@@ -1,8 +1,9 @@
-import { MATERIAL_OPTIONS, type LabParams, type MaterialState } from './params';
-import { uniqueName } from './naming';
-
 /**
- * 材质库与材质槽的数据模型（纯逻辑，不碰 GPU / DOM，可单独测试）。
+ * 编辑器侧材质管理（依赖 LabParams 共享材质库）。
+ *
+ * 纯材质数据 / 原语已上提进包体（见 @aether/render 的 MaterialState / MaterialSlot /
+ * sharedId / slotSource 等）。本文件只保留"把槽位解析到 LabParams.materials 共享库"
+ * 的编辑器逻辑——这是 ADR-007 的边界：包体定义材质数据契约，编辑器消费并管理之。
  *
  * 三层材质语义，与 Unity 对齐：
  *   1. shared（共享材质）—— params.materials 里的 6 个条目。改它就是全局改，
@@ -13,70 +14,49 @@ import { uniqueName } from './naming';
  *      「保存覆盖」= 把 override 提升为 instance，从此进库、可复用。
  *
  * 优先级：override > instance > shared。
- *
- * 为什么共享材质不存进本库：params.materials 是 JSON 导出的真源，也是既有「材质」
- * 分组与 ramp 预览的读写对象。本库只持有实例，共享条目一律按 id 回查 params，
- * 避免出现两份互相打架的副本。
  */
 
-export type MaterialKind = 'shared' | 'instance';
-/** 子网格材质槽当前的来源层级（override 不是库条目，是槽位上的局部副本） */
-export type MaterialSource = 'shared' | 'instance' | 'override';
+import { MATERIAL_OPTIONS, type LabParams } from './params';
+import { uniqueName } from './naming';
+import {
+  cloneMaterial,
+  isInstanceId,
+  planSubMeshCount,
+  sharedId,
+  sharedIndex,
+  slotSource,
+  type MaterialInstance,
+  type MaterialKind,
+  type MaterialRef,
+  type MaterialSlot,
+  type MaterialState,
+} from '@aether/render';
 
-/** 材质库下拉项 */
-export interface MaterialRef {
-  id: string;
-  name: string;
-  kind: MaterialKind;
-}
+// 既有 `from './materials'` 引用兼容（renderer / materials.test）——纯原语改从包体来
+export {
+  cloneMaterial,
+  isInstanceId,
+  planSubMeshCount,
+  sharedId,
+  sharedIndex,
+  slotSource,
+};
+export type {
+  MaterialInstance,
+  MaterialKind,
+  MaterialRef,
+  MaterialSlot,
+  MaterialState,
+  MaterialSource,
+} from '@aether/render';
 
-/** 用户创建的材质实例 */
-export interface MaterialInstance {
-  id: string;
-  name: string;
-  /** 派生来源 id（仅用于溯源展示，创建后不再联动） */
-  baseId: string | null;
-  state: MaterialState;
-}
-
-const SHARED_PREFIX = 's';
+// 实例 id 前缀（共享材质 id 的 sharedId 已随包体走，这里只保留实例铸 id 用）
 const INSTANCE_PREFIX = 'i';
 
-/** 共享材质 id：与 params.materials 的下标一一对应 */
-export function sharedId(index: number): string {
-  return `${SHARED_PREFIX}${index}`;
-}
-
-/** 从 id 反解共享材质下标；非共享 id 返回 null */
-export function sharedIndex(id: string): number | null {
-  if (id.length < 2 || id[0] !== SHARED_PREFIX) return null;
-  const n = Number(id.slice(1));
-  return Number.isInteger(n) && n >= 0 ? n : null;
-}
-
-export function isInstanceId(id: string): boolean {
-  return id.length >= 2 && id[0] === INSTANCE_PREFIX;
-}
-
-export function cloneMaterial(m: MaterialState): MaterialState {
-  return { ...m };
-}
-
-/**
- * 材质槽：一条子网格挂一份。这是「数据隔离」的核心结构 ——
- * materialId 指向材质库，override 是本槽的局部副本，两者互不干扰。
- */
-export interface MaterialSlot {
-  /** 库条目 id（共享或实例） */
-  materialId: string;
-  /** 局部覆盖：非 null 时优先于库条目，只作用于这一条子网格 */
-  override: MaterialState | null;
-}
-
-/** 槽位的来源层级：override（本 mesh）> instance（库实例）> shared（共享材质） */
-export function slotSource(slot: MaterialSlot): MaterialSource {
-  if (slot.override !== null) return 'override';
-  return isInstanceId(slot.materialId) ? 'instance' : 'shared';
+/** 去掉「0 · 」这类序号前缀，用于给实例起名 */
+function bareName(label: string): string {
+  const i = label.indexOf('·');
+  return (i >= 0 ? label.slice(i + 1) : label).trim();
 }
 
 /**
@@ -86,30 +66,6 @@ export function slotSource(slot: MaterialSlot): MaterialSource {
 export function slotState(slot: MaterialSlot, lib: MaterialLibrary, p: LabParams): MaterialState {
   return slot.override ?? lib.resolve(p, slot.materialId);
 }
-
-/** 去掉「0 · 」这类序号前缀，用于给实例起名 */
-function bareName(label: string): string {
-  const i = label.indexOf('·');
-  return (i >= 0 ? label.slice(i + 1) : label).trim();
-}
-
-/**
- * 子网格条数的预算裁剪（纯函数，便于单测）。
- *
- * uniform 材质槽是固定容量，写越界 = WebGPU 校验错误 = 整页黑屏。
- * 所以「拆出来的条数装不下」时整体退化为 1 条（用整物体当一条子网格），
- * 而不是截断——截断会静默丢掉模型后半部分的几何，比少拆危险得多。
- *
- * @param requested   想拆成几条（0 或负 = 调用方没给 primitive 信息）
- * @param usedByOthers 场景里其他物体已经占掉的槽位数
- * @param capacity    全局槽位容量
- */
-export function planSubMeshCount(requested: number, usedByOthers: number, capacity: number): number {
-  if (requested <= 0) return 1;
-  const budget = Math.max(1, capacity - usedByOthers);
-  return requested <= budget ? requested : 1;
-}
-
 
 export class MaterialLibrary {
   /**

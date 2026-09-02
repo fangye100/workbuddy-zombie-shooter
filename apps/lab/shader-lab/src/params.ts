@@ -5,25 +5,10 @@
  * 渲染器按同一份数据写 uniform。改参数只需改这里。
  */
 
-export interface MaterialState {
-  albedo: string;
-  roughness: number;
-  metallic: number;
-  emissiveColor: string;
-  emissiveStrength: number;
-  /** 材质级分阶阈值；< 0 表示跟随全局 */
-  shadowEnd: number;
-  /** 材质级高光混合；< 0 表示跟随全局 */
-  specMix: number;
-  /** 软边倍率，布料等柔和材质放大 */
-  softnessScale: number;
-  /** 半调强度倍率 */
-  halftoneScale: number;
-  /** 描边宽度倍率 */
-  outlineScale: number;
-  /** 自发光材质：跳过全部分阶 */
-  unlit: boolean;
-}
+// MaterialState（材质数据契约）已上提进引擎层包体，编辑器的真源是 @aether/render。
+// 这里只做类型 re-export，保证既有 `from './params'` 引用（renderer / ui / binding / presets）全绿。
+import type { MaterialState } from '@aether/render';
+export type { MaterialState } from '@aether/render';
 
 export interface LabParams {
   keyAzimuth: number;
