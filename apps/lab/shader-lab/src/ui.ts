@@ -12,6 +12,7 @@ import { BUILTIN_MODELS } from './models';
 import {
   type HierarchyNode,
   type HierarchySubNode,
+  type HierarchyTreeNode,
   type LabRenderer,
   type MaterialSlotInfo,
 } from './renderer';
@@ -275,6 +276,8 @@ export class Panel {
   /** 展开/收起状态按物体索引记；两个集合都没记的用默认值（子网格 > 1 才默认展开） */
   private readonly hierExpanded = new Set<number>();
   private readonly hierCollapsed = new Set<number>();
+  /** GLB 组节点的折叠态（key = 对象下标:节点路径），默认全部展开 */
+  private readonly hierGrpCollapsed = new Set<string>();
 
   // ---- Mesh 材质（材质槽编辑）----
   private mmEmpty!: HTMLElement;
@@ -699,8 +702,18 @@ export class Panel {
     const kids = document.createElement('div');
     kids.className = 'hier-kids';
     kids.style.display = expanded ? '' : 'none';
-    for (let s = 0; s < item.subMeshes.length; s++) {
-      kids.appendChild(this.buildHierarchySubRow(item.index, s, item.subMeshes[s]!));
+    if (item.tree.length > 0) {
+      // GLB 导入：按原始父子层级还原树（组节点可折叠，mesh 节点 = 子网格行）
+      item.tree.forEach((n, ti) => {
+        for (const el of this.buildHierarchyTree(item.index, n, 1, `${item.index}/${ti}`)) {
+          kids.appendChild(el);
+        }
+      });
+    } else {
+      // 程序化网格 / 无层级资产：平铺子网格
+      for (let s = 0; s < item.subMeshes.length; s++) {
+        kids.appendChild(this.buildHierarchySubRow(item.index, s, item.subMeshes[s]!));
+      }
     }
 
     tw.addEventListener('click', (e) => {
@@ -725,10 +738,16 @@ export class Panel {
     return wrap;
   }
 
-  /** 子网格（mesh）节点：缩进一级，眼睛独立显隐，右侧跟当前材质名 */
-  private buildHierarchySubRow(objIndex: number, subIndex: number, sm: HierarchySubNode): HTMLElement {
+  /** 子网格（mesh）节点：缩进一级，眼睛独立显隐，右侧跟当前材质名；indent 供 GLB 树按需加深 */
+  private buildHierarchySubRow(
+    objIndex: number,
+    subIndex: number,
+    sm: HierarchySubNode,
+    indent: string | null = null,
+  ): HTMLElement {
     const row = document.createElement('div');
     row.className = 'hier-row hier-sub';
+    if (indent !== null) row.style.marginLeft = indent;
     row.dataset.obj = String(objIndex);
     row.dataset.sub = String(subIndex);
     if (objIndex === this.selIndex && subIndex === this.selSub) row.classList.add('sel');
@@ -775,6 +794,76 @@ export class Panel {
     row.addEventListener('mouseenter', () => this.onHierarchyHover?.(objIndex, subIndex));
     row.addEventListener('mouseleave', () => this.onHierarchyHover?.(null, null));
     return row;
+  }
+
+  /**
+   * GLB 层级树 → 面板行。组节点（含多 primitive 的 mesh 节点）产「折叠行 + 子容器」；
+   * 单 primitive 的纯叶子不产组行，直接给子网格行，少一层噪音。
+   * key 用对象下标 + 兄弟序号链（与名字无关，同名节点不串折叠态）。
+   */
+  private buildHierarchyTree(objIndex: number, node: HierarchyTreeNode, depth: number, key: string): HTMLElement[] {
+    const indent = `${30 + (depth - 1) * 14}px`;
+
+    // 纯叶子：单 primitive 的 mesh 节点 → 直接一行
+    if (node.children.length === 0 && node.subs.length === 1) {
+      const s = node.subs[0]!;
+      return [this.buildHierarchySubRow(objIndex, s.subIndex, s.node, indent)];
+    }
+
+    const row = document.createElement('div');
+    row.className = 'hier-row hier-grp';
+    row.style.marginLeft = indent;
+
+    const collapsed = this.hierGrpCollapsed.has(key);
+    const tw = document.createElement('button');
+    tw.className = 'hier-tw';
+    tw.type = 'button';
+    tw.title = collapsed ? '展开' : '收起';
+    tw.textContent = collapsed ? '▸' : '▾';
+
+    const name = document.createElement('span');
+    name.className = 'hier-name';
+    name.textContent = node.name;
+
+    const countSubs = (n: HierarchyTreeNode): number =>
+      n.subs.length + n.children.reduce((acc, c) => acc + countSubs(c), 0);
+    const meta = document.createElement('span');
+    meta.className = 'hier-meta';
+    meta.textContent = `${countSubs(node)} mesh`;
+
+    const kids = document.createElement('div');
+    kids.className = 'hier-kids';
+    kids.style.display = collapsed ? 'none' : '';
+    for (const s of node.subs) {
+      kids.appendChild(this.buildHierarchySubRow(objIndex, s.subIndex, s.node, `${30 + depth * 14}px`));
+    }
+    node.children.forEach((c, i) => {
+      for (const el of this.buildHierarchyTree(objIndex, c, depth + 1, `${key}/${i}`)) {
+        kids.appendChild(el);
+      }
+    });
+
+    const toggle = (): void => {
+      const opening = kids.style.display === 'none';
+      kids.style.display = opening ? '' : 'none';
+      tw.textContent = opening ? '▾' : '▸';
+      tw.title = opening ? '收起' : '展开';
+      if (opening) this.hierGrpCollapsed.delete(key);
+      else this.hierGrpCollapsed.add(key);
+    };
+    tw.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggle();
+    });
+    // 组节点没有 GPU 存在：不发选中/悬停，点行 = 折叠展开
+    row.addEventListener('click', toggle);
+
+    row.append(tw, name, meta);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'hier-item';
+    wrap.append(row, kids);
+    return [wrap];
   }
 
   /** 视图里选中 ↔ 层级面板高亮同步：遍历行数很少，每次拾取调一次毫无压力 */
