@@ -269,6 +269,20 @@ export class Panel {
   private modelInfo!: HTMLElement;
   private modelSelect!: HTMLSelectElement;
 
+  // ---- 动画 Animation 面板 ----
+  private animClip!: HTMLSelectElement;
+  private animPlayBtn!: HTMLButtonElement;
+  private animStopBtn!: HTMLButtonElement;
+  private animLoop!: HTMLInputElement;
+  private animSpeed!: { input: HTMLInputElement; val: HTMLElement };
+  private animScrub!: { input: HTMLInputElement; val: HTMLElement };
+  private animWeight!: HTMLInputElement;
+  private animHint!: HTMLElement;
+  /** 播放/暂停按钮当前语义，与渲染器 isAnimationPlaying 对齐 */
+  private animPlaying = false;
+  /** 用户正在拖时间轴时不让每帧 tick 抢写值 */
+  private animScrubbing = false;
+
   // ---- 场景层级 ----
   private hierBody!: HTMLElement;
   private hierEmpty!: HTMLElement;
@@ -363,6 +377,8 @@ export class Panel {
       root.appendChild(details);
     }
 
+    root.appendChild(this.buildAnimation());
+
     this.syncAll();
   }
 
@@ -442,6 +458,212 @@ export class Panel {
   /** 让下拉框高亮项与当前实际加载的模型一致（默认加载的不一定是列表第一项） */
   setSelectedModel(id: string): void {
     if (this.modelSelect !== undefined) this.modelSelect.value = id;
+  }
+
+  // ===================== 动画 Animation 面板 =====================
+
+  /** 构建「动画」分组：片段下拉 + 播放/暂停/停止 + 循环 + 速率 + 时间轴 + 蒙皮权重可视化 */
+  private buildAnimation(): HTMLElement {
+    const details = document.createElement('details');
+    details.className = 'group';
+    details.id = 'animation';
+    details.open = true;
+
+    const summary = document.createElement('summary');
+    summary.textContent = '动画 Animation';
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'group-body';
+
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.style.marginBottom = '8px';
+    hint.textContent = '选中带骨骼的模型后可用。无骨骼动画时控件灰显。';
+    this.animHint = hint;
+    body.appendChild(hint);
+
+    // 本地滑块构造器（与 buildSelectionControls 里的 mkSlider 同形，但挂在动画容器上）
+    const mkSlider = (
+      lbl: string,
+      min: number,
+      max: number,
+      step: number,
+      onInput: (v: number) => void,
+    ): { row: HTMLElement; input: HTMLInputElement; val: HTMLElement } => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const head = document.createElement('div');
+      head.className = 'row-head';
+      const label = document.createElement('label');
+      label.textContent = lbl;
+      const val = document.createElement('span');
+      val.className = 'val';
+      head.append(label, val);
+      row.appendChild(head);
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = String(min);
+      input.max = String(max);
+      input.step = String(step);
+      input.addEventListener('input', () => {
+        const v = Number(input.value);
+        val.textContent = fmt(v, step);
+        onInput(v);
+      });
+      row.appendChild(input);
+      return { row, input, val };
+    };
+
+    // 片段下拉
+    body.appendChild(
+      this.mkRow('片段 Clip', (row) => {
+        const sel = document.createElement('select');
+        sel.dataset.anim = 'clip';
+        sel.addEventListener('change', () => {
+          if (!this.renderer.hasAnimation()) return;
+          const idx = Number(sel.value);
+          this.renderer.playAnimation(idx);
+          this.setPlayLabel(true);
+        });
+        this.animClip = sel;
+        row.appendChild(sel);
+      }),
+    );
+
+    // 播放/暂停 + 停止
+    const btnRow = document.createElement('div');
+    btnRow.className = 'btn-row';
+    const play = document.createElement('button');
+    play.textContent = '▶ 播放';
+    play.dataset.anim = 'play';
+    play.addEventListener('click', () => {
+      if (!this.renderer.hasAnimation()) return;
+      if (this.renderer.isAnimationPlaying()) {
+        this.renderer.pauseAnimation();
+        this.setPlayLabel(false);
+      } else {
+        const cur = this.renderer.getCurrentClip();
+        if (cur < 0) this.renderer.playAnimation(0);
+        else this.renderer.playAnimation();
+        this.setPlayLabel(true);
+      }
+    });
+    this.animPlayBtn = play;
+    const stop = document.createElement('button');
+    stop.textContent = '■ 停止';
+    stop.addEventListener('click', () => {
+      if (!this.renderer.hasAnimation()) return;
+      this.renderer.stopAnimation();
+      this.setPlayLabel(false);
+    });
+    this.animStopBtn = stop;
+    btnRow.append(play, stop);
+    body.appendChild(btnRow);
+
+    // 循环
+    const loopWrap = this.toggleRow('循环 Loop', (checked) => {
+      if (!this.renderer.hasAnimation()) return;
+      this.renderer.setAnimationLoop(checked);
+    });
+    this.animLoop = loopWrap.input;
+    body.appendChild(loopWrap.el);
+
+    // 速率
+    const speed = mkSlider('速率 Speed', 0.1, 3, 0.05, (v) => {
+      if (!this.renderer.hasAnimation()) return;
+      this.renderer.setAnimationSpeed(v);
+    });
+    body.appendChild(speed.row);
+    this.animSpeed = speed;
+
+    // 时间轴
+    const scrub = mkSlider('时间 Time', 0, 1, 0.01, (v) => {
+      if (!this.renderer.hasAnimation()) return;
+      this.animScrubbing = true;
+      this.renderer.seekAnimation(v);
+    });
+    scrub.input.addEventListener('change', () => {
+      this.animScrubbing = false;
+    });
+    scrub.input.addEventListener('pointerup', () => {
+      this.animScrubbing = false;
+    });
+    body.appendChild(scrub.row);
+    this.animScrub = scrub;
+
+    // 蒙皮权重可视化（切到 shader debugMode 9）
+    const weightWrap = this.toggleRow('蒙皮权重可视化 Skin Weights', (checked) => {
+      this.params.debugMode = checked ? 9 : 0;
+      this.syncValues();
+      this.onChange?.();
+    });
+    this.animWeight = weightWrap.input;
+    body.appendChild(weightWrap.el);
+
+    details.appendChild(body);
+    return details;
+  }
+
+  private setPlayLabel(playing: boolean): void {
+    this.animPlaying = playing;
+    this.animPlayBtn.textContent = playing ? '⏸ 暂停' : '▶ 播放';
+  }
+
+  /** 选中对象 / 导入模型后重建动画控件状态（片段列表、启用态、当前帧） */
+  refreshAnimation(): void {
+    if (this.animClip === undefined) return;
+    const has = this.renderer.hasAnimation();
+
+    this.animClip.replaceChildren();
+    const names = this.renderer.getClipNames();
+    names.forEach((name, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = name;
+      this.animClip.appendChild(o);
+    });
+    const clip = this.renderer.getCurrentClip();
+    if (clip >= 0 && clip < names.length) this.animClip.value = String(clip);
+
+    const dis = !has;
+    this.animClip.disabled = dis;
+    this.animPlayBtn.disabled = dis;
+    this.animStopBtn.disabled = dis;
+    this.animLoop.disabled = dis;
+    this.animSpeed.input.disabled = dis;
+    this.animScrub.input.disabled = dis;
+    this.animWeight.disabled = dis;
+
+    this.animHint.textContent = has
+      ? '骨骼动画已就绪。选择片段并播放即可预览。'
+      : '当前模型无骨骼动画（静态网格，或导入的 GLB 没有 skin/anim）。';
+
+    if (has) {
+      this.animLoop.checked = this.renderer.getAnimationLoop();
+      const sp = this.renderer.getAnimationSpeed();
+      this.animSpeed.input.value = String(sp);
+      this.animSpeed.val.textContent = fmt(sp, 0.05);
+      this.setPlayLabel(this.renderer.isAnimationPlaying());
+      const dur = this.renderer.getAnimationDuration();
+      this.animScrub.input.max = String(dur > 0 ? dur : 1);
+      const t = this.renderer.getAnimationTime();
+      this.animScrub.input.value = String(t);
+      this.animScrub.val.textContent = `${t.toFixed(2)}s`;
+    }
+  }
+
+  /** 每帧由渲染循环调用：把时间轴拖到当前播放位置，并同步播放按钮（处理播完自动停） */
+  tickAnimation(): void {
+    if (this.animClip === undefined || !this.renderer.hasAnimation()) return;
+    if (this.animScrubbing) return;
+    const dur = this.renderer.getAnimationDuration();
+    this.animScrub.input.max = String(dur > 0 ? dur : 1);
+    const t = this.renderer.getAnimationTime();
+    this.animScrub.input.value = String(t);
+    this.animScrub.val.textContent = `${t.toFixed(2)}s`;
+    const playing = this.renderer.isAnimationPlaying();
+    if (playing !== this.animPlaying) this.setPlayLabel(playing);
   }
 
   // ===================== 对象选择 / 变换面板 =====================
@@ -929,6 +1151,7 @@ export class Panel {
       this.selEmpty.style.display = '';
       this.selBox.style.display = 'none';
       this.refreshMaterialSlot();
+      this.refreshAnimation();
       return;
     }
     const info = this.renderer.getObjectState(index);
@@ -936,12 +1159,14 @@ export class Panel {
       this.selEmpty.style.display = '';
       this.selBox.style.display = 'none';
       this.refreshMaterialSlot();
+      this.refreshAnimation();
       return;
     }
     this.selEmpty.style.display = 'none';
     this.selBox.style.display = '';
     this.fillSelection(info);
     this.refreshMaterialSlot();
+    this.refreshAnimation();
   }
 
   // ===================== Mesh 材质（材质槽编辑）=====================

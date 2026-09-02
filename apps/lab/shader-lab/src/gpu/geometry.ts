@@ -27,9 +27,60 @@ export const VERTEX_LAYOUT: GPUVertexBufferLayout = {
   ],
 };
 
+/**
+ * 蒙皮顶点布局（第二个顶点缓冲槽，stride 24B）：
+ *   joints  : uint16 ×4（shaderLocation 5，偏移 0）  —— 指向关节矩阵调色板
+ *   weights : float32 ×4（shaderLocation 6，偏移 8） —— 4 个影响权重，已归一化
+ * 未蒙皮的顶点绑到「恒等关节」(index 0)、权重 [1,0,0,0]，蒙皮结果 = 顶点原样。
+ */
+export const SKIN_STRIDE = 24;
+
+export const SKIN_LAYOUT: GPUVertexBufferLayout = {
+  arrayStride: SKIN_STRIDE,
+  attributes: [
+    { shaderLocation: 5, offset: 0, format: 'uint16x4' },
+    { shaderLocation: 6, offset: 8, format: 'float32x4' },
+  ],
+};
+
+/**
+ * 把蒙皮数据打包成 GPU 顶点缓冲（interleaved u16×4 + f32×4）。
+ * joints/weights 为 null（无蒙皮）时退化为「恒等关节 + 权重 1」的静止缓冲。
+ */
+export function packSkin(
+  joints: Uint16Array | null,
+  weights: Float32Array | null,
+  count: number,
+): ArrayBuffer {
+  const buf = new ArrayBuffer(count * SKIN_STRIDE);
+  // 交错布局：每个顶点 24 字节 = [j0..j3 (u16, 8B)] [w0..w3 (f32, 16B)]。
+  // 顶点 i 的关节落在 u16 元素 [12i .. 12i+3]，权重落在 f32 元素 [6i+2 .. 6i+5]，
+  // 不能用连续的 set()（续顶点会错位并覆盖上一顶点的权重）。
+  const jv = new Uint16Array(buf);
+  const wv = new Float32Array(buf);
+  if (joints && weights && joints.length >= count * 4 && weights.length >= count * 4) {
+    for (let i = 0; i < count; i++) {
+      for (let k = 0; k < 4; k++) {
+        jv[12 * i + k] = joints[i * 4 + k]!;
+        wv[6 * i + 2 + k] = weights[i * 4 + k]!;
+      }
+    }
+  } else {
+    for (let i = 0; i < count; i++) {
+      jv[12 * i] = 0; // 关节 0 = 恒等关节（静态，不受骨骼驱动）
+      wv[6 * i + 2] = 1; // 权重全压在恒等关节上
+    }
+  }
+  return buf;
+}
+
 export interface MeshData {
   vertices: Float32Array;
   indices: Uint32Array;
+  /** 蒙皮关节索引（4/顶点，0..nJoints-1；末尾恒等关节 = nJoints）。无蒙皮为 null */
+  joints?: Uint16Array | null;
+  /** 蒙皮权重（4/顶点，已归一化）。无蒙皮为 null */
+  weights?: Float32Array | null;
 }
 
 type Vec3 = readonly [number, number, number];

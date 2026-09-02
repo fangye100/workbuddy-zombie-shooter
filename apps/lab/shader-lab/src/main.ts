@@ -214,7 +214,7 @@ async function boot(): Promise<void> {
         const bmp = model.image === null ? null : await decodeTexture(model.image, name);
         // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
         // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
-        renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree);
+        renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree, model.skeleton, model.animations);
         const texState =
           model.image === null
             ? '无贴图（平色预览）'
@@ -840,7 +840,7 @@ async function boot(): Promise<void> {
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       const name = uniqueObjectName(stemName(relPath));
       // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
-      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree);
+      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
       if (idx === null) {
         panel.setModelInfo('场景物体已达上限（64），先在层级里删掉一些再拖入');
         return;
@@ -1013,6 +1013,7 @@ async function boot(): Promise<void> {
     }
 
     renderer.render(panel.params, camera, elapsed, dpr());
+    panel.tickAnimation();
     requestAnimationFrame(frame);
   };
 

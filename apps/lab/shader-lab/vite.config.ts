@@ -150,7 +150,14 @@ export default defineConfig({
   },
   server: {
     port: 5178,
+    // host:true = 监听所有网卡，含 Tailscale 虚拟网卡（100.124.237.93 /
+    // fangye-win11-office.tail6b29a2.ts.net）。手机或另一台设备经 Tailscale
+    // 访问编辑器必须开这个，否则只绑 localhost 收不到外部请求。
     host: true,
+    // 经 Tailscale 域名（*.ts.net:5178）访问时，Vite 默认 host-check 会拦截
+    // （Blocked request. This host is not allowed.）。allowedHosts:true 放行任意
+    // Host，否则 Tailscale 链路在应用层被挡、连得上但 403。
+    allowedHosts: true,
     open: false,
     https,
   },
