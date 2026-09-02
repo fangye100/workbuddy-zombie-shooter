@@ -28,7 +28,14 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { SubMeshRange } from './gpu/gltf';
+import {
+  matchBindings,
+  type MatchReportEntry,
+  type MeshNodeBinding,
+  type MeshNodeStub,
+  type PrimitiveBinding,
+} from './binding';
+import type { GltfNodeTree, SubMeshRange } from './gpu/gltf';
 
 /** 选中高亮色（白线轮廓），纯色不经过 tonemap，要够亮才压得住暗背景 */
 const SEL_COLOR = '#FFFFFF';
@@ -123,6 +130,16 @@ interface SceneObject {
   /** 已从场景删除。用墓碑标记而不是真删数组元素 —— 索引一旦变动会打乱其他物体的 uniform 槽位 */
   removed: boolean;
   selected: boolean;
+  /**
+   * GLB 原始父子层级（导入模型才有；程序化网格为空数组 → 层级面板走旧的平铺展示）。
+   * 叶子 mesh 节点引用 subMeshes 下标区间，组节点只有 name + children。
+   */
+  nodeTree: GltfNodeTree[];
+  /**
+   * 绑定孤儿池：换模型时没人认领的旧材质绑定留在这里，参与后续替换的匹配
+   * （artist 删掉又补回的 mesh 仍能接回原材质）。匹配规则见 binding.ts。
+   */
+  bindingOrphans: MeshNodeBinding[];
 }
 
 export interface CameraState {
@@ -141,6 +158,14 @@ export interface HierarchySubNode {
   source: MaterialSource;
 }
 
+/** GLB 原始层级里的一个节点：组节点只有名字与后代；mesh 节点带它名下的子网格下标 */
+export interface HierarchyTreeNode {
+  name: string;
+  /** mesh 节点名下的子网格（含 subMeshes 下标，供选中/显隐/材质面板寻址）；组节点为空数组 */
+  subs: { subIndex: number; node: HierarchySubNode }[];
+  children: HierarchyTreeNode[];
+}
+
 /** 层级树的一个对象节点，subMeshes 就是它下面能展开的 mesh 子节点 */
 export interface HierarchyNode {
   index: number;
@@ -150,6 +175,11 @@ export interface HierarchyNode {
   pickable: boolean;
   triangles: number;
   subMeshes: HierarchySubNode[];
+  /**
+   * GLB 原始父子层级（导入的模型才有）。非空时层级面板按它渲染树形，
+   * 忽略上面的平铺 subMeshes 列表；空数组 = 程序化网格，平铺展示。
+   */
+  tree: HierarchyTreeNode[];
 }
 
 /** 单个材质槽的完整信息（Mesh 材质面板的数据源） */
@@ -235,12 +265,20 @@ function applyAo(mesh: MeshData, minY: number, maxY: number, floor = 0.55): void
  * 材质解析顺序（Unity 同语义）：
  *   override（本槽局部副本） > materialId 指向的库条目（instance 或 shared）
  * 默认 override 为 null、materialId 是共享材质 —— 即「默认用 shared material」。
+ *
+ * 后 5 个身份字段来自 GLB（见 gltf.ts SubMeshRange）：换模型时 binding.ts 靠它们
+ * 把旧绑定继承过来。程序化网格没有身份（nodeId=''），不参与继承。
  */
 interface SubMesh extends MaterialSlot {
   name: string;
   indexStart: number;
   indexCount: number;
   visible: boolean;
+  nodeId: string;
+  nodePath: string[];
+  nodeName: string;
+  primitiveKey: string;
+  primitiveIndex: number;
 }
 
 interface ObjectSpec {
@@ -467,6 +505,12 @@ export class LabRenderer {
             visible: true,
             materialId: sharedId(s.material),
             override: null,
+            // 程序化网格没有 GLB 身份：nodeId 为空 = 不参与绑定继承
+            nodeId: '',
+            nodePath: [],
+            nodeName: s.name,
+            primitiveKey: '',
+            primitiveIndex: 0,
           },
         ],
         slotBase: 0, // 稍后 assignSlotBases() 统一分配
@@ -474,6 +518,8 @@ export class LabRenderer {
         visible: true,
         removed: false,
         selected: false,
+        nodeTree: [],
+        bindingOrphans: [],
       });
       triangles += mesh.indices.length / 3;
     }
@@ -803,8 +849,14 @@ export class LabRenderer {
    *   bitmap 为 null → 用材质平色；否则上传贴图，着色器切到纹理采样。
    *   ranges 为 null/空 → 单条子网格覆盖全部；否则按 GLB primitive 拆成多条
    *   （层级树里展开就是 身体/武器/盾牌 各自一个 mesh 节点 + 各自一个材质槽）。
+   *   tree 为 GLB 原始父子层级：层级面板按它还原树形；绑定继承见 applySubMeshes。
    */
-  setCharacter(mesh: MeshData | null, bitmap: ImageBitmap | null, ranges: SubMeshRange[] | null = null): void {
+  setCharacter(
+    mesh: MeshData | null,
+    bitmap: ImageBitmap | null,
+    ranges: SubMeshRange[] | null = null,
+    tree: GltfNodeTree[] | null = null,
+  ): void {
     const o = this.objects[this.characterIndex];
     if (o === undefined || o.removed) return;
 
@@ -826,7 +878,7 @@ export class LabRenderer {
     o.texture = this.charTexture ?? this.whiteTex;
 
     // 子网格重排 → slotBase 全部后移 → 所有 bind group 都得重建（不只是角色自己）
-    this.applySubMeshes(this.characterIndex, ranges);
+    this.applySubMeshes(this.characterIndex, ranges, tree);
     // 选中 + 悬停的高亮 bind group 都缓存了 texture view，必须一起重建
     this.refreshHighlightBindGroups(this.characterIndex);
     // 选中/悬停的子网格下标在换模型后可能越界
@@ -849,10 +901,45 @@ export class LabRenderer {
   }
 
   /**
+   * 抓当前子网格的材质绑定快照（按 mesh 节点聚合，只收有 GLB 身份的）。
+   * 换模型的前一刹那调用 —— 此刻的 subMeshes 就是用户最新的编辑成果。
+   */
+  private snapshotBindings(o: SceneObject): MeshNodeBinding[] {
+    const byNode = new Map<string, MeshNodeBinding>();
+    for (const sm of o.subMeshes) {
+      if (sm.nodeId === '') continue;
+      let b = byNode.get(sm.nodeId);
+      if (b === undefined) {
+        b = { nodeId: sm.nodeId, nodePath: sm.nodePath, prims: [] };
+        byNode.set(sm.nodeId, b);
+      }
+      b.prims.push({
+        primitiveKey: sm.primitiveKey,
+        primitiveIndex: sm.primitiveIndex,
+        materialId: sm.materialId,
+        override: sm.override === null ? null : cloneMaterial(sm.override),
+        visible: sm.visible,
+      });
+    }
+    return [...byNode.values()];
+  }
+
+  /** 最近一次换模型的绑定继承报告（模型信息行展示用；无继承动作时为 null） */
+  private lastMatchReport: MatchReportEntry[] | null = null;
+
+  getLastMatchReport(): MatchReportEntry[] | null {
+    return this.lastMatchReport;
+  }
+
+  /**
    * 重建某物体的子网格表并连带重建全部 bind group。
    * ranges 为空 → 退化为单条覆盖全部（程序化网格与「没拆 primitive 的 glb」都走这条）。
+   *
+   * 绑定继承（ranges 带 GLB 身份时）：先抓旧快照，与新节点跑两层匹配
+   * （nodeId → 反向路径），继承 materialId / override / 显隐到 primitive 粒度；
+   * 没人认领的旧绑定进孤儿池，留给再下一次替换。匹配报告存 lastMatchReport。
    */
-  private applySubMeshes(index: number, ranges: SubMeshRange[] | null): void {
+  private applySubMeshes(index: number, ranges: SubMeshRange[] | null, tree: GltfNodeTree[] | null = null): void {
     const o = this.objects[index];
     if (o === undefined) return;
     const total = o.mesh.indices.length;
@@ -864,20 +951,13 @@ export class LabRenderer {
         visible: true,
         materialId: sharedId(o.materialIndex),
         override: null,
+        nodeId: '',
+        nodePath: [],
+        nodeName: o.name,
+        primitiveKey: '',
+        primitiveIndex: 0,
       },
     ];
-    const build = (list: SubMeshRange[]): SubMesh[] =>
-      list.map((r) => {
-        const start = Math.min(Math.max(0, r.indexStart), total);
-        return {
-          name: r.name.trim() === '' ? `${o.name} part` : r.name,
-          indexStart: start,
-          indexCount: Math.min(r.indexCount, total - start),
-          visible: true,
-          materialId: sharedId(o.materialIndex),
-          override: null,
-        };
-      });
 
     // 预算 = 全局上限 − 别的物体已占的槽位（planSubMeshCount 是纯函数，可直接单测）
     const planned = planSubMeshCount(
@@ -885,8 +965,61 @@ export class LabRenderer {
       this.slotsUsedExcluding(index),
       MAX_MATERIAL_SLOTS,
     );
-    const next = planned === 1 || ranges === null ? single() : build(ranges);
 
+    if (planned === 1 || ranges === null) {
+      // 退化路径：旧绑定不丢，并进孤儿池 —— 切走再切回来还能接
+      const snap = this.snapshotBindings(o);
+      if (snap.length > 0) o.bindingOrphans = [...snap, ...o.bindingOrphans];
+      o.nodeTree = [];
+      o.subMeshes = single();
+      this.lastMatchReport = null;
+      this.rebuildAllBindGroups();
+      return;
+    }
+
+    // ---- 绑定继承：快照 + 孤儿 → 与新节点两层匹配 ----
+    const snapshot = this.snapshotBindings(o);
+
+    // 新节点按 nodeId 聚合成 stubs（保持 ranges 的首现顺序与内部顺序）
+    const stubs: MeshNodeStub[] = [];
+    const stubOf = new Map<string, number>();
+    const rangeSlot: { stub: number; pos: number }[] = [];
+    for (const r of ranges) {
+      let si = stubOf.get(r.nodeId);
+      if (si === undefined) {
+        si = stubs.length;
+        stubOf.set(r.nodeId, si);
+        stubs.push({ nodeId: r.nodeId, nodePath: r.nodePath, prims: [] });
+      }
+      rangeSlot.push({ stub: si, pos: stubs[si]!.prims.length });
+      stubs[si]!.prims.push({ primitiveKey: r.primitiveKey, primitiveIndex: r.primitiveIndex });
+    }
+
+    const matched = matchBindings(snapshot, o.bindingOrphans, stubs);
+    o.bindingOrphans = matched.orphans;
+    this.lastMatchReport = matched.report;
+
+    const next: SubMesh[] = ranges.map((r, ri) => {
+      const start = Math.min(Math.max(0, r.indexStart), total);
+      const slot = rangeSlot[ri]!;
+      const inh: PrimitiveBinding | null = matched.inherited[slot.stub]?.[slot.pos] ?? null;
+      return {
+        name: r.name.trim() === '' ? `${o.name} part` : r.name,
+        indexStart: start,
+        indexCount: Math.min(r.indexCount, total - start),
+        // 继承成功 → 旧绑定（含显隐）；否则回到物体默认共享材质
+        visible: inh?.visible ?? true,
+        materialId: inh?.materialId ?? sharedId(o.materialIndex),
+        override: inh?.override ?? null,
+        nodeId: r.nodeId,
+        nodePath: r.nodePath,
+        nodeName: r.nodeName,
+        primitiveKey: r.primitiveKey,
+        primitiveIndex: r.primitiveIndex,
+      };
+    });
+
+    o.nodeTree = tree ?? [];
     o.subMeshes = next;
     this.rebuildAllBindGroups();
   }
@@ -1008,6 +1141,31 @@ export class LabRenderer {
 
   /** 层级面板数据源；removed 的墓碑行不出现在列表里。每个对象带上可展开的子网格列表 */
   getObjectList(): HierarchyNode[] {
+    const subNode = (sm: SubMesh): HierarchySubNode => ({
+      name: sm.name,
+      triangles: sm.indexCount / 3,
+      visible: sm.visible,
+      materialName: this.library.nameOf(this.params, sm.materialId),
+      source: this.sourceOf(sm),
+    });
+    // GLB 原始层级 → 面板树节点；组节点若没有 mesh 后代会被剪掉（parseGlb 已剪过空壳，双保险）
+    const buildTree = (o: SceneObject, nodes: GltfNodeTree[]): HierarchyTreeNode[] => {
+      const out: HierarchyTreeNode[] = [];
+      for (const n of nodes) {
+        const subs: HierarchyTreeNode['subs'] = [];
+        if (n.subStart !== null) {
+          for (let s = n.subStart; s < n.subStart + n.subCount; s++) {
+            const sm = o.subMeshes[s];
+            if (sm !== undefined) subs.push({ subIndex: s, node: subNode(sm) });
+          }
+        }
+        const children = buildTree(o, n.children);
+        if (subs.length === 0 && children.length === 0) continue;
+        out.push({ name: n.name, subs, children });
+      }
+      return out;
+    };
+
     const out: HierarchyNode[] = [];
     for (let i = 0; i < this.objects.length; i++) {
       const o = this.objects[i]!;
@@ -1019,13 +1177,8 @@ export class LabRenderer {
         visible: o.visible,
         pickable: o.pickable,
         triangles: o.indexCount / 3,
-        subMeshes: o.subMeshes.map((sm) => ({
-          name: sm.name,
-          triangles: sm.indexCount / 3,
-          visible: sm.visible,
-          materialName: this.library.nameOf(this.params, sm.materialId),
-          source: this.sourceOf(sm),
-        })),
+        subMeshes: o.subMeshes.map(subNode),
+        tree: buildTree(o, o.nodeTree),
       });
     }
     return out;
@@ -1100,6 +1253,7 @@ export class LabRenderer {
     ranges: SubMeshRange[] | null,
     name: string,
     pos: [number, number, number],
+    tree: GltfNodeTree[] | null = null,
   ): number | null {
     const reused = this.objects.findIndex((o) => o.removed);
     if (reused < 0 && this.objects.length >= MAX_OBJECTS) {
@@ -1147,8 +1301,15 @@ export class LabRenderer {
           visible: true,
           materialId: sharedId(0),
           override: null,
+          nodeId: '',
+          nodePath: [],
+          nodeName: name,
+          primitiveKey: '',
+          primitiveIndex: 0,
         },
       ],
+      nodeTree: [],
+      bindingOrphans: [],
       slotBase: 0, // applySubMeshes → rebuildAllBindGroups 会统一重排
       pickable: true,
       visible: true,
@@ -1164,8 +1325,8 @@ export class LabRenderer {
     } else {
       index = this.objects.push(obj) - 1;
     }
-    // 按 GLB primitive 拆子网格（含槽位预算裁剪），内部重建全部 bind group
-    this.applySubMeshes(index, ranges);
+    // 按 GLB primitive 拆子网格（含槽位预算裁剪 + 绑定继承），内部重建全部 bind group
+    this.applySubMeshes(index, ranges, tree);
     this.recountTriangles();
     return index;
   }
@@ -1464,7 +1625,7 @@ export class LabRenderer {
     return this.library.serialize();
   }
 
-  /** 全场景材质槽绑定（JSON 导出用）：谁用了哪条材质、有没有局部覆盖 */
+  /** 全场景材质槽绑定（JSON 导出用）：谁用了哪条材质、有没有局部覆盖；身份信息供重导对齐 */
   exportSlots(): {
     object: string;
     mesh: string;
@@ -1472,6 +1633,9 @@ export class LabRenderer {
     materialName: string;
     source: MaterialSource;
     override: MaterialState | null;
+    nodeId: string;
+    nodePath: string[];
+    primitiveKey: string;
   }[] {
     const out: {
       object: string;
@@ -1480,6 +1644,9 @@ export class LabRenderer {
       materialName: string;
       source: MaterialSource;
       override: MaterialState | null;
+      nodeId: string;
+      nodePath: string[];
+      primitiveKey: string;
     }[] = [];
     for (const o of this.objects) {
       if (o.removed) continue;
@@ -1491,6 +1658,9 @@ export class LabRenderer {
           materialName: this.library.nameOf(this.params, sm.materialId),
           source: this.sourceOf(sm),
           override: sm.override === null ? null : cloneMaterial(sm.override),
+          nodeId: sm.nodeId,
+          nodePath: sm.nodePath,
+          primitiveKey: sm.primitiveKey,
         });
       }
     }
