@@ -1,0 +1,33 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 资产烘焙中间产物
+tools/**/dist/
+*.log
+
+# 冒烟测试的临时编译输出
+.smoke/
+
+# Python 缓存（gen_assets.py 生成 .ase / .cube 时产生）
+__pycache__/
+*.py[cod]
+
+# 会话过程产物：UI 验证截图，可随时重新生成
+# 注意：.workbuddy/memory/ 是项目记忆，需要入库
+.workbuddy/screenshots/
+
+# 会话诊断脚本与中间产物（~95MB；可复用脚本已转正到 assets/characters/_tools/）
+.workbuddy/tmp/
+
+# CDP 验证脚本生成的 Chrome 用户配置
+.workbuddy/tmp/chrome-profile/
+
+# 损坏的旧 .git 存档（灾难恢复证据，本地保留）
+.git.corrupt-20260902/

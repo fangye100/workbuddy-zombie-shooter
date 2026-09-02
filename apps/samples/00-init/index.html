@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — 00 设备初始化</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #141414; color: #d4d4d4;
+      font: 13px/1.6 ui-monospace, monospace; }
+    #app { display: grid; place-items: center; height: 100%; }
+    canvas { width: min(90vw, 960px); aspect-ratio: 16 / 9; background: #000; border-radius: 8px; }
+    #hud { position: absolute; left: 16px; top: 16px; white-space: pre; opacity: .75; }
+    #err { color: #f09595; max-width: 60ch; padding: 24px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="gpu"></canvas>
+    <pre id="hud"></pre>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

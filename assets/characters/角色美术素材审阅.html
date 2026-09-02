@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>角色美术素材审阅 · 末日尸潮</title>
+<style>
+:root{
+      --ink: #14110F;
+      --paper: #F5E7C8;
+      --bone: #FFF6E2;
+      --night: #171327;
+      --night-deep: #0E0C16;
+      --zombie: #8FD14F;
+      --blood: #E8402A;
+      --warn: #FFC531;
+      --teal: #2BC4D6;
+      --toxic: #9B5DE5;
+      --gold: #FF9F1C;
+      --rare-common: #9AA0A6;
+      --rare-rare: #4EA8FF;
+      --rare-epic: #9B5DE5;
+      --rare-legend: #FF9F1C;
+      --panel: #221E33;
+      --panel-deep: #0A0812;
+      --text-dim: #9AA0A6;
+      --cd-track: #3A3550;
+      --cd-icon: #6B6880;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#0A0812;color:#FFF6E2;font-family:"Sarasa Gothic SC","更纱黑体 SC","Noto Sans SC","Microsoft YaHei",sans-serif;padding:28px 24px 80px}
+h1{font-size:28px;font-weight:900;letter-spacing:.5px}
+h2{font-size:20px;font-weight:900;color:#FF9F1C;margin:40px 0 14px;border-left:6px solid #FF9F1C;padding-left:12px}
+h3{font-size:17px;font-weight:900;color:#FFF6E2;margin:18px 0 8px}
+.sub{color:#9AA0A6;font-size:13px;margin-top:8px;line-height:1.7}
+.num{font-family:"Inter","Arial Black",Impact,sans-serif;font-weight:900}
+code{font-family:ui-monospace,Consolas,monospace;background:#171327;padding:2px 6px;border-radius:4px;font-size:12px}
+
+.badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 12px;border:3px solid #14110F;font-weight:900;font-size:14px;color:#14110F;margin-right:10px}
+.hero{display:flex;align-items:center;gap:16px;margin-bottom:6px}
+.done{background:#8FD14F}
+
+.warn{background:#3a1a12;border-left:6px solid #E8402A;padding:12px 16px;font-size:13px;line-height:1.7;color:#FFF6E2;margin:18px 0}
+.ok{background:#1a3312;border-left-color:#8FD14F}
+
+/* ---- 48px 剪影验收 ---- */
+.sil-group{display:inline-flex;flex-direction:column;align-items:center;gap:6px;margin-right:18px}
+.sil-imgs{display:flex;gap:6px}
+.sil-imgs img{width:48px;height:48px;object-fit:contain;background:#221E33;border:3px solid #14110F}
+.sil-id{font-size:12px;font-weight:900;color:#FFC531}
+.sil-name{font-size:10px;color:#9AA0A6;max-width:66px;text-align:center;line-height:1.2}
+.sil-row{overflow-x:auto;padding:14px;background:#171327;border:4px solid #14110F;white-space:nowrap}
+
+/* ---- 角色卡片 ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:22px}
+.card{background:#221E33;border:5px solid #14110F;padding:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{display:flex;align-items:center;gap:10px}
+.card-id{font-size:22px;font-weight:900;font-family:"Inter",sans-serif}
+.card-cn{font-size:20px;font-weight:900}
+.card-en{font-size:12px;color:#9AA0A6;font-family:"Inter",sans-serif;font-weight:900}
+.card-threat{font-size:14px;font-weight:900;padding:4px 12px;border:3px solid #14110F;color:#14110F}
+.card-views{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.view{position:relative;background:#0A0812;border:4px solid #14110F;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.view img{max-width:100%;max-height:100%;object-fit:contain}
+.view-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(20,17,15,0.85);color:#FFF6E2;font-size:12px;font-weight:900;padding:4px 8px;text-align:center}
+.missing{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#E8402A;font-size:13px;font-weight:900}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#0A0812;border:3px solid #14110F;padding:8px 10px}
+.stat-k{font-size:11px;color:#9AA0A6;font-weight:900;letter-spacing:1px}
+.stat-v{font-size:15px;font-weight:900;color:#FFF6E2;line-height:1.3;word-break:break-word}
+
+.meta{font-size:13px;line-height:1.6;color:#FFF6E2;margin-bottom:6px}
+.meta b{color:#FFC531}
+
+/* ---- 预警矩阵 ---- */
+table{width:100%;border-collapse:collapse;background:#221E33;border:4px solid #14110F;font-size:14px;margin-top:10px}
+th{background:#0A0812;color:#9AA0A6;padding:10px;border:2px solid #14110F;text-align:left}
+td{padding:10px;border:2px solid #14110F;vertical-align:top}
+td.id{font-weight:900;color:#FFC531;white-space:nowrap}
+td.shape{color:#2BC4D6;font-weight:900}
+
+/* ---- 投放矩阵 ---- */
+.spawn td,.spawn th{text-align:center}
+.spawn td.on{color:#8FD14F;font-weight:900;font-size:18px}
+.spawn td.off{color:#3A3550}
+.spawn td.act{text-align:left;font-weight:900}
+.spawn .act-en{font-size:11px;color:#6B6880;margin-left:6px}
+
+.footer{margin-top:60px;color:#6B6880;font-size:12px}
+
+</style></head><body>
+
+<div class="hero">
+  <span class="badge done">24/24</span>
+  <div>
+    <h1>角色美术素材审阅 · 末日尸潮</h1>
+    <div class="sub">由 <code>assets/characters/roster.json</code> + <code>assets/style/tokens.json</code> + <code>images/</code> 自动生成
+      （<code>_tools/gen_asset_review.py</code>）。改设定改 roster.json，改风格改 tokens.json，不要手改本文件。</div>
+  </div>
+</div>
+
+
+
+
+<section>
+  <h2>48px 剪影验收</h2>
+  <div class="sub">把 24 张图缩到游戏内实际可读尺寸，8 角色必须 0.3s 可辨。重点看 E-03（球腹细腿）vs E-05（正圆球）、B-02（上下双体）vs B-03（瘦高）。</div>
+  <div class="sil-row"><div class="sil-group"><div class="sil-imgs"><img src="images/E-01/front/E-01_front.png" title="游荡者 · 正面"><img src="images/E-01/side/E-01_side.png" title="游荡者 · 侧面"><img src="images/E-01/attack/E-01_attack.png" title="游荡者 · 攻击"></div><div class="sil-id">E-01</div><div class="sil-name">游荡者</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/E-02/front/E-02_front.png" title="扑跃者 · 正面"><img src="images/E-02/side/E-02_side.png" title="扑跃者 · 侧面"><img src="images/E-02/attack/E-02_attack.png" title="扑跃者 · 攻击"></div><div class="sil-id">E-02</div><div class="sil-name">扑跃者</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/E-03/front/E-03_front.png" title="呕吐者 · 正面"><img src="images/E-03/side/E-03_side.png" title="呕吐者 · 侧面"><img src="images/E-03/attack/E-03_attack.png" title="呕吐者 · 攻击"></div><div class="sil-id">E-03</div><div class="sil-name">呕吐者</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/E-04/front/E-04_front.png" title="盾卫 · 正面"><img src="images/E-04/side/E-04_side.png" title="盾卫 · 侧面"><img src="images/E-04/attack/E-04_attack.png" title="盾卫 · 攻击"></div><div class="sil-id">E-04</div><div class="sil-name">盾卫</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/E-05/front/E-05_front.png" title="爆尸 · 正面"><img src="images/E-05/side/E-05_side.png" title="爆尸 · 侧面"><img src="images/E-05/attack/E-05_attack.png" title="爆尸 · 攻击"></div><div class="sil-id">E-05</div><div class="sil-name">爆尸</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/B-01/front/B-01_front.png" title="屠夫 · 正面"><img src="images/B-01/side/B-01_side.png" title="屠夫 · 侧面"><img src="images/B-01/attack/B-01_attack.png" title="屠夫 · 攻击"></div><div class="sil-id">B-01</div><div class="sil-name">屠夫</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/B-02/front/B-02_front.png" title="母体 · 正面"><img src="images/B-02/side/B-02_side.png" title="母体 · 侧面"><img src="images/B-02/attack/B-02_attack.png" title="母体 · 攻击"></div><div class="sil-id">B-02</div><div class="sil-name">母体</div></div><div class="sil-group"><div class="sil-imgs"><img src="images/B-03/front/B-03_front.png" title="零号 · 正面"><img src="images/B-03/side/B-03_side.png" title="零号 · 侧面"><img src="images/B-03/attack/B-03_attack.png" title="零号 · 攻击"></div><div class="sil-id">B-03</div><div class="sil-name">零号</div></div></div>
+</section>
+
+
+
+<section>
+  <h2>角色卡 · 8 个单位 × 3 视图</h2>
+  <div class="sub">真源驱动的卡片，改设定请改 roster.json，然后重跑脚本。</div>
+  <div class="grid">
+<div class="card" id="E-01">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">E-01</span>
+      <div>
+        <div class="card-cn">游荡者</div>
+        <div class="card-en">Shambler</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--teal)">低</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/E-01/front/E-01_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/E-01/side/E-01_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/E-01/attack/E-01_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">60</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">1.4 m/s</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">900</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">1.75 m</div></div></div>
+  <div class="meta"><b>定位:</b> 教学兵 · 教玩家侧移绕后与打头</div>
+  <div class="meta"><b>剪影:</b> 倒三角躯干 + 双臂垂过膝盖 + 头部低垂</div>
+  <div class="meta"><b>预警:</b> <b>挥抓</b> — 右臂高举过头顶，地面出现淡红扇形警示</div>
+</div>
+
+<div class="card" id="E-02">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">E-02</span>
+      <div>
+        <div class="card-cn">扑跃者</div>
+        <div class="card-en">Lunger</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--warn)">中</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/E-02/front/E-02_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/E-02/side/E-02_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/E-02/attack/E-02_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">45</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">3.2 m/s（扑跃 8 m/s）</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">1,100</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">1.25 m（四足）/ 1.60 m（直立）</div></div></div>
+  <div class="meta"><b>定位:</b> 打断站桩输出 · 逼玩家保留位移</div>
+  <div class="meta"><b>剪影:</b> 水平压缩 + 四肢外张 + 前倾头颅</div>
+  <div class="meta"><b>预警:</b> <b>扑跃</b> — 后腿压低、身体贴地，地面亮起黄色直线预警</div>
+</div>
+
+<div class="card" id="E-03">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">E-03</span>
+      <div>
+        <div class="card-cn">呕吐者</div>
+        <div class="card-en">Spitter</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--warn)">中</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/E-03/front/E-03_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/E-03/side/E-03_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/E-03/attack/E-03_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">70</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">1.0 m/s</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">1,200</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">1.70 m</div></div></div>
+  <div class="meta"><b>定位:</b> 占场型 · 逼玩家离开掩体与固定输出位</div>
+  <div class="meta"><b>剪影:</b> 巨大球腹 + 萎缩细肢 + 上仰喷口头</div>
+  <div class="meta"><b>预警:</b> <b>酸液抛射</b> — 球体鼓胀发亮，落点提前 0.8 s 出现绿圈</div>
+</div>
+
+<div class="card" id="E-04">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">E-04</span>
+      <div>
+        <div class="card-cn">盾卫</div>
+        <div class="card-en">Bulwark</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--blood)">高</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/E-04/front/E-04_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/E-04/side/E-04_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/E-04/attack/E-04_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">220</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">1.8 m/s（冲锋 6 m/s）</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">1,600</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">2.05 m</div></div></div>
+  <div class="meta"><b>定位:</b> 教玩家绕侧背 · 正面硬刚必亏</div>
+  <div class="meta"><b>剪影:</b> 厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</div>
+  <div class="meta"><b>预警:</b> <b>盾击冲锋</b> — 低头、盾板前压，地面出现黄色冲锋轨迹</div>
+</div>
+
+<div class="card" id="E-05">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">E-05</span>
+      <div>
+        <div class="card-cn">爆尸</div>
+        <div class="card-en">Bloater</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--blood)">高</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/E-05/front/E-05_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/E-05/side/E-05_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/E-05/attack/E-05_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">90</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">1.1 m/s</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">1,000</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">1.60 m / 直径 1.50 m</div></div></div>
+  <div class="meta"><b>定位:</b> 走位惩罚 + 环境武器（可引爆清群）</div>
+  <div class="meta"><b>剪影:</b> 正圆球 + 无脖子 + 最小头身比</div>
+  <div class="meta"><b>预警:</b> <b>自爆</b> — 体表由绿转红、裂纹增亮、高频蜂鸣</div>
+</div>
+
+<div class="card" id="B-01">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">B-01</span>
+      <div>
+        <div class="card-cn">屠夫</div>
+        <div class="card-en">THE BUTCHER</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--gold)">极高</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/B-01/front/B-01_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/B-01/side/B-01_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/B-01/attack/B-01_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">4200</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">2.2 m/s（冲锋 9 m/s）</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">4,200</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">3.2 m</div></div></div>
+  <div class="meta"><b>场景:</b> 废弃仓库冷库　<b>破防:</b> 撞墙眩晕 2.0 s，期间减伤 -50%</div>
+  <div class="meta"><b>剪影:</b> 宽肩倒梯形 + 右臂单点长垂（肉钩）</div>
+  <div class="meta"><b>预警:</b> <b>A</b> 横扫 — 地面亮起黄色弧形预警，弧长即判定范围<br><b>B</b> 冲锋 — 低头蓄力 0.7 s，地面黄色直线轨迹<br><b>C</b> 抛钩 — 链条绷紧声 + 钩子发光 0.5 s</div>
+</div>
+
+<div class="card" id="B-02">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">B-02</span>
+      <div>
+        <div class="card-cn">母体</div>
+        <div class="card-en">THE BROODMOTHER</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--gold)">极高</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/B-02/front/B-02_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/B-02/side/B-02_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/B-02/attack/B-02_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">6000</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">本体固定不可移动</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">6,000</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">4.0 m（上半身 2.4 m）</div></div></div>
+  <div class="meta"><b>场景:</b> 地铁隧道巢穴　<b>破防:</b> 产卵时囊袋张开 1.5 s，期间 ×2 伤害</div>
+  <div class="meta"><b>剪影:</b> 上下双体（地面产卵囊 + 反折上身）+ 双臂拖地</div>
+  <div class="meta"><b>预警:</b> <b>A</b> 产卵 — 囊袋口鼓胀发光 1.0 s<br><b>B</b> 酸雨 — 落点绿圈预警 1.0 s<br><b>C</b> 拍击 — 单臂高举 0.8 s，地面出现十字裂纹预告</div>
+</div>
+
+<div class="card" id="B-03">
+  <div class="card-head">
+    <div class="card-title">
+      <span class="card-id">B-03</span>
+      <div>
+        <div class="card-cn">零号</div>
+        <div class="card-en">PATIENT ZERO</div>
+      </div>
+    </div>
+    <div class="card-threat" style="background:var(--gold)">极高</div>
+  </div>
+  <div class="card-views"><div class="view"><img src="images/B-03/front/B-03_front.png" alt="正面"><div class="view-lbl">正面</div></div><div class="view"><img src="images/B-03/side/B-03_side.png" alt="侧面"><div class="view-lbl">侧面</div></div><div class="view"><img src="images/B-03/attack/B-03_attack.png" alt="攻击"><div class="view-lbl">攻击</div></div></div>
+  <div class="stats"><div class="stat"><div class="stat-k">HP</div><div class="stat-v">9000</div></div><div class="stat"><div class="stat-k">移速</div><div class="stat-v">3.0 m/s（P3 狂暴 ×1.6）</div></div><div class="stat"><div class="stat-k">三角面</div><div class="stat-v">5,200</div></div><div class="stat"><div class="stat-k">身高</div><div class="stat-v">2.6 m</div></div></div>
+  <div class="meta"><b>场景:</b> 生化医院天台　<b>破防:</b> 每次阶段切换 1.2 s 硬直，可打断一次攻击；P3 毒息期间侧后方为安全区</div>
+  <div class="meta"><b>剪影:</b> 瘦高 + 破碎下摆 + 胸腔纵向裂口发光</div>
+  <div class="meta"><b>预警:</b> <b>P1</b> 100–70% · 注射器飞刀 — 抬手 +  syringe 尖端紫光 0.4 s<br><b>P2</b> 70–35% · 长鞭双臂 — 白大褂撕裂瞬间 1.2 s 硬直（可打断）<br><b>P3</b> 35–0% · 胸腔毒息 — 胸腔裂口紫光暴涨 1.0 s</div>
+</div>
+</div>
+</section>
+
+
+
+<section>
+  <h2>预警形状语言矩阵</h2>
+  <div class="sub">确保同一幕内不会出现读错的预警形状。扇形 → 直线 → 落点圈 → 弧形 → 十字 → 体态突变，分级不能串。</div>
+  <table>
+    <thead><tr><th>角色</th><th>预警形状</th><th>剪影关键词</th></tr></thead>
+    <tbody><tr><td class='id'>E-01 游荡者</td><td class='shape'>右臂高举过头顶</td><td>倒三角躯干 + 双臂垂过膝盖 + 头部低垂</td></tr><tr><td class='id'>E-02 扑跃者</td><td class='shape'>后腿压低、身体贴地</td><td>水平压缩 + 四肢外张 + 前倾头颅</td></tr><tr><td class='id'>E-03 呕吐者</td><td class='shape'>球体鼓胀发亮</td><td>巨大球腹 + 萎缩细肢 + 上仰喷口头</td></tr><tr><td class='id'>E-04 盾卫</td><td class='shape'>低头、盾板前压</td><td>厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</td></tr><tr><td class='id'>E-05 爆尸</td><td class='shape'>体表由绿转红、裂纹增亮、高频蜂鸣</td><td>正圆球 + 无脖子 + 最小头身比</td></tr><tr><td class='id'>B-01 屠夫</td><td class='shape'>A=地面亮起黄色弧形预警 / B=低头蓄力 0.7 s / C=链条绷紧声 + 钩子发光 0.5 s</td><td>宽肩倒梯形 + 右臂单点长垂（肉钩）</td></tr><tr><td class='id'>B-02 母体</td><td class='shape'>A=囊袋口鼓胀发光 1.0 s / B=落点绿圈预警 1.0 s / C=单臂高举 0.8 s</td><td>上下双体（地面产卵囊 + 反折上身）+ 双臂拖地</td></tr><tr><td class='id'>B-03 零号</td><td class='shape'>P1=抬手 +  syringe 尖端紫光 0.4 s / P2=白大褂撕裂瞬间 1.2 s 硬直（可打断） / P3=胸腔裂口紫光暴涨 1.0 s</td><td>瘦高 + 破碎下摆 + 胸腔纵向裂口发光</td></tr></tbody>
+  </table>
+</section>
+
+
+
+<section>
+  <h2>投放矩阵</h2>
+  <table class="spawn">
+    <thead><tr><th>幕</th><th>波</th><th>E-01</th><th>E-02</th><th>E-03</th><th>E-04</th><th>E-05</th><th>BOSS</th><th>场地</th></tr></thead>
+    <tbody><tr><td class='act' style='color:var(--warn);text-align:left'><b>Act 1</b> 城郊公路<span class='act-en'>Highway Outskirts</span></td><td>1–3 波</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td class='off'>·</td><td class='off'>·</td><td style='color:var(--blood);font-weight:900'>B-01 屠夫</td><td style='font-size:12px;color:#9AA0A6'>加油站雨棚 + 翻覆车阵，开阔但多硬掩体</td></tr><tr><td class='act' style='color:var(--blood);text-align:left'><b>Act 2</b> 废弃仓库<span class='act-en'>Ruined Warehouse</span></td><td>4–6 波</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td style='color:var(--blood);font-weight:900'>B-01 屠夫</td><td style='font-size:12px;color:#9AA0A6'>货架巷道 + 冷库，视线被切碎，适合伏击</td></tr><tr><td class='act' style='color:var(--toxic);text-align:left'><b>Act 3</b> 地铁隧道<span class='act-en'>Subway Tunnels</span></td><td>7–9 波</td><td class='off'>·</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td style='color:var(--toxic);font-weight:900'>B-02 母体</td><td style='font-size:12px;color:#9AA0A6'>狭长线性，纵向空间高，天花板可挂敌</td></tr><tr><td class='act' style='color:var(--gold);text-align:left'><b>Act 4</b> 生化医院<span class='act-en'>Biohazard Hospital</span></td><td>10–12 波</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td style='color:var(--toxic);font-weight:900'>B-03 零号</td><td style='font-size:12px;color:#9AA0A6'>天台开阔 + 病房迷宫双层，风向影响毒息</td></tr></tbody>
+  </table>
+</section>
+
+
+<div class="footer">末日尸潮 · 横屏肉鸽射击 UI · 角色美术素材审阅页</div>
+
+</body></html>

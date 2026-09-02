@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-04 盾卫 · 游戏成品</title>
+<style>
+  :root{
+    --ink:#14110F; --paper:#F5E7C8; --zombie:#8FD14F; --blood:#E8402A;
+    --teal:#2BC4D6; --warn:#FFC531; --panel:#221E33; --panel-deep:#0A0812;
+    --dim:#9AA0A6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;overflow:hidden;
+    font-family:"Sarasa Gothic SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--panel-deep);color:var(--paper);}
+  body{display:flex;flex-direction:column;}
+
+  header{flex:0 0 auto;background:var(--panel);border-bottom:4px solid var(--ink);
+    padding:11px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .title{font-weight:900;font-size:16px;}
+  .title .id{color:var(--teal);}
+  .badge{padding:2px 9px;border-radius:11px;font-size:10.5px;font-weight:700;
+    border:2px solid var(--ink);background:var(--zombie);color:var(--ink);}
+  .spacer{flex:1;}
+  .ctrls{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;
+    padding:6px 12px;border:3px solid var(--ink);border-radius:8px;
+    background:#2a2540;color:var(--paper);box-shadow:3px 3px 0 var(--ink);
+    transition:transform .08s,box-shadow .08s;}
+  button:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink);}
+  button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+  button.on{background:var(--zombie);color:var(--ink);}
+
+  .body{flex:1 1 auto;display:flex;min-height:0;}
+  @media(max-width:980px){.body{flex-direction:column;}}
+
+  .stage{flex:1 1 auto;position:relative;background:#1a1729;min-height:0;}
+  model-viewer{width:100%;height:100%;}
+  model-viewer.silhouette{filter:brightness(0);}
+  .hint{position:absolute;left:12px;bottom:10px;font-size:11px;color:#8b86a3;
+    pointer-events:none;}
+
+  aside{flex:0 0 320px;background:var(--panel);border-left:4px solid var(--ink);
+    padding:14px 16px;overflow-y:auto;}
+  @media(max-width:980px){aside{flex:0 0 auto;border-left:none;border-top:4px solid var(--ink);}}
+
+  h3{margin:0 0 9px;font-size:12.5px;letter-spacing:.4px;color:var(--teal);
+    text-transform:uppercase;}
+  h3:not(:first-child){margin-top:18px;}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  td{padding:4px 0;border-bottom:1px solid #322c4a;}
+  td:first-child{color:var(--dim);}
+  td:last-child{text-align:right;font-weight:700;}
+  .ok{color:var(--zombie);}
+  .no{color:var(--blood);}
+  .wn{color:var(--warn);}
+
+  ul{margin:0;padding-left:16px;font-size:11.5px;line-height:1.75;}
+  li.done{color:#8fd14faa;text-decoration:line-through;}
+  li.todo{color:var(--paper);}
+
+  .note{margin-top:14px;padding:9px 11px;font-size:10.8px;line-height:1.7;
+    background:#191528;border-left:3px solid var(--warn);border-radius:5px;color:#c8c3d8;}
+  .note b{color:var(--warn);}
+
+  footer{flex:0 0 auto;padding:7px 18px;font-size:10.8px;color:#8b86a3;
+    background:var(--panel);border-top:4px solid var(--ink);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><span class="id">E-04</span> 盾卫 Bulwark · 游戏成品</div>
+  <span class="badge">1,599 tris · 达标</span>
+  <span class="badge" style="background:var(--teal)">UV + 贴图</span>
+  <div class="spacer"></div>
+  <div class="ctrls">
+    <button id="btnRotate" class="on">自动旋转</button>
+    <button id="btnSil">剪影验收</button>
+    <button id="btnReset">重置视角</button>
+  </div>
+</header>
+
+<div class="body">
+  <div class="stage">
+    <model-viewer id="mv" src="textured/E04_Bulwark_1600_baked.glb"
+      camera-controls auto-rotate shadow-intensity="1"
+      environment-image="neutral" tone-mapping="commerce"></model-viewer>
+    <div class="hint">左键旋转 · 滚轮缩放 · 右键平移</div>
+  </div>
+
+  <aside>
+    <h3>资产规格</h3>
+    <table>
+      <tr><td>三角面</td><td class="ok">1,599</td></tr>
+      <tr><td>预算（roster）</td><td>1,600</td></tr>
+      <tr><td>顶点</td><td>1,502</td></tr>
+      <tr><td>UV 顶点</td><td>1,635</td></tr>
+      <tr><td>UV 利用率</td><td>64%</td></tr>
+      <tr><td>贴图</td><td class="ok">1024² baseColor</td></tr>
+      <tr><td>体积</td><td class="ok">135 KB</td></tr>
+      <tr><td>源文件</td><td>38 MB（8 万面）</td></tr>
+      <tr><td>压缩比</td><td class="ok">体积 0.35%</td></tr>
+      <tr><td>骨骼</td><td class="no">0</td></tr>
+      <tr><td>动画</td><td class="no">0</td></tr>
+    </table>
+
+    <h3>管线进度</h3>
+    <ul>
+      <li class="done">AI 生成高模（混元 3D，图生3D）</li>
+      <li class="done">减面到预算（QEM，−98%）</li>
+      <li class="done">顶点色烘焙（高模 baseColor）</li>
+      <li class="done">UV 展开（xatlas）</li>
+      <li class="done">贴图烘焙 + 色阶校正</li>
+      <li class="todo">Maya HumanIK 骨架与蒙皮</li>
+      <li class="todo">Mixamo 动画重定向</li>
+      <li class="todo">FBX 导出入引擎</li>
+    </ul>
+
+    <div class="note">
+      <b>关于颜色</b>：混元 3D 生成的 baseColor 实测偏暗（4096² 贴图亮度中位仅
+      22/255，70% 像素低于 40）。已按亮度中位反解 gamma 自动校正到 0.335，
+      并加饱和 1.25×。若要做正式资产，建议在 Substance 里按
+      <code>assets/style/tokens.json</code> 的配色重绘，才对得上「美漫卡通、高饱和撞色」的调性。
+    </div>
+  </aside>
+</div>
+
+<footer>
+  零云端额度产出 · 全流程脚本在 <code>assets/characters/_tools/</code>
+  （gen3d_from_image.py → make_game_ready.py → bake_lowpoly.py）
+</footer>
+
+<script type="module">
+  const CDNS=[
+    "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js",
+    "https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js",
+    "https://fastly.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"
+  ];
+  function load(u){return new Promise((res,rej)=>{const s=document.createElement("script");
+    s.type="module";s.src=u;s.onload=res;s.onerror=()=>rej(new Error(u));document.head.appendChild(s);});}
+
+  let ok=false;
+  for(const u of CDNS){ try{ await load(u); ok=true; break; }catch(e){} }
+  if(!ok){
+    document.querySelector(".stage").insertAdjacentHTML("beforeend",
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;'+
+      'justify-content:center;color:#E8402A;font-size:13px;text-align:center;padding:20px">'+
+      '预览组件加载失败（CDN 不可达）<br><span style="font-size:11px;color:#9AA0A6">'+
+      '可直接在 Blender 打开 textured/E04_Bulwark_1600_baked.glb</span></div>');
+  } else {
+    const mv=document.getElementById("mv");
+    const bR=document.getElementById("btnRotate"), bS=document.getElementById("btnSil");
+    bR.onclick=()=>{mv.autoRotate=!mv.autoRotate;bR.classList.toggle("on",mv.autoRotate);};
+    bS.onclick=()=>{const on=mv.classList.toggle("silhouette");bS.classList.toggle("on",on);};
+    document.getElementById("btnReset").onclick=()=>mv.resetTurntableRotation();
+  }
+</script>
+</body>
+</html>

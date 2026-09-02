@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>末日尸潮 · 风格圣经 v1.0</title>
+<style>
+:root{
+  --ink:#14110F; --paper:#F5E7C8; --bone:#FFF6E2; --night:#171327; --night-deep:#0E0C16;
+  --zombie:#8FD14F; --blood:#E8402A; --warn:#FFC531; --teal:#2BC4D6; --toxic:#9B5DE5; --gold:#FF9F1C;
+  --panel:#221E33; --panel-deep:#0A0812; --text-dim:#9AA0A6; --cd-track:#3A3550; --cd-icon:#6B6880;
+  --rare-common:#9AA0A6; --rare-rare:#4EA8FF; --rare-epic:#9B5DE5; --rare-legend:#FF9F1C;
+  --stroke:4px; --stroke-bold:6px; --r-card:18px; --r-panel:24px; --hard:6px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:40px 32px 96px;
+  background:var(--panel-deep);
+  color:var(--paper);
+  font-family:"Inter","Sarasa Gothic SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto}
+h1{
+  font-size:56px; font-weight:900; letter-spacing:-1px; margin:0 0 8px;
+  color:var(--bone); text-shadow:var(--hard) var(--hard) 0 var(--blood);
+}
+.sub{color:var(--text-dim);font-size:15px;margin-bottom:40px}
+h2{
+  font-size:26px;font-weight:900;color:var(--ink);background:var(--warn);
+  display:inline-block;padding:6px 16px;margin:52px 0 18px;
+  border:var(--stroke) solid var(--ink);
+  box-shadow:var(--hard) var(--hard) 0 0 var(--ink);
+}
+h3{font-size:16px;font-weight:900;color:var(--bone);margin:28px 0 10px}
+p,li{font-size:14px;line-height:1.75}
+p{max-width:820px;color:#D9CFBB}
+.card{
+  background:var(--panel);border:var(--stroke) solid var(--ink);border-radius:var(--r-panel);
+  box-shadow:var(--hard) var(--hard) 0 0 var(--ink);padding:22px 24px;margin:18px 0;
+}
+.grid{display:grid;gap:12px}
+.g-sw{grid-template-columns:repeat(auto-fill,minmax(184px,1fr))}
+.sw{border:var(--stroke) solid var(--ink);border-radius:var(--r-card);overflow:hidden;background:#2A2540}
+.sw .chip{height:64px;border-bottom:var(--stroke) solid var(--ink)}
+.sw .meta{padding:10px 12px}
+.sw .nm{font-weight:900;font-size:13px;color:var(--bone)}
+.sw .hex{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--text-dim);margin-top:2px}
+.sw .use{font-size:11px;color:#A79CB8;margin-top:6px;line-height:1.5}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;
+  border:var(--stroke) solid var(--ink);border-radius:var(--r-card);overflow:hidden}
+th{background:var(--zombie);color:var(--ink);font-weight:900;text-align:left;padding:10px 12px;font-size:12px}
+td{padding:10px 12px;border-top:2px solid #342E4C;color:#D9CFBB;vertical-align:middle}
+tr:nth-child(even) td{background:#1E1A2E}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--panel-deep);
+  padding:2px 6px;border-radius:6px;color:var(--teal)}
+pre{
+  background:var(--night-deep);border:var(--stroke) solid var(--ink);border-radius:var(--r-card);
+  padding:18px 20px;overflow-x:auto;font-size:12.5px;line-height:1.7;color:#C9E4C5;
+  box-shadow:var(--hard) var(--hard) 0 0 var(--ink);margin:14px 0;
+}
+pre .c{color:#6B6880}.k{color:var(--warn)}.s{color:var(--zombie)}.n{color:var(--gold)}
+.ramp{display:flex;gap:0;border:var(--stroke) solid var(--ink);border-radius:var(--r-card);overflow:hidden}
+.ramp div{flex:1;height:56px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;font-family:ui-monospace,monospace}
+.lw{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:2px solid #342E4C}
+.lw:last-child{border-bottom:0}
+.lw .box{width:74px;height:44px;background:var(--paper);border-color:var(--ink);border-style:solid;border-radius:8px}
+.lw .lbl{font-weight:900;font-size:13px;color:var(--bone);min-width:112px}
+.lw .desc{font-size:12px;color:#A79CB8}
+.y{color:var(--warn);font-weight:900}
+.n2{color:var(--blood);font-weight:900}
+ul{padding-left:20px}
+li{margin:5px 0;color:#D9CFBB}
+.tag{display:inline-block;background:var(--panel-deep);border:2px solid var(--ink);border-radius:999px;
+  padding:3px 12px;font-size:11px;font-weight:900;color:var(--teal);margin-right:6px}
+.foot{margin-top:56px;color:#6B6880;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>末日尸潮 · 风格圣经</h1>
+  <div class="sub">v1.0 · 美漫卡通描边 / Comic-book × Brutalism-Arcade · 第三人称顶视角 3D 肉鸽射击 · WebGPU (WGSL)</div>
+
+  <div class="card">
+    <span class="tag">怎么用</span>
+    <p style="margin-top:12px">这份文档是<strong>美术与渲染的裁决依据</strong>：任何新角色、场景、道具、UI 产出，先过一遍 01–07 的表；有争议时以本表为准，不以单张参考图为准。08 是引擎落地实现，直接对应 Aether 的 Clustered Forward+ 管线。</p>
+  </div>
+
+  <!-- 01 -->
+  <h2>01 · 色板表</h2>
+  <p>共 20 个核心 token（11 主色 + 4 稀有度 + 5 数值），另有 5 个 UI 辅助色。禁止在资产里出现表外颜色，禁止纯黑 <code>#000000</code> 与纯白 <code>#FFFFFF</code>。</p>
+
+  <h3>主色 Core</h3>
+  <div class="grid g-sw">
+    <div class="sw"><div class="chip" style="background:#14110F"></div><div class="meta"><div class="nm">ink</div><div class="hex">#14110F</div><div class="use">全部描边与文字轮廓</div></div></div>
+    <div class="sw"><div class="chip" style="background:#F5E7C8"></div><div class="meta"><div class="nm">paper</div><div class="hex">#F5E7C8</div><div class="use">UI 主底 / 标签 / 纸感</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFF6E2"></div><div class="meta"><div class="nm">bone</div><div class="hex">#FFF6E2</div><div class="use">高光与最高文字层级</div></div></div>
+    <div class="sw"><div class="chip" style="background:#171327"></div><div class="meta"><div class="nm">night</div><div class="hex">#171327</div><div class="use">HUD 面板底，比纯黑透气</div></div></div>
+    <div class="sw"><div class="chip" style="background:#0E0C16"></div><div class="meta"><div class="nm">night-deep</div><div class="hex">#0E0C16</div><div class="use">暗部色相偏移的目标色</div></div></div>
+    <div class="sw"><div class="chip" style="background:#8FD14F"></div><div class="meta"><div class="nm">zombie</div><div class="hex">#8FD14F</div><div class="use">敌人主色 / 毒系 / 拾取高亮</div></div></div>
+    <div class="sw"><div class="chip" style="background:#E8402A"></div><div class="meta"><div class="nm">blood</div><div class="hex">#E8402A</div><div class="use">伤害 / 濒死 / 危险区</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFC531"></div><div class="meta"><div class="nm">warn</div><div class="hex">#FFC531</div><div class="use">警告 / 倒计时 / 弹药告急</div></div></div>
+    <div class="sw"><div class="chip" style="background:#2BC4D6"></div><div class="meta"><div class="nm">teal</div><div class="hex">#2BC4D6</div><div class="use">科技 / 弹药 / 护盾 / 冷补光</div></div></div>
+    <div class="sw"><div class="chip" style="background:#9B5DE5"></div><div class="meta"><div class="nm">toxic</div><div class="hex">#9B5DE5</div><div class="use">精英怪 / 异变 / Debuff</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FF9F1C"></div><div class="meta"><div class="nm">gold</div><div class="hex">#FF9F1C</div><div class="use">传说掉落 / 终极技能就绪</div></div></div>
+  </div>
+
+  <h3>稀有度 Rarity</h3>
+  <div class="grid g-sw">
+    <div class="sw"><div class="chip" style="background:#9AA0A6"></div><div class="meta"><div class="nm">rare-common</div><div class="hex">#9AA0A6</div><div class="use">普通 · 灰</div></div></div>
+    <div class="sw"><div class="chip" style="background:#4EA8FF"></div><div class="meta"><div class="nm">rare-rare</div><div class="hex">#4EA8FF</div><div class="use">精良 · 蓝</div></div></div>
+    <div class="sw"><div class="chip" style="background:#9B5DE5"></div><div class="meta"><div class="nm">rare-epic</div><div class="hex">#9B5DE5</div><div class="use">史诗 · 紫</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FF9F1C"></div><div class="meta"><div class="nm">rare-legend</div><div class="hex">#FF9F1C</div><div class="use">传说 · 金</div></div></div>
+  </div>
+
+  <h3>UI 辅助色</h3>
+  <div class="grid g-sw">
+    <div class="sw"><div class="chip" style="background:#221E33"></div><div class="meta"><div class="nm">panel</div><div class="hex">#221E33</div><div class="use">面板底</div></div></div>
+    <div class="sw"><div class="chip" style="background:#0A0812"></div><div class="meta"><div class="nm">panel-deep</div><div class="hex">#0A0812</div><div class="use">页面背景 / 遮罩</div></div></div>
+    <div class="sw"><div class="chip" style="background:#9AA0A6"></div><div class="meta"><div class="nm">text-dim</div><div class="hex">#9AA0A6</div><div class="use">次级文字</div></div></div>
+    <div class="sw"><div class="chip" style="background:#3A3550"></div><div class="meta"><div class="nm">cd-track</div><div class="hex">#3A3550</div><div class="use">冷却槽底</div></div></div>
+    <div class="sw"><div class="chip" style="background:#6B6880"></div><div class="meta"><div class="nm">cd-icon</div><div class="hex">#6B6880</div><div class="use">冷却图标</div></div></div>
+  </div>
+
+  <!-- 02 -->
+  <h2>02 · 线宽表</h2>
+  <p>线宽以 <strong>1080p 屏幕空间像素</strong>为基准；3D 侧靠顶点色 R 通道（0–1 映射 0–8mm 世界空间外扩）+ 距离补偿实现恒定屏幕宽度。</p>
+  <div class="card">
+    <div class="lw"><div class="box" style="border-width:6px"></div><div class="lbl">6 px</div><div class="desc">主角 / 精英怪 · UI 强调边框（<code>stroke-bold</code>）</div></div>
+    <div class="lw"><div class="box" style="border-width:4px"></div><div class="lbl">4 px</div><div class="desc">普通僵尸 · 近景道具 · UI 常规边框（<code>stroke-ink</code>）</div></div>
+    <div class="lw"><div class="box" style="border-width:3px"></div><div class="lbl">3 px</div><div class="desc">中景道具 / 掩体</div></div>
+    <div class="lw"><div class="box" style="border-width:2px"></div><div class="lbl">2 px</div><div class="desc">远景道具 / 地面装饰 —— 再细就会在移动端闪烁，宁可去掉描边也不要 1px</div></div>
+  </div>
+
+  <!-- 03 -->
+  <h2>03 · 明暗阶表</h2>
+  <p>2 阶硬分阶：<strong>暗部做色相偏移（往 night-deep 紫蓝拉），不是压灰</strong>；亮部保饱和，最上一层高光往 bone 提，只给金属 / 湿润 / 黏液材质。</p>
+  <table>
+    <tr><th>固有色</th><th>暗部（NdotL &lt; 0.30）</th><th>亮部</th><th>高光层</th></tr>
+    <tr><td><code>zombie</code> #8FD14F</td><td><div class="ramp"><div style="background:#3A5523;color:#C9E4C5">#3A5523</div></div></td><td><div class="ramp"><div style="background:#8AD442;color:#14110F">#8AD442</div></div></td><td><div class="ramp"><div style="background:#B8E87D;color:#14110F">#B8E87D</div></div></td></tr>
+    <tr><td><code>blood</code> #E8402A</td><td><div class="ramp"><div style="background:#601C16;color:#C9E4C5">#601C16</div></div></td><td><div class="ramp"><div style="background:#F83C23;color:#14110F">#F83C23</div></div></td><td><div class="ramp"><div style="background:#FF7F67;color:#14110F">#FF7F67</div></div></td></tr>
+    <tr><td><code>teal</code> #2BC4D6</td><td><div class="ramp"><div style="background:#12505A;color:#C9E4C5">#12505A</div></div></td><td><div class="ramp"><div style="background:#1CC8DC;color:#14110F">#1CC8DC</div></div></td><td><div class="ramp"><div style="background:#6DE0E7;color:#14110F">#6DE0E7</div></div></td></tr>
+    <tr><td><code>toxic</code> #9B5DE5</td><td><div class="ramp"><div style="background:#412761;color:#C9E4C5">#412761</div></div></td><td><div class="ramp"><div style="background:#A05AF3;color:#14110F">#A05AF3</div></div></td><td><div class="ramp"><div style="background:#C794F6;color:#14110F">#C794F6</div></div></td></tr>
+    <tr><td><code>gold</code> #FF9F1C</td><td><div class="ramp"><div style="background:#68410F;color:#C9E4C5">#68410F</div></div></td><td><div class="ramp"><div style="background:#FF9E0B;color:#14110F">#FF9E0B</div></div></td><td><div class="ramp"><div style="background:#FFC357;color:#14110F">#FFC357</div></div></td></tr>
+    <tr><td><code>paper</code> #F5E7C8</td><td><div class="ramp"><div style="background:#635D53;color:#C9E4C5">#635D53</div></div></td><td><div class="ramp"><div style="background:#F7E7C4;color:#14110F">#F7E7C4</div></div></td><td><div class="ramp"><div style="background:#FFF5D6;color:#14110F">#FFF5D6</div></div></td></tr>
+  </table>
+
+  <!-- 04 -->
+  <h2>04 · 描边规则</h2>
+  <ul>
+    <li>方法：<strong>inverted hull（背面外扩）</strong>，不用后处理边缘检测——后者在顶视角密集尸潮时会糊成一团。</li>
+    <li>线宽存储：<strong>顶点色 R 通道</strong>，0–1 映射 0–8 mm 世界空间外扩量，逐资产可微调。</li>
+    <li>外扩量必须做摄像机距离补偿，保证屏幕空间线宽恒定（近处细远处粗会瞬间出戏）。</li>
+    <li><code>cullMode: 'front'</code>，depth bias 微推，避免与本体 z-fighting。</li>
+    <li>描边不接光照、不接 fog，纯 <code>ink</code> 色。<span class="n2">禁止</span>用阴影代替描边。</li>
+    <li>顶视角特例：角色头顶与地面的夹角处容易出现断线，建模时头顶法线需手动外扩修形。</li>
+  </ul>
+
+  <!-- 05 -->
+  <h2>05 · 半调网点</h2>
+  <ul>
+    <li>屏幕空间后处理，<strong>只叠加在暗部</strong>（luminance &lt; 0.45），亮部保持干净——全屏铺网点会让画面变脏、移动端还会在细密纹理上产生摩尔纹。</li>
+    <li>1080p 下网点尺寸 <strong>4–6 px</strong>，旋转 45° 打散网格感；移动端按 DPR 缩放，不要固定像素。</li>
+    <li>强度控制在 0.15–0.25，超过 0.3 会和描边抢视觉。</li>
+  </ul>
+
+  <!-- 06 -->
+  <h2>06 · 投影与控件</h2>
+  <ul>
+    <li>投影一律<strong>硬边偏移</strong> 6 px（<code>shadow-hard</code>），零模糊。模糊阴影会破坏漫画感。</li>
+    <li>UI 圆角：卡片 18 px / 面板 24 px；主按钮描边 4 px，强调按钮 6 px。</li>
+    <li>按钮按下 = 位移 6 px + 投影归零，这是全游戏唯一的"物理反馈"，别加缩放动画。</li>
+    <li>稀有度用卡片<strong>顶部 6 px 色条</strong>表达，不用整卡染色——同屏 12 张卡时整卡染色会糊成一片。</li>
+  </ul>
+
+  <!-- 07 -->
+  <h2>07 · Do / Don't</h2>
+  <table>
+    <tr><th style="background:var(--zombie)">Do</th><th style="background:var(--blood);color:var(--bone)">Don't</th></tr>
+    <tr><td>暗部往 night-deep 偏色相</td><td>暗部直接乘灰 / 压黑</td></tr>
+    <tr><td>描边宽度随距离补偿，屏幕恒定</td><td>固定世界空间宽度，远处变粗</td></tr>
+    <tr><td>高饱和撞色，主色一眼可辨</td><td>整体降饱和"电影感"调色</td></tr>
+    <tr><td>网点只上暗部，强度 ≤ 0.25</td><td>全屏网点 / 强度 0.5+</td></tr>
+    <tr><td>稀有度用顶部色条</td><td>整卡按稀有度染色</td></tr>
+    <tr><td>道具复用 kit + trim sheet + 顶点色</td><td>每个箱子单独贴图与材质</td></tr>
+    <tr><td>僵尸 ≤ 1.5k tris，GPU Instancing</td><td>每只僵尸独立 draw call</td></tr>
+  </table>
+
+  <!-- 08 -->
+  <h2>08 · 引擎落地（WGSL / Aether）</h2>
+  <p>对应管线文档中的 Pass 拓扑：<strong>描边</strong>跟在 <code>[8 Opaque]</code> 之后、<code>[14 Transparent]</code> 之前；<strong>半调 + LUT</strong> 插在 <code>[15 Post]</code> 的 Tonemap 之后、Grading 之前。</p>
+
+  <h3>描边 Pass · inverted hull</h3>
+<pre><span class="c">// 线宽来自顶点色 R 通道；外扩量随距离线性放大，保证屏幕空间线宽恒定</span>
+<span class="k">@vertex</span>
+<span class="k">fn</span> vs_outline(
+  <span class="k">@location</span>(0) position: vec3f,
+  <span class="k">@location</span>(1) normal:   vec3f,
+  <span class="k">@location</span>(2) color:    vec4f,   <span class="c">// R = 线宽 0..1 → 0..8mm</span>
+) -&gt; <span class="k">@builtin</span>(position) vec4f {
+  <span class="k">let</span> worldPos = (model * vec4f(position, <span class="n">1.0</span>)).xyz;
+  <span class="k">let</span> worldNrm = normalize((model * vec4f(normal, <span class="n">0.0</span>)).xyz);
+  <span class="k">let</span> dist     = length(camera.position - worldPos);
+
+  <span class="k">let</span> width = color.r * <span class="n">8.0</span> * <span class="n">0.001</span> * dist * camera.pxToWorldScale;
+  <span class="k">return</span> camera.viewProj * vec4f(worldPos + worldNrm * width, <span class="n">1.0</span>);
+}
+<span class="c">// pipeline: cullMode = 'front'，depthBias 微推，避免与本体 z-fighting</span>
+
+<span class="k">@fragment</span>
+<span class="k">fn</span> fs_outline() -&gt; <span class="k">@location</span>(0) vec4f {
+  <span class="k">return</span> vec4f(INK, <span class="n">1.0</span>);   <span class="c">// 纯墨线，不接光照、不接雾</span>
+}</pre>
+
+  <h3>2 阶 Toon 分阶</h3>
+<pre><span class="k">fn</span> boostSat(c: vec3f, k: f32) -&gt; vec3f {
+  <span class="k">let</span> l = dot(c, vec3f(<span class="n">0.2126</span>, <span class="n">0.7152</span>, <span class="n">0.0722</span>));
+  <span class="k">return</span> clamp(l + (c - vec3f(l)) * k, vec3f(<span class="n">0.0</span>), vec3f(<span class="n">1.0</span>));
+}
+
+<span class="k">fn</span> toonShade(albedo: vec3f, ndotl: f32, isWet: f32) -&gt; vec3f {
+  <span class="c">// 暗部：先压到 0.55，再把色相往 night-deep 拉，而不是压成灰</span>
+  <span class="k">let</span> shadowCol = mix(boostSat(albedo * <span class="n">0.55</span>, <span class="n">1.05</span>), NIGHT_DEEP, <span class="n">0.30</span>);
+  <span class="k">let</span> litCol    = boostSat(albedo, <span class="n">1.12</span>);
+
+  <span class="k">var</span> c = select(shadowCol, litCol, ndotl &gt; <span class="n">0.30</span>);
+  <span class="c">// 高光层只给金属 / 黏液 / 湿润表面</span>
+  c = mix(c, mix(litCol * <span class="n">1.06</span>, BONE, <span class="n">0.35</span>), isWet * step(<span class="n">0.88</span>, ndotl));
+  <span class="k">return</span> c;
+}</pre>
+
+  <h3>半调网点（Post · 仅暗部）</h3>
+<pre><span class="k">let</span> rot = mat2x2f(<span class="n">0.7071</span>, <span class="n">-0.7071</span>, <span class="n">0.7071</span>, <span class="n">0.7071</span>);  <span class="c">// 45° 打散网格感</span>
+<span class="k">let</span> p   = rot * (frag.xy / dotSize);              <span class="c">// 1080p: dotSize = 4..6</span>
+<span class="k">let</span> d   = length(fract(p) - <span class="n">0.5</span>) - <span class="n">0.32</span>;         <span class="c">// 圆形网点 SDF</span>
+<span class="k">let</span> lum = dot(color, vec3f(<span class="n">0.2126</span>, <span class="n">0.7152</span>, <span class="n">0.0722</span>));
+<span class="k">let</span> dot_ = <span class="n">1.0</span> - smoothstep(-<span class="n">0.06</span>, <span class="n">0.06</span>, d);
+color = mix(color, INK, dot_ * (<span class="n">1.0</span> - smoothstep(<span class="n">0.0</span>, <span class="n">0.45</span>, lum)) * <span class="n">0.20</span>);</pre>
+
+  <!-- 09 -->
+  <h2>09 · 交付文件</h2>
+  <table>
+    <tr><th>文件</th><th>用途</th><th>消费方</th></tr>
+    <tr><td><code>tokens.json</code></td><td>唯一真源。改这里再跑生成脚本</td><td>全链路</td></tr>
+    <tr><td><code>末日尸潮-Tokens.ase</code></td><td>Adobe 色板（Photoshop / Substance / Aseprite / Blender 可直接导入）</td><td>美术</td></tr>
+    <tr><td><code>末日尸潮-ToonRamp.cube</code></td><td>17³ 3D LUT，整体调色：加饱和 + 暗部染紫蓝 + 亮部提亮。<strong>不做分阶</strong></td><td>引擎 Post / 录屏后期</td></tr>
+    <tr><td><code>tokens.css</code></td><td>CSS 变量 + 漫画控件类，UI 与原型直接引用</td><td>UI / 前端</td></tr>
+    <tr><td><code>风格圣经.html</code></td><td>本文件</td><td>全员</td></tr>
+    <tr><td><code>_tools/gen_assets.py</code></td><td>从 tokens.json 重新生成色板与 LUT（纯标准库）</td><td>工具链</td></tr>
+  </table>
+  <p style="margin-top:12px">重新生成：<code>"C:/Users/fangy/.workbuddy/binaries/python/versions/3.13.12/python.exe" _tools/gen_assets.py</code></p>
+
+  <div class="foot">末日尸潮 · 风格圣经 v1.0 · 由 WorkBuddy 智能设计助手生成 · 与画布设计稿同源</div>
+</div>
+</body>
+</html>

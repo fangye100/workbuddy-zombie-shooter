@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>角色 Frame 施工图 · 末日尸潮</title>
+<style>
+:root{
+      --ink: #14110F;
+      --paper: #F5E7C8;
+      --bone: #FFF6E2;
+      --night: #171327;
+      --night-deep: #0E0C16;
+      --zombie: #8FD14F;
+      --blood: #E8402A;
+      --warn: #FFC531;
+      --teal: #2BC4D6;
+      --toxic: #9B5DE5;
+      --gold: #FF9F1C;
+      --rare-common: #9AA0A6;
+      --rare-rare: #4EA8FF;
+      --rare-epic: #9B5DE5;
+      --rare-legend: #FF9F1C;
+      --panel: #221E33;
+      --panel-deep: #0A0812;
+      --text-dim: #9AA0A6;
+      --cd-track: #3A3550;
+      --cd-icon: #6B6880;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0A0812;color:#FFF6E2;
+  font-family:"Sarasa Gothic SC","更纱黑体 SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+  padding:28px 24px 80px}
+h1{font-size:26px;font-weight:900;letter-spacing:.5px}
+.sub{color:#9AA0A6;font-size:13px;margin-top:6px;line-height:1.7}
+.num{font-family:"Inter","Arial Black",Impact,sans-serif;font-weight:900}
+
+/* ---- 缩放器：内部一律用画布真实坐标 ---- */
+.scaler{position:relative;margin:0 auto}
+.frame{position:absolute;top:0;left:0;width:1560px;height:900px;
+  transform:scale(var(--s));transform-origin:0 0;
+  background:#0E0C16;outline:6px solid #14110F}
+
+/* ---- 标题栏 ---- */
+.titlebar{position:absolute;left:0;top:0;width:1560px;height:96px;
+  background:#221E33;border:6px solid #14110F}
+.badge{position:absolute;left:28px;top:20px;width:84px;height:56px;
+  border:4px solid #14110F;color:#14110F;font-weight:900;font-size:24px;
+  display:flex;align-items:center;justify-content:center}
+.name-cn{position:absolute;left:132px;top:12px;font-size:40px;font-weight:900;line-height:1}
+.name-en{position:absolute;left:132px;top:60px;font-size:20px;color:#9AA0A6;
+  font-family:"Inter","Arial Black",sans-serif;font-weight:900;letter-spacing:1px}
+.threatpill{position:absolute;left:1300px;top:26px;width:232px;height:44px;
+  border:4px solid #14110F;display:flex;align-items:center;justify-content:center;gap:12px;color:#14110F}
+.tp-k{font-size:18px;font-weight:900;opacity:.75}
+.tp-v{font-size:26px;font-weight:900}
+.page-tag{position:absolute;right:16px;bottom:10px;font-size:18px;color:#6B6880;
+  font-family:"Inter",sans-serif;font-weight:900;letter-spacing:2px}
+
+/* ---- 三视图卡 ---- */
+.viewcard{position:absolute;width:480px;height:540px;
+  background:#221E33;border:6px solid #14110F}
+.cardimg{position:absolute;left:20px;top:20px;width:440px;height:420px;
+  background:#0A0812;border:4px dashed #3A3550;overflow:hidden;padding:12px}
+.ph-title{font-size:17px;font-weight:900;color:#FFC531;margin-bottom:8px}
+.ph-sil{font-size:14px;color:#9AA0A6;line-height:1.5;margin-bottom:10px;
+  max-height:60px;overflow:hidden}
+.ph-prompt{font-family:ui-monospace,Consolas,monospace;font-size:10.5px;line-height:1.45;
+  color:#6B6880;white-space:pre-wrap;word-break:break-word}
+.cardlabel{position:absolute;left:20px;top:452px;width:440px;height:68px;
+  background:#14110F;color:#FFF6E2;display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:900;letter-spacing:2px}
+
+/* ---- 底部面板 ---- */
+.bottompanel{position:absolute;left:24px;top:676px;width:1512px;height:200px;
+  background:#221E33;border:6px solid #14110F}
+.panel-frame{position:absolute;inset:0}
+.stat{position:absolute;top:16px;width:372px;height:64px;
+  background:#0A0812;border:4px solid #14110F;padding:6px 12px;overflow:hidden}
+.stat-k{font-size:14px;color:#9AA0A6;font-weight:900;letter-spacing:1px}
+.stat-v{font-size:24px;font-weight:900;color:#FFF6E2;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.is-long .stat-v{font-size:15px;white-space:normal;line-height:1.25;
+  max-height:38px;overflow:hidden}
+
+.noteblock{position:absolute;left:24px;width:1464px;height:92px;
+  background:#0A0812;border:4px solid #14110F;padding:6px 12px;overflow:hidden}
+.note-line{font-size:15px;line-height:1.45;color:#FFF6E2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-k{display:inline-block;min-width:44px;color:#FFC531;font-weight:900;margin-right:10px}
+
+.bossnote{position:absolute;left:24px;width:1464px;height:32px;
+  background:#0A0812;border:4px solid #14110F;
+  display:flex;align-items:center;gap:12px;padding:0 12px;overflow:hidden}
+.bn-key{flex:0 0 auto;background:#FFC531;color:#14110F;font-weight:900;font-size:14px;
+  padding:1px 8px;border:2px solid #14110F}
+.bn-name{flex:0 0 auto;font-weight:900;font-size:16px;color:#FFF6E2}
+.bn-en{flex:0 0 auto;font-size:12px;color:#6B6880;font-family:"Inter",sans-serif;font-weight:900}
+.bn-desc{flex:1 1 auto;font-size:14px;color:#FFF6E2;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.bn-tele{flex:0 0 auto;font-size:13px;color:#2BC4D6;white-space:nowrap}
+
+/* ---- 索引页 ---- */
+.idx-table{position:absolute}
+.idx-table table{width:1512px;border-collapse:collapse;background:#221E33;
+  border:6px solid #14110F;font-size:15px}
+.idx-table th{background:#0A0812;color:#9AA0A6;font-size:13px;padding:8px 6px;
+  border:2px solid #14110F;letter-spacing:1px}
+.idx-table td{padding:12px 10px;border:2px solid #14110F;color:#FFF6E2;vertical-align:middle}
+.idx-table td.act{font-size:15px;font-weight:900}
+.idx-table td.act b{color:#FFC531}
+.idx-table td.act .act-en{color:#6B6880;font-size:12px;margin-left:8px;
+  font-family:"Inter",sans-serif;font-weight:900}
+.act-dot{display:inline-block;width:12px;height:12px;border:2px solid #14110F;
+  margin-right:8px;vertical-align:middle}
+.idx-table td.waves,.idx-table th.waves{text-align:center;color:#9AA0A6;
+  font-family:"Inter",sans-serif;font-weight:900}
+.idx-table td.on{text-align:center;color:#8FD14F;font-size:20px;font-weight:900}
+.idx-table td.off{text-align:center;color:#3A3550;font-size:20px}
+.idx-table td.boss{font-weight:900;font-size:14px;white-space:nowrap}
+.idx-table td.arena{font-size:13px;color:#9AA0A6;line-height:1.4}
+
+.idx-chips{position:absolute;left:24px;top:512px;width:1512px;height:150px;
+  background:#221E33;border:6px solid #14110F;padding:10px 14px}
+.chips-title{font-size:13px;color:#FFC531;font-weight:900;margin-bottom:8px}
+.chips{display:flex;gap:8px}
+.chip{flex:1;text-align:center}
+.chip-box{width:48px;height:48px;margin:0 auto 6px;border:4px solid #14110F;
+  color:#14110F;font-size:13px;font-weight:900;
+  display:flex;align-items:center;justify-content:center}
+.chip-nm{font-size:13px;font-weight:900;color:#FFF6E2}
+.chip-sl{font-size:10px;color:#9AA0A6;line-height:1.25;margin-top:3px;height:26px;overflow:hidden}
+
+/* ---- 页面装饰 ---- */
+section{margin-top:44px}
+h2{font-size:20px;font-weight:900;color:#FF9F1C;margin-bottom:6px;
+  border-left:6px solid #FF9F1C;padding-left:10px}
+.hint{font-size:13px;color:#9AA0A6;line-height:1.7;margin-bottom:16px}
+.grid3{display:flex;flex-wrap:wrap;gap:18px;justify-content:center}
+.contact{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;justify-items:center}
+.contact .scaler{--s:.3}
+.detail .scaler{--s:.8;margin-bottom:24px}
+details{background:#221E33;border:4px solid #14110F;margin-bottom:10px}
+summary{cursor:pointer;padding:10px 14px;font-weight:900;font-size:15px;color:#FFC531}
+details pre{white-space:pre-wrap;word-break:break-word;padding:0 14px 14px;
+  font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6;color:#FFF6E2}
+details .pl{margin:0 14px 10px;font-size:12px;color:#9AA0A6;font-weight:900}
+.warn{background:#3a1a12;border-left:6px solid #E8402A;padding:10px 14px;
+  font-size:13px;line-height:1.7;color:#FFF6E2;margin:14px 0}
+
+</style></head><body>
+
+<h1>角色 Frame 施工图 · 末日尸潮</h1>
+<div class="sub">
+由 <code>assets/characters/roster.json</code> + <code>assets/style/tokens.json</code> 自动生成
+（<code>_tools/gen_canvas_preview.py</code>）。<br>
+坐标与 <code>画布施工交接单.md</code> 完全一致，可直接当作 Ardot 画布施工底稿。
+改设定改 roster.json，改风格改 tokens.json，然后重跑脚本 —— 不要手改本文件。
+</div>
+
+<div class="warn">
+<b>状态：</b>三视图卡内已嵌入当前 assets/characters/images/ 下的图；若某格缺失则回退显示完整提示词。
+出图后重跑本脚本即可刷新。
+</div>
+
+<section>
+  <h2>总览 · 9 Frame 落位</h2>
+  <div class="hint">对应画布 Page 10–18（3 行 × 3 列）。点击可跳到该 Frame 明细。</div>
+  <div class="contact"><div class="scaler" style="width:468px;height:270px"><a href="#p10" style="display:block">
+<div class="frame" data-unit="E-01">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--zombie)">E-01</div>
+    <div class="name-cn">游荡者</div>
+    <div class="name-en">Shambler</div>
+    <div class="threatpill" style="background:var(--teal)">
+      <span class="tp-k">威胁度</span><span class="tp-v">低</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-01/front/E-01_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-01/side/E-01_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-01/attack/E-01_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">60</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.4 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">900</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">头部 ×2.5 伤害；可被近战击退打断前摇</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>教学兵 · 教玩家侧移绕后与打头</div><div class="note-line"><span class="note-k">剪影</span>倒三角躯干 + 双臂垂过膝盖 + 头部低垂</div><div class="note-line"><span class="note-k">预警</span>右臂高举过头顶，地面出现淡红扇形警示</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 10</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p11" style="display:block">
+<div class="frame" data-unit="E-02">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--blood)">E-02</div>
+    <div class="name-cn">扑跃者</div>
+    <div class="name-en">Lunger</div>
+    <div class="threatpill" style="background:var(--warn)">
+      <span class="tp-k">威胁度</span><span class="tp-v">中</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-02/front/E-02_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-02/side/E-02_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-02/attack/E-02_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">45</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">3.2 m/s（扑跃 8 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,100</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">蓄力 0.5s 内被打断 → 自伤 15 并翻倒 1.2 s</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>打断站桩输出 · 逼玩家保留位移</div><div class="note-line"><span class="note-k">剪影</span>水平压缩 + 四肢外张 + 前倾头颅</div><div class="note-line"><span class="note-k">预警</span>后腿压低、身体贴地，地面亮起黄色直线预警</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 11</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p12" style="display:block">
+<div class="frame" data-unit="E-03">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--zombie)">E-03</div>
+    <div class="name-cn">呕吐者</div>
+    <div class="name-en">Spitter</div>
+    <div class="threatpill" style="background:var(--warn)">
+      <span class="tp-k">威胁度</span><span class="tp-v">中</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-03/front/E-03_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-03/side/E-03_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-03/attack/E-03_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">70</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.0 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">击中发光毒囊 → 立即在自身脚下生成毒池，可被引诱自伤</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>占场型 · 逼玩家离开掩体与固定输出位</div><div class="note-line"><span class="note-k">剪影</span>巨大球腹 + 萎缩细肢 + 上仰喷口头</div><div class="note-line"><span class="note-k">预警</span>球体鼓胀发亮，落点提前 0.8 s 出现绿圈</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 12</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p13" style="display:block">
+<div class="frame" data-unit="E-04">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--teal)">E-04</div>
+    <div class="name-cn">盾卫</div>
+    <div class="name-en">Bulwark</div>
+    <div class="threatpill" style="background:var(--blood)">
+      <span class="tp-k">威胁度</span><span class="tp-v">高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-04/front/E-04_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-04/side/E-04_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-04/attack/E-04_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">220</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.8 m/s（冲锋 6 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,600</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">正面 120° 减伤 70%；背面脊椎红色接口 ×2 伤害</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>教玩家绕侧背 · 正面硬刚必亏</div><div class="note-line"><span class="note-k">剪影</span>厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</div><div class="note-line"><span class="note-k">预警</span>低头、盾板前压，地面出现黄色冲锋轨迹</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 13</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p14" style="display:block">
+<div class="frame" data-unit="E-05">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--warn)">E-05</div>
+    <div class="name-cn">爆尸</div>
+    <div class="name-en">Bloater</div>
+    <div class="threatpill" style="background:var(--blood)">
+      <span class="tp-k">威胁度</span><span class="tp-v">高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-05/front/E-05_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-05/side/E-05_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-05/attack/E-05_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">90</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.1 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,000</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">引信期间击杀 → 伤害减半；可引到尸群中当炸弹用</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>走位惩罚 + 环境武器（可引爆清群）</div><div class="note-line"><span class="note-k">剪影</span>正圆球 + 无脖子 + 最小头身比</div><div class="note-line"><span class="note-k">预警</span>体表由绿转红、裂纹增亮、高频蜂鸣</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 14</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p15" style="display:block">
+<div class="frame" data-unit="IDX">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--teal)">IDX</div>
+    <div class="name-cn">敌群图鉴 · 投放矩阵</div>
+    <div class="name-en">ENEMY CODEX · SPAWN MATRIX</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">幕</span><span class="tp-v">4 · 共 12 波</span>
+    </div>
+  </div>
+
+  <div class="idx-table" style="left:24px;top:112px;width:1512px">
+    <table>
+      <thead><tr>
+        <th class='act'>幕 / ARENA</th><th class='waves'>WAVES</th><th>E-01</th><th>E-02</th><th>E-03</th><th>E-04</th><th>E-05</th><th class='col-boss'>BOSS</th><th class='arena'>场地特征</th>
+      </tr></thead>
+      <tbody><tr><td class='act'><span class='act-dot' style='background:var(--warn)'></span><b>Act 1</b> 城郊公路<span class='act-en'>Highway Outskirts</span></td><td class='waves'>1–3 波</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td class='off'>·</td><td class='off'>·</td><td class='boss'><span style='color:var(--blood)'>B-01 屠夫</span></td><td class='arena'>加油站雨棚 + 翻覆车阵，开阔但多硬掩体</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--blood)'></span><b>Act 2</b> 废弃仓库<span class='act-en'>Ruined Warehouse</span></td><td class='waves'>4–6 波</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td class='boss'><span style='color:var(--blood)'>B-01 屠夫</span></td><td class='arena'>货架巷道 + 冷库，视线被切碎，适合伏击</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--toxic)'></span><b>Act 3</b> 地铁隧道<span class='act-en'>Subway Tunnels</span></td><td class='waves'>7–9 波</td><td class='off'>·</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='boss'><span style='color:var(--toxic)'>B-02 母体</span></td><td class='arena'>狭长线性，纵向空间高，天花板可挂敌</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--gold)'></span><b>Act 4</b> 生化医院<span class='act-en'>Biohazard Hospital</span></td><td class='waves'>10–12 波</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='boss'><span style='color:var(--toxic)'>B-03 零号</span></td><td class='arena'>天台开阔 + 病房迷宫双层，风向影响毒息</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="idx-chips">
+    <div class="chips-title">剪影对照 · 48px（出图后必须拼在一起复验：E-03 球腹细腿 vs E-05 正圆球 是唯一高风险对）</div>
+    <div class="chips"><div class='chip'><div class='chip-box' style='background:var(--zombie)'>E-01</div><div class='chip-nm'>游荡者</div><div class='chip-sl'>倒三角躯干 + 双臂垂过膝盖 + 头部低垂</div></div> <div class='chip'><div class='chip-box' style='background:var(--blood)'>E-02</div><div class='chip-nm'>扑跃者</div><div class='chip-sl'>水平压缩 + 四肢外张 + 前倾头颅</div></div> <div class='chip'><div class='chip-box' style='background:var(--zombie)'>E-03</div><div class='chip-nm'>呕吐者</div><div class='chip-sl'>巨大球腹 + 萎缩细肢 + 上仰喷口头</div></div> <div class='chip'><div class='chip-box' style='background:var(--teal)'>E-04</div><div class='chip-nm'>盾卫</div><div class='chip-sl'>厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</div></div> <div class='chip'><div class='chip-box' style='background:var(--warn)'>E-05</div><div class='chip-nm'>爆尸</div><div class='chip-sl'>正圆球 + 无脖子 + 最小头身比</div></div> <div class='chip'><div class='chip-box' style='background:var(--blood)'>B-01</div><div class='chip-nm'>屠夫</div><div class='chip-sl'>宽肩倒梯形 + 右臂单点长垂（肉钩）</div></div> <div class='chip'><div class='chip-box' style='background:var(--toxic)'>B-02</div><div class='chip-nm'>母体</div><div class='chip-sl'>上下双体（地面产卵囊 + 反折上身）+ 双臂拖地</div></div> <div class='chip'><div class='chip-box' style='background:var(--toxic)'>B-03</div><div class='chip-nm'>零号</div><div class='chip-sl'>瘦高 + 破碎下摆 + 胸腔纵向裂口发光</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 15</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p16" style="display:block">
+<div class="frame" data-unit="B-01">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--blood)">B-01</div>
+    <div class="name-cn">屠夫</div>
+    <div class="name-en">THE BUTCHER</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-01/front/B-01_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-01/side/B-01_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-01/attack/B-01_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">4200</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">2.2 m/s（冲锋 9 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">4,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">撞墙眩晕 2.0 s，期间减伤 -50%</div></div><div class="bossnote" style="top:768px"><span class="bn-key">A</span><span class="bn-name">横扫</span><span class="bn-en">Sweep</span><span class="bn-desc">肉钩 270° 横扫，前摇 0.9 s，半径 4 m，伤害 30 + 击退 3 m</span><span class="bn-tele">预警 · 地面亮起黄色弧形预警，弧长即判定范围</span></div><div class="bossnote" style="top:806px"><span class="bn-key">B</span><span class="bn-name">冲锋</span><span class="bn-en">Charge</span><span class="bn-desc">直线突进 12 m，伤害 25；撞墙后自我眩晕 2.0 s</span><span class="bn-tele">预警 · 低头蓄力 0.7 s，地面黄色直线轨迹</span></div><div class="bossnote" style="top:844px"><span class="bn-key">C</span><span class="bn-name">抛钩</span><span class="bn-en">Hook</span><span class="bn-desc">9 m 抛钩命中拉拽玩家强制位移 + 0.8 s 硬直，伤害 10</span><span class="bn-tele">预警 · 链条绷紧声 + 钩子发光 0.5 s</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 16</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p17" style="display:block">
+<div class="frame" data-unit="B-02">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--toxic)">B-02</div>
+    <div class="name-cn">母体</div>
+    <div class="name-en">THE BROODMOTHER</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-02/front/B-02_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-02/side/B-02_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-02/attack/B-02_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">6000</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">本体固定不可移动</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">6,000</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">产卵时囊袋张开 1.5 s，期间 ×2 伤害</div></div><div class="bossnote" style="top:768px"><span class="bn-key">A</span><span class="bn-name">产卵</span><span class="bn-en">Spawn</span><span class="bn-desc">每 8 s 从囊袋产出 6 只幼虫（1.1 m / 速度 4.5 / HP 20 / 自爆 8 伤害）</span><span class="bn-tele">预警 · 囊袋口鼓胀发光 1.0 s</span></div><div class="bossnote" style="top:806px"><span class="bn-key">B</span><span class="bn-name">酸雨</span><span class="bn-en">Rain</span><span class="bn-desc">天花板 3 段连环 AoE，每段伤害 15</span><span class="bn-tele">预警 · 落点绿圈预警 1.0 s</span></div><div class="bossnote" style="top:844px"><span class="bn-key">C</span><span class="bn-name">拍击</span><span class="bn-en">Slam</span><span class="bn-desc">双臂交替砸地，冲击波沿隧道十字扩散，伤害 22</span><span class="bn-tele">预警 · 单臂高举 0.8 s，地面出现十字裂纹预告</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 17</div>
+</div></a></div><div class="scaler" style="width:468px;height:270px"><a href="#p18" style="display:block">
+<div class="frame" data-unit="B-03">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--toxic)">B-03</div>
+    <div class="name-cn">零号</div>
+    <div class="name-en">PATIENT ZERO</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-03/front/B-03_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-03/side/B-03_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-03/attack/B-03_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">9000</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">3.0 m/s（P3 狂暴 ×1.6）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">5,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">每次阶段切换 1.2 s 硬直，可打断一次攻击；P3 毒息期间侧后方为安全区</div></div><div class="bossnote" style="top:768px"><span class="bn-key">P1</span><span class="bn-name">100–70% · 注射器飞刀</span><span class="bn-en">Syringe Volley</span><span class="bn-desc">三连射，射程 12 m，伤害 12 / 发；附带 6 m 短距闪现（CD 4 s）</span><span class="bn-tele">预警 · 抬手 +  syringe 尖端紫光 0.4 s</span></div><div class="bossnote" style="top:806px"><span class="bn-key">P2</span><span class="bn-name">70–35% · 长鞭双臂</span><span class="bn-en">Lash Arms</span><span class="bn-desc">撕裂白大褂 → 双臂变异为 7 m 长鞭，横扫 + 拉拽；召唤 3 只盾卫</span><span class="bn-tele">预警 · 白大褂撕裂瞬间 1.2 s 硬直（可打断）</span></div><div class="bossnote" style="top:844px"><span class="bn-key">P3</span><span class="bn-name">35–0% · 胸腔毒息</span><span class="bn-en">Chest Miasma</span><span class="bn-desc">第二张口器张开，120° 扇形毒息持续 5 s（DPS 14）+ 全场毒池；狂暴（速度 ×1.6、攻击 CD ×0.7）</span><span class="bn-tele">预警 · 胸腔裂口紫光暴涨 1.0 s</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 18</div>
+</div></a></div></div>
+</section>
+
+<section class="detail">
+  <h2>Frame 明细 · 1:1 坐标</h2>
+  <div class="hint">每格严格使用画布坐标：Frame 1560×900、标题栏 h96、视图卡 480×540、
+    底部面板 1512×200、数据格 372×64（gap 8）。</div>
+  <div id="p10" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="E-01">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--zombie)">E-01</div>
+    <div class="name-cn">游荡者</div>
+    <div class="name-en">Shambler</div>
+    <div class="threatpill" style="background:var(--teal)">
+      <span class="tp-k">威胁度</span><span class="tp-v">低</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-01/front/E-01_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-01/side/E-01_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-01/attack/E-01_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">60</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.4 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">900</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">头部 ×2.5 伤害；可被近战击退打断前摇</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>教学兵 · 教玩家侧移绕后与打头</div><div class="note-line"><span class="note-k">剪影</span>倒三角躯干 + 双臂垂过膝盖 + 头部低垂</div><div class="note-line"><span class="note-k">预警</span>右臂高举过头顶，地面出现淡红扇形警示</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 10</div>
+</div></div><div id="p11" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="E-02">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--blood)">E-02</div>
+    <div class="name-cn">扑跃者</div>
+    <div class="name-en">Lunger</div>
+    <div class="threatpill" style="background:var(--warn)">
+      <span class="tp-k">威胁度</span><span class="tp-v">中</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-02/front/E-02_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-02/side/E-02_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-02/attack/E-02_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">45</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">3.2 m/s（扑跃 8 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,100</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">蓄力 0.5s 内被打断 → 自伤 15 并翻倒 1.2 s</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>打断站桩输出 · 逼玩家保留位移</div><div class="note-line"><span class="note-k">剪影</span>水平压缩 + 四肢外张 + 前倾头颅</div><div class="note-line"><span class="note-k">预警</span>后腿压低、身体贴地，地面亮起黄色直线预警</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 11</div>
+</div></div><div id="p12" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="E-03">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--zombie)">E-03</div>
+    <div class="name-cn">呕吐者</div>
+    <div class="name-en">Spitter</div>
+    <div class="threatpill" style="background:var(--warn)">
+      <span class="tp-k">威胁度</span><span class="tp-v">中</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-03/front/E-03_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-03/side/E-03_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-03/attack/E-03_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">70</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.0 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">击中发光毒囊 → 立即在自身脚下生成毒池，可被引诱自伤</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>占场型 · 逼玩家离开掩体与固定输出位</div><div class="note-line"><span class="note-k">剪影</span>巨大球腹 + 萎缩细肢 + 上仰喷口头</div><div class="note-line"><span class="note-k">预警</span>球体鼓胀发亮，落点提前 0.8 s 出现绿圈</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 12</div>
+</div></div><div id="p13" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="E-04">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--teal)">E-04</div>
+    <div class="name-cn">盾卫</div>
+    <div class="name-en">Bulwark</div>
+    <div class="threatpill" style="background:var(--blood)">
+      <span class="tp-k">威胁度</span><span class="tp-v">高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-04/front/E-04_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-04/side/E-04_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-04/attack/E-04_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">220</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.8 m/s（冲锋 6 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,600</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">正面 120° 减伤 70%；背面脊椎红色接口 ×2 伤害</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>教玩家绕侧背 · 正面硬刚必亏</div><div class="note-line"><span class="note-k">剪影</span>厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</div><div class="note-line"><span class="note-k">预警</span>低头、盾板前压，地面出现黄色冲锋轨迹</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 13</div>
+</div></div><div id="p14" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="E-05">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--warn)">E-05</div>
+    <div class="name-cn">爆尸</div>
+    <div class="name-en">Bloater</div>
+    <div class="threatpill" style="background:var(--blood)">
+      <span class="tp-k">威胁度</span><span class="tp-v">高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/E-05/front/E-05_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/E-05/side/E-05_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/E-05/attack/E-05_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">90</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">1.1 m/s</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">1,000</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">引信期间击杀 → 伤害减半；可引到尸群中当炸弹用</div></div><div class="noteblock" style="top:768px"><div class="note-line"><span class="note-k">定位</span>走位惩罚 + 环境武器（可引爆清群）</div><div class="note-line"><span class="note-k">剪影</span>正圆球 + 无脖子 + 最小头身比</div><div class="note-line"><span class="note-k">预警</span>体表由绿转红、裂纹增亮、高频蜂鸣</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 14</div>
+</div></div><div id="p15" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="IDX">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--teal)">IDX</div>
+    <div class="name-cn">敌群图鉴 · 投放矩阵</div>
+    <div class="name-en">ENEMY CODEX · SPAWN MATRIX</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">幕</span><span class="tp-v">4 · 共 12 波</span>
+    </div>
+  </div>
+
+  <div class="idx-table" style="left:24px;top:112px;width:1512px">
+    <table>
+      <thead><tr>
+        <th class='act'>幕 / ARENA</th><th class='waves'>WAVES</th><th>E-01</th><th>E-02</th><th>E-03</th><th>E-04</th><th>E-05</th><th class='col-boss'>BOSS</th><th class='arena'>场地特征</th>
+      </tr></thead>
+      <tbody><tr><td class='act'><span class='act-dot' style='background:var(--warn)'></span><b>Act 1</b> 城郊公路<span class='act-en'>Highway Outskirts</span></td><td class='waves'>1–3 波</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td class='off'>·</td><td class='off'>·</td><td class='boss'><span style='color:var(--blood)'>B-01 屠夫</span></td><td class='arena'>加油站雨棚 + 翻覆车阵，开阔但多硬掩体</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--blood)'></span><b>Act 2</b> 废弃仓库<span class='act-en'>Ruined Warehouse</span></td><td class='waves'>4–6 波</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='off'>·</td><td class='boss'><span style='color:var(--blood)'>B-01 屠夫</span></td><td class='arena'>货架巷道 + 冷库，视线被切碎，适合伏击</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--toxic)'></span><b>Act 3</b> 地铁隧道<span class='act-en'>Subway Tunnels</span></td><td class='waves'>7–9 波</td><td class='off'>·</td><td class='off'>·</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='boss'><span style='color:var(--toxic)'>B-02 母体</span></td><td class='arena'>狭长线性，纵向空间高，天花板可挂敌</td></tr><tr><td class='act'><span class='act-dot' style='background:var(--gold)'></span><b>Act 4</b> 生化医院<span class='act-en'>Biohazard Hospital</span></td><td class='waves'>10–12 波</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='on'>●</td><td class='boss'><span style='color:var(--toxic)'>B-03 零号</span></td><td class='arena'>天台开阔 + 病房迷宫双层，风向影响毒息</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="idx-chips">
+    <div class="chips-title">剪影对照 · 48px（出图后必须拼在一起复验：E-03 球腹细腿 vs E-05 正圆球 是唯一高风险对）</div>
+    <div class="chips"><div class='chip'><div class='chip-box' style='background:var(--zombie)'>E-01</div><div class='chip-nm'>游荡者</div><div class='chip-sl'>倒三角躯干 + 双臂垂过膝盖 + 头部低垂</div></div> <div class='chip'><div class='chip-box' style='background:var(--blood)'>E-02</div><div class='chip-nm'>扑跃者</div><div class='chip-sl'>水平压缩 + 四肢外张 + 前倾头颅</div></div> <div class='chip'><div class='chip-box' style='background:var(--zombie)'>E-03</div><div class='chip-nm'>呕吐者</div><div class='chip-sl'>巨大球腹 + 萎缩细肢 + 上仰喷口头</div></div> <div class='chip'><div class='chip-box' style='background:var(--teal)'>E-04</div><div class='chip-nm'>盾卫</div><div class='chip-sl'>厚重金属矩形 + 单侧巨大盾板 · 左右强不对称</div></div> <div class='chip'><div class='chip-box' style='background:var(--warn)'>E-05</div><div class='chip-nm'>爆尸</div><div class='chip-sl'>正圆球 + 无脖子 + 最小头身比</div></div> <div class='chip'><div class='chip-box' style='background:var(--blood)'>B-01</div><div class='chip-nm'>屠夫</div><div class='chip-sl'>宽肩倒梯形 + 右臂单点长垂（肉钩）</div></div> <div class='chip'><div class='chip-box' style='background:var(--toxic)'>B-02</div><div class='chip-nm'>母体</div><div class='chip-sl'>上下双体（地面产卵囊 + 反折上身）+ 双臂拖地</div></div> <div class='chip'><div class='chip-box' style='background:var(--toxic)'>B-03</div><div class='chip-nm'>零号</div><div class='chip-sl'>瘦高 + 破碎下摆 + 胸腔纵向裂口发光</div></div></div>
+  </div>
+  <div class="page-tag">PAGE 15</div>
+</div></div><div id="p16" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="B-01">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--blood)">B-01</div>
+    <div class="name-cn">屠夫</div>
+    <div class="name-en">THE BUTCHER</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-01/front/B-01_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-01/side/B-01_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-01/attack/B-01_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">4200</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">2.2 m/s（冲锋 9 m/s）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">4,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">撞墙眩晕 2.0 s，期间减伤 -50%</div></div><div class="bossnote" style="top:768px"><span class="bn-key">A</span><span class="bn-name">横扫</span><span class="bn-en">Sweep</span><span class="bn-desc">肉钩 270° 横扫，前摇 0.9 s，半径 4 m，伤害 30 + 击退 3 m</span><span class="bn-tele">预警 · 地面亮起黄色弧形预警，弧长即判定范围</span></div><div class="bossnote" style="top:806px"><span class="bn-key">B</span><span class="bn-name">冲锋</span><span class="bn-en">Charge</span><span class="bn-desc">直线突进 12 m，伤害 25；撞墙后自我眩晕 2.0 s</span><span class="bn-tele">预警 · 低头蓄力 0.7 s，地面黄色直线轨迹</span></div><div class="bossnote" style="top:844px"><span class="bn-key">C</span><span class="bn-name">抛钩</span><span class="bn-en">Hook</span><span class="bn-desc">9 m 抛钩命中拉拽玩家强制位移 + 0.8 s 硬直，伤害 10</span><span class="bn-tele">预警 · 链条绷紧声 + 钩子发光 0.5 s</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 16</div>
+</div></div><div id="p17" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="B-02">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--toxic)">B-02</div>
+    <div class="name-cn">母体</div>
+    <div class="name-en">THE BROODMOTHER</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-02/front/B-02_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-02/side/B-02_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-02/attack/B-02_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">6000</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">本体固定不可移动</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">6,000</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">产卵时囊袋张开 1.5 s，期间 ×2 伤害</div></div><div class="bossnote" style="top:768px"><span class="bn-key">A</span><span class="bn-name">产卵</span><span class="bn-en">Spawn</span><span class="bn-desc">每 8 s 从囊袋产出 6 只幼虫（1.1 m / 速度 4.5 / HP 20 / 自爆 8 伤害）</span><span class="bn-tele">预警 · 囊袋口鼓胀发光 1.0 s</span></div><div class="bossnote" style="top:806px"><span class="bn-key">B</span><span class="bn-name">酸雨</span><span class="bn-en">Rain</span><span class="bn-desc">天花板 3 段连环 AoE，每段伤害 15</span><span class="bn-tele">预警 · 落点绿圈预警 1.0 s</span></div><div class="bossnote" style="top:844px"><span class="bn-key">C</span><span class="bn-name">拍击</span><span class="bn-en">Slam</span><span class="bn-desc">双臂交替砸地，冲击波沿隧道十字扩散，伤害 22</span><span class="bn-tele">预警 · 单臂高举 0.8 s，地面出现十字裂纹预告</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 17</div>
+</div></div><div id="p18" class="scaler" style="width:1248px;height:720px">
+<div class="frame" data-unit="B-03">
+  <div class="titlebar">
+    <div class="badge" style="background:var(--toxic)">B-03</div>
+    <div class="name-cn">零号</div>
+    <div class="name-en">PATIENT ZERO</div>
+    <div class="threatpill" style="background:var(--gold)">
+      <span class="tp-k">威胁度</span><span class="tp-v">极高</span>
+    </div>
+  </div>
+  <div class="viewcard" style="left:24px;top:112px"><div class="cardimg"><img src="images/B-03/front/B-03_front.png" alt="正面 · FRONT" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">正面 · FRONT</div></div><div class="viewcard" style="left:540px;top:112px"><div class="cardimg"><img src="images/B-03/side/B-03_side.png" alt="侧面 · SIDE" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">侧面 · SIDE</div></div><div class="viewcard" style="left:1056px;top:112px"><div class="cardimg"><img src="images/B-03/attack/B-03_attack.png" alt="攻击 · ATTACK" style="max-width:100%;max-height:100%;object-fit:contain"></div><div class="cardlabel">攻击 · ATTACK</div></div>
+  <div class="bottompanel">
+    <div class="panel-frame"><div class="stat" style="left:24px"><div class="stat-k">HP</div><div class="stat-v">9000</div></div><div class="stat" style="left:404px"><div class="stat-k">移速</div><div class="stat-v">3.0 m/s（P3 狂暴 ×1.6）</div></div><div class="stat" style="left:784px"><div class="stat-k">三角面</div><div class="stat-v">5,200</div></div><div class="stat is-long" style="left:1164px"><div class="stat-k">弱点</div><div class="stat-v">每次阶段切换 1.2 s 硬直，可打断一次攻击；P3 毒息期间侧后方为安全区</div></div><div class="bossnote" style="top:768px"><span class="bn-key">P1</span><span class="bn-name">100–70% · 注射器飞刀</span><span class="bn-en">Syringe Volley</span><span class="bn-desc">三连射，射程 12 m，伤害 12 / 发；附带 6 m 短距闪现（CD 4 s）</span><span class="bn-tele">预警 · 抬手 +  syringe 尖端紫光 0.4 s</span></div><div class="bossnote" style="top:806px"><span class="bn-key">P2</span><span class="bn-name">70–35% · 长鞭双臂</span><span class="bn-en">Lash Arms</span><span class="bn-desc">撕裂白大褂 → 双臂变异为 7 m 长鞭，横扫 + 拉拽；召唤 3 只盾卫</span><span class="bn-tele">预警 · 白大褂撕裂瞬间 1.2 s 硬直（可打断）</span></div><div class="bossnote" style="top:844px"><span class="bn-key">P3</span><span class="bn-name">35–0% · 胸腔毒息</span><span class="bn-en">Chest Miasma</span><span class="bn-desc">第二张口器张开，120° 扇形毒息持续 5 s（DPS 14）+ 全场毒池；狂暴（速度 ×1.6、攻击 CD ×0.7）</span><span class="bn-tele">预警 · 胸腔裂口紫光暴涨 1.0 s</span></div></div>
+  </div>
+  <div class="page-tag">PAGE 18</div>
+</div></div>
+</section>
+
+<section>
+  <h2>AI 出图提示词 · 24 条</h2>
+  <div class="hint">已按规则拼接为可直接投喂的完整提示词，展开即复制。</div>
+  <details><summary>E-01 游荡者 · Shambler</summary><div class="pl">正面 · FRONT</div><pre>Gaunt shambling zombie, hunched back, unnaturally long forearms hanging past its knees, dislocated jaw hanging half open with exposed teeth, torn gas-station coverall, exposed shin bone on left leg, sickly green-grey skin with ash blotches front facing orthographic view, standing idle, arms hanging low, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Gaunt shambling zombie, hunched back, unnaturally long forearms hanging past its knees, dislocated jaw hanging half open with exposed teeth, torn gas-station coverall, exposed shin bone on left leg, sickly green-grey skin with ash blotches side profile orthographic view, showing hunched spine curve and overhanging jaw, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Gaunt shambling zombie, hunched back, unnaturally long forearms hanging past its knees, dislocated jaw hanging half open with exposed teeth, torn gas-station coverall, exposed shin bone on left leg, sickly green-grey skin with ash blotches front three-quarter view mid-attack, right arm raised high overhead about to swipe down, motion arc lines, aggressive snarl American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>E-02 扑跃者 · Lunger</summary><div class="pl">正面 · FRONT</div><pre>Feline-skeleton zombie crouched on all fours, spine spikes protruding in a jagged ridge, coiled hind legs, lower jaw entirely missing so the mouth splits vertically down into the chest cavity, bone spurs on fingertips, dark red flesh front facing orthographic view, crouched coiled stance, symmetric, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Feline-skeleton zombie crouched on all fours, spine spikes protruding in a jagged ridge, coiled hind legs, lower jaw entirely missing so the mouth splits vertically down into the chest cavity, bone spurs on fingertips, dark red flesh side profile orthographic view, showing the coiled hind leg spring tension and jagged spine ridge, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Feline-skeleton zombie crouched on all fours, spine spikes protruding in a jagged ridge, coiled hind legs, lower jaw entirely missing so the mouth splits vertically down into the chest cavity, bone spurs on fingertips, dark red flesh side view mid-leap, body horizontal stretched forward through the air, jaws wide open, speed lines trailing behind American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>E-03 呕吐者 · Spitter</summary><div class="pl">正面 · FRONT</div><pre>Bloated zombie with a huge translucent spherical belly, glowing green toxin sac visible inside, withered atrophied arms pressed tight against the body, head tilted back with a flared trumpet-like nozzle mouth, extreme proportion imbalance front facing orthographic view, standing, huge belly centered, symmetric, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Bloated zombie with a huge translucent spherical belly, glowing green toxin sac visible inside, withered atrophied arms pressed tight against the body, head tilted back with a flared trumpet-like nozzle mouth, extreme proportion imbalance side profile orthographic view, showing the backward-tilted nozzle head and the belly overhang, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Bloated zombie with a huge translucent spherical belly, glowing green toxin sac visible inside, withered atrophied arms pressed tight against the body, head tilted back with a flared trumpet-like nozzle mouth, extreme proportion imbalance front three-quarter view, belly contracted and glowing, mid-vomit arc of green acid spraying forward in a parabolic stream American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>E-04 盾卫 · Bulwark</summary><div class="pl">正面 · FRONT</div><pre>Heavy zombie with steel plates welded directly into its chest and left arm forming a single integrated shield slab, helmet welded shut leaving only a horizontal viewing slit, right arm bare and grotesquely overgrown, exposed red-glowing spinal port on its back, teal weld beads front facing orthographic view, shield slab covering the left side, welded helmet facing viewer, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Heavy zombie with steel plates welded directly into its chest and left arm forming a single integrated shield slab, helmet welded shut leaving only a horizontal viewing slit, right arm bare and grotesquely overgrown, exposed red-glowing spinal port on its back, teal weld beads side profile orthographic view from the unshielded right side, showing the depth of the shield slab and the exposed back port, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Heavy zombie with steel plates welded directly into its chest and left arm forming a single integrated shield slab, helmet welded shut leaving only a horizontal viewing slit, right arm bare and grotesquely overgrown, exposed red-glowing spinal port on its back, teal weld beads front view charging forward low, shield slab leading, head down, impact dust and speed lines American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>E-05 爆尸 · Bloater</summary><div class="pl">正面 · FRONT</div><pre>Grossly inflated zombie, whole body swollen like a water balloon, translucent skin revealing subcutaneous yellow gas nodules, cracks across the belly glowing orange from within, neck completely gone with the skull sunk into the torso, tiny stubby limbs front facing orthographic view, perfectly round body, tiny sunken head, symmetric, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Grossly inflated zombie, whole body swollen like a water balloon, translucent skin revealing subcutaneous yellow gas nodules, cracks across the belly glowing orange from within, neck completely gone with the skull sunk into the torso, tiny stubby limbs side profile orthographic view, showing the round belly overhang and stubby limbs, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Grossly inflated zombie, whole body swollen like a water balloon, translucent skin revealing subcutaneous yellow gas nodules, cracks across the belly glowing orange from within, neck completely gone with the skull sunk into the torso, tiny stubby limbs front three-quarter view at the moment of detonation trigger, body flushed from green to red, cracks blazing orange, warning pulse rings expanding outward American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>B-01 屠夫 · THE BUTCHER</summary><div class="pl">正面 · FRONT</div><pre>Giant 3.2 meter butcher zombie, bloodstained canvas apron hung with metal meat hooks, right arm severed at the elbow and replaced with a 60cm meat hook, left arm replaced with a slowly rotating meat-grinder drum, pig-head mask with glowing yellow eye holes, snapped iron chains locked around the ankles front facing orthographic view, wide trapezoid shoulders, both modified arms visible, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Giant 3.2 meter butcher zombie, bloodstained canvas apron hung with metal meat hooks, right arm severed at the elbow and replaced with a 60cm meat hook, left arm replaced with a slowly rotating meat-grinder drum, pig-head mask with glowing yellow eye holes, snapped iron chains locked around the ankles side profile orthographic view, showing the long hanging meat hook arm and the grinder drum silhouette, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Giant 3.2 meter butcher zombie, bloodstained canvas apron hung with metal meat hooks, right arm severed at the elbow and replaced with a 60cm meat hook, left arm replaced with a slowly rotating meat-grinder drum, pig-head mask with glowing yellow eye holes, snapped iron chains locked around the ankles front three-quarter view mid-sweep, meat hook arm extended horizontally trailing a bright yellow ground warning arc, apron whipping, impact dust American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>B-02 母体 · THE BROODMOTHER</summary><div class="pl">正面 · FRONT</div><pre>Towering 4 meter broodmother zombie, lower half is a massive egg sac anchored between the tunnel floor and ceiling, upper humanoid half with the spine bent backward into a C-curve, unnaturally long arms dragging on the ground, head tilted back with the mouth split vertically down into the chest, purple bioluminescent veins front facing orthographic view, egg sac base below, arching upper body above, both long arms dragging, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Towering 4 meter broodmother zombie, lower half is a massive egg sac anchored between the tunnel floor and ceiling, upper humanoid half with the spine bent backward into a C-curve, unnaturally long arms dragging on the ground, head tilted back with the mouth split vertically down into the chest, purple bioluminescent veins side profile orthographic view, showing the backward C-curve of the spine and the depth of the egg sac, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Towering 4 meter broodmother zombie, lower half is a massive egg sac anchored between the tunnel floor and ceiling, upper humanoid half with the spine bent backward into a C-curve, unnaturally long arms dragging on the ground, head tilted back with the mouth split vertically down into the chest, purple bioluminescent veins front three-quarter view mid-slam, one long arm raised high about to crash down, egg sac opening glowing and distended, shockwave cracks spreading on the floor American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details><details><summary>B-03 零号 · PATIENT ZERO</summary><div class="pl">正面 · FRONT</div><pre>Tall gaunt 2.6 meter patient zero zombie, white lab coat torn into hanging tatters, chest split vertically open revealing a second mouth lined with ringed teeth, left half of the skull exposed bone and right half covered in withered skin, purple glowing veins, dragging a broken IV stand in the left hand front facing orthographic view, tall and thin, chest rift visible and glowing, coat tatters hanging, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">侧面 · SIDE</div><pre>Tall gaunt 2.6 meter patient zero zombie, white lab coat torn into hanging tatters, chest split vertically open revealing a second mouth lined with ringed teeth, left half of the skull exposed bone and right half covered in withered skin, purple glowing veins, dragging a broken IV stand in the left hand side profile orthographic view, showing the gaunt frame depth and the open chest rift profile, full body American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre><div class="pl">攻击 · ATTACK</div><pre>Tall gaunt 2.6 meter patient zero zombie, white lab coat torn into hanging tatters, chest split vertically open revealing a second mouth lined with ringed teeth, left half of the skull exposed bone and right half covered in withered skin, purple glowing veins, dragging a broken IV stand in the left hand front three-quarter view phase 3, chest rift wide open blazing purple, fan-shaped toxic breath spraying forward, lab coat tatters whipping, one arm mutated into a long lash whip American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark</pre></details>
+</section>
+
+</body></html>

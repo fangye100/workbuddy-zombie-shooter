@@ -1,0 +1,16 @@
+# 角色概念图（生成服务原图，二进制）
+assets/characters/images/** filter=lfs diff=lfs merge=lfs -text
+
+# 3D 模型与贴图（源文件 + 烘焙/减面产物）
+assets/characters/models/**/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.fbx filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.zip filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.png filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.obj filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.ply filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.labmesh filter=lfs diff=lfs merge=lfs -text
+assets/characters/models/**/*.mesh.ts filter=lfs diff=lfs merge=lfs -text
+
+# 编辑器贴图与生成的网格模块
+apps/lab/shader-lab/src/assets/** filter=lfs diff=lfs merge=lfs -text
+apps/lab/shader-lab/src/*.mesh.ts filter=lfs diff=lfs merge=lfs -text

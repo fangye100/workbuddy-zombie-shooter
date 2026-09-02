@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>末日尸潮 · 角色设定圣经</title>
+<style>
+:root{
+  --ink:#14110F; --paper:#F5E7C8; --bone:#FFF6E2;
+  --night:#171327; --night-deep:#0E0C16;
+  --zombie:#8FD14F; --blood:#E8402A; --warn:#FFC531;
+  --teal:#2BC4D6; --toxic:#9B5DE5; --gold:#FF9F1C;
+  --panel:#221E33; --panel-deep:#0A0812; --dim:#9AA0A6;
+  --common:#9AA0A6; --rare:#4EA8FF; --epic:#9B5DE5; --legend:#FF9F1C;
+  --st:4px; --stb:6px; --rc:18px; --rp:24px; --sh:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--night-deep);
+  color:var(--paper);
+  font-family:"Sarasa Gothic SC","Source Han Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  line-height:1.6; padding:40px 32px 120px;
+  background-image:radial-gradient(circle at 12% 8%, rgba(155,93,229,.16), transparent 42%),
+                   radial-gradient(circle at 88% 4%, rgba(232,64,42,.12), transparent 38%);
+}
+.wrap{max-width:1400px;margin:0 auto}
+.mono{font-family:"Inter","HarmonyOS Sans",system-ui,sans-serif;font-weight:900;letter-spacing:.02em}
+
+/* ---------- header ---------- */
+.hero{
+  border:var(--stb) solid var(--ink); border-radius:var(--rp);
+  background:var(--panel); box-shadow:var(--sh) var(--sh) 0 var(--ink);
+  padding:36px 40px; margin-bottom:44px; position:relative; overflow:hidden;
+}
+.hero:before{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 10px, transparent 10px 20px);}
+.hero>*{position:relative}
+.kicker{display:inline-block;background:var(--warn);color:var(--ink);
+  font-weight:900;font-size:13px;letter-spacing:.18em;padding:5px 14px;
+  border:var(--st) solid var(--ink);border-radius:999px;margin-bottom:16px}
+h1{font-size:46px;font-weight:900;line-height:1.15;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--zombie)}
+.sub{color:var(--dim);margin-top:12px;font-size:16px;max-width:860px}
+.metabar{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.chip{background:var(--night-deep);border:3px solid var(--ink);border-radius:999px;
+  padding:6px 16px;font-size:13px;font-weight:700}
+.chip b{color:var(--warn)}
+
+/* ---------- section ---------- */
+section{margin-bottom:56px}
+h2{font-size:28px;font-weight:900;display:flex;align-items:center;gap:14px;margin-bottom:6px}
+h2 .num{background:var(--ink);color:var(--warn);border-radius:10px;padding:2px 12px;font-size:20px}
+.lede{color:var(--dim);font-size:15px;margin-bottom:22px;max-width:940px}
+
+/* ---------- act matrix ---------- */
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.act{border:var(--stb) solid var(--ink);border-radius:var(--rc);
+  background:var(--panel);box-shadow:var(--sh) var(--sh) 0 var(--ink);overflow:hidden}
+.act .bar{height:12px}
+.act .body{padding:20px 20px 22px}
+.act .no{font-size:12px;letter-spacing:.2em;color:var(--dim);font-weight:900}
+.act h3{font-size:26px;font-weight:900;margin:4px 0 2px}
+.act .en{font-size:13px;color:var(--dim);letter-spacing:.1em;margin-bottom:14px}
+.act .row{display:flex;justify-content:space-between;font-size:13px;
+  padding:6px 0;border-top:2px dashed rgba(245,231,200,.16)}
+.act .row span:first-child{color:var(--dim)}
+.act .arena{margin-top:12px;font-size:13px;line-height:1.55;color:var(--paper);
+  background:var(--night-deep);border-radius:10px;padding:10px 12px;border:2px solid var(--ink)}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pill{font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px;
+  border:2px solid var(--ink);color:var(--ink)}
+
+/* ---------- character sheet ---------- */
+.sheet{border:var(--stb) solid var(--ink);border-radius:var(--rp);
+  background:var(--panel);box-shadow:var(--sh) var(--sh) 0 var(--ink);
+  margin-bottom:34px;overflow:hidden}
+.sheet .top{display:flex;align-items:center;gap:20px;padding:22px 28px;
+  background:linear-gradient(180deg,var(--panel) 0%, var(--night-deep) 100%);
+  border-bottom:var(--stb) solid var(--ink)}
+.badge{width:78px;height:78px;flex:none;border:var(--stb) solid var(--ink);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;
+  color:var(--ink);box-shadow:4px 4px 0 var(--ink)}
+.sheet .tt{flex:1;min-width:0}
+.sheet .tt h3{font-size:34px;font-weight:900;line-height:1.1}
+.sheet .tt .en{font-size:14px;letter-spacing:.22em;color:var(--dim);font-weight:700;margin-top:2px}
+.threat{flex:none;text-align:center;border:var(--st) solid var(--ink);border-radius:12px;
+  padding:8px 20px;box-shadow:4px 4px 0 var(--ink)}
+.threat .lv{font-size:11px;letter-spacing:.2em;color:var(--ink);font-weight:900;opacity:.7}
+.threat .v{font-size:22px;font-weight:900;color:var(--ink)}
+
+.sheet .grid{display:grid;grid-template-columns:300px 1fr;gap:0}
+.sheet .sil{border-right:var(--stb) solid var(--ink);background:var(--night-deep);
+  padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.silbox{width:100%;aspect-ratio:3/4;background:var(--paper);
+  border:var(--st) solid var(--ink);border-radius:14px;display:flex;
+  align-items:flex-end;justify-content:center;padding:10px;
+  background-image:radial-gradient(circle at 50% 88%, rgba(20,17,15,.10), transparent 62%)}
+.silbox svg{width:100%;height:100%;color:var(--ink)}
+.silcap{font-size:12px;color:var(--dim);text-align:center;line-height:1.5}
+.silcap b{color:var(--paper);display:block;font-size:13px;margin-bottom:3px}
+
+.sheet .info{padding:24px 28px}
+.look{font-size:15px;line-height:1.75;margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stat{background:var(--night-deep);border:3px solid var(--ink);border-radius:12px;padding:10px 12px}
+.stat .k{font-size:11px;letter-spacing:.14em;color:var(--dim);font-weight:900}
+.stat .v{font-size:19px;font-weight:900;color:var(--bone);margin-top:2px}
+.stat.acc .v{color:var(--warn)}
+
+.atk{background:var(--night-deep);border:var(--st) solid var(--ink);
+  border-left:10px solid var(--blood);border-radius:12px;padding:14px 18px;margin-bottom:14px}
+.atk .h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.atk .h .n{font-size:19px;font-weight:900}
+.atk .h .e{font-size:12px;letter-spacing:.16em;color:var(--dim)}
+.atk .h .d{margin-left:auto;font-size:13px;font-weight:900;color:var(--blood)}
+.atk p{font-size:14px;line-height:1.6}
+.atk .tg{margin-top:7px;font-size:13px;color:var(--warn)}
+.atk .tg b{color:var(--paper)}
+
+.kv{display:flex;gap:10px;font-size:14px;padding:9px 0;
+  border-top:2px dashed rgba(245,231,200,.16);align-items:flex-start}
+.kv .k{flex:none;width:96px;color:var(--dim);font-weight:900;font-size:13px}
+.kv .v{flex:1}
+
+.bossnote{margin-top:8px;background:rgba(43,196,214,.10);
+  border:3px solid var(--ink);border-left:10px solid var(--teal);
+  border-radius:12px;padding:13px 16px;font-size:14px;line-height:1.65}
+.bossnote b{color:var(--teal)}
+
+/* ---------- boss list ---------- */
+.bosslist{display:flex;flex-direction:column;gap:12px}
+.arow{display:grid;grid-template-columns:34px 1fr;gap:14px;background:var(--night-deep);
+  border:3px solid var(--ink);border-radius:12px;padding:12px 16px}
+.arow .key{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-weight:900;color:var(--ink);font-size:15px;border:3px solid var(--ink)}
+.arow .an{font-size:17px;font-weight:900}
+.arow .ae{font-size:11px;letter-spacing:.16em;color:var(--dim);margin-left:8px;font-weight:700}
+.arow .ad{font-size:14px;line-height:1.6;margin-top:3px}
+.arow .at{font-size:13px;color:var(--warn);margin-top:4px}
+
+/* ---------- appendix ---------- */
+.warnbox{border:var(--stb) solid var(--ink);border-radius:var(--rp);
+  background:var(--panel);box-shadow:var(--sh) var(--sh) 0 var(--ink);padding:26px 30px}
+.warnbox h3{font-size:20px;margin-bottom:10px;color:var(--warn)}
+.warnbox ol{margin-left:20px;font-size:15px;line-height:1.9}
+.warnbox code{background:var(--night-deep);padding:2px 7px;border-radius:5px;
+  font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--teal)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+th,td{border:3px solid var(--ink);padding:9px 12px;text-align:left}
+th{background:var(--night-deep);font-size:12px;letter-spacing:.12em;color:var(--warn)}
+td{background:var(--panel)}
+footer{margin-top:50px;text-align:center;color:var(--dim);font-size:13px}
+@media(max-width:1100px){
+  .acts{grid-template-columns:repeat(2,1fr)}
+  .sheet .grid{grid-template-columns:1fr}
+  .sheet .sil{border-right:none;border-bottom:var(--stb) solid var(--ink)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <span class="kicker">CHARACTER BIBLE · v1.0</span>
+  <h1>末日尸潮 · <em>角色设定圣经</em></h1>
+  <p class="sub">5 名普通敌人 + 3 名 Boss，按关卡投放节奏排序。每一条都带正视图 / 侧视图 / 攻击 Pose 的画面规范，以及 god view 55° 俯角下的读图要求。画布施工单见文末。</p>
+  <div class="metabar">
+    <span class="chip">敌人 <b>5</b></span>
+    <span class="chip">Boss <b>3</b></span>
+    <span class="chip">幕 <b>4</b></span>
+    <span class="chip">波次 <b>1–12</b></span>
+    <span class="chip">风格 <b>美漫卡通描边</b></span>
+    <span class="chip">视角 <b>god view · 俯角 55°</b></span>
+  </div>
+</div>
+
+<!-- ========== 1 关卡投放 ========== -->
+<section>
+  <h2><span class="num">01</span>关卡投放矩阵</h2>
+  <p class="lede">敌人不是平均撒的。每一幕只新增 1–2 个机制，玩家先学会、再被组合考验。第一幕是"怎么动"，第二幕是"往哪打"，第三幕是"不敢站"，第四幕是全都来。</p>
+  <div class="acts">
+    <div class="act"><div class="bar" style="background:var(--warn)"></div><div class="body">
+      <div class="no">ACT 01</div><h3>城郊公路</h3><div class="en">HIGHWAY OUTSKIRTS</div>
+      <div class="row"><span>波次</span><b>1–3</b></div>
+      <div class="row"><span>教学点</span><b>侧移 · 打头</b></div>
+      <div class="row"><span>Boss</span><b>B-01 屠夫</b></div>
+      <div class="pills"><span class="pill" style="background:var(--zombie)">E-01</span><span class="pill" style="background:var(--blood);color:var(--bone)">E-02</span></div>
+      <div class="arena">加油站雨棚 + 翻覆车阵。开阔但多硬掩体，E-02 的直线预警在开阔地里才读得清。</div>
+    </div></div>
+    <div class="act"><div class="bar" style="background:var(--blood)"></div><div class="body">
+      <div class="no">ACT 02</div><h3>废弃仓库</h3><div class="en">RUINED WAREHOUSE</div>
+      <div class="row"><span>波次</span><b>4–6</b></div>
+      <div class="row"><span>教学点</span><b>绕侧背 · 离开掩体</b></div>
+      <div class="row"><span>Boss</span><b>B-01 屠夫（强化）</b></div>
+      <div class="pills"><span class="pill" style="background:var(--blood);color:var(--bone)">E-02</span><span class="pill" style="background:var(--zombie)">E-03</span><span class="pill" style="background:var(--common)">E-04</span></div>
+      <div class="arena">货架巷道 + 冷库。视线被切碎，E-03 专治蹲掩体，E-04 逼你从正面绕到背面。</div>
+    </div></div>
+    <div class="act"><div class="bar" style="background:var(--toxic)"></div><div class="body">
+      <div class="no">ACT 03</div><h3>地铁隧道</h3><div class="en">SUBWAY TUNNELS</div>
+      <div class="row"><span>波次</span><b>7–9</b></div>
+      <div class="row"><span>教学点</span><b>空间管理 · 引爆环境</b></div>
+      <div class="row"><span>Boss</span><b>B-02 母体</b></div>
+      <div class="pills"><span class="pill" style="background:var(--common)">E-04</span><span class="pill" style="background:var(--warn)">E-05</span><span class="pill" style="background:var(--zombie)">E-03</span></div>
+      <div class="arena">狭长线性，纵向空间高。E-05 在窄道里是死亡陷阱，也是清群工具——同一机制两种用法。</div>
+    </div></div>
+    <div class="act"><div class="bar" style="background:var(--gold)"></div><div class="body">
+      <div class="no">ACT 04</div><h3>生化医院</h3><div class="en">BIOHAZARD HOSPITAL</div>
+      <div class="row"><span>波次</span><b>10–12</b></div>
+      <div class="row"><span>教学点</span><b>全机制混合</b></div>
+      <div class="row"><span>Boss</span><b>B-03 零号</b></div>
+      <div class="pills"><span class="pill" style="background:var(--zombie)">E-01</span><span class="pill" style="background:var(--blood);color:var(--bone)">E-02</span><span class="pill" style="background:var(--zombie)">E-03</span><span class="pill" style="background:var(--common)">E-04</span><span class="pill" style="background:var(--warn)">E-05</span></div>
+      <div class="arena">天台开阔 + 病房迷宫双层。五种敌人全上，靠组合而非数值制造压力。</div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ========== 2 普通敌人 ========== -->
+<section>
+  <h2><span class="num">02</span>普通敌人 · 5 名</h2>
+  <p class="lede">判据只有一条：<strong>剪影能不能在 0.3 秒内被认出来</strong>。god view 下角色只有几十像素高，细节全丢，能读的只剩轮廓和主色。所以这 5 个的剪影分别是倒三角 / 水平条 / 正球+细腿 / 单侧巨块 / 正圆球——两两之间没有任何一对会混淆。</p>
+
+  <!-- E-01 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--zombie)">E-01</div>
+      <div class="tt"><h3>游荡者</h3><div class="en">SHAMBLER</div></div>
+      <div class="threat" style="background:var(--teal)"><div class="lv">THREAT</div><div class="v">低</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none">
+              <path d="M50 58 C38 74 32 98 34 126"/>
+              <path d="M76 58 C88 74 92 98 90 124"/>
+            </g>
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="15" fill="none">
+              <path d="M55 120 L52 160"/><path d="M80 120 L84 160"/>
+            </g>
+            <path d="M58 44 C46 46 40 60 42 82 L46 112 C47 120 54 124 62 124 L78 124 C86 122 90 112 88 98 L84 62 C82 50 72 44 58 44 Z" fill="currentColor"/>
+            <circle cx="56" cy="28" r="14" fill="currentColor"/>
+            <path d="M46 34 L64 34 L62 42 L48 42 Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>倒三角 + 长臂垂膝</b>头部低垂前伸，双臂长度超过大腿——远看是个"挂着两条绳子的三角"</div>
+      </div>
+      <div class="info">
+        <p class="look">瘦长驼背，前臂过长垂至膝下，下颚脱臼半垂露出牙齿。破烂加油站连体工装，左小腿胫骨外露。皮肤尸绿带灰斑。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">60</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">1.4 m/s</div></div>
+          <div class="stat"><div class="k">身高</div><div class="v">1.75 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">900</div></div>
+        </div>
+        <div class="atk">
+          <div class="h"><span class="n">挥抓</span><span class="e">SWIPE</span><span class="d">伤害 8 · CD 1.6s</span></div>
+          <p>前摇 0.8 s，扇形 90° / 2.2 m。</p>
+          <div class="tg"><b>预警：</b>右臂高举过头顶，地面淡红扇形。这是全场第一个被教的"看预警走位"。</div>
+        </div>
+        <div class="kv"><div class="k">定位</div><div class="v">教学兵。教玩家侧移绕后 + 打头部。</div></div>
+        <div class="kv"><div class="k">弱点</div><div class="v">头部 ×2.5 伤害；可被近战击退打断前摇。</div></div>
+        <div class="kv"><div class="k">投放</div><div class="v">Act 1–4 全幕填充，混在尸群里当背景密度。</div></div>
+        <div class="kv"><div class="k">主色</div><div class="v"><code>#8FD14F</code> 尸绿</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-02 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--blood)">E-02</div>
+      <div class="tt"><h3>扑跃者</h3><div class="en">LUNGER</div></div>
+      <div class="threat" style="background:var(--warn)"><div class="lv">THREAT</div><div class="v">中</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="12" fill="none">
+              <path d="M40 96 L24 126"/><path d="M54 100 L46 136"/>
+              <path d="M78 96 L92 118 L104 132"/><path d="M86 100 L102 122 L114 134"/>
+            </g>
+            <path d="M28 86 C28 71 42 62 60 62 C78 62 92 71 92 86 C92 99 78 107 60 107 C42 107 28 99 28 86 Z" fill="currentColor"/>
+            <g fill="currentColor">
+              <path d="M44 66 L50 52 L56 66 Z"/><path d="M56 63 L62 49 L68 63 Z"/><path d="M68 65 L74 52 L80 65 Z"/>
+            </g>
+            <circle cx="98" cy="72" r="13" fill="currentColor"/>
+            <path d="M104 64 L118 60 L118 74 L104 76 Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>水平压缩 + 四肢外张</b>唯一一个身体是"横着"的敌人，背脊锯齿是第二识别点</div>
+      </div>
+      <div class="info">
+        <p class="look">猫科骨架，脊椎棘突外露成锯齿状背脊，后腿蜷曲呈蓄力态。下颌骨完全缺失，口腔纵向开裂至胸腔。指端生骨刺。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">45</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">3.2 / 8 m/s</div></div>
+          <div class="stat"><div class="k">身高</div><div class="v">1.25 m 四足</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">1100</div></div>
+        </div>
+        <div class="atk">
+          <div class="h"><span class="n">扑跃</span><span class="e">POUNCE</span><span class="d">伤害 18 · CD 3.2s</span></div>
+          <p>蓄力 0.5 s，直线 6 m，落点 1.6 m 圆形 AoE。</p>
+          <div class="tg"><b>预警：</b>后腿压低身体贴地，地面亮起黄色<b>直线</b>预警。直线预警和 E-01 的扇形预警是玩家要区分的第一组形状语言。</div>
+        </div>
+        <div class="kv"><div class="k">定位</div><div class="v">打断站桩输出，逼玩家留位移技能。</div></div>
+        <div class="kv"><div class="k">弱点</div><div class="v">蓄力 0.5 s 内被打断 → 自伤 15 并翻倒 1.2 s。这是"读预警"的第一个正反馈。</div></div>
+        <div class="kv"><div class="k">投放</div><div class="v">Act 1 波次 3 起登场 → Act 2 主力。</div></div>
+        <div class="kv"><div class="k">主色</div><div class="v"><code>#E8402A</code> 血红</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-03 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--zombie)">E-03</div>
+      <div class="tt"><h3>呕吐者</h3><div class="en">SPITTER</div></div>
+      <div class="threat" style="background:var(--warn)"><div class="lv">THREAT</div><div class="v">中</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="15" fill="none">
+              <path d="M54 128 L48 158"/><path d="M70 128 L76 158"/>
+            </g>
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="8" fill="none">
+              <path d="M34 92 C26 100 24 112 28 122"/><path d="M86 92 C94 100 96 112 92 122"/>
+            </g>
+            <circle cx="58" cy="100" r="34" fill="currentColor"/>
+            <circle cx="66" cy="48" r="12" fill="currentColor"/>
+            <path d="M74 42 L96 36 L96 52 L74 54 Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>正球腹 + 细肢 + 上仰喷口</b>体积集中在一个圆里，四肢细到几乎消失——和 E-05 的区别是头小、有喇叭口</div>
+      </div>
+      <div class="info">
+        <p class="look">腹部膨大成半透明球，内部毒囊透出绿光。双臂萎缩贴身，头颈后仰、口器呈喇叭状喷口。躯干与四肢比例极端失衡。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">70</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">1.0 m/s</div></div>
+          <div class="stat"><div class="k">射程</div><div class="v">9 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">1200</div></div>
+        </div>
+        <div class="atk">
+          <div class="h"><span class="n">酸液抛射</span><span class="e">ACID LOB</span><span class="d">6 DPS · CD 4.0s</span></div>
+          <p>蓄力 1.2 s，抛物线弹道，落点生成 2 m 毒池持续 4 s。</p>
+          <div class="tg"><b>预警：</b>球体鼓胀发亮，落点提前 0.8 s 出现绿圈。<b>0.8 s 是硬指标</b>——短了玩家来不及离场，长了毒池就没有威胁。</div>
+        </div>
+        <div class="kv"><div class="k">定位</div><div class="v">占场型。逼玩家离开掩体和固定输出位。</div></div>
+        <div class="kv"><div class="k">弱点</div><div class="v">击中发光毒囊 → 立即在自身脚下生成毒池。可被引诱自伤，是"打要害"教学。</div></div>
+        <div class="kv"><div class="k">投放</div><div class="v">Act 2 起，全幕远程压制。</div></div>
+        <div class="kv"><div class="k">主色</div><div class="v"><code>#8FD14F</code> 尸绿 + 毒囊自发光</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-04 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--common)">E-04</div>
+      <div class="tt"><h3>盾卫</h3><div class="en">BULWARK</div></div>
+      <div class="threat" style="background:var(--blood);color:var(--bone)"><div class="lv" style="color:var(--bone)">THREAT</div><div class="v">高</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="17" fill="none">
+              <path d="M54 106 L52 152"/><path d="M78 106 L80 152"/>
+            </g>
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="19" fill="none">
+              <path d="M82 56 C98 64 106 82 104 102"/>
+            </g>
+            <path d="M50 44 L82 44 L86 108 L48 108 Z" fill="currentColor"/>
+            <circle cx="66" cy="30" r="12" fill="currentColor"/>
+            <path d="M52 28 L80 28 L80 34 L52 34 Z" fill="currentColor"/>
+            <path d="M22 38 C8 46 4 70 8 94 C11 112 22 122 38 122 L48 122 L48 38 Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>矩形块 + 单侧巨盾</b>全场唯一左右强不对称的敌人。玩家只要看到"哪边更大"就知道该往哪绕</div>
+      </div>
+      <div class="info">
+        <p class="look">钢板直接焊进胸腔与左臂形成一体化盾板，头盔焊死只剩横向观察缝。右臂裸露并畸形肥大，背脊椎接口裸露发红光。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">220</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">1.8 / 6 m/s</div></div>
+          <div class="stat"><div class="k">正面减伤</div><div class="v">70 %</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">1600</div></div>
+        </div>
+        <div class="atk">
+          <div class="h"><span class="n">盾击冲锋</span><span class="e">SHIELD CHARGE</span><span class="d">伤害 12 + 眩晕 0.6s · CD 5.0s</span></div>
+          <p>蓄力 1.0 s，直线 8 m 冲撞，命中击退 + 眩晕。</p>
+          <div class="tg"><b>预警：</b>低头、盾板前压，地面黄色<b>直线</b>轨迹。<b>被动：</b>正面 120° 减伤 70%，背面 ×1.5。</div>
+        </div>
+        <div class="kv"><div class="k">定位</div><div class="v">教玩家绕侧背。正面硬刚必亏，是所有敌人里唯一"打得动但打不痛"的。</div></div>
+        <div class="kv"><div class="k">弱点</div><div class="v">背面脊椎红色接口 ×2 伤害。</div></div>
+        <div class="kv"><div class="k">投放</div><div class="v">Act 2 末登场 → Act 3 主力。</div></div>
+        <div class="kv"><div class="k">主色</div><div class="v"><code>#9AA0A6</code> 钢灰 + <code>#2BC4D6</code> 焊点</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-05 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--warn)">E-05</div>
+      <div class="tt"><h3>爆尸</h3><div class="en">BLOATER</div></div>
+      <div class="threat" style="background:var(--blood);color:var(--bone)"><div class="lv" style="color:var(--bone)">THREAT</div><div class="v">高</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none">
+              <path d="M46 132 L40 158"/><path d="M76 132 L82 158"/>
+              <path d="M24 98 L8 110"/><path d="M96 98 L112 110"/>
+            </g>
+            <circle cx="60" cy="94" r="44" fill="currentColor"/>
+            <circle cx="60" cy="40" r="14" fill="currentColor"/>
+            <g stroke="var(--paper)" stroke-width="3" stroke-linecap="round" opacity=".55">
+              <path d="M44 66 L52 82 L44 96"/><path d="M76 66 L68 82 L76 96"/><path d="M60 52 L60 74"/>
+            </g>
+          </svg>
+        </div>
+        <div class="silcap"><b>正圆球 + 无脖子</b>最小头身比。和 E-03 的区别：E-05 是完美圆形且头颅陷进去，E-03 是球在上、细腿在下</div>
+      </div>
+      <div class="info">
+        <p class="look">全身充气水肿，皮肤半透可见皮下黄色气肿结节，肚皮裂纹透出橙光。脖子完全消失、头颅陷进躯干，四肢短小。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">90</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">1.1 m/s</div></div>
+          <div class="stat"><div class="k">爆炸半径</div><div class="v">3.5 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">1000</div></div>
+        </div>
+        <div class="atk">
+          <div class="h"><span class="n">自爆</span><span class="e">DETONATE</span><span class="d">伤害 35 + 击退 4m</span></div>
+          <p>进入 2.5 m 触发 1.5 s 引信，半径 3.5 m 爆炸。<strong>被击杀也爆</strong>（引信缩短至 0.4 s，伤害减半）。</p>
+          <div class="tg"><b>预警：</b>体表由绿转红、裂纹增亮、高频蜂鸣。三组信号（色 / 光 / 声）必须同时给，god view 下角色太小，靠单一信号读不出来。</div>
+        </div>
+        <div class="kv"><div class="k">定位</div><div class="v">走位惩罚 + 环境武器。可引到尸群中引爆清场——同一个机制两种用法，是这套设计里性价比最高的一条。</div></div>
+        <div class="kv"><div class="k">弱点</div><div class="v">引信期间击杀 → 伤害减半。</div></div>
+        <div class="kv"><div class="k">投放</div><div class="v">Act 3 起（隧道窄道里威胁翻倍）。</div></div>
+        <div class="kv"><div class="k">主色</div><div class="v"><code>#FFC531</code> 常态 → <code>#E8402A</code> 引信态</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 3 Boss ========== -->
+<section>
+  <h2><span class="num">03</span>Boss · 3 名</h2>
+  <p class="lede">三个 Boss 按<strong>攻击特性</strong>而非按难度分：B-01 是"压制"（贴脸逼你跑），B-02 是"控场"（占空间逼你算），B-03 是"变异"（换机制逼你重新学）。三者机制不重叠，玩家不会因为"又是同一个大只的"而疲劳。</p>
+
+  <!-- B-01 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--blood);color:var(--bone)">B-01</div>
+      <div class="tt"><h3>屠夫</h3><div class="en">THE BUTCHER</div></div>
+      <div class="threat" style="background:var(--gold)"><div class="lv">THREAT</div><div class="v">极高</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="18" fill="none">
+              <path d="M44 126 L42 160"/><path d="M78 126 L80 160"/>
+              <path d="M30 58 C16 66 10 86 14 104"/>
+            </g>
+            <path d="M60 40 C40 40 28 54 28 78 L28 112 C28 122 36 128 46 128 L74 128 C84 128 92 122 92 112 L92 78 C92 54 80 40 60 40 Z" fill="currentColor"/>
+            <rect x="8" y="98" width="20" height="34" rx="6" fill="currentColor"/>
+            <circle cx="60" cy="24" r="15" fill="currentColor"/>
+            <path d="M46 26 L74 26 L74 34 L46 34 Z" fill="currentColor"/>
+            <g stroke="currentColor" stroke-linecap="round" fill="none">
+              <path d="M92 56 C106 66 110 88 106 110" stroke-width="15"/>
+              <path d="M106 110 C106 128 96 138 82 134" stroke-width="8"/>
+            </g>
+          </svg>
+        </div>
+        <div class="silcap"><b>宽肩倒梯形 + 右臂单点长垂</b>左臂是滚筒（团块），右臂是钩子（线条）——左右一圆一线，是全场最好认的 Boss 剪影</div>
+      </div>
+      <div class="info">
+        <p class="look">3.2 m 巨型。血污帆布围裙挂满金属挂钩，右臂自肘部截断接上 60 cm 肉钩，左臂改装成缓慢转动的绞肉机滚筒。猪头面具眼孔透黄光，脚踝锁着崩断的铁链。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">4200</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">2.2 / 9 m/s</div></div>
+          <div class="stat"><div class="k">身高</div><div class="v">3.2 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">4200</div></div>
+        </div>
+        <div class="bosslist">
+          <div class="arow"><div class="key" style="background:var(--warn)">A</div><div>
+            <div class="an">横扫<span class="ae">SWEEP</span></div>
+            <div class="ad">肉钩 270° 横扫。前摇 0.9 s，半径 4 m，伤害 30 + 击退 3 m。</div>
+            <div class="at">预警：地面亮起黄色<b>弧形</b>，弧长即判定范围。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--warn)">B</div><div>
+            <div class="an">冲锋<span class="ae">CHARGE</span></div>
+            <div class="ad">直线突进 12 m，伤害 25。撞墙后自我眩晕 2.0 s。</div>
+            <div class="at">预警：低头蓄力 0.7 s，地面黄色直线轨迹。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--warn)">C</div><div>
+            <div class="an">抛钩<span class="ae">HOOK</span></div>
+            <div class="ad">9 m 抛钩命中拉拽玩家强制位移 + 0.8 s 硬直，伤害 10。</div>
+            <div class="at">预警：链条绷紧声 + 钩子发光 0.5 s。</div></div></div>
+        </div>
+        <div class="kv" style="margin-top:12px"><div class="k">破绽</div><div class="v">撞墙眩晕 2.0 s，期间减伤 −50%。<strong>这是唯一的稳定输出窗口。</strong></div></div>
+        <div class="kv"><div class="k">场地</div><div class="v">Act 1 Boss · 废弃仓库冷库</div></div>
+        <div class="bossnote"><b>god view 读图:</b>俯角 55° 下 270° 横扫光靠身体动画看不清，必须靠地面预警弧读图。撞墙点是唯一稳定输出窗口——场景里要有明确、可达、不重复的撞墙位，否则这个破绽形同虚设。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B-02 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--toxic)">B-02</div>
+      <div class="tt"><h3>母体</h3><div class="en">THE BROODMOTHER</div></div>
+      <div class="threat" style="background:var(--gold)"><div class="lv">THREAT</div><div class="v">极高</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none">
+              <path d="M48 68 C32 88 26 120 28 154"/>
+              <path d="M74 72 C88 94 94 128 92 156"/>
+            </g>
+            <path d="M58 110 C42 98 42 62 60 48 C74 36 92 46 94 66 C96 86 84 102 70 110 Z" fill="currentColor"/>
+            <circle cx="88" cy="42" r="12" fill="currentColor"/>
+            <path d="M22 168 C18 132 34 108 60 108 C86 108 102 132 98 168 Z" fill="currentColor"/>
+            <ellipse cx="60" cy="150" rx="18" ry="11" fill="var(--paper)" opacity=".35"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>上下双体 + 反折上身 + 双臂拖地</b>唯一"不是站着"的 Boss。上半身向后弓成 C 形，是全场唯一的反向曲线</div>
+      </div>
+      <div class="info">
+        <p class="look">4.0 m 高。下半身是巨大的产卵囊固定在隧道地面与顶部之间，上半身人形但腰椎反折成 C 形后弓，双臂过长垂地拖行。头颅后仰、口器纵向开裂至胸腔，静脉发紫光。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">6000</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">固定不可移动</div></div>
+          <div class="stat"><div class="k">身高</div><div class="v">4.0 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">6000</div></div>
+        </div>
+        <div class="bosslist">
+          <div class="arow"><div class="key" style="background:var(--zombie)">A</div><div>
+            <div class="an">产卵<span class="ae">SPAWN</span></div>
+            <div class="ad">每 8 s 从囊袋产出 6 只幼虫（1.1 m / 速度 4.5 / HP 20 / 自爆 8 伤害）。</div>
+            <div class="at">预警：囊袋口鼓胀发光 1.0 s。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--zombie)">B</div><div>
+            <div class="an">酸雨<span class="ae">RAIN</span></div>
+            <div class="ad">天花板 3 段连环 AoE，每段伤害 15。</div>
+            <div class="at">预警：落点绿圈 1.0 s。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--zombie)">C</div><div>
+            <div class="an">拍击<span class="ae">SLAM</span></div>
+            <div class="ad">双臂交替砸地，冲击波沿隧道十字扩散，伤害 22。</div>
+            <div class="at">预警：单臂高举 0.8 s，地面出现十字裂纹预告。</div></div></div>
+        </div>
+        <div class="kv" style="margin-top:12px"><div class="k">破绽</div><div class="v">产卵时囊袋张开 1.5 s，期间 ×2 伤害。</div></div>
+        <div class="kv"><div class="k">场地</div><div class="v">Act 2 Boss · 地铁隧道巢穴</div></div>
+        <div class="bossnote"><b>god view 读图:</b>本体固定，玩家走位空间是环形——必须用地面分区色（安全 / 危险）保持持续可读，不能只靠瞬时预警圈。另外幼虫数量要有 HUD 计数：玩家在小屏上分不清"压力来自本体还是来自小怪"，这点必须靠 UI 补。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B-03 -->
+  <div class="sheet">
+    <div class="top">
+      <div class="badge" style="background:var(--toxic);color:var(--bone)">B-03</div>
+      <div class="tt"><h3>零号</h3><div class="en">PATIENT ZERO</div></div>
+      <div class="threat" style="background:var(--gold)"><div class="lv">THREAT</div><div class="v">极高</div></div>
+    </div>
+    <div class="grid">
+      <div class="sil">
+        <div class="silbox">
+          <svg viewBox="0 0 120 175" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-width="11" fill="none">
+              <path d="M54 116 L52 158"/><path d="M68 116 L70 158"/>
+              <path d="M48 54 C34 66 28 88 30 108"/><path d="M72 54 C86 66 92 88 90 108"/>
+            </g>
+            <path d="M44 96 C36 110 32 130 30 152 L42 148 C44 128 46 112 48 104 Z" fill="currentColor"/>
+            <path d="M76 96 C84 110 88 130 90 152 L78 148 C76 128 74 112 72 104 Z" fill="currentColor"/>
+            <path d="M60 44 C52 44 48 54 48 70 L48 104 C48 114 54 118 60 118 C66 118 72 114 72 104 L72 70 C72 54 68 44 60 44 Z" fill="currentColor"/>
+            <circle cx="60" cy="28" r="13" fill="currentColor"/>
+            <path d="M60 58 C53 70 53 86 60 96 C67 86 67 70 60 58 Z" fill="var(--toxic)"/>
+          </svg>
+        </div>
+        <div class="silcap"><b>瘦高 + 破碎下摆 + 胸腔裂口发光</b>全场唯一"瘦"的 Boss。胸腔那块紫色自发光是远距离唯一的识别点</div>
+      </div>
+      <div class="info">
+        <p class="look">2.6 m 瘦削高挑。白大褂撕裂成条状下摆，胸腔纵向裂开露出第二张口器（内衬环状牙齿），头骨左半外露、右半覆盖萎缩皮肤。静脉发紫光，左手拖着断裂的输液架。</p>
+        <div class="stats">
+          <div class="stat"><div class="k">HP</div><div class="v">9000</div></div>
+          <div class="stat"><div class="k">速度</div><div class="v">3.0 / P3 ×1.6</div></div>
+          <div class="stat"><div class="k">身高</div><div class="v">2.6 m</div></div>
+          <div class="stat acc"><div class="k">TRIS</div><div class="v">5200</div></div>
+        </div>
+        <div class="bosslist">
+          <div class="arow"><div class="key" style="background:var(--toxic)">P1</div><div>
+            <div class="an">100–70% · 注射器飞刀<span class="ae">SYRINGE VOLLEY</span></div>
+            <div class="ad">三连射，射程 12 m，伤害 12 / 发；附带 6 m 短距闪现（CD 4 s）。</div>
+            <div class="at">预警：抬手 + 针尖紫光 0.4 s。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--toxic)">P2</div><div>
+            <div class="an">70–35% · 长鞭双臂<span class="ae">LASH ARMS</span></div>
+            <div class="ad">撕裂白大褂 → 双臂变异为 7 m 长鞭，横扫 + 拉拽；召唤 3 只盾卫。</div>
+            <div class="at">预警：白大褂撕裂瞬间 1.2 s 硬直（可打断）。</div></div></div>
+          <div class="arow"><div class="key" style="background:var(--toxic)">P3</div><div>
+            <div class="an">35–0% · 胸腔毒息<span class="ae">CHEST MIASMA</span></div>
+            <div class="ad">第二张口器张开，120° 扇形毒息持续 5 s（DPS 14）+ 全场毒池；狂暴（速度 ×1.6、攻击 CD ×0.7）。</div>
+            <div class="at">预警：胸腔裂口紫光暴涨 1.0 s。</div></div></div>
+        </div>
+        <div class="kv" style="margin-top:12px"><div class="k">破绽</div><div class="v">每次阶段切换 1.2 s 硬直，可打断一次攻击；P3 毒息期间侧后方为安全区。</div></div>
+        <div class="kv"><div class="k">场地</div><div class="v">Act 4 Boss · 生化医院天台（风向影响毒息扩散方向）</div></div>
+        <div class="bossnote"><b>god view 读图:</b>阶段切换靠<strong>体态突变</strong>读图——P2 手臂变长、P3 胸腔张开。这两个是最强信号，必须做成全屏可辨的轮廓变化。不能只靠血条数字：横屏手机里玩家眼睛在摇杆和角色之间，血条在角落根本看不到。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 4 剪影对照 ========== -->
+<section>
+  <h2><span class="num">04</span>剪影对照 · 混淆检查</h2>
+  <p class="lede">把 8 个剪影缩到 48 px 并排放在一起——这是 god view 下的真实尺寸。<strong>如果在这个尺寸下认不出来，设计就是失败的。</strong></p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;padding:24px;background:var(--panel);border:var(--stb) solid var(--ink);border-radius:var(--rp);box-shadow:var(--sh) var(--sh) 0 var(--ink);align-items:flex-end;justify-content:center">
+    <!-- 48px 版本 -->
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--zombie)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none"><path d="M50 58 C38 74 32 98 34 126"/><path d="M76 58 C88 74 92 98 90 124"/></g>
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="15" fill="none"><path d="M55 120 L52 160"/><path d="M80 120 L84 160"/></g>
+      <path d="M58 44 C46 46 40 60 42 82 L46 112 C47 120 54 124 62 124 L78 124 C86 122 90 112 88 98 L84 62 C82 50 72 44 58 44 Z" fill="currentColor"/>
+      <circle cx="56" cy="28" r="14" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">E-01</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--blood)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="12" fill="none"><path d="M40 96 L24 126"/><path d="M54 100 L46 136"/><path d="M78 96 L92 118 L104 132"/><path d="M86 100 L102 122 L114 134"/></g>
+      <path d="M28 86 C28 71 42 62 60 62 C78 62 92 71 92 86 C92 99 78 107 60 107 C42 107 28 99 28 86 Z" fill="currentColor"/>
+      <g fill="currentColor"><path d="M44 66 L50 52 L56 66 Z"/><path d="M56 63 L62 49 L68 63 Z"/><path d="M68 65 L74 52 L80 65 Z"/></g>
+      <circle cx="98" cy="72" r="13" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">E-02</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--zombie)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="15" fill="none"><path d="M54 128 L48 158"/><path d="M70 128 L76 158"/></g>
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="8" fill="none"><path d="M34 92 C26 100 24 112 28 122"/><path d="M86 92 C94 100 96 112 92 122"/></g>
+      <circle cx="58" cy="100" r="34" fill="currentColor"/><circle cx="66" cy="48" r="12" fill="currentColor"/>
+      <path d="M74 42 L96 36 L96 52 L74 54 Z" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">E-03</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--common)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="17" fill="none"><path d="M54 106 L52 152"/><path d="M78 106 L80 152"/></g>
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="19" fill="none"><path d="M82 56 C98 64 106 82 104 102"/></g>
+      <path d="M50 44 L82 44 L86 108 L48 108 Z" fill="currentColor"/><circle cx="66" cy="30" r="12" fill="currentColor"/>
+      <path d="M22 38 C8 46 4 70 8 94 C11 112 22 122 38 122 L48 122 L48 38 Z" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">E-04</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--warn)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none"><path d="M46 132 L40 158"/><path d="M76 132 L82 158"/><path d="M24 98 L8 110"/><path d="M96 98 L112 110"/></g>
+      <circle cx="60" cy="94" r="44" fill="currentColor"/><circle cx="60" cy="40" r="14" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">E-05</div></div>
+    <div style="width:2px;background:var(--ink);height:70px;margin:0 6px"></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--blood)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="18" fill="none"><path d="M44 126 L42 160"/><path d="M78 126 L80 160"/><path d="M30 58 C16 66 10 86 14 104"/></g>
+      <path d="M60 40 C40 40 28 54 28 78 L28 112 C28 122 36 128 46 128 L74 128 C84 128 92 122 92 112 L92 78 C92 54 80 40 60 40 Z" fill="currentColor"/>
+      <rect x="8" y="98" width="20" height="34" rx="6" fill="currentColor"/><circle cx="60" cy="24" r="15" fill="currentColor"/>
+      <path d="M46 26 L74 26 L74 34 L46 34 Z" fill="currentColor"/>
+      <g stroke="currentColor" stroke-linecap="round" fill="none"><path d="M92 56 C106 66 110 88 106 110" stroke-width="15"/><path d="M106 110 C106 128 96 138 82 134" stroke-width="8"/></g></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">B-01</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--toxic)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="13" fill="none"><path d="M48 68 C32 88 26 120 28 154"/><path d="M74 72 C88 94 94 128 92 156"/></g>
+      <path d="M58 110 C42 98 42 62 60 48 C74 36 92 46 94 66 C96 86 84 102 70 110 Z" fill="currentColor"/>
+      <circle cx="88" cy="42" r="12" fill="currentColor"/>
+      <path d="M22 168 C18 132 34 108 60 108 C86 108 102 132 98 168 Z" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">B-02</div></div>
+    <div style="text-align:center"><svg viewBox="0 0 120 175" style="width:48px;height:70px;color:var(--toxic)">
+      <g stroke="currentColor" stroke-linecap="round" stroke-width="11" fill="none"><path d="M54 116 L52 158"/><path d="M68 116 L70 158"/><path d="M48 54 C34 66 28 88 30 108"/><path d="M72 54 C86 66 92 88 90 108"/></g>
+      <path d="M44 96 C36 110 32 130 30 152 L42 148 C44 128 46 112 48 104 Z" fill="currentColor"/>
+      <path d="M76 96 C84 110 88 130 90 152 L78 148 C76 128 74 112 72 104 Z" fill="currentColor"/>
+      <path d="M60 44 C52 44 48 54 48 70 L48 104 C48 114 54 118 60 118 C66 118 72 114 72 104 L72 70 C72 54 68 44 60 44 Z" fill="currentColor"/>
+      <circle cx="60" cy="28" r="13" fill="currentColor"/></svg><div style="font-size:10px;color:var(--dim);margin-top:4px">B-03</div></div>
+  </div>
+  <table style="margin-top:18px">
+    <tr><th>对比组</th><th>区分手段</th><th>结论</th></tr>
+    <tr><td>E-03 呕吐者 / E-05 爆尸</td><td>都是"球体"。E-03 球在<strong>上</strong>、细腿在下、头小且带喇叭口；E-05 是完美正圆、头颅陷进去、四肢极短</td><td style="color:var(--blood)">风险最高的一对，需靠主色二次区分（绿 / 黄）</td></tr>
+    <tr><td>E-01 游荡者 / B-03 零号</td><td>都偏瘦。E-01 驼背+长臂，B-03 直立+破碎下摆+胸腔紫光</td><td style="color:var(--zombie)">体型差 1.75 / 2.6 m，尺寸本身已足够区分</td></tr>
+    <tr><td>E-02 扑跃者 / 其余全部</td><td>唯一水平构图</td><td style="color:var(--zombie)">零混淆</td></tr>
+    <tr><td>E-04 盾卫 / B-01 屠夫</td><td>都有大面积金属。E-04 是<strong>单侧</strong>盾板，B-01 是<strong>整体</strong>宽肩+长垂钩</td><td style="color:var(--zombie)">剪影朝向完全相反（竖块 / 横梯形）</td></tr>
+    <tr><td>B-02 母体 / 其余全部</td><td>唯一上下双体 + 反向 C 形曲线</td><td style="color:var(--zombie)">零混淆</td></tr>
+  </table>
+</section>
+
+<!-- ========== 5 画布施工单 ========== -->
+<section>
+  <h2><span class="num">05</span>画布施工单</h2>
+  <p class="lede">以下是在 Ardot 画布 <code>末日尸潮 · 横屏肉鸽射击 UI</code>（fileId <code>720788949675822</code>）里的落位规划，共 9 个 Frame。等画布连接恢复后按此执行。</p>
+  <div class="warnbox">
+    <h3>⚠ 当前状态：画布未挂载</h3>
+    <p style="font-size:15px;line-height:1.8">本次会话的 ardot 画布工具未加载，无法写入。已确认服务本身在线（工具名 <code>mcp__ardot__open_design</code> / <code>create_design</code> 已注册），属于会话启动快照问题。</p>
+    <ol>
+      <li>新开一个会话（最省事）；若另有窗口占用画布，先关掉那个窗口</li>
+      <li>新会话里直接说「按 <code>assets/characters/roster.json</code> 的 canvas 段施工」即可，无需重讲背景</li>
+    </ol>
+  </div>
+  <table style="margin-top:20px">
+    <tr><th>页码</th><th>内容</th><th>Frame</th><th>坐标</th><th>尺寸</th></tr>
+    <tr><td>10</td><td>E-01 游荡者</td><td>三视图 + 数据条</td><td>(0, 2640)</td><td>1560 × 900</td></tr>
+    <tr><td>11</td><td>E-02 扑跃者</td><td>三视图 + 数据条</td><td>(1700, 2640)</td><td>1560 × 900</td></tr>
+    <tr><td>12</td><td>E-03 呕吐者</td><td>三视图 + 数据条</td><td>(3400, 2640)</td><td>1560 × 900</td></tr>
+    <tr><td>13</td><td>E-04 盾卫</td><td>三视图 + 数据条</td><td>(0, 3680)</td><td>1560 × 900</td></tr>
+    <tr><td>14</td><td>E-05 爆尸</td><td>三视图 + 数据条</td><td>(1700, 3680)</td><td>1560 × 900</td></tr>
+    <tr><td>15</td><td>敌群图鉴 · 投放矩阵</td><td>索引总览</td><td>(3400, 3680)</td><td>1560 × 900</td></tr>
+    <tr><td>16</td><td>B-01 屠夫</td><td>三视图 + 三段攻击表</td><td>(0, 4720)</td><td>1560 × 900</td></tr>
+    <tr><td>17</td><td>B-02 母体</td><td>三视图 + 三段攻击表</td><td>(1700, 4720)</td><td>1560 × 900</td></tr>
+    <tr><td>18</td><td>B-03 零号</td><td>三视图 + 三阶段表</td><td>(3400, 4720)</td><td>1560 × 900</td></tr>
+  </table>
+  <p style="margin-top:16px;font-size:14px;color:var(--dim);line-height:1.8">每个角色 Frame 内部结构：顶部标题栏 96 px（编号徽章 + 中英文名 + 威胁等级 pill）→ 三张视图卡 480×540（正面 / 侧面 / 攻击，各含 440×420 图位与 440×68 标签条）→ 底部面板 1512×200（4 个数据格 + 特性说明行；Boss 为 3 条攻击行）。AI 提示词已写入 <code>roster.json</code> 的 <code>ai.base / ai.front / ai.side / ai.attack</code>，施工时直接拼接 <code>base + " " + 视图 + styleSuffix</code>。</p>
+</section>
+
+<footer>末日尸潮 · 角色设定圣经 v1.0 · 与 <code>assets/style/tokens.json</code> 同源</footer>
+</div>
+</body>
+</html>

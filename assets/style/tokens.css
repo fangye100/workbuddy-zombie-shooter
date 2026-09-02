@@ -1,0 +1,76 @@
+/* 末日尸潮 Tokens — v1.0.0
+   由 tokens.json 派生，UI 层（HTML/CSS）与引擎共用同一套命名。 */
+
+:root {
+  /* core */
+  --ink:        #14110F;
+  --paper:      #F5E7C8;
+  --bone:       #FFF6E2;
+  --night:      #171327;
+  --night-deep: #0E0C16;
+  --zombie:     #8FD14F;
+  --blood:      #E8402A;
+  --warn:       #FFC531;
+  --teal:       #2BC4D6;
+  --toxic:      #9B5DE5;
+  --gold:       #FF9F1C;
+
+  /* rarity */
+  --rare-common: #9AA0A6;
+  --rare-rare:   #4EA8FF;
+  --rare-epic:   #9B5DE5;
+  --rare-legend: #FF9F1C;
+
+  /* ui */
+  --panel:       #221E33;
+  --panel-deep:  #0A0812;
+  --text-dim:    #9AA0A6;
+  --cd-track:    #3A3550;
+  --cd-icon:     #6B6880;
+
+  /* numbers */
+  --stroke-ink:   4px;
+  --stroke-bold:  6px;
+  --radius-card:  18px;
+  --radius-panel: 24px;
+  --shadow-hard:  6px;
+}
+
+/* 漫画控件：粗描边 + 硬边偏移投影，不用模糊 */
+.btn-comic {
+  border: var(--stroke-ink) solid var(--ink);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-hard) var(--shadow-hard) 0 0 var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 900;
+}
+.btn-comic:active {
+  transform: translate(var(--shadow-hard), var(--shadow-hard));
+  box-shadow: 0 0 0 0 var(--ink);
+}
+
+/* HUD 面板：深色底高对比，禁止纯黑 */
+.panel-hud {
+  background: var(--panel);
+  border: var(--stroke-ink) solid var(--ink);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-hard) var(--shadow-hard) 0 0 var(--ink);
+}
+
+/* 稀有度：卡片顶部色条 */
+.rarity-bar { height: var(--stroke-bold); border-radius: 0; }
+.rarity-common { background: var(--rare-common); }
+.rarity-rare   { background: var(--rare-rare); }
+.rarity-epic   { background: var(--rare-epic); }
+.rarity-legend { background: var(--rare-legend); }
+
+/* 冷却态：去饱和，靠明度而不是灰度表达 */
+.cd { background: var(--cd-track); color: var(--cd-icon); }
+
+/* 文字层级 */
+.t-hi   { color: var(--bone); }
+.t-mid  { color: var(--paper); }
+.t-dim  { color: var(--text-dim); }
+.t-warn { color: var(--warn); }
+.t-danger { color: var(--blood); }

@@ -1,0 +1,21 @@
+{
+  "label": "E-04 盾卫",
+  "source": "E04_Bulwark_1600_baked.glb",
+  "vertices": 2083,
+  "triangles": 1575,
+  "heightMeters": 2.05,
+  "upAxis": "y",
+  "feetAtOrigin": true,
+  "facing": "-Z",
+  "bbox": [
+    -0.6741,
+    0.0,
+    -0.285,
+    0.6741,
+    2.05,
+    0.285
+  ],
+  "strideFloats": 15,
+  "aoMin": 0.0,
+  "aoMean": 0.549
+}

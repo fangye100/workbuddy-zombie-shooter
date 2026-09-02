@@ -1,0 +1,721 @@
+/**
+ * 极简 glTF 2.0 Binary（.glb）加载器。
+ *
+ * 用途：把「AI 生成的游戏模型」直接拖进 Shader Lab 预览，不用改任何代码。
+ * 输出统一转成 lab 的顶点契约（与 gpu/geometry.ts 一致，stride 60B / 15 floats）：
+ *   pos(3) + normal(3) + smoothNormal(3) + uv(2) + color(4)
+ *   color.r = 描边倍率(1.0)，color.g = 烘焙 AO（有 COLOR_0 才用，否则 1.0）
+ *
+ * 模型规整化（与 export_labmesh.py 同一套约定）：
+ *   - 轴：自动检测。AI 生成管线的 glb 常是 Z-up（高度在 Z），检测到 zSpan > ySpan×1.5
+ *     就按 (x,y,z)→(x,-z,y) 转成 Y-up（det=+1 的纯旋转，绕序不翻转）。
+ *     注意：混元 3D 产物脚底在 z-max（+Z 朝下），必须是这个带 180° X 翻转的极性才正立；
+ *     早期版本写成 (x,z,-y) 会让模型上下颠倒，13:58 已修正，别再改回去。
+ *   - 平移：X/Z 居中，脚底贴 y=0
+ *   - 缩放：统一缩到 targetHeight 米（**由调用方传入**，见 models.ts 的 CHARACTER_HEIGHT_M，
+ *     真源是 assets/characters/roster.json 的 height 字段；这里不硬编码身高）
+ *
+ * 已知限制（预览够用，别过度设计）：
+ *   - 只取 POSITION / NORMAL / TEXCOORD_0 / COLOR_0，无视 morph / skin
+ *   - 多 primitive / 多 mesh 会合并成一张（按 primitive 拆成子网格区间，见 subMeshes）
+ *   - 外部 .bin / 外部纹理文件不解析（glb 内嵌的才支持）
+ *
+ * 注：早期版本「忽略 node 层级变换」，这是导入后模型稀碎的根因（Blender 把 Z-up→Y-up
+ * 烘在 node 上，E-04 的 node 带 90°X 旋转）。现已改为 collectMeshInstances 遍历场景图
+ * 累乘世界矩阵，法线走 3x3 逆转置；烘完再做轴检测，避免双重旋转。别再改回去。
+ */
+
+import type { MeshData } from './geometry';
+import { nameAllocator } from '../naming';
+
+export const VF = 15;
+
+/** 子网格在合并后索引缓冲中的区间（与 Unity sub-mesh 同语义） */
+export interface SubMeshRange {
+  name: string;
+  indexStart: number;
+  indexCount: number;
+}
+
+export interface GltfResult {
+  mesh: MeshData;
+  /** 网格名（mesh.name 或 image.name，取得到才给） */
+  name: string;
+  vertices: number;
+  triangles: number;
+  /** 规整化后的身高（米） */
+  heightMeters: number;
+  /**
+   * 子网格（sub-mesh）：每个 primitive 在合并后索引缓冲里的区间。
+   * Unity 里一个 Mesh 可以有多个 sub-mesh，各自挂不同材质槽 —— 这里照同一套落地，
+   * 层级面板据此展开子节点，渲染据此分 draw call、材质据此分槽位。
+   */
+  subMeshes: SubMeshRange[];
+  /** 第一张内嵌 image 的字节；没有则为 null。主线程里用 createImageBitmap 解码 */
+  image: Blob | null;
+}
+
+const COMPONENT_SIZE: Record<number, number> = {
+  5120: 1,
+  5121: 1,
+  5122: 2,
+  5123: 2,
+  5124: 4,
+  5125: 4,
+  5126: 4,
+};
+
+const TYPE_SIZE: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
+
+interface GltfJson {
+  buffers?: { byteLength?: number; uri?: string }[];
+  bufferViews?: {
+    buffer?: number;
+    byteOffset?: number;
+    byteLength?: number;
+    byteStride?: number;
+  }[];
+  accessors?: {
+    bufferView?: number;
+    byteOffset?: number;
+    componentType?: number;
+    count?: number;
+    type?: string;
+    normalized?: boolean;
+  }[];
+  meshes?: {
+    name?: string;
+    primitives?: { attributes?: Record<string, number>; indices?: number; material?: number }[];
+  }[];
+  /** 场景图：模型分件 / Z-up 转换就藏在这里的变换上，不能忽略 */
+  nodes?: NodeJson[];
+  scenes?: { nodes?: number[] }[];
+  materials?: {
+    name?: string;
+    pbrMetallicRoughness?: { baseColorTexture?: { index?: number } };
+  }[];
+  textures?: { source?: number }[];
+  images?: { bufferView?: number; mimeType?: string; uri?: string; name?: string }[];
+}
+
+/** 读一个 accessor 的原始元素（含 byteStride 展开 / 整数归一化），返回 f32 */
+function readFloats(
+  json: GltfJson,
+  bin: ArrayBuffer,
+  binStart: number,
+  accessor: NonNullable<GltfJson['accessors']>[number],
+): Float32Array | null {
+  const compType = accessor.componentType ?? 0;
+  const type = accessor.type ?? 'SCALAR';
+  const count = accessor.count ?? 0;
+  const compSize = COMPONENT_SIZE[compType];
+  const typeSize = TYPE_SIZE[type] ?? 1;
+  if (compSize === undefined || count === 0) return null;
+
+  const bv = json.bufferViews?.[accessor.bufferView ?? -1];
+  if (bv === undefined) return null;
+  const buffer = json.buffers?.[bv.buffer ?? -1];
+  if (buffer === undefined || buffer.uri !== undefined) return null;
+
+  const stride = bv.byteStride ?? compSize * typeSize;
+  const start = binStart + (bv.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+  const view = new DataView(bin);
+
+  const out = new Float32Array(count * typeSize);
+  const isFloat = compType === 5126;
+
+  for (let i = 0; i < count; i++) {
+    const elem = start + i * stride;
+    for (let c = 0; c < typeSize; c++) {
+      let v: number;
+      switch (compType) {
+        case 5126:
+          v = view.getFloat32(elem + c * 4, true);
+          break;
+        case 5121:
+          v = view.getUint8(elem + c);
+          break;
+        case 5120:
+          v = view.getInt8(elem + c);
+          break;
+        case 5123:
+          v = view.getUint16(elem + c * 2, true);
+          break;
+        case 5122:
+          v = view.getInt16(elem + c * 2, true);
+          break;
+        case 5125:
+          v = view.getUint32(elem + c * 4, true);
+          break;
+        case 5124:
+          v = view.getInt32(elem + c * 4, true);
+          break;
+        default:
+          return null;
+      }
+      out[i * typeSize + c] = v;
+    }
+  }
+
+  // 整数分量归一化：规范只认 accessor.normalized=true。这里额外兜底非规范导出器
+  // （整数分量却没设 normalized，值域 0..255 之类的），按数据范围判断，避免坐标爆炸几个数量级。
+  if (!isFloat) {
+    let maxAbs = 0;
+    for (let i = 0; i < out.length; i++) {
+      const a = Math.abs(out[i]!);
+      if (a > maxAbs) maxAbs = a;
+    }
+    const specNorm = accessor.normalized === true;
+    if (specNorm || maxAbs > 1.0001) {
+      // glTF 归一化量程：有符号是 2^(n-1)-1，无符号是 2^n-1
+      const d =
+        compType === 5120 ? 127
+        : compType === 5121 ? 255
+        : compType === 5122 ? 32767
+        : compType === 5123 ? 65535
+        : compType === 5124 ? 2147483647
+        : 1;
+      if (d !== 1) for (let i = 0; i < out.length; i++) out[i] = out[i]! / d;
+    }
+  }
+  return out;
+}
+
+/** 读索引 accessor（u8/u16/u32 → Uint32Array） */
+function readIndices(json: GltfJson, bin: ArrayBuffer, binStart: number, index: number): Uint32Array | null {
+  const acc = json.accessors?.[index];
+  if (acc === undefined) return null;
+  const bv = json.bufferViews?.[acc.bufferView ?? -1];
+  if (bv === undefined) return null;
+  const compType = acc.componentType ?? 0;
+  const count = acc.count ?? 0;
+  const stride = bv.byteStride ?? COMPONENT_SIZE[compType] ?? 2;
+  const start = binStart + (bv.byteOffset ?? 0) + (acc.byteOffset ?? 0);
+  const view = new DataView(bin);
+
+  const out = new Uint32Array(count);
+  for (let i = 0; i < count; i++) {
+    const e = start + i * stride;
+    if (compType === 5125) out[i] = view.getUint32(e, true);
+    else if (compType === 5121) out[i] = view.getUint8(e);
+    else out[i] = view.getUint16(e, true);
+  }
+  return out;
+}
+
+/** 按位置焊接顶点，把法线平均成描边专用的 smoothNormal（硬边几何的着色法线在棱角不连续，直接外扩会裂） */
+function smoothNormals(pos: Float32Array, normal: Float32Array): Float32Array {
+  const count = pos.length / 3;
+  // 用量化后的精确坐标字符串做键：早期版本用哈希整数取键，56k 顶点下碰撞概率约三成，
+  // 一旦撞上就会把两个毫不相干的顶点法线平均 → 描边炸出尖刺（表现为模型「稀碎」）。
+  const accum = new Map<string, [number, number, number]>();
+  const key = (i: number): string => {
+    const x = Math.round(pos[i * 3]! * 10000);
+    const y = Math.round(pos[i * 3 + 1]! * 10000);
+    const z = Math.round(pos[i * 3 + 2]! * 10000);
+    return `${x},${y},${z}`;
+  };
+
+  for (let i = 0; i < count; i++) {
+    const k = key(i);
+    const prev = accum.get(k) ?? [0, 0, 0];
+    prev[0] += normal[i * 3]!;
+    prev[1] += normal[i * 3 + 1]!;
+    prev[2] += normal[i * 3 + 2]!;
+    accum.set(k, prev);
+  }
+
+  const out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const v = accum.get(key(i));
+    if (v === undefined) {
+      out[i * 3 + 1] = 1;
+      continue;
+    }
+    const len = Math.hypot(v[0], v[1], v[2]);
+    if (len < 1e-8) {
+      out[i * 3 + 1] = 1;
+    } else {
+      out[i * 3] = v[0] / len;
+      out[i * 3 + 1] = v[1] / len;
+      out[i * 3 + 2] = v[2] / len;
+    }
+  }
+  return out;
+}
+
+/** 没有法线属性时，按三角形面法线累计一份顶点法线 */
+function faceNormals(pos: Float32Array, idx: Uint32Array): Float32Array {
+  const n = new Float32Array(pos.length);
+  for (let t = 0; t + 2 < idx.length; t += 3) {
+    const i0 = idx[t]!;
+    const i1 = idx[t + 1]!;
+    const i2 = idx[t + 2]!;
+    const ax = pos[i1 * 3]! - pos[i0 * 3]!;
+    const ay = pos[i1 * 3 + 1]! - pos[i0 * 3 + 1]!;
+    const az = pos[i1 * 3 + 2]! - pos[i0 * 3 + 2]!;
+    const bx = pos[i2 * 3]! - pos[i0 * 3]!;
+    const by = pos[i2 * 3 + 1]! - pos[i0 * 3 + 1]!;
+    const bz = pos[i2 * 3 + 2]! - pos[i0 * 3 + 2]!;
+    const fx = ay * bz - az * by;
+    const fy = az * bx - ax * bz;
+    const fz = ax * by - ay * bx;
+    for (const i of [i0, i1, i2]) {
+      n[i * 3]! += fx;
+      n[i * 3 + 1]! += fy;
+      n[i * 3 + 2]! += fz;
+    }
+  }
+  for (let i = 0; i < n.length; i += 3) {
+    const len = Math.hypot(n[i]!, n[i + 1]!, n[i + 2]!);
+    if (len < 1e-8) {
+      n[i + 1] = 1;
+    } else {
+      n[i] = n[i]! / len;
+      n[i + 1] = n[i + 1]! / len;
+      n[i + 2] = n[i + 2]! / len;
+    }
+  }
+  return n;
+}
+
+/** 绕序校正为 CCW（inverted hull 描边用 cullMode:'front'，绕序错会整个涂黑） */
+function fixWinding(pos: Float32Array, normal: Float32Array, idx: Uint32Array): void {
+  for (let t = 0; t + 2 < idx.length; t += 3) {
+    const i0 = idx[t]!;
+    const i1 = idx[t + 1]!;
+    const i2 = idx[t + 2]!;
+    const ax = pos[i1 * 3]! - pos[i0 * 3]!;
+    const ay = pos[i1 * 3 + 1]! - pos[i0 * 3 + 1]!;
+    const az = pos[i1 * 3 + 2]! - pos[i0 * 3 + 2]!;
+    const bx = pos[i2 * 3]! - pos[i0 * 3]!;
+    const by = pos[i2 * 3 + 1]! - pos[i0 * 3 + 1]!;
+    const bz = pos[i2 * 3 + 2]! - pos[i0 * 3 + 2]!;
+    const fx = ay * bz - az * by;
+    const fy = az * bx - ax * bz;
+    const fz = ax * by - ay * bx;
+    if (fx * fx + fy * fy + fz * fz < 1e-20) continue;
+    const nx = normal[i0 * 3]! + normal[i1 * 3]! + normal[i2 * 3]!;
+    const ny = normal[i0 * 3 + 1]! + normal[i1 * 3 + 1]! + normal[i2 * 3 + 1]!;
+    const nz = normal[i0 * 3 + 2]! + normal[i1 * 3 + 2]! + normal[i2 * 3 + 2]!;
+    if (fx * nx + fy * ny + fz * nz < 0) {
+      const tmp = idx[t + 1]!;
+      idx[t + 1] = idx[t + 2]!;
+      idx[t + 2] = tmp;
+    }
+  }
+}
+
+/* ===================== 场景图（纯函数，可单测） ===================== */
+
+interface NodeJson {
+  mesh?: number;
+  children?: number[];
+  matrix?: number[];
+  translation?: number[];
+  rotation?: number[];
+  scale?: number[];
+}
+
+/** 单位阵（列主序，与 WGSL mat4x4f 同约定） */
+function identity4(): Float32Array {
+  const m = new Float32Array(16);
+  m[0] = 1;
+  m[5] = 1;
+  m[10] = 1;
+  m[15] = 1;
+  return m;
+}
+
+/** a · b（列主序，先应用 b） */
+function mul4(a: Float32Array, b: Float32Array): Float32Array {
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) {
+    const b0 = b[c * 4]!;
+    const b1 = b[c * 4 + 1]!;
+    const b2 = b[c * 4 + 2]!;
+    const b3 = b[c * 4 + 3]!;
+    for (let r = 0; r < 4; r++) {
+      o[c * 4 + r] = a[r]! * b0 + a[4 + r]! * b1 + a[8 + r]! * b2 + a[12 + r]! * b3;
+    }
+  }
+  return o;
+}
+
+/** node 的局部矩阵：优先 matrix，否则 T·R·S（glTF 规定顺序） */
+export function nodeMatrix(n: NodeJson): Float32Array {
+  if (n.matrix !== undefined && n.matrix.length === 16) return new Float32Array(n.matrix);
+
+  const t = n.translation ?? [0, 0, 0];
+  const r = n.rotation ?? [0, 0, 0, 1];
+  const s = n.scale ?? [1, 1, 1];
+  const x = r[0] ?? 0;
+  const y = r[1] ?? 0;
+  const z = r[2] ?? 0;
+  const w = r[3] ?? 1;
+
+  const x2 = x + x;
+  const y2 = y + y;
+  const z2 = z + z;
+  const xx = x * x2;
+  const xy = x * y2;
+  const xz = x * z2;
+  const yy = y * y2;
+  const yz = y * z2;
+  const zz = z * z2;
+  const wx = w * x2;
+  const wy = w * y2;
+  const wz = w * z2;
+
+  const m = new Float32Array(16);
+  m[0] = (1 - (yy + zz)) * (s[0] ?? 1);
+  m[1] = (xy + wz) * (s[0] ?? 1);
+  m[2] = (xz - wy) * (s[0] ?? 1);
+  m[4] = (xy - wz) * (s[1] ?? 1);
+  m[5] = (1 - (xx + zz)) * (s[1] ?? 1);
+  m[6] = (yz + wx) * (s[1] ?? 1);
+  m[8] = (xz + wy) * (s[2] ?? 1);
+  m[9] = (yz - wx) * (s[2] ?? 1);
+  m[10] = (1 - (xx + yy)) * (s[2] ?? 1);
+  m[12] = t[0] ?? 0;
+  m[13] = t[1] ?? 0;
+  m[14] = t[2] ?? 0;
+  m[15] = 1;
+  return m;
+}
+
+/** 4x4 取左上 3x3 的逆转置，行主序 9 个数（法线变换用；非等比缩放也正确） */
+export function normalMatrix(m: Float32Array): Float32Array {
+  // 列主序 4x4 的 3x3 部分：a[col*4+row]
+  const a00 = m[0]!;
+  const a10 = m[1]!;
+  const a20 = m[2]!;
+  const a01 = m[4]!;
+  const a11 = m[5]!;
+  const a21 = m[6]!;
+  const a02 = m[8]!;
+  const a12 = m[9]!;
+  const a22 = m[10]!;
+
+  const b01 = a22 * a11 - a12 * a21;
+  const b11 = -a22 * a10 + a12 * a20;
+  const b21 = a21 * a10 - a11 * a20;
+  let det = a00 * b01 + a01 * b11 + a02 * b21;
+  if (Math.abs(det) < 1e-12) det = 1;
+  const id = 1 / det;
+
+  // inverse(M3) 行主序，再转置 → 等于 inverse 的转置
+  const inv = [
+    b01 * id,
+    (-a22 * a01 + a02 * a21) * id,
+    (a12 * a01 - a02 * a11) * id,
+    b11 * id,
+    (a22 * a00 - a02 * a20) * id,
+    (-a12 * a00 + a02 * a10) * id,
+    b21 * id,
+    (-a21 * a00 + a01 * a20) * id,
+    (a11 * a00 - a01 * a10) * id,
+  ];
+  // transpose(inv) 行主序
+  return new Float32Array([
+    inv[0]!, inv[3]!, inv[6]!,
+    inv[1]!, inv[4]!, inv[7]!,
+    inv[2]!, inv[5]!, inv[8]!,
+  ]);
+}
+
+/**
+ * 收集「mesh 实例 → 世界矩阵」。一个 mesh 被多个 node 引用就产生多个实例（正确行为）。
+ * 没有被任何 node 引用的 mesh 兜底按 identity 处理，避免模型凭空少一块。
+ */
+export function collectMeshInstances(json: GltfJson): { mesh: number; m: Float32Array }[] {
+  const nodes = json.nodes ?? [];
+  const out: { mesh: number; m: Float32Array }[] = [];
+  const seen = new Set<number>();
+
+  const walk = (i: number, parent: Float32Array): void => {
+    const n = nodes[i];
+    if (n === undefined) return;
+    const m = mul4(parent, nodeMatrix(n));
+    if (n.mesh !== undefined) {
+      out.push({ mesh: n.mesh, m });
+      seen.add(n.mesh);
+    }
+    for (const c of n.children ?? []) walk(c, m);
+  };
+
+  const scene = json.scenes?.[0];
+  if (scene !== undefined || json.scenes !== undefined) {
+    for (const r of scene?.nodes ?? []) walk(r, identity4());
+  } else {
+    // 没有 scene：所有 node 都当根节点，各自用本地变换
+    for (let i = 0; i < nodes.length; i++) walk(i, identity4());
+  }
+  // 兜底：不在场景图里的 mesh
+  const meshes = json.meshes ?? [];
+  for (let i = 0; i < meshes.length; i++) {
+    if (!seen.has(i)) out.push({ mesh: i, m: identity4() });
+  }
+  return out;
+}
+
+export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
+  if (buf.byteLength < 20) throw new Error('文件太小，不是合法的 glb');
+  const head = new DataView(buf);
+  if (head.getUint32(0, true) !== 0x46546c67) throw new Error('不是 glTF 二进制（缺 glTF magic）');
+  if (head.getUint32(4, true) !== 2) throw new Error(`不支持的 glTF 版本 ${head.getUint32(4, true)}`);
+
+  // ---- 切 chunk ----
+  let jsonBuf: ArrayBuffer | null = null;
+  let binStart = 0;
+  let binEnd = 0;
+  let off = 12;
+  while (off + 8 <= buf.byteLength) {
+    const len = head.getUint32(off, true);
+    const type = head.getUint32(off + 4, true);
+    const start = off + 8;
+    if (type === 0x4e4f534a) {
+      jsonBuf = buf.slice(start, start + len);
+    } else if (type === 0x004e4942) {
+      binStart = start;
+      binEnd = start + len;
+    }
+    off = start + len + ((4 - (len % 4)) % 4); // chunk 按 4 字节对齐
+  }
+  if (jsonBuf === null) throw new Error('glb 里没有 JSON chunk');
+
+  const json = JSON.parse(new TextDecoder().decode(jsonBuf)) as GltfJson;
+  const bin = buf.slice(binStart, binEnd);
+
+  // ---- 场景图：把 node 的世界变换烘进顶点 ----
+  // glTF 规范步骤，不能省。AI / Blender 导出常把 Z-up→Y-up 烘在 node 的 rotation 上，
+  // 或把武器、盾牌做成带独立变换的子节点；忽略 node 变换会让这类模型直接散架 ——
+  // 这正是「导入后模型稀碎」的根因。烘焙后再做轴向规整，两把尺子不会重复生效。
+  const instances = collectMeshInstances(json);
+
+  // ---- 合并所有 primitive ----
+  // 两趟：先按 primitive 收集（readFloats 本来就是类型化数组，零拷贝），
+  // 再按总顶点数一次性预分配。80k 顶点的高模实测 —— 避免百万次 Array.push 的扩容抖动。
+  interface PrimChunk {
+    name: string;
+    pos: Float32Array;
+    nor: Float32Array;
+    uv: Float32Array | null;
+    col: Float32Array | null;
+    ind: Uint32Array;
+  }
+  const chunks: PrimChunk[] = [];
+  const primNames = nameAllocator(); // 同名 primitive（同材质被复用）自动加序号，避免层级树里分不清
+  let base = 0;
+
+  for (const inst of instances) {
+    const mesh = json.meshes?.[inst.mesh];
+    if (mesh === undefined) continue;
+    for (const prim of mesh.primitives ?? []) {
+      const attr = prim.attributes ?? {};
+      const raw = attr.POSITION === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.POSITION]!);
+      if (raw === null || raw.length === 0) continue;
+      // 把 node 世界变换烘进局部顶点（位置 = M·p，法线 = 逆转置·n 再归一化）
+      const p = new Float32Array(raw.length);
+      for (let i = 0; i < raw.length; i += 3) {
+        const x = raw[i]!;
+        const y = raw[i + 1]!;
+        const z = raw[i + 2]!;
+        p[i] = inst.m[0]! * x + inst.m[4]! * y + inst.m[8]! * z + inst.m[12]!;
+        p[i + 1] = inst.m[1]! * x + inst.m[5]! * y + inst.m[9]! * z + inst.m[13]!;
+        p[i + 2] = inst.m[2]! * x + inst.m[6]! * y + inst.m[10]! * z + inst.m[14]!;
+      }
+
+      const rawNor =
+        attr.NORMAL === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.NORMAL]!);
+      const rawUv =
+        attr.TEXCOORD_0 === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.TEXCOORD_0]!);
+      const rawCol =
+        attr.COLOR_0 === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.COLOR_0]!);
+      let ind =
+        prim.indices === undefined ? null : readIndices(json, bin, 0, prim.indices);
+      if (ind === null) {
+        ind = new Uint32Array(p.length / 3);
+        for (let i = 0; i < ind.length; i++) ind[i] = i;
+      }
+
+      const localNor = rawNor ?? faceNormals(p, ind);
+      fixWinding(p, localNor, ind);
+      // 法线：M 的 3x3 逆转置（非等比缩放也不会歪），再归一化
+      const nm = normalMatrix(inst.m);
+      const normal = new Float32Array(localNor.length);
+      for (let i = 0; i < localNor.length; i += 3) {
+        const x = localNor[i]!;
+        const y = localNor[i + 1]!;
+        const z = localNor[i + 2]!;
+        const nx = nm[0]! * x + nm[1]! * y + nm[2]! * z;
+        const ny = nm[3]! * x + nm[4]! * y + nm[5]! * z;
+        const nz = nm[6]! * x + nm[7]! * y + nm[8]! * z;
+        const len = Math.hypot(nx, ny, nz);
+        if (len < 1e-12) {
+          normal[i + 1] = 1;
+        } else {
+          normal[i] = nx / len;
+          normal[i + 1] = ny / len;
+          normal[i + 2] = nz / len;
+        }
+      }
+
+      const count = p.length / 3;
+      // 命名优先级：材质名 > mesh 名 > primitive_N。
+      //
+      // **材质名必须排第一**：glTF 的 primitive 就是按材质拆的（身体/武器/盾牌各一条），
+      // 而同一个 mesh 下的所有 primitive 共用 mesh.name。Blender 导出的模型几乎都带
+      // mesh.name，按「mesh.name 优先」会让 3 条子网格全叫同一个名字 —— 层级树里
+      // 根本分不清哪个是盾牌哪个是武器。只有单 primitive（用不上材质名区分）时才用 mesh 名。
+      const matName =
+        prim.material === undefined ? undefined : json.materials?.[prim.material]?.name;
+      const rawName =
+        matName ?? ((mesh.primitives?.length ?? 0) === 1 ? mesh.name : undefined) ?? '';
+      const primName =
+        rawName.trim() === '' ? `primitive_${chunks.length}` : primNames.take(rawName.trim());
+      chunks.push({ name: primName, pos: p, nor: normal, uv: rawUv, col: rawCol, ind });
+      base += count;
+    }
+  }
+
+  if (base === 0) throw new Error('glb 里没有可用的 POSITION 网格');
+
+  const posArr = new Float32Array(base * 3);
+  const norArr = new Float32Array(base * 3);
+  const uvArr = new Float32Array(base * 2);
+  const colArr = new Float32Array(base * 4);
+  const idxArr = new Uint32Array(chunks.reduce((n, c) => n + c.ind.length, 0));
+
+  let vOff = 0;
+  let iOff = 0;
+  const subMeshes: SubMeshRange[] = [];
+  for (const c of chunks) {
+    subMeshes.push({ name: c.name, indexStart: iOff, indexCount: c.ind.length });
+    posArr.set(c.pos, vOff * 3);
+    norArr.set(c.nor, vOff * 3);
+    if (c.uv !== null) uvArr.set(c.uv.subarray(0, (c.pos.length / 3) * 2), vOff * 2);
+    // COLOR_0 可能是 vec3（无 alpha）也可能是 vec4，按长度取 G 通道当 AO
+    const count = c.pos.length / 3;
+    if (c.col !== null) {
+      const vec4 = c.col.length >= count * 4;
+      for (let i = 0; i < count; i++) {
+        const ao = vec4 ? c.col[i * 4 + 1]! : c.col[i * 3 + 1]!;
+        const o = (vOff + i) * 4;
+        colArr[o] = 1;
+        colArr[o + 1] = ao;
+        colArr[o + 2] = 0;
+        colArr[o + 3] = 1;
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        const o = (vOff + i) * 4;
+        colArr[o] = 1;
+        colArr[o + 1] = 1;
+        colArr[o + 2] = 0;
+        colArr[o + 3] = 1;
+      }
+    }
+    for (let i = 0; i < c.ind.length; i++) idxArr[iOff + i] = vOff + c.ind[i]!;
+    vOff += count;
+    iOff += c.ind.length;
+  }
+
+  // ---- 轴检测：生成管线常出 Z-up（高度在 Z）。zSpan 明显大于 ySpan 就按 Z-up 转 ----
+  {
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < posArr.length; i += 3) {
+      minY = Math.min(minY, posArr[i + 1]!);
+      maxY = Math.max(maxY, posArr[i + 1]!);
+      minZ = Math.min(minZ, posArr[i + 2]!);
+      maxZ = Math.max(maxZ, posArr[i + 2]!);
+    }
+    if (maxZ - minZ > (maxY - minY) * 1.5) {
+      // (x, y, z) → (x, -z, y)，det=+1 纯旋转，绕序与法线方向都保持不变
+      // 混元产物脚底在 z-max（+Z 朝下），必须带这个 180° X 翻转才正立；
+      // 与 export_labmesh.to_y_up / verify_alignment.py 的归一化保持同一把尺子
+      for (let i = 0; i < posArr.length; i += 3) {
+        const y = posArr[i + 1]!;
+        const z = posArr[i + 2]!;
+        posArr[i + 1] = -z;
+        posArr[i + 2] = y;
+        const ny = norArr[i + 1]!;
+        const nz = norArr[i + 2]!;
+        norArr[i + 1] = -nz;
+        norArr[i + 2] = ny;
+      }
+    }
+  }
+
+  // ---- 规整化：XZ 居中、脚底贴地、统一身高 ----
+  const smooth = smoothNormals(posArr, norArr);
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+  for (let i = 0; i < posArr.length; i += 3) {
+    minX = Math.min(minX, posArr[i]!);
+    maxX = Math.max(maxX, posArr[i]!);
+    minY = Math.min(minY, posArr[i + 1]!);
+    maxY = Math.max(maxY, posArr[i + 1]!);
+    minZ = Math.min(minZ, posArr[i + 2]!);
+    maxZ = Math.max(maxZ, posArr[i + 2]!);
+  }
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+  const height = Math.max(1e-5, maxY - minY);
+  const s = targetHeight / height;
+
+  const verts = new Float32Array(posArr.length + norArr.length + smooth.length + (posArr.length / 3) * 6);
+  for (let i = 0; i < base; i++) {
+    const o = i * VF;
+    verts[o] = (posArr[i * 3]! - cx) * s;
+    verts[o + 1] = (posArr[i * 3 + 1]! - minY) * s;
+    verts[o + 2] = (posArr[i * 3 + 2]! - cz) * s;
+    verts[o + 3] = norArr[i * 3]!;
+    verts[o + 4] = norArr[i * 3 + 1]!;
+    verts[o + 5] = norArr[i * 3 + 2]!;
+    verts[o + 6] = smooth[i * 3]!;
+    verts[o + 7] = smooth[i * 3 + 1]!;
+    verts[o + 8] = smooth[i * 3 + 2]!;
+    verts[o + 9] = uvArr[i * 2]!;
+    verts[o + 10] = uvArr[i * 2 + 1]!;
+    verts[o + 11] = colArr[i * 4]!;
+    verts[o + 12] = colArr[i * 4 + 1]!;
+    verts[o + 13] = colArr[i * 4 + 2]!;
+    verts[o + 14] = colArr[i * 4 + 3]!;
+  }
+
+  // ---- 内嵌 baseColor 图 ----
+  // 必须按 material.pbrMetallicRoughness.baseColorTexture -> texture.source 找，
+  // 不能取 images[0]：像 E-04 的 glb，images[0] 是法线图、images[1] 才是 baseColor，
+  // 直接取第一张会把法线图当 albedo 显示（看起来就是「没贴图」）。
+  let image: Blob | null = null;
+  let albedoIndex: number | undefined;
+  const mat0 = json.materials?.[0];
+  const bct = mat0?.pbrMetallicRoughness?.baseColorTexture;
+  if (bct?.index !== undefined) {
+    albedoIndex = json.textures?.[bct.index]?.source;
+  }
+  if (albedoIndex === undefined) albedoIndex = 0; // 无材质信息时退回第一张
+  const img = albedoIndex !== undefined ? json.images?.[albedoIndex] : undefined;
+  if (img !== undefined && img.bufferView !== undefined) {
+    const bv = json.bufferViews?.[img.bufferView];
+    if (bv !== undefined && bin.byteLength > 0) {
+      const start = bv.byteOffset ?? 0;
+      const bytes = bin.slice(start, start + (bv.byteLength ?? 0));
+      image = new Blob([bytes], { type: img.mimeType ?? 'image/png' });
+    }
+  }
+
+  const meshName = json.meshes?.find((m) => m.name !== undefined)?.name;
+  return {
+    mesh: { vertices: verts, indices: idxArr },
+    name: meshName ?? img?.name ?? '',
+    vertices: base,
+    triangles: idxArr.length / 3,
+    heightMeters: targetHeight,
+    subMeshes,
+    image,
+  };
+}
