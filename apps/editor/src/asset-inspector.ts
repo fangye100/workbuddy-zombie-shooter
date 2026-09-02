@@ -48,7 +48,7 @@ export class AssetInspector {
   clear(): void {
     this.token++;
     this.rootEl.innerHTML = `
-      <div class="ai-head"><span class="ai-title">属性 <em>Inspector</em></span></div>
+      <div class="ai-head"><span class="ai-title">资产<em>属性</em></span></div>
       <div class="ai-empty">在资产库中选中一个文件或文件夹<br>这里会显示它的静态资源属性</div>`;
   }
 
@@ -58,7 +58,7 @@ export class AssetInspector {
     const kind = kindOf(entry);
 
     this.rootEl.innerHTML = `
-      <div class="ai-head"><span class="ai-title">属性 <em>Inspector</em></span></div>
+      <div class="ai-head"><span class="ai-title">资产<em>属性</em></span></div>
       <div class="ai-hero adk-${kind}">
         <span class="ai-ico">${iconSvg(kind)}</span>
         <span class="ai-name" title="${entry.name}">${entry.name}</span>

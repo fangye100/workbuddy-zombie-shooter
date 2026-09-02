@@ -49,7 +49,7 @@ export class HierarchyService {
     const out: HierarchyNode[] = [];
     for (let i = 0; i < s.objects.length; i++) {
       const o = s.objects[i]!;
-      if (o.removed) continue;
+      if (o.removed || o.background) continue; // 背景物体（天空/网格底）不进层级面板
       out.push({
         index: i,
         name: o.name,

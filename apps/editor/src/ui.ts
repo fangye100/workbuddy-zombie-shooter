@@ -306,7 +306,11 @@ export class Panel {
   private mmBtnDelete!: HTMLButtonElement;
   private mmNotice!: HTMLElement;
 
-  constructor(root: HTMLElement, renderer: LabRenderer) {
+  constructor(
+    leftRoot: HTMLElement,
+    panes: { inspector: HTMLElement; scene: HTMLElement; render: HTMLElement },
+    renderer: LabRenderer,
+  ) {
     this.renderer = renderer;
     this.params = defaultParams();
 
@@ -315,6 +319,8 @@ export class Panel {
       details.className = 'group';
       details.id = group.id;
       details.open = group.open;
+      // 左栏（层级/资源）vs 右栏属性 Inspector：按 group.side / group.tab 路由到对应分页
+      const target = group.side === 'right' ? panes[group.tab ?? 'inspector']! : leftRoot;
 
       const summary = document.createElement('summary');
       summary.textContent = group.title;
@@ -374,10 +380,10 @@ export class Panel {
         if (details.open) this.redrawCurves();
       });
 
-      root.appendChild(details);
+      target.appendChild(details);
     }
 
-    root.appendChild(this.buildAnimation());
+    leftRoot.appendChild(this.buildAnimation());
 
     this.syncAll();
   }

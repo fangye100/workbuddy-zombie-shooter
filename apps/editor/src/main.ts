@@ -97,9 +97,33 @@ async function boot(): Promise<void> {
     return;
   }
 
-  const panel = new Panel(groups, renderer);
+  const inspPanes = {
+    inspector: document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="inspector"]')!,
+    scene: document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="scene"]')!,
+    render: document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="render"]')!,
+  };
+  const panel = new Panel(groups, inspPanes, renderer);
   // 材质 API 要按 id 回查共享材质（params.materials），先把引用挂上
   renderer.attachParams(panel.params);
+
+  /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
+  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
+    for (const t of document.querySelectorAll<HTMLElement>('#inspector .insp-tab')) {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    }
+    for (const p of document.querySelectorAll<HTMLElement>('#inspector .insp-pane')) {
+      p.classList.toggle('active', p.dataset.pane === tab);
+    }
+  };
+  // 标签页本身可点击切换：让「场景/光照」「渲染」页可达（默认只随选中物体/资产自动切）。
+  for (const t of document.querySelectorAll<HTMLButtonElement>('#inspector .insp-tab')) {
+    t.addEventListener('click', () => {
+      const tab = t.dataset.tab;
+      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset') {
+        switchInspectorTab(tab);
+      }
+    });
+  }
   let hudDirty = true;
   panel.onChange = () => {
     hudDirty = true;
@@ -174,6 +198,7 @@ async function boot(): Promise<void> {
   panel.onHierarchySelect = (index, subIndex) => {
     renderer.selectObject(index, subIndex);
     panel.setSelection(index, subIndex);
+    switchInspectorTab('inspector');
     hudDirty = true;
   };
   panel.onHierarchyToggle = (index, visible) => {
@@ -329,6 +354,7 @@ async function boot(): Promise<void> {
     }
     renderer.selectObject(idx);
     panel.setSelection(idx);
+    switchInspectorTab('inspector');
     hudDirty = true;
   }
 
@@ -847,6 +873,7 @@ async function boot(): Promise<void> {
       }
       renderer.selectObject(idx);
       panel.setSelection(idx);
+      switchInspectorTab('inspector');
       panel.refreshHierarchy();
       panel.setModelInfo(
         `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 · 来自资产库 ${relPath}`,
@@ -859,14 +886,21 @@ async function boot(): Promise<void> {
     }
   }
 
-  const inspectorEl = document.getElementById('inspector');
+  const inspectorEl = document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="asset"]');
   const dockEl = document.getElementById('asset-dock');
   if (inspectorEl !== null && dockEl !== null) {
     const inspector = new AssetInspector(inspectorEl, {
       onSpawn: (p) => void spawnAssetAt(p, null),
     });
     const assets = new AssetBrowser(dockEl, {
-      onSelect: (sel) => (sel === null ? inspector.clear() : inspector.showAsset(sel)),
+      onSelect: (sel) => {
+        if (sel === null) {
+          inspector.clear();
+        } else {
+          inspector.showAsset(sel);
+          switchInspectorTab('asset');
+        }
+      },
       onSpawn: (p) => void spawnAssetAt(p, null),
     });
 

@@ -136,6 +136,8 @@ export interface SceneObject {
   /** 已从场景删除。用墓碑标记而不是真删数组元素 —— 索引一旦变动会打乱其他物体的 uniform 槽位 */
   removed: boolean;
   selected: boolean;
+  /** 背景物体（天空穹顶 / 网格底）：不进层级面板、不参与拾取、不可选中 */
+  background: boolean;
   /**
    * GLB 原始父子层级（导入模型才有；程序化网格为空数组 → 层级面板走旧的平铺展示）。
    * 叶子 mesh 节点引用 subMeshes 下标区间，组节点只有 name + children。
@@ -351,6 +353,8 @@ interface ObjectSpec {
   name: string;
   pickable: boolean;
   category: string;
+  /** 背景物体标记（天空 / 网格底），构造期打在物体上 */
+  background?: boolean;
 }
 
 export class LabRenderer {
@@ -418,6 +422,10 @@ export class LabRenderer {
   /** gizmo 交互状态 / 变换读写 / 物体检视（委托 GizmoService） */
   private readonly gizmo = new GizmoService(this);
 
+  /** 编辑器独占资源：地面网格贴图 + 平铺（REPEAT）采样器（引擎 sampler 为 clamp-to-edge，改它即碰 packages/render） */
+  private gridTex!: GPUTexture;
+  private gridSampler!: GPUSampler;
+
   constructor(
     gpu: GpuContext,
     private readonly canvas: HTMLCanvasElement,
@@ -470,6 +478,19 @@ export class LabRenderer {
         category: '敌人',
       });
     }
+
+    // 天空穹顶：半径 120 的大球（scene pass cullMode none，从内部可见），
+    // 白 albedo + 半球填充光自然形成上→下渐变；background 标记 = 不进层级 / 不拾取 / 不可选。
+    specs.push({
+      mesh: createSphere(120, 48, 32),
+      material: 6,
+      pos: [0, 0, 0],
+      bob: 0,
+      name: '天空 Sky',
+      pickable: false,
+      category: '环境',
+      background: true,
+    });
 
     let triangles = 0;
     for (const s of specs) {
@@ -526,6 +547,7 @@ export class LabRenderer {
         visible: true,
         removed: false,
         selected: false,
+        background: s.background ?? false,
         nodeTree: [],
         bindingOrphans: [],
         ...defaultSkinFields(this.device, mesh.vertices.length / 15),
@@ -533,6 +555,24 @@ export class LabRenderer {
       triangles += mesh.indices.length / 3;
     }
     this.state.stats.triangles = triangles;
+
+    // ---- 地面网格贴图：Canvas2D 程序化生成，赋给地面物体（albedo 改走贴图采样），
+    // 平铺 REPEAT 形成 1m 细格 / 5m 粗格的专业地面。引擎 sampler 是 clamp-to-edge，
+    // 平铺必须编辑器独占的 REPEAT sampler（packages/render 零改动）。 ----
+    this.gridSampler = this.device.createSampler({
+      label: 'grid-repeat',
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      magFilter: 'linear',
+      minFilter: 'linear',
+    });
+    this.gridTex = this.buildGridTexture();
+    const groundObj = this.state.objects.find((o) => o.name === '地面 Ground');
+    if (groundObj !== undefined) {
+      groundObj.texture = this.gridTex;
+      groundObj.useTex = true;
+      groundObj.ownsTexture = true;
+    }
     // 材质槽位按「子网格」分配（一个子网格一个槽），变换槽位按「物体」分配。
     // 两者都按固定上限开，换模型导致子网格数变化时只需重排 slotBase + 重建 bind group，不用动 buffer。
     this.materialData = new Float32Array(MAX_MATERIAL_SLOTS * SLOT_FLOATS);
@@ -564,6 +604,8 @@ export class LabRenderer {
     const matBase = (o.slotBase + subIndex) * SLOT_BYTES;
     const xformBase = objIndex * SLOT_BYTES;
     const tex = o.texture ?? this.whiteTex;
+    // 白图（1×1）用引擎 clamp sampler；带 albedo 贴图的物体（地面网格 / 角色）走 REPEAT 平铺
+    const sampler = tex === this.whiteTex ? this.core.sampler : this.gridSampler;
     return this.device.createBindGroup({
       label: `obj-${objIndex}-sub-${subIndex}`,
       layout: this.core.sceneLayout,
@@ -574,10 +616,80 @@ export class LabRenderer {
         { binding: 3, resource: { buffer: this.core.materialBuf, offset: matBase, size: 80 } },
         { binding: 4, resource: { buffer: this.core.transformBuf, offset: xformBase, size: 64 } },
         { binding: 5, resource: tex.createView() },
-        { binding: 6, resource: this.core.sampler },
+        { binding: 6, resource: sampler },
         { binding: 7, resource: { buffer: o.skinBuffer!, offset: 0, size: o.skinCount * 64 } },
       ],
     });
+  }
+
+  /**
+   * 程序化生成地面网格贴图（Canvas2D → rgba8unorm）。
+   * 一张 = 20 世界单位（地面 UV 0..4 平铺 4 次），内含 20×20 细格（1m）+ 每 5 格加粗（5m）。
+   * 底色极暗导航蓝 = 地面本体；细线冷灰、粗线青色，呈现专业工作室地面网格。
+   */
+  private buildGridTexture(): GPUTexture {
+    const S = 1024; // 1024×4 bytesPerRow = 4096，256 对齐，writeTexture 安全
+    const cv = document.createElement('canvas');
+    cv.width = S;
+    cv.height = S;
+    const ctx = cv.getContext('2d');
+    if (ctx === null) {
+      // 兜底：退化成纯色贴图，地面不至于黑屏
+      const t = this.device.createTexture({
+        size: [1, 1],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      });
+      this.device.queue.writeTexture({ texture: t }, new Uint8Array([20, 23, 31, 255]), {}, [1, 1]);
+      return t;
+    }
+
+    ctx.fillStyle = '#14171F';
+    ctx.fillRect(0, 0, S, S);
+
+    const cells = 20; // 1m 一格
+    const step = S / cells;
+
+    // 细线（次要格）
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(70, 82, 112, 0.55)';
+    ctx.beginPath();
+    for (let i = 0; i <= cells; i++) {
+      const p = Math.round(i * step) + 0.5;
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, S);
+      ctx.moveTo(0, p);
+      ctx.lineTo(S, p);
+    }
+    ctx.stroke();
+
+    // 粗线（主格，每 5m）
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(63, 167, 196, 0.85)';
+    ctx.beginPath();
+    for (let i = 0; i <= cells; i += 5) {
+      const p = Math.round(i * step) + 0.5;
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, S);
+      ctx.moveTo(0, p);
+      ctx.lineTo(S, p);
+    }
+    ctx.stroke();
+
+    const tex = this.device.createTexture({
+      label: 'grid',
+      size: [S, S],
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    const img = ctx.getImageData(0, 0, S, S);
+    this.device.queue.writeTexture(
+      { texture: tex },
+      img.data,
+      { bytesPerRow: S * 4, rowsPerImage: S },
+      [S, S],
+    );
+    return tex;
   }
 
   /** 场景当前占用的材质槽位总数 */
@@ -1103,6 +1215,7 @@ export class LabRenderer {
       visible: true,
       removed: false,
       selected: false,
+      background: false,
     };
 
     let index: number;
@@ -1815,6 +1928,7 @@ export class LabRenderer {
     this.core.destroy();
 
     // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图
+    // （GPUSampler 在 @webgpu/types 0.1.49 无 destroy 方法，跟随 device 释放即可，不显式销毁）
     this.whiteTex.destroy();
     this.charTexture?.destroy();
     for (const o of this.state.objects) {
