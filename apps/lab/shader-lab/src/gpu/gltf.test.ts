@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { collectMeshInstances, nodeMatrix, normalMatrix } from './gltf';
+import { collectMeshInstances, nodeMatrix, normalMatrix } from '@aether/scene';
 import { normalizeMeshHeight, CHARACTER_HEIGHT_M, BUILTIN_MODELS } from '../models';
-import type { MeshData } from './geometry';
+import type { MeshData } from '@aether/scene';
 
 /**
  * 导入器与内置模型清单的回归测试。
@@ -158,7 +158,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
    * 的区间。项目里唯一的真实资产只有 1 个 primitive，这里用手搓的 GLB 把多槽位钉死。
    */
   it('3 个 primitive → 3 条子网格，区间首尾相接且总数守恒', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const glb = makeGlb([
       { name: '身体', triangles: 4 },
@@ -181,7 +181,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
   });
 
   it('单 primitive 退化成一条覆盖全部的子网格', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const r = parseGlb(makeGlb([{ name: '整体', triangles: 5 }]), 2.05);
 
@@ -197,7 +197,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
    * 用户根本分不清哪个是盾牌。所以材质名必须排在 mesh 名之前。
    */
   it('多 primitive 且 mesh 带 name → 用材质名，不能全叫成 mesh 名', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const r = parseGlb(
       makeGlb(
@@ -214,7 +214,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
   });
 
   it('没有材质名时退到 mesh 名，而不是 primitive_0', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const glb = makeGlb([{ name: 'X', triangles: 4 }], 'Cube.001');
     // 抹掉 materials，逼出「只有 mesh 名可用」的分支
@@ -224,7 +224,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
   });
 
   it('同名 primitive（同材质被复用）自动加序号，层级树里不会出现两个一模一样的节点', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const r = parseGlb(
       makeGlb([
@@ -240,7 +240,7 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
   });
 
   it('身高归一化不受 primitive 数量影响（多件模型不会变高）', async () => {
-    const { parseGlb } = await import('./gltf');
+    const { parseGlb } = await import('@aether/scene');
     const { makeGlb } = await import('./testGlb');
     const one = parseGlb(makeGlb([{ name: '整体', triangles: 6 }]), 2.05);
     const many = parseGlb(

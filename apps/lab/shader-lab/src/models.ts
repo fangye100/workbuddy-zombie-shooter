@@ -12,7 +12,7 @@
  * `.mesh.ts`，把文件放进 src/，在 BUILTIN_MODELS 里加一条，贴图放 src/assets/ 并 import 进来。
  */
 
-import type { MeshData } from './gpu/geometry';
+import type { MeshData } from '@aether/scene';
 
 /**
  * 角色身高唯一真源（米）。取自 assets/characters/roster.json 的 height 字段（E-04「盾卫」= 2.05 m）。

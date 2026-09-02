@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import * as m4 from './math';
-import { createBox } from './geometry';
+import * as m4 from '@aether/core';
+import { createBox } from '@aether/scene';
 
 /**
  * 拾取数学回归测试（纯 CPU，零 GPU 依赖）。

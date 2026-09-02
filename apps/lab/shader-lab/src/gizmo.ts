@@ -12,7 +12,7 @@
  * 交互数学（hitTest / drag）是纯函数，放在 main.ts，因为它要读相机 ray / viewProj。
  */
 
-import * as m4 from './gpu/math';
+import * as m4 from '@aether/core';
 
 export type GizmoMode = 'translate' | 'rotate' | 'scale';
 export type GizmoSpace = 'local' | 'world';

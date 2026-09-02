@@ -275,8 +275,8 @@ apps/editor/src/
 | 门禁 | 结果 |
 |---|---|
 | `tsc -p tsconfig.check.json` | 0 错误 |
-| `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 + skin 9 + gizmo 9 + binding 19 经桥全绿） |
-| `vite build`（lab） | 成功，44 模块，别名正确解析 |
+| `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 + skin 9 + gizmo 9 + binding 19；桥已删，直连 `@aether/*` 全绿） |
+| `vite build`（lab） | 成功，39 模块（0b.8 删 10 兼容桥文件后），别名正确解析 |
 
 > 0b.6 改动了 `render()` 的形态（CPU 装箱 → `RenderFrameInput` → `core.drawFrame`），但三道门禁全绿且关键数值路径（矩阵/draws/uniform 字节布局）经审查逐字节等价。**建议下一步补 headless WebGPU 冒烟**（Chrome + `--enable-unsafe-swiftshader`）以像素级确认渲染产物零回归——这是 docs/09 §7 既定的引擎级 CI 标准。
 > 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin/main` 已恢复，本地提交后 push。
@@ -284,5 +284,5 @@ apps/editor/src/
 ### 13.5 下一步（按 docs/11 §9 顺序）
 ### 13.5 剩余（0b.8，需编辑器重手术）
 - ✅ **0b.6 已完成**（见 §13.3.5）：`renderer.ts` 帧绘制核心上提 `packages/render`，编辑器公开 API 零改动，三道门禁全绿。
-- 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`，删全部兼容桥（`gpu/math`/`naming`/`geometry`/`gltf`/`skin`/`device`/`shaders` 的 `export * from '@aether/*'` 桥，以及本会话 `apps/lab/shader-lab/src/gizmo.ts` 仍遗留的 `buildGizmoHandles` 死代码）。
-- 0b.8 是架构收口的重手术，建议作为独立专项推进，并以 headless WebGPU 冒烟做像素级回归门禁。
+- ✅ **0b.8 兼容桥收敛已完成**（局部收口）：删除 10 个 `export * from '@aether/*'` 桥文件（`naming.ts`/`skin.ts`/`gpu/{device,geometry,gltf,math}.ts`/`shaders/{common,gizmo,post,scene}.wgsl.ts`），并把全部消费者（`main.ts`/`gizmo.ts`/`models.ts`/`asset-inspector.ts`/`renderer.ts`/`materials.test.ts`/`gpu/{geometry,gltf,math}.test.ts`/`skin.test.ts`）的 import 改写为直连 `@aether/{gfx,scene,core,render}`——含 `gltf.test.ts` 内 6 处动态 `import('./gltf')` 一并改 `@aether/scene`。`shaders/*.wgsl.ts` 无消费者，直接删。三道门禁全绿（tsc 0 error / vitest 97/97 / lab build 39 模块）。
+- ⬜ **0b.8 剩余**：①编辑器 `apps/lab/shader-lab/src/gizmo.ts` 仍遗留死代码 `buildGizmoHandles`+`GizmoHandleGPU`（与引擎层 `packages/render/src/gizmo.ts` 重复、无引用），需清理；②编辑器 `services`+`features` 重构为 `apps/editor`（架构收口重手术）。两项均建议作为独立专项推进，并以 headless WebGPU 冒烟做像素级回归门禁。

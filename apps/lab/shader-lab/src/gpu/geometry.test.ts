@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { weldMesh } from './geometry';
-import type { MeshData } from './geometry';
+import { weldMesh } from '@aether/scene';
+import type { MeshData } from '@aether/scene';
 
 /**
  * 焊接（Merge Points）回归测试。

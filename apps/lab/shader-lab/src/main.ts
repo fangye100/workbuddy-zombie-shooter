@@ -1,11 +1,11 @@
-import { GpuUnavailableError, initGpu, type GpuContext } from './gpu/device';
+import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
 import { LabRenderer, type CameraState } from './renderer';
 import { Panel } from './ui';
-import * as m4 from './gpu/math';
+import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, CHARACTER_HEIGHT_M } from './models';
-import { parseGlb } from './gpu/gltf';
+import { parseGlb } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { ASSET_MIME, stemName } from './asset-util';
