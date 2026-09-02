@@ -528,8 +528,8 @@
     overflow-x: hidden;
     padding: 6px 4px;
   }
-  .ad-tree::-webkit-scrollbar, .ad-content::-webkit-scrollbar, #inspector::-webkit-scrollbar { width: 8px; }
-  .ad-tree::-webkit-scrollbar-thumb, .ad-content::-webkit-scrollbar-thumb, #inspector::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
+  .ad-tree::-webkit-scrollbar, .ad-content::-webkit-scrollbar, .insp-pane::-webkit-scrollbar { width: 8px; }
+  .ad-tree::-webkit-scrollbar-thumb, .ad-content::-webkit-scrollbar-thumb, .insp-pane::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
   .ad-split { flex: 0 0 6px; background: var(--ink); cursor: col-resize; transition: background .12s; }
   .ad-split:hover, .ad-split.dragging { background: var(--zombie); }
   .ad-content {
@@ -639,9 +639,46 @@
     width: var(--insp-w);
     flex: 0 0 var(--insp-w);
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     background: var(--panel-deep);
+    min-height: 0;
   }
+  /* ---- 右侧属性 Inspector：Tab 栏 + 分页（检视 / 场景光照 / 渲染 / 资产）---- */
+  .insp-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border-bottom: 3px solid var(--ink);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .insp-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 2px;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid var(--ink);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .insp-tab:last-child { border-right: none; }
+  .insp-tab:hover { background: var(--panel-deep); color: var(--paper); }
+  .insp-tab.active { background: var(--zombie); color: var(--ink); }
+  .insp-panes { flex: 1 1 auto; min-height: 0; position: relative; }
+  .insp-pane {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    display: none;
+    padding-bottom: 40px;
+  }
+  .insp-pane.active { display: block; }
   .ai-head { padding: 10px 14px; background: var(--panel); border-bottom: 3px solid var(--ink); position: sticky; top: 0; z-index: 5; }
   .ai-title { font-size: 14px; font-weight: 700; color: var(--bone); }
   .ai-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
@@ -700,7 +737,20 @@
   <div id="asset-dock"></div>
 </div>
 <div class="split-handle" id="split-right" title="拖拽调整属性面板宽度"></div>
-<aside id="inspector"></aside>
+<aside id="inspector">
+  <div class="insp-tabs">
+    <button class="insp-tab active" data-tab="inspector">检视</button>
+    <button class="insp-tab" data-tab="scene">场景/光照</button>
+    <button class="insp-tab" data-tab="render">渲染</button>
+    <button class="insp-tab" data-tab="asset">资产</button>
+  </div>
+  <div class="insp-panes">
+    <div class="insp-pane active" data-pane="inspector"></div>
+    <div class="insp-pane" data-pane="scene"></div>
+    <div class="insp-pane" data-pane="render"></div>
+    <div class="insp-pane" data-pane="asset"></div>
+  </div>
+</aside>
 
 <div id="gizmo-bar">
   <div class="gz-inner">

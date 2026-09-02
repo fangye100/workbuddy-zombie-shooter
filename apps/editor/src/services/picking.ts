@@ -74,7 +74,7 @@ export class PickingService {
     const objects = this.host.state.objects;
     for (let i = 0; i < objects.length; i++) {
       const o = objects[i]!;
-      if (!o.pickable || o.removed || !o.visible) continue;
+      if (!o.pickable || o.removed || !o.visible || o.background) continue;
       const M = o.modelMatrix;
       // 预剔除：先把局部 AABB 变到世界空间（8 个角点），射线打不中这个盒子就跳过逐三角形求交。
       // 场景里物体一多、或导入 80k 面高模后，这一步能省掉绝大多数三角形测试。

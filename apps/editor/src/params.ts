@@ -190,6 +190,13 @@ export interface GroupDef {
   title: string;
   open: boolean;
   controls: ControlDef[];
+  /**
+   * 面板归属：'left' = 左侧层级/资源栏；'right' = 右侧属性 Inspector。
+   * 右侧再按 tab 落到具体分页（检视 / 场景光照 / 渲染），实现游戏软件常识性的左右拆分。
+   */
+  side: 'left' | 'right';
+  /** side==='right' 时生效：落到哪个右侧分页 */
+  tab?: 'inspector' | 'scene' | 'render';
 }
 
 /** 选中物体的可编辑状态 —— 由 renderer.getObjectState 填充，面板用这个同步控件 */
@@ -248,30 +255,38 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'hierarchy',
     title: '场景层级 Hierarchy',
     open: true,
+    side: 'left',
     controls: [],
   },
   {
     id: 'model',
     title: '模型预览',
     open: true,
+    side: 'left',
     controls: [],
   },
   {
     id: 'selection',
     title: '对象选择与变换',
     open: true,
+    side: 'right',
+    tab: 'inspector',
     controls: [],
   },
   {
     id: 'preset',
     title: '关卡灯光预设',
     open: true,
+    side: 'right',
+    tab: 'scene',
     controls: [],
   },
   {
     id: 'key',
     title: 'Key 主光（唯一分阶）',
     open: true,
+    side: 'right',
+    tab: 'scene',
     controls: [
       { kind: 'slider', key: 'keyAzimuth', label: '方位角', min: -180, max: 180, step: 1 },
       {
@@ -291,6 +306,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'fill',
     title: 'Fill 半球环境（不分阶）',
     open: true,
+    side: 'right',
+    tab: 'scene',
     controls: [
       { kind: 'color', key: 'fillSkyColor', label: '天空色' },
       { kind: 'slider', key: 'fillSkyIntensity', label: '天空强度', min: 0, max: 1.5, step: 0.01 },
@@ -304,6 +321,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'rim',
     title: 'Rim 边缘光（不分阶）',
     open: true,
+    side: 'right',
+    tab: 'scene',
     controls: [
       { kind: 'color', key: 'rimColor', label: '颜色' },
       {
@@ -331,6 +350,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'point',
     title: '局部点光（调试用）',
     open: false,
+    side: 'right',
+    tab: 'scene',
     controls: [
       { kind: 'toggle', key: 'pointEnabled', label: '启用点光' },
       { kind: 'color', key: 'pointColor', label: '颜色' },
@@ -353,6 +374,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'toon',
     title: 'Toon 分阶',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'slider', key: 'shadowEnd', label: '暗部上界', min: 0, max: 1, step: 0.005 },
       { kind: 'slider', key: 'specStart', label: '高光下界', min: 0, max: 1, step: 0.005 },
@@ -386,6 +409,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'outline',
     title: '描边（inverted hull）',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'toggle', key: 'outlineEnabled', label: '启用描边' },
       {
@@ -416,6 +441,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'halftone',
     title: '半调网点',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'toggle', key: 'halftoneEnabled', label: '启用网点' },
       { kind: 'slider', key: 'halftoneSize', label: '网点尺寸（px）', min: 2, max: 16, step: 0.5 },
@@ -443,6 +470,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'post',
     title: '后处理',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'select', key: 'tonemapMode', label: 'Tonemap', options: TONEMAP_OPTIONS },
       { kind: 'slider', key: 'exposure', label: '曝光', min: 0.1, max: 4, step: 0.01 },
@@ -457,6 +486,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'grading',
     title: 'Grading 三段调色',
     open: false,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'slider', key: 'gradeShadowRange', label: '暗部上界', min: 0, max: 1, step: 0.01 },
       { kind: 'slider', key: 'gradeMidRange', label: '中间调上界', min: 0, max: 1, step: 0.01 },
@@ -474,12 +505,16 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'mesh-material',
     title: 'Mesh 材质（Material Slot）',
     open: true,
+    side: 'right',
+    tab: 'inspector',
     controls: [],
   },
   {
     id: 'material',
     title: '材质（共享材质库）',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'select', key: 'editTarget', label: '编辑目标', options: EDIT_TARGETS },
       { kind: 'material-color', field: 'albedo', label: 'Albedo' },
@@ -551,6 +586,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     id: 'debug',
     title: '调试视图与相机',
     open: true,
+    side: 'right',
+    tab: 'render',
     controls: [
       { kind: 'select', key: 'debugMode', label: '调试视图', options: DEBUG_OPTIONS },
       {
@@ -570,23 +607,23 @@ export const PARAM_GROUPS: GroupDef[] = [
 /** 从 tokens.json 派生的默认值 */
 export function defaultParams(): LabParams {
   return {
-    keyAzimuth: -35,
-    keyElevation: 34,
-    keyIntensity: 2.6,
-    keyColor: '#FFD2A1',
+    keyAzimuth: -38,
+    keyElevation: 42,
+    keyIntensity: 2.1,
+    keyColor: '#FFE3BC',
 
-    fillSkyColor: '#828C9E',
-    fillSkyIntensity: 0.5,
-    fillGroundColor: '#8A7A5E',
-    fillGroundIntensity: 0.3,
+    fillSkyColor: '#7E92C4',
+    fillSkyIntensity: 0.62,
+    fillGroundColor: '#C49A72',
+    fillGroundIntensity: 0.34,
 
-    rimColor: '#FFEAB8',
-    rimIntensity: 0.45,
-    rimPower: 3.0,
-    rimTopBias: 0.45,
+    rimColor: '#FFE0B0',
+    rimIntensity: 0.5,
+    rimPower: 3.2,
+    rimTopBias: 0.5,
 
-    ambientColor: '#565A72',
-    ambientIntensity: 0.5,
+    ambientColor: '#4E5370',
+    ambientIntensity: 0.42,
 
     pointEnabled: false,
     pointColor: '#FF6A3D',
@@ -594,8 +631,8 @@ export function defaultParams(): LabParams {
     pointRange: 5.0,
     pointOrbit: true,
 
-    fogColor: '#8A5A3C',
-    fogDensity: 0.02,
+    fogColor: '#6E7A9A',
+    fogDensity: 0.016,
 
     shadowEnd: 0.5,
     specStart: 0.88,
@@ -620,7 +657,7 @@ export function defaultParams(): LabParams {
     halftoneThreshold: 0.4,
 
     tonemapMode: 3,
-    exposure: 1.6,
+    exposure: 1.5,
     bloomEnabled: true,
     bloomThreshold: 1.3,
     bloomIntensity: 0.3,
@@ -658,7 +695,7 @@ export function defaultParams(): LabParams {
         unlit: false,
       },
       {
-        albedo: '#5A5560',
+        albedo: '#1B1F2B',
         roughness: 0.9,
         metallic: 0.0,
         emissiveColor: '#000000',
@@ -720,6 +757,20 @@ export function defaultParams(): LabParams {
         softnessScale: 2.0,
         halftoneScale: 1.0,
         outlineScale: 1.0,
+        unlit: false,
+      },
+      // 6 · 天空穹顶（背景）：白 albedo + 半球填充光自然形成上→下渐变，outlineScale=0 不描边
+      {
+        albedo: '#FFFFFF',
+        roughness: 1.0,
+        metallic: 0.0,
+        emissiveColor: '#000000',
+        emissiveStrength: 0,
+        shadowEnd: -1,
+        specMix: -1,
+        softnessScale: 1.0,
+        halftoneScale: 0.0,
+        outlineScale: 0.0,
         unlit: false,
       },
     ],
