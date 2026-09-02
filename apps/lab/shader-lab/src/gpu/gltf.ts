@@ -30,11 +30,41 @@ import { nameAllocator } from '../naming';
 
 export const VF = 15;
 
-/** 子网格在合并后索引缓冲中的区间（与 Unity sub-mesh 同语义） */
+/**
+ * 子网格在合并后索引缓冲中的区间（与 Unity sub-mesh 同语义）。
+ *
+ * 后 5 个字段是「换模型继承材质绑定」的身份信息（见 binding.ts）：
+ * nodeId 是第一层防护（精确匹配），nodePath 是第二层防护（反向路径匹配），
+ * primitiveKey / primitiveIndex 是节点内部 primitive 粒度的匹配键。
+ */
 export interface SubMeshRange {
   name: string;
   indexStart: number;
   indexCount: number;
+  /** mesh 节点稳定 ID：node.extras 里的字符串优先，缺省 auto-<nodeIndex>（同一文件重导恒定） */
+  nodeId: string;
+  /** 场景根 → 该节点的名字链（leaf 在最后）。反向匹配时从 leaf 往 root 比 */
+  nodePath: string[];
+  /** mesh 节点自身的名字（层级树显示用；与 sub-mesh 的显示名 name 不是一回事） */
+  nodeName: string;
+  /** primitive 级身份：材质名优先，缺省 #<primitive 在 mesh 内序号> */
+  primitiveKey: string;
+  /** 该 primitive 在同一 mesh 节点内的序号（key 失效时的兜底匹配键） */
+  primitiveIndex: number;
+}
+
+/**
+ * GLB 原始场景树的显示节点（层级面板据此还原父子结构，不再 flat）。
+ * 只有「mesh 节点」与「有后代的组节点」会进树；空叶子（灯光/相机/locator）不进。
+ */
+export interface GltfNodeTree {
+  /** 显示名（node.name，缺省 node_<index>） */
+  name: string;
+  /** mesh 节点：其 primitive 在 subMeshes 里的起始下标；非 mesh 节点为 null */
+  subStart: number | null;
+  /** mesh 节点的 primitive 条数（实际解析成功的，可能少于 glTF 里的条数） */
+  subCount: number;
+  children: GltfNodeTree[];
 }
 
 export interface GltfResult {
@@ -51,6 +81,8 @@ export interface GltfResult {
    * 层级面板据此展开子节点，渲染据此分 draw call、材质据此分槽位。
    */
   subMeshes: SubMeshRange[];
+  /** GLB 原始父子层级（多个场景根就有多条）；叶子 mesh 节点引用 subMeshes 下标 */
+  nodeTree: GltfNodeTree[];
   /** 第一张内嵌 image 的字节；没有则为 null。主线程里用 createImageBitmap 解码 */
   image: Blob | null;
 }
@@ -310,11 +342,14 @@ function fixWinding(pos: Float32Array, normal: Float32Array, idx: Uint32Array): 
 
 interface NodeJson {
   mesh?: number;
+  name?: string;
   children?: number[];
   matrix?: number[];
   translation?: number[];
   rotation?: number[];
   scale?: number[];
+  /** DCC / 导出器可写入的自定义数据。绑定继承的第一层防护（稳定节点 ID）就读这里 */
+  extras?: Record<string, unknown>;
 }
 
 /** 单位阵（列主序，与 WGSL mat4x4f 同约定） */
@@ -425,38 +460,119 @@ export function normalMatrix(m: Float32Array): Float32Array {
 }
 
 /**
- * 收集「mesh 实例 → 世界矩阵」。一个 mesh 被多个 node 引用就产生多个实例（正确行为）。
- * 没有被任何 node 引用的 mesh 兜底按 identity 处理，避免模型凭空少一块。
+ * node.extras 里认这几个键当稳定节点 ID（按优先级取第一个非空字符串）。
+ * 美术在 DCC 里重命名节点不影响它；重导同一文件时它是材质绑定继承的第一层防护。
+ * 约定键：zombieNodeId（本编辑器写回用的官方键） > meshId / nodeId / id（兼容外来管线）。
  */
-export function collectMeshInstances(json: GltfJson): { mesh: number; m: Float32Array }[] {
+const EXTRA_ID_KEYS = ['zombieNodeId', 'meshId', 'nodeId', 'id'] as const;
+
+function extraNodeId(n: NodeJson): string | null {
+  const ex = n.extras;
+  if (ex === undefined) return null;
+  for (const k of EXTRA_ID_KEYS) {
+    const v = ex[k];
+    if (typeof v === 'string' && v.trim() !== '') return v.trim();
+  }
+  return null;
+}
+
+/** 节点显示名：缺名节点给确定性占位名（路径匹配与层级树都靠它） */
+function nodeName(n: NodeJson, index: number): string {
+  const raw = n.name?.trim() ?? '';
+  return raw === '' ? `node_${index}` : raw;
+}
+
+/** 场景图遍历产物：mesh 实例（含身份）+ 原始父子层级树 */
+export interface SceneGraph {
+  instances: {
+    mesh: number;
+    m: Float32Array;
+    nodeIndex: number; // -1 = 兜底合成节点（mesh 没被任何 node 引用）
+    nodeId: string;
+    nodeName: string;
+    /** 场景根 → 该节点的名字链，leaf 在最后 */
+    path: string[];
+  }[];
+  /**
+   * 显示树（subStart/subCount 此阶段为 -1/0 占位，parseGlb 收集 primitive 时回填）。
+   * 空叶子（无 mesh 无后代）已被剪掉。
+   */
+  tree: GltfNodeTree[];
+}
+
+/**
+ * 遍历 glTF 场景图：既收集「mesh 实例 → 世界矩阵 + 节点身份」，
+ * 也保出原始父子层级（层级面板要按它还原树形，而不是把所有 mesh 压平）。
+ */
+export function collectSceneGraph(json: GltfJson): SceneGraph {
   const nodes = json.nodes ?? [];
-  const out: { mesh: number; m: Float32Array }[] = [];
+  const out: SceneGraph['instances'] = [];
   const seen = new Set<number>();
 
-  const walk = (i: number, parent: Float32Array): void => {
+  // 返回建好的显示节点；空叶子返回 null（剪掉）
+  const walk = (i: number, parent: Float32Array, parentPath: string[]): GltfNodeTree | null => {
     const n = nodes[i];
-    if (n === undefined) return;
+    if (n === undefined) return null;
     const m = mul4(parent, nodeMatrix(n));
+    const name = nodeName(n, i);
+    const path = [...parentPath, name];
+
+    let hasMesh = false;
     if (n.mesh !== undefined) {
-      out.push({ mesh: n.mesh, m });
+      out.push({
+        mesh: n.mesh,
+        m,
+        nodeIndex: i,
+        nodeId: extraNodeId(n) ?? `auto-${i}`,
+        nodeName: name,
+        path,
+      });
       seen.add(n.mesh);
+      hasMesh = true;
     }
-    for (const c of n.children ?? []) walk(c, m);
+
+    const kids: GltfNodeTree[] = [];
+    for (const c of n.children ?? []) {
+      const k = walk(c, m, path);
+      if (k !== null) kids.push(k);
+    }
+    if (!hasMesh && kids.length === 0) return null; // 空叶子：灯光/相机/locator，不进树
+    return { name, subStart: hasMesh ? -1 : null, subCount: 0, children: kids };
   };
 
+  const tree: GltfNodeTree[] = [];
   const scene = json.scenes?.[0];
   if (scene !== undefined || json.scenes !== undefined) {
-    for (const r of scene?.nodes ?? []) walk(r, identity4());
+    for (const r of scene?.nodes ?? []) {
+      const t = walk(r, identity4(), []);
+      if (t !== null) tree.push(t);
+    }
   } else {
     // 没有 scene：所有 node 都当根节点，各自用本地变换
-    for (let i = 0; i < nodes.length; i++) walk(i, identity4());
+    for (let i = 0; i < nodes.length; i++) {
+      const t = walk(i, identity4(), []);
+      if (t !== null) tree.push(t);
+    }
   }
-  // 兜底：不在场景图里的 mesh
+
+  // 兜底：不在场景图里的 mesh 合成伪节点收进来，不丢件
   const meshes = json.meshes ?? [];
   for (let i = 0; i < meshes.length; i++) {
-    if (!seen.has(i)) out.push({ mesh: i, m: identity4() });
+    if (seen.has(i)) continue;
+    const name = meshes[i]?.name?.trim() || `mesh_${i}`;
+    out.push({ mesh: i, m: identity4(), nodeIndex: -1, nodeId: `auto-mesh-${i}`, nodeName: name, path: [name] });
+    tree.push({ name, subStart: -1, subCount: 0, children: [] });
   }
-  return out;
+  return { instances: out, tree };
+}
+
+/**
+ * 收集「mesh 实例 → 世界矩阵」。一个 mesh 被多个 node 引用就产生多个实例（正确行为）。
+ * 没有被任何 node 引用的 mesh 兜底按 identity 处理，避免模型凭空少一块。
+ * （身份信息见 collectSceneGraph；本接口保留给只关心矩阵的老调用方）
+ */
+export function collectMeshInstances(json: GltfJson): { mesh: number; m: Float32Array }[] {
+  return collectSceneGraph(json).instances.map(({ mesh, m }) => ({ mesh, m }));
 }
 
 export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
@@ -491,7 +607,10 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   // glTF 规范步骤，不能省。AI / Blender 导出常把 Z-up→Y-up 烘在 node 的 rotation 上，
   // 或把武器、盾牌做成带独立变换的子节点；忽略 node 变换会让这类模型直接散架 ——
   // 这正是「导入后模型稀碎」的根因。烘焙后再做轴向规整，两把尺子不会重复生效。
-  const instances = collectMeshInstances(json);
+  // graph 同时带回每个 mesh 节点的身份（nodeId / 路径）与原始父子层级 ——
+  // 前者是换模型继承材质绑定的匹配键，后者让层级面板能还原树形结构。
+  const graph = collectSceneGraph(json);
+  const instances = graph.instances;
 
   // ---- 合并所有 primitive ----
   // 两趟：先按 primitive 收集（readFloats 本来就是类型化数组，零拷贝），
@@ -503,15 +622,28 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     uv: Float32Array | null;
     col: Float32Array | null;
     ind: Uint32Array;
+    nodeId: string;
+    nodePath: string[];
+    nodeName: string;
+    primitiveKey: string;
+    primitiveIndex: number;
   }
   const chunks: PrimChunk[] = [];
   const primNames = nameAllocator(); // 同名 primitive（同材质被复用）自动加序号，避免层级树里分不清
   let base = 0;
+  /** 与 instances 同序：每个 mesh 节点实际产出的子网格区间（回填显示树用） */
+  const instSubs: { start: number; count: number }[] = [];
 
   for (const inst of instances) {
+    const subStart = chunks.length;
     const mesh = json.meshes?.[inst.mesh];
-    if (mesh === undefined) continue;
-    for (const prim of mesh.primitives ?? []) {
+    if (mesh === undefined) {
+      instSubs.push({ start: subStart, count: 0 });
+      continue;
+    }
+    const prims = mesh.primitives ?? [];
+    for (let pi = 0; pi < prims.length; pi++) {
+      const prim = prims[pi]!;
       const attr = prim.attributes ?? {};
       const raw = attr.POSITION === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.POSITION]!);
       if (raw === null || raw.length === 0) continue;
@@ -574,9 +706,26 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
         matName ?? ((mesh.primitives?.length ?? 0) === 1 ? mesh.name : undefined) ?? '';
       const primName =
         rawName.trim() === '' ? `primitive_${chunks.length}` : primNames.take(rawName.trim());
-      chunks.push({ name: primName, pos: p, nor: normal, uv: rawUv, col: rawCol, ind });
+      // primitive 级匹配键：材质名最稳（artist 重排 primitive 顺序也不怕）；
+      // 没材质名才退到 #<序号> —— 此时顺序就是唯一信号
+      const primitiveKey =
+        matName !== undefined && matName.trim() !== '' ? matName.trim() : `#${pi}`;
+      chunks.push({
+        name: primName,
+        pos: p,
+        nor: normal,
+        uv: rawUv,
+        col: rawCol,
+        ind,
+        nodeId: inst.nodeId,
+        nodePath: inst.path,
+        nodeName: inst.nodeName,
+        primitiveKey,
+        primitiveIndex: pi,
+      });
       base += count;
     }
+    instSubs.push({ start: subStart, count: chunks.length - subStart });
   }
 
   if (base === 0) throw new Error('glb 里没有可用的 POSITION 网格');
@@ -591,7 +740,16 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   let iOff = 0;
   const subMeshes: SubMeshRange[] = [];
   for (const c of chunks) {
-    subMeshes.push({ name: c.name, indexStart: iOff, indexCount: c.ind.length });
+    subMeshes.push({
+      name: c.name,
+      indexStart: iOff,
+      indexCount: c.ind.length,
+      nodeId: c.nodeId,
+      nodePath: c.nodePath,
+      nodeName: c.nodeName,
+      primitiveKey: c.primitiveKey,
+      primitiveIndex: c.primitiveIndex,
+    });
     posArr.set(c.pos, vOff * 3);
     norArr.set(c.nor, vOff * 3);
     if (c.uv !== null) uvArr.set(c.uv.subarray(0, (c.pos.length / 3) * 2), vOff * 2);
@@ -709,6 +867,30 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   }
 
   const meshName = json.meshes?.find((m) => m.name !== undefined)?.name;
+
+  // ---- 回填显示树：mesh 节点 → 其子网格区间 ----
+  // instances 与「DFS 前序收集 mesh 树节点」同序（walk 时先入实例、再递归子节点），一一对应。
+  // 一个 primitive 都没解析出来的 mesh 节点（全缺 POSITION）从树上剪掉，层级面板不挂空壳。
+  {
+    let cursor = 0;
+    const fill = (nodes: GltfNodeTree[]): GltfNodeTree[] => {
+      const keep: GltfNodeTree[] = [];
+      for (const n of nodes) {
+        n.children = fill(n.children);
+        if (n.subStart === -1) {
+          const subs = instSubs[cursor] ?? { start: 0, count: 0 };
+          cursor++;
+          if (subs.count === 0 && n.children.length === 0) continue; // 空壳，剪掉
+          n.subStart = subs.start;
+          n.subCount = subs.count;
+        }
+        keep.push(n);
+      }
+      return keep;
+    };
+    graph.tree = fill(graph.tree);
+  }
+
   return {
     mesh: { vertices: verts, indices: idxArr },
     name: meshName ?? img?.name ?? '',
@@ -716,6 +898,7 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     triangles: idxArr.length / 3,
     heightMeters: targetHeight,
     subMeshes,
+    nodeTree: graph.tree,
     image,
   };
 }
