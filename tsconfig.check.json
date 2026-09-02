@@ -23,6 +23,7 @@
   },
   "include": [
     "packages/core/src/**/*.ts",
+    "packages/scene/src/**/*.ts",
     "packages/gfx/src/**/*.ts",
     "packages/framegraph/src/**/*.ts",
     "packages/render/src/**/*.ts",
