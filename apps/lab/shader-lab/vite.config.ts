@@ -136,6 +136,18 @@ function fsApiPlugin(): Plugin {
 export default defineConfig({
   root,
   plugins: [fsApiPlugin()],
+  // 包体基座以 @aether/* 命名空间消费（ADR-005），避免深相对路径跨包。
+  // 仅匹配 `@aether/<pkg>`（不含子路径），解析到 packages/<pkg>/src。
+  resolve: {
+    alias: [
+      {
+        find: /^@aether\/([^/]+)$/,
+        // 直接解析到包的 index.ts 入口，避免目录解析歧义
+        // config 位于 apps/lab/shader-lab，回退三级到项目根再进 packages
+        replacement: fileURLToPath(new URL('../../../packages/$1/src/index.ts', import.meta.url)),
+      },
+    ],
+  },
   server: {
     port: 5178,
     host: true,
