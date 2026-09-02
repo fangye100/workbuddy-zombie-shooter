@@ -5,9 +5,9 @@ import {
   evalJointMatrices,
   seek,
   selectClip,
-} from './skin';
-import { packSkin } from './gpu/geometry';
-import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from './gpu/gltf';
+} from '@aether/render';
+import { packSkin } from '@aether/scene';
+import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene';
 
 /** 列主序平移矩阵 */
 function translate(x: number, y: number, z: number): Float32Array {

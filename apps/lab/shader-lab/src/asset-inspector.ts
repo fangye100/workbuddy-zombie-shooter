@@ -22,7 +22,7 @@ import {
   listDir,
   type AssetSelection,
 } from './asset-util';
-import { parseGlb } from './gpu/gltf';
+import { parseGlb } from '@aether/scene';
 import { CHARACTER_HEIGHT_M } from './models';
 
 const TEXT_PREVIEW_MAX_BYTES = 256 * 1024;

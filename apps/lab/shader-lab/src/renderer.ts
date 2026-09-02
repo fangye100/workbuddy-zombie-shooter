@@ -27,8 +27,8 @@ import {
   meshStats,
   weldMesh,
   type MeshData,
-} from './gpu/geometry';
-import * as m4 from './gpu/math';
+} from '@aether/scene';
+import * as m4 from '@aether/core';
 import { defaultParams, type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
@@ -49,7 +49,7 @@ import {
   type MeshNodeStub,
   type PrimitiveBinding,
 } from './binding';
-import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from './gpu/gltf';
+import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
 import {
   createSkinState,
   evalJointMatrices,
@@ -63,7 +63,7 @@ import {
   setSpeed as skinSetSpeed,
   seek as skinSeek,
   type SkinState,
-} from './skin';
+} from '@aether/render';
 
 /** 选中高亮色（白线轮廓），纯色不经过 tonemap，要够亮才压得住暗背景 */
 const SEL_COLOR = '#FFFFFF';

@@ -11,7 +11,7 @@ import {
   slotState,
   type MaterialSlot,
 } from './materials';
-import { nameAllocator, uniqueName } from './naming';
+import { nameAllocator, uniqueName } from '@aether/core';
 
 /**
  * 材质三层语义的回归测试（override > instance > shared）。
