@@ -31,7 +31,7 @@
     "packages/ai/test/**/*.ts",
     "packages/gameplay/src/**/*.ts",
     "apps/samples/00-init/*.ts",
-    "apps/lab/shader-lab/src/**/*.ts"
+    "apps/editor/src/**/*.ts"
   ],
   "exclude": ["apps/samples/00-init/vite.config.ts", "apps/lab/shader-lab/vite.config.ts"]
 }
