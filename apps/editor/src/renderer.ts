@@ -30,6 +30,7 @@ import {
 } from '@aether/scene';
 import * as m4 from '@aether/core';
 import { EditorState } from './services/editor-state';
+import { SelectionService } from './services/selection';
 import { type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
@@ -364,7 +365,8 @@ export class LabRenderer {
   }
 
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
-  private readonly core: RendererCore;
+  /** 引擎帧绘制核心（services 通过它读 gizmo/相机矩阵与高亮 buffer） */
+  public readonly core: RendererCore;
   private readonly materialData: Float32Array;
   private readonly transformData: Float32Array;
 
@@ -403,7 +405,11 @@ export class LabRenderer {
    * 编辑器拥有的全部可变状态（场景物体 / 选中悬停 / gizmo 交互 / 材质库 / 帧计数等）。
    * 下沉到 EditorState：services 通过 host.state 读写；render / GPU 装箱仍在 LabRenderer。
    */
-  private readonly state = new EditorState();
+  /** 编辑器全部可变状态（services 通过 host.state 读写；render / GPU 装箱也在 LabRenderer 内读它） */
+  public readonly state = new EditorState();
+
+  /** 选中 / 悬停状态机（委托 SelectionService） */
+  private readonly selection = new SelectionService(this);
 
   constructor(
     gpu: GpuContext,
@@ -629,7 +635,7 @@ export class LabRenderer {
    * 高亮用的独立 bind group：toon / material 换成指定高亮色 + 加粗描边，
    * 但 transform / texture 仍指向被高亮物体本身。复用 outline 管线即可（选中白线 / 悬停绿线共用）。
    */
-  private buildHighlightBindGroup(
+  public buildHighlightBindGroup(
     index: number | null,
     toonBuf: GPUBuffer,
     matBuf: GPUBuffer,
@@ -671,7 +677,7 @@ export class LabRenderer {
     }
   }
 
-  private buildSelectionBindGroup(index: number): void {
+  public buildSelectionBindGroup(index: number): void {
     this.state.selBindGroup = this.buildHighlightBindGroup(index, this.core.selToonBuf, this.core.selMatBuf, 'sel');
   }
 
@@ -732,7 +738,7 @@ export class LabRenderer {
   }
 
   /** 把子网格下标夹到合法范围；null（整个物体）原样返回 */
-  private clampSub(objIndex: number, sub: number | null): number | null {
+  public clampSub(objIndex: number, sub: number | null): number | null {
     const o = this.state.objects[objIndex];
     if (o === undefined || sub === null) return null;
     return sub >= 0 && sub < o.subMeshes.length ? sub : null;
@@ -957,24 +963,16 @@ export class LabRenderer {
    * sub 为 null = 选中整个物体（层级树点到父节点）；否则只描那一条子网格的轮廓。
    */
   selectObject(index: number | null, sub: number | null = null): void {
-    this.state.selectedIndex = index;
-    this.state.selectedSub = index === null ? null : this.clampSub(index, sub);
-    for (const o of this.state.objects) o.selected = false;
-    if (index !== null && index >= 0 && index < this.state.objects.length) {
-      this.state.objects[index]!.selected = true;
-      this.buildSelectionBindGroup(index);
-    } else {
-      this.state.selBindGroup = null;
-    }
+    this.selection.selectObject(index, sub);
   }
 
   getSelected(): number | null {
-    return this.state.selectedIndex;
+    return this.selection.getSelected();
   }
 
   /** 当前选中的子网格下标（null = 整个物体 / 无选中） */
   getSelectedSub(): number | null {
-    return this.state.selectedSub;
+    return this.selection.getSelectedSub();
   }
 
   /**
@@ -983,26 +981,11 @@ export class LabRenderer {
    * sub 非 null 时只高亮那一条子网格。
    */
   setHovered(index: number | null, sub: number | null = null): void {
-    const next = this.isHighlightable(index) ? index : null;
-    // 没有目标时子网格下标必须为 null（保持「悬停的是整物体还是某条 mesh」的语义）
-    const nextSub = next === null ? null : this.clampSub(next, sub);
-    if (next === this.state.hoveredIndex && nextSub === this.state.hoveredSub) return;
-    this.state.hoveredIndex = next;
-    this.state.hoveredSub = nextSub;
-    this.state.hoverBindGroup =
-      next === null
-        ? null
-        : this.buildHighlightBindGroup(next, this.core.hoverToonBuf, this.core.hoverMatBuf, 'hover');
+    this.selection.setHovered(index, sub);
   }
 
   getHovered(): number | null {
-    return this.state.hoveredIndex;
-  }
-
-  private isHighlightable(index: number | null): boolean {
-    if (index === null) return false;
-    const o = this.state.objects[index];
-    return o !== undefined && !o.removed && o.visible;
+    return this.selection.getHovered();
   }
 
   // ===================== 场景层级（Hierarchy）API =====================
