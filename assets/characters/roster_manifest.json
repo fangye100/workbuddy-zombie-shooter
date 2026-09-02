@@ -1,0 +1,55 @@
+{
+  "project": "末日尸潮 (Zombie Horde)",
+  "purpose": "名册角色 -> 已生成 3D 资产索引。Game Editor / 引擎侧消费此文件即可按 id 定位 rigged+animated GLB，无需硬编码路径。",
+  "pipeline": "混元 3D 图生3D(80000 tris 高模) -> decimate_cluster -> bake_lowpoly(xatlas) -> rig_character(HumanIK 22 骨) -> retarget_bvh(6 段程序化动作) -> validate_glb",
+  "skeleton": "HumanIK / Mixamo 22-bone",
+  "clips": ["idle", "run", "attack", "walk", "hit", "death"],
+  "up_axis": "Y-up (bind-pose 已归一化到骨架空间，脚在 y=0，静置高 2.05m)",
+  "status": "6/8 done — B-02/B-03 待混元每日 5 次提交额度刷新后由 pipeline_character.py --id B-02 --id B-03 补齐",
+  "characters": [
+    {
+      "id": "E-01", "name": "游荡者", "en": "Shambler", "height_m": 1.75, "tris_budget": 900,
+      "rigged": "assets/characters/models/E-01/rigged/E01_Shambler_900_rigged.glb",
+      "animated": "assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "E-02", "name": "扑跃者", "en": "Lunger", "height_m": 1.9, "tris_budget": 1100,
+      "rigged": "assets/characters/models/E-02/rigged/E02_Lunger_1100_rigged.glb",
+      "animated": "assets/characters/models/E-02/rigged/E02_Lunger_1100_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "E-03", "name": "呕吐者", "en": "Spitter", "height_m": 1.8, "tris_budget": 1200,
+      "rigged": "assets/characters/models/E-03/rigged/E03_Spitter_1200_rigged.glb",
+      "animated": "assets/characters/models/E-03/rigged/E03_Spitter_1200_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "E-04", "name": "盾卫", "en": "Bulwark", "height_m": 2.05, "tris_budget": 1600,
+      "rigged": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
+      "animated": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "E-05", "name": "爆尸", "en": "Bloater", "height_m": 1.7, "tris_budget": 1000,
+      "rigged": "assets/characters/models/E-05/rigged/E05_Bloater_1000_rigged.glb",
+      "animated": "assets/characters/models/E-05/rigged/E05_Bloater_1000_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "B-01", "name": "屠夫", "en": "The Butcher", "height_m": 3.2, "tris_budget": 4200,
+      "rigged": "assets/characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged.glb",
+      "animated": "assets/characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged_animated.glb",
+      "status": "done"
+    },
+    {
+      "id": "B-02", "name": "母体", "en": "Broodmother", "height_m": 4.0, "tris_budget": 6000,
+      "rigged": null, "animated": null, "status": "pending"
+    },
+    {
+      "id": "B-03", "name": "零号", "en": "Patient Zero", "height_m": 2.6, "tris_budget": 5200,
+      "rigged": null, "animated": null, "status": "pending"
+    }
+  ]
+}
