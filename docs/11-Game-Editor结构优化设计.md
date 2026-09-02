@@ -285,4 +285,5 @@ apps/editor/src/
 ### 13.5 剩余（0b.8，需编辑器重手术）
 - ✅ **0b.6 已完成**（见 §13.3.5）：`renderer.ts` 帧绘制核心上提 `packages/render`，编辑器公开 API 零改动，三道门禁全绿。
 - ✅ **0b.8 兼容桥收敛已完成**（局部收口）：删除 10 个 `export * from '@aether/*'` 桥文件（`naming.ts`/`skin.ts`/`gpu/{device,geometry,gltf,math}.ts`/`shaders/{common,gizmo,post,scene}.wgsl.ts`），并把全部消费者（`main.ts`/`gizmo.ts`/`models.ts`/`asset-inspector.ts`/`renderer.ts`/`materials.test.ts`/`gpu/{geometry,gltf,math}.test.ts`/`skin.test.ts`）的 import 改写为直连 `@aether/{gfx,scene,core,render}`——含 `gltf.test.ts` 内 6 处动态 `import('./gltf')` 一并改 `@aether/scene`。`shaders/*.wgsl.ts` 无消费者，直接删。三道门禁全绿（tsc 0 error / vitest 97/97 / lab build 39 模块）。
-- ⬜ **0b.8 剩余**：①编辑器 `apps/lab/shader-lab/src/gizmo.ts` 仍遗留死代码 `buildGizmoHandles`+`GizmoHandleGPU`（与引擎层 `packages/render/src/gizmo.ts` 重复、无引用），需清理；②编辑器 `services`+`features` 重构为 `apps/editor`（架构收口重手术）。两项均建议作为独立专项推进，并以 headless WebGPU 冒烟做像素级回归门禁。
+- ✅ **0b.8 gizmo 死代码已清**：编辑器 `gizmo.ts` 删除与引擎层 `packages/render/src/gizmo.ts` 重复的几何生成块（`GizmoHandleGPU`/`buildGizmoHandles`/`COL`/`hex`/`orient`/`pushCylinder`/`pushCone`/`pushBox`/`pushRing`/`arrow`/`ring`/`boxAt`/`toGPU` 及未引用的 `GizmoMode`/`GizmoSpace` 导出），仅保留 `axisPlaneNormal`/`rotatePlaneBasis`/`angleInPlane`/`wrapAngle`/`V3` 交互数学（main.ts + gizmo.test.ts 依赖）。三道门禁仍全绿。
+- ⬜ **0b.8 剩余**：编辑器 `services`+`features` 重构为 `apps/editor`（架构收口重手术，独立专项），并以 headless WebGPU 冒烟做像素级回归门禁。
