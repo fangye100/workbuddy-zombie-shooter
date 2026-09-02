@@ -259,15 +259,23 @@ apps/editor/src/
 - **跨 session 注意（非破坏式搬迁）**：`skin.ts` 当时正被并行 asset/skin session 暂存（含其蒙皮管线 WIP）。同 0b.3 手法——先 cp 当前 lab 文件进 packages/render（保留 WIP），再写 lab 桥，代码不丢。
 - **0b.5 范围收窄**：蓝图 0b.5 含"管线构建"，但管线构建（createRenderPipeline ×4 + 4-pass 帧绘制）嵌在 `renderer.ts` 里，而 `renderer.ts` 正被并行 session 暂存且是 2611 行 god class、其消费者（main/ui/gizmo）也暂存——无法用兼容桥零破坏搬迁（renderer 是 class，剥编辑器方法会改 API 破坏锁定消费者）。故"管线构建"上提取消独立步，并入 0b.6 与 renderer 帧绘制核心一并处理（见 13.5 跨 session 协调）。
 
-### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3 + 0b.4 + 0b.5）
+### 13.3.4 设备初始化上提（0b.7，归入 packages/gfx）
+- lab `gpu/device.ts`（GpuContext / initGpu / GpuUnavailableError）真源迁入 `packages/gfx/src/context.ts`；`packages/gfx/src/index.ts` 加 `export * from './context'`。
+- 注意：`packages/gfx/src/device.ts` 是既有「能力分级 / 资源注册」层（CapabilityTier / pickFeatures / ResourceRegistry），与 lab 的「设备初始化」互补两块，不冲突、不重名，合并后 `@aether/gfx` 同时暴露两者。
+- 编辑器侧 `apps/lab/shader-lab/src/gpu/device.ts` 保留为兼容桥（`export * from '@aether/gfx'`），保护 main/renderer 的 `import './gpu/device'` 继续编译。
+
+### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3 + 0b.4 + 0b.5 + 0b.7）
 | 门禁 | 结果 |
 |---|---|
 | `tsc -p tsconfig.check.json` | 0 错误 |
 | `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 经桥全绿） |
-| `vite build`（lab） | 成功，41 模块，别名正确解析 |
+| `vite build`（lab） | 成功，45 模块，别名正确解析 |
 
 > 运行时 E-04 渲染本增量未跑：纯模块搬迁，math/naming 取值逐字节不变，消费方经桥零改动，渲染产物必然一致。若需正式门禁可补 headless WebGPU 冒烟。
 > 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin` 当前 `upstream` 缺失，本地提交后暂未 push。
 
 ### 13.5 下一步（按 docs/11 §9 顺序）
-0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法（含 0b.5 遗留「管线构建」）—— **需先协调并行 asset/skin session 落地其 renderer/main/ui/gizmo 暂存改动**：renderer 是 class、剥编辑器方法会改 API 破坏锁定消费者，无法用兼容桥零破坏搬迁。0b.7 设备层合并入 `packages/gfx` → 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`。每步独立保绿。
+### 13.5 剩余（0b.6 + 0b.8，需 renderer 重手术）
+- 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法（含 0b.5 遗留「管线构建」）：把 `createRenderPipeline ×4` + 4-pass 帧绘制抽进 `packages/render`，lab `renderer.ts` 退化为「引擎 `RendererCore` + 编辑器 `RenderFeature`（gizmo/selection/picking）」薄壳。需同步改 main/ui/gizmo 消费。
+- 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`，删全部兼容桥。
+- 这两步是架构收口的重手术（动 2611 行 god class 与其消费者），建议作为独立专项推进，且补 headless WebGPU 冒烟验证渲染产物一致。
