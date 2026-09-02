@@ -20,4 +20,13 @@
 ## 3D 资产生成管线（E-04 跑通）
 - 入口 `assets/characters/_tools/gen3d_from_image.py`（勿直接调 buddy-cloud `--image-base64`，本地 PNG base64 超 Windows 命令行长度上限）。
 - 减面首选 `decimate_cluster.py`（对病态拓扑免疫）；质检硬判据 = 表面积保持率 >80%。混元产物脚在 z-max，`export_labmesh` 用 `(x,-z,y)`，极性反用 `--up-flip`。
+
+## 名册全角色绑定流水线（2026-09-02 跑通，6/8 完成）
+- **全链路脚本 `assets/characters/_tools/pipeline_character.py`**：概念图 front.png → 混元图生3D(80000 tris) → decimate_cluster → bake_lowpoly(xatlas UV+贴图) → rig_character → retarget_bvh(烤6段) → validate_glb。单角色一条命令跑完。
+- **rig_character.py**（rig_e04.py 的通用化）：支持任意角色、按切片法**自动判定朝上轴极性**（脚在 z-max/z-min）、按 roster 身高取名；E-04 回归产物与 rig_e04.py 仅 y 轴恒定 3.6e-4 偏移（脚精确落地 y=0），bind-pose LBS max_err=1.12e-7。
+- **两套 Python 环境必须分开**：云端/绑骨用 `binaries/python/versions/3.13.12`（要 requests）；减面/烘焙用 `binaries/python/envs/default`（要 pymeshlab+xatlas）。
+- **headless 验证**：`cdp-rigged.mjs`（参数化，GLB 路径走命令行）任意角色 20 断言；E-01/E-02/E-03/E-04/E-05/B-01 均 20/20 PASS（0 console/0 exception）。
+- **⚠️ 混元每日提交上限 = 5 次/天**（dimension hy-3d，HTTP 429）。本日已用满：E-01/E-02/E-03/E-05/B-01 共 5 次 → **B-02/B-03 被限流挡住**，次日额度刷新或单独补跑 `pipeline_character.py --id B-02 --id B-03` 即可。
+- 图生3D **不能同时带 --prompt**（API 拒 "Prompt和ImageBase64不能同时存在"）。
+- 现状：E-01/E-02/E-03/E-04/E-05/B-01 六个角色 rig+anim 全齐；B-02/B-03 待次日额度。
 - worktree 内用 npm 装依赖会漂版本（TS 5.9/@webgpu/types 0.1.72 → 一片 TS2345）；主仓 pnpm 钉 5.6.3 / 0.1.49，修法 `npm install --no-save` 钉同版。
