@@ -1,0 +1,21 @@
+{
+  "label": "E-04 盾卫 UV1600",
+  "source": "E04_uv1600.glb",
+  "vertices": 4800,
+  "triangles": 1600,
+  "heightMeters": 2.187,
+  "upAxis": "y",
+  "feetAtOrigin": true,
+  "facing": "-Z",
+  "bbox": [
+    -0.7054,
+    0.0,
+    -0.3152,
+    0.7054,
+    2.1872,
+    0.3152
+  ],
+  "strideFloats": 15,
+  "aoMin": 0.0,
+  "aoMean": 0.547
+}

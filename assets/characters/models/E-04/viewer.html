@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-04 盾卫 · 3D 模型预览</title>
+<style>
+  :root{
+    --ink:#14110F; --paper:#F5E7C8; --zombie:#8FD14F; --blood:#E8402A;
+    --teal:#2BC4D6; --warn:#FFC531; --panel:#221E33; --panel-deep:#0A0812;
+    --text-dim:#9AA0A6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;
+    font-family:"Sarasa Gothic SC","Microsoft YaHei",system-ui,sans-serif;}
+  body{background:#f0f0f0;color:var(--ink);display:flex;flex-direction:column;
+    transition:background .25s ease,color .25s ease;}
+  body.dark{background:var(--panel-deep);color:var(--paper);}
+
+  /* 顶部信息栏 */
+  header{flex:0 0 auto;padding:12px 18px;background:var(--panel);color:var(--paper);
+    border-bottom:4px solid var(--ink);display:flex;align-items:center;gap:18px;
+    flex-wrap:wrap;z-index:10;}
+  .title{font-weight:900;font-size:17px;letter-spacing:.5px;}
+  .title .id{color:var(--teal);}
+  .badge{padding:2px 9px;border-radius:11px;font-size:11px;font-weight:700;
+    border:2px solid var(--ink);background:var(--zombie);color:var(--ink);}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#cfc9e0;}
+  .stats b{color:var(--paper);font-weight:800;}
+  .stats .warn{color:var(--warn);}
+  .spacer{flex:1;}
+  .ctrls{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;
+    padding:6px 12px;border:3px solid var(--ink);border-radius:8px;
+    background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink);
+    transition:transform .08s ease,box-shadow .08s ease;}
+  button:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink);}
+  button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+  button.on{background:var(--zombie);}
+  body.dark button{background:#2a2540;color:var(--paper);border-color:#0b0916;
+    box-shadow:3px 3px 0 #0b0916;}
+  body.dark button.on{background:var(--zombie);color:var(--ink);}
+
+  /* 视图区 */
+  main{flex:1 1 auto;position:relative;min-height:0;}
+  model-viewer{width:100%;height:100%;background:transparent;}
+
+  /* 底部提示 */
+  footer{flex:0 0 auto;padding:9px 18px;font-size:11.5px;line-height:1.6;
+    background:var(--panel);color:#cfc9e0;border-top:4px solid var(--ink);z-index:10;}
+  footer .k{color:var(--warn);font-weight:700;}
+  footer .g{color:var(--zombie);font-weight:700;}
+  footer .r{color:var(--blood);font-weight:700;}
+
+  /* 加载 / 失败提示 */
+  .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:10px;background:rgba(240,240,240,.92);z-index:5;
+    text-align:center;padding:24px;font-size:13px;}
+  body.dark .overlay{background:rgba(10,8,18,.94);color:var(--paper);}
+  .overlay.hide{display:none;}
+  .spinner{width:34px;height:34px;border:4px solid var(--ink);
+    border-top-color:var(--zombie);border-radius:50%;animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .err{color:var(--blood);font-weight:700;max-width:620px;line-height:1.7;}
+  code{background:rgba(0,0,0,.1);padding:1px 5px;border-radius:4px;}
+  body.dark code{background:rgba(255,255,255,.12);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><span class="id">E-04</span> 盾卫 Bulwark</div>
+  <span class="badge">混元 3D · 图生3D</span>
+  <div class="stats">
+    <span>三角形 <b>80,000</b></span>
+    <span>顶点 <b>56,156</b></span>
+    <span>预算 <b class="warn">1,600</b>（需减面 <b class="warn">98%</b>）</span>
+    <span>材质 <b>1</b> · 贴图 <b>3</b></span>
+    <span>骨骼 <b class="warn">0</b> · 动画 <b class="warn">0</b></span>
+  </div>
+  <div class="spacer"></div>
+  <div class="ctrls">
+    <button id="btnRotate" class="on">自动旋转</button>
+    <button id="btnTheme">深色背景</button>
+    <button id="btnReset">重置视角</button>
+  </div>
+</header>
+
+<main>
+  <div class="overlay" id="overlay">
+    <div class="spinner"></div>
+    <div>正在加载 3D 模型…</div>
+  </div>
+
+  <model-viewer id="mv"
+    src="E04_20260901_010134.glb"
+    camera-controls
+    auto-rotate
+    shadow-intensity="1"
+    exposure="1.0"
+    environment-image="neutral"
+    tone-mapping="commerce"
+    interaction-prompt="auto">
+  </model-viewer>
+</main>
+
+<footer>
+  <span class="k">当前阶段</span>：AI 生成的高模（静态网格，<span class="r">无骨骼 / 无动画</span>）。
+  下一步需在 Blender 重拓扑至 <span class="g">1600 tris</span>、分 UV，再进 Maya 建 HumanIK 骨架并重定向 Mixamo 动画。
+  左键拖拽旋转 · 滚轮缩放 · 右键平移。
+</footer>
+
+<script type="module">
+  // 加载 model-viewer，失败时自动切换到备用 CDN
+  const CDNS = [
+    "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js",
+    "https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js",
+    "https://fastly.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"
+  ];
+
+  const overlay = document.getElementById("overlay");
+
+  function loadScript(url){
+    return new Promise((resolve,reject)=>{
+      const s = document.createElement("script");
+      s.type = "module";
+      s.src = url;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("load failed: " + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  function showError(msg){
+    overlay.classList.remove("hide");
+    overlay.innerHTML =
+      '<div class="err">模型预览组件加载失败</div>' +
+      '<div>' + msg + '</div>' +
+      '<div style="font-size:12px;opacity:.8">' +
+      '本页需要从 CDN 加载 <code>model-viewer</code>。若网络受限，可直接在 Blender / Maya ' +
+      '或任意 glTF 查看器中打开 <code>E04_20260901_010134.glb</code>。' +
+      '</div>';
+  }
+
+  (async () => {
+    let ok = false;
+    for (const url of CDNS){
+      try { await loadScript(url); ok = true; break; } catch(e){ /* 试下一个 */ }
+    }
+    if (!ok){
+      showError("已尝试 " + CDNS.length + " 个 CDN 均不可达，请检查网络连接。");
+      return;
+    }
+    const mv = document.getElementById("mv");
+    const btnRotate = document.getElementById("btnRotate");
+    const btnTheme  = document.getElementById("btnTheme");
+    const btnReset  = document.getElementById("btnReset");
+
+    mv.addEventListener("load", () => overlay.classList.add("hide"));
+    mv.addEventListener("error", () => showError("模型文件加载失败，请确认 .glb 与本页面在同一目录。"));
+
+    btnRotate.addEventListener("click", () => {
+      mv.autoRotate = !mv.autoRotate;
+      btnRotate.classList.toggle("on", mv.autoRotate);
+    });
+
+    btnTheme.addEventListener("click", () => {
+      const dark = document.body.classList.toggle("dark");
+      btnTheme.textContent = dark ? "浅色背景" : "深色背景";
+      btnTheme.classList.toggle("on", dark);
+    });
+
+    btnReset.addEventListener("click", () => mv.resetTurntableRotation());
+
+    // 兜底：8 秒后仍未触发 load 事件就隐藏遮罩，避免卡在加载态
+    setTimeout(() => { if (!mv.loaded) overlay.classList.add("hide"); }, 8000);
+  })();
+</script>
+</body>
+</html>

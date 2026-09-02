@@ -1,0 +1,21 @@
+{
+  "label": "E-04 盾卫 UV6K",
+  "source": "E04_uv6000.glb",
+  "vertices": 18000,
+  "triangles": 6000,
+  "heightMeters": 2.108,
+  "upAxis": "y",
+  "feetAtOrigin": true,
+  "facing": "-Z",
+  "bbox": [
+    -0.7468,
+    0.0,
+    -0.376,
+    0.7468,
+    2.1076,
+    0.376
+  ],
+  "strideFloats": 15,
+  "aoMin": 0.0,
+  "aoMean": 0.431
+}

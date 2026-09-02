@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "typeRoots": ["./node_modules"],
+    "types": ["@webgpu/types", "vite/client"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "packages/core/src/**/*.ts",
+    "packages/gfx/src/**/*.ts",
+    "packages/framegraph/src/**/*.ts",
+    "packages/render/src/**/*.ts",
+    "packages/ai/src/**/*.ts",
+    "packages/ai/test/**/*.ts",
+    "packages/gameplay/src/**/*.ts",
+    "apps/samples/00-init/*.ts",
+    "apps/lab/shader-lab/src/**/*.ts"
+  ],
+  "exclude": ["apps/samples/00-init/vite.config.ts", "apps/lab/shader-lab/vite.config.ts"]
+}

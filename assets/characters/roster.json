@@ -1,0 +1,253 @@
+{
+  "project": "末日尸潮 · 横屏肉鸽射击",
+  "version": "1.0.0",
+  "note": "角色 roster 唯一真源。画布施工单（canvas 段）由本文件驱动。风格 token 见 assets/style/tokens.json。",
+  "styleSuffix": "American comic book style zombie game character, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, white clean background, full body, centered, character design turnaround sheet, no text, no UI, no watermark",
+  "levelStructure": [
+    { "act": 1, "name": "城郊公路", "en": "Highway Outskirts", "waves": "1–3", "color": "warn",      "enemies": ["E-01", "E-02"], "boss": "B-01", "arena": "加油站雨棚 + 翻覆车阵，开阔但多硬掩体" },
+    { "act": 2, "name": "废弃仓库", "en": "Ruined Warehouse", "waves": "4–6", "color": "blood",     "enemies": ["E-02", "E-03", "E-04"], "boss": "B-01", "arena": "货架巷道 + 冷库，视线被切碎，适合伏击" },
+    { "act": 3, "name": "地铁隧道", "en": "Subway Tunnels", "waves": "7–9", "color": "toxic",     "enemies": ["E-04", "E-05", "E-03"], "boss": "B-02", "arena": "狭长线性，纵向空间高，天花板可挂敌" },
+    { "act": 4, "name": "生化医院", "en": "Biohazard Hospital", "waves": "10–12", "color": "gold", "enemies": ["E-01", "E-02", "E-03", "E-04", "E-05"], "boss": "B-03", "arena": "天台开阔 + 病房迷宫双层，风向影响毒息" }
+  ],
+  "threatColors": { "低": "teal", "中": "warn", "高": "blood", "极高": "gold" },
+  "npcs": [
+    {
+      "id": "E-01",
+      "name": "游荡者",
+      "en": "Shambler",
+      "threat": "低",
+      "acts": [1, 2, 3, 4],
+      "role": "教学兵 · 教玩家侧移绕后与打头",
+      "silhouette": "倒三角躯干 + 双臂垂过膝盖 + 头部低垂",
+      "look": "瘦长驼背，前臂过长垂至膝下，下颚脱臼半垂露出牙齿，破烂加油站连体工装，左小腿胫骨外露，皮肤尸绿带灰斑",
+      "height": "1.75 m",
+      "tris": 900,
+      "hp": 60,
+      "speed": "1.4 m/s",
+      "attack": { "name": "挥抓", "en": "Swipe", "windup": "0.8 s", "range": "扇形 90° / 2.2 m", "damage": 8, "cd": "1.6 s", "telegraph": "右臂高举过头顶，地面出现淡红扇形警示" },
+      "weakness": "头部 ×2.5 伤害；可被近战击退打断前摇",
+      "accent": "zombie",
+      "ai": {
+        "base": "Gaunt shambling zombie, hunched back, unnaturally long forearms hanging past its knees, dislocated jaw hanging half open with exposed teeth, torn gas-station coverall, exposed shin bone on left leg, sickly green-grey skin with ash blotches",
+        "front": "front facing orthographic view, standing idle, arms hanging low, full body",
+        "side": "side profile orthographic view, showing hunched spine curve and overhanging jaw, full body",
+        "attack": "front three-quarter view mid-attack, right arm raised high overhead about to swipe down, motion arc lines, aggressive snarl"
+      }
+    },
+    {
+      "id": "E-02",
+      "name": "扑跃者",
+      "en": "Lunger",
+      "threat": "中",
+      "acts": [1, 2, 3, 4],
+      "role": "打断站桩输出 · 逼玩家保留位移",
+      "silhouette": "水平压缩 + 四肢外张 + 前倾头颅",
+      "look": "猫科骨架，脊椎棘突外露成锯齿状背脊，后腿蜷曲呈蓄力态，下颌骨完全缺失、口腔纵向开裂至胸腔，指端生骨刺",
+      "height": "1.25 m（四足）/ 1.60 m（直立）",
+      "tris": 1100,
+      "hp": 45,
+      "speed": "3.2 m/s（扑跃 8 m/s）",
+      "attack": { "name": "扑跃", "en": "Pounce", "windup": "0.5 s", "range": "直线 6 m / 落点 1.6 m AoE", "damage": 18, "cd": "3.2 s", "telegraph": "后腿压低、身体贴地，地面亮起黄色直线预警" },
+      "weakness": "蓄力 0.5s 内被打断 → 自伤 15 并翻倒 1.2 s",
+      "accent": "blood",
+      "ai": {
+        "base": "Feline-skeleton zombie crouched on all fours, spine spikes protruding in a jagged ridge, coiled hind legs, lower jaw entirely missing so the mouth splits vertically down into the chest cavity, bone spurs on fingertips, dark red flesh",
+        "front": "front facing orthographic view, crouched coiled stance, symmetric, full body",
+        "side": "side profile orthographic view, showing the coiled hind leg spring tension and jagged spine ridge, full body",
+        "attack": "side view mid-leap, body horizontal stretched forward through the air, jaws wide open, speed lines trailing behind"
+      }
+    },
+    {
+      "id": "E-03",
+      "name": "呕吐者",
+      "en": "Spitter",
+      "threat": "中",
+      "acts": [2, 3, 4],
+      "role": "占场型 · 逼玩家离开掩体与固定输出位",
+      "silhouette": "巨大球腹 + 萎缩细肢 + 上仰喷口头",
+      "look": "腹部膨大成半透明球，内部毒囊透出绿光，双臂萎缩贴身，头颈后仰、口器呈喇叭状喷口，躯干与四肢比例极端失衡",
+      "height": "1.70 m",
+      "tris": 1200,
+      "hp": 70,
+      "speed": "1.0 m/s",
+      "attack": { "name": "酸液抛射", "en": "Acid Lob", "windup": "1.2 s", "range": "9 m 抛物线 / 落点 2 m 毒池持续 4 s", "damage": "6 DPS", "cd": "4.0 s", "telegraph": "球体鼓胀发亮，落点提前 0.8 s 出现绿圈" },
+      "weakness": "击中发光毒囊 → 立即在自身脚下生成毒池，可被引诱自伤",
+      "accent": "zombie",
+      "ai": {
+        "base": "Bloated zombie with a huge translucent spherical belly, glowing green toxin sac visible inside, withered atrophied arms pressed tight against the body, head tilted back with a flared trumpet-like nozzle mouth, extreme proportion imbalance",
+        "front": "front facing orthographic view, standing, huge belly centered, symmetric, full body",
+        "side": "side profile orthographic view, showing the backward-tilted nozzle head and the belly overhang, full body",
+        "attack": "front three-quarter view, belly contracted and glowing, mid-vomit arc of green acid spraying forward in a parabolic stream"
+      }
+    },
+    {
+      "id": "E-04",
+      "name": "盾卫",
+      "en": "Bulwark",
+      "threat": "高",
+      "acts": [2, 3, 4],
+      "role": "教玩家绕侧背 · 正面硬刚必亏",
+      "silhouette": "厚重金属矩形 + 单侧巨大盾板 · 左右强不对称",
+      "look": "钢板直接焊进胸腔与左臂形成一体化盾板，头盔焊死只剩横向观察缝，右臂裸露并畸形肥大，背脊椎接口裸露发红光",
+      "height": "2.05 m",
+      "tris": 1600,
+      "hp": 220,
+      "speed": "1.8 m/s（冲锋 6 m/s）",
+      "attack": { "name": "盾击冲锋", "en": "Shield Charge", "windup": "1.0 s", "range": "直线 8 m", "damage": "12 + 击退 + 眩晕 0.6 s", "cd": "5.0 s", "telegraph": "低头、盾板前压，地面出现黄色冲锋轨迹" },
+      "weakness": "正面 120° 减伤 70%；背面脊椎红色接口 ×2 伤害",
+      "accent": "teal",
+      "ai": {
+        "base": "Heavy zombie with steel plates welded directly into its chest and left arm forming a single integrated shield slab, helmet welded shut leaving only a horizontal viewing slit, right arm bare and grotesquely overgrown, exposed red-glowing spinal port on its back, teal weld beads",
+        "front": "front facing orthographic view, shield slab covering the left side, welded helmet facing viewer, full body",
+        "side": "side profile orthographic view from the unshielded right side, showing the depth of the shield slab and the exposed back port, full body",
+        "attack": "front view charging forward low, shield slab leading, head down, impact dust and speed lines"
+      }
+    },
+    {
+      "id": "E-05",
+      "name": "爆尸",
+      "en": "Bloater",
+      "threat": "高",
+      "acts": [3, 4],
+      "role": "走位惩罚 + 环境武器（可引爆清群）",
+      "silhouette": "正圆球 + 无脖子 + 最小头身比",
+      "look": "全身充气水肿，皮肤半透可见皮下黄色气肿结节，肚皮裂纹透出橙光，脖子完全消失、头颅陷进躯干，四肢短小",
+      "height": "1.60 m / 直径 1.50 m",
+      "tris": 1000,
+      "hp": 90,
+      "speed": "1.1 m/s",
+      "attack": { "name": "自爆", "en": "Detonate", "windup": "1.5 s 引信（进入 2.5 m 触发）", "range": "半径 3.5 m", "damage": "35 + 击退 4 m", "cd": "—", "telegraph": "体表由绿转红、裂纹增亮、高频蜂鸣" },
+      "weakness": "引信期间击杀 → 伤害减半；可引到尸群中当炸弹用",
+      "accent": "warn",
+      "ai": {
+        "base": "Grossly inflated zombie, whole body swollen like a water balloon, translucent skin revealing subcutaneous yellow gas nodules, cracks across the belly glowing orange from within, neck completely gone with the skull sunk into the torso, tiny stubby limbs",
+        "front": "front facing orthographic view, perfectly round body, tiny sunken head, symmetric, full body",
+        "side": "side profile orthographic view, showing the round belly overhang and stubby limbs, full body",
+        "attack": "front three-quarter view at the moment of detonation trigger, body flushed from green to red, cracks blazing orange, warning pulse rings expanding outward"
+      }
+    }
+  ],
+  "bosses": [
+    {
+      "id": "B-01",
+      "name": "屠夫",
+      "en": "THE BUTCHER",
+      "threat": "极高",
+      "act": 1,
+      "arena": "废弃仓库冷库",
+      "archetype": "近战压制型",
+      "silhouette": "宽肩倒梯形 + 右臂单点长垂（肉钩）",
+      "look": "3.2 m 巨型，血污帆布围裙挂满金属挂钩，右臂自肘部截断接上 60 cm 肉钩，左臂改装成缓慢转动的绞肉机滚筒，猪头面具眼孔透黄光，脚踝锁着崩断的铁链",
+      "height": "3.2 m",
+      "tris": 4200,
+      "hp": 4200,
+      "speed": "2.2 m/s（冲锋 9 m/s）",
+      "attacks": [
+        { "key": "A", "name": "横扫", "en": "Sweep", "desc": "肉钩 270° 横扫，前摇 0.9 s，半径 4 m，伤害 30 + 击退 3 m", "telegraph": "地面亮起黄色弧形预警，弧长即判定范围" },
+        { "key": "B", "name": "冲锋", "en": "Charge", "desc": "直线突进 12 m，伤害 25；撞墙后自我眩晕 2.0 s", "telegraph": "低头蓄力 0.7 s，地面黄色直线轨迹" },
+        { "key": "C", "name": "抛钩", "en": "Hook", "desc": "9 m 抛钩命中拉拽玩家强制位移 + 0.8 s 硬直，伤害 10", "telegraph": "链条绷紧声 + 钩子发光 0.5 s" }
+      ],
+      "vulnerable": "撞墙眩晕 2.0 s，期间减伤 -50%",
+      "godViewNote": "俯角 55° 下 270° 横扫必须靠地面预警弧读图，光靠身体动画看不清；撞墙点是唯一的稳定输出窗口，要在场景里放明确的撞墙位",
+      "accent": "blood",
+      "ai": {
+        "base": "Giant 3.2 meter butcher zombie, bloodstained canvas apron hung with metal meat hooks, right arm severed at the elbow and replaced with a 60cm meat hook, left arm replaced with a slowly rotating meat-grinder drum, pig-head mask with glowing yellow eye holes, snapped iron chains locked around the ankles",
+        "front": "front facing orthographic view, wide trapezoid shoulders, both modified arms visible, full body",
+        "side": "side profile orthographic view, showing the long hanging meat hook arm and the grinder drum silhouette, full body",
+        "attack": "front three-quarter view mid-sweep, meat hook arm extended horizontally trailing a bright yellow ground warning arc, apron whipping, impact dust"
+      }
+    },
+    {
+      "id": "B-02",
+      "name": "母体",
+      "en": "THE BROODMOTHER",
+      "threat": "极高",
+      "act": 2,
+      "arena": "地铁隧道巢穴",
+      "archetype": "召唤 / 场地控制型",
+      "silhouette": "上下双体（地面产卵囊 + 反折上身）+ 双臂拖地",
+      "look": "4.0 m 高，下半身是巨大的产卵囊固定在隧道地面与顶部之间，上半身人形但腰椎反折成 C 形后弓，双臂过长垂地拖行，头颅后仰、口器纵向开裂至胸腔",
+      "height": "4.0 m（上半身 2.4 m）",
+      "tris": 6000,
+      "hp": 6000,
+      "speed": "本体固定不可移动",
+      "attacks": [
+        { "key": "A", "name": "产卵", "en": "Spawn", "desc": "每 8 s 从囊袋产出 6 只幼虫（1.1 m / 速度 4.5 / HP 20 / 自爆 8 伤害）", "telegraph": "囊袋口鼓胀发光 1.0 s" },
+        { "key": "B", "name": "酸雨", "en": "Rain", "desc": "天花板 3 段连环 AoE，每段伤害 15", "telegraph": "落点绿圈预警 1.0 s" },
+        { "key": "C", "name": "拍击", "en": "Slam", "desc": "双臂交替砸地，冲击波沿隧道十字扩散，伤害 22", "telegraph": "单臂高举 0.8 s，地面出现十字裂纹预告" }
+      ],
+      "vulnerable": "产卵时囊袋张开 1.5 s，期间 ×2 伤害",
+      "godViewNote": "本体固定 → 玩家走位空间是环形，必须用地面分区色（安全 / 危险）持续可读；幼虫数量要有 HUD 计数，否则玩家会读不清压力来源",
+      "accent": "toxic",
+      "ai": {
+        "base": "Towering 4 meter broodmother zombie, lower half is a massive egg sac anchored between the tunnel floor and ceiling, upper humanoid half with the spine bent backward into a C-curve, unnaturally long arms dragging on the ground, head tilted back with the mouth split vertically down into the chest, purple bioluminescent veins",
+        "front": "front facing orthographic view, egg sac base below, arching upper body above, both long arms dragging, full body",
+        "side": "side profile orthographic view, showing the backward C-curve of the spine and the depth of the egg sac, full body",
+        "attack": "front three-quarter view mid-slam, one long arm raised high about to crash down, egg sac opening glowing and distended, shockwave cracks spreading on the floor"
+      }
+    },
+    {
+      "id": "B-03",
+      "name": "零号",
+      "en": "PATIENT ZERO",
+      "threat": "极高",
+      "act": 4,
+      "arena": "生化医院天台",
+      "archetype": "三阶段变异型",
+      "silhouette": "瘦高 + 破碎下摆 + 胸腔纵向裂口发光",
+      "look": "2.6 m 瘦削高挑，白大褂撕裂成条状下摆，胸腔纵向裂开露出第二张口器（内衬环状牙齿），头骨左半外露、右半覆盖萎缩皮肤，静脉发紫光，左手拖着断裂的输液架",
+      "height": "2.6 m",
+      "tris": 5200,
+      "hp": 9000,
+      "speed": "3.0 m/s（P3 狂暴 ×1.6）",
+      "attacks": [
+        { "key": "P1", "name": "100–70% · 注射器飞刀", "en": "Syringe Volley", "desc": "三连射，射程 12 m，伤害 12 / 发；附带 6 m 短距闪现（CD 4 s）", "telegraph": "抬手 +  syringe 尖端紫光 0.4 s" },
+        { "key": "P2", "name": "70–35% · 长鞭双臂", "en": "Lash Arms", "desc": "撕裂白大褂 → 双臂变异为 7 m 长鞭，横扫 + 拉拽；召唤 3 只盾卫", "telegraph": "白大褂撕裂瞬间 1.2 s 硬直（可打断）" },
+        { "key": "P3", "name": "35–0% · 胸腔毒息", "en": "Chest Miasma", "desc": "第二张口器张开，120° 扇形毒息持续 5 s（DPS 14）+ 全场毒池；狂暴（速度 ×1.6、攻击 CD ×0.7）", "telegraph": "胸腔裂口紫光暴涨 1.0 s" }
+      ],
+      "vulnerable": "每次阶段切换 1.2 s 硬直，可打断一次攻击；P3 毒息期间侧后方为安全区",
+      "godViewNote": "阶段切换靠体态突变读图：P2 手臂变长、P3 胸腔张开——这两个是最强信号，必须做成全屏可辨的轮廓变化，不能只靠血条数字",
+      "accent": "toxic",
+      "ai": {
+        "base": "Tall gaunt 2.6 meter patient zero zombie, white lab coat torn into hanging tatters, chest split vertically open revealing a second mouth lined with ringed teeth, left half of the skull exposed bone and right half covered in withered skin, purple glowing veins, dragging a broken IV stand in the left hand",
+        "front": "front facing orthographic view, tall and thin, chest rift visible and glowing, coat tatters hanging, full body",
+        "side": "side profile orthographic view, showing the gaunt frame depth and the open chest rift profile, full body",
+        "attack": "front three-quarter view phase 3, chest rift wide open blazing purple, fan-shaped toxic breath spraying forward, lab coat tatters whipping, one arm mutated into a long lash whip"
+      }
+    }
+  ],
+  "canvas": {
+    "fileId": "720788949675822",
+    "frameSize": { "w": 1560, "h": 900 },
+    "grid": { "x": [0, 1700, 3400], "rowY": [2640, 3680, 4720] },
+    "frames": [
+      { "page": 10, "id": "E-01", "x": 0,    "y": 2640 },
+      { "page": 11, "id": "E-02", "x": 1700, "y": 2640 },
+      { "page": 12, "id": "E-03", "x": 3400, "y": 2640 },
+      { "page": 13, "id": "E-04", "x": 0,    "y": 3680 },
+      { "page": 14, "id": "E-05", "x": 1700, "y": 3680 },
+      { "page": 15, "id": "IDX",  "x": 3400, "y": 3680, "kind": "index", "title": "敌群图鉴 · 投放矩阵" },
+      { "page": 16, "id": "B-01", "x": 0,    "y": 4720 },
+      { "page": 17, "id": "B-02", "x": 1700, "y": 4720 },
+      { "page": 18, "id": "B-03", "x": 3400, "y": 4720 }
+    ],
+    "frameLayout": {
+      "titleBar": { "h": 96, "fill": "panel", "stroke": "ink", "strokeWeight": 6 },
+      "badge":   { "x": 28, "y": 20, "w": 84, "h": 56, "fill": "accent" },
+      "nameCn":  { "x": 132, "y": 12, "size": 40 },
+      "nameEn":  { "x": 132, "y": 60, "size": 20, "fill": "text-dim" },
+      "threatPill": { "x": 1300, "y": 26, "w": 232, "h": 44 },
+      "viewCards": [
+        { "label": "正面 · FRONT",  "x": 24,  "y": 112, "w": 480, "h": 540 },
+        { "label": "侧面 · SIDE",   "x": 540, "y": 112, "w": 480, "h": 540 },
+        { "label": "攻击 · ATTACK", "x": 1056,"y": 112, "w": 480, "h": 540 }
+      ],
+      "cardImage":  { "x": 20, "y": 20, "w": 440, "h": 420 },
+      "cardLabel":  { "x": 20, "y": 452, "w": 440, "h": 68 },
+      "bottomPanel": { "x": 24, "y": 676, "w": 1512, "h": 200 },
+      "statCells": { "w": 372, "h": 64, "gap": 8, "y": 16, "count": 4 },
+      "noteRow":   { "y": 92, "h": 92 },
+      "bossNoteRows": { "y": 92, "h": 32, "gap": 6, "count": 3 }
+    }
+  }
+}

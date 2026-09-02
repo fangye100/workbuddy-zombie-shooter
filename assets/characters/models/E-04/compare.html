@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-04 盾卫 · 减面档位对比</title>
+<style>
+  :root{
+    --ink:#14110F; --paper:#F5E7C8; --zombie:#8FD14F; --blood:#E8402A;
+    --teal:#2BC4D6; --warn:#FFC531; --panel:#221E33; --panel-deep:#0A0812;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;
+    font-family:"Sarasa Gothic SC","Microsoft YaHei",system-ui,sans-serif;
+    background:#f0f0f0;color:var(--ink);display:flex;flex-direction:column;
+    transition:background .25s,color .25s;}
+  body.dark{background:var(--panel-deep);color:var(--paper);}
+
+  header{flex:0 0 auto;background:var(--panel);color:var(--paper);
+    border-bottom:4px solid var(--ink);padding:11px 18px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;z-index:10;}
+  .title{font-weight:900;font-size:16px;}
+  .title .id{color:var(--teal);}
+  .meta{font-size:11.5px;color:#cfc9e0;}
+  .meta b{color:var(--warn);}
+  .spacer{flex:1;}
+  .ctrls{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;
+    padding:6px 12px;border:3px solid var(--ink);border-radius:8px;
+    background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink);
+    transition:transform .08s,box-shadow .08s;}
+  button:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink);}
+  button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+  button.on{background:var(--zombie);}
+  body.dark button{background:#2a2540;color:var(--paper);border-color:#0b0916;
+    box-shadow:3px 3px 0 #0b0916;}
+  body.dark button.on{background:var(--zombie);color:var(--ink);}
+
+  .grid{flex:1 1 auto;display:grid;grid-template-columns:repeat(3,1fr);
+    gap:3px;background:var(--ink);min-height:0;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;grid-auto-rows:1fr;}}
+  .cell{position:relative;background:#f0f0f0;display:flex;flex-direction:column;
+    min-height:0;transition:background .25s;}
+  body.dark .cell{background:#15121f;}
+  .cap{flex:0 0 auto;padding:8px 12px;font-size:12px;font-weight:800;
+    background:var(--panel);color:var(--paper);
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .cap .n{font-size:15px;color:var(--warn);}
+  .cap .tag{padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;
+    border:2px solid var(--ink);background:var(--text-dim,#9AA0A6);color:var(--ink);}
+  .cap .tag.budget{background:var(--zombie);}
+  .cap .tag.src{background:var(--teal);}
+  .cap .tag.mid{background:var(--warn);}
+  .cap .sub{font-weight:500;font-size:10.5px;color:#b9b3cc;}
+  .stage{flex:1 1 auto;min-height:0;position:relative;}
+  model-viewer{width:100%;height:100%;}
+  /* 剪影模式：把整个渲染结果压成纯黑，用于验收god view下的轮廓辨识度 */
+  model-viewer.silhouette{filter:brightness(0);}
+
+  .loading{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;font-size:11.5px;color:#888;
+    background:inherit;z-index:3;pointer-events:none;}
+  .loading.hide{display:none;}
+
+  footer{flex:0 0 auto;padding:9px 18px;font-size:11.5px;line-height:1.65;
+    background:var(--panel);color:#cfc9e0;border-top:4px solid var(--ink);z-index:10;}
+  footer .g{color:var(--zombie);font-weight:700;}
+  footer .r{color:var(--blood);font-weight:700;}
+  footer .w{color:var(--warn);font-weight:700;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><span class="id">E-04</span> 盾卫 Bulwark · 减面对比</div>
+  <div class="meta">身高 <b>2.05 m</b> · roster 预算 <b>1600 tris</b> · 顶点色已烘焙</div>
+  <div class="spacer"></div>
+  <div class="ctrls">
+    <button id="btnRotate" class="on">自动旋转</button>
+    <button id="btnSil">剪影验收</button>
+    <button id="btnTheme">深色背景</button>
+    <button id="btnReset">重置视角</button>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="cell">
+    <div class="cap">
+      <span class="n">80,000</span> 面
+      <span class="tag src">AI 原模</span>
+      <span class="sub">56,156 顶点 · 38 MB</span>
+    </div>
+    <div class="stage">
+      <div class="loading">加载中…</div>
+      <model-viewer src="E04_20260901_010134.glb" camera-controls auto-rotate
+        shadow-intensity="1" environment-image="neutral" tone-mapping="commerce"></model-viewer>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cap">
+      <span class="n">6,000</span> 面
+      <span class="tag mid">中间档</span>
+      <span class="sub">4,421 顶点 · 烘焙源</span>
+    </div>
+    <div class="stage">
+      <div class="loading">加载中…</div>
+      <model-viewer src="game_ready/E04_20260901_010134_6000tris.glb" camera-controls auto-rotate
+        shadow-intensity="1" environment-image="neutral" tone-mapping="commerce"></model-viewer>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cap">
+      <span class="n">1,599</span> 面
+      <span class="tag budget">达标预算</span>
+      <span class="sub">1,502 顶点 · 减面 98%</span>
+    </div>
+    <div class="stage">
+      <div class="loading">加载中…</div>
+      <model-viewer src="game_ready/E04_20260901_010134_1600tris.glb" camera-controls auto-rotate
+        shadow-intensity="1" environment-image="neutral" tone-mapping="commerce"></model-viewer>
+    </div>
+  </div>
+</div>
+
+<footer>
+  三档同步旋转，可拖动任一格单独查看。「<span class="w">剪影验收</span>」把渲染压成纯黑，
+  用于检验 god view 下 <span class="g">0.3 秒可辨</span> 的轮廓铁律 —— 重点看盾板、肥大右臂、
+  焊死头盔三处特征在 1600 面下是否还立得住。<br>
+  低模的颜色来自 <span class="g">顶点色烘焙</span>（按 UV 采样高模 baseColor），不依赖贴图，
+  因为压到 2% 面数后 UV 必然严重拉伸。骨骼与动画仍是 <span class="r">0</span> —— 绑定（Maya HumanIK）
+  与 Mixamo 重定向尚未开始。
+</footer>
+
+<script type="module">
+  const CDNS = [
+    "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js",
+    "https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js",
+    "https://fastly.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"
+  ];
+
+  function loadScript(url){
+    return new Promise((res,rej)=>{
+      const s=document.createElement("script");
+      s.type="module"; s.src=url;
+      s.onload=res; s.onerror=()=>rej(new Error(url));
+      document.head.appendChild(s);
+    });
+  }
+
+  let ok=false;
+  for(const url of CDNS){
+    try{ await loadScript(url); ok=true; break; }catch(e){}
+  }
+
+  if(!ok){
+    document.querySelectorAll(".loading").forEach(el=>{
+      el.classList.remove("hide");
+      el.style.color="#E8402A";
+      el.innerHTML='<div style="text-align:center;padding:12px">'+
+        '预览组件加载失败（CDN 不可达）<br>'+
+        '<span style="font-size:11px">请检查网络，或直接在 Blender 打开 game_ready 下的 .glb</span></div>';
+    });
+  } else {
+    const mvs=[...document.querySelectorAll("model-viewer")];
+    mvs.forEach(mv=>{
+      const tip=mv.parentElement.querySelector(".loading");
+      mv.addEventListener("load",()=>tip.classList.add("hide"));
+      mv.addEventListener("error",()=>{
+        tip.style.color="#E8402A";
+        tip.textContent="模型加载失败";
+      });
+      setTimeout(()=>{ if(!mv.loaded) tip.classList.add("hide"); },15000);
+    });
+
+    const btnRotate=document.getElementById("btnRotate");
+    const btnSil=document.getElementById("btnSil");
+    const btnTheme=document.getElementById("btnTheme");
+    const btnReset=document.getElementById("btnReset");
+
+    btnRotate.onclick=()=>{
+      const on=!mvs[0].autoRotate;
+      mvs.forEach(m=>m.autoRotate=on);
+      btnRotate.classList.toggle("on",on);
+    };
+    btnSil.onclick=()=>{
+      const on=!mvs[0].classList.contains("silhouette");
+      mvs.forEach(m=>m.classList.toggle("silhouette",on));
+      btnSil.classList.toggle("on",on);
+    };
+    btnTheme.onclick=()=>{
+      const d=document.body.classList.toggle("dark");
+      btnTheme.textContent=d?"浅色背景":"深色背景";
+      btnTheme.classList.toggle("on",d);
+    };
+    btnReset.onclick=()=>mvs.forEach(m=>m.resetTurntableRotation());
+  }
+</script>
+</body>
+</html>
