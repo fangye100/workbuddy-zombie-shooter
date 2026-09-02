@@ -17,7 +17,7 @@
  */
 
 import { MATERIAL_OPTIONS, type LabParams } from './params';
-import { uniqueName } from './naming';
+import { uniqueName } from '@aether/core';
 import {
   cloneMaterial,
   isInstanceId,
