@@ -186,6 +186,123 @@ def make_procedural_walk(order, bones, fps=30, frames=60):
     return times, quats, hips_trans
 
 
+# ---- multi-clip procedural motion (idle / run / attack) ------------------
+def _qangles(axis, angs):
+    """axis: 3-seq, angs: (N,) -> (N,4) quaternions (xyzw)."""
+    return np.array([G.quat_from_axis_angle(list(axis), float(a)) for a in angs], dtype=np.float64)
+
+
+def make_procedural_clips(order, bones, fps=30):
+    """Return a list of clip dicts: {name, times, quats:{bone:(N,4)}, hips:(N,3)|None}.
+
+    All tracks target the standard HumanIK bones, so the same GLB works with any
+    HumanIK-compatible Game Editor / Mixamo retarget. Stand-in until a real
+    .bvh / FBX-with-anim motion source is supplied.
+    """
+    clips = []
+    hips0 = np.array(bones["Hips"]["offset"], dtype=np.float64)
+
+    def hips_track(frames, bob_amp, freq_mul=1.0, lunge=None):
+        times = np.arange(frames) / fps
+        w = 2 * np.pi * times * freq_mul
+        h = np.tile(hips0, (frames, 1)).astype(np.float64)
+        if bob_amp:
+            h[:, 1] += bob_amp * np.abs(np.sin(w))
+        if lunge is not None:
+            h[:, 0] += lunge[0] * np.sin(w)
+            h[:, 1] += lunge[1] * np.sin(w)
+        return times, h
+
+    # ---- idle ----
+    frames = 60
+    times, h = hips_track(frames, 0.012)
+    w = 2 * np.pi * times
+    q = {
+        "Spine": _qangles([1, 0, 0], 0.03 * np.sin(w)),
+        "Spine1": _qangles([1, 0, 0], 0.025 * np.sin(w + 0.3)),
+        "LeftArm": _qangles([1, 0, 0], 0.04 * np.sin(w)),
+        "RightArm": _qangles([1, 0, 0], 0.04 * np.sin(w + np.pi)),
+        "Head": _qangles([0, 1, 0], 0.03 * np.sin(w)),
+    }
+    clips.append({"name": "idle", "times": times, "quats": q, "hips": h})
+
+    # ---- run ----
+    frames = 40
+    times, h = hips_track(frames, 0.06, freq_mul=1.6)
+    w = 2 * np.pi * times * 1.6
+    q = {
+        "LeftUpLeg": _qangles([1, 0, 0], 0.7 * np.sin(w)),
+        "RightUpLeg": _qangles([1, 0, 0], 0.7 * np.sin(w + np.pi)),
+        "LeftLeg": _qangles([1, 0, 0], 0.45 * np.sin(w + 0.4)),
+        "RightLeg": _qangles([1, 0, 0], 0.45 * np.sin(w + np.pi + 0.4)),
+        "LeftArm": _qangles([1, 0, 0], 0.55 * np.sin(w + np.pi)),
+        "RightArm": _qangles([1, 0, 0], 0.55 * np.sin(w)),
+        "Spine": _qangles([1, 0, 0], 0.12 * np.sin(w)),
+    }
+    clips.append({"name": "run", "times": times, "quats": q, "hips": h})
+
+    # ---- attack (periodic thrust + torso twist) ----
+    frames = 45
+    times, h = hips_track(frames, 0.02, freq_mul=0.8, lunge=(0.05, -0.03))
+    w = 2 * np.pi * times * 0.8
+    rarm = 0.5 * np.sin(w) + 0.35 * np.sin(2 * w + 1.0)
+    q = {
+        "RightArm": _qangles([1, 0, 0], rarm),
+        "RightForeArm": _qangles([1, 0, 0], 0.3 * np.sin(w + 1.0)),
+        "Spine": _qangles([0, 1, 0], 0.25 * np.sin(w)),
+        "Spine1": _qangles([0, 1, 0], 0.2 * np.sin(w + 0.3)),
+        "LeftArm": _qangles([1, 0, 0], 0.2 * np.sin(w + np.pi)),
+    }
+    clips.append({"name": "attack", "times": times, "quats": q, "hips": h})
+
+    # ---- walk (slower, smaller swing than run) ----
+    frames = 50
+    times, h = hips_track(frames, 0.035, freq_mul=1.0)
+    w = 2 * np.pi * times * 1.0
+    q = {
+        "LeftUpLeg": _qangles([1, 0, 0], 0.5 * np.sin(w)),
+        "RightUpLeg": _qangles([1, 0, 0], 0.5 * np.sin(w + np.pi)),
+        "LeftLeg": _qangles([1, 0, 0], 0.32 * np.sin(w + 0.4)),
+        "RightLeg": _qangles([1, 0, 0], 0.32 * np.sin(w + np.pi + 0.4)),
+        "LeftArm": _qangles([1, 0, 0], 0.4 * np.sin(w + np.pi)),
+        "RightArm": _qangles([1, 0, 0], 0.4 * np.sin(w)),
+        "Spine": _qangles([1, 0, 0], 0.07 * np.sin(w)),
+    }
+    clips.append({"name": "walk", "times": times, "quats": q, "hips": h})
+
+    # ---- hit (damped recoil: torso twist back + arms fling up) ----
+    frames = 24
+    tn = np.linspace(0, 1, frames)
+    times = tn / fps
+    h = np.tile(hips0, (frames, 1)).astype(np.float64)
+    env = np.sin(np.pi * tn)  # 0 -> 1 -> 0 impulse
+    q = {
+        "Spine": _qangles([0, 1, 0], -0.30 * env),
+        "Spine1": _qangles([0, 1, 0], -0.25 * env),
+        "Head": _qangles([0, 1, 0], -0.20 * env),
+        "LeftArm": _qangles([1, 0, 0], 0.45 * env),
+        "RightArm": _qangles([1, 0, 0], 0.45 * env),
+    }
+    clips.append({"name": "hit", "times": times, "quats": q, "hips": h})
+
+    # ---- death (collapse: spine folds forward, hips sink) ----
+    frames = 40
+    tn = np.linspace(0, 1, frames)
+    times = tn / fps
+    h = np.tile(hips0, (frames, 1)).astype(np.float64)
+    h[:, 1] -= 0.5 * tn  # sink into the ground
+    q = {
+        "Spine": _qangles([1, 0, 0], 0.55 * tn),
+        "Spine1": _qangles([1, 0, 0], 0.45 * tn),
+        "Head": _qangles([1, 0, 0], 0.35 * tn),
+        "LeftUpLeg": _qangles([1, 0, 0], 0.20 * tn),
+        "RightUpLeg": _qangles([1, 0, 0], 0.20 * tn),
+    }
+    clips.append({"name": "death", "times": times, "quats": q, "hips": h})
+
+    return clips
+
+
 # ---- main retarget --------------------------------------------------------
 def retarget_to_glb(rigged_glb, bvh_path, out_glb):
     js, bin_data = G.read_glb(rigged_glb)
@@ -242,9 +359,11 @@ def retarget_to_glb(rigged_glb, bvh_path, out_glb):
             pz = motion[:, cols["Zposition"]] * scale - rest[2]
             hips_rest = np.array(bones["Hips"]["offset"], dtype=np.float64)
             hips_trans = np.stack([px + hips_rest[0], py + hips_rest[1], pz + hips_rest[2]], axis=1)
+            clips = [{"name": "retargeted", "times": times, "quats": quats, "hips": hips_trans}]
     else:
-        print("[anim ] no BVH given -> synthesizing procedural walk cycle")
-        times, quats, hips_trans = make_procedural_walk(order, bones)
+        print("[anim ] no BVH given -> synthesizing procedural clips "
+              "(idle/run/attack/walk/hit/death)")
+        clips = make_procedural_clips(order, bones)
 
     # ---- append animation accessors to bin ----
     new_bin = bytearray(bin_data)
@@ -265,38 +384,38 @@ def retarget_to_glb(rigged_glb, bvh_path, out_glb):
         new_bin += raw
         return acc_idx
 
-    times_acc = add_accessor(times, 5126, "SCALAR", len(times))
+    animations = []
+    for clip in clips:
+        ctimes = clip["times"]
+        cquats = clip["quats"]
+        chips = clip.get("hips")
+        times_acc = add_accessor(ctimes, 5126, "SCALAR", len(ctimes))
+        samplers = []
+        channels = []
+        for bone, q in cquats.items():
+            if bone not in name_to_node:
+                continue
+            node = name_to_node[bone]
+            out_acc = add_accessor(np.asarray(q, dtype=np.float64).reshape(-1, 4), 5126, "VEC4", q.shape[0])
+            si = len(samplers)
+            samplers.append({"input": times_acc, "output": out_acc, "interpolation": "LINEAR"})
+            channels.append({"sampler": si, "target": {"node": node, "path": "rotation"}})
+        if chips is not None and "Hips" in name_to_node:
+            node = name_to_node["Hips"]
+            out_acc = add_accessor(np.asarray(chips, dtype=np.float64).reshape(-1, 3), 5126, "VEC3", chips.shape[0])
+            si = len(samplers)
+            samplers.append({"input": times_acc, "output": out_acc, "interpolation": "LINEAR"})
+            channels.append({"sampler": si, "target": {"node": node, "path": "translation"}})
+        animations.append({"name": clip["name"], "channels": channels, "samplers": samplers})
 
-    samplers = []
-    channels = []
-    for bone, q in quats.items():
-        if bone not in name_to_node:
-            continue
-        node = name_to_node[bone]
-        out_acc = add_accessor(np.asarray(q, dtype=np.float64).reshape(-1, 4), 5126, "VEC4", q.shape[0])
-        si = len(samplers)
-        samplers.append({"input": times_acc, "output": out_acc, "interpolation": "LINEAR"})
-        channels.append({"sampler": si, "target": {"node": node, "path": "rotation"}})
-
-    if hips_trans is not None and "Hips" in name_to_node:
-        node = name_to_node["Hips"]
-        out_acc = add_accessor(np.asarray(hips_trans, dtype=np.float64).reshape(-1, 3), 5126, "VEC3", hips_trans.shape[0])
-        si = len(samplers)
-        samplers.append({"input": times_acc, "output": out_acc, "interpolation": "LINEAR"})
-        channels.append({"sampler": si, "target": {"node": node, "path": "translation"}})
-
-    duration = float(times[-1]) if len(times) else 0.0
-    js["animations"] = [{
-        "name": "retargeted" if (bvh_path and os.path.isfile(bvh_path)) else "procedural_walk",
-        "channels": channels,
-        "samplers": samplers,
-    }]
+    js["animations"] = animations
 
     os.makedirs(os.path.dirname(os.path.abspath(out_glb)), exist_ok=True)
     G.write_glb(out_glb, js, bytes(new_bin))
+    names = [a["name"] for a in animations]
+    total_ch = sum(len(a["channels"]) for a in animations)
     print(f"[anim ] wrote {out_glb}  ({os.path.getsize(out_glb)/1024:.1f} KB)  "
-          f"clip='{js['animations'][0]['name']}'  channels={len(channels)}  "
-          f"duration={duration:.3f}s")
+          f"clips={names}  total_channels={total_ch}")
     return out_glb
 
 

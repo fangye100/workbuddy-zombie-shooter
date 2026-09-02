@@ -124,6 +124,7 @@ def main():
     out_verts = vsum / np.maximum(vcnt, 1)[:, None]
 
     print("[3/4] 写带顶点色 OBJ ...", file=sys.stderr)
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fo:
         for i in range(nv):
             r, g, bch = out_colors[i] / 255.0
