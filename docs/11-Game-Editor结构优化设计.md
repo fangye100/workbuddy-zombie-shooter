@@ -248,15 +248,20 @@ apps/editor/src/
 - 编辑器侧 `apps/lab/shader-lab/src/gpu/{geometry,gltf}.ts` 保留为兼容桥（`export * from '@aether/scene'`），保护 main/renderer/skin/asset-inspector 及 skin.test 的 `import './gpu/{geometry,gltf}'` 继续编译。
 - **跨 session 注意（非破坏式搬迁）**：`gpu/geometry.ts` / `gpu/gltf.ts` 当时正被并行 asset/skin session 暂存（含其 WIP 修改）。本步用"先 cp 当前 lab 文件进 packages/scene（保留其 WIP）、再写 lab 桥"的方式搬迁——其修改落到 `packages/scene/{geometry,gltf}.ts`，lab 同名文件退化为桥，**代码不丢**，待 0b.8 收敛后删桥。
 
-### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3）
+### 13.3.2 WGSL 上提（0b.4，归入 packages/render）
+- 4 个 `.wgsl.ts`（common / gizmo / post / scene）真源迁入 `packages/render/src/shaders/`，由 `packages/render/src/shaders/index.ts` 再导出；`@aether/render` 新增 `export * from './shaders'`。
+- `scene.wgsl.ts` / `post.wgsl.ts` 的 `import { COMMON_WGSL } from './common.wgsl'` 在包内同目录仍成立，无需改路径。
+- 编辑器侧 `apps/lab/shader-lab/src/shaders/*.wgsl.ts` 四项全保留为兼容桥（`export * from '@aether/render'`），保护 renderer 的 `import { SCENE_WGSL, POST_WGSL, GIZMO_WGSL } from './shaders/*'` 继续编译。
+
+### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3 + 0b.4）
 | 门禁 | 结果 |
 |---|---|
 | `tsc -p tsconfig.check.json` | 0 错误 |
-| `vitest run` | 97/97 通过（math 16 + materials 23 含在内，桥路径下仍全绿） |
-| `vite build`（lab） | 成功，34 模块，别名正确解析 |
+| `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 经桥全绿） |
+| `vite build`（lab） | 成功，40 模块，别名正确解析 |
 
 > 运行时 E-04 渲染本增量未跑：纯模块搬迁，math/naming 取值逐字节不变，消费方经桥零改动，渲染产物必然一致。若需正式门禁可补 headless WebGPU 冒烟。
 > 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin` 当前 `upstream` 缺失，本地提交后暂未 push。
 
 ### 13.5 下一步（按 docs/11 §9 顺序）
-0b.4 `shaders/*.wgsl.ts`→`packages/render/src/shaders` → 0b.5 `skin.ts`+管线构建→`packages/render` → 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法 → 0b.7 设备层合并入 `packages/gfx` → 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`。每步独立保绿。
+0b.5 `skin.ts`+管线构建→`packages/render` → 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法 → 0b.7 设备层合并入 `packages/gfx` → 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`。每步独立保绿。
