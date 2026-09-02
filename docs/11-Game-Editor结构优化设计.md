@@ -220,7 +220,7 @@ apps/editor/src/
 
 ---
 
-## 13. 执行进度（2026-09-02 首增量 · Phase 0a + 0b.1）
+## 13. 执行进度（2026-09-02 首增量 · Phase 0a + 0b.1 + 0b.2）
 
 **已落地，验证全绿。** 这一增量建立整个后续上提所依赖的包体解析地基，并完成第一块纯数据的上提。
 
@@ -236,15 +236,21 @@ apps/editor/src/
 - `params.ts` 删除 `MaterialState` 定义，改为 `import type` + `export type` 从 `@aether/render` re-export。因此 `renderer.ts` / `binding.ts` / `ui.ts` / `presets.ts` **零改动**即保绿。
 - **偏差（命名）**：蓝图 §6/ADR-007 称包级类型为 `MaterialDef`，执行时保留既有 `MaterialState` 名——它本就是渲染器装箱的材质数据，改名需动 renderer 的 uniform 装箱代码，风险大且无收益。`MaterialDef` 作为工作名退役。
 
-### 13.3 验证结果
+### 13.3 数学/命名上提（0b.2）
+- `gpu/math.ts`（列主序 mat4/quat/vec3 + 拾取 rayAabb/rayTri + hex/rgb 互转）与 `naming.ts`（`uniqueName`/`nameAllocator`）真源迁入 `packages/core/src/math.ts` 与 `packages/core/src/naming.ts`，由 `@aether/core` 再导出。
+- 编辑器侧 `apps/lab/shader-lab/src/gpu/math.ts` 与 `apps/lab/shader-lab/src/naming.ts` **保留为兼容桥**（`export * from '@aether/core'`）：`main.ts`/`renderer.ts`/`skin.ts`/`gltf.ts` 正被另一并行 session 暂存、本步不触碰，桥保证其 `import './gpu/math'` / `'../naming'` 继续编译，待 0b.8 编辑器收敛后删除桥。
+- `materials.ts` 改为 `import { uniqueName } from '@aether/core'`（不再经桥），完成 editor→core 清洁消费。
+- **踩坑（已修复）**：本步首次落地时把"拷贝真源进 core"与"写 lab 桥"放进同一条消息并行执行，桥的 `Write` 先于 `cp` 落地，导致 `cp` 把已生成的桥当真源拷进 `packages/core` —— core 与 lab 互为桥、导出全空（tsc `no exported member`、vitest `nameAllocator is not a function`）。修复：改用确定内容 `Write` 真实实现进 `packages/core`。**纪律固化：拷贝文件内容（`cp`）与改写源文件（`Write`/`Edit`）不可在同一条消息并行，必须顺序执行。**
+
+### 13.4 验证结果（累计 0a + 0b.1 + 0b.2）
 | 门禁 | 结果 |
 |---|---|
 | `tsc -p tsconfig.check.json` | 0 错误 |
-| `vitest run` | 97/97 通过（materials 23 例含在内） |
-| `vite build`（lab） | 成功，29 模块，别名正确解析 |
+| `vitest run` | 97/97 通过（math 16 + materials 23 含在内，桥路径下仍全绿） |
+| `vite build`（lab） | 成功，34 模块，别名正确解析 |
 
-> 运行时 E-04 渲染（docs/10 D4 第二/三层）本增量未跑：此次纯属模块搬迁，`MaterialState` 数据结构与取值逐字节不变，`renderer` 等消费方零改动，渲染产物必然一致。若需正式门禁可补 headless WebGPU 冒烟。
-> 改动仅在工作区，**未自动 git 提交/推送**（守 09-02 git 红线；多 session 并行期由用户指定唯一 session 收尾）。
+> 运行时 E-04 渲染本增量未跑：纯模块搬迁，math/naming 取值逐字节不变，消费方经桥零改动，渲染产物必然一致。若需正式门禁可补 headless WebGPU 冒烟。
+> 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin` 当前 `upstream` 缺失，本地提交后暂未 push。
 
-### 13.4 下一步（按 docs/11 §9 顺序）
-0b.2 `gpu/math.ts`→`packages/core/math` + `naming.ts`→`packages/core/naming` → 0b.3 `gpu/geometry.ts`+`gpu/gltf.ts`→`packages/scene`（新建 scene 包）→ 0b.4 `shaders/*.wgsl.ts`→`packages/render/src/shaders` → 0b.5 `skin.ts`+管线构建→`packages/render` → 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法 → 0b.7 设备层合并入 `packages/gfx` → 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`。每步独立保绿。
+### 13.5 下一步（按 docs/11 §9 顺序）
+0b.3 `gpu/geometry.ts`+`gpu/gltf.ts`→`packages/scene`（新建 scene 包）→ 0b.4 `shaders/*.wgsl.ts`→`packages/render/src/shaders` → 0b.5 `skin.ts`+管线构建→`packages/render` → 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法 → 0b.7 设备层合并入 `packages/gfx` → 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`。每步独立保绿。
