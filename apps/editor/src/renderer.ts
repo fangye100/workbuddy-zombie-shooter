@@ -5,8 +5,6 @@ import {
   RendererCore,
   type CoreObjectDraw,
   type CoreSubMeshDraw,
-  type CoreHighlight,
-  type CoreGizmo,
   type RenderFrameInput,
   SLOT_BYTES,
   SLOT_FLOATS,
@@ -36,6 +34,8 @@ import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
 import { AnimationService } from './services/animation';
 import { GizmoService } from './services/gizmo';
+import { buildSelectionOutline } from './features/selection-outline.feature';
+import { buildGizmo } from './features/gizmo.feature';
 import { type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
@@ -1769,33 +1769,9 @@ export class LabRenderer {
       }),
     }));
 
-    // 先快照高亮 / 选中状态，避免在三元表达式内反复读取 this.x（exactOptionalPropertyTypes 下更稳）
-    const selIdx = this.state.selectedIndex;
-    const selSub = this.state.selectedSub;
-    const hovIdx = this.state.hoveredIndex;
-    const hovSub = this.state.hoveredSub;
-    const selBg = this.state.selBindGroup;
-    const hovBg = this.state.hoverBindGroup;
-    const highlight: CoreHighlight = {
-      selected:
-        selIdx !== null && selBg !== null
-          ? { objIndex: selIdx, sub: selSub, bindGroup: selBg }
-          : null,
-      hovered:
-        hovIdx !== null && hovIdx !== selIdx && hovBg !== null
-          ? { objIndex: hovIdx, sub: hovSub, bindGroup: hovBg }
-          : null,
-    };
-
-    let gizmo: CoreGizmo | null = null;
-    if (selIdx !== null) {
-      const o = this.state.objects[selIdx];
-      if (o !== undefined && !o.removed && o.visible) {
-        const origin: [number, number, number] = [o.pos[0], o.pos[1], o.pos[2]];
-        const q: m4.Quat = this.state.gizmoSpace === 'local' ? o.quat : [0, 0, 0, 1];
-        gizmo = { origin, quat: q, mode: this.state.gizmoMode, activeAxis: this.state.gizmoActiveAxis };
-      }
-    }
+    // 高亮描边与 gizmo 的帧输入由 features 组装（编辑器侧语义，引擎零改动）
+    const highlight = buildSelectionOutline(this);
+    const gizmo = buildGizmo(this);
 
     const input: RenderFrameInput = {
       p: { outlineEnabled: p.outlineEnabled, debugMode: p.debugMode, cameraElevation: p.cameraElevation },
