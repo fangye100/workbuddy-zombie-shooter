@@ -1,11 +1,23 @@
-import type { GpuContext } from './gpu/device';
-import { SCENE_WGSL } from './shaders/scene.wgsl';
-import { POST_WGSL } from './shaders/post.wgsl';
-import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
-import { buildGizmoHandles, type GizmoMode, type GizmoSpace } from './gizmo';
+import type { GpuContext } from '@aether/gfx';
 import {
-  VERTEX_LAYOUT,
-  SKIN_LAYOUT,
+  type GizmoMode,
+  type GizmoSpace,
+  RendererCore,
+  type CoreObjectDraw,
+  type CoreSubMeshDraw,
+  type CoreHighlight,
+  type CoreGizmo,
+  type RenderFrameInput,
+  SLOT_BYTES,
+  SLOT_FLOATS,
+  MAX_MATERIAL_SLOTS,
+  MAX_OBJECTS,
+  FRAME_FLOATS,
+  LIGHTS_FLOATS,
+  TOON_FLOATS,
+  POST_FLOATS,
+} from '@aether/render';
+import {
   packSkin,
   createBox,
   createCapsule,
@@ -57,8 +69,6 @@ import {
 const SEL_COLOR = '#FFFFFF';
 /** 层级面板悬停高亮色（尸绿）：必须与选中的白色明显区分，且同样压得住暗背景 */
 const HOVER_COLOR = '#8FD14F';
-/** gizmo 期望在屏幕上占据的像素长度（按相机距离自动缩放，保持恒定大小） */
-const GIZMO_SCREEN_PX = 90;
 
 /**
  * Game Editor 渲染器（原 Shader Lab）。
@@ -79,24 +89,6 @@ const GIZMO_SCREEN_PX = 90;
  *   - Post 的 nightDeep / bone / ink → 送 raw sRGB，因为 grading 工作在 display-referred 空间
  */
 
-const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
-const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
-
-const SLOT_BYTES = 256; // minUniformBufferOffsetAlignment
-const SLOT_FLOATS = SLOT_BYTES / 4;
-
-/**
- * uniform 槽位容量（固定上限，避免换模型时重建 buffer / bind group 布局）。
- * 材质槽按「子网格」分配，导入的 GLB 每个 primitive 占一条 —— 256 条对编辑器场景绰绰有余；
- * 物体数固定为初始场景（只删不增，删除用墓碑），留 64 也够。
- */
-const MAX_MATERIAL_SLOTS = 256;
-const MAX_OBJECTS = 64;
-
-const FRAME_FLOATS = 24; // 96 B
-const LIGHTS_FLOATS = 40; // 160 B
-const TOON_FLOATS = 28; // 112 B
-const POST_FLOATS = 44; // 176 B
 
 interface SceneObject {
   vertexBuffer: GPUBuffer;
@@ -365,23 +357,11 @@ interface ObjectSpec {
 
 export class LabRenderer {
   private readonly device: GPUDevice;
-  private readonly postLayout: GPUBindGroupLayout;
-  private readonly sceneLayout: GPUBindGroupLayout;
-
-  private readonly frameBuf: GPUBuffer;
-  private readonly lightsBuf: GPUBuffer;
-  private readonly toonBuf: GPUBuffer;
-  private readonly postBuf: GPUBuffer;
-  private readonly materialBuf: GPUBuffer;
-  private readonly transformBuf: GPUBuffer;
   /** bind group 按「物体 → 子网格」两级建：材质槽位随子网格走，变换槽位随物体走 */
   private bindGroups: GPUBindGroup[][] = [];
 
-  private readonly mainPipeline: GPURenderPipeline;
-  private readonly outlinePipeline: GPURenderPipeline;
-  private readonly postPipeline: GPURenderPipeline;
-
-  private readonly sampler: GPUSampler;
+  /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
+  private readonly core: RendererCore;
   private readonly objects: SceneObject[] = [];
   private readonly materialData: Float32Array;
   private readonly transformData: Float32Array;
@@ -399,55 +379,25 @@ export class LabRenderer {
   /** 选中的子网格下标；null = 选中整个物体（层级树点到父节点） */
   private selectedSub: number | null = null;
   /** 选中高亮用的独立 toon / material buffer（黄色 + 加粗描边），bind group 复用 outline 管线 */
-  private readonly selToonBuf: GPUBuffer;
-  private readonly selMatBuf: GPUBuffer;
   private readonly selToonData: Float32Array;
   private readonly selMatData: Float32Array;
   private selBindGroup: GPUBindGroup | null = null;
   /** 层级面板悬停高亮（与选中白线区分开的颜色），同样复用 outline 管线，只在悬停时多 1 个 draw call */
-  private readonly hoverToonBuf: GPUBuffer;
-  private readonly hoverMatBuf: GPUBuffer;
   private readonly hoverToonData: Float32Array;
   private readonly hoverMatData: Float32Array;
   private hoverBindGroup: GPUBindGroup | null = null;
   private hoveredIndex: number | null = null;
   /** 悬停的子网格下标；null = 整个物体。悬停到子网格时只描那一段的轮廓 */
   private hoveredSub: number | null = null;
-  /** 每帧刷新的反投影矩阵与世界相机位置，拾取时反算射线 */
-  private readonly invViewProj: m4.Mat4 = m4.mat4();
-  private readonly eyeVec: [number, number, number] = [0, 0, 0];
+  /** 反投影矩阵 / 世界相机位置由 core 在每帧计算（见 core.invViewProj / core.eyeVec） */
 
   /** 模型浏览器：角色槽位（替换中心胶囊）。切换模型只动这一个 */
   private readonly characterIndex = 1;
 
-  // ---- Transform Gizmo ----
+  // ---- Transform Gizmo（几何 / 管线 / 资源在 core；编辑器只持有交互状态）----
   private gizmoMode: GizmoMode = 'translate';
   private gizmoSpace: GizmoSpace = 'world';
   private gizmoActiveAxis: number | null = null; // -1..2；null = 未抓到手柄
-  private readonly gizmoModel: m4.Mat4 = m4.mat4();
-  private gizmoK = 1; // 屏幕恒定大小的缩放系数（世界单位）
-  private gizmoOrigin: [number, number, number] = [0, 0, 0];
-  private gizmoAxes: [number, number, number][] = [
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-  ];
-  private gizmoPipeline: GPURenderPipeline | null = null;
-  private gizmoLayout: GPUBindGroupLayout | null = null;
-  private gizmoModelBuf: GPUBuffer | null = null;
-  /** gizmo 描边颜色暂存的 4 个 float（每帧复用，避免短命对象） */
-  private readonly gizmoColorScratch = new Float32Array([1, 1, 1, 1]);
-  private gizmoHandles: {
-    id: string;
-    mode: GizmoMode;
-    axis: number;
-    baseColor: [number, number, number];
-    vbuf: GPUBuffer;
-    ibuf: GPUBuffer;
-    colorBuf: GPUBuffer;
-    bindGroup: GPUBindGroup;
-    indexCount: number;
-  }[] = [];
   private sceneCapsule!: MeshData;
   private whiteTex!: GPUTexture;
   private charTexture: GPUTexture | null = null;
@@ -456,9 +406,7 @@ export class LabRenderer {
   private readonly lightsData = new Float32Array(LIGHTS_FLOATS);
   private readonly toonData = new Float32Array(TOON_FLOATS);
   private readonly postData = new Float32Array(POST_FLOATS);
-  private readonly proj = m4.mat4();
-  private readonly view = m4.mat4();
-  private readonly viewProj = m4.mat4();
+  /** 逐物体变换矩阵（每帧复用，避免短命对象） */
   private readonly model = m4.mat4();
 
   /**
@@ -468,15 +416,11 @@ export class LabRenderer {
    */
   private readonly resolvedBySlot: (MaterialState | undefined)[] = new Array(MAX_MATERIAL_SLOTS);
 
-  private hdrTex: GPUTexture | null = null;
-  private auxTex: GPUTexture | null = null;
-  private depthTex: GPUTexture | null = null;
-  private postBindGroup: GPUBindGroup | null = null;
+  /** 渲染目标（hdr / aux / depth / post bind group）由 core 持有 */
   /** destroy() 幂等：HMR 与手动调用可能重复触发，重复 destroy 同一 GPU 对象会抛错 */
   private destroyed = false;
 
-  private width = 1;
-  private height = 1;
+  /** 画布尺寸由 core 持有（resize 时更新）；编辑器通过 core.width / core.height 读取 */
   /** 帧序号：canvas 矩形缓存按帧失效 */
   private frameCounter = 0;
   /** 上一帧时间（秒），用于动画推进的 dt；-1 表示首帧 */
@@ -485,7 +429,7 @@ export class LabRenderer {
   stats: RenderStats = { width: 0, height: 0, drawCalls: 0, triangles: 0 };
 
   constructor(
-    private readonly gpu: GpuContext,
+    gpu: GpuContext,
     private readonly canvas: HTMLCanvasElement,
   ) {
     this.device = gpu.device;
@@ -604,187 +548,19 @@ export class LabRenderer {
     this.materialData = new Float32Array(MAX_MATERIAL_SLOTS * SLOT_FLOATS);
     this.transformData = new Float32Array(MAX_OBJECTS * SLOT_FLOATS);
 
-    // ---- uniform buffer ----
-    this.frameBuf = this.uniform(FRAME_FLOATS * 4, 'frame');
-    this.lightsBuf = this.uniform(LIGHTS_FLOATS * 4, 'lights');
-    this.toonBuf = this.uniform(TOON_FLOATS * 4, 'toon');
-    this.postBuf = this.uniform(POST_FLOATS * 4, 'post');
-    this.materialBuf = this.uniform(MAX_MATERIAL_SLOTS * SLOT_BYTES, 'materials');
-    this.transformBuf = this.uniform(MAX_OBJECTS * SLOT_BYTES, 'transforms');
-    this.assignSlotBases(); // 槽位分配要在建 bind group 之前完成
-    this.selToonBuf = this.uniform(TOON_FLOATS * 4, 'selToon');
-    this.selMatBuf = this.uniform(SLOT_BYTES, 'selMat');
+    // ---- GPU 资源（管线 / 布局 / buffer / 纹理 / gizmo）已在 RendererCore 构造期建好 ----
+    // 编辑器只持有 CPU 端 uniform 数据数组 + 引擎核心引用。
     this.selToonData = new Float32Array(TOON_FLOATS);
     this.selMatData = new Float32Array(SLOT_FLOATS);
-    this.hoverToonBuf = this.uniform(TOON_FLOATS * 4, 'hoverToon');
-    this.hoverMatBuf = this.uniform(SLOT_BYTES, 'hoverMat');
     this.hoverToonData = new Float32Array(TOON_FLOATS);
     this.hoverMatData = new Float32Array(SLOT_FLOATS);
 
-    // ---- 场景 bind group layout ----
-    const sceneModule = this.device.createShaderModule({ label: 'scene', code: SCENE_WGSL });
-    this.checkModule(sceneModule);
-    this.sceneLayout = this.device.createBindGroupLayout({
-      label: 'scene',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        {
-          binding: 2,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-        // binding 3 在 vs_outline 里也要读（mat.flags.y = 描边倍率），必须同时可见
-        {
-          binding: 3,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-        { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-        // 5/6：albedo 贴图。非角色物体绑 1x1 白图，角色有贴图时换真图
-        { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 6, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-        // 7：关节矩阵调色板（storage 只读，仅顶点阶段用）
-        { binding: 7, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
-      ],
-    });
+    // ★ 引擎帧绘制核心：拥有 sceneLayout / 4 条 pipeline / 全部 uniform buffer /
+    // 采样器 / gizmo 资源，并执行 4-pass 编码（ADR-001：编辑器是消费者）。
+    this.core = new RendererCore(gpu, canvas);
 
-    const targets: GPUColorTargetState[] = [{ format: HDR_FORMAT }, { format: HDR_FORMAT }];
-
-    this.mainPipeline = this.device.createRenderPipeline({
-      label: 'scene-main',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout] }),
-      vertex: { module: sceneModule, entryPoint: 'vs_main', buffers: [VERTEX_LAYOUT, SKIN_LAYOUT] },
-      fragment: { module: sceneModule, entryPoint: 'fs_main', targets },
-      primitive: { topology: 'triangle-list', cullMode: 'none', frontFace: 'ccw' },
-      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
-    });
-
-    this.outlinePipeline = this.device.createRenderPipeline({
-      label: 'scene-outline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout] }),
-      vertex: { module: sceneModule, entryPoint: 'vs_outline', buffers: [VERTEX_LAYOUT, SKIN_LAYOUT] },
-      fragment: { module: sceneModule, entryPoint: 'fs_outline', targets },
-      // inverted hull：只画背面，让外扩的壳只在轮廓外圈露出一条边
-      primitive: { topology: 'triangle-list', cullMode: 'front', frontFace: 'ccw' },
-      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'less' },
-    });
-
-    // 后处理与 albedo 贴图共用一个线性采样器。必须在 bind group 创建之前就位
-    this.sampler = this.device.createSampler({
-      magFilter: 'linear',
-      minFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    });
-
-    // bind group 按「子网格」建：每个子网格一个（材质槽位不同，变换槽位相同）
+    // 绑定组按「子网格」建（依赖 core 的 sceneLayout / frameBuf / sampler 等）
     this.rebuildAllBindGroups();
-
-    // ---- 后处理 ----
-    const postModule = this.device.createShaderModule({ label: 'post', code: POST_WGSL });
-    this.checkModule(postModule);
-    const postLayout = this.device.createBindGroupLayout({
-      label: 'post',
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      ],
-    });
-    this.postLayout = postLayout;
-
-    this.postPipeline = this.device.createRenderPipeline({
-      label: 'post',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [postLayout] }),
-      vertex: { module: postModule, entryPoint: 'vs_fullscreen' },
-      fragment: { module: postModule, entryPoint: 'fs_post', targets: [{ format: gpu.format }] },
-      primitive: { topology: 'triangle-list' },
-    });
-
-    // ---- Transform Gizmo 管线（position-only，unlit 纯色，绘于后处理之上）----
-    const gizmoModule = this.device.createShaderModule({ label: 'gizmo', code: GIZMO_WGSL });
-    this.checkModule(gizmoModule);
-    this.gizmoLayout = this.device.createBindGroupLayout({
-      label: 'gizmo',
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-      ],
-    });
-    this.gizmoPipeline = this.device.createRenderPipeline({
-      label: 'gizmo',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.gizmoLayout] }),
-      vertex: {
-        module: gizmoModule,
-        entryPoint: 'vs_main',
-        buffers: [{ arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }],
-      },
-      fragment: { module: gizmoModule, entryPoint: 'fs_main', targets: [{ format: gpu.format }] },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-    });
-    this.gizmoModelBuf = this.uniform(64, 'gizmoModel');
-    for (const h of buildGizmoHandles()) {
-      const vbuf = this.device.createBuffer({
-        label: `gizmo-${h.id}-v`,
-        size: h.positions.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
-      const ibuf = this.device.createBuffer({
-        label: `gizmo-${h.id}-i`,
-        size: h.indices.byteLength,
-        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-      });
-      this.device.queue.writeBuffer(vbuf, 0, h.positions);
-      this.device.queue.writeBuffer(ibuf, 0, h.indices);
-      const colorBuf = this.uniform(16, `gizmo-${h.id}-col`);
-      this.device.queue.writeBuffer(colorBuf, 0, new Float32Array([...h.color, 1]));
-      const bindGroup = this.device.createBindGroup({
-        label: `gizmo-${h.id}`,
-        layout: this.gizmoLayout,
-        entries: [
-          { binding: 0, resource: { buffer: this.frameBuf } },
-          { binding: 1, resource: { buffer: this.gizmoModelBuf } },
-          { binding: 2, resource: { buffer: colorBuf } },
-        ],
-      });
-      this.gizmoHandles.push({
-        id: h.id,
-        mode: h.mode,
-        axis: h.axis,
-        baseColor: h.color,
-        vbuf,
-        ibuf,
-        colorBuf,
-        bindGroup,
-        indexCount: h.indices.length,
-      });
-    }
-  }
-
-  /** WGSL 编译错误默认只在控制台里一闪而过，这里把行号一起打出来 */
-  private checkModule(module: GPUShaderModule): void {
-    void module.getCompilationInfo().then((info) => {
-      for (const msg of info.messages) {
-        const where = `[${module.label}] ${msg.lineNum}:${msg.linePos}`;
-        if (msg.type === 'error') console.error(`${where} ${msg.message}`);
-        else if (msg.type === 'warning') console.warn(`${where} ${msg.message}`);
-      }
-    });
-  }
-
-  private uniform(size: number, label: string): GPUBuffer {
-    return this.device.createBuffer({
-      label,
-      size,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
   }
 
   /**
@@ -800,15 +576,15 @@ export class LabRenderer {
     const tex = o.texture ?? this.whiteTex;
     return this.device.createBindGroup({
       label: `obj-${objIndex}-sub-${subIndex}`,
-      layout: this.sceneLayout,
+      layout: this.core.sceneLayout,
       entries: [
-        { binding: 0, resource: { buffer: this.frameBuf } },
-        { binding: 1, resource: { buffer: this.lightsBuf } },
-        { binding: 2, resource: { buffer: this.toonBuf } },
-        { binding: 3, resource: { buffer: this.materialBuf, offset: matBase, size: 80 } },
-        { binding: 4, resource: { buffer: this.transformBuf, offset: xformBase, size: 64 } },
+        { binding: 0, resource: { buffer: this.core.frameBuf } },
+        { binding: 1, resource: { buffer: this.core.lightsBuf } },
+        { binding: 2, resource: { buffer: this.core.toonBuf } },
+        { binding: 3, resource: { buffer: this.core.materialBuf, offset: matBase, size: 80 } },
+        { binding: 4, resource: { buffer: this.core.transformBuf, offset: xformBase, size: 64 } },
         { binding: 5, resource: tex.createView() },
-        { binding: 6, resource: this.sampler },
+        { binding: 6, resource: this.core.sampler },
         { binding: 7, resource: { buffer: o.skinBuffer!, offset: 0, size: o.skinCount * 64 } },
       ],
     });
@@ -887,15 +663,15 @@ export class LabRenderer {
     const base = index * SLOT_BYTES;
     return this.device.createBindGroup({
       label,
-      layout: this.sceneLayout,
+      layout: this.core.sceneLayout,
       entries: [
-        { binding: 0, resource: { buffer: this.frameBuf } },
-        { binding: 1, resource: { buffer: this.lightsBuf } },
+        { binding: 0, resource: { buffer: this.core.frameBuf } },
+        { binding: 1, resource: { buffer: this.core.lightsBuf } },
         { binding: 2, resource: { buffer: toonBuf } },
         { binding: 3, resource: { buffer: matBuf } },
-        { binding: 4, resource: { buffer: this.transformBuf, offset: base, size: 64 } },
+        { binding: 4, resource: { buffer: this.core.transformBuf, offset: base, size: 64 } },
         { binding: 5, resource: (o.texture ?? this.whiteTex).createView() },
-        { binding: 6, resource: this.sampler },
+        { binding: 6, resource: this.core.sampler },
         { binding: 7, resource: { buffer: o.skinBuffer!, offset: 0, size: o.skinCount * 64 } },
       ],
     });
@@ -911,15 +687,15 @@ export class LabRenderer {
     if (this.hoveredIndex === index) {
       this.hoverBindGroup = this.buildHighlightBindGroup(
         index,
-        this.hoverToonBuf,
-        this.hoverMatBuf,
+        this.core.hoverToonBuf,
+        this.core.hoverMatBuf,
         'hover',
       );
     }
   }
 
   private buildSelectionBindGroup(index: number): void {
-    this.selBindGroup = this.buildHighlightBindGroup(index, this.selToonBuf, this.selMatBuf, 'sel');
+    this.selBindGroup = this.buildHighlightBindGroup(index, this.core.selToonBuf, this.core.selMatBuf, 'sel');
   }
 
   /**
@@ -1242,7 +1018,7 @@ export class LabRenderer {
     this.hoverBindGroup =
       next === null
         ? null
-        : this.buildHighlightBindGroup(next, this.hoverToonBuf, this.hoverMatBuf, 'hover');
+        : this.buildHighlightBindGroup(next, this.core.hoverToonBuf, this.core.hoverMatBuf, 'hover');
   }
 
   getHovered(): number | null {
@@ -1652,10 +1428,10 @@ export class LabRenderer {
     | null {
     if (this.selectedIndex === null) return null;
     return {
-      model: this.gizmoModel,
-      k: this.gizmoK,
-      origin: this.gizmoOrigin,
-      axes: this.gizmoAxes,
+      model: this.core.gizmoModel,
+      k: this.core.gizmoK,
+      origin: this.core.gizmoOrigin,
+      axes: this.core.gizmoAxes,
       mode: this.gizmoMode,
       space: this.gizmoSpace,
     };
@@ -1668,7 +1444,7 @@ export class LabRenderer {
 
   /** 当前帧相机世界坐标（用于 gizmo 拖拽平面定向） */
   getEye(): [number, number, number] {
-    return [this.eyeVec[0], this.eyeVec[1], this.eyeVec[2]];
+    return [this.core.eyeVec[0], this.core.eyeVec[1], this.core.eyeVec[2]];
   }
 
   /**
@@ -1692,8 +1468,8 @@ export class LabRenderer {
     if (rect.width < 1 || rect.height < 1) return null;
     const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
     const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2;
-    const near = this.unproject(this.invViewProj, ndcX, ndcY, 0);
-    const far = this.unproject(this.invViewProj, ndcX, ndcY, 1);
+    const near = this.unproject(this.core.invViewProj, ndcX, ndcY, 0);
+    const far = this.unproject(this.core.invViewProj, ndcX, ndcY, 1);
     let dx = far[0] - near[0];
     let dy = far[1] - near[1];
     let dz = far[2] - near[2];
@@ -1706,7 +1482,7 @@ export class LabRenderer {
 
   /** 世界坐标 → 屏幕像素（clientX/clientY 同一坐标系）。behind=true 表示在相机背后（投影翻转，不可用于命中） */
   worldToScreen(p: readonly [number, number, number]): { x: number; y: number; behind: boolean } {
-    const m = this.viewProj;
+    const m = this.core.viewProj;
     const cx = m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2] + m[12]!;
     const cy = m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2] + m[13]!;
     const cw = m[3]! * p[0] + m[7]! * p[1] + m[11]! * p[2] + m[15]!;
@@ -1950,11 +1726,11 @@ export class LabRenderer {
    * 返回命中列表（每物体取最小 t），按距离近→远排序。穿透拾取（Alt+点击循环）用。
    */
   pickAtAll(ndcX: number, ndcY: number): { index: number; t: number }[] {
-    const near = this.unproject(this.invViewProj, ndcX, ndcY, 0);
-    const far = this.unproject(this.invViewProj, ndcX, ndcY, 1);
-    const ox = this.eyeVec[0];
-    const oy = this.eyeVec[1];
-    const oz = this.eyeVec[2];
+    const near = this.unproject(this.core.invViewProj, ndcX, ndcY, 0);
+    const far = this.unproject(this.core.invViewProj, ndcX, ndcY, 1);
+    const ox = this.core.eyeVec[0];
+    const oy = this.core.eyeVec[1];
+    const oz = this.core.eyeVec[2];
     let dx = far[0] - near[0];
     let dy = far[1] - near[1];
     let dz = far[2] - near[2];
@@ -2034,50 +1810,11 @@ export class LabRenderer {
     return [wx * iw, wy * iw, wz * iw];
   }
 
+  /** 画布尺寸变更：委托引擎核心重建 HDR/AUX/Depth 纹理与后处理 bind group（ADR-001） */
   resize(width: number, height: number): void {
-    if (width === this.width && height === this.height) return;
-    this.width = Math.max(1, width);
-    this.height = Math.max(1, height);
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
-
-    this.hdrTex?.destroy();
-    this.auxTex?.destroy();
-    this.depthTex?.destroy();
-
-    const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
-    this.hdrTex = this.device.createTexture({
-      label: 'hdr',
-      size: [this.width, this.height],
-      format: HDR_FORMAT,
-      usage,
-    });
-    this.auxTex = this.device.createTexture({
-      label: 'aux',
-      size: [this.width, this.height],
-      format: HDR_FORMAT,
-      usage,
-    });
-    this.depthTex = this.device.createTexture({
-      label: 'depth',
-      size: [this.width, this.height],
-      format: DEPTH_FORMAT,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    this.postBindGroup = this.device.createBindGroup({
-      label: 'post',
-      layout: this.postLayout,
-      entries: [
-        { binding: 0, resource: { buffer: this.postBuf } },
-        { binding: 1, resource: this.hdrTex.createView() },
-        { binding: 2, resource: this.auxTex.createView() },
-        { binding: 3, resource: this.sampler },
-      ],
-    });
-
-    this.stats.width = this.width;
-    this.stats.height = this.height;
+    this.core.resize(width, height);
+    this.stats.width = this.core.width;
+    this.stats.height = this.core.height;
   }
 
   private packLights(p: LabParams, time: number): void {
@@ -2169,7 +1906,7 @@ export class LabRenderer {
     d[15] = 0;
 
     // 线宽按 1080p 定义，canvas.height 已是物理像素，直接按比例换算
-    d[16] = (p.outlineWidth * this.height) / 1080;
+    d[16] = (p.outlineWidth * this.core.height) / 1080;
     d[17] = p.outlineDistanceComp ? 1 : 0;
     d[18] = 0;
     d[19] = 0;
@@ -2240,8 +1977,8 @@ export class LabRenderer {
 
     d[36] = p.vignette;
     d[37] = p.outlinePostExempt ? 1 : 0;
-    d[38] = this.width;
-    d[39] = this.height;
+    d[38] = this.core.width;
+    d[39] = this.core.height;
 
     d[40] = p.debugMode;
     d[41] = 0;
@@ -2285,52 +2022,24 @@ export class LabRenderer {
     dst[base + 19] = 0;
   }
 
+  /**
+   * 帧绘制入口（公开 API 不变）。
+   *
+   * 编辑器负责「CPU 端语义」：材质解析 / 变换装箱 / 蒙皮推进 / 高亮描边数据上传，
+   * 并把一份已完全解析的帧（RenderFrameInput）交给 RendererCore 编码 4 个 pass
+   * （ADR-001：编辑器是消费者，不内嵌渲染器）。相机矩阵与 4-pass 命令编码都在 core 内完成。
+   */
   render(p: LabParams, camera: CameraState, time: number, dpr: number): void {
-    if (
-      this.hdrTex === null ||
-      this.auxTex === null ||
-      this.depthTex === null ||
-      this.postBindGroup === null
-    ) {
-      return;
-    }
-
-    const device = this.device;
     this.params = p; // 引用恒定，材质 API 靠它回查共享材质
     this.frameCounter++; // canvas 矩形缓存按帧刷新
     // 动画推进用的 dt（首帧为 0，避免大跳变）；夹取到 [0,0.1] 防卡顿后暴冲
     const dt = this.lastFrameTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - this.lastFrameTime));
     this.lastFrameTime = time;
-    const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, p.cameraElevation);
 
-    const aspect = this.width / Math.max(1, this.height);
-    const projScaleY = m4.perspective(this.proj, (45 * Math.PI) / 180, aspect, 0.1, 200);
-    m4.lookAt(this.view, eye, camera.target, [0, 1, 0]);
-    m4.multiply(this.viewProj, this.proj, this.view);
-    m4.invert(this.invViewProj, this.viewProj);
-    this.eyeVec[0] = eye[0];
-    this.eyeVec[1] = eye[1];
-    this.eyeVec[2] = eye[2];
-
-    const f = this.frameData;
-    f.set(this.viewProj, 0);
-    f[16] = eye[0];
-    f[17] = eye[1];
-    f[18] = eye[2];
-    f[19] = time;
-    f[20] = this.width;
-    f[21] = projScaleY;
-    f[22] = this.height;
-    f[23] = dpr;
-
+    // ---- CPU 端装箱：材质 / 变换 / 蒙皮（编辑器语义）----
     this.packLights(p, time);
     this.packToon(p);
     this.packPost(p);
-
-    device.queue.writeBuffer(this.frameBuf, 0, this.frameData);
-    device.queue.writeBuffer(this.lightsBuf, 0, this.lightsData);
-    device.queue.writeBuffer(this.toonBuf, 0, this.toonData);
-    device.queue.writeBuffer(this.postBuf, 0, this.postData);
 
     for (let i = 0; i < this.objects.length; i++) {
       const o = this.objects[i]!;
@@ -2349,14 +2058,7 @@ export class LabRenderer {
       }
 
       const bobY = o.bob !== 0 ? Math.sin(time * 1.6 + o.bob) * 0.05 : 0;
-      m4.composeQuat(
-        this.model,
-        o.pos[0],
-        o.pos[1] + bobY,
-        o.pos[2],
-        o.quat,
-        o.scale,
-      );
+      m4.composeQuat(this.model, o.pos[0], o.pos[1] + bobY, o.pos[2], o.quat, o.scale);
       // 变换按「物体」装箱：同一物体的所有子网格共享同一个 model 矩阵
       const xBase = i * SLOT_FLOATS;
       this.transformData.set(this.model, xBase);
@@ -2367,11 +2069,13 @@ export class LabRenderer {
       if (o.skinState !== null && o.skinBuffer !== null) {
         skinAdvance(o.skinState, dt);
         evalJointMatrices(o.skinState, o.skinScratch);
-        device.queue.writeBuffer(o.skinBuffer, 0, o.skinScratch);
+        this.device.queue.writeBuffer(o.skinBuffer, 0, o.skinScratch);
       }
     }
-    device.queue.writeBuffer(this.materialBuf, 0, this.materialData);
-    device.queue.writeBuffer(this.transformBuf, 0, this.transformData);
+
+    // 材质 / 变换 buffer 由 core 持有，编辑器通过 this.core.* 上传
+    this.device.queue.writeBuffer(this.core.materialBuf, 0, this.materialData);
+    this.device.queue.writeBuffer(this.core.transformBuf, 0, this.transformData);
 
     // 悬停高亮的 toon / material：绿色细描边（与选中同规格，只是换个颜色）
     if (
@@ -2382,17 +2086,17 @@ export class LabRenderer {
       const o = this.objects[this.hoveredIndex];
       if (o !== undefined) {
         this.hoverToonData.set(this.toonData);
-        this.hoverToonData[16] = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.height) / 1080);
+        this.hoverToonData[16] = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.core.height) / 1080);
         const c = m4.hexToRgb(HOVER_COLOR);
         this.hoverToonData[20] = c[0];
         this.hoverToonData[21] = c[1];
         this.hoverToonData[22] = c[2];
-        device.queue.writeBuffer(this.hoverToonBuf, 0, this.hoverToonData);
+        this.device.queue.writeBuffer(this.core.hoverToonBuf, 0, this.hoverToonData);
 
         const m = this.highlightMaterial(this.hoveredIndex, this.hoveredSub);
         this.packMaterial(this.hoverMatData, 0, m);
         this.hoverMatData[17] = Math.max((this.hoverMatData[17] ?? 0) * 1.1, 0.8);
-        device.queue.writeBuffer(this.hoverMatBuf, 0, this.hoverMatData);
+        this.device.queue.writeBuffer(this.core.hoverMatBuf, 0, this.hoverMatData);
       }
     }
 
@@ -2401,157 +2105,93 @@ export class LabRenderer {
       const o = this.objects[this.selectedIndex];
       if (o !== undefined) {
         this.selToonData.set(this.toonData);
-        const boosted = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.height) / 1080);
+        const boosted = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.core.height) / 1080);
         this.selToonData[16] = boosted;
         const c = m4.hexToRgb(SEL_COLOR);
         this.selToonData[20] = c[0];
         this.selToonData[21] = c[1];
         this.selToonData[22] = c[2];
-        device.queue.writeBuffer(this.selToonBuf, 0, this.selToonData);
+        this.device.queue.writeBuffer(this.core.selToonBuf, 0, this.selToonData);
 
         const m = this.highlightMaterial(this.selectedIndex, this.selectedSub);
         this.packMaterial(this.selMatData, 0, m);
         this.selMatData[17] = Math.max((this.selMatData[17] ?? 0) * 1.1, 0.8);
-        device.queue.writeBuffer(this.selMatBuf, 0, this.selMatData);
+        this.device.queue.writeBuffer(this.core.selMatBuf, 0, this.selMatData);
       }
     }
 
-    // ---- Pass 1 + 2：场景 MRT + inverted hull 描边 ----
-    const encoder = device.createCommandEncoder({ label: 'frame' });
-    const pass = encoder.beginRenderPass({
-      label: 'scene',
-      colorAttachments: [
-        {
-          view: this.hdrTex.createView(),
-          clearValue: { r: 0.09, g: 0.1, b: 0.13, a: 1 },
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-        {
-          view: this.auxTex.createView(),
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
-        view: this.depthTex.createView(),
-        depthClearValue: 1,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-      },
-    });
-
-    // debugMode 0 = 最终画面，1..5 = 各种 debug 视图（要干净），6 = 描边 mask（必须画描边才有意义）
-    const wantOutline = p.outlineEnabled && (p.debugMode === 0 || p.debugMode === 6);
-    let draws = 0;
-
-    for (let i = 0; i < this.objects.length; i++) {
-      const o = this.objects[i]!;
-      if (o.removed || !o.visible) continue; // 隐藏 / 已删除：整条跳过
-      pass.setVertexBuffer(0, o.vertexBuffer);
-      pass.setVertexBuffer(1, o.skinVb!);
-      pass.setIndexBuffer(o.indexBuffer, 'uint32');
-
-      // 逐子网格画：各自一个 bind group（材质槽）+ 各自一段索引区间
-      for (let s = 0; s < o.subMeshes.length; s++) {
-        const sm = o.subMeshes[s]!;
-        if (!sm.visible) continue; // 子网格级显隐（层级树 mesh 节点的小眼睛）
+    // ---- 构造 RenderFrameInput：一份已完全解析的帧 ----
+    const objects: CoreObjectDraw[] = this.objects.map((o, i) => ({
+      vertexBuffer: o.vertexBuffer,
+      skinVb: o.skinVb,
+      indexBuffer: o.indexBuffer,
+      visible: o.visible && !o.removed,
+      subMeshes: o.subMeshes.map((sm, s) => {
         const slot = o.slotBase + s;
-        if (slot >= MAX_MATERIAL_SLOTS) break;
-        const bg = this.bindGroups[i]?.[s];
-        if (bg === undefined) continue;
         const mat = this.resolvedBySlot[slot] ?? this.params.materials[0]!;
+        return {
+          indexStart: sm.indexStart,
+          indexCount: sm.indexCount,
+          visible: sm.visible,
+          bindGroup: this.bindGroups[i]?.[s],
+          outline: mat.outlineScale > 0.001,
+        } satisfies CoreSubMeshDraw;
+      }),
+    }));
 
-        pass.setBindGroup(0, bg);
-        pass.setPipeline(this.mainPipeline);
-        pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
-        draws++;
+    // 先快照高亮 / 选中状态，避免在三元表达式内反复读取 this.x（exactOptionalPropertyTypes 下更稳）
+    const selIdx = this.selectedIndex;
+    const selSub = this.selectedSub;
+    const hovIdx = this.hoveredIndex;
+    const hovSub = this.hoveredSub;
+    const selBg = this.selBindGroup;
+    const hovBg = this.hoverBindGroup;
+    const highlight: CoreHighlight = {
+      selected:
+        selIdx !== null && selBg !== null
+          ? { objIndex: selIdx, sub: selSub, bindGroup: selBg }
+          : null,
+      hovered:
+        hovIdx !== null && hovIdx !== selIdx && hovBg !== null
+          ? { objIndex: hovIdx, sub: hovSub, bindGroup: hovBg }
+          : null,
+    };
 
-        const isSel = i === this.selectedIndex && (this.selectedSub === null || this.selectedSub === s);
-        const isHover =
-          !isSel && i === this.hoveredIndex && (this.hoveredSub === null || this.hoveredSub === s);
-
-        if (isSel && this.selBindGroup !== null) {
-          // 选中：白色加粗 inverted hull 当高亮，替代原本的墨色描边
-          pass.setBindGroup(0, this.selBindGroup);
-          pass.setPipeline(this.outlinePipeline);
-          pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
-          draws++;
-        } else if (isHover && this.hoverBindGroup !== null) {
-          // 层级悬停：绿色描边区分于选中的白色；悬停到子网格时只描那一段
-          pass.setBindGroup(0, this.hoverBindGroup);
-          pass.setPipeline(this.outlinePipeline);
-          pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
-          draws++;
-        } else if (wantOutline && mat.outlineScale > 0.001) {
-          pass.setBindGroup(0, bg);
-          pass.setPipeline(this.outlinePipeline);
-          pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
-          draws++;
-        }
-      }
-    }
-    pass.end();
-
-    // ---- Pass 3：后处理 ----
-    const swapView = this.gpu.context.getCurrentTexture().createView();
-    const postPass = encoder.beginRenderPass({
-      label: 'post',
-      colorAttachments: [
-        { view: swapView, clearValue: { r: 0, g: 0, b: 0, a: 1 }, loadOp: 'clear', storeOp: 'store' },
-      ],
-    });
-    postPass.setPipeline(this.postPipeline);
-    postPass.setBindGroup(0, this.postBindGroup);
-    postPass.draw(3);
-    postPass.end();
-
-    // ---- Pass 4：Transform Gizmo（无深度，绘于 swapchain 之上）----
-    if (this.selectedIndex !== null && this.gizmoPipeline !== null && this.gizmoModelBuf !== null) {
-      const o = this.objects[this.selectedIndex];
+    let gizmo: CoreGizmo | null = null;
+    if (selIdx !== null) {
+      const o = this.objects[selIdx];
       if (o !== undefined && !o.removed && o.visible) {
         const origin: [number, number, number] = [o.pos[0], o.pos[1], o.pos[2]];
-        const d = Math.hypot(eye[0] - origin[0], eye[1] - origin[1], eye[2] - origin[2]) || 1;
-        // 世界长度 k 投影像素 ≈ k * projScaleY * (height/2) / d，反解使 gizmo 恒定 ~GIZMO_SCREEN_PX
-        const k = (2 * GIZMO_SCREEN_PX * d) / (projScaleY * this.height);
         const q: m4.Quat = this.gizmoSpace === 'local' ? o.quat : [0, 0, 0, 1];
-        m4.composeQuat(this.gizmoModel, origin[0], origin[1], origin[2], q, k);
-        this.gizmoK = k;
-        this.gizmoOrigin = origin;
-        for (let ax = 0; ax < 3; ax++) {
-          const vx = this.gizmoModel[ax * 4]!;
-          const vy = this.gizmoModel[ax * 4 + 1]!;
-          const vz = this.gizmoModel[ax * 4 + 2]!;
-          const len = Math.hypot(vx, vy, vz) || 1;
-          this.gizmoAxes[ax] = [vx / len, vy / len, vz / len];
-        }
+        gizmo = { origin, quat: q, mode: this.gizmoMode, activeAxis: this.gizmoActiveAxis };
       }
-      device.queue.writeBuffer(this.gizmoModelBuf, 0, this.gizmoModel);
-      const gp = encoder.beginRenderPass({
-        label: 'gizmo',
-        colorAttachments: [{ view: swapView, loadOp: 'load', storeOp: 'store' }],
-      });
-      gp.setPipeline(this.gizmoPipeline);
-      for (const h of this.gizmoHandles) {
-        if (h.mode !== this.gizmoMode) continue;
-        const active = this.gizmoActiveAxis !== null && h.axis === this.gizmoActiveAxis;
-        // 复用同一段 scratch：这里每帧每个手柄都会执行，逐帧 new 会产生大量短命对象
-        this.gizmoColorScratch[0] = active ? 1 : h.baseColor[0];
-        this.gizmoColorScratch[1] = active ? 1 : h.baseColor[1];
-        this.gizmoColorScratch[2] = active ? 1 : h.baseColor[2];
-        this.gizmoColorScratch[3] = 1;
-        device.queue.writeBuffer(h.colorBuf, 0, this.gizmoColorScratch);
-        gp.setBindGroup(0, h.bindGroup);
-        gp.setVertexBuffer(0, h.vbuf);
-        gp.setIndexBuffer(h.ibuf, 'uint32');
-        gp.drawIndexed(h.indexCount);
-      }
-      gp.end();
     }
 
-    device.queue.submit([encoder.finish()]);
-    this.stats.drawCalls = draws;
+    const input: RenderFrameInput = {
+      p: { outlineEnabled: p.outlineEnabled, debugMode: p.debugMode, cameraElevation: p.cameraElevation },
+      camera: { target: camera.target, distance: camera.distance, yaw: camera.yaw },
+      time,
+      dpr,
+      uniforms: {
+        frame: this.frameData,
+        lights: this.lightsData,
+        toon: this.toonData,
+        post: this.postData,
+        material: this.materialData,
+        transform: this.transformData,
+        selToon: this.selToonData,
+        selMat: this.selMatData,
+        hoverToon: this.hoverToonData,
+        hoverMat: this.hoverMatData,
+      },
+      objects,
+      highlight,
+      gizmo,
+      stats: { drawCalls: 0 },
+    };
+
+    this.core.drawFrame(input);
+    this.stats.drawCalls = input.stats.drawCalls;
   }
 
   /**
@@ -2565,15 +2205,14 @@ export class LabRenderer {
     if (this.destroyed) return;
     this.destroyed = true;
 
-    this.hdrTex?.destroy();
-    this.auxTex?.destroy();
-    this.depthTex?.destroy();
+    // 引擎核心持有的全部 GPU 资源（HDR/AUX/Depth 纹理、uniform buffer、gizmo 几何）由 core 释放
+    this.core.destroy();
+
+    // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图
     this.whiteTex.destroy();
     this.charTexture?.destroy();
-
-    // 物体网格与独占贴图（removed 的墓碑在 removeObject 时已释放，跳过避免二次 destroy）
     for (const o of this.objects) {
-      if (o.removed) continue;
+      if (o.removed) continue; // 墓碑在 removeObject 时已释放，跳过避免二次 destroy
       o.vertexBuffer.destroy();
       o.indexBuffer.destroy();
       if (o.ownsTexture) o.texture.destroy();
@@ -2581,31 +2220,7 @@ export class LabRenderer {
     this.objects.length = 0;
     this.bindGroups = [];
 
-    for (const h of this.gizmoHandles) {
-      h.vbuf.destroy();
-      h.ibuf.destroy();
-      h.colorBuf.destroy();
-    }
-    this.gizmoHandles = [];
-
-    for (const b of [
-      this.frameBuf,
-      this.lightsBuf,
-      this.toonBuf,
-      this.postBuf,
-      this.materialBuf,
-      this.transformBuf,
-      this.selToonBuf,
-      this.selMatBuf,
-      this.hoverToonBuf,
-      this.hoverMatBuf,
-      this.gizmoModelBuf,
-    ]) {
-      b?.destroy();
-    }
-
     this.selBindGroup = null;
     this.hoverBindGroup = null;
-    this.postBindGroup = null;
   }
 }

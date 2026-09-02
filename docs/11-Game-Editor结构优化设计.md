@@ -264,18 +264,25 @@ apps/editor/src/
 - 注意：`packages/gfx/src/device.ts` 是既有「能力分级 / 资源注册」层（CapabilityTier / pickFeatures / ResourceRegistry），与 lab 的「设备初始化」互补两块，不冲突、不重名，合并后 `@aether/gfx` 同时暴露两者。
 - 编辑器侧 `apps/lab/shader-lab/src/gpu/device.ts` 保留为兼容桥（`export * from '@aether/gfx'`），保护 main/renderer 的 `import './gpu/device'` 继续编译。
 
-### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3 + 0b.4 + 0b.5 + 0b.7）
+### 13.3.5 帧绘制核心上提（0b.6，归入 packages/render）
+- 新建 `packages/render/src/renderer-core.ts`：`RendererCore` 拥有全部 GPU 资源（4 条管线 / 3 套 bind group layout / frame+lights+toon+post+material+transform + 4 个高亮 buffer / HDR·AUX·Depth 纹理 / gizmo 几何与资源），并封装 4-pass 帧绘制 `drawFrame(input: RenderFrameInput)`。core **不认识任何编辑器语义**——选中/悬停/子网格显隐/描边分支都已在 `RenderFrameInput` 里物化。
+- 新建 `packages/render/src/gizmo.ts`：把 gizmo 几何生成 `buildGizmoHandles()` + `GizmoMode`/`GizmoSpace` 类型上提引擎层（纯几何，与编辑器解耦）；交互数学（`axisPlaneNormal`/`rotatePlaneBasis`/`angleInPlane`/`wrapAngle`）**留在**编辑器侧 `gizmo.ts`（需读相机 ray/viewProj）。
+- lab `renderer.ts` 退化为薄壳：`RendererCore` 持有 + 委托；**公开 API（~80 方法）签名与行为完全保留**（main/ui/gizmo 零改动，符合 ADR-001）。编辑器侧仍负责场景对象/选中/材质解析/蒙皮/悬停-选中 toon 装箱，把「已完全解析的帧」以 `RenderFrameInput` 交给 `core.drawFrame()`。
+- core 对编辑器暴露的逐帧矩阵/向量（`viewProj`/`invViewProj`/`eyeVec`/`gizmoModel`/`gizmoK`/`gizmoOrigin`/`gizmoAxes`/`width`/`height`）改为公有，供 `getGizmoInfo`/`getEye`/`pointerRay`/`worldToScreen`/`pickAtAll`/`resize` 读取。
+- **行为保持**：相机矩阵公式、gizmo 恒定像素缩放 `k`、高亮描边分支优先级（sel > hover > 原生 outline）、`draws` 计数、uniform 装箱字节布局全部与重构前逐字节一致；`RendererCore` 的 `frameBuf`/材质/变换 buffer 与编辑器 `frameData`/`materialData`/`transformData` 是同一份 Float32Array。
+
+### 13.4 验证结果（累计 0a + 0b.1 + 0b.2 + 0b.3 + 0b.4 + 0b.5 + 0b.6 + 0b.7）
 | 门禁 | 结果 |
 |---|---|
 | `tsc -p tsconfig.check.json` | 0 错误 |
-| `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 经桥全绿） |
-| `vite build`（lab） | 成功，45 模块，别名正确解析 |
+| `vitest run` | 97/97 通过（math 16 + materials 23 + geometry 5 + gltf 16 + skin 9 + gizmo 9 + binding 19 经桥全绿） |
+| `vite build`（lab） | 成功，44 模块，别名正确解析 |
 
-> 运行时 E-04 渲染本增量未跑：纯模块搬迁，math/naming 取值逐字节不变，消费方经桥零改动，渲染产物必然一致。若需正式门禁可补 headless WebGPU 冒烟。
-> 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin` 当前 `upstream` 缺失，本地提交后暂未 push。
+> 0b.6 改动了 `render()` 的形态（CPU 装箱 → `RenderFrameInput` → `core.drawFrame`），但三道门禁全绿且关键数值路径（矩阵/draws/uniform 字节布局）经审查逐字节等价。**建议下一步补 headless WebGPU 冒烟**（Chrome + `--enable-unsafe-swiftshader`）以像素级确认渲染产物零回归——这是 docs/09 §7 既定的引擎级 CI 标准。
+> 各增量按用户指令**逐次 git 部分提交**（仅含本增量文件，不裹挟其他并行 session 的暂存改动）；远程 `origin/main` 已恢复，本地提交后 push。
 
 ### 13.5 下一步（按 docs/11 §9 顺序）
-### 13.5 剩余（0b.6 + 0b.8，需 renderer 重手术）
-- 0b.6 `renderer.ts` 帧绘制核心上提 + 剥离编辑器方法（含 0b.5 遗留「管线构建」）：把 `createRenderPipeline ×4` + 4-pass 帧绘制抽进 `packages/render`，lab `renderer.ts` 退化为「引擎 `RendererCore` + 编辑器 `RenderFeature`（gizmo/selection/picking）」薄壳。需同步改 main/ui/gizmo 消费。
-- 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`，删全部兼容桥。
-- 这两步是架构收口的重手术（动 2611 行 god class 与其消费者），建议作为独立专项推进，且补 headless WebGPU 冒烟验证渲染产物一致。
+### 13.5 剩余（0b.8，需编辑器重手术）
+- ✅ **0b.6 已完成**（见 §13.3.5）：`renderer.ts` 帧绘制核心上提 `packages/render`，编辑器公开 API 零改动，三道门禁全绿。
+- 0b.8 编辑器 `services`+`features` 重构为 `apps/editor`，删全部兼容桥（`gpu/math`/`naming`/`geometry`/`gltf`/`skin`/`device`/`shaders` 的 `export * from '@aether/*'` 桥，以及本会话 `apps/lab/shader-lab/src/gizmo.ts` 仍遗留的 `buildGizmoHandles` 死代码）。
+- 0b.8 是架构收口的重手术，建议作为独立专项推进，并以 headless WebGPU 冒烟做像素级回归门禁。

@@ -2,3 +2,5 @@ export * from './feature';
 export * from './materials';
 export * from './shaders';
 export * from './skin';
+export * from './gizmo';
+export * from './renderer-core';
