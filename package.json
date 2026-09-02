@@ -10,8 +10,8 @@
     "build": "vite build --config apps/samples/00-init/vite.config.ts",
     "typecheck": "tsc -p tsconfig.check.json --pretty false",
     "smoke:nav": "tsc packages/ai/test/navigation.smoke.ts --outDir .smoke --module commonjs --target ES2022 --moduleResolution node --skipLibCheck && node .smoke/test/navigation.smoke.js",
-    "lab": "vite --config apps/lab/shader-lab/vite.config.ts",
-    "lab:build": "vite build --config apps/lab/shader-lab/vite.config.ts",
+    "lab": "vite --config apps/editor/vite.config.ts",
+    "lab:build": "vite build --config apps/editor/vite.config.ts",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
     "test": "vitest run"

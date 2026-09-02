@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 // 故经 Tailscale 访问必须用 HTTPS。证书用 `tailscale cert <magicdns>` 生成，
 // 放 .workbuddy/tmp/certs/（已 gitignore）。证书存在才开 https，缺失则退回 HTTP。
 const certName = 'fangye-win11-office.tail6b29a2.ts.net';
-const certDir = fileURLToPath(new URL('../../../.workbuddy/tmp/certs/', import.meta.url));
+const certDir = fileURLToPath(new URL('../../.workbuddy/tmp/certs/', import.meta.url));
 const certFile = `${certDir}${certName}.crt`;
 const keyFile = `${certDir}${certName}.key`;
 const https = fs.existsSync(certFile) && fs.existsSync(keyFile)
@@ -25,7 +25,7 @@ const https = fs.existsSync(certFile) && fs.existsSync(keyFile)
 //   GET /__fs/file?path=<相对路径>  → 原始文件流（GLB fetch、图片缩略图）
 // 根 = 工作区根目录（整个游戏项目）。只读，不提供任何写操作。
 // =========================================================================
-const projectRoot = path.resolve(fileURLToPath(new URL('../../..', import.meta.url)));
+const projectRoot = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 const projectRootLower = projectRoot.toLowerCase();
 
 /** 把客户端给的相对路径解析成绝对路径；越出项目根返回 null（防 ../../ 穿越） */
@@ -143,8 +143,8 @@ export default defineConfig({
       {
         find: /^@aether\/([^/]+)$/,
         // 直接解析到包的 index.ts 入口，避免目录解析歧义
-        // config 位于 apps/lab/shader-lab，回退三级到项目根再进 packages
-        replacement: fileURLToPath(new URL('../../../packages/$1/src/index.ts', import.meta.url)),
+        // config 位于 apps/editor，回退两级到项目根再进 packages
+        replacement: fileURLToPath(new URL('../../packages/$1/src/index.ts', import.meta.url)),
       },
     ],
   },
@@ -162,7 +162,7 @@ export default defineConfig({
     https,
   },
   build: {
-    outDir: '../../../dist/shader-lab',
+    outDir: '../../dist/shader-lab',
     emptyOutDir: true,
     // WebGPU 依赖较新的语法（含 top-level await），不做降级
     target: 'esnext',
