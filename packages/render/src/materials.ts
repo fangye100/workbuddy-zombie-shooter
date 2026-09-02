@@ -7,7 +7,7 @@
  * 不依赖任何编辑器状态。
  *
  * 编辑器侧（apps/editor）的 MaterialLibrary 在此之上叠加"把槽位解析到
- * LabParams.materials 共享库"的逻辑（见 apps/lab/src/materials.ts）。
+ * 共享材质库"的逻辑（见 apps/editor/src/materials.ts）。
  */
 
 /** 单个材质的可写数据本体（渲染器装箱进 uniform 的就是它） */
