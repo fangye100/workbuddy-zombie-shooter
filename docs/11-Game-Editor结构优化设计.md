@@ -286,4 +286,34 @@ apps/editor/src/
 - ✅ **0b.6 已完成**（见 §13.3.5）：`renderer.ts` 帧绘制核心上提 `packages/render`，编辑器公开 API 零改动，三道门禁全绿。
 - ✅ **0b.8 兼容桥收敛已完成**（局部收口）：删除 10 个 `export * from '@aether/*'` 桥文件（`naming.ts`/`skin.ts`/`gpu/{device,geometry,gltf,math}.ts`/`shaders/{common,gizmo,post,scene}.wgsl.ts`），并把全部消费者（`main.ts`/`gizmo.ts`/`models.ts`/`asset-inspector.ts`/`renderer.ts`/`materials.test.ts`/`gpu/{geometry,gltf,math}.test.ts`/`skin.test.ts`）的 import 改写为直连 `@aether/{gfx,scene,core,render}`——含 `gltf.test.ts` 内 6 处动态 `import('./gltf')` 一并改 `@aether/scene`。`shaders/*.wgsl.ts` 无消费者，直接删。三道门禁全绿（tsc 0 error / vitest 97/97 / lab build 39 模块）。
 - ✅ **0b.8 gizmo 死代码已清**：编辑器 `gizmo.ts` 删除与引擎层 `packages/render/src/gizmo.ts` 重复的几何生成块（`GizmoHandleGPU`/`buildGizmoHandles`/`COL`/`hex`/`orient`/`pushCylinder`/`pushCone`/`pushBox`/`pushRing`/`arrow`/`ring`/`boxAt`/`toGPU` 及未引用的 `GizmoMode`/`GizmoSpace` 导出），仅保留 `axisPlaneNormal`/`rotatePlaneBasis`/`angleInPlane`/`wrapAngle`/`V3` 交互数学（main.ts + gizmo.test.ts 依赖）。三道门禁仍全绿。
-- ⬜ **0b.8 剩余**：编辑器 `services`+`features` 重构为 `apps/editor`（架构收口重手术，独立专项），并以 headless WebGPU 冒烟做像素级回归门禁。
+- ✅ **0b.8 收口已完成**（见 §13.6）：编辑器 `services`+`features` 重构为 `apps/editor`，`LabRenderer` 退化为门面；`packages/render` 引擎零改动；headless WebGPU 冒烟 30/30 全绿、CONSOLE(0)+EXCEPTIONS(0)。
+
+### 13.6 执行进度（0b.8A–D · 编辑器 services+features 收口）
+
+**架构收口重手术完成，验证全绿。** 本增量把 `LabRenderer`（≈2600 行 god class）里的编辑器语义（selection/hover/gizmo/hierarchy/material-slot/pick/animation）重归 `apps/editor/src/services/*`，渲染期组装逻辑重归 `apps/editor/src/features/*`，`LabRenderer` 退化为**门面**（持有 service 实例、公开 ~80 方法 1 行委托、GPU 装箱与每帧装箱留在体内）。引擎层 `packages/render` 零改动（不引入 `registerFeature` 钩子）。
+
+- **0b.8A 物理搬迁**（`ca07e98`）：`apps/lab/shader-lab` → `apps/editor`，更新 vite alias / index.html / 启动脚本；纯文件移动，行为不变。
+- **0b.8B services 抽取**（8 提交 `c94b85d`→`ef2ad89`）：
+  - `EditorState`（`c94b85d`）：集中编辑器全部可变状态为单一真源，`host.state` 读写。
+  - `SelectionService`（`7378809`）：选中/悬停状态机，委托 `host.buildSelectionBindGroup` / `host.buildHighlightBindGroup`。
+  - `HierarchyService`（`cd630f2`）：层级/子网格显隐/删除（释放 GPU 缓冲、联动 select/hover）。
+  - `MaterialPanelService`（`61e45e3`）：材质槽三层语义（共享/实例/覆盖）+ 库导出，依赖 `host.resolveMaterial` / `host.sourceOf`。
+  - `PickingService`（`d4f8ffe`）：屏幕↔世界拾取/投影，复用 `host.core.invViewProj`/`viewProj`/`eyeVec`。
+  - `AnimationService`（`69ff660`）：蒙皮动画控制 + 选中名，从 `@aether/render` 引入真名、读 `host.characterIndex`。
+  - `GizmoService`（`ef2ad89`）：gizmo 状态/变换读写/物体检视，`GizmoMode`/`GizmoSpace` 引自 `@aether/render`。
+- **0b.8C features 抽取**（`8bb7a1d`）：`features/selection-outline.feature.ts`（`buildSelectionOutline`）与 `features/gizmo.feature.ts`（`buildGizmo`）在编辑器侧组装 `CoreHighlight`/`CoreGizmo`，从 `host.state` 读选中/悬停与 bind group；引擎层 `RenderFeature`/`framegraph` 仍作死设计为未接入口，保持零改动。
+- **0b.8D 验收**：
+  - ADR-001 硬判据复核：`grep -rn "LabParams" packages/render` → **零命中**（清理 `materials.ts` 注释残留字面 token，路径改为 `apps/editor/src/materials.ts`）。
+  - **headless WebGPU 冒烟**（真实 Chrome 152 + SwiftShader + CDP，`webgpu-headless-validate` 流程）：默认胶囊场景 + 逐一驱动每个 service 公开 API（经 `LabRenderer` 门面）+ 导入 E-01 带动画 GLB 跑 skin 渲染与 AnimationService —— **30/30 PASS，CONSOLE(0)，EXCEPTIONS(0)**，HUD 持续出帧、无致命错误卡片。截图 `editor-0b8-smoke.png`。
+
+#### 13.6.1 三道门禁（0b.8B/C/D 累计）
+| 门禁 | 结果 |
+|---|---|
+| `tsc -p tsconfig.check.json` | 0 错误（每步保绿） |
+| `vitest run` | 97/97 通过 |
+| `vite build`（lab） | 成功，41 模块（services+features 增量后） |
+| headless WebGPU 冒烟 | 30/30，CONSOLE(0)，EXCEPTIONS(0) |
+
+#### 13.6.2 关键决策（用户拍板）
+- **不引入 `registerFeature` 宿主**：原蓝图（`docs/11` §7）设想 `RendererCore` 作为 `registerFeature` 宿主、features 经 `RenderFeature` 接入包体 pass 链。用户否决（"先不做 feature register 的方式了"）——改为**编辑器侧组装 `RenderFrameInput`**，`packages/render` 零改动。`features/` 模块仅作编辑器侧组装函数，不触碰引擎 `RenderFeature` 接口。
+- **门面而非引擎钩子**：`LabRenderer` 公开 API 签名与行为逐字节保留（main/ui/gizmo 零改动），services 经 `host.state`/`host.core`/`host.build*BindGroup` 读写——把 god class 拆成"门面 + 6 service + 2 feature"，而非改成引擎 plugin 系统。
