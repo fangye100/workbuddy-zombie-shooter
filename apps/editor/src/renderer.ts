@@ -34,6 +34,7 @@ import { SelectionService } from './services/selection';
 import { HierarchyService } from './services/hierarchy';
 import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
+import { AnimationService } from './services/animation';
 import { type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
@@ -58,14 +59,6 @@ import {
   createSkinState,
   evalJointMatrices,
   advance as skinAdvance,
-  clipNames,
-  currentClip,
-  selectClip,
-  play as skinPlay,
-  pause as skinPause,
-  setLoop as skinSetLoop,
-  setSpeed as skinSetSpeed,
-  seek as skinSeek,
   type SkinState,
 } from '@aether/render';
 
@@ -419,6 +412,8 @@ export class LabRenderer {
   private readonly materialPanel = new MaterialPanelService(this);
   /** 屏幕 ↔ 世界拾取与投影（委托 PickingService） */
   private readonly picking = new PickingService(this);
+  /** 蒙皮动画播放控制 + 选中名查询（委托 AnimationService） */
+  private readonly animation = new AnimationService(this);
 
   constructor(
     gpu: GpuContext,
@@ -1136,107 +1131,69 @@ export class LabRenderer {
   // ---- 蒙皮动画播放控制 ----
   // 当前可播动画的物体：优先「选中且带骨骼」的物体，否则退回角色槽位。
 
-  private activeSkinObject(): SceneObject | null {
-    if (this.state.selectedIndex !== null) {
-      const o = this.state.objects[this.state.selectedIndex];
-      if (o !== undefined && o.skinState !== null) return o;
-    }
-    const c = this.state.objects[this.characterIndex];
-    return c !== undefined && c.skinState !== null ? c : null;
-  }
-
   hasAnimation(): boolean {
-    return this.activeSkinObject() !== null;
+    return this.animation.hasAnimation();
   }
 
   getClipNames(): string[] {
-    const o = this.activeSkinObject();
-    return o !== null ? clipNames(o.skinState!) : [];
+    return this.animation.getClipNames();
   }
 
   getCurrentClip(): number {
-    const o = this.activeSkinObject();
-    return o !== null ? currentClip(o.skinState!) : -1;
+    return this.animation.getCurrentClip();
   }
 
   getAnimationDuration(): number {
-    const o = this.activeSkinObject();
-    if (o === null) return 0;
-    const cs = o.skinState!;
-    return cs.clip >= 0 ? cs.clips[cs.clip]!.duration : 0;
+    return this.animation.getAnimationDuration();
   }
 
   getAnimationTime(): number {
-    const o = this.activeSkinObject();
-    return o !== null ? o.skinState!.time : 0;
+    return this.animation.getAnimationTime();
   }
 
-  /** clip：片段下标或名字；省略则继续/从头播放当前片段 */
   playAnimation(clip?: number | string): void {
-    const o = this.activeSkinObject();
-    if (o === null) return;
-    const st = o.skinState!;
-    if (typeof clip === 'string') {
-      const idx = clipNames(st).indexOf(clip);
-      if (idx >= 0) selectClip(st, idx);
-    } else if (typeof clip === 'number') {
-      selectClip(st, clip);
-    } else {
-      skinPlay(st);
-    }
+    this.animation.playAnimation(clip);
   }
 
   pauseAnimation(): void {
-    const o = this.activeSkinObject();
-    if (o !== null) skinPause(o.skinState!);
+    this.animation.pauseAnimation();
   }
 
   stopAnimation(): void {
-    const o = this.activeSkinObject();
-    if (o !== null) selectClip(o.skinState!, -1);
+    this.animation.stopAnimation();
   }
 
   setAnimationLoop(loop: boolean): void {
-    const o = this.activeSkinObject();
-    if (o !== null) skinSetLoop(o.skinState!, loop);
+    this.animation.setAnimationLoop(loop);
   }
 
   setAnimationSpeed(speed: number): void {
-    const o = this.activeSkinObject();
-    if (o !== null) skinSetSpeed(o.skinState!, speed);
+    this.animation.setAnimationSpeed(speed);
   }
 
   seekAnimation(time: number): void {
-    const o = this.activeSkinObject();
-    if (o !== null) skinSeek(o.skinState!, time);
+    this.animation.seekAnimation(time);
   }
 
-  /** 当前是否正在播放（供 UI 同步播放/暂停按钮） */
   isAnimationPlaying(): boolean {
-    const o = this.activeSkinObject();
-    return o !== null && o.skinState!.playing;
+    return this.animation.isAnimationPlaying();
   }
 
-  /** 当前片段是否循环（供 UI 同步复选框） */
   getAnimationLoop(): boolean {
-    const o = this.activeSkinObject();
-    return o !== null && o.skinState!.loop;
+    return this.animation.getAnimationLoop();
   }
 
-  /** 当前播放速率倍率（供 UI 同步滑块） */
   getAnimationSpeed(): number {
-    const o = this.activeSkinObject();
-    return o !== null ? o.skinState!.speed : 1;
+    return this.animation.getAnimationSpeed();
   }
 
   selectedName(): string | null {
-    return this.state.selectedIndex === null ? null : this.state.objects[this.state.selectedIndex]?.name ?? null;
+    return this.animation.selectedName();
   }
 
   /** 选中子网格的名字（HUD 用）；选中的是整物体或无选中则 null */
   selectedSubName(): string | null {
-    if (this.state.selectedIndex === null || this.state.selectedSub === null) return null;
-    return this.state.objects[this.state.selectedIndex]?.subMeshes[this.state.selectedSub]?.name ?? null;
+    return this.animation.selectedSubName();
   }
 
   /** 读选中物体的可编辑状态（面板用） */
