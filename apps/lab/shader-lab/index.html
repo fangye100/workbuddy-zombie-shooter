@@ -311,6 +311,10 @@
   .hier-row.hier-sub { margin-left: 30px; padding: 2px 5px; }
   .hier-row.hier-sub .hier-name { font-size: 11px; color: #C9CDD4; }
   .hier-row.hier-sub.sel .hier-name { color: var(--ink); }
+  /* GLB 组节点（父子层级还原）：淡色小字 + 整行点击折叠，无眼睛/删除/材质徽章 */
+  .hier-row.hier-grp { padding: 2px 5px; cursor: pointer; }
+  .hier-row.hier-grp .hier-name { font-size: 11px; color: var(--text-dim); letter-spacing: 0.02em; }
+  .hier-row.hier-grp:hover .hier-name { color: #C9CDD4; }
   .hier-mat {
     flex: 0 1 auto;
     max-width: 96px;

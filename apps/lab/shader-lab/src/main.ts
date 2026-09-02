@@ -10,6 +10,7 @@ import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { ASSET_MIME, stemName } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
+import { summarizeMatch } from './binding';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -211,17 +212,21 @@ async function boot(): Promise<void> {
       const model = parseGlb(buffer, CHARACTER_HEIGHT_M);
       void (async () => {
         const bmp = model.image === null ? null : await decodeTexture(model.image, name);
-        // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽
-        renderer.setCharacter(model.mesh, bmp, model.subMeshes);
+        // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
+        // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
+        renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree);
         const texState =
           model.image === null
             ? '无贴图（平色预览）'
             : bmp !== null
               ? '贴图已载入'
               : '⚠ 贴图解码失败（见控制台）';
+        // 换模型时旧材质绑定按「nodeId → 反向路径」两层匹配继承，结果一并告知
+        const inheritNote = summarizeMatch(renderer.getLastMatchReport() ?? []);
         panel.setModelInfo(
           `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 / ` +
-            `${model.heightMeters.toFixed(2)} m / ${texState}`,
+            `${model.heightMeters.toFixed(2)} m / ${texState}` +
+            (inheritNote === null ? '' : ` · ${inheritNote}`),
         );
         panel.refreshHierarchy(); // 导入模型替换了角色槽位，面数与子网格都变了
         // 选中可能落在旧的（现已不存在的）子网格上，重挂一次
@@ -834,7 +839,8 @@ async function boot(): Promise<void> {
       const model = parseGlb(buffer, CHARACTER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       const name = uniqueObjectName(stemName(relPath));
-      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0]);
+      // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
+      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree);
       if (idx === null) {
         panel.setModelInfo('场景物体已达上限（64），先在层级里删掉一些再拖入');
         return;
