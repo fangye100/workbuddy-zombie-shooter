@@ -35,6 +35,7 @@ import { HierarchyService } from './services/hierarchy';
 import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
 import { AnimationService } from './services/animation';
+import { GizmoService } from './services/gizmo';
 import { type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
@@ -414,6 +415,8 @@ export class LabRenderer {
   private readonly picking = new PickingService(this);
   /** 蒙皮动画播放控制 + 选中名查询（委托 AnimationService） */
   private readonly animation = new AnimationService(this);
+  /** gizmo 交互状态 / 变换读写 / 物体检视（委托 GizmoService） */
+  private readonly gizmo = new GizmoService(this);
 
   constructor(
     gpu: GpuContext,
@@ -1124,8 +1127,7 @@ export class LabRenderer {
 
   /** 读选中物体的旋转四元数（gizmo 旋转需要） */
   getObjectQuat(index: number): m4.Quat | null {
-    const o = this.state.objects[index];
-    return o === undefined ? null : o.quat;
+    return this.gizmo.getObjectQuat(index);
   }
 
   // ---- 蒙皮动画播放控制 ----
@@ -1205,61 +1207,37 @@ export class LabRenderer {
     materialIndex: number;
     stats: { vertices: number; triangles: number; boundaryEdges: number; components: number };
   } | null {
-    const o = this.state.objects[index];
-    if (o === undefined) return null;
-    return {
-      name: o.name,
-      pos: [o.pos[0], o.pos[1], o.pos[2]],
-      rot: [o.rot[0], o.rot[1], o.rot[2]],
-      scale: o.scale,
-      materialIndex: o.materialIndex,
-      stats: meshStats(o.mesh),
-    };
+    return this.gizmo.getObjectState(index);
   }
 
-  /** 子网格数量（层级面板据此决定能不能展开、材质面板据此自动落到唯一的 mesh 上） */
   getSubMeshCount(index: number): number {
-    return this.state.objects[index]?.subMeshes.length ?? 0;
+    return this.gizmo.getSubMeshCount(index);
   }
 
   setObjectPos(index: number, axis: 0 | 1 | 2, v: number): void {
-    const o = this.state.objects[index];
-    if (o !== undefined) o.pos[axis] = v;
+    this.gizmo.setObjectPos(index, axis, v);
   }
 
-  /**
-   * 设置欧拉角分量。**注意入参单位是度**（面板滑块用度），内部 rot 始终存弧度 ——
-   * 单位边界容易出错，所以函数名直接把 Deg 写出来；旋转真源是 quat，改完会同步重建。
-   */
   setObjectRotDeg(index: number, axis: 0 | 1 | 2, deg: number): void {
-    const o = this.state.objects[index];
-    if (o !== undefined) {
-      o.rot[axis] = (deg * Math.PI) / 180;
-      o.quat = m4.eulerToQuat(o.rot[0], o.rot[1], o.rot[2]);
-    }
+    this.gizmo.setObjectRotDeg(index, axis, deg);
   }
 
-  /** gizmo 旋转：直接写入四元数，并把 rot 同步成欧拉角供面板显示 */
   setObjectQuat(index: number, q: m4.Quat): void {
-    const o = this.state.objects[index];
-    if (o !== undefined) {
-      o.quat = q;
-      o.rot = m4.quatToEuler(q);
-    }
+    this.gizmo.setObjectQuat(index, q);
   }
 
   // ===================== Gizmo 控制 API =====================
 
   setGizmoMode(mode: GizmoMode): void {
-    this.state.gizmoMode = mode;
+    this.gizmo.setGizmoMode(mode);
   }
 
   setGizmoSpace(space: GizmoSpace): void {
-    this.state.gizmoSpace = space;
+    this.gizmo.setGizmoSpace(space);
   }
 
   setGizmoActiveAxis(axis: number | null): void {
-    this.state.gizmoActiveAxis = axis;
+    this.gizmo.setGizmoActiveAxis(axis);
   }
 
   /**
@@ -1276,20 +1254,11 @@ export class LabRenderer {
         space: GizmoSpace;
       }
     | null {
-    if (this.state.selectedIndex === null) return null;
-    return {
-      model: this.core.gizmoModel,
-      k: this.core.gizmoK,
-      origin: this.core.gizmoOrigin,
-      axes: this.core.gizmoAxes,
-      mode: this.state.gizmoMode,
-      space: this.state.gizmoSpace,
-    };
+    return this.gizmo.getGizmoInfo();
   }
 
   setObjectScale(index: number, v: number): void {
-    const o = this.state.objects[index];
-    if (o !== undefined) o.scale = Math.max(0.01, v);
+    this.gizmo.setObjectScale(index, v);
   }
 
   /** 当前帧相机世界坐标（用于 gizmo 拖拽平面定向） */
