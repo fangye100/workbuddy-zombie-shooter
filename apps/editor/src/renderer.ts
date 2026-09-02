@@ -29,10 +29,10 @@ import {
   type MeshData,
 } from '@aether/scene';
 import * as m4 from '@aether/core';
-import { defaultParams, type LabParams, type MaterialState } from './params';
+import { EditorState } from './services/editor-state';
+import { type LabParams, type MaterialState } from './params';
 import {
   cloneMaterial,
-  MaterialLibrary,
   planSubMeshCount,
   sharedId,
   slotSource,
@@ -90,7 +90,7 @@ const HOVER_COLOR = '#8FD14F';
  */
 
 
-interface SceneObject {
+export interface SceneObject {
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
   indexCount: number;
@@ -333,7 +333,7 @@ function applyAo(mesh: MeshData, minY: number, maxY: number, floor = 0.55): void
  * 后 5 个身份字段来自 GLB（见 gltf.ts SubMeshRange）：换模型时 binding.ts 靠它们
  * 把旧绑定继承过来。程序化网格没有身份（nodeId=''），不参与继承。
  */
-interface SubMesh extends MaterialSlot {
+export interface SubMesh extends MaterialSlot {
   name: string;
   indexStart: number;
   indexCount: number;
@@ -357,47 +357,27 @@ interface ObjectSpec {
 
 export class LabRenderer {
   private readonly device: GPUDevice;
-  /** bind group 按「物体 → 子网格」两级建：材质槽位随子网格走，变换槽位随物体走 */
-  private bindGroups: GPUBindGroup[][] = [];
+
+  /** 公开统计（HUD / 面板读）；底层存于 EditorState */
+  get stats(): RenderStats {
+    return this.state.stats;
+  }
 
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
   private readonly core: RendererCore;
-  private readonly objects: SceneObject[] = [];
   private readonly materialData: Float32Array;
   private readonly transformData: Float32Array;
 
-  /** 材质库（用户实例）。共享材质仍在 params.materials 里，按 id 回查 */
-  readonly library = new MaterialLibrary();
-  /**
-   * 参数引用。材质 API 要按 id 回查共享材质，所以必须拿得到 params；
-   * 由 main.ts 在启动后 attachParams()，render() 每帧顺手刷新（引用恒定，无拷贝成本）。
-   */
-  private params: LabParams = defaultParams();
-
-  /** 选中物体索引；null = 无选中 */
-  private selectedIndex: number | null = null;
-  /** 选中的子网格下标；null = 选中整个物体（层级树点到父节点） */
-  private selectedSub: number | null = null;
-  /** 选中高亮用的独立 toon / material buffer（黄色 + 加粗描边），bind group 复用 outline 管线 */
+  /** 选中高亮用的独立 toon / material buffer（白色细描边），bind group 复用 outline 管线 */
   private readonly selToonData: Float32Array;
   private readonly selMatData: Float32Array;
-  private selBindGroup: GPUBindGroup | null = null;
-  /** 层级面板悬停高亮（与选中白线区分开的颜色），同样复用 outline 管线，只在悬停时多 1 个 draw call */
+  /** 层级面板悬停高亮（尸绿）用的独立 toon / material buffer，复用 outline 管线 */
   private readonly hoverToonData: Float32Array;
   private readonly hoverMatData: Float32Array;
-  private hoverBindGroup: GPUBindGroup | null = null;
-  private hoveredIndex: number | null = null;
-  /** 悬停的子网格下标；null = 整个物体。悬停到子网格时只描那一段的轮廓 */
-  private hoveredSub: number | null = null;
-  /** 反投影矩阵 / 世界相机位置由 core 在每帧计算（见 core.invViewProj / core.eyeVec） */
 
   /** 模型浏览器：角色槽位（替换中心胶囊）。切换模型只动这一个 */
-  private readonly characterIndex = 1;
+  public readonly characterIndex = 1;
 
-  // ---- Transform Gizmo（几何 / 管线 / 资源在 core；编辑器只持有交互状态）----
-  private gizmoMode: GizmoMode = 'translate';
-  private gizmoSpace: GizmoSpace = 'world';
-  private gizmoActiveAxis: number | null = null; // -1..2；null = 未抓到手柄
   private sceneCapsule!: MeshData;
   private whiteTex!: GPUTexture;
   private charTexture: GPUTexture | null = null;
@@ -416,17 +396,14 @@ export class LabRenderer {
    */
   private readonly resolvedBySlot: (MaterialState | undefined)[] = new Array(MAX_MATERIAL_SLOTS);
 
-  /** 渲染目标（hdr / aux / depth / post bind group）由 core 持有 */
   /** destroy() 幂等：HMR 与手动调用可能重复触发，重复 destroy 同一 GPU 对象会抛错 */
   private destroyed = false;
 
-  /** 画布尺寸由 core 持有（resize 时更新）；编辑器通过 core.width / core.height 读取 */
-  /** 帧序号：canvas 矩形缓存按帧失效 */
-  private frameCounter = 0;
-  /** 上一帧时间（秒），用于动画推进的 dt；-1 表示首帧 */
-  private lastFrameTime = -1;
-
-  stats: RenderStats = { width: 0, height: 0, drawCalls: 0, triangles: 0 };
+  /**
+   * 编辑器拥有的全部可变状态（场景物体 / 选中悬停 / gizmo 交互 / 材质库 / 帧计数等）。
+   * 下沉到 EditorState：services 通过 host.state 读写；render / GPU 装箱仍在 LabRenderer。
+   */
+  private readonly state = new EditorState();
 
   constructor(
     gpu: GpuContext,
@@ -497,7 +474,7 @@ export class LabRenderer {
       this.device.queue.writeBuffer(vb, 0, mesh.vertices);
       this.device.queue.writeBuffer(ib, 0, mesh.indices);
 
-      this.objects.push({
+      this.state.objects.push({
         vertexBuffer: vb,
         indexBuffer: ib,
         indexCount: mesh.indices.length,
@@ -542,7 +519,7 @@ export class LabRenderer {
       });
       triangles += mesh.indices.length / 3;
     }
-    this.stats.triangles = triangles;
+    this.state.stats.triangles = triangles;
     // 材质槽位按「子网格」分配（一个子网格一个槽），变换槽位按「物体」分配。
     // 两者都按固定上限开，换模型导致子网格数变化时只需重排 slotBase + 重建 bind group，不用动 buffer。
     this.materialData = new Float32Array(MAX_MATERIAL_SLOTS * SLOT_FLOATS);
@@ -568,7 +545,7 @@ export class LabRenderer {
    * （同一物体的所有子网格共享同一个 model 矩阵）。角色槽位的 binding 5 在 setCharacter 后换成真贴图。
    */
   private makeSubBindGroup(objIndex: number, subIndex: number): GPUBindGroup {
-    const o = this.objects[objIndex];
+    const o = this.state.objects[objIndex];
     if (o === undefined) throw new Error(`makeSubBindGroup: 物体越界 ${objIndex}`);
     if (subIndex >= o.subMeshes.length) throw new Error(`makeSubBindGroup: 子网格越界 ${subIndex}`);
     const matBase = (o.slotBase + subIndex) * SLOT_BYTES;
@@ -593,15 +570,15 @@ export class LabRenderer {
   /** 场景当前占用的材质槽位总数 */
   private totalSlots(): number {
     let n = 0;
-    for (const o of this.objects) n += o.subMeshes.length;
+    for (const o of this.state.objects) n += o.subMeshes.length;
     return n;
   }
 
   /** 除 index 这个物体外，其余物体已占用的槽位数 —— 给 index 算剩余预算 */
   private slotsUsedExcluding(index: number): number {
     let n = 0;
-    for (let i = 0; i < this.objects.length; i++) {
-      if (i !== index) n += this.objects[i]!.subMeshes.length;
+    for (let i = 0; i < this.state.objects.length; i++) {
+      if (i !== index) n += this.state.objects[i]!.subMeshes.length;
     }
     return n;
   }
@@ -615,7 +592,7 @@ export class LabRenderer {
    */
   private assignSlotBases(): void {
     let slot = 0;
-    for (const o of this.objects) {
+    for (const o of this.state.objects) {
       o.slotBase = slot;
       slot += Math.min(o.subMeshes.length, MAX_MATERIAL_SLOTS - slot);
     }
@@ -629,7 +606,7 @@ export class LabRenderer {
   /** 重建全部 bind group。换模型导致子网格数变化、slotBase 重排后必须调一次 */
   private rebuildAllBindGroups(): void {
     this.assignSlotBases();
-    this.bindGroups = this.objects.map((o, i) =>
+    this.state.bindGroups = this.state.objects.map((o, i) =>
       o.removed ? [] : o.subMeshes.map((_, s) => this.makeSubBindGroup(i, s)),
     );
   }
@@ -640,7 +617,7 @@ export class LabRenderer {
    * 改 override 或实例绝不影响共享材质。
    */
   private resolveMaterial(sm: SubMesh): MaterialState {
-    return slotState(sm, this.library, this.params);
+    return slotState(sm, this.state.library, this.state.params);
   }
 
   /** 该槽位当前材质的来源层级 */
@@ -658,7 +635,7 @@ export class LabRenderer {
     matBuf: GPUBuffer,
     label: string,
   ): GPUBindGroup | null {
-    const o = index === null ? undefined : this.objects[index];
+    const o = index === null ? undefined : this.state.objects[index];
     if (index === null || o === undefined) return null;
     const base = index * SLOT_BYTES;
     return this.device.createBindGroup({
@@ -683,9 +660,9 @@ export class LabRenderer {
    * 就会继续引用一个已被 destroy() 的纹理 —— 属于「引用已销毁资源」的硬错误。
    */
   private refreshHighlightBindGroups(index: number): void {
-    if (this.selectedIndex === index) this.buildSelectionBindGroup(index);
-    if (this.hoveredIndex === index) {
-      this.hoverBindGroup = this.buildHighlightBindGroup(
+    if (this.state.selectedIndex === index) this.buildSelectionBindGroup(index);
+    if (this.state.hoveredIndex === index) {
+      this.state.hoverBindGroup = this.buildHighlightBindGroup(
         index,
         this.core.hoverToonBuf,
         this.core.hoverMatBuf,
@@ -695,7 +672,7 @@ export class LabRenderer {
   }
 
   private buildSelectionBindGroup(index: number): void {
-    this.selBindGroup = this.buildHighlightBindGroup(index, this.core.selToonBuf, this.core.selMatBuf, 'sel');
+    this.state.selBindGroup = this.buildHighlightBindGroup(index, this.core.selToonBuf, this.core.selMatBuf, 'sel');
   }
 
   /**
@@ -714,7 +691,7 @@ export class LabRenderer {
     skeleton: SkeletonData | null = null,
     animations: AnimClip[] = [],
   ): void {
-    const o = this.objects[this.characterIndex];
+    const o = this.state.objects[this.characterIndex];
     if (o === undefined || o.removed) return;
 
     let m: MeshData;
@@ -743,11 +720,11 @@ export class LabRenderer {
     // 选中 + 悬停的高亮 bind group 都缓存了 texture view，必须一起重建
     this.refreshHighlightBindGroups(this.characterIndex);
     // 选中/悬停的子网格下标在换模型后可能越界
-    if (this.selectedIndex === this.characterIndex) {
-      this.selectedSub = this.clampSub(this.characterIndex, this.selectedSub);
+    if (this.state.selectedIndex === this.characterIndex) {
+      this.state.selectedSub = this.clampSub(this.characterIndex, this.state.selectedSub);
     }
-    if (this.hoveredIndex === this.characterIndex) {
-      this.hoveredSub = this.clampSub(this.characterIndex, this.hoveredSub);
+    if (this.state.hoveredIndex === this.characterIndex) {
+      this.state.hoveredSub = this.clampSub(this.characterIndex, this.state.hoveredSub);
     }
 
     // 统一走 recountTriangles：跳过 removed，否则删过物体后再换模型，HUD 面数会把墓碑算回去
@@ -756,7 +733,7 @@ export class LabRenderer {
 
   /** 把子网格下标夹到合法范围；null（整个物体）原样返回 */
   private clampSub(objIndex: number, sub: number | null): number | null {
-    const o = this.objects[objIndex];
+    const o = this.state.objects[objIndex];
     if (o === undefined || sub === null) return null;
     return sub >= 0 && sub < o.subMeshes.length ? sub : null;
   }
@@ -785,11 +762,8 @@ export class LabRenderer {
     return [...byNode.values()];
   }
 
-  /** 最近一次换模型的绑定继承报告（模型信息行展示用；无继承动作时为 null） */
-  private lastMatchReport: MatchReportEntry[] | null = null;
-
   getLastMatchReport(): MatchReportEntry[] | null {
-    return this.lastMatchReport;
+    return this.state.lastMatchReport;
   }
 
   /**
@@ -801,7 +775,7 @@ export class LabRenderer {
    * 没人认领的旧绑定进孤儿池，留给再下一次替换。匹配报告存 lastMatchReport。
    */
   private applySubMeshes(index: number, ranges: SubMeshRange[] | null, tree: GltfNodeTree[] | null = null): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined) return;
     const total = o.mesh.indices.length;
     const single = (): SubMesh[] => [
@@ -833,7 +807,7 @@ export class LabRenderer {
       if (snap.length > 0) o.bindingOrphans = [...snap, ...o.bindingOrphans];
       o.nodeTree = [];
       o.subMeshes = single();
-      this.lastMatchReport = null;
+      this.state.lastMatchReport = null;
       this.rebuildAllBindGroups();
       return;
     }
@@ -858,7 +832,7 @@ export class LabRenderer {
 
     const matched = matchBindings(snapshot, o.bindingOrphans, stubs);
     o.bindingOrphans = matched.orphans;
-    this.lastMatchReport = matched.report;
+    this.state.lastMatchReport = matched.report;
 
     const next: SubMesh[] = ranges.map((r, ri) => {
       const start = Math.min(Math.max(0, r.indexStart), total);
@@ -951,7 +925,7 @@ export class LabRenderer {
 
   /** 替换某物体的网格。bind group 不用动，但删/换后墓碑物体的缓冲已经释放，这里要挡住 */
   private setMesh(index: number, mesh: MeshData): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined || o.removed) return;
     this.uploadMesh(o, mesh, o.skeleton);
     this.recountTriangles();
@@ -983,24 +957,24 @@ export class LabRenderer {
    * sub 为 null = 选中整个物体（层级树点到父节点）；否则只描那一条子网格的轮廓。
    */
   selectObject(index: number | null, sub: number | null = null): void {
-    this.selectedIndex = index;
-    this.selectedSub = index === null ? null : this.clampSub(index, sub);
-    for (const o of this.objects) o.selected = false;
-    if (index !== null && index >= 0 && index < this.objects.length) {
-      this.objects[index]!.selected = true;
+    this.state.selectedIndex = index;
+    this.state.selectedSub = index === null ? null : this.clampSub(index, sub);
+    for (const o of this.state.objects) o.selected = false;
+    if (index !== null && index >= 0 && index < this.state.objects.length) {
+      this.state.objects[index]!.selected = true;
       this.buildSelectionBindGroup(index);
     } else {
-      this.selBindGroup = null;
+      this.state.selBindGroup = null;
     }
   }
 
   getSelected(): number | null {
-    return this.selectedIndex;
+    return this.state.selectedIndex;
   }
 
   /** 当前选中的子网格下标（null = 整个物体 / 无选中） */
   getSelectedSub(): number | null {
-    return this.selectedSub;
+    return this.state.selectedSub;
   }
 
   /**
@@ -1012,22 +986,22 @@ export class LabRenderer {
     const next = this.isHighlightable(index) ? index : null;
     // 没有目标时子网格下标必须为 null（保持「悬停的是整物体还是某条 mesh」的语义）
     const nextSub = next === null ? null : this.clampSub(next, sub);
-    if (next === this.hoveredIndex && nextSub === this.hoveredSub) return;
-    this.hoveredIndex = next;
-    this.hoveredSub = nextSub;
-    this.hoverBindGroup =
+    if (next === this.state.hoveredIndex && nextSub === this.state.hoveredSub) return;
+    this.state.hoveredIndex = next;
+    this.state.hoveredSub = nextSub;
+    this.state.hoverBindGroup =
       next === null
         ? null
         : this.buildHighlightBindGroup(next, this.core.hoverToonBuf, this.core.hoverMatBuf, 'hover');
   }
 
   getHovered(): number | null {
-    return this.hoveredIndex;
+    return this.state.hoveredIndex;
   }
 
   private isHighlightable(index: number | null): boolean {
     if (index === null) return false;
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     return o !== undefined && !o.removed && o.visible;
   }
 
@@ -1039,7 +1013,7 @@ export class LabRenderer {
       name: sm.name,
       triangles: sm.indexCount / 3,
       visible: sm.visible,
-      materialName: this.library.nameOf(this.params, sm.materialId),
+      materialName: this.state.library.nameOf(this.state.params, sm.materialId),
       source: this.sourceOf(sm),
     });
     // GLB 原始层级 → 面板树节点；组节点若没有 mesh 后代会被剪掉（parseGlb 已剪过空壳，双保险）
@@ -1061,8 +1035,8 @@ export class LabRenderer {
     };
 
     const out: HierarchyNode[] = [];
-    for (let i = 0; i < this.objects.length; i++) {
-      const o = this.objects[i]!;
+    for (let i = 0; i < this.state.objects.length; i++) {
+      const o = this.state.objects[i]!;
       if (o.removed) continue;
       out.push({
         index: i,
@@ -1080,23 +1054,23 @@ export class LabRenderer {
 
   /** 子网格显隐（层级树里 mesh 节点的眼睛）。只影响那一段索引区间 */
   setSubMeshVisible(index: number, sub: number, visible: boolean): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     const sm = o?.subMeshes[sub];
     if (sm === undefined) return;
     sm.visible = visible;
-    if (!visible && this.selectedIndex === index && this.selectedSub === sub) {
+    if (!visible && this.state.selectedIndex === index && this.state.selectedSub === sub) {
       this.selectObject(index, null);
     }
   }
 
   /** 显隐（层级面板的眼睛）。隐藏 = 不画 + 不拾取；已隐藏的物体被取消选中以免残留 gizmo */
   setObjectVisible(index: number, visible: boolean): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined) return;
     o.visible = visible;
     if (!visible) {
-      if (this.selectedIndex === index) this.selectObject(null);
-      if (this.hoveredIndex === index) this.setHovered(null);
+      if (this.state.selectedIndex === index) this.selectObject(null);
+      if (this.state.hoveredIndex === index) this.setHovered(null);
     }
   }
 
@@ -1107,10 +1081,10 @@ export class LabRenderer {
    * 只打标记不释放，等于每次导入 80k 面高模再删掉就永久泄漏一份顶点数据。
    */
   removeObject(index: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined || o.removed) return;
-    if (this.selectedIndex === index) this.selectObject(null);
-    if (this.hoveredIndex === index) this.setHovered(null);
+    if (this.state.selectedIndex === index) this.selectObject(null);
+    if (this.state.hoveredIndex === index) this.setHovered(null);
     o.removed = true;
     o.vertexBuffer.destroy();
     o.indexBuffer.destroy();
@@ -1121,14 +1095,14 @@ export class LabRenderer {
       o.texture = this.whiteTex;
     }
     // 丢弃指向已销毁缓冲的 bind group：留着只是占引用，用到就是非法访问
-    this.bindGroups[index] = [];
+    this.state.bindGroups[index] = [];
     this.recountTriangles();
   }
 
   private recountTriangles(): void {
     let tris = 0;
-    for (const ob of this.objects) if (!ob.removed) tris += ob.indexCount;
-    this.stats.triangles = tris / 3;
+    for (const ob of this.state.objects) if (!ob.removed) tris += ob.indexCount;
+    this.state.stats.triangles = tris / 3;
   }
 
   /**
@@ -1151,8 +1125,8 @@ export class LabRenderer {
     skeleton: SkeletonData | null = null,
     animations: AnimClip[] = [],
   ): number | null {
-    const reused = this.objects.findIndex((o) => o.removed);
-    if (reused < 0 && this.objects.length >= MAX_OBJECTS) {
+    const reused = this.state.objects.findIndex((o) => o.removed);
+    if (reused < 0 && this.state.objects.length >= MAX_OBJECTS) {
       console.warn(`[renderer] 场景物体已达上限 ${MAX_OBJECTS}，无法再添加`);
       return null;
     }
@@ -1217,13 +1191,13 @@ export class LabRenderer {
     let index: number;
     if (reused >= 0) {
       // 墓碑的缓冲/贴图在 removeObject 时已释放，整对象替换即可
-      this.objects[reused] = obj;
+      this.state.objects[reused] = obj;
       index = reused;
     } else {
-      index = this.objects.push(obj) - 1;
+      index = this.state.objects.push(obj) - 1;
     }
     // 蒙皮字段 + 用真实骨架重建蒙皮缓冲（defaultSkinFields 只给了恒等退化版）
-    const added = this.objects[index]!;
+    const added = this.state.objects[index]!;
     added.skeleton = skeleton;
     added.animations = animations;
     added.skinState = skeleton !== null ? createSkinState(skeleton, animations) : null;
@@ -1236,7 +1210,7 @@ export class LabRenderer {
 
   /** 读选中物体的旋转四元数（gizmo 旋转需要） */
   getObjectQuat(index: number): m4.Quat | null {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     return o === undefined ? null : o.quat;
   }
 
@@ -1244,11 +1218,11 @@ export class LabRenderer {
   // 当前可播动画的物体：优先「选中且带骨骼」的物体，否则退回角色槽位。
 
   private activeSkinObject(): SceneObject | null {
-    if (this.selectedIndex !== null) {
-      const o = this.objects[this.selectedIndex];
+    if (this.state.selectedIndex !== null) {
+      const o = this.state.objects[this.state.selectedIndex];
       if (o !== undefined && o.skinState !== null) return o;
     }
-    const c = this.objects[this.characterIndex];
+    const c = this.state.objects[this.characterIndex];
     return c !== undefined && c.skinState !== null ? c : null;
   }
 
@@ -1337,13 +1311,13 @@ export class LabRenderer {
   }
 
   selectedName(): string | null {
-    return this.selectedIndex === null ? null : this.objects[this.selectedIndex]?.name ?? null;
+    return this.state.selectedIndex === null ? null : this.state.objects[this.state.selectedIndex]?.name ?? null;
   }
 
   /** 选中子网格的名字（HUD 用）；选中的是整物体或无选中则 null */
   selectedSubName(): string | null {
-    if (this.selectedIndex === null || this.selectedSub === null) return null;
-    return this.objects[this.selectedIndex]?.subMeshes[this.selectedSub]?.name ?? null;
+    if (this.state.selectedIndex === null || this.state.selectedSub === null) return null;
+    return this.state.objects[this.state.selectedIndex]?.subMeshes[this.state.selectedSub]?.name ?? null;
   }
 
   /** 读选中物体的可编辑状态（面板用） */
@@ -1355,7 +1329,7 @@ export class LabRenderer {
     materialIndex: number;
     stats: { vertices: number; triangles: number; boundaryEdges: number; components: number };
   } | null {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined) return null;
     return {
       name: o.name,
@@ -1369,11 +1343,11 @@ export class LabRenderer {
 
   /** 子网格数量（层级面板据此决定能不能展开、材质面板据此自动落到唯一的 mesh 上） */
   getSubMeshCount(index: number): number {
-    return this.objects[index]?.subMeshes.length ?? 0;
+    return this.state.objects[index]?.subMeshes.length ?? 0;
   }
 
   setObjectPos(index: number, axis: 0 | 1 | 2, v: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o !== undefined) o.pos[axis] = v;
   }
 
@@ -1382,7 +1356,7 @@ export class LabRenderer {
    * 单位边界容易出错，所以函数名直接把 Deg 写出来；旋转真源是 quat，改完会同步重建。
    */
   setObjectRotDeg(index: number, axis: 0 | 1 | 2, deg: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o !== undefined) {
       o.rot[axis] = (deg * Math.PI) / 180;
       o.quat = m4.eulerToQuat(o.rot[0], o.rot[1], o.rot[2]);
@@ -1391,7 +1365,7 @@ export class LabRenderer {
 
   /** gizmo 旋转：直接写入四元数，并把 rot 同步成欧拉角供面板显示 */
   setObjectQuat(index: number, q: m4.Quat): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o !== undefined) {
       o.quat = q;
       o.rot = m4.quatToEuler(q);
@@ -1401,15 +1375,15 @@ export class LabRenderer {
   // ===================== Gizmo 控制 API =====================
 
   setGizmoMode(mode: GizmoMode): void {
-    this.gizmoMode = mode;
+    this.state.gizmoMode = mode;
   }
 
   setGizmoSpace(space: GizmoSpace): void {
-    this.gizmoSpace = space;
+    this.state.gizmoSpace = space;
   }
 
   setGizmoActiveAxis(axis: number | null): void {
-    this.gizmoActiveAxis = axis;
+    this.state.gizmoActiveAxis = axis;
   }
 
   /**
@@ -1426,19 +1400,19 @@ export class LabRenderer {
         space: GizmoSpace;
       }
     | null {
-    if (this.selectedIndex === null) return null;
+    if (this.state.selectedIndex === null) return null;
     return {
       model: this.core.gizmoModel,
       k: this.core.gizmoK,
       origin: this.core.gizmoOrigin,
       axes: this.core.gizmoAxes,
-      mode: this.gizmoMode,
-      space: this.gizmoSpace,
+      mode: this.state.gizmoMode,
+      space: this.state.gizmoSpace,
     };
   }
 
   setObjectScale(index: number, v: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o !== undefined) o.scale = Math.max(0.01, v);
   }
 
@@ -1452,14 +1426,12 @@ export class LabRenderer {
    * gizmo 命中测试一次要投影上百个点（圆环采样），每次都读 getBoundingClientRect
    * 会在鼠标移动时反复触发布局计算，是悬停卡顿的主因。
    */
-  private cachedRect: DOMRect | null = null;
-  private cacheFrame = -1;
   private canvasRect(): DOMRect {
-    if (this.cachedRect === null || this.cacheFrame !== this.frameCounter) {
-      this.cachedRect = this.canvas.getBoundingClientRect();
-      this.cacheFrame = this.frameCounter;
+    if (this.state.cachedRect === null || this.state.cacheFrame !== this.state.frameCounter) {
+      this.state.cachedRect = this.canvas.getBoundingClientRect();
+      this.state.cacheFrame = this.state.frameCounter;
     }
-    return this.cachedRect;
+    return this.state.cachedRect;
   }
 
   /** 指针屏幕坐标 → 世界射线（near=o，远点用于求方向）。client 取 canvas 实时矩形换算 NDC */
@@ -1502,7 +1474,7 @@ export class LabRenderer {
    * 会清掉所有子网格的 override —— 换材质是一次显式重绑，局部覆盖再留着只会让人困惑。
    */
   setObjectMaterial(index: number, materialIndex: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined) return;
     o.materialIndex = materialIndex;
     for (const sm of o.subMeshes) {
@@ -1515,17 +1487,17 @@ export class LabRenderer {
 
   /** 挂上参数引用：材质 API 要按 id 回查共享材质。params 对象引用全程恒定（重置也是 Object.assign 就地改） */
   attachParams(p: LabParams): void {
-    this.params = p;
+    this.state.params = p;
   }
 
   /** 材质库下拉项：6 个共享材质 + 用户实例 */
   getMaterialLibrary(): MaterialRef[] {
-    return this.library.refs(this.params);
+    return this.state.library.refs(this.state.params);
   }
 
   /** 当前材质槽信息；越界或无该槽返回 null */
   getSlotMaterial(objIndex: number, subIndex: number): MaterialSlotInfo | null {
-    const o = this.objects[objIndex];
+    const o = this.state.objects[objIndex];
     const sm = o?.subMeshes[subIndex];
     if (o === undefined || sm === undefined) return null;
     return {
@@ -1535,7 +1507,7 @@ export class LabRenderer {
       meshName: sm.name,
       triangles: sm.indexCount / 3,
       materialId: sm.materialId,
-      materialName: this.library.nameOf(this.params, sm.materialId),
+      materialName: this.state.library.nameOf(this.state.params, sm.materialId),
       source: this.sourceOf(sm),
       hasOverride: sm.override !== null,
       state: this.resolveMaterial(sm),
@@ -1544,7 +1516,7 @@ export class LabRenderer {
 
   /** 把槽位换成材质库里已有的一条（共享或实例），并清掉本地覆盖 */
   assignSlotMaterial(objIndex: number, subIndex: number, id: string): void {
-    const sm = this.objects[objIndex]?.subMeshes[subIndex];
+    const sm = this.state.objects[objIndex]?.subMeshes[subIndex];
     if (sm === undefined) return;
     sm.materialId = id;
     sm.override = null;
@@ -1555,12 +1527,12 @@ export class LabRenderer {
    * 实例进库：其他 mesh 也能从下拉里选到它；改它不影响它的来源材质。
    */
   createSlotInstance(objIndex: number, subIndex: number): void {
-    const sm = this.objects[objIndex]?.subMeshes[subIndex];
+    const sm = this.state.objects[objIndex]?.subMeshes[subIndex];
     if (sm === undefined) return;
     const baseId = sm.materialId;
     const template = this.resolveMaterial(sm);
-    const name = this.library.nameOf(this.params, baseId);
-    const newId = this.library.createInstance(template, baseId, name);
+    const name = this.state.library.nameOf(this.state.params, baseId);
+    const newId = this.state.library.createInstance(template, baseId, name);
     sm.materialId = newId;
     sm.override = null;
   }
@@ -1570,7 +1542,7 @@ export class LabRenderer {
    * 用途：用户在共享材质上调参数时自动转覆盖 —— 这样「改这个 mesh」永远不会误伤全局。
    */
   ensureOverride(objIndex: number, subIndex: number): void {
-    const sm = this.objects[objIndex]?.subMeshes[subIndex];
+    const sm = this.state.objects[objIndex]?.subMeshes[subIndex];
     if (sm === undefined || sm.override !== null) return;
     sm.override = cloneMaterial(this.resolveMaterial(sm));
   }
@@ -1580,24 +1552,24 @@ export class LabRenderer {
    * 而共享材质的全局设置一点没动。
    */
   promoteOverride(objIndex: number, subIndex: number): void {
-    const sm = this.objects[objIndex]?.subMeshes[subIndex];
+    const sm = this.state.objects[objIndex]?.subMeshes[subIndex];
     if (sm === undefined || sm.override === null) return;
     const template = sm.override;
-    const name = this.library.nameOf(this.params, sm.materialId);
-    const newId = this.library.createInstance(template, sm.materialId, name);
+    const name = this.state.library.nameOf(this.state.params, sm.materialId);
+    const newId = this.state.library.createInstance(template, sm.materialId, name);
     sm.materialId = newId;
     sm.override = null;
   }
 
   /** 丢弃本地覆盖，回到库条目（共享或实例） */
   discardOverride(objIndex: number, subIndex: number): void {
-    const sm = this.objects[objIndex]?.subMeshes[subIndex];
+    const sm = this.state.objects[objIndex]?.subMeshes[subIndex];
     if (sm === undefined) return;
     sm.override = null;
   }
 
   renameMaterial(id: string, name: string): void {
-    this.library.rename(id, name);
+    this.state.library.rename(id, name);
   }
 
   /**
@@ -1605,11 +1577,11 @@ export class LabRenderer {
    * 免得一删实例就有一堆 mesh 掉回默认材质。
    */
   removeMaterial(id: string): void {
-    const inst = this.library.find(id);
+    const inst = this.state.library.find(id);
     if (inst === null) return; // 共享材质不可删
     const fallback = inst.baseId ?? sharedId(0);
-    if (!this.library.remove(id)) return;
-    for (const o of this.objects) {
+    if (!this.state.library.remove(id)) return;
+    for (const o of this.state.objects) {
       for (const sm of o.subMeshes) {
         if (sm.materialId === id) {
           sm.materialId = fallback;
@@ -1621,7 +1593,7 @@ export class LabRenderer {
 
   /** 实例清单（JSON 导出用） */
   exportInstances(): MaterialInstance[] {
-    return this.library.serialize();
+    return this.state.library.serialize();
   }
 
   /** 全场景材质槽绑定（JSON 导出用）：谁用了哪条材质、有没有局部覆盖；身份信息供重导对齐 */
@@ -1647,14 +1619,14 @@ export class LabRenderer {
       nodePath: string[];
       primitiveKey: string;
     }[] = [];
-    for (const o of this.objects) {
+    for (const o of this.state.objects) {
       if (o.removed) continue;
       for (const sm of o.subMeshes) {
         out.push({
           object: o.name,
           mesh: sm.name,
           materialId: sm.materialId,
-          materialName: this.library.nameOf(this.params, sm.materialId),
+          materialName: this.state.library.nameOf(this.state.params, sm.materialId),
           source: this.sourceOf(sm),
           override: sm.override === null ? null : cloneMaterial(sm.override),
           nodeId: sm.nodeId,
@@ -1668,12 +1640,12 @@ export class LabRenderer {
 
   /** 焊点（Merge Points）：按位置量化合并重合顶点，重映射索引 */
   weldObject(index: number): void {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o !== undefined) this.setMesh(index, weldMesh(o.mesh));
   }
 
   getMeshStats(index: number): { vertices: number; triangles: number; boundaryEdges: number; components: number } | null {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     return o === undefined ? null : meshStats(o.mesh);
   }
 
@@ -1707,7 +1679,7 @@ export class LabRenderer {
 
   /** 物体世界空间包围盒与包围球。双击/F 聚焦取景用（复用缓存，不遍历顶点） */
   getObjectBounds(index: number): { center: [number, number, number]; radius: number } | null {
-    const o = this.objects[index];
+    const o = this.state.objects[index];
     if (o === undefined) return null;
     const bb = this.worldAabb(o);
     const center: [number, number, number] = [
@@ -1740,8 +1712,8 @@ export class LabRenderer {
     dz /= dl;
 
     const best = new Map<number, number>(); // 物体索引 → 该物体最小命中 t
-    for (let i = 0; i < this.objects.length; i++) {
-      const o = this.objects[i]!;
+    for (let i = 0; i < this.state.objects.length; i++) {
+      const o = this.state.objects[i]!;
       if (!o.pickable || o.removed || !o.visible) continue;
       const M = o.modelMatrix;
       // 预剔除：先把局部 AABB 变到世界空间（8 个角点），射线打不中这个盒子就跳过逐三角形求交。
@@ -1813,8 +1785,8 @@ export class LabRenderer {
   /** 画布尺寸变更：委托引擎核心重建 HDR/AUX/Depth 纹理与后处理 bind group（ADR-001） */
   resize(width: number, height: number): void {
     this.core.resize(width, height);
-    this.stats.width = this.core.width;
-    this.stats.height = this.core.height;
+    this.state.stats.width = this.core.width;
+    this.state.stats.height = this.core.height;
   }
 
   private packLights(p: LabParams, time: number): void {
@@ -1988,9 +1960,9 @@ export class LabRenderer {
 
   /** 高亮描边用的材质：指定了子网格就取那一条的生效材质，否则取第 0 条 */
   private highlightMaterial(objIndex: number, sub: number | null): MaterialState {
-    const o = this.objects[objIndex];
+    const o = this.state.objects[objIndex];
     const sm = o?.subMeshes[sub ?? 0] ?? o?.subMeshes[0];
-    return sm === undefined ? this.params.materials[0]! : this.resolveMaterial(sm);
+    return sm === undefined ? this.state.params.materials[0]! : this.resolveMaterial(sm);
   }
 
   private packMaterial(dst: Float32Array, base: number, m: MaterialState): void {
@@ -2030,19 +2002,19 @@ export class LabRenderer {
    * （ADR-001：编辑器是消费者，不内嵌渲染器）。相机矩阵与 4-pass 命令编码都在 core 内完成。
    */
   render(p: LabParams, camera: CameraState, time: number, dpr: number): void {
-    this.params = p; // 引用恒定，材质 API 靠它回查共享材质
-    this.frameCounter++; // canvas 矩形缓存按帧刷新
+    this.state.params = p; // 引用恒定，材质 API 靠它回查共享材质
+    this.state.frameCounter++; // canvas 矩形缓存按帧刷新
     // 动画推进用的 dt（首帧为 0，避免大跳变）；夹取到 [0,0.1] 防卡顿后暴冲
-    const dt = this.lastFrameTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - this.lastFrameTime));
-    this.lastFrameTime = time;
+    const dt = this.state.lastFrameTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - this.state.lastFrameTime));
+    this.state.lastFrameTime = time;
 
     // ---- CPU 端装箱：材质 / 变换 / 蒙皮（编辑器语义）----
     this.packLights(p, time);
     this.packToon(p);
     this.packPost(p);
 
-    for (let i = 0; i < this.objects.length; i++) {
-      const o = this.objects[i]!;
+    for (let i = 0; i < this.state.objects.length; i++) {
+      const o = this.state.objects[i]!;
       if (o.removed) continue; // 墓碑：不画不拾取，不占槽位
       // 材质按「子网格」装箱：每条子网格一个槽，各自解析 override > instance > shared。
       // 解析结果存进 resolvedBySlot，绘制阶段直接读 —— 同一子网格每帧只解析一次。
@@ -2079,11 +2051,11 @@ export class LabRenderer {
 
     // 悬停高亮的 toon / material：绿色细描边（与选中同规格，只是换个颜色）
     if (
-      this.hoveredIndex !== null &&
-      this.hoveredIndex !== this.selectedIndex &&
-      this.hoverBindGroup !== null
+      this.state.hoveredIndex !== null &&
+      this.state.hoveredIndex !== this.state.selectedIndex &&
+      this.state.hoverBindGroup !== null
     ) {
-      const o = this.objects[this.hoveredIndex];
+      const o = this.state.objects[this.state.hoveredIndex];
       if (o !== undefined) {
         this.hoverToonData.set(this.toonData);
         this.hoverToonData[16] = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.core.height) / 1080);
@@ -2093,7 +2065,7 @@ export class LabRenderer {
         this.hoverToonData[22] = c[2];
         this.device.queue.writeBuffer(this.core.hoverToonBuf, 0, this.hoverToonData);
 
-        const m = this.highlightMaterial(this.hoveredIndex, this.hoveredSub);
+        const m = this.highlightMaterial(this.state.hoveredIndex, this.state.hoveredSub);
         this.packMaterial(this.hoverMatData, 0, m);
         this.hoverMatData[17] = Math.max((this.hoverMatData[17] ?? 0) * 1.1, 0.8);
         this.device.queue.writeBuffer(this.core.hoverMatBuf, 0, this.hoverMatData);
@@ -2101,8 +2073,8 @@ export class LabRenderer {
     }
 
     // 选中高亮的 toon / material：白色细描边，仅比原生墨线轻微加强（细腻优先，不糊轮廓）
-    if (this.selectedIndex !== null && this.selBindGroup !== null) {
-      const o = this.objects[this.selectedIndex];
+    if (this.state.selectedIndex !== null && this.state.selBindGroup !== null) {
+      const o = this.state.objects[this.state.selectedIndex];
       if (o !== undefined) {
         this.selToonData.set(this.toonData);
         const boosted = Math.max((this.toonData[16] ?? 0) * 1.15, (2.5 * this.core.height) / 1080);
@@ -2113,7 +2085,7 @@ export class LabRenderer {
         this.selToonData[22] = c[2];
         this.device.queue.writeBuffer(this.core.selToonBuf, 0, this.selToonData);
 
-        const m = this.highlightMaterial(this.selectedIndex, this.selectedSub);
+        const m = this.highlightMaterial(this.state.selectedIndex, this.state.selectedSub);
         this.packMaterial(this.selMatData, 0, m);
         this.selMatData[17] = Math.max((this.selMatData[17] ?? 0) * 1.1, 0.8);
         this.device.queue.writeBuffer(this.core.selMatBuf, 0, this.selMatData);
@@ -2121,31 +2093,31 @@ export class LabRenderer {
     }
 
     // ---- 构造 RenderFrameInput：一份已完全解析的帧 ----
-    const objects: CoreObjectDraw[] = this.objects.map((o, i) => ({
+    const objects: CoreObjectDraw[] = this.state.objects.map((o, i) => ({
       vertexBuffer: o.vertexBuffer,
       skinVb: o.skinVb,
       indexBuffer: o.indexBuffer,
       visible: o.visible && !o.removed,
       subMeshes: o.subMeshes.map((sm, s) => {
         const slot = o.slotBase + s;
-        const mat = this.resolvedBySlot[slot] ?? this.params.materials[0]!;
+        const mat = this.resolvedBySlot[slot] ?? this.state.params.materials[0]!;
         return {
           indexStart: sm.indexStart,
           indexCount: sm.indexCount,
           visible: sm.visible,
-          bindGroup: this.bindGroups[i]?.[s],
+          bindGroup: this.state.bindGroups[i]?.[s],
           outline: mat.outlineScale > 0.001,
         } satisfies CoreSubMeshDraw;
       }),
     }));
 
     // 先快照高亮 / 选中状态，避免在三元表达式内反复读取 this.x（exactOptionalPropertyTypes 下更稳）
-    const selIdx = this.selectedIndex;
-    const selSub = this.selectedSub;
-    const hovIdx = this.hoveredIndex;
-    const hovSub = this.hoveredSub;
-    const selBg = this.selBindGroup;
-    const hovBg = this.hoverBindGroup;
+    const selIdx = this.state.selectedIndex;
+    const selSub = this.state.selectedSub;
+    const hovIdx = this.state.hoveredIndex;
+    const hovSub = this.state.hoveredSub;
+    const selBg = this.state.selBindGroup;
+    const hovBg = this.state.hoverBindGroup;
     const highlight: CoreHighlight = {
       selected:
         selIdx !== null && selBg !== null
@@ -2159,11 +2131,11 @@ export class LabRenderer {
 
     let gizmo: CoreGizmo | null = null;
     if (selIdx !== null) {
-      const o = this.objects[selIdx];
+      const o = this.state.objects[selIdx];
       if (o !== undefined && !o.removed && o.visible) {
         const origin: [number, number, number] = [o.pos[0], o.pos[1], o.pos[2]];
-        const q: m4.Quat = this.gizmoSpace === 'local' ? o.quat : [0, 0, 0, 1];
-        gizmo = { origin, quat: q, mode: this.gizmoMode, activeAxis: this.gizmoActiveAxis };
+        const q: m4.Quat = this.state.gizmoSpace === 'local' ? o.quat : [0, 0, 0, 1];
+        gizmo = { origin, quat: q, mode: this.state.gizmoMode, activeAxis: this.state.gizmoActiveAxis };
       }
     }
 
@@ -2191,7 +2163,7 @@ export class LabRenderer {
     };
 
     this.core.drawFrame(input);
-    this.stats.drawCalls = input.stats.drawCalls;
+    this.state.stats.drawCalls = input.stats.drawCalls;
   }
 
   /**
@@ -2211,16 +2183,16 @@ export class LabRenderer {
     // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图
     this.whiteTex.destroy();
     this.charTexture?.destroy();
-    for (const o of this.objects) {
+    for (const o of this.state.objects) {
       if (o.removed) continue; // 墓碑在 removeObject 时已释放，跳过避免二次 destroy
       o.vertexBuffer.destroy();
       o.indexBuffer.destroy();
       if (o.ownsTexture) o.texture.destroy();
     }
-    this.objects.length = 0;
-    this.bindGroups = [];
+    this.state.objects.length = 0;
+    this.state.bindGroups = [];
 
-    this.selBindGroup = null;
-    this.hoverBindGroup = null;
+    this.state.selBindGroup = null;
+    this.state.hoverBindGroup = null;
   }
 }
