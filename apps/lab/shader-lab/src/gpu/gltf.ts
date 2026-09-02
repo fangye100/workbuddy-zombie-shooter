@@ -26,6 +26,7 @@
  */
 
 import type { MeshData } from './geometry';
+import * as m4 from './math';
 import { nameAllocator } from '../naming';
 
 export const VF = 15;
@@ -85,6 +86,69 @@ export interface GltfResult {
   nodeTree: GltfNodeTree[];
   /** 第一张内嵌 image 的字节；没有则为 null。主线程里用 createImageBitmap 解码 */
   image: Blob | null;
+
+  /**
+   * 骨骼数据（skinned mesh 才有，否则 null）。
+   * 约定全部基于 glTF 规范：joint 节点是世界空间（场景根空间）的，inverseBind 也是；
+   * 渲染时 jointMatrix_i = jointWorld_i * inverseBind_i，顶点已是「mesh 节点世界矩阵烘过的」
+   * 场景空间坐标，二者同空间，公式自洽（详见 renderer 的 updateSkinning）。
+   */
+  skeleton: SkeletonData | null;
+  /** 动画片段（skinned+animated 才有，否则空数组） */
+  animations: AnimClip[];
+}
+
+/** 单根骨骼的本地变换（与 glTF node 的 T/R/S 同义；无 T/R/S 时为零向量/单位四元数） */
+export interface NodeLocal {
+  t: [number, number, number];
+  r: [number, number, number, number];
+  s: [number, number, number];
+}
+
+/**
+ * 打包好的骨骼 + 动画驱动数据。渲染器直接消费，不需要再回去翻 json。
+ * joints 是节点索引（指向 nodesLocal / parent 数组）；inverseBind 按 joints 同序。
+ */
+export interface SkeletonData {
+  /** 该 skin 的关节节点索引（glTF skin.joints），length = 关节数 */
+  joints: number[];
+  /** 关节显示名（Mixamo/HumanIK 约定名：Hips/Spine/...），用于权重可视化与 Mixamo 重定向映射 */
+  jointNames: (string | null)[];
+  /** inverseBindMatrices，列主序，length = joints.length * 16 */
+  inverseBind: Float32Array;
+  /** 每个节点的父节点下标，-1 = 场景根 */
+  parent: number[];
+  /** 每个节点的初始本地变换（bind pose 来源） */
+  locals: NodeLocal[];
+  /** 场景根节点下标（parent === -1 的节点） */
+  roots: number[];
+  /**
+   * 顶点规整化矩阵 T（列主序 mat4）：把「未规整化的场景根空间」映射到
+   * 「顶点实际所在空间」(v' = T·v)。由上面的轴旋转 + 居中 + 缩放构成，
+   * 蒙皮求值时会用它共轭关节矩阵，否则蒙皮与顶点不在同一空间 → 整体错位。
+   * 已是 Y-up 居中模型时退化为单位阵。
+   */
+  normalization: Float32Array;
+}
+
+/** 一段动画轨道：驱动某个节点的某个变换路径 */
+export interface AnimTrack {
+  node: number;
+  path: 'translation' | 'rotation' | 'scale';
+  /** 关键帧时间（秒），升序 */
+  times: Float32Array;
+  /** 关键帧值，按 track 平铺：rotation=stride4（四元数 xyzw），translation/scale=stride3 */
+  values: Float32Array;
+  stride: number;
+  interpolation: 'LINEAR' | 'STEP';
+}
+
+/** 一个动画片段（如 Mixamo 的 Idle / Walk / Run / Attack） */
+export interface AnimClip {
+  name: string;
+  /** 时长（秒）= 各 sampler 最大关键帧时间 */
+  duration: number;
+  tracks: AnimTrack[];
 }
 
 const COMPONENT_SIZE: Record<number, number> = {
@@ -122,6 +186,19 @@ interface GltfJson {
   /** 场景图：模型分件 / Z-up 转换就藏在这里的变换上，不能忽略 */
   nodes?: NodeJson[];
   scenes?: { nodes?: number[] }[];
+  /** 骨骼：joints 节点索引数组 + inverseBindMatrices 访问器（列主序 mat4，按 joints 同序） */
+  skins?: {
+    name?: string;
+    joints: number[];
+    inverseBindMatrices?: number;
+    skeleton?: number;
+  }[];
+  /** 动画：channels 指向节点 + 变换路径，samplers 指向关键帧输入/输出 */
+  animations?: {
+    name?: string;
+    channels: { sampler: number; target: { node: number; path: string } }[];
+    samplers: { input: number; output: number; interpolation?: string }[];
+  }[];
   materials?: {
     name?: string;
     pbrMetallicRoughness?: { baseColorTexture?: { index?: number } };
@@ -231,6 +308,42 @@ function readIndices(json: GltfJson, bin: ArrayBuffer, binStart: number, index: 
     if (compType === 5125) out[i] = view.getUint32(e, true);
     else if (compType === 5121) out[i] = view.getUint8(e);
     else out[i] = view.getUint16(e, true);
+  }
+  return out;
+}
+
+/**
+ * 读整数分量访问器（JOINTS_0 专用）。JOINTS 是整数索引，绝不归一化，
+ * 所以不能用 readFloats（它会把归一化的整数当 0..1）。compType 只可能是
+ * 5121(u8) / 5123(u16) / 5125(u32)；每顶点 comps 个分量（JOINTS 固定 4）。
+ * 返回 Float32Array（*comps 长度），方便与 WEIGHTS 同序拼接、零拷贝合并。
+ */
+function readInts(
+  json: GltfJson,
+  bin: ArrayBuffer,
+  binStart: number,
+  index: number,
+  comps: number,
+): Float32Array | null {
+  const acc = json.accessors?.[index];
+  if (acc === undefined) return null;
+  const bv = json.bufferViews?.[acc.bufferView ?? -1];
+  if (bv === undefined) return null;
+  const compType = acc.componentType ?? 0;
+  const count = acc.count ?? 0;
+  const stride = bv.byteStride ?? comps * COMPONENT_SIZE[compType]!;
+  const start = binStart + (bv.byteOffset ?? 0) + (acc.byteOffset ?? 0);
+  const view = new DataView(bin);
+  const out = new Float32Array(count * comps);
+  for (let i = 0; i < count; i++) {
+    const e = start + i * stride;
+    for (let c = 0; c < comps; c++) {
+      const o = e + c * COMPONENT_SIZE[compType]!;
+      out[i * comps + c] =
+        compType === 5125 ? view.getUint32(o, true)
+        : compType === 5121 ? view.getUint8(o)
+        : view.getUint16(o, true);
+    }
   }
   return out;
 }
@@ -348,6 +461,8 @@ interface NodeJson {
   translation?: number[];
   rotation?: number[];
   scale?: number[];
+  /** 该节点引用的 skin 下标（glTF node.skin）。有 skin 的节点通常是蒙皮网格节点 */
+  skin?: number;
   /** DCC / 导出器可写入的自定义数据。绑定继承的第一层防护（稳定节点 ID）就读这里 */
   extras?: Record<string, unknown>;
 }
@@ -492,6 +607,8 @@ export interface SceneGraph {
     nodeName: string;
     /** 场景根 → 该节点的名字链，leaf 在最后 */
     path: string[];
+    /** 该节点引用的 skin 下标（glTF node.skin），无则 undefined */
+    skin: number | undefined;
   }[];
   /**
    * 显示树（subStart/subCount 此阶段为 -1/0 占位，parseGlb 收集 primitive 时回填）。
@@ -526,6 +643,7 @@ export function collectSceneGraph(json: GltfJson): SceneGraph {
         nodeId: extraNodeId(n) ?? `auto-${i}`,
         nodeName: name,
         path,
+        skin: n.skin,
       });
       seen.add(n.mesh);
       hasMesh = true;
@@ -560,7 +678,7 @@ export function collectSceneGraph(json: GltfJson): SceneGraph {
   for (let i = 0; i < meshes.length; i++) {
     if (seen.has(i)) continue;
     const name = meshes[i]?.name?.trim() || `mesh_${i}`;
-    out.push({ mesh: i, m: identity4(), nodeIndex: -1, nodeId: `auto-mesh-${i}`, nodeName: name, path: [name] });
+    out.push({ mesh: i, m: identity4(), nodeIndex: -1, nodeId: `auto-mesh-${i}`, nodeName: name, path: [name], skin: undefined });
     tree.push({ name, subStart: -1, subCount: 0, children: [] });
   }
   return { instances: out, tree };
@@ -627,6 +745,10 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     nodeName: string;
     primitiveKey: string;
     primitiveIndex: number;
+    /** 蒙皮关节索引（4/顶点，0..nJoints-1）；无 skin 的 primitive 为 null */
+    joints: Uint16Array | null;
+    /** 蒙皮权重（4/顶点，已归一化）；无 skin 为 null */
+    weights: Float32Array | null;
   }
   const chunks: PrimChunk[] = [];
   const primNames = nameAllocator(); // 同名 primitive（同材质被复用）自动加序号，避免层级树里分不清
@@ -664,6 +786,24 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
         attr.TEXCOORD_0 === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.TEXCOORD_0]!);
       const rawCol =
         attr.COLOR_0 === undefined ? null : readFloats(json, bin, 0, json.accessors?.[attr.COLOR_0]!);
+
+      // 蒙皮：仅当该节点引用了 skin 且 primitive 带 JOINTS_0 / WEIGHTS_0 才读取。
+      // JOINTS_0 的值直接索引 skin.joints[] 与 inverseBind[]（glTF 规范），渲染器按同序建调色板，无需重映射。
+      let joints: Uint16Array | null = null;
+      let weights: Float32Array | null = null;
+      if (inst.skin !== undefined) {
+        const ji = attr.JOINTS_0;
+        const wi = attr.WEIGHTS_0;
+        if (ji !== undefined && wi !== undefined) {
+          const jf = readInts(json, bin, 0, ji, 4);
+          const wf = readFloats(json, bin, 0, json.accessors?.[wi]!);
+          if (jf !== null && wf !== null) {
+            joints = new Uint16Array(jf); // f32 暂存 → u16（JOINTS 都是小整数）
+            weights = wf;
+          }
+        }
+      }
+
       let ind =
         prim.indices === undefined ? null : readIndices(json, bin, 0, prim.indices);
       if (ind === null) {
@@ -722,6 +862,8 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
         nodeName: inst.nodeName,
         primitiveKey,
         primitiveIndex: pi,
+        joints,
+        weights,
       });
       base += count;
     }
@@ -735,6 +877,27 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   const uvArr = new Float32Array(base * 2);
   const colArr = new Float32Array(base * 4);
   const idxArr = new Uint32Array(chunks.reduce((n, c) => n + c.ind.length, 0));
+
+  // 蒙皮输出：仅当任一 primitive 带 joints 才分配（否则保持 null → 渲染器走 identity 蒙皮）。
+  // 调色板末尾永远留一个「恒等关节」(index = jointCount)，未蒙皮的 primitive 顶点全部绑到它，
+  // 既不随骨骼运动、也不会因权重全 0 而坍缩。
+  let skinJointCount = 0;
+  for (const inst of instances) {
+    if (inst.skin !== undefined) {
+      const sk = json.skins?.[inst.skin];
+      if (sk !== undefined) { skinJointCount = sk.joints.length; break; }
+    }
+  }
+  let jointsOut: Uint16Array | null = null;
+  let weightsOut: Float32Array | null = null;
+  {
+    let hasSkin = false;
+    for (const c of chunks) if (c.joints !== null) { hasSkin = true; break; }
+    if (hasSkin) {
+      jointsOut = new Uint16Array(base * 4);
+      weightsOut = new Float32Array(base * 4);
+    }
+  }
 
   let vOff = 0;
   let iOff = 0;
@@ -775,10 +938,25 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
       }
     }
     for (let i = 0; i < c.ind.length; i++) idxArr[iOff + i] = vOff + c.ind[i]!;
+    // 蒙皮数据：有则原样拷贝；无（该 primitive 未蒙皮）则绑到末尾的恒等关节，保持静止
+    if (jointsOut !== null && weightsOut !== null) {
+      if (c.joints !== null && c.weights !== null) {
+        jointsOut.set(c.joints, vOff * 4);
+        weightsOut.set(c.weights, vOff * 4);
+      } else {
+        for (let i = 0; i < count; i++) {
+          jointsOut[(vOff + i) * 4] = skinJointCount; // 恒等关节
+          weightsOut[(vOff + i) * 4] = 1;
+        }
+      }
+    }
     vOff += count;
     iOff += c.ind.length;
   }
 
+  // 规整化矩阵 T（顶点用的同一把尺子；蒙皮求值时用它共轭关节矩阵，否则蒙皮错位）
+  let normMat: m4.Mat4 = m4.mat4();
+  let zUp = false;
   // ---- 轴检测：生成管线常出 Z-up（高度在 Z）。zSpan 明显大于 ySpan 就按 Z-up 转 ----
   {
     let minY = Infinity, maxY = -Infinity;
@@ -789,7 +967,8 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
       minZ = Math.min(minZ, posArr[i + 2]!);
       maxZ = Math.max(maxZ, posArr[i + 2]!);
     }
-    if (maxZ - minZ > (maxY - minY) * 1.5) {
+    zUp = (maxZ - minZ) > (maxY - minY) * 1.5;
+    if (zUp) {
       // (x, y, z) → (x, -z, y)，det=+1 纯旋转，绕序与法线方向都保持不变
       // 混元产物脚底在 z-max（+Z 朝下），必须带这个 180° X 翻转才正立；
       // 与 export_labmesh.to_y_up / verify_alignment.py 的归一化保持同一把尺子
@@ -823,6 +1002,28 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   const cz = (minZ + maxZ) / 2;
   const height = Math.max(1e-5, maxY - minY);
   const s = targetHeight / height;
+
+  // 规整化矩阵 T：v' = s·(R·v − center) = Tc(−s·center) · S(s) · R（v 齐次）。
+  // R 为 Z-up→Y-up 旋转（或 I），与上方顶点旋转一致；蒙皮求值端会用它共轭关节矩阵。
+  {
+    const R = m4.mat4();
+    if (zUp) {
+      R[0] = 1; R[1] = 0; R[2] = 0; R[3] = 0;
+      R[4] = 0; R[5] = 0; R[6] = -1; R[7] = 0;
+      R[8] = 0; R[9] = 1; R[10] = 0; R[11] = 0;
+      R[12] = 0; R[13] = 0; R[14] = 0; R[15] = 1;
+    } else {
+      R[0] = 1; R[5] = 1; R[10] = 1; R[15] = 1;
+    }
+    const S = m4.mat4();
+    S[0] = s; S[5] = s; S[10] = s; S[15] = 1;
+    const Tc = m4.mat4();
+    Tc[0] = 1; Tc[5] = 1; Tc[10] = 1; Tc[15] = 1;
+    Tc[12] = -s * cx; Tc[13] = -s * minY; Tc[14] = -s * cz;
+    const SR = m4.mat4();
+    m4.multiply(SR, S, R);
+    m4.multiply(normMat, Tc, SR);
+  }
 
   const verts = new Float32Array(posArr.length + norArr.length + smooth.length + (posArr.length / 3) * 6);
   for (let i = 0; i < base; i++) {
@@ -891,8 +1092,79 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     graph.tree = fill(graph.tree);
   }
 
+  // ---- 骨骼（skinned mesh 才有）----
+  // 关节的世界矩阵用「节点父子链累乘」算（与 glTF 规范一致），inverseBind 也是场景根空间，
+  // 与上面烘进顶点的 mesh 节点世界矩阵同空间 → jointMatrix = jointWorld * inverseBind 自洽。
+  let skeleton: SkeletonData | null = null;
+  {
+    const firstSkinInst = instances.find((i) => i.skin !== undefined);
+    if (firstSkinInst !== undefined) {
+      const sk = json.skins?.[firstSkinInst.skin!];
+      if (sk !== undefined && sk.joints.length > 0) {
+        const ibm = sk.inverseBindMatrices !== undefined
+          ? readFloats(json, bin, 0, json.accessors?.[sk.inverseBindMatrices]!)
+          : null;
+        const nodeCount = json.nodes?.length ?? 0;
+        const parent = new Array<number>(nodeCount).fill(-1);
+        const locals: NodeLocal[] = [];
+        for (let i = 0; i < nodeCount; i++) {
+          const n = json.nodes?.[i];
+          locals.push({
+            t: (n?.translation as [number, number, number]) ?? [0, 0, 0],
+            r: (n?.rotation as [number, number, number, number]) ?? [0, 0, 0, 1],
+            s: (n?.scale as [number, number, number]) ?? [1, 1, 1],
+          });
+          for (const c of n?.children ?? []) if (c >= 0 && c < nodeCount) parent[c] = i;
+        }
+        const roots: number[] = [];
+        for (let i = 0; i < nodeCount; i++) if (parent[i] === -1) roots.push(i);
+        skeleton = {
+          joints: sk.joints.slice(),
+          jointNames: sk.joints.map((j) => json.nodes?.[j]?.name ?? null),
+          inverseBind: ibm ?? new Float32Array(sk.joints.length * 16),
+          parent,
+          locals,
+          roots,
+          normalization: normMat,
+        };
+      }
+    }
+  }
+
+  // ---- 动画（skinned + animated 才有）----
+  const animations: AnimClip[] = [];
+  for (const a of json.animations ?? []) {
+    const tracks: AnimTrack[] = [];
+    let duration = 0;
+    for (const ch of a.channels) {
+      const samp = a.samplers[ch.sampler];
+      if (samp === undefined) continue;
+      const inAcc = json.accessors?.[samp.input];
+      const outAcc = json.accessors?.[samp.output];
+      if (inAcc === undefined || outAcc === undefined) continue;
+      const times = readFloats(json, bin, 0, inAcc);
+      const values = readFloats(json, bin, 0, outAcc);
+      if (times === null || values === null) continue;
+      const path = ch.target.path;
+      if (path !== 'translation' && path !== 'rotation' && path !== 'scale') continue;
+      const stride = path === 'rotation' ? 4 : 3;
+      tracks.push({
+        node: ch.target.node,
+        path,
+        times,
+        values,
+        stride,
+        interpolation: samp.interpolation === 'STEP' ? 'STEP' : 'LINEAR',
+      });
+      if (times.length > 0) duration = Math.max(duration, times[times.length - 1]!);
+    }
+    if (tracks.length > 0) {
+      animations.push({ name: a.name?.trim() || `clip_${animations.length}`, duration, tracks });
+    }
+  }
+
   return {
-    mesh: { vertices: verts, indices: idxArr },
+    mesh: { vertices: verts, indices: idxArr, joints: jointsOut, weights: weightsOut },
     name: meshName ?? img?.name ?? '',
     vertices: base,
     triangles: idxArr.length / 3,
@@ -900,5 +1172,7 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     subMeshes,
     nodeTree: graph.tree,
     image,
+    skeleton,
+    animations,
   };
 }

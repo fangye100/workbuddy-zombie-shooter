@@ -5,6 +5,8 @@ import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode, type GizmoSpace } from './gizmo';
 import {
   VERTEX_LAYOUT,
+  SKIN_LAYOUT,
+  packSkin,
   createBox,
   createCapsule,
   createCylinder,
@@ -35,7 +37,21 @@ import {
   type MeshNodeStub,
   type PrimitiveBinding,
 } from './binding';
-import type { GltfNodeTree, SubMeshRange } from './gpu/gltf';
+import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from './gpu/gltf';
+import {
+  createSkinState,
+  evalJointMatrices,
+  advance as skinAdvance,
+  clipNames,
+  currentClip,
+  selectClip,
+  play as skinPlay,
+  pause as skinPause,
+  setLoop as skinSetLoop,
+  setSpeed as skinSetSpeed,
+  seek as skinSeek,
+  type SkinState,
+} from './skin';
 
 /** 选中高亮色（白线轮廓），纯色不经过 tonemap，要够亮才压得住暗背景 */
 const SEL_COLOR = '#FFFFFF';
@@ -140,6 +156,20 @@ interface SceneObject {
    * （artist 删掉又补回的 mesh 仍能接回原材质）。匹配规则见 binding.ts。
    */
   bindingOrphans: MeshNodeBinding[];
+  /** 骨骼（skinned mesh 才有）；非蒙皮物体为 null */
+  skeleton: SkeletonData | null;
+  /** 动画片段（skinned+animated 才有） */
+  animations: AnimClip[];
+  /** 蒙皮关节矩阵 storage buffer（binding 7），长度 = skinCount * 64 字节 */
+  skinBuffer: GPUBuffer | null;
+  /** 蒙皮关节数 + 1（恒等关节）；非蒙皮为 1 */
+  skinCount: number;
+  /** 蒙皮顶点缓冲（slot 1）：joints(u16×4) + weights(f32×4) */
+  skinVb: GPUBuffer | null;
+  /** 逐帧求值的关节矩阵暂存（CPU 侧，写进 skinBuffer 前的中转） */
+  skinScratch: Float32Array;
+  /** 动画播放状态；有骨骼时创建，否则 null */
+  skinState: SkinState | null;
 }
 
 export interface CameraState {
@@ -225,7 +255,49 @@ function localBounds(m: MeshData): { localMin: [number, number, number]; localMa
 
 /** 深拷贝一份网格，避免多个物体共享同一 MeshData 时焊点互相污染 */
 function cloneMesh(m: MeshData): MeshData {
-  return { vertices: new Float32Array(m.vertices), indices: new Uint32Array(m.indices) };
+  const copy: MeshData = {
+    vertices: new Float32Array(m.vertices),
+    indices: new Uint32Array(m.indices),
+  };
+  if (m.joints !== null && m.joints !== undefined) copy.joints = new Uint16Array(m.joints);
+  if (m.weights !== null && m.weights !== undefined) copy.weights = new Float32Array(m.weights);
+  return copy;
+}
+
+/** 非蒙皮物体的默认皮肤字段：1 个恒等关节 + 全 1 权重缓冲，蒙皮结果 = 顶点原样 */
+function defaultSkinFields(device: GPUDevice, vertexCount: number): {
+  skeleton: SkeletonData | null;
+  animations: AnimClip[];
+  skinBuffer: GPUBuffer;
+  skinCount: number;
+  skinVb: GPUBuffer;
+  skinScratch: Float32Array;
+  skinState: SkinState | null;
+} {
+  const skinBuffer = device.createBuffer({
+    label: 'skin-id',
+    size: 64, // 1 mat4
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  // 恒等关节矩阵
+  const id = new Float32Array(16);
+  id[0] = 1; id[5] = 1; id[10] = 1; id[15] = 1;
+  device.queue.writeBuffer(skinBuffer, 0, id);
+  const skinVb = device.createBuffer({
+    label: 'skin-vb-id',
+    size: Math.max(24, vertexCount * 24),
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(skinVb, 0, packSkin(null, null, vertexCount));
+  return {
+    skeleton: null,
+    animations: [],
+    skinBuffer,
+    skinCount: 1,
+    skinVb,
+    skinScratch: new Float32Array(16),
+    skinState: null,
+  };
 }
 
 /** 点是否在 AABB 内（射线原点落在盒内时 rayAabb 会退化，需要这条兜底） */
@@ -407,6 +479,8 @@ export class LabRenderer {
   private height = 1;
   /** 帧序号：canvas 矩形缓存按帧失效 */
   private frameCounter = 0;
+  /** 上一帧时间（秒），用于动画推进的 dt；-1 表示首帧 */
+  private lastFrameTime = -1;
 
   stats: RenderStats = { width: 0, height: 0, drawCalls: 0, triangles: 0 };
 
@@ -520,6 +594,7 @@ export class LabRenderer {
         selected: false,
         nodeTree: [],
         bindingOrphans: [],
+        ...defaultSkinFields(this.device, mesh.vertices.length / 15),
       });
       triangles += mesh.indices.length / 3;
     }
@@ -573,6 +648,8 @@ export class LabRenderer {
         // 5/6：albedo 贴图。非角色物体绑 1x1 白图，角色有贴图时换真图
         { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
         { binding: 6, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+        // 7：关节矩阵调色板（storage 只读，仅顶点阶段用）
+        { binding: 7, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       ],
     });
 
@@ -581,7 +658,7 @@ export class LabRenderer {
     this.mainPipeline = this.device.createRenderPipeline({
       label: 'scene-main',
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout] }),
-      vertex: { module: sceneModule, entryPoint: 'vs_main', buffers: [VERTEX_LAYOUT] },
+      vertex: { module: sceneModule, entryPoint: 'vs_main', buffers: [VERTEX_LAYOUT, SKIN_LAYOUT] },
       fragment: { module: sceneModule, entryPoint: 'fs_main', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none', frontFace: 'ccw' },
       depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
@@ -590,7 +667,7 @@ export class LabRenderer {
     this.outlinePipeline = this.device.createRenderPipeline({
       label: 'scene-outline',
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout] }),
-      vertex: { module: sceneModule, entryPoint: 'vs_outline', buffers: [VERTEX_LAYOUT] },
+      vertex: { module: sceneModule, entryPoint: 'vs_outline', buffers: [VERTEX_LAYOUT, SKIN_LAYOUT] },
       fragment: { module: sceneModule, entryPoint: 'fs_outline', targets },
       // inverted hull：只画背面，让外扩的壳只在轮廓外圈露出一条边
       primitive: { topology: 'triangle-list', cullMode: 'front', frontFace: 'ccw' },
@@ -732,6 +809,7 @@ export class LabRenderer {
         { binding: 4, resource: { buffer: this.transformBuf, offset: xformBase, size: 64 } },
         { binding: 5, resource: tex.createView() },
         { binding: 6, resource: this.sampler },
+        { binding: 7, resource: { buffer: o.skinBuffer!, offset: 0, size: o.skinCount * 64 } },
       ],
     });
   }
@@ -818,6 +896,7 @@ export class LabRenderer {
         { binding: 4, resource: { buffer: this.transformBuf, offset: base, size: 64 } },
         { binding: 5, resource: (o.texture ?? this.whiteTex).createView() },
         { binding: 6, resource: this.sampler },
+        { binding: 7, resource: { buffer: o.skinBuffer!, offset: 0, size: o.skinCount * 64 } },
       ],
     });
   }
@@ -856,6 +935,8 @@ export class LabRenderer {
     bitmap: ImageBitmap | null,
     ranges: SubMeshRange[] | null = null,
     tree: GltfNodeTree[] | null = null,
+    skeleton: SkeletonData | null = null,
+    animations: AnimClip[] = [],
   ): void {
     const o = this.objects[this.characterIndex];
     if (o === undefined || o.removed) return;
@@ -871,7 +952,11 @@ export class LabRenderer {
       o.useTex = bitmap !== null;
     }
 
-    this.uploadMesh(o, m);
+    // 蒙皮字段：先挂上骨架/动画，再上传网格（uploadMesh 按 skeleton 定关节缓冲大小）
+    o.skeleton = mesh === null ? null : skeleton;
+    o.animations = mesh === null ? [] : animations;
+    o.skinState = o.skeleton !== null ? createSkinState(o.skeleton, o.animations) : null;
+    this.uploadMesh(o, m, o.skeleton);
 
     this.charTexture?.destroy();
     this.charTexture = bitmap === null ? null : this.createTextureFromBitmap(bitmap);
@@ -1032,7 +1117,7 @@ export class LabRenderer {
    * 深拷贝是必须的：多个物体共享同一 MeshData 时，焊点会互相污染。
    * bind group 不需要重建 —— 它只引用 uniform，不引用 vb/ib。
    */
-  private uploadMesh(o: SceneObject, mesh: MeshData): void {
+  private uploadMesh(o: SceneObject, mesh: MeshData, skeleton: SkeletonData | null): void {
     o.vertexBuffer.destroy();
     o.indexBuffer.destroy();
     const cloned = cloneMesh(mesh);
@@ -1053,13 +1138,46 @@ export class LabRenderer {
     o.indexCount = cloned.indices.length;
     o.mesh = cloned;
     Object.assign(o, localBounds(cloned));
+
+    // ---- 蒙皮缓冲：关节数随骨架变化，必须重建；未蒙皮退化为 1 个恒等关节 ----
+    const vcount = cloned.vertices.length / 15;
+    const skinned = cloned.joints !== null && cloned.weights !== null;
+    const nJoints = skeleton !== null ? skeleton.joints.length : 0;
+    const skinCount = skinned ? nJoints + 1 : 1;
+
+    o.skinBuffer?.destroy();
+    o.skinBuffer = this.device.createBuffer({
+      label: 'skin',
+      size: skinCount * 64,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    // 初始填恒等矩阵（首帧 render 前可能就被 draw 用到，避免读到未初始化 storage）
+    const init = new Float32Array(skinCount * 16);
+    for (let k = 0; k < skinCount; k++) {
+      init[k * 16] = 1;
+      init[k * 16 + 5] = 1;
+      init[k * 16 + 10] = 1;
+      init[k * 16 + 15] = 1;
+    }
+    this.device.queue.writeBuffer(o.skinBuffer, 0, init);
+
+    o.skinVb?.destroy();
+    o.skinVb = this.device.createBuffer({
+      label: 'skin-vb',
+      size: Math.max(24, vcount * 24),
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(o.skinVb, 0, packSkin(cloned.joints ?? null, cloned.weights ?? null, vcount));
+
+    o.skinCount = skinCount;
+    o.skinScratch = new Float32Array(skinCount * 16);
   }
 
   /** 替换某物体的网格。bind group 不用动，但删/换后墓碑物体的缓冲已经释放，这里要挡住 */
   private setMesh(index: number, mesh: MeshData): void {
     const o = this.objects[index];
     if (o === undefined || o.removed) return;
-    this.uploadMesh(o, mesh);
+    this.uploadMesh(o, mesh, o.skeleton);
     this.recountTriangles();
   }
 
@@ -1254,6 +1372,8 @@ export class LabRenderer {
     name: string,
     pos: [number, number, number],
     tree: GltfNodeTree[] | null = null,
+    skeleton: SkeletonData | null = null,
+    animations: AnimClip[] = [],
   ): number | null {
     const reused = this.objects.findIndex((o) => o.removed);
     if (reused < 0 && this.objects.length >= MAX_OBJECTS) {
@@ -1308,9 +1428,10 @@ export class LabRenderer {
           primitiveIndex: 0,
         },
       ],
-      nodeTree: [],
-      bindingOrphans: [],
-      slotBase: 0, // applySubMeshes → rebuildAllBindGroups 会统一重排
+        nodeTree: [],
+        bindingOrphans: [],
+        ...defaultSkinFields(this.device, cloned.vertices.length / 15),
+        slotBase: 0, // applySubMeshes → rebuildAllBindGroups 会统一重排
       pickable: true,
       visible: true,
       removed: false,
@@ -1325,6 +1446,12 @@ export class LabRenderer {
     } else {
       index = this.objects.push(obj) - 1;
     }
+    // 蒙皮字段 + 用真实骨架重建蒙皮缓冲（defaultSkinFields 只给了恒等退化版）
+    const added = this.objects[index]!;
+    added.skeleton = skeleton;
+    added.animations = animations;
+    added.skinState = skeleton !== null ? createSkinState(skeleton, animations) : null;
+    this.uploadMesh(added, mesh, skeleton);
     // 按 GLB primitive 拆子网格（含槽位预算裁剪 + 绑定继承），内部重建全部 bind group
     this.applySubMeshes(index, ranges, tree);
     this.recountTriangles();
@@ -1335,6 +1462,102 @@ export class LabRenderer {
   getObjectQuat(index: number): m4.Quat | null {
     const o = this.objects[index];
     return o === undefined ? null : o.quat;
+  }
+
+  // ---- 蒙皮动画播放控制 ----
+  // 当前可播动画的物体：优先「选中且带骨骼」的物体，否则退回角色槽位。
+
+  private activeSkinObject(): SceneObject | null {
+    if (this.selectedIndex !== null) {
+      const o = this.objects[this.selectedIndex];
+      if (o !== undefined && o.skinState !== null) return o;
+    }
+    const c = this.objects[this.characterIndex];
+    return c !== undefined && c.skinState !== null ? c : null;
+  }
+
+  hasAnimation(): boolean {
+    return this.activeSkinObject() !== null;
+  }
+
+  getClipNames(): string[] {
+    const o = this.activeSkinObject();
+    return o !== null ? clipNames(o.skinState!) : [];
+  }
+
+  getCurrentClip(): number {
+    const o = this.activeSkinObject();
+    return o !== null ? currentClip(o.skinState!) : -1;
+  }
+
+  getAnimationDuration(): number {
+    const o = this.activeSkinObject();
+    if (o === null) return 0;
+    const cs = o.skinState!;
+    return cs.clip >= 0 ? cs.clips[cs.clip]!.duration : 0;
+  }
+
+  getAnimationTime(): number {
+    const o = this.activeSkinObject();
+    return o !== null ? o.skinState!.time : 0;
+  }
+
+  /** clip：片段下标或名字；省略则继续/从头播放当前片段 */
+  playAnimation(clip?: number | string): void {
+    const o = this.activeSkinObject();
+    if (o === null) return;
+    const st = o.skinState!;
+    if (typeof clip === 'string') {
+      const idx = clipNames(st).indexOf(clip);
+      if (idx >= 0) selectClip(st, idx);
+    } else if (typeof clip === 'number') {
+      selectClip(st, clip);
+    } else {
+      skinPlay(st);
+    }
+  }
+
+  pauseAnimation(): void {
+    const o = this.activeSkinObject();
+    if (o !== null) skinPause(o.skinState!);
+  }
+
+  stopAnimation(): void {
+    const o = this.activeSkinObject();
+    if (o !== null) selectClip(o.skinState!, -1);
+  }
+
+  setAnimationLoop(loop: boolean): void {
+    const o = this.activeSkinObject();
+    if (o !== null) skinSetLoop(o.skinState!, loop);
+  }
+
+  setAnimationSpeed(speed: number): void {
+    const o = this.activeSkinObject();
+    if (o !== null) skinSetSpeed(o.skinState!, speed);
+  }
+
+  seekAnimation(time: number): void {
+    const o = this.activeSkinObject();
+    if (o !== null) skinSeek(o.skinState!, time);
+  }
+
+  /** 当前是否正在播放（供 UI 同步播放/暂停按钮） */
+  isAnimationPlaying(): boolean {
+    const o = this.activeSkinObject();
+    return o !== null && o.skinState!.playing;
+  }
+
+  /** 当前片段是否循环（供 UI 同步复选框） */
+  getAnimationLoop(): boolean {
+    const o = this.activeSkinObject();
+    return o !== null && o.skinState!.loop;
+  }
+
+  /** 当前播放速率倍率（供 UI 同步滑块） */
+  getAnimationSpeed(): number {
+    const o = this.activeSkinObject();
+    return o !== null ? o.skinState!.speed : 1;
   }
 
   selectedName(): string | null {
@@ -2075,6 +2298,9 @@ export class LabRenderer {
     const device = this.device;
     this.params = p; // 引用恒定，材质 API 靠它回查共享材质
     this.frameCounter++; // canvas 矩形缓存按帧刷新
+    // 动画推进用的 dt（首帧为 0，避免大跳变）；夹取到 [0,0.1] 防卡顿后暴冲
+    const dt = this.lastFrameTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - this.lastFrameTime));
+    this.lastFrameTime = time;
     const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, p.cameraElevation);
 
     const aspect = this.width / Math.max(1, this.height);
@@ -2135,6 +2361,14 @@ export class LabRenderer {
       const xBase = i * SLOT_FLOATS;
       this.transformData.set(this.model, xBase);
       o.modelMatrix.set(this.model);
+
+      // 蒙皮：推进动画 → 求关节矩阵 → 写进 storage buffer（binding 7）。
+      // 每帧重算，姿势随片段变化；未播或 bind pose 时 jointMatrix 退化为 I，顶点原样。
+      if (o.skinState !== null && o.skinBuffer !== null) {
+        skinAdvance(o.skinState, dt);
+        evalJointMatrices(o.skinState, o.skinScratch);
+        device.queue.writeBuffer(o.skinBuffer, 0, o.skinScratch);
+      }
     }
     device.queue.writeBuffer(this.materialBuf, 0, this.materialData);
     device.queue.writeBuffer(this.transformBuf, 0, this.transformData);
@@ -2216,6 +2450,7 @@ export class LabRenderer {
       const o = this.objects[i]!;
       if (o.removed || !o.visible) continue; // 隐藏 / 已删除：整条跳过
       pass.setVertexBuffer(0, o.vertexBuffer);
+      pass.setVertexBuffer(1, o.skinVb!);
       pass.setIndexBuffer(o.indexBuffer, 'uint32');
 
       // 逐子网格画：各自一个 bind group（材质槽）+ 各自一段索引区间

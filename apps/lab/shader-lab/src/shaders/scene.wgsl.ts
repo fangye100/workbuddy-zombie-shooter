@@ -4,10 +4,11 @@ import { COMMON_WGSL } from './common.wgsl';
  * 场景着色：toon 三层光 + inverted hull 描边，MRT 输出。
  *
  * 单一 bind group（每个物体一份，frame/lights/toon 三个 buffer 共享）：
- *   0 Frame   1 Lights   2 Toon   3 Material   4 Transform
+ *   0 Frame   1 Lights   2 Toon   3 Material   4 Transform   5/6 albedo 贴图   7 关节矩阵调色板
  *
- * 顶点布局（与 gpu/geometry.ts 的 VERTEX_LAYOUT 对应）：
- *   0 position vec3f  1 normal vec3f  2 smoothNormal vec3f  3 uv vec2f  4 color vec4f
+ * 顶点布局（与 gpu/geometry.ts 的 VERTEX_LAYOUT / SKIN_LAYOUT 对应）：
+ *   主缓冲（slot 0）：0 position 1 normal 2 smoothNormal 3 uv 4 color
+ *   蒙皮缓冲（slot 1）：5 joints(uint16×4) 6 weights(float32×4)
  *
  * 所有 uniform 成员一律 vec4f / mat4x4f，规避 WGSL 把 vec3 pad 成 16 字节的对齐陷阱。
  */
@@ -64,6 +65,9 @@ struct Transform {
 // 贴图按 rgba8unorm 上传（raw sRGB 字节），着色器里同样走 srgbToLinear，颜色空间约定不变
 @group(0) @binding(5) var albedoTex : texture_2d<f32>;
 @group(0) @binding(6) var albedoSampler : sampler;
+// 7：关节矩阵调色板（storage 只读）。蒙皮端按 JOINTS_0 索引取 mat4x4f；
+// 末尾恒等关节 = I，未蒙皮顶点绑到它 → 蒙皮结果 = 顶点原样。
+@group(0) @binding(7) var<storage, read> jointMat : array<mat4x4f>;
 
 struct VSOut {
   @builtin(position) clip : vec4f,
@@ -71,6 +75,9 @@ struct VSOut {
   @location(1) normal : vec3f,
   @location(2) uv : vec2f,
   @location(3) vcolor : vec4f,
+  // 蒙皮调试用：权重 + 主影响关节 index（debugMode 9 取色）
+  @location(4) skin : vec4f,
+  @location(5) skinIdx : vec4f,
 };
 
 struct FragOut {
@@ -81,6 +88,23 @@ struct FragOut {
 // 一像素在参考距离处的世界尺寸。不做距离补偿时用它，保证行为可预期
 const OUTLINE_REF_DIST : f32 = 6.0;
 
+// Linear Blend Skinning：Σ wᵢ · jointMat[i]
+fn skinMatrix(j : vec4u, w : vec4f) -> mat4x4f {
+  var m : mat4x4f = jointMat[j.x] * w.x;
+  m = m + jointMat[j.y] * w.y;
+  m = m + jointMat[j.z] * w.z;
+  m = m + jointMat[j.w] * w.w;
+  return m;
+}
+
+// 色相 → 饱和 RGB（蒙皮权重可视化用），h ∈ [0,1)
+fn hueRgb(h : f32) -> vec3f {
+  let r = abs(h * 6.0 - 3.0) - 1.0;
+  let g = 2.0 - abs(h * 6.0 - 2.0);
+  let b = 2.0 - abs(h * 6.0 - 4.0);
+  return clamp(vec3f(r, g, b), vec3f(0.0), vec3f(1.0));
+}
+
 @vertex
 fn vs_main(
   @location(0) position : vec3f,
@@ -88,13 +112,19 @@ fn vs_main(
   @location(2) smoothNormal : vec3f,
   @location(3) uv : vec2f,
   @location(4) color : vec4f,
+  @location(5) joints : vec4u,
+  @location(6) weights : vec4f,
 ) -> VSOut {
   var out : VSOut;
-  let worldPos = (transform.model * vec4f(position, 1.0)).xyz;
+  let sm = skinMatrix(joints, weights);
+  let localPos = sm * vec4f(position, 1.0);
+  let worldPos = (transform.model * localPos).xyz;
   out.worldPos = worldPos;
-  out.normal = normalize((transform.model * vec4f(normal, 0.0)).xyz);
+  out.normal = normalize((transform.model * sm * vec4f(normal, 0.0)).xyz);
   out.uv = uv;
   out.vcolor = color;
+  out.skin = weights;
+  out.skinIdx = vec4f(f32(joints.x), f32(joints.y), f32(joints.z), f32(joints.w));
   out.clip = frame.viewProj * vec4f(worldPos, 1.0);
   return out;
 }
@@ -106,13 +136,17 @@ fn vs_outline(
   @location(2) smoothNormal : vec3f,
   @location(3) uv : vec2f,
   @location(4) color : vec4f,
+  @location(5) joints : vec4u,
+  @location(6) weights : vec4f,
 ) -> VSOut {
   var out : VSOut;
-  let worldPos = (transform.model * vec4f(position, 1.0)).xyz;
+  let sm = skinMatrix(joints, weights);
+  let localPos = sm * vec4f(position, 1.0);
+  let worldPos = (transform.model * localPos).xyz;
 
   // 外扩用 smoothNormal，不用着色法线：硬边几何的顶点法线在棱角处不连续，
   // 直接拿去外扩会让描边裂开（见文档 §4.3）
-  let n = normalize((transform.model * vec4f(smoothNormal, 0.0)).xyz);
+  let n = normalize((transform.model * sm * vec4f(smoothNormal, 0.0)).xyz);
 
   let dist = length(frame.cameraPos.xyz - worldPos);
   // 一像素在当前距离处的世界尺寸 = 2*d / (projScaleY * viewportHeight)
@@ -127,6 +161,8 @@ fn vs_outline(
   out.normal = n;
   out.uv = uv;
   out.vcolor = color;
+  out.skin = weights;
+  out.skinIdx = vec4f(f32(joints.x), f32(joints.y), f32(joints.z), f32(joints.w));
   out.clip = frame.viewProj * vec4f(expanded, 1.0);
   return out;
 }
@@ -246,11 +282,16 @@ fn fs_main(in : VSOut) -> FragOut {
     out.aux = vec4f(uvc.x, uvc.y, 0.0, 0.0);
   } else if (debugMode > 7.5 && debugMode < 8.5) {
     // UV 棋盘格（模式 8）：直接检验「UV ↔ 贴图采样」的对应关系。
-    // 格子清晰规整 = UV 与采样都正常；格子扭曲断裂 = UV 展开有问题；
-    // 格子消失变成纯色或噪点 = 贴图上传/采样出错。
     let tiles = in.uv * 24.0;
     let checker = f32((i32(floor(tiles.x)) + i32(floor(tiles.y))) % 2);
     out.aux = vec4f(vec3f(mix(0.15, 0.85, checker)), 0.0);
+  } else if (debugMode > 8.5 && debugMode < 9.5) {
+    // 蒙皮权重可视化（模式 9）：主影响关节 index → 色相，主权重 → 亮度。
+    // 未蒙皮顶点权重=1、关节=0 → 纯红；蒙皮顶点按主关节分色，可肉眼核查权重分布是否合理。
+    let idx = i32(in.skinIdx.x + 0.5);
+    let hue = fract(f32(idx) * 0.137);
+    let col = hueRgb(hue) * clamp(in.skin.x, 0.0, 1.0);
+    out.aux = vec4f(col, 0.0);
   } else {
     out.aux = vec4f(0.0, 0.0, 0.0, 0.0);
   }
