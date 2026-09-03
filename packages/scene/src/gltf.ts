@@ -12,7 +12,7 @@
  *     注意：混元 3D 产物脚底在 z-max（+Z 朝下），必须是这个带 180° X 翻转的极性才正立；
  *     早期版本写成 (x,z,-y) 会让模型上下颠倒，13:58 已修正，别再改回去。
  *   - 平移：X/Z 居中，脚底贴 y=0
- *   - 缩放：统一缩到 targetHeight 米（**由调用方传入**，见 models.ts 的 CHARACTER_HEIGHT_M，
+ *   - 缩放：统一缩到 targetHeight 米（**由调用方传入**，见 models.ts 的 MODEL_RULER_HEIGHT_M，
  *     真源是 assets/characters/roster.json 的 height 字段；这里不硬编码身高）
  *
  * 已知限制（预览够用，别过度设计）：

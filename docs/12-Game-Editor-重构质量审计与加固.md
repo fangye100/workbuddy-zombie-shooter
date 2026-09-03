@@ -322,10 +322,11 @@ apps/editor/test/selection-outline.test.ts 7  ← 编辑器层合计 42（L-2 �
 | **L-1** | `framegraph` + `RenderFeature` 运行时孤儿（425 行） | Phase 0 不接 M1；删了 Phase 1 要重写 | ✅ **dormant 标记已于 2026-09-03 完成**（§6.3），代码一个字没动。仍待决策：在 `docs/10` Phase 1 里把"接上 FrameGraph"写成明确交付项 |
 | **L-2** | `RenderFrameInput.highlight.hovered` 编辑器语义词 | ~~与 L-3 一起做~~ **已于 2026-09-03 第二轮完成**，见 §6.2 | — |
 | **L-3** | `LabRenderer` 剩余 1,330 行实质逻辑（GPU 装箱 + 资源生命周期） | ~~推荐收敛路径~~ **已于 2026-09-03 第二轮完成**，见下方 §6.1；剩余部分是资源生命周期（`uploadMesh` / `buildGridTexture` / bind group 管理），需重做运行时验证，不在本轮范围 | 下一步若要继续收敛，目标是资源生命周期，不是装箱 |
-| **L-4** | `CHARACTER_HEIGHT_M = 2.05` 硬编码，未由 `roster.json` 生成 | 属 `docs/10` Phase 0 backlog 第 3 项（D3/ADR-002），是独立里程碑 | 建 `content/` 生成层时一并解决，本轮不动 |
+| **L-4** | `CHARACTER_HEIGHT_M = 2.05` 硬编码，未由 `roster.json` 生成 | ~~属 `docs/10` Phase 0 backlog 第 3 项（D3/ADR-002），是独立里程碑~~ | ✅ **已于 2026-09-03 第三轮完成**，见 §6.4 |
 | **L-5** | ADR-005 的生产形态未落地（无 `pnpm-workspace.yaml`、无子包 `package.json`） | docs/11 §13.1 已记录为刻意偏差（多 session 下 `pnpm install` 有风险） | 保持现状；等上提全部收敛、单 session 时再补 |
 | **L-6** | `docs/10` 未发布到线上资料库 | 资料库现有 01–05 + Game Editor 系列 4 篇，**没有 10/11/12** | 与 `docs/11`、`docs/12` 一并发布（docs/10 §5 自己把"线上内容未入版本控制"列为风险， mitigation 是"以 docs/ 为同源真源，发布仅是镜像"——那就真的要发） |
-| **L-7** | `packPost` 里 grading 三色硬编码（`#0E0C16` night-deep / `#FFF6E2` bone / `0.98` 中间调倍率） | 随 L-3 下沉时只是搬家，未改性质；改成内容库驱动要动 ADR-002 生成层 | 与 L-4 一起在 `content/` 生成层解决（ADR-002） |
+| **L-7** | `packPost` 里 grading 三色硬编码（`#0E0C16` night-deep / `#FFF6E2` bone / `0.98` 中间调倍率） | ~~随 L-3 下沉时只是搬家，未改性质；改成内容库驱动要动 ADR-002 生成层~~ | ✅ **已于 2026-09-03 第三轮完成**，见 §6.4 |
+| **L-8** | `params.ts` 的 10 个 `grade*` 默认值里 **2 处与 `tokens.json` 漂移**：`gradeShadowMult` 0.95（真源 0.78）、`gradeShadowMix` 0.12（真源 0.2，疑似把亮部的 0.12 抄到了暗部） | **修正会改变画面**（暗部更深、紫蓝更重），属美术决策，审计不擅自改 | 由用户在编辑器里目视确认后决定：对齐真源 or 承认这是刻意艺术偏移并在注释里写明 |
 
 ### 6.1 L-3 已收敛（2026-09-03 第二轮）
 
@@ -384,6 +385,71 @@ apps/editor/test/selection-outline.test.ts 7  ← 编辑器层合计 42（L-2 �
 所以它「typecheck 通过」不等于「能用」；②`apps/editor/src/features/*.feature.ts` 的 "feature"
 与 `RenderFeature` **不是同一个东西** —— 前者是活的、每帧在跑的帧输入组装纯函数，
 后者是 dormant 接口。命名撞车，已在 `feature.ts` 文件头写明。
+
+---
+
+### 6.4 L-4 + L-7 已收口：`packages/content/` 生成层（2026-09-03 第三轮）
+
+L-4 与 L-7 卡在同一个前置 —— **ADR-002 的 `content/` 生成层**（`docs/10` D3 / Phase 0 backlog 第 3 项）。
+本轮把它建起来（D3 的第一步），并顺带收掉这两个遗留项。
+
+**新增 `packages/content/`（L4）**
+
+| 文件 | 作用 |
+|---|---|
+| `scripts/gen-content.mjs` | 生成器。`roster.json` + `tokens.json` → 强类型 TS。纯 Node、零依赖 |
+| `src/generated/tokens.generated.ts` | `CORE_COLORS` / `COLOR_USAGE` / `NUMBERS` / `GRADING` / `TOON_RAMP` / `OUTLINE` |
+| `src/generated/roster.generated.ts` | 8 个角色（npc 5 + boss 3）的标识与可解析数值 |
+| `src/index.ts` | `@aether/content` 入口 |
+| `test/content.test.ts` | 13 条回归（ADR-009 归位） |
+
+`npm run content:gen` 写文件，`npm run content:check` 只比对（不同步即 exit 1）。
+
+**生成器的两条铁律**
+
+1. **只派生真源里真实存在的东西，绝不编造。** 解析失败直接抛错，不静默填 0。
+   实例：B-02 母体 `speed: "本体固定不可移动"` → 生成 `speedMps: null`，
+   **不是 0** —— 0 是我们编的数，`null` 是「真源明示不可移动」这个事实。
+2. **复合串取第一个数值，原始串原样保留。** `"1.25 m（四足）/ 1.60 m（直立）"` → `1.25`，
+   且 `heightRaw` 保留全文，信息不丢。规则写进生成物注释，并有测试钉死。
+
+**不可派生清单（11 项，写进生成物头部）**
+
+`CharacterPhysicsDef` 的半径/质量、`CharacterAiDef` 的转向/视野/听觉/攻击性、
+`HurtboxDef` 的骨骼与半径、boss 招式数值、`BodyPartDef` 的网格/材质索引 ——
+**roster.json 里根本没有这些字段**（它的 `ai` 是出图提示词，`weakness` 和 `attacks[].desc` 是中文散文）。
+
+> ⚠️ 这一点很重要：D3 原文写的是「`roster.json` → `roster.generated.ts`，`gameplay/character.ts` 改读生成物」，
+> 但**真源承载不了 `CharacterDef` 需要的调参数**。硬生成等于把编造的数字洗成「单一真源」，
+> 比硬编码更坏 —— 那正是 §4 里「68% 来自未入库临时脚本」同一类错误。
+> 因此本轮**只做标识与可解析数值**，`CharacterDef` 的调参字段继续留空，
+> 等真源补结构化数据、或由独立调参表承载。清单本身已入版本库，不会靠口头传承。
+
+**L-7 的解法不是「引擎读 tokens」 —— 分层不允许**
+
+`content/` 在 **L4**，`packages/render` 在 **L3**，依赖规则只允许向下。**render 不能反向 import content。**
+所以 `packPost` 的三处硬编码改成 **参数注入**（ADR-007：LabParams 由编辑器 UI 层产出，引擎只声明收窄契约）：
+
+| 硬编码 | 改为 | 真源 |
+|---|---|---|
+| `dst[8] = 0.98` | `p.gradeMidMult` | `grading.stops[mid].multiply` |
+| `hexToRgb('#0E0C16')` | `p.gradeShadowColor` | `stops[shadow].mixTo` → `core.night-deep` |
+| `hexToRgb('#FFF6E2')` | `p.gradeLightColor` | `stops[light].mixTo` → `core.bone` |
+
+`gradeMidMult` 原先连参数都不是（写死 0.98），现已补滑杆，可调。
+测试补两条「值来自参数而非硬编码」的断言 —— 否则改回硬编码后值一样，测试照样绿。
+
+**L-4：`CHARACTER_HEIGHT_M` → `MODEL_RULER_HEIGHT_M`（改名 + 接真源）**
+
+值改为 `requireCharacter('E-04').heightMeters`（由生成层派生）。**改名是必要的**：
+roster 里 8 个角色身高从 1.25 m（E-02 四足）到 4.0 m（B-02 母体）各不相同，
+原名会被读成「角色都是这个高度」；它实际是**归一化标尺**。
+选值规则（E-04 盾卫，编辑器全部验收截图与回归测试都用它）已写进注释。
+测试补溯源断言（必须严格等于 roster 里 E-04 的身高），防止改回硬编码。
+
+**顺带发现 L-8**：`params.ts` 的 10 个 `grade*` 默认值里 8 个与 `tokens.json` 一致，
+但 `gradeShadowMult`（0.95 vs 真源 0.78）与 `gradeShadowMix`（0.12 vs 真源 0.2）漂移 ——
+后者疑似把亮部的 0.12 抄到了暗部。修正会改变画面，列为 L-8 交用户决策。
 
 ---
 

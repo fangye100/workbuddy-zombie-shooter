@@ -33,6 +33,8 @@
     "packages/ai/src/**/*.ts",
     "packages/ai/test/**/*.ts",
     "packages/gameplay/src/**/*.ts",
+    "packages/content/src/**/*.ts",
+    "packages/content/test/**/*.ts",
     "apps/samples/00-init/*.ts",
     "apps/editor/src/**/*.ts",
     "apps/editor/test/**/*.ts"

@@ -69,9 +69,12 @@ const POST = {
   gradeShadowMix: 0.12,
   gradeShadowSat: 1.15,
   gradeMidSat: 1.14,
+  gradeMidMult: 0.98,
   gradeLightMult: 1.04,
   gradeLightMix: 0.12,
   gradeLightSat: 1.06,
+  gradeShadowColor: '#0E0C16',
+  gradeLightColor: '#FFF6E2',
   halftoneEnabled: true,
   halftoneSize: 5,
   halftoneStrength: 0.1,
@@ -245,12 +248,32 @@ describe('packPost', () => {
   it('grading 三色是 display-referred，不转 linear', () => {
     const d = new Float32Array(POST_FLOATS);
     packPost(d, POST, 1280, 720);
-    // bone = #FFF6E2
+    // light 混向色 = #FFF6E2（tokens.json → core.bone），写死在 [20..22]
     const bone = hexToRgb('#FFF6E2');
     expect(d[20]).toBeCloseTo(bone[0], 6);
     expect(d[22]).toBeCloseTo(bone[2], 6);
-    // 中间调倍率硬编码 0.98（tokens.json，未做成可调参数）
-    expect(d[8]).toBeCloseTo(0.98, 6);
+  });
+
+  // L-7：这三处原先在 packPost 里写死（0.98 / #0E0C16 / #FFF6E2），
+  // 引擎是 L3 不能反向依赖 content(L4)，所以改成参数注入（ADR-007）。
+  // 断言它们真的跟着参数走 —— 否则哪天有人改回硬编码，值一样，测试照样绿。
+  it('中间调倍率来自参数，不是写死 0.98', () => {
+    const d = new Float32Array(POST_FLOATS);
+    packPost(d, { ...POST, gradeMidMult: 0.5 }, 1280, 720);
+    expect(d[8]).toBeCloseTo(0.5, 6);
+  });
+
+  it('暗部/亮部混向色来自参数，不是写死 #0E0C16 / #FFF6E2', () => {
+    const d = new Float32Array(POST_FLOATS);
+    packPost(d, { ...POST, gradeShadowColor: '#112233', gradeLightColor: '#445566' }, 1280, 720);
+    const shadow = hexToRgb('#112233');
+    const light = hexToRgb('#445566');
+    expect(d[16]).toBeCloseTo(shadow[0], 6);
+    expect(d[17]).toBeCloseTo(shadow[1], 6);
+    expect(d[18]).toBeCloseTo(shadow[2], 6);
+    expect(d[20]).toBeCloseTo(light[0], 6);
+    expect(d[21]).toBeCloseTo(light[1], 6);
+    expect(d[22]).toBeCloseTo(light[2], 6);
   });
 });
 

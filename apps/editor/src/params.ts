@@ -8,6 +8,7 @@
 // MaterialState（材质数据契约）已上提进引擎层包体，编辑器的真源是 @aether/render。
 // 这里只做类型 re-export，保证既有 `from './params'` 引用（renderer / ui / binding / presets）全绿。
 import type { MaterialState } from '@aether/render';
+import { GRADING } from '@aether/content';
 export type { MaterialState } from '@aether/render';
 
 export interface LabParams {
@@ -75,9 +76,15 @@ export interface LabParams {
   gradeShadowMix: number;
   gradeShadowSat: number;
   gradeMidSat: number;
+  /** 中间调倍率。真源 tokens.json → grading.stops[mid].multiply */
+  gradeMidMult: number;
   gradeLightMult: number;
   gradeLightMix: number;
   gradeLightSat: number;
+  /** 暗部混向色。真源 tokens.json → grading.stops[shadow].mixTo → core 色组 */
+  gradeShadowColor: string;
+  /** 亮部混向色。真源 tokens.json → grading.stops[light].mixTo → core 色组 */
+  gradeLightColor: string;
 
   debugMode: number;
   cameraElevation: number;
@@ -496,6 +503,7 @@ export const PARAM_GROUPS: GroupDef[] = [
       { kind: 'slider', key: 'gradeShadowMix', label: '暗部染紫蓝', min: 0, max: 1, step: 0.01 },
       { kind: 'slider', key: 'gradeShadowSat', label: '暗部饱和度', min: 0, max: 2, step: 0.01 },
       { kind: 'slider', key: 'gradeMidSat', label: '中间调饱和度', min: 0, max: 2, step: 0.01 },
+      { kind: 'slider', key: 'gradeMidMult', label: '中间调倍率', min: 0, max: 2, step: 0.01 },
       { kind: 'slider', key: 'gradeLightMult', label: '亮部倍率', min: 0, max: 2, step: 0.01 },
       { kind: 'slider', key: 'gradeLightMix', label: '亮部混 bone', min: 0, max: 1, step: 0.01 },
       { kind: 'slider', key: 'gradeLightSat', label: '亮部饱和度', min: 0, max: 2, step: 0.01 },
@@ -604,7 +612,33 @@ export const PARAM_GROUPS: GroupDef[] = [
   },
 ];
 
-/** 从 tokens.json 派生的默认值 */
+/**
+ * 取 grading 停靠点。取不到直接抛错 —— 宁可启动失败，
+ * 也不拿编造的兜底值糊过去（ADR-002：禁止手写重复定义）。
+ */
+function gradeStop(name: string) {
+  const s = GRADING.stops.find((x) => x.name === name);
+  if (!s) throw new Error(`tokens.json 的 grading.stops 里没有 ${name} 这一挡`);
+  return s;
+}
+
+/** 取某一挡的混向色（mixTo 已在生成层解析成 hex）。该挡不做混色时抛错。 */
+function gradeColor(name: string): string {
+  const hex = gradeStop(name).mixToHex;
+  if (hex === null) {
+    throw new Error(`tokens.json 的 grading.stops[${name}].mixTo 为空，无法派生混向色`);
+  }
+  return hex;
+}
+
+/**
+ * 从 tokens.json 派生的默认值。
+ *
+ * ⚠️ 目前只有 gradeMidMult / gradeShadowColor / gradeLightColor 三个是**真正**从
+ * 生成层取的（L-7：它们原先在引擎 packPost 里写死，连参数都不是）。
+ * 其余 grade* 默认值仍是手写的，其中两处已与真源漂移 —— 见 docs/12 遗留 L-8，
+ * 修正会改变画面，需人工确认后再动。
+ */
 export function defaultParams(): LabParams {
   return {
     keyAzimuth: -38,
@@ -671,6 +705,10 @@ export function defaultParams(): LabParams {
     gradeShadowMix: 0.12,
     gradeShadowSat: 1.15,
     gradeMidSat: 1.14,
+    // ↓ 以下三项取自真源（@aether/content ← tokens.json），原先在引擎里写死
+    gradeMidMult: gradeStop('mid').multiply,
+    gradeShadowColor: gradeColor('shadow'),
+    gradeLightColor: gradeColor('light'),
     gradeLightMult: 1.04,
     gradeLightMix: 0.12,
     gradeLightSat: 1.06,
