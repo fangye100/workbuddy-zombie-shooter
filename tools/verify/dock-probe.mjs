@@ -87,6 +87,26 @@ const MEASURE = `(() => {
     treeRows: document.querySelectorAll('.ad-tree [data-path]').length,
     contentItems: document.querySelectorAll('.ad-content [data-path]').length,
     contentChildren: q('.ad-content') ? q('.ad-content').children.length : null,
+    // ── 分段高度：dock 高 316 但内容是空的，一定是某一段吃掉了高度 ──
+    // .ad-tree 没有 height 属性，靠 .ad-body(row flex) 的 align-items:stretch 撑开；
+    // 所以「树高 0」=「.ad-body 高 0」= 高度被 .ad-head 或 .ad-grip 吃光了。
+    // 只数 DOM 节点数不够——节点存在 ≠ 看得见，必须量几何。
+    seg: (() => {
+      const h = (s) => { const e = q(s); return e ? Math.round(e.getBoundingClientRect().height) : null; };
+      const grip = h('.ad-grip'), head = h('.ad-head'), body = h('.ad-body'), tree = h('.ad-tree'), cont = h('.ad-content');
+      return { grip, head, body, tree, content: cont, sum: (grip ?? 0) + (head ?? 0) + (body ?? 0) };
+    })(),
+    varTreeW: getComputedStyle(document.documentElement).getPropertyValue('--tree-w').trim(),
+    // elementFromPoint：dock 中心点到底画的是谁。命中 dock 自身而非子元素 = 子元素零高。
+    hitAtCenter: (() => {
+      const el = dock && document.elementFromPoint(
+        Math.round(dock.getBoundingClientRect().left + dock.getBoundingClientRect().width / 2),
+        Math.round(dock.getBoundingClientRect().top + dock.getBoundingClientRect().height / 2),
+      );
+      if (!el) return null;
+      return (el.id ? '#' + el.id : (typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : el.tagName)) +
+        (dock && dock.contains(el) ? ' [dock内]' : ' [dock外]');
+    })(),
     crumb: (q('.ad-crumb')?.textContent || '').trim().slice(0, 60),
     lsCollapsed: localStorage.getItem('zh.assets.collapsed'),
     lsDockH: localStorage.getItem('zh.ui.dockH'),
