@@ -74,8 +74,34 @@ review 并加固 `game-design-zombie` 里「Game Editor Refactory」session（`0
   ⚠️ 工作区里 `tools/verify/editor-smoke.mjs` 是**别的 session 在改**，本轮未动。
 - **待用户确认**：开着广告拦截插件的普通窗口硬刷，面板是否恢复（headless 证不了的最终证据）。
 
+## 执行结果（2026-09-03 第 7 次运行 · 建 content/ 生成层，收口 L-4 / L-7）
+- **判断**：L-4 与 L-7 都卡在同一个前置（ADR-002 的 `content/` 生成层，docs/10 D3），
+  分开修会各造一个临时方案 → 先建生成层，再顺带收两项。
+- **建 `packages/content/`（L4）**：`scripts/gen-content.mjs`（纯 Node 零依赖）+
+  `src/generated/{tokens,roster}.generated.ts` + `test/content.test.ts`(13 条)。
+  `npm run content:gen` / `npm run content:check`（不同步 exit 1，已自测有效）。
+- **三个关键发现**：
+  ① `tokens.json` 的 `.grading.stops` 是完整规格，与 packPost 三处硬编码逐项对上
+     （0.98 / #0E0C16 / #FFF6E2），L-7 可忠实收口不必编造；
+  ② **content(L4) 高于 render(L3)，render 不能反向 import content** → L-7 只能按
+     ADR-007 参数注入（`PostPackParams` 加 gradeMidMult/gradeShadowColor/gradeLightColor）；
+  ③ **D3 原文「character.ts 改读生成物」目前做不到**：roster 是美术/设计资料库，
+     承载不了 CharacterDef 的调参字段 → 只生成标识与可解析数值，
+     11 项不可派生清单写进生成物头部（已入库，不靠口头传承）。
+- **L-4 收口**：`CHARACTER_HEIGHT_M` → **`MODEL_RULER_HEIGHT_M`**（改名必要：
+  roster 8 个角色 1.25~4.0 m 各不相同，原名暗示「角色都是这高度」是错的；它是归一化标尺），
+  值取 `requireCharacter('E-04').heightMeters`。
+- **新增遗留 L-8**：`gradeShadowMult` 0.95 vs 真源 0.78、`gradeShadowMix` 0.12 vs 真源 0.2
+  （疑似抄了亮部的值）。**修正会改变画面**，属美术决策，交用户目视后定夺，审计不擅改。
+- **验证**：vitest **141/141**（原 124）· build 53 modules/189.32 kB ·
+  冒烟 35 PASS/0 FAIL/0 SKIP · content:check 同步 · verify:prefix 通过 · 本会话文件 typecheck 0 错误。
+- **提交 `dc18c1d`**（18 文件 +1046/−29），已 push `a78ba66..dc18c1d`。
+- **⚠️ 并行 session**：期间另一 session 在改 `renderer-core.ts`（+120 行，多画布改造）并新增
+  `services/{asset-preview,skeleton-overlay}.ts`；typecheck 剩 2 条错误属他们在途半成品，**未触碰**。
+
 ## 下次运行要点
-- **别重复修**：§3 的 12 项 + §6.1 的 L-3 + §6.2 的 L-2 + §6.3 的 L-1 dormant 标记，都已做完。下次先跑四道门禁看是否仍绿，再挑遗留项 **L-4/L-5/L-6/L-7**（docs/12 §6）。
+- **别重复修**：§3 的 12 项 + §6.1 的 L-3 + §6.2 的 L-2 + §6.3 的 L-1 dormant 标记 + §6.4 的 **L-4 / L-7**，都已做完。下次先跑六道门禁（typecheck / vitest / editor:build / editor:smoke / content:check / verify:prefix）看是否仍绿，再挑遗留项 **L-5 / L-6 / L-8**（docs/12 §6）。
+- **L-8 需要用户拍板**（不能自动化代劳）：`params.ts` 的 grading 默认值是否对齐 tokens.json 真源。改动会改变画面，必须目视确认。
 - **推荐下一个动作**：**资源生命周期下沉** —— `uploadMesh`(46) / `buildGridTexture`(48) / bind group 管理，仍在 `apps/editor/src/renderer.ts`。这是 D1 剩下的 5%。⚠️ 比 L-3 难一个量级：涉及 GPU 资源创建与销毁时机，**必须重做运行时验证**（不能只靠单测），建议先补 headless 断言再动手，且该和用户确认范围后再开始。
 - **低风险可做项**：L-7（grading 三色硬编码 → 进 content/ 生成层）、L-4（`CHARACTER_HEIGHT_M` 由 roster 生成）—— 两者都依赖 `content/` 生成层，可打包成一个里程碑。L-6（docs/10/11/12 上资料库）是纯文档动作，随时可做。
 - **复跑冒烟**：`npm run editor:smoke -- --glb assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb`（自起 dev server；注意本机 vite 走 https）。
