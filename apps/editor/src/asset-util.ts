@@ -126,7 +126,7 @@ export const KIND_LABEL: Record<AssetKind, string> = {
 };
 
 /**
- * 类型图标（内联 SVG，fill=currentColor，配色由 CSS 按 .adk-<kind> 给）。
+ * 类型图标（内联 SVG，fill=currentColor，配色由 CSS 按 .akind-<kind> 给）。
  * 全部 24×24 viewBox，粗描边剪影风，贴合项目的美漫描边调性。
  */
 const ICONS: Record<AssetKind, string> = {

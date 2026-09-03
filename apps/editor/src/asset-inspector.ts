@@ -59,7 +59,7 @@ export class AssetInspector {
 
     this.rootEl.innerHTML = `
       <div class="ai-head"><span class="ai-title">资产<em>属性</em></span></div>
-      <div class="ai-hero adk-${kind}">
+      <div class="ai-hero akind-${kind}">
         <span class="ai-ico">${iconSvg(kind)}</span>
         <span class="ai-name" title="${entry.name}">${entry.name}</span>
       </div>
