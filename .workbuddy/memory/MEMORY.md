@@ -16,7 +16,9 @@
 - 引擎真实落地：`ai`(流场寻路/战斗/行为 1759 行，最成熟) · `gameplay`(SoA 角色表 436) · `gfx`(device/handle) · `core`(app/ecs) · `framegraph`(Pass DAG)。规划里 platform/scene/assets/animation/physics/vfx/ui/audio 等尚未建——不为空包建目录。
 - 验证方法论（docs/09 §7，已证伪 headless 假阴性）：数学 Node 直测 + headless WebGPU(Chrome152 + `--enable-unsafe-swiftshader`) + CDP 视觉像素判定 → 应作为引擎级 CI 标准。
 - 换模型材质绑定：GLB node extras → nodePath → primitiveKey 三层匹配；nodeId 精确匹配须双侧 leaf 同名否则撞车；未认领进孤儿池。
-- **脚本名坑（易踩）**：`npm run build` 构建的是 sample-00，**编辑器**是 `npm run editor:build`；冒烟是 `npm run editor:smoke`（无 `verify:smoke`），且需传 `--glb <rigged.glb>` 才会启用骨骼动画断言组，不传则 3 条 SKIP。另有 `verify:glb` / `verify:uv` / `verify:facade`。`lab`/`lab:build` 只是 `editor*` 的兼容别名。
+- **端口（2026-09-03 订正，b25506c 锁定）**：**编辑器 5100**，**最终游戏 5101**（HMR / Tailscale HTTPS 同套合约）。以 `apps/editor/vite.config.ts` 的 `port` 为准。
+- **脚本名坑（易踩）**：`npm run build` 构建的是 sample-00，**编辑器**是 `npm run editor:build`（产物走 5100）；冒烟是 `npm run editor:smoke`（无 `verify:smoke`），且需传 `--glb <rigged.glb>` 才会启用骨骼动画断言组，不传则 3 条 SKIP。另有 `verify:glb` / `verify:uv` / `verify:facade` / `verify:dock`（见下）。`lab`/`lab:build` 只是 `editor*` 的兼容别名。
+- **资产库面板「不见了」陷阱**：`apps/editor/src/asset-browser.ts` 的 `zh.assets.collapsed === '1'` 持久化在 localStorage —— 折叠后 `.ad-body` / `.ad-grip` `display:none`、`height:auto`，视觉上只剩标题栏，容易被误判为「整个 dock 没了」。F12 → Application → Local Storage 删 `zh.assets.collapsed` / `zh.ui.dockH` → Ctrl+Shift+R 即恢复。已固化 `tools/verify/dock-probe.mjs`（`node tools/verify/dock-probe.mjs`）专查 dock 运行时状态，遇到类似报告可直接复跑。
 - **ADR-008 验证资产与结论同入库**：任何「跑了 X 条断言 / Y 条全绿」的结论，其脚本/配置/产物必须一并进版本库，否则结论不可复现（曾因临时脚本导致 docs/12 的「68%」数字无法复算）。
 - **ADR-009 测试与被测代码同位**：`packages/*` 测试进 `packages/<pkg>/test/`，`apps/*` 测试进 `apps/<app>/test/`；禁止引擎测试寄居 app 的 `src/`，禁止测试反向依赖上层。
 - dormant 模块：`packages/framegraph/src/graph.ts` + `packages/render/src/feature.ts` 共 425 行零运行时消费者，已加 DORMANT 标记但未删；注意 `apps/editor/src/features/*.feature.ts` 的 feature 与 `RenderFeature` **不是同一个东西**（命名撞车）。
