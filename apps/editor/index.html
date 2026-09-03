@@ -868,6 +868,34 @@
   .bd-dot-right { background: #FF8FA3; }
   .bd-tip { border-top: 2px solid var(--ink); padding-top: 6px; font-size: 10px; color: var(--text-dim); line-height: 1.7; }
   .bd-tip b { color: var(--paper); }
+  /* 侧栏表单字段（姿态预览 / 骨骼显示 / 权重优化） */
+  .bd-field { display: flex; flex-direction: column; gap: 4px; }
+  .bd-field > label { font-size: 10px; color: var(--text-dim); }
+  .bd-pov { display: flex; gap: 4px; }
+  .bd-pov button {
+    flex: 1 1 0;
+    padding: 4px 0;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .bd-pov button:hover { background: var(--ink); color: var(--zombie); }
+  .bd-pov button.active { background: var(--zombie); color: var(--ink); border-color: var(--zombie); }
+  .bd-select {
+    padding: 3px 6px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .bd-check { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); cursor: pointer; }
+  .bd-check input { accent-color: var(--zombie); }
 
   /* 右键菜单（资产库 / 层级「进入绑定」共用） */
   #ctx-menu {

@@ -56,6 +56,12 @@ export const HUMANIK_BONES: Readonly<Record<string, BoneDef>> = {
   RightToeBase:  { name: 'RightToeBase',  parent: 'RightFoot', tposeOffset: [0.0, 0.0, 0.14] },
 };
 
+/** 手臂骨（含肩），A-pose 时整条链绕肩旋转 45° 下垂。镜像判断用前缀即可。 */
+export const ARM_BONES: ReadonlySet<string> = new Set<string>([
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+]);
+
 /** 左右镜像对（正视图 mirror 用）。左右互为 x 取反，其余分量相同。 */
 export const MIRROR_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['LeftShoulder', 'RightShoulder'],
@@ -108,6 +114,49 @@ export function tposeDirections(): Record<string, Vec3> {
     out[name] = len > 1e-9
       ? [o[0] / len, o[1] / len, o[2] / len]
       : [0, 0, 0];
+  }
+  return out;
+}
+
+/**
+ * A-pose 关节世界坐标：在标准 T-pose 基础上，把**整条手臂链绕肩旋转 45° 下垂**。
+ *
+ * 做法：从根逐骨累加，遇到手臂骨时把「相对父骨的偏移」绕 Z 轴旋转
+ *   - Left  -45°（顺时针，手臂向 -X/-Y 倒）
+ *   - Right +45°（左手系对称）
+ * 因为 T-pose 里手臂是沿 X 的共线链，对每个骨偏移施加同一角度的 Z 旋转，
+ * 等价于把整条手臂刚体绕肩旋转 45°，世界坐标正确。
+ *
+ * @param base 基准摆放（默认 = 模板 T-pose）。传 `this.positions` 即可得到
+ *             用**当前编辑骨长**算出的 A-pose（预览用，保留用户拖出的肢体长度）。
+ */
+export function aposeWorldPositions(
+  base?: Record<string, [number, number, number]>,
+): Record<string, [number, number, number]> {
+  const src = base ?? tposeWorldPositions();
+  const out: Record<string, [number, number, number]> = {};
+  for (const name of HUMANIK_ORDER) {
+    const parent = HUMANIK_BONES[name]!.parent;
+    if (parent === null) {
+      out[name] = [src[name]![0], src[name]![1], src[name]![2]];
+      continue;
+    }
+    const pp = out[parent]!;
+    const p = src[name]!;
+    let ox = p[0] - pp[0];
+    let oy = p[1] - pp[1];
+    const oz = p[2] - pp[2];
+    if (ARM_BONES.has(name)) {
+      const deg = name.startsWith('Left') ? -45 : 45;
+      const a = (deg * Math.PI) / 180;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const nx = c * ox - s * oy;
+      const ny = s * ox + c * oy;
+      ox = nx;
+      oy = ny;
+    }
+    out[name] = [pp[0] + ox, pp[1] + oy, pp[2] + oz];
   }
   return out;
 }

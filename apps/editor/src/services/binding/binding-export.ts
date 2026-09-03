@@ -26,6 +26,7 @@ import {
   boneSegments,
   computeLbsWeights,
   fitSkeleton,
+  smoothSkinWeights,
   unposeMesh,
   unposeNormals,
   type FitResult,
@@ -65,6 +66,16 @@ export interface BindExportInput {
   falloff?: number;
   eps?: number;
   maxInfluences?: number;
+  /**
+   * 权重平滑（空间热力 / Laplacian 松弛）。默认开启：胶囊权重算完后做 2 次扩散，
+   * 把骨交界处的硬切换晕成平滑过渡，消除蒙皮棱角撕裂。
+   * 设为 false 可跳过（保留纯胶囊权重）。
+   */
+  smoothWeights?: boolean;
+  /** 平滑迭代次数（默认 2） */
+  smoothIters?: number;
+  /** 平滑扩散强度 0..1（默认 0.5） */
+  smoothLambda?: number;
   /**
    * 可选：一并烘焙进 `animations[]`。
    * 骨名必须在 HumanIK 22 骨里，对不上的骨会被跳过并记进 `animSkipped`。
@@ -133,6 +144,7 @@ function runExport(
   const {
     name, vertices, indices, placed,
     falloff = 3.0, eps = 0.02, maxInfluences = 4,
+    smoothWeights = true, smoothIters = 2, smoothLambda = 0.5,
   } = input;
   const VF = BINDING_VERTEX_FLOATS;
   const vertexCount = vertices.length / VF;
@@ -146,9 +158,14 @@ function runExport(
 
   // ② 在**当前姿态**骨架上算权重（此时骨架与模型真实肢体重合）
   const segs = boneSegments(placed);
-  const skin = computeLbsWeights(
+  let skin = computeLbsWeights(
     vertices, VF, vertexCount, segs, falloff, eps, maxInfluences,
   );
+
+  // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
+  if (smoothWeights) {
+    skin = smoothSkinWeights(skin, indices, vertexCount, smoothIters, smoothLambda);
+  }
 
   // ③ 反解：顶点 → T-pose，法线同步旋转
   let tposeVertices = unposeMesh(vertices, VF, vertexCount, skin, fit);

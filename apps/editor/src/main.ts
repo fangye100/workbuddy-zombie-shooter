@@ -986,7 +986,7 @@ async function boot(): Promise<void> {
     if (binding === null) {
       binding = new BindingPanel(bindingDockEl, {
         onClose: () => closeBinding(),
-        onApply: (fit) => void applyBinding(fit),
+        onApply: (fit, opts) => void applyBinding(fit, opts?.smoothWeights ?? true),
         onLoadBvh: () => pickBvhFile((t, n) => loadBvhForBinding(t, n)),
         onExportAnim: () => void exportAnimGlb(),
       });
@@ -1051,6 +1051,7 @@ async function boot(): Promise<void> {
     anim: BindAnimationInput | null,
     download: boolean,
     suffix: string,
+    smoothWeights = true,
   ): Promise<BindExportStats | null> {
     const s = bindingSession;
     if (s === null || binding === null) return null;
@@ -1063,6 +1064,7 @@ async function boot(): Promise<void> {
         indices: mesh.indices,
         image: s.image,
         placed: binding.getState().positions,
+        smoothWeights,
       };
       // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
       const res = await rigToTPoseWithImage(
@@ -1109,8 +1111,12 @@ async function boot(): Promise<void> {
     }
   }
 
-  async function applyBinding(fit: FitResult, download = true): Promise<BindExportStats | null> {
-    return await exportBound(fit, null, download, '_tpose');
+  async function applyBinding(
+    fit: FitResult,
+    download = true,
+    smoothWeights = true,
+  ): Promise<BindExportStats | null> {
+    return await exportBound(fit, null, download, '_tpose', smoothWeights);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
