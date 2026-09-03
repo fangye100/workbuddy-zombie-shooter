@@ -27,6 +27,16 @@
 - **ADR-009 测试与被测代码同位**：`packages/*` 测试进 `packages/<pkg>/test/`，`apps/*` 测试进 `apps/<app>/test/`；禁止引擎测试寄居 app 的 `src/`，禁止测试反向依赖上层。
 - dormant 模块：`packages/framegraph/src/graph.ts` + `packages/render/src/feature.ts` 共 425 行零运行时消费者，已加 DORMANT 标记但未删；注意 `apps/editor/src/features/*.feature.ts` 的 feature 与 `RenderFeature` **不是同一个东西**（命名撞车）。
 
+## 内容真源与生成层（2026-09-03 建，D3 第一步）
+- **真源（改前先改这里）**：`assets/characters/roster.json`（8 角色：npcs 5 + bosses 3，**顶层键不是 `characters`**）+ `assets/style/tokens.json`（groups.core / grading.stops / toonRamp.stops / outline / numbers）。
+- **生成层 `packages/content/`（L4）**：`scripts/gen-content.mjs` → `src/generated/{tokens,roster}.generated.ts`，经 `@aether/content` 消费。`npm run content:gen` 写文件、`npm run content:check` 比对（不同步 exit 1）。改了真源必须重跑，否则门禁挂。
+- **🔴 分层硬约束**：content 在 **L4**，`packages/render` 在 **L3**，只允许向下依赖 → **render 不能反向 import content**。引擎侧的风格参数一律按 ADR-007 由编辑器 UI 层注入（`PostPackParams` 已加 `gradeMidMult` / `gradeShadowColor` / `gradeLightColor`）。谁想让引擎直接读 tokens，先想清楚这条。
+- **`MODEL_RULER_HEIGHT_M`**（原 `CHARACTER_HEIGHT_M`，2026-09-03 改名）：编辑器模型**归一化标尺**，`requireCharacter('E-04').heightMeters` = 2.05。改名原因：roster 里 8 个角色 1.25 m（E-02 四足）~4.0 m（B-02 母体）各不相同，原名会被读成「角色都是这个高度」。
+- **生成器铁律**：① 解析失败抛错，不静默填 0（B-02 `speed:"本体固定不可移动"` → `null` 不是 0）；② 复合串取第一个数值 + 原始串原样保留（`heightRaw`）。
+- **⚠️ D3 未完：roster.json 承载不了 `CharacterDef`**。它是美术/设计资料库 —— 无胶囊半径/质量/转向速率/视野/听觉/攻击性/骨骼受伤盒；`ai` 是出图提示词，`weakness` 与 boss `attacks[].desc` 是中文散文。11 项不可派生字段清单写在 `roster.generated.ts` 头部。**硬生成 = 把编造数字洗成「单一真源」，比硬编码更坏**，别干。
+- **门禁现在有 6 道**：typecheck · vitest · editor:build · editor:smoke · `content:check` · `verify:prefix`。后两道防的是「跑不出来但会出事」的问题（真源改了忘重跑 / 类名撞广告拦截）。
+- **遗留 L-8（待用户决策，勿擅改）**：`params.ts` 的 `gradeShadowMult` 0.95 vs 真源 0.78、`gradeShadowMix` 0.12 vs 真源 0.2（疑似抄了亮部的 0.12）。**修正会改变画面**，属美术决策。
+
 ## 3D 资产生成管线（E-04 跑通）
 - 入口 `assets/characters/_tools/gen3d_from_image.py`（勿直接调 buddy-cloud `--image-base64`，本地 PNG base64 超 Windows 命令行长度上限）。
 - 减面首选 `decimate_cluster.py`（对病态拓扑免疫）；质检硬判据 = 表面积保持率 >80%。混元产物脚在 z-max，`export_labmesh` 用 `(x,-z,y)`，极性反用 `--up-flip`。
