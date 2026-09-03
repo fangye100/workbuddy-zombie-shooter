@@ -51,6 +51,29 @@ review 并加固 `game-design-zombie` 里「Game Editor Refactory」session（`0
 - **推前检查**：`git rev-list --left-right --count HEAD...origin/main` = `1 0`
   （本地领先 1、远端领先 0）→ 无分歧可安全 push。
 
+## 执行结果（2026-09-03 第 6 次运行 · 资产库面板消失，已定位并修复）
+- **用户报**：访问 `https://100.124.237.93:5100/`，底部 Asset Library 面板不见了。
+- **真凶：广告拦截插件**。面板类名前缀是 **`ad-`**（`.ad-head`/`.ad-body`/`.ad-content`/`.ad-title`/
+  `.ad-filter` + `data-ad` + `--ad-cell`），而 `ad-` 是 EasyList / uBlock Origin / AdGuard 的
+  头号命中模式，被注入 `display:none !important`；`.ad-grip` 因不像广告词幸存 → 只剩 6px。
+- **定性三特征**：无痕窗口正常（扩展默认禁用）+ `Ctrl+Shift+R` 无效（扩展每次重新注入）+
+  项目自身 `display:none` 规则与观测**恰好相反**（项目只在 collapsed 时藏 body+grip、保留 head，
+  实测 head=0/grip=6）。**headless 三条全不成立 → 探针再绿也证明不了没被拦。**
+- **修复**：`ad-`→`asset-`、`adk-`→`akind-`、`data-ad`→`data-asset`，覆盖
+  `index.html` / `asset-browser.ts` / `asset-inspector.ts` / `asset-util.ts` 四个文件。
+  新增回归闸门 `tools/verify/guard-classprefix.mjs`（`npm run verify:prefix`），
+  已自测（注入 4 处违规 exit 1；`load-asset`/`add-node`/`bad-idea` 零误报）。
+- **两处漏网**（改名后必须全仓复查）：`asset-inspector.ts`/`asset-util.ts` 不在首轮扫描范围；
+  且模板字面量 `adk-${kind}` 后跟 `$` 不是字母，`(?=[a-z])` 前瞻未命中。
+- **踩坑：Python `open(p,'w')` 在 Windows 把 LF 写成 CRLF** → 整文件 diff（1700 行 → 还原后 274 行）。
+  一律 `newline=''`；自查 `git diff --stat --ignore-cr-at-eol`。
+- **验证**：typecheck 0 · vitest 124/124 · build 183.86 kB · 冒烟 35 PASS/0 FAIL/0 SKIP ·
+  verify:prefix 通过 · dock-probe 与改名前基线逐项一致（`seg{grip:6,head:42,body:212,tree:212,content:212,sum:260}`）。
+- **提交 1 个**：`750972d 修复资产库面板被广告拦截插件误杀：类名前缀 ad- → asset-`（8 文件 +274/−122）。
+  推前检查本地领先 1、远端领先 0 → 已 push `f86455d..750972d`。
+  ⚠️ 工作区里 `tools/verify/editor-smoke.mjs` 是**别的 session 在改**，本轮未动。
+- **待用户确认**：开着广告拦截插件的普通窗口硬刷，面板是否恢复（headless 证不了的最终证据）。
+
 ## 下次运行要点
 - **别重复修**：§3 的 12 项 + §6.1 的 L-3 + §6.2 的 L-2 + §6.3 的 L-1 dormant 标记，都已做完。下次先跑四道门禁看是否仍绿，再挑遗留项 **L-4/L-5/L-6/L-7**（docs/12 §6）。
 - **推荐下一个动作**：**资源生命周期下沉** —— `uploadMesh`(46) / `buildGridTexture`(48) / bind group 管理，仍在 `apps/editor/src/renderer.ts`。这是 D1 剩下的 5%。⚠️ 比 L-3 难一个量级：涉及 GPU 资源创建与销毁时机，**必须重做运行时验证**（不能只靠单测），建议先补 headless 断言再动手，且该和用户确认范围后再开始。
@@ -63,4 +86,6 @@ review 并加固 `game-design-zombie` 里「Game Editor Refactory」session（`0
 - 判据陷阱（setCharacter 不增对象数 / #fatal 需 getComputedStyle）+ https dev server 配方 → 已更新 skill `webgpu-headless-validate`。
 - 「自动化把 session 建到临时工作区」的完整排查与迁移流程 → 已更新 skill `workbuddy-workspace-repair`
   （含：`app/sessions.json` 是陈旧快照、真正生效的是 `sessions/<pid>.json`；活跃会话要复制而非原地改写）。
+- 「网页元素不显示」的 14 层诊断阶梯 + 广告拦截类名前缀命中表 + 探针假绿反模式
+  → 已新建 skill `ui-element-invisible-diagnosis`（用户级）。
 - 详细结论 → `game-design-zombie/.workbuddy/memory/2026-09-03.md`。
