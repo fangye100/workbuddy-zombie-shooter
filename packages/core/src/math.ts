@@ -1,10 +1,10 @@
 /**
- * 最小矩阵库。只为 Shader Lab 服务，列主序（与 WGSL mat4x4f 一致）。
+ * 最小矩阵库。列主序（与 WGSL mat4x4f 一致）。
  *
  * 深度范围用 WebGPU 的 [0, 1]（不是 OpenGL 的 [-1, 1]），近平面映射到 0。
  *
- * 已上提进包体基座（ADR-005 / 0b.2）：引擎层真源在 packages/core/src/math.ts，
- * 编辑器通过 @aether/core 消费。apps/lab/shader-lab/src/gpu/math.ts 仅作兼容桥。
+ * 归属（ADR-005 / 0b.2）：本文件即 L0 引擎层真源，编辑器经 `@aether/core` 消费。
+ * 0b.8 已删除 `apps/lab/shader-lab` 下的兼容桥，全仓不存在第二份数学实现。
  */
 
 export type Mat4 = Float32Array;
@@ -394,6 +394,23 @@ export function rgbToHex(r: number, g: number, b: number): string {
       .toString(16)
       .padStart(2, '0');
   return `#${c(r)}${c(g)}${c(b)}`.toUpperCase();
+}
+
+/**
+ * sRGB display 分量 → linear 光分量。
+ *
+ * 2026-09-03 从 apps/editor/src/renderer.ts 下沉：装箱灯光颜色时要用，
+ * 而装箱逻辑本身已归入 packages/render（L-3），这个纯色域函数跟着回到 L0。
+ * 注意 grading 那一路**故意不转** —— grading 工作在 sRGB display-referred 空间。
+ */
+export function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/** hex → linear 三元组（颜色进 uniform 前的标准预处理） */
+export function hexToLinear(hex: string): [number, number, number] {
+  const [r, g, b] = hexToRgb(hex);
+  return [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)];
 }
 
 // ===================== 四元数（旋转 gizmo 用） =====================

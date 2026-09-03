@@ -1,4 +1,4 @@
-import type { MaterialState } from './params';
+import type { MaterialState } from './materials';
 
 /**
  * 换模型时的材质绑定继承（纯逻辑，不碰 GPU / DOM，可单独测试）。

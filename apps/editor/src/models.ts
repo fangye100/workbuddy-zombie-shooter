@@ -24,35 +24,14 @@ import type { MeshData } from '@aether/scene';
  */
 export const CHARACTER_HEIGHT_M = 2.05;
 
-/** 顶点 stride（与 gpu/geometry.ts 一致） */
-const VF = 15;
-
 /**
- * 把网格按 Y 向高度归一化到 targetMeters，脚底保持贴 y=0（纯函数，不改入参）。
- * 等比缩放：X/Z 与 Y 同比例，体型不失真；法线不需要改（等比 + 正交，方向不变）。
+ * 身高归一化真源已上提引擎层 `packages/scene`（纯几何，运行时导入链路要用）。
+ * 这里 re-export 只为兼容既有 `from './models'` 消费者，不再维护第二份实现。
+ *
+ * 注意：`CHARACTER_HEIGHT_M` 是内容常量（源自 roster.json），仍属编辑器域，
+ * 未随之上提——ADR-002 要求它最终由 roster 生成层产出，见 docs/12 遗留项 L-4。
  */
-export function normalizeMeshHeight(mesh: MeshData, targetMeters: number): MeshData {
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (let i = 0; i < mesh.vertices.length; i += VF) {
-    const y = mesh.vertices[i + 1]!;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
-  }
-  const height = maxY - minY;
-  if (!(height > 1e-6) || Math.abs(height - targetMeters) < 1e-6) {
-    return { vertices: new Float32Array(mesh.vertices), indices: new Uint32Array(mesh.indices) };
-  }
-  const s = targetMeters / height;
-  const out = new Float32Array(mesh.vertices.length);
-  for (let i = 0; i < mesh.vertices.length; i += VF) {
-    out[i] = mesh.vertices[i]! * s;
-    out[i + 1] = (mesh.vertices[i + 1]! - minY) * s; // 先移到脚底 y=0 再缩放
-    out[i + 2] = mesh.vertices[i + 2]! * s;
-    for (let c = 3; c < VF; c++) out[i + c] = mesh.vertices[i + c]!;
-  }
-  return { vertices: out, indices: new Uint32Array(mesh.indices) };
-}
+export { normalizeMeshHeight } from '@aether/scene';
 
 export interface BuiltinModel {
   id: string;

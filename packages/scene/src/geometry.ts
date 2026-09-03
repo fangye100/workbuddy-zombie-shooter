@@ -477,3 +477,36 @@ export function meshStats(mesh: MeshData): {
 
   return { vertices: verts, triangles: tris, boundaryEdges, components: roots.size };
 }
+
+/**
+ * 把网格按 Y 向高度归一化到 targetMeters，脚底保持贴 y=0（纯函数，不改入参）。
+ *
+ * 等比缩放：X/Z 与 Y 同比例，体型不失真；法线不需要改（等比 + 正交，方向不变）。
+ *
+ * 归属说明（2026-09-03 上提）：原本住在 `apps/editor/src/models.ts`，但它是纯几何运算
+ * （只依赖本文件的 MeshData），且被运行时导入链路调用（`parseGlb(buffer, CHARACTER_HEIGHT_M)`
+ * 之后统一身高），属引擎域而非编辑器 UI 域。按 docs/11 §5「几何归 packages/scene」补完成。
+ */
+export function normalizeMeshHeight(mesh: MeshData, targetMeters: number): MeshData {
+  const VF = VERTEX_FLOATS;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < mesh.vertices.length; i += VF) {
+    const y = mesh.vertices[i + 1]!;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const height = maxY - minY;
+  if (!(height > 1e-6) || Math.abs(height - targetMeters) < 1e-6) {
+    return { vertices: new Float32Array(mesh.vertices), indices: new Uint32Array(mesh.indices) };
+  }
+  const s = targetMeters / height;
+  const out = new Float32Array(mesh.vertices.length);
+  for (let i = 0; i < mesh.vertices.length; i += VF) {
+    out[i] = mesh.vertices[i]! * s;
+    out[i + 1] = (mesh.vertices[i + 1]! - minY) * s; // 先移到脚底 y=0 再缩放
+    out[i + 2] = mesh.vertices[i + 2]! * s;
+    for (let c = 3; c < VF; c++) out[i + c] = mesh.vertices[i + c]!;
+  }
+  return { vertices: out, indices: new Uint32Array(mesh.indices) };
+}

@@ -16,12 +16,14 @@ export function buildSelectionOutline(host: LabRenderer): CoreHighlight {
   const hovSub = s.hoveredSub;
   const selBg = s.selBindGroup;
   const hovBg = s.hoverBindGroup;
+  // 编辑器语义 → 引擎中性槽位：选中是第一层，悬停是第二层（被第一层压过）。
+  // 引擎只知道「有两层高亮」，selected/hovered 这套交互词汇止步于此文件。
   return {
-    selected:
+    primary:
       selIdx !== null && selBg !== null
         ? { objIndex: selIdx, sub: selSub, bindGroup: selBg }
         : null,
-    hovered:
+    secondary:
       hovIdx !== null && hovIdx !== selIdx && hovBg !== null
         ? { objIndex: hovIdx, sub: hovSub, bindGroup: hovBg }
         : null,

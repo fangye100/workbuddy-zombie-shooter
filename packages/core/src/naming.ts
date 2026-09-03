@@ -1,11 +1,11 @@
 /**
  * 命名工具（纯函数，跨层共用）。
  *
- * 单独成文件而不是塞进 materials.ts：gpu/ 层（gltf 解析器）也要用，
- * 让它去 import 编辑器层的 materials 会把依赖方向搞反。
+ * 单独成文件而不是塞进 materials.ts：scene 层（gltf 解析器）也要用，
+ * 让它去 import render 层的 materials 会把依赖方向搞反。
  *
- * 已上提进包体基座（ADR-005 / 0b.2）：引擎层真源在 packages/core/src/naming.ts，
- * 编辑器通过 @aether/core 消费。apps/lab/shader-lab/src/naming.ts 仅作兼容桥。
+ * 归属（ADR-005 / 0b.2）：本文件即 L0 引擎层真源，编辑器经 `@aether/core` 消费。
+ * 0b.8 已删除 `apps/lab/shader-lab` 下的兼容桥，全仓不存在第二份实现。
  */
 
 /**

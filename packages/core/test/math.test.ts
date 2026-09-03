@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import * as m4 from '@aether/core';
-import { createBox } from '@aether/scene';
 
 /**
  * 拾取数学回归测试（纯 CPU，零 GPU 依赖）。
@@ -8,7 +7,41 @@ import { createBox } from '@aether/scene';
  * 背景：rayTri 曾把 Möller–Trumbore 的 q = tvec × edge1 误写成 tvec × edge2，
  * v 几乎恒为负 → 拾取从未命中过任何物体，typecheck 查不出这种数学错误。
  * 本文件用已知几何基准 + 投影往返把守。
+ *
+ * 2026-09-03 归位：原 `apps/editor/src/gpu/math.test.ts`，随数学真源迁回 packages/core。
  */
+
+/** 最小网格形状（与 @aether/scene 的 MeshData 同构，此处本地声明避免 L0 反向依赖 L4） */
+interface TriMesh {
+  vertices: Float32Array;
+  indices: Uint32Array;
+}
+
+/**
+ * 单位立方体（stride 15）。
+ *
+ * 为什么不 import `@aether/scene` 的 createBox：core 是 L0、scene 是 L4，
+ * 测试反向依赖上层会把分层图撑成环。这里只需要「一个闭合的三角形网格」
+ * 验证 rayTri 端到端，12 个三角形手搓即可，不值得为此引入跨层依赖。
+ */
+function unitBox(): TriMesh {
+  const P: readonly (readonly number[])[] = [
+    [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5],
+    [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5],
+  ];
+  const F: readonly (readonly number[])[] = [
+    [0, 3, 2], [0, 2, 1], [4, 5, 6], [4, 6, 7],
+    [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5],
+    [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7],
+  ];
+  const vertices = new Float32Array(P.length * 15);
+  P.forEach((p, i) => {
+    vertices[i * 15] = p[0]!;
+    vertices[i * 15 + 1] = p[1]!;
+    vertices[i * 15 + 2] = p[2]!;
+  });
+  return { vertices, indices: new Uint32Array(F.flat()) };
+}
 
 /** 基准三角形：(-1,-1,5) (1,-1,5) (0,1,5)，射线原点沿 +z → 应命中 t=5, u=0.25, v=0.5 */
 const BASE_TRI = [-1, -1, 5, 1, -1, 5, 0, 1, 5] as const;
@@ -120,7 +153,7 @@ describe('投影 → 反投影往返（拾取射线正确性）', () => {
 
   it('盒子网格：射线过中心必命中某三角形（端到端 rayTri + 真实 createBox 网格）', () => {
     const boxPos: [number, number, number] = [2.4, 0.5, 0.6];
-    const mesh = createBox(1, 1, 1);
+    const mesh = unitBox();
     const M = m4.mat4();
     m4.composeQuat(M, boxPos[0], boxPos[1], boxPos[2], [0, 0, 0, 1], 1);
     const [nx, ny] = worldToNdc(boxPos);

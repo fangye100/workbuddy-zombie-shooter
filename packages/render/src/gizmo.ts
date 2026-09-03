@@ -10,7 +10,7 @@
  * 颜色用项目 token（红=血红 / 绿=尸绿 / 蓝=电光青），直接写 sRGB
  * （swapchain 非 srgb，post 已自带编码）。
  *
- * 交互数学（hitTest / drag）留在编辑器侧（apps/lab/shader-lab/src/gizmo.ts），
+ * 交互数学（hitTest / drag）留在编辑器侧（apps/editor/src/gizmo.ts），
  * 因为它要读相机 ray / viewProj，属于编辑器消费逻辑。
  */
 

@@ -7,7 +7,7 @@ import {
   type MeshNodeBinding,
   type MeshNodeStub,
   type PrimitiveBinding,
-} from './binding';
+} from '@aether/render';
 
 /**
  * 换模型材质绑定继承的回归测试。

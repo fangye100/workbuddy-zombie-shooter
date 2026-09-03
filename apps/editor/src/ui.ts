@@ -451,6 +451,10 @@ export class Panel {
     this.modelInfo.className = 'hint';
     this.modelInfo.style.marginTop = '6px';
     this.modelInfo.textContent = '';
+    // 自动化钩子：无头冒烟（tools/verify/editor-smoke.mjs）靠这个 id 判定 GLB 是否真的
+    // 走完了 parseGlb → setCharacter 这条链路。没有它只能靠对象数判断，而 setCharacter
+    // 是「替换角色槽」而非新增物体，对象数根本不变。
+    this.modelInfo.id = 'model-info';
     wrap.appendChild(this.modelInfo);
 
     return wrap;

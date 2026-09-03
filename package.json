@@ -10,11 +10,17 @@
     "build": "vite build --config apps/samples/00-init/vite.config.ts",
     "typecheck": "tsc -p tsconfig.check.json --pretty false",
     "smoke:nav": "tsc packages/ai/test/navigation.smoke.ts --outDir .smoke --module commonjs --target ES2022 --moduleResolution node --skipLibCheck && node .smoke/test/navigation.smoke.js",
-    "lab": "vite --config apps/editor/vite.config.ts",
-    "lab:build": "vite build --config apps/editor/vite.config.ts",
+    "editor": "vite --config apps/editor/vite.config.ts",
+    "editor:build": "vite build --config apps/editor/vite.config.ts",
+    "editor:smoke": "node tools/verify/editor-smoke.mjs",
+    "verify:glb": "node tools/verify/cdp-verify.mjs",
+    "verify:uv": "node tools/verify/uv-regularity.mjs",
+    "verify:facade": "python tools/verify/facade-metric.py apps/editor/src/renderer.ts",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lab": "npm run editor",
+    "lab:build": "npm run editor:build"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

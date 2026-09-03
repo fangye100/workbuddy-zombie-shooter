@@ -162,7 +162,9 @@ export default defineConfig({
     https,
   },
   build: {
-    outDir: '../../dist/shader-lab',
+    // 0b.8A 已把 apps/lab/shader-lab 物理搬迁为 apps/editor，产物目录同步改名；
+    // dist/shader-lab 是历史名，留着只会让人以为编辑器还叫 Shader Lab。
+    outDir: '../../dist/editor',
     emptyOutDir: true,
     // WebGPU 依赖较新的语法（含 top-level await），不做降级
     target: 'esnext',
