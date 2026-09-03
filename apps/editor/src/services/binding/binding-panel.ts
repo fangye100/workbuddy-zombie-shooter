@@ -19,7 +19,8 @@
  *  - 精确移动：Shift 拖拽锁定横/纵主轴；方向键微调（Shift 精调 5mm）。
  *  - 半显：下拉「全部 / 仅中轴 / 隐藏左 / 隐藏右」过滤绘制与拾取。
  *  - Detach：移除已应用的皮肤结果但保留 joint 编辑；reset 加确认防误丢数据。
- *  - 姿态预览：三态「当前 / T / A」，实时把当前网格重姿态为 T 或 A 并叠加参考骨架。
+ *  - 姿态预览：四态「当前 / T / A / Bind」。Bind = 冻结保存的绑定姿态（带 offset），
+ *    点 Bind Skin 时拍下、Detach 不清空、再 Bind Skin 才刷新；随时切回即可重绑。
  */
 
 import {
@@ -44,8 +45,8 @@ import {
 
 /** 正视图：投影 (x, y)，深度 = z；侧视图：投影 (z, y)，深度 = x */
 type ViewAxis = 'front' | 'side';
-/** 姿态预览模式 */
-type PreviewMode = 'current' | 'T' | 'A';
+/** 姿态预览模式：当前编辑 / 标准 T / 标准 A / 冻结的 Bind Pose（用于绑定的带 offset 姿态） */
+type PreviewMode = 'current' | 'T' | 'A' | 'bind';
 /** 骨骼显示过滤 */
 type SideFilter = 'all' | 'mid' | 'hideL' | 'hideR';
 
@@ -71,7 +72,7 @@ export interface BindingPanelHooks {
   /** 拟合结果变化（拖拽/镜像/重置）时回调，供外部同步显示 */
   onChange?(fit: FitResult): void;
   /**
-   * 点「应用 T-pose」：外部在这里做 re-gen —— 算权重 → 反解网格 → 导出 GLB。
+   * 点「Bind Skin」：外部在这里做 re-gen —— 算权重 → 反解网格 → 导出 GLB。
    * 面板只负责把拟合结果交出去，不关心导出细节（导出在 binding-export.ts）。
    * @param opts 额外选项（如平滑开关），外部据此决定是否平滑权重。
    */
@@ -111,6 +112,7 @@ export class BindingPanel {
   private animEl!: HTMLElement;
   private bvhBtn!: HTMLButtonElement;
   private exportAnimBtn!: HTMLButtonElement;
+  private bindPoseBtn!: HTMLButtonElement;
 
   /**
    * 模型顶点（stride 15：pos3 / normal3 / smoothNormal3 / uv2 / color4）
@@ -133,6 +135,12 @@ export class BindingPanel {
 
   /** 关节坐标：local 空间，可拖拽修改 */
   private positions: Record<string, [number, number, number]> = tposeWorldPositions();
+  /**
+   * 冻结保存的 Bind Pose —— 点「Bind Skin」时拍下的、带 initial offset 的编辑姿态。
+   * 它「必须和模型对应起来」，所以一经绑定就持久存在：即便 Detach Skin 也不清空，
+   * 只有再次 Bind Skin 才会刷新。随时切到 Bind 预览即可回到它，免去每次重拖骨骼。
+   */
+  private bindPose: JointPositions | null = null;
   private selected: string | null = null;
 
   /** 视图缩放：米 → 像素，由模型包围盒自动定 */
@@ -172,8 +180,8 @@ export class BindingPanel {
         <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节镜像到右侧（x 取反）">镜像 L→R</button>
         <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节镜像到左侧（x 取反）">镜像 R→L</button>
         <button class="bd-btn" data-bd="reset" title="回到模板 T-pose 的初始摆放（会清空编辑，有确认）">重置</button>
-        <button class="bd-btn accent" data-bd="apply" title="用拟合出的骨长重建 T-pose 并导出">应用 T-pose</button>
-        <button class="bd-btn" data-bd="detach" title="移除已应用的皮肤结果，但保留你拖出的关节编辑">Detach 皮肤</button>
+        <button class="bd-btn accent" data-bd="apply" title="用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose">Bind Skin</button>
+        <button class="bd-btn" data-bd="detach" title="移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑">Detach Skin</button>
         <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
         <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB" disabled>导出动画 GLB</button>
         <button class="bd-btn" data-bd="close" title="关闭绑定面板">✕</button>
@@ -196,6 +204,7 @@ export class BindingPanel {
               <button data-bd="pov-current" class="active" title="当前编辑姿态（可拖拽）">当前</button>
               <button data-bd="pov-t" title="把网格重姿态为标准 T-pose 并叠加参考骨架">T</button>
               <button data-bd="pov-a" title="把网格重姿态为标准 A-pose 并叠加参考骨架">A</button>
+              <button data-bd="pov-bind" title="回到冻结的 Bind Pose（带 offset 的绑定姿态，可随时重绑）" disabled>Bind</button>
             </div>
           </div>
           <div class="bd-field">
@@ -219,7 +228,10 @@ export class BindingPanel {
             <b>Shift 拖拽</b>锁定横/纵主轴；<b>方向键</b>微调（Shift 5mm）。<br>
             <b>骨长</b>会被采纳进 T-pose；<br>
             <b>方向偏移</b>只是当前姿态与 T-pose 的差，<br>
-            不会进骨架。
+            不会进骨架。<br>
+            <b>Bind Skin</b> 绑定并冻结此姿态为 <b>Bind Pose</b>；<br>
+            <b>Detach Skin</b> 移除结果但保留 Bind Pose；<br>
+            切到 <b>Bind</b> 预览随时回到它重绑。
           </div>
         </div>
       </div>`;
@@ -233,6 +245,7 @@ export class BindingPanel {
     this.animEl = this.rootEl.querySelector<HTMLElement>('[data-bd="anim"]')!;
     this.bvhBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="bvh"]')!;
     this.exportAnimBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="export-anim"]')!;
+    this.bindPoseBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="pov-bind"]')!;
 
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="close"]')!
       .addEventListener('click', () => this.hooks.onClose());
@@ -257,6 +270,8 @@ export class BindingPanel {
       .addEventListener('click', () => this.setMode('T'));
     pov.querySelector<HTMLButtonElement>('[data-bd="pov-a"]')!
       .addEventListener('click', () => this.setMode('A'));
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-bind"]')!
+      .addEventListener('click', () => this.setMode('bind'));
 
     // 半显下拉
     const sel = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="sidefilter"]')!;
@@ -290,6 +305,8 @@ export class BindingPanel {
     this.tposeMesh = null;
     this.previewMode = 'current';
     this.sideFilter = 'all';
+    this.bindPose = null;
+    this.bindPoseBtn.disabled = true;
     this.setAnimationInfo(null);
     this.computeViewFit();
     this.syncDisplay();
@@ -320,6 +337,8 @@ export class BindingPanel {
     this.tposeMesh = null;
     this.previewMode = 'current';
     this.sideFilter = 'all';
+    this.bindPose = null;
+    this.bindPoseBtn.disabled = true;
     this.positions = tposeWorldPositions();
     this.selected = null;
     this.setAnimationInfo(null);
@@ -364,6 +383,9 @@ export class BindingPanel {
       this.meshVerts = this.srcVerts;
     } else if (this.previewMode === 'current') {
       this.meshVerts = (this.unposed && this.tposeMesh !== null) ? this.tposeMesh : this.srcVerts;
+    } else if (this.previewMode === 'bind') {
+      // Bind Pose 预览：原始网格即处于 bind pose（模型原生姿态），直接显示 + 冻结骨架叠加
+      this.meshVerts = this.srcVerts;
     } else {
       // T / A：把当前姿态网格重姿态为目标姿态（胶囊权重 + 刚体骨变换按权重混合）
       const fit = this.currentFit();
@@ -382,10 +404,11 @@ export class BindingPanel {
     this.cacheSide = null;
   }
 
-  /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose */
+  /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose，bind=冻结的 Bind Pose */
   private overlayPositions(): JointPositions {
     if (this.previewMode === 'T') return this.currentFit().tposePositions;
     if (this.previewMode === 'A') return aposeWorldPositions(this.positions);
+    if (this.previewMode === 'bind' && this.bindPose !== null) return this.bindPose;
     return this.positions;
   }
 
@@ -518,6 +541,11 @@ export class BindingPanel {
   /** 三态姿态预览切换 */
   private setMode(mode: PreviewMode): void {
     if (mode === this.previewMode) return;
+    // 回到冻结的 Bind Pose：把编辑姿态恢复成拍下的 bind pose（只读预览，可随时重绑）
+    if (mode === 'bind') {
+      if (this.bindPose === null) return;
+      this.positions = this.clonePositions(this.bindPose);
+    }
     this.previewMode = mode;
     const pov = this.rootEl.querySelector<HTMLElement>('[data-bd="pov"]')!;
     pov.querySelector<HTMLButtonElement>('[data-bd="pov-current"]')!
@@ -526,6 +554,8 @@ export class BindingPanel {
       .classList.toggle('active', mode === 'T');
     pov.querySelector<HTMLButtonElement>('[data-bd="pov-a"]')!
       .classList.toggle('active', mode === 'A');
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-bind"]')!
+      .classList.toggle('active', mode === 'bind');
     this.syncDisplay();
     this.refresh();
   }
@@ -541,7 +571,10 @@ export class BindingPanel {
     this.refresh();
   }
 
-  /** Detach 皮肤：移除已应用的 T-pose 结果，但保留你拖出的关节编辑 */
+  /**
+   * Detach 皮肤：移除已应用的 T-pose 结果，但**保留 Bind Pose 与关节编辑**。
+   * bindPose 是独立字段，这里不动它 —— 所以切到 Bind 预览仍能回到冻结的绑定姿态。
+   */
   private detach(): void {
     this.unposed = false;
     this.tposeMesh = null;
@@ -558,6 +591,10 @@ export class BindingPanel {
    */
   private applyTPose(): void {
     const fit = this.currentFit();
+    // 冻结保存 Bind Pose（带 offset 的编辑姿态）—— 必须在复位成 T-pose 之前拍下，
+    // 它冻结持久存在，Detach 不清空，只有再次 Bind Skin 才刷新。
+    this.bindPose = this.clonePositions(this.positions);
+    this.bindPoseBtn.disabled = false;
     this.hooks.onApply?.(fit, { smoothWeights: this.smoothWeights });
     // 复位：把关节坐标同步成 T-pose（ΔR 清零），用户立刻看到结果
     for (const name of HUMANIK_ORDER) {
@@ -595,6 +632,13 @@ export class BindingPanel {
     return this.fitCache;
   }
 
+  /** 深拷贝一份关节坐标（冻结 Bind Pose 用，避免与实时编辑互相污染） */
+  private clonePositions(p: JointPositions): JointPositions {
+    const out: Record<string, [number, number, number]> = {};
+    for (const name of HUMANIK_ORDER) out[name] = [...p[name]!];
+    return out;
+  }
+
   // ─────────────────────────── 绘制 ───────────────────────────
 
   private refresh(): void {
@@ -621,7 +665,8 @@ export class BindingPanel {
     const verts = v !== null ? v.length / this.vertexFloats : 0;
     const modeTag = this.previewMode === 'T'
       ? ' · <b class="bd-warn">预览 T-pose</b>'
-      : this.previewMode === 'A' ? ' · <b class="bd-warn">预览 A-pose</b>' : '';
+      : this.previewMode === 'A' ? ' · <b class="bd-warn">预览 A-pose</b>'
+      : this.previewMode === 'bind' ? ' · <b class="bd-warn">Bind Pose</b>' : '';
     this.statsEl.innerHTML = this.modelName !== null
       ? `${this.modelName} · ${verts} 顶点 / ${tris} 面` +
         (this.unposed ? ' · <b class="bd-ok">已摆正 T-pose</b>' : '') + modeTag
