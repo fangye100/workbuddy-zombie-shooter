@@ -27,8 +27,9 @@
 - 🔴 **红线只禁「手动操作 `.git` 目录内部原始数据」**：`git fsck`、删 `.git` 内文件、手建
   refs、直接碰 pack、`git gc --prune` 等直接读写对象库的动作，未经许可一律禁止。
   发现仓库异常（dubious ownership、refs 缺失、对象损坏）只报告症状、等用户指令，**不要自行动手修复**。
-- 多 session 并行时：git 写操作（add/commit/push）只由用户指定的唯一 session 执行，
-  其余 session 只改工作区文件、不跑 git 写命令。
+- 多 session 并行时：**每个 session 只负责提交自己业务范围内的修改文件**，不禁止各 session
+  自行提交。提交时只 `git add` 本会话改动的那些文件，禁止 `git add -A` 一把抓整个工作区
+  （会误吞其他 session 在途的改动）。push 时避开与其他 session 在同一分支同时推。
 - 远程 `origin = git@github.com:fangye100/workbuddy-zombie-shooter.git`（只走 SSH；
   拼写是 **shooter**；另有拼写相近的空仓 **shotter** 勿推）。
 - 大二进制资产（角色概念图、模型 `*.glb/*.fbx/*.obj/*.zip/*.ply`、贴图等）走 **Git LFS**
