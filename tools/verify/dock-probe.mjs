@@ -23,6 +23,16 @@
  *                                    [--chrome <path>] [--cdp 9334] [--shot <png>]
  *                                    [--sizes 1280x800,1366x768,1920x1080,1024x600]
  * 注意：走 https 时必须带 --ignore-certificate-errors（Tailscale 自签证书）。
+ *
+ * ── 用户侧自助诊断 ────────────────────────────────────────────────
+ * 服务端侧全部排干净、但用户仍报「面板不见了」时，把下面这段粘进浏览器
+ * DevTools 控制台（F12 → Console），把输出贴回来即可与无头探针的数字逐项比对。
+ * 它测的是同一批指标，只是跑在用户真实浏览器里：
+ *
+ * (()=>{const d=document.getElementById('asset-dock'),c=document.getElementById('gpu'),n=document.getElementById('center'),r=e=>{const b=e.getBoundingClientRect();return{top:Math.round(b.top),bottom:Math.round(b.bottom),h:Math.round(b.height)}};const v=r(d);return{视口:innerWidth+'x'+innerHeight,dock:v,dock可见:v.h>0&&v.top<innerHeight&&v.bottom>0,被裁掉:Math.max(0,v.bottom-innerHeight),collapsed:d.classList.contains('collapsed'),dockH:getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(),canvas:r(c),center:r(n),fatal:getComputedStyle(document.getElementById('fatal')).display!=='none',树行数:document.querySelectorAll('.ad-tree [data-path]').length,内容项:document.querySelector('.ad-content')?.children.length??null,面包屑:document.querySelector('.ad-crumb')?.textContent?.trim(),ls:{collapsed:localStorage.getItem('zh.assets.collapsed'),dockH:localStorage.getItem('zh.ui.dockH')}}})()
+ *
+ * 判读：dock.h 为 0 或 被裁掉 > 0 → 布局问题；collapsed 为 true → 折叠态，
+ * 清 localStorage 即可；dock 各项正常但用户说看不见 → 检查 fatal 与浏览器缩放。
  */
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
