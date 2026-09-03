@@ -6,9 +6,15 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb } from '@aether/scene';
+import type { GltfResult } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
-import { ASSET_MIME, stemName } from './asset-util';
+import { AssetPreview } from './services/asset-preview';
+import { BindingPanel } from './services/binding/binding-panel';
+import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
+import type { FitResult } from './services/binding/binding-math';
+import type { BindExportStats } from './services/binding/binding-export';
+import { ASSET_MIME, stemName, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
 import { summarizeMatch } from '@aether/render';
 
@@ -886,22 +892,307 @@ async function boot(): Promise<void> {
     }
   }
 
-  const inspectorEl = document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="asset"]');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 绑定面板 Binding —— 资产库 / 层级面板右键「进入绑定」共用一套实现
+  //
+  // 核心契约（改这块之前先读 services/binding/ 三个文件的头注释）：
+  //   · 面板全程只在**模型 local 空间**里操作，不读任何节点世界矩阵；
+  //   · 正视改 (x,y)、侧视改 (z,y)，两次拖拽定一个三维坐标；
+  //   · mirror 是 x 取反，属于正视图（侧视图里 x 是深度轴，看不出镜像）；
+  //   · 拟合产出两类数据：**骨长采纳进 T-pose**，**姿态旋转 ΔR 只在反解时被消耗，
+  //     绝不进骨架** —— 否则 bind pose 不是干净 T-pose，接入 BVH/动捕会带 offset。
+  //
+  // 必须定义在资产库之前：资产库的右键回调直接调 openCtxMenu / bindAssetAt。
+  // ═══════════════════════════════════════════════════════════════════════════
+  const bindingDockEl = document.getElementById('binding-dock');
+  const ctxMenuEl = document.getElementById('ctx-menu');
+
+  /** 一次绑定会话的素材：源网格（**当前姿态**）+ 索引 + 原始 baseColor 贴图 */
+  interface BindingSession {
+    name: string;
+    vertices: Float32Array;
+    indices: Uint32Array;
+    image: Blob | null;
+  }
+  let bindingSession: BindingSession | null = null;
+  let binding: BindingPanel | null = null;
+
+  // ── 右键菜单：资产库与层级面板共用一套 DOM 与关闭逻辑 ──
+  interface CtxItem {
+    label: string;
+    disabled?: boolean;
+    run(): void;
+  }
+
+  function openCtxMenu(x: number, y: number, items: CtxItem[]): void {
+    if (ctxMenuEl === null) return;
+    ctxMenuEl.replaceChildren();
+    for (const it of items) {
+      const b = document.createElement('button');
+      b.className = 'ctx-item';
+      b.type = 'button';
+      b.textContent = it.label;
+      if (it.disabled === true) b.disabled = true;
+      b.addEventListener('click', () => {
+        closeCtxMenu();
+        it.run();
+      });
+      ctxMenuEl.appendChild(b);
+    }
+    ctxMenuEl.classList.add('open');
+    // 先可见才量得到尺寸，故 add('open') 之后再定位；贴边翻转避免被窗口裁掉
+    const r = ctxMenuEl.getBoundingClientRect();
+    ctxMenuEl.style.left = `${Math.max(4, Math.min(x, window.innerWidth - r.width - 6))}px`;
+    ctxMenuEl.style.top = `${Math.max(4, Math.min(y, window.innerHeight - r.height - 6))}px`;
+  }
+
+  function closeCtxMenu(): void {
+    ctxMenuEl?.classList.remove('open');
+  }
+  // 捕获阶段监听：菜单里的按钮在冒泡到 window 前就可能被移除，捕获更稳
+  window.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (ctxMenuEl === null || !ctxMenuEl.classList.contains('open')) return;
+      if (!ctxMenuEl.contains(e.target as Node)) closeCtxMenu();
+    },
+    true,
+  );
+  window.addEventListener('blur', () => closeCtxMenu());
+
+  // ── 面板开关 ──
+  function openBinding(session: BindingSession): void {
+    if (bindingDockEl === null) return;
+    bindingSession = session;
+    if (binding === null) {
+      binding = new BindingPanel(bindingDockEl, {
+        onClose: () => closeBinding(),
+        onApply: (fit) => void applyBinding(fit),
+      });
+      wireBindingGrip();
+    }
+    bindingDockEl.classList.add('open');
+    binding.setModel(session.name, session.vertices, session.indices);
+    // canvas 必须等 open 之后才量得到 clientWidth，晚一帧再重算视图缩放
+    requestAnimationFrame(() => binding?.resize());
+    panel.setModelInfo(
+      `已进入绑定：${session.name} · 正视改 x/y、侧视改 z/y · ` +
+        `骨长采纳进 T-pose，姿态偏移不入骨架`,
+    );
+  }
+
+  function closeBinding(): void {
+    bindingDockEl?.classList.remove('open');
+    binding?.clear();
+    bindingSession = null;
+  }
+
+  /** 顶边把手：下压面板露出上方 3D 视图对照（只改 style.top） */
+  function wireBindingGrip(): void {
+    const grip = bindingDockEl?.querySelector<HTMLElement>('.bd-grip');
+    if (grip === null || grip === undefined || bindingDockEl === null) return;
+    let startY = 0;
+    let startTop = 0;
+    grip.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      startTop = parseFloat(getComputedStyle(bindingDockEl).top) || 0;
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add('dragging');
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!grip.classList.contains('dragging')) return;
+      const host = bindingDockEl.parentElement;
+      const max = host === null ? 0 : Math.max(0, host.clientHeight - 140);
+      bindingDockEl.style.top = `${clamp(startTop + (e.clientY - startY), 0, max)}px`;
+    });
+    const end = (e: PointerEvent): void => {
+      if (!grip.classList.contains('dragging')) return;
+      grip.classList.remove('dragging');
+      if (grip.hasPointerCapture(e.pointerId)) grip.releasePointerCapture(e.pointerId);
+      binding?.resize();
+    };
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
+  }
+
+  /**
+   * 应用 T-pose：算权重 → 反解网格 → 导出 GLB → 回灌显示。
+   *
+   * 传进来的 fit 是**当前姿态**的拟合结果（面板刻意先交 fit、后复位关节）：
+   * LBS 权重必须在当前姿态骨架 + 当前姿态网格上算，顺序反了 A-pose 手臂权重全错。
+   */
+  async function applyBinding(fit: FitResult, download = true): Promise<BindExportStats | null> {
+    const s = bindingSession;
+    if (s === null || binding === null) return null;
+    const mesh = binding.getMesh();
+    if (mesh === null) return null;
+    try {
+      const placed = binding.getState().positions;
+      const res = await rigToTPoseWithImage({
+        name: s.name,
+        vertices: mesh.vertices,
+        indices: mesh.indices,
+        image: s.image,
+        placed,
+      });
+      if (download) {
+        downloadBlob(`${s.name}_tpose.glb`, new Blob([res.glb], { type: 'model/gltf-binary' }));
+      }
+      // 回灌 T-pose 网格：网格摆正 + 骨架摆正，两者重合即证明反解成立（一眼可验证）
+      binding.showTPoseResult(res.fit, res.tposeVertices);
+      const st = res.stats;
+      panel.setModelInfo(
+        `已导出 ${s.name}_tpose.glb · ${st.vertices} 顶点 / ${st.triangles} 面 / ` +
+          `${(st.bytes / 1024).toFixed(0)} KB · 最大姿态偏移 ${st.maxPoseAngleDeg.toFixed(1)}° · ` +
+          `身高 ${st.heightBefore.toFixed(3)} → ${st.heightAfter.toFixed(3)} m` +
+          (st.zeroWeightVerts > 0 ? ` · ⚠ ${st.zeroWeightVerts} 个零权重顶点` : ''),
+      );
+      console.log('[绑定] T-pose 导出完成', {
+        name: s.name,
+        vertices: st.vertices,
+        triangles: st.triangles,
+        bytes: st.bytes,
+        maxPoseAngleDeg: st.maxPoseAngleDeg,
+        offAxisBones: st.offAxisBones,
+        heightBefore: st.heightBefore,
+        heightAfter: st.heightAfter,
+        zeroWeightVerts: st.zeroWeightVerts,
+      });
+      return st;
+    } catch (err) {
+      panel.setModelInfo(`绑定导出失败：${String(err)}`);
+      console.error('[绑定] 导出失败', err);
+      return null;
+    }
+  }
+
+  /** 入口一：资产库里右键 .glb → 「进入绑定」 */
+  async function bindAssetAt(relPath: string): Promise<void> {
+    try {
+      const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const buffer = await resp.arrayBuffer();
+      // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
+      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+      openBinding({
+        name: stemName(relPath),
+        vertices: model.mesh.vertices,
+        indices: model.mesh.indices,
+        image: model.image,
+      });
+    } catch (err) {
+      panel.setModelInfo(`进入绑定失败：${stemName(relPath)} · ${String(err)}`);
+      console.error('[绑定] 载入失败', relPath, err);
+    }
+  }
+
+  /** 入口二：层级面板右键场景物体 → 「进入绑定」 */
+  panel.onHierarchyContextMenu = (index, x, y) => {
+    const obj = renderer.state.objects[index];
+    openCtxMenu(x, y, [
+      {
+        label: obj === undefined ? '进入绑定 Binding…（物体不存在）' : '进入绑定 Binding…',
+        disabled: obj === undefined,
+        run: () => {
+          if (obj === undefined) return;
+          openBinding({
+            name: obj.name,
+            // 拷贝一份：场景网格是渲染器的活引用，applyAo 之类会就地改它
+            vertices: new Float32Array(obj.mesh.vertices),
+            indices: new Uint32Array(obj.mesh.indices),
+            // 场景物体的贴图已上传成 GPUTexture，原始字节取不回来 → 导出不带贴图
+            image: null,
+          });
+        },
+      },
+      { label: '聚焦 Focus', disabled: obj === undefined, run: () => focusOn(index) },
+    ]);
+  };
+
+  window.addEventListener('resize', () => binding?.resize());
+
+  // 自动化钩子：无头 CDP 验证驱动绑定面板（全部走函数，避免持有过期引用）
+  {
+    const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
+    hook.binding = {
+      isOpen: () => bindingDockEl?.classList.contains('open') ?? false,
+      open: (p: string) => void bindAssetAt(p),
+      close: () => closeBinding(),
+      state: () => binding?.getState() ?? null,
+      fit: () => binding?.currentFit() ?? null,
+      pose: (n: string, p: [number, number, number]) => binding?.poseJoint(n, p),
+      select: (n: string | null) => binding?.select(n),
+      distance: (n: string) => binding?.distanceToMesh(n) ?? NaN,
+      /** 只跑导出算一遍（不触发下载），返回统计结果供断言 */
+      dryRun: async () => {
+        if (binding === null) return null;
+        return await applyBinding(binding.currentFit(), false);
+      },
+    };
+  }
+
+  let assetPreview: AssetPreview | null = null;
+  const inspectorEl = document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="asset"] .ai-host');
+  const previewHostEl = document.getElementById('asset-preview-host');
   const dockEl = document.getElementById('asset-dock');
   if (inspectorEl !== null && dockEl !== null) {
     const inspector = new AssetInspector(inspectorEl, {
       onSpawn: (p) => void spawnAssetAt(p, null),
     });
+    assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
+
+    // 资产库预览缓存：避免反复 fetch + 解析 GLB（贴图仍每次重新解码，因 ImageBitmap 已被 close）
+    const previewCache = new Map<string, GltfResult>();
+    async function previewAsset(sel: AssetSelection): Promise<void> {
+      if (sel.entry.kind !== 'file' || !sel.entry.ext.toLowerCase().endsWith('.glb')) {
+        assetPreview?.clear();
+        return;
+      }
+      try {
+        let model = previewCache.get(sel.path);
+        if (model === undefined) {
+          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(sel.path)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const buffer = await resp.arrayBuffer();
+          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+          previewCache.set(sel.path, model);
+        }
+        const bmp = model.image === null ? null : await decodeTexture(model.image, sel.path);
+        await assetPreview?.load(model, bmp);
+      } catch (err) {
+        console.error('[资产库] 预览解析失败', sel.path, err);
+      }
+    }
+
     const assets = new AssetBrowser(dockEl, {
       onSelect: (sel) => {
         if (sel === null) {
           inspector.clear();
+          assetPreview?.clear();
         } else {
           inspector.showAsset(sel);
           switchInspectorTab('asset');
+          void previewAsset(sel);
         }
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
+      // 右键条目 → 统一菜单（与层级面板共用一套 DOM）。只有 .glb 才给「进入绑定」
+      onContextMenu: (path, entry, x, y) => {
+        const isGlb = entry.kind === 'file' && entry.ext.toLowerCase() === '.glb';
+        openCtxMenu(x, y, [
+          {
+            label: isGlb ? '进入绑定 Binding…' : '进入绑定 Binding…（仅 .glb）',
+            disabled: !isGlb,
+            run: () => void bindAssetAt(path),
+          },
+          {
+            label: isGlb ? '载入场景 Spawn' : '载入场景 Spawn（仅 .glb）',
+            disabled: !isGlb,
+            run: () => void spawnAssetAt(path, null),
+          },
+        ]);
+      },
     });
 
     // 画布接收资产拖放：落点 = 视线与地面 y=0 的交点（落不出地面就退回原点）
@@ -937,7 +1228,28 @@ async function boot(): Promise<void> {
     const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
     hook.assets = assets;
     hook.inspector = inspector;
+    hook.preview = assetPreview;
+    hook.previewShow = (p: string) => {
+      const base = p.split('/').pop() ?? p;
+      const dot = base.lastIndexOf('.');
+      const ext = dot >= 0 ? base.slice(dot).toLowerCase() : '';
+      void previewAsset({
+        entry: { name: base, kind: 'file', size: 0, mtime: 0, ext },
+        path: p,
+      });
+    };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
+
+    // 主视图骨骼 X-ray 开关（gizmo-bar 上的「骨骼 X」按钮）
+    const xrayBtn = document.querySelector<HTMLButtonElement>('#gizmo-bar .gz-xray');
+    if (xrayBtn !== null) {
+      xrayBtn.addEventListener('click', () => {
+        const on = !xrayBtn.classList.contains('active');
+        xrayBtn.classList.toggle('active', on);
+        assetPreview?.setSkeletonVisible(on);
+        renderer.setSkeletonVisible(on);
+      });
+    }
   }
 
   // ---- 尺寸 ----
@@ -1048,6 +1360,7 @@ async function boot(): Promise<void> {
 
     renderer.render(panel.params, camera, elapsed, dpr());
     panel.tickAnimation();
+    assetPreview?.tick(dt, elapsed, panel.params);
     requestAnimationFrame(frame);
   };
 

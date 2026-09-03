@@ -34,6 +34,11 @@ export interface AssetBrowserHooks {
   onSelect(sel: AssetSelection | null): void;
   /** 请求把某个 .glb 资产生成到场景（双击 / Inspector 按钮 / 拖放共用） */
   onSpawn(path: string): void;
+  /**
+   * 右键某个条目。菜单 DOM 由外部统一实现并渲染（与层级面板共用一套），
+   * 资产库自己不建菜单元素 —— 否则两处菜单样式/关闭逻辑会各写一遍而走样。
+   */
+  onContextMenu?(path: string, entry: FsEntry, clientX: number, clientY: number): void;
 }
 
 interface TreeNode {
@@ -443,6 +448,16 @@ export class AssetBrowser {
       } else if (entry.ext.toLowerCase() === '.glb') {
         this.hooks.onSpawn(path);
       }
+    });
+
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // 顺手把选中切到右键的这一项，菜单里的动作才有明确的作用对象
+      this.selectedPath = path;
+      this.markContentSelection();
+      this.hooks.onSelect({ path, entry });
+      this.hooks.onContextMenu?.(path, entry, e.clientX, e.clientY);
     });
 
     if (entry.kind === 'file') {

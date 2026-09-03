@@ -457,6 +457,38 @@
   #gizmo-bar .gz-btn.active[data-mode="rotate"] { background: var(--zombie); }
   #gizmo-bar .gz-btn.active[data-mode="scale"] { background: var(--teal); }
   #gizmo-bar .gz-btn.active[data-space] { background: var(--warn); }
+  #gizmo-bar .gz-btn.active[data-xray] { background: var(--zombie); color: var(--ink); }
+
+  /* ---- Asset Preview Pane（资产页内 3D 预览 + Timeline）---- */
+  .insp-pane[data-pane="asset"].active { display: flex; flex-direction: column; }
+  .insp-pane[data-pane="asset"] .ai-host { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  #asset-preview-host {
+    flex: 0 0 auto;
+    height: 360px;
+    display: flex;
+    flex-direction: column;
+    border-top: 3px solid var(--ink);
+    background: var(--panel-deep);
+  }
+  #asset-preview-host .ap-canvas { flex: 1 1 auto; width: 100%; min-height: 0; display: block; }
+  #asset-preview-host .ap-panel { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; }
+  #asset-preview-host .ap-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  #asset-preview-host .ap-play,
+  #asset-preview-host .ap-xray {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 30px; height: 26px; padding: 0 8px;
+    background: var(--panel); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 5px;
+    font-size: 12px; font-weight: 700; cursor: pointer; user-select: none;
+  }
+  #asset-preview-host .ap-play:hover,
+  #asset-preview-host .ap-xray:hover { background: var(--zombie); color: var(--ink); }
+  #asset-preview-host .ap-xray.active { background: var(--zombie); color: var(--ink); }
+  #asset-preview-host .ap-loop { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--paper); }
+  #asset-preview-host .ap-clip, #asset-preview-host .ap-speed { height: 26px; font-size: 11px; }
+  #asset-preview-host .ap-scrub { width: 100%; accent-color: var(--zombie); }
+  #asset-preview-host .ap-time { font-size: 11px; text-align: center; color: var(--paper); }
+  #asset-preview-host .ap-time .ap-t { color: var(--zombie); font-weight: 700; }
 
   /* ================= 可拖拽分界线（所有面板边界都不锁死） ================= */
   .split-handle {
@@ -730,6 +762,127 @@
     overflow: auto;
     max-height: 280px;
   }
+
+  /* ================= 绑定面板 Binding（覆盖中央区域的全屏模式） =================
+   * 进绑定 = 一种编辑模式：面板盖住 3D 视图，退出才回到场景，避免两个坐标系混看。
+   * 顶边 bd-grip 可拖拽下压，露出上方 3D 视图对照（只改 --bind-top 一个值）。
+   *
+   * ⚠️ 类名前缀是 bd-，不是 ad- —— 同资产库那条注释：ad- 开头会被 EasyList /
+   * uBlock Origin / AdGuard 注入 display:none !important，表现为「面板整片消失」。
+   * ============================================================================ */
+  #center { position: relative; } /* 绑定面板是它的绝对定位子层 */
+  #binding-dock {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    top: var(--bind-top, 0px);
+    z-index: 40;
+    display: none;
+    flex-direction: column;
+    background: var(--panel-deep);
+    border-top: 3px solid var(--ink);
+    min-height: 0;
+  }
+  #binding-dock.open { display: flex; }
+  .bd-grip { flex: 0 0 6px; height: 6px; background: var(--ink); cursor: row-resize; transition: background .12s; }
+  .bd-grip:hover, .bd-grip.dragging { background: var(--zombie); }
+  .bd-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-bottom: 3px solid var(--ink);
+  }
+  .bd-title { font-weight: 700; font-size: 13px; color: var(--bone); white-space: nowrap; }
+  .bd-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
+  .bd-model { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .bd-spacer { flex: 1 1 auto; }
+  .bd-btn {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bd-btn:hover { background: var(--ink); color: var(--zombie); }
+  .bd-btn.accent { border-color: var(--zombie); color: var(--zombie); }
+  .bd-btn.accent:hover { background: var(--zombie); color: var(--ink); }
+  .bd-body { flex: 1 1 auto; display: flex; min-height: 0; }
+  .bd-view { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 6px; }
+  .bd-vlabel { flex: 0 0 auto; font-size: 10px; color: var(--text-dim); padding: 0 0 4px 2px; }
+  .bd-canvas {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    display: block;
+    background: #0A0812;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    touch-action: none; /* joint 拖拽自己接管 pointer 事件，别让浏览器抢去做滚动 */
+  }
+  .bd-side {
+    flex: 0 0 250px;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    overflow-y: auto;
+    border-left: 2px solid var(--ink);
+  }
+  .bd-side::-webkit-scrollbar { width: 8px; }
+  .bd-side::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
+  .bd-info { font-size: 11px; line-height: 1.65; }
+  .bd-sel { font-weight: 700; font-size: 12px; color: var(--warn); margin-bottom: 4px; }
+  .bd-mir { color: var(--text-dim); font-weight: 400; font-size: 10px; }
+  .bd-row { display: flex; justify-content: space-between; gap: 8px; }
+  .bd-row span { color: var(--text-dim); }
+  .bd-row i { font-style: normal; font-size: 9px; opacity: .75; }
+  .bd-ok { color: var(--zombie); }
+  .bd-warn { color: var(--warn); }
+  .bd-dim { color: var(--text-dim); }
+  .bd-legend { border-top: 2px solid var(--ink); padding-top: 6px; font-size: 10px; color: var(--text-dim); }
+  .bd-legend-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+  .bd-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
+  .bd-dot-mid { background: #9BE7A8; }
+  .bd-dot-left { background: #6FB7FF; }
+  .bd-dot-right { background: #FF8FA3; }
+  .bd-tip { border-top: 2px solid var(--ink); padding-top: 6px; font-size: 10px; color: var(--text-dim); line-height: 1.7; }
+  .bd-tip b { color: var(--paper); }
+
+  /* 右键菜单（资产库 / 层级「进入绑定」共用） */
+  #ctx-menu {
+    position: fixed;
+    z-index: 90;
+    display: none;
+    flex-direction: column;
+    min-width: 170px;
+    padding: 4px;
+    background: var(--panel);
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.55);
+  }
+  #ctx-menu.open { display: flex; }
+  .ctx-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--paper);
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .ctx-item:hover { background: var(--ink); color: var(--zombie); }
+  .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
 </style>
 </head>
 <body>
@@ -744,6 +897,8 @@
 <div id="center">
   <canvas id="gpu"></canvas>
   <div id="asset-dock"></div>
+  <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
+  <div id="binding-dock"></div>
 </div>
 <div class="split-handle" id="split-right" title="拖拽调整属性面板宽度"></div>
 <aside id="inspector">
@@ -757,7 +912,10 @@
     <div class="insp-pane active" data-pane="inspector"></div>
     <div class="insp-pane" data-pane="scene"></div>
     <div class="insp-pane" data-pane="render"></div>
-    <div class="insp-pane" data-pane="asset"></div>
+    <div class="insp-pane" data-pane="asset">
+      <div class="ai-host"></div>
+      <div id="asset-preview-host"></div>
+    </div>
   </div>
 </aside>
 
@@ -782,8 +940,15 @@
       <button class="gz-btn gz-space" data-space="world" title="世界坐标">World</button>
       <button class="gz-btn gz-space" data-space="local" title="局部坐标">Local</button>
     </div>
+    <div class="gz-sep"></div>
+    <div class="gz-group">
+      <button class="gz-btn gz-xray" data-xray="1" title="骨骼 X-ray 叠加（主视图）">骨骼 X</button>
+    </div>
   </div>
 </div>
+
+<!-- 右键菜单：资产库 / 层级面板共用，由 main.ts 填充 -->
+<div id="ctx-menu"></div>
 
 <div id="hud"></div>
 

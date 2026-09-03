@@ -32,7 +32,7 @@ const arg = (name, dflt) => {
 };
 const has = (name) => args.includes(`--${name}`);
 
-const PORT = Number(arg('port', 5178));
+const PORT = Number(arg('port', 5100));
 const CDP_PORT = Number(arg('cdp', 9333));
 const GLB = arg('glb', null);
 const OUT_DIR = path.resolve(arg('out', '.workbuddy/tmp'));
@@ -62,9 +62,14 @@ function skip(name, why) {
 // 会自动开 https，此时 curl/http 探测返回 000 而 https 通。用 Node 侧也得忽略自签证书。
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-async function alive(url) {
+/**
+ * 探活。超时默认给足 8s：冷启动时第一次请求会连带触发 vite 依赖预构建 +
+ * 首屏 transform（main.ts 打包后 200KB+），1.5s 必超时，60 次轮询全打空，
+ * 表现为「dev server 30s 未就绪」但其实它早就 ready 了 —— 这个坑踩过一次。
+ */
+async function alive(url, timeoutMs = 8000) {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(1500) });
+    const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     return r.ok;
   } catch {
     return false;
@@ -460,6 +465,261 @@ async function main() {
     await sleep(1500);
     const after = await cdp.eval('window.__editor.renderer.stats.drawCalls');
     check('1.5s 后仍在出帧（drawCalls 有更新）', after > 0 && before > 0, `${before} → ${after}`);
+
+    // ---- J. AssetPreview（右侧栏 3D 预览 + 动画 Timeline + 骨骼 X-ray）----
+    console.log('\nJ. AssetPreview（资产预览 / 动画时间轴 / 骨骼 X-ray）');
+    const previewDom = await cdp.eval(
+      `(()=>{const h=document.getElementById('asset-preview-host');const x=document.querySelector('.gz-xray');return {host:h!==null, xray:x!==null, preview:typeof window.__editor.preview}})()`,
+    );
+    check('资产预览宿主 #asset-preview-host 存在', previewDom.host === true);
+    check('主视图骨骼 X-ray 按钮 .gz-xray 存在', previewDom.xray === true);
+    check('window.__editor.preview 调试钩子已挂载', previewDom.preview === 'object');
+
+    const PREVIEW_GLB = arg(
+      'preview',
+      'assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb',
+    );
+    if (!fs.existsSync(path.resolve(PREVIEW_GLB))) {
+      skip('AssetPreview 载入 rigged GLB', `预览 GLB 不存在: ${PREVIEW_GLB}`);
+    } else {
+      const loadRes = await cdp.eval(`(async () => {
+        window.__editor.previewShow(${JSON.stringify(PREVIEW_GLB)});
+        const tab = document.querySelector('.insp-tab[data-tab="asset"]');
+        if (tab) tab.click();
+        await new Promise((r) => setTimeout(r, 3500));
+        const c = document.querySelector('#asset-preview-host .ap-canvas');
+        const st = window.__editor.preview.getState();
+        return {
+          state: st,
+          canvas: c ? { w: c.width, h: c.height, disp: getComputedStyle(c).display } : null,
+          clipOpts: document.querySelectorAll('#asset-preview-host .ap-clip option').length,
+          timeText: (document.querySelector('#asset-preview-host .ap-time') || {}).innerText || '',
+        };
+      })()`);
+      check('载入 rigged GLB 后预览有对象', loadRes.state.hasObject === true, JSON.stringify(loadRes.state));
+      check('预览物体带骨骼动画（isAnim）', loadRes.state.isAnim === true, `isAnim=${loadRes.state.isAnim}`);
+      check('预览自动播放（playing）', loadRes.state.playing === true, `playing=${loadRes.state.playing}`);
+      check(
+        '预览画布有有效尺寸',
+        loadRes.canvas !== null && loadRes.canvas.w > 0 && loadRes.canvas.h > 0,
+        JSON.stringify(loadRes.canvas),
+      );
+      check('Timeline 片段下拉有选项', loadRes.clipOpts > 0, `clips=${loadRes.clipOpts}`);
+      check(
+        'Timeline 时间轴文本格式正确',
+        /\d+\.\d+ \/ \d+\.\d+ s/.test(loadRes.timeText),
+        loadRes.timeText,
+      );
+
+      // 动画推进：主循环持续 advance，time 应增长 → Timeline 实时更新。
+      // 注意 clip 是循环的（duration≈1.97s），直接 t2>t1 会因 wrap 误判，
+      // 用「模 duration 后的前进量」判定是否真的在向前走。
+      const t1 = loadRes.state.time;
+      const dur = loadRes.state.duration;
+      await sleep(1200);
+      const t2 = await cdp.eval('window.__editor.preview.getState().time');
+      const adv = (((Number(t2) - Number(t1)) % dur) + dur) % dur;
+      check(
+        '动画时间在推进（考虑循环 wrap，Timeline 实时更新）',
+        Number.isFinite(adv) && adv > 0.05,
+        `${t1.toFixed(3)} → ${t2.toFixed(3)}（前进 ${adv.toFixed(3)} / 时长 ${dur.toFixed(3)}）`,
+      );
+
+      // 骨骼 X-ray 开关（gizmo-bar 按钮，同时驱动预览 + 主视图）
+      const xray = await cdp.eval(`(async () => {
+        const btn = document.querySelector('.gz-xray');
+        btn.click();
+        await new Promise((r) => setTimeout(r, 600));
+        return { active: btn.classList.contains('active'), previewXray: window.__editor.preview.getState().skeletonVisible };
+      })()`);
+      check('骨骼 X-ray 按钮激活', xray.active === true);
+      check('预览骨骼 X-ray 叠加开启', xray.previewXray === true);
+
+      const shot2 = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      const shot2Path = path.join(OUT_DIR, 'editor-preview-smoke.png');
+      fs.writeFileSync(shot2Path, Buffer.from(shot2.data, 'base64'));
+      console.log(`预览截图：${shot2Path}`);
+    }
+
+    // ---- K. 绑定面板 Binding（正/侧视图 · mirror · T-pose 反解导出）----
+    // 这里守的是一条铁律：**初始 T-pose 只能采纳骨长，joint 之间的旋转差值全是
+    // currentPose 与 T-pose 的 pose 差值**。一旦有人把 ΔR 写进骨架，bind pose 就
+    // 不是干净 T-pose，接入 BVH / 动捕会整条带 offset。DOM 探针证明不了这条，
+    // 必须用「A-pose 输入 → T-pose 手臂仍水平 → 世界矩阵旋转仍是单位阵」三连断言。
+    console.log('\nK. 绑定面板 Binding（骨长采纳 / 姿态偏移不入骨架）');
+    const bindDom = await cdp.eval(
+      `(()=>{const d=document.getElementById('binding-dock');const m=document.getElementById('ctx-menu');
+        return {dock:d!==null, menu:m!==null, hook:typeof window.__editor.binding}})()`,
+    );
+    check('绑定面板宿主 #binding-dock 存在', bindDom.dock === true);
+    check('右键菜单宿主 #ctx-menu 存在', bindDom.menu === true);
+    check('window.__editor.binding 调试钩子已挂载', bindDom.hook === 'object');
+
+    const BIND_GLB = arg(
+      'bind',
+      'assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb',
+    );
+    if (!fs.existsSync(path.resolve(BIND_GLB))) {
+      skip('绑定面板载入 GLB', `绑定 GLB 不存在: ${BIND_GLB}`);
+    } else {
+      const openRes = await cdp.eval(`(async () => {
+        window.__editor.binding.open(${JSON.stringify(BIND_GLB)});
+        await new Promise((r) => setTimeout(r, 3500));
+        const fc = document.querySelector('#binding-dock .bd-canvas[data-bd="front"]');
+        const sc = document.querySelector('#binding-dock .bd-canvas[data-bd="side"]');
+        return {
+          open: window.__editor.binding.isOpen(),
+          state: window.__editor.binding.state(),
+          front: fc ? { w: fc.width, h: fc.height } : null,
+          side: sc ? { w: sc.width, h: sc.height } : null,
+          btns: document.querySelectorAll('#binding-dock .bd-btn').length,
+          grip: document.querySelector('#binding-dock .bd-grip') !== null,
+        };
+      })()`);
+      const p0 = openRes.state?.positions ?? {};
+      check('绑定面板已打开（#binding-dock.open）', openRes.open === true);
+      check(
+        '模型已载入绑定面板',
+        openRes.state?.loaded === true,
+        `model=${String(openRes.state?.modelName)}`,
+      );
+      check(
+        '22 个 HumanIK joint 全部就位',
+        Object.keys(p0).length === 22,
+        `joints=${Object.keys(p0).length}`,
+      );
+      check(
+        '正/侧两个视图 canvas 有有效尺寸',
+        openRes.front !== null && openRes.front.w > 0 && openRes.front.h > 0 &&
+          openRes.side !== null && openRes.side.w > 0 && openRes.side.h > 0,
+        `front=${JSON.stringify(openRes.front)} side=${JSON.stringify(openRes.side)}`,
+      );
+      check('面板按钮齐全（镜像×2 / 重置 / 应用 / 关闭）', openRes.btns >= 5, `btns=${openRes.btns}`);
+      check('顶边拖拽把手 .bd-grip 存在（面板可下压露出 3D 视图）', openRes.grip === true);
+      check(
+        '默认摆放是 T-pose（左臂水平：LeftHand 与 LeftArm 同高）',
+        Number.isFinite(p0.LeftHand?.[1]) && Math.abs(p0.LeftHand[1] - p0.LeftArm[1]) < 1e-9,
+        `LeftArm.y=${p0.LeftArm?.[1]} LeftHand.y=${p0.LeftHand?.[1]}`,
+      );
+
+      // ── 把左前臂+手整体下垂 45° 造出 A-pose，验证「骨长采纳 / ΔR 不入骨架」 ──
+      const aPose = await cdp.eval(`(() => {
+        const b = window.__editor.binding;
+        const f0 = b.fit();
+        const arm = b.state().positions.LeftArm;
+        const fore = b.state().positions.LeftForeArm;
+        const hand = b.state().positions.LeftHand;
+        const r = (-45 * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r);
+        const rot = (p) => {
+          const x = p[0] - arm[0], y = p[1] - arm[1];
+          return [arm[0] + x * c - y * s, arm[1] + x * s + y * c, p[2]];
+        };
+        b.pose('LeftForeArm', rot(fore));
+        b.pose('LeftHand', rot(hand));
+        const f1 = b.fit();
+        const deg = (q) => (2 * Math.acos(Math.min(1, Math.abs(q[3])))) * 180 / Math.PI;
+        const rotErr = (m) => {
+          let d = 0;
+          for (let col = 0; col < 3; col++)
+            for (let row = 0; row < 3; row++) d += Math.abs(m[col * 4 + row] - (col === row ? 1 : 0));
+          return d;
+        };
+        return {
+          len0: f0.lengths.LeftForeArm,
+          len1: f1.lengths.LeftForeArm,
+          degFore: deg(f1.poseRotations.LeftForeArm),
+          degHand: deg(f1.poseRotations.LeftHand),
+          degArm: deg(f1.poseRotations.LeftArm),
+          tyArm: f1.tposePositions.LeftArm[1],
+          tyFore: f1.tposePositions.LeftForeArm[1],
+          tyHand: f1.tposePositions.LeftHand[1],
+          maxRotErr: Math.max(...['Hips', 'LeftArm', 'LeftForeArm', 'LeftHand']
+            .map((n) => rotErr(f1.tposeWorld[n]))),
+        };
+      })()`);
+      check(
+        'A-pose 下骨长仍是刚体不变量（采纳的只是长度）',
+        Math.abs(aPose.len1 - aPose.len0) < 1e-9,
+        `${aPose.len0?.toFixed(9)} → ${aPose.len1?.toFixed(9)}`,
+      );
+      check(
+        '姿态偏移被如实记录（前臂 / 手各约 45°）',
+        Math.abs(aPose.degFore - 45) < 0.5 && Math.abs(aPose.degHand - 45) < 0.5,
+        `ForeArm=${aPose.degFore?.toFixed(2)}° Hand=${aPose.degHand?.toFixed(2)}°`,
+      );
+      check(
+        '没被摆动的骨不带姿态偏移（LeftArm ≈ 0°）',
+        Math.abs(aPose.degArm) < 1e-6,
+        `LeftArm=${aPose.degArm?.toFixed(6)}°`,
+      );
+      check(
+        '★ 重建的 T-pose 里左臂重新水平（ΔR 没被写进骨架）',
+        Math.abs(aPose.tyFore - aPose.tyArm) < 1e-9 &&
+          Math.abs(aPose.tyHand - aPose.tyFore) < 1e-9,
+        `Arm.y=${aPose.tyArm?.toFixed(6)} ForeArm.y=${aPose.tyFore?.toFixed(6)} Hand.y=${aPose.tyHand?.toFixed(6)}`,
+      );
+      check(
+        '★ T-pose 世界矩阵旋转部分 = 单位阵（ΔR 不进骨架）',
+        aPose.maxRotErr < 1e-9,
+        `maxRotErr=${aPose.maxRotErr?.toExponential(2)}`,
+      );
+
+      // ── Mirror：正视图里左右对称（x 取反），y/z 不动 ──
+      const mir = await cdp.eval(`(() => {
+        const b = window.__editor.binding;
+        b.pose('LeftHand', [0.77, 1.42, 0.05]);
+        document.querySelector('#binding-dock .bd-btn[data-bd="mirror-lr"]').click();
+        const st = b.state();
+        return { left: st.positions.LeftHand, right: st.positions.RightHand };
+      })()`);
+      check(
+        '镜像 L→R：右侧 = 左侧 x 取反，y/z 原样',
+        Math.abs(mir.right[0] + mir.left[0]) < 1e-9 &&
+          Math.abs(mir.right[1] - mir.left[1]) < 1e-9 &&
+          Math.abs(mir.right[2] - mir.left[2]) < 1e-9,
+        `L=${JSON.stringify(mir.left)} R=${JSON.stringify(mir.right)}`,
+      );
+
+      // ── 反解导出（dryRun：只算不下载）──
+      const exp = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const stats = await b.dryRun();
+        const statsHtml = document.querySelector('#binding-dock [data-bd="stats"]');
+        return { stats, state: b.state(), statsHtml: statsHtml ? statsHtml.innerHTML : '' };
+      })()`);
+      const es = exp.stats;
+      check('导出 GLB 非空', es !== null && es !== undefined && es.bytes > 0, `bytes=${es?.bytes}`);
+      check('导出含 22 根骨', es?.bones === 22, `bones=${es?.bones}`);
+      check('无零权重顶点（兜底生效）', es?.zeroWeightVerts === 0, `zero=${es?.zeroWeightVerts}`);
+      check(
+        '反解是刚体变换，身高不跳变',
+        es !== null && es !== undefined && Math.abs(es.heightAfter - es.heightBefore) < 0.35,
+        `height ${es?.heightBefore?.toFixed(3)} → ${es?.heightAfter?.toFixed(3)} m`,
+      );
+      check(
+        '统计如实报出「离轴骨」= 被摆动的那两根',
+        Array.isArray(es?.offAxisBones) && es.offAxisBones.length === 2,
+        `offAxis=${JSON.stringify(es?.offAxisBones)}`,
+      );
+      check(
+        '★ 导出后关节已复位到 T-pose（ΔR 清零，手臂重新水平）',
+        Math.abs(exp.state.positions.LeftHand[1] - exp.state.positions.LeftArm[1]) < 1e-9,
+        `Arm.y=${exp.state.positions.LeftArm[1]?.toFixed(6)} Hand.y=${exp.state.positions.LeftHand[1]?.toFixed(6)}`,
+      );
+      check('面板标注已摆正 T-pose', /已摆正 T-pose/.test(exp.statsHtml), exp.statsHtml);
+
+      const shot3 = await cdp.send('Page.captureScreenshot', { format: 'png' });
+      const shot3Path = path.join(OUT_DIR, 'editor-binding-smoke.png');
+      fs.writeFileSync(shot3Path, Buffer.from(shot3.data, 'base64'));
+      console.log(`绑定面板截图：${shot3Path}`);
+
+      // 关掉面板，让最后的收尾截图回到常规编辑器视图
+      const closed = await cdp.eval(`(() => {
+        window.__editor.binding.close();
+        return window.__editor.binding.isOpen();
+      })()`);
+      check('绑定面板已关闭（回到 3D 视图）', closed === false);
+    }
 
     // ---- 截图 ----
     const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
