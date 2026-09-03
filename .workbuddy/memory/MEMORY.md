@@ -2,7 +2,7 @@
 
 ## 项目规则（铁律）
 - 每完成一个任务收尾必须 `git add -A && git commit && git push`，规范中文 commit message，不留脏工作区。
-- 🔴 Git 红线：未经许可禁止触碰 `.git` 内部（修复/fsck/删文件/建 refs/碰 pack 全禁）。发现异常只报告症状等指令。多 session 并行时 git 写操作由用户指定唯一 session 处理，其余只改工作区。
+- 🔴 Git 红线：未经许可禁止触碰 `.git` 内部（修复/fsck/删文件/建 refs/碰 pack 全禁）。发现异常只报告症状等指令。多 session 并行时每个 session 只负责提交自己业务范围内的修改文件（只 `git add` 本会话改的，禁止 `git add -A` 一把抓整树吞别人在途改动），不禁止各 session 自行提交；push 避开同分支并发。
 - 远程 `origin = git@github.com:fangye100/workbuddy-zombie-shooter.git`（只走 SSH；拼写是 shooter，另有空仓 shotter 勿推）。
 
 ## 资料 / 真源（改前先改这里）
