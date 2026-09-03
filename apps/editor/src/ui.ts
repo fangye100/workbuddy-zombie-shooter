@@ -248,6 +248,8 @@ export class Panel {
   onHierarchyHover: ((index: number | null, subIndex: number | null) => void) | null = null;
   /** 双击行 → 选中并聚焦（与视图里双击物体同义） */
   onHierarchyFocus: ((index: number) => void) | null = null;
+  /** 右键物体行 → 弹菜单（「进入绑定」等）。菜单 DOM 由外部统一实现 */
+  onHierarchyContextMenu: ((index: number, clientX: number, clientY: number) => void) | null = null;
   /** 子网格的显隐开关 */
   onSubMeshToggle: ((index: number, subIndex: number, visible: boolean) => void) | null = null;
 
@@ -963,6 +965,11 @@ export class Panel {
     // 单击选中；悬停只发索引给渲染器高亮，不重建任何 DOM；双击 = 选中 + 聚焦
     row.addEventListener('click', () => this.onHierarchySelect?.(item.index, null));
     row.addEventListener('dblclick', () => this.onHierarchyFocus?.(item.index));
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onHierarchyContextMenu?.(item.index, e.clientX, e.clientY);
+    });
     row.addEventListener('mouseenter', () => this.onHierarchyHover?.(item.index, null));
     row.addEventListener('mouseleave', () => this.onHierarchyHover?.(null, null));
 
