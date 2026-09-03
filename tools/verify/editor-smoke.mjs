@@ -35,6 +35,11 @@ const has = (name) => args.includes(`--${name}`);
 const PORT = Number(arg('port', 5100));
 const CDP_PORT = Number(arg('cdp', 9333));
 const GLB = arg('glb', null);
+/** 已绑定的 rigged GLB（22 根 HumanIK 骨）→ L 段「应用动画到场景物体」用 */
+const RIGGED_GLB = arg(
+  'rigged',
+  'assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb',
+);
 const OUT_DIR = path.resolve(arg('out', '.workbuddy/tmp'));
 const CHROME =
   arg('chrome', '') ||
@@ -42,6 +47,7 @@ const CHROME =
 
 let APP_URL = ''; // 由 ensureServer() 探测后确定（http 还是 https）
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 
 // ------------------------------------------------------------------ 断言记账
 
@@ -707,6 +713,108 @@ async function main() {
         `Arm.y=${exp.state.positions.LeftArm[1]?.toFixed(6)} Hand.y=${exp.state.positions.LeftHand[1]?.toFixed(6)}`,
       );
       check('面板标注已摆正 T-pose', /已摆正 T-pose/.test(exp.statsHtml), exp.statsHtml);
+
+      // ---- L. 动画应用（BVH 重定向 → 烘焙进 GLB / 挂到场景里已绑定的模型）----
+      //
+      // 这一段守的是用户的定性要求：「通用、Generic 的绑定和动画应用系统」。
+      // 夹具是入库的 A-pose 合成 BVH（armDeg=45），同源的 T-pose 版在单元测试里对照。
+      // 浏览器端要证的就一件事：A-pose 源的 45° rest 偏移被消掉，且整条链路不炸。
+      console.log('\nL. 动画应用（BVH 重定向）');
+      const APOSE_BVH = 'assets/characters/_tools/sample_apose_arm45.bvh';
+      const bvhText = fs.readFileSync(path.resolve(APOSE_BVH), 'utf8');
+
+      const animHook = await cdp.eval(`(() => typeof window.__editor.anim)()`);
+      check('window.__editor.anim 调试钩子已挂载', animHook === 'object', animHook);
+
+      const rt = await cdp.eval(`(() => {
+        const a = window.__editor.anim;
+        const r = a.load(${JSON.stringify(bvhText)}, 'smoke_apose');
+        const el = document.querySelector('#binding-dock [data-bd="anim"]');
+        return { r, info: a.info(), html: el ? el.innerText : '' };
+      })()`);
+      check(
+        '★ A-pose 源的重定向：最大对齐角 = 45°（rest 偏移被识别出来）',
+        rt.r !== null && Math.abs(rt.r.maxAlignAngleDeg - 45) < 0.01,
+        `maxAlign=${rt.r?.maxAlignAngleDeg?.toFixed(4)}°`,
+      );
+      check(
+        '22 根骨全映射、无缺骨、无未匹配',
+        rt.r?.mapped?.length === 22 &&
+          rt.r?.missingBones?.length === 0 &&
+          rt.r?.unmatchedBvh?.length === 0,
+        `mapped=${rt.r?.mapped?.length} missing=${JSON.stringify(rt.r?.missingBones)}`,
+      );
+      check(
+        '片段信息：5 帧 / 22 骨 / 带根位移',
+        rt.info?.frames === 5 && rt.info?.bones === 22 && rt.info?.hasRoot === true,
+        JSON.stringify(rt.info),
+      );
+      check(
+        '面板 .bd-anim 诊断区写出片段名与对齐角',
+        /smoke_apose/.test(rt.html) && /45\.00/.test(rt.html),
+        rt.html.replace(/\n/g, ' | ').slice(0, 160),
+      );
+
+      const baked = await cdp.eval(`(async () => {
+        const st = await window.__editor.anim.exportDryRun();
+        return st;
+      })()`);
+      check(
+        '★ 带动画导出：23 条轨道（22 rotation + 1 根位移）',
+        baked?.animChannels === 23 && baked?.animClips?.[0] === 'smoke_apose',
+        `channels=${baked?.animChannels} clips=${JSON.stringify(baked?.animClips)}`,
+      );
+
+      // ── 挂到场景里一个**已绑定的外部模型**上（不是绑定面板刚做出来的那个）──
+      const absRigged = path.resolve(RIGGED_GLB);
+      if (!fs.existsSync(absRigged)) {
+        skip('动画挂到场景物体', `rigged GLB 不存在: ${RIGGED_GLB}`);
+        skip('场景物体的片段数/播放状态', `同上`);
+      } else {
+        const applied = await cdp.eval(`(async () => {
+          const a = window.__editor.anim;
+          const renderer = window.__editor.renderer;
+          window.__editor.spawnAsset(${JSON.stringify(RIGGED_GLB)}, [-1.5, 0, 0]);
+          await new Promise((r) => setTimeout(r, 4000));
+          const list = renderer.getObjectList();
+          const idx = list.length - 1;
+          // 诊断：直接扫 state.objects，看 E04 物体到底在不在、有没有骨架
+          const objs = renderer.state.objects.map((o, i) => ({
+            i,
+            name: o.name,
+            hasSkel: o.skeleton !== null,
+            joints: o.skeleton ? o.skeleton.jointNames.filter((n) => n !== null).length : 0,
+            isE04: /E04/.test(o.name),
+          }));
+          const e04 = objs.filter((o) => o.isE04);
+          // getObjectList 的下标和 state.objects 不一定对齐（层级树可能不数某个槽位），
+          // 所以按名字在 state.objects 里定位真实下标，避免挂错物体。
+          const realIdx = e04.length > 0 ? e04[0].i : idx;
+          const r = a.applyTo(realIdx, ${JSON.stringify(bvhText)}, 'smoke_apose');
+          return {
+            idx,
+            realIdx,
+            n: list.length,
+            objs,
+            e04,
+            r,
+            clips: a.objectClips(realIdx),
+            info: (document.getElementById('model-info') || {}).innerText || '',
+          };
+        })()`);
+        check(
+          '★ 重定向后的动画挂到场景里已绑定的模型上',
+          applied.r !== null && applied.r !== undefined,
+          `obj#${applied.realIdx} report=${applied.r === null ? 'null' : 'ok'} info="${String(applied.info).slice(0, 120)}"`,
+        );
+        check(
+          '★ 23 条轨道落到目标骨架上且自动开始播放',
+          applied.clips?.tracks === 23 &&
+            applied.clips?.playing === true &&
+            applied.clips?.clip >= 0,
+          JSON.stringify(applied.clips),
+        );
+      }
 
       const shot3 = await cdp.send('Page.captureScreenshot', { format: 'png' });
       const shot3Path = path.join(OUT_DIR, 'editor-binding-smoke.png');

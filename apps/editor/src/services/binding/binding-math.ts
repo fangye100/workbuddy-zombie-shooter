@@ -92,7 +92,8 @@ export function matPoint(m: Mat4, p: Vec3): [number, number, number] {
   return [x, y, z];
 }
 
-type Quat = [number, number, number, number]; // xyzw
+/** 四元数 xyzw（与 glTF / BVH 烘焙输出同序） */
+export type Quat = [number, number, number, number];
 
 /** 把单位向量 a 旋到单位向量 b 的最小旋转（四元数） */
 export function quatFromUnitVectors(a: Vec3, b: Vec3): Quat {

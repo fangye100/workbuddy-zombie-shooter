@@ -1,5 +1,5 @@
 import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
-import { LabRenderer, type CameraState } from './renderer';
+import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
@@ -12,11 +12,21 @@ import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { BindingPanel } from './services/binding/binding-panel';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
-import type { FitResult } from './services/binding/binding-math';
-import type { BindExportStats } from './services/binding/binding-export';
+import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
+import type { FitResult, JointPositions } from './services/binding/binding-math';
 import { ASSET_MIME, stemName, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
-import { summarizeMatch } from '@aether/render';
+import { summarizeMatch, createSkinState, selectClip, play } from '@aether/render';
+import { parseBvh } from './services/binding/bvh-parser';
+import {
+  retargetBvh,
+  retargetSummary,
+  clipToAnimClip,
+  skeletonRestWorldPositions,
+  type RetargetClip,
+  type RetargetOptions,
+  type RetargetReport,
+} from './services/binding/retarget';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -917,6 +927,15 @@ async function boot(): Promise<void> {
   let bindingSession: BindingSession | null = null;
   let binding: BindingPanel | null = null;
 
+  /**
+   * 已重定向的动画（**骨名**为键，还没绑到任何具体骨架上）。
+   *
+   * 这正是「通用」的关键：重定向的产物与骨架解耦，因此同一份 BVH 既能导进
+   * 绑定面板正在做的 T-pose GLB，也能直接挂到场景里任意一个已绑定模型上。
+   */
+  let animClip: RetargetClip | null = null;
+  let animReport: RetargetReport | null = null;
+
   // ── 右键菜单：资产库与层级面板共用一套 DOM 与关闭逻辑 ──
   interface CtxItem {
     label: string;
@@ -968,6 +987,8 @@ async function boot(): Promise<void> {
       binding = new BindingPanel(bindingDockEl, {
         onClose: () => closeBinding(),
         onApply: (fit) => void applyBinding(fit),
+        onLoadBvh: () => pickBvhFile((t, n) => loadBvhForBinding(t, n)),
+        onExportAnim: () => void exportAnimGlb(),
       });
       wireBindingGrip();
     }
@@ -1019,37 +1040,56 @@ async function boot(): Promise<void> {
   /**
    * 应用 T-pose：算权重 → 反解网格 → 导出 GLB → 回灌显示。
    *
-   * 传进来的 fit 是**当前姿态**的拟合结果（面板刻意先交 fit、后复位关节）：
-   * LBS 权重必须在当前姿态骨架 + 当前姿态网格上算，顺序反了 A-pose 手臂权重全错。
+   * @param fit     当前姿态的拟合结果（面板刻意先交 fit、后复位关节：
+   *                LBS 权重必须在当前姿态骨架 + 当前姿态网格上算，顺序反了
+   *                A-pose 手臂权重全错）
+   * @param anim    可选的重定向动画，一并烘焙进 `animations[]`
+   * @param suffix  文件名后缀（`_tpose` / `_anim`）；download=false 时不落盘
    */
-  async function applyBinding(fit: FitResult, download = true): Promise<BindExportStats | null> {
+  async function exportBound(
+    fit: FitResult,
+    anim: BindAnimationInput | null,
+    download: boolean,
+    suffix: string,
+  ): Promise<BindExportStats | null> {
     const s = bindingSession;
     if (s === null || binding === null) return null;
     const mesh = binding.getMesh();
     if (mesh === null) return null;
     try {
-      const placed = binding.getState().positions;
-      const res = await rigToTPoseWithImage({
+      const base = {
         name: s.name,
         vertices: mesh.vertices,
         indices: mesh.indices,
         image: s.image,
-        placed,
-      });
+        placed: binding.getState().positions,
+      };
+      // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
+      const res = await rigToTPoseWithImage(
+        anim === null ? base : { ...base, animation: anim },
+      );
+      const file = `${s.name}${suffix}.glb`;
       if (download) {
-        downloadBlob(`${s.name}_tpose.glb`, new Blob([res.glb], { type: 'model/gltf-binary' }));
+        downloadBlob(file, new Blob([res.glb], { type: 'model/gltf-binary' }));
       }
       // 回灌 T-pose 网格：网格摆正 + 骨架摆正，两者重合即证明反解成立（一眼可验证）
       binding.showTPoseResult(res.fit, res.tposeVertices);
       const st = res.stats;
+      const animPart =
+        anim === null
+          ? ''
+          : ` · 动画 ${st.animClips.join('/')} (${st.animChannels} 轨道)`;
       panel.setModelInfo(
-        `已导出 ${s.name}_tpose.glb · ${st.vertices} 顶点 / ${st.triangles} 面 / ` +
+        (download ? `已导出 ${file}` : '已试算') +
+          ` · ${st.vertices} 顶点 / ${st.triangles} 面 / ` +
           `${(st.bytes / 1024).toFixed(0)} KB · 最大姿态偏移 ${st.maxPoseAngleDeg.toFixed(1)}° · ` +
           `身高 ${st.heightBefore.toFixed(3)} → ${st.heightAfter.toFixed(3)} m` +
+          animPart +
           (st.zeroWeightVerts > 0 ? ` · ⚠ ${st.zeroWeightVerts} 个零权重顶点` : ''),
       );
-      console.log('[绑定] T-pose 导出完成', {
+      console.log('[绑定] 导出完成', {
         name: s.name,
+        file: download ? file : null,
         vertices: st.vertices,
         triangles: st.triangles,
         bytes: st.bytes,
@@ -1058,6 +1098,8 @@ async function boot(): Promise<void> {
         heightBefore: st.heightBefore,
         heightAfter: st.heightAfter,
         zeroWeightVerts: st.zeroWeightVerts,
+        animChannels: st.animChannels,
+        animClips: st.animClips,
       });
       return st;
     } catch (err) {
@@ -1065,6 +1107,176 @@ async function boot(): Promise<void> {
       console.error('[绑定] 导出失败', err);
       return null;
     }
+  }
+
+  async function applyBinding(fit: FitResult, download = true): Promise<BindExportStats | null> {
+    return await exportBound(fit, null, download, '_tpose');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 动画应用：任意 BVH → 重定向 → ① 导出带动画的 GLB  ② 直接挂到场景里已绑定的模型
+  //
+  // 为什么必须重定向而不能直接拷轨道值，见 services/binding/retarget.ts 的头注释。
+  // 一句话：glTF 轨道是**绝对本地旋转**，源 A-pose / 目标 T-pose 直接拷会整体偏 45°，
+  // 这就是用户说的「所有导入的动画都会有 offset」。
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"]/g, (c) =>
+      c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;',
+    );
+  }
+
+  /** 绑定面板侧栏的诊断 HTML：一句话看清这次重定向发生了什么 */
+  function animInfoHtml(r: RetargetReport): string {
+    const row = (k: string, v: string): string =>
+      `<div class="bd-row"><span class="bd-dim">${k}</span> ${v}</div>`;
+    const out: string[] = [`<div><b>${escapeHtml(r.clipName)}</b></div>`];
+    out.push(row('帧', `${r.frameCount} @ ${r.fps.toFixed(1)}fps · ${r.duration.toFixed(2)}s`));
+    out.push(
+      row(
+        '骨',
+        `${r.mapped.length} 已映射` +
+          (r.missingBones.length > 0
+            ? ` · <span class="bd-warn">缺 ${escapeHtml(r.missingBones.join(' '))}</span>`
+            : ''),
+      ),
+    );
+    out.push(row('对齐', `最大 ${r.maxAlignAngleDeg.toFixed(2)}°`));
+    out.push(row('缩放', `${r.skeletonScale.toFixed(4)} · 源 ${r.srcUpAxis}-up`));
+    if (r.unmatchedBvh.length > 0) {
+      const list = r.unmatchedBvh.slice(0, 6).join(' ');
+      out.push(row('未用', escapeHtml(list) + (r.unmatchedBvh.length > 6 ? ' …' : '')));
+    }
+    for (const w of r.warnings) out.push(row('提示', `<span class="bd-warn">${escapeHtml(w)}</span>`));
+    return out.join('');
+  }
+
+  /**
+   * 重定向一份 BVH 文本并缓存为 `animClip`（**骨名**为键，与具体骨架解耦）。
+   *
+   * @param targetPositions 目标骨架的 T-pose 关节世界位置，用于算根位移缩放。
+   *                        null = 退回 HumanIK 模板（姿势仍对，缩放按 1.7 m 模板算）。
+   */
+  function retargetInto(
+    text: string,
+    clipName: string,
+    targetPositions: JointPositions | null,
+  ): RetargetReport {
+    const opts: RetargetOptions = { clipName };
+    if (targetPositions !== null) opts.targetPositions = targetPositions;
+    const res = retargetBvh(parseBvh(text), opts);
+    animClip = res.clip;
+    animReport = res.report;
+    return res.report;
+  }
+
+  function clearAnim(): void {
+    animClip = null;
+    animReport = null;
+  }
+
+  /** 入口 A：绑定面板「载入 BVH…」—— 目标骨架就是面板里那个 T-pose */
+  function loadBvhForBinding(text: string, clipName: string): RetargetReport | null {
+    if (binding === null) return null;
+    try {
+      const r = retargetInto(text, clipName, binding.currentFit().tposePositions);
+      binding.setAnimationInfo(animInfoHtml(r));
+      panel.setModelInfo(`动画已重定向：${retargetSummary(r)}`);
+      console.log('[动画] 重定向完成', r);
+      return r;
+    } catch (err) {
+      clearAnim();
+      binding.setAnimationInfo(null);
+      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      console.error('[动画] 重定向失败', err);
+      return null;
+    }
+  }
+
+  /**
+   * 入口 B：层级面板「应用动画 (BVH)…」—— 目标骨架是**场景里这个模型自己的**。
+   *
+   * 缩放按它自己的 rest 腿长算（不是模板身高），所以 2.05 m 的 E-04 接到
+   * 1.7 m 模板录的动捕上根位移不会被压扁。
+   */
+  function loadBvhForObject(text: string, clipName: string, obj: SceneObject): RetargetReport | null {
+    if (obj.skeleton === null) return null;
+    try {
+      const r = retargetInto(text, clipName, skeletonRestWorldPositions(obj.skeleton));
+      const applied = applyAnimToObject(obj);
+      if (applied === null) return null;
+      panel.setModelInfo(
+        `${obj.name} 已应用 ${clipName} · ${applied.tracks} 条轨道 · ` +
+          `片段 #${applied.clip} · ${retargetSummary(r)}`,
+      );
+      console.log('[动画] 已挂到场景物体', { obj: obj.name, ...applied, report: r });
+      return r;
+    } catch (err) {
+      clearAnim();
+      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      console.error('[动画] 重定向失败', err);
+      return null;
+    }
+  }
+
+  /** 隐藏 file input：BVH 没有别的入口，只能从磁盘挑 */
+  function pickBvhFile(onText: (text: string, name: string) => void): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.bvh';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', () => {
+      const f = input.files?.[0];
+      input.remove();
+      if (f === undefined) return;
+      void f
+        .text()
+        .then((t) => onText(t, stemName(f.name)))
+        .catch((err: unknown) => {
+          panel.setModelInfo(`BVH 读取失败：${String(err)}`);
+          console.error('[动画] 读取失败', err);
+        });
+    });
+    input.click();
+  }
+
+  /** 导出「T-pose 网格 + 骨架 + 已重定向动画」的 GLB */
+  async function exportAnimGlb(): Promise<BindExportStats | null> {
+    const c = animClip;
+    if (c === null || binding === null) return null;
+    const anim: BindAnimationInput = {
+      name: c.name,
+      times: c.times,
+      rotations: c.rotations,
+      translation: c.translation,
+    };
+    return await exportBound(binding.currentFit(), anim, true, '_anim');
+  }
+
+  /**
+   * 把已重定向的动画挂到一个**场景里已绑定的模型**上。
+   *
+   * 这是「通用」的另一半：不要求模型来自绑定面板，只要骨架命名能对上 HumanIK
+   * （rig_character.py 产物、Mixamo 导出、绑定面板导出的 GLB 都满足）。
+   */
+  function applyAnimToObject(obj: SceneObject): { tracks: number; clip: number } | null {
+    const c = animClip;
+    if (c === null || obj.skeleton === null) return null;
+    const clip = clipToAnimClip(c, obj.skeleton);
+    if (clip === null) {
+      panel.setModelInfo(
+        `动画应用失败：${obj.name} 的骨架没有一根骨对上 HumanIK 22 骨（无法按名重定向）`,
+      );
+      return null;
+    }
+    obj.animations = [...obj.animations, clip];
+    obj.skinState = createSkinState(obj.skeleton, obj.animations);
+    selectClip(obj.skinState, obj.animations.length - 1);
+    play(obj.skinState);
+    hudDirty = true;
+    return { tracks: clip.tracks.length, clip: obj.animations.length - 1 };
   }
 
   /** 入口一：资产库里右键 .glb → 「进入绑定」 */
@@ -1106,6 +1318,19 @@ async function boot(): Promise<void> {
           });
         },
       },
+      {
+        label:
+          obj === undefined
+            ? '应用动画 (BVH)…（物体不存在）'
+            : obj.skeleton === null
+              ? '应用动画 (BVH)…（该物体无骨骼）'
+              : '应用动画 (BVH)…',
+        disabled: obj === undefined || obj.skeleton === null,
+        run: () => {
+          if (obj === undefined) return;
+          pickBvhFile((t, n) => loadBvhForObject(t, n, obj));
+        },
+      },
       { label: '聚焦 Focus', disabled: obj === undefined, run: () => focusOn(index) },
     ]);
   };
@@ -1130,9 +1355,61 @@ async function boot(): Promise<void> {
         return await applyBinding(binding.currentFit(), false);
       },
     };
+
+    /**
+     * 动画钩子：无头冒烟直接喂 BVH 文本，绕过 file input（headless 里没法点）。
+     *
+     * 两条路都要能验证：
+     *   · `load(text, name)`           → 绑到面板当前的 T-pose（对应面板「载入 BVH…」）
+     *   · `applyTo(index, text, name)` → 直接挂到场景物体（对应层级右键「应用动画」）
+     */
+    hook.anim = {
+      /** 当前缓存的重定向报告；没载入过为 null */
+      report: () => animReport,
+      /** 当前缓存的片段名 / 帧数；没载入过为 null */
+      info: () =>
+        animClip === null
+          ? null
+          : { name: animClip.name, frames: animClip.times.length, bones: Object.keys(animClip.rotations).length, hasRoot: animClip.translation !== null },
+      load: (text: string, name = 'clip') => loadBvhForBinding(text, name),
+      applyTo: (index: number, text: string, name = 'clip') => {
+        const obj = renderer.state.objects[index];
+        if (obj === undefined) return null;
+        return loadBvhForObject(text, name, obj);
+      },
+      /** 导出带动画的 GLB 走一遍全流程（不落盘），返回统计供断言 */
+      exportDryRun: async () => {
+        const c = animClip;
+        if (c === null || binding === null) return null;
+        const anim: BindAnimationInput = {
+          name: c.name,
+          times: c.times,
+          rotations: c.rotations,
+          translation: c.translation,
+        };
+        return await exportBound(binding.currentFit(), anim, false, '_anim');
+      },
+      /** 场景物体当前的片段数与正在播的片段下标 */
+      objectClips: (index: number) => {
+        const obj = renderer.state.objects[index];
+        if (obj === undefined || obj.skinState === null) return null;
+        return {
+          clips: obj.skinState.clips.length,
+          clip: obj.skinState.clip,
+          playing: obj.skinState.playing,
+          tracks: obj.skinState.clips[obj.skinState.clip]?.tracks.length ?? 0,
+        };
+      },
+      clear: () => {
+        clearAnim();
+        binding?.setAnimationInfo(null);
+      },
+    };
   }
 
   let assetPreview: AssetPreview | null = null;
+  // 预览缓存提到块外：动画应用要往缓存里的 model.animations 追加片段
+  const previewCache = new Map<string, GltfResult>();
   const inspectorEl = document.querySelector<HTMLElement>('#inspector .insp-pane[data-pane="asset"] .ai-host');
   const previewHostEl = document.getElementById('asset-preview-host');
   const dockEl = document.getElementById('asset-dock');
@@ -1143,7 +1420,6 @@ async function boot(): Promise<void> {
     assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
 
     // 资产库预览缓存：避免反复 fetch + 解析 GLB（贴图仍每次重新解码，因 ImageBitmap 已被 close）
-    const previewCache = new Map<string, GltfResult>();
     async function previewAsset(sel: AssetSelection): Promise<void> {
       if (sel.entry.kind !== 'file' || !sel.entry.ext.toLowerCase().endsWith('.glb')) {
         assetPreview?.clear();
@@ -1239,6 +1515,9 @@ async function boot(): Promise<void> {
       });
     };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
+    // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则
+    // 只能绕 UI 后门。renderer 是模块级单例，这里挂一次即可。
+    hook.renderer = renderer;
 
     // 主视图骨骼 X-ray 开关（gizmo-bar 上的「骨骼 X」按钮）
     const xrayBtn = document.querySelector<HTMLButtonElement>('#gizmo-bar .gz-xray');

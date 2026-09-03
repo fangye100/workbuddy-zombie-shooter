@@ -45,6 +45,16 @@ export interface BindingPanelHooks {
    * 面板只负责把拟合结果交出去，不关心导出细节（导出在 binding-export.ts）。
    */
   onApply?(fit: FitResult): void;
+  /**
+   * 点「载入 BVH…」：外部在这里选文件 → 解析 → 重定向到当前骨架。
+   * 面板不碰文件 IO，只负责把入口暴露出来（与 onApply 同样的分层）。
+   */
+  onLoadBvh?(): void;
+  /**
+   * 点「导出动画 GLB」：外部把「T-pose 网格 + 骨骼 + 已重定向的动画」一起导出。
+   * 没有载入 BVH 时按钮是禁用的。
+   */
+  onExportAnim?(): void;
 }
 
 export interface BindingPanelState {
@@ -67,6 +77,9 @@ export class BindingPanel {
   private sideCtx!: CanvasRenderingContext2D;
   private infoEl!: HTMLElement;
   private statsEl!: HTMLElement;
+  private animEl!: HTMLElement;
+  private bvhBtn!: HTMLButtonElement;
+  private exportAnimBtn!: HTMLButtonElement;
 
   /**
    * 模型顶点（stride 15：pos3 / normal3 / smoothNormal3 / uv2 / color4）
@@ -114,6 +127,8 @@ export class BindingPanel {
         <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节镜像到左侧（x 取反）">镜像 R→L</button>
         <button class="bd-btn" data-bd="reset" title="回到模板 T-pose 的初始摆放">重置</button>
         <button class="bd-btn accent" data-bd="apply" title="用拟合出的骨长重建 T-pose 并导出">应用 T-pose</button>
+        <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
+        <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB" disabled>导出动画 GLB</button>
         <button class="bd-btn" data-bd="close" title="关闭绑定面板">✕</button>
       </div>
       <div class="bd-body">
@@ -127,6 +142,7 @@ export class BindingPanel {
         </div>
         <div class="bd-side">
           <div class="bd-info" data-bd="info">选中一个 joint 查看骨长与姿态偏移</div>
+          <div class="bd-anim" data-bd="anim">未载入动画</div>
           <div class="bd-legend">
             <div class="bd-legend-row"><i class="bd-dot bd-dot-mid"></i>中轴骨</div>
             <div class="bd-legend-row"><i class="bd-dot bd-dot-left"></i>左侧 L</div>
@@ -148,6 +164,9 @@ export class BindingPanel {
     this.sideCtx = this.sideCanvas.getContext('2d')!;
     this.infoEl = this.rootEl.querySelector<HTMLElement>('[data-bd="info"]')!;
     this.statsEl = this.rootEl.querySelector<HTMLElement>('[data-bd="stats"]')!;
+    this.animEl = this.rootEl.querySelector<HTMLElement>('[data-bd="anim"]')!;
+    this.bvhBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="bvh"]')!;
+    this.exportAnimBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="export-anim"]')!;
 
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="close"]')!
       .addEventListener('click', () => this.hooks.onClose());
@@ -162,6 +181,8 @@ export class BindingPanel {
       .addEventListener('click', () => { this.mirror('R2L'); });
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="apply"]')!
       .addEventListener('click', () => this.applyTPose());
+    this.bvhBtn.addEventListener('click', () => this.hooks.onLoadBvh?.());
+    this.exportAnimBtn.addEventListener('click', () => this.hooks.onExportAnim?.());
 
     this.bindCanvas(this.frontCanvas, 'front');
     this.bindCanvas(this.sideCanvas, 'side');
@@ -181,8 +202,24 @@ export class BindingPanel {
     this.vertexFloats = vertexFloats;
     this.selected = null;
     this.unposed = false;
+    this.setAnimationInfo(null);
     this.computeViewFit();
     this.refresh();
+  }
+
+  /**
+   * 显示一段已重定向动画的诊断信息，并联动「导出动画 GLB」按钮的可用性。
+   *
+   * @param html null = 清空（换模型 / 关面板时用），此时导出按钮禁用
+   */
+  setAnimationInfo(html: string | null): void {
+    if (html === null) {
+      this.animEl.innerHTML = '<span class="bd-dim">未载入动画</span>';
+      this.exportAnimBtn.disabled = true;
+      return;
+    }
+    this.animEl.innerHTML = html;
+    this.exportAnimBtn.disabled = false;
   }
 
   clear(): void {
@@ -193,6 +230,7 @@ export class BindingPanel {
     this.unposed = false;
     this.positions = tposeWorldPositions();
     this.selected = null;
+    this.setAnimationInfo(null);
     this.refresh();
   }
 

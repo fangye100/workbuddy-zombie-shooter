@@ -38,6 +38,20 @@ export const BINDING_VERTEX_FLOATS = 15;
 const NORMAL_OFFSET = 3;
 const UV_OFFSET = 9;
 
+/**
+ * 一段待烘焙进 GLB 的动画（以**骨名**为键，与 glTF 节点索引解耦）。
+ * 直接吃 `retarget.ts` 的 `RetargetClip` 形状 —— 重定向与导出因此零耦合。
+ */
+export interface BindAnimationInput {
+  name: string;
+  /** 关键帧时间（秒），升序。glTF 要求其 accessor 带 min/max */
+  times: Float32Array;
+  /** 骨名 → (frames × 4) 四元数 xyzw */
+  rotations: Record<string, Float32Array>;
+  /** Hips 的 (frames × 3) 平移；null = 只写旋转轨道 */
+  translation: Float32Array | null;
+}
+
 export interface BindExportInput {
   /** 导出文件名（不含扩展名） */
   name: string;
@@ -51,6 +65,11 @@ export interface BindExportInput {
   falloff?: number;
   eps?: number;
   maxInfluences?: number;
+  /**
+   * 可选：一并烘焙进 `animations[]`。
+   * 骨名必须在 HumanIK 22 骨里，对不上的骨会被跳过并记进 `animSkipped`。
+   */
+  animation?: BindAnimationInput;
 }
 
 export interface BindExportStats {
@@ -69,6 +88,10 @@ export interface BindExportStats {
   /** 零权重顶点数，应为 0（兜底逻辑保证） */
   zeroWeightVerts: number;
   bytes: number;
+  /** 烘焙进 GLB 的动画轨道数（没有动画时为 0） */
+  animChannels: number;
+  /** animations[] 里的片段名（没有动画时为空数组） */
+  animClips: string[];
 }
 
 export interface BindExportResult {
@@ -116,6 +139,7 @@ function runExport(
   if (!Number.isInteger(vertexCount) || vertexCount <= 0) {
     throw new Error(`顶点数组长度 ${vertices.length} 不是 stride ${VF} 的正整数倍`);
   }
+  const anim = input.animation ?? null;
 
   // ① 拟合：拆出「采纳的骨长」与「不入骨架的 ΔR」
   const fit = fitSkeleton(placed);
@@ -131,11 +155,36 @@ function runExport(
   tposeVertices = unposeNormals(tposeVertices, VF, vertexCount, skin, fit, NORMAL_OFFSET);
 
   const glb = buildGlb(
-    name, tposeVertices, indices, VF, vertexCount, skin, fit, imageBytes, mime,
+    name, tposeVertices, indices, VF, vertexCount, skin, fit, imageBytes, mime, anim,
   );
   const stats = buildStats(vertices, tposeVertices, VF, vertexCount, indices, fit, skin);
+  const animInfo = anim === null
+    ? { animChannels: 0, animClips: [] as string[] }
+    : countAnimChannels(anim);
 
-  return { glb, fit, skin, tposeVertices, stats: { ...stats, bytes: glb.byteLength } };
+  return {
+    glb,
+    fit,
+    skin,
+    tposeVertices,
+    stats: { ...stats, bytes: glb.byteLength, ...animInfo },
+  };
+}
+
+/** 统计真正写进 GLB 的动画轨道（骨名不在 HumanIK 22 骨里的会被跳过） */
+function countAnimChannels(anim: BindAnimationInput): {
+  animChannels: number;
+  animClips: string[];
+} {
+  let n = 0;
+  for (const bone of Object.keys(anim.rotations)) {
+    if (HUMANIK_BONES[bone] === undefined) continue;
+    if (anim.rotations[bone]!.length !== anim.times.length * 4) continue;
+    n++;
+  }
+  const hips = anim.translation;
+  if (hips !== null && hips.length === anim.times.length * 3) n++;
+  return { animChannels: n, animClips: n > 0 ? [anim.name] : [] };
 }
 
 function buildStats(
@@ -146,7 +195,7 @@ function buildStats(
   indices: Uint32Array,
   fit: FitResult,
   skin: SkinWeights,
-): Omit<BindExportStats, 'bytes'> {
+): Omit<BindExportStats, 'bytes' | 'animChannels' | 'animClips'> {
   const spanY = (v: Float32Array): number => {
     let lo = Infinity;
     let hi = -Infinity;
@@ -267,6 +316,7 @@ function buildGlb(
   fit: FitResult,
   imageBytes: Uint8Array | null,
   mime: string,
+  anim: BindAnimationInput | null,
 ): ArrayBuffer {
   const parts = new GlbParts();
   const accessors: Accessor[] = [];
@@ -390,6 +440,63 @@ function buildGlb(
     nodes.push(node);
   });
 
+  // ── 动画（可选）──
+  // 必须在 parts.concat() 之前把 accessor 数据推进去，否则 bufferView 偏移全错。
+  // 骨名 → 节点索引靠 nodeOfJoint 翻译，所以调用方只需给骨名，不必关心节点布局。
+  let animations: Array<Record<string, unknown>> | null = null;
+  if (anim !== null && anim.times.length >= 2) {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < anim.times.length; i++) {
+      const t = anim.times[i]!;
+      if (t < lo) lo = t;
+      if (t > hi) hi = t;
+    }
+    // glTF 强制：动画 sampler 的 input accessor 必须带 min/max
+    const timesAcc = accessors.push({
+      bufferView: parts.add(f32(anim.times)),
+      componentType: COMPONENT_FLOAT,
+      count: anim.times.length,
+      type: 'SCALAR',
+      min: [lo],
+      max: [hi],
+    }) - 1;
+
+    const samplers: Array<Record<string, unknown>> = [];
+    const channels: Array<Record<string, unknown>> = [];
+    for (const bone of HUMANIK_ORDER) {
+      const q = anim.rotations[bone];
+      if (q === undefined || q.length !== anim.times.length * 4) continue;
+      const node = nodeOfJoint[bone];
+      if (node === undefined) continue;
+      const outAcc = accessors.push({
+        bufferView: parts.add(f32(q)),
+        componentType: COMPONENT_FLOAT,
+        count: anim.times.length,
+        type: 'VEC4',
+      }) - 1;
+      samplers.push({ input: timesAcc, output: outAcc, interpolation: 'LINEAR' });
+      channels.push({ sampler: samplers.length - 1, target: { node, path: 'rotation' } });
+    }
+    const hips = anim.translation;
+    if (hips !== null && hips.length === anim.times.length * 3) {
+      const node = nodeOfJoint.Hips;
+      if (node !== undefined) {
+        const outAcc = accessors.push({
+          bufferView: parts.add(f32(hips)),
+          componentType: COMPONENT_FLOAT,
+          count: anim.times.length,
+          type: 'VEC3',
+        }) - 1;
+        samplers.push({ input: timesAcc, output: outAcc, interpolation: 'LINEAR' });
+        channels.push({ sampler: samplers.length - 1, target: { node, path: 'translation' } });
+      }
+    }
+    if (channels.length > 0) {
+      animations = [{ name: anim.name, channels, samplers }];
+    }
+  }
+
   const json: Record<string, unknown> = {
     asset: { version: '2.0', generator: 'Aether Editor · Binding Panel (T-pose unpose)' },
     scene: 0,
@@ -422,6 +529,7 @@ function buildGlb(
       },
     }],
   };
+  if (animations !== null) json.animations = animations;
 
   if (imageBytes !== null && imageBytes.byteLength > 0) {
     const imgView = parts.add(imageBytes);
