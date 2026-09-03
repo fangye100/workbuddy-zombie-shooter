@@ -12,6 +12,14 @@
  *    侧视图里 x 是深度轴、看不出镜像，所以 mirror 只挂在正视图上。
  * 4. **拟合产出两类数据**：骨长（采纳进 T-pose）与姿态旋转 ΔR（只是 currentPose 与
  *    T-pose 的差值，re-gen 时被消耗于网格反解，绝不进骨架）。详见 binding-math.ts。
+ *
+ * ── 本轮（骨骼编辑 5 项反馈）新增 ───────────────────────────────────────────
+ *  - 性能：网格渲染缓存到离屏 canvas，拖拽时只 blit 缓存 + 重画骨架；
+ *          refresh 用 requestAnimationFrame 合帧，避免每帧重画全三角面。
+ *  - 精确移动：Shift 拖拽锁定横/纵主轴；方向键微调（Shift 精调 5mm）。
+ *  - 半显：下拉「全部 / 仅中轴 / 隐藏左 / 隐藏右」过滤绘制与拾取。
+ *  - Detach：移除已应用的皮肤结果但保留 joint 编辑；reset 加确认防误丢数据。
+ *  - 姿态预览：三态「当前 / T / A」，实时把当前网格重姿态为 T 或 A 并叠加参考骨架。
  */
 
 import {
@@ -20,15 +28,37 @@ import {
   MIRROR_PAIRS,
   mirrorOf,
   tposeWorldPositions,
+  aposeWorldPositions,
   type Vec3,
 } from './humanik-template';
-import { boneSegments, distToSegment, fitSkeleton, type FitResult } from './binding-math';
+import {
+  boneSegments,
+  distToSegment,
+  fitSkeleton,
+  computeLbsWeights,
+  reposeMesh,
+  aposeWorld,
+  type FitResult,
+  type JointPositions,
+} from './binding-math';
 
 /** 正视图：投影 (x, y)，深度 = z；侧视图：投影 (z, y)，深度 = x */
 type ViewAxis = 'front' | 'side';
+/** 姿态预览模式 */
+type PreviewMode = 'current' | 'T' | 'A';
+/** 骨骼显示过滤 */
+type SideFilter = 'all' | 'mid' | 'hideL' | 'hideR';
 
 const JOINT_HIT_PX = 9;
 const JOINT_R_PX = 4.5;
+/** 方向键微调步长（米）：普通 2cm，Shift 精调 5mm */
+const NUDGE_STEP = 0.02;
+const NUDGE_STEP_FINE = 0.005;
+
+export interface ApplyOptions {
+  /** apply 时是否对皮肤权重做热扩散平滑（默认 true） */
+  smoothWeights: boolean;
+}
 
 interface Tri {
   i0: number; i1: number; i2: number;
@@ -43,8 +73,9 @@ export interface BindingPanelHooks {
   /**
    * 点「应用 T-pose」：外部在这里做 re-gen —— 算权重 → 反解网格 → 导出 GLB。
    * 面板只负责把拟合结果交出去，不关心导出细节（导出在 binding-export.ts）。
+   * @param opts 额外选项（如平滑开关），外部据此决定是否平滑权重。
    */
-  onApply?(fit: FitResult): void;
+  onApply?(fit: FitResult, opts?: ApplyOptions): void;
   /**
    * 点「载入 BVH…」：外部在这里选文件 → 解析 → 重定向到当前骨架。
    * 面板不碰文件 IO，只负责把入口暴露出来（与 onApply 同样的分层）。
@@ -87,7 +118,8 @@ export class BindingPanel {
    * ⚠️ 两套指针，别合并：
    *  - `srcVerts` = 载入时的**当前姿态**网格，**永不被反解覆盖**。导出永远基于它 ——
    *    LBS 权重必须在当前姿态上算，若拿反解后的 T-pose 网格去算，A-pose 手臂权重全错。
-   *  - `meshVerts` = 当前**显示**用的网格，可能是 srcVerts，也可能是反解后的 T-pose 网格。
+   *  - `meshVerts` = 当前**显示**用的网格（缓存到离屏 canvas；可能是 srcVerts、
+   *    反解后的 T-pose 网格、或重姿态成 T/A 的网格）。
    */
   private srcVerts: Float32Array | null = null;
   private meshVerts: Float32Array | null = null;
@@ -96,6 +128,8 @@ export class BindingPanel {
   private modelName: string | null = null;
   /** 当前显示的网格是否已是反解后的 T-pose 网格 */
   private unposed = false;
+  /** 已应用的 T-pose 网格（apply 后回灌，供「当前」模式展示） */
+  private tposeMesh: Float32Array | null = null;
 
   /** 关节坐标：local 空间，可拖拽修改 */
   private positions: Record<string, [number, number, number]> = tposeWorldPositions();
@@ -107,6 +141,18 @@ export class BindingPanel {
   private originY = 0;
 
   private fitCache: FitResult | null = null;
+
+  // ── 本轮新增状态 ──
+  private previewMode: PreviewMode = 'current';
+  private sideFilter: SideFilter = 'all';
+  private smoothWeights = true;
+  /** 离屏网格缓存（按视图），仅在模型/姿态/缩放变化时重绘 */
+  private cacheFront: HTMLCanvasElement | null = null;
+  private cacheSide: HTMLCanvasElement | null = null;
+  /** rAF 合帧锁 */
+  private rafPending = false;
+  /** 拖拽起点（屏幕像素 + 起始关节坐标），用于 Shift 约束 */
+  private dragStart: { mx: number; my: number; x: number; y: number; z: number } | null = null;
 
   constructor(rootEl: HTMLElement, hooks: BindingPanelHooks) {
     this.rootEl = rootEl;
@@ -125,8 +171,9 @@ export class BindingPanel {
         <span class="bd-spacer"></span>
         <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节镜像到右侧（x 取反）">镜像 L→R</button>
         <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节镜像到左侧（x 取反）">镜像 R→L</button>
-        <button class="bd-btn" data-bd="reset" title="回到模板 T-pose 的初始摆放">重置</button>
+        <button class="bd-btn" data-bd="reset" title="回到模板 T-pose 的初始摆放（会清空编辑，有确认）">重置</button>
         <button class="bd-btn accent" data-bd="apply" title="用拟合出的骨长重建 T-pose 并导出">应用 T-pose</button>
+        <button class="bd-btn" data-bd="detach" title="移除已应用的皮肤结果，但保留你拖出的关节编辑">Detach 皮肤</button>
         <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
         <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB" disabled>导出动画 GLB</button>
         <button class="bd-btn" data-bd="close" title="关闭绑定面板">✕</button>
@@ -134,15 +181,33 @@ export class BindingPanel {
       <div class="bd-body">
         <div class="bd-view">
           <div class="bd-vlabel">正视 Front · (x, y)</div>
-          <canvas class="bd-canvas" data-bd="front"></canvas>
+          <canvas class="bd-canvas" data-bd="front" tabindex="0"></canvas>
         </div>
         <div class="bd-view">
           <div class="bd-vlabel">侧视 Side · (z, y)</div>
-          <canvas class="bd-canvas" data-bd="side"></canvas>
+          <canvas class="bd-canvas" data-bd="side" tabindex="0"></canvas>
         </div>
         <div class="bd-side">
           <div class="bd-info" data-bd="info">选中一个 joint 查看骨长与姿态偏移</div>
           <div class="bd-anim" data-bd="anim">未载入动画</div>
+          <div class="bd-field">
+            <label>姿态预览</label>
+            <div class="bd-pov" data-bd="pov">
+              <button data-bd="pov-current" class="active" title="当前编辑姿态（可拖拽）">当前</button>
+              <button data-bd="pov-t" title="把网格重姿态为标准 T-pose 并叠加参考骨架">T</button>
+              <button data-bd="pov-a" title="把网格重姿态为标准 A-pose 并叠加参考骨架">A</button>
+            </div>
+          </div>
+          <div class="bd-field">
+            <label>骨骼显示</label>
+            <select class="bd-select" data-bd="sidefilter">
+              <option value="all">全部</option>
+              <option value="mid">仅中轴</option>
+              <option value="hideL">隐藏左侧</option>
+              <option value="hideR">隐藏右侧</option>
+            </select>
+          </div>
+          <label class="bd-check"><input type="checkbox" data-bd="smooth" checked> 优化皮肤权重（apply 时平滑）</label>
           <div class="bd-legend">
             <div class="bd-legend-row"><i class="bd-dot bd-dot-mid"></i>中轴骨</div>
             <div class="bd-legend-row"><i class="bd-dot bd-dot-left"></i>左侧 L</div>
@@ -151,6 +216,7 @@ export class BindingPanel {
           <div class="bd-tip">
             拖拽 joint 对齐模型解剖位置。<br>
             正视改 <b>x/y</b>，侧视改 <b>z/y</b>。<br>
+            <b>Shift 拖拽</b>锁定横/纵主轴；<b>方向键</b>微调（Shift 5mm）。<br>
             <b>骨长</b>会被采纳进 T-pose；<br>
             <b>方向偏移</b>只是当前姿态与 T-pose 的差，<br>
             不会进骨架。
@@ -171,10 +237,9 @@ export class BindingPanel {
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="close"]')!
       .addEventListener('click', () => this.hooks.onClose());
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="reset"]')!
-      .addEventListener('click', () => {
-        this.positions = tposeWorldPositions();
-        this.refresh();
-      });
+      .addEventListener('click', () => this.resetPose());
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="detach"]')!
+      .addEventListener('click', () => this.detach());
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mirror-lr"]')!
       .addEventListener('click', () => { this.mirror('L2R'); });
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mirror-rl"]')!
@@ -183,6 +248,26 @@ export class BindingPanel {
       .addEventListener('click', () => this.applyTPose());
     this.bvhBtn.addEventListener('click', () => this.hooks.onLoadBvh?.());
     this.exportAnimBtn.addEventListener('click', () => this.hooks.onExportAnim?.());
+
+    // 姿态预览三态
+    const pov = this.rootEl.querySelector<HTMLElement>('[data-bd="pov"]')!;
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-current"]')!
+      .addEventListener('click', () => this.setMode('current'));
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-t"]')!
+      .addEventListener('click', () => this.setMode('T'));
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-a"]')!
+      .addEventListener('click', () => this.setMode('A'));
+
+    // 半显下拉
+    const sel = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="sidefilter"]')!;
+    sel.addEventListener('change', () => {
+      this.sideFilter = sel.value as SideFilter;
+      this.refresh();
+    });
+
+    // 权重平滑开关
+    const smooth = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth"]')!;
+    smooth.addEventListener('change', () => { this.smoothWeights = smooth.checked; });
 
     this.bindCanvas(this.frontCanvas, 'front');
     this.bindCanvas(this.sideCanvas, 'side');
@@ -202,8 +287,12 @@ export class BindingPanel {
     this.vertexFloats = vertexFloats;
     this.selected = null;
     this.unposed = false;
+    this.tposeMesh = null;
+    this.previewMode = 'current';
+    this.sideFilter = 'all';
     this.setAnimationInfo(null);
     this.computeViewFit();
+    this.syncDisplay();
     this.refresh();
   }
 
@@ -228,9 +317,13 @@ export class BindingPanel {
     this.meshIndices = null;
     this.modelName = null;
     this.unposed = false;
+    this.tposeMesh = null;
+    this.previewMode = 'current';
+    this.sideFilter = 'all';
     this.positions = tposeWorldPositions();
     this.selected = null;
     this.setAnimationInfo(null);
+    this.syncDisplay();
     this.refresh();
   }
 
@@ -260,18 +353,66 @@ export class BindingPanel {
     this.originY = h * 0.92;
   }
 
+  // ─────────────────────────── 显示同步 ───────────────────────────
+
+  /**
+   * 根据 previewMode 计算当前应显示的网格与（drawSkeleton 用的）参考骨架。
+   * 仅在模型/姿态/模式变化时被调用，不在每帧重复算重姿态。
+   */
+  private syncDisplay(): void {
+    if (this.srcVerts === null || this.meshIndices === null) {
+      this.meshVerts = this.srcVerts;
+    } else if (this.previewMode === 'current') {
+      this.meshVerts = (this.unposed && this.tposeMesh !== null) ? this.tposeMesh : this.srcVerts;
+    } else {
+      // T / A：把当前姿态网格重姿态为目标姿态（胶囊权重 + 刚体骨变换按权重混合）
+      const fit = this.currentFit();
+      const segs = boneSegments(this.positions);
+      const skin = computeLbsWeights(
+        this.srcVerts, this.vertexFloats, this.srcVerts.length / this.vertexFloats, segs,
+      );
+      const toWorld = this.previewMode === 'T' ? fit.tposeWorld : aposeWorld(this.positions);
+      this.meshVerts = reposeMesh(
+        this.srcVerts, this.vertexFloats, this.srcVerts.length / this.vertexFloats,
+        skin, fit.posedWorld, toWorld,
+      );
+    }
+    // 网格变了 → 离屏缓存失效（下一帧重建）
+    this.cacheFront = null;
+    this.cacheSide = null;
+  }
+
+  /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose */
+  private overlayPositions(): JointPositions {
+    if (this.previewMode === 'T') return this.currentFit().tposePositions;
+    if (this.previewMode === 'A') return aposeWorldPositions(this.positions);
+    return this.positions;
+  }
+
+  /** 过滤后的可见关节（按 sideFilter） */
+  private visibleJoints(): string[] {
+    switch (this.sideFilter) {
+      case 'mid': return HUMANIK_ORDER.filter((n) => !n.startsWith('Left') && !n.startsWith('Right'));
+      case 'hideL': return HUMANIK_ORDER.filter((n) => !n.startsWith('Left'));
+      case 'hideR': return HUMANIK_ORDER.filter((n) => !n.startsWith('Right'));
+      default: return [...HUMANIK_ORDER];
+    }
+  }
+
   // ─────────────────────────── 交互 ───────────────────────────
 
   private bindCanvas(canvas: HTMLCanvasElement, axis: ViewAxis): void {
     let dragging: string | null = null;
 
     const pick = (e: PointerEvent): string | null => {
+      // 非当前姿态预览下不编辑（参考骨架只读）
+      if (this.previewMode !== 'current') return null;
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       let best: string | null = null;
       let bestD = JOINT_HIT_PX;
-      for (const name of HUMANIK_ORDER) {
+      for (const name of this.visibleJoints()) {
         const [sx, sy] = this.project(this.positions[name]!, axis, canvas);
         const d = Math.hypot(sx - mx, sy - my);
         if (d < bestD) { bestD = d; best = name; }
@@ -284,6 +425,14 @@ export class BindingPanel {
       if (hit === null) return;
       dragging = hit;
       this.selected = hit;
+      canvas.focus();
+      const rect = canvas.getBoundingClientRect();
+      const p = this.positions[hit]!;
+      this.dragStart = {
+        mx: e.clientX - rect.left,
+        my: e.clientY - rect.top,
+        x: p[0], y: p[1], z: p[2],
+      };
       canvas.setPointerCapture(e.pointerId);
       this.refresh();
     });
@@ -295,12 +444,20 @@ export class BindingPanel {
       const my = e.clientY - rect.top;
       const p = this.positions[dragging]!;
       const y = (this.originY - my) / this.scale;
+      // Shift 约束：锁定离起点位移较小的主轴，实现纯横向 / 纯纵向精确移动
+      let lockY = false;
+      let lockX = false;
+      if (e.shiftKey && this.dragStart !== null) {
+        const dx = mx - this.dragStart.mx;
+        const dy = my - this.dragStart.my;
+        if (Math.abs(dx) >= Math.abs(dy)) lockY = true; else lockX = true;
+      }
       if (axis === 'front') {
-        const x = (mx - this.originX) / this.scale;
-        this.positions[dragging] = [x, y, p[2]];
+        const x = lockX ? this.dragStart!.x : (mx - this.originX) / this.scale;
+        this.positions[dragging] = [x, lockY ? this.dragStart!.y : y, p[2]];
       } else {
-        const z = (mx - this.originX) / this.scale;
-        this.positions[dragging] = [p[0], y, z];
+        const z = lockX ? this.dragStart!.z : (mx - this.originX) / this.scale;
+        this.positions[dragging] = [p[0], lockY ? this.dragStart!.y : y, z];
       }
       this.refresh();
     });
@@ -308,10 +465,29 @@ export class BindingPanel {
     const end = (e: PointerEvent): void => {
       if (dragging === null) return;
       dragging = null;
+      this.dragStart = null;
       if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     };
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
+
+    // 方向键微调（Shift 精调 5mm）；仅当前姿态可编辑
+    canvas.addEventListener('keydown', (e) => {
+      if (this.selected === null || this.previewMode !== 'current') return;
+      const step = e.shiftKey ? NUDGE_STEP_FINE : NUDGE_STEP;
+      const p = this.positions[this.selected]!;
+      let { x, y, z } = { x: p[0], y: p[1], z: p[2] };
+      switch (e.key) {
+        case 'ArrowUp': y += step; break;
+        case 'ArrowDown': y -= step; break;
+        case 'ArrowLeft': if (axis === 'front') x -= step; else z -= step; break;
+        case 'ArrowRight': if (axis === 'front') x += step; else z += step; break;
+        default: return;
+      }
+      e.preventDefault();
+      this.positions[this.selected] = [x, y, z];
+      this.refresh();
+    });
   }
 
   /** 三维 → 二维。正视 (x, -y)；侧视 (z, -y)。画布 y 轴朝下，故 y 取反。 */
@@ -339,15 +515,50 @@ export class BindingPanel {
     this.refresh();
   }
 
+  /** 三态姿态预览切换 */
+  private setMode(mode: PreviewMode): void {
+    if (mode === this.previewMode) return;
+    this.previewMode = mode;
+    const pov = this.rootEl.querySelector<HTMLElement>('[data-bd="pov"]')!;
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-current"]')!
+      .classList.toggle('active', mode === 'current');
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-t"]')!
+      .classList.toggle('active', mode === 'T');
+    pov.querySelector<HTMLButtonElement>('[data-bd="pov-a"]')!
+      .classList.toggle('active', mode === 'A');
+    this.syncDisplay();
+    this.refresh();
+  }
+
+  /** 安全重置：清空所有关节编辑（带确认，避免误丢数据） */
+  private resetPose(): void {
+    if (!window.confirm('重置会清空当前所有关节编辑，回到模板 T-pose。确定？')) return;
+    this.positions = tposeWorldPositions();
+    this.previewMode = 'current';
+    this.unposed = false;
+    this.tposeMesh = null;
+    this.syncDisplay();
+    this.refresh();
+  }
+
+  /** Detach 皮肤：移除已应用的 T-pose 结果，但保留你拖出的关节编辑 */
+  private detach(): void {
+    this.unposed = false;
+    this.tposeMesh = null;
+    this.previewMode = 'current';
+    this.syncDisplay();
+    this.refresh();
+  }
+
   /**
-   * 应用 T-pose：**先**把当前姿态的 fit 交出去做 re-gen，**后**复位关节显示。
+   * 应用 T-pose：**先**把当前姿态的 fit 交出去做 re-gen（带平滑开关），**后**复位关节显示。
    *
    * 顺序不能反 —— 外部要在「当前姿态骨架 + 当前姿态网格」上算 LBS 权重，
    * 一旦先复位成 T-pose 再导出，权重就按 T 字形算了，A-pose 模型的手臂权重全错。
    */
   private applyTPose(): void {
     const fit = this.currentFit();
-    this.hooks.onApply?.(fit);
+    this.hooks.onApply?.(fit, { smoothWeights: this.smoothWeights });
     // 复位：把关节坐标同步成 T-pose（ΔR 清零），用户立刻看到结果
     for (const name of HUMANIK_ORDER) {
       this.positions[name] = [
@@ -364,8 +575,9 @@ export class BindingPanel {
    * 网格摆正了 + 骨架也摆正了，两者重合即证明反解成立（一眼可验证）。
    */
   showTPoseResult(fit: FitResult, verts: Float32Array): void {
-    this.meshVerts = verts;
+    this.tposeMesh = verts;
     this.unposed = true;
+    this.previewMode = 'current';
     for (const name of HUMANIK_ORDER) {
       this.positions[name] = [
         fit.tposePositions[name]![0],
@@ -373,6 +585,7 @@ export class BindingPanel {
         fit.tposePositions[name]![2],
       ];
     }
+    this.syncDisplay();
     this.refresh();
   }
 
@@ -386,19 +599,32 @@ export class BindingPanel {
 
   private refresh(): void {
     const fit = this.currentFit();
-    this.drawView(this.frontCtx, this.frontCanvas, 'front');
-    this.drawView(this.sideCtx, this.sideCanvas, 'side');
     this.updateInfo(fit);
     this.hooks.onChange?.(fit);
+    this.scheduleDraw();
+  }
+
+  /** rAF 合帧：多次 refresh 合并为一次绘制 */
+  private scheduleDraw(): void {
+    if (this.rafPending) return;
+    this.rafPending = true;
+    requestAnimationFrame(() => {
+      this.rafPending = false;
+      this.drawView(this.frontCtx, this.frontCanvas, 'front');
+      this.drawView(this.sideCtx, this.sideCanvas, 'side');
+    });
   }
 
   private updateInfo(fit: FitResult): void {
     const v = this.meshVerts;
     const tris = this.meshIndices !== null ? this.meshIndices.length / 3 : 0;
     const verts = v !== null ? v.length / this.vertexFloats : 0;
+    const modeTag = this.previewMode === 'T'
+      ? ' · <b class="bd-warn">预览 T-pose</b>'
+      : this.previewMode === 'A' ? ' · <b class="bd-warn">预览 A-pose</b>' : '';
     this.statsEl.innerHTML = this.modelName !== null
       ? `${this.modelName} · ${verts} 顶点 / ${tris} 面` +
-        (this.unposed ? ' · <b class="bd-ok">已摆正 T-pose</b>' : '')
+        (this.unposed ? ' · <b class="bd-ok">已摆正 T-pose</b>' : '') + modeTag
       : '未加载模型';
 
     if (this.selected === null) {
@@ -446,8 +672,10 @@ export class BindingPanel {
     ctx.lineTo(axisX, h);
     ctx.stroke();
 
+    // 网格：blit 离屏缓存（仅模型/姿态/缩放变化时重建），避免每帧重画全三角面
     if (this.meshVerts !== null && this.meshIndices !== null) {
-      this.drawMesh(ctx, canvas, axis);
+      const off = this.ensureMeshCache(axis);
+      ctx.drawImage(off, 0, 0, w, h);
     }
     this.drawSkeleton(ctx, canvas, axis);
   }
@@ -457,8 +685,27 @@ export class BindingPanel {
     return w / 2 + (this.originX - (this.frontCanvas.clientWidth || 320) / 2);
   }
 
+  /** 取（必要则重建）该视图的离屏网格缓存 */
+  private ensureMeshCache(axis: ViewAxis): HTMLCanvasElement {
+    const canvas = axis === 'front' ? this.frontCanvas : this.sideCanvas;
+    const w = canvas.width;
+    const h = canvas.height;
+    let off = axis === 'front' ? this.cacheFront : this.cacheSide;
+    if (off !== null && off.width === w && off.height === h) return off;
+    const nOff = document.createElement('canvas');
+    nOff.width = w;
+    nOff.height = h;
+    const octx = nOff.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.clearRect(0, 0, canvas.clientWidth || 320, canvas.clientHeight || 320);
+    this.drawMeshInto(octx, canvas, axis);
+    if (axis === 'front') this.cacheFront = nOff; else this.cacheSide = nOff;
+    return nOff;
+  }
+
   /** 正交投影 + 画家算法（按深度远→近排序）填充三角面，法线做简单朗伯明暗 */
-  private drawMesh(
+  private drawMeshInto(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     axis: ViewAxis,
@@ -511,12 +758,14 @@ export class BindingPanel {
     }
   }
 
-  /** 骨架：先画骨连线，再画 joint 图标（选中/左右用不同色） */
+  /** 骨架：先画骨连线，再画 joint 图标（选中/左右用不同色）；非当前姿态用参考色 */
   private drawSkeleton(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     axis: ViewAxis,
   ): void {
+    const pos = this.overlayPositions();
+    const visible = new Set(this.visibleJoints());
     const s = this.scale;
     const ox = this.centerX(canvas);
     const h = canvas.clientHeight || 320;
@@ -526,31 +775,33 @@ export class BindingPanel {
       return [ox + horiz * s, oy - p[1] * s];
     };
     const depth = (p: Vec3): number => (axis === 'front' ? p[2] : p[0]);
+    const isRef = this.previewMode !== 'current';
 
-    // 骨连线
+    // 骨连线（任一端点被隐藏则跳过该段）
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(120, 200, 255, 0.75)';
+    ctx.strokeStyle = isRef ? 'rgba(155,93,229,0.85)' : 'rgba(120,200,255,0.75)';
     ctx.beginPath();
     for (const name of HUMANIK_ORDER) {
       const parent = HUMANIK_BONES[name]!.parent;
-      if (parent === null) continue;
-      const a = to2d(this.positions[parent]!);
-      const b = to2d(this.positions[name]!);
+      if (parent === null || !visible.has(name) || !visible.has(parent)) continue;
+      const a = to2d(pos[parent]!);
+      const b = to2d(pos[name]!);
       ctx.moveTo(a[0], a[1]);
       ctx.lineTo(b[0], b[1]);
     }
     ctx.stroke();
 
     // joint 图标（按深度排序，近的画在上面）
-    const order = [...HUMANIK_ORDER].sort(
-      (p, q) => depth(this.positions[q]!) - depth(this.positions[p]!),
+    const order = [...this.visibleJoints()].sort(
+      (p, q) => depth(pos[q]!) - depth(pos[p]!),
     );
     for (const name of order) {
-      const [x, y] = to2d(this.positions[name]!);
-      const isSel = name === this.selected;
+      const [x, y] = to2d(pos[name]!);
+      const isSel = name === this.selected && !isRef;
       const side = name.startsWith('Left') ? 'L' : name.startsWith('Right') ? 'R' : 'M';
-      const fill = isSel
-        ? '#FFD166'
+      const fill = isRef
+        ? '#C9A6F0'
+        : isSel ? '#FFD166'
         : side === 'L' ? '#6FB7FF' : side === 'R' ? '#FF8FA3' : '#9BE7A8';
       ctx.beginPath();
       ctx.arc(x, y, isSel ? JOINT_R_PX + 2 : JOINT_R_PX, 0, Math.PI * 2);
@@ -646,6 +897,7 @@ export class BindingPanel {
 
   resize(): void {
     this.computeViewFit();
+    this.syncDisplay();
     this.refresh();
   }
 }

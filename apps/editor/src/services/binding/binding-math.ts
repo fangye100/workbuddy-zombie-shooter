@@ -26,6 +26,7 @@
  */
 
 import {
+  ARM_BONES,
   HUMANIK_BONES,
   HUMANIK_ORDER,
   tposeDirections,
@@ -195,6 +196,41 @@ export function distToSegment(
   return Math.hypot(dx, dy, dz);
 }
 
+/**
+ * A-pose 的**世界矩阵**（含 45° 旋转），供 `reposeMesh` 把网格重姿态成 A-pose。
+ *
+ * 与 `humanik-template.aposeWorldPositions` 同源：手臂链每个骨相对父骨的偏移绕 Z
+ * 旋转 ±45°（Left -45° / Right +45°）。区别是这里返回**带旋转的世界矩阵**，
+ * 这样 `reposeMesh` 的 Δ_k = M_A_k · M_P_k⁻¹ 才能把 limb 真正旋转下去，而不只是平移。
+ */
+export function aposeWorld(placed: JointPositions): Record<string, Mat4> {
+  const out: Record<string, Mat4> = {};
+  for (const name of HUMANIK_ORDER) {
+    const parent = HUMANIK_BONES[name]!.parent;
+    if (parent === null) {
+      const p = placed[name]!;
+      out[name] = matTranslation(p[0], p[1], p[2]);
+      continue;
+    }
+    const pp = out[parent]!;
+    const p = placed[name]!;
+    let ox = p[0] - pp[12]!;
+    let oy = p[1] - pp[13]!;
+    const oz = p[2] - pp[14]!;
+    if (ARM_BONES.has(name)) {
+      const a = (name.startsWith('Left') ? -45 : 45) * Math.PI / 180;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      const nx = c * ox - s * oy;
+      const ny = s * ox + c * oy;
+      ox = nx;
+      oy = ny;
+    }
+    out[name] = matMul(pp, matTranslation(ox, oy, oz));
+  }
+  return out;
+}
+
 export interface SkinWeights {
   /** 每顶点 4 个关节索引（Uint16Array，长度 4N） */
   joints: Uint16Array;
@@ -259,6 +295,76 @@ export function computeLbsWeights(
     }
   }
   return { joints, weights };
+}
+
+/**
+ * 皮肤权重平滑（**空间热力 / Laplacian 松弛**）。
+ *
+ * 胶囊算法（`computeLbsWeights`）按「顶点到骨段最近距离」分配影响，骨交界处的权重是
+ * 硬切换的，蒙皮会出现棱角状撕裂。这里在网格邻接图上做几次 Jacobi 松弛：
+ *
+ *   w_i ← (1−λ)·w_i + λ·mean(w_邻居)
+ *
+ * 等价于对权重场做一次**热扩散**，把硬边"晕"开成平滑过渡，且不改变每顶点的 4 个
+ * 影响骨（只平滑权重数值），所以不会引入错骨。迭代 2 次、λ=0.5 已是肉眼可见的改善。
+ *
+ * 邻接由三角面索引构建（每个顶点连它的三角面邻居），复杂度 O(迭代·顶点·平均度数)，
+ * 对 ≤ 几千顶点的角色网格是毫秒级，只在 apply 时跑一次，不影响拖拽帧率。
+ *
+ * @param iterations 松弛迭代次数（默认 2）
+ * @param lambda     扩散强度 0..1（默认 0.5；越大越糊）
+ */
+export function smoothSkinWeights(
+  skin: SkinWeights,
+  indices: Uint32Array,
+  vertexCount: number,
+  iterations = 2,
+  lambda = 0.5,
+): SkinWeights {
+  const adj: number[][] = Array.from({ length: vertexCount }, () => []);
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t]!;
+    const b = indices[t + 1]!;
+    const c = indices[t + 2]!;
+    adj[a]!.push(b, c);
+    adj[b]!.push(a, c);
+    adj[c]!.push(a, b);
+  }
+  for (let i = 0; i < vertexCount; i++) {
+    adj[i] = [...new Set(adj[i]!)];
+  }
+
+  const joints = new Uint16Array(skin.joints); // 影响骨不动，只平滑权重
+  const cur = Float32Array.from(skin.weights);
+  const next = new Float32Array(cur.length);
+
+  for (let it = 0; it < iterations; it++) {
+    for (let i = 0; i < vertexCount; i++) {
+      const nb = adj[i]!;
+      for (let k = 0; k < 4; k++) {
+        const self = cur[i * 4 + k]!;
+        if (nb.length === 0) {
+          next[i * 4 + k] = self;
+          continue;
+        }
+        let sum = 0;
+        for (const j of nb) sum += cur[j * 4 + k]!;
+        const avg = sum / nb.length;
+        next[i * 4 + k] = (1 - lambda) * self + lambda * avg;
+      }
+    }
+    cur.set(next);
+  }
+
+  // 归一化（Σ=1），保持 LBS 正确
+  for (let i = 0; i < vertexCount; i++) {
+    let s = 0;
+    for (let k = 0; k < 4; k++) s += cur[i * 4 + k]!;
+    if (s > 1e-9) {
+      for (let k = 0; k < 4; k++) cur[i * 4 + k] = cur[i * 4 + k]! / s;
+    }
+  }
+  return { joints, weights: cur };
 }
 
 // ─────────────────────────── 姿态拟合与反解 ───────────────────────────
@@ -395,17 +501,28 @@ export function fitSkeleton(placed: JointPositions): FitResult {
  * 业界 pose-space 反解即此。反解后网格呈 T 字形，可与 T-pose 骨架直接绑定，
  * bind pose 保持干净。
  */
-export function unposeMesh(
+/**
+ * 把网格从一个姿态重姿态到另一个姿态（刚性骨变换按权重混合，业界 pose-space 标准做法）。
+ *
+ *   v' = Σ_k w_k · M_to_k · M_from_k⁻¹ · v
+ *
+ * @param fromWorld 源姿态每骨世界矩阵（如当前姿态 posedWorld）
+ * @param toWorld   目标姿态每骨世界矩阵（如 T-pose / A-pose 世界矩阵）
+ *
+ * 反解回 T-pose 只是本函数的特例（from=当前姿态，to=T-pose），见 `unposeMesh`。
+ */
+export function reposeMesh(
   positions: Float32Array,
   vertexFloats: number,
   vertexCount: number,
   skin: SkinWeights,
-  fit: FitResult,
+  fromWorld: Record<string, Mat4>,
+  toWorld: Record<string, Mat4>,
 ): Float32Array {
   const order = HUMANIK_ORDER;
-  // 预算每骨的 Δ_k = M_T_k · M_P_k⁻¹，避免逐顶点重复求逆
+  // 预算每骨的 Δ_k = M_to_k · M_from_k⁻¹，避免逐顶点重复求逆
   const delta: Mat4[] = order.map(
-    (name) => matMul(fit.tposeWorld[name]!, matInvertRigid(fit.posedWorld[name]!)),
+    (name) => matMul(toWorld[name]!, matInvertRigid(fromWorld[name]!)),
   );
   const out = new Float32Array(positions.length);
   out.set(positions);
@@ -427,4 +544,15 @@ export function unposeMesh(
     out[o + 2] = z;
   }
   return out;
+}
+
+/** 反解回 T-pose（reposeMesh 的特例：from=当前姿态，to=T-pose） */
+export function unposeMesh(
+  positions: Float32Array,
+  vertexFloats: number,
+  vertexCount: number,
+  skin: SkinWeights,
+  fit: FitResult,
+): Float32Array {
+  return reposeMesh(positions, vertexFloats, vertexCount, skin, fit.posedWorld, fit.tposeWorld);
 }
