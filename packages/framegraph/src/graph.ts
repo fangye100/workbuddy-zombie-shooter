@@ -2,9 +2,28 @@
  * L2 — FrameGraph：声明式 Pass DAG。
  * 编译期做四件事：生命周期推导、Pass 合并、内存别名、MSAA 自动 resolve。
  * 资源在创建时是"虚拟"的，只有 compile() 之后才落到真实 GPUTexture。
+ *
+ * ============================ ⚠️ DORMANT（2026-09-03 核实）============================
+ * **本模块当前未接入任何运行时，全项目零消费者。**
+ *
+ * 核实方式（可复现）：
+ *   grep -rn "@aether/framegraph" --include=*.ts . | grep -v "^./packages/framegraph/"
+ *   → 唯一命中是 packages/render/src/feature.ts 的一个 `import type`（而 feature.ts 本身
+ *     也是 dormant，见该文件头）。也就是说这两个 dormant 模块互相引用，谁都没落地。
+ *
+ * 当前的真实渲染路径是 `packages/render/src/renderer-core.ts`：手写的 4-pass
+ * （scene MRT → outline → post → gizmo），没有经过 FrameGraph。
+ *
+ * 按 docs/10 的路线，FrameGraph 是 **Phase 1 交付项**（M1 之后）。启用前需要：
+ *   1. 给本模块补单测（目前 `packages/framegraph/` 下没有任何测试）；
+ *   2. 写一个 driver 把 renderer-core 的 4 个 pass 迁进来，并做运行时等价验证；
+ *   3. 验证通过后再删掉 renderer-core 里的手写编排。
+ *
+ * **不要因为「代码在这里」就假定它已经被调用过。**
+ * ==================================================================================
  */
 
-import type { GfxDevice } from '../../gfx/src/device';
+import type { GfxDevice } from '@aether/gfx';
 
 // ---------------------------------------------------------------- 虚拟资源
 

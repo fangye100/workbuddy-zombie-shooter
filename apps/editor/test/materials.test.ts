@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultParams, type LabParams, type MaterialState } from './params';
+import { defaultParams, type LabParams, type MaterialState } from '../src/params';
 import {
   cloneMaterial,
   isInstanceId,
@@ -10,7 +10,7 @@ import {
   slotSource,
   slotState,
   type MaterialSlot,
-} from './materials';
+} from '../src/materials';
 import { nameAllocator, uniqueName } from '@aether/core';
 
 /**

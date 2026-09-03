@@ -2,10 +2,28 @@
  * L3 — 渲染特性插件接口。
  * 每个 Pass（阴影 / AO / SSR / TAA / 后处理…）都实现为独立 RenderFeature，
  * 按设备能力门控装配，2D 项目可以只装配两三个。
+ *
+ * ============================ ⚠️ DORMANT（2026-09-03 核实）============================
+ * **本模块当前未接入任何运行时：`RenderFeature` 零实现者，`registerFeature` 不存在。**
+ *
+ * 核实方式（可复现）：
+ *   grep -rn "RenderFeature" --include=*.ts . | grep -v node_modules
+ *   → 只有本文件的定义/声明，没有任何 `implements RenderFeature`。
+ *
+ * ⚠️ 命名陷阱：`apps/editor/src/features/*.feature.ts` 里的 "feature" 与这里的
+ * `RenderFeature` **不是同一个东西**。前者是编辑器侧的「帧输入组装函数」
+ * （buildSelectionOutline / buildGizmo），是活的、每帧都在跑；它们是纯函数，
+ * **刻意不引入** registerFeature 钩子。别把两者搞混。
+ *
+ * 另注：用户已明确否决 `registerFeature` 宿主路线（见 docs/11 §13.6.2）。
+ * 本模块保留的理由是它是 Phase 1 的既定设计，删除后 Phase 1 要重写。
+ * 启用前需要：先有 FrameGraph 承载（见 packages/framegraph 的 DORMANT 说明），
+ * 再按 docs/10 Phase 1 排期接入。
+ * ==================================================================================
  */
 
-import type { GfxDevice, CapabilityTier } from '../../gfx/src/device';
-import type { FrameGraph } from '../../framegraph/src/graph';
+import type { GfxDevice, CapabilityTier } from '@aether/gfx';
+import type { FrameGraph } from '@aether/framegraph';
 
 /** 一帧的渲染快照：渲染层只读，逻辑层永不回写 */
 export interface RenderView {

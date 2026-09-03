@@ -6,10 +6,9 @@
  * `this.state.*`，services 通过 `host.state` 读写。这样状态有单一真源，
  * services 抽取时不需要把状态在 LabRenderer 与服务间来回搬（ADR-001：编辑器是消费者）。
  */
-import type { GizmoMode, GizmoSpace } from '@aether/render';
+import type { GizmoMode, GizmoSpace, MatchReportEntry } from '@aether/render';
 import { MaterialLibrary } from '../materials';
 import { defaultParams, type LabParams } from '../params';
-import type { MatchReportEntry } from '../binding';
 import type { SceneObject, RenderStats } from '../renderer';
 
 export class EditorState {

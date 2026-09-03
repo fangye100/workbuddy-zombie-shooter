@@ -10,7 +10,7 @@ import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { ASSET_MIME, stemName } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
-import { summarizeMatch } from './binding';
+import { summarizeMatch } from '@aether/render';
 
 /**
  * Game Editor 入口（原 Shader Lab）。

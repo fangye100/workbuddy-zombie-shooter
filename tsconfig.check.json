@@ -23,15 +23,19 @@
   },
   "include": [
     "packages/core/src/**/*.ts",
+    "packages/core/test/**/*.ts",
     "packages/scene/src/**/*.ts",
+    "packages/scene/test/**/*.ts",
     "packages/gfx/src/**/*.ts",
     "packages/framegraph/src/**/*.ts",
     "packages/render/src/**/*.ts",
+    "packages/render/test/**/*.ts",
     "packages/ai/src/**/*.ts",
     "packages/ai/test/**/*.ts",
     "packages/gameplay/src/**/*.ts",
     "apps/samples/00-init/*.ts",
-    "apps/editor/src/**/*.ts"
+    "apps/editor/src/**/*.ts",
+    "apps/editor/test/**/*.ts"
   ],
-  "exclude": ["apps/samples/00-init/vite.config.ts", "apps/lab/shader-lab/vite.config.ts"]
+  "exclude": ["apps/samples/00-init/vite.config.ts"]
 }

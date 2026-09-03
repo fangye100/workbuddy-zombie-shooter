@@ -5,7 +5,7 @@ import {
   angleInPlane,
   wrapAngle,
   type V3,
-} from './gizmo';
+} from '../src/gizmo';
 
 /**
  * gizmo 交互数学回归测试（纯 CPU）。

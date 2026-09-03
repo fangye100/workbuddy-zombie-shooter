@@ -52,7 +52,12 @@ export class SelectionService {
     s.hoverBindGroup =
       next === null
         ? null
-        : this.host.buildHighlightBindGroup(next, this.host.core.hoverToonBuf, this.host.core.hoverMatBuf, 'hover');
+        : this.host.buildHighlightBindGroup(
+            next,
+            this.host.core.secondaryToonBuf,
+            this.host.core.secondaryMatBuf,
+            'hover-secondary',
+          );
   }
 
   getHovered(): number | null {

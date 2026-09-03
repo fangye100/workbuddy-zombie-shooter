@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { collectMeshInstances, nodeMatrix, normalMatrix } from '@aether/scene';
-import { normalizeMeshHeight, CHARACTER_HEIGHT_M, BUILTIN_MODELS } from '../models';
-import type { MeshData } from '@aether/scene';
+import {
+  collectMeshInstances,
+  nodeMatrix,
+  normalMatrix,
+  normalizeMeshHeight,
+  type MeshData,
+} from '@aether/scene';
 
 /**
- * 导入器与内置模型清单的回归测试。
+ * 导入器与身高归一化的回归测试。
  * 背景（审计发现）：
  *   1) 导入器曾直接忽略 glTF node 变换 —— 带旋转/分件的模型会散架（"稀碎"）；
  *   2) 三档 LOD 各自带着导出时的身高（2.050/2.108/2.187），切换 LOD 角色会变高。
+ *
+ * 2026-09-03 归位：原 `apps/editor/src/gpu/gltf.test.ts`，随 glTF/几何真源迁回 packages/scene。
+ * 目标身高属内容域常量（roster.json 派生），引擎侧只认「调用方传入值」契约，故这里钉字面量。
  */
+const TARGET_HEIGHT_M = 2.05;
 
 /** 造一个 stride 15 的最小网格（两个顶点，高度 h） */
 function makeMesh(h: number, footY = 0): MeshData {
@@ -120,35 +128,34 @@ describe('glTF 场景图', () => {
 
 describe('身高归一化（LOD 共用一把尺子）', () => {
   it('按目标高度缩放，脚底归零', () => {
-    const m = normalizeMeshHeight(makeMesh(2.4, 0.3), 2.05);
-    expect(meshHeight(m)).toBeCloseTo(2.05, 5);
+    const m = normalizeMeshHeight(makeMesh(2.4, 0.3), TARGET_HEIGHT_M);
+    expect(meshHeight(m)).toBeCloseTo(TARGET_HEIGHT_M, 5);
     expect(m.vertices[1]).toBeCloseTo(0, 6);
   });
 
   it('已达标时原样返回（幂等），不重复缩放', () => {
-    const once = normalizeMeshHeight(makeMesh(2.4, 0.3), 2.05);
-    const twice = normalizeMeshHeight(once, 2.05);
-    expect(meshHeight(twice)).toBeCloseTo(2.05, 5);
+    const once = normalizeMeshHeight(makeMesh(2.4, 0.3), TARGET_HEIGHT_M);
+    const twice = normalizeMeshHeight(once, TARGET_HEIGHT_M);
+    expect(meshHeight(twice)).toBeCloseTo(TARGET_HEIGHT_M, 5);
   });
 
   it('不改入参（纯函数）', () => {
     const src = makeMesh(2.4, 0.3);
-    normalizeMeshHeight(src, 2.05);
+    normalizeMeshHeight(src, TARGET_HEIGHT_M);
     expect(meshHeight(src)).toBeCloseTo(2.4, 5);
   });
 
   it('等比缩放：X/Z 与 Y 同比例，体型不失真', () => {
     const src = makeMesh(2.4, 0);
     src.vertices[0] = 1.2; // X 半径
-    const out = normalizeMeshHeight(src, 2.05);
-    expect(out.vertices[0]! / 1.2).toBeCloseTo(2.05 / 2.4, 5);
+    const out = normalizeMeshHeight(src, TARGET_HEIGHT_M);
+    expect(out.vertices[0]! / 1.2).toBeCloseTo(TARGET_HEIGHT_M / 2.4, 5);
   });
 
-  it('三档 LOD 实际身高全部等于 roster 真源身高（防漂移回归）', () => {
-    for (const bm of BUILTIN_MODELS) {
-      expect(meshHeight(bm.mesh)).toBeCloseTo(CHARACTER_HEIGHT_M, 3);
-      expect(bm.meta.heightMeters).toBeCloseTo(CHARACTER_HEIGHT_M, 6);
-    }
+  it('退化输入安全：零高度网格不会被缩放成 NaN', () => {
+    const flat = makeMesh(0, 0.5);
+    const out = normalizeMeshHeight(flat, TARGET_HEIGHT_M);
+    expect(Number.isFinite(out.vertices[1]!)).toBe(true);
   });
 });
 

@@ -58,10 +58,19 @@ export interface CoreObjectDraw {
   subMeshes: CoreSubMeshDraw[];
 }
 
-/** 选中 / 悬停高亮（复用 outline 管线，独立 toon/material buffer） */
+/**
+ * 两层高亮描边（复用 outline 管线，各带独立的 toon/material buffer）。
+ *
+ * 2026-09-03 L-2：字段名从 `selected` / `hovered` 中性化为 `primary` / `secondary`。
+ * "hovered" 是鼠标交互语义，引擎里不该出现 —— 引擎只知道「有两层高亮要画，
+ * 第一层压过第二层」。调用方（编辑器）负责把自己的 selected/hovered 状态映射过来，
+ * 映射点集中在 `apps/editor/src/features/selection-outline.feature.ts` 一处。
+ *
+ * 优先级语义不变：同一子网格上 primary 命中时不再画 secondary。
+ */
 export interface CoreHighlight {
-  selected: { objIndex: number; sub: number | null; bindGroup: GPUBindGroup } | null;
-  hovered: { objIndex: number; sub: number | null; bindGroup: GPUBindGroup } | null;
+  primary: { objIndex: number; sub: number | null; bindGroup: GPUBindGroup } | null;
+  secondary: { objIndex: number; sub: number | null; bindGroup: GPUBindGroup } | null;
 }
 
 /** gizmo 绘制描述（origin / quat 由调用方按 local/world 算好） */
@@ -80,10 +89,12 @@ export interface CoreFrameUniforms {
   post: Float32Array;
   material: Float32Array;
   transform: Float32Array;
-  selToon: Float32Array;
-  selMat: Float32Array;
-  hoverToon: Float32Array;
-  hoverMat: Float32Array;
+  /** 第一层高亮的 toon / material（编辑器映射为「选中」） */
+  primaryToon: Float32Array;
+  primaryMat: Float32Array;
+  /** 第二层高亮的 toon / material（编辑器映射为「悬停」，被第一层压过） */
+  secondaryToon: Float32Array;
+  secondaryMat: Float32Array;
 }
 
 /** drawFrame 的完整输入：一份已完全解析的帧 */
@@ -102,16 +113,17 @@ export interface RenderFrameInput {
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
 const DEPTH_FORMAT: GPUTextureFormat = 'depth24plus';
 
-const SLOT_BYTES = 256; // minUniformBufferOffsetAlignment
-const SLOT_FLOATS = SLOT_BYTES / 4;
-
-const MAX_MATERIAL_SLOTS = 256;
-const MAX_OBJECTS = 64;
-
-const FRAME_FLOATS = 24; // 96 B
-const LIGHTS_FLOATS = 40; // 160 B
-const TOON_FLOATS = 28; // 112 B
-const POST_FLOATS = 44; // 176 B
+// uniform 布局常量与装箱函数已归入 ./frame-uniforms（2026-09-03 L-3）：
+// buffer 尺寸和写进 buffer 的字段顺序是同一件事的两半，必须放一起。
+import {
+  FRAME_FLOATS,
+  LIGHTS_FLOATS,
+  MAX_MATERIAL_SLOTS,
+  MAX_OBJECTS,
+  POST_FLOATS,
+  SLOT_BYTES,
+  TOON_FLOATS,
+} from './frame-uniforms';
 
 /** gizmo 期望在屏幕上占据的像素长度（按相机距离自动缩放，保持恒定大小） */
 const GIZMO_SCREEN_PX = 90;
@@ -151,10 +163,11 @@ export class RendererCore {
   readonly postBuf: GPUBuffer;
   readonly materialBuf: GPUBuffer;
   readonly transformBuf: GPUBuffer;
-  readonly selToonBuf: GPUBuffer;
-  readonly selMatBuf: GPUBuffer;
-  readonly hoverToonBuf: GPUBuffer;
-  readonly hoverMatBuf: GPUBuffer;
+  /** 两层高亮各自的 toon / material buffer（命名中性化见 CoreHighlight 注释） */
+  readonly primaryToonBuf: GPUBuffer;
+  readonly primaryMatBuf: GPUBuffer;
+  readonly secondaryToonBuf: GPUBuffer;
+  readonly secondaryMatBuf: GPUBuffer;
 
   // ---- gizmo 资源 ----
   private readonly gizmoModelBuf: GPUBuffer;
@@ -263,10 +276,10 @@ export class RendererCore {
     this.postBuf = this.uniform(POST_FLOATS * 4, 'post');
     this.materialBuf = this.uniform(MAX_MATERIAL_SLOTS * SLOT_BYTES, 'materials');
     this.transformBuf = this.uniform(MAX_OBJECTS * SLOT_BYTES, 'transforms');
-    this.selToonBuf = this.uniform(TOON_FLOATS * 4, 'selToon');
-    this.selMatBuf = this.uniform(SLOT_BYTES, 'selMat');
-    this.hoverToonBuf = this.uniform(TOON_FLOATS * 4, 'hoverToon');
-    this.hoverMatBuf = this.uniform(SLOT_BYTES, 'hoverMat');
+    this.primaryToonBuf = this.uniform(TOON_FLOATS * 4, 'primaryToon');
+    this.primaryMatBuf = this.uniform(SLOT_BYTES, 'primaryMat');
+    this.secondaryToonBuf = this.uniform(TOON_FLOATS * 4, 'secondaryToon');
+    this.secondaryMatBuf = this.uniform(SLOT_BYTES, 'secondaryMat');
 
     // ---- 后处理 ----
     const postModule = this.device.createShaderModule({ label: 'post', code: POST_WGSL });
@@ -461,10 +474,10 @@ export class RendererCore {
     device.queue.writeBuffer(this.postBuf, 0, u.post);
     device.queue.writeBuffer(this.materialBuf, 0, u.material);
     device.queue.writeBuffer(this.transformBuf, 0, u.transform);
-    device.queue.writeBuffer(this.selToonBuf, 0, u.selToon);
-    device.queue.writeBuffer(this.selMatBuf, 0, u.selMat);
-    device.queue.writeBuffer(this.hoverToonBuf, 0, u.hoverToon);
-    device.queue.writeBuffer(this.hoverMatBuf, 0, u.hoverMat);
+    device.queue.writeBuffer(this.primaryToonBuf, 0, u.primaryToon);
+    device.queue.writeBuffer(this.primaryMatBuf, 0, u.primaryMat);
+    device.queue.writeBuffer(this.secondaryToonBuf, 0, u.secondaryToon);
+    device.queue.writeBuffer(this.secondaryMatBuf, 0, u.secondaryMat);
 
     // ---- Pass 1 + 2：场景 MRT + inverted hull 描边 ----
     const encoder = device.createCommandEncoder({ label: 'frame' });
@@ -513,23 +526,23 @@ export class RendererCore {
         pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
         draws++;
 
-        const isSel =
-          input.highlight.selected !== null &&
-          input.highlight.selected.objIndex === i &&
-          (input.highlight.selected.sub === null || input.highlight.selected.sub === s);
-        const isHover =
-          !isSel &&
-          input.highlight.hovered !== null &&
-          input.highlight.hovered.objIndex === i &&
-          (input.highlight.hovered.sub === null || input.highlight.hovered.sub === s);
+        const isPrimary =
+          input.highlight.primary !== null &&
+          input.highlight.primary.objIndex === i &&
+          (input.highlight.primary.sub === null || input.highlight.primary.sub === s);
+        const isSecondary =
+          !isPrimary &&
+          input.highlight.secondary !== null &&
+          input.highlight.secondary.objIndex === i &&
+          (input.highlight.secondary.sub === null || input.highlight.secondary.sub === s);
 
-        if (isSel && input.highlight.selected!.bindGroup !== null) {
-          pass.setBindGroup(0, input.highlight.selected!.bindGroup);
+        if (isPrimary && input.highlight.primary!.bindGroup !== null) {
+          pass.setBindGroup(0, input.highlight.primary!.bindGroup);
           pass.setPipeline(this.outlinePipeline);
           pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
           draws++;
-        } else if (isHover && input.highlight.hovered!.bindGroup !== null) {
-          pass.setBindGroup(0, input.highlight.hovered!.bindGroup);
+        } else if (isSecondary && input.highlight.secondary!.bindGroup !== null) {
+          pass.setBindGroup(0, input.highlight.secondary!.bindGroup);
           pass.setPipeline(this.outlinePipeline);
           pass.drawIndexed(sm.indexCount, 1, sm.indexStart);
           draws++;
@@ -611,10 +624,10 @@ export class RendererCore {
     this.postBuf.destroy();
     this.materialBuf.destroy();
     this.transformBuf.destroy();
-    this.selToonBuf.destroy();
-    this.selMatBuf.destroy();
-    this.hoverToonBuf.destroy();
-    this.hoverMatBuf.destroy();
+    this.primaryToonBuf.destroy();
+    this.primaryMatBuf.destroy();
+    this.secondaryToonBuf.destroy();
+    this.secondaryMatBuf.destroy();
     this.gizmoModelBuf.destroy();
     for (const h of this.gizmoHandles) {
       h.vbuf.destroy();
@@ -624,4 +637,6 @@ export class RendererCore {
   }
 }
 
-export { HDR_FORMAT, DEPTH_FORMAT, SLOT_BYTES, SLOT_FLOATS, MAX_MATERIAL_SLOTS, MAX_OBJECTS, FRAME_FLOATS, LIGHTS_FLOATS, TOON_FLOATS, POST_FLOATS, GIZMO_SCREEN_PX };
+// 布局常量不再从这里导出 —— 真源是 ./frame-uniforms，由包入口 index.ts 统一对外。
+// 留在这里会与 `export * from './frame-uniforms'` 撞名（ESM 的星号导出歧义）。
+export { HDR_FORMAT, DEPTH_FORMAT, GIZMO_SCREEN_PX };

@@ -14,6 +14,13 @@ import {
   LIGHTS_FLOATS,
   TOON_FLOATS,
   POST_FLOATS,
+  packFrameUniforms,
+  packMaterial,
+  matchBindings,
+  type MatchReportEntry,
+  type MeshNodeBinding,
+  type MeshNodeStub,
+  type PrimitiveBinding,
 } from '@aether/render';
 import {
   packSkin,
@@ -48,13 +55,6 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import {
-  matchBindings,
-  type MatchReportEntry,
-  type MeshNodeBinding,
-  type MeshNodeStub,
-  type PrimitiveBinding,
-} from './binding';
 import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
 import {
   createSkinState,
@@ -303,14 +303,7 @@ export function pointInAabb(
   return x >= min[0] && x <= max[0] && y >= min[1] && y <= max[1] && z >= min[2] && z <= max[2];
 }
 
-function srgbToLinear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function hexToLinear(hex: string): [number, number, number] {
-  const [r, g, b] = m4.hexToRgb(hex);
-  return [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)];
-}
+// srgbToLinear / hexToLinear 已于 2026-09-03 随装箱逻辑下沉到 @aether/core（L-3）。
 
 /** 按局部 Y 烘一层接地 AO，写进顶点色 G 通道 */
 function applyAo(mesh: MeshData, minY: number, maxY: number, floor = 0.55): void {
@@ -789,15 +782,20 @@ export class LabRenderer {
     if (this.state.hoveredIndex === index) {
       this.state.hoverBindGroup = this.buildHighlightBindGroup(
         index,
-        this.core.hoverToonBuf,
-        this.core.hoverMatBuf,
-        'hover',
+        this.core.secondaryToonBuf,
+        this.core.secondaryMatBuf,
+        'hover-secondary',
       );
     }
   }
 
   public buildSelectionBindGroup(index: number): void {
-    this.state.selBindGroup = this.buildHighlightBindGroup(index, this.core.selToonBuf, this.core.selMatBuf, 'sel');
+    this.state.selBindGroup = this.buildHighlightBindGroup(
+      index,
+      this.core.primaryToonBuf,
+      this.core.primaryMatBuf,
+      'sel-primary',
+    );
   }
 
   /**
@@ -1560,209 +1558,11 @@ export class LabRenderer {
     this.state.stats.height = this.core.height;
   }
 
-  private packLights(p: LabParams, time: number): void {
-    const d = this.lightsData;
-
-    const dir = m4.sphericalToDir(p.keyAzimuth, p.keyElevation);
-    d[0] = dir[0];
-    d[1] = dir[1];
-    d[2] = dir[2];
-    d[3] = p.keyIntensity;
-
-    const key = hexToLinear(p.keyColor);
-    d[4] = key[0];
-    d[5] = key[1];
-    d[6] = key[2];
-    d[7] = 1;
-
-    const sky = hexToLinear(p.fillSkyColor);
-    d[8] = sky[0];
-    d[9] = sky[1];
-    d[10] = sky[2];
-    d[11] = p.fillSkyIntensity;
-
-    const ground = hexToLinear(p.fillGroundColor);
-    d[12] = ground[0];
-    d[13] = ground[1];
-    d[14] = ground[2];
-    d[15] = p.fillGroundIntensity;
-
-    const rim = hexToLinear(p.rimColor);
-    d[16] = rim[0];
-    d[17] = rim[1];
-    d[18] = rim[2];
-    d[19] = p.rimIntensity;
-
-    const amb = hexToLinear(p.ambientColor);
-    d[20] = amb[0];
-    d[21] = amb[1];
-    d[22] = amb[2];
-    d[23] = p.ambientIntensity;
-
-    d[24] = p.rimPower;
-    d[25] = p.rimTopBias;
-    d[26] = 0;
-    d[27] = 0;
-
-    const fog = hexToLinear(p.fogColor);
-    d[28] = fog[0];
-    d[29] = fog[1];
-    d[30] = fog[2];
-    d[31] = p.fogDensity;
-
-    const t = p.pointOrbit ? time * 0.8 : 0;
-    d[32] = Math.cos(t) * 2.6;
-    d[33] = 1.4;
-    d[34] = Math.sin(t) * 2.6;
-    d[35] = p.pointRange;
-
-    const pl = hexToLinear(p.pointColor);
-    d[36] = pl[0];
-    d[37] = pl[1];
-    d[38] = pl[2];
-    d[39] = p.pointEnabled ? p.pointIntensity : 0;
-  }
-
-  private packToon(p: LabParams): void {
-    const d = this.toonData;
-
-    d[0] = p.shadowEnd;
-    d[1] = p.specStart;
-    d[2] = p.edgeSoftness;
-    d[3] = p.shadowMult;
-
-    d[4] = p.shadowMix;
-    d[5] = p.shadowSat;
-    d[6] = p.litSat;
-    d[7] = p.specMix;
-
-    const st = m4.hexToRgb(p.shadowTint);
-    d[8] = st[0];
-    d[9] = st[1];
-    d[10] = st[2];
-    d[11] = 0;
-
-    const sp = m4.hexToRgb(p.specTint);
-    d[12] = sp[0];
-    d[13] = sp[1];
-    d[14] = sp[2];
-    d[15] = 0;
-
-    // 线宽按 1080p 定义，canvas.height 已是物理像素，直接按比例换算
-    d[16] = (p.outlineWidth * this.core.height) / 1080;
-    d[17] = p.outlineDistanceComp ? 1 : 0;
-    d[18] = 0;
-    d[19] = 0;
-
-    const ink = m4.hexToRgb(p.inkColor);
-    d[20] = ink[0];
-    d[21] = ink[1];
-    d[22] = ink[2];
-    d[23] = 0;
-
-    d[24] = p.debugMode;
-    d[25] = 0;
-    d[26] = 0;
-    d[27] = 0;
-  }
-
-  private packPost(p: LabParams): void {
-    const d = this.postData;
-
-    d[0] = p.gradeShadowRange;
-    d[1] = p.gradeMidRange;
-    d[2] = p.gradeEdge;
-    d[3] = p.gradeEnabled ? 1 : 0;
-
-    d[4] = p.gradeShadowMult;
-    d[5] = p.gradeShadowMix;
-    d[6] = p.gradeShadowSat;
-    d[7] = 0;
-
-    d[8] = 0.98; // tokens.json：中间调倍率固定 0.98，没有做成可调参数
-    d[9] = 0;
-    d[10] = p.gradeMidSat;
-    d[11] = 0;
-
-    d[12] = p.gradeLightMult;
-    d[13] = p.gradeLightMix;
-    d[14] = p.gradeLightSat;
-    d[15] = 0;
-
-    // grading 工作在 sRGB display-referred 空间，这里送 raw sRGB，不转 linear
-    const nd = m4.hexToRgb('#0E0C16');
-    d[16] = nd[0];
-    d[17] = nd[1];
-    d[18] = nd[2];
-    d[19] = 0;
-
-    const bone = m4.hexToRgb('#FFF6E2');
-    d[20] = bone[0];
-    d[21] = bone[1];
-    d[22] = bone[2];
-    d[23] = 0;
-
-    const ink = m4.hexToRgb(p.inkColor);
-    d[24] = ink[0];
-    d[25] = ink[1];
-    d[26] = ink[2];
-    d[27] = 0;
-
-    d[28] = p.halftoneEnabled ? 1 : 0;
-    d[29] = p.halftoneSize;
-    d[30] = p.halftoneStrength;
-    d[31] = p.halftoneThreshold;
-
-    d[32] = p.tonemapMode;
-    d[33] = p.exposure;
-    d[34] = p.bloomThreshold;
-    d[35] = p.bloomEnabled ? p.bloomIntensity : 0;
-
-    d[36] = p.vignette;
-    d[37] = p.outlinePostExempt ? 1 : 0;
-    d[38] = this.core.width;
-    d[39] = this.core.height;
-
-    d[40] = p.debugMode;
-    d[41] = 0;
-    d[42] = 0;
-    d[43] = 0;
-  }
-
   /** 高亮描边用的材质：指定了子网格就取那一条的生效材质，否则取第 0 条 */
   private highlightMaterial(objIndex: number, sub: number | null): MaterialState {
     const o = this.state.objects[objIndex];
     const sm = o?.subMeshes[sub ?? 0] ?? o?.subMeshes[0];
     return sm === undefined ? this.state.params.materials[0]! : this.resolveMaterial(sm);
-  }
-
-  private packMaterial(dst: Float32Array, base: number, m: MaterialState): void {
-    const a = m4.hexToRgb(m.albedo);
-    dst[base] = a[0];
-    dst[base + 1] = a[1];
-    dst[base + 2] = a[2];
-    dst[base + 3] = 1;
-
-    dst[base + 4] = m.roughness;
-    dst[base + 5] = m.metallic;
-    dst[base + 6] = m.emissiveStrength;
-    dst[base + 7] = 0;
-
-    const e = m4.hexToRgb(m.emissiveColor);
-    dst[base + 8] = e[0];
-    dst[base + 9] = e[1];
-    dst[base + 10] = e[2];
-    dst[base + 11] = 0;
-
-    dst[base + 12] = m.shadowEnd;
-    dst[base + 13] = m.specMix;
-    dst[base + 14] = m.softnessScale;
-    dst[base + 15] = m.halftoneScale;
-
-    dst[base + 16] = m.unlit ? 1 : 0;
-    dst[base + 17] = m.outlineScale;
-    dst[base + 18] = 0;
-    dst[base + 19] = 0;
   }
 
   /**
@@ -1779,10 +1579,17 @@ export class LabRenderer {
     const dt = this.state.lastFrameTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - this.state.lastFrameTime));
     this.state.lastFrameTime = time;
 
-    // ---- CPU 端装箱：材质 / 变换 / 蒙皮（编辑器语义）----
-    this.packLights(p, time);
-    this.packToon(p);
-    this.packPost(p);
+    // ---- CPU 端装箱：灯光 / toon / 后处理（引擎层，见 ADR-001）----
+    // 装箱与 layout 常量同在 packages/render/src/frame-uniforms.ts，编辑器只传 UI 参数与画布尺寸。
+    packFrameUniforms({
+      lights: this.lightsData,
+      toon: this.toonData,
+      post: this.postData,
+      params: p,
+      time,
+      width: this.core.width,
+      height: this.core.height,
+    });
 
     for (let i = 0; i < this.state.objects.length; i++) {
       const o = this.state.objects[i]!;
@@ -1795,7 +1602,7 @@ export class LabRenderer {
         const m = this.resolveMaterial(o.subMeshes[s]!);
         this.resolvedBySlot[slot] = m;
         const base = slot * SLOT_FLOATS;
-        this.packMaterial(this.materialData, base, m);
+        packMaterial(this.materialData, base, m);
         // flags.z：有贴图的角色槽位切到纹理采样（见 scene.wgsl fs_main）
         if (o.useTex) this.materialData[base + 18] = 1;
       }
@@ -1834,12 +1641,12 @@ export class LabRenderer {
         this.hoverToonData[20] = c[0];
         this.hoverToonData[21] = c[1];
         this.hoverToonData[22] = c[2];
-        this.device.queue.writeBuffer(this.core.hoverToonBuf, 0, this.hoverToonData);
+        this.device.queue.writeBuffer(this.core.secondaryToonBuf, 0, this.hoverToonData);
 
         const m = this.highlightMaterial(this.state.hoveredIndex, this.state.hoveredSub);
-        this.packMaterial(this.hoverMatData, 0, m);
+        packMaterial(this.hoverMatData, 0, m);
         this.hoverMatData[17] = Math.max((this.hoverMatData[17] ?? 0) * 1.1, 0.8);
-        this.device.queue.writeBuffer(this.core.hoverMatBuf, 0, this.hoverMatData);
+        this.device.queue.writeBuffer(this.core.secondaryMatBuf, 0, this.hoverMatData);
       }
     }
 
@@ -1854,12 +1661,12 @@ export class LabRenderer {
         this.selToonData[20] = c[0];
         this.selToonData[21] = c[1];
         this.selToonData[22] = c[2];
-        this.device.queue.writeBuffer(this.core.selToonBuf, 0, this.selToonData);
+        this.device.queue.writeBuffer(this.core.primaryToonBuf, 0, this.selToonData);
 
         const m = this.highlightMaterial(this.state.selectedIndex, this.state.selectedSub);
-        this.packMaterial(this.selMatData, 0, m);
+        packMaterial(this.selMatData, 0, m);
         this.selMatData[17] = Math.max((this.selMatData[17] ?? 0) * 1.1, 0.8);
-        this.device.queue.writeBuffer(this.core.selMatBuf, 0, this.selMatData);
+        this.device.queue.writeBuffer(this.core.primaryMatBuf, 0, this.selMatData);
       }
     }
 
@@ -1898,10 +1705,11 @@ export class LabRenderer {
         post: this.postData,
         material: this.materialData,
         transform: this.transformData,
-        selToon: this.selToonData,
-        selMat: this.selMatData,
-        hoverToon: this.hoverToonData,
-        hoverMat: this.hoverMatData,
+        // 编辑器语义 → 引擎中性槽位的映射点：选中=第一层，悬停=第二层（见 CoreHighlight 注释）
+        primaryToon: this.selToonData,
+        primaryMat: this.selMatData,
+        secondaryToon: this.hoverToonData,
+        secondaryMat: this.hoverMatData,
       },
       objects,
       highlight,
