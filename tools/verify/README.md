@@ -1,6 +1,6 @@
 # 验证工具（CDP）
 
-不需要人工点浏览器，一条命令完成验证。目录下六个脚本，**职责不重叠**：
+不需要人工点浏览器，一条命令完成验证。目录下七个脚本 + 一个生成层，**职责不重叠**：
 
 | 脚本 | 验证什么 | 浏览器形态 | 命令 |
 |---|---|---|---|
@@ -10,6 +10,26 @@
 | `facade-metric.py` | **架构度量**：`LabRenderer` 的门面化程度（方法数 / 委托占比 / 实质逻辑行数） | 不需要浏览器 | `npm run verify:facade` |
 | `dock-probe.mjs` | **布局几何**：资产库 dock 的分段高度 + `elementFromPoint` 命中测试，多视口扫描 | headless（SwiftShader） | `node tools/verify/dock-probe.mjs` |
 | `guard-classprefix.mjs` | **类名前缀闸门**：禁止 `ad-` / `adk-` / `data-ad` / `--ad-*` 复活（会被广告拦截插件 `display:none`） | 不需要浏览器 | `npm run verify:prefix` |
+| `packages/content/scripts/gen-content.mjs` | **内容生成层**：`roster.json` + `tokens.json` → 强类型 TS；`--check` 时不同步即 exit 1 | 不需要浏览器 | `npm run content:gen` / `npm run content:check` |
+
+## 门禁清单（改完代码按序跑）
+
+```bash
+npm run typecheck        # 类型
+npx vitest run           # 单测
+npm run editor:build     # 构建
+npm run editor:smoke -- --glb <rigged.glb>   # 结构冒烟（headless）
+npm run content:check    # 内容生成物与真源同步
+npm run verify:prefix    # 类名前缀闸门
+```
+
+后两道是 2026-09-03 加的，防的都是「跑不出来但会出事」的问题：
+`content:check` 防「改了真源忘了重跑生成器」，`verify:prefix` 防「类名撞上广告拦截规则」。
+
+> **注意**：`content:check` 与 vitest 里的生成层测试**不重复**。
+> 本仓没装 `@types/node`，TS 测试里用不了 `node:child_process`，
+> 所以「同步性」只能由 `content:check` 承担；vitest 那边只做纯取值与解析规则断言。
+> 两个都要跑。
 
 `facade-metric.py` 存在的理由（2026-09-03）：`docs/12` 初版那个「68% 实质逻辑」的结论
 来自一个**从未入库的临时脚本**，第二轮想把数字复算一遍时发现根本对不上 —— 度量工具丢了，

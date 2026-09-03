@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { BUILTIN_MODELS, CHARACTER_HEIGHT_M } from './models';
+import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
@@ -234,7 +234,7 @@ async function boot(): Promise<void> {
   panel.onModelFile = (buffer, name) => {
     try {
       // 身高用与内置 LOD 同一把尺子（roster 真源），保证导入档与内置档体型一致
-      const model = parseGlb(buffer, CHARACTER_HEIGHT_M);
+      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       void (async () => {
         const bmp = model.image === null ? null : await decodeTexture(model.image, name);
         // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
@@ -862,7 +862,7 @@ async function boot(): Promise<void> {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
       // 与「导入 GLB…」同一把身高尺，保证资产库生成的与导入的体型一致
-      const model = parseGlb(buffer, CHARACTER_HEIGHT_M);
+      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       const name = uniqueObjectName(stemName(relPath));
       // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树

@@ -23,7 +23,7 @@ import {
   type AssetSelection,
 } from './asset-util';
 import { parseGlb } from '@aether/scene';
-import { CHARACTER_HEIGHT_M } from './models';
+import { MODEL_RULER_HEIGHT_M } from './models';
 
 const TEXT_PREVIEW_MAX_BYTES = 256 * 1024;
 const TEXT_PREVIEW_LINES = 30;
@@ -116,7 +116,7 @@ export class AssetInspector {
       void fetch(fileUrl(path))
         .then(async (resp) => {
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          return parseGlb(await resp.arrayBuffer(), CHARACTER_HEIGHT_M);
+          return parseGlb(await resp.arrayBuffer(), MODEL_RULER_HEIGHT_M);
         })
         .then((model) => {
           if (!alive()) return;

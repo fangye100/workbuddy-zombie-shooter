@@ -89,9 +89,16 @@ export interface PostPackParams {
   gradeShadowMix: number;
   gradeShadowSat: number;
   gradeMidSat: number;
+  /** 中间调倍率。此前在 packPost 里写死 0.98（L-7），真源是 tokens.json 的 grading.stops[mid].multiply */
+  gradeMidMult: number;
   gradeLightMult: number;
   gradeLightMix: number;
   gradeLightSat: number;
+
+  /** 暗部混向色。此前写死 #0E0C16（= core.night-deep），真源是 tokens.json */
+  gradeShadowColor: string;
+  /** 亮部混向色。此前写死 #FFF6E2（= core.bone），真源是 tokens.json */
+  gradeLightColor: string;
 
   halftoneEnabled: boolean;
   halftoneSize: number;
@@ -254,7 +261,7 @@ export function packPost(
   dst[6] = p.gradeShadowSat;
   dst[7] = 0;
 
-  dst[8] = 0.98; // tokens.json：中间调倍率固定 0.98，没有做成可调参数
+  dst[8] = p.gradeMidMult;
   dst[9] = 0;
   dst[10] = p.gradeMidSat;
   dst[11] = 0;
@@ -264,13 +271,13 @@ export function packPost(
   dst[14] = p.gradeLightSat;
   dst[15] = 0;
 
-  const nd = hexToRgb('#0E0C16');
+  const nd = hexToRgb(p.gradeShadowColor);
   dst[16] = nd[0];
   dst[17] = nd[1];
   dst[18] = nd[2];
   dst[19] = 0;
 
-  const bone = hexToRgb('#FFF6E2');
+  const bone = hexToRgb(p.gradeLightColor);
   dst[20] = bone[0];
   dst[21] = bone[1];
   dst[22] = bone[2];

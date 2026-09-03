@@ -17,6 +17,8 @@
     "verify:uv": "node tools/verify/uv-regularity.mjs",
     "verify:facade": "python tools/verify/facade-metric.py apps/editor/src/renderer.ts",
     "verify:prefix": "node tools/verify/guard-classprefix.mjs",
+    "content:gen": "node packages/content/scripts/gen-content.mjs",
+    "content:check": "node packages/content/scripts/gen-content.mjs --check",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
     "test": "vitest run",

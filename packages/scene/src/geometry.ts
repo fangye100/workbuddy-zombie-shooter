@@ -484,7 +484,7 @@ export function meshStats(mesh: MeshData): {
  * 等比缩放：X/Z 与 Y 同比例，体型不失真；法线不需要改（等比 + 正交，方向不变）。
  *
  * 归属说明（2026-09-03 上提）：原本住在 `apps/editor/src/models.ts`，但它是纯几何运算
- * （只依赖本文件的 MeshData），且被运行时导入链路调用（`parseGlb(buffer, CHARACTER_HEIGHT_M)`
+ * （只依赖本文件的 MeshData），且被运行时导入链路调用（`parseGlb(buffer, MODEL_RULER_HEIGHT_M)`
  * 之后统一身高），属引擎域而非编辑器 UI 域。按 docs/11 §5「几何归 packages/scene」补完成。
  */
 export function normalizeMeshHeight(mesh: MeshData, targetMeters: number): MeshData {
