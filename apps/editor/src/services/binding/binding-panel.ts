@@ -584,44 +584,30 @@ export class BindingPanel {
   }
 
   /**
-   * 应用 T-pose：**先**把当前姿态的 fit 交出去做 re-gen（带平滑开关），**后**复位关节显示。
+   * Bind Skin：把「当前编辑姿态 + 当前网格」交出去做 re-gen（带平滑开关），并冻结 Bind Pose。
    *
-   * 顺序不能反 —— 外部要在「当前姿态骨架 + 当前姿态网格」上算 LBS 权重，
-   * 一旦先复位成 T-pose 再导出，权重就按 T 字形算了，A-pose 模型的手臂权重全错。
+   * ⚠️ **绑完骨架绝不动**：bind pose 是动词 —— 在「当前姿势 + 当前模型」把骨骼与皮肤绑定的
+   * 那一瞬间，骨架的姿势就叫 bind pose。所以这里**绝不**把 `positions` 复位成 T-pose，
+   * 绑定后你仍停留在 bind pose（与 T pose 天然不同），可随时切 T / A 预览对比。
    */
   private applyTPose(): void {
     const fit = this.currentFit();
-    // 冻结保存 Bind Pose（带 offset 的编辑姿态）—— 必须在复位成 T-pose 之前拍下，
-    // 它冻结持久存在，Detach 不清空，只有再次 Bind Skin 才刷新。
+    // 冻结保存 Bind Pose（绑定瞬间的带 offset 姿态），永久存在；Detach 不清空，再 Bind 才刷新。
     this.bindPose = this.clonePositions(this.positions);
     this.bindPoseBtn.disabled = false;
     this.hooks.onApply?.(fit, { smoothWeights: this.smoothWeights });
-    // 复位：把关节坐标同步成 T-pose（ΔR 清零），用户立刻看到结果
-    for (const name of HUMANIK_ORDER) {
-      this.positions[name] = [
-        fit.tposePositions[name]![0],
-        fit.tposePositions[name]![1],
-        fit.tposePositions[name]![2],
-      ];
-    }
+    // 注意：不复位 positions —— 骨骼保持 bind pose 不动（用户铁律）。
     this.refresh();
   }
 
   /**
-   * 反解结果回灌：把 re-gen 出来的 T-pose 网格换进来显示。
-   * 网格摆正了 + 骨架也摆正了，两者重合即证明反解成立（一眼可验证）。
+   * 反解结果回灌：把 re-gen 出的 T-pose 网格存着（供「T」预览复用），
+   * 但**骨骼保持 bind pose 不动** —— 绑定是动词，绑完骨架姿势即定，绝不跳回 T-pose。
    */
   showTPoseResult(fit: FitResult, verts: Float32Array): void {
     this.tposeMesh = verts;
-    this.unposed = true;
-    this.previewMode = 'current';
-    for (const name of HUMANIK_ORDER) {
-      this.positions[name] = [
-        fit.tposePositions[name]![0],
-        fit.tposePositions[name]![1],
-        fit.tposePositions[name]![2],
-      ];
-    }
+    this.unposed = false;
+    this.fitCache = fit;
     this.syncDisplay();
     this.refresh();
   }
