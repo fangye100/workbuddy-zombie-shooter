@@ -2,23 +2,25 @@
 
 本文件是给 AI 协作会话（WorkBuddy Agent）的项目级硬性规则。**改项目前先读本文件。**
 
-## 1. 编辑器必须经 Tailscale 可达
+## 1. 本地服务必须经 Tailscale 可达（固定端口 + HTTPS）
 
-- Game Editor (WebGPU) dev 服务：`npm run lab` → 端口 **5178**。
-- vite `server` 必须保持：
-  - `host: true` —— 监听所有网卡，含 Tailscale 虚拟网卡（100.124.237.93 / `*.ts.net`）。
-    手机或异地设备经 Tailscale 访问编辑器依赖这一项；只绑 localhost 会收不到外部请求。
-  - `allowedHosts: true` —— 放行 `*.ts.net` 等任意 Host。否则 Vite 的 host-check 会在
-    应用层返回 `403 Blocked request. This host is not allowed.`，表现为「连得上但打不开」。
-- **禁止**把 `server.host` 改回 `localhost` / `127.0.0.1` / 某个具体 IP，会切断 Tailscale 访问。
-- 经 Tailscale 访问**必须用 HTTPS**：WebGPU 只在 secure context 下可用，HTTP 下
-  `navigator.gpu` 为 `undefined` → 黑屏。证书由 `tailscale cert <magicdns>` 生成
-  （`fangye-win11-office.tail6b29a2.ts.net.crt/.key`），放在 `.workbuddy/tmp/certs/`
-  （已 gitignore），vite 检测到即自动走 HTTPS；缺失则退回 HTTP（仅本机 localhost 可用）。
-- 访问地址（三选一）：
-  - `https://localhost:5178`（本机）
-  - `https://100.124.237.93:5178`（Tailscale IP）
-  - `https://fangye-win11-office.tail6b29a2.ts.net:5178`（Tailscale MagicDNS 域名，推荐）
+- **固定端口**（改端口须同步改这里 + 对应 vite.config 的 `port`/`strictPort`）：
+  | 服务 | 脚本 | 端口 | 配置 |
+  |---|---|---|---|
+  | Game Editor (WebGPU) | `npm run lab` / `npm run editor` | **5100** | `apps/editor/vite.config.ts` |
+  | 最终游戏 | `npm run dev` | **5101** | `apps/samples/00-init/vite.config.ts` |
+- vite `server` 必须保持：`host: true`（监听所有网卡含 Tailscale 虚拟网卡
+  100.124.237.93 / `*.ts.net`）、`allowedHosts: true`（放行 `*.ts.net` 避免 403）、
+  `strictPort: true`（端口被占直接报错，不漂到 5101+/5102+）。
+- **禁止**把 `server.host` 改回 `localhost`/`127.0.0.1`/具体 IP，会切断 Tailscale 访问。
+- 经 Tailscale 访问**必须用 HTTPS**：WebGPU / SharedArrayBuffer 都需要 secure context，
+  HTTP 下 `navigator.gpu` 为 `undefined` → 黑屏。证书由 `tailscale cert <magicdns>` 生成
+  （`fangye-win11-office.tail6b29a2.ts.net.crt/.key`），放 `.workbuddy/tmp/certs/`（已 gitignore），
+  vite 检测到即自动走 HTTPS；缺失则退回 HTTP（仅本机 localhost 可用）。
+- 访问地址（以 5100 为例，最终游戏把端口换成 5101）：
+  - `https://localhost:5100`（本机）
+  - `https://100.124.237.93:5100`（Tailscale IP）
+  - `https://fangye-win11-office.tail6b29a2.ts.net:5100`（Tailscale MagicDNS 域名，推荐）
 
 ## 2. Git 提交纪律（澄清红线歧义）
 

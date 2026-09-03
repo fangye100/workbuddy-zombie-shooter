@@ -13,7 +13,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const URL_APP = 'http://localhost:5178/';
+const URL_APP = 'http://localhost:5100/';
 const PORT = 9222;
 const USER_DIR = path.resolve('.workbuddy/tmp/chrome-profile');
 const GLB = path.resolve('assets/characters/models/E-04/E04_20260901_010134.glb');
@@ -190,7 +190,7 @@ try {
   console.log('浏览器已就绪:', ver.Browser);
 
   let targets = await httpJson(`http://127.0.0.1:${PORT}/json/list`, 60);
-  let page = targets.find((t) => t.type === 'page' && t.url.includes('5178'));
+  let page = targets.find((t) => t.type === 'page' && t.url.includes('5100'));
   if (page === undefined) {
     await sleep(3000);
     targets = await httpJson(`http://127.0.0.1:${PORT}/json/list`);
