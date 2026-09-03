@@ -16,6 +16,7 @@
     "verify:glb": "node tools/verify/cdp-verify.mjs",
     "verify:uv": "node tools/verify/uv-regularity.mjs",
     "verify:facade": "python tools/verify/facade-metric.py apps/editor/src/renderer.ts",
+    "verify:prefix": "node tools/verify/guard-classprefix.mjs",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
     "test": "vitest run",

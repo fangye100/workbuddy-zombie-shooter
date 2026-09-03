@@ -1,6 +1,6 @@
 # 验证工具（CDP）
 
-不需要人工点浏览器，一条命令完成验证。目录下四个脚本，**职责不重叠**：
+不需要人工点浏览器，一条命令完成验证。目录下六个脚本，**职责不重叠**：
 
 | 脚本 | 验证什么 | 浏览器形态 | 命令 |
 |---|---|---|---|
@@ -8,6 +8,8 @@
 | `cdp-verify.mjs` | **视觉验证**：导入真实 GLB → 截图 → 像素统计（UV / 贴图是否错乱） | 带界面（真实 GPU） | `npm run verify:glb` |
 | `uv-regularity.mjs` | 棋盘格规整度分析（判定 UV 是否错乱） | 读上一步的截图 | `npm run verify:uv` |
 | `facade-metric.py` | **架构度量**：`LabRenderer` 的门面化程度（方法数 / 委托占比 / 实质逻辑行数） | 不需要浏览器 | `npm run verify:facade` |
+| `dock-probe.mjs` | **布局几何**：资产库 dock 的分段高度 + `elementFromPoint` 命中测试，多视口扫描 | headless（SwiftShader） | `node tools/verify/dock-probe.mjs` |
+| `guard-classprefix.mjs` | **类名前缀闸门**：禁止 `ad-` / `adk-` / `data-ad` / `--ad-*` 复活（会被广告拦截插件 `display:none`） | 不需要浏览器 | `npm run verify:prefix` |
 
 `facade-metric.py` 存在的理由（2026-09-03）：`docs/12` 初版那个「68% 实质逻辑」的结论
 来自一个**从未入库的临时脚本**，第二轮想把数字复算一遍时发现根本对不上 —— 度量工具丢了，
@@ -40,8 +42,11 @@ npm run verify:uv
 ```
 
 dev server 默认 **https**：本机 `apps/editor/vite.config.ts` 检测到 Tailscale 证书
-（`.workbuddy/tmp/certs/`）会自动开 https，`http://localhost:5178` 直接连会返回 000。
+（`.workbuddy/tmp/certs/`）会自动开 https，`http://localhost:5100` 直接连会返回 000。
 `editor-smoke.mjs` 会自动探测协议并在 https 时给 Chrome 加 `--ignore-certificate-errors`。
+
+> **端口（2026-09-03 锁定）**：Game Editor = **5100**，最终游戏 = **5101**。
+> 5178 是 2026-09-03 11:17（`b25506c`）之前的旧值，见到就改掉。
 
 产物写在 `.workbuddy/tmp/`：`editor-smoke.png`（冒烟截图）、
 `import-default.png`、`import-uvchecker.png`、`analysis.json`（视觉验证）。
@@ -104,3 +109,44 @@ npm run verify:facade
 > 要读 `#model-info` 的统计行。此外 `#fatal` 是**常驻 DOM**，靠 `style.display` 显形，
 > 判据必须用 `getComputedStyle(...).display !== 'none'` —— 直接读 `innerText`
 > 即使卡片没显示也会返回标题文字「无法启动」，同样假失败。
+
+## 已验证结论（2026-09-03，资产库 `ad-` 前缀改名后）
+
+```
+npm run verify:prefix   → ✅ 通过（自测：注入 4 处违规 → exit 1；load-asset/add-node/bad-idea 零误报）
+npm run typecheck       → 0 error
+npx vitest run          → 124/124（10 文件）
+npm run editor:build    → 49 modules / 183.86 kB
+npm run editor:smoke    → 35 PASS / 0 FAIL / 0 SKIP，CONSOLE(0)，EXCEPTIONS(0)
+
+dock-probe 基线（1280×800）：
+  seg: {grip:6, head:42, body:212, tree:212, content:212, sum:260}
+  hitAtCenter: "path [dock内]" · treeRows 13 · contentChildren 2 · clippedBelow 0
+  五视口（1280×800 / 1366×768 / 1920×1080 / 1024×600 / 800×480）dockH 恒 260、裁剪 0
+```
+
+### 判据陷阱：headless 永远复现不出来的「面板消失」
+
+「资产库面板不见了」的真凶是**广告拦截插件**：面板曾用类名前缀 `ad-`
+（`.ad-head` / `.ad-body` / `.ad-content` / `.ad-title` / `.ad-filter`），
+而 `ad-` 是 EasyList / uBlock Origin / AdGuard 的头号命中模式，会被注入
+`display:none !important`。`.ad-grip` 因为「ad-grip」不像广告词而逃过一劫，
+于是 dock 只剩 6px 的一条。
+
+三个特征一对照即可定性（**headless 里三个全不成立，所以探针再绿也没用**）：
+
+| 现象 | 说明 |
+|---|---|
+| 无痕窗口正常 | 扩展默认禁用 → 指向扩展 |
+| `Ctrl+Shift+R` 硬刷无效 | 扩展每次加载都会重新注入 → 排除缓存 |
+| 项目唯一 `display:none` 规则与观测**恰好相反** | 项目规则是 `collapsed` 时藏 body+grip、留 head；实测 head=0 而 grip=6 → 排除自身 CSS |
+
+**诊断阶梯**（按顺序排除，每层都要留数字证据）：
+服务器 HTML → 布局 CSS（flex 不可压缩）→ 多视口扫描 → console 错误 →
+Service Worker → 缓存头 → media query → 顶层浮层遮挡 → dev server 是否陈旧 →
+localStorage 键清单 → 窗口/屏幕几何 → **`elementFromPoint` 命中测试** →
+**分段高度（grip/head/body/tree/content）** → **扩展注入**。
+
+> **教训**：`dock-probe.mjs` 早期版本数 `.ad-content [data-path]` 的子节点数并报全绿，
+> 但用户浏览器里整片内容高度是 0 —— 「节点存在」不等于「可见」。
+> 现在它以**分段高度 + 命中测试**为准，不再靠节点计数。

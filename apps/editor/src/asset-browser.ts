@@ -87,31 +87,31 @@ export class AssetBrowser {
     restoreCssVar('--tree-w', LS_TREE_W, 210);
 
     this.dock.innerHTML = `
-      <div class="ad-grip" data-ad="grip" title="拖拽调整资产库高度"></div>
-      <div class="ad-head">
-        <span class="ad-title">资产库 <em>Asset Library</em></span>
-        <span class="ad-crumb" data-ad="crumb"></span>
-        <input class="ad-filter" data-ad="filter" type="search" placeholder="筛选当前目录…">
-        <span class="ad-zoom-label">列表</span>
-        <input class="ad-zoom" data-ad="zoom" type="range" min="0" max="100" step="1" title="视图缩放：列表 ↔ 大图标">
-        <span class="ad-zoom-label">图标</span>
-        <button class="ad-collapse" data-ad="collapse" title="收起 / 展开资产库">▾</button>
+      <div class="asset-grip" data-asset="grip" title="拖拽调整资产库高度"></div>
+      <div class="asset-head">
+        <span class="asset-title">资产库 <em>Asset Library</em></span>
+        <span class="asset-crumb" data-asset="crumb"></span>
+        <input class="asset-filter" data-asset="filter" type="search" placeholder="筛选当前目录…">
+        <span class="asset-zoom-label">列表</span>
+        <input class="asset-zoom" data-asset="zoom" type="range" min="0" max="100" step="1" title="视图缩放：列表 ↔ 大图标">
+        <span class="asset-zoom-label">图标</span>
+        <button class="asset-collapse" data-asset="collapse" title="收起 / 展开资产库">▾</button>
       </div>
-      <div class="ad-body" data-ad="body">
-        <div class="ad-tree" data-ad="tree"></div>
-        <div class="ad-split" data-ad="split" title="拖拽调整目录树宽度"></div>
-        <div class="ad-content" data-ad="content"></div>
+      <div class="asset-body" data-asset="body">
+        <div class="asset-tree" data-asset="tree"></div>
+        <div class="asset-split" data-asset="split" title="拖拽调整目录树宽度"></div>
+        <div class="asset-content" data-asset="content"></div>
       </div>`;
 
-    this.treeEl = this.dock.querySelector('[data-ad="tree"]')!;
-    this.contentEl = this.dock.querySelector('[data-ad="content"]')!;
-    this.crumbEl = this.dock.querySelector('[data-ad="crumb"]')!;
-    this.filterEl = this.dock.querySelector('[data-ad="filter"]')!;
-    this.zoomEl = this.dock.querySelector('[data-ad="zoom"]')!;
-    this.bodyEl = this.dock.querySelector('[data-ad="body"]')!;
+    this.treeEl = this.dock.querySelector('[data-asset="tree"]')!;
+    this.contentEl = this.dock.querySelector('[data-asset="content"]')!;
+    this.crumbEl = this.dock.querySelector('[data-asset="crumb"]')!;
+    this.filterEl = this.dock.querySelector('[data-asset="filter"]')!;
+    this.zoomEl = this.dock.querySelector('[data-asset="zoom"]')!;
+    this.bodyEl = this.dock.querySelector('[data-asset="body"]')!;
 
     // 顶缘拖拽 → dock 高；分隔条拖拽 → 树宽。指针捕获在 splitter 里做
-    const grip = this.dock.querySelector<HTMLElement>('[data-ad="grip"]')!;
+    const grip = this.dock.querySelector<HTMLElement>('[data-asset="grip"]')!;
     makeSplitter(grip, {
       cssVar: '--dock-h',
       valueFromPointer: (e) => window.innerHeight - e.clientY,
@@ -120,7 +120,7 @@ export class AssetBrowser {
       max: () => Math.max(320, window.innerHeight - 160),
       persistKey: LS_DOCK_H,
     });
-    const split = this.dock.querySelector<HTMLElement>('[data-ad="split"]')!;
+    const split = this.dock.querySelector<HTMLElement>('[data-asset="split"]')!;
     makeSplitter(split, {
       cssVar: '--tree-w',
       valueFromPointer: (e) => {
@@ -155,7 +155,7 @@ export class AssetBrowser {
       }
     });
 
-    const collapseBtn = this.dock.querySelector<HTMLButtonElement>('[data-ad="collapse"]')!;
+    const collapseBtn = this.dock.querySelector<HTMLButtonElement>('[data-asset="collapse"]')!;
     collapseBtn.addEventListener('click', () => this.setCollapsed(!this.dock.classList.contains('collapsed')));
     if (localStorage.getItem(LS_COLLAPSED) === '1') this.setCollapsed(true);
   }
@@ -163,7 +163,7 @@ export class AssetBrowser {
   private setCollapsed(v: boolean): void {
     this.dock.classList.toggle('collapsed', v);
     localStorage.setItem(LS_COLLAPSED, v ? '1' : '0');
-    const btn = this.dock.querySelector<HTMLButtonElement>('[data-ad="collapse"]');
+    const btn = this.dock.querySelector<HTMLButtonElement>('[data-asset="collapse"]');
     if (btn !== null) btn.textContent = v ? '▴' : '▾';
   }
 
@@ -208,15 +208,15 @@ export class AssetBrowser {
 
   private makeTreeNode(path: string, name: string, depth: number): TreeNode {
     const row = document.createElement('div');
-    row.className = 'ad-tnode';
+    row.className = 'asset-tnode';
     row.style.paddingLeft = `${8 + depth * 14}px`;
     row.dataset.path = path;
     row.innerHTML = `
-      <span class="ad-tarrow">▸</span>
-      <span class="ad-tico adk-dir">${iconSvg('dir')}</span>
-      <span class="ad-tname" title="${name}">${name}</span>`;
+      <span class="asset-tarrow">▸</span>
+      <span class="asset-tico akind-dir">${iconSvg('dir')}</span>
+      <span class="asset-tname" title="${name}">${name}</span>`;
     const kids = document.createElement('div');
-    kids.className = 'ad-tkids';
+    kids.className = 'asset-tkids';
     kids.style.display = 'none';
 
     const node: TreeNode = { path, name, row, kids, expanded: false, loaded: false };
@@ -224,7 +224,7 @@ export class AssetBrowser {
       e.stopPropagation();
       void this.selectDir(path);
     });
-    row.querySelector('.ad-tarrow')!.addEventListener('click', (e) => {
+    row.querySelector('.asset-tarrow')!.addEventListener('click', (e) => {
       e.stopPropagation();
       void this.toggleNode(node);
     });
@@ -261,14 +261,14 @@ export class AssetBrowser {
     node.expanded = true;
     this.expandedPaths.add(node.path);
     node.kids.style.display = '';
-    node.row.querySelector('.ad-tarrow')!.textContent = '▾';
+    node.row.querySelector('.asset-tarrow')!.textContent = '▾';
   }
 
   private collapseNode(node: TreeNode): void {
     node.expanded = false;
     this.expandedPaths.delete(node.path);
     node.kids.style.display = 'none';
-    node.row.querySelector('.ad-tarrow')!.textContent = '▸';
+    node.row.querySelector('.asset-tarrow')!.textContent = '▸';
   }
 
   /** 展开到指定路径（恢复上次浏览位置用）；失败的段跳过 */
@@ -297,7 +297,7 @@ export class AssetBrowser {
       try {
         this.entries = await listDir(path);
       } catch (err) {
-        this.contentEl.innerHTML = `<div class="ad-empty">目录读取失败：${String(err)}</div>`;
+        this.contentEl.innerHTML = `<div class="asset-empty">目录读取失败：${String(err)}</div>`;
         return;
       }
       this.renderCrumb();
@@ -324,14 +324,14 @@ export class AssetBrowser {
 
   private renderCrumb(): void {
     const segs = this.currentDir === '' ? [] : this.currentDir.split('/');
-    const parts: string[] = [`<span class="ad-cseg" data-path="">项目根</span>`];
+    const parts: string[] = [`<span class="asset-cseg" data-path="">项目根</span>`];
     let cur = '';
     for (const s of segs) {
       cur = cur === '' ? s : `${cur}/${s}`;
-      parts.push(`<span class="ad-csep">›</span><span class="ad-cseg" data-path="${cur}">${s}</span>`);
+      parts.push(`<span class="asset-csep">›</span><span class="asset-cseg" data-path="${cur}">${s}</span>`);
     }
     this.crumbEl.innerHTML = parts.join('');
-    for (const el of this.crumbEl.querySelectorAll<HTMLElement>('.ad-cseg')) {
+    for (const el of this.crumbEl.querySelectorAll<HTMLElement>('.asset-cseg')) {
       el.addEventListener('click', () => void this.selectDir(el.dataset.path ?? ''));
     }
   }
@@ -351,7 +351,7 @@ export class AssetBrowser {
     }
     if (!isList) {
       const cell = Math.round(74 + z * 0.78);
-      this.contentEl.style.setProperty('--ad-cell', `${cell}px`);
+      this.contentEl.style.setProperty('--asset-cell', `${cell}px`);
     }
   }
 
@@ -359,7 +359,7 @@ export class AssetBrowser {
     const z = this.zoom;
     const isList = z === 0;
     this.contentEl.classList.toggle('list', isList);
-    if (!isList) this.contentEl.style.setProperty('--ad-cell', `${Math.round(74 + z * 0.78)}px`);
+    if (!isList) this.contentEl.style.setProperty('--asset-cell', `${Math.round(74 + z * 0.78)}px`);
 
     const items = this.filter === ''
       ? this.entries
@@ -368,14 +368,14 @@ export class AssetBrowser {
     this.contentEl.innerHTML = '';
     if (items.length === 0) {
       const msg = this.entries.length === 0 ? '空目录' : '没有匹配筛选项';
-      this.contentEl.innerHTML = `<div class="ad-empty">${msg}</div>`;
+      this.contentEl.innerHTML = `<div class="asset-empty">${msg}</div>`;
       return;
     }
 
     if (isList) {
       const head = document.createElement('div');
-      head.className = 'ad-row ad-lhead';
-      head.innerHTML = `<span class="ad-rname">名称</span><span class="ad-rsize">大小</span><span class="ad-rtime">修改时间</span>`;
+      head.className = 'asset-row asset-lhead';
+      head.innerHTML = `<span class="asset-rname">名称</span><span class="asset-rsize">大小</span><span class="asset-rtime">修改时间</span>`;
       this.contentEl.appendChild(head);
     }
 
@@ -388,10 +388,10 @@ export class AssetBrowser {
   private makeCell(entry: FsEntry): HTMLElement {
     const kind = kindOf(entry);
     const el = document.createElement('div');
-    el.className = `ad-item adk-${kind}`;
+    el.className = `asset-item akind-${kind}`;
     el.dataset.name = entry.name;
     const ico = document.createElement('div');
-    ico.className = 'ad-ico';
+    ico.className = 'asset-ico';
     if (kind === 'image') {
       const img = document.createElement('img');
       img.src = fileUrl(joinPath(this.currentDir, entry.name));
@@ -403,7 +403,7 @@ export class AssetBrowser {
       ico.innerHTML = iconSvg(kind);
     }
     const name = document.createElement('div');
-    name.className = 'ad-name';
+    name.className = 'asset-name';
     name.textContent = entry.name;
     name.title = entry.name;
     el.appendChild(ico);
@@ -415,12 +415,12 @@ export class AssetBrowser {
   private makeRow(entry: FsEntry): HTMLElement {
     const kind = kindOf(entry);
     const el = document.createElement('div');
-    el.className = `ad-row adk-${kind}`;
+    el.className = `asset-row akind-${kind}`;
     el.dataset.name = entry.name;
     el.innerHTML = `
-      <span class="ad-rname"><span class="ad-ric">${iconSvg(kind)}</span><span class="ad-rname-t" title="${entry.name}">${entry.name}</span></span>
-      <span class="ad-rsize">${entry.kind === 'dir' ? '—' : fmtSize(entry.size)}</span>
-      <span class="ad-rtime">${fmtTime(entry.mtime)}</span>`;
+      <span class="asset-rname"><span class="asset-ric">${iconSvg(kind)}</span><span class="asset-rname-t" title="${entry.name}">${entry.name}</span></span>
+      <span class="asset-rsize">${entry.kind === 'dir' ? '—' : fmtSize(entry.size)}</span>
+      <span class="asset-rtime">${fmtTime(entry.mtime)}</span>`;
     this.wireItem(el, entry);
     return el;
   }

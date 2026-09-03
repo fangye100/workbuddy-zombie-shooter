@@ -29,7 +29,7 @@
  * DevTools 控制台（F12 → Console），把输出贴回来即可与无头探针的数字逐项比对。
  * 它测的是同一批指标，只是跑在用户真实浏览器里：
  *
- * (()=>{const d=document.getElementById('asset-dock'),c=document.getElementById('gpu'),n=document.getElementById('center'),r=e=>{const b=e.getBoundingClientRect();return{top:Math.round(b.top),bottom:Math.round(b.bottom),h:Math.round(b.height)}};const v=r(d);return{视口:innerWidth+'x'+innerHeight,dock:v,dock可见:v.h>0&&v.top<innerHeight&&v.bottom>0,被裁掉:Math.max(0,v.bottom-innerHeight),collapsed:d.classList.contains('collapsed'),dockH:getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(),canvas:r(c),center:r(n),fatal:getComputedStyle(document.getElementById('fatal')).display!=='none',树行数:document.querySelectorAll('.ad-tree [data-path]').length,内容项:document.querySelector('.ad-content')?.children.length??null,面包屑:document.querySelector('.ad-crumb')?.textContent?.trim(),ls:{collapsed:localStorage.getItem('zh.assets.collapsed'),dockH:localStorage.getItem('zh.ui.dockH')}}})()
+ * (()=>{const d=document.getElementById('asset-dock'),c=document.getElementById('gpu'),n=document.getElementById('center'),r=e=>{const b=e.getBoundingClientRect();return{top:Math.round(b.top),bottom:Math.round(b.bottom),h:Math.round(b.height)}};const v=r(d);return{视口:innerWidth+'x'+innerHeight,dock:v,dock可见:v.h>0&&v.top<innerHeight&&v.bottom>0,被裁掉:Math.max(0,v.bottom-innerHeight),collapsed:d.classList.contains('collapsed'),dockH:getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(),canvas:r(c),center:r(n),fatal:getComputedStyle(document.getElementById('fatal')).display!=='none',树行数:document.querySelectorAll('.asset-tree [data-path]').length,内容项:document.querySelector('.asset-content')?.children.length??null,面包屑:document.querySelector('.asset-crumb')?.textContent?.trim(),ls:{collapsed:localStorage.getItem('zh.assets.collapsed'),dockH:localStorage.getItem('zh.ui.dockH')}}})()
  *
  * 判读：dock.h 为 0 或 被裁掉 > 0 → 布局问题；collapsed 为 true → 折叠态，
  * 清 localStorage 即可；dock 各项正常但用户说看不见 → 检查 fatal 与浏览器缩放。
@@ -84,16 +84,16 @@ const MEASURE = `(() => {
     collapsed: dock ? dock.classList.contains('collapsed') : null,
     children: dock ? dock.children.length : null,
     htmlLen: dock ? dock.innerHTML.length : null,
-    treeRows: document.querySelectorAll('.ad-tree [data-path]').length,
-    contentItems: document.querySelectorAll('.ad-content [data-path]').length,
-    contentChildren: q('.ad-content') ? q('.ad-content').children.length : null,
+    treeRows: document.querySelectorAll('.asset-tree [data-path]').length,
+    contentItems: document.querySelectorAll('.asset-content [data-path]').length,
+    contentChildren: q('.asset-content') ? q('.asset-content').children.length : null,
     // ── 分段高度：dock 高 316 但内容是空的，一定是某一段吃掉了高度 ──
-    // .ad-tree 没有 height 属性，靠 .ad-body(row flex) 的 align-items:stretch 撑开；
-    // 所以「树高 0」=「.ad-body 高 0」= 高度被 .ad-head 或 .ad-grip 吃光了。
+    // .asset-tree 没有 height 属性，靠 .asset-body(row flex) 的 align-items:stretch 撑开；
+    // 所以「树高 0」=「.asset-body 高 0」= 高度被 .asset-head 或 .asset-grip 吃光了。
     // 只数 DOM 节点数不够——节点存在 ≠ 看得见，必须量几何。
     seg: (() => {
       const h = (s) => { const e = q(s); return e ? Math.round(e.getBoundingClientRect().height) : null; };
-      const grip = h('.ad-grip'), head = h('.ad-head'), body = h('.ad-body'), tree = h('.ad-tree'), cont = h('.ad-content');
+      const grip = h('.asset-grip'), head = h('.asset-head'), body = h('.asset-body'), tree = h('.asset-tree'), cont = h('.asset-content');
       return { grip, head, body, tree, content: cont, sum: (grip ?? 0) + (head ?? 0) + (body ?? 0) };
     })(),
     varTreeW: getComputedStyle(document.documentElement).getPropertyValue('--tree-w').trim(),
@@ -107,7 +107,7 @@ const MEASURE = `(() => {
       return (el.id ? '#' + el.id : (typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : el.tagName)) +
         (dock && dock.contains(el) ? ' [dock内]' : ' [dock外]');
     })(),
-    crumb: (q('.ad-crumb')?.textContent || '').trim().slice(0, 60),
+    crumb: (q('.asset-crumb')?.textContent || '').trim().slice(0, 60),
     lsCollapsed: localStorage.getItem('zh.assets.collapsed'),
     lsDockH: localStorage.getItem('zh.ui.dockH'),
     fatalVisible: (() => { const f = document.getElementById('fatal'); return f ? getComputedStyle(f).display !== 'none' : null; })(),
