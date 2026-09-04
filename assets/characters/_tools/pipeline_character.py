@@ -83,7 +83,7 @@ def newest(pattern):
     return hits[0] if hits else None
 
 
-def pipeline(cid, roster, token=None, skip_gen=False, size=1024):
+def pipeline(cid, roster, token=None, skip_gen=False, size=1024, skip_rig=False):
     c = roster[cid]
     en = c.get("en", cid.replace("-", ""))
     tag = cid.replace("-", "")
@@ -134,21 +134,24 @@ def pipeline(cid, roster, token=None, skip_gen=False, size=1024):
          "--outdir", tex_dir, "--name", stem], label=f"{cid} bake")
     baked = os.path.join(tex_dir, f"{stem}_baked.glb")
 
-    # --- [4] 绑骨 ------------------------------------------------------------
+    # --- [4][5][6] 绑骨 + 动作 + 骨骼验证（非双足/不可移动角色可跳过） ---------
     rig_dir = os.path.join(mdir, "rigged")
     rigged = os.path.join(rig_dir, f"{stem}_rigged.glb")
-    run([PY_CLOUD, "-u", os.path.join(_HERE, "rig_character.py"),
-         "--input", baked, "--out", rigged, "--id", cid], label=f"{cid} rig")
-
-    # --- [5] 动作 ------------------------------------------------------------
     animated = os.path.join(rig_dir, f"{stem}_rigged_animated.glb")
-    run([PY_CLOUD, "-u", os.path.join(_HERE, "retarget_bvh.py"),
-         "--rigged", rigged, "--out", animated], label=f"{cid} anim")
-
-    # --- [6] 验证 ------------------------------------------------------------
-    # validate_glb.py 签名：<rigged> [--animated <animated glb>]
-    run([PY_CLOUD, "-u", os.path.join(_HERE, "validate_glb.py"),
-         rigged, "--animated", animated], label=f"{cid} validate")
+    if skip_rig:
+        # B-02 母体等：混元只出静态 mesh，本地人形 rig/行走 retarget 套不上、
+        # 且本体不可移动无需 walk。只交付减面+烘焙后的静态 GLB（含 PBR 贴图）。
+        print(f"    [SKIP] 跳过绑骨/动作/骨骼验证（非双足或不可移动角色）\n"
+              f"           交付静态网格 = {os.path.basename(baked)}", flush=True)
+        rigged, animated = None, None
+    else:
+        run([PY_CLOUD, "-u", os.path.join(_HERE, "rig_character.py"),
+             "--input", baked, "--out", rigged, "--id", cid], label=f"{cid} rig")
+        run([PY_CLOUD, "-u", os.path.join(_HERE, "retarget_bvh.py"),
+             "--rigged", rigged, "--out", animated], label=f"{cid} anim")
+        # validate_glb.py 签名：<rigged> [--animated <animated glb>]
+        run([PY_CLOUD, "-u", os.path.join(_HERE, "validate_glb.py"),
+             rigged, "--animated", animated], label=f"{cid} validate")
 
     return {"id": cid, "high": hi_glb, "lowpoly": lo_obj, "baked": baked,
             "rigged": rigged, "animated": animated}
@@ -160,6 +163,9 @@ def main():
     ap.add_argument("--all", action="store_true", help="跑 roster 全部角色")
     ap.add_argument("--skip-gen", action="store_true", help="跳过混元生成，用已有高模")
     ap.add_argument("--size", type=int, default=1024, help="贴图分辨率")
+    ap.add_argument("--skip-rig", nargs="*", default=None,
+                    help="跳过绑骨/动作/骨骼验证：--skip-rig B-02 只跳 B-02；"
+                         "单独 --skip-rig 则跳过本次全部 ID（用于非双足/不可移动角色）")
     ap.add_argument("--token-stdin", action="store_true")
     args = ap.parse_args()
 
@@ -176,8 +182,12 @@ def main():
             print(f"[SKIP] {cid} 不在 roster", flush=True)
             continue
         try:
+            # --skip-rig 不带参数 = 跳过本次全部；带 ID 列表 = 只跳指定 ID
+            skip_rig = args.skip_rig is not None and (
+                len(args.skip_rig) == 0 or cid in args.skip_rig)
             ok.append(pipeline(cid, roster, token=token,
-                               skip_gen=args.skip_gen, size=args.size))
+                               skip_gen=args.skip_gen, size=args.size,
+                               skip_rig=skip_rig))
         except Exception as e:  # noqa: BLE001 — 单角色失败不该中断整批
             print(f"\n[FAIL] {cid}: {type(e).__name__}: {e}", flush=True)
             fail.append({"id": cid, "error": f"{type(e).__name__}: {e}"})
@@ -185,7 +195,11 @@ def main():
     print(f"\n{'=' * 66}")
     print(f"完成 {len(ok)}/{len(ok) + len(fail)}  耗时 {time.time() - t0:.0f}s")
     for r in ok:
-        print(f"  OK   {r['id']}  ->  {os.path.relpath(r['animated'], _CHARS)}")
+        if r["animated"]:
+            print(f"  OK   {r['id']}  ->  {os.path.relpath(r['animated'], _CHARS)}")
+        else:
+            print(f"  OK   {r['id']}  ->  {os.path.relpath(r['baked'], _CHARS)}  "
+                  f"(static, no rig)")
     for r in fail:
         print(f"  FAIL {r['id']}  {r['error']}")
     print(json.dumps({"ok": ok, "fail": fail}, ensure_ascii=False, indent=2))
