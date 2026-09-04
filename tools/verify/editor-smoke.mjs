@@ -316,6 +316,58 @@ async function main() {
     const hudFps = (gpuName.match(/FPS\s*(\d+)/) || [])[1];
     check('FPS 有读数（SwiftShader 下 10 左右属正常）', Number(hudFps) > 0, `fps=${hudFps}`);
 
+    // ---- B2. 场景来自文件（ADR-010 / S1）----
+    // 关键判据：**不能只看物体数** —— 硬编码 fallback 与场景文件当前都是 13 个物体、
+    // 名字也一样。必须查 getSceneSource()，它为 null 就说明读的根本不是文件。
+    console.log('\nB2. 场景来自文件（ADR-010：场景是唯一数据载体）');
+    const src = await cdp.eval(`(()=>window.__editor.renderer.getSceneSource())()`);
+    check('场景来源非 null（不是硬编码 fallback）', src !== null, JSON.stringify(src));
+    check(
+      '场景来源指向 .scene.json',
+      src !== null && /\.scene\.json$/.test(src.url),
+      src === null ? 'null' : src.url,
+    );
+    check(
+      '物体数 = 13（场景文件 15 个节点减去光与相机）',
+      src !== null && src.objects === 13,
+      `objects=${src === null ? 'null' : src.objects}`,
+    );
+
+    const sceneObjs = await cdp.eval(
+      `(()=>window.__editor.renderer.getObjectList().map(o=>({n:o.name,c:o.category,p:o.pickable})))()`,
+    );
+    const byName = Object.fromEntries(sceneObjs.map((o) => [o.n, o]));
+    check(
+      '物体名来自文件（地面/角色/敌人6 都在）',
+      ['地面 Ground', '角色 Character', '敌人 Enemy 6'].every((n) => byName[n] !== undefined),
+      `names=${sceneObjs.map((o) => o.n).join(',')}`.slice(0, 160),
+    );
+    // 层级面板只列 12 个：天空是 background=true，按设计不进层级、不拾取、不可选
+    check(
+      '天空不进层级面板（background 生效），故列表 12 个而场景 13 个',
+      sceneObjs.length === 12 && byName['天空 Sky'] === undefined,
+      `list=${sceneObjs.length} scene=${src === null ? 'null' : src.objects}`,
+    );
+    check(
+      'category 来自 userData（角色=角色，敌人6=敌人，地面=环境）',
+      byName['角色 Character']?.c === '角色' &&
+        byName['敌人 Enemy 6']?.c === '敌人' &&
+        byName['地面 Ground']?.c === '环境',
+      JSON.stringify({
+        角色: byName['角色 Character']?.c,
+        敌人6: byName['敌人 Enemy 6']?.c,
+        地面: byName['地面 Ground']?.c,
+      }),
+    );
+    check(
+      'pickable 来自文件（地面不可选，立方体可选）',
+      byName['地面 Ground']?.p === false && byName['立方体 Box']?.p === true,
+      JSON.stringify({
+        地面: byName['地面 Ground']?.p,
+        立方体: byName['立方体 Box']?.p,
+      }),
+    );
+
     // ---- C. SelectionService ----
     console.log('\nC. SelectionService（选中/悬停状态机）');
     const objCount = await cdp.eval('window.__editor.renderer.getObjectList().length');

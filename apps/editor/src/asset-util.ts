@@ -63,6 +63,40 @@ export function fileUrl(path: string): string {
   return `/__fs/file?path=${encodeURIComponent(path)}`;
 }
 
+/**
+ * 读项目根下一个 **JSON** 文件（项目容器 / 场景 / 资产 sidecar 都走这里）。
+ *
+ * 🔴 必须走 `fileUrl()` 的 `/__fs/file` 端点，**不能直接 fetch 路径**：
+ * vite dev server 的 `root` 是 `apps/editor`，项目根的 `assets/**` 与
+ * `aether.project.json` 都不在它下面，请求 `/assets/...` 会命中
+ * **SPA fallback** —— 返回 **HTTP 200 + index.html**。`res.ok` 为真、状态码漂亮，
+ * 只有 `res.json()` 抛 `Unexpected token '<'` 才暴露。这类"看起来成功"的失败最难查。
+ *
+ * ⚠️ 该端点由 `apps/editor/vite.config.ts` 的 dev 中间件提供，生产构建产物里没有。
+ */
+export interface ProjectFileResult {
+  ok: boolean;
+  status: number;
+  json: unknown;
+  /** 失败原因。**降级不等于丢信息** —— 排障时"HTTP 0"没有"network down"有用 */
+  error: string | null;
+}
+
+export async function readProjectFile(
+  rel: string,
+  fetchFn: (url: string) => Promise<{ ok: boolean; status?: number; json(): Promise<unknown> }> = fetch,
+): Promise<ProjectFileResult> {
+  try {
+    const res = await fetchFn(fileUrl(rel.replace(/^\/+/, '')));
+    if (!res.ok) {
+      return { ok: false, status: res.status ?? 0, json: null, error: `HTTP ${res.status ?? '?'}` };
+    }
+    return { ok: true, status: res.status ?? 200, json: await res.json(), error: null };
+  } catch (e) {
+    return { ok: false, status: 0, json: null, error: String(e) };
+  }
+}
+
 export async function listDir(dir: string): Promise<FsEntry[]> {
   const resp = await fetch(`/__fs/list?dir=${encodeURIComponent(dir)}`);
   if (!resp.ok) throw new Error(`目录读取失败 HTTP ${resp.status}`);

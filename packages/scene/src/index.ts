@@ -11,6 +11,7 @@
  *   asset-meta.ts 资产 sidecar 元数据（*.meta.json）—— 导入设置 + 默认绑定 + 骨骼/动画配置
  *   document.ts   场景 / prefab 文件 schema（*.scene.json）—— 游戏内容的唯一载体（ADR-010）
  *   asset-server.ts 资产 sidecar 加载器（S1）—— **只读**，缺失/损坏一律降级不抛异常
+ *   instantiate.ts 场景图 → 可渲染对象清单（S1）—— 纯 CPU，不认材质槽位、不碰 GPU
  *
  * 四层容器与覆盖链：project ⊃ asset(.meta) → prefab → scene → runtime（Play 期，不落盘）
  *
@@ -28,3 +29,4 @@ export * from './document';
 export * from './asset-server';
 export * from './graph';
 export * from './migrate';
+export * from './instantiate';

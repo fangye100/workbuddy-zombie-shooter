@@ -18,6 +18,7 @@ import {
   packFrameUniforms,
   packMaterial,
   matchBindings,
+  sharedIndex,
   type MatchReportEntry,
   type MeshNodeBinding,
   type MeshNodeStub,
@@ -32,6 +33,9 @@ import {
   createSphere,
   meshStats,
   weldMesh,
+  migrateToLatest,
+  SceneGraph,
+  instantiateScene,
   type MeshData,
 } from '@aether/scene';
 import * as m4 from '@aether/core';
@@ -58,6 +62,7 @@ import {
   type MaterialSource,
 } from './materials';
 import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
+import { readProjectFile } from './asset-util';
 import {
   createSkinState,
   evalJointMatrices,
@@ -350,6 +355,132 @@ interface ObjectSpec {
   category: string;
   /** 背景物体标记（天空 / 网格底），构造期打在物体上 */
   background?: boolean;
+  /**
+   * 顶点 AO 烘焙范围（局部 Y）；null / 缺省 = 不烘。
+   * 来自场景节点的 `userData.aoMin` / `userData.aoMax`（S2 转正前的临时寄居）。
+   */
+  ao?: { min: number; max: number } | null;
+}
+
+/**
+ * `loadScene()` 的结果。**失败不抛异常**：场景文件坏了不该让编辑器起不来，
+ * 失败的细节走 warnings / reason，由调用方决定怎么提示。
+ */
+export interface SceneLoadResult {
+  ok: boolean;
+  url: string;
+  /** 失败原因（ok=false 时必有） */
+  reason?: string;
+  /** 成功实例化的物体数（ok=true 时） */
+  objects?: number;
+  /** 因无 MeshRenderer / 被隐藏而跳过的节点数 */
+  skipped?: number;
+  /** 非致命问题：材质 id 认不出、外部资产网格待异步加载… */
+  warnings?: string[];
+}
+
+/**
+ * 硬编码 fallback 场景（S1 之前渲染器的唯一内容来源）。
+ *
+ * ⚠️ 只在**场景文件加载失败**时兜底 —— 编辑器宁可显示这组默认物体，
+ * 也不能因为一个场景文件坏了就起不来。正常路径是 `loadScene()` 从
+ * `assets/scenes/sandbox/default.scene.json` 读（ADR-010：场景是唯一数据载体）。
+ */
+function buildDefaultSpecs(): ObjectSpec[] {
+  const ground = createPlane(80, 24);
+  const capsule = createCapsule(0.34, 1.0, 28, 10);
+  const clothCapsule = createCapsule(0.3, 0.6, 24, 8);
+  const aoChar = { min: -0.84, max: 0.84 };
+  const aoCloth = { min: -0.6, max: 0.6 };
+
+  const specs: ObjectSpec[] = [
+    // 地面不可选：避免点到空白处就选中地板
+    {
+      mesh: ground,
+      material: 1,
+      pos: [0, 0, 0],
+      bob: 0,
+      name: '地面 Ground',
+      pickable: false,
+      category: '环境',
+    },
+    {
+      mesh: capsule,
+      material: 0,
+      pos: [0, 0.84, 0],
+      bob: 0,
+      name: '角色 Character',
+      pickable: true,
+      category: '角色',
+      ao: aoChar,
+    },
+    {
+      mesh: createSphere(0.55, 40, 24),
+      material: 2,
+      pos: [-2.4, 0.55, 0.6],
+      bob: 0,
+      name: '球体 Sphere',
+      pickable: true,
+      category: '道具',
+    },
+    {
+      mesh: createBox(1, 1, 1),
+      material: 3,
+      pos: [2.4, 0.5, 0.6],
+      bob: 0,
+      name: '立方体 Box',
+      pickable: true,
+      category: '道具',
+    },
+    {
+      mesh: createCylinder(0.32, 1.3, 32),
+      material: 4,
+      pos: [-1.6, 0.65, -2.6],
+      bob: 0,
+      name: '圆柱 Cylinder',
+      pickable: true,
+      category: '道具',
+    },
+    {
+      mesh: clothCapsule,
+      material: 5,
+      pos: [1.6, 0.6, -2.6],
+      bob: 0,
+      name: '布料胶囊 Cloth',
+      pickable: true,
+      category: '道具',
+      ao: aoCloth,
+    },
+  ];
+
+  // 一排退向远处的敌人剪影：直接检验描边的屏幕空间恒定补偿有没有生效
+  for (let i = 0; i < 6; i++) {
+    specs.push({
+      mesh: capsule,
+      material: 0,
+      pos: [i % 2 === 0 ? -0.9 - i * 0.35 : 1.4 + i * 0.3, 0.84, -5.5 - i * 3.2],
+      bob: i * 0.7,
+      name: `敌人 Enemy ${i + 1}`,
+      pickable: true,
+      category: '敌人',
+      ao: aoChar,
+    });
+  }
+
+  // 天空穹顶：半径 120 的大球（scene pass cullMode none，从内部可见），
+  // 白 albedo + 半球填充光自然形成上→下渐变；background 标记 = 不进层级 / 不拾取 / 不可选。
+  specs.push({
+    mesh: createSphere(120, 48, 32),
+    material: 6,
+    pos: [0, 0, 0],
+    bob: 0,
+    name: '天空 Sky',
+    pickable: false,
+    category: '环境',
+    background: true,
+  });
+
+  return specs;
 }
 
 export class LabRenderer {
@@ -421,6 +552,14 @@ export class LabRenderer {
   private gridTex!: GPUTexture;
   private gridSampler!: GPUSampler;
 
+  /**
+   * 当前场景的来源。null = 用的还是构造函数里的硬编码 fallback（说明场景文件没加载成功）。
+   *
+   * 为什么要有这个字段：fallback 与场景文件当前都是 13 个物体、名字也一样，
+   * 光看物体数**区分不出**到底读了文件没有。冒烟测试与界面提示都靠它做判据。
+   */
+  private loadedScene: { url: string; objects: number; at: string } | null = null;
+
   constructor(
     gpu: GpuContext,
     private readonly canvas: HTMLCanvasElement,
@@ -428,11 +567,9 @@ export class LabRenderer {
     this.device = gpu.device;
 
     // ---- 几何 ----
-    const ground = createPlane(80, 24);
+    // 场景内容不再写死在这里：初值由 buildDefaultSpecs() 兜底，
+    // 真正的来源是 main.ts 调 loadScene() 读 assets/scenes/sandbox/default.scene.json。
     const capsule = createCapsule(0.34, 1.0, 28, 10);
-    applyAo(capsule, -0.84, 0.84);
-    const clothCapsule = createCapsule(0.3, 0.6, 24, 8);
-    applyAo(clothCapsule, -0.6, 0.6);
     this.sceneCapsule = capsule;
 
     // 1x1 白色 fallback 贴图（rgba8unorm，raw sRGB 字节，与材质 albedo 同约定）
@@ -450,46 +587,97 @@ export class LabRenderer {
       [1, 1],
     );
 
-    const specs: ObjectSpec[] = [
-      // 地面不可选：避免点到空白处就选中地板
-      { mesh: ground, material: 1, pos: [0, 0, 0], bob: 0, name: '地面 Ground', pickable: false, category: '环境' },
-      // 角色槽位：模型浏览器会整体替换它（场景角色 = 胶囊，E-04/导入模型 = 真实网格）
-      { mesh: capsule, material: 0, pos: [0, 0.84, 0], bob: 0, name: '角色 Character', pickable: true, category: '角色' },
-      { mesh: createSphere(0.55, 40, 24), material: 2, pos: [-2.4, 0.55, 0.6], bob: 0, name: '球体 Sphere', pickable: true, category: '道具' },
-      { mesh: createBox(1, 1, 1), material: 3, pos: [2.4, 0.5, 0.6], bob: 0, name: '立方体 Box', pickable: true, category: '道具' },
-      { mesh: createCylinder(0.32, 1.3, 32), material: 4, pos: [-1.6, 0.65, -2.6], bob: 0, name: '圆柱 Cylinder', pickable: true, category: '道具' },
-      { mesh: clothCapsule, material: 5, pos: [1.6, 0.6, -2.6], bob: 0, name: '布料胶囊 Cloth', pickable: true, category: '道具' },
-    ];
+    // ---- 地面网格贴图：Canvas2D 程序化生成，平铺 REPEAT 形成 1m 细格 / 5m 粗格 ----
+    // 引擎 sampler 是 clamp-to-edge，平铺必须编辑器独占的 REPEAT sampler
+    // （packages/render 零改动）。**必须先于 applySpecs**：applySpecs 里按名字
+    // 把它认领给地面物体，loadScene 重建场景时同样要复用这一份，不能重建。
+    this.gridSampler = this.device.createSampler({
+      label: 'grid-repeat',
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      magFilter: 'linear',
+      minFilter: 'linear',
+    });
+    this.gridTex = this.buildGridTexture();
 
-    // 一排退向远处的敌人剪影：直接检验描边的屏幕空间恒定补偿有没有生效
-    for (let i = 0; i < 6; i++) {
-      specs.push({
-        mesh: capsule,
-        material: 0,
-        pos: [i % 2 === 0 ? -0.9 - i * 0.35 : 1.4 + i * 0.3, 0.84, -5.5 - i * 3.2],
-        bob: i * 0.7,
-        name: `敌人 Enemy ${i + 1}`,
-        pickable: true,
-        category: '敌人',
-      });
+    // 场景初值（硬编码 fallback）。loadScene 成功后会整体替换。
+    this.applySpecs(buildDefaultSpecs());
+
+    // 材质槽位按「子网格」分配（一个子网格一个槽），变换槽位按「物体」分配。
+    // 两者都按固定上限开，换模型导致子网格数变化时只需重排 slotBase + 重建 bind group，不用动 buffer。
+    this.materialData = new Float32Array(MAX_MATERIAL_SLOTS * SLOT_FLOATS);
+    this.transformData = new Float32Array(MAX_OBJECTS * SLOT_FLOATS);
+
+    // ---- GPU 资源（管线 / 布局 / buffer / 纹理 / gizmo）已在 RendererCore 构造期建好 ----
+    // 编辑器只持有 CPU 端 uniform 数据数组 + 引擎核心引用。
+    this.selToonData = new Float32Array(TOON_FLOATS);
+    this.selMatData = new Float32Array(SLOT_FLOATS);
+    this.hoverToonData = new Float32Array(TOON_FLOATS);
+    this.hoverMatData = new Float32Array(SLOT_FLOATS);
+
+    // ★ 引擎帧绘制核心：拥有 sceneLayout / 4 条 pipeline / 全部 uniform buffer /
+    // 采样器 / gizmo 资源，并执行 4-pass 编码（ADR-001：编辑器是消费者）。
+    this.core = new RendererCore(gpu, canvas);
+
+    // 绑定组按「子网格」建（依赖 core 的 sceneLayout / frameBuf / sampler 等）
+    this.rebuildAllBindGroups();
+  }
+
+  // ============================================================ 场景加载（S1）
+  //
+  // 场景内容来自 `assets/scenes/**/*.scene.json`（ADR-010：场景是唯一数据载体）。
+  // 构造函数里的 buildDefaultSpecs() 只是兜底：loadScene 成功后整体替换。
+  // 这里的难点不是解析，是 **GPU 资源生命周期** —— 换场景要销毁旧的
+  // vertex/index/skin buffer 与独占贴图，漏一处就是显存泄漏，反复加载后 OOM。
+
+  /** 地面物体的显示名。网格贴图按名字认领（场景文件里约定叫这个） */
+  private static readonly GROUND_NAME = '地面 Ground';
+
+  /**
+   * 释放全部场景物体的 GPU 资源。
+   *
+   * 只销毁**物体独占**的东西。共享资源不能碰：
+   *   - `whiteTex`（全局 1×1 白图，所有无贴图物体共用）
+   *   - `gridTex` / `gridSampler`（地面网格，本渲染器持有、跨场景复用）
+   * 判断依据是 `ownsTexture` + 排除 gridTex —— 地面物体被标了 ownsTexture，
+   * 但它"拥有"的其实是渲染器复用的 gridTex，销毁后第二次加载就没地面贴图了。
+   *
+   * bind group **没有 destroy()**（WebGPU 规范里 GPUBindGroup 不持有可回收资源），
+   * 置空即可；真正的显存都在 buffer / texture 上。
+   */
+  private destroySceneGpuResources(): void {
+    for (const o of this.state.objects) {
+      o.vertexBuffer.destroy();
+      o.indexBuffer.destroy();
+      o.skinBuffer?.destroy();
+      o.skinVb?.destroy();
+      if (o.ownsTexture && o.texture !== this.gridTex) o.texture.destroy();
+    }
+    this.state.objects.length = 0;
+    this.state.bindGroups = [];
+    this.state.selBindGroup = null;
+    this.state.hoverBindGroup = null;
+  }
+
+  /**
+   * 用一组 ObjectSpec 整体替换场景物体（先销毁旧的 GPU 资源，再重建）。
+   *
+   * **不重建 bind group**：构造期 `core` 还没建好，这里调不了。
+   * 由调用方在 core 就绪后调 `rebuildAllBindGroups()`。
+   */
+  private applySpecs(specs: readonly ObjectSpec[]): void {
+    if (specs.length > MAX_OBJECTS) {
+      throw new Error(
+        `场景有 ${specs.length} 个物体，超过渲染器上限 ${MAX_OBJECTS}；大量同类实体请走 instancing`,
+      );
     }
 
-    // 天空穹顶：半径 120 的大球（scene pass cullMode none，从内部可见），
-    // 白 albedo + 半球填充光自然形成上→下渐变；background 标记 = 不进层级 / 不拾取 / 不可选。
-    specs.push({
-      mesh: createSphere(120, 48, 32),
-      material: 6,
-      pos: [0, 0, 0],
-      bob: 0,
-      name: '天空 Sky',
-      pickable: false,
-      category: '环境',
-      background: true,
-    });
+    this.destroySceneGpuResources();
 
     let triangles = 0;
     for (const s of specs) {
       const mesh = cloneMesh(s.mesh);
+      if (s.ao !== null && s.ao !== undefined) applyAo(mesh, s.ao.min, s.ao.max);
       const vb = this.device.createBuffer({
         label: 'vertex',
         size: mesh.vertices.byteLength,
@@ -551,41 +739,95 @@ export class LabRenderer {
     }
     this.state.stats.triangles = triangles;
 
-    // ---- 地面网格贴图：Canvas2D 程序化生成，赋给地面物体（albedo 改走贴图采样），
-    // 平铺 REPEAT 形成 1m 细格 / 5m 粗格的专业地面。引擎 sampler 是 clamp-to-edge，
-    // 平铺必须编辑器独占的 REPEAT sampler（packages/render 零改动）。 ----
-    this.gridSampler = this.device.createSampler({
-      label: 'grid-repeat',
-      addressModeU: 'repeat',
-      addressModeV: 'repeat',
-      magFilter: 'linear',
-      minFilter: 'linear',
-    });
-    this.gridTex = this.buildGridTexture();
-    const groundObj = this.state.objects.find((o) => o.name === '地面 Ground');
+    // 地面认领网格贴图（albedo 改走贴图采样 + REPEAT 平铺）
+    const groundObj = this.state.objects.find((o) => o.name === LabRenderer.GROUND_NAME);
     if (groundObj !== undefined) {
       groundObj.texture = this.gridTex;
       groundObj.useTex = true;
       groundObj.ownsTexture = true;
     }
-    // 材质槽位按「子网格」分配（一个子网格一个槽），变换槽位按「物体」分配。
-    // 两者都按固定上限开，换模型导致子网格数变化时只需重排 slotBase + 重建 bind group，不用动 buffer。
-    this.materialData = new Float32Array(MAX_MATERIAL_SLOTS * SLOT_FLOATS);
-    this.transformData = new Float32Array(MAX_OBJECTS * SLOT_FLOATS);
+  }
 
-    // ---- GPU 资源（管线 / 布局 / buffer / 纹理 / gizmo）已在 RendererCore 构造期建好 ----
-    // 编辑器只持有 CPU 端 uniform 数据数组 + 引擎核心引用。
-    this.selToonData = new Float32Array(TOON_FLOATS);
-    this.selMatData = new Float32Array(SLOT_FLOATS);
-    this.hoverToonData = new Float32Array(TOON_FLOATS);
-    this.hoverMatData = new Float32Array(SLOT_FLOATS);
+  /**
+   * 从场景文件加载内容，整体替换当前场景。
+   *
+   * 链路：fetch JSON → `migrateToLatest`（ADR-013）→ `SceneGraph.fromDocument`
+   * → `updateWorldTransforms`（解算世界变换）→ `instantiateScene`（展开几何与材质 id）
+   * → `applySpecs`（销毁旧 GPU 资源 + 重建）。
+   *
+   * **失败不抛**：场景文件坏了不该让编辑器起不来 —— 返回失败原因，
+   * 由调用方决定提示方式；此时保留的是构造函数里的 fallback 场景。
+   */
+  public async loadScene(
+    url: string,
+    load: (rel: string) => Promise<{ ok: boolean; status: number; json: unknown }> = readProjectFile,
+  ): Promise<SceneLoadResult> {
+    // 默认走 /__fs/file：直接 fetch 项目根路径会被 vite 的 SPA fallback 挡成
+    // 「HTTP 200 + index.html」—— res.ok 为真但内容是 HTML，只有 json() 抛错才暴露。
+    // 详见 scene-boot.ts 里 readProjectFile 的注释。
+    const got = await load(url);
+    if (!got.ok) return { ok: false, reason: `读取失败（HTTP ${got.status}）`, url };
+    const doc = got.json;
 
-    // ★ 引擎帧绘制核心：拥有 sceneLayout / 4 条 pipeline / 全部 uniform buffer /
-    // 采样器 / gizmo 资源，并执行 4-pass 编码（ADR-001：编辑器是消费者）。
-    this.core = new RendererCore(gpu, canvas);
+    const migrated = migrateToLatest(doc);
+    if (migrated.diagnostics.some((d) => d.severity === 'error')) {
+      const first = migrated.diagnostics.find((d) => d.severity === 'error');
+      return { ok: false, reason: `场景校验失败：${first?.path ?? ''} ${first?.code ?? ''}`, url };
+    }
 
-    // 绑定组按「子网格」建（依赖 core 的 sceneLayout / frameBuf / sampler 等）
+    const graph = SceneGraph.fromDocument(migrated.doc);
+    graph.updateWorldTransforms();
+    const inst = instantiateScene(graph);
+
+    const specs: ObjectSpec[] = [];
+    const warnings: string[] = [];
+    for (const o of inst.objects) {
+      if (o.mesh === null) {
+        warnings.push(`${o.name}：外部资产网格暂不支持在场景加载期同步取用，已跳过`);
+        continue;
+      }
+      // 材质 id → 共享材质槽位下标。'mat3' → 3；认不出来回落 mat0（不猜、不静默丢物体）
+      const idx = o.materialId === null ? null : sharedIndex(o.materialId);
+      if (o.materialId !== null && idx === null) {
+        warnings.push(`${o.name}：材质 id 「${o.materialId}」不是共享材质，已回落 mat0`);
+      }
+      const aoMin = o.userData['aoMin'];
+      const aoMax = o.userData['aoMax'];
+      specs.push({
+        mesh: o.mesh,
+        material: idx ?? 0,
+        pos: [o.position[0], o.position[1], o.position[2]],
+        bob: typeof o.userData['bob'] === 'number' ? (o.userData['bob'] as number) : 0,
+        name: o.name,
+        pickable: o.pickable,
+        category: typeof o.userData['category'] === 'string' ? String(o.userData['category']) : '道具',
+        background: o.userData['background'] === true,
+        ao:
+          typeof aoMin === 'number' && typeof aoMax === 'number' ? { min: aoMin, max: aoMax } : null,
+      });
+    }
+
+    try {
+      this.applySpecs(specs);
+    } catch (e) {
+      // applySpecs 会先销毁旧资源再建新的 —— 抛错时场景已被清空，
+      // 必须重建 fallback，否则编辑器变空白且无从恢复。
+      this.applySpecs(buildDefaultSpecs());
+      this.rebuildAllBindGroups();
+      return { ok: false, reason: `应用到渲染器失败：${String(e)}`, url, warnings };
+    }
+
     this.rebuildAllBindGroups();
+    this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
+    return { ok: true, url, objects: specs.length, skipped: inst.skipped.length, warnings };
+  }
+
+  /**
+   * 当前场景来源（null = 硬编码 fallback）。
+   * 界面提示与冒烟断言都用它判断"到底读没读到场景文件"。
+   */
+  public getSceneSource(): { url: string; objects: number; at: string } | null {
+    return this.loadedScene;
   }
 
   /**

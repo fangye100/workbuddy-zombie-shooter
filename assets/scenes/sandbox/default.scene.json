@@ -4,15 +4,29 @@
   "name": "Sandbox · 默认场景",
   "act": null,
   "environment": {
-    "fogColor": "#2a2f3a",
-    "fogDensity": 0.012,
-    "fogHeightFalloff": 0.08,
-    "ambientSkyColor": "#8fa6c4",
-    "ambientGroundColor": "#2b2419",
-    "ambientIntensity": 0.55,
-    "hemiFillColor": "#6b7a90",
-    "hemiFillIntensity": 0.35,
-    "exposure": 1
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0.012,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
   },
   "editorCamera": {
     "target": [
@@ -142,8 +156,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat1"
               }
@@ -155,7 +172,9 @@
         }
       ],
       "prefab": null,
-      "userData": {}
+      "userData": {
+        "category": "环境"
+      }
     },
     {
       "id": "nd_char00000",
@@ -197,8 +216,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -212,7 +234,8 @@
       "prefab": null,
       "userData": {
         "aoMin": -0.84,
-        "aoMax": 0.84
+        "aoMax": 0.84,
+        "category": "角色"
       }
     },
     {
@@ -254,8 +277,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat2"
               }
@@ -267,7 +293,9 @@
         }
       ],
       "prefab": null,
-      "userData": {}
+      "userData": {
+        "category": "道具"
+      }
     },
     {
       "id": "nd_box000000",
@@ -308,8 +336,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat3"
               }
@@ -321,7 +352,9 @@
         }
       ],
       "prefab": null,
-      "userData": {}
+      "userData": {
+        "category": "道具"
+      }
     },
     {
       "id": "nd_cylinder0",
@@ -362,8 +395,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat4"
               }
@@ -375,7 +411,9 @@
         }
       ],
       "prefab": null,
-      "userData": {}
+      "userData": {
+        "category": "道具"
+      }
     },
     {
       "id": "nd_cloth0000",
@@ -417,8 +455,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat5"
               }
@@ -432,7 +473,8 @@
       "prefab": null,
       "userData": {
         "aoMin": -0.6,
-        "aoMax": 0.6
+        "aoMax": 0.6,
+        "category": "道具"
       }
     },
     {
@@ -475,8 +517,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -489,7 +534,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 0
+        "bob": 0,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -532,8 +580,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -546,7 +597,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 0.7
+        "bob": 0.7,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -589,8 +643,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -603,7 +660,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 1.4
+        "bob": 1.4,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -646,8 +706,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -660,7 +723,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 2.0999999999999996
+        "bob": 2.0999999999999996,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -703,8 +769,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -717,7 +786,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 2.8
+        "bob": 2.8,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -760,8 +832,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat0"
               }
@@ -774,7 +849,10 @@
       ],
       "prefab": null,
       "userData": {
-        "bob": 3.5
+        "bob": 3.5,
+        "category": "敌人",
+        "aoMin": -0.84,
+        "aoMax": 0.84
       }
     },
     {
@@ -816,8 +894,11 @@
           },
           "materials": [
             {
-              "subMesh": -1,
-              "binding": {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
                 "type": "shared",
                 "id": "mat6"
               }
@@ -830,7 +911,8 @@
       ],
       "prefab": null,
       "userData": {
-        "background": true
+        "background": true,
+        "category": "环境"
       }
     }
   ],
