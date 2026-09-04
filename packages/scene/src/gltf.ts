@@ -597,8 +597,15 @@ function nodeName(n: NodeJson, index: number): string {
   return raw === '' ? `node_${index}` : raw;
 }
 
-/** 场景图遍历产物：mesh 实例（含身份）+ 原始父子层级树 */
-export interface SceneGraph {
+/**
+ * 遍历产物：mesh 实例（含身份）+ 原始父子层级树。
+ *
+ * ⚠️ **它不是场景图** —— 原名 `SceneGraph` 是历史遗留的错误命名，
+ * 它实际是 GLB 内部 mesh 实例的扁平清单。真正的场景图在 `graph.ts`
+ * （可编辑的场景节点层级，ADR-012）。原名占用导致两者星号导出撞名
+ * （TS2308），2026-09-04 改名 `GltfInstances`。
+ */
+export interface GltfInstances {
   instances: {
     mesh: number;
     m: Float32Array;
@@ -621,9 +628,9 @@ export interface SceneGraph {
  * 遍历 glTF 场景图：既收集「mesh 实例 → 世界矩阵 + 节点身份」，
  * 也保出原始父子层级（层级面板要按它还原树形，而不是把所有 mesh 压平）。
  */
-export function collectSceneGraph(json: GltfJson): SceneGraph {
+export function collectSceneGraph(json: GltfJson): GltfInstances {
   const nodes = json.nodes ?? [];
-  const out: SceneGraph['instances'] = [];
+  const out: GltfInstances['instances'] = [];
   const seen = new Set<number>();
 
   // 返回建好的显示节点；空叶子返回 null（剪掉）
