@@ -7,8 +7,14 @@
   "assetRoots": [
     "assets"
   ],
-  "scenes": [],
-  "startIndex": null,
+  "scenes": [
+    {
+      "path": "assets/scenes/sandbox/default.scene.json",
+      "id": "sc_sandbox_default",
+      "enabled": true
+    }
+  ],
+  "startIndex": 0,
   "layers": [
     "Default",
     "TransparentFX",

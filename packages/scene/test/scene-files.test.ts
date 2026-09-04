@@ -112,6 +112,10 @@ describe('资产元数据文件', () => {
 });
 
 describe('场景文件', () => {
+  it('assets 下至少有一个 .scene.json（否则说明场景系统还没落地）', () => {
+    expect(Object.keys(sceneModules).length).toBeGreaterThan(0);
+  });
+
   it('每个 .scene.json 通过 validateSceneDocument（零 error）', () => {
     const failures: string[] = [];
     for (const [path, doc] of Object.entries(sceneModules)) {
@@ -133,5 +137,33 @@ describe('场景文件', () => {
       else seen.set(id, path);
     }
     expect(dups).toEqual([]);
+  });
+
+  it('🔴 每个场景都登记在 aether.project.json 的 scenes[]（项目容器是锚点，ADR-015）', () => {
+    const project = projectModules[`/${PROJECT_FILE_NAME}`] as
+      | { scenes?: { path?: string }[] }
+      | undefined;
+    // 项目里存相对路径，glob 给出的是 / 开头 —— 比较前统一去掉前导斜杠
+    const registered = new Set(
+      (project?.scenes ?? []).map((s) => (s.path ?? '').replace(/^\//, '')),
+    );
+    const orphans = Object.keys(sceneModules)
+      .map((p) => p.replace(/^\//, ''))
+      .filter((p) => !registered.has(p));
+
+    expect(orphans).toEqual([]);
+    expect(registered.size).toBeGreaterThan(0);
+  });
+
+  it('🔴 登记过的场景路径必须真实存在（project 不能指向空路径）', () => {
+    const project = projectModules[`/${PROJECT_FILE_NAME}`] as
+      | { scenes?: { path?: string }[] }
+      | undefined;
+    const onDisk = new Set(Object.keys(sceneModules).map((p) => p.replace(/^\//, '')));
+    const dangling = (project?.scenes ?? [])
+      .map((s) => (s.path ?? '').replace(/^\//, ''))
+      .filter((p) => !onDisk.has(p));
+
+    expect(dangling).toEqual([]);
   });
 });

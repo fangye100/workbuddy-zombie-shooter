@@ -400,6 +400,15 @@ export interface SceneNode {
   components: ComponentData[];
   /** 非 null 时本节点是预制体实例：components 只存 override 子集 */
   prefab: PrefabInstance | null;
+  /**
+   * 非标准标注（Inspector 不解释，原样透传）。
+   *
+   * ⚠️ **临时寄居地**：`bob`（上下浮动，渲染期动画）、`aoMin`/`aoMax`（顶点 AO 烘焙
+   * 范围）、`background`（天空穹顶：不进层级/不拾取/不可选）这三项是渲染期行为参数，
+   * 严格说该是组件字段。S2 做 Inspector 时会把它们从 userData 提到正式 schema。
+   * 在此之前先落盘，避免"场景文件表达不了当前画面"而让硬编码继续留在代码里。
+   */
+  userData?: Record<string, number | string | boolean>;
 }
 
 // ---------------------------------------------------------------- 环境
