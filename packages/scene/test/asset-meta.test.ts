@@ -12,9 +12,12 @@ import {
   metaPathFor,
   validateAssetMeta,
   isAssetMetaValid,
+  defaultRigSettings,
+  defaultRigExportSettings,
   type AssetMeta,
   type MetaDiagnostic,
   type MeshNodeBindingEntry,
+  type RigSettings,
 } from '../src/asset-meta';
 
 function codes(d: MetaDiagnostic[]): string[] {
@@ -138,43 +141,92 @@ describe('validateAssetMeta · 导入设置', () => {
 });
 
 describe('validateAssetMeta · 骨骼', () => {
-  it('镜像配对非对称 → W_META_MIRROR_ASYM（刷权重时只有一半生效）', () => {
-    const m = createDefaultAssetMeta(newAssetGuid(), 'gltf');
-    m.rig = {
-      template: 'humanik',
-      boneWorldPositions: {},
-      mirrorPairs: { Arm_L: 'Arm_R' },
-      tposeLocalRotations: null,
-      weightsBaked: false,
-    };
-    const d = validateAssetMeta(m);
-    expect(codes(d)).toEqual([]);
-    expect(warns(d)).toContain('W_META_MIRROR_ASYM');
+  /**
+   * 造一份「已导出」的干净绑定：会话数据齐全 + exported=true。
+   * 这是唯一不该产生任何诊断的状态。
+   */
+  const cleanRig = (): RigSettings => ({
+    ...defaultRigSettings(),
+    template: 'humanik',
+    session: {
+      positions: { Hips: [0, 0.95, 0], Spine: [0, 1.3, 0] },
+      bindPose: { Hips: [0, 0.95, 0], Spine: [0, 1.3, 0] },
+      skinCylinders: {
+        LeftArm: { bone: 'LeftArm', radii: { top: 0.05, medium: 0.06, bottom: 0.07 }, enabled: true },
+      },
+    },
+    tposeLocalRotations: { Arm_L: [0, 0, 0.38, 0.92] },
+    exported: true,
   });
 
-  it('镜像配对对称 + 权重已烘焙 → 无警告（干净的绑定状态）', () => {
+  /** 在干净绑定上打补丁。patch 允许部分字段，便于造非法输入 */
+  const withRig = (patch: Record<string, unknown>): AssetMeta => {
     const m = createDefaultAssetMeta(newAssetGuid(), 'gltf');
-    m.rig = {
-      template: 'humanik',
-      boneWorldPositions: {},
-      mirrorPairs: { Arm_L: 'Arm_R', Arm_R: 'Arm_L' },
-      tposeLocalRotations: null,
-      // 必须 true：有镜像对却未烘焙权重会额外触发 W_META_RIG_UNBAKED（那是另一条规则）
-      weightsBaked: true,
-    };
-    expect(validateAssetMeta(m)).toEqual([]);
+    m.rig = { ...cleanRig(), ...patch } as RigSettings;
+    return m;
+  };
+
+  it('干净状态（会话齐全 + 已导出）→ 零诊断', () => {
+    expect(validateAssetMeta(withRig({}))).toEqual([]);
+  });
+
+  it('未导出但有会话 → W_META_RIG_NOT_EXPORTED（摆位与 Wrapper 半径刷新即丢）', () => {
+    const d = validateAssetMeta(withRig({ exported: false }));
+    expect(codes(d)).toEqual([]);
+    expect(warns(d)).toContain('W_META_RIG_NOT_EXPORTED');
+  });
+
+  it('已导出 + 无会话 → 零诊断（结果在 GLB 里，不需要草稿）', () => {
+    expect(validateAssetMeta(withRig({ session: null }))).toEqual([]);
+  });
+
+  it('有模板 + 无会话 + 未导出 → W_META_RIG_EMPTY_SESSION', () => {
+    const d = validateAssetMeta(withRig({ session: null, exported: false }));
+    expect(warns(d)).toContain('W_META_RIG_EMPTY_SESSION');
   });
 
   it('有骨骼坐标但无模板 → W_META_RIG_NO_TEMPLATE', () => {
-    const m = createDefaultAssetMeta(newAssetGuid(), 'gltf');
-    m.rig = {
-      template: null,
-      boneWorldPositions: { Hips: [0, 1, 0] },
-      mirrorPairs: {},
-      tposeLocalRotations: null,
-      weightsBaked: true,
+    const d = validateAssetMeta(withRig({ template: null }));
+    expect(warns(d)).toContain('W_META_RIG_NO_TEMPLATE');
+  });
+
+  it('maxInfluences 越界 → E_META_RIG_MAXINF（引擎侧 4 骨/顶点）', () => {
+    expect(codes(validateAssetMeta(withRig({ export: { ...defaultRigExportSettings(), maxInfluences: 0 } }))))
+      .toContain('E_META_RIG_MAXINF');
+    expect(codes(validateAssetMeta(withRig({ export: { ...defaultRigExportSettings(), maxInfluences: 9 } }))))
+      .toContain('E_META_RIG_MAXINF');
+    // 4 是合法值
+    expect(codes(validateAssetMeta(withRig({})))).toEqual([]);
+  });
+
+  it('falloff / eps / smoothLambda / smoothIters 越界 → 对应 E_META_RIG_*', () => {
+    const e = defaultRigExportSettings();
+    expect(codes(validateAssetMeta(withRig({ export: { ...e, falloff: 0 } })))).toContain('E_META_RIG_FALLOFF');
+    expect(codes(validateAssetMeta(withRig({ export: { ...e, eps: 1.5 } })))).toContain('E_META_RIG_EPS');
+    expect(codes(validateAssetMeta(withRig({ export: { ...e, smoothLambda: 2 } })))).toContain('E_META_RIG_LAMBDA');
+    expect(codes(validateAssetMeta(withRig({ export: { ...e, smoothIters: 64 } })))).toContain('E_META_RIG_ITERS');
+  });
+
+  it('Skin Wrapper 半径 ≤ 0 → E_META_RIG_RADIUS（算权重会出 NaN）', () => {
+    const s = cleanRig().session!;
+    const bad = {
+      ...s,
+      skinCylinders: { LeftArm: { bone: 'LeftArm', radii: { top: 0, medium: 0.06, bottom: 0.07 }, enabled: true } },
     };
-    expect(warns(validateAssetMeta(m))).toContain('W_META_RIG_NO_TEMPLATE');
+    const d = validateAssetMeta(withRig({ session: bad }));
+    expect(codes(d)).toContain('E_META_RIG_RADIUS');
+    // 报错路径要指到具体骨与段，便于定位
+    expect(d.some((x) => x.code === 'E_META_RIG_RADIUS' && x.path.includes('skinCylinders/LeftArm/radii/top'))).toBe(true);
+  });
+
+  it('开镜像权重但无 Wrapper 数据 → W_META_RIG_MIRROR_NOOP（镜像只作用于 Wrapper 模式）', () => {
+    const s = { ...cleanRig().session!, skinCylinders: null };
+    const d = validateAssetMeta(withRig({ session: s, export: { ...defaultRigExportSettings(), mirrorWeights: true } }));
+    expect(warns(d)).toContain('W_META_RIG_MIRROR_NOOP');
+  });
+
+  it('默认 RigSettings 不触发「未导出」告警（session 为 null，压根没做过会话）', () => {
+    expect(validateAssetMeta(withRig({ ...defaultRigSettings() }))).toEqual([]);
   });
 });
 
@@ -193,11 +245,17 @@ describe('序列化往返', () => {
       },
     ];
     m.rig = {
+      ...defaultRigSettings(),
       template: 'humanik',
-      boneWorldPositions: { Hips: [0, 0.95, 0], Spine: [0, 1.3, 0] },
-      mirrorPairs: { Arm_L: 'Arm_R', Arm_R: 'Arm_L' },
+      session: {
+        positions: { Hips: [0, 0.95, 0], Spine: [0, 1.3, 0] },
+        bindPose: { Hips: [0, 0.95, 0], Spine: [0, 1.3, 0] },
+        skinCylinders: {
+          LeftArm: { bone: 'LeftArm', radii: { top: 0.05, medium: 0.06, bottom: 0.07 }, enabled: true },
+        },
+      },
       tposeLocalRotations: { Arm_L: [0, 0, 0.38, 0.92] },
-      weightsBaked: true,
+      exported: true,
     };
     m.userData = { batch: 'P2', note: '盾牌可拆' };
     m.sourceHash = 'sha256:deadbeef';
