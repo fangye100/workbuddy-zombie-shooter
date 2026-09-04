@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_1l143w3k",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.05,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-04",
+    "characterName": "盾卫",
+    "variant": "rigged",
+    "file": "E04_Bulwark_1600_rigged_mixamo.glb"
+  },
+  "sourceHash": "sha256:f95abcfd1a40a4d6408f275a336f3dddd0fd9d3c86a8c239b58cf1a4acf8a531",
+  "updatedAt": "2026-09-04T03:48:29.965Z"
+}

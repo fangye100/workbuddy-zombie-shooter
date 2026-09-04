@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_6lpeo704",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-05",
+    "characterName": "爆尸",
+    "variant": "textured",
+    "file": "E05_Bloater_1000_baked.glb"
+  },
+  "sourceHash": "sha256:ad7e61a3790eb0692764685ee9fa64cf656850752468593a2311fbb2200048b8",
+  "updatedAt": "2026-09-04T03:48:30.095Z"
+}

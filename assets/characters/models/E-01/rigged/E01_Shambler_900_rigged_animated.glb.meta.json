@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_hr4s9rm7",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.75,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-01",
+    "characterName": "游荡者",
+    "variant": "rigged-animated",
+    "file": "E01_Shambler_900_rigged_animated.glb"
+  },
+  "sourceHash": "sha256:84ad2c7b00bf5122bb89c3cd500e1cb3d968e1aabe014b8da6fa81112abdeb83",
+  "updatedAt": "2026-09-04T03:48:29.718Z"
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_mwiamsxw",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-05",
+    "characterName": "爆尸",
+    "variant": "rigged-animated",
+    "file": "E05_Bloater_1000_rigged_animated.glb"
+  },
+  "sourceHash": "sha256:6fcfa27f0498928e93f2d28f5ac02b02b2d2c4589fdc30e41dd2d79e5663dddb",
+  "updatedAt": "2026-09-04T03:48:30.051Z"
+}

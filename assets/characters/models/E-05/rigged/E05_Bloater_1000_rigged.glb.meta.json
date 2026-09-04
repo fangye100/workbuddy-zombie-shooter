@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_ia2yrino",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-05",
+    "characterName": "爆尸",
+    "variant": "rigged",
+    "file": "E05_Bloater_1000_rigged.glb"
+  },
+  "sourceHash": "sha256:748d21a89e0986e50f3209ee744acc3ea78f07c1f4974c447d8028e9313a6b59",
+  "updatedAt": "2026-09-04T03:48:30.052Z"
+}

@@ -601,7 +601,8 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 |---|---|---|---|
 | **S0 · 场景 Schema**（✅ 已完） | `document.ts` + 28 例测试 | `npm run typecheck` + `vitest` 全绿 | — |
 | **S0b · 项目 + 资产元数据**（✅ 已完） | `project.ts` + `asset-meta.ts` + 46 例测试；顺带修掉 schema 两处缺陷（`MaterialRef` 撞名、patch 字段与 `MaterialState` 不对齐） | `vitest` 95/95；scene 包类型检查零错误 | — |
-| **S0c · 落地文件**（建议紧接，半天） | 落地 `aether.project.json`；写 `tools/gen-asset-meta.mjs` 扫描 `assets/**/*.glb` 批量产出 sidecar（从 `roster.json` 填 `normalizeHeightM`、从 `_tools` 脚本参数填导入设置）；把现有骨骼绑定会话导出成 `.meta` | `npm run scene:check` 对全部场景/元数据零 error；改一次 `.meta` 的材质，所有引用它的场景同步生效 | S0b |
+| **S0c · 落地文件**（✅ 已完） | 落地 `aether.project.json`（层表含 8 内置层 + `Enemy`/`Projectile`/`Hazard` 等 5 个游戏层）；`tools/scene/gen-asset-meta.mjs` 扫描 `assets/**/*.glb` 批量产出 **24 个** sidecar（身高从 `roster.generated.ts` 取）；新增门禁 `scene:gen` / `scene:check` | `npm run scene:check` 全绿（24 资产同步 + 9 项校验）；**已实测门禁有效**：注入 `maxSubMeshes=0` 与重复 guid 都能被精确捕获并报出冲突文件路径 | S0b |
+| **S0d · 导出骨骼会话**（待做，需编辑器配合） | 把 `binding-panel.ts` 里的骨骼绑定会话（骨长采纳、T/A-pose 反解、镜像权重）导出进 `.meta.rig` | 重新打开编辑器，上一次摆的骨骼还在 | S1 的 Inspector 落地后 |
 | **S1 · 加载** | `migrate.ts` + `graph.ts` + `instantiate.ts` + `asset-server`（读 `.meta` 的导入设置与默认绑定）；编辑器启动时从 `assets/scenes/*.scene.json` 加载，**删掉构造函数里硬编码的地面/胶囊** | 编辑器启动后画面与今天一致（地面还在，但来自文件）；`validateSceneDocument` 对示例场景零 error | S0c |
 | **S2 · 保存** | Inspector 绑定组件 → 编辑 → 写回文件；Undo/Redo | 改一盏灯颜色 → 保存 → 重开 → 颜色还在；git diff 只一行 | S1 |
 | **S3 · Play mode** | 补 `App.tick` 主循环；Play/Stop 状态机；快照回滚；Play 期 GPU 资源登记与释放 | Play → 生成 10 只僵尸 → Stop → 场景回到原样；**连按 20 次 Play/Stop，显存无增长** | S2 |
@@ -621,9 +622,18 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 | **L2 headless WebGPU** | 加载真实场景文件 → 渲染 1 帧 → CDP 像素判定（非全黑 + 有描边 + 主光方向正确） | Chrome 152 + `--enable-unsafe-swiftshader`（配方见 `webgpu-headless-validate` 技能） |
 | **L3 编辑器冒烟** | `editor:smoke` 新增 **section K**：Play/Stop 往返 20 次后 GPU 资源数归零、场景内容与快照逐字段相等 | `npm run editor:smoke` |
 
-**新增门禁**（S1 起）：
-- `npm run scene:check` —— 校验 `assets/scenes/**` 全部文件通过 `validateSceneDocument`，失败 exit 1。
-  与现有 `content:check`（roster/tokens 同步检查）同构，都是防"跑不出来但会出事"的问题。
+**新增门禁**（S0c 已落地）：
+- `npm run scene:gen` —— 批量生成 / 更新资产 sidecar（**merge 而非覆盖**，绝不冲掉用户手改）。
+- `npm run scene:check` —— 两步：① 元数据与源文件是否同步（hash 比对）；② `scene-files.test.ts` 校验
+  项目文件 + 全部 `.meta.json` + 全部 `.scene.json`，并查**跨文件约束**（guid 唯一、孤儿元数据、
+  场景 id 唯一）。失败 exit 1。
+  与 `content:check`（roster/tokens 同步）同构，都是防"跑不出来但会出事"的问题。
+
+> **门禁必须验证它真的会拦住错误**，不能只报绿。S0c 验收时实测注入了两类故障：
+> 单个 meta 的 `maxSubMeshes=0` → 精确报出 `路径 + E_META_MAXSUB + 原因`；
+> 两个 meta 设为同一 guid → 报出冲突双方的文件路径。两者都 exit 1。
+> 门禁测试用 `import.meta.glob` 而非 `node:fs`（本仓库未装 `@types/node`，
+> 且 tsconfig 的 `types` 是白名单）—— 顺带获得"新增资产自动纳入、无需手动登记"的好处。
 
 ---
 
@@ -658,9 +668,16 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 
 ## 14. 立即可做（S1 开工清单）
 
-1. `packages/scene/src/migrate.ts` —— 迁移链骨架（当前 `MIGRATIONS` 为空表，先把机制建起来）。
+**已完成**：S0 场景 schema · S0b 项目 + 资产元数据 · S0c 落地文件与门禁。
+
+**S1 待办**（目标：编辑器的场景内容来自文件，而不是构造函数）：
+
+1. `packages/scene/src/migrate.ts` —— 迁移链骨架（当前无迁移项，先把机制建起来）。
 2. `packages/scene/src/graph.ts` —— `SceneGraph`：NodeId→row 索引、TRS 存取、脏标记变换传播。
-3. `packages/assets/src/asset-server.ts` —— `AssetRef` → `MeshData`/纹理，带缓存。
-4. `packages/scene/src/instantiate.ts` —— Document + AssetServer → `SceneObject[]`（复用现有 `addObject` 逻辑）。
-5. 把 `assets/scenes/sandbox/default.scene.json` 造出来（内容 = 今天编辑器里硬编码的那三样：地面 + 胶囊 + 一盏主光）。
+3. `packages/assets/src/asset-server.ts` —— **读 `.meta` 的导入设置与默认绑定**，`AssetRef/guid` → `MeshData`/纹理，带缓存。
+4. `packages/scene/src/instantiate.ts` —— Document + AssetServer → `SceneObject[]`（复用现有 `addObject` 逻辑）；
+   `PrimitiveBinding` ⇄ `MaterialBindingRef` 的转换放这一层（**不放 schema**，避免 scene 包反向依赖 render 包）。
+5. 把 `assets/scenes/sandbox/default.scene.json` 造出来（内容 = 今天编辑器里硬编码的那三样：地面 + 胶囊 + 一盏主光），
+   并登记进 `aether.project.json` 的 `scenes[]`。
 6. 删除 `LabRenderer` 构造函数里的硬编码几何（`renderer.ts:431-436`）。
+7. 编辑器保存时把骨骼绑定会话写进 `.meta.rig`（补完 S0d，彻底解决"摆完骨骼刷新就丢"）。

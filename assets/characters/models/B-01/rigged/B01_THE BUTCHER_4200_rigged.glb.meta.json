@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_7dg9hh55",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 3.2,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "B-01",
+    "characterName": "屠夫",
+    "variant": "rigged",
+    "file": "B01_THE BUTCHER_4200_rigged.glb"
+  },
+  "sourceHash": "sha256:d1cde6613361c28ec7e7befa6dab01764da03f364c3e92026e3114dfdc0601ce",
+  "updatedAt": "2026-09-04T03:48:29.672Z"
+}

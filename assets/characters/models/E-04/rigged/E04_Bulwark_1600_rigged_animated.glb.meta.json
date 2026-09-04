@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_68c5qqtl",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.05,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-04",
+    "characterName": "盾卫",
+    "variant": "rigged-animated",
+    "file": "E04_Bulwark_1600_rigged_animated.glb"
+  },
+  "sourceHash": "sha256:b5f6d43dc15c2ce9448bcd35f6aca018ef8d5584cc3bea639792c38fb3b140d6",
+  "updatedAt": "2026-09-04T03:48:29.962Z"
+}

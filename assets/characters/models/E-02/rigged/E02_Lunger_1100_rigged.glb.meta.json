@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_3xzxx6h7",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.25,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-02",
+    "characterName": "扑跃者",
+    "variant": "rigged",
+    "file": "E02_Lunger_1100_rigged.glb"
+  },
+  "sourceHash": "sha256:20d7b4be8abff26f0c1e939c813de3cb4dd06e92bf3f9a2b61988306e89e961f",
+  "updatedAt": "2026-09-04T03:48:29.805Z"
+}
