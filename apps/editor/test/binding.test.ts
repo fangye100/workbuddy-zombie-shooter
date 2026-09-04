@@ -20,6 +20,12 @@ import {
   type JointPositions,
 } from '../src/services/binding/binding-math';
 import { rigToTPose } from '../src/services/binding/binding-export';
+import {
+  defaultSkinCylinders,
+  computeCylinderWeights,
+  mirrorCylinders,
+  mirrorSkinWeights,
+} from '../src/services/binding/skin-proxy';
 
 /**
  * 绑定面板数学的回归测试（纯 CPU，不需要 WebGPU）。
@@ -541,5 +547,71 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     expect(() => rigToTPose({
       name: 'bad', vertices: bad, indices: new Uint32Array([0, 1, 2]), image: null, placed: T,
     })).toThrow(/不是 stride 15 的正整数倍/);
+  });
+});
+
+describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
+  it('defaultSkinCylinders 覆盖全部 22 骨，半径正且有限', () => {
+    const cyls = defaultSkinCylinders(T);
+    expect(Object.keys(cyls)).toHaveLength(22);
+    for (const n of HUMANIK_ORDER) {
+      const c = cyls[n]!;
+      expect(c.enabled).toBe(true);
+      for (const k of ['top', 'medium', 'bottom'] as const) {
+        expect(c.radii[k]).toBeGreaterThan(0);
+        expect(Number.isFinite(c.radii[k])).toBe(true);
+      }
+    }
+  });
+
+  it('★ 包裹在圆柱体内部的顶点，权重归属该 joint（top 段归属骨 B）', () => {
+    const cyls = defaultSkinCylinders(T);
+    const seg = boneSegments(T).find((s) => s.bone === 'LeftUpLeg')!;
+    const mid: [number, number, number] = [
+      (seg.a[0] + seg.b[0]) / 2, (seg.a[1] + seg.b[1]) / 2, (seg.a[2] + seg.b[2]) / 2,
+    ];
+    const verts = new Float32Array(15);
+    verts[0] = mid[0]; verts[1] = mid[1]; verts[2] = mid[2];
+    const skin = computeCylinderWeights(verts, 15, 1, T, cyls);
+    const top = skin.joints[0]!;
+    expect(HUMANIK_ORDER[top]).toBe('LeftUpLeg');
+    // 归一化、单骨权重占主导
+    expect(skin.weights[0]!).toBeGreaterThan(0.9);
+  });
+
+  it('远离所有 wrapper 的顶点仍得到有效归一化权重（退回距离衰减，无 NaN/零权重）', () => {
+    const cyls = defaultSkinCylinders(T);
+    const verts = new Float32Array(15);
+    verts[0] = 5; verts[1] = 5; verts[2] = 5; // 天外飞点
+    const skin = computeCylinderWeights(verts, 15, 1, T, cyls);
+    let sum = 0;
+    for (let k = 0; k < 4; k++) sum += skin.weights[k]!;
+    expect(sum).toBeCloseTo(1, 5);
+    for (let k = 0; k < 4; k++) expect(Number.isFinite(skin.weights[k]!)).toBe(true);
+  });
+
+  it('mirrorCylinders：左侧半径抄到对侧同名骨', () => {
+    const cyls = defaultSkinCylinders(T);
+    cyls.LeftArm!.radii.top = 0.31;
+    const out = mirrorCylinders(cyls);
+    expect(out.RightArm!.radii.top).toBeCloseTo(0.31, 9);
+    // 中轴骨保持原样
+    expect(out.Hips!.radii.top).toBeCloseTo(cyls.Hips!.radii.top, 9);
+  });
+
+  it('★ mirrorSkinWeights：左半顶点（LeftArm 权重）镜像到右半同名对称点（RightArm）', () => {
+    // 对称网格：左 (-0.3,1,0) 权重给 LeftArm；右 (0.3,1,0) 故意给 LeftHand（不对称）
+    const positions = new Float32Array(2 * 15);
+    positions[0] = -0.3; positions[1] = 1; positions[2] = 0;
+    positions[15] = 0.3; positions[16] = 1; positions[17] = 0;
+    const li = HUMANIK_ORDER.indexOf('LeftArm');
+    const hi = HUMANIK_ORDER.indexOf('LeftHand');
+    const ri = HUMANIK_ORDER.indexOf('RightArm');
+    const joints = new Uint16Array([li, 0, 0, 0, hi, 0, 0, 0]);
+    const weights = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]);
+    const mirrored = mirrorSkinWeights({ joints, weights }, 15, 2, positions);
+    // 右半顶点（index 1）现在应拿到 RightArm 权重（来自左半 LeftArm 的镜像）
+    expect(mirrored.joints[4]!).toBe(ri);
+    expect(mirrored.weights[4]!).toBeCloseTo(1, 9);
   });
 });
