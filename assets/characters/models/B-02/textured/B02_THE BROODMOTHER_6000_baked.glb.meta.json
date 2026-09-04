@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_c57wp4xs",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 4,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "B-02",
+    "characterName": "母体",
+    "variant": "textured",
+    "file": "B02_THE BROODMOTHER_6000_baked.glb"
+  },
+  "sourceHash": "sha256:ada9361da9fd00426af0ac0db9033b20dfc70a139f36ea82f8c05548a10b5e7d",
+  "updatedAt": "2026-09-04T04:20:14.313Z"
+}

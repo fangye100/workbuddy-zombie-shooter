@@ -41,7 +41,7 @@
 | **ECS World 是半成品** | `remove()` 空实现（`world.ts:170`）、`strideOf()` 硬编码返回 4（`world.ts:229`）、`isChanged()` 恒真（`world.ts:189`） | 不能直接当场景运行时的底座，见 §4.1 |
 | **分层图有反向依赖** | `packages/render/src/renderer-core.ts:18` 反向 import `@aether/scene` | 见 §8 修正方案 |
 | **没有项目容器** | 仓库根无 `aether.project.json`；"基准路径"靠口头约定 | 见 §3.7 |
-| **零资产元数据** | `find assets -name '*.meta*'` 返回空；绑定/骨骼/导入参数全在内存 | 见 §3.8 —— **正在发生的数据丢失** |
+| **零资产元数据** | `find assets -name '*.meta*'` 返回空；绑定会话/材质绑定/导入参数全在内存 | 见 §3.8 —— **正在发生的数据丢失**（S0c 已补 24 个 sidecar） |
 
 **一句话诊断**：编辑器有**渲染能力**、有**编辑交互**，但缺**数据层**。场景系统就是补这一层。
 
@@ -219,13 +219,15 @@ GDD §4.1-4.2 要求**程序生成楼层**（3 层 × 房间图）。程序生�
 ### 3.8 资产附加数据：`<file>.meta.json`（ADR-016）
 
 **这不是设计缺口，是正在发生的数据丢失**。编辑器对 GLB 做的操作会产生大量附加数据，
-现在**全部只活在内存里，刷新即丢** —— `assets/` 下一个 `.meta.json` 都没有：
+**全部只活在内存里，刷新即丢**。S0c 已为 24 个 `.glb` 生成了 sidecar（导入设置与空绑定槽），
+但**会话类数据（材质绑定、骨骼会话、动画配置）仍是空的** —— 生成工具只能填静态默认值，
+真正的内容要等编辑器侧对接写入：
 
 | 已产生的附加数据 | 现存位置 | 丢失后果 |
 |---|---|---|
 | 材质绑定继承快照 `MeshNodeBinding` + 孤儿池 | `SceneObject.bindingOrphans`（内存） | 换模型后材质绑定全回默认 |
 | 身高归一化系数（E-04 = 2.05 m） | 命令行参数 `MODEL_RULER_HEIGHT_M` | 每次导入要重填 |
-| 骨骼绑定会话（骨长采纳、T/A-pose 反解、镜像权重） | `binding-panel.ts` 会话（内存） | **重灾区**：花几小时摆的骨骼，刷新全没 |
+| 骨骼绑定**会话**（骨架摆位、Skin Wrapper 半径、导出配方） | `binding-panel.ts` 会话（内存） | **重灾区**：花几小时摆的骨骼，刷新全没 |
 | 动画配置（clip 选择 / loop / speed） | `SkinState`（内存） | 每次重设 |
 | 导入参数（焊接容差 / AO / up-flip / 拆子网格） | Python 脚本命令行 | 换台机器重导入结果不同 |
 
@@ -238,9 +240,47 @@ GDD §4.1-4.2 要求**程序生成楼层**（3 层 × 房间图）。程序生�
 |---|---|---|
 | 身高归一化 2.05 m | `.meta` | 换场景，E-04 还是 2.05 m |
 | GLB 子网格 3 默认用"铁锈"材质 | `.meta` | 任何场景导入它都该这样（**可**被场景覆盖） |
-| 骨骼绑定 / T-pose 反解结果 | `.meta` | 模型固有属性 |
+| 骨骼**会话**（摆位 / Wrapper 半径 / 导出配方） | `.meta` | 模型固有属性，与场景无关 |
+| 骨骼**结果**（骨架 / IBM / 权重 / clip） | **源 GLB，不进 `.meta`** | 已在资产里，抄一份 = 双真源 |
 | 这个房间里的僵尸皮肤偏红 | scene override | 场景特有 |
 | 这盏灯只照亮这个房间 | scene | 有位置，场景特有 |
+
+**第二问（防双真源）**：光靠上面那句判定会误伤——有些数据「换场景也还在」，
+但它**已经落在源资产里了**，再存一份就是两个真源。所以归属判定实际是两句：
+
+> ① 换一个全新的空场景，这个数据还在不在？　不在 → 场景数据
+> ② **这段数据丢了，能不能从源资产（GLB）反推出来？**　能 → **不存**
+
+#### 3.8.1 骨骼：会话存，结果不存（2026-09-04 实证订正）
+
+初版文档把「骨骼绑定结果」写进了 `.meta`，**这是错的**，实测推翻：
+
+```
+assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb   300 KB
+  skins: 1          关节数: 22        inverseBindMatrices: ✓
+  animations: 6     网格属性 JOINTS_0/WEIGHTS_0: ✓
+```
+
+glTF 2.0 的 `skins[].joints` + `inverseBindMatrices` + `JOINTS_0/WEIGHTS_0` **已经完整承载了
+骨架与蒙皮绑定**。它是 LFS 资产，跨项目跨场景都在。往 `.meta` 抄一份，
+改一边另一边不同步 —— **比丢失更糟**。
+
+真正只在内存、且产物里找不到的，是**造出结果的配方**：
+
+| 字段 | 会话来源 | 为什么产物里没有 |
+|---|---|---|
+| `rig.session.positions` | 用户拖出来的骨骼世界坐标 | 导出时已反解到 T-pose，产物骨架是另一套姿态 |
+| `rig.session.bindPose` | 「采纳为 bind pose」的快照 | 采纳是一次性会话动作 |
+| `rig.session.skinCylinders` | Skin Wrapper 三段半径 | 只用于算权重，算完即弃 |
+| `rig.export.*` | falloff / eps / 平滑 / 镜像开关 | 是配方不是成品 |
+| `rig.tposeLocalRotations` | bind → T-pose 反解出的关节局部旋转 | 产物骨架**直接就是** T-pose，反解量被吸收 |
+
+**不存 `mirrorPairs`**：它是模板常量（`humanik-template.ts` 的 `MIRROR_PAIRS`），
+由 `template` 派生，存了就是冗余真源。
+
+**`rig.exported` 是这条边界的开关**：
+`false` → 结果只活在内存（真·重灾区，校验器发 `W_META_RIG_NOT_EXPORTED`）；
+`true` → 结果已在 GLB 里，`.meta.rig` 降级为**历史记录**，用于复现与微调，**运行时不读它**。
 
 **为什么是 sidecar 而不是集中索引**：集中索引（如 `assetdb.json`）会让每次加资产都改同一个文件，
 多人协作时是**合并冲突制造机**。sidecar 跟着文件走，天然无冲突。
@@ -601,8 +641,8 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 |---|---|---|---|
 | **S0 · 场景 Schema**（✅ 已完） | `document.ts` + 28 例测试 | `npm run typecheck` + `vitest` 全绿 | — |
 | **S0b · 项目 + 资产元数据**（✅ 已完） | `project.ts` + `asset-meta.ts` + 46 例测试；顺带修掉 schema 两处缺陷（`MaterialRef` 撞名、patch 字段与 `MaterialState` 不对齐） | `vitest` 95/95；scene 包类型检查零错误 | — |
-| **S0c · 落地文件**（✅ 已完） | 落地 `aether.project.json`（层表含 8 内置层 + `Enemy`/`Projectile`/`Hazard` 等 5 个游戏层）；`tools/scene/gen-asset-meta.mjs` 扫描 `assets/**/*.glb` 批量产出 **24 个** sidecar（身高从 `roster.generated.ts` 取）；新增门禁 `scene:gen` / `scene:check` | `npm run scene:check` 全绿（24 资产同步 + 9 项校验）；**已实测门禁有效**：注入 `maxSubMeshes=0` 与重复 guid 都能被精确捕获并报出冲突文件路径 | S0b |
-| **S0d · 导出骨骼会话**（待做，需编辑器配合） | 把 `binding-panel.ts` 里的骨骼绑定会话（骨长采纳、T/A-pose 反解、镜像权重）导出进 `.meta.rig` | 重新打开编辑器，上一次摆的骨骼还在 | S1 的 Inspector 落地后 |
+| **S0c · 落地文件**（✅ 已完） | 落地 `aether.project.json`（层表含 8 内置层 + `Enemy`/`Projectile`/`Hazard` 等 5 个游戏层）；`tools/scene/gen-asset-meta.mjs` 扫描 `assets/**/*.glb` 批量产出 sidecar（**28 个**，身高从 `roster.generated.ts` 取；B-02/B-03 补齐后从 24 → 28，门禁自动抓到缺失）；新增门禁 `scene:gen` / `scene:check` | `npm run scene:check` 全绿（28 资产同步 + 9 项校验）；**已实测门禁有效**：注入 `maxSubMeshes=0`、重复 guid、新增资产漏 sidecar 三种情况都能被精确捕获并报出路径 | S0b |
+| **S0d · 导出骨骼会话**（schema ✅ 已完，编辑器对接待做） | schema 已按 §3.8.1 实证订正：`RigSettings` 只装**会话与配方**（`session.positions` / `session.bindPose` / `session.skinCylinders` / `export.*` / `tposeLocalRotations` / `exported`），**不装绑定结果**（骨架/IBM/权重都在导出 GLB 里，抄一份 = 双真源）。编辑器侧待接：`binding-panel.ts` 存/读这套字段 | 重新打开编辑器，上一次摆的骨骼和 Wrapper 半径还在；点导出后 `exported=true`，`.meta.rig` 降为历史记录 | S1 的 Inspector 落地后 |
 | **S1 · 加载** | `migrate.ts` + `graph.ts` + `instantiate.ts` + `asset-server`（读 `.meta` 的导入设置与默认绑定）；编辑器启动时从 `assets/scenes/*.scene.json` 加载，**删掉构造函数里硬编码的地面/胶囊** | 编辑器启动后画面与今天一致（地面还在，但来自文件）；`validateSceneDocument` 对示例场景零 error | S0c |
 | **S2 · 保存** | Inspector 绑定组件 → 编辑 → 写回文件；Undo/Redo | 改一盏灯颜色 → 保存 → 重开 → 颜色还在；git diff 只一行 | S1 |
 | **S3 · Play mode** | 补 `App.tick` 主循环；Play/Stop 状态机；快照回滚；Play 期 GPU 资源登记与释放 | Play → 生成 10 只僵尸 → Stop → 场景回到原样；**连按 20 次 Play/Stop，显存无增长** | S2 |
@@ -680,4 +720,6 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 5. 把 `assets/scenes/sandbox/default.scene.json` 造出来（内容 = 今天编辑器里硬编码的那三样：地面 + 胶囊 + 一盏主光），
    并登记进 `aether.project.json` 的 `scenes[]`。
 6. 删除 `LabRenderer` 构造函数里的硬编码几何（`renderer.ts:431-436`）。
-7. 编辑器保存时把骨骼绑定会话写进 `.meta.rig`（补完 S0d，彻底解决"摆完骨骼刷新就丢"）。
+7. 编辑器保存时把骨骼绑定**会话与配方**写进 `.meta.rig`（补完 S0d 的编辑器对接，
+   彻底解决"摆完骨骼刷新就丢"）。**只写配方，不写绑定结果** —— 结果在点导出那一刻
+   已经进了 GLB，再写一份就是双真源（§3.8.1）。

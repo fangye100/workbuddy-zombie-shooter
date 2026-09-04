@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_kp0rr2gz",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "B-03",
+    "characterName": "零号",
+    "variant": "rigged-animated",
+    "file": "B03_PATIENT ZERO_5200_rigged_animated.glb"
+  },
+  "sourceHash": "sha256:eecbad8471bb22ea4c53fb2e833e2151eb9f70833912516037e44c1db7fd4fa2",
+  "updatedAt": "2026-09-04T04:20:14.315Z"
+}

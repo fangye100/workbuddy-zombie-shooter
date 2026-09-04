@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_soppwo40",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "B-03",
+    "characterName": "零号",
+    "variant": "textured",
+    "file": "B03_PATIENT ZERO_5200_baked.glb"
+  },
+  "sourceHash": "sha256:dd6e30aa6c6116510b3bb71ebcd28ce9507cd46f4547c6f9403deb6e14b1d854",
+  "updatedAt": "2026-09-04T04:20:14.360Z"
+}
