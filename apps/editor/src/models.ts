@@ -13,6 +13,7 @@
  */
 
 import type { MeshData } from '@aether/scene';
+import { AssetServer } from '@aether/scene';
 import { requireCharacter } from '@aether/content';
 
 /**
@@ -32,6 +33,39 @@ import { requireCharacter } from '@aether/content';
  * 值由 content 生成层从 roster.json 派生（ADR-002），不再手抄。
  */
 export const MODEL_RULER_HEIGHT_M = requireCharacter('E-04').heightMeters;
+
+/**
+ * 编辑器全局的资产 sidecar 加载器（ADR-016 / S1）。
+ *
+ * 单例理由：meta 带缓存，多个面板各自 `new` 会各存一份，
+ * 编辑过 `.meta` 之后得挨个清。共用一份，`assetServer.clearCache()` 一处搞定。
+ *
+ * **降级即默认**：sidecar 缺失 / 损坏一律返回默认 meta + 诊断，**不抛异常**。
+ * 所以它永远不会让资产加载失败 —— 它是便利层，不是链路上的单点故障。
+ */
+export const assetServer = new AssetServer();
+
+/**
+ * 归一化身高：**优先问资产自己的 sidecar，没有才回落全局标尺**。
+ *
+ * 这个函数是 `.meta.json` 在运行时被消费的**第一处**。在此之前的状况是：
+ * 28 个 sidecar 躺在盘上，没有任何一行代码读它们（2026-09-04 实测）。
+ *
+ * 它修掉一个真实 bug：此前所有 GLB 一律按 `MODEL_RULER_HEIGHT_M`（E-04 的 2.05 m）
+ * 归一化，于是 B-02 母体（4.0 m）载入后会被压成 2.05 m。现在各资产用自己的身高。
+ *
+ * @returns `fromMeta` 用于 UI 标注来源 —— 新架构生没生效，界面上看得见才算数
+ */
+export async function resolveModelHeightM(
+  assetPath: string,
+): Promise<{ meters: number; fromMeta: boolean }> {
+  const load = await assetServer.loadMeta(assetPath);
+  const configured = load.meta.importer?.normalizeHeightM ?? null;
+  if (typeof configured === 'number' && configured > 0) {
+    return { meters: configured, fromMeta: true };
+  }
+  return { meters: MODEL_RULER_HEIGHT_M, fromMeta: false };
+}
 
 /**
  * 身高归一化真源已上提引擎层 `packages/scene`（纯几何，运行时导入链路要用）。

@@ -23,7 +23,7 @@ import {
   type AssetSelection,
 } from './asset-util';
 import { parseGlb } from '@aether/scene';
-import { MODEL_RULER_HEIGHT_M } from './models';
+import { resolveModelHeightM } from './models';
 
 const TEXT_PREVIEW_MAX_BYTES = 256 * 1024;
 const TEXT_PREVIEW_LINES = 30;
@@ -116,9 +116,12 @@ export class AssetInspector {
       void fetch(fileUrl(path))
         .then(async (resp) => {
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          return parseGlb(await resp.arrayBuffer(), MODEL_RULER_HEIGHT_M);
+          const buf = await resp.arrayBuffer();
+          // 归一化身高先问这个资产自己的 sidecar，没有才回落全局标尺（ADR-016）
+          const { meters, fromMeta } = await resolveModelHeightM(path);
+          return { model: parseGlb(buf, meters), fromMeta };
         })
-        .then((model) => {
+        .then(({ model, fromMeta }) => {
           if (!alive()) return;
           stat.remove();
           const subs = model.subMeshes
@@ -128,7 +131,9 @@ export class AssetInspector {
             'beforeend',
             `<div class="ai-row"><span>顶点</span><b>${model.vertices}</b></div>
              <div class="ai-row"><span>三角面</span><b>${model.triangles}</b></div>
-             <div class="ai-row"><span>身高</span><b>${model.heightMeters.toFixed(2)} m（已按角色尺归一）</b></div>
+             <div class="ai-row"><span>身高</span><b>${model.heightMeters.toFixed(2)} m${
+               fromMeta ? '（.meta 指定）' : '（回落全局标尺，无 .meta）'
+             }</b></div>
              <div class="ai-row"><span>贴图</span><b>${model.image !== null ? '内嵌 ✓' : '无（平色预览）'}</b></div>
              <div class="ai-row"><span>子网格</span><b>${model.subMeshes.length} 条</b></div>
              ${subs}`,

@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M, normalizeMeshHeight } from '../src/models';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import {
+  BUILTIN_MODELS,
+  MODEL_RULER_HEIGHT_M,
+  normalizeMeshHeight,
+  assetServer,
+  resolveModelHeightM,
+} from '../src/models';
 import { ROSTER_CHARACTERS, requireCharacter } from '@aether/content';
+import { createDefaultAssetMeta, newAssetGuid } from '@aether/scene';
 
 /**
  * 内置模型清单的不变量测试（编辑器域）。
@@ -58,5 +65,79 @@ describe('内置模型清单', () => {
     const out = normalizeMeshHeight({ vertices: v, indices: new Uint32Array([0, 1, 0]) }, MODEL_RULER_HEIGHT_M);
     expect(meshHeight(out)).toBeCloseTo(MODEL_RULER_HEIGHT_M, 5);
     expect(out.vertices[1]).toBeCloseTo(0, 6);
+  });
+});
+
+// ---------------------------------------------------------------- .meta 接线
+
+/**
+ * `resolveModelHeightM` 是 `.meta.json` 在运行时被消费的**第一处**，
+ * 所以这里测的不是底层 AssetServer（它有自己的 20 例），
+ * 而是「编辑器这条链路真的会去读 sidecar」这件事本身。
+ *
+ * 单例用 `globalThis.fetch`，测试期用 `vi.stubGlobal` 顶掉。
+ * 每次跑完必须 `clearCache()` —— 否则单例缓存会污染下一个用例。
+ */
+describe('resolveModelHeightM · .meta 接线', () => {
+  const B02 = '/assets/characters/models/B-02/textured/B02_THE BROODMOTHER_6000_baked.glb';
+
+  function stubFetch(handler: (url: string) => { status: number; body?: string }): void {
+    vi.stubGlobal('fetch', async (url: string) => {
+      const r = handler(url);
+      return { ok: r.status >= 200 && r.status < 300, status: r.status, text: async () => r.body ?? '' };
+    });
+  }
+
+  it('sidecar 指定了身高 → 用它，且 fromMeta=true（B-02 母体 4.0 m 不再被 E-04 的 2.05 覆盖）', async () => {
+    const meta = createDefaultAssetMeta(newAssetGuid(), 'gltf');
+    if (meta.importer) meta.importer.normalizeHeightM = 4.0;
+    stubFetch(() => ({ status: 200, body: JSON.stringify(meta) }));
+    assetServer.clearCache();
+
+    const r = await resolveModelHeightM(B02);
+
+    expect(r.meters).toBe(4.0);
+    expect(r.fromMeta).toBe(true);
+    expect(r.meters).not.toBe(MODEL_RULER_HEIGHT_M); // 2.05 —— 这就是修掉的那个 bug
+  });
+
+  it('没有 sidecar → 回落全局标尺，fromMeta=false（降级不能让加载失败）', async () => {
+    stubFetch(() => ({ status: 404 }));
+    assetServer.clearCache();
+
+    const r = await resolveModelHeightM(B02);
+
+    expect(r.meters).toBe(MODEL_RULER_HEIGHT_M);
+    expect(r.fromMeta).toBe(false);
+  });
+
+  it('sidecar 损坏 → 回落全局标尺，不抛异常（便利层不是单点故障）', async () => {
+    stubFetch(() => ({ status: 200, body: '{ 坏掉的 json' }));
+    assetServer.clearCache();
+
+    await expect(resolveModelHeightM(B02)).resolves.toEqual({
+      meters: MODEL_RULER_HEIGHT_M,
+      fromMeta: false,
+    });
+  });
+
+  it('请求的是 sidecar 路径，不是源 GLB', async () => {
+    const seen: string[] = [];
+    const meta = createDefaultAssetMeta(newAssetGuid(), 'gltf');
+    if (meta.importer) meta.importer.normalizeHeightM = 1.25;
+    stubFetch((url) => {
+      seen.push(url);
+      return { status: 200, body: JSON.stringify(meta) };
+    });
+    assetServer.clearCache();
+
+    await resolveModelHeightM(B02);
+
+    expect(seen).toEqual([`${B02}.meta.json`]);
+  });
+
+  afterEach(() => {
+    assetServer.clearCache();
+    vi.unstubAllGlobals();
   });
 });
