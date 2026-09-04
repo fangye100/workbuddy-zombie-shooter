@@ -69,6 +69,29 @@
   （项目已在 `removeObject` 上踩过"只打墓碑不释放"的泄漏坑，不要再踩）。
 - 编辑器相机（`editorCamera`）与游戏相机（`Camera` 组件）**严格分离**，互不影响。
 
+### 2.5 项目容器、资产元数据与脚本
+
+- **项目锚点 = 仓库根 `aether.project.json`**（真源 `packages/scene/src/project.ts`）。
+  所有相对路径、场景清单、`layers[]` 层表、渲染档位、材质库/行为目录指针都在这里。
+  **新场景必须登记进 `scenes[]`**，否则"通关后加载哪个场景"没有数据落点。
+  层表前 8 项是内置层（`Default`/`Character`/`Pickup`/`Trigger`…）—— **`layer` 索引语义靠它稳定，禁止改名**。
+- **资产附加数据必须落 sidecar `<源文件名>.meta.json`**（真源 `packages/scene/src/asset-meta.ts`），
+  与源资产同目录。**禁止只在内存里保存** —— 绑定继承快照、身高归一化系数、骨骼绑定会话、
+  T/A-pose 反解结果、动画配置、导入参数（焊接/AO/up-flip/拆子网格）全部属于这一类，
+  现在它们刷新即丢，这是正在发生的数据丢失。
+  - **归属判定**：问一句「换一个全新的空场景，这个数据还在不在？」
+    在 → `.meta.json`；不在 / 场景特有 → `.scene.json`。
+  - **sidecar 不用集中索引**：集中 `assetdb.json` 是合并冲突制造机。
+    guid→path 索引是**派生产物**，启动时扫描重建，落 `.workbuddy/cache/`（不进 git）。
+  - 场景里的 `AssetRef.path` 目前在用的同时**必须落 `guid`**（重命名/移动文件不丢引用）。
+- **脚本 = 行为注册表，场景绝不存代码字符串**（ADR-017）。
+  - 行为是代码资产（`assets/behaviors/*.ts`），**必须同时声明 `BehaviorDef.params` 参数 schema**，
+    否则 Inspector 画不出控件，Script 组件只能手改 JSON —— 等于没有功能。
+  - 场景只存 `{ behavior: 'spawn-wave', params: { count: 12 } }`。
+  - 参数 schema 覆盖 `number/int/bool/string/color/nodeRef/assetRef/enum` 八种控件类型。
+  - 行为被删 / 参数改名 → 报 `warning` 并降级为空操作，**不阻塞加载**（一个挂掉的行为不该让场景打不开）。
+  - Play 模式下**禁用行为热重载**（正在跑的实体持有旧闭包）。
+
 ## 3. Git 提交纪律（澄清红线歧义）
 
 - **正常 `git add` / `git commit` / `git push` 是被允许、且是硬性要求的**：每完成一个任务

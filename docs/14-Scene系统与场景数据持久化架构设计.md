@@ -19,6 +19,9 @@
 | **ADR-012** | 场景文件用**扁平节点表 + parent 引用**，不用嵌套树 | diff 友好、无递归、与 prefab override 的 propertyPath 寻址天然一致 |
 | **ADR-013** | 文件格式用 **JSON + schemaVersion + 迁移链**，不用二进制 | 与 roster.json/tokens.json 的真源哲学一致；二进制 .pak 是 Phase 4 的**运行时产物**，不是编辑格式 |
 | **ADR-014** | Edit/Play 严格分离：Play 前快照、Play 中只改副本、Stop 时整体回滚 + 释放全部 Play 期 GPU 资源 | 否则反复 Play/Stop 泄漏显存（项目已在 `removeObject` 上踩过同类坑） |
+| **ADR-015** | 项目容器 `aether.project.json` 是所有路径/场景清单/层表的**锚点** | 没有它，`.meta` 的 guid、"相对什么"、场景清单、`layer: 3` 是第几层全都靠口头约定 |
+| **ADR-016** | 资产附加数据走**同名 sidecar**（`<file>.meta.json`），不用集中索引 | 集中索引文件是合并冲突制造机；sidecar 跟着文件走，天然无冲突 |
+| **ADR-017** | 脚本 = **行为注册表**（代码资产 + 参数 schema），场景只存 `behavior id + params` | JSON 携带代码字符串 = 远程代码执行入口；且没有参数 schema 就没有 Inspector 控件 |
 
 **头号风险（必须先看）**：当前渲染器 `MAX_OBJECTS = 64`（`packages/render/src/frame-uniforms.ts:23`）。
 场景里的静态物件受此硬限，而 GDD 要求的 **500 僵尸不能走这条路径**。见 §4.5 容量预算。
@@ -37,6 +40,8 @@
 | **主循环是空实现** | `App.tick` 只有 `void now`（`packages/core/src/app.ts:156-161`），编辑器自己写 rAF（`main.ts:1646-1649`） | Play mode 没有可复用的调度器，必须 S3 补 |
 | **ECS World 是半成品** | `remove()` 空实现（`world.ts:170`）、`strideOf()` 硬编码返回 4（`world.ts:229`）、`isChanged()` 恒真（`world.ts:189`） | 不能直接当场景运行时的底座，见 §4.1 |
 | **分层图有反向依赖** | `packages/render/src/renderer-core.ts:18` 反向 import `@aether/scene` | 见 §8 修正方案 |
+| **没有项目容器** | 仓库根无 `aether.project.json`；"基准路径"靠口头约定 | 见 §3.7 |
+| **零资产元数据** | `find assets -name '*.meta*'` 返回空；绑定/骨骼/导入参数全在内存 | 见 §3.8 —— **正在发生的数据丢失** |
 
 **一句话诊断**：编辑器有**渲染能力**、有**编辑交互**，但缺**数据层**。场景系统就是补这一层。
 
@@ -61,7 +66,31 @@
 
 完整类型定义见 `packages/scene/src/document.ts`，这里只讲设计取舍。
 
-### 3.1 三层表示
+### 3.1 五层容器 + 三种表示
+
+**落盘的四层容器**（都是 JSON，都在 git 里）：
+
+```
+  aether.project.json                    锚点：路径根 / 场景清单 / 层表 / 渲染档位
+    │
+    ├─ assets/**/<file>.glb.meta.json    资产默认：导入设置 + 默认绑定 + 骨骼/动画
+    │      │ 提供默认值
+    │      ▼
+    ├─ assets/prefabs/*.prefab.json      复用单元：节点树 + 组件（可覆盖 .meta）
+    │      │ 实例化 + override
+    │      ▼
+    └─ assets/scenes/*.scene.json        关卡：节点 + 组件（可覆盖 prefab）
+```
+
+**四级覆盖链**（每级只存与上级的差异，不是全量拷贝）：
+
+```
+  .meta（资产默认） ─▶ prefab（覆盖） ─▶ scene（覆盖） ─▶ runtime（Play 期，不落盘）
+```
+
+改一次 `.meta`，引用它的几十个场景同步生效；某个场景要特化，只写自己那一条覆盖。
+
+**三种表示**（落盘 → 内存 → 逐帧）：
 
 ```
   SceneDocument                 SceneRuntime                    GPU
@@ -75,8 +104,16 @@
    可 diff/可 review            可交互/可撤销                    只画一帧
 ```
 
-**关键**：三层之间**单向**转化。GPU 层永远不会写回 Document 层（编辑的是 Runtime 的 Node，
+**关键**：三种表示之间**单向**转化。GPU 层永远不会写回 Document 层（编辑的是 Runtime 的 Node，
 保存时序列化 Node → Document）。这保证了"屏幕上的临时状态"不会污染文件。
+
+**不落盘的三类**（务必区分，否则会污染 git 或丢失可复现性）：
+
+| 类别 | 例子 | 落点 |
+|---|---|---|
+| 派生/烘焙产物 | 减面结果、AO 贴图、流场、guid 索引 | `.workbuddy/cache/`（gitignore，按 `.meta.sourceHash` 失效重算） |
+| 编辑器 UI 状态 | 面板折叠、最近打开文件、相机位置 | `localStorage`（项目已有先例 `zh.assets.collapsed`） |
+| Play 期运行时状态 | 僵尸生成、门打开、拾取物消耗 | 内存，Stop 即弃（ADR-014） |
 
 ### 3.2 为什么是扁平节点表（`nodes[]` + `parent`）
 
@@ -151,6 +188,103 @@ GDD §4.1-4.2 要求**程序生成楼层**（3 层 × 房间图）。程序生�
 保留 `postOverride: AssetPath | null` 指向风格文件（由 tokens.json 生成）。
 **引擎不直接读 tokens**（ADR-007：render 在 L3，content 在 L4，禁止反向依赖），
 风格参数仍由编辑器 UI 层注入 `PostPackParams`。
+
+### 3.7 项目容器：`aether.project.json`（ADR-015）
+
+**为什么必须有**：前面几层都需要一个锚点才有意义 ——
+`.meta` 的 guid 在什么范围内唯一？资产路径相对谁？"通关后去哪个场景"？`layer: 3` 是第几层？
+没有项目文件，这些全靠**口头约定**，而约定不会写进任何地方。
+
+对标 Unity `ProjectSettings/`、Unreal `.uproject`、Godot `project.godot`。
+
+**形态决策：单文件，不是目录**。本项目所有真源都是单文件 JSON（`roster.json` / `tokens.json`），
+保持一致；目录形态会把设置散成十几个小文件，改一项要 diff 一堆。**一个仓库 = 一个项目**（多项目是 YAGNI）。
+
+里面装什么（完整定义见 `packages/scene/src/project.ts`）：
+
+| 字段 | 作用 |
+|---|---|
+| `assetRoots` | 资产根目录，扫描 guid 索引时遍历它 |
+| `scenes[]` + `startIndex` | 场景清单 = Unity Build Settings；**有它"通关后加载哪个场景"才有数据落点** |
+| `layers[]` | 层表，索引即 `MeshRenderer.layer` 的值。前 8 个是内置层（`Default`/`Character`/`Pickup`/`Trigger`…）**不可改名** |
+| `tags[]` | 自由语义标注（`Boss` / `Loot` / `Destructible`） |
+| `render` | 目标档位 `t0..t3`（对齐 `packages/gfx` 的 `CapabilityTier`）、描边/后处理开关、`renderScale`、`targetFps` |
+| `defaultStyle` / `inputMap` / `gameplayConfig` | 指向独立资产的路径（**项目文件只存指针，不存内容**，避免它随方案调整频繁变动） |
+| `materialLibrary` | 一个项目一套共享材质库，跨场景复用美术调校 |
+| `behaviorRoots` | 行为（脚本）目录，Inspector 的 Script 下拉项从这里扫 |
+
+**明确不放进去**：资产索引（guid→path 派生产物，扫描重建，落 cache）、
+编辑器 UI 状态（localStorage）、烘焙产物（cache，按 hash 失效）。
+
+### 3.8 资产附加数据：`<file>.meta.json`（ADR-016）
+
+**这不是设计缺口，是正在发生的数据丢失**。编辑器对 GLB 做的操作会产生大量附加数据，
+现在**全部只活在内存里，刷新即丢** —— `assets/` 下一个 `.meta.json` 都没有：
+
+| 已产生的附加数据 | 现存位置 | 丢失后果 |
+|---|---|---|
+| 材质绑定继承快照 `MeshNodeBinding` + 孤儿池 | `SceneObject.bindingOrphans`（内存） | 换模型后材质绑定全回默认 |
+| 身高归一化系数（E-04 = 2.05 m） | 命令行参数 `MODEL_RULER_HEIGHT_M` | 每次导入要重填 |
+| 骨骼绑定会话（骨长采纳、T/A-pose 反解、镜像权重） | `binding-panel.ts` 会话（内存） | **重灾区**：花几小时摆的骨骼，刷新全没 |
+| 动画配置（clip 选择 / loop / speed） | `SkinState`（内存） | 每次重设 |
+| 导入参数（焊接容差 / AO / up-flip / 拆子网格） | Python 脚本命令行 | 换台机器重导入结果不同 |
+
+**归属判定规则**（本层的设计地基）：
+
+> **问一句：「换一个全新的空场景，这个数据还在不在？」**
+> 在 → 资产数据（`.meta.json`）｜不在 / 是场景特有 → 场景数据（`.scene.json`）
+
+| 数据 | 归属 | 理由 |
+|---|---|---|
+| 身高归一化 2.05 m | `.meta` | 换场景，E-04 还是 2.05 m |
+| GLB 子网格 3 默认用"铁锈"材质 | `.meta` | 任何场景导入它都该这样（**可**被场景覆盖） |
+| 骨骼绑定 / T-pose 反解结果 | `.meta` | 模型固有属性 |
+| 这个房间里的僵尸皮肤偏红 | scene override | 场景特有 |
+| 这盏灯只照亮这个房间 | scene | 有位置，场景特有 |
+
+**为什么是 sidecar 而不是集中索引**：集中索引（如 `assetdb.json`）会让每次加资产都改同一个文件，
+多人协作时是**合并冲突制造机**。sidecar 跟着文件走，天然无冲突。
+索引是派生产物，启动时扫描各 `.meta.json` 重建，落 `.workbuddy/cache/`（gitignore）。
+
+**guid 的作用**：场景若存死路径 `.../E-04/rigged.glb`，改个目录名所有引用全断。
+有了 guid，文件移动后 sidecar 跟着走、guid 不变，引用自动保持。
+S1 阶段解析仍走 `path`，`guid` 作为"重命名保护"的预备字段先落盘 —— 渐进启用，不一次性改完。
+
+**`.meta` 与 `binding.ts` 的对接**：`PrimitiveBinding { materialId, override }`
+⇄ `MaterialBindingRef { shared | instance | override }` 三种形态一一对应
+（转换是**编辑器/资产层的职责**，不放 schema 里，避免 scene 包反向依赖 render 包造成循环）。
+`PrimitiveBindingEntry` 的 `nodeId` / `nodePath` 直接沿用现有两层匹配（nodeId 精确 → 反向路径打分），
+换模型继承的匹配算法一个字都不用改。
+
+**身高归一化值从哪来**：`.meta` 只存数值（如 `2.05`），
+由生成工具从 `roster.json` 的 `heightMeters` 填入 —— 数据层零依赖，生成器做桥（与 ADR-002 同构）。
+
+### 3.9 脚本与行为（ADR-017）
+
+**三层结构**：
+
+```
+  ① 行为定义（代码资产，不落盘）        ② 参数 schema（代码里声明）      ③ 引用（场景数据）
+     assets/behaviors/*.ts                 BehaviorDef.params[]           ScriptComponent
+     defineBehavior({                        ├ {key:'count', kind:'int',    { behavior:'spawn-wave',
+       id: 'spawn-wave',                    │   min:1, max:50, default:8}   params:{ count:12 } }
+       run(ctx, params){...} })             └ {key:'prefab', kind:'assetRef'}
+```
+
+**为什么场景绝不存代码字符串**：
+① JSON 就成了远程代码执行入口（打开下载来的 `.scene.json` 即中招）；
+② 无法静态校验；③ 重构时改个函数名要全局搜 JSON。
+
+**最容易漏掉的一环是参数 schema**。如果行为只有 `run(ctx, params)` 而不声明参数结构，
+Inspector 就画不出控件（不知道 `count` 该是 slider 还是文本框、范围多少），
+结果 Script 组件只能靠手改 JSON 编辑 —— 功能等于没有。所以 `BehaviorParamSchema` 是**必需**的，
+字段覆盖 `number/int/bool/string/color/nodeRef/assetRef/enum` 八种控件类型。
+
+**失效处理**：行为被删 / 参数改名 → 加载时报 `warning`，组件降级为空操作，**不阻塞加载**
+（一个挂了的行为不该让整个场景打不开）。
+
+**热重载**：行为是 TS 模块，Vite HMR 天然支持。但 Play 模式下正在跑的实体持有旧闭包 ——
+**约定：Play 中禁用行为热重载**，或只对新生成实体生效。
 
 ---
 
@@ -379,6 +513,7 @@ export function migrateToCurrent(doc: unknown): SceneDocument;
 ### 7.3 目录约定
 
 ```
+aether.project.json                ← 项目锚点（路径根 / 场景清单 / 层表 / 渲染档位）
 assets/
   scenes/
     act1/act1-01-highway.scene.json      手工编辑的静态场景
@@ -388,10 +523,18 @@ assets/
     characters/zombie-E01.prefab.json    角色 prefab（roster → 场景的桥）
     rooms/room-combat-a.prefab.json      房间模板（程序生成原子）
     props/door.prefab.json
+  characters/models/E-04/rigged/
+    E04_rigged.glb                       源资产（LFS，只读）
+    E04_rigged.glb.meta.json             资产 sidecar（git，可写）← 导入设置/绑定/骨骼
   materials/
     library.mat.json                     共享材质库（跨场景复用）
+  behaviors/
+    spawn-wave.ts                        行为定义（代码资产，不落 JSON）
   style/
     *.post.json                          风格/后处理预设（EnvironmentData.postOverride 指向它）
+  input/
+    mobile-landscape.input.json          输入映射（GDD：横屏虚拟摇杆 + 右侧动作键）
+.workbuddy/cache/                        ← 派生/烘焙产物 + guid 索引（gitignore）
 ```
 
 ### 7.4 git 与 LFS
@@ -456,8 +599,10 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 
 | 阶段 | 交付 | 验收（可跑的判据） | 依赖 |
 |---|---|---|---|
-| **S0 · Schema**（✅ 已完） | `document.ts` + 28 例测试 | `npm run typecheck` + `vitest` 全绿 | — |
-| **S1 · 加载** | `migrate.ts` + `graph.ts` + `instantiate.ts` + `asset-server`；编辑器启动时从 `assets/scenes/*.scene.json` 加载，**删掉构造函数里硬编码的地面/胶囊** | 编辑器启动后画面与今天一致（地面还在，但来自文件）；`validateSceneDocument` 对示例场景零 error | S0 |
+| **S0 · 场景 Schema**（✅ 已完） | `document.ts` + 28 例测试 | `npm run typecheck` + `vitest` 全绿 | — |
+| **S0b · 项目 + 资产元数据**（✅ 已完） | `project.ts` + `asset-meta.ts` + 46 例测试；顺带修掉 schema 两处缺陷（`MaterialRef` 撞名、patch 字段与 `MaterialState` 不对齐） | `vitest` 95/95；scene 包类型检查零错误 | — |
+| **S0c · 落地文件**（建议紧接，半天） | 落地 `aether.project.json`；写 `tools/gen-asset-meta.mjs` 扫描 `assets/**/*.glb` 批量产出 sidecar（从 `roster.json` 填 `normalizeHeightM`、从 `_tools` 脚本参数填导入设置）；把现有骨骼绑定会话导出成 `.meta` | `npm run scene:check` 对全部场景/元数据零 error；改一次 `.meta` 的材质，所有引用它的场景同步生效 | S0b |
+| **S1 · 加载** | `migrate.ts` + `graph.ts` + `instantiate.ts` + `asset-server`（读 `.meta` 的导入设置与默认绑定）；编辑器启动时从 `assets/scenes/*.scene.json` 加载，**删掉构造函数里硬编码的地面/胶囊** | 编辑器启动后画面与今天一致（地面还在，但来自文件）；`validateSceneDocument` 对示例场景零 error | S0c |
 | **S2 · 保存** | Inspector 绑定组件 → 编辑 → 写回文件；Undo/Redo | 改一盏灯颜色 → 保存 → 重开 → 颜色还在；git diff 只一行 | S1 |
 | **S3 · Play mode** | 补 `App.tick` 主循环；Play/Stop 状态机；快照回滚；Play 期 GPU 资源登记与释放 | Play → 生成 10 只僵尸 → Stop → 场景回到原样；**连按 20 次 Play/Stop，显存无增长** | S2 |
 | **S4 · 灯光组件化** | `Light` 组件 + 多灯降级 + 环境面板改造 | 场景里放 3 盏灯，只有 1 主 1 点生效且落选者标黄；主题切换（火场/暗巷）改变画面 | S3 |
@@ -492,6 +637,9 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 - **ADR-012**：场景文件用扁平节点表 + parent 引用，不用嵌套树（diff 友好 / 无递归 / 与 propertyPath 一致）。
 - **ADR-013**：格式用 JSON + `schemaVersion` + 迁移链，不用二进制。二进制 .pak 是 Phase 4 运行时产物。
 - **ADR-014**：Edit/Play 严格分离 —— Play 前快照、Play 中只改副本、Stop 回滚 + 释放全部 Play 期 GPU 资源。
+- **ADR-015**：项目容器 `aether.project.json` 是锚点 —— 路径根、场景清单、层表、渲染档位、材质库/行为目录指针都在这里。单文件形态，一个仓库 = 一个项目。
+- **ADR-016**：资产附加数据走同名 sidecar `<file>.meta.json`（导入设置 + 默认绑定 + 骨骼/动画配置 + userData + sourceHash）。guid 保证重命名/移动不丢引用；索引是派生产物不进 git。归属判定问一句"换场景还在不在"。
+- **ADR-017**：脚本 = 行为注册表。代码资产 + `BehaviorParamSchema`（Inspector 据此画控件），场景只存 `behavior id + params`。绝不存代码字符串。
 
 ---
 
