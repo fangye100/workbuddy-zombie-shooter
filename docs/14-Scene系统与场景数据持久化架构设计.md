@@ -717,14 +717,28 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 | 1 | `migrate.ts` 迁移链 | ✅ | `packages/scene/src/migrate.ts`（16 例）。机制建好，暂无迁移项 |
 | 2 | `graph.ts` SceneGraph | ✅ | `packages/scene/src/graph.ts`（36 例） |
 | 3 | `asset-server.ts` | ✅ | **`packages/scene/src/asset-server.ts`**（20 例）—— 见 §15 ① 为何不建新包 |
-| 4 | `instantiate.ts` | ⏸ | 未做，见下面第 6 条（与渲染器改造一起做） |
+| 4 | `instantiate.ts` | ✅ | **`packages/scene/src/instantiate.ts`**（14 例，含端到端）。纯 CPU：不认材质槽位、不碰 GPU |
 | 5 | `default.scene.json` + 登记 | ✅ | `assets/scenes/sandbox/default.scene.json`（13 物体 + 光 + 相机），已登记 `scenes[]` |
-| 6 | 删硬编码几何 | ⏸ | **剩下的最后一步**，见 §15 ⑤（难点是 GPU 资源生命周期） |
+| 6 | 删硬编码几何 | ✅ | **已完成**：`renderer.ts` 的 specs 抽成 `buildDefaultSpecs()`（仅作 fallback），新增 `loadScene()` 从文件读。见 §15 ⑤ |
 | 7 | 骨骼会话导出进 `.meta.rig` | ⏸ | schema 已就绪（`RigSettings`），编辑器侧对接待 S1 Inspector |
+
+**S1 已完成**（2026-09-04）：编辑器的场景内容来自 `assets/scenes/sandbox/default.scene.json`，
+不再是构造函数里的常量。启动链路：`resolveStartScenePath()`（读 `aether.project.json`
+的 `scenes[startIndex]`，ADR-015）→ `renderer.loadScene()` → fetch → `migrateToLatest`
+→ `SceneGraph.fromDocument` → `updateWorldTransforms` → `instantiateScene` → `applySpecs`。
+
+判据（已进 `npm run editor:smoke` 的 B2 段）：`renderer.getSceneSource()` 非 null、
+url 指向 `.scene.json`、物体数 13、`category`/`pickable`/`background` 都来自文件。
 
 **S1 之外的收获**：#3 的接线顺手修掉一个真 bug —— 此前**所有** GLB 一律按
 `MODEL_RULER_HEIGHT_M`（E-04 的 2.05 m）归一化，**B-02 母体 4.0 m 载入后被压成 2.05 m**。
 现在各资产用自己的 `.meta.importer.normalizeHeightM`，缺失才回落全局标尺。
+
+#6 的接线又抓出两个（都是"先造文件没人读"的直接后果，见 §15 ②）：
+`default.scene.json` 的 `environment` 用了**旧 LabParams 扁平格式**（schema 是嵌套对象）、
+`materials[]` 写了 `subMesh: -1`（schema 是 `match: {by,value}`）—— **17 处全量不一致，
+门禁一片绿**。补完校验器后精确报出全部 17 处，已修正；`fogHeightFalloff` / `exposure`
+两个 LabParams 字段 schema 里原本无家可归，已补进 `EnvironmentData`。
 
 ---
 
@@ -768,19 +782,25 @@ ADR-014 要求 Play/Stop 能回滚。增量回滚要追踪每一处改动，
 一旦漏掉一处就是「回滚不干净」——这类 bug 极难复现也极难定位。
 节点上限 64，整图重建的代价可以忽略，换来的是**回滚结果可证明正确**。
 
-### ⑤ 剩下的一步，以及它真正的难点
+### ⑤ 换场景的 GPU 资源生命周期（已落地）
 
-`renderer.ts:453` 的 `specs` 仍是硬编码。要改成：
+`renderer.ts` 的 `specs` 已抽成 `buildDefaultSpecs()`（仅作 fallback），
+新增 `async loadScene(url)`：fetch → `migrateToLatest` → `SceneGraph.fromDocument`
+→ `updateWorldTransforms` → `instantiateScene` → `applySpecs`（销毁旧 GPU 资源 + 重建）。
 
-1. 把 `specs` 构造抽成 `buildDefaultSpecs()`（保留为 fallback）；
-2. 新增 `async loadScene(url)`：fetch → `migrateToLatest` → `SceneGraph.fromDocument`
-   → 遍历节点生成 `ObjectSpec[]` → 重建物体；
-3. `main.ts:110` 创建 renderer 之后调用（失败回落硬编码，不能让编辑器起不来）。
+**难点确实不是解析，是 GPU 资源生命周期。** 三个具体结论：
 
-**难点不是解析，是 GPU 资源生命周期**：重建物体前要销毁旧的
-vertex/index buffer 与相关 bind group，漏一处就是显存泄漏，
-而反复 Play/Stop 后 OOM 黑屏正是 §13 已列的风险项。
-这需要单独一轮、在清醒状态下处理，不适合搭在其他改动里顺手做。
+1. **`GPUBindGroup` 没有 `destroy()`**（WebGPU 规范里它不持有可回收资源）——
+   只有 `GPUBuffer` / `GPUTexture` 需要显式销毁。所以换场景要销毁的是：
+   `vertexBuffer` / `indexBuffer` / `skinBuffer` / `skinVb` / **独占的** `texture`。
+2. **`ownsTexture` 会骗人**：地面物体的 `ownsTexture = true`，但它"拥有"的
+   `gridTex` 是渲染器跨场景复用的共享资源。销毁它 → 第二次加载就没地面贴图了。
+   判据必须是 `o.ownsTexture && o.texture !== this.gridTex`。
+3. **`applySpecs` 抛错时场景已被清空**（先销毁后重建），所以 catch 里必须重建
+   fallback，否则编辑器变空白且无从恢复。
+
+验证：`npm run editor:smoke` 的 B2 段 + 0 console error / 0 exception。
+反复加载的泄漏尚未做长时间压测（Play/Stop 循环见 §13 风险项）。
 
 ### ⑥ `SceneNode.userData` 是临时寄居地，记得转正
 
@@ -790,3 +810,48 @@ vertex/index buffer 与相关 bind group，漏一处就是显存泄漏，
 当时把它们放进 `userData` 是为了避免「场景文件表达不了当前画面，
 于是硬编码继续留在代码里」—— 两害相权取其轻。
 **S2 做 Inspector 时必须提到正式 schema**，已在 `document.ts` 的字段注释里标注。
+
+S1 收尾时又寄居了一项 **`category`**（层级面板分类）。场景 schema 里
+`MeshRenderer` 只有 `layer`（0..7，当前全是 0），没有分类字段，
+而层级面板要靠它分组。同类问题、同样处理、同样在 S2 一起转正。
+
+### ⑦ SPA fallback：HTTP 200 + index.html，最难查的一种失败
+
+dev server 的 vite `root` 是 `apps/editor`，项目根的 `assets/**` 与
+`aether.project.json` **都不在它下面**。直接 `fetch('/assets/scenes/x.scene.json')`
+会命中 SPA fallback —— 返回 **HTTP 200 + index.html**：
+
+```text
+res.ok        === true     ← 看起来完全成功
+res.status    === 200
+await res.json() → SyntaxError: Unexpected token '<'   ← 只有这里才暴露
+```
+
+`if (!res.ok)` 拦不住它，所以**必须走 `/__fs/file?path=` 端点**（资产库一直在用，
+场景与项目文件跟它统一，见 `asset-util.ts` 的 `fileUrl()` / `readProjectFile()`）。
+
+两个配套教训：
+- **降级不等于丢信息**：`readProjectFile` 返回体里带 `error` 字段，
+  否则排障时只能看到「HTTP 0」，看不到 `network down`。
+- **这类失败不会进 console error**，冒烟测试的 `CONSOLE ERRORS: 0` 照样是 0。
+  判断"到底读没读到文件"必须靠**可断言的判据**，见 §15 ⑧。
+
+### ⑧ 「读了文件」和「用了 fallback」必须有能区分的判据
+
+fallback 与场景文件当前都是 **13 个物体、名字也一样**，光看物体数**区分不出**
+到底读了文件没有 —— 场景加载悄悄失败、编辑器照常显示默认物体，看起来一切正常。
+
+所以 `loadScene()` 成功后要记 `loadedScene = { url, objects, at }`，
+暴露 `getSceneSource()`：**null 就说明读的不是文件**。
+已进 `editor:smoke` 的 B2 段，是 S1 的实际落点证明。
+
+### ⑨ 校验器不验的字段 = 门禁假绿
+
+`validateSceneDocument` 原本**完全不校验** `environment` / `editorCamera` /
+`MeshRenderer` 内部（`source` / `materials`）—— 只查了组件 `kind` 是否合法。
+结果手写场景文件时用错了两套格式（旧 LabParams 扁平 environment、
+`subMesh: -1` 而非 `match: {by,value}`），**17 处全量不一致，门禁一片绿**。
+
+补完校验器后一次报出全部 17 处。**规律：schema 有多少字段，校验器就得覆盖多少字段，
+否则没覆盖的那部分等于没有 schema。**（与 `docs/09 §8.1 ③` 同一条：门禁要验证"会拦住错误"，
+不能只报绿 —— 这次是同一个坑在 scene 包里又踩了一遍。）

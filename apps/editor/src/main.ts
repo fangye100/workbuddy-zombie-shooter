@@ -10,6 +10,7 @@ import type { GltfResult } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
+import { resolveStartScenePath } from './scene-boot';
 import { BindingPanel } from './services/binding/binding-panel';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
@@ -121,6 +122,25 @@ async function boot(): Promise<void> {
   const panel = new Panel(groups, inspPanes, renderer);
   // 材质 API 要按 id 回查共享材质（params.materials），先把引用挂上
   renderer.attachParams(panel.params);
+
+  // ---- 场景加载（ADR-010：场景是唯一数据载体；ADR-015：项目容器是路径锚点）----
+  // 构造期那组硬编码物体只是 fallback，真内容从这里读。失败不阻断启动：
+  // 控制台告警 + 保留 fallback 场景 —— 场景文件坏了不该让编辑器起不来。
+  void (async () => {
+    const start = await resolveStartScenePath();
+    if (start.warning !== null) {
+      console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
+    }
+    const r = await renderer.loadScene(start.path);
+    if (!r.ok) {
+      console.warn(`[boot] 场景加载失败（${r.reason ?? '未知'}），保留硬编码 fallback 场景`);
+      return;
+    }
+    for (const w of r.warnings ?? []) console.warn(`[boot] 场景告警：${w}`);
+    console.info(
+      `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
+    );
+  })();
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
   const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {

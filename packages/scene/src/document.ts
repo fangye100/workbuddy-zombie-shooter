@@ -187,9 +187,27 @@ export interface MeshRendererComponent extends ComponentBase {
   importScale: number;
 }
 
+export type BuiltinShape = 'box' | 'sphere' | 'cylinder' | 'capsule' | 'plane';
+
+/**
+ * 每种程序化几何的参数**名与个数**（校验器与 instantiate 共用 —— 单一真源）。
+ *
+ * 必须与 `packages/scene/src/geometry.ts` 的 createXxx 签名一致：
+ * box(w,h,d) / sphere(radius,segments,rings) / cylinder(radius,height,segments) /
+ * capsule(radius,cylinderHeight,segments,rings) / plane(size,subdivisions)。
+ * 不一致的后果是"文件里写了 4 个数、造网格时只传了 3 个"这类静默错位。
+ */
+export const BUILTIN_SHAPE_PARAMS: Readonly<Record<BuiltinShape, readonly string[]>> = {
+  box: ['width', 'height', 'depth'],
+  sphere: ['radius', 'segments', 'rings'],
+  cylinder: ['radius', 'height', 'segments'],
+  capsule: ['radius', 'cylinderHeight', 'segments', 'rings'],
+  plane: ['size', 'subdivisions'],
+};
+
 export type MeshSource =
-  /** 程序化几何（地面 / 碰撞盒 / 占位体），参数按 shape 约定 */
-  | { type: 'builtin'; shape: 'box' | 'sphere' | 'cylinder' | 'capsule' | 'plane'; params: number[] }
+  /** 程序化几何（地面 / 碰撞盒 / 占位体），参数按 BUILTIN_SHAPE_PARAMS 约定 */
+  | { type: 'builtin'; shape: BuiltinShape; params: number[] }
   /** 外部资产 */
   | { type: 'asset'; ref: AssetRef };
 
@@ -429,8 +447,11 @@ export interface EnvironmentData {
     ground: ColorHex;
     groundIntensity: number;
   };
-  fog: { color: ColorHex; density: number };
+  /** `heightFalloff`：高度雾衰减（越高越淡）。原属 LabParams，随场景落盘 */
+  fog: { color: ColorHex; density: number; heightFalloff: number };
   rim: { color: ColorHex; intensity: number; power: number; topBias: number };
+  /** 曝光。原属 LabParams（UI 可调的渲染调试参数），成为场景内容后每个场景可不同 */
+  exposure: number;
   /**
    * 风格 / 后处理覆写：引用 assets/style/*.post.json。
    * null = 用引擎默认（由 tokens.json 生成，经 UI 层注入，见 ADR-007）。
@@ -447,8 +468,9 @@ export function defaultEnvironment(): EnvironmentData {
       ground: '#3a2f28',
       groundIntensity: 0.18,
     },
-    fog: { color: '#0e1013', density: 0.012 },
+    fog: { color: '#0e1013', density: 0.012, heightFalloff: 0.08 },
     rim: { color: '#ffffff', intensity: 0.5, power: 2.5, topBias: 0.35 },
+    exposure: 1,
     postOverride: null,
   };
 }
@@ -734,6 +756,156 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
   if (d.entryCamera !== null && d.entryCamera !== undefined && !byId.has(d.entryCamera)) {
     err('/entryCamera', 'E_ENTRY_CAMERA', `entryCamera 指向不存在的节点：${d.entryCamera}`);
   }
+
+  // ---- environment（全局单例环境，不是组件）----
+  // ⚠️ 这段是 2026-09-04 补的：此前校验器完全不验 environment / editorCamera /
+  // MeshRenderer 内部，导致「手写的场景文件用了旧 LabParams 扁平格式、schema 是嵌套对象」
+  // 这种全量不一致**门禁一片绿**。教训复现见 docs/09 §8.1 ③。
+  const env = d.environment;
+  if (typeof env !== 'object' || env === null) {
+    err('/environment', 'E_ENV', 'environment 缺失或不是对象');
+  } else {
+    const group = (
+      key: 'ambient' | 'hemisphere' | 'fog' | 'rim',
+      fields: readonly string[],
+      numeric: readonly string[],
+    ): void => {
+      const bag = env as unknown as Record<string, unknown>;
+      const g = bag[key];
+      if (typeof g !== 'object' || g === null) {
+        err(`/environment/${key}`, 'E_ENV_GROUP', `${key} 缺失或不是对象`);
+        return;
+      }
+      const o = g as Record<string, unknown>;
+      for (const f of fields) {
+        if (!HEX_RE.test(String(o[f]))) {
+          err(`/environment/${key}/${f}`, 'E_COLOR', `${key}.${f} 颜色格式非法：${String(o[f])}`);
+        }
+      }
+      for (const f of numeric) {
+        if (typeof o[f] !== 'number' || !Number.isFinite(o[f])) {
+          err(`/environment/${key}/${f}`, 'E_ENV_NUM', `${key}.${f} 必须是有限数`);
+        }
+      }
+    };
+    group('ambient', ['color'], ['intensity']);
+    group('hemisphere', ['sky', 'ground'], ['skyIntensity', 'groundIntensity']);
+    group('fog', ['color'], ['density', 'heightFalloff']);
+    group('rim', ['color'], ['intensity', 'power', 'topBias']);
+    if (typeof env.exposure !== 'number' || !Number.isFinite(env.exposure)) {
+      err('/environment/exposure', 'E_ENV_NUM', 'exposure 必须是有限数');
+    }
+  }
+
+  // ---- editorCamera ----
+  const cam = d.editorCamera;
+  if (typeof cam !== 'object' || cam === null) {
+    err('/editorCamera', 'E_EDITOR_CAM', 'editorCamera 缺失或不是对象');
+  } else {
+    if (!isVec3(cam.target)) err('/editorCamera/target', 'E_EDITOR_CAM_TARGET', 'target 必须是 3 个有限数');
+    if (!(cam.distance > 0)) err('/editorCamera/distance', 'E_EDITOR_CAM_DIST', 'distance 必须 > 0');
+    for (const k of ['yaw', 'elevation'] as const) {
+      if (typeof cam[k] !== 'number' || !Number.isFinite(cam[k])) {
+        err(`/editorCamera/${k}`, 'E_EDITOR_CAM_ANGLE', `${k} 必须是有限数（弧度）`);
+      }
+    }
+  }
+
+  // ---- MeshRenderer 组件内部（source / materials）----
+  d.nodes.forEach((n, i) => {
+    const comps = n?.components;
+    if (!Array.isArray(comps)) return;
+    comps.forEach((c, ci) => {
+      if (c?.kind !== ComponentKind.MeshRenderer) return;
+      const at = `/nodes/${i}/components/${ci}`;
+      const m = c as Partial<MeshRendererComponent>;
+
+      const src = m.source;
+      if (typeof src !== 'object' || src === null) {
+        err(`${at}/source`, 'E_MESH_SOURCE', 'MeshRenderer 缺少 source');
+        return;
+      }
+      if (src.type === 'builtin') {
+        if (!(src.shape in BUILTIN_SHAPE_PARAMS)) {
+          err(`${at}/source/shape`, 'E_MESH_SHAPE', `未知的 builtin 形状：${String(src.shape)}`);
+        } else {
+          const want = BUILTIN_SHAPE_PARAMS[src.shape];
+          if (!Array.isArray(src.params) || src.params.length !== want.length) {
+            err(
+              `${at}/source/params`,
+              'E_MESH_PARAMS',
+              `${src.shape} 需要 ${want.length} 个参数 [${want.join(', ')}]，实际 ${Array.isArray(src.params) ? src.params.length : '非数组'} 个`,
+            );
+          } else if (src.params.some((p) => typeof p !== 'number' || !Number.isFinite(p))) {
+            err(`${at}/source/params`, 'E_MESH_PARAMS_NUM', 'params 必须全是有限数');
+          }
+        }
+      } else if (src.type === 'asset') {
+        const ref = src.ref;
+        if (typeof ref !== 'object' || ref === null || typeof ref.path !== 'string') {
+          err(`${at}/source/ref`, 'E_MESH_REF', 'asset 类型的 source 必须有 ref.path');
+        }
+      } else {
+        err(`${at}/source/type`, 'E_MESH_SOURCE_TYPE', `source.type 必须是 'builtin' 或 'asset'`);
+      }
+
+      if (!Array.isArray(m.materials)) {
+        err(`${at}/materials`, 'E_MESH_MATERIALS', 'materials 必须是数组');
+        return;
+      }
+      m.materials.forEach((b, bi) => {
+        const bt = `${at}/materials/${bi}`;
+        const match = b?.match;
+        if (typeof match !== 'object' || match === null) {
+          err(`${bt}/match`, 'E_BIND_MATCH', '材质绑定缺少 match');
+          return;
+        }
+        // 取成 unknown 再判：直接用 match.by 判别式窄化会让 else 分支塌成 never，
+        // 那里还要读它拼错误信息（TS2339）。文件是外部输入，本来就不能信类型。
+        const by: unknown = match.by;
+        if (by === 'index') {
+          if (typeof match.value !== 'number' || !Number.isInteger(match.value)) {
+            err(`${bt}/match/value`, 'E_BIND_MATCH_INDEX', 'match.by=index 时 value 必须是整数');
+          }
+        } else if (by === 'primitiveKey' || by === 'nodePath' || by === 'nodeName') {
+          if (typeof match.value !== 'string') {
+            err(`${bt}/match/value`, 'E_BIND_MATCH_STR', `match.by=${String(by)} 时 value 必须是字符串`);
+          }
+        } else {
+          err(`${bt}/match/by`, 'E_BIND_MATCH_BY', `未知的匹配方式：${String(by)}`);
+        }
+        // binding 递归判定（override 嵌套，深度上限防环）
+        const checkRef = (r: unknown, path: string, depth: number): void => {
+          if (depth > 8) {
+            err(path, 'E_BIND_DEEP', '材质绑定嵌套超过 8 层，疑似环');
+            return;
+          }
+          if (typeof r !== 'object' || r === null) {
+            err(path, 'E_BIND_REF', 'binding 缺失或不是对象');
+            return;
+          }
+          const b = r as { type?: string; id?: unknown; base?: unknown };
+          if (b.type === 'shared') {
+            if (typeof b.id !== 'string' || b.id.length === 0) {
+              err(`${path}/id`, 'E_BIND_ID', 'shared 绑定必须有非空 id');
+            }
+          } else if (b.type === 'instance') {
+            if (typeof b.id !== 'string' || b.id.length === 0) {
+              err(`${path}/id`, 'E_BIND_ID', 'instance 绑定必须有非空 id');
+            }
+            if (typeof b.base !== 'string' || b.base.length === 0) {
+              err(`${path}/base`, 'E_BIND_BASE', 'instance 绑定必须有非空 base');
+            }
+          } else if (b.type === 'override') {
+            checkRef(b.base, `${path}/base`, depth + 1);
+          } else {
+            err(`${path}/type`, 'E_BIND_TYPE', `未知的绑定类型：${String(b.type)}`);
+          }
+        };
+        checkRef(b?.material, `${bt}/material`, 0);
+      });
+    });
+  });
 
   return out;
 }
