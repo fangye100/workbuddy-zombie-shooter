@@ -49,9 +49,17 @@ export interface InstantiatedObject {
    * 无绑定或绑定非法时为 null —— 由调用方决定回落哪个材质。
    */
   materialId: string | null;
+  /** 层级面板分类标签（来自 SceneNode.category，S2a 起为正式字段） */
+  category: string;
+  /** 上下浮动动画相位（来自 MeshRendererComponent.bob），0 = 不浮动 */
+  bob: number;
+  /** 顶点 AO 烘焙范围（来自 MeshRendererComponent.aoMin/aoMax），null = 不烘 */
+  ao: { min: number; max: number } | null;
+  /** 背景物体标记（来自 MeshRendererComponent.background） */
+  background: boolean;
   /**
-   * 原样透传的标注（bob / aoMin / aoMax / background…）。
-   * ⚠️ 临时寄居：S2 做 Inspector 时要把它们提到正式 schema（见 document.ts 的注释）。
+   * 原样透传的自由标注。S2a 起 bob / ao* / background / category 已转正为正式字段，
+   * 这里只保留无法归类的自由标注，读取方一律走正式字段、userData 仅作兜底。
    */
   userData: Record<string, number | string | boolean>;
 }
@@ -149,6 +157,12 @@ export function instantiateScene(graph: SceneGraph): InstantiateResult {
     }
 
     const w = node.world;
+    // S2a 起 bob/ao*/background 是 MeshRendererComponent 的正式字段；
+    // category 是 SceneNode 的正式字段。userData 仅作兜底（兼容未迁移的存量）。
+    const ao =
+      comp.aoMin !== undefined && comp.aoMax !== undefined
+        ? { min: comp.aoMin, max: comp.aoMax }
+        : null;
     objects.push({
       nodeId: node.id,
       name: node.name,
@@ -160,6 +174,10 @@ export function instantiateScene(graph: SceneGraph): InstantiateResult {
       source: comp.source,
       mesh,
       materialId: resolveMaterialId(comp.materials),
+      category: typeof node.category === 'string' ? node.category : '道具',
+      bob: typeof comp.bob === 'number' ? comp.bob : 0,
+      ao,
+      background: comp.background === true,
       userData: node.userData ?? {},
     });
   });

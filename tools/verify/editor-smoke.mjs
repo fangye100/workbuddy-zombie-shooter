@@ -349,7 +349,7 @@ async function main() {
       `list=${sceneObjs.length} scene=${src === null ? 'null' : src.objects}`,
     );
     check(
-      'category 来自 userData（角色=角色，敌人6=敌人，地面=环境）',
+      'category 来自正式字段（S2a 转正；角色=角色，敌人6=敌人，地面=环境）',
       byName['角色 Character']?.c === '角色' &&
         byName['敌人 Enemy 6']?.c === '敌人' &&
         byName['地面 Ground']?.c === '环境',

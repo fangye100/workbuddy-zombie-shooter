@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "sc_sandbox_default",
   "name": "Sandbox · 默认场景",
   "act": null,
@@ -172,9 +172,7 @@
         }
       ],
       "prefab": null,
-      "userData": {
-        "category": "环境"
-      }
+      "category": "环境"
     },
     {
       "id": "nd_char00000",
@@ -228,15 +226,13 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "aoMin": -0.84,
-        "aoMax": 0.84,
-        "category": "角色"
-      }
+      "category": "角色"
     },
     {
       "id": "nd_sphere0000",
@@ -293,9 +289,7 @@
         }
       ],
       "prefab": null,
-      "userData": {
-        "category": "道具"
-      }
+      "category": "道具"
     },
     {
       "id": "nd_box000000",
@@ -352,9 +346,7 @@
         }
       ],
       "prefab": null,
-      "userData": {
-        "category": "道具"
-      }
+      "category": "道具"
     },
     {
       "id": "nd_cylinder0",
@@ -411,9 +403,7 @@
         }
       ],
       "prefab": null,
-      "userData": {
-        "category": "道具"
-      }
+      "category": "道具"
     },
     {
       "id": "nd_cloth0000",
@@ -467,15 +457,13 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": -0.6,
+          "aoMax": 0.6
         }
       ],
       "prefab": null,
-      "userData": {
-        "aoMin": -0.6,
-        "aoMax": 0.6,
-        "category": "道具"
-      }
+      "category": "道具"
     },
     {
       "id": "nd_enemy0000",
@@ -529,16 +517,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 0,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 0,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_enemy0001",
@@ -592,16 +578,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 0.7,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 0.7,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_enemy0002",
@@ -655,16 +639,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 1.4,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 1.4,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_enemy0003",
@@ -718,16 +700,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 2.0999999999999996,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 2.0999999999999996,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_enemy0004",
@@ -781,16 +761,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 2.8,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 2.8,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_enemy0005",
@@ -844,16 +822,14 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "bob": 3.5,
+          "aoMin": -0.84,
+          "aoMax": 0.84
         }
       ],
       "prefab": null,
-      "userData": {
-        "bob": 3.5,
-        "category": "敌人",
-        "aoMin": -0.84,
-        "aoMax": 0.84
-      }
+      "category": "敌人"
     },
     {
       "id": "nd_sky000000",
@@ -906,14 +882,12 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "background": true
         }
       ],
       "prefab": null,
-      "userData": {
-        "background": true,
-        "category": "环境"
-      }
+      "category": "环境"
     }
   ],
   "meta": {

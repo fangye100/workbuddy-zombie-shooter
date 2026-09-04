@@ -357,7 +357,7 @@ interface ObjectSpec {
   background?: boolean;
   /**
    * 顶点 AO 烘焙范围（局部 Y）；null / 缺省 = 不烘。
-   * 来自场景节点的 `userData.aoMin` / `userData.aoMax`（S2 转正前的临时寄居）。
+   * 来自 MeshRendererComponent.aoMin / aoMax（S2a 转正的正式字段）。
    */
   ao?: { min: number; max: number } | null;
 }
@@ -791,19 +791,16 @@ export class LabRenderer {
       if (o.materialId !== null && idx === null) {
         warnings.push(`${o.name}：材质 id 「${o.materialId}」不是共享材质，已回落 mat0`);
       }
-      const aoMin = o.userData['aoMin'];
-      const aoMax = o.userData['aoMax'];
       specs.push({
         mesh: o.mesh,
         material: idx ?? 0,
         pos: [o.position[0], o.position[1], o.position[2]],
-        bob: typeof o.userData['bob'] === 'number' ? (o.userData['bob'] as number) : 0,
+        bob: o.bob,
         name: o.name,
         pickable: o.pickable,
-        category: typeof o.userData['category'] === 'string' ? String(o.userData['category']) : '道具',
-        background: o.userData['background'] === true,
-        ao:
-          typeof aoMin === 'number' && typeof aoMax === 'number' ? { min: aoMin, max: aoMax } : null,
+        category: o.category,
+        background: o.background,
+        ao: o.ao,
       });
     }
 

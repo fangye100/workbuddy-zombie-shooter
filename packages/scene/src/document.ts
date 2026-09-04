@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -185,6 +185,14 @@ export interface MeshRendererComponent extends ComponentBase {
    * 存盘是为了换模型时保持身高一致，也便于审计"这个物体被缩放过"。
    */
   importScale: number;
+  /** 上下浮动动画相位（渲染期）；0 = 不浮动 */
+  bob?: number;
+  /** 顶点 AO 烘焙范围（局部 Y 下限），配合 aoMax 烘接地 AO */
+  aoMin?: number;
+  /** 顶点 AO 烘焙范围（局部 Y 上限） */
+  aoMax?: number;
+  /** 背景物体标记（天空穹顶 / 网格底）：不进层级 / 不拾取 / 不可选 */
+  background?: boolean;
 }
 
 export type BuiltinShape = 'box' | 'sphere' | 'cylinder' | 'capsule' | 'plane';
@@ -415,16 +423,17 @@ export interface SceneNode {
   visible: boolean;
   /** 是否可被鼠标拾取。地面/天空设 false，避免点空白就选中地板 */
   pickable: boolean;
+  /** 层级面板分类标签（环境 / 角色 / 道具 / 敌人…）；纯展示，不影响渲染行为 */
+  category?: string;
   components: ComponentData[];
   /** 非 null 时本节点是预制体实例：components 只存 override 子集 */
   prefab: PrefabInstance | null;
   /**
-   * 非标准标注（Inspector 不解释，原样透传）。
+   * 非标准自由标注（Inspector 不解释，原样透传）。
    *
-   * ⚠️ **临时寄居地**：`bob`（上下浮动，渲染期动画）、`aoMin`/`aoMax`（顶点 AO 烘焙
-   * 范围）、`background`（天空穹顶：不进层级/不拾取/不可选）这三项是渲染期行为参数，
-   * 严格说该是组件字段。S2 做 Inspector 时会把它们从 userData 提到正式 schema。
-   * 在此之前先落盘，避免"场景文件表达不了当前画面"而让硬编码继续留在代码里。
+   * v2 起 `bob` / `aoMin` / `aoMax` / `background` / `category` 已转正为正式字段
+   * （bob、ao*、background 落在 MeshRendererComponent，category 落在 SceneNode），
+   * 这里只保留无法归类的自由标注。读取方一律走正式字段，userData 仅作兜底。
    */
   userData?: Record<string, number | string | boolean>;
 }

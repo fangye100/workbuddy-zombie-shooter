@@ -22,6 +22,7 @@
  */
 
 import {
+  ComponentKind,
   SCHEMA_VERSION,
   validateSceneDocument,
   type SceneDiagnostic,
@@ -180,3 +181,64 @@ export function migrateTo(doc: unknown, target: number): MigrateResult {
   const diagnostics = validateSceneDocument(migrated);
   return { doc: migrated as unknown as SceneDocument, from, to: target, applied, diagnostics };
 }
+
+// ---------------------------------------------------------------- S2a：v1 → v2 迁移
+
+/**
+ * S2a（userData 转正）：把 v1 临时寄居在 `userData` 的渲染期行为参数提到正式 schema。
+ *
+ * - `bob` / `aoMin` / `aoMax` / `background` → 节点的 MeshRendererComponent
+ * - `category` → 节点本身（SceneNode.category）
+ * 这 5 个键从 userData 剔除；剔除后若 userData 变空则连键一起删。
+ *
+ * 兜底：仅当正式字段尚不存在时才写入，避免覆盖已经转正的值（幂等、可重复跑）。
+ */
+export const migrateV1ToV2: MigrationStep = {
+  from: 1,
+  to: 2,
+  name: 'userdata-to-schema',
+  run(doc) {
+    const nodes = doc['nodes'];
+    if (!Array.isArray(nodes)) return doc;
+    const FORMAL = ['bob', 'aoMin', 'aoMax', 'background', 'category'] as const;
+    for (const n of nodes as Array<Record<string, unknown>>) {
+      const ud = (n['userData'] as Record<string, unknown> | undefined) ?? {};
+
+      // node 级：category
+      if (typeof ud['category'] === 'string' && n['category'] === undefined) {
+        n['category'] = ud['category'];
+      }
+
+      // component 级：bob / aoMin / aoMax / background
+      const comps = n['components'];
+      if (Array.isArray(comps)) {
+        const mesh = comps.find(
+          (c) => (c as Record<string, unknown>)?.['kind'] === ComponentKind.MeshRenderer,
+        ) as Record<string, unknown> | undefined;
+        if (mesh) {
+          if (typeof ud['bob'] === 'number') mesh['bob'] = ud['bob'];
+          if (typeof ud['aoMin'] === 'number') mesh['aoMin'] = ud['aoMin'];
+          if (typeof ud['aoMax'] === 'number') mesh['aoMax'] = ud['aoMax'];
+          if (ud['background'] === true) mesh['background'] = true;
+        }
+      }
+
+      // 剔除已转正的键
+      for (const k of FORMAL) delete ud[k];
+      if (Object.keys(ud).length === 0) delete n['userData'];
+    }
+    return doc;
+  },
+};
+
+/**
+ * 注册全部历史迁移。幂等：已注册则跳过（测试 clearMigrations 后再调不会重复抛）。
+ * 模块加载时即调用一次，保证 migrateToLatest 在任何入口都可用。
+ */
+export function registerSceneMigrations(): void {
+  if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
+    registerMigration(migrateV1ToV2);
+  }
+}
+
+registerSceneMigrations();
