@@ -710,16 +710,83 @@ core(L0) → gfx(L1) → framegraph(L2) → render(L3) → scene/graph(L4)
 
 **已完成**：S0 场景 schema · S0b 项目 + 资产元数据 · S0c 落地文件与门禁。
 
-**S1 待办**（目标：编辑器的场景内容来自文件，而不是构造函数）：
+**S1 进度**（目标：编辑器的场景内容来自文件，而不是构造函数）：
 
-1. `packages/scene/src/migrate.ts` —— 迁移链骨架（当前无迁移项，先把机制建起来）。
-2. `packages/scene/src/graph.ts` —— `SceneGraph`：NodeId→row 索引、TRS 存取、脏标记变换传播。
-3. `packages/assets/src/asset-server.ts` —— **读 `.meta` 的导入设置与默认绑定**，`AssetRef/guid` → `MeshData`/纹理，带缓存。
-4. `packages/scene/src/instantiate.ts` —— Document + AssetServer → `SceneObject[]`（复用现有 `addObject` 逻辑）；
-   `PrimitiveBinding` ⇄ `MaterialBindingRef` 的转换放这一层（**不放 schema**，避免 scene 包反向依赖 render 包）。
-5. 把 `assets/scenes/sandbox/default.scene.json` 造出来（内容 = 今天编辑器里硬编码的那三样：地面 + 胶囊 + 一盏主光），
-   并登记进 `aether.project.json` 的 `scenes[]`。
-6. 删除 `LabRenderer` 构造函数里的硬编码几何（`renderer.ts:431-436`）。
-7. 编辑器保存时把骨骼绑定**会话与配方**写进 `.meta.rig`（补完 S0d 的编辑器对接，
-   彻底解决"摆完骨骼刷新就丢"）。**只写配方，不写绑定结果** —— 结果在点导出那一刻
-   已经进了 GLB，再写一份就是双真源（§3.8.1）。
+| # | 原计划 | 状态 | 实际落点 |
+|---|---|---|---|
+| 1 | `migrate.ts` 迁移链 | ✅ | `packages/scene/src/migrate.ts`（16 例）。机制建好，暂无迁移项 |
+| 2 | `graph.ts` SceneGraph | ✅ | `packages/scene/src/graph.ts`（36 例） |
+| 3 | `asset-server.ts` | ✅ | **`packages/scene/src/asset-server.ts`**（20 例）—— 见 §15 ① 为何不建新包 |
+| 4 | `instantiate.ts` | ⏸ | 未做，见下面第 6 条（与渲染器改造一起做） |
+| 5 | `default.scene.json` + 登记 | ✅ | `assets/scenes/sandbox/default.scene.json`（13 物体 + 光 + 相机），已登记 `scenes[]` |
+| 6 | 删硬编码几何 | ⏸ | **剩下的最后一步**，见 §15 ⑤（难点是 GPU 资源生命周期） |
+| 7 | 骨骼会话导出进 `.meta.rig` | ⏸ | schema 已就绪（`RigSettings`），编辑器侧对接待 S1 Inspector |
+
+**S1 之外的收获**：#3 的接线顺手修掉一个真 bug —— 此前**所有** GLB 一律按
+`MODEL_RULER_HEIGHT_M`（E-04 的 2.05 m）归一化，**B-02 母体 4.0 m 载入后被压成 2.05 m**。
+现在各资产用自己的 `.meta.importer.normalizeHeightM`，缺失才回落全局标尺。
+
+---
+
+## 15. 落地教训（S1 实施实录）
+
+通用工程教训（星号导出撞名、门禁有效性验证、CRLF 判据、测试单例污染、
+并行 session 的失败归因）见 **`docs/09 §8.1`**，不在此重复 —— 单一真源。
+本节只记 **Scene 数据层专属**的决策与判据。
+
+### ① 加载器放 `packages/scene`，不新建 `packages/assets`
+
+原计划要建 `packages/assets/src/asset-server.ts`，**实际没建**。理由：
+
+- asset-server 的全部依赖就是同包 `asset-meta.ts` 的 schema，建新包换不来任何隔离；
+- `tsconfig.check.json` 的 `include` 是**显式白名单**，漏写包路径 → **typecheck 完全不覆盖**，
+  这种"静默失效"比多一层目录危险得多；
+- 不为想象中的包建目录。等它真长出「guid 索引重建 / 字节流缓存 / 写入回存」再拆不迟。
+
+### ② 顺序反了会白干：**先让 schema 有消费者，再造场景文件**
+
+S1 开工时的状态是：1590 行 schema + 111 例测试 + 28 个 sidecar，**运行时消费者为零**。
+
+此时如果先做第 5 条（造 `default.scene.json`），只会**再多一个没人读的文件**，
+把纸面工程堆厚一层。**正确顺序是先打通一条最窄的消费链路**：
+让编辑器真读一次 `.meta.json`（只消费 `normalizeHeightM` 一个字段），
+零消费者 → 一，schema 才从纸面变成活的。
+
+选这条链路的三个理由：① 不动渲染管线，风险最低；② 立刻验证 sidecar 格式对不对；
+③ **把来源显示在界面上**（「.meta 指定」/「回落全局标尺，无 .meta」）——
+新架构生没生效，看得见才算接上。
+
+### ③ 容量上限必须抛错，不能静默丢
+
+`MAX_NODES = 64`（对应 `packages/render/src/frame-uniforms.ts` 的 `MAX_OBJECTS`）。
+静默丢弃的表现是**「第 65 个物件神秘消失」**——用户会当成渲染 bug 排查很久。
+所以 `addNode` 超限时抛错，错误信息里写清「大量同类实体走 instancing，不要建节点」。
+
+### ④ `restore` 整图重建，不做增量回滚
+
+ADR-014 要求 Play/Stop 能回滚。增量回滚要追踪每一处改动，
+一旦漏掉一处就是「回滚不干净」——这类 bug 极难复现也极难定位。
+节点上限 64，整图重建的代价可以忽略，换来的是**回滚结果可证明正确**。
+
+### ⑤ 剩下的一步，以及它真正的难点
+
+`renderer.ts:453` 的 `specs` 仍是硬编码。要改成：
+
+1. 把 `specs` 构造抽成 `buildDefaultSpecs()`（保留为 fallback）；
+2. 新增 `async loadScene(url)`：fetch → `migrateToLatest` → `SceneGraph.fromDocument`
+   → 遍历节点生成 `ObjectSpec[]` → 重建物体；
+3. `main.ts:110` 创建 renderer 之后调用（失败回落硬编码，不能让编辑器起不来）。
+
+**难点不是解析，是 GPU 资源生命周期**：重建物体前要销毁旧的
+vertex/index buffer 与相关 bind group，漏一处就是显存泄漏，
+而反复 Play/Stop 后 OOM 黑屏正是 §13 已列的风险项。
+这需要单独一轮、在清醒状态下处理，不适合搭在其他改动里顺手做。
+
+### ⑥ `SceneNode.userData` 是临时寄居地，记得转正
+
+`bob`（上下浮动）、`aoMin`/`aoMax`（顶点 AO 烘焙范围）、`background`（天空穹顶不进层级）
+这三项是**渲染期行为参数**，严格说该是组件字段。
+
+当时把它们放进 `userData` 是为了避免「场景文件表达不了当前画面，
+于是硬编码继续留在代码里」—— 两害相权取其轻。
+**S2 做 Inspector 时必须提到正式 schema**，已在 `document.ts` 的字段注释里标注。
