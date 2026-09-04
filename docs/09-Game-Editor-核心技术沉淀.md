@@ -120,6 +120,92 @@ graph LR
 | 平滑法线随机炸尖刺 | 整数哈希键碰撞（~30%） | 量化坐标字符串键 |
 | 手搓 GLB 后 JSON.parse 报错 | JSON chunk 用 0x00 补齐 | 规范：JSON 补 0x20，BIN 才补 0x00 |
 | 全新 clone 跑不起测试 | 测试 import 的辅助文件漏提交 | testGlb.ts 入库 |
+| 新增类型后 typecheck 报 **TS2308** | 同包星号导出撞名（本仓已踩 3 次，见 §8.1） | 新增导出前 grep 全包；真源留一处，其余 import + 转出 |
+| 门禁加了断言，注入故障后**仍然全绿** | 遍历的集合是空的（glob 没匹配到 / 文件没生成） | 断言集合非空，再注入故障实测 |
+| 测试单跑绿、**全跑红** | 模块级单例跨用例污染（fetch 桩 / 迁移注册表） | `beforeEach` 清注册表 + `vi.unstubAllGlobals()` |
+| 多步迁移链**构造不出测试场景** | 当前 SCHEMA_VERSION=1、没有 v0，不存在"要迁的历史版本" | 把「链执行」从「版本合法性校验」里抽出来单测 |
+| 改几行却 git diff 出**整文件变更** | 换行被改写 | 先比对 `git diff --stat --ignore-cr-at-eol`；两者相同说明文件**本来就是 CRLF**，别改（见 §8.1） |
+| headless 探针全绿，用户那边**还是坏的** | headless 不加载浏览器扩展 | 扩展类 bug 只能让用户在普通窗口硬刷确认（见 §8.1） |
+| 加个元数据层结果**资产加载更容易失败** | 把 sidecar 缺失当 error | 缺 sidecar 是**正常状态**：降级默认 meta + warning，不抛 |
+| 场景文件表达了画面，但**表达不了某个调试效果** | 渲染期行为参数（bob / AO / background）没进 schema | 先落 `userData` 并标注临时，S2 提到正式 schema —— 别因此把硬编码留在代码里 |
+
+### 8.1 2026-09-04 · Scene 数据层落地的坑与判据
+
+以下五条形态不像上面那种「一行现象」，需要判据和推理，单列。
+
+#### ① 骨骼：会话存、结果不存（**先实证，别照着感觉设计**）
+
+初版把「骨骼绑定结果」写进了 `.meta.rig`，**这是错的，实测推翻**：
+
+```
+assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb   300 KB
+  skins: 1 | 关节数: 22 | inverseBindMatrices: ✓ | animations: 6
+  网格属性 JOINTS_0 / WEIGHTS_0: ✓ ✓
+```
+
+glTF 2.0 的 `skins[].joints` + `inverseBindMatrices` + `JOINTS_0`/`WEIGHTS_0` **已经完整承载了骨架与蒙皮绑定**。
+它是 LFS 资产，跨项目跨场景都在。**再往 `.meta` 抄一份 = 双真源，改一边另一边不同步，比丢失更糟。**
+
+**归属判定实际上是两句，只问第一句会误伤：**
+
+> ① 换一个全新的空场景，这个数据还在不在？　不在 → 场景数据
+> ② **这段数据丢了，能不能从源资产（GLB）反推出来？**　能 → **不存**
+
+真正只在内存、且产物里找不到的，是**造出结果的配方**：`session.positions`（导出时已反解到 T-pose）、
+`session.bindPose`、`session.skinCylinders`（Wrapper 半径，算完即弃）、`export.*`（权重生成参数）。
+另外 **`mirrorPairs` 不存** —— 它是 `humanik-template.ts` 的 `MIRROR_PAIRS` 模板常量，由 `template` 派生。
+
+#### ② 星号导出撞名 —— 本仓已踩 3 次
+
+| # | 撞的两个 | 处理 |
+|---|---|---|
+| 1 | `MaterialRef`（scene） vs `MaterialRef`（render/materials.ts） | scene 侧改名 `MaterialBindingRef` |
+| 2 | `AssetPath`（document.ts） vs `AssetPath`（asset-server.ts） | 后者删定义，改 `import type` + 转出 |
+| 3 | `SceneGraph`（gltf.ts，装 GLB mesh 实例清单） vs `SceneGraph`（graph.ts，真场景图） | gltf 侧改名 `GltfInstances`（它零外部消费者） |
+
+**规律：`export *` 是包级扁平命名空间，新增导出前必须 grep 全包，只看当前文件一定会漏。**
+第 3 次还额外暴露一个命名问题：gltf 那个名字本来就起错了（它根本不是场景图），
+撞名反而是发现命名误导的机会。
+
+#### ③ 门禁必须验证「会拦住错误」—— 不能只报绿
+
+已实测有效的四种注入：
+
+| 注入 | 门禁反应 |
+|---|---|
+| `maxSubMeshes=0` | 精确报出路径 + `E_META_MAXSUB` + 原因，exit 1 |
+| 两个 meta 设同一个 guid | 报出**冲突双方路径**，exit 1 |
+| 新增 GLB 但漏生成 sidecar（B-02/B-03 补齐时真实发生） | 自动报出 4 个缺失路径 |
+| 清空 `project.scenes[]` | 精确报出「场景必须登记」失败 |
+
+反例教训：**测试数不变 ≠ 新文件被纳入**。加断言后要顺手断言「集合非空」，
+否则 glob 没匹配到时门禁会一片绿。
+
+#### ④ CRLF 铁律的适用边界（这条被订正过）
+
+原铁律「Python 写文件会把 LF 改成 CRLF → 整文件 diff」**有前提：仓库 blob 存的是 LF**。
+
+`apps/editor/src/models.ts` 在 HEAD 里**本来就是 CRLF**（58 CR / 58 LF）。
+此时按 LF 续写反而制造不一致。判据是：
+
+```bash
+git diff --stat            # 34 insertions
+git diff --stat --ignore-cr-at-eol   # 34 insertions   ← 相同 = 没有整文件污染，别改
+```
+
+两者相同就是干净的不同；新代码**跟随所在文件的既有换行**比遵守全局铁律更重要。
+
+#### ⑤ 并行 session 时代的「失败是不是我的」
+
+判据三条全中才可判定为**断言过期 / 他人行为变更**，而不是自己引入的回归：
+
+1. **0 console error / 0 exception**（运行时没坏）
+2. 失败项**全在别人的业务域**（本例是绑定面板 K 段）
+3. 自己的代码**不经过那条路径**
+
+三条都满足才「不修但要在 commit message 里写明」。少一条就必须查到底。
+另外：session 停了但**改动还留在工作区未提交**时，应代为入库保存（注明"内容未作任何修改"），
+否则成果随时可能丢。
 
 ## 9. 遗留与后续项
 
