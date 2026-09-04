@@ -22,7 +22,54 @@
   - `https://100.124.237.93:5100`（Tailscale IP）
   - `https://fangye-win11-office.tail6b29a2.ts.net:5100`（Tailscale MagicDNS 域名，推荐）
 
-## 2. Git 提交纪律（澄清红线歧义）
+## 2. 🔴 场景是游戏开发的唯一数据载体（铁律，2026-09-04 立）
+
+> 完整架构设计见 `docs/14-Scene系统与场景数据持久化架构设计.md`；
+> 数据字典真源 = `packages/scene/src/document.ts`（改 schema 先改那里，再写测试）。
+
+### 2.1 硬性要求
+
+- **一切游戏内容都是场景数据**。网格 / 灯光 / 相机 / 刷怪点 / 房间语义 / 导航区，
+  只能是场景文件里的**节点与组件**。代码里 `new` 出来的地面、写死的灯光参数、硬编码的相机位置，
+  一律视为 bug —— 它意味着这段内容没有持久化、不可版本化、不可复用、不可程序生成。
+- **场景文件是唯一真源，编辑器只是它的读写器 + 运行器**。编辑器不得"拥有"场景
+  （即：场景状态不得只存在于内存对象里，必须能完整序列化回文件）。
+- **新增任何场景语义前先扩 schema**，再写运行时与 UI。反过来做 = 又造一份不可持久化的状态。
+- **引用一律用稳定 `NodeId`，禁用数组下标做跨节点引用**
+  （`parent` / `followTarget` / prefab override 的 propertyPath 都走 id）。
+  编辑器现有的 `objects[]` 下标寻址是运行时表示，不是存储格式，两者不要混。
+
+### 2.2 明确禁止
+
+- ❌ 在 `LabRenderer` / `main.ts` / 任何引擎代码里硬编码场景物件、灯光、相机。
+- ❌ 把 `GPUBuffer` / `GPUTexture` / `Float32Array` 顶点数据写进场景文件（只存 `AssetRef` 引用）。
+- ❌ 在场景文件里内联 GLB / 贴图（会同时毁掉 git diff 与 LFS）。
+- ❌ 在 `Script` 组件里存代码字符串（只存 `behavior` 注册 key + `params`；JSON 携带可执行文本 = 远程代码执行入口）。
+- ❌ 静默修数据：旧版本、缺字段、断链、超容量，一律产出 diagnostic 显式告知用户。
+- ❌ 改 schema 不补迁移链。每次 `SCHEMA_VERSION` +1 **必须**同时补一条迁移函数 + 一条测试。
+
+### 2.3 格式与容量硬约束
+
+- 格式：**JSON**（`.scene.json` / `.prefab.json`），扁平节点表 + `parent` 引用（不用嵌套树）。
+- 目录：`assets/scenes/**`、`assets/prefabs/**`、`assets/materials/library.mat.json`。
+- 字段必须带 `schemaVersion`，加载时走迁移链；版本高于当前支持值 → **拒绝加载**，不静默降级。
+- 容量上限（引擎写死，超了必须报错而不是静默丢弃）：
+  | 常量 | 值 | 含义 |
+  |---|---|---|
+  | `MAX_OBJECTS` | **64** | 场景**静态物件**上限（变换 uniform 槽位） |
+  | `MAX_MATERIAL_SLOTS` | 256 | 材质槽位（逐子网格） |
+  | `LIGHTS_FLOATS` | 40 | 10×vec4 → **1 主光(directional) + 1 点光** |
+- **500 僵尸属运行时热实体，不得走场景静态物件路径**，必须走 instancing / 批处理（Phase 2）。
+- 多灯降级：场景可声明任意多盏灯，运行时按 `priority` 取 top-1 + top-1，落选者在编辑器里**标黄提示**。
+
+### 2.4 Play Mode 纪律
+
+- Play 前对场景做**快照**；Play 中只改 runtime 副本；Stop 时**整体回滚 + 释放全部 Play 期 GPU 资源**。
+- Play 期的每一次 GPU 资源分配都必须登记进 PlaySession，Stop 时逐个 `destroy()`
+  （项目已在 `removeObject` 上踩过"只打墓碑不释放"的泄漏坑，不要再踩）。
+- 编辑器相机（`editorCamera`）与游戏相机（`Camera` 组件）**严格分离**，互不影响。
+
+## 3. Git 提交纪律（澄清红线歧义）
 
 - **正常 `git add` / `git commit` / `git push` 是被允许、且是硬性要求的**：每完成一个任务
   收尾必须提交，使用规范中文 commit message，不留脏工作区。
