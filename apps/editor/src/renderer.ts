@@ -5,6 +5,7 @@ import {
   RendererCore,
   type CoreObjectDraw,
   type CoreSubMeshDraw,
+  type CoreSkeletonOverlay,
   type RenderFrameInput,
   SLOT_BYTES,
   SLOT_FLOATS,
@@ -41,6 +42,7 @@ import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
 import { AnimationService } from './services/animation';
 import { GizmoService } from './services/gizmo';
+import { buildSkeletonPositions } from './services/skeleton-overlay';
 import { buildSelectionOutline } from './features/selection-outline.feature';
 import { buildGizmo } from './features/gizmo.feature';
 import { type LabParams, type MaterialState } from './params';
@@ -1264,6 +1266,12 @@ export class LabRenderer {
     return this.animation.getAnimationTime();
   }
 
+  /** 主视图骨骼 X-ray 叠加开关（与资产预览面板共用同一套引擎叠加层） */
+  private skeletonVisible = false;
+  setSkeletonVisible(v: boolean): void {
+    this.skeletonVisible = v;
+  }
+
   playAnimation(clip?: number | string): void {
     this.animation.playAnimation(clip);
   }
@@ -1693,6 +1701,20 @@ export class LabRenderer {
     const highlight = buildSelectionOutline(this);
     const gizmo = buildGizmo(this);
 
+    // 骨骼 X-ray 叠加（主视图）：开启时，对「选中的带骨骼物体」（否则退回角色槽位）
+    // 用其本帧已求值的关节矩阵构造 line-list 线段；颜色用尸绿，与主视图白/绿高亮区分。
+    let mainSkeleton: CoreSkeletonOverlay | null = null;
+    if (this.skeletonVisible) {
+      const idx = this.state.selectedIndex ?? this.characterIndex;
+      const so = idx !== null ? this.state.objects[idx] : undefined;
+      if (so !== undefined && so.skinState !== null && so.skeleton !== null) {
+        mainSkeleton = {
+          positions: buildSkeletonPositions(so.skinScratch, so.skeleton, so.modelMatrix),
+          color: [0.56, 0.82, 0.31],
+        };
+      }
+    }
+
     const input: RenderFrameInput = {
       p: { outlineEnabled: p.outlineEnabled, debugMode: p.debugMode, cameraElevation: p.cameraElevation },
       camera: { target: camera.target, distance: camera.distance, yaw: camera.yaw },
@@ -1714,6 +1736,7 @@ export class LabRenderer {
       objects,
       highlight,
       gizmo,
+      skeleton: mainSkeleton,
       stats: { drawCalls: 0 },
     };
 

@@ -21,6 +21,22 @@ import { POST_WGSL } from './shaders/post.wgsl';
 import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
 
+/**
+ * 骨骼 X-ray 叠加层用的极简 line-list 着色器：无光照，只把顶点用帧矩阵的 viewProj
+ * 投到屏幕，输出纯色。画在后处理之后的 swapchain 之上、不做深度测试，所以骨骼会
+ * 透视网格显示（X-ray）。viewProj 复用 frameBuf（偏移 0 处就是 mat4x4），颜色走
+ * 一个独立 16B 的 uniform。内联而非新增 .wgsl 文件，减少 Vite 加载器耦合。
+ */
+const SKELETON_WGSL = /* wgsl */ `
+struct Frame { vp: mat4x4<f32> };
+@group(0) @binding(0) var<uniform> frame: Frame;
+@group(0) @binding(1) var<uniform> color: vec4<f32>;
+@vertex fn vs(@location(0) pos: vec3<f32>) -> @builtin(position) vec4<f32> {
+  return frame.vp * vec4<f32>(pos, 1.0);
+}
+@fragment fn fs() -> @location(0) vec4<f32> { return color; }
+`;
+
 export type RenderGizmoMode = GizmoMode;
 
 /** 帧绘制所需的相机子集（引擎只关心这三项） */
@@ -81,6 +97,18 @@ export interface CoreGizmo {
   activeAxis: number | null;
 }
 
+/**
+ * 骨骼 X-ray 叠加层：一组 line-list 线段（每两个顶点构成一段），由调用方（编辑器）
+ * 用「关节世界坐标」算好。引擎只负责在后处理之后把它画到 swapchain 之上、不做深度
+ * 测试（即透视网格），从而呈现 X-ray 骨骼。颜色为最终色（不经 tonemap）。
+ */
+export interface CoreSkeletonOverlay {
+  /** 线段端点（世界空间，与顶点同一把尺子）；长度必须是 3 的倍数且 ≥ 6 */
+  positions: Float32Array;
+  /** 线段颜色（0..1，最终色，不经 tonemap） */
+  color: [number, number, number];
+}
+
 /** 一帧的全部 CPU 端 uniform 数据（调用方填好，本类只负责上传） */
 export interface CoreFrameUniforms {
   frame: Float32Array;
@@ -107,6 +135,8 @@ export interface RenderFrameInput {
   objects: CoreObjectDraw[];
   highlight: CoreHighlight;
   gizmo: CoreGizmo | null;
+  /** 骨骼 X-ray 叠加层（可选）；存在则在后处理之后绘于 swapchain 之上 */
+  skeleton: CoreSkeletonOverlay | null;
   stats: { drawCalls: number };
 }
 
@@ -142,8 +172,16 @@ interface CoreGizmoHandle {
 
 export class RendererCore {
   readonly device: GPUDevice;
-  private readonly gpu: GpuContext;
   private readonly canvas: HTMLCanvasElement;
+  /**
+   * 本核心独占的画布上下文。
+   *
+   * 2026-09-03 多画布改造：原先 `drawFrame` 用 `gpu.context`（GpuContext 持有的**主画布**
+   * 单例上下文）取 swapchain，导致同一进程里第二个渲染目标（资产预览画布）会错误地画到
+   * 主画布。现在每个 RendererCore 在构造时自己 `getContext('webgpu')` 并 configure 自己的
+   * 画布 —— 一个 device 可同时驱动多个画布上下文，预览实例与主视图因此完全独立。
+   */
+  private readonly ctx: GPUCanvasContext;
   readonly format: GPUTextureFormat;
   readonly sampler: GPUSampler;
 
@@ -172,6 +210,14 @@ export class RendererCore {
   // ---- gizmo 资源 ----
   private readonly gizmoModelBuf: GPUBuffer;
   private readonly gizmoHandles: CoreGizmoHandle[] = [];
+
+  // ---- 骨骼 X-ray 叠加层（line-list，无光照，绘于后处理之后透视网格） ----
+  private readonly skeletonLayout: GPUBindGroupLayout;
+  private readonly skeletonPipeline: GPURenderPipeline;
+  private readonly skeletonColorBuf: GPUBuffer;
+  private skeletonBindGroup: GPUBindGroup | null = null;
+  private skeletonVb: GPUBuffer | null = null;
+  private skeletonVbCap = 0;
 
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
@@ -203,10 +249,16 @@ export class RendererCore {
   private readonly gizmoColorScratch = new Float32Array([1, 1, 1, 1]);
 
   constructor(gpu: GpuContext, canvas: HTMLCanvasElement) {
-    this.gpu = gpu;
     this.canvas = canvas;
     this.device = gpu.device;
     this.format = gpu.format;
+
+    // 独占画布上下文：configure 自己的 canvas，使本核心独立于任何「主画布」上下文
+    // （预览实例与主视图因此能共存于同一 device）。
+    const ctx = canvas.getContext('webgpu');
+    if (ctx === null) throw new Error('RendererCore: 无法获取 WebGPU 画布上下文');
+    ctx.configure({ device: gpu.device, format: gpu.format, alphaMode: 'opaque' });
+    this.ctx = ctx;
 
     // ---- 场景 bind group layout ----
     const sceneModule = this.device.createShaderModule({ label: 'scene', code: SCENE_WGSL });
@@ -363,6 +415,37 @@ export class RendererCore {
         indexCount: h.indices.length,
       });
     }
+
+    // ---- 骨骼 X-ray 叠加层（line-list，无光照，绘于后处理之后，透视网格） ----
+    const skModule = this.device.createShaderModule({ label: 'skeleton', code: SKELETON_WGSL });
+    this.checkModule(skModule);
+    this.skeletonLayout = this.device.createBindGroupLayout({
+      label: 'skeleton',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    });
+    this.skeletonPipeline = this.device.createRenderPipeline({
+      label: 'skeleton',
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.skeletonLayout] }),
+      vertex: {
+        module: skModule,
+        entryPoint: 'vs',
+        buffers: [{ arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }],
+      },
+      fragment: { module: skModule, entryPoint: 'fs', targets: [{ format: this.format }] },
+      primitive: { topology: 'line-list' },
+    });
+    this.skeletonColorBuf = this.uniform(16, 'skeleton-color');
+    this.skeletonBindGroup = this.device.createBindGroup({
+      label: 'skeleton',
+      layout: this.skeletonLayout,
+      entries: [
+        { binding: 0, resource: { buffer: this.frameBuf } },
+        { binding: 1, resource: { buffer: this.skeletonColorBuf } },
+      ],
+    });
   }
 
   /** WGSL 编译错误默认只在控制台里一闪而过，这里把行号一起打出来 */
@@ -557,7 +640,7 @@ export class RendererCore {
     pass.end();
 
     // ---- Pass 3：后处理 ----
-    const swapView = this.gpu.context.getCurrentTexture().createView();
+    const swapView = this.ctx.getCurrentTexture().createView();
     const postPass = encoder.beginRenderPass({
       label: 'post',
       colorAttachments: [
@@ -607,6 +690,38 @@ export class RendererCore {
       gp.end();
     }
 
+    // ---- Pass 5：骨骼 X-ray 叠加（line-list，绘于 swapchain 之上、透视网格） ----
+    const skOverlay = input.skeleton;
+    if (
+      skOverlay !== null &&
+      skOverlay.positions.length >= 6 &&
+      this.skeletonPipeline !== null &&
+      this.skeletonBindGroup !== null
+    ) {
+      const need = skOverlay.positions.byteLength;
+      // 顶点缓冲按需求惰性扩容（避免每帧重建）；容量只增不减
+      if (this.skeletonVb === null || this.skeletonVbCap < need) {
+        this.skeletonVb?.destroy();
+        this.skeletonVb = this.device.createBuffer({
+          label: 'skeleton-vb',
+          size: Math.max(need, 1024),
+          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        this.skeletonVbCap = this.skeletonVb.size;
+      }
+      this.device.queue.writeBuffer(this.skeletonColorBuf, 0, new Float32Array([...skOverlay.color, 1]));
+      this.device.queue.writeBuffer(this.skeletonVb, 0, skOverlay.positions);
+      const skPass = encoder.beginRenderPass({
+        label: 'skeleton',
+        colorAttachments: [{ view: swapView, loadOp: 'load', storeOp: 'store' }],
+      });
+      skPass.setPipeline(this.skeletonPipeline);
+      skPass.setBindGroup(0, this.skeletonBindGroup);
+      skPass.setVertexBuffer(0, this.skeletonVb);
+      skPass.draw(skOverlay.positions.length / 3);
+      skPass.end();
+    }
+
     device.queue.submit([encoder.finish()]);
     input.stats.drawCalls = draws;
   }
@@ -634,6 +749,8 @@ export class RendererCore {
       h.ibuf.destroy();
       h.colorBuf.destroy();
     }
+    this.skeletonVb?.destroy();
+    this.skeletonColorBuf.destroy();
   }
 }
 
