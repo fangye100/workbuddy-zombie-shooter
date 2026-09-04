@@ -29,11 +29,10 @@
 - Asset Preview 自开独立 `RendererCore` 实例（`apps/editor/src/services/asset-preview.ts`），与 `LabRenderer` 平级，均不内嵌渲染逻辑。骨骼 X-ray 用引擎 `CoreSkeletonOverlay`，编辑器算端点、引擎只画。
 
 ### 🔴 资产库面板「不见了」——两个独立成因
-1. **广告拦截插件（真凶，commit `750972d` 已修）**：曾用类名前缀 **`ad-`**（EasyList/uBlock/AdGuard 头号命中）被注入 `display:none !important`；`.ad-grip` 不像广告词幸存 → 只剩 6px。
-   已全改 `ad-`→`asset-`、`adk-`→`akind-`、`data-ad`→`data-asset`，加闸门 `npm run verify:prefix`。
-   **定性三特征**：无痕窗口正常 + 硬刷无效（扩展每次重新注入）+ 项目自身 `display:none` 规则与观测**恰好相反**。**headless 三条全不成立 → 探针再绿也证明不了没被拦。**
-2. **localStorage 折叠（次要）**：`zh.assets.collapsed === '1'`。F12 → Local Storage 删它和 `zh.ui.dockH` → 硬刷恢复。
-- 工具 `node tools/verify/dock-probe.mjs`（五视口 + 分段高度 + `elementFromPoint`）。基线 `seg {grip:6, head:42, body:212, tree:212, content:212, sum:260}`。**教训：节点存在 ≠ 可见，别靠数 DOM 子节点报绿。**
+**完整诊断方法论已外置为 skill `ui-element-invisible-diagnosis`（分层阶梯 + 广告拦截定性 + 防复发闸门），别在这里重写。** 本项目特有事实只留这些：
+- 已成事实：类名前缀 `ad-` 全改 `asset-`（`adk-`→`akind-`、`data-ad`→`data-asset`），commit `750972d`；闸门 `npm run verify:prefix`。
+- 次要成因：localStorage `zh.assets.collapsed === '1'`（还有 `zh.ui.dockH`），删掉硬刷即恢复。
+- 项目工具 `node tools/verify/dock-probe.mjs`（五视口 + 分段高度 + `elementFromPoint`）；基线 `seg {grip:6, head:42, body:212, tree:212, content:212, sum:260}`。
 
 ## Scene 系统（2026-09-04 定案；铁律 `agents.md` §2/§2.5，全文 `docs/14`，这里只留**不可派生的判断与坑**）
 - **游戏规则：游戏开发必须以场景为唯一数据存储与编辑载体**。三份真源：`document.ts`(场景) / `project.ts`(项目锚点) / `asset-meta.ts`(资产 sidecar)。改 schema 先改它 + 补测试 + 补迁移链。
@@ -75,10 +74,11 @@
 - headless `cdp-rigged.mjs`（参数化，GLB 路径走命令行）20 断言。**8/8 角色 rig+anim 全齐**（B-02/B-03 于 2026-09-04 补跑完成）。
 - worktree 内 npm 装依赖会漂版本（TS 5.9/@webgpu/types 0.1.72 → 一片 TS2345）；主仓 pnpm 钉 5.6.3 / 0.1.49，修法 `npm install --no-save` 钉同版。
 
-## WebGPU 编码坑
-- **纹理 usage 必须用 `GPUTextureUsage.*`，绝不可写 `GPUBufferUsage.COPY_DST`**：数值完全不同——0x8 套到纹理上变成 `STORAGE_BINDING`，与 `TEXTURE_BINDING`(0x4) OR 后缺 `COPY_DST`(0x2) → `writeTexture`/`copyExternalImageToTexture` 报 console error（**只在运行时炸，tsc/vite 全绿**）。`copyExternalImageToTexture` 还要求同时有 `COPY_DST | RENDER_ATTACHMENT`。
-- **多画布**：一个 `GPUDevice` 可驱动多个 `GPUCanvasContext`，但每个 canvas 必须自己 `getContext('webgpu')`+`configure`；不能共用 `GpuContext.context`（主画布单例）。`RendererCore` 构造时持有自己的 `ctx`。
-- **headless 验证是必选项**：uniform offset 256 对齐 / bind group visibility / WGSL 编译错误 / 纹理 usage 错配只在运行时暴露。流程见 `webgpu-headless-validate` 技能。
+## WebGPU
+**编码期陷阱（usage 常量混用 / 多画布）已外置为 skill `webgpu-coding-pitfalls`；
+运行时验证流程见 skill `webgpu-headless-validate`。** 这里只留一句话：
+**tsc + vite build 全绿照样线上炸** —— WebGPU 的 usage 错配、uniform offset 对齐、bind group
+visibility、WGSL 编译错误只在运行时暴露，headless 验证是必选项不是可选项。
 
 ## 门禁（8 道，收尾全跑）
 `typecheck` · `vitest` · `editor:build` · `editor:smoke` · `content:check` · `verify:prefix` · `scene:gen` · `scene:check`
