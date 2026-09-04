@@ -114,20 +114,19 @@ describe('instantiateScene（端到端：真实场景文件）', () => {
     expect(result.objects.find((o) => o.name === '立方体 Box')?.pickable).toBe(true);
   });
 
-  // 用 toMatchObject 而不是 toEqual：userData 里还有 category 等字段，
-  // 断言"我关心的这几项在"比"一个不多一个不少"更能扛住后续加字段。
-  it('userData 原样透传（bob / aoMin·aoMax / background / category 都要到得了渲染器）', () => {
-    expect(result.objects.find((o) => o.name === '天空 Sky')?.userData).toMatchObject({
+  // S2a 转正后：category / bob / ao / background 都来自正式字段，不再寄居 userData。
+  // 用 toMatchObject 而不是 toEqual，断言"我关心的这几项在"比"一个不多一个不少"更能扛住后续加字段。
+  it('S2a 转正后：category / bob / ao / background 来自正式字段（到得了渲染器）', () => {
+    expect(result.objects.find((o) => o.name === '天空 Sky')).toMatchObject({
       background: true,
       category: '环境',
     });
-    expect(result.objects.find((o) => o.name === '角色 Character')?.userData).toMatchObject({
-      aoMin: -0.84,
-      aoMax: 0.84,
+    expect(result.objects.find((o) => o.name === '角色 Character')).toMatchObject({
+      ao: { min: -0.84, max: 0.84 },
       category: '角色',
     });
     // 敌人 4 的 bob 是 2.0999999999999996（JSON 里写死的值，别"修"它）
-    expect(result.objects.find((o) => o.name === '敌人 Enemy 4')?.userData).toMatchObject({
+    expect(result.objects.find((o) => o.name === '敌人 Enemy 4')).toMatchObject({
       bob: 2.0999999999999996,
       category: '敌人',
     });

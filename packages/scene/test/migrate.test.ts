@@ -16,12 +16,14 @@ import {
   migrateToLatest,
   needsMigration,
   registerMigration,
+  registerSceneMigrations,
   runMigrationChain,
   type MigrationStep,
 } from '../src/migrate';
 import {
   SCHEMA_VERSION,
   createEmptySceneDocument,
+  defaultEnvironment,
   validateSceneDocument,
 } from '../src/document';
 
@@ -185,5 +187,97 @@ describe('migrateTo · 指定目标版本', () => {
     const r = migrateTo(docAt(SCHEMA_VERSION), SCHEMA_VERSION);
     expect(r.applied).toEqual([]);
     expect(r.diagnostics).toBeInstanceOf(Array);
+  });
+});
+
+describe('migrateV1ToV2 · S2a userData 转正', () => {
+  beforeEach(() => {
+    clearMigrations();
+    registerSceneMigrations();
+  });
+  afterEach(() => clearMigrations());
+
+  /** 造一个 v1 假文档：天空（background+category）与角色（ao+bob+category）两类典型节点 */
+  function v1Doc(): Record<string, unknown> {
+    const mesh = (extra: Record<string, unknown>): Record<string, unknown> => ({
+      kind: 'MeshRenderer',
+      enabled: true,
+      source: { type: 'builtin', shape: 'box', params: [1, 1, 1] },
+      materials: [],
+      visible: true,
+      layer: 0,
+      importScale: 1,
+      ...extra,
+    });
+    return {
+      schemaVersion: 1,
+      id: 'sc_v1',
+      name: '转正测试',
+      act: null,
+      environment: defaultEnvironment(),
+      editorCamera: { target: [0, 1, 0], distance: 8, yaw: 0.6, elevation: 0.45 },
+      entryCamera: null,
+      dependencies: [],
+      nodes: [
+        {
+          id: 'nd_sky',
+          name: 'Sky',
+          parent: null,
+          transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+          visible: true,
+          pickable: false,
+          components: [mesh({})],
+          prefab: null,
+          userData: { background: true, category: '环境' },
+        },
+        {
+          id: 'nd_char',
+          name: 'Char',
+          parent: null,
+          transform: { position: [0, 0.84, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+          visible: true,
+          pickable: true,
+          components: [mesh({})],
+          prefab: null,
+          userData: { aoMin: -0.84, aoMax: 0.84, category: '角色', bob: 1.2 },
+        },
+      ],
+      meta: {},
+    };
+  }
+
+  it('v1 → v2：userData 的 bob/ao*/background 提到 MeshRenderer，category 提到节点', () => {
+    const r = migrateToLatest(v1Doc());
+    expect(r.from).toBe(1);
+    expect(r.to).toBe(2);
+    expect(r.applied).toEqual(['userdata-to-schema']);
+
+    const nodes = (r.doc as unknown as { nodes: Array<Record<string, any>> }).nodes;
+    const sky = nodes.find((n) => n.id === 'nd_sky')!;
+    const char = nodes.find((n) => n.id === 'nd_char')!;
+
+    expect(sky.category).toBe('环境');
+    expect(sky.userData).toBeUndefined();
+    expect(sky.components.find((c: any) => c.kind === 'MeshRenderer').background).toBe(true);
+
+    expect(char.category).toBe('角色');
+    expect(char.userData).toBeUndefined();
+    const charMesh = char.components.find((c: any) => c.kind === 'MeshRenderer');
+    expect(charMesh.bob).toBe(1.2);
+    expect(charMesh.aoMin).toBe(-0.84);
+    expect(charMesh.aoMax).toBe(0.84);
+  });
+
+  it('迁移后文档仍能通过校验（转正不引入 error）', () => {
+    const r = migrateToLatest(v1Doc());
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('已转正的 v2 文档再跑迁移链 → 不重复应用（幂等）', () => {
+    const once = migrateToLatest(v1Doc());
+    const twice = migrateToLatest(once.doc as unknown as Record<string, unknown>);
+    expect(twice.applied).toEqual([]);
+    expect(twice.from).toBe(2);
+    expect(twice.to).toBe(2);
   });
 });
