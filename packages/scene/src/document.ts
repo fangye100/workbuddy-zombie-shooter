@@ -57,30 +57,64 @@ export interface AssetRef {
 }
 
 /**
- * 材质三层语义（与编辑器 materials.ts 的 shared / instance / override 一一对应）。
+ * 材质三层语义（与 packages/render/materials.ts 的 shared / instance / override 一一对应）。
  * 场景文件不存材质全量定义，只存"引用 + 覆盖"，共享材质活在材质库文件里。
+ *
+ * ⚠️ 命名：叫 `MaterialBindingRef` 而不叫 `MaterialRef` ——
+ * `packages/render/src/materials.ts` 已经有一个同名的 `MaterialRef { id, name, kind }`
+ * （材质库下拉项）。两个包都经 `@aether/*` 星号导出，同名会在编辑器侧撞车。
  */
-export type MaterialRef =
+export type MaterialBindingRef =
   /** 直接引用材质库里的共享材质（改库即全场景生效） */
   | { type: 'shared'; id: string }
   /** 由共享材质实例化出的场景内材质（独立可调，仍记录来源） */
   | { type: 'instance'; id: string; base: string }
   /** 在任意 base 之上打补丁（override 层，可丢弃回滚） */
-  | { type: 'override'; base: MaterialRef; patch: MaterialPatch };
+  | { type: 'override'; base: MaterialBindingRef; patch: MaterialPatch };
 
-/** 材质可覆盖字段（与 material-panel 的三层编辑面一一对应，字段名对齐 MaterialState） */
+/**
+ * 材质可覆盖字段。**字段名与 `MaterialState` 严格一一对齐**
+ * （packages/render/src/materials.ts）——不对齐就会在赋值时静默丢字段，
+ * 这类 bug 只在画面上表现为"某个参数调了没反应"，极难定位。
+ *
+ * 与 `MaterialState` 唯一的区别：这里是 `Partial`（覆盖语义，未列出的字段沿用 base）。
+ */
 export interface MaterialPatch {
   albedo?: ColorHex;
   roughness?: number;
   metallic?: number;
-  emissive?: ColorHex;
+  emissiveColor?: ColorHex;
   emissiveStrength?: number;
-  /** 描边宽度倍率；<= 0 表示本子网格不描边 */
+  /** 材质级分阶阈值；< 0 = 跟随全局 */
+  shadowEnd?: number;
+  /** 材质级高光混合；< 0 = 跟随全局 */
+  specMix?: number;
+  /** 软边倍率（布料等柔和材质放大） */
+  softnessScale?: number;
+  /** 半调强度倍率 */
+  halftoneScale?: number;
+  /** 描边宽度倍率；<= 0 = 本子网格不描边 */
   outlineScale?: number;
-  /** 是否走 albedo 贴图采样（GLB 带贴图的子网格） */
-  useTexture?: boolean;
+  /** 自发光：跳过全部分阶 */
+  unlit?: boolean;
+  /** albedo 贴图。存在时渲染置 mat.flags.z = 1 走贴图采样（MaterialState 无此字段，是槽位级选项） */
   texture?: AssetRef;
 }
+
+/** MaterialState 的全部可写字段名（与 packages/render 的契约，用于校验器比对） */
+export const MATERIAL_STATE_FIELDS: readonly string[] = [
+  'albedo',
+  'roughness',
+  'metallic',
+  'emissiveColor',
+  'emissiveStrength',
+  'shadowEnd',
+  'specMix',
+  'softnessScale',
+  'halftoneScale',
+  'outlineScale',
+  'unlit',
+];
 
 /** 子网格 → 材质的绑定。匹配优先级：primitiveKey > nodePath > nodeName > index */
 export type MaterialMatch =
@@ -91,7 +125,7 @@ export type MaterialMatch =
 
 export interface MaterialBinding {
   match: MaterialMatch;
-  material: MaterialRef;
+  material: MaterialBindingRef;
 }
 
 // ---------------------------------------------------------------- 变换
@@ -262,15 +296,57 @@ export interface NavZoneComponent extends ComponentBase {
   baked: AssetRef | null;
 }
 
+/** 行为参数的标量类型。与 ScriptComponent.params 的取值域一致 */
+export type BehaviorScalar = number | string | boolean;
+
 /**
- * 脚本行为。**只存行为 id + 参数，不存代码字符串**——
- * 一旦允许场景文件携带可执行文本，JSON 就变成了远程代码执行的入口，
- * 且无法静态校验、无法 diff。行为由注册表 key 解析。
+ * 行为参数的**元数据**——Inspector 靠它自动生成控件。
+ *
+ * 这是"脚本"这块最容易漏掉的一环：如果行为只有 `run(ctx, params)` 而没声明参数结构，
+ * Inspector 就画不出控件（不知道 `count` 该是 slider 还是文本框、范围多少），
+ * 结果就是 Script 组件只能靠手改 JSON 编辑 —— 那就退化成了不可用的功能。
+ *
+ * 参数 schema 由行为定义（`defineBehavior`）**在代码里声明**，不落盘；
+ * 场景文件只存 `params` 的**值**。加载时按 schema 校验，失效项报 warning 而非阻塞。
+ */
+export interface BehaviorParamSchema {
+  key: string;
+  label: string;
+  kind: 'number' | 'int' | 'bool' | 'string' | 'color' | 'nodeRef' | 'assetRef' | 'enum';
+  default: BehaviorScalar;
+  /** number / int 的取值域（Inspector 画 slider） */
+  min?: number;
+  max?: number;
+  step?: number;
+  /** enum 的候选值 */
+  options?: string[];
+  /** 悬浮说明 */
+  hint?: string;
+}
+
+/** 行为定义（代码资产，注册表条目）。schema 不落盘，运行期由注册表提供 */
+export interface BehaviorDef {
+  id: string;
+  label: string;
+  /** 分类（Inspector 下拉分组） */
+  category?: string;
+  params: BehaviorParamSchema[];
+}
+
+/**
+ * 脚本行为。**只存行为 id + 参数值，绝不存代码字符串**——
+ * 一旦允许场景文件携带可执行文本：① JSON 就成了远程代码执行入口（打开下载来的
+ * .scene.json 即中招）；② 无法静态校验；③ 重构时改个函数名要全局搜 JSON。
+ *
+ * 行为本体是代码资产（`assets/behaviors/*.ts` 或引擎内置注册表），
+ * 由 `BehaviorDef.params` 声明参数结构，Inspector 据此画控件。
  */
 export interface ScriptComponent extends ComponentBase {
   kind: typeof ComponentKind.Script;
+  /** 行为注册表的 key。加载时未找到对应 BehaviorDef → 报 warning，组件降级为空操作 */
   behavior: string;
-  params: Record<string, number | string | boolean>;
+  /** 参数值。键必须能在 BehaviorDef.params 里找到；多余/缺失项加载时报 warning */
+  params: Record<string, BehaviorScalar>;
 }
 
 export type ComponentData =
