@@ -91,6 +91,15 @@
   - 参数 schema 覆盖 `number/int/bool/string/color/nodeRef/assetRef/enum` 八种控件类型。
   - 行为被删 / 参数改名 → 报 `warning` 并降级为空操作，**不阻塞加载**（一个挂掉的行为不该让场景打不开）。
   - Play 模式下**禁用行为热重载**（正在跑的实体持有旧闭包）。
+- **门禁（第 7、8 道，与 `content:check` 同构）**：
+  - `npm run scene:gen` —— 新增/改动 GLB 后批量生成 sidecar。
+    **merge 而非覆盖**，绝不冲掉已有 `.meta.json` 里手改的 `bindings`/`rig`/`userData`。
+  - `npm run scene:check` —— ① 元数据与源文件 hash 同步；② 校验项目文件 + 全部 `.meta.json`
+    + 全部 `.scene.json`，并查跨文件约束（guid 唯一、孤儿元数据、场景 id 唯一）。失败 exit 1。
+  - **改动任何 `assets/**` 的资产或场景后必须跑 `scene:check`**，与改 `roster.json` 必须跑
+    `content:gen` + `content:check` 同理。
+  - 注：门禁测试用 `import.meta.glob` 而非 `node:fs` —— 本仓库未装 `@types/node`，
+    且 tsconfig 的 `types` 是白名单。别改成 `node:fs`，会引入类型依赖并需要手动登记新资产。
 
 ## 3. Git 提交纪律（澄清红线歧义）
 

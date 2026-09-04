@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_lmcps9i0",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.75,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-01",
+    "characterName": "游荡者",
+    "variant": "textured",
+    "file": "E01_Shambler_900_baked.glb"
+  },
+  "sourceHash": "sha256:c11ed883d2323b795cf2f71d3739b87317b3d0c68fb5c6c4993c10fc52c3ad15",
+  "updatedAt": "2026-09-04T03:48:29.741Z"
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_n8n3inf3",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.7,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-03",
+    "characterName": "呕吐者",
+    "variant": "textured",
+    "file": "E03_Spitter_1200_baked.glb"
+  },
+  "sourceHash": "sha256:3ae761c085926b1b34e12b850af94f7189722d57211c856b57a31600289166d1",
+  "updatedAt": "2026-09-04T03:48:29.894Z"
+}

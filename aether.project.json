@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "pr_zombie_horde",
+  "name": "zombie-horde",
+  "displayName": "末日尸潮",
+  "description": "第三人称俯视 · mobile 横屏 · 美漫描边风格的 3D 僵尸肉鸽射击（短局 5-8 分钟，程序生成楼层）",
+  "assetRoots": [
+    "assets"
+  ],
+  "scenes": [],
+  "startIndex": null,
+  "layers": [
+    "Default",
+    "TransparentFX",
+    "IgnoreRaycast",
+    "Background",
+    "Environment",
+    "Character",
+    "Pickup",
+    "Trigger",
+    "Enemy",
+    "Projectile",
+    "Hazard",
+    "Destructible",
+    "SpawnVolume"
+  ],
+  "tags": [
+    "Boss",
+    "Elite",
+    "Loot",
+    "Interactable"
+  ],
+  "render": {
+    "targetTier": "t1",
+    "shadows": false,
+    "outline": true,
+    "postFx": true,
+    "renderScale": 1,
+    "targetFps": 60
+  },
+  "defaultStyle": null,
+  "inputMap": null,
+  "gameplayConfig": null,
+  "materialLibrary": "assets/materials/library.mat.json",
+  "behaviorRoots": [
+    "assets/behaviors"
+  ],
+  "meta": {
+    "createdAt": "2026-09-04T00:00:00.000Z",
+    "updatedAt": "2026-09-04T00:00:00.000Z",
+    "notes": "项目锚点。场景清单在 scenes[] —— 新场景必须登记，否则「通关后加载哪个场景」没有数据落点。层表前 8 项是引擎内置层，禁止改名。"
+  }
+}

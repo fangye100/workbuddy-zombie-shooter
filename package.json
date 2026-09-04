@@ -19,6 +19,8 @@
     "verify:prefix": "node tools/verify/guard-classprefix.mjs",
     "content:gen": "node packages/content/scripts/gen-content.mjs",
     "content:check": "node packages/content/scripts/gen-content.mjs --check",
+    "scene:gen": "node tools/scene/gen-asset-meta.mjs",
+    "scene:check": "node tools/scene/gen-asset-meta.mjs --check && vitest run packages/scene/test/scene-files.test.ts",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
     "test": "vitest run",

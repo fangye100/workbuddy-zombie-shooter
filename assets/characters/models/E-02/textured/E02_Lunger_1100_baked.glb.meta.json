@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_t2nau5b6",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.25,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-02",
+    "characterName": "扑跃者",
+    "variant": "textured",
+    "file": "E02_Lunger_1100_baked.glb"
+  },
+  "sourceHash": "sha256:82d6796b390d617af5a6f25901dd2532ba8de86bc08e771170f0c3a0e8556567",
+  "updatedAt": "2026-09-04T03:48:29.807Z"
+}

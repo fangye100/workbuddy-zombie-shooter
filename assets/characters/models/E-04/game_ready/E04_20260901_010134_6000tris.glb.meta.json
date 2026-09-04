@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_mh2gcrd3",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.05,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "E-04",
+    "characterName": "盾卫",
+    "variant": "game_ready",
+    "file": "E04_20260901_010134_6000tris.glb"
+  },
+  "sourceHash": "sha256:6c26ac579fd8b106193fbed148a8a3df8d8f50c7410cca89d7c4cf3743ef50b1",
+  "updatedAt": "2026-09-04T03:48:29.918Z"
+}

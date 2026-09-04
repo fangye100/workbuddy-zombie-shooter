@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_ells5q95",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "synthetic_static.glb"
+  },
+  "sourceHash": "sha256:ea8de961917b5fb9e1e7802103e96e73149b6255ef95e53806b9a13ffbb9c25c",
+  "updatedAt": "2026-09-04T03:48:30.161Z"
+}

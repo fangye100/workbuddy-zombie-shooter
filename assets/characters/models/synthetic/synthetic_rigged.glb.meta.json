@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_deas7qur",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "synthetic_rigged.glb"
+  },
+  "sourceHash": "sha256:0591e07e4a61f505f62ace82df1f61323301f69028204b3c2b979af674f5aba1",
+  "updatedAt": "2026-09-04T03:48:30.139Z"
+}
