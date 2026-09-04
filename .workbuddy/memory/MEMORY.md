@@ -1,52 +1,85 @@
 # 项目长期记忆
 
 ## 项目规则（铁律）
-- 每完成一个任务收尾必须 `git add <本会话文件> && git commit && git push`，规范中文 commit message，不留脏工作区（**不是 `git add -A`**，见下条）。
-- 🔴 Git 红线：未经许可禁止触碰 `.git` 内部（修复/fsck/删文件/建 refs/碰 pack 全禁）。发现异常只报告症状等指令。多 session 并行时每个 session 只负责提交自己业务范围内的修改文件（只 `git add` 本会话改的，禁止 `git add -A` 一把抓整树吞别人在途改动），不禁止各 session 自行提交；push 避开同分支并发。
-- 远程 `origin = git@github.com:fangye100/workbuddy-zombie-shooter.git`（只走 SSH；拼写是 shooter，另有空仓 shotter 勿推）。
+- 收尾必须 `git add <本会话文件> && git commit && git push`，规范中文 commit message，不留脏工作区。
+- 🔴 未经许可禁止触碰 `.git` 内部（fsck/删文件/建 refs/碰 pack 全禁）。异常只报告症状等指令。
+  多 session 并行时**只 `git add` 本会话改的**，禁止 `git add -A`（会吞别人在途改动）；不禁止各 session 自行提交；push 避开同分支并发。
+- 远程 `origin = git@github.com:fangye100/workbuddy-zombie-shooter.git`（只走 SSH；拼写 **shooter**，另有空仓 shotter 勿推）。
+- 🔴 **Python 写文本文件会偷偷 LF→CRLF**：`open(p,'w')` 默认做换行翻译，仓库 blob 存 LF → 整文件 diff。**一律用 `newline=''`**。
+  自查 `git diff --cached --stat --ignore-cr-at-eol` 应远小于 `git diff --cached --stat`；已中招用 `open(f,'wb').write(open(f,'rb').read().replace(b'\r\n',b'\n'))`。
+
+## ADR 速查（全文在 `docs/10` 与 `docs/14`）
+001 渲染真源唯一化 · 002 资料库为运行时单一真源 · 003 验证分层 · 005 包体 `@aether/*` · 007 render(L3) 不得反向依赖 content(L4) · 008 验证资产与结论同入库 · 009 测试与被测代码同位 · **010 场景为唯一数据载体** · 011 Authoring=Node/Component(AoS)+热实体 SoA ECS，NodeId↔EntityId 桥接 · 012 扁平节点表+parent · 013 JSON+SCHEMA_VERSION+迁移链 · 014 Edit/Play 严格分离（快照/副本/回滚/释放 GPU）· 015 项目容器 `aether.project.json` 为锚点 · 016 资产附加数据走同名 sidecar · 017 脚本=行为注册表
 
 ## 资料 / 真源（改前先改这里）
-- 角色真源 `assets/characters/roster.json`（8 角色全量数据驱动）；风格真源 `assets/style/tokens.json`（→ `gen_assets.py` 出 .ase/.cube）。
-- 画布施工看 `画布施工交接单.md`；ardot 两道门（settings `enabledPlugins` + 账号灰度 `EnableArdot`）详见该交接单，已开。
-- 线上资料库（`docs/09` 镜像，nodeId `FNfRd1b8idYncNDIdKBmvQ`）需登录、未入 git——以本地 `docs/` 为同源真源。
+- `assets/characters/roster.json`（8 角色 npcs5+bosses3，**顶层键不是 `characters`**）+ `assets/style/tokens.json`。
+- 生成层 `packages/content/`：`scripts/gen-content.mjs` → `src/generated/{tokens,roster}.generated.ts`。`content:gen` 写 / `content:check` 比对（不同步 exit 1）。
+- **生成器铁律**：① 解析失败抛错不静默填 0（B-02 `speed:"本体固定不可移动"` → `null`）；② 复合串取第一个数值 + 原始串原样保留（`heightRaw`）。
+- ⚠️ **D3 未完：`roster.json` 承载不了 `CharacterDef`**（无胶囊半径/质量/转向速率/视野/攻击性/骨骼受伤盒）。11 项不可派生字段清单在 `roster.generated.ts` 头部。
+  **硬生成 = 把编造数字洗成「单一真源」，比硬编码更坏**，别干。
+- 遗留 L-8（待用户决策，勿擅改）：`params.ts` `gradeShadowMult` 0.95 vs 真源 0.78、`gradeShadowMix` 0.12 vs 真源 0.2。**修正改变画面**，属美术决策。
 
-## 引擎与编辑器（架构定案，2026-09-02）
-- **头号架构债 = 两套平行代码**：`packages/render` 仅 130 行接口桩，而 `apps/lab/shader-lab` 有 ~13K 行真实 WebGPU 渲染器（renderer 2611 / gltf 1178 / ui 1917 / materials 三层语义）。
-- **决策 ADR-001 渲染真源唯一化**：把 lab 的 renderer/gltf/materials 上提进 `packages/render|scene|gfx`；编辑器重构为 `apps/editor` 消费 packages，自身不带渲染器。详见 `docs/10-整体架构设计与长期发展规划.md`（含双轨长期路线图 Phase0–4）。
-- 引擎真实落地：`ai`(流场寻路/战斗/行为 1759 行，最成熟) · `gameplay`(SoA 角色表 436) · `gfx`(device/handle) · `core`(app/ecs) · `framegraph`(Pass DAG)。规划里 platform/scene/assets/animation/physics/vfx/ui/audio 等尚未建——不为空包建目录。
-- 验证方法论（docs/09 §7，已证伪 headless 假阴性）：数学 Node 直测 + headless WebGPU(Chrome152 + `--enable-unsafe-swiftshader`) + CDP 视觉像素判定 → 应作为引擎级 CI 标准。
+## 引擎与编辑器
+- 端口：**编辑器 5100**，**最终游戏 5101**（见 `agents.md` §1）。以 `apps/editor/vite.config.ts` 的 `port` 为准。
+- **脚本名坑**：`npm run build` 构建的是 sample-00；**编辑器**是 `npm run editor:build`；冒烟 `npm run editor:smoke`（无 `verify:smoke`），需传 `--glb <rigged.glb>` 才启用骨骼动画断言组（不传 3 条 SKIP）。另有 `verify:glb|uv|facade|dock|prefix`。`lab*` 只是 `editor*` 的兼容别名。
+- 引擎已落地：`ai`(流场寻路/战斗/行为，最成熟) · `gameplay`(SoA 角色表) · `gfx` · `core` · `framegraph`。platform/scene/assets/animation/physics/vfx/ui/audio 尚未建——不为空包建目录。
+- dormant：`packages/framegraph/src/graph.ts` + `packages/render/src/feature.ts`（425 行零消费者，已标 DORMANT 未删）。注意 `apps/editor/src/features/*.feature.ts` 的 feature 与 `RenderFeature` **不是同一个东西**。
+- 验证方法论：数学 Node 直测 + headless WebGPU(Chrome152 + `--enable-unsafe-swiftshader`) + CDP 像素判定（已证伪 headless 假阴性）→ 引擎级 CI 标准。
 - 换模型材质绑定：GLB node extras → nodePath → primitiveKey 三层匹配；nodeId 精确匹配须双侧 leaf 同名否则撞车；未认领进孤儿池。
-- **端口（2026-09-03 订正，b25506c 锁定）**：**编辑器 5100**，**最终游戏 5101**（HMR / Tailscale HTTPS 同套合约）。以 `apps/editor/vite.config.ts` 的 `port` 为准。
-- **脚本名坑（易踩）**：`npm run build` 构建的是 sample-00，**编辑器**是 `npm run editor:build`（产物走 5100）；冒烟是 `npm run editor:smoke`（无 `verify:smoke`），且需传 `--glb <rigged.glb>` 才会启用骨骼动画断言组，不传则 3 条 SKIP。另有 `verify:glb` / `verify:uv` / `verify:facade` / `verify:dock`（见下）。`lab`/`lab:build` 只是 `editor*` 的兼容别名。
-- **资产库面板「不见了」——两个独立成因，别再只想到第一个**：
-  1. **广告拦截插件（真凶，2026-09-03 确诊并修复，commit `750972d`）**：面板曾用类名前缀 **`ad-`**（`.ad-head`/`.ad-body`/`.ad-content`/`.ad-title`/`.ad-filter`/`data-ad`/`--ad-cell`），而 `ad-` 是 **EasyList / uBlock Origin / AdGuard 的头号命中模式**，被注入 `display:none !important`；`.ad-grip` 因不像广告词幸存 → 只剩 6px 一条。已全部改名 `ad-`→`asset-`、`adk-`→`akind-`、`data-ad`→`data-asset`，并加回归闸门 `npm run verify:prefix`（`tools/verify/guard-classprefix.mjs`）。**定性三特征**：无痕窗口正常（扩展默认禁用）+ 硬刷无效（扩展每次重新注入）+ 项目自身 `display:none` 规则与观测**恰好相反**（项目只在 collapsed 时藏 body+grip 并保留 head，实测 head=0/grip=6）。**headless 三条全不成立 → 探针再绿也证明不了没被拦。**
-  2. **localStorage 折叠（次要）**：`asset-browser.ts` 的 `zh.assets.collapsed === '1'` 持久化，折叠后 body/grip 隐藏、只剩标题栏。F12 → Application → Local Storage 删 `zh.assets.collapsed` / `zh.ui.dockH` → 硬刷恢复。
-  - 排查工具 `node tools/verify/dock-probe.mjs`：五视口扫描 + **分段高度**（grip/head/body/tree/content）+ `elementFromPoint` 命中测试。基线 `seg {grip:6, head:42, body:212, tree:212, content:212, sum:260}`。**教训：别靠数 DOM 子节点报绿——节点存在 ≠ 可见**（初版就是这么漏掉的）。
-- **🔴 Python 写文本文件会偷偷把 LF 改成 CRLF**（2026-09-03 踩）：Windows 下 `open(p,'w')` 默认做换行翻译，仓库 blob 存的是 LF（`core.autocrlf=false`）→ 整文件 diff（本轮 1700 行，还原后 274 行），污染历史且易与并行 session 冲突。**一律用 `newline=''`**。自查：`git diff --cached --stat --ignore-cr-at-eol` 数字应远小于 `git diff --cached --stat`；已中招就 `open(f,'wb').write(open(f,'rb').read().replace(b'\r\n', b'\n'))`。
-- **ADR-008 验证资产与结论同入库**：任何「跑了 X 条断言 / Y 条全绿」的结论，其脚本/配置/产物必须一并进版本库，否则结论不可复现（曾因临时脚本导致 docs/12 的「68%」数字无法复算）。
-- **ADR-009 测试与被测代码同位**：`packages/*` 测试进 `packages/<pkg>/test/`，`apps/*` 测试进 `apps/<app>/test/`；禁止引擎测试寄居 app 的 `src/`，禁止测试反向依赖上层。
-- dormant 模块：`packages/framegraph/src/graph.ts` + `packages/render/src/feature.ts` 共 425 行零运行时消费者，已加 DORMANT 标记但未删；注意 `apps/editor/src/features/*.feature.ts` 的 feature 与 `RenderFeature` **不是同一个东西**（命名撞车）。
+- Asset Preview 自开独立 `RendererCore` 实例（`apps/editor/src/services/asset-preview.ts`），与 `LabRenderer` 平级，均不内嵌渲染逻辑。骨骼 X-ray 用引擎 `CoreSkeletonOverlay`，编辑器算端点、引擎只画。
 
-## 内容真源与生成层（2026-09-03 建，D3 第一步）
-- **真源（改前先改这里）**：`assets/characters/roster.json`（8 角色：npcs 5 + bosses 3，**顶层键不是 `characters`**）+ `assets/style/tokens.json`（groups.core / grading.stops / toonRamp.stops / outline / numbers）。
-- **生成层 `packages/content/`（L4）**：`scripts/gen-content.mjs` → `src/generated/{tokens,roster}.generated.ts`，经 `@aether/content` 消费。`npm run content:gen` 写文件、`npm run content:check` 比对（不同步 exit 1）。改了真源必须重跑，否则门禁挂。
-- **🔴 分层硬约束**：content 在 **L4**，`packages/render` 在 **L3**，只允许向下依赖 → **render 不能反向 import content**。引擎侧的风格参数一律按 ADR-007 由编辑器 UI 层注入（`PostPackParams` 已加 `gradeMidMult` / `gradeShadowColor` / `gradeLightColor`）。谁想让引擎直接读 tokens，先想清楚这条。
-- **`MODEL_RULER_HEIGHT_M`**（原 `CHARACTER_HEIGHT_M`，2026-09-03 改名）：编辑器模型**归一化标尺**，`requireCharacter('E-04').heightMeters` = 2.05。改名原因：roster 里 8 个角色 1.25 m（E-02 四足）~4.0 m（B-02 母体）各不相同，原名会被读成「角色都是这个高度」。
-- **生成器铁律**：① 解析失败抛错，不静默填 0（B-02 `speed:"本体固定不可移动"` → `null` 不是 0）；② 复合串取第一个数值 + 原始串原样保留（`heightRaw`）。
-- **⚠️ D3 未完：roster.json 承载不了 `CharacterDef`**。它是美术/设计资料库 —— 无胶囊半径/质量/转向速率/视野/听觉/攻击性/骨骼受伤盒；`ai` 是出图提示词，`weakness` 与 boss `attacks[].desc` 是中文散文。11 项不可派生字段清单写在 `roster.generated.ts` 头部。**硬生成 = 把编造数字洗成「单一真源」，比硬编码更坏**，别干。
-- **门禁现在有 6 道**：typecheck · vitest · editor:build · editor:smoke · `content:check` · `verify:prefix`。后两道防的是「跑不出来但会出事」的问题（真源改了忘重跑 / 类名撞广告拦截）。
-- **遗留 L-8（待用户决策，勿擅改）**：`params.ts` 的 `gradeShadowMult` 0.95 vs 真源 0.78、`gradeShadowMix` 0.12 vs 真源 0.2（疑似抄了亮部的 0.12）。**修正会改变画面**，属美术决策。
+### 🔴 资产库面板「不见了」——两个独立成因
+1. **广告拦截插件（真凶，commit `750972d` 已修）**：曾用类名前缀 **`ad-`**（EasyList/uBlock/AdGuard 头号命中）被注入 `display:none !important`；`.ad-grip` 不像广告词幸存 → 只剩 6px。
+   已全改 `ad-`→`asset-`、`adk-`→`akind-`、`data-ad`→`data-asset`，加闸门 `npm run verify:prefix`。
+   **定性三特征**：无痕窗口正常 + 硬刷无效（扩展每次重新注入）+ 项目自身 `display:none` 规则与观测**恰好相反**。**headless 三条全不成立 → 探针再绿也证明不了没被拦。**
+2. **localStorage 折叠（次要）**：`zh.assets.collapsed === '1'`。F12 → Local Storage 删它和 `zh.ui.dockH` → 硬刷恢复。
+- 工具 `node tools/verify/dock-probe.mjs`（五视口 + 分段高度 + `elementFromPoint`）。基线 `seg {grip:6, head:42, body:212, tree:212, content:212, sum:260}`。**教训：节点存在 ≠ 可见，别靠数 DOM 子节点报绿。**
 
-## 3D 资产生成管线（E-04 跑通）
+## Scene 系统（2026-09-04 定案；铁律 `agents.md` §2/§2.5，全文 `docs/14`，这里只留**不可派生的判断与坑**）
+- **游戏规则：游戏开发必须以场景为唯一数据存储与编辑载体**。三份真源：`document.ts`(场景) / `project.ts`(项目锚点) / `asset-meta.ts`(资产 sidecar)。改 schema 先改它 + 补测试 + 补迁移链。
+- **🔴 不要用 `packages/core/src/ecs/world.ts` 当场景骨架**：半成品（remove 空实现 :170、strideOf 硬编码 4 :229、isChanged 恒真 :189）。用它重写 = 把能跑的编辑器拆成不能跑的架构正确品。静态物件走 SceneGraph，500 僵尸走 ai+gameplay 的 SoA。
+- **容量硬约束**：`MAX_OBJECTS=64`（frame-uniforms.ts:23）静态物件上限，超了**必须报错不能静默丢**；`MAX_MATERIAL_SLOTS=256`；`LIGHTS_FLOATS=40` → **只支持 1 directional + 1 point**，schema 允许多灯、运行时按 `priority` 取 top-1+top-1、**落选者标黄**。**500 僵尸必须 instancing**。
+- **Play mode 前置**：`App.tick` 空实现（`core/src/app.ts:156-161`），必须先补固定步长主循环，否则又变两套循环。
+- 分层修正：`renderer-core.ts:18` 反向 import `@aether/scene` 与「L3 不能依赖 L4」冲突 → 把 `scene/geometry.ts` 定性为**共享契约层**允许被 L3 依赖，`graph.ts`/`document.ts` 才是 L4。只改文档与注释，**不移动文件**。
+- 路线 S0(已完)→S1 加载→S2 保存→S3 Play→S4 灯光组件化→S5 prefab→S6 接 ai/gameplay。S1 第一件事：把 `renderer.ts:431-436` 硬编码的地面/胶囊换成从 `assets/scenes/sandbox/default.scene.json` 加载。
+
+### 资产元数据（ADR-016）
+- **四层容器**：`aether.project.json`(锚点) ⊃ `<file>.meta.json`(保留源扩展名 → a.glb 与 a.obj 不撞车) → `*.prefab.json` → `*.scene.json`。**覆盖链**：`.meta` → prefab → scene → runtime(Play 期不落盘)，每级只存差异。
+- **🔴 归属判定两句**：① 换个全新空场景，这数据还在不在？不在 → `.scene`。② **这段数据丢了，能不能从源 GLB 反推出来？能 → 不存**（否则双真源）。
+- **不用集中索引** —— `assetdb.json` 是**合并冲突制造机**；guid→path 索引是派生产物，启动扫描重建落 `.workbuddy/cache/`（不进 git）。
+- `.meta` ⇄ `binding.ts`：`PrimitiveBinding{materialId,override}` ⇄ `MaterialBindingRef{shared|instance|override}` 三形态对应。**转换是编辑器/资产层职责，不放 schema**（避免 scene 反向依赖 render）。
+- **不落盘三类**：派生/烘焙 → `.workbuddy/cache/`；编辑器 UI 状态 → localStorage；Play 运行时 → 内存 Stop 即弃。
+- ⚠️ **schema 两个已修的坑**：① `MaterialRef` 与 `packages/render/materials.ts` 同名撞车 → `MaterialBindingRef`；② `MaterialPatch` 字段须与 `MaterialState` **逐个对齐**（`emissiveColor` 不是 `emissive`，另有 shadowEnd/specMix/softnessScale/halftoneScale/unlit），清单见 `MATERIAL_STATE_FIELDS`。
+- **🔴 门禁测试禁用 `node:fs`**：未装 `@types/node`，`tsconfig.check.json` 的 `types` 是白名单。用 `import.meta.glob('/assets/**/*.meta.json',{eager:true,import:'default'})`（无需 node 类型 + 新资产自动纳入）。
+- `tools/scene/gen-asset-meta.mjs`（⚠️ 不是 `tools/gen-asset-meta.mjs`）：**28 个** `.glb.meta.json`。跳过原始混元产物（`<ID>_<YYYYMMDD>_<HHMMSS>.glb`，40-50MB）、`_broken_backup_*/`、`uvkeep/`、`obj_*/`；只留 `rigged/ textured/ game_ready/ synthetic/`。
+  铁律：① **merge 不覆盖**（手改的 bindings/rig/userData/导入设置必须保留）；② 身高从 **`roster.generated.ts` 的 `heightMeters`** 读，断言 8 个角色否则抛错。
+- **门禁必须验证会拦住错误**（不能只报绿）：`maxSubMeshes=0`、重复 guid、新增资产漏 sidecar 三种已实测能精确报错 exit 1。
+
+### 🔴 骨骼：会话存，结果不存（2026-09-04 实证订正）
+- 实测 `E04_Bulwark_1600_rigged_animated.glb`（300KB）已含 **22 关节 + inverseBindMatrices + JOINTS_0/WEIGHTS_0 + 6 动画** → **绑定结果已随导出 GLB 落盘（LFS）**，往 `.meta` 抄一份 = **双真源，比丢失更糟**。
+- `.meta.rig` 只装**造出结果的配方**（产物里都找不到）：`session.positions`(摆位，导出时已反解到 T-pose) / `session.bindPose` / `session.skinCylinders`(Wrapper 三段半径，算完即弃) / `export.*`(falloff/eps/maxInfluences/smooth×/mirrorWeights) / `tposeLocalRotations`。
+- **不存 `mirrorPairs`**：它是 `humanik-template.ts` 的 `MIRROR_PAIRS` 模板常量，由 `template` 派生。
+- `rig.exported` 取代 `weightsBaked`：`false` = 结果只在内存（**真·重灾区**，发 `W_META_RIG_NOT_EXPORTED`）；`true` = 结果已在 GLB，`.meta.rig` 降级为**历史记录**，运行时不读。
+- S0d 编辑器侧对接未做（依赖 S1 Inspector）：`binding-panel.ts` 的 `positions`/`bindPose`/`cylinders`/`smoothWeights`/`mirrorWeightsExport`/`unposed` **全是实例私有字段，无落盘路径**。
+
+### 脚本（ADR-017）
+- 代码资产 + **`BehaviorParamSchema` 必须有**（没它 Inspector 画不出控件 = 功能等于没有）。场景只存 `{behavior:'spawn-wave', params:{count:12}}`，**绝不存代码字符串**（RCE 入口 + 无法重构）。
+- 行为失效报 warning 降级空操作，**不阻塞加载**。Play 中禁用行为热重载。
+
+## 3D 资产生成管线
 - 入口 `assets/characters/_tools/gen3d_from_image.py`（勿直接调 buddy-cloud `--image-base64`，本地 PNG base64 超 Windows 命令行长度上限）。
 - 减面首选 `decimate_cluster.py`（对病态拓扑免疫）；质检硬判据 = 表面积保持率 >80%。混元产物脚在 z-max，`export_labmesh` 用 `(x,-z,y)`，极性反用 `--up-flip`。
+- **全链路 `assets/characters/_tools/pipeline_character.py`**：front.png → 混元图生3D(80000 tris) → decimate_cluster → bake_lowpoly(xatlas UV+贴图) → rig_character → retarget_bvh(烤6段) → validate_glb。单角色一条命令。
+- **两套 Python 环境必须分开**：云端/绑骨 `binaries/python/versions/3.13.12`（要 requests）；减面/烘焙 `binaries/python/envs/default`（要 pymeshlab+xatlas）。
+- **⚠️ 混元每日提交上限 5 次/天**（hy-3d，HTTP 429）；图生3D **不能同时带 `--prompt`**（API 拒 "Prompt和ImageBase64不能同时存在"）。
+- headless `cdp-rigged.mjs`（参数化，GLB 路径走命令行）20 断言。**8/8 角色 rig+anim 全齐**（B-02/B-03 于 2026-09-04 补跑完成）。
+- worktree 内 npm 装依赖会漂版本（TS 5.9/@webgpu/types 0.1.72 → 一片 TS2345）；主仓 pnpm 钉 5.6.3 / 0.1.49，修法 `npm install --no-save` 钉同版。
 
-## 名册全角色绑定流水线（2026-09-02 跑通，6/8 完成）
-- **全链路脚本 `assets/characters/_tools/pipeline_character.py`**：概念图 front.png → 混元图生3D(80000 tris) → decimate_cluster → bake_lowpoly(xatlas UV+贴图) → rig_character → retarget_bvh(烤6段) → validate_glb。单角色一条命令跑完。
-- **rig_character.py**（rig_e04.py 的通用化）：支持任意角色、按切片法**自动判定朝上轴极性**（脚在 z-max/z-min）、按 roster 身高取名；E-04 回归产物与 rig_e04.py 仅 y 轴恒定 3.6e-4 偏移（脚精确落地 y=0），bind-pose LBS max_err=1.12e-7。
-- **两套 Python 环境必须分开**：云端/绑骨用 `binaries/python/versions/3.13.12`（要 requests）；减面/烘焙用 `binaries/python/envs/default`（要 pymeshlab+xatlas）。
-- **headless 验证**：`cdp-rigged.mjs`（参数化，GLB 路径走命令行）任意角色 20 断言；E-01/E-02/E-03/E-04/E-05/B-01 均 20/20 PASS（0 console/0 exception）。
-- **⚠️ 混元每日提交上限 = 5 次/天**（dimension hy-3d，HTTP 429）。本日已用满：E-01/E-02/E-03/E-05/B-01 共 5 次 → **B-02/B-03 被限流挡住**，次日额度刷新或单独补跑 `pipeline_character.py --id B-02 --id B-03` 即可。
-- 图生3D **不能同时带 --prompt**（API 拒 "Prompt和ImageBase64不能同时存在"）。
-- 现状：E-01/E-02/E-03/E-04/E-05/B-01 六个角色 rig+anim 全齐；B-02/B-03 待次日额度。
-- worktree 内用 npm 装依赖会漂版本（TS 5.9/@webgpu/types 0.1.72 → 一片 TS2345）；主仓 pnpm 钉 5.6.3 / 0.1.49，修法 `npm install --no-save` 钉同版。
+## WebGPU 编码坑
+- **纹理 usage 必须用 `GPUTextureUsage.*`，绝不可写 `GPUBufferUsage.COPY_DST`**：数值完全不同——0x8 套到纹理上变成 `STORAGE_BINDING`，与 `TEXTURE_BINDING`(0x4) OR 后缺 `COPY_DST`(0x2) → `writeTexture`/`copyExternalImageToTexture` 报 console error（**只在运行时炸，tsc/vite 全绿**）。`copyExternalImageToTexture` 还要求同时有 `COPY_DST | RENDER_ATTACHMENT`。
+- **多画布**：一个 `GPUDevice` 可驱动多个 `GPUCanvasContext`，但每个 canvas 必须自己 `getContext('webgpu')`+`configure`；不能共用 `GpuContext.context`（主画布单例）。`RendererCore` 构造时持有自己的 `ctx`。
+- **headless 验证是必选项**：uniform offset 256 对齐 / bind group visibility / WGSL 编译错误 / 纹理 usage 错配只在运行时暴露。流程见 `webgpu-headless-validate` 技能。
+
+## 门禁（8 道，收尾全跑）
+`typecheck` · `vitest` · `editor:build` · `editor:smoke` · `content:check` · `verify:prefix` · `scene:gen` · `scene:check`
+（后四道防「跑不出来但会出事」：真源改了忘重跑 / 类名撞广告拦截 / 资产漏 sidecar / 场景格式非法）
