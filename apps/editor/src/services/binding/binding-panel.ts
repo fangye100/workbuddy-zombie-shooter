@@ -42,6 +42,12 @@ import {
   type FitResult,
   type JointPositions,
 } from './binding-math';
+import {
+  defaultSkinCylinders,
+  mirrorCylinders,
+  type SkinCylinderMap,
+  type CylSegment,
+} from './skin-proxy';
 
 /** 正视图：投影 (x, y)，深度 = z；侧视图：投影 (z, y)，深度 = x */
 type ViewAxis = 'front' | 'side';
@@ -143,6 +149,17 @@ export class BindingPanel {
   private bindPose: JointPositions | null = null;
   private selected: string | null = null;
 
+  // ── Skin Wrapper（代理圆柱体蒙皮）状态 ──
+  /** 编辑模式：关节骨架 / 蒙皮包裹。两者共用同一套正视/侧视 2D 视图 */
+  private editMode: 'skeleton' | 'skin' = 'skeleton';
+  /** 每个 joint 的 Skin Wrapper（圆柱体）。null = 尚未进入 skin 模式 / 未载模型 */
+  private cylinders: SkinCylinderMap | null = null;
+  /** 当前选中的圆柱体（joint 名）与其子段；用于属性面板与高亮 */
+  private selectedCyl: string | null = null;
+  private selectedSeg: CylSegment | null = null;
+  /** 导出时是否镜像皮肤权重 L→R */
+  private mirrorWeightsExport = false;
+
   /** 视图缩放：米 → 像素，由模型包围盒自动定 */
   private scale = 200;
   private originX = 0;
@@ -176,6 +193,8 @@ export class BindingPanel {
       <div class="bd-head">
         <span class="bd-title">绑定<em>Binding</em></span>
         <span class="bd-model" data-bd="stats">未加载模型</span>
+        <button class="bd-btn mode active" data-bd="mode-skel" title="编辑 22 关节：拖拽对齐模型解剖位置">关节 Skeleton</button>
+        <button class="bd-btn mode" data-bd="mode-skin" title="编辑蒙皮包裹圆柱体 Skin Wrapper（代理物体）">蒙皮 Skin</button>
         <span class="bd-spacer"></span>
         <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节镜像到右侧（x 取反）">镜像 L→R</button>
         <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节镜像到左侧（x 取反）">镜像 R→L</button>
@@ -233,6 +252,26 @@ export class BindingPanel {
             <b>Detach Skin</b> 移除结果但保留 Bind Pose；<br>
             切到 <b>Bind</b> 预览随时回到它重绑。
           </div>
+            <div class="bd-js" data-bd="js-section">
+              <div class="bd-js-title">Joint Skeleton</div>
+              <div class="bd-skin" data-bd="skin-panel" hidden>
+                <div class="bd-sel" data-bd="skin-sel">未选中圆柱体 · 在视图中点选一段</div>
+                <div class="bd-field" data-bd="skin-sliders" hidden>
+                  <label>Top 半径 <span data-bd="r-top-v"></span> m</label>
+                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-top">
+                  <label>Medium 半径 <span data-bd="r-medium-v"></span> m</label>
+                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-medium">
+                  <label>Bottom 半径 <span data-bd="r-bottom-v"></span> m</label>
+                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-bottom">
+                </div>
+                <div class="bd-skin-actions">
+                  <button class="bd-btn" data-bd="cyl-mirror" disabled>镜像此圆柱 → 对侧</button>
+                  <button class="bd-btn" data-bd="skin-mirror-all">镜像全部 L→R</button>
+                </div>
+                <label class="bd-check"><input type="checkbox" data-bd="skin-mirror-w"> 导出时镜像皮肤权重 L→R</label>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
 
@@ -284,8 +323,47 @@ export class BindingPanel {
     const smooth = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth"]')!;
     smooth.addEventListener('change', () => { this.smoothWeights = smooth.checked; });
 
+    // 模式切换：关节 Skeleton / 蒙皮包裹 Skin
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skel"]')!
+      .addEventListener('click', () => this.setEditMode('skeleton'));
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skin"]')!
+      .addEventListener('click', () => this.setEditMode('skin'));
+
+    // Skin Wrapper 属性面板
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-mirror"]')!
+      .addEventListener('click', () => this.mirrorSelectedCylinder());
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="skin-mirror-all"]')!
+      .addEventListener('click', () => this.mirrorAllCylinders());
+    const mw = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-mirror-w"]')!;
+    mw.addEventListener('change', () => { this.mirrorWeightsExport = mw.checked; });
+    for (const seg of ['top', 'medium', 'bottom'] as const) {
+      const sl = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="r-${seg}"]`)!;
+      sl.addEventListener('input', () => this.onRadiusSlider(seg, sl.value));
+    }
+
     this.bindCanvas(this.frontCanvas, 'front');
     this.bindCanvas(this.sideCanvas, 'side');
+    this.injectStyle();
+  }
+
+  /** 注入本模块专属样式（避免修改 index.html / 其他模块） */
+  private static styleInjected = false;
+  private injectStyle(): void {
+    if (BindingPanel.styleInjected) return;
+    BindingPanel.styleInjected = true;
+    const css = `
+      .bd-btn.mode.active { background: var(--zombie); color: var(--ink); border-color: var(--zombie); }
+      .bd-js-title { font-weight: 700; font-size: 12px; color: var(--toxic); margin: 8px 0 4px; letter-spacing: .5px; }
+      .bd-skin { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px;
+        background: rgba(155,93,229,0.08); border: 1px solid rgba(155,93,229,0.3); border-radius: 6px; }
+      .bd-skin-actions { display: flex; gap: 4px; }
+      .bd-skin-actions .bd-btn { flex: 1 1 0; }
+      .bd-skin input[type=range] { width: 100%; accent-color: var(--zombie); }
+      .bd-sel { font-size: 11px; color: var(--text-dim); }
+    `;
+    const st = document.createElement('style');
+    st.textContent = css;
+    document.head.appendChild(st);
   }
 
   // ─────────────────────────── 模型载入 ───────────────────────────
@@ -307,6 +385,16 @@ export class BindingPanel {
     this.sideFilter = 'all';
     this.bindPose = null;
     this.bindPoseBtn.disabled = true;
+    this.editMode = 'skeleton';
+    this.cylinders = null;
+    this.selectedCyl = null;
+    this.selectedSeg = null;
+    this.mirrorWeightsExport = false;
+    this.resetModeButtons();
+    const sp = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]');
+    if (sp !== null) sp.hidden = true;
+    const mw = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-mirror-w"]');
+    if (mw !== null) mw.checked = false;
     this.setAnimationInfo(null);
     this.computeViewFit();
     this.syncDisplay();
@@ -339,6 +427,14 @@ export class BindingPanel {
     this.sideFilter = 'all';
     this.bindPose = null;
     this.bindPoseBtn.disabled = true;
+    this.editMode = 'skeleton';
+    this.cylinders = null;
+    this.selectedCyl = null;
+    this.selectedSeg = null;
+    this.mirrorWeightsExport = false;
+    this.resetModeButtons();
+    const sp = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]');
+    if (sp !== null) sp.hidden = true;
     this.positions = tposeWorldPositions();
     this.selected = null;
     this.setAnimationInfo(null);
@@ -444,6 +540,15 @@ export class BindingPanel {
     };
 
     canvas.addEventListener('pointerdown', (e) => {
+      // 蒙皮模式：点选圆柱体的一段（top/medium/bottom），不直接拖骨架
+      if (this.editMode === 'skin') {
+        const hit = this.pickCylinder(e, canvas, axis);
+        this.selectedCyl = hit?.bone ?? null;
+        this.selectedSeg = hit?.seg ?? null;
+        this.updateSkinPanel();
+        this.refresh();
+        return;
+      }
       const hit = pick(e);
       if (hit === null) return;
       dragging = hit;
@@ -496,6 +601,7 @@ export class BindingPanel {
 
     // 方向键微调（Shift 精调 5mm）；仅当前姿态可编辑
     canvas.addEventListener('keydown', (e) => {
+      if (this.editMode !== 'skeleton') return;
       if (this.selected === null || this.previewMode !== 'current') return;
       const step = e.shiftKey ? NUDGE_STEP_FINE : NUDGE_STEP;
       const p = this.positions[this.selected]!;
@@ -625,6 +731,134 @@ export class BindingPanel {
     return out;
   }
 
+  // ─────────────────────────── Skin Wrapper（代理圆柱体） ───────────────────────────
+
+  /** 切换编辑模式（关节骨架 / 蒙皮包裹）。进入 skin 模式时惰性初始化默认 wrapper */
+  private setEditMode(mode: 'skeleton' | 'skin'): void {
+    if (mode === this.editMode) return;
+    this.editMode = mode;
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skel"]')!
+      .classList.toggle('active', mode === 'skeleton');
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skin"]')!
+      .classList.toggle('active', mode === 'skin');
+    const skinPanel = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]')!;
+    skinPanel.hidden = mode !== 'skin';
+    if (mode === 'skin') this.ensureCylinders();
+    this.refresh();
+  }
+
+  private resetModeButtons(): void {
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skel"]')!
+      .classList.toggle('active', true);
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="mode-skin"]')!
+      .classList.toggle('active', false);
+  }
+
+  private ensureCylinders(): void {
+    if (this.cylinders === null) this.cylinders = defaultSkinCylinders(this.positions);
+  }
+
+  /** 把选中圆柱体（若有对侧同名骨）的半径镜像到对侧 */
+  private mirrorSelectedCylinder(): void {
+    if (this.selectedCyl === null || this.cylinders === null) return;
+    const m = mirrorOf(this.selectedCyl);
+    if (m === null) return;
+    const src = this.cylinders[this.selectedCyl]!;
+    this.cylinders[m] = { bone: m, radii: { ...src.radii }, enabled: src.enabled };
+    this.refresh();
+  }
+
+  /** 全部 L↔R 镜像 wrapper 几何 */
+  private mirrorAllCylinders(): void {
+    if (this.cylinders === null) return;
+    this.cylinders = mirrorCylinders(this.cylinders);
+    this.updateSkinPanel();
+    this.refresh();
+  }
+
+  /** 拖动某段半径滑块 → 更新该圆柱体对应子段的半径并重绘 */
+  private onRadiusSlider(seg: CylSegment, value: string): void {
+    if (this.selectedCyl === null || this.cylinders === null) return;
+    const v = parseFloat(value);
+    if (!Number.isFinite(v)) return;
+    this.cylinders[this.selectedCyl]!.radii[seg] = v;
+    const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`)!;
+    span.textContent = v.toFixed(3);
+    this.refresh();
+  }
+
+  /** 刷新 skin 属性面板（选中信息 + 三段半径滑块 + 镜像按钮可用性） */
+  private updateSkinPanel(): void {
+    const sel = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-sel"]')!;
+    const sliders = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-sliders"]')!;
+    const mirBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-mirror"]')!;
+    if (this.selectedCyl === null || this.cylinders === null) {
+      sel.textContent = '未选中圆柱体 · 在视图中点选一段';
+      sliders.hidden = true;
+      mirBtn.disabled = true;
+      return;
+    }
+    const cyl = this.cylinders[this.selectedCyl]!;
+    const m = mirrorOf(this.selectedCyl);
+    sel.innerHTML = `<b>${this.selectedCyl}</b>${m !== null ? ` <span class="bd-mir">↔ ${m}</span>` : ''} · ${this.selectedSeg ?? '整段'}`;
+    sliders.hidden = false;
+    mirBtn.disabled = m === null;
+    for (const seg of ['top', 'medium', 'bottom'] as const) {
+      const sl = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="r-${seg}"]`)!;
+      const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`)!;
+      const v = cyl.radii[seg];
+      sl.value = String(v);
+      span.textContent = v.toFixed(3);
+    }
+  }
+
+  /** 点选：返回离指针最近、且落在某段线宽容差内的圆柱体子段 */
+  private pickCylinder(
+    e: PointerEvent, canvas: HTMLCanvasElement, axis: ViewAxis,
+  ): { bone: string; seg: CylSegment } | null {
+    if (this.cylinders === null) return null;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const segs = boneSegments(this.positions);
+    const s = this.scale;
+    const ox = this.centerX(canvas);
+    const h = canvas.clientHeight || 320;
+    const oy = h * 0.92;
+    const to2d = (p: Vec3): [number, number] => {
+      const horiz = axis === 'front' ? p[0] : p[2];
+      return [ox + horiz * s, oy - p[1] * s];
+    };
+    let best: { bone: string; seg: CylSegment } | null = null;
+    let bestD = Infinity;
+    for (const seg of segs) {
+      const cyl = this.cylinders[seg.bone];
+      if (cyl === undefined || !cyl.enabled) continue;
+      const A = to2d(seg.a);
+      const B = to2d(seg.b);
+      for (const ss of BindingPanel.subSeg2d(A, B)) {
+        const halfW = Math.max(4, cyl.radii[ss.seg] * s) + 4; // 线半宽 + 容差
+        const d = BindingPanel.distPointToSeg2d(mx, my, ss.a, ss.b);
+        if (d <= halfW && d < bestD) { bestD = d; best = { bone: seg.bone, seg: ss.seg }; }
+      }
+    }
+    return best;
+  }
+
+  private static distPointToSeg2d(
+    px: number, py: number, a: [number, number], b: [number, number],
+  ): number {
+    const abx = b[0] - a[0];
+    const aby = b[1] - a[1];
+    const len2 = abx * abx + aby * aby;
+    let t = 0;
+    if (len2 > 1e-9) {
+      t = ((px - a[0]) * abx + (py - a[1]) * aby) / len2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+    }
+    return Math.hypot(px - (a[0] + t * abx), py - (a[1] + t * aby));
+  }
+
   // ─────────────────────────── 绘制 ───────────────────────────
 
   private refresh(): void {
@@ -708,7 +942,8 @@ export class BindingPanel {
       const off = this.ensureMeshCache(axis);
       ctx.drawImage(off, 0, 0, w, h);
     }
-    this.drawSkeleton(ctx, canvas, axis);
+    if (this.editMode === 'skin') this.drawSkin(ctx, canvas, axis);
+    else this.drawSkeleton(ctx, canvas, axis);
   }
 
   private centerX(canvas: HTMLCanvasElement): number {
@@ -789,11 +1024,13 @@ export class BindingPanel {
     }
   }
 
-  /** 骨架：先画骨连线，再画 joint 图标（选中/左右用不同色）；非当前姿态用参考色 */
+  /** 骨架：先画骨连线，再画 joint 图标（选中/左右用不同色）；非当前姿态用参考色。
+   *  faint=true 时整体淡显（蒙皮模式下作对照底图用） */
   private drawSkeleton(
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     axis: ViewAxis,
+    faint = false,
   ): void {
     const pos = this.overlayPositions();
     const visible = new Set(this.visibleJoints());
@@ -807,6 +1044,7 @@ export class BindingPanel {
     };
     const depth = (p: Vec3): number => (axis === 'front' ? p[2] : p[0]);
     const isRef = this.previewMode !== 'current';
+    ctx.globalAlpha = faint ? 0.28 : 1;
 
     // 骨连线（任一端点被隐藏则跳过该段）
     ctx.lineWidth = 2;
@@ -828,7 +1066,7 @@ export class BindingPanel {
     );
     for (const name of order) {
       const [x, y] = to2d(pos[name]!);
-      const isSel = name === this.selected && !isRef;
+      const isSel = !faint && name === this.selected && !isRef;
       const side = name.startsWith('Left') ? 'L' : name.startsWith('Right') ? 'R' : 'M';
       const fill = isRef
         ? '#C9A6F0'
@@ -847,6 +1085,82 @@ export class BindingPanel {
         ctx.fillText(name, x + 8, y - 6);
       }
     }
+    ctx.globalAlpha = 1;
+  }
+
+  /** 蒙皮模式：在骨段上画 Skin Wrapper 圆柱体（top/medium/bottom 三段），可选中 */
+  private drawSkin(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    axis: ViewAxis,
+  ): void {
+    const cyls = this.cylinders;
+    if (cyls === null) { this.drawSkeleton(ctx, canvas, axis); return; }
+    // 骨骼淡显作对照
+    this.drawSkeleton(ctx, canvas, axis, true);
+    const segs = boneSegments(this.positions);
+    const s = this.scale;
+    const ox = this.centerX(canvas);
+    const h = canvas.clientHeight || 320;
+    const oy = h * 0.92;
+    const to2d = (p: Vec3): [number, number] => {
+      const horiz = axis === 'front' ? p[0] : p[2];
+      return [ox + horiz * s, oy - p[1] * s];
+    };
+    for (const seg of segs) {
+      const cyl = cyls[seg.bone];
+      if (cyl === undefined || !cyl.enabled) continue;
+      const A = to2d(seg.a);
+      const B = to2d(seg.b);
+      const parts = BindingPanel.subSeg2d(A, B);
+      for (const ss of parts) {
+        const r = cyl.radii[ss.seg];
+        const pxR = Math.max(4, r * s);
+        const sel = this.selectedCyl === seg.bone && this.selectedSeg === ss.seg;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = BindingPanel.cylColor(ss.seg);
+        ctx.globalAlpha = sel ? 1 : 0.85;
+        ctx.lineWidth = pxR * 2;
+        ctx.beginPath();
+        ctx.moveTo(ss.a[0], ss.a[1]);
+        ctx.lineTo(ss.b[0], ss.b[1]);
+        ctx.stroke();
+        if (sel) {
+          ctx.strokeStyle = 'rgba(143,209,79,0.95)';
+          ctx.lineWidth = pxR * 2 + 3;
+          ctx.beginPath();
+          ctx.moveTo(ss.a[0], ss.a[1]);
+          ctx.lineTo(ss.b[0], ss.b[1]);
+          ctx.stroke();
+        }
+      }
+      if (this.selectedCyl === seg.bone) {
+        const A = to2d(seg.a);
+        ctx.globalAlpha = 1;
+        ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+        ctx.fillStyle = '#FFD166';
+        ctx.fillText(seg.bone, A[0] + 8, A[1] - 6);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** 把骨段 A→B 在 2D 上切成 bottom / medium / top 三段 */
+  private static subSeg2d(
+    A: [number, number], B: [number, number],
+  ): Array<{ a: [number, number]; b: [number, number]; seg: CylSegment }> {
+    const m1: [number, number] = [A[0] + (B[0] - A[0]) / 3, A[1] + (B[1] - A[1]) / 3];
+    const m2: [number, number] = [A[0] + 2 * (B[0] - A[0]) / 3, A[1] + 2 * (B[1] - A[1]) / 3];
+    return [
+      { a: A, b: m1, seg: 'bottom' },
+      { a: m1, b: m2, seg: 'medium' },
+      { a: m2, b: B, seg: 'top' },
+    ];
+  }
+
+  /** 三段颜色：bottom=蓝 / medium=绿 / top=红（与左右着色区分） */
+  private static cylColor(seg: CylSegment): string {
+    return seg === 'top' ? '#FF8FA3' : seg === 'medium' ? '#9BE7A8' : '#6FB7FF';
   }
 
   // ─────────────────────────── 对外查询 ───────────────────────────
@@ -876,6 +1190,16 @@ export class BindingPanel {
       indices: this.meshIndices,
       vertexFloats: this.vertexFloats,
     };
+  }
+
+  /** 供导出取用：当前 Skin Wrapper（null = 未进入蒙皮模式，导出退回胶囊权重） */
+  getCylinders(): SkinCylinderMap | null {
+    return this.cylinders;
+  }
+
+  /** 供导出取用：是否镜像皮肤权重 L→R */
+  getMirrorWeights(): boolean {
+    return this.mirrorWeightsExport;
   }
 
   /** 供 headless 冒烟：模拟把某个 joint 拖到指定 local 坐标 */

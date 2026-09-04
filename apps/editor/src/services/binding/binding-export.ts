@@ -33,6 +33,11 @@ import {
   type JointPositions,
   type SkinWeights,
 } from './binding-math';
+import {
+  computeCylinderWeights,
+  mirrorSkinWeights,
+  type SkinCylinderMap,
+} from './skin-proxy';
 
 /** 引擎顶点布局：pos3 / normal3 / smoothNormal3 / uv2 / color4 */
 export const BINDING_VERTEX_FLOATS = 15;
@@ -76,6 +81,14 @@ export interface BindExportInput {
   smoothIters?: number;
   /** 平滑扩散强度 0..1（默认 0.5） */
   smoothLambda?: number;
+  /**
+   * 可选：Skin Wrapper 代理圆柱体（binding 模块的「蒙皮包裹」编辑产物）。
+   * 提供时，权重改由 `computeCylinderWeights` 按圆柱体包裹范围计算（被包顶点归属对应
+   * joint），否则退回 `computeLbsWeights` 的胶囊距离权重（旧行为，默认路径不变）。
+   */
+  cylinders?: SkinCylinderMap | undefined;
+  /** 导出时把左半皮肤权重镜像到右半（L→R 对称蒙皮） */
+  mirrorWeights?: boolean;
   /**
    * 可选：一并烘焙进 `animations[]`。
    * 骨名必须在 HumanIK 22 骨里，对不上的骨会被跳过并记进 `animSkipped`。
@@ -158,9 +171,22 @@ function runExport(
 
   // ② 在**当前姿态**骨架上算权重（此时骨架与模型真实肢体重合）
   const segs = boneSegments(placed);
-  let skin = computeLbsWeights(
-    vertices, VF, vertexCount, segs, falloff, eps, maxInfluences,
-  );
+  let skin: SkinWeights;
+  if (input.cylinders !== undefined) {
+    // Skin Wrapper 模式：权重由圆柱体包裹范围定义（被包顶点归属对应 joint）
+    skin = computeCylinderWeights(
+      vertices, VF, vertexCount, placed, input.cylinders,
+      { falloff, eps, maxInfluences },
+    );
+    if (input.mirrorWeights === true) {
+      skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
+    }
+  } else {
+    // 默认胶囊距离权重（旧行为，保证既有导出 / 测试不受影响）
+    skin = computeLbsWeights(
+      vertices, VF, vertexCount, segs, falloff, eps, maxInfluences,
+    );
+  }
 
   // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
   if (smoothWeights) {

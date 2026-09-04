@@ -1065,6 +1065,9 @@ async function boot(): Promise<void> {
         image: s.image,
         placed: binding.getState().positions,
         smoothWeights,
+        // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重
+        cylinders: binding?.getCylinders() ?? undefined,
+        mirrorWeights: binding?.getMirrorWeights() ?? false,
       };
       // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
       const res = await rigToTPoseWithImage(
