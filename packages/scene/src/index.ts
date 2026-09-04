@@ -26,3 +26,4 @@ export * from './project';
 export * from './asset-meta';
 export * from './document';
 export * from './asset-server';
+export * from './graph';
