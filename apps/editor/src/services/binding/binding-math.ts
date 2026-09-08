@@ -29,6 +29,7 @@ import {
   ARM_BONES,
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  isTipBone,
   tposeDirections,
   type Vec3,
 } from './humanik-template';
@@ -161,6 +162,12 @@ export type JointPositions = Record<string, [number, number, number]>;
  * 「第一个子骨」按 HUMANIK_ORDER 里出现的顺序取，与 Python 侧
  * `rig_humanik.bone_segments` 的 `child_of.setdefault` 规则一致 —— 两边必须同规则，
  * 否则离线 rig 与编辑器面板会算出两套权重。
+ *
+ * ⚠️ **tip 骨仍在输出里**（保持 `结果下标 == HUMANIK_ORDER 下标`，因为下游
+ * `computeLbsWeights` 把这个下标直接当 glTF joint index 写进 `joints[]`）。
+ * 是否参与 skin 由 `computeLbsWeights` 里的置零决定，不是靠这里过滤。
+ * tip 作为「第一个子骨」出现在 Hand / ToeBase 之下，正是它们存在的意义：
+ * 让原本退化成点的末端胶囊拿到长度。
  */
 export function boneSegments(
   positions: JointPositions,
@@ -245,12 +252,18 @@ export interface SkinWeights {
  *
  * 注意调用时机：应在**当前姿态**的骨架 + **当前姿态**的网格上调用 ——
  * 此时骨架与模型真实肢体重合，权重才分配到正确的骨上。
+ *
+ * ⚠️ **tip 骨恒 0 权重**（不参与 skin）：`segs[b].bone` 命中 `isTipBone()` 时
+ * 权重直接置 0，它永远进不了 top-4。
+ * 这里**不能**改用「过滤掉 tip 项再算」—— `joints[]` 里写的是 segs 下标，
+ * 而它必须等于 `HUMANIK_ORDER` 的下标（glTF joint index），过滤会让整体错位。
+ * 保留槽位、置零权重，是唯一既对齐索引又满足「tip 不参与 skin」的做法。
  */
 export function computeLbsWeights(
   positions: Float32Array,
   vertexFloats: number,
   vertexCount: number,
-  segs: Array<{ a: Vec3; b: Vec3 }>,
+  segs: Array<{ bone: string; a: Vec3; b: Vec3 }>,
   falloff = 3.0,
   eps = 0.02,
   maxInfluences = 4,
@@ -260,16 +273,20 @@ export function computeLbsWeights(
   const nBones = segs.length;
   const w = new Float64Array(nBones);
   const idx = new Int32Array(nBones);
+  // 预先标记 tip：内层循环每顶点 × 每骨都会查，别在热路径里做 Set 查找
+  const isTip = new Uint8Array(nBones);
+  for (let b = 0; b < nBones; b++) isTip[b] = isTipBone(segs[b]!.bone) ? 1 : 0;
 
   for (let i = 0; i < vertexCount; i++) {
     const o = i * vertexFloats;
     const p: Vec3 = [positions[o]!, positions[o + 1]!, positions[o + 2]!];
     for (let b = 0; b < nBones; b++) {
+      if (isTip[b] === 1) { w[b] = 0; idx[b] = b; continue; }
       const d = distToSegment(p, segs[b]!.a, segs[b]!.b);
       w[b] = 1 / Math.pow(d + eps, falloff);
       idx[b] = b;
     }
-    // 取权重最大的 maxInfluences 个（nBones=22 很小，直接插入排序足够）
+    // 取权重最大的 maxInfluences 个（nBones 很小，直接插入排序足够）
     for (let k = 0; k < maxInfluences; k++) {
       let best = k;
       for (let j = k + 1; j < nBones; j++) if (w[idx[j]!]! > w[idx[best]!]!) best = j;
@@ -279,9 +296,10 @@ export function computeLbsWeights(
     for (let k = 0; k < maxInfluences; k++) sum += w[idx[k]!]!;
     const base = i * 4;
     if (sum <= 1e-12) {
-      // 兜底：全近零 → 最近骨权重 1.0，杜绝零权重顶点
+      // 兜底：全近零 → 最近骨权重 1.0，杜绝零权重顶点（tip 同样排除，不给它兜底）
       let bd = Infinity, bj = 0;
       for (let b = 0; b < nBones; b++) {
+        if (isTip[b] === 1) continue;
         const d = distToSegment(p, segs[b]!.a, segs[b]!.b);
         if (d < bd) { bd = d; bj = b; }
       }
@@ -298,6 +316,29 @@ export function computeLbsWeights(
 }
 
 /**
+ * 权重平滑的每顶点累加器容量：4 个自身骨 + 邻居贡献。
+ * 平均度数 ~6 的流形网格，第一轮最多也就 ~28 个不同骨；64 足够，超出部分丢弃
+ * （丢弃的是权重最小的骨，与 maxInfluences=4 的截断语义一致）。
+ */
+const SMOOTH_ACC_CAP = 64;
+
+/**
+ * 可选：按**坐标重合**焊接邻接（split-normal / 硬边拆点专用）。
+ *
+ * 描边风格模型的硬边处，同一位置会被拆成多个顶点（法线不同、索引不同），
+ * 三角面邻接图在此断开 → 扩散过不去 → 裂缝两侧各跟各的骨，蒙皮撕裂。
+ * 传了这个选项后，位置重合的顶点互为邻居，扩散得以跨过硬边。
+ */
+export interface SmoothWeldOptions {
+  /** 顶点数组（引擎 stride 布局，位置在 offset 0..2） */
+  positions: Float32Array;
+  /** 每个顶点的 float 数（stride） */
+  vertexFloats: number;
+  /** 焊接量化精度（米，默认 0.1mm） */
+  tolerance?: number;
+}
+
+/**
  * 皮肤权重平滑（**空间热力 / Laplacian 松弛**）。
  *
  * 胶囊算法（`computeLbsWeights`）按「顶点到骨段最近距离」分配影响，骨交界处的权重是
@@ -305,14 +346,24 @@ export function computeLbsWeights(
  *
  *   w_i ← (1−λ)·w_i + λ·mean(w_邻居)
  *
- * 等价于对权重场做一次**热扩散**，把硬边"晕"开成平滑过渡，且不改变每顶点的 4 个
- * 影响骨（只平滑权重数值），所以不会引入错骨。迭代 2 次、λ=0.5 已是肉眼可见的改善。
+ * 等价于对权重场做一次**热扩散**，把硬边"晕"开成平滑过渡。迭代 2 次、λ=0.5
+ * 已是肉眼可见的改善。
+ *
+ * ⚠️ **必须按骨 id（joint index）聚合，绝不能按槽位 k 平均**（2026-09-08 修复，P0-1）。
+ * 各顶点的 4 个槽位是**按它自己的权重降序**排的，所以顶点 i 的第 k 个槽位与邻居 j 的
+ * 第 k 个槽位**不保证是同一根骨**。旧实现只对 `weights[k]` 做邻域平均、不碰 `joints`，
+ * 于是在骨骼交界处：邻居槽位 1 的真实第二骨权重（如 40%）被灌进本顶点槽位 1 那个
+ * w=0 的无关骨（稳定排序后恒为索引最小的 Hips/Spine/Spine1）→ 实测无关骨凭空拿到
+ * **18.8%** 权重，画面上就是「关节周围一圈顶点把权重交给脊柱」。
+ * 现在改成：把自身与所有邻居的 (boneId, weight) 展开成一个稀疏累加器，按 **boneId**
+ * 汇总，再取 top-4 重新打包 —— 骨集合允许随扩散增长，但永远不会串到无关骨上。
  *
  * 邻接由三角面索引构建（每个顶点连它的三角面邻居），复杂度 O(迭代·顶点·平均度数)，
- * 对 ≤ 几千顶点的角色网格是毫秒级，只在 apply 时跑一次，不影响拖拽帧率。
+ * 对 ≤ 几万顶点的角色网格是毫秒级，只在 apply 时跑一次，不影响拖拽帧率。
  *
  * @param iterations 松弛迭代次数（默认 2）
  * @param lambda     扩散强度 0..1（默认 0.5；越大越糊）
+ * @param weld       可选：按坐标重合焊接邻接（描边硬边模型请务必传）
  */
 export function smoothSkinWeights(
   skin: SkinWeights,
@@ -320,7 +371,9 @@ export function smoothSkinWeights(
   vertexCount: number,
   iterations = 2,
   lambda = 0.5,
+  weld?: SmoothWeldOptions,
 ): SkinWeights {
+  // ① 邻接：三角面索引
   const adj: number[][] = Array.from({ length: vertexCount }, () => []);
   for (let t = 0; t < indices.length; t += 3) {
     const a = indices[t]!;
@@ -334,37 +387,120 @@ export function smoothSkinWeights(
     adj[i] = [...new Set(adj[i]!)];
   }
 
-  const joints = new Uint16Array(skin.joints); // 影响骨不动，只平滑权重
-  const cur = Float32Array.from(skin.weights);
-  const next = new Float32Array(cur.length);
+  // ② 焊接：位置重合但索引不同的顶点互为邻居（split-normal 硬边）
+  if (weld !== undefined) {
+    const { positions, vertexFloats } = weld;
+    const q = 1 / (weld.tolerance ?? 1e-4);
+    const groups = new Map<string, number[]>();
+    for (let i = 0; i < vertexCount; i++) {
+      const o = i * vertexFloats;
+      const key =
+        `${Math.round(positions[o]! * q)}_` +
+        `${Math.round(positions[o + 1]! * q)}_` +
+        `${Math.round(positions[o + 2]! * q)}`;
+      const g = groups.get(key);
+      if (g === undefined) groups.set(key, [i]);
+      else g.push(i);
+    }
+    for (const g of groups.values()) {
+      if (g.length < 2) continue; // 没被拆点，保持原邻接
+      const merged = new Set<number>();
+      for (const i of g) {
+        for (const j of adj[i]!) merged.add(j);
+      }
+      for (const i of g) {
+        const out: number[] = [];
+        for (const j of merged) if (j !== i) out.push(j);
+        for (const j of g) if (j !== i) out.push(j);
+        adj[i] = out;
+      }
+    }
+  }
+
+  // ③ 逐顶点稀疏累加器（定长数组 + 线性探测，避免每顶点分配 Map）
+  const key = new Int32Array(SMOOTH_ACC_CAP);
+  const val = new Float64Array(SMOOTH_ACC_CAP);
+  let n = 0;
+  const put = (bone: number, w: number): void => {
+    if (w <= 0) return; // 0 权重不占位：tip 骨恒 0，绝不会被扩散带进来
+    for (let s = 0; s < n; s++) {
+      if (key[s] === bone) {
+        val[s] = val[s]! + w;
+        return;
+      }
+    }
+    if (n < SMOOTH_ACC_CAP) {
+      key[n] = bone;
+      val[n] = w;
+      n++;
+    }
+  };
+
+  let curJ = Uint16Array.from(skin.joints);
+  let curW = Float32Array.from(skin.weights);
+  let nextJ = new Uint16Array(vertexCount * 4);
+  let nextW = new Float32Array(vertexCount * 4);
 
   for (let it = 0; it < iterations; it++) {
     for (let i = 0; i < vertexCount; i++) {
+      const base = i * 4;
       const nb = adj[i]!;
-      for (let k = 0; k < 4; k++) {
-        const self = cur[i * 4 + k]!;
-        if (nb.length === 0) {
-          next[i * 4 + k] = self;
-          continue;
+      if (nb.length === 0) {
+        for (let k = 0; k < 4; k++) {
+          nextJ[base + k] = curJ[base + k]!;
+          nextW[base + k] = curW[base + k]!;
         }
-        let sum = 0;
-        for (const j of nb) sum += cur[j * 4 + k]!;
-        const avg = sum / nb.length;
-        next[i * 4 + k] = (1 - lambda) * self + lambda * avg;
+        continue;
+      }
+      n = 0;
+      for (let k = 0; k < 4; k++) put(curJ[base + k]!, (1 - lambda) * curW[base + k]!);
+      const share = lambda / nb.length;
+      for (const j of nb) {
+        const ob = j * 4;
+        for (let k = 0; k < 4; k++) put(curJ[ob + k]!, share * curW[ob + k]!);
+      }
+      if (n === 0) {
+        for (let k = 0; k < 4; k++) {
+          nextJ[base + k] = curJ[base + k]!;
+          nextW[base + k] = curW[base + k]!;
+        }
+        continue;
+      }
+      // top-4（n 很小，选择排序足够）
+      const take = n < 4 ? n : 4;
+      for (let k = 0; k < take; k++) {
+        let best = k;
+        for (let s = k + 1; s < n; s++) if (val[s]! > val[best]!) best = s;
+        const tk = key[k]!;
+        const tv = val[k]!;
+        key[k] = key[best]!;
+        val[k] = val[best]!;
+        key[best] = tk;
+        val[best] = tv;
+      }
+      // 归一化（Σ=1），保持 LBS 正确
+      let sum = 0;
+      for (let k = 0; k < take; k++) sum += val[k]!;
+      for (let k = 0; k < 4; k++) {
+        if (k < take && sum > 1e-12) {
+          nextJ[base + k] = key[k]!;
+          nextW[base + k] = val[k]! / sum;
+        } else {
+          // 空槽位：沿用主骨 + 权重 0，不引入任何无关骨的真实权重
+          nextJ[base + k] = key[0]!;
+          nextW[base + k] = 0;
+        }
       }
     }
-    cur.set(next);
+    const tj = curJ;
+    curJ = nextJ;
+    nextJ = tj;
+    const tw = curW;
+    curW = nextW;
+    nextW = tw;
   }
 
-  // 归一化（Σ=1），保持 LBS 正确
-  for (let i = 0; i < vertexCount; i++) {
-    let s = 0;
-    for (let k = 0; k < 4; k++) s += cur[i * 4 + k]!;
-    if (s > 1e-9) {
-      for (let k = 0; k < 4; k++) cur[i * 4 + k] = cur[i * 4 + k]! / s;
-    }
-  }
-  return { joints, weights: cur };
+  return { joints: curJ, weights: curW };
 }
 
 // ─────────────────────────── 姿态拟合与反解 ───────────────────────────
