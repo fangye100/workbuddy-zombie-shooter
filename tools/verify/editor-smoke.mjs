@@ -690,6 +690,59 @@ async function main() {
       );
       check('面板按钮齐全（镜像×2 / 重置 / 应用 / 关闭）', openRes.btns >= 5, `btns=${openRes.btns}`);
       check('顶边拖拽把手 .bd-grip 存在（面板可下压露出 3D 视图）', openRes.grip === true);
+
+      // UI/UX 重分组（docs/15 §3.1–3.6）：头部按语义分组、破坏性操作降级、
+      // 半径双输入、帮助折叠、产出状态常驻徽标。DOM 结构断言，防止以后又被摊平。
+      const uxRes = await cdp.eval(`(() => {
+        const dock = document.getElementById('binding-dock');
+        const groups = [...dock.querySelectorAll('.bd-head-group')];
+        const badge = dock.querySelector('[data-bd="export-badge"]');
+        const tip = dock.querySelector('[data-bd="tip"]');
+        return {
+          groups: groups.map((e) => e.getAttribute('data-group')),
+          labelled: groups.filter((e) => e.querySelector('.bd-glabel') !== null).length,
+          headViewportToggle: dock.querySelector('.bd-head [data-bd="skin-view3d"]') !== null,
+          subViewportToggle: dock.querySelector('.bd-skin [data-bd="skin-view3d"]') !== null,
+          radiusNums: dock.querySelectorAll('[data-bd="r-top-n"],[data-bd="r-medium-n"],[data-bd="r-bottom-n"]').length,
+          danger: [...dock.querySelectorAll('.bd-btn.danger')].map((e) => e.getAttribute('data-bd')),
+          tipHidden: tip === null ? null : tip.hidden,
+          badge: badge === null ? null : { hidden: badge.hidden, text: badge.textContent.trim(), cls: badge.className },
+        };
+      })()`);
+      check(
+        '头部按语义分 5 组（编辑/镜像/姿态/产出/保存）',
+        JSON.stringify(uxRes.groups) === JSON.stringify(['编辑', '镜像', '姿态', '产出', '保存']),
+        `groups=${JSON.stringify(uxRes.groups)}`,
+      );
+      check('每个分组都有文字标签', uxRes.labelled === uxRes.groups.length, `labelled=${uxRes.labelled}/${uxRes.groups.length}`);
+      check(
+        '破坏性操作降级为 danger 次要样式（重置 / Detach）',
+        JSON.stringify(uxRes.danger) === JSON.stringify(['reset', 'detach']),
+        `danger=${JSON.stringify(uxRes.danger)}`,
+      );
+      check('「在 3D 视图显示包裹器」已提到头部（不再埋在 Skin 子面板）',
+        uxRes.headViewportToggle === true && uxRes.subViewportToggle === false,
+        `head=${uxRes.headViewportToggle} sub=${uxRes.subViewportToggle}`);
+      check('半径三段都有数字输入框（滑块 + 数字框双向同步）', uxRes.radiusNums === 3, `nums=${uxRes.radiusNums}`);
+      check('操作说明默认收起（不再 10 行常驻）', uxRes.tipHidden === true, `hidden=${uxRes.tipHidden}`);
+      check(
+        '载入后产出状态徽标常驻显示「● 未导出」',
+        uxRes.badge !== null && uxRes.badge.hidden === false && uxRes.badge.text === '● 未导出',
+        `badge=${JSON.stringify(uxRes.badge)}`,
+      );
+
+      // 头部「?」能展开/收起说明
+      const helpRes = await cdp.eval(`(() => {
+        const dock = document.getElementById('binding-dock');
+        const btn = dock.querySelector('[data-bd="help"]');
+        const tip = dock.querySelector('[data-bd="tip"]');
+        btn.click();
+        const afterOpen = tip.hidden;
+        btn.click();
+        return { afterOpen, afterClose: tip.hidden, aria: btn.getAttribute('aria-expanded') };
+      })()`);
+      check('头部「?」可展开操作说明', helpRes.afterOpen === false, `hidden=${helpRes.afterOpen}`);
+      check('头部「?」可再次收起', helpRes.afterClose === true, `hidden=${helpRes.afterClose}`);
       check(
         '默认摆放是 T-pose（左臂水平：LeftHand 与 LeftArm 同高）',
         Number.isFinite(p0.LeftHand?.[1]) && Math.abs(p0.LeftHand[1] - p0.LeftArm[1]) < 1e-9,
@@ -1121,30 +1174,69 @@ async function main() {
         const b = window.__editor.binding;
         const c = document.querySelector('[data-bd="front"]');
         const w = c.clientWidth, h = c.clientHeight;
-        // ① 扫格子找一个能点中圆柱体的位置（不硬编码坐标，换模型也不会失效）
-        let hit = null, at = null;
-        for (let y = Math.round(h * 0.2); y < h * 0.8 && hit === null; y += 6) {
-          for (let x = Math.round(w * 0.2); x < w * 0.8; x += 6) {
+        // ① 扫格子找「包裹器**边缘**」的点（不硬编码坐标，换模型也不会失效）。
+        //
+        //    ⚠️ 不能取第一个命中点就收工：命中判定用的是到**子段**的距离，
+        //    骨端帽上方、贴着骨轴延长线的点也会命中，但它到骨轴的垂距可能只有
+        //    2~3px，小于 rPx×0.45 → 被判成「抓核心 = 沿轴移动偏移」，改不了半径。
+        //    本断言验的是「拖边缘 = 改半径」，所以取**垂距最大**的命中点。
+        const axisCache = {};
+        const axisOf = (bn) => {
+          if (axisCache[bn] === undefined) axisCache[bn] = b.wrappers.axis(bn, 'front');
+          return axisCache[bn];
+        };
+        const perpDist = (px, py, sg) => (sg === null ? -1
+          : Math.abs((px - sg.a[0]) * (sg.b[1] - sg.a[1]) - (py - sg.a[1]) * (sg.b[0] - sg.a[0]))
+            / (Math.hypot(sg.b[0] - sg.a[0], sg.b[1] - sg.a[1]) || 1));
+        let hit = null;
+        let at = null;
+        let bestDr = -1;
+        for (let y = Math.round(h * 0.2); y < h * 0.8; y += 4) {
+          for (let x = Math.round(w * 0.2); x < w * 0.8; x += 4) {
             const p = b.wrappers.pick('front', x, y);
-            if (p !== null) { hit = p; at = { x, y }; break; }
+            if (p === null) continue;
+            const dr = perpDist(x, y, axisOf(p.bone));
+            if (dr > bestDr) { bestDr = dr; hit = p; at = { x, y }; }
           }
         }
         if (hit === null) return { found: false };
         const before = { ...b.wrappers.cylinders()[hit.bone].radii };
-        // ② 按下 → 拖到偏离骨轴 60px → 松开
+        // ② 按下 → 沿**垂直于骨轴**的方向拖 60px → 松开。
+        //    半径 = 指针到骨轴的垂距，沿轴方向拖垂距不变、半径**本就不该动**；
+        //    Head 的骨轴在正视里恰好垂直，固定「向下 60px」会取到退化方向，
+        //    于是看起来像「拖动没反应」，实际是断言拖错了方向。
+        const seg = axisOf(hit.bone);
+        let dx = 0;
+        let dy = 60;
+        if (seg !== null) {
+          const ax = seg.b[0] - seg.a[0];
+          const ay = seg.b[1] - seg.a[1];
+          const L = Math.hypot(ax, ay) || 1;
+          let nx = -ay / L;
+          let ny = ax / L;
+          // 朝**远离**骨轴的那一侧拖，保证垂距一定变大（半径 = 垂距）
+          if ((at.x - seg.a[0]) * nx + (at.y - seg.a[1]) * ny < 0) { nx = -nx; ny = -ny; }
+          dx = Math.round(nx * 60);
+          dy = Math.round(ny * 60);
+        }
+        const cylOf = () => b.wrappers.cylinders()[hit.bone];
         const ev = (type, x, y) => c.dispatchEvent(new PointerEvent(type, {
           clientX: c.getBoundingClientRect().left + x,
           clientY: c.getBoundingClientRect().top + y,
           bubbles: true, pointerId: 1, isPrimary: true,
         }));
         ev('pointerdown', at.x, at.y);
-        ev('pointermove', at.x, at.y + 60);
+        ev('pointermove', at.x + dx, at.y + dy);
         await ${nFrames(2)};
-        const after = { ...b.wrappers.cylinders()[hit.bone].radii };
-        ev('pointerup', at.x, at.y + 60);
+        const after = { ...cylOf().radii };
+        ev('pointerup', at.x + dx, at.y + dy);
         // ③ 还原，别把半径留在奇怪的值上
         for (const s of ['top', 'medium', 'bottom']) b.wrappers.setRadius(hit.bone, s, before[s]);
-        return { found: true, hit, before, after, moved: Math.abs(after[hit.seg] - before[hit.seg]) };
+        return {
+          found: true, hit, before, after, dir: { dx, dy },
+          moved: Math.abs(after[hit.seg] - before[hit.seg]),
+          hitDrPx: bestDr,
+        };
       })()`);
       check(
         '★ 视图里能点中圆柱体子段（点选判定没坏）',
@@ -1155,7 +1247,9 @@ async function main() {
         '★ 在视图里拖圆柱体 = 改半径（拖动真的有反应）',
         drag.found === true && drag.moved > 0.01,
         `${drag.hit?.bone}.${drag.hit?.seg} ${drag.before?.[drag.hit?.seg]?.toFixed(3)} → ` +
-          `${drag.after?.[drag.hit?.seg]?.toFixed(3)}`,
+          `${drag.after?.[drag.hit?.seg]?.toFixed(3)} · 拖动方向 ${JSON.stringify(drag.dir)} · ` +
+          `off ${JSON.stringify(drag.offBefore)} → ${JSON.stringify(drag.offAfter)} · ` +
+          `起点垂距 ${drag.hitDrPx?.toFixed(1)}px`,
       );
       check(
         '★ 只改点中的那一段，另两段不动',
