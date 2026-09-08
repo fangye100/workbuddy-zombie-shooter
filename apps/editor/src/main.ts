@@ -5,17 +5,18 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
-import { parseGlb } from '@aether/scene';
+import { parseGlb, validateAssetMeta } from '@aether/scene';
 import type { GltfResult } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
 import { BindingPanel } from './services/binding/binding-panel';
+import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
 import type { FitResult, JointPositions } from './services/binding/binding-math';
-import { ASSET_MIME, stemName, type AssetSelection } from './asset-util';
+import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
 import { summarizeMatch, createSkinState, selectClip, play } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
@@ -946,6 +947,10 @@ async function boot(): Promise<void> {
   }
   let bindingSession: BindingSession | null = null;
   let binding: BindingPanel | null = null;
+  // 当前绑定会话对应的 .meta.json 落盘点（资产库入口才有；层级/场景物体入口为 null）
+  let currentBindingMetaPath: string | null = null;
+  // 资产库当前选中的资产路径（供顶部菜单「进入绑定」取目标 .glb）
+  let lastAssetPath: string | null = null;
 
   /**
    * 已重定向的动画（**骨名**为键，还没绑到任何具体骨架上）。
@@ -1000,7 +1005,7 @@ async function boot(): Promise<void> {
   window.addEventListener('blur', () => closeCtxMenu());
 
   // ── 面板开关 ──
-  function openBinding(session: BindingSession): void {
+  function openBinding(session: BindingSession, saved?: unknown): void {
     if (bindingDockEl === null) return;
     bindingSession = session;
     if (binding === null) {
@@ -1009,11 +1014,29 @@ async function boot(): Promise<void> {
         onApply: (fit, opts) => void applyBinding(fit, opts?.smoothWeights ?? true),
         onLoadBvh: () => pickBvhFile((t, n) => loadBvhForBinding(t, n)),
         onExportAnim: () => void exportAnimGlb(),
-      });
+        onSave: () => void saveBinding(),
+        onToggleViewportCylinders: (on) => {
+          panel.setModelInfo(
+            on
+              ? '3D 视口：已显示 Skin Wrapper 圆柱体（半透明 X-ray，随骨骼动画实时更新）'
+              : '3D 视口：已隐藏 Skin Wrapper 圆柱体',
+          );
+                  hudDirty = true;
+        },
+        onAutoFit: (changed) => {
+          panel.setModelInfo(
+            changed.length > 0
+              ? `已自动适配半径：${changed.length} 根骨（手动改过的不动）`
+              : '已自动适配半径：没有可改的骨（都手动改过了）',
+          );
+        },
+      }, gpu);
       wireBindingGrip();
     }
     bindingDockEl.classList.add('open');
     binding.setModel(session.name, session.vertices, session.indices);
+    // 资产库入口会把上次写进 .meta.json 的编辑态灌回来（有则回填，无则保持模板默认）
+    if (saved !== undefined) binding.hydrate(saved);
     // canvas 必须等 open 之后才量得到 clientWidth，晚一帧再重算视图缩放
     requestAnimationFrame(() => binding?.resize());
     panel.setModelInfo(
@@ -1026,6 +1049,56 @@ async function boot(): Promise<void> {
     bindingDockEl?.classList.remove('open');
     binding?.clear();
     bindingSession = null;
+    currentBindingMetaPath = null;
+  }
+
+  /**
+   * 「保存绑定」：把当前编辑态（骨架摆位 + Skin Wrapper 半径）写回
+   * `<mesh>.meta.json` 的 `bindingEditor` 节点。
+   *
+   * - 仅资产库入口（currentBindingMetaPath 非空）能落盘；层级/场景物体入口无路径，
+   *   点保存会提示「无路径」而不写盘，避免误把数据写进无关文件。
+   * - 用 devfs 的 patch 模式浅合并：只动 `bindingEditor` 顶层键，保留
+   *   importer / userData / rig / bindings 等其余字段（含手改），与 node 管线互不踩。
+   */
+  function saveBinding(): void {
+    if (binding === null) return;
+    if (currentBindingMetaPath === null) {
+      binding.setSaveStatus(false, '无路径：层级入口不支持存盘');
+      return;
+    }
+    const data = binding.getEditorData();
+    const path = currentBindingMetaPath;
+    void (async () => {
+      // 写盘前必须确认目标 sidecar 是合法的，否则一律拒绝写。
+      // 事故复现：patch 到一个「不存在 / 不完整」的 `.meta.json` 上，会产出只有
+      // bindingEditor、缺 schemaVersion/guid/kind/importer 的非法文件，
+      // 直接把 `scene:check` 打红（E04 的 40MB 原始产物就因此多了一个本不该存在的 sidecar
+      // —— 它命中 gen 脚本的 RAW_SOURCE_RE，压根不该有 meta）。
+      // 项目铁律是「不静默修数据」→ 这里只报错、不代补字段，指引用户跑 scene:gen。
+      const cur = await readProjectFile(path);
+      if (!cur.ok) {
+        binding?.setSaveStatus(
+          false,
+          `读不到 sidecar${cur.error ? ` (${cur.error})` : ''}，请先跑 npm run scene:gen`,
+        );
+        return;
+      }
+      const errs = validateAssetMeta(cur.json).filter((d) => d.severity === 'error');
+      if (errs.length > 0) {
+        binding?.setSaveStatus(
+          false,
+          `sidecar 不完整（${errs[0]!.code}），请先跑 npm run scene:gen`,
+        );
+        return;
+      }
+      const res = await writeProjectFile(path, { patch: { bindingEditor: data } });
+      if (res.ok) {
+        binding?.setSaveStatus(true, `已保存${res.bytes !== undefined ? ` ${res.bytes}B` : ''}`);
+      } else {
+        binding?.setSaveStatus(false, `保存失败 ${res.status}${res.error ? ` ${res.error}` : ''}`);
+      }
+    })();
   }
 
   /** 顶边把手：下压面板露出上方 3D 视图对照（只改 style.top） */
@@ -1085,8 +1158,12 @@ async function boot(): Promise<void> {
         image: s.image,
         placed: binding.getState().positions,
         smoothWeights,
-        // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重
-        cylinders: binding?.getCylinders() ?? undefined,
+        // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重。
+        // 权重算法由面板显式选择（默认 wrapper，保持历史行为）；选「距离衰减」时
+        // 必须传 undefined，否则 runExport 会一直走圆柱体分支（cylinders 载入即建）。
+        cylinders: binding?.getWeightMode() === 'distance'
+          ? undefined
+          : (binding?.getCylinders() ?? undefined),
         mirrorWeights: binding?.getMirrorWeights() ?? false,
       };
       // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
@@ -1296,7 +1373,7 @@ async function boot(): Promise<void> {
     const clip = clipToAnimClip(c, obj.skeleton);
     if (clip === null) {
       panel.setModelInfo(
-        `动画应用失败：${obj.name} 的骨架没有一根骨对上 HumanIK 22 骨（无法按名重定向）`,
+        `动画应用失败：${obj.name} 的骨架没有一根骨对上 HumanIK 骨架（无法按名重定向）`,
       );
       return null;
     }
@@ -1316,12 +1393,21 @@ async function boot(): Promise<void> {
       const buffer = await resp.arrayBuffer();
       // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+      // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
+      currentBindingMetaPath = `${relPath}.meta.json`;
+      // 尝试回填上次的编辑态（bindingEditor 节点）；没有/损坏都不影响打开
+      let saved: unknown = undefined;
+      const meta = await readProjectFile(currentBindingMetaPath);
+      if (meta.ok && meta.json !== null && typeof meta.json === 'object') {
+        const ed = (meta.json as Record<string, unknown>).bindingEditor;
+        if (ed !== undefined && ed !== null) saved = ed;
+      }
       openBinding({
         name: stemName(relPath),
         vertices: model.mesh.vertices,
         indices: model.mesh.indices,
         image: model.image,
-      });
+      }, saved);
     } catch (err) {
       panel.setModelInfo(`进入绑定失败：${stemName(relPath)} · ${String(err)}`);
       console.error('[绑定] 载入失败', relPath, err);
@@ -1337,6 +1423,8 @@ async function boot(): Promise<void> {
         disabled: obj === undefined,
         run: () => {
           if (obj === undefined) return;
+          // 层级入口无 GLB 路径 → 没有可落盘的 .meta.json，保存按钮会被拦下
+          currentBindingMetaPath = null;
           openBinding({
             name: obj.name,
             // 拷贝一份：场景网格是渲染器的活引用，applyAo 之类会就地改它
@@ -1366,6 +1454,86 @@ async function boot(): Promise<void> {
 
   window.addEventListener('resize', () => binding?.resize());
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 顶部菜单栏 Skeleton ▸ 绑定动作（外壳入口；绑定逻辑全在 services/binding）
+  // ═══════════════════════════════════════════════════════════════════════════
+  /** 从顶部菜单「进入绑定」：优先资产库选中的 .glb，其次场景选中的物体 */
+  function enterBindingFromMenu(): void {
+    if (lastAssetPath !== null && lastAssetPath.toLowerCase().endsWith('.glb')) {
+      void bindAssetAt(lastAssetPath);
+      return;
+    }
+    const idx = renderer.state.selectedIndex;
+    if (idx !== null) {
+      const obj = renderer.state.objects[idx];
+      if (obj !== undefined && obj.mesh !== null) {
+        // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
+        currentBindingMetaPath = null;
+        openBinding({
+          name: obj.name,
+          vertices: new Float32Array(obj.mesh.vertices),
+          indices: new Uint32Array(obj.mesh.indices),
+          image: null,
+        });
+        return;
+      }
+    }
+    dockEl?.classList.remove('collapsed');
+    panel.setModelInfo('请先在底部资产库选中一个 .glb 模型，或右键场景物体 → 进入绑定');
+    hudDirty = true;
+  }
+
+  function exportTposeFromMenu(): void {
+    if (binding === null || bindingSession === null) return;
+    void applyBinding(binding.currentFit(), true, binding.getSmoothWeights());
+  }
+
+  function loadBvhFromMenu(): void {
+    if (binding === null) return;
+    pickBvhFile((t, n) => loadBvhForBinding(t, n));
+  }
+
+  function setupTopMenu(): void {
+    const btn = document.getElementById('skeleton-menu-btn');
+    const dd = document.getElementById('skeleton-dropdown');
+    if (btn === null || dd === null) return;
+
+    const setOpen = (open: boolean): void => {
+      if (open) { dd.removeAttribute('hidden'); btn.classList.add('open'); }
+      else { dd.setAttribute('hidden', ''); btn.classList.remove('open'); }
+    };
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(dd.hasAttribute('hidden')); });
+
+    dd.querySelectorAll<HTMLButtonElement>('.tb-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        setOpen(false);
+        const a = item.dataset.tbAction;
+        if (a === 'enter') enterBindingFromMenu();
+        else if (a === 'export') void exportTposeFromMenu();
+        else if (a === 'bvh') loadBvhFromMenu();
+        else if (a === 'close') closeBinding();
+      });
+    });
+
+    // 绑定面板开/关 → 同步「导出 / 载入 BVH / 退出」可用态
+    const refresh = (): void => {
+      const open = bindingDockEl?.classList.contains('open') ?? false;
+      dd.querySelectorAll<HTMLButtonElement>('.tb-item').forEach((item) => {
+        const a = item.dataset.tbAction;
+        if (a === 'export' || a === 'bvh' || a === 'close') item.disabled = !open;
+      });
+    };
+    if (bindingDockEl !== null) {
+      new MutationObserver(refresh).observe(bindingDockEl, { attributes: true, attributeFilter: ['class'] });
+    }
+    window.addEventListener('pointerdown', (e) => {
+      if (!dd.contains(e.target as Node) && !btn.contains(e.target as Node)) setOpen(false);
+    }, true);
+    refresh();
+  }
+  setupTopMenu();
+
   // 自动化钩子：无头 CDP 验证驱动绑定面板（全部走函数，避免持有过期引用）
   {
     const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
@@ -1382,6 +1550,40 @@ async function boot(): Promise<void> {
       dryRun: async () => {
         if (binding === null) return null;
         return await applyBinding(binding.currentFit(), false);
+      },
+      /**
+       * 3D 视口 Skin Wrapper 包裹器圆柱体（自动化断言用）：
+       * 开关状态 + 本帧实际送进管线的顶点数（>0 才说明真的画了）。
+       */
+      wrappers: {
+        set: (v: boolean) => {
+          binding?.setViewportCylinders(v);
+          return binding?.getViewportCylinders() ?? false;
+        },
+        get: () => binding?.getViewportCylinders() ?? false,
+        verts: () => renderer.debugCylinderVertexCount(),
+        cylinders: () => binding?.getCylinders() ?? null,
+        /** 几何指纹：顶点数看不出半径变化，改半径必须体现在 sum 上 */
+        stats: () => renderer.debugCylinderStats(),
+        setRadius: (bone: string, seg: 'top' | 'medium' | 'bottom', v: number) =>
+          binding?.setCylinderRadius(bone, seg, v) ?? false,
+        /** 画布局部坐标点选圆柱体子段（与鼠标点选同一套判定） */
+        pick: (axis: 'front' | 'side', x: number, y: number) => {
+          const c = document.querySelector<HTMLCanvasElement>(`[data-bd="${axis}"]`);
+          if (c === null || binding === null) return null;
+          return binding.pickCylinderAt(x, y, axis, c);
+        },
+      },
+      /**
+       * 面板正/侧视的 3D 正交层（自动化断言用）：
+       * 网格是否已上 GPU + 本帧圆柱体顶点数（>0 才说明真的画了）。
+       */
+      view3d: () => binding?.getView3dStats() ?? null,
+      /** 切到蒙皮模式（半径表是惰性初始化的，不切模式拿不到 cylinders） */
+      setMode: (m: 'skeleton' | 'skin') => binding?.setEditModeForAutomation(m),
+      redraw: () => {
+        binding?.resize();
+        return true;
       },
     };
 
@@ -1472,6 +1674,7 @@ async function boot(): Promise<void> {
 
     const assets = new AssetBrowser(dockEl, {
       onSelect: (sel) => {
+        lastAssetPath = sel === null ? null : sel.path;
         if (sel === null) {
           inspector.clear();
           assetPreview?.clear();
@@ -1664,6 +1867,26 @@ async function boot(): Promise<void> {
       camera.distance = lerp(focusAnim.fromD, focusAnim.toD, e);
       hudDirty = true;
       if (k >= 1) focusAnim = null;
+    }
+
+    // ── 蒙皮包裹器圆柱体（Skin Wrapper）主 3D 视口叠加 ──
+    // 几何由 binding 模块按「本帧实时关节矩阵」算出来（随骨骼动画实时更新），
+    // 渲染器只负责画 —— 它完全不认识绑定语义。
+    const bp = binding;
+    if (bp !== null && bp.getViewportCylinders()) {
+      const src = renderer.getSkeletonOverlaySource();
+      renderer.setCylinderOverlay(
+        src === null
+          ? null
+          : buildCylinderOverlay(
+              src.jointMatrices,
+              src.skeleton,
+              src.modelMatrix,
+              bp.getCylinders(),
+            ),
+      );
+    } else {
+      renderer.setCylinderOverlay(null);
     }
 
     renderer.render(panel.params, camera, elapsed, dpr());

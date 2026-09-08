@@ -21,7 +21,12 @@
  * 不会带任何 A-pose 的 offset。
  */
 
-import { HUMANIK_BONES, HUMANIK_ORDER, tposeDirections } from './humanik-template';
+import {
+  HUMANIK_BONES,
+  HUMANIK_ORDER,
+  isTipBone,
+  tposeDirections,
+} from './humanik-template';
 import {
   boneSegments,
   computeLbsWeights,
@@ -91,7 +96,7 @@ export interface BindExportInput {
   mirrorWeights?: boolean;
   /**
    * 可选：一并烘焙进 `animations[]`。
-   * 骨名必须在 HumanIK 22 骨里，对不上的骨会被跳过并记进 `animSkipped`。
+   * 骨名必须在 HumanIK 27 骨里，对不上的骨会被跳过并记进 `animSkipped`。
    */
   animation?: BindAnimationInput;
 }
@@ -111,6 +116,12 @@ export interface BindExportStats {
   heightAfter: number;
   /** 零权重顶点数，应为 0（兜底逻辑保证） */
   zeroWeightVerts: number;
+  /**
+   * 所有 tip 骨的权重总和，**必为 0**（tip 不参与 skin 计算）。
+   * 顺带给出引用过 tip 的顶点数 `tipRefVerts`，非 0 就是回归。
+   */
+  tipWeightSum: number;
+  tipRefVerts: number;
   bytes: number;
   /** 烘焙进 GLB 的动画轨道数（没有动画时为 0） */
   animChannels: number;
@@ -176,7 +187,7 @@ function runExport(
     // Skin Wrapper 模式：权重由圆柱体包裹范围定义（被包顶点归属对应 joint）
     skin = computeCylinderWeights(
       vertices, VF, vertexCount, placed, input.cylinders,
-      { falloff, eps, maxInfluences },
+      { maxInfluences },
     );
     if (input.mirrorWeights === true) {
       skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
@@ -189,8 +200,13 @@ function runExport(
   }
 
   // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
+  //    传 weld：位置重合但索引不同的顶点（split-normal 硬边）互为邻居，
+  //    否则扩散在描边模型的硬边处断裂，裂缝两侧各跟各的骨。
   if (smoothWeights) {
-    skin = smoothSkinWeights(skin, indices, vertexCount, smoothIters, smoothLambda);
+    skin = smoothSkinWeights(skin, indices, vertexCount, smoothIters, smoothLambda, {
+      positions: vertices,
+      vertexFloats: VF,
+    });
   }
 
   // ③ 反解：顶点 → T-pose，法线同步旋转
@@ -214,7 +230,7 @@ function runExport(
   };
 }
 
-/** 统计真正写进 GLB 的动画轨道（骨名不在 HumanIK 22 骨里的会被跳过） */
+/** 统计真正写进 GLB 的动画轨道（骨名不在 HumanIK 27 骨里的会被跳过） */
 function countAnimChannels(anim: BindAnimationInput): {
   animChannels: number;
   animClips: string[];
@@ -266,6 +282,22 @@ function buildStats(
     if (s <= 1e-6) zero++;
   }
 
+  // tip 骨的权重总和：必须是 0 —— 「tip 不参与 skin 计算」的可断言证据。
+  // 顺带记下有多少顶点引用过 tip（非 0 就是回归）。
+  const tipIdx = new Set<number>();
+  HUMANIK_ORDER.forEach((n, i) => { if (isTipBone(n)) tipIdx.add(i); });
+  let tipWeightSum = 0;
+  let tipRefVerts = 0;
+  for (let i = 0; i < vertexCount; i++) {
+    let hit = false;
+    for (let k = 0; k < 4; k++) {
+      const j = skin.joints[i * 4 + k]!;
+      const w = skin.weights[i * 4 + k]!;
+      if (tipIdx.has(j) && w > 0) { tipWeightSum += w; hit = true; }
+    }
+    if (hit) tipRefVerts++;
+  }
+
   return {
     vertices: vertexCount,
     triangles: indices.length / 3,
@@ -276,6 +308,8 @@ function buildStats(
     heightBefore: spanY(before),
     heightAfter: spanY(after),
     zeroWeightVerts: zero,
+    tipWeightSum,
+    tipRefVerts,
   };
 }
 
@@ -456,7 +490,7 @@ function buildGlb(
     type: 'MAT4',
   }) - 1;
 
-  // ── 节点：索引 0 = mesh 节点，1..22 = 骨骼──
+  // ── 节点：索引 0 = mesh 节点，1..27 = 骨骼──
   const dirs = tposeDirections();
   const nodes: Array<Record<string, unknown>> = [
     { mesh: 0, skin: 0, name: `${name}_Skinned` },

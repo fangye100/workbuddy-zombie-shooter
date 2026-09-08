@@ -4,8 +4,11 @@
 - 收尾 `git add <本会话文件> && git commit && git push`，中文 message。只 add 自己改的，禁 `git add -A`（并行 session 会吞别人在途改动）；push 避同分支并发。
 - 🔴 未经许可禁碰 `.git` 内部（fsck/删文件/建 refs/碰 pack）。异常只报告症状。
 - remote `origin = git@github.com:fangye100/workbuddy-zombie-shooter.git`（SSH；拼写 shooter，另有空仓 shotter）。
-- 🔴 Python 写文本会 LF→CRLF，`open(p,'w')` 一律 `newline=''`。自查 `git diff --cached --stat --ignore-cr-at-eol` 应远小于 `--stat`；中招二进制 `replace(b'\r\n',b'\n')`。
-- ⚠️ 边界：文件本身已是 CRLF 时保持一致性（如 models.ts），勿整文件改写。
+- 🔴 Python 读写文本会毁行尾：`open(p,'w')` 加 `newline=''` **只挡住写**，挡不住读 —— 文本模式**读**就把 `\r\n` 归一成 `\n`，再 `newline=''` 写回仍然把 CRLF 文件整文件转成 LF（main.ts 1814 行惨案，2026-09-07）。
+  改已存在文件的正确姿势：**二进制** `open(p,'rb').read()` → `bytes.replace` → `open(p,'wb').write()`。
+  自查 `git diff --cached --stat --ignore-cr-at-eol` 应远小于 `--stat`；中招用二进制 `replace(b'\n', b'\r\n')` 还原。
+- ⚠️ 边界：文件本身已是 CRLF 时保持一致性（main.ts / models.ts），勿整文件改写。
+- 已提交未 push 的行尾事故**用新提交修，不要 amend**（并行 session 可能已基于它往下走）。
 
 ## ADR 速查（全文 docs/10 + docs/14）
 001 渲染真源唯一化 · 002 资料库运行时单一真源 · 003 验证分层 · 005 包体 @aether/* · 007 render(L3) 不反向依赖 content(L4) · 008 验证资产与结论同入库 · 009 测试同位 · 010 场景唯一数据载体 · 011 Node/Component(AoS)+SoA ECS · 012 扁平节点表+parent · 013 JSON+SCHEMA_VERSION+迁移链 · 014 Edit/Play 分离 · 015 aether.project.json 锚点 · 016 sidecar 同名 .meta.json · 017 脚本=行为注册表
@@ -53,6 +56,42 @@
 
 ## WebGPU
 编码期陷阱→skill webgpu-coding-pitfalls；运行时验证→skill webgpu-headless-validate。一句话：tsc+vite build 全绿照样线上炸——usage 错配/uniform offset 对齐/bind group visibility/WGSL 编译错误只在运行时暴露。
+
+## 骨架 tip（尖端）骨 —— 22 + 5 = 27（2026-09-08 核实：已加 HeadTip，不再是 26）
+- 手腕末端 + 脚趾末端 + 头顶尖端：`LeftHandTip / RightHandTip / LeftToeTip / RightToeTip / HeadTip`。
+  `HUMANIK_ORDER` 现为 27 项，索引 0..26；参与 skin 的仍是 22 根（`skinBones()`）。
+  HeadTip 是后加的（0.14 m，解决「头顶顶点被脖子抢走」），旧文档/旧记忆写 26 的已过期。
+- 🔴 **索引对齐铁律**：`joints[]` 写的是 `HUMANIK_ORDER` 下标，**tip 只能「保留槽位 + 权重置零」，绝不能过滤数组**——一过滤后面所有 joint index 整体错位。
+- tip 三不：不产生 wrapper mesh、不产生 skin wrapper、不参与 skin 计算（权重恒 0）。但它**仍是骨架节点**（进 `skins[].joints`、有 node/IBM、可被动画驱动）。
+- tip **不是**重定向目标（`retargetBvh` 映射用 `skinBones()`，否则误报「缺 4 根骨」）。
+- 正收益：影响胶囊 = 骨 head → 其**第一个子骨** head；Hand/ToeBase 原本是叶子（胶囊退化成点），有了 tip 才拿到长度。
+- 同源三处必须一起改：`humanik-template.ts`、`assets/characters/_tools/humanik_skeleton.json`、`rig_humanik.py`。
+- 姿势夹具（vitest `poseLeftArm` / 冒烟 A-pose）**摆 Hand 时必须一起摆 tip**，否则手尖留在 T-pose 位置被误报成「离轴骨」。
+- 编辑器/引擎侧 `unposed` 徽标是死代码（从不置 true）；不改，因为铁律是「绑定是动词，绑完骨架姿势即定，绝不跳回 T-pose」。
+
+## 绑定/蒙皮评审结论（2026-09-08，全文 docs/15）
+- 🔴 **P0-1 已实证**：`smoothSkinWeights` 按**槽位 k** 而非**骨 id** 做邻域平均（`joints` 原样拷贝不参与）→
+  骨交界处顶点的邻居槽位 1（真实第二骨 40%）被灌进本顶点槽位 1（w=0 的骨）→ 实测无关骨拿到 **18.8%**。
+  圆柱体权重多为单骨 100%，其槽位 1/2/3 填的是 w=0 且稳定排序后**索引最小的骨 = Hips/Spine/Spine1**
+  → 关节周围一圈顶点把权重交给脊柱。修法：平滑前展开成 `Map<jointId,w>` 累加，按 joint id 聚合再取 top-4。
+- 🔴 **P0-2**：`binding-export` 走 `if (cylinders !== undefined)` 分支，而 `ensureCylinders()` 在
+  **setModel 时载入即建** → `getCylinders()` 永远非 null → **UI 上每一次 Bind Skin 都走圆柱体路径**，
+  `computeLbsWeights` 在 UI 是死代码，`BindExportInput` 的 `falloff/eps/maxInfluences` 是**死参数**（无人传）。
+- P0-3：无权重热力图、无变形预览（`cylinder-overlay` 只画圆柱体，grep 权重只命中注释）。
+- P1：`PEN_SCALE=8.0` 是绝对米制（粗骨碾压细骨、不尺度不变）；包裹体外顶点硬权重 1.0 兜底；
+  平滑邻接靠三角面索引 → split-normal 描边模型硬边会切断扩散；**无 Undo/Redo**（grep 零命中）；
+  无预算数字（`BindExportStats` 已算出 zeroWeightVerts 等却只进 console）。
+- 验证手法可复用：在 binding/ 下临时建 `__probe.test.ts`，`npx vitest run <路径>` 直跑真实模块，打印后**立即删除**。
+
+## Skin Wrapper（包裹器）半径
+- 三条绘制路径都必须响应半径：主 3D 视口（`buildCylinderOverlay`，吃实时关节矩阵）、面板正/侧视 3D（`buildCylinderOverlayFromSegments`，吃 boneSegments）、无 WebGPU 时的 2D 降级（`drawSkin`）。
+- **顶点数看不出半径变化**（改半径不增不减顶点）。判据是几何指纹：`renderer.debugCylinderStats()` 的 `sum`（顶点坐标绝对值之和）+ bbox；面板 3D 用 `BindingView3D.cylinderSum`。冒烟 L2e/L2f/L2g 已固化。
+- 改半径只有一条路径：`BindingPanel.setCylinderRadius()`（滑块 / 视图拖拽 / 自动化钩子共用），杜绝「钩子能改、UI 改不动」的假绿。
+- 视图里拖圆柱体 = 改半径：**半径 = 指针到骨轴的垂距**，垂距必须用**直线**不是线段（`distPointToLine2d`；线段版靠近骨两端会被端点距离撑大），只改点中的那一段。
+- 合成 PointerEvent 没有真实 pointer，`setPointerCapture` 会抛 → 必须 try/catch。
+
+## 冒烟环境坑
+- `editor:smoke` 默认**复用 5100 上已在跑的编辑器**。5100 不在时它会自己起 vite，但 readiness 探测在新端口上会失败并**卡死**（实测卡了 1h39m，只能 TaskStop）。跑之前先 `curl -sk https://localhost:5100/` 确认；卡住就换回 5100。
 
 ## 门禁（8 道，收尾全跑）
 typecheck · vitest · editor:build · editor:smoke · content:check · verify:prefix · scene:gen · scene:check
