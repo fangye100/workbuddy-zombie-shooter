@@ -1,5 +1,5 @@
 /**
- * retarget.ts — 通用动画重定向（任意 BVH 骨架 → HumanIK 22 骨干净 T-pose 骨架）。
+ * retarget.ts — 通用动画重定向（任意 BVH 骨架 → HumanIK 干净 T-pose 骨架）。
  *
  * # 这个文件存在的理由
  *
@@ -77,6 +77,7 @@
 import {
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  skinBones,
   tposeDirections,
   tposeWorldPositions,
   type Vec3,
@@ -163,7 +164,12 @@ export interface RetargetResult {
 // ─────────────────────────── 主入口 ───────────────────────────
 
 /**
- * 把任意 BVH 重定向到 HumanIK 22 骨骨架。
+ * 把任意 BVH 重定向到 HumanIK 27 骨骨架（22 骨干 + 5 tip）。
+ *
+ * ⚠️ 重定向目标用 `skinBones()`（= 27 − 5 tip）而不是 `HUMANIK_ORDER`：
+ * tip 没有 BVH 对应关节，它是**末端控制节点**，没有独立动画轨道时保持
+ * local 偏移跟随父骨。若把 tip 也当目标，它会被算进 `missingBones`
+ * 报成「缺 4 根骨」——那是误报，不是真的没对上。
  *
  * 抛错场景（全部显式抛，不静默降级）：源里一根 HumanIK 骨都没对上号。
  * 其余「部分对上」的情况不抛 —— 没对上的骨保持静止，信息全在 report 里，
@@ -172,11 +178,11 @@ export interface RetargetResult {
 export function retargetBvh(bvh: BvhFile, options: RetargetOptions = {}): RetargetResult {
   const { mapping, unmatched, missingBones } = mapBvhJointsToHumanik(
     bvh.order,
-    HUMANIK_ORDER,
+    skinBones(),
   );
   if (Object.keys(mapping).length === 0) {
     throw new Error(
-      `BVH 里没有任何关节能对上 HumanIK 22 骨（共 ${bvh.order.length} 个关节：` +
+      `BVH 里没有任何关节能对上 HumanIK 骨架（共 ${bvh.order.length} 个关节：` +
         `${bvh.order.slice(0, 6).join(', ')}…）。请确认这是人形骨架的 BVH。`,
     );
   }
@@ -368,7 +374,7 @@ export function clipToAnimClip(clip: RetargetClip, sk: SkeletonData): AnimClip |
  * 让根位移的缩放按目标骨架的真实腿长算 —— 模板身高 1.7 m 套到 E-04（2.05 m）上
  * 会让根位移整体偏小 17%，走路会「滑步」。
  *
- * 名字不在 HumanIK 22 骨里的关节直接跳过；一根都没对上返回 null，调用方退回模板
+ * 名字不在 HumanIK 骨架里的关节直接跳过；一根都没对上返回 null，调用方退回模板
  * （对齐角 A_i 只依赖**方向**，不依赖这份坐标，所以退回模板不会让姿势错，
  * 只会让根位移缩放不精确）。
  */

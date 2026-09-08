@@ -46,9 +46,14 @@ import {
 import { packSkin, type SkeletonData, type GltfResult } from '@aether/scene';
 import * as m4 from '@aether/core';
 import type { LabParams } from '../params';
+import { defaultParams } from '../params';
 import { buildSkeletonPositions } from './skeleton-overlay';
 
-/** 预览物体默认材质（bone 平色 + 描边），让没贴图的模型也有漫画描边质感 */
+/**
+ * 预览物体默认材质（bone 平色）。不再带漫画描边 —— Asset Library 预览一律用
+ * 「普通灯光」渲染（见 PREVIEW_PARAMS），所以 outlineScale 归 0，让没贴图的模型
+ * 也只是一个平滑受光的普通 3D 材质，而不是场景里的卡通描边质感。
+ */
 const PREVIEW_MATERIAL: MaterialState = {
   albedo: '#FFF6E2',
   roughness: 0.85,
@@ -59,9 +64,35 @@ const PREVIEW_MATERIAL: MaterialState = {
   specMix: -1,
   softnessScale: 1,
   halftoneScale: 1,
-  outlineScale: 1,
+  outlineScale: 0,
   unlit: false,
 };
+
+/**
+ * 预览用的「普通灯光」配置：继承项目默认灯光（key/fill/ambient/rim 三点光，
+ * 即正常 3D 模型浏览器的受光），但**关闭场景的卡通预制**——
+ * 描边 / 半调网点 / 三段 Grading 全部禁用，并把 toon 分阶阈值拉平
+ * （shadowEnd=0、shadowMult=1、shadowMix=0、*Sat=1、specMix=0），
+ * 让材质按平滑 NdotL 受光，而非卡通分阶 + 墨线描边的「预制效果」。
+ *
+ * 模块级一次性构造：不与场景 params 耦合，Asset Library 里的预览永远是
+ * 一致的普通打光，不随主视图的卡通调试预设漂移。
+ */
+const PREVIEW_PARAMS: LabParams = (() => {
+  const p = defaultParams();
+  p.outlineEnabled = false;
+  p.halftoneEnabled = false;
+  p.gradeEnabled = false;
+  p.bloomEnabled = false;
+  // 拉平分阶：几乎无暗部带 + 不染色 → 平滑受光的普通材质
+  p.shadowEnd = 0;
+  p.shadowMult = 1;
+  p.shadowMix = 0;
+  p.shadowSat = 1;
+  p.litSat = 1;
+  p.specMix = 0;
+  return p;
+})();
 
 /** 骨骼 X-ray 颜色（尸绿，与主视图高亮区分） */
 const SKELETON_COLOR: [number, number, number] = [0.56, 0.82, 0.31];
@@ -101,9 +132,9 @@ export class AssetPreview {
   private obj: PreviewObject | null = null;
   private dpr = 1;
 
-  // 相机（预览用固定 18° 俯角；target/distance 按模型包围盒自适应）
+  // 相机（预览支持 orbit/pan/zoom 导航，见 wireNavigation；target/distance 按模型包围盒自适应）
   private readonly camera = { yaw: 0.4, distance: 4.5, target: [0, 1, 0] as [number, number, number] };
-  private static readonly ELEVATION = 18;
+  private elevation = 18; // 相机俯仰角（度），导航可改；默认 18° 略俯视
 
   // 骨骼 X-ray
   private skeletonVisible = false;
@@ -156,6 +187,7 @@ export class AssetPreview {
     this.core = new RendererCore(gpu, this.canvas);
 
     this.wireControls();
+    this.wireNavigation();
     this.showEmpty();
 
     // 预览画布尺寸跟随容器
@@ -422,18 +454,146 @@ export class AssetPreview {
     this.panel.querySelector('.ap-xray')?.classList.toggle('active', v);
   }
 
+  // ===================== 预览画布导航（与主视图同手感） =====================
+  // 左键拖=环绕(orbit yaw+俯仰)，右键/中键/Shift+左键拖=平移(pan target)，
+  // 滚轮/双指=缩放(distance)。与主视图 main.ts 的相机交互一一对应，只是省略拾取/gizmo。
+
+  private wireNavigation(): void {
+    const canvas = this.canvas;
+    const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+
+    const FOVY = (45 * Math.PI) / 180; // 与 renderer 的 perspective 一致
+    const ORBIT_RAD_PER_PX = 0.006; // 环绕灵敏度：每像素弧度
+    const PITCH_DEG_PER_PX = 0.25; // 俯仰灵敏度：每像素度
+    const PITCH_LIMIT_DEG = 89; // 俯仰上限（留 1° 防 lookAt 退化）
+    const ZOOM_MIN = 1;
+    const ZOOM_MAX = 80;
+    const PAN_MIN_Y = -5;
+    const PAN_MAX_Y = 20;
+
+    const pointers = new Map<number, { x: number; y: number }>();
+    let gesture: 'orbit' | 'pan' | 'pinch' = 'orbit';
+    let lastX = 0;
+    let lastY = 0;
+    let pinchDist = 0;
+
+    // 屏幕位移 → target 世界位移：一像素对应的世界尺寸随距离/视高变化，
+    // 平移手感是「内容跟着手指走」。相机基与主视图同约定。
+    const panBy = (dx: number, dy: number): void => {
+      const el = (this.elevation * Math.PI) / 180;
+      const se = Math.sin(el);
+      const ce = Math.cos(el);
+      const sy = Math.sin(this.camera.yaw);
+      const cy = Math.cos(this.camera.yaw);
+      const worldPerPx =
+        (2 * this.camera.distance * Math.tan(FOVY / 2)) / Math.max(1, canvas.clientHeight);
+      const lim = (this.obj?.radius ?? 2) * 6;
+      this.camera.target[0] = clamp(
+        this.camera.target[0] + (-cy * dx - sy * se * dy) * worldPerPx,
+        -lim,
+        lim,
+      );
+      this.camera.target[1] = clamp(this.camera.target[1] + ce * dy * worldPerPx, PAN_MIN_Y, PAN_MAX_Y);
+      this.camera.target[2] = clamp(
+        this.camera.target[2] + (sy * dx - cy * se * dy) * worldPerPx,
+        -lim,
+        lim,
+      );
+    };
+    const zoomBy = (factor: number): void => {
+      this.camera.distance = clamp(this.camera.distance * factor, ZOOM_MIN, ZOOM_MAX);
+    };
+
+    canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+      canvas.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 1) {
+        gesture = e.button === 2 || e.button === 1 || e.shiftKey ? 'pan' : 'orbit';
+        lastX = e.clientX;
+        lastY = e.clientY;
+      } else if (pointers.size === 2) {
+        const pts = [...pointers.values()];
+        const a = pts[0]!;
+        const b = pts[1]!;
+        pinchDist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+        lastX = (a.x + b.x) / 2;
+        lastY = (a.y + b.y) / 2;
+        gesture = 'pinch';
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e: PointerEvent) => {
+      const pt = pointers.get(e.pointerId);
+      if (pt === undefined) return;
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      if (pointers.size === 1) {
+        if (gesture === 'orbit') {
+          this.camera.yaw -= (e.clientX - lastX) * ORBIT_RAD_PER_PX;
+          // 自由俯仰：上下拖可越过地平线（负=仰视，eye 在 target 之下）
+          this.elevation = clamp(
+            this.elevation + (e.clientY - lastY) * PITCH_DEG_PER_PX,
+            -PITCH_LIMIT_DEG,
+            PITCH_LIMIT_DEG,
+          );
+        } else if (gesture === 'pan') {
+          panBy(e.clientX - lastX, e.clientY - lastY);
+        }
+        lastX = e.clientX;
+        lastY = e.clientY;
+      } else if (pointers.size >= 2 && gesture === 'pinch') {
+        const pts = [...pointers.values()];
+        const a = pts[0]!;
+        const b = pts[1]!;
+        const d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+        zoomBy(pinchDist / d); // 双指张开 → 拉近
+        pinchDist = d;
+        const cx = (a.x + b.x) / 2;
+        const cy = (a.y + b.y) / 2;
+        panBy(cx - lastX, cy - lastY);
+        lastX = cx;
+        lastY = cy;
+      }
+    });
+
+    const endPointer = (e: PointerEvent): void => {
+      pointers.delete(e.pointerId);
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+      if (pointers.size === 1) {
+        // 双指抬起一根：用剩下那根重新锚定，视角不跳变
+        const rest = [...pointers.values()][0]!;
+        lastX = rest.x;
+        lastY = rest.y;
+        gesture = 'orbit';
+      }
+    };
+    canvas.addEventListener('pointerup', endPointer);
+    canvas.addEventListener('pointercancel', endPointer);
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault()); // 右键留给平移
+    canvas.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        e.preventDefault();
+        zoomBy(Math.exp(e.deltaY * 0.0012));
+      },
+      { passive: false },
+    );
+  }
+
   // ===================== 每帧驱动（由 main 循环调用） =====================
 
-  tick(dt: number, time: number, params: LabParams): void {
+  // 预览用「普通灯光」：不接场景卡通预设，固定用 PREVIEW_PARAMS（见文件顶部）。
+  // 保留 _sceneParams 形参以兼容主循环调用，但预览的打光与它解耦。
+  tick(dt: number, time: number, _sceneParams: LabParams): void {
     const o = this.obj;
     if (o === null) return;
 
-    // 装箱灯光 / toon / 后处理（与主视图同套 UI 参数，光照一致）
+    // 装箱灯光 / toon / 后处理：用 PREVIEW_PARAMS（普通灯光，关闭卡通分阶/描边/半调/grading）
     packFrameUniforms({
       lights: this.lightsData,
       toon: this.toonData,
       post: this.postData,
-      params,
+      params: PREVIEW_PARAMS,
       time,
       width: this.core.width,
       height: this.core.height,
@@ -484,9 +644,11 @@ export class AssetPreview {
 
     const input: RenderFrameInput = {
       p: {
-        outlineEnabled: true,
+        outlineEnabled: false,
         debugMode: 0,
-        cameraElevation: AssetPreview.ELEVATION,
+        cameraElevation: this.elevation,
+        // 资产预览恒为透视（正交只给绑定面板的正/侧视用）
+        orthoHalfHeight: null,
       },
       camera: { target: this.camera.target, distance: this.camera.distance, yaw: this.camera.yaw },
       time,
@@ -507,6 +669,8 @@ export class AssetPreview {
       highlight: { primary: null, secondary: null },
       gizmo: null,
       skeleton,
+      // 资产预览不画蒙皮包裹器（那是主视图绑定工作流的事）
+      cylinders: null,
       stats: { drawCalls: 0 },
     };
     this.core.drawFrame(input);

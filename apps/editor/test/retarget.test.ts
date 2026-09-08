@@ -31,6 +31,7 @@ import { rigToTPose } from '../src/services/binding/binding-export';
 import {
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  skinBones,
   tposeDirections,
   tposeWorldPositions,
 } from '../src/services/binding/humanik-template';
@@ -306,9 +307,9 @@ describe('BVH 解析（错误路径必须显式抛，不静默兜底）', () => 
 // ─────────────────────────── B. 名字映射 ───────────────────────────
 
 describe('关节名 → HumanIK 映射', () => {
-  it('Mixamo 前缀名 22 个全中', () => {
+  it('Mixamo 前缀名 22 个全中（tip 不是重定向目标）', () => {
     const bvh = realSample();
-    const r = mapBvhJointsToHumanik(bvh.order, HUMANIK_ORDER);
+    const r = mapBvhJointsToHumanik(bvh.order, skinBones());
     expect(Object.keys(r.mapping).length).toBe(22);
     expect(r.unmatched).toEqual([]);
     expect(r.missingBones).toEqual([]);
@@ -327,7 +328,7 @@ describe('关节名 → HumanIK 映射', () => {
   });
 
   it('公共前缀 < 4 的不做模糊匹配（Spock 不能配到 Spine 上）', () => {
-    const r = mapBvhJointsToHumanik(['Spock'], HUMANIK_ORDER);
+    const r = mapBvhJointsToHumanik(['Spock'], skinBones());
     expect(r.mapping['Spock']).toBeUndefined();
     expect(r.unmatched).toEqual(['Spock']);
   });
@@ -355,11 +356,12 @@ describe('重定向 · T-pose 源（必须退化为直接拷贝）', () => {
   });
 
   it('★ 逐帧逐骨的本地旋转 = 源欧拉四元数（A 全为单位阵 ⟹ R′ = R）', () => {
-    const { mapping } = mapBvhJointsToHumanik(bvh.order, HUMANIK_ORDER);
+    const { mapping } = mapBvhJointsToHumanik(bvh.order, skinBones());
     const jointOf: Record<string, string> = {};
     for (const [jn, b] of Object.entries(mapping)) jointOf[b] = jn;
     for (let f = 0; f < bvh.frameCount; f++) {
-      for (const b of HUMANIK_ORDER) {
+      // 只比 22 骨干：tip 不是重定向目标，BVH 里没有对应关节
+      for (const b of skinBones()) {
         const want = srcLocalQuat(bvh, jointOf[b]!, f);
         const got = targetLocalAt(clip.rotations, f)[b]!;
         for (let k = 0; k < 4; k++) expect(got[k]).toBeCloseTo(want[k]!, 6);
@@ -682,7 +684,7 @@ describe('闭环 · 重定向结果烘焙进 GLB', () => {
     const { glb } = bake(true);
     const a = glb.json.animations![0]!;
     const names = a.channels.map((c) => glb.json.nodes![c.target.node]?.name ?? '');
-    for (const b of HUMANIK_ORDER) expect(names).toContain(b);
+    for (const b of skinBones()) expect(names).toContain(b);
   });
 
   it('不传 animation 时 GLB 里不出现 animations 字段', () => {

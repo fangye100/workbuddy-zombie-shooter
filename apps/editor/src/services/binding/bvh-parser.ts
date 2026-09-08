@@ -402,7 +402,7 @@ export interface JointMapResult {
 }
 
 /**
- * 把 BVH 关节名映射到 HumanIK 22 骨。
+ * 把 BVH 关节名映射到 HumanIK 27 骨（tip 骨无 BVH 对应，保持 local 偏移跟随父骨）。
  *
  * 先精确匹配（归一化后全等），再最长公共前缀模糊匹配（阈值 4 —— 低于 4 的
  * 前缀重合，比如 `Sp` 同时是 Spine / Shoulder 的前缀，会把肩关节错配到脊柱上）。

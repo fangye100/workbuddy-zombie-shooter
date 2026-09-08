@@ -22,6 +22,12 @@ import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
 
 /**
+ * 正交投影的裁剪体半深度（世界单位）。正交下相机 distance 只决定裁剪范围，
+ * 与画面大小无关，所以给一个远大于任何角色包围盒的固定值就够，不必随模型自适应。
+ */
+const ORTHO_DEPTH = 500;
+
+/**
  * 骨骼 X-ray 叠加层用的极简 line-list 着色器：无光照，只把顶点用帧矩阵的 viewProj
  * 投到屏幕，输出纯色。画在后处理之后的 swapchain 之上、不做深度测试，所以骨骼会
  * 透视网格显示（X-ray）。viewProj 复用 frameBuf（偏移 0 处就是 mat4x4），颜色走
@@ -35,6 +41,43 @@ struct Frame { vp: mat4x4<f32> };
   return frame.vp * vec4<f32>(pos, 1.0);
 }
 @fragment fn fs() -> @location(0) vec4<f32> { return color; }
+`;
+
+/**
+ * 蒙皮包裹器圆柱体：pos + normal + 顶点色，半透明。
+ * 只乘一个**固定**方向光（不读场景灯光）—— 包裹器是编辑辅助体，不该被关卡打光影响，
+ * 也不该随场景 toon 预设变色；明暗只为了圆柱体看起来有体积而不是一片色。
+ */
+const CYLINDER_WGSL = /* wgsl */ `
+struct Frame { vp: mat4x4<f32> };
+@group(0) @binding(0) var<uniform> frame: Frame;
+@group(0) @binding(1) var<uniform> tint: vec4<f32>;
+
+struct VSOut {
+  @builtin(position) pos: vec4<f32>,
+  @location(0) nrm: vec3<f32>,
+  @location(1) col: vec3<f32>,
+};
+
+@vertex fn vs(
+  @location(0) p: vec3<f32>,
+  @location(1) n: vec3<f32>,
+  @location(2) c: vec3<f32>,
+) -> VSOut {
+  var o: VSOut;
+  o.pos = frame.vp * vec4<f32>(p, 1.0);
+  o.nrm = n;
+  o.col = c;
+  return o;
+}
+
+@fragment fn fs(i: VSOut) -> @location(0) vec4<f32> {
+  let L = normalize(vec3<f32>(0.42, 0.80, 0.43));
+  let ndl = max(dot(normalize(i.nrm), L), 0.0);
+  // 0.45 底光：背光面不至于黑掉，保证任何视角下包裹器都看得见
+  let shade = 0.45 + 0.55 * ndl;
+  return vec4<f32>(i.col * shade, tint.a);
+}
 `;
 
 export type RenderGizmoMode = GizmoMode;
@@ -51,6 +94,14 @@ export interface RenderFrameParams {
   outlineEnabled: boolean;
   debugMode: number;
   cameraElevation: number;
+  /**
+   * 正交投影的**半高**（世界单位）；`null` = 透视投影（主视图 / 资产预览的既有行为）。
+   *
+   * 非 null 时 `drawFrame` 用 `m4.ortho` 代替 `m4.perspective`——绑定面板的正/侧视
+   * 必须是无透视畸变的正交视图，否则圆柱体的半径 / 骨长比例会被近大远小带偏，
+   * 「包裹器有没有穿出模型」根本目测不准。
+   */
+  orthoHalfHeight: number | null;
 }
 
 /** 单个子网格的绘制描述（bind group 已由调用方解析好） */
@@ -109,6 +160,25 @@ export interface CoreSkeletonOverlay {
   color: [number, number, number];
 }
 
+/**
+ * 蒙皮包裹器（Skin Wrapper）叠加层：一组 **三角形**（triangle-list），由调用方
+ * （编辑器 / binding 模块）用「关节世界坐标 + 每骨半径」算好，用来把每个 joint 的
+ * 代理圆柱体以半透明实体画在模型上。
+ *
+ * 与 `CoreSkeletonOverlay` 同层：同样绘于后处理之后、swapchain 之上且**不做深度测试**
+ * （X-ray）—— 否则包裹器会被模型挡住，而它的全部意义恰恰是「看见被网格包住的体积」。
+ * 顶点色为最终色（不经 tonemap），只乘一个固定方向光的明暗项来给出体积感。
+ */
+export interface CoreCylinderOverlay {
+  /**
+   * 交错顶点数组，stride = 9 floats（36 B）：pos(3) + normal(3) + color(3)。
+   * 长度必须是 9 的倍数；不引索，按 triangle-list 顺序绘制。
+   */
+  vertices: Float32Array;
+  /** 整体不透明度（0..1）。圆柱体互相重叠时靠它避免糊成一片 */
+  alpha: number;
+}
+
 /** 一帧的全部 CPU 端 uniform 数据（调用方填好，本类只负责上传） */
 export interface CoreFrameUniforms {
   frame: Float32Array;
@@ -137,6 +207,8 @@ export interface RenderFrameInput {
   gizmo: CoreGizmo | null;
   /** 骨骼 X-ray 叠加层（可选）；存在则在后处理之后绘于 swapchain 之上 */
   skeleton: CoreSkeletonOverlay | null;
+  /** 蒙皮包裹器圆柱体叠加层（可选）；存在则紧跟骨骼层绘于 swapchain 之上 */
+  cylinders: CoreCylinderOverlay | null;
   stats: { drawCalls: number };
 }
 
@@ -218,6 +290,14 @@ export class RendererCore {
   private skeletonBindGroup: GPUBindGroup | null = null;
   private skeletonVb: GPUBuffer | null = null;
   private skeletonVbCap = 0;
+
+  // ---- 蒙皮包裹器圆柱体叠加层（triangle-list，半透明，X-ray） ----
+  private readonly cylinderLayout: GPUBindGroupLayout;
+  private readonly cylinderPipeline: GPURenderPipeline;
+  private readonly cylinderTintBuf: GPUBuffer;
+  private cylinderBindGroup: GPUBindGroup | null = null;
+  private cylinderVb: GPUBuffer | null = null;
+  private cylinderVbCap = 0;
 
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
@@ -446,6 +526,57 @@ export class RendererCore {
         { binding: 1, resource: { buffer: this.skeletonColorBuf } },
       ],
     });
+
+    // ---- 蒙皮包裹器圆柱体（triangle-list + alpha 混合） ----
+    const cyModule = this.device.createShaderModule({ label: 'cylinder', code: CYLINDER_WGSL });
+    this.checkModule(cyModule);
+    this.cylinderLayout = this.device.createBindGroupLayout({
+      label: 'cylinder',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    });
+    this.cylinderPipeline = this.device.createRenderPipeline({
+      label: 'cylinder',
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.cylinderLayout] }),
+      vertex: {
+        module: cyModule,
+        entryPoint: 'vs',
+        // stride 36B：pos(12) + normal(12) + color(12)
+        buffers: [{
+          arrayStride: 36,
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x3' },
+            { shaderLocation: 1, offset: 12, format: 'float32x3' },
+            { shaderLocation: 2, offset: 24, format: 'float32x3' },
+          ],
+        }],
+      },
+      fragment: {
+        module: cyModule,
+        entryPoint: 'fs',
+        targets: [{
+          format: this.format,
+          // 标准 alpha 混合：src.rgb*a + dst.rgb*(1-a)
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
+        }],
+      },
+      // 不写深度、不做深度测试：包裹器是 X-ray 辅助体，必须盖在模型之上
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+    });
+    this.cylinderTintBuf = this.uniform(16, 'cylinder-tint');
+    this.cylinderBindGroup = this.device.createBindGroup({
+      label: 'cylinder',
+      layout: this.cylinderLayout,
+      entries: [
+        { binding: 0, resource: { buffer: this.frameBuf } },
+        { binding: 1, resource: { buffer: this.cylinderTintBuf } },
+      ],
+    });
   }
 
   /** WGSL 编译错误默认只在控制台里一闪而过，这里把行号一起打出来 */
@@ -531,7 +662,17 @@ export class RendererCore {
     const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, p.cameraElevation);
 
     const aspect = this.width / Math.max(1, this.height);
-    const projScaleY = m4.perspective(this.proj, (45 * Math.PI) / 180, aspect, 0.1, 200);
+    const oh = p.orthoHalfHeight;
+    let projScaleY: number;
+    if (oh !== null && oh > 0) {
+      // 正交：near/far 跟着相机距离走，保证整只模型（最大几米）落在裁剪体内。
+      // 正交下 distance 只影响裁剪范围，不影响画面大小 —— 缩放全靠 orthoHalfHeight。
+      const near = Math.max(0.01, camera.distance - ORTHO_DEPTH);
+      const far = camera.distance + ORTHO_DEPTH;
+      projScaleY = m4.ortho(this.proj, oh, aspect, near, far);
+    } else {
+      projScaleY = m4.perspective(this.proj, (45 * Math.PI) / 180, aspect, 0.1, 200);
+    }
     m4.lookAt(this.view, eye, camera.target, [0, 1, 0]);
     m4.multiply(this.viewProj, this.proj, this.view);
     m4.invert(this.invViewProj, this.viewProj);
@@ -722,6 +863,38 @@ export class RendererCore {
       skPass.end();
     }
 
+    // ---- Pass 6：蒙皮包裹器圆柱体（半透明三角形，X-ray，绘于骨骼之上） ----
+    const cyOverlay = input.cylinders;
+    if (
+      cyOverlay !== null &&
+      cyOverlay.vertices.length >= 27 && // 至少一个三角形（3 顶点 × 9 float）
+      this.cylinderPipeline !== null &&
+      this.cylinderBindGroup !== null
+    ) {
+      const need = cyOverlay.vertices.byteLength;
+      if (this.cylinderVb === null || this.cylinderVbCap < need) {
+        this.cylinderVb?.destroy();
+        this.cylinderVb = this.device.createBuffer({
+          label: 'cylinder-vb',
+          size: Math.max(need, 4096),
+          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        this.cylinderVbCap = this.cylinderVb.size;
+      }
+      const a = Math.min(1, Math.max(0, cyOverlay.alpha));
+      this.device.queue.writeBuffer(this.cylinderTintBuf, 0, new Float32Array([0, 0, 0, a]));
+      this.device.queue.writeBuffer(this.cylinderVb, 0, cyOverlay.vertices);
+      const cyPass = encoder.beginRenderPass({
+        label: 'cylinder',
+        colorAttachments: [{ view: swapView, loadOp: 'load', storeOp: 'store' }],
+      });
+      cyPass.setPipeline(this.cylinderPipeline);
+      cyPass.setBindGroup(0, this.cylinderBindGroup);
+      cyPass.setVertexBuffer(0, this.cylinderVb);
+      cyPass.draw(cyOverlay.vertices.length / 9);
+      cyPass.end();
+    }
+
     device.queue.submit([encoder.finish()]);
     input.stats.drawCalls = draws;
   }
@@ -751,6 +924,8 @@ export class RendererCore {
     }
     this.skeletonVb?.destroy();
     this.skeletonColorBuf.destroy();
+    this.cylinderVb?.destroy();
+    this.cylinderTintBuf.destroy();
   }
 }
 

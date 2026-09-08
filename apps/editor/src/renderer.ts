@@ -6,6 +6,7 @@ import {
   type CoreObjectDraw,
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
+  type CoreCylinderOverlay,
   type RenderFrameInput,
   SLOT_BYTES,
   SLOT_FLOATS,
@@ -1511,6 +1512,81 @@ export class LabRenderer {
     this.skeletonVisible = v;
   }
 
+  /**
+   * 主视图蒙皮包裹器（Skin Wrapper 圆柱体）叠加层。
+   *
+   * 渲染器**不认识绑定**：这里只接一个已经算好的几何块，转发给引擎。
+   * 圆柱体的半径语义、几何生成全在 `services/binding/cylinder-overlay.ts`，
+   * 由 main.ts 每帧算好塞进来（ADR：绑定实现不外溢进渲染层）。
+   */
+  private cylinderOverlay: CoreCylinderOverlay | null = null;
+  setCylinderOverlay(o: CoreCylinderOverlay | null): void {
+    this.cylinderOverlay = o;
+  }
+
+  /** 调试 / 冒烟用：当前注入的圆柱体叠加层顶点数（0 = 本帧没有包裹器要画） */
+  debugCylinderVertexCount(): number {
+    return this.cylinderOverlay?.vertices.length ?? 0;
+  }
+
+  /**
+   * 调试 / 冒烟用：圆柱体叠加层的「几何指纹」。
+   *
+   * 顶点数看不出半径变化（改半径不增不减顶点），所以另给一个坐标绝对值之和：
+   * 任何一根圆柱体变粗/变细都会改变它。用来断言「拖半径滑块 → 几何真的变了」。
+   */
+  debugCylinderStats(): {
+    verts: number;
+    sum: number;
+    min: [number, number, number];
+    max: [number, number, number];
+    first: [number, number, number];
+  } | null {
+    const o = this.cylinderOverlay;
+    if (o === null) return null;
+    const v = o.vertices;
+    let sum = 0;
+    let nx = Infinity, ny = Infinity, nz = Infinity;
+    let xx = -Infinity, xy = -Infinity, xz = -Infinity;
+    for (let i = 0; i < v.length; i += 9) {
+      const px = v[i]!, py = v[i + 1]!, pz = v[i + 2]!;
+      sum += Math.abs(px) + Math.abs(py) + Math.abs(pz);
+      if (px < nx) nx = px;
+      if (py < ny) ny = py;
+      if (pz < nz) nz = pz;
+      if (px > xx) xx = px;
+      if (py > xy) xy = py;
+      if (pz > xz) xz = pz;
+    }
+    return {
+      verts: v.length / 9,
+      sum,
+      min: [nx, ny, nz],
+      max: [xx, xy, xz],
+      first: [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0],
+    };
+  }
+
+  /**
+   * 骨骼类叠加层（X-ray 骨骼 / 包裹器圆柱体）的取数源：
+   * 主视图里「当前该显示」的那个带骨骼物体 —— 选中的，否则退回角色槽位。
+   * 暴露给 main.ts，好让绑定模块拿到实时关节矩阵去算包裹器。
+   */
+  getSkeletonOverlaySource(): {
+    jointMatrices: Float32Array;
+    skeleton: SkeletonData;
+    modelMatrix: Float32Array;
+  } | null {
+    const idx = this.state.selectedIndex ?? this.characterIndex;
+    const so = idx !== null ? this.state.objects[idx] : undefined;
+    if (so === undefined || so.skinState === null || so.skeleton === null) return null;
+    return {
+      jointMatrices: so.skinScratch,
+      skeleton: so.skeleton,
+      modelMatrix: so.modelMatrix,
+    };
+  }
+
   playAnimation(clip?: number | string): void {
     this.animation.playAnimation(clip);
   }
@@ -1944,18 +2020,23 @@ export class LabRenderer {
     // 用其本帧已求值的关节矩阵构造 line-list 线段；颜色用尸绿，与主视图白/绿高亮区分。
     let mainSkeleton: CoreSkeletonOverlay | null = null;
     if (this.skeletonVisible) {
-      const idx = this.state.selectedIndex ?? this.characterIndex;
-      const so = idx !== null ? this.state.objects[idx] : undefined;
-      if (so !== undefined && so.skinState !== null && so.skeleton !== null) {
+      const src = this.getSkeletonOverlaySource();
+      if (src !== null) {
         mainSkeleton = {
-          positions: buildSkeletonPositions(so.skinScratch, so.skeleton, so.modelMatrix),
+          positions: buildSkeletonPositions(src.jointMatrices, src.skeleton, src.modelMatrix),
           color: [0.56, 0.82, 0.31],
         };
       }
     }
 
     const input: RenderFrameInput = {
-      p: { outlineEnabled: p.outlineEnabled, debugMode: p.debugMode, cameraElevation: p.cameraElevation },
+      p: {
+        outlineEnabled: p.outlineEnabled,
+        debugMode: p.debugMode,
+        cameraElevation: p.cameraElevation,
+        // 主视图恒为透视（正交只给绑定面板的正/侧视用）
+        orthoHalfHeight: null,
+      },
       camera: { target: camera.target, distance: camera.distance, yaw: camera.yaw },
       time,
       dpr,
@@ -1976,6 +2057,8 @@ export class LabRenderer {
       highlight,
       gizmo,
       skeleton: mainSkeleton,
+      // 蒙皮包裹器圆柱体：由 main.ts 每帧从绑定模块算好后注入（渲染器不认识绑定）
+      cylinders: this.cylinderOverlay,
       stats: { drawCalls: 0 },
     };
 

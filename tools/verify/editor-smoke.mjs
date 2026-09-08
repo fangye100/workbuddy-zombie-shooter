@@ -73,12 +73,33 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
  * 首屏 transform（main.ts 打包后 200KB+），1.5s 必超时，60 次轮询全打空，
  * 表现为「dev server 30s 未就绪」但其实它早就 ready 了 —— 这个坑踩过一次。
  */
+import https from 'node:https';
+import http from 'node:http';
+
+/** 用原生 http/https 探活：自签 HTTPS 证书下 fetch(undici) 会因 TLS 握手挂起，
+ *  必须显式 rejectUnauthorized:false 才能稳定拿到 200。 */
+function aliveRaw(url, timeoutMs = 8000) {
+  const lib = url.startsWith('https') ? https : http;
+  return new Promise((resolve) => {
+    const req = lib.get(
+      url,
+      { rejectUnauthorized: false, timeout: timeoutMs },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode !== undefined && res.statusCode < 500);
+      },
+    );
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => resolve(false));
+  });
+}
 async function alive(url, timeoutMs = 8000) {
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     return r.ok;
   } catch {
-    return false;
+    // fetch 在自签证书下会抛错 → 退回原生 http/https（忽略证书）
+    return aliveRaw(url, timeoutMs);
   }
 }
 
@@ -122,9 +143,13 @@ async function ensureServer() {
     buf += d.toString();
   });
 
+  // vite 往 pipe 写带 ANSI 颜色码（\x1b[1m / \x1b[36m），会把 `localhost:5188/`
+  // 拆成 `localhost:\x1b[1m5188\x1b[22m/`，正则匹配不到 → 误判「30s 未就绪」。
+  // 匹配前先剥离 ANSI 转义序列。
+  const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
   for (let i = 0; i < 60; i++) {
     await sleep(500);
-    const m = buf.match(/(https?:\/\/localhost:(\d+)\/)/);
+    const m = stripAnsi(buf).match(/(https?:\/\/localhost:(\d+)\/)/);
     if (m !== null && (await alive(m[1]))) {
       APP_URL = m[1];
       console.log(`dev server 就绪（${APP_URL}）`);
@@ -210,22 +235,33 @@ async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const server = await ensureServer();
 
-  console.log(`启动 headless Chrome（SwiftShader 软件 WebGPU）→ ${APP_URL}`);
+  // 本沙箱 headless + SwiftShader 起不来 CDP（Chrome 进程直接退出，日志为空），
+  // 但 headed + 真实 GPU 可以（见 cdp-verify.mjs）。用 --headed 切到 headed，
+  // 默认仍 headless（CI 无显示器场景）。两者都靠真实/软件 WebGPU，断言逻辑不变。
+  const HEADED = has('headed');
+  console.log(`启动 ${HEADED ? 'headed' : 'headless'} Chrome（WebGPU）→ ${APP_URL}`);
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null，
   // 页面打出「找不到可用的 GPU 适配器」——极易被误判成选择器写错。
   const flags = [
-    '--headless=new',
-    '--no-sandbox',
-    '--disable-dev-shm-usage',
     '--enable-unsafe-webgpu',
-    '--enable-unsafe-swiftshader',
-    '--use-webgpu-adapter=swiftshader',
-    '--enable-features=Vulkan',
     `--remote-debugging-port=${CDP_PORT}`,
-    // 用不重复的新目录：Chrome profile 200+ 文件，删它会撞安全删除守卫
-    `--user-data-dir=${path.resolve('.workbuddy/tmp/chrome-smoke')}`,
+    // 与 cdp-verify 复用同一份可用 profile 目录（本沙箱里 --no-sandbox 反而让
+    // Chrome 起不来 CDP，去掉后 headed + 真实 GPU 才能连上）
+    `--user-data-dir=${path.resolve('.workbuddy/tmp/chrome-profile')}`,
     '--window-size=1280,800',
+    '--no-first-run',
+    '--no-default-browser-check',
   ];
+  if (HEADED) {
+    // headed + 真实 GPU：不需要 SwiftShader / Vulkan 软件回退
+  } else {
+    flags.unshift('--headless=new');
+    flags.push(
+      '--enable-unsafe-swiftshader',
+      '--use-webgpu-adapter=swiftshader',
+      '--enable-features=Vulkan',
+    );
+  }
   // dev server 走 https（Tailscale 自签证书，CN 是 tailnet 域名）时，
   // 不加这条无头 Chrome 会停在证书报错页，所有断言全炸成 null。
   if (APP_URL.startsWith('https://')) flags.push('--ignore-certificate-errors');
@@ -642,8 +678,8 @@ async function main() {
         `model=${String(openRes.state?.modelName)}`,
       );
       check(
-        '22 个 HumanIK joint 全部就位',
-        Object.keys(p0).length === 22,
+        '27 个 HumanIK joint 全部就位（22 骨干 + 5 tip）',
+        Object.keys(p0).length === 27,
         `joints=${Object.keys(p0).length}`,
       );
       check(
@@ -667,6 +703,8 @@ async function main() {
         const arm = b.state().positions.LeftArm;
         const fore = b.state().positions.LeftForeArm;
         const hand = b.state().positions.LeftHand;
+        // tip 必须跟着手一起转：它是 LeftHand 的子骨，不转就成了「手腕转了、指尖没转」
+        const handTip = b.state().positions.LeftHandTip;
         const r = (-45 * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r);
         const rot = (p) => {
           const x = p[0] - arm[0], y = p[1] - arm[1];
@@ -674,6 +712,7 @@ async function main() {
         };
         b.pose('LeftForeArm', rot(fore));
         b.pose('LeftHand', rot(hand));
+        b.pose('LeftHandTip', rot(handTip));
         const f1 = b.fit();
         const deg = (q) => (2 * Math.acos(Math.min(1, Math.abs(q[3])))) * 180 / Math.PI;
         const rotErr = (m) => {
@@ -726,16 +765,41 @@ async function main() {
       const mir = await cdp.eval(`(() => {
         const b = window.__editor.binding;
         b.pose('LeftHand', [0.77, 1.42, 0.05]);
+        // 手尖保持标准骨向（+X 0.10）：末端不跟着走就会被报成「离轴骨」
+        b.pose('LeftHandTip', [0.87, 1.42, 0.05]);
         document.querySelector('#binding-dock .bd-btn[data-bd="mirror-lr"]').click();
         const st = b.state();
-        return { left: st.positions.LeftHand, right: st.positions.RightHand };
+        return {
+          left: st.positions.LeftHand,
+          right: st.positions.RightHand,
+          leftTip: st.positions.LeftHandTip,
+          rightTip: st.positions.RightHandTip,
+        };
       })()`);
       check(
-        '镜像 L→R：右侧 = 左侧 x 取反，y/z 原样',
+        '镜像 L→R：右侧 = 左侧 x 取反，y/z 原样（tip 也一起镜像）',
         Math.abs(mir.right[0] + mir.left[0]) < 1e-9 &&
           Math.abs(mir.right[1] - mir.left[1]) < 1e-9 &&
-          Math.abs(mir.right[2] - mir.left[2]) < 1e-9,
-        `L=${JSON.stringify(mir.left)} R=${JSON.stringify(mir.right)}`,
+          Math.abs(mir.right[2] - mir.left[2]) < 1e-9 &&
+          Math.abs(mir.rightTip[0] + mir.leftTip[0]) < 1e-9 &&
+          Math.abs(mir.rightTip[1] - mir.leftTip[1]) < 1e-9,
+        `L=${JSON.stringify(mir.left)} R=${JSON.stringify(mir.right)} ` +
+          `LTip=${JSON.stringify(mir.leftTip)} RTip=${JSON.stringify(mir.rightTip)}`,
+      );
+
+      // ── 镜像必须连 Skin Wrapper 半径一起翻（之前「skin wrapper 没法镜像」的真因）──
+      const mirCyl = await cdp.eval(`(() => {
+        const c = window.__editor.binding.wrappers.cylinders();
+        return { l: c.LeftHand.radii, r: c.RightHand.radii };
+      })()`);
+      const rEq = (a, b) =>
+        Math.abs(a.top - b.top) < 1e-9 &&
+        Math.abs(a.medium - b.medium) < 1e-9 &&
+        Math.abs(a.bottom - b.bottom) < 1e-9;
+      check(
+        '镜像 L→R：Skin Wrapper 半径一并镜像（RightHand 半径 == LeftHand）',
+        rEq(mirCyl.l, mirCyl.r),
+        `L=${JSON.stringify(mirCyl.l)} R=${JSON.stringify(mirCyl.r)}`,
       );
 
       // ── 反解导出（dryRun：只算不下载）──
@@ -747,24 +811,64 @@ async function main() {
       })()`);
       const es = exp.stats;
       check('导出 GLB 非空', es !== null && es !== undefined && es.bytes > 0, `bytes=${es?.bytes}`);
-      check('导出含 22 根骨', es?.bones === 22, `bones=${es?.bones}`);
+      check('导出含 27 根骨', es?.bones === 27, `bones=${es?.bones}`);
       check('无零权重顶点（兜底生效）', es?.zeroWeightVerts === 0, `zero=${es?.zeroWeightVerts}`);
+      // 末端可控的关键证据：Head / Hand / ToeBase 原本是叶子（胶囊退化成点），
+      // 加了 tip 之后它们的胶囊才拿到长度 —— 断言这三个骨长 > 0。
+      const tips = await cdp.eval(`(() => {
+        const st = window.__editor.binding.state();
+        const p = st && st.positions;
+        if (!p) return null;
+        const d = (a, b) => Math.hypot(p[b][0]-p[a][0], p[b][1]-p[a][1], p[b][2]-p[a][2]);
+        return {
+          hasTips: ['HeadTip','LeftHandTip','RightHandTip','LeftToeTip','RightToeTip']
+            .every(n => !!p[n]),
+          headLen: +d('Head','HeadTip').toFixed(4),
+          handLen: +d('LeftHand','LeftHandTip').toFixed(4),
+          toeLen: +d('LeftToeBase','LeftToeTip').toFixed(4),
+          handTipIsLeafBeyondHand:
+            Math.abs(p['LeftHandTip'][1] - p['LeftHand'][1]) < 0.35,
+        };
+      })()`);
+      check('★ 5 个 tip 节点都在骨架里', tips?.hasTips === true, JSON.stringify(tips));
+      check(
+        '★ tip 让末端骨段拿到长度（Head→HeadTip / Hand→HandTip / ToeBase→ToeTip 均 > 0）',
+        tips !== null && tips.headLen > 0 && tips.handLen > 0 && tips.toeLen > 0,
+        `head=${tips?.headLen} hand=${tips?.handLen} toe=${tips?.toeLen}`,
+      );
+      // 「tip 不参与 skin 计算」的硬证据：导出的权重里 tip 总权重必须为 0
+      check(
+        '★ tip 权重恒为 0（不参与 skin 计算）',
+        es?.tipWeightSum === 0 && es?.tipRefVerts === 0,
+        `tipWeightSum=${es?.tipWeightSum} tipRefVerts=${es?.tipRefVerts}`,
+      );
+      // 「tip 权重恒 0」与「半径表无 tip」分别在 L2 / L2d 段断言
+      // （那里已经切到蒙皮模式，半径表才初始化出来）。
       check(
         '反解是刚体变换，身高不跳变',
         es !== null && es !== undefined && Math.abs(es.heightAfter - es.heightBefore) < 0.35,
         `height ${es?.heightBefore?.toFixed(3)} → ${es?.heightAfter?.toFixed(3)} m`,
       );
       check(
-        '统计如实报出「离轴骨」= 被摆动的那两根',
+        '统计如实报出「离轴骨」= 被摆动的那两根（tip 已随手走，不该再报）',
         Array.isArray(es?.offAxisBones) && es.offAxisBones.length === 2,
         `offAxis=${JSON.stringify(es?.offAxisBones)}`,
       );
+      // 「绑定是动词」铁律：导出只回灌**网格**，骨架姿势原地不动，绝不跳回 T-pose。
+      // ΔR 清零看的是导出出去的那份骨架（fit.tposePositions），
+      // 上面「★ 重建的 T-pose 里左臂重新水平」已经断言过，这里守的是姿势不被改写。
       check(
-        '★ 导出后关节已复位到 T-pose（ΔR 清零，手臂重新水平）',
-        Math.abs(exp.state.positions.LeftHand[1] - exp.state.positions.LeftArm[1]) < 1e-9,
-        `Arm.y=${exp.state.positions.LeftArm[1]?.toFixed(6)} Hand.y=${exp.state.positions.LeftHand[1]?.toFixed(6)}`,
+        '★ 导出后摆放姿势原地不动（绑完骨架姿势即定，绝不跳回 T-pose）',
+        Math.abs(exp.state.positions.LeftHand[1] - mir.left[1]) < 1e-9 &&
+          Math.abs(exp.state.positions.LeftHandTip[1] - mir.left[1]) < 1e-9,
+        `Hand.y=${exp.state.positions.LeftHand[1]?.toFixed(6)} ` +
+          `Tip.y=${exp.state.positions.LeftHandTip[1]?.toFixed(6)}（应保持摆放值 ${mir.left[1]}）`,
       );
-      check('面板标注已摆正 T-pose', /已摆正 T-pose/.test(exp.statsHtml), exp.statsHtml);
+      check(
+        '面板统计区仍是当前模型（导出流程没把它清空）',
+        /顶点/.test(exp.statsHtml) && /面/.test(exp.statsHtml),
+        exp.statsHtml,
+      );
 
       // ---- L. 动画应用（BVH 重定向 → 烘焙进 GLB / 挂到场景里已绑定的模型）----
       //
@@ -865,6 +969,556 @@ async function main() {
             applied.clips?.playing === true &&
             applied.clips?.clip >= 0,
           JSON.stringify(applied.clips),
+        );
+      }
+
+      // ---- L2. Skin Wrapper 包裹器圆柱体在主 3D 视口可见 ----
+      //
+      // 守的是用户的定性要求：「模型每个 joint 上应当显示一个圆柱形状的皮肤权重包裹器」。
+      // 几何由 binding 模块按**实时关节矩阵**算，再交给引擎的半透明 X-ray 管线画。
+      // 这里要证的是渲染链路真的通 —— WGSL 编译错误 / usage 错配只在运行时暴露，
+      // tsc 与 vite build 全绿也查不出来。
+      console.log('\nL2. Skin Wrapper 圆柱体（主 3D 视口）');
+      // 先切到「蒙皮包裹」模式：每 joint 的默认 wrapper 半径表是**惰性**初始化的，
+      // 未进 skin 模式时 getCylinders() 为 null，3D 视口退回「骨长×0.35」默认半径。
+      // 这里显式切模式，才能验证「面板半径 → 3D 几何」这条链路而不仅是默认值。
+      const skinMode = await cdp.eval(`(() => {
+        const b = document.querySelector('[data-bd="mode-skin"]');
+        if (b) b.click();
+        return !!b;
+      })()`);
+      check('可切到「蒙皮包裹 skin」编辑模式', skinMode === true);
+
+      const wrapOn = await cdp.eval(`(() => window.__editor.binding.wrappers.set(true))()`);
+      check('3D 视口包裹器开关可打开', wrapOn === true, `set→${wrapOn}`);
+      await sleep(600); // 让几帧真正画过去（含圆柱体管线）
+      const wrap = await cdp.eval(`(() => ({
+        on: window.__editor.binding.wrappers.get(),
+        verts: window.__editor.binding.wrappers.verts(),
+        cyls: Object.keys(window.__editor.binding.wrappers.cylinders() || {}).length,
+      }))()`);
+      check(
+        '★ 圆柱体几何已产出并送进管线（顶点数 > 0）',
+        wrap.verts > 0,
+        JSON.stringify(wrap),
+      );
+      check(
+        '★ 顶点数是 stride 9 的整数倍（pos+nrm+col 交错，stride 36B）',
+        wrap.verts > 0 && wrap.verts % 9 === 0,
+        `verts=${wrap.verts}`,
+      );
+      check('包裹器半径表非空（每 joint 一个 wrapper）', wrap.cyls > 0, `cyls=${wrap.cyls}`);
+
+      // ---- L2d. tip（尖端）骨的三条硬约束 ----
+      //
+      // tip 存在的意义：Head / Hand / ToeBase 原本是叶子，影响胶囊退化成点 → 末端
+      // 外形与旋转无法控制。补上 tip 后它们的胶囊才拿到长度。但 tip 自己必须满足：
+      //   ① 不产生 wrapper mesh / skin wrapper；② 不参与 skin 计算。
+      // 这里断言的正是「该有的有、不该有的没有」。
+      console.log('\nL2d. tip（尖端）骨约束');
+      const tipWrap = await cdp.eval(`(() => {
+        const c = window.__editor.binding.wrappers.cylinders() || {};
+        return {
+          total: Object.keys(c).length,
+          tipKeys: Object.keys(c).filter((k) => /Tip$/.test(k)),
+        };
+      })()`);
+      check(
+        '★ 半径表里没有 tip（不产生 skin wrapper）',
+        tipWrap.tipKeys.length === 0,
+        `total=${tipWrap.total} tipKeys=${JSON.stringify(tipWrap.tipKeys)}`,
+      );
+      check(
+        '★ 22 骨干各有 wrapper（tip 只是让它们拿到长度，不是替换）',
+        tipWrap.total === 22,
+        `total=${tipWrap.total}`,
+      );
+
+      // ---- L2e. 改半径 → 几何必须真的变（「拖了滑块没反应」的回归闸门）----
+      //
+      // 顶点数看不出半径变化（改半径不增不减顶点），所以判据是几何指纹
+      // `sum`（顶点坐标绝对值之和）：圆柱一粗一细它就得动。
+      // 主 3D 视口与面板正/侧视两条路径都要验 —— 它们用不同的输入
+      // （实时关节矩阵 vs boneSegments），一条通了不代表另一条通。
+      console.log('\nL2e. 改半径 → 几何真的变');
+      const nFrames = (n) =>
+        `new Promise((r) => { let k = 0; const step = () => (++k >= ${n} ? r() : requestAnimationFrame(step)); requestAnimationFrame(step); })`;
+      const rad = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const wait = () => ${nFrames(4)};
+        const snap = () => ({ vp: b.wrappers.stats(), v3d: b.view3d() });
+        const src = b.wrappers.cylinders().LeftArm;
+        const orig = { ...src.radii };
+        const set3 = (v) => ['top', 'medium', 'bottom'].forEach((s) => b.wrappers.setRadius('LeftArm', s, v));
+
+        // 对照组：写入**同一个值**（半径没变，但 refresh() 照样跑一遍）
+        // → 量出「刷新副作用」本身带来的几何漂移，真变化必须显著大于它
+        const c0 = snap();
+        set3(orig.top);
+        await wait();
+        const c1 = snap();
+
+        const before = snap();
+        const ok = ['top', 'medium', 'bottom']
+          .every((s) => b.wrappers.setRadius('LeftArm', s, 0.55));
+        await wait();
+        const after = snap();
+        // 还原，再验一次「改回去也得变回去」
+        set3(orig.top);
+        await wait();
+        const restored = snap();
+        return { ok, c0, c1, before, after, restored, orig };
+      })()`);
+      const sum = (s) => s?.vp?.sum ?? 0;
+      const dCtrlVp = Math.abs(sum(rad.c1) - sum(rad.c0));
+      const dVp = Math.abs(sum(rad.after) - sum(rad.before));
+      const dFront = Math.abs((rad.after?.v3d?.frontCylSum ?? 0) - (rad.before?.v3d?.frontCylSum ?? 0));
+      const dSide = Math.abs((rad.after?.v3d?.sideCylSum ?? 0) - (rad.before?.v3d?.sideCylSum ?? 0));
+      const backVp = Math.abs(sum(rad.restored) - sum(rad.before));
+      check(
+        '★ 改半径真的写进半径表（setRadius 返回 true）',
+        rad.ok === true,
+        `ok=${rad.ok} orig=${JSON.stringify(rad.orig)}`,
+      );
+      console.log(
+        `  诊断：对照组（写入同值）Δsum=${dCtrlVp.toFixed(4)} · 真改半径 Δsum=${dVp.toFixed(4)}` +
+          ` · 主视口 sum ${sum(rad.before).toFixed(2)} → ${sum(rad.after).toFixed(2)}` +
+          ` · verts ${rad.before?.vp?.verts} → ${rad.after?.vp?.verts}` +
+          ` · bboxMin ${JSON.stringify(rad.before?.vp?.min)} → ${JSON.stringify(rad.after?.vp?.min)}` +
+          ` · bboxMax ${JSON.stringify(rad.before?.vp?.max)} → ${JSON.stringify(rad.after?.vp?.max)}` +
+          ` · first ${JSON.stringify(rad.before?.vp?.first)} → ${JSON.stringify(rad.after?.vp?.first)}`,
+      );
+      check(
+        '★ 主 3D 视口：改半径后圆柱体几何变了（且远大于刷新副作用）',
+        dVp > 1e-3 && dVp > dCtrlVp * 10,
+        `Δsum=${dVp.toFixed(4)} vs 对照组 ${dCtrlVp.toFixed(4)}`,
+      );
+      check(
+        '★ 面板正视：改半径后圆柱体几何变了',
+        dFront > 1e-3,
+        `Δsum=${dFront.toFixed(4)}（${rad.before?.v3d?.frontCylSum?.toFixed(2)} → ${rad.after?.v3d?.frontCylSum?.toFixed(2)}）`,
+      );
+      check(
+        '★ 面板侧视：改半径后圆柱体几何变了',
+        dSide > 1e-3,
+        `Δsum=${dSide.toFixed(4)}（${rad.before?.v3d?.sideCylSum?.toFixed(2)} → ${rad.after?.v3d?.sideCylSum?.toFixed(2)}）`,
+      );
+      check(
+        '★ 改回原值后几何回到基线（不是单向漂移）',
+        backVp < 1e-6,
+        `Δsum=${backVp.toExponential(2)}`,
+      );
+
+      // ---- L2g. 在视图里直接拖圆柱体 = 改半径（拖了要有反应） ----
+      //
+      // 蒙皮模式下 pointerdown 只做点选、拖动没有任何行为 —— 用户「在视图里调整
+      // 这些圆柱体」却看不到变化，根因就在这。现在语义是：
+      //   半径 = 指针到骨轴的垂距（米）
+      // 这里用合成 PointerEvent 走真实的事件链（不是绕过 UI 直接调 API），
+      // 才能同时证明「点得到」和「拖得动」。
+      console.log('\nL2g. 视图里拖圆柱体 = 改半径');
+      const drag = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const c = document.querySelector('[data-bd="front"]');
+        const w = c.clientWidth, h = c.clientHeight;
+        // ① 扫格子找一个能点中圆柱体的位置（不硬编码坐标，换模型也不会失效）
+        let hit = null, at = null;
+        for (let y = Math.round(h * 0.2); y < h * 0.8 && hit === null; y += 6) {
+          for (let x = Math.round(w * 0.2); x < w * 0.8; x += 6) {
+            const p = b.wrappers.pick('front', x, y);
+            if (p !== null) { hit = p; at = { x, y }; break; }
+          }
+        }
+        if (hit === null) return { found: false };
+        const before = { ...b.wrappers.cylinders()[hit.bone].radii };
+        // ② 按下 → 拖到偏离骨轴 60px → 松开
+        const ev = (type, x, y) => c.dispatchEvent(new PointerEvent(type, {
+          clientX: c.getBoundingClientRect().left + x,
+          clientY: c.getBoundingClientRect().top + y,
+          bubbles: true, pointerId: 1, isPrimary: true,
+        }));
+        ev('pointerdown', at.x, at.y);
+        ev('pointermove', at.x, at.y + 60);
+        await ${nFrames(2)};
+        const after = { ...b.wrappers.cylinders()[hit.bone].radii };
+        ev('pointerup', at.x, at.y + 60);
+        // ③ 还原，别把半径留在奇怪的值上
+        for (const s of ['top', 'medium', 'bottom']) b.wrappers.setRadius(hit.bone, s, before[s]);
+        return { found: true, hit, before, after, moved: Math.abs(after[hit.seg] - before[hit.seg]) };
+      })()`);
+      check(
+        '★ 视图里能点中圆柱体子段（点选判定没坏）',
+        drag.found === true,
+        JSON.stringify(drag.hit ?? null),
+      );
+      check(
+        '★ 在视图里拖圆柱体 = 改半径（拖动真的有反应）',
+        drag.found === true && drag.moved > 0.01,
+        `${drag.hit?.bone}.${drag.hit?.seg} ${drag.before?.[drag.hit?.seg]?.toFixed(3)} → ` +
+          `${drag.after?.[drag.hit?.seg]?.toFixed(3)}`,
+      );
+      check(
+        '★ 只改点中的那一段，另两段不动',
+        drag.found === true &&
+          ['top', 'medium', 'bottom']
+            .filter((s) => s !== drag.hit.seg)
+            .every((s) => Math.abs(drag.after[s] - drag.before[s]) < 1e-9),
+        JSON.stringify(drag.after ?? null),
+      );
+
+      // ---- L2h. 侧边栏滑块（真实 DOM 路径）→ 半径真的改，且不被自动算法覆盖 ----
+      //
+      // L2e / L2g 走的是自动化钩子与合成 pointer，**从没碰过那三个 range 滑块本身**。
+      // 用户报的正是「在侧边栏拖 top / bottom 没反应」—— 只有走真实 DOM 事件链
+      // （改 value + 派发 input）才能证明这条路径没断。
+      //
+      // 另一半是「自动算法 override 手动值」：拖 joint 会改骨长，而默认半径
+      // r = clamp(骨长 × 0.35, 0.04, 0.22) 正是骨长的函数 —— 手动值一旦被它
+      // 重算覆盖，表现就是「拖 joint 包裹器自己变大变小，手动调的却总是不见」。
+      console.log('\nL2h. 侧边栏滑块 与「自动半径不覆盖手动值」');
+      const sl = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const wait = () => ${nFrames(4)};
+        b.setMode('skin');
+        await wait();
+        // ① 在视图里点中一段，让侧边栏出现可编辑的圆柱体
+        const c = document.querySelector('[data-bd="front"]');
+        const w = c.clientWidth, h = c.clientHeight;
+        let hit = null, at = null;
+        for (let y = Math.round(h * 0.2); y < h * 0.8 && hit === null; y += 6) {
+          for (let x = Math.round(w * 0.2); x < w * 0.8; x += 6) {
+            const p = b.wrappers.pick('front', x, y);
+            if (p !== null) { hit = p; at = { x, y }; break; }
+          }
+        }
+        if (hit === null) return { found: false };
+        const rect = c.getBoundingClientRect();
+        const ev = (type, x, y) => c.dispatchEvent(new PointerEvent(type, {
+          clientX: rect.left + x, clientY: rect.top + y,
+          bubbles: true, pointerId: 1, isPrimary: true,
+        }));
+        ev('pointerdown', at.x, at.y);
+        ev('pointerup', at.x, at.y);
+        await wait();
+
+        // ② 真实 DOM 滑块路径：改 value + 派发 input
+        const el = document.querySelector('#binding-dock [data-bd="r-top"]');
+        if (el === null) return { found: true, noSlider: true, hit };
+        const domBefore = el.value;
+        const rBefore = { ...b.wrappers.cylinders()[hit.bone].radii };
+        const v3Before = b.view3d();
+        el.value = '0.3';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await wait();
+        const domAfter = document.querySelector('#binding-dock [data-bd="r-top"]').value;
+        const rAfter = { ...b.wrappers.cylinders()[hit.bone].radii };
+        const v3After = b.view3d();
+
+        // ③ 自动半径会不会覆盖手动值？拖 joint 改骨长（默认半径 r = 骨长×0.35
+        //    正是骨长的函数），再看手动值还在不在
+        const p0 = b.state().positions[hit.bone];
+        b.pose(hit.bone, [p0[0] + 0.06, p0[1] + 0.06, p0[2]]);
+        await wait();
+        const rAfterDrag = { ...b.wrappers.cylinders()[hit.bone].radii };
+
+        // ④ 模式往返（skin → skeleton → skin）后手动值还在不在
+        b.setMode('skeleton');
+        await wait();
+        b.setMode('skin');
+        await wait();
+        const rAfterRoundTrip = { ...b.wrappers.cylinders()[hit.bone].radii };
+
+        // ⑤ 关节模式下 3D 层也必须吃半径表（之前传 null → 回退成骨长×0.35 自动半径，
+        //    正是「拖 joint 包裹器自己变大变小、侧边栏调的看不到」的根因）
+        b.setMode('skeleton');
+        await wait();
+        const skBefore = b.view3d().frontCylSum;
+        b.wrappers.setRadius(hit.bone, 'top', 0.45);
+        await wait();
+        const skAfter = b.view3d().frontCylSum;
+        b.setMode('skin');
+        await wait();
+        const sknSum = b.view3d().frontCylSum;
+
+        // ⑥ 自动适配（显式按钮）只碰未手动改过的骨：
+        //    手动骨在 ⑤ 已被设成 top=0.45 且 manual=true；另取一根**非手动**骨
+        //    RightArm，把其子骨 RightForeArm 大幅挪开使骨长变化，autofit 后它的半径
+        //    必须等于公式值 clamp(骨长×0.35, 0.04, 0.22)；手动骨绝不被动。
+        const other = 'RightArm';
+        const otherChild = 'RightForeArm';
+        const headTopBefore = b.wrappers.cylinders()[hit.bone].radii.top;
+        const otherOrig = { ...b.wrappers.cylinders()[other].radii };
+        const op = b.state().positions[otherChild];
+        b.pose(otherChild, [op[0] + 0.3, op[1] + 0.3, op[2]]);
+        await wait();
+        const autoBtn = document.querySelector('#binding-dock [data-bd="cyl-autofit"]');
+        const autoBtnFound = autoBtn !== null;
+        const lfBefore = b.state().positions[otherChild];
+        if (autoBtn !== null) autoBtn.click();
+        // autofit 是同步写入：click() 返回前 this.cylinders 已原地改好（引用不变），
+        // 立即读就是 autofit 的真实产出。去掉原本夹在 click 与读取之间的 await wait()，
+        // 避免 4 帧等待引入的非确定性（渲染/帧回调不会写半径，无需等帧）。
+        const oRadiiImmediate = b.wrappers.cylinders()[other].radii.top;
+        const posImmediate = b.state().positions[otherChild];
+        const oRadii = b.wrappers.cylinders()[other].radii;
+        // 持久性：再等几帧，确认没有任何渲染/帧回调把半径写回默认值
+        await wait();
+        const oRadiiPersist = b.wrappers.cylinders()[other].radii.top;
+        const oManual = b.wrappers.cylinders()[other].manual === true;
+        const pa = b.state().positions[other];
+        const pb = b.state().positions[otherChild];
+        const len = Math.hypot(pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]);
+        const expR = Math.min(0.22, Math.max(0.04, len * 0.35));
+        const headTopAfter = b.wrappers.cylinders()[hit.bone].radii.top;
+
+        // 还原（关节 + 手动骨 + 自动骨都回到测试前）
+        b.pose(otherChild, op);
+        b.pose(hit.bone, p0);
+        for (const s of ['top', 'medium', 'bottom']) b.wrappers.setRadius(hit.bone, s, rBefore[s]);
+        for (const s of ['top', 'medium', 'bottom']) b.wrappers.setRadius(other, s, otherOrig[s]);
+        await wait();
+        return {
+          found: true, hit, domBefore, domAfter,
+          rBefore, rAfter, rAfterDrag, rAfterRoundTrip,
+          v3Before, v3After,
+          spanText: document.querySelector('#binding-dock [data-bd="r-top-v"]').textContent,
+          skBefore, skAfter, sknSum,
+          oRadii, expR, headTopBefore, headTopAfter,
+          autoBtnFound, oManual, lfBefore,
+          oRadiiImmediate: (typeof oRadiiImmediate !== 'undefined') ? oRadiiImmediate : undefined,
+          oRadiiPersist: (typeof oRadiiPersist !== 'undefined') ? oRadiiPersist : undefined,
+          posImmediate: (typeof posImmediate !== 'undefined') ? posImmediate : undefined,
+        };
+      })()`);
+      check(
+        '★ 点中圆柱体后侧边栏滑块就位（可编辑）',
+        sl.found === true && sl.noSlider !== true,
+        JSON.stringify({ hit: sl.hit ?? null, noSlider: sl.noSlider ?? false }),
+      );
+      check(
+        '★ 拖侧边栏滑块 → 半径表真的改了（真实 DOM input 事件路径）',
+        sl.found === true && Math.abs((sl.rAfter?.top ?? 0) - 0.3) < 1e-6,
+        `r-top ${sl.domBefore} → ${sl.domAfter} · radii.top ${sl.rBefore?.top} → ${sl.rAfter?.top}`,
+      );
+      check(
+        '★ 拖侧边栏滑块 → 面板 3D 视图几何跟着变（不是只改了数字）',
+        sl.found === true &&
+          Math.abs((sl.v3After?.frontCylSum ?? 0) - (sl.v3Before?.frontCylSum ?? 0)) > 1e-3,
+        `ΔfrontSum=${Math.abs((sl.v3After?.frontCylSum ?? 0) - (sl.v3Before?.frontCylSum ?? 0)).toFixed(4)}`,
+      );
+      check(
+        '★ 滑块位置不被回弹覆盖（改完 value 仍是新值，没被自动刷新写回旧值）',
+        sl.found === true && Math.abs(Number(sl.domAfter) - 0.3) < 1e-6,
+        `domAfter=${sl.domAfter} span=${sl.spanText}`,
+      );
+      check(
+        '★ 拖 joint 改骨长后，手动半径不被自动算法覆盖（r 仍是 0.3）',
+        sl.found === true && Math.abs((sl.rAfterDrag?.top ?? 0) - 0.3) < 1e-9,
+        `radii=${JSON.stringify(sl.rAfterDrag ?? null)}`,
+      );
+      check(
+        '★ skin → skeleton → skin 往返后手动半径仍在',
+        sl.found === true && Math.abs((sl.rAfterRoundTrip?.top ?? 0) - 0.3) < 1e-9,
+        `radii=${JSON.stringify(sl.rAfterRoundTrip ?? null)}`,
+      );
+      check(
+        '★ 关节模式也吃半径表（不在该模式用 null 回退成自动半径）',
+        sl.found === true && Math.abs(sl.skAfter - sl.skBefore) > 1e-3,
+        `ΔfrontSum(skeleton 模式)=${Math.abs((sl.skAfter ?? 0) - (sl.skBefore ?? 0)).toFixed(4)}`,
+      );
+      check(
+        '★ 关节模式与蒙皮模式的几何一致（同一个半径表，不再两套真源）',
+        sl.found === true && Math.abs((sl.sknSum ?? 0) - (sl.skAfter ?? 0)) < 1e-6,
+        `skn=${sl.sknSum?.toFixed(3)} sk=${sl.skAfter?.toFixed(3)}`,
+      );
+      check(
+        '★ 自动适配只重算非手动骨：手动骨（⑤ 置的 top）一点没动',
+        sl.found === true && Math.abs((sl.headTopAfter ?? 0) - (sl.headTopBefore ?? 0)) < 1e-9,
+        `headTop ${sl.headTopBefore} → ${sl.headTopAfter}`,
+      );
+      check(
+        '★ 自动适配把非手动骨重算成公式值 clamp(骨长×0.35, 0.04, 0.22)',
+        sl.found === true &&
+          Math.abs((sl.oRadii?.top ?? 0) - sl.expR) < 1e-9 &&
+          Math.abs((sl.oRadii?.medium ?? 0) - sl.expR) < 1e-9 &&
+          Math.abs((sl.oRadii?.bottom ?? 0) - sl.expR) < 1e-9,
+        `LeftArm=${JSON.stringify(sl.oRadii)} 预期=${sl.expR?.toFixed(4)} · oRadiiImmediate=${sl.oRadiiImmediate} · oRadiiPersist=${sl.oRadiiPersist}`,
+      );
+      check(
+        '★ 自动适配结果在若干帧后仍保持（无帧回调覆盖半径）',
+        sl.found === true && Math.abs((sl.oRadiiPersist ?? 0) - (sl.oRadiiImmediate ?? 0)) < 1e-9,
+        `oRadiiImmediate=${sl.oRadiiImmediate} · oRadiiPersist=${sl.oRadiiPersist}`,
+      );
+
+      // ---- L2f. 主 3D 视口：改半径 → 画面像素必须跟着变 ----
+      //
+      // L2e 证的是「几何数据变了」，这里证的是「用户眼睛看到的变了」。
+      // 中间还隔着一次 GPU 上传 + 一次 draw，任何一环被条件跳过（比如按顶点数
+      // 判断要不要重建缓冲）都会让几何变了但画面没变 —— 那正是用户报的现象。
+      console.log('\nL2f. 主 3D 视口像素：改半径前后画面必须不同');
+      const vpRect = await cdp.eval(`(() => {
+        const e = document.querySelector('canvas#gpu');
+        if (e === null) return null;
+        const r = e.getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height };
+      })()`);
+      const grabAvg = async () => {
+        const snap = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          clip: { x: vpRect.x, y: vpRect.y, width: vpRect.w, height: vpRect.h, scale: 1 },
+        });
+        return await cdp.eval(`(async (b64) => {
+          const blob = await (await fetch('data:image/png;base64,' + b64)).blob();
+          const bmp = await createImageBitmap(blob);
+          const c = document.createElement('canvas');
+          c.width = bmp.width; c.height = bmp.height;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(bmp, 0, 0);
+          const d = ctx.getImageData(0, 0, c.width, c.height).data;
+          let sum = 0, n = 0;
+          for (let i = 0; i < d.length; i += 4) { sum += (d[i] + d[i + 1] + d[i + 2]) / 3; n++; }
+          return +(sum / n).toFixed(3);
+        })('${snap.data}')`);
+      };
+      if (vpRect === null || vpRect.w < 2) {
+        check('★ 主 3D 视口有可采样区域', false, JSON.stringify(vpRect));
+      } else {
+        const p0 = await grabAvg();
+        // 把所有 wrapper 撑到最大：任何一个包裹器生效，画面都得动。
+        // 撑完必须还原 —— 后面 L2c 的像素健康度断言依赖原始半径。
+        await cdp.eval(`(() => {
+          const c = window.__editor.binding.wrappers.cylinders();
+          window.__radOrig = {};
+          for (const k of Object.keys(c)) window.__radOrig[k] = { ...c[k].radii };
+          return Object.keys(window.__radOrig).length;
+        })()`);
+        await cdp.eval(`(async () => {
+          const b = window.__editor.binding;
+          for (const k of Object.keys(window.__radOrig)) {
+            for (const s of ['top', 'medium', 'bottom']) b.wrappers.setRadius(k, s, 0.55);
+          }
+          await ${nFrames(4)};
+          return true;
+        })()`);
+        const p1 = await grabAvg();
+        // 必须还原成原值：后面 L2c 的像素健康度断言依赖原始半径
+        await cdp.eval(`(async () => {
+          const b = window.__editor.binding;
+          for (const k of Object.keys(window.__radOrig)) {
+            for (const s of ['top', 'medium', 'bottom']) {
+              b.wrappers.setRadius(k, s, window.__radOrig[k][s]);
+            }
+          }
+          await ${nFrames(4)};
+          return true;
+        })()`);
+        check(
+          '★ 主 3D 视口：撑大所有包裹器后画面亮度变了（半径真的画出来了）',
+          Math.abs(p1 - p0) > 0.05,
+          `avg ${p0} → ${p1}`,
+        );
+      }
+
+      // ---- L2b. 绑定面板正/侧视 = 3D 正交视图 ----
+      //
+      // 守的是「正/侧视要能真正看出包裹器体积和穿插」：2D 粗描边看不出体积，
+      // 必须换成带深度的正交 3D（网格实体 + 半透明 X-ray 圆柱体）。
+      // 与 L2 同理：WGSL / usage 错配只有运行时才暴露，必须实测顶点数。
+      console.log('\nL2b. 绑定面板正/侧视（3D 正交视图）');
+      await cdp.eval(`(() => window.__editor.binding.redraw())()`);
+      await sleep(600);
+      const v3 = await cdp.eval(`(() => window.__editor.binding.view3d())()`);
+      check('★ 正/侧视 3D 层已建立（非 null = WebGPU 可用）', v3 !== null, JSON.stringify(v3));
+      if (v3 !== null) {
+        check('★ 正视 3D 层已上传网格缓冲', v3.frontMesh === true, JSON.stringify(v3));
+        check('★ 侧视 3D 层已上传网格缓冲', v3.sideMesh === true, JSON.stringify(v3));
+        // 顶点数 = 骨数 × 每骨 240（3 段侧壁 3×10×6 + 两端盖 2×10×3）—— 结构自证
+        check(
+          '★ 正视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240）',
+          v3.frontCylVerts > 0 && v3.frontCylVerts % 240 === 0,
+          `frontCylVerts=${v3.frontCylVerts}（${v3.frontCylVerts / 240} 骨）`,
+        );
+        check(
+          '★ 侧视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240）',
+          v3.sideCylVerts > 0 && v3.sideCylVerts % 240 === 0,
+          `sideCylVerts=${v3.sideCylVerts}（${v3.sideCylVerts / 240} 骨）`,
+        );
+        check(
+          '正/侧视两个 3D 视图画出的圆柱体一致（同一批骨段）',
+          v3.frontCylVerts === v3.sideCylVerts,
+          `front=${v3.frontCylVerts} side=${v3.sideCylVerts}`,
+        );
+      }
+
+      // ---- L2c. 面板 3D 视图的像素健康度（过曝 / 全黑 / 被包裹器糊死） ----
+      //
+      // 只断言「顶点数 > 0」是不够的：管线通了也可能因为 alpha 层层叠加把模型糊成
+      // 一片白，或者 tonemap / 相机取景错了整块黑掉。这里直接把 WebGPU canvas 画到
+      // 2D canvas 上采样，用亮度分布把这两类回归钉死。
+      //
+      // ⚠️ 不能直接 `drawImage(glCanvas)`：WebGPU canvas 在 present 之后 drawing buffer
+      // 已被丢弃，headless 下采样出来是**全 0**，会把真黑和「取不到像素」混为一谈。
+      // 必须走 Page.captureScreenshot 拿到真实合成结果，再回传页面用
+      // createImageBitmap 解码成像素（Node 侧没有 PNG 解码器）。
+      console.log('\nL2c. 面板 3D 视图像素健康度（防过曝 / 全黑 / 被包裹器糊死）');
+      for (const [key, label] of [['front', '正视'], ['side', '侧视']]) {
+        const rect = await cdp.eval(`(() => {
+          const e = document.querySelector('[data-bd="${key}-gl"]');
+          if (e === null) return null;
+          const r = e.getBoundingClientRect();
+          return { x: r.x, y: r.y, w: r.width, h: r.height };
+        })()`);
+        if (rect === null || rect.w < 2 || rect.h < 2) {
+          check(`★ ${label} 3D 视图有可采样区域`, false, JSON.stringify(rect));
+          continue;
+        }
+        const snap = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          clip: { x: rect.x, y: rect.y, width: rect.w, height: rect.h, scale: 1 },
+        });
+        const pngPath = path.join(OUT_DIR, `editor-binding-${key}-3d.png`);
+        fs.writeFileSync(pngPath, Buffer.from(snap.data, 'base64'));
+
+        const px = await cdp.eval(`(async (b64) => {
+          const blob = await (await fetch('data:image/png;base64,' + b64)).blob();
+          const bmp = await createImageBitmap(blob);
+          const c = document.createElement('canvas');
+          c.width = bmp.width; c.height = bmp.height;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(bmp, 0, 0);
+          const d = ctx.getImageData(0, 0, c.width, c.height).data;
+          let sum = 0, n = 0, white = 0, dark = 0, maxL = 0;
+          const hist = [0, 0, 0, 0, 0];
+          for (let i = 0; i < d.length; i += 4) {
+            const l = (d[i] + d[i + 1] + d[i + 2]) / 3;
+            sum += l; n++;
+            if (l > 235) white++;
+            if (l < 20) dark++;
+            if (l > maxL) maxL = l;
+            hist[Math.min(4, Math.floor(l / 51))]++;
+          }
+          return { w: c.width, h: c.height, avg: +(sum / n).toFixed(1),
+                   white: +(white / n).toFixed(3), dark: +(dark / n).toFixed(3),
+                   maxL, hist: hist.map((x) => +(x / n).toFixed(3)) };
+        })('${snap.data}')`);
+        console.log(`  ${label} 像素：${JSON.stringify(px)} → ${pngPath}`);
+        check(
+          `★ ${label} 3D 视图不是全黑（相机取景 / 灯光没坏）`,
+          px.avg > 8 && px.dark < 0.98,
+          `avg=${px.avg} dark=${px.dark}`,
+        );
+        check(
+          `★ ${label} 3D 视图不过曝（近白像素 < 30%）`,
+          px.white < 0.3,
+          `white=${px.white} avg=${px.avg} maxL=${px.maxL}`,
+        );
+        // 中亮档（102~255）占比：太低 = 模型被压成一团黑看不清轮廓，
+        // 太高 = 又回到过曝。这一条和上面那条一起，把「模型 vs 包裹器」的对比夹住。
+        const mid = px.hist[2] + px.hist[3] + px.hist[4];
+        check(
+          `★ ${label} 3D 视图里模型看得见（中亮像素 3%~60%）`,
+          mid > 0.03 && mid < 0.6,
+          `mid=${mid.toFixed(3)} hist=${JSON.stringify(px.hist)}`,
         );
       }
 

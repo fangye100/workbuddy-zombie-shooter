@@ -30,6 +30,14 @@ import glb_util as G  # noqa: E402
 
 DEFAULT_SKELETON = os.path.join(_HERE, "humanik_skeleton.json")
 
+# tip（尖端）骨：头顶尖端 / 手腕末端 / 脚趾末端。它们只是末端控制节点 ——
+#   ① 不产生 wrapper mesh / skin wrapper；② 不参与 skin 计算（权重恒 0）。
+# 存在意义：让原本退化成点的末端胶囊（Head / Hand / ToeBase 是叶子）拿到长度，
+# 从而末端外形与旋转可控。与 TS 侧 `humanik-template.TIP_BONES` 必须一致。
+TIP_BONES = frozenset({
+    "HeadTip", "LeftHandTip", "RightHandTip", "LeftToeTip", "RightToeTip",
+})
+
 
 def bone_segments(order, bones, world):
     """For each bone return (A, B) world endpoints of its influence capsule: A = bone head,
@@ -50,7 +58,13 @@ def bone_segments(order, bones, world):
 
 def compute_lbs_weights(positions, order, bones, world, max_influences=4,
                         falloff=3.0, eps=0.02):
-    """Return (joints (N,4) u16, weights (N,4) f32)."""
+    """Return (joints (N,4) u16, weights (N,4) f32).
+
+    tip（尖端）骨恒 0 权重、不参与 skin —— 与 TS 侧 `binding-math.computeLbsWeights`
+    同一约定。注意**不能**走「过滤掉 tip 项再算」：joints 里写的是 segs 下标，
+    它必须等于 `order` 的下标（glTF joint index），过滤会让索引整体错位。
+    保留槽位 + 置零权重才是既对齐索引又满足约束的做法。
+    """
     segs = bone_segments(order, bones, world)
     n_bones = len(segs)
     N = positions.shape[0]
@@ -59,6 +73,9 @@ def compute_lbs_weights(positions, order, bones, world, max_influences=4,
     AB = B - A
     AB_len2 = np.sum(AB * AB, axis=1)
     AB_len2[AB_len2 < 1e-12] = 1e-12
+
+    # tip 掩码：True 表示该骨不参与 skin（权重恒 0）
+    tip_mask = np.array([n in TIP_BONES for n in order], dtype=bool)
 
     joints = np.zeros((N, max_influences), dtype=np.uint16)
     weights = np.zeros((N, max_influences), dtype=np.float64)
@@ -72,6 +89,7 @@ def compute_lbs_weights(positions, order, bones, world, max_influences=4,
         dist = np.linalg.norm(v - proj, axis=1)  # (B,)
         # smooth inverse-distance falloff
         w = 1.0 / (dist + eps) ** falloff
+        w = np.where(tip_mask, 0.0, w)  # tip 不参与 skin
         # pick top-k influences
         if N <= 4000:
             idx = np.argpartition(-w, max_influences)[:max_influences]
@@ -81,8 +99,9 @@ def compute_lbs_weights(positions, order, bones, world, max_influences=4,
         sub = w[idx]
         s = sub.sum()
         if s <= 1e-12:
-            # fallback: nearest bone weight 1.0
-            j = int(np.argmin(dist))
+            # fallback: nearest bone weight 1.0（tip 同样排除，不给它兜底）
+            dist_nz = np.where(tip_mask, np.inf, dist)
+            j = int(np.argmin(dist_nz))
             joints[i, 0] = j
             weights[i, 0] = 1.0
         else:
@@ -105,7 +124,7 @@ def rig_static_glb(input_glb, out_glb, skeleton_json=DEFAULT_SKELETON):
     inv_binds = np.array(
         [G.mat_to_colmajor(G.m_inverse(world_mats[name])) for name in order],
         dtype=np.float64,
-    )  # shape (22, 16)
+    )  # shape (len(order), 16)
 
     # --- LBS weights ---
     joints, weights = compute_lbs_weights(pos, order, bones, world)

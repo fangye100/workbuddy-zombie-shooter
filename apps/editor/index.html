@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<html lang="zh-CN" data-page-node-id="XXO9YJxl6n3UGOPbVhCxsx">
+<head data-page-node-id="9rrMyCu50aotildlwpb3Px">
+<meta charset="UTF-8" data-page-node-id="foeH2nAegwlSZ0gR18YgyE">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" data-page-node-id="1arz6knwqRPi7le88bCFwM">
 <title>Aether Game Editor · 末日尸潮</title>
 <style>
   :root {
@@ -26,6 +26,7 @@
     --insp-w: 300px;
     --dock-h: 260px;
     --tree-w: 210px;
+    --topbar-h: 40px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; overflow: hidden; }
@@ -35,6 +36,7 @@
     font-family: "Sarasa Gothic SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     font-size: 13px;
     display: flex;
+    flex-direction: column;
   }
   /* 中央列 = 画布 + 底部资产库 dock；画布吃满剩余高度 */
   #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; height: 100%; }
@@ -221,7 +223,7 @@
   #hud {
     position: fixed;
     right: calc(var(--insp-w) + 18px);
-    top: 12px;
+    top: calc(var(--topbar-h, 40px) + 12px);
     background: rgba(10, 8, 18, 0.86);
     border: 2px solid var(--ink);
     border-radius: 6px;
@@ -409,10 +411,74 @@
   .hier-row.sel .hier-eye, .hier-row.sel .hier-del { color: var(--ink); }
   .hier-row.sel .hier-eye:hover, .hier-row.sel .hier-del:hover { color: var(--blood); }
 
+  /* ================= 顶部菜单栏 Top Menu（Skeleton ▸ 绑定） =================
+   * 外壳层 UI：菜单项只调 main.ts 里既有的绑定入口（bindAssetAt / openBinding /
+   * applyBinding / loadBvhForBinding / closeBinding），绑定逻辑仍在 services/binding。
+   * 类名前缀 tb-，不是 ad-（同资产库那条注释，ad- 会被广告拦截插件 display:none）。 */
+  #topbar {
+    flex: 0 0 var(--topbar-h, 40px);
+    height: var(--topbar-h, 40px);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 14px;
+    background: var(--panel);
+    border-bottom: var(--stroke) solid var(--ink);
+    z-index: 50;
+  }
+  .tb-brand { font-weight: 700; font-size: 14px; color: var(--bone); letter-spacing: 0.5px; white-space: nowrap; }
+  .tb-brand em { color: var(--zombie); font-style: normal; }
+  .tb-menus { display: flex; align-items: center; gap: 4px; }
+  .tb-menu { position: relative; }
+  .tb-btn {
+    padding: 5px 12px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tb-btn:hover, .tb-menu.open .tb-btn { background: var(--zombie); color: var(--ink); }
+  .tb-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 210px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    background: var(--panel);
+    border: 3px solid var(--ink);
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.55);
+    z-index: 60;
+  }
+  .tb-dropdown[hidden] { display: none; }
+  .tb-item {
+    padding: 7px 10px;
+    font-size: 12px;
+    color: var(--paper);
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    text-align: left;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tb-item:hover:not(:disabled) { background: var(--ink); color: var(--zombie); }
+  .tb-item:disabled { color: var(--text-dim); cursor: default; }
+  .tb-sep { height: 2px; background: var(--ink); margin: 4px 2px; }
+
+  #mainrow { flex: 1 1 auto; display: flex; min-height: 0; width: 100%; }
+
   /* ---- Transform Gizmo 顶部工具栏（Unity 风格）---- */
   #gizmo-bar {
     position: fixed;
-    top: 12px;
+    top: calc(var(--topbar-h, 40px) + 12px);
     left: calc(var(--panel-w) + 22px);
     right: auto;
     display: flex;
@@ -788,16 +854,19 @@
   .bd-head {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
     background: var(--panel);
     border-bottom: 3px solid var(--ink);
   }
+  /* 头部子项过多时整体换行；把控制项收进两组，避免「显示」下拉溢出到屏幕右端 */
+  .bd-head-group { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; }
+  .bd-head-actions { margin-left: auto; }
   .bd-title { font-weight: 700; font-size: 13px; color: var(--bone); white-space: nowrap; }
   .bd-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
   .bd-model { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
-  .bd-spacer { flex: 1 1 auto; }
   .bd-btn {
     flex: 0 0 auto;
     padding: 4px 10px;
@@ -818,6 +887,17 @@
   .bd-body { flex: 1 1 auto; display: flex; min-height: 0; }
   .bd-view { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 6px; }
   .bd-vlabel { flex: 0 0 auto; font-size: 10px; color: var(--text-dim); padding: 0 0 4px 2px; }
+  /* 正/侧视舞台：3D 正交层（.bd-gl）垫底，2D 骨架层（.bd-canvas）透明叠在上面。
+     两层共用同一投影（见 BindingView3D.setFit），所以骨架与网格不会错位。 */
+  .bd-stage {
+    flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;
+    background: #0A0812; border: 2px solid var(--ink); border-radius: 4px;
+  }
+  .bd-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bd-stage .bd-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0;
+    background: transparent; border: none; border-radius: 0;
+  }
   .bd-canvas {
     flex: 1 1 auto;
     min-height: 0;
@@ -926,77 +1006,94 @@
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
 </style>
 </head>
-<body>
-<div class="panel" id="panel">
-  <div class="brand">
-    <h1>Aether <em>Game Editor</em></h1>
-    <p>末日尸潮 · 关卡物件编辑器<br>轻点选中 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩放</p>
+<body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
+<div id="topbar" data-page-node-id="DWAspFABjPYSzYXohJSEZM">
+  <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">末日尸潮 <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
+  <div class="tb-menus" data-page-node-id="vbJDAHfCbrcoMGMvC78aMX">
+    <div class="tb-menu" id="skeleton-menu-btn" data-page-node-id="N7eBka9ze56EnwMDFJkARW">
+      <button class="tb-btn" type="button" data-tb="skeleton" data-page-node-id="Tq5XZhd5MoZYTVMZV9GQ37">Skeleton</button>
+      <div class="tb-dropdown" id="skeleton-dropdown" hidden data-page-node-id="KOoVYjCxsGYdnAyb9J4uUa">
+        <button class="tb-item" type="button" data-tb-action="enter" data-page-node-id="z1sv7a72GvbHMqBmWKdghq">进入绑定 Binding…</button>
+        <button class="tb-item" type="button" data-tb-action="export" data-page-node-id="EZAZ8uXGx1yzrrN1chlsPH">导出 T-pose GLB</button>
+        <button class="tb-item" type="button" data-tb-action="bvh" data-page-node-id="9eCoZaNSGYcYl4rBf4magb">载入 BVH 动画…</button>
+        <div class="tb-sep" data-page-node-id="XCVR6ZM8ycfPLiKA0kOn5P"></div>
+        <button class="tb-item" type="button" data-tb-action="close" data-page-node-id="aZy0sUCcQOmy9Pu0uwIzV7">退出绑定 Close</button>
+      </div>
+    </div>
   </div>
-  <div id="groups"></div>
 </div>
-<div class="split-handle" id="split-left" title="拖拽调整左侧面板宽度"></div>
-<div id="center">
-  <canvas id="gpu"></canvas>
-  <div id="asset-dock"></div>
+<div id="mainrow" data-page-node-id="2Cxv2YNaoPTtxF2JK44Tph">
+<div class="panel" id="panel" data-page-node-id="SCyKf1cEE4HmfH8QmaT4B0">
+  <div class="brand" data-page-node-id="09ulbVZNUBtxNpyeQhrbqH">
+    <h1 data-page-node-id="TmsXkYvGEaaERG8ATQdXz0">Aether <em data-page-node-id="sRVmOUsrArVbJ5F8wN7bv0">Game Editor</em></h1>
+    <p data-page-node-id="ecWNI2oZAHmLNCQROT5vRe">末日尸潮 · 关卡物件编辑器<br data-page-node-id="dDBQL2ESzuFClxAMmqpPNS">轻点选中 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩放</p>
+  </div>
+  <div id="groups" data-page-node-id="ZJ8AolQUgzk2QafDtoHRFM"></div>
+</div>
+<div class="split-handle" id="split-left" title="拖拽调整左侧面板宽度" data-page-node-id="BwyYiG8ZrAcq7N1LF0XRms"></div>
+<div id="center" data-page-node-id="tnfONArFpWjeHhBxYM6zyz">
+  <canvas id="gpu" data-page-node-id="ivFEi1oS94rS9xuDyqOhkd"></canvas>
+  <div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
   <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
-  <div id="binding-dock"></div>
+  <div id="binding-dock" data-page-node-id="pDTPu4XOCe9JtvhJd81DtY"></div>
 </div>
-<div class="split-handle" id="split-right" title="拖拽调整属性面板宽度"></div>
-<aside id="inspector">
-  <div class="insp-tabs">
-    <button class="insp-tab active" data-tab="inspector">检视</button>
-    <button class="insp-tab" data-tab="scene">场景/光照</button>
-    <button class="insp-tab" data-tab="render">渲染</button>
-    <button class="insp-tab" data-tab="asset">资产</button>
+<div class="split-handle" id="split-right" title="拖拽调整属性面板宽度" data-page-node-id="ua1k6cPBGoxsy5WlV7ilNT"></div>
+<aside id="inspector" data-page-node-id="wrDMEMSc3MGdMWECtEjQAE">
+  <div class="insp-tabs" data-page-node-id="Ym3raYp1pz8hh5ozph4tVb">
+    <button class="insp-tab active" data-tab="inspector" data-page-node-id="cEMO2GWfcHF9AAUA46Xf2Q">检视</button>
+    <button class="insp-tab" data-tab="scene" data-page-node-id="kSTHppUnagGT9wPcv3Fvqq">场景/光照</button>
+    <button class="insp-tab" data-tab="render" data-page-node-id="FNRHc3KHABmmCW6EyqYmcG">渲染</button>
+    <button class="insp-tab" data-tab="asset" data-page-node-id="DYDFEWq3rIBYTVFY3Ouqcv">资产</button>
   </div>
-  <div class="insp-panes">
-    <div class="insp-pane active" data-pane="inspector"></div>
-    <div class="insp-pane" data-pane="scene"></div>
-    <div class="insp-pane" data-pane="render"></div>
-    <div class="insp-pane" data-pane="asset">
-      <div class="ai-host"></div>
-      <div id="asset-preview-host"></div>
+  <div class="insp-panes" data-page-node-id="4kRrPUbWn9BQAA1DXM2GLf">
+    <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK"></div>
+    <div class="insp-pane" data-pane="scene" data-page-node-id="Ht0prF6O4nFB58DEvN0Av5"></div>
+    <div class="insp-pane" data-pane="render" data-page-node-id="4Buf15XQbE3rFgCO8zsmcb"></div>
+    <div class="insp-pane" data-pane="asset" data-page-node-id="B5JRBF3dqcB8ZX37Ik3zRW">
+      <div class="ai-host" data-page-node-id="f8HHSTMum6lFrQGZgU5eES"></div>
+      <div id="asset-preview-host" data-page-node-id="5tt6WD9ZUHK6yCr0naAgDd"></div>
     </div>
   </div>
 </aside>
 
-<div id="gizmo-bar">
-  <div class="gz-inner">
-    <div class="gz-group">
-      <button class="gz-btn gz-mode" data-mode="translate" title="移动 (W)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l4 4h-3v4h6V7l4 4-4 4v-3h-6v6h3l-4 4-4-4h3v-6H5v3l-4-4 4-4v3h6V6H8z"/></svg>
+</div>
+<div id="gizmo-bar" data-page-node-id="7CiU4AxJIbgWbVYBtjyO6d">
+  <div class="gz-inner" data-page-node-id="It5hMRg4gOFMThmHBHFPqM">
+    <div class="gz-group" data-page-node-id="PDY03c5Yt6Xh2UtCUcaMXR">
+      <button class="gz-btn gz-mode" data-mode="translate" title="移动 (W)" data-page-node-id="qYlZbfhw3VRn38r924uXQF">
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="ac2qWxjhJNrnEFhXD4bxUt"><path d="M12 2l4 4h-3v4h6V7l4 4-4 4v-3h-6v6h3l-4 4-4-4h3v-6H5v3l-4-4 4-4v3h6V6H8z" data-page-node-id="04bqKCa169ppAU3wHYQ1op"/></svg>
         移动 W
       </button>
-      <button class="gz-btn gz-mode" data-mode="rotate" title="旋转 (E)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 1-6.32 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M5 3l1.2 4.4L10 8z"/></svg>
+      <button class="gz-btn gz-mode" data-mode="rotate" title="旋转 (E)" data-page-node-id="gNYbOF5EoxB0KEmNv4sP7j">
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="bnKBZnNlD6teDIeU11BGpZ"><path d="M12 5a7 7 0 1 1-6.32 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" data-page-node-id="EqWzcaS9DhfnWqXjq9q9y2"/><path d="M5 3l1.2 4.4L10 8z" data-page-node-id="JTo8z9EVNBO1hnKuDYsiTW"/></svg>
         旋转 E
       </button>
-      <button class="gz-btn gz-mode" data-mode="scale" title="缩放 (R)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h2v2H8zM14 8h2v2h-2zM8 14h2v2H8zM14 14h2v2h-2zM10 10h4v4h-4z"/></svg>
+      <button class="gz-btn gz-mode" data-mode="scale" title="缩放 (R)" data-page-node-id="vvGr53cwlGLPK03Ewhstna">
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="MdECCHPkNovKrkgzSAcY1h"><path d="M8 8h2v2H8zM14 8h2v2h-2zM8 14h2v2H8zM14 14h2v2h-2zM10 10h4v4h-4z" data-page-node-id="sYyRbuebDpIrXu1koXiLxU"/></svg>
         缩放 R
       </button>
     </div>
-    <div class="gz-sep"></div>
-    <div class="gz-group">
-      <button class="gz-btn gz-space" data-space="world" title="世界坐标">World</button>
-      <button class="gz-btn gz-space" data-space="local" title="局部坐标">Local</button>
+    <div class="gz-sep" data-page-node-id="g4rhOJ0jrg7K7wkfHuFCCk"></div>
+    <div class="gz-group" data-page-node-id="NLHKrudCUWpmxJ4Zdt3rcV">
+      <button class="gz-btn gz-space" data-space="world" title="世界坐标" data-page-node-id="NYVTnQ9gzvXGWTkeAojai4">World</button>
+      <button class="gz-btn gz-space" data-space="local" title="局部坐标" data-page-node-id="Xr2sGne1SRWC5h8ZZTY1uE">Local</button>
     </div>
-    <div class="gz-sep"></div>
-    <div class="gz-group">
-      <button class="gz-btn gz-xray" data-xray="1" title="骨骼 X-ray 叠加（主视图）">骨骼 X</button>
+    <div class="gz-sep" data-page-node-id="bWsvQ8v6hY04l7COEEjMdO"></div>
+    <div class="gz-group" data-page-node-id="6D2v828Z4ocfqZUtnlJiCE">
+      <button class="gz-btn gz-xray" data-xray="1" title="骨骼 X-ray 叠加（主视图）" data-page-node-id="kZZmupbCWcrqNGO21TdOq0">骨骼 X</button>
     </div>
   </div>
 </div>
 
 <!-- 右键菜单：资产库 / 层级面板共用，由 main.ts 填充 -->
-<div id="ctx-menu"></div>
+<div id="ctx-menu" data-page-node-id="k8GzVsS5xMvEU2xlH9DUau"></div>
 
-<div id="hud"></div>
+<div id="hud" data-page-node-id="IB6dB5JtrSOh2aZCR5gYdH"></div>
 
-<div id="fatal">
-  <div class="card">
-    <h2 id="fatal-title">无法启动</h2>
-    <div id="fatal-body"></div>
+<div id="fatal" data-page-node-id="48Qy046v9rPnZFcqKek59V">
+  <div class="card" data-page-node-id="NqAT0VyGVGUEseHrLOPjyD">
+    <h2 id="fatal-title" data-page-node-id="BsvVwT5VZowDUKCuQHZX9l">无法启动</h2>
+    <div id="fatal-body" data-page-node-id="JFlAACNnm837o9Ir4iqCJd"></div>
   </div>
 </div>
 
