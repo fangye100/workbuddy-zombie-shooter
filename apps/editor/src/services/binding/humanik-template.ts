@@ -1,5 +1,5 @@
 /**
- * HumanIK / Mixamo 22 骨模板（编辑器绑定面板用）。
+ * HumanIK / Mixamo 27 骨模板（22 骨干 + 5 tip）（编辑器绑定面板用）。
  *
  * 与 `assets/characters/_tools/humanik_skeleton.json` **同源同值**，只是搬到 TS 侧：
  * 坐标系 Y-up、T-pose、静置 ~2.05 m。改骨架请**两边一起改**，否则离线 pipeline
@@ -22,13 +22,18 @@ export interface BoneDef {
   readonly tposeOffset: Vec3;
 }
 
-/** 骨骼顺序 = glTF skins[].joints 的顺序，也是关节索引 0..21。顺序不可变。 */
+/**
+ * 骨骼顺序 = glTF skins[].joints 的顺序，也是关节索引。顺序不可变。
+ *
+ * ⚠️ 2026-09-07：原本是 22 骨（索引 0..21）。为修「末端外形与旋转无法控制」
+ * 加了 5 个 **tip（尖端）** 骨 → 27 骨（索引 0..26）。原因见 `TIP_BONES`。
+ */
 export const HUMANIK_ORDER: readonly string[] = [
-  'Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head',
-  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
-  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
-  'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase',
-  'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase',
+  'Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTip',
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'LeftHandTip',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'RightHandTip',
+  'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftToeBase', 'LeftToeTip',
+  'RightUpLeg', 'RightLeg', 'RightFoot', 'RightToeBase', 'RightToeTip',
 ] as const;
 
 export const HUMANIK_BONES: Readonly<Record<string, BoneDef>> = {
@@ -38,28 +43,76 @@ export const HUMANIK_BONES: Readonly<Record<string, BoneDef>> = {
   Spine2:        { name: 'Spine2',        parent: 'Spine1',    tposeOffset: [0.0, 0.15, 0.0] },
   Neck:          { name: 'Neck',          parent: 'Spine2',    tposeOffset: [0.0, 0.15, 0.0] },
   Head:          { name: 'Head',          parent: 'Neck',      tposeOffset: [0.0, 0.20, 0.0] },
+  // 头顶尖端：Head 原本是叶子，头顶一圈顶点（发型 / 头顶装备）没有可依附的骨段，
+  // 低头抬头时头顶会被脖子抢走。0.14 m ≈ 颅顶到 Head 关节的距离。
+  HeadTip:       { name: 'HeadTip',       parent: 'Head',      tposeOffset: [0.0, 0.14, 0.0] },
   LeftShoulder:  { name: 'LeftShoulder',  parent: 'Spine2',    tposeOffset: [0.07, 0.10, 0.0] },
   LeftArm:       { name: 'LeftArm',       parent: 'LeftShoulder', tposeOffset: [0.10, 0.0, 0.0] },
   LeftForeArm:   { name: 'LeftForeArm',   parent: 'LeftArm',   tposeOffset: [0.26, 0.0, 0.0] },
   LeftHand:      { name: 'LeftHand',      parent: 'LeftForeArm', tposeOffset: [0.25, 0.0, 0.0] },
+  LeftHandTip:   { name: 'LeftHandTip',   parent: 'LeftHand',  tposeOffset: [0.10, 0.0, 0.0] },
   RightShoulder: { name: 'RightShoulder', parent: 'Spine2',    tposeOffset: [-0.07, 0.10, 0.0] },
   RightArm:      { name: 'RightArm',      parent: 'RightShoulder', tposeOffset: [-0.10, 0.0, 0.0] },
   RightForeArm:  { name: 'RightForeArm',  parent: 'RightArm',  tposeOffset: [-0.26, 0.0, 0.0] },
   RightHand:     { name: 'RightHand',     parent: 'RightForeArm', tposeOffset: [-0.25, 0.0, 0.0] },
+  RightHandTip:  { name: 'RightHandTip',  parent: 'RightHand', tposeOffset: [-0.10, 0.0, 0.0] },
   LeftUpLeg:     { name: 'LeftUpLeg',     parent: 'Hips',      tposeOffset: [0.10, -0.10, 0.0] },
   LeftLeg:       { name: 'LeftLeg',       parent: 'LeftUpLeg', tposeOffset: [0.0, -0.42, 0.0] },
   LeftFoot:      { name: 'LeftFoot',      parent: 'LeftLeg',   tposeOffset: [0.0, -0.45, 0.0] },
   LeftToeBase:   { name: 'LeftToeBase',   parent: 'LeftFoot',  tposeOffset: [0.0, 0.0, 0.14] },
+  LeftToeTip:    { name: 'LeftToeTip',    parent: 'LeftToeBase', tposeOffset: [0.0, 0.0, 0.10] },
   RightUpLeg:    { name: 'RightUpLeg',    parent: 'Hips',      tposeOffset: [-0.10, -0.10, 0.0] },
   RightLeg:      { name: 'RightLeg',      parent: 'RightUpLeg', tposeOffset: [0.0, -0.42, 0.0] },
   RightFoot:     { name: 'RightFoot',     parent: 'RightLeg',  tposeOffset: [0.0, -0.45, 0.0] },
   RightToeBase:  { name: 'RightToeBase',  parent: 'RightFoot', tposeOffset: [0.0, 0.0, 0.14] },
+  RightToeTip:   { name: 'RightToeTip',   parent: 'RightToeBase', tposeOffset: [0.0, 0.0, 0.10] },
 };
 
-/** 手臂骨（含肩），A-pose 时整条链绕肩旋转 45° 下垂。镜像判断用前缀即可。 */
+/**
+ * **tip（尖端）骨**：手腕末端、脚趾末端与头顶尖端的末端节点。
+ *
+ * 为什么需要它们
+ * --------------
+ * `boneSegments()` 的规则是「每根骨的影响胶囊 = 骨 head → 其**第一个子骨** 的 head」。
+ * 加 tip 之前，`Head` / `LeftHand` / `LeftToeBase` 都是**叶子**，胶囊退化成一个点
+ * （a == b）→ 头顶、手掌、脚尖这些末端部位没有可被顶点依附的骨段，于是：
+ *   - **末端外形无法控制**：这些部位的顶点权重只能被脖子 / 前臂 / 小腿抢走，蒙皮变形发散；
+ *   - **末端旋转无法控制**：没有末端骨，就没法给头顶 / 指尖 / 脚尖一个独立的旋转轴。
+ * 补上 tip 之后，`LeftHand` 的胶囊变成 Hand → HandTip（有长度），三个问题一起解决。
+ *
+ * tip 的三条硬性约束（用户明确规定）
+ * ----------------------------------
+ *   1. tip **不产生 wrapper mesh / skin wrapper** —— 不进半径表、不画圆柱体；
+ *   2. tip **不参与 skin 计算** —— 顶点权重里 tip 恒为 0，不占影响槽位；
+ *   3. 但 tip **仍然是骨架节点**：进 glTF skins[].joints、有 node / IBM，
+ *      可被动画驱动（没有独立轨道时跟随父骨），这正是「末端旋转可控」的落点。
+ *
+ * ⚠️ 因此**不能**简单地把 tip 从权重数组里摘掉：`joints[]` 里的数字是
+ * `HUMANIK_ORDER` 的下标，过滤数组会让索引整体错位。正确做法是**保留槽位、
+ * 把 tip 的权重恒置 0**（见 `computeLbsWeights`）。
+ */
+export const TIP_BONES: ReadonlySet<string> = new Set<string>([
+  'HeadTip', 'LeftHandTip', 'RightHandTip', 'LeftToeTip', 'RightToeTip',
+]);
+
+/** 是否是 tip（尖端）骨 */
+export function isTipBone(name: string): boolean {
+  return TIP_BONES.has(name);
+}
+
+/** 参与 skin 计算的骨（= 全部骨 − tip） */
+export function skinBones(): readonly string[] {
+  return HUMANIK_ORDER.filter((n) => !TIP_BONES.has(n));
+}
+
+/**
+ * 手臂骨（含肩、含手腕 tip），A-pose 时整条链绕肩旋转 45° 下垂。镜像判断用前缀即可。
+ *
+ * ⚠️ tip 必须在内：否则 A-pose 下指尖会留在 T-pose 的位置，手尖从手腕"折"出去。
+ */
 export const ARM_BONES: ReadonlySet<string> = new Set<string>([
-  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
-  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'LeftHandTip',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'RightHandTip',
 ]);
 
 /** 左右镜像对（正视图 mirror 用）。左右互为 x 取反，其余分量相同。 */
@@ -68,10 +121,12 @@ export const MIRROR_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['LeftArm', 'RightArm'],
   ['LeftForeArm', 'RightForeArm'],
   ['LeftHand', 'RightHand'],
+  ['LeftHandTip', 'RightHandTip'],
   ['LeftUpLeg', 'RightUpLeg'],
   ['LeftLeg', 'RightLeg'],
   ['LeftFoot', 'RightFoot'],
   ['LeftToeBase', 'RightToeBase'],
+  ['LeftToeTip', 'RightToeTip'],
 ];
 
 /** 找镜像骨；中轴骨（Hips/Spine/Head）返回 null。 */
@@ -84,7 +139,7 @@ export function mirrorOf(name: string): string | null {
 }
 
 /**
- * 默认（模板）T-pose 下的 22 个关节世界坐标。
+ * 默认（模板）T-pose 下的 27 个关节世界坐标（22 骨干 + 5 tip）。
  * 用作绑定面板的初始摆放 —— 用户随后把它们拖到模型实际解剖位置上。
  */
 export function tposeWorldPositions(): Record<string, [number, number, number]> {

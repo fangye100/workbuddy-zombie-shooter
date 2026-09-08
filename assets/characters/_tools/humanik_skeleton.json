@@ -1,35 +1,555 @@
 {
-  "name": "HumanIK_Mixamo_22",
-  "description": "HumanIK/Mixamo-compatible 22-bone humanoid. Y-up, T-pose. Rest local transform = translation offset from parent (meters), identity rotation, scale 1. Assembled bind pose stands ~2.05 m (Hips ~1.0 m, head top ~2.0 m).",
+  "name": "HumanIK_Mixamo_27",
+  "description": "HumanIK/Mixamo-compatible 27-bone (22 core + 4 tip) humanoid. Y-up, T-pose. Rest local transform = translation offset from parent (meters), identity rotation, scale 1. Assembled bind pose stands ~2.05 m (Hips ~1.0 m, head top ~2.0 m).",
   "boneOrder": [
-    "Hips", "Spine", "Spine1", "Spine2", "Neck", "Head",
-    "LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand",
-    "RightShoulder", "RightArm", "RightForeArm", "RightHand",
-    "LeftUpLeg", "LeftLeg", "LeftFoot", "LeftToeBase",
-    "RightUpLeg", "RightLeg", "RightFoot", "RightToeBase"
+    "Hips",
+    "Spine",
+    "Spine1",
+    "Spine2",
+    "Neck",
+    "Head",
+    "HeadTip",
+    "LeftShoulder",
+    "LeftArm",
+    "LeftForeArm",
+    "LeftHand",
+    "LeftHandTip",
+    "RightShoulder",
+    "RightArm",
+    "RightForeArm",
+    "RightHand",
+    "RightHandTip",
+    "LeftUpLeg",
+    "LeftLeg",
+    "LeftFoot",
+    "LeftToeBase",
+    "LeftToeTip",
+    "RightUpLeg",
+    "RightLeg",
+    "RightFoot",
+    "RightToeBase",
+    "RightToeTip"
   ],
   "bones": {
-    "Hips":         { "parent": null,         "offset": [0.00, 1.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "Spine":        { "parent": "Hips",       "offset": [0.00, 0.15, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "Spine1":       { "parent": "Spine",      "offset": [0.00, 0.15, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "Spine2":       { "parent": "Spine1",     "offset": [0.00, 0.15, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "Neck":         { "parent": "Spine2",     "offset": [0.00, 0.15, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "Head":         { "parent": "Neck",       "offset": [0.00, 0.20, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftShoulder": { "parent": "Spine2",     "offset": [0.07, 0.10, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftArm":      { "parent": "LeftShoulder", "offset": [0.10, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftForeArm":  { "parent": "LeftArm",    "offset": [0.26, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftHand":     { "parent": "LeftForeArm", "offset": [0.25, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightShoulder":{ "parent": "Spine2",     "offset": [-0.07, 0.10, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightArm":     { "parent": "RightShoulder", "offset": [-0.10, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightForeArm": { "parent": "RightArm",   "offset": [-0.26, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightHand":    { "parent": "RightForeArm", "offset": [-0.25, 0.00, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftUpLeg":    { "parent": "Hips",       "offset": [0.10, -0.10, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftLeg":      { "parent": "LeftUpLeg",  "offset": [0.00, -0.42, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftFoot":     { "parent": "LeftLeg",    "offset": [0.00, -0.45, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "LeftToeBase":  { "parent": "LeftFoot",   "offset": [0.00, 0.00, 0.14], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightUpLeg":   { "parent": "Hips",       "offset": [-0.10, -0.10, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightLeg":     { "parent": "RightUpLeg", "offset": [0.00, -0.42, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightFoot":    { "parent": "RightLeg",   "offset": [0.00, -0.45, 0.00], "rotation": [0,0,0,1], "scale": [1,1,1] },
-    "RightToeBase": { "parent": "RightFoot",  "offset": [0.00, 0.00, 0.14], "rotation": [0,0,0,1], "scale": [1,1,1] }
-  }
+    "Hips": {
+      "parent": null,
+      "offset": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "Spine": {
+      "parent": "Hips",
+      "offset": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "Spine1": {
+      "parent": "Spine",
+      "offset": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "Spine2": {
+      "parent": "Spine1",
+      "offset": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "Neck": {
+      "parent": "Spine2",
+      "offset": [
+        0.0,
+        0.15,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "Head": {
+      "parent": "Neck",
+      "offset": [
+        0.0,
+        0.2,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "HeadTip": {
+      "parent": "Head",
+      "offset": [
+        0.0,
+        0.14,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftShoulder": {
+      "parent": "Spine2",
+      "offset": [
+        0.07,
+        0.1,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftArm": {
+      "parent": "LeftShoulder",
+      "offset": [
+        0.1,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftForeArm": {
+      "parent": "LeftArm",
+      "offset": [
+        0.26,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftHand": {
+      "parent": "LeftForeArm",
+      "offset": [
+        0.25,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftHandTip": {
+      "parent": "LeftHand",
+      "offset": [
+        0.1,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightShoulder": {
+      "parent": "Spine2",
+      "offset": [
+        -0.07,
+        0.1,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightArm": {
+      "parent": "RightShoulder",
+      "offset": [
+        -0.1,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightForeArm": {
+      "parent": "RightArm",
+      "offset": [
+        -0.26,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightHand": {
+      "parent": "RightForeArm",
+      "offset": [
+        -0.25,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightHandTip": {
+      "parent": "RightHand",
+      "offset": [
+        -0.1,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftUpLeg": {
+      "parent": "Hips",
+      "offset": [
+        0.1,
+        -0.1,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftLeg": {
+      "parent": "LeftUpLeg",
+      "offset": [
+        0.0,
+        -0.42,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftFoot": {
+      "parent": "LeftLeg",
+      "offset": [
+        0.0,
+        -0.45,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftToeBase": {
+      "parent": "LeftFoot",
+      "offset": [
+        0.0,
+        0.0,
+        0.14
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "LeftToeTip": {
+      "parent": "LeftToeBase",
+      "offset": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightUpLeg": {
+      "parent": "Hips",
+      "offset": [
+        -0.1,
+        -0.1,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightLeg": {
+      "parent": "RightUpLeg",
+      "offset": [
+        0.0,
+        -0.42,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightFoot": {
+      "parent": "RightLeg",
+      "offset": [
+        0.0,
+        -0.45,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightToeBase": {
+      "parent": "RightFoot",
+      "offset": [
+        0.0,
+        0.0,
+        0.14
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RightToeTip": {
+      "parent": "RightToeBase",
+      "offset": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "tipBones": [
+    "HeadTip",
+    "LeftHandTip",
+    "RightHandTip",
+    "LeftToeTip",
+    "RightToeTip"
+  ]
 }

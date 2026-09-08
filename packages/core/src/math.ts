@@ -68,6 +68,30 @@ export function perspective(out: Mat4, fovY: number, aspect: number, near: numbe
   return f;
 }
 
+/**
+ * 正交投影（WebGPU 深度 [0,1]，与 perspective 同约定）。
+ *
+ * 绑定面板的正视 / 侧视要的是**无透视畸变**的视图：正交下「屏幕上 1px = 固定的世界
+ * 长度」，圆柱体半径与骨长的比例才可直接目测，否则近大远小会把包裹器体积看走样。
+ *
+ * @param halfHeight 视口半高（世界单位）—— 越大装得下越多
+ * @returns out[5]，即 1/halfHeight。语义上等价于 perspective 返回的 projScaleY
+ *          （透视下 1 世界单位在距离 d 处占 d·tan(fov/2) 分之一屏高，正交下恒为
+ *          1/halfHeight 分之一屏高），描边的屏幕空间换算可直接沿用。
+ */
+export function ortho(out: Mat4, halfHeight: number, aspect: number, near: number, far: number): number {
+  const h = Math.max(1e-6, halfHeight);
+  const w = h * Math.max(1e-6, aspect);
+  out.fill(0);
+  out[0] = 1 / w;
+  out[5] = 1 / h;
+  // z_eye = -near → ndc.z = 0；z_eye = -far → ndc.z = 1（w_clip 恒为 1）
+  out[10] = 1 / (near - far);
+  out[14] = near / (near - far);
+  out[15] = 1;
+  return out[5]!;
+}
+
 export function lookAt(out: Mat4, eye: Vec3, center: Vec3, up: Vec3): void {
   let zx = eye[0] - center[0];
   let zy = eye[1] - center[1];

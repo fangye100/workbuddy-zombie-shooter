@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  TIP_BONES,
+  isTipBone,
   mirrorOf,
+  skinBones,
   tposeDirections,
   tposeWorldPositions,
 } from '../src/services/binding/humanik-template';
@@ -25,6 +28,8 @@ import {
   computeCylinderWeights,
   mirrorCylinders,
   mirrorSkinWeights,
+  boneLocalBasis,
+  offsetSegmentEndpoints,
 } from '../src/services/binding/skin-proxy';
 
 /**
@@ -58,15 +63,19 @@ function rotZ(p: readonly [number, number, number], about: readonly [number, num
 function poseLeftArm(placed: JointPositions, deg: number): JointPositions {
   const out: JointPositions = JSON.parse(JSON.stringify(placed)) as JointPositions;
   const pivot = out.LeftArm!;
-  for (const n of ['LeftForeArm', 'LeftHand'] as const) {
+  // tip 必须一起转：它是 LeftHand 的子骨，不转的话手尖会留在 T-pose 位置
+  // （等价于「手腕转了、指尖没转」的脱节姿态）
+  for (const n of ['LeftForeArm', 'LeftHand', 'LeftHandTip'] as const) {
     out[n] = rotZ(placed[n]!, pivot, deg);
   }
   return out;
 }
 
 describe('HumanIK 模板', () => {
-  it('22 根骨，顺序与父子关系自洽（父骨一定排在子骨之前）', () => {
-    expect(HUMANIK_ORDER).toHaveLength(22);
+  it('27 根骨（22 骨干 + 5 tip），顺序与父子关系自洽（父骨一定排在子骨之前）', () => {
+    expect(HUMANIK_ORDER).toHaveLength(27);
+    expect(skinBones()).toHaveLength(22);
+    expect(TIP_BONES.size).toBe(5);
     const seen = new Set<string>();
     for (const n of HUMANIK_ORDER) {
       const b = HUMANIK_BONES[n];
@@ -325,13 +334,69 @@ describe('矩阵与四元数工具', () => {
 describe('boneSegments / computeLbsWeights', () => {
   it('骨段 = 骨 head → 第一个子骨 head；叶子骨退化为点', () => {
     const segs = boneSegments(T);
-    expect(segs).toHaveLength(22);
+    expect(segs).toHaveLength(27); // 22 骨干 + 5 tip
     const arm = segs.find((s) => s.bone === 'LeftArm')!;
     // LeftArm 的第一个子骨是 LeftForeArm
     expect(arm.b).toEqual(T.LeftForeArm!);
-    const hand = segs.find((s) => s.bone === 'LeftHand')!;
-    // LeftHand 是叶子 → 退化为点
-    expect(hand.a).toEqual(hand.b);
+    // Head 的第一个子骨是 HeadTip（tip 也加在头顶）→ 胶囊不再退化为点
+    const head = segs.find((s) => s.bone === 'Head')!;
+    expect(head.b).toEqual(T.HeadTip!);
+    // 真正的叶子只剩 tip 本身（它下面没有子骨）
+    const tip = segs.find((s) => s.bone === 'HeadTip')!;
+    expect(tip.a).toEqual(tip.b);
+  });
+
+  /**
+   * tip 存在的全部意义就在这一条：加 tip 之前 LeftHand / LeftToeBase 是叶子，
+   * 影响胶囊退化成点 → 手掌 / 脚尖没有可被顶点依附的骨段，末端外形与旋转失控。
+   */
+  it('★ tip 让末端骨段拿到长度（Head→HeadTip、Hand→HandTip、ToeBase→ToeTip）', () => {
+    const segs = boneSegments(T);
+    const len = (name: string): number => {
+      const s = segs.find((x) => x.bone === name)!;
+      return Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1], s.b[2] - s.a[2]);
+    };
+    expect(len('Head')).toBeGreaterThan(0);
+    expect(len('LeftHand')).toBeGreaterThan(0);
+    expect(len('RightHand')).toBeGreaterThan(0);
+    expect(len('LeftToeBase')).toBeGreaterThan(0);
+    expect(len('RightToeBase')).toBeGreaterThan(0);
+    // tip 自己是叶子（b == a），它的胶囊没有长度 —— 所以它不该参与 skin
+    expect(len('HeadTip')).toBeCloseTo(0, 9);
+    expect(len('LeftHandTip')).toBeCloseTo(0, 9);
+    expect(len('RightToeTip')).toBeCloseTo(0, 9);
+  });
+
+  it('★ tip 权重恒为 0（不参与 skin 计算），且索引仍与骨序对齐', () => {
+    const pts: number[] = [];
+    // 刻意把手部周围堆满采样点，逼出「tip 被分到权重」这类回归
+    for (let i = 0; i < 64; i++) {
+      const t = i / 63;
+      pts.push(-0.3 + t * 0.6, 0.2 + t * 1.5, Math.sin(t * 6) * 0.2);
+    }
+    pts.push(99, 99, 99);
+    const N = 65;
+    const verts = new Float32Array(N * 15);
+    for (let i = 0; i < N; i++) {
+      verts[i * 15] = pts[i * 3]!;
+      verts[i * 15 + 1] = pts[i * 3 + 1]!;
+      verts[i * 15 + 2] = pts[i * 3 + 2]!;
+    }
+    const segs = boneSegments(T);
+    const skin = computeLbsWeights(verts, 15, N, segs);
+
+    const tipIdx = new Set<number>();
+    HUMANIK_ORDER.forEach((n, i) => { if (isTipBone(n)) tipIdx.add(i); });
+    expect(tipIdx.size).toBe(TIP_BONES.size);
+
+    for (let i = 0; i < N; i++) {
+      for (let k = 0; k < 4; k++) {
+        const j = skin.joints[i * 4 + k]!;
+        // 索引仍是 segs 下标 = HUMANIK_ORDER 下标（没被过滤错位）
+        expect(j).toBeLessThan(HUMANIK_ORDER.length);
+        if (tipIdx.has(j)) expect(skin.weights[i * 4 + k]!).toBe(0);
+      }
+    }
   });
 
   it('权重归一化、无零权重顶点、top-4 上限', () => {
@@ -354,7 +419,7 @@ describe('boneSegments / computeLbsWeights', () => {
       for (let k = 0; k < 4; k++) sum += skin.weights[i * 4 + k]!;
       expect(sum).toBeCloseTo(1, 5);
       // 关节索引必须落在有效范围内
-      for (let k = 0; k < 4; k++) expect(skin.joints[i * 4 + k]!).toBeLessThan(22);
+      for (let k = 0; k < 4; k++) expect(skin.joints[i * 4 + k]!).toBeLessThan(HUMANIK_ORDER.length);
     }
   });
 
@@ -418,7 +483,7 @@ function makeMesh(n: number): { verts: Float32Array; idx: Uint32Array } {
 }
 
 describe('rigToTPose：导出的 GLB 契约', () => {
-  it('★ 22 根骨骼节点全部无 rotation 字段（ΔR 绝不进骨架）', () => {
+  it('★ 27 根骨骼节点全部无 rotation 字段（ΔR 绝不进骨架）', () => {
     const { verts, idx } = makeMesh(120);
     const res = rigToTPose({
       name: 'probe',
@@ -430,7 +495,7 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     const { json } = parseGlb(res.glb);
 
     const skin = json.skins[0]!;
-    expect(skin.joints).toHaveLength(22);
+    expect(skin.joints).toHaveLength(HUMANIK_ORDER.length);
     for (const nodeIdx of skin.joints) {
       const node = json.nodes[nodeIdx]!;
       expect(node.rotation, `骨骼 ${String(node.name)} 不该带 rotation`).toBeUndefined();
@@ -469,14 +534,14 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     }
   });
 
-  it('inverseBindMatrices = 22 个 mat4，且是纯平移的逆', () => {
+  it('inverseBindMatrices = 27 个 mat4，且是纯平移的逆', () => {
     const { verts, idx } = makeMesh(120);
     const res = rigToTPose({
       name: 'probe', vertices: verts, indices: idx, image: null, placed: T,
     });
     const { json } = parseGlb(res.glb);
     const ibmAcc = json.accessors[json.skins[0]!.inverseBindMatrices]!;
-    expect(ibmAcc.count).toBe(22);
+    expect(ibmAcc.count).toBe(HUMANIK_ORDER.length);
     expect(ibmAcc.type).toBe('MAT4');
 
     // 直接从 BIN 里读回来验证每一条
@@ -526,10 +591,11 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     expect(res.stats.heightAfter).toBeGreaterThan(0);
     expect(Math.abs(res.stats.heightAfter - res.stats.heightBefore)).toBeLessThan(0.35);
     expect(res.stats.zeroWeightVerts).toBe(0);
-    expect(res.stats.bones).toBe(22);
+    expect(res.stats.bones).toBe(HUMANIK_ORDER.length);
     expect(res.stats.maxPoseAngleDeg).toBeCloseTo(45, 3);
-    // 只有被摆动的那两根骨算"离轴"
-    expect(res.stats.offAxisBones.sort()).toEqual(['LeftForeArm', 'LeftHand']);
+    // 臂链整体下垂 45° 时，链上每根骨的**世界朝向**都偏 45°，tip 也一样
+    // （tip 虽不参与 skin，但它是真骨架节点，朝向随父骨走，报出来是对的）
+    expect(res.stats.offAxisBones.sort()).toEqual(['LeftForeArm', 'LeftHand', 'LeftHandTip']);
   });
 
   it('顶点数超过 65535 时索引自动升级为 UNSIGNED_INT', () => {
@@ -551,10 +617,15 @@ describe('rigToTPose：导出的 GLB 契约', () => {
 });
 
 describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
-  it('defaultSkinCylinders 覆盖全部 22 骨，半径正且有限', () => {
+  it('defaultSkinCylinders 覆盖 22 骨干（tip 不产生 wrapper），半径正且有限', () => {
     const cyls = defaultSkinCylinders(T);
+    // ⚠️ 这里是 22 不是 26：tip 是末端控制节点，没有自己的包裹体积
     expect(Object.keys(cyls)).toHaveLength(22);
     for (const n of HUMANIK_ORDER) {
+      if (isTipBone(n)) {
+        expect(cyls[n], `tip 不该有 wrapper: ${n}`).toBeUndefined();
+        continue;
+      }
       const c = cyls[n]!;
       expect(c.enabled).toBe(true);
       for (const k of ['top', 'medium', 'bottom'] as const) {
@@ -579,7 +650,22 @@ describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
     expect(skin.weights[0]!).toBeGreaterThan(0.9);
   });
 
-  it('远离所有 wrapper 的顶点仍得到有效归一化权重（退回距离衰减，无 NaN/零权重）', () => {
+  it('★ 被多根 wrapper 包住的顶点按穿透深度做百分比分配（共享，而非某根独占）', () => {
+    const cyls = defaultSkinCylinders(T);
+    const j = T.LeftLeg!; // 左大腿(LeftUpLeg)与左小腿(LeftLeg)的交界关节
+    const verts = new Float32Array(15);
+    verts[0] = j[0] + 0.01; verts[1] = j[1]; verts[2] = j[2]; // 关节处微偏，落入相邻两根 wrapper 重叠区
+    const skin = computeCylinderWeights(verts, 15, 1, T, cyls);
+    const names = [...skin.joints].map((bi) => HUMANIK_ORDER[bi]!);
+    const wUp = skin.weights[names.indexOf('LeftUpLeg') as number] ?? 0;
+    const wLeg = skin.weights[names.indexOf('LeftLeg') as number] ?? 0;
+    // 两根相邻 limb wrapper 都包住该点 → 二者都拿显著权重（共享），不是某一根独占
+    expect(wUp).toBeGreaterThan(0.05);
+    expect(wLeg).toBeGreaterThan(0.05);
+    expect(wUp + wLeg).toBeGreaterThan(0.8);
+  });
+
+  it('远离所有 wrapper 的顶点仍得到有效归一化权重（退回最近 wrapper 兜底，无 NaN/零权重）', () => {
     const cyls = defaultSkinCylinders(T);
     const verts = new Float32Array(15);
     verts[0] = 5; verts[1] = 5; verts[2] = 5; // 天外飞点
@@ -613,5 +699,59 @@ describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
     // 右半顶点（index 1）现在应拿到 RightArm 权重（来自左半 LeftArm 的镜像）
     expect(mirrored.joints[4]!).toBe(ri);
     expect(mirrored.weights[4]!).toBeCloseTo(1, 9);
+  });
+
+  it('★ offsetSegmentEndpoints：局部轴分量按 axial/v1/v2 正交基平移骨段', () => {
+    const a: [number, number, number] = [0, 0, 0];
+    const b: [number, number, number] = [0, 2, 0];
+    const basis = boneLocalBasis(a, b);
+    // axial = +Y，v1 = +X，v2 = -Z（骨骼局部基退化叉乘的确定结果）
+    expect(basis.axial).toEqual([0, 1, 0]);
+    expect(basis.v1).toEqual([1, 0, 0]);
+    expect(basis.v2).toEqual([0, 0, -1]);
+
+    const e = (off: [number, number, number] | undefined) => offsetSegmentEndpoints(a, b, off);
+    expect(e(undefined)).toEqual({ a, b });
+    // 轴向分量（x）沿 +Y 平移整根骨段
+    expect(e([0.3, 0, 0])).toEqual({ a: [0, 0.3, 0], b: [0, 2.3, 0] });
+    // 侧向分量（y）沿 +X 平移
+    expect(e([0, 0.3, 0])).toEqual({ a: [0.3, 0, 0], b: [0.3, 2, 0] });
+    // 前后分量（z）沿 -Z 平移
+    expect(e([0, 0, 0.3])).toEqual({ a: [0, 0, -0.3], b: [0, 2, -0.3] });
+  });
+
+  it('★ 偏移后的 wrapper 在空域里捕获顶点（offset 沿骨局部前-后轴平移，且方向敏感）', () => {
+    const cyls0 = defaultSkinCylinders(T);
+    const seg = boneSegments(T).find((s) => s.bone === 'LeftUpLeg')!;
+    const basis = boneLocalBasis(seg.a, seg.b);
+    const r = cyls0.LeftUpLeg!.radii.medium;
+    const D = r + 0.22; // 落到身体外约 0.36m 的空域
+    // 点 P 落在「若 wrapper 沿局部前-后(v2)轴平移 +D」后的轴线上（段中点处）
+    const mid: [number, number, number] = [
+      (seg.a[0] + seg.b[0]) / 2, (seg.a[1] + seg.b[1]) / 2, (seg.a[2] + seg.b[2]) / 2,
+    ];
+    const P: [number, number, number] = [
+      mid[0] + basis.v2[0]! * D, mid[1] + basis.v2[1]! * D, mid[2] + basis.v2[2]! * D,
+    ];
+    const verts = new Float32Array(15);
+    verts[0] = P[0]; verts[1] = P[1]; verts[2] = P[2];
+
+    // A：wrapper 朝 P 方向平移 → 捕获 P（绝对体，权重≈1，其余≈0）
+    const cylsA = JSON.parse(JSON.stringify(cyls0)) as typeof cyls0;
+    cylsA.LeftUpLeg!.offset = [0, 0, D];
+    const skinA = computeCylinderWeights(verts, 15, 1, T, cylsA);
+    expect(HUMANIK_ORDER[skinA.joints[0]!]).toBe('LeftUpLeg');
+    expect(skinA.weights[0]!).toBeGreaterThan(0.9);
+    let rest = 0;
+    for (let k = 1; k < 4; k++) rest += skinA.weights[k]!;
+    expect(rest).toBeLessThan(0.05); // P 在空域，无其他 wrapper 触及
+
+    // B：wrapper 朝相反方向平移 → P 不再被该 wrapper 包住（方向敏感，证明偏移真的生效）
+    const cylsB = JSON.parse(JSON.stringify(cyls0)) as typeof cyls0;
+    cylsB.LeftUpLeg!.offset = [0, 0, -D];
+    const skinB = computeCylinderWeights(verts, 15, 1, T, cylsB);
+    const namesB = [...skinB.joints].map((bi) => HUMANIK_ORDER[bi]!);
+    const wUpB = skinB.weights[namesB.indexOf('LeftUpLeg') as number] ?? 0;
+    expect(wUpB).toBeLessThan(0.5);
   });
 });

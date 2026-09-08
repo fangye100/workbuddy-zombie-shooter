@@ -225,3 +225,64 @@ describe('rayAabb（拾取预剔除）', () => {
     expect(m4.rayAabb(0, 5, 0, 1, 0, 0, min, max)).toBe(-1);
   });
 });
+
+describe('m4.ortho（绑定面板正/侧视的 3D 正交相机）', () => {
+  const W = 480;
+  const H = 260;
+
+  function projectPoint(p: readonly [number, number, number], halfHeight: number, distance: number) {
+    // 与 renderer-core 正交分支同参：near = distance-500，far = distance+500
+    const near = Math.max(0.01, distance - 500);
+    const far = distance + 500;
+    const proj = m4.mat4();
+    const scaleY = m4.ortho(proj, halfHeight, W / H, near, far);
+    const eye = m4.orbitEye([0, 0, 0], distance, 0, 0);
+    const view = m4.mat4();
+    m4.lookAt(view, eye, [0, 0, 0], [0, 1, 0]);
+    const vp = m4.mat4();
+    m4.multiply(vp, proj, view);
+    const cx = vp[0]! * p[0] + vp[4]! * p[1] + vp[8]! * p[2] + vp[12]!;
+    const cy = vp[1]! * p[0] + vp[5]! * p[1] + vp[9]! * p[2] + vp[13]!;
+    const cw = vp[3]! * p[0] + vp[7]! * p[1] + vp[11]! * p[2] + vp[15]!;
+    return { ndcX: cx / cw, ndcY: cy / cw, scaleY };
+  }
+
+  it('返回的 projScaleY 与 perspective 同语义（= 1/halfHeight）', () => {
+    const out = m4.mat4();
+    const s = m4.ortho(out, 0.5, 2, 0.1, 100);
+    expect(s).toBeCloseTo(1 / 0.5, 6);
+    expect(out[5]).toBeCloseTo(1 / 0.5, 6);
+    // X 方向按 aspect 摊开：halfWidth = halfHeight * aspect
+    expect(out[0]).toBeCloseTo(1 / (0.5 * 2), 6);
+  });
+
+  it('halfHeight 正好框住半屏：y=halfHeight 落在 NDC 上边界', () => {
+    const hh = 1.3;
+    const { ndcY } = projectPoint([0, hh, 0], hh, 10);
+    expect(ndcY).toBeCloseTo(1, 5);
+  });
+
+  it('正交无透视缩放：远处与近处同尺寸（z 变化不改变 NDC x/y）', () => {
+    const hh = 1.3;
+    const near = projectPoint([0.6, 0.4, 1.0], hh, 10);
+    const far = projectPoint([0.6, 0.4, -1.0], hh, 10);
+    expect(near.ndcX).toBeCloseTo(far.ndcX, 6);
+    expect(near.ndcY).toBeCloseTo(far.ndcY, 6);
+  });
+
+  it('相机距离不影响成像大小（正交的定义式绑定面板依赖它）', () => {
+    const hh = 1.3;
+    const d5 = projectPoint([0.6, 0.4, 0], hh, 5);
+    const d50 = projectPoint([0.6, 0.4, 0], hh, 50);
+    expect(d5.ndcX).toBeCloseTo(d50.ndcX, 6);
+    expect(d5.ndcY).toBeCloseTo(d50.ndcY, 6);
+  });
+
+  it('halfHeight 退化到 0 时夹到下限，不产生 NaN / Infinity', () => {
+    const out = m4.mat4();
+    const s = m4.ortho(out, 0, 1, 0.1, 100);
+    expect(Number.isFinite(s)).toBe(true);
+    expect(s).toBeGreaterThan(0);
+    for (let i = 0; i < 16; i++) expect(Number.isFinite(out[i]!)).toBe(true);
+  });
+});

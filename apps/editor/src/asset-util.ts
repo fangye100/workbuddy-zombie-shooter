@@ -97,6 +97,39 @@ export async function readProjectFile(
   }
 }
 
+export interface WriteResult {
+  ok: boolean;
+  status: number;
+  bytes?: number | undefined;
+  error: string | null;
+}
+
+/**
+ * 写回项目内一个文件（编辑器存盘底座，对应 dev server 的 `POST /__fs/write`）。
+ * - `content`：整文件替换（字符串，服务器会校验合法 JSON）
+ * - `patch`：浅合并进现有 JSON 的顶层键（保留其它键，如 importer / userData）
+ * 二者给其一即可；都不给服务器会拒。
+ *
+ * ⚠️ 该端点仅 dev server 提供（生产构建无），故只在本地创作流（5100 / Tailscale）可用。
+ */
+export async function writeProjectFile(
+  rel: string,
+  body: { content?: string; patch?: Record<string, unknown> },
+  fetchFn: typeof fetch = fetch,
+): Promise<WriteResult> {
+  try {
+    const res = await fetchFn('/__fs/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: rel.replace(/^\/+/, ''), ...body }),
+    });
+    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string };
+    return { ok: res.ok && data.ok === true, status: res.status, bytes: data.bytes, error: data.error ?? null };
+  } catch (e) {
+    return { ok: false, status: 0, error: String(e) };
+  }
+}
+
 export async function listDir(dir: string): Promise<FsEntry[]> {
   const resp = await fetch(`/__fs/list?dir=${encodeURIComponent(dir)}`);
   if (!resp.ok) throw new Error(`目录读取失败 HTTP ${resp.status}`);
