@@ -105,6 +105,12 @@
 
 - **正常 `git add` / `git commit` / `git push` 是被允许、且是硬性要求的**：每完成一个任务
   收尾必须提交，使用规范中文 commit message，不留脏工作区。
+- 🔴 **提交即推送（2026-09-08 新增，强制）**：本地每产生一个 commit，必须在同一次收尾里
+  `git push` 到远端，**禁止把 commit 攒在本地**。本地未推送的提交是唯一无法从远端恢复的
+  部分——2026-09-08 事故中一次 `.git` 损坏就让本地 5 个未推送提交的对象全部丢失，
+  内容虽在工作区侥幸存活，但提交历史与作者日期永久没了。攒本地提交 = 主动制造单点故障。
+  - 一个任务产出多笔 commit 时：**逐笔 push**，不要等全部提交完再一次性推。
+  - push 失败（网络、远端拒绝、非快进）**必须当场解决或明确上报**，禁止以「稍后再推」为由搁置。
 - 🔴 **红线只禁「手动操作 `.git` 目录内部原始数据」**：`git fsck`、删 `.git` 内文件、手建
   refs、直接碰 pack、`git gc --prune` 等直接读写对象库的动作，未经许可一律禁止。
   发现仓库异常（dubious ownership、refs 缺失、对象损坏）只报告症状、等用户指令，**不要自行动手修复**。
@@ -115,3 +121,32 @@
   拼写是 **shooter**；另有拼写相近的空仓 **shotter** 勿推）。
 - 大二进制资产（角色概念图、模型 `*.glb/*.fbx/*.obj/*.zip/*.ply`、贴图等）走 **Git LFS**
   （见 `.gitattributes`），`git add` 会被自动转成 LFS 指针，不要手动绕过。
+
+## 4. 浏览器运行时验证（WebGPU）纪律
+
+> 门禁 `editor:smoke` = `tools/verify/editor-smoke.mjs`；手写 CDP 连已运行 dev server 用
+> `tools/verify/cdp-verify.mjs`。本沙箱（win11 + nvidia lovelace）的坑见下，**照抄可省一次重踩**。
+
+### 4.1 必须用 headed + 真实 GPU，禁止 headless + SwiftShader
+- 本机 **headless Chrome + `--enable-unsafe-swiftshader` 起不来 CDP**（进程直接退出、日志空）。
+  验证 WebGPU 运行时（WGSL 编译、bind group、uniform 对齐）一律走 **headed Chrome + 真实 GPU**。
+- 启动 flag（已固化在 `editor-smoke.mjs --headed` 与 `cdp-verify.mjs`）：
+  `--enable-unsafe-webgpu --remote-debugging-port=<CDP> --user-data-dir=.workbuddy/tmp/chrome-profile --window-size=1280,800 --no-first-run`。
+  🔴 **不要加 `--no-sandbox` / `--disable-dev-shm-usage`** —— 本沙箱里这俩反而让 Chrome 起不来 CDP。
+- `editor-smoke.mjs` 已支持 `--headed` 开关（默认仍 headless 以兼容 CI），本机验证一律带 `--headed`。
+
+### 4.2 🔴 优先复用已打开的 tab / 已连上的浏览器（默认行为）
+- 跑 headed 验证时，**优先复用已经打开的 Chrome 实例与已连上的 tab**，不要每次都新起一个浏览器：
+  - **手测**：直接在已开的浏览器（指向 `https://localhost:5100` 或 Tailscale 域名）里操作看效果，
+    别再 spawn 新 Chrome。
+  - **自动化**：CDP 连到**已运行的** dev server（`http://localhost:5100/`），复用固定的
+    `.workbuddy/tmp/chrome-profile` 这个 profile，避免重复冷启。
+- 固定 profile 的好处：证书/登录态/窗口状态保留，且 `editor-smoke.mjs` 的 `--headed` 路径默认复用它。
+
+### 4.3 自签 HTTPS 与 vite 输出坑（冒烟在本环境能跑通的前提）
+- 自签证书下 `fetch()`（undici）TLS 握手会挂/抛错 → 探针 `alive()` 必须退回原生
+  `https.get`/`http.get`（`rejectUnauthorized:false`）。
+- vite 往 pipe 写带 ANSI 颜色码，会把 `localhost:5188/` 拆成 `localhost:\x1b[1m5188\x1b[22m/`
+  → 正则匹配端口前必须先 `stripAnsi(buf)`。
+- 手动后台起的 vite 会占端口、与 `editor-smoke.mjs` 自带 `strictPort` 冲突
+  → 跑冒烟前先 `TaskStop` 掉自己起的 vite，让冒烟用全新空闲端口（如 5197）。
