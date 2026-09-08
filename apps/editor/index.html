@@ -861,9 +861,42 @@
     background: var(--panel);
     border-bottom: 3px solid var(--ink);
   }
-  /* 头部子项过多时整体换行；把控制项收进两组，避免「显示」下拉溢出到屏幕右端 */
-  .bd-head-group { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; }
+  /* 头部按语义分 5 组（编辑 / 镜像 / 姿态 / 产出 / 保存），组间竖分隔线。
+     组内 nowrap（组是整体，一起换行），组间可换行 —— 破坏性操作与常用操作
+     不再平铺在一起抢视觉权重。 */
+  .bd-head-group {
+    display: flex; align-items: center; gap: 6px;
+    flex: 0 0 auto; flex-wrap: nowrap;
+    padding-left: 10px;
+    border-left: 2px solid var(--ink);
+  }
+  .bd-head-group:first-of-type { border-left: none; padding-left: 0; }
   .bd-head-actions { margin-left: auto; }
+  .bd-glabel {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-dim); opacity: .7; white-space: nowrap;
+  }
+  .bd-toplabel { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  /* 破坏性操作（重置 / Detach）降级为次要样式，不与 Bind Skin 抢视觉权重 */
+  .bd-btn.danger { border-color: #ff9d6e; color: #ff9d6e; opacity: .78; }
+  .bd-btn.danger:hover { background: rgba(255,157,110,0.16); opacity: 1; }
+  .bd-btn.bd-icon { padding: 4px 8px; font-weight: 700; }
+  .bd-btn.bd-icon.active { background: var(--zombie); color: var(--ink); border-color: var(--zombie); }
+  .bd-check-head { flex: 0 0 auto; }
+  /* 常驻产出状态徽标：保存提示只活 2.6 秒，这个一直在 */
+  .bd-badge { font-size: 10px; white-space: nowrap; }
+  .bd-badge-warn { color: var(--warn); }
+  .bd-badge-ok { color: var(--toxic); }
+  /* 半径：滑块粗调 + 数字框精调，两者双向同步 */
+  .bd-rctl { display: flex; align-items: center; gap: 6px; }
+  .bd-rctl input[type=range] { flex: 1 1 auto; min-width: 0; }
+  .bd-num {
+    flex: 0 0 62px; width: 62px; padding: 2px 4px;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-size: 11px; font-family: inherit;
+  }
+  .bd-tip-inline { border-top: none; padding-top: 0; }
   .bd-title { font-weight: 700; font-size: 13px; color: var(--bone); white-space: nowrap; }
   .bd-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
   .bd-model { font-size: 11px; color: var(--text-dim); white-space: nowrap; }

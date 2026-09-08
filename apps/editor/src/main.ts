@@ -1573,6 +1573,16 @@ async function boot(): Promise<void> {
           if (c === null || binding === null) return null;
           return binding.pickCylinderAt(x, y, axis, c);
         },
+        /**
+         * 某根骨的骨段在视图里的屏幕两端点。
+         * 断言「拖离骨轴 = 改半径」时据此取**垂直**于骨轴的拖动方向 ——
+         * 沿轴拖垂距不变，半径本就不该变（否则会误判成「拖动没反应」）。
+         */
+        axis: (bone: string, view: 'front' | 'side') => {
+          const c = document.querySelector<HTMLCanvasElement>(`[data-bd="${view}"]`);
+          if (c === null || binding === null) return null;
+          return binding.segmentScreen(bone, view, c);
+        },
       },
       /**
        * 面板正/侧视的 3D 正交层（自动化断言用）：

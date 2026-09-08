@@ -184,6 +184,17 @@ export class BindingPanel {
   private saveBtn!: HTMLButtonElement;
   private saveStatusEl!: HTMLElement;
   private saveStatusTimer = 0;
+  /** 头部「?」按钮与它折叠的操作说明块 */
+  private helpBtn!: HTMLButtonElement;
+  private helpTipEl!: HTMLElement;
+  /** 「● 未导出 / ✓ 已绑定」常驻徽标 */
+  private exportBadgeEl!: HTMLElement;
+  /**
+   * 上次 Bind Skin 成功瞬间的「编辑指纹」（关节坐标 + 包裹器半径）。
+   * `null` = 从未 Bind 过。与当前指纹不等即说明结果已过期 —— 比在十几个
+   * 改动点里逐个插 markDirty 更不容易漏，因为 refresh() 是所有改动的唯一出口。
+   */
+  private boundSig: string | null = null;
 
   /**
    * 模型顶点（stride 15：pos3 / normal3 / smoothNormal3 / uv2 / color4）
@@ -271,33 +282,47 @@ export class BindingPanel {
       <div class="bd-head">
         <span class="bd-title">绑定<em>Binding</em></span>
         <span class="bd-model" data-bd="stats">未加载模型</span>
-        <div class="bd-head-group">
+        <div class="bd-head-group" data-group="编辑">
+          <span class="bd-glabel">编辑</span>
           <button class="bd-btn mode active" data-bd="mode-skel" title="选择并编辑 27 关节（22 骨干 + 5 tip）：拖拽对齐模型解剖位置">选择 Skeleton</button>
           <button class="bd-btn mode" data-bd="mode-skin" title="选择并编辑蒙皮包裹圆柱体 Skin Wrapper（整段 wrapper = 一根骨，top/medium/bottom 只调三个半径）">选择 Skin Wrapper</button>
-          <label class="bd-toplabel">显示</label>
+          <span class="bd-toplabel">显示</span>
           <select class="bd-select" data-bd="sidefilter" title="隐藏 / 仅显某侧关节与 Skin Wrapper（左右都含包裹器）">
             <option value="all">全部</option>
             <option value="mid">仅中轴</option>
             <option value="hideL">隐藏左</option>
             <option value="hideR">隐藏右</option>
           </select>
-          <label class="bd-toplabel">权重算法</label>
+          <label class="bd-check bd-check-head" title="在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新"><input type="checkbox" data-bd="skin-view3d">包裹器</label>
+        </div>
+        <div class="bd-head-group" data-group="镜像">
+          <span class="bd-glabel">镜像</span>
+          <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节与 Skin Wrapper 半径一并镜像到右侧（x 取反）">镜像 L→R</button>
+          <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节与 Skin Wrapper 半径一并镜像到左侧（x 取反）">镜像 R→L</button>
+        </div>
+        <div class="bd-head-group" data-group="姿态">
+          <span class="bd-glabel">姿态</span>
+          <button class="bd-btn danger" data-bd="reset" title="回到模板 T-pose 的初始摆放（会清空全部关节编辑，有二次确认）">重置</button>
+          <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
+        </div>
+        <div class="bd-head-group" data-group="产出">
+          <span class="bd-glabel">产出</span>
+          <span class="bd-toplabel">权重算法</span>
           <select class="bd-select" data-bd="weightmode" title="Bind Skin 时真正生效的权重算法。包裹体：被 Skin Wrapper 圆柱体包住才归属该骨，边界较硬但可控，配合半径精细调整；距离衰减：按顶点到骨段距离衰减取 top-4，过渡自然、不用调半径，但对侧骨可能抢到少量权重">
             <option value="wrapper">包裹体 Wrapper</option>
             <option value="distance">距离衰减</option>
           </select>
+          <button class="bd-btn accent" data-bd="apply" title="用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose">Bind Skin</button>
+          <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB（需要先载入 BVH）" disabled>导出动画 GLB</button>
+          <button class="bd-btn danger" data-bd="detach" title="移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑（有二次确认）">Detach Skin</button>
         </div>
-        <div class="bd-head-group bd-head-actions">
-          <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节与 Skin Wrapper 半径一并镜像到右侧（x 取反）">镜像 L→R</button>
-          <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节与 Skin Wrapper 半径一并镜像到左侧（x 取反）">镜像 R→L</button>
-          <button class="bd-btn" data-bd="reset" title="回到模板 T-pose 的初始摆放（会清空编辑，有确认）">重置</button>
+        <div class="bd-head-group bd-head-actions" data-group="保存">
+          <span class="bd-glabel">保存</span>
           <button class="bd-btn save" data-bd="save" title="把当前骨架摆位与 Skin Wrapper 半径存回 <mesh>.meta.json（仅资产库入口有路径时可用）">保存绑定</button>
           <span class="bd-savestatus" data-bd="save-status"></span>
-          <button class="bd-btn accent" data-bd="apply" title="用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose">Bind Skin</button>
-          <button class="bd-btn" data-bd="detach" title="移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑">Detach Skin</button>
-          <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
-          <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB" disabled>导出动画 GLB</button>
-          <button class="bd-btn" data-bd="close" title="关闭绑定面板">✕</button>
+          <span class="bd-badge" data-bd="export-badge" hidden></span>
+          <button class="bd-btn bd-icon" data-bd="help" title="展开 / 收起操作说明" aria-expanded="false">?</button>
+          <button class="bd-btn bd-icon" data-bd="close" title="关闭绑定面板">✕</button>
         </div>
       </div>
       <div class="bd-body">
@@ -333,7 +358,7 @@ export class BindingPanel {
             <div class="bd-legend-row"><i class="bd-dot bd-dot-left"></i>左侧 L</div>
             <div class="bd-legend-row"><i class="bd-dot bd-dot-right"></i>右侧 R</div>
           </div>
-          <div class="bd-tip">
+          <div class="bd-tip" data-bd="tip" hidden>
             拖拽 joint 对齐模型解剖位置。<br>
             正视改 <b>x/y</b>，侧视改 <b>z/y</b>。<br>
             <b>Shift 拖拽</b>锁定横/纵主轴；<b>方向键</b>微调（Shift 5mm）。<br>
@@ -350,11 +375,21 @@ export class BindingPanel {
                 <div class="bd-sel" data-bd="skin-sel">未选中圆柱体 · 在视图中点选一段</div>
                 <div class="bd-field" data-bd="skin-sliders" hidden>
                   <label>Top 半径 <span data-bd="r-top-v"></span> m</label>
-                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-top">
+                  <div class="bd-rctl">
+                    <input type="range" min="0.005" max="0.6" step="0.005" data-bd="r-top">
+                    <input type="number" class="bd-num" min="0.005" max="0.6" step="0.005" data-bd="r-top-n">
+                  </div>
                   <label>Medium 半径 <span data-bd="r-medium-v"></span> m</label>
-                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-medium">
+                  <div class="bd-rctl">
+                    <input type="range" min="0.005" max="0.6" step="0.005" data-bd="r-medium">
+                    <input type="number" class="bd-num" min="0.005" max="0.6" step="0.005" data-bd="r-medium-n">
+                  </div>
                   <label>Bottom 半径 <span data-bd="r-bottom-v"></span> m</label>
-                  <input type="range" min="0.01" max="0.6" step="0.005" data-bd="r-bottom">
+                  <div class="bd-rctl">
+                    <input type="range" min="0.005" max="0.6" step="0.005" data-bd="r-bottom">
+                    <input type="number" class="bd-num" min="0.005" max="0.6" step="0.005" data-bd="r-bottom-n">
+                  </div>
+                  <div class="bd-tip bd-tip-inline">滑块与数字框双向同步；方向键微调，<b>Shift + 方向键</b> 10× 步进。</div>
                 </div>
                 <div class="bd-field bd-offset" data-bd="skin-offset" hidden>
                   <label>偏移 Offset（沿骨局部轴，米）</label>
@@ -380,9 +415,6 @@ export class BindingPanel {
                     title="取消当前骨的手动标记，交还给自动适配">重置此骨为自动</button>
                 </div>
                 <label class="bd-check"><input type="checkbox" data-bd="skin-mirror-w"> 导出时镜像皮肤权重 L→R</label>
-                <label class="bd-check" title="在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新">
-                  <input type="checkbox" data-bd="skin-view3d"> 在 3D 视图显示包裹器
-                </label>
               </div>
             </div>
           </div>
@@ -409,6 +441,7 @@ export class BindingPanel {
     this.bindPoseBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="pov-bind"]')!;
     this.saveBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="save"]')!;
     this.saveStatusEl = this.rootEl.querySelector<HTMLElement>('[data-bd="save-status"]')!;
+    this.exportBadgeEl = this.rootEl.querySelector<HTMLElement>('[data-bd="export-badge"]')!;
     this.saveBtn.addEventListener('click', () => this.hooks.onSave?.());
 
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="close"]')!
@@ -483,10 +516,21 @@ export class BindingPanel {
       this.hooks.onToggleViewportCylinders?.(v3d.checked);
     });
 
+    // 半径：滑块 + 数字框双向同步，两条路径都走 setCylinderRadius 这一个入口。
+    // 方向键微调：原生 range 已支持，这里补 Shift = 10× 步进。
     for (const seg of ['top', 'medium', 'bottom'] as const) {
       const sl = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="r-${seg}"]`)!;
-      sl.addEventListener('input', () => this.onRadiusSlider(seg, sl.value));
+      sl.addEventListener('input', () => this.onRadiusSlider(seg, sl.value, sl));
+      sl.addEventListener('keydown', (e) => this.onRadiusKey(seg, sl, e));
+      const num = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="r-${seg}-n"]`)!;
+      num.addEventListener('input', () => this.onRadiusSlider(seg, num.value, num));
+      num.addEventListener('keydown', (e) => this.onRadiusKey(seg, num, e));
     }
+
+    // 操作说明折叠（默认收起，头部「?」切换）
+    this.helpBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="help"]')!;
+    this.helpTipEl = this.rootEl.querySelector<HTMLElement>('[data-bd="tip"]')!;
+    this.helpBtn.addEventListener('click', () => this.toggleHelp());
 
     // 包裹器偏移（沿骨局部轴）：X/Y/Z 三个输入框 + 归零按钮
     for (const ax of ['x', 'y', 'z'] as const) {
@@ -513,9 +557,9 @@ export class BindingPanel {
         background: rgba(155,93,229,0.08); border: 1px solid rgba(155,93,229,0.3); border-radius: 6px; }
       .bd-skin-actions { display: flex; gap: 4px; }
       .bd-skin-actions .bd-btn { flex: 1 1 0; }
-      .bd-skin input[type=range] { width: 100%; accent-color: var(--zombie); }
+      /* 宽度交给 .bd-rctl 的 flex 布局（滑块与数字框同排），这里只管配色 */
+      .bd-skin input[type=range] { accent-color: var(--zombie); min-width: 0; }
       .bd-sel { font-size: 11px; color: var(--text-dim); }
-      .bd-toplabel { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
       .bd-head .bd-select { flex: 0 0 auto; }
       .bd-btn.save { border-color: var(--toxic); color: var(--toxic); }
       .bd-btn.save:hover { background: rgba(124,252,0,0.16); }
@@ -546,6 +590,7 @@ export class BindingPanel {
     this.previewMode = 'current';
     this.sideFilter = 'all';
     this.bindPose = null;
+    this.boundSig = null;
     this.bindPoseBtn.disabled = true;
     this.editMode = 'skeleton';
     this.cylinders = null;
@@ -595,6 +640,7 @@ export class BindingPanel {
     this.previewMode = 'current';
     this.sideFilter = 'all';
     this.bindPose = null;
+    this.boundSig = null;
     this.bindPoseBtn.disabled = true;
     this.editMode = 'skeleton';
     this.cylinders = null;
@@ -1013,9 +1059,12 @@ export class BindingPanel {
    * bindPose 是独立字段，这里不动它 —— 所以切到 Bind 预览仍能回到冻结的绑定姿态。
    */
   private detach(): void {
+    if (!window.confirm('Detach 会移除已应用的绑定结果（Bind Pose 与关节编辑保留）。确定？')) return;
     this.unposed = false;
     this.tposeMesh = null;
     this.previewMode = 'current';
+    // 结果没了 → 回到「未导出」
+    this.boundSig = null;
     this.syncDisplay();
     this.refresh();
   }
@@ -1034,6 +1083,8 @@ export class BindingPanel {
     this.bindPoseBtn.disabled = false;
     this.hooks.onApply?.(fit, { smoothWeights: this.smoothWeights });
     // 注意：不复位 positions —— 骨骼保持 bind pose 不动（用户铁律）。
+    // 记下这一刻的编辑指纹：徽标据此判断「之后动过没有」。
+    this.boundSig = this.editSig();
     this.refresh();
   }
 
@@ -1117,14 +1168,56 @@ export class BindingPanel {
     this.refresh();
   }
 
-  /** 拖动某段半径滑块 → 更新该圆柱体对应子段的半径并重绘 */
-  private onRadiusSlider(seg: CylSegment, value: string): void {
+  /**
+   * 半径变化（滑块或数字框）→ 收口到 setCylinderRadius 这一个入口，并把值回灌给
+   * **另一个**控件。`src` 是事件源，避免把用户正在敲的输入框自己覆盖掉。
+   */
+  private onRadiusSlider(seg: CylSegment, value: string, src: HTMLInputElement): void {
     if (this.selectedCyl === null) return;
     const v = parseFloat(value);
+    if (!Number.isFinite(v)) return;
     if (!this.setCylinderRadius(this.selectedCyl, seg, v)) return;
-    const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`)!;
-    span.textContent = v.toFixed(3);
+    const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`);
+    if (span !== null) span.textContent = v.toFixed(3);
+    for (const key of [`r-${seg}`, `r-${seg}-n`]) {
+      const el = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="${key}"]`);
+      if (el !== null && el !== src) el.value = String(v);
+    }
   }
+
+  /**
+   * 半径控件的键盘微调。方向键交给浏览器原生（step=0.005），
+   * 这里只补 Shift + 方向键 = 10× 步进，避免细调 0.6m 这种大行程时按到手酸。
+   */
+  private onRadiusKey(seg: CylSegment, el: HTMLInputElement, e: KeyboardEvent): void {
+    if (!e.shiftKey) return;
+    const dir = e.key === 'ArrowUp' || e.key === 'ArrowRight' ? 1
+      : e.key === 'ArrowDown' || e.key === 'ArrowLeft' ? -1 : 0;
+    if (dir === 0) return;
+    e.preventDefault();
+    const step = (parseFloat(el.step) || 0.005) * 10;
+    const cur = parseFloat(el.value);
+    if (!Number.isFinite(cur)) return;
+    const numMin = parseFloat(el.min);
+    const numMax = parseFloat(el.max);
+    const lo = Number.isFinite(numMin) ? numMin : BindingPanel.R_MIN;
+    const hi = Number.isFinite(numMax) ? numMax : BindingPanel.R_MAX;
+    const next = Math.min(hi, Math.max(lo, cur + dir * step));
+    el.value = String(next);
+    this.onRadiusSlider(seg, el.value, el);
+  }
+
+  /**
+   * 半径量程（滑块用）。
+   *
+   * ⚠️ **刻意不做「随骨长自适应」** —— 试过 `骨长 × 0.8`，两个问题：
+   *   ① range 的 `max` 会**静默钳制**写入值：用户/脚本写 0.3，骨短时被悄悄
+   *      改成 0.155，既违反本项目「禁止静默修数据」，也让外部无法写超量程值；
+   *   ② 量程随选中骨变化 = 同一个滑块位置在不同骨上代表不同半径，肌肉记忆失效。
+   * 精确输入交给数字框（它不会被钳制），滑块只负责粗调，量程固定、step 更细。
+   */
+  private static readonly R_MIN = 0.005;
+  private static readonly R_MAX = 0.6;
 
   /**
    * 设置某根骨某段的包裹器半径（滑块与自动化钩子共用同一条路径 —— 只有一条
@@ -1220,6 +1313,7 @@ export class BindingPanel {
       sliders.hidden = true;
       offBox.hidden = true;
       mirBtn.disabled = true;
+      mirBtn.title = '先在正/侧视图里点选一段包裹器，才能镜像到对侧';
       return;
     }
     const cyl = this.cylinders[this.selectedCyl]!;
@@ -1230,14 +1324,22 @@ export class BindingPanel {
     sliders.hidden = false;
     offBox.hidden = false;
     mirBtn.disabled = m === null;
+    // 禁用时必须说清为什么灰 —— 否则用户只会以为面板坏了
+    mirBtn.title = m === null
+      ? `${this.selectedCyl} 是中轴骨，没有对侧可镜像`
+      : `把 ${this.selectedCyl} 的半径镜像给 ${m}（对侧骨会被标记为手动）`;
     const unpin = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-unpin"]');
     if (unpin !== null) unpin.disabled = cyl.manual !== true;
     for (const seg of ['top', 'medium', 'bottom'] as const) {
-      const sl = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="r-${seg}"]`)!;
-      const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`)!;
       const v = cyl.radii[seg];
-      sl.value = String(v);
-      span.textContent = v.toFixed(3);
+      const span = this.rootEl.querySelector<HTMLElement>(`[data-bd="r-${seg}-v"]`);
+      if (span !== null) span.textContent = v.toFixed(3);
+      for (const key of [`r-${seg}`, `r-${seg}-n`]) {
+        const el = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="${key}"]`);
+        if (el === null) continue;
+        // 别打断正在输入 / 正在拖的那个控件
+        if (document.activeElement !== el) el.value = String(v);
+      }
     }
     const off = this.getOffset(this.selectedCyl);
     const axs = ['x', 'y', 'z'] as const;
@@ -1263,6 +1365,24 @@ export class BindingPanel {
    * 点选（画布局部坐标版）：`pickCylinder` 与自动化钩子共用同一套判定，
    * 免得「脚本点得到、鼠标点不到」这种对不上的假绿。
    */
+  /**
+   * 供无头冒烟：某根骨的骨段在指定视图里的**屏幕**两端点。
+   *
+   * 存在的理由：断言「拖离骨轴 = 改半径」时，必须沿**垂直于骨轴**的方向拖 ——
+   * 半径取的是到骨轴的垂距，沿轴方向拖动垂距不变，半径**本来就不该动**。
+   * Head 的骨轴在正视里恰好是垂直的，于是「向下拖 60px」是个退化方向，
+   * 拿不到任何变化 —— 看起来像「拖动没反应」，其实是断言取错了方向。
+   */
+  segmentScreen(
+    bone: string, axis: ViewAxis, canvas: HTMLCanvasElement,
+  ): { a: [number, number]; b: [number, number] } | null {
+    const sg = boneSegments(this.positions).find((x) => x.bone === bone);
+    if (sg === undefined) return null;
+    const cyl = this.cylinders?.[bone];
+    const ends = offsetSegmentEndpoints(sg.a, sg.b, cyl?.offset);
+    return { a: this.project(ends.a, axis, canvas), b: this.project(ends.b, axis, canvas) };
+  }
+
   pickCylinderAt(
     mx: number, my: number, axis: ViewAxis, canvas: HTMLCanvasElement,
   ): { bone: string; seg: CylSegment } | null {
@@ -1327,8 +1447,67 @@ export class BindingPanel {
   private refresh(): void {
     const fit = this.currentFit();
     this.updateInfo(fit);
+    this.updateExportBadge();
     this.hooks.onChange?.(fit);
     this.scheduleDraw();
+  }
+
+  // ─────────────────────────── 产出状态徽标 ───────────────────────────
+
+  /**
+   * 当前编辑态指纹：27 关节坐标 + 全部包裹器半径。
+   * 只用于「自上次 Bind 后动过没有」的比对，不参与任何算法。
+   */
+  private editSig(): string | null {
+    if (this.modelName === null) return null;
+    const parts: string[] = [];
+    for (const n of HUMANIK_ORDER) {
+      const p = this.positions[n];
+      parts.push(p === undefined ? '-' : `${p[0].toFixed(5)},${p[1].toFixed(5)},${p[2].toFixed(5)}`);
+    }
+    if (this.cylinders !== null) {
+      for (const n of Object.keys(this.cylinders).sort()) {
+        const c = this.cylinders[n]!;
+        parts.push(`${n}:${c.radii.top.toFixed(5)}/${c.radii.medium.toFixed(5)}/${c.radii.bottom.toFixed(5)}`);
+      }
+    }
+    return parts.join('|');
+  }
+
+  /**
+   * 「● 未导出 / ✓ 已绑定」常驻徽标。
+   *
+   * 为什么要常驻：保存提示只活 2.6 秒就消失，用户切个面板回来就不知道
+   * 「我这次编辑到底 Bind 过没有」。徽标把这件事变成一直可见的状态。
+   */
+  private updateExportBadge(): void {
+    const el = this.exportBadgeEl;
+    if (el === undefined) return;
+    const sig = this.editSig();
+    if (sig === null) {
+      el.hidden = true;
+      el.className = 'bd-badge';
+      el.textContent = '';
+      el.removeAttribute('title');
+      return;
+    }
+    el.hidden = false;
+    const stale = this.boundSig === null || this.boundSig !== sig;
+    el.className = stale ? 'bd-badge bd-badge-warn' : 'bd-badge bd-badge-ok';
+    el.textContent = stale ? '● 未导出' : '✓ 已绑定';
+    el.title = this.boundSig === null
+      ? '这个模型还没 Bind 过：骨架摆位与包裹器半径只存在于面板里，Bind Skin 后才会产出绑定结果'
+      : stale
+        ? '自上次 Bind Skin 起又改过关节或半径，已产出的绑定结果已过期，需要重新 Bind Skin'
+        : '当前编辑态与上次 Bind Skin 一致';
+  }
+
+  /** 头部「?」：展开 / 收起操作说明（默认收起，别让 10 行帮助常驻占版面） */
+  private toggleHelp(): void {
+    const open = this.helpTipEl.hidden;
+    this.helpTipEl.hidden = !open;
+    this.helpBtn.classList.toggle('active', open);
+    this.helpBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
   /** rAF 合帧：多次 refresh 合并为一次绘制 */
