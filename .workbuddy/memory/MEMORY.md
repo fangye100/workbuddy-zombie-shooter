@@ -46,6 +46,7 @@
 - 🔴 **P0-1 已修**：smoothSkinWeights 按**槽位 k** 而非**骨 id** 做邻域平均 → 实测无关骨拿到 **18.8%**。修法：展开成 Map<jointId,w> 累加，按 joint id 聚合再取 top-4；修复后 v0 只剩骨0=0.625 骨1=0.375，Σ=1。附带坐标量化焊接（SmoothWeldOptions）解决 split-normal 硬边切断扩散。
 - 🔴 **P0-2 已修**：`if (cylinders !== undefined)` 而 ensureCylinders() 载入即建 → UI 上 Bind Skin 永远走包裹体路径，computeLbsWeights 成死代码。修法：WeightMode='wrapper'|'distance' + 面板下拉。
 - **P0-3 已修**：saveBinding 写 sidecar 前先 validateAssetMeta，不合法拒绝写。
+- UI §3.1–3.6 已修（53a5e32）：头部5组/危险降级/半径双输入/帮助折叠/未导出徽标，冒烟9条DOM断言锁死。
 - P1 未修：PEN_SCALE=8.0 不尺度不变；包裹体外顶点硬权重 1.0 兜底；**无 Undo/Redo**；无预算数字；无权重热力图。验证手法：binding/ 下临时建 __probe.test.ts 直跑真实模块，打印后**立即删除**。
 
 ## Skin Wrapper 半径
