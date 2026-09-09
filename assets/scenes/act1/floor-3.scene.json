@@ -1,0 +1,1352 @@
+{
+  "schemaVersion": 2,
+  "id": "sc_act1_floor3",
+  "name": "第三层 · 暗巷",
+  "act": "Act1",
+  "environment": {
+    "ambient": {
+      "color": "#1a1f2a",
+      "intensity": 0.22
+    },
+    "hemisphere": {
+      "sky": "#4a5a72",
+      "skyIntensity": 0.2,
+      "ground": "#14161c",
+      "groundIntensity": 0.12
+    },
+    "fog": {
+      "color": "#05070a",
+      "density": 0.035,
+      "heightFalloff": 0.12
+    },
+    "rim": {
+      "color": "#9fb4d9",
+      "intensity": 0.45,
+      "power": 2.8,
+      "topBias": 0.4
+    },
+    "exposure": 0.85,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      29,
+      0,
+      0
+    ],
+    "distance": 62,
+    "yaw": 1.1,
+    "elevation": 0.75
+  },
+  "entryCamera": "nd_f3_cam",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_f3_key",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_cam",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "相机",
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 55,
+          "distance": 12,
+          "yawOffsetDeg": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_void",
+      "name": "虚空底",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          -0.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "plane",
+            "params": [
+              220,
+              1
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "background": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0",
+      "name": "房间 1 · 精英",
+      "parent": null,
+      "transform": {
+        "position": [
+          11,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "elite",
+          "theme": "dark",
+          "bounds": {
+            "center": [
+              11,
+              0,
+              0
+            ],
+            "size": [
+              22,
+              4,
+              18
+            ]
+          },
+          "clearRule": "elite-dead",
+          "depth": 3
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              22,
+              0.2,
+              18
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_cv0",
+      "name": "掩体 1",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          -6.6,
+          0.7,
+          -4.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_cv1",
+      "name": "掩体 2",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          6.6,
+          0.7,
+          4.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_cv2",
+      "name": "掩体 3",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          -6.6,
+          0.7,
+          4.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_sp0",
+      "name": "刷怪点 1 · E-04 ×1",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          4.159691499144779,
+          0.8,
+          1.992058646137685
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-04",
+          "count": 1,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_sp1",
+      "name": "刷怪点 2 · E-02 ×5",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          -4.544379168691919,
+          0.8,
+          1.5256496340470458
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 5,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_sp2",
+      "name": "刷怪点 3 · E-03 ×4",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0.3846876695471361,
+          0.8,
+          -3.517708280184731
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-03",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3c0",
+      "name": "走廊 1",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              6,
+              0.2,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1",
+      "name": "房间 2 · Boss",
+      "parent": null,
+      "transform": {
+        "position": [
+          43,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "boss",
+          "theme": "dark",
+          "bounds": {
+            "center": [
+              43,
+              0,
+              0
+            ],
+            "size": [
+              30,
+              4,
+              24
+            ]
+          },
+          "clearRule": "kill-all",
+          "depth": 3
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              30,
+              0.2,
+              24
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_cv0",
+      "name": "掩体 1",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          -9,
+          0.7,
+          -6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_cv1",
+      "name": "掩体 2",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          9,
+          0.7,
+          6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_cv2",
+      "name": "掩体 3",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          -9,
+          0.7,
+          6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_cv3",
+      "name": "掩体 4",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          9,
+          0.7,
+          -6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_sp0",
+      "name": "刷怪点 1 · B-01 ×1",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          5.546255332193039,
+          1.1,
+          2.6560781948502465
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "B-01",
+          "count": 1,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 2.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              1.2,
+              2.2,
+              12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_sp1",
+      "name": "刷怪点 2 · E-05 ×4",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          -6.059172224922559,
+          0.8,
+          2.0341995120627274
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-05",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_sp2",
+      "name": "刷怪点 3 · E-03 ×4",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0.5129168927295148,
+          0.8,
+          -4.6902777069129735
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-03",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_nav",
+      "name": "导航区",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              29,
+              0,
+              0
+            ],
+            "size": [
+              58,
+              4,
+              24
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ],
+      "prefab": null
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-09-09T06:48:56.611Z",
+    "updatedAt": "2026-09-09T06:48:56.611Z",
+    "author": "gen-level.mjs",
+    "notes": "GDD §4.1 层 3 · 主题 暗巷"
+  }
+}
