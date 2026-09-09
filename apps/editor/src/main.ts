@@ -6,7 +6,7 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
-import type { GltfResult } from '@aether/scene';
+import type { EditorCameraData, GltfResult } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
@@ -127,21 +127,7 @@ async function boot(): Promise<void> {
   // ---- 场景加载（ADR-010：场景是唯一数据载体；ADR-015：项目容器是路径锚点）----
   // 构造期那组硬编码物体只是 fallback，真内容从这里读。失败不阻断启动：
   // 控制台告警 + 保留 fallback 场景 —— 场景文件坏了不该让编辑器起不来。
-  void (async () => {
-    const start = await resolveStartScenePath();
-    if (start.warning !== null) {
-      console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
-    }
-    const r = await renderer.loadScene(start.path);
-    if (!r.ok) {
-      console.warn(`[boot] 场景加载失败（${r.reason ?? '未知'}），保留硬编码 fallback 场景`);
-      return;
-    }
-    for (const w of r.warnings ?? []) console.warn(`[boot] 场景告警：${w}`);
-    console.info(
-      `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
-    );
-  })();
+  // boot 依赖 camera / hudDirty（定义在后），实际执行挪到 __editor 钩子接线之后。
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
   const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
@@ -321,6 +307,37 @@ async function boot(): Promise<void> {
     renderer,
   };
 
+  // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
+  // 不应用的话相机停在 DEFAULT_VIEW（target 原点 distance 9），用户看到的是
+  // 局部特写，会误以为"关卡没加载出来"。
+  const applySceneCamera = (ec: EditorCameraData): void => {
+    camera.target = [...ec.target] as [number, number, number];
+    camera.distance = ec.distance;
+    camera.yaw = ec.yaw;
+    panel.params.cameraElevation = (ec.elevation * 180) / Math.PI;
+    hudDirty = true;
+  };
+
+  void (async () => {
+    const start = await resolveStartScenePath();
+    if (start.warning !== null) {
+      console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
+    }
+    const r = await renderer.loadScene(start.path);
+    if (!r.ok) {
+      console.warn(`[boot] 场景加载失败（${r.reason ?? '未知'}），保留硬编码 fallback 场景`);
+      return;
+    }
+    for (const w of r.warnings ?? []) console.warn(`[boot] 场景告警：${w}`);
+    console.info(
+      `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
+    );
+    if (r.editorCamera !== undefined) applySceneCamera(r.editorCamera);
+    // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
+    // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
+    panel.refreshHierarchy();
+  })();
+
   // ---- 相机交互：环绕 / 平移 / 缩放 + 拾取 ----
   // 鼠标与触屏统一走 Pointer Events：单指=环绕，双指=捏合缩放+质心平移，
   // 右键/中键/Shift+左键=平移，滚轮=缩放，轻点（位移<阈值）=拾取。
@@ -328,11 +345,11 @@ async function boot(): Promise<void> {
   const ORBIT_RAD_PER_PX = 0.006; // 环绕灵敏度：每像素多少弧度
   const PITCH_DEG_PER_PX = 0.25; // 俯仰灵敏度：每像素多少度
   const PITCH_LIMIT_DEG = 89; // 俯仰上限（留 1° 避免 lookAt 的 up 与视线平行退化）
-  const PAN_LIMIT_XZ = 20; // 平移边界：target 的 X/Z 活动范围（米）
+  const PAN_LIMIT_XZ = 120; // 平移边界：target 的 X/Z 活动范围（米）。关卡跨度 ~76m（一层一关），20 会把用户困在第一个房间
   const PAN_MIN_Y = 0.05; // 平移边界：target 最低高度，避免钻到地面下
   const PAN_MAX_Y = 8;
   const ZOOM_MIN = 1.2;
-  const ZOOM_MAX = 40;
+  const ZOOM_MAX = 120; // 全览一层的距离（关卡 editorCamera.distance=62，40 会一滚轮就被拽回来）
   const FOVY = (45 * Math.PI) / 180; // 与 renderer.render 的 perspective 保持一致
 
   interface Ptr {

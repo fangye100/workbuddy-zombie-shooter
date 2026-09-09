@@ -62,7 +62,7 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
+import type { EditorCameraData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
 import { readProjectFile } from './asset-util';
 import {
   createSkinState,
@@ -378,6 +378,12 @@ export interface SceneLoadResult {
   skipped?: number;
   /** 非致命问题：材质 id 认不出、外部资产网格待异步加载… */
   warnings?: string[];
+  /**
+   * 场景文件里的编辑器相机（ok=true 时带回）。调用方应把它应用到主视图相机 ——
+   * 否则关卡建在 x=0..76m 的物件，相机还停在默认 target [0,0.95,0] distance 9，
+   * 用户看到的是"第一个房间的局部特写"，会误以为关卡没加载。
+   */
+  editorCamera?: EditorCameraData;
 }
 
 /**
@@ -817,7 +823,7 @@ export class LabRenderer {
 
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
-    return { ok: true, url, objects: specs.length, skipped: inst.skipped.length, warnings };
+    return { ok: true, url, objects: specs.length, skipped: inst.skipped.length, warnings, editorCamera: migrated.doc.editorCamera };
   }
 
   /**
