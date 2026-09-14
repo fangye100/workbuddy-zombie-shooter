@@ -341,8 +341,8 @@ export function packMaterial(dst: Float32Array, base: number, m: MaterialState):
 
   dst[base + 16] = m.unlit ? 1 : 0;
   dst[base + 17] = m.outlineScale;
-  dst[base + 18] = 0;
-  dst[base + 19] = 0;
+  dst[base + 18] = 0; // 「有贴图」标志位，调用方按物体单独置位
+  dst[base + 19] = 0; // 保留
 }
 
 /** 三个 block 一次装完（编辑器每帧的正规入口） */

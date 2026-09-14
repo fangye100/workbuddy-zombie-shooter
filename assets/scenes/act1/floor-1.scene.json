@@ -6,13 +6,13 @@
   "environment": {
     "ambient": {
       "color": "#4a2a12",
-      "intensity": 0.45
+      "intensity": 0.5
     },
     "hemisphere": {
       "sky": "#d98f4f",
-      "skyIntensity": 0.4,
+      "skyIntensity": 0.55,
       "ground": "#3a1a08",
-      "groundIntensity": 0.3
+      "groundIntensity": 0.35
     },
     "fog": {
       "color": "#2a1206",
@@ -72,7 +72,7 @@
           "enabled": true,
           "type": "directional",
           "color": "#fff3e0",
-          "intensity": 1.2,
+          "intensity": 1.4,
           "range": 0,
           "spotAngle": 0,
           "castShadow": false,
@@ -1407,8 +1407,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-09T06:48:56.581Z",
-    "updatedAt": "2026-09-09T06:48:56.581Z",
+    "createdAt": "2026-09-14T10:19:33.979Z",
+    "updatedAt": "2026-09-14T10:19:33.979Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

@@ -6,13 +6,13 @@
   "environment": {
     "ambient": {
       "color": "#3a3428",
-      "intensity": 0.4
+      "intensity": 0.5
     },
     "hemisphere": {
       "sky": "#9aa88c",
-      "skyIntensity": 0.42,
+      "skyIntensity": 0.55,
       "ground": "#2a2418",
-      "groundIntensity": 0.2
+      "groundIntensity": 0.3
     },
     "fog": {
       "color": "#14100c",
@@ -72,7 +72,7 @@
           "enabled": true,
           "type": "directional",
           "color": "#fff3e0",
-          "intensity": 1.2,
+          "intensity": 1.4,
           "range": 0,
           "spotAngle": 0,
           "castShadow": false,
@@ -1407,8 +1407,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-09T06:48:56.589Z",
-    "updatedAt": "2026-09-09T06:48:56.589Z",
+    "createdAt": "2026-09-14T10:19:33.984Z",
+    "updatedAt": "2026-09-14T10:19:33.984Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

@@ -6,13 +6,13 @@
   "environment": {
     "ambient": {
       "color": "#1a1f2a",
-      "intensity": 0.22
+      "intensity": 0.3
     },
     "hemisphere": {
       "sky": "#4a5a72",
-      "skyIntensity": 0.2,
+      "skyIntensity": 0.32,
       "ground": "#14161c",
-      "groundIntensity": 0.12
+      "groundIntensity": 0.2
     },
     "fog": {
       "color": "#05070a",
@@ -72,7 +72,7 @@
           "enabled": true,
           "type": "directional",
           "color": "#fff3e0",
-          "intensity": 1.2,
+          "intensity": 1.4,
           "range": 0,
           "spotAngle": 0,
           "castShadow": false,
@@ -1344,8 +1344,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-09T06:48:56.611Z",
-    "updatedAt": "2026-09-09T06:48:56.611Z",
+    "createdAt": "2026-09-14T10:19:34.007Z",
+    "updatedAt": "2026-09-14T10:19:34.007Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }
