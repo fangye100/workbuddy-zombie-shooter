@@ -733,7 +733,10 @@ export function defaultParams(): LabParams {
         unlit: false,
       },
       {
-        albedo: '#1B1F2B',
+        // s1 深蓝灰（掩体 / 走廊 / 虚空底）。#1B1F2B 在火场/暗巷主题的曝光下
+        // 被 AgX + grading 的暗部压缩推到近黑（实测盒顶 #4F413B），剪影读不出来；
+        // #707A8C 实测渲染 #6E6E6E 中性灰，亮/暗两个 band 都有形。
+        albedo: '#707A8C',
         roughness: 0.9,
         metallic: 0.0,
         emissiveColor: '#000000',

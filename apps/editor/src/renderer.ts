@@ -62,7 +62,7 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { EditorCameraData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
 import { readProjectFile } from './asset-util';
 import {
   createSkinState,
@@ -384,6 +384,17 @@ export interface SceneLoadResult {
    * 用户看到的是"第一个房间的局部特写"，会误以为关卡没加载。
    */
   editorCamera?: EditorCameraData;
+  /**
+   * 场景环境（ok=true 时带回）。环境是场景内容（docs/14 §14）：每层有自己的
+   * 环境光 / 半球补光 / rim / 雾 / 曝光。调用方应把它写进面板参数并同步 UI ——
+   * 否则主题环境（火场暖光 / 暗巷冷调）全部失效，渲染的永远是编辑器默认值。
+   */
+  environment?: EnvironmentData;
+  /**
+   * 场景里第一个启用的 Light 组件（ok=true 时带回；null = 场景没声明灯光）。
+   * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
+   */
+  keyLight?: { color: string; intensity: number } | null;
 }
 
 /**
@@ -823,7 +834,28 @@ export class LabRenderer {
 
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
-    return { ok: true, url, objects: specs.length, skipped: inst.skipped.length, warnings, editorCamera: migrated.doc.editorCamera };
+
+    // 场景灯光：第一个启用的 Light 组件（directional key）。场景 schema 目前只有
+    // 颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    let keyLight: SceneLoadResult['keyLight'] = null;
+    for (const n of migrated.doc.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'Light' && c.enabled && keyLight === null) {
+          keyLight = { color: c.color, intensity: c.intensity };
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      url,
+      objects: specs.length,
+      skipped: inst.skipped.length,
+      warnings,
+      editorCamera: migrated.doc.editorCamera,
+      environment: migrated.doc.environment,
+      keyLight,
+    };
   }
 
   /**
