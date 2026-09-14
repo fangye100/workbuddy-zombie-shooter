@@ -62,7 +62,8 @@ L0–L4 是责任层，不是固定执行顺序，也不是动画师控制器的
  → L3 从源标记识别接触，构造世界/物体/身体任务
  → L2 用共享根、固定骨长和活动约束求解
  ↔ L4 在窗口内调整连续性、复算约束，直到收敛或显式失败
- → 同一结果 clip → 预览（clipToAnimClip）或 GLB（binding-export）
+ → 烘焙适配：统一世界解 → 指定输出骨架的节点局部 clip
+ → 同一局部结果 clip → 预览（clipToAnimClip）或 GLB（binding-export）
  → 配方/摘要写 sidecar；场景特有约束写场景；临时缓存可重建
 ```
 
@@ -158,14 +159,20 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 
 | 契约 | 必需信息 | 真源/生命周期 |
 |---|---|---|
-| `RetargetRig` | 稳定骨 id/映射、parent、参考局部变换、链、关节范围、坐标标定、足/掌/表面标记 | 骨架由资产派生；不能反推的标定进目标 sidecar |
+| `RetargetRig` | 稳定骨 id/映射、parent、参考局部变换、链、关节范围、坐标标定、足/掌/表面标记 | 骨架由资产派生；源标定进源资产 sidecar，目标标定进目标资产 sidecar，各为唯一真源 |
 | `SourceMotion` | 秒制时间、源 rig、可采样局部/世界姿态、根模式、单位/轴来源、源指纹 | 从源重建；采样缓存不复制到 sidecar |
-| `RetargetRecipe` | 版本、源/目标引用及 hash、profile、环境、尺度规则、接触标注/检测配置、权重、容差、算法版本 | 派生动画资产 sidecar |
+| `RetargetRecipe` | 版本、源/目标引用及 hash、双方标定指纹、profile、环境、尺度规则、接触标注/检测配置、权重、容差、算法版本 | 派生动画资产 sidecar；引用双方标定，不复制一份可编辑标定 |
 | `ContactSegment` | 稳定 id、标记/链、起止秒、模式、参考空间、来源/置信度、落点/枢轴 | 标注覆盖进配方；自动结果可缓存并存摘要 |
 | `RetargetEnvironment` | 源/目标平面、物体/表面映射、标定来源；场景引用用 `NodeId` | 平地烘焙配方或场景节点/组件，不在引擎硬编码 |
-| `RetargetResult` | `complete/partial/failed`、可空 clip、逐段指标、诊断、能力覆盖、依赖指纹 | 可播放结果才交预览；不完整不标“验收成功” |
+| `RetargetResult` | `complete/partial/failed`、可空目标节点局部 clip、输出骨架/父层级指纹、逐段指标、诊断、能力覆盖、依赖指纹 | 可播放结果才交预览；不完整不标“验收成功” |
 
 接口语义为 `retargetMotion({source, targetRig, basePose, recipe, environment}) → RetargetResult`。废弃旧计划只传目标 clip 的接口；`basePose` 必须与源/目标/时刻一致。输入不可变，支持取消，失败不覆盖最后已验收产物。
+
+源侧 `SourceCalibration` 和目标侧 `TargetCalibration` 分别保存于各自资产 sidecar：包括不能从资产反推的足/掌标记、参考站姿/支撑平面标定、单位和轴向覆盖及版本。MR-01 的 BVH 源资产接入必须支持该标定，不将其仅存采样缓存。配方只引用双方标定指纹；任一标定修改均使结果失效。临时载入的外部 BVH 在保存可复现配方前须进入源资产身份/sidecar 管理，不能只记浏览器临时文件名。
+
+`RetargetResult.clip` 明确使用**指定目标实际骨骼节点的绝对局部旋转（xyzw）和局部平移**，不能直接装入统一世界求解值。新增 `bake-adapter.ts` 负责输出转换：先将规范世界解转换回目标资产/实例坐标，再用实际目标父世界变换的逆矩阵计算 `M_local = inverse(M_parent_world) · M_joint_world`，分解为局部 TRS；保留未动画的目标参考平移/缩放。根骨有容器或骨架父节点时也按此规则，不能只对四肢转换。单位、参考旋转、骨名到实际节点映射及输出父层级均纳入适配和指纹。
+
+现有 `RetargetClip` 只容纳旋转和 Hips 平移，因此本阶段输出要求固定骨长/参考局部缩放、非 Hips 关节无新增平移自由度；适配不可表达时显式拒绝，不丢轨道。正的统一父缩放、父平移/旋转必须支持；非均匀缩放、反射或 shear 若不能经标定烘入合法刚性骨架，报告不支持。预览和导出若父层级/参考姿态不同，各由同一世界解确定性适配到相应输出骨架，再比较规范世界读回结果；不能跨不同父空间复用裸局部数组。`clipToAnimClip` 与 `binding-export` 只消费已适配的局部轨道。
 
 报告包含根/链尺度、接触覆盖与置信度、每段最大落点偏差、累计切向滑动、最大穿透、内/外可达残差、关节超限、根修正、切换跳变、时序残差、迭代/收敛状态、耗时及峰值内存；米/秒/角度单位明确，不只报 `maxStretch`。
 
@@ -190,8 +197,9 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | 身体表面 | `MR/surface-contacts.ts` | `MT/surface-contacts.test.ts`：物体/自身/胸背及穿插 |
 | 质量指标 | `MR/quality-report.ts` | `MT/quality-report.test.ts`：已知轨迹指标/阈值/能力覆盖 |
 | 算法编排 | `MR/pipeline.ts`，仅连接 owner | `MT/pipeline.test.ts`：输入不可变/依赖一致/取消/顺序 |
+| 输出坐标/轨道适配 | `MR/bake-adapter.ts` | `MT/bake-adapter.test.ts`：世界到实际父局部、参考变换/单位、可表达性与输出骨架指纹 |
 | 载入、预览、导出会话 | 新 `services/binding/retarget-session.ts`，`main.ts` 只调用 | `MT/retarget-session.test.ts`：两入口/重载/失效/失败不覆盖 |
-| 最终烘焙验收 | 复用 `clipToAnimClip`、`binding-export.ts`，只加最小映射 | `MT/bake-acceptance.test.ts`：最终轨道读回与业务组合；原 `binding.test.ts` 继续拥有绑定/蒙皮合同 |
+| 最终烘焙验收 | `bake-adapter.ts` 交付局部轨道，复用 `clipToAnimClip`、`binding-export.ts` 消费 | `MT/bake-acceptance.test.ts`：最终轨道读回与业务组合；原 `binding.test.ts` 继续拥有绑定/蒙皮合同 |
 
 现有 `retarget.test.ts` 只拥有 L0 基准/API，不追加接触。`main.ts`、`binding-math.ts`、`binding-export.ts` 不增加求解规则；`retarget.ts` 现有换基/动画转换混合，不再增加源接触或新 rig 构建责任。共享 fixture 仅提供输入与独立 oracle，不能用被测目标生成器计算预期值。
 
@@ -201,12 +209,12 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 
 | 单元 | 依赖 | 声明的 owner / 交付 | 最小验收 |
 |---|---|---|---|
-| MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、缺字段诊断；无轨迹不伪造 world 模式 |
+| MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、源/目标独立标定、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、双方标定保存/读取与指纹；无轨迹不伪造 world 模式 |
 | MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 |
 | MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 |
 | MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 |
 | MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 |
-| MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/bake 测试 | 两入口同结果、导出再导入、刷新可复现；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP |
+| MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`、`MR/bake-adapter.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/adapter/bake 测试 | 两入口规范世界结果一致；含父平移/旋转/统一缩放的导出读回；双方标定刷新复现/修改失效；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP |
 | MR-07 手掌与全身求解 | MR-06 | 扩展 pose、标定/接触 owner 及各自测试，开放肩/脊椎/根自由度；bake 组合验收 | 走路→掌面支撑、手脚同支撑、自由摆臂风格、真实手支撑烘焙 |
 | MR-08 表面及翻滚闭环 | MR-07 | `surface-contacts.ts` 及测试；场景部分另列 `document.ts`/迁移/测试单元；最小接入 pipeline/bake | 胸背滚动、手触身体、固定抓物、不同体积不穿插；真实“入场→翻滚→起身”导出读回 |
 
@@ -232,6 +240,8 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | A12 | 手支撑调动必要全身关节；固定物体不随人物缩放 | `pose-solver.test.ts`（支撑）、`surface-contacts.test.ts`（物体） |
 | A13 | 胸背滚动支撑点变化且表面不穿地，不同厚度分别验收，骨架正确不代替网格正确 | `surface-contacts.test.ts` |
 | A14 | 两入口与导出同配方/结果，重载可复现，源/目标/标记/版本变化正确失效 | `retarget-session.test.ts` |
+| A15 | 目标有非恒等父平移/旋转/正统一缩放；最终 GLB 读回转到规范世界后与求解结果差 ≤1e-5m，根不二次变换；不同输出父空间各自适配后结果等价 | `bake-acceptance.test.ts` |
+| A16 | 源侧足底偏移、参考站姿/平面、单位覆盖重载后保持一致；改源或目标任一标定仅使关联配方失效，重算使用新指纹 | `retarget-session.test.ts` |
 
 滑步至少报告整段最大锚点偏差、相邻样本切向距离总和及速度分布，不只报最大单帧位移。若真实数据需调整门槛，记录尺寸、原因和批准的产品质量档，不能改变统计口径隐藏失败。
 
@@ -242,6 +252,7 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | 发现 | 行为 / 状态 | 单元 |
 |---|---|---|
 | 单位/轴/标定不可信、时刻不一致 | 拒绝请求并指出字段，保留已有产物 | MR-01/02 |
+| 输出父变换/参考骨架不匹配，或轨道无法表达所求解的自由度 | 重新适配指定输出骨架或显式拒绝；不把世界值直接写局部轨道，不静默丢平移/缩放 | MR-06 |
 | 缺源轨迹或平面置信度低 | FK/自由运动可预览但为 partial，不承诺世界锁脚 | MR-02/03 |
 | 缺足/掌标记 | 使用已保存代理并报告误差或标未覆盖；不以踝偷偷代替脚底 | MR-02/03/07 |
 | 多接触不可达、限位冲突、不收敛 | 最佳预览＋逐约束残差，partial/failed，不覆盖成功产物 | MR-04/05/07 |
