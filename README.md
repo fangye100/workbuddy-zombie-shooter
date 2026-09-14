@@ -12,6 +12,8 @@ FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
 | [03-渲染管线](./docs/03-渲染管线.md) | Clustered Forward+ 选型、一帧 Pass 拓扑、阴影/GI/材质/透明/后处理、RenderWorld 解耦、排序与合批 |
 | [04-子系统](./docs/04-子系统.md) | ECS、场景、资产、动画、物理、VFX、UI、音频、输入、脚本、网络、地形、存档、i18n、剖析器、依赖矩阵 |
 | [05-NPC角色控制系统](./docs/05-NPC角色控制系统.md) | 四层解耦（Agent/Locomotion/Avatar/Combat）、角色装配与池化、VAT 表现 LOD、感知与 Utility 决策、流场寻路与群体避让、帧数据与扫掠命中、攻击名额与包围圈配额 |
+| [16-Retargeting 设计与开发计划](./docs/16-MotionMatch动画匹配设计.md) | 根与末端空间补偿、接触约束、共享骨盆及全身求解、数据契约、开发队列与验收 |
+| [16A-Retargeting 运动空间补偿算法研究](./docs/16A-Retargeting运动空间补偿算法研究.md) | HumanIK 等公开证据、可复现公式、接触策略、数值验证及完整脚本 |
 
 ## 目录
 
@@ -24,7 +26,7 @@ packages/
   ai/          流场寻路(Dial's Dijkstra) + 空间哈希 + 群体避让 + 感知 + Utility 决策 + 战斗帧数据
   gameplay/    CharacterDef / CharacterTable(SoA) / 池化与分帧装配 / 表现 LOD
 apps/samples/00-init   最小可运行基座（M0 验收）
-docs/                  上述五篇设计文档
+docs/                  架构、产品设计、专项开发计划与研究参考
 tools/                 baker / shaderlab / trace（规划中）
 ```
 
