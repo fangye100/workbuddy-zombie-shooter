@@ -1,452 +1,263 @@
-# Motion Match —— 重定向后的动画匹配设计
+# Retargeting 空间补偿与接触求解：设计及开发计划
 
-> 范围：在 `apps/editor/src/services/binding/retarget.ts`（下称 **L0**）之上新增的**位置守恒**层。
-> 视角：技美 —— 解决「同一套 mocap 套到不同比例角色上时的滑步（foot sliding）与动作幅度失真」。
-> 日期：2026-09-10　状态：**设计已定，未实现**
-> 关联：`docs/06`（资产生成管线）、`docs/15`（绑定与蒙皮评审）、`apps/editor/test/retarget.test.ts`
+> 更新：2026-09-14。状态：**研究已归档，计划已修订；新增功能尚未实现、尚未做实际 mocap 验收**。
+> 本文是本项目 retargeting 后续开发的计划真源，替代 2026-09-10 版的固定 FK/IK 分区及单链后处理方案。
+> 算法依据：[16A-Retargeting运动空间补偿算法研究](./16A-Retargeting运动空间补偿算法研究.md)。该报告区分公开证据、独立推导与工程选择。
+> 关联：[资产管线](./06-从2D概念图到3D游戏模型管线.md)、[绑定评审](./15-绑定与蒙皮面板技术美术评审.md)、[场景及持久化](./14-Scene系统与场景数据持久化架构设计.md)。
 
----
+## 0. 产品目标与本次修订
 
-## 0. 结论先行
+用户导入一段 mocap，应用到约 2 米和 0.5 米、以及四肢和躯干比例不同的角色时，默认生成符合所选运动语义的动画：自由运动保留姿态风格，支撑动作保持正确接触，无法满足的约束可见且可定位。
 
-现有 L0 是**纯 FK 旋转重定向**，它守住的只有一条不变量：
+完整目标包括走路、转身、跳跃、手掌支撑、走路进入翻滚、胸背接触及体型引起的穿插。分阶段交付；**完成足部 MVP 不代表完成翻滚或全身体积接触**。优先离线烘焙为现有动画轨道，运行时播放普通 FK 动画。动态地形、运行时变速和物理平衡不属于离线保证。
 
-```
-Q_tgt_i(f) · d_tgt_i  =  Q_src_i(f) · d_src_i        （世界骨向守恒）
-```
+文件名保留以维持引用；这里的 MotionMatch 指动作重定向适配，不是从动作数据库检索片段的 Motion Matching。
 
-**它完全没守住末端效应器的世界位置。** 而 HumanIK / MotionBuilder 的 "Match" 本质是后者。
-
-由此产生两个必然症状：
-
-| 症状 | 机理 |
+| 旧版假设/计划 | 本版决定 |
 |---|---|
-| **动作幅度失真** | 旋转相同 + 骨长不同 ⟹ 末端位移 = ΣL·sinθ 必然不同。源臂 0.70 摸到头顶，目标臂 0.55 就停在胸口 |
-| **滑步** | 根位移按**单一全局腿长比**缩放，而脚的落点由 FK 用**目标骨长 × 源旋转**算出。两条路径只在「目标是源的等比缩放」时才相等 —— 现实中比例分布不同，必然对不上 |
+| 逐链比例映射已消除比例引起的滑步，接触只是加固 | 接触是核心约束；根与末端比例不同会使映射后的静止脚漂移 |
+| 手臂、脊椎永久属于 FK 区，HumanIK 也是如此 | 保留全身 FK 基准，按时段任务和权重选择参与求解的关节；不能如此推断 HumanIK |
+| 所有末端都守恒“链根相对位置 × 链长比” | 自由、支撑、滚动、滑动、物体接触、身体接触使用不同目标空间 |
+| `Hips + rest 固定偏移` 得到当前链根 | 使用真实目标 FK 链根，包含父层级旋转 |
+| 只传目标 `RetargetClip` 就能恢复源目标信息 | 显式保留源 rig、源采样姿态、单位和根运动语义 |
+| 只根回退一次便可完成接触修正 | 共享根和活动约束迭代求解，按残差终止；双支撑不可行须报告 |
+| 地面处理留待 L4 下一轮 | 足底标记、地面标定与不穿地从足部 MVP 开始实现 |
+| 所有等比输入都必须原样输出 | 恒等验收要求源接触正确、无冲突任务且不需要清理；源滑动清理会有意改变姿态 |
+| `translation === null` 等价于 in-place 且锁脚无意义 | 轨道缺失、in-place、世界轨迹分别建模，按可用轨迹/相位判断能力 |
+| 一个约 600 行的 `motion-match.ts` 实现全部规则 | 按源采样、目标构造、接触、求解、时序、集成划分 owner |
 
-**修复思路不是调参数，是加一层**：把动画的**语义层**（末端效应器的世界轨迹）抽出来按链比映射，再用 IK 反解回旋转。旋转从此不再是守恒量，而是被位置约束求解出来的结果。
+HumanIK 公开的是朝向初始化、效应器配置、IK pass 与补偿参数。本项目不声称复现其未公开的 Auto 比例公式，也不把 Floor Contact 等同于整段锁脚或全身碰撞。
 
-### 三条新的不变量（新增层必须守住）
+## 1. 当前代码基线（已检查，非新增能力）
 
-| # | 不变量 | 判据 |
-|---|---|---|
-| **I2** | 末端位置守恒：目标 tip 相对链根的偏移 = 源 tip 相对链根的偏移 × **该链长度比** | §6-T4 |
-| **I3** | 接触期脚世界静止：接触帧内目标脚的水平位移 < ε | §6-T3 |
-| **I4** | 根位移与接触约束自洽：腿永不过伸，夹紧量必须为 0 或已回退根 | §6-T8 |
-
-**I1（旋转守恒，L0 已有）在新链路里不再全局成立** —— 四肢的旋转会被 IK 覆盖。这是有意为之，也是本设计的全部意义。退化检验见 §6-T1/T2：等比情形下新层必须是恒等变换，不破坏 L0。
-
----
-
-## 1. 现状审计：L0 精确做了什么
-
-`retarget.ts:266` 的核心一行：
-
-```ts
-const q = quatMul(quatMul(aP, qSrc), aI);   // R'_i = A_parent · R_i · A_i⁻¹
-```
-
-- `A_i = quatFromUnitVectors(d_src_i, d_tgt_i)` —— 把源 rest 骨向旋到目标 rest 骨向
-- 根位移（`retarget.ts:287`）：`tgtHips + (w − rest) * skeletonScale`
-- `skeletonScale`（`computeSkeletonScale`, `retarget.ts:602`）= **目标腿长 / 源腿长**，其中
-  `腿长 = Hips.y − min(所有关节.y)`
-
-### 1.1 这个缩放量的精确语义
-
-对 T-pose 模板，`min(y)` 落在 `LeftToeBase` / `LeftFoot`（两者 y 相同，脚掌沿 Z 外伸），
-所以：
-
-```
-腿长 = Hips.y − Foot.y = 1.00 − 0.03 = 0.97
-```
-
-⚠️ **这个 0.97 不是腿骨长度**，它是「髋到踝的**高度差**」，混进了 `LeftUpLeg` 的横向髋偏移
-（tposeOffset `[0.10, −0.10, 0]` 里的 −0.10）。真正的**腿骨链长**是：
-
-```
-legLen = |UpLeg → Leg| + |Leg → Foot| = 0.42 + 0.45 = 0.87
-```
-
-两者差 11%，**必须分开用**，不能混：
-
-| 量 | 定义 | 用途 |
-|---|---|---|
-| `hipToAnkleY` | `Hips.y − Foot.y` | 根位移缩放（**沿用 L0 现值**，不改，否则破坏 40+ 条既有断言） |
-| `legLen` | 大腿 + 小腿 | IK 链的**长度比**与可达半径（新层专用） |
-
-### 1.2 缺失清单
-
-| 缺口 | 后果 |
+| 现有 owner | 当前责任与缺口 |
 |---|---|
-| 只有**一个**全局 scale，没有分链 | 腿躯干比例不同时，顾此失彼 |
-| 没有 IK | 末端位置完全由 FK 决定，无法被约束 |
-| 没有接触检测 / 脚锁定 | mocap 自身的微小滑动被忠实传递并放大 |
-| 没有地面约束 | 脚穿地或悬空 |
-| Hips 高度没做整体对齐 | 系统性偏高/偏低，看起来「飘」 |
+| [`retarget.ts`](../apps/editor/src/services/binding/retarget.ts) | `retargetBvh` 做骨向换基和根位移缩放；`RetargetClip` 只有时间、目标局部旋转与可空根平移；另有 `clipToAnimClip`、`skeletonRestWorldPositions` |
+| [`bvh-parser.ts`](../apps/editor/src/services/binding/bvh-parser.ts) | BVH 解析、语义骨映射、参考骨架；新采样器复用解析结果 |
+| [`binding-math.ts`](../apps/editor/src/services/binding/binding-math.ts) | 矩阵/四元数、蒙皮和拟合等混合责任；冻结责任增长，不堆接触或全身求解 |
+| [`main.ts`](../apps/editor/src/main.ts) | `retargetInto` 只缓存目标 clip/report；承担两个 BVH 入口、预览应用及导出编排。新增任务前抽离本场景簇 |
+| [`binding-export.ts`](../apps/editor/src/services/binding/binding-export.ts) | 消费动画输入并写 GLB，不拥有空间补偿规则 |
+| [`asset-meta.ts`](../packages/scene/src/asset-meta.ts) | `RigSettings`、`AnimationSettings` 等 sidecar 契约；尚无本文完整配方/接触标定字段 |
 
----
+L0 当前公式 `R'_i = A_parent · R_src_i · A_i⁻¹`；`computeSkeletonScale` 使用 `Hips.y − min(关节.y)` 的目标/源比。该量不是大腿＋小腿链长，也不是标定后的骨盆到脚底高度。
 
-## 2. 分层设计
+新路径复用 L0 旋转基准，从源采样重新构造根目标，**不能把已缩放的 L0 根轨道再缩放一次**。旧 L0 直接调用作为明确的 FK 基准模式保持自身契约；新路径按新标定和验收语义实现，不为保住旧断言沿用错误尺度。
 
-| 层 | 职责 | 输出 | MVP |
+## 2. 层编号与数据流
+
+L0–L4 是责任层，不是固定执行顺序，也不是动画师控制器的 IK/FK 模式。
+
+| 层 | 责任 | 输出 |
+|---|---|---|
+| L0 | 参考姿态、骨轴映射、旋转基准 | 用于风格保持与 A/B 的 `basePose` |
+| L1 | 根尺度、自由运动归一化、物体/身体空间目标 | 根候选、自由末端及朝向任务 |
+| L2 | 固定骨长的姿态求解 | 两骨解析核、共享根约束解，后续全身解 |
+| L3 | 接触时段与目标空间选择 | 置信度、稳定落点、滚动枢轴和活动约束 |
+| L4 | 时间连续、质量评估、烘焙交付 | clip、诊断、指标和可复现配方 |
+
+```text
+源 BVH/导入描述 + 目标标定 + 资产配方 + 环境契约
+ → 源采样（米、秒、统一轴；保留世界轨迹或缺失状态）
+ → L0 旋转基准 + L1 根/自由目标
+ → L3 从源标记识别接触，构造世界/物体/身体任务
+ → L2 用共享根、固定骨长和活动约束求解
+ ↔ L4 在窗口内调整连续性、复算约束，直到收敛或显式失败
+ → 同一结果 clip → 预览（clipToAnimClip）或 GLB（binding-export）
+ → 配方/摘要写 sidecar；场景特有约束写场景；临时缓存可重建
+```
+
+## 3. 空间补偿规则
+
+### 3.1 坐标、根与足迹
+
+先统一米、秒、up/forward 和四元数约定。`C` 是固定世界朝向对齐，`o_s/o_t` 是对应支撑平面的参考原点。默认 profile 保持归一化步态：
+
+```text
+h_s/h_t = 参考站姿骨盆到各自支撑平面的高度（包含足底标定）
+s_root  = h_t / h_s
+S(p)    = o_t + s_root · C · (p − o_s)
+H_bar(t)= S(H_source(t))
+```
+
+标定须满足 `S(H_source_ref) = H_target_ref`。这是本项目选择，不称为 HumanIK Auto。根与默认足迹共用 `S`；不能用最后整体下降掩盖平面/原点错误。
+
+业务若要求保持现实米制路径或固定物体，选择 `preserve-world`：不按角色尺寸缩放这些世界目标，允许姿态/相对步幅改变。模式持久化。运行时速度比例 `v_game/v_clip` 是独立问题，不混入身高比。
+
+### 3.2 自由部位
+
+链根 `A`、链长 `L`、标定后的附着框架 `U`：
+
+```text
+u_source = inverse(U_source) · (P_source − A_source) / L_source
+P_free   = A_target + L_target · U_target · u_source
+```
+
+`A_target` 来自真实 FK。该目标是软任务，允许降低自由手臂的位置权重以保留摆动，不能覆盖接触。GMR 分部位径向缩放可作比较策略，不把其中调校系数当作自动骨长比。
+
+接触时不能继续直接用自由目标：若 `P_hat = r_root H + r_tip(P − H)` 且源脚静止，则 `dP_hat/dt = (r_root − r_tip) dH/dt`。IK 精确跟踪这个目标仍会滑步。
+
+### 3.3 接触与标记
+
+| 任务模式 | 空间及约束 | 阶段 |
+|---|---|---|
+| 自由摆动 | 链附着空间目标＋姿态软约束 | MR-02 |
+| 稳定足支撑 | 同时段固定世界落点 | MR-03/04 |
+| 脚跟→前掌→脚尖滚动 | 固定当前支撑标记，允许足部旋转 | MR-03/04 |
+| 有意滑动 | 法向高度约束＋切向轨迹 | MR-03/04 |
+| 手掌支撑 | 掌面世界标记；肩/臂/脊椎/骨盆协同 | MR-07 |
+| 抓物、手触身体 | 物体局部点或目标身体对应表面点 | MR-07/08 |
+| 胸背翻滚 | 随滚动切换的表面支撑、不穿透 | MR-08 |
+
+稳定时段 `I_k` 的初始落点：`a_k = projectToPlane(S(median(P_source_marker[I_k])))`。时段内保持固定；允许调整脚印时，`a_k` 是整段共享变量并惩罚偏离初值，不能逐帧重设。
+
+脚底局部标记为 `b_target` 时，踝目标 `P_ankle = a_k − R_foot_world · b_target`。求解后按新的父旋转恢复指定足部世界朝向，再用最终姿态重算标记验收。不能用踝静止代替脚尖静止，也不能无条件固定源脚跟/脚尖的原始间距。
+
+### 3.4 无动画师时的识别规则
+
+可信标注优先；否则使用源标记高度、世界速度、进入/退出滞回、最短持续时间（秒）与置信度生成接触段。阈值按标定高度归一化，速度用实际时间差，不固定帧数。
+
+- 未知地面可从长时间稳定候选拟合，保留来源/置信度；低置信度必须诊断。编辑器可提供已保存的平地烘焙配方，不硬编码场景地面。
+- 显式区分 `world-trajectory`、`in-place-with-trajectory`、`in-place-with-phase`、`unknown`。仅相位可指导局部摆动，不能承诺世界锁脚；锁脚需要可重建的位移轨迹。
+- 禁止逐帧将最低骨/最低脚归零，保留跳跃与腾空。
+- 低高度不自动等于静止支撑；滚动、滑动、自由运动分别建模。手掌/胸背自动接触必须有相应表面标记与环境证据，缺失则报告能力未覆盖。
+
+## 4. IK、共享根与时间求解
+
+### 4.1 两骨解析核
+
+根 `A`、末端 `T`、骨长 `l1/l2`，`D=|T−A|`，可达域为 `|l1−l2| ≤ D ≤ l1+l2`。非退化情形：
+
+```text
+e = (T − A) / D
+a = (l1² − l2² + D²) / (2D)
+b = sqrt(max(0, l1² − a²))
+K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
+```
+
+处理零骨长、`D=0`、完全伸直、180°、pole 退化和跨帧连续。不可达预览近似必须记录内/外半径残差；总链长相同比不保证可达。
+
+最小 from-to 旋转通常已经是 swing，不能再次分解它便宣称保住 twist。用基准骨朝向/源弯曲平面定义扭转保持，足/掌世界朝向单列任务。`q` 与 `−q` 是同一旋转，按相邻四元数点积选半球，不按轴投影正负防翻转。
+
+### 4.2 共享姿态约束
+
+变量为一个共享根/骨盆、参与的关节角及可选时段落点。优化姿态偏离、自由末端误差、根轨迹偏离、脚印调整与时间修正；位置残差按目标尺寸归一化，旋转用 SO(3) 对数。
+
+活动约束为接触标记固定、不穿透、关节范围；固定骨长由 FK 保证。足部阶段可固定躯干基准，联合求根＋双腿，这是阶段能力限制，不是永久 FK 分区；MR-07 开放肩/脊椎等自由度。
+
+用阻尼 Gauss–Newton/SQP 或等价可验证约束方法，记录残差、迭代与终止原因。两骨核用于适用链的初始化/子解，不代替共享约束。详细方程见研究报告 §4.7。
+
+不以“只修一次骨盆”判成功。约束冲突时显式放松软姿态/根目标或允许时段落点调整；硬接触仍超标则 `partial/failed`。禁止静默拉骨、移动固定物体或以平均误差隐藏单脚失败。
+
+### 4.3 时间连续
+
+保留源节奏，对相对基准的修正做时间正则。接触切换采用秒制过渡和窗口，跨窗口携带同一段落点；平滑后重新评估约束。足部 MVP 就包含这一层。
+
+## 5. 数据契约、持久化与边界
+
+下表为待实现语义，最终 TS/schema 由 MR-01 落定；本轮只改文档。
+
+| 契约 | 必需信息 | 真源/生命周期 |
+|---|---|---|
+| `RetargetRig` | 稳定骨 id/映射、parent、参考局部变换、链、关节范围、坐标标定、足/掌/表面标记 | 骨架由资产派生；不能反推的标定进目标 sidecar |
+| `SourceMotion` | 秒制时间、源 rig、可采样局部/世界姿态、根模式、单位/轴来源、源指纹 | 从源重建；采样缓存不复制到 sidecar |
+| `RetargetRecipe` | 版本、源/目标引用及 hash、profile、环境、尺度规则、接触标注/检测配置、权重、容差、算法版本 | 派生动画资产 sidecar |
+| `ContactSegment` | 稳定 id、标记/链、起止秒、模式、参考空间、来源/置信度、落点/枢轴 | 标注覆盖进配方；自动结果可缓存并存摘要 |
+| `RetargetEnvironment` | 源/目标平面、物体/表面映射、标定来源；场景引用用 `NodeId` | 平地烘焙配方或场景节点/组件，不在引擎硬编码 |
+| `RetargetResult` | `complete/partial/failed`、可空 clip、逐段指标、诊断、能力覆盖、依赖指纹 | 可播放结果才交预览；不完整不标“验收成功” |
+
+接口语义为 `retargetMotion({source, targetRig, basePose, recipe, environment}) → RetargetResult`。废弃旧计划只传目标 clip 的接口；`basePose` 必须与源/目标/时刻一致。输入不可变，支持取消，失败不覆盖最后已验收产物。
+
+报告包含根/链尺度、接触覆盖与置信度、每段最大落点偏差、累计切向滑动、最大穿透、内/外可达残差、关节超限、根修正、切换跳变、时序残差、迭代/收敛状态、耗时及峰值内存；米/秒/角度单位明确，不只报 `maxStretch`。
+
+持久化归属 `packages/scene/src/asset-meta.ts`；复杂字段提取到拟新增 `retarget-meta.ts`，由 AssetMeta 引用，禁止 scene 反向依赖编辑器。先正式 schema、校验、迁移/往返，再接保存。当前 `AssetKind` 未列 BVH，MR-01 必须明确源动画导入类型/引用并补验证，不能冒充 glTF 或藏到 `userData`。
+
+场景特有接触先扩 `document.ts` 及迁移，MR-08 单独声明这个 owner。源/目标 hash、参考姿态、标记、配方、环境或算法版本变化使结果失效。缓冲和详细日志进 `.workbuddy/cache/`；轨道进派生 GLB，配方可在重载后复现，不造双真源。
+
+## 6. 生产与测试 owner
+
+拟新增 `apps/editor/src/services/binding/motion-retarget/`，简称 `MR/`；测试为 `apps/editor/test/motion-retarget/`，简称 `MT/`。以下均为规划路径，不建泛化 utils 或按行数拆分。
+
+| 责任 | 生产 owner | 唯一测试 owner/归属 |
+|---|---|---|
+| 资产配方/版本 | 新 `packages/scene/src/retarget-meta.ts`，由 `asset-meta.ts` 接入 | 新 `packages/scene/test/retarget-meta.test.ts`：配方迁移校验；原 `asset-meta.test.ts`：AssetMeta 集成 |
+| 内存合同 | `MR/contracts.ts` | `MT/contracts.test.ts`：形状、身份、时刻、单位 |
+| 源采样与标定 | `MR/source-motion.ts`、`MR/rig-calibration.ts` | `MT/source-motion.test.ts`：采样/轨迹；`MT/rig-calibration.test.ts`：参考姿态/轴/标记 |
+| 空间目标 | `MR/space-targets.ts` | `MT/space-targets.test.ts`：根/链尺度、坐标与错误目标反例 |
+| 接触语义 | `MR/contact-segments.ts` | `MT/contact-segments.test.ts`：支撑/滚动/滑动/跳跃/置信度 |
+| 两骨几何 | `MR/two-bone-solver.ts` | `MT/two-bone-solver.test.ts`：解析解/可达域/pole/末端朝向 |
+| 共享姿态 | `MR/pose-solver.ts` | `MT/pose-solver.test.ts`：双支撑/根/限位/手支撑/不可行 |
+| 时间窗口 | `MR/temporal-solve.ts` | `MT/temporal-solve.test.ts`：切换/跨窗口/保留源动态 |
+| 身体表面 | `MR/surface-contacts.ts` | `MT/surface-contacts.test.ts`：物体/自身/胸背及穿插 |
+| 质量指标 | `MR/quality-report.ts` | `MT/quality-report.test.ts`：已知轨迹指标/阈值/能力覆盖 |
+| 算法编排 | `MR/pipeline.ts`，仅连接 owner | `MT/pipeline.test.ts`：输入不可变/依赖一致/取消/顺序 |
+| 载入、预览、导出会话 | 新 `services/binding/retarget-session.ts`，`main.ts` 只调用 | `MT/retarget-session.test.ts`：两入口/重载/失效/失败不覆盖 |
+| 最终烘焙验收 | 复用 `clipToAnimClip`、`binding-export.ts`，只加最小映射 | `MT/bake-acceptance.test.ts`：最终轨道读回与业务组合；原 `binding.test.ts` 继续拥有绑定/蒙皮合同 |
+
+现有 `retarget.test.ts` 只拥有 L0 基准/API，不追加接触。`main.ts`、`binding-math.ts`、`binding-export.ts` 不增加求解规则；`retarget.ts` 现有换基/动画转换混合，不再增加源接触或新 rig 构建责任。共享 fixture 仅提供输入与独立 oracle，不能用被测目标生成器计算预期值。
+
+## 7. 开发队列
+
+全部状态为 **待开发**。本次完成的是计划修订和研究归档，不勾选任何新增功能。
+
+| 单元 | 依赖 | 声明的 owner / 交付 | 最小验收 |
 |---|---|---|---|
-| **L0** | FK 骨向对齐（已有） | 旋转 + 根位移 | ✅ 已有 |
-| **L1** | 骨架比例归一化 | 目标末端世界位置 | ✅ |
-| **L2** | 末端 IK 反解 | 四肢旋转 | ✅ |
-| **L3** | 接触帧脚锁定 + 根回退 | 修正的根位移 | ✅ |
-| **L4** | 地面 clamp + Hips 高度对齐 | 最终动画 | ⏸ 下一轮 |
+| MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、缺字段诊断；无轨迹不伪造 world 模式 |
+| MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 |
+| MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 |
+| MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 |
+| MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 |
+| MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/bake 测试 | 两入口同结果、导出再导入、刷新可复现；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP |
+| MR-07 手掌与全身求解 | MR-06 | 扩展 pose、标定/接触 owner 及各自测试，开放肩/脊椎/根自由度；bake 组合验收 | 走路→掌面支撑、手脚同支撑、自由摆臂风格、真实手支撑烘焙 |
+| MR-08 表面及翻滚闭环 | MR-07 | `surface-contacts.ts` 及测试；场景部分另列 `document.ts`/迁移/测试单元；最小接入 pipeline/bake | 胸背滚动、手触身体、固定抓物、不同体积不穿插；真实“入场→翻滚→起身”导出读回 |
 
-### 2.1 IK / FK 的划分（关键设计决策）
+实施前重核现有 owner；需要表外 owner 时先说明影响并按项目规则取得授权。MR-06 的当前预览/导出具体适配文件属于上述声明范围，业务规则仍归新会话 owner。本次不提前改生产代码。足部 MVP 后继续 MR-07/08，不将手臂或脊椎永久排除出用户目标。
 
-```
-FK 区（不被 IK 触碰）:  Hips · Spine · Spine1 · Spine2 · Neck · Head
-IK 区（MVP）:           LeftUpLeg → LeftLeg → LeftFoot
-                        RightUpLeg → RightLeg → RightFoot
-预留（默认关闭）:        LeftArm → LeftForeArm → LeftHand （右同）
-```
+## 8. 验收矩阵
 
-**中轴走 FK 的理由**：重心起伏、躯干扭转、头部朝向是 mocap 的节奏信息，
-用 IK 反解会把它平滑掉，角色会「飘」。HumanIK 也是这么切的。
+数字为本项目拟定门槛，不是 Autodesk 保证。业务指标在最终烘焙读回后测量；解析核可用更严的数值容差。真实动作记录源噪声、模型尺寸、帧率、配方与能力覆盖。
 
-**手臂默认不走 IK 的理由**（已与用户确认）：
-
-1. 本项目是第三人称射击游戏，角色大量时间处于持枪 / 瞄准姿态 —— 手臂 IK 与瞄准姿势
-   直接打架，且持枪没有世界空间约束可依；
-2. 手部没有地面接触，锁定的收益远小于腿部；
-3. 幅度匹配（L1）对手臂的出口是 IK，没有 IK 就没有消费方 —— 所以 **MVP 里臂链完全不进
-   motion match**，保持 L0 的 FK 结果。
-
-> 实现上 L2 是**链无关**的（`IkChainDef` 配置驱动），日后要开手臂 IK 只需加两条链配置，
-> 不用改算法。
-
----
-
-## 3. L1 · 骨架比例归一化
-
-### 3.1 骨长与链比
-
-从源 / 目标的 rest 世界坐标各算一次骨长（`骨 i 的长 = |p_i − p_parent(i)|`）：
-
-```
-r_c = L_tgt_c / L_src_c          c ∈ { leg_L, leg_R, (arm_L, arm_R, spine) }
-```
-
-其中 `L_leg = |UpLeg→Leg| + |Leg→Foot|`（纯腿骨，不含髋偏移）。
-
-**为什么按链而不是按全身**：mocap 演员腿 0.90 / 躯干 0.50，僵尸腿 0.70 / 躯干 0.70，
-总高相同 → 全局 scale = 1.0，但腿链比 = 0.78、脊柱链比 = 1.40。一个数字表达不了两个比值。
-
-### 3.2 末端目标位置
-
-对每帧 f、每条 IK 链 c：
-
-```
-offset_src(f) = P_src_tip(f) − P_src_root(f)              // 源：tip 相对链根
-offset_tgt(f) = offset_src(f) · r_c                        // 各向同性缩放
-P_tgt_tip(f)  = P_tgt_root(f) + offset_tgt(f)              // 贴到目标链根上
-```
-
-`P_tgt_root(f)` = 目标 Hips 世界位置 + 链根相对 Hips 的 **rest 固定偏移**（目标骨架常量）。
-
-### 3.3 为什么用各向同性缩放
-
-- **简单可预测**，且与「目标 = 源等比 k 倍」的退化情形**完全一致**：
-  此时 `r_c = k`，`offset_tgt = offset_src · k`，而 FK 出来的也是 k 倍 → 两条路径吻合 →
-  新层退化为恒等（§6-T2 守住这条）。
-- 分轴缩放（垂直按腿长、水平按步幅）会破坏这个退化性质，且引入难以直观预测的结果。
-  **不做。**
-
----
-
-## 4. L2 · 两骨 IK 反解（解析解，非迭代）
-
-### 4.1 解析解
-
-链 `root(A) → mid(B) → tip(C)`，骨长 `L1 = |AB|`、`L2 = |BC|`（rest 值，恒定），
-目标位置 `T`，极向量 `pole`（世界方向）：
-
-```
-d  = T − A
-D  = clamp(|d|,  |L1 − L2| + ε,  L1 + L2 − ε)      // 夹紧，防过伸/NaN
-u  = normalize(d)
-
-cos θ₁ = (L1² + D² − L2²) / (2 · L1 · D)            // 大腿与 root→tip 连线的夹角
-cos θ₂ = (L1² + L2² − D²) / (2 · L1 · L2)           // 膝内角
-
-pole_perp = normalize(pole − u · dot(pole, u))      // 极向量投影到垂直于 u 的平面
-
-B = A + L1 · (u · cos θ₁ + pole_perp · sin θ₁)      // 膝的世界位置
-```
-
-夹紧后 `T` 若不可达，实际落点是 `A + u · D`，残差进 `report.maxStretch`。
-
-### 4.2 极向量必须来自源姿态
-
-`pole = P_src_mid − (P_src_root + u_src · dot(P_src_mid − P_src_root, u_src))`
-
-膝盖 / 手肘朝哪边弯是 mocap 的语义信息。用固定方向（如世界 +Z）会在角色转身时出现
-**膝盖反折或内外翻**。方向是单位向量，与尺度无关，可直接跨骨架复用。
-
-### 4.3 swing–twist 分解：保留 mocap 的扭转
-
-直接对骨做 `quatFromUnitVectors(u_cur → u_target)` 是**最小旋转**，它会把绕骨自身轴的
-扭转（twist）一起改掉 —— 脚掌的外八 / 内八会被掰正。
-
-正确做法是只应用 **swing** 分量：
-
-```
-q_delta  = quatFromUnitVectors(u_cur, u_target)
-q_swing, q_twist = swingTwist(q_delta, u_cur)      // 沿 u_cur 轴分解
-Q_i'     = q_swing · Q_i                            // 只叠加 swing
-R_i'     = Q_parent'⁻¹ · Q_i'                       // 转回 local
-```
-
-`swingTwist` 分解（沿轴 `a`）：
-
-```
-p = a · dot([q.x, q.y, q.z], a)          // 轴上的投影 = twist 部分
-q_twist = normalize([p.x, p.y, p.z, q.w])
-q_swing = q · q_twist⁻¹
-```
-
-⚠️ `dot(v, a) < 0` 时要对 `q_twist` 取反再归一化（四元数双覆盖），否则会出现 180° 翻转。
-
-### 4.4 落地位置
-
-`binding-math.ts` 已有 `matMul` / `matInvertRigid` / `matPoint` / `quatFromUnitVectors`，
-缺 `quatFromMat` / `slerp` / `swingTwist` / `forwardKinematics`，需补。
-
----
-
-## 5. L3 · 接触帧脚锁定 + 根回退
-
-### 5.1 为什么 L1+L2 之后仍然需要 L3
-
-L1+L2 已经消除了**由比例差异引起的**滑步。残余来源有三：
-
-1. mocap 自身在接触期也不是严格静止（真人脚有微滑），IK 会**忠实放大**这部分；
-2. 接触起止帧的检测误差；
-3. IK 夹紧（够不到）导致的漂移。
-
-L3 是**加固层**，不是核心层。
-
-### 5.2 检测点 vs effector
-
-| 用途 | 关节 | 理由 |
+| ID | 场景 / 独立判据 | 测试 owner |
 |---|---|---|
-| **接触检测点** | `LeftToeBase` / `RightToeBase` | 脚趾先着地、后离地，对接触最敏感；用踝（Foot）会在「脚跟离地、脚趾仍触地」阶段漏检 |
-| **IK effector** | `LeftFoot` / `RightFoot` | 踝是两骨 IK 链的天然末端 |
+| A01 | 正确接触的同骨架/严格等比，无清理及冲突任务：旋转差 ≤1e-5rad，S 映射位置差 ≤1e-5m | `bake-acceptance.test.ts` |
+| A02 | 根比 .25、末端比 .20、源骨盆移动 .4m：自由映射有 .02m 漂移，不可直接锁脚 | `space-targets.test.ts` |
+| A03 | 同动作 m/cm、不同 up/forward 和有效父变换，归一化输出差 ≤1e-5m | `rig-calibration.test.ts` |
+| A04 | 接触与独立标注一致，30/60/120Hz 的秒制边界偏差不超过各自一个采样间隔 | `contact-segments.test.ts` |
+| A05 | 可达双支撑/不同比例：标记误差 ≤1e-4m，骨长误差 ≤1e-6m；内外不可达显式报告 | `pose-solver.test.ts` |
+| A06 | 父旋转改变后足部保持指定世界朝向（≤0.5°），支撑标记固定但允许踝移动 | `two-bone-solver.test.ts` |
+| A07 | 切换/跨窗口不重设锚点；修正引入的速度跳变默认 ≤0.1×目标标定高度/秒，不误罚源动态 | `temporal-solve.test.ts` |
+| A08 | 真实完整锁定段：最大切向落点偏差 ≤0.002×h_t，累计切向路程 ≤0.005×h_t，穿透 ≤0.001×h_t；过渡段单列 | `bake-acceptance.test.ts` |
+| A09 | 无根轨道、零位移轨道、in-place＋轨迹、in-place＋仅相位能力有区别，不因 null/非 null 判成功 | `source-motion.test.ts` |
+| A10 | 多接触/限位冲突定位到帧与约束；无 NaN、不静默拉骨 | `pose-solver.test.ts` |
+| A11 | 跳跃不逐帧贴地，保留对应尺度的源高度变化 | `contact-segments.test.ts` |
+| A12 | 手支撑调动必要全身关节；固定物体不随人物缩放 | `pose-solver.test.ts`（支撑）、`surface-contacts.test.ts`（物体） |
+| A13 | 胸背滚动支撑点变化且表面不穿地，不同厚度分别验收，骨架正确不代替网格正确 | `surface-contacts.test.ts` |
+| A14 | 两入口与导出同配方/结果，重载可复现，源/目标/标记/版本变化正确失效 | `retarget-session.test.ts` |
 
-两者不一致，需要一次转换（锁定期间）：
+滑步至少报告整段最大锚点偏差、相邻样本切向距离总和及速度分布，不只报最大单帧位移。若真实数据需调整门槛，记录尺寸、原因和批准的产品质量档，不能改变统计口径隐藏失败。
 
-```
-P_foot_target = P_lock_toe − R_foot_world · off_toe
-```
+研究附录的二维数值验证只证明几何关系，不能替代本矩阵或真实骨架/蒙皮验收。各阶段需独立真实动作证据。
 
-其中 `off_toe` = `ToeBase` 相对 `Foot` 的 **rest 局部偏移**（目标骨架常量），
-`R_foot_world` = 当前帧 FK 得到的 Foot 世界旋转。
-这样脚掌的 heel-to-toe 翻转被完整保留，不会被钉成平板。
+## 9. 失败矩阵和交付边界
 
-### 5.3 接触判定（全部相对化，避开 cm/m 单位陷阱）
-
-```
-高度： |C.y − groundY|                 < heightEps · srcLegLen     (默认 0.05)
-速度： |C(f+1) − C(f)| / dt            < speedEps  · srcLegLen/s   (默认 0.20)
-持续： 连续满足 ≥ minContactFrames 帧才算一段                        (默认 3)
-```
-
-阈值乘以 `srcLegLen` 而非写死米数 —— 源 BVH 可能是 cm 单位（`unitScale = 0.01`），
-写死会全盘失效。
-
-### 5.4 根回退（防过伸，这是 L3 真正的作用）
-
-⚠️ **常见误解**：脚锁定不是把 Hips 冻住。单脚支撑时身体**必须**继续前进，
-否则角色会原地踏步。
-
-正确的因果是：
-
-```
-源 mocap:  Hips 前进 D_src，被锁脚世界不动，源腿从「前伸」变「后展」
-目标:      Hips 前进 D_src · r_leg，被锁脚世界不动
-           ⟹ 所有长度同比缩放，腿在整个接触期内始终在可达范围内  ✓
-```
-
-所以**只要根位移用了链比、脚锁定位置也按链比映射，就是自洽的，不需要额外修正**。
-
-L3 要处理的只是**自洽被破坏**的情形（残差累积、检测误差、源动画本身脚在动）：
-当 IK 夹紧量 > 0 时，**把根拉回来**而不是让腿过伸：
-
-```
-若夹紧:   H(f) += u · (dist − D_max)      // 沿 root→tip 方向回退根
-          用新的 H(f) 重跑一次 IK          // 单次迭代，残差进 report
-```
-
-只对**接触期**做根回退 —— 非接触期脚在空中，夹紧无害且回退会破坏步幅。
-
-### 5.5 落地顺序（每帧）
-
-```
-1. L1:  算 H(f) 候选 + 各 tip 目标位置
-2. L3:  tip 目标 = 接触期 ? P_lock : L1 映射
-3. L2:  IK 解算 → 腿部旋转
-4. L3:  夹紧 ? 根回退 + 重跑 IK（一次）
-5. L4:  地面 clamp + Hips 整体高度对齐
-```
-
----
-
-## 6. 测试判据（可证伪）
-
-> 原则同 `retarget.test.ts`：判据必须**独立于被测实现**，禁止自证。
-> 新文件 `apps/editor/test/motion-match.test.ts`。
-
-| # | 判据 | 断言 |
+| 发现 | 行为 / 状态 | 单元 |
 |---|---|---|
-| **T1** | **等比退化恒等**：目标骨架 = 源骨架 ⟹ 输出与输入逐帧相同 | 旋转差 < 1e-5，根位移差 < 1e-6 |
-| **T2** | **缩放退化**：目标 = 源 × k ⟹ 旋转**不变**、根位移 × k | 旋转差 < 1e-5；`scale(k)/scale(1) ≈ k` |
-| **T3** | **零滑步**：接触帧内目标脚的**水平**位移 < 1e-4 m | 遍历所有接触段 |
-| **T4** | **末端位置守恒**（I2）：非接触帧，`offset_tgt ≈ offset_src · r_c` | 相对误差 < 1e-4 |
-| **T5** | **twist 保持**：`preserveTwist=true` 时，脚绕小腿轴的扭转与 FK 结果一致 | 夹角 < 0.5° |
-| **T6** | **不破坏 L0**：`retarget.test.ts` 全部仍通过 | 全套绿 |
-| **T7** | **接触检测**：合成「走路」夹具（脚周期性静止/移动），断言段数与锁定位置正确 | 段数 == 设计值 |
-| **T8** | **过伸保护**：目标超出可达半径时腿伸直、无 NaN、且 `report.maxStretch > 0` | 无 NaN + 有告警 |
-| **T9** | **单位无关**：同一动作分别用 m / cm 的源 BVH，输出的末端世界轨迹一致 | 差 < 1e-5 |
+| 单位/轴/标定不可信、时刻不一致 | 拒绝请求并指出字段，保留已有产物 | MR-01/02 |
+| 缺源轨迹或平面置信度低 | FK/自由运动可预览但为 partial，不承诺世界锁脚 | MR-02/03 |
+| 缺足/掌标记 | 使用已保存代理并报告误差或标未覆盖；不以踝偷偷代替脚底 | MR-02/03/07 |
+| 多接触不可达、限位冲突、不收敛 | 最佳预览＋逐约束残差，partial/failed，不覆盖成功产物 | MR-04/05/07 |
+| 有意滑动被误锁 | 接触模式标注覆盖持久化，重新生成 | MR-03/06 |
+| 仅骨架无法判断胸背/皮肤穿插 | 表面能力未覆盖，不报告翻滚完成 | MR-08 |
+| 依赖指纹变化 | 结果失效并重算，缓存不作真源 | MR-01/06 |
+| 取消/导出失败 | 不写半份完成状态，不丢原产物，说明失败阶段 | MR-06 |
+| 动态地形/游戏速度偏离假设 | 离线保证失效，另开 runtime adaptation 单元 | 本离线闭环之外 |
 
-**T1/T2 是最重要的两条** —— 它们保证新层不会把「本来就对」的等比情形搞坏。
-任何一条挂了，说明新层引入了非物理的偏差。
+只有影响真实数据、持久结果、运行时表现或本单元验收的问题阻断当前单元；无关静态清理进入 backlog，不全仓整顿。MR-08 未完成不阻断范围明确的足部阶段交付，也不能据此宣布完整目标完成。
 
-**滑步度量**（供 T3 与 report）：
+## 10. 检查、性能和当前状态
 
-```
-slide(f) = |P_foot(f+1) − P_foot(f)| 的水平分量     （仅接触帧）
-maxSlide = max slide(f)
-```
-
----
-
-## 7. 数据契约
-
-新增文件 `apps/editor/src/services/binding/motion-match.ts`：
-
-```ts
-/** 参与匹配的骨架描述（源 / 目标各一份） */
-export interface MatchRig {
-  /** rest 世界关节位置（HumanIK 骨名索引） */
-  positions: JointPositions;
-  /** 每根骨的 rest 长度（骨 i = parent(i) → i） */
-  lengths: Record<string, number>;
-}
-
-export interface IkChainDef {
-  /** IK 链的末端（effector） */
-  effector: string;
-  /** 链根（旋转被 IK 修改的第一根骨） */
-  root: string;
-  /** 中间关节（膝 / 肘） */
-  mid: string;
-  /** 接触检测点（通常比 effector 更末端） */
-  contact: string;
-}
-
-export interface MatchOptions {
-  /** 地面高度（世界 Y），默认 0 */
-  groundY?: number;
-  /** IK 链定义；默认双腿 */
-  chains?: IkChainDef[];
-  /** 接触高度阈值 = heightEps × 源腿长，默认 0.05 */
-  contactHeightEps?: number;
-  /** 接触速度阈值 = speedEps × 源腿长/秒，默认 0.20 */
-  contactSpeedEps?: number;
-  /** 一段接触至少持续多少帧，默认 3 */
-  minContactFrames?: number;
-  /** 接触结束后多少帧内平滑释放，默认 4 */
-  lockBlendFrames?: number;
-  /** 是否做 swing–twist 分解保留扭转，默认 true */
-  preserveTwist?: boolean;
-  /** 是否允许根回退（防过伸），默认 true */
-  rootCorrection?: boolean;
-}
-
-export interface MatchReport {
-  /** 每条链的长度比 */
-  chainScales: Record<string, number>;
-  /** 检测出的接触段 */
-  contacts: Array<{ chain: string; start: number; end: number; world: [number, number, number] }>;
-  /** 接触期内脚的最大水平滑移（米） */
-  maxFootSlide: number;
-  /** IK 夹紧的最大不可达量（米）；> 0 说明腿被拉直过 */
-  maxStretch: number;
-  /** 根回退的总位移（米） */
-  rootCorrectionTotal: number;
-  warnings: string[];
-}
-
-/** 主入口：L0 的输出 → 位置守恒的动画。不修改入参。 */
-export function matchMotion(
-  clip: RetargetClip,
-  srcRig: MatchRig,
-  tgtRig: MatchRig,
-  options?: MatchOptions,
-): { clip: RetargetClip; report: MatchReport };
-```
-
-**设计约束**：
-
-- `matchMotion` 是**可选后处理**，L0 的契约与全部既有断言不受影响（T6）。
-- 入参不可变 —— 返回新的 `RetargetClip`，便于 A/B 对比与回滚。
-- 纯 CPU、无 GPU、无 DOM，可在 vitest 里直跑。
-
----
-
-## 8. 性能
-
-**motion match 是离线烘焙，运行时零成本。**
-
-- 输入是 `RetargetClip`（BVH 级数据），输出仍是 `RetargetClip`，最终经
-  `clipToAnimClip` → `rigToTPose` 烘进 GLB 的 `animations[]`。
-- 500 僵尸在运行时只是播放同一个 `AnimClip` + GPU instancing，
-  **与是否跑过 motion match 无关**。
-- 烘焙成本：O(帧数 × 链数 × 链长)，60 帧 × 2 链 × 3 骨 ≈ 千次浮点运算，毫秒级。
-
-> 别把它放进每帧运行时 —— 那是把离线工具当 runtime IK 用的典型错误。
-
----
-
-## 9. 风险与未决项
-
-| # | 风险 | 处置 |
-|---|---|---|
-| R1 | 源 BVH **无根位移**（in-place 动画）：脚锁定无意义 | 检测 `clip.translation === null` → 自动跳过 L3，只做 L1+L2，进 `warnings` |
-| R2 | 根回退 ↔ IK 的循环依赖 | 单次迭代；残差进 `report.rootCorrectionTotal`，不追求收敛 |
-| R3 | 脚 twist 与 IK 冲突（外八被掰正） | `preserveTwist` 默认开（§4.3），T5 守住 |
-| R4 | 源骨架缺 `ToeBase`（部分 Mixamo 导出没有） | 回退用 `Foot` 兼作检测点，进 `warnings` |
-| R5 | 极端比例差（僵尸 vs 儿童）导致 IK 大面积夹紧 | `report.maxStretch` 报出来，编辑器面板标黄，不静默 |
-| R6 | **未决**：L4 的 Hips 整体高度对齐用「最低点贴地」还是「平均高度对齐」 | 待 MVP 跑通后看画面再定，MVP 先只做地面 clamp |
-
----
-
-## 10. 落地计划
-
-| 步骤 | 文件 | 说明 |
-|---|---|---|
-| 1 | `binding-math.ts` | 补 `quatFromMat` / `slerp` / `swingTwist` / `forwardKinematics` |
-| 2 | `retarget.ts` | 导出 `buildMatchRig(bvh | SkeletonData): MatchRig`，产 source / target 两份 rig |
-| 3 | **`motion-match.ts`（新）** | L1 + L2 + L3，约 600 行 |
-| 4 | **`motion-match.test.ts`（新）** | T1–T9 |
-| 5 | `binding-export.ts` | 导出链路串上 `matchMotion`（开关控制） |
-| 6 | 门禁 | `typecheck` · `npm test` · `editor:build` |
-
-**不在本轮范围**：L4（地面 clamp + Hips 对齐）、编辑器面板控件、手臂 IK。
-
----
-
-## 附：与 HumanIK / MotionBuilder 的术语对照
-
-| 本项目 | MotionBuilder / HumanIK | 说明 |
-|---|---|---|
-| L0 FK 骨向对齐 | Characterization + Retarget | 消除 rest 姿态差（A-pose vs T-pose） |
-| L1 比例归一化 | Actor Scale / Body Part Size | 逐段比例，非全局缩放 |
-| L2 两骨 IK | IK Solver (2-bone) | 解析解，非迭代 |
-| L3 脚锁定 | Foot Contact / Floor Contact | 冻结 effector 世界位置 |
-| 根回退 | Hips Translation Mode | 身体跟着脚走，而不是脚跟着身体滑 |
-| FK 区 / IK 区 | IK/FK Blend | 中轴 FK 保节奏，四肢 IK 保接触 |
+- 单元默认只跑所属 `npx vitest run <测试文件...>`；改 L0 才加 `apps/editor/test/retarget.test.ts`，导出影响绑定才加原 `binding.test.ts`，不默认全仓 `npm test`。
+- MR-01 涉 scene 公共契约时扩大到相关元数据/迁移消费者并说明原因；改 `assets/**` 必跑 `scene:check`，必要时先 `scene:gen`。改文档不触发资产门禁。
+- MR-06/08 触及实际编辑器时做相应类型检查/`editor:build`、headed 真实 GPU 定向验证；共享类型需全项目 typecheck 时说明影响。保留接触测量和导出读回，不以启动成功替代。
+- 求解耗时取决于帧数、自由度、约束、窗口和迭代；不再宣称千次运算或毫秒级。MR-05/06 测量真实 10s/60s 片段耗时/内存，支持进度/取消，再决定 worker 和缓存。
+- 默认离线求解，普通播放不新增 IK。500 角色能否共享产物取决于骨架/配方/尺寸指纹，不假定所有体型共用同一 clip。
+- 本轮文档 owner：本文维护合同/队列/验收，16A 保存研究证据与推导；README 只增导航。**生产文件及测试代码未改，现有 god file 未增长；仅做文档一致性、链接与 diff 检查。**
