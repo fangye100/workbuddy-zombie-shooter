@@ -741,3 +741,81 @@ describe('第三轮 P2：叶子骨保留参考朝向', () => {
     for (let k = 0; k < 4; k++) expect(localLeaf[k]).toBeCloseTo(z30[k]!, 9);
   });
 });
+
+// ───────────────── 第三轮报告精确探针（按报告复现脚本） ─────────────────
+
+describe('T03 报告探针：模板去 LeftHandTip 的叶子手 Z30', () => {
+  it('静止源 → 手部基准局部 == [0,0,.2588,.9659]（报告期望值）', () => {
+    const bvh = parseBvh(buildBvhText({}));
+    const { rig } = buildTargetRig({});
+    // 报告复现：删掉 HandTip 使 LeftHand 成为叶子，参考旋转 Z30（不改任何关节位置）
+    const noTip: RetargetRig = {
+      ...rig,
+      order: rig.order.filter((n) => n !== 'LeftHandTip'),
+      bones: { ...rig.bones },
+    };
+    delete (noTip.bones as Record<string, unknown>).LeftHandTip;
+    noTip.bones.LeftHand = {
+      ...noTip.bones.LeftHand!,
+      restLocalR: [0, 0, Math.sin(Math.PI / 12), Math.cos(Math.PI / 12)],
+    };
+    const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, noTip);
+    const local = quatMul(baseline.pre.LeftHand!, baseline.post.LeftHand!);
+    expect(local[0]).toBeCloseTo(0, 9);
+    expect(local[1]).toBeCloseTo(0, 9);
+    expect(local[2]).toBeCloseTo(0.2588190451, 9);
+    expect(local[3]).toBeCloseTo(0.9659258263, 9);
+  });
+});
+
+describe('T01 报告不变式：几何保持的参考系更换不改变物理结果（自由 vs 接触）', () => {
+  it('同一目标（脚 Z90 参考系）自由运动与接触两种路径的脚世界朝向都含 Z90', () => {
+    const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
+    const sm = buildSourceMotion(bvh);
+    const { rig } = buildTargetRig({});
+    const h = Math.SQRT1_2;
+    const mkHacked = (): RetargetRig => ({
+      ...rig,
+      bones: { ...rig.bones, LeftFoot: { ...rig.bones.LeftFoot!, restLocalR: [0, 0, h, h] } },
+      markers: {
+        ...rig.markers,
+        'LeftFoot.ball': { ...rig.markers['LeftFoot.ball']!, offset: [-0.03, 0, 0.09] },
+        'LeftFoot.heel': { ...rig.markers['LeftFoot.heel']!, offset: [-0.03, 0, -0.05] },
+      },
+    });
+    const hacked = mkHacked();
+    const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hacked);
+    const recipe = createDefaultRecipe(
+      { guid: 'as_src00001', path: 'assets/x/w.bvh', contentHash: 'sha256:a' },
+      { guid: 'as_tgt00001', path: 'assets/x/t.glb', contentHash: 'sha256:b' },
+    );
+    const environment: RetargetEnvironment = {
+      sourcePlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      origin: 'recipe-default', sceneNodeId: null,
+    };
+    const cal = {
+      schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
+      supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
+      unitScale: 1, upAxis: 'y' as const,
+      markers: {
+        'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+        'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' as const },
+        'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+        'RightFoot.heel': { bone: 'RightFoot', offset: [0, -0.03, -0.05], origin: 'manual' as const },
+      },
+      rotationBaseline: 'direction' as const,
+    };
+    // 自由运动（无源标定标记 → contact-uncalibrated → 不锁脚）
+    const free = retargetMotion({ source: sm, targetRig: hacked, baseline, recipe, environment, sourceCalibration: { ...cal, markers: {} } });
+    // 接触（有源标定标记 → 支撑锁定）
+    const contact = retargetMotion({ source: sm, targetRig: hacked, baseline, recipe, environment, sourceCalibration: cal });
+    for (const out of [free, contact]) {
+      expect(out.status).not.toBe('failed');
+      const q = out.clip!.frames[0]!.boneQuat.LeftFoot!;
+      // 两种路径的脚世界朝向都必须含 Z90 参考系（不变式：参考系更换不改变物理结果）
+      expect(q[2]).toBeCloseTo(h, 3);
+      expect(q[3]).toBeCloseTo(h, 3);
+    }
+  });
+});
