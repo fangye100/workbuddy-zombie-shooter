@@ -17,7 +17,7 @@ import { solvePose } from '../../src/services/binding/motion-retarget/pose-solve
 import { alignBoneRotation } from '../../src/services/binding/motion-retarget/two-bone-solver';
 import { bakeWorldSolveToLocal, type BakeOutputRig } from '../../src/services/binding/motion-retarget/bake-adapter';
 import { buildQualityReport } from '../../src/services/binding/motion-retarget/quality-report';
-import { defaultRetargetTolerances, createDefaultRecipe, RETARGET_META_SCHEMA_VERSION, validateRetargetCalibration } from '@aether/scene';
+import { defaultRetargetTolerances, createDefaultRecipe, RETARGET_META_SCHEMA_VERSION, validateRetargetCalibration, type RetargetCalibration } from '@aether/scene';
 import { quatMul, quatToMat, type Quat } from '../../src/services/binding/binding-math';
 import { buildBvhText } from './fixture';
 import type { RetargetEnvironment, RetargetRig, SourceMotion, WorldPoseFrame } from '../../src/services/binding/motion-retarget/contracts';
@@ -180,7 +180,7 @@ describe('R05 源侧标记', () => {
       targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
       origin: 'recipe-default', sceneNodeId: null,
     };
-    const cal = {
+    const cal: RetargetCalibration = {
       schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
       supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
       unitScale: 1, upAxis: 'y' as const,
@@ -407,7 +407,7 @@ describe('R12 依赖身份含实际标定', () => {
   it('同源同配方、不同源标定（h_s 1m vs 0.5m）→ 依赖指纹不同、根高不同', () => {
     const mk = (pelvis: number) => {
       const input = makePipelineInput(buildBvhText({ rootPos: () => [0, 100, 0] }));
-      const cal = {
+      const cal: RetargetCalibration = {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: pelvis,
         supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
         unitScale: 1, upAxis: 'y' as const,
@@ -600,9 +600,10 @@ describe('复审 P1：方向基准保留参考 roll', () => {
       },
     };
     const bl = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hacked);
-    for (const [bone, expectQ] of [['LeftArm', [h, 0, 0, h]], ['LeftForeArm', [-h, 0, 0, h]]] as const) {
+    const pairs: Array<[string, [number, number, number, number]]> = [['LeftArm', [h, 0, 0, h]], ['LeftForeArm', [-h, 0, 0, h]]];
+    for (const [bone, expectQ] of pairs) {
       const local = quatMul(quatMul(bl.pre[bone]!, [0, 0, 0, 1] as Quat), bl.post[bone]!);
-      for (let k = 0; k < 4; k++) expect(local[k]).toBeCloseTo(expectQ[k], 9);
+      for (let k = 0; k < 4; k++) expect(local[k]).toBeCloseTo(expectQ[k]!, 9);
     }
   });
 });
