@@ -523,7 +523,7 @@ export function unposeNormals(
   skin: SkinWeights,
   fit: FitResult,
   normalOffset = 3,
-): Float32Array {
+): Float32Array<ArrayBuffer> {
   // Δ_k 的线性部分 = R_world_kᵀ（T-pose 世界旋转是 identity，故不含 R_T）
   const lin: Mat4[] = HUMANIK_ORDER.map(
     (name) => matInvertRigid(fit.posedWorld[name]!),
@@ -654,7 +654,7 @@ export function reposeMesh(
   skin: SkinWeights,
   fromWorld: Record<string, Mat4>,
   toWorld: Record<string, Mat4>,
-): Float32Array {
+): Float32Array<ArrayBuffer> {
   const order = HUMANIK_ORDER;
   // 预算每骨的 Δ_k = M_to_k · M_from_k⁻¹，避免逐顶点重复求逆
   const delta: Mat4[] = order.map(
@@ -689,6 +689,6 @@ export function unposeMesh(
   vertexCount: number,
   skin: SkinWeights,
   fit: FitResult,
-): Float32Array {
+): Float32Array<ArrayBuffer> {
   return reposeMesh(positions, vertexFloats, vertexCount, skin, fit.posedWorld, fit.tposeWorld);
 }

@@ -958,8 +958,8 @@ async function boot(): Promise<void> {
   /** 一次绑定会话的素材：源网格（**当前姿态**）+ 索引 + 原始 baseColor 贴图 */
   interface BindingSession {
     name: string;
-    vertices: Float32Array;
-    indices: Uint32Array;
+    vertices: Float32Array<ArrayBuffer>;
+    indices: Uint32Array<ArrayBuffer>;
     image: Blob | null;
   }
   let bindingSession: BindingSession | null = null;

@@ -67,8 +67,8 @@ export interface BindExportInput {
   /** 导出文件名（不含扩展名） */
   name: string;
   /** 当前姿态的网格顶点（引擎 15-float 布局） */
-  vertices: Float32Array;
-  indices: Uint32Array;
+  vertices: Float32Array<ArrayBuffer>;
+  indices: Uint32Array<ArrayBuffer>;
   /** 原始 baseColor 贴图；有则一并嵌入，保证 T-pose 产物仍带贴图 */
   image: Blob | null;
   /** 用户摆放的关节坐标（当前姿态、模型 local 空间、Y-up） */
@@ -134,7 +134,7 @@ export interface BindExportResult {
   fit: FitResult;
   skin: SkinWeights;
   /** T-pose 网格顶点（可回灌编辑器显示，让用户立刻看到「摆正了」） */
-  tposeVertices: Float32Array;
+  tposeVertices: Float32Array<ArrayBuffer>;
   stats: BindExportStats;
 }
 

@@ -464,7 +464,7 @@ function parseGlb(buf: ArrayBuffer): { json: GlbJson; bin: Uint8Array } {
   return { json, bin: new Uint8Array(buf, binAt + 8, binLen) };
 }
 
-function makeMesh(n: number): { verts: Float32Array; idx: Uint32Array } {
+function makeMesh(n: number): { verts: Float32Array<ArrayBuffer>; idx: Uint32Array<ArrayBuffer> } {
   // 沿身体中轴撒点，够 computeLbsWeights 用即可（这里验的是 GLB 结构，不是权重质量）
   const verts = new Float32Array(n * 15);
   for (let i = 0; i < n; i++) {

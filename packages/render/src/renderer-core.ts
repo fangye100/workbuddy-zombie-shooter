@@ -155,7 +155,7 @@ export interface CoreGizmo {
  */
 export interface CoreSkeletonOverlay {
   /** 线段端点（世界空间，与顶点同一把尺子）；长度必须是 3 的倍数且 ≥ 6 */
-  positions: Float32Array;
+  positions: Float32Array<ArrayBuffer>;
   /** 线段颜色（0..1，最终色，不经 tonemap） */
   color: [number, number, number];
 }
@@ -174,25 +174,25 @@ export interface CoreCylinderOverlay {
    * 交错顶点数组，stride = 9 floats（36 B）：pos(3) + normal(3) + color(3)。
    * 长度必须是 9 的倍数；不引索，按 triangle-list 顺序绘制。
    */
-  vertices: Float32Array;
+  vertices: Float32Array<ArrayBuffer>;
   /** 整体不透明度（0..1）。圆柱体互相重叠时靠它避免糊成一片 */
   alpha: number;
 }
 
 /** 一帧的全部 CPU 端 uniform 数据（调用方填好，本类只负责上传） */
 export interface CoreFrameUniforms {
-  frame: Float32Array;
-  lights: Float32Array;
-  toon: Float32Array;
-  post: Float32Array;
-  material: Float32Array;
-  transform: Float32Array;
+  frame: Float32Array<ArrayBuffer>;
+  lights: Float32Array<ArrayBuffer>;
+  toon: Float32Array<ArrayBuffer>;
+  post: Float32Array<ArrayBuffer>;
+  material: Float32Array<ArrayBuffer>;
+  transform: Float32Array<ArrayBuffer>;
   /** 第一层高亮的 toon / material（编辑器映射为「选中」） */
-  primaryToon: Float32Array;
-  primaryMat: Float32Array;
+  primaryToon: Float32Array<ArrayBuffer>;
+  primaryMat: Float32Array<ArrayBuffer>;
   /** 第二层高亮的 toon / material（编辑器映射为「悬停」，被第一层压过） */
-  secondaryToon: Float32Array;
-  secondaryMat: Float32Array;
+  secondaryToon: Float32Array<ArrayBuffer>;
+  secondaryMat: Float32Array<ArrayBuffer>;
 }
 
 /** drawFrame 的完整输入：一份已完全解析的帧 */
