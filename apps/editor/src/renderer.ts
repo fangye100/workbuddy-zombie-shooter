@@ -904,6 +904,35 @@ export class LabRenderer {
   }
 
   /**
+   * 换掉作者文档（WU-5）。
+   *
+   * 编辑态的文档由 `SpawnEditStore` 持有并**唯一拥有**；本渲染器只是转发引用
+   * （消费方是 `PlayController.start()`）。刷怪点参数不产生可渲染内容，所以换引用
+   * **不需要重建 GPU 资源** —— 改完点「重跑」即可，装载时才真正读它的值。
+   */
+  public setDocument(doc: SceneDocument): void {
+    this.document = doc;
+  }
+
+  /**
+   * 场景节点 id → 物体下标（WU-5「Stop 后定位来源节点」）。
+   *
+   * 走 `subMeshes[].nodeId` 反查：物体是渲染侧的运行时表示，节点 id 才是存储格式
+   * （ADR-010）。找不到返回 null —— 刷怪点节点本身没有网格时确实查不到，
+   * 调用方要能接受"定位失败"而不是崩。
+   */
+  public findObjectIndexByNodeId(nodeId: string): number | null {
+    if (nodeId === '') return null;
+    const objs = this.state.objects;
+    for (let i = 0; i < objs.length; i++) {
+      for (const sm of objs[i]!.subMeshes) {
+        if (sm.nodeId === nodeId) return i;
+      }
+    }
+    return null;
+  }
+
+  /**
    * 每个「子网格」一个 bind group：材质槽位按子网格取，变换槽位按物体取
    * （同一物体的所有子网格共享同一个 model 矩阵）。角色槽位的 binding 5 在 setCharacter 后换成真贴图。
    */

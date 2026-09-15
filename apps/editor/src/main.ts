@@ -6,7 +6,16 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument } from '@aether/scene';
+import {
+  SpawnEditStore,
+  captureInitialScatter,
+  compareScatter,
+  describeDelta,
+  listSpawnPoints,
+} from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import { SpawnPanel } from './services/spawn-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
@@ -142,6 +151,7 @@ async function boot(): Promise<void> {
   const playCtl = new PlayController(renderer, bridge, {
     onStateChange: () => {
       syncPlayButtons();
+      refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
       hudDirty = true;
     },
   });
@@ -165,7 +175,8 @@ async function boot(): Promise<void> {
   btnPause?.addEventListener('click', () => playCtl.togglePause());
   btnStep?.addEventListener('click', () => playCtl.step());
   btnReset?.addEventListener('click', () => playCtl.reset());
-  btnStop?.addEventListener('click', () => playCtl.stop());
+  // stopPlay 而不是 playCtl.stop()：退出 Play 后要顺带定位到选中实体的来源刷怪点
+  btnStop?.addEventListener('click', () => stopPlay());
 
   /** 按钮的启用/高亮完全由 PlayController 的状态推导，不自己存第二份状态 */
   function syncPlayButtons(): void {
@@ -192,7 +203,7 @@ async function boot(): Promise<void> {
   // boot 依赖 camera / hudDirty（定义在后），实际执行挪到 __editor 钩子接线之后。
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
-  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
+  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset' | 'spawn'): void => {
     for (const t of document.querySelectorAll<HTMLElement>('#inspector .insp-tab')) {
       t.classList.toggle('active', t.dataset.tab === tab);
     }
@@ -204,7 +215,7 @@ async function boot(): Promise<void> {
   for (const t of document.querySelectorAll<HTMLButtonElement>('#inspector .insp-tab')) {
     t.addEventListener('click', () => {
       const tab = t.dataset.tab;
-      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset') {
+      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset' || tab === 'spawn') {
         switchInspectorTab(tab);
       }
     });
@@ -429,6 +440,8 @@ async function boot(): Promise<void> {
       panel.params.keyIntensity = r.keyLight.intensity;
     }
     panel.syncAll();
+    // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源
+    setSpawnScene(renderer.getDocument());
     // ---- WU-4：不再自动进入 Play ----
     // 编辑器打开就该是编辑态。之前是"加载完场景就跑起来"，结果是每次刷新页面
     // 都被一个已经在动的世界干扰 —— 想安静看关卡反而要先点停止。
@@ -537,10 +550,15 @@ async function boot(): Promise<void> {
         bridge.select(hit.id, hit.generation);
         renderer.selectObject(null);
         panel.setSelection(null);
+        // 面板直接切到这只僵尸的来源刷怪点：「它是从哪冒出来的」就该一步到位
+        if (hit.sourceNodeId !== null) selectedSpawnNode = hit.sourceNodeId;
+        switchInspectorTab('spawn');
+        refreshSpawnPanel();
         hudDirty = true;
         return;
       }
       bridge.clearSelection();
+      refreshSpawnPanel();
     }
 
     let idx: number | null;
@@ -850,6 +868,297 @@ async function boot(): Promise<void> {
     };
   }
 
+  // =====================================================================
+  // 刷怪点编辑闭环（WU-5）
+  //
+  // 分工严格遵守「每类状态只有一个 owner」：作者文档与撤销栈在 `SpawnEditStore`
+  // （runtime 包，纯 CPU 可测），校验在 store 里，A/B 指纹在 runtime 里。
+  // 这里只做编辑器专属的三件事：画控件、写文件、把改动送进 Play。
+  // 面板**不持有状态** —— 每次改动后由 store 重算整份 vm 重绘，杜绝
+  // 「面板显示 8、场景里其实还是 3」这种只有刷新才复现的错位。
+  // =====================================================================
+  const spawnHost = document.getElementById('spawn-host');
+  let spawnStore: SpawnEditStore | null = null;
+  let selectedSpawnNode: string | null = null;
+  let spawnAb: { before: ScatterFingerprint; after: ScatterFingerprint; cmp: ScatterComparison } | null = null;
+  let spawnMsg: { text: string; kind: 'info' | 'warn' | 'ok' } | null = null;
+
+  const spawnPanel =
+    spawnHost === null
+      ? null
+      : new SpawnPanel(spawnHost, {
+          onSelect: (id) => {
+            selectedSpawnNode = id;
+            refreshSpawnPanel();
+          },
+          onEdit: (field, value) => editSpawnField(field, value),
+          onUndo: () => undoSpawnEdit(),
+          onSave: () => void saveSpawnEdits(),
+          onRerun: () => restartPlay(),
+          onFocusSource: () => focusSourceNode(),
+        });
+
+  /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
+  function setSpawnScene(doc: SceneDocument | null): void {
+    if (doc === null) {
+      spawnStore = null;
+      spawnAb = null;
+      selectedSpawnNode = null;
+      refreshSpawnPanel();
+      return;
+    }
+    spawnStore = new SpawnEditStore(doc);
+    // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
+    // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
+    renderer.setDocument(spawnStore.document);
+    spawnAb = null;
+    selectedSpawnNode = listSpawnPoints(spawnStore.document)[0]?.nodeId ?? null;
+    refreshSpawnPanel();
+  }
+
+  function editSpawnField(field: 'radius' | 'count', value: number): void {
+    const store = spawnStore;
+    if (store === null || selectedSpawnNode === null) return;
+    const seed = playCtl.session.seed;
+    // A = 编辑前的同种子指纹；改完再抓一次 B。只展示"改后"看不出改动到底生没生效
+    // （房间还没进 → 一个都没刷，params 变了但画面纹丝不动，作者会以为没保存）
+    const before = captureInitialScatter(store.document, { seed });
+    const r = store.set(selectedSpawnNode, field, value);
+    if (!r.ok) {
+      spawnMsg = { text: r.error ?? '编辑被拒绝', kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    const after = captureInitialScatter(store.document, { seed });
+    spawnAb = { before, after, cmp: compareScatter(before, after) };
+    const d = spawnAb.cmp.deltas.find((x) => x.nodeId === selectedSpawnNode);
+    const label = field === 'radius' ? '生成散布半径' : '生成数量';
+    spawnMsg = {
+      text:
+        `已改 ${label}：${r.edit!.from} → ${r.edit!.to}` +
+        (d !== undefined ? `　散布均 ${d.meanBefore.toFixed(2)} → ${d.meanAfter.toFixed(2)} m` : ''),
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  function undoSpawnEdit(): void {
+    const store = spawnStore;
+    if (store === null) return;
+    const undone = store.undo();
+    if (undone === null) return;
+    // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
+    if (spawnAb !== null) {
+      const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
+      spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
+    }
+    spawnMsg = {
+      text: `已撤销：${undone.field === 'radius' ? '生成散布半径' : '生成数量'} ${undone.to} → ${undone.from}`,
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /**
+   * 保存。
+   *
+   * 写盘前先做一次**改动集合自检**：差异路径必须全部落在刷怪点的 radius / count 上。
+   * 这是"保存保留未消费组件和无关字段"的兜底 —— store 的实现保证了它不会去碰别的
+   * 字段，但断言放在保存这一步，才能保证将来有人加了新命令也不会悄悄破坏这个性质。
+   */
+  async function saveSpawnEdits(): Promise<void> {
+    const store = spawnStore;
+    const src = renderer.getSceneSource();
+    if (store === null || src === null) {
+      spawnMsg = { text: '没有可保存的场景文件', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    const diffs = store.changedPaths();
+    const unexpected = diffs.filter((d) => !/\.components\[\d+\]\.(radius|count)$/.test(d.path));
+    if (unexpected.length > 0) {
+      spawnMsg = {
+        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+    // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
+    // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
+    const content = `${JSON.stringify(store.document, null, 2)}\n`;
+    const res = await writeProjectFile(src.url, { content });
+    if (!res.ok) {
+      spawnMsg = { text: `保存失败：${res.error ?? `HTTP ${res.status}`}`, kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    store.commit();
+    spawnMsg = {
+      text: `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留`,
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /** 按改动后的场景重新装载并开跑 */
+  function restartPlay(): void {
+    if (spawnStore === null) return;
+    // 🔴 不能只调 playCtl.reset()：reset 用的是**装载时**的运行描述，改完 radius
+    // 它根本看不见。要让改动生效必须重新装载 = stop（恢复作者态）→ start（按新文档建会话）
+    if (playCtl.isPlaying) stopPlay();
+    if (!playCtl.start()) {
+      spawnMsg = { text: `重跑失败：${playCtl.error ?? '未知'}`, kind: 'warn' };
+    } else {
+      spawnMsg = { text: '已按改动后的场景重新装载并开跑（同种子）', kind: 'ok' };
+    }
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /** 按场景节点 id 在视口里选中并聚焦（WU-5「Stop 后定位该来源节点」） */
+  function focusNode(nodeId: string): void {
+    const idx = renderer.findObjectIndexByNodeId(nodeId);
+    if (idx === null) {
+      spawnMsg = {
+        text: `节点 ${nodeId} 没有可见网格，无法在视口定位（刷怪点本身通常不挂网格）`,
+        kind: 'info',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+    renderer.selectObject(idx);
+    panel.setSelection(idx);
+    focusOn(idx);
+    hudDirty = true;
+  }
+
+  function focusSourceNode(): void {
+    // 优先用运行实体的来源（"这只僵尸从哪来的"），没有运行时退回面板里选中的刷怪点
+    const src = bridge.selectedEntity?.sourceNodeId ?? selectedSpawnNode;
+    if (src !== null) focusNode(src);
+  }
+
+  /**
+   * 退出 Play 并定位来源节点。
+   *
+   * 顺序：先取出来源 id（stop 会摘掉会话、清空实体选中），再 stop，最后定位。
+   */
+  function stopPlay(): void {
+    const src = bridge.selectedEntity?.sourceNodeId ?? null;
+    playCtl.stop();
+    if (src !== null) focusNode(src);
+    hudDirty = true;
+  }
+
+  function refreshSpawnPanel(): void {
+    if (spawnPanel === null) return;
+    const store = spawnStore;
+    const doc = store?.document ?? null;
+    const ent = bridge.selectedEntity;
+    const cmp = spawnAb?.cmp ?? null;
+    const lines: string[] = [];
+    let summary: string | null = null;
+    if (cmp !== null) {
+      if (!cmp.usable) {
+        lines.push('A/B 不可用：装载失败，没有可比指纹');
+      } else {
+        for (const d of cmp.deltas) lines.push(describeDelta(d));
+        summary =
+          `改动 ${cmp.changedNodeIds.length} 处 / 共 ${cmp.deltas.length} 个刷怪点` +
+          `　NPC ${cmp.npcBefore} → ${cmp.npcAfter}　种子 ${spawnAb!.before.seed}`;
+      }
+    }
+    spawnPanel.render({
+      scenePath: renderer.getSceneSource()?.url ?? null,
+      spawns: doc === null ? [] : listSpawnPoints(doc),
+      selectedNodeId: selectedSpawnNode,
+      entity:
+        ent === null
+          ? null
+          : {
+              characterId: ent.characterId,
+              sourceNodeId: ent.sourceNodeId,
+              targetId: ent.targetId,
+              behavior: ent.behavior,
+              x: ent.x,
+              z: ent.z,
+            },
+      dirty: store?.dirty ?? false,
+      undoDepth: store?.undoDepth ?? 0,
+      message: spawnMsg?.text ?? null,
+      messageKind: spawnMsg?.kind ?? 'info',
+      abLines: lines,
+      abSummary: summary,
+      playing: playCtl.isPlaying,
+    });
+  }
+
+  // 自动化钩子：无头/实机 CDP 验证驱动刷怪点闭环（面板是 DOM，只能靠实机验证）
+  {
+    const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
+    hook.spawn = {
+      /** 面板当前状态的纯数据镜像（探针据此断言，不解析 DOM 文本） */
+      state: () => {
+        const doc = spawnStore?.document ?? null;
+        const sel =
+          doc === null || selectedSpawnNode === null
+            ? null
+            : listSpawnPoints(doc).find((s) => s.nodeId === selectedSpawnNode) ?? null;
+        const ent = bridge.selectedEntity;
+        return {
+          scenePath: renderer.getSceneSource()?.url ?? null,
+          dirty: spawnStore?.dirty ?? false,
+          undoDepth: spawnStore?.undoDepth ?? 0,
+          selectedNodeId: selectedSpawnNode,
+          radius: sel?.radius ?? null,
+          count: sel?.count ?? null,
+          spawnCount: doc === null ? 0 : listSpawnPoints(doc).length,
+          message: spawnMsg?.text ?? null,
+          messageKind: spawnMsg?.kind ?? null,
+          ab: spawnAb === null ? null : {
+            usable: spawnAb.cmp.usable,
+            changed: spawnAb.cmp.changedNodeIds,
+            unchanged: spawnAb.cmp.unchangedNodeIds,
+            npcBefore: spawnAb.cmp.npcBefore,
+            npcAfter: spawnAb.cmp.npcAfter,
+            lines: spawnAb.cmp.deltas.map(describeDelta),
+          },
+          entity:
+            ent === null
+              ? null
+              : { characterId: ent.characterId, sourceNodeId: ent.sourceNodeId, targetId: ent.targetId, behavior: ent.behavior },
+          changedPaths: spawnStore?.changedPaths().map((d) => d.path) ?? [],
+        };
+      },
+      select: (id: string | null) => {
+        selectedSpawnNode = id;
+        refreshSpawnPanel();
+      },
+      edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
+      undo: () => undoSpawnEdit(),
+      save: () => saveSpawnEdits(),
+      rerun: () => restartPlay(),
+      focusSource: () => focusSourceNode(),
+      /** 选中第一个 NPC（等价于在画面里点它） */
+      pickFirstNpc: () => {
+        const e = bridge.entities.find((x) => x.kind === 'npc');
+        if (e === undefined) return null;
+        bridge.select(e.id, e.generation);
+        if (e.sourceNodeId !== null) selectedSpawnNode = e.sourceNodeId;
+        switchInspectorTab('spawn');
+        refreshSpawnPanel();
+        return { id: e.id, generation: e.generation, sourceNodeId: e.sourceNodeId, characterId: e.characterId };
+      },
+      /** 面板可见文本（验证 DOM 真的渲染出来了，而不只是内存状态对） */
+      panelText: () => document.getElementById('spawn-host')?.innerText ?? '',
+    };
+  }
+
   for (const btn of document.querySelectorAll<HTMLButtonElement>('#gizmo-bar .gz-mode')) {
     btn.addEventListener('click', () =>
       setGizmoModeUI(btn.dataset.mode as 'translate' | 'rotate' | 'scale'),
@@ -879,7 +1188,7 @@ async function boot(): Promise<void> {
     if (k === 'escape') {
       if (playCtl.isPlaying) {
         e.preventDefault();
-        playCtl.stop();
+        stopPlay();
       }
       return;
     }

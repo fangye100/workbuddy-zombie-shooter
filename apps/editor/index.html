@@ -1043,6 +1043,56 @@
   }
   .ctx-item:hover { background: var(--ink); color: var(--zombie); }
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
+  /* ---- 刷怪点编辑面板（WU-5）---- */
+  .sp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: var(--panel);
+    border-bottom: 3px solid var(--ink);
+  }
+  .sp-head b { font-size: 13px; color: var(--bone); }
+  .sp-tag { font-size: 10px; font-weight: 700; color: var(--zombie); }
+  .sp-tag.dirty { color: var(--warn); }
+  .sp-path { padding: 6px 14px; font-size: 10px; color: var(--text-dim); word-break: break-all; }
+  .sp-sec { padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .sp-lab { font-size: 10px; font-weight: 700; color: var(--text-dim); margin: 4px 0 6px; }
+  .sp-body, .sp-kv { font-size: 11px; }
+  .sp-kv { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .sp-kv span { color: var(--text-dim); flex: 0 0 auto; }
+  .sp-kv b { color: var(--paper); font-weight: 400; text-align: right; word-break: break-all; }
+  .sp-dim { color: var(--text-dim); font-size: 10px; line-height: 1.7; }
+  .sp-sel {
+    width: 100%; margin-bottom: 8px; padding: 5px 6px;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px;
+  }
+  .sp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
+  .sp-row label { font-size: 11px; color: var(--paper); }
+  .sp-num {
+    width: 84px; padding: 4px 6px; text-align: right;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px;
+  }
+  .sp-num:disabled { opacity: .4; }
+  .sp-btns { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .sp-btn {
+    flex: 1 1 auto; padding: 6px 8px;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  .sp-btn:hover:not(:disabled) { background: var(--zombie); color: var(--ink); }
+  .sp-btn:active:not(:disabled) { transform: translate(1px, 1px); }
+  .sp-btn.accent:not(:disabled) { background: var(--warn); color: var(--ink); }
+  .sp-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .sp-msg { min-height: 15px; margin-top: 6px; font-size: 10px; line-height: 1.6; color: var(--text-dim); }
+  .sp-msg.warn { color: var(--blood); }
+  .sp-msg.ok { color: var(--zombie); }
+  .sp-absum { font-size: 10px; color: var(--zombie); margin-bottom: 4px; }
+  .sp-ab { font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.6; color: var(--text-dim); }
+  .sp-abline { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.06); word-break: break-all; }
+  .sp-abline.changed { color: var(--warn); }
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
@@ -1083,6 +1133,7 @@
     <button class="insp-tab" data-tab="scene" data-page-node-id="kSTHppUnagGT9wPcv3Fvqq">场景/光照</button>
     <button class="insp-tab" data-tab="render" data-page-node-id="FNRHc3KHABmmCW6EyqYmcG">渲染</button>
     <button class="insp-tab" data-tab="asset" data-page-node-id="DYDFEWq3rIBYTVFY3Ouqcv">资产</button>
+    <button class="insp-tab" data-tab="spawn" data-page-node-id="SpAwNTab00000000001" title="刷怪点参数编辑（WU-5）">刷怪点</button>
   </div>
   <div class="insp-panes" data-page-node-id="4kRrPUbWn9BQAA1DXM2GLf">
     <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK"></div>
@@ -1091,6 +1142,10 @@
     <div class="insp-pane" data-pane="asset" data-page-node-id="B5JRBF3dqcB8ZX37Ik3zRW">
       <div class="ai-host" data-page-node-id="f8HHSTMum6lFrQGZgU5eES"></div>
       <div id="asset-preview-host" data-page-node-id="5tt6WD9ZUHK6yCr0naAgDd"></div>
+    </div>
+    <!-- 刷怪点编辑（WU-5）：内部 DOM 由 services/spawn-panel.ts 全量构建 -->
+    <div class="insp-pane" data-pane="spawn" data-page-node-id="SpAwNPane0000000001">
+      <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
     </div>
   </div>
 </aside>
