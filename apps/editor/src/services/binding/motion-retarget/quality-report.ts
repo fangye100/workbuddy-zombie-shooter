@@ -73,7 +73,8 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   // 累计切向滑动 + 穿透 + 摆动净空
   // 滑动口径（docs/16 §8 A08）：**相邻样本**切向距离总和 Σ|tangential(P(t+1)−P(t))|，
   // 只在段内累加——静态偏差不重复计入（那归 MRQ_ANCHOR），且不随帧率放大。
-  let cumulativeSlide = 0;
+  // 滑动按**骨**聚合：同一块脚上 ball+heel 两个标记共享同一物理滑动，只计一次
+  const slideByBone = new Map<string, number>();
   let maxPenetration = 0;
   let minSwingClearance = Infinity;
   let maxRootCorrection = 0;
@@ -103,7 +104,8 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
           if (next.t <= seg.endS + 1e-9) {
             const w2 = markerWorldAt(rig, next, id);
             if (w2 !== null) {
-              cumulativeSlide += len3(tangential(sub3(w2, world), plane.normal));
+              const d = len3(tangential(sub3(w2, world), plane.normal));
+              slideByBone.set(mk.bone, (slideByBone.get(mk.bone) ?? 0) + d);
             }
           }
         }
@@ -114,6 +116,7 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
     }
   }
   if (!Number.isFinite(minSwingClearance)) minSwingClearance = Infinity;
+  const cumulativeSlide = [...slideByBone.values()].reduce((a, b) => a + b, 0);
 
   const metrics: RetargetMetrics = {
     maxAnchorDeviationM: maxAnchor,

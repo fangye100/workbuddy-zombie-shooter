@@ -64,7 +64,14 @@ function worldOfBone(
   } else {
     const b = output.bones[name]!;
     if (b.parent === null || output.bones[b.parent] === undefined) {
-      result = { pos: b.restLocalT, quat: b.restLocalR };
+      const rp = output.rootParentWorld ?? null;
+      if (rp !== null) {
+        const q = quatMul(rp.quat, b.restLocalR);
+        const off = rotate(rp.quat, [b.restLocalT[0] * rp.uniformScale, b.restLocalT[1] * rp.uniformScale, b.restLocalT[2] * rp.uniformScale]);
+        result = { pos: [rp.pos[0] + off[0], rp.pos[1] + off[1], rp.pos[2] + off[2]], quat: q };
+      } else {
+        result = { pos: b.restLocalT, quat: b.restLocalR };
+      }
     } else {
       const pw = worldOfBone(b.parent, solved, output, cache);
       const q = quatMul(pw.quat, b.restLocalR);
