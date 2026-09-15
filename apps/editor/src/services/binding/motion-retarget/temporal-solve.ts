@@ -25,33 +25,55 @@ export function smoothRootCorrections(
   opts: TemporalOptions = { transitionS: 0.25 },
 ): TemporalResult {
   const frames = times.length;
-  const radius = Math.max(1, Math.round((opts.transitionS / 2) / medianDt(times)));
-  const out = new Float64Array(frames * 3);
-  for (let f = 0; f < frames; f++) {
-    const lo = Math.max(0, f - radius);
-    const hi = Math.min(frames - 1, f + radius);
-    const n = hi - lo + 1;
+  if (!Number.isFinite(opts.transitionS) || opts.transitionS < 0) throw new RangeError('Invalid transition duration');
+  if (frames < 2 || opts.transitionS === 0) {
+    const copy = corrections.slice();
+    return { corrections: copy, maxJumpMps: measureRootCorrectionSpeed(times, copy) };
+  }
+  // Integrate the piecewise-linear signal over an actual seconds window. Frame-count
+  // averages overweight dense samples and change the result for irregular sampling.
+  const prefix = new Float64Array(frames * 3);
+  for (let f = 1; f < frames; f++) {
+    const dt = times[f]! - times[f - 1]!;
     for (let c = 0; c < 3; c++) {
-      let sum = 0;
-      for (let k = lo; k <= hi; k++) sum += corrections[k * 3 + c]!;
-      out[f * 3 + c] = sum / n;
+      prefix[f * 3 + c] = prefix[(f - 1) * 3 + c]! + dt * (corrections[(f - 1) * 3 + c]! + corrections[f * 3 + c]!) / 2;
     }
   }
+  const integralAt = (t: number, c: number): number => {
+    let lo = 0, hi = frames - 1;
+    while (lo + 1 < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (times[mid]! <= t) lo = mid; else hi = mid;
+    }
+    const dt = t - times[lo]!;
+    const span = times[hi]! - times[lo]!;
+    const a = corrections[lo * 3 + c]!;
+    const slope = (corrections[hi * 3 + c]! - a) / span;
+    return prefix[lo * 3 + c]! + a * dt + slope * dt * dt / 2;
+  };
+  const out = new Float64Array(frames * 3);
+  for (let f = 0; f < frames; f++) {
+    const lo = Math.max(times[0]!, times[f]! - opts.transitionS / 2);
+    const hi = Math.min(times[frames - 1]!, times[f]! + opts.transitionS / 2);
+    for (let c = 0; c < 3; c++) {
+      out[f * 3 + c] = (integralAt(hi, c) - integralAt(lo, c)) / (hi - lo);
+    }
+  }
+  return { corrections: out, maxJumpMps: measureRootCorrectionSpeed(times, out) };
+}
+
+/** Maximum added root speed, measured on the final correction signal, in m/s. */
+export function measureRootCorrectionSpeed(times: Float64Array, corrections: Float64Array): number {
   // 修正信号的速度跳变（相邻帧差的模 / dt）
   let maxJump = 0;
-  for (let f = 1; f < frames; f++) {
+  for (let f = 1; f < times.length; f++) {
     const dt = Math.max(1e-9, times[f]! - times[f - 1]!);
     const d = Math.hypot(
-      out[f * 3]! - out[(f - 1) * 3]!,
-      out[f * 3 + 1]! - out[(f - 1) * 3 + 1]!,
-      out[f * 3 + 2]! - out[(f - 1) * 3 + 2]!,
+      corrections[f * 3]! - corrections[(f - 1) * 3]!,
+      corrections[f * 3 + 1]! - corrections[(f - 1) * 3 + 1]!,
+      corrections[f * 3 + 2]! - corrections[(f - 1) * 3 + 2]!,
     );
     maxJump = Math.max(maxJump, d / dt);
   }
-  return { corrections: out, maxJumpMps: maxJump };
-}
-
-function medianDt(times: Float64Array): number {
-  if (times.length < 2) return 1 / 30;
-  return times[1]! - times[0]!;
+  return maxJump;
 }

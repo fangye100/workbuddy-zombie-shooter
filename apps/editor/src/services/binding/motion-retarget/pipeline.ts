@@ -10,6 +10,7 @@ import {
   computeDependencyFingerprint,
   diagnoseSourceMotion,
   diagnoseRetargetRig,
+  diagnoseRetargetEnvironment,
   hasErrors,
   type Quat,
   type RetargetOutcome,
@@ -21,6 +22,7 @@ import {
 } from './contracts';
 import {
   calibrationFingerprint,
+  RETARGET_ALGORITHM_VERSION,
   validateRetargetRecipe,
   validateRetargetCalibration,
   type RetargetRecipe,
@@ -32,7 +34,7 @@ import { detectContactSegments } from './contact-segments';
 import { markerWorldPositions } from './source-motion';
 import type { RotationBaseline } from './rig-calibration';
 import { solvePose } from './pose-solver';
-import { smoothRootCorrections } from './temporal-solve';
+import { smoothRootCorrections, measureRootCorrectionSpeed } from './temporal-solve';
 import { buildQualityReport } from './quality-report';
 
 export interface RetargetMotionInput {
@@ -63,7 +65,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
       baseline: { mode: baseline.mode, pre: baseline.pre, post: baseline.post },
     },
     environment,
-    algorithmVersion: recipe.algorithmVersion,
+    algorithmVersion: RETARGET_ALGORITHM_VERSION,
   });
 
   const cancelled = (): boolean =>
@@ -104,6 +106,27 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     const calDiags = validateRetargetCalibration(input.sourceCalibration);
     diagnostics.push(...calDiags);
     if (hasErrors(calDiags)) return failed(diagnostics, dep);
+    const cal = input.sourceCalibration;
+    if (cal.side !== 'source' || cal.rotationBaseline !== baseline.mode ||
+        (cal.unitScale !== null && Math.abs(cal.unitScale - source.unitScaleSource) >
+          1e-9 * Math.max(cal.unitScale, source.unitScaleSource)) ||
+        (cal.upAxis !== null && cal.upAxis !== source.upAxisSource)) {
+      diagnostics.push({ severity: 'error', code: 'MRC_SOURCE_CALIBRATION_MISMATCH',
+        message: '源标定的身份、单位、轴向或姿态基准与实际源采样不一致；请按该标定重新采样',
+      });
+      return failed(diagnostics, dep);
+    }
+  }
+  const envDiags = diagnoseRetargetEnvironment(environment, targetRig.supportPlane, input.sourceCalibration?.supportPlane);
+  diagnostics.push(...envDiags);
+  if (hasErrors(envDiags)) return failed(diagnostics, dep);
+  const sourcePlaneTrusted = input.sourceCalibration?.supportPlane.confidence !== 0;
+  if (!sourcePlaneTrusted) {
+    diagnostics.push({
+      severity: 'warning', code: 'MRC_SOURCE_PLANE_UNTRUSTED',
+      message: '源支撑平面置信度为零：保留自由运动预览，不构造世界接触锚点',
+    });
+    coverage.push('contact-plane-untrusted');
   }
   // R13：配方显式绑定了标定指纹却没传标定 → 拒绝（不允许首帧估计静默顶替持久标定）
   if (recipe.sourceCalibrationFingerprint !== '' && input.sourceCalibration === null) {
@@ -165,7 +188,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   // ── 3. 接触检测 + 锚点 ──
   // 足部标记按「挂在 3 骨腿链上的标记」语义筛选（不认骨名字符串）
   const legChainBones = new Set(
-    targetRig.chains.filter((ch) => ch.joints.length === 3).flatMap((ch) => [...ch.joints]),
+    targetRig.chains.filter((ch) => ch.joints.length === 3).map((ch) => ch.joints[2]!),
   );
   const footMarkers = Object.values(targetRig.markers).filter((mk) => legChainBones.has(mk.bone));
   if (footMarkers.length === 0) {
@@ -190,7 +213,15 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     coverage.push('contact-uncalibrated');
   } else {
     markerTrajs = footMarkers
-      .filter((mk) => srcMarkers.has(markerKeyOf(mk)))
+      .filter((mk) => {
+        if (!srcMarkers.has(markerKeyOf(mk))) return false;
+        if (source.worldPositions[mk.bone] !== undefined && source.worldRotations[mk.bone] !== undefined) return true;
+        diagnostics.push({
+          severity: 'warning', code: 'MRC_MARKER_TRAJECTORY_MISSING', constraint: mk.id,
+          message: `源标记 ${mk.id} 缺少骨骼世界轨迹，无法构造接触；不以全零轨迹代替`,
+        });
+        return false;
+      })
       .map((mk) => ({
         markerId: mk.id,
         chainId: chainIdOfBone(targetRig, mk.bone),
@@ -210,12 +241,24 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   const anchors = new Map<string, [number, number, number]>();
   const segmentsWithTimes: ContactSegment[] = detected.segments;
   for (const s of segmentsWithTimes) {
+    // Phase detections are retained as evidence only. Unsupported modes must
+    // not acquire a world anchor or be sent to the current support solver.
+    if (!source.canWorldLock || !sourcePlaneTrusted || s.mode !== 'support') continue;
     const traj = markerTrajs.find((m) => m.markerId === s.marker);
     if (traj === undefined) continue;
-    const [fs, fe] = frameSpan(source.times, s.startS, s.endS);
+    const span = frameSpan(source.times, s.startS, s.endS);
+    if (span === null) continue;
+    const [fs, fe] = span;
     anchors.set(s.id, contactAnchor(traj.positions, fs, fe, mapping, environment.targetPlane));
   }
-  const segments = assignContactAnchors(segmentsWithTimes, anchors);
+  const segments = assignContactAnchors(segmentsWithTimes, anchors)
+    .filter((sg) => sg.mode === 'support' && sg.anchor !== null);
+  if (detected.segments.some((sg) => sg.mode !== 'support')) {
+    diagnostics.push({
+      severity: 'warning', code: 'MRC_CONTACT_MODE_UNSUPPORTED',
+      message: '当前足部求解仅支持静止支撑；slide/roll 任务保留标注但按自由运动预览，不能视为已兑现',
+    });
+  }
   // coverage 语义（第三轮复审 P1）：world-lock 只在**真有带锚点的支撑段**时声明；
   // 未标定/无段时是 phase-only 或 contact-uncalibrated，不再同时给两个矛盾标签
   if (segments.some((sg) => sg.mode === 'support' && sg.anchor !== null)) {
@@ -226,7 +269,8 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   // 显式标注未兑现（如右脚 support 标注被无标记忽略）→ 能力缺口，必须显式报告
   for (const ann of recipe.annotations) {
     const honored = segments.some(
-      (sg) => sg.marker === ann.marker && sg.mode === ann.mode && sg.origin === 'annotated',
+      (sg) => sg.marker === ann.marker && sg.mode === ann.mode && sg.origin === 'annotated' &&
+        sg.startS === ann.startS && sg.endS === ann.endS && sg.anchor !== null,
     );
     if (!honored) {
       diagnostics.push({
@@ -286,16 +330,24 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   if (cancelled()) return failed(diagnostics, dep);
 
   // ── 6. 质量与状态 ──
+  // The second solve can change the smoothed candidate again. Measure the
+  // delivered trajectory against the original candidate, not an intermediate.
+  const finalCorrections = new Float64Array(root.positions.length);
+  for (let f = 0; f < second.frames.length; f++) {
+    for (let axis = 0; axis < 3; axis++) {
+      finalCorrections[f * 3 + axis] = second.frames[f]!.rootPos[axis]! - root.positions[f * 3 + axis]!;
+    }
+  }
   const quality = buildQualityReport({
     rig: targetRig,
     frames: second.frames,
     segments,
     anchorDeviations: second.anchorDeviations,
     reachResidualsM: second.reachResidualsM,
-    rootCorrections: smoothed.corrections,
-    switchJumpMps: smoothed.maxJumpMps,
+    rootCorrections: finalCorrections,
+    switchJumpMps: measureRootCorrectionSpeed(source.times, finalCorrections),
     iterations: first.iterations + second.iterations,
-    converged: first.converged && second.converged,
+    converged: second.converged,
     durationMs: Date.now() - t0,
     tolerances: recipe.tolerances,
   });
@@ -312,18 +364,21 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   let status: 'complete' | 'partial' | 'failed' = quality.status === 'failed' ? 'failed' : quality.status;
   const capabilityGap =
     coverage.includes('contact-uncalibrated') ||
-    diagnostics.some((d) => d.code === 'MRC_ANNOT_UNHONORED' && d.severity === 'warning');
+    !sourcePlaneTrusted ||
+    !source.canWorldLock ||
+    diagnostics.some((d) => ['MRC_ANNOT_UNHONORED', 'MRC_MARKER_TRAJECTORY_MISSING',
+      'MRC_CONTACT_MODE_UNSUPPORTED'].includes(d.code) && d.severity === 'warning');
   if (capabilityGap && status === 'complete') {
     status = 'partial';
     diagnostics.push({
       severity: 'warning',
       code: 'MRC_CAPABILITY_GAP',
-      message: '存在接触能力缺口（未标定源足底标记或标注未兑现）：结果按自由运动交付，标记为 partial',
+      message: '存在接触能力缺口（轨迹不可信、标记缺失或标注未兑现）：保留已支持任务的结果，标记为 partial',
     });
   }
   return {
     status,
-    clip: {
+    clip: status === 'failed' ? null : {
       times: source.times.slice(),
       frames: second.frames,
       skeletonFingerprint: targetRig.fingerprint,
@@ -375,14 +430,15 @@ function chainIdOfBone(rig: RetargetRig, bone: string): string | null {
   return null;
 }
 
-function frameSpan(times: Float64Array, startS: number, endS: number): [number, number] {
-  let s = 0;
-  let e = times.length - 1;
+function frameSpan(times: Float64Array, startS: number, endS: number): [number, number] | null {
+  let s = -1;
+  let e = -1;
   for (let f = 0; f < times.length; f++) {
-    if (Math.abs(times[f]! - startS) < Math.abs(times[s]! - startS)) s = f;
-    if (Math.abs(times[f]! - endS) < Math.abs(times[e]! - endS)) e = f;
+    if (times[f]! < startS || times[f]! > endS) continue;
+    if (s < 0) s = f;
+    e = f;
   }
-  return [Math.min(s, e), Math.max(s, e)];
+  return s < 0 ? null : [s, e];
 }
 
 /** baseline_local(b) = pre · R_src_local(b) · post（逐帧，按骨名索引） */

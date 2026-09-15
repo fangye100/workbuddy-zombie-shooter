@@ -61,7 +61,8 @@ export function detectContactSegments(input: DetectContactsInput): DetectContact
     });
   }
 
-  // 标注按 marker 分组；存在标注的 marker 不再自动检测（标注覆盖，不叠加）
+  // A declaration suppresses automatic detection for that marker even when its
+  // interval is invalid: do not replace a rejected request with an invented one.
   const annotated = new Map<string, ContactAnnotation[]>();
   for (const a of annotations) {
     if (!markers.some((m) => m.markerId === a.marker)) {
@@ -74,8 +75,18 @@ export function detectContactSegments(input: DetectContactsInput): DetectContact
       continue;
     }
     const list = annotated.get(a.marker) ?? [];
-    list.push(a);
     annotated.set(a.marker, list);
+    const inClip = Number.isFinite(a.startS) && Number.isFinite(a.endS) &&
+      a.endS > a.startS && a.startS >= times[0]! && a.endS <= times[times.length - 1]!;
+    const sampled = inClip && times.some((t) => t >= a.startS && t <= a.endS);
+    if (!sampled) {
+      diagnostics.push({
+        severity: 'warning', code: 'MRC_ANNOT_TIME_UNSUPPORTED', constraint: a.marker,
+        message: `标注 ${a.marker} [${a.startS}s..${a.endS}s] 不在片段采样范围内，无法兑现；未裁剪或移动到相邻帧`,
+      });
+      continue;
+    }
+    list.push(a);
   }
 
   for (const m of markers) {
@@ -83,7 +94,7 @@ export function detectContactSegments(input: DetectContactsInput): DetectContact
     if (notes !== undefined) {
       for (const a of notes) {
         segments.push({
-          id: `${a.marker}@${a.startS.toFixed(3)}s`,
+          id: `${a.marker}@${a.startS}s:${a.endS}s:${a.mode}`,
           marker: a.marker,
           chainId: m.chainId,
           startS: a.startS,
@@ -193,7 +204,7 @@ function pushSegment(
   const heightTerm = maxHeight <= 0 ? 1 : clamp01(1 - maxHeight / heightExitM);
   const conf = clamp01(0.5 + 0.5 * speedTerm * (0.5 + 0.5 * heightTerm));
   out.push({
-    id: `${m.markerId}@${startS.toFixed(3)}s`,
+    id: `${m.markerId}@${startS}s:${endS}s:support`,
     marker: m.markerId,
     chainId: m.chainId,
     startS,
@@ -210,4 +221,3 @@ function pushSegment(
 function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x));
 }
-

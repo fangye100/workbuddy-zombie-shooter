@@ -81,6 +81,87 @@ function runSolve(rig: RetargetRig, sm: SourceMotion, segments: ContactSegment[]
 describe('solvePose · A05 双支撑', () => {
   const { rig } = buildTargetRig({});
 
+  it.each([0.25, 1, 2])('straight and proportion-adjusted legs preserve independent FK at scale %s', (scale) => {
+    for (const fractions of [[0.42, 0.45], [0.2, 0.67]]) {
+      const target = structuredClone(rig);
+      for (const bone of Object.values(target.bones)) bone.restLocalT = bone.restLocalT.map(v => v * scale) as [number, number, number];
+      for (const marker of Object.values(target.markers)) marker.offset = marker.offset.map(v => v * scale) as [number, number, number];
+      for (const side of ['Left', 'Right']) {
+        target.bones[`${side}Leg`]!.restLocalT = [0, -fractions[0]! * scale, 0];
+        target.bones[`${side}Foot`]!.restLocalT = [0, -fractions[1]! * scale, 0];
+      }
+      target.pelvisHeightM *= scale;
+      for (const height of [1, 1 - 1e-9]) {
+        const result = runSolve(target, fakeMotion(9), [
+          seg('LeftFoot.ball', 'LeftLeg', [0.1 * scale, 0, 0.09 * scale], 0, 1),
+          seg('RightFoot.ball', 'RightLeg', [-0.1 * scale, 0, 0.09 * scale], 0, 1),
+        ], height * scale);
+        for (const frame of result.frames) for (const side of ['Left', 'Right']) {
+          for (const [parent, child] of [[`${side}UpLeg`, `${side}Leg`], [`${side}Leg`, `${side}Foot`]]) {
+            const expectedOffset = rotateVec3(frame.boneQuat[parent!]!, target.bones[child!]!.restLocalT);
+            const actualOffset = frame.bonePos[child!]!.map((v, i) => v - frame.bonePos[parent!]![i]!);
+            expect(Math.hypot(...actualOffset.map((v, i) => v - expectedOffset[i]!))).toBeLessThan(1e-10);
+          }
+        }
+        for (const dev of result.anchorDeviations) expect(dev.maxM).toBeLessThan(1e-9);
+      }
+    }
+  });
+
+  it('contact correction retains source axial twist when endpoint geometry is unchanged', () => {
+    const half = Math.PI / 12;
+    const twist: [number, number, number, number] = [0, Math.sin(half), 0, Math.cos(half)];
+    const result = solvePose({
+      targetRig: rig, sourceMotion: fakeMotion(1),
+      baselineLocals: [{ LeftUpLeg: twist, LeftLeg: [0, -twist[1], 0, twist[3]] }],
+      rootPositions: new Float64Array([0, 1, 0]), rootQuats: new Float64Array([0, 0, 0, 1]),
+      segments: [seg('LeftFoot.ball', 'LeftLeg', LEFT_ANCHOR, 0, 1)], tolerances: defaultRetargetTolerances(),
+    });
+    expect(result.anchorDeviations[0]!.maxM).toBeLessThan(1e-9);
+    result.frames[0]!.boneQuat.LeftUpLeg!.forEach((v, i) => expect(v).toBeCloseTo(twist[i]!, 12));
+  });
+
+  it.each([false, true])('retains unmapped reference frames and animated toe locals with support=%s', (contact) => {
+    const target = structuredClone(rig);
+    const half = Math.PI / 12;
+    const authoredToe: [number, number, number, number] = [Math.sin(half), 0, 0, Math.cos(half)];
+    const leafRest: [number, number, number, number] = [0, 0, Math.sin(half), Math.cos(half)];
+    target.bones.LeftHandTip!.restLocalR = leafRest;
+    const result = solvePose({
+      targetRig: target, sourceMotion: fakeMotion(1), baselineLocals: [{ LeftToeBase: authoredToe }],
+      rootPositions: new Float64Array([0, 1, 0]), rootQuats: new Float64Array([0, 0, 0, 1]),
+      segments: contact ? [seg('LeftFoot.ball', 'LeftLeg', LEFT_ANCHOR, 0, 1)] : [],
+      tolerances: defaultRetargetTolerances(),
+    });
+    const frame = result.frames[0]!;
+    frame.boneQuat.LeftHandTip!.forEach((v, i) => expect(v).toBeCloseTo(leafRest[i]!, 12));
+    frame.boneQuat.LeftToeBase!.forEach((v, i) => expect(v).toBeCloseTo(authoredToe[i]!, 12));
+    const offset = rotateVec3(authoredToe, target.bones.LeftToeTip!.restLocalT);
+    const tipOffset = frame.bonePos.LeftToeTip!.map((v, i) => v - frame.bonePos.LeftToeBase![i]!);
+    expect(Math.hypot(...tipOffset.map((v, i) => v - offset[i]!))).toBeLessThan(1e-12);
+  });
+
+  it('rebuilds thigh and shin side branches from corrected parents without overwriting IK joints', () => {
+    const target = { ...rig, bones: { ...rig.bones }, order: [...rig.order] };
+    for (const [name, parent] of [['ThighSide', 'LeftUpLeg'], ['ShinSide', 'LeftLeg'], ['SideLeaf', 'ThighSide']]) {
+      target.bones[name!] = { name: name!, parent: parent!, restLocalT: [0, -0.2, 0], restLocalR: [0, 0, 0, 1] };
+      const index = target.order.indexOf(parent!);
+      target.order.splice(index + 1, 0, name!);
+    }
+    const res = runSolve(target, fakeMotion(3), [seg('LeftFoot.ball', 'LeftLeg', LEFT_ANCHOR, 0, 1)], 0.95);
+    for (const frame of res.frames) {
+      for (const name of ['ThighSide', 'ShinSide', 'SideLeaf']) {
+        const bone = target.bones[name]!;
+        const parent = bone.parent!;
+        const offset = rotateVec3(frame.boneQuat[parent]!, bone.restLocalT);
+        const actual = frame.bonePos[name]!.map((v, i) => v - frame.bonePos[parent]![i]!);
+        expect(Math.hypot(...actual.map((v, i) => v - offset[i]!))).toBeLessThan(1e-12);
+        frame.boneQuat[name]!.forEach((v, i) => expect(v).toBeCloseTo(frame.boneQuat[parent]![i]!, 12));
+      }
+    }
+    expect(res.anchorDeviations[0]!.maxM).toBeLessThan(1e-9);
+  });
+
   it('可达双支撑：标记误差 ≤1e-4、骨长误差 ≤1e-6、根修正 ≈0', () => {
     const sm = fakeMotion(3);
     const res = runSolve(rig, sm, [
@@ -187,6 +268,22 @@ describe('solvePose · A05 双支撑', () => {
 
 describe('solvePose · A10 不可达冲突', () => {
   const { rig } = buildTargetRig({});
+
+  it('shared pelvis moves away from an inner reach violation on unequal legs', () => {
+    const target = structuredClone(rig);
+    for (const side of ['Left', 'Right']) {
+      target.bones[`${side}Leg`]!.restLocalT = [0, -0.8, 0];
+      target.bones[`${side}Foot`]!.restLocalT = [0, -0.2, 0];
+    }
+    const result = runSolve(target, fakeMotion(2), [
+      seg('LeftFoot.ball', 'LeftLeg', LEFT_ANCHOR, 0, 1),
+      seg('RightFoot.ball', 'RightLeg', RIGHT_ANCHOR, 0, 1),
+    ], 0.33);
+    expect(result.rootCorrections[1]).toBeCloseTo(0.4, 8);
+    expect(result.converged).toBe(true);
+    expect(result.reachResidualsM.inner).toBeLessThan(1e-9);
+    for (const dev of result.anchorDeviations) expect(dev.maxM).toBeLessThan(1e-9);
+  });
 
   it('锚点相距 3m（互不可达）：逐约束残差定位到帧、无 NaN、不静默拉骨', () => {
     const sm = fakeMotion(2);

@@ -170,7 +170,7 @@ describe('validateRetargetRecipe', () => {
     const det = defaultContactDetection();
     expect(det.speedExit).toBeGreaterThan(det.speedEnter);
     expect(det.minDurationS).toBeGreaterThan(0);
-    expect(RETARGET_ALGORITHM_VERSION).toBe('mr-foot-1');
+    expect(RETARGET_ALGORITHM_VERSION).toBe('mr-foot-2');
   });
 });
 

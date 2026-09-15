@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   diagnoseSourceMotion,
   diagnoseRetargetRig,
+  diagnoseRetargetEnvironment,
   computeDependencyFingerprint,
   hasErrors,
   type RetargetRig,
@@ -78,6 +79,18 @@ function walkMotion(overrides: Partial<SourceMotion> = {}): SourceMotion {
 // ───────────────────── SourceMotion 形状/时刻/单位 ─────────────────────
 
 describe('diagnoseSourceMotion', () => {
+  it('rejects missing root tracks instead of synthesizing zero positions or rotations', () => {
+    for (const key of ['worldPositions', 'worldRotations', 'localRotations'] as const) {
+      const motion = walkMotion();
+      const changed = { ...motion, [key]: { ...motion[key], Hips: undefined } } as unknown as SourceMotion;
+      expect(diagnoseSourceMotion(changed).map((d) => d.code)).toContain('MRC_ROOT_TRACK_MISSING');
+    }
+  });
+
+  it('rejects nonfinite unit and rig dimensions before spatial mapping', () => {
+    expect(hasErrors(diagnoseSourceMotion(walkMotion({ unitScaleSource: Infinity })))).toBe(true);
+    expect(hasErrors(diagnoseRetargetRig(twoBoneRig({ pelvisHeightM: Infinity })))).toBe(true);
+  });
   it('合法采样 → 零 error', () => {
     expect(hasErrors(diagnoseSourceMotion(walkMotion()))).toBe(false);
   });
@@ -124,6 +137,11 @@ describe('diagnoseSourceMotion', () => {
 // ───────────────────── RetargetRig 形状 ─────────────────────
 
 describe('diagnoseRetargetRig', () => {
+  it('rejects a zero-length two-bone segment before the analytical solver', () => {
+    const rig = twoBoneRig();
+    const bad = { ...rig, bones: { ...rig.bones, LeftLeg: { ...rig.bones.LeftLeg!, restLocalT: [0, 0, 0] as [number, number, number] } } };
+    expect(diagnoseRetargetRig(bad).map((d) => d.code)).toContain('MRC_CHAIN_LENGTH_BAD');
+  });
   it('合法骨架 → 零 error', () => {
     expect(hasErrors(diagnoseRetargetRig(twoBoneRig()))).toBe(false);
   });
@@ -154,6 +172,19 @@ describe('diagnoseRetargetRig', () => {
   it('h_t ≤ 0 或 unitScale ≤ 0 → error（S 映射的分母/因子）', () => {
     expect(hasErrors(diagnoseRetargetRig(twoBoneRig({ pelvisHeightM: 0 })))).toBe(true);
     expect(hasErrors(diagnoseRetargetRig(twoBoneRig({ unitScale: 0 })))).toBe(true);
+  });
+});
+
+describe('canonical environment agreement', () => {
+  const plane = { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number] };
+  const env: RetargetEnvironment = { sourcePlane: plane, targetPlane: plane, origin: 'recipe-default', sceneNodeId: null };
+  it('allows different origins on the same horizontal plane', () => {
+    expect(diagnoseRetargetEnvironment({ ...env, targetPlane: { ...plane, origin: [10, 0, 20] } }, plane, plane)).toEqual([]);
+  });
+  it('rejects two ground elevations or an unnormalized/non-Y normal', () => {
+    expect(hasErrors(diagnoseRetargetEnvironment({ ...env, targetPlane: { ...plane, origin: [0, 1, 0] } }, plane))).toBe(true);
+    expect(hasErrors(diagnoseRetargetEnvironment({ ...env, sourcePlane: { ...plane, normal: [0, 2, 0] } }, plane))).toBe(true);
+    expect(hasErrors(diagnoseRetargetEnvironment(env, plane, { ...plane, origin: [0, 2, 0] }))).toBe(true);
   });
 });
 

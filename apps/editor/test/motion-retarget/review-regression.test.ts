@@ -31,7 +31,7 @@ function yawDeg(q: Quat): number {
 
 function makePipelineInput(bvhText: string, targetOverride?: (rig: RetargetRig) => RetargetRig) {
   const bvh = parseBvh(bvhText);
-  const sm = buildSourceMotion(bvh);
+  const sm = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
   const { rig } = buildTargetRig({});
   const target = targetOverride ? targetOverride(rig) : rig;
   const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, target);
@@ -149,7 +149,7 @@ describe('R05 源侧标记', () => {
       sourceCalibration: {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1.0,
         supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
-        unitScale: 1, upAxis: 'y', markers: {}, rotationBaseline: 'direction',
+        unitScale: 0.01, upAxis: 'y', markers: {}, rotationBaseline: 'direction',
       },
     });
     expect(out.diagnostics.some((d) => d.code === 'MRC_CONTACT_UNCALIBRATED')).toBe(true);
@@ -160,7 +160,7 @@ describe('R05 源侧标记', () => {
 
   it('已标定：源检测用源侧标记，与目标标记几何无关（目标踝下 5cm 不改变检测）', () => {
     const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
-    const sm = buildSourceMotion(bvh);
+    const sm = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
     const { rig } = buildTargetRig({});
     const hackedRig: RetargetRig = {
       ...rig,
@@ -183,7 +183,7 @@ describe('R05 源侧标记', () => {
     const cal: RetargetCalibration = {
       schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
       supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
-      unitScale: 1, upAxis: 'y' as const,
+      unitScale: 0.01, upAxis: 'y' as const,
       markers: {
         'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
         'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
@@ -198,7 +198,7 @@ describe('R05 源侧标记', () => {
 
   it('复审 P1：同骨 heel/ball 交换插入顺序 → 输出不变（身份对应，不取第一项）', () => {
     const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
-    const sm = buildSourceMotion(bvh);
+    const sm = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
     const { rig } = buildTargetRig({});
     const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, rig);
     const recipe = createDefaultRecipe(
@@ -215,7 +215,7 @@ describe('R05 源侧标记', () => {
     const mkCal = (swap: boolean) => ({
       schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
       supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
-      unitScale: 1, upAxis: 'y' as const,
+      unitScale: 0.01, upAxis: 'y' as const,
       markers: swap
         ? {
             'LeftFoot.heel': heel('LeftFoot'),
@@ -410,7 +410,7 @@ describe('R12 依赖身份含实际标定', () => {
       const cal: RetargetCalibration = {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: pelvis,
         supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
-        unitScale: 1, upAxis: 'y' as const,
+        unitScale: 0.01, upAxis: 'y' as const,
         markers: {
           'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
           'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
@@ -642,7 +642,7 @@ describe('复审 P1：跳过的并发约束进残差', () => {
 describe('第三轮 P1：接触求解不覆盖目标脚参考旋转', () => {
   it('脚 restLocalR=Z90（几何不变）→ 输出脚世界朝向 = Z90 映射、踝位不漂移', () => {
     const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
-    const sm = buildSourceMotion(bvh);
+    const sm = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
     const { rig } = buildTargetRig({});
     const h = Math.SQRT1_2;
     // 只改脚的参考坐标系：Z90 不动 ToeBase 偏移（沿 Z），标记偏移做反向补偿保几何
@@ -669,7 +669,7 @@ describe('第三轮 P1：接触求解不覆盖目标脚参考旋转', () => {
       sourceCalibration: {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1,
         supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
-        unitScale: 1, upAxis: 'y',
+        unitScale: 0.01, upAxis: 'y',
         markers: {
           'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
           'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
@@ -702,7 +702,7 @@ describe('第三轮 P1：能力缺口计入状态', () => {
       sourceCalibration: {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1,
         supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
-        unitScale: 1, upAxis: 'y',
+        unitScale: 0.01, upAxis: 'y',
         markers: { 'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' } },
         rotationBaseline: 'direction',
       },
@@ -772,7 +772,7 @@ describe('T03 报告探针：模板去 LeftHandTip 的叶子手 Z30', () => {
 describe('T01 报告不变式：几何保持的参考系更换不改变物理结果（自由 vs 接触）', () => {
   it('同一目标（脚 Z90 参考系）自由运动与接触两种路径的脚世界朝向都含 Z90', () => {
     const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
-    const sm = buildSourceMotion(bvh);
+    const sm = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
     const { rig } = buildTargetRig({});
     const h = Math.SQRT1_2;
     const mkHacked = (): RetargetRig => ({
@@ -798,7 +798,7 @@ describe('T01 报告不变式：几何保持的参考系更换不改变物理结
     const cal: RetargetCalibration = {
       schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
       supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
-      unitScale: 1, upAxis: 'y' as const,
+      unitScale: 0.01, upAxis: 'y' as const,
       markers: {
         'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
         'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' as const },

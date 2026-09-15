@@ -8,10 +8,32 @@ import {
   solveTwoBone,
   alignBoneRotation,
   worldToLocalRotation,
+  swingBetweenDirections,
+  rotateVec3,
 } from '../../src/services/binding/motion-retarget/two-bone-solver';
 import { quatMul, quatToMat, type Quat } from '../../src/services/binding/binding-math';
 
 describe('solveTwoBone · 解析几何', () => {
+  it.each([0, -1, NaN, Infinity])('rejects invalid segment length %s before solving', (length) => {
+    for (const [l1, l2] of [[length, 0.4], [0.4, length]]) {
+      expect(() => solveTwoBone({ root: [0, 0, 0], tip: [0, 0, 0], l1: l1!, l2: l2!, poleHint: null, prevKnee: null })).toThrow(RangeError);
+    }
+  });
+  it.each([0.25, 1, 2])('closed reach boundaries retain exact geometry at scale %s', (scale) => {
+    const l1 = 0.42 * scale, l2 = 0.45 * scale;
+    for (const distance of [l1 + l2, Math.abs(l1 - l2)]) {
+      const sol = solveTwoBone({ root: [0, 0, 0], tip: [0, -distance, 0], l1, l2, poleHint: [1, 0, 0], prevKnee: null });
+      expect(sol.status).toBe('exact');
+      expect(sol.residualM).toBe(0);
+      expect(sol.knee[0]).toBe(0);
+      expect(Math.hypot(...sol.knee)).toBeCloseTo(l1, 12);
+      expect(Math.hypot(sol.knee[0], sol.knee[1] + distance, sol.knee[2])).toBeCloseTo(l2, 12);
+    }
+    const folded = solveTwoBone({ root: [0, 0, 0], tip: [0, 0, 0], l1, l2: l1, poleHint: [1, 0, 0], prevKnee: null });
+    expect(folded.status).toBe('exact');
+    expect(folded.reachedTip).toEqual([0, 0, 0]);
+    expect(Math.hypot(...folded.knee)).toBeCloseTo(l1, 12);
+  });
   it('可达目标：|K−A| = l1、|T−K| = l2（骨长严格保持，A05 的 ≤1e-6 在这里是 ≤1e-9）', () => {
     const sol = solveTwoBone({
       root: [0, 0.9, 0],
@@ -70,7 +92,7 @@ describe('solveTwoBone · 解析几何', () => {
     });
     expect(out.status).toBe('clamped-out');
     expect(out.residualM).toBeCloseTo(0.6, 9);
-    // 夹取带 REACH_EPS 内缩（1e-9），断言容差放宽到 1e-8
+    // Clamping reaches the actual boundary, without introducing an artificial bend.
     expect(Math.hypot(out.reachedTip[0], out.reachedTip[1], out.reachedTip[2])).toBeCloseTo(0.9, 8);
   });
 
@@ -91,6 +113,16 @@ describe('solveTwoBone · 解析几何', () => {
 
 describe('旋转分配（A06）', () => {
   const h = Math.SQRT1_2;
+
+  it.each([0, 1e-8, 5e-5, Math.PI - 5e-5, Math.PI])('IK swing preserves direction for angle %s', (angle) => {
+    const from: [number, number, number] = [0, -1, 0];
+    const target: [number, number, number] = [Math.sin(angle), -Math.cos(angle), 0];
+    for (const length of [0.1, 0.42, 2]) {
+      const q = swingBetweenDirections(from, target.map(v => v * length) as [number, number, number]);
+      const result = rotateVec3(q, from);
+      expect(Math.hypot(...result.map((v, i) => v - target[i]!))).toBeLessThan(1e-12);
+    }
+  });
 
   it('worldToLocalRotation：父旋转改变后，parent·local 仍等于期望世界朝向（≤ 数值精度）', () => {
     const desired: Quat = [0, h, 0, h]; // 世界 yaw 90°
