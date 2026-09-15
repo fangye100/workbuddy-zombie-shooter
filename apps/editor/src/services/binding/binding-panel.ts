@@ -205,15 +205,15 @@ export class BindingPanel {
    *  - `meshVerts` = 当前**显示**用的网格（缓存到离屏 canvas；可能是 srcVerts、
    *    反解后的 T-pose 网格、或重姿态成 T/A 的网格）。
    */
-  private srcVerts: Float32Array | null = null;
-  private meshVerts: Float32Array | null = null;
-  private meshIndices: Uint32Array | null = null;
+  private srcVerts: Float32Array<ArrayBuffer> | null = null;
+  private meshVerts: Float32Array<ArrayBuffer> | null = null;
+  private meshIndices: Uint32Array<ArrayBuffer> | null = null;
   private vertexFloats = 15;
   private modelName: string | null = null;
   /** 当前显示的网格是否已是反解后的 T-pose 网格 */
   private unposed = false;
   /** 已应用的 T-pose 网格（apply 后回灌，供「当前」模式展示） */
-  private tposeMesh: Float32Array | null = null;
+  private tposeMesh: Float32Array<ArrayBuffer> | null = null;
 
   /** 关节坐标：local 空间，可拖拽修改 */
   private positions: Record<string, [number, number, number]> = tposeWorldPositions();
@@ -578,7 +578,7 @@ export class BindingPanel {
    * 载入模型。vertices 用引擎的 15-float 布局（pos 在 offset 0..2）。
    * 只取几何做正交投影，不碰材质/贴图 —— 对齐 joint 看剪影与明暗足够。
    */
-  setModel(name: string, vertices: Float32Array, indices: Uint32Array, vertexFloats = 15): void {
+  setModel(name: string, vertices: Float32Array<ArrayBuffer>, indices: Uint32Array<ArrayBuffer>, vertexFloats = 15): void {
     this.modelName = name;
     this.srcVerts = vertices;
     this.meshVerts = vertices;
@@ -1092,7 +1092,7 @@ export class BindingPanel {
    * 反解结果回灌：把 re-gen 出的 T-pose 网格存着（供「T」预览复用），
    * 但**骨骼保持 bind pose 不动** —— 绑定是动词，绑完骨架姿势即定，绝不跳回 T-pose。
    */
-  showTPoseResult(fit: FitResult, verts: Float32Array): void {
+  showTPoseResult(fit: FitResult, verts: Float32Array<ArrayBuffer>): void {
     this.tposeMesh = verts;
     this.unposed = false;
     this.fitCache = fit;
@@ -1902,7 +1902,7 @@ export class BindingPanel {
    *   ① 在当前姿态骨架上算 LBS 权重；② 由它反解出 T-pose 网格。
    * 若误传反解后的网格，① 会按 T 字形算权重 —— A-pose 的手臂权重全错。
    */
-  getMesh(): { vertices: Float32Array; indices: Uint32Array; vertexFloats: number } | null {
+  getMesh(): { vertices: Float32Array<ArrayBuffer>; indices: Uint32Array<ArrayBuffer>; vertexFloats: number } | null {
     if (this.srcVerts === null || this.meshIndices === null) return null;
     return {
       vertices: this.srcVerts,

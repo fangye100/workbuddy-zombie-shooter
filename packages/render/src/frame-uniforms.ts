@@ -119,9 +119,9 @@ export interface PostPackParams {
 
 /** 三个 block 一起装箱时的入参（编辑器每帧调一次就够） */
 export interface FrameUniformInput {
-  lights: Float32Array;
-  toon: Float32Array;
-  post: Float32Array;
+  lights: Float32Array<ArrayBuffer>;
+  toon: Float32Array<ArrayBuffer>;
+  post: Float32Array<ArrayBuffer>;
   /** 传 LabParams 即可（字段超集，结构化兼容） */
   params: LightPackParams & ToonPackParams & PostPackParams;
   /** 秒；点光自动环绕用 */

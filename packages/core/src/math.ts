@@ -7,7 +7,7 @@
  * 0b.8 已删除 `apps/lab/shader-lab` 下的兼容桥，全仓不存在第二份数学实现。
  */
 
-export type Mat4 = Float32Array;
+export type Mat4 = Float32Array<ArrayBuffer>;
 export type Vec3 = readonly [number, number, number];
 
 // ===================== 三维向量（纯函数，全项目共用） =====================

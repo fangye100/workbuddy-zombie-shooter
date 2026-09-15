@@ -59,7 +59,7 @@ export class UniformRing {
   }
 
   /** 返回动态偏移；容量不足时返回 -1（调用方应扩容或分批） */
-  push(data: ArrayBufferView): number {
+  push(data: GPUAllowSharedBufferSource): number {
     const aligned = Math.ceil(data.byteLength / this.alignment) * this.alignment;
     if (this.offset + aligned > this.capacityBytes) return -1;
     const off = this.offset;

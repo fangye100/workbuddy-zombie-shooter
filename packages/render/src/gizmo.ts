@@ -22,8 +22,8 @@ export interface GizmoHandleGPU {
   mode: GizmoMode;
   /** 0/1/2 = 对应轴；-1 = 中心（整体移动 / 整体缩放） */
   axis: 0 | 1 | 2 | -1;
-  positions: Float32Array;
-  indices: Uint32Array;
+  positions: Float32Array<ArrayBuffer>;
+  indices: Uint32Array<ArrayBuffer>;
   /** 0..1 sRGB */
   color: [number, number, number];
 }
@@ -190,7 +190,7 @@ function boxAt(axis: 0 | 1 | 2, atEnd: boolean): Raw {
   return r;
 }
 
-function toGPU(raw: Raw): { positions: Float32Array; indices: Uint32Array } {
+function toGPU(raw: Raw): { positions: Float32Array<ArrayBuffer>; indices: Uint32Array<ArrayBuffer> } {
   return { positions: new Float32Array(raw.p), indices: new Uint32Array(raw.idx) };
 }
 

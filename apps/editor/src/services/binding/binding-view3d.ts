@@ -123,8 +123,8 @@ export class BindingView3D {
   private readonly transformData = new Float32Array(SLOT_FLOATS);
 
   // ---- 网格 ----
-  private verts: Float32Array | null = null;
-  private indices: Uint32Array | null = null;
+  private verts: Float32Array<ArrayBuffer> | null = null;
+  private indices: Uint32Array<ArrayBuffer> | null = null;
   /** setMesh 每次自增；render 里与 builtVersion 比对决定是否重建 GPU 缓冲 */
   private meshVersion = 0;
   private builtVersion = -1;
@@ -168,7 +168,7 @@ export class BindingView3D {
   }
 
   /** 更新要显示的网格（stride = VERTEX_FLOATS）。传 null 清空。 */
-  setMesh(vertices: Float32Array | null, indices: Uint32Array | null): void {
+  setMesh(vertices: Float32Array<ArrayBuffer> | null, indices: Uint32Array<ArrayBuffer> | null): void {
     this.verts = vertices;
     this.indices = indices;
     this.meshVersion++;

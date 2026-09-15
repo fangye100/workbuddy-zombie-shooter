@@ -19,7 +19,7 @@ import { quatMul, quatToMat } from '../../src/services/binding/binding-math';
 import { buildBvhText } from './fixture';
 import type { Quat } from '../../src/services/binding/binding-math';
 
-function m4Identity(): Float32Array {
+function m4Identity(): Float32Array<ArrayBuffer> {
   const m = new Float32Array(16);
   m[0] = 1; m[5] = 1; m[10] = 1; m[15] = 1;
   return m;

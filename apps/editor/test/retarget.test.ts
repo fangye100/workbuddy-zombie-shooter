@@ -830,7 +830,7 @@ describe('skeletonRestWorldPositions（外部 GLB 骨架 → HumanIK 名索引�
     };
   }
 
-  function m4Identity(): Float32Array {
+  function m4Identity(): Float32Array<ArrayBuffer> {
     const m = new Float32Array(16);
     m[0] = 1;
     m[5] = 1;

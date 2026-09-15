@@ -10,7 +10,7 @@ import { packSkin } from '@aether/scene';
 import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene';
 
 /** 列主序平移矩阵 */
-function translate(x: number, y: number, z: number): Float32Array {
+function translate(x: number, y: number, z: number): Float32Array<ArrayBuffer> {
   const m = new Float32Array(16);
   m[0] = 1;
   m[5] = 1;
@@ -23,7 +23,7 @@ function translate(x: number, y: number, z: number): Float32Array {
 }
 
 /** 列主序均匀缩放矩阵 */
-function scaleUniform(s: number): Float32Array {
+function scaleUniform(s: number): Float32Array<ArrayBuffer> {
   const m = new Float32Array(16);
   m[0] = s;
   m[5] = s;
@@ -46,7 +46,7 @@ function identityLocal(): NodeLocal {
 }
 
 /** 单关节骨架，bind 本地变换 = local，inverseBind 由调用方给定 */
-function singleJointSkeleton(local: NodeLocal, inverseBind: Float32Array, normalization?: Float32Array): SkeletonData {
+function singleJointSkeleton(local: NodeLocal, inverseBind: Float32Array<ArrayBuffer>, normalization?: Float32Array<ArrayBuffer>): SkeletonData {
   return {
     joints: [0],
     jointNames: ['Bone0'],
