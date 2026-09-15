@@ -152,7 +152,9 @@ function renderEntry(e, indent) {
 
 function generate() {
   const npcs = toDefId();
-  const player = { ...stats.player, defId: -1 };
+  // 玩家排在 NPC 定义表之后，占一个正常槽位 —— 用 -1 之类的哨兵值会让它
+  // 既不能被 Uint16Array 正确表示，也无法和 CharacterDef 表统一索引。
+  const player = { ...stats.player, defId: npcs.length };
 
   return `// 自动生成，请勿手改 —— 真源 assets/characters/stats.json
 //
@@ -167,7 +169,7 @@ function generate() {
 //
 // 生成：npm run content:gen
 
-/** 单个角色的运行时参数。defId = -1 表示玩家（不占 NPC 定义表） */
+/** 单个角色的运行时参数。defId 是全局唯一的角色定义槽位 */
 export interface CharacterStatsEntry {
   readonly defId: number;
   readonly id: string;

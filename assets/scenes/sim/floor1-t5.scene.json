@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 2,
-  "id": "sc_sim_floor1_t5",
-  "name": "模拟快照 · 第一层 · 火场 · t=5s",
+  "schemaVersion": 3,
+  "id": "sc_sim_floorsc_act1_floor1_t5",
+  "name": "第一层 · 火场 · t=5s 快照（派生产物）",
   "act": "Act1",
   "environment": {
     "ambient": {
@@ -38,7 +38,8 @@
     "yaw": 1.1,
     "elevation": 0.75
   },
-  "entryCamera": null,
+  "entryCamera": "nd_f1_cam",
+  "playerStart": "nd_f1_start",
   "dependencies": [],
   "nodes": [
     {
@@ -1406,13 +1407,13 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_0",
-      "name": "玩家 #0",
+      "id": "nd_f1_start",
+      "name": "玩家起点",
       "parent": null,
       "transform": {
         "position": [
-          10,
-          0.8999999761581421,
+          3,
+          0.9,
           0
         ],
         "rotation": [
@@ -1438,10 +1439,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.4000000059604645,
-              0.9999999403953552,
-              10,
-              6
+              0.35,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1464,14 +1465,72 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_1",
+      "id": "nd_sim_a0",
+      "name": "P-01 · 玩家",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a1",
       "name": "E-01 #1",
       "parent": null,
       "transform": {
         "position": [
-          10.618958473205566,
-          0.875,
-          0.8534770011901855
+          7.714822292327881,
+          0.85,
+          0.2778889238834381
         ],
         "rotation": [
           0,
@@ -1496,10 +1555,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1522,14 +1581,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_2",
+      "id": "nd_sim_a2",
       "name": "E-01 #2",
       "parent": null,
       "transform": {
         "position": [
-          10.964279174804688,
-          0.875,
-          -0.31625813245773315
+          6.082990646362305,
+          0.85,
+          0.2252369523048401
         ],
         "rotation": [
           0,
@@ -1554,10 +1613,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1580,14 +1639,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_3",
+      "id": "nd_sim_a3",
       "name": "E-01 #3",
       "parent": null,
       "transform": {
         "position": [
-          10.021801948547363,
-          0.875,
-          0.6186261773109436
+          8.3702392578125,
+          0.85,
+          0.27469998598098755
         ],
         "rotation": [
           0,
@@ -1612,10 +1671,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1638,14 +1697,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_4",
+      "id": "nd_sim_a4",
       "name": "E-01 #4",
       "parent": null,
       "transform": {
         "position": [
-          11.135788917541504,
-          0.875,
-          0.36451131105422974
+          7.050976276397705,
+          0.85,
+          0.22411780059337616
         ],
         "rotation": [
           0,
@@ -1670,10 +1729,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1696,14 +1755,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_5",
+      "id": "nd_sim_a5",
       "name": "E-01 #5",
       "parent": null,
       "transform": {
         "position": [
-          10.502460479736328,
-          0.875,
-          0.2082521766424179
+          9.03518295288086,
+          0.85,
+          0.2748343050479889
         ],
         "rotation": [
           0,
@@ -1728,10 +1787,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1754,14 +1813,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_6",
+      "id": "nd_sim_a6",
       "name": "E-01 #6",
       "parent": null,
       "transform": {
         "position": [
-          9.070098876953125,
-          0.875,
-          -0.32269901037216187
+          3.18302845954895,
+          0.85,
+          0.742656409740448
         ],
         "rotation": [
           0,
@@ -1786,10 +1845,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1812,14 +1871,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_7",
+      "id": "nd_sim_a7",
       "name": "E-01 #7",
       "parent": null,
       "transform": {
         "position": [
-          9.45393180847168,
-          0.875,
-          0.2545170187950134
+          2.76430082321167,
+          0.85,
+          0.3603535294532776
         ],
         "rotation": [
           0,
@@ -1844,10 +1903,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1870,14 +1929,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_8",
+      "id": "nd_sim_a8",
       "name": "E-01 #8",
       "parent": null,
       "transform": {
         "position": [
-          8.858453750610352,
-          0.875,
-          0.315889447927475
+          3.6840500831604004,
+          0.85,
+          0.4267905354499817
         ],
         "rotation": [
           0,
@@ -1902,10 +1961,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1928,14 +1987,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_9",
+      "id": "nd_sim_a9",
       "name": "E-01 #9",
       "parent": null,
       "transform": {
         "position": [
-          9.37488842010498,
-          0.875,
-          0.8402218818664551
+          3.0388412475585938,
+          0.85,
+          -0.1743098348379135
         ],
         "rotation": [
           0,
@@ -1960,10 +2019,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -1986,14 +2045,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_10",
+      "id": "nd_sim_a10",
       "name": "E-02 #10",
       "parent": null,
       "transform": {
         "position": [
-          10.367542266845703,
-          0.625,
-          -0.46707049012184143
+          3.248920202255249,
+          0.85,
+          0.25569140911102295
         ],
         "rotation": [
           0,
@@ -2018,10 +2077,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -2044,14 +2103,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_11",
+      "id": "nd_sim_a11",
       "name": "E-02 #11",
       "parent": null,
       "transform": {
         "position": [
-          9.676881790161133,
-          0.625,
-          -0.45770010352134705
+          3.270904541015625,
+          0.85,
+          0.25031572580337524
         ],
         "rotation": [
           0,
@@ -2076,10 +2135,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -2102,14 +2161,14 @@
       "prefab": null
     },
     {
-      "id": "nd_sim_12",
+      "id": "nd_sim_a12",
       "name": "E-02 #12",
       "parent": null,
       "transform": {
         "position": [
-          10.1045503616333,
-          0.625,
-          0.06704241037368774
+          3.246818780899048,
+          0.85,
+          0.22805121541023254
         ],
         "rotation": [
           0,
@@ -2134,706 +2193,10 @@
             "type": "builtin",
             "shape": "capsule",
             "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_13",
-      "name": "E-01 #13",
-      "parent": null,
-      "transform": {
-        "position": [
-          52.71875,
-          0.875,
-          1.9327080249786377
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_14",
-      "name": "E-01 #14",
-      "parent": null,
-      "transform": {
-        "position": [
-          52.22588348388672,
-          0.875,
-          2.4291958808898926
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_15",
-      "name": "E-01 #15",
-      "parent": null,
-      "transform": {
-        "position": [
-          53.096763610839844,
-          0.875,
-          1.2321810722351074
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_16",
-      "name": "E-01 #16",
-      "parent": null,
-      "transform": {
-        "position": [
-          52.75054931640625,
-          0.875,
-          2.892146587371826
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_17",
-      "name": "E-02 #17",
-      "parent": null,
-      "transform": {
-        "position": [
-          35.31395721435547,
-          0.625,
-          0.8527064323425293
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_18",
-      "name": "E-02 #18",
-      "parent": null,
-      "transform": {
-        "position": [
-          35.07238006591797,
-          0.625,
-          1.5069342851638794
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_19",
-      "name": "E-02 #19",
-      "parent": null,
-      "transform": {
-        "position": [
-          34.50857162475586,
-          0.625,
-          1.0935839414596558
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_20",
-      "name": "E-02 #20",
-      "parent": null,
-      "transform": {
-        "position": [
-          36.867313385009766,
-          0.625,
-          1.0806591510772705
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              0.550000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_21",
-      "name": "E-01 #21",
-      "parent": null,
-      "transform": {
-        "position": [
-          49.6572380065918,
-          0.875,
-          -3.6322920322418213
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_22",
-      "name": "E-01 #22",
-      "parent": null,
-      "transform": {
-        "position": [
-          49.18550109863281,
-          0.875,
-          -2.7861788272857666
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_23",
-      "name": "E-01 #23",
-      "parent": null,
-      "transform": {
-        "position": [
-          50.416717529296875,
-          0.875,
-          -2.361379384994507
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s4"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 5,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_sim_24",
-      "name": "E-01 #24",
-      "parent": null,
-      "transform": {
-        "position": [
-          49.71734619140625,
-          0.875,
-          -2.3317642211914062
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "敌人",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.3499999940395355,
-              1.050000011920929,
-              10,
-              6
+              0.34,
+              1.1,
+              8,
+              4
             ]
           },
           "materials": [
@@ -2857,9 +2220,9 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-15T04:18:55.132Z",
-    "updatedAt": "2026-09-15T04:18:55.132Z",
+    "createdAt": "2026-09-15T06:46:32.283Z",
+    "updatedAt": "2026-09-15T06:46:32.283Z",
     "author": "sim-level.mjs",
-    "notes": "headless runtime 模拟 t=5s（seed=20260915，步长 0.0333s）"
+    "notes": "派生产物：种子 1 · 固定步 1/30 · t=5s。不要手改，重跑即被覆盖。"
   }
 }

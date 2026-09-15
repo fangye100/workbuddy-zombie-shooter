@@ -11,7 +11,7 @@
 //
 // 生成：npm run content:gen
 
-/** 单个角色的运行时参数。defId = -1 表示玩家（不占 NPC 定义表） */
+/** 单个角色的运行时参数。defId 是全局唯一的角色定义槽位 */
 export interface CharacterStatsEntry {
   readonly defId: number;
   readonly id: string;
@@ -32,7 +32,7 @@ export interface CharacterStatsEntry {
 }
 
 export const PLAYER_STATS: CharacterStatsEntry = {
-  defId: -1,
+  defId: 8,
   id: "P-01",
   name: "玩家",
   capsuleRadius: 0.35,

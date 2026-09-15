@@ -1,212 +1,197 @@
 #!/usr/bin/env node
 /**
- * 关卡模拟：场景 .scene.json → headless runtime → 各时刻快照 .scene.json
+ * 关卡模拟 CLI（WU-1e）。
  *
- * ## 这是「先做 headless」这条路的兑现点
- * 玩法逻辑完全在 packages/runtime 里跑（纯 CPU、可断言、可复现），
- * 跑完把某一帧的世界状态**导出成一份普通场景文件** —— 编辑器不用改一行代码，
- * 打开就能看到「僵尸朝玩家推进了 N 秒之后长什么样」。
- * 于是"人能看到画面"这件事不必等 Play 模式（S3）。
+ * ## 这个文件的职责边界
  *
- * ## 用法
- *   npm run sim                      # 默认跑 floor-1，导出 t=0/1/3/5s
- *   node tools/level/sim-level.mjs --floor=2 --times=0,2,5
+ * 它**只做三件事**：解析参数、调用共享能力、把结果显式导出。
+ * 场景怎么解释、实体怎么生成、移动怎么受障碍约束，全在 `@aether/runtime` 里 ——
+ * 以前这些逻辑就写在本文件里，编辑器要做 Play 时只能复制一份，两份语义必然漂移。
+ * 现在 CLI 与浏览器共用同一个入口（docs/17 §4）。
  *
- * 产物落在 assets/scenes/sim/ 并自动登记进 aether.project.json 的 scenes[]
- * （ADR-015：没登记的场景过不了 scene:check）。
+ * ## 为什么产物是 .scene.json
+ *
+ * 人要看画面。headless 跑完把某一帧导出成**普通场景文件**，
+ * 编辑器零改动就能打开 —— 不必等 Play 模式（S3）做完。
+ *
+ * ⚠️ 这些是**派生产物**（docs/17 §3.3），不是作者场景：
+ * 不要手改它们，也不要让它们反过来成为关卡的真源。
+ *
+ * 用法：
+ *   npm run sim -- --floor=1 --times=0,3,5
+ *   npm run sim -- --floor=1 --times=5 --focus=5   # 把项目启动场景指到 t=5
  */
-import fs from 'node:fs';
-import path from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(import.meta.url);
-const { World, makeRng } = require(path.join(ROOT, '.workbuddy/tmp/runtime/index.js'));
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const SIM_DIR = 'assets/scenes/sim';
-const TICK = 1 / 30; // 固定步长 30Hz，与快照时刻对齐
+// 共享能力：esbuild 打出来的 CJS bundle（npm run runtime:build）
+const { loadLevelRuntime, createSession } = require(join(ROOT, '.workbuddy/tmp/runtime/index.js'));
+
+const PROJECT_FILE = 'aether.project.json';
+const SUPPORTED_SCHEMA = 3;
 
 // ---------------------------------------------------------------- 参数
 
-function arg(name, fallback) {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit === undefined ? fallback : hit.slice(name.length + 3);
-}
-
-const floor = Number(arg('floor', 1));
-const times = arg('times', '0,1,3,5')
-  .split(',')
-  .map((s) => Number(s.trim()))
-  .filter((n) => Number.isFinite(n));
-const seed = Number(arg('seed', 20260915));
-
-const srcRel = `assets/scenes/act1/floor-${floor}.scene.json`;
-const src = JSON.parse(fs.readFileSync(path.join(ROOT, srcRel), 'utf8'));
-
-// ---------------------------------------------------------------- 角色数值（真源 roster.json）
-
-/**
- * 从 roster 解析 speed / height。
- * roster 里这两个字段是人类可读字符串（"1.4 m/s" / "1.75 m"），这里只取数值。
- * 碰撞半径 roster 没有，按体型给常数 —— 等 CharacterDef 落地（记忆里缺的 11 项）再换成真值。
- */
-const roster = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/characters/roster.json'), 'utf8'));
-const statsTable = new Map();
-for (const c of [...(roster.npcs ?? []), ...(roster.bosses ?? [])]) {
-  const speed = Number.parseFloat(String(c.speed ?? '1.4'));
-  const height = Number.parseFloat(String(c.height ?? '1.75'));
-  statsTable.set(c.id, {
-    id: c.id,
-    speed: Number.isFinite(speed) ? speed : 1.4,
-    radius: c.id.startsWith('B-') ? 0.6 : 0.35,
-    height: Number.isFinite(height) ? height : 1.75,
-  });
-}
-const fallbackStats = { id: 'UNKNOWN', speed: 1.4, radius: 0.35, height: 1.75 };
-const statsOf = (id) => statsTable.get(id) ?? fallbackStats;
-
-// ---------------------------------------------------------------- 场景 → 世界
-
-/**
- * 世界坐标：沿 parent 链累加 position。
- * 切片场景里父节点只有平移（无旋转/缩放），够用；将来接真 prefab 层级时要
- * 换成 packages/scene 的 SceneGraph.updateWorldTransforms()，别在这里重复实现。
- */
-function worldPosition(node, byId) {
-  let x = 0;
-  let z = 0;
-  let cur = node;
-  let guard = 0;
-  while (cur !== undefined && guard++ < 32) {
-    x += cur.transform.position[0];
-    z += cur.transform.position[2];
-    cur = cur.parent === null || cur.parent === undefined ? undefined : byId.get(cur.parent);
+function parseArgs(argv) {
+  const out = { floor: 1, times: [0, 1, 3, 5], seed: 1, focus: null };
+  for (const a of argv.slice(2)) {
+    const m = /^--([^=]+)=(.*)$/.exec(a);
+    if (m === null) continue;
+    const [, k, v] = m;
+    if (k === 'floor') out.floor = Number(v);
+    else if (k === 'times') out.times = v.split(',').map((x) => Number(x.trim()));
+    else if (k === 'seed') out.seed = Number(v);
+    else if (k === 'focus') out.focus = Number(v);
   }
-  return [x, z];
+  return out;
 }
 
-const byId = new Map(src.nodes.map((n) => [n.id, n]));
-const rooms = src.nodes.filter((n) => n.components.some((c) => c.kind === 'RoomVolume'));
-const spawns = src.nodes.filter((n) => n.components.some((c) => c.kind === 'SpawnPoint'));
+// ---------------------------------------------------------------- 导出：运行实体 → 场景节点
 
-if (rooms.length === 0) throw new Error(`${srcRel} 里没有 RoomVolume，无法确定关卡起点`);
+const identity = () => ({ position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] });
 
-// 玩家放在第一个房间（关卡入口）的中心
-const [px, pz] = worldPosition(rooms[0], byId);
-
-const totalSpawn = spawns.reduce(
-  (s, n) => s + (n.components.find((c) => c.kind === 'SpawnPoint')?.count ?? 0),
-  0,
-);
-
-const world = new World({ capacity: Math.max(64, totalSpawn + 8) });
-world.addPlayer(px, pz, { id: 'PLAYER', speed: 4.0, radius: 0.4, height: 1.8 });
-
-const rng = makeRng(seed);
-for (const node of spawns) {
-  const sp = node.components.find((c) => c.kind === 'SpawnPoint');
-  const [x, z] = worldPosition(node, byId);
-  world.spawn(
-    { x, z, characterId: sp.characterId, count: sp.count, spread: sp.radius, stats: statsOf(sp.characterId) },
-    rng,
-  );
+function agentNode(e, seq) {
+  const isPlayer = e.kind === 'player';
+  return {
+    id: `nd_sim_a${seq}`,
+    name: `${e.characterId}${isPlayer ? ' · 玩家' : ' #' + seq}`,
+    parent: null,
+    transform: { ...identity(), position: [e.x, isPlayer ? 0.9 : 0.85, e.z] },
+    visible: true,
+    pickable: true,
+    category: isPlayer ? '角色' : '敌人',
+    components: [
+      {
+        kind: 'MeshRenderer',
+        enabled: true,
+        source: { type: 'builtin', shape: 'capsule', params: [0.34, 1.1, 8, 4] },
+        materials: [
+          { match: { by: 'index', value: 0 }, material: { type: 'shared', id: isPlayer ? 's3' : 's4' } },
+        ],
+        visible: true,
+        layer: 5, // Character 层占位：引擎暂不消费，但语义正确
+        importScale: 1,
+      },
+    ],
+    prefab: null,
+  };
 }
 
-console.log(`[sim] ${srcRel}：房间 ${rooms.length} · 刷怪点 ${spawns.length} · 投放 ${totalSpawn} 只 · 玩家在 (${px.toFixed(1)}, ${pz.toFixed(1)})`);
-
-// ---------------------------------------------------------------- 跑 + 导出
-
-/** 把世界状态转成场景节点（capsule gizmo，沿用 gen-level 的 gizmo 约定） */
-function agentNodes(agents) {
-  return agents.map((a, i) => {
-    const r = a.radius;
-    const cylH = Math.max(0.2, a.height - 2 * r);
-    return {
-      id: `nd_sim_${a.index}`,
-      name: `${a.kind === 0 ? '玩家' : a.characterId} #${i}`,
-      parent: null,
-      transform: { position: [a.x, a.height / 2, a.z], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-      visible: true,
-      pickable: true,
-      category: a.kind === 0 ? '角色' : '敌人',
-      components: [
-        {
-          kind: 'MeshRenderer',
-          enabled: true,
-          source: { type: 'builtin', shape: 'capsule', params: [r, cylH, 10, 6] },
-          materials: [{ match: { by: 'index', value: 0 }, material: { type: 'shared', id: a.kind === 0 ? 's3' : 's4' } }],
-          visible: true,
-          layer: 5, // Character 层（BUILTIN_LAYERS 索引 5）；当前引擎不消费，先占好位
-          importScale: 1,
-        },
-      ],
-      prefab: null,
-    };
-  });
-}
-
-function writeSnapshot(t) {
-  const doc = {
-    schemaVersion: src.schemaVersion,
-    id: `sc_sim_floor${floor}_t${String(t).replace('.', '_')}`,
-    name: `模拟快照 · ${src.name} · t=${t}s`,
+/** 作者场景 + 某一帧的实体 → 可打开的场景文件 */
+function buildSnapshotScene(src, entities, seconds, seed) {
+  return {
+    schemaVersion: SUPPORTED_SCHEMA,
+    id: `sc_sim_floor${src.id}_t${seconds}`,
+    name: `${src.name} · t=${seconds}s 快照（派生产物）`,
     act: src.act,
     environment: src.environment,
     editorCamera: src.editorCamera,
-    entryCamera: null,
+    entryCamera: src.entryCamera,
+    playerStart: src.playerStart,
     dependencies: [],
-    // 源场景的静态几何（房间地板 / 掩体 / 走廊）+ 模拟出来的实体
-    nodes: [...src.nodes, ...agentNodes(world.snapshot())],
+    // 保留作者布局（房间 / 掩体 / 刷怪点是观察参照），再叠上这一帧的实体
+    nodes: [...src.nodes.map((n) => ({ ...n, components: n.components.map((c) => ({ ...c })) })), ...entities],
     meta: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       author: 'sim-level.mjs',
-      notes: `headless runtime 模拟 t=${t}s（seed=${seed}，步长 ${TICK.toFixed(4)}s）`,
+      notes: `派生产物：种子 ${seed} · 固定步 1/30 · t=${seconds}s。不要手改，重跑即被覆盖。`,
     },
   };
-  const rel = `${SIM_DIR}/floor${floor}-t${String(t).replace('.', '_')}.scene.json`;
-  const abs = path.join(ROOT, rel);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
-  return { rel, id: doc.id, objects: doc.nodes.length };
 }
 
-// 按时刻推进（times 需升序）
-const sorted = [...times].sort((a, b) => a - b);
-const written = [];
-let elapsed = 0;
-for (const t of sorted) {
-  const steps = Math.round((t - elapsed) / TICK);
-  for (let k = 0; k < steps; k++) world.tick(TICK);
-  elapsed = t;
-  written.push({ t, ...writeSnapshot(t) });
+// ---------------------------------------------------------------- 项目登记
+
+function readProject() {
+  return JSON.parse(readFileSync(join(ROOT, PROJECT_FILE), 'utf8'));
 }
 
-// ---------------------------------------------------------------- 登记进项目容器
-
-const projPath = path.join(ROOT, 'aether.project.json');
-const project = JSON.parse(fs.readFileSync(projPath, 'utf8'));
-const scenes = Array.isArray(project.scenes) ? [...project.scenes] : [];
-for (const w of written) {
-  const i = scenes.findIndex((s) => s.path === w.rel);
-  const entry = { path: w.rel, id: w.id, enabled: true };
-  if (i >= 0) scenes[i] = { ...scenes[i], ...entry };
-  else scenes.push(entry);
+function writeProject(project) {
+  writeFileSync(join(ROOT, PROJECT_FILE), JSON.stringify(project, null, 2) + '\n', 'utf8');
 }
-project.scenes = scenes;
 
-// --focus=<t>：把编辑器启动场景直接指到该时刻的快照（省得手改 startIndex）
-const focus = arg('focus', null);
-if (focus !== null) {
-  const want = `sc_sim_floor${floor}_t${focus}`;
-  const i = scenes.findIndex((s) => s.id === want);
-  if (i < 0) throw new Error(`--focus=${focus} 没找到对应快照（应为 ${want}）`);
+function registerScene(rel, name) {
+  const project = readProject();
+  const scenes = Array.isArray(project.scenes) ? [...project.scenes] : [];
+  const i = scenes.findIndex((s) => s.path === rel);
+  if (i >= 0) scenes[i] = { ...scenes[i], path: rel, name };
+  else scenes.push({ path: rel, name });
+  project.scenes = scenes;
+  writeProject(project);
+}
+
+function setStartIndex(targetPath) {
+  const project = readProject();
+  const i = project.scenes.findIndex((s) => s.path === targetPath);
+  if (i < 0) return -1;
   project.startIndex = i;
+  writeProject(project);
+  return i;
 }
 
-fs.writeFileSync(projPath, `${JSON.stringify(project, null, 2)}\n`, 'utf8');
+// ---------------------------------------------------------------- 主流程
 
-console.table(written.map((w) => ({ 时刻: `${w.t}s`, 文件: w.rel, 节点数: w.objects })));
-console.log(`登记完成 · startIndex=${project.startIndex} → ${scenes[project.startIndex]?.path ?? '(空)'}`);
-console.log('编辑器里看：刷新 https://localhost:5100/ 即可；换时刻重跑本脚本加 --focus=<秒数>');
+const args = parseArgs(process.argv);
+const relScene = `assets/scenes/act1/floor-${args.floor}.scene.json`;
+const srcRaw = JSON.parse(readFileSync(join(ROOT, relScene), 'utf8'));
+
+if (srcRaw.schemaVersion !== SUPPORTED_SCHEMA) {
+  console.error(
+    `[sim] ${relScene} 是 v${srcRaw.schemaVersion}，本工具只处理 v${SUPPORTED_SCHEMA}。\n` +
+      `      先跑 node tools/level/gen-level.mjs 重新生成关卡。`,
+  );
+  process.exit(1);
+}
+
+const loaded = loadLevelRuntime(srcRaw);
+if (loaded.desc === null) {
+  console.error('[sim] 场景装载失败：');
+  for (const d of loaded.diagnostics) console.error(`  [${d.severity}] ${d.code} ${d.message}`);
+  process.exit(1);
+}
+for (const d of loaded.diagnostics) {
+  if (d.severity === 'warning') console.warn(`[sim] warning ${d.code} ${d.message}`);
+}
+
+const desc = loaded.desc;
+const session = createSession(desc, { seed: args.seed });
+const STEP_PER_SEC = Math.round(1 / session.fixedStep);
+
+console.log(
+  `[sim] ${relScene}：房间 ${desc.rooms.length} · 刷怪点 ${desc.spawns.length} · ` +
+    `障碍 ${desc.obstacles.length} · 玩家在 (${desc.playerStart.x.toFixed(1)}, ${desc.playerStart.z.toFixed(1)})`,
+);
+
+const ordered = [...args.times].sort((a, b) => a - b);
+let elapsed = 0;
+
+for (const sec of ordered) {
+  const want = Math.round(sec * STEP_PER_SEC);
+  if (want > elapsed) {
+    session.run(want - elapsed);
+    elapsed = want;
+  }
+  const entities = session.view().map((e, k) => agentNode(e, k));
+  const scene = buildSnapshotScene(srcRaw, entities, sec, args.seed);
+  const rel = `assets/scenes/sim/floor${args.floor}-t${sec}.scene.json`;
+  writeFileSync(join(ROOT, rel), JSON.stringify(scene, null, 2) + '\n', 'utf8');
+  registerScene(rel, scene.name);
+  console.log(
+    `[sim] t=${sec}s → ${rel}（tick ${session.tick} · 实体 ${entities.length} · ` +
+      `已触发房间 ${session.triggeredRooms().length}/${desc.rooms.length}）`,
+  );
+}
+
+if (args.focus !== null) {
+  const target = `assets/scenes/sim/floor${args.floor}-t${args.focus}.scene.json`;
+  const i = setStartIndex(target);
+  if (i < 0) console.warn(`[sim] --focus=${args.focus} 没有对应快照，已忽略`);
+  else console.log(`[sim] 项目启动场景已指向 ${target}（startIndex=${i}）`);
+}
+
+console.log('[sim] 提示：编辑器切换预览场景需要刷新浏览器页面');

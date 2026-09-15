@@ -31,7 +31,8 @@
     {
       "path": "assets/scenes/sim/floor1-t0.scene.json",
       "id": "sc_sim_floor1_t0",
-      "enabled": true
+      "enabled": true,
+      "name": "第一层 · 火场 · t=0s 快照（派生产物）"
     },
     {
       "path": "assets/scenes/sim/floor1-t1.scene.json",
@@ -41,15 +42,17 @@
     {
       "path": "assets/scenes/sim/floor1-t3.scene.json",
       "id": "sc_sim_floor1_t3",
-      "enabled": true
+      "enabled": true,
+      "name": "第一层 · 火场 · t=3s 快照（派生产物）"
     },
     {
       "path": "assets/scenes/sim/floor1-t5.scene.json",
       "id": "sc_sim_floor1_t5",
-      "enabled": true
+      "enabled": true,
+      "name": "第一层 · 火场 · t=5s 快照（派生产物）"
     }
   ],
-  "startIndex": 1,
+  "startIndex": 7,
   "layers": [
     "Default",
     "TransparentFX",

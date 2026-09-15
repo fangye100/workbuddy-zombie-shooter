@@ -15,6 +15,5 @@
  * 不禁 @aether 系列包：依赖 scene（数据契约 + 世界变换）、content（只读生成物）、
  * gameplay（实体状态表）、ai（流场寻路），全是纯 CPU；不依赖 render 与编辑器。
  */
-export * from './types';
 export * from './loader';
-export * from './world';
+export * from './session';
