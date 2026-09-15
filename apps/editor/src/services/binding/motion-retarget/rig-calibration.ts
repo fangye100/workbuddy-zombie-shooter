@@ -99,6 +99,13 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
   const unitScale = cal?.unitScale ?? 1;
   const upAxis = cal?.upAxis ?? 'y';
   const qAxis = axisToYQuat(upAxis);
+  if (upAxis === 'x') {
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRR_XUP_NOT_NORMALIZED',
+      message: 'X-up 目标不做轴向归一（极罕见），结果可能不可用',
+    });
+  }
   if (!(unitScale > 0)) {
     diagnostics.push({ severity: 'error', code: 'MRR_UNIT_SCALE_BAD', message: `unitScale ${unitScale} 必须 > 0` });
   }

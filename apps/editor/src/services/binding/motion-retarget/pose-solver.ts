@@ -381,7 +381,11 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
   };
 }
 
-/** 把 startBone 的全部后代按其 rest 局部重新挂到（已更新的）startBone 世界变换下 */
+/**
+ * 把 startBone 的全部后代按其 rest 局部重新挂到（已更新的）startBone 世界变换下。
+ * 语义权衡（一致性 > 保真度）：接触/抬脚期脚趾丢失源动画的局部旋转、回到 rest
+ * 摆位——避免「新脚朝向配旧 toe 世界位」的混合帧；源 toe 动画的保留留给后续单元。
+ */
 function refreshSubtree(
   rig: RetargetRig,
   bonePos: Record<string, [number, number, number]>,

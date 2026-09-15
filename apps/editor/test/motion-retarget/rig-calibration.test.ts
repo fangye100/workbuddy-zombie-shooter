@@ -25,8 +25,9 @@ function m4Identity(): Float32Array {
   return m;
 }
 
-/** HumanIK 27 骨 SkeletonData（k = 整体缩放；rotZ = 骨盆节点加 Z 旋转） */
-function buildSkeleton(k: number, rotZ = 0): SkeletonData {
+/** HumanIK 27 骨 SkeletonData（k = 整体缩放；rotZDeg = 骨盆节点 Z 旋转角度） */
+function buildSkeleton(k: number, rotZDeg = 0): SkeletonData {
+  const rotZ = (rotZDeg * Math.PI) / 180;
   const HUMANIK = {
     Hips: [0.0, 1.0, 0.0], Spine: [0.0, 0.15, 0.0], Spine1: [0.0, 0.15, 0.0], Spine2: [0.0, 0.15, 0.0],
     Neck: [0.0, 0.15, 0.0], Head: [0.0, 0.2, 0.0], HeadTip: [0.0, 0.14, 0.0],
@@ -46,14 +47,14 @@ function buildSkeleton(k: number, rotZ = 0): SkeletonData {
     LeftUpLeg: 'Hips', LeftLeg: 'LeftUpLeg', LeftFoot: 'LeftLeg', LeftToeBase: 'LeftFoot', LeftToeTip: 'LeftToeBase',
     RightUpLeg: 'Hips', RightLeg: 'RightUpLeg', RightFoot: 'RightLeg', RightToeBase: 'RightFoot', RightToeTip: 'RightToeBase',
   };
-  const half = Math.SQRT1_2;
+  const half = Math.sin(Math.abs(rotZ) / 2);
   for (const n of names) {
     const off = HUMANIK[n as keyof typeof HUMANIK];
     const p = PARENTS[n]!;
     parent.push(p === null ? -1 : idx.get(p)!);
     locals.push({
       t: [off[0] * k, off[1] * k, off[2] * k],
-      r: n === 'Hips' && rotZ !== 0 ? [0, 0, half, half] : [0, 0, 0, 1],
+      r: n === 'Hips' && rotZ !== 0 ? [0, 0, Math.sign(rotZ) * half, Math.cos(rotZ / 2)] : [0, 0, 0, 1],
       s: [1, 1, 1],
     });
   }
@@ -305,6 +306,26 @@ describe('computeWorldRestBaseline（glTF→glTF 姿态基准）', () => {
       const out = quatMul(quatMul(bl.pre[n]!, rs), bl.post[n]!);
       const want = rig.bones[n]!.restLocalR as Quat;
       for (let k = 0; k < 4; k++) expect(out[k]).toBeCloseTo(want[k]!, 6);
+    }
+  });
+
+  it('★ 非退化自洽：源 Hips Z −30° vs 目标 +90°，代入源 rest 局部 ⟹ 精确得到目标 rest 局部', () => {
+    // 源/目标 rest 不同（对 pre/post 互换、父子关联取错等符号错误敏感）
+    const srcRig = buildTargetRig({ skeleton: buildSkeleton(1, -30) });
+    const tgtRig = buildTargetRig({ skeleton: buildSkeleton(1, 90) });
+    // 源每骨 rest 世界旋转：沿链累乘（测试内独立 FK，不复用被测内部）
+    const srcRest: Record<string, Quat> = {};
+    for (const n of srcRig.rig.order) {
+      const b = srcRig.rig.bones[n]!;
+      srcRest[n] = b.parent === null ? (b.restLocalR as Quat) : quatMul(srcRest[b.parent]!, b.restLocalR as Quat);
+    }
+    const bl = computeWorldRestBaseline({ srcRestWorldRotations: srcRest }, tgtRig.rig);
+    expect(bl.diagnostics.every((d) => d.severity !== 'error')).toBe(true);
+    for (const n of ['Hips', 'Spine', 'Spine2', 'LeftArm', 'LeftFoot']) {
+      const rs = srcRig.rig.bones[n]!.restLocalR as Quat;
+      const want = tgtRig.rig.bones[n]!.restLocalR as Quat;
+      const got = quatMul(quatMul(bl.pre[n]!, rs), bl.post[n]!);
+      for (let k = 0; k < 4; k++) expect(got[k]).toBeCloseTo(want[k]!, 9);
     }
   });
 

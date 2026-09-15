@@ -76,8 +76,9 @@ export function buildSpaceMapping(
   const mode = opts.mode ?? 'normalize-gait';
 
   const similarity = (p: V3): [number, number, number] => {
-    // S(p) = o_t + s·C·(p − o_s)：C 是固定世界朝向对齐（非 identity 时也参与，
-    // 不做静默假设；锚点路径 median∘map 与 map∘median 对仿射映射等价）
+    // S(p) = o_t + s·C·(p − o_s)：C 是固定世界朝向对齐（非 identity 时也参与）。
+    // 注意：contactAnchor 是 median∘map；C 恒 identity 时与文档的 map∘median 等价，
+    // 启用非 identity C 时须改为先取中值再映射（逐坐标中值不与旋转交换）。
     const d = sub3(p, oSrc);
     const r = rotateQuat(C, d);
     return add3(oTgt, scale3(r, sRoot));

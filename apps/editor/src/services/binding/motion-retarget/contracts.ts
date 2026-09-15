@@ -269,6 +269,9 @@ export function diagnoseSourceMotion(m: SourceMotion): RetargetDiagnostic[] {
   if (!m.boneNames.includes(m.rootBone)) {
     err(diags, 'ROOT_MISSING', `根骨 ${m.rootBone} 不在骨名表里`);
   }
+  if (m.upAxisSource === 'x') {
+    diags.push({ severity: 'warning', code: `${CODE_PREFIX}_XUP_NOT_NORMALIZED`, message: 'X-up 源未做轴向归一（极罕见），结果可能不可用' });
+  }
   if (m.rootMode === 'unknown') {
     diags.push({ severity: 'warning', code: `${CODE_PREFIX}_ROOT_UNKNOWN`, message: '根轨迹不可信，世界锁脚能力关闭' });
   }
