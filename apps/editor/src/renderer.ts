@@ -417,10 +417,12 @@ export interface SceneLoadResult {
    */
   environment?: EnvironmentData;
   /**
-   * 场景里第一个启用的 Light 组件（ok=true 时带回；null = 场景没声明灯光）。
+   * 场景里按 `priority` 选出的主光（directional；ok=true 时带回；null = 没声明）。
    * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
    */
-  keyLight?: { color: string; intensity: number } | null;
+  keyLight?: { color: string; intensity: number; nodeId: string } | null;
+  /** 同规则选出的点光（null = 没有 point 灯）。位置仍由引擎轨道驱动（见已知遗留） */
+  pointLight?: { color: string; intensity: number; range: number; nodeId: string } | null;
 }
 
 /**
@@ -872,15 +874,48 @@ export class LabRenderer {
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
     this.document = migrated.doc;
 
-    // 场景灯光：第一个启用的 Light 组件（directional key）。场景 schema 目前只有
-    // 颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
-    let keyLight: SceneLoadResult['keyLight'] = null;
+    // 场景灯光：按 `priority` 降序取 top-1（directional key）。
+    // 场景 schema 目前只有颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    //
+    // 🔴 这里曾经是「取节点顺序里第一个启用的 Light」—— 与 `priority` 完全无关，
+    // 落选的灯也不给任何提示。AGENTS.md §2.3 的要求是：场景可声明任意多盏，
+    // 运行时按 priority 取 top-1(+top-1)，**落选者要显式提示**。
+    // 不做提示的后果（docs/14 §6.2 原话）：用户放 5 盏灯只亮 1 盏，会当 bug 排查一整天。
+    type Picked = { nodeId: string; priority: number; color: string; intensity: number; range: number };
+    const byPriority = (a: Picked, b: Picked) => b.priority - a.priority;
+    const directional: Picked[] = [];
+    const point: Picked[] = [];
     for (const n of migrated.doc.nodes) {
       for (const c of n.components) {
-        if (c.kind === 'Light' && c.enabled && keyLight === null) {
-          keyLight = { color: c.color, intensity: c.intensity };
-        }
+        if (c.kind !== 'Light' || !c.enabled) continue;
+        const p: Picked = { nodeId: n.id, priority: c.priority ?? 0, color: c.color, intensity: c.intensity, range: c.range ?? 0 };
+        if (c.type === 'point' || c.type === 'spot') point.push(p);
+        else directional.push(p);
       }
+    }
+    // priority 相同时保持节点顺序（Array.prototype.sort 稳定），保证同输入同结果
+    directional.sort(byPriority);
+    point.sort(byPriority);
+
+    const key = directional[0] ?? null;
+    const pt = point[0] ?? null;
+    let keyLight: SceneLoadResult['keyLight'] = null;
+    let pointLight: SceneLoadResult['pointLight'] = null;
+    if (key !== null) keyLight = { color: key.color, intensity: key.intensity, nodeId: key.nodeId };
+    if (pt !== null) pointLight = { color: pt.color, intensity: pt.intensity, range: pt.range, nodeId: pt.nodeId };
+
+    // 落选者必须显式告知，否则"放了 5 盏只亮 1 盏"会被当成 bug 排查一整天
+    for (const dropped of directional.slice(1)) {
+      warnings.push(
+        `灯光降级：主光 ${dropped.nodeId}（priority ${dropped.priority}）未进入 shader 槽位` +
+          (key === null ? '' : `，已被 ${key.nodeId}（priority ${key.priority}）占用`),
+      );
+    }
+    for (const dropped of point.slice(1)) {
+      warnings.push(
+        `灯光降级：点光 ${dropped.nodeId}（priority ${dropped.priority}）未进入 shader 槽位` +
+          (pt === null ? '' : `，已被 ${pt.nodeId}（priority ${pt.priority}）占用`),
+      );
     }
 
     return {
@@ -892,6 +927,7 @@ export class LabRenderer {
       editorCamera: migrated.doc.editorCamera,
       environment: migrated.doc.environment,
       keyLight,
+      pointLight,
     };
   }
 

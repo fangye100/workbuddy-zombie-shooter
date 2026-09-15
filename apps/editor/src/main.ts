@@ -441,6 +441,13 @@ async function boot(): Promise<void> {
       panel.params.keyColor = r.keyLight.color;
       panel.params.keyIntensity = r.keyLight.intensity;
     }
+    // 点光同样来自场景（priority 最高的那一盏）。位置仍由引擎轨道驱动 —— 见已知遗留：
+    // 场景 schema 有点光的 color/intensity/range，但没有位置字段。
+    if (r.pointLight) {
+      panel.params.pointColor = r.pointLight.color;
+      panel.params.pointIntensity = r.pointLight.intensity;
+      if (r.pointLight.range > 0) panel.params.pointRange = r.pointLight.range;
+    }
     panel.syncAll();
     // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源
     setSpawnScene(renderer.getDocument());
@@ -940,9 +947,15 @@ async function boot(): Promise<void> {
   /**
    * 保存。
    *
-   * 写盘前先做一次**改动集合自检**：差异路径必须全部落在刷怪点的 radius / count 上。
-   * 这是"保存保留未消费组件和无关字段"的兜底 —— store 的实现保证了它不会去碰别的
-   * 字段，但断言放在保存这一步，才能保证将来有人加了新命令也不会悄悄破坏这个性质。
+   * 写盘前先做一次**改动集合自检**：
+   *
+   *   ① 路径必须落在**被编辑的那一个** `SpawnPoint` 组件的 radius / count 上
+   *      —— 光匹配正则不够：`Collider{sphere}.radius` 或任何组件上的 `count`
+   *      都能骗过 `/components\[\d+\]\.(radius|count)$/`，等于放行；
+   *   ② 改动**必须恰好一条**（本轮只有一个编辑命令），多了说明顺手动了别的东西。
+   *
+   * 这条兜底的意义：store 的实现保证了它不会去碰别的字段，但把断言放在保存这一步，
+   * 才能保证将来有人加了新命令也不会悄悄破坏这个性质。
    */
   async function saveSpawnEdits(): Promise<void> {
     const store = spawnStore;
@@ -953,10 +966,27 @@ async function boot(): Promise<void> {
       return;
     }
     const diffs = store.changedPaths();
-    const unexpected = diffs.filter((d) => !/\.components\[\d+\]\.(radius|count)$/.test(d.path));
-    if (unexpected.length > 0) {
+    const doc = store.document;
+    const nodeId = store.lastEdit?.nodeId ?? null;
+    const expected = new Set<string>();
+    if (nodeId !== null && Array.isArray(doc.nodes)) {
+      const idx = doc.nodes.findIndex((n) => n.id === nodeId);
+      if (idx >= 0) {
+        const comps = doc.nodes[idx]!.components;
+        for (let c = 0; c < comps.length; c++) {
+          if (comps[c]!.kind !== 'SpawnPoint') continue;
+          expected.add(`nodes[${idx}].components[${c}].radius`);
+          expected.add(`nodes[${idx}].components[${c}].count`);
+        }
+      }
+    }
+    const unexpected = diffs.filter((d) => !expected.has(d.path));
+    if (unexpected.length > 0 || diffs.length > 1) {
       spawnMsg = {
-        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
+        text:
+          unexpected.length > 0
+            ? `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`
+            : `拒绝保存：一次编辑只应产生 1 处改动，实际 ${diffs.length} 处（${diffs.slice(0, 3).join('、')}）`,
         kind: 'warn',
       };
       refreshSpawnPanel();
@@ -2306,9 +2336,9 @@ async function boot(): Promise<void> {
       });
     };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
-    // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则
-    // 只能绕 UI 后门。renderer 是模块级单例，这里挂一次即可。
-    hook.renderer = renderer;
+    // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则只能绕 UI 后门。
+    // renderer 在初始化钩子对象里已经挂过一次（简写属性），这里**不要重复赋值** ——
+    // 两处指向同一个键，改一处会让人以为另一处是新的真源。
 
     // 主视图骨骼 X-ray 开关（gizmo-bar 上的「骨骼 X」按钮）
     const xrayBtn = document.querySelector<HTMLButtonElement>('#gizmo-bar .gz-xray');

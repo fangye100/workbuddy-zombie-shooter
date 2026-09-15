@@ -67,6 +67,16 @@ export class PlayController {
     return this.session.diagnostics;
   }
 
+  /** 运行期诊断（容量不足整批拒绝等）。装载期诊断在 `diagnostics`，两者语义不同 */
+  get runtimeDiagnostics() {
+    return this.session.runtimeDiagnostics;
+  }
+
+  /** 资源账目。`pending === 0` = Stop 后无未释放的 Play 期资源 */
+  get ledger() {
+    return this.session.ledger;
+  }
+
   /**
    * 进入 Play。
    *
@@ -87,6 +97,9 @@ export class PlayController {
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
     this.bridge.attach(this.session.runtime);
+    // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
+    // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
+    this.session.registerResource('bridge-batches', () => this.bridge.attach(null));
     this.lastError = null;
     this.notify();
     return true;
