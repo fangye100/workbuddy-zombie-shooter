@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "sc_act1_floor3",
   "name": "第三层 · 暗巷",
   "act": "Act1",
@@ -39,6 +39,7 @@
     "elevation": 0.75
   },
   "entryCamera": "nd_f3_cam",
+  "playerStart": "nd_f3_start",
   "dependencies": [],
   "nodes": [
     {
@@ -1341,11 +1342,69 @@
         }
       ],
       "prefab": null
+    },
+    {
+      "id": "nd_f3_start",
+      "name": "玩家起点",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.35,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
     }
   ],
   "meta": {
-    "createdAt": "2026-09-14T10:19:34.007Z",
-    "updatedAt": "2026-09-14T10:19:34.007Z",
+    "createdAt": "2026-09-15T05:46:15.069Z",
+    "updatedAt": "2026-09-15T05:46:15.069Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

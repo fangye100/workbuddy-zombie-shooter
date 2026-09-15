@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
 const PROJECT_FILE = 'aether.project.json';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -442,6 +442,21 @@ function buildFloor(floor) {
     }),
   );
 
+  // ---- 玩家起点（v3 起的必需字段）----
+  // 放在第一间房的入口侧：玩家从这里进场，第一间房的 room-enter 立即触发。
+  // 挂 capsule gizmo 是为了在编辑器里看得见（instantiate 只认 MeshRenderer）；
+  // layer 5 = Character 层占位（引擎暂不消费，但语义正确，将来引擎消费即自动生效）。
+  const startId = `nd_f${floor.depth}_start`;
+  nodes.push(
+    node(startId, '玩家起点', {
+      position: [first.x - first.spec.w / 2 + 3, 0.9, first.z],
+      category: '角色',
+      components: [
+        meshRenderer({ type: 'builtin', shape: 'capsule', params: [0.35, 1.1, 8, 4] }, 's3', { layer: 5 }),
+      ],
+    }),
+  );
+
   const env = { ...baseEnvironment(), ...theme.env };
   const now = new Date().toISOString();
 
@@ -453,6 +468,7 @@ function buildFloor(floor) {
     environment: env,
     editorCamera: { target: [spanX / 2 - 10, 0, 0], distance: 62, yaw: 1.1, elevation: 0.75 },
     entryCamera: cameraId,
+    playerStart: startId,
     dependencies: [],
     nodes,
     meta: { createdAt: now, updatedAt: now, author: 'gen-level.mjs', notes: `GDD §4.1 层 ${floor.depth} · 主题 ${theme.label}` },
