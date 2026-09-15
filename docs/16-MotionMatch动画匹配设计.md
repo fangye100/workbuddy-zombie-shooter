@@ -216,7 +216,7 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | 单元 | 依赖 | 声明的 owner / 交付 | 最小验收 | 状态 |
 |---|---|---|---|---|
 | MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、源/目标独立标定、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、双方标定保存/读取与指纹；无轨迹不伪造 world 模式 | **已交付 2026-09-15**（未接 UI；scene:check 的 6 个 meta 哈希失配为 worktree 既有问题，见提交说明） |
-| MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 | 待开发 |
+| MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 | **已交付 2026-09-15**（world-rest 基准已实现并有公式自洽测试；BVH 路径固定 direction 并守门） |
 | MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 | 待开发 |
 | MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 | 待开发 |
 | MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 | 待开发 |
