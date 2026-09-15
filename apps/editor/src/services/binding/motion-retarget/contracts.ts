@@ -134,6 +134,37 @@ export interface RetargetEnvironment {
   sceneNodeId: string | null;
 }
 
+/** The current solver operates in a shared, canonical +Y ground frame. */
+export function diagnoseRetargetEnvironment(
+  environment: RetargetEnvironment,
+  targetPlane: RetargetEnvironment['targetPlane'],
+  calibratedSourcePlane?: RetargetEnvironment['sourcePlane'],
+): RetargetDiagnostic[] {
+  const diags: RetargetDiagnostic[] = [];
+  for (const [name, plane] of [
+    ['source', environment.sourcePlane], ['target', environment.targetPlane],
+    ['targetRig', targetPlane], ['sourceCalibration', calibratedSourcePlane],
+  ] as const) {
+    if (plane === undefined) continue;
+    if (plane.origin.some((x) => !Number.isFinite(x)) ||
+        plane.normal.some((x) => !Number.isFinite(x)) ||
+        Math.hypot(plane.normal[0], plane.normal[1] - 1, plane.normal[2]) > 1e-6) {
+      err(diags, 'ENVIRONMENT_PLANE_UNSUPPORTED', `${name} 平面必须在米制规范空间内，使用有限坐标和 +Y 单位法向`);
+    }
+  }
+  // Origins may differ within the same horizontal plane; only its elevation
+  // must agree. In-plane offsets are intentional inputs to spatial mapping.
+  if (Math.abs(environment.targetPlane.origin[1] - targetPlane.origin[1]) > 1e-6 ||
+      (calibratedSourcePlane !== undefined &&
+       Math.abs(environment.sourcePlane.origin[1] - calibratedSourcePlane.origin[1]) > 1e-6)) {
+    err(diags, 'ENVIRONMENT_PLANE_MISMATCH', '环境与骨架/源标定使用了不同的支撑平面，不能在同一次求解中混用');
+  }
+  if (environment.origin === 'scene' && !environment.sceneNodeId) {
+    err(diags, 'ENVIRONMENT_NODE_MISSING', '场景环境必须提供稳定 sceneNodeId');
+  }
+  return diags;
+}
+
 // ---------------------------------------------------------------- 求解结果
 
 /** 单帧规范世界解 */
@@ -269,6 +300,13 @@ export function diagnoseSourceMotion(m: SourceMotion): RetargetDiagnostic[] {
   if (!m.boneNames.includes(m.rootBone)) {
     err(diags, 'ROOT_MISSING', `根骨 ${m.rootBone} 不在骨名表里`);
   }
+  if (m.worldPositions[m.rootBone] === undefined || m.worldRotations[m.rootBone] === undefined ||
+      m.localRotations[m.rootBone] === undefined) {
+    err(diags, 'ROOT_TRACK_MISSING', '根骨必须同时提供局部旋转、世界旋转和世界位置轨迹，不能以零轨迹代替');
+  }
+  if (!Number.isFinite(m.unitScaleSource) || m.unitScaleSource <= 0) {
+    err(diags, 'SOURCE_UNIT_BAD', '源单位换算必须是有限正数');
+  }
   if (m.upAxisSource === 'x') {
     diags.push({ severity: 'warning', code: `${CODE_PREFIX}_XUP_NOT_NORMALIZED`, message: 'X-up 源未做轴向归一（极罕见），结果可能不可用' });
   }
@@ -324,7 +362,17 @@ export function diagnoseRetargetRig(rig: RetargetRig): RetargetDiagnostic[] {
         break;
       }
     }
-    if (!(ch.lengthM > 0)) err(diags, 'CHAIN_LENGTH_BAD', `链 ${ch.id} 总长必须 > 0`);
+    if (!Number.isFinite(ch.lengthM) || !(ch.lengthM > 0)) err(diags, 'CHAIN_LENGTH_BAD', `链 ${ch.id} 总长必须为有限正数`);
+    if (ch.joints.length === 3) {
+      for (const joint of ch.joints.slice(1)) {
+        const bone = rig.bones[joint];
+        if (bone === undefined) continue;
+        const length = Math.hypot(...bone.restLocalT);
+        if (!Number.isFinite(length) || length <= 0) {
+          err(diags, 'CHAIN_LENGTH_BAD', `两骨链 ${ch.id} 的 ${joint} 骨段必须有有限正长度`);
+        }
+      }
+    }
   }
   for (const [id, mk] of Object.entries(rig.markers)) {
     if (!inOrder.has(mk.bone)) {
@@ -334,8 +382,8 @@ export function diagnoseRetargetRig(rig: RetargetRig): RetargetDiagnostic[] {
       err(diags, 'MARKER_OFFSET_BAD', `标记 ${id} 偏移含非有限值`);
     }
   }
-  if (!(rig.pelvisHeightM > 0)) err(diags, 'PELVIS_HEIGHT_BAD', 'h_t（骨盆高）必须 > 0');
-  if (!(rig.unitScale > 0)) err(diags, 'UNIT_SCALE_BAD', 'unitScale 必须 > 0');
+  if (!Number.isFinite(rig.pelvisHeightM) || !(rig.pelvisHeightM > 0)) err(diags, 'PELVIS_HEIGHT_BAD', 'h_t（骨盆高）必须为有限正数');
+  if (!Number.isFinite(rig.unitScale) || !(rig.unitScale > 0)) err(diags, 'UNIT_SCALE_BAD', 'unitScale 必须为有限正数');
   return diags;
 }
 

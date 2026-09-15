@@ -29,6 +29,8 @@ export interface BuildSourceMotionOptions {
   unitScale?: number;
   /** up 轴覆盖；缺省用解析器检测 */
   forceUpAxis?: 0 | 1 | 2;
+  /** Importer-declared trajectory semantics. Stationary world motion cannot be inferred from displacement. */
+  rootMotion?: 'auto' | 'world-trajectory' | 'in-place-with-trajectory';
 }
 
 /** up 轴 → Y-up 的刚转四元数（与 retarget.ts upAxisToQuat 同约定） */
@@ -149,6 +151,9 @@ export function buildSourceMotion(
 
   const rootJoint = bvh.joints[bvh.root]!;
   const hasRootPos = rootJoint.posColumn >= 0;
+  if (!hasRootPos && opts.rootMotion !== undefined && opts.rootMotion !== 'auto') {
+    throw new RangeError('Declared root trajectory requires BVH position channels');
+  }
 
   // 逐帧：先算所有骨的局部旋转（C 共轭），再沿 BVH 父链 FK；只写映射骨
   const euler: [number, number, number] = [0, 0, 0];
@@ -255,6 +260,10 @@ export function buildSourceMotion(
     }
   }
 
+  if (hasRootPos && opts.rootMotion !== undefined && opts.rootMotion !== 'auto') {
+    rootMode = opts.rootMotion;
+    canWorldLock = rootMode === 'world-trajectory';
+  }
   const fingerprint = sourceFingerprintOf(bvh, mapping, unitScale, upAxis, rootMode);
   return {
     fingerprint,

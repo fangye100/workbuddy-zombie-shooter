@@ -13,6 +13,34 @@ const PLANE = { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0]
 const H = 1.0; // h_s（米）——阈值即绝对值
 const DET = defaultContactDetection(); // heightEnter .02, speedEnter .1, speedExit .25, minDur .08s
 
+describe('annotation execution intervals', () => {
+  const times = new Float64Array([0, 0.1, 0.2, 0.3]);
+  const marker: MarkerTrajectory = {
+    markerId: 'LeftFoot.ball', chainId: 'LeftLeg', positions: new Float64Array(12),
+  };
+  const detect = (annotations: ContactAnnotation[]) => detectContactSegments({
+    times, markers: [marker], plane: PLANE, hSrcM: H, detection: DET, annotations, canWorldLock: true,
+  });
+
+  it.each([[10, 11], [-0.1, 0.2], [0.2, 0.4], [0.01, 0.02]])(
+    'rejects unsupported interval [%s,%s] without inventing an automatic segment', (startS, endS) => {
+      const out = detect([{ marker: marker.markerId, startS, endS, mode: 'support' }]);
+      expect(out.segments).toEqual([]);
+      expect(out.diagnostics.map((d) => d.code)).toContain('MRC_ANNOT_TIME_UNSUPPORTED');
+    },
+  );
+
+  it('keeps valid requested seconds and independent identities without millisecond rounding', () => {
+    const out = detect([
+      { marker: marker.markerId, startS: 0.0001, endS: 0.1, mode: 'support' },
+      { marker: marker.markerId, startS: 0.0002, endS: 0.2, mode: 'support' },
+    ]);
+    expect(out.diagnostics).toEqual([]);
+    expect(out.segments.map((sg) => sg.startS)).toEqual([0.0001, 0.0002]);
+    expect(new Set(out.segments.map((sg) => sg.id)).size).toBe(2);
+  });
+});
+
 function timesAt(fps: number, seconds: number): Float64Array {
   const n = Math.round(seconds * fps) + 1;
   const t = new Float64Array(n);

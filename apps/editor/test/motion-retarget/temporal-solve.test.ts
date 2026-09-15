@@ -2,7 +2,7 @@
  * temporal-solve.test.ts —— 时间连续测试（MR-05，验收 A07 归此）。
  */
 import { describe, it, expect } from 'vitest';
-import { smoothRootCorrections } from '../../src/services/binding/motion-retarget/temporal-solve';
+import { measureRootCorrectionSpeed, smoothRootCorrections } from '../../src/services/binding/motion-retarget/temporal-solve';
 
 function timesAt(fps: number, n: number): Float64Array {
   const t = new Float64Array(n);
@@ -11,6 +11,21 @@ function timesAt(fps: number, n: number): Float64Array {
 }
 
 describe('smoothRootCorrections · A07', () => {
+  it('seconds windows do not overweight dense samples; zero duration preserves the input signal', () => {
+    const t = new Float64Array([0, 0.01, 0.5, 1]);
+    const corr = new Float64Array(t.length * 3);
+    t.forEach((v, i) => { corr[i * 3] = v; });
+    const out = smoothRootCorrections(t, corr, { transitionS: 0.2 });
+    expect(out.corrections[6]).toBeCloseTo(0.5, 12);
+    expect(out.corrections[0]).toBeCloseTo(0.05, 12);
+    expect(smoothRootCorrections(t, corr, { transitionS: 0 }).corrections).toEqual(corr);
+  });
+
+  it('measures the final correction instead of reusing a smoothed intermediate bound', () => {
+    const t = new Float64Array([0, 0.1, 0.15]);
+    const correction = new Float64Array([0, 0, 0, 0, 0.02, 0, 0, 0.04, 0]);
+    expect(measureRootCorrectionSpeed(t, correction)).toBeCloseTo(0.4, 12);
+  });
   it('阶跃修正在过渡窗内摊开：速度跳变 ≤ 阈值，不误罚源动态', () => {
     const fps = 30;
     const t = timesAt(fps, 30);

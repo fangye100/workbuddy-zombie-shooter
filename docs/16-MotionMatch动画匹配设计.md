@@ -1,6 +1,6 @@
 # Retargeting 空间补偿与接触求解：设计及开发计划
 
-> 更新：2026-09-15（第二轮）。状态：**MR-01…05 + bake-adapter 已交付；2026-09-15 第二轮外部审核（R01–R14）的姿态/坐标链缺陷已全部修复并有回归覆盖（`review-regression.test.ts`，含端到端「源→求解→烘焙→独立 FK」一致性）；尚未接入编辑器会话、尚未做实际 mocap 验收**。
+> Implementation refinement: **MR-01…05 and the bake core were reviewed from `749dd66` by three independent agent queues. Current algorithm: `mr-foot-2`. Scope, corrections, failure rules and validation evidence are recorded in [16B — Core review and refinement](./16B-RetargetingCoreReviewAndRefinement.md). Editor/session integration and real mocap acceptance remain pending; this is not a full-product completion claim.**
 > 本文是本项目 retargeting 后续开发的计划真源，替代 2026-09-10 版的固定 FK/IK 分区及单链后处理方案。
 > 算法依据：[16A-Retargeting运动空间补偿算法研究](./16A-Retargeting运动空间补偿算法研究.md)。该报告区分公开证据、独立推导与工程选择。
 > 关联：[资产管线](./06-从2D概念图到3D游戏模型管线.md)、[绑定评审](./15-绑定与蒙皮面板技术美术评审.md)、[场景及持久化](./14-Scene系统与场景数据持久化架构设计.md)。
@@ -217,9 +217,9 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 |---|---|---|---|---|
 | MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、源/目标独立标定、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、双方标定保存/读取与指纹；无轨迹不伪造 world 模式 | **已交付 2026-09-15**（未接 UI；scene:check 的 meta 哈希失配为 worktree 既有问题——2026-09-15 独立审核实测 28 项、交付前即存在且与本交付无关，未擅跑 scene:gen） |
 | MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 | **已交付 2026-09-15**（world-rest 基准已实现并有公式自洽测试；BVH 路径固定 direction 并守门） |
-| MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 | **已交付 2026-09-15**（脚跟→前掌滚动枢轴留 MR-04 求解期处理；滑动/滚动仅认标注） |
+| MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 | **Support detection and executable annotation validation delivered.** World locks require declared/trusted trajectory and source foot calibration. Slide/roll annotations are retained but explicitly partial; their solvers remain pending. |
 | MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 | **已交付 2026-09-15**（GN 只用于共享根平移，yaw 不受污染；A06 朝向任务在 two-bone 侧验收） |
-| MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 | **已交付 2026-09-15**（平滑后重解一遍约束复算残差；求解耗时/内存为逐帧估计，真实 10s 片段测量留 MR-06 接入时做） |
+| MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 | **Refined in `mr-foot-2`:** seconds-based smoothing, final re-solved correction metrics, independently measured anchors, inner/outer reach and convergence gates. Remaining temporal violations return partial; real-clip performance measurement remains in MR-06. |
 | MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`、`MR/bake-adapter.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/adapter/bake 测试 | 两入口规范世界结果一致；含父平移/旋转/统一缩放的导出读回；双方标定刷新复现/修改失效；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP | **部分交付 2026-09-15**：`bake-adapter.ts` 已实现（世界→局部 TRS、统一父缩放、根容器、指纹守门、缺骨保持 rest、读回等价测试）；`retarget-session.ts`/`main.ts` 抽离/预览导出接入与真实 GPU 验证待后续会话 |
 | MR-07 手掌与全身求解 | MR-06 | 扩展 pose、标定/接触 owner 及各自测试，开放肩/脊椎/根自由度；bake 组合验收 | 走路→掌面支撑、手脚同支撑、自由摆臂风格、真实手支撑烘焙 | 待开发 |
 | MR-08 表面及翻滚闭环 | MR-07 | `surface-contacts.ts` 及测试；场景部分另列 `document.ts`/迁移/测试单元；最小接入 pipeline/bake | 胸背滚动、手触身体、固定抓物、不同体积不穿插；真实“入场→翻滚→起身”导出读回 | 待开发 |

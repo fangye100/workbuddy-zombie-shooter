@@ -1,8 +1,7 @@
 /**
  * bake-adapter.test.ts —— 烘焙转换测试（MR-06 数学核心；A15 口径归此）。
  *
- * 世界解 → 节点局部轨道 → FK 读回，与原世界解逐分量比对（独立 FK 在
- * readBackWorld 里实现，不用被测代码自证）。
+ * Adapter unit contracts. Independent matrix playback and skin acceptance live in bake-acceptance.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -42,7 +41,7 @@ function sampleFrames(restChild: V3 = [0.3, 0.4, 0], restLeaf: V3 = [0.2, -0.2, 
   const mk = (f: number): WorldPoseFrame => {
     const rootQ = rotY(0.1 * f);
     const rootP: V3 = [0.1 * f, 1 + 0.02 * f, 0];
-    const childQ: Quat = [h * 0.2, 0, 0, h];
+    const childQ: Quat = [0.2 / Math.sqrt(1.04), 0, 0, 1 / Math.sqrt(1.04)];
     const childP = addRot(rootQ, rootP, restChild);
     const leafQ: Quat = [0, h, 0, h];
     const leafP = addRot(childQ, childP, restLeaf);
@@ -156,6 +155,35 @@ describe('bakeWorldSolveToLocal · 读回等价（A15）', () => {
 });
 
 describe('bakeWorldSolveToLocal · 拒绝与缺失', () => {
+  it.each([0, -1, Infinity, NaN])('rejects invalid root container scale %s before writing nonfinite tracks', (scale) => {
+    const rig = rigOf([bone('Root', null, [0, 1, 0], 0)], RIG_FP,
+      { pos: [0, 0, 0], quat: [0, 0, 0, 1], uniformScale: scale });
+    const result = bakeWorldSolveToLocal(clipOf(sampleFrames(), RIG_FP), rig);
+    expect(result.tracks).toBeNull();
+    expect(result.diagnostics.some((d) => d.code === 'MRB_SCALE')).toBe(true);
+  });
+
+  it('rejects a partially missing track with a diagnostic instead of throwing', () => {
+    const frames = sampleFrames();
+    delete (frames[1]!.boneQuat as Record<string, Quat>).Root;
+    const result = bakeWorldSolveToLocal(clipOf(frames, RIG_FP), rigOf([bone('Root', null, [0, 1, 0], 0)], RIG_FP));
+    expect(result.tracks).toBeNull();
+    expect(result.diagnostics.some((d) => d.code === 'MRB_POSE_SAMPLE')).toBe(true);
+  });
+
+  it('rejects a missing actual parent instead of silently treating the bone as a scene root', () => {
+    const result = bakeWorldSolveToLocal(clipOf(sampleFrames(), RIG_FP),
+      rigOf([bone('Root', 'MissingArmature', [0, 1, 0], 0)], RIG_FP));
+    expect(result.tracks).toBeNull();
+    expect(result.diagnostics.some((d) => d.code === 'MRB_GRAPH')).toBe(true);
+  });
+
+  it('rejects an out-of-order output graph before computing cumulative scales', () => {
+    const result = bakeWorldSolveToLocal(clipOf(sampleFrames(), RIG_FP),
+      rigOf([bone('Child', 'Root', [0.3, 0.4, 0], 1), bone('Root', null, [0, 1, 0], 0, 2)], RIG_FP));
+    expect(result.tracks).toBeNull();
+    expect(result.diagnostics.some((d) => d.code === 'MRB_GRAPH')).toBe(true);
+  });
   it('骨架指纹不一致 → 拒绝烘焙（不静默混骨架）', () => {
     const rig = rigOf([bone('Root', null, [0, 1, 0], 0)], 'fp1_other');
     const clip = clipOf(sampleFrames(), RIG_FP);

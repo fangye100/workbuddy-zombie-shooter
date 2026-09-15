@@ -130,16 +130,78 @@ function rotate(q: Quat, v: V3): [number, number, number] {
   ];
 }
 
-export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRig): BakeResult {
+/** Validate the actual output graph and every emitted sample before allocating tracks. */
+function diagnoseBakeInput(clip: WorldSolveClip, output: BakeOutputRig): RetargetDiagnostic[] {
   const diagnostics: RetargetDiagnostic[] = [];
-
-  // 可表达性检查：rest 缩放必须为正的统一值（非统一/负缩放不经此路径表达）
-  for (const b of Object.values(output.bones)) {
-    const s = b.restUniformScale ?? 1;
-    if (!(s > 0)) {
-      diagnostics.push({ severity: 'error', code: 'MRB_SCALE', message: `${b.name} 的缩放 ${s} 非正，刚性骨架无法表达` });
+  const fail = (code: string, message: string): void => {
+    diagnostics.push({ severity: 'error', code, message });
+  };
+  const validPos = (p: V3): boolean => p.length === 3 && p.every(Number.isFinite);
+  const validQuat = (q: Quat): boolean =>
+    q.length === 4 && q.every(Number.isFinite) && Math.abs(Math.hypot(...q) - 1) <= 1e-6;
+  const seen = new Set<string>();
+  const indices = new Set<number>();
+  if (output.order.length === 0) fail('MRB_GRAPH', 'Output skeleton must contain at least one node');
+  for (const name of output.order) {
+    const bone = output.bones[name];
+    if (bone === undefined || seen.has(name) || bone.name !== name) {
+      fail('MRB_GRAPH', `Output bone ${name} is missing, duplicated, or has a mismatched name`);
+      continue;
+    }
+    if (bone.parent !== null && !seen.has(bone.parent)) {
+      fail('MRB_GRAPH', `${name}: actual parent ${bone.parent} must exist and precede its child`);
+    }
+    if (!Number.isInteger(bone.nodeIndex) || bone.nodeIndex < 0 || indices.has(bone.nodeIndex)) {
+      fail('MRB_GRAPH', `${name}: output node index must be a unique nonnegative integer`);
+    }
+    if (!validPos(bone.restLocalT) || !validQuat(bone.restLocalR)) {
+      fail('MRB_REST_TRS', `${name}: rest translation must be finite and rotation must be normalized`);
+    }
+    const scale = bone.restUniformScale ?? 1;
+    if (!Number.isFinite(scale) || !(scale > 0)) fail('MRB_SCALE', `${name}: uniform scale must be finite and positive`);
+    seen.add(name);
+    indices.add(bone.nodeIndex);
+  }
+  if (Object.keys(output.bones).some((name) => !seen.has(name))) {
+    fail('MRB_GRAPH', 'Every output node must occur in the parent-first order');
+  }
+  const parent = output.rootParentWorld;
+  if (parent != null) {
+    if (!Number.isFinite(parent.uniformScale) || !(parent.uniformScale > 0)) {
+      fail('MRB_SCALE', 'Output root parent scale must be finite and positive');
+    }
+    if (!validPos(parent.pos) || !validQuat(parent.quat)) {
+      fail('MRB_PARENT_TRS', 'Output root parent translation must be finite and rotation must be normalized');
     }
   }
+  if (clip.frames.length === 0 || clip.frames.length !== clip.times.length) {
+    fail('MRB_TIMES', 'The clip must have one time per frame and at least one frame');
+  }
+  for (let f = 0; f < clip.times.length; f++) {
+    const t = clip.times[f]!;
+    if (!Number.isFinite(t) || t < 0 || (f > 0 && t <= clip.times[f - 1]!) || clip.frames[f]?.t !== t) {
+      fail('MRB_TIMES', `Frame ${f}: clip and pose times must match and be strictly ascending`);
+      break;
+    }
+  }
+  for (const name of output.order) {
+    const hasAny = clip.frames.some((frame) => frame.bonePos[name] !== undefined || frame.boneQuat[name] !== undefined);
+    if (!hasAny) continue; // A wholly unsolved output node retains its rest transform.
+    for (let f = 0; f < clip.frames.length; f++) {
+      const frame = clip.frames[f]!;
+      const p = frame.bonePos[name];
+      const q = frame.boneQuat[name];
+      if (p === undefined || q === undefined || !validPos(p) || !validQuat(q)) {
+        fail('MRB_POSE_SAMPLE', `${name}, frame ${f}: an emitted track requires finite positions and normalized rotations at every sample`);
+        break;
+      }
+    }
+  }
+  return diagnostics;
+}
+
+export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRig): BakeResult {
+  const diagnostics = diagnoseBakeInput(clip, output);
   if (clip.skeletonFingerprint !== output.fingerprint) {
     diagnostics.push({
       severity: 'error',
@@ -148,11 +210,16 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
     });
     return { tracks: null, diagnostics };
   }
+  if (diagnostics.some((d) => d.severity === 'error')) return { tracks: null, diagnostics };
 
   const rootParent = output.rootParentWorld ?? null;
   const tracks: LocalTrack[] = [];
   const cachePerFrame: Map<string, { pos: V3; quat: Quat }>[] = clip.frames.map(() => new Map());
   const cum = cumulativeScales(output);
+  if ([...cum.values()].some((s) => !Number.isFinite(s) || !(s > 0))) {
+    diagnostics.push({ severity: 'error', code: 'MRB_SCALE', message: 'Cumulative output scale overflowed or underflowed' });
+    return { tracks: null, diagnostics };
+  }
   // R08：非根骨没有平移轨道（固定骨长契约），世界解必须能被 rest 偏移×累计缩放复现；
   // 复现不了 = 解里带了刚性骨架表达不了的自由度 → 显式拒绝，不静默丢偏差
   const inexpressible = (bone: string, frame: number, devM: number): void => {
@@ -245,6 +312,12 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
       }
     }
     tracks.push({ bone: name, nodeIndex: b.nodeIndex, times: times.slice(), rotations, translations });
+  }
+
+  // Finite inputs can still overflow while converting an extremely small output scale.
+  if (tracks.some((track) => !track.rotations.every(Number.isFinite) ||
+    (track.translations !== null && !track.translations.every(Number.isFinite)))) {
+    diagnostics.push({ severity: 'error', code: 'MRB_TRACK_NONFINITE', message: 'World-to-local conversion produced a nonfinite track value' });
   }
 
   if (diagnostics.some((d) => d.severity === 'error')) {

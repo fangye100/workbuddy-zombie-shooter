@@ -6,13 +6,12 @@
  * 双支撑不可达时按最小二乘妥协根位置，逐约束残差显式上报（A10），
  * 绝不静默拉骨。摆动脚走自由基准；净空破坏时抬脚（A17）。
  *
- * Gauss–Newton（阻尼）只在「根 → 腿可达性」残差上运行：每条活动腿的
- * 残差 r_i = max(0, |root + c_i − T_i| − L_i)，解析雅可比 = 单位方向，
+ * Gauss–Newton adjusts only root translation, enforcing inner and outer reach
+ * radii with signed radial residuals and the corresponding direction Jacobian.
  * 3×3 法方程 + 阻尼项，收敛/迭代次数记录。
  */
 
-import { quatFromUnitVectors, quatMul, type Quat } from '../binding-math';
-import { restWorldRotations } from './rig-calibration';
+import { quatMul, type Quat } from '../binding-math';
 import type {
   ContactSegment,
   RetargetRig,
@@ -21,7 +20,7 @@ import type {
   WorldPoseFrame,
   RetargetDiagnostic,
 } from './contracts';
-import { solveTwoBone, rotateVec3 } from './two-bone-solver';
+import { solveTwoBone, rotateVec3, swingBetweenDirections } from './two-bone-solver';
 import { signedPlaneDistance } from './space-targets';
 import type { RetargetRecipeTolerances } from '@aether/scene';
 
@@ -78,30 +77,6 @@ function len3(a: V3): number {
   return Math.hypot(a[0], a[1], a[2]);
 }
 
-/** 沿用 rig 的 rest 世界方向（骨 i 的 rest 世界骨向 = 归一化偏移转父世界旋转） */
-function restWorldDirs(rig: RetargetRig): Record<string, V3> {
-  const worldRot: Record<string, Quat> = {};
-  const out: Record<string, V3> = {};
-  const firstChildOffset: Record<string, V3> = {};
-  for (const n of rig.order) {
-    const p = rig.bones[n]!.parent;
-    worldRot[n] = p === null ? (rig.bones[n]!.restLocalR as Quat) : quatMul(worldRot[p]!, rig.bones[n]!.restLocalR as Quat);
-    if (p !== null && firstChildOffset[p] === undefined) {
-      firstChildOffset[p] = rig.bones[n]!.restLocalT;
-    }
-  }
-  for (const n of rig.order) {
-    const off = firstChildOffset[n];
-    if (off === undefined) {
-      out[n] = [0, 0, 0];
-      continue;
-    }
-    const l = len3(off);
-    out[n] = l > 1e-9 ? scale3(rotateVec3(worldRot[n]!, off), 1 / l) : [0, 0, 0];
-  }
-  return out;
-}
-
 /** 全身基准 FK。根帧语义 = **根骨（Hips）的世界原点 + 完整世界朝向**：
  *  pos[Hips] = rootPos、quat[Hips] = rootQuat —— 根骨的局部旋转**已折进 rootQuat**
  *  （R01：rootQuat 再乘基准局部会把手臂/躯干的源旋转算两遍），基准局部表里根骨项被忽略；
@@ -115,7 +90,7 @@ function fkBaseline(rig: RetargetRig, locals: Readonly<Record<string, Quat>>, ro
       quat[n] = rootQuat;
       pos[n] = [rootPos[0], rootPos[1], rootPos[2]];
     } else {
-      const local = locals[n] ?? [0, 0, 0, 1];
+      const local = locals[n] ?? b.restLocalR;
       const pw = quat[b.parent]!;
       quat[n] = quatMul(pw, local);
       const t = b.restLocalT;
@@ -179,8 +154,6 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
   const diagnostics: RetargetDiagnostic[] = [];
   const frames = sm.times.length;
   const legs = legChainInfos(rig);
-  const rwd = restWorldDirs(rig);
-  const restWR = restWorldRotations(rig);
   const plane = rig.supportPlane;
 
   // 接触段 → 踝目标（锚点 − R_foot·b；R_foot 用源脚世界朝向，不依赖求解结果）。
@@ -278,10 +251,13 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
         const delta = sub3(c.ankleTarget, hipPos);
         const dist = len3(delta);
         const reach = c.leg.l1 + c.leg.l2;
-        if (dist <= reach) continue;
+        const inner = Math.abs(c.leg.l1 - c.leg.l2);
+        const r = dist > reach ? dist - reach : dist < inner ? dist - inner : 0;
+        if (Math.abs(r) <= 1e-10 * Math.max(1, reach)) continue;
         any = true;
-        const u = scale3(delta, 1 / dist);
-        const r = dist - reach;
+        // Signed radial error: positive pulls the pelvis toward a far target;
+        // negative pushes it away from an unreachable inner-sphere target.
+        const u = dist > 1e-12 ? scale3(delta, 1 / dist) : scale3(plane.normal, -1);
         const w = 1 / Math.max(1e-6, reach);
         for (let i = 0; i < 3; i++) {
           g[i]! += w * r * u[i]!;
@@ -303,7 +279,15 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       }
       rootPos = [rootPos[0] + step[0]!, rootPos[1] + step[1]!, rootPos[2] + step[2]!];
     }
-    if (iter >= maxIter && contacts.length > 0) residualRemains = true;
+    if (iter >= maxIter && contacts.length > 0) {
+      const finalFK = fkBaseline(rig, locals, rootPos, rootQ);
+      residualRemains = contacts.some(c => {
+        const d = len3(sub3(c.ankleTarget, finalFK.pos[c.leg.hip]!));
+        const outer = c.leg.l1 + c.leg.l2;
+        const inner = Math.abs(c.leg.l1 - c.leg.l2);
+        return Math.max(d - outer, inner - d) > 1e-10 * Math.max(1, outer);
+      });
+    }
     converged = converged && !residualRemains;
     totalIter += iter;
     rootCorrections[f * 3] = rootPos[0] - candRoot[0];
@@ -315,10 +299,12 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
     const bonePos: Record<string, [number, number, number]> = { ...fk.pos };
     const boneQuat: Record<string, Quat> = { ...fk.quat };
     const contactLegs = new Set<string>();
+    const controlledBones = new Set<string>();
 
     for (const c of contacts) {
       const leg = c.leg;
       contactLegs.add(leg.chainId);
+      for (const bone of [leg.hip, leg.knee, leg.ankle]) controlledBones.add(bone);
       const hipPos = fk.pos[leg.hip]!;
       const sol = solveTwoBone({
         root: hipPos,
@@ -351,13 +337,11 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       bonePos[leg.ankle] = sol.reachedTip;
       // 旋转（R02：WorldPoseFrame.boneQuat 一律存**世界**旋转；局部轨道只由 bake 派生）：
       // 大腿/小腿对齐当前方向；脚保持源世界朝向（A06/A18）
-      const parentW = parentWorldOf(rig, fk, leg.hip);
-      // 复审 P1：世界旋转 = swing(rest 向→当前向) · rest 世界参考旋转——
-      // 只取 swing 会丢目标参考旋转（大腿 Z20° ⟹ 重建膝位差 14.6cm）
-      const worldHip = quatMul(swingFromTo(rwd[leg.hip]!, sub3(sol.knee, hipPos)), restWR[leg.hip]!);
-      void parentW;
+      // Rotate the mapped animation frame, retaining its axial twist. Rest-only
+      // reconstruction discards source twist even when the endpoint is unchanged.
+      const worldHip = quatMul(swingFromTo(sub3(fk.pos[leg.knee]!, hipPos), sub3(sol.knee, hipPos)), fk.quat[leg.hip]!);
       boneQuat[leg.hip] = worldHip;
-      const worldKnee = quatMul(swingFromTo(rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee)), restWR[leg.knee]!);
+      const worldKnee = quatMul(swingFromTo(sub3(fk.pos[leg.ankle]!, fk.pos[leg.knee]!), sub3(sol.reachedTip, sol.knee)), fk.quat[leg.knee]!);
       boneQuat[leg.knee] = worldKnee;
       boneQuat[leg.ankle] = c.footWorld;
       // 锚点偏差验收：最终脚变换下重算标记世界点
@@ -366,8 +350,6 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       const rec = anchorDev.get(c.seg.id);
       if (rec === undefined) anchorDev.set(c.seg.id, { marker: c.seg.marker, maxM: dev });
       else rec.maxM = Math.max(rec.maxM, dev);
-      // 链下子骨（ToeBase/ToeTip 等）用新脚世界变换重挂，避免新旧混合帧
-      refreshSubtree(rig, bonePos, boneQuat, leg.ankle);
     }
 
     // 被跳过的并发约束：按最终姿态计锚点残差（进入 anchorDeviations → 质量门禁）
@@ -389,6 +371,7 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       const markerWorld = add3(anklePos, rotateVec3(footQ, leg.markerLocal));
       const clearance = signedPlaneDistance(markerWorld, plane);
       if (clearance < -tolerances.penetrationH * rig.pelvisHeightM) {
+        for (const bone of [leg.hip, leg.knee, leg.ankle]) controlledBones.add(bone);
         // 沿法向抬踝，让标记回到支撑面（软修正；残差进诊断）
         const lift = scale3(plane.normal, -clearance);
         const hipPos = bonePos[leg.hip]!;
@@ -402,9 +385,9 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
         });
         bonePos[leg.knee] = sol.knee;
         bonePos[leg.ankle] = sol.reachedTip;
-        const worldHip = quatMul(swingFromTo(rwd[leg.hip]!, sub3(sol.knee, hipPos)), restWR[leg.hip]!);
+        const worldHip = quatMul(swingFromTo(sub3(fk.pos[leg.knee]!, hipPos), sub3(sol.knee, hipPos)), fk.quat[leg.hip]!);
         boneQuat[leg.hip] = worldHip;
-        const worldKnee = quatMul(swingFromTo(rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee)), restWR[leg.knee]!);
+        const worldKnee = quatMul(swingFromTo(sub3(fk.pos[leg.ankle]!, fk.pos[leg.knee]!), sub3(sol.reachedTip, sol.knee)), fk.quat[leg.knee]!);
         boneQuat[leg.knee] = worldKnee;
         boneQuat[leg.ankle] = footQ;
         diagnostics.push({
@@ -414,10 +397,12 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
           frame: f,
           constraint: leg.chainId,
         });
-        refreshSubtree(rig, bonePos, boneQuat, leg.ankle);
       }
     }
 
+    // IK also moves side branches attached to thighs and shins. Rebuild every
+    // non-controlled descendant, retaining the solved chain's world transforms.
+    refreshDerivedBones(rig, bonePos, boneQuat, controlledBones, locals);
     outFrames.push({ t, rootPos, rootQuat: rootQ, bonePos, boneQuat });
     prevBonePos = bonePos;
   }
@@ -434,35 +419,26 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
 }
 
 /**
- * 把 startBone 的全部后代按其 rest 局部重新挂到（已更新的）startBone 世界变换下。
- * 语义权衡（一致性 > 保真度）：接触/抬脚期脚趾丢失源动画的局部旋转、回到 rest
- * 摆位——避免「新脚朝向配旧 toe 世界位」的混合帧；源 toe 动画的保留留给后续单元。
+ * Reattach descendants to the corrected world frame while preserving mapped local
+ * animation. Bones without a source track retain their target reference rotation.
  */
-function refreshSubtree(
+function refreshDerivedBones(
   rig: RetargetRig,
   bonePos: Record<string, [number, number, number]>,
   boneQuat: Record<string, Quat>,
-  startBone: string,
+  controlled: ReadonlySet<string>,
+  locals: Readonly<Record<string, Quat>>,
 ): void {
   for (const n of rig.order) {
     const b = rig.bones[n]!;
-    if (b.parent === null || b.parent !== startBone && !isDescendantOf(rig, b.parent, startBone)) continue;
+    if (b.parent === null || controlled.has(n)) continue;
     const pq = boneQuat[b.parent]!;
     const t = rig.bones[n]!.restLocalT;
-    boneQuat[n] = quatMul(pq, rig.bones[n]!.restLocalR as Quat);
+    boneQuat[n] = quatMul(pq, locals[n] ?? rig.bones[n]!.restLocalR as Quat);
     const off = rotateVec3(pq, [t[0], t[1], t[2]]);
     const pp = bonePos[b.parent]!;
     bonePos[n] = [pp[0] + off[0], pp[1] + off[1], pp[2] + off[2]];
   }
-}
-
-function isDescendantOf(rig: RetargetRig, bone: string, ancestor: string): boolean {
-  let cur: string | null = bone;
-  while (cur !== null) {
-    if (cur === ancestor) return true;
-    cur = rig.bones[cur]!.parent;
-  }
-  return false;
 }
 
 /** 源脚世界旋转映射到目标参考系：Q_src · D（缺基准/缺骨时退回源旋转） */
@@ -481,18 +457,7 @@ function mappedFootWorld(
 
 /** swing(restWorldDir → currentDir)·参考系；两向量自动归一化（退化给 identity） */
 function swingFromTo(restDir: V3, curDir: V3): Quat {
-  const a = Math.hypot(restDir[0], restDir[1], restDir[2]);
-  const b = Math.hypot(curDir[0], curDir[1], curDir[2]);
-  if (a < 1e-12 || b < 1e-12) return [0, 0, 0, 1];
-  return quatFromUnitVectors(
-    [restDir[0] / a, restDir[1] / a, restDir[2] / a],
-    [curDir[0] / b, curDir[1] / b, curDir[2] / b],
-  );
-}
-
-function parentWorldOf(rig: RetargetRig, fk: RigFK, bone: string): Quat {
-  const p = rig.bones[bone]!.parent;
-  return p === null || fk.quat[p] === undefined ? [0, 0, 0, 1] : fk.quat[p]!;
+  return swingBetweenDirections(restDir, curDir);
 }
 
 /** 3×3 线性解（高斯消元；奇异返回 null） */

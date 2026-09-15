@@ -16,6 +16,23 @@ import { buildBvhText } from './fixture';
 // ───────────────────────── A09：根模式四分类 ─────────────────────────
 
 describe('buildSourceMotion · 根模式（A09）', () => {
+  it('explicit world semantics preserve stationary and vertical trajectories and invalidate inferred identity', () => {
+    const bvh = parseBvh(buildBvhText({ rootPos: (f) => [0, 100 + f * 10, 0] }));
+    const inferred = buildSourceMotion(bvh);
+    const declared = buildSourceMotion(bvh, { rootMotion: 'world-trajectory' });
+    expect(declared.canWorldLock).toBe(true);
+    expect(declared.rootMode).toBe('world-trajectory');
+    expect(declared.worldPositions.Hips).toEqual(inferred.worldPositions.Hips);
+    expect(declared.fingerprint).not.toBe(inferred.fingerprint);
+    const stationary = buildSourceMotion(parseBvh(buildBvhText({})), { rootMotion: 'world-trajectory' });
+    expect(stationary.canWorldLock).toBe(true);
+  });
+
+  it('explicit in-place semantics override horizontal drift; missing channels cannot supply a trajectory', () => {
+    const motion = buildSourceMotion(parseBvh(buildBvhText({ rootPos: f => [f * 10, 100, 0] })), { rootMotion: 'in-place-with-trajectory' });
+    expect(motion.canWorldLock).toBe(false);
+    expect(() => buildSourceMotion(parseBvh(buildBvhText({ rootChannels: '3' })), { rootMotion: 'world-trajectory' })).toThrow(/position channels/);
+  });
   it('有位置通道 + 水平位移 0.4 m → world-trajectory，可世界锁脚', () => {
     const sm = buildSourceMotion(
       parseBvh(buildBvhText({ rootPos: (f) => [f * 10, 100, 0] })),

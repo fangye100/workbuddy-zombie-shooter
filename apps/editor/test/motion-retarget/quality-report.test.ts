@@ -44,6 +44,28 @@ function supportSeg(anchor: [number, number, number], startS: number, endS: numb
 }
 
 describe('buildQualityReport', () => {
+  it('recomputes hard anchor error even when solver residuals omit the segment', () => {
+    const res = buildQualityReport({
+      rig, frames: [standFrame()], segments: [supportSeg([0.2, 0, 0.09], 0, 0.1)],
+      anchorDeviations: [], reachResidualsM: { inner: 0, outer: 0 },
+      rootCorrections: new Float64Array(3), switchJumpMps: 0,
+      iterations: 1, converged: true, durationMs: 1, tolerances: defaultRetargetTolerances(),
+    });
+    expect(res.metrics.maxAnchorDeviationM).toBeCloseTo(0.1, 12);
+    expect(res.status).toBe('partial');
+    expect(res.violations.map(v => v.code)).toContain('MRQ_ANCHOR');
+  });
+
+  it('inner reach and nonconvergence cannot be reported as complete', () => {
+    const res = buildQualityReport({
+      rig, frames: [standFrame()], segments: [], anchorDeviations: [],
+      reachResidualsM: { inner: 0.1, outer: 0 }, rootCorrections: new Float64Array(3),
+      switchJumpMps: 0, iterations: 8, converged: false, durationMs: 1,
+      tolerances: defaultRetargetTolerances(),
+    });
+    expect(res.status).toBe('partial');
+    expect(res.violations.map(v => v.code)).toEqual(expect.arrayContaining(['MRQ_REACH_IN', 'MRQ_NOT_CONVERGED']));
+  });
   it('完美锁定（标记恰在锚点上、无穿透、无滑动）→ complete，零违例', () => {
     // rest 站姿：左 ball 世界位 = 踝 + (0,−0.03,+0.09)
     const anchor: [number, number, number] = [0.1, 0, 0.09];

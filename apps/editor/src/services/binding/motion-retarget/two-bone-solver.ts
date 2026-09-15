@@ -10,7 +10,7 @@
  * 不在这里二次分解假装保住 twist（docs/16 §4.1）。
  */
 
-import { quatFromUnitVectors, quatMul, type Quat } from '../binding-math';
+import { quatMul, type Quat } from '../binding-math';
 import type { V3 } from './contracts';
 
 export interface TwoBoneInput {
@@ -67,15 +67,15 @@ export function rotateVec3(q: Quat, v: V3): [number, number, number] {
   ];
 }
 
-/** 数值余量：可达域边界内缩，避免 a→l1 时 b 的 sqrt 负数污染 */
-const REACH_EPS = 1e-9;
-
 export function solveTwoBone(input: TwoBoneInput): TwoBoneSolution {
   const { root, tip, l1, l2 } = input;
+  if (!Number.isFinite(l1) || !Number.isFinite(l2) || l1 <= 0 || l2 <= 0) {
+    throw new RangeError('Two-bone IK requires finite, positive segment lengths');
+  }
   const delta = sub3(tip, root);
   const dReq = len3(delta);
-  const dMax = l1 + l2 - REACH_EPS;
-  const dMin = Math.abs(l1 - l2) + REACH_EPS;
+  const dMax = l1 + l2;
+  const dMin = Math.abs(l1 - l2);
 
   let status: TwoBoneStatus = 'exact';
   let residualM = 0;
@@ -95,8 +95,13 @@ export function solveTwoBone(input: TwoBoneInput): TwoBoneSolution {
   const reachedTip: [number, number, number] =
     status === 'exact' ? [tip[0], tip[1], tip[2]] : add3(root, scale3(e, d));
 
-  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d);
-  const b = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  // Use the closed reach interval. Artificially shortening a straight limb creates
+  // a sqrt(epsilon)-sized bend and makes positions disagree with its rotations.
+  // Coincident endpoints with equal lengths form a fully folded limb.
+  const a = d === 0 ? 0 : d === dMax ? l1 :
+    d === dMin ? (l1 >= l2 ? l1 : -l1) :
+      (l1 * l1 - l2 * l2 + d * d) / (2 * d);
+  const b = d === dMax || (d === dMin && d > 0) ? 0 : Math.sqrt(Math.max(0, l1 * l1 - a * a));
 
   // 弯曲方向 v：poleHint − (poleHint·e)e；退化用 prevKnee；再退化用确定性正交基
   let v = orthogonalize(input.poleHint, e);
@@ -126,7 +131,7 @@ function defaultPerp(e: V3): [number, number, number] {
 /**
  * 世界方向 → 骨局部旋转：local = inv(parentWorld) · fromTo(restWorldDir, currentWorldDir)。
  * 输入**可以是任意长度**的位移向量（如 knee−hip，模长 = 骨长）——内部先归一化，
- * 再喂给只接受单位向量的 quatFromUnitVectors（R03：不归一化会让对齐角随骨长变化）。
+ * 再计算保留微小角度的 swing（不归一化会让对齐角随骨长变化）。
  * 纯 swing（最小弧）；twist 保持是上层基准的事。零长度方向 = 不旋转。
  */
 export function alignBoneRotation(
@@ -134,11 +139,25 @@ export function alignBoneRotation(
   restWorldDir: V3,
   currentWorldDir: V3,
 ): Quat {
-  const a = unitOrZero(restWorldDir);
-  const b = unitOrZero(currentWorldDir);
-  if (a === null || b === null) return conj(parentWorldQuat);
-  const q = quatFromUnitVectors([a[0], a[1], a[2]], [b[0], b[1], b[2]]);
-  return quatMul(conj(parentWorldQuat), q);
+  return quatMul(conj(parentWorldQuat), swingBetweenDirections(restWorldDir, currentWorldDir));
+}
+
+/** Minimal swing for IK geometry, retaining small angles at either end of [0, pi]. */
+export function swingBetweenDirections(from: V3, to: V3): Quat {
+  const a = unitOrZero(from);
+  const b = unitOrZero(to);
+  if (a === null || b === null) return [0, 0, 0, 1];
+  const cross: V3 = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const sin = len3(cross);
+  const cos = Math.max(-1, Math.min(1, dot3(a, b)));
+  if (sin === 0) {
+    if (cos >= 0) return [0, 0, 0, 1];
+    const axis = defaultPerp(a);
+    return [axis[0], axis[1], axis[2], 0];
+  }
+  const half = Math.atan2(sin, cos) / 2;
+  const factor = Math.sin(half) / sin;
+  return [cross[0] * factor, cross[1] * factor, cross[2] * factor, Math.cos(half)];
 }
 
 function unitOrZero(v: V3): [number, number, number] | null {

@@ -69,6 +69,18 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   // 锚点偏差（沿用求解器逐段值）
   let maxAnchor = 0;
   for (const d of input.anchorDeviations) maxAnchor = Math.max(maxAnchor, d.maxM);
+  // The delivered pose is the authority. A skipped or stale solver residual must
+  // never hide a requested hard anchor from acceptance.
+  let missingAnchorPose = false;
+  for (const seg of segments) {
+    if (seg.mode !== 'support' || seg.anchor === null) continue;
+    for (const frame of frames) {
+      if (frame.t < seg.startS - 1e-9 || frame.t > seg.endS + 1e-9) continue;
+      const world = markerWorldAt(rig, frame, seg.marker);
+      if (world === null) missingAnchorPose = true;
+      else maxAnchor = Math.max(maxAnchor, len3(sub3(world, seg.anchor)));
+    }
+  }
 
   // 累计切向滑动 + 穿透 + 摆动净空
   // 滑动口径（docs/16 §8 A08）：**相邻样本**切向距离总和 Σ|tangential(P(t+1)−P(t))|，
@@ -93,6 +105,7 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
       const seg = segments.find(
         (s) =>
           rig.markers[s.marker]?.bone === mk.bone &&
+          s.mode === 'support' &&
           fr.t >= s.startS - 1e-9 &&
           fr.t <= s.endS + 1e-9 &&
           s.anchor !== null,
@@ -147,6 +160,13 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   check('MRQ_SLIDE', '累计切向滑动超限', cumulativeSlide, tolerances.slideH * hT);
   check('MRQ_PENETRATION', '穿透超限', maxPenetration, tolerances.penetrationH * hT);
   check('MRQ_REACH_OUT', '外侧不可达残差', metrics.maxReachResidualOuterM, tolerances.anchorH * hT);
+  check('MRQ_REACH_IN', '内侧不可达残差', metrics.maxReachResidualInnerM, tolerances.anchorH * hT);
+  if (!input.converged) {
+    violations.push({ code: 'MRQ_NOT_CONVERGED', message: '姿态求解未收敛', valueM: 1, limitM: 0 });
+  }
+  if (missingAnchorPose) {
+    violations.push({ code: 'MRQ_ANCHOR_UNEVALUABLE', message: '最终姿态缺少约束标记', valueM: 1, limitM: 0 });
+  }
   check('MRQ_SWITCH_JUMP', '修正速度跳变超限', input.switchJumpMps, 0.1 * hT);
   // R09：摆动相穿透同样是穿透——没有接触段不等于允许穿地
   if (Number.isFinite(metrics.minSwingClearanceM) && metrics.minSwingClearanceM < 0) {

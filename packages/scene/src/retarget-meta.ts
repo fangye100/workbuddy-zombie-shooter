@@ -29,7 +29,7 @@ import type { MetaDiagnostic } from './asset-meta';
 export const RETARGET_META_SCHEMA_VERSION = 1;
 
 /** 当前求解算法版本：算法行为变化时必须 +1，否则旧产物不会被判定失效 */
-export const RETARGET_ALGORITHM_VERSION = 'mr-foot-1';
+export const RETARGET_ALGORITHM_VERSION = 'mr-foot-2';
 
 // ---------------------------------------------------------------- 标定
 
