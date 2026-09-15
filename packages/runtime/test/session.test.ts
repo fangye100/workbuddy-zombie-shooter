@@ -163,6 +163,56 @@ describe('WU-3 验收：动态实体数量不受 MAX_OBJECTS(64) 约束', () => 
 });
 
 /**
+ * docs/17 §8-2：玩家未进入的房间不刷怪；进入后生成一次；再次跨越边界不重复投放；
+ * **禁用刷怪组件不生成**。
+ *
+ * 最后一条单独立一条，是因为 `enabled` 很容易被实现成"提示"而不是"硬约束" ——
+ * 组件照样读、照样生成，只是不画出来。那种实现在实体计数上看不出来，只能靠
+ * "来源刷怪点一个实体都没有"这种身份级断言抓。
+ */
+describe('docs/17 §8-2：房间触发与禁用语义', () => {
+  /** 改指定节点上某类组件的字段，返回新会话 */
+  function withPatch(nodeId: string, kind: string, patch: Record<string, unknown>): RuntimeSession {
+    const key = Object.keys(MODULES)[0]!;
+    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    let found = false;
+    for (const n of doc.nodes) {
+      if (n.id !== nodeId) continue;
+      for (const c of n.components) {
+        if (c.kind === kind) {
+          Object.assign(c, patch);
+          found = true;
+        }
+      }
+    }
+    if (!found) throw new Error(`夹具里没有 ${nodeId} 的 ${kind}`);
+    const r = loadLevelRuntime(doc);
+    if (r.desc === null) throw new Error('装载失败：' + JSON.stringify(r.diagnostics));
+    return new RuntimeSession({ desc: r.desc, seed: 5 });
+  }
+
+  it('禁用的刷怪点一个都不生成（enabled 是硬约束，不是提示）', () => {
+    const s = withPatch('nd_f1r0_sp0', 'SpawnPoint', { enabled: false });
+    expect(s.countNpc()).toBe(7); // 房间 1 = 5+4+3，去掉 sp0 的 5
+    expect(s.view().some((e) => e.sourceNodeId === 'nd_f1r0_sp0')).toBe(false);
+  });
+
+  it('禁用的房间不触发（里面的刷怪点一个都不投放）', () => {
+    const s = withPatch('nd_f1r0', 'RoomVolume', { enabled: false });
+    expect(s.countNpc()).toBe(0);
+    expect(s.triggeredRooms()).toEqual([]);
+  });
+
+  it('再次跨越边界不重复投放（跑 300 步实体数不涨）', () => {
+    const s = new RuntimeSession({ desc: desc(), seed: 5 });
+    const n0 = s.countNpc();
+    s.run(300);
+    expect(s.countNpc()).toBe(n0);
+    expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
+  });
+});
+
+/**
  * WU-5 前置属性：**刷怪随机流的局部性**。
  *
  * 每个刷怪点用 `mixSeed(会话种子, nodeId)` 派生自己的随机流（见 session.ts）。

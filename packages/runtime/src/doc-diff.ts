@@ -73,3 +73,38 @@ export function changedJsonPaths(a: unknown, b: unknown): JsonDiffEntry[] {
 export function changedPathsOnly(a: unknown, b: unknown): string[] {
   return changedJsonPaths(a, b).map((d) => d.path);
 }
+
+/**
+ * 稳定序列化：**对象键按字典序**（JSON.stringify 用插入序，同一份数据换个构造
+ * 路径就会得到不同的字符串，直接比字符串会假报不一致）。
+ */
+export function stableJson(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableJson(o[k])}`).join(',')}}`;
+}
+
+/**
+ * 文档指纹（FNV-1a 32 位，十六进制）。
+ *
+ * ## 为什么需要它
+ *
+ * docs/17 §8-1 要求证明「Node 与浏览器**同一输入** → 同一输出」。这句话有个隐含
+ * 前提：两边喂进去的确实是同一份场景。这个前提不能靠"都从磁盘读的"来假设 ——
+ * 编辑器手上的那份文档可能已被未保存编辑改过、被迁移链补过字段、被归一化过顺序，
+ * 任何一条都会让"同输入"这句悄悄失效，然后你会看到一堆位置偏差却查不出源头。
+ *
+ * 有了指纹，两侧先比指纹：**指纹不等 = 输入不同，不是一致性坏了**，排查方向立刻
+ * 分岔，不用再拿实体坐标去猜。
+ */
+export function sceneFingerprint(doc: unknown): string {
+  const s = stableJson(doc);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
