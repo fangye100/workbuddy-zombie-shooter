@@ -179,22 +179,22 @@ export function readBackWorld(
         continue;
       }
       const localR: Quat = [t.rotations[f * 4]!, t.rotations[f * 4 + 1]!, t.rotations[f * 4 + 2]!, t.rotations[f * 4 + 3]!];
-      const parent = b.parent !== null && output.bones[b.parent] !== undefined ? frame[b.parent] : null;
+      const parent = b.parent !== null && output.bones[b.parent] !== undefined ? (frame[b.parent] ?? null) : null;
       if (parent === null) {
         if (rootParent !== null) {
           const wq = quatMul(rootParent.quat, localR);
-          const lt = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
+          const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
           const wp = rotate(rootParent.quat, [lt[0] * rootParent.uniformScale, lt[1] * rootParent.uniformScale, lt[2] * rootParent.uniformScale]);
           frame[name] = { pos: [rootParent.pos[0] + wp[0], rootParent.pos[1] + wp[1], rootParent.pos[2] + wp[2]], quat: wq };
         } else {
-          const lt = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
-          frame[name] = { pos: [lt[0], lt[1], lt[2]], quat: localR };
+          const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
+          frame[name] = { pos: [lt[0]!, lt[1]!, lt[2]!], quat: localR };
         }
       } else {
         const wq = quatMul(parent.quat, localR);
         const parentBone = output.bones[b.parent!]!;
         const s = parentBone.restUniformScale ?? 1;
-        const lt = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
+        const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
         const off = rotate(parent.quat, [lt[0] * s, lt[1] * s, lt[2] * s]);
         frame[name] = { pos: [parent.pos[0] + off[0], parent.pos[1] + off[1], parent.pos[2] + off[2]], quat: wq };
       }
