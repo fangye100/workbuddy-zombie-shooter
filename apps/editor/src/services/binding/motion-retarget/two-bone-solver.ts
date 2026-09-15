@@ -125,18 +125,26 @@ function defaultPerp(e: V3): [number, number, number] {
 
 /**
  * 世界方向 → 骨局部旋转：local = inv(parentWorld) · fromTo(restWorldDir, currentWorldDir)。
- * 纯 swing（最小弧）；twist 保持是上层基准的事。
+ * 输入**可以是任意长度**的位移向量（如 knee−hip，模长 = 骨长）——内部先归一化，
+ * 再喂给只接受单位向量的 quatFromUnitVectors（R03：不归一化会让对齐角随骨长变化）。
+ * 纯 swing（最小弧）；twist 保持是上层基准的事。零长度方向 = 不旋转。
  */
 export function alignBoneRotation(
   parentWorldQuat: Quat,
   restWorldDir: V3,
   currentWorldDir: V3,
 ): Quat {
-  const q = quatFromUnitVectors(
-    [restWorldDir[0], restWorldDir[1], restWorldDir[2]],
-    [currentWorldDir[0], currentWorldDir[1], currentWorldDir[2]],
-  );
+  const a = unitOrZero(restWorldDir);
+  const b = unitOrZero(currentWorldDir);
+  if (a === null || b === null) return conj(parentWorldQuat);
+  const q = quatFromUnitVectors([a[0], a[1], a[2]], [b[0], b[1], b[2]]);
   return quatMul(conj(parentWorldQuat), q);
+}
+
+function unitOrZero(v: V3): [number, number, number] | null {
+  const l = Math.hypot(v[0], v[1], v[2]);
+  if (l < 1e-12) return null;
+  return [v[0] / l, v[1] / l, v[2] / l];
 }
 
 /** 目标世界朝向 → 局部：local = inv(parentWorld) · desiredWorld（足/掌世界朝向任务） */

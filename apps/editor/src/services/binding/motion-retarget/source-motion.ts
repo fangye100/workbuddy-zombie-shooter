@@ -271,7 +271,12 @@ export function buildSourceMotion(
   };
 }
 
-/** 源身份指纹：骨架映射 + 帧率 + 帧数 + 全部帧值的稳定散列（内容变 → 指纹变） */
+/**
+ * 源身份指纹（R11：完整性优先）：
+ *  - 结构全量：逐关节 parent/offset/通道序/End Site（改任何骨长或拓扑 → 指纹变）；
+ *  - 帧值全量：不采样、不舍入（采样会漏改帧，舍入会漏亚微米编辑）。
+ * 大文件的指纹耗时是线性一遍，接受（正确性关键路径不做抽样缓存键）。
+ */
 function sourceFingerprintOf(
   bvh: BvhFile,
   mapping: Record<string, string>,
@@ -279,24 +284,31 @@ function sourceFingerprintOf(
   upAxis: number,
   rootMode: RootMotionMode,
 ): string {
-  const framesDigest: number[] = [];
-  const step = Math.max(1, Math.floor(bvh.frames.length / 4096));
-  for (let i = 0; i < bvh.frames.length; i += step) framesDigest.push(round6(bvh.frames[i]!));
+  const structure = bvh.order.map((n) => {
+    const j = bvh.joints[n]!;
+    return [
+      n,
+      j.parent,
+      j.offset[0],
+      j.offset[1],
+      j.offset[2],
+      j.channels.join(','),
+      j.endOffset === null ? null : [j.endOffset[0], j.endOffset[1], j.endOffset[2]],
+    ];
+  });
   return retargetFingerprint({
     root: bvh.root,
     joints: bvh.order.length,
     frameCount: bvh.frameCount,
-    frameTime: round6(bvh.frameTime),
+    frameTime: bvh.frameTime,
+    dof: bvh.dof,
     mapping,
     unitScale,
     upAxis,
     rootMode,
-    framesDigest,
+    structure,
+    frames: Array.from(bvh.frames),
   });
-}
-
-function round6(v: number): number {
-  return Math.round(v * 1e6) / 1e6;
 }
 
 /**

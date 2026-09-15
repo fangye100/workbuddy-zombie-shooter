@@ -49,12 +49,42 @@ function conj(q: Quat): Quat {
   return [-q[0], -q[1], -q[2], q[3]];
 }
 
+/**
+ * R08：骨局部平移的**累计缩放** = rootParent 缩放 × 所有严格祖先（含父）的 restUniformScale。
+ * glTF T·R·S 语义下，child 世界偏移 = parentQ·(t_child · cum(child))；
+ * 只乘直接父缩放会漏容器/更高祖先，读回就会验证自己造出的错值。
+ */
+function cumulativeScales(output: BakeOutputRig): Map<string, number> {
+  const rootParent = output.rootParentWorld ?? null;
+  const cum = new Map<string, number>();
+  for (const n of output.order) {
+    const b = output.bones[n]!;
+    if (b.parent === null || output.bones[b.parent] === undefined) {
+      cum.set(n, rootParent?.uniformScale ?? 1);
+    } else {
+      cum.set(n, (cum.get(b.parent) ?? 1) * (output.bones[b.parent]!.restUniformScale ?? 1));
+    }
+  }
+  return cum;
+}
+
 /** 某骨世界变换；解/帧里没有时沿父链 rest FK（锚在最近已解祖先） */
 function worldOfBone(
   name: string,
   solved: { bonePos: Record<string, V3>; boneQuat: Record<string, Quat> },
   output: BakeOutputRig,
   cache: Map<string, { pos: V3; quat: Quat }>,
+): { pos: V3; quat: Quat } {
+  const cum = cumulativeScales(output);
+  return worldOfBoneScaled(name, solved, output, cache, cum);
+}
+
+function worldOfBoneScaled(
+  name: string,
+  solved: { bonePos: Record<string, V3>; boneQuat: Record<string, Quat> },
+  output: BakeOutputRig,
+  cache: Map<string, { pos: V3; quat: Quat }>,
+  cum: Map<string, number>,
 ): { pos: V3; quat: Quat } {
   const hit = cache.get(name);
   if (hit !== undefined) return hit;
@@ -73,9 +103,10 @@ function worldOfBone(
         result = { pos: b.restLocalT, quat: b.restLocalR };
       }
     } else {
-      const pw = worldOfBone(b.parent, solved, output, cache);
+      const pw = worldOfBoneScaled(b.parent, solved, output, cache, cum);
       const q = quatMul(pw.quat, b.restLocalR);
-      const off = rotate(pw.quat, b.restLocalT);
+      const sCum = cum.get(name) ?? 1;
+      const off = rotate(pw.quat, [b.restLocalT[0] * sCum, b.restLocalT[1] * sCum, b.restLocalT[2] * sCum]);
       result = { pos: [pw.pos[0] + off[0], pw.pos[1] + off[1], pw.pos[2] + off[2]], quat: q };
     }
   }
@@ -121,6 +152,18 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
   const rootParent = output.rootParentWorld ?? null;
   const tracks: LocalTrack[] = [];
   const cachePerFrame: Map<string, { pos: V3; quat: Quat }>[] = clip.frames.map(() => new Map());
+  const cum = cumulativeScales(output);
+  // R08：非根骨没有平移轨道（固定骨长契约），世界解必须能被 rest 偏移×累计缩放复现；
+  // 复现不了 = 解里带了刚性骨架表达不了的自由度 → 显式拒绝，不静默丢偏差
+  const inexpressible = (bone: string, frame: number, devM: number): void => {
+    diagnostics.push({
+      severity: 'error',
+      code: 'MRB_INEXPRESSIBLE',
+      message: `${bone} 第 ${frame} 帧的世界位置偏离 rest 偏移可达位置 ${devM.toFixed(6)}m：非根骨无平移自由度，拒绝烘焙`,
+      frame,
+      constraint: bone,
+    });
+  };
   const frames = clip.frames.length;
   const times = clip.times;
 
@@ -178,19 +221,35 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
       rotations[f * 4 + 2] = localR[2];
       rotations[f * 4 + 3] = localR[3];
 
-      // 局部平移 = inv(parentQ) · (worldP − parentP) / parentScale（统一缩放吸收进平移）
+      // 局部平移 = inv(parentQ) · (worldP − parentP) / cum(bone)（R08：累计缩放，非仅直接父）
       if (translations !== null) {
         const d: V3 = [wp[0] - parentWorldP[0], wp[1] - parentWorldP[1], wp[2] - parentWorldP[2]];
         const lt = rotateInv(parentWorldQ, d);
-        const invS = 1 / parentScale;
+        const invS = 1 / (cum.get(name) ?? parentScale);
         translations[f * 3] = lt[0] * invS;
         translations[f * 3 + 1] = lt[1] * invS;
         translations[f * 3 + 2] = lt[2] * invS;
+      } else {
+        // 可表达性验收：非根骨世界位置必须等于 父世界 · (rest 偏移 × 累计缩放)
+        const expected = rotate(parentWorldQ, [
+          b.restLocalT[0] * (cum.get(name) ?? 1),
+          b.restLocalT[1] * (cum.get(name) ?? 1),
+          b.restLocalT[2] * (cum.get(name) ?? 1),
+        ]);
+        const dev = Math.hypot(
+          wp[0] - parentWorldP[0] - expected[0],
+          wp[1] - parentWorldP[1] - expected[1],
+          wp[2] - parentWorldP[2] - expected[2],
+        );
+        if (dev > 1e-5) inexpressible(name, f, dev);
       }
     }
     tracks.push({ bone: name, nodeIndex: b.nodeIndex, times: times.slice(), rotations, translations });
   }
 
+  if (diagnostics.some((d) => d.severity === 'error')) {
+    return { tracks: null, diagnostics };
+  }
   return { tracks, diagnostics };
 }
 
@@ -203,6 +262,7 @@ export function readBackWorld(
   const trackOf = new Map<string, LocalTrack>();
   for (const t of tracks) trackOf.set(t.bone, t);
   const rootParent = output.rootParentWorld ?? null;
+  const cumRb = cumulativeScales(output); // R08：读回同样用累计缩放，否则验证自己造出的错值
   const out: Array<Record<string, { pos: V3; quat: Quat }>> = [];
   for (let f = 0; f < frames; f++) {
     const frame: Record<string, { pos: V3; quat: Quat }> = {};
@@ -235,10 +295,9 @@ export function readBackWorld(
         quatView[name] = frame[name]!.quat;
       } else {
         const wq = quatMul(parent.quat, localR);
-        const parentBone = output.bones[b.parent!]!;
-        const s = parentBone.restUniformScale ?? 1;
+        const sCum = cumRb.get(name) ?? 1;
         const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
-        const off = rotate(parent.quat, [lt[0] * s, lt[1] * s, lt[2] * s]);
+        const off = rotate(parent.quat, [lt[0] * sCum, lt[1] * sCum, lt[2] * sCum]);
         frame[name] = { pos: [parent.pos[0] + off[0], parent.pos[1] + off[1], parent.pos[2] + off[2]], quat: wq };
         posView[name] = frame[name]!.pos;
         quatView[name] = frame[name]!.quat;

@@ -270,6 +270,17 @@ export function validateRetargetCalibration(cal: unknown): MetaDiagnostic[] {
   }
   const c = cal as Partial<RetargetCalibration>;
 
+  // R14：版本先于字段校验（缺失/非法/未来版本都拒绝，不静默当 v1 用）
+  if (typeof c.schemaVersion !== 'number' || !Number.isInteger(c.schemaVersion) || c.schemaVersion < 1) {
+    err('/retarget/calibration/schemaVersion', 'E_RTCAL_VERSION', 'schemaVersion 缺失或非法');
+  } else if (c.schemaVersion > RETARGET_META_SCHEMA_VERSION) {
+    err(
+      '/retarget/calibration/schemaVersion',
+      'E_RTCAL_VERSION_FUTURE',
+      `标定版本 ${c.schemaVersion} 高于支持的 ${RETARGET_META_SCHEMA_VERSION}，拒绝加载`,
+    );
+  }
+
   if (c.side !== 'source' && c.side !== 'target') {
     err('/retarget/calibration/side', 'E_RTCAL_SIDE', "side 必须是 'source' | 'target'");
   }
