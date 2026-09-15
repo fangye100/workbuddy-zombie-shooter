@@ -749,15 +749,16 @@ describe('T03 报告探针：模板去 LeftHandTip 的叶子手 Z30', () => {
     const bvh = parseBvh(buildBvhText({}));
     const { rig } = buildTargetRig({});
     // 报告复现：删掉 HandTip 使 LeftHand 成为叶子，参考旋转 Z30（不改任何关节位置）
+    const bonesWritable: Record<string, typeof rig.bones[string]> = { ...rig.bones };
+    delete bonesWritable.LeftHandTip;
+    bonesWritable.LeftHand = {
+      ...bonesWritable.LeftHand!,
+      restLocalR: [0, 0, Math.sin(Math.PI / 12), Math.cos(Math.PI / 12)],
+    };
     const noTip: RetargetRig = {
       ...rig,
       order: rig.order.filter((n) => n !== 'LeftHandTip'),
-      bones: { ...rig.bones },
-    };
-    delete (noTip.bones as Record<string, unknown>).LeftHandTip;
-    noTip.bones.LeftHand = {
-      ...noTip.bones.LeftHand!,
-      restLocalR: [0, 0, Math.sin(Math.PI / 12), Math.cos(Math.PI / 12)],
+      bones: bonesWritable,
     };
     const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, noTip);
     const local = quatMul(baseline.pre.LeftHand!, baseline.post.LeftHand!);
@@ -794,7 +795,7 @@ describe('T01 报告不变式：几何保持的参考系更换不改变物理结
       targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
       origin: 'recipe-default', sceneNodeId: null,
     };
-    const cal = {
+    const cal: RetargetCalibration = {
       schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
       supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
       unitScale: 1, upAxis: 'y' as const,
