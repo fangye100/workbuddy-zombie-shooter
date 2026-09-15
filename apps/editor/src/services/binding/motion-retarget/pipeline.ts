@@ -19,13 +19,20 @@ import {
   type ContactSegment,
   type RetargetDiagnostic,
 } from './contracts';
-import { calibrationFingerprint, type RetargetRecipe, type RetargetCalibration } from '@aether/scene';
+import {
+  calibrationFingerprint,
+  validateRetargetRecipe,
+  validateRetargetCalibration,
+  type RetargetRecipe,
+  type RetargetCalibration,
+} from '@aether/scene';
 import { quatMul } from '../binding-math';
 import { buildSpaceMapping, rootCandidate, contactAnchor, assignContactAnchors } from './space-targets';
 import { detectContactSegments } from './contact-segments';
 import { markerWorldPositions } from './source-motion';
 import type { RotationBaseline } from './rig-calibration';
 import { solvePose } from './pose-solver';
+import { DERIVED_HEEL_BACK_M, DERIVED_BALL_FWD_M } from './rig-calibration';
 import { smoothRootCorrections } from './temporal-solve';
 import { buildQualityReport } from './quality-report';
 
@@ -46,10 +53,16 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   const { source, targetRig, baseline, recipe, environment, signal } = input;
   const diagnostics: RetargetDiagnostic[] = [];
   const coverage: string[] = [];
+  // R12：依赖身份必须覆盖**实际参与求解**的执行依赖（源标定与基准 pre/post），
+  // 而不只是配方元数据——否则同源同配方、不同标定的解会共享缓存身份。
   const dep = computeDependencyFingerprint({
     sourceFingerprint: source.fingerprint,
     targetRig,
-    recipeSemantic: recipe,
+    recipeSemantic: {
+      recipe,
+      sourceCalibration: input.sourceCalibration,
+      baseline: { mode: baseline.mode, pre: baseline.pre, post: baseline.post },
+    },
     environment,
     algorithmVersion: recipe.algorithmVersion,
   });
@@ -84,6 +97,24 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     return failed(diagnostics, dep);
   }
 
+  // R13/R14：配方与标定先过校验（含版本/未来版本拒绝），再谈指纹
+  const recipeDiags = validateRetargetRecipe(recipe);
+  diagnostics.push(...recipeDiags);
+  if (recipeDiags.some((d) => d.severity === 'error') || cancelled()) return failed(diagnostics, dep);
+  if (input.sourceCalibration !== null) {
+    const calDiags = validateRetargetCalibration(input.sourceCalibration);
+    diagnostics.push(...calDiags);
+    if (hasErrors(calDiags)) return failed(diagnostics, dep);
+  }
+  // R13：配方显式绑定了标定指纹却没传标定 → 拒绝（不允许首帧估计静默顶替持久标定）
+  if (recipe.sourceCalibrationFingerprint !== '' && input.sourceCalibration === null) {
+    diagnostics.push({
+      severity: 'error',
+      code: 'MRC_CAL_MISSING',
+      message: '配方绑定了源标定指纹但未提供源标定：拒绝用首帧估计顶替持久标定',
+    });
+    return failed(diagnostics, dep);
+  }
   // 标定指纹核对：配方引用的指纹必须与传入标定一致（MR-01 失效规则）
   if (recipe.sourceCalibrationFingerprint !== '' && input.sourceCalibration !== null) {
     const fp = calibrationFingerprint(input.sourceCalibration);
@@ -108,6 +139,13 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
       message: '源骨盆高度不可得（无标定且源根世界位置缺失），拒绝求解',
     });
     return failed(diagnostics, dep);
+  }
+  if (input.sourceCalibration === null) {
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRC_HS_DERIVED',
+      message: '未提供源标定：h_s 用源首帧骨盆高度估计（首帧蹲姿/腾空会系统性偏移，建议补 SourceCalibration）',
+    });
   }
   const { mapping, calibrationErrorM } = buildSpaceMapping(hS, targetRig.pelvisHeightM, {
     mode: recipe.spaceMode,
@@ -138,10 +176,13 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
       message: '目标骨架上没有挂在腿链（3 骨链）上的标记：接触检测为空，只做自由运动适配',
     });
   }
+  // R05：源接触检测必须用**源侧**标记——目标标记几何不能反过来定义源的接触状态。
+  // 优先 sidecar 标定；缺省时从源几何（首帧）推导代理偏移并显式警告。
+  const sourceOffsets = sourceFootMarkerOffsets(source, input.sourceCalibration, environment.sourcePlane, footMarkers, diagnostics);
   const markerTrajs = footMarkers.map((mk) => ({
     markerId: mk.id,
     chainId: chainIdOfBone(targetRig, mk.bone),
-    positions: markerWorldPositions(source, mk.bone, mk.offset),
+    positions: markerWorldPositions(source, mk.bone, sourceOffsets.get(markerKeyOf(mk)) ?? mk.offset),
   }));
   const detected = detectContactSegments({
     times: source.times,
@@ -168,6 +209,17 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   // ── 4. 基准局部旋转 ──
   const baselineLocals = buildBaselineLocals(source, baseline);
   coverage.push(`rotation-baseline:${baseline.mode}`);
+  // R01：根骨的完整世界朝向由基准局部给出（BVH 根局部==根世界），
+  // fkBaseline 语义是「rootQuat 已含根局部」——直接覆盖根候选的透传朝向，避免二次应用
+  for (let f = 0; f < source.times.length; f++) {
+    const mapped = baselineLocals[f]![source.rootBone];
+    if (mapped !== undefined) {
+      root.quats[f * 4] = mapped[0];
+      root.quats[f * 4 + 1] = mapped[1];
+      root.quats[f * 4 + 2] = mapped[2];
+      root.quats[f * 4 + 3] = mapped[3];
+    }
+  }
 
   // ── 5. 求解 → 平滑 → 重解（平滑后复算约束）──
   const first = solvePose({
@@ -236,6 +288,87 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
 }
 
 // ---------------------------------------------------------------- 内部
+
+/** 目标足标记 → 源侧同名同部位标记的键（HumanIK 骨名跨侧一致） */
+function markerKeyOf(mk: { id: string; bone: string }): string {
+  const kind = mk.id.endsWith('.heel') ? 'heel' : 'ball';
+  return `${mk.bone}:${kind}`;
+}
+
+/**
+ * R05：构造**源侧**足底标记偏移。
+ * 优先 sourceCalibration.markers（骨名+部位对上即用）；缺省时从源几何首帧推导：
+ * 前向 = Foot→ToeBase 的世界方向；踝高 = 首帧踝关节到源支撑面的距离；
+ * 偏移在脚骨局部系里表达（inv(R_foot(f0))·(fwd·距离 − n·踝高)）。
+ * 推导路径必须出 MRC_SOURCE_MARKERS_DERIVED 警告——它是代理，不是标定。
+ */
+function sourceFootMarkerOffsets(
+  source: SourceMotion,
+  cal: RetargetCalibration | null,
+  plane: { origin: RetargetEnvironment['sourcePlane']['origin']; normal: RetargetEnvironment['sourcePlane']['normal'] },
+  footMarkers: ReadonlyArray<{ id: string; bone: string }>,
+  diagnostics: RetargetDiagnostic[],
+): Map<string, [number, number, number]> {
+  const out = new Map<string, [number, number, number]>();
+  const warned = { value: false };
+  for (const mk of footMarkers) {
+    const key = markerKeyOf(mk);
+    const kind = key.endsWith(':heel') ? 'heel' : 'ball';
+    // 1) sidecar 标定
+    if (cal !== null) {
+      const entry = Object.entries(cal.markers).find(([, e]) => e.bone === mk.bone);
+      if (entry !== undefined) {
+        out.set(key, [entry[1].offset[0], entry[1].offset[1], entry[1].offset[2]]);
+        continue;
+      }
+    }
+    // 2) 几何推导代理
+    if (!warned.value) {
+      warned.value = true;
+      diagnostics.push({
+        severity: 'warning',
+        code: 'MRC_SOURCE_MARKERS_DERIVED',
+        message: '源标定缺足底标记：用源几何首帧推导代理偏移（前向=Foot→ToeBase，踝高=首帧到源支撑面），精确接触验收前须补 SourceCalibration',
+      });
+    }
+    const footP = source.worldPositions[mk.bone];
+    const footR = source.worldRotations[mk.bone];
+    if (footP === undefined || footR === undefined) continue;
+    const toeName = mk.bone.replace('Foot', 'ToeBase');
+    const toeP = source.worldPositions[toeName];
+    let fwd: [number, number, number] = [0, 0, 1];
+    if (toeP !== undefined) {
+      const dx = toeP[0]! - footP[0]!;
+      const dy = toeP[1]! - footP[1]!;
+      const dz = toeP[2]! - footP[2]!;
+      const l = Math.hypot(dx, dy, dz);
+      if (l > 1e-9) fwd = [dx / l, dy / l, dz / l];
+    }
+    const ankleH = footP[1]! - plane.origin[1];
+    const dist = kind === 'heel' ? -DERIVED_HEEL_BACK_M : DERIVED_BALL_FWD_M;
+    const world: [number, number, number] = [
+      fwd[0] * dist - plane.normal[0] * ankleH,
+      fwd[1] * dist - plane.normal[1] * ankleH,
+      fwd[2] * dist - plane.normal[2] * ankleH,
+    ];
+    const q: [number, number, number, number] = [footR[0]!, footR[1]!, footR[2]!, footR[3]!];
+    out.set(key, rotateInvVec(q, world));
+  }
+  return out;
+}
+
+function rotateInvVec(q: [number, number, number, number], v: [number, number, number]): [number, number, number] {
+  const c: [number, number, number, number] = [-q[0], -q[1], -q[2], q[3]];
+  const x = c[0], y = c[1], z = c[2], w = c[3];
+  const tx = 2 * (y * v[2] - z * v[1]);
+  const ty = 2 * (z * v[0] - x * v[2]);
+  const tz = 2 * (x * v[1] - y * v[0]);
+  return [
+    v[0] + w * tx + (y * tz - z * ty),
+    v[1] + w * ty + (z * tx - x * tz),
+    v[2] + w * tz + (x * ty - y * tx),
+  ];
+}
 
 function chainIdOfBone(rig: RetargetRig, bone: string): string | null {
   for (const ch of rig.chains) {

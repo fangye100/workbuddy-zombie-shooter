@@ -20,7 +20,7 @@ import type {
   WorldPoseFrame,
   RetargetDiagnostic,
 } from './contracts';
-import { solveTwoBone, alignBoneRotation, worldToLocalRotation, rotateVec3 } from './two-bone-solver';
+import { solveTwoBone, alignBoneRotation, rotateVec3 } from './two-bone-solver';
 import { signedPlaneDistance } from './space-targets';
 import type { RetargetRecipeTolerances } from '@aether/scene';
 
@@ -94,18 +94,20 @@ function restWorldDirs(rig: RetargetRig): Record<string, V3> {
   return out;
 }
 
-/** 全身基准 FK。根帧语义 = **根骨（Hips）的世界原点**：pos[Hips] = rootPos，
- *  根骨自己的 restLocalT 已折进 rootPos（它来自源 Hips 的 S 映射），子骨按父世界旋转累加偏移。 */
+/** 全身基准 FK。根帧语义 = **根骨（Hips）的世界原点 + 完整世界朝向**：
+ *  pos[Hips] = rootPos、quat[Hips] = rootQuat —— 根骨的局部旋转**已折进 rootQuat**
+ *  （R01：rootQuat 再乘基准局部会把手臂/躯干的源旋转算两遍），基准局部表里根骨项被忽略；
+ *  根骨 restLocalT 同样折进 rootPos；子骨按父世界旋转累加偏移。 */
 function fkBaseline(rig: RetargetRig, locals: Readonly<Record<string, Quat>>, rootPos: V3, rootQuat: Quat): RigFK {
   const pos: Record<string, [number, number, number]> = {};
   const quat: Record<string, Quat> = {};
   for (const n of rig.order) {
     const b = rig.bones[n]!;
-    const local = locals[n] ?? [0, 0, 0, 1];
     if (b.parent === null || rig.bones[b.parent] === undefined) {
-      quat[n] = quatMul(rootQuat, local);
+      quat[n] = rootQuat;
       pos[n] = [rootPos[0], rootPos[1], rootPos[2]];
     } else {
+      const local = locals[n] ?? [0, 0, 0, 1];
       const pw = quat[b.parent]!;
       quat[n] = quatMul(pw, local);
       const t = b.restLocalT;
@@ -156,6 +158,8 @@ function legChainInfos(rig: RetargetRig): LegChainInfo[] {
 interface ActiveContact {
   seg: ContactSegment;
   leg: LegChainInfo;
+  /** 本段引用的确切标记的骨局部偏移（R04：不用腿的"首选标记"替代） */
+  markerOffset: V3;
   ankleTarget: V3;
   /** 源脚世界朝向（映射透传） */
   footWorld: Quat;
@@ -187,22 +191,44 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       }
     }
   }
+  const warnedConcurrent = new Set<string>();
   const activeAt = (f: number): ActiveContact[] => {
     const t = sm.times[f]!;
     const out: ActiveContact[] = [];
+    const seenLeg = new Map<string, number>();
     for (const seg of segments) {
       if (seg.mode !== 'support') continue;
       if (seg.anchor === null || t < seg.startS - 1e-9 || t > seg.endS + 1e-9) continue;
-      const leg = legs.find((l) => l.markerId === seg.marker || l.chainId === seg.chainId);
-      if (leg === undefined || leg.markerLocal === null) continue;
+      // R04：解析段引用的确切标记（heel 段用 heel 偏移），按标记所在踝骨找链
+      const mk = rig.markers[seg.marker];
+      if (mk === undefined) continue;
+      const leg = legs.find((l) => l.ankle === mk.bone);
+      if (leg === undefined) continue;
+      const seen = seenLeg.get(leg.chainId) ?? 0;
+      seenLeg.set(leg.chainId, seen + 1);
+      if (seen > 0) {
+        // 同脚多标记同时硬锁 = 各自独立的链求解互相覆盖，MVP 只保留先到段并显式报告
+        if (!warnedConcurrent.has(leg.chainId)) {
+          warnedConcurrent.add(leg.chainId);
+          diagnostics.push({
+            severity: 'warning',
+            code: 'MRP_CONCURRENT_MARKERS',
+            message: `${leg.chainId} 同帧有多个标记接触段（如 ball+heel 同时锁）：MVP 保留首个，联合求解留 MR-07`,
+            frame: f,
+            constraint: seg.id,
+          });
+        }
+        continue;
+      }
       const rot = sm.worldRotations[leg.ankle];
       const footWorld: Quat = rot === undefined
         ? [0, 0, 0, 1]
         : [rot[f * 4]!, rot[f * 4 + 1]!, rot[f * 4 + 2]!, rot[f * 4 + 3]!];
-      const offset = rotateVec3(footWorld, leg.markerLocal);
+      const offset = rotateVec3(footWorld, mk.offset);
       out.push({
         seg,
         leg,
+        markerOffset: mk.offset,
         ankleTarget: sub3(seg.anchor, offset),
         footWorld,
       });
@@ -312,15 +338,18 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       }
       bonePos[leg.knee] = sol.knee;
       bonePos[leg.ankle] = sol.reachedTip;
-      // 旋转：大腿/小腿对齐当前方向；脚保持源世界朝向（A06/A18）
-      boneQuat[leg.hip] = alignBoneRotation(parentWorldOf(rig, fk, leg.hip), rwd[leg.hip]!, sub3(sol.knee, hipPos));
-      const upperWorld = quatMul(parentWorldOf(rig, { pos: bonePos, quat: boneQuat }, leg.hip), boneQuat[leg.hip]!);
-      boneQuat[leg.knee] = alignBoneRotation(upperWorld, rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee));
-      const lowerWorld = quatMul(upperWorld, boneQuat[leg.knee]!);
-      boneQuat[leg.ankle] = worldToLocalRotation(lowerWorld, c.footWorld);
+      // 旋转（R02：WorldPoseFrame.boneQuat 一律存**世界**旋转；局部轨道只由 bake 派生）：
+      // 大腿/小腿对齐当前方向；脚保持源世界朝向（A06/A18）
+      const parentW = parentWorldOf(rig, fk, leg.hip);
+      const localHip = alignBoneRotation(parentW, rwd[leg.hip]!, sub3(sol.knee, hipPos));
+      const worldHip = quatMul(parentW, localHip);
+      boneQuat[leg.hip] = worldHip;
+      const localKnee = alignBoneRotation(worldHip, rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee));
+      const worldKnee = quatMul(worldHip, localKnee);
+      boneQuat[leg.knee] = worldKnee;
+      boneQuat[leg.ankle] = c.footWorld;
       // 锚点偏差验收：最终脚变换下重算标记世界点
-      const footWorldFinal = quatMul(lowerWorld, boneQuat[leg.ankle]!);
-      const markerWorld = add3(sol.reachedTip, rotateVec3(footWorldFinal, leg.markerLocal!));
+      const markerWorld = add3(sol.reachedTip, rotateVec3(c.footWorld, c.markerOffset));
       const dev = len3(sub3(markerWorld, c.seg.anchor!));
       const rec = anchorDev.get(c.seg.id);
       if (rec === undefined) anchorDev.set(c.seg.id, { marker: c.seg.marker, maxM: dev });
@@ -350,11 +379,14 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
         });
         bonePos[leg.knee] = sol.knee;
         bonePos[leg.ankle] = sol.reachedTip;
-        boneQuat[leg.hip] = alignBoneRotation(parentWorldOf(rig, { pos: bonePos, quat: boneQuat }, leg.hip), rwd[leg.hip]!, sub3(sol.knee, hipPos));
-        const upperWorld = quatMul(parentWorldOf(rig, { pos: bonePos, quat: boneQuat }, leg.hip), boneQuat[leg.hip]!);
-        boneQuat[leg.knee] = alignBoneRotation(upperWorld, rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee));
-        const lowerWorld = quatMul(upperWorld, boneQuat[leg.knee]!);
-        boneQuat[leg.ankle] = worldToLocalRotation(lowerWorld, footQ);
+        const parentW = parentWorldOf(rig, { pos: bonePos, quat: boneQuat }, leg.hip);
+        const localHip = alignBoneRotation(parentW, rwd[leg.hip]!, sub3(sol.knee, hipPos));
+        const worldHip = quatMul(parentW, localHip);
+        boneQuat[leg.hip] = worldHip;
+        const localKnee = alignBoneRotation(worldHip, rwd[leg.knee]!, sub3(sol.reachedTip, sol.knee));
+        const worldKnee = quatMul(worldHip, localKnee);
+        boneQuat[leg.knee] = worldKnee;
+        boneQuat[leg.ankle] = footQ;
         diagnostics.push({
           severity: 'info',
           code: 'MRP_SWING_CLEARANCE_LIFT',

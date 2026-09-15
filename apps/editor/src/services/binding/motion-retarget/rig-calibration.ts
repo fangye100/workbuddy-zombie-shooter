@@ -74,9 +74,9 @@ export interface BuildTargetRigResult {
 }
 
 /** 派生足底标记的几何常量（米，相对踝关节；docs/16 失败矩阵「代理标记须报告」） */
-const DERIVED_HEEL_BACK_M = 0.05;
-const DERIVED_BALL_FWD_M = 0.09;
-const DERIVED_ANKLE_HEIGHT_M = 0.03;
+export const DERIVED_HEEL_BACK_M = 0.05;
+export const DERIVED_BALL_FWD_M = 0.09;
+export const DERIVED_ANKLE_HEIGHT_M = 0.03;
 
 const FOOT_BONES = ['LeftFoot', 'RightFoot'] as const;
 
@@ -132,27 +132,107 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
       };
     }
   } else {
+    // R06/R10：沿**完整 glTF 节点图**做 FK（含非关节祖先 Armature/中间节点、统一缩放），
+    // 再把每个关节相对「最近的关节祖先」提取局部 TRS——而不是信任 skin.joints 的数组序，
+    // 也不是把非关节父直接丢成 null。非统一缩放无法用刚性骨架表达 → 显式拒绝。
     const sk = input.skeleton!;
+    const nodeOfJoint = new Map<number, string>();
     for (let k = 0; k < sk.joints.length; k++) {
-      const node = sk.joints[k]!;
       const nm = sk.jointNames[k];
-      if (nm === null || nm === undefined) continue;
-      order.push(nm);
-      const loc = sk.locals[node]!;
-      const pIdx = sk.parent[node];
-      // 父用 glTF 节点下标反查名字；不在 joints 表里的父（中间节点）按 null 处理
-      let parent: string | null = null;
-      if (pIdx !== undefined && pIdx >= 0) {
-        const pj = sk.joints.indexOf(pIdx);
-        parent = pj >= 0 ? (sk.jointNames[pj] ?? null) : null;
+      if (nm !== null && nm !== undefined) nodeOfJoint.set(sk.joints[k]!, nm);
+    }
+    const worldPosOf = new Map<number, [number, number, number]>();
+    const worldRotOf = new Map<number, Quat>();
+    const worldCumOf = new Map<number, number>(); // 该节点及全部祖先的统一缩放累计（作用于其子偏移）
+    const depthOf = new Map<number, number>();
+    const visiting = new Set<number>();
+    const resolveNode = (node: number): void => {
+      if (worldRotOf.has(node)) return;
+      if (visiting.has(node)) {
+        diagnostics.push({ severity: 'error', code: 'MRR_NODE_CYCLE', message: `glTF 节点 ${node} 的父链成环，拒绝构造` });
+        worldRotOf.set(node, [0, 0, 0, 1]);
+        worldPosOf.set(node, [0, 0, 0]);
+        worldCumOf.set(node, 1);
+        depthOf.set(node, 0);
+        return;
+      }
+      visiting.add(node);
+      const loc = sk.locals[node];
+      if (loc === undefined) {
+        diagnostics.push({ severity: 'error', code: 'MRR_NODE_LOCAL_MISSING', message: `glTF 节点 ${node} 缺局部变换` });
+        worldRotOf.set(node, [0, 0, 0, 1]);
+        worldPosOf.set(node, [0, 0, 0]);
+        worldCumOf.set(node, 1);
+        depthOf.set(node, 0);
+        visiting.delete(node);
+        return;
+      }
+      const s = loc.s ?? [1, 1, 1];
+      const uniform = Math.abs(s[0]! - s[1]!) < 1e-9 && Math.abs(s[1]! - s[2]!) < 1e-9;
+      if (!uniform) {
+        diagnostics.push({
+          severity: 'error',
+          code: 'MRR_NONUNIFORM_SCALE',
+          message: `glTF 节点 ${node} 的局部缩放 [${s.join(', ')}] 非统一，刚性骨架无法表达，拒绝构造`,
+        });
       }
       const tScaled: [number, number, number] = [loc.t[0] * unitScale, loc.t[1] * unitScale, loc.t[2] * unitScale];
-      bones[nm] = {
-        name: nm,
-        parent,
-        restLocalT: rotateVec(qAxis, tScaled),
-        restLocalR: quatMul(qAxis, quatMul([loc.r[0], loc.r[1], loc.r[2], loc.r[3]], conj(qAxis))),
-      };
+      const t = rotateVec(qAxis, tScaled);
+      const r = quatMul(qAxis, quatMul([loc.r[0], loc.r[1], loc.r[2], loc.r[3]], conj(qAxis)));
+      const p = sk.parent[node];
+      if (p === undefined || p < 0) {
+        worldRotOf.set(node, r);
+        worldPosOf.set(node, t);
+        worldCumOf.set(node, s[0] ?? 1);
+        depthOf.set(node, 0);
+      } else {
+        resolveNode(p);
+        const pw = worldRotOf.get(p)!;
+        worldRotOf.set(node, quatMul(pw, r));
+        // glTF 矩阵复合：祖先缩放**沿全链累计**作用到子偏移
+        //（Armature s=2 ⟹ 其下所有层级的偏移都 ×2，不是只有直接子层）
+        const sp = worldCumOf.get(p) ?? 1;
+        const off = rotateVec(pw, [t[0] * sp, t[1] * sp, t[2] * sp]);
+        const pp = worldPosOf.get(p)!;
+        worldPosOf.set(node, [pp[0] + off[0], pp[1] + off[1], pp[2] + off[2]]);
+        worldCumOf.set(node, sp * (s[0] ?? 1));
+        depthOf.set(node, (depthOf.get(p) ?? 0) + 1);
+      }
+      visiting.delete(node);
+    };
+    for (const node of nodeOfJoint.keys()) resolveNode(node);
+
+    // 拓扑序：按节点深度排序（R10：skin.joints 的数组序不保证父先于子）
+    const sortedJoints = [...nodeOfJoint.entries()].sort((a, b) => (depthOf.get(a[0]) ?? 0) - (depthOf.get(b[0]) ?? 0));
+    const nameOfNode = new Map(sk.joints.map((n, k) => [n, sk.jointNames[k] ?? null] as const));
+
+    for (const [node, nm] of sortedJoints) {
+      order.push(nm);
+      const wp = worldPosOf.get(node)!;
+      const wr = worldRotOf.get(node)!;
+      // 最近的**关节**祖先（跨过非关节中间节点）
+      let anc = sk.parent[node];
+      let parentName: string | null = null;
+      while (anc !== undefined && anc >= 0) {
+        const jn = nodeOfJoint.get(anc);
+        if (jn !== undefined) {
+          parentName = jn;
+          break;
+        }
+        anc = sk.parent[anc];
+      }
+      let restLocalT: [number, number, number] = wp;
+      let restLocalR: Quat = wr;
+      if (parentName !== null) {
+        const pNode = [...nodeOfJoint.entries()].find(([n2, name2]) => name2 === parentName)![0];
+        const pw = worldRotOf.get(pNode)!;
+        const pp = worldPosOf.get(pNode)!;
+        const d: [number, number, number] = [wp[0] - pp[0], wp[1] - pp[1], wp[2] - pp[2]];
+        restLocalT = rotateVec(conj(pw), d);
+        restLocalR = quatMul(conj(pw), wr);
+      }
+      bones[nm] = { name: nm, parent: parentName, restLocalT, restLocalR };
+      void nameOfNode;
     }
   }
 
@@ -354,39 +434,59 @@ export interface WorldRestBaselineInput {
 }
 
 /**
- * 方向最小弧换基（BVH 姿态基准）。与 L0 同式：
- * A_b = fromTo(d_src_b, d_tgt_b)，pre=A_parent，post=A_b⁻¹；
- * 缺骨向的骨继承父骨（叶子骨常规路径）。
+ * 方向最小弧换基（BVH 姿态基准）。
+ * R07：A 定义在**局部轴**上（a = 第一个子骨 restLocalT 的方向，不做世界旋转）——
+ * 这样目标用非恒等 restLocalR 编码同一几何（如 LeftArm.restLocalR=Z45）时局部基准仍正确：
+ *   要求 W'_i · a_tgtLocal_i = Q_i · a_srcLocal_i  ⟹  W'_i = Q_i · M_i，M = fromTo(a_tgt, a_src)
+ *   R'_i = conj(M_parent) · R_i · M_i（pre = conj(M_p)，post = M_b）
+ * 目标 rest 局部全 identity（模板）时 M 退化为世界方向差，与 L0 同式。
+ * 源方向取 BVH 的世界偏移方向（其 rest 局部恒 identity，局部=世界）。
  */
 export function computeDirectionBaseline(
   input: DirectionBaselineInput,
   targetRig: RetargetRig,
 ): RotationBaseline {
-  const tgtDirs = targetRestDirections(targetRig);
+  const tgtAxes = targetLocalAxes(targetRig);
   const ID: Quat = [0, 0, 0, 1];
-  // A_b = fromTo(d_src_b, d_tgt_b)；缺骨向的骨继承父骨的 A（叶子骨常规路径）
-  const A: Record<string, Quat> = {};
+  // M_b = fromTo(a_tgtLocal_b, a_srcLocal_b)；缺轴的骨继承父骨的 M（叶子骨常规路径）
+  const M: Record<string, Quat> = {};
   for (const b of targetRig.order) {
     const parent = targetRig.bones[b]!.parent;
     const s = input.srcDirections[b];
-    const t = tgtDirs[b];
+    const t = tgtAxes[b];
     const sOk = s !== undefined && Math.hypot(s[0], s[1], s[2]) > 1e-9;
     const tOk = t !== undefined && Math.hypot(t[0], t[1], t[2]) > 1e-9;
     if (sOk && tOk) {
-      A[b] = quatFromUnitVectors([s![0], s![1], s![2]], [t![0], t![1], t![2]]);
+      M[b] = quatFromUnitVectors([t![0], t![1], t![2]], [s![0], s![1], s![2]]);
     } else {
-      A[b] = parent === null ? ID : (A[parent] ?? ID);
+      M[b] = parent === null ? ID : (M[parent] ?? ID);
     }
   }
-  // baseline_local(b) = A_parent(b) · R_src · A_b⁻¹（L0 同式）
   const pre: Record<string, Quat> = {};
   const post: Record<string, Quat> = {};
   for (const b of targetRig.order) {
     const parent = targetRig.bones[b]!.parent;
-    pre[b] = parent === null ? ID : (A[parent] ?? ID);
-    post[b] = conj(A[b]!);
+    pre[b] = parent === null ? ID : conj(M[parent] ?? ID);
+    post[b] = M[b]!;
   }
   return { mode: 'direction', pre, post, diagnostics: [] };
+}
+
+/** 目标骨架每骨的**局部轴**：第一个子骨 restLocalT 的方向（不转世界旋转；叶子骨零向量） */
+export function targetLocalAxes(rig: RetargetRig): Record<string, V3> {
+  const out: Record<string, V3> = {};
+  const childOff: Record<string, V3> = {};
+  for (const n of rig.order) {
+    const p = rig.bones[n]!.parent;
+    if (p === null || childOff[p] !== undefined) continue;
+    childOff[p] = rig.bones[n]!.restLocalT;
+  }
+  for (const n of rig.order) {
+    const off = childOff[n];
+    const len = off === undefined ? 0 : Math.hypot(off[0], off[1], off[2]);
+    out[n] = len > 1e-9 ? [off![0] / len, off![1] / len, off![2] / len] : [0, 0, 0];
+  }
+  return out;
 }
 
 /** 目标骨架每骨的 rest 骨向（第一个子骨方向；叶子骨零向量） */

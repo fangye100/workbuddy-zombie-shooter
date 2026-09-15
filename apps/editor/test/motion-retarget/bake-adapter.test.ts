@@ -128,23 +128,27 @@ describe('bakeWorldSolveToLocal · 读回等价（A15）', () => {
   });
 
   it('★ 不同输出父空间：同一世界解各自适配后读回等价（都 = 原世界解）', () => {
-    const clip = clipOf(sampleFrames(), RIG_FP);
+    // rigB 声明容器缩放 2：其骨架真实几何 = rest 偏移×2，世界解须按同一几何构造
+    // （R08 可表达性校验会拒绝「容器缩放 2 + 未缩放偏移」的不自洽输入）
+    const clipA = clipOf(sampleFrames(), RIG_FP);
+    const clipB = clipOf(sampleFrames([0.6, 0.8, 0]), RIG_FP);
     const rigA = rigOf([bone('Root', null, [0, 1, 0], 0), bone('Child', 'Root', [0.3, 0.4, 0], 1)], RIG_FP);
     const rigB = rigOf(
       [bone('Root', null, [0, 1, 0], 0), bone('Child', 'Root', [0.3, 0.4, 0], 1)],
       RIG_FP,
       { pos: [-1, 7, 3], quat: [h, 0, 0, h], uniformScale: 2 },
     );
-    const a = bakeWorldSolveToLocal(clip, rigA).tracks!;
-    const b = bakeWorldSolveToLocal(clip, rigB).tracks!;
+    const a = bakeWorldSolveToLocal(clipA, rigA).tracks!;
+    const b = bakeWorldSolveToLocal(clipB, rigB).tracks!;
     const backA = readBackWorld(a, rigA, 3);
     const backB = readBackWorld(b, rigB, 3);
     for (let f = 0; f < 3; f++) {
       for (const n of ['Root', 'Child']) {
-        const wa = clip.frames[f]!.bonePos[n]!;
-        for (const back of [backA, backB]) {
+        const wa = clipA.frames[f]!.bonePos[n]!;
+        const wb = clipB.frames[f]!.bonePos[n]!;
+        for (const [back, w] of [[backA, wa] as const, [backB, wb] as const]) {
           const got = back[f]![n]!;
-          expect(Math.hypot(got.pos[0] - wa[0], got.pos[1] - wa[1], got.pos[2] - wa[2])).toBeLessThan(1e-9);
+          expect(Math.hypot(got.pos[0] - w[0], got.pos[1] - w[1], got.pos[2] - w[2])).toBeLessThan(1e-9);
         }
       }
     }

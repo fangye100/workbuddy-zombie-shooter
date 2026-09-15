@@ -148,6 +148,10 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   check('MRQ_PENETRATION', '穿透超限', maxPenetration, tolerances.penetrationH * hT);
   check('MRQ_REACH_OUT', '外侧不可达残差', metrics.maxReachResidualOuterM, tolerances.anchorH * hT);
   check('MRQ_SWITCH_JUMP', '修正速度跳变超限', input.switchJumpMps, 0.1 * hT);
+  // R09：摆动相穿透同样是穿透——没有接触段不等于允许穿地
+  if (Number.isFinite(metrics.minSwingClearanceM) && metrics.minSwingClearanceM < 0) {
+    check('MRQ_SWING_PENETRATION', '摆动相穿透', -metrics.minSwingClearanceM, tolerances.penetrationH * hT);
+  }
 
   const status: 'complete' | 'partial' | 'failed' = violations.length === 0 ? 'complete' : 'partial';
   return { metrics, status, violations };
