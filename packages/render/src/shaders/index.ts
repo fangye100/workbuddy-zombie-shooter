@@ -7,3 +7,4 @@ export * from './common.wgsl';
 export * from './gizmo.wgsl';
 export * from './post.wgsl';
 export * from './scene.wgsl';
+export * from './dynamic.wgsl';
