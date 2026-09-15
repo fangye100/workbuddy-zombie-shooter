@@ -470,8 +470,17 @@ export function computeDirectionBaseline(
   const W = restWorldRotations(targetRig);
   const D: Record<string, Quat> = {};
   for (const b of targetRig.order) {
-    const tau = quatMul(conj(M[b]!), W[b]!);
-    D[b] = quatMul(M[b]!, twistOf(tau, axes2[b]!));
+    const axisLen = Math.hypot(axes2[b]![0], axes2[b]![1], axes2[b]![2]);
+    if (axisLen > 1e-9) {
+      const tau = quatMul(conj(M[b]!), W[b]!);
+      D[b] = quatMul(M[b]!, twistOf(tau, axes2[b]!));
+    } else {
+      // 叶子骨（无子骨偏移 → 无长轴，twist 投影退化为 identity）：
+      // D = D_parent · restLocalR —— 静止源时局部基准精确等于自身参考旋转，
+      // 参考朝向不被清除（第三轮复审 P2：LeftHand Z30 输出 identity 会扭蒙皮 5.18cm）
+      const parent = targetRig.bones[b]!.parent;
+      D[b] = quatMul(parent === null ? ID : (D[parent] ?? ID), targetRig.bones[b]!.restLocalR as Quat);
+    }
   }
   const pre: Record<string, Quat> = {};
   const post: Record<string, Quat> = {};

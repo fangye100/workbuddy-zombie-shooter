@@ -71,8 +71,12 @@ describe('retargetMotion · 正常路径', () => {
   it('原地素材（in-place）→ 不承诺 world-lock：coverage 标 phase-only，仍出结果', () => {
     const { sm, rig, baseline, recipe, environment } = makeInput(false);
     const out = retargetMotion({ source: sm, targetRig: rig, baseline, recipe, environment, sourceCalibration: null });
-    expect(out.coverage).toContain('phase-only');
-    expect(out.status).not.toBe('failed');
+    // 未标定源标记：coverage 明确标 contact-uncalibrated（不再与 world-lock 并存），
+    // 状态因能力缺口降为 partial（几何仍自由运动交付）
+    expect(out.coverage).toContain('contact-uncalibrated');
+    expect(out.coverage).not.toContain('world-lock');
+    expect(out.status).toBe('partial');
+    expect(out.diagnostics.some((d) => d.code === 'MRC_CAPABILITY_GAP')).toBe(true);
   });
 });
 
