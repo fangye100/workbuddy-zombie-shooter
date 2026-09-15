@@ -11,6 +11,7 @@ import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
+import { RuntimeBridge } from './services/runtime-bridge';
 import { BindingPanel } from './services/binding/binding-panel';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
@@ -123,6 +124,12 @@ async function boot(): Promise<void> {
   const panel = new Panel(groups, inspPanes, renderer);
   // 材质 API 要按 id 回查共享材质（params.materials），先把引用挂上
   renderer.attachParams(panel.params);
+
+  /**
+   * 运行时桥（WU-3）：headless 会话与渲染之间的**唯一**翻译层。
+   * 它不产玩法，只把实体视图翻译成实例批次；真模型接进来后换代理网格即可。
+   */
+  const bridge = new RuntimeBridge();
 
   // ---- 场景加载（ADR-010：场景是唯一数据载体；ADR-015：项目容器是路径锚点）----
   // 构造期那组硬编码物体只是 fallback，真内容从这里读。失败不阻断启动：
@@ -361,6 +368,19 @@ async function boot(): Promise<void> {
       panel.params.keyIntensity = r.keyLight.intensity;
     }
     panel.syncAll();
+    // ---- 运行时（WU-3）：场景加载完成即启动 headless 会话 ----
+    // 装载失败（缺玩家起点 / 无 NavZone / 未登记角色）时**不启动**并把原因打出来：
+    // 静默跑一个残缺世界，比明确告诉用户「这份场景还跑不起来」糟糕得多。
+    const doc = renderer.getDocument();
+    if (doc !== null) {
+      const res = bridge.start(doc);
+      if (res.ok) {
+        console.info('[boot] 运行时已启动（动态实体走独立 instancing 路径，不占静态槽位）');
+      } else {
+        console.warn(`[boot] 运行时未启动：${res.errors.join('；')}`);
+      }
+    }
+    hudDirty = true;
     // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();
@@ -414,6 +434,40 @@ async function boot(): Promise<void> {
     camera.distance = clamp(camera.distance * factor, ZOOM_MIN, ZOOM_MAX);
   }
 
+  /**
+   * NDC → 世界射线（origin = 相机眼睛）。
+   *
+   * 必须与 renderer.drawFrame 里的 lookAt + perspective 同一套约定（up = [0,1,0]、
+   * fov = FOVY、WebGPU 的 y 向上 NDC），否则运行时实体的拾取点会跟画面错开 ——
+   * 而且错得「看起来差不多」，只有俯视角下才明显，最难查。
+   */
+  function screenRay(ndcX: number, ndcY: number): [m4.Vec3, m4.Vec3] {
+    const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, panel.params.cameraElevation);
+    const fx = camera.target[0] - eye[0];
+    const fy = camera.target[1] - eye[1];
+    const fz = camera.target[2] - eye[2];
+    const fl = Math.hypot(fx, fy, fz) || 1;
+    const Fx = fx / fl;
+    const Fy = fy / fl;
+    const Fz = fz / fl;
+    // lookAt 的基向量：right = normalize(-F.z, 0, F.x)，up = cross(zAxis, right)
+    const L = Math.hypot(Fx, Fz) || 1e-6;
+    const right: m4.Vec3 = [-Fz / L, 0, Fx / L];
+    const up: m4.Vec3 = [(-Fy * Fx) / L, L, (-Fy * Fz) / L];
+    const tanHalf = Math.tan(FOVY / 2);
+    const aspect = renderer.core.width / Math.max(1, renderer.core.height);
+    const sx = ndcX * tanHalf * aspect;
+    const sy = ndcY * tanHalf;
+    const dx = Fx + right[0] * sx + up[0] * sy;
+    const dy = Fy + right[1] * sx + up[1] * sy;
+    const dz = Fz + right[2] * sx + up[2] * sy;
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    return [
+      [eye[0], eye[1], eye[2]],
+      [dx / dl, dy / dl, dz / dl],
+    ];
+  }
+
   // 把屏幕坐标转 NDC 并交给渲染器做射线拾取
   // penetrate（Alt+点击）：穿透拾取——同一射线上的命中物体按深度循环切换，
   // 解决「小物体包在大凹面外壳里选不中」：外壳 → 内部 → 再回外壳
@@ -421,6 +475,21 @@ async function boot(): Promise<void> {
     const rect = canvas!.getBoundingClientRect();
     const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
     const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2;
+
+    // 运行时实体优先：它们不在静态场景的拾取表里，GPU 拾取根本拿不到。
+    // 命中则选中实体（并清掉静态选中），未命中才走原来的静态物体拾取。
+    if (bridge.active) {
+      const hit = bridge.pickRay(...screenRay(ndcX, ndcY));
+      if (hit !== null) {
+        bridge.select(hit.id, hit.generation);
+        renderer.selectObject(null);
+        panel.setSelection(null);
+        hudDirty = true;
+        return;
+      }
+      bridge.clearSelection();
+    }
+
     let idx: number | null;
     if (penetrate) {
       const hits = renderer.pickAtAll(ndcX, ndcY);
@@ -1870,6 +1939,34 @@ async function boot(): Promise<void> {
       rows.push('<span class="warn">⚠ 半调强度 &gt; 0.25，会从印刷质感变成波普艺术</span>');
     }
 
+    // ---- 运行时状态（WU-3）----
+    if (bridge.active) {
+      const ents = bridge.entities;
+      const npc = ents.filter((e) => e.kind === 'npc').length;
+      rows.push(
+        `<b>运行时</b> <span style="color:#7FE03F">tick ${bridge.currentTick}</span>　` +
+          `<b>实体</b> ${ents.length}（NPC ${npc}）　` +
+          `<b>实例</b> ${renderer.debugDynamicInstanceCount()}　` +
+          `<span class="hint">动态实体走独立 instancing，不占 ${ents.length > 0 ? '静态' : ''}64 槽位</span>`,
+      );
+      const sel = bridge.selectedEntity;
+      if (sel !== null) {
+        rows.push(
+          `<b>实体选中</b> <span style="color:#FFC531;font-weight:700">${sel.characterId}</span>` +
+            `　槽位 ${sel.id}·代 ${sel.generation}　来源 ${sel.sourceNodeId ?? '—'}` +
+            `　目标 ${sel.targetId >= 0 ? sel.targetId : '—'}　(${sel.x.toFixed(1)}, ${sel.z.toFixed(1)})`,
+        );
+      }
+      for (const d of bridge.loadDiagnostics) {
+        if (d.severity === 'warning') rows.push(`<span class="warn">⚠ 运行时：${d.message}</span>`);
+      }
+    } else {
+      const errs = bridge.loadDiagnostics.filter((d) => d.severity === 'error');
+      if (errs.length > 0) {
+        rows.push(`<span class="warn">⚠ 运行时未启动：${errs.map((d) => d.message).join('；')}</span>`);
+      }
+    }
+
     hud.innerHTML = rows.join('<br>');
   };
 
@@ -1943,6 +2040,11 @@ async function boot(): Promise<void> {
     } else {
       renderer.setCylinderOverlay(null);
     }
+
+    // ── 运行时推进 + 动态实例注入（WU-3） ──
+    // advance 走固定步累加器：渲染帧率不决定游戏步数，掉帧不会让僵尸走慢。
+    bridge.advance(dt);
+    renderer.setDynamicBatches(bridge.batches());
 
     renderer.render(panel.params, camera, elapsed, dpr());
     panel.tickAnimation();

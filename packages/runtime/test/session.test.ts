@@ -18,6 +18,20 @@ function make(opts: { seed?: number; capacity?: number } = {}): RuntimeSession {
   return new RuntimeSession({ desc: desc(), seed: opts.seed ?? 1, ...(opts.capacity ? { capacity: opts.capacity } : {}) });
 }
 
+/** 把全部刷怪点的数量改写成 n，用来造「超过静态上限」的压测场景 */
+function makeScaled(count: number, capacity: number): RuntimeSession {
+  const key = Object.keys(MODULES)[0]!;
+  const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+  for (const n of doc.nodes) {
+    for (const c of n.components) {
+      if (c.kind === 'SpawnPoint') (c as { count: number }).count = count;
+    }
+  }
+  const r = loadLevelRuntime(doc);
+  if (r.desc === null) throw new Error('压测夹具装载失败：' + JSON.stringify(r.diagnostics));
+  return new RuntimeSession({ desc: r.desc, seed: 1, capacity });
+}
+
 /** 僵尸中心是否落在障碍内部（留 0.05 容差）。这是"没有穿墙"的最低标准 */
 function insideAnyObstacle(s: RuntimeSession, x: number, z: number): boolean {
   const eps = 0.05;
@@ -115,5 +129,35 @@ describe('RuntimeSession —— 确定性与容量', () => {
     s.reset();
     expect(s.tick).toBe(0);
     expect(s.countNpc()).toBe(12);
+  });
+});
+
+/**
+ * WU-3 验收（docs/17 §8 第 8 条）：动态实体**不消耗静态场景槽位**。
+ *
+ * 静态世界的上限 MAX_OBJECTS = 64 来自 transformBuf 的 buffer 大小，是渲染侧约束；
+ * 运行时实体走独立路径，所以「一波超过 64 只」必须能在纯 CPU 侧成立。
+ * 此项只证明路径独立，不等于 500 僵尸的性能验收。
+ */
+describe('WU-3 验收：动态实体数量不受 MAX_OBJECTS(64) 约束', () => {
+  it('同一关能同时存在远超静态上限的实体', () => {
+    const s = makeScaled(40, 512); // 3 个刷怪点 × 40 = 120 只 + 玩家
+    const v = s.view();
+    expect(s.countNpc()).toBe(120);
+    expect(v.length).toBeGreaterThan(64);
+  });
+
+  it('超出容量时整批拒绝 —— 上限是显式声明的，不是悄悄截断', () => {
+    const s = makeScaled(40, 100); // 需要 121 槽位，只有 100
+    expect(s.countNpc()).toBe(0);
+    expect(s.triggeredRooms()).toEqual([]);
+  });
+
+  it('超量实体跑起来仍然不穿障碍（寻路对大批量同样有效）', () => {
+    const s = makeScaled(20, 256);
+    s.run(60);
+    const bad = s.view().filter((e) => e.kind === 'npc' && insideAnyObstacle(s, e.x, e.z));
+    expect(bad).toEqual([]);
+    expect(s.countNpc()).toBe(60);
   });
 });

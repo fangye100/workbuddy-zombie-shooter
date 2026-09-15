@@ -7,6 +7,7 @@ import {
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
   type CoreCylinderOverlay,
+  type CoreDynamicBatch,
   type RenderFrameInput,
   SLOT_BYTES,
   SLOT_FLOATS,
@@ -62,7 +63,7 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip, SceneDocument } from '@aether/scene';
 import { readProjectFile } from './asset-util';
 import {
   createSkinState,
@@ -577,6 +578,16 @@ export class LabRenderer {
    * 光看物体数**区分不出**到底读了文件没有。冒烟测试与界面提示都靠它做判据。
    */
   private loadedScene: { url: string; objects: number; at: string } | null = null;
+  /**
+   * 最近一次成功加载的**已迁移**场景文档（ADR-013：对外只给最新版）。
+   *
+   * 渲染器只是「持有并转发」这份引用，不解释任何语义 —— 消费方是
+   * `RuntimeBridge`（拿它做玩法装载）与将来的保存链路。渲染不读它。
+   */
+  private document: SceneDocument | null = null;
+  getDocument(): SceneDocument | null {
+    return this.document;
+  }
 
   constructor(
     gpu: GpuContext,
@@ -834,6 +845,7 @@ export class LabRenderer {
 
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
+    this.document = migrated.doc;
 
     // 场景灯光：第一个启用的 Light 组件（directional key）。场景 schema 目前只有
     // 颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
@@ -1562,6 +1574,31 @@ export class LabRenderer {
     this.cylinderOverlay = o;
   }
 
+  /**
+   * 动态实例批次（运行时热实体，WU-3）。
+   *
+   * 渲染器同样**不认识运行时**：只接已经打包好的实例数组，转发给引擎的 pass 1b。
+   * 语义全部在 `services/runtime-bridge.ts`，由 main.ts 每帧注入。
+   * null = 本帧没有动态实体（未启动 / 全部阵亡），引擎跳过整段。
+   */
+  private dynamicBatches: CoreDynamicBatch[] | null = null;
+  setDynamicBatches(b: CoreDynamicBatch[] | null): void {
+    this.dynamicBatches = b;
+  }
+
+  /** 调试 / 冒烟用：当前动态批次的实例总数（0 = 一个动态实体都没画） */
+  debugDynamicInstanceCount(): number {
+    if (this.dynamicBatches === null) return 0;
+    let n = 0;
+    for (const b of this.dynamicBatches) n += b.count;
+    return n;
+  }
+
+  /** 调试 / 冒烟用：当前动态批次的 meshId 列表（验证「按体型分组」） */
+  debugDynamicMeshIds(): string[] {
+    return this.dynamicBatches?.map((b) => b.meshId) ?? [];
+  }
+
   /** 调试 / 冒烟用：当前注入的圆柱体叠加层顶点数（0 = 本帧没有包裹器要画） */
   debugCylinderVertexCount(): number {
     return this.cylinderOverlay?.vertices.length ?? 0;
@@ -2097,6 +2134,9 @@ export class LabRenderer {
       skeleton: mainSkeleton,
       // 蒙皮包裹器圆柱体：由 main.ts 每帧从绑定模块算好后注入（渲染器不认识绑定）
       cylinders: this.cylinderOverlay,
+      // 动态实例（运行时热实体）：由 main.ts 每帧从 RuntimeBridge 注入，
+      // 走独立 instancing 路径，不占 transformBuf 的静态槽位
+      dynamicBatches: this.dynamicBatches,
       stats: { drawCalls: 0 },
     };
 
