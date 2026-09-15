@@ -66,8 +66,8 @@ describe('buildQualityReport', () => {
     expect(res.metrics.maxPenetrationM).toBeLessThanOrEqual(0.001 + 1e-9);
   });
 
-  it('穿透与滑动超标 → partial + 逐项违例（值与限都给出）', () => {
-    const anchor: [number, number, number] = [0.5, 0, 0.09]; // 锚点被挪远 40cm
+  it('静态偏差零运动 → 滑动 = 0（口径：相邻样本路程，不重复计锚点偏差）；偏差由 MRQ_ANCHOR 捕获', () => {
+    const anchor: [number, number, number] = [0.5, 0, 0.09]; // 恒定偏 0.4m，零运动
     const frames = [standFrame(), { ...standFrame(), t: 1 / 30 }];
     const res = buildQualityReport({
       rig,
@@ -82,9 +82,34 @@ describe('buildQualityReport', () => {
       durationMs: 1,
       tolerances: defaultRetargetTolerances(),
     });
-    expect(res.status).toBe('partial');
+    expect(res.metrics.cumulativeSlideM).toBeCloseTo(0, 9);
+    expect(res.violations.some((v) => v.code === 'MRQ_ANCHOR')).toBe(true);
+    expect(res.violations.some((v) => v.code === 'MRQ_SLIDE')).toBe(false);
+  });
+
+  it('锁定段内切向移动 0.3m → 累计滑动 ≈ 0.3（相邻样本差分）', () => {
+    const anchor: [number, number, number] = [0.1, 0, 0.09];
+    const a = standFrame();
+    const b = standFrame();
+    // 脚在段内平移 0.3m（模拟滑步）
+    (b.bonePos as Record<string, [number, number, number]>).LeftFoot = [0.4, 0.03, 0];
+    const res = buildQualityReport({
+      rig,
+      frames: [{ ...a, t: 0 }, { ...b, t: 1 / 30 }],
+      segments: [supportSeg(anchor, 0, 0.1)],
+      anchorDeviations: [{ segmentId: 'x', marker: 'LeftFoot.ball', maxM: 0.31 }],
+      reachResidualsM: { inner: 0, outer: 0 },
+      rootCorrections: new Float64Array(6),
+      switchJumpMps: 0,
+      iterations: 1,
+      converged: true,
+      durationMs: 1,
+      tolerances: defaultRetargetTolerances(),
+    });
+    // ball 标记跟随脚移动 0.3m；heel 标记同骨同段也移动 → 两者相加
+    expect(res.metrics.cumulativeSlideM).toBeGreaterThan(0.29);
+    expect(res.metrics.cumulativeSlideM).toBeLessThan(0.7);
     expect(res.violations.some((v) => v.code === 'MRQ_SLIDE')).toBe(true);
-    expect(res.violations[0]!.valueM).toBeGreaterThan(res.violations[0]!.limitM);
   });
 
   it('速度跳变口径：0.1×h_t/s 阈值，超限出违例', () => {

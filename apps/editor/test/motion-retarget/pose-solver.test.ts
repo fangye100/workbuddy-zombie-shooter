@@ -101,6 +101,42 @@ describe('solvePose · A05 双支撑', () => {
     expect(Math.hypot(corr[0]!, corr[1]!, corr[2]!)).toBeLessThan(1e-6);
   });
 
+  it('★ A18 后半：求解后根朝向与输入逐分量一致（锚点求解不污染 yaw），链下子树随新脚变换重挂', () => {
+    const sm = fakeMotion(3);
+    // 根朝向给一个非平凡 yaw（第 1 帧起 30°）
+    const frames = sm.times.length;
+    const rootQ = new Float64Array(frames * 4);
+    for (let f = 0; f < frames; f++) {
+      const a = (f === 0 ? 0 : 30) * Math.PI / 180;
+      rootQ[f * 4 + 1] = Math.sin(a / 2);
+      rootQ[f * 4 + 3] = Math.cos(a / 2);
+    }
+    const res = solvePose({
+      targetRig: rig,
+      sourceMotion: sm,
+      baselineLocals: Array.from({ length: frames }, () => ({})),
+      rootPositions: new Float64Array(frames * 3).fill(0).map((_, i) => (i % 3 === 1 ? 0.95 : 0)),
+      rootQuats: rootQ,
+      segments: [
+        seg('LeftFoot.ball', 'LeftLeg', LEFT_ANCHOR, 0, 0.1),
+        seg('RightFoot.ball', 'RightLeg', RIGHT_ANCHOR, 0, 0.1),
+      ],
+      tolerances: defaultRetargetTolerances(),
+    });
+    for (let f = 0; f < frames; f++) {
+      for (let k = 0; k < 4; k++) {
+        expect(res.frames[f]!.rootQuat[k]).toBeCloseTo(rootQ[f * 4 + k]!, 12);
+      }
+      // 子树重挂：ToeBase 世界 = 踝世界 + R_foot_world · rest 偏移
+      const toe = res.frames[f]!.bonePos.LeftToeBase!;
+      const ankle = res.frames[f]!.bonePos.LeftFoot!;
+      const fq = res.frames[f]!.boneQuat.LeftFoot!;
+      const restOff = rig.bones.LeftToeBase!.restLocalT;
+      const rot = rotateVec3(fq, restOff);
+      expect(Math.hypot(toe[0] - ankle[0] - rot[0], toe[1] - ankle[1] - rot[1], toe[2] - ankle[2] - rot[2])).toBeLessThan(1e-9);
+    }
+  });
+
   it('非等比腿（左 0.30/0.35）：根被拉低补可达，接触仍保持 ≤1e-4', () => {
     const short = JSON.parse(JSON.stringify(rig)) as RetargetRig;
     short.bones.LeftLeg!.restLocalT = [0, -0.3, 0];

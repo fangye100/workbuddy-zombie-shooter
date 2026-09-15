@@ -48,6 +48,18 @@ function dot3(a: V3, b: V3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+function rotateQuat(q: Quat, v: V3): [number, number, number] {
+  const x = q[0], y = q[1], z = q[2], w = q[3];
+  const tx = 2 * (y * v[2] - z * v[1]);
+  const ty = 2 * (z * v[0] - x * v[2]);
+  const tz = 2 * (x * v[1] - y * v[0]);
+  return [
+    v[0] + w * tx + (y * tz - z * ty),
+    v[1] + w * ty + (z * tx - x * tz),
+    v[2] + w * tz + (x * ty - y * tx),
+  ];
+}
+
 /**
  * 构造空间映射。标定自检：S(参考站姿骨盆) 必须落在目标参考骨盆高上，
  * 不满足时返回诊断（错误在平面/原点标定，不允许用整体下降掩盖）。
@@ -63,7 +75,13 @@ export function buildSpaceMapping(
   const oTgt: V3 = opts.oTgt ?? [0, 0, 0];
   const mode = opts.mode ?? 'normalize-gait';
 
-  const similarity = (p: V3): [number, number, number] => add3(oTgt, scale3(sub3(p, oSrc), sRoot));
+  const similarity = (p: V3): [number, number, number] => {
+    // S(p) = o_t + s·C·(p − o_s)：C 是固定世界朝向对齐（非 identity 时也参与，
+    // 不做静默假设；锚点路径 median∘map 与 map∘median 对仿射映射等价）
+    const d = sub3(p, oSrc);
+    const r = rotateQuat(C, d);
+    return add3(oTgt, scale3(r, sRoot));
+  };
   const identityAnchor = (p: V3): [number, number, number] => [p[0], p[1], p[2]];
 
   const mapping: SpaceMapping = {

@@ -65,6 +65,25 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   diagnostics.push(...d1, ...d2);
   if (hasErrors([...d1, ...d2]) || cancelled()) return failed(diagnostics, dep);
 
+  // 姿态基准守门（docs/16 §1 钉板：不可达组合拒绝，不允许带着 error 诊断继续）
+  if (hasErrors(baseline.diagnostics)) {
+    diagnostics.push(...baseline.diagnostics);
+    diagnostics.push({
+      severity: 'error',
+      code: 'MRC_BASELINE_REJECTED',
+      message: `姿态基准（${baseline.mode}）自带 error 级诊断，拒绝求解（如 BVH 源 × world-rest 的非法组合）`,
+    });
+    return failed(diagnostics, dep);
+  }
+  if (baseline.mode !== recipe.rotationBaseline || baseline.mode !== targetRig.rotationBaseline) {
+    diagnostics.push({
+      severity: 'error',
+      code: 'MRC_BASELINE_MODE_MISMATCH',
+      message: `基准模式不一致：baseline=${baseline.mode}，recipe=${recipe.rotationBaseline}，rig=${targetRig.rotationBaseline}`,
+    });
+    return failed(diagnostics, dep);
+  }
+
   // 标定指纹核对：配方引用的指纹必须与传入标定一致（MR-01 失效规则）
   if (recipe.sourceCalibrationFingerprint !== '' && input.sourceCalibration !== null) {
     const fp = calibrationFingerprint(input.sourceCalibration);
@@ -79,9 +98,17 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   }
 
   // ── 2. 空间映射 + 根候选 ──
-  const hS =
-    input.sourceCalibration?.pelvisHeightM ??
-    Math.max(0.1, source.worldPositions[source.rootBone]?.[1]! - environment.sourcePlane.origin[1]);
+  const srcHipsY = source.worldPositions[source.rootBone]?.[1];
+  const hS = input.sourceCalibration?.pelvisHeightM ??
+    (Number.isFinite(srcHipsY) ? Math.max(0.1, srcHipsY! - environment.sourcePlane.origin[1]) : NaN);
+  if (!Number.isFinite(hS)) {
+    diagnostics.push({
+      severity: 'error',
+      code: 'MRC_HS_UNAVAILABLE',
+      message: '源骨盆高度不可得（无标定且源根世界位置缺失），拒绝求解',
+    });
+    return failed(diagnostics, dep);
+  }
   const { mapping, calibrationErrorM } = buildSpaceMapping(hS, targetRig.pelvisHeightM, {
     mode: recipe.spaceMode,
     oSrc: environment.sourcePlane.origin,
@@ -99,7 +126,18 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   coverage.push('space-mapping');
 
   // ── 3. 接触检测 + 锚点 ──
-  const footMarkers = Object.values(targetRig.markers).filter((mk) => mk.bone.includes('Foot'));
+  // 足部标记按「挂在 3 骨腿链上的标记」语义筛选（不认骨名字符串）
+  const legChainBones = new Set(
+    targetRig.chains.filter((ch) => ch.joints.length === 3).flatMap((ch) => [...ch.joints]),
+  );
+  const footMarkers = Object.values(targetRig.markers).filter((mk) => legChainBones.has(mk.bone));
+  if (footMarkers.length === 0) {
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRC_NO_FOOT_MARKERS',
+      message: '目标骨架上没有挂在腿链（3 骨链）上的标记：接触检测为空，只做自由运动适配',
+    });
+  }
   const markerTrajs = footMarkers.map((mk) => ({
     markerId: mk.id,
     chainId: chainIdOfBone(targetRig, mk.bone),
@@ -141,6 +179,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     segments,
     tolerances: recipe.tolerances,
   });
+  diagnostics.push(...first.diagnostics);
   const smoothed = smoothRootCorrections(source.times, first.rootCorrections, {
     transitionS: 0.25,
   });
@@ -169,7 +208,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     rootCorrections: smoothed.corrections,
     switchJumpMps: smoothed.maxJumpMps,
     iterations: first.iterations + second.iterations,
-    converged: true,
+    converged: first.converged && second.converged,
     durationMs: Date.now() - t0,
     tolerances: recipe.tolerances,
   });

@@ -49,6 +49,33 @@ function conj(q: Quat): Quat {
   return [-q[0], -q[1], -q[2], q[3]];
 }
 
+/** 某骨世界变换；解/帧里没有时沿父链 rest FK（锚在最近已解祖先） */
+function worldOfBone(
+  name: string,
+  solved: { bonePos: Record<string, V3>; boneQuat: Record<string, Quat> },
+  output: BakeOutputRig,
+  cache: Map<string, { pos: V3; quat: Quat }>,
+): { pos: V3; quat: Quat } {
+  const hit = cache.get(name);
+  if (hit !== undefined) return hit;
+  let result: { pos: V3; quat: Quat };
+  if (solved.boneQuat[name] !== undefined) {
+    result = { pos: solved.bonePos[name]!, quat: solved.boneQuat[name]! };
+  } else {
+    const b = output.bones[name]!;
+    if (b.parent === null || output.bones[b.parent] === undefined) {
+      result = { pos: b.restLocalT, quat: b.restLocalR };
+    } else {
+      const pw = worldOfBone(b.parent, solved, output, cache);
+      const q = quatMul(pw.quat, b.restLocalR);
+      const off = rotate(pw.quat, b.restLocalT);
+      result = { pos: [pw.pos[0] + off[0], pw.pos[1] + off[1], pw.pos[2] + off[2]], quat: q };
+    }
+  }
+  cache.set(name, result);
+  return result;
+}
+
 function rotateInv(q: Quat, v: V3): [number, number, number] {
   return rotate(conj(q), v);
 }
@@ -86,6 +113,7 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
 
   const rootParent = output.rootParentWorld ?? null;
   const tracks: LocalTrack[] = [];
+  const cachePerFrame: Map<string, { pos: V3; quat: Quat }>[] = clip.frames.map(() => new Map());
   const frames = clip.frames.length;
   const times = clip.times;
 
@@ -112,6 +140,7 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
 
     for (let f = 0; f < frames; f++) {
       const fr = clip.frames[f]!;
+      const cache = cachePerFrame[f]!;
       const wq = fr.boneQuat[name]!;
       const wp = fr.bonePos[name]!;
 
@@ -129,10 +158,9 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
         }
       } else {
         const p = output.bones[b.parent]!;
-        const pq = fr.boneQuat[p.name] ?? p.restLocalR;
-        const pp = fr.bonePos[p.name];
-        parentWorldQ = pq;
-        parentWorldP = pp ?? p.restLocalT;
+        const pw = worldOfBone(p.name, fr, output, cache);
+        parentWorldQ = pw.quat;
+        parentWorldP = pw.pos;
         parentScale = p.restUniformScale ?? 1;
       }
 
@@ -153,7 +181,7 @@ export function bakeWorldSolveToLocal(clip: WorldSolveClip, output: BakeOutputRi
         translations[f * 3 + 2] = lt[2] * invS;
       }
     }
-    tracks.push({ bone: name, nodeIndex: b.nodeIndex, times, rotations, translations });
+    tracks.push({ bone: name, nodeIndex: b.nodeIndex, times: times.slice(), rotations, translations });
   }
 
   return { tracks, diagnostics };
@@ -171,11 +199,17 @@ export function readBackWorld(
   const out: Array<Record<string, { pos: V3; quat: Quat }>> = [];
   for (let f = 0; f < frames; f++) {
     const frame: Record<string, { pos: V3; quat: Quat }> = {};
+    // 增量视图：随遍历（父先于子）填充，worldOfBone 对已重建祖先直接命中
+    const posView: Record<string, V3> = {};
+    const quatView: Record<string, Quat> = {};
     for (const name of output.order) {
       const b = output.bones[name]!;
       const t = trackOf.get(name);
       if (t === undefined) {
-        frame[name] = { pos: b.restLocalT, quat: b.restLocalR };
+        const w = worldOfBone(name, { bonePos: posView, boneQuat: quatView }, output, new Map());
+        frame[name] = { pos: w.pos, quat: w.quat };
+        posView[name] = w.pos;
+        quatView[name] = w.quat;
         continue;
       }
       const localR: Quat = [t.rotations[f * 4]!, t.rotations[f * 4 + 1]!, t.rotations[f * 4 + 2]!, t.rotations[f * 4 + 3]!];
@@ -190,6 +224,8 @@ export function readBackWorld(
           const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
           frame[name] = { pos: [lt[0]!, lt[1]!, lt[2]!], quat: localR };
         }
+        posView[name] = frame[name]!.pos;
+        quatView[name] = frame[name]!.quat;
       } else {
         const wq = quatMul(parent.quat, localR);
         const parentBone = output.bones[b.parent!]!;
@@ -197,6 +233,8 @@ export function readBackWorld(
         const lt: V3 = t.translations === null ? b.restLocalT : [t.translations[f * 3]!, t.translations[f * 3 + 1]!, t.translations[f * 3 + 2]!];
         const off = rotate(parent.quat, [lt[0] * s, lt[1] * s, lt[2] * s]);
         frame[name] = { pos: [parent.pos[0] + off[0], parent.pos[1] + off[1], parent.pos[2] + off[2]], quat: wq };
+        posView[name] = frame[name]!.pos;
+        quatView[name] = frame[name]!.quat;
       }
     }
     out.push(frame);

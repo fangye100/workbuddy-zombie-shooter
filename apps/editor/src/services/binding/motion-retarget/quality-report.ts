@@ -71,6 +71,8 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   for (const d of input.anchorDeviations) maxAnchor = Math.max(maxAnchor, d.maxM);
 
   // 累计切向滑动 + 穿透 + 摆动净空
+  // 滑动口径（docs/16 §8 A08）：**相邻样本**切向距离总和 Σ|tangential(P(t+1)−P(t))|，
+  // 只在段内累加——静态偏差不重复计入（那归 MRQ_ANCHOR），且不随帧率放大。
   let cumulativeSlide = 0;
   let maxPenetration = 0;
   let minSwingClearance = Infinity;
@@ -85,12 +87,26 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
       const world = markerWorldAt(rig, fr, id);
       if (world === null) continue;
       void mk;
-      const seg = segments.find((s) => s.marker === id && fr.t >= s.startS - 1e-9 && fr.t <= s.endS + 1e-9 && s.anchor !== null);
+      // 同一块骨上任一标记在接触段内 → 整骨按接触处理（ball 锁着时 heel 不算摆动）
+      const seg = segments.find(
+        (s) =>
+          rig.markers[s.marker]?.bone === mk.bone &&
+          fr.t >= s.startS - 1e-9 &&
+          fr.t <= s.endS + 1e-9 &&
+          s.anchor !== null,
+      );
       if (seg !== undefined) {
-        const dev = tangential(sub3(world, seg.anchor!), plane.normal);
-        cumulativeSlide += len3(dev);
         const pen = -signedPlaneDistance(world, plane);
         maxPenetration = Math.max(maxPenetration, pen);
+        if (f + 1 < frames.length) {
+          const next = frames[f + 1]!;
+          if (next.t <= seg.endS + 1e-9) {
+            const w2 = markerWorldAt(rig, next, id);
+            if (w2 !== null) {
+              cumulativeSlide += len3(tangential(sub3(w2, world), plane.normal));
+            }
+          }
+        }
       } else {
         const clearance = signedPlaneDistance(world, plane);
         minSwingClearance = Math.min(minSwingClearance, clearance);
