@@ -1,6 +1,6 @@
 import { loadLevelRuntime, type LoadDiagnostic } from './loader';
 import { createSession } from './session';
-import type { RuntimeSession, EntityView } from './session';
+import type { RuntimeSession, EntityView, RuntimeDiagnostic } from './session';
 import type { SceneDocument } from '@aether/scene';
 
 /**
@@ -38,6 +38,28 @@ export interface PlayResult {
   errors: string[];
 }
 
+/** 一项已登记的 Play 期资源 */
+export interface PlayResource {
+  label: string;
+  dispose: () => void;
+}
+
+/**
+ * 资源账目。
+ *
+ * AGENTS.md §2.4 明文：**Play 期的每一次资源分配都必须登记进 PlaySession，
+ * Stop 时逐个释放**。这条规则是拿"只打墓碑不释放"的泄漏坑换来的，所以账目本身
+ * 必须是可查询、可断言的 —— 否则"账目平衡"又变成一句无法证伪的口号。
+ */
+export interface ResourceLedger {
+  /** 本次（及历次）累计登记数 */
+  registered: number;
+  /** 累计已释放数 */
+  disposed: number;
+  /** 当前仍未释放数。Stop 之后必须为 0 */
+  pending: number;
+}
+
 export class PlaySession {
   private session: RuntimeSession | null = null;
   private _state: PlayState = 'stopped';
@@ -52,6 +74,11 @@ export class PlaySession {
 
   /** 启停次数。资源账目平衡断言用它（浏览器侧配 draw call / 实例数回落） */
   private cycles = 0;
+
+  /** Play 期登记的资源。Stop 时逐个释放 —— 见 AGENTS.md §2.4 */
+  private resources: PlayResource[] = [];
+  private registeredCount = 0;
+  private disposedCount = 0;
 
   constructor(opts: PlaySessionOptions = {}) {
     this.seed = opts.seed ?? 1;
@@ -70,6 +97,32 @@ export class PlaySession {
 
   get cycleCount(): number {
     return this.cycles;
+  }
+
+  /**
+   * 登记一项 Play 期资源，Stop 时自动释放。
+   *
+   * runtime 侧自己不碰 GPU（依赖方向禁止），但**宿主**在 Play 期分配的句柄
+   * （Bridge 批次、临时代理网格、临时 buffer）必须在这里挂号，否则"Stop 后无残留"
+   * 只能靠人眼观察。重复登记同一 label 不会覆盖，逐条释放。
+   */
+  registerResource(label: string, dispose: () => void): void {
+    this.resources.push({ label, dispose });
+    this.registeredCount++;
+  }
+
+  /** 资源账目。`pending === 0` 是「Stop 后无残留」的可断言判据 */
+  get ledger(): ResourceLedger {
+    return {
+      registered: this.registeredCount,
+      disposed: this.disposedCount,
+      pending: this.resources.length,
+    };
+  }
+
+  /** 运行期诊断（容量拒绝等）。与 `diagnostics`（装载期）语义不同，别混用 */
+  get runtimeDiagnostics(): readonly RuntimeDiagnostic[] {
+    return this.session?.diagnostics() ?? [];
   }
 
   /** 当前世界；stopped 时为 null。调用方不得长期持有 —— 每次 play 都是新对象 */
@@ -154,10 +207,24 @@ export class PlaySession {
   /**
    * 停止并释放。
    *
-   * runtime 侧没有 GPU 资源，释放 = 断开引用让整棵世界可回收；GPU 侧的
-   * 动态实例 buffer 由渲染核心持有，Bridge 不再产出批次即自然不画。
+   * 顺序：**先逐个释放登记的资源，再断开世界引用**。反过来做的话，释放回调里
+   * 还想读一次运行时状态就会拿到 null。
+   *
+   * runtime 侧自身不持有 GPU 句柄（依赖方向禁止），所以这里释放的是**宿主登记进来**的
+   * 那些（Bridge 批次等）；动态实例 buffer 由渲染核心持有、按 meshId 缓存跨 Play 复用，
+   * 不随单次 Stop 销毁（见 docs/19 §6）。
    */
   stop(): void {
+    for (const r of this.resources) {
+      try {
+        r.dispose();
+        this.disposedCount++;
+      } catch (e) {
+        // 一个释放失败不能挡住其余的，也不能挡住"停止"本身
+        console.warn(`[play] 释放资源 ${r.label} 失败：${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    this.resources.length = 0;
     this.session = null;
     this._state = 'stopped';
     this.accumulator = 0;

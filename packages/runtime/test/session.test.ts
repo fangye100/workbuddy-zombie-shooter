@@ -50,10 +50,37 @@ describe('RuntimeSession —— 房间进入触发', () => {
     expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
   });
 
-  it('再次跨越边界不重复投放同一波', () => {
+  it('时间推进不会重复投放同一波（同一房间内跑 200 步）', () => {
     const s = make();
     s.run(200);
     expect(s.countNpc()).toBe(12);
+    expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
+  });
+
+  /**
+   * docs/17 §8-2 要求的是「**再次跨越边界**不重复投放同一波」。
+   *
+   * 玩家本轮不可移动（maxSpeed = 0，没有输入驱动），所以光"跑 200 步"根本没发生跨边界 ——
+   * 那条只证明了"时间推进不重复触发"。这里直接搬动玩家坐标，**真的走出房间再走回来**，
+   * 才算验到"再次跨越边界"。
+   */
+  it('玩家走出房间再走回来 → 不重复投放同一波', () => {
+    const s = make();
+    const before = s.countNpc();
+    const p = s.view().find((e) => e.kind === 'player')!;
+    const home = { x: s.table.posX[p.id]!, z: s.table.posZ[p.id]! };
+
+    // 走出房间（房间 1 的 bounds 远小于这个坐标）
+    s.table.posX[p.id] = 500;
+    s.table.posZ[p.id] = 500;
+    s.run(5);
+    expect(s.countNpc()).toBe(before);
+
+    // 再走回来
+    s.table.posX[p.id] = home.x;
+    s.table.posZ[p.id] = home.z;
+    s.run(5);
+    expect(s.countNpc()).toBe(before);
     expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
   });
 
@@ -65,11 +92,13 @@ describe('RuntimeSession —— 房间进入触发', () => {
     expect(v.filter((e) => e.kind === 'player')[0]?.sourceNodeId).toBe('nd_f1_start');
   });
 
-  it('身份带 generation，不是裸数组下标', () => {
+  it('身份带 generation，且 id 唯一（不是裸数组下标）', () => {
     const s = make();
     const v = s.view();
-    expect(v.every((e) => Number.isInteger(e.generation))).toBe(true);
+    // 注：不断言 `generation 是整数` —— 它来自 Uint32Array，恒真，没有区分力。
+    // 真正要锁的是「id 唯一」以及「generation 随槽位复用递增」。
     expect(new Set(v.map((e) => e.id)).size).toBe(v.length);
+    expect(v.every((e) => e.generation >= 1)).toBe(true);
   });
 });
 
@@ -121,6 +150,59 @@ describe('RuntimeSession —— 确定性与容量', () => {
     const s = make({ capacity: 6 }); // 玩家占 1，房间 1 需要 12
     expect(s.countNpc()).toBe(0);
     expect(s.triggeredRooms()).toEqual([]);
+  });
+
+  /**
+   * docs/17 §7 失败矩阵：「生成量超过容量 → **明确失败**，符合约定的原子性」。
+   * 原子性只是"不留半批"，**明确失败**要求调用方能读到"被拒了、为什么、哪个房间" ——
+   * 否则"一只没刷"到底是房间没触发还是容量不够，从输出上无从区分。
+   */
+  it('容量不足 → StepReport 明确回传被拒房间（AGENTS.md §2.2 不静默）', () => {
+    const s = make({ capacity: 6 }); // 玩家占 1，房间 1 需要 12
+    const r = s.step();
+    expect(r.spawned).toBe(0);
+    expect(r.rejectedRooms).toBe(1);
+    expect(r.rejections).toEqual([{ roomNodeId: 'nd_f1r0', needed: 12, free: 5 }]);
+  });
+
+  it('容量不足 → 运行期 diagnostic 可见，且同一房间只记一次', () => {
+    const s = make({ capacity: 6 });
+    s.run(10);
+    const d = s.diagnostics();
+    expect(d).toHaveLength(1);
+    expect(d[0]!.code).toBe('W_SPAWN_CAPACITY');
+    expect(d[0]!.nodeId).toBe('nd_f1r0');
+    expect(d[0]!.message).toContain('nd_f1r0');
+  });
+
+  it('drainDiagnostics 取走后清空（宿主每帧取一次，不会越攒越多）', () => {
+    const s = make({ capacity: 6 });
+    s.run(5);
+    expect(s.drainDiagnostics().length).toBeGreaterThan(0);
+    expect(s.diagnostics()).toEqual([]);
+  });
+
+  it('容量充足 → StepReport.spawned 是真实生成数，且无拒绝', () => {
+    const s = make(); // 出生房间在构造期就触发了，这里搬去另一间房看一次真实生成
+    const p = s.view().find((e) => e.kind === 'player')!;
+    // 挑一间**还没触发过、且真的挂了刷怪点**的房间（不是所有房间都有刷怪点）
+    const triggered = s.triggeredRooms();
+    const seedSpawn = s.desc.spawns.find(
+      (sp) => sp.enabled && sp.trigger === 'room-enter' && !triggered.includes(sp.roomNodeId),
+    )!;
+    const other = s.desc.rooms.find((r) => r.nodeId === seedSpawn.roomNodeId)!;
+    const want = s.desc.spawns
+      .filter((sp) => sp.roomNodeId === other.nodeId && sp.enabled && sp.trigger === 'room-enter')
+      .reduce((a, sp) => a + sp.count, 0);
+    expect(want).toBeGreaterThan(0);
+
+    s.table.posX[p.id] = (other.minX + other.maxX) / 2;
+    s.table.posZ[p.id] = (other.minZ + other.maxZ) / 2;
+    const r = s.step();
+    expect(r.spawned).toBe(want);
+    expect(r.rejectedRooms).toBe(0);
+    expect(r.rejections).toEqual([]);
+    expect(s.diagnostics()).toEqual([]);
   });
 
   it('reset 回到初始状态（房间需要重新触发，实体数不累积）', () => {

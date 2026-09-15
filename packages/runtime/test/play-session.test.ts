@@ -63,7 +63,14 @@ describe('PlaySession —— 状态机', () => {
 });
 
 describe('PlaySession —— 固定步调度', () => {
-  it('渲染帧率不决定游戏步数：同样 1 秒，大帧小帧走的总步数一致', () => {
+  /**
+   * docs/17 §8-4 的原话是「不同渲染帧率不改变**约定逻辑结果**」。
+   *
+   * 🔴 只比 tick 数量、还带 ±1 容差是**不够的**：`a.tick=29 / b.tick=30` 也算过，
+   * 而那恰恰是"两种帧率走了不同步数"—— 与命题本身冲突。
+   * 正确做法：两侧都喂到**同一个 tick**，再逐实体比世界状态（容差 1e-9）。
+   */
+  it('渲染帧率不改变逻辑结果：对齐到同一 tick 后，世界状态逐位一致', () => {
     const a = new PlaySession({ maxCatchUpSteps: 1000 });
     const b = new PlaySession({ maxCatchUpSteps: 1000 });
     a.play(floor1());
@@ -73,6 +80,29 @@ describe('PlaySession —— 固定步调度', () => {
     // fixedStep = 1/30 → 1 秒 ≈ 30 步（浮点累加会有 ±1 的尾差）
     expect(Math.abs(a.tick - 30)).toBeLessThanOrEqual(1);
     expect(Math.abs(b.tick - 30)).toBeLessThanOrEqual(1);
+
+    // 把慢的一侧用 stepOnce 精确补到与快的一侧同一个 tick（target = 较慢的那个）
+    const target = Math.min(a.tick, b.tick);
+    const align = (p: PlaySession) => {
+      p.pause(); // stepOnce 只在 paused 下生效
+      while (p.tick < target) p.stepOnce();
+    };
+    align(a);
+    align(b);
+    expect(a.tick).toBe(target);
+    expect(b.tick).toBe(target);
+
+    const ea = a.entities;
+    const eb = b.entities;
+    expect(ea.length).toBe(eb.length);
+    for (let i = 0; i < ea.length; i++) {
+      expect(ea[i]!.id).toBe(eb[i]!.id);
+      expect(ea[i]!.generation).toBe(eb[i]!.generation);
+      expect(ea[i]!.sourceNodeId).toBe(eb[i]!.sourceNodeId);
+      expect(Math.abs(ea[i]!.x - eb[i]!.x)).toBeLessThan(1e-9);
+      expect(Math.abs(ea[i]!.z - eb[i]!.z)).toBeLessThan(1e-9);
+      expect(Math.abs(ea[i]!.yaw - eb[i]!.yaw)).toBeLessThan(1e-9);
+    }
   });
 
   it('单帧追赶有上限：一次喂 10 秒不会瞬移 300 步', () => {

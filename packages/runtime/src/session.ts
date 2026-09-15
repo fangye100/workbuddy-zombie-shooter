@@ -86,13 +86,39 @@ export interface EntityView {
   behavior: number;
 }
 
-/** 一次推进的结果摘要。拒绝是显式的，不藏在返回值里 */
+/** 一个房间因容量不足被整批拒绝的明细 */
+export interface SpawnRejection {
+  roomNodeId: NodeId;
+  /** 这一波要生成的实体数 */
+  needed: number;
+  /** 当时剩余的容量 */
+  free: number;
+}
+
+/** 运行期诊断（与 loader 的装载期诊断分开：装载是一次性的，运行是每步的） */
+export interface RuntimeDiagnostic {
+  code: string;
+  message: string;
+  nodeId: NodeId | null;
+}
+
+/**
+ * 一次推进的结果摘要。
+ *
+ * 🔴 拒绝必须是**显式的**：`spawned` / `rejectedRooms` / `rejections` 都要是真值。
+ * 这里曾经返回常量 `{ spawned: 0, rejectedRooms: 0 }` —— 容量不足的房间被静默跳过，
+ * 调用方看到"什么都没刷"却分不清是"房间没触发"还是"容量不够被拒"。
+ * 那直接违反 AGENTS.md §2.2「超容量一律产出 diagnostic 显式告知」与
+ * docs/17 §7「生成量超过容量 → 明确失败」。
+ */
 export interface StepReport {
   tick: number;
   /** 本步新生成的实体数 */
   spawned: number;
   /** 本步因容量不足被整批拒绝的房间数 */
   rejectedRooms: number;
+  /** 被拒房间的明细（与 rejectedRooms 同源，供 UI 指出是哪一个房间） */
+  rejections: SpawnRejection[];
 }
 
 const BEHAVIOR_IDLE = 0;
@@ -128,6 +154,10 @@ export class RuntimeSession {
   private playerId = -1;
   private tickCount = 0;
   private readonly capacity: number;
+
+  /** 运行期诊断累计（容量拒绝等）。与装载期诊断分开：装载一次性，运行每步都可能产生 */
+  private readonly diags: RuntimeDiagnostic[] = [];
+  private readonly diagSeen = new Set<string>();
 
   constructor(opts: SessionOptions) {
     this.desc = opts.desc;
@@ -252,10 +282,44 @@ export class RuntimeSession {
 
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
-    this.triggerRooms();
+    const r = this.triggerRooms();
     this.moveNpcs();
     this.tickCount += 1;
-    return { tick: this.tickCount, spawned: 0, rejectedRooms: 0 };
+    for (const j of r.rejections) {
+      this.pushDiag(
+        'W_SPAWN_CAPACITY',
+        `房间 ${j.roomNodeId} 这一波要 ${j.needed} 只，剩余容量只有 ${j.free} 只 —— 整批不生成`,
+        j.roomNodeId,
+      );
+    }
+    return {
+      tick: this.tickCount,
+      spawned: r.spawned,
+      rejectedRooms: r.rejections.length,
+      rejections: r.rejections,
+    };
+  }
+
+  /** 运行期诊断（累计）。与装载期诊断分开，装载是一次性的 */
+  diagnostics(): readonly RuntimeDiagnostic[] {
+    return this.diags;
+  }
+
+  /** 取走运行期诊断并清空（宿主每帧取一次去显示，不会越攒越多） */
+  drainDiagnostics(): RuntimeDiagnostic[] {
+    const out = this.diags.slice();
+    this.diags.length = 0;
+    this.diagSeen.clear();
+    return out;
+  }
+
+  private pushDiag(code: string, message: string, nodeId: NodeId | null): void {
+    // 同一个 (code, node) 只记一次：容量不足的房间每步都会命中，
+    // 逐步 push 会把真正重要的那条冲掉（WebGPU 错误那条踩过同样的坑）
+    const key = `${code}|${nodeId ?? ''}`;
+    if (this.diagSeen.has(key)) return;
+    this.diagSeen.add(key);
+    this.diags.push({ code, message, nodeId });
   }
 
   run(ticks: number): StepReport[] {
@@ -279,6 +343,8 @@ export class RuntimeSession {
     this.kindOf.fill(0);
     this.triggered.clear();
     this.tickCount = 0;
+    this.diags.length = 0;
+    this.diagSeen.clear();
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();
@@ -310,8 +376,12 @@ export class RuntimeSession {
    *  - 禁用组件（enabled=false）的房间与刷怪点不触发；
    *  - **整批原子**：容量不够就一个都不生成，不留半批实体。
    */
-  private triggerRooms(): void {
-    if (this.playerId < 0 || !this.table.isAlive(this.playerId)) return;
+  private triggerRooms(): { spawned: number; rejections: SpawnRejection[] } {
+    const rejections: SpawnRejection[] = [];
+    let spawned = 0;
+    if (this.playerId < 0 || !this.table.isAlive(this.playerId)) {
+      return { spawned, rejections };
+    }
     const px = this.table.posX[this.playerId]!;
     const pz = this.table.posZ[this.playerId]!;
 
@@ -324,28 +394,35 @@ export class RuntimeSession {
         (s) => s.roomNodeId === room.nodeId && s.enabled && s.trigger === 'room-enter',
       );
       const total = pending.reduce((a, s) => a + s.count, 0);
-      if (total > this.table.capacity - this.table.aliveCount) {
-        // 原子拒绝：宁可这一波不刷，也不能刷一半让调用方以为成功了
+      const free = this.table.capacity - this.table.aliveCount;
+      if (total > free) {
+        // 原子拒绝：宁可这一波不刷，也不能刷一半让调用方以为成功了。
+        // 🔴 但"不刷"不等于"不报" —— 拒绝必须显式回传，否则调用方无从区分
+        // "房间没触发" 与 "容量不够被拒"（docs/17 §7：明确失败，符合约定的原子性）。
+        rejections.push({ roomNodeId: room.nodeId, needed: total, free });
         continue;
       }
 
-      for (const s of pending) this.spawnBatch(s);
+      for (const s of pending) spawned += this.spawnBatch(s);
       this.triggered.add(room.nodeId);
     }
+    return { spawned, rejections };
   }
 
-  private spawnBatch(s: { nodeId: NodeId; characterId: string; count: number; radius: number; x: number; z: number }): void {
+  /** 返回实际生成的数量（供 StepReport.spawned 汇总） */
+  private spawnBatch(s: { nodeId: NodeId; characterId: string; count: number; radius: number; x: number; z: number }): number {
     const stats = lookupCharacterStats(s.characterId);
-    if (stats === undefined) return; // loader 已报 error，这里不重复生成
+    if (stats === undefined) return 0; // loader 已报 error，这里不重复生成
     // 🔴 每个刷怪点一条**独立**随机流（种子 = 会话种子 ⊗ 节点 id）。
     // 全场景共用一条流时，改 A 刷怪点的 count 会多消耗几个随机数，于是 B、C 的
     // 取点被整体平移 —— 作者以为自己在做"局部编辑"，实际上整关重排了一遍。
     // WU-5 的 A/B 探针正是靠"没改的地方必须逐位不变"来证明改动是局部的，
     // 共享流会让这条断言对 count 永远不成立。
     const rng = makeRng(mixSeed(this.initialSeed, s.nodeId));
+    let made = 0;
     for (let k = 0; k < s.count; k++) {
       const i = this.table.spawn(stats.defId);
-      if (i < 0) return; // 容量保护（正常走不到：triggerRooms 已预检）
+      if (i < 0) return made; // 容量保护（正常走不到：triggerRooms 已预检）
       // 圆内均匀取点：半径乘 sqrt(u)，否则会向圆心堆积
       const ang = rng() * Math.PI * 2;
       const r = Math.sqrt(rng()) * s.radius;
@@ -359,7 +436,9 @@ export class RuntimeSession {
       this.table.behavior[i] = BEHAVIOR_CHASE;
       this.kindOf[i] = 1;
       this.sourceOf[i] = s.nodeId;
+      made++;
     }
+    return made;
   }
 
   // ------------------------------------------------------------ 内部：移动

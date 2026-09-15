@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { RuntimeBridge } from '../src/services/runtime-bridge';
 import { DYNAMIC_INSTANCE_FLOATS } from '@aether/render';
+import { lookupCharacterStats } from '@aether/content';
 import { PlaySession } from '@aether/runtime';
 import type { SceneDocument } from '@aether/scene';
 
@@ -89,11 +90,12 @@ describe('RuntimeBridge —— 实例打包（与 shader 的 DInst 布局一一�
     }
   });
 
-  it('不同体型分成不同批次（meshId 带尺寸参数）', () => {
+  it('同一 meshId 不会被拆成两份批次（按体型聚合，不是按实体）', () => {
     const { bridge: b } = started();
-    const ids = new Set(b.batches()!.map((x) => x.meshId));
-    // floor-1 第一间房有多种 NPC → 至少两个尺寸；同一 meshId 不会被拆成两份
-    expect(ids.size).toBeGreaterThanOrEqual(1);
+    const batches = b.batches()!;
+    const ids = batches.map((x) => x.meshId);
+    // 断言"没有重复 meshId"而不是"size >= 1" —— 后者对非空数组恒真，等于没测
+    expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id).toMatch(/^capsule:r[\d.]+:h[\d.]+$/);
   });
 
@@ -124,7 +126,14 @@ describe('RuntimeBridge —— 实例打包（与 shader 的 DInst 布局一一�
     const batches = b.batches()!;
     const total = batches.reduce((n, x) => n + x.count, 0);
     expect(total).toBeGreaterThan(64);
-    // 网格份数远小于实体数：120 个实体只对应「体型种类数」个 meshId
+    // 🔴 网格份数必须等于**体型种类数**，不能只写"小于 total/10" ——
+    // 那种近似断言在「每 10 个实体退化成一份网格」时照样通过，等于放行退化。
+    const kinds = new Set<string>();
+    for (const e of b.entities) {
+      const s = lookupCharacterStats(e.characterId);
+      kinds.add(`${(s?.capsuleRadius ?? 0.35).toFixed(3)}:${(s?.capsuleHeight ?? 1.8).toFixed(3)}`);
+    }
+    expect(batches.length).toBe(kinds.size);
     expect(batches.length).toBeLessThan(total / 10);
     for (const batch of batches) {
       expect(batch.vertices.length).toBeGreaterThan(0);
