@@ -16,7 +16,9 @@ import type { WorldSolveClip, WorldPoseFrame, Quat, V3 } from '../../src/service
 const h = Math.SQRT1_2;
 
 function bone(name: string, parent: string | null, t: V3, nodeIndex: number, s?: number): BakeBone {
-  return { name, parent, restLocalT: t, restLocalR: [0, 0, 0, 1], nodeIndex, restUniformScale: s };
+  const b: BakeBone = { name, parent, restLocalT: t, restLocalR: [0, 0, 0, 1], nodeIndex };
+  if (s !== undefined) b.restUniformScale = s;
+  return b;
 }
 
 function rigOf(bones: BakeBone[], fingerprint: string, rootParent?: BakeOutputRig['rootParentWorld']): BakeOutputRig {
