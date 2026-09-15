@@ -40,6 +40,22 @@ export function makeRng(seed: number): () => number {
   };
 }
 
+/**
+ * 把「会话种子 + 一个字符串身份」混成一颗派生种子（FNV-1a）。
+ *
+ * 用途见 `spawnBatch`：每个刷怪点用自己的派生流取点，而不是全场景共用一条。
+ * 混入 session 种子而不是只用字符串哈希，是为了让"换种子重跑"仍然整体改变散布 ——
+ * 否则无论 session 种子是多少，同一份场景的刷怪位置永远一模一样。
+ */
+export function mixSeed(seed: number, key: string): number {
+  let h = (2166136261 ^ (seed >>> 0)) >>> 0;
+  for (let i = 0; i < key.length; i++) {
+    h = (h ^ key.charCodeAt(i)) >>> 0;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0 || 1;
+}
+
 export interface SessionOptions {
   desc: LevelRuntimeDesc;
   seed?: number;
@@ -99,8 +115,7 @@ export class RuntimeSession {
   private readonly solver: CrowdSolver;
   private readonly buffers: CrowdBuffers;
   private readonly params: CrowdParams;
-  /** 非 readonly：reset() 要用同一颗种子重新播种 */
-  private rng: () => number;
+  /** 刷怪随机流的根种子。reset() 之后仍然用它派生，保证"同种子重跑" */
   private readonly initialSeed: number;
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
@@ -125,7 +140,6 @@ export class RuntimeSession {
     this.tbl = new CharacterTable(this.capacity);
     this.sourceOf = new Array<NodeId | null>(capacity).fill(null);
     this.kindOf = new Uint8Array(capacity);
-    this.rng = makeRng(this.seed);
 
     for (const s of [...NPC_STATS, PLAYER_STATS]) {
       this.defIdToStats.set(s.defId, s);
@@ -265,8 +279,8 @@ export class RuntimeSession {
     this.kindOf.fill(0);
     this.triggered.clear();
     this.tickCount = 0;
-    // 用**构造时的种子**重新播种 —— 否则 reset 后重跑会得到不同散布
-    this.rng = makeRng(this.initialSeed);
+    // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
+    // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();
     this.triggerRooms();
   }
@@ -323,12 +337,18 @@ export class RuntimeSession {
   private spawnBatch(s: { nodeId: NodeId; characterId: string; count: number; radius: number; x: number; z: number }): void {
     const stats = lookupCharacterStats(s.characterId);
     if (stats === undefined) return; // loader 已报 error，这里不重复生成
+    // 🔴 每个刷怪点一条**独立**随机流（种子 = 会话种子 ⊗ 节点 id）。
+    // 全场景共用一条流时，改 A 刷怪点的 count 会多消耗几个随机数，于是 B、C 的
+    // 取点被整体平移 —— 作者以为自己在做"局部编辑"，实际上整关重排了一遍。
+    // WU-5 的 A/B 探针正是靠"没改的地方必须逐位不变"来证明改动是局部的，
+    // 共享流会让这条断言对 count 永远不成立。
+    const rng = makeRng(mixSeed(this.initialSeed, s.nodeId));
     for (let k = 0; k < s.count; k++) {
       const i = this.table.spawn(stats.defId);
       if (i < 0) return; // 容量保护（正常走不到：triggerRooms 已预检）
       // 圆内均匀取点：半径乘 sqrt(u)，否则会向圆心堆积
-      const ang = this.rng() * Math.PI * 2;
-      const r = Math.sqrt(this.rng()) * s.radius;
+      const ang = rng() * Math.PI * 2;
+      const r = Math.sqrt(rng()) * s.radius;
       this.table.posX[i] = s.x + Math.cos(ang) * r;
       this.table.posZ[i] = s.z + Math.sin(ang) * r;
       this.table.radius[i] = stats.capsuleRadius;

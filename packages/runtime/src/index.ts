@@ -18,3 +18,6 @@
 export * from './loader';
 export * from './session';
 export * from './play-session';
+export * from './doc-diff';
+export * from './spawn-edit';
+export * from './spawn-ab';

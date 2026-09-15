@@ -161,3 +161,58 @@ describe('WU-3 验收：动态实体数量不受 MAX_OBJECTS(64) 约束', () => 
     expect(s.countNpc()).toBe(60);
   });
 });
+
+/**
+ * WU-5 前置属性：**刷怪随机流的局部性**。
+ *
+ * 每个刷怪点用 `mixSeed(会话种子, nodeId)` 派生自己的随机流（见 session.ts）。
+ * 共用一条流时，改 A 的 count 会多消耗几个随机数、把 B/C 的取点整体平移 ——
+ * 于是「改一处」在效果上等于「整关重排」，WU-5 的局部编辑闭环就立不住。
+ */
+describe('WU-5 前置：改一处刷怪点不牵动其它刷怪点', () => {
+  /** 只改指定刷怪点的 count，返回一个新会话 */
+  function withCount(nodeId: string, count: number): RuntimeSession {
+    const key = Object.keys(MODULES)[0]!;
+    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    let found = false;
+    for (const n of doc.nodes) {
+      if (n.id !== nodeId) continue;
+      for (const c of n.components) {
+        if (c.kind === 'SpawnPoint') {
+          (c as { count: number }).count = count;
+          found = true;
+        }
+      }
+    }
+    if (!found) throw new Error(`夹具里没有刷怪点 ${nodeId}`);
+    const r = loadLevelRuntime(doc);
+    if (r.desc === null) throw new Error('装载失败：' + JSON.stringify(r.diagnostics));
+    return new RuntimeSession({ desc: r.desc, seed: 11 });
+  }
+
+  const posOf = (s: RuntimeSession, nodeId: string): string[] =>
+    s
+      .view()
+      .filter((e) => e.kind === 'npc' && e.sourceNodeId === nodeId)
+      .map((e) => `${e.x.toFixed(6)},${e.z.toFixed(6)}`)
+      .sort();
+
+  it('🔴 改 sp0 的 count，sp1 / sp2 的初始位置逐位不变', () => {
+    const base = posOf(withCount('nd_f1r0_sp0', 5), 'nd_f1r0_sp1');
+    const after = posOf(withCount('nd_f1r0_sp0', 13), 'nd_f1r0_sp1');
+    expect(base.length).toBeGreaterThan(0);
+    expect(after).toEqual(base);
+  });
+
+  it('改 count 只影响被改的那一处，总数变化正确', () => {
+    const s = withCount('nd_f1r0_sp0', 13);
+    expect(s.view().filter((e) => e.sourceNodeId === 'nd_f1r0_sp0')).toHaveLength(13);
+    expect(s.countNpc()).toBe(20); // 13 + 4 + 3
+  });
+
+  it('派生流仍然随会话种子变化（局部性不是把种子废掉）', () => {
+    const a = new RuntimeSession({ desc: desc(), seed: 1 }).view().map((e) => e.x.toFixed(6));
+    const b = new RuntimeSession({ desc: desc(), seed: 2 }).view().map((e) => e.x.toFixed(6));
+    expect(b).not.toEqual(a);
+  });
+});
