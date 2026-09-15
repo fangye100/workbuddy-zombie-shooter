@@ -30,3 +30,4 @@ export * from './asset-server';
 export * from './graph';
 export * from './migrate';
 export * from './instantiate';
+export * from './retarget-meta';

@@ -211,16 +211,18 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 
 全部状态为 **待开发**。本次完成的是计划修订和研究归档，不勾选任何新增功能。
 
-| 单元 | 依赖 | 声明的 owner / 交付 | 最小验收 |
-|---|---|---|---|
-| MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、源/目标独立标定、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、双方标定保存/读取与指纹；无轨迹不伪造 world 模式 |
-| MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 |
-| MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 |
-| MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 |
-| MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 |
-| MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`、`MR/bake-adapter.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/adapter/bake 测试 | 两入口规范世界结果一致；含父平移/旋转/统一缩放的导出读回；双方标定刷新复现/修改失效；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP |
-| MR-07 手掌与全身求解 | MR-06 | 扩展 pose、标定/接触 owner 及各自测试，开放肩/脊椎/根自由度；bake 组合验收 | 走路→掌面支撑、手脚同支撑、自由摆臂风格、真实手支撑烘焙 |
-| MR-08 表面及翻滚闭环 | MR-07 | `surface-contacts.ts` 及测试；场景部分另列 `document.ts`/迁移/测试单元；最小接入 pipeline/bake | 胸背滚动、手触身体、固定抓物、不同体积不穿插；真实“入场→翻滚→起身”导出读回 |
+全部单元按下方表格状态推进（2026-09-15 起随交付逐行更新；MR-06 之后的单元仍为待开发）。
+
+| 单元 | 依赖 | 声明的 owner / 交付 | 最小验收 | 状态 |
+|---|---|---|---|---|
+| MR-01 数据和持久化 | 无 | `retarget-meta.ts`、`asset-meta.ts`、`MR/contracts.ts` 及对应测试；源身份、源/目标独立标定、单位/轨迹、版本/迁移 | 旧资产迁移/往返、新版拒绝、双方标定保存/读取与指纹；无轨迹不伪造 world 模式 | **已交付 2026-09-15**（未接 UI；scene:check 的 6 个 meta 哈希失配为 worktree 既有问题，见提交说明） |
+| MR-02 源采样、标定、空间目标 | MR-01 | `source-motion.ts`、`rig-calibration.ts`、`space-targets.ts` 及测试，复用 parser/L0 | 等比 2m/0.5m、非等比腿、轴/单位等价、2cm 漂移反例、根不二次缩放 | 待开发 |
+| MR-03 足部接触语义 | MR-02 | `contact-segments.ts` 及测试；标记/平面、时段/锚点、滚动/滑动 | 噪声、30/60/120Hz、脚跟到前掌、跳跃不归零、in-place 不误判 | 待开发 |
+| MR-04 两骨与共享根 | MR-02/03 | `two-bone-solver.ts`、`pose-solver.ts` 及测试 | 双支撑、大小腿比例差、内/外可达域、足底/朝向、不穿地、冲突诊断 | 待开发 |
+| MR-05 连续性和质量 | MR-04 | `temporal-solve.ts`、`quality-report.ts`、`pipeline.ts` 及测试 | 切换/窗口连续、平滑后约束有效、complete/partial/failed 正确 | 待开发 |
+| MR-06 足部编辑器/烘焙闭环 | MR-01/05 | 新 `retarget-session.ts`、`MR/bake-adapter.ts`；抽离 `main.ts` 场景簇；最小接入预览/导出/sidecar；session/adapter/bake 测试 | 两入口规范世界结果一致；含父平移/旋转/统一缩放的导出读回；双方标定刷新复现/修改失效；2m/0.5m 真实 walk/turn/jump。到此仅足部 MVP | 待开发 |
+| MR-07 手掌与全身求解 | MR-06 | 扩展 pose、标定/接触 owner 及各自测试，开放肩/脊椎/根自由度；bake 组合验收 | 走路→掌面支撑、手脚同支撑、自由摆臂风格、真实手支撑烘焙 | 待开发 |
+| MR-08 表面及翻滚闭环 | MR-07 | `surface-contacts.ts` 及测试；场景部分另列 `document.ts`/迁移/测试单元；最小接入 pipeline/bake | 胸背滚动、手触身体、固定抓物、不同体积不穿插；真实“入场→翻滚→起身”导出读回 | 待开发 |
 
 实施前重核现有 owner；需要表外 owner 时先说明影响并按项目规则取得授权。MR-06 的当前预览/导出具体适配文件属于上述声明范围，业务规则仍归新会话 owner。本次不提前改生产代码。足部 MVP 后继续 MR-07/08，不将手臂或脊椎永久排除出用户目标。
 
