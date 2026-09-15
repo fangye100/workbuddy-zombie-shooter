@@ -216,7 +216,27 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     anchors.set(s.id, contactAnchor(traj.positions, fs, fe, mapping, environment.targetPlane));
   }
   const segments = assignContactAnchors(segmentsWithTimes, anchors);
-  coverage.push(source.canWorldLock ? 'world-lock' : 'phase-only');
+  // coverage 语义（第三轮复审 P1）：world-lock 只在**真有带锚点的支撑段**时声明；
+  // 未标定/无段时是 phase-only 或 contact-uncalibrated，不再同时给两个矛盾标签
+  if (segments.some((sg) => sg.mode === 'support' && sg.anchor !== null)) {
+    coverage.push('world-lock');
+  } else if (!coverage.includes('contact-uncalibrated')) {
+    coverage.push('phase-only');
+  }
+  // 显式标注未兑现（如右脚 support 标注被无标记忽略）→ 能力缺口，必须显式报告
+  for (const ann of recipe.annotations) {
+    const honored = segments.some(
+      (sg) => sg.marker === ann.marker && sg.mode === ann.mode && sg.origin === 'annotated',
+    );
+    if (!honored) {
+      diagnostics.push({
+        severity: 'warning',
+        code: 'MRC_ANNOT_UNHONORED',
+        message: `标注 ${ann.marker} [${ann.startS}s..${ann.endS}s] ${ann.mode} 未被兑现（对应标记无轨迹或未检出），按自由运动处理`,
+        constraint: ann.marker,
+      });
+    }
+  }
   if (cancelled()) return failed(diagnostics, dep);
 
   // ── 4. 基准局部旋转 ──
@@ -243,6 +263,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     rootQuats: root.quats,
     segments,
     tolerances: recipe.tolerances,
+    baselinePost: baseline.post,
   });
   diagnostics.push(...first.diagnostics);
   const smoothed = smoothRootCorrections(source.times, first.rootCorrections, {
@@ -260,6 +281,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     rootQuats: root.quats,
     segments,
     tolerances: recipe.tolerances,
+    baselinePost: baseline.post,
   });
   if (cancelled()) return failed(diagnostics, dep);
 
@@ -285,7 +307,20 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
       message: `${v.message}：${v.valueM.toFixed(5)}m > 限 ${v.limitM.toFixed(5)}m`,
     });
   }
-  const status = quality.status === 'failed' ? 'failed' : quality.status;
+  // 状态判定（第三轮复审 P1）：能力缺口（接触未标定 / 标注未兑现）不算 complete——
+  // 几何质量全过 ≠ 语义承诺全兑现；自由运动结果保留，但标 partial
+  let status: 'complete' | 'partial' | 'failed' = quality.status === 'failed' ? 'failed' : quality.status;
+  const capabilityGap =
+    coverage.includes('contact-uncalibrated') ||
+    diagnostics.some((d) => d.code === 'MRC_ANNOT_UNHONORED' && d.severity === 'warning');
+  if (capabilityGap && status === 'complete') {
+    status = 'partial';
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRC_CAPABILITY_GAP',
+      message: '存在接触能力缺口（未标定源足底标记或标注未兑现）：结果按自由运动交付，标记为 partial',
+    });
+  }
   return {
     status,
     clip: {

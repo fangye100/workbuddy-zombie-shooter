@@ -36,6 +36,13 @@ export interface PoseSolveInput {
   /** 已带锚点的接触段 */
   segments: readonly ContactSegment[];
   tolerances: RetargetRecipeTolerances;
+  /**
+   * 姿态基准（第三轮复审 P1）：脚的世界朝向任务必须用**映射后**的目标朝向
+   * W'_foot = Q_src_foot · D_foot（D = baseline.post）——直接用源世界旋转会把
+   * 目标脚的参考坐标系覆盖成源系（Z90 基准被写成 identity，踝位漂移、蒙皮扭转）。
+   * 不传时退回源旋转（仅限模板等 D≡I 的场景）。
+   */
+  baselinePost?: Readonly<Record<string, Quat>>;
   /** GN 迭代上限（默认 8） */
   maxIterations?: number;
 }
@@ -207,10 +214,7 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       if (mk === undefined) continue;
       const leg = legs.find((l) => l.ankle === mk.bone);
       if (leg === undefined) continue;
-      const rot = sm.worldRotations[leg.ankle];
-      const footWorld: Quat = rot === undefined
-        ? [0, 0, 0, 1]
-        : [rot[f * 4]!, rot[f * 4 + 1]!, rot[f * 4 + 2]!, rot[f * 4 + 3]!];
+      const footWorld = mappedFootWorld(sm, leg.ankle, f, input.baselinePost);
       const offset = rotateVec3(footWorld, mk.offset);
       const contact: ActiveContact = {
         seg,
@@ -459,6 +463,20 @@ function isDescendantOf(rig: RetargetRig, bone: string, ancestor: string): boole
     cur = rig.bones[cur]!.parent;
   }
   return false;
+}
+
+/** 源脚世界旋转映射到目标参考系：Q_src · D（缺基准/缺骨时退回源旋转） */
+function mappedFootWorld(
+  sm: SourceMotion,
+  ankle: string,
+  f: number,
+  post?: Readonly<Record<string, Quat>>,
+): Quat {
+  const rot = sm.worldRotations[ankle];
+  if (rot === undefined) return [0, 0, 0, 1];
+  const q: Quat = [rot[f * 4]!, rot[f * 4 + 1]!, rot[f * 4 + 2]!, rot[f * 4 + 3]!];
+  const d = post?.[ankle];
+  return d === undefined ? q : quatMul(q, d);
 }
 
 /** swing(restWorldDir → currentDir)·参考系；两向量自动归一化（退化给 identity） */

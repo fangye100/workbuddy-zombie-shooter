@@ -636,3 +636,108 @@ describe('复审 P1：跳过的并发约束进残差', () => {
     expect(heelDev.maxM).toBeLessThan(0.15);
   });
 });
+
+// ───────────────── 第三轮复审探针 ─────────────────
+
+describe('第三轮 P1：接触求解不覆盖目标脚参考旋转', () => {
+  it('脚 restLocalR=Z90（几何不变）→ 输出脚世界朝向 = Z90 映射、踝位不漂移', () => {
+    const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
+    const sm = buildSourceMotion(bvh);
+    const { rig } = buildTargetRig({});
+    const h = Math.SQRT1_2;
+    // 只改脚的参考坐标系：Z90 不动 ToeBase 偏移（沿 Z），标记偏移做反向补偿保几何
+    const hacked: RetargetRig = {
+      ...rig,
+      bones: { ...rig.bones, LeftFoot: { ...rig.bones.LeftFoot!, restLocalR: [0, 0, h, h] } },
+      markers: {
+        ...rig.markers,
+        'LeftFoot.ball': { ...rig.markers['LeftFoot.ball']!, offset: [-0.03, 0, 0.09] },
+      },
+    };
+    const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hacked);
+    const recipe = createDefaultRecipe(
+      { guid: 'as_src00001', path: 'assets/x/w.bvh', contentHash: 'sha256:a' },
+      { guid: 'as_tgt00001', path: 'assets/x/t.glb', contentHash: 'sha256:b' },
+    );
+    const environment: RetargetEnvironment = {
+      sourcePlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      origin: 'recipe-default', sceneNodeId: null,
+    };
+    const out = retargetMotion({
+      source: sm, targetRig: hacked, baseline, recipe, environment,
+      sourceCalibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1, upAxis: 'y',
+        markers: {
+          'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
+          'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
+        },
+        rotationBaseline: 'direction',
+      },
+    });
+    expect(out.status).not.toBe('failed');
+    const foot = out.clip!.frames[0]!.bonePos.LeftFoot!;
+    // 踝位不漂移（旧实现 [0.13,0,0]）
+    expect(foot[0]).toBeCloseTo(0.1, 3);
+    expect(foot[1]).toBeCloseTo(0.03, 3);
+    // 脚世界朝向 = Z90（旧实现被覆盖成 identity）
+    const q = out.clip!.frames[0]!.boneQuat.LeftFoot!;
+    expect(q[2]).toBeCloseTo(h, 3);
+    expect(q[3]).toBeCloseTo(h, 3);
+  });
+});
+
+describe('第三轮 P1：能力缺口计入状态', () => {
+  it('右脚 support 标注被忽略（仅左脚有标定标记）→ MRC_ANNOT_UNHONORED + partial', () => {
+    const input = makePipelineInput(buildBvhText({ rootPos: () => [0, 100, 0] }));
+    const out = retargetMotion({
+      source: input.sm, targetRig: input.rig, baseline: input.baseline,
+      recipe: {
+        ...input.recipe,
+        annotations: [{ marker: 'RightFoot.ball', startS: 0, endS: 0.1, mode: 'support' }],
+      },
+      environment: input.environment,
+      sourceCalibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1, upAxis: 'y',
+        markers: { 'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' } },
+        rotationBaseline: 'direction',
+      },
+    });
+    expect(out.diagnostics.some((d) => d.code === 'MRC_ANNOT_UNHONORED')).toBe(true);
+    expect(out.status).toBe('partial');
+    // 结果仍产出（自由运动 + 左脚接触），只是不冒充 complete
+    expect(out.clip).not.toBeNull();
+  });
+});
+
+describe('第三轮 P2：叶子骨保留参考朝向', () => {
+  it('无长轴叶子骨 restLocalR=Z30：静止源基准局部 == Z30（蒙皮系不丢）', () => {
+    // 手工最小 rig：Root(+Y) → Leaf(无子骨，restLocalR=Z30)
+    const deg = Math.PI / 180;
+    const z30: Quat = [0, 0, Math.sin(15 * deg), Math.cos(15 * deg)];
+    const rig: RetargetRig = {
+      name: 'leaf-rig',
+      order: ['Root', 'Leaf'],
+      bones: {
+        Root: { name: 'Root', parent: null, restLocalT: [0, 1, 0], restLocalR: [0, 0, 0, 1] },
+        Leaf: { name: 'Leaf', parent: 'Root', restLocalT: [0.2, 0, 0], restLocalR: z30 },
+      },
+      chains: [],
+      markers: {},
+      pelvisHeightM: 1,
+      supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      unitScale: 1,
+      upAxis: 'y',
+      rotationBaseline: 'direction',
+      fingerprint: 'fp1_leaf',
+    };
+    const srcDirs: Record<string, [number, number, number]> = { Root: [0, 1, 0], Leaf: [0, 0, 0] };
+    const bl = computeDirectionBaseline({ srcDirections: srcDirs }, rig);
+    const localLeaf = quatMul(quatMul(bl.pre.Leaf!, [0, 0, 0, 1] as Quat), bl.post.Leaf!);
+    for (let k = 0; k < 4; k++) expect(localLeaf[k]).toBeCloseTo(z30[k]!, 9);
+  });
+});
