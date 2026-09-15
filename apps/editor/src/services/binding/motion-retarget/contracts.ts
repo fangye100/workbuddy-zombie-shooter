@@ -221,6 +221,14 @@ export interface RetargetMetrics {
   peakMemoryEstMb: number;
 }
 
+/** 单个支撑约束的残差（会话层「逐约束残差」汇总的数据源） */
+export interface ConstraintResidual {
+  segmentId: string;
+  marker: string;
+  /** 该段最终姿态对锚点的最大偏差（米） */
+  maxDeviationM: number;
+}
+
 /** 求解结果（docs/16 §5，2026-09-15 起得名 RetargetOutcome） */
 export interface RetargetOutcome {
   status: 'complete' | 'partial' | 'failed';
@@ -232,6 +240,10 @@ export interface RetargetOutcome {
   coverage: readonly string[];
   /** 全部输入的依赖指纹；任一输入变化即失效 */
   dependencyFingerprint: string;
+  /** 本轮检测到的全部接触段（含未兑现 / 非 support；诊断与时间轴用，不入求解） */
+  segments: readonly ContactSegment[];
+  /** 逐约束残差（支撑段锚点最大偏差，最终姿态口径） */
+  constraintResiduals: readonly ConstraintResidual[];
 }
 
 // ---------------------------------------------------------------- 校验与指纹

@@ -1010,6 +1010,93 @@
   .bd-check { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); cursor: pointer; }
   .bd-check input { accent-color: var(--zombie); }
 
+  /* 重定向工作台（MR-06）：右侧覆盖式 dock，可与底部绑定面板共存 */
+  #retarget-dock {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 640px;
+    z-index: 45;
+    display: none;
+    flex-direction: column;
+    background: var(--panel-deep);
+    border-left: 3px solid var(--ink);
+  }
+  #retarget-dock.open { display: flex; }
+  .rw-head {
+    flex: 0 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-bottom: 3px solid var(--ink);
+  }
+  .rw-title { font-weight: 700; color: var(--paper); }
+  .rw-flow { color: var(--text-dim); font-size: 11px; }
+  .rw-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 3px;
+    border: 2px solid var(--ink); background: var(--panel-deep);
+  }
+  .rw-badge.pass { background: var(--zombie); color: var(--ink); }
+  .rw-badge.partial { background: var(--warn); color: var(--ink); }
+  .rw-badge.failed { background: var(--blood); color: var(--bone); }
+  .rw-badge.stale { background: var(--gold); color: var(--ink); }
+  .rw-body { flex: 1 1 auto; display: flex; min-height: 0; }
+  .rw-side {
+    flex: 0 0 280px; overflow-y: auto; padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--panel); border-right: 3px solid var(--ink);
+  }
+  .rw-side h4 {
+    margin: 0 0 4px; font-size: 11px; letter-spacing: .04em;
+    color: var(--teal); border-bottom: 1px solid var(--ink); padding-bottom: 2px;
+  }
+  .rw-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+  .rw-row span { color: var(--text-dim); }
+  .rw-warn { color: var(--warn); }
+  .rw-ok { color: var(--zombie); }
+  .rw-main { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  .rw-views { flex: 1 1 auto; display: flex; min-height: 0; }
+  .rw-view { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; position: relative; }
+  .rw-view canvas { flex: 1 1 auto; width: 100%; min-height: 0; display: block; }
+  .rw-view-label {
+    position: absolute; top: 6px; left: 8px; z-index: 2;
+    font-size: 11px; color: var(--text-dim); background: rgba(10,8,18,.6);
+    padding: 1px 6px; border-radius: 3px;
+  }
+  .rw-timeline { flex: 0 0 118px; border-top: 3px solid var(--ink); background: var(--panel); }
+  .rw-timeline canvas { width: 100%; height: 84px; display: block; cursor: crosshair; }
+  .rw-tl-controls {
+    display: flex; align-items: center; gap: 8px; padding: 2px 8px; font-size: 11px;
+    color: var(--text-dim);
+  }
+  .rw-diags {
+    flex: 0 0 108px; overflow-y: auto; padding: 4px 10px;
+    border-top: 3px solid var(--ink); background: var(--panel-deep);
+    font-size: 10.5px; line-height: 1.45;
+  }
+  .rw-diags b { color: var(--teal); }
+  .rw-diag { display: flex; gap: 8px; }
+  .rw-diag .sev { flex: 0 0 34px; font-weight: 700; }
+  .rw-diag .sev.error { color: var(--blood); }
+  .rw-diag .sev.warning { color: var(--warn); }
+  .rw-diag .sev.info { color: var(--teal); }
+  .rw-diag .code { flex: 0 0 210px; color: var(--text-dim); }
+  .rw-diag.clickable { cursor: pointer; }
+  .rw-diag.clickable:hover { background: var(--panel); }
+  #retarget-dock button {
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-size: 11px; font-family: inherit; padding: 3px 10px; cursor: pointer;
+  }
+  #retarget-dock button:hover:not(:disabled) { border-color: var(--zombie); }
+  #retarget-dock button:disabled { opacity: .4; cursor: not-allowed; }
+  #retarget-dock button.primary { background: var(--zombie); color: var(--ink); font-weight: 700; }
+  #retarget-dock select {
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px; font-size: 11px; font-family: inherit;
+  }
+  .rw-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .rw-action-note { font-size: 10.5px; color: var(--warn); }
+
   /* 右键菜单（资产库 / 层级「进入绑定」共用） */
   #ctx-menu {
     position: fixed;
@@ -1069,6 +1156,8 @@
   <div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
   <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
   <div id="binding-dock" data-page-node-id="pDTPu4XOCe9JtvhJd81DtY"></div>
+  <!-- 重定向工作台（MR-06：两入口汇入的统一会话 UI，内部 DOM 由 RetargetWorkbench 全量构建） -->
+  <div id="retarget-dock"></div>
 </div>
 <div class="split-handle" id="split-right" title="拖拽调整属性面板宽度" data-page-node-id="ua1k6cPBGoxsy5WlV7ilNT"></div>
 <aside id="inspector" data-page-node-id="wrDMEMSc3MGdMWECtEjQAE">
