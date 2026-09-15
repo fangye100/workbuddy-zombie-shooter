@@ -12,6 +12,7 @@ import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
 import { RuntimeBridge } from './services/runtime-bridge';
+import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
@@ -131,6 +132,60 @@ async function boot(): Promise<void> {
    */
   const bridge = new RuntimeBridge();
 
+  /**
+   * Play 控制器（WU-4）：只做装配 —— 快照/恢复作者态、把推进同步给 Bridge、
+   * 通知 UI。状态机本体在 `PlaySession`（runtime 包，纯 CPU 可测）。
+   *
+   * 这里**不自动进入 Play**：编辑器打开就该是编辑态，跑起来要用户显式点 ——
+   * 否则每次改完参数刷新页面都会被"已经在跑的世界"干扰判断。
+   */
+  const playCtl = new PlayController(renderer, bridge, {
+    onStateChange: () => {
+      syncPlayButtons();
+      hudDirty = true;
+    },
+  });
+
+  // ---- Play 控制按钮（装配层：只负责按钮 → 控制器，无玩法逻辑）----
+  const btnPlay = document.querySelector<HTMLButtonElement>('#btn-play');
+  const btnPause = document.querySelector<HTMLButtonElement>('#btn-pause');
+  const btnStep = document.querySelector<HTMLButtonElement>('#btn-step');
+  const btnReset = document.querySelector<HTMLButtonElement>('#btn-reset');
+  const btnStop = document.querySelector<HTMLButtonElement>('#btn-stop');
+
+  btnPlay?.addEventListener('click', () => {
+    if (playCtl.state === 'stopped') {
+      if (!playCtl.start()) {
+        // 启动失败：不动作者状态，只提示。错误原因由 HUD 显示
+        console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
+        hudDirty = true;
+      }
+    } else playCtl.togglePause();
+  });
+  btnPause?.addEventListener('click', () => playCtl.togglePause());
+  btnStep?.addEventListener('click', () => playCtl.step());
+  btnReset?.addEventListener('click', () => playCtl.reset());
+  btnStop?.addEventListener('click', () => playCtl.stop());
+
+  /** 按钮的启用/高亮完全由 PlayController 的状态推导，不自己存第二份状态 */
+  function syncPlayButtons(): void {
+    const st = playCtl.state;
+    const playing = st !== 'stopped';
+    if (btnPlay !== null) {
+      btnPlay.classList.toggle('active', playing);
+      btnPlay.textContent = st === 'paused' ? '▶ 继续' : '▶ Play';
+    }
+    if (btnPause !== null) {
+      btnPause.disabled = !playing;
+      btnPause.classList.toggle('active', st === 'paused');
+      btnPause.textContent = st === 'paused' ? '⏸ 已暂停' : '⏸ 暂停';
+    }
+    if (btnStep !== null) btnStep.disabled = st !== 'paused';
+    if (btnReset !== null) btnReset.disabled = !playing;
+    if (btnStop !== null) btnStop.disabled = !playing;
+  }
+  syncPlayButtons();
+
   // ---- 场景加载（ADR-010：场景是唯一数据载体；ADR-015：项目容器是路径锚点）----
   // 构造期那组硬编码物体只是 fallback，真内容从这里读。失败不阻断启动：
   // 控制台告警 + 保留 fallback 场景 —— 场景文件坏了不该让编辑器起不来。
@@ -243,6 +298,12 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
   panel.onHierarchyDelete = (index) => {
+    // Play 中禁止增删（同 Delete 键）：作者状态按索引恢复，物体数变了就会张冠李戴
+    if (playCtl.isPlaying) {
+      console.warn('[play] Play 中禁止删除物体（Stop 后作者状态按索引恢复，数量必须一致）');
+      hudDirty = true;
+      return;
+    }
     renderer.removeObject(index);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
     panel.refreshHierarchy();
@@ -368,18 +429,10 @@ async function boot(): Promise<void> {
       panel.params.keyIntensity = r.keyLight.intensity;
     }
     panel.syncAll();
-    // ---- 运行时（WU-3）：场景加载完成即启动 headless 会话 ----
-    // 装载失败（缺玩家起点 / 无 NavZone / 未登记角色）时**不启动**并把原因打出来：
-    // 静默跑一个残缺世界，比明确告诉用户「这份场景还跑不起来」糟糕得多。
-    const doc = renderer.getDocument();
-    if (doc !== null) {
-      const res = bridge.start(doc);
-      if (res.ok) {
-        console.info('[boot] 运行时已启动（动态实体走独立 instancing 路径，不占静态槽位）');
-      } else {
-        console.warn(`[boot] 运行时未启动：${res.errors.join('；')}`);
-      }
-    }
+    // ---- WU-4：不再自动进入 Play ----
+    // 编辑器打开就该是编辑态。之前是"加载完场景就跑起来"，结果是每次刷新页面
+    // 都被一个已经在动的世界干扰 —— 想安静看关卡反而要先点停止。
+    // 现在由用户显式点 ▶（或空格）进入 Play，失败时 HUD 给出原因。
     hudDirty = true;
     // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
@@ -811,6 +864,40 @@ async function boot(): Promise<void> {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+
+    // ---- Play 控制（WU-4）----
+    // 空格：停止态 → 进入 Play；播放中 → 暂停；暂停中 → 继续。
+    // Esc：退出 Play 并恢复作者状态。句点：单步。逗号：同种子重跑。
+    // 必须 preventDefault —— 否则空格会滚动页面，且焦点在按钮上时还会重复触发 click。
+    if (k === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      if (playCtl.state === 'stopped') {
+        if (!playCtl.start()) console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
+      } else playCtl.togglePause();
+      return;
+    }
+    if (k === 'escape') {
+      if (playCtl.isPlaying) {
+        e.preventDefault();
+        playCtl.stop();
+      }
+      return;
+    }
+    if (k === '.') {
+      if (playCtl.isPaused) {
+        e.preventDefault();
+        playCtl.step();
+      }
+      return;
+    }
+    if (k === ',') {
+      if (playCtl.isPlaying) {
+        e.preventDefault();
+        playCtl.reset();
+      }
+      return;
+    }
+
     if (k === 'w') setGizmoModeUI('translate');
     else if (k === 'e') setGizmoModeUI('rotate');
     else if (k === 'r') setGizmoModeUI('scale');
@@ -818,11 +905,16 @@ async function boot(): Promise<void> {
     else if (k === 'delete') {
       // Delete 删除选中物体（Unity 惯例）
       const idx = renderer.getSelected();
-      if (idx !== null) {
+      if (idx !== null && !playCtl.isPlaying) {
         e.preventDefault();
         renderer.removeObject(idx);
         panel.setSelection(renderer.getSelected());
         panel.refreshHierarchy();
+        hudDirty = true;
+      } else if (idx !== null && playCtl.isPlaying) {
+        // Play 中禁止增删：作者状态快照是按索引恢复的，物体数一变就会张冠李戴
+        e.preventDefault();
+        console.warn('[play] Play 中禁止删除物体（Stop 后作者状态按索引恢复，数量必须一致）');
         hudDirty = true;
       }
     }
@@ -1939,15 +2031,28 @@ async function boot(): Promise<void> {
       rows.push('<span class="warn">⚠ 半调强度 &gt; 0.25，会从印刷质感变成波普艺术</span>');
     }
 
-    // ---- 运行时状态（WU-3）----
-    if (bridge.active) {
+    // ---- 运行时状态（WU-4）----
+    const st = playCtl.state;
+    const badge =
+      st === 'playing'
+        ? '<span style="color:#7FE03F;font-weight:700">● PLAYING</span>'
+        : st === 'paused'
+          ? '<span style="color:#FFC531;font-weight:700">❚❚ PAUSED</span>'
+          : '<span class="hint">■ 已停止（空格进入 Play）</span>';
+    // 实例数**常驻显示**（停止态也要显示 0）：它是「动态批次有没有真的从渲染侧
+    // 摘干净」的唯一可见指标，只在 Play 中显示的话，Stop 后泄漏根本看不出来。
+    rows.push(
+      `<b>运行时</b> ${badge}　<b>启停</b> ${playCtl.session.cycleCount} 次　` +
+        `<b>实例</b> ${renderer.debugDynamicInstanceCount()}`,
+    );
+
+    if (playCtl.isPlaying) {
       const ents = bridge.entities;
       const npc = ents.filter((e) => e.kind === 'npc').length;
       rows.push(
-        `<b>运行时</b> <span style="color:#7FE03F">tick ${bridge.currentTick}</span>　` +
+        `<b>tick</b> ${playCtl.tick}　` +
           `<b>实体</b> ${ents.length}（NPC ${npc}）　` +
-          `<b>实例</b> ${renderer.debugDynamicInstanceCount()}　` +
-          `<span class="hint">动态实体走独立 instancing，不占 ${ents.length > 0 ? '静态' : ''}64 槽位</span>`,
+          `<span class="hint">动态实体走独立 instancing，不占静态 64 槽位</span>`,
       );
       const sel = bridge.selectedEntity;
       if (sel !== null) {
@@ -1957,14 +2062,11 @@ async function boot(): Promise<void> {
             `　目标 ${sel.targetId >= 0 ? sel.targetId : '—'}　(${sel.x.toFixed(1)}, ${sel.z.toFixed(1)})`,
         );
       }
-      for (const d of bridge.loadDiagnostics) {
+      for (const d of playCtl.diagnostics) {
         if (d.severity === 'warning') rows.push(`<span class="warn">⚠ 运行时：${d.message}</span>`);
       }
-    } else {
-      const errs = bridge.loadDiagnostics.filter((d) => d.severity === 'error');
-      if (errs.length > 0) {
-        rows.push(`<span class="warn">⚠ 运行时未启动：${errs.map((d) => d.message).join('；')}</span>`);
-      }
+    } else if (playCtl.error !== null) {
+      rows.push(`<span class="warn">⚠ 无法进入 Play：${playCtl.error}</span>`);
     }
 
     hud.innerHTML = rows.join('<br>');
@@ -2041,9 +2143,10 @@ async function boot(): Promise<void> {
       renderer.setCylinderOverlay(null);
     }
 
-    // ── 运行时推进 + 动态实例注入（WU-3） ──
-    // advance 走固定步累加器：渲染帧率不决定游戏步数，掉帧不会让僵尸走慢。
-    bridge.advance(dt);
+    // ── 运行时推进 + 动态实例注入（WU-3 / WU-4） ──
+    // playCtl.update 内部走 PlaySession 的固定步累加器：渲染帧率不决定游戏步数，
+    // 且只在 playing 状态推进（暂停就是真的停）。
+    playCtl.update(dt);
     renderer.setDynamicBatches(bridge.batches());
 
     renderer.render(panel.params, camera, elapsed, dpr());

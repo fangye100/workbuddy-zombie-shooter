@@ -13,10 +13,9 @@
  * 批次与身份映射逻辑不动。
  */
 
-import { createCapsule, type SceneDocument } from '@aether/scene';
+import { createCapsule } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
-import { loadLevelRuntime, createSession } from '@aether/runtime';
-import type { RuntimeSession, EntityView, LoadDiagnostic } from '@aether/runtime';
+import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, type CoreDynamicBatch } from '@aether/render';
 
 /** 实例的 CPU 端打包宽度（float），与 CoreDynamicBatch 契约一致 */
@@ -40,13 +39,6 @@ const PROXY_COLORS: Record<string, [number, number, number]> = {
 
 /** 未登记角色的兜底色（尸绿，与编辑器高亮色系一致） */
 const FALLBACK_COLOR: [number, number, number] = [0.56, 0.72, 0.38];
-
-export interface RuntimeBridgeStartResult {
-  ok: boolean;
-  diagnostics: LoadDiagnostic[];
-  /** 装载期 error 的中文摘要；空数组 = 可以跑 */
-  errors: string[];
-}
 
 /**
  * 射线与「竖直胶囊」求交：脚底在 y=0，轴为 (x, *, z)，总高 h、半径 r。
@@ -129,22 +121,14 @@ interface BatchSlot {
 
 export class RuntimeBridge {
   private session: RuntimeSession | null = null;
-  private diagnostics: LoadDiagnostic[] = [];
   /** 按 characterId 分组的批次（网格尺寸不同 → 不同 meshId） */
   private readonly slots = new Map<string, BatchSlot>();
-  /** 固定步累加器：渲染帧率不决定游戏步数 */
-  private accumulator = 0;
-  private running = false;
 
   /** 当前选中的实体（id + generation 才是身份，槽位会复用） */
   private selected: { id: number; generation: number } | null = null;
 
   get active(): boolean {
     return this.session !== null;
-  }
-
-  get paused(): boolean {
-    return !this.running;
   }
 
   get currentTick(): number {
@@ -155,78 +139,35 @@ export class RuntimeBridge {
     return this.session?.view() ?? [];
   }
 
-  get loadDiagnostics(): LoadDiagnostic[] {
-    return this.diagnostics;
-  }
-
   /**
-   * 用场景文档装载并建会话。失败（缺玩家起点 / 无 NavZone / 未登记角色）时
-   * **不启动**并把 diagnostics 交给调用方显示 —— 静默降级比报错更糟。
+   * 挂接（或摘下）一个会话。
+   *
+   * **本模块不拥有运行状态** —— 播放/暂停/单步/停止都由 `PlaySession` 管，
+   * 这里只认「给我一个世界，我把它翻译成批次」（docs/18 §1.5：每类状态只能有一个 owner）。
+   * 传 null 即摘下：批次立刻变空，渲染侧自动跳过 pass 1b。
    */
-  start(doc: SceneDocument, opts: { seed?: number; capacity?: number } = {}): RuntimeBridgeStartResult {
-    const loaded = loadLevelRuntime(doc);
-    this.diagnostics = loaded.diagnostics;
-    const errors = loaded.diagnostics.filter((d) => d.severity === 'error').map((d) => d.message);
-    if (loaded.desc === null || errors.length > 0) {
-      this.session = null;
+  attach(session: RuntimeSession | null): void {
+    this.session = session;
+    for (const s of this.slots.values()) s.entities.length = 0;
+    if (session === null) {
       this.slots.clear();
-      return { ok: false, diagnostics: loaded.diagnostics, errors };
+      this.selected = null;
+      return;
     }
-    this.session = createSession(loaded.desc, {
-      seed: opts.seed ?? 1,
-      capacity: opts.capacity ?? 512,
-    });
-    this.accumulator = 0;
-    this.running = true;
     this.selected = null;
-    // 会话一建好就已经刷了第一间房（进入即触发），立刻打包一次：
-    // 否则首帧到第一次 advance 之间画面上是「运行时启动了但一个实体都没有」
-    this.rebuildSlots();
-    return { ok: true, diagnostics: loaded.diagnostics, errors: [] };
-  }
-
-  stop(): void {
-    this.session = null;
-    this.slots.clear();
-    this.running = false;
-    this.accumulator = 0;
-    this.selected = null;
-  }
-
-  setPaused(v: boolean): void {
-    this.running = !v;
-    // 从暂停恢复时丢弃累积时间，避免"暂停 10 秒 → 恢复瞬间补 300 步"
-    if (this.running) this.accumulator = 0;
-  }
-
-  /** 单步推进（暂停时用）。忽略累加器，直接走一步 */
-  stepOnce(): void {
-    this.session?.step();
-    this.rebuildSlots();
-  }
-
-  reset(): void {
-    this.session?.reset();
-    this.accumulator = 0;
-    this.selected = null;
+    // 会话一挂上就已经刷了第一间房（进入即触发），立刻打包一次：
+    // 否则首帧到第一次推进之间画面上是「运行时启动了但一个实体都没有」
     this.rebuildSlots();
   }
 
   /**
-   * 按真实时间推进固定步。`dt` 由渲染循环给（秒）。
-   * 单帧最多补 5 步：卡顿后一次性补几百步会让画面瞬移，宁可慢放。
+   * 世界推进后必须调一次：实体位置变了，实例数组要重打包。
+   *
+   * 由 `PlayController` 在 `PlaySession.advance()` / `stepOnce()` 之后调用 ——
+   * 不放在 `batches()` 里隐式做，是因为「读批次」不该有推进世界的副作用。
    */
-  advance(dt: number): void {
-    if (this.session === null || !this.running) return;
-    const step = this.session.fixedStep;
-    this.accumulator += dt;
-    let n = 0;
-    while (this.accumulator >= step && n < 5) {
-      this.session.step();
-      this.accumulator -= step;
-      n++;
-    }
-    if (n > 0) this.rebuildSlots();
+  refresh(): void {
+    this.rebuildSlots();
   }
 
   /** 生成渲染批次。没有会话时返回 null（渲染器据此跳过整段 pass 1b） */

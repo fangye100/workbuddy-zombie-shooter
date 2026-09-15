@@ -347,6 +347,31 @@ export interface SubMesh extends MaterialSlot {
   primitiveIndex: number;
 }
 
+/**
+ * 单个物体的作者态（WU-4 快照）。只含可序列化的编辑字段，不含 GPU 资源。
+ */
+export interface AuthorObjectState {
+  pos: [number, number, number];
+  rot: [number, number, number];
+  quat: [number, number, number, number];
+  scale: number;
+  bob: number;
+  visible: boolean;
+  removed: boolean;
+  pickable: boolean;
+  name: string;
+  category: string;
+  subVisible: boolean[];
+}
+
+/** Play 前的作者状态快照。见 `snapshotAuthorState()` 的语义说明 */
+export interface AuthorSnapshot {
+  /** 快照时的物体数。恢复时用它判断"Play 期间有没有增删" */
+  count: number;
+  objects: AuthorObjectState[];
+  selectedIndex: number | null;
+}
+
 interface ObjectSpec {
   mesh: MeshData;
   material: number;
@@ -1584,6 +1609,67 @@ export class LabRenderer {
   private dynamicBatches: CoreDynamicBatch[] | null = null;
   setDynamicBatches(b: CoreDynamicBatch[] | null): void {
     this.dynamicBatches = b;
+  }
+
+  /**
+   * Play 前的作者状态快照（WU-4）。
+   *
+   * 语义与 Unity 一致：Play 期间对场景的改动**在 Stop 后丢弃**。
+   * docs/17 WU-4 特别点名「Stop 必须恢复未保存的作者状态，不能简单从磁盘重载
+   * 覆盖它」—— 作者可能刚拖完一个掩体还没保存，从磁盘重载等于把他的活儿吞了。
+   *
+   * 只存**可序列化的编辑态**（变换 / 显隐 / 材质槽 / 名字），不存 GPU 资源：
+   * 恢复时原地写回，零 GPU 重建。这也意味着快照期间物体数不能变 ——
+   * Play 模式下已禁掉增删与导入（见 main.ts 的 `isPlaying` 守卫）。
+   */
+  snapshotAuthorState(): AuthorSnapshot {
+    return {
+      count: this.state.objects.length,
+      objects: this.state.objects.map((o) => ({
+        pos: [o.pos[0], o.pos[1], o.pos[2]],
+        rot: [o.rot[0], o.rot[1], o.rot[2]],
+        quat: [o.quat[0], o.quat[1], o.quat[2], o.quat[3]],
+        scale: o.scale,
+        bob: o.bob,
+        visible: o.visible,
+        removed: o.removed,
+        pickable: o.pickable,
+        name: o.name,
+        category: o.category,
+        subVisible: o.subMeshes.map((sm) => sm.visible),
+      })),
+      selectedIndex: this.state.selectedIndex,
+    };
+  }
+
+  /**
+   * 恢复作者状态。物体数与快照不一致时**保守处理**：能对上的逐个恢复，
+   * 对不上的原样留着 —— 宁可残留一个改动，也不要把索引搞错导致张冠李戴。
+   */
+  restoreAuthorState(snap: AuthorSnapshot): { restored: number; mismatched: boolean } {
+    const objs = this.state.objects;
+    const n = Math.min(objs.length, snap.objects.length);
+    for (let i = 0; i < n; i++) {
+      const o = objs[i]!;
+      const s = snap.objects[i]!;
+      o.pos = [s.pos[0], s.pos[1], s.pos[2]];
+      o.rot = [s.rot[0], s.rot[1], s.rot[2]];
+      o.quat = [s.quat[0], s.quat[1], s.quat[2], s.quat[3]];
+      o.scale = s.scale;
+      o.bob = s.bob;
+      o.visible = s.visible;
+      o.removed = s.removed;
+      o.pickable = s.pickable;
+      o.name = s.name;
+      o.category = s.category;
+      for (let k = 0; k < o.subMeshes.length && k < s.subVisible.length; k++) {
+        o.subMeshes[k]!.visible = s.subVisible[k]!;
+      }
+    }
+    if (snap.selectedIndex !== null && snap.selectedIndex < objs.length) {
+      this.state.selectedIndex = snap.selectedIndex;
+    }
+    return { restored: n, mismatched: objs.length !== snap.count };
   }
 
   /** 调试 / 冒烟用：当前动态批次的实例总数（0 = 一个动态实体都没画） */
