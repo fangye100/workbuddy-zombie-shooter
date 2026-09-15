@@ -8,11 +8,13 @@ import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument } from '@aether/scene';
 import {
+  PlaySession,
   SpawnEditStore,
   captureInitialScatter,
   compareScatter,
   describeDelta,
   listSpawnPoints,
+  sceneFingerprint,
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
@@ -500,40 +502,6 @@ async function boot(): Promise<void> {
     camera.distance = clamp(camera.distance * factor, ZOOM_MIN, ZOOM_MAX);
   }
 
-  /**
-   * NDC → 世界射线（origin = 相机眼睛）。
-   *
-   * 必须与 renderer.drawFrame 里的 lookAt + perspective 同一套约定（up = [0,1,0]、
-   * fov = FOVY、WebGPU 的 y 向上 NDC），否则运行时实体的拾取点会跟画面错开 ——
-   * 而且错得「看起来差不多」，只有俯视角下才明显，最难查。
-   */
-  function screenRay(ndcX: number, ndcY: number): [m4.Vec3, m4.Vec3] {
-    const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, panel.params.cameraElevation);
-    const fx = camera.target[0] - eye[0];
-    const fy = camera.target[1] - eye[1];
-    const fz = camera.target[2] - eye[2];
-    const fl = Math.hypot(fx, fy, fz) || 1;
-    const Fx = fx / fl;
-    const Fy = fy / fl;
-    const Fz = fz / fl;
-    // lookAt 的基向量：right = normalize(-F.z, 0, F.x)，up = cross(zAxis, right)
-    const L = Math.hypot(Fx, Fz) || 1e-6;
-    const right: m4.Vec3 = [-Fz / L, 0, Fx / L];
-    const up: m4.Vec3 = [(-Fy * Fx) / L, L, (-Fy * Fz) / L];
-    const tanHalf = Math.tan(FOVY / 2);
-    const aspect = renderer.core.width / Math.max(1, renderer.core.height);
-    const sx = ndcX * tanHalf * aspect;
-    const sy = ndcY * tanHalf;
-    const dx = Fx + right[0] * sx + up[0] * sy;
-    const dy = Fy + right[1] * sx + up[1] * sy;
-    const dz = Fz + right[2] * sx + up[2] * sy;
-    const dl = Math.hypot(dx, dy, dz) || 1;
-    return [
-      [eye[0], eye[1], eye[2]],
-      [dx / dl, dy / dl, dz / dl],
-    ];
-  }
-
   // 把屏幕坐标转 NDC 并交给渲染器做射线拾取
   // penetrate（Alt+点击）：穿透拾取——同一射线上的命中物体按深度循环切换，
   // 解决「小物体包在大凹面外壳里选不中」：外壳 → 内部 → 再回外壳
@@ -544,8 +512,15 @@ async function boot(): Promise<void> {
 
     // 运行时实体优先：它们不在静态场景的拾取表里，GPU 拾取根本拿不到。
     // 命中则选中实体（并清掉静态选中），未命中才走原来的静态物体拾取。
+    //
+    // 🔴 射线只有一条来源：`renderer.pointerRay()`（对 core.invViewProj 做反投影，
+    // 与画出这一帧的 viewProj 严格互逆，和静态拾取同一条）。
+    // 这里曾经另有一份手算 lookAt 基向量的 screenRay()，与画面矩阵"看起来一样"，
+    // 结果运行时实体的命中点整体偏开 —— 点在僵尸身上却选不中，且俯视角下才明显。
+    // 两条射线实现 = 两份相机约定 = 迟早漂移，宁可删掉也不要"两份都对"。
     if (bridge.active) {
-      const hit = bridge.pickRay(...screenRay(ndcX, ndcY));
+      const ray = renderer.pointerRay(clientX, clientY);
+      const hit = ray === null ? null : bridge.pickRay(ray.o, ray.d);
       if (hit !== null) {
         bridge.select(hit.id, hit.generation);
         renderer.selectObject(null);
@@ -1156,6 +1131,65 @@ async function boot(): Promise<void> {
       },
       /** 面板可见文本（验证 DOM 真的渲染出来了，而不只是内存状态对） */
       panelText: () => document.getElementById('spawn-host')?.innerText ?? '',
+    };
+
+    // §8-5「在画面中对应到它」要用到的**原语**（不是验证逻辑本身）：
+    // 屏幕坐标 → 世界射线（与静态拾取同一条），与真实点击走的同一个入口。
+    // 刻意暴露「点击」而不是「射线」，因为要证明的是"用户在画面上点它就能选中它"。
+    hook.bridge = bridge;
+    hook.pointerRay = (clientX: number, clientY: number) => renderer.pointerRay(clientX, clientY);
+    hook.pickAtClient = (clientX: number, clientY: number) => pickAtClient(clientX, clientY);
+
+    /**
+     * §8-1「Node 与浏览器使用同一初始化、seed 和固定 tick 输入」的浏览器侧取样口。
+     *
+     * 用**页面里同一个 bundle** 的 runtime 模块跑一次给定种子 / 步数的会话，
+     * 返回实体快照。自建自停，**不碰用户正在播放的会话** —— 否则对比会撞上
+     * 真实时间推进，那就不再是「同输入」了。
+     */
+    /**
+     * 把「浏览器实际喂给 runtime 的那份文档」原样导出来。
+     *
+     * 这是 §8-1 的**取证口**，不是产品功能：指纹对不上时必须能立刻拿到两侧文档的
+     * 逐路径差异，否则只能靠猜（"大概是被迁移补了字段吧"），而猜错一次就是半天。
+     */
+    hook.runtime = {
+      docJson: () => JSON.stringify(spawnStore?.document ?? renderer.getDocument()),
+      runTo: (seed: number, ticks: number) => {
+        const doc = spawnStore?.document ?? renderer.getDocument();
+        if (doc === null) return { ok: false as const, error: '场景未加载' };
+        const ps = new PlaySession({ seed, fixedStep: 1 / 30 });
+        const r = ps.play(doc);
+        if (!r.ok) return { ok: false as const, error: r.errors.join('；') };
+        const s = ps.runtime;
+        if (s === null) return { ok: false as const, error: '会话为空' };
+        for (let i = 0; i < ticks; i++) s.step();
+        const out = {
+          ok: true as const,
+          seed,
+          fixedStep: ps.fixedStep,
+          tick: s.tick,
+          sceneId: s.desc.sceneId,
+          schemaVersion: s.desc.schemaVersion,
+          // 与 Node 侧 runtime-parity.mjs 用**同一个** sceneFingerprint：
+          // 先确认喂进去的是同一份文档，再谈输出一致。
+          docFingerprint: sceneFingerprint(doc),
+          entities: s.view().map((e) => ({
+            id: e.id,
+            generation: e.generation,
+            characterId: e.characterId,
+            kind: e.kind,
+            x: e.x,
+            z: e.z,
+            yaw: e.yaw,
+            sourceNodeId: e.sourceNodeId,
+            targetId: e.targetId,
+            behavior: e.behavior,
+          })),
+        };
+        ps.stop();
+        return out;
+      },
     };
   }
 
