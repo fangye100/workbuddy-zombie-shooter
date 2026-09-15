@@ -6,7 +6,7 @@
 
 - 真源是 `package.json` 的 `"packageManager": "pnpm@9.0.0"`；**锁文件 `pnpm-lock.yaml` 已入库，依赖装法一律 `pnpm install`**。
 - 禁止用 npm/yarn 安装（会生成竞争锁文件、绕过锁定的版本）；历史遗留的 npm 安装痕迹已在 2026-09-15 清除。
-- worktree 新建后先 `pnpm install` 再干活——node_modules 不跨目录共享，且不提交入库。
+- worktree 新建/迁移后先 `pnpm install` + `git lfs pull` 再干活——node_modules 不跨目录共享；LFS 若未检出，工作区里全是指针文本（131 字节），`scene:check` 会报一堆哈希失配（2026-09-15 踩过：28 项失配的真实原因是未 smudge，不是 meta 过期，**禁止**用 scene:gen 去"修"）。
 
 ## 1. 本地服务必须经 Tailscale 可达（固定端口 + HTTPS）
 
