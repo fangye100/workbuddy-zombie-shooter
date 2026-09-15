@@ -1,6 +1,6 @@
 # Retargeting 空间补偿与接触求解：设计及开发计划
 
-> 更新：2026-09-14。状态：**研究已归档，计划已修订；新增功能尚未实现、尚未做实际 mocap 验收**。
+> 更新：2026-09-15。状态：**研究已归档；计划按 2026-09-15 独立审核补齐三项决策钉板（§1/§3.1/§5），开发按 §7 队列执行中；尚未做实际 mocap 验收**。
 > 本文是本项目 retargeting 后续开发的计划真源，替代 2026-09-10 版的固定 FK/IK 分区及单链后处理方案。
 > 算法依据：[16A-Retargeting运动空间补偿算法研究](./16A-Retargeting运动空间补偿算法研究.md)。该报告区分公开证据、独立推导与工程选择。
 > 关联：[资产管线](./06-从2D概念图到3D游戏模型管线.md)、[绑定评审](./15-绑定与蒙皮面板技术美术评审.md)、[场景及持久化](./14-Scene系统与场景数据持久化架构设计.md)。
@@ -43,6 +43,8 @@ L0 当前公式 `R'_i = A_parent · R_src_i · A_i⁻¹`；`computeSkeletonScale
 
 新路径复用 L0 旋转基准，从源采样重新构造根目标，**不能把已缩放的 L0 根轨道再缩放一次**。旧 L0 直接调用作为明确的 FK 基准模式保持自身契约；新路径按新标定和验收语义实现，不为保住旧断言沿用错误尺度。
 
+姿态基准公式分层（2026-09-15 钉板）：源为 BVH（rest 是纯平移链，姿态差编码在**骨向**里）时，用 L0 的**方向最小弧换基** `A_i = quatFromUnitVectors(d_src_i, d_tgt_i)`；源与目标标定都携带完整 rest TRS（glTF→glTF）时，用研究报告 §4.2 的**世界 rest 换基**（roll 精确传递）。两式在「rest 差异只由骨向表达」时一致；BVH 源**禁止**用世界 rest 换基（其 rest 世界旋转恒为 identity，公式会退化为直接拷贝、把 A-pose 偏移带进目标——正是 L0 头注释里的坑）。选择显式记入配方 `rotationBaseline: 'direction' | 'world-rest'`，`rig-calibration` 对不兼容组合产出诊断并拒绝，不允许隐式切换。
+
 ## 2. 层编号与数据流
 
 L0–L4 是责任层，不是固定执行顺序，也不是动画师控制器的 IK/FK 模式。
@@ -83,6 +85,8 @@ H_bar(t)= S(H_source(t))
 标定须满足 `S(H_source_ref) = H_target_ref`。这是本项目选择，不称为 HumanIK Auto。根与默认足迹共用 `S`；不能用最后整体下降掩盖平面/原点错误。
 
 业务若要求保持现实米制路径或固定物体，选择 `preserve-world`：不按角色尺寸缩放这些世界目标，允许姿态/相对步幅改变。模式持久化。运行时速度比例 `v_game/v_clip` 是独立问题，不混入身高比。
+
+两种模式的目标构造规则（2026-09-15 钉板，MR-02 实现依据）：`normalize-gait`（默认）下根、默认足迹与自由末端共用 `S`；`preserve-world` 下接触锚点与世界物体目标**直接取源世界坐标**（不乘 `s_root`），根的竖直分量仍按 `h_t/h_s` 归一（骨盆离地高度是身体属性），根的水平轨迹降为软目标、由求解器在「锚点固定」约束下重排步幅，`S` 只继续用于自由末端的相对身体目标。模式写入配方 `spaceMode`，单个配方内不允许混用。
 
 ### 3.2 自由部位
 
@@ -164,9 +168,9 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | `RetargetRecipe` | 版本、源/目标引用及 hash、双方标定指纹、profile、环境、尺度规则、接触标注/检测配置、权重、容差、算法版本 | 派生动画资产 sidecar；引用双方标定，不复制一份可编辑标定 |
 | `ContactSegment` | 稳定 id、标记/链、起止秒、模式、参考空间、来源/置信度、落点/枢轴 | 标注覆盖进配方；自动结果可缓存并存摘要 |
 | `RetargetEnvironment` | 源/目标平面、物体/表面映射、标定来源；场景引用用 `NodeId` | 平地烘焙配方或场景节点/组件，不在引擎硬编码 |
-| `RetargetResult` | `complete/partial/failed`、可空目标节点局部 clip、输出骨架/父层级指纹、逐段指标、诊断、能力覆盖、依赖指纹 | 可播放结果才交预览；不完整不标“验收成功” |
+| `RetargetOutcome` | `complete/partial/failed`、可空目标节点局部 clip、输出骨架/父层级指纹、逐段指标、诊断、能力覆盖、依赖指纹 | 可播放结果才交预览；不完整不标“验收成功” |
 
-接口语义为 `retargetMotion({source, targetRig, basePose, recipe, environment}) → RetargetResult`。废弃旧计划只传目标 clip 的接口；`basePose` 必须与源/目标/时刻一致。输入不可变，支持取消，失败不覆盖最后已验收产物。
+接口语义为 `retargetMotion({source, targetRig, basePose, recipe, environment}) → RetargetOutcome`。`RetargetOutcome` 是运行期求解结果契约；它刻意**不与** [`retarget.ts`](../apps/editor/src/services/binding/retarget.ts) 既有导出 `RetargetResult`（L0 的 clip+report 二元组）同名——两者不同形，session 层同时引用时同名只会制造歧义，禁止改回同名。`basePose` 必须与源/目标/时刻一致。输入不可变，支持取消，失败不覆盖最后已验收产物。
 
 源侧 `SourceCalibration` 和目标侧 `TargetCalibration` 分别保存于各自资产 sidecar：包括不能从资产反推的足/掌标记、参考站姿/支撑平面标定、单位和轴向覆盖及版本。MR-01 的 BVH 源资产接入必须支持该标定，不将其仅存采样缓存。配方只引用双方标定指纹；任一标定修改均使结果失效。临时载入的外部 BVH 在保存可复现配方前须进入源资产身份/sidecar 管理，不能只记浏览器临时文件名。
 
@@ -198,7 +202,7 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | 质量指标 | `MR/quality-report.ts` | `MT/quality-report.test.ts`：已知轨迹指标/阈值/能力覆盖 |
 | 算法编排 | `MR/pipeline.ts`，仅连接 owner | `MT/pipeline.test.ts`：输入不可变/依赖一致/取消/顺序 |
 | 输出坐标/轨道适配 | `MR/bake-adapter.ts` | `MT/bake-adapter.test.ts`：世界到实际父局部、参考变换/单位、可表达性与输出骨架指纹 |
-| 载入、预览、导出会话 | 新 `services/binding/retarget-session.ts`，`main.ts` 只调用 | `MT/retarget-session.test.ts`：两入口/重载/失效/失败不覆盖 |
+| 载入、预览、导出会话 | 新 `services/binding/retarget-session.ts`（放在 `binding/` 下而非 `motion-retarget/` 内是**有意的**：session 编排预览/导出/失效检查，范围超出算法层，禁止实施时当笔误“纠正”），`main.ts` 只调用；诊断汇总（状态＋逐约束残差）在此输出，呈现 UI 另开后续单元 | `MT/retarget-session.test.ts`：两入口/重载/失效/失败不覆盖 |
 | 最终烘焙验收 | `bake-adapter.ts` 交付局部轨道，复用 `clipToAnimClip`、`binding-export.ts` 消费 | `MT/bake-acceptance.test.ts`：最终轨道读回与业务组合；原 `binding.test.ts` 继续拥有绑定/蒙皮合同 |
 
 现有 `retarget.test.ts` 只拥有 L0 基准/API，不追加接触。`main.ts`、`binding-math.ts`、`binding-export.ts` 不增加求解规则；`retarget.ts` 现有换基/动画转换混合，不再增加源接触或新 rig 构建责任。共享 fixture 仅提供输入与独立 oracle，不能用被测目标生成器计算预期值。
@@ -242,6 +246,8 @@ K = A + a·e + b·v    // v 正交于 e，来自映射后的源弯曲平面
 | A14 | 两入口与导出同配方/结果，重载可复现，源/目标/标记/版本变化正确失效 | `retarget-session.test.ts` |
 | A15 | 目标有非恒等父平移/旋转/正统一缩放；最终 GLB 读回转到规范世界后与求解结果差 ≤1e-5m，根不二次变换；不同输出父空间各自适配后结果等价 | `bake-acceptance.test.ts` |
 | A16 | 源侧足底偏移、参考站姿/平面、单位覆盖重载后保持一致；改源或目标任一标定仅使关联配方失效，重算使用新指纹 | `retarget-session.test.ts` |
+| A17 | 摆动相净空：非接触段目标脚底标记不低于支撑面（穿透容差同 A08），源腾空净空按 `h_t/h_s` 缩放后保留——短腿不刮地、跳跃不被压平 | `pose-solver.test.ts` |
+| A18 | 根朝向轨迹：yaw 随源保留；等比恒等路径下转身的世界朝向差 ≤0.5°；非等比下锚点求解不得污染根朝向 | `space-targets.test.ts` |
 
 滑步至少报告整段最大锚点偏差、相邻样本切向距离总和及速度分布，不只报最大单帧位移。若真实数据需调整门槛，记录尺寸、原因和批准的产品质量档，不能改变统计口径隐藏失败。
 
