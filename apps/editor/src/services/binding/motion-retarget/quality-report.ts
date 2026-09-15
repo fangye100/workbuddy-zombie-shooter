@@ -73,13 +73,15 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
   // 累计切向滑动 + 穿透 + 摆动净空
   // 滑动口径（docs/16 §8 A08）：**相邻样本**切向距离总和 Σ|tangential(P(t+1)−P(t))|，
   // 只在段内累加——静态偏差不重复计入（那归 MRQ_ANCHOR），且不随帧率放大。
-  // 滑动按**骨**聚合：同一块脚上 ball+heel 两个标记共享同一物理滑动，只计一次
+  // 同骨多标记（ball/heel）共享同一物理滑动：**每一步**取骨内各标记距离的最大值，
+  // 再跨步累加（逐步 max、跨步 sum；全程求和或全程 max 都会错——前者双计、后者丢路程）。
   const slideByBone = new Map<string, number>();
   let maxPenetration = 0;
   let minSwingClearance = Infinity;
   let maxRootCorrection = 0;
   for (let f = 0; f < frames.length; f++) {
     const fr = frames[f]!;
+    const stepMaxByBone = new Map<string, number>();
     maxRootCorrection = Math.max(
       maxRootCorrection,
       Math.hypot(input.rootCorrections[f * 3]!, input.rootCorrections[f * 3 + 1]!, input.rootCorrections[f * 3 + 2]!),
@@ -87,7 +89,6 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
     for (const [id, mk] of Object.entries(rig.markers)) {
       const world = markerWorldAt(rig, fr, id);
       if (world === null) continue;
-      void mk;
       // 同一块骨上任一标记在接触段内 → 整骨按接触处理（ball 锁着时 heel 不算摆动）
       const seg = segments.find(
         (s) =>
@@ -105,7 +106,7 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
             const w2 = markerWorldAt(rig, next, id);
             if (w2 !== null) {
               const d = len3(tangential(sub3(w2, world), plane.normal));
-              slideByBone.set(mk.bone, (slideByBone.get(mk.bone) ?? 0) + d);
+              stepMaxByBone.set(mk.bone, Math.max(stepMaxByBone.get(mk.bone) ?? 0, d));
             }
           }
         }
@@ -113,6 +114,9 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
         const clearance = signedPlaneDistance(world, plane);
         minSwingClearance = Math.min(minSwingClearance, clearance);
       }
+    }
+    for (const [bone, d] of stepMaxByBone) {
+      slideByBone.set(bone, (slideByBone.get(bone) ?? 0) + d);
     }
   }
   if (!Number.isFinite(minSwingClearance)) minSwingClearance = Infinity;

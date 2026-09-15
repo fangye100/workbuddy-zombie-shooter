@@ -106,9 +106,9 @@ describe('buildQualityReport', () => {
       durationMs: 1,
       tolerances: defaultRetargetTolerances(),
     });
-    // ball 标记跟随脚移动 0.3m；heel 标记同骨同段也移动 → 两者相加
+    // ball/heel 同骨共享同一物理滑动，按骨聚合只计一次：≈0.3（双计会得 ~0.6）
     expect(res.metrics.cumulativeSlideM).toBeGreaterThan(0.29);
-    expect(res.metrics.cumulativeSlideM).toBeLessThan(0.7);
+    expect(res.metrics.cumulativeSlideM).toBeLessThan(0.31);
     expect(res.violations.some((v) => v.code === 'MRQ_SLIDE')).toBe(true);
   });
 
