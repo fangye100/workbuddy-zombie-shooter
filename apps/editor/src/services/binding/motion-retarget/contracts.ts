@@ -15,8 +15,8 @@
 
 import { retargetFingerprint } from '@aether/scene';
 
-export type Quat = readonly [number, number, number, number];
-export type V3 = readonly [number, number, number];
+export type Quat = [number, number, number, number];
+export type V3 = [number, number, number];
 
 // ---------------------------------------------------------------- RetargetRig
 
