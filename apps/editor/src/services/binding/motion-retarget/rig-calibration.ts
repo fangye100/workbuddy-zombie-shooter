@@ -462,14 +462,44 @@ export function computeDirectionBaseline(
       M[b] = parent === null ? ID : (M[parent] ?? ID);
     }
   }
+  // 参考 roll 完成（复审 P1）：M 只钉住骨长轴，目标参考系绕骨轴的 roll 会被清掉。
+  // D_b = M_b · twist(conj(M_b)·W_rest_b, a_local_b)：
+  //   W_rest = 目标 rest 世界旋转；twist 取其绕骨轴的分量（几何一致时是纯 twist，
+  //   不一致时丢弃 swing 分量——方向追踪优先）。静止源 ⟹ 局部基准 == 目标 restLocalR。
+  const axes2 = targetLocalAxes(targetRig);
+  const W = restWorldRotations(targetRig);
+  const D: Record<string, Quat> = {};
+  for (const b of targetRig.order) {
+    const tau = quatMul(conj(M[b]!), W[b]!);
+    D[b] = quatMul(M[b]!, twistOf(tau, axes2[b]!));
+  }
   const pre: Record<string, Quat> = {};
   const post: Record<string, Quat> = {};
   for (const b of targetRig.order) {
     const parent = targetRig.bones[b]!.parent;
-    pre[b] = parent === null ? ID : conj(M[parent] ?? ID);
-    post[b] = M[b]!;
+    pre[b] = parent === null ? ID : conj(D[parent] ?? ID);
+    post[b] = D[b]!;
   }
   return { mode: 'direction', pre, post, diagnostics: [] };
+}
+
+/** 绕轴 twist 分量：四元数向量部分在轴上的投影 + 标量部分，归一化 */
+function twistOf(q: Quat, axis: V3): Quat {
+  const d = q[0] * axis[0] + q[1] * axis[1] + q[2] * axis[2];
+  const t: Quat = [d * axis[0], d * axis[1], d * axis[2], q[3]];
+  const n = Math.hypot(t[0], t[1], t[2], t[3]);
+  if (n < 1e-12) return [0, 0, 0, 1];
+  return [t[0] / n, t[1] / n, t[2] / n, t[3] / n];
+}
+
+/** 目标骨架每骨的 rest 世界旋转（沿父链累乘 restLocalR；根骨=自身局部） */
+export function restWorldRotations(rig: RetargetRig): Record<string, Quat> {
+  const out: Record<string, Quat> = {};
+  for (const n of rig.order) {
+    const b = rig.bones[n]!;
+    out[n] = b.parent === null ? (b.restLocalR as Quat) : quatMul(out[b.parent]!, b.restLocalR as Quat);
+  }
+  return out;
 }
 
 /** 目标骨架每骨的**局部轴**：第一个子骨 restLocalT 的方向（不转世界旋转；叶子骨零向量） */
