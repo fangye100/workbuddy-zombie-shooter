@@ -78,16 +78,33 @@ function skeletonFromPositions(pos: JointPositions): SkeletonData {
   };
 }
 
-/**
- * 带世界位移的行走样 BVH（cm 制、Y-up、6 帧）。
- * 根速 0.2cm/帧（0.06 m/s @30fps）：低于进入阈值 0.1×h_s（脚可判支撑），
- * 6 帧跨度 1cm ≥ in-place 判定线 → world-trajectory（可世界锁脚）。
- */
+/** 带世界位移的行走样 BVH（cm 制、Y-up、6 帧）。根速 0.2cm/帧（0.06 m/s @30fps）：
+ * 低于进入阈值 0.1×h_s（脚可判支撑），6 帧跨度 1cm ≥ in-place 判定线 → world-trajectory。 */
 function walkBvh(): string {
   return buildBvhText({
     frames: 6,
     rootPos: (f) => [f * 0.2, 100, 0],
   });
+}
+
+/** 入口 B 带容器节点的骨架：节点 0 = Armature（平移 [1,0,0]、统一缩放 2），骨节点 1..27。
+ * 用来端到端抓「两份 FK 实现（rig-calibration vs bake 输出骨架）在缩放祖先下漂移」。 */
+function skeletonWithContainer(pos: JointPositions): SkeletonData {
+  const base = skeletonFromPositions(pos);
+  const parent = [-1, ...base.parent.map((p) => (p < 0 ? 0 : p + 1))];
+  const locals = [
+    { t: [1, 0, 0] as [number, number, number], r: [0, 0, 0, 1] as [number, number, number, number], s: [2, 2, 2] as [number, number, number] },
+    ...base.locals,
+  ];
+  return {
+    joints: base.joints.map((j) => j + 1),
+    jointNames: base.jointNames,
+    inverseBind: base.inverseBind,
+    parent,
+    locals,
+    roots: [0],
+    normalization: base.normalization,
+  };
 }
 
 /** 源侧标定：cm 制（unitScale 0.01）、Y-up、骨盆高 1m、双侧足底标记 */
@@ -277,6 +294,106 @@ describe('retarget-session 失效与失败不覆盖', () => {
     const o = s.solve();
     expect(o.status).toBe('failed');
     expect(o.diagnostics.some((d) => d.code === 'MRS_NO_SOURCE')).toBe(true);
+  });
+
+  it('消费点守门：输入变化后 bake() 拒绝（MRS_STALE），旧轨道不得流出（复审 P0 回归）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    expect(s.solve().status).not.toBe('failed');
+    const before = s.bake();
+    expect(before.ok).toBe(true);
+    // 参数修改（spaceMode）→ 待更新：烘焙（= 导出/挂载的上游）必须拒绝
+    s.updateRecipeSettings({ spaceMode: 'preserve-world' });
+    const after = s.bake();
+    expect(after.ok).toBe(false);
+    if (!after.ok) expect(after.code).toBe('MRS_STALE');
+  });
+
+  it('syncTarget：fit 被拖改 → changed + 失效；未改 → unchanged 不 bump（复审 P1 回归）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const fit = tposeWorldPositions();
+    s.setTarget({ fitPositions: fit, name: 'binding-fit' });
+    expect(s.solve().status).not.toBe('failed');
+    expect(s.isStale()).toBe(false);
+    // 同一 fit 再 sync：无变化
+    const same = s.syncTarget({ fitPositions: fit, name: 'binding-fit' });
+    expect(same.state).toBe('unchanged');
+    expect(s.isStale()).toBe(false);
+    // 拖高 Hips 10cm：目标几何变了
+    const edited: JointPositions = { ...fit, Hips: [fit.Hips![0]!, fit.Hips![1]! + 0.1, fit.Hips![2]!] };
+    const changed = s.syncTarget({ fitPositions: edited, name: 'binding-fit' });
+    expect(changed.state).toBe('changed');
+    expect(s.isStale()).toBe(true);
+    const guard = s.requireResult();
+    expect(guard.ok).toBe(false);
+  });
+
+  it('配方绑定标定指纹但会话未设标定 → 拒绝求解，不静默降级（R13 / 复审 P1 回归）', async () => {
+    const { files, store } = memStore();
+    // 先在一个带源标定的会话里产出配方 JSON
+    files.set('assets/mocap/walk.bvh.meta.json', { retarget: { calibration: sourceCalibration() } });
+    const calibrated = new RetargetSession(store);
+    calibrated.loadSourceBvh(walkBvh(), 'walk');
+    await calibrated.loadCalibrationFromMeta('source', 'assets/mocap/walk.bvh.meta.json');
+    calibrated.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    expect(calibrated.solve().status).not.toBe('failed');
+    const json = calibrated.recipeJson()!;
+
+    // 新会话：同源同目标、载入该配方、但**不**设标定 → 求解必须失败并指出缺标定
+    const bare = new RetargetSession(store);
+    bare.loadSourceBvh(walkBvh(), 'walk');
+    bare.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    expect(bare.loadRecipeJson(json).ok).toBe(true);
+    const refused = bare.solve();
+    expect(refused.status).toBe('failed');
+    expect(refused.diagnostics.some((d) => d.code === 'MRS_RECIPE_CAL_UNBOUND')).toBe(true);
+    // 补载标定后同一配方即可求解（配方的标定身份被恢复而非抹掉）
+    const restored = await bare.loadCalibrationFromMeta('source', 'assets/mocap/walk.bvh.meta.json');
+    expect(restored.ok).toBe(true);
+    const ok2 = bare.solve();
+    expect(ok2.status).not.toBe('failed');
+    expect(ok2.coverage).toContain('world-lock');
+  });
+
+  it('summary.spaceMode 回显当前配方（复审 P2 回归：呈现层不得自持状态）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    s.solve();
+    expect(s.summary().spaceMode).toBe('normalize-gait');
+    s.updateRecipeSettings({ spaceMode: 'preserve-world' });
+    expect(s.summary().spaceMode).toBe('preserve-world');
+    expect(s.summary().status).toBe('stale');
+  });
+
+  it('容器祖先（平移 + 统一缩放 2）下端到端：烘焙读回 == 求解世界（两份 FK 不得漂移）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const set = s.setTarget({ skeleton: skeletonWithContainer(tposeWorldPositions()), name: 'container-object' });
+    expect(set.ok).toBe(true);
+    const outcome = s.solve();
+    expect(outcome.status).not.toBe('failed');
+    const baked = s.bake();
+    expect(baked.ok).toBe(true);
+    if (!baked.ok) return;
+    const output = s.outputRig()!;
+    expect(output.rootParentWorld).not.toBeNull();
+    expect(output.rootParentWorld!.uniformScale).toBeCloseTo(2, 12);
+    const frames = readBackWorld(baked.tracks, output, outcome.clip!.frames.length);
+    for (let f = 0; f < frames.length; f++) {
+      const solved = outcome.clip!.frames[f]!;
+      const read = frames[f]!;
+      for (const bone of output.order) {
+        const rp = read[bone];
+        const sp = solved.bonePos[bone];
+        if (rp === undefined || sp === undefined) continue;
+        for (let k = 0; k < 3; k++) {
+          expect(rp.pos[k]).toBeCloseTo(sp[k]!, 6);
+        }
+      }
+    }
   });
 });
 
