@@ -27,9 +27,29 @@
       "path": "assets/scenes/act1/floor-3.scene.json",
       "id": "sc_act1_floor3",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t0.scene.json",
+      "id": "sc_sim_floor1_t0",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t1.scene.json",
+      "id": "sc_sim_floor1_t1",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t3.scene.json",
+      "id": "sc_sim_floor1_t3",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t5.scene.json",
+      "id": "sc_sim_floor1_t5",
+      "enabled": true
     }
   ],
-  "startIndex": 1,
+  "startIndex": 7,
   "layers": [
     "Default",
     "TransparentFX",

@@ -24,6 +24,8 @@
     "scene:check": "node tools/scene/gen-asset-meta.mjs --check && vitest run packages/scene/test/scene-files.test.ts",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
+    "runtime:build": "tsc packages/runtime/src/index.ts --outDir .workbuddy/tmp/runtime --module commonjs --target ES2022 --moduleResolution node --skipLibCheck --esModuleInterop",
+    "sim": "npm run runtime:build && node tools/level/sim-level.mjs",
     "test": "vitest run",
     "lab": "npm run editor",
     "lab:build": "npm run editor:build"
