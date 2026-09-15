@@ -122,7 +122,7 @@ describe('buildTargetRig · 模板目标', () => {
 // ───────────────────────── A03：单位/父变换等价 ─────────────────────────
 
 describe('buildTargetRig · 外部骨架（A03）', () => {
-  it('m/cm：k=1 与 k=0.01 骨架（后者配 unitScale=100）→ rest 世界位置一致 ≤1e-5', () => {
+  it('★ m/cm 真等价：k=1 vs k=0.01+unitScale=100 → **归一化输出**（rest 世界位置）一致 ≤1e-5', () => {
     const a = buildTargetRig({ skeleton: buildSkeleton(1) });
     const b = buildTargetRig({
       skeleton: buildSkeleton(0.01),
@@ -137,11 +137,65 @@ describe('buildTargetRig · 外部骨架（A03）', () => {
         rotationBaseline: 'direction',
       },
     });
-    // 骨长按各自单位归一后一致
+    expect(b.diagnostics.every((d) => d.severity !== 'error')).toBe(true);
+    // 归一化后的骨长直接相等（不再需要手乘换算系数）
     const la = a.rig.chains.find((c) => c.id === 'LeftLeg')!;
     const lb = b.rig.chains.find((c) => c.id === 'LeftLeg')!;
-    expect(lb.lengthM * b.rig.unitScale).toBeCloseTo(la.lengthM * a.rig.unitScale, 5);
-    expect(a.rig.unitScale).toBe(1);
+    expect(lb.lengthM).toBeCloseTo(la.lengthM, 5);
+    // rest 世界位置逐骨一致（用测试内独立 FK）
+    for (const bone of ['Hips', 'LeftFoot', 'LeftToeBase', 'LeftArm']) {
+      const pa = rigOrderPos(a.rig, bone);
+      const pb = rigOrderPos(b.rig, bone);
+      expect(Math.hypot(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2])).toBeLessThan(1e-5);
+    }
+    // h_t 同为 1.0（米）
+    expect(b.rig.pelvisHeightM).toBeCloseTo(a.rig.pelvisHeightM, 5);
+  });
+
+  it('★ upAxis 覆盖：Z-up 骨架归一到 Y-up 后与 Y-up 骨架一致 ≤1e-5', () => {
+    // 构造 Z-up 版骨架：每个局部 t 先做 (x,−z,y)（与 BVH fixture 的 Z-up 约定一致），r 共轭同一旋转
+    const yUp = buildSkeleton(1);
+    const zUpSk = buildSkeleton(1);
+    for (let i = 0; i < zUpSk.locals.length; i++) {
+      const t = yUp.locals[i]!.t;
+      zUpSk.locals[i] = { t: [t[0]!, -t[2]!, t[1]!], r: yUp.locals[i]!.r, s: [1, 1, 1] };
+    }
+    const a = buildTargetRig({ skeleton: yUp });
+    const b = buildTargetRig({
+      skeleton: zUpSk,
+      calibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION,
+        side: 'target',
+        pelvisHeightM: 1.0,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1,
+        upAxis: 'z',
+        markers: {},
+        rotationBaseline: 'direction',
+      },
+    });
+    expect(b.diagnostics.every((d) => d.severity !== 'error')).toBe(true);
+    for (const bone of ['Hips', 'LeftFoot', 'Head']) {
+      const pa = rigOrderPos(a.rig, bone);
+      const pb = rigOrderPos(b.rig, bone);
+      expect(Math.hypot(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2])).toBeLessThan(1e-5);
+    }
+  });
+
+  it('模板目标不接受 unitScale/upAxis 覆盖（模板已是规范形态）→ 显式 error', () => {
+    const { diagnostics } = buildTargetRig({
+      calibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION,
+        side: 'target',
+        pelvisHeightM: 1.0,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 100,
+        upAxis: 'y',
+        markers: {},
+        rotationBaseline: 'direction',
+      },
+    });
+    expect(diagnostics.some((d) => d.code === 'MRR_TEMPLATE_NOT_CANONICAL')).toBe(true);
   });
 
   it('★ 有效父变换：骨盆带 Z 旋转时，rest 世界位置正确累乘旋转（不是纯平移累加）', () => {

@@ -7,9 +7,9 @@
 import { describe, it, expect } from 'vitest';
 import { parseBvh } from '../../src/services/binding/bvh-parser';
 import { buildSourceMotion, sourceRestDirections } from '../../src/services/binding/motion-retarget/source-motion';
-import { buildTargetRig, computeDirectionBaseline } from '../../src/services/binding/motion-retarget/rig-calibration';
+import { buildTargetRig, computeDirectionBaseline, computeWorldRestBaseline } from '../../src/services/binding/motion-retarget/rig-calibration';
 import { retargetMotion } from '../../src/services/binding/motion-retarget/pipeline';
-import { createDefaultRecipe, defaultContactDetection, defaultRetargetTolerances, defaultRetargetWeights, RETARGET_META_SCHEMA_VERSION, RETARGET_ALGORITHM_VERSION } from '@aether/scene';
+import { createDefaultRecipe, RETARGET_META_SCHEMA_VERSION, type RetargetCalibration } from '@aether/scene';
 import { buildBvhText } from './fixture';
 import type { RetargetEnvironment } from '../../src/services/binding/motion-retarget/contracts';
 
@@ -100,43 +100,60 @@ describe('retargetMotion · 失败路径', () => {
 
   it('★ 标定指纹失配 → failed + MRC_CAL_FINGERPRINT_MISMATCH（结果失效语义）', () => {
     const { sm, rig, baseline, recipe, environment } = makeInput(true);
-    const out = retargetMotion({
-      source: sm, targetRig: rig, baseline, recipe, environment,
-      sourceCalibration: {
-        schemaVersion: RETARGET_META_SCHEMA_VERSION,
-        side: 'source',
-        pelvisHeightM: 0.98,
-        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
-        unitScale: 0.01,
-        upAxis: 'y',
-        markers: {},
-        rotationBaseline: 'direction',
-      },
-    });
+    const cal: RetargetCalibration = {
+      schemaVersion: RETARGET_META_SCHEMA_VERSION,
+      side: 'source',
+      pelvisHeightM: 0.98,
+      supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+      unitScale: 0.01,
+      upAxis: 'y',
+      markers: {},
+      rotationBaseline: 'direction',
+    };
+    const out = retargetMotion({ source: sm, targetRig: rig, baseline, recipe, environment, sourceCalibration: cal });
     // recipe.sourceCalibrationFingerprint 为空串 → 不核对（草稿语义）；填错的指纹才触发
     expect(out.status).not.toBe('failed');
     const bad = {
       ...recipe,
       sourceCalibrationFingerprint: 'fp1_0000000000000000000000',
-      contactDetection: defaultContactDetection(),
-      tolerances: defaultRetargetTolerances(),
-      weights: defaultRetargetWeights(),
-      algorithmVersion: RETARGET_ALGORITHM_VERSION,
     };
-    const out2 = retargetMotion({
-      source: sm, targetRig: rig, baseline, recipe: bad, environment,
-      sourceCalibration: {
-        schemaVersion: RETARGET_META_SCHEMA_VERSION,
-        side: 'source',
-        pelvisHeightM: 0.98,
-        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
-        unitScale: 0.01,
-        upAxis: 'y',
-        markers: {},
-        rotationBaseline: 'direction',
-      },
-    });
+    const out2 = retargetMotion({ source: sm, targetRig: rig, baseline, recipe: bad, environment, sourceCalibration: cal });
     expect(out2.status).toBe('failed');
     expect(out2.diagnostics.some((d) => d.code === 'MRC_CAL_FINGERPRINT_MISMATCH')).toBe(true);
+  });
+
+  it('★ 姿态基准守门：world-rest 作用于 identity 源（BVH）→ failed + MRC_BASELINE_REJECTED', () => {
+    const { sm, rig, recipe, environment } = makeInput(true);
+    // 构造带 error 诊断的 world-rest 基准（identity 源）
+    const identityRest: Record<string, [number, number, number, number]> = {};
+    for (const n of rig.order) identityRest[n] = [0, 0, 0, 1];
+    const badBaseline = computeWorldRestBaseline({ srcRestWorldRotations: identityRest }, rig);
+    const worldRestRecipe = { ...recipe, rotationBaseline: 'world-rest' as const };
+    const out = retargetMotion({ source: sm, targetRig: rig, baseline: badBaseline, recipe: worldRestRecipe, environment, sourceCalibration: null });
+    expect(out.status).toBe('failed');
+    expect(out.clip).toBeNull();
+    expect(out.diagnostics.some((d) => d.code === 'MRC_BASELINE_REJECTED')).toBe(true);
+  });
+
+  it('★ 基准模式三方不一致（baseline vs recipe vs rig）→ failed + MRC_BASELINE_MODE_MISMATCH', () => {
+    const { sm, rig, baseline, environment } = makeInput(true);
+    const mismatchRecipe = {
+      ...makeInput(true).recipe,
+      rotationBaseline: 'world-rest' as const,
+    };
+    const out = retargetMotion({ source: sm, targetRig: rig, baseline, recipe: mismatchRecipe, environment, sourceCalibration: null });
+    expect(out.status).toBe('failed');
+    expect(out.diagnostics.some((d) => d.code === 'MRC_BASELINE_MODE_MISMATCH')).toBe(true);
+  });
+
+  it('slide 标注段 → 不硬锁（MRP_MODE_SOFT_MVP 警告），结果仍产出不失败', () => {
+    const { sm, rig, baseline, environment } = makeInput(true);
+    const slideRecipe = {
+      ...makeInput(true).recipe,
+      annotations: [{ marker: 'LeftFoot.ball', startS: 0.0, endS: 0.1, mode: 'slide' as const }],
+    };
+    const out = retargetMotion({ source: sm, targetRig: rig, baseline, recipe: slideRecipe, environment, sourceCalibration: null });
+    expect(out.status).not.toBe('failed');
+    expect(out.diagnostics.some((d) => d.code === 'MRP_MODE_SOFT_MVP')).toBe(true);
   });
 });

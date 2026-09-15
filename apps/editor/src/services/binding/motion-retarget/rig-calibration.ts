@@ -93,10 +93,27 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
   const cal = input.calibration ?? null;
   const useTemplate = input.skeleton == null;
 
+  // 目标侧单位/轴向归一（A03）：rest 局部 TRS 在构造期就转成米 + 规范 Y-up。
+  // 刚体换基：t' = C·(t·unitScale)，r' = C·r·C⁻¹（C 为 up 轴→Y-up 的固定旋转），
+  // 整具骨架被同一刚转携带，父子几何关系不变。
+  const unitScale = cal?.unitScale ?? 1;
+  const upAxis = cal?.upAxis ?? 'y';
+  const qAxis = axisToYQuat(upAxis);
+  if (!(unitScale > 0)) {
+    diagnostics.push({ severity: 'error', code: 'MRR_UNIT_SCALE_BAD', message: `unitScale ${unitScale} 必须 > 0` });
+  }
+
   // ── 骨表（父先于子）──
   const order: string[] = [];
   const bones: Record<string, RigBone> = {};
   if (useTemplate) {
+    if (unitScale !== 1 || upAxis !== 'y') {
+      diagnostics.push({
+        severity: 'error',
+        code: 'MRR_TEMPLATE_NOT_CANONICAL',
+        message: '模板目标已是 米/Y-up 规范形态，不接受 unitScale/upAxis 覆盖',
+      });
+    }
     for (const n of HUMANIK_ORDER) {
       const b = HUMANIK_BONES[n]!;
       order.push(n);
@@ -122,11 +139,12 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
         const pj = sk.joints.indexOf(pIdx);
         parent = pj >= 0 ? (sk.jointNames[pj] ?? null) : null;
       }
+      const tScaled: [number, number, number] = [loc.t[0] * unitScale, loc.t[1] * unitScale, loc.t[2] * unitScale];
       bones[nm] = {
         name: nm,
         parent,
-        restLocalT: [loc.t[0], loc.t[1], loc.t[2]],
-        restLocalR: [loc.r[0], loc.r[1], loc.r[2], loc.r[3]],
+        restLocalT: rotateVec(qAxis, tScaled),
+        restLocalR: quatMul(qAxis, quatMul([loc.r[0], loc.r[1], loc.r[2], loc.r[3]], conj(qAxis))),
       };
     }
   }
@@ -264,8 +282,6 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
     }
   }
 
-  const unitScale = cal?.unitScale ?? 1;
-  const upAxis = cal?.upAxis ?? 'y';
   const rotationBaseline = cal?.rotationBaseline ?? 'direction';
 
   const rig: RetargetRig = {
@@ -297,6 +313,17 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
 
 function dot3(a: V3, b: V3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/** up 轴 → Y-up 的固定刚转（与 source-motion 同约定：Z-up 绕 X −90°） */
+function axisToYQuat(axis: 'x' | 'y' | 'z'): Quat {
+  if (axis === 'y') return [0, 0, 0, 1];
+  if (axis === 'z') {
+    const h = (-90 * Math.PI / 180) / 2;
+    return [Math.sin(h), 0, 0, Math.cos(h)];
+  }
+  // X-up：极罕见，与源侧同策略——不重映射（诊断层提示）
+  return [0, 0, 0, 1];
 }
 
 // ---------------------------------------------------------------- 姿态基准

@@ -48,6 +48,8 @@ export interface PoseSolveResult {
   /** 每帧根修正量（米，Δ 相对候选） */
   rootCorrections: Float64Array;
   iterations: number;
+  /** GN 是否全部收敛（无奇异、未在残差未清时打满迭代） */
+  converged: boolean;
 }
 
 interface RigFK {
@@ -168,18 +170,35 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
   const rwd = restWorldDirs(rig);
   const plane = rig.supportPlane;
 
-  // 接触段 → 踝目标（锚点 − R_foot·b；R_foot 用源脚世界朝向，不依赖求解结果）
-  const activeAt = (t: number): ActiveContact[] => {
+  // 接触段 → 踝目标（锚点 − R_foot·b；R_foot 用源脚世界朝向，不依赖求解结果）。
+  // 只有 support 段硬锁；slide/roll 是 MVP 未覆盖的能力（法向约束/枢轴滚动），
+  // 显式报诊断而不是误当支撑锁死（docs/16 失败矩阵「有意滑动被误锁」）。
+  const softModes = new Set<string>();
+  for (const seg of segments) {
+    if (seg.mode !== 'support' && seg.anchor !== null) {
+      if (!softModes.has(seg.mode)) {
+        softModes.add(seg.mode);
+        diagnostics.push({
+          severity: 'warning',
+          code: 'MRP_MODE_SOFT_MVP',
+          message: `接触模式 ${seg.mode} 在足部 MVP 中不硬锁（按自由基准处理），完整支撑留 MR-07/08`,
+          constraint: seg.id,
+        });
+      }
+    }
+  }
+  const activeAt = (f: number): ActiveContact[] => {
+    const t = sm.times[f]!;
     const out: ActiveContact[] = [];
     for (const seg of segments) {
+      if (seg.mode !== 'support') continue;
       if (seg.anchor === null || t < seg.startS - 1e-9 || t > seg.endS + 1e-9) continue;
       const leg = legs.find((l) => l.markerId === seg.marker || l.chainId === seg.chainId);
       if (leg === undefined || leg.markerLocal === null) continue;
-      const footFrame = timeToFrame(sm.times, t);
       const rot = sm.worldRotations[leg.ankle];
       const footWorld: Quat = rot === undefined
         ? [0, 0, 0, 1]
-        : [rot[footFrame * 4]!, rot[footFrame * 4 + 1]!, rot[footFrame * 4 + 2]!, rot[footFrame * 4 + 3]!];
+        : [rot[f * 4]!, rot[f * 4 + 1]!, rot[f * 4 + 2]!, rot[f * 4 + 3]!];
       const offset = rotateVec3(footWorld, leg.markerLocal);
       out.push({
         seg,
@@ -197,6 +216,7 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
   let maxInner = 0;
   let maxOuter = 0;
   let totalIter = 0;
+  let converged = true;
   let prevBonePos: Record<string, [number, number, number]> | null = null;
 
   for (let f = 0; f < frames; f++) {
@@ -204,11 +224,12 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
     const candRoot: V3 = [rootPositions[f * 3]!, rootPositions[f * 3 + 1]!, rootPositions[f * 3 + 2]!];
     const rootQ: Quat = [rootQuats[f * 4]!, rootQuats[f * 4 + 1]!, rootQuats[f * 4 + 2]!, rootQuats[f * 4 + 3]!];
     const locals = baselineLocals[f] ?? {};
-    const contacts = activeAt(t);
+    const contacts = activeAt(f);
 
     // ── 共享根 GN：残差 = 各活动腿的可达性缺口 ──
     let rootPos: [number, number, number] = [candRoot[0], candRoot[1], candRoot[2]];
     let iter = 0;
+    let residualRemains = false;
     for (; iter < maxIter; iter++) {
       const fk = fkBaseline(rig, locals, rootPos, rootQ);
       // 残差向量与雅可比（3 变量）
@@ -240,10 +261,13 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       const step = solve3(A, g);
       if (step === null) {
         diagnostics.push({ severity: 'warning', code: 'MRP_GN_SINGULAR', message: `第 ${f} 帧根修正线性系统奇异，保留当前根`, frame: f });
+        residualRemains = true;
         break;
       }
       rootPos = [rootPos[0] + step[0]!, rootPos[1] + step[1]!, rootPos[2] + step[2]!];
     }
+    if (iter >= maxIter && contacts.length > 0) residualRemains = true;
+    converged = converged && !residualRemains;
     totalIter += iter;
     rootCorrections[f * 3] = rootPos[0] - candRoot[0];
     rootCorrections[f * 3 + 1] = rootPos[1] - candRoot[1];
@@ -301,6 +325,8 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
       const rec = anchorDev.get(c.seg.id);
       if (rec === undefined) anchorDev.set(c.seg.id, { marker: c.seg.marker, maxM: dev });
       else rec.maxM = Math.max(rec.maxM, dev);
+      // 链下子骨（ToeBase/ToeTip 等）用新脚世界变换重挂，避免新旧混合帧
+      refreshSubtree(rig, bonePos, boneQuat, leg.ankle);
     }
 
     // ── 摆动脚：基准保持 + 净空保护（A17）──
@@ -336,6 +362,7 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
           frame: f,
           constraint: leg.chainId,
         });
+        refreshSubtree(rig, bonePos, boneQuat, leg.ankle);
       }
     }
 
@@ -350,15 +377,36 @@ export function solvePose(input: PoseSolveInput): PoseSolveResult {
     reachResidualsM: { inner: maxInner, outer: maxOuter },
     rootCorrections,
     iterations: totalIter,
+    converged,
   };
 }
 
-function timeToFrame(times: Float64Array, t: number): number {
-  let best = 0;
-  for (let f = 0; f < times.length; f++) {
-    if (Math.abs(times[f]! - t) < Math.abs(times[best]! - t)) best = f;
+/** 把 startBone 的全部后代按其 rest 局部重新挂到（已更新的）startBone 世界变换下 */
+function refreshSubtree(
+  rig: RetargetRig,
+  bonePos: Record<string, [number, number, number]>,
+  boneQuat: Record<string, Quat>,
+  startBone: string,
+): void {
+  for (const n of rig.order) {
+    const b = rig.bones[n]!;
+    if (b.parent === null || b.parent !== startBone && !isDescendantOf(rig, b.parent, startBone)) continue;
+    const pq = boneQuat[b.parent]!;
+    const t = rig.bones[n]!.restLocalT;
+    boneQuat[n] = quatMul(pq, rig.bones[n]!.restLocalR as Quat);
+    const off = rotateVec3(pq, [t[0], t[1], t[2]]);
+    const pp = bonePos[b.parent]!;
+    bonePos[n] = [pp[0] + off[0], pp[1] + off[1], pp[2] + off[2]];
   }
-  return best;
+}
+
+function isDescendantOf(rig: RetargetRig, bone: string, ancestor: string): boolean {
+  let cur: string | null = bone;
+  while (cur !== null) {
+    if (cur === ancestor) return true;
+    cur = rig.bones[cur]!.parent;
+  }
+  return false;
 }
 
 function parentWorldOf(rig: RetargetRig, fk: RigFK, bone: string): Quat {

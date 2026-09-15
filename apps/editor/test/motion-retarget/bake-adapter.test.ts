@@ -177,6 +177,13 @@ describe('bakeWorldSolveToLocal · 拒绝与缺失', () => {
     expect(diagnostics.some((d) => d.code === 'MRB_BONE_NOT_SOLVED')).toBe(true);
     expect(tracks!.find((t) => t.bone === 'Ghost')).toBeUndefined();
     const back = readBackWorld(tracks!, rig, 3);
-    expect(back[0]!.Ghost!.pos).toEqual([9, 9, 9]);
+    // 缺解骨按「已解父世界 × rest 局部」重建（P2-7：不再把 rest 当世界值凭空放置）
+    expect(back[0]!.Ghost!.pos[0]).toBeCloseTo(9, 9);
+    expect(back[0]!.Ghost!.pos[1]).toBeCloseTo(10, 9);
+    // 第 2 帧根有 yaw(0.2rad)：rest 偏移随之旋转（手算 rotY(0.2)·[9,9,9]）
+    const c = Math.cos(0.2);
+    const sn = Math.sin(0.2);
+    expect(back[2]!.Ghost!.pos[0]).toBeCloseTo(0.2 + 9 * c + 9 * sn, 6);
+    expect(back[2]!.Ghost!.pos[2]).toBeCloseTo(-9 * sn + 9 * c, 6);
   });
 });
