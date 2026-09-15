@@ -251,7 +251,10 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     const [fs, fe] = span;
     anchors.set(s.id, contactAnchor(traj.positions, fs, fe, mapping, environment.targetPlane));
   }
-  const segments = assignContactAnchors(segmentsWithTimes, anchors)
+  // 带锚段全量保留（含 slide/roll/未兑现——诊断与时间轴需要看见它们），
+  // 求解器只吃其中「support 且有锚」的子集
+  const segmentsWithAnchors = assignContactAnchors(segmentsWithTimes, anchors);
+  const segments = segmentsWithAnchors
     .filter((sg) => sg.mode === 'support' && sg.anchor !== null);
   if (detected.segments.some((sg) => sg.mode !== 'support')) {
     diagnostics.push({
@@ -387,6 +390,12 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     metrics: quality.metrics,
     coverage,
     dependencyFingerprint: dep,
+    segments: segmentsWithAnchors,
+    constraintResiduals: second.anchorDeviations.map((d) => ({
+      segmentId: d.segmentId,
+      marker: d.marker,
+      maxDeviationM: d.maxM,
+    })),
   };
 }
 
@@ -471,5 +480,7 @@ function failed(diagnostics: RetargetDiagnostic[], dep: string): RetargetOutcome
     metrics: null,
     coverage: [],
     dependencyFingerprint: dep,
+    segments: [],
+    constraintResiduals: [],
   };
 }
