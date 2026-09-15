@@ -32,7 +32,6 @@ import { detectContactSegments } from './contact-segments';
 import { markerWorldPositions } from './source-motion';
 import type { RotationBaseline } from './rig-calibration';
 import { solvePose } from './pose-solver';
-import { DERIVED_HEEL_BACK_M, DERIVED_BALL_FWD_M } from './rig-calibration';
 import { smoothRootCorrections } from './temporal-solve';
 import { buildQualityReport } from './quality-report';
 
@@ -177,13 +176,27 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     });
   }
   // R05：源接触检测必须用**源侧**标记——目标标记几何不能反过来定义源的接触状态。
-  // 优先 sidecar 标定；缺省时从源几何（首帧）推导代理偏移并显式警告。
-  const sourceOffsets = sourceFootMarkerOffsets(source, input.sourceCalibration, environment.sourcePlane, footMarkers, diagnostics);
-  const markerTrajs = footMarkers.map((mk) => ({
-    markerId: mk.id,
-    chainId: chainIdOfBone(targetRig, mk.bone),
-    positions: markerWorldPositions(source, mk.bone, sourceOffsets.get(markerKeyOf(mk)) ?? mk.offset),
-  }));
+  // 复审 P1：①标定查找按「骨名 + 部位身份（.heel/.ball）」对应，与插入顺序无关；
+  // ②没有可靠源标定时**不做世界锁脚**——从动画自身推导足底偏移会把腾空片段伪造成
+  // 支撑（首帧 30cm 腾空被消除还报 complete）。正确语义：能力不完整 + 自由运动。
+  const srcMarkers = sourceFootMarkerOffsets(input.sourceCalibration, footMarkers);
+  let markerTrajs: Array<{ markerId: string; chainId: string | null; positions: Float64Array }> = [];
+  if (srcMarkers.size === 0) {
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRC_CONTACT_UNCALIBRATED',
+      message: '源标定缺足底标记：接触能力不完整，本次不做世界锁脚（自由运动适配）；SourceCalibration.markers 提供足底标记前不承诺接触',
+    });
+    coverage.push('contact-uncalibrated');
+  } else {
+    markerTrajs = footMarkers
+      .filter((mk) => srcMarkers.has(markerKeyOf(mk)))
+      .map((mk) => ({
+        markerId: mk.id,
+        chainId: chainIdOfBone(targetRig, mk.bone),
+        positions: markerWorldPositions(source, mk.bone, srcMarkers.get(markerKeyOf(mk))!),
+      }));
+  }
   const detected = detectContactSegments({
     times: source.times,
     markers: markerTrajs,
@@ -296,78 +309,28 @@ function markerKeyOf(mk: { id: string; bone: string }): string {
 }
 
 /**
- * R05：构造**源侧**足底标记偏移。
- * 优先 sourceCalibration.markers（骨名+部位对上即用）；缺省时从源几何首帧推导：
- * 前向 = Foot→ToeBase 的世界方向；踝高 = 首帧踝关节到源支撑面的距离；
- * 偏移在脚骨局部系里表达（inv(R_foot(f0))·(fwd·距离 − n·踝高)）。
- * 推导路径必须出 MRC_SOURCE_MARKERS_DERIVED 警告——它是代理，不是标定。
+ * R05/复审 P1：源侧足底标记**只认显式标定**。
+ * 按「骨名 + .heel/.ball 身份后缀」对应——同骨两个标记交换插入顺序不影响结果；
+ * 没有匹配条目就不返回偏移（调用方据此判定接触能力不完整），
+ * 绝不从动画自身推导足底偏移（那会把腾空片段伪造成支撑）。
  */
 function sourceFootMarkerOffsets(
-  source: SourceMotion,
   cal: RetargetCalibration | null,
-  plane: { origin: RetargetEnvironment['sourcePlane']['origin']; normal: RetargetEnvironment['sourcePlane']['normal'] },
   footMarkers: ReadonlyArray<{ id: string; bone: string }>,
-  diagnostics: RetargetDiagnostic[],
 ): Map<string, [number, number, number]> {
   const out = new Map<string, [number, number, number]>();
-  const warned = { value: false };
+  if (cal === null) return out;
   for (const mk of footMarkers) {
     const key = markerKeyOf(mk);
     const kind = key.endsWith(':heel') ? 'heel' : 'ball';
-    // 1) sidecar 标定
-    if (cal !== null) {
-      const entry = Object.entries(cal.markers).find(([, e]) => e.bone === mk.bone);
-      if (entry !== undefined) {
-        out.set(key, [entry[1].offset[0], entry[1].offset[1], entry[1].offset[2]]);
-        continue;
-      }
+    const entry = Object.entries(cal.markers).find(
+      ([id, e]) => e.bone === mk.bone && id.endsWith(`.${kind}`),
+    );
+    if (entry !== undefined) {
+      out.set(key, [entry[1].offset[0], entry[1].offset[1], entry[1].offset[2]]);
     }
-    // 2) 几何推导代理
-    if (!warned.value) {
-      warned.value = true;
-      diagnostics.push({
-        severity: 'warning',
-        code: 'MRC_SOURCE_MARKERS_DERIVED',
-        message: '源标定缺足底标记：用源几何首帧推导代理偏移（前向=Foot→ToeBase，踝高=首帧到源支撑面），精确接触验收前须补 SourceCalibration',
-      });
-    }
-    const footP = source.worldPositions[mk.bone];
-    const footR = source.worldRotations[mk.bone];
-    if (footP === undefined || footR === undefined) continue;
-    const toeName = mk.bone.replace('Foot', 'ToeBase');
-    const toeP = source.worldPositions[toeName];
-    let fwd: [number, number, number] = [0, 0, 1];
-    if (toeP !== undefined) {
-      const dx = toeP[0]! - footP[0]!;
-      const dy = toeP[1]! - footP[1]!;
-      const dz = toeP[2]! - footP[2]!;
-      const l = Math.hypot(dx, dy, dz);
-      if (l > 1e-9) fwd = [dx / l, dy / l, dz / l];
-    }
-    const ankleH = footP[1]! - plane.origin[1];
-    const dist = kind === 'heel' ? -DERIVED_HEEL_BACK_M : DERIVED_BALL_FWD_M;
-    const world: [number, number, number] = [
-      fwd[0] * dist - plane.normal[0] * ankleH,
-      fwd[1] * dist - plane.normal[1] * ankleH,
-      fwd[2] * dist - plane.normal[2] * ankleH,
-    ];
-    const q: [number, number, number, number] = [footR[0]!, footR[1]!, footR[2]!, footR[3]!];
-    out.set(key, rotateInvVec(q, world));
   }
   return out;
-}
-
-function rotateInvVec(q: [number, number, number, number], v: [number, number, number]): [number, number, number] {
-  const c: [number, number, number, number] = [-q[0], -q[1], -q[2], q[3]];
-  const x = c[0], y = c[1], z = c[2], w = c[3];
-  const tx = 2 * (y * v[2] - z * v[1]);
-  const ty = 2 * (z * v[0] - x * v[2]);
-  const tz = 2 * (x * v[1] - y * v[0]);
-  return [
-    v[0] + w * tx + (y * tz - z * ty),
-    v[1] + w * ty + (z * tx - x * tz),
-    v[2] + w * tz + (x * ty - y * tx),
-  ];
 }
 
 function chainIdOfBone(rig: RetargetRig, bone: string): string | null {

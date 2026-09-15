@@ -138,21 +138,29 @@ describe('R04 确切标记', () => {
 // ───────────────── R05：源检测用源侧标记 ─────────────────
 
 describe('R05 源侧标记', () => {
-  it('目标标记几何改变（踝下 5cm）不再影响源接触检测：仍检出支撑、无摆动穿透', () => {
-    // 目标 ball 标记被挪到踝下 5cm：若源检测误用目标偏移，源标记会陷地 2cm → 摆动穿透 → partial
-    const { sm, recipe, environment } = makePipelineInput(
-      buildBvhText({ rootPos: () => [0, 100, 0] }),
-      (rig) => ({
-        ...rig,
-        markers: {
-          ...rig.markers,
-          'LeftFoot.ball': { ...rig.markers['LeftFoot.ball']!, offset: [0, -0.05, 0.09] },
-          'RightFoot.ball': { ...rig.markers['RightFoot.ball']!, offset: [0, -0.05, 0.09] },
-        },
-      }),
-    );
-    // 重建 rig 后 baseline 需与该 rig 一致（模板几何没变，重算一次）
+  it('未标定：不做世界锁脚（MRC_CONTACT_UNCALIBRATED），30cm 腾空不被伪造成支撑', () => {
+    // 源整体抬高 30cm（root y=130cm → 脚 ~0.33m）：任何从动画自身推导的足底偏移
+    // 都会把腾空解释成站地；新语义 = 能力不完整 + 自由运动，腾空保留
+    const input = makePipelineInput(buildBvhText({ rootPos: () => [0, 130, 0] }));
+    // 复审场景：骨盆高度已正确标定（h_s=1.0），仅缺足底标记——腾空必须保留
+    const out = retargetMotion({
+      source: input.sm, targetRig: input.rig, baseline: input.baseline,
+      recipe: input.recipe, environment: input.environment,
+      sourceCalibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source', pelvisHeightM: 1.0,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1, upAxis: 'y', markers: {}, rotationBaseline: 'direction',
+      },
+    });
+    expect(out.diagnostics.some((d) => d.code === 'MRC_CONTACT_UNCALIBRATED')).toBe(true);
+    expect(out.status).not.toBe('failed');
+    expect(out.clip!.frames[0]!.bonePos.LeftFoot![1]).toBeGreaterThan(0.25);
+    expect(out.coverage).toContain('contact-uncalibrated');
+  });
+
+  it('已标定：源检测用源侧标记，与目标标记几何无关（目标踝下 5cm 不改变检测）', () => {
     const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
+    const sm = buildSourceMotion(bvh);
     const { rig } = buildTargetRig({});
     const hackedRig: RetargetRig = {
       ...rig,
@@ -162,12 +170,71 @@ describe('R05 源侧标记', () => {
         'RightFoot.ball': { ...rig.markers['RightFoot.ball']!, offset: [0, -0.05, 0.09] },
       },
     };
-    const bl = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hackedRig);
-    const out = retargetMotion({ source: sm, targetRig: hackedRig, baseline: bl, recipe, environment, sourceCalibration: null });
-    // 源侧检测用的是源几何 → 接触存在，不会把双脚误判成“摆动+穿透”
-    expect(out.diagnostics.some((d) => d.code === 'MRC_SOURCE_MARKERS_DERIVED')).toBe(true);
-    expect(out.metrics!.maxAnchorDeviationM).toBeLessThan(0.01);
+    const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hackedRig);
+    const recipe = createDefaultRecipe(
+      { guid: 'as_src00001', path: 'assets/x/w.bvh', contentHash: 'sha256:a' },
+      { guid: 'as_tgt00001', path: 'assets/x/t.glb', contentHash: 'sha256:b' },
+    );
+    const environment: RetargetEnvironment = {
+      sourcePlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      origin: 'recipe-default', sceneNodeId: null,
+    };
+    const cal = {
+      schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
+      supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
+      unitScale: 1, upAxis: 'y' as const,
+      markers: {
+        'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+        'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+      },
+      rotationBaseline: 'direction' as const,
+    };
+    const out = retargetMotion({ source: sm, targetRig: hackedRig, baseline, recipe, environment, sourceCalibration: cal });
+    expect(out.diagnostics.some((d) => d.code === 'MRC_CONTACT_UNCALIBRATED')).toBe(false);
     expect(out.diagnostics.some((d) => d.code === 'MRQ_SWING_PENETRATION')).toBe(false);
+    expect(out.metrics!.maxAnchorDeviationM).toBeLessThan(0.01);
+  });
+
+  it('复审 P1：同骨 heel/ball 交换插入顺序 → 输出不变（身份对应，不取第一项）', () => {
+    const bvh = parseBvh(buildBvhText({ rootPos: () => [0, 100, 0] }));
+    const sm = buildSourceMotion(bvh);
+    const { rig } = buildTargetRig({});
+    const baseline = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, rig);
+    const recipe = createDefaultRecipe(
+      { guid: 'as_src00001', path: 'assets/x/w.bvh', contentHash: 'sha256:a' },
+      { guid: 'as_tgt00001', path: 'assets/x/t.glb', contentHash: 'sha256:b' },
+    );
+    const environment: RetargetEnvironment = {
+      sourcePlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      targetPlane: { origin: [0, 0, 0], normal: [0, 1, 0] },
+      origin: 'recipe-default', sceneNodeId: null,
+    };
+    const ball = (bone: string) => ({ bone, offset: [0, -0.03, 0.09] as [number, number, number], origin: 'manual' as const });
+    const heel = (bone: string) => ({ bone, offset: [0, -0.03, -0.05] as [number, number, number], origin: 'manual' as const });
+    const mkCal = (swap: boolean) => ({
+      schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: 1,
+      supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
+      unitScale: 1, upAxis: 'y' as const,
+      markers: swap
+        ? {
+            'LeftFoot.heel': heel('LeftFoot'),
+            'LeftFoot.ball': ball('LeftFoot'),
+            'RightFoot.heel': heel('RightFoot'),
+            'RightFoot.ball': ball('RightFoot'),
+          }
+        : {
+            'LeftFoot.ball': ball('LeftFoot'),
+            'LeftFoot.heel': heel('LeftFoot'),
+            'RightFoot.ball': ball('RightFoot'),
+            'RightFoot.heel': heel('RightFoot'),
+          },
+      rotationBaseline: 'direction' as const,
+    });
+    const a = retargetMotion({ source: sm, targetRig: rig, baseline, recipe, environment, sourceCalibration: mkCal(false) });
+    const b = retargetMotion({ source: sm, targetRig: rig, baseline, recipe, environment, sourceCalibration: mkCal(true) });
+    expect(b.clip!.frames[0]!.bonePos.LeftFoot![0]).toBeCloseTo(a.clip!.frames[0]!.bonePos.LeftFoot![0], 9);
+    expect(b.clip!.frames[0]!.bonePos.LeftFoot![1]).toBeCloseTo(a.clip!.frames[0]!.bonePos.LeftFoot![1], 9);
   });
 });
 
@@ -343,7 +410,12 @@ describe('R12 依赖身份含实际标定', () => {
       const cal = {
         schemaVersion: RETARGET_META_SCHEMA_VERSION, side: 'source' as const, pelvisHeightM: pelvis,
         supportPlane: { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number], source: 'declared' as const, confidence: 1 },
-        unitScale: 1, upAxis: 'y' as const, markers: {}, rotationBaseline: 'direction' as const,
+        unitScale: 1, upAxis: 'y' as const,
+        markers: {
+          'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+          'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' as const },
+        },
+        rotationBaseline: 'direction' as const,
       };
       const out = retargetMotion({
         source: input.sm, targetRig: input.rig, baseline: input.baseline,
@@ -461,3 +533,105 @@ function rotateTest(q: Quat, v: [number, number, number]): [number, number, numb
     m[2]! * v[0] + m[6]! * v[1] + m[10]! * v[2],
   ];
 }
+
+// ───────────────── 复审第二轮 P1 探针 ─────────────────
+
+describe('复审 P1：IK 保留目标参考旋转', () => {
+  it('大腿 restLocalR=Z20°：膝位可由骨世界旋转+固定偏移重建（≤1e-6，旧实现差 0.146m）', () => {
+    const { rig } = buildTargetRig({});
+    // 目标大腿参考旋转 Z20°（不改任何偏移）
+    const h10 = Math.sin((10 * Math.PI) / 180);
+    const c10 = Math.cos((10 * Math.PI) / 180);
+    const hacked: RetargetRig = {
+      ...rig,
+      bones: { ...rig.bones, LeftUpLeg: { ...rig.bones.LeftUpLeg!, restLocalR: [0, 0, h10, c10] } },
+    };
+    const times = new Float64Array([0, 1 / 30]);
+    const ident = (n: number): Float64Array<ArrayBuffer> => {
+      const a = new Float64Array(n * 4);
+      for (let i = 0; i < n; i++) a[i * 4 + 3] = 1;
+      return a;
+    };
+    const sm: SourceMotion = {
+      fingerprint: 'fp1_r', boneNames: ['Hips', 'LeftUpLeg', 'LeftLeg', 'LeftFoot'], times,
+      localRotations: {}, worldRotations: { LeftFoot: ident(2) }, worldPositions: {},
+      rootBone: 'Hips', rootMode: 'world-trajectory', canWorldLock: true, unitScaleSource: 1, upAxisSource: 'y',
+    };
+    const rootPos = new Float64Array(6);
+    rootPos[1] = 0.95; rootPos[4] = 0.95;
+    const rootQ = new Float64Array(8);
+    rootQ[3] = 1; rootQ[7] = 1;
+    const res = solvePose({
+      targetRig: hacked, sourceMotion: sm, baselineLocals: [{}, {}],
+      rootPositions: rootPos, rootQuats: rootQ,
+      segments: [{
+        id: 'LeftFoot.ball@0s', marker: 'LeftFoot.ball', chainId: 'LeftLeg',
+        startS: 0, endS: 1, mode: 'support', space: 'world', origin: 'annotated',
+        confidence: 1, anchor: [0.1, 0, 0.09], pivot: null,
+      }],
+      tolerances: defaultRetargetTolerances(),
+    });
+    // 重建：膝世界 = 髋世界 + R_hip_world · restLeg 偏移
+    const hip = res.frames[0]!.bonePos.LeftUpLeg!;
+    const hipQ = res.frames[0]!.boneQuat.LeftUpLeg!;
+    const off = hacked.bones.LeftLeg!.restLocalT;
+    const m = quatToMat(hipQ);
+    const knee = [
+      hip[0] + m[0]! * off[0] + m[4]! * off[1] + m[8]! * off[2],
+      hip[1] + m[1]! * off[0] + m[5]! * off[1] + m[9]! * off[2],
+      hip[2] + m[2]! * off[0] + m[6]! * off[1] + m[10]! * off[2],
+    ];
+    const want = res.frames[0]!.bonePos.LeftLeg!;
+    expect(Math.hypot(knee[0]! - want[0], knee[1]! - want[1], knee[2]! - want[2])).toBeLessThan(1e-6);
+  });
+});
+
+describe('复审 P1：方向基准保留参考 roll', () => {
+  it('目标上臂 X+90°/前臂 X−90°、源静止 T-pose → 基准局部 == 目标 restLocalR（蒙皮系不扭）', () => {
+    const bvh = parseBvh(buildBvhText({ armDeg: 0, rootPos: () => [0, 100, 0] }));
+    const { rig } = buildTargetRig({});
+    const h = Math.SQRT1_2;
+    const hacked: RetargetRig = {
+      ...rig,
+      bones: {
+        ...rig.bones,
+        LeftArm: { ...rig.bones.LeftArm!, restLocalR: [h, 0, 0, h] },
+        LeftForeArm: { ...rig.bones.LeftForeArm!, restLocalR: [-h, 0, 0, h] },
+      },
+    };
+    const bl = computeDirectionBaseline({ srcDirections: sourceRestDirections(bvh) }, hacked);
+    for (const [bone, expectQ] of [['LeftArm', [h, 0, 0, h]], ['LeftForeArm', [-h, 0, 0, h]]] as const) {
+      const local = quatMul(quatMul(bl.pre[bone]!, [0, 0, 0, 1] as Quat), bl.post[bone]!);
+      for (let k = 0; k < 4; k++) expect(local[k]).toBeCloseTo(expectQ[k], 9);
+    }
+  });
+});
+
+describe('复审 P1：跳过的并发约束进残差', () => {
+  it('ball+heel 同帧、heel 锚点偏 10cm → heel 段残差 ≈0.1 计入 anchorDeviations（管线级 partial）', () => {
+    const { rig } = buildTargetRig({});
+    const times = new Float64Array([0]);
+    const sm: SourceMotion = {
+      fingerprint: 'fp1_r2', boneNames: ['Hips', 'LeftUpLeg', 'LeftLeg', 'LeftFoot'], times,
+      localRotations: {}, worldRotations: { LeftFoot: new Float64Array([0, 0, 0, 1]) }, worldPositions: {},
+      rootBone: 'Hips', rootMode: 'world-trajectory', canWorldLock: true, unitScaleSource: 1, upAxisSource: 'y',
+    };
+    const rootPos = new Float64Array([0, 0.95, 0]);
+    const rootQ = new Float64Array([0, 0, 0, 1]);
+    const res = solvePose({
+      targetRig: rig, sourceMotion: sm, baselineLocals: [{}],
+      rootPositions: rootPos, rootQuats: rootQ,
+      segments: [
+        { id: 'ball@0s', marker: 'LeftFoot.ball', chainId: 'LeftLeg', startS: 0, endS: 1, mode: 'support', space: 'world', origin: 'annotated', confidence: 1, anchor: [0.1, 0, 0.09], pivot: null },
+        // heel 锚点故意偏 10cm（与 ball 锚定的脚位冲突）
+        { id: 'heel@0s', marker: 'LeftFoot.heel', chainId: 'LeftLeg', startS: 0, endS: 1, mode: 'support', space: 'world', origin: 'annotated', confidence: 1, anchor: [0.1, 0, -0.15], pivot: null },
+      ],
+      tolerances: defaultRetargetTolerances(),
+    });
+    expect(res.diagnostics.some((d) => d.code === 'MRP_CONCURRENT_MARKERS')).toBe(true);
+    const heelDev = res.anchorDeviations.find((d) => d.segmentId === 'heel@0s')!;
+    expect(heelDev).toBeDefined();
+    expect(heelDev.maxM).toBeGreaterThan(0.05);
+    expect(heelDev.maxM).toBeLessThan(0.15);
+  });
+});

@@ -152,7 +152,20 @@ describe('retargetMotion · 失败路径', () => {
       ...makeInput(true).recipe,
       annotations: [{ marker: 'LeftFoot.ball', startS: 0.0, endS: 0.1, mode: 'slide' as const }],
     };
-    const out = retargetMotion({ source: sm, targetRig: rig, baseline, recipe: slideRecipe, environment, sourceCalibration: null });
+    // 源标定提供足底标记（未标定语义直接不做接触，slide 段拿不到锚点）
+    const out = retargetMotion({
+      source: sm, targetRig: rig, baseline, recipe: slideRecipe, environment,
+      sourceCalibration: {
+        schemaVersion: RETARGET_META_SCHEMA_VERSION,
+        side: 'source',
+        pelvisHeightM: 1.0,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1,
+        upAxis: 'y',
+        markers: { 'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' } },
+        rotationBaseline: 'direction',
+      },
+    });
     expect(out.status).not.toBe('failed');
     expect(out.diagnostics.some((d) => d.code === 'MRP_MODE_SOFT_MVP')).toBe(true);
   });
