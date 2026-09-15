@@ -113,6 +113,10 @@ export interface RetargetSessionSummary {
   rootMode: RootMotionMode | null;
   /** 源是否有可信世界轨迹（世界锁脚前提） */
   canWorldLock: boolean;
+  /** 当前配方的空间模式（未建配方时为 null）；呈现层据此回显，勿自持 DOM 状态 */
+  spaceMode: 'normalize-gait' | 'preserve-world' | null;
+  /** 目标支撑平面高度（世界 Y，米）；预览地线画这里 */
+  targetPlaneY: number | null;
   frames: number | null;
   durationS: number | null;
   fps: number | null;
@@ -295,6 +299,13 @@ export function bakeOutputRigFromSkeleton(
         'NONUNIFORM_SCALE',
         `glTF 节点 ${node} 的局部缩放 [${s.join(', ')}] 非统一，局部轨道无法表达，拒绝`,
       ));
+    } else if ((s[0] ?? 1) < 0) {
+      // 反射：统一负缩放同样无法经刚性骨架的局部轨道表达——在会话层早拒，
+      // 不让求解白跑后由 bake 的可表达性门禁兜底
+      diagnostics.push(err(
+        'NEGATIVE_SCALE',
+        `glTF 节点 ${node} 的统一缩放为负（反射），局部轨道无法表达，拒绝`,
+      ));
     }
     // 与 rig-calibration 相同的规范化：t·unitScale、r 刚体换基
     const tScaled: [number, number, number] = [loc.t[0] * unitScale, loc.t[1] * unitScale, loc.t[2] * unitScale];
@@ -377,7 +388,8 @@ export function bakeOutputRigFromSkeleton(
         restLocalT: [d[0] / cum, d[1] / cum, d[2] / cum],
         restLocalR: quatMul(quatConj(pq), wr),
         nodeIndex: node,
-        restUniformScale: cum > 0 ? selfScale / cum : 1,
+        // cum ≠ 0（含负）：自身比例 = selfScale / cum，符号语义与 bake 累计缩放一致
+        restUniformScale: cum !== 0 ? selfScale / cum : 1,
       };
     }
   }
@@ -491,6 +503,33 @@ export class RetargetSession {
     return { ok: true, diagnostics: built.diagnostics };
   }
 
+  /**
+   * 用**当前**目标输入核对会话目标：几何有变 → 重设目标并失效（'changed'），
+   * 无变 → 不动（'unchanged'），构造失败 → 'invalid'（目标保持原状）。
+   *
+   * 入口 A 的 fit 在绑定面板里随时可被拖改——求解前 sync 保证解的是当前 fit；
+   * 导出前 sync 必须为 unchanged，否则拒绝导出（防「解是旧 fit、导出铺新 fit」）。
+   */
+  syncTarget(input: RetargetTargetInput): { state: 'unchanged' | 'changed' | 'invalid'; diagnostics: RetargetDiagnostic[] } {
+    if (this.target === null) {
+      const r = this.setTarget(input);
+      return { state: r.ok ? 'changed' : 'invalid', diagnostics: r.diagnostics };
+    }
+    const built = this.buildTargetParts(input, this.targetCal);
+    if (!built.ok) return { state: 'invalid', diagnostics: built.diagnostics };
+    if (built.rig.fingerprint === this.target.rig.fingerprint) {
+      return { state: 'unchanged', diagnostics: built.diagnostics };
+    }
+    this.target = {
+      rig: built.rig,
+      name: input.name,
+      output: built.output,
+      origin: { skeleton: input.skeleton ?? null, fitPositions: input.fitPositions ?? null, name: input.name },
+    };
+    this.bump();
+    return { state: 'changed', diagnostics: built.diagnostics };
+  }
+
   /** 源侧标定（null = 清除 → 接触能力回到未标定态）。side 必须为 source。 */
   setSourceCalibration(cal: RetargetCalibration | null): LoadResult {
     if (cal === null) {
@@ -560,6 +599,7 @@ export class RetargetSession {
   solve(signal?: AbortSignal): RetargetOutcome {
     const sessionDiags: RetargetDiagnostic[] = [];
     if (this.source === null || this.target === null) {
+      this.sessionDiagnostics = [];
       const outcome = syntheticFailed(
         this.source === null ? 'NO_SOURCE' : 'NO_TARGET',
         this.source === null ? '尚未载入源动作' : '尚未设定目标骨架',
@@ -568,6 +608,17 @@ export class RetargetSession {
       return outcome;
     }
     const recipe = this.ensureRecipe(sessionDiags);
+    if (recipe === null) {
+      // 配方无法与当前输入对齐（如绑定了标定却未设置）：失败，不静默降级
+      this.sessionDiagnostics = sessionDiags;
+      const outcome = syntheticFailed(
+        'RECIPE_NOT_USABLE',
+        '配方无法与当前输入对齐（详见诊断：缺标定 / 指纹不符且不可自动重绑）',
+      );
+      outcome.diagnostics = [...sessionDiags, ...outcome.diagnostics];
+      this.lastFailure = outcome;
+      return outcome;
+    }
     const baseline = computeDirectionBaseline(
       { srcDirections: sourceRestDirections(this.source.bvh) },
       this.target.rig,
@@ -723,11 +774,12 @@ export class RetargetSession {
       : null;
   }
 
-  /** 目标骨架视图：骨序 / 父链 / 标记表 */
+  /** 目标骨架视图：骨序 / 父链 / 标记表 / 支撑平面高度（预览地线） */
   targetSkeletonView(): {
     order: readonly string[];
     parentOf: (bone: string) => string | null;
     markers: Readonly<Record<string, { id: string; bone: string; offset: V3 }>>;
+    planeY: number;
   } | null {
     if (this.target === null) return null;
     const bones = this.target.rig.bones;
@@ -735,6 +787,7 @@ export class RetargetSession {
       order: this.target.rig.order,
       parentOf: (b: string) => bones[b]?.parent ?? null,
       markers: this.target.rig.markers,
+      planeY: this.target.rig.supportPlane.origin[1],
     };
   }
 
@@ -787,6 +840,8 @@ export class RetargetSession {
       targetCalibrated: this.targetCal !== null,
       rootMode: this.source?.motion.rootMode ?? null,
       canWorldLock: this.source?.motion.canWorldLock ?? false,
+      spaceMode: this.recipe?.spaceMode ?? null,
+      targetPlaneY: this.target?.rig.supportPlane.origin[1] ?? null,
       frames: times?.length ?? this.source?.motion.times.length ?? null,
       durationS: times !== undefined && times.length > 0 ? times[times.length - 1]! : null,
       fps: this.source !== null ? 1 / this.source.bvh.frameTime : null,
@@ -928,8 +983,13 @@ export class RetargetSession {
   /**
    * 配方与当前输入对齐：源 / 目标 / 标定指纹任一变化 → 重绑（保留用户参数）。
    * A16：改任一侧标定只重绑该侧指纹；重算即用新指纹（不悄悄沿用旧绑定）。
+   *
+   * R13 防降级（复审 P1）：**配方绑定了标定指纹、会话却没设该侧标定**时不允许静默
+   * 重绑成"未标定"求解——那会把持久配方的标定身份就地抹掉。此时 solve 直接失败，
+   * 指引补标定（loadCalibrationFromMeta）或显式重置配方。标定存在但指纹不同
+   * （用户改了标定）才是 A16 允许的重绑路径。
    */
-  private ensureRecipe(sessionDiags: RetargetDiagnostic[]): RetargetRecipe {
+  private ensureRecipe(sessionDiags: RetargetDiagnostic[]): RetargetRecipe | null {
     if (this.source === null || this.target === null) {
       throw new Error('MRS_INTERNAL: ensureRecipe 需要源与目标先就绪');
     }
@@ -945,6 +1005,22 @@ export class RetargetSession {
       cur.algorithmVersion === RETARGET_ALGORITHM_VERSION
     ) {
       return cur;
+    }
+    if (cur !== null && cur.sourceCalibrationFingerprint !== '' && srcCalFp === '') {
+      sessionDiags.push(err(
+        'RECIPE_CAL_UNBOUND',
+        `配方绑定了源标定指纹（${cur.sourceCalibrationFingerprint.slice(0, 10)}…）但会话未设置源标定：` +
+          '拒绝静默降级为未标定求解；请先载入标定（loadCalibrationFromMeta）或重置配方',
+      ));
+      return null;
+    }
+    if (cur !== null && cur.targetCalibrationFingerprint !== '' && tgtCalFp === '') {
+      sessionDiags.push(err(
+        'RECIPE_CAL_UNBOUND',
+        `配方绑定了目标标定指纹（${cur.targetCalibrationFingerprint.slice(0, 10)}…）但会话未设置目标标定：` +
+          '拒绝静默降级；请先载入标定或重置配方',
+      ));
+      return null;
     }
     const fresh = createDefaultRecipe(
       this.sourceRef(),

@@ -1336,6 +1336,14 @@ async function boot(): Promise<void> {
 
   /** 会话求解 → 烘焙产物缓存（animClip）→ 工作台 / 侧栏刷新。失败时 animClip 置空。 */
   function solveAndRefresh(): void {
+    // 入口 A 的 fit 在绑定面板里随时可被拖改：求解前先同步目标，
+    // 解的一定是当前 fit（有变 → bump 失效 → 本次求解即重算）
+    if (retargetEntry === 'binding' && binding !== null) {
+      retargetSession.syncTarget({
+        fitPositions: binding.currentFit().tposePositions,
+        name: bindingSession?.name ?? 'binding',
+      });
+    }
     const outcome = retargetSession.solve();
     animClip = null;
     const baked = retargetSession.bake();
@@ -1437,6 +1445,7 @@ async function boot(): Promise<void> {
       targetSegments,
       markers,
       bounds,
+      groundY: skelView?.planeY ?? null,
       canApply: retargetEntry === 'object' && retargetTargetObject !== null,
       canExport: retargetEntry === 'binding' && binding !== null,
       entry: retargetEntry,
@@ -1457,7 +1466,11 @@ async function boot(): Promise<void> {
         onExport: () => void exportAnimGlb(),
         onSpaceModeChange: (mode) => {
           retargetSession.updateRecipeSettings({ spaceMode: mode });
-          updateRetargetWorkbench(); // 状态立即变「结果待更新」，旧结果守门拦截
+          // 状态立即变「结果待更新」：侧栏同步刷新（管线行），旧结果由消费点守门拦截
+          if (binding !== null && retargetEntry === 'binding') {
+            binding.setAnimationInfo(animInfoHtml());
+          }
+          updateRetargetWorkbench();
         },
         onFrameChange: (f) => {
           previewFrame = f;
@@ -1587,10 +1600,45 @@ async function boot(): Promise<void> {
     input.click();
   }
 
-  /** 导出「T-pose 网格 + 骨架 + 会话烘焙动画」的 GLB（与预览同版本） */
-  async function exportAnimGlb(): Promise<BindExportStats | null> {
+  /**
+   * 消费守门（导出 / 挂载共用）：stale、无结果、或入口 A 的 fit 已被拖改 → 拒绝并提示。
+   * 这是 session.requireResult 之外的第二道防线——绑定面板自带的「导出动画」按钮
+   * 不感知会话状态，真正的防线必须在消费点。
+   */
+  function guardedAnimForConsumption(): RetargetAnimPayload | null {
+    const guard = retargetSession.requireResult();
+    if (!guard.ok) {
+      panel.setModelInfo(`导出/应用被拦截：${guard.message}`);
+      return null;
+    }
+    if (retargetEntry === 'binding' && binding !== null) {
+      // fit 在求解后被拖改 → 解与导出骨架错配，必须重新生成
+      const sync = retargetSession.syncTarget({
+        fitPositions: binding.currentFit().tposePositions,
+        name: bindingSession?.name ?? 'binding',
+      });
+      if (sync.state === 'changed') {
+        panel.setModelInfo('导出被拦截：目标（绑定 T-pose）在生成后被修改，请重新「生成预览」再导出');
+        return null;
+      }
+      if (sync.state === 'invalid') {
+        panel.setModelInfo(`导出被拦截：目标骨架构建失败（${sync.diagnostics[0]?.message ?? 'MRS'}）`);
+        return null;
+      }
+    }
     const c = animClip;
-    if (c === null || binding === null) return null;
+    if (c === null) {
+      panel.setModelInfo('导出被拦截：没有烘焙产物（求解/烘焙失败，见重定向工作台诊断）');
+      return null;
+    }
+    return c;
+  }
+
+  /** 导出「T-pose 网格 + 骨架 + 会话烘焙动画」的 GLB（与预览同版本，双守门） */
+  async function exportAnimGlb(): Promise<BindExportStats | null> {
+    if (binding === null) return null;
+    const c = guardedAnimForConsumption();
+    if (c === null) return null;
     const anim: BindAnimationInput = {
       name: c.name,
       times: c.times,
@@ -1608,6 +1656,11 @@ async function boot(): Promise<void> {
    * 同名片段先移除再追加——工作台里反复「应用」不堆叠重复片段。
    */
   function applyAnimToObject(obj: SceneObject): { tracks: number; clip: number } | null {
+    const guard = retargetSession.requireResult();
+    if (!guard.ok) {
+      panel.setModelInfo(`应用被拦截：${guard.message}`);
+      return null;
+    }
     const c = animClip;
     if (c === null || obj.skeleton === null) return null;
     const clip = clipToAnimClip(c, obj.skeleton);
@@ -1861,10 +1914,11 @@ async function boot(): Promise<void> {
         if (obj === undefined) return null;
         return loadBvhForObject(text, name, obj);
       },
-      /** 导出带动画的 GLB 走一遍全流程（不落盘），返回统计供断言 */
+      /** 导出带动画的 GLB 走一遍全流程（不落盘），返回统计供断言；与用户导出同守门 */
       exportDryRun: async () => {
-        const c = animClip;
-        if (c === null || binding === null) return null;
+        if (binding === null) return null;
+        const c = guardedAnimForConsumption();
+        if (c === null) return null;
         const anim: BindAnimationInput = {
           name: c.name,
           times: c.times,

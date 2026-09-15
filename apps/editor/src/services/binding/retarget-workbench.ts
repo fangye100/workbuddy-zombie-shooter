@@ -30,6 +30,8 @@ export interface RetargetWorkbenchState {
   markers: ReadonlyArray<readonly [number, number, string]>;
   /** 两视口统一的包围盒（同尺度对比；null = 无内容） */
   bounds: { minX: number; maxX: number; minY: number; maxY: number } | null;
+  /** 目标支撑平面高度（世界 Y，米；目标视口的地线画这里；null = 未设目标） */
+  groundY: number | null;
   canApply: boolean;
   canExport: boolean;
   /** 入口 A/B：A=绑定面板（导出动画），B=场景物体（应用到角色） */
@@ -334,7 +336,8 @@ export class RetargetWorkbench {
     this.calTgtEl.appendChild(this.calRow('目标标定', sum.targetCalibrated, true));
     this.rootModeEl.textContent = sum.rootMode === null ? '—' : (ROOT_MODE_LABEL[sum.rootMode] ?? sum.rootMode);
     this.contactNoteEl.textContent = this.contactNote(sum);
-    this.spaceModeSel.value = this.currentSpaceMode();
+    // 回显来自会话配方（summary.spaceMode），不自持 DOM 状态——换目标 / 重绑后不残留旧选择
+    if (sum.spaceMode !== null) this.spaceModeSel.value = sum.spaceMode;
     this.renderMetrics(sum);
     this.renderDiagnostics(sum);
     const busy = sum.status === 'idle';
@@ -370,10 +373,6 @@ export class RetargetWorkbench {
     if (sum.coverage.includes('phase-only')) return '地面接触：仅相位指导（原地 / 无可信轨迹，不做世界锁脚）';
     if (sum.canWorldLock) return '地面接触：有可信轨迹，生成后按检测结果启用';
     return '地面接触：不可用（源无世界轨迹）';
-  }
-
-  private currentSpaceMode(): string {
-    return this.spaceModeSel.value;
   }
 
   private renderMetrics(sum: RetargetSessionSummary): void {
@@ -492,7 +491,7 @@ export class RetargetWorkbench {
     const s = this.state;
     if (s === null) return;
     this.drawSkeletonView(this.srcCanvas, s.sourceSegments, s.bounds, '#FFC531');
-    this.drawSkeletonView(this.tgtCanvas, s.targetSegments, s.bounds, '#8FD14F', s.markers, s.summary);
+    this.drawSkeletonView(this.tgtCanvas, s.targetSegments, s.bounds, '#8FD14F', s.markers, s.groundY);
   }
 
   private drawSkeletonView(
@@ -501,7 +500,7 @@ export class RetargetWorkbench {
     bounds: RetargetWorkbenchState['bounds'],
     color: string,
     markers?: ReadonlyArray<readonly [number, number, string]>,
-    summary?: RetargetSessionSummary,
+    groundY?: number | null,
   ): void {
     const ctx = canvas.getContext('2d');
     if (ctx === null) return;
@@ -525,13 +524,13 @@ export class RetargetWorkbench {
     const px = (x: number): number => ox + x * scale;
     const py = (y: number): number => oy - y * scale;
 
-    // 支撑平面（目标视口按 rig 平面高度画地线）
-    if (summary !== null) {
+    // 支撑平面：按目标 rig 的真实平面高度画地线（穿透/接触目检的基准，不是硬编码 0）
+    if (groundY !== undefined && groundY !== null) {
       ctx.strokeStyle = '#2BC4D6';
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.moveTo(0, py(0));
-      ctx.lineTo(w, py(0));
+      ctx.moveTo(0, py(groundY));
+      ctx.lineTo(w, py(groundY));
       ctx.stroke();
       ctx.setLineDash([]);
     }
