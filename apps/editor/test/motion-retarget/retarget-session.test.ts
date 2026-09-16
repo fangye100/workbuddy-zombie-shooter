@@ -780,7 +780,7 @@ describe('retarget-session 标定判据契约（85620c9 复审三反例回归）
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(false);
   });
 
-  it('P1 反例1 附属：残留单位声明对换骨架不适用时被人形合理性校验丢弃', () => {
+  it('P1 反例1 附属：换资产不沿用旧单位（资产键门控），回原资产复用', () => {
     const s = new RetargetSession(memStore().store);
     s.loadSourceBvh(walkBvh(), 'walk');
     const cmFit: JointPositions = {};
@@ -789,13 +789,14 @@ describe('retarget-session 标定判据契约（85620c9 复审三反例回归）
     const cmCal = targetCalibration(1.0);
     cmCal.unitScale = 0.01;
     expect(s.setTargetCalibration(cmCal).ok).toBe(true);
-    // 换成**米制**骨架（同量级数字的米制 fit）：残留 0.01 会得到 0.01m 级骨盆 → 越界丢弃
+    // 换**米制**资产（不同键）：单位上下文不沿用——直接按默认米制构建，无跨资产污染
     s.setTarget({ fitPositions: tposeWorldPositions(), name: 'meter-rig' });
-    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(true);
-    // 丢弃后按米制重建：支撑面在米制原点附近（残留 0.01 时骨盆 0.01m 触发丢弃）
     const py = s.targetSkeletonView()!.planeY;
     expect(py).toBeGreaterThan(-0.5);
     expect(py).toBeLessThan(0.5);
+    // 换回原 cm 资产（同键）：上下文复用（不再触发丢弃/推断）
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1);
   });
 
   it('P1 反例2：角色与地面同时抬高 0.5m（比例不变）→ 源/目标标定都不得误拒', () => {
@@ -844,7 +845,7 @@ describe('retarget-session 标定判据契约（85620c9 复审三反例回归）
 });
 
 describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () => {
-  it('P2：单位丢弃后换回 cm 资产 → 按厘米制推断重建（不再静默 97m）', () => {
+  it('P2：资产键门控下换回 cm 资产直接复用单位（不静默 97m）', () => {
     const s = new RetargetSession(memStore().store);
     s.loadSourceBvh(walkBvh(), 'walk');
     const cmFit: JointPositions = {};
@@ -853,21 +854,39 @@ describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () =>
     const cmCal = targetCalibration(1.0);
     cmCal.unitScale = 0.01;
     expect(s.setTargetCalibration(cmCal).ok).toBe(true);
-    // 换米制资产 → 单位丢弃
+    // 换米制资产（不同键）→ 不沿用；换回 cm 资产（同键）→ 上下文直接复用
     s.setTarget({ fitPositions: tposeWorldPositions(), name: 'meter-rig' });
-    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(true);
-    // 换回 cm 资产：默认米制会得到 ~97m 骨盆 → 超出人形区间 → 按厘米制推断
     s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
-    const diags = s.summary().diagnostics;
-    expect(diags.some((d) => d.code === 'MRS_TARGET_UNITS_INFERRED')).toBe(true);
-    // 推断后回到米制量级（97m 级是错的）
-    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1);
-    // 推断出的单位沿用：再次 sync 同骨架 → 不再出推断/丢弃警告
+    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1); // 米制量级（97m 级是错的）
     const again = s.syncTarget({ fitPositions: cmFit, name: 'cm-rig' });
     expect(again.state).toBe('unchanged');
-    // 求解可用（不再产出 97m 级 h_t 的怪结果）
     const out = s.solve();
     expect(out.status).not.toBe('failed');
+  });
+
+  it('P1(1505f36)：无标定资产的单位上下文按资产键隔离——.1 资产不得污染米制资产', () => {
+    // 差分 oracle：B 直接载入 vs 先载 A(.1) 再切 B，两者骨架必须一致
+    const mk = () => {
+      const s = new RetargetSession(memStore().store);
+      s.loadSourceBvh(walkBvh(), 'walk');
+      return s;
+    };
+    const fitA: JointPositions = {}; // 分米制授权：数字 ×10
+    for (const [k, p] of Object.entries(tposeWorldPositions())) fitA[k] = [p[0]! * 10, p[1]! * 10, p[2]! * 10];
+    const fitB = tposeWorldPositions(); // 米制
+    // 直接 B
+    const direct = mk();
+    direct.setTarget({ fitPositions: fitB, name: 'B' });
+    const directPlane = direct.targetSkeletonView()!.planeY;
+    // 先 A（带 .1 标定）再切 B
+    const viaA = mk();
+    viaA.setTarget({ fitPositions: fitA, name: 'A' });
+    const calA = targetCalibration(1.0);
+    calA.unitScale = 0.1;
+    expect(viaA.setTargetCalibration(calA).ok).toBe(true);
+    viaA.setTarget({ fitPositions: fitB, name: 'B' });
+    expect(viaA.targetSkeletonView()!.planeY).toBeCloseTo(directPlane, 9);
+    // 两边都在人形区间内（0.1 缩放后的 B≈0.2m 也合法）——差异只能靠资产键拦住
   });
 
   it('P3：手部标记（下垂远小于 h）不劫持足底判据', () => {
@@ -925,5 +944,25 @@ describe('retarget-session 单侧缩短不得被未变侧掩盖（复审 P1 回�
     const bad = s.setTargetCalibration(cal);
     expect(bad.ok).toBe(false);
     expect(bad.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
+  });
+});
+
+describe('retarget-session 标定载入事务性（1505f36 复审 P2 回归）', () => {
+  it('模板目标载入不支持的 X-up 标定：失败不覆盖原标定，清除仍可用', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setTarget({ name: 'tpl' }); // 模板目标（无 skeleton/fit）
+    // 先放一个模板接受的标定（单位/轴向 null → 模板规范形态）
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(true);
+    // X-up 标定：模板分支 MRR_TEMPLATE_NOT_CANONICAL 拒绝——失败且**不覆盖**原状态
+    const xup = targetCalibration(1.0);
+    xup.upAxis = 'x';
+    const r = s.setTargetCalibration(xup);
+    expect(r.ok).toBe(false);
+    expect(s.summary().targetCalibrated).toBe(true); // 旧标定保留（事务回滚）
+    // 清除不再被失败状态卡死
+    expect(s.setTargetCalibration(null).ok).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(false);
   });
 });
