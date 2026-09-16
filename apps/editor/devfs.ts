@@ -20,16 +20,23 @@
  *   2. 浏览器保存（编辑器）与 Agent 写入**都必须走这里**。直接 `fsp.writeFile` 的写入
  *      **不受保护** —— 进程内队列约束不了别的进程/程序。
  *   3. 即使用队列 + 即时校验，`rename` 前仍存在毫秒级窗口（别的进程此时写入仍可能
- *      被覆盖）。这个窗口**无法在本机无锁文件系统上彻底消除**；遇到时按 409 +
- *      人工合并处理。因此：**不要宣称队列提供了"完整保护"**，它的保证是
- *      「经过 API 的写者互不可覆盖 + 直接写者能被判出 409（前提是他们先读了基准）」。
+ *      被覆盖）。这个窗口**无法在本机无锁文件系统上彻底消除**。因此：**不要宣称
+ *      队列提供了"完整保护"**。它的准确保证是：
+ *        - 经过 API 的写者**互不可覆盖**（同基准并发 → 一个 200、一个 409）；
+ *        - 直接写文件者**没有 HTTP 响应、也不会被"判出 409"** —— 409 只存在于
+ *          HTTP API 内。直接写者造成的版本漂移，要等**之后某次经过 API 的保存**
+ *          在核对基准时才可能被检出；那次保存返回 409，但写入本身早已发生。
  *   4. 写入失败（500）不会终止进程、不会卡死队列：下一次同路径写入照常执行。
+ *   5. 队列按**文件身份**（realpath + 平台大小写语义）分桶，不是按路径字符串：
+ *      Windows/macOS 上 `case.json` 与 `CASE.JSON` 指向同一文件，进同一队列；
+ *      Linux 上大小写是两个文件，**不**强行转小写。
  *
  * ⚠️ 该中间件仅 dev 存在（`vite dev` 的 `zh-fs-api` 插件）；生产构建产物里没有。
  *    生产部署时需在托管产物的 Node server 复刻同一套写路由。
  */
 
 import { createReadStream, existsSync, promises as fsp, statSync } from 'node:fs';
+import { realpathSync, writeFileSync as writeFileSyncCase, existsSync as existsSyncCase, rmSync as rmSyncCase } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 // 与浏览器侧保存共用同一个指纹实现 —— 版本校验必须逐位一致，各算一份必然漂移。
@@ -67,6 +74,51 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
+}
+
+// ------------------------------------------------------------ 文件身份（队列键）
+
+/**
+ * 本机根是否大小写不敏感（写路径上的一次性探测；启动一次，结果缓存）。
+ * Windows/macOS 默认 APFS/NTFS → true；Linux ext4 → false。
+ * 不能跨平台一律转小写：Linux 上 `A.json` 与 `a.json` 是两个文件。
+ */
+let caseInsensitiveCache: boolean | null = null;
+function isCaseInsensitiveFs(root: string): boolean {
+  if (caseInsensitiveCache !== null) return caseInsensitiveCache;
+  if (process.platform === 'win32' || process.platform === 'darwin') {
+    caseInsensitiveCache = true;
+    return true;
+  }
+  try {
+    const probe = path.join(root, `.caseprobe-${process.pid}`);
+    writeFileSyncCase(probe, 'x');
+    const insensitive = existsSyncCase(probe.toUpperCase());
+    rmSyncCase(probe, { force: true });
+    caseInsensitiveCache = insensitive;
+    return insensitive;
+  } catch {
+    caseInsensitiveCache = false;
+    return false;
+  }
+}
+
+/**
+ * 文件身份键：让指向**同一个文件**的不同写法（大小写不同、含 `./`、`a/../a`）
+ * 落入同一个队列。Windows/macOS 用 `realpathSync` 解析出真实路径再统一小写；
+ * 文件不存在时（新建保存）退化为规范化后的路径按平台语义小写。
+ *
+ * 不跨平台一律转小写：Linux 上大小写是两个文件，转小写会把不该串行的写串行化。
+ */
+function fileIdentityKey(root: string, abs: string): string {
+  let resolved = abs;
+  try {
+    resolved = realpathSync(abs);
+  } catch {
+    // 文件尚不存在（新建）：realpath 会抛，退化为规范化路径
+    resolved = path.normalize(abs);
+  }
+  return isCaseInsensitiveFs(root) ? resolved.toLowerCase() : resolved;
 }
 
 /** 收集 POST 请求体并 JSON.parse（空体返回 {}） */
@@ -143,19 +195,45 @@ async function handleWrite(
     return;
   }
 
-  // 🔴 校验 + 写入必须串行完成（复审 P1）。把这次写排进该路径的队列尾部：
+  // 🔴 校验 + 写入必须串行完成（复审 P1）。把这次写排进**同一文件**的队列尾部：
   // 前一个写完（或失败）才轮到它，从此没有「两个写请求交错执行」的窗口。
-  const prev = writeQueues.get(abs) ?? Promise.resolve();
+  // 队列键必须是**文件身份**，不是路径字符串：Windows/macOS 上 `case.json` 与
+  // `CASE.JSON` 是同一个文件，按大小写敏感分桶会让它们跑进两条队列（复审 P1）。
+  const qKey = fileIdentityKey(root, abs);
+  const prev = writeQueues.get(qKey) ?? Promise.resolve();
   const task = prev.catch(() => undefined).then(() => performWrite(abs, rel, body, res));
   // 🔴 队列里存的是**尾巴本身**，且这里 await 的也是它（复审 P1）：
   // 曾经存 `task.finally()` 派生的新 Promise、却只 await 原始 task ——
   // 写入失败后派生 Promise 的拒绝无人消费，进程会以 unhandled rejection 崩掉；
   // 清理时拿原始 task 跟派生 Promise 比，条件永不成立，队列记录永远清不掉。
   const tail = task.finally(() => {
-    if (writeQueues.get(abs) === tail) writeQueues.delete(abs);
+    if (writeQueues.get(qKey) === tail) writeQueues.delete(qKey);
   });
-  writeQueues.set(abs, tail);
+  writeQueues.set(qKey, tail);
   await tail; // 拒绝向上冒到中间件的 try/catch → HTTP 500，进程与队列都活着
+}
+
+/** 临时文件唯一命名计数器（同一进程内单调递增，配合随机数保证不碰撞） */
+let tmpCounter = 0;
+
+/**
+ * 生成一个独占的临时文件路径：进程号 + 时间 + 随机 + 计数器，
+ * 用 `wx`（独占创建）落盘时若撞上已存在的名字，由调用方换下一个。
+ * 不能只靠「文件名 + pid + 毫秒」：同一毫秒的并发请求会互相覆盖。
+ */
+async function uniqueTempPath(abs: string): Promise<string> {
+  const dir = path.dirname(abs);
+  const base = path.basename(abs);
+  for (let i = 0; i < 32; i++) {
+    tmpCounter = (tmpCounter + 1) & 0xffff;
+    const rand = Math.random().toString(36).slice(2, 8);
+    const name = `.${base}.${process.pid}.${Date.now().toString(36)}.${rand}.${tmpCounter.toString(36)}.tmp`;
+    const p = path.join(dir, name);
+    // 预检查：路径尚不存在才用（`wx` 落盘仍会兜底，这里是尽量避免重试）
+    if (!existsSync(p)) return p;
+  }
+  // 32 次都撞上是极小概率，退回纯随机长名
+  return path.join(dir, `.${base}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`);
 }
 
 /** 队列体内执行的一次写入（校验 → 组装 → 原子落盘） */
@@ -228,13 +306,18 @@ async function performWrite(
     return;
   }
 
-  // 护栏③：原子写 = 写 temp 再 rename（同卷内 rename 原子，崩溃不留半截文件）
-  const tmp = path.join(
-    path.dirname(abs),
-    `.${path.basename(abs)}.${process.pid}.${Date.now().toString(36)}.tmp`,
-  );
-  await fsp.writeFile(tmp, out, 'utf8');
-  await fsp.rename(tmp, abs);
+  // 护栏③：原子写 = 写 temp 再 rename（同卷内 rename 原子，崩溃不留半截文件）。
+  // 临时名必须**独占创建**：加随机数 + 计数器 + `wx`（不存在才创建），
+  // 否则两个请求同毫秒同文件名会互相覆盖（复审 P1：大小写并发场景实测碰撞）。
+  const tmp = await uniqueTempPath(abs);
+  await fsp.writeFile(tmp, out, { encoding: 'utf8', flag: 'wx' });
+  try {
+    await fsp.rename(tmp, abs);
+  } catch (e) {
+    // rename 失败要把临时文件收走，否则下次同路径写入会撞上残留
+    await fsp.rm(tmp, { force: true }).catch(() => undefined);
+    throw e;
+  }
   const st = statSync(abs);
   sendJson(res, 200, { ok: true, path: rel, bytes: st.size });
 }

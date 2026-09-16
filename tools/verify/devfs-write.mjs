@@ -14,7 +14,7 @@
  */
 import { createFsApiHandler } from '../../apps/editor/devfs.ts';
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -146,6 +146,37 @@ try {
   check('并发两写：恰好一个 200、一个 409', statuses[0] === 200 && statuses[1] === 409);
   const finalV = JSON.parse(readFileSync(concAbs, 'utf8')).v;
   check('并发后磁盘是其中一个写入者的内容（不是交错碎片）', finalV === 3 || finalV === 4);
+
+  // ④b 大小写路径并发（复审 P1）：Windows/macOS 上 `case.json` 与 `CASE.JSON`
+  //     是同一个文件，必须进同一队列 —— 一个 200、一个 409，且内容属于成功的那一笔。
+  //     Linux 上大小写是两个文件，这个用例只在大小写不敏感的盘上断言（探测一次）。
+  {
+    const caseRel = 'casefold/case.json';
+    const caseAbs = path.join(root, caseRel);
+    mkdirSync(path.dirname(caseAbs), { recursive: true });
+    writeFileSync(caseAbs, '{"n":1}\n', 'utf8');
+    // 探测本机盘是否大小写不敏感：用大写路径读到同一份内容即不敏感
+    let ciFs = false;
+    try {
+      ciFs = readFileSync(caseAbs.toUpperCase().replace(/CASE\.JSON$/, 'CASE.JSON'), 'utf8') === '{"n":1}\n';
+    } catch { /* 区分大小写的盘会抛 */ }
+    if (ciFs) {
+      const fpN = sceneFingerprint({ n: 1 });
+      const [r1, r2] = await Promise.all([
+        runWrite(handler, root, 'casefold/case.json', { content: '{"n":2}\n', baseHash: fpN }),
+        runWrite(handler, root, 'casefold/CASE.JSON', { content: '{"n":3}\n', baseHash: fpN }),
+      ]);
+      const st = [r1.status, r2.status].sort((a, b) => a - b);
+      check('大小写并发：恰好一个 200、一个 409（同一文件进同一队列）', st[0] === 200 && st[1] === 409);
+      const finalN = JSON.parse(readFileSync(caseAbs, 'utf8')).n;
+      check('大小写并发后磁盘是成功那笔的内容', finalN === 2 || finalN === 3);
+      // 且没有留下互相覆盖的临时文件残骸
+      const leftovers = readdirSync(path.dirname(caseAbs)).filter((f) => f.endsWith('.tmp'));
+      check('大小写并发后无临时文件残留', leftovers.length === 0);
+    } else {
+      console.log('  (跳过大小写并发用例：当前盘区分大小写)');
+    }
+  }
 
   // ⑤ 写入失败恢复（复审 P1）：让一次写入真实失败，进程与队列都必须活着
   //    blocker 是**文件**而不是目录 → mkdir 必抛（ENOTDIR）→ 走 500 路径
