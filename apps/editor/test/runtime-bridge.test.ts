@@ -161,11 +161,39 @@ describe('RuntimeBridge —— 选中与射线拾取（最小选择入口）', (
   it('选中后 selectedEntity 能取到；generation 对不上时拒绝选中', () => {
     const { bridge: b } = started();
     const e = b.entities.find((x) => x.kind === 'npc')!;
-    expect(b.select(e.id, e.generation)).toBe(true);
+    expect(b.select(e.id, e.generation, e.runId)).toBe(true);
     expect(b.selectedEntity?.id).toBe(e.id);
-    expect(b.select(e.id, e.generation + 7)).toBe(false);
+    expect(b.select(e.id, e.generation + 7, e.runId)).toBe(false);
     b.clearSelection();
     expect(b.selectedEntity).toBeNull();
+  });
+
+  /**
+   * 复审 #6：`id + generation` 是**逻辑身份**（跨会话会重复，用于确定性比较），
+   * 不能当**操作引用**用。旧会话/旧 reset 的引用必须三代同检后明确失效，
+   * 不能被新世界里同槽位的实体冒名顶替。
+   */
+  it('跨会话实体身份：旧 runId 的引用被拒绝（复审 #6）', () => {
+    const { bridge: b } = started();
+    const e = b.entities.find((x) => x.kind === 'npc')!;
+    // 伪造一个"上一代会话"的引用（runId 对不上）
+    expect(b.select(e.id, e.generation, e.runId + 1)).toBe(false);
+    expect(b.selectedEntity).toBeNull();
+  });
+
+  it('reset 换运行代次：旧引用明确失效，即使槽位与 generation 相同', () => {
+    const { bridge: b, play } = started();
+    const e = b.entities.find((x) => x.kind === 'npc')!;
+    expect(b.select(e.id, e.generation, e.runId)).toBe(true);
+    expect(b.selectedEntity?.id).toBe(e.id);
+
+    play.reset();
+    b.refresh();
+    // reset 后新世界里有同槽位同 generation 的实体（同种子重放）——
+    // 但这条引用属于上一代，selectedEntity 必须失效
+    expect(b.selectedEntity).toBeNull();
+    // 同 id+generation 但旧 runId 的 select 也必须被拒
+    expect(b.select(e.id, e.generation, e.runId)).toBe(false);
   });
 });
 describe('RuntimeBridge —— 换世界', () => {

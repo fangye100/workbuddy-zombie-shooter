@@ -67,11 +67,22 @@ export interface SessionOptions {
 
 export type EntityKind = 'player' | 'npc';
 
-/** 单个实体的查询视图。id + generation 共同构成跨会话安全的身份 */
+/**
+ * 单个实体的查询视图。
+ *
+ * 两类身份，**用途不同，别混用**（复审 #6）：
+ *   - **逻辑身份** `id + generation`：用于确定性比较（Node 与浏览器同种子逐实体比对）。
+ *     它是会话内的，跨会话会重复 —— 这不是 bug，是它的设计定义。
+ *   - **操作引用** `runId + id + generation`：用于"这个操作/选中还有效吗"的有效期判定。
+ *     重跑（新会话或 reset）之后，旧引用必须**明确失效**，不能被新世界里同槽位的
+ *     实体冒名顶替。
+ */
 export interface EntityView {
   /** CharacterTable 槽位。数组下标**不是**身份，必须配 generation 用 */
   id: number;
   generation: number;
+  /** 运行代次：本次会话（或最近一次 reset）的唯一标识。跨代次的引用一律视为过期 */
+  runId: number;
   characterId: string;
   kind: EntityKind;
   x: number;
@@ -124,6 +135,12 @@ export interface StepReport {
 const BEHAVIOR_IDLE = 0;
 const BEHAVIOR_CHASE = 1;
 
+/**
+ * 运行代次计数器。**只用于实体引用的有效期判定**（复审 #6），
+ * 不进任何模拟计算、不影响确定性 —— 同样的种子/输入下，世界的演化与它无关。
+ */
+let NEXT_RUN_ID = 1;
+
 export class RuntimeSession {
   private tbl: CharacterTable;
 
@@ -143,6 +160,14 @@ export class RuntimeSession {
   private readonly params: CrowdParams;
   /** 刷怪随机流的根种子。reset() 之后仍然用它派生，保证"同种子重跑" */
   private readonly initialSeed: number;
+
+  /**
+   * 运行代次。每次构造与每次 `reset()` 递增。
+   *
+   * 它**只用于操作引用的有效期判定**（"这条选中/编辑还有没有效"），
+   * 不参与任何模拟计算 —— 不影响确定性，也别拿它当随机源。
+   */
+  runId: number;
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
@@ -166,6 +191,7 @@ export class RuntimeSession {
     this.fixedStep = opts.fixedStep ?? 1 / 30;
     const capacity = opts.capacity ?? 512;
     this.capacity = capacity;
+    this.runId = NEXT_RUN_ID++;
 
     this.tbl = new CharacterTable(this.capacity);
     this.sourceOf = new Array<NodeId | null>(capacity).fill(null);
@@ -251,6 +277,7 @@ export class RuntimeSession {
       out.push({
         id: i,
         generation: this.table.generation[i]!,
+        runId: this.runId,
         characterId: stats?.id ?? '?',
         kind: this.kindOf[i] === 0 ? 'player' : 'npc',
         x: this.table.posX[i]!,
@@ -345,6 +372,9 @@ export class RuntimeSession {
     this.tickCount = 0;
     this.diags.length = 0;
     this.diagSeen.clear();
+    // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
+    // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
+    this.runId = NEXT_RUN_ID++;
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();

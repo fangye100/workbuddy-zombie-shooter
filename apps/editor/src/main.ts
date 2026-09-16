@@ -553,7 +553,7 @@ async function boot(): Promise<void> {
       const ray = renderer.pointerRay(clientX, clientY);
       const hit = ray === null ? null : bridge.pickRay(ray.o, ray.d);
       if (hit !== null) {
-        bridge.select(hit.id, hit.generation);
+        bridge.select(hit.id, hit.generation, hit.runId);
         renderer.selectObject(null);
         panel.setSelection(null);
         // 面板直接切到这只僵尸的来源刷怪点：「它是从哪冒出来的」就该一步到位
@@ -1220,7 +1220,7 @@ async function boot(): Promise<void> {
       pickFirstNpc: () => {
         const e = bridge.entities.find((x) => x.kind === 'npc');
         if (e === undefined) return null;
-        bridge.select(e.id, e.generation);
+        bridge.select(e.id, e.generation, e.runId);
         if (e.sourceNodeId !== null) selectedSpawnNode = e.sourceNodeId;
         switchInspectorTab('spawn');
         refreshSpawnPanel();

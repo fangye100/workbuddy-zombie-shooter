@@ -124,8 +124,8 @@ export class RuntimeBridge {
   /** 按 characterId 分组的批次（网格尺寸不同 → 不同 meshId） */
   private readonly slots = new Map<string, BatchSlot>();
 
-  /** 当前选中的实体（id + generation 才是身份，槽位会复用） */
-  private selected: { id: number; generation: number } | null = null;
+  /** 当前选中的实体（runId + id + generation 才是操作引用，跨代次必然失效） */
+  private selected: { id: number; generation: number; runId: number } | null = null;
 
   get active(): boolean {
     return this.session !== null;
@@ -188,11 +188,17 @@ export class RuntimeBridge {
     return out.length > 0 ? out : null;
   }
 
-  /** 用槽位 + generation 选中一个实体；返回是否命中（槽位复用后旧身份必然失效） */
-  select(id: number, generation: number): boolean {
+  /**
+   * 选中一个实体。身份必须带**运行代次**（`runId + id + generation`）。
+   *
+   * 只比 `id + generation` 是逻辑身份 —— 它在跨会话里会重复，重跑之后旧引用
+   * 会被新世界里同槽位的实体冒名顶替（复审 #6）。所以选中必须三代同检：
+   * runId 不一致（来自旧会话 / 旧 reset 的引用）一律拒绝。
+   */
+  select(id: number, generation: number, runId: number): boolean {
     const v = this.session?.view().find((e) => e.id === id);
-    if (v === undefined || v.generation !== generation) return false;
-    this.selected = { id, generation };
+    if (v === undefined || v.generation !== generation || v.runId !== runId) return false;
+    this.selected = { id, generation, runId };
     this.rebuildSlots();
     return true;
   }
@@ -231,7 +237,9 @@ export class RuntimeBridge {
 
   get selectedEntity(): EntityView | null {
     if (this.selected === null) return null;
-    const v = this.session?.view().find((e) => e.id === this.selected!.id);
+    // 三代同检：runId 变了（重跑 / 换会话），这条引用已经指向旧世界，不能返回
+    if (this.session === null || this.session.runId !== this.selected.runId) return null;
+    const v = this.session.view().find((e) => e.id === this.selected!.id);
     if (v === undefined || v.generation !== this.selected.generation) return null;
     return v;
   }

@@ -100,6 +100,26 @@ describe('RuntimeSession —— 房间进入触发', () => {
     expect(new Set(v.map((e) => e.id)).size).toBe(v.length);
     expect(v.every((e) => e.generation >= 1)).toBe(true);
   });
+
+  /**
+   * 复审 #6：`id + generation` 是**逻辑身份**（跨会话会重复），
+   * `runId` 是**操作引用**的有效期（跨代次必然失效）。两者分别定义，互不顶替。
+   */
+  it('runId 随会话与 reset 递增；view 暴露它；同种子两个会话逻辑身份相同但 runId 不同', () => {
+    const a = make({ seed: 7 });
+    const b = make({ seed: 7 });
+    // 逻辑身份相同（同种子）—— 这是确定性比较的用途
+    expect(b.view().map((e) => `${e.id}:${e.generation}`)).toEqual(a.view().map((e) => `${e.id}:${e.generation}`));
+    // 但运行代次必须不同 —— 这是操作引用有效期的用途
+    expect(b.runId).not.toBe(a.runId);
+    expect(a.view().every((e) => e.runId === a.runId)).toBe(true);
+    expect(b.view().every((e) => e.runId === b.runId)).toBe(true);
+
+    const before = a.runId;
+    a.reset();
+    expect(a.runId).not.toBe(before);
+    expect(a.view().every((e) => e.runId === a.runId)).toBe(true);
+  });
 });
 
 describe('RuntimeSession —— 障碍真实参与约束', () => {
