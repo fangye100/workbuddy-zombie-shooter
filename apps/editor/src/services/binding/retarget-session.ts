@@ -188,19 +188,19 @@ function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>
   return { severity: 'warning', code: `MRS_${code}`, message, ...extra };
 }
 
-/** 标定兼容判定的容差：隐含足底（最低标记 rest 世界 y）距支撑面超过 max(2cm, 5%×h) 即视为另一具骨架 */
-function calSoleTolM(h: number): number {
-  return Math.max(0.02, 0.05 * h);
-}
-
 /** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
 const CAL_PELVIS_BAND = 0.35;
 
 /**
  * 源标定 × 当前源的兼容性（UX 复审 P1「不同骨架沿用旧标定」的守门）。
- * 判据全部是**几何身份**而非帧数据：标记骨必须存在；单位/轴向一致；
- * rest 骨盆高在带宽内；最低标记的隐含足底必须贴着标定自己的支撑面
- * （腿长差一倍的骨架会把足底标记顶到离地几十厘米处，一票否决）。
+ *
+ * 判据刻意只用**骨盆相对的骨架几何**，不看任何世界量：
+ *  - 标记骨必须存在；单位/轴向声明与采样一致（身份，不是几何）；
+ *  - 骨盆 → 最低标记的**几何距离**（偏移链之差 × unitScale − 标记偏移）
+ *    必须与标定声明的「骨盆高 − 支撑面高」在带宽内——这是标定唯一可核对的
+ *    骨架不变量，与角色站哪、根位置通道、根 OFFSET 全部无关。
+ *    （把根 OFFSET 当世界骨盆高是错的：有位置通道时采样世界根完全由通道值
+ *    决定，改 OFFSET 不改任何采样位置——三判 P1 之一。）
  */
 function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSource): RetargetDiagnostic[] {
   const out: RetargetDiagnostic[] = [];
@@ -218,26 +218,26 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
   if (cal.upAxis !== null && cal.upAxis !== source.motion.upAxisSource) {
     out.push(err('CAL_UPAXIS_MISMATCH', `源标定 upAxis=${cal.upAxis} 与源 ${source.motion.upAxisSource} 不一致`));
   }
-  // rest 链 Y（与 buildSourceMotion 同约定：rest 全 identity，qUp 只换基）
+  // rest 偏移链（源单位）→ 换算到米、经 up 轴换基后的世界 Y
   const chainY = restChainYOf(source.bvh, source.motion.unitScaleSource, source.motion.upAxisSource);
   const { mapping } = mapBvhJointsToHumanik(source.bvh.order, skinBones());
   const jointOfBone = new Map(Object.entries(mapping).map(([jn, b]) => [b, jn] as const));
   const hipsY = chainY.get(source.bvh.root) ?? NaN;
-  if (Number.isFinite(hipsY) && cal.pelvisHeightM > 0 &&
-      Math.abs(hipsY - cal.pelvisHeightM) / cal.pelvisHeightM > CAL_PELVIS_BAND) {
-    out.push(err('CAL_PELVIS_MISMATCH', `源标定骨盆高 ${cal.pelvisHeightM.toFixed(3)}m 与当前源 rest 骨盆 ${hipsY.toFixed(3)}m 相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%`));
-  }
-  const planeY = cal.supportPlane.origin[1];
-  let lowest: number | null = null;
+  if (!Number.isFinite(hipsY)) return out;
+  const calPelvisToPlane = cal.pelvisHeightM - cal.supportPlane.origin[1];
+  let lowestDist: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
     const jn = jointOfBone.get(mk.bone);
     const y = jn === undefined ? undefined : chainY.get(jn);
     if (y === undefined) continue;
-    const implied = y + mk.offset[1];
-    if (lowest === null || implied < lowest) lowest = implied;
+    // 骨盆 → 标记的几何下垂量（标记偏移在骨局部，BVH rest 全 identity ⇒ 世界）
+    const dist = hipsY - (y + mk.offset[1]);
+    if (lowestDist === null || dist < lowestDist) lowestDist = dist;
   }
-  if (lowest !== null && Math.abs(lowest - planeY) > calSoleTolM(cal.pelvisHeightM)) {
-    out.push(err('CAL_SOLE_MISMATCH', `源标定的最低标记隐含足底在 ${lowest.toFixed(3)}m，距其支撑平面 ${planeY.toFixed(3)}m 超过容差——标定属于另一具骨架`));
+  if (lowestDist !== null && calPelvisToPlane > 0 &&
+      Math.abs(lowestDist - calPelvisToPlane) / calPelvisToPlane > CAL_PELVIS_BAND) {
+    out.push(err('CAL_PELVIS_MISMATCH',
+      `源标定声明骨盆到支撑面 ${calPelvisToPlane.toFixed(3)}m，但当前源骨架骨盆到最低标记的几何距离为 ${lowestDist.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%）——标定属于另一具骨架`));
   }
   return out;
 }
@@ -267,8 +267,10 @@ function restChainYOf(bvh: BvhFile, unitScale: number, upAxis: 'x' | 'y' | 'z'):
 }
 
 /**
- * 目标标定 × 骨架的兼容性（同源侧判据，用**无标定**基线 rig 的 rest 世界量）：
- * 标记骨存在、骨盆高带宽、最低标记隐含足底贴平面。
+ * 目标标定 × 骨架的兼容性。基线 rig 用**标定自己的单位/轴向声明**构建
+ *（unitScale/upAxis 是身份声明、不是几何，剥掉 markers/pelvis/plane 让骨架自算），
+ * 判据同源侧：标记骨存在 + 骨盆高带宽 + 骨盆 → 最低标记的几何距离 ≈ 声明的
+ * 骨盆到支撑面。厘米骨架配 unitScale=.01 时基线正确得到米制值，不再被 97 vs 1 拒绝。
  */
 function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: RetargetRig): RetargetDiagnostic[] {
   const out: RetargetDiagnostic[] = [];
@@ -282,7 +284,7 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
       Math.abs(baselineRig.pelvisHeightM - cal.pelvisHeightM) / cal.pelvisHeightM > CAL_PELVIS_BAND) {
     out.push(err('CAL_PELVIS_MISMATCH', `目标标定骨盆高 ${cal.pelvisHeightM.toFixed(3)}m 与骨架实测 ${baselineRig.pelvisHeightM.toFixed(3)}m 相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%`));
   }
-  // rest 世界 FK（局部旋转累计），标记世界 y 的最小值 = 隐含足底
+  // rest 世界 FK（骨盆 → 最低标记的几何距离；根/容器平移在差值中抵消）
   const posY: Record<string, number> = {};
   const rot: Record<string, Quat> = {};
   for (const n of baselineRig.order) {
@@ -296,18 +298,29 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
       posY[n] = posY[b.parent]! + off[1];
     }
   }
-  const planeY = cal.supportPlane.origin[1];
-  let lowest: number | null = null;
+  const hipsY = posY['Hips'];
+  if (hipsY === undefined) return out;
+  const calPelvisToPlane = cal.pelvisHeightM - cal.supportPlane.origin[1];
+  let lowestDist: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
-    if (!orderSet.has(mk.bone)) continue;
+    if (!orderSet.has(mk.bone) || posY[mk.bone] === undefined) continue;
     const off = rotateVec(rot[mk.bone]!, [mk.offset[0], mk.offset[1], mk.offset[2]]);
-    const implied = posY[mk.bone]! + off[1];
-    if (lowest === null || implied < lowest) lowest = implied;
+    const dist = hipsY - (posY[mk.bone]! + off[1]);
+    if (lowestDist === null || dist < lowestDist) lowestDist = dist;
   }
-  if (lowest !== null && Math.abs(lowest - planeY) > calSoleTolM(cal.pelvisHeightM)) {
-    out.push(err('CAL_SOLE_MISMATCH', `目标标定的最低标记隐含足底在 ${lowest.toFixed(3)}m，距其支撑平面 ${planeY.toFixed(3)}m 超过容差——标定属于另一具骨架`));
+  if (lowestDist !== null && calPelvisToPlane > 0 &&
+      Math.abs(lowestDist - calPelvisToPlane) / calPelvisToPlane > CAL_PELVIS_BAND) {
+    out.push(err('CAL_PELVIS_MISMATCH',
+      `目标标定声明骨盆到支撑面 ${calPelvisToPlane.toFixed(3)}m，但骨架骨盆到最低标记的几何距离为 ${lowestDist.toFixed(3)}m——标定属于另一具骨架`));
   }
   return out;
+}
+
+/** 只保留标定的单位/轴向身份声明（markers/pelvis/plane 剥掉，骨架自算）——兼容基线的构建输入 */
+function calibrationUnitsOnly(cal: RetargetCalibration): RetargetCalibration {
+  const { markers: _m, supportPlane: _sp, ...rest } = cal;
+  // pelvisHeightM=0 → buildTargetRig 落回骨架实测；supportPlane 缺省 → 派生平面
+  return { ...rest, markers: {}, pelvisHeightM: 0 } as RetargetCalibration;
 }
 
 function identity16(): Float32Array<ArrayBuffer> {
@@ -680,23 +693,7 @@ export class RetargetSession {
    * 旧结果立即失效。骨架构建失败（非统一缩放 / 环 / 缺 Hips）不改当前目标。
    */
   setTarget(input: RetargetTargetInput): LoadResult {
-    // 标定归属（UX 复审 P1）：换骨架时旧目标标定按**无标定基线 rig** 验明——
-    // 骨名/骨盆高/隐含足底任一不符 = 属于另一具骨架 → 自动停用（警告），不带病构建
-    if (this.targetCal !== null) {
-      const baseline = this.buildTargetParts(input, null);
-      if (baseline.ok) {
-        const mismatch = diagnoseTargetCalibration(this.targetCal, baseline.rig);
-        if (mismatch.length > 0) {
-          this.tgtCalDiagnostics = [
-            warn('TARGET_CAL_DETACHED', `目标标定与新骨架不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
-          ];
-          this.targetCal = null;
-        } else {
-          this.tgtCalDiagnostics = [];
-        }
-      }
-    }
-    const built = this.buildTargetParts(input, this.targetCal);
+    const built = this.buildTargetChecked(input);
     if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
     this.target = {
       rig: built.rig,
@@ -709,20 +706,51 @@ export class RetargetSession {
   }
 
   /**
+   * setTarget / syncTarget / setTargetCalibration 共用的「标定兼容检查 + 构建」入口。
+   * 三判 P1：体型编辑路径（syncTarget）此前绕过检查——现在**只有这一个入口**构建目标，
+   * 检查不可能被绕过。检查用的是「标定自己的单位声明 + 骨架自算几何」的基线。
+   */
+  private buildTargetChecked(input: RetargetTargetInput):
+    | { ok: true; rig: RetargetRig; output: BakeOutputRig; diagnostics: RetargetDiagnostic[]; calDetached: boolean }
+    | { ok: false; diagnostics: RetargetDiagnostic[] } {
+    let calDetached = false;
+    if (this.targetCal !== null) {
+      const baseline = this.buildTargetParts(input, calibrationUnitsOnly(this.targetCal));
+      if (baseline.ok) {
+        const mismatch = diagnoseTargetCalibration(this.targetCal, baseline.rig);
+        if (mismatch.length > 0) {
+          this.tgtCalDiagnostics = [
+            warn('TARGET_CAL_DETACHED', `目标标定与新骨架不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
+          ];
+          this.targetCal = null;
+          calDetached = true;
+        } else {
+          this.tgtCalDiagnostics = [];
+        }
+      }
+    }
+    const built = this.buildTargetParts(input, this.targetCal);
+    if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
+    return { ok: true, rig: built.rig, output: built.output, diagnostics: built.diagnostics, calDetached };
+  }
+
+  /**
    * 用**当前**目标输入核对会话目标：几何有变 → 重设目标并失效（'changed'），
    * 无变 → 不动（'unchanged'），构造失败 → 'invalid'（目标保持原状）。
    *
    * 入口 A 的 fit 在绑定面板里随时可被拖改——求解前 sync 保证解的是当前 fit；
    * 导出前 sync 必须为 unchanged，否则拒绝导出（防「解是旧 fit、导出铺新 fit」）。
+   * 与 setTarget 走**同一个** buildTargetChecked（含标定兼容检查）：体型编辑路径
+   * 不得绕过标定归属验明（三判 P1 之二）。
    */
   syncTarget(input: RetargetTargetInput): { state: 'unchanged' | 'changed' | 'invalid'; diagnostics: RetargetDiagnostic[] } {
     if (this.target === null) {
       const r = this.setTarget(input);
       return { state: r.ok ? 'changed' : 'invalid', diagnostics: r.diagnostics };
     }
-    const built = this.buildTargetParts(input, this.targetCal);
+    const built = this.buildTargetChecked(input);
     if (!built.ok) return { state: 'invalid', diagnostics: built.diagnostics };
-    if (built.rig.fingerprint === this.target.rig.fingerprint) {
+    if (!built.calDetached && built.rig.fingerprint === this.target.rig.fingerprint) {
       return { state: 'unchanged', diagnostics: built.diagnostics };
     }
     this.target = {
@@ -777,9 +805,10 @@ export class RetargetSession {
       diags.push(err('CAL_SIDE_MISMATCH', `目标侧标定的 side 必须是 'target'，收到 '${cal.side}'`));
     }
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
-    // 显式载入错骨架的 sidecar：按当前目标的无标定基线验明，不符则拒绝
+    // 显式载入错骨架的 sidecar：按当前目标构建「该标定单位声明 + 骨架自算几何」基线，
+    // 不符则拒绝（基线带单位换算——厘米骨架 + unitScale=.01 不再被 97 vs 1 误拒）
     if (this.target !== null) {
-      const baseline = this.buildTargetParts(this.target.origin, null);
+      const baseline = this.buildTargetParts(this.target.origin, calibrationUnitsOnly(cal));
       if (baseline.ok) {
         const mismatch = diagnoseTargetCalibration(cal, baseline.rig);
         if (mismatch.length > 0) {

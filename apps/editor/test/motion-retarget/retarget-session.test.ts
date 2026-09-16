@@ -614,14 +614,14 @@ describe('retarget-session 标定归属与兼容停用', () => {
     const r1 = s.setSourceCalibration(wrongHips);
     expect(r1.ok).toBe(false);
     expect(r1.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
-    // 判据 2：隐含足底离支撑面（标记深 0.5m → 足底悬在 -0.47m）
+    // 判据 2：骨盆 → 最低标记的几何距离（标记深 0.5m → 距离 1.47m vs 声明 1.0m）
     const wrongSole = sourceCalibration();
     for (const id of Object.keys(wrongSole.markers)) {
       wrongSole.markers[id]!.offset = [0, -0.5, 0];
     }
     const r2 = s.setSourceCalibration(wrongSole);
     expect(r2.ok).toBe(false);
-    expect(r2.diagnostics.some((d) => d.code === 'MRS_CAL_SOLE_MISMATCH')).toBe(true);
+    expect(r2.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
     // 判据 3：标记骨不存在
     const wrongBone = sourceCalibration();
     wrongBone.markers['GhostFoot.heel'] = { bone: 'GhostFoot', offset: [0, 0, 0], origin: 'manual' };
@@ -701,5 +701,56 @@ describe('retarget-session 标定诊断通道（复审 P3 回归）', () => {
     s.loadSourceBvh(scaleBvhOffsets(walkBvh(), 1.2), 'another');
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(false);
     expect(s.summary().sourceCalibrated).toBe(false);
+  });
+});
+
+describe('retarget-session 标定判据的坐标规则（三判 P1 反例回归）', () => {
+  it('P1-1：只改根 OFFSET（位置通道驱动世界）→ 骨架几何未变，标定不得误拒', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    // 有位置通道时，采样世界根完全由通道值决定：改根 OFFSET 不改任何采样位置
+    const movedRoot = walkBvh().replace('OFFSET 0 100 0', 'OFFSET 0 55 0');
+    expect(movedRoot).not.toBe(walkBvh());
+    const r = s.loadSourceBvh(movedRoot, 'moved-root');
+    expect(r.ok).toBe(true);
+    // 骨盆相对几何不变 → 标定保留（旧判据把根 OFFSET 当世界骨盆高，会误停用）
+    expect(s.summary().sourceCalibrated).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(false);
+  });
+
+  it('P1-2：体型编辑路径 syncTarget 不再绕过目标标定兼容检查', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    const fit = tposeWorldPositions();
+    s.setTarget({ fitPositions: fit, name: 'a' });
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true);
+    // 入口 A 实际用的路径：syncTarget 换 ×1.5 体型 → 必须停用旧标定（旧实现直接带病构建）
+    const scaledFit: JointPositions = {};
+    for (const [k, p] of Object.entries(fit)) scaledFit[k] = [p[0]! * 1.5, p[1]! * 1.5, p[2]! * 1.5];
+    const r = s.syncTarget({ fitPositions: scaledFit, name: 'a' });
+    expect(r.state).toBe('changed');
+    expect(s.summary().targetCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+    // 停用后求解用骨架自算 h_t（不再是旧标定的 1.0）；源标定不受影响 → 世界锁脚照常
+    const out = s.solve();
+    expect(out.status).not.toBe('failed');
+    expect(out.coverage).toContain('world-lock');
+  });
+
+  it('P1-3：厘米骨架 + unitScale=0.01 的目标标定不被未换算基线误拒', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    // 厘米制外部骨架（模板位置 ×100）
+    const cmFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) cmFit[k] = [p[0]! * 100, p[1]! * 100, p[2]! * 100];
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    const cmCal = targetCalibration(1.0);
+    cmCal.unitScale = 0.01;
+    const r = s.setTargetCalibration(cmCal);
+    expect(r.ok).toBe(true); // 基线按标定单位换算后 ≈1.0m，不再拿 97.03 比 1.0
+    expect(s.summary().targetCalibrated).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(false);
   });
 });
