@@ -36,6 +36,12 @@ export interface RetargetWorkbenchState {
   canExport: boolean;
   /** 入口 A/B：A=绑定面板（导出动画），B=场景物体（应用到角色） */
   entry: 'binding' | 'object';
+  /** 源标定 sidecar 路径（保存/载入用；编辑即回传） */
+  calSrcPath: string;
+  /** 目标标定 sidecar 路径；空串 = 该入口无 sidecar（保存禁用） */
+  calTgtPath: string;
+  /** 最近一次载入失败等信息（保留上一份结果的提示）；null = 无 */
+  notice: string | null;
 }
 
 export interface RetargetWorkbenchHooks {
@@ -44,6 +50,12 @@ export interface RetargetWorkbenchHooks {
   onApply(): void;
   onExport(): void;
   onSpaceModeChange(mode: 'normalize-gait' | 'preserve-world'): void;
+  /** 纠正源的动作位移声明（invalidated → 待更新） */
+  onRootMotionChange(mode: 'auto' | 'world-trajectory' | 'in-place-with-trajectory'): void;
+  /** 标定 sidecar 动作：load = 读入会话；save = 写回 sidecar */
+  onCalAction(side: 'source' | 'target', action: 'load' | 'save', path: string): void;
+  /** 标定路径输入变化（面板不持有真值，主循环回传下一帧 state） */
+  onCalPathInput(side: 'source' | 'target', path: string): void;
   onFrameChange(frame: number): void;
   onClose(): void;
 }
@@ -59,10 +71,18 @@ const STATUS_LABEL: Record<RetargetSessionSummary['status'], string> = {
 
 const ROOT_MODE_LABEL: Record<string, string> = {
   'world-trajectory': '包含场景位移',
-  'in-place-with-trajectory': '原地（有轨迹通道）',
+  'in-place-with-trajectory': '原地（有轨迹）',
   'in-place-with-phase': '原地（仅相位）',
   unknown: '轨迹不可信',
 };
+
+/** 时间轴布局常量：左侧标记名标签区 / 右侧留白（绘制与点击换算必须共用） */
+const TL_LABEL_W = 60;
+const TL_RIGHT_PAD = 10;
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
 
 export class RetargetWorkbench {
   private readonly host: HTMLElement;
@@ -70,9 +90,16 @@ export class RetargetWorkbench {
 
   private flowEl!: HTMLElement;
   private badgeEl!: HTMLElement;
-  private calSrcEl!: HTMLElement;
-  private calTgtEl!: HTMLElement;
+  private calSrcStatusEl!: HTMLElement;
+  private calTgtStatusEl!: HTMLElement;
+  private calSrcPathInput!: HTMLInputElement;
+  private calTgtPathInput!: HTMLInputElement;
+  private calSrcLoadBtn!: HTMLButtonElement;
+  private calSrcSaveBtn!: HTMLButtonElement;
+  private calTgtLoadBtn!: HTMLButtonElement;
+  private calTgtSaveBtn!: HTMLButtonElement;
   private rootModeEl!: HTMLElement;
+  private rootMotionSel!: HTMLSelectElement;
   private contactNoteEl!: HTMLElement;
   private spaceModeSel!: HTMLSelectElement;
   private metricsEl!: HTMLElement;
@@ -87,6 +114,7 @@ export class RetargetWorkbench {
   private frameLabelEl!: HTMLElement;
   private playBtn!: HTMLButtonElement;
   private diagsEl!: HTMLElement;
+  private noticeEl!: HTMLElement;
 
   private state: RetargetWorkbenchState | null = null;
   private playing = false;
@@ -171,13 +199,16 @@ export class RetargetWorkbench {
     const side = document.createElement('div');
     side.className = 'rw-side';
 
-    // 标定
+    // 一次性通知（载入失败但保留上一份结果等）
+    this.noticeEl = document.createElement('div');
+    this.noticeEl.className = 'rw-notice';
+    this.noticeEl.style.display = 'none';
+
+    // 标定（载入 / 保存 sidecar —— 标定流程的闭环入口）
     const calSec = document.createElement('section');
     const calH = document.createElement('h4');
     calH.textContent = '角色标定';
-    this.calSrcEl = document.createElement('div');
-    this.calTgtEl = document.createElement('div');
-    calSec.append(calH, this.calSrcEl, this.calTgtEl);
+    calSec.append(calH, this.buildCalRow('source'), this.buildCalRow('target'));
 
     // 动作适配
     const adaptSec = document.createElement('section');
@@ -186,8 +217,24 @@ export class RetargetWorkbench {
     const rootRow = document.createElement('div');
     rootRow.className = 'rw-row';
     rootRow.innerHTML = '<span>动作位移</span>';
-    this.rootModeEl = document.createElement('span');
-    rootRow.appendChild(this.rootModeEl);
+    this.rootMotionSel = document.createElement('select');
+    for (const [v, label] of [
+      ['auto', '自动检测'],
+      ['world-trajectory', '包含场景位移'],
+      ['in-place-with-trajectory', '原地（有轨迹）'],
+    ] as const) {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = label;
+      this.rootMotionSel.appendChild(opt);
+    }
+    this.rootMotionSel.addEventListener('change', () => {
+      this.hooks.onRootMotionChange(this.rootMotionSel.value as 'auto' | 'world-trajectory' | 'in-place-with-trajectory');
+    });
+    rootRow.appendChild(this.rootMotionSel);
+    this.rootModeEl = document.createElement('div');
+    this.rootModeEl.className = 'rw-row';
+    this.rootModeEl.innerHTML = '<span>检测结果</span><em style="font-style:normal"></em>';
     const spaceRow = document.createElement('div');
     spaceRow.className = 'rw-row';
     spaceRow.innerHTML = '<span>适配目标</span>';
@@ -207,7 +254,7 @@ export class RetargetWorkbench {
     spaceRow.appendChild(this.spaceModeSel);
     this.contactNoteEl = document.createElement('div');
     this.contactNoteEl.style.cssText = 'font-size:10.5px;color:var(--text-dim);margin-top:4px';
-    adaptSec.append(adaptH, rootRow, spaceRow, this.contactNoteEl);
+    adaptSec.append(adaptH, rootRow, this.rootModeEl, spaceRow, this.contactNoteEl);
 
     // 质量结果
     const qSec = document.createElement('section');
@@ -249,8 +296,52 @@ export class RetargetWorkbench {
     this.diagsEl = document.createElement('div');
     diagSec.append(diagH, this.diagsEl);
 
-    side.append(calSec, adaptSec, qSec, actSec, diagSec);
+    side.append(this.noticeEl, calSec, adaptSec, qSec, actSec, diagSec);
     return side;
+  }
+
+  /** 一侧标定的操作行：状态徽标 + 路径输入 + 载入/保存 */
+  private buildCalRow(side: 'source' | 'target'): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'rw-cal-row';
+    const head = document.createElement('div');
+    head.className = 'rw-row';
+    const label = document.createElement('span');
+    label.textContent = side === 'source' ? '源标定' : '目标标定';
+    const status = document.createElement('em');
+    status.style.fontStyle = 'normal';
+    if (side === 'source') this.calSrcStatusEl = status;
+    else this.calTgtStatusEl = status;
+    head.append(label, status);
+    const pathRow = document.createElement('div');
+    pathRow.className = 'rw-cal-path';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.spellcheck = false;
+    input.placeholder = side === 'source'
+      ? 'assets/…/clip.bvh.meta.json'
+      : 'assets/…/model.glb.meta.json';
+    input.addEventListener('change', () => this.hooks.onCalPathInput(side, input.value.trim()));
+    if (side === 'source') this.calSrcPathInput = input;
+    else this.calTgtPathInput = input;
+    const loadBtn = document.createElement('button');
+    loadBtn.type = 'button';
+    loadBtn.textContent = '载入';
+    loadBtn.addEventListener('click', () => this.hooks.onCalAction(side, 'load', input.value.trim()));
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.textContent = '保存';
+    saveBtn.addEventListener('click', () => this.hooks.onCalAction(side, 'save', input.value.trim()));
+    if (side === 'source') {
+      this.calSrcLoadBtn = loadBtn;
+      this.calSrcSaveBtn = saveBtn;
+    } else {
+      this.calTgtLoadBtn = loadBtn;
+      this.calTgtSaveBtn = saveBtn;
+    }
+    pathRow.append(input, loadBtn, saveBtn);
+    wrap.append(head, pathRow);
+    return wrap;
   }
 
   private buildMain(): HTMLElement {
@@ -259,9 +350,9 @@ export class RetargetWorkbench {
 
     const views = document.createElement('div');
     views.className = 'rw-views';
-    views.append(this.buildView('源 Source', (c) => {
+    views.append(this.buildView('源 · 世界投影（诊断）', (c) => {
       this.srcCanvas = c;
-    }), this.buildView('目标 Target（补偿后）', (c) => {
+    }), this.buildView('目标 · 求解世界投影（最终动画 = 应用/导出后的蒙皮播放）', (c) => {
       this.tgtCanvas = c;
     }));
     main.appendChild(views);
@@ -271,10 +362,12 @@ export class RetargetWorkbench {
     this.tlCanvas = document.createElement('canvas');
     this.tlCanvas.addEventListener('pointerdown', (e) => {
       const rect = this.tlCanvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
+      // 与绘制共用同一坐标映射：左侧 60px 是标记名标签区，右侧留 10px——
+      // 点击换算必须扣掉标签区，否则点段起点会跳到中段（UX 审核 P2）
+      const frac = clamp01((e.clientX - rect.left - TL_LABEL_W) / (rect.width - TL_LABEL_W - TL_RIGHT_PAD));
       const s = this.state;
       if (s === null || s.summary.durationS === null || s.summary.durationS <= 0) return;
-      const t = Math.max(0, Math.min(1, x)) * s.summary.durationS;
+      const t = frac * s.summary.durationS;
       const times = this.frameTimes();
       if (times === null) return;
       let best = 0;
@@ -327,14 +420,25 @@ export class RetargetWorkbench {
     const s = this.state;
     if (s === null) return;
     const sum = s.summary;
+    // 先量尺寸再画：画布 width/height 赋值会清空内容（首帧空白的根因）
+    this.resizeCanvases();
     this.flowEl.textContent = `${sum.clipName ?? '（未载入）'} → ${sum.targetName ?? '（未设目标）'}`;
     this.badgeEl.textContent = STATUS_LABEL[sum.status];
     this.badgeEl.className = `rw-badge ${sum.status}`;
-    this.calSrcEl.textContent = '';
-    this.calSrcEl.appendChild(this.calRow('源标定', sum.sourceCalibrated, sum.canWorldLock));
-    this.calTgtEl.textContent = '';
-    this.calTgtEl.appendChild(this.calRow('目标标定', sum.targetCalibrated, true));
-    this.rootModeEl.textContent = sum.rootMode === null ? '—' : (ROOT_MODE_LABEL[sum.rootMode] ?? sum.rootMode);
+    this.renderCalRow(this.calSrcStatusEl, this.calSrcPathInput, this.calSrcLoadBtn, this.calSrcSaveBtn, sum.sourceCalibrated, sum.canWorldLock, s.calSrcPath);
+    this.renderCalRow(this.calTgtStatusEl, this.calTgtPathInput, this.calTgtLoadBtn, this.calTgtSaveBtn, sum.targetCalibrated, true, s.calTgtPath);
+    if (s.notice !== null) {
+      this.noticeEl.style.display = 'block';
+      this.noticeEl.textContent = s.notice;
+    } else {
+      this.noticeEl.style.display = 'none';
+    }
+    const detected = this.rootModeEl.querySelector('em');
+    if (detected !== null) {
+      detected.textContent = sum.rootMode === null ? '—' : (ROOT_MODE_LABEL[sum.rootMode] ?? sum.rootMode);
+      detected.className = sum.canWorldLock ? 'rw-ok' : 'rw-warn';
+    }
+    if (sum.rootMotionSetting !== null) this.rootMotionSel.value = sum.rootMotionSetting;
     this.contactNoteEl.textContent = this.contactNote(sum);
     // 回显来自会话配方（summary.spaceMode），不自持 DOM 状态——换目标 / 重绑后不残留旧选择
     if (sum.spaceMode !== null) this.spaceModeSel.value = sum.spaceMode;
@@ -348,20 +452,26 @@ export class RetargetWorkbench {
     this.frameLabelEl.textContent = this.frameLabelText();
     this.drawViews();
     this.drawTimeline();
-    this.resizeCanvases();
   }
 
-  private calRow(name: string, calibrated: boolean, ok: boolean): HTMLElement {
-    const div = document.createElement('div');
-    div.className = 'rw-row';
-    const label = document.createElement('span');
-    label.textContent = name;
-    const val = document.createElement('em');
-    val.className = calibrated ? 'rw-ok' : 'rw-warn';
-    val.style.fontStyle = 'normal';
-    val.textContent = calibrated ? (ok ? '已标定' : '已标定（轨迹受限）') : '需标定';
-    div.append(label, val);
-    return div;
+  private renderCalRow(
+    statusEl: HTMLElement,
+    pathInput: HTMLInputElement,
+    loadBtn: HTMLButtonElement,
+    saveBtn: HTMLButtonElement,
+    calibrated: boolean,
+    ok: boolean,
+    path: string,
+  ): void {
+    statusEl.className = calibrated ? (ok ? 'rw-ok' : 'rw-warn') : 'rw-warn';
+    statusEl.textContent = calibrated ? (ok ? '已标定' : '已标定（轨迹受限）') : '需标定';
+    if (pathInput.value !== path) pathInput.value = path;
+    const hasPath = path !== '';
+    loadBtn.disabled = !hasPath;
+    saveBtn.disabled = !hasPath || !calibrated;
+    if (saveBtn.disabled && calibrated && !hasPath) saveBtn.title = '该入口没有 sidecar 路径（场景物体不支持保存）';
+    else if (saveBtn.disabled && !calibrated) saveBtn.title = '先载入或设置标定后再保存';
+    else saveBtn.title = '';
   }
 
   private contactNote(sum: RetargetSessionSummary): string {
@@ -376,16 +486,20 @@ export class RetargetWorkbench {
   }
 
   private renderMetrics(sum: RetargetSessionSummary): void {
-    const rows: Array<[string, string, boolean]> = [];
+    // 接触指标只在「真的评估过接触」时给数：没有已兑现的支撑段时显示"未评估"，
+    // 不给 0.00mm 冒充质量通过（穿透只在接触段内计量，同样未评估）
+    const contactEvaluated = sum.segments.some((sg) => sg.mode === 'support' && sg.anchor !== null);
+    const mm = (v: number): string => `${(v * 1000).toFixed(2)} mm`;
+    const rows: Array<[string, string]> = [];
     const m = sum.metrics;
     if (m !== null) {
-      rows.push(['锚点偏差', `${(m.maxAnchorDeviationM * 1000).toFixed(2)} mm`, true]);
-      rows.push(['累计滑动', `${(m.cumulativeSlideM * 1000).toFixed(2)} mm`, true]);
-      rows.push(['穿透', `${(m.maxPenetrationM * 1000).toFixed(2)} mm`, m.maxPenetrationM <= 0.001]);
-      rows.push(['根修正', `${(m.maxRootCorrectionM * 1000).toFixed(2)} mm`, true]);
-      rows.push(['求解耗时', `${m.durationMs.toFixed(0)} ms`, true]);
+      rows.push(['锚点偏差', contactEvaluated ? mm(m.maxAnchorDeviationM) : '未评估（无已兑现支撑段）']);
+      rows.push(['累计滑动', contactEvaluated ? mm(m.cumulativeSlideM) : '未评估']);
+      rows.push(['穿透', contactEvaluated ? mm(m.maxPenetrationM) : '未评估']);
+      rows.push(['根修正', mm(m.maxRootCorrectionM)]);
+      rows.push(['求解耗时', `${m.durationMs.toFixed(0)} ms`]);
     } else {
-      rows.push(['质量指标', '尚未求解', false]);
+      rows.push(['质量指标', '尚未求解']);
     }
     this.metricsEl.replaceChildren();
     for (const [k, v] of rows) {
@@ -396,6 +510,7 @@ export class RetargetWorkbench {
       const val = document.createElement('em');
       val.style.fontStyle = 'normal';
       val.textContent = v;
+      val.className = v.startsWith('未评估') ? 'rw-warn' : '';
       div.append(span, val);
       this.metricsEl.appendChild(div);
     }
@@ -414,21 +529,26 @@ export class RetargetWorkbench {
 
   private renderDiagnostics(sum: RetargetSessionSummary): void {
     this.diagsEl.replaceChildren();
-    // 问题帧：带帧号的诊断 + 残差段的中点帧
+    // 问题帧 = 带帧号的诊断 + **未兑现段**的中点帧。正常兑现的支撑段不是问题——
+    // 残差是否超限由质量判定报告，不靠问题帧导航冒充
     const issues: number[] = [];
     for (const d of sum.diagnostics) {
       if (d.frame !== undefined) issues.push(d.frame);
       const div = document.createElement('div');
       div.className = `rw-diag${d.frame !== undefined ? ' clickable' : ''}`;
+      const head = document.createElement('div');
+      head.className = 'dhead';
       const sev = document.createElement('span');
       sev.className = `sev ${d.severity}`;
       sev.textContent = d.severity === 'error' ? '错误' : d.severity === 'warning' ? '警告' : '信息';
       const code = document.createElement('span');
       code.className = 'code';
       code.textContent = `${d.code}${d.constraint !== undefined ? ` · ${d.constraint}` : ''}`;
-      const msg = document.createElement('span');
+      head.append(sev, code);
+      const msg = document.createElement('div');
+      msg.className = 'msg';
       msg.textContent = d.message;
-      div.append(sev, code, msg);
+      div.append(head, msg);
       if (d.frame !== undefined) {
         const f = d.frame;
         div.title = `跳到第 ${f} 帧`;
@@ -440,6 +560,9 @@ export class RetargetWorkbench {
       const times = this.frameTimes();
       if (times !== null) {
         for (const seg of sum.segments) {
+          // 只把「有问题的接触」标进导航：未兑现（无锚）或非支撑模式；
+          // 正常兑现的 support 段是结果的一部分，不是问题
+          if (seg.anchor !== null && seg.mode === 'support') continue;
           const mid = (seg.startS + seg.endS) / 2;
           let best = 0;
           let bestD = Infinity;
@@ -592,8 +715,8 @@ export class RetargetWorkbench {
       ctx.font = '9px sans-serif';
       ctx.fillText(name, 4, y + 9);
       for (const seg of rows.get(name)!) {
-        const x1 = 60 + seg.start * (w - 70);
-        const x2 = Math.max(x1 + 2, 60 + seg.end * (w - 70));
+        const x1 = TL_LABEL_W + seg.start * (w - TL_LABEL_W - TL_RIGHT_PAD);
+        const x2 = Math.max(x1 + 2, TL_LABEL_W + seg.end * (w - TL_LABEL_W - TL_RIGHT_PAD));
         ctx.fillStyle = seg.mode === 'support'
           ? (seg.honored ? '#8FD14F' : '#FF9F1C')
           : '#FFC531';
@@ -611,7 +734,7 @@ export class RetargetWorkbench {
       const times = this.frameTimes();
       if (times === null) continue;
       const t = times[f] ?? 0;
-      ctx.fillRect(60 + (t / dur) * (w - 70) - 1, 2, 2, h - 4);
+      ctx.fillRect(TL_LABEL_W + (t / dur) * (w - TL_LABEL_W - TL_RIGHT_PAD) - 1, 2, 2, h - 4);
     }
 
     // 当前帧指针
@@ -620,7 +743,7 @@ export class RetargetWorkbench {
     ctx.strokeStyle = '#F5E7C8';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    const cx = 60 + (t / dur) * (w - 70);
+    const cx = TL_LABEL_W + (t / dur) * (w - TL_LABEL_W - TL_RIGHT_PAD);
     ctx.moveTo(cx, 0);
     ctx.lineTo(cx, h);
     ctx.stroke();
