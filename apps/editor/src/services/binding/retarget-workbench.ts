@@ -465,7 +465,10 @@ export class RetargetWorkbench {
   ): void {
     statusEl.className = calibrated ? (ok ? 'rw-ok' : 'rw-warn') : 'rw-warn';
     statusEl.textContent = calibrated ? (ok ? '已标定' : '已标定（轨迹受限）') : '需标定';
-    if (pathInput.value !== path) pathInput.value = path;
+    // 聚焦时不回写：播放定时器每帧全量 render，正在敲入的路径不能被旧值顶掉
+    if (document.activeElement !== pathInput && pathInput.value !== path) {
+      pathInput.value = path;
+    }
     const hasPath = path !== '';
     loadBtn.disabled = !hasPath;
     saveBtn.disabled = !hasPath || !calibrated;

@@ -1005,6 +1005,8 @@ async function boot(): Promise<void> {
   /** 标定 sidecar 路径（工作台输入框的真值在 main，面板只回显） */
   let retargetCalSrcPath = '';
   let retargetCalTgtPath = '';
+  /** 上一次自动填入的源 sidecar 缺省值（用户手改过的路径不被下一次缺省值覆盖） */
+  let previousCalSrcDefault = '';
   /** 一次性通知（如载入失败但已保留上一份结果）；下一次成功操作清除 */
   let retargetNotice: string | null = null;
   let animClip: RetargetAnimPayload | null = null;
@@ -1463,6 +1465,10 @@ async function boot(): Promise<void> {
 
   /** 打开（或复用）工作台。entry 决定操作区的「应用到角色 / 导出动画」语义。 */
   function openRetargetWorkbench(entry: 'binding' | 'object', obj: SceneObject | null): void {
+    // 换入口/换目标时，旧的入口 B 物体可能被上次 scrub 暂停——先恢复它的自动播放
+    if (retargetTargetObject !== null && retargetTargetObject !== obj && retargetTargetObject.skinState !== null) {
+      play(retargetTargetObject.skinState);
+    }
     retargetEntry = entry;
     retargetTargetObject = obj;
     if (retargetWorkbench === null) {
@@ -1507,9 +1513,14 @@ async function boot(): Promise<void> {
       });
     }
     previewFrame = 0;
-    retargetCalSrcPath = retargetSession.sourceInfo()?.clipName !== null && retargetSession.sourceInfo() !== null
-      ? `assets/characters/_tools/${retargetSession.sourceInfo()!.clipName}.bvh.meta.json`
-      : retargetCalSrcPath;
+    const srcInfo = retargetSession.sourceInfo();
+    if (srcInfo !== null) {
+      // 源 sidecar 缺省 = BVH 样材目录约定；用户可在输入框改（编辑后不再被默认值覆盖）
+      retargetCalSrcPath = retargetCalSrcPath !== '' && retargetCalSrcPath !== previousCalSrcDefault
+        ? retargetCalSrcPath
+        : `assets/characters/_tools/${srcInfo.clipName}.bvh.meta.json`;
+    }
+    previousCalSrcDefault = retargetCalSrcPath;
     retargetCalTgtPath = entry === 'binding' ? (currentBindingMetaPath ?? '') : '';
     retargetWorkbench.open();
     updateRetargetWorkbench();
@@ -1591,9 +1602,9 @@ async function boot(): Promise<void> {
     if (binding === null) return null;
     try {
       const report = l0MappingReport(text, clipName, binding.currentFit().tposePositions);
-      animReport = report;
       const load = retargetSession.loadSourceBvh(text, clipName);
       if (!load.ok) throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      animReport = report; // 源载入成功才提交映射诊断，失败时侧栏保持上一份（不错位到坏文件）
       const tgt = retargetSession.setTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
@@ -1623,9 +1634,9 @@ async function boot(): Promise<void> {
     if (obj.skeleton === null) return null;
     try {
       const report = l0MappingReport(text, clipName, skeletonRestWorldPositions(obj.skeleton));
-      animReport = report;
       const load = retargetSession.loadSourceBvh(text, clipName);
       if (!load.ok) throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      animReport = report; // 同入口 A：源载入成功才提交映射诊断
       const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name });
       if (!tgt.ok) throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
       openRetargetWorkbench('object', obj);
