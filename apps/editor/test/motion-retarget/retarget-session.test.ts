@@ -966,3 +966,38 @@ describe('retarget-session 标定载入事务性（1505f36 复审 P2 回归）',
     expect(s.summary().targetCalibrated).toBe(false);
   });
 });
+
+describe('retarget-session 完整标定的资产归属（37bd3ad 复审 P1 回归）', () => {
+  it('先载已标定的 A 再切 B：B 不得沿用 A 的完整标定（等比骨架让几何检查恰好通过）', () => {
+    const mk = () => {
+      const s = new RetargetSession(memStore().store);
+      s.loadSourceBvh(walkBvh(), 'walk');
+      return s;
+    };
+    // Luna 构造：A/B **原始数字相同**、唯一差异是资产键——几何检查（用 A 的
+    // 单位解释 B）必然通过，只有资产归属能拦。
+    // A：模板原始数字 + 单位声明 0.5 → 真实骨盆 ≈0.515m，标定声明与之一致
+    const fitA = tposeWorldPositions();
+    const calA = targetCalibration(0.515);
+    calA.unitScale = 0.5;
+    calA.markers = {
+      'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'RightFoot.heel': { bone: 'RightFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+    };
+    // B：同一套原始数字，米制授权（直载骨盆 ≈1.03m；被 A 的 0.5 单位解释 → 0.515m）
+    const fitB = tposeWorldPositions();
+    // 直接 B（无任何标定史）
+    const direct = mk();
+    direct.setTarget({ fitPositions: fitB, name: 'B' });
+    const directPlane = direct.targetSkeletonView()!.planeY;
+    // 先 A（带完整标定）再切 B：B 的原始数字 ×A 的 0.5 恰好复现 A 的几何 →
+    // 几何检查通过，只有资产归属检查能拦（旧实现：B 被按 0.5 单位建出 1.03m 并误报已标定）
+    const viaA = mk();
+    viaA.setTarget({ fitPositions: fitA, name: 'A' });
+    expect(viaA.setTargetCalibration(calA).ok).toBe(true);
+    viaA.setTarget({ fitPositions: fitB, name: 'B' });
+    expect(viaA.targetSkeletonView()!.planeY).toBeCloseTo(directPlane, 9);
+    expect(viaA.summary().targetCalibrated).toBe(false); // 不误报已标定
+    expect(viaA.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+  });
+});
