@@ -1003,7 +1003,13 @@ export class RetargetSession {
         return { ok: false, diagnostics: [...diags, ...mismatch] };
       }
     }
-    this.sourceCal = cal;
+    // 入库时归一支撑面法向（PR 复审）：校验层只警告；未归一值（[0,2,0]）会被
+    // pipeline 对原始标定平面的复核再次拒绝——会话侧持有效值，与目标侧同规则
+    const nLen = Math.hypot(cal.supportPlane.normal[0], cal.supportPlane.normal[1], cal.supportPlane.normal[2]);
+    const calEff: RetargetCalibration = nLen > 1e-9
+      ? { ...cal, supportPlane: { ...cal.supportPlane, normal: [cal.supportPlane.normal[0] / nLen, cal.supportPlane.normal[1] / nLen, cal.supportPlane.normal[2] / nLen] } }
+      : cal;
+    this.sourceCal = calEff;
     this.srcCalDiagnostics = [];
     this.srcCalDetachAtFp = null;
     this.bump();
@@ -1140,10 +1146,16 @@ export class RetargetSession {
       this.target.rig,
     );
     const sp = this.sourceCal?.supportPlane;
+    // 源平面法向在使用点归一（PR 复审）：校验层只警告不改值，未归一法向（如
+    // [0,2,0]）原样进 diagnoseRetargetEnvironment 会被拒——目标侧早已同规则
+    const spn = sp === undefined ? 0 : Math.hypot(sp.normal[0], sp.normal[1], sp.normal[2]);
+    const spNormal: [number, number, number] = spn > 1e-9
+      ? [sp!.normal[0] / spn, sp!.normal[1] / spn, sp!.normal[2] / spn]
+      : [0, 1, 0];
     const environment: RetargetEnvironment = {
       sourcePlane: {
         origin: [sp?.origin[0] ?? 0, sp?.origin[1] ?? 0, sp?.origin[2] ?? 0],
-        normal: [sp?.normal[0] ?? 0, sp?.normal[1] ?? 1, sp?.normal[2] ?? 0],
+        normal: spNormal,
       },
       targetPlane: {
         origin: [this.target.rig.supportPlane.origin[0], this.target.rig.supportPlane.origin[1], this.target.rig.supportPlane.origin[2]],

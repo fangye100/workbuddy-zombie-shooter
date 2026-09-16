@@ -1164,3 +1164,47 @@ describe('retarget-session PR#1 bot 评审修复回归', () => {
     expect(s.requireResult().ok).toBe(true);
   });
 });
+
+describe('retarget-session Copilot 迟到评审修复回归（PR#1 合并后跟进）', () => {
+  it('法向归一：[0,2,0] 的源支撑面不再被环境校验拒绝', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const cal = sourceCalibration();
+    cal.supportPlane = { origin: [0, 0, 0], normal: [0, 2, 0], source: 'declared', confidence: 1 };
+    expect(s.setSourceCalibration(cal).ok).toBe(true); // 校验层只警告
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'rig' });
+    const out = s.solve();
+    expect(out.status).not.toBe('failed'); // 旧实现：未归一法向进 env → ENVIRONMENT_PLANE_UNSUPPORTED 拒绝
+    expect(out.diagnostics.some((d) => d.code === 'MRC_ENVIRONMENT_PLANE_UNSUPPORTED')).toBe(false);
+  });
+
+  it('锚点中位数先于映射：非 identity 旋转映射下与数学正确值一致', async () => {
+    const { contactAnchor } = await import('../../src/services/binding/motion-retarget/space-targets');
+    type SM = Parameters<typeof contactAnchor>[3];
+    // 90° 绕 Z 的公共旋转 + 平移：mapWorldAnchor(p) = Rz90·p + t
+    const map = {
+      mode: 'preserve-world', sRoot: 1, C: [0, 0, Math.SQRT1_2, Math.SQRT1_2] as [number, number, number, number],
+      oSrc: [0, 0, 0], oTgt: [0, 0, 0],
+      mapBodyRelative: (p: readonly number[]) => [p[0]!, p[1]!, p[2]!],
+      mapWorldAnchor: (p: readonly number[]) => {
+        const [x, y, z] = [p[0]!, p[1]!, p[2]!];
+        // Rz90: (x,y) -> (-y,x)
+        return [-y + 5, x, z];
+      },
+    } as unknown as SM;
+    // 偶数帧样本：中位数 = 中间两值均值；旋转不与坐标中位数交换
+    const traj = new Float64Array([
+      1, 2, 0,
+      3, 8, 0,
+      5, 4, 0,
+      7, 6, 0,
+    ]);
+    const plane = { origin: [0, 0, 0] as [number, number, number], normal: [0, 1, 0] as [number, number, number] };
+    const got = contactAnchor(traj, 0, 3, map, plane);
+    // 源中位数 = (4,5,0) → Rz90+平移 → (-(5)+5, 4, 0) = (0,4,0)；平面 y=0 投影 → (0,0,0)
+    expect(got[0]).toBeCloseTo(0, 9);
+    expect(got[1]).toBeCloseTo(0, 9);
+    expect(got[2]).toBeCloseTo(0, 9);
+    // 旧实现（先映射再中位数）：x=[-2+5?…] 与上不同——映射后 x = -y+5 ∈ {3,-3,1,-1} → 中位 0..? 差异可判别
+  });
+});
