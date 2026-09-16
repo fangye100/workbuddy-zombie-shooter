@@ -877,7 +877,7 @@ describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () =>
     // 直接 B
     const direct = mk();
     direct.setTarget({ fitPositions: fitB, name: 'B' });
-    const directPlane = direct.targetSkeletonView()!.planeY;
+    const directPelvis = direct.targetSkeletonView()!.pelvisHeightM;
     // 先 A（带 .1 标定）再切 B
     const viaA = mk();
     viaA.setTarget({ fitPositions: fitA, name: 'A' });
@@ -885,7 +885,7 @@ describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () =>
     calA.unitScale = 0.1;
     expect(viaA.setTargetCalibration(calA).ok).toBe(true);
     viaA.setTarget({ fitPositions: fitB, name: 'B' });
-    expect(viaA.targetSkeletonView()!.planeY).toBeCloseTo(directPlane, 9);
+    expect(viaA.targetSkeletonView()!.pelvisHeightM).toBeCloseTo(directPelvis, 9);
     // 两边都在人形区间内（0.1 缩放后的 B≈0.2m 也合法）——差异只能靠资产键拦住
   });
 
@@ -989,15 +989,28 @@ describe('retarget-session 完整标定的资产归属（37bd3ad 复审 P1 回�
     // 直接 B（无任何标定史）
     const direct = mk();
     direct.setTarget({ fitPositions: fitB, name: 'B' });
-    const directPlane = direct.targetSkeletonView()!.planeY;
+    const directPelvis = direct.targetSkeletonView()!.pelvisHeightM;
     // 先 A（带完整标定）再切 B：B 的原始数字 ×A 的 0.5 恰好复现 A 的几何 →
     // 几何检查通过，只有资产归属检查能拦（旧实现：B 被按 0.5 单位建出 1.03m 并误报已标定）
     const viaA = mk();
     viaA.setTarget({ fitPositions: fitA, name: 'A' });
     expect(viaA.setTargetCalibration(calA).ok).toBe(true);
     viaA.setTarget({ fitPositions: fitB, name: 'B' });
-    expect(viaA.targetSkeletonView()!.planeY).toBeCloseTo(directPlane, 9);
+    // 骨盆高差分（单位敏感量：直载 ≈1.03m；旧 bug 下被 A 的 0.5 单位解释成 ≈0.515m）
+    expect(viaA.targetSkeletonView()!.pelvisHeightM).toBeCloseTo(directPelvis, 9);
     expect(viaA.summary().targetCalibrated).toBe(false); // 不误报已标定
     expect(viaA.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+  });
+
+  it('无目标时载入目标标定被拒绝（不再产出 owner 未知的死标定）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const r = s.setTargetCalibration(targetCalibration(1.0));
+    expect(r.ok).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === 'MRS_NO_TARGET')).toBe(true);
+    // 状态未被触碰
+    expect(s.summary().targetCalibrated).toBe(false);
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'rig' });
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true); // 有目标后正常
   });
 });
