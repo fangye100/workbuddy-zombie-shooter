@@ -668,3 +668,38 @@ describe('retarget-session 标定归属与兼容停用', () => {
     expect(tol!.anchorM).toBeLessThan(0.005);
   });
 });
+
+describe('retarget-session 标定诊断通道（复审 P3 回归）', () => {
+  it('一侧通过/操作不得抹掉另一侧的停用警告', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const fit = tposeWorldPositions();
+    s.setTarget({ fitPositions: fit, name: 'a' });
+    s.setTargetCalibration(targetCalibration(1.0));
+    // 换 ×1.5 骨架 → 目标侧停用
+    const scaledFit: JointPositions = {};
+    for (const [k, p] of Object.entries(fit)) scaledFit[k] = [p[0]! * 1.5, p[1]! * 1.5, p[2]! * 1.5];
+    s.setTarget({ fitPositions: scaledFit, name: 'b' });
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+    // 源侧随后换 clip（源侧通道无警告、检查跳过）→ 目标侧警告必须保留
+    s.loadSourceBvh(buildBvhText({ frames: 5 }), 'other-clip');
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+    // 显式载回匹配的目标标定 → 该侧警告清除
+    expect(s.setTargetCalibration(targetCalibration(scaledFit.Hips![1]!)).ok).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(false);
+  });
+
+  it('源停用警告随源再换而过期清除（不指向已不在场的老骨架）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setSourceCalibration(sourceCalibration());
+    // 换 ×1.5 骨架 → 源标定停用 + 警告
+    s.loadSourceBvh(scaleBvhOffsets(walkBvh(), 1.5), 'big');
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(true);
+    expect(s.summary().sourceCalibrated).toBe(false);
+    // 再换第三具骨架（指纹又不同）→ 停用警告过期清除（徽章「需标定」仍持续提示）
+    s.loadSourceBvh(scaleBvhOffsets(walkBvh(), 1.2), 'another');
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(false);
+    expect(s.summary().sourceCalibrated).toBe(false);
+  });
+});
