@@ -11,6 +11,20 @@
  *   ② 只允许写 `.json`（杜绝浏览器写二进制 / 源码进项目）；
  *   ③ 原子写（temp + rename），中途崩溃不会留半截文件。
  *
+ * ## 写入协议（复审 P1，如实声明保护边界）
+ *
+ * **`POST /__fs/write` 是唯一受协调的写路径。** 规则：
+ *
+ *   1. 客户端带 `baseHash`（它认为磁盘当前的版本指纹）→ 服务端在**逐路径串行队列**内
+ *      先核后写：不一致 → **409 conflict**（回传 `currentHash`），绝不覆盖。
+ *   2. 浏览器保存（编辑器）与 Agent 写入**都必须走这里**。直接 `fsp.writeFile` 的写入
+ *      **不受保护** —— 进程内队列约束不了别的进程/程序。
+ *   3. 即使用队列 + 即时校验，`rename` 前仍存在毫秒级窗口（别的进程此时写入仍可能
+ *      被覆盖）。这个窗口**无法在本机无锁文件系统上彻底消除**；遇到时按 409 +
+ *      人工合并处理。因此：**不要宣称队列提供了"完整保护"**，它的保证是
+ *      「经过 API 的写者互不可覆盖 + 直接写者能被判出 409（前提是他们先读了基准）」。
+ *   4. 写入失败（500）不会终止进程、不会卡死队列：下一次同路径写入照常执行。
+ *
  * ⚠️ 该中间件仅 dev 存在（`vite dev` 的 `zh-fs-api` 插件）；生产构建产物里没有。
  *    生产部署时需在托管产物的 Node server 复刻同一套写路由。
  */
@@ -18,8 +32,10 @@
 import { createReadStream, existsSync, promises as fsp, statSync } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-// 与浏览器侧保存共用同一个指纹实现 —— 版本校验必须逐位一致，各算一份必然漂移
-import { sceneFingerprint } from '../../packages/runtime/src/doc-diff';
+// 与浏览器侧保存共用同一个指纹实现 —— 版本校验必须逐位一致，各算一份必然漂移。
+// ⚠️ 必须带 .ts 扩展名：vite/esbuild 能解析无扩展名 import，但 `node --experimental-strip-types`
+// （verify:fs 的执行环境）按 Node ESM 规则要求显式扩展名 —— 漏掉就是 ERR_MODULE_NOT_FOUND。
+import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -131,11 +147,15 @@ async function handleWrite(
   // 前一个写完（或失败）才轮到它，从此没有「两个写请求交错执行」的窗口。
   const prev = writeQueues.get(abs) ?? Promise.resolve();
   const task = prev.catch(() => undefined).then(() => performWrite(abs, rel, body, res));
-  writeQueues.set(abs, task.finally(() => {
-    // 队列尾巴离开后就清掉，避免 Map 无限增长
-    if (writeQueues.get(abs) === task) writeQueues.delete(abs);
-  }) as unknown as Promise<unknown>);
-  await task;
+  // 🔴 队列里存的是**尾巴本身**，且这里 await 的也是它（复审 P1）：
+  // 曾经存 `task.finally()` 派生的新 Promise、却只 await 原始 task ——
+  // 写入失败后派生 Promise 的拒绝无人消费，进程会以 unhandled rejection 崩掉；
+  // 清理时拿原始 task 跟派生 Promise 比，条件永不成立，队列记录永远清不掉。
+  const tail = task.finally(() => {
+    if (writeQueues.get(abs) === tail) writeQueues.delete(abs);
+  });
+  writeQueues.set(abs, tail);
+  await tail; // 拒绝向上冒到中间件的 try/catch → HTTP 500，进程与队列都活着
 }
 
 /** 队列体内执行的一次写入（校验 → 组装 → 原子落盘） */

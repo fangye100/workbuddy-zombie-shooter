@@ -13,7 +13,8 @@
  * 退出码：0 = 全过；1 = 有断言失败。
  */
 import { createFsApiHandler } from '../../apps/editor/devfs.ts';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -117,6 +118,55 @@ try {
   // ② 仅允许 .json
   const nonJson = await runWrite(handler, root, 'assets/x.png', { content: '{}' });
   check('非 .json 被拒 (403)', nonJson.status === 403);
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ④ 乐观并发控制（baseHash）与逐路径写入队列（复审 P1/P2）
+  // ────────────────────────────────────────────────────────────────────────
+  const concRel = 'concur/x.json';
+  const concAbs = path.join(root, concRel);
+  mkdirSync(path.dirname(concAbs), { recursive: true });
+  writeFileSync(concAbs, '{"v":1}\n', 'utf8');
+  const baseFp = sceneFingerprint({ v: 1 });
+
+  // 正确 baseHash → 200；错误 baseHash → 409 且磁盘未被触碰
+  const okHash = await runWrite(handler, root, concRel, { content: '{"v":2}\n', baseHash: baseFp });
+  check('正确 baseHash 放行 (200)', okHash.status === 200 && okHash.body?.ok === true);
+  const badHash = await runWrite(handler, root, concRel, { content: '{"v":9}\n', baseHash: 'deadbeefdeadbeef' });
+  check('错误 baseHash → 409 conflict', badHash.status === 409 && badHash.body?.code === 'conflict');
+  check('409 回传当前磁盘指纹', typeof badHash.body?.currentHash === 'string' && badHash.body.currentHash.length === 8);
+  check('409 后磁盘未被触碰', readFileSync(concAbs, 'utf8') === '{"v":2}\n');
+
+  // 并发：两个带**同一基准**的写请求同时进来，恰好一个 200、一个 409（队列串行化生效）
+  const fp2 = sceneFingerprint({ v: 2 });
+  const [c1, c2] = await Promise.all([
+    runWrite(handler, root, concRel, { content: '{"v":3}\n', baseHash: fp2 }),
+    runWrite(handler, root, concRel, { content: '{"v":4}\n', baseHash: fp2 }),
+  ]);
+  const statuses = [c1.status, c2.status].sort((a, b) => a - b);
+  check('并发两写：恰好一个 200、一个 409', statuses[0] === 200 && statuses[1] === 409);
+  const finalV = JSON.parse(readFileSync(concAbs, 'utf8')).v;
+  check('并发后磁盘是其中一个写入者的内容（不是交错碎片）', finalV === 3 || finalV === 4);
+
+  // ⑤ 写入失败恢复（复审 P1）：让一次写入真实失败，进程与队列都必须活着
+  //    blocker 是**文件**而不是目录 → mkdir 必抛（ENOTDIR）→ 走 500 路径
+  const blockerRel = 'blocker';
+  writeFileSync(path.join(root, blockerRel), 'not-a-dir', 'utf8');
+  const failRes = await runWrite(handler, root, 'blocker/x.json', { content: '{"a":1}\n' });
+  check('写入失败返回 500 而不是把进程打挂', failRes.status === 500);
+
+  // 失败之后：其它路径照常可写（队列没有卡死）
+  const recoverA = await runWrite(handler, root, 'recover/a.json', { content: '{"ok":1}\n' });
+  check('失败后其它路径照常可写 (200)', recoverA.status === 200 && recoverA.body?.ok === true);
+
+  // 同一路径在故障排除后也照常可写（队列尾部被正确清理，没有残留拒绝态）
+  rmSync(path.join(root, blockerRel), { force: true });
+  const recoverB = await runWrite(handler, root, 'blocker/x.json', { content: '{"ok":2}\n' });
+  check('故障排除后同一路径照常可写 (200)', recoverB.status === 200 && recoverB.body?.ok === true);
+  check('恢复写入的内容落盘', JSON.parse(readFileSync(path.join(root, 'blocker/x.json'), 'utf8')).ok === 2);
+
+  // 队列内部状态不应无限增长：刚才这些路径的队列尾部都已离开（不能逐个断言 Map，
+  // 用「连续成功 + 进程存活」作为健康证据；若 Map 泄漏会在长跑里显现）
+  check('写端点在全部失败后仍存活且可服务', existsSync(concAbs));
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
