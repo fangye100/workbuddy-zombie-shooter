@@ -341,9 +341,11 @@ export function markerWorldPositions(sm: SourceMotion, bone: string, offset: V3)
 }
 
 /** 源 rest 骨向（HumanIK 名索引）——方向换基的输入。零向量 = 该骨无可用朝向 */
-export function sourceRestDirections(bvh: BvhFile): Record<string, V3> {
+export function sourceRestDirections(bvh: BvhFile, upAxis?: 0 | 1 | 2): Record<string, V3> {
   const { mapping } = mapBvhJointsToHumanik(bvh.order, skinBones());
-  const qUp = upAxisQuat(bvh.upAxis);
+  // upAxis 覆盖必须传**有效采样轴向**（SourceMotion.upAxisSource）：基准与采样不同轴向
+  // 会让摆臂对齐整体扭曲（PR 复审 P2）
+  const qUp = upAxisQuat(upAxis ?? bvh.upAxis);
   const out: Record<string, V3> = {};
   for (const jn of bvh.order) {
     const bone = mapping[jn];

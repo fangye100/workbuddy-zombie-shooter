@@ -13,6 +13,8 @@ import {
   type RetargetSidecarStore,
 } from '../../src/services/binding/retarget-session';
 import { readBackWorld } from '../../src/services/binding/motion-retarget/bake-adapter';
+import { sourceRestDirections } from '../../src/services/binding/motion-retarget/source-motion';
+import { parseBvh } from '../../src/services/binding/bvh-parser';
 import { buildBvhText } from './fixture';
 import { HUMANIK_BONES, HUMANIK_ORDER, tposeWorldPositions } from '../../src/services/binding/humanik-template';
 import type { JointPositions } from '../../src/services/binding/binding-math';
@@ -1076,5 +1078,89 @@ describe('retarget-session 复审跟进（b778631 复审 P3 回归）', () => {
     }
     const count = s.summary().diagnostics.filter((d) => d.code === 'MRS_TARGET_UNITS_SUSPECT').length;
     expect(count).toBe(1);
+  });
+});
+
+describe('retarget-session PR#1 bot 评审修复回归', () => {
+  it('#2 标定单位声明纠正误推断：事务性重采样后接受（旧实现 CAL_UNIT_MISMATCH 拒绝）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk'); // 推断 unitScale=0.01，hips≈1.0
+    // 声明“真实单位是 0.02”（hips 实为 2.0）+ 与之一致的 pelvisHeightM/标记
+    const cal = sourceCalibration();
+    cal.pelvisHeightM = 2.0; // 声明与 0.02 单位一致（hips 2.0）
+    cal.unitScale = 0.02;
+    for (const id of Object.keys(cal.markers)) {
+      cal.markers[id]!.offset = [cal.markers[id]!.offset[0]!, -0.06, cal.markers[id]!.offset[2]!];
+    }
+    cal.supportPlane = { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 };
+    const r = s.setSourceCalibration(cal);
+    expect(r.ok).toBe(true); // 重采样到 0.02 后几何一致（droop 2.0 = h 2.0）
+    expect(s.summary().sourceCalibrated).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_CAL_UNIT_MISMATCH')).toBe(false);
+    // 重采样生效：Hips 世界高度翻倍
+    expect(s.sourceFramePositions(0)!.Hips![1]).toBeCloseTo(2.0, 6);
+  });
+
+  it('#2 附属：声明重采样后几何仍不匹配 → 连重采样一起回滚', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const cal = sourceCalibration();
+    cal.pelvisHeightM = 5.0; // 与重采样后几何（hips 2.0）严重不符
+    cal.unitScale = 0.02;
+    const r = s.setSourceCalibration(cal);
+    expect(r.ok).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
+    // 源回到推断采样（hips 1.0），不残留 0.02 重采样
+    expect(s.sourceFramePositions(0)!.Hips![1]).toBeCloseTo(1.0, 6);
+    expect(s.summary().sourceCalibrated).toBe(false);
+  });
+
+  it('#3 基准用有效采样轴向：sourceRestDirections 轴覆盖与检测轴的结果差一个换基旋转', () => {
+    const text = buildBvhText({ up: 'Z' }); // 解析器检测为 Z-up
+    const bvh = parseBvh(text);
+    const det = sourceRestDirections(bvh); // 检测轴（z → 规范 Y-up）
+    const forced = sourceRestDirections(bvh, 1); // 声明按 Y-up 解释原始偏移
+    const sp = det['Spine']!;
+    const spY = forced['Spine']!;
+    // Z 内容按 Y 解释：规范系里的 +Y 骨向在 Y 解释下落在 +Z；rotX(-90) 应把它们对齐
+    const h = (-90 * Math.PI / 180) / 2;
+    const q = [Math.sin(h), 0, 0, Math.cos(h)] as [number, number, number, number];
+    const w = q[3], x = q[0];
+    // rotX(-90) 作用在 spY 上
+    const rx = (v: readonly number[]): [number, number, number] => {
+      const tx = 2 * (0 * v[2]! - 0 * v[1]!);
+      const ty = 2 * (0 * v[0]! - x * v[2]!);
+      const tz = 2 * (x * v[1]! - 0 * v[0]!);
+      return [
+        v[0]! + w * tx + (0 * tz - 0 * ty),
+        v[1]! + w * ty + (0 * tx - x * tz),
+        v[2]! + w * tz + (x * ty - 0 * tx),
+      ];
+    };
+    const rotated = rx(spY);
+    for (const k of [0, 1, 2] as const) {
+      expect(rotated[k]).toBeCloseTo(sp[k]!, 6);
+    }
+  });
+
+  it('#4 成对载入失败回滚源：目标构建失败后旧结果仍新鲜可消费', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setSourceCalibration(sourceCalibration());
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'A' });
+    expect(s.solve().status).not.toBe('failed');
+    expect(s.isStale()).toBe(false);
+    // 模拟 main 的成对载入：先快照 → 新源提交 → 坏目标被拒 → 回滚源
+    const snap = s.snapshotSourceState();
+    expect(s.loadSourceBvh(buildBvhText({ frames: 4, armDeg: 30 }), 'newclip').ok).toBe(true);
+    expect(s.isStale()).toBe(true); // 源已提交 → 旧结果待更新
+    const sk = skeletonFromPositions(tposeWorldPositions());
+    sk.locals[HUMANIK_ORDER.indexOf('LeftFoot')]!.s = [1, 1, 2];
+    expect(s.setTarget({ skeleton: sk, name: 'B', assetKey: 'B' }).ok).toBe(false);
+    s.rollbackSourceTo(snap);
+    // 回滚后：源回到旧 clip、结果恢复新鲜（非 stale）——catch 语义“保留上一份结果”成立
+    expect(s.sourceInfo()!.clipName).toBe('walk');
+    expect(s.isStale()).toBe(false);
+    expect(s.requireResult().ok).toBe(true);
   });
 });
