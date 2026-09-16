@@ -499,6 +499,10 @@ export class RetargetSession {
   setSourceRootMotion(
     mode: 'auto' | 'world-trajectory' | 'in-place-with-trajectory',
   ): LoadResult {
+    if (mode !== 'auto' && mode !== 'world-trajectory' && mode !== 'in-place-with-trajectory') {
+      // DOM 注入的非法值不得进采样（会污染 rootMode 与源指纹）
+      return { ok: false, diagnostics: [err('ROOT_MOTION_INVALID', `动作位移声明非法：${String(mode)}`)] };
+    }
     if (this.source === null) {
       return { ok: false, diagnostics: [err('NO_SOURCE', '尚未载入源动作')] };
     }
