@@ -47,6 +47,7 @@ import { HierarchyService } from './services/hierarchy';
 import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
 import { AnimationService } from './services/animation';
+import { snapshotObjects, restoreObjects } from './services/author-snapshot';
 import { GizmoService } from './services/gizmo';
 import { buildSkeletonPositions } from './services/skeleton-overlay';
 import { buildSelectionOutline } from './features/selection-outline.feature';
@@ -1744,23 +1745,9 @@ export class LabRenderer {
    * Play 模式下已禁掉增删与导入（见 main.ts 的 `isPlaying` 守卫）。
    */
   snapshotAuthorState(): AuthorSnapshot {
-    return {
-      count: this.state.objects.length,
-      objects: this.state.objects.map((o) => ({
-        pos: [o.pos[0], o.pos[1], o.pos[2]],
-        rot: [o.rot[0], o.rot[1], o.rot[2]],
-        quat: [o.quat[0], o.quat[1], o.quat[2], o.quat[3]],
-        scale: o.scale,
-        bob: o.bob,
-        visible: o.visible,
-        removed: o.removed,
-        pickable: o.pickable,
-        name: o.name,
-        category: o.category,
-        subVisible: o.subMeshes.map((sm) => sm.visible),
-      })),
-      selectedIndex: this.state.selectedIndex,
-    };
+    // 纯函数实现见 services/author-snapshot.ts —— 恢复语义在那里被直接测，
+    // 本方法只是把渲染器状态喂给它
+    return snapshotObjects(this.state.objects, this.state.selectedIndex);
   }
 
   /**
@@ -1768,29 +1755,11 @@ export class LabRenderer {
    * 对不上的原样留着 —— 宁可残留一个改动，也不要把索引搞错导致张冠李戴。
    */
   restoreAuthorState(snap: AuthorSnapshot): { restored: number; mismatched: boolean } {
-    const objs = this.state.objects;
-    const n = Math.min(objs.length, snap.objects.length);
-    for (let i = 0; i < n; i++) {
-      const o = objs[i]!;
-      const s = snap.objects[i]!;
-      o.pos = [s.pos[0], s.pos[1], s.pos[2]];
-      o.rot = [s.rot[0], s.rot[1], s.rot[2]];
-      o.quat = [s.quat[0], s.quat[1], s.quat[2], s.quat[3]];
-      o.scale = s.scale;
-      o.bob = s.bob;
-      o.visible = s.visible;
-      o.removed = s.removed;
-      o.pickable = s.pickable;
-      o.name = s.name;
-      o.category = s.category;
-      for (let k = 0; k < o.subMeshes.length && k < s.subVisible.length; k++) {
-        o.subMeshes[k]!.visible = s.subVisible[k]!;
-      }
+    const r = restoreObjects(this.state.objects, snap);
+    if (r.selectedIndex !== null) {
+      this.state.selectedIndex = r.selectedIndex;
     }
-    if (snap.selectedIndex !== null && snap.selectedIndex < objs.length) {
-      this.state.selectedIndex = snap.selectedIndex;
-    }
-    return { restored: n, mismatched: objs.length !== snap.count };
+    return { restored: r.restored, mismatched: r.mismatched };
   }
 
   /** 调试 / 冒烟用：当前动态批次的实例总数（0 = 一个动态实体都没画） */

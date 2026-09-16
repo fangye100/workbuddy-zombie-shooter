@@ -1545,6 +1545,14 @@ async function boot(): Promise<void> {
    * pos 为 null 时放原点；拖放路径会把落点（视线与地面交点）传进来。
    */
   async function spawnAssetAt(relPath: string, pos: [number, number, number] | null): Promise<void> {
+    // 🔴 Play 中禁止增删（复审 #3）：作者状态按索引恢复，物体数变了就会张冠李戴。
+    // 这一条与层级删除 / Delete 键同一约束，所有入口统一。
+    if (playCtl.isPlaying) {
+      console.warn('[play] Play 中禁止导入 / 生成资产（Stop 后作者状态按索引恢复，数量必须一致）');
+      panel.setModelInfo('Play 中不能导入 / 生成资产，先 Stop');
+      hudDirty = true;
+      return;
+    }
     try {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -1552,6 +1560,14 @@ async function boot(): Promise<void> {
       // 与「导入 GLB…」同一把身高尺，保证资产库生成的与导入的体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
+      // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
+      // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
+      if (playCtl.isPlaying) {
+        console.warn('[play] 资产载入完成时已进入 Play，本次导入被丢弃（Stop 后可重新导入）');
+        panel.setModelInfo(`已进入 Play，${stemName(relPath)} 的导入被丢弃；Stop 后重新导入`);
+        hudDirty = true;
+        return;
+      }
       const name = uniqueObjectName(stemName(relPath));
       // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
       const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
