@@ -18,7 +18,7 @@ import type { BindAnimationInput, BindExportStats } from './services/binding/bin
 import type { FitResult, JointPositions } from './services/binding/binding-math';
 import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
-import { summarizeMatch, createSkinState, selectClip, play } from '@aether/render';
+import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
@@ -1002,6 +1002,11 @@ async function boot(): Promise<void> {
   let retargetEntry: 'binding' | 'object' = 'binding';
   let retargetTargetObject: SceneObject | null = null;
   let previewFrame = 0;
+  /** 标定 sidecar 路径（工作台输入框的真值在 main，面板只回显） */
+  let retargetCalSrcPath = '';
+  let retargetCalTgtPath = '';
+  /** 一次性通知（如载入失败但已保留上一份结果）；下一次成功操作清除 */
+  let retargetNotice: string | null = null;
   let animClip: RetargetAnimPayload | null = null;
   let animReport: RetargetReport | null = null;
 
@@ -1345,6 +1350,7 @@ async function boot(): Promise<void> {
       });
     }
     const outcome = retargetSession.solve();
+    retargetNotice = null; // 求解完成（含失败：失败信息走诊断与 lastFailureCode）
     animClip = null;
     const baked = retargetSession.bake();
     if (baked.ok) {
@@ -1449,6 +1455,9 @@ async function boot(): Promise<void> {
       canApply: retargetEntry === 'object' && retargetTargetObject !== null,
       canExport: retargetEntry === 'binding' && binding !== null,
       entry: retargetEntry,
+      calSrcPath: retargetCalSrcPath,
+      calTgtPath: retargetCalTgtPath,
+      notice: retargetNotice,
     });
   }
 
@@ -1472,16 +1481,87 @@ async function boot(): Promise<void> {
           }
           updateRetargetWorkbench();
         },
-        onFrameChange: (f) => {
-          previewFrame = f;
+        onRootMotionChange: (mode) => {
+          // 纠正动作位移声明（覆盖 buildSourceMotion 的根模式分类）→ 重采样 + 待更新
+          const r = retargetSession.setSourceRootMotion(mode);
+          retargetNotice = r.ok ? null : (r.diagnostics[0]?.message ?? '动作位移声明不可用');
+          if (binding !== null && retargetEntry === 'binding') {
+            binding.setAnimationInfo(animInfoHtml());
+          }
           updateRetargetWorkbench();
         },
-        onClose: () => retargetWorkbench?.close(),
+        onCalPathInput: (side, path) => {
+          if (side === 'source') retargetCalSrcPath = path;
+          else retargetCalTgtPath = path;
+        },
+        onCalAction: (side, action, path) => void handleCalAction(side, action, path),
+        onFrameChange: (f) => {
+          previewFrame = f;
+          seekAppliedObjectToFrame(f);
+          updateRetargetWorkbench();
+        },
+        onClose: () => {
+          retargetWorkbench?.close();
+          resumeAppliedObjectPlayback();
+        },
       });
     }
     previewFrame = 0;
+    retargetCalSrcPath = retargetSession.sourceInfo()?.clipName !== null && retargetSession.sourceInfo() !== null
+      ? `assets/characters/_tools/${retargetSession.sourceInfo()!.clipName}.bvh.meta.json`
+      : retargetCalSrcPath;
+    retargetCalTgtPath = entry === 'binding' ? (currentBindingMetaPath ?? '') : '';
     retargetWorkbench.open();
     updateRetargetWorkbench();
+  }
+
+  /** 标定 sidecar 载入 / 保存（工作台「角色标定」分区的动作） */
+  async function handleCalAction(
+    side: 'source' | 'target',
+    action: 'load' | 'save',
+    path: string,
+  ): Promise<void> {
+    if (path === '') {
+      retargetNotice = `请先填写${side === 'source' ? '源' : '目标'}标定的 sidecar 路径`;
+      updateRetargetWorkbench();
+      return;
+    }
+    if (action === 'load') {
+      const r = await retargetSession.loadCalibrationFromMeta(side, path);
+      retargetNotice = r.ok
+        ? `已从 ${path} 载入${side === 'source' ? '源' : '目标'}标定（结果待更新，请重新生成）`
+        : (r.diagnostics[0]?.message ?? `载入失败：${path}`);
+      if (binding !== null && retargetEntry === 'binding') {
+        binding.setAnimationInfo(animInfoHtml());
+      }
+      updateRetargetWorkbench();
+      return;
+    }
+    const r = await retargetSession.saveCalibrationToMeta(side, path);
+    retargetNotice = r.ok ? `已保存${side === 'source' ? '源' : '目标'}标定到 ${path}` : (r.error ?? '保存失败');
+    updateRetargetWorkbench();
+  }
+
+  /**
+   * 时间轴驱动真实角色（P1-3 的最小闭环）：入口 B 已应用动画的物体暂停自动播放、
+   * seek 到当前帧——工作台预览与主视口蒙皮角色逐帧对应。最终蒙皮播放即「应用到角色」
+   * 后的主视口动画；工作台双视口是求解器世界投影（诊断用），不冒充蒙皮验收。
+   */
+  function seekAppliedObjectToFrame(frame: number): void {
+    const obj = retargetTargetObject;
+    if (obj === null || obj === undefined || obj.skinState === null) return;
+    const times = animClip !== null ? animClip.times : null;
+    if (times === null || times.length === 0) return;
+    const t = frame < times.length ? times[frame]! : times[times.length - 1]!;
+    pause(obj.skinState);
+    seek(obj.skinState, t);
+    hudDirty = true;
+  }
+
+  /** 关工作台时恢复场景角色的自动播放（scrub 期间被暂停） */
+  function resumeAppliedObjectPlayback(): void {
+    const obj = retargetTargetObject;
+    if (obj !== null && obj !== undefined && obj.skinState !== null) play(obj.skinState);
   }
 
   /** 工作台内换一份 BVH（保留当前目标 / 入口语义） */
@@ -1523,9 +1603,12 @@ async function boot(): Promise<void> {
       solveAndRefresh();
       return report;
     } catch (err) {
-      clearAnim();
-      binding.setAnimationInfo(null);
-      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      // 载入失败**不破坏已有工作状态**（UX 审核 P1）：会话源/结果未动（loadSourceBvh
+      // 失败先于状态变更），上一份可用结果与工作台保持打开，只亮一次性通知
+      retargetNotice = `BVH 载入失败：${String(err)}（已保留上一份结果）`;
+      panel.setModelInfo(`BVH 载入失败：${String(err)}（已保留上一份结果）`);
+      if (binding !== null && animReport !== null) binding.setAnimationInfo(animInfoHtml());
+      updateRetargetWorkbench();
       console.error('[动画] 重定向失败', err);
       return null;
     }
@@ -1556,8 +1639,10 @@ async function boot(): Promise<void> {
       console.log('[动画] 已挂到场景物体', { obj: obj.name, ...applied, report });
       return report;
     } catch (err) {
-      clearAnim();
-      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      // 同入口 A：失败不破坏已有工作状态
+      retargetNotice = `BVH 载入失败：${String(err)}（已保留上一份结果）`;
+      panel.setModelInfo(`BVH 载入失败：${String(err)}（已保留上一份结果）`);
+      updateRetargetWorkbench();
       console.error('[动画] 重定向失败', err);
       return null;
     }

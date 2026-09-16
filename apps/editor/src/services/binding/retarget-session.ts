@@ -113,6 +113,8 @@ export interface RetargetSessionSummary {
   rootMode: RootMotionMode | null;
   /** 源是否有可信世界轨迹（世界锁脚前提） */
   canWorldLock: boolean;
+  /** 用户对源动作位移的声明（auto = 按位移检测）；呈现层据此回显下拉 */
+  rootMotionSetting: 'auto' | 'world-trajectory' | 'in-place-with-trajectory' | null;
   /** 当前配方的空间模式（未建配方时为 null）；呈现层据此回显，勿自持 DOM 状态 */
   spaceMode: 'normalize-gait' | 'preserve-world' | null;
   /** 目标支撑平面高度（世界 Y，米）；预览地线画这里 */
@@ -448,6 +450,7 @@ interface SessionTarget {
 export class RetargetSession {
   private readonly store: RetargetSidecarStore;
   private source: SessionSource | null = null;
+  private sourceOpts: BuildSourceMotionOptions = {};
   private target: SessionTarget | null = null;
   private sourceCal: RetargetCalibration | null = null;
   private targetCal: RetargetCalibration | null = null;
@@ -482,8 +485,36 @@ export class RetargetSession {
       return { ok: false, diagnostics };
     }
     this.source = { bvh, motion, clipName };
+    this.sourceOpts = { ...opts };
     this.bump();
     return { ok: true, diagnostics };
+  }
+
+  /**
+   * 纠正源的动作位移声明（ importer 语义，不是从数据猜）：auto = 按位移检测；
+   * world-trajectory / in-place-with-trajectory = 显式覆盖根模式（A09 能力声明）。
+   * 用缓存的 BvhFile 重采样——**不**接受「声明了轨迹却无位置通道」的非法组合
+   *（buildSourceMotion 会抛，转为诊断，源保持原状）。
+   */
+  setSourceRootMotion(
+    mode: 'auto' | 'world-trajectory' | 'in-place-with-trajectory',
+  ): LoadResult {
+    if (this.source === null) {
+      return { ok: false, diagnostics: [err('NO_SOURCE', '尚未载入源动作')] };
+    }
+    const opts = { ...this.sourceOpts, rootMotion: mode };
+    try {
+      const motion = buildSourceMotion(this.source.bvh, opts);
+      this.source = { bvh: this.source.bvh, motion, clipName: this.source.clipName };
+      this.sourceOpts = opts;
+      this.bump();
+      return { ok: true, diagnostics: [] };
+    } catch (e) {
+      return {
+        ok: false,
+        diagnostics: [err('ROOT_MOTION_INVALID', `动作位移声明不可用：${String(e)}`)],
+      };
+    }
   }
 
   /**
@@ -840,6 +871,9 @@ export class RetargetSession {
       targetCalibrated: this.targetCal !== null,
       rootMode: this.source?.motion.rootMode ?? null,
       canWorldLock: this.source?.motion.canWorldLock ?? false,
+      rootMotionSetting: this.source !== null
+        ? (this.sourceOpts.rootMotion ?? 'auto')
+        : null,
       spaceMode: this.recipe?.spaceMode ?? null,
       targetPlaneY: this.target?.rig.supportPlane.origin[1] ?? null,
       frames: times?.length ?? this.source?.motion.times.length ?? null,

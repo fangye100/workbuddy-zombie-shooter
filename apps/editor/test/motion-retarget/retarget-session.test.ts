@@ -368,6 +368,30 @@ describe('retarget-session 失效与失败不覆盖', () => {
     expect(s.summary().status).toBe('stale');
   });
 
+  it('动作位移纠正：覆盖根模式 → 重采样 + 待更新；非法声明被拒且源保持（UX 审核 P1 回归）', () => {
+    const s = new RetargetSession(memStore().store);
+    // 站立 BVH（位置通道恒定）→ 自动检测为原地（有轨迹）、不可世界锁脚
+    s.loadSourceBvh(buildBvhText({ frames: 5 }), 'stand');
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    s.solve();
+    expect(s.summary().rootMode).toBe('in-place-with-trajectory');
+    expect(s.summary().rootMotionSetting).toBe('auto');
+    // 用户纠正为「包含场景位移」→ canWorldLock 打开 + 结果待更新
+    const fix = s.setSourceRootMotion('world-trajectory');
+    expect(fix.ok).toBe(true);
+    expect(s.summary().rootMode).toBe('world-trajectory');
+    expect(s.summary().canWorldLock).toBe(true);
+    expect(s.summary().rootMotionSetting).toBe('world-trajectory');
+    expect(s.summary().status).toBe('stale');
+    // 无位置通道的源声明轨迹 → 非法组合被拒，源保持原状
+    const phaseOnly = new RetargetSession(memStore().store);
+    phaseOnly.loadSourceBvh(buildBvhText({ frames: 5, rootChannels: '3' }), 'phase');
+    const bad = phaseOnly.setSourceRootMotion('world-trajectory');
+    expect(bad.ok).toBe(false);
+    expect(bad.diagnostics.some((d) => d.code === 'MRS_ROOT_MOTION_INVALID')).toBe(true);
+    expect(phaseOnly.summary().rootMode).toBe('in-place-with-phase');
+  });
+
   it('容器祖先（平移 + 统一缩放 2）下端到端：烘焙读回 == 求解世界（两份 FK 不得漂移）', () => {
     const s = new RetargetSession(memStore().store);
     s.loadSourceBvh(walkBvh(), 'walk');
