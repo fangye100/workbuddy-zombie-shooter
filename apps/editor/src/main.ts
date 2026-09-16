@@ -177,6 +177,26 @@ async function boot(): Promise<void> {
   btnPause?.addEventListener('click', () => playCtl.togglePause());
   btnStep?.addEventListener('click', () => playCtl.step());
   btnReset?.addEventListener('click', () => playCtl.reset());
+
+  /**
+   * 取走并展示运行期诊断（容量不足整批拒绝等）。
+   *
+   * 信号产出之后**必须有消费者**：否则 diagnostic 写了一整套，UI 上依旧一片寂静，
+   * 等于没写。去重由 `pushDiag`（同 code+node 只记一次）与这里的一次性展示共同保证 ——
+   * 每帧刷同一条告警会把真正重要的那条冲掉（WebGPU 错误那条踩过同样的坑）。
+   */
+  const shownRuntimeDiags = new Set<string>();
+  function drainRuntimeDiagnostics(): void {
+    for (const d of playCtl.runtimeDiagnostics) {
+      const key = `${d.code}|${d.nodeId ?? ''}`;
+      if (shownRuntimeDiags.has(key)) continue;
+      shownRuntimeDiags.add(key);
+      console.warn(`[runtime] ${d.code}: ${d.message}`);
+      spawnMsg = { text: `运行告警：${d.message}`, kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+    }
+  }
   // stopPlay 而不是 playCtl.stop()：退出 Play 后要顺带定位到选中实体的来源刷怪点
   btnStop?.addEventListener('click', () => stopPlay());
 
@@ -949,10 +969,15 @@ async function boot(): Promise<void> {
    *
    * 写盘前先做一次**改动集合自检**：
    *
-   *   ① 路径必须落在**被编辑的那一个** `SpawnPoint` 组件的 radius / count 上
+   *   ① 路径必须落在**某个 `SpawnPoint` 组件**的 radius / count 上
    *      —— 光匹配正则不够：`Collider{sphere}.radius` 或任何组件上的 `count`
    *      都能骗过 `/components\[\d+\]\.(radius|count)$/`，等于放行；
-   *   ② 改动**必须恰好一条**（本轮只有一个编辑命令），多了说明顺手动了别的东西。
+   *   ② 至少要有一条改动（零改动就没必要写盘）。
+   *
+   * ⚠️ 这里**不能**限制"恰好一条"：作者完全可能连续改两个刷怪点再保存，
+   * 那时 2 处改动是合法的。曾经这么写过，结果把合法保存给拒了（复审抓出来的回归）。
+   * "一次编辑只产生一处改动"这条性质由 `spawn-edit.test.ts` 在 runtime 侧断言，
+   * 不该在保存这一步用条数来卡。
    *
    * 这条兜底的意义：store 的实现保证了它不会去碰别的字段，但把断言放在保存这一步，
    * 才能保证将来有人加了新命令也不会悄悄破坏这个性质。
@@ -966,27 +991,28 @@ async function boot(): Promise<void> {
       return;
     }
     const diffs = store.changedPaths();
+    if (diffs.length === 0) {
+      spawnMsg = { text: '没有改动需要保存', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    // 合法路径集合 = 全文所有 SpawnPoint 组件的 radius / count（按 kind 限定，不是按路径形状）
     const doc = store.document;
-    const nodeId = store.lastEdit?.nodeId ?? null;
     const expected = new Set<string>();
-    if (nodeId !== null && Array.isArray(doc.nodes)) {
-      const idx = doc.nodes.findIndex((n) => n.id === nodeId);
-      if (idx >= 0) {
-        const comps = doc.nodes[idx]!.components;
+    if (Array.isArray(doc.nodes)) {
+      for (let i = 0; i < doc.nodes.length; i++) {
+        const comps = doc.nodes[i]!.components;
         for (let c = 0; c < comps.length; c++) {
           if (comps[c]!.kind !== 'SpawnPoint') continue;
-          expected.add(`nodes[${idx}].components[${c}].radius`);
-          expected.add(`nodes[${idx}].components[${c}].count`);
+          expected.add(`nodes[${i}].components[${c}].radius`);
+          expected.add(`nodes[${i}].components[${c}].count`);
         }
       }
     }
     const unexpected = diffs.filter((d) => !expected.has(d.path));
-    if (unexpected.length > 0 || diffs.length > 1) {
+    if (unexpected.length > 0) {
       spawnMsg = {
-        text:
-          unexpected.length > 0
-            ? `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`
-            : `拒绝保存：一次编辑只应产生 1 处改动，实际 ${diffs.length} 处（${diffs.slice(0, 3).join('、')}）`,
+        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
         kind: 'warn',
       };
       refreshSpawnPanel();
@@ -2521,6 +2547,9 @@ async function boot(): Promise<void> {
     // 且只在 playing 状态推进（暂停就是真的停）。
     playCtl.update(dt);
     renderer.setDynamicBatches(bridge.batches());
+    // 运行期诊断必须有消费者，否则"容量不足整批不生成"在 UI 上依旧是一片寂静，
+    // 跟没产出这个信号没有区别（AGENTS.md §2.2：不静默）。
+    drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
     panel.tickAnimation();

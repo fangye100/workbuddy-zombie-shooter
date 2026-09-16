@@ -328,22 +328,54 @@ try {
     const nodeId = s.selectedNodeId;
     const target = (radiusOf(origJson, nodeId) ?? 1.5) + 3.25;
 
+    // 🔴 刻意改**两个**刷怪点再保存。
+    // 保存自检曾经写成"改动必须恰好一条"，结果把"连续改两个点"这个合法操作给拒了
+    // （复审抓出来的回归）。这条用例就是它的守卫：多节点编辑必须能正常存盘。
+    const docJson = JSON.parse(await cdp.eval(`window.__editor.runtime.docJson()`));
+    const spawnIds = (docJson.nodes ?? [])
+      .filter((n) => (n.components ?? []).some((c) => c.kind === 'SpawnPoint'))
+      .map((n) => n.id);
+    const secondId = spawnIds.find((id) => id !== nodeId) ?? null;
+    const target2 = secondId === null ? null : (radiusOf(origJson, secondId) ?? 1.5) + 2.25;
+
     try {
+      await call(`select(${JSON.stringify(nodeId)})`);
       await call(`edit('radius', ${target})`);
+      if (secondId !== null) {
+        await call(`select(${JSON.stringify(secondId)})`);
+        await call(`edit('radius', ${target2})`);
+      }
       await sleep(300);
       await call('save()');
       await sleep(900);
       s = await st();
-      check('保存成功且 dirty 归零', String(s.message).includes('已保存') && s.dirty === false, String(s.message));
+      check(
+        '保存成功且 dirty 归零',
+        String(s.message).includes('已保存') && s.dirty === false,
+        String(s.message),
+      );
+      check(
+        '🔴 多节点编辑不会被保存自检误拒（回归守卫）',
+        secondId === null || (String(s.message).includes('已保存') && !String(s.message).includes('拒绝保存')),
+        secondId === null ? '场景只有一个刷怪点，跳过' : `第二个点 ${secondId} → ${target2}`,
+      );
 
       const afterText = await cdp.eval(
         `(async () => { const r = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(scenePath)})); return await r.text(); })()`,
       );
+      const afterJson = JSON.parse(afterText);
       check(
         '磁盘 radius 已是新值',
-        Math.abs(radiusOf(JSON.parse(afterText), nodeId) - target) < 1e-6,
-        `${radiusOf(origJson, nodeId)} → ${radiusOf(JSON.parse(afterText), nodeId)}`,
+        Math.abs(radiusOf(afterJson, nodeId) - target) < 1e-6,
+        `${radiusOf(origJson, nodeId)} → ${radiusOf(afterJson, nodeId)}`,
       );
+      if (secondId !== null) {
+        check(
+          '第二个刷怪点的改动也落盘了',
+          Math.abs(radiusOf(afterJson, secondId) - target2) < 1e-6,
+          `${radiusOf(origJson, secondId)} → ${radiusOf(afterJson, secondId)}`,
+        );
+      }
 
       // **重开**：整页重载，场景从磁盘重新读一遍 —— 这是"保存重开保持"的唯一硬证据
       await cdp.send('Page.reload', { ignoreCache: true });

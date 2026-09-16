@@ -188,7 +188,7 @@ describe('RuntimeSession —— 确定性与容量', () => {
     // 挑一间**还没触发过、且真的挂了刷怪点**的房间（不是所有房间都有刷怪点）
     const triggered = s.triggeredRooms();
     const seedSpawn = s.desc.spawns.find(
-      (sp) => sp.enabled && sp.trigger === 'room-enter' && !triggered.includes(sp.roomNodeId),
+      (sp) => sp.enabled && sp.trigger === 'room-enter' && sp.roomNodeId !== null && !triggered.includes(sp.roomNodeId),
     )!;
     const other = s.desc.rooms.find((r) => r.nodeId === seedSpawn.roomNodeId)!;
     const want = s.desc.spawns
