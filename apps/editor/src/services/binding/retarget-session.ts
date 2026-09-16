@@ -24,9 +24,10 @@
 import {
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  skinBones,
 } from './humanik-template';
 import type { JointPositions } from './binding-math';
-import { parseBvh, type BvhFile } from './bvh-parser';
+import { parseBvh, mapBvhJointsToHumanik, type BvhFile } from './bvh-parser';
 import {
   buildSourceMotion,
   sourceRestDirections,
@@ -126,6 +127,8 @@ export interface RetargetSessionSummary {
   metrics: RetargetMetrics | null;
   segments: readonly ContactSegment[];
   constraintResiduals: readonly ConstraintResidual[];
+  /** 当前配方的验收容差（绝对米 = 比例 × h_t）；呈现层据此判定残差是否超限 */
+  tolerances: { anchorM: number; slideM: number; penetrationM: number } | null;
   diagnostics: readonly RetargetDiagnostic[];
   /** 最近一次失败尝试的错误码（成功后清除；不影响保留的上一份结果） */
   lastFailureCode: string | null;
@@ -183,6 +186,128 @@ function err(code: string, message: string, extra?: Partial<RetargetDiagnostic>)
 
 function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>): RetargetDiagnostic {
   return { severity: 'warning', code: `MRS_${code}`, message, ...extra };
+}
+
+/** 标定兼容判定的容差：隐含足底（最低标记 rest 世界 y）距支撑面超过 max(3cm, 8%×h) 即视为另一具骨架 */
+function calSoleTolM(h: number): number {
+  return Math.max(0.03, 0.08 * h);
+}
+
+/** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
+const CAL_PELVIS_BAND = 0.35;
+
+/**
+ * 源标定 × 当前源的兼容性（UX 复审 P1「不同骨架沿用旧标定」的守门）。
+ * 判据全部是**几何身份**而非帧数据：标记骨必须存在；单位/轴向一致；
+ * rest 骨盆高在带宽内；最低标记的隐含足底必须贴着标定自己的支撑面
+ * （腿长差一倍的骨架会把足底标记顶到离地几十厘米处，一票否决）。
+ */
+function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSource): RetargetDiagnostic[] {
+  const out: RetargetDiagnostic[] = [];
+  const boneSet = new Set(source.motion.boneNames);
+  for (const [id, mk] of Object.entries(cal.markers)) {
+    if (!boneSet.has(mk.bone)) {
+      out.push(err('CAL_BONE_MISSING', `源标定标记 ${id} 引用的骨 ${mk.bone} 不在当前源骨架里`, { constraint: id }));
+    }
+  }
+  if (cal.unitScale !== null &&
+      Math.abs(cal.unitScale - source.motion.unitScaleSource) >
+        1e-9 * Math.max(cal.unitScale, source.motion.unitScaleSource)) {
+    out.push(err('CAL_UNIT_MISMATCH', `源标定 unitScale=${cal.unitScale} 与源采样 ${source.motion.unitScaleSource} 不一致`));
+  }
+  if (cal.upAxis !== null && cal.upAxis !== source.motion.upAxisSource) {
+    out.push(err('CAL_UPAXIS_MISMATCH', `源标定 upAxis=${cal.upAxis} 与源 ${source.motion.upAxisSource} 不一致`));
+  }
+  // rest 链 Y（与 buildSourceMotion 同约定：rest 全 identity，qUp 只换基）
+  const chainY = restChainYOf(source.bvh, source.motion.unitScaleSource, source.motion.upAxisSource);
+  const { mapping } = mapBvhJointsToHumanik(source.bvh.order, skinBones());
+  const jointOfBone = new Map(Object.entries(mapping).map(([jn, b]) => [b, jn] as const));
+  const hipsY = chainY.get(source.bvh.root) ?? NaN;
+  if (Number.isFinite(hipsY) && cal.pelvisHeightM > 0 &&
+      Math.abs(hipsY - cal.pelvisHeightM) / cal.pelvisHeightM > CAL_PELVIS_BAND) {
+    out.push(err('CAL_PELVIS_MISMATCH', `源标定骨盆高 ${cal.pelvisHeightM.toFixed(3)}m 与当前源 rest 骨盆 ${hipsY.toFixed(3)}m 相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%`));
+  }
+  const planeY = cal.supportPlane.origin[1];
+  let lowest: number | null = null;
+  for (const [, mk] of Object.entries(cal.markers)) {
+    const jn = jointOfBone.get(mk.bone);
+    const y = jn === undefined ? undefined : chainY.get(jn);
+    if (y === undefined) continue;
+    const implied = y + mk.offset[1];
+    if (lowest === null || implied < lowest) lowest = implied;
+  }
+  if (lowest !== null && Math.abs(lowest - planeY) > calSoleTolM(cal.pelvisHeightM)) {
+    out.push(err('CAL_SOLE_MISMATCH', `源标定的最低标记隐含足底在 ${lowest.toFixed(3)}m，距其支撑平面 ${planeY.toFixed(3)}m 超过容差——标定属于另一具骨架`));
+  }
+  return out;
+}
+
+/** BVH rest 链各关节的世界 Y（米）：rest 全 identity，偏移和经 up 轴换基后取 y 分量 */
+function restChainYOf(bvh: BvhFile, unitScale: number, upAxis: 'x' | 'y' | 'z'): Map<string, number> {
+  // 链和（源单位）：joint = Σ 偏移（root 起累计）
+  const chain = new Map<string, [number, number, number]>();
+  const acc = (name: string): [number, number, number] => {
+    const hit = chain.get(name);
+    if (hit !== undefined) return hit;
+    const j = bvh.joints[name]!;
+    const base: readonly [number, number, number] = j.parent === null ? [0, 0, 0] : acc(j.parent);
+    const v: [number, number, number] = [base[0]! + j.offset[0], base[1]! + j.offset[1], base[2]! + j.offset[2]];
+    chain.set(name, v);
+    return v;
+  };
+  const out = new Map<string, number>();
+  for (const name of bvh.order) {
+    const [, y, z] = acc(name);
+    const my = y! * unitScale;
+    const mz = z! * unitScale;
+    // qUp = I（y-up）→ y；rotX(-90)（z-up）→ y' = z；x-up 不换基 → y
+    out.set(name, upAxis === 'z' ? mz : my);
+  }
+  return out;
+}
+
+/**
+ * 目标标定 × 骨架的兼容性（同源侧判据，用**无标定**基线 rig 的 rest 世界量）：
+ * 标记骨存在、骨盆高带宽、最低标记隐含足底贴平面。
+ */
+function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: RetargetRig): RetargetDiagnostic[] {
+  const out: RetargetDiagnostic[] = [];
+  const orderSet = new Set(baselineRig.order);
+  for (const [id, mk] of Object.entries(cal.markers)) {
+    if (!orderSet.has(mk.bone)) {
+      out.push(err('CAL_BONE_MISSING', `目标标定标记 ${id} 引用的骨 ${mk.bone} 不在骨架里`, { constraint: id }));
+    }
+  }
+  if (cal.pelvisHeightM > 0 && baselineRig.pelvisHeightM > 0 &&
+      Math.abs(baselineRig.pelvisHeightM - cal.pelvisHeightM) / cal.pelvisHeightM > CAL_PELVIS_BAND) {
+    out.push(err('CAL_PELVIS_MISMATCH', `目标标定骨盆高 ${cal.pelvisHeightM.toFixed(3)}m 与骨架实测 ${baselineRig.pelvisHeightM.toFixed(3)}m 相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%`));
+  }
+  // rest 世界 FK（局部旋转累计），标记世界 y 的最小值 = 隐含足底
+  const posY: Record<string, number> = {};
+  const rot: Record<string, Quat> = {};
+  for (const n of baselineRig.order) {
+    const b = baselineRig.bones[n]!;
+    if (b.parent === null) {
+      posY[n] = b.restLocalT[1];
+      rot[n] = b.restLocalR as Quat;
+    } else {
+      rot[n] = quatMul(rot[b.parent]!, b.restLocalR as Quat);
+      const off = rotateVec(rot[b.parent]!, b.restLocalT);
+      posY[n] = posY[b.parent]! + off[1];
+    }
+  }
+  const planeY = cal.supportPlane.origin[1];
+  let lowest: number | null = null;
+  for (const [, mk] of Object.entries(cal.markers)) {
+    if (!orderSet.has(mk.bone)) continue;
+    const off = rotateVec(rot[mk.bone]!, [mk.offset[0], mk.offset[1], mk.offset[2]]);
+    const implied = posY[mk.bone]! + off[1];
+    if (lowest === null || implied < lowest) lowest = implied;
+  }
+  if (lowest !== null && Math.abs(lowest - planeY) > calSoleTolM(cal.pelvisHeightM)) {
+    out.push(err('CAL_SOLE_MISMATCH', `目标标定的最低标记隐含足底在 ${lowest.toFixed(3)}m，距其支撑平面 ${planeY.toFixed(3)}m 超过容差——标定属于另一具骨架`));
+  }
+  return out;
 }
 
 function identity16(): Float32Array<ArrayBuffer> {
@@ -458,6 +583,8 @@ export class RetargetSession {
   private lastGood: RetargetOutcome | null = null;
   private lastFailure: RetargetOutcome | null = null;
   private sessionDiagnostics: RetargetDiagnostic[] = [];
+  /** 标定兼容性 / 停用的粘性诊断（直到下一次成功载入或匹配检查清空） */
+  private calDiagnostics: RetargetDiagnostic[] = [];
   private revision = 0;
   private solvedRevision: number | null = null;
 
@@ -487,6 +614,21 @@ export class RetargetSession {
     this.source = { bvh, motion, clipName };
     this.sourceOpts = { ...opts };
     this.bump();
+    // 标定归属（UX 复审 P1）：换了源（不同骨架/比例）时旧标定必须重新验明——
+    // 骨名不存在或隐含足底远离支撑面 = 标定属于另一具骨架 → 自动停用并警告，
+    // 不带着错误标高/标记继续"已标定"地求解
+    if (this.sourceCal !== null) {
+      const mismatch = diagnoseSourceCalibration(this.sourceCal, this.source);
+      if (mismatch.length > 0) {
+        this.sourceCal = null;
+        this.calDiagnostics = [
+          warn('SOURCE_CAL_DETACHED', `源标定与当前源不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
+        ];
+        this.bump();
+      } else {
+        this.calDiagnostics = [];
+      }
+    }
     return { ok: true, diagnostics };
   }
 
@@ -526,6 +668,22 @@ export class RetargetSession {
    * 旧结果立即失效。骨架构建失败（非统一缩放 / 环 / 缺 Hips）不改当前目标。
    */
   setTarget(input: RetargetTargetInput): LoadResult {
+    // 标定归属（UX 复审 P1）：换骨架时旧目标标定按**无标定基线 rig** 验明——
+    // 骨名/骨盆高/隐含足底任一不符 = 属于另一具骨架 → 自动停用（警告），不带病构建
+    if (this.targetCal !== null) {
+      const baseline = this.buildTargetParts(input, null);
+      if (baseline.ok) {
+        const mismatch = diagnoseTargetCalibration(this.targetCal, baseline.rig);
+        if (mismatch.length > 0) {
+          this.calDiagnostics = [
+            warn('TARGET_CAL_DETACHED', `目标标定与新骨架不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
+          ];
+          this.targetCal = null;
+        } else {
+          this.calDiagnostics = [];
+        }
+      }
+    }
     const built = this.buildTargetParts(input, this.targetCal);
     if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
     this.target = {
@@ -565,7 +723,7 @@ export class RetargetSession {
     return { state: 'changed', diagnostics: built.diagnostics };
   }
 
-  /** 源侧标定（null = 清除 → 接触能力回到未标定态）。side 必须为 source。 */
+  /** 源侧标定（null = 清除 → 接触能力回到未标定态）。side 必须为 source；与当前源几何不符则拒绝。 */
   setSourceCalibration(cal: RetargetCalibration | null): LoadResult {
     if (cal === null) {
       this.sourceCal = null;
@@ -577,12 +735,20 @@ export class RetargetSession {
       diags.push(err('CAL_SIDE_MISMATCH', `源侧标定的 side 必须是 'source'，收到 '${cal.side}'`));
     }
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // 显式载入错骨架的 sidecar：报错拒绝，不静默接受（用户看得到该换哪份）
+    if (this.source !== null) {
+      const mismatch = diagnoseSourceCalibration(cal, this.source);
+      if (mismatch.length > 0) {
+        return { ok: false, diagnostics: [...diags, ...mismatch] };
+      }
+    }
     this.sourceCal = cal;
+    this.calDiagnostics = [];
     this.bump();
     return { ok: true, diagnostics: diags };
   }
 
-  /** 目标侧标定；改变即按原目标来源重建 rig（h_t / 标记 / 平面全走新值）。 */
+  /** 目标侧标定；改变即按原目标来源重建 rig（h_t / 标记 / 平面全走新值）。与骨架不符则拒绝。 */
   setTargetCalibration(cal: RetargetCalibration | null): LoadResult {
     if (cal === null) {
       this.targetCal = null;
@@ -598,7 +764,18 @@ export class RetargetSession {
       diags.push(err('CAL_SIDE_MISMATCH', `目标侧标定的 side 必须是 'target'，收到 '${cal.side}'`));
     }
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // 显式载入错骨架的 sidecar：按当前目标的无标定基线验明，不符则拒绝
+    if (this.target !== null) {
+      const baseline = this.buildTargetParts(this.target.origin, null);
+      if (baseline.ok) {
+        const mismatch = diagnoseTargetCalibration(cal, baseline.rig);
+        if (mismatch.length > 0) {
+          return { ok: false, diagnostics: [...diags, ...mismatch] };
+        }
+      }
+    }
     this.targetCal = cal;
+    this.calDiagnostics = [];
     if (this.target !== null) {
       const r = this.setTarget(this.target.origin);
       return { ok: r.ok, diagnostics: [...diags, ...r.diagnostics] };
@@ -863,8 +1040,16 @@ export class RetargetSession {
     else if (failure !== null) status = 'failed';
     else status = 'ready';
     const diagSource = this.isStale() && failure !== null ? failure : outcome ?? failure;
-    const diagnostics = [...this.sessionDiagnostics, ...(diagSource?.diagnostics ?? [])];
+    const diagnostics = [...this.sessionDiagnostics, ...this.calDiagnostics, ...(diagSource?.diagnostics ?? [])];
     const times = outcome?.clip?.times;
+    const hT = this.target?.rig.pelvisHeightM ?? null;
+    const tol = this.recipe !== null && hT !== null
+      ? {
+          anchorM: this.recipe.tolerances.anchorH * hT,
+          slideM: this.recipe.tolerances.slideH * hT,
+          penetrationM: this.recipe.tolerances.penetrationH * hT,
+        }
+      : null;
     return {
       status,
       hasSource: this.source !== null,
@@ -887,6 +1072,7 @@ export class RetargetSession {
       metrics: outcome?.metrics ?? null,
       segments: outcome?.segments ?? [],
       constraintResiduals: outcome?.constraintResiduals ?? [],
+      tolerances: tol,
       diagnostics,
       lastFailureCode: failure?.diagnostics.find((d) => d.severity === 'error')?.code ?? null,
     };
@@ -1044,18 +1230,23 @@ export class RetargetSession {
     ) {
       return cur;
     }
-    if (cur !== null && cur.sourceCalibrationFingerprint !== '' && srcCalFp === '') {
+    // R13 拒绝只适用于「配方与当前**同一**源/目标匹配、却缺它绑定的标定」（防持久配方
+    // 被静默降级）。输入本身已换（指纹不符）时旧配方整体作废——包括它的标定绑定——
+    // 直接重绑（换源后标定被兼容性停用的场景就属于这一类，不得被拒绝卡死）
+    const sameSource = cur !== null && cur.source.contentHash === this.source.motion.fingerprint;
+    const sameTarget = cur !== null && cur.target.contentHash === this.target.rig.fingerprint;
+    if (sameSource && cur!.sourceCalibrationFingerprint !== '' && srcCalFp === '') {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
-        `配方绑定了源标定指纹（${cur.sourceCalibrationFingerprint.slice(0, 10)}…）但会话未设置源标定：` +
+        `配方绑定了源标定指纹（${cur!.sourceCalibrationFingerprint.slice(0, 10)}…）但会话未设置源标定：` +
           '拒绝静默降级为未标定求解；请先载入标定（loadCalibrationFromMeta）或重置配方',
       ));
       return null;
     }
-    if (cur !== null && cur.targetCalibrationFingerprint !== '' && tgtCalFp === '') {
+    if (sameTarget && cur!.targetCalibrationFingerprint !== '' && tgtCalFp === '') {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
-        `配方绑定了目标标定指纹（${cur.targetCalibrationFingerprint.slice(0, 10)}…）但会话未设置目标标定：` +
+        `配方绑定了目标标定指纹（${cur!.targetCalibrationFingerprint.slice(0, 10)}…）但会话未设置目标标定：` +
           '拒绝静默降级；请先载入标定或重置配方',
       ));
       return null;
