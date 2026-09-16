@@ -754,3 +754,91 @@ describe('retarget-session 标定判据的坐标规则（三判 P1 反例回归�
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(false);
   });
 });
+
+describe('retarget-session 标定判据契约（85620c9 复审三反例回归）', () => {
+  it('P1 反例1：停用几何标定不得丢单位换算（cm 骨架编辑体型后仍是米制）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    // 厘米骨架 + 有效标定（unitScale=.01）
+    const cmFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) cmFit[k] = [p[0]! * 100, p[1]! * 100, p[2]! * 100];
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    const cmCal = targetCalibration(1.0);
+    cmCal.unitScale = 0.01;
+    expect(s.setTargetCalibration(cmCal).ok).toBe(true);
+    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1); // 米制
+
+    // 编辑体型 ×1.5 → 几何停用；单位换算必须保留（旧实现退回 unitScale=1 → 145m）
+    const scaledCm: JointPositions = {};
+    for (const [k, p] of Object.entries(cmFit)) scaledCm[k] = [p[0]! * 1.5, p[1]! * 1.5, p[2]! * 1.5];
+    const r = s.syncTarget({ fitPositions: scaledCm, name: 'cm-rig' });
+    expect(r.state).toBe('changed');
+    expect(s.summary().targetCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+    // 单位保留的铁证：支撑面仍在米制量级（丢单位会变成 ~3.7m）
+    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(false);
+  });
+
+  it('P1 反例1 附属：残留单位声明对换骨架不适用时被人形合理性校验丢弃', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const cmFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) cmFit[k] = [p[0]! * 100, p[1]! * 100, p[2]! * 100];
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    const cmCal = targetCalibration(1.0);
+    cmCal.unitScale = 0.01;
+    expect(s.setTargetCalibration(cmCal).ok).toBe(true);
+    // 换成**米制**骨架（同量级数字的米制 fit）：残留 0.01 会得到 0.01m 级骨盆 → 越界丢弃
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'meter-rig' });
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(true);
+    // 丢弃后按米制重建：支撑面在米制原点附近（残留 0.01 时骨盆 0.01m 触发丢弃）
+    const py = s.targetSkeletonView()!.planeY;
+    expect(py).toBeGreaterThan(-0.5);
+    expect(py).toBeLessThan(0.5);
+  });
+
+  it('P1 反例2：角色与地面同时抬高 0.5m（比例不变）→ 源/目标标定都不得误拒', () => {
+    const s = new RetargetSession(memStore().store);
+    // 源：根抬高到 150cm；标定声明平面 y=0.5、骨盆到支撑面 1.0（相对量，契约语义）
+    const raised = walkBvh().replace('OFFSET 0 100 0', 'OFFSET 0 150 0');
+    s.loadSourceBvh(raised, 'raised');
+    const srcCal = sourceCalibration(); // pelvisHeightM 1.0
+    srcCal.supportPlane = { origin: [0, 0.5, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 };
+    const rs = s.setSourceCalibration(srcCal);
+    expect(rs.ok).toBe(true); // 旧实现按 1.0−0.5=0.5 对比几何下垂 1.0 → 误拒
+    expect(s.summary().sourceCalibrated).toBe(true);
+
+    // 目标：fit 整体抬高 0.5 + 带足底标记 + 声明平面 y=0.5
+    const raisedFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) raisedFit[k] = [p[0]!, p[1]! + 0.5, p[2]!];
+    s.setTarget({ fitPositions: raisedFit, name: 'raised-rig' });
+    const tgtCal = targetCalibration(1.0);
+    tgtCal.supportPlane = { origin: [0, 0.5, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 };
+    tgtCal.markers = {
+      'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
+      'RightFoot.heel': { bone: 'RightFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'RightFoot.ball': { bone: 'RightFoot', offset: [0, -0.03, 0.09], origin: 'manual' },
+    };
+    const rt = s.setTargetCalibration(tgtCal);
+    expect(rt.ok).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(true);
+  });
+
+  it('P1 反例3：单侧腿变长不得被另一侧的最小下垂掩盖', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    // 只把左腿一段加长 42cm（JS 单次字符串替换只改第一处 = LeftLeg）
+    const leftLonger = walkBvh().replace('OFFSET 0 -42 0', 'OFFSET 0 -84 0');
+    expect(leftLonger.includes('OFFSET 0 -84 0')).toBe(true);
+    // 右腿的 -42 仍在（只改了一处）
+    expect(leftLonger.includes('OFFSET 0 -42 0')).toBe(true);
+    const r = s.loadSourceBvh(leftLonger, 'left-longer');
+    expect(r.ok).toBe(true);
+    // 左脚下垂 1.42m > 1.0×1.35 → 停用；右腿 1.0 不得掩盖
+    expect(s.summary().sourceCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(true);
+  });
+});
