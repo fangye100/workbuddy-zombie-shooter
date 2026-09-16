@@ -1320,10 +1320,25 @@ async function boot(): Promise<void> {
       setGizmoSpaceUI(btn.dataset.space as 'local' | 'world'),
     );
   }
+  // ---- Play 期玩家输入（虚拟摇杆的键盘装配，复审 #7 的编辑器侧）----
+  // 用**箭头键**而不是 WASD：W/E/R 已被 gizmo 快捷键占用，混用会一边走一边切模式。
+  // 宿主（这里）只负责把真实输入转成约定的运行输入向量，消费全在 runtime 的固定步里。
+  const playKeys = new Set<string>();
+  const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
+  window.addEventListener('keyup', (e) => {
+    playKeys.delete(e.key.toLowerCase());
+  });
+
   window.addEventListener('keydown', (e) => {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+
+    if (PLAY_KEYS.has(k)) {
+      playKeys.add(k);
+      if (playCtl.isPlaying) e.preventDefault(); // Play 中箭头键归玩家，不滚动页面
+      return;
+    }
 
     // ---- Play 控制（WU-4）----
     // 空格：停止态 → 进入 Play；播放中 → 暂停；暂停中 → 继续。
@@ -2622,6 +2637,13 @@ async function boot(): Promise<void> {
     // ── 运行时推进 + 动态实例注入（WU-3 / WU-4） ──
     // playCtl.update 内部走 PlaySession 的固定步累加器：渲染帧率不决定游戏步数，
     // 且只在 playing 状态推进（暂停就是真的停）。
+    // 玩家输入装配（复审 #7）：宿主把箭头键状态转成约定的运行输入向量，
+    // 每帧喂给会话；runtime 在固定步里消费。俯视世界轴向：↑ = -z，→ = +x。
+    if (playCtl.isPlaying) {
+      const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
+      const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
+      playCtl.session.setInput(ix, iz);
+    }
     playCtl.update(dt);
     renderer.setDynamicBatches(bridge.batches());
     // 运行期诊断必须有消费者，否则"容量不足整批不生成"在 UI 上依旧是一片寂静，

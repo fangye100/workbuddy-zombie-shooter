@@ -340,6 +340,24 @@ try {
   const spawned = await waitEntity(30_000);
   check('Play 后世界里真的有运行时实体', spawned > 0, `${spawned} 个（轮询等待，最多 30s）`);
 
+  // ── 复审 #7 编辑器侧装配：箭头键真的驱动玩家（不是只接了 runtime API）──
+  const posBefore = await cdp.eval(`(() => {
+    const p = window.__editor.bridge.entities.find((e) => e.kind === 'player');
+    return p === undefined ? null : { x: p.x, z: p.z };
+  })()`);
+  await cdp.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); 'ok'`);
+  await sleep(1500);
+  await cdp.eval(`window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' })); 'ok'`);
+  const posAfter = await cdp.eval(`(() => {
+    const p = window.__editor.bridge.entities.find((e) => e.kind === 'player');
+    return p === undefined ? null : { x: p.x, z: p.z };
+  })()`);
+  check(
+    '🔴 箭头键驱动玩家移动（编辑器输入装配，复审 #7）',
+    posBefore !== null && posAfter !== null && posAfter.x > posBefore.x + 0.3,
+    posBefore === null || posAfter === null ? '取不到玩家实体' : `(${posBefore.x.toFixed(2)}, ${posBefore.z.toFixed(2)}) → (${posAfter.x.toFixed(2)}, ${posAfter.z.toFixed(2)})`,
+  );
+
   const picked = await call('pickFirstNpc()');
   check('Play 中选中一个运行敌人', picked !== null && picked !== undefined, JSON.stringify(picked));
 
