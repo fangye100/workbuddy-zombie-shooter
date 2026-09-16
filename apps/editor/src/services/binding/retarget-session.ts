@@ -948,9 +948,15 @@ export class RetargetSession {
       diags.push(err('CAL_SIDE_MISMATCH', `目标侧标定的 side 必须是 'target'，收到 '${cal.side}'`));
     }
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // 无目标时拒绝：标定的资产归属无从记录（owner=null → 之后任何 setTarget 都会
+    // 以「资产键不同」停用，成为永不可激活的死标定）——先 setTarget 再载标定
+    if (this.target === null) {
+      diags.push(err('NO_TARGET', '尚未设定目标骨架：先载入/设定目标，再载入目标侧标定'));
+      return { ok: false, diagnostics: diags };
+    }
     // 显式载入错骨架的 sidecar：按当前目标构建「该标定单位声明 + 骨架自算几何」基线，
     // 不符则拒绝（基线带单位换算——厘米骨架 + unitScale=.01 不再被 97 vs 1 误拒）
-    if (this.target !== null) {
+    {
       const baseline = this.buildTargetParts(this.target.origin, calibrationUnitsOnly(cal));
       if (baseline.ok) {
         const mismatch = diagnoseTargetCalibration(cal, baseline.rig);
@@ -1185,6 +1191,8 @@ export class RetargetSession {
     parentOf: (bone: string) => string | null;
     markers: Readonly<Record<string, { id: string; bone: string; offset: V3 }>>;
     planeY: number;
+    /** 骨盆到支撑面的高度（米）——对单位解释敏感的观测量（差分 oracle 用） */
+    pelvisHeightM: number;
   } | null {
     if (this.target === null) return null;
     const bones = this.target.rig.bones;
@@ -1193,6 +1201,7 @@ export class RetargetSession {
       parentOf: (b: string) => bones[b]?.parent ?? null,
       markers: this.target.rig.markers,
       planeY: this.target.rig.supportPlane.origin[1],
+      pelvisHeightM: this.target.rig.pelvisHeightM,
     };
   }
 
