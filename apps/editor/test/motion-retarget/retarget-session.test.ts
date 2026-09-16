@@ -87,6 +87,12 @@ function walkBvh(): string {
   });
 }
 
+/** 把 BVH 文本里全部 OFFSET 数值 ×k（换骨架体型用，不动通道/帧数据） */
+function scaleBvhOffsets(text: string, k: number): string {
+  return text.replace(/OFFSET (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)/g, (_, a, b, c) =>
+    `OFFSET ${Number(a) * k} ${Number(b) * k} ${Number(c) * k}`);
+}
+
 /** 入口 B 带容器节点的骨架：节点 0 = Armature（平移 [1,0,0]、统一缩放 2），骨节点 1..27。
  * 用来端到端抓「两份 FK 实现（rig-calibration vs bake 输出骨架）在缩放祖先下漂移」。 */
 function skeletonWithContainer(pos: JointPositions): SkeletonData {
@@ -368,8 +374,7 @@ describe('retarget-session 失效与失败不覆盖', () => {
     expect(s.summary().status).toBe('stale');
   });
 
-  it('动作位移纠正：覆盖根模式 → 重采样 + 待更新；非法声明被拒且源保持（UX 审核 P1 回归）', () => {
-    const s = new RetargetSession(memStore().store);
+  it('动作位移纠正：覆盖根模式 → 重采样 + 待更新；非法声明被拒且源保持（UX 审核 P1 回归）', () => {    const s = new RetargetSession(memStore().store);
     // 站立 BVH（位置通道恒定）→ 自动检测为原地（有轨迹）、不可世界锁脚
     s.loadSourceBvh(buildBvhText({ frames: 5 }), 'stand');
     s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
@@ -565,5 +570,101 @@ describe('skeletonFromFitPositions', () => {
         expect(t[2] + fit[pn]![2]).toBeCloseTo(fit[n]![2], 12);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------- 标定归属（UX 复审 P1「不同骨架沿用旧标定」）
+
+describe('retarget-session 标定归属与兼容停用', () => {
+  it('换不同体型的源 → 旧源标定自动停用并警告（不再显示已标定地求解）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    const good = s.solve();
+    expect(good.coverage).toContain('world-lock');
+
+    // 换一具整体 ×1.5 的骨架（骨盆 1.0→1.5m）：rest 骨盆高超出 35% 带宽 → 停用
+    const swapped = s.loadSourceBvh(scaleBvhOffsets(walkBvh(), 1.5), 'big');
+    expect(swapped.ok).toBe(true);
+    expect(s.summary().sourceCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(true);
+    // 停用后求解回到未标定语义（自由运动、不谎报锁脚）
+    const after = s.solve();
+    expect(after.coverage).toContain('contact-uncalibrated');
+    expect(after.coverage).not.toContain('world-lock');
+  });
+
+  it('同骨架换 clip → 标定保留（可复用是其设计目的，不得误停用）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    // 同一具骨架的另一段动作（帧数/内容不同、骨髯相同）
+    s.loadSourceBvh(buildBvhText({ frames: 5, armDeg: 20 }), 'same-rig-other-clip');
+    expect(s.summary().sourceCalibrated).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(false);
+  });
+
+  it('显式载入错骨架的源标定 → 拒绝（骨盆高 / 隐含足底判据）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    // 判据 1：骨盆高带宽
+    const wrongHips = sourceCalibration();
+    wrongHips.pelvisHeightM = 2.0;
+    const r1 = s.setSourceCalibration(wrongHips);
+    expect(r1.ok).toBe(false);
+    expect(r1.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
+    // 判据 2：隐含足底离支撑面（标记深 0.5m → 足底悬在 -0.47m）
+    const wrongSole = sourceCalibration();
+    for (const id of Object.keys(wrongSole.markers)) {
+      wrongSole.markers[id]!.offset = [0, -0.5, 0];
+    }
+    const r2 = s.setSourceCalibration(wrongSole);
+    expect(r2.ok).toBe(false);
+    expect(r2.diagnostics.some((d) => d.code === 'MRS_CAL_SOLE_MISMATCH')).toBe(true);
+    // 判据 3：标记骨不存在
+    const wrongBone = sourceCalibration();
+    wrongBone.markers['GhostFoot.heel'] = { bone: 'GhostFoot', offset: [0, 0, 0], origin: 'manual' };
+    const r3 = s.setSourceCalibration(wrongBone);
+    expect(r3.ok).toBe(false);
+    expect(r3.diagnostics.some((d) => d.code === 'MRS_CAL_BONE_MISSING')).toBe(true);
+    // 会话保持未标定
+    expect(s.summary().sourceCalibrated).toBe(false);
+  });
+
+  it('换不同体型的目标骨架 → 旧目标标定自动停用；显式错配拒绝', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const fit = tposeWorldPositions();
+    s.setTarget({ fitPositions: fit, name: 'a' });
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(true);
+
+    // 换 ×1.5 体型：基线 h_t ≈1.55 vs 标定 1.0 → 超带宽 → 停用 + 警告，目标仍成功构建
+    const scaledFit: JointPositions = {};
+    for (const [k, p] of Object.entries(fit)) scaledFit[k] = [p[0]! * 1.5, p[1]! * 1.5, p[2]! * 1.5];
+    const r = s.setTarget({ fitPositions: scaledFit, name: 'b' });
+    expect(r.ok).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+
+    // 显式给小骨架载大骨架的标定 → 拒绝
+    const bad = s.setTargetCalibration(targetCalibration(2.5));
+    expect(bad.ok).toBe(false);
+    expect(bad.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
+  });
+
+  it('summary.tolerances 暴露绝对容差（×h_t）供问题帧判定', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'fit' });
+    s.solve();
+    const tol = s.summary().tolerances;
+    expect(tol).not.toBeNull();
+    const hT = s.summary().targetPlaneY;
+    expect(hT).not.toBeNull();
+    // anchorM = 0.002 × h_t（h_t = Hips − 平面），正数且量级在毫米级
+    expect(tol!.anchorM).toBeGreaterThan(0.001);
+    expect(tol!.anchorM).toBeLessThan(0.005);
   });
 });

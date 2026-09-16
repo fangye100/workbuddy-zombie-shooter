@@ -532,13 +532,13 @@ export class RetargetWorkbench {
 
   private renderDiagnostics(sum: RetargetSessionSummary): void {
     this.diagsEl.replaceChildren();
-    // 问题帧 = 带帧号的诊断 + **未兑现段**的中点帧。正常兑现的支撑段不是问题——
-    // 残差是否超限由质量判定报告，不靠问题帧导航冒充
+    // 问题帧 = 「warning/error 且带帧号」的诊断 + 未兑现段 + 残差超限段。
+    // info 不进问题导航（成功补偿的提示不是问题）；正常兑现且残差在容差内的支撑段也不是
     const issues: number[] = [];
     for (const d of sum.diagnostics) {
-      if (d.frame !== undefined) issues.push(d.frame);
+      if (d.frame !== undefined && d.severity !== 'info') issues.push(d.frame);
       const div = document.createElement('div');
-      div.className = `rw-diag${d.frame !== undefined ? ' clickable' : ''}`;
+      div.className = `rw-diag${d.frame !== undefined && d.severity !== 'info' ? ' clickable' : ''}`;
       const head = document.createElement('div');
       head.className = 'dhead';
       const sev = document.createElement('span');
@@ -552,32 +552,38 @@ export class RetargetWorkbench {
       msg.className = 'msg';
       msg.textContent = d.message;
       div.append(head, msg);
-      if (d.frame !== undefined) {
+      if (d.frame !== undefined && d.severity !== 'info') {
         const f = d.frame;
         div.title = `跳到第 ${f} 帧`;
         div.addEventListener('click', () => this.hooks.onFrameChange(f));
       }
       this.diagsEl.appendChild(div);
     }
-    if (sum.frames !== null && sum.segments.length > 0) {
-      const times = this.frameTimes();
-      if (times !== null) {
-        for (const seg of sum.segments) {
-          // 只把「有问题的接触」标进导航：未兑现（无锚）或非支撑模式；
-          // 正常兑现的 support 段是结果的一部分，不是问题
-          if (seg.anchor !== null && seg.mode === 'support') continue;
-          const mid = (seg.startS + seg.endS) / 2;
-          let best = 0;
-          let bestD = Infinity;
-          for (let f = 0; f < times.length; f++) {
-            const d = Math.abs(times[f]! - mid);
-            if (d < bestD) {
-              bestD = d;
-              best = f;
-            }
+    const times = this.frameTimes();
+    if (sum.frames !== null && times !== null && times.length > 0) {
+      const midFrameOf = (startS: number, endS: number): number => {
+        const mid = (startS + endS) / 2;
+        let best = 0;
+        let bestD = Infinity;
+        for (let f = 0; f < times.length; f++) {
+          const d = Math.abs(times[f]! - mid);
+          if (d < bestD) {
+            bestD = d;
+            best = f;
           }
-          issues.push(best);
         }
+        return best;
+      };
+      const overLimit = new Set<string>();
+      if (sum.tolerances !== null) {
+        for (const r of sum.constraintResiduals) {
+          if (r.maxDeviationM > sum.tolerances.anchorM) overLimit.add(r.segmentId);
+        }
+      }
+      for (const seg of sum.segments) {
+        // 只把「有问题的接触」标进导航：未兑现（无锚）、非支撑模式、或残差超容差
+        if (seg.anchor !== null && seg.mode === 'support' && !overLimit.has(seg.id)) continue;
+        issues.push(midFrameOf(seg.startS, seg.endS));
       }
     }
     this.issueFrames = [...new Set(issues)].sort((a, b) => a - b);

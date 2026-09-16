@@ -1361,6 +1361,15 @@ async function boot(): Promise<void> {
         retargetSession.sourceInfo()?.clipName ?? 'retargeted',
       );
     }
+    // 版本一致性（UX 复审 P1）：入口 B 重新生成成功后**自动重挂载**新轨道并恢复播放——
+    // 时间轴 scrub/播放驱动的蒙皮角色永远是当前版本，不再需要手动再点「应用到角色」
+    let autoApplied = false;
+    if (
+      outcome.status !== 'failed' && animClip !== null &&
+      retargetEntry === 'object' && retargetTargetObject !== null
+    ) {
+      autoApplied = applyAnimToObject(retargetTargetObject) !== null;
+    }
     if (binding !== null && retargetEntry === 'binding') {
       binding.setAnimationInfo(animInfoHtml());
     }
@@ -1371,6 +1380,7 @@ async function boot(): Promise<void> {
       panel.setModelInfo(
         `动画已重定向：${sum.status === 'pass' ? '通过' : '部分完成'} · ` +
           `${sum.frames ?? 0} 帧 · 覆盖 ${sum.coverage.join('/') || '自由运动'}` +
+          (autoApplied && retargetTargetObject !== null ? ` · 新轨道已应用到 ${retargetTargetObject.name}` : '') +
           (animReport !== null ? ` · ${retargetSummary(animReport)}` : ''),
       );
     }
@@ -1379,6 +1389,7 @@ async function boot(): Promise<void> {
       coverage: sum.coverage,
       metrics: sum.metrics,
       hasPayload: animClip !== null,
+      autoApplied,
     });
     updateRetargetWorkbench();
   }
@@ -1499,6 +1510,8 @@ async function boot(): Promise<void> {
         onCalPathInput: (side, path) => {
           if (side === 'source') retargetCalSrcPath = path;
           else retargetCalTgtPath = path;
+          // 立即重渲染：路径从空变有效后「载入」按钮必须马上可用（UX 复审 P2）
+          updateRetargetWorkbench();
         },
         onCalAction: (side, action, path) => void handleCalAction(side, action, path),
         onFrameChange: (f) => {
