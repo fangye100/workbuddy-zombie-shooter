@@ -669,6 +669,42 @@ export class RetargetSession {
 
   // ── 输入 ──────────────────────────────────────────────────────────
 
+  /**
+  * 源状态快照（PR 复审 P2：main 两入口的「源+目标成对载入」失败时整体回退，
+  * 保证旧结果仍新鲜可消费——只回滚目标会让 catch 宣称的“保留上一份结果”落空）。
+  * 含 revision/solvedRevision：单线程会话内成对恢复是安全的。
+  */
+ public snapshotSourceState(): {
+   source: SessionSource | null;
+   sourceOpts: BuildSourceMotionOptions;
+   sourceCal: RetargetCalibration | null;
+   srcDiags: RetargetDiagnostic[];
+   srcDetachAtFp: string | null;
+   revision: number;
+   solvedRevision: number | null;
+ } {
+   return {
+     source: this.source,
+     sourceOpts: { ...this.sourceOpts },
+     sourceCal: this.sourceCal,
+     srcDiags: this.srcCalDiagnostics,
+     srcDetachAtFp: this.srcCalDetachAtFp,
+     revision: this.revision,
+     solvedRevision: this.solvedRevision,
+   };
+ }
+
+ /** 回滚到快照（成对载入失败路径；不触碰目标侧——目标有自己的事务） */
+ public rollbackSourceTo(snap: ReturnType<RetargetSession['snapshotSourceState']>): void {
+   this.source = snap.source;
+   this.sourceOpts = { ...snap.sourceOpts };
+   this.sourceCal = snap.sourceCal;
+   this.srcCalDiagnostics = snap.srcDiags;
+   this.srcCalDetachAtFp = snap.srcDetachAtFp;
+   this.revision = snap.revision;
+   this.solvedRevision = snap.solvedRevision;
+ }
+
   /** 载入 BVH 源（两入口共用）。解析 / 采样失败不抛，全部走诊断。 */
   loadSourceBvh(text: string, clipName: string, opts: BuildSourceMotionOptions = {}): LoadResult {
     const diagnostics: RetargetDiagnostic[] = [];
@@ -926,6 +962,35 @@ export class RetargetSession {
       return { ok: true, diagnostics: [] };
     }
     const diags = validateRetargetCalibration(cal).map(metaDiagToRetarget);
+    if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // PR 复审 P1：标定的 unitScale/upAxis 是声明，用于纠正被误推断的源——先用缓存
+    // BvhFile 按声明事务性重采样，再做几何兼容检查（否则纠错声明永远被当成资产
+    // 不匹配拒绝，没有可用路径）。重采样后仍不匹配 → 连同重采样一起回滚拒绝。
+    const snap = this.snapshotSourceState();
+    if (this.source !== null) {
+      const wantUnit = cal.unitScale;
+      const wantAxis = cal.upAxis;
+      const unitDiffers = wantUnit !== null && Math.abs(wantUnit - this.source.motion.unitScaleSource) >
+        1e-9 * Math.max(wantUnit, this.source.motion.unitScaleSource);
+      const axisDiffers = wantAxis !== null && wantAxis !== this.source.motion.upAxisSource;
+      if (unitDiffers || axisDiffers) {
+        try {
+          const opts: BuildSourceMotionOptions = { ...this.sourceOpts };
+          if (wantUnit !== null) opts.unitScale = wantUnit;
+          if (wantAxis !== null) opts.forceUpAxis = ({ x: 0, y: 1, z: 2 } as const)[wantAxis];
+          const motion = buildSourceMotion(this.source.bvh, opts);
+          this.source = { bvh: this.source.bvh, motion, clipName: this.source.clipName };
+          this.sourceOpts = opts;
+          this.bump();
+        } catch (e) {
+          this.rollbackSourceTo(snap);
+          return {
+            ok: false,
+            diagnostics: [...diags, err('SOURCE_RESAMPLE_FAILED', `标定声明的单位/轴向无法用于该源：${String(e)}`)],
+          };
+        }
+      }
+    }
     if (cal.side !== 'source') {
       diags.push(err('CAL_SIDE_MISMATCH', `源侧标定的 side 必须是 'source'，收到 '${cal.side}'`));
     }
@@ -934,6 +999,7 @@ export class RetargetSession {
     if (this.source !== null) {
       const mismatch = diagnoseSourceCalibration(cal, this.source);
       if (mismatch.length > 0) {
+        this.rollbackSourceTo(snap); // 声明引发的重采样随拒绝一起回滚（事务性）
         return { ok: false, diagnostics: [...diags, ...mismatch] };
       }
     }
@@ -1067,7 +1133,10 @@ export class RetargetSession {
       return outcome;
     }
     const baseline = computeDirectionBaseline(
-      { srcDirections: sourceRestDirections(this.source.bvh) },
+      { srcDirections: sourceRestDirections(
+          this.source.bvh,
+          ({ x: 0, y: 1, z: 2 } as const)[this.source.motion.upAxisSource], // 有效采样轴向（PR 复审 P2）
+        ) },
       this.target.rig,
     );
     const sp = this.sourceCal?.supportPlane;

@@ -1644,15 +1644,23 @@ async function boot(): Promise<void> {
     if (binding === null) return null;
     try {
       const report = l0MappingReport(text, clipName, binding.currentFit().tposePositions);
+      // PR 复审 P2：源+目标成对载入——任一失败回滚源快照，旧结果保持新鲜可消费
+      const sourceSnap = retargetSession.snapshotSourceState();
       const load = retargetSession.loadSourceBvh(text, clipName);
-      if (!load.ok) throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      if (!load.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      }
       animReport = report; // 源载入成功才提交映射诊断，失败时侧栏保持上一份（不错位到坏文件）
       const tgt = retargetSession.setTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
         assetKey: bindingSession ?? undefined,
       });
-      if (!tgt.ok) throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      if (!tgt.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      }
       openRetargetWorkbench('binding', null);
       solveAndRefresh();
       return report;
@@ -1677,11 +1685,18 @@ async function boot(): Promise<void> {
     if (obj.skeleton === null) return null;
     try {
       const report = l0MappingReport(text, clipName, skeletonRestWorldPositions(obj.skeleton));
+      const sourceSnap = retargetSession.snapshotSourceState();
       const load = retargetSession.loadSourceBvh(text, clipName);
-      if (!load.ok) throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      if (!load.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      }
       animReport = report; // 同入口 A：源载入成功才提交映射诊断
       const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name, assetKey: obj });
-      if (!tgt.ok) throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      if (!tgt.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      }
       openRetargetWorkbench('object', obj);
       solveAndRefresh();
       const applied = applyAnimToObject(obj);
