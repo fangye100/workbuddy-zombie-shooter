@@ -201,10 +201,9 @@ const TARGET_UNIT_SANITY = { min: 0.1, max: 5 } as const;
  * `cal.pelvisHeightM`——数据契约（retarget-meta）明确它**已经是骨盆到支撑面的
  * 距离**，不得再减支撑面高度（角色与地面同时抬高时比例不变，标定必须保留）。
  *  - 标记骨必须存在；单位/轴向声明与采样一致（身份，不是几何）；
- *  - 每个标记的「骨盆 → 标记下垂量」：**最小值** ≈ pelvisHeightM（足底要能
- *    贴到支撑面）；**最大值** ≤ pelvisHeightM×(1+带宽)——贴着支撑面的标记
- *    下垂量不可能超过骨盆到支撑面的距离，单侧腿被拉长会在这里暴露
- *    （只看最小值会被未变的另一侧掩盖）。
+ *  - **最深标记**（= 足底）的「骨盆 → 标记下垂量」必须落在 pelvisHeightM 的
+ *    带宽内：够不着（缩短/悬空）或垂得更深（单侧拉长）都是另一具骨架。
+ *    只看最深标记，手部等高位标记（下垂更小）不进判据、不会劫持。
  */
 function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSource): RetargetDiagnostic[] {
   const out: RetargetDiagnostic[] = [];
@@ -229,7 +228,6 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
   const hipsY = chainY.get(source.bvh.root) ?? NaN;
   if (!Number.isFinite(hipsY)) return out;
   const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
-  let minDroop: number | null = null;
   let maxDroop: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
     const jn = jointOfBone.get(mk.bone);
@@ -237,17 +235,14 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
     if (y === undefined) continue;
     // 骨盆 → 标记的几何下垂量（标记偏移在骨局部，BVH rest 全 identity ⇒ 世界）
     const droop = hipsY - (y + mk.offset[1]);
-    if (minDroop === null || droop < minDroop) minDroop = droop;
     if (maxDroop === null || droop > maxDroop) maxDroop = droop;
   }
-  if (h > 0 && minDroop !== null) {
-    if (Math.abs(minDroop - h) / h > CAL_PELVIS_BAND) {
-      out.push(err('CAL_PELVIS_MISMATCH',
-        `源标定声明骨盆到支撑面 ${h.toFixed(3)}m，但当前源骨架骨盆到最低标记的几何下垂为 ${minDroop.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%）——标定属于另一具骨架`));
-    } else if (maxDroop! > h * (1 + CAL_PELVIS_BAND)) {
-      out.push(err('CAL_PELVIS_MISMATCH',
-        `当前源骨架有标记的下垂量 ${maxDroop!.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的 ${Math.round(CAL_PELVIS_BAND * 100)}% 带宽（贴支撑面的标记不可能垂得更深；常见于单侧腿长被改）——标定属于另一具骨架`));
-    }
+  if (h > 0 && maxDroop !== null && Math.abs(maxDroop - h) / h > CAL_PELVIS_BAND) {
+    // 只看**最深**标记（足底）：它必须落在 h 的带宽内——够不着（缩短/悬空）
+    // 或垂得更深（单侧拉长）都是另一具骨架。手部等高位标记下垂更小、不进判据，
+    // 不会劫持（复审 P3：min 口径会被手标记劫持误拒合法足底标定）。
+    out.push(err('CAL_PELVIS_MISMATCH',
+      `源标定声明骨盆到支撑面 ${h.toFixed(3)}m，但当前源骨架最深标记的几何下垂为 ${maxDroop.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%；常见于腿长/比例被改）——标定属于另一具骨架`));
   }
   return out;
 }
@@ -312,23 +307,17 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
   const hipsY = posY['Hips'];
   if (hipsY === undefined) return out;
   const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
-  let minDroop: number | null = null;
   let maxDroop: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
     if (!orderSet.has(mk.bone) || posY[mk.bone] === undefined) continue;
     const off = rotateVec(rot[mk.bone]!, [mk.offset[0], mk.offset[1], mk.offset[2]]);
     const droop = hipsY - (posY[mk.bone]! + off[1]);
-    if (minDroop === null || droop < minDroop) minDroop = droop;
     if (maxDroop === null || droop > maxDroop) maxDroop = droop;
   }
-  if (h > 0 && minDroop !== null) {
-    if (Math.abs(minDroop - h) / h > CAL_PELVIS_BAND) {
-      out.push(err('CAL_PELVIS_MISMATCH',
-        `目标标定声明骨盆到支撑面 ${h.toFixed(3)}m，但骨架骨盆到最低标记的几何下垂为 ${minDroop.toFixed(3)}m——标定属于另一具骨架`));
-    } else if (maxDroop! > h * (1 + CAL_PELVIS_BAND)) {
-      out.push(err('CAL_PELVIS_MISMATCH',
-        `骨架有标记的下垂量 ${maxDroop!.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的带宽（贴支撑面的标记不可能垂得更深；常见于单侧腿长被改）——标定属于另一具骨架`));
-    }
+  if (h > 0 && maxDroop !== null && Math.abs(maxDroop - h) / h > CAL_PELVIS_BAND) {
+    // 同源侧：只看最深标记（足底）——手部等高位标记不进判据，不会劫持
+    out.push(err('CAL_PELVIS_MISMATCH',
+      `目标标定声明骨盆到支撑面 ${h.toFixed(3)}m，但骨架最深标记的几何下垂为 ${maxDroop.toFixed(3)}m——标定属于另一具骨架`));
   }
   return out;
 }
@@ -338,6 +327,21 @@ function calibrationUnitsOnly(cal: RetargetCalibration): RetargetCalibration {
   const { markers: _m, supportPlane: _sp, ...rest } = cal;
   // pelvisHeightM=0 → buildTargetRig 落回骨架实测；supportPlane 缺省 → 派生平面
   return { ...rest, markers: {}, pelvisHeightM: 0 } as RetargetCalibration;
+}
+
+/** 按给定单位/轴向构造单位上下文（单位推断用；骨架几何仍自算） */
+function unitContext(unitScale: number, upAxis: 'x' | 'y' | 'z' | null): RetargetCalibration {
+  return calibrationUnitsOnly({
+    schemaVersion: RETARGET_META_SCHEMA_VERSION,
+    side: 'target',
+    pelvisHeightM: 0,
+    // 占位平面——calibrationUnitsOnly 会剥掉，骨架自算派生平面
+    supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'template', confidence: 1 },
+    unitScale,
+    upAxis,
+    markers: {},
+    rotationBaseline: 'direction',
+  } as RetargetCalibration);
 }
 
 function identity16(): Float32Array<ArrayBuffer> {
@@ -756,18 +760,46 @@ export class RetargetSession {
       }
     }
     let built = this.buildTargetParts(input, this.targetCal ?? this.targetUnitCtx);
-    // 残留单位声明对新骨架可能不适用（换资产）：合理性校验失败即丢弃并按默认重建
-    if (
-      this.targetCal === null && this.targetUnitCtx !== null && built.ok &&
-      (built.rig.pelvisHeightM < TARGET_UNIT_SANITY.min || built.rig.pelvisHeightM > TARGET_UNIT_SANITY.max)
-    ) {
-      this.tgtCalDiagnostics = [
-        ...this.tgtCalDiagnostics,
-        warn('TARGET_UNITS_DROPPED',
-          `残留的单位声明（unitScale=${this.targetUnitCtx.unitScale ?? 1}）使骨架骨盆高为 ${built.rig.pelvisHeightM.toFixed(3)}m，超出人形合理区间 [${TARGET_UNIT_SANITY.min}, ${TARGET_UNIT_SANITY.max}]m，已丢弃并按默认单位重建`),
-      ];
-      this.targetUnitCtx = null;
-      built = this.buildTargetParts(input, null);
+    if (this.targetCal === null && built.ok) {
+      const inBand = (v: number): boolean => v >= TARGET_UNIT_SANITY.min && v <= TARGET_UNIT_SANITY.max;
+      if (!inBand(built.rig.pelvisHeightM)) {
+        // 当前单位解释（残留声明或默认米制）超人形区间：按候选解析——
+        // ① 残留声明不可信 → 丢弃按默认重建；② 默认米制把 cm 骨架当米（资产往返
+        // 的已知坑）→ 按 cm（×0.01）推断；两者都不行 → 保留并警告
+        const prevUpAxis = this.targetUnitCtx?.upAxis ?? null;
+        if (this.targetUnitCtx !== null) {
+          this.tgtCalDiagnostics = [
+            ...this.tgtCalDiagnostics,
+            warn('TARGET_UNITS_DROPPED',
+              `残留的单位声明（unitScale=${this.targetUnitCtx.unitScale ?? 1}）使骨架骨盆高为 ${built.rig.pelvisHeightM.toFixed(3)}m，超出人形合理区间 [${TARGET_UNIT_SANITY.min}, ${TARGET_UNIT_SANITY.max}]m，已丢弃`),
+          ];
+          this.targetUnitCtx = null;
+          const retry = this.buildTargetParts(input, null);
+          if (retry.ok && inBand(retry.rig.pelvisHeightM)) {
+            built = retry;
+          }
+        }
+        if (built.ok && !inBand(built.rig.pelvisHeightM)) {
+          // 默认（或丢弃后重建）仍超界：最后尝试 cm 解释（米制骨架按 0.01 会过小，不会误采）
+          const cmCtx = unitContext(0.01, prevUpAxis);
+          const cmTry = this.buildTargetParts(input, cmCtx);
+          if (cmTry.ok && inBand(cmTry.rig.pelvisHeightM)) {
+            this.targetUnitCtx = cmCtx; // 推断结果入上下文，后续构建沿用
+            this.tgtCalDiagnostics = [
+              ...this.tgtCalDiagnostics,
+              warn('TARGET_UNITS_INFERRED',
+                `骨架按米制解释骨盆高 ${built.rig.pelvisHeightM.toFixed(3)}m 超出人形区间，已按厘米制（×0.01）解释为 ${cmTry.rig.pelvisHeightM.toFixed(3)}m；请以 sidecar 标定确认单位`),
+            ];
+            built = cmTry;
+          } else {
+            this.tgtCalDiagnostics = [
+              ...this.tgtCalDiagnostics,
+              warn('TARGET_UNITS_SUSPECT',
+                `骨架骨盆高 ${built.rig.pelvisHeightM.toFixed(3)}m 超出人形区间且无法按厘米制解释——单位可疑，请载入该资产的标定`),
+            ];
+          }
+        }
+      }
     }
     if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
     return { ok: true, rig: built.rig, output: built.output, diagnostics: built.diagnostics, calDetached };
