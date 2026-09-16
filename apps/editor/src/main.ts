@@ -171,6 +171,10 @@ async function boot(): Promise<void> {
         // 启动失败：不动作者状态，只提示。错误原因由 HUD 显示
         console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
         hudDirty = true;
+      } else {
+        // 每一次新的 Play 都是一个新的世界：诊断去重集合必须随之清空，
+        // 否则第二轮 Play 里同类的"容量不足"告警会被上一轮的记录吞掉。
+        shownRuntimeDiags.clear();
       }
     } else playCtl.togglePause();
   });
