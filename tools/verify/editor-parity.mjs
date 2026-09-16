@@ -244,18 +244,37 @@ try {
   // ================================================================ §8-5
   console.log('\n──── §8-5：选中的敌人在画面中对应得到 ────');
   await cdp.eval(`document.querySelector('#btn-play').click(); 'ok'`);
-  await sleep(1500);
+  // 🔴 不能只 sleep 固定时长就断言：机器有并发负载 / 冷启动时，1.5s 后世界可能还没跑起来，
+  // §8-5 三条会一起挂（实测 10 次里挂 4 次）。改成**轮询到条件成立**为止。
+  const waitEntity = async (timeoutMs) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      const n = await cdp.eval(`(window.__editor.bridge.active ? window.__editor.bridge.entities.length : 0)`);
+      if (Number(n) > 0) return Number(n);
+      await sleep(400);
+    }
+    return 0;
+  };
+  const spawned = await waitEntity(30_000);
+  check('Play 后世界里真的有运行时实体', spawned > 0, `${spawned} 个（轮询等待，最多 30s）`);
+
   const picked = await call('pickFirstNpc()');
   check('Play 中选中一个运行敌人', picked !== null && picked !== undefined, JSON.stringify(picked));
 
   // 冻结运行：不暂停的话投影取的是这一帧、点到的是下一帧的位置
   await cdp.eval(`document.querySelector('#btn-pause').click(); 'ok'`);
-  await sleep(400);
+  // 暂停后还要等画面真的画过一帧 —— 否则 viewProj 可能还是上一帧（甚至未初始化）的
+  const f0 = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
+  for (let i = 0; i < 60; i++) {
+    const f = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
+    if (f > f0 + 1) break;
+    await sleep(200);
+  }
 
   // ⚠️ 不去动相机。Play 期间渲染用的不是 `__editor.camera`（那是编辑相机的 UI 状态），
   // 试图"把相机对准它"会让投影落到近平面上爆成 x=12683 —— 那是探针在自欺欺人。
   // 正确做法：在当前画面里挑一只真的看得见的僵尸。
-  const locate = await cdp.eval(`(() => {
+  const locateEval = `(() => {
     const r = window.__editor.renderer;
     const rect = document.getElementById('gpu').getBoundingClientRect();
     const M = 24;
@@ -267,7 +286,7 @@ try {
       if (p.behind || !inside(p)) continue;
       cands.push({ e, p, d: Math.hypot(e.x - eye[0], 0.9 - eye[1], e.z - eye[2]) });
     }
-    if (cands.length === 0) return { ok: false, why: '画面里没有可见实体' };
+    if (cands.length === 0) return { ok: false, why: '画面里没有可见实体', eye: eye.map((v) => +v.toFixed(2)) };
     cands.sort((a, b) => a.d - b.d);
     const { e, p } = cands[0];
     const target = { id: e.id, generation: e.generation, sourceNodeId: e.sourceNodeId, targetId: e.targetId, behavior: e.behavior };
@@ -288,13 +307,22 @@ try {
       hit: sel === null ? null : { id: sel.id, generation: sel.generation },
       back,
     };
-  })()`);
+  })()`;
+  // 同样要重试：相机取景 / canvas 尺寸在冷启动时可能还没稳定，
+  // 一次性判定会把"还没画好"误报成"画面对应失败"。
+  let locate = await cdp.eval(locateEval);
+  let attempts = 1;
+  while (locate.ok !== true && attempts < 20) {
+    await sleep(500);
+    locate = await cdp.eval(locateEval);
+    attempts++;
+  }
   check(
     '画面里能找到可见的运行时实体',
     locate.ok === true,
     locate.ok
       ? `${locate.visible} 只可见 · 目标 #${locate.picked.id}·代${locate.picked.generation} @ (${locate.screen.x.toFixed(1)}, ${locate.screen.y.toFixed(1)})px`
-      : String(locate.why),
+      : `${String(locate.why)} · eye=${JSON.stringify(locate.eye)} · 已重试 ${attempts} 次`,
   );
   check('🔴 点在它的像素位置上能选中运行时实体（真实点击入口）', locate.ok === true && locate.hit != null,
     locate.hit == null ? '点下去什么都没选中' : `选中 #${locate.hit.id}·代${locate.hit.generation}`);

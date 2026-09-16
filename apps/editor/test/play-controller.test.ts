@@ -112,6 +112,18 @@ describe('PlayController —— Stop 恢复作者状态（docs/17 §8-7 前半�
     expect(ctl.error).toContain('场景尚未加载');
     expect(ctl.state).toBe('stopped');
   });
+
+  it('Play 期间发生了增删（restore 报 mismatched）→ 不吞掉，明确告警', () => {
+    const { ctl, r } = make();
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    ctl.start();
+    // 渲染器返回 mismatched=true 表示 Play 期间物体数变了 —— 控制器必须告警，不能当没事发生
+    r.restoreAuthorState = () => ({ restored: 1, mismatched: true });
+    ctl.stop();
+    expect(spy).toHaveBeenCalled();
+    expect(String(spy.mock.calls[0]?.[0] ?? '')).toContain('不一致');
+    spy.mockRestore();
+  });
 });
 
 describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGENTS.md §2.4）', () => {

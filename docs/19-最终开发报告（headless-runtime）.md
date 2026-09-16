@@ -1,10 +1,11 @@
 # 19 · 最终开发报告（Agent 优先 Game Editor · WU-0 → WU-6）
 
-- 分支：`feature/headless-runtime`，领先 `origin/main` **20 笔提交**，落后 0（全部已推送）。
+- 分支：`feature/headless-runtime`，领先 `origin/main` **22 笔提交**，落后 0（全部已推送）。
 - 依据：`docs/17-Agent优先GameEditor架构与开发指导.md` §8 业务证明、§9 报告要求。
 - 取舍过程：`docs/18-运行时责任收敛与取舍记录.md`（WU-0 → WU-6 逐节，含踩坑与仍未解决项）。
-- 独立评审：`.workbuddy/tmp/review-{a,b,c}.md`（三份只读评审，A 架构铁律 / B 证据可复现 / C 代码风险）。
-  首轮判定 A、B **不通过**，共 6 条阻断；已全部修掉。评审意见与整改见 `docs/18` §9。
+- 独立评审：`docs/review/`（三份只读评审，A 架构铁律 / B 证据可复现 / C 代码风险）。
+  首轮 A、B **不通过**（6 条阻断），第二轮 A **不通过**（含整改引入的 1 条真回归 + 1 处门禁红）；
+  两轮发现已全部修掉。评审意见与整改见 `docs/18` §9。
 
 ---
 
@@ -72,14 +73,14 @@
 
 | 文件 | main | HEAD | 说明 |
 |---|---|---|---|
-| `apps/editor/src/main.ts` | 1958 | **2537** | +579，**全部是装配接线**：Play/Pause/Step/Stop 按钮绑定、Bridge 每帧注入、刷怪点面板挂载、验证钩子。领域逻辑一行都没有 |
-| `apps/editor/src/renderer.ts` | 2137 | 2329 | +192，动态实例批次注入 + 作者状态快照 + 灯光 priority 选择 |
+| `apps/editor/src/main.ts` | 1958 | **2566** | +608，**全部是装配接线**：Play/Pause/Step/Stop 按钮绑定、Bridge 每帧注入、刷怪点面板挂载、验证钩子。领域逻辑一行都没有 |
+| `apps/editor/src/renderer.ts` | 2137 | 2385 | +248，动态实例批次注入 + 作者状态快照 + 灯光 priority 选择 |
 | `packages/render/src/renderer-core.ts` | 934 | 1141 | +207，动态实例渲染通道（storage 实例数组 + `@builtin(instance_index)`） |
 | `apps/editor/src/services/runtime-bridge.ts` | — | 307 | 新建 |
 | `apps/editor/src/services/play-controller.ts` | — | 170 | 新建 |
 | `apps/editor/src/services/spawn-panel.ts` | — | 215 | 新建 |
 
-`main.ts` 涨到 2537 行是事实，但涨的都是"把已有的东西接起来"；
+`main.ts` 涨到 2566 行是事实，但涨的都是"把已有的东西接起来"；
 判断标准是：**把它删掉，运行时与规则仍然完整**（都在 `packages/runtime`）。
 它是本阶段唯一一处需要盯的膨胀点，建议下一阶段把面板/钩子装配按领域拆成独立装配模块。
 
@@ -170,14 +171,14 @@ $ npm run verify:parity-host
 | 门禁 | 结果 |
 |---|---|
 | `npm run typecheck` | exit 0 |
-| `npm run test` | **560 passed / 31 files** |
+| `npm run test` | **568 passed / 32 files** |
 | `npm run smoke:nav` | **exit 0 / 13 PASS**（§8-3 的 `bakeClearance` 证据在这里） |
 | `npm run scene:check` | exit 0（28 个资产元数据同步 + 12 条场景文件测试） |
 | `npm run content:check` | exit 0 |
 | `npm run verify:prefix` | exit 0 |
 | `npm run editor:build` | exit 0 |
 | `npm run editor:smoke` | **127 PASS / 6 FAIL / 3 SKIP**，CONSOLE 0 / EXCEPTION 0 |
-| `npm run verify:parity-host` | **17 PASS / 0 FAIL**（§8-1 / §8-5 / §8-6 实机 harness） |
+| `npm run verify:parity-host` | **20 PASS / 0 FAIL，连续 3 次一致**（§8-1 / §8-5 / §8-6 实机 harness） |
 
 `editor:smoke` 的 **6 条 FAIL 与整改前逐条一致、零新增**（详见 §6 已知限制 1）。
 
@@ -187,12 +188,12 @@ $ npm run verify:parity-host
 |---|---|---|---|
 | 1 | Node/浏览器同输入一致 | `tools/verify/runtime-parity.mjs --compare`（比对逻辑入库） | `verify:parity-host` §8-1 |
 | 2 | 房间触发与禁用语义 | `session.test.ts`：禁用 SpawnPoint 不生成（**按身份核**）、禁用 RoomVolume 不触发、**玩家走出房间再走回来不重复投放**、时间推进不重复触发 | — |
-| 3 | 障碍参与移动约束 | `session.test.ts:77,156` 用 `insideAnyObstacle()` 在 tick 0/10/50/200 逐实体核（**不是"朝玩家距离变小"**）；`packages/ai/test/navigation.smoke.ts`（`smoke:nav`，13 条） | — |
+| 3 | 障碍参与移动约束 | `session.test.ts:112,241` 用 `insideAnyObstacle()` 在 tick 0/10/50/200 逐实体核（**不是"朝玩家距离变小"**）；`packages/ai/test/navigation.smoke.ts`（`smoke:nav`，13 条） | — |
 | 4 | Pause/Step 与帧率无关 | `play-session.test.ts`：暂停 5 秒不补算、`stepOnce()` 严格 +1、**对齐到同一 tick 后逐实体比世界状态（1e-9）** | — |
 | 5 | 选敌读身份/来源/目标/状态 + **画面对应** | `runtime-bridge.test.ts`（身份/来源/拾取自洽） | `verify:parity-host` §8-5：点在 `(730.6,174.2)px` → 命中 `#2·代1`，回投影 `Δ=(0.00,0.00)px` |
 | 6 | 改 radius 撤销 + 保存重开保持 + 同种子重跑 | `spawn-edit.test.ts`（undo 精确回原值、多步 LIFO、一次编辑恰好 1 条差异路径）+ `spawn-ab.test.ts`（改一处不牵动它处、散布随 radius **单调变大**） | `verify:parity-host` §8-6：整页重载后仍 `4.75` |
-| 7 | Stop 恢复作者状态 + 20 次启停账目 | **`apps/editor/test/play-controller.test.ts`（本次整改新增，此前零测试）**：Play 中改动 → Stop 后逐字段还原、装载失败不动作者状态、20 次启停 `registered==disposed 且 pending==0` | `verify:parity-host` |
-| 8 | 动态实体不占静态槽位 | `session.test.ts:143,150`（120 只 > 64）+ `runtime-bridge.test.ts`（**批次 == 体型种类数**） | docs/18 §5.5 |
+| 7 | Stop 恢复作者状态 + 20 次启停账目 | **`apps/editor/test/play-controller.test.ts`（本次整改新增，此前零测试）**：Play 中改动 → Stop 后逐字段还原、装载失败不动作者状态、20 次启停 `registered==disposed 且 pending==0` | — |
+| 8 | 动态实体不占静态槽位 | `session.test.ts:226`（120 只 > 64）+ `runtime-bridge.test.ts`（**批次 == 体型种类数**） | docs/18 §5.5 |
 
 **范围说明**：本轮未改 schema、未改 `assets/**`，故未重跑内容/场景生成全量流程；
 `scene:check` / `content:check` 仍按纪律执行。**未按 `npm run sim` 走完整模拟导出**
@@ -267,7 +268,7 @@ $ npm run verify:parity-host
 - **保留他人工作区改动**：`agents.md` 由另一并行会话修改、`agents.md.bak-webdebug-20260911`
   是其备份 —— 本轮**未暂存、未修改、未删除**。
 - 本阶段提交构成：WU-0(1) + WU-1(4) + WU-2(1) + WU-3(2) + WU-4(2) + WU-5(2) + WU-6(2)
-  + 记忆日志(4) + **评审整改(2)** = 20 笔。
+  + 记忆日志(4) + **评审整改(4)** = 22 笔。
 - 本轮（评审整改）改动文件：
 
 | 文件 | 动作 |
@@ -283,6 +284,7 @@ $ npm run verify:parity-host
 | `apps/editor/test/runtime-bridge.test.ts` | 修 2 条恒真/近似断言 |
 | `tools/verify/runtime-parity.mjs` | 新增 `--compare` 比对模式 |
 | `tools/verify/editor-parity.mjs` | **新建**（原 `wu*-probe` 转正入库） |
+| `apps/editor/test/scene-lights.test.ts` | **新建**（灯光 priority 降级此前零测试） |
 | `package.json` | `verify:parity` / `verify:parity-host` 入口 |
 | `docs/18`、`docs/19` | 评审记录与本报告 |
 
@@ -295,7 +297,8 @@ $ npm run verify:parity-host
 - **定位**：点画面里的僵尸 → 面板直接告诉你是哪个刷怪点、什么角色、追谁、什么状态；
   跨宿主不一致时，输入指纹先告诉你"是输入不同还是逻辑不同"。
 - **修改**：面板改散布半径，改前自检、改后可撤销。
-- **保存**：写盘前逐路径核对改动集合（**恰好一条**），未消费组件不丢；重开页面值仍在。
+- **保存**：写盘前核对改动集合（**全部落在某个 SpawnPoint 的 radius/count 上**），
+  未消费组件不丢；重开页面值仍在。
 - **重跑并检查**：停→跑按新文档重新装载，同种子重跑可 A/B 对比初始散布。
 
 这条闭环是通的，且每一环都有**可复跑**的证据（入库测试 + 入库 harness）。
