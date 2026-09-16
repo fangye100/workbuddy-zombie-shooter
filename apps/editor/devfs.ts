@@ -79,36 +79,34 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 // ------------------------------------------------------------ 文件身份（队列键）
 
 /**
- * 本机根是否大小写不敏感（写路径上的一次性探测；启动一次，结果缓存）。
- * Windows/macOS 默认 APFS/NTFS → true；Linux ext4 → false。
- * 不能跨平台一律转小写：Linux 上 `A.json` 与 `a.json` 是两个文件。
+ * 本机根是否大小写不敏感：**按实际文件系统能力探测**（写路径上一次性，结果缓存）。
+ * 不按平台硬编码 —— win32/darwin 上也可能存在大小写敏感的卷/目录，
+ * Linux 上也可能挂载不敏感的共享盘。探测 = 在项目根写一个探针文件，
+ * 用**大写变体**能否读到它来判断；探测失败保守按「敏感」处理（宁可多串行，
+ * 不要把同一文件拆进两条队列）。不能跨平台一律转小写：大小写敏感的盘上
+ * `A.json` 与 `a.json` 是两个文件，转小写会把不该串行的写串行化。
  */
 let caseInsensitiveCache: boolean | null = null;
 function isCaseInsensitiveFs(root: string): boolean {
   if (caseInsensitiveCache !== null) return caseInsensitiveCache;
-  if (process.platform === 'win32' || process.platform === 'darwin') {
-    caseInsensitiveCache = true;
-    return true;
-  }
   try {
     const probe = path.join(root, `.caseprobe-${process.pid}`);
     writeFileSyncCase(probe, 'x');
+    // 大写变体能读到 → 盘不敏感（case.json 与 CASE.JSON 是同一文件）
     const insensitive = existsSyncCase(probe.toUpperCase());
     rmSyncCase(probe, { force: true });
     caseInsensitiveCache = insensitive;
     return insensitive;
   } catch {
-    caseInsensitiveCache = false;
+    caseInsensitiveCache = false; // 探测失败按敏感处理：宁可多串行，不拆同一文件
     return false;
   }
 }
 
 /**
  * 文件身份键：让指向**同一个文件**的不同写法（大小写不同、含 `./`、`a/../a`）
- * 落入同一个队列。Windows/macOS 用 `realpathSync` 解析出真实路径再统一小写；
- * 文件不存在时（新建保存）退化为规范化后的路径按平台语义小写。
- *
- * 不跨平台一律转小写：Linux 上大小写是两个文件，转小写会把不该串行的写串行化。
+ * 落入同一个队列。`realpathSync` 解析出真实路径后，按**探测到的**文件系统能力
+ * 决定是否统一小写；文件不存在时（新建保存）退化为规范化后的路径走同一规则。
  */
 function fileIdentityKey(root: string, abs: string): string {
   let resolved = abs;
