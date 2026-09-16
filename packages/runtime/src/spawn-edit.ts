@@ -204,9 +204,15 @@ export class SpawnEditStore {
     return this.committed;
   }
 
-  /** 有未提交的编辑 */
+  /**
+   * 有未提交的编辑。
+   *
+   * 判据是「撤销栈非空 **或** 工作副本与已提交版本有差异」，不能只数栈 ——
+   * 保存竞态下（发送快照后、确认前撤销了一条编辑），栈是空的但工作副本和
+   * 磁盘并不一致，这时必须把 dirty 如实亮出来。
+   */
   get dirty(): boolean {
-    return this.undoStack.length > 0;
+    return this.undoStack.length > 0 || this.changedPaths().length > 0;
   }
 
   get undoDepth(): number {
@@ -261,10 +267,25 @@ export class SpawnEditStore {
     return changedJsonPaths(this.committed, this.working);
   }
 
-  /** 保存成功后调用：把工作副本定为新的已提交版本，清空撤销栈 */
-  commit(): void {
-    this.committed = cloneDocument(this.working);
-    this.undoStack.length = 0;
+  /**
+   * 开始一次保存：**快照**要发送的版本，并记下它包含了撤销栈里的前几步。
+   *
+   * 🔴 竞态边界：保存是异步 IO。从"序列化"到"写盘返回"之间，作者可能继续编辑。
+   * 如果把"保存返回 = 提交当前工作副本"（曾经就是这么写的），那两步之间新做的
+   * 编辑会被**一并标记为已保存**、撤销栈被清空 —— 未落盘的数据被说成落了盘。
+   * 所以：发送的是**快照**，确认时只提交快照，快照之后的编辑原样保留为未保存。
+   */
+  beginSave(): { doc: SceneDocument; editsIncluded: number } {
+    return { doc: cloneDocument(this.working), editsIncluded: this.undoStack.length };
+  }
+
+  /**
+   * 保存成功后调用：**只提交那次发送的快照**，把已包含的编辑从撤销栈里出队，
+   * 快照之后的编辑原样保留（仍为未保存修改，可继续撤销）。
+   */
+  confirmSave(saved: SceneDocument, editsIncluded: number): void {
+    this.committed = cloneDocument(saved);
+    this.undoStack.splice(0, editsIncluded);
   }
 
   /** 换了场景（或放弃编辑重新装载） */

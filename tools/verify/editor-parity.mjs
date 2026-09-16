@@ -412,6 +412,59 @@ try {
       const s2 = await st();
       check('🔴 重新打开页面后 radius 仍是新值', Math.abs((s2.radius ?? -1) - target) < 1e-6, `重载后 radius=${s2.radius}（期望 ${target}）`);
       check('重开后没有残留未保存改动', s2.dirty === false && s2.undoDepth === 0, `dirty=${s2.dirty} undo=${s2.undoDepth}`);
+
+      // ── 保存竞态（复审 #1 的验收场景）──
+      // 「发送 radius 2 → 等待写盘期间改成 3 → 保存返回后，3 仍为未保存修改」
+      const race = await cdp.eval(`(async () => {
+        window.__editor.spawn.select(${JSON.stringify(nodeId)});
+        window.__editor.spawn.edit('radius', ${target + 1});
+        const p = window.__editor.spawn.save(); // 序列化的是 target+1，之后才开始写盘
+        window.__editor.spawn.edit('radius', ${target + 2}); // 等待期间作者继续改
+        await p;
+        return window.__editor.spawn.state();
+      })()`);
+      check(
+        '🔴 保存竞态：快照之后的编辑不被吞（仍是未保存、可撤销）',
+        race.dirty === true && race.undoDepth === 1 && Math.abs(race.radius - (target + 2)) < 1e-6,
+        JSON.stringify({ dirty: race.dirty, undo: race.undoDepth, radius: race.radius }),
+      );
+      // 清理竞态状态：撤回后工作副本回到已提交版本（target+1），与磁盘一致
+      await call('revertAll()');
+      s = await st();
+      check('竞态后撤回，工作副本与磁盘一致（dirty 归零）', s.dirty === false && Math.abs(s.radius - (target + 1)) < 1e-6, `radius=${s.radius}`);
+
+      // ── 外部修改冲突（复审 #2）──
+      // 外部把磁盘改掉，此时再保存：绝不能静默覆盖对方，本地编辑要保留
+      const extJson = JSON.parse(await cdp.eval(
+        `(async () => { const r = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(scenePath)})); return await r.text(); })()`,
+      ));
+      for (const n of extJson.nodes) for (const c of n.components) if (n.id === nodeId && c.kind === 'SpawnPoint') c.radius = 99;
+      const extText = JSON.stringify(extJson, null, 2);
+      await cdp.eval(
+        `(async () => {
+          const r = await fetch('/__fs/write', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: ${JSON.stringify(scenePath)}, content: ${JSON.stringify(extText)} }) });
+          return await r.json();
+        })()`,
+      );
+      await call(`select(${JSON.stringify(nodeId)})`);
+      await call(`edit('radius', ${target + 3})`);
+      await call('save()');
+      await sleep(900);
+      s = await st();
+      check(
+        '🔴 外部修改冲突：拒绝覆盖对方内容（不写盘、本地编辑保留）',
+        String(s.message).includes('外部修改') && s.dirty === true && Math.abs(s.radius - (target + 3)) < 1e-6,
+        String(s.message).slice(0, 120),
+      );
+      const stillExt = radiusOf(
+        JSON.parse(await cdp.eval(
+          `(async () => { const r = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(scenePath)})); return await r.text(); })()`,
+        )),
+        nodeId,
+      );
+      check('磁盘仍是外部写入的值（没被这次保存覆盖）', stillExt === 99, `磁盘 radius=${stillExt}`);
+      await call('revertAll()');
     } finally {
       // 🔴 还原必须放 finally：任何断言抛错都不能把改动留在用户资产上
       const restore = await cdp.eval(

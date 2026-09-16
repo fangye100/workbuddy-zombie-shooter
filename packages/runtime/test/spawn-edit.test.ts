@@ -135,12 +135,54 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     const id = firstSpawn(store.document);
     const r0 = readSpawnField(store.document, id, 'radius')!;
     store.set(id, 'radius', r0 + 5);
-    store.commit();
+    const snap = store.beginSave();
+    store.confirmSave(snap.doc, snap.editsIncluded);
     expect(store.dirty).toBe(false);
     expect(readSpawnField(store.committedDocument, id, 'radius')).toBeCloseTo(r0 + 5, 6);
     // commit 之后再来一次编辑，差异仍然只有一条（基线已经前移）
     store.set(id, 'radius', r0 + 6);
     expect(changedPathsOnly(store.committedDocument, store.document)).toHaveLength(1);
+  });
+
+  /**
+   * 保存竞态（复审 #1 的验收场景）：
+   * 「发送 radius 2 → 等待写盘期间改成 3 → 保存返回后，3 仍为未保存修改」。
+   * 曾经"保存返回 = 提交当前工作副本"，把快照之后的编辑一并标记为已保存并清空撤销栈 ——
+   * 未落盘的数据被说成落了盘。
+   */
+  it('保存竞态：快照之后的编辑不被吞 —— 仍是未保存，且可撤销', () => {
+    const store = new SpawnEditStore(fixture());
+    const id = firstSpawn(store.document);
+    const r0 = readSpawnField(store.document, id, 'radius')!;
+
+    store.set(id, 'radius', r0 + 0.5); // 相当于"发送 radius 2"
+    const snap = store.beginSave(); // 序列化的是 radius = r0+0.5
+    store.set(id, 'radius', r0 + 1.5); // 等待写盘期间作者改成 3
+
+    store.confirmSave(snap.doc, snap.editsIncluded); // 只提交快照（radius = r0+0.5）
+    // 🔴 关键断言：3（r0+1.5）仍是未保存修改
+    expect(store.dirty).toBe(true);
+    expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0 + 1.5, 6);
+    expect(readSpawnField(store.committedDocument, id, 'radius')).toBeCloseTo(r0 + 0.5, 6);
+    // 且能撤销回来（撤销栈只保留了快照之后的那一步）
+    expect(store.undoDepth).toBe(1);
+    store.undo();
+    expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0 + 0.5, 6);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('保存竞态边界：等待期间撤销了已发送的编辑，dirty 也要如实为真', () => {
+    const store = new SpawnEditStore(fixture());
+    const id = firstSpawn(store.document);
+    const r0 = readSpawnField(store.document, id, 'radius')!;
+
+    store.set(id, 'radius', r0 + 0.5);
+    const snap = store.beginSave();
+    store.undo(); // 快照之后的瞬间作者反悔，撤销了刚发出去的那一步
+    store.confirmSave(snap.doc, snap.editsIncluded);
+    // 磁盘有这一笔，工作副本没有 —— 两者不一致，dirty 必须如实为真，不能数栈为 0 就说干净
+    expect(store.dirty).toBe(true);
+    expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0, 6);
   });
 
   it('拒绝：节点不存在 / 值非法 / 值没变化，且只有成功才进撤销栈', () => {

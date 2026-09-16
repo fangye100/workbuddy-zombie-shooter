@@ -1022,18 +1022,49 @@ async function boot(): Promise<void> {
       refreshSpawnPanel();
       return;
     }
+
+    // ① 竞态边界：**快照**这次要发送的版本。保存是异步 IO，从序列化到写盘返回之间
+    // 作者可能继续编辑；确认时只提交快照，快照之后的编辑原样保留为未保存。
+    const snap = store.beginSave();
     // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
     // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
-    const content = `${JSON.stringify(store.document, null, 2)}\n`;
+    const content = `${JSON.stringify(snap.doc, null, 2)}\n`;
+
+    // ② 外部修改冲突：整份覆盖之前，先核对磁盘基准指纹。
+    // 人在编辑器里改、Agent 同时改文件时，绝不能静默覆盖对方 ——
+    // 磁盘已经不是我们上次知道的版本时，保留本地编辑并明确报告。
+    const disk = await readProjectFile(src.url);
+    if (!disk.ok) {
+      spawnMsg = { text: `保存失败：读不到磁盘基准版本（${disk.error ?? '未知'}）`, kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    const diskFp = sceneFingerprint(disk.json);
+    const baseFp = sceneFingerprint(store.committedDocument);
+    if (diskFp !== baseFp) {
+      spawnMsg = {
+        text:
+          `拒绝保存：磁盘上的场景已被外部修改（基准 ${baseFp} → 磁盘 ${diskFp}）。` +
+          '为避免覆盖对方内容，本次未写盘；本地编辑已保留。重新装载或人工合并后再保存。',
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+
+    // ③ 写盘，成功后**只提交那次发送的快照**
     const res = await writeProjectFile(src.url, { content });
     if (!res.ok) {
       spawnMsg = { text: `保存失败：${res.error ?? `HTTP ${res.status}`}`, kind: 'warn' };
       refreshSpawnPanel();
       return;
     }
-    store.commit();
+    store.confirmSave(snap.doc, snap.editsIncluded);
+    const kept = store.undoDepth;
     spawnMsg = {
-      text: `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留`,
+      text:
+        `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留` +
+        (kept > 0 ? `（另有 ${kept} 处保存期间的编辑仍为未保存）` : ''),
       kind: 'ok',
     };
     refreshSpawnPanel();
@@ -1176,6 +1207,12 @@ async function boot(): Promise<void> {
       },
       edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
       undo: () => undoSpawnEdit(),
+      /** 全部撤回（不提交）。此前只有 API 没有任何入口 —— 探针/用户都到不了 */
+      revertAll: () => {
+        spawnStore?.revertAll();
+        refreshSpawnPanel();
+        hudDirty = true;
+      },
       save: () => saveSpawnEdits(),
       rerun: () => restartPlay(),
       focusSource: () => focusSourceNode(),
