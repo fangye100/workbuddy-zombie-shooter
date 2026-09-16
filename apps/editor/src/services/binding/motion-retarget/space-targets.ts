@@ -198,21 +198,24 @@ export function contactAnchor(
   map: SpaceMapping,
   plane: Plane,
 ): [number, number, number] {
+  // 中位数先于映射取（PR 复审）：坐标中位数不与旋转交换——先映射再取会在
+  // 非 identity C（preserve-world 的公共旋转）下得到不同的锚点。正确次序：
+  // 源空间中位数 → mapWorldAnchor 一次 → 投影到目标平面。
   const xs: number[] = [];
   const ys: number[] = [];
   const zs: number[] = [];
   for (let f = frameStart; f <= frameEnd; f++) {
-    const p = map.mapWorldAnchor([markerTraj[f * 3]!, markerTraj[f * 3 + 1]!, markerTraj[f * 3 + 2]!]);
-    xs.push(p[0]);
-    ys.push(p[1]);
-    zs.push(p[2]);
+    xs.push(markerTraj[f * 3]!);
+    ys.push(markerTraj[f * 3 + 1]!);
+    zs.push(markerTraj[f * 3 + 2]!);
   }
   const median = (arr: number[]): number => {
     const s = [...arr].sort((a, b) => a - b);
     const m = s.length >> 1;
     return s.length % 2 === 1 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
   };
-  return projectToPlane([median(xs), median(ys), median(zs)], plane);
+  const srcAnchor = map.mapWorldAnchor([median(xs), median(ys), median(zs)]);
+  return projectToPlane(srcAnchor, plane);
 }
 
 /**

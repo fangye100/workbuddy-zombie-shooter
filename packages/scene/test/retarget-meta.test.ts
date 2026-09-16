@@ -219,3 +219,40 @@ describe('validateRetargetAssetBlock', () => {
     expect(d[0]!.path.startsWith('/retarget/')).toBe(true);
   });
 });
+
+describe('PR#1 Copilot 迟到评审：confidence 与 recipe 版本校验', () => {
+  const base = () => ({
+    schemaVersion: 1,
+    side: 'source' as const,
+    pelvisHeightM: 1,
+    supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared' as const, confidence: 1 },
+    unitScale: null,
+    upAxis: null,
+    markers: {},
+    rotationBaseline: 'direction' as const,
+  });
+  it('confidence 非有限/越界/declared≠1 均拒绝', () => {
+    for (const bad of [Number.NaN, -0.1, 1.5]) {
+      const c = { ...base(), supportPlane: { ...base().supportPlane, confidence: bad } };
+      const d = validateRetargetCalibration(c);
+      expect(d.some((x) => x.code === 'E_RTCAL_PLANE_CONFIDENCE')).toBe(true);
+    }
+    const dec = { ...base(), supportPlane: { ...base().supportPlane, source: 'declared' as const, confidence: 0.9 } };
+    expect(validateRetargetCalibration(dec).some((x) => x.code === 'E_RTCAL_PLANE_CONFIDENCE')).toBe(true);
+    expect(validateRetargetCalibration(base()).some((x) => x.severity === 'error')).toBe(false);
+  });
+  it('recipe schemaVersion=0 被直接校验拒绝（与迁移链一致）', () => {
+    const r = {
+      schemaVersion: 0, name: 'x',
+      source: { guid: 'g', path: 'p', contentHash: 'h' },
+      target: { guid: 'g', path: 'p', contentHash: 'h' },
+      sourceCalibrationFingerprint: '', targetCalibrationFingerprint: '',
+      spaceMode: 'normalize-gait', rotationBaseline: 'direction',
+      contactDetection: { heightEnter: 0.02, speedEnter: 0.1, speedExit: 0.25, minDurationS: 0.08 },
+      annotations: [], weights: { pose: 1, root: 1, free: 0.5, anchorAdjust: 0.1, temporal: 0.3 },
+      tolerances: { anchorH: 0.002, slideH: 0.005, penetrationH: 0.001, yawDeg: 0.5 },
+      algorithmVersion: 'mr-foot-2',
+    };
+    expect(validateRetargetRecipe(r).some((x) => x.code === 'E_RTR_VERSION')).toBe(true);
+  });
+});

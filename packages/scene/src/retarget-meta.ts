@@ -319,6 +319,14 @@ export function validateRetargetCalibration(cal: unknown): MetaDiagnostic[] {
     if (sp.source !== 'declared' && sp.source !== 'fitted' && sp.source !== 'template') {
       err('/retarget/calibration/supportPlane/source', 'E_RTCAL_PLANE_SOURCE', '平面来源非法');
     }
+    // PR 复审：confidence 契约为有限 0..1；管线把非 0 一律当可信——NaN/负/超 1
+    // 会静默放开接触锚定，必须在准入层拒绝。declared 恒 1（schema 注释）。
+    if (typeof sp.confidence !== 'number' || !Number.isFinite(sp.confidence) ||
+        sp.confidence < 0 || sp.confidence > 1) {
+      err('/retarget/calibration/supportPlane/confidence', 'E_RTCAL_PLANE_CONFIDENCE', 'confidence 必须是 [0,1] 内的有限数');
+    } else if (sp.source === 'declared' && sp.confidence !== 1) {
+      err('/retarget/calibration/supportPlane/confidence', 'E_RTCAL_PLANE_CONFIDENCE', "declared 平面的 confidence 恒为 1");
+    }
   }
 
   if (typeof c.markers !== 'object' || c.markers === null) {
@@ -349,8 +357,8 @@ export function validateRetargetRecipe(recipe: unknown): MetaDiagnostic[] {
   }
   const r = recipe as Partial<RetargetRecipe>;
 
-  if (typeof r.schemaVersion !== 'number' || !Number.isInteger(r.schemaVersion)) {
-    err('/retarget/recipe/schemaVersion', 'E_RTR_VERSION', 'schemaVersion 缺失或非整数');
+  if (typeof r.schemaVersion !== 'number' || !Number.isInteger(r.schemaVersion) || r.schemaVersion < 1) {
+    err('/retarget/recipe/schemaVersion', 'E_RTR_VERSION', 'schemaVersion 缺失、非整数或低于首个支持版本 1');
   } else if (r.schemaVersion > RETARGET_META_SCHEMA_VERSION) {
     err(
       '/retarget/recipe/schemaVersion',

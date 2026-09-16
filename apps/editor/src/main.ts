@@ -1374,11 +1374,19 @@ async function boot(): Promise<void> {
     // 入口 A 的 fit 在绑定面板里随时可被拖改：求解前先同步目标，
     // 解的一定是当前 fit（有变 → bump 失效 → 本次求解即重算）
     if (retargetEntry === 'binding' && binding !== null) {
-      retargetSession.syncTarget({
+      const sync = retargetSession.syncTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
         assetKey: bindingSession ?? undefined,
       });
+      // PR 复审 P1：fit 构建失败（invalid）不得继续求解——否则解的是旧目标，
+      // 与绑定面板显示的 fit 错配。拦下并保留上一份结果。
+      if (sync.state === 'invalid') {
+        retargetNotice = `目标同步失败：${sync.diagnostics[0]?.message ?? 'MRS'}（已保留上一份结果，请修正绑定 T-pose 后重试）`;
+        panel.setModelInfo(`生成被拦截：${retargetNotice}`);
+        updateRetargetWorkbench();
+        return;
+      }
     }
     const outcome = retargetSession.solve();
     retargetNotice = null; // 求解完成（含失败：失败信息走诊断与 lastFailureCode）
