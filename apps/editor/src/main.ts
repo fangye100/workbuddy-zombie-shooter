@@ -6,7 +6,7 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
-import type { EditorCameraData, GltfResult } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult } from '@aether/scene';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
@@ -326,6 +326,26 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
 
+  // 场景环境 → 面板参数。环境是场景内容（docs/14 §14：每层主题一套 EnvironmentData），
+  // 不应用的话火场/暗巷等主题环境全部失效，画面永远是编辑器默认的那套冷灰参数。
+  // 覆盖的字段与 EnvironmentData 一一对应；key 方位角/仰角场景 schema 没有，保持编辑器值。
+  const applySceneEnvironment = (env: EnvironmentData): void => {
+    const p = panel.params;
+    p.ambientColor = env.ambient.color;
+    p.ambientIntensity = env.ambient.intensity;
+    p.fillSkyColor = env.hemisphere.sky;
+    p.fillSkyIntensity = env.hemisphere.skyIntensity;
+    p.fillGroundColor = env.hemisphere.ground;
+    p.fillGroundIntensity = env.hemisphere.groundIntensity;
+    p.fogColor = env.fog.color;
+    p.fogDensity = env.fog.density;
+    p.rimColor = env.rim.color;
+    p.rimIntensity = env.rim.intensity;
+    p.rimPower = env.rim.power;
+    p.rimTopBias = env.rim.topBias;
+    p.exposure = env.exposure;
+  };
+
   void (async () => {
     const start = await resolveStartScenePath();
     if (start.warning !== null) {
@@ -341,6 +361,14 @@ async function boot(): Promise<void> {
       `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
     );
     if (r.editorCamera !== undefined) applySceneCamera(r.editorCamera);
+    // 环境与场景灯光写进面板（真源是场景文件，面板滑块是它的读写器），
+    // syncAll 让「场景/光照」「渲染」页的控件立即反映覆盖后的值。
+    if (r.environment !== undefined) applySceneEnvironment(r.environment);
+    if (r.keyLight) {
+      panel.params.keyColor = r.keyLight.color;
+      panel.params.keyIntensity = r.keyLight.intensity;
+    }
+    panel.syncAll();
     // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();

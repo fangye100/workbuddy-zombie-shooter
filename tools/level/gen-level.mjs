@@ -46,8 +46,8 @@ const THEMES = {
   fire: {
     label: '火场',
     env: {
-      ambient: { color: '#4a2a12', intensity: 0.45 },
-      hemisphere: { sky: '#d98f4f', skyIntensity: 0.4, ground: '#3a1a08', groundIntensity: 0.3 },
+      ambient: { color: '#4a2a12', intensity: 0.5 },
+      hemisphere: { sky: '#d98f4f', skyIntensity: 0.55, ground: '#3a1a08', groundIntensity: 0.35 },
       fog: { color: '#2a1206', density: 0.02, heightFalloff: 0.1 },
       rim: { color: '#ffb066', intensity: 0.7, power: 2.5, topBias: 0.35 },
       exposure: 1.05,
@@ -56,8 +56,8 @@ const THEMES = {
   swarm: {
     label: '尸潮',
     env: {
-      ambient: { color: '#3a3428', intensity: 0.4 },
-      hemisphere: { sky: '#9aa88c', skyIntensity: 0.42, ground: '#2a2418', groundIntensity: 0.2 },
+      ambient: { color: '#3a3428', intensity: 0.5 },
+      hemisphere: { sky: '#9aa88c', skyIntensity: 0.55, ground: '#2a2418', groundIntensity: 0.3 },
       fog: { color: '#14100c', density: 0.015, heightFalloff: 0.08 },
       rim: { color: '#d8e0c0', intensity: 0.5, power: 2.5, topBias: 0.35 },
       exposure: 1.0,
@@ -66,8 +66,8 @@ const THEMES = {
   corrosion: {
     label: '腐液',
     env: {
-      ambient: { color: '#2a3a2a', intensity: 0.42 },
-      hemisphere: { sky: '#8fc49a', skyIntensity: 0.4, ground: '#1a2a1a', groundIntensity: 0.25 },
+      ambient: { color: '#2a3a2a', intensity: 0.5 },
+      hemisphere: { sky: '#8fc49a', skyIntensity: 0.52, ground: '#1a2a1a', groundIntensity: 0.3 },
       fog: { color: '#0e1a12', density: 0.018, heightFalloff: 0.09 },
       rim: { color: '#a8ffb0', intensity: 0.6, power: 2.2, topBias: 0.3 },
       exposure: 0.98,
@@ -76,8 +76,8 @@ const THEMES = {
   dark: {
     label: '暗巷',
     env: {
-      ambient: { color: '#1a1f2a', intensity: 0.22 },
-      hemisphere: { sky: '#4a5a72', skyIntensity: 0.2, ground: '#14161c', groundIntensity: 0.12 },
+      ambient: { color: '#1a1f2a', intensity: 0.3 },
+      hemisphere: { sky: '#4a5a72', skyIntensity: 0.32, ground: '#14161c', groundIntensity: 0.2 },
       fog: { color: '#05070a', density: 0.035, heightFalloff: 0.12 },
       rim: { color: '#9fb4d9', intensity: 0.45, power: 2.8, topBias: 0.4 },
       exposure: 0.85,
@@ -291,7 +291,8 @@ function buildFloor(floor) {
           enabled: true,
           type: 'directional',
           color: '#fff3e0',
-          intensity: 1.2,
+          // 美卡 toon 的 lit band ≈ albedo × key × exposure，1.4 让亮部接近满色而不炸白
+          intensity: 1.4,
           range: 0,
           spotAngle: 0,
           castShadow: false,
@@ -320,6 +321,9 @@ function buildFloor(floor) {
   );
 
   // ---- 虚空底：防止房间之间看起来悬空 ----
+  // 注：关卡背景 = 虚空底 + 主题雾色的距离渐变（火场暖棕 / 暗巷近黑），比天空穹顶
+  // 更贴主题。白 albedo 穹顶试过 —— toon 分阶下背光半边变灰紫，把主题氛围洗掉，弃用。
+  // 引擎侧已给 background 物件做雾豁免（mat.flags.w），sandbox 的穹顶渐变受益。
   const spanX = placed[placed.length - 1].x + placed[placed.length - 1].spec.w / 2 + 20;
   nodes.push(
     node(`nd_f${floor.depth}_void`, '虚空底', {
