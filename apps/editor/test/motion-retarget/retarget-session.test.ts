@@ -890,3 +890,40 @@ describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () =>
     expect(s.setTargetCalibration(t).ok).toBe(true);
   });
 });
+
+describe('retarget-session 单侧缩短不得被未变侧掩盖（复审 P1 回归）', () => {
+  it('源：左腿 −42→−2（左脚下垂 0.60 / 右 1.00）→ 停用', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    const shortened = walkBvh().replace('OFFSET 0 -42 0', 'OFFSET 0 -2 0'); // 只改第一处 = LeftLeg
+    expect(shortened.includes('OFFSET 0 -2 0')).toBe(true);
+    expect(shortened.includes('OFFSET 0 -42 0')).toBe(true); // RightLeg 未动
+    expect(s.loadSourceBvh(shortened, 'left-shorter').ok).toBe(true);
+    expect(s.summary().sourceCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(true);
+  });
+
+  it('目标：左脚骨上移 40cm → 显式载入被拒 / 已载标定被停用', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const fit = tposeWorldPositions();
+    const cal = targetCalibration(1.0);
+    cal.markers = {
+      'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'RightFoot.heel': { bone: 'RightFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+    };
+    s.setTarget({ fitPositions: fit, name: 'a' });
+    expect(s.setTargetCalibration(cal).ok).toBe(true);
+    // 左脚骨上移 40cm：左足下垂 0.6、右足 1.0——已载标定在换骨架时停用
+    const liftedFit: JointPositions = { ...fit, LeftFoot: [fit.LeftFoot![0]!, fit.LeftFoot![1]! + 0.4, fit.LeftFoot![2]!] };
+    const r = s.syncTarget({ fitPositions: liftedFit, name: 'a' });
+    expect(r.state).toBe('changed');
+    expect(s.summary().targetCalibrated).toBe(false);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
+    // 显式载入错骨架：直接拒绝
+    const bad = s.setTargetCalibration(cal);
+    expect(bad.ok).toBe(false);
+    expect(bad.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(true);
+  });
+});

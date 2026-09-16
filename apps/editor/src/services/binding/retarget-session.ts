@@ -191,6 +191,10 @@ function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>
 /** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
 const CAL_PELVIS_BAND = 0.35;
 
+/** 腿链末端骨（与 rig-calibration chainSpecs 的 LeftLeg/RightLeg 3 骨链末端、
+ *  pipeline footMarkers 的「3 骨链末端」同一类定义）：其上的标记是足类 */
+const FOOT_CHAIN_END_BONES: ReadonlySet<string> = new Set(['LeftFoot', 'RightFoot']);
+
 /** 残留单位声明的人形合理性区间（米）：脱离这个区间的骨架不适用该单位制 */
 const TARGET_UNIT_SANITY = { min: 0.1, max: 5 } as const;
 
@@ -228,21 +232,24 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
   const hipsY = chainY.get(source.bvh.root) ?? NaN;
   if (!Number.isFinite(hipsY)) return out;
   const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
-  let maxDroop: number | null = null;
-  for (const [, mk] of Object.entries(cal.markers)) {
+  // 足类标记 = 挂在腿链末端骨（LeftFoot/RightFoot，与 pipeline footMarkers
+  // 的「3 骨链末端」同一定义）。足类逐个必须落在 h 带宽内——缩短够不着、
+  // 拉长垂更深都暴露，**单侧变化不得被另一侧掩盖**（复审 P1）；
+  // 非足类（手/掌等高位标记）只需不垂到支撑面之下（下垂 ≤ h×(1+带宽)）。
+  for (const [id, mk] of Object.entries(cal.markers)) {
     const jn = jointOfBone.get(mk.bone);
     const y = jn === undefined ? undefined : chainY.get(jn);
     if (y === undefined) continue;
     // 骨盆 → 标记的几何下垂量（标记偏移在骨局部，BVH rest 全 identity ⇒ 世界）
     const droop = hipsY - (y + mk.offset[1]);
-    if (maxDroop === null || droop > maxDroop) maxDroop = droop;
-  }
-  if (h > 0 && maxDroop !== null && Math.abs(maxDroop - h) / h > CAL_PELVIS_BAND) {
-    // 只看**最深**标记（足底）：它必须落在 h 的带宽内——够不着（缩短/悬空）
-    // 或垂得更深（单侧拉长）都是另一具骨架。手部等高位标记下垂更小、不进判据，
-    // 不会劫持（复审 P3：min 口径会被手标记劫持误拒合法足底标定）。
-    out.push(err('CAL_PELVIS_MISMATCH',
-      `源标定声明骨盆到支撑面 ${h.toFixed(3)}m，但当前源骨架最深标记的几何下垂为 ${maxDroop.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%；常见于腿长/比例被改）——标定属于另一具骨架`));
+    const isFoot = FOOT_CHAIN_END_BONES.has(mk.bone);
+    if (droop > h * (1 + CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `源标记 ${id} 的骨盆→标记下垂 ${droop.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的 ${Math.round(CAL_PELVIS_BAND * 100)}% 带宽（贴支撑面的标记不可能垂得更深；常见于腿被拉长）——标定属于另一具骨架`, { constraint: id }));
+    } else if (isFoot && droop < h * (1 - CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `源足标记 ${id} 的骨盆→标记下垂 ${droop.toFixed(3)}m 够不到标定支撑面 ${h.toFixed(3)}m 的带宽（常见于腿被缩短）——标定属于另一具骨架`, { constraint: id }));
+    }
   }
   return out;
 }
@@ -307,17 +314,24 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
   const hipsY = posY['Hips'];
   if (hipsY === undefined) return out;
   const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
-  let maxDroop: number | null = null;
-  for (const [, mk] of Object.entries(cal.markers)) {
+  // 足类标记 = 3 骨腿链末端骨上的标记（取基线 rig 的链定义，与 pipeline
+  // footMarkers 同一逻辑）。足类逐个 ∈ h 带宽（缩短/拉长都暴露，单侧不被
+  // 另一侧掩盖）；非足类只需不垂到支撑面之下。
+  const footBones = new Set(
+    baselineRig.chains.filter((c) => c.joints.length === 3).map((c) => c.joints[2]!),
+  );
+  for (const [id, mk] of Object.entries(cal.markers)) {
     if (!orderSet.has(mk.bone) || posY[mk.bone] === undefined) continue;
     const off = rotateVec(rot[mk.bone]!, [mk.offset[0], mk.offset[1], mk.offset[2]]);
     const droop = hipsY - (posY[mk.bone]! + off[1]);
-    if (maxDroop === null || droop > maxDroop) maxDroop = droop;
-  }
-  if (h > 0 && maxDroop !== null && Math.abs(maxDroop - h) / h > CAL_PELVIS_BAND) {
-    // 同源侧：只看最深标记（足底）——手部等高位标记不进判据，不会劫持
-    out.push(err('CAL_PELVIS_MISMATCH',
-      `目标标定声明骨盆到支撑面 ${h.toFixed(3)}m，但骨架最深标记的几何下垂为 ${maxDroop.toFixed(3)}m——标定属于另一具骨架`));
+    const isFoot = footBones.has(mk.bone);
+    if (droop > h * (1 + CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `目标标记 ${id} 的骨盆→标记下垂 ${droop.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的带宽（常见于腿被拉长）——标定属于另一具骨架`, { constraint: id }));
+    } else if (isFoot && droop < h * (1 - CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `目标足标记 ${id} 的骨盆→标记下垂 ${droop.toFixed(3)}m 够不到标定支撑面 ${h.toFixed(3)}m 的带宽（常见于腿被缩短）——标定属于另一具骨架`, { constraint: id }));
+    }
   }
   return out;
 }
