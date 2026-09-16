@@ -191,16 +191,20 @@ function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>
 /** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
 const CAL_PELVIS_BAND = 0.35;
 
+/** 残留单位声明的人形合理性区间（米）：脱离这个区间的骨架不适用该单位制 */
+const TARGET_UNIT_SANITY = { min: 0.1, max: 5 } as const;
+
 /**
  * 源标定 × 当前源的兼容性（UX 复审 P1「不同骨架沿用旧标定」的守门）。
  *
- * 判据刻意只用**骨盆相对的骨架几何**，不看任何世界量：
+ * 判据刻意只用**骨盆相对的骨架几何**，不看任何世界量；对照值是
+ * `cal.pelvisHeightM`——数据契约（retarget-meta）明确它**已经是骨盆到支撑面的
+ * 距离**，不得再减支撑面高度（角色与地面同时抬高时比例不变，标定必须保留）。
  *  - 标记骨必须存在；单位/轴向声明与采样一致（身份，不是几何）；
- *  - 骨盆 → 最低标记的**几何距离**（偏移链之差 × unitScale − 标记偏移）
- *    必须与标定声明的「骨盆高 − 支撑面高」在带宽内——这是标定唯一可核对的
- *    骨架不变量，与角色站哪、根位置通道、根 OFFSET 全部无关。
- *    （把根 OFFSET 当世界骨盆高是错的：有位置通道时采样世界根完全由通道值
- *    决定，改 OFFSET 不改任何采样位置——三判 P1 之一。）
+ *  - 每个标记的「骨盆 → 标记下垂量」：**最小值** ≈ pelvisHeightM（足底要能
+ *    贴到支撑面）；**最大值** ≤ pelvisHeightM×(1+带宽)——贴着支撑面的标记
+ *    下垂量不可能超过骨盆到支撑面的距离，单侧腿被拉长会在这里暴露
+ *    （只看最小值会被未变的另一侧掩盖）。
  */
 function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSource): RetargetDiagnostic[] {
   const out: RetargetDiagnostic[] = [];
@@ -224,20 +228,26 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
   const jointOfBone = new Map(Object.entries(mapping).map(([jn, b]) => [b, jn] as const));
   const hipsY = chainY.get(source.bvh.root) ?? NaN;
   if (!Number.isFinite(hipsY)) return out;
-  const calPelvisToPlane = cal.pelvisHeightM - cal.supportPlane.origin[1];
-  let lowestDist: number | null = null;
+  const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
+  let minDroop: number | null = null;
+  let maxDroop: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
     const jn = jointOfBone.get(mk.bone);
     const y = jn === undefined ? undefined : chainY.get(jn);
     if (y === undefined) continue;
     // 骨盆 → 标记的几何下垂量（标记偏移在骨局部，BVH rest 全 identity ⇒ 世界）
-    const dist = hipsY - (y + mk.offset[1]);
-    if (lowestDist === null || dist < lowestDist) lowestDist = dist;
+    const droop = hipsY - (y + mk.offset[1]);
+    if (minDroop === null || droop < minDroop) minDroop = droop;
+    if (maxDroop === null || droop > maxDroop) maxDroop = droop;
   }
-  if (lowestDist !== null && calPelvisToPlane > 0 &&
-      Math.abs(lowestDist - calPelvisToPlane) / calPelvisToPlane > CAL_PELVIS_BAND) {
-    out.push(err('CAL_PELVIS_MISMATCH',
-      `源标定声明骨盆到支撑面 ${calPelvisToPlane.toFixed(3)}m，但当前源骨架骨盆到最低标记的几何距离为 ${lowestDist.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%）——标定属于另一具骨架`));
+  if (h > 0 && minDroop !== null) {
+    if (Math.abs(minDroop - h) / h > CAL_PELVIS_BAND) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `源标定声明骨盆到支撑面 ${h.toFixed(3)}m，但当前源骨架骨盆到最低标记的几何下垂为 ${minDroop.toFixed(3)}m（相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%）——标定属于另一具骨架`));
+    } else if (maxDroop! > h * (1 + CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `当前源骨架有标记的下垂量 ${maxDroop!.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的 ${Math.round(CAL_PELVIS_BAND * 100)}% 带宽（贴支撑面的标记不可能垂得更深；常见于单侧腿长被改）——标定属于另一具骨架`));
+    }
   }
   return out;
 }
@@ -269,8 +279,9 @@ function restChainYOf(bvh: BvhFile, unitScale: number, upAxis: 'x' | 'y' | 'z'):
 /**
  * 目标标定 × 骨架的兼容性。基线 rig 用**标定自己的单位/轴向声明**构建
  *（unitScale/upAxis 是身份声明、不是几何，剥掉 markers/pelvis/plane 让骨架自算），
- * 判据同源侧：标记骨存在 + 骨盆高带宽 + 骨盆 → 最低标记的几何距离 ≈ 声明的
- * 骨盆到支撑面。厘米骨架配 unitScale=.01 时基线正确得到米制值，不再被 97 vs 1 拒绝。
+ * 判据同源侧：标记骨存在 + 骨盆高带宽 + 逐标记下垂量（min ≈ pelvisHeightM、
+ * max ≤ pelvisHeightM×(1+带宽)）。`pelvisHeightM` 是骨盆到支撑面的相对量
+ *（数据契约），不再减支撑面高度。
  */
 function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: RetargetRig): RetargetDiagnostic[] {
   const out: RetargetDiagnostic[] = [];
@@ -284,7 +295,7 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
       Math.abs(baselineRig.pelvisHeightM - cal.pelvisHeightM) / cal.pelvisHeightM > CAL_PELVIS_BAND) {
     out.push(err('CAL_PELVIS_MISMATCH', `目标标定骨盆高 ${cal.pelvisHeightM.toFixed(3)}m 与骨架实测 ${baselineRig.pelvisHeightM.toFixed(3)}m 相差超过 ${Math.round(CAL_PELVIS_BAND * 100)}%`));
   }
-  // rest 世界 FK（骨盆 → 最低标记的几何距离；根/容器平移在差值中抵消）
+  // rest 世界 FK（骨盆 → 标记的下垂量；根/容器平移在差值中抵消）
   const posY: Record<string, number> = {};
   const rot: Record<string, Quat> = {};
   for (const n of baselineRig.order) {
@@ -300,18 +311,24 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
   }
   const hipsY = posY['Hips'];
   if (hipsY === undefined) return out;
-  const calPelvisToPlane = cal.pelvisHeightM - cal.supportPlane.origin[1];
-  let lowestDist: number | null = null;
+  const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
+  let minDroop: number | null = null;
+  let maxDroop: number | null = null;
   for (const [, mk] of Object.entries(cal.markers)) {
     if (!orderSet.has(mk.bone) || posY[mk.bone] === undefined) continue;
     const off = rotateVec(rot[mk.bone]!, [mk.offset[0], mk.offset[1], mk.offset[2]]);
-    const dist = hipsY - (posY[mk.bone]! + off[1]);
-    if (lowestDist === null || dist < lowestDist) lowestDist = dist;
+    const droop = hipsY - (posY[mk.bone]! + off[1]);
+    if (minDroop === null || droop < minDroop) minDroop = droop;
+    if (maxDroop === null || droop > maxDroop) maxDroop = droop;
   }
-  if (lowestDist !== null && calPelvisToPlane > 0 &&
-      Math.abs(lowestDist - calPelvisToPlane) / calPelvisToPlane > CAL_PELVIS_BAND) {
-    out.push(err('CAL_PELVIS_MISMATCH',
-      `目标标定声明骨盆到支撑面 ${calPelvisToPlane.toFixed(3)}m，但骨架骨盆到最低标记的几何距离为 ${lowestDist.toFixed(3)}m——标定属于另一具骨架`));
+  if (h > 0 && minDroop !== null) {
+    if (Math.abs(minDroop - h) / h > CAL_PELVIS_BAND) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `目标标定声明骨盆到支撑面 ${h.toFixed(3)}m，但骨架骨盆到最低标记的几何下垂为 ${minDroop.toFixed(3)}m——标定属于另一具骨架`));
+    } else if (maxDroop! > h * (1 + CAL_PELVIS_BAND)) {
+      out.push(err('CAL_PELVIS_MISMATCH',
+        `骨架有标记的下垂量 ${maxDroop!.toFixed(3)}m 超过标定骨盆到支撑面 ${h.toFixed(3)}m 的带宽（贴支撑面的标记不可能垂得更深；常见于单侧腿长被改）——标定属于另一具骨架`));
+    }
   }
   return out;
 }
@@ -592,6 +609,13 @@ export class RetargetSession {
   private target: SessionTarget | null = null;
   private sourceCal: RetargetCalibration | null = null;
   private targetCal: RetargetCalibration | null = null;
+  /**
+   * 目标骨架的单位/轴向上下文（从标定剥离的 identity 部分）。
+   * 单位制是**资产文件的属性**（cm/m 授权），不是体型属性——几何标定因体型
+   * 编辑被停用时，单位换算必须保留（否则 cm 骨架瞬间变 145m）。换到完全不同
+   * 的骨架时由 TARGET_UNIT_SANITY 合理性校验丢弃。
+   */
+  private targetUnitCtx: RetargetCalibration | null = null;
   private recipe: RetargetRecipe | null = null;
   private lastGood: RetargetOutcome | null = null;
   private lastFailure: RetargetOutcome | null = null;
@@ -724,12 +748,27 @@ export class RetargetSession {
           ];
           this.targetCal = null;
           calDetached = true;
+          // 单位制是资产属性不是体型属性：停用几何标定时保留单位换算（cm 骨架
+          // 不得因此变 145m）；targetUnitCtx 已在标定载入成功时捕获
         } else {
           this.tgtCalDiagnostics = [];
         }
       }
     }
-    const built = this.buildTargetParts(input, this.targetCal);
+    let built = this.buildTargetParts(input, this.targetCal ?? this.targetUnitCtx);
+    // 残留单位声明对新骨架可能不适用（换资产）：合理性校验失败即丢弃并按默认重建
+    if (
+      this.targetCal === null && this.targetUnitCtx !== null && built.ok &&
+      (built.rig.pelvisHeightM < TARGET_UNIT_SANITY.min || built.rig.pelvisHeightM > TARGET_UNIT_SANITY.max)
+    ) {
+      this.tgtCalDiagnostics = [
+        ...this.tgtCalDiagnostics,
+        warn('TARGET_UNITS_DROPPED',
+          `残留的单位声明（unitScale=${this.targetUnitCtx.unitScale ?? 1}）使骨架骨盆高为 ${built.rig.pelvisHeightM.toFixed(3)}m，超出人形合理区间 [${TARGET_UNIT_SANITY.min}, ${TARGET_UNIT_SANITY.max}]m，已丢弃并按默认单位重建`),
+      ];
+      this.targetUnitCtx = null;
+      built = this.buildTargetParts(input, null);
+    }
     if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
     return { ok: true, rig: built.rig, output: built.output, diagnostics: built.diagnostics, calDetached };
   }
@@ -817,6 +856,7 @@ export class RetargetSession {
       }
     }
     this.targetCal = cal;
+    this.targetUnitCtx = calibrationUnitsOnly(cal); // 单位制独立保留：几何停用不清单位
     this.tgtCalDiagnostics = [];
     if (this.target !== null) {
       const r = this.setTarget(this.target.origin);
