@@ -1014,3 +1014,49 @@ describe('retarget-session 完整标定的资产归属（37bd3ad 复审 P1 回�
     expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true); // 有目标后正常
   });
 });
+
+describe('retarget-session 新目标构建失败的完整保留（099a5d1 复审 P1 回归）', () => {
+  /** 非统一缩放的目标骨架：把某节点 locals 的 s 改成 [1,1,2] */
+  function nonUniformSkeleton(): SkeletonData {
+    const sk = skeletonFromPositions(tposeWorldPositions());
+    const i = HUMANIK_ORDER.indexOf('LeftFoot');
+    sk.locals[i]!.s = [1, 1, 2];
+    return sk;
+  }
+
+  it('setTarget 拒绝坏目标 B 后，A 的标定/骨架/旧结果完整保留', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setSourceCalibration(sourceCalibration());
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'A' });
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true);
+    const before = s.solve();
+    expect(before.status).not.toBe('failed');
+
+    // 切换到含非统一缩放的 B：被正确拒绝
+    const r = s.setTarget({ skeleton: nonUniformSkeleton(), name: 'B', assetKey: 'B' });
+    expect(r.ok).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === 'MRR_NONUNIFORM_SCALE')).toBe(true);
+    // A 的标定未被清空（归属停用发生在构建前，构建失败必须回滚）
+    expect(s.summary().targetCalibrated).toBe(true);
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(false);
+    // 旧目标与旧结果仍在
+    expect(s.requireResult().ok).toBe(true);
+    expect(s.result()!.dependencyFingerprint).toBe(before.dependencyFingerprint);
+    expect(s.targetSkeletonView()!.pelvisHeightM).toBeGreaterThan(0.9); // 仍是 A
+  });
+
+  it('syncTarget 同路径：坏目标返回 invalid，A 状态完整保留', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    s.setSourceCalibration(sourceCalibration());
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'A' });
+    expect(s.setTargetCalibration(targetCalibration(1.0)).ok).toBe(true);
+    expect(s.solve().status).not.toBe('failed');
+
+    const r = s.syncTarget({ skeleton: nonUniformSkeleton(), name: 'B', assetKey: 'B' });
+    expect(r.state).toBe('invalid');
+    expect(s.summary().targetCalibrated).toBe(true);
+    expect(s.requireResult().ok).toBe(true);
+  });
+});

@@ -751,9 +751,40 @@ export class RetargetSession {
    * 设定目标（两入口的差别只在这里收敛）。有目标标定时随 rig 一起生效；
    * 旧结果立即失效。骨架构建失败（非统一缩放 / 环 / 缺 Hips）不改当前目标。
    */
+  /** 目标标定相关状态快照（setTarget/syncTarget 事务化用） */
+  private snapshotTargetCalState(): {
+    targetCal: RetargetCalibration | null;
+    calOwner: unknown;
+    unitCtx: RetargetCalibration | null;
+    unitOwner: unknown;
+    tgtDiags: RetargetDiagnostic[];
+  } {
+    return {
+      targetCal: this.targetCal,
+      calOwner: this.targetCalOwner,
+      unitCtx: this.targetUnitCtx,
+      unitOwner: this.targetUnitOwner,
+      tgtDiags: this.tgtCalDiagnostics,
+    };
+  }
+
+  private restoreTargetCalState(snap: ReturnType<RetargetSession['snapshotTargetCalState']>): void {
+    this.targetCal = snap.targetCal;
+    this.targetCalOwner = snap.calOwner;
+    this.targetUnitCtx = snap.unitCtx;
+    this.targetUnitOwner = snap.unitOwner;
+    this.tgtCalDiagnostics = snap.tgtDiags;
+  }
+
   setTarget(input: RetargetTargetInput): LoadResult {
+    // 事务性（复审 099a5d1 P1）：归属/几何停用与单位解析都发生在构建之前，
+    // 构建失败（如非统一缩放骨架）必须完整保留旧目标及其标定
+    const snap = this.snapshotTargetCalState();
     const built = this.buildTargetChecked(input);
-    if (!built.ok) return { ok: false, diagnostics: built.diagnostics };
+    if (!built.ok) {
+      this.restoreTargetCalState(snap);
+      return { ok: false, diagnostics: built.diagnostics };
+    }
     this.target = {
       rig: built.rig,
       name: input.name,
@@ -867,8 +898,12 @@ export class RetargetSession {
       const r = this.setTarget(input);
       return { state: r.ok ? 'changed' : 'invalid', diagnostics: r.diagnostics };
     }
+    const snap = this.snapshotTargetCalState();
     const built = this.buildTargetChecked(input);
-    if (!built.ok) return { state: 'invalid', diagnostics: built.diagnostics };
+    if (!built.ok) {
+      this.restoreTargetCalState(snap);
+      return { state: 'invalid', diagnostics: built.diagnostics };
+    }
     if (!built.calDetached && built.rig.fingerprint === this.target.rig.fingerprint) {
       return { state: 'unchanged', diagnostics: built.diagnostics };
     }
