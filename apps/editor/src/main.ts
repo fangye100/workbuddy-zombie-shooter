@@ -165,22 +165,37 @@ async function boot(): Promise<void> {
   const btnReset = document.querySelector<HTMLButtonElement>('#btn-reset');
   const btnStop = document.querySelector<HTMLButtonElement>('#btn-stop');
 
+  /**
+   * 启动一个新会话（**所有入口共用**）。
+   *
+   * 🔴 每一次新会话都是一个新的世界：诊断去重集合必须随之清空，否则第二轮
+   * Play 里同类的"容量不足"告警会被上一轮的记录吞掉。清理要归会话生命周期
+   * 统一管理（复审 #8），不能在按钮里各写一份 —— 漏一个入口就是吞一类告警。
+   */
+  function startPlay(): boolean {
+    const ok = playCtl.start();
+    if (ok) shownRuntimeDiags.clear();
+    return ok;
+  }
+
+  /** 同种子重跑（**所有入口共用**）：runId 换代，去重集合同样要清空 */
+  function resetPlay(): void {
+    playCtl.reset();
+    shownRuntimeDiags.clear();
+  }
+
   btnPlay?.addEventListener('click', () => {
     if (playCtl.state === 'stopped') {
-      if (!playCtl.start()) {
+      if (!startPlay()) {
         // 启动失败：不动作者状态，只提示。错误原因由 HUD 显示
         console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
         hudDirty = true;
-      } else {
-        // 每一次新的 Play 都是一个新的世界：诊断去重集合必须随之清空，
-        // 否则第二轮 Play 里同类的"容量不足"告警会被上一轮的记录吞掉。
-        shownRuntimeDiags.clear();
       }
     } else playCtl.togglePause();
   });
   btnPause?.addEventListener('click', () => playCtl.togglePause());
   btnStep?.addEventListener('click', () => playCtl.step());
-  btnReset?.addEventListener('click', () => playCtl.reset());
+  btnReset?.addEventListener('click', () => resetPlay());
 
   /**
    * 取走并展示运行期诊断（容量不足整批拒绝等）。
@@ -1077,7 +1092,7 @@ async function boot(): Promise<void> {
     // 🔴 不能只调 playCtl.reset()：reset 用的是**装载时**的运行描述，改完 radius
     // 它根本看不见。要让改动生效必须重新装载 = stop（恢复作者态）→ start（按新文档建会话）
     if (playCtl.isPlaying) stopPlay();
-    if (!playCtl.start()) {
+    if (!startPlay()) {
       spawnMsg = { text: `重跑失败：${playCtl.error ?? '未知'}`, kind: 'warn' };
     } else {
       spawnMsg = { text: '已按改动后的场景重新装载并开跑（同种子）', kind: 'ok' };
@@ -1317,7 +1332,7 @@ async function boot(): Promise<void> {
     if (k === ' ' || e.code === 'Space') {
       e.preventDefault();
       if (playCtl.state === 'stopped') {
-        if (!playCtl.start()) console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
+        if (!startPlay()) console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
       } else playCtl.togglePause();
       return;
     }
@@ -1338,7 +1353,7 @@ async function boot(): Promise<void> {
     if (k === ',') {
       if (playCtl.isPlaying) {
         e.preventDefault();
-        playCtl.reset();
+        resetPlay();
       }
       return;
     }

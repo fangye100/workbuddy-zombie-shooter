@@ -118,6 +118,12 @@ const chrome = spawn(
     '--no-default-browser-check',
     '--enable-unsafe-webgpu',
     '--ignore-certificate-errors',
+    // 🔴 窗口被遮挡时 Chrome 会把 rAF 节流成 0 —— 渲染循环一帧都不画，
+    // viewProj 停在 [0,0,0]，一切基于投影的断言全部假死（复审 #9 的失败就是这条）。
+    // 验证 harness 必须关掉遮挡节流，否则"首跑失败、复跑通过"会周期性出现。
+    '--disable-backgrounding-occluded-windows',
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
     '--window-size=1600,900',
     URL_APP,
   ],
@@ -172,6 +178,14 @@ try {
   console.log(`  页面新鲜度 age=${age}ms（接管阈值 ${ADOPT_MAX_MS}ms）`);
   check('接管的页面是本轮新开的', age !== null && age <= ADOPT_MAX_MS, `age=${age}ms`);
 
+  // 把标签页提到前台：接管的可能是个后台 tab，后台 tab 的 rAF 也会被节流。
+  // 与启动参数 --disable-backgrounding-occluded-windows 是双保险（复审 #9）。
+  try {
+    await cdp.send('Page.bringToFront');
+  } catch {
+    /* 老版 CDP 没有这个方法时退回，由启动参数兜底 */
+  }
+
   // 关掉 HTTP 缓存：要验的是"同一份场景 → 同一结果"，不是缓存行为
   try {
     await cdp.send('Network.enable');
@@ -195,6 +209,43 @@ try {
     throw new Error(`${label} 启动超时`);
   }
   await waitReady('首次加载');
+
+  // ── 绘制就绪 ≠ 场景就绪（复审 #9） ──
+  // `viewProj` / `eyeVec` 只在 drawFrame 里写入：场景加载完不等于画过一帧。
+  // 相机 eye 还是 [0,0,0] 时，一切基于投影的断言都是在退化矩阵上做的，
+  // 症状与真实失败无法区分。就绪 = 「至少画过一帧」且「相机已就位」，
+  // 且**等待超时必须明确失败**，不能循环次数到了就默不作声继续往下跑。
+  async function awaitDrawn(label) {
+    const t0 = Date.now();
+    let st = null;
+    while (Date.now() - t0 < 30_000) {
+      st = await cdp.eval(`(() => {
+        const r = window.__editor.renderer;
+        const eye = r.picking.getEye();
+        return { frame: r.state.frameCounter, eyeLen: Math.hypot(eye[0], eye[1], eye[2]) };
+      })()`);
+      if (st.frame >= 1 && st.eyeLen > 1e-3) {
+        check(`${label}：画面已绘制且投影状态有效`, true, `frame=${st.frame} eyeLen=${st.eyeLen.toFixed(1)}`);
+        return true;
+      }
+      await sleep(300);
+    }
+    check(`🔴 ${label}：30s 内画面未就绪（frame=${st?.frame} eyeLen=${st?.eyeLen}）`, false, '绘制未就绪，后续基于投影的断言不可信');
+    return false;
+  }
+
+  // 等画面**再多画 n 帧**（暂停后 viewProj 要等下一帧才反映冻结状态）。超时明确失败。
+  async function awaitFrames(label, n, timeoutMs) {
+    const f0 = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      const f = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
+      if (f >= f0 + n) return true;
+      await sleep(200);
+    }
+    check(`🔴 ${label}：${timeoutMs}ms 内没有新帧（frameCounter 停在 ${f0}）`, false, '渲染循环疑似卡住');
+    return false;
+  }
 
   const st = () => cdp.eval(`window.__editor.spawn.state()`);
   const call = (expr) => cdp.eval(`window.__editor.spawn.${expr}`);
@@ -294,13 +345,10 @@ try {
 
   // 冻结运行：不暂停的话投影取的是这一帧、点到的是下一帧的位置
   await cdp.eval(`document.querySelector('#btn-pause').click(); 'ok'`);
-  // 暂停后还要等画面真的画过一帧 —— 否则 viewProj 可能还是上一帧（甚至未初始化）的
-  const f0 = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
-  for (let i = 0; i < 60; i++) {
-    const f = Number(await cdp.eval(`window.__editor.renderer.state.frameCounter`));
-    if (f > f0 + 1) break;
-    await sleep(200);
-  }
+  // 暂停后还要等画面真的画过一帧 —— 否则 viewProj 可能还是上一帧（甚至未初始化）的。
+  // 超时**明确失败**，不能循环到次数就默不作声继续往下跑（复审 #9）。
+  await awaitFrames('暂停后绘制继续', 2, 15_000);
+  const drawnOk = await awaitDrawn('§8-5 前');
 
   // ⚠️ 不去动相机。Play 期间渲染用的不是 `__editor.camera`（那是编辑相机的 UI 状态），
   // 试图"把相机对准它"会让投影落到近平面上爆成 x=12683 —— 那是探针在自欺欺人。
@@ -339,18 +387,18 @@ try {
       back,
     };
   })()`;
-  // 同样要重试：相机取景 / canvas 尺寸在冷启动时可能还没稳定，
-  // 一次性判定会把"还没画好"误报成"画面对应失败"。
+  // 相机取景 / canvas 尺寸在冷启动时可能还没稳定。等，但**等待超时就明确失败**（复审 #9：
+  // 不能只靠"多试几次"把不稳定盖过去 —— 要么在预算内等到，要么如实报 FAIL）。
   let locate = await cdp.eval(locateEval);
   let attempts = 1;
-  while (locate.ok !== true && attempts < 20) {
+  while (drawnOk && locate.ok !== true && attempts < 20) {
     await sleep(500);
     locate = await cdp.eval(locateEval);
     attempts++;
   }
   check(
     '画面里能找到可见的运行时实体',
-    locate.ok === true,
+    drawnOk === true && locate.ok === true,
     locate.ok
       ? `${locate.visible} 只可见 · 目标 #${locate.picked.id}·代${locate.picked.generation} @ (${locate.screen.x.toFixed(1)}, ${locate.screen.y.toFixed(1)})px`
       : `${String(locate.why)} · eye=${JSON.stringify(locate.eye)} · 已重试 ${attempts} 次`,
@@ -534,4 +582,29 @@ try {
 
 const failed = results.filter((r) => !r.ok).length;
 console.log(`\n===== ${results.length - failed} PASS / ${failed} FAIL =====`);
+
+// ── 运行历史（复审 #9）──
+// 每次运行的结果都**追加**记录，绝不只用"最后一次通过"去覆盖之前的失败 ——
+// 抖动的唯一证据就是历史。看抖动：`tail -n 20 .workbuddy/tmp/parity-runs.jsonl`
+{
+  const histFile = path.join(OUT, 'parity-runs.jsonl');
+  const entry = JSON.stringify({
+    at: new Date().toISOString(),
+    pass: results.length - failed,
+    fail: failed,
+    noSave: SKIP_SAVE,
+    seed: SEED,
+    ticks: TICKS,
+    failures: results.filter((r) => !r.ok).map((r) => r.name),
+  });
+  fs.appendFileSync(histFile, entry + '\n', 'utf8');
+  const lines = fs.existsSync(histFile) ? fs.readFileSync(histFile, 'utf8').trim().split('\n').filter(Boolean) : [];
+  const recent = lines.slice(-5).map((l) => {
+    const e = JSON.parse(l);
+    return `  ${e.at.slice(0, 19)}  ${e.pass} PASS / ${e.fail} FAIL${e.noSave ? ' (--no-save)' : ''}${e.fail > 0 ? '  ← ' + e.failures.join(' | ') : ''}`;
+  });
+  console.log('---- 最近 5 次运行（首次与重复一视同仁）----');
+  console.log(recent.join('\n'));
+}
+
 process.exit(failed === 0 ? 0 : 1);
