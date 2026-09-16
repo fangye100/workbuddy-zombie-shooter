@@ -22,8 +22,12 @@
 - ⚠️ roster.json 承载不了 CharacterDef（缺胶囊半径/质量/转向/视野/受伤盒等 11 项）——硬生成=把编造数字洗成单一真源，比硬编码更坏。
 - L-8 待用户决策：params.ts gradeShadowMult 0.95 vs 真源 0.78、gradeShadowMix 0.12 vs 0.2（改了变画面）。
 
+## 环境定案（2026-09-15）
+- 🔴 包管理器 = **pnpm 9**（锁文件已入库，禁 npm/yarn——会产生竞争锁文件）；worktree 新建/迁移后先 `pnpm install` + `git lfs pull`，**LFS 指针态禁跑 scene:gen**（scene:check 报一堆哈希失配的真因是未 smudge，不是 meta 过期）。
+- TS5.9 泛型 TypedArray 要求**源头**标注 `<ArrayBuffer>`（MeshData/SkeletonData/Mat4 等 ~19 文件已标），不是调用点 cast。
+
 ## 编辑器 / 引擎
-- 端口 编辑器 5100 / 游戏 5101（agents.md §1）。脚本名坑：**测试是 `npm test`（无 vitest 脚本）**；build=sample-00；编辑器 editor:build；冒烟 editor:smoke（无 verify:smoke，传 --glb 才启用骨骼断言）。
+- 端口 编辑器 5100 / 游戏 5101（agents.md §1）。脚本：测试 `pnpm test`(=vitest run)；build=sample-00；编辑器 editor:build；冒烟 editor:smoke（传 --glb 才启用骨骼断言）。
 - 🔴 不用 core/src/ecs/world.ts 当场景骨架（remove 空实现/strideOf 硬编码/isChanged 恒真）。静态物件走 SceneGraph，500 僵尸走 SoA+instancing。
 - 容量：MAX_OBJECTS=64 超限必须报错不能静默丢；MAX_MATERIAL_SLOTS=256；LIGHTS_FLOATS=40 → 只 1 dir+1 point，多灯按 priority 取 top-1+top-1、落选标黄。
 - 🔴 项目文件必须走 `/__fs/file?path=` 端点：vite root=apps/editor，项目根文件不在其下 → SPA fallback 返 HTTP 200 + index.html，`res.ok` 为真、只有 `res.json()` 抛 `Unexpected token '<'` 才暴露。统一入口 asset-util.ts 的 fileUrl()/readProjectFile()。仅 dev 中间件有。
@@ -64,8 +68,20 @@
 - `editor:smoke` 默认复用 5100 上已在跑的编辑器；5100 不在时它自己起 vite 但 readiness 探测失败并**卡死**（实测 1h39m）。跑前先 `curl -sk https://localhost:5100/` 确认。
 - 已知遗留失败（非本次引入）：autoFitCylinders 断言读 LeftArm 拿到旧值 0.091，而钩子返回的 oRadiiImmediate/Persist 都已是正确 0.057492 —— 断言读取路径与半径表不同步。E-04 恢复后从 118 PASS/4 FAIL 改善到 123 PASS/1 FAIL。
 
+## Retargeting（全文 docs/16/16A/16B；生产 binding/motion-retarget/ + retarget-session/retarget-workbench）
+- 状态：MR-01..06 已交付（16 轮审核全 PASS + 用户侧确认 05058af）；**剩真实 mocap 2m/0.5m 蒙皮验收、首次标定创建 UI（视口拾取）、MR-07/08**。
+- 🔴 接触要求 SourceCalibration.markers **显式**足底标记（.heel/.ball 按骨名+部位身份对应）；未标定=不做世界锁脚，不从动画推导。`pelvisHeightM` 契约=骨盆到支撑面**相对量**，任何判据/管线不得再减 planeY。
+- 🔴 标定兼容判据（换骨架停用）：只用**骨盆相对骨架几何**（根 OFFSET/位置通道/世界摆放无关）+ **链推导足类**（3 骨腿链末端骨）逐标记 ±35% 带宽 + **资产归属**（assetKey：入口A=绑定会话、入口B=物体引用；完整标定与单位上下文都不跨资产沿用）。根 OFFSET ≠ 世界骨盆高（有位置通道时采样世界根由通道决定）。
+- 🔴 单位上下文（targetUnitCtx）独立保留：同资产编辑保留、换资产不沿用、cm 推断兜底（人形区间 [0.1,5]m）；setTarget/syncTarget/setTargetCalibration **全事务化**（构建失败完整回滚旧标定）。
+- L0 retargetBvh 只作映射诊断报告；动画产物一律走新管线；`hook.anim` 形状兼容冒烟。浏览器定向验证脚本 `.workbuddy/tmp/verify-workbench.mjs`（34 断言，A–L 段）。
+
+## 开发/审核流程（元教训，2026-09-15/16 实证）
+- 🔴 **判别力实验是交付前置**：每条新回归自证「禁用修复→测试失败→恢复全过」；差分 oracle 的观测量必须对被测错误敏感（pelvisHeightM 对单位敏感 ✓，planeY 恒≈0 ✗）。
+- 修"类"不修"字面"；**先审后记**（docs 不得预写复审结论）；typecheck 归零是 commit 前置（vitest 全绿会掩盖类型错误）；读回 oracle 不得用被测代码自己的 helper（自证）。
+- 独立审核闭环模式（用户认可）：独立子代理自跑门禁 + file:line 证据 + VERDICT/P0–P3 → 逐项修复 → 复审，直到 PASS。
+
 ## 门禁（8 道，收尾全跑）
-typecheck · npm test · editor:build · editor:smoke · content:check · verify:prefix · scene:gen · scene:check
+typecheck · pnpm test · editor:build · editor:smoke · content:check · verify:prefix · scene:gen · scene:check
 
 ## 线上资料库（workbuddy.cn/space）
 - 流程：connect_open_platform 换票(1800s) → list-user-spaces 判 category(personal 直接写/team 停等) → get_doc_reviews.py --page-id → submit_doc_edit.py(新增) / submit_review_edit.py(改已有)。
