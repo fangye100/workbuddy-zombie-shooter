@@ -2,7 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
 import type { SceneDocument } from '@aether/scene';
-import type { LevelRuntimeDesc } from '../src/loader';
+import type { LevelRuntimeDesc, NavDesc } from '../src/loader';
+
+/** 最小合成运行描述：一块空导航区，可选障碍。输入链路测试用它，不碰真实关卡 */
+function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDesc {
+  const nav: NavDesc = { nodeId: 'nd_nav', minX: -10, minZ: -10, maxX: 10, maxZ: 10, cellSize: 1 };
+  return {
+    sceneId: 'sc_input_test',
+    sceneName: '输入测试',
+    schemaVersion: 3,
+    playerStart: { nodeId: 'nd_start', x: 0, z: 0 },
+    rooms: [],
+    spawns: [],
+    obstacles,
+    nav,
+  };
+}
 
 const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
 
@@ -119,6 +134,112 @@ describe('RuntimeSession —— 房间进入触发', () => {
     a.reset();
     expect(a.runId).not.toBe(before);
     expect(a.view().every((e) => e.runId === a.runId)).toBe(true);
+  });
+});
+
+/**
+ * 复审 #7：玩家输入链路（固定 tick 输入消费）。
+ *
+ * 🔴 这里刻意**不**直接改玩家坐标 —— 那是在绕过「输入 → 每步消费 → 碰撞与
+ * 导航目标更新」整条链。这些用例全部走 `setInput()`，跟虚拟摇杆进的是同一个入口。
+ */
+describe('RuntimeSession —— 玩家输入链路（复审 #7）', () => {
+  const player = (s: RuntimeSession) => s.view().find((e) => e.kind === 'player')!;
+
+  it('没有输入 → 玩家不动（历史行为保持不变）', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    const p0 = player(s);
+    s.run(60);
+    const p1 = player(s);
+    expect(p1.x).toBe(p0.x);
+    expect(p1.z).toBe(p0.z);
+  });
+
+  it('setInput(1,0) 跑 30 步：玩家沿 +x 走出 速度×时间，方向即 yaw', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    s.setInput(1, 0);
+    s.run(30); // 1 秒 × 4.5 m/s
+    const p = player(s);
+    expect(p.x).toBeCloseTo(4.5, 3);
+    expect(p.z).toBeCloseTo(0, 5);
+    expect(p.yaw).toBeCloseTo(0, 5);
+  });
+
+  it('摇杆超 1 会截断（斜向摇满不超 1）：位移只有单轴满速', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    s.setInput(3, 4); // 长度 5 → 截断到单位向量 (0.6, 0.8)
+    s.run(30);
+    const p = player(s);
+    expect(p.x).toBeCloseTo(4.5 * 0.6, 3);
+    expect(p.z).toBeCloseTo(4.5 * 0.8, 3);
+  });
+
+  it('玩家撞障碍会被推出，不会停进障碍内部', () => {
+    const s = new RuntimeSession({
+      desc: bareDesc([{ nodeId: 'nd_wall', name: '墙', x: 2, z: 0, shape: 'box', halfX: 0.5, halfZ: 4, radius: 0.5, enabled: true }]),
+      seed: 1,
+    });
+    s.setInput(1, 0);
+    s.run(60);
+    const p = player(s);
+    // 推回障碍外侧：x 应停在 2 - (0.5 + 0.35) = 1.15 附近，绝不进内部
+    expect(p.x).toBeLessThanOrEqual(2 - (0.5 + 0.35) + 1e-6);
+    expect(p.x).toBeGreaterThan(0.5);
+  });
+
+  it('玩家走出导航区会被钳制在边界内', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    s.setInput(1, 0);
+    s.run(300); // 4.5 m/s × 10s = 45m，远超导航区
+    const p = player(s);
+    expect(p.x).toBeCloseTo(10 - 0.35, 5);
+  });
+
+  it('导航目标随玩家移动重烘：navGoal 跟着玩家换格', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    const g0 = s.navGoal;
+    expect(g0.x).toBeCloseTo(0, 5);
+    s.setInput(1, 0);
+    s.run(60); // 4.5m/s × 2s = 9m，跨了 9 个格子
+    const g1 = s.navGoal;
+    // 重烘有"挪一个格子才动"的滞后，所以断言的是"跟上了"，不是"逐位相等"
+    expect(g1.x).toBeGreaterThan(g0.x + 5);
+    expect(Math.abs(g1.x - player(s).x)).toBeLessThan(1.5);
+  });
+
+  it('同一输入序列 → 逐位一致（确定性，parity 的单侧证明）', () => {
+    const run = () => {
+      const s = new RuntimeSession({ desc: bareDesc(), seed: 7 });
+      const seq = [
+        { x: 1, z: 0 },
+        { x: 1, z: 0 },
+        { x: 0, z: 1 },
+        { x: -0.5, z: 0.5 },
+      ];
+      for (let t = 0; t < 60; t++) {
+        const inp = seq[t % seq.length]!;
+        s.setInput(inp.x, inp.z);
+        s.step();
+      }
+      return player(s);
+    };
+    const a = run();
+    const b = run();
+    expect(a.x).toBe(b.x);
+    expect(a.z).toBe(b.z);
+    expect(a.yaw).toBe(b.yaw);
+  });
+
+  it('reset 清空输入并把导航目标烘回出生点', () => {
+    const s = new RuntimeSession({ desc: bareDesc(), seed: 1 });
+    s.setInput(1, 0);
+    s.run(60);
+    s.reset();
+    const p = player(s);
+    expect(p.x).toBeCloseTo(0, 5);
+    expect(s.navGoal.x).toBeCloseTo(0, 5);
+    s.run(30); // 没有输入 → 不该自己走
+    expect(player(s).x).toBeCloseTo(0, 5);
   });
 });
 

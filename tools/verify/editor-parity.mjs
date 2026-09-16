@@ -241,6 +241,37 @@ try {
     '',
   );
 
+  // ── 复审 #7：同一输入序列在 Node 与浏览器一致 ──
+  // 玩家输入也走"固定 tick 输入消费"，必须进比对 —— 否则"两边都能跑玩家"这句话
+  // 跟"两边跑的是同一个世界"没有绑定。这里给一条确定性的摇杆序列，两侧各喂一遍。
+  const seq = [];
+  for (let t = 0; t < TICKS; t++) seq.push([{ x: 1, z: 0 }, { x: 0, z: 1 }, { x: -0.5, z: 0.5 }, { x: 0, z: 0 }][t % 4]);
+  const seqFile = path.join(OUT, 'parity-inputs.json');
+  fs.writeFileSync(seqFile, JSON.stringify(seq), 'utf8');
+  const webSnap3 = await cdp.eval(`window.__editor.runtime.runTo(${SEED}, ${TICKS}, ${JSON.stringify(seq)})`);
+  check('浏览器侧（带输入序列）取样成功', webSnap3.ok === true, webSnap3.ok ? '' : String(webSnap3.error));
+  const webFile3 = path.join(OUT, `parity-web-inputs-seed${SEED}.json`);
+  fs.writeFileSync(webFile3, JSON.stringify(webSnap3, null, 2), 'utf8');
+  const cmp3 = spawnSync(
+    process.execPath,
+    ['tools/verify/runtime-parity.mjs', '--compare', webFile3, '--scene', scenePath, '--seed', String(SEED), '--ticks', String(TICKS), '--inputs', seqFile],
+    { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+  );
+  check(
+    '🔴 同一输入序列 → Node 与浏览器逐实体一致（复审 #7，输入进比对）',
+    cmp3.status === 0,
+    cmp3.status === 0 ? '一致' : String(cmp3.stdout ?? cmp3.stderr ?? '').slice(0, 300),
+  );
+  // 防"零输入巧合"：玩家的位置必须真的因为输入变了
+  const playerOf = (snap) => snap.entities.find((e) => e.kind === 'player') ?? null;
+  const p0 = playerOf(webSnap);
+  const p3 = playerOf(webSnap3);
+  check(
+    '玩家真的因为输入移动了（不是零输入的巧合）',
+    p0 !== null && p3 !== null && (Math.abs(p0.x - p3.x) > 0.01 || Math.abs(p0.z - p3.z) > 0.01),
+    `零输入 (${p0?.x.toFixed(2)}, ${p0?.z.toFixed(2)}) → 带输入 (${p3?.x.toFixed(2)}, ${p3?.z.toFixed(2)})`,
+  );
+
   // ================================================================ §8-5
   console.log('\n──── §8-5：选中的敌人在画面中对应得到 ────');
   await cdp.eval(`document.querySelector('#btn-play').click(); 'ok'`);

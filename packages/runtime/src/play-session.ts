@@ -196,6 +196,11 @@ export class PlaySession {
     this.session.step();
   }
 
+  /** 转发玩家输入（虚拟摇杆 → 固定 tick 输入消费）。语义见 `RuntimeSession.setInput` */
+  setInput(x: number, z: number): void {
+    this.session?.setInput(x, z);
+  }
+
   /** 同种子重跑。stopped 时无世界可重置，静默忽略 */
   reset(): void {
     if (this.session === null) return;

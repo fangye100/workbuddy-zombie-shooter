@@ -1252,7 +1252,7 @@ async function boot(): Promise<void> {
      */
     hook.runtime = {
       docJson: () => JSON.stringify(spawnStore?.document ?? renderer.getDocument()),
-      runTo: (seed: number, ticks: number) => {
+      runTo: (seed: number, ticks: number, inputs?: { x: number; z: number }[]) => {
         const doc = spawnStore?.document ?? renderer.getDocument();
         if (doc === null) return { ok: false as const, error: '场景未加载' };
         const ps = new PlaySession({ seed, fixedStep: 1 / 30 });
@@ -1260,7 +1260,12 @@ async function boot(): Promise<void> {
         if (!r.ok) return { ok: false as const, error: r.errors.join('；') };
         const s = ps.runtime;
         if (s === null) return { ok: false as const, error: '会话为空' };
-        for (let i = 0; i < ticks; i++) s.step();
+        for (let i = 0; i < ticks; i++) {
+          // 固定 tick 输入消费（复审 #7）：与 Node 侧喂同一条序列，玩家输入才算进比对
+          const inp = inputs?.[i];
+          if (inp !== undefined) s.setInput(inp.x, inp.z);
+          s.step();
+        }
         const out = {
           ok: true as const,
           seed,

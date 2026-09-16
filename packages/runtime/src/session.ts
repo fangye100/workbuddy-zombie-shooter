@@ -171,6 +171,16 @@ export class RuntimeSession {
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
+
+  // ---- 玩家输入与导航目标（复审 #7） ----
+  /** 玩家移动输入（已归一化，长度 ≤ 1）。宿主每帧写，runtime 每个固定步消费 */
+  private inputX = 0;
+  private inputZ = 0;
+  /** 上次重烘时的流场目标。挪动不到一个格子不重烘 */
+  private goalX = 0;
+  private goalZ = 0;
+  /** 导航区（构造时已保证非 null，这里留一份免得每次判空） */
+  private navBounds = { minX: 0, minZ: 0, maxX: 0, maxZ: 0 };
   /** 按槽位记录来源作者节点 */
   private readonly sourceOf: (NodeId | null)[];
   private readonly kindOf: Uint8Array;
@@ -220,8 +230,10 @@ export class RuntimeSession {
     this.field.applyClearanceToCost(2, 3);
 
     this.integrator = new FlowFieldIntegrator(this.field);
-    // 玩家本轮固定不动 → 目标恒定 → 流场只需算一次
-    this.integrator.setGoal(opts.desc.playerStart.x, opts.desc.playerStart.z);
+    this.navBounds = { minX: nav.minX, minZ: nav.minZ, maxX: nav.maxX, maxZ: nav.maxZ };
+    this.goalX = opts.desc.playerStart.x;
+    this.goalZ = opts.desc.playerStart.z;
+    this.integrator.setGoal(this.goalX, this.goalZ);
     this.integrator.step(this.field.cellCount);
 
     this.solver = new CrowdSolver(nav.minX, nav.minZ, nav.maxX, nav.maxZ, cs * 2, capacity);
@@ -307,9 +319,27 @@ export class RuntimeSession {
 
   // ------------------------------------------------------------ 推进
 
+  /**
+   * 设置玩家的移动输入（XZ）。
+   *
+   * 这是**固定 tick 输入消费**的唯一入口（复审 #7）：宿主把虚拟摇杆的真实输入
+   * 转成约定的运行输入（一个向量），runtime 每个固定步消费一次 —— 跟 NPC 一样
+   * 走同一条确定性路径。直接改玩家坐标不算输入链路：那绕过了"输入 → 每步消费 →
+   * 碰撞与导航目标更新"整条链。
+   *
+   * 语义是模拟摇杆：长度是强度，超过 1 截断到 1（斜向摇满不超 1）。
+   */
+  setInput(x: number, z: number): void {
+    const l = Math.hypot(x, z);
+    const s = l > 1 ? 1 / l : 1;
+    this.inputX = x * s;
+    this.inputZ = z * s;
+  }
+
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
     const r = this.triggerRooms();
+    this.movePlayer();
     this.moveNpcs();
     this.tickCount += 1;
     for (const j of r.rejections) {
@@ -325,6 +355,11 @@ export class RuntimeSession {
       rejectedRooms: r.rejections.length,
       rejections: r.rejections,
     };
+  }
+
+  /** 当前导航流场的目标（玩家位置）。玩家移动超过一个格子就会重烘 —— 测试据此核 */
+  get navGoal(): { x: number; z: number } {
+    return { x: this.goalX, z: this.goalZ };
   }
 
   /** 运行期诊断（累计）。与装载期诊断分开，装载是一次性的 */
@@ -375,6 +410,13 @@ export class RuntimeSession {
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
+    // 输入与导航目标也要回到初始态 —— 否则 reset 后玩家还按着上一轮的摇杆
+    this.inputX = 0;
+    this.inputZ = 0;
+    this.goalX = this.desc.playerStart.x;
+    this.goalZ = this.desc.playerStart.z;
+    this.integrator.setGoal(this.goalX, this.goalZ);
+    this.integrator.step(this.field.cellCount);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();
@@ -393,8 +435,8 @@ export class RuntimeSession {
     this.table.posX[i] = this.desc.playerStart.x;
     this.table.posZ[i] = this.desc.playerStart.z;
     this.table.radius[i] = stats.capsuleRadius;
-    // 本轮玩家不移动 —— 没有输入驱动，硬给速度会让"玩家在漂移"
-    this.table.maxSpeed[i] = 0;
+    // 玩家速度来自真源；是否移动只由**输入**决定，没有输入就是 0 位移
+    this.table.maxSpeed[i] = stats.moveSpeed;
     this.table.behavior[i] = BEHAVIOR_IDLE;
   }
 
@@ -471,7 +513,61 @@ export class RuntimeSession {
     return made;
   }
 
-  // ------------------------------------------------------------ 内部：移动
+  // ------------------------------------------------------------ 内部：玩家移动
+
+  /**
+   * 按输入推进玩家一个固定步。
+   *
+   * 三件事按序做：输入 → 位移 → 约束（障碍推出 + 导航区钳制）→ 导航目标更新。
+   * 没有输入时连流场都不用碰（不动玩家的历史行为保持不变）。
+   */
+  private movePlayer(): void {
+    if (this.playerId < 0 || !this.table.isAlive(this.playerId)) return;
+    if (this.inputX === 0 && this.inputZ === 0) return;
+    const i = this.playerId;
+    const speed = this.table.maxSpeed[i]!;
+    if (speed <= 0) return;
+
+    const nx = this.table.posX[i]! + this.inputX * speed * this.fixedStep;
+    const nz = this.table.posZ[i]! + this.inputZ * speed * this.fixedStep;
+    const [cx, cz] = this.resolvePlayerCollision(nx, nz, this.table.radius[i]!);
+    this.table.posX[i] = cx;
+    this.table.posZ[i] = cz;
+    this.table.yaw[i] = Math.atan2(this.inputZ, this.inputX);
+
+    // 导航目标更新：玩家挪动超过一个格子，流场必须跟着重烘 ——
+    // 不重烘的话 NPC 会朝"玩家原来站的地方"跑，画面与逻辑分家。
+    const cs = this.field.cellSize;
+    if (Math.abs(cx - this.goalX) >= cs || Math.abs(cz - this.goalZ) >= cs) {
+      this.goalX = cx;
+      this.goalZ = cz;
+      this.integrator.setGoal(cx, cz);
+      this.integrator.step(this.field.cellCount);
+    }
+  }
+
+  /** 障碍推出（AABB 最浅穿透轴）+ 导航区边界钳制 */
+  private resolvePlayerCollision(x: number, z: number, r: number): [number, number] {
+    let px = x;
+    let pz = z;
+    for (const o of this.desc.obstacles) {
+      if (!o.enabled) continue;
+      const dx = px - o.x;
+      const dz = pz - o.z;
+      const ex = o.halfX + r;
+      const ez = o.halfZ + r;
+      if (Math.abs(dx) >= ex || Math.abs(dz) >= ez) continue;
+      const pxn = ex - Math.abs(dx);
+      const pzn = ez - Math.abs(dz);
+      if (pxn < pzn) px = o.x + Math.sign(dx || 1) * ex;
+      else pz = o.z + Math.sign(dz || 1) * ez;
+    }
+    px = Math.min(this.navBounds.maxX - r, Math.max(this.navBounds.minX + r, px));
+    pz = Math.min(this.navBounds.maxZ - r, Math.max(this.navBounds.minZ + r, pz));
+    return [px, pz];
+  }
+
+  // ------------------------------------------------------------ 内部：NPC 移动
 
   private moveNpcs(): void {
     const b = this.buffers;

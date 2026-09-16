@@ -43,7 +43,7 @@ function arg(name, def) {
 }
 const has = (name) => process.argv.includes(`--${name}`);
 
-function sample(rt, sceneText, seed, ticks) {
+function sample(rt, sceneText, seed, ticks, inputs) {
   const doc = JSON.parse(sceneText);
   // 与浏览器侧完全一致的入口：PlaySession（装载 + 固定步生命周期），不是裸 createSession。
   // 只有走同一条路，"同输入同输出"这句话才成立 —— 否则比的是两个不同的东西。
@@ -54,7 +54,12 @@ function sample(rt, sceneText, seed, ticks) {
     process.exit(3);
   }
   const s = ps.runtime;
-  for (let i = 0; i < ticks; i++) s.step();
+  for (let i = 0; i < ticks; i++) {
+    // 固定 tick 输入消费：与浏览器侧喂同一条序列，玩家输入才算进了比对（复审 #7）
+    const inp = inputs !== null && inputs[i] !== undefined ? inputs[i] : null;
+    if (inp !== null) s.setInput(inp.x, inp.z);
+    s.step();
+  }
   const snap = {
     host: 'node',
     seed,
@@ -119,6 +124,8 @@ function diffSnapshots(a, b, tol) {
 }
 
 const TOL = Number(arg('tol', '1e-9'));
+const inputsFile = arg('inputs', null);
+const inputs = inputsFile === null ? null : JSON.parse(fs.readFileSync(inputsFile, 'utf8'));
 const compare = arg('compare', null);
 
 if (!has('compare') && !has('scene')) {
@@ -126,7 +133,8 @@ if (!has('compare') && !has('scene')) {
     '用法：\n' +
       '  取样  node tools/verify/runtime-parity.mjs --scene <path> --seed <n> --ticks <n> [--out <file>]\n' +
       '  比对  node tools/verify/runtime-parity.mjs --compare <web.json> --scene <path> --seed <n> --ticks <n>\n' +
-      '  比对  node tools/verify/runtime-parity.mjs --compare <web.json> --against <node.json>',
+      '  比对  node tools/verify/runtime-parity.mjs --compare <web.json> --against <node.json>\n' +
+      '  通用  --inputs <file.json> 每 tick 的玩家输入序列 [{x,z},...]（复审 #7：输入也进比对）',
   );
   process.exit(4);
 }
@@ -151,7 +159,7 @@ if (compare !== null) {
       console.error('比对模式要么给 --against <node.json>，要么给 --scene/--seed/--ticks 现场取样');
       process.exit(4);
     }
-    mine = sample(rt, fs.readFileSync(scene, 'utf8'), seed, ticks);
+    mine = sample(rt, fs.readFileSync(scene, 'utf8'), seed, ticks, inputs);
   }
 
   const lines = [];
@@ -193,7 +201,7 @@ if (scene === null || !Number.isFinite(seed) || !Number.isFinite(ticks)) {
   process.exit(4);
 }
 
-const snapshot = sample(rt, fs.readFileSync(scene, 'utf8'), seed, ticks);
+const snapshot = sample(rt, fs.readFileSync(scene, 'utf8'), seed, ticks, inputs);
 const text = JSON.stringify(snapshot, null, 2);
 if (out !== null) {
   fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
