@@ -188,9 +188,9 @@ function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>
   return { severity: 'warning', code: `MRS_${code}`, message, ...extra };
 }
 
-/** 标定兼容判定的容差：隐含足底（最低标记 rest 世界 y）距支撑面超过 max(3cm, 8%×h) 即视为另一具骨架 */
+/** 标定兼容判定的容差：隐含足底（最低标记 rest 世界 y）距支撑面超过 max(2cm, 5%×h) 即视为另一具骨架 */
 function calSoleTolM(h: number): number {
-  return Math.max(0.03, 0.08 * h);
+  return Math.max(0.02, 0.05 * h);
 }
 
 /** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
@@ -583,8 +583,11 @@ export class RetargetSession {
   private lastGood: RetargetOutcome | null = null;
   private lastFailure: RetargetOutcome | null = null;
   private sessionDiagnostics: RetargetDiagnostic[] = [];
-  /** 标定兼容性 / 停用的粘性诊断（直到下一次成功载入或匹配检查清空） */
-  private calDiagnostics: RetargetDiagnostic[] = [];
+  /** 标定兼容性 / 停用的粘性诊断——**按侧分通道**：一侧通过不得抹掉另一侧仍有效的停用警告 */
+  private srcCalDiagnostics: RetargetDiagnostic[] = [];
+  private tgtCalDiagnostics: RetargetDiagnostic[] = [];
+  /** 源侧停用警告所属的源指纹：源再换（指纹不同）即过期清除 */
+  private srcCalDetachAtFp: string | null = null;
   private revision = 0;
   private solvedRevision: number | null = null;
 
@@ -621,13 +624,22 @@ export class RetargetSession {
       const mismatch = diagnoseSourceCalibration(this.sourceCal, this.source);
       if (mismatch.length > 0) {
         this.sourceCal = null;
-        this.calDiagnostics = [
+        this.srcCalDetachAtFp = motion.fingerprint;
+        this.srcCalDiagnostics = [
           warn('SOURCE_CAL_DETACHED', `源标定与当前源不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
         ];
         this.bump();
       } else {
-        this.calDiagnostics = [];
+        this.srcCalDiagnostics = [];
       }
+    } else if (
+      this.srcCalDiagnostics.length > 0 &&
+      this.srcCalDetachAtFp !== null &&
+      this.srcCalDetachAtFp !== motion.fingerprint
+    ) {
+      // 停用警告描述的是上一次换源：源再换即过期（徽章「需标定」已持续提示状态本身）
+      this.srcCalDiagnostics = [];
+      this.srcCalDetachAtFp = null;
     }
     return { ok: true, diagnostics };
   }
@@ -675,12 +687,12 @@ export class RetargetSession {
       if (baseline.ok) {
         const mismatch = diagnoseTargetCalibration(this.targetCal, baseline.rig);
         if (mismatch.length > 0) {
-          this.calDiagnostics = [
+          this.tgtCalDiagnostics = [
             warn('TARGET_CAL_DETACHED', `目标标定与新骨架不匹配，已停用（${mismatch.map((d) => d.code).join('、')}）：请载入这具骨架的 sidecar 或重新标定`),
           ];
           this.targetCal = null;
         } else {
-          this.calDiagnostics = [];
+          this.tgtCalDiagnostics = [];
         }
       }
     }
@@ -743,7 +755,8 @@ export class RetargetSession {
       }
     }
     this.sourceCal = cal;
-    this.calDiagnostics = [];
+    this.srcCalDiagnostics = [];
+    this.srcCalDetachAtFp = null;
     this.bump();
     return { ok: true, diagnostics: diags };
   }
@@ -775,7 +788,7 @@ export class RetargetSession {
       }
     }
     this.targetCal = cal;
-    this.calDiagnostics = [];
+    this.tgtCalDiagnostics = [];
     if (this.target !== null) {
       const r = this.setTarget(this.target.origin);
       return { ok: r.ok, diagnostics: [...diags, ...r.diagnostics] };
@@ -1040,7 +1053,12 @@ export class RetargetSession {
     else if (failure !== null) status = 'failed';
     else status = 'ready';
     const diagSource = this.isStale() && failure !== null ? failure : outcome ?? failure;
-    const diagnostics = [...this.sessionDiagnostics, ...this.calDiagnostics, ...(diagSource?.diagnostics ?? [])];
+    const diagnostics = [
+      ...this.sessionDiagnostics,
+      ...this.srcCalDiagnostics,
+      ...this.tgtCalDiagnostics,
+      ...(diagSource?.diagnostics ?? []),
+    ];
     const times = outcome?.clip?.times;
     const hT = this.target?.rig.pelvisHeightM ?? null;
     const tol = this.recipe !== null && hT !== null
