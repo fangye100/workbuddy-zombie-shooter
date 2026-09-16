@@ -1349,6 +1349,7 @@ async function boot(): Promise<void> {
       retargetSession.syncTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
       });
     }
     const outcome = retargetSession.solve();
@@ -1621,6 +1622,7 @@ async function boot(): Promise<void> {
       const tgt = retargetSession.setTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
       });
       if (!tgt.ok) throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
       openRetargetWorkbench('binding', null);
@@ -1650,7 +1652,7 @@ async function boot(): Promise<void> {
       const load = retargetSession.loadSourceBvh(text, clipName);
       if (!load.ok) throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
       animReport = report; // 同入口 A：源载入成功才提交映射诊断
-      const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name });
+      const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name, assetKey: obj });
       if (!tgt.ok) throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
       openRetargetWorkbench('object', obj);
       solveAndRefresh();
@@ -1725,6 +1727,7 @@ async function boot(): Promise<void> {
       const sync = retargetSession.syncTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
       });
       if (sync.state === 'changed') {
         panel.setModelInfo('导出被拦截：目标（绑定 T-pose）在生成后被修改，请重新「生成预览」再导出');

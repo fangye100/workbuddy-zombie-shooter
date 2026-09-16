@@ -149,6 +149,13 @@ export interface RetargetTargetInput {
   /** 绑定面板拟合的 T-pose 世界坐标（入口 A）；会被合成为等价骨架 */
   fitPositions?: JointPositions | null;
   name: string;
+  /**
+   * 资产身份键（单位上下文的归属）：同一资产的体型编辑应传同一键（入口 B 传
+   * 物体引用、入口 A 传绑定会话/模型）；缺省回退 name。**同键编辑保留单位，
+   * 换键重新解析**——单位制是资产属性，跨资产沿用会把 1.97m 的骨架缩成 0.224m
+   * 且落在人形区间内、合理性校验抓不住（复审 P1）。
+   */
+  assetKey?: unknown;
 }
 
 // ---------------------------------------------------------------- 数学小件（会话适配层的轻量几何，不进算法层）
@@ -620,6 +627,11 @@ interface SessionTarget {
   origin: RetargetTargetInput;
 }
 
+/** 资产身份键：显式 assetKey 优先，缺省回退 name（两入口的 name 都按资产稳定） */
+function assetKeyOf(input: RetargetTargetInput): unknown {
+  return input.assetKey !== undefined ? input.assetKey : input.name;
+}
+
 export class RetargetSession {
   private readonly store: RetargetSidecarStore;
   private source: SessionSource | null = null;
@@ -628,12 +640,13 @@ export class RetargetSession {
   private sourceCal: RetargetCalibration | null = null;
   private targetCal: RetargetCalibration | null = null;
   /**
-   * 目标骨架的单位/轴向上下文（从标定剥离的 identity 部分）。
-   * 单位制是**资产文件的属性**（cm/m 授权），不是体型属性——几何标定因体型
-   * 编辑被停用时，单位换算必须保留（否则 cm 骨架瞬间变 145m）。换到完全不同
-   * 的骨架时由 TARGET_UNIT_SANITY 合理性校验丢弃。
+   * 目标骨架的单位/轴向上下文（从标定剥离的 identity 部分）+ 它的**资产身份键**。
+   * 单位制是**资产文件的属性**（cm/m 授权），不是体型属性——同资产（同键）的
+   * 体型编辑保留；换资产（换键）不沿用（跨资产污染会把 1.97m 缩成 0.224m 且
+   * 落在人形区间内，合理性校验抓不住）。人形区间只兜底同资产内的病态声明。
    */
   private targetUnitCtx: RetargetCalibration | null = null;
+  private targetUnitOwner: unknown = null;
   private recipe: RetargetRecipe | null = null;
   private lastGood: RetargetOutcome | null = null;
   private lastFailure: RetargetOutcome | null = null;
@@ -741,7 +754,7 @@ export class RetargetSession {
       rig: built.rig,
       name: input.name,
       output: built.output,
-      origin: { skeleton: input.skeleton ?? null, fitPositions: input.fitPositions ?? null, name: input.name },
+      origin: { skeleton: input.skeleton ?? null, fitPositions: input.fitPositions ?? null, name: input.name, assetKey: input.assetKey },
     };
     this.bump();
     return { ok: true, diagnostics: built.diagnostics };
@@ -773,21 +786,27 @@ export class RetargetSession {
         }
       }
     }
-    let built = this.buildTargetParts(input, this.targetCal ?? this.targetUnitCtx);
+    // 单位上下文按**资产身份键**门控：同资产（同键）沿用；换资产不沿用
+    //（跨资产污染：.1 声明套到米制骨架 → 1.97m 变 0.224m，且两者都在人形
+    // 区间内，合理性校验抓不住——复审 P1）
+    const key = assetKeyOf(input);
+    const staleCtx = this.targetCal === null && this.targetUnitOwner === key ? this.targetUnitCtx : null;
+    let built = this.buildTargetParts(input, this.targetCal ?? staleCtx);
     if (this.targetCal === null && built.ok) {
       const inBand = (v: number): boolean => v >= TARGET_UNIT_SANITY.min && v <= TARGET_UNIT_SANITY.max;
       if (!inBand(built.rig.pelvisHeightM)) {
-        // 当前单位解释（残留声明或默认米制）超人形区间：按候选解析——
-        // ① 残留声明不可信 → 丢弃按默认重建；② 默认米制把 cm 骨架当米（资产往返
+        // 当前单位解释（本资产的残留声明或默认米制）超人形区间：按候选解析——
+        // ① 残留声明不可信 → 丢弃按默认重建；② 默认米制把 cm 骨架当米（资产内
         // 的已知坑）→ 按 cm（×0.01）推断；两者都不行 → 保留并警告
-        const prevUpAxis = this.targetUnitCtx?.upAxis ?? null;
-        if (this.targetUnitCtx !== null) {
+        const prevUpAxis = staleCtx?.upAxis ?? null;
+        if (staleCtx !== null) {
           this.tgtCalDiagnostics = [
             ...this.tgtCalDiagnostics,
             warn('TARGET_UNITS_DROPPED',
-              `残留的单位声明（unitScale=${this.targetUnitCtx.unitScale ?? 1}）使骨架骨盆高为 ${built.rig.pelvisHeightM.toFixed(3)}m，超出人形合理区间 [${TARGET_UNIT_SANITY.min}, ${TARGET_UNIT_SANITY.max}]m，已丢弃`),
+              `残留的单位声明（unitScale=${staleCtx.unitScale ?? 1}）使骨架骨盆高为 ${built.rig.pelvisHeightM.toFixed(3)}m，超出人形合理区间 [${TARGET_UNIT_SANITY.min}, ${TARGET_UNIT_SANITY.max}]m，已丢弃`),
           ];
           this.targetUnitCtx = null;
+          this.targetUnitOwner = null;
           const retry = this.buildTargetParts(input, null);
           if (retry.ok && inBand(retry.rig.pelvisHeightM)) {
             built = retry;
@@ -798,7 +817,8 @@ export class RetargetSession {
           const cmCtx = unitContext(0.01, prevUpAxis);
           const cmTry = this.buildTargetParts(input, cmCtx);
           if (cmTry.ok && inBand(cmTry.rig.pelvisHeightM)) {
-            this.targetUnitCtx = cmCtx; // 推断结果入上下文，后续构建沿用
+            this.targetUnitCtx = cmCtx; // 推断结果入上下文（绑定当前资产键），后续同资产构建沿用
+            this.targetUnitOwner = key;
             this.tgtCalDiagnostics = [
               ...this.tgtCalDiagnostics,
               warn('TARGET_UNITS_INFERRED',
@@ -842,7 +862,7 @@ export class RetargetSession {
       rig: built.rig,
       name: input.name,
       output: built.output,
-      origin: { skeleton: input.skeleton ?? null, fitPositions: input.fitPositions ?? null, name: input.name },
+      origin: { skeleton: input.skeleton ?? null, fitPositions: input.fitPositions ?? null, name: input.name, assetKey: input.assetKey },
     };
     this.bump();
     return { state: 'changed', diagnostics: built.diagnostics };
@@ -875,11 +895,33 @@ export class RetargetSession {
   }
 
   /** 目标侧标定；改变即按原目标来源重建 rig（h_t / 标记 / 平面全走新值）。与骨架不符则拒绝。 */
+  /**
+   * 目标侧标定载入 / 清除——**事务性**：先在临时状态上完成候选构建，全部成功才
+   * 统一提交；任一步失败回滚到调用前状态（复审 P2：模板目标 + 不支持的 X-up
+   * 标定构建失败时，不得已覆盖原标定与单位上下文，且清除操作不得因此卡死）。
+   */
   setTargetCalibration(cal: RetargetCalibration | null): LoadResult {
+    // 快照（回滚用）
+    const prev = {
+      targetCal: this.targetCal,
+      unitCtx: this.targetUnitCtx,
+      unitOwner: this.targetUnitOwner,
+      tgtDiags: this.tgtCalDiagnostics,
+    };
+    const rollback = (): void => {
+      this.targetCal = prev.targetCal;
+      this.targetUnitCtx = prev.unitCtx;
+      this.targetUnitOwner = prev.unitOwner;
+      this.tgtCalDiagnostics = prev.tgtDiags;
+    };
     if (cal === null) {
       this.targetCal = null;
       if (this.target !== null) {
         const r = this.setTarget(this.target.origin);
+        if (!r.ok) {
+          rollback();
+          return { ok: false, diagnostics: r.diagnostics };
+        }
         return r;
       }
       this.bump();
@@ -901,12 +943,18 @@ export class RetargetSession {
         }
       }
     }
+    // 候选状态提交后统一走重建；重建失败整体回滚
     this.targetCal = cal;
     this.targetUnitCtx = calibrationUnitsOnly(cal); // 单位制独立保留：几何停用不清单位
+    this.targetUnitOwner = this.target !== null ? assetKeyOf(this.target.origin) : null;
     this.tgtCalDiagnostics = [];
     if (this.target !== null) {
       const r = this.setTarget(this.target.origin);
-      return { ok: r.ok, diagnostics: [...diags, ...r.diagnostics] };
+      if (!r.ok) {
+        rollback();
+        return { ok: false, diagnostics: [...diags, ...r.diagnostics] };
+      }
+      return { ok: true, diagnostics: [...diags, ...r.diagnostics] };
     }
     this.bump();
     return { ok: true, diagnostics: diags };
