@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>末日尸潮 · 环境道具设计表</title>
+<style>
+  :root{
+    --ink:#14110F; --paper:#F5E7C8; --bone:#FFF6E2; --night:#171327;
+    --dim:#9AA0A6; --line:#3A3550;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px;background:var(--night);color:var(--bone);
+       font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  h1{font-size:24px;margin:0 0 4px}
+  h1 small{font-size:14px;color:var(--dim);font-weight:400}
+  .meta{color:var(--dim);font-size:13px;margin-bottom:8px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 28px}
+  .legend div{background:#221E33;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px}
+  h2{font-size:18px;margin:32px 0 4px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  h2 span{font-size:13px;color:var(--dim);font-weight:400}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-top:14px}
+  .card{background:#221E33;border:2px solid var(--line);border-radius:14px;padding:12px}
+  .card header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .badge{color:var(--ink);font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+  .card h3{margin:0;font-size:15px;flex:1}
+  .card h3 small{color:var(--dim);font-weight:400;font-size:12px}
+  .kind{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  .thumb{height:160px;background:var(--paper);border-radius:10px;overflow:hidden;margin-bottom:10px}
+  .thumb img{width:100%;height:100%;object-fit:contain}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0 0 8px;font-size:13px}
+  dt{color:var(--dim)}
+  dd{margin:0}
+  .card p{margin:4px 0;font-size:13px}
+  .card b{color:var(--bone)}
+  .dz{color:#FFC531}
+  .note{color:#2BC4D6;font-size:12px}
+  details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+  summary{cursor:pointer;color:var(--dim);font-size:12px}
+  code{display:block;margin-top:6px;font-size:11px;color:var(--dim);
+       background:#0A0812;padding:8px;border-radius:6px;word-break:break-word}
+</style>
+</head>
+<body>
+<h1>末日尸潮 · 环境 / 道具设计表 <small>v1.0.0</small></h1>
+<div class="meta">
+  真源 <code>assets/environment/props.json</code> · 共 38 件
+  （30 道具 + 8 结构）·
+  三角合计 28830 · 单位 1 unit = 1 m，Y-up
+</div>
+<div class="meta">预算：150–900（小件 150–400，中件 400–900） / 1200–2500（模块段按可拼接设计，单段 ≤ 1200） · 俯视相机下靠**轮廓 + 顶部色块**辨识：每件道具必须有可辨识的顶面形状与一个 accent 色</div>
+<div class="legend">
+  <div><b>不挡</b> · 不挡子弹不挡视线（纯装饰）</div><div><b>半掩体</b> · 半掩体：挡移动、不挡俯视视线，可翻越（h ≤ 1.0 m）</div><div><b>全掩体</b> · 全掩体：挡移动与平射，玩家需绕行（h = 1.1–1.8 m）</div><div><b>全阻断</b> · 完全阻断：挡移动、挡视线、挡流场（大型结构 / 车厢 / 货架）</div><div><b>头顶遮蔽</b> · 头顶遮蔽：可挂敌、挡抛物线（雨棚 / 车厢顶 / 隧道拱）</div>
+</div>
+
+  <section>
+    <h2>通用件 <span>跨幕复用，任何 Act 都能撒</span></h2>
+    <div class="grid">
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-01</span>
+      <h3>油桶 <small>Oil Barrel</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>0.6 × 0.6 × 0.9 m</dd>
+      <dt>三角</dt><dd>180</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 4–8（成组 2–3 个摆放）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 矮胖圆柱 + 两道环形箍，顶面是清晰的圆</p>
+    <p class="look"><b>外观</b> 锈迹斑斑的 55 加仑钢桶，桶身凹陷，顶部有红色危险标贴，桶口渗油</p>
+    <p class="place"><b>摆放</b> 贴掩体侧面、敌群路径上；不要挡住唯一通道</p>
+    <p class="dz"><b>可破坏</b> 可爆：爆炸 2.5 m 半径，是关卡里的**节奏点**而非障碍</p>
+    <p class="note">出图要点：爆桶是玩法件，出图时务必让红色 hazard 标贴可见</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>rusty dented 55-gallon steel oil drum, two horizontal ribs, red hazard label peeling off, oil stains, slightly tilted, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-02</span>
+      <h3>水泥路障 <small>Jersey Barrier</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2.5 × 0.6 × 0.9 m</dd>
+      <dt>三角</dt><dd>220</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 6–12（连成长条）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 梯形长条，底部外扩，顶面窄</p>
+    <p class="look"><b>外观</b> 脏污混凝土路障，表面有刮痕与涂鸦，顶部有黄色反光条残迹</p>
+    <p class="place"><b>摆放</b> 连成线切分场地；末端留缺口做通道</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>weathered concrete Jersey barrier, trapezoidal profile, chipped edges, faded yellow reflector stripe, graffiti marks, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">P-03</span>
+      <h3>铁皮垃圾桶 <small>Dumpster</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>1.8 × 1.1 × 1.3 m</dd>
+      <dt>三角</dt><dd>260</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 3–6</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 方盒 + 掀开的斜顶盖，轮廓方正</p>
+    <p class="look"><b>外观</b> 锈蚀的绿色商用垃圾箱，盖板半掀，侧面凹陷，底部有污渍渗出</p>
+    <p class="place"><b>摆放</b> 贴墙角、巷口；成对摆放形成 L 形掩体</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>rusted teal commercial dumpster, half-open slanted lid, dented side panels, grime streaks, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FF9F1C">
+    <header>
+      <span class="badge" style="background:#FF9F1C">P-04</span>
+      <h3>托盘货箱 <small>Pallet &amp; Crates</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>1.2 × 1 × 1.1 m</dd>
+      <dt>三角</dt><dd>300</dd>
+      <dt>掩体</dt><dd><b style="color:#FF9F1C">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 4–10（堆 2–3 层）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 木托盘 + 错落的方箱堆，外轮廓不规则</p>
+    <p class="look"><b>外观</b> 木质托盘上堆着两三个木条箱，箱板有裂缝，侧面有褪色的货运标记</p>
+    <p class="place"><b>摆放</b> 堆垛成掩体群；不同高度混搭出层次</p>
+    <p class="dz"><b>可破坏</b> 木箱可打碎，是**动态掩体**：打光了就没得躲</p>
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>wooden shipping pallet stacked with two or three wooden crates, cracked planks, faded stencil markings, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#14110F">
+    <header>
+      <span class="badge" style="background:#14110F">P-05</span>
+      <h3>轮胎堆 <small>Tire Stack</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>0.9 × 0.9 × 0.8 m</dd>
+      <dt>三角</dt><dd>320</dd>
+      <dt>掩体</dt><dd><b style="color:#14110F">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 4–8</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 三四个黑圆环叠成的短柱，顶面是同心圆</p>
+    <p class="look"><b>外观</b> 叠放的旧汽车轮胎，橡胶发灰开裂，中间卡着泥与碎玻璃</p>
+    <p class="place"><b>摆放</b> 散落在开阔地做软掩体；可叠 2–3 个加高</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>stack of three worn car tires, cracked grey rubber, dirt and broken glass wedged between them, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-06</span>
+      <h3>沙袋掩体 <small>Sandbag Wall</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2 × 0.7 × 0.9 m</dd>
+      <dt>三角</dt><dd>280</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 1/2/3/4</dd>
+      <dt>数量</dt><dd>每关 4–8</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 低矮圆润的长条，一坨一坨的袋形</p>
+    <p class="look"><b>外观</b> 草绿色帆布沙袋交错堆叠，部分破口漏沙，顶面塌陷</p>
+    <p class="place"><b>摆放</b> 与水泥墩混用打破重复；缺口处留射击位</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>olive canvas sandbag wall, sandbags stacked in alternating rows, one bag torn open spilling sand, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article></div>
+  </section>
+
+  <section>
+    <h2>Act 1 · 城郊公路 <span>Highway Outskirts — 加油站雨棚 + 翻覆车阵，开阔但多硬掩体</span></h2>
+    <div class="grid">
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">S-01</span>
+      <h3>加油站雨棚 <small>Gas Station Canopy</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>16 × 12 × 5.5 m</dd>
+      <dt>三角</dt><dd>1800</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">头顶遮蔽</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>1（主战场）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 巨大的平顶大板 + 四根方柱，顶面是最大的可辨识面</p>
+    <p class="look"><b>外观</b> 加油站钢构雨棚，顶板边缘下垂变形，四根方柱漆面剥落，顶面有褪色的品牌色带</p>
+    <p class="place"><b>摆放</b> 罩住加油机阵列；柱子是唯一的实体掩体</p>
+    
+    <p class="note">出图要点：俯视下顶面是主视角，色带必须醒目</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>gas station steel canopy, flat roof with sagging edge, four square support columns with peeling paint, faded brand color stripe along the fascia, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">S-02</span>
+      <h3>便利店 <small>Convenience Store</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>12 × 8 × 4 m</dd>
+      <dt>三角</dt><dd>2000</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>1</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 单层方盒 + 大面积玻璃幕墙 + 门口雨篷</p>
+    <p class="look"><b>外观</b> 路边便利店，落地玻璃幕墙碎裂大半，店内货架东倒西歪，招牌只剩几个字母</p>
+    <p class="place"><b>摆放</b> 占住一侧边界；正门是主要出入口，玻璃幕墙是**可击穿视线**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>roadside convenience store, single story, large glass storefront mostly shattered, toppled shelves visible inside, broken sign with missing letters, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#E8402A">
+    <header>
+      <span class="badge" style="background:#E8402A">P-11</span>
+      <h3>翻覆轿车 <small>Overturned Sedan</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>4.4 × 1.9 × 1.5 m</dd>
+      <dt>三角</dt><dd>700</dd>
+      <dt>掩体</dt><dd><b style="color:#E8402A">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>每关 2–4</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 四轮朝天的车壳，底盘朝上，轮廓是圆润长方体</p>
+    <p class="look"><b>外观</b> 翻覆的旧轿车，车顶压瘪，车窗全碎，底盘朝天露出排气管与悬挂，车身有干涸血手印</p>
+    <p class="place"><b>摆放</b> 车阵主力，斜向摆放形成对角掩体；车头朝向玩家来路</p>
+    <p class="dz"><b>可破坏</b> 车体可打爆，爆后残留骨架仍挡路</p>
+    <p class="note">出图要点：底盘朝天是这件的核心辨识点，出图必须能看到车轮</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>overturned sedan car wreck flipped on its roof, crushed cabin, shattered windows, exposed undercarriage with exhaust and suspension, dried bloody handprints, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-12</span>
+      <h3>厢式货车残骸 <small>Box Truck Wreck</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>6.5 × 2.4 × 2.8 m</dd>
+      <dt>三角</dt><dd>900</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>每关 1–2（地标级）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 巨大的方箱车壳，侧面是可辨识的矩形大面</p>
+    <p class="look"><b>外观</b> 侧翻的白色厢式货车，车厢铁皮撕裂卷边，车门脱落，货厢内黑漆漆看不清</p>
+    <p class="place"><b>摆放</b> 当**房间锚点**用：它一放，周边战斗空间就定下来了</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>overturned white box truck wreck, torn and curled cargo panel, missing door, dark open cargo interior, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-13</span>
+      <h3>公路护栏 <small>Guardrail</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>4 × 0.3 × 0.8 m</dd>
+      <dt>三角</dt><dd>200</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>成段铺设</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 波浪形横向长条（W 型截面）</p>
+    <p class="look"><b>外观</b> 镀锌波形护栏，立柱歪斜，漆面剥落露出锈迹，中间有撞击凹陷</p>
+    <p class="place"><b>摆放</b> 沿场地边缘围合，留 2–3 个缺口做出入口</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>galvanized W-beam highway guardrail section, bent metal posts, peeling paint with rust, impact dent in the middle, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#E8402A">
+    <header>
+      <span class="badge" style="background:#E8402A">P-14</span>
+      <h3>加油机 <small>Fuel Pump</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>0.8 × 0.6 × 1.8 m</dd>
+      <dt>三角</dt><dd>400</dd>
+      <dt>掩体</dt><dd><b style="color:#E8402A">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>每关 2–4（成排）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 竖立方柱 + 顶部小显示屏，细高</p>
+    <p class="look"><b>外观</b> 老式加油机，显示屏碎裂，油管垂落在地，机身有油污与弹孔</p>
+    <p class="place"><b>摆放</b> 成排放在雨棚下，形成规则掩体阵列</p>
+    <p class="dz"><b>可破坏</b> 可引爆，是加油站的天然陷阱点</p>
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>old-fashioned gasoline pump, cracked display screen, hose dangling to the ground, oily grime and bullet holes, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FF9F1C">
+    <header>
+      <span class="badge" style="background:#FF9F1C">P-15</span>
+      <h3>路边广告牌 <small>Roadside Billboard</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>6 × 0.4 × 5 m</dd>
+      <dt>三角</dt><dd>500</dd>
+      <dt>掩体</dt><dd><b style="color:#FF9F1C">不挡</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>每关 1（背景地标）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 高耸的矩形大板 + 两根支柱</p>
+    <p class="look"><b>外观</b> 巨大的路牌广告牌，画面撕裂只剩一半，钢架锈蚀，背面被涂鸦覆盖</p>
+    <p class="place"><b>摆放</b> 放在战场外围当背景轮廓，不参与碰撞</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>large roadside billboard on two steel posts, half the poster torn away, rusted frame, graffiti on the back, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">P-16</span>
+      <h3>收费站亭 <small>Toll Booth</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>1.6 × 1.6 × 2.4 m</dd>
+      <dt>三角</dt><dd>450</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 1</dd>
+      <dt>数量</dt><dd>每关 1–2</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 小方盒 + 玻璃窗带，独立小屋</p>
+    <p class="look"><b>外观</b> 破败的公路收费站亭，玻璃全碎，内部柜台翻倒，顶灯垂落摇晃</p>
+    <p class="place"><b>摆放</b> 卡在通道上做**门闩**：绕不开，只能从旁边过</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>derelict highway toll booth, all glass shattered, overturned counter inside, dangling ceiling light, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article></div>
+  </section>
+  <section>
+    <h2>Act 2 · 废弃仓库 <span>Ruined Warehouse — 货架巷道 + 冷库，视线被切碎，适合伏击</span></h2>
+    <div class="grid">
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">S-03</span>
+      <h3>仓库外壳 <small>Warehouse Shell</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>40 × 30 × 9 m</dd>
+      <dt>三角</dt><dd>2400</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>1（关卡外壳）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 巨大的坡顶铁皮盒 + 一排高窗</p>
+    <p class="look"><b>外观</b> 大型铁皮仓库，波纹钢板外墙，坡屋顶，高处一排积灰的天窗，卷帘门大开</p>
+    <p class="place"><b>摆放</b> 整体是关卡边界；内部用货架再切巷道</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>large corrugated metal warehouse building, sloped roof, row of dusty clerestory windows, wide open rolling door, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">S-04</span>
+      <h3>冷库房 <small>Cold Storage Room</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>10 × 8 × 4 m</dd>
+      <dt>三角</dt><dd>1600</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>1（子房间）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 封闭方盒 + 厚门，外面挂满冰凌</p>
+    <p class="look"><b>外观</b> 冷库房间，保温板墙面结满白霜，门框挂冰凌，内部寒气外溢</p>
+    <p class="place"><b>摆放</b> 塞在仓库一角，作为**高压小房间**：进去就关门</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>walk-in cold storage room, insulated panels covered in white frost, icicles hanging from the door frame, cold vapor spilling out, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-21</span>
+      <h3>重型货架 <small>Heavy Shelving</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2.4 × 1 × 4.5 m</dd>
+      <dt>三角</dt><dd>800</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>成排（每关 8–16 段）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 高瘦的框架，横梁分层，侧面看是稀疏的梯子状</p>
+    <p class="look"><b>外观</b> 工业重型货架，钢梁锈黄，层板歪斜，零星残留几个纸箱与油渍</p>
+    <p class="place"><b>摆放</b> **背靠背成排**形成巷道；巷道宽 2.5–3 m，只容两人错身</p>
+    
+    <p class="note">出图要点：要能看到层板通透 —— 缝隙是巷道的视线逻辑</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>industrial heavy-duty steel shelving rack, rusty orange beams, tilted shelves, a few leftover cardboard boxes and oil stains, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">P-22</span>
+      <h3>冷库门 <small>Freezer Door</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2.2 × 0.5 × 2.6 m</dd>
+      <dt>三角</dt><dd>400</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>每关 1–2</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 厚重的方门 + 中央转轮把手</p>
+    <p class="look"><b>外观</b> 厚重的保温冷库门，表面结霜，中央是大型转轮锁把，边缘有冰凌</p>
+    <p class="place"><b>摆放</b> 作为**房间门**：关着就是墙，开了才通</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>heavy insulated walk-in freezer door, frost covered surface, large central wheel handle, icicles along the edge, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-23</span>
+      <h3>叉车 <small>Forklift</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2.6 × 1.2 × 2.2 m</dd>
+      <dt>三角</dt><dd>700</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>每关 1–3</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 矮胖车体 + 前伸的两根货叉 + 护顶架</p>
+    <p class="look"><b>外观</b> 黄色工业叉车，货叉上还插着一个破木托盘，护顶架变形，轮胎瘪了一个</p>
+    <p class="place"><b>摆放</b> 停在巷道口做**临时路障**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>yellow industrial forklift, two forks holding a broken wooden pallet, bent overhead guard, one flat tire, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#14110F">
+    <header>
+      <span class="badge" style="background:#14110F">P-24</span>
+      <h3>传送带段 <small>Conveyor Section</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>6 × 1 × 0.9 m</dd>
+      <dt>三角</dt><dd>500</dd>
+      <dt>掩体</dt><dd><b style="color:#14110F">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>每关 2–4 段</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 细长的斜带 + 支腿，顶面是连续的履带面</p>
+    <p class="look"><b>外观</b> 工厂传送带段，橡胶带断裂垂落，滚筒锈死，支腿歪斜</p>
+    <p class="place"><b>摆放</b> 长条斜切场地，制造**单向走廊**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>factory conveyor belt section, torn rubber belt hanging down, seized rollers, crooked support legs, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-25</span>
+      <h3>卷帘门 <small>Rolling Shutter</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>4 × 0.3 × 3.5 m</dd>
+      <dt>三角</dt><dd>350</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>每关 2–4</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 横向条纹的平板，底部参差不齐</p>
+    <p class="look"><b>外观</b> 铁皮卷帘门，底部被撬弯翘起，漆面起皮，横向条纹积灰</p>
+    <p class="place"><b>摆放</b> 贴结构墙做**可开合的门洞**；半开状态最有戲</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>metal rolling shutter door, bottom edge pried and bent upward, flaking paint, dust on the horizontal slats, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#E8402A">
+    <header>
+      <span class="badge" style="background:#E8402A">P-26</span>
+      <h3>储油罐 <small>Storage Tank</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>3 × 3 × 4 m</dd>
+      <dt>三角</dt><dd>600</dd>
+      <dt>掩体</dt><dd><b style="color:#E8402A">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 2</dd>
+      <dt>数量</dt><dd>每关 1–2</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 立式圆柱 + 顶部人孔，圆润</p>
+    <p class="look"><b>外观</b> 立式工业储油罐，罐体锈斑，顶部人孔盖敞开，底部阀门滴着黑色残液</p>
+    <p class="place"><b>摆放</b> 靠边摆放，做**圆形绕行**的战斗支点</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>vertical industrial storage tank, rust patches, open manhole on top, black residue dripping from the bottom valve, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article></div>
+  </section>
+  <section>
+    <h2>Act 3 · 地铁隧道 <span>Subway Tunnels — 狭长线性，纵向空间高，天花板可挂敌</span></h2>
+    <div class="grid">
+  <article class="card" style="border-color:#9B5DE5">
+    <header>
+      <span class="badge" style="background:#9B5DE5">S-05</span>
+      <h3>隧道段模块 <small>Tunnel Module</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>20 × 8 × 6 m</dd>
+      <dt>三角</dt><dd>2000</dd>
+      <dt>掩体</dt><dd><b style="color:#9B5DE5">头顶遮蔽</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>拼接 6–10 段</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 拱形断面，内壁管线密布，尽头是黑洞</p>
+    <p class="look"><b>外观</b> 圆形拱顶地铁隧道，混凝土壁面渗水，瓷砖脱落，顶部灯管只剩几盏还亮</p>
+    <p class="place"><b>摆放</b> **模块化拼接**：直段 / 弯段 / 岔口；纵向高度留给挂敌</p>
+    
+    <p class="note">出图要点：模块必须能首尾拼接 —— 出图时断面要规整</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>circular arched subway tunnel section, concrete walls with water seepage, missing tiles, a few flickering ceiling lights, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">S-06</span>
+      <h3>地铁站台 <small>Subway Platform</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>40 × 6 × 1.2 m</dd>
+      <dt>三角</dt><dd>1400</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">不挡</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>1–2（车站区）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 抬高的长条平台 + 黄色安全线 + 立柱</p>
+    <p class="look"><b>外观</b> 废弃地铁站台，黄色安全线磨损，立柱贴满寻人启事，天花板漏光</p>
+    <p class="place"><b>摆放</b> 隧道中途的**喘息节点**：会在这里开战，然后重新钻回隧道</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>abandoned subway platform, worn yellow safety line, support pillars covered with missing-person flyers, light leaking through the ceiling, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#14110F">
+    <header>
+      <span class="badge" style="background:#14110F">P-31</span>
+      <h3>铁轨段 <small>Rail Track Segment</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>8 × 2.4 × 0.25 m</dd>
+      <dt>三角</dt><dd>350</dd>
+      <dt>掩体</dt><dd><b style="color:#14110F">不挡</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>成段铺设</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 两条平行钢轨 + 横向枕木，强线性</p>
+    <p class="look"><b>外观</b> 地铁铁轨段，钢轨锈亮，混凝土枕木开裂，道砟间长出杂草</p>
+    <p class="place"><b>摆放</b> 沿隧道中线铺，是**视觉引导线**（不挡移动，但绊脚感要保留）</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>subway rail track segment, two rusty steel rails, cracked concrete sleepers, weeds growing between the ballast, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#9B5DE5">
+    <header>
+      <span class="badge" style="background:#9B5DE5">P-32</span>
+      <h3>废弃车厢 <small>Derelict Subway Car</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>18 × 2.8 × 3.4 m</dd>
+      <dt>三角</dt><dd>1600</dd>
+      <dt>掩体</dt><dd><b style="color:#9B5DE5">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>每关 1–2</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 超长圆润厢体 + 车窗带，是隧道里最大的体量</p>
+    <p class="look"><b>外观</b> 废弃地铁车厢，车窗全碎，车身涂鸦覆盖，车门半开，车顶凹陷</p>
+    <p class="place"><b>摆放</b> 停在轨道上，把线性隧道切成**上下两条通路**（车内 / 车侧）</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>abandoned subway car, all windows shattered, body covered in graffiti, one door half open, dented roof, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-33</span>
+      <h3>电缆管线 <small>Cable Conduit</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>6 × 0.3 × 0.3 m</dd>
+      <dt>三角</dt><dd>200</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">不挡</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>沿墙成束</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 一束平行细管，沿墙的长线</p>
+    <p class="look"><b>外观</b> 成束的电缆管线沿墙铺设，外皮剥落露出彩色线芯，有几根垂落</p>
+    <p class="place"><b>摆放</b> 贴隧道壁走线，强化**纵向延伸感**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>bundle of wall-mounted cable conduits, cracked insulation exposing colored wires, a few cables hanging loose, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFC531">
+    <header>
+      <span class="badge" style="background:#FFC531">P-34</span>
+      <h3>检修平台 <small>Maintenance Platform</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>3 × 1.2 × 2.6 m</dd>
+      <dt>三角</dt><dd>450</dd>
+      <dt>掩体</dt><dd><b style="color:#FFC531">不挡</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>每关 2–4</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 悬空的小平台 + 斜梯 + 栏杆</p>
+    <p class="look"><b>外观</b> 钢制检修平台，格栅踏板锈蚀，护栏歪斜，斜梯通到地面</p>
+    <p class="place"><b>摆放</b> 贴壁高处，是**挂敌 / 高地**锚点（配合纵向空间）</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>steel maintenance platform, rusty grating floor, crooked guardrail, angled ladder down to the ground, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">P-35</span>
+      <h3>站台长椅 <small>Platform Bench</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2 × 0.6 × 0.9 m</dd>
+      <dt>三角</dt><dd>220</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>每关 3–6</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 细长的板 + 两条支腿</p>
+    <p class="look"><b>外观</b> 地铁站台长椅，金属条椅面翻起一个，地面散落报纸与废弃物</p>
+    <p class="place"><b>摆放</b> 站台边缘成排，给开阔段一点**低矮节奏**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>subway platform bench, one metal seat slat flipped up, scattered newspapers and litter on the ground, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-36</span>
+      <h3>通风管道 <small>Ventilation Duct</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>5 × 1.2 × 1.2 m</dd>
+      <dt>三角</dt><dd>400</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">不挡</b></dd>
+      <dt>出场</dt><dd>Act 3</dd>
+      <dt>数量</dt><dd>每关 2–4</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 粗大的方管，沿顶延伸</p>
+    <p class="look"><b>外观</b> 粗大的方形通风管，铁皮接缝漏风，表面结露滴水</p>
+    <p class="place"><b>摆放</b> 架在隧道顶部，制造**头顶遮蔽与阴影**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>large square ventilation duct running along the ceiling, leaking seams, condensation drips on the surface, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article></div>
+  </section>
+  <section>
+    <h2>Act 4 · 生化医院 <span>Biohazard Hospital — 天台开阔 + 病房迷宫双层，风向影响毒息</span></h2>
+    <div class="grid">
+  <article class="card" style="border-color:#FFF6E2">
+    <header>
+      <span class="badge" style="background:#FFF6E2">S-07</span>
+      <h3>病房模块 <small>Ward Module</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>8 × 8 × 3.2 m</dd>
+      <dt>三角</dt><dd>1800</dd>
+      <dt>掩体</dt><dd><b style="color:#FFF6E2">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>拼接 6–10 间</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 方形房间，一面开口，墙上有门洞与观察窗</p>
+    <p class="look"><b>外观</b> 医院病房模块，瓷砖墙裙，地面是褪色塑胶地板，天花板格栅塌了一角</p>
+    <p class="place"><b>摆放</b> **模块化病房**：墙段 + 门洞 + 半墙；拼出迷宫</p>
+    
+    <p class="note">出图要点：至少要有一个门洞 —— 迷宫要能走通</p>
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>hospital ward room module, tiled wainscot walls, faded vinyl floor, one corner of the ceiling grid collapsed, door opening on one side, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FF9F1C">
+    <header>
+      <span class="badge" style="background:#FF9F1C">S-08</span>
+      <h3>天台机房与水塔 <small>Rooftop Utility &amp; Water Tower</small></h3>
+      <span class="kind">结构</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>6 × 6 × 7 m</dd>
+      <dt>三角</dt><dd>2200</dd>
+      <dt>掩体</dt><dd><b style="color:#FF9F1C">全阻断</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>1–2（天台层）</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 方盒机房 + 圆柱水塔 + 支架</p>
+    <p class="look"><b>外观</b> 天台机房与锈迹水塔，通风机组停转，管道纵横，水塔外壳漆着褪色的字</p>
+    <p class="place"><b>摆放</b> 天台层的**唯一高体量**：绕着它打远距离对枪</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>rooftop utility shed with a rusty cylindrical water tower on legs, stalled ventilation units, pipes running across, faded painted lettering on the tank, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFF6E2">
+    <header>
+      <span class="badge" style="background:#FFF6E2">P-41</span>
+      <h3>病床 <small>Hospital Bed</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2.1 × 0.9 × 0.9 m</dd>
+      <dt>三角</dt><dd>500</dd>
+      <dt>掩体</dt><dd><b style="color:#FFF6E2">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 4–10</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 带轮子的窄床 + 床头护栏</p>
+    <p class="look"><b>外观</b> 医用病床，床单凌乱带血迹，护栏立起一侧，输液架挂在床边，轮子歪斜</p>
+    <p class="place"><b>摆放</b> 病房迷宫的主力：可推倒、可翻越，**迷宫墙的可变体**</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>hospital bed with wheels, messy blood-stained sheets, one raised side rail, IV pole hooked on the side, crooked casters, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#2BC4D6">
+    <header>
+      <span class="badge" style="background:#2BC4D6">P-42</span>
+      <h3>输液架 <small>IV Pole</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>0.5 × 0.5 × 1.8 m</dd>
+      <dt>三角</dt><dd>200</dd>
+      <dt>掩体</dt><dd><b style="color:#2BC4D6">不挡</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 4–8</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 细杆 + 顶部挂钩 + 五爪底座</p>
+    <p class="look"><b>外观</b> 医用输液架，挂着空了一半的血袋，五爪底座带轮，杆身贴着褪色的标签</p>
+    <p class="place"><b>摆放</b> 细高，做**视线噪声**而非掩体；打倒了会响</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>medical IV pole, half-empty blood bag hanging on the hook, five-wheel base, faded label on the shaft, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#F5E7C8">
+    <header>
+      <span class="badge" style="background:#F5E7C8">P-43</span>
+      <h3>轮椅 <small>Wheelchair</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>1 × 0.7 × 1.1 m</dd>
+      <dt>三角</dt><dd>400</dd>
+      <dt>掩体</dt><dd><b style="color:#F5E7C8">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 3–6</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 两个大轮 + 座椅，圆的</p>
+    <p class="look"><b>外观</b> 翻倒的轮椅，一个大轮还在转，座垫撕裂露出海绵，脚踏板变形</p>
+    <p class="place"><b>摆放</b> 散落走廊，制造**不规则小障碍**（会卡走位）</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>overturned wheelchair, one large wheel still spinning, torn seat cushion exposing foam, bent footrest, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#9B5DE5">
+    <header>
+      <span class="badge" style="background:#9B5DE5">P-44</span>
+      <h3>隔断屏风 <small>Privacy Screen</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>2 × 0.1 × 1.7 m</dd>
+      <dt>三角</dt><dd>300</dd>
+      <dt>掩体</dt><dd><b style="color:#9B5DE5">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 6–12</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 薄薄的一片，顶部有波浪起伏</p>
+    <p class="look"><b>外观</b> 医用隔断屏风，浅绿布面有污渍，折页歪斜，底部轮子卡死</p>
+    <p class="place"><b>摆放</b> **迷宫的核心墙**：可打穿，视线会随战斗变化</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>hospital privacy screen, pale green fabric panels with stains, bent hinges, jammed casters, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#9B5DE5">
+    <header>
+      <span class="badge" style="background:#9B5DE5">P-45</span>
+      <h3>培养舱 <small>Bio Containment Pod</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>1.2 × 1.2 × 2.2 m</dd>
+      <dt>三角</dt><dd>600</dd>
+      <dt>掩体</dt><dd><b style="color:#9B5DE5">全掩体</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 2–4</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 立式玻璃舱 + 金属底座，内部发着紫光</p>
+    <p class="look"><b>外观</b> 立式生物培养舱，玻璃罩内漂浮着不明组织，紫色荧光液，底座控制台闪烁</p>
+    <p class="place"><b>摆放</b> 病房里的**高危物件**：打不打是玩家的选择</p>
+    <p class="dz"><b>可破坏</b> 打碎会放出一团毒气 —— 与 Act4 的风向机制联动</p>
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>vertical bio containment pod, unidentified tissue floating inside the glass cylinder, glowing purple fluid, blinking console on the base, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article>
+  <article class="card" style="border-color:#FFF6E2">
+    <header>
+      <span class="badge" style="background:#FFF6E2">P-46</span>
+      <h3>医疗推车 <small>Medical Cart</small></h3>
+      <span class="kind">道具</span>
+    </header>
+    <div class="thumb" style="display:grid;place-items:center;color:#6B6880">
+      <span>待出图</span>
+    </div>
+    <dl>
+      <dt>占地</dt><dd>0.8 × 0.5 × 0.9 m</dd>
+      <dt>三角</dt><dd>350</dd>
+      <dt>掩体</dt><dd><b style="color:#FFF6E2">半掩体</b></dd>
+      <dt>出场</dt><dd>Act 4</dd>
+      <dt>数量</dt><dd>每关 3–6</dd>
+    </dl>
+    <p class="sil"><b>轮廓</b> 双层小推车 + 四个小轮</p>
+    <p class="look"><b>外观</b> 不锈钢医疗推车，上层散落注射器与药瓶，下层抽屉半开，车架有血手印</p>
+    <p class="place"><b>摆放</b> 贴墙摆放，是**补给点**的视觉暗示</p>
+    
+    
+    <details>
+      <summary>生成提示词（混元图生 3D）</summary>
+      <code>stainless steel medical cart, syringes and pill bottles scattered on the top shelf, half-open drawer, bloody handprint on the frame, three-quarter view, slightly above eye level, full object visible, clean silhouette, no ground plane, no shadow, American comic book style game environment prop, thick black ink outlines, bold saturated flat colors, 2-step cel shading, halftone dots in shadows, clean white background, single object, centered, no text, no logo, no UI, no watermark</code>
+    </details>
+  </article></div>
+  </section>
+</body>
+</html>
