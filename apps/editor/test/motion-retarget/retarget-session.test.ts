@@ -775,7 +775,7 @@ describe('retarget-session 标定判据契约（85620c9 复审三反例回归）
     expect(r.state).toBe('changed');
     expect(s.summary().targetCalibrated).toBe(false);
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
-    // 单位保留的铁证：支撑面仍在米制量级（丢单位会变成 ~3.7m）
+    // 单位保留的铁证：支撑面仍在米制量级（丢单位会变成 ~4.5m 级）
     expect(s.targetSkeletonView()!.planeY).toBeLessThan(1);
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(false);
   });
@@ -840,5 +840,53 @@ describe('retarget-session 标定判据契约（85620c9 复审三反例回归）
     // 左脚下垂 1.42m > 1.0×1.35 → 停用；右腿 1.0 不得掩盖
     expect(s.summary().sourceCalibrated).toBe(false);
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_SOURCE_CAL_DETACHED')).toBe(true);
+  });
+});
+
+describe('retarget-session 复审跟进（b840ac6 复审 P2/P3 回归）', () => {
+  it('P2：单位丢弃后换回 cm 资产 → 按厘米制推断重建（不再静默 97m）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const cmFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) cmFit[k] = [p[0]! * 100, p[1]! * 100, p[2]! * 100];
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    const cmCal = targetCalibration(1.0);
+    cmCal.unitScale = 0.01;
+    expect(s.setTargetCalibration(cmCal).ok).toBe(true);
+    // 换米制资产 → 单位丢弃
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'meter-rig' });
+    expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_DROPPED')).toBe(true);
+    // 换回 cm 资产：默认米制会得到 ~97m 骨盆 → 超出人形区间 → 按厘米制推断
+    s.setTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    const diags = s.summary().diagnostics;
+    expect(diags.some((d) => d.code === 'MRS_TARGET_UNITS_INFERRED')).toBe(true);
+    // 推断后回到米制量级（97m 级是错的）
+    expect(s.targetSkeletonView()!.planeY).toBeLessThan(1);
+    // 推断出的单位沿用：再次 sync 同骨架 → 不再出推断/丢弃警告
+    const again = s.syncTarget({ fitPositions: cmFit, name: 'cm-rig' });
+    expect(again.state).toBe('unchanged');
+    // 求解可用（不再产出 97m 级 h_t 的怪结果）
+    const out = s.solve();
+    expect(out.status).not.toBe('failed');
+  });
+
+  it('P3：手部标记（下垂远小于 h）不劫持足底判据', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const cal = sourceCalibration(); // 足底 droop=1.0 ≈ h=1.0
+    // T-pose 手在肩上方：骨盆→手下垂 ≈ -0.55（负值），min 口径会误拒
+    cal.markers['LeftHand.palm'] = { bone: 'LeftHand', offset: [0, 0, 0], origin: 'manual' };
+    const r = s.setSourceCalibration(cal);
+    expect(r.ok).toBe(true); // 深处仍由足底决定 ≈ h；手标记不进最深判据
+    // 目标侧同口径
+    const fit = tposeWorldPositions();
+    s.setTarget({ fitPositions: fit, name: 'rig' });
+    const t = targetCalibration(1.0);
+    t.markers = {
+      'LeftFoot.heel': { bone: 'LeftFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'RightFoot.heel': { bone: 'RightFoot', offset: [0, -0.03, -0.05], origin: 'manual' },
+      'LeftHand.palm': { bone: 'LeftHand', offset: [0, 0, 0], origin: 'manual' },
+    };
+    expect(s.setTargetCalibration(t).ok).toBe(true);
   });
 });
