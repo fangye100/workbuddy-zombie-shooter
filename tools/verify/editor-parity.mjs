@@ -34,6 +34,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -429,9 +430,57 @@ try {
     locate.back == null ? '无' : `#${locate.back.id}·代${locate.back.generation} Δ=(${locate.back.dx.toFixed(2)}, ${locate.back.dy.toFixed(2)})px`,
   );
 
-  // 收尾 Stop（§8-6 要写盘，别让 Play 会话挂在上面）
+  // ================================================================ §8-5b：模型替换边界 + 失焦清理（复审 P1 / P2）
+  console.log('\n──── §8-5b：模型替换边界 + 失焦清理 ────');
+  // 用「对象名 + 顶点数」做网格身份：换模型 = 这个指纹会变
+  const meshSig = () =>
+    cdp.eval(`window.__editor.renderer.state.objects.map((o) => o.name + ':' + (o.mesh?.vertices?.length ?? -1)).join('|')`);
+
+  // §8-5 结束时还在 Play（暂停中）。先恢复播放做失焦用例，再做模型替换用例。
+  await cdp.eval(`document.querySelector('#btn-play').click(); 'ok'`); // paused → 继续
+  await sleep(300);
+
+  // ── 失焦清理：按住方向键失焦，没有 keyup，玩家必须停下而不是继续走 ──
+  await cdp.eval(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); 'ok'`);
+  await sleep(400);
+  const bx = await cdp.eval(`window.__editor.bridge.entities.find((e) => e.kind === 'player').x`);
+  await cdp.eval(`window.dispatchEvent(new Event('blur')); 'ok'`); // 只失焦，不发 keyup
+  await sleep(1200);
+  const ax = await cdp.eval(`window.__editor.bridge.entities.find((e) => e.kind === 'player').x`);
+  check(
+    '🔴 失焦清空按键并提交零输入（无 keyup 玩家也必须停下，复审 P2）',
+    Math.abs(ax - bx) < 0.2,
+    `失焦时 x=${Number(bx).toFixed(2)} → 1.2s 后 x=${Number(ax).toFixed(2)}（修前会继续走约 1.95m）`,
+  );
+
+  // ── 模型替换边界：Play 中切换模型必须被拒，Stop 后网格不丢 ──
+  const sigBefore = await meshSig();
+  const modelAttempt = await cdp.eval(`(() => {
+    const sels = [...document.querySelectorAll('select')].filter((s) => [...s.options].some((o) => o.value === 'scene'));
+    if (sels.length === 0) return { ok: false, why: '找不到模型下拉框' };
+    const sel = sels[0];
+    sel.value = 'scene';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true };
+  })()`);
+  check('找到模型下拉框并能触发切换', modelAttempt.ok === true, String(modelAttempt.why ?? ''));
+  await sleep(800);
+  const sigDuringPlay = await meshSig();
+  check(
+    '🔴 Play 中切换模型被拒（网格指纹不变，复审 P1）',
+    sigDuringPlay === sigBefore,
+    sigDuringPlay === sigBefore ? '未变' : '网格被换了（不应发生）',
+  );
   await cdp.eval(`document.querySelector('#btn-stop').click(); 'ok'`);
   await sleep(800);
+  const sigAfterStop = await meshSig();
+  check(
+    '🔴 Stop 后原网格还在（Play 中的替换没生效，不存在"恢复不回来"）',
+    sigAfterStop === sigBefore,
+    sigAfterStop === sigBefore ? '一致' : 'Stop 后网格指纹变了',
+  );
+
+  // ================================================================ §8-8：服务端乐观并发（复审 P1 TOCTOU）
 
   // ================================================================ §8-6
   if (SKIP_SAVE) {
@@ -452,6 +501,37 @@ try {
     let s = await st();
     const nodeId = s.selectedNodeId;
     const target = (radiusOf(origJson, nodeId) ?? 1.5) + 3.25;
+
+    // ── §8-8 服务端乐观并发（复审 P1 TOCTOU）：baseHash 与写入是同一个受控操作 ──
+    // 浏览器的预检只能提前提示；真正的判定在服务端队列体内。注入修改若发生在
+    // 「预检通过」与「写入」之间，服务端必须拒而不是覆盖。
+    console.log('\n──── §8-8：服务端乐观并发 ────');
+    const rtBundle = createRequire(import.meta.url)(path.resolve('.workbuddy/tmp/runtime/index.js'));
+    const correctFp = rtBundle.sceneFingerprint(origJson);
+    const writeWithHash = (hash) =>
+      cdp.eval(`(async () => {
+        const r = await fetch('/__fs/write', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: ${JSON.stringify(scenePath)}, content: ${JSON.stringify(origText)}, baseHash: ${JSON.stringify(hash)} }) });
+        const b = await r.json();
+        return { status: r.status, ok: b.ok === true, code: b.code ?? null, currentHash: b.currentHash ?? null };
+      })()`);
+
+    const bad = await writeWithHash('deadbeefdeadbeef');
+    check(
+      '🔴 错误 baseHash → 服务端 409 拒绝（校验与写入同一操作，复审 P1）',
+      bad.status === 409 && bad.ok === false && bad.code === 'conflict' && bad.currentHash === correctFp,
+      JSON.stringify(bad),
+    );
+    const diskAfterBad = await cdp.eval(
+      `(async () => { const r = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(scenePath)})); return await r.text(); })()`,
+    );
+    check('被拒后磁盘未被触碰', diskAfterBad === origText, `${diskAfterBad.length} 字符`);
+    const good = await writeWithHash(correctFp);
+    check('正确 baseHash → 同一请求放行写入', good.status === 200 && good.ok === true, JSON.stringify(good));
+    const diskAfterGood = await cdp.eval(
+      `(async () => { const r = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(scenePath)})); return await r.text(); })()`,
+    );
+    check('放行后磁盘仍是原内容（写的是同一份）', diskAfterGood === origText, `${diskAfterGood.length} 字符`);
 
     // 🔴 刻意改**两个**刷怪点再保存。
     // 保存自检曾经写成"改动必须恰好一条"，结果把"连续改两个点"这个合法操作给拒了

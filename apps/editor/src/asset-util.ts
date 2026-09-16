@@ -102,6 +102,10 @@ export interface WriteResult {
   status: number;
   bytes?: number | undefined;
   error: string | null;
+  /** 服务端乐观并发拒绝（磁盘版本与 baseHash 不一致）时为 true */
+  conflict?: boolean;
+  /** 冲突时服务端报告的当前磁盘指纹 */
+  currentHash?: string | undefined;
 }
 
 /**
@@ -114,7 +118,7 @@ export interface WriteResult {
  */
 export async function writeProjectFile(
   rel: string,
-  body: { content?: string; patch?: Record<string, unknown> },
+  body: { content?: string; patch?: Record<string, unknown>; baseHash?: string },
   fetchFn: typeof fetch = fetch,
 ): Promise<WriteResult> {
   try {
@@ -123,8 +127,15 @@ export async function writeProjectFile(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: rel.replace(/^\/+/, ''), ...body }),
     });
-    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string };
-    return { ok: res.ok && data.ok === true, status: res.status, bytes: data.bytes, error: data.error ?? null };
+    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string; code?: string; currentHash?: string };
+    return {
+      ok: res.ok && data.ok === true,
+      status: res.status,
+      bytes: data.bytes,
+      error: data.error ?? null,
+      conflict: res.status === 409 && data.code === 'conflict',
+      currentHash: data.currentHash,
+    };
   } catch (e) {
     return { ok: false, status: 0, error: String(e) };
   }

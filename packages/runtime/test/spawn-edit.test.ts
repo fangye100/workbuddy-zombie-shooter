@@ -136,7 +136,7 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     const r0 = readSpawnField(store.document, id, 'radius')!;
     store.set(id, 'radius', r0 + 5);
     const snap = store.beginSave();
-    store.confirmSave(snap.doc, snap.editsIncluded);
+    store.confirmSave(snap.doc, snap.lastEditId);
     expect(store.dirty).toBe(false);
     expect(readSpawnField(store.committedDocument, id, 'radius')).toBeCloseTo(r0 + 5, 6);
     // commit 之后再来一次编辑，差异仍然只有一条（基线已经前移）
@@ -159,7 +159,7 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     const snap = store.beginSave(); // 序列化的是 radius = r0+0.5
     store.set(id, 'radius', r0 + 1.5); // 等待写盘期间作者改成 3
 
-    store.confirmSave(snap.doc, snap.editsIncluded); // 只提交快照（radius = r0+0.5）
+    store.confirmSave(snap.doc, snap.lastEditId); // 只提交快照（radius = r0+0.5）
     // 🔴 关键断言：3（r0+1.5）仍是未保存修改
     expect(store.dirty).toBe(true);
     expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0 + 1.5, 6);
@@ -179,9 +179,33 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     store.set(id, 'radius', r0 + 0.5);
     const snap = store.beginSave();
     store.undo(); // 快照之后的瞬间作者反悔，撤销了刚发出去的那一步
-    store.confirmSave(snap.doc, snap.editsIncluded);
+    store.confirmSave(snap.doc, snap.lastEditId);
     // 磁盘有这一笔，工作副本没有 —— 两者不一致，dirty 必须如实为真，不能数栈为 0 就说干净
     expect(store.dirty).toBe(true);
+    expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0, 6);
+  });
+
+  /**
+   * 复审 P2-3：等待期间「撤销 + 再编辑」—— 栈长不变但栈里换了一条。
+   * 按栈长出队会把**新编辑误删**（撤销历史没了），必须把确认范围记在编辑身份上。
+   */
+  it('保存竞态边界：发送 2 → 撤销 → 改成 3 → 确认保存，3 的撤销记录不能被误删', () => {
+    const store = new SpawnEditStore(fixture());
+    const id = firstSpawn(store.document);
+    const r0 = readSpawnField(store.document, id, 'radius')!;
+
+    store.set(id, 'radius', r0 + 0.5); // 发送 radius 2
+    const snap = store.beginSave();
+    store.undo(); // 撤销了刚发送的那一步
+    store.set(id, 'radius', r0 + 1.5); // 再改成 3（新的编辑身份）
+    store.confirmSave(snap.doc, snap.lastEditId);
+
+    // 3 仍是未保存（工作副本 3，已提交快照 2）
+    expect(store.dirty).toBe(true);
+    expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0 + 1.5, 6);
+    // 🔴 且撤销栈里**必须还有这一条** —— 按栈长出队时它被误删了，撤销历史丢了
+    expect(store.undoDepth).toBe(1);
+    store.undo();
     expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0, 6);
   });
 
@@ -214,7 +238,7 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
     const doc = fixture();
     const id = firstSpawn(doc);
     const before = readSpawnField(doc, id, 'radius')!;
-    const edit = { field: 'radius' as const, nodeId: id, from: before, to: before + 1.5 };
+    const edit = { id: 1, field: 'radius' as const, nodeId: id, from: before, to: before + 1.5 };
     expect(applySpawnEdit(doc, edit).ok).toBe(true);
     expect(readSpawnField(doc, id, 'radius')).toBeCloseTo(before + 1.5, 6);
     expect(applySpawnEdit(doc, invertSpawnEdit(edit)).ok).toBe(true);
@@ -224,7 +248,7 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
   it('apply 到不存在的节点返回错误而不是抛异常（也不改任何东西）', () => {
     const doc = fixture();
     const snapshot = JSON.stringify(doc);
-    const r = applySpawnEdit(doc, { field: 'radius', nodeId: 'nd_nope', from: 0, to: 5 });
+    const r = applySpawnEdit(doc, { id: 1, field: 'radius', nodeId: 'nd_nope', from: 0, to: 5 });
     expect(r.ok).toBe(false);
     expect(r.error).not.toBeNull();
     expect(JSON.stringify(doc)).toBe(snapshot);
@@ -241,7 +265,7 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
     const doc = fixture();
     const copy = cloneDocument(doc);
     const id = firstSpawn(doc);
-    applySpawnEdit(copy, { field: 'count', nodeId: id, from: 0, to: 99 });
+    applySpawnEdit(copy, { id: 1, field: 'count', nodeId: id, from: 0, to: 99 });
     expect(readSpawnField(doc, id, 'count')).not.toBe(99);
   });
 });

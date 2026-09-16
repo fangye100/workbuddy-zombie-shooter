@@ -18,6 +18,8 @@
 import { createReadStream, existsSync, promises as fsp, statSync } from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+// 与浏览器侧保存共用同一个指纹实现 —— 版本校验必须逐位一致，各算一份必然漂移
+import { sceneFingerprint } from '../../packages/runtime/src/doc-diff';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -72,6 +74,15 @@ export interface WriteBody {
   content?: string;
   /** 合并模式：浅合并进现有 JSON 的顶层键（不破坏其它键，如 importer / userData） */
   patch?: Record<string, unknown>;
+  /**
+   * 乐观并发控制（复审 P1）：客户端认为磁盘当前的版本指纹
+   * （`sceneFingerprint`，与浏览器侧保存同一个实现）。
+   *
+   * 🔴 版本校验与写入必须落在**同一个服务端操作**里：浏览器「先读盘比对、再发
+   * 覆盖请求」是两步，Agent 恰好在这两步之间改文件就仍会被覆盖 —— 那是
+   * TOCTOU 竞态。浏览器的预检只能给**提前提示**，真正的判定只能在这里做。
+   */
+  baseHash?: string;
 }
 
 export interface WriteResult {
@@ -80,6 +91,9 @@ export interface WriteResult {
   bytes?: number;
   error: string | null;
 }
+
+/** 逐文件的写入串行队列：同一路径的写请求严格排队，校验+写入在队列体内原子完成 */
+const writeQueues = new Map<string, Promise<unknown>>();
 
 async function handleWrite(
   req: IncomingMessage,
@@ -112,6 +126,51 @@ async function handleWrite(
     sendJson(res, 403, { error: '仅允许写 .json 文件' });
     return;
   }
+
+  // 🔴 校验 + 写入必须串行完成（复审 P1）。把这次写排进该路径的队列尾部：
+  // 前一个写完（或失败）才轮到它，从此没有「两个写请求交错执行」的窗口。
+  const prev = writeQueues.get(abs) ?? Promise.resolve();
+  const task = prev.catch(() => undefined).then(() => performWrite(abs, rel, body, res));
+  writeQueues.set(abs, task.finally(() => {
+    // 队列尾巴离开后就清掉，避免 Map 无限增长
+    if (writeQueues.get(abs) === task) writeQueues.delete(abs);
+  }) as unknown as Promise<unknown>);
+  await task;
+}
+
+/** 队列体内执行的一次写入（校验 → 组装 → 原子落盘） */
+async function performWrite(
+  abs: string,
+  rel: string,
+  body: Partial<WriteBody>,
+  res: ServerResponse,
+): Promise<void> {
+  // ① 乐观并发控制：客户端带了基准指纹就先核再写，绝不静默覆盖对方。
+  // 这一刻起，到本文件落盘完成，同一路径没有其它写请求在跑（队列保证）。
+  if (body.baseHash !== undefined) {
+    let current: unknown = null;
+    let currentHash = 'missing';
+    if (existsSync(abs)) {
+      const txt = await fsp.readFile(abs, 'utf8');
+      try {
+        current = JSON.parse(txt);
+        currentHash = sceneFingerprint(current);
+      } catch {
+        sendJson(res, 409, { ok: false, code: 'conflict', error: '现有文件不是合法 JSON，无法做版本校验' });
+        return;
+      }
+    }
+    if (currentHash !== body.baseHash) {
+      sendJson(res, 409, {
+        ok: false,
+        code: 'conflict',
+        currentHash,
+        error: `磁盘版本与客户端基准不一致（基准 ${body.baseHash} → 磁盘 ${currentHash}），拒绝覆盖`,
+      });
+      return;
+    }
+  }
+
   // 确保父目录存在（首次保存 .scene.json / 新建 sidecar 也成立）
   await fsp.mkdir(path.dirname(abs), { recursive: true });
 

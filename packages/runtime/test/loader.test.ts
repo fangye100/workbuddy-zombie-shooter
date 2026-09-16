@@ -141,6 +141,31 @@ describe('loadLevelRuntime —— 碰撞体世界变换（复审 #4）', () => {
     expect(o.halfX).toBeCloseTo(3, 5);
     expect(o.halfZ).toBeCloseTo(1, 5);
   });
+
+  it('胶囊倾斜（绕 Z 转 90°）：轴向线段计入范围，height 不能被丢（复审 P2）', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    col.shape = { type: 'capsule', radius: 0.5, height: 4 };
+    // 绕 Z 转 90°：局部 Y 轴 → 世界 -X。按球体算的话 X 半宽只有 0.5 —— 明显低估
+    const q = Math.SQRT1_2;
+    node.transform.rotation = [0, 0, q, q];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    // X 半宽 = 轴向投影(height/2 - r) + 半径 = (2 - 0.5) + 0.5 = 2
+    expect(o.halfX).toBeCloseTo(2, 5);
+    expect(o.halfZ).toBeCloseTo(0.5, 5); // 胶囊在该轴没有投影，只剩半径
+  });
+
+  it('直立胶囊：轴向沿 Y 没有 XZ 投影，半宽只剩半径（不能误放大）', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    col.shape = { type: 'capsule', radius: 0.5, height: 4 };
+    node.transform.rotation = [0, 0, 0, 1];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    expect(o.halfX).toBeCloseTo(0.5, 5);
+    expect(o.halfZ).toBeCloseTo(0.5, 5);
+  });
 });
 
 describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5）', () => {

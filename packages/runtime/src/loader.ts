@@ -165,8 +165,17 @@ export function colliderWorldAabb(
     const h = shape.halfExtents;
     halfX = Math.abs(rowX[0]) * h[0] + Math.abs(rowX[1]) * h[1] + Math.abs(rowX[2]) * h[2];
     halfZ = Math.abs(rowZ[0]) * h[0] + Math.abs(rowZ[1]) * h[1] + Math.abs(rowZ[2]) * h[2];
+  } else if (shape.type === 'capsule') {
+    // 🔴 胶囊 = 轴向线段 + 半径。只按球体处理会完全丢掉 height（复审 P2）：
+    // 横向旋转后障碍范围被低估成半径，等于"胶囊不存在"。
+    // 局部轴沿 Y（居中于原点），世界投影 = 线性部分第 1 列 × 半轴长；
+    // 再按椭球半径（r × 各行模长）外扩。
+    const r = shape.radius;
+    const segHalf = Math.max(0, shape.height / 2 - r);
+    halfX = Math.abs(m[4]! * segHalf) + r * Math.hypot(rowX[0], rowX[1], rowX[2]);
+    halfZ = Math.abs(m[6]! * segHalf) + r * Math.hypot(rowZ[0], rowZ[1], rowZ[2]);
   } else {
-    // sphere / capsule：半径乘线性部分各行的模长（非均匀缩放 → 椭球的精确 AABB）
+    // sphere：半径乘线性部分各行的模长（非均匀缩放 → 椭球的精确 AABB）
     const r = shape.radius;
     halfX = r * Math.hypot(rowX[0], rowX[1], rowX[2]);
     halfZ = r * Math.hypot(rowZ[0], rowZ[1], rowZ[2]);

@@ -42,6 +42,8 @@ export const FIELD_LABEL: Readonly<Record<SpawnEditField, string>> = {
 
 /** 一条已应用的编辑。`from` / `to` 让撤销成为纯函数，不需要存快照 */
 export interface SpawnEdit {
+  /** 单调递增的编辑身份。确认保存范围靠它，不能靠栈长（复审 P2） */
+  id: number;
   field: SpawnEditField;
   nodeId: NodeId;
   from: number;
@@ -168,9 +170,9 @@ export function applySpawnEdit(doc: SceneDocument, edit: SpawnEdit): EditResult 
   return { ok: true, error: null, edit };
 }
 
-/** 逆命令。`from` / `to` 互换即可，不需要任何额外状态 */
+/** 逆命令。`from` / `to` 互换即可，不需要任何额外状态。id 保留 —— 撤销的是**同一条**编辑 */
 export function invertSpawnEdit(edit: SpawnEdit): SpawnEdit {
-  return { field: edit.field, nodeId: edit.nodeId, from: edit.to, to: edit.from };
+  return { id: edit.id, field: edit.field, nodeId: edit.nodeId, from: edit.to, to: edit.from };
 }
 
 /**
@@ -188,6 +190,8 @@ export class SpawnEditStore {
   private committed: SceneDocument;
   private working: SceneDocument;
   private readonly undoStack: SpawnEdit[] = [];
+  /** 编辑身份计数器。确认保存范围用它（复审 P2：栈长在"撤销+再编辑"下会骗人） */
+  private nextEditId = 1;
 
   constructor(doc: SceneDocument) {
     this.committed = cloneDocument(doc);
@@ -240,7 +244,7 @@ export class SpawnEditStore {
     const from = field === 'radius' ? c.radius : c.count;
     if (Object.is(from, value)) return { ok: false, error: '值没有变化', edit: null };
 
-    const edit: SpawnEdit = { field, nodeId, from, to: value };
+    const edit: SpawnEdit = { id: this.nextEditId++, field, nodeId, from, to: value };
     const r = applySpawnEdit(this.working, edit);
     if (!r.ok) return r;
     this.undoStack.push(edit);
@@ -268,24 +272,28 @@ export class SpawnEditStore {
   }
 
   /**
-   * 开始一次保存：**快照**要发送的版本，并记下它包含了撤销栈里的前几步。
+   * 开始一次保存：**快照**要发送的版本，并记下它包含到哪一条编辑身份。
    *
    * 🔴 竞态边界：保存是异步 IO。从"序列化"到"写盘返回"之间，作者可能继续编辑。
-   * 如果把"保存返回 = 提交当前工作副本"（曾经就是这么写的），那两步之间新做的
-   * 编辑会被**一并标记为已保存**、撤销栈被清空 —— 未落盘的数据被说成落了盘。
-   * 所以：发送的是**快照**，确认时只提交快照，快照之后的编辑原样保留为未保存。
+   * 如果把"保存返回 = 提交当前工作副本"，那两步之间新做的编辑会被一并标记为
+   * 已保存、撤销栈被清空 —— 未落盘的数据被说成落了盘。
+   * 🔴 记**编辑身份**而不是栈长（复审 P2）：等待期间作者可能"撤销 + 再编辑"，
+   * 栈长不变但栈里已经换了一条 —— 按长度出队会把新编辑误删，把旧编辑误留。
    */
-  beginSave(): { doc: SceneDocument; editsIncluded: number } {
-    return { doc: cloneDocument(this.working), editsIncluded: this.undoStack.length };
+  beginSave(): { doc: SceneDocument; lastEditId: number } {
+    const top = this.undoStack.length > 0 ? this.undoStack[this.undoStack.length - 1]! : null;
+    return { doc: cloneDocument(this.working), lastEditId: top?.id ?? 0 };
   }
 
   /**
-   * 保存成功后调用：**只提交那次发送的快照**，把已包含的编辑从撤销栈里出队，
-   * 快照之后的编辑原样保留（仍为未保存修改，可继续撤销）。
+   * 保存成功后调用：**只提交那次发送的快照**，出队 `id <= lastEditId` 的编辑，
+   * 快照之后（或"撤销后重做"）的编辑原样保留（仍为未保存修改，可继续撤销）。
    */
-  confirmSave(saved: SceneDocument, editsIncluded: number): void {
+  confirmSave(saved: SceneDocument, lastEditId: number): void {
     this.committed = cloneDocument(saved);
-    this.undoStack.splice(0, editsIncluded);
+    for (let i = this.undoStack.length - 1; i >= 0; i--) {
+      if (this.undoStack[i]!.id <= lastEditId) this.undoStack.splice(i, 1);
+    }
   }
 
   /** 换了场景（或放弃编辑重新装载） */

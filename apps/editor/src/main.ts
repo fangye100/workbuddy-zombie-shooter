@@ -305,10 +305,28 @@ async function boot(): Promise<void> {
     }
   }
 
+  /**
+   * 模型替换的统一边界（复审 P1）。
+   *
+   * Play 中替换网格 = 改变对象的可序列化状态（快照只存变换/显隐/材质，**不存网格与骨架**），
+   * Stop 后恢复不回来 —— 原网格就这么没了。与增删同一约束：所有模型修改入口
+   * （内置下拉、文件导入、及其异步完成路径）都走这一个判定点。
+   */
+  function modelReplaceBlocked(): boolean {
+    if (!playCtl.isPlaying) return false;
+    console.warn('[play] Play 中禁止替换模型（快照不存网格/骨架，Stop 后无法恢复；先 Stop 再换）');
+    panel.setModelInfo('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop');
+    hudDirty = true;
+    return true;
+  }
+
   function applyBuiltin(id: string): void {
+    if (modelReplaceBlocked()) return;
     const bm = BUILTIN_MODELS.find((b) => b.id === id);
     if (bm === undefined) return;
     void loadBitmap(bm.texUrl).then((bmp) => {
+      // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
+      if (modelReplaceBlocked()) return;
       renderer.setCharacter(bm.mesh, bmp, null);
       panel.setModelInfo(
         `${bm.label} · ${bm.meta.vertices} 顶点 / ${bm.meta.triangles} 面 / ` +
@@ -321,6 +339,7 @@ async function boot(): Promise<void> {
   }
 
   panel.onModelSelect = (id) => {
+    if (modelReplaceBlocked()) return;
     if (id === null) {
       renderer.setCharacter(null, null);
       panel.setModelInfo('程序化胶囊 · 材质在「材质」面板调');
@@ -375,11 +394,14 @@ async function boot(): Promise<void> {
   };
 
   panel.onModelFile = (buffer, name) => {
+    if (modelReplaceBlocked()) return;
     try {
       // 身高用与内置 LOD 同一把尺子（roster 真源），保证导入档与内置档体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       void (async () => {
         const bmp = model.image === null ? null : await decodeTexture(model.image, name);
+        // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
+        if (modelReplaceBlocked()) return;
         // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
         // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
         renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree, model.skeleton, model.animations);
@@ -1009,12 +1031,32 @@ async function boot(): Promise<void> {
       refreshSpawnPanel();
       return;
     }
+    // 🔴 重复保存必须串行（复审 P2）：上一次保存还在写盘，这次的快照/确认
+    // 会跟它交错 —— 确认范围是按编辑身份记的，交错会把还没包含进快照的编辑
+    // 当成已保存。客户端这里先拒，服务端对同一路径还有队列兜底。
+    if (saveInFlight) {
+      spawnMsg = { text: '上一次保存尚未完成，稍候再试', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
     const diffs = store.changedPaths();
     if (diffs.length === 0) {
       spawnMsg = { text: '没有改动需要保存', kind: 'warn' };
       refreshSpawnPanel();
       return;
     }
+    saveInFlight = true;
+    try {
+      await saveSpawnEditsInner(store, src, diffs);
+    } finally {
+      saveInFlight = false;
+    }
+  }
+
+  let saveInFlight = false;
+
+  /** saveSpawnEdits 的主体（串行门在外层） */
+  async function saveSpawnEditsInner(store: SpawnEditStore, src: { url: string }, diffs: ReturnType<SpawnEditStore['changedPaths']>): Promise<void> {
     // 合法路径集合 = 全文所有 SpawnPoint 组件的 radius / count（按 kind 限定，不是按路径形状）
     const doc = store.document;
     const expected = new Set<string>();
@@ -1039,15 +1081,15 @@ async function boot(): Promise<void> {
     }
 
     // ① 竞态边界：**快照**这次要发送的版本。保存是异步 IO，从序列化到写盘返回之间
-    // 作者可能继续编辑；确认时只提交快照，快照之后的编辑原样保留为未保存。
+    // 作者可能继续编辑；确认时只提交快照（按编辑身份，不按栈长 —— 复审 P2）。
     const snap = store.beginSave();
     // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
     // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
     const content = `${JSON.stringify(snap.doc, null, 2)}\n`;
+    const baseFp = sceneFingerprint(store.committedDocument);
 
-    // ② 外部修改冲突：整份覆盖之前，先核对磁盘基准指纹。
-    // 人在编辑器里改、Agent 同时改文件时，绝不能静默覆盖对方 ——
-    // 磁盘已经不是我们上次知道的版本时，保留本地编辑并明确报告。
+    // ② 提前提示（不是判定）：先读盘看一眼有没有明显的外部修改，
+    // 能早一步给作者更清楚的中文提示。
     const disk = await readProjectFile(src.url);
     if (!disk.ok) {
       spawnMsg = { text: `保存失败：读不到磁盘基准版本（${disk.error ?? '未知'}）`, kind: 'warn' };
@@ -1055,7 +1097,6 @@ async function boot(): Promise<void> {
       return;
     }
     const diskFp = sceneFingerprint(disk.json);
-    const baseFp = sceneFingerprint(store.committedDocument);
     if (diskFp !== baseFp) {
       spawnMsg = {
         text:
@@ -1067,14 +1108,20 @@ async function boot(): Promise<void> {
       return;
     }
 
-    // ③ 写盘，成功后**只提交那次发送的快照**
-    const res = await writeProjectFile(src.url, { content });
+    // ③ 写盘：**基准指纹随请求一起交给服务端**，版本校验与写入在同一个受控操作里
+    // （复审 P1：浏览器两步之间被注入修改的 TOCTOU 窗口，由服务端队列 + 校验封死）。
+    const res = await writeProjectFile(src.url, { content, baseHash: baseFp });
     if (!res.ok) {
-      spawnMsg = { text: `保存失败：${res.error ?? `HTTP ${res.status}`}`, kind: 'warn' };
+      spawnMsg = {
+        text: res.conflict
+          ? `拒绝保存：服务端确认磁盘已被外部修改（当前 ${res.currentHash ?? '?'}）。本地编辑已保留，请重新装载或人工合并。`
+          : `保存失败：${res.error ?? `HTTP ${res.status}`}`,
+        kind: 'warn',
+      };
       refreshSpawnPanel();
       return;
     }
-    store.confirmSave(snap.doc, snap.editsIncluded);
+    store.confirmSave(snap.doc, snap.lastEditId);
     const kept = store.undoDepth;
     spawnMsg = {
       text:
@@ -1327,6 +1374,21 @@ async function boot(): Promise<void> {
   const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
   window.addEventListener('keyup', (e) => {
     playKeys.delete(e.key.toLowerCase());
+  });
+
+  /**
+   * 失焦必须清空按键并**立即**提交零输入（复审 P2）。
+   * 按住方向键切到别的窗口、在那边松开，本页收不到 keyup —— 玩家会一直走。
+   * 不能等下一帧：失焦后 rAF 可能直接被节流停掉，那时候"等 frame 再提交"等于不提交。
+   */
+  const clearPlayKeys = (): void => {
+    if (playKeys.size === 0) return;
+    playKeys.clear();
+    if (playCtl.isPlaying) playCtl.session.setInput(0, 0);
+  };
+  window.addEventListener('blur', clearPlayKeys);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearPlayKeys();
   });
 
   window.addEventListener('keydown', (e) => {
