@@ -647,6 +647,10 @@ export class RetargetSession {
    */
   private targetUnitCtx: RetargetCalibration | null = null;
   private targetUnitOwner: unknown = null;
+  /** 完整目标标定的资产归属键：标定载入成功时记录。换资产（换键）时标定
+   *  与单位上下文一样不得沿用——等比缩放的跨资产骨架可让几何检查恰好通过
+   * （复审 37bd3ad P1：先载已标定 A 再切 B，B 被按 A 的 0.5 单位建出 0.5m） */
+  private targetCalOwner: unknown = null;
   private recipe: RetargetRecipe | null = null;
   private lastGood: RetargetOutcome | null = null;
   private lastFailure: RetargetOutcome | null = null;
@@ -769,6 +773,17 @@ export class RetargetSession {
     | { ok: true; rig: RetargetRig; output: BakeOutputRig; diagnostics: RetargetDiagnostic[]; calDetached: boolean }
     | { ok: false; diagnostics: RetargetDiagnostic[] } {
     let calDetached = false;
+    const key = assetKeyOf(input);
+    if (this.targetCal !== null && this.targetCalOwner !== key) {
+      // 资产归属（先于几何检查）：完整标定属于另一资产 → 停用。几何检查挡不住
+      // 等比缩放的跨资产骨架（B 的原始数字 ×A 的单位恰好落进 A 标定的带宽）
+      this.tgtCalDiagnostics = [
+        warn('TARGET_CAL_DETACHED', '目标标定属于另一资产（资产键不同），已停用：请为当前资产载入对应 sidecar 或重新标定'),
+      ];
+      this.targetCal = null;
+      this.targetCalOwner = null;
+      calDetached = true;
+    }
     if (this.targetCal !== null) {
       const baseline = this.buildTargetParts(input, calibrationUnitsOnly(this.targetCal));
       if (baseline.ok) {
@@ -789,7 +804,6 @@ export class RetargetSession {
     // 单位上下文按**资产身份键**门控：同资产（同键）沿用；换资产不沿用
     //（跨资产污染：.1 声明套到米制骨架 → 1.97m 变 0.224m，且两者都在人形
     // 区间内，合理性校验抓不住——复审 P1）
-    const key = assetKeyOf(input);
     const staleCtx = this.targetCal === null && this.targetUnitOwner === key ? this.targetUnitCtx : null;
     let built = this.buildTargetParts(input, this.targetCal ?? staleCtx);
     if (this.targetCal === null && built.ok) {
@@ -904,12 +918,14 @@ export class RetargetSession {
     // 快照（回滚用）
     const prev = {
       targetCal: this.targetCal,
+      calOwner: this.targetCalOwner,
       unitCtx: this.targetUnitCtx,
       unitOwner: this.targetUnitOwner,
       tgtDiags: this.tgtCalDiagnostics,
     };
     const rollback = (): void => {
       this.targetCal = prev.targetCal;
+      this.targetCalOwner = prev.calOwner;
       this.targetUnitCtx = prev.unitCtx;
       this.targetUnitOwner = prev.unitOwner;
       this.tgtCalDiagnostics = prev.tgtDiags;
@@ -945,8 +961,9 @@ export class RetargetSession {
     }
     // 候选状态提交后统一走重建；重建失败整体回滚
     this.targetCal = cal;
+    this.targetCalOwner = this.target !== null ? assetKeyOf(this.target.origin) : null;
     this.targetUnitCtx = calibrationUnitsOnly(cal); // 单位制独立保留：几何停用不清单位
-    this.targetUnitOwner = this.target !== null ? assetKeyOf(this.target.origin) : null;
+    this.targetUnitOwner = this.targetCalOwner;
     this.tgtCalDiagnostics = [];
     if (this.target !== null) {
       const r = this.setTarget(this.target.origin);
