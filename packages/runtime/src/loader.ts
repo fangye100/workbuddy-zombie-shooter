@@ -139,6 +139,42 @@ function aabbToXZ(b: AabbData): { minX: number; maxX: number; minZ: number; maxZ
 }
 
 /**
+ * 碰撞体的**世界空间**障碍范围（XZ）。
+ *
+ * 用节点世界矩阵的线性部分把局部形状推出去，**含旋转、缩放与父级链**：
+ *   - 盒（OBB 的精确世界 AABB）：半轴 i = Σⱼ |Lᵢⱼ| · hⱼ
+ *   - 球 / 胶囊（椭球的精确世界 AABB）：半轴 i = r · ‖Lᵢ‖
+ * 曾经直接用 `halfExtents` / `radius` 当世界半宽，只对了**未经变换**的默认场景 ——
+ * 旋转过的长条盒在世界系里可能更长（低估 = 穿墙），缩放过的直接算错。
+ */
+export function colliderWorldAabb(
+  graph: SceneGraph,
+  nodeId: NodeId,
+  shape: ColliderComponent['shape'],
+): { x: number; z: number; halfX: number; halfZ: number; radius: number } {
+  const m = graph.worldMatrix(nodeId);
+  // 列主序：第 i 行的线性部分 = (m[i], m[i+4], m[i+8])，平移在 12/13/14
+  const rowX = [m[0]!, m[4]!, m[8]!] as const;
+  const rowZ = [m[2]!, m[6]!, m[10]!] as const;
+  const tx = m[12]!;
+  const tz = m[14]!;
+
+  let halfX: number;
+  let halfZ: number;
+  if (shape.type === 'box') {
+    const h = shape.halfExtents;
+    halfX = Math.abs(rowX[0]) * h[0] + Math.abs(rowX[1]) * h[1] + Math.abs(rowX[2]) * h[2];
+    halfZ = Math.abs(rowZ[0]) * h[0] + Math.abs(rowZ[1]) * h[1] + Math.abs(rowZ[2]) * h[2];
+  } else {
+    // sphere / capsule：半径乘线性部分各行的模长（非均匀缩放 → 椭球的精确 AABB）
+    const r = shape.radius;
+    halfX = r * Math.hypot(rowX[0], rowX[1], rowX[2]);
+    halfZ = r * Math.hypot(rowZ[0], rowZ[1], rowZ[2]);
+  }
+  return { x: tx, z: tz, halfX, halfZ, radius: Math.max(halfX, halfZ) };
+}
+
+/**
  * 装载。
  *
  * **不抛异常**（除非 SceneGraph 建图失败这种真正的坏文件）：所有问题进 diagnostics。
@@ -231,6 +267,16 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           );
         }
 
+        // delaySec 是非零的默认值 0：本轮没有波次/延迟调度，`delaySec = 10` 会
+        // **立即**刷怪 —— 那是"读取了字段却没有执行语义"。明确告知，不静默。
+        if (s.delaySec > 0) {
+          warn(
+            'W_SPAWN_DELAY_UNSUPPORTED',
+            `delaySec=${s.delaySec} 本轮未实现，该刷怪点将**立即**投放而不是延迟 ${s.delaySec} 秒`,
+            n.id,
+          );
+        }
+
         spawns.push({
           nodeId: n.id,
           name: n.name,
@@ -248,34 +294,24 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       } else if (c.kind === 'Collider') {
         const col = c as ColliderComponent;
         if (col.isTrigger) continue; // 触发器不挡路
+        // 🔴 必须按**世界矩阵**（含旋转、缩放与父级链）算障碍范围。
+        // 曾经直接用 `halfExtents` 当世界半宽 —— 旋转过的长条盒在世界系里可能
+        // 反而更长（低估 → 僵尸穿墙），缩放过的则直接算错。
         const o: ObstacleDesc = {
           nodeId: n.id,
           name: n.name,
-          x: n.world.position[0],
-          z: n.world.position[2],
+          ...colliderWorldAabb(graph, n.id, col.shape),
           shape: col.shape.type,
-          halfX: 0,
-          halfZ: 0,
-          radius: 0,
           enabled: col.enabled,
         };
-        if (col.shape.type === 'box') {
-          // 忽略绕 Y 的旋转：旋转过的盒子用 AABB 会略微放大，对避障是可接受保守估计。
-          // 真要精确得走 OBB 检测，本轮规模不值得。
-          o.halfX = col.shape.halfExtents[0];
-          o.halfZ = col.shape.halfExtents[2];
-          o.radius = Math.max(o.halfX, o.halfZ);
-        } else if (col.shape.type === 'sphere') {
-          o.radius = col.shape.radius;
-          o.halfX = col.shape.radius;
-          o.halfZ = col.shape.radius;
-        } else {
-          o.radius = col.shape.radius;
-          o.halfX = col.shape.radius;
-          o.halfZ = col.shape.radius;
-        }
         obstacles.push(o);
       } else if (c.kind === 'NavZone') {
+        if (!c.enabled) {
+          // 禁用的 NavZone 不能"被接受但导航还正常"——那等于 enabled 字段在说谎。
+          // 视为不存在，并明确告知（若因此没有任何 NavZone，后面会报 E_NAV_MISSING）
+          warn('W_NAV_DISABLED', `NavZone ${n.id} 被禁用（enabled=false），不参与导航计算`, n.id);
+          continue;
+        }
         if (nav !== null) {
           warn('W_NAV_MULTIPLE', `场景有多个 NavZone，本轮只取第一个（${nav.nodeId}）`, n.id);
           continue;

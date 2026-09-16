@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { loadLevelRuntime } from '../src/loader';
-import type { SceneDocument } from '@aether/scene';
+import type { ColliderComponent, SceneDocument } from '@aether/scene';
 
 /**
  * 门禁测试用 import.meta.glob 而非 node:fs —— 本仓库没装 @types/node，
@@ -60,6 +60,116 @@ describe('loadLevelRuntime —— 真实关卡 floor-1', () => {
   it('触发器不作为障碍（门框不该变成墙）', () => {
     const d = loadLevelRuntime(floor1()).desc!;
     expect(d.obstacles.every((o) => o.nodeId.startsWith('nd_f1r'))).toBe(true);
+  });
+});
+
+/**
+ * 复审 #4：碰撞体必须按**世界矩阵**（旋转、缩放、父级链）算障碍范围。
+ * 曾经直接拿 `halfExtents` / `radius` 当世界半宽，只对了未经变换的默认场景。
+ * 这里的每个用例都刻意带变换，不允许只测恒等场景。
+ */
+describe('loadLevelRuntime —— 碰撞体世界变换（复审 #4）', () => {
+  type N = SceneDocument['nodes'][number];
+  const findColliderNode = (d: SceneDocument): N =>
+    d.nodes.find((x) => x.components.some((c) => c.kind === 'Collider' && !(c as { isTrigger: boolean }).isTrigger))!;
+  const colOf = (n: N) => n.components.find((c) => c.kind === 'Collider' && !(c as { isTrigger: boolean }).isTrigger)! as ColliderComponent;
+  const obOf = (desc: import('../src/loader').LevelRuntimeDesc, nodeId: string) => desc.obstacles.find((o) => o.nodeId === nodeId)!;
+
+  it('非均匀缩放：box 半宽必须乘上节点缩放（scale [3,1,1] → halfX ×3，halfZ 不变）', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    if (col.shape.type !== 'box') throw new Error('夹具需要 box');
+    const hx = col.shape.halfExtents[0];
+    const hz = col.shape.halfExtents[2];
+    node.transform.scale = [3, 1, 1];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    expect(o.halfX).toBeCloseTo(hx * 3, 5);
+    expect(o.halfZ).toBeCloseTo(hz, 5);
+  });
+
+  it('绕 Y 旋转 90°：长条盒的半宽在世界系里必须换轴（忽略旋转会得 (2, 0.5)）', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    if (col.shape.type !== 'box') throw new Error('夹具需要 box');
+    col.shape.halfExtents = [2, 1, 0.5];
+    const q = Math.SQRT1_2;
+    node.transform.rotation = [0, q, 0, q];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    expect(o.halfX).toBeCloseTo(0.5, 5);
+    expect(o.halfZ).toBeCloseTo(2, 5);
+  });
+
+  it('绕 Y 旋转 45°：精确世界 AABB = |cos|·hx + |sin|·hz', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    if (col.shape.type !== 'box') throw new Error('夹具需要 box');
+    col.shape.halfExtents = [1, 1, 1];
+    const s = Math.sin(Math.PI / 8);
+    const c = Math.cos(Math.PI / 8);
+    node.transform.rotation = [0, s, 0, c];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    const expected = Math.SQRT1_2 * 2;
+    expect(o.halfX).toBeCloseTo(expected, 5);
+    expect(o.halfZ).toBeCloseTo(expected, 5);
+  });
+
+  it('父节点变换（平移 + 旋转）要传到子级碰撞体', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    if (col.shape.type !== 'box') throw new Error('夹具需要 box');
+    col.shape.halfExtents = [1, 1, 1];
+    const parent = n.nodes.find((x) => x.id === node.parent)!;
+    parent.transform.position = [10, 0, -4];
+    const q = Math.SQRT1_2;
+    parent.transform.rotation = [0, q, 0, q];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    expect(o.x).not.toBeCloseTo(node.transform.position[0], 4);
+    expect(o.halfX).toBeCloseTo(o.halfZ, 5);
+  });
+
+  it('球体非均匀缩放 → 椭球的精确 AABB（r × 各行模长）', () => {
+    const n = clone(floor1());
+    const node = findColliderNode(n);
+    const col = colOf(node);
+    col.shape = { type: 'sphere', radius: 1 };
+    node.transform.scale = [3, 1, 1];
+    const o = obOf(loadLevelRuntime(n).desc!, node.id);
+    expect(o.halfX).toBeCloseTo(3, 5);
+    expect(o.halfZ).toBeCloseTo(1, 5);
+  });
+});
+
+describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5）', () => {
+  it('delaySec > 0 → 明确告知将立即投放（不能"读了字段却没执行语义"）', () => {
+    const doc = clone(floor1());
+    const n = doc.nodes.find((x) => x.components.some((c) => c.kind === 'SpawnPoint'))!;
+    const sp = n.components.find((c) => c.kind === 'SpawnPoint')!;
+    (sp as { delaySec: number }).delaySec = 10;
+    const r = loadLevelRuntime(doc);
+    const w = r.diagnostics.find((d) => d.code === 'W_SPAWN_DELAY_UNSUPPORTED');
+    expect(w).toBeDefined();
+    expect(w!.message).toContain('立即');
+    expect(w!.nodeId).toBe(n.id);
+  });
+
+  it('delaySec = 0 → 不出这条诊断（默认值不该吵）', () => {
+    const r = loadLevelRuntime(floor1());
+    expect(r.diagnostics.some((d) => d.code === 'W_SPAWN_DELAY_UNSUPPORTED')).toBe(false);
+  });
+
+  it('禁用的 NavZone → 视为不存在并出 W_NAV_DISABLED；唯一导航被禁 → E_NAV_MISSING', () => {
+    const doc = clone(floor1());
+    const n = doc.nodes.find((x) => x.components.some((c) => c.kind === 'NavZone'))!;
+    const nav = n.components.find((c) => c.kind === 'NavZone')!;
+    (nav as { enabled: boolean }).enabled = false;
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.some((d) => d.code === 'W_NAV_DISABLED' && d.nodeId === n.id)).toBe(true);
+    expect(r.desc).toBeNull();
+    expect(r.diagnostics.some((d) => d.code === 'E_NAV_MISSING')).toBe(true);
   });
 });
 
