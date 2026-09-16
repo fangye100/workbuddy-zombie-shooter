@@ -870,7 +870,8 @@ export class RetargetSession {
                 `骨架按米制解释骨盆高 ${built.rig.pelvisHeightM.toFixed(3)}m 超出人形区间，已按厘米制（×0.01）解释为 ${cmTry.rig.pelvisHeightM.toFixed(3)}m；请以 sidecar 标定确认单位`),
             ];
             built = cmTry;
-          } else {
+          } else if (!this.tgtCalDiagnostics.some((d) => d.code === 'MRS_TARGET_UNITS_SUSPECT')) {
+            // 追加式会随反复 sync 无界累积（复审 P3）——同一可疑状态只留一条
             this.tgtCalDiagnostics = [
               ...this.tgtCalDiagnostics,
               warn('TARGET_UNITS_SUSPECT',

@@ -1060,3 +1060,21 @@ describe('retarget-session 新目标构建失败的完整保留（099a5d1 复审
     expect(s.requireResult().ok).toBe(true);
   });
 });
+
+describe('retarget-session 复审跟进（b778631 复审 P3 回归）', () => {
+  it('同一超界骨架反复 syncTarget：TARGET_UNITS_SUSPECT 不无界累积', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    // 米/cm 双超界的微缩骨架（骨盆 ~0.05m，×0.01 后更小）→ SUSPECT
+    const tinyFit: JointPositions = {};
+    for (const [k, p] of Object.entries(tposeWorldPositions())) tinyFit[k] = [p[0]! * 0.05, p[1]! * 0.05, p[2]! * 0.05];
+    s.setTarget({ fitPositions: tinyFit, name: 'tiny' });
+    for (let i = 0; i < 4; i++) {
+      const scaled: JointPositions = {};
+      for (const [k, p] of Object.entries(tinyFit)) scaled[k] = [p[0]! + i * 1e-6, p[1]!, p[2]!];
+      s.syncTarget({ fitPositions: scaled, name: 'tiny' });
+    }
+    const count = s.summary().diagnostics.filter((d) => d.code === 'MRS_TARGET_UNITS_SUSPECT').length;
+    expect(count).toBe(1);
+  });
+});
