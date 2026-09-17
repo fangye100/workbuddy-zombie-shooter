@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>末日尸潮 · 资产浏览器</title>
+<style>
+  :root{
+    --night:#171327; --panel:#221E33; --panel2:#1B1729; --line:#3A3550;
+    --bone:#FFF6E2; --dim:#9AA0A6; --gold:#FFC531; --teal:#2BC4D6; --red:#E5484D;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--night);color:var(--bone);
+       font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{display:flex;align-items:baseline;gap:14px;padding:18px 24px 10px;border-bottom:1px solid var(--line)}
+  header h1{font-size:20px;margin:0}
+  header small{color:var(--dim)}
+  nav{display:flex;gap:8px;padding:12px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--night);z-index:5}
+  nav button{background:var(--panel);border:1px solid var(--line);color:var(--bone);
+    border-radius:8px;padding:7px 18px;font-size:14px;cursor:pointer}
+  nav button.on{background:var(--gold);color:#14110F;font-weight:700;border-color:var(--gold)}
+  nav .count{margin-left:auto;color:var(--dim);font-size:12px;align-self:center}
+  main{padding:16px 24px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .12s, transform .12s}
+  .card:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .thumb{height:150px;background:#F5E7C8;border-radius:8px;overflow:hidden;display:grid;place-items:center}
+  .thumb img{width:100%;height:100%;object-fit:contain;cursor:zoom-in}
+  .thumb .noimg{color:#8a7f66;font-size:12px}
+  .card h3{margin:8px 0 2px;font-size:14px}
+  .card h3 small{color:var(--dim);font-weight:400;font-size:11px}
+  .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .tag{font-size:10px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--dim)}
+  .tag.gold{color:var(--gold);border-color:var(--gold)}
+  .tag.teal{color:var(--teal);border-color:var(--teal)}
+  .kind{font-size:10px;color:#14110F;font-weight:700;border-radius:5px;padding:1px 7px}
+
+  /* ---------- 3D Viewer 弹层 ---------- */
+  #viewer{display:none;position:fixed;inset:0;background:rgba(10,8,18,.92);z-index:20;
+          backdrop-filter:blur(4px)}
+  #viewer.open{display:grid;grid-template-columns:minmax(0,1fr) 320px}
+  #v3d{position:relative;min-width:0}
+  #v3d canvas{display:block}
+  #vsidebar{background:var(--panel2);border-left:1px solid var(--line);padding:16px;overflow-y:auto}
+  #vsidebar h2{margin:0 0 2px;font-size:17px}
+  #vsidebar .sub{color:var(--dim);font-size:12px;margin-bottom:10px}
+  #vsidebar h4{margin:14px 0 6px;font-size:12px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em}
+  .btnrow{display:flex;flex-wrap:wrap;gap:6px}
+  .btnrow button{background:var(--panel);border:1px solid var(--line);color:var(--bone);
+    border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .btnrow button.on{background:var(--teal);color:#0c2126;font-weight:700;border-color:var(--teal)}
+  .btnrow button:disabled{opacity:.35;cursor:not-allowed}
+  #vclose{position:absolute;top:10px;right:10px;z-index:2;background:var(--panel);border:1px solid var(--line);
+    color:var(--bone);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:14px}
+  #vstat{position:absolute;left:10px;top:10px;z-index:2;background:rgba(20,17,31,.8);border:1px solid var(--line);
+    border-radius:8px;padding:4px 10px;font-size:11px;color:var(--dim)}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px;margin:0}
+  dt{color:var(--dim)} dd{margin:0}
+  #animlist button{display:block;width:100%;text-align:left;margin-bottom:4px}
+  #loading{position:absolute;inset:0;display:none;place-items:center;background:rgba(10,8,18,.6);z-index:3;
+    color:var(--gold);font-size:15px}
+  /* 2D 大图弹层 */
+  #bigimg{display:none;position:fixed;inset:0;z-index:40;background:rgba(10,8,18,.94);place-items:center;cursor:zoom-out}
+  #bigimg img{max-width:94vw;max-height:94vh;border-radius:10px}
+  .hint{color:var(--dim);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>末日尸潮 · 资产浏览器</h1>
+  <small>2D 设计表 → 3D Viewer（LOD / Animation / Skeleton / 白膜·贴图·线框）</small>
+</header>
+<nav>
+  <button id="tab-char" class="on">角色 Characters</button>
+  <button id="tab-env">环境 Environment</button>
+  <span class="count" id="count"></span>
+</nav>
+<main><div class="grid" id="cards"></div></main>
+
+<div id="viewer">
+  <div id="v3d">
+    <button id="vclose">✕ 关闭</button>
+    <div id="vstat"></div>
+    <div id="loading">加载模型中…</div>
+  </div>
+  <div id="vsidebar"></div>
+</div>
+<div id="bigimg"><img alt=""></div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+const state = {
+  manifest: null, tab: 'char', entry: null,
+  renderer: null, scene: null, camera: null, controls: null, mixer: null,
+  clock: new THREE.Clock(), raf: 0, current: null, skeletonHelper: null,
+  viewMode: 'textured', activeClip: null, gltfAnimations: [],
+};
+
+/* ---------------- 2D 列表 ---------------- */
+
+const KIND_COL = { npc: '#2BC4D6', boss: '#E5484D' };
+const COVER_LABEL = { none:'不挡', low:'半掩体', high:'全掩体', full:'全阻断', overhead:'头顶遮蔽' };
+
+async function loadManifest() {
+  const r = await fetch('_data/asset-manifest.json');
+  state.manifest = await r.json();
+}
+
+function cardHTML(e, isChar) {
+  const img = isChar
+    ? e.views.front ?? Object.values(e.views)[0]
+    : e.img ?? e.preview;
+  const kindCol = isChar ? KIND_COL[e.kind] : (e.kind === 'structure' ? '#FFC531' : '#9AA0A6');
+  const tags = [];
+  if (isChar) {
+    tags.push(`<span class="tag gold">${e.lods.length} LOD</span>`);
+    if (e.animations.length) tags.push(`<span class="tag teal">${e.animations.length} 动画</span>`);
+    if (e.joints) tags.push(`<span class="tag teal">${e.joints} 骨节</span>`);
+    tags.push(`<span class="tag">${e.tris} tris</span>`);
+  } else {
+    tags.push(`<span class="tag gold">${e.lods.length} LOD</span>`);
+    tags.push(`<span class="tag">${e.tris} tris</span>`);
+    tags.push(`<span class="tag">${COVER_LABEL[e.cover] ?? e.cover}</span>`);
+    tags.push(`<span class="tag">${e.act}</span>`);
+  }
+  return `<article class="card" data-id="${e.id}">
+    <div class="thumb">${img
+      ? `<img loading="lazy" src="${img}" alt="${e.name}" data-full="${isChar ? img : (e.img ?? e.preview)}">`
+      : `<span class="noimg">无 2D</span>`}</div>
+    <h3><span class="kind" style="background:${kindCol}">${e.id}</span> ${e.name}
+        <small>${e.en}</small></h3>
+    <div class="tags">${tags.join('')}</div>
+  </article>`;
+}
+
+function renderCards() {
+  const list = state.tab === 'char' ? state.manifest.characters : state.manifest.environments;
+  document.getElementById('count').textContent = `${list.length} 件 · 点击卡片开 3D · 点击图片看大图`;
+  document.getElementById('cards').innerHTML = list.map((e) => cardHTML(e, state.tab === 'char')).join('');
+  for (const el of document.querySelectorAll('.card')) {
+    el.addEventListener('click', (ev) => {
+      if (ev.target.tagName === 'IMG') return; // 图片点击走大图
+      const entry = list.find((x) => x.id === el.dataset.id);
+      openViewer(entry, state.tab === 'char');
+    });
+  }
+  for (const im of document.querySelectorAll('.card img')) {
+    im.addEventListener('click', (ev) => { ev.stopPropagation(); showBig(im.dataset.full); });
+  }
+}
+
+function showBig(src) {
+  const box = document.getElementById('bigimg');
+  box.querySelector('img').src = src;
+  box.style.display = 'grid';
+  box.onclick = () => { box.style.display = 'none'; };
+}
+
+/* ---------------- 3D Viewer ---------------- */
+
+function ensureRenderer() {
+  if (state.renderer) return;
+  const host = document.getElementById('v3d');
+  const r = new THREE.WebGLRenderer({ antialias: true });
+  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  r.setSize(host.clientWidth, host.clientHeight);
+  host.appendChild(r.domElement);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x14101f);
+  scene.fog = new THREE.Fog(0x14101f, 18, 42);
+  const camera = new THREE.PerspectiveCamera(45, host.clientWidth / host.clientHeight, 0.05, 200);
+  camera.position.set(2.6, 1.8, 3.2);
+  const controls = new OrbitControls(camera, r.domElement);
+  controls.target.set(0, 0.9, 0);
+  controls.enableDamping = true;
+  // 灯光：主光 + 环境补光（白膜/贴图共用）
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(3, 6, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0x88aaff, 0.8); rim.position.set(-4, 3, -3); scene.add(rim);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  // 地面网格
+  const grid = new THREE.GridHelper(20, 40, 0x3a3550, 0x262040);
+  grid.position.y = -0.001; scene.add(grid);
+  Object.assign(state, { renderer: r, scene, camera, controls });
+  new ResizeObserver(() => {
+    const w = host.clientWidth, h = host.clientHeight;
+    if (w === 0 || h === 0) return;
+    r.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }).observe(host);
+}
+
+function stopLoop() { cancelAnimationFrame(state.raf); state.raf = 0; }
+function loop() {
+  state.raf = requestAnimationFrame(loop);
+  const dt = state.clock.getDelta();
+  state.controls.update();
+  if (state.mixer) state.mixer.update(dt);
+  state.renderer.render(state.scene, state.camera);
+}
+
+function disposeCurrent() {
+  if (state.current) {
+    state.current.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        const ms = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of ms) for (const k of Object.keys(m)) {
+          const v = m[k]; if (v && v.isTexture) v.dispose();
+        }
+      }
+    });
+    state.scene.remove(state.current);
+  }
+  if (state.skeletonHelper) { state.scene.remove(state.skeletonHelper); state.skeletonHelper = null; }
+  if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; }
+  state.current = null; state.activeClip = null; state.gltfAnimations = [];
+}
+
+function frameObject(root) {
+  // 🔴 立姿归一：baked 管线的 glb 是 Z-up 躺姿（高度在 Z），rigged 是 Y-up 站姿。
+  // 检测包围盒：若最高轴不是 Y → 绕对应轴旋 90°（X→Y：绕 Z；Z→Y：绕 X）。
+  const pre = new THREE.Box3().setFromObject(root);
+  const ps = pre.getSize(new THREE.Vector3());
+  if (ps.z > ps.y * 1.3 && ps.z > ps.x * 1.3) {
+    root.rotateX(Math.PI / 2); // Z-up → Y-up
+  } else if (ps.x > ps.y * 1.3 && ps.x > ps.z * 1.3) {
+    root.rotateZ(Math.PI / 2); // X-up → Y-up
+  }
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  root.position.sub(center); root.position.y += size.y / 2; // 居中 + 贴地
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const camDist = maxDim * 1.9;
+  state.camera.position.set(camDist * 0.7, maxDim * 1.1, camDist * 0.9);
+  state.controls.target.set(0, size.y * 0.45, 0);
+  state.controls.update();
+}
+
+function applyViewMode() {
+  if (!state.current) return;
+  state.current.traverse((o) => {
+    if (!o.isMesh) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of ms) {
+      if (state.viewMode === 'wire') {
+        m.wireframe = true;
+      } else {
+        m.wireframe = false;
+        if (state.viewMode === 'clay') { delete m.map; m.color = new THREE.Color(0xbfc4cc); }
+        // textured：保持加载原样（不恢复 map——切回贴图需重载 LOD）
+      }
+    }
+  });
+  syncSidebarButtons();
+}
+
+function statLine(obj) {
+  let tris = 0, meshes = 0;
+  obj.traverse((o) => { if (o.isMesh) { meshes++; const g = o.geometry;
+    tris += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } });
+  return `${meshes} mesh · ${Math.round(tris).toLocaleString()} tris`;
+}
+
+async function loadLOD(lod) {
+  const loading = document.getElementById('loading');
+  loading.style.display = 'grid';
+  try {
+    disposeCurrent();
+    ensureRenderer();
+    let root;
+    if (lod.file.endsWith('.glb')) {
+      const gltf = await new GLTFLoader().loadAsync(lod.file);
+      root = gltf.scene;
+      state.gltfAnimations = gltf.animations ?? [];
+    } else {
+      const obj = await new OBJLoader().loadAsync(lod.file);
+      root = obj;
+      state.gltfAnimations = [];
+      // OBJ 顶点色 → 顶点色材质。🔴 废土灰 + 无影灯会显得"死灰"：
+      // 用 color 白 ×1 增益（材质 color 与 vertexColors 相乘）+ 提升环境光。
+      root.traverse((o) => { if (o.isMesh) {
+        o.material = new THREE.MeshStandardMaterial({
+          vertexColors: true, roughness: .8, metalness: 0,
+          color: new THREE.Color(1.35, 1.35, 1.35),
+        });
+      } });
+    }
+    state.current = root;
+    state.scene.add(root);
+    frameObject(root);
+    document.getElementById('vstat').textContent = `${lod.label} · ${statLine(root)}`;
+    // 有动画 → 自动播第一个
+    if (state.gltfAnimations.length) {
+      state.mixer = new THREE.AnimationMixer(root);
+      playClip(state.gltfAnimations[0].name);
+    }
+    // clay 模式残留时应用
+    if (state.viewMode === 'clay' || state.viewMode === 'wire') applyViewMode();
+    renderSidebar();
+  } catch (e) {
+    document.getElementById('vstat').textContent = `加载失败：${e.message}`;
+  } finally {
+    loading.style.display = 'none';
+  }
+}
+
+function playClip(name) {
+  if (!state.mixer) return;
+  state.mixer.stopAllAction();
+  const clip = state.gltfAnimations.find((c) => c.name === name);
+  if (!clip) return;
+  state.mixer.clipAction(clip).reset().play();
+  state.activeClip = name;
+  syncSidebarButtons();
+}
+
+function toggleSkeleton(on) {
+  if (state.skeletonHelper) { state.scene.remove(state.skeletonHelper); state.skeletonHelper = null; }
+  if (on && state.current) {
+    let helper = null;
+    state.current.traverse((o) => {
+      if (o.isSkinnedMesh && !helper) {
+        helper = new THREE.SkeletonHelper(o);
+        helper.material.linewidth = 2;
+      }
+    });
+    if (helper) { state.skeletonHelper = helper; state.scene.add(helper); }
+    // X-Ray：网格半透明
+    state.current.traverse((o) => {
+      if (o.isMesh) { const ms = Array.isArray(o.material)?o.material:[o.material];
+        for (const m of ms) { m.transparent = true; m.opacity = 0.28; } }
+    });
+  } else if (state.current) {
+    state.current.traverse((o) => {
+      if (o.isMesh) { const ms = Array.isArray(o.material)?o.material:[o.material];
+        for (const m of ms) { m.transparent = false; m.opacity = 1; } }
+    });
+  }
+  state.skeletonOn = on;
+  syncSidebarButtons();
+}
+
+/* ---------------- Sidebar ---------------- */
+
+let ui = {}; // 按钮引用
+
+function sidebarHTML(e, isChar) {
+  const rows = isChar
+    ? `<dt>身高</dt><dd>${e.height}</dd>
+       <dt>定位</dt><dd>${e.role}</dd>
+       <dt>HP / 速度 / 攻击</dt><dd>${e.hp} / ${e.speed} / ${e.attack}</dd>
+       <dt>弱点</dt><dd>${e.weakness ?? '—'}</dd>`
+    : `<dt>占地</dt><dd>${e.footprint.join(' × ')} m</dd>
+       <dt>掩体</dt><dd>${COVER_LABEL[e.cover] ?? e.cover}</dd>
+       <dt>挡视线 / 挡移动</dt><dd>${e.blocksSight ? '是' : '否'} / ${e.blocksMove ? '是' : '否'}</dd>
+       <dt>归属</dt><dd>${e.act}</dd>`;
+  return `
+  <h2><span class="kind" style="background:${isChar ? KIND_COL[e.kind] : '#FFC531'}">${e.id}</span> ${e.name}</h2>
+  <div class="sub">${e.en}${e.threat ? ' · ' + e.threat : ''}</div>
+  <dl>${rows}</dl>
+  ${e.silhouette ? `<h4>剪影</h4><p style="font-size:12px;margin:0">${e.silhouette}</p>` : ''}
+  ${e.look ? `<h4>外观</h4><p style="font-size:12px;margin:0">${e.look}</p>` : ''}
+  <h4>LOD 层级</h4><div class="btnrow" id="lodbtns">
+    ${e.lods.map((l, i) => `<button data-lod="${i}">${l.label}</button>`).join('')}
+  </div>
+  <h4>显示模式</h4><div class="btnrow" id="viewbtns">
+    <button data-view="textured">贴图/顶点色</button>
+    <button data-view="clay">白膜</button>
+    <button data-view="wire">线框</button>
+  </div>
+  ${e.animations.length ? `<h4>Animation（${e.animations.length}）</h4><div class="btnrow" id="animlist">
+    ${e.animations.map((a) => `<button data-anim="${a}">${a}</button>`).join('')}
+  </div>` : ''}
+  ${e.joints ? `<h4>Skeleton</h4><div class="btnrow">
+    <button id="skbtn">🦴 骨骼 X-Ray（${e.joints} 骨节）</button>
+  </div>` : ''}
+  ${isChar && Object.keys(e.views).length ? `<h4>2D 设计图</h4><div class="btnrow" id="v2dbtns">
+    ${Object.keys(e.views).map((v) => `<button data-img="${e.views[v]}">${{front:'正面',side:'侧面',attack:'攻击'}[v]}</button>`).join('')}
+  </div>` : (!isChar && e.img ? `<h4>2D 设计图</h4><div class="btnrow">
+    <button data-img="${e.img}">参考图</button></div>` : '')}
+  <p class="hint">拖动旋转 · 滚轮缩放 · 右键平移</p>`;
+}
+
+function renderSidebar() {
+  const e = state.entry;
+  document.getElementById('vsidebar').innerHTML = sidebarHTML(e, state.tab === 'char');
+  ui = {};
+  ui.lod = [...document.querySelectorAll('#lodbtns button')];
+  ui.view = [...document.querySelectorAll('#viewbtns button')];
+  ui.anim = [...document.querySelectorAll('#animlist button')];
+  ui.sk = document.getElementById('skbtn');
+  for (const b of ui.lod) b.onclick = () => { state.viewMode = 'textured'; loadLOD(e.lods[+b.dataset.lod]); };
+  for (const b of ui.view) b.onclick = () => { state.viewMode = b.dataset.view;
+    if (b.dataset.view === 'textured' && b.dataset._needReload) loadLOD(e.lods[state.curLOD ?? 0]);
+    applyViewMode(); };
+  for (const b of ui.anim) b.onclick = () => playClip(b.dataset.anim);
+  if (ui.sk) ui.sk.onclick = () => toggleSkeleton(!state.skeletonOn);
+  for (const b of document.querySelectorAll('[data-img]')) b.onclick = () => showBig(b.dataset.img);
+  syncSidebarButtons();
+}
+
+function syncSidebarButtons() {
+  const e = state.entry; if (!e || !ui.lod) return;
+  const curLabel = state.current ? document.getElementById('vstat').textContent : '';
+  for (const b of ui.lod) {
+    const lod = e.lods[+b.dataset.lod];
+    b.classList.toggle('on', curLabel.startsWith(lod.label.split(' · ')[0]));
+  }
+  for (const b of ui.view) b.classList.toggle('on', b.dataset.view === state.viewMode);
+  for (const b of ui.anim) b.classList.toggle('on', b.dataset.anim === state.activeClip);
+  if (ui.sk) ui.sk.classList.toggle('on', !!state.skeletonOn);
+}
+
+function openViewer(entry, isChar) {
+  state.entry = entry;
+  state.viewMode = 'textured';
+  state.curLOD = 0;
+  document.getElementById('viewer').classList.add('open');
+  ensureRenderer();
+  // 默认加载策略：**信息最全的最轻版**——
+  // 角色 = rigged_animated（带骨骼+动画）；环境 = tex baked（带贴图的低模）。
+  // 🔴 曾用「endsWith('_baked.glb') && !tex」选中角色的 textured baked（无动画）
+  //    → 动画按钮永远点不亮（点击的 LOD 里没有 clips）。
+  const def = entry.lods.find((l) => /_rigged_animated\.glb$/.test(l.file))
+    ?? entry.lods.find((l) => l.file.includes('/tex/') && l.file.endsWith('_baked.glb'))
+    ?? entry.lods.find((l) => l.file.endsWith('.glb'))
+    ?? entry.lods[0];
+  const idx = entry.lods.indexOf(def);
+  state.curLOD = idx;
+  loadLOD(def);
+  renderSidebar();
+  if (!state.raf) loop();
+}
+
+function closeViewer() {
+  stopLoop();
+  disposeCurrent();
+  document.getElementById('viewer').classList.remove('open');
+}
+
+document.getElementById('vclose').onclick = closeViewer;
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeViewer(); });
+
+/* ---------------- 入口 ---------------- */
+
+document.getElementById('tab-char').onclick = () => {
+  state.tab = 'char';
+  document.getElementById('tab-char').classList.add('on');
+  document.getElementById('tab-env').classList.remove('on');
+  renderCards();
+};
+document.getElementById('tab-env').onclick = () => {
+  state.tab = 'env';
+  document.getElementById('tab-env').classList.add('on');
+  document.getElementById('tab-char').classList.remove('on');
+  renderCards();
+};
+
+await loadManifest();
+renderCards();
+</script>
+</body>
+</html>
