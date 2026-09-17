@@ -191,6 +191,8 @@ function ensureRenderer() {
   const grid = new THREE.GridHelper(20, 40, 0x3a3550, 0x262040);
   grid.position.y = -0.001; scene.add(grid);
   Object.assign(state, { renderer: r, scene, camera, controls });
+  // 调试钩子：headless harness 用它量世界包围盒（朝向体检）
+  window.__viewer = { state, THREE };
   new ResizeObserver(() => {
     const w = host.clientWidth, h = host.clientHeight;
     if (w === 0 || h === 0) return;
@@ -226,16 +228,43 @@ function disposeCurrent() {
 }
 
 function frameObject(root) {
-  // 🔴 立姿归一：baked 管线的 glb 是 Z-up 躺姿（高度在 Z），rigged 是 Y-up 站姿。
-  // 检测包围盒：若最高轴不是 Y → 绕对应轴旋 90°（X→Y：绕 Z；Z→Y：绕 X）。
-  const pre = new THREE.Box3().setFromObject(root);
+  // 🔴 立姿归一：baked 管线的 glb 是 Z-up 躺姿（身高在 Z），rigged 是 Y-up 站姿，
+  // E-02 的 raw 高模也是 Z-up。skinned mesh 的静态几何是 bind pose（T-pose），不能直接量——
+  // 先驱动 mixer 一帧让骨骼把蒙皮摆到 A-pose 再量；无动画的普通 mesh 直接量。
+  if (state.mixer) state.mixer.update(0);
+  root.traverse((o) => { if (o.isSkinnedMesh) { o.frustumCulled = false; o.computeBoundingBox(); o.computeBoundingSphere(); } });
+  const measure = () => {
+    let box = new THREE.Box3();
+    let hasSkinned = false;
+    root.traverse((o) => {
+      if (o.isSkinnedMesh && o.skeleton) {
+        hasSkinned = true;
+        o.skeleton.bones.forEach((b) => {
+          b.updateWorldMatrix(true, false);
+          box.expandByPoint(new THREE.Vector3().setFromMatrixPosition(b.matrixWorld));
+        });
+      }
+    });
+    if (!hasSkinned) box.setFromObject(root);
+    return box;
+  };
+  const pre = measure();
   const ps = pre.getSize(new THREE.Vector3());
   if (ps.z > ps.y * 1.3 && ps.z > ps.x * 1.3) {
     root.rotateX(Math.PI / 2); // Z-up → Y-up
   } else if (ps.x > ps.y * 1.3 && ps.x > ps.z * 1.3) {
     root.rotateZ(Math.PI / 2); // X-up → Y-up
   }
-  const box = new THREE.Box3().setFromObject(root);
+  // 🔴 B-02 型边界 case：躺姿但三轴接近（z=0.92 只比 y=0.71 高 1.3 倍不到），
+  // 上面的阈值没触发。二次判定：仍非 Y 最大（容差 1.1）且 z>y → 强制按 Z-up 翻。
+  const pre2 = measure();
+  const ps2 = pre2.getSize(new THREE.Vector3());
+  if (ps2.z > ps2.y * 1.1 && ps2.z >= ps2.x) {
+    root.rotateX(Math.PI / 2);
+  } else if (ps2.x > ps2.y * 1.1 && ps2.x >= ps2.z) {
+    root.rotateZ(Math.PI / 2);
+  }
+  const box = measure();
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   root.position.sub(center); root.position.y += size.y / 2; // 居中 + 贴地
@@ -297,13 +326,14 @@ async function loadLOD(lod) {
     }
     state.current = root;
     state.scene.add(root);
-    frameObject(root);
-    document.getElementById('vstat').textContent = `${lod.label} · ${statLine(root)}`;
-    // 有动画 → 自动播第一个
+    // 有动画 → 建 mixer 并推到首帧（frameObject 的立姿检测要用摆好姿势的骨骼）
     if (state.gltfAnimations.length) {
       state.mixer = new THREE.AnimationMixer(root);
       playClip(state.gltfAnimations[0].name);
+      state.mixer.update(0);
     }
+    frameObject(root);
+    document.getElementById('vstat').textContent = `${lod.label} · ${statLine(root)}`;
     // clay 模式残留时应用
     if (state.viewMode === 'clay' || state.viewMode === 'wire') applyViewMode();
     renderSidebar();
