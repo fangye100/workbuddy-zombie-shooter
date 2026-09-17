@@ -32,7 +32,16 @@
       "colorToken": "warn",
       "arena": "加油站雨棚 + 翻覆车阵，开阔但多硬掩体",
       "readGoal": "开阔场地靠**硬掩体切分视线**，让玩家学会绕掩体与拉扯",
-      "ids": ["S-01", "S-02", "P-11", "P-12", "P-13", "P-14", "P-15", "P-16"]
+      "ids": [
+        "S-01",
+        "S-02",
+        "P-11",
+        "P-12",
+        "P-13",
+        "P-14",
+        "P-15",
+        "P-16"
+      ]
     },
     {
       "act": 2,
@@ -41,7 +50,16 @@
       "colorToken": "blood",
       "arena": "货架巷道 + 冷库，视线被切碎，适合伏击",
       "readGoal": "巷道制造**近身遭遇**，转角即敌人；纵向货架给高处视线",
-      "ids": ["S-03", "S-04", "P-21", "P-22", "P-23", "P-24", "P-25", "P-26"]
+      "ids": [
+        "S-03",
+        "S-04",
+        "P-21",
+        "P-22",
+        "P-23",
+        "P-24",
+        "P-25",
+        "P-26"
+      ]
     },
     {
       "act": 3,
@@ -50,7 +68,16 @@
       "colorToken": "toxic",
       "arena": "狭长线性，纵向空间高，天花板可挂敌",
       "readGoal": "**线性压迫 + 头顶威胁**：视野被隧道收束，逼玩家抬头与快速通过",
-      "ids": ["S-05", "S-06", "P-31", "P-32", "P-33", "P-34", "P-35", "P-36"]
+      "ids": [
+        "S-05",
+        "S-06",
+        "P-31",
+        "P-32",
+        "P-33",
+        "P-34",
+        "P-35",
+        "P-36"
+      ]
     },
     {
       "act": 4,
@@ -59,12 +86,28 @@
       "colorToken": "gold",
       "arena": "天台开阔 + 病房迷宫双层，风向影响毒息",
       "readGoal": "**双层对比**：病房迷宫近战压迫 → 天台开阔远程对枪",
-      "ids": ["S-07", "S-08", "P-41", "P-42", "P-43", "P-44", "P-45", "P-46"]
+      "ids": [
+        "S-07",
+        "S-08",
+        "P-41",
+        "P-42",
+        "P-43",
+        "P-44",
+        "P-45",
+        "P-46"
+      ]
     }
   ],
   "shared": {
     "note": "跨幕通用件，任何 Act 都能撒，用于把空场填出可读性与掩体节奏",
-    "ids": ["P-01", "P-02", "P-03", "P-04", "P-05", "P-06"]
+    "ids": [
+      "P-01",
+      "P-02",
+      "P-03",
+      "P-04",
+      "P-05",
+      "P-06"
+    ]
   },
   "entries": [
     {
@@ -72,9 +115,18 @@
       "kind": "prop",
       "name": "油桶",
       "en": "Oil Barrel",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 可交互",
-      "footprint": [0.6, 0.6, 0.9],
+      "footprint": [
+        0.6,
+        0.6,
+        0.9
+      ],
       "tris": 180,
       "cover": "low",
       "blocksSight": false,
@@ -96,9 +148,18 @@
       "kind": "prop",
       "name": "水泥路障",
       "en": "Jersey Barrier",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 掩体",
-      "footprint": [2.5, 0.6, 0.9],
+      "footprint": [
+        2.5,
+        0.6,
+        0.9
+      ],
       "tris": 220,
       "cover": "low",
       "blocksSight": false,
@@ -118,9 +179,18 @@
       "kind": "prop",
       "name": "铁皮垃圾桶",
       "en": "Dumpster",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 掩体",
-      "footprint": [1.8, 1.1, 1.3],
+      "footprint": [
+        1.8,
+        1.1,
+        1.3
+      ],
       "tris": 260,
       "cover": "high",
       "blocksSight": true,
@@ -140,9 +210,18 @@
       "kind": "prop",
       "name": "托盘货箱",
       "en": "Pallet & Crates",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 掩体",
-      "footprint": [1.2, 1.0, 1.1],
+      "footprint": [
+        1.2,
+        1,
+        1.1
+      ],
       "tris": 300,
       "cover": "high",
       "blocksSight": true,
@@ -163,9 +242,18 @@
       "kind": "prop",
       "name": "轮胎堆",
       "en": "Tire Stack",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 掩体",
-      "footprint": [0.9, 0.9, 0.8],
+      "footprint": [
+        0.9,
+        0.9,
+        0.8
+      ],
       "tris": 320,
       "cover": "low",
       "blocksSight": false,
@@ -185,9 +273,18 @@
       "kind": "prop",
       "name": "沙袋掩体",
       "en": "Sandbag Wall",
-      "acts": [1, 2, 3, 4],
+      "acts": [
+        1,
+        2,
+        3,
+        4
+      ],
       "category": "通用 · 掩体",
-      "footprint": [2.0, 0.7, 0.9],
+      "footprint": [
+        2,
+        0.7,
+        0.9
+      ],
       "tris": 280,
       "cover": "low",
       "blocksSight": false,
@@ -202,15 +299,20 @@
         "base": "olive canvas sandbag wall, sandbags stacked in alternating rows, one bag torn open spilling sand"
       }
     },
-
     {
       "id": "P-11",
       "kind": "prop",
       "name": "翻覆轿车",
       "en": "Overturned Sedan",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 载具",
-      "footprint": [4.4, 1.9, 1.5],
+      "footprint": [
+        4.4,
+        1.9,
+        1.5
+      ],
       "tris": 700,
       "cover": "high",
       "blocksSight": true,
@@ -232,9 +334,15 @@
       "kind": "prop",
       "name": "厢式货车残骸",
       "en": "Box Truck Wreck",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 载具",
-      "footprint": [6.5, 2.4, 2.8],
+      "footprint": [
+        6.5,
+        2.4,
+        2.8
+      ],
       "tris": 900,
       "cover": "full",
       "blocksSight": true,
@@ -254,9 +362,15 @@
       "kind": "prop",
       "name": "公路护栏",
       "en": "Guardrail",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 街道",
-      "footprint": [4.0, 0.3, 0.8],
+      "footprint": [
+        4,
+        0.3,
+        0.8
+      ],
       "tris": 200,
       "cover": "low",
       "blocksSight": false,
@@ -276,9 +390,15 @@
       "kind": "prop",
       "name": "加油机",
       "en": "Fuel Pump",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 街道",
-      "footprint": [0.8, 0.6, 1.8],
+      "footprint": [
+        0.8,
+        0.6,
+        1.8
+      ],
       "tris": 400,
       "cover": "high",
       "blocksSight": true,
@@ -299,9 +419,15 @@
       "kind": "prop",
       "name": "路边广告牌",
       "en": "Roadside Billboard",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 街道",
-      "footprint": [6.0, 0.4, 5.0],
+      "footprint": [
+        6,
+        0.4,
+        5
+      ],
       "tris": 500,
       "cover": "none",
       "blocksSight": true,
@@ -321,9 +447,15 @@
       "kind": "prop",
       "name": "收费站亭",
       "en": "Toll Booth",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 街道",
-      "footprint": [1.6, 1.6, 2.4],
+      "footprint": [
+        1.6,
+        1.6,
+        2.4
+      ],
       "tris": 450,
       "cover": "full",
       "blocksSight": true,
@@ -343,9 +475,15 @@
       "kind": "structure",
       "name": "加油站雨棚",
       "en": "Gas Station Canopy",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 结构",
-      "footprint": [16.0, 12.0, 5.5],
+      "footprint": [
+        16,
+        12,
+        5.5
+      ],
       "tris": 1800,
       "cover": "overhead",
       "blocksSight": false,
@@ -366,9 +504,15 @@
       "kind": "structure",
       "name": "便利店",
       "en": "Convenience Store",
-      "acts": [1],
+      "acts": [
+        1
+      ],
       "category": "Act1 · 结构",
-      "footprint": [12.0, 8.0, 4.0],
+      "footprint": [
+        12,
+        8,
+        4
+      ],
       "tris": 2000,
       "cover": "full",
       "blocksSight": true,
@@ -383,15 +527,20 @@
         "base": "roadside convenience store, single story, large glass storefront mostly shattered, toppled shelves visible inside, broken sign with missing letters"
       }
     },
-
     {
       "id": "P-21",
       "kind": "prop",
       "name": "重型货架",
       "en": "Heavy Shelving",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 仓储",
-      "footprint": [2.4, 1.0, 4.5],
+      "footprint": [
+        2.4,
+        1,
+        4.5
+      ],
       "tris": 800,
       "cover": "full",
       "blocksSight": true,
@@ -412,9 +561,15 @@
       "kind": "prop",
       "name": "冷库门",
       "en": "Freezer Door",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 仓储",
-      "footprint": [2.2, 0.5, 2.6],
+      "footprint": [
+        2.2,
+        0.5,
+        2.6
+      ],
       "tris": 400,
       "cover": "full",
       "blocksSight": true,
@@ -434,9 +589,15 @@
       "kind": "prop",
       "name": "叉车",
       "en": "Forklift",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 载具",
-      "footprint": [2.6, 1.2, 2.2],
+      "footprint": [
+        2.6,
+        1.2,
+        2.2
+      ],
       "tris": 700,
       "cover": "high",
       "blocksSight": true,
@@ -456,9 +617,15 @@
       "kind": "prop",
       "name": "传送带段",
       "en": "Conveyor Section",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 仓储",
-      "footprint": [6.0, 1.0, 0.9],
+      "footprint": [
+        6,
+        1,
+        0.9
+      ],
       "tris": 500,
       "cover": "low",
       "blocksSight": false,
@@ -478,9 +645,15 @@
       "kind": "prop",
       "name": "卷帘门",
       "en": "Rolling Shutter",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 仓储",
-      "footprint": [4.0, 0.3, 3.5],
+      "footprint": [
+        4,
+        0.3,
+        3.5
+      ],
       "tris": 350,
       "cover": "full",
       "blocksSight": true,
@@ -500,9 +673,15 @@
       "kind": "prop",
       "name": "储油罐",
       "en": "Storage Tank",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 仓储",
-      "footprint": [3.0, 3.0, 4.0],
+      "footprint": [
+        3,
+        3,
+        4
+      ],
       "tris": 600,
       "cover": "full",
       "blocksSight": true,
@@ -522,9 +701,15 @@
       "kind": "structure",
       "name": "仓库外壳",
       "en": "Warehouse Shell",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 结构",
-      "footprint": [40.0, 30.0, 9.0],
+      "footprint": [
+        40,
+        30,
+        9
+      ],
       "tris": 2400,
       "cover": "full",
       "blocksSight": true,
@@ -544,9 +729,15 @@
       "kind": "structure",
       "name": "冷库房",
       "en": "Cold Storage Room",
-      "acts": [2],
+      "acts": [
+        2
+      ],
       "category": "Act2 · 结构",
-      "footprint": [10.0, 8.0, 4.0],
+      "footprint": [
+        10,
+        8,
+        4
+      ],
       "tris": 1600,
       "cover": "full",
       "blocksSight": true,
@@ -561,15 +752,20 @@
         "base": "walk-in cold storage room, insulated panels covered in white frost, icicles hanging from the door frame, cold vapor spilling out"
       }
     },
-
     {
       "id": "P-31",
       "kind": "prop",
       "name": "铁轨段",
       "en": "Rail Track Segment",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 轨道",
-      "footprint": [8.0, 2.4, 0.25],
+      "footprint": [
+        8,
+        2.4,
+        0.25
+      ],
       "tris": 350,
       "cover": "none",
       "blocksSight": false,
@@ -589,9 +785,15 @@
       "kind": "prop",
       "name": "废弃车厢",
       "en": "Derelict Subway Car",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 载具",
-      "footprint": [18.0, 2.8, 3.4],
+      "footprint": [
+        18,
+        2.8,
+        3.4
+      ],
       "tris": 1600,
       "cover": "full",
       "blocksSight": true,
@@ -611,10 +813,16 @@
       "kind": "prop",
       "name": "电缆管线",
       "en": "Cable Conduit",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 轨道",
-      "footprint": [6.0, 0.3, 0.3],
-      "tris": 200,
+      "footprint": [
+        6,
+        0.3,
+        0.3
+      ],
+      "tris": 520,
       "cover": "none",
       "blocksSight": false,
       "blocksMove": false,
@@ -633,9 +841,15 @@
       "kind": "prop",
       "name": "检修平台",
       "en": "Maintenance Platform",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 轨道",
-      "footprint": [3.0, 1.2, 2.6],
+      "footprint": [
+        3,
+        1.2,
+        2.6
+      ],
       "tris": 450,
       "cover": "none",
       "blocksSight": false,
@@ -655,9 +869,15 @@
       "kind": "prop",
       "name": "站台长椅",
       "en": "Platform Bench",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 轨道",
-      "footprint": [2.0, 0.6, 0.9],
+      "footprint": [
+        2,
+        0.6,
+        0.9
+      ],
       "tris": 220,
       "cover": "low",
       "blocksSight": false,
@@ -677,9 +897,15 @@
       "kind": "prop",
       "name": "通风管道",
       "en": "Ventilation Duct",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 轨道",
-      "footprint": [5.0, 1.2, 1.2],
+      "footprint": [
+        5,
+        1.2,
+        1.2
+      ],
       "tris": 400,
       "cover": "none",
       "blocksSight": false,
@@ -699,9 +925,15 @@
       "kind": "structure",
       "name": "隧道段模块",
       "en": "Tunnel Module",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 结构",
-      "footprint": [20.0, 8.0, 6.0],
+      "footprint": [
+        20,
+        8,
+        6
+      ],
       "tris": 2000,
       "cover": "overhead",
       "blocksSight": true,
@@ -722,9 +954,15 @@
       "kind": "structure",
       "name": "地铁站台",
       "en": "Subway Platform",
-      "acts": [3],
+      "acts": [
+        3
+      ],
       "category": "Act3 · 结构",
-      "footprint": [40.0, 6.0, 1.2],
+      "footprint": [
+        40,
+        6,
+        1.2
+      ],
       "tris": 1400,
       "cover": "none",
       "blocksSight": false,
@@ -739,15 +977,20 @@
         "base": "abandoned subway platform, worn yellow safety line, support pillars covered with missing-person flyers, light leaking through the ceiling"
       }
     },
-
     {
       "id": "P-41",
       "kind": "prop",
       "name": "病床",
       "en": "Hospital Bed",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [2.1, 0.9, 0.9],
+      "footprint": [
+        2.1,
+        0.9,
+        0.9
+      ],
       "tris": 500,
       "cover": "low",
       "blocksSight": false,
@@ -767,10 +1010,16 @@
       "kind": "prop",
       "name": "输液架",
       "en": "IV Pole",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [0.5, 0.5, 1.8],
-      "tris": 200,
+      "footprint": [
+        0.5,
+        0.5,
+        1.8
+      ],
+      "tris": 800,
       "cover": "none",
       "blocksSight": false,
       "blocksMove": true,
@@ -789,10 +1038,16 @@
       "kind": "prop",
       "name": "轮椅",
       "en": "Wheelchair",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [1.0, 0.7, 1.1],
-      "tris": 400,
+      "footprint": [
+        1,
+        0.7,
+        1.1
+      ],
+      "tris": 420,
       "cover": "low",
       "blocksSight": false,
       "blocksMove": true,
@@ -811,9 +1066,15 @@
       "kind": "prop",
       "name": "隔断屏风",
       "en": "Privacy Screen",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [2.0, 0.1, 1.7],
+      "footprint": [
+        2,
+        0.1,
+        1.7
+      ],
       "tris": 300,
       "cover": "high",
       "blocksSight": true,
@@ -833,9 +1094,15 @@
       "kind": "prop",
       "name": "培养舱",
       "en": "Bio Containment Pod",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [1.2, 1.2, 2.2],
+      "footprint": [
+        1.2,
+        1.2,
+        2.2
+      ],
       "tris": 600,
       "cover": "high",
       "blocksSight": true,
@@ -856,9 +1123,15 @@
       "kind": "prop",
       "name": "医疗推车",
       "en": "Medical Cart",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 医疗",
-      "footprint": [0.8, 0.5, 0.9],
+      "footprint": [
+        0.8,
+        0.5,
+        0.9
+      ],
       "tris": 350,
       "cover": "low",
       "blocksSight": false,
@@ -878,9 +1151,15 @@
       "kind": "structure",
       "name": "病房模块",
       "en": "Ward Module",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 结构",
-      "footprint": [8.0, 8.0, 3.2],
+      "footprint": [
+        8,
+        8,
+        3.2
+      ],
       "tris": 1800,
       "cover": "full",
       "blocksSight": true,
@@ -901,9 +1180,15 @@
       "kind": "structure",
       "name": "天台机房与水塔",
       "en": "Rooftop Utility & Water Tower",
-      "acts": [4],
+      "acts": [
+        4
+      ],
       "category": "Act4 · 结构",
-      "footprint": [6.0, 6.0, 7.0],
+      "footprint": [
+        6,
+        6,
+        7
+      ],
       "tris": 2200,
       "cover": "full",
       "blocksSight": true,
