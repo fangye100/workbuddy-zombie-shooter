@@ -74,9 +74,13 @@ for (const c of [...roster.npcs, ...roster.bosses]) {
   }
 
   const lods = [];
-  if (baked) lods.push({ label: 'LOD0 · 贴图低模', file: `${base}/textured/${baked}`, tris: c.tris });
-  if (riggedOnly) lods.push({ label: 'LOD1 · +骨骼', file: `${base}/rigged/${riggedOnly}`, tris: c.tris });
-  if (animated) lods.push({ label: 'LOD2 · +动画', file: `${base}/rigged/${animated}`, tris: c.tris });
+  // 🔴 LOD0 = 混元原生高模（原生 4096² baseColor 贴图，真源）。
+  // 旧 LOD0（textured/*_baked.glb）是「原贴图→顶点色→逐面平涂」的有损中间产物，不是原生模型。
+  const rawGlb = fs.readdirSync(dir).find((f) => new RegExp(`^${c.id.replace(/-/g, '')}_\\d{8}_\\d{6}\\.glb$`).test(f)) ?? null;
+  if (rawGlb) lods.push({ label: 'LOD0 · 原生高模(混元raw ~80k面)', file: `${base}/${rawGlb}`, tris: 80000 });
+  if (baked) lods.push({ label: 'LOD1 · 贴图低模', file: `${base}/textured/${baked}`, tris: c.tris });
+  if (riggedOnly) lods.push({ label: 'LOD2 · +骨骼', file: `${base}/rigged/${riggedOnly}`, tris: c.tris });
+  if (animated) lods.push({ label: 'LOD3 · +动画', file: `${base}/rigged/${animated}`, tris: c.tris });
 
   out.characters.push({
     id: c.id, name: c.name, en: c.en ?? '', kind: roster.bosses.includes(c) ? 'boss' : 'npc',
@@ -103,10 +107,15 @@ for (const e of props.entries) {
 
   const lods = [];
   if (raw) lods.push({ label: 'LOD0 · 高模(raw ~50万面)', file: raw, tris: 500000 });
-  // 🔴 烘焙版（tex/<ID>_tex_baked.glb，xatlas UV + baseColor 贴图）优先于顶点色 OBJ
+  // 🔴 tex2（原贴图转移版）优先于 tex（顶点色烘焙版）优先于顶点色 OBJ：
+  // tex2 = raw 混元原贴图经三维空间对应转移到低模 UV（真色）；tex = 顶点色放大（旧法，弃用）。
+  const tex2 = fs.existsSync(path.join(dir, 'tex2'))
+    ? fs.readdirSync(path.join(dir, 'tex2')).filter((f) => f.endsWith('_baked.glb')) : [];
   const texGlbs = fs.existsSync(path.join(dir, 'tex'))
     ? fs.readdirSync(path.join(dir, 'tex')).filter((f) => f.endsWith('_baked.glb')) : [];
-  if (texGlbs.length) {
+  if (tex2.length) {
+    lods.push({ label: 'LOD1 · 低模+原贴图', file: `${base}/tex2/${tex2[0]}`, tris: e.tris });
+  } else if (texGlbs.length) {
     lods.push({ label: 'LOD1 · 低模+贴图', file: `${base}/tex/${texGlbs[0]}`, tris: e.tris });
   }
   if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris });
