@@ -34,11 +34,26 @@ const hasImage = (id) =>
   fs.existsSync(path.join(imgDir, `${id}.png`)) ||
   fs.existsSync(path.join(imgDir, `${id}_gen.png`));
 
+/**
+ * 图片 src：优先 base64 内嵌缩略图（256px JPEG，_tools/make_thumbs.py 产出）。
+ * 🔴 单文件预览器只托管 HTML 本身、不托管 ../images/ 兄弟目录 —— 相对路径
+ * 在内置预览面板里全部 404（表现为"图裂了"）。内嵌后任何位置打开都完整；
+ * 缩略图缺失时退回相对路径（本地双击打开仍可见）。
+ */
+const thumbDir = path.resolve(root, '../../.workbuddy/tmp/thumbs');
+function imgSrc(id) {
+  const thumb = path.join(thumbDir, `${id}.jpg`);
+  if (fs.existsSync(thumb)) {
+    return `data:image/jpeg;base64,${fs.readFileSync(thumb).toString('base64')}`;
+  }
+  return `../images/${id}.png`;
+}
+
 /** 一件道具的卡片 */
 function card(e) {
   const [w, d, h] = e.footprint;
   const accent = TOKENS[e.accent] ?? '#9AA0A6';
-  const img = hasImage(e.id) ? `../images/${e.id}.png` : null;
+  const img = hasImage(e.id) ? imgSrc(e.id) : null;
   const gen = `${e.ai.base}, ${data.genViewSuffix}, ${data.styleSuffix}`;
   return `
   <article class="card" style="border-color:${accent}">
