@@ -10,9 +10,13 @@ assets/characters/models/**/*.obj filter=lfs diff=lfs merge=lfs -text
 assets/characters/models/**/*.ply filter=lfs diff=lfs merge=lfs -text
 assets/characters/models/**/*.labmesh filter=lfs diff=lfs merge=lfs -text
 assets/characters/models/**/*.mesh.ts filter=lfs diff=lfs merge=lfs -text
+
 # 编辑器贴图与生成的网格模块
 apps/lab/shader-lab/src/assets/** filter=lfs diff=lfs merge=lfs -text
 apps/lab/shader-lab/src/*.mesh.ts filter=lfs diff=lfs merge=lfs -text
+
+# 环境道具（TokenHub 混元 3D 产物 + 参考图，二进制）
 assets/environment/models/**/*.glb filter=lfs diff=lfs merge=lfs -text
 assets/environment/models/**/*.zip filter=lfs diff=lfs merge=lfs -text
 assets/environment/models/**/*.png filter=lfs diff=lfs merge=lfs -text
+assets/environment/images/**/*.png filter=lfs diff=lfs merge=lfs -text
