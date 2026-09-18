@@ -51,6 +51,10 @@ function fakeRenderer(doc: SceneDocument | null) {
       objects = objects.map((o, i) => (i === 0 ? { name } : o));
       selectedIndex = sel;
     },
+    // Play 期渲染侧 GPU 资源的释放入口（动态实例 buffer + 代理网格缓存）。
+    // PlayController 必须把它登记进 PlaySession 的账目，否则账目显示 pending = 0
+    // 而 GPU 上仍留着 Play 期分配物（PR #3 review）。
+    core: { releaseDynamicResources: vi.fn() },
     read: () => ({ count: objects.length, names: objects.map((o) => o.name), selectedIndex }),
   };
 }
@@ -128,10 +132,11 @@ describe('PlayController —— Stop 恢复作者状态（docs/17 §8-7 前半�
 
 describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGENTS.md §2.4）', () => {
   it('Play 期登记的资源在 Stop 时全部释放；20 次启停 pending 恒为 0', () => {
-    const { ctl, b } = make();
+    const { ctl, b, r } = make();
     for (let i = 0; i < 20; i++) {
       expect(ctl.start()).toBe(true);
-      expect(ctl.ledger.pending).toBe(1); // Bridge 批次已登记
+      // 每轮登记两项：Bridge 批次（CPU 侧）+ 渲染核心动态实例资源（GPU 侧）
+      expect(ctl.ledger.pending).toBe(2);
       expect(b.attached).toBe(1);
       ctl.stop();
       // 🔴 判据不是"看着没泄漏"，是账目：登记数 == 释放数，且无未释放项
@@ -139,8 +144,10 @@ describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGEN
       expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);
       expect(b.attached).toBe(0);
     }
-    expect(ctl.ledger.registered).toBe(20);
-    expect(ctl.ledger.disposed).toBe(20);
+    expect(ctl.ledger.registered).toBe(40);
+    expect(ctl.ledger.disposed).toBe(40);
+    // 渲染侧的释放入口必须真的被调用过（登记了却不调 = 假账目）
+    expect(r.core.releaseDynamicResources).toHaveBeenCalledTimes(20);
   });
 
   it('释放回调抛错不会挡住停止，账目仍记为已处理', () => {

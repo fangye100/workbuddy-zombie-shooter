@@ -301,8 +301,12 @@ export class RuntimeBridge {
         inst[o + 6] = 1;
         inst[o + 7] = 0;
         const base = PROXY_COLORS[e.characterId] ?? FALLBACK_COLOR;
-        // 选中 = 提亮。没有第二套高亮管线，成本最低且不会误伤静态关卡的高亮层
-        const k = sel !== null && sel.id === e.id && sel.generation === e.generation ? 1.9 : 1;
+        // 选中 = 提亮。没有第二套高亮管线，成本最低且不会误伤静态关卡的高亮层。
+        // 🔴 必须三代同检：reset() 后 runId 变了，但槽位 id 与 generation 会被复用，
+        // 只比后两者的话「旧引用已失效」的实体仍会被画成选中态（视口与 Inspector 打架）。
+        // 与 selectedEntity 的判定保持一致，见 PR #3 review。
+        const k = sel !== null && sel.runId === e.runId
+          && sel.id === e.id && sel.generation === e.generation ? 1.9 : 1;
         inst[o + 8] = base[0] * k;
         inst[o + 9] = base[1] * k;
         inst[o + 10] = base[2] * k;

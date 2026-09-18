@@ -134,6 +134,8 @@ try {
   console.log(`\n断言 ${checks - fails}/${checks} 通过`);
   console.log('CONSOLE ERRORS:', pageErrors.length, pageErrors.slice(0, 3).join(' | '));
   if (fails === 0) console.log('ALL PASS');
+  // 🔴 断言失败必须映射到非零退出码，否则自动化会把失败的批量检查当成通过（门禁失效）
+  else { console.log(`${fails} FAILED`); process.exitCode = 1; }
 } catch (e) {
   console.error('HARNESS ERROR:', e.message);
   process.exitCode = 1;

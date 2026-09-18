@@ -43,7 +43,11 @@ const server = http.createServer((req, res) => {
     if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) {
       abs = path.join(abs, 'asset-browser.html');
     }
-    if (!abs.startsWith(ROOT)) { res.writeHead(403); res.end('forbidden'); return; }
+    // 🔴 前缀碰撞防护：只判断 `startsWith(ROOT)` 的话，`assets-other/...` 这类
+    // 同级目录也满足条件（`/x/assets` 是 `/x/assets-other` 的前缀）。必须比到分隔符。
+    if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) {
+      res.writeHead(403); res.end('forbidden'); return;
+    }
     if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(`404: /${rel}`);

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_rljfwtni",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "S-05_baked.glb"
+  },
+  "sourceHash": "sha256:1cb78406a23addea50055613bcbf774905c7ae7ba600beb172ccf65021b95c56",
+  "updatedAt": "2026-09-18T15:11:46.341Z"
+}

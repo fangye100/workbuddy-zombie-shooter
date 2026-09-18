@@ -100,6 +100,10 @@ export class PlayController {
     // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
     // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
     this.session.registerResource('bridge-batches', () => this.bridge.attach(null));
+    // 🔴 渲染侧的动态实例资源也要进账目：只摘 CPU 侧 bridge 的话，账目显示 pending = 0
+    // 而 GPU 上仍留着 Play 期分配的实例 buffer 与代理网格缓存（由 renderer-core 持有）。
+    // 见 PR #3 review / AGENTS.md §2.4「Play 期每次 GPU 分配都必须登记并在 Stop 释放」。
+    this.session.registerResource('dynamic-instances', () => this.renderer.core.releaseDynamicResources());
     this.lastError = null;
     this.notify();
     return true;

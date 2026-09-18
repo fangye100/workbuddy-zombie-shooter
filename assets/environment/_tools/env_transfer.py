@@ -232,8 +232,19 @@ def transfer(hp, lp, size=512):
         if ti < 0:
             continue
         a, b, c = F_lp[ti]
-        # 重心（像素中心）
-        P3 = (V_lp[a] + V_lp[b] + V_lp[c]) / 3.0
+        # 🔴 用**像素中心**在 UV 三角形内的重心坐标插出 3D 点，不能用三角形质心。
+        # 用质心的话整片三角形都采到同一个高模位置、得到同一种颜色，面内纹理变化全部丢失
+        # —— 低模只有几百面时整张贴图会退化成马赛克，声称的「空间转移」名存实亡。
+        # 见 PR #3 review。
+        p0, p1, p2 = uvp[a], uvp[b], uvp[c]
+        d = (p1[1] - p2[1]) * (p0[0] - p2[0]) + (p2[0] - p1[0]) * (p0[1] - p2[1])
+        if abs(d) < 1e-12:
+            continue
+        rx, ry = px + 0.5, py + 0.5
+        w0 = ((p1[1] - p2[1]) * (rx - p2[0]) + (p2[0] - p1[0]) * (ry - p2[1])) / d
+        w1 = ((p2[1] - p0[1]) * (rx - p2[0]) + (p0[0] - p2[0]) * (ry - p2[1])) / d
+        w2 = 1.0 - w0 - w1
+        P3 = w0 * V_lp[a] + w1 * V_lp[b] + w2 * V_lp[c]
         # 最近高模顶点（3x3x3 邻域）
         k = tuple(np.floor(P3 / cell).astype(np.int64))
         best = None

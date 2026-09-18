@@ -308,8 +308,25 @@ function applyViewMode() {
         m.wireframe = true;
       } else {
         m.wireframe = false;
-        if (state.viewMode === 'clay') { delete m.map; m.color = new THREE.Color(0xbfc4cc); }
-        // textured：保持加载原样（不恢复 map——切回贴图需重载 LOD）
+        if (state.viewMode === 'clay') {
+          // 🔴 白膜必须可逆：`delete m.map` 是不可逆的（切回贴图后永远是白膜）。
+          // 先把原 map/color 存进 userData，再换成素模外观。
+          if (m.userData.__orig === undefined) {
+            m.userData.__orig = { map: m.map ?? null, color: m.color ? m.color.clone() : null };
+          }
+          m.map = null;
+          m.color = new THREE.Color(0xbfc4cc);
+        } else {
+          // textured：还原加载时的贴图与颜色（存过才还原）
+          const orig = m.userData.__orig;
+          if (orig !== undefined) {
+            m.map = orig.map;
+            if (orig.color !== null) m.color = orig.color;
+            delete m.userData.__orig;
+          }
+        }
+        // map 有无会改变着色器分支，必须让材质重编译
+        m.needsUpdate = true;
       }
     }
   });
@@ -531,9 +548,8 @@ function renderSidebar() {
   ui.anim = [...document.querySelectorAll('#animlist button')];
   ui.sk = document.getElementById('skbtn');
   for (const b of ui.lod) b.onclick = () => { state.viewMode = 'textured'; loadLOD(e.lods[+b.dataset.lod], +b.dataset.lod); };
-  for (const b of ui.view) b.onclick = () => { state.viewMode = b.dataset.view;
-    if (b.dataset.view === 'textured' && b.dataset._needReload) loadLOD(e.lods[state.curLOD ?? 0], state.curLOD ?? 0);
-    applyViewMode(); };
+  // clay / wire 现在是可逆的（applyViewMode 从 userData 还原），切回 textured 不必重载 LOD
+  for (const b of ui.view) b.onclick = () => { state.viewMode = b.dataset.view; applyViewMode(); };
   for (const b of ui.anim) b.onclick = () => playClip(b.dataset.anim);
   if (ui.sk) ui.sk.onclick = () => toggleSkeleton(!state.skeletonOn);
   for (const b of document.querySelectorAll('[data-img]')) b.onclick = () => showBig(b.dataset.img);
@@ -559,11 +575,14 @@ function openViewer(entry, isChar) {
   document.getElementById('viewer').classList.add('open');
   ensureRenderer();
   // 默认加载策略：**信息最全的最轻版**——
-  // 角色 = rigged_animated（带骨骼+动画）；环境 = tex baked（带贴图的低模）。
+  // 角色 = rigged_animated（带骨骼+动画）；环境 = tex2/tex baked（带贴图的低模）。
   // 🔴 曾用「endsWith('_baked.glb') && !tex」选中角色的 textured baked（无动画）
   //    → 动画按钮永远点不亮（点击的 LOD 里没有 clips）。
+  // 🔴 环境侧只匹配 '/tex/' 会漏掉 tex2（原贴图转移版所在目录）→ 默认回落到
+  //    约 50 万面的 raw .glb，首次打开就白扛一次大模型加载。两个目录都要匹配。
   const def = entry.lods.find((l) => /_rigged_animated\.glb$/.test(l.file))
-    ?? entry.lods.find((l) => l.file.includes('/tex/') && l.file.endsWith('_baked.glb'))
+    ?? entry.lods.find((l) => (l.file.includes('/tex2/') || l.file.includes('/tex/'))
+      && l.file.endsWith('_baked.glb'))
     ?? entry.lods.find((l) => l.file.endsWith('.glb'))
     ?? entry.lods[0];
   const idx = entry.lods.indexOf(def);

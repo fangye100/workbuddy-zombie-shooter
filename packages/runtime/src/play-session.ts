@@ -159,13 +159,18 @@ export class PlaySession {
     this.errs = loaded.diagnostics.filter((d) => d.severity === 'error').map((d) => d.message);
 
     if (loaded.desc === null || this.errs.length > 0) {
-      // 启动失败清理：确保一个残留的旧会话都不会留下
+      // 启动失败清理：**先释放旧会话登记的资源再丢引用** —— 直接置 null 的话，
+      // 宿主登记的 GPU 句柄就再也没人释放（stop() 已无会话可释放），而账目仍显示
+      // pending = 0，账目与 GPU 实际占用脱节。见 PR #3 review。
+      this.releaseResources();
       this.session = null;
       this._state = 'stopped';
       this.accumulator = 0;
       return { ok: false, diagnostics: this.diag, errors: this.errs };
     }
 
+    // 未 Stop 就再次 Play（换场景）时，旧会话的登记资源同样要先释放
+    this.releaseResources();
     this.session = createSession(loaded.desc, {
       seed: this.seed,
       capacity: this.capacity,
@@ -216,10 +221,20 @@ export class PlaySession {
    * 还想读一次运行时状态就会拿到 null。
    *
    * runtime 侧自身不持有 GPU 句柄（依赖方向禁止），所以这里释放的是**宿主登记进来**的
-   * 那些（Bridge 批次等）；动态实例 buffer 由渲染核心持有、按 meshId 缓存跨 Play 复用，
-   * 不随单次 Stop 销毁（见 docs/19 §6）。
+   * 那些（Bridge 批次 / 渲染核心的动态实例 buffer 与代理网格缓存）。
    */
   stop(): void {
+    this.releaseResources();
+    this.session = null;
+    this._state = 'stopped';
+    this.accumulator = 0;
+  }
+
+  /**
+   * 释放全部登记资源并清空账目。`stop()` / `play()` 共用 —— 换会话与启动失败
+   * 都必须走这里，否则资源账目会「显示已清零、实际仍占着」。
+   */
+  private releaseResources(): void {
     for (const r of this.resources) {
       try {
         r.dispose();
@@ -230,9 +245,6 @@ export class PlaySession {
       }
     }
     this.resources.length = 0;
-    this.session = null;
-    this._state = 'stopped';
-    this.accumulator = 0;
   }
 
   /**

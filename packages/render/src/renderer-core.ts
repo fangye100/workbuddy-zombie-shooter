@@ -347,9 +347,16 @@ export class RendererCore {
   private readonly dynamicPipeline: GPURenderPipeline;
   private readonly dynamicOutlinePipeline: GPURenderPipeline;
   /** 实例数组 storage buffer，按需求惰性扩容（容量只增不减） */
-  private dynamicInstBuf: GPUBuffer | null = null;
-  private dynamicInstCap = 0;
-  private dynamicBindGroup: GPUBindGroup | null = null;
+  /**
+   * 🔴 动态实例 buffer 必须**每批次一份**。
+   *
+   * 同一帧内的多次 `queue.writeBuffer` 与随后的 `pass.drawIndexed` 之间没有顺序保证：
+   * 写入是在 queue 上入队、命令缓冲在 submit 后才执行，所以只要多批共用一份 buffer、
+   * 每次都写 offset 0，**所有 draw 读到的都是最后一次上传的数据** —— 同屏多个角色会
+   * 互相借用位置与颜色（数量不等时还会读到上一帧的残留尾巴）。
+   * 见 PR #3 review（codex P1 / copilot）。
+   */
+  private dynamicInstSlots: { buf: GPUBuffer; bg: GPUBindGroup; cap: number }[] = [];
   /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
   private readonly dynamicMeshes = new Map<string, { vbuf: GPUBuffer; ibuf: GPUBuffer; indexCount: number }>();
 
@@ -732,45 +739,19 @@ export class RendererCore {
     batches: CoreDynamicBatch[],
     wantOutline: boolean,
   ): number {
-    let maxCount = 0;
-    for (const b of batches) maxCount = Math.max(maxCount, b.count);
-    if (maxCount <= 0) return 0;
-
-    // 实例数组按最大批次容量惰性扩容（容量只增不减，避免每帧重建 buffer）
-    const need = maxCount * DYNAMIC_INSTANCE_FLOATS * 4;
-    if (this.dynamicInstBuf === null || this.dynamicInstCap < need) {
-      this.dynamicInstBuf?.destroy();
-      this.dynamicInstBuf = this.device.createBuffer({
-        label: 'dynamic-instances',
-        size: Math.max(need, 4096),
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      });
-      this.dynamicInstCap = this.dynamicInstBuf.size;
-      this.dynamicBindGroup = this.device.createBindGroup({
-        label: 'dynamic',
-        layout: this.dynamicLayout,
-        entries: [
-          { binding: 0, resource: { buffer: this.frameBuf } },
-          { binding: 1, resource: { buffer: this.lightsBuf } },
-          { binding: 2, resource: { buffer: this.toonBuf } },
-          { binding: 3, resource: { buffer: this.dynamicInstBuf } },
-        ],
-      });
-    }
-    const instBuf = this.dynamicInstBuf;
-    const bg = this.dynamicBindGroup;
-    if (bg === null) return 0;
-
     let draws = 0;
-    for (const b of batches) {
-      if (b.count <= 0) continue;
+    for (let bi = 0; bi < batches.length; bi++) {
+      const b = batches[bi];
+      if (b === undefined || b.count <= 0) continue;
       const mesh = this.dynamicMesh(b);
       if (mesh === null) continue;
       // 防御：调用方给的 count 大于实际打包的实例数时按后者截断，不越界读
       const n = Math.min(b.count, Math.floor(b.instances.length / DYNAMIC_INSTANCE_FLOATS));
       if (n <= 0) continue;
-      this.device.queue.writeBuffer(instBuf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
-      pass.setBindGroup(0, bg);
+      // 每批次写进自己的 buffer：共用一份则所有 draw 都会读到最后一次上传（见字段注释）
+      const slot = this.dynamicInstSlot(bi, n);
+      this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
+      pass.setBindGroup(0, slot.bg);
       pass.setVertexBuffer(0, mesh.vbuf);
       pass.setIndexBuffer(mesh.ibuf, 'uint32');
       pass.setPipeline(this.dynamicPipeline);
@@ -783,6 +764,45 @@ export class RendererCore {
       }
     }
     return draws;
+  }
+
+  /** 取（或按需扩容）第 `i` 个批次的实例 buffer + bind group。容量只增不减，避免每帧重建。 */
+  private dynamicInstSlot(i: number, count: number): { buf: GPUBuffer; bg: GPUBindGroup } {
+    const need = Math.max(count * DYNAMIC_INSTANCE_FLOATS * 4, 4096);
+    let slot = this.dynamicInstSlots[i];
+    if (slot === undefined || slot.cap < need) {
+      slot?.buf.destroy();
+      const buf = this.device.createBuffer({
+        label: `dynamic-instances-${i}`,
+        size: need,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      const bg = this.device.createBindGroup({
+        label: `dynamic-${i}`,
+        layout: this.dynamicLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.frameBuf } },
+          { binding: 1, resource: { buffer: this.lightsBuf } },
+          { binding: 2, resource: { buffer: this.toonBuf } },
+          { binding: 3, resource: { buffer: buf } },
+        ],
+      });
+      slot = { buf, bg, cap: buf.size };
+      this.dynamicInstSlots[i] = slot;
+    }
+    return slot;
+  }
+
+  /**
+   * 释放全部动态实例资源（每批次实例 buffer + 缓存的代理网格）。
+   *
+   * Play Stop / 换关卡 / 换代理参数时必须调用 —— 否则账目上「Play 期资源已清零」，
+   * GPU 侧却还留着这些 buffer。见 PR #3 review（copilot：disposer 只摘了 CPU 侧 bridge）。
+   */
+  releaseDynamicResources(): void {
+    for (const s of this.dynamicInstSlots) s.buf.destroy();
+    this.dynamicInstSlots = [];
+    this.clearDynamicMeshes();
   }
 
   private uniform(size: number, label: string): GPUBuffer {
@@ -1130,7 +1150,8 @@ export class RendererCore {
     this.skeletonColorBuf.destroy();
     this.cylinderVb?.destroy();
     this.cylinderTintBuf.destroy();
-    this.dynamicInstBuf?.destroy();
+    for (const s of this.dynamicInstSlots) s.buf.destroy();
+    this.dynamicInstSlots = [];
     this.clearDynamicMeshes();
   }
 }

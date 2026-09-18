@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
-"""批量给环境低模补贴图：子进程调用角色管线 bake_lowpoly.py CLI。
+"""环境资产链路 **第 1 步（UV 展开）**：调用 bake_lowpoly.py 给低模展 xatlas UV。
 
 输入：assets/environment/models/<ID>/<ID>_low.obj（带顶点色）
 输出：assets/environment/models/<ID>/tex/<ID>_tex.obj/.mtl/.png
+
+🔴 上游 bake_lowpoly.py 已标 DEPRECATED，但**弃用的是它的「顶点色→平涂贴图」上色法**，
+   不是它的 xatlas UV 展开：`tex/<ID>_tex.obj`（带 UV 的低模）正是第 2 步
+   `env_transfer.py` 必需的低模输入。所以本脚本仍然有效，只是产物里的
+   `_tex_baseColor.png` 已属历史遗留（贴图改由 env_transfer 从原生 4096² 转移得到）。
+
+链路（两步，别只用第二步）：
+  1. `env_bake.py`      → tex/<ID>_tex.obj（xatlas UV 低模；贴图 PNG 不采用）
+  2. `env_transfer.py`  → tex2/<ID>_baked.glb + <ID>_tex.png（原生贴图转移版，**这才是成品**）
 
 用法：
   PYTHONIOENCODING=utf-8 python env_bake.py [--only P-11]

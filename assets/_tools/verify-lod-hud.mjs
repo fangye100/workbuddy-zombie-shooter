@@ -133,6 +133,8 @@ try {
   ok('LOD3 HUD 标注动画', /段/.test(seen[3].hud), (seen[3].hud.match(/\d+ 段/) ?? ['无'])[0]);
   console.log('\nCONSOLE ERRORS:', pageErrors.length, pageErrors.slice(0, 3).join(' | '));
   console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILED`);
+  // 🔴 断言失败必须映射到非零退出码，否则该 harness 不能当门禁用（失败也返回成功）
+  process.exitCode = fails === 0 ? 0 : 1;
 } catch (e) {
   console.error('HARNESS ERROR:', e.message);
   process.exitCode = 1;

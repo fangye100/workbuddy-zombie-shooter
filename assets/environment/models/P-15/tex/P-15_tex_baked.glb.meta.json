@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_q9mljlpy",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex",
+    "file": "P-15_tex_baked.glb"
+  },
+  "sourceHash": "sha256:2cdc3b7bc3758fce44ab1a0e1026b6d8f2a471d1dd83e3763ae87b6c741e8df1",
+  "updatedAt": "2026-09-18T15:11:46.282Z"
+}

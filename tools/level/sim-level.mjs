@@ -83,10 +83,13 @@ function agentNode(e, seq) {
 }
 
 /** 作者场景 + 某一帧的实体 → 可打开的场景文件 */
-function buildSnapshotScene(src, entities, seconds, seed) {
+function buildSnapshotScene(src, entities, seconds, seed, floor) {
   return {
     schemaVersion: SUPPORTED_SCHEMA,
-    id: `sc_sim_floor${src.id}_t${seconds}`,
+    // 🔴 id 必须与 `aether.project.json` 的 SceneEntry.id 一致（它是文档 id 的副本）。
+    // 曾写成 `sc_sim_floor${src.id}_t${seconds}`，而 src.id = `sc_act1_floor1`，
+    // 于是产出 `sc_sim_floorsc_act1_floor1_t0` —— 按 id 查场景会拿到与登记项不同的身份。
+    id: `sc_sim_floor${floor}_t${seconds}`,
     name: `${src.name} · t=${seconds}s 快照（派生产物）`,
     act: src.act,
     environment: src.environment,
@@ -115,12 +118,13 @@ function writeProject(project) {
   writeFileSync(join(ROOT, PROJECT_FILE), JSON.stringify(project, null, 2) + '\n', 'utf8');
 }
 
-function registerScene(rel, name) {
+function registerScene(rel, name, id) {
   const project = readProject();
   const scenes = Array.isArray(project.scenes) ? [...project.scenes] : [];
   const i = scenes.findIndex((s) => s.path === rel);
-  if (i >= 0) scenes[i] = { ...scenes[i], path: rel, name };
-  else scenes.push({ path: rel, name });
+  // id 是文档 id 的副本 —— 登记时一起写，否则登记项与文档各说各话（见 buildSnapshotScene）
+  if (i >= 0) scenes[i] = { ...scenes[i], path: rel, name, id };
+  else scenes.push({ path: rel, name, id });
   project.scenes = scenes;
   writeProject(project);
 }
@@ -177,10 +181,10 @@ for (const sec of ordered) {
     elapsed = want;
   }
   const entities = session.view().map((e, k) => agentNode(e, k));
-  const scene = buildSnapshotScene(srcRaw, entities, sec, args.seed);
+  const scene = buildSnapshotScene(srcRaw, entities, sec, args.seed, args.floor);
   const rel = `assets/scenes/sim/floor${args.floor}-t${sec}.scene.json`;
   writeFileSync(join(ROOT, rel), JSON.stringify(scene, null, 2) + '\n', 'utf8');
-  registerScene(rel, scene.name);
+  registerScene(rel, scene.name, scene.id);
   console.log(
     `[sim] t=${sec}s → ${rel}（tick ${session.tick} · 实体 ${entities.length} · ` +
       `已触发房间 ${session.triggeredRooms().length}/${desc.rooms.length}）`,
