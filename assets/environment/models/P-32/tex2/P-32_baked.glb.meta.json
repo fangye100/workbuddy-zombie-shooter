@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_p7t3r2c0",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-32_baked.glb"
+  },
+  "sourceHash": "sha256:3d69d60b729fc339d0fe9f4d2e0dfa139a2a8a70755440149743d4270b471eea",
+  "updatedAt": "2026-09-18T15:11:46.304Z"
+}

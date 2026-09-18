@@ -7,6 +7,7 @@ import {
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
   type CoreCylinderOverlay,
+  type CoreDynamicBatch,
   type RenderFrameInput,
   SLOT_BYTES,
   SLOT_FLOATS,
@@ -46,6 +47,7 @@ import { HierarchyService } from './services/hierarchy';
 import { MaterialPanelService } from './services/material-panel';
 import { PickingService } from './services/picking';
 import { AnimationService } from './services/animation';
+import { snapshotObjects, restoreObjects } from './services/author-snapshot';
 import { GizmoService } from './services/gizmo';
 import { buildSkeletonPositions } from './services/skeleton-overlay';
 import { buildSelectionOutline } from './features/selection-outline.feature';
@@ -62,7 +64,7 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip, SceneDocument } from '@aether/scene';
 import { readProjectFile } from './asset-util';
 import {
   createSkinState,
@@ -346,6 +348,31 @@ export interface SubMesh extends MaterialSlot {
   primitiveIndex: number;
 }
 
+/**
+ * 单个物体的作者态（WU-4 快照）。只含可序列化的编辑字段，不含 GPU 资源。
+ */
+export interface AuthorObjectState {
+  pos: [number, number, number];
+  rot: [number, number, number];
+  quat: [number, number, number, number];
+  scale: number;
+  bob: number;
+  visible: boolean;
+  removed: boolean;
+  pickable: boolean;
+  name: string;
+  category: string;
+  subVisible: boolean[];
+}
+
+/** Play 前的作者状态快照。见 `snapshotAuthorState()` 的语义说明 */
+export interface AuthorSnapshot {
+  /** 快照时的物体数。恢复时用它判断"Play 期间有没有增删" */
+  count: number;
+  objects: AuthorObjectState[];
+  selectedIndex: number | null;
+}
+
 interface ObjectSpec {
   mesh: MeshData;
   material: number;
@@ -391,10 +418,89 @@ export interface SceneLoadResult {
    */
   environment?: EnvironmentData;
   /**
-   * 场景里第一个启用的 Light 组件（ok=true 时带回；null = 场景没声明灯光）。
+   * 场景里按 `priority` 选出的主光（directional；ok=true 时带回；null = 没声明）。
    * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
    */
-  keyLight?: { color: string; intensity: number } | null;
+  keyLight?: { color: string; intensity: number; nodeId: string } | null;
+  /** 同规则选出的点光（null = 没有 point 灯）。位置仍由引擎轨道驱动（见已知遗留） */
+  pointLight?: { color: string; intensity: number; range: number; nodeId: string } | null;
+}
+
+/** 一盏被选中的灯 */
+export interface PickedLight {
+  nodeId: string;
+  priority: number;
+  color: string;
+  intensity: number;
+  range: number;
+}
+
+export interface SceneLightsPick {
+  /** priority 最高的 directional（null = 没有） */
+  key: PickedLight | null;
+  /** priority 最高的 point / spot（null = 没有） */
+  point: PickedLight | null;
+  /** 落选灯的中文说明。不提示的话"放了 5 盏只亮 1 盏"会被当用户成 bug 排查一整天 */
+  warnings: string[];
+}
+
+/**
+ * 从场景节点里按 `priority` 选出进入 shader 槽位的灯（**纯函数**，可单测）。
+ *
+ * AGENTS.md §2.3：场景可声明任意多盏，运行时按 `priority` 取 **top-1 + top-1**，
+ * **落选者要显式提示**。这里曾经的实现是「取节点顺序里第一个启用的 Light」，
+ * 与 priority 完全无关、也不提示 —— 是独立评审抓出来的阻断（A3）。
+ *
+ * 排序用 `Array.prototype.sort`（稳定）：priority 相同时保持节点顺序，
+ * 保证同输入同结果，灯光不会随机跳。
+ */
+export function pickSceneLights(nodes: readonly SceneNodeLike[]): SceneLightsPick {
+  const directional: PickedLight[] = [];
+  const point: PickedLight[] = [];
+  for (const n of nodes) {
+    for (const c of n.components) {
+      if (c.kind !== 'Light' || !c.enabled) continue;
+      const p: PickedLight = {
+        nodeId: n.id,
+        priority: c.priority ?? 0,
+        color: c.color ?? '#ffffff',
+        intensity: c.intensity ?? 0,
+        range: c.range ?? 0,
+      };
+      if (c.type === 'point' || c.type === 'spot') point.push(p);
+      else directional.push(p);
+    }
+  }
+  const byPriority = (a: PickedLight, b: PickedLight) => b.priority - a.priority;
+  directional.sort(byPriority);
+  point.sort(byPriority);
+
+  const key = directional[0] ?? null;
+  const pt = point[0] ?? null;
+  const warnings: string[] = [];
+  const why = (winner: PickedLight | null) =>
+    winner === null ? '' : `，已被 ${winner.nodeId}（priority ${winner.priority}）占用`;
+  for (const d of directional.slice(1)) {
+    warnings.push(`灯光降级：主光 ${d.nodeId}（priority ${d.priority}）未进入 shader 槽位${why(key)}`);
+  }
+  for (const d of point.slice(1)) {
+    warnings.push(`灯光降级：点光 ${d.nodeId}（priority ${d.priority}）未进入 shader 槽位${why(pt)}`);
+  }
+  return { key, point: pt, warnings };
+}
+
+/** `pickSceneLights` 只需要节点的这三个字段，抽出来是为了让单测不用造完整节点 */
+export interface SceneNodeLike {
+  id: string;
+  components: readonly {
+    kind: string;
+    enabled?: boolean;
+    type?: string;
+    color?: string;
+    intensity?: number;
+    range?: number;
+    priority?: number;
+  }[];
 }
 
 /**
@@ -577,6 +683,16 @@ export class LabRenderer {
    * 光看物体数**区分不出**到底读了文件没有。冒烟测试与界面提示都靠它做判据。
    */
   private loadedScene: { url: string; objects: number; at: string } | null = null;
+  /**
+   * 最近一次成功加载的**已迁移**场景文档（ADR-013：对外只给最新版）。
+   *
+   * 渲染器只是「持有并转发」这份引用，不解释任何语义 —— 消费方是
+   * `RuntimeBridge`（拿它做玩法装载）与将来的保存链路。渲染不读它。
+   */
+  private document: SceneDocument | null = null;
+  getDocument(): SceneDocument | null {
+    return this.document;
+  }
 
   constructor(
     gpu: GpuContext,
@@ -834,17 +950,30 @@ export class LabRenderer {
 
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
+    this.document = migrated.doc;
 
-    // 场景灯光：第一个启用的 Light 组件（directional key）。场景 schema 目前只有
-    // 颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    // 场景灯光：按 `priority` 降序取 top-1（directional key）。
+    // 场景 schema 目前只有颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    //
+    // 🔴 这里曾经是「取节点顺序里第一个启用的 Light」—— 与 `priority` 完全无关，
+    // 落选的灯也不给任何提示。AGENTS.md §2.3 的要求是：场景可声明任意多盏，
+    // 运行时按 priority 取 top-1(+top-1)，**落选者要显式提示**。
+    // 不做提示的后果（docs/14 §6.2 原话）：用户放 5 盏灯只亮 1 盏，会当 bug 排查一整天。
+    const picked = pickSceneLights(migrated.doc.nodes);
     let keyLight: SceneLoadResult['keyLight'] = null;
-    for (const n of migrated.doc.nodes) {
-      for (const c of n.components) {
-        if (c.kind === 'Light' && c.enabled && keyLight === null) {
-          keyLight = { color: c.color, intensity: c.intensity };
-        }
-      }
+    let pointLight: SceneLoadResult['pointLight'] = null;
+    if (picked.key !== null) {
+      keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId };
     }
+    if (picked.point !== null) {
+      pointLight = {
+        color: picked.point.color,
+        intensity: picked.point.intensity,
+        range: picked.point.range,
+        nodeId: picked.point.nodeId,
+      };
+    }
+    for (const w of picked.warnings) warnings.push(w);
 
     return {
       ok: true,
@@ -855,6 +984,7 @@ export class LabRenderer {
       editorCamera: migrated.doc.editorCamera,
       environment: migrated.doc.environment,
       keyLight,
+      pointLight,
     };
   }
 
@@ -864,6 +994,35 @@ export class LabRenderer {
    */
   public getSceneSource(): { url: string; objects: number; at: string } | null {
     return this.loadedScene;
+  }
+
+  /**
+   * 换掉作者文档（WU-5）。
+   *
+   * 编辑态的文档由 `SpawnEditStore` 持有并**唯一拥有**；本渲染器只是转发引用
+   * （消费方是 `PlayController.start()`）。刷怪点参数不产生可渲染内容，所以换引用
+   * **不需要重建 GPU 资源** —— 改完点「重跑」即可，装载时才真正读它的值。
+   */
+  public setDocument(doc: SceneDocument): void {
+    this.document = doc;
+  }
+
+  /**
+   * 场景节点 id → 物体下标（WU-5「Stop 后定位来源节点」）。
+   *
+   * 走 `subMeshes[].nodeId` 反查：物体是渲染侧的运行时表示，节点 id 才是存储格式
+   * （ADR-010）。找不到返回 null —— 刷怪点节点本身没有网格时确实查不到，
+   * 调用方要能接受"定位失败"而不是崩。
+   */
+  public findObjectIndexByNodeId(nodeId: string): number | null {
+    if (nodeId === '') return null;
+    const objs = this.state.objects;
+    for (let i = 0; i < objs.length; i++) {
+      for (const sm of objs[i]!.subMeshes) {
+        if (sm.nodeId === nodeId) return i;
+      }
+    }
+    return null;
   }
 
   /**
@@ -1562,6 +1721,60 @@ export class LabRenderer {
     this.cylinderOverlay = o;
   }
 
+  /**
+   * 动态实例批次（运行时热实体，WU-3）。
+   *
+   * 渲染器同样**不认识运行时**：只接已经打包好的实例数组，转发给引擎的 pass 1b。
+   * 语义全部在 `services/runtime-bridge.ts`，由 main.ts 每帧注入。
+   * null = 本帧没有动态实体（未启动 / 全部阵亡），引擎跳过整段。
+   */
+  private dynamicBatches: CoreDynamicBatch[] | null = null;
+  setDynamicBatches(b: CoreDynamicBatch[] | null): void {
+    this.dynamicBatches = b;
+  }
+
+  /**
+   * Play 前的作者状态快照（WU-4）。
+   *
+   * 语义与 Unity 一致：Play 期间对场景的改动**在 Stop 后丢弃**。
+   * docs/17 WU-4 特别点名「Stop 必须恢复未保存的作者状态，不能简单从磁盘重载
+   * 覆盖它」—— 作者可能刚拖完一个掩体还没保存，从磁盘重载等于把他的活儿吞了。
+   *
+   * 只存**可序列化的编辑态**（变换 / 显隐 / 材质槽 / 名字），不存 GPU 资源：
+   * 恢复时原地写回，零 GPU 重建。这也意味着快照期间物体数不能变 ——
+   * Play 模式下已禁掉增删与导入（见 main.ts 的 `isPlaying` 守卫）。
+   */
+  snapshotAuthorState(): AuthorSnapshot {
+    // 纯函数实现见 services/author-snapshot.ts —— 恢复语义在那里被直接测，
+    // 本方法只是把渲染器状态喂给它
+    return snapshotObjects(this.state.objects, this.state.selectedIndex);
+  }
+
+  /**
+   * 恢复作者状态。物体数与快照不一致时**保守处理**：能对上的逐个恢复，
+   * 对不上的原样留着 —— 宁可残留一个改动，也不要把索引搞错导致张冠李戴。
+   */
+  restoreAuthorState(snap: AuthorSnapshot): { restored: number; mismatched: boolean } {
+    const r = restoreObjects(this.state.objects, snap);
+    if (r.selectedIndex !== null) {
+      this.state.selectedIndex = r.selectedIndex;
+    }
+    return { restored: r.restored, mismatched: r.mismatched };
+  }
+
+  /** 调试 / 冒烟用：当前动态批次的实例总数（0 = 一个动态实体都没画） */
+  debugDynamicInstanceCount(): number {
+    if (this.dynamicBatches === null) return 0;
+    let n = 0;
+    for (const b of this.dynamicBatches) n += b.count;
+    return n;
+  }
+
+  /** 调试 / 冒烟用：当前动态批次的 meshId 列表（验证「按体型分组」） */
+  debugDynamicMeshIds(): string[] {
+    return this.dynamicBatches?.map((b) => b.meshId) ?? [];
+  }
+
   /** 调试 / 冒烟用：当前注入的圆柱体叠加层顶点数（0 = 本帧没有包裹器要画） */
   debugCylinderVertexCount(): number {
     return this.cylinderOverlay?.vertices.length ?? 0;
@@ -2097,6 +2310,9 @@ export class LabRenderer {
       skeleton: mainSkeleton,
       // 蒙皮包裹器圆柱体：由 main.ts 每帧从绑定模块算好后注入（渲染器不认识绑定）
       cylinders: this.cylinderOverlay,
+      // 动态实例（运行时热实体）：由 main.ts 每帧从 RuntimeBridge 注入，
+      // 走独立 instancing 路径，不占 transformBuf 的静态槽位
+      dynamicBatches: this.dynamicBatches,
       stats: { drawCalls: 0 },
     };
 

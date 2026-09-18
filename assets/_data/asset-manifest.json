@@ -1,0 +1,2331 @@
+{
+ "characters": [
+  {
+   "id": "E-01",
+   "name": "游荡者",
+   "en": "Shambler",
+   "kind": "npc",
+   "threat": "低",
+   "role": "教学兵 · 教玩家侧移绕后与打头",
+   "height": "1.75 m",
+   "tris": 900,
+   "silhouette": "倒三角躯干 + 双臂垂过膝盖 + 头部低垂",
+   "look": "瘦长驼背，前臂过长垂至膝下，下颚脱臼半垂露出牙齿，破烂加油站连体工装，左小腿胫骨外露，皮肤尸绿带灰斑",
+   "accent": "zombie",
+   "hp": 60,
+   "speed": "1.4 m/s",
+   "attack": {
+    "name": "挥抓",
+    "en": "Swipe",
+    "windup": "0.8 s",
+    "range": "扇形 90° / 2.2 m",
+    "damage": 8,
+    "cd": "1.6 s",
+    "telegraph": "右臂高举过头顶，地面出现淡红扇形警示"
+   },
+   "weakness": "头部 ×2.5 伤害；可被近战击退打断前摇",
+   "views": {
+    "front": "characters/images/E-01/front/E-01_front.png",
+    "side": "characters/images/E-01/side/E-01_side.png",
+    "attack": "characters/images/E-01/attack/E-01_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/E-01/E01_20260902_145203.glb",
+     "tris": 79744,
+     "verts": 54414,
+     "bytes": 44274008
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/E-01/textured/E01_Shambler_900_baked.glb",
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 2963204
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/E-01/rigged/E01_Shambler_900_rigged.glb",
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 3068220
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb",
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 3105528
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "E-02",
+   "name": "扑跃者",
+   "en": "Lunger",
+   "kind": "npc",
+   "threat": "中",
+   "role": "打断站桩输出 · 逼玩家保留位移",
+   "height": "1.25 m（四足）/ 1.60 m（直立）",
+   "tris": 1100,
+   "silhouette": "水平压缩 + 四肢外张 + 前倾头颅",
+   "look": "猫科骨架，脊椎棘突外露成锯齿状背脊，后腿蜷曲呈蓄力态，下颌骨完全缺失、口腔纵向开裂至胸腔，指端生骨刺",
+   "accent": "blood",
+   "hp": 45,
+   "speed": "3.2 m/s（扑跃 8 m/s）",
+   "attack": {
+    "name": "扑跃",
+    "en": "Pounce",
+    "windup": "0.5 s",
+    "range": "直线 6 m / 落点 1.6 m AoE",
+    "damage": 18,
+    "cd": "3.2 s",
+    "telegraph": "后腿压低、身体贴地，地面亮起黄色直线预警"
+   },
+   "weakness": "蓄力 0.5s 内被打断 → 自伤 15 并翻倒 1.2 s",
+   "views": {
+    "front": "characters/images/E-02/front/E-02_front.png",
+    "side": "characters/images/E-02/side/E-02_side.png",
+    "attack": "characters/images/E-02/attack/E-02_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/E-02/E02_20260902_150504.glb",
+     "tris": 79944,
+     "verts": 59760,
+     "bytes": 41149756
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/E-02/textured/E02_Lunger_1100_baked.glb",
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3057780
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged.glb",
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3190172
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged_animated.glb",
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3227480
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "E-03",
+   "name": "呕吐者",
+   "en": "Spitter",
+   "kind": "npc",
+   "threat": "中",
+   "role": "占场型 · 逼玩家离开掩体与固定输出位",
+   "height": "1.70 m",
+   "tris": 1200,
+   "silhouette": "巨大球腹 + 萎缩细肢 + 上仰喷口头",
+   "look": "腹部膨大成半透明球，内部毒囊透出绿光，双臂萎缩贴身，头颈后仰、口器呈喇叭状喷口，躯干与四肢比例极端失衡",
+   "accent": "zombie",
+   "hp": 70,
+   "speed": "1.0 m/s",
+   "attack": {
+    "name": "酸液抛射",
+    "en": "Acid Lob",
+    "windup": "1.2 s",
+    "range": "9 m 抛物线 / 落点 2 m 毒池持续 4 s",
+    "damage": "6 DPS",
+    "cd": "4.0 s",
+    "telegraph": "球体鼓胀发亮，落点提前 0.8 s 出现绿圈"
+   },
+   "weakness": "击中发光毒囊 → 立即在自身脚下生成毒池，可被引诱自伤",
+   "views": {
+    "front": "characters/images/E-03/front/E-03_front.png",
+    "side": "characters/images/E-03/side/E-03_side.png",
+    "attack": "characters/images/E-03/attack/E-03_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/E-03/E03_20260902_150837.glb",
+     "tris": 79918,
+     "verts": 53865,
+     "bytes": 45246004
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/E-03/textured/E03_Spitter_1200_baked.glb",
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2757264
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged.glb",
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2877948
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged_animated.glb",
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2915252
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "E-04",
+   "name": "盾卫",
+   "en": "Bulwark",
+   "kind": "npc",
+   "threat": "高",
+   "role": "教玩家绕侧背 · 正面硬刚必亏",
+   "height": "2.05 m",
+   "tris": 1600,
+   "silhouette": "厚重金属矩形 + 单侧巨大盾板 · 左右强不对称",
+   "look": "钢板直接焊进胸腔与左臂形成一体化盾板，头盔焊死只剩横向观察缝，右臂裸露并畸形肥大，背脊椎接口裸露发红光",
+   "accent": "teal",
+   "hp": 220,
+   "speed": "1.8 m/s（冲锋 6 m/s）",
+   "attack": {
+    "name": "盾击冲锋",
+    "en": "Shield Charge",
+    "windup": "1.0 s",
+    "range": "直线 8 m",
+    "damage": "12 + 击退 + 眩晕 0.6 s",
+    "cd": "5.0 s",
+    "telegraph": "低头、盾板前压，地面出现黄色冲锋轨迹"
+   },
+   "weakness": "正面 120° 减伤 70%；背面脊椎红色接口 ×2 伤害",
+   "views": {
+    "front": "characters/images/E-04/front/E-04_front-landmarks.png",
+    "side": "characters/images/E-04/side/E-04_side.png",
+    "attack": "characters/images/E-04/attack/E-04_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/E-04/E04_20260901_010134.glb",
+     "tris": 80000,
+     "verts": 56156,
+     "bytes": 39868076
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/E-04/textured/E04_Bulwark_1600_baked.glb",
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2710468
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2870824
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2908132
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "E-05",
+   "name": "爆尸",
+   "en": "Bloater",
+   "kind": "npc",
+   "threat": "高",
+   "role": "走位惩罚 + 环境武器（可引爆清群）",
+   "height": "1.60 m / 直径 1.50 m",
+   "tris": 1000,
+   "silhouette": "正圆球 + 无脖子 + 最小头身比",
+   "look": "全身充气水肿，皮肤半透可见皮下黄色气肿结节，肚皮裂纹透出橙光，脖子完全消失、头颅陷进躯干，四肢短小",
+   "accent": "warn",
+   "hp": 90,
+   "speed": "1.1 m/s",
+   "attack": {
+    "name": "自爆",
+    "en": "Detonate",
+    "windup": "1.5 s 引信（进入 2.5 m 触发）",
+    "range": "半径 3.5 m",
+    "damage": "35 + 击退 4 m",
+    "cd": "—",
+    "telegraph": "体表由绿转红、裂纹增亮、高频蜂鸣"
+   },
+   "weakness": "引信期间击杀 → 伤害减半；可引到尸群中当炸弹用",
+   "views": {
+    "front": "characters/images/E-05/front/E-05_front.png",
+    "side": "characters/images/E-05/side/E-05_side.png",
+    "attack": "characters/images/E-05/attack/E-05_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/E-05/E05_20260902_151212.glb",
+     "tris": 80000,
+     "verts": 54299,
+     "bytes": 49275504
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/E-05/textured/E05_Bloater_1000_baked.glb",
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3018736
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged.glb",
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3122856
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged_animated.glb",
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3160164
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "B-01",
+   "name": "屠夫",
+   "en": "THE BUTCHER",
+   "kind": "boss",
+   "threat": "极高",
+   "role": "",
+   "height": "3.2 m",
+   "tris": 4200,
+   "silhouette": "宽肩倒梯形 + 右臂单点长垂（肉钩）",
+   "look": "3.2 m 巨型，血污帆布围裙挂满金属挂钩，右臂自肘部截断接上 60 cm 肉钩，左臂改装成缓慢转动的绞肉机滚筒，猪头面具眼孔透黄光，脚踝锁着崩断的铁链",
+   "accent": "blood",
+   "hp": 4200,
+   "speed": "2.2 m/s（冲锋 9 m/s）",
+   "views": {
+    "front": "characters/images/B-01/front/B-01_front.png",
+    "side": "characters/images/B-01/side/B-01_side.png",
+    "attack": "characters/images/B-01/attack/B-01_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/B-01/B01_20260902_151604.glb",
+     "tris": 79758,
+     "verts": 66745,
+     "bytes": 46619056
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/B-01/textured/B01_THE BUTCHER_4200_baked.glb",
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3095792
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged.glb",
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3515140
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged_animated.glb",
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3552448
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  },
+  {
+   "id": "B-02",
+   "name": "母体",
+   "en": "THE BROODMOTHER",
+   "kind": "boss",
+   "threat": "极高",
+   "role": "",
+   "height": "4.0 m（上半身 2.4 m）",
+   "tris": 6000,
+   "silhouette": "上下双体（地面产卵囊 + 反折上身）+ 双臂拖地",
+   "look": "4.0 m 高，下半身是巨大的产卵囊固定在隧道地面与顶部之间，上半身人形但腰椎反折成 C 形后弓，双臂过长垂地拖行，头颅后仰、口器纵向开裂至胸腔",
+   "accent": "toxic",
+   "hp": 6000,
+   "speed": "本体固定不可移动",
+   "views": {
+    "front": "characters/images/B-02/front/B-02_front.png",
+    "side": "characters/images/B-02/side/B-02_side.png",
+    "attack": "characters/images/B-02/attack/B-02_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/B-02/B02_20260904_121308.glb",
+     "tris": 80046,
+     "verts": 62117,
+     "bytes": 44253596
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/B-02/textured/B02_THE BROODMOTHER_6000_baked.glb",
+     "tris": 18000,
+     "verts": 21049,
+     "bytes": 3440496
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "B-03",
+   "name": "零号",
+   "en": "PATIENT ZERO",
+   "kind": "boss",
+   "threat": "极高",
+   "role": "",
+   "height": "2.6 m",
+   "tris": 5200,
+   "silhouette": "瘦高 + 破碎下摆 + 胸腔纵向裂口发光",
+   "look": "2.6 m 瘦削高挑，白大褂撕裂成条状下摆，胸腔纵向裂开露出第二张口器（内衬环状牙齿），头骨左半外露、右半覆盖萎缩皮肤，静脉发紫光，左手拖着断裂的输液架",
+   "accent": "toxic",
+   "hp": 9000,
+   "speed": "3.0 m/s（P3 狂暴 ×1.6）",
+   "views": {
+    "front": "characters/images/B-03/front/B-03_front.png",
+    "side": "characters/images/B-03/side/B-03_side.png",
+    "attack": "characters/images/B-03/attack/B-03_attack.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/B-03/B03_20260904_121648.glb",
+     "tris": 79912,
+     "verts": 59224,
+     "bytes": 43219364
+    },
+    {
+     "label": "LOD1 · 贴图低模",
+     "file": "characters/models/B-03/textured/B03_PATIENT ZERO_5200_baked.glb",
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3395568
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged.glb",
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3820076
+    },
+    {
+     "label": "LOD3 · +动画",
+     "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged_animated.glb",
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3857384
+    }
+   ],
+   "animations": [
+    "idle",
+    "run",
+    "attack",
+    "walk",
+    "hit",
+    "death"
+   ],
+   "joints": 22
+  }
+ ],
+ "environments": [
+  {
+   "id": "P-01",
+   "name": "油桶",
+   "en": "Oil Barrel",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    0.6,
+    0.6,
+    0.9
+   ],
+   "tris": 180,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "矮胖圆柱 + 两道环形箍，顶面是清晰的圆",
+   "look": "锈迹斑斑的 55 加仑钢桶，桶身凹陷，顶部有红色危险标贴，桶口渗油",
+   "accent": "warn",
+   "placement": "贴掩体侧面、敌群路径上；不要挡住唯一通道",
+   "img": "environment/images/P-01.png",
+   "preview": "environment/models/P-01/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-01/P-01.glb",
+     "tris": 500000,
+     "verts": 283217,
+     "bytes": 33791976
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-01/tex2/P-01_baked.glb",
+     "tris": 171,
+     "verts": 199,
+     "bytes": 27828
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-01/P-01_low.obj",
+     "tris": 180,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-02",
+   "name": "水泥路障",
+   "en": "Jersey Barrier",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2.5,
+    0.6,
+    0.9
+   ],
+   "tris": 220,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "梯形长条，底部外扩，顶面窄",
+   "look": "脏污混凝土路障，表面有刮痕与涂鸦，顶部有黄色反光条残迹",
+   "accent": "paper",
+   "placement": "连成线切分场地；末端留缺口做通道",
+   "img": "environment/images/P-02.png",
+   "preview": "environment/models/P-02/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-02/P-02.glb",
+     "tris": 500000,
+     "verts": 309838,
+     "bytes": 30377896
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-02/tex2/P-02_baked.glb",
+     "tris": 233,
+     "verts": 241,
+     "bytes": 23888
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-02/P-02_low.obj",
+     "tris": 220,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-03",
+   "name": "铁皮垃圾桶",
+   "en": "Dumpster",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    1.8,
+    1.1,
+    1.3
+   ],
+   "tris": 260,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "方盒 + 掀开的斜顶盖，轮廓方正",
+   "look": "锈蚀的绿色商用垃圾箱，盖板半掀，侧面凹陷，底部有污渍渗出",
+   "accent": "teal",
+   "placement": "贴墙角、巷口；成对摆放形成 L 形掩体",
+   "img": "environment/images/P-03.png",
+   "preview": "environment/models/P-03/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-03/P-03.glb",
+     "tris": 500000,
+     "verts": 282239,
+     "bytes": 25587352
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-03/tex2/P-03_baked.glb",
+     "tris": 262,
+     "verts": 372,
+     "bytes": 34492
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-03/P-03_low.obj",
+     "tris": 260,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-04",
+   "name": "托盘货箱",
+   "en": "Pallet & Crates",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    1.2,
+    1,
+    1.1
+   ],
+   "tris": 300,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "木托盘 + 错落的方箱堆，外轮廓不规则",
+   "look": "木质托盘上堆着两三个木条箱，箱板有裂缝，侧面有褪色的货运标记",
+   "accent": "gold",
+   "placement": "堆垛成掩体群；不同高度混搭出层次",
+   "img": "environment/images/P-04.png",
+   "preview": "environment/models/P-04/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-04/P-04.glb",
+     "tris": 499674,
+     "verts": 298561,
+     "bytes": 24755268
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-04/tex2/P-04_baked.glb",
+     "tris": 294,
+     "verts": 411,
+     "bytes": 34988
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-04/P-04_low.obj",
+     "tris": 300,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-05",
+   "name": "轮胎堆",
+   "en": "Tire Stack",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    0.9,
+    0.9,
+    0.8
+   ],
+   "tris": 320,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "三四个黑圆环叠成的短柱，顶面是同心圆",
+   "look": "叠放的旧汽车轮胎，橡胶发灰开裂，中间卡着泥与碎玻璃",
+   "accent": "ink",
+   "placement": "散落在开阔地做软掩体；可叠 2–3 个加高",
+   "img": "environment/images/P-05.png",
+   "preview": "environment/models/P-05/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-05/P-05.glb",
+     "tris": 520937,
+     "verts": 365050,
+     "bytes": 25912444
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-05/tex2/P-05_baked.glb",
+     "tris": 384,
+     "verts": 606,
+     "bytes": 49084
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-05/P-05_low.obj",
+     "tris": 320,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-06",
+   "name": "沙袋掩体",
+   "en": "Sandbag Wall",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2,
+    0.7,
+    0.9
+   ],
+   "tris": 280,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "低矮圆润的长条，一坨一坨的袋形",
+   "look": "草绿色帆布沙袋交错堆叠，部分破口漏沙，顶面塌陷",
+   "accent": "paper",
+   "placement": "与水泥墩混用打破重复；缺口处留射击位",
+   "img": "environment/images/P-06.png",
+   "preview": "environment/models/P-06/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-06/P-06.glb",
+     "tris": 500000,
+     "verts": 295792,
+     "bytes": 25953252
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-06/tex2/P-06_baked.glb",
+     "tris": 286,
+     "verts": 406,
+     "bytes": 32804
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-06/P-06_low.obj",
+     "tris": 280,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-11",
+   "name": "翻覆轿车",
+   "en": "Overturned Sedan",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    4.4,
+    1.9,
+    1.5
+   ],
+   "tris": 700,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "四轮朝天的车壳，底盘朝上，轮廓是圆润长方体",
+   "look": "翻覆的旧轿车，车顶压瘪，车窗全碎，底盘朝天露出排气管与悬挂，车身有干涸血手印",
+   "accent": "blood",
+   "placement": "车阵主力，斜向摆放形成对角掩体；车头朝向玩家来路",
+   "img": "environment/images/P-11.png",
+   "preview": "environment/models/P-11/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-11/P-11.glb",
+     "tris": 500000,
+     "verts": 314835,
+     "bytes": 30243328
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-11/tex2/P-11_baked.glb",
+     "tris": 697,
+     "verts": 833,
+     "bytes": 70048
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-11/P-11_low.obj",
+     "tris": 700,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-12",
+   "name": "厢式货车残骸",
+   "en": "Box Truck Wreck",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    6.5,
+    2.4,
+    2.8
+   ],
+   "tris": 900,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "巨大的方箱车壳，侧面是可辨识的矩形大面",
+   "look": "侧翻的白色厢式货车，车厢铁皮撕裂卷边，车门脱落，货厢内黑漆漆看不清",
+   "accent": "warn",
+   "placement": "当**房间锚点**用：它一放，周边战斗空间就定下来了",
+   "img": "environment/images/P-12.png",
+   "preview": "environment/models/P-12/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-12/P-12.glb",
+     "tris": 500000,
+     "verts": 326484,
+     "bytes": 25971036
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-12/tex2/P-12_baked.glb",
+     "tris": 877,
+     "verts": 1331,
+     "bytes": 87412
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-12/P-12_low.obj",
+     "tris": 900,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-13",
+   "name": "公路护栏",
+   "en": "Guardrail",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    4,
+    0.3,
+    0.8
+   ],
+   "tris": 200,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "波浪形横向长条（W 型截面）",
+   "look": "镀锌波形护栏，立柱歪斜，漆面剥落露出锈迹，中间有撞击凹陷",
+   "accent": "paper",
+   "placement": "沿场地边缘围合，留 2–3 个缺口做出入口",
+   "img": "environment/images/P-13.png",
+   "preview": "environment/models/P-13/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-13/P-13.glb",
+     "tris": 500000,
+     "verts": 304212,
+     "bytes": 24928492
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-13/tex2/P-13_baked.glb",
+     "tris": 190,
+     "verts": 354,
+     "bytes": 32412
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-13/P-13_low.obj",
+     "tris": 200,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-14",
+   "name": "加油机",
+   "en": "Fuel Pump",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    0.8,
+    0.6,
+    1.8
+   ],
+   "tris": 400,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "竖立方柱 + 顶部小显示屏，细高",
+   "look": "老式加油机，显示屏碎裂，油管垂落在地，机身有油污与弹孔",
+   "accent": "blood",
+   "placement": "成排放在雨棚下，形成规则掩体阵列",
+   "img": "environment/images/P-14.png",
+   "preview": "environment/models/P-14/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-14/P-14.glb",
+     "tris": 499962,
+     "verts": 303839,
+     "bytes": 35420828
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-14/tex2/P-14_baked.glb",
+     "tris": 407,
+     "verts": 435,
+     "bytes": 40972
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-14/P-14_low.obj",
+     "tris": 400,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-15",
+   "name": "路边广告牌",
+   "en": "Roadside Billboard",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    6,
+    0.4,
+    5
+   ],
+   "tris": 500,
+   "cover": "none",
+   "blocksSight": true,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "高耸的矩形大板 + 两根支柱",
+   "look": "巨大的路牌广告牌，画面撕裂只剩一半，钢架锈蚀，背面被涂鸦覆盖",
+   "accent": "gold",
+   "placement": "放在战场外围当背景轮廓，不参与碰撞",
+   "img": "environment/images/P-15.png",
+   "preview": "environment/models/P-15/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-15/P-15.glb",
+     "tris": 499998,
+     "verts": 312801,
+     "bytes": 27137828
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-15/tex2/P-15_baked.glb",
+     "tris": 472,
+     "verts": 700,
+     "bytes": 46372
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-15/P-15_low.obj",
+     "tris": 500,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-16",
+   "name": "收费站亭",
+   "en": "Toll Booth",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    1.6,
+    1.6,
+    2.4
+   ],
+   "tris": 450,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "小方盒 + 玻璃窗带，独立小屋",
+   "look": "破败的公路收费站亭，玻璃全碎，内部柜台翻倒，顶灯垂落摇晃",
+   "accent": "teal",
+   "placement": "卡在通道上做**门闩**：绕不开，只能从旁边过",
+   "img": "environment/images/P-16.png",
+   "preview": "environment/models/P-16/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-16/P-16.glb",
+     "tris": 499500,
+     "verts": 305629,
+     "bytes": 34392516
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-16/tex2/P-16_baked.glb",
+     "tris": 462,
+     "verts": 694,
+     "bytes": 54292
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-16/P-16_low.obj",
+     "tris": 450,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-01",
+   "name": "加油站雨棚",
+   "en": "Gas Station Canopy",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    16,
+    12,
+    5.5
+   ],
+   "tris": 1800,
+   "cover": "overhead",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "巨大的平顶大板 + 四根方柱，顶面是最大的可辨识面",
+   "look": "加油站钢构雨棚，顶板边缘下垂变形，四根方柱漆面剥落，顶面有褪色的品牌色带",
+   "accent": "warn",
+   "placement": "罩住加油机阵列；柱子是唯一的实体掩体",
+   "img": "environment/images/S-01.png",
+   "preview": "environment/models/S-01/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-01/S-01.glb",
+     "tris": 500000,
+     "verts": 279719,
+     "bytes": 25994508
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-01/tex2/S-01_baked.glb",
+     "tris": 1790,
+     "verts": 1557,
+     "bytes": 77032
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-01/S-01_low.obj",
+     "tris": 1800,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-02",
+   "name": "便利店",
+   "en": "Convenience Store",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    12,
+    8,
+    4
+   ],
+   "tris": 2000,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "单层方盒 + 大面积玻璃幕墙 + 门口雨篷",
+   "look": "路边便利店，落地玻璃幕墙碎裂大半，店内货架东倒西歪，招牌只剩几个字母",
+   "accent": "teal",
+   "placement": "占住一侧边界；正门是主要出入口，玻璃幕墙是**可击穿视线**",
+   "img": "environment/images/S-02.png",
+   "preview": "environment/models/S-02/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-02/S-02.glb",
+     "tris": 499608,
+     "verts": 296508,
+     "bytes": 26451764
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-02/tex2/S-02_baked.glb",
+     "tris": 1903,
+     "verts": 2609,
+     "bytes": 118716
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-02/S-02_low.obj",
+     "tris": 2000,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-21",
+   "name": "重型货架",
+   "en": "Heavy Shelving",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2.4,
+    1,
+    4.5
+   ],
+   "tris": 800,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "高瘦的框架，横梁分层，侧面看是稀疏的梯子状",
+   "look": "工业重型货架，钢梁锈黄，层板歪斜，零星残留几个纸箱与油渍",
+   "accent": "warn",
+   "placement": "**背靠背成排**形成巷道；巷道宽 2.5–3 m，只容两人错身",
+   "img": "environment/images/P-21.png",
+   "preview": "environment/models/P-21/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-21/P-21.glb",
+     "tris": 499630,
+     "verts": 301031,
+     "bytes": 35124052
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-21/tex2/P-21_baked.glb",
+     "tris": 753,
+     "verts": 1238,
+     "bytes": 69000
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-21/P-21_low.obj",
+     "tris": 800,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-22",
+   "name": "冷库门",
+   "en": "Freezer Door",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2.2,
+    0.5,
+    2.6
+   ],
+   "tris": 400,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "厚重的方门 + 中央转轮把手",
+   "look": "厚重的保温冷库门，表面结霜，中央是大型转轮锁把，边缘有冰凌",
+   "accent": "teal",
+   "placement": "作为**房间门**：关着就是墙，开了才通",
+   "img": "environment/images/P-22.png",
+   "preview": "environment/models/P-22/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-22/P-22.glb",
+     "tris": 499970,
+     "verts": 284443,
+     "bytes": 34858928
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-22/tex2/P-22_baked.glb",
+     "tris": 401,
+     "verts": 391,
+     "bytes": 28192
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-22/P-22_low.obj",
+     "tris": 400,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-23",
+   "name": "叉车",
+   "en": "Forklift",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2.6,
+    1.2,
+    2.2
+   ],
+   "tris": 700,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "矮胖车体 + 前伸的两根货叉 + 护顶架",
+   "look": "黄色工业叉车，货叉上还插着一个破木托盘，护顶架变形，轮胎瘪了一个",
+   "accent": "warn",
+   "placement": "停在巷道口做**临时路障**",
+   "img": "environment/images/P-23.png",
+   "preview": "environment/models/P-23/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-23/P-23.glb",
+     "tris": 498302,
+     "verts": 316961,
+     "bytes": 26872992
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-23/tex2/P-23_baked.glb",
+     "tris": 715,
+     "verts": 1121,
+     "bytes": 73100
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-23/P-23_low.obj",
+     "tris": 700,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-24",
+   "name": "传送带段",
+   "en": "Conveyor Section",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    6,
+    1,
+    0.9
+   ],
+   "tris": 500,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "细长的斜带 + 支腿，顶面是连续的履带面",
+   "look": "工厂传送带段，橡胶带断裂垂落，滚筒锈死，支腿歪斜",
+   "accent": "ink",
+   "placement": "长条斜切场地，制造**单向走廊**",
+   "img": "environment/images/P-24.png",
+   "preview": "environment/models/P-24/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-24/P-24.glb",
+     "tris": 498926,
+     "verts": 296685,
+     "bytes": 23336768
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-24/tex2/P-24_baked.glb",
+     "tris": 476,
+     "verts": 656,
+     "bytes": 34864
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-24/P-24_low.obj",
+     "tris": 500,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-25",
+   "name": "卷帘门",
+   "en": "Rolling Shutter",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    4,
+    0.3,
+    3.5
+   ],
+   "tris": 350,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "横向条纹的平板，底部参差不齐",
+   "look": "铁皮卷帘门，底部被撬弯翘起，漆面起皮，横向条纹积灰",
+   "accent": "paper",
+   "placement": "贴结构墙做**可开合的门洞**；半开状态最有戲",
+   "img": "environment/images/P-25.png",
+   "preview": "environment/models/P-25/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-25/P-25.glb",
+     "tris": 500000,
+     "verts": 302257,
+     "bytes": 36302056
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-25/tex2/P-25_baked.glb",
+     "tris": 335,
+     "verts": 324,
+     "bytes": 34788
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-25/P-25_low.obj",
+     "tris": 350,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-26",
+   "name": "储油罐",
+   "en": "Storage Tank",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    3,
+    3,
+    4
+   ],
+   "tris": 600,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "立式圆柱 + 顶部人孔，圆润",
+   "look": "立式工业储油罐，罐体锈斑，顶部人孔盖敞开，底部阀门滴着黑色残液",
+   "accent": "blood",
+   "placement": "靠边摆放，做**圆形绕行**的战斗支点",
+   "img": "environment/images/P-26.png",
+   "preview": "environment/models/P-26/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-26/P-26.glb",
+     "tris": 499390,
+     "verts": 313721,
+     "bytes": 36834240
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-26/tex2/P-26_baked.glb",
+     "tris": 631,
+     "verts": 794,
+     "bytes": 55188
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-26/P-26_low.obj",
+     "tris": 600,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-03",
+   "name": "仓库外壳",
+   "en": "Warehouse Shell",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    40,
+    30,
+    9
+   ],
+   "tris": 2400,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "巨大的坡顶铁皮盒 + 一排高窗",
+   "look": "大型铁皮仓库，波纹钢板外墙，坡屋顶，高处一排积灰的天窗，卷帘门大开",
+   "accent": "paper",
+   "placement": "整体是关卡边界；内部用货架再切巷道",
+   "img": "environment/images/S-03.png",
+   "preview": "environment/models/S-03/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-03/S-03.glb",
+     "tris": 499880,
+     "verts": 282358,
+     "bytes": 22484840
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-03/tex2/S-03_baked.glb",
+     "tris": 2307,
+     "verts": 2561,
+     "bytes": 128072
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-03/S-03_low.obj",
+     "tris": 2400,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-04",
+   "name": "冷库房",
+   "en": "Cold Storage Room",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    10,
+    8,
+    4
+   ],
+   "tris": 1600,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "封闭方盒 + 厚门，外面挂满冰凌",
+   "look": "冷库房间，保温板墙面结满白霜，门框挂冰凌，内部寒气外溢",
+   "accent": "teal",
+   "placement": "塞在仓库一角，作为**高压小房间**：进去就关门",
+   "img": "environment/images/S-04.png",
+   "preview": "environment/models/S-04/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-04/S-04.glb",
+     "tris": 500000,
+     "verts": 293245,
+     "bytes": 34867764
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-04/tex2/S-04_baked.glb",
+     "tris": 1662,
+     "verts": 2298,
+     "bytes": 103844
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-04/S-04_low.obj",
+     "tris": 1600,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-31",
+   "name": "铁轨段",
+   "en": "Rail Track Segment",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    8,
+    2.4,
+    0.25
+   ],
+   "tris": 350,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "两条平行钢轨 + 横向枕木，强线性",
+   "look": "地铁铁轨段，钢轨锈亮，混凝土枕木开裂，道砟间长出杂草",
+   "accent": "ink",
+   "placement": "沿隧道中线铺，是**视觉引导线**（不挡移动，但绊脚感要保留）",
+   "img": "environment/images/P-31.png",
+   "preview": "environment/models/P-31/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-31/P-31.glb",
+     "tris": 499510,
+     "verts": 321927,
+     "bytes": 28880744
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-31/tex2/P-31_baked.glb",
+     "tris": 361,
+     "verts": 554,
+     "bytes": 45844
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-31/P-31_low.obj",
+     "tris": 350,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-32",
+   "name": "废弃车厢",
+   "en": "Derelict Subway Car",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    18,
+    2.8,
+    3.4
+   ],
+   "tris": 1600,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "超长圆润厢体 + 车窗带，是隧道里最大的体量",
+   "look": "废弃地铁车厢，车窗全碎，车身涂鸦覆盖，车门半开，车顶凹陷",
+   "accent": "toxic",
+   "placement": "停在轨道上，把线性隧道切成**上下两条通路**（车内 / 车侧）",
+   "img": "environment/images/P-32.png",
+   "preview": "environment/models/P-32/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-32/P-32.glb",
+     "tris": 499936,
+     "verts": 316993,
+     "bytes": 29875364
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-32/tex2/P-32_baked.glb",
+     "tris": 1526,
+     "verts": 1714,
+     "bytes": 86332
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-32/P-32_low.obj",
+     "tris": 1600,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-33",
+   "name": "电缆管线",
+   "en": "Cable Conduit",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    6,
+    0.3,
+    0.3
+   ],
+   "tris": 520,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "一束平行细管，沿墙的长线",
+   "look": "成束的电缆管线沿墙铺设，外皮剥落露出彩色线芯，有几根垂落",
+   "accent": "warn",
+   "placement": "贴隧道壁走线，强化**纵向延伸感**",
+   "img": "environment/images/P-33.png",
+   "preview": "environment/models/P-33/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-33/P-33.glb",
+     "tris": 499332,
+     "verts": 309760,
+     "bytes": 34122792
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-33/tex2/P-33_baked.glb",
+     "tris": 513,
+     "verts": 955,
+     "bytes": 37976
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-33/P-33_low.obj",
+     "tris": 520,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-34",
+   "name": "检修平台",
+   "en": "Maintenance Platform",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    3,
+    1.2,
+    2.6
+   ],
+   "tris": 450,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "悬空的小平台 + 斜梯 + 栏杆",
+   "look": "钢制检修平台，格栅踏板锈蚀，护栏歪斜，斜梯通到地面",
+   "accent": "warn",
+   "placement": "贴壁高处，是**挂敌 / 高地**锚点（配合纵向空间）",
+   "img": "environment/images/P-34.png",
+   "preview": "environment/models/P-34/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-34/P-34.glb",
+     "tris": 499812,
+     "verts": 293318,
+     "bytes": 33380576
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-34/tex2/P-34_baked.glb",
+     "tris": 431,
+     "verts": 661,
+     "bytes": 38388
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-34/P-34_low.obj",
+     "tris": 450,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-35",
+   "name": "站台长椅",
+   "en": "Platform Bench",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2,
+    0.6,
+    0.9
+   ],
+   "tris": 220,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "细长的板 + 两条支腿",
+   "look": "地铁站台长椅，金属条椅面翻起一个，地面散落报纸与废弃物",
+   "accent": "teal",
+   "placement": "站台边缘成排，给开阔段一点**低矮节奏**",
+   "img": "environment/images/P-35.png",
+   "preview": null,
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-35/P-35.glb",
+     "tris": 499574,
+     "verts": 298910,
+     "bytes": 26461080
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-35/tex2/P-35_baked.glb",
+     "tris": 226,
+     "verts": 358,
+     "bytes": 33288
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-35/P-35_low.obj",
+     "tris": 220,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-36",
+   "name": "通风管道",
+   "en": "Ventilation Duct",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    5,
+    1.2,
+    1.2
+   ],
+   "tris": 400,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "粗大的方管，沿顶延伸",
+   "look": "粗大的方形通风管，铁皮接缝漏风，表面结露滴水",
+   "accent": "paper",
+   "placement": "架在隧道顶部，制造**头顶遮蔽与阴影**",
+   "img": "environment/images/P-36.png",
+   "preview": null,
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-36/P-36.glb",
+     "tris": 500000,
+     "verts": 268787,
+     "bytes": 23058980
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-36/tex2/P-36_baked.glb",
+     "tris": 389,
+     "verts": 477,
+     "bytes": 35184
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-36/P-36_low.obj",
+     "tris": 400,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-05",
+   "name": "隧道段模块",
+   "en": "Tunnel Module",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    20,
+    8,
+    6
+   ],
+   "tris": 2000,
+   "cover": "overhead",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "拱形断面，内壁管线密布，尽头是黑洞",
+   "look": "圆形拱顶地铁隧道，混凝土壁面渗水，瓷砖脱落，顶部灯管只剩几盏还亮",
+   "accent": "toxic",
+   "placement": "**模块化拼接**：直段 / 弯段 / 岔口；纵向高度留给挂敌",
+   "img": "environment/images/S-05.png",
+   "preview": "environment/models/S-05/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-05/S-05.glb",
+     "tris": 500000,
+     "verts": 270288,
+     "bytes": 27595672
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-05/tex2/S-05_baked.glb",
+     "tris": 1907,
+     "verts": 2187,
+     "bytes": 111020
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-05/S-05_low.obj",
+     "tris": 2000,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-06",
+   "name": "地铁站台",
+   "en": "Subway Platform",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    40,
+    6,
+    1.2
+   ],
+   "tris": 1400,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": false,
+   "destructible": false,
+   "silhouette": "抬高的长条平台 + 黄色安全线 + 立柱",
+   "look": "废弃地铁站台，黄色安全线磨损，立柱贴满寻人启事，天花板漏光",
+   "accent": "teal",
+   "placement": "隧道中途的**喘息节点**：会在这里开战，然后重新钻回隧道",
+   "img": "environment/images/S-06.png",
+   "preview": "environment/models/S-06/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-06/S-06.glb",
+     "tris": 498686,
+     "verts": 297565,
+     "bytes": 26138896
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-06/tex2/S-06_baked.glb",
+     "tris": 1354,
+     "verts": 2048,
+     "bytes": 95936
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-06/S-06_low.obj",
+     "tris": 1400,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-41",
+   "name": "病床",
+   "en": "Hospital Bed",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2.1,
+    0.9,
+    0.9
+   ],
+   "tris": 500,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "带轮子的窄床 + 床头护栏",
+   "look": "医用病床，床单凌乱带血迹，护栏立起一侧，输液架挂在床边，轮子歪斜",
+   "accent": "bone",
+   "placement": "病房迷宫的主力：可推倒、可翻越，**迷宫墙的可变体**",
+   "img": "environment/images/P-41.png",
+   "preview": "environment/models/P-41/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-41/P-41.glb",
+     "tris": 499924,
+     "verts": 304859,
+     "bytes": 36569276
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-41/tex2/P-41_baked.glb",
+     "tris": 487,
+     "verts": 674,
+     "bytes": 38764
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-41/P-41_low.obj",
+     "tris": 500,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-42",
+   "name": "输液架",
+   "en": "IV Pole",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    0.5,
+    0.5,
+    1.8
+   ],
+   "tris": 800,
+   "cover": "none",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "细杆 + 顶部挂钩 + 五爪底座",
+   "look": "医用输液架，挂着空了一半的血袋，五爪底座带轮，杆身贴着褪色的标签",
+   "accent": "teal",
+   "placement": "细高，做**视线噪声**而非掩体；打倒了会响",
+   "img": "environment/images/P-42.png",
+   "preview": "environment/models/P-42/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-42/P-42.glb",
+     "tris": 500000,
+     "verts": 296437,
+     "bytes": 27907720
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-42/tex2/P-42_baked.glb",
+     "tris": 759,
+     "verts": 1244,
+     "bytes": 73476
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-42/P-42_low.obj",
+     "tris": 800,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-43",
+   "name": "轮椅",
+   "en": "Wheelchair",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    1,
+    0.7,
+    1.1
+   ],
+   "tris": 420,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "两个大轮 + 座椅，圆的",
+   "look": "翻倒的轮椅，一个大轮还在转，座垫撕裂露出海绵，脚踏板变形",
+   "accent": "paper",
+   "placement": "散落走廊，制造**不规则小障碍**（会卡走位）",
+   "img": "environment/images/P-43.png",
+   "preview": "environment/models/P-43/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-43/P-43.glb",
+     "tris": 480322,
+     "verts": 310512,
+     "bytes": 24712516
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-43/tex2/P-43_baked.glb",
+     "tris": 401,
+     "verts": 696,
+     "bytes": 47432
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-43/P-43_low.obj",
+     "tris": 420,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-44",
+   "name": "隔断屏风",
+   "en": "Privacy Screen",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    2,
+    0.1,
+    1.7
+   ],
+   "tris": 300,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "薄薄的一片，顶部有波浪起伏",
+   "look": "医用隔断屏风，浅绿布面有污渍，折页歪斜，底部轮子卡死",
+   "accent": "toxic",
+   "placement": "**迷宫的核心墙**：可打穿，视线会随战斗变化",
+   "img": "environment/images/P-44.png",
+   "preview": "environment/models/P-44/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-44/P-44.glb",
+     "tris": 500000,
+     "verts": 287925,
+     "bytes": 29740276
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-44/tex2/P-44_baked.glb",
+     "tris": 302,
+     "verts": 464,
+     "bytes": 28920
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-44/P-44_low.obj",
+     "tris": 300,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-45",
+   "name": "培养舱",
+   "en": "Bio Containment Pod",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    1.2,
+    1.2,
+    2.2
+   ],
+   "tris": 600,
+   "cover": "high",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "立式玻璃舱 + 金属底座，内部发着紫光",
+   "look": "立式生物培养舱，玻璃罩内漂浮着不明组织，紫色荧光液，底座控制台闪烁",
+   "accent": "toxic",
+   "placement": "病房里的**高危物件**：打不打是玩家的选择",
+   "img": "environment/images/P-45.png",
+   "preview": "environment/models/P-45/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-45/P-45.glb",
+     "tris": 500000,
+     "verts": 309277,
+     "bytes": 31235640
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-45/tex2/P-45_baked.glb",
+     "tris": 600,
+     "verts": 586,
+     "bytes": 51264
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-45/P-45_low.obj",
+     "tris": 600,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "P-46",
+   "name": "医疗推车",
+   "en": "Medical Cart",
+   "kind": "prop",
+   "act": "通用",
+   "footprint": [
+    0.8,
+    0.5,
+    0.9
+   ],
+   "tris": 350,
+   "cover": "low",
+   "blocksSight": false,
+   "blocksMove": true,
+   "destructible": true,
+   "silhouette": "双层小推车 + 四个小轮",
+   "look": "不锈钢医疗推车，上层散落注射器与药瓶，下层抽屉半开，车架有血手印",
+   "accent": "bone",
+   "placement": "贴墙摆放，是**补给点**的视觉暗示",
+   "img": "environment/images/P-46.png",
+   "preview": "environment/models/P-46/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/P-46/P-46.glb",
+     "tris": 499188,
+     "verts": 296842,
+     "bytes": 32650612
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/P-46/tex2/P-46_baked.glb",
+     "tris": 362,
+     "verts": 492,
+     "bytes": 39252
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/P-46/P-46_low.obj",
+     "tris": 350,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-07",
+   "name": "病房模块",
+   "en": "Ward Module",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    8,
+    8,
+    3.2
+   ],
+   "tris": 1800,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "方形房间，一面开口，墙上有门洞与观察窗",
+   "look": "医院病房模块，瓷砖墙裙，地面是褪色塑胶地板，天花板格栅塌了一角",
+   "accent": "bone",
+   "placement": "**模块化病房**：墙段 + 门洞 + 半墙；拼出迷宫",
+   "img": "environment/images/S-07.png",
+   "preview": "environment/models/S-07/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-07/S-07.glb",
+     "tris": 499066,
+     "verts": 291125,
+     "bytes": 34762388
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-07/tex2/S-07_baked.glb",
+     "tris": 1707,
+     "verts": 2165,
+     "bytes": 119596
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-07/S-07_low.obj",
+     "tris": 1800,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
+   "id": "S-08",
+   "name": "天台机房与水塔",
+   "en": "Rooftop Utility & Water Tower",
+   "kind": "structure",
+   "act": "通用",
+   "footprint": [
+    6,
+    6,
+    7
+   ],
+   "tris": 2200,
+   "cover": "full",
+   "blocksSight": true,
+   "blocksMove": true,
+   "destructible": false,
+   "silhouette": "方盒机房 + 圆柱水塔 + 支架",
+   "look": "天台机房与锈迹水塔，通风机组停转，管道纵横，水塔外壳漆着褪色的字",
+   "accent": "gold",
+   "placement": "天台层的**唯一高体量**：绕着它打远距离对枪",
+   "img": "environment/images/S-08.png",
+   "preview": "environment/models/S-08/preview.png",
+   "lods": [
+    {
+     "label": "LOD0 · 高模(raw ~50万面)",
+     "file": "environment/models/S-08/S-08.glb",
+     "tris": 500000,
+     "verts": 309386,
+     "bytes": 36438364
+    },
+    {
+     "label": "LOD1 · 低模+原贴图",
+     "file": "environment/models/S-08/tex2/S-08_baked.glb",
+     "tris": 2080,
+     "verts": 2700,
+     "bytes": 147936
+    },
+    {
+     "label": "LOD2 · 低模(顶点色)",
+     "file": "environment/models/S-08/S-08_low.obj",
+     "tris": 2200,
+     "verts": null,
+     "bytes": null
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  }
+ ]
+}

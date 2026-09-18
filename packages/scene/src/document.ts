@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -507,6 +507,18 @@ export interface SceneDocument {
   editorCamera: EditorCameraData;
   /** Play mode 启动相机；null = 取场景里第一个启用的 Camera 组件，再没有就回落 EditorCamera */
   entryCamera: NodeId | null;
+  /**
+   * 玩家出生点。**必须显式指定，不允许隐式推导。**
+   *
+   * 为什么需要它：玩家起点是玩法真源。没有它，装载方只能去猜 ——
+   * 「取第一个房间」「取 rooms[0] 的中心」这类推导会把顺序耦合进语义，
+   * 一旦有人在层级面板里拖一下节点顺序，玩家出生位置就变了。
+   * 与其让三个宿主各自猜一遍且猜得不一样，不如让它成为必须填的字段。
+   *
+   * null = 作者尚未指定。装载阶段必须产出 error diagnostic 并拒绝建立运行世界，
+   * 不得回落到任何隐式默认值（ADR-010：静默修数据是最坏的做法）。
+   */
+  playerStart: NodeId | null;
   /** 资源依赖清单。保存时由引用收集自动重算——预加载与打包都靠它 */
   dependencies: AssetPath[];
   nodes: SceneNode[];
@@ -548,6 +560,7 @@ export function createEmptySceneDocument(name: string): SceneDocument {
     environment: defaultEnvironment(),
     editorCamera: { target: [0, 1, 0], distance: 8, yaw: 0.6, elevation: 0.45 },
     entryCamera: cameraId,
+    playerStart: null,
     dependencies: [],
     nodes: [
       {
@@ -764,6 +777,16 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
   // ---- entryCamera 指向 ----
   if (d.entryCamera !== null && d.entryCamera !== undefined && !byId.has(d.entryCamera)) {
     err('/entryCamera', 'E_ENTRY_CAMERA', `entryCamera 指向不存在的节点：${d.entryCamera}`);
+  }
+
+  // ---- playerStart ----
+  // undefined = 旧版本场景（迁移链会补 null）；这里只对"填了但填错"报 error。
+  // null 本身是合法的存储态（新场景还没指定），但装载阶段会拒绝建立运行世界，
+  // 所以给 warning 让 scene:check 能在作者忘填时提醒，而不是等到 Play 才炸。
+  if (d.playerStart === null) {
+    warn('/playerStart', 'W_PLAYER_START_UNSET', 'playerStart 未指定，Play 将拒绝启动（玩家出生点不能靠隐式推导）');
+  } else if (d.playerStart !== undefined && !byId.has(d.playerStart)) {
+    err('/playerStart', 'E_PLAYER_START', `playerStart 指向不存在的节点：${d.playerStart}`);
   }
 
   // ---- environment（全局单例环境，不是组件）----

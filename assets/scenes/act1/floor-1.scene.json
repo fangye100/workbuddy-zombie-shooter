@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场",
   "act": "Act1",
@@ -39,6 +39,7 @@
     "elevation": 0.75
   },
   "entryCamera": "nd_f1_cam",
+  "playerStart": "nd_f1_start",
   "dependencies": [],
   "nodes": [
     {
@@ -1404,11 +1405,69 @@
         }
       ],
       "prefab": null
+    },
+    {
+      "id": "nd_f1_start",
+      "name": "玩家起点",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.35,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
     }
   ],
   "meta": {
-    "createdAt": "2026-09-14T10:19:33.979Z",
-    "updatedAt": "2026-09-14T10:19:33.979Z",
+    "createdAt": "2026-09-15T05:46:15.006Z",
+    "updatedAt": "2026-09-15T05:46:15.006Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

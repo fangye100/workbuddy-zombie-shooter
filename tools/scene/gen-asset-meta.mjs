@@ -77,8 +77,18 @@ const SKIP_DIR_RE = /(^|[\\/])(_broken_backup[^\\/]*|uvkeep|obj_[^\\/]*|lab)([\\
 /** 原始混元产物：`E04_20260901_010134.glb` —— 40~50MB，是减面管线的输入，不是游戏资产 */
 const RAW_SOURCE_RE = /^[EB]-\d{2}_\d{8}_\d{6}\.glb$/;
 
-/** 成品所在的目录（这些目录下的 GLB 才生成 meta） */
-const PRODUCT_DIRS = new Set(['rigged', 'textured', 'game_ready', 'synthetic']);
+/**
+ * 成品所在的目录（这些目录下的 GLB 才生成 meta）。
+ *
+ * 🔴 **原始混元产物不在此列**：它们是 40~50MB 的减面管线输入，不是游戏资产。
+ * 角色侧靠 `RAW_SOURCE_RE` 排除；环境侧的 `<ID>.glb` 则因父目录名就是资产 id 而天然落选
+ * —— 两类原始产物走同一判据，不要为了「文件看起来没 meta」把它们塞进来。
+ *
+ * `tex2` / `tex` 是**环境 LOD 成品**：tex2 = 原生贴图三维转移版（现行），
+ * tex = 旧的顶点色烘焙版（manifest 里仅作回退）。两者都要 meta，
+ * 否则这一资产类的 guid / 导入设置无法持久化，而 scene:check 只查孤儿、查不出缺失。
+ */
+const PRODUCT_DIRS = new Set(['rigged', 'textured', 'game_ready', 'synthetic', 'tex2', 'tex']);
 
 function isTarget(relPath) {
   if (SKIP_DIR_RE.test(relPath)) return false;

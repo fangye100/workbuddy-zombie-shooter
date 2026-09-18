@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_qz8drxvu",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex",
+    "file": "S-02_tex_baked.glb"
+  },
+  "sourceHash": "sha256:66608f45391ef6bef0cfa1c0c100176a3e55c2aa42cc5f8b52a7d626af20993c",
+  "updatedAt": "2026-09-18T15:11:46.332Z"
+}

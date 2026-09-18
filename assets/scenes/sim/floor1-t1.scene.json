@@ -1,0 +1,2228 @@
+{
+  "schemaVersion": 3,
+  "id": "sc_sim_floor1_t1",
+  "name": "第一层 · 火场 · t=1s 快照（派生产物）",
+  "act": "Act1",
+  "environment": {
+    "ambient": {
+      "color": "#4a2a12",
+      "intensity": 0.5
+    },
+    "hemisphere": {
+      "sky": "#d98f4f",
+      "skyIntensity": 0.55,
+      "ground": "#3a1a08",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a1206",
+      "density": 0.02,
+      "heightFalloff": 0.1
+    },
+    "rim": {
+      "color": "#ffb066",
+      "intensity": 0.7,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1.05,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      33,
+      0,
+      0
+    ],
+    "distance": 62,
+    "yaw": 1.1,
+    "elevation": 0.75
+  },
+  "entryCamera": "nd_f1_cam",
+  "playerStart": "nd_f1_start",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_f1_key",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.4,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_cam",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "相机",
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 55,
+          "distance": 12,
+          "yawOffsetDeg": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_void",
+      "name": "虚空底",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "plane",
+            "params": [
+              220,
+              1
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "background": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0",
+      "name": "房间 1 · 战斗",
+      "parent": null,
+      "transform": {
+        "position": [
+          10,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              10,
+              0,
+              0
+            ],
+            "size": [
+              20,
+              4,
+              16
+            ]
+          },
+          "clearRule": "kill-all",
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              20,
+              0.2,
+              16
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s0"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv0",
+      "name": "掩体 1",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -6,
+          0.7,
+          -4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv1",
+      "name": "掩体 2",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          6,
+          0.7,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv2",
+      "name": "掩体 3",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -6,
+          0.7,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp0",
+      "name": "刷怪点 1 · E-01 ×5",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          3.697503554795359,
+          0.8,
+          1.770718796566831
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 5,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp1",
+      "name": "刷怪点 2 · E-01 ×4",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -4.039448149948372,
+          0.8,
+          1.3561330080418184
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp2",
+      "name": "刷怪点 3 · E-02 ×3",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0.34194459515300984,
+          0.8,
+          -3.1268518046086493
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 3,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1c0",
+      "name": "走廊 1",
+      "parent": null,
+      "transform": {
+        "position": [
+          23,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              6,
+              0.2,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1",
+      "name": "房间 2 · 事件",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "event",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              33,
+              0,
+              0
+            ],
+            "size": [
+              14,
+              4,
+              14
+            ]
+          },
+          "clearRule": "interact",
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              14,
+              0.2,
+              14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s5"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1c1",
+      "name": "走廊 2",
+      "parent": null,
+      "transform": {
+        "position": [
+          43,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              6,
+              0.2,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2",
+      "name": "房间 3 · 战斗",
+      "parent": null,
+      "transform": {
+        "position": [
+          56,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              56,
+              0,
+              0
+            ],
+            "size": [
+              20,
+              4,
+              16
+            ]
+          },
+          "clearRule": "kill-all",
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              20,
+              0.2,
+              16
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s0"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv0",
+      "name": "掩体 1",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -6,
+          0.7,
+          -4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv1",
+      "name": "掩体 2",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          6,
+          0.7,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv2",
+      "name": "掩体 3",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -6,
+          0.7,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.4,
+              1.4,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.2,
+              0.7,
+              1.2
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp0",
+      "name": "刷怪点 1 · E-01 ×4",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          3.697503554795359,
+          0.8,
+          1.770718796566831
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp1",
+      "name": "刷怪点 2 · E-02 ×4",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -4.039448149948372,
+          0.8,
+          1.3561330080418184
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp2",
+      "name": "刷怪点 3 · E-01 ×4",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          0.34194459515300984,
+          0.8,
+          -3.1268518046086493
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 4,
+          "wave": 0,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 1.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_nav",
+      "name": "导航区",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              33,
+              0,
+              0
+            ],
+            "size": [
+              66,
+              4,
+              16
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_start",
+      "name": "玩家起点",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.35,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a0",
+      "name": "P-01 · 玩家",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s3"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a1",
+      "name": "E-01 #1",
+      "parent": null,
+      "transform": {
+        "position": [
+          12.966782569885254,
+          0.85,
+          1.7210123538970947
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a2",
+      "name": "E-01 #2",
+      "parent": null,
+      "transform": {
+        "position": [
+          13.472639083862305,
+          0.85,
+          2.02132248878479
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a3",
+      "name": "E-01 #3",
+      "parent": null,
+      "transform": {
+        "position": [
+          12.848562240600586,
+          0.85,
+          2.3642385005950928
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a4",
+      "name": "E-01 #4",
+      "parent": null,
+      "transform": {
+        "position": [
+          11.408836364746094,
+          0.85,
+          0.42141303420066833
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a5",
+      "name": "E-01 #5",
+      "parent": null,
+      "transform": {
+        "position": [
+          13.342942237854004,
+          0.85,
+          0.3968470096588135
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a6",
+      "name": "E-01 #6",
+      "parent": null,
+      "transform": {
+        "position": [
+          4.103290557861328,
+          0.85,
+          0.9231289029121399
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a7",
+      "name": "E-01 #7",
+      "parent": null,
+      "transform": {
+        "position": [
+          4.948550224304199,
+          0.85,
+          0.5158541202545166
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a8",
+      "name": "E-01 #8",
+      "parent": null,
+      "transform": {
+        "position": [
+          5.749114513397217,
+          0.85,
+          1.5016077756881714
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a9",
+      "name": "E-01 #9",
+      "parent": null,
+      "transform": {
+        "position": [
+          4.430225372314453,
+          0.85,
+          0.28905680775642395
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a10",
+      "name": "E-02 #10",
+      "parent": null,
+      "transform": {
+        "position": [
+          8.912569046020508,
+          0.85,
+          -2.674853801727295
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a11",
+      "name": "E-02 #11",
+      "parent": null,
+      "transform": {
+        "position": [
+          9.453221321105957,
+          0.85,
+          -0.5811808109283447
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_sim_a12",
+      "name": "E-02 #12",
+      "parent": null,
+      "transform": {
+        "position": [
+          7.985290050506592,
+          0.85,
+          -0.27919623255729675
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "capsule",
+            "params": [
+              0.34,
+              1.1,
+              8,
+              4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-09-18T15:10:08.454Z",
+    "updatedAt": "2026-09-18T15:10:08.454Z",
+    "author": "sim-level.mjs",
+    "notes": "派生产物：种子 1 · 固定步 1/30 · t=1s。不要手改，重跑即被覆盖。"
+  }
+}

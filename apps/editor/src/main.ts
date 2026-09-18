@@ -6,11 +6,24 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument } from '@aether/scene';
+import {
+  PlaySession,
+  SpawnEditStore,
+  captureInitialScatter,
+  compareScatter,
+  describeDelta,
+  listSpawnPoints,
+  sceneFingerprint,
+} from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import { SpawnPanel } from './services/spawn-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
+import { RuntimeBridge } from './services/runtime-bridge';
+import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
@@ -124,13 +137,114 @@ async function boot(): Promise<void> {
   // 材质 API 要按 id 回查共享材质（params.materials），先把引用挂上
   renderer.attachParams(panel.params);
 
+  /**
+   * 运行时桥（WU-3）：headless 会话与渲染之间的**唯一**翻译层。
+   * 它不产玩法，只把实体视图翻译成实例批次；真模型接进来后换代理网格即可。
+   */
+  const bridge = new RuntimeBridge();
+
+  /**
+   * Play 控制器（WU-4）：只做装配 —— 快照/恢复作者态、把推进同步给 Bridge、
+   * 通知 UI。状态机本体在 `PlaySession`（runtime 包，纯 CPU 可测）。
+   *
+   * 这里**不自动进入 Play**：编辑器打开就该是编辑态，跑起来要用户显式点 ——
+   * 否则每次改完参数刷新页面都会被"已经在跑的世界"干扰判断。
+   */
+  const playCtl = new PlayController(renderer, bridge, {
+    onStateChange: () => {
+      syncPlayButtons();
+      refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
+      hudDirty = true;
+    },
+  });
+
+  // ---- Play 控制按钮（装配层：只负责按钮 → 控制器，无玩法逻辑）----
+  const btnPlay = document.querySelector<HTMLButtonElement>('#btn-play');
+  const btnPause = document.querySelector<HTMLButtonElement>('#btn-pause');
+  const btnStep = document.querySelector<HTMLButtonElement>('#btn-step');
+  const btnReset = document.querySelector<HTMLButtonElement>('#btn-reset');
+  const btnStop = document.querySelector<HTMLButtonElement>('#btn-stop');
+
+  /**
+   * 启动一个新会话（**所有入口共用**）。
+   *
+   * 🔴 每一次新会话都是一个新的世界：诊断去重集合必须随之清空，否则第二轮
+   * Play 里同类的"容量不足"告警会被上一轮的记录吞掉。清理要归会话生命周期
+   * 统一管理（复审 #8），不能在按钮里各写一份 —— 漏一个入口就是吞一类告警。
+   */
+  function startPlay(): boolean {
+    const ok = playCtl.start();
+    if (ok) shownRuntimeDiags.clear();
+    return ok;
+  }
+
+  /** 同种子重跑（**所有入口共用**）：runId 换代，去重集合同样要清空 */
+  function resetPlay(): void {
+    playCtl.reset();
+    shownRuntimeDiags.clear();
+  }
+
+  btnPlay?.addEventListener('click', () => {
+    if (playCtl.state === 'stopped') {
+      if (!startPlay()) {
+        // 启动失败：不动作者状态，只提示。错误原因由 HUD 显示
+        console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
+        hudDirty = true;
+      }
+    } else playCtl.togglePause();
+  });
+  btnPause?.addEventListener('click', () => playCtl.togglePause());
+  btnStep?.addEventListener('click', () => playCtl.step());
+  btnReset?.addEventListener('click', () => resetPlay());
+
+  /**
+   * 取走并展示运行期诊断（容量不足整批拒绝等）。
+   *
+   * 信号产出之后**必须有消费者**：否则 diagnostic 写了一整套，UI 上依旧一片寂静，
+   * 等于没写。去重由 `pushDiag`（同 code+node 只记一次）与这里的一次性展示共同保证 ——
+   * 每帧刷同一条告警会把真正重要的那条冲掉（WebGPU 错误那条踩过同样的坑）。
+   */
+  const shownRuntimeDiags = new Set<string>();
+  function drainRuntimeDiagnostics(): void {
+    for (const d of playCtl.runtimeDiagnostics) {
+      const key = `${d.code}|${d.nodeId ?? ''}`;
+      if (shownRuntimeDiags.has(key)) continue;
+      shownRuntimeDiags.add(key);
+      console.warn(`[runtime] ${d.code}: ${d.message}`);
+      spawnMsg = { text: `运行告警：${d.message}`, kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+    }
+  }
+  // stopPlay 而不是 playCtl.stop()：退出 Play 后要顺带定位到选中实体的来源刷怪点
+  btnStop?.addEventListener('click', () => stopPlay());
+
+  /** 按钮的启用/高亮完全由 PlayController 的状态推导，不自己存第二份状态 */
+  function syncPlayButtons(): void {
+    const st = playCtl.state;
+    const playing = st !== 'stopped';
+    if (btnPlay !== null) {
+      btnPlay.classList.toggle('active', playing);
+      btnPlay.textContent = st === 'paused' ? '▶ 继续' : '▶ Play';
+    }
+    if (btnPause !== null) {
+      btnPause.disabled = !playing;
+      btnPause.classList.toggle('active', st === 'paused');
+      btnPause.textContent = st === 'paused' ? '⏸ 已暂停' : '⏸ 暂停';
+    }
+    if (btnStep !== null) btnStep.disabled = st !== 'paused';
+    if (btnReset !== null) btnReset.disabled = !playing;
+    if (btnStop !== null) btnStop.disabled = !playing;
+  }
+  syncPlayButtons();
+
   // ---- 场景加载（ADR-010：场景是唯一数据载体；ADR-015：项目容器是路径锚点）----
   // 构造期那组硬编码物体只是 fallback，真内容从这里读。失败不阻断启动：
   // 控制台告警 + 保留 fallback 场景 —— 场景文件坏了不该让编辑器起不来。
   // boot 依赖 camera / hudDirty（定义在后），实际执行挪到 __editor 钩子接线之后。
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
-  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
+  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset' | 'spawn'): void => {
     for (const t of document.querySelectorAll<HTMLElement>('#inspector .insp-tab')) {
       t.classList.toggle('active', t.dataset.tab === tab);
     }
@@ -142,7 +256,7 @@ async function boot(): Promise<void> {
   for (const t of document.querySelectorAll<HTMLButtonElement>('#inspector .insp-tab')) {
     t.addEventListener('click', () => {
       const tab = t.dataset.tab;
-      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset') {
+      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset' || tab === 'spawn') {
         switchInspectorTab(tab);
       }
     });
@@ -191,10 +305,28 @@ async function boot(): Promise<void> {
     }
   }
 
+  /**
+   * 模型替换的统一边界（复审 P1）。
+   *
+   * Play 中替换网格 = 改变对象的可序列化状态（快照只存变换/显隐/材质，**不存网格与骨架**），
+   * Stop 后恢复不回来 —— 原网格就这么没了。与增删同一约束：所有模型修改入口
+   * （内置下拉、文件导入、及其异步完成路径）都走这一个判定点。
+   */
+  function modelReplaceBlocked(): boolean {
+    if (!playCtl.isPlaying) return false;
+    console.warn('[play] Play 中禁止替换模型（快照不存网格/骨架，Stop 后无法恢复；先 Stop 再换）');
+    panel.setModelInfo('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop');
+    hudDirty = true;
+    return true;
+  }
+
   function applyBuiltin(id: string): void {
+    if (modelReplaceBlocked()) return;
     const bm = BUILTIN_MODELS.find((b) => b.id === id);
     if (bm === undefined) return;
     void loadBitmap(bm.texUrl).then((bmp) => {
+      // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
+      if (modelReplaceBlocked()) return;
       renderer.setCharacter(bm.mesh, bmp, null);
       panel.setModelInfo(
         `${bm.label} · ${bm.meta.vertices} 顶点 / ${bm.meta.triangles} 面 / ` +
@@ -207,6 +339,7 @@ async function boot(): Promise<void> {
   }
 
   panel.onModelSelect = (id) => {
+    if (modelReplaceBlocked()) return;
     if (id === null) {
       renderer.setCharacter(null, null);
       panel.setModelInfo('程序化胶囊 · 材质在「材质」面板调');
@@ -236,6 +369,12 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
   panel.onHierarchyDelete = (index) => {
+    // Play 中禁止增删（同 Delete 键）：作者状态按索引恢复，物体数变了就会张冠李戴
+    if (playCtl.isPlaying) {
+      console.warn('[play] Play 中禁止删除物体（Stop 后作者状态按索引恢复，数量必须一致）');
+      hudDirty = true;
+      return;
+    }
     renderer.removeObject(index);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
     panel.refreshHierarchy();
@@ -255,11 +394,14 @@ async function boot(): Promise<void> {
   };
 
   panel.onModelFile = (buffer, name) => {
+    if (modelReplaceBlocked()) return;
     try {
       // 身高用与内置 LOD 同一把尺子（roster 真源），保证导入档与内置档体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       void (async () => {
         const bmp = model.image === null ? null : await decodeTexture(model.image, name);
+        // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
+        if (modelReplaceBlocked()) return;
         // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
         // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
         renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree, model.skeleton, model.animations);
@@ -360,7 +502,21 @@ async function boot(): Promise<void> {
       panel.params.keyColor = r.keyLight.color;
       panel.params.keyIntensity = r.keyLight.intensity;
     }
+    // 点光同样来自场景（priority 最高的那一盏）。位置仍由引擎轨道驱动 —— 见已知遗留：
+    // 场景 schema 有点光的 color/intensity/range，但没有位置字段。
+    if (r.pointLight) {
+      panel.params.pointColor = r.pointLight.color;
+      panel.params.pointIntensity = r.pointLight.intensity;
+      if (r.pointLight.range > 0) panel.params.pointRange = r.pointLight.range;
+    }
     panel.syncAll();
+    // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源
+    setSpawnScene(renderer.getDocument());
+    // ---- WU-4：不再自动进入 Play ----
+    // 编辑器打开就该是编辑态。之前是"加载完场景就跑起来"，结果是每次刷新页面
+    // 都被一个已经在动的世界干扰 —— 想安静看关卡反而要先点停止。
+    // 现在由用户显式点 ▶（或空格）进入 Play，失败时 HUD 给出原因。
+    hudDirty = true;
     // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();
@@ -421,6 +577,33 @@ async function boot(): Promise<void> {
     const rect = canvas!.getBoundingClientRect();
     const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
     const ndcY = 1 - ((clientY - rect.top) / rect.height) * 2;
+
+    // 运行时实体优先：它们不在静态场景的拾取表里，GPU 拾取根本拿不到。
+    // 命中则选中实体（并清掉静态选中），未命中才走原来的静态物体拾取。
+    //
+    // 🔴 射线只有一条来源：`renderer.pointerRay()`（对 core.invViewProj 做反投影，
+    // 与画出这一帧的 viewProj 严格互逆，和静态拾取同一条）。
+    // 这里曾经另有一份手算 lookAt 基向量的 screenRay()，与画面矩阵"看起来一样"，
+    // 结果运行时实体的命中点整体偏开 —— 点在僵尸身上却选不中，且俯视角下才明显。
+    // 两条射线实现 = 两份相机约定 = 迟早漂移，宁可删掉也不要"两份都对"。
+    if (bridge.active) {
+      const ray = renderer.pointerRay(clientX, clientY);
+      const hit = ray === null ? null : bridge.pickRay(ray.o, ray.d);
+      if (hit !== null) {
+        bridge.select(hit.id, hit.generation, hit.runId);
+        renderer.selectObject(null);
+        panel.setSelection(null);
+        // 面板直接切到这只僵尸的来源刷怪点：「它是从哪冒出来的」就该一步到位
+        if (hit.sourceNodeId !== null) selectedSpawnNode = hit.sourceNodeId;
+        switchInspectorTab('spawn');
+        refreshSpawnPanel();
+        hudDirty = true;
+        return;
+      }
+      bridge.clearSelection();
+      refreshSpawnPanel();
+    }
+
     let idx: number | null;
     if (penetrate) {
       const hits = renderer.pickAtAll(ndcX, ndcY);
@@ -728,6 +911,452 @@ async function boot(): Promise<void> {
     };
   }
 
+  // =====================================================================
+  // 刷怪点编辑闭环（WU-5）
+  //
+  // 分工严格遵守「每类状态只有一个 owner」：作者文档与撤销栈在 `SpawnEditStore`
+  // （runtime 包，纯 CPU 可测），校验在 store 里，A/B 指纹在 runtime 里。
+  // 这里只做编辑器专属的三件事：画控件、写文件、把改动送进 Play。
+  // 面板**不持有状态** —— 每次改动后由 store 重算整份 vm 重绘，杜绝
+  // 「面板显示 8、场景里其实还是 3」这种只有刷新才复现的错位。
+  // =====================================================================
+  const spawnHost = document.getElementById('spawn-host');
+  let spawnStore: SpawnEditStore | null = null;
+  let selectedSpawnNode: string | null = null;
+  let spawnAb: { before: ScatterFingerprint; after: ScatterFingerprint; cmp: ScatterComparison } | null = null;
+  let spawnMsg: { text: string; kind: 'info' | 'warn' | 'ok' } | null = null;
+
+  const spawnPanel =
+    spawnHost === null
+      ? null
+      : new SpawnPanel(spawnHost, {
+          onSelect: (id) => {
+            selectedSpawnNode = id;
+            refreshSpawnPanel();
+          },
+          onEdit: (field, value) => editSpawnField(field, value),
+          onUndo: () => undoSpawnEdit(),
+          onSave: () => void saveSpawnEdits(),
+          onRerun: () => restartPlay(),
+          onFocusSource: () => focusSourceNode(),
+        });
+
+  /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
+  function setSpawnScene(doc: SceneDocument | null): void {
+    if (doc === null) {
+      spawnStore = null;
+      spawnAb = null;
+      selectedSpawnNode = null;
+      refreshSpawnPanel();
+      return;
+    }
+    spawnStore = new SpawnEditStore(doc);
+    // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
+    // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
+    renderer.setDocument(spawnStore.document);
+    spawnAb = null;
+    selectedSpawnNode = listSpawnPoints(spawnStore.document)[0]?.nodeId ?? null;
+    refreshSpawnPanel();
+  }
+
+  function editSpawnField(field: 'radius' | 'count', value: number): void {
+    const store = spawnStore;
+    if (store === null || selectedSpawnNode === null) return;
+    const seed = playCtl.session.seed;
+    // A = 编辑前的同种子指纹；改完再抓一次 B。只展示"改后"看不出改动到底生没生效
+    // （房间还没进 → 一个都没刷，params 变了但画面纹丝不动，作者会以为没保存）
+    const before = captureInitialScatter(store.document, { seed });
+    const r = store.set(selectedSpawnNode, field, value);
+    if (!r.ok) {
+      spawnMsg = { text: r.error ?? '编辑被拒绝', kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    const after = captureInitialScatter(store.document, { seed });
+    spawnAb = { before, after, cmp: compareScatter(before, after) };
+    const d = spawnAb.cmp.deltas.find((x) => x.nodeId === selectedSpawnNode);
+    const label = field === 'radius' ? '生成散布半径' : '生成数量';
+    spawnMsg = {
+      text:
+        `已改 ${label}：${r.edit!.from} → ${r.edit!.to}` +
+        (d !== undefined ? `　散布均 ${d.meanBefore.toFixed(2)} → ${d.meanAfter.toFixed(2)} m` : ''),
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  function undoSpawnEdit(): void {
+    const store = spawnStore;
+    if (store === null) return;
+    const undone = store.undo();
+    if (undone === null) return;
+    // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
+    if (spawnAb !== null) {
+      const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
+      spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
+    }
+    spawnMsg = {
+      text: `已撤销：${undone.field === 'radius' ? '生成散布半径' : '生成数量'} ${undone.to} → ${undone.from}`,
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /**
+   * 保存。
+   *
+   * 写盘前先做一次**改动集合自检**：
+   *
+   *   ① 路径必须落在**某个 `SpawnPoint` 组件**的 radius / count 上
+   *      —— 光匹配正则不够：`Collider{sphere}.radius` 或任何组件上的 `count`
+   *      都能骗过 `/components\[\d+\]\.(radius|count)$/`，等于放行；
+   *   ② 至少要有一条改动（零改动就没必要写盘）。
+   *
+   * ⚠️ 这里**不能**限制"恰好一条"：作者完全可能连续改两个刷怪点再保存，
+   * 那时 2 处改动是合法的。曾经这么写过，结果把合法保存给拒了（复审抓出来的回归）。
+   * "一次编辑只产生一处改动"这条性质由 `spawn-edit.test.ts` 在 runtime 侧断言，
+   * 不该在保存这一步用条数来卡。
+   *
+   * 这条兜底的意义：store 的实现保证了它不会去碰别的字段，但把断言放在保存这一步，
+   * 才能保证将来有人加了新命令也不会悄悄破坏这个性质。
+   */
+  async function saveSpawnEdits(): Promise<void> {
+    const store = spawnStore;
+    const src = renderer.getSceneSource();
+    if (store === null || src === null) {
+      spawnMsg = { text: '没有可保存的场景文件', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    // 🔴 重复保存必须串行（复审 P2）：上一次保存还在写盘，这次的快照/确认
+    // 会跟它交错 —— 确认范围是按编辑身份记的，交错会把还没包含进快照的编辑
+    // 当成已保存。客户端这里先拒，服务端对同一路径还有队列兜底。
+    if (saveInFlight) {
+      spawnMsg = { text: '上一次保存尚未完成，稍候再试', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    const diffs = store.changedPaths();
+    if (diffs.length === 0) {
+      spawnMsg = { text: '没有改动需要保存', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    saveInFlight = true;
+    try {
+      await saveSpawnEditsInner(store, src, diffs);
+    } finally {
+      saveInFlight = false;
+    }
+  }
+
+  let saveInFlight = false;
+
+  /** saveSpawnEdits 的主体（串行门在外层） */
+  async function saveSpawnEditsInner(store: SpawnEditStore, src: { url: string }, diffs: ReturnType<SpawnEditStore['changedPaths']>): Promise<void> {
+    // 合法路径集合 = 全文所有 SpawnPoint 组件的 radius / count（按 kind 限定，不是按路径形状）
+    const doc = store.document;
+    const expected = new Set<string>();
+    if (Array.isArray(doc.nodes)) {
+      for (let i = 0; i < doc.nodes.length; i++) {
+        const comps = doc.nodes[i]!.components;
+        for (let c = 0; c < comps.length; c++) {
+          if (comps[c]!.kind !== 'SpawnPoint') continue;
+          expected.add(`nodes[${i}].components[${c}].radius`);
+          expected.add(`nodes[${i}].components[${c}].count`);
+        }
+      }
+    }
+    const unexpected = diffs.filter((d) => !expected.has(d.path));
+    if (unexpected.length > 0) {
+      spawnMsg = {
+        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+
+    // ① 竞态边界：**快照**这次要发送的版本。保存是异步 IO，从序列化到写盘返回之间
+    // 作者可能继续编辑；确认时只提交快照（按编辑身份，不按栈长 —— 复审 P2）。
+    const snap = store.beginSave();
+    // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
+    // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
+    const content = `${JSON.stringify(snap.doc, null, 2)}\n`;
+    const baseFp = sceneFingerprint(store.committedDocument);
+
+    // ② 提前提示（不是判定）：先读盘看一眼有没有明显的外部修改，
+    // 能早一步给作者更清楚的中文提示。
+    const disk = await readProjectFile(src.url);
+    if (!disk.ok) {
+      spawnMsg = { text: `保存失败：读不到磁盘基准版本（${disk.error ?? '未知'}）`, kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
+    const diskFp = sceneFingerprint(disk.json);
+    if (diskFp !== baseFp) {
+      spawnMsg = {
+        text:
+          `拒绝保存：磁盘上的场景已被外部修改（基准 ${baseFp} → 磁盘 ${diskFp}）。` +
+          '为避免覆盖对方内容，本次未写盘；本地编辑已保留。重新装载或人工合并后再保存。',
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+
+    // ③ 写盘：**基准指纹随请求一起交给服务端**，版本校验与写入在同一个受控操作里
+    // （复审 P1：浏览器两步之间被注入修改的 TOCTOU 窗口，由服务端队列 + 校验封死）。
+    const res = await writeProjectFile(src.url, { content, baseHash: baseFp });
+    if (!res.ok) {
+      spawnMsg = {
+        text: res.conflict
+          ? `拒绝保存：服务端确认磁盘已被外部修改（当前 ${res.currentHash ?? '?'}）。本地编辑已保留，请重新装载或人工合并。`
+          : `保存失败：${res.error ?? `HTTP ${res.status}`}`,
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+    store.confirmSave(snap.doc, snap.lastEditId);
+    const kept = store.undoDepth;
+    spawnMsg = {
+      text:
+        `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留` +
+        (kept > 0 ? `（另有 ${kept} 处保存期间的编辑仍为未保存）` : ''),
+      kind: 'ok',
+    };
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /** 按改动后的场景重新装载并开跑 */
+  function restartPlay(): void {
+    if (spawnStore === null) return;
+    // 🔴 不能只调 playCtl.reset()：reset 用的是**装载时**的运行描述，改完 radius
+    // 它根本看不见。要让改动生效必须重新装载 = stop（恢复作者态）→ start（按新文档建会话）
+    if (playCtl.isPlaying) stopPlay();
+    if (!startPlay()) {
+      spawnMsg = { text: `重跑失败：${playCtl.error ?? '未知'}`, kind: 'warn' };
+    } else {
+      spawnMsg = { text: '已按改动后的场景重新装载并开跑（同种子）', kind: 'ok' };
+    }
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
+  /** 按场景节点 id 在视口里选中并聚焦（WU-5「Stop 后定位该来源节点」） */
+  function focusNode(nodeId: string): void {
+    const idx = renderer.findObjectIndexByNodeId(nodeId);
+    if (idx === null) {
+      spawnMsg = {
+        text: `节点 ${nodeId} 没有可见网格，无法在视口定位（刷怪点本身通常不挂网格）`,
+        kind: 'info',
+      };
+      refreshSpawnPanel();
+      return;
+    }
+    renderer.selectObject(idx);
+    panel.setSelection(idx);
+    focusOn(idx);
+    hudDirty = true;
+  }
+
+  function focusSourceNode(): void {
+    // 优先用运行实体的来源（"这只僵尸从哪来的"），没有运行时退回面板里选中的刷怪点
+    const src = bridge.selectedEntity?.sourceNodeId ?? selectedSpawnNode;
+    if (src !== null) focusNode(src);
+  }
+
+  /**
+   * 退出 Play 并定位来源节点。
+   *
+   * 顺序：先取出来源 id（stop 会摘掉会话、清空实体选中），再 stop，最后定位。
+   */
+  function stopPlay(): void {
+    const src = bridge.selectedEntity?.sourceNodeId ?? null;
+    playCtl.stop();
+    if (src !== null) focusNode(src);
+    hudDirty = true;
+  }
+
+  function refreshSpawnPanel(): void {
+    if (spawnPanel === null) return;
+    const store = spawnStore;
+    const doc = store?.document ?? null;
+    const ent = bridge.selectedEntity;
+    const cmp = spawnAb?.cmp ?? null;
+    const lines: string[] = [];
+    let summary: string | null = null;
+    if (cmp !== null) {
+      if (!cmp.usable) {
+        lines.push('A/B 不可用：装载失败，没有可比指纹');
+      } else {
+        for (const d of cmp.deltas) lines.push(describeDelta(d));
+        summary =
+          `改动 ${cmp.changedNodeIds.length} 处 / 共 ${cmp.deltas.length} 个刷怪点` +
+          `　NPC ${cmp.npcBefore} → ${cmp.npcAfter}　种子 ${spawnAb!.before.seed}`;
+      }
+    }
+    spawnPanel.render({
+      scenePath: renderer.getSceneSource()?.url ?? null,
+      spawns: doc === null ? [] : listSpawnPoints(doc),
+      selectedNodeId: selectedSpawnNode,
+      entity:
+        ent === null
+          ? null
+          : {
+              characterId: ent.characterId,
+              sourceNodeId: ent.sourceNodeId,
+              targetId: ent.targetId,
+              behavior: ent.behavior,
+              x: ent.x,
+              z: ent.z,
+            },
+      dirty: store?.dirty ?? false,
+      undoDepth: store?.undoDepth ?? 0,
+      message: spawnMsg?.text ?? null,
+      messageKind: spawnMsg?.kind ?? 'info',
+      abLines: lines,
+      abSummary: summary,
+      playing: playCtl.isPlaying,
+    });
+  }
+
+  // 自动化钩子：无头/实机 CDP 验证驱动刷怪点闭环（面板是 DOM，只能靠实机验证）
+  {
+    const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
+    hook.spawn = {
+      /** 面板当前状态的纯数据镜像（探针据此断言，不解析 DOM 文本） */
+      state: () => {
+        const doc = spawnStore?.document ?? null;
+        const sel =
+          doc === null || selectedSpawnNode === null
+            ? null
+            : listSpawnPoints(doc).find((s) => s.nodeId === selectedSpawnNode) ?? null;
+        const ent = bridge.selectedEntity;
+        return {
+          scenePath: renderer.getSceneSource()?.url ?? null,
+          dirty: spawnStore?.dirty ?? false,
+          undoDepth: spawnStore?.undoDepth ?? 0,
+          selectedNodeId: selectedSpawnNode,
+          radius: sel?.radius ?? null,
+          count: sel?.count ?? null,
+          spawnCount: doc === null ? 0 : listSpawnPoints(doc).length,
+          message: spawnMsg?.text ?? null,
+          messageKind: spawnMsg?.kind ?? null,
+          ab: spawnAb === null ? null : {
+            usable: spawnAb.cmp.usable,
+            changed: spawnAb.cmp.changedNodeIds,
+            unchanged: spawnAb.cmp.unchangedNodeIds,
+            npcBefore: spawnAb.cmp.npcBefore,
+            npcAfter: spawnAb.cmp.npcAfter,
+            lines: spawnAb.cmp.deltas.map(describeDelta),
+          },
+          entity:
+            ent === null
+              ? null
+              : { characterId: ent.characterId, sourceNodeId: ent.sourceNodeId, targetId: ent.targetId, behavior: ent.behavior },
+          changedPaths: spawnStore?.changedPaths().map((d) => d.path) ?? [],
+        };
+      },
+      select: (id: string | null) => {
+        selectedSpawnNode = id;
+        refreshSpawnPanel();
+      },
+      edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
+      undo: () => undoSpawnEdit(),
+      /** 全部撤回（不提交）。此前只有 API 没有任何入口 —— 探针/用户都到不了 */
+      revertAll: () => {
+        spawnStore?.revertAll();
+        refreshSpawnPanel();
+        hudDirty = true;
+      },
+      save: () => saveSpawnEdits(),
+      rerun: () => restartPlay(),
+      focusSource: () => focusSourceNode(),
+      /** 选中第一个 NPC（等价于在画面里点它） */
+      pickFirstNpc: () => {
+        const e = bridge.entities.find((x) => x.kind === 'npc');
+        if (e === undefined) return null;
+        bridge.select(e.id, e.generation, e.runId);
+        if (e.sourceNodeId !== null) selectedSpawnNode = e.sourceNodeId;
+        switchInspectorTab('spawn');
+        refreshSpawnPanel();
+        return { id: e.id, generation: e.generation, sourceNodeId: e.sourceNodeId, characterId: e.characterId };
+      },
+      /** 面板可见文本（验证 DOM 真的渲染出来了，而不只是内存状态对） */
+      panelText: () => document.getElementById('spawn-host')?.innerText ?? '',
+    };
+
+    // §8-5「在画面中对应到它」要用到的**原语**（不是验证逻辑本身）：
+    // 屏幕坐标 → 世界射线（与静态拾取同一条），与真实点击走的同一个入口。
+    // 刻意暴露「点击」而不是「射线」，因为要证明的是"用户在画面上点它就能选中它"。
+    hook.bridge = bridge;
+    hook.pointerRay = (clientX: number, clientY: number) => renderer.pointerRay(clientX, clientY);
+    hook.pickAtClient = (clientX: number, clientY: number) => pickAtClient(clientX, clientY);
+
+    /**
+     * §8-1「Node 与浏览器使用同一初始化、seed 和固定 tick 输入」的浏览器侧取样口。
+     *
+     * 用**页面里同一个 bundle** 的 runtime 模块跑一次给定种子 / 步数的会话，
+     * 返回实体快照。自建自停，**不碰用户正在播放的会话** —— 否则对比会撞上
+     * 真实时间推进，那就不再是「同输入」了。
+     */
+    /**
+     * 把「浏览器实际喂给 runtime 的那份文档」原样导出来。
+     *
+     * 这是 §8-1 的**取证口**，不是产品功能：指纹对不上时必须能立刻拿到两侧文档的
+     * 逐路径差异，否则只能靠猜（"大概是被迁移补了字段吧"），而猜错一次就是半天。
+     */
+    hook.runtime = {
+      docJson: () => JSON.stringify(spawnStore?.document ?? renderer.getDocument()),
+      runTo: (seed: number, ticks: number, inputs?: { x: number; z: number }[]) => {
+        const doc = spawnStore?.document ?? renderer.getDocument();
+        if (doc === null) return { ok: false as const, error: '场景未加载' };
+        const ps = new PlaySession({ seed, fixedStep: 1 / 30 });
+        const r = ps.play(doc);
+        if (!r.ok) return { ok: false as const, error: r.errors.join('；') };
+        const s = ps.runtime;
+        if (s === null) return { ok: false as const, error: '会话为空' };
+        for (let i = 0; i < ticks; i++) {
+          // 固定 tick 输入消费（复审 #7）：与 Node 侧喂同一条序列，玩家输入才算进比对
+          const inp = inputs?.[i];
+          if (inp !== undefined) s.setInput(inp.x, inp.z);
+          s.step();
+        }
+        const out = {
+          ok: true as const,
+          seed,
+          fixedStep: ps.fixedStep,
+          tick: s.tick,
+          sceneId: s.desc.sceneId,
+          schemaVersion: s.desc.schemaVersion,
+          // 与 Node 侧 runtime-parity.mjs 用**同一个** sceneFingerprint：
+          // 先确认喂进去的是同一份文档，再谈输出一致。
+          docFingerprint: sceneFingerprint(doc),
+          entities: s.view().map((e) => ({
+            id: e.id,
+            generation: e.generation,
+            characterId: e.characterId,
+            kind: e.kind,
+            x: e.x,
+            z: e.z,
+            yaw: e.yaw,
+            sourceNodeId: e.sourceNodeId,
+            targetId: e.targetId,
+            behavior: e.behavior,
+          })),
+        };
+        ps.stop();
+        return out;
+      },
+    };
+  }
+
   for (const btn of document.querySelectorAll<HTMLButtonElement>('#gizmo-bar .gz-mode')) {
     btn.addEventListener('click', () =>
       setGizmoModeUI(btn.dataset.mode as 'translate' | 'rotate' | 'scale'),
@@ -738,10 +1367,74 @@ async function boot(): Promise<void> {
       setGizmoSpaceUI(btn.dataset.space as 'local' | 'world'),
     );
   }
+  // ---- Play 期玩家输入（虚拟摇杆的键盘装配，复审 #7 的编辑器侧）----
+  // 用**箭头键**而不是 WASD：W/E/R 已被 gizmo 快捷键占用，混用会一边走一边切模式。
+  // 宿主（这里）只负责把真实输入转成约定的运行输入向量，消费全在 runtime 的固定步里。
+  const playKeys = new Set<string>();
+  const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
+  window.addEventListener('keyup', (e) => {
+    playKeys.delete(e.key.toLowerCase());
+  });
+
+  /**
+   * 失焦必须清空按键并**立即**提交零输入（复审 P2）。
+   * 按住方向键切到别的窗口、在那边松开，本页收不到 keyup —— 玩家会一直走。
+   * 不能等下一帧：失焦后 rAF 可能直接被节流停掉，那时候"等 frame 再提交"等于不提交。
+   */
+  const clearPlayKeys = (): void => {
+    if (playKeys.size === 0) return;
+    playKeys.clear();
+    if (playCtl.isPlaying) playCtl.session.setInput(0, 0);
+  };
+  window.addEventListener('blur', clearPlayKeys);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearPlayKeys();
+  });
+
   window.addEventListener('keydown', (e) => {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+
+    if (PLAY_KEYS.has(k)) {
+      playKeys.add(k);
+      if (playCtl.isPlaying) e.preventDefault(); // Play 中箭头键归玩家，不滚动页面
+      return;
+    }
+
+    // ---- Play 控制（WU-4）----
+    // 空格：停止态 → 进入 Play；播放中 → 暂停；暂停中 → 继续。
+    // Esc：退出 Play 并恢复作者状态。句点：单步。逗号：同种子重跑。
+    // 必须 preventDefault —— 否则空格会滚动页面，且焦点在按钮上时还会重复触发 click。
+    if (k === ' ' || e.code === 'Space') {
+      e.preventDefault();
+      if (playCtl.state === 'stopped') {
+        if (!startPlay()) console.warn(`[play] 启动失败：${playCtl.error ?? '未知'}`);
+      } else playCtl.togglePause();
+      return;
+    }
+    if (k === 'escape') {
+      if (playCtl.isPlaying) {
+        e.preventDefault();
+        stopPlay();
+      }
+      return;
+    }
+    if (k === '.') {
+      if (playCtl.isPaused) {
+        e.preventDefault();
+        playCtl.step();
+      }
+      return;
+    }
+    if (k === ',') {
+      if (playCtl.isPlaying) {
+        e.preventDefault();
+        resetPlay();
+      }
+      return;
+    }
+
     if (k === 'w') setGizmoModeUI('translate');
     else if (k === 'e') setGizmoModeUI('rotate');
     else if (k === 'r') setGizmoModeUI('scale');
@@ -749,11 +1442,16 @@ async function boot(): Promise<void> {
     else if (k === 'delete') {
       // Delete 删除选中物体（Unity 惯例）
       const idx = renderer.getSelected();
-      if (idx !== null) {
+      if (idx !== null && !playCtl.isPlaying) {
         e.preventDefault();
         renderer.removeObject(idx);
         panel.setSelection(renderer.getSelected());
         panel.refreshHierarchy();
+        hudDirty = true;
+      } else if (idx !== null && playCtl.isPlaying) {
+        // Play 中禁止增删：作者状态快照是按索引恢复的，物体数一变就会张冠李戴
+        e.preventDefault();
+        console.warn('[play] Play 中禁止删除物体（Stop 后作者状态按索引恢复，数量必须一致）');
         hudDirty = true;
       }
     }
@@ -939,6 +1637,14 @@ async function boot(): Promise<void> {
    * pos 为 null 时放原点；拖放路径会把落点（视线与地面交点）传进来。
    */
   async function spawnAssetAt(relPath: string, pos: [number, number, number] | null): Promise<void> {
+    // 🔴 Play 中禁止增删（复审 #3）：作者状态按索引恢复，物体数变了就会张冠李戴。
+    // 这一条与层级删除 / Delete 键同一约束，所有入口统一。
+    if (playCtl.isPlaying) {
+      console.warn('[play] Play 中禁止导入 / 生成资产（Stop 后作者状态按索引恢复，数量必须一致）');
+      panel.setModelInfo('Play 中不能导入 / 生成资产，先 Stop');
+      hudDirty = true;
+      return;
+    }
     try {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -946,6 +1652,14 @@ async function boot(): Promise<void> {
       // 与「导入 GLB…」同一把身高尺，保证资产库生成的与导入的体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
+      // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
+      // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
+      if (playCtl.isPlaying) {
+        console.warn('[play] 资产载入完成时已进入 Play，本次导入被丢弃（Stop 后可重新导入）');
+        panel.setModelInfo(`已进入 Play，${stemName(relPath)} 的导入被丢弃；Stop 后重新导入`);
+        hudDirty = true;
+        return;
+      }
       const name = uniqueObjectName(stemName(relPath));
       // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
       const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
@@ -1802,9 +2516,9 @@ async function boot(): Promise<void> {
       });
     };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
-    // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则
-    // 只能绕 UI 后门。renderer 是模块级单例，这里挂一次即可。
-    hook.renderer = renderer;
+    // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则只能绕 UI 后门。
+    // renderer 在初始化钩子对象里已经挂过一次（简写属性），这里**不要重复赋值** ——
+    // 两处指向同一个键，改一处会让人以为另一处是新的真源。
 
     // 主视图骨骼 X-ray 开关（gizmo-bar 上的「骨骼 X」按钮）
     const xrayBtn = document.querySelector<HTMLButtonElement>('#gizmo-bar .gz-xray');
@@ -1868,6 +2582,44 @@ async function boot(): Promise<void> {
     }
     if (p.halftoneStrength > 0.25) {
       rows.push('<span class="warn">⚠ 半调强度 &gt; 0.25，会从印刷质感变成波普艺术</span>');
+    }
+
+    // ---- 运行时状态（WU-4）----
+    const st = playCtl.state;
+    const badge =
+      st === 'playing'
+        ? '<span style="color:#7FE03F;font-weight:700">● PLAYING</span>'
+        : st === 'paused'
+          ? '<span style="color:#FFC531;font-weight:700">❚❚ PAUSED</span>'
+          : '<span class="hint">■ 已停止（空格进入 Play）</span>';
+    // 实例数**常驻显示**（停止态也要显示 0）：它是「动态批次有没有真的从渲染侧
+    // 摘干净」的唯一可见指标，只在 Play 中显示的话，Stop 后泄漏根本看不出来。
+    rows.push(
+      `<b>运行时</b> ${badge}　<b>启停</b> ${playCtl.session.cycleCount} 次　` +
+        `<b>实例</b> ${renderer.debugDynamicInstanceCount()}`,
+    );
+
+    if (playCtl.isPlaying) {
+      const ents = bridge.entities;
+      const npc = ents.filter((e) => e.kind === 'npc').length;
+      rows.push(
+        `<b>tick</b> ${playCtl.tick}　` +
+          `<b>实体</b> ${ents.length}（NPC ${npc}）　` +
+          `<span class="hint">动态实体走独立 instancing，不占静态 64 槽位</span>`,
+      );
+      const sel = bridge.selectedEntity;
+      if (sel !== null) {
+        rows.push(
+          `<b>实体选中</b> <span style="color:#FFC531;font-weight:700">${sel.characterId}</span>` +
+            `　槽位 ${sel.id}·代 ${sel.generation}　来源 ${sel.sourceNodeId ?? '—'}` +
+            `　目标 ${sel.targetId >= 0 ? sel.targetId : '—'}　(${sel.x.toFixed(1)}, ${sel.z.toFixed(1)})`,
+        );
+      }
+      for (const d of playCtl.diagnostics) {
+        if (d.severity === 'warning') rows.push(`<span class="warn">⚠ 运行时：${d.message}</span>`);
+      }
+    } else if (playCtl.error !== null) {
+      rows.push(`<span class="warn">⚠ 无法进入 Play：${playCtl.error}</span>`);
     }
 
     hud.innerHTML = rows.join('<br>');
@@ -1943,6 +2695,22 @@ async function boot(): Promise<void> {
     } else {
       renderer.setCylinderOverlay(null);
     }
+
+    // ── 运行时推进 + 动态实例注入（WU-3 / WU-4） ──
+    // playCtl.update 内部走 PlaySession 的固定步累加器：渲染帧率不决定游戏步数，
+    // 且只在 playing 状态推进（暂停就是真的停）。
+    // 玩家输入装配（复审 #7）：宿主把箭头键状态转成约定的运行输入向量，
+    // 每帧喂给会话；runtime 在固定步里消费。俯视世界轴向：↑ = -z，→ = +x。
+    if (playCtl.isPlaying) {
+      const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
+      const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
+      playCtl.session.setInput(ix, iz);
+    }
+    playCtl.update(dt);
+    renderer.setDynamicBatches(bridge.batches());
+    // 运行期诊断必须有消费者，否则"容量不足整批不生成"在 UI 上依旧是一片寂静，
+    // 跟没产出这个信号没有区别（AGENTS.md §2.2：不静默）。
+    drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
     panel.tickAnimation();

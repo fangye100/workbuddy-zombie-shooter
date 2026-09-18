@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_rhe434dp",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-14_baked.glb"
+  },
+  "sourceHash": "sha256:c2baf31303259e837daa06890cc94b3fe0b090ac76f9bf381d7e795d477a7628",
+  "updatedAt": "2026-09-18T15:11:46.281Z"
+}
