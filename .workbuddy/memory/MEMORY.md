@@ -72,8 +72,8 @@
 ## WebGPU / 浏览器验证（AGENTS.md §4）
 - 编码期陷阱→skill webgpu-coding-pitfalls；运行时验证→skill webgpu-headless-validate。tsc+vite build 全绿照样线上炸。
 - **headed Chrome + 真实 GPU，禁止 headless + SwiftShader**；🔴 不加 `--no-sandbox`/`--disable-dev-shm-usage`；🔴 必须加 `--ignore-certificate-errors`（新 profile 不信任自签证书 → 停在警告页，页面根本不加载，极易误判成"应用起不来"）。固定 profile `.workbuddy/tmp/chrome-profile`。
-- `editor:smoke` 5100 不在时自起 vite 但探测失败并**卡死**（实测 1h39m）→ 跑前先确认 5100 在。
-- 已知遗留失败（非本次引入）：5 条冒烟硬编码 sandbox 期望 vs 实际加载 floor1-t5；1 条 autoFitCylinders 断言读取路径不同步。`CONSOLE ERRORS: 0` 才是关键指标。
+- `editor:smoke` 自带 dev server：5100 不在时会自起 vite（2026-09-19 实测成功并自停）；历史上曾探测失败**卡死** 1h39m，跑前仍建议确认 5100 状态。
+- 已知遗留失败（非本次引入；2026-09-19 合并态实测 127 PASS / 6 FAIL）：5 条冒烟硬编码 sandbox 期望（13 物体/固定名/category/pickable）vs 实际启动场景 act1/floor-1（19 物体）；1 条 autoFitCylinders 断言自身活引用 bug。6 条均为脚本侧问题、非产品回归；`CONSOLE ERRORS: 0` 才是关键指标。
 - 🔴 实机探针的时序坑：HUD 每 0.4s 才刷新（采样间隔要 >700ms）；draw 基线要轮询到连续两次相同再取。
 - 🔴 **写用户资产的验证脚本：还原必须放 `finally`**，且校验失败也要还原；把「原文长度合理」也做成断言。
 - 自签 HTTPS 下 undici `fetch()` 挂 → 用原生 `https.get`(`rejectUnauthorized:false`)。vite 输出带 ANSI → 匹配前先 stripAnsi。
