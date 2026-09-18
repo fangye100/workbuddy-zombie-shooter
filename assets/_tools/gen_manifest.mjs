@@ -19,16 +19,36 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = path.resolve(HERE, '..');
 
-/** 读 GLB 的 JSON chunk（拿动画名/骨骼数，不加载网格） */
+/** 读 GLB 的 JSON chunk，拿动画名/骨骼数/实测三角数（不加载网格，只读 accessor 计数） */
 function glbInfo(abs) {
   try {
     const buf = fs.readFileSync(abs);
     if (buf.readUInt32LE(0) !== 0x46546c67) return null; // 'glTF'
     const jsonLen = buf.readUInt32LE(12);
     const js = JSON.parse(buf.slice(20, 20 + jsonLen).toString('utf8'));
+    // 实测面数/顶点数：indices.count/3 + POSITION.count（多 primitive 累加，跳过点/线模式）
+    let tris = 0, verts = 0;
+    for (const m of js.meshes ?? []) {
+      for (const p of m.primitives ?? []) {
+        const mode = p.mode ?? 4;
+        if (mode !== 4) continue;
+        const pos = js.accessors?.[p.attributes?.POSITION];
+        if (pos) verts += pos.count ?? 0;
+        if (p.indices != null) {
+          const ia = js.accessors?.[p.indices];
+          if (ia) tris += Math.floor((ia.count ?? 0) / 3);
+        } else if (pos) {
+          tris += Math.floor((pos.count ?? 0) / 3);
+        }
+      }
+    }
     return {
       animations: (js.animations ?? []).map((a) => a.name ?? 'clip'),
       joints: js.skins?.[0]?.joints?.length ?? 0,
+      tris, verts,
+      bytes: buf.length,
+      // 贴图尺寸（只取第一张图所在的 bufferView 长度做粗略信号；精确尺寸留浏览器端）
+      images: (js.images ?? []).length,
     };
   } catch {
     return null;
@@ -76,11 +96,18 @@ for (const c of [...roster.npcs, ...roster.bosses]) {
   const lods = [];
   // 🔴 LOD0 = 混元原生高模（原生 4096² baseColor 贴图，真源）。
   // 旧 LOD0（textured/*_baked.glb）是「原贴图→顶点色→逐面平涂」的有损中间产物，不是原生模型。
+  // 🔴 每档的 tris/verts/bytes 一律**实测**（读 glb accessor），不用 roster 的预算值——
+  //    预算值（如 E-01 的 900）与实际产出（现在 3000）早已脱节，拿它做 LOD 对比会误导。
   const rawGlb = fs.readdirSync(dir).find((f) => new RegExp(`^${c.id.replace(/-/g, '')}_\\d{8}_\\d{6}\\.glb$`).test(f)) ?? null;
-  if (rawGlb) lods.push({ label: 'LOD0 · 原生高模(混元raw ~80k面)', file: `${base}/${rawGlb}`, tris: 80000 });
-  if (baked) lods.push({ label: 'LOD1 · 贴图低模', file: `${base}/textured/${baked}`, tris: c.tris });
-  if (riggedOnly) lods.push({ label: 'LOD2 · +骨骼', file: `${base}/rigged/${riggedOnly}`, tris: c.tris });
-  if (animated) lods.push({ label: 'LOD3 · +动画', file: `${base}/rigged/${animated}`, tris: c.tris });
+  const mk = (label, file, abs) => {
+    const inf = glbInfo(abs);
+    return { label, file, tris: inf?.tris ?? c.tris, verts: inf?.verts ?? null,
+             bytes: inf?.bytes ?? null };
+  };
+  if (rawGlb) lods.push(mk('LOD0 · 原生高模(混元raw ~80k面)', `${base}/${rawGlb}`, path.join(dir, rawGlb)));
+  if (baked) lods.push(mk('LOD1 · 贴图低模', `${base}/textured/${baked}`, path.join(texturedDir, baked)));
+  if (riggedOnly) lods.push(mk('LOD2 · +骨骼', `${base}/rigged/${riggedOnly}`, path.join(riggedDir, riggedOnly)));
+  if (animated) lods.push(mk('LOD3 · +动画', `${base}/rigged/${animated}`, path.join(riggedDir, animated)));
 
   out.characters.push({
     id: c.id, name: c.name, en: c.en ?? '', kind: roster.bosses.includes(c) ? 'boss' : 'npc',
@@ -106,7 +133,12 @@ for (const e of props.entries) {
   const preview = fs.existsSync(path.join(dir, 'preview.png')) ? `${base}/preview.png` : null;
 
   const lods = [];
-  if (raw) lods.push({ label: 'LOD0 · 高模(raw ~50万面)', file: raw, tris: 500000 });
+  const mkE = (label, file, abs) => {
+    const inf = fs.existsSync(abs) ? glbInfo(abs) : null;
+    return { label, file, tris: inf?.tris ?? e.tris, verts: inf?.verts ?? null,
+             bytes: inf?.bytes ?? (fs.existsSync(abs) ? fs.statSync(abs).size : null) };
+  };
+  if (raw) lods.push(mkE('LOD0 · 高模(raw ~50万面)', raw, path.join(dir, `${e.id}.glb`)));
   // 🔴 tex2（原贴图转移版）优先于 tex（顶点色烘焙版）优先于顶点色 OBJ：
   // tex2 = raw 混元原贴图经三维空间对应转移到低模 UV（真色）；tex = 顶点色放大（旧法，弃用）。
   const tex2 = fs.existsSync(path.join(dir, 'tex2'))
@@ -114,11 +146,11 @@ for (const e of props.entries) {
   const texGlbs = fs.existsSync(path.join(dir, 'tex'))
     ? fs.readdirSync(path.join(dir, 'tex')).filter((f) => f.endsWith('_baked.glb')) : [];
   if (tex2.length) {
-    lods.push({ label: 'LOD1 · 低模+原贴图', file: `${base}/tex2/${tex2[0]}`, tris: e.tris });
+    lods.push(mkE('LOD1 · 低模+原贴图', `${base}/tex2/${tex2[0]}`, path.join(dir, 'tex2', tex2[0])));
   } else if (texGlbs.length) {
-    lods.push({ label: 'LOD1 · 低模+贴图', file: `${base}/tex/${texGlbs[0]}`, tris: e.tris });
+    lods.push(mkE('LOD1 · 低模+贴图', `${base}/tex/${texGlbs[0]}`, path.join(dir, 'tex', texGlbs[0])));
   }
-  if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris });
+  if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
 
   out.environments.push({
     id: e.id, name: e.name, en: e.en ?? '', kind: e.kind,

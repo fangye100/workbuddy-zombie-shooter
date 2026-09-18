@@ -33,22 +33,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/E-01/E01_20260902_145203.glb",
-     "tris": 80000
+     "tris": 79744,
+     "verts": 54414,
+     "bytes": 44274008
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-01/textured/E01_Shambler_900_baked.glb",
-     "tris": 900
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 2963204
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-01/rigged/E01_Shambler_900_rigged.glb",
-     "tris": 900
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 3068220
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb",
-     "tris": 900
+     "tris": 3000,
+     "verts": 4209,
+     "bytes": 3105528
     }
    ],
    "animations": [
@@ -94,22 +102,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/E-02/E02_20260902_150504.glb",
-     "tris": 80000
+     "tris": 79944,
+     "verts": 59760,
+     "bytes": 41149756
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-02/textured/E02_Lunger_1100_baked.glb",
-     "tris": 1100
+     "tris": 1076,
+     "verts": 1671,
+     "bytes": 157536
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged.glb",
-     "tris": 1100
+     "tris": 1076,
+     "verts": 1671,
+     "bytes": 221564
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged_animated.glb",
-     "tris": 1100
+     "tris": 1076,
+     "verts": 1671,
+     "bytes": 258936
     }
    ],
    "animations": [
@@ -155,22 +171,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/E-03/E03_20260902_150837.glb",
-     "tris": 80000
+     "tris": 79918,
+     "verts": 53865,
+     "bytes": 45246004
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-03/textured/E03_Spitter_1200_baked.glb",
-     "tris": 1200
+     "tris": 1181,
+     "verts": 1367,
+     "bytes": 152284
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged.glb",
-     "tris": 1200
+     "tris": 1181,
+     "verts": 1367,
+     "bytes": 205288
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged_animated.glb",
-     "tris": 1200
+     "tris": 1181,
+     "verts": 1367,
+     "bytes": 242660
     }
    ],
    "animations": [
@@ -216,22 +240,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/E-04/E04_20260901_010134.glb",
-     "tris": 80000
+     "tris": 80000,
+     "verts": 56156,
+     "bytes": 39868076
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-04/textured/E04_Bulwark_1600_baked.glb",
-     "tris": 1600
+     "tris": 1575,
+     "verts": 2083,
+     "bytes": 190776
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
-     "tris": 1600
+     "tris": 1575,
+     "verts": 2083,
+     "bytes": 269564
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
-     "tris": 1600
+     "tris": 1575,
+     "verts": 2083,
+     "bytes": 306936
     }
    ],
    "animations": [
@@ -277,22 +309,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/E-05/E05_20260902_151212.glb",
-     "tris": 80000
+     "tris": 80000,
+     "verts": 54299,
+     "bytes": 49275504
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-05/textured/E05_Bloater_1000_baked.glb",
-     "tris": 1000
+     "tris": 989,
+     "verts": 1054,
+     "bytes": 144428
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged.glb",
-     "tris": 1000
+     "tris": 989,
+     "verts": 1054,
+     "bytes": 186164
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged_animated.glb",
-     "tris": 1000
+     "tris": 989,
+     "verts": 1054,
+     "bytes": 223536
     }
    ],
    "animations": [
@@ -328,22 +368,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/B-01/B01_20260902_151604.glb",
-     "tris": 80000
+     "tris": 79758,
+     "verts": 66745,
+     "bytes": 46619056
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-01/textured/B01_THE BUTCHER_4200_baked.glb",
-     "tris": 4200
+     "tris": 4027,
+     "verts": 5104,
+     "bytes": 343684
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged.glb",
-     "tris": 4200
+     "tris": 4027,
+     "verts": 5104,
+     "bytes": 531220
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged_animated.glb",
-     "tris": 4200
+     "tris": 4027,
+     "verts": 5104,
+     "bytes": 568592
     }
    ],
    "animations": [
@@ -379,12 +427,16 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/B-02/B02_20260904_121308.glb",
-     "tris": 80000
+     "tris": 80046,
+     "verts": 62117,
+     "bytes": 44253596
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-02/textured/B02_THE BROODMOTHER_6000_baked.glb",
-     "tris": 6000
+     "tris": 5645,
+     "verts": 7069,
+     "bytes": 424172
     }
    ],
    "animations": [],
@@ -413,22 +465,30 @@
     {
      "label": "LOD0 · 原生高模(混元raw ~80k面)",
      "file": "characters/models/B-03/B03_20260904_121648.glb",
-     "tris": 80000
+     "tris": 79912,
+     "verts": 59224,
+     "bytes": 43219364
     },
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-03/textured/B03_PATIENT ZERO_5200_baked.glb",
-     "tris": 5200
+     "tris": 5379,
+     "verts": 7157,
+     "bytes": 412000
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged.glb",
-     "tris": 5200
+     "tris": 5379,
+     "verts": 7157,
+     "bytes": 673444
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged_animated.glb",
-     "tris": 5200
+     "tris": 5379,
+     "verts": 7157,
+     "bytes": 710816
     }
    ],
    "animations": [
@@ -469,17 +529,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-01/P-01.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 283217,
+     "bytes": 33791976
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-01/tex2/P-01_baked.glb",
-     "tris": 180
+     "tris": 171,
+     "verts": 199,
+     "bytes": 27828
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-01/P-01_low.obj",
-     "tris": 180
+     "tris": 180,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -511,17 +577,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-02/P-02.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 309838,
+     "bytes": 30377896
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-02/tex2/P-02_baked.glb",
-     "tris": 220
+     "tris": 233,
+     "verts": 241,
+     "bytes": 23888
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-02/P-02_low.obj",
-     "tris": 220
+     "tris": 220,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -553,17 +625,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-03/P-03.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 282239,
+     "bytes": 25587352
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-03/tex2/P-03_baked.glb",
-     "tris": 260
+     "tris": 262,
+     "verts": 372,
+     "bytes": 34492
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-03/P-03_low.obj",
-     "tris": 260
+     "tris": 260,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -595,17 +673,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-04/P-04.glb",
-     "tris": 500000
+     "tris": 499674,
+     "verts": 298561,
+     "bytes": 24755268
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-04/tex2/P-04_baked.glb",
-     "tris": 300
+     "tris": 294,
+     "verts": 411,
+     "bytes": 34988
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-04/P-04_low.obj",
-     "tris": 300
+     "tris": 300,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -637,17 +721,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-05/P-05.glb",
-     "tris": 500000
+     "tris": 520937,
+     "verts": 365050,
+     "bytes": 25912444
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-05/tex2/P-05_baked.glb",
-     "tris": 320
+     "tris": 384,
+     "verts": 606,
+     "bytes": 49084
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-05/P-05_low.obj",
-     "tris": 320
+     "tris": 320,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -679,17 +769,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-06/P-06.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 295792,
+     "bytes": 25953252
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-06/tex2/P-06_baked.glb",
-     "tris": 280
+     "tris": 286,
+     "verts": 406,
+     "bytes": 32804
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-06/P-06_low.obj",
-     "tris": 280
+     "tris": 280,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -721,17 +817,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-11/P-11.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 314835,
+     "bytes": 30243328
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-11/tex2/P-11_baked.glb",
-     "tris": 700
+     "tris": 697,
+     "verts": 833,
+     "bytes": 70048
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-11/P-11_low.obj",
-     "tris": 700
+     "tris": 700,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -763,17 +865,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-12/P-12.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 326484,
+     "bytes": 25971036
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-12/tex2/P-12_baked.glb",
-     "tris": 900
+     "tris": 877,
+     "verts": 1331,
+     "bytes": 87412
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-12/P-12_low.obj",
-     "tris": 900
+     "tris": 900,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -805,17 +913,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-13/P-13.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 304212,
+     "bytes": 24928492
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-13/tex2/P-13_baked.glb",
-     "tris": 200
+     "tris": 190,
+     "verts": 354,
+     "bytes": 32412
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-13/P-13_low.obj",
-     "tris": 200
+     "tris": 200,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -847,17 +961,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-14/P-14.glb",
-     "tris": 500000
+     "tris": 499962,
+     "verts": 303839,
+     "bytes": 35420828
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-14/tex2/P-14_baked.glb",
-     "tris": 400
+     "tris": 407,
+     "verts": 435,
+     "bytes": 40972
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-14/P-14_low.obj",
-     "tris": 400
+     "tris": 400,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -889,17 +1009,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-15/P-15.glb",
-     "tris": 500000
+     "tris": 499998,
+     "verts": 312801,
+     "bytes": 27137828
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-15/tex2/P-15_baked.glb",
-     "tris": 500
+     "tris": 472,
+     "verts": 700,
+     "bytes": 46372
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-15/P-15_low.obj",
-     "tris": 500
+     "tris": 500,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -931,17 +1057,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-16/P-16.glb",
-     "tris": 500000
+     "tris": 499500,
+     "verts": 305629,
+     "bytes": 34392516
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-16/tex2/P-16_baked.glb",
-     "tris": 450
+     "tris": 462,
+     "verts": 694,
+     "bytes": 54292
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-16/P-16_low.obj",
-     "tris": 450
+     "tris": 450,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -973,17 +1105,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-01/S-01.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 279719,
+     "bytes": 25994508
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-01/tex2/S-01_baked.glb",
-     "tris": 1800
+     "tris": 1790,
+     "verts": 1557,
+     "bytes": 77032
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-01/S-01_low.obj",
-     "tris": 1800
+     "tris": 1800,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1015,17 +1153,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-02/S-02.glb",
-     "tris": 500000
+     "tris": 499608,
+     "verts": 296508,
+     "bytes": 26451764
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-02/tex2/S-02_baked.glb",
-     "tris": 2000
+     "tris": 1903,
+     "verts": 2609,
+     "bytes": 118716
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-02/S-02_low.obj",
-     "tris": 2000
+     "tris": 2000,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1057,17 +1201,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-21/P-21.glb",
-     "tris": 500000
+     "tris": 499630,
+     "verts": 301031,
+     "bytes": 35124052
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-21/tex2/P-21_baked.glb",
-     "tris": 800
+     "tris": 753,
+     "verts": 1238,
+     "bytes": 69000
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-21/P-21_low.obj",
-     "tris": 800
+     "tris": 800,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1099,17 +1249,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-22/P-22.glb",
-     "tris": 500000
+     "tris": 499970,
+     "verts": 284443,
+     "bytes": 34858928
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-22/tex2/P-22_baked.glb",
-     "tris": 400
+     "tris": 401,
+     "verts": 391,
+     "bytes": 28192
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-22/P-22_low.obj",
-     "tris": 400
+     "tris": 400,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1141,17 +1297,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-23/P-23.glb",
-     "tris": 500000
+     "tris": 498302,
+     "verts": 316961,
+     "bytes": 26872992
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-23/tex2/P-23_baked.glb",
-     "tris": 700
+     "tris": 715,
+     "verts": 1121,
+     "bytes": 73100
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-23/P-23_low.obj",
-     "tris": 700
+     "tris": 700,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1183,17 +1345,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-24/P-24.glb",
-     "tris": 500000
+     "tris": 498926,
+     "verts": 296685,
+     "bytes": 23336768
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-24/tex2/P-24_baked.glb",
-     "tris": 500
+     "tris": 476,
+     "verts": 656,
+     "bytes": 34864
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-24/P-24_low.obj",
-     "tris": 500
+     "tris": 500,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1225,17 +1393,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-25/P-25.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 302257,
+     "bytes": 36302056
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-25/tex2/P-25_baked.glb",
-     "tris": 350
+     "tris": 335,
+     "verts": 324,
+     "bytes": 34788
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-25/P-25_low.obj",
-     "tris": 350
+     "tris": 350,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1267,17 +1441,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-26/P-26.glb",
-     "tris": 500000
+     "tris": 499390,
+     "verts": 313721,
+     "bytes": 36834240
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-26/tex2/P-26_baked.glb",
-     "tris": 600
+     "tris": 631,
+     "verts": 794,
+     "bytes": 55188
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-26/P-26_low.obj",
-     "tris": 600
+     "tris": 600,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1309,17 +1489,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-03/S-03.glb",
-     "tris": 500000
+     "tris": 499880,
+     "verts": 282358,
+     "bytes": 22484840
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-03/tex2/S-03_baked.glb",
-     "tris": 2400
+     "tris": 2307,
+     "verts": 2561,
+     "bytes": 128072
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-03/S-03_low.obj",
-     "tris": 2400
+     "tris": 2400,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1351,17 +1537,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-04/S-04.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 293245,
+     "bytes": 34867764
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-04/tex2/S-04_baked.glb",
-     "tris": 1600
+     "tris": 1662,
+     "verts": 2298,
+     "bytes": 103844
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-04/S-04_low.obj",
-     "tris": 1600
+     "tris": 1600,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1393,17 +1585,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-31/P-31.glb",
-     "tris": 500000
+     "tris": 499510,
+     "verts": 321927,
+     "bytes": 28880744
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-31/tex2/P-31_baked.glb",
-     "tris": 350
+     "tris": 361,
+     "verts": 554,
+     "bytes": 45844
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-31/P-31_low.obj",
-     "tris": 350
+     "tris": 350,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1435,17 +1633,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-32/P-32.glb",
-     "tris": 500000
+     "tris": 499936,
+     "verts": 316993,
+     "bytes": 29875364
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-32/tex2/P-32_baked.glb",
-     "tris": 1600
+     "tris": 1526,
+     "verts": 1714,
+     "bytes": 86332
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-32/P-32_low.obj",
-     "tris": 1600
+     "tris": 1600,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1477,17 +1681,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-33/P-33.glb",
-     "tris": 500000
+     "tris": 499332,
+     "verts": 309760,
+     "bytes": 34122792
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-33/tex2/P-33_baked.glb",
-     "tris": 520
+     "tris": 513,
+     "verts": 955,
+     "bytes": 37976
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-33/P-33_low.obj",
-     "tris": 520
+     "tris": 520,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1519,17 +1729,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-34/P-34.glb",
-     "tris": 500000
+     "tris": 499812,
+     "verts": 293318,
+     "bytes": 33380576
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-34/tex2/P-34_baked.glb",
-     "tris": 450
+     "tris": 431,
+     "verts": 661,
+     "bytes": 38388
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-34/P-34_low.obj",
-     "tris": 450
+     "tris": 450,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1561,17 +1777,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-35/P-35.glb",
-     "tris": 500000
+     "tris": 499574,
+     "verts": 298910,
+     "bytes": 26461080
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-35/tex2/P-35_baked.glb",
-     "tris": 220
+     "tris": 226,
+     "verts": 358,
+     "bytes": 33288
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-35/P-35_low.obj",
-     "tris": 220
+     "tris": 220,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1603,17 +1825,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-36/P-36.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 268787,
+     "bytes": 23058980
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-36/tex2/P-36_baked.glb",
-     "tris": 400
+     "tris": 389,
+     "verts": 477,
+     "bytes": 35184
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-36/P-36_low.obj",
-     "tris": 400
+     "tris": 400,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1645,17 +1873,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-05/S-05.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 270288,
+     "bytes": 27595672
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-05/tex2/S-05_baked.glb",
-     "tris": 2000
+     "tris": 1907,
+     "verts": 2187,
+     "bytes": 111020
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-05/S-05_low.obj",
-     "tris": 2000
+     "tris": 2000,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1687,17 +1921,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-06/S-06.glb",
-     "tris": 500000
+     "tris": 498686,
+     "verts": 297565,
+     "bytes": 26138896
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-06/tex2/S-06_baked.glb",
-     "tris": 1400
+     "tris": 1354,
+     "verts": 2048,
+     "bytes": 95936
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-06/S-06_low.obj",
-     "tris": 1400
+     "tris": 1400,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1729,17 +1969,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-41/P-41.glb",
-     "tris": 500000
+     "tris": 499924,
+     "verts": 304859,
+     "bytes": 36569276
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-41/tex2/P-41_baked.glb",
-     "tris": 500
+     "tris": 487,
+     "verts": 674,
+     "bytes": 38764
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-41/P-41_low.obj",
-     "tris": 500
+     "tris": 500,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1771,17 +2017,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-42/P-42.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 296437,
+     "bytes": 27907720
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-42/tex2/P-42_baked.glb",
-     "tris": 800
+     "tris": 759,
+     "verts": 1244,
+     "bytes": 73476
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-42/P-42_low.obj",
-     "tris": 800
+     "tris": 800,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1813,17 +2065,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-43/P-43.glb",
-     "tris": 500000
+     "tris": 480322,
+     "verts": 310512,
+     "bytes": 24712516
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-43/tex2/P-43_baked.glb",
-     "tris": 420
+     "tris": 401,
+     "verts": 696,
+     "bytes": 47432
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-43/P-43_low.obj",
-     "tris": 420
+     "tris": 420,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1855,17 +2113,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-44/P-44.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 287925,
+     "bytes": 29740276
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-44/tex2/P-44_baked.glb",
-     "tris": 300
+     "tris": 302,
+     "verts": 464,
+     "bytes": 28920
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-44/P-44_low.obj",
-     "tris": 300
+     "tris": 300,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1897,17 +2161,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-45/P-45.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 309277,
+     "bytes": 31235640
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-45/tex2/P-45_baked.glb",
-     "tris": 600
+     "tris": 600,
+     "verts": 586,
+     "bytes": 51264
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-45/P-45_low.obj",
-     "tris": 600
+     "tris": 600,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1939,17 +2209,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/P-46/P-46.glb",
-     "tris": 500000
+     "tris": 499188,
+     "verts": 296842,
+     "bytes": 32650612
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-46/tex2/P-46_baked.glb",
-     "tris": 350
+     "tris": 362,
+     "verts": 492,
+     "bytes": 39252
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-46/P-46_low.obj",
-     "tris": 350
+     "tris": 350,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -1981,17 +2257,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-07/S-07.glb",
-     "tris": 500000
+     "tris": 499066,
+     "verts": 291125,
+     "bytes": 34762388
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-07/tex2/S-07_baked.glb",
-     "tris": 1800
+     "tris": 1707,
+     "verts": 2165,
+     "bytes": 119596
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-07/S-07_low.obj",
-     "tris": 1800
+     "tris": 1800,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],
@@ -2023,17 +2305,23 @@
     {
      "label": "LOD0 · 高模(raw ~50万面)",
      "file": "environment/models/S-08/S-08.glb",
-     "tris": 500000
+     "tris": 500000,
+     "verts": 309386,
+     "bytes": 36438364
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-08/tex2/S-08_baked.glb",
-     "tris": 2200
+     "tris": 2080,
+     "verts": 2700,
+     "bytes": 147936
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/S-08/S-08_low.obj",
-     "tris": 2200
+     "tris": 2200,
+     "verts": null,
+     "bytes": null
     }
    ],
    "animations": [],

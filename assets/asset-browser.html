@@ -53,7 +53,26 @@
   #vclose{position:absolute;top:10px;right:10px;z-index:2;background:var(--panel);border:1px solid var(--line);
     color:var(--bone);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:14px}
   #vstat{position:absolute;left:10px;top:10px;z-index:2;background:rgba(20,17,31,.8);border:1px solid var(--line);
-    border-radius:8px;padding:4px 10px;font-size:11px;color:var(--dim)}
+    border-radius:8px;padding:4px 10px;font-size:11px;color:var(--dim);max-width:calc(100% - 20px)}
+  /* LOD 量化对比 HUD：面数 / 顶点数 / 贴图变化一眼可比 */
+  #vhud{position:absolute;left:10px;top:10px;z-index:3;background:rgba(14,12,22,.9);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px 11px;font-size:12px;color:var(--bone);min-width:212px;
+    box-shadow:0 6px 20px rgba(0,0,0,.45);backdrop-filter:blur(3px)}
+  #vhud .hudtitle{font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.09em;
+    font-weight:700;margin-bottom:7px}
+  #vhud table{border-collapse:collapse;width:100%}
+  #vhud td{padding:1px 0;vertical-align:baseline}
+  #vhud td.k{color:var(--dim);padding-right:12px;white-space:nowrap;font-size:11px}
+  #vhud td.v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px}
+  #vhud .sep{height:1px;background:var(--line);margin:7px 0}
+  #vhud .delta{font-size:11px;font-weight:400;margin-left:5px}
+  #vhud .d-red{color:#FF7A5C} #vhud .d-green{color:#4FD69C} #vhud .d-dim{color:var(--dim)}
+  #vhud .bar{display:flex;gap:3px}
+  #vhud .bar button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    border-radius:6px;padding:3px 0;font-size:10.5px;cursor:pointer;font-variant-numeric:tabular-nums}
+  #vhud .bar button.on{background:var(--teal);color:#0c2126;font-weight:700;border-color:var(--teal)}
+  #vstat.hidden{display:none}
+  #vhud.hidden{display:none}
   dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px;margin:0}
   dt{color:var(--dim)} dd{margin:0}
   #animlist button{display:block;width:100%;text-align:left;margin-bottom:4px}
@@ -80,7 +99,8 @@
 <div id="viewer">
   <div id="v3d">
     <button id="vclose">✕ 关闭</button>
-    <div id="vstat"></div>
+    <div id="vhud" class="hidden"></div>
+    <div id="vstat" class="hidden"></div>
     <div id="loading">加载模型中…</div>
   </div>
   <div id="vsidebar"></div>
@@ -270,8 +290,11 @@ function frameObject(root) {
   root.position.sub(center); root.position.y += size.y / 2; // 居中 + 贴地
   const maxDim = Math.max(size.x, size.y, size.z);
   const camDist = maxDim * 1.9;
-  state.camera.position.set(camDist * 0.7, maxDim * 1.1, camDist * 0.9);
-  state.controls.target.set(0, size.y * 0.45, 0);
+  // 🔴 量化 HUD 固定在左上，会压住模型。把注视点沿 -X 移一小段（模型因此落在画面偏右），
+  // 并抬高相机让整体下移，模型就完整落在 HUD 右侧的可视区里。
+  const panX = maxDim * 0.42;
+  state.camera.position.set(camDist * 0.7 - panX, maxDim * 1.1, camDist * 0.9);
+  state.controls.target.set(-panX, size.y * 0.45, 0);
   state.controls.update();
 }
 
@@ -293,14 +316,83 @@ function applyViewMode() {
   syncSidebarButtons();
 }
 
-function statLine(obj) {
-  let tris = 0, meshes = 0;
-  obj.traverse((o) => { if (o.isMesh) { meshes++; const g = o.geometry;
-    tris += g.index ? g.index.count / 3 : g.attributes.position.count / 3; } });
-  return `${meshes} mesh · ${Math.round(tris).toLocaleString()} tris`;
+function countMesh(obj) {
+  let tris = 0, verts = 0, meshes = 0, skinned = 0, bones = 0, withTex = 0;
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    meshes++;
+    const g = o.geometry;
+    tris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
+    verts += g.attributes.position.count;
+    if (o.isSkinnedMesh) { skinned++; bones = Math.max(bones, o.skeleton?.bones?.length ?? 0); }
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    if (mats.some((m) => m && m.map)) withTex++;
+  });
+  return { tris: Math.round(tris), verts, meshes, skinned, bones, withTex };
 }
 
-async function loadLOD(lod) {
+function statLine(obj) {
+  const c = countMesh(obj);
+  return `${c.meshes} mesh · ${c.tris.toLocaleString()} tris`;
+}
+
+/** LOD 量化对比 HUD：面数/顶点数/文件大小 + 相对 LOD0 的降幅。 */
+function renderHud() {
+  const el = document.getElementById('vhud');
+  const vstat = document.getElementById('vstat');
+  const e = state.entry;
+  if (!el) return;
+  if (!e || !state.current) { el.classList.add('hidden'); return; }
+  const c = countMesh(state.current);
+  const idx = state.lodIndex ?? 0;
+  const lods = e.lods ?? [];
+  // 🔴 基准用 manifest 实测值（lod.tris/verts/bytes），不用「已加载过的档」——
+  // 否则用户没点过 LOD0 时降幅就没得算。
+  const base = lods[0];
+  const fmtBytes = (b) => (b == null ? null
+    : b >= 1048576 ? `${(b / 1048576).toFixed(2)} MB` : `${Math.round(b / 1024)} KB`);
+  // 降幅：相对 LOD0（负 = 减少，绿；正 = 增加，红）
+  const delta = (cur, ref) => {
+    if (idx === 0 || !ref || !cur) return '';
+    const d = cur / ref - 1;
+    const col = d < 0 ? 'd-green' : d > 0 ? 'd-red' : 'd-dim';
+    return `<span class="delta ${col}">${d > 0 ? '+' : ''}${(d * 100).toFixed(1)}%</span>`;
+  };
+
+  const rows = [
+    ['三角形', c.tris.toLocaleString(), delta(c.tris, base?.tris)],
+    ['顶点', c.verts.toLocaleString(), delta(c.verts, base?.verts)],
+    ['Mesh', String(c.meshes), ''],
+  ];
+  if (c.skinned) rows.push(['骨骼', `${c.bones} joints`, '']);
+  if (state.gltfAnimations?.length) rows.push(['动画', `${state.gltfAnimations.length} 段`, '']);
+  rows.push(['贴图', c.withTex ? '有' : '无', '']);
+  const mb = fmtBytes(lods[idx]?.bytes);
+  if (mb) rows.push(['文件', mb, delta(lods[idx].bytes, base?.bytes)]);
+
+  const bars = lods.map((l, i) =>
+    `<button class="${i === idx ? 'on' : ''}" data-hudlod="${i}" title="${l.label} · ${
+      l.bytes ? fmtBytes(l.bytes) : ''}">${l.tris == null ? '—' : l.tris.toLocaleString()}</button>`).join('');
+
+  el.innerHTML =
+    `<div class="hudtitle">${e.id} · ${(lods[idx]?.label ?? '').split(' · ')[0]} 量化</div>
+     <table>${rows.map(([k, v, d]) =>
+       `<tr><td class="k">${k}</td><td class="v">${v}${d}</td></tr>`).join('')}
+     </table>
+     <div class="sep"></div>
+     <div style="font-size:10.5px;color:var(--dim);margin-bottom:4px">各档三角形（点击切换）</div>
+     <div class="bar">${bars}</div>`;
+  el.classList.remove('hidden');
+  vstat?.classList.add('hidden');
+  el.querySelectorAll('[data-hudlod]').forEach((btn) => {
+    btn.onclick = () => {
+      const i = +btn.dataset.hudlod;
+      if (i !== idx) loadLOD(lods[i], i);
+    };
+  });
+}
+
+async function loadLOD(lod, index = null) {
   const loading = document.getElementById('loading');
   loading.style.display = 'grid';
   try {
@@ -333,12 +425,21 @@ async function loadLOD(lod) {
       state.mixer.update(0);
     }
     frameObject(root);
+    // 量化 HUD：记录本档统计，供 LOD 间对比
+    if (index != null) state.lodIndex = index;
+    const c = countMesh(root);
+    state.lodStats = state.lodStats ?? [];
+    if (index != null) state.lodStats[index] = c;
     document.getElementById('vstat').textContent = `${lod.label} · ${statLine(root)}`;
+    renderHud();
     // clay 模式残留时应用
     if (state.viewMode === 'clay' || state.viewMode === 'wire') applyViewMode();
     renderSidebar();
   } catch (e) {
-    document.getElementById('vstat').textContent = `加载失败：${e.message}`;
+    const vstat = document.getElementById('vstat');
+    vstat.classList.remove('hidden');
+    document.getElementById('vhud')?.classList.add('hidden');
+    vstat.textContent = `加载失败：${e.message}`;
   } finally {
     loading.style.display = 'none';
   }
@@ -429,9 +530,9 @@ function renderSidebar() {
   ui.view = [...document.querySelectorAll('#viewbtns button')];
   ui.anim = [...document.querySelectorAll('#animlist button')];
   ui.sk = document.getElementById('skbtn');
-  for (const b of ui.lod) b.onclick = () => { state.viewMode = 'textured'; loadLOD(e.lods[+b.dataset.lod]); };
+  for (const b of ui.lod) b.onclick = () => { state.viewMode = 'textured'; loadLOD(e.lods[+b.dataset.lod], +b.dataset.lod); };
   for (const b of ui.view) b.onclick = () => { state.viewMode = b.dataset.view;
-    if (b.dataset.view === 'textured' && b.dataset._needReload) loadLOD(e.lods[state.curLOD ?? 0]);
+    if (b.dataset.view === 'textured' && b.dataset._needReload) loadLOD(e.lods[state.curLOD ?? 0], state.curLOD ?? 0);
     applyViewMode(); };
   for (const b of ui.anim) b.onclick = () => playClip(b.dataset.anim);
   if (ui.sk) ui.sk.onclick = () => toggleSkeleton(!state.skeletonOn);
@@ -467,7 +568,10 @@ function openViewer(entry, isChar) {
     ?? entry.lods[0];
   const idx = entry.lods.indexOf(def);
   state.curLOD = idx;
-  loadLOD(def);
+  // 换条目 → 清空上一只的 LOD 量化缓存（否则 HUD 会拿别的模型的面数做分母）
+  state.lodStats = [];
+  state.lodIndex = idx;
+  loadLOD(def, idx);
   renderSidebar();
   if (!state.raf) loop();
 }
