@@ -109,23 +109,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-02/textured/E02_Lunger_1100_baked.glb",
-     "tris": 1076,
-     "verts": 1671,
-     "bytes": 157536
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3057780
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged.glb",
-     "tris": 1076,
-     "verts": 1671,
-     "bytes": 221564
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3190172
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged_animated.glb",
-     "tris": 1076,
-     "verts": 1671,
-     "bytes": 258936
+     "tris": 3300,
+     "verts": 5350,
+     "bytes": 3227480
     }
    ],
    "animations": [
@@ -178,23 +178,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-03/textured/E03_Spitter_1200_baked.glb",
-     "tris": 1181,
-     "verts": 1367,
-     "bytes": 152284
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2757264
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged.glb",
-     "tris": 1181,
-     "verts": 1367,
-     "bytes": 205288
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2877948
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged_animated.glb",
-     "tris": 1181,
-     "verts": 1367,
-     "bytes": 242660
+     "tris": 3600,
+     "verts": 4862,
+     "bytes": 2915252
     }
    ],
    "animations": [
@@ -247,23 +247,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-04/textured/E04_Bulwark_1600_baked.glb",
-     "tris": 1575,
-     "verts": 2083,
-     "bytes": 190776
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2710468
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
-     "tris": 1575,
-     "verts": 2083,
-     "bytes": 269564
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2870824
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
-     "tris": 1575,
-     "verts": 2083,
-     "bytes": 306936
+     "tris": 4800,
+     "verts": 6515,
+     "bytes": 2908132
     }
    ],
    "animations": [
@@ -316,23 +316,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/E-05/textured/E05_Bloater_1000_baked.glb",
-     "tris": 989,
-     "verts": 1054,
-     "bytes": 144428
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3018736
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged.glb",
-     "tris": 989,
-     "verts": 1054,
-     "bytes": 186164
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3122856
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged_animated.glb",
-     "tris": 989,
-     "verts": 1054,
-     "bytes": 223536
+     "tris": 3000,
+     "verts": 4172,
+     "bytes": 3160164
     }
    ],
    "animations": [
@@ -375,23 +375,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-01/textured/B01_THE BUTCHER_4200_baked.glb",
-     "tris": 4027,
-     "verts": 5104,
-     "bytes": 343684
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3095792
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged.glb",
-     "tris": 4027,
-     "verts": 5104,
-     "bytes": 531220
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3515140
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged_animated.glb",
-     "tris": 4027,
-     "verts": 5104,
-     "bytes": 568592
+     "tris": 12600,
+     "verts": 17306,
+     "bytes": 3552448
     }
    ],
    "animations": [
@@ -434,9 +434,9 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-02/textured/B02_THE BROODMOTHER_6000_baked.glb",
-     "tris": 5645,
-     "verts": 7069,
-     "bytes": 424172
+     "tris": 18000,
+     "verts": 21049,
+     "bytes": 3440496
     }
    ],
    "animations": [],
@@ -472,23 +472,23 @@
     {
      "label": "LOD1 · 贴图低模",
      "file": "characters/models/B-03/textured/B03_PATIENT ZERO_5200_baked.glb",
-     "tris": 5379,
-     "verts": 7157,
-     "bytes": 412000
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3395568
     },
     {
      "label": "LOD2 · +骨骼",
      "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged.glb",
-     "tris": 5379,
-     "verts": 7157,
-     "bytes": 673444
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3820076
     },
     {
      "label": "LOD3 · +动画",
      "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged_animated.glb",
-     "tris": 5379,
-     "verts": 7157,
-     "bytes": 710816
+     "tris": 15600,
+     "verts": 17521,
+     "bytes": 3857384
     }
    ],
    "animations": [

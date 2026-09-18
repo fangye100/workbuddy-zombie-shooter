@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""LOD2/LOD3（+骨骼 / +动画）重制：路线 A 几何 + 复用既有骨架 + 权重转移。
+"""路线 A 批量重制器：一次产出 LOD1 / LOD2 / LOD3（贴图低模 / +骨骼 / +动画）。
+
+产出
+----
+  LOD1 = decimate_uvkeep 的产物（保 UV 减面 + 内嵌原生贴图，原尺度）
+  LOD2 = LOD1 几何 + 复用既有 rigged 的骨架
+  LOD3 = LOD2 + animations（与 LOD2 同一容器结构，仅 base 模板不同）
+三者共享同一份几何与同一张原生贴图，差别只在「有没有骨架 / 动画」。
 
 为什么这样做
 ------------
@@ -16,11 +23,18 @@ HumanIK 骨架的骨点是**固定世界坐标**（Hips ≈ y=1.0，总高 2.05 
 本条已在 rig_character.py:140 `s = SKELETON_HEIGHT / zspan` 得到印证。
 本脚本的 s 直接由「低模自身高度 → 2.05」求得，与管线常数相差 ~0.7%（≈1.4 cm），
 对骨骼-体段对齐无实质影响（权重 falloff eps=0.02 m）。
+注意 LOD1 **不缩放**（保持与 LOD0 同尺度）；引擎侧由 sidecar 的 normalizeHeightM 归一。
+
+目标面数
+--------
+缺省走 `roster_target()`：roster 的 tris 预算 ×3（下限 3000）。理由见该函数 docstring。
 
 用法
 ----
-  python rig_uvkeep.py --char E-01 --target 3000 --stats
-  python rig_uvkeep.py --char E-01 --target 3000 --only rigged
+  python rig_uvkeep.py --char E-01                  # 单只，自动定档，全套 LOD1/2/3
+  python rig_uvkeep.py --char all                   # 8 只全量批处理
+  python rig_uvkeep.py --char all --skip-lod1       # 只重做 LOD2/LOD3
+  python rig_uvkeep.py --char B-01 --target 12000   # 覆盖目标面数
 """
 import argparse
 import importlib.util
@@ -293,14 +307,57 @@ def find_files(cid):
     return raw, rig, ani
 
 
-def process(cid, target, only=None, tex_weight=1.0, quality=0.6, keep_png=False, log=print):
+def roster_target(cid):
+    """按 roster 的 tris 预算推导 LOD1 目标面数。
+
+    🔴 为什么是 ×3：roster.tris 是**设计预算**（旧 baked 严格照它减面：E-02 预算 1100 /
+    实际 1076，B-01 4200 / 4027），但该预算档位的剪影已被验证为不可接受
+    （E-01 900 面 → 小臂细成棍、脸糊成团）。E-01 提到 3000 面后用户验收通过，
+    故按同一比例（≈3×）放大其余角色；下限 3000 是为了不让最小的怪低于已验收的 E-01。
+    """
+    roster = json.load(open(os.path.join(ASSETS, "characters", "roster.json"), encoding="utf-8"))
+    for c in roster["npcs"] + roster["bosses"]:
+        if c["id"] == cid:
+            return max(3000, int(round(int(c.get("tris", 1000)) * 3)))
+    return 3000
+
+
+def process(cid, target=None, only=None, tex_weight=1.0, quality=0.6, keep_png=False,
+            skip_lod1=False, log=print):
     raw, rig, ani = find_files(cid)
     if not raw:
         raise SystemExit(f"[FATAL] {cid} 找不到原生高模")
-    log(f"\n{'='*74}\n{cid}  raw={os.path.basename(raw)}")
+    if target is None:
+        target = roster_target(cid)
+    log(f"\n{'='*74}\n{cid}  raw={os.path.basename(raw)}  目标 {target} 面")
 
     tmpdir = tempfile.mkdtemp(prefix=f"riguv_{cid}_")
     geo = uk.low_geometry(raw, target, tmpdir, texture_weight=tex_weight, quality=quality, log=log)
+    tex, mime = uk.encode_texture(geo["tex_png"], keep_png)
+
+    results = []
+
+    # ---- LOD1：贴图低模（原尺度，不缩放 —— 与既有 LOD1 及各角色保持一致）----
+    if not skip_lod1:
+        tex_dir = os.path.join(os.path.dirname(raw), "textured")
+        baked = None
+        if os.path.isdir(tex_dir):
+            cand = [f for f in os.listdir(tex_dir) if f.endswith("_baked.glb")]
+            baked = cand[0] if cand else None
+        if baked:
+            out1 = os.path.join(tex_dir, baked)
+            if os.path.exists(out1) and not os.path.exists(out1 + ".pre-uvkeep.bak"):
+                import shutil
+                shutil.copy2(out1, out1 + ".pre-uvkeep.bak")
+            size1, g1 = uk.build_glb(out1, geo["V"], geo["pairs"], geo["VT"], tex, mime, N=geo["N"])
+            log(f"      [lod1] → {baked}  {size1/1e6:.2f}MB  {g1['gltf_faces']} 面 / "
+                f"{g1['gltf_vertices']} 顶点")
+            results.append(dict(tag="lod1", out=out1, size=size1, faces=g1["gltf_faces"],
+                                verts=g1["gltf_vertices"], align_med_mm=None, align_p95_mm=None))
+        else:
+            log("      [lod1] textured/ 下没有 *_baked.glb，跳过")
+
+    # ---- LOD2/LOD3：复用既有骨架 + 权重转移 ----
     # 🔴 缩放到骨架空间（见文件头「尺度铁律」）
     V = geo["V"]
     h = float(V[:, 1].max() - V[:, 1].min())
@@ -310,9 +367,6 @@ def process(cid, target, only=None, tex_weight=1.0, quality=0.6, keep_png=False,
     log(f"      缩放 s={s:.4f}（低模高 {h:.4f} m → 骨架空间 {SKELETON_HEIGHT} m），"
         f"y∈[{V[:,1].min():.3f},{V[:,1].max():.3f}]")
 
-    tex, mime = uk.encode_texture(geo["tex_png"], keep_png)
-
-    results = []
     for tag, base in (("rigged", rig), ("rigged_animated", ani)):
         if only and tag != only:
             continue
@@ -359,24 +413,37 @@ def process(cid, target, only=None, tex_weight=1.0, quality=0.6, keep_png=False,
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--char", default="E-01", help="角色 ID，或 all")
-    ap.add_argument("--target", type=int, default=3000)
+    ap.add_argument("--char", default="E-01", help="角色 ID，或 all（批量全部）")
+    ap.add_argument("--target", type=int, default=None,
+                    help="目标面数。缺省按 roster 的 tris 预算 ×3（下限 3000），见 roster_target()")
     ap.add_argument("--only", choices=["rigged", "rigged_animated"], default=None)
+    ap.add_argument("--skip-lod1", action="store_true", help="只做 LOD2/LOD3，不动 LOD1")
     ap.add_argument("--tex-weight", type=float, default=1.0)
     ap.add_argument("--quality", type=float, default=0.6)
     ap.add_argument("--keep-png", action="store_true")
     args = ap.parse_args()
 
-    import json as _json
-    roster = _json.load(open(os.path.join(ASSETS, "characters", "roster.json"), encoding="utf-8"))
+    roster = json.load(open(os.path.join(ASSETS, "characters", "roster.json"), encoding="utf-8"))
     ids = [c["id"] for c in roster["npcs"] + roster["bosses"]]
     todo = ids if args.char == "all" else [args.char]
 
-    allres = []
+    allres, failed = [], []
     for cid in todo:
-        allres.append(process(cid, args.target, args.only, args.tex_weight, args.quality,
-                              args.keep_png))
-    print("\n" + _json.dumps(allres, ensure_ascii=False, indent=1))
+        try:
+            allres.append(process(cid, args.target, args.only, args.tex_weight, args.quality,
+                                  args.keep_png, args.skip_lod1))
+        except SystemExit as e:
+            failed.append((cid, str(e)))
+            print(f"\n[SKIP] {cid}: {e}", flush=True)
+        except Exception as e:
+            failed.append((cid, repr(e)))
+            print(f"\n[FAIL] {cid}: {e!r}", flush=True)
+
+    print("\n" + "=" * 74)
+    print(f"批次完成：{len(allres)} 只成功" + (f"，{len(failed)} 只跳过/失败" if failed else ""))
+    for cid, why in failed:
+        print(f"  SKIP {cid}: {why}")
+    print(json.dumps(allres, ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
