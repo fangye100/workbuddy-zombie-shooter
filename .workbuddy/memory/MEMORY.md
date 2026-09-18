@@ -90,7 +90,24 @@ typecheck · npm test · editor:build · editor:smoke · content:check · verify
 ## 线上资料库（workbuddy.cn/space）
 - 流程：connect_open_platform 换票(1800s) → list-user-spaces 判 category(personal 直接写/team 停等) → get_doc_reviews.py --page-id → submit_doc_edit.py(新增) / submit_review_edit.py(改已有)。
 - 🔴 Table 只接受无属性；仅 delete/insert_before/insert_after，禁 update；加删行列=整表重建 → rowHeader 永久丢失。新建整篇用 create_doc.py。本地 docs/ 是真源。
-- 线上节点：docs/09 → FNfRd1b8idYncNDIdKBmvQ；docs/14 §14–§15 → 48WumseQVdiYkWOQL2pz94。
+- 线上节点：docs/09 → FNfRd1b8idYncNDIdKBmvQ；docs/14 §14–§15 → 48WumseQVdiYkWOQL2pz94；**docs/06 §7（3D 角色资产 LOD 管线·路线 A）→ PoRjTxrLfqhGrHQYENM1UA**。
+- personal 空间 spaceId = `GHweUCr3bUooHpT4dfdVQi`（我的文档）；team 空间 `cCwTkzCwCevtZDBkVGnFEv` 本账号仅 reader，不可写。
+- 脚本路径：`<library skill>/space_api.py`、`doc/create_doc.py`、`doc/get_doc_reviews.py`（**不在 `doc/scripts/` 下**）。
+- 🔴 **PowerShell 捕获子进程 stdout 再重定向会按本地码页解码，中文 UTF-8 字节在非法序列处被替换 → 不可逆丢失**（事后用 latin1→utf-8 往返也修不回）。凡调这类会返回中文的脚本，一律用 Python 包装器 `subprocess.run(capture_output=True, encoding="utf-8")` **直接写文件**，不经 PowerShell 捕获。
+- 新建整篇的判据：先 `--dry-run`（本地校验、不发 HTTP、不需 token），看 `content=ok`；正式创建后回读验收，`failedCount`/`fatalCount` 必须为 0。
+
+## 3D 资产 LOD 管线（路线 A，2026-09-18 定稿，全文 docs/06 §7）
+- **铁律 1**：贴图「花脸」的根因是**几何**不是 UV 算法 —— 聚类减面产出的三角形横跨模型不同部位，采任何贴图都花。正解 = 焊点 + pymeshlab `..._quadric_edge_collapse_with_texture`（`preserveboundary=False`）。
+- **铁律 2**：混元高模几何本体是**封闭流形**（焊点后 E=1.5F / 边界 0 / 非流形 0）；表面的 20%「边界边」是 UV 切分假象，别用 `preserveboundary=True` 去保护（会让 QEM 卡死不动）。
+- **铁律 3**：glTF `TEXCOORD_0` 是**逐顶点**属性，OBJ 的 vt 是逐面角 → 必须做 wedge 顶点分裂，否则 UV 错配、全身偏色。
+- **铁律 4**：glb 手写容器 —— JSON chunk 填充用**空格 0x20**（`\x00` 会让 `JSON.parse` 抛错）、BIN 才用 `\x00`、`buffers[0].byteLength` 要同步扩、双 chunk 都 4 字节对齐。
+- **铁律 5**：低模 UV 与原生意一致时**直接内嵌原生 4096² 贴图**，零烘焙；换贴图不必重跑减面。
+- **铁律 6**：绑骨侧网格必须等比缩放到骨架高度 2.05 m 且脚底 y=0（HumanIK 骨点是固定世界坐标）；**LOD1 不缩放**。
+- **铁律 7**：LOD2/3 复用既有骨架时**必须 `prune_base`** 丢弃旧网格 accessor，否则体积反超 LOD1（5.03 vs 3.07MB）；原始模板存 `.pre-uvkeep.bak` 保证幂等。
+- 工具：`decimate_uvkeep.py`（LOD1）/ `rig_uvkeep.py`（LOD2/3，`--char all` 批量）/ `verify-batch-lods.mjs`（浏览器逐档断言）。
+- 面数定档 = roster.tris × 3（下限 3000）：E-01 3000 / E-02 3300 / E-03 3600 / E-04 4800 / E-05 3000 / B-01 12600 / B-02 18000 / B-03 15600。
+- 🔴 **B-02 从未绑骨**（无 `rigged/` 目录），只有 LOD0+LOD1 两档；补骨骼档需先跑绑骨管线。
+- 质检判据：面积保持 >90%、边界/非流形 0、UV 密度 p99/med <3、**点到面**距离（不是点到点）。
 
 ## 环境坑（Windows 沙箱）
 - Git Bash 会突然损坏（`dirname/cd/head/tail: command not found` + wsl.exe 被拦）→ 改用 PowerShell（重定向到 `.workbuddy/tmp/*.log` 再 Read，直接输出常被吞；中文乱码但功能正常）+ Write/Read/Glob/Grep 工具。
