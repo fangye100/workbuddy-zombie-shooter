@@ -1,11 +1,14 @@
 # 19 · 最终开发报告（Agent 优先 Game Editor · WU-0 → WU-6）
 
-- 分支：`feature/headless-runtime`，领先 `origin/main` **22 笔提交**，落后 0（全部已推送）。
+- 分支：`feature/headless-runtime` —— **已通过 PR #3 合并进 `main`**（merge commit `4091ec3`，2026-09-18；合并时领先 22 笔、全部已推送）。
 - 依据：`docs/17-Agent优先GameEditor架构与开发指导.md` §8 业务证明、§9 报告要求。
 - 取舍过程：`docs/18-运行时责任收敛与取舍记录.md`（WU-0 → WU-6 逐节，含踩坑与仍未解决项）。
 - 独立评审：`docs/review/`（三份只读评审，A 架构铁律 / B 证据可复现 / C 代码风险）。
   首轮 A、B **不通过**（6 条阻断），第二轮 A **不通过**（含整改引入的 1 条真回归 + 1 处门禁红）；
   两轮发现已全部修掉。评审意见与整改见 `docs/18` §9。
+- 合并后补记（2026-09-18 → 09-19）：PR #3 的 22 条 bot 评审（codex 3 + copilot 19）逐条复现后
+  整改 —— 20 条修复（`87c2b25`）、2 条拒绝（附取证），独立审核 PASS；2026-09-19 第二轮独立审核
+  （逐条复现 + 门禁复跑）再次 PASS。本报告中与整改冲突的段落已同步（§6 资源清理、§6 已知限制 1/2）。
 
 ---
 
@@ -221,27 +224,44 @@ $ npm run verify:parity-host
 - **runtime 侧没有 GPU 资源**（依赖方向禁止），`PlaySession.stop()` 断开世界引用即可回收。
 - **Play 期由宿主分配的资源必须登记进 `PlaySession`**（AGENTS.md §2.4），
   `stop()` 逐个释放，`ledger` 给出 `{registered, disposed, pending}`；
-  编辑器把 Bridge 批次登记进去。**`pending === 0` 是"Stop 后无残留"的可断言判据**
+  编辑器把 **Bridge 批次 + 渲染侧动态实例资源（`RendererCore.releaseDynamicResources()`）
+  两项**登记进去。**`pending === 0` 是"Stop 后无残留"的可断言判据**
   （本次整改新增 —— 整改前这条规则只写在文档里，代码没有任何登记表）。
-- **动态实例/代理网格由渲染核心持有，按 `meshId` 缓存跨 Play 复用**，不随单次 Stop 销毁，
-  随 `renderer-core.destroy()` 释放。这是有意的：每次 Play 重建网格会让 500 僵尸的
-  CPU 开销全落在造网格上。
-- 20 次启停后 `registered == disposed == 20`、`pending == 0`（入库测试断言）。
+- **动态实例/代理网格由渲染核心持有**（按 `meshId` 缓存），但**随 Stop 释放**：
+  `RendererCore.releaseDynamicResources()` 销毁实例 buffer / bind group / 代理网格缓存，
+  并由 `PlayController` 登记进 PlaySession 账目（bot 评审 [11]/[21] 修正）。
+  报告截点前的写法是「跨 Play 复用、不随单次 Stop 销毁」——与 AGENTS.md §2.4
+  「Play 期每一次 GPU 资源分配都必须登记、Stop 时逐个 `destroy()`」相抵，纪律优先；
+  500 僵尸的造网格 CPU 开销另作优化，不与资源纪律混用。
+- 20 次启停后 `registered == disposed == 40`（2 项/轮）、`pending == 0`，并断言渲染侧
+  释放入口真的被调用（入库测试 `play-controller.test.ts`）。
 
 ### 已知限制
 
-1. **`editor:smoke` 6 条恒失败**（横跨 WU-3 → WU-6 未修）：
-   - **5 条**是脚本硬编码了 sandbox 场景（`default.scene.json`，15 节点）的期望值，
-     而启动场景早已换成 `assets/scenes/sim/floor1-t5.scene.json`（35 节点）——
-     根因是分支在 WU-1e 把 `aether.project.json` 的 `startIndex` 从 1 改成了 7。
-     其中 `category` / `pickable` 两条返回 `{}`，等于**门禁在这两项上完全失效**。
-     ⚠️ 这个 `startIndex=7` 是**本分支引入、尚未回改**的，见限制 2。
+1. **`editor:smoke` 6 条 FAIL 持续存在**（横跨 WU-3 → 合并，尚未修；2026-09-19 合并态实测 127 PASS / 6 FAIL / 3 SKIP）：
+   - **5 条**是脚本硬编码了 sandbox 场景（`default.scene.json`）的期望值（物体数 13、固定物体名、
+     `category` / `pickable`），而启动场景是 `assets/scenes/act1/floor-1.scene.json`
+     （**19 物体**，作者场景）。实测：`objects=19 ≠ 13`、物体名/层级数对不上、
+     `category` / `pickable` 两条返回 `{}` —— **门禁在这两项上仍完全失效**。
+     ⚠️ 报告截点的根因（WU-1e 把 `startIndex` 1→7、启动场景变 sim 快照）已被 bot 评审整改
+     回改（`87c2b25` → `startIndex: 1`，见限制 2），但 **smoke 脚本的期望值未同步更新** ——
+     这 5 条与其无关地继续失败，性质是「脚本未跟随产品启动场景」，不再是数据回归。
    - **1 条** `autoFitCylinders`：脚本 `:1357` 取的是**活引用**未拷贝，被它自己的
      "还原"步骤（`:1372`）就地写回旧值；同批取回的 `oRadiiImmediate/Persist`（数字）
      都是正确的 `0.0574924`。**功能是好的，是脚本自身的问题。**
-2. **启动场景是 sim 派生产物**：`startIndex = 7` → `assets/scenes/sim/floor1-t5.scene.json`
-   （WU-1e 引入，标注为"派生产物"）。§8-1 比对的"同一份文档"就是这份快照；
-   它同时是上面 5 条 smoke FAIL 的根因。**尚未决定回改 `act1/floor-1` 还是接受现状。**
+     （2026-09-19 实测复现：该条仍 FAIL，LeftArm 读到 `0.091` vs 预期 `0.0575`。）
+2. **启动场景指向派生产物：仓库残留已修，复发路径未关闭**（bot 评审 [2]/[9] 修复；PR #4 评审补充）：
+   - **已修**：`87c2b25` 把 `aether.project.json` 的 `startIndex` 回改 `1` →
+     `assets/scenes/act1/floor-1.scene.json`（作者场景 `sc_act1_floor1`）；sim 快照
+     （`floor1-t0/t1/t3/t5`）的 id 与 `scenes[]` 登记项对齐（评审 [7]/[8]）。
+   - **复发路径仍在**：`tools/level/sim-level.mjs:196` 的 `--focus=N` 仍调用 `setStartIndex()`
+     写回 `project.startIndex`（该 flag 的文档用途本就是「把项目启动场景指到 t=N」，工具现在会在
+     写回时打印提交前核对提示）。跑过 `--focus` 后提交，就会把启动场景再次指到派生产物 ——
+     **本项保持未关闭**；关闭需产品决策（保留写回 + 核对提示 / 拆独立 `--set-start` 开关 /
+     编辑器侧预览不再改产品文件），且需一并澄清与 docs/17 §5.4「显式选择模拟预览不自动更改
+     产品启动场景」的张力。
+   - §8-1 的比对脚本与方法不依赖具体场景（`runtime-parity.mjs --scene <path>` 可指向任意场景），
+     但上面那组记录数字是在当时的 sim 快照（旧 id `sc_sim_floorsc_act1_floor1_t5`）上采集的。
 3. **点光位置仍由引擎轨道驱动**（`frame-uniforms.ts` 硬编码 `cos(t)*2.6 / 1.4 / sin(t)*2.6`）。
    本次整改只把点光的 color/intensity/range 接到了场景组件，位置字段 schema 没有。
 4. **`LabRenderer` 仍保留硬编码 fallback 场景**（`buildDefaultSpecs()`，13 物件），
