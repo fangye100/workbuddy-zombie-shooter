@@ -37,6 +37,7 @@
 
 ## 关卡生成（一层一关，2026-09-09）
 - `node tools/level/gen-level.mjs [--start=floor-2]`——设计表在脚本内；生成 assets/scenes/act1/floor-N.scene.json，登记 project.json 并切 startIndex。幂等可重跑。
+- ⚠️ `sim-level.mjs --focus=N` 同样写回 `project.startIndex`（指向 **sim 快照派生产物**）——这是评审 [2]/[9] 的复发路径；工具现已打印提交前核对提示，是否保留写回 = 未决产品决策（docs/19 §6 限制 2）。
 - 🔴 gizmo 铁律（已门禁化）：RoomVolume/SpawnPoint 必须同时挂 MeshRenderer，否则编辑器里隐形（instantiate 只渲染 MeshRenderer）。NavZone 故意豁免。门禁 packages/scene/test/level-scenes.test.ts。
 - 🔴 gizmo 颜色只能用共享材质 s0-s6：override 的 patch 被 resolveMaterialId 丢弃。
 - 真机验证 `node tools/level/verify-level.mjs`。⚠️ **boot 日志会说谎**，要看页面内探针（CDP Runtime.evaluate 读 DOM/fetch）。
