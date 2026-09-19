@@ -195,7 +195,12 @@ if (args.focus !== null) {
   const target = `assets/scenes/sim/floor${args.floor}-t${args.focus}.scene.json`;
   const i = setStartIndex(target);
   if (i < 0) console.warn(`[sim] --focus=${args.focus} 没有对应快照，已忽略`);
-  else console.log(`[sim] 项目启动场景已指向 ${target}（startIndex=${i}）`);
+  else {
+    console.log(`[sim] 项目启动场景已指向 ${target}（startIndex=${i}）`);
+    console.warn(
+      '[sim] ⚠️ 已改动 aether.project.json 的 startIndex —— 提交前核对是否保留（产品启动场景应为作者场景 act1/floor-1）',
+    );
+  }
 }
 
 console.log('[sim] 提示：编辑器切换预览场景需要刷新浏览器页面');

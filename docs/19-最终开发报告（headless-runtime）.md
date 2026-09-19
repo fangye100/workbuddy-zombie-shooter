@@ -250,12 +250,18 @@ $ npm run verify:parity-host
      "还原"步骤（`:1372`）就地写回旧值；同批取回的 `oRadiiImmediate/Persist`（数字）
      都是正确的 `0.0574924`。**功能是好的，是脚本自身的问题。**
      （2026-09-19 实测复现：该条仍 FAIL，LeftArm 读到 `0.091` vs 预期 `0.0575`。）
-2. **启动场景曾指向 sim 派生产物 —— 已修复**（bot 评审 [2]/[9]）：`87c2b25` 把 `startIndex`
-   回改为 `1` → `assets/scenes/act1/floor-1.scene.json`（作者场景 `sc_act1_floor1`）。
-   sim 快照（`floor1-t0/t1/t3/t5`）恢复「派生产物」身份、不再是启动场景，快照 id 与
-   `scenes[]` 登记项已对齐（同一提交，评审 [7]/[8]）。§8-1 的比对脚本与方法不依赖具体场景
-   （`runtime-parity.mjs --scene <path>` 可指向任意场景），但上面那组记录数字是在当时的
-   sim 快照（旧 id `sc_sim_floorsc_act1_floor1_t5`）上采集的。
+2. **启动场景指向派生产物：仓库残留已修，复发路径未关闭**（bot 评审 [2]/[9] 修复；PR #4 评审补充）：
+   - **已修**：`87c2b25` 把 `aether.project.json` 的 `startIndex` 回改 `1` →
+     `assets/scenes/act1/floor-1.scene.json`（作者场景 `sc_act1_floor1`）；sim 快照
+     （`floor1-t0/t1/t3/t5`）的 id 与 `scenes[]` 登记项对齐（评审 [7]/[8]）。
+   - **复发路径仍在**：`tools/level/sim-level.mjs:196` 的 `--focus=N` 仍调用 `setStartIndex()`
+     写回 `project.startIndex`（该 flag 的文档用途本就是「把项目启动场景指到 t=N」，工具现在会在
+     写回时打印提交前核对提示）。跑过 `--focus` 后提交，就会把启动场景再次指到派生产物 ——
+     **本项保持未关闭**；关闭需产品决策（保留写回 + 核对提示 / 拆独立 `--set-start` 开关 /
+     编辑器侧预览不再改产品文件），且需一并澄清与 docs/17 §5.4「显式选择模拟预览不自动更改
+     产品启动场景」的张力。
+   - §8-1 的比对脚本与方法不依赖具体场景（`runtime-parity.mjs --scene <path>` 可指向任意场景），
+     但上面那组记录数字是在当时的 sim 快照（旧 id `sc_sim_floorsc_act1_floor1_t5`）上采集的。
 3. **点光位置仍由引擎轨道驱动**（`frame-uniforms.ts` 硬编码 `cos(t)*2.6 / 1.4 / sin(t)*2.6`）。
    本次整改只把点光的 color/intensity/range 接到了场景组件，位置字段 schema 没有。
 4. **`LabRenderer` 仍保留硬编码 fallback 场景**（`buildDefaultSpecs()`，13 物件），
