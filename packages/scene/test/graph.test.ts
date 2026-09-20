@@ -11,6 +11,7 @@ import {
   composeTransform,
   quatRotateVec3,
   trsToMat4,
+  worldToLocalTransform,
   type TransformData,
 } from '../src/graph';
 import { createEmptySceneDocument, identityTransform } from '../src/document';
@@ -442,5 +443,52 @@ describe('变换数学', () => {
     // 合成旋转应为 180°：+x → -x
     const v = quatRotateVec3([1, 0, 0], out.rotation);
     expect(v[0]).toBeCloseTo(-1, 6);
+  });
+});
+
+// ---------------------------------------------------------------- 世界 ↔ 局部（复审 B1）
+
+describe('worldToLocalTransform —— composeTransform 的逆（视口编辑写回用）', () => {
+  const PARENTS: ReadonlyArray<[string, TransformData]> = [
+    ['单位父（根节点）', t()],
+    ['只有平移', t({ position: [10, -0.1, 3] })],
+    ['带旋转（绕 Z 90°）', t({ position: [4, 1, 0], rotation: QUARTER_Z })],
+    ['平移 + 旋转 + 均匀缩放', t({ position: [-2, 0.5, 7], rotation: QUARTER_Z, scale: [2, 2, 2] })],
+    ['平移 + 旋转 + 非等比缩放', t({ position: [1, 2, 3], rotation: QUARTER_Z, scale: [1, 2, 0.5] })],
+  ];
+
+  for (const [name, parent] of PARENTS) {
+    it(`${name}：反解后重新合成逐值还原（往返恒等）`, () => {
+      const local = t({
+        position: [0.5, 1.25, -3],
+        rotation: [0.1, 0.2, 0.3, 0.927],
+        scale: [1.5, 1.5, 1.5],
+      });
+      const world = composeTransform(parent, local, identityTransform());
+      const back = worldToLocalTransform(parent, world, identityTransform());
+      expect(back).not.toBeNull();
+      for (let i = 0; i < 3; i++) {
+        expect(back!.position[i]).toBeCloseTo(local.position[i]!, 6);
+        expect(back!.scale[i]).toBeCloseTo(local.scale[i]!, 6);
+      }
+      for (let i = 0; i < 4; i++) expect(back!.rotation[i]).toBeCloseTo(local.rotation[i]!, 6);
+    });
+  }
+
+  it('父缩放含 0 → 无解返回 null（不静默产出 Infinity）', () => {
+    const parent = t({ scale: [1, 0, 1] });
+    expect(worldToLocalTransform(parent, t({ position: [1, 2, 3] }), identityTransform())).toBeNull();
+  });
+
+  it('平移父下把世界位移换算成局部值（act1 房间节点的真实形态）', () => {
+    // 房间节点在 [10, -0.1, 0]、掩体世界位置 [4, 0.7, -4] → 局部必须是 [-6, 0.8, -4]
+    const parent = t({ position: [10, -0.1, 0] });
+    const world = t({ position: [4, 0.7, -4] });
+    const local = worldToLocalTransform(parent, world, identityTransform());
+    expect(local!.position[0]).toBeCloseTo(-6, 6);
+    expect(local!.position[1]).toBeCloseTo(0.8, 6);
+    expect(local!.position[2]).toBeCloseTo(-4, 6);
+    // 反面：世界的 x 与局部的 x 相差 10m —— 把世界值当局部值写进文件就是这个量级的错
+    expect(world.position[0]).not.toBeCloseTo(local!.position[0]!, 1);
   });
 });

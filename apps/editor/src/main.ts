@@ -5,8 +5,8 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
-import { parseGlb, validateAssetMeta } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, composeTransform, worldToLocalTransform, identityTransform } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -15,8 +15,11 @@ import {
   describeDelta,
   listSpawnPoints,
   sceneFingerprint,
+  formatAuthorEdit,
+  readTransformValues,
+  findNode,
 } from '@aether/runtime';
-import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint, TransformField, TransformValues } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
@@ -455,6 +458,30 @@ async function boot(): Promise<void> {
     elevation: () => panel.params.cameraElevation,
     params: panel.params,
     renderer,
+    /**
+     * 视口变换写回的**可验证面**（复审 B1；冒烟脚本用：找手柄 → 真事件链拖 → 查文档/撤销）。
+     *
+     * `worldPosFromDoc` 刻意**独立**于渲染物体与拖拽数学：它从文档重新建图解算世界位置。
+     * 于是「视口位置 == 从文档重算的世界位置」这个断言能真正抓出
+     * 「世界值当局部值写进文件」这类错（局部与世界相差一个父偏移时就露馅）。
+     */
+    viewportEdit: {
+      hitTest: (x: number, y: number) => hitTestGizmo(x, y),
+      worldPosFromDoc: (nodeId: string) => {
+        if (spawnStore === null) return null;
+        const g = SceneGraph.fromDocument(spawnStore.document);
+        g.updateWorldTransforms();
+        const n = g.getNode(nodeId);
+        return n === null ? null : [n.world.position[0], n.world.position[1], n.world.position[2]];
+      },
+      localPos: (nodeId: string) => {
+        if (spawnStore === null) return null;
+        const n = findNode(spawnStore.document, nodeId);
+        return n === null ? null : [...n.transform.position];
+      },
+      state: () => ({ dirty: spawnStore?.dirty ?? false, undoDepth: spawnStore?.undoDepth ?? 0 }),
+      undo: () => undoSpawnEdit(),
+    },
   };
 
   // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
@@ -857,8 +884,119 @@ async function boot(): Promise<void> {
     hudDirty = true;
   }
 
+  /**
+   * 节点父级的**世界**变换（根节点 → 单位变换）。
+   *
+   * 用文档临时建一次图：几十个节点，一次拖拽收尾调一次，比维护一份增量缓存便宜得多，
+   * 而且不会出现"缓存与文档不同步"这种第二真源问题。
+   */
+  function parentWorldOf(doc: SceneDocument, nodeId: NodeId): TransformData | null {
+    const graph = SceneGraph.fromDocument(doc);
+    graph.updateWorldTransforms();
+    const n = graph.getNode(nodeId);
+    if (n === null) return null;
+    if (n.parent === null) return identityTransform();
+    const p = graph.getNode(n.parent);
+    if (p === null) return identityTransform();
+    return {
+      position: [p.world.position[0], p.world.position[1], p.world.position[2]],
+      rotation: [p.world.rotation[0], p.world.rotation[1], p.world.rotation[2], p.world.rotation[3]],
+      scale: [p.world.scale[0], p.world.scale[1], p.world.scale[2]],
+    };
+  }
+
+  /**
+   * 文档 → 视口：把某节点的**局部**变换解算成世界量写回渲染物体。
+   *
+   * 撤销（以及任何绕过视口的文档改动）之后必须调它 —— 文档是唯一真源，但渲染物体
+   * 是另一份运行时表示，不主动回写就会出现「文档已退、画面还留着」。
+   * YAGNI 说明：只做单节点的精确解算，不做整体重建 —— 重建会销毁并重传 GPU 资源，
+   * 为了回退一个拖拽不值得，而且会丢失选中态与相机。
+   */
+  function pushNodeTransformToView(nodeId: NodeId): void {
+    const store = spawnStore;
+    if (store === null) return;
+    const idx = renderer.findObjectIndexByNodeId(nodeId);
+    if (idx === null) return;
+    const node = findNode(store.document, nodeId);
+    const parentWorld = parentWorldOf(store.document, nodeId);
+    if (node === null || parentWorld === null) return;
+    const world = composeTransform(parentWorld, node.transform, identityTransform());
+    renderer.setObjectPos(idx, 0, world.position[0]);
+    renderer.setObjectPos(idx, 1, world.position[1]);
+    renderer.setObjectPos(idx, 2, world.position[2]);
+    renderer.setObjectQuat(idx, [world.rotation[0], world.rotation[1], world.rotation[2], world.rotation[3]]);
+    renderer.setObjectScale(idx, world.scale[0]);
+  }
+
+  /**
+   * gizmo 拖拽收尾：把渲染物体的**世界**变换换算成**局部**变换写回场景文档。
+   *
+   * 复审 B1 的修复本体。过去这里什么都不做：拖完点保存不落盘、点 Play 也看不见
+   * （文档里还是旧位置）—— 那是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。
+   * 现在走 `SpawnEditStore.setTransform`：一条拖拽 = 一条可撤销编辑，保存范围
+   * （`changedPaths`）自动包含它，Play 读同一份文档于是立刻生效。
+   */
+  function commitGizmoTransform(d: DragStart): void {
+    const store = spawnStore;
+    if (store === null) return;
+    const idx = d.objIndex;
+    const nodeId = renderer.getObjectNodeId(idx);
+    const st = renderer.getObjectState(idx);
+    const q = renderer.getObjectQuat(idx);
+    if (nodeId === null || st === null || q === null) {
+      // 兜底场景与拖入的资产模型没有文档来源：明确说清"存不了"，而不是静默丢弃
+      spawnMsg = {
+        text: '该物体不属于场景文档（兜底场景或拖入的资产模型），变换不会被保存',
+        kind: 'warn',
+      };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    const parentWorld = parentWorldOf(store.document, nodeId);
+    if (parentWorld === null) {
+      spawnMsg = { text: `场景文档里找不到父级链（节点 ${nodeId}），变换未写回`, kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    const world: TransformData = {
+      position: [st.pos[0], st.pos[1], st.pos[2]],
+      rotation: [q[0], q[1], q[2], q[3]],
+      scale: [st.scale, st.scale, st.scale],
+    };
+    const local = worldToLocalTransform(parentWorld, world, identityTransform());
+    if (local === null) {
+      // 父级缩放含 0 → 世界量反解不出局部量。宁可拒绝也不写一个错变换进文件
+      spawnMsg = { text: '父级缩放为 0，无法把世界变换换算成局部变换：请先修正父节点缩放', kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    const fields: TransformField[] = ['posX', 'posY', 'posZ', 'scale'];
+    const to: TransformValues = {
+      posX: local.position[0],
+      posY: local.position[1],
+      posZ: local.position[2],
+      scale: local.scale[0],
+    };
+    // 拖回原处（或只点了一下手柄没真动）→ 不进撤销栈、不弹提示
+    const cur = readTransformValues(store.document, nodeId, fields);
+    if (cur !== null && fields.every((f) => Math.abs((cur[f] ?? 0) - to[f]!) < 1e-9)) return;
+    const r = store.setTransform(nodeId, to);
+    if (!r.ok) {
+      spawnMsg = { text: r.error ?? '变换写回被拒绝', kind: 'warn' };
+    } else {
+      spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(r.edit!)}（↶ 撤销 可回退）`, kind: 'ok' };
+    }
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
+
   function endGizmoDrag(): void {
     if (drag !== null) {
+      commitGizmoTransform(drag);
       renderer.setGizmoActiveAxis(null);
       drag = null;
       canvas!.style.cursor = '';
@@ -984,10 +1122,9 @@ async function boot(): Promise<void> {
     const after = captureInitialScatter(store.document, { seed });
     spawnAb = { before, after, cmp: compareScatter(before, after) };
     const d = spawnAb.cmp.deltas.find((x) => x.nodeId === selectedSpawnNode);
-    const label = field === 'radius' ? '生成散布半径' : '生成数量';
     spawnMsg = {
       text:
-        `已改 ${label}：${r.edit!.from} → ${r.edit!.to}` +
+        `已改 ${formatAuthorEdit(r.edit!)}` +
         (d !== undefined ? `　散布均 ${d.meanBefore.toFixed(2)} → ${d.meanAfter.toFixed(2)} m` : ''),
       kind: 'ok',
     };
@@ -1005,10 +1142,10 @@ async function boot(): Promise<void> {
       const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
       spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
     }
-    spawnMsg = {
-      text: `已撤销：${undone.field === 'radius' ? '生成散布半径' : '生成数量'} ${undone.to} → ${undone.from}`,
-      kind: 'ok',
-    };
+    // 变换编辑撤销后必须把视口也退回去：文档是唯一真源，但渲染物体是另一份表示，
+    // 不主动回写就会出现「文档已退、画面还留着」（复审 B1）
+    if (undone.kind === 'transform') pushNodeTransformToView(undone.nodeId);
+    spawnMsg = { text: `已撤销：${formatAuthorEdit(undone)}`, kind: 'ok' };
     refreshSpawnPanel();
     hudDirty = true;
   }
