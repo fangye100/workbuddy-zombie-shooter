@@ -13,6 +13,7 @@
  */
 
 import {
+  firstHumanikChild,
   mapBvhJointsToHumanik,
   type BvhFile,
   type BvhJoint,
@@ -351,15 +352,33 @@ export function sourceRestDirections(bvh: BvhFile, upAxis?: 0 | 1 | 2): Record<s
     const bone = mapping[jn];
     if (bone === undefined) continue;
     const j = bvh.joints[jn]!;
-    // 优先：第一个子关节的偏移；退化：End Site；再退化：零向量
+    // 优先：映射到「该骨 HumanIK 第一子骨」的子关节——与模板 tposeDirections 严格同源，
+    // twist/helper 分支排在文件前面时不污染方向基准（与 bvhRestDirections 同规则）；
+    // 退化：第一个非零子关节；再退化：End Site；全零：零向量
+    const wantChild = firstHumanikChild(bone, HUMANIK_BONES, HUMANIK_ORDER);
     let v: V3 | null = null;
-    for (const cn of j.children) {
-      const c = bvh.joints[cn]!;
-      const len = Math.hypot(c.offset[0], c.offset[1], c.offset[2]);
-      if (len > 1e-9) {
-        const r = rotateVec(qUp, [c.offset[0], c.offset[1], c.offset[2]]);
-        v = [r[0] / len, r[1] / len, r[2] / len];
-        break;
+    if (wantChild !== null) {
+      for (const cn of j.children) {
+        if (mapping[cn] === wantChild) {
+          const c = bvh.joints[cn]!;
+          const len = Math.hypot(c.offset[0], c.offset[1], c.offset[2]);
+          if (len > 1e-9) {
+            const r = rotateVec(qUp, [c.offset[0], c.offset[1], c.offset[2]]);
+            v = [r[0] / len, r[1] / len, r[2] / len];
+          }
+          break;
+        }
+      }
+    }
+    if (v === null) {
+      for (const cn of j.children) {
+        const c = bvh.joints[cn]!;
+        const len = Math.hypot(c.offset[0], c.offset[1], c.offset[2]);
+        if (len > 1e-9) {
+          const r = rotateVec(qUp, [c.offset[0], c.offset[1], c.offset[2]]);
+          v = [r[0] / len, r[1] / len, r[2] / len];
+          break;
+        }
       }
     }
     if (v === null && j.endOffset !== null) {

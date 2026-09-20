@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   RetargetSession,
+  bakeOutputRigFromSkeleton,
   skeletonFromFitPositions,
   type RetargetSidecarStore,
 } from '../../src/services/binding/retarget-session';
@@ -1206,5 +1207,39 @@ describe('retarget-session Copilot 迟到评审修复回归（PR#1 合并后跟�
     expect(got[0]).toBeCloseTo(-Math.SQRT1_2, 9);
     expect(got[1]).toBeCloseTo(0, 9);
     expect(got[2]).toBeCloseTo(0, 9);
+  });
+});
+
+// ───────────────── PR#5 bot 评审：mid-chain 非关节中间节点 ─────────────────
+
+/** LeftArm 与 LeftForeArm 之间插入非关节中间节点（节点 27；identity=true 时为身份变换） */
+function skeletonWithMidchainNonjoint(pos: JointPositions, identity = false): SkeletonData {
+  const base = skeletonFromPositions(pos);
+  const armIdx = base.jointNames.indexOf('LeftArm');
+  const forearmIdx = base.jointNames.indexOf('LeftForeArm');
+  const parent = [...base.parent, armIdx];
+  parent[forearmIdx] = base.jointNames.length;
+  const locals = [...base.locals, {
+    t: (identity ? [0, 0, 0] : [0.5, 0, 0]) as [number, number, number],
+    r: [0, 0, 0, 1] as [number, number, number, number],
+    s: [1, 1, 1] as [number, number, number],
+  }];
+  return { ...base, parent, locals };
+}
+
+describe('bakeOutputRigFromSkeleton · mid-chain 非关节中间节点（PR#5 bot 评审）', () => {
+  it('非身份中间节点 → NONJOINT_INTERMEDIATE error，setTarget 事务失败', () => {
+    const d = bakeOutputRigFromSkeleton(skeletonWithMidchainNonjoint(tposeWorldPositions()), null, 'fp');
+    expect(d.diagnostics.some((x) => x.severity === 'error' && x.code === 'MRS_NONJOINT_INTERMEDIATE')).toBe(true);
+    const s = new RetargetSession(memStore().store);
+    const r = s.setTarget({ skeleton: skeletonWithMidchainNonjoint(tposeWorldPositions()), name: 'B', assetKey: 'B' });
+    expect(r.ok).toBe(false);
+  });
+
+  it('身份中间节点不拦；根容器（rootParentWorld 路径）不受影响', () => {
+    const d = bakeOutputRigFromSkeleton(skeletonWithMidchainNonjoint(tposeWorldPositions(), true), null, 'fp');
+    expect(d.diagnostics.some((x) => x.code === 'MRS_NONJOINT_INTERMEDIATE')).toBe(false);
+    const dc = bakeOutputRigFromSkeleton(skeletonWithContainer(tposeWorldPositions()), null, 'fp');
+    expect(dc.diagnostics.some((x) => x.code === 'MRS_NONJOINT_INTERMEDIATE')).toBe(false);
   });
 });

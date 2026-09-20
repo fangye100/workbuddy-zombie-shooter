@@ -346,3 +346,49 @@ function worldRotOf(rig: ReturnType<typeof buildTargetRig>['rig']): Record<strin
   }
   return out;
 }
+
+// ───────────────────────── PR#5 bot 评审：导入归一守门 ─────────────────────────
+
+describe('buildTargetRig · 导入归一守门（PR#5 bot 评审）', () => {
+  /** Z-up 检测旋转（loader 混元约定：(x,y,z)→(x,−z,y)，列主序） */
+  const zUpNormalization = (): Float32Array<ArrayBuffer> =>
+    new Float32Array([1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]);
+
+  it('外部骨架 normalization 含旋转且无标定 → MRR_NORMALIZATION_IGNORED warning', () => {
+    const sk = buildSkeleton(1);
+    sk.normalization = zUpNormalization();
+    const { diagnostics } = buildTargetRig({ skeleton: sk });
+    const w = diagnostics.find((d) => d.code === 'MRR_NORMALIZATION_IGNORED');
+    expect(w).toBeDefined();
+    expect(w!.severity).toBe('warning');
+  });
+
+  it('纯均匀缩放/居中平移（无旋转）不提示', () => {
+    const sk = buildSkeleton(1);
+    sk.normalization = new Float32Array([2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, -1, 0, -1, 1]);
+    const { diagnostics } = buildTargetRig({ skeleton: sk });
+    expect(diagnostics.some((d) => d.code === 'MRR_NORMALIZATION_IGNORED')).toBe(false);
+  });
+
+  it('标定显式声明 upAxis 时不提示（身份声明归标定契约）', () => {
+    const sk = buildSkeleton(1);
+    sk.normalization = zUpNormalization();
+    const cal: RetargetCalibration = {
+      schemaVersion: RETARGET_META_SCHEMA_VERSION,
+      side: 'target' as const,
+      pelvisHeightM: 0,
+      supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared' as const, confidence: 1 },
+      unitScale: 0.01,
+      upAxis: 'z' as const,
+      markers: {},
+      rotationBaseline: 'direction' as const,
+    };
+    const { diagnostics } = buildTargetRig({ skeleton: sk, calibration: cal });
+    expect(diagnostics.some((d) => d.code === 'MRR_NORMALIZATION_IGNORED')).toBe(false);
+  });
+
+  it('identity normalization（自有管线产物）不提示', () => {
+    const { diagnostics } = buildTargetRig({ skeleton: buildSkeleton(1) });
+    expect(diagnostics.some((d) => d.code === 'MRR_NORMALIZATION_IGNORED')).toBe(false);
+  });
+});

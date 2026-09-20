@@ -2373,7 +2373,6 @@ async function boot(): Promise<void> {
         retargetSession.rollbackSourceTo(sourceSnap);
         throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
       }
-      animReport = report; // 源载入成功才提交映射诊断，失败时侧栏保持上一份（不错位到坏文件）
       const tgt = retargetSession.setTarget({
         fitPositions: binding.currentFit().tposePositions,
         name: bindingSession?.name ?? 'binding',
@@ -2383,6 +2382,9 @@ async function boot(): Promise<void> {
         retargetSession.rollbackSourceTo(sourceSnap);
         throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
       }
+      // 源+目标都成功才提交映射诊断（PR#5 评审 P2）：提交早于 setTarget 时，目标侧
+      // 失败的回滚不覆盖 animReport，侧栏会把保留的旧结果标成坏文件的名字与统计
+      animReport = report;
       openRetargetWorkbench('binding', null);
       solveAndRefresh();
       return report;
@@ -2413,12 +2415,12 @@ async function boot(): Promise<void> {
         retargetSession.rollbackSourceTo(sourceSnap);
         throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
       }
-      animReport = report; // 同入口 A：源载入成功才提交映射诊断
       const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name, assetKey: obj });
       if (!tgt.ok) {
         retargetSession.rollbackSourceTo(sourceSnap);
         throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
       }
+      animReport = report; // 同入口 A：源+目标都成功才提交（目标失败时侧栏保持旧文件的诊断）
       openRetargetWorkbench('object', obj);
       solveAndRefresh();
       const applied = applyAnimToObject(obj);

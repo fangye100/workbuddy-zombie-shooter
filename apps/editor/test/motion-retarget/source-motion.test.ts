@@ -199,3 +199,62 @@ describe('markerWorldPositions / 指纹', () => {
     expect(() => buildSourceMotion(junk)).toThrow(/HumanIK/);
   });
 });
+
+// ───────────────── PR#5 bot 评审：源 rest 骨向的映射感知选子 ─────────────────
+
+describe('sourceRestDirections · 映射感知选子（PR#5 bot 评审）', () => {
+  /** 最小 BVH：Hips→LeftArm→LeftForeArm→children（+X 为 HumanIK 链向，twist 用 +Z 干扰） */
+  function miniBvh(children: string): string {
+    return [
+      'HIERARCHY',
+      'ROOT Hips',
+      '{',
+      ' OFFSET 0 10 0',
+      ' CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation',
+      ' JOINT LeftArm',
+      ' {',
+      '  OFFSET 10 0 0',
+      '  CHANNELS 3 Zrotation Xrotation Yrotation',
+      '  JOINT LeftForeArm',
+      '  {',
+      '   OFFSET 26 0 0',
+      '   CHANNELS 3 Zrotation Xrotation Yrotation',
+      children,
+      '  }',
+      ' }',
+      '}',
+      'MOTION',
+      'Frames: 2',
+      'Frame Time: 0.033333',
+      '<frames>',
+    ].join('\n');
+  }
+  const frame = (n: number): string => Array(2).fill(Array(n).fill('0').join(' ')).join('\n');
+  const twist = [
+    '   JOINT LeftForeArmTwist',
+    '   {',
+    '    OFFSET 0 0 9',
+    '    CHANNELS 3 Zrotation Xrotation Yrotation',
+    '   }',
+  ].join('\n');
+  const hand = [
+    '   JOINT LeftHand',
+    '   {',
+    '    OFFSET 25 0 0',
+    '    CHANNELS 3 Zrotation Xrotation Yrotation',
+    '   }',
+  ].join('\n');
+
+  it('twist 分支排前不污染基准：取映射到 HumanIK 第一子骨（LeftHand, +X）的子关节', () => {
+    const d = sourceRestDirections(parseBvh(miniBvh(twist + '\n' + hand).replace('<frames>', frame(18))));
+    expect(d['LeftForeArm']![0]).toBeCloseTo(1);
+    expect(d['LeftForeArm']![1]).toBeCloseTo(0);
+    expect(d['LeftForeArm']![2]).toBeCloseTo(0);
+  });
+
+  it('没有映射子骨时退回第一个非零子关节（fallback 不回退）', () => {
+    const d = sourceRestDirections(parseBvh(miniBvh(twist).replace('<frames>', frame(15))));
+    expect(d['LeftForeArm']![0]).toBeCloseTo(0);
+    expect(d['LeftForeArm']![2]).toBeCloseTo(1);
+  });
+});

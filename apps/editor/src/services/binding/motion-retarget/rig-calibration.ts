@@ -84,6 +84,11 @@ const FOOT_BONES = ['LeftFoot', 'RightFoot'] as const;
  * 构造目标 RetargetRig。派生标记落支撑平面（脚底不悬空不穿地），
  * h_t 用「Hips 世界 y − 标记平面 y」，有标定则全部走标定。
  */
+/** normalization 3×3 部分是否含旋转（列主序 off-diagonal 非零；纯均匀缩放/平移不算） */
+function normalizationHasRotation(m: Float32Array): boolean {
+  return Math.abs(m[1]!) + Math.abs(m[2]!) + Math.abs(m[4]!) + Math.abs(m[6]!) + Math.abs(m[8]!) + Math.abs(m[9]!) > 1e-9;
+}
+
 export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult {
   const diagnostics: RetargetDiagnostic[] = [];
   const warn = (code: string, message: string): void => {
@@ -108,6 +113,18 @@ export function buildTargetRig(input: BuildTargetRigInput): BuildTargetRigResult
   }
   if (!(unitScale > 0)) {
     diagnostics.push({ severity: 'error', code: 'MRR_UNIT_SCALE_BAD', message: `unitScale ${unitScale} 必须 > 0` });
+  }
+  // 导入归一守门（PR#5 评审）：parseGlb 目标的 normalization 里存着 loader 检测的
+  // Z-up 旋转 + 展示重缩放/居中，本层不消费它（unitScale/upAxis 是身份声明，归标定契约；
+  // 且 loader 的 ±90° 符号绑定混元 +Z 朝下约定，不能盲用）。但静默按 Y-up 解算
+  // Z-up 资产 = 基准错位，必须显式告知——与 MRR_XUP_NOT_NORMALIZED 同为 warning。
+  if (!useTemplate && cal?.upAxis == null && input.skeleton !== null && input.skeleton !== undefined &&
+      normalizationHasRotation(input.skeleton.normalization)) {
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRR_NORMALIZATION_IGNORED',
+      message: '目标骨架带导入归一变换（含 Z-up 旋转/展示重缩放），无标定时按原始资产坐标（unitScale=1、Y-up）求解——Z-up 或非米制资产请先提供 sidecar 标定（upAxis/unitScale）',
+    });
   }
 
   // ── 骨表（父先于子）──

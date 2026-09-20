@@ -373,6 +373,17 @@ function identity16(): Float32Array<ArrayBuffer> {
 
 // ---------------------------------------------------------------- 目标骨架适配
 
+/** 节点局部变换是否为身份（零平移 + 单位旋转 + 单位缩放）——身份的中间节点折叠无害 */
+function isIdentityLocal(l: NodeLocal): boolean {
+  const r = l.r;
+  const s = l.s ?? [1, 1, 1];
+  return (
+    Math.abs(l.t[0]) + Math.abs(l.t[1]) + Math.abs(l.t[2]) < 1e-9 &&
+    Math.abs(r[0]) + Math.abs(r[1]) + Math.abs(r[2]) < 1e-9 && Math.abs(r[3] - 1) < 1e-9 &&
+    Math.abs(s[0]! - 1) < 1e-9 && Math.abs(s[1]! - 1) < 1e-9 && Math.abs(s[2]! - 1) < 1e-9
+  );
+}
+
 /**
  * 绑定面板 fit（骨名 → T-pose 世界坐标）→ 等价 SkeletonData。
  * T-pose 世界是纯平移（rest 旋转恒 identity，绑定面板契约），因此局部平移 =
@@ -560,6 +571,24 @@ export function bakeOutputRigFromSkeleton(
         restUniformScale: rootParentWorld !== null ? selfScale / cum : selfScale,
       };
     } else {
+      // 中间非关节节点守门（PR#5 评审）：本层把节点 → 最近关节祖先之间跨过的
+      // 非关节中间节点折叠进 rest（restLocal 相对**关节父**表达），但播放期 FK
+      // 走节点层级（skin.ts evalJointMatrices 按 sk.parent 逐节点累乘）会把该
+      // 中间节点再乘一次 → 求解姿态与播放姿态必不一致，且适配器按骨层级读回
+      // 自检抓不住。身份变换折叠 = 无操作，不拦；非身份 → 显式拒绝（与
+      // NONUNIFORM_SCALE 同为不可表达层级）。根骨容器链走 rootParentWorld，
+      // restLocal 保持容器相对，与节点 FK 自洽，不受此检查影响。
+      const intermediates: string[] = [];
+      for (let m = sk.parent[node]; m !== undefined && m >= 0 && m !== parentNode; m = sk.parent[m]) {
+        const lm = sk.locals[m];
+        if (lm !== undefined && !isIdentityLocal(lm)) intermediates.push(`节点#${m}`);
+      }
+      if (intermediates.length > 0) {
+        diagnostics.push(err(
+          'NONJOINT_INTERMEDIATE',
+          `关节 ${nm} 与关节父 ${nodeOfJoint.get(parentNode)} 之间存在非关节中间节点（${intermediates.join('、')}）且变换非身份：烘焙 rest 会折叠它而播放端按节点层级再应用一次，播放姿态必错——请先清理骨架层级`,
+        ));
+      }
       const pq = worldRot.get(parentNode)!;
       const pp = worldPos.get(parentNode)!;
       const cum = worldScale.get(parentNode) ?? 1; // 作用于本骨偏移的累计缩放
