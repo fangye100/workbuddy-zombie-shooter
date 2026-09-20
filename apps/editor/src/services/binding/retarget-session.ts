@@ -1622,7 +1622,10 @@ export class RetargetSession {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
         `配方绑定了源标定指纹（${cur!.sourceCalibrationFingerprint.slice(0, 10)}…）但会话未设置源标定：` +
-          '拒绝静默降级为未标定求解；请先载入标定（loadCalibrationFromMeta）或重置配方',
+          // 复审 P3：这里曾经写"或重置配方"——那个操作在 API 与 UI 里都不存在（没有
+          // resetRecipe），照做的用户只会撞墙。只列真正存在的出路：重新载入该标定，
+          // 或换源/换目标让配方随新指纹重绑（见上面 sameSource/sameTarget 的分支）。
+          '拒绝静默降级为未标定求解；请重新载入该源标定（loadCalibrationFromMeta），或换一份源/目标让配方按新输入重绑',
       ));
       return null;
     }
@@ -1630,7 +1633,7 @@ export class RetargetSession {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
         `配方绑定了目标标定指纹（${cur!.targetCalibrationFingerprint.slice(0, 10)}…）但会话未设置目标标定：` +
-          '拒绝静默降级；请先载入标定或重置配方',
+          '拒绝静默降级；请重新载入该目标标定，或换一份源/目标让配方按新输入重绑',
       ));
       return null;
     }
