@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_tfuz5kml",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex",
+    "file": "P-41_tex_baked.glb"
+  },
+  "sourceHash": "sha256:1fd9ce70eaf203fb81f9c6640c8768bf44cd345ad64af83de197928463f41fe8",
+  "updatedAt": "2026-09-18T15:11:46.314Z"
+}

@@ -27,6 +27,30 @@
       "path": "assets/scenes/act1/floor-3.scene.json",
       "id": "sc_act1_floor3",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t0.scene.json",
+      "id": "sc_sim_floor1_t0",
+      "enabled": true,
+      "name": "第一层 · 火场 · t=0s 快照（派生产物）"
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t1.scene.json",
+      "id": "sc_sim_floor1_t1",
+      "enabled": true,
+      "name": "第一层 · 火场 · t=1s 快照（派生产物）"
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t3.scene.json",
+      "id": "sc_sim_floor1_t3",
+      "enabled": true,
+      "name": "第一层 · 火场 · t=3s 快照（派生产物）"
+    },
+    {
+      "path": "assets/scenes/sim/floor1-t5.scene.json",
+      "id": "sc_sim_floor1_t5",
+      "enabled": true,
+      "name": "第一层 · 火场 · t=5s 快照（派生产物）"
     }
   ],
   "startIndex": 1,

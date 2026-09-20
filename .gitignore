@@ -31,3 +31,9 @@ __pycache__/
 
 # 损坏的旧 .git 存档（灾难恢复证据，本地保留）
 .git.corrupt-20260902/
+
+# 资产回滚备份：原地保留（出问题可一条命令还原），但不入库。
+# pre-rebake = 贴图转移前的旧版；pre-uvkeep = 路线A重制前的旧版；v2-flower = 花脸中间版
+assets/**/*.pre-rebake.bak
+assets/**/*.pre-uvkeep.bak
+assets/**/*.v2-flower.keep

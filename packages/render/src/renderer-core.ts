@@ -17,6 +17,7 @@ import type { GpuContext } from '@aether/gfx';
 import * as m4 from '@aether/core';
 import { VERTEX_LAYOUT, SKIN_LAYOUT } from '@aether/scene';
 import { SCENE_WGSL } from './shaders/scene.wgsl';
+import { DYNAMIC_WGSL } from './shaders/dynamic.wgsl';
 import { POST_WGSL } from './shaders/post.wgsl';
 import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
@@ -179,6 +180,43 @@ export interface CoreCylinderOverlay {
   alpha: number;
 }
 
+/**
+ * 一个动态实例的 CPU 端打包宽度（float 数）= 48 B：
+ *   [0..3] posX, posY, posZ, yaw(弧度)
+ *   [4..7] scaleX, scaleY, scaleZ, (pad)
+ *   [8..11] albedoR, albedoG, albedoB, (pad)
+ *
+ * 与 `dynamic.wgsl.ts` 的 `struct DInst`（3 × vec4f）一一对应；改一边必须改另一边。
+ */
+export const DYNAMIC_INSTANCE_FLOATS = 12;
+
+/**
+ * 一批动态实例的绘制描述（WU-3）。
+ *
+ * 关键性质：**不占用 `transformBuf` 的静态槽位**。MAX_OBJECTS = 64 是静态场景物件的
+ * 硬上限（来自 transformBuf 大小），运行时热实体（设计目标 500 只）必须走这条独立
+ * 路径，否则会把关卡本身挤掉。实例变换走 storage buffer，容量只受显存约束。
+ *
+ * 顶点/索引数据只在 `meshId` 首次出现时上传一次（core 缓存 GPU buffer，ADR-001：
+ * GPU 资源归 core 所有）；之后每帧只需重传 `instances`。
+ */
+export interface CoreDynamicBatch {
+  /**
+   * 网格缓存键。同一个 key 的顶点/索引只上传一次，之后忽略 `vertices`/`indices`。
+   * 建议带参数（如 `capsule:r0.35:h1.8`），改参数即换 key，避免旧网格阴魂不散。
+   */
+  meshId: string;
+  /** 交错顶点数组，stride = 15 floats（60 B），与 VERTEX_LAYOUT 一致 */
+  vertices: Float32Array;
+  indices: Uint32Array;
+  /** 实例数组，长度 ≥ count × DYNAMIC_INSTANCE_FLOATS */
+  instances: Float32Array;
+  /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
+  count: number;
+  /** 是否画 inverted-hull 描边（默认风格的动态实体建议开） */
+  outline: boolean;
+}
+
 /** 一帧的全部 CPU 端 uniform 数据（调用方填好，本类只负责上传） */
 export interface CoreFrameUniforms {
   frame: Float32Array<ArrayBuffer>;
@@ -209,6 +247,11 @@ export interface RenderFrameInput {
   skeleton: CoreSkeletonOverlay | null;
   /** 蒙皮包裹器圆柱体叠加层（可选）；存在则紧跟骨骼层绘于 swapchain 之上 */
   cylinders: CoreCylinderOverlay | null;
+  /**
+   * 动态实例批次（可选，WU-3）。运行时热实体（僵尸等）走这里，
+   * **不消耗 `transformBuf` 的 64 个静态槽位**。null / 空数组 = 本帧没有动态实体。
+   */
+  dynamicBatches?: CoreDynamicBatch[] | null;
   stats: { drawCalls: number };
 }
 
@@ -298,6 +341,24 @@ export class RendererCore {
   private cylinderBindGroup: GPUBindGroup | null = null;
   private cylinderVb: GPUBuffer | null = null;
   private cylinderVbCap = 0;
+
+  // ---- 动态实例（instancing，绕开 transformBuf 的 64 静态槽位；见 CoreDynamicBatch）----
+  private readonly dynamicLayout: GPUBindGroupLayout;
+  private readonly dynamicPipeline: GPURenderPipeline;
+  private readonly dynamicOutlinePipeline: GPURenderPipeline;
+  /** 实例数组 storage buffer，按需求惰性扩容（容量只增不减） */
+  /**
+   * 🔴 动态实例 buffer 必须**每批次一份**。
+   *
+   * 同一帧内的多次 `queue.writeBuffer` 与随后的 `pass.drawIndexed` 之间没有顺序保证：
+   * 写入是在 queue 上入队、命令缓冲在 submit 后才执行，所以只要多批共用一份 buffer、
+   * 每次都写 offset 0，**所有 draw 读到的都是最后一次上传的数据** —— 同屏多个角色会
+   * 互相借用位置与颜色（数量不等时还会读到上一帧的残留尾巴）。
+   * 见 PR #3 review（codex P1 / copilot）。
+   */
+  private dynamicInstSlots: { buf: GPUBuffer; bg: GPUBindGroup; cap: number }[] = [];
+  /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
+  private readonly dynamicMeshes = new Map<string, { vbuf: GPUBuffer; ibuf: GPUBuffer; indexCount: number }>();
 
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
@@ -577,6 +638,52 @@ export class RendererCore {
         { binding: 1, resource: { buffer: this.cylinderTintBuf } },
       ],
     });
+
+    // ---- 动态实例（instancing，绘于 pass 1 的同一 MRT + depth，不占静态槽位）----
+    const dyModule = this.device.createShaderModule({ label: 'dynamic', code: DYNAMIC_WGSL });
+    this.checkModule(dyModule);
+    this.dynamicLayout = this.device.createBindGroupLayout({
+      label: 'dynamic',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        // toon 的 visibility 必须带上 VERTEX：vs_outline 要读 toon.outline 算描边宽度。
+        // 只给 FRAGMENT 的话顶点阶段引用它 → 运行时报 "not in the binding visibility"，
+        // 而 tsc / vite build 完全查不出来（WGSL 编译错误只在 device 上暴露）。
+        {
+          binding: 2,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
+        { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      ],
+    });
+    const dyVertex = {
+      module: dyModule,
+      // 只接 slot 0（position/normal/smoothNormal/uv/color），**不接蒙皮 slot**
+      buffers: [VERTEX_LAYOUT],
+    } as const;
+    this.dynamicPipeline = this.device.createRenderPipeline({
+      label: 'dynamic',
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout] }),
+      vertex: { ...dyVertex, entryPoint: 'vs_main' },
+      fragment: { module: dyModule, entryPoint: 'fs_main', targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none', frontFace: 'ccw' },
+      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
+    });
+    this.dynamicOutlinePipeline = this.device.createRenderPipeline({
+      label: 'dynamic-outline',
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout] }),
+      vertex: { ...dyVertex, entryPoint: 'vs_outline' },
+      fragment: { module: dyModule, entryPoint: 'fs_outline', targets },
+      // inverted hull：只画背面，让外扩的壳只在轮廓外圈露出一条边
+      primitive: { topology: 'triangle-list', cullMode: 'front', frontFace: 'ccw' },
+      depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'less' },
+    });
   }
 
   /** WGSL 编译错误默认只在控制台里一闪而过，这里把行号一起打出来 */
@@ -588,6 +695,114 @@ export class RendererCore {
         else if (msg.type === 'warning') console.warn(`${where} ${msg.message}`);
       }
     });
+  }
+
+  /**
+   * 按 `meshId` 取（或首次上传）动态实例的代理网格。
+   *
+   * GPU buffer 由 core 持有并缓存（ADR-001）：调用方每帧传全量 `vertices`/`indices`
+   * 也不会重复上传，只在 key 首次出现时用一次。改参数要换 key（如 `capsule:r0.35:h1.8`）。
+   */
+  private dynamicMesh(b: CoreDynamicBatch): { vbuf: GPUBuffer; ibuf: GPUBuffer; indexCount: number } | null {
+    const hit = this.dynamicMeshes.get(b.meshId);
+    if (hit !== undefined) return hit;
+    if (b.vertices.length === 0 || b.indices.length === 0) return null;
+    const vbuf = this.device.createBuffer({
+      label: `dyn-${b.meshId}-v`,
+      size: b.vertices.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    const ibuf = this.device.createBuffer({
+      label: `dyn-${b.meshId}-i`,
+      size: b.indices.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(vbuf, 0, b.vertices);
+    this.device.queue.writeBuffer(ibuf, 0, b.indices);
+    const mesh = { vbuf, ibuf, indexCount: b.indices.length };
+    this.dynamicMeshes.set(b.meshId, mesh);
+    return mesh;
+  }
+
+  /** 丢弃全部已缓存的动态代理网格（换关卡 / 代理体参数变了时调用） */
+  clearDynamicMeshes(): void {
+    for (const m of this.dynamicMeshes.values()) {
+      m.vbuf.destroy();
+      m.ibuf.destroy();
+    }
+    this.dynamicMeshes.clear();
+  }
+
+  /** 把若干批动态实例画进当前 pass；返回新增的 draw call 数 */
+  private drawDynamicBatches(
+    pass: GPURenderPassEncoder,
+    batches: CoreDynamicBatch[],
+    wantOutline: boolean,
+  ): number {
+    let draws = 0;
+    for (let bi = 0; bi < batches.length; bi++) {
+      const b = batches[bi];
+      if (b === undefined || b.count <= 0) continue;
+      const mesh = this.dynamicMesh(b);
+      if (mesh === null) continue;
+      // 防御：调用方给的 count 大于实际打包的实例数时按后者截断，不越界读
+      const n = Math.min(b.count, Math.floor(b.instances.length / DYNAMIC_INSTANCE_FLOATS));
+      if (n <= 0) continue;
+      // 每批次写进自己的 buffer：共用一份则所有 draw 都会读到最后一次上传（见字段注释）
+      const slot = this.dynamicInstSlot(bi, n);
+      this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
+      pass.setBindGroup(0, slot.bg);
+      pass.setVertexBuffer(0, mesh.vbuf);
+      pass.setIndexBuffer(mesh.ibuf, 'uint32');
+      pass.setPipeline(this.dynamicPipeline);
+      pass.drawIndexed(mesh.indexCount, n);
+      draws++;
+      if (wantOutline && b.outline) {
+        pass.setPipeline(this.dynamicOutlinePipeline);
+        pass.drawIndexed(mesh.indexCount, n);
+        draws++;
+      }
+    }
+    return draws;
+  }
+
+  /** 取（或按需扩容）第 `i` 个批次的实例 buffer + bind group。容量只增不减，避免每帧重建。 */
+  private dynamicInstSlot(i: number, count: number): { buf: GPUBuffer; bg: GPUBindGroup } {
+    const need = Math.max(count * DYNAMIC_INSTANCE_FLOATS * 4, 4096);
+    let slot = this.dynamicInstSlots[i];
+    if (slot === undefined || slot.cap < need) {
+      slot?.buf.destroy();
+      const buf = this.device.createBuffer({
+        label: `dynamic-instances-${i}`,
+        size: need,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      const bg = this.device.createBindGroup({
+        label: `dynamic-${i}`,
+        layout: this.dynamicLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.frameBuf } },
+          { binding: 1, resource: { buffer: this.lightsBuf } },
+          { binding: 2, resource: { buffer: this.toonBuf } },
+          { binding: 3, resource: { buffer: buf } },
+        ],
+      });
+      slot = { buf, bg, cap: buf.size };
+      this.dynamicInstSlots[i] = slot;
+    }
+    return slot;
+  }
+
+  /**
+   * 释放全部动态实例资源（每批次实例 buffer + 缓存的代理网格）。
+   *
+   * Play Stop / 换关卡 / 换代理参数时必须调用 —— 否则账目上「Play 期资源已清零」，
+   * GPU 侧却还留着这些 buffer。见 PR #3 review（copilot：disposer 只摘了 CPU 侧 bridge）。
+   */
+  releaseDynamicResources(): void {
+    for (const s of this.dynamicInstSlots) s.buf.destroy();
+    this.dynamicInstSlots = [];
+    this.clearDynamicMeshes();
   }
 
   private uniform(size: number, label: string): GPUBuffer {
@@ -778,6 +993,15 @@ export class RendererCore {
         }
       }
     }
+
+    // ---- Pass 1b：动态实例（运行时热实体，instancing，不占 transformBuf 静态槽位）----
+    // 画在 pass 1 的同一 MRT + 同一 depth 上 → 自动参与 toon 分阶、雾与全部后处理，
+    // 与静态关卡视觉一致。变换来自 storage 实例数组，容量不受 MAX_OBJECTS 约束。
+    const dyn = input.dynamicBatches;
+    if (dyn !== null && dyn !== undefined && dyn.length > 0) {
+      draws += this.drawDynamicBatches(pass, dyn, wantOutline);
+    }
+
     pass.end();
 
     // ---- Pass 3：后处理 ----
@@ -926,6 +1150,9 @@ export class RendererCore {
     this.skeletonColorBuf.destroy();
     this.cylinderVb?.destroy();
     this.cylinderTintBuf.destroy();
+    for (const s of this.dynamicInstSlots) s.buf.destroy();
+    this.dynamicInstSlots = [];
+    this.clearDynamicMeshes();
   }
 }
 

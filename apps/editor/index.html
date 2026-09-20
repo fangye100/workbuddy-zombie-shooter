@@ -524,6 +524,12 @@
   #gizmo-bar .gz-btn.active[data-mode="scale"] { background: var(--teal); }
   #gizmo-bar .gz-btn.active[data-space] { background: var(--warn); }
   #gizmo-bar .gz-btn.active[data-xray] { background: var(--zombie); color: var(--ink); }
+  /* Play 控制（WU-4）：播放中用尸绿高亮，暂停用警示黄，与 mode/space 的语义色区分开 */
+  #gizmo-bar .gz-btn.active[data-play] { background: var(--zombie); color: var(--ink); }
+  #gizmo-bar .gz-btn.active[data-play="pause"] { background: var(--warn); }
+  #gizmo-bar .gz-btn:disabled { opacity: .35; cursor: not-allowed; }
+  #gizmo-bar .gz-btn:disabled:hover { background: var(--panel); color: var(--paper); }
+  #gizmo-bar .gz-btn:disabled:active { transform: none; }
 
   /* ---- Asset Preview Pane（资产页内 3D 预览 + Timeline）---- */
   .insp-pane[data-pane="asset"].active { display: flex; flex-direction: column; }
@@ -1139,6 +1145,56 @@
   }
   .ctx-item:hover { background: var(--ink); color: var(--zombie); }
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
+  /* ---- 刷怪点编辑面板（WU-5）---- */
+  .sp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: var(--panel);
+    border-bottom: 3px solid var(--ink);
+  }
+  .sp-head b { font-size: 13px; color: var(--bone); }
+  .sp-tag { font-size: 10px; font-weight: 700; color: var(--zombie); }
+  .sp-tag.dirty { color: var(--warn); }
+  .sp-path { padding: 6px 14px; font-size: 10px; color: var(--text-dim); word-break: break-all; }
+  .sp-sec { padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .sp-lab { font-size: 10px; font-weight: 700; color: var(--text-dim); margin: 4px 0 6px; }
+  .sp-body, .sp-kv { font-size: 11px; }
+  .sp-kv { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .sp-kv span { color: var(--text-dim); flex: 0 0 auto; }
+  .sp-kv b { color: var(--paper); font-weight: 400; text-align: right; word-break: break-all; }
+  .sp-dim { color: var(--text-dim); font-size: 10px; line-height: 1.7; }
+  .sp-sel {
+    width: 100%; margin-bottom: 8px; padding: 5px 6px;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px;
+  }
+  .sp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
+  .sp-row label { font-size: 11px; color: var(--paper); }
+  .sp-num {
+    width: 84px; padding: 4px 6px; text-align: right;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px;
+  }
+  .sp-num:disabled { opacity: .4; }
+  .sp-btns { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .sp-btn {
+    flex: 1 1 auto; padding: 6px 8px;
+    background: var(--panel-deep); color: var(--paper);
+    border: 2px solid var(--ink); border-radius: 4px;
+    font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+  }
+  .sp-btn:hover:not(:disabled) { background: var(--zombie); color: var(--ink); }
+  .sp-btn:active:not(:disabled) { transform: translate(1px, 1px); }
+  .sp-btn.accent:not(:disabled) { background: var(--warn); color: var(--ink); }
+  .sp-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .sp-msg { min-height: 15px; margin-top: 6px; font-size: 10px; line-height: 1.6; color: var(--text-dim); }
+  .sp-msg.warn { color: var(--blood); }
+  .sp-msg.ok { color: var(--zombie); }
+  .sp-absum { font-size: 10px; color: var(--zombie); margin-bottom: 4px; }
+  .sp-ab { font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.6; color: var(--text-dim); }
+  .sp-abline { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.06); word-break: break-all; }
+  .sp-abline.changed { color: var(--warn); }
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
@@ -1181,6 +1237,7 @@
     <button class="insp-tab" data-tab="scene" data-page-node-id="kSTHppUnagGT9wPcv3Fvqq">场景/光照</button>
     <button class="insp-tab" data-tab="render" data-page-node-id="FNRHc3KHABmmCW6EyqYmcG">渲染</button>
     <button class="insp-tab" data-tab="asset" data-page-node-id="DYDFEWq3rIBYTVFY3Ouqcv">资产</button>
+    <button class="insp-tab" data-tab="spawn" data-page-node-id="SpAwNTab00000000001" title="刷怪点参数编辑（WU-5）">刷怪点</button>
   </div>
   <div class="insp-panes" data-page-node-id="4kRrPUbWn9BQAA1DXM2GLf">
     <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK"></div>
@@ -1190,12 +1247,26 @@
       <div class="ai-host" data-page-node-id="f8HHSTMum6lFrQGZgU5eES"></div>
       <div id="asset-preview-host" data-page-node-id="5tt6WD9ZUHK6yCr0naAgDd"></div>
     </div>
+    <!-- 刷怪点编辑（WU-5）：内部 DOM 由 services/spawn-panel.ts 全量构建 -->
+    <div class="insp-pane" data-pane="spawn" data-page-node-id="SpAwNPane0000000001">
+      <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
+    </div>
   </div>
 </aside>
 
 </div>
 <div id="gizmo-bar" data-page-node-id="7CiU4AxJIbgWbVYBtjyO6d">
   <div class="gz-inner" data-page-node-id="It5hMRg4gOFMThmHBHFPqM">
+    <!-- Play 控制（WU-4）：Play / 暂停 / 单步 / 重跑 / 停止。
+         语义与按钮启用状态全部由 main.ts 按 PlayController.state 驱动 -->
+    <div class="gz-group" data-page-node-id="PLayCtlGrp00000000001">
+      <button class="gz-btn" data-play="play" id="btn-play" title="进入 Play（空格）">▶ Play</button>
+      <button class="gz-btn" data-play="pause" id="btn-pause" title="暂停 / 继续（空格）">⏸ 暂停</button>
+      <button class="gz-btn" data-play="step" id="btn-step" title="单步推进一帧（. 句号）">⏭ 单步</button>
+      <button class="gz-btn" data-play="reset" id="btn-reset" title="同种子重跑（, 逗号）">↻ 重跑</button>
+      <button class="gz-btn" data-play="stop" id="btn-stop" title="退出 Play 并恢复作者状态（Esc）">■ 停止</button>
+    </div>
+    <div class="gz-sep" data-page-node-id="PLayCtlSep00000000001"></div>
     <div class="gz-group" data-page-node-id="PDY03c5Yt6Xh2UtCUcaMXR">
       <button class="gz-btn gz-mode" data-mode="translate" title="移动 (W)" data-page-node-id="qYlZbfhw3VRn38r924uXQF">
         <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="ac2qWxjhJNrnEFhXD4bxUt"><path d="M12 2l4 4h-3v4h6V7l4 4-4 4v-3h-6v6h3l-4 4-4-4h3v-6H5v3l-4-4 4-4v3h6V6H8z" data-page-node-id="04bqKCa169ppAU3wHYQ1op"/></svg>

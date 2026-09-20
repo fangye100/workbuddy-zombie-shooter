@@ -247,7 +247,9 @@ describe('migrateV1ToV2 · S2a userData 转正', () => {
   }
 
   it('v1 → v2：userData 的 bob/ao*/background 提到 MeshRenderer，category 提到节点', () => {
-    const r = migrateToLatest(v1Doc());
+    // 用 migrateTo(…, 2) 锁在这一档，不用 migrateToLatest ——
+    // 后者会一路推到最新版，升 v3 之后这条就变成在测全链，失去"锁定单档迁移"的意义。
+    const r = migrateTo(v1Doc(), 2);
     expect(r.from).toBe(1);
     expect(r.to).toBe(2);
     expect(r.applied).toEqual(['userdata-to-schema']);
@@ -274,10 +276,62 @@ describe('migrateV1ToV2 · S2a userData 转正', () => {
   });
 
   it('已转正的 v2 文档再跑迁移链 → 不重复应用（幂等）', () => {
-    const once = migrateToLatest(v1Doc());
-    const twice = migrateToLatest(once.doc as unknown as Record<string, unknown>);
+    // 同样锁在 v2：migrateToLatest 会一路推到最新版，写死 2 的断言在升版后必然失效。
+    const once = migrateTo(v1Doc(), 2);
+    const twice = migrateTo(once.doc as unknown as Record<string, unknown>, 2);
     expect(twice.applied).toEqual([]);
     expect(twice.from).toBe(2);
     expect(twice.to).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------- v2 → v3
+
+describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
+  // 前面的用例测迁移骨架时会 clearMigrations() 把注册表清空（那是它的职责）。
+  // 注册表是模块级单例且用例间共享，所以这里每个用例都要自己恢复，
+  // 否则会撞上"迁移链断裂：缺 v2 → v3"。
+  beforeEach(() => {
+    registerSceneMigrations();
+  });
+
+  /** 造一个 v2 文档：v3 才引入 playerStart，v2 里它不存在 */
+  function v2Doc(): Record<string, unknown> {
+    const doc = createEmptySceneDocument('v2 场景');
+    const o = doc as unknown as Record<string, unknown>;
+    o['schemaVersion'] = 2;
+    delete o['playerStart'];
+    return o;
+  }
+
+  it('补出 playerStart，值必须是 null（不许猜出生点）', () => {
+    const r = migrateTo(v2Doc(), 3);
+    expect(r.from).toBe(2);
+    expect(r.to).toBe(3);
+    expect(r.applied).toEqual(['add-player-start']);
+    expect(r.doc.playerStart).toBeNull();
+  });
+
+  it('已有 playerStart 的文档不被覆盖', () => {
+    const doc = v2Doc();
+    doc['playerStart'] = 'nd_somewhere';
+    const r = migrateTo(doc, 3);
+    expect(r.doc.playerStart).toBe('nd_somewhere');
+  });
+
+  it('迁移后校验不产生 error（playerStart=null 只是 warning）', () => {
+    const r = migrateTo(v2Doc(), 3);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('v2 → v3 已注册进默认迁移链', () => {
+    expect(listMigrations().some((m) => m.from === 2 && m.to === 3)).toBe(true);
+  });
+
+  it('v1 文档走 migrateToLatest 必须一路到最新版，且中途不跳步', () => {
+    const r = migrateToLatest(docAt(1));
+    expect(r.from).toBe(1);
+    expect(r.to).toBe(SCHEMA_VERSION);
+    expect(r.applied).toEqual(['userdata-to-schema', 'add-player-start']);
   });
 });

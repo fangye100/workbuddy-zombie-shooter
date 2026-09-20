@@ -35,6 +35,8 @@
     "packages/gameplay/src/**/*.ts",
     "packages/content/src/**/*.ts",
     "packages/content/test/**/*.ts",
+    "packages/runtime/src/**/*.ts",
+    "packages/runtime/test/**/*.ts",
     "apps/samples/00-init/*.ts",
     "apps/editor/src/**/*.ts",
     "apps/editor/test/**/*.ts"

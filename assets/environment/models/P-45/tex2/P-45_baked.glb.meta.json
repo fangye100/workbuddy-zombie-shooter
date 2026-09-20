@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_tv2hi8sg",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-45_baked.glb"
+  },
+  "sourceHash": "sha256:9ebf4a5885e729791d4158ca84cd9a508caa837d9a5fbe0a21c909ca42a891e8",
+  "updatedAt": "2026-09-18T15:11:46.326Z"
+}

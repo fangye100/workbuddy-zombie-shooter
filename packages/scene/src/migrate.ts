@@ -231,6 +231,29 @@ export const migrateV1ToV2: MigrationStep = {
   },
 };
 
+// ---------------------------------------------------------------- WU-1a：v2 → v3 迁移
+
+/**
+ * v2 → v3：新增场景级 `playerStart`（玩家出生点，见 document.ts 的字段注释）。
+ *
+ * **这里只能填 null，不能猜。** 玩家起点是玩法真源，从节点顺序、房间下标、
+ * 名字关键字去"推断"一个出生点，等于把布局顺序耦合进玩法语义 ——
+ * 作者在层级面板里拖一下顺序，玩家就出生在别的地方了。
+ * 迁移猜错的场景比明确报"未指定"的场景危险得多，所以置 null，
+ * 由装载阶段产出带定位的 diagnostic 让作者显式补上。
+ */
+export const migrateV2ToV3: MigrationStep = {
+  from: 2,
+  to: 3,
+  name: 'add-player-start',
+  run(doc) {
+    if (doc['playerStart'] === undefined) {
+      doc['playerStart'] = null;
+    }
+    return doc;
+  },
+};
+
 /**
  * 注册全部历史迁移。幂等：已注册则跳过（测试 clearMigrations 后再调不会重复抛）。
  * 模块加载时即调用一次，保证 migrateToLatest 在任何入口都可用。
@@ -238,6 +261,9 @@ export const migrateV1ToV2: MigrationStep = {
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
+  }
+  if (!listMigrations().some((m) => m.from === 2 && m.to === 3)) {
+    registerMigration(migrateV2ToV3);
   }
 }
 

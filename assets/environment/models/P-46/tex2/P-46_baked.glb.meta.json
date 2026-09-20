@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_quao8bar",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-46_baked.glb"
+  },
+  "sourceHash": "sha256:f4d09a8ee9ee52d05bb3616b04f06e066eba5b81f8f6977eec617f2e306164a7",
+  "updatedAt": "2026-09-18T15:11:46.328Z"
+}
