@@ -848,6 +848,9 @@ export class LabRenderer {
       this.device.queue.writeBuffer(vb, 0, mesh.vertices);
       this.device.queue.writeBuffer(ib, 0, mesh.indices);
 
+      const q: m4.Quat = s.quat !== undefined
+        ? ([s.quat[0], s.quat[1], s.quat[2], s.quat[3]] as m4.Quat)
+        : [0, 0, 0, 1];
       this.state.objects.push({
         vertexBuffer: vb,
         indexBuffer: ib,
@@ -855,8 +858,11 @@ export class LabRenderer {
         materialIndex: s.material,
         nodeId: s.nodeId ?? null,
         pos: [s.pos[0], s.pos[1], s.pos[2]],
-        rot: [0, 0, 0],
-        quat: s.quat !== undefined ? ([s.quat[0], s.quat[1], s.quat[2], s.quat[3]] as m4.Quat) : [0, 0, 0, 1],
+        // 欧拉角只是**面板显示**用的派生量，旋转真源是 quat：场景带了非恒等旋转时
+        // 必须从 quat 反算，否则面板显示 0 而画面是转过的（复审 codex P2）；且
+        // setObjectRotDeg 会用 rot 重建 quat，初值不对会让"改一个轴"丢掉其它分量
+        rot: s.quat !== undefined ? m4.quatToEuler(q) : [0, 0, 0],
+        quat: q,
         scale: s.scale ?? 1,
         bob: s.bob,
         mesh,

@@ -151,18 +151,24 @@ const BOUNDS_NODE_TOL_M = 1e-3;
  * 会破了它**：gizmo 写的是 `transform`，bounds 留在原地 → 触发区不动、里面的刷怪点跟着
  * 走，而玩家侧碰撞照旧生效 —— 静默分家、排查成本极高。这里显式告警（复审 B4）。
  *
- * 只在**节点带网格代理**时告警：`instantiateScene` 只渲染 `MeshRenderer`，没有代理的语义
- * 节点（生成器给导航区就不挂代理）在视口里根本选不中、拖不动，它的 transform 也不被任何
- * 消费方读取 —— 对它告警等于常年喊狼来了，反而训练大家忽略红灯。
+ * 只在**节点真的会被渲染**时告警：口径与 `instantiateScene` 严格对齐 —— 组件启用、
+ * 自身与祖先可见、且 `builtin` 网格（`asset` 网格在装载期是异步的，loadScene 会跳过）。
+ * 三者任一不满足，该节点在视口里根本选不中、拖不动，对它告警等于常年喊狼来了，
+ * 反而训练大家忽略红灯。（生成器给导航区不挂代理，就是这一类。）
  *
  * 返回 null = 一致或不适用；否则返回给作者看的文案（发 diagnostic 由调用方做）。
  */
 function boundsNodeMismatchMessage(
+  graph: SceneGraph,
   n: SceneNodeRuntime,
   bounds: AabbData,
   kindLabel: string,
 ): string | null {
-  if (!n.components.some((c) => c.kind === 'MeshRenderer')) return null;
+  const comp = n.components.find((c) => c.kind === 'MeshRenderer');
+  const meshComp = comp as { enabled?: boolean; source?: { type?: string } } | undefined;
+  if (meshComp === undefined || meshComp.enabled === false) return null;
+  if (!graph.isEffectivelyVisible(n.id)) return null;
+  if (meshComp.source?.type !== 'builtin') return null;
   const dx = n.world.position[0] - bounds.center[0];
   const dz = n.world.position[2] - bounds.center[2];
   const d = Math.hypot(dx, dz);
@@ -278,7 +284,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       if (c.kind === 'RoomVolume') {
         const r = c as RoomVolumeComponent;
         const b = aabbToXZ(r.bounds);
-        const mis = boundsNodeMismatchMessage(n, r.bounds, 'RoomVolume');
+        const mis = boundsNodeMismatchMessage(graph, n, r.bounds, 'RoomVolume');
         if (mis !== null) warn('W_BOUNDS_NODE_MISMATCH', mis, n.id);
         rooms.push({
           nodeId: n.id,
@@ -375,7 +381,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           warn('W_NAV_MULTIPLE', `场景有多个 NavZone，本轮只取第一个（${nav.nodeId}）`, n.id);
           continue;
         }
-        const navMis = boundsNodeMismatchMessage(n, c.bounds, 'NavZone');
+        const navMis = boundsNodeMismatchMessage(graph, n, c.bounds, 'NavZone');
         if (navMis !== null) warn('W_BOUNDS_NODE_MISMATCH', navMis, n.id);
         const b = aabbToXZ(c.bounds);
         nav = {

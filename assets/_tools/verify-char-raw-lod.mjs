@@ -22,7 +22,8 @@ const chromePaths = [
 const chrome = chromePaths.find((p) => existsSync(p));
 if (!chrome) { console.error('chrome not found'); process.exit(1); }
 
-const profile = `${OUT}/chrome-prof-${Date.now()}`;
+// 固定 profile（= 上面声明的 PROFILE）：复用证书/登录态/窗口状态，不每次新建临时目录
+const profile = PROFILE;
 const proc = spawn(chrome, [
   '--enable-unsafe-webgpu',
   '--remote-debugging-port=' + PORT,

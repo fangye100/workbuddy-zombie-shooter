@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, composeTransform, worldToLocalTransform, identityTransform } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData } from '@aether/scene';
 import {
   PlaySession,
@@ -16,10 +16,9 @@ import {
   listSpawnPoints,
   sceneFingerprint,
   formatAuthorEdit,
-  readTransformValues,
   findNode,
 } from '@aether/runtime';
-import type { ScatterComparison, ScatterFingerprint, TransformField, TransformValues } from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint, TransformValues } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
@@ -479,6 +478,22 @@ async function boot(): Promise<void> {
         const n = findNode(spawnStore.document, nodeId);
         return n === null ? null : [...n.transform.position];
       },
+      /** 从文档重算的**世界**四元数（转向 gizmo 的写回判据：视口 quat == 它） */
+      quatOfDoc: (nodeId: string) => {
+        if (spawnStore === null) return null;
+        const g = SceneGraph.fromDocument(spawnStore.document);
+        g.updateWorldTransforms();
+        const n = g.getNode(nodeId);
+        return n === null
+          ? null
+          : [n.world.rotation[0], n.world.rotation[1], n.world.rotation[2], n.world.rotation[3]];
+      },
+      /** 文档里某节点的子节点 id 列表（冒烟用它挑"有可渲染子节点的父节点"来拖） */
+      childIds: (nodeId: string) => {
+        if (spawnStore === null) return null;
+        const g = SceneGraph.fromDocument(spawnStore.document);
+        return g.childrenOf(nodeId);
+      },
       state: () => ({ dirty: spawnStore?.dirty ?? false, undoDepth: spawnStore?.undoDepth ?? 0 }),
       undo: () => undoSpawnEdit(),
     },
@@ -765,6 +780,12 @@ async function boot(): Promise<void> {
     lastAngle: number; // 上一帧极角（逐帧差值用，避免 atan2 分支跳变）
     totalAngle: number; // 本次拖拽累计角（可连续旋转任意圈）
     startDist: number; // 中心缩放起始距离
+    /**
+     * 本次拖拽的**文档图快照**与节点 id（拖拽开始时建一次；父节点被拖时用它把整棵
+     * 子树的世界变换逐帧推到视口）。拿不到文档来源（兜底场景/拖入资产）时为 null。
+     */
+    docGraph: SceneGraph | null;
+    docNodeId: NodeId | null;
   }
   let drag: DragStart | null = null;
 
@@ -799,6 +820,9 @@ async function boot(): Promise<void> {
       lastAngle: 0,
       totalAngle: 0,
       startDist: 1,
+      // 文档图快照：拖拽开始时的文档（拖拽中不重读磁盘，只重算世界变换）
+      docGraph: spawnStore === null ? null : graphOfDoc(spawnStore.document),
+      docNodeId: renderer.getObjectNodeId(idx),
     };
 
     if (info.mode === 'rotate') {
@@ -887,18 +911,20 @@ async function boot(): Promise<void> {
       }
     }
     panel.syncSelectionFromRenderer();
+    // 拖父节点时让整棵子树跟着走（视口物体是扁平的，不推子物体就留在原地）
+    pushDraggedSubtree(drag);
     hudDirty = true;
   }
 
-  /**
-   * 节点父级的**世界**变换（根节点 → 单位变换）。
-   *
-   * 用文档临时建一次图：几十个节点，一次拖拽收尾调一次，比维护一份增量缓存便宜得多，
-   * 而且不会出现"缓存与文档不同步"这种第二真源问题。
-   */
-  function parentWorldOf(doc: SceneDocument, nodeId: NodeId): TransformData | null {
-    const graph = SceneGraph.fromDocument(doc);
-    graph.updateWorldTransforms();
+  /** 从文档建一次图（父级世界变换的来源；几十个节点，按需建，不维护增量缓存） */
+  function graphOfDoc(doc: SceneDocument): SceneGraph {
+    const g = SceneGraph.fromDocument(doc);
+    g.updateWorldTransforms();
+    return g;
+  }
+
+  /** 节点父级的**世界**变换（根节点 → 单位变换） */
+  function parentWorldOf(graph: SceneGraph, nodeId: NodeId): TransformData | null {
     const n = graph.getNode(nodeId);
     if (n === null) return null;
     if (n.parent === null) return identityTransform();
@@ -911,28 +937,66 @@ async function boot(): Promise<void> {
     };
   }
 
-  /**
-   * 文档 → 视口：把某节点的**局部**变换解算成世界量写回渲染物体。
-   *
-   * 撤销（以及任何绕过视口的文档改动）之后必须调它 —— 文档是唯一真源，但渲染物体
-   * 是另一份运行时表示，不主动回写就会出现「文档已退、画面还留着」。
-   * YAGNI 说明：只做单节点的精确解算，不做整体重建 —— 重建会销毁并重传 GPU 资源，
-   * 为了回退一个拖拽不值得，而且会丢失选中态与相机。
-   */
-  function pushNodeTransformToView(nodeId: NodeId): void {
-    const store = spawnStore;
-    if (store === null) return;
+  /** 把图里某节点的**世界**变换写进对应的渲染物体（没有对应物体时静默跳过） */
+  function pushWorldOfNode(graph: SceneGraph, nodeId: NodeId): void {
     const idx = renderer.findObjectIndexByNodeId(nodeId);
     if (idx === null) return;
-    const node = findNode(store.document, nodeId);
-    const parentWorld = parentWorldOf(store.document, nodeId);
-    if (node === null || parentWorld === null) return;
-    const world = composeTransform(parentWorld, node.transform, identityTransform());
-    renderer.setObjectPos(idx, 0, world.position[0]);
-    renderer.setObjectPos(idx, 1, world.position[1]);
-    renderer.setObjectPos(idx, 2, world.position[2]);
-    renderer.setObjectQuat(idx, [world.rotation[0], world.rotation[1], world.rotation[2], world.rotation[3]]);
-    renderer.setObjectScale(idx, world.scale[0]);
+    const n = graph.getNode(nodeId);
+    if (n === null) return;
+    renderer.setObjectPos(idx, 0, n.world.position[0]);
+    renderer.setObjectPos(idx, 1, n.world.position[1]);
+    renderer.setObjectPos(idx, 2, n.world.position[2]);
+    renderer.setObjectQuat(idx, [
+      n.world.rotation[0], n.world.rotation[1], n.world.rotation[2], n.world.rotation[3],
+    ]);
+    renderer.setObjectScale(idx, n.world.scale[0]);
+  }
+
+  /**
+   * 文档 → 视口：把某节点**及其整棵子树**的世界变换写回渲染物体。
+   *
+   * 子树必须一起推：视口物体是**扁平**的，每个物体一份世界变换；而文档是层级 ——
+   * 拖父节点时（act1 的 `nd_f1r0` / `nd_f1r2` 各有 6 个可渲染子节点）子物体在文档里
+   * 跟着走，视口里却留在原地，松手/保存/Play 之后才跳过去（codex 评审 P1）。
+   * YAGNI 说明：不做整体重建 —— 重建会销毁并重传全部 GPU 资源、丢选中态与相机。
+   */
+  function pushSubtreeToView(graph: SceneGraph, nodeId: NodeId): void {
+    pushWorldOfNode(graph, nodeId);
+    for (const d of graph.descendantsOf(nodeId)) pushWorldOfNode(graph, d);
+  }
+
+  /**
+   * 拖拽**进行中**把子树同步到视口。
+   *
+   * 用拖拽开始时缓存的文档图（`d.docGraph`）逐帧重算：先把被拖节点的当前世界量反解成
+   * 局部量写进图，再 `updateWorldTransforms()`，然后推子树。逐帧成本 = 节点数（几十）。
+   * 不这么做的话，拖父节点期间子物体不动，只有松手才跟上 —— 正是"视口与文档不一致"。
+   */
+  function pushDraggedSubtree(d: DragStart): void {
+    const g = d.docGraph;
+    const id = d.docNodeId;
+    if (g === null || id === null) return;
+    const st = renderer.getObjectState(d.objIndex);
+    const q = renderer.getObjectQuat(d.objIndex);
+    const parentWorld = parentWorldOf(g, id);
+    if (st === null || q === null || parentWorld === null) return;
+    const local = worldToLocalTransform(
+      parentWorld,
+      {
+        position: [st.pos[0], st.pos[1], st.pos[2]],
+        rotation: [q[0], q[1], q[2], q[3]],
+        scale: [st.scale, st.scale, st.scale],
+      },
+      identityTransform(),
+    );
+    if (local === null) return;
+    g.setLocalTransform(id, {
+      position: local.position,
+      rotation: local.rotation,
+      scale: local.scale,
+    });
+    g.updateWorldTransforms();
+    for (const child of g.descendantsOf(id)) pushWorldOfNode(g, child);
   }
 
   /**
@@ -942,6 +1006,10 @@ async function boot(): Promise<void> {
    * （文档里还是旧位置）—— 那是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。
    * 现在走 `SpawnEditStore.setTransform`：一条拖拽 = 一条可撤销编辑，保存范围
    * （`changedPaths`）自动包含它，Play 读同一份文档于是立刻生效。
+   *
+   * 🔴 旋转必须与位置/缩放一起写：`TransformValues` 的标量分量只覆盖位置与统一缩放，
+   * 纯旋转拖拽时位置/缩放都没变。曾经这里只写位置+缩放 → 旋转被丢弃，纯旋转既不进
+   * 撤销栈也不落盘（codex / Copilot 评审 P1）。
    */
   function commitGizmoTransform(d: DragStart): void {
     const store = spawnStore;
@@ -960,7 +1028,7 @@ async function boot(): Promise<void> {
       hudDirty = true;
       return;
     }
-    const parentWorld = parentWorldOf(store.document, nodeId);
+    const parentWorld = parentWorldOf(graphOfDoc(store.document), nodeId);
     if (parentWorld === null) {
       spawnMsg = { text: `场景文档里找不到父级链（节点 ${nodeId}），变换未写回`, kind: 'warn' };
       refreshSpawnPanel();
@@ -980,21 +1048,24 @@ async function boot(): Promise<void> {
       hudDirty = true;
       return;
     }
-    const fields: TransformField[] = ['posX', 'posY', 'posZ', 'scale'];
     const to: TransformValues = {
       posX: local.position[0],
       posY: local.position[1],
       posZ: local.position[2],
       scale: local.scale[0],
+      // 旋转与位置/缩放一起提交（纯旋转拖拽时标量分量都没变，漏了它就整条编辑丢失）
+      rotation: [local.rotation[0], local.rotation[1], local.rotation[2], local.rotation[3]],
     };
-    // 拖回原处（或只点了一下手柄没真动）→ 不进撤销栈、不弹提示
-    const cur = readTransformValues(store.document, nodeId, fields);
-    if (cur !== null && fields.every((f) => Math.abs((cur[f] ?? 0) - to[f]!) < 1e-9)) return;
+    // 拖回原处（或只点了一下手柄没真动）→ 不进撤销栈、不弹提示。
+    // 交给 store.setTransform 自己判定"值没变化"（它按 |四元数点积| 比旋转，q 与 −q
+    // 是同一姿态，逐分量比会把"转一圈回到原处"误报成一次编辑）。
     const r = store.setTransform(nodeId, to);
-    if (!r.ok) {
+    if (r.ok) {
+      spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(r.edit!)}（↶ 撤销 可回退）`, kind: 'ok' };
+    } else if (r.error !== '值没有变化') {
       spawnMsg = { text: r.error ?? '变换写回被拒绝', kind: 'warn' };
     } else {
-      spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(r.edit!)}（↶ 撤销 可回退）`, kind: 'ok' };
+      return; // 没真动：不刷面板、不提示
     }
     refreshSpawnPanel();
     hudDirty = true;
@@ -1149,8 +1220,12 @@ async function boot(): Promise<void> {
       spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
     }
     // 变换编辑撤销后必须把视口也退回去：文档是唯一真源，但渲染物体是另一份表示，
-    // 不主动回写就会出现「文档已退、画面还留着」（复审 B1）
-    if (undone.kind === 'transform') pushNodeTransformToView(undone.nodeId);
+    // 不主动回写就会出现「文档已退、画面还留着」（复审 B1）。**连同子树**一起回写 ——
+    // 撤销父节点编辑时子物体在文档里也退回去了，视口不同步就会留下"错位的子物体"。
+    if (undone.kind === 'transform') {
+      const store2 = spawnStore;
+      if (store2 !== null) pushSubtreeToView(graphOfDoc(store2.document), undone.nodeId);
+    }
     spawnMsg = { text: `已撤销：${formatAuthorEdit(undone)}`, kind: 'ok' };
     refreshSpawnPanel();
     hudDirty = true;

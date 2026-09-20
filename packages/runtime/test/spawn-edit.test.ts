@@ -396,3 +396,73 @@ describe('TransformEdit —— 视口变换写回文档（复审 B1）', () => {
     expect(changedPathsOnly(store.committedDocument, store.document)).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------- 旋转（复审 codex/Copilot P1）
+
+describe('TransformEdit —— 旋转（四元数）必须能持久化', () => {
+  /** 绕 Y 轴 90° 的规范四元数 */
+  const YAW90 = [0, Math.SQRT1_2, 0, Math.SQRT1_2] as const;
+
+  it('纯旋转拖拽 = 一条编辑，且写进文档的是那条四元数', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    // 只有旋转、没有位置/缩放改动 —— 旧实现只看标量分量，这种拖拽会被当成"值没有变化"
+    const r = store.setTransform(COVER, { rotation: YAW90 });
+    expect(r.ok).toBe(true);
+    expect(store.undoDepth).toBe(1);
+    expect(store.dirty).toBe(true);
+    expect(findNode(store.document, COVER)!.transform.rotation).toEqual([...YAW90]);
+    // 差异路径全部落在 rotation 上（位置/缩放一个字节都没动）。数组分量按元素出路径，
+    // 所以这里是"变了几个分量就有几条"，不锁死条数以免夹具初值一变就假红。
+    const paths = changedPathsOnly(store.committedDocument, store.document);
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.every((p) => p.includes('transform.rotation'))).toBe(true);
+    // 撤销把旋转也退回去
+    const undone = store.undo();
+    expect(undone!.kind).toBe('transform');
+    expect(findNode(store.document, COVER)!.transform.rotation).toEqual([0, 0, 0, 1]);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('位置 + 旋转一次提交：两条分量都写、撤销一起退', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    expect(store.setTransform(COVER, { posX: 7, rotation: YAW90 }).ok).toBe(true);
+    const n = findNode(store.document, COVER)!;
+    expect(n.transform.position[0]).toBe(7);
+    expect(n.transform.rotation).toEqual([...YAW90]);
+    store.undo();
+    const back = findNode(store.document, COVER)!;
+    expect(back.transform.position[0]).toBe(-6); // 夹具初值
+    expect(back.transform.rotation).toEqual([0, 0, 0, 1]);
+  });
+
+  it('q 与 −q 是同一姿态 → 不算一次编辑（转一圈回到原处不该进撤销栈）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const cur = findNode(store.document, COVER)!.transform.rotation;
+    const negated = cur.map((x) => -x) as unknown as [number, number, number, number];
+    const r = store.setTransform(COVER, { rotation: negated });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('值没有变化');
+    expect(store.undoDepth).toBe(0);
+  });
+
+  it('非归一 / 非有限四元数被拒绝（不写进文件）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const snapshot = JSON.stringify(store.document);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0, 2] }).ok).toBe(false);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0, Number.NaN] }).ok).toBe(false);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0] as unknown as [number, number, number, number] }).ok).toBe(false);
+    expect(JSON.stringify(store.document)).toBe(snapshot);
+    expect(store.undoDepth).toBe(0);
+  });
+
+  it('formatAuthorEdit 会写出旋转（面板状态行不吞掉这条改动）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const r = store.setTransform(COVER, { rotation: YAW90 });
+    expect(formatAuthorEdit(r.edit!)).toContain('旋转');
+  });
+});

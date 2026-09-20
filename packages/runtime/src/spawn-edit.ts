@@ -81,7 +81,41 @@ export const TRANSFORM_SCALE_MIN = 0.01;
 export const TRANSFORM_SCALE_MAX = 100;
 
 /** 逐分量的目标值。键集合 = 本次实际改动的分量（键不在 = 不动那个分量） */
-export type TransformValues = Partial<Record<TransformField, number>>;
+export type TransformValues = Partial<Record<TransformField, number>> & {
+  /**
+   * 旋转**真源是四元数**（不拆欧拉角：拆成三个分量会引入万向锁与「三分量各自独立」的假象）。
+   * 分量级命令只覆盖位置/缩放；旋转整条一起写。
+   */
+  rotation?: readonly [number, number, number, number];
+};
+
+/** 旋转四元数的"归一"容差（视口写回的是组合出来的单位四元数，这里只拦垃圾值） */
+const QUAT_NORM_TOL = 1e-3;
+
+/** 校验待写入的四元数：4 个有限数且已归一 */
+export function validateQuat(q: readonly number[]): string | null {
+  if (q.length !== 4 || !q.every((x) => typeof x === 'number' && Number.isFinite(x))) {
+    return '旋转四元数必须是 4 个有限数字';
+  }
+  const n = Math.hypot(q[0]!, q[1]!, q[2]!, q[3]!);
+  return Math.abs(n - 1) <= QUAT_NORM_TOL ? null : `旋转四元数未归一（模长 ${n.toFixed(6)}）`;
+}
+
+/** 只取数值分量：rotation 不是标量，校验与写入都要单独走 */
+function numericOf(v: TransformValues): [TransformField, number][] {
+  const out: [TransformField, number][] = [];
+  for (const [k, x] of Object.entries(v)) {
+    if (k === 'rotation' || typeof x !== 'number') continue;
+    out.push([k as TransformField, x]);
+  }
+  return out;
+}
+
+/** 同一旋转的判据：q 与 −q 表示同一姿态，所以比 |点积| 而不是逐分量相等 */
+function sameRotation(a: readonly number[], b: readonly number[]): boolean {
+  const d = a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]! + a[3]! * b[3]!;
+  return Math.abs(Math.abs(d) - 1) <= 1e-9;
+}
 
 /**
  * 一条已应用的**局部**变换编辑。一次 gizmo 拖拽 = 一条编辑（可能同时改 x/y/z），
@@ -294,11 +328,16 @@ export function validateTransformValue(field: TransformField, value: number): st
 export function applyTransformEdit(doc: SceneDocument, edit: TransformEdit): EditResult {
   const n = findNode(doc, edit.nodeId);
   if (n === null) return { ok: false, error: `场景里找不到节点 ${edit.nodeId}`, edit: null };
-  for (const [f, v] of Object.entries(edit.to) as [TransformField, number][]) {
+  const nums = numericOf(edit.to);
+  for (const [f, v] of nums) {
     const err = validateTransformValue(f, v);
     if (err !== null) return { ok: false, error: err, edit: null };
   }
-  for (const [f, v] of Object.entries(edit.to) as [TransformField, number][]) {
+  if (edit.to.rotation !== undefined) {
+    const err = validateQuat(edit.to.rotation);
+    if (err !== null) return { ok: false, error: err, edit: null };
+  }
+  for (const [f, v] of nums) {
     if (f === 'scale') {
       n.transform.scale = [v, v, v];
     } else {
@@ -306,12 +345,22 @@ export function applyTransformEdit(doc: SceneDocument, edit: TransformEdit): Edi
       n.transform.position[axis] = v;
     }
   }
+  if (edit.to.rotation !== undefined) {
+    const r = edit.to.rotation;
+    n.transform.rotation = [r[0], r[1], r[2], r[3]];
+  }
   return { ok: true, error: null, edit };
 }
 
-/** 逆命令：逐分量互换。id 保留 */
+/** 逆命令：逐分量互换（旋转一起互换）。id 保留 */
 export function invertTransformEdit(edit: TransformEdit): TransformEdit {
-  return { kind: 'transform', id: edit.id, nodeId: edit.nodeId, from: edit.to, to: edit.from };
+  return {
+    kind: 'transform',
+    id: edit.id,
+    nodeId: edit.nodeId,
+    from: edit.to,
+    to: edit.from,
+  };
 }
 
 /** 按 `kind` 分发应用（撤销栈里两条命令族共用一条 LIFO） */
@@ -329,8 +378,10 @@ export function formatAuthorEdit(edit: AuthorEdit): string {
   if (edit.kind === 'spawn') {
     return `${FIELD_LABEL[edit.field]}：${edit.from} → ${edit.to}`;
   }
-  const parts = (Object.entries(edit.to) as [TransformField, number][])
-    .map(([f, v]) => `${TRANSFORM_LABEL[f]} ${v.toFixed(3)}`);
+  const parts = numericOf(edit.to).map(([f, v]) => `${TRANSFORM_LABEL[f]} ${v.toFixed(3)}`);
+  if (edit.to.rotation !== undefined) {
+    parts.push(`旋转 (${edit.to.rotation.map((x) => x.toFixed(3)).join(', ')})`);
+  }
   return `节点 ${edit.nodeId} 变换：${parts.join('、')}`;
 }
 
@@ -420,17 +471,32 @@ export class SpawnEditStore {
   setTransform(nodeId: NodeId, to: TransformValues): EditResult {
     const n = findNode(this.working, nodeId);
     if (n === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
-    const fields = Object.keys(to) as TransformField[];
-    if (fields.length === 0) return { ok: false, error: '没有任何分量要写入', edit: null };
-    const from = readTransformValues(this.working, nodeId, fields);
-    if (from === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
-    for (const f of fields) {
-      const err = validateTransformValue(f, to[f]!);
+    const nums = numericOf(to);
+    if (nums.length === 0 && to.rotation === undefined) {
+      return { ok: false, error: '没有任何分量要写入', edit: null };
+    }
+    for (const [f, v] of nums) {
+      const err = validateTransformValue(f, v);
       if (err !== null) return { ok: false, error: err, edit: null };
     }
-    if (fields.every((f) => Object.is(from[f], to[f]))) {
-      return { ok: false, error: '值没有变化', edit: null };
+    if (to.rotation !== undefined) {
+      const err = validateQuat(to.rotation);
+      if (err !== null) return { ok: false, error: err, edit: null };
     }
+    const from: TransformValues = {};
+    for (const [f] of nums) {
+      const cur = readTransformField(this.working, nodeId, f);
+      if (cur === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
+      from[f] = cur;
+    }
+    if (to.rotation !== undefined) {
+      const r = n.transform.rotation;
+      from.rotation = [r[0], r[1], r[2], r[3]];
+    }
+    // 无变化：标量逐位比较；旋转按 |点积|≈1（q 与 −q 是同一姿态）
+    const sameNums = nums.every(([f, v]) => Object.is(from[f], v));
+    const sameRot = to.rotation === undefined || sameRotation(from.rotation!, to.rotation);
+    if (sameNums && sameRot) return { ok: false, error: '值没有变化', edit: null };
     const edit: TransformEdit = { kind: 'transform', id: this.nextEditId++, nodeId, from, to: { ...to } };
     const r = applyTransformEdit(this.working, edit);
     if (!r.ok) return r;

@@ -268,6 +268,35 @@ describe('loadLevelRuntime —— RoomVolume / NavZone 的 bounds 空间（复�
       loadLevelRuntime(doc).diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH'),
     ).toBe(false);
   });
+
+  it('口径与 instantiateScene 对齐：禁用 / 隐藏 / asset 网格的代理都不告警（拖不动）', () => {
+    /** 把房间节点**自带**的网格代理改成指定形态后把节点挪走，再装载 */
+    const withRoomProxy = (
+      mutate: (comp: Record<string, unknown>) => void,
+    ): ReturnType<typeof loadLevelRuntime> => {
+      const doc = clone(floor1());
+      const room = findNode(doc, 'nd_f1r0');
+      const comp = room.components.find((c) => c.kind === 'MeshRenderer');
+      expect(comp).toBeDefined();
+      mutate(comp as unknown as Record<string, unknown>);
+      room.transform.position = [40, -0.1, 0];
+      return loadLevelRuntime(doc);
+    };
+    const warned = (r: ReturnType<typeof loadLevelRuntime>): boolean =>
+      r.diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH' && x.nodeId === 'nd_f1r0');
+
+    // 基线：可渲染的 builtin 代理 → 必须告警（上一条用例已锁，这里确认构造有效）
+    expect(warned(withRoomProxy(() => {}))).toBe(true);
+    expect(warned(withRoomProxy((c) => { c.enabled = false; }))).toBe(false);
+    expect(warned(withRoomProxy((c) => { c.source = { type: 'asset', path: 'a.glb', guid: 'g' }; }))).toBe(false);
+
+    // 自身隐藏（祖先隐藏同理）→ 视口里看不到、选不中
+    const doc = clone(floor1());
+    const room = findNode(doc, 'nd_f1r0');
+    room.visible = false;
+    room.transform.position = [40, -0.1, 0];
+    expect(warned(loadLevelRuntime(doc))).toBe(false);
+  });
 });
 
 describe('loadLevelRuntime —— 失败必须明确，不静默兜底', () => {

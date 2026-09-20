@@ -1,6 +1,8 @@
 // 批量验证：8 角色 × 全部 LOD，逐档加载确认无报错 + 贴图非空 + 立姿 + 记录量化数据
 import { spawn } from 'node:child_process';
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // 输出目录：从脚本自身位置推导（assets/_tools → 仓库根），不再写死某台机器的绝对路径
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.workbuddy/tmp');
