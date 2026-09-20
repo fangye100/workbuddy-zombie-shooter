@@ -1,9 +1,18 @@
+// 🔴 本机运行环境（复审 B5/§4）：WebGPU 冒烟一律 **headed + 真实 GPU + 固定 profile** ——
+//   本机 headless Chrome + --enable-unsafe-swiftshader 起不来 CDP，--no-sandbox /
+//   --disable-dev-shm-usage 反而让 Chrome 起不来；软件渲染出的帧也不能当作视觉证据。
+//   输出目录由脚本自身位置推导（不再写死某台机器的绝对路径），他人/CI 可复跑。
 // 终验：① E-01 角色 LOD0 原生高模真贴图 ② P-11/P-42 环境 LOD1 tex2 真贴图
 // 用法: node verify-final.mjs
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const OUT = 'C:/Users/fangy/WorkBuddy/game-design-zombie/.workbuddy/tmp';
+// 输出目录：从脚本自身位置推导（assets/_tools → 仓库根），不再写死某台机器的绝对路径
+const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.workbuddy/tmp');
+// 固定自动化 profile（与 tools/verify/editor-smoke.mjs 共用；保证书/登录态/窗口状态）
+const PROFILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.workbuddy/tmp/chrome-profile');
 mkdirSync(OUT, { recursive: true });
 const PORT = 9400 + (process.pid % 500);
 const URL = 'http://127.0.0.1:5612/asset-browser.html';
@@ -56,11 +65,10 @@ async function pixelStats(sel) {
 }
 
 const proc = spawn(chrome, [
-  '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
-  '--enable-unsafe-webgpu', '--enable-unsafe-swiftshader',
-  '--use-webgpu-adapter=swiftshader', '--enable-features=Vulkan',
-  '--ignore-certificate-errors',
-  `--remote-debugging-port=${PORT}`, `--user-data-dir=${OUT}/chrome-prof-${Date.now()}`,
+  '--enable-unsafe-webgpu',
+  '--remote-debugging-port=' + PORT,
+  '--user-data-dir=' + PROFILE,
+  '--window-size=1280,800', '--no-first-run', '--no-default-browser-check',
   'about:blank',
 ], { stdio: 'ignore' });
 

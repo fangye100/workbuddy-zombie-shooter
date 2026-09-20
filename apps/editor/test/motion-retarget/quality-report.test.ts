@@ -44,7 +44,7 @@ function supportSeg(anchor: [number, number, number], startS: number, endS: numb
 }
 
 describe('buildQualityReport', () => {
-  it('recomputes hard anchor error even when solver residuals omit the segment', () => {
+  it('硬接触超标（锚点偏差超限）→ failed，哪怕求解器残差里没有该段', () => {
     const res = buildQualityReport({
       rig, frames: [standFrame()], segments: [supportSeg([0.2, 0, 0.09], 0, 0.1)],
       anchorDeviations: [], reachResidualsM: { inner: 0, outer: 0 },
@@ -52,17 +52,20 @@ describe('buildQualityReport', () => {
       iterations: 1, converged: true, durationMs: 1, tolerances: defaultRetargetTolerances(),
     });
     expect(res.metrics.maxAnchorDeviationM).toBeCloseTo(0.1, 12);
-    expect(res.status).toBe('partial');
+    // 复审 P2：硬接触（已锚定支撑段的锚点/滑动/穿透）超标意味着世界锁脚没兑现——
+    // 必须判 failed，不得与「能力缺口」一起降为 partial（partial 会被入口 B 自动应用）
+    expect(res.status).toBe('failed');
     expect(res.violations.map(v => v.code)).toContain('MRQ_ANCHOR');
   });
 
-  it('inner reach and nonconvergence cannot be reported as complete', () => {
+  it('能力缺口（不可达 / 未收敛）保持 partial，不当成 failed', () => {
     const res = buildQualityReport({
       rig, frames: [standFrame()], segments: [], anchorDeviations: [],
       reachResidualsM: { inner: 0.1, outer: 0 }, rootCorrections: new Float64Array(3),
       switchJumpMps: 0, iterations: 8, converged: false, durationMs: 1,
       tolerances: defaultRetargetTolerances(),
     });
+    // docs/16 §8：多接触不可达 / 不收敛 → 最佳预览 + partial/failed，此处按 partial 交付
     expect(res.status).toBe('partial');
     expect(res.violations.map(v => v.code)).toEqual(expect.arrayContaining(['MRQ_REACH_IN', 'MRQ_NOT_CONVERGED']));
   });

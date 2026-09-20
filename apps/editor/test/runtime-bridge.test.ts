@@ -90,13 +90,23 @@ describe('RuntimeBridge —— 实例打包（与 shader 的 DInst 布局一一�
     }
   });
 
-  it('同一 meshId 不会被拆成两份批次（按体型聚合，不是按实体）', () => {
+  it('批次按 characterId 分槽：同一角色的多只僵尸不会被拆成两批', () => {
     const { bridge: b } = started();
     const batches = b.batches()!;
-    const ids = batches.map((x) => x.meshId);
-    // 断言"没有重复 meshId"而不是"size >= 1" —— 后者对非空数组恒真，等于没测
-    expect(new Set(ids).size).toBe(ids.length);
-    for (const id of ids) expect(id).toMatch(/^capsule:r[\d.]+:h[\d.]+$/);
+    // 每个 characterId 恰好一个批次，且各批实例数 = 该角色在视图里的实体数
+    //（旧断言是"meshId 互不相同"——那严于实现的不变量：批次按 characterId 分槽、
+    //  meshId 由胶囊尺寸派生，两个角色尺寸相同时本就该共用同一份网格。当前 9 个角色
+    //  尺寸互异纯属数据巧合，美术改档把两人调成同尺寸就会让旧断言假红。
+    //  复审 P3：断言必须钉住实现真的保证的性质，否则红灯只会教人改测试。）
+    const byCharacter = new Map<string, number>();
+    for (const e of b.entities) {
+      byCharacter.set(e.characterId, (byCharacter.get(e.characterId) ?? 0) + 1);
+    }
+    expect(byCharacter.size).toBeGreaterThan(1);
+    expect(batches).toHaveLength(byCharacter.size);
+    const sorted = (xs: number[]) => xs.slice().sort((a, c) => a - c);
+    expect(sorted(batches.map((x) => x.count))).toEqual(sorted([...byCharacter.values()]));
+    for (const batch of batches) expect(batch.meshId).toMatch(/^capsule:r[\d.]+:h[\d.]+$/);
   });
 
   it('实例数组长度足够，不会读到未初始化的尾区', () => {

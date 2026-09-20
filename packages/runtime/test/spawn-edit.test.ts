@@ -9,8 +9,12 @@ import {
   listSpawnPoints,
   readSpawnField,
   validateSpawnValue,
+  readTransformValues,
+  findNode,
+  formatAuthorEdit,
   SPAWN_RADIUS_MAX,
   SPAWN_COUNT_MAX,
+  type SpawnEdit,
 } from '../src/spawn-edit';
 import { changedPathsOnly } from '../src/doc-diff';
 
@@ -238,7 +242,7 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
     const doc = fixture();
     const id = firstSpawn(doc);
     const before = readSpawnField(doc, id, 'radius')!;
-    const edit = { id: 1, field: 'radius' as const, nodeId: id, from: before, to: before + 1.5 };
+    const edit: SpawnEdit = { kind: 'spawn', id: 1, field: 'radius', nodeId: id, from: before, to: before + 1.5 };
     expect(applySpawnEdit(doc, edit).ok).toBe(true);
     expect(readSpawnField(doc, id, 'radius')).toBeCloseTo(before + 1.5, 6);
     expect(applySpawnEdit(doc, invertSpawnEdit(edit)).ok).toBe(true);
@@ -248,7 +252,7 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
   it('apply 到不存在的节点返回错误而不是抛异常（也不改任何东西）', () => {
     const doc = fixture();
     const snapshot = JSON.stringify(doc);
-    const r = applySpawnEdit(doc, { id: 1, field: 'radius', nodeId: 'nd_nope', from: 0, to: 5 });
+    const r = applySpawnEdit(doc, { kind: 'spawn', id: 1, field: 'radius', nodeId: 'nd_nope', from: 0, to: 5 });
     expect(r.ok).toBe(false);
     expect(r.error).not.toBeNull();
     expect(JSON.stringify(doc)).toBe(snapshot);
@@ -265,7 +269,200 @@ describe('applySpawnEdit / invertSpawnEdit —— 纯函数', () => {
     const doc = fixture();
     const copy = cloneDocument(doc);
     const id = firstSpawn(doc);
-    applySpawnEdit(copy, { id: 1, field: 'count', nodeId: id, from: 0, to: 99 });
+    applySpawnEdit(copy, { kind: 'spawn', id: 1, field: 'count', nodeId: id, from: 0, to: 99 });
     expect(readSpawnField(doc, id, 'count')).not.toBe(99);
+  });
+});
+
+// ---------------------------------------------------------------- 节点变换编辑（复审 B1）
+
+/** 房间 1 的掩体：普通网格节点（有父节点、父带平移）——"视口拖拽写回"的真实形态 */
+const COVER = 'nd_f1r0_cv0';
+
+describe('TransformEdit —— 视口变换写回文档（复审 B1）', () => {
+  it('一次拖拽 = 一条编辑：三个位置分量一起改、撤销一起退', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const before = readTransformValues(store.document, COVER, ['posX', 'posY', 'posZ'])!;
+    const r = store.setTransform(COVER, { posX: -5, posY: 0.9, posZ: -3.5 });
+    expect(r.ok).toBe(true);
+    expect(store.undoDepth).toBe(1); // 不是 3：整条拖拽是一条编辑
+    expect(store.dirty).toBe(true);
+    expect(readTransformValues(store.document, COVER, ['posX', 'posY', 'posZ'])).toEqual({
+      posX: -5, posY: 0.9, posZ: -3.5,
+    });
+    // 撤销一步回到起点（三个分量一起退）
+    const undone = store.undo();
+    expect(undone!.kind).toBe('transform');
+    expect(readTransformValues(store.document, COVER, ['posX', 'posY', 'posZ'])).toEqual(before);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('只改动写过的分量：同节点的其它分量与其它节点一个字节都不动', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const otherBefore = JSON.stringify(findNode(store.document, 'nd_f1r0_cv1'));
+    const rotBefore = JSON.stringify(findNode(store.document, COVER)!.transform.rotation);
+    store.setTransform(COVER, { posY: 1.4 });
+    expect(JSON.stringify(findNode(store.document, 'nd_f1r0_cv1'))).toBe(otherBefore);
+    expect(JSON.stringify(findNode(store.document, COVER)!.transform.rotation)).toBe(rotBefore);
+    // 差异路径只有一条，且落在 position 的 y 分量上
+    const paths = changedPathsOnly(store.committedDocument, store.document);
+    expect(paths).toHaveLength(1);
+    expect(paths[0]).toContain('transform');
+    expect(paths[0]).toContain('1');
+  });
+
+  it('缩放写三分量（等比是无解约束，写单分量会造出隐藏的非等比）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    expect(store.setTransform(COVER, { scale: 2.5 }).ok).toBe(true);
+    expect(findNode(store.document, COVER)!.transform.scale).toEqual([2.5, 2.5, 2.5]);
+    const paths = changedPathsOnly(store.committedDocument, store.document);
+    expect(paths).toHaveLength(3); // x/y/z 三个分量都变了
+  });
+
+  it('拖回原处（值没变）→ 不记编辑、不进撤销栈、不弄脏文档', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const cur = readTransformValues(store.document, COVER, ['posX', 'posY', 'posZ'])!;
+    const r = store.setTransform(COVER, cur);
+    expect(r.ok).toBe(false);
+    expect(r.edit).toBeNull();
+    expect(store.undoDepth).toBe(0);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('越界值被拒绝：位置 ±500m 之外、缩放 ≤0 或 >100（不写进文件）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const snapshot = JSON.stringify(store.document);
+    expect(store.setTransform(COVER, { posX: 1e6 }).ok).toBe(false);
+    expect(store.setTransform(COVER, { posY: Number.NaN }).ok).toBe(false);
+    expect(store.setTransform(COVER, { scale: 0 }).ok).toBe(false);
+    expect(store.setTransform(COVER, { scale: 1e3 }).ok).toBe(false);
+    expect(JSON.stringify(store.document)).toBe(snapshot); // 全部拒绝 → 文档未被碰过
+    expect(store.undoDepth).toBe(0);
+  });
+
+  it('不存在的节点 → 报错拒绝（不抛异常、不改文档）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const snapshot = JSON.stringify(store.document);
+    const r = store.setTransform('nd_nope', { posX: 1 });
+    expect(r.ok).toBe(false);
+    expect(r.error).not.toBeNull();
+    expect(JSON.stringify(store.document)).toBe(snapshot);
+  });
+
+  it('两条命令族共用一条撤销栈（LIFO 跨族正确）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const sp = firstSpawn(doc);
+    const radius0 = readSpawnField(store.document, sp, 'radius')!;
+    const pos0 = readTransformValues(store.document, COVER, ['posX'])!;
+    expect(store.set(sp, 'radius', radius0 + 2).ok).toBe(true);
+    expect(store.setTransform(COVER, { posX: 42 }).ok).toBe(true);
+    // 后进先出：先退变换，再退 radius
+    expect(store.undo()!.kind).toBe('transform');
+    expect(readTransformValues(store.document, COVER, ['posX'])).toEqual(pos0);
+    expect(readSpawnField(store.document, sp, 'radius')).toBeCloseTo(radius0 + 2, 6);
+    expect(store.undo()!.kind).toBe('spawn');
+    expect(readSpawnField(store.document, sp, 'radius')).toBeCloseTo(radius0, 6);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('formatAuthorEdit：两条命令族都能给出一句话描述（UI 不自己拼字段名）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const sp = firstSpawn(doc);
+    const a = store.set(sp, 'count', 7);
+    expect(formatAuthorEdit(a.edit!)).toContain('生成数量');
+    const b = store.setTransform(COVER, { posY: 1.1, scale: 1.2 });
+    const line = formatAuthorEdit(b.edit!);
+    expect(line).toContain('位置 Y');
+    expect(line).toContain('统一缩放');
+  });
+
+  it('变换编辑随保存一起提交：confirmSave 后 dirty 归假、committed 含新值', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    store.setTransform(COVER, { posZ: -2.25 });
+    const snap = store.beginSave();
+    expect(findNode(snap.doc, COVER)!.transform.position[2]).toBeCloseTo(-2.25, 6);
+    store.confirmSave(snap.doc, snap.lastEditId);
+    expect(store.dirty).toBe(false);
+    expect(findNode(store.committedDocument, COVER)!.transform.position[2]).toBeCloseTo(-2.25, 6);
+    expect(changedPathsOnly(store.committedDocument, store.document)).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------- 旋转（复审 codex/Copilot P1）
+
+describe('TransformEdit —— 旋转（四元数）必须能持久化', () => {
+  /** 绕 Y 轴 90° 的规范四元数 */
+  const YAW90 = [0, Math.SQRT1_2, 0, Math.SQRT1_2] as const;
+
+  it('纯旋转拖拽 = 一条编辑，且写进文档的是那条四元数', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    // 只有旋转、没有位置/缩放改动 —— 旧实现只看标量分量，这种拖拽会被当成"值没有变化"
+    const r = store.setTransform(COVER, { rotation: YAW90 });
+    expect(r.ok).toBe(true);
+    expect(store.undoDepth).toBe(1);
+    expect(store.dirty).toBe(true);
+    expect(findNode(store.document, COVER)!.transform.rotation).toEqual([...YAW90]);
+    // 差异路径全部落在 rotation 上（位置/缩放一个字节都没动）。数组分量按元素出路径，
+    // 所以这里是"变了几个分量就有几条"，不锁死条数以免夹具初值一变就假红。
+    const paths = changedPathsOnly(store.committedDocument, store.document);
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.every((p) => p.includes('transform.rotation'))).toBe(true);
+    // 撤销把旋转也退回去
+    const undone = store.undo();
+    expect(undone!.kind).toBe('transform');
+    expect(findNode(store.document, COVER)!.transform.rotation).toEqual([0, 0, 0, 1]);
+    expect(store.dirty).toBe(false);
+  });
+
+  it('位置 + 旋转一次提交：两条分量都写、撤销一起退', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    expect(store.setTransform(COVER, { posX: 7, rotation: YAW90 }).ok).toBe(true);
+    const n = findNode(store.document, COVER)!;
+    expect(n.transform.position[0]).toBe(7);
+    expect(n.transform.rotation).toEqual([...YAW90]);
+    store.undo();
+    const back = findNode(store.document, COVER)!;
+    expect(back.transform.position[0]).toBe(-6); // 夹具初值
+    expect(back.transform.rotation).toEqual([0, 0, 0, 1]);
+  });
+
+  it('q 与 −q 是同一姿态 → 不算一次编辑（转一圈回到原处不该进撤销栈）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const cur = findNode(store.document, COVER)!.transform.rotation;
+    const negated = cur.map((x) => -x) as unknown as [number, number, number, number];
+    const r = store.setTransform(COVER, { rotation: negated });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('值没有变化');
+    expect(store.undoDepth).toBe(0);
+  });
+
+  it('非归一 / 非有限四元数被拒绝（不写进文件）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const snapshot = JSON.stringify(store.document);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0, 2] }).ok).toBe(false);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0, Number.NaN] }).ok).toBe(false);
+    expect(store.setTransform(COVER, { rotation: [0, 0, 0] as unknown as [number, number, number, number] }).ok).toBe(false);
+    expect(JSON.stringify(store.document)).toBe(snapshot);
+    expect(store.undoDepth).toBe(0);
+  });
+
+  it('formatAuthorEdit 会写出旋转（面板状态行不吞掉这条改动）', () => {
+    const doc = fixture();
+    const store = new SpawnEditStore(doc);
+    const r = store.setTransform(COVER, { rotation: YAW90 });
+    expect(formatAuthorEdit(r.edit!)).toContain('旋转');
   });
 });

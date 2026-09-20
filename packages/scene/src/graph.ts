@@ -432,6 +432,39 @@ export function quatRotateVec3(v: Vec3, q: Quat): Vec3 {
 }
 
 /**
+ * `composeTransform` 的**逆**：由父与子的世界变换反解子节点的局部变换（TRS 精确）。
+ *
+ * 唯一用途是「视口编辑写回文档」：文档存的是**局部**变换，而 gizmo 拖的是**世界**
+ * 量，父链非恒等时两者数值并不相同（act1 三关里 12/19 个网格就挂在带平移的房间
+ * 节点下）——把世界值当局部值写进文件等于静默改坏关卡。
+ *
+ * 父缩放分量出现 0 时无解（不可逆）→ 返回 null，由调用方给出诊断，不静默产 Infinity。
+ */
+export function worldToLocalTransform(
+  parentWorld: TransformData,
+  world: TransformData,
+  out: TransformData,
+): TransformData | null {
+  const s = parentWorld.scale;
+  if (Math.abs(s[0]) < 1e-9 || Math.abs(s[1]) < 1e-9 || Math.abs(s[2]) < 1e-9) return null;
+  const p = parentWorld.rotation;
+  const inv: Quat = [-p[0], -p[1], -p[2], p[3]]; // 单位四元数的共轭 = 逆
+  // rotation：q_local = q_parent⁻¹ · q_world
+  const rq = quatMul(inv, world.rotation);
+  // position：p_local = (R_parent⁻¹ · (p_world − p_parent)) / S_parent
+  const d: Vec3 = [
+    world.position[0] - parentWorld.position[0],
+    world.position[1] - parentWorld.position[1],
+    world.position[2] - parentWorld.position[2],
+  ];
+  const rotated = quatRotateVec3(d, inv);
+  out.position = [rotated[0] / s[0], rotated[1] / s[1], rotated[2] / s[2]];
+  out.rotation = [rq[0], rq[1], rq[2], rq[3]];
+  out.scale = [world.scale[0] / s[0], world.scale[1] / s[1], world.scale[2] / s[2]];
+  return out;
+}
+
+/**
  * 世界变换 = 父 world ∘ 本节点 local（TRS 组合）。
  *
  * 非等比缩放下这是**近似**：父级带旋转的非等比缩放会产生 skew，

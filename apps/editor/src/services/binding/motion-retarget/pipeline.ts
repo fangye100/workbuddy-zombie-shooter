@@ -80,8 +80,10 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
   if (hasErrors([...d1, ...d2]) || cancelled()) return failed(diagnostics, dep);
 
   // 姿态基准守门（docs/16 §1 钉板：不可达组合拒绝，不允许带着 error 诊断继续）
+  // warning 级基准诊断（如 MRC_TARGET_BONE_UNMAPPED）同样要送达调用方——只推 error
+  // 会让「目标骨名不匹配」这类能力缺口在 outcome.diagnostics 里彻底消失
+  diagnostics.push(...baseline.diagnostics);
   if (hasErrors(baseline.diagnostics)) {
-    diagnostics.push(...baseline.diagnostics);
     diagnostics.push({
       severity: 'error',
       code: 'MRC_BASELINE_REJECTED',
@@ -370,7 +372,7 @@ export function retargetMotion(input: RetargetMotionInput): RetargetOutcome {
     !sourcePlaneTrusted ||
     !source.canWorldLock ||
     diagnostics.some((d) => ['MRC_ANNOT_UNHONORED', 'MRC_MARKER_TRAJECTORY_MISSING',
-      'MRC_CONTACT_MODE_UNSUPPORTED'].includes(d.code) && d.severity === 'warning');
+      'MRC_CONTACT_MODE_UNSUPPORTED', 'MRC_TARGET_BONE_UNMAPPED'].includes(d.code) && d.severity === 'warning');
   if (capabilityGap && status === 'complete') {
     status = 'partial';
     diagnostics.push({

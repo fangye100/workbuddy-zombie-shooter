@@ -1,5 +1,5 @@
 /**
- * 刷怪点的**领域编辑命令**（WU-5）。
+ * 刷怪点字段 + 节点变换的**领域编辑命令**（WU-5 起，复审 B1 加入节点变换）。
  *
  * ## 为什么是"领域命令"而不是"改 JSON 的通用 setPath"
  *
@@ -15,15 +15,20 @@
  * 与 `loader.ts` 同理（docs/17 §4）：Node CLI、vitest、浏览器共用同一套规则。
  * 编辑器侧只允许做三件事：拿文档、调命令、把结果画成控件。
  *
- * ## 本轮只开两个字段
+ * ## 两条命令族共用一条撤销栈（复审 B1）
  *
- * docs/17 明确「默认选择已有 SpawnPoint.radius ... 使用已有 count 作为补充可选项」。
- * 其余字段（wave / trigger / delaySec / prefab）本轮**不改**：它们各自牵扯运行语义
- * （触发时机、波次推进），加进来等于把 WU-5 变成半个 Inspector。
+ * 视口里的 gizmo 拖拽过去只写渲染器内存（场景文档一个字节都不动）→ 拖完点保存
+ * 不落盘、点 Play 也看不见，是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。
+ * 现在变换编辑走**同一条**命令链：文档是唯一真源，撤销栈只有一条，保存范围
+ * （`changedPaths`）自动把它算进去。`field` 的取值域在两条命令族之间不相交，
+ * 因此 `AuthorEdit` 靠 `field` 就能判别，不需要额外的 kind 标签。
+ *
+ * 文件/类名保留 `spawn-edit` / `SpawnEditStore`（WU-5 的历史命名）：`docs/18`、
+ * `docs/19`、`docs/review/*` 都按这个名字与行号引用它，改名会让那些记录失准。
  */
 
 import { ComponentKind } from '@aether/scene';
-import type { NodeId, SceneDocument, SpawnPointComponent } from '@aether/scene';
+import type { NodeId, SceneDocument, SceneNode, SpawnPointComponent } from '@aether/scene';
 import { changedJsonPaths, type JsonDiffEntry } from './doc-diff';
 
 /** 本轮可编辑的字段 */
@@ -40,8 +45,9 @@ export const FIELD_LABEL: Readonly<Record<SpawnEditField, string>> = {
   count: '生成数量',
 };
 
-/** 一条已应用的编辑。`from` / `to` 让撤销成为纯函数，不需要存快照 */
+/** 一条已应用的刷怪点编辑。`from` / `to` 让撤销成为纯函数，不需要存快照 */
 export interface SpawnEdit {
+  kind: 'spawn';
   /** 单调递增的编辑身份。确认保存范围靠它，不能靠栈长（复审 P2） */
   id: number;
   field: SpawnEditField;
@@ -50,12 +56,92 @@ export interface SpawnEdit {
   to: number;
 }
 
+// ---------------------------------------------------------------- 节点变换（复审 B1）
+
+/**
+ * 可编辑的节点变换分量。
+ *
+ * 只开 gizmo 真能拖的四个量：位置三分量 + **统一**缩放（缩放手柄是等比的）。
+ * 欧拉角**不作为分量**——旋转真源是四元数，拆成三个欧拉角会引入万向锁与
+ * 「三个分量各自独立」的假象，所以旋转编辑整条四元数一次写入（见 `poseField`）。
+ */
+export type TransformField = 'posX' | 'posY' | 'posZ' | 'scale';
+
+export const TRANSFORM_LABEL: Readonly<Record<TransformField, string>> = {
+  posX: '位置 X（米）',
+  posY: '位置 Y（米）',
+  posZ: '位置 Z（米）',
+  scale: '统一缩放',
+};
+
+/** 位置量程（米）：关卡是几十米级，±500 米之外必是笔误或单位错误 */
+export const TRANSFORM_POS_MIN = -500;
+export const TRANSFORM_POS_MAX = 500;
+export const TRANSFORM_SCALE_MIN = 0.01;
+export const TRANSFORM_SCALE_MAX = 100;
+
+/** 逐分量的目标值。键集合 = 本次实际改动的分量（键不在 = 不动那个分量） */
+export type TransformValues = Partial<Record<TransformField, number>> & {
+  /**
+   * 旋转**真源是四元数**（不拆欧拉角：拆成三个分量会引入万向锁与「三分量各自独立」的假象）。
+   * 分量级命令只覆盖位置/缩放；旋转整条一起写。
+   */
+  rotation?: readonly [number, number, number, number];
+};
+
+/** 旋转四元数的"归一"容差（视口写回的是组合出来的单位四元数，这里只拦垃圾值） */
+const QUAT_NORM_TOL = 1e-3;
+
+/** 校验待写入的四元数：4 个有限数且已归一 */
+export function validateQuat(q: readonly number[]): string | null {
+  if (q.length !== 4 || !q.every((x) => typeof x === 'number' && Number.isFinite(x))) {
+    return '旋转四元数必须是 4 个有限数字';
+  }
+  const n = Math.hypot(q[0]!, q[1]!, q[2]!, q[3]!);
+  return Math.abs(n - 1) <= QUAT_NORM_TOL ? null : `旋转四元数未归一（模长 ${n.toFixed(6)}）`;
+}
+
+/** 只取数值分量：rotation 不是标量，校验与写入都要单独走 */
+function numericOf(v: TransformValues): [TransformField, number][] {
+  const out: [TransformField, number][] = [];
+  for (const [k, x] of Object.entries(v)) {
+    if (k === 'rotation' || typeof x !== 'number') continue;
+    out.push([k as TransformField, x]);
+  }
+  return out;
+}
+
+/** 同一旋转的判据：q 与 −q 表示同一姿态，所以比 |点积| 而不是逐分量相等 */
+function sameRotation(a: readonly number[], b: readonly number[]): boolean {
+  const d = a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]! + a[3]! * b[3]!;
+  return Math.abs(Math.abs(d) - 1) <= 1e-9;
+}
+
+/**
+ * 一条已应用的**局部**变换编辑。一次 gizmo 拖拽 = 一条编辑（可能同时改 x/y/z），
+ * 这样撤销一步就是撤销一次拖拽，而不是撤销一个分量。
+ */
+export interface TransformEdit {
+  kind: 'transform';
+  id: number;
+  nodeId: NodeId;
+  from: TransformValues;
+  to: TransformValues;
+}
+
+/**
+ * 撤销栈与保存范围的单位：作者文档的一条编辑。
+ * 两条命令族用显式 `kind` 判别（`field` 的取值域本来也不相交，但显式标签让
+ * 「以后再加第三条命令族」这件事不需要重新论证判别方式）。
+ */
+export type AuthorEdit = SpawnEdit | TransformEdit;
+
 export interface EditResult {
   ok: boolean;
   /** 失败原因（中文，直接给 UI 显示）；成功时为 null */
   error: string | null;
   /** 成功时是被应用的命令，失败时为 null */
-  edit: SpawnEdit | null;
+  edit: AuthorEdit | null;
 }
 
 /** 面板列表用的一行摘要 */
@@ -172,7 +258,131 @@ export function applySpawnEdit(doc: SceneDocument, edit: SpawnEdit): EditResult 
 
 /** 逆命令。`from` / `to` 互换即可，不需要任何额外状态。id 保留 —— 撤销的是**同一条**编辑 */
 export function invertSpawnEdit(edit: SpawnEdit): SpawnEdit {
-  return { id: edit.id, field: edit.field, nodeId: edit.nodeId, from: edit.to, to: edit.from };
+  return { kind: 'spawn', id: edit.id, field: edit.field, nodeId: edit.nodeId, from: edit.to, to: edit.from };
+}
+
+// ---------------------------------------------------------------- 节点变换命令
+
+/** 找节点（不存在返回 null，不抛） */
+export function findNode(doc: SceneDocument, nodeId: NodeId): SceneNode | null {
+  for (const n of doc.nodes) if (n.id === nodeId) return n;
+  return null;
+}
+
+/** 读节点某变换分量的当前**局部**值；节点不存在返回 null */
+export function readTransformField(
+  doc: SceneDocument,
+  nodeId: NodeId,
+  field: TransformField,
+): number | null {
+  const n = findNode(doc, nodeId);
+  if (n === null) return null;
+  if (field === 'scale') return n.transform.scale[0];
+  const axis = field === 'posX' ? 0 : field === 'posY' ? 1 : 2;
+  return n.transform.position[axis];
+}
+
+/** 读节点一整组变换分量的当前局部值（键集合由调用方给定） */
+export function readTransformValues(
+  doc: SceneDocument,
+  nodeId: NodeId,
+  fields: readonly TransformField[],
+): TransformValues | null {
+  const out: TransformValues = {};
+  for (const f of fields) {
+    const v = readTransformField(doc, nodeId, f);
+    if (v === null) return null;
+    out[f] = v;
+  }
+  return out;
+}
+
+/**
+ * 校验一个待写入的变换分量。
+ * 与 `validateSpawnValue` 同规矩：有限数 + 有界（上界是"作者多半敲错了"，
+ * 不是"物理不可能"；缩放上界 100 也防住了 INF 之外的实际爆表）。
+ */
+export function validateTransformValue(field: TransformField, value: number): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return `${TRANSFORM_LABEL[field]} 必须是有限数字`;
+  }
+  if (field === 'scale') {
+    if (value < TRANSFORM_SCALE_MIN || value > TRANSFORM_SCALE_MAX) {
+      return `${TRANSFORM_LABEL[field]} 必须在 ${TRANSFORM_SCALE_MIN} – ${TRANSFORM_SCALE_MAX} 之间`;
+    }
+    return null;
+  }
+  if (value < TRANSFORM_POS_MIN || value > TRANSFORM_POS_MAX) {
+    return `${TRANSFORM_LABEL[field]} 必须在 ${TRANSFORM_POS_MIN} – ${TRANSFORM_POS_MAX} 米之间`;
+  }
+  return null;
+}
+
+/**
+ * 把一条变换命令**就地**应用到文档。
+ *
+ * 只写 `to` 里出现过的分量：同节点的其它分量、其它组件、`userData`、文档顶层的
+ * 未知键一个字节都不动（与 `applySpawnEdit` 同一条"保存保留未消费内容"的实现方式）。
+ * `scale` 写三分量——gizmo 的缩放手柄是等比的，写单一分量只会造出隐藏的非等比。
+ */
+export function applyTransformEdit(doc: SceneDocument, edit: TransformEdit): EditResult {
+  const n = findNode(doc, edit.nodeId);
+  if (n === null) return { ok: false, error: `场景里找不到节点 ${edit.nodeId}`, edit: null };
+  const nums = numericOf(edit.to);
+  for (const [f, v] of nums) {
+    const err = validateTransformValue(f, v);
+    if (err !== null) return { ok: false, error: err, edit: null };
+  }
+  if (edit.to.rotation !== undefined) {
+    const err = validateQuat(edit.to.rotation);
+    if (err !== null) return { ok: false, error: err, edit: null };
+  }
+  for (const [f, v] of nums) {
+    if (f === 'scale') {
+      n.transform.scale = [v, v, v];
+    } else {
+      const axis = f === 'posX' ? 0 : f === 'posY' ? 1 : 2;
+      n.transform.position[axis] = v;
+    }
+  }
+  if (edit.to.rotation !== undefined) {
+    const r = edit.to.rotation;
+    n.transform.rotation = [r[0], r[1], r[2], r[3]];
+  }
+  return { ok: true, error: null, edit };
+}
+
+/** 逆命令：逐分量互换（旋转一起互换）。id 保留 */
+export function invertTransformEdit(edit: TransformEdit): TransformEdit {
+  return {
+    kind: 'transform',
+    id: edit.id,
+    nodeId: edit.nodeId,
+    from: edit.to,
+    to: edit.from,
+  };
+}
+
+/** 按 `kind` 分发应用（撤销栈里两条命令族共用一条 LIFO） */
+export function applyAuthorEdit(doc: SceneDocument, edit: AuthorEdit): EditResult {
+  return edit.kind === 'transform' ? applyTransformEdit(doc, edit) : applySpawnEdit(doc, edit);
+}
+
+/** 按 `kind` 分发取逆 */
+export function invertAuthorEdit(edit: AuthorEdit): AuthorEdit {
+  return edit.kind === 'transform' ? invertTransformEdit(edit) : invertSpawnEdit(edit);
+}
+
+/** 面板/状态行用的一句话描述（"刚改了什么"）。UI 不该自己拼字段名 */
+export function formatAuthorEdit(edit: AuthorEdit): string {
+  if (edit.kind === 'spawn') {
+    return `${FIELD_LABEL[edit.field]}：${edit.from} → ${edit.to}`;
+  }
+  const parts = numericOf(edit.to).map(([f, v]) => `${TRANSFORM_LABEL[f]} ${v.toFixed(3)}`);
+  if (edit.to.rotation !== undefined) {
+    parts.push(`旋转 (${edit.to.rotation.map((x) => x.toFixed(3)).join(', ')})`);
+  }
+  return `节点 ${edit.nodeId} 变换：${parts.join('、')}`;
 }
 
 /**
@@ -189,7 +399,7 @@ export function invertSpawnEdit(edit: SpawnEdit): SpawnEdit {
 export class SpawnEditStore {
   private committed: SceneDocument;
   private working: SceneDocument;
-  private readonly undoStack: SpawnEdit[] = [];
+  private readonly undoStack: AuthorEdit[] = [];
   /** 编辑身份计数器。确认保存范围用它（复审 P2：栈长在"撤销+再编辑"下会骗人） */
   private nextEditId = 1;
 
@@ -224,12 +434,12 @@ export class SpawnEditStore {
   }
 
   /** 最近一次编辑（面板上显示"刚改了什么"） */
-  get lastEdit(): SpawnEdit | null {
+  get lastEdit(): AuthorEdit | null {
     return this.undoStack.length > 0 ? this.undoStack[this.undoStack.length - 1]! : null;
   }
 
   /**
-   * 写字段。
+   * 写刷怪点字段。
    *
    * 值没变时不记为一次编辑（`dirty` 不该因为"点了一下输入框"就亮起来），
    * 但也不算失败 —— 调用方按 `edit === null && ok === false` 区分"拒绝了"和"没变化"。
@@ -244,18 +454,61 @@ export class SpawnEditStore {
     const from = field === 'radius' ? c.radius : c.count;
     if (Object.is(from, value)) return { ok: false, error: '值没有变化', edit: null };
 
-    const edit: SpawnEdit = { id: this.nextEditId++, field, nodeId, from, to: value };
+    const edit: SpawnEdit = { kind: 'spawn', id: this.nextEditId++, field, nodeId, from, to: value };
     const r = applySpawnEdit(this.working, edit);
     if (!r.ok) return r;
     this.undoStack.push(edit);
     return { ok: true, error: null, edit };
   }
 
+  /**
+   * 写节点**局部**变换（一次 gizmo 拖拽 = 一条编辑）。
+   *
+   * 入参是局部值：世界→局部的换算在调用方（编辑器）用
+   * `worldToLocalTransform` 完成 —— 文档只认局部量，命令层不猜坐标系。
+   * 全部目标值都与当前值相同 → 不算一次编辑（拖了但没动的拖拽不该进撤销栈）。
+   */
+  setTransform(nodeId: NodeId, to: TransformValues): EditResult {
+    const n = findNode(this.working, nodeId);
+    if (n === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
+    const nums = numericOf(to);
+    if (nums.length === 0 && to.rotation === undefined) {
+      return { ok: false, error: '没有任何分量要写入', edit: null };
+    }
+    for (const [f, v] of nums) {
+      const err = validateTransformValue(f, v);
+      if (err !== null) return { ok: false, error: err, edit: null };
+    }
+    if (to.rotation !== undefined) {
+      const err = validateQuat(to.rotation);
+      if (err !== null) return { ok: false, error: err, edit: null };
+    }
+    const from: TransformValues = {};
+    for (const [f] of nums) {
+      const cur = readTransformField(this.working, nodeId, f);
+      if (cur === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
+      from[f] = cur;
+    }
+    if (to.rotation !== undefined) {
+      const r = n.transform.rotation;
+      from.rotation = [r[0], r[1], r[2], r[3]];
+    }
+    // 无变化：标量逐位比较；旋转按 |点积|≈1（q 与 −q 是同一姿态）
+    const sameNums = nums.every(([f, v]) => Object.is(from[f], v));
+    const sameRot = to.rotation === undefined || sameRotation(from.rotation!, to.rotation);
+    if (sameNums && sameRot) return { ok: false, error: '值没有变化', edit: null };
+    const edit: TransformEdit = { kind: 'transform', id: this.nextEditId++, nodeId, from, to: { ...to } };
+    const r = applyTransformEdit(this.working, edit);
+    if (!r.ok) return r;
+    this.undoStack.push(edit);
+    return { ok: true, error: null, edit };
+  }
+
   /** 撤销一步，返回被撤销的命令（栈空则 null） */
-  undo(): SpawnEdit | null {
+  undo(): AuthorEdit | null {
     const e = this.undoStack.pop();
     if (e === undefined) return null;
-    applySpawnEdit(this.working, invertSpawnEdit(e));
+    applyAuthorEdit(this.working, invertAuthorEdit(e));
     return e;
   }
 

@@ -34,7 +34,12 @@ export interface LabParams {
   pointColor: string;
   pointIntensity: number;
   pointRange: number;
-  pointOrbit: boolean;
+  /**
+   * 点光**世界位置**（米）。真源是场景里 `type: 'point'` 的 Light 节点 ——
+   * 场景声明了就用它的世界坐标；没声明时保留这一份编辑器调试默认值。
+   * 引擎侧不再有点光轨道动画（复审 B5：引擎动画会盖过场景声明的位置）。
+   */
+  pointPosition: [number, number, number];
 
   fogColor: string;
   fogDensity: number;
@@ -355,7 +360,7 @@ export const PARAM_GROUPS: GroupDef[] = [
   },
   {
     id: 'point',
-    title: '局部点光（调试用）',
+    title: '局部点光（调试用；位置取场景 Light 节点的世界坐标）',
     open: false,
     side: 'right',
     tab: 'scene',
@@ -364,7 +369,6 @@ export const PARAM_GROUPS: GroupDef[] = [
       { kind: 'color', key: 'pointColor', label: '颜色' },
       { kind: 'slider', key: 'pointIntensity', label: '强度', min: 0, max: 6, step: 0.01 },
       { kind: 'slider', key: 'pointRange', label: '半径', min: 0.5, max: 12, step: 0.1 },
-      { kind: 'toggle', key: 'pointOrbit', label: '自动环绕' },
       {
         kind: 'slider',
         key: 'fogDensity',
@@ -663,7 +667,7 @@ export function defaultParams(): LabParams {
     pointColor: '#FF6A3D',
     pointIntensity: 2.2,
     pointRange: 5.0,
-    pointOrbit: true,
+    pointPosition: [2.6, 1.4, 0],
 
     fogColor: '#6E7A9A',
     fogDensity: 0.016,

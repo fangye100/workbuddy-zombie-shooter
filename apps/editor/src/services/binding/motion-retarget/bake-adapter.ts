@@ -9,6 +9,7 @@
  */
 
 import type { Quat, RetargetDiagnostic, V3, WorldSolveClip } from './contracts';
+import { QUAT_NORM_TOL } from './contracts';
 import { quatMul } from '../binding-math';
 
 export interface BakeBone {
@@ -138,7 +139,7 @@ function diagnoseBakeInput(clip: WorldSolveClip, output: BakeOutputRig): Retarge
   };
   const validPos = (p: V3): boolean => p.length === 3 && p.every(Number.isFinite);
   const validQuat = (q: Quat): boolean =>
-    q.length === 4 && q.every(Number.isFinite) && Math.abs(Math.hypot(...q) - 1) <= 1e-6;
+    q.length === 4 && q.every(Number.isFinite) && Math.abs(Math.hypot(...q) - 1) <= QUAT_NORM_TOL;
   const seen = new Set<string>();
   const indices = new Set<number>();
   if (output.order.length === 0) fail('MRB_GRAPH', 'Output skeleton must contain at least one node');

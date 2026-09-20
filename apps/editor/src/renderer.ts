@@ -64,7 +64,7 @@ import {
   type MaterialSlot,
   type MaterialSource,
 } from './materials';
-import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip, SceneDocument } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfNodeTree, SubMeshRange, SkeletonData, AnimClip, SceneDocument, NodeId } from '@aether/scene';
 import { readProjectFile } from './asset-util';
 import {
   createSkinState,
@@ -103,6 +103,14 @@ export interface SceneObject {
   indexBuffer: GPUBuffer;
   indexCount: number;
   materialIndex: number;
+  /**
+   * 本物体对应的**场景节点 id**（`null` = 程序化兜底物体，没有文档来源）。
+   *
+   * 这是「视口物体 ↔ 存储节点」的唯一映射依据（ADR-010：节点 id 才是存储格式）。
+   * 别拿 `subMeshes[].nodeId` 顶替：那个是**资产内部**的 glTF 节点 id，用于材质
+   * 绑定继承，与场景节点 id 是两套东西（复审 B1 修的就是这个错位）。
+   */
+  nodeId: NodeId | null;
   pos: [number, number, number];
   /** 欧拉旋转（弧度，Rz·Ry·Rx），编辑器「旋转」工具写入这里 */
   rot: [number, number, number];
@@ -377,6 +385,11 @@ interface ObjectSpec {
   mesh: MeshData;
   material: number;
   pos: [number, number, number];
+  /** 世界旋转 / 世界缩放（复审 B1：过去只带 pos，文档里的旋转与缩放被静默丢掉） */
+  quat?: m4.Quat;
+  scale?: number;
+  /** 场景节点 id（兜底场景为 null） */
+  nodeId?: NodeId | null;
   bob: number;
   name: string;
   pickable: boolean;
@@ -422,8 +435,18 @@ export interface SceneLoadResult {
    * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
    */
   keyLight?: { color: string; intensity: number; nodeId: string } | null;
-  /** 同规则选出的点光（null = 没有 point 灯）。位置仍由引擎轨道驱动（见已知遗留） */
-  pointLight?: { color: string; intensity: number; range: number; nodeId: string } | null;
+  /**
+   * 同规则选出的点光（null = 没有 point 灯）。
+   * `position` 是该 Light 节点的**世界坐标** —— 场景声明了点光就必须按它摆，
+   * 引擎不再自带轨道动画（复审 B5）。
+   */
+  pointLight?: {
+    color: string;
+    intensity: number;
+    range: number;
+    nodeId: string;
+    position: readonly [number, number, number];
+  } | null;
 }
 
 /** 一盏被选中的灯 */
@@ -825,15 +848,22 @@ export class LabRenderer {
       this.device.queue.writeBuffer(vb, 0, mesh.vertices);
       this.device.queue.writeBuffer(ib, 0, mesh.indices);
 
+      const q: m4.Quat = s.quat !== undefined
+        ? ([s.quat[0], s.quat[1], s.quat[2], s.quat[3]] as m4.Quat)
+        : [0, 0, 0, 1];
       this.state.objects.push({
         vertexBuffer: vb,
         indexBuffer: ib,
         indexCount: mesh.indices.length,
         materialIndex: s.material,
+        nodeId: s.nodeId ?? null,
         pos: [s.pos[0], s.pos[1], s.pos[2]],
-        rot: [0, 0, 0],
-        quat: [0, 0, 0, 1],
-        scale: 1,
+        // 欧拉角只是**面板显示**用的派生量，旋转真源是 quat：场景带了非恒等旋转时
+        // 必须从 quat 反算，否则面板显示 0 而画面是转过的（复审 codex P2）；且
+        // setObjectRotDeg 会用 rot 重建 quat，初值不对会让"改一个轴"丢掉其它分量
+        rot: s.quat !== undefined ? m4.quatToEuler(q) : [0, 0, 0],
+        quat: q,
+        scale: s.scale ?? 1,
         bob: s.bob,
         mesh,
         modelMatrix: m4.mat4(),
@@ -929,6 +959,9 @@ export class LabRenderer {
         mesh: o.mesh,
         material: idx ?? 0,
         pos: [o.position[0], o.position[1], o.position[2]],
+        quat: [o.quaternion[0], o.quaternion[1], o.quaternion[2], o.quaternion[3]],
+        scale: o.scale[0],
+        nodeId: o.nodeId,
         bob: o.bob,
         name: o.name,
         pickable: o.pickable,
@@ -936,6 +969,14 @@ export class LabRenderer {
         background: o.background,
         ao: o.ao,
       });
+      // 渲染物体只有一个统一缩放：非等比的世界缩放在视口里表达不出来。
+      // 当前 8 个场景的网格链上全是恒等缩放，所以这是"将来会咬人"的守门 ——
+      // 静默按 x 分量显示会让作者以为关卡是对的（AGENTS.md §2.2 禁静默降级）。
+      if (Math.abs(o.scale[0] - o.scale[1]) > 1e-6 || Math.abs(o.scale[1] - o.scale[2]) > 1e-6) {
+        warnings.push(
+          `${o.name}：世界缩放非等比 (${o.scale.map((v) => v.toFixed(3)).join(', ')})，视口按 x 分量显示；请在编辑器里改为等比缩放`,
+        );
+      }
     }
 
     try {
@@ -966,11 +1007,14 @@ export class LabRenderer {
       keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId };
     }
     if (picked.point !== null) {
+      // 位置取该节点的**世界**变换（灯可以挂在带变换的父级下）：与碰撞体/刷怪点同一把尺子
+      const wo = graph.getNode(picked.point.nodeId)?.world.position;
       pointLight = {
         color: picked.point.color,
         intensity: picked.point.intensity,
         range: picked.point.range,
         nodeId: picked.point.nodeId,
+        position: wo === undefined ? [0, 0, 0] : [wo[0], wo[1], wo[2]],
       };
     }
     for (const w of picked.warnings) warnings.push(w);
@@ -1008,21 +1052,32 @@ export class LabRenderer {
   }
 
   /**
-   * 场景节点 id → 物体下标（WU-5「Stop 后定位来源节点」）。
+   * 场景节点 id → 物体下标（WU-5「Stop 后定位来源节点」／复审 B1「视口编辑写回」）。
    *
-   * 走 `subMeshes[].nodeId` 反查：物体是渲染侧的运行时表示，节点 id 才是存储格式
-   * （ADR-010）。找不到返回 null —— 刷怪点节点本身没有网格时确实查不到，
+   * 认 `SceneObject.nodeId`（由 `loadScene` 从 `InstantiatedObject.nodeId` 带下来）——
+   * 物体是渲染侧的运行时表示，节点 id 才是存储格式（ADR-010）。
+   * 🔴 这里**曾经**遍历 `subMeshes[].nodeId` 反查：那个字段是**资产内部**的 glTF 节点 id
+   * （材质绑定继承用），跟场景节点 id 是两套编号，只有两者偶然同名时才命中 ——
+   * 于是 `focusNode()` 时灵时不灵。要找场景节点，只能看 `nodeId`。
+   *
+   * 找不到返回 null —— 刷怪点节点本身没有网格时确实查不到，
    * 调用方要能接受"定位失败"而不是崩。
    */
   public findObjectIndexByNodeId(nodeId: string): number | null {
     if (nodeId === '') return null;
     const objs = this.state.objects;
     for (let i = 0; i < objs.length; i++) {
-      for (const sm of objs[i]!.subMeshes) {
-        if (sm.nodeId === nodeId) return i;
-      }
+      if (objs[i]!.nodeId === nodeId) return i;
     }
     return null;
+  }
+
+  /**
+   * 物体对应的场景节点 id（`null` = 兜底场景 / 拖入的资产模型，没有文档来源）。
+   * 视口编辑写回文档时用它判断"这个物体能不能存"（复审 B1）。
+   */
+  public getObjectNodeId(index: number): NodeId | null {
+    return this.state.objects[index]?.nodeId ?? null;
   }
 
   /**
@@ -1629,6 +1684,8 @@ export class LabRenderer {
       useTex: bitmap !== null,
       name,
       category: '资产',
+      // 拖入的资产模型不属于任何场景节点（保存链路不管它），没有文档来源
+      nodeId: null,
       subMeshes: [
         {
           name,

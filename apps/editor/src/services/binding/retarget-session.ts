@@ -195,6 +195,18 @@ function warn(code: string, message: string, extra?: Partial<RetargetDiagnostic>
   return { severity: 'warning', code: `MRS_${code}`, message, ...extra };
 }
 
+/**
+ * 姿态基准模式的能力守门：本会话的求解入口恒构造 `computeDirectionBaseline`
+ *（world-rest 需要源侧「每骨 rest 世界旋转」，BVH 源不提供）。声明 world-rest 的
+ * 标定**必须在准入层拒绝**——接受它等于把「每次 solve 必然 MRC_BASELINE_MODE_MISMATCH
+ * 失败」的配置存进会话，而失败码只谈「基准模式不一致」，用户无从知道该改哪里（复审 P1）。
+ */
+function unsupportedBaselineError(cal: RetargetCalibration): RetargetDiagnostic | null {
+  if (cal.rotationBaseline === 'direction') return null;
+  return err('CAL_BASELINE_UNSUPPORTED',
+    `本会话只支持 rotationBaseline='direction'，该标定声明 '${cal.rotationBaseline}'（world-rest 需要源侧逐骨 rest 世界旋转，BVH 源不提供）：请标定/导出时改用 direction`);
+}
+
 /** 骨盆高相对带宽：标定 h 与骨架实测 h 差 35% 以上 = 不同体型 */
 const CAL_PELVIS_BAND = 0.35;
 
@@ -236,7 +248,12 @@ function diagnoseSourceCalibration(cal: RetargetCalibration, source: SessionSour
   const chainY = restChainYOf(source.bvh, source.motion.unitScaleSource, source.motion.upAxisSource);
   const { mapping } = mapBvhJointsToHumanik(source.bvh.order, skinBones());
   const jointOfBone = new Map(Object.entries(mapping).map(([jn, b]) => [b, jn] as const));
-  const hipsY = chainY.get(source.bvh.root) ?? NaN;
+  // 骨盆参照 = **映射到 Hips 的那个关节**，不是 BVH 根关节。`Root → Hips` 层级里根
+  // 关节的 OFFSET 常是 [0,0,0]（Blender / 3ds Max 常规导出形态），取根关节会得到
+  // pelvisHeight=0，把已持久化的合法标定判成「另一具骨架」——载入时静默停用、
+  // 显式载入时拒绝，且错误信息把责任推给用户（复审 P1）。仅当源里没有 Hips 映射时
+  // 才退化到根关节。
+  const hipsY = chainY.get(jointOfBone.get('Hips') ?? source.bvh.root) ?? NaN;
   if (!Number.isFinite(hipsY)) return out;
   const h = cal.pelvisHeightM; // 已是「骨盆到支撑面」的相对量（契约），不再减 planeY
   // 足类标记 = 挂在腿链末端骨（LeftFoot/RightFoot，与 pipeline footMarkers
@@ -345,9 +362,13 @@ function diagnoseTargetCalibration(cal: RetargetCalibration, baselineRig: Retarg
 
 /** 只保留标定的单位/轴向身份声明（markers/pelvis/plane 剥掉，骨架自算）——兼容基线的构建输入 */
 function calibrationUnitsOnly(cal: RetargetCalibration): RetargetCalibration {
-  const { markers: _m, supportPlane: _sp, ...rest } = cal;
+  const { markers: _m, supportPlane: _sp, rotationBaseline: _rb, ...rest } = cal;
   // pelvisHeightM=0 → buildTargetRig 落回骨架实测；supportPlane 缺省 → 派生平面
-  return { ...rest, markers: {}, pelvisHeightM: 0 } as RetargetCalibration;
+  // rotationBaseline **不是**单位/轴向身份：本会话的求解器只跑 direction 基准
+  //（computeDirectionBaseline），把 world-rest 留在上下文里会随资产键粘住——之后
+  // 每次 solve 都以 MRC_BASELINE_MODE_MISMATCH 失败，且清标定 / 换源都救不回来
+  //（复审 P1）。此处固定回 direction，与求解入口实际构造的基准一致。
+  return { ...rest, markers: {}, pelvisHeightM: 0, rotationBaseline: 'direction' } as RetargetCalibration;
 }
 
 /** 按给定单位/轴向构造单位上下文（单位推断用；骨架几何仍自算） */
@@ -992,6 +1013,9 @@ export class RetargetSession {
     }
     const diags = validateRetargetCalibration(cal).map(metaDiagToRetarget);
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // 能力守门先于重采样：不接受本会话无法执行的基准模式（否则白做一次重采样）
+    const unsupported = unsupportedBaselineError(cal);
+    if (unsupported !== null) return { ok: false, diagnostics: [...diags, unsupported] };
     // PR 复审 P1：标定的 unitScale/upAxis 是声明，用于纠正被误推断的源——先用缓存
     // BvhFile 按声明事务性重采样，再做几何兼容检查（否则纠错声明永远被当成资产
     // 不匹配拒绝，没有可用路径）。重采样后仍不匹配 → 连同重采样一起回滚拒绝。
@@ -1085,6 +1109,12 @@ export class RetargetSession {
       diags.push(err('CAL_SIDE_MISMATCH', `目标侧标定的 side 必须是 'target'，收到 '${cal.side}'`));
     }
     if (diags.some((d) => d.severity === 'error')) return { ok: false, diagnostics: diags };
+    // 能力守门（复审 P1）：本会话只跑 direction 基准，world-rest 标定不得入库——
+    // 入库后它随单位上下文粘在资产键上，清标定 / 换源都救不回来
+    const unsupportedTargetBaseline = unsupportedBaselineError(cal);
+    if (unsupportedTargetBaseline !== null) {
+      return { ok: false, diagnostics: [...diags, unsupportedTargetBaseline] };
+    }
     // 无目标时拒绝：标定的资产归属无从记录（owner=null → 之后任何 setTarget 都会
     // 以「资产键不同」停用，成为永不可激活的死标定）——先 setTarget 再载标定
     if (this.target === null) {
@@ -1592,7 +1622,10 @@ export class RetargetSession {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
         `配方绑定了源标定指纹（${cur!.sourceCalibrationFingerprint.slice(0, 10)}…）但会话未设置源标定：` +
-          '拒绝静默降级为未标定求解；请先载入标定（loadCalibrationFromMeta）或重置配方',
+          // 复审 P3：这里曾经写"或重置配方"——那个操作在 API 与 UI 里都不存在（没有
+          // resetRecipe），照做的用户只会撞墙。只列真正存在的出路：重新载入该标定，
+          // 或换源/换目标让配方随新指纹重绑（见上面 sameSource/sameTarget 的分支）。
+          '拒绝静默降级为未标定求解；请重新载入该源标定（loadCalibrationFromMeta），或换一份源/目标让配方按新输入重绑',
       ));
       return null;
     }
@@ -1600,7 +1633,7 @@ export class RetargetSession {
       sessionDiags.push(err(
         'RECIPE_CAL_UNBOUND',
         `配方绑定了目标标定指纹（${cur!.targetCalibrationFingerprint.slice(0, 10)}…）但会话未设置目标标定：` +
-          '拒绝静默降级；请先载入标定或重置配方',
+          '拒绝静默降级；请重新载入该目标标定，或换一份源/目标让配方按新输入重绑',
       ));
       return null;
     }

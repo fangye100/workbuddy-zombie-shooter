@@ -254,9 +254,23 @@ function err(diags: RetargetDiagnostic[], code: string, message: string, extra?:
   diags.push({ severity: 'error', code: `${CODE_PREFIX}_${code}`, message, ...extra });
 }
 
+/**
+ * 四元数"归一"的**统一**容差。
+ *
+ * 两个使用点必须共用它（复审 P3）：入口守门（`diagnoseSourceMotion` /
+ * `diagnoseRetargetRig` 的 rest 旋转）与烘焙期逐样本校验（`bake-adapter`）。
+ * 曾经入口用 1e-3、烘焙用 1e-6 —— 能过入口的数据可能在烘焙被拒，表现成
+ * 「求解 complete、产物为空」这种极难定位的失败。烘焙是**下游**守门，不该比入口更严。
+ *
+ * 取 1e-3 而非更紧：rig 的 rest 旋转来自 glTF（float32，误差 ~1e-7）与手工数据，
+ * 更紧只会拒掉合法素材。真正的正确性判据在别处 —— `bake-acceptance` 用独立矩阵
+ * 复现世界姿态、误差 1e-5 量级。
+ */
+export const QUAT_NORM_TOL = 1e-3;
+
 function quatNormOk(q: Quat): boolean {
   const n = Math.hypot(q[0], q[1], q[2], q[3]);
-  return Number.isFinite(n) && n > 1 - 1e-3 && n < 1 + 1e-3;
+  return Number.isFinite(n) && Math.abs(n - 1) <= QUAT_NORM_TOL;
 }
 
 /**

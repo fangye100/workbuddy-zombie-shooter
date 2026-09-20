@@ -1,8 +1,13 @@
 // 验证 LOD 量化 HUD：四个 LOD 全切一遍，读 HUD 文本 + 截图
 import { spawn } from 'node:child_process';
 import { writeFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const OUT = 'C:/Users/fangy/WorkBuddy/game-design-zombie/.workbuddy/tmp';
+// 输出目录：从脚本自身位置推导（assets/_tools → 仓库根），不再写死某台机器的绝对路径
+const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.workbuddy/tmp');
+// 固定自动化 profile（与 tools/verify/editor-smoke.mjs 共用；保证书/登录态/窗口状态）
+const PROFILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.workbuddy/tmp/chrome-profile');
 const PORT = 9400 + (process.pid % 500);
 const URL = 'http://127.0.0.1:5612/asset-browser.html';
 
@@ -29,8 +34,10 @@ async function evalJs(expr) {
 }
 
 const proc = spawn(chrome, [
-  '--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--ignore-certificate-errors',
-  `--remote-debugging-port=${PORT}`, `--user-data-dir=${OUT}/chrome-prof-hud-${Date.now()}`,
+  '--enable-unsafe-webgpu',
+  '--remote-debugging-port=' + PORT,
+  '--user-data-dir=' + PROFILE,
+  '--window-size=1280,800', '--no-first-run', '--no-default-browser-check',
   'about:blank',
 ], { stdio: 'ignore' });
 

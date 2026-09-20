@@ -196,6 +196,107 @@ describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5�
     expect(r.desc).toBeNull();
     expect(r.diagnostics.some((d) => d.code === 'E_NAV_MISSING')).toBe(true);
   });
+
+  it('wave 非零 → warning（读了字段却没有波次语义，触发时仍一次性全量投放）', () => {
+    const doc = clone(floor1());
+    const sp = findNode(doc, 'nd_f1r0_sp0').components.find((c) => c.kind === 'SpawnPoint');
+    (sp as { wave: number }).wave = 2;
+    const r = loadLevelRuntime(doc);
+    expect(r.desc).not.toBeNull();
+    const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED');
+    expect(d?.severity).toBe('warning');
+    expect(d?.nodeId).toBe('nd_f1r0_sp0');
+    // 真实关卡 wave 全为 0 → 不打扰作者
+    expect(
+      loadLevelRuntime(floor1()).diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED'),
+    ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------- bounds 空间一致性（复审 B4）
+
+describe('loadLevelRuntime —— RoomVolume / NavZone 的 bounds 空间（复审 B4）', () => {
+  it('带网格代理的房间节点被挪走（bounds 不动）→ 显式告警，不静默分家', () => {
+    const doc = clone(floor1());
+    // 把房间 1 的节点拖到 30m 外（bounds 不动）——正是「视口里拖走房间、触发区留在原地」的形态
+    findNode(doc, 'nd_f1r0').transform.position = [40, -0.1, 0];
+    const r = loadLevelRuntime(doc);
+    const d = r.diagnostics.find((x) => x.code === 'W_BOUNDS_NODE_MISMATCH' && x.nodeId === 'nd_f1r0');
+    expect(d?.severity).toBe('warning');
+    // 告警要说清"以 bounds 为准、节点变换不参与"，否则作者不知道该改哪边
+    expect(d?.message).toContain('世界');
+    expect(d?.message).toContain('bounds');
+  });
+
+  it('带代理的 NavZone 同样受检', () => {
+    const doc = clone(floor1());
+    const navNode = doc.nodes.find((n) => n.components.some((c) => c.kind === 'NavZone'))!;
+    // 生成器给导航区不挂代理（视口里选不中）→ 先补一个，模拟"作者给它加了可视化"
+    navNode.components.push({
+      kind: 'MeshRenderer',
+      enabled: true,
+      source: { type: 'builtin', shape: 'box', params: [1, 0.1, 1] },
+      materials: [],
+      visible: true,
+      layer: 0,
+      importScale: 1,
+    } as (typeof navNode.components)[number]);
+    navNode.transform.position = [
+      navNode.transform.position[0] + 12,
+      navNode.transform.position[1],
+      navNode.transform.position[2],
+    ];
+    const r = loadLevelRuntime(doc);
+    expect(
+      r.diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH' && x.nodeId === navNode.id),
+    ).toBe(true);
+  });
+
+  it('真实关卡的房间（节点位置 == bounds 中心）→ 零告警', () => {
+    expect(
+      loadLevelRuntime(floor1()).diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH'),
+    ).toBe(false);
+  });
+
+  it('无网格代理的语义节点不告警（视口里选不中、拖不动，transform 无人读）', () => {
+    const doc = clone(floor1());
+    const navNode = doc.nodes.find((n) => n.components.some((c) => c.kind === 'NavZone'))!;
+    // 生成器的形态：导航区节点在原点、bounds 覆盖整层（差 33m）—— 不是可拖的 footgun
+    expect(navNode.transform.position[0]).toBe(0);
+    expect(navNode.components.some((c) => c.kind === 'MeshRenderer')).toBe(false);
+    expect(
+      loadLevelRuntime(doc).diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH'),
+    ).toBe(false);
+  });
+
+  it('口径与 instantiateScene 对齐：禁用 / 隐藏 / asset 网格的代理都不告警（拖不动）', () => {
+    /** 把房间节点**自带**的网格代理改成指定形态后把节点挪走，再装载 */
+    const withRoomProxy = (
+      mutate: (comp: Record<string, unknown>) => void,
+    ): ReturnType<typeof loadLevelRuntime> => {
+      const doc = clone(floor1());
+      const room = findNode(doc, 'nd_f1r0');
+      const comp = room.components.find((c) => c.kind === 'MeshRenderer');
+      expect(comp).toBeDefined();
+      mutate(comp as unknown as Record<string, unknown>);
+      room.transform.position = [40, -0.1, 0];
+      return loadLevelRuntime(doc);
+    };
+    const warned = (r: ReturnType<typeof loadLevelRuntime>): boolean =>
+      r.diagnostics.some((x) => x.code === 'W_BOUNDS_NODE_MISMATCH' && x.nodeId === 'nd_f1r0');
+
+    // 基线：可渲染的 builtin 代理 → 必须告警（上一条用例已锁，这里确认构造有效）
+    expect(warned(withRoomProxy(() => {}))).toBe(true);
+    expect(warned(withRoomProxy((c) => { c.enabled = false; }))).toBe(false);
+    expect(warned(withRoomProxy((c) => { c.source = { type: 'asset', path: 'a.glb', guid: 'g' }; }))).toBe(false);
+
+    // 自身隐藏（祖先隐藏同理）→ 视口里看不到、选不中
+    const doc = clone(floor1());
+    const room = findNode(doc, 'nd_f1r0');
+    room.visible = false;
+    room.transform.position = [40, -0.1, 0];
+    expect(warned(loadLevelRuntime(doc))).toBe(false);
+  });
 });
 
 describe('loadLevelRuntime —— 失败必须明确，不静默兜底', () => {

@@ -49,6 +49,61 @@ let APP_URL = ''; // 由 ensureServer() 探测后确定（http 还是 https）
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 
+// ------------------------------------------------------------------ 真源推导（B2）
+
+/**
+ * 从**项目文件 + 起始场景**推导「应该看到什么」。
+ *
+ * 🔴 之前这里把 sandbox 场景的期望写死在断言里（objects=13、'地面 Ground'…）。
+ * `aether.project.json` 的 `startIndex` 从 sandbox 改到 `act1/floor-1` 之后，那些断言
+ * 全部失效（19≠13、名字一个都对不上），门禁长期红灯 → 真回归与"老毛病"再也分不开。
+ * 现在期望值一律由真源推导：换起始场景、改关卡内容，断言自动跟着走。
+ *
+ * 口径与 `instantiateScene` 对齐：
+ *  - 只算 `MeshRenderer` 组件 **enabled !== false** 且**自身与祖先都可见**的节点；
+ *  - 只算 `builtin` 网格 —— `asset` 网格在装载期是异步的（loadScene 会跳过并给告警），
+ *    不该算进"应该看到几个物体"；
+ *  - `background: true`（天空/网格底）进物体列表但**不进层级面板**。
+ */
+function readStartSceneExpectation() {
+  const proj = JSON.parse(fs.readFileSync(path.resolve('aether.project.json'), 'utf8'));
+  // startIndex 允许为 null（契约：null = 用第一个）；照抄 resolveStartScenePath 的归一，
+  // 否则 null 时 scenes[null] 是 undefined，下一行 start.path 直接抛错把门禁脚本打死
+  const rawIndex = proj.startIndex;
+  const index = typeof rawIndex === 'number' ? rawIndex : 0;
+  const start = proj.scenes[index];
+  if (start === undefined || typeof start.path !== 'string') {
+    throw new Error(`aether.project.json 的 scenes[${index}] 不可用（startIndex=${String(rawIndex)}）`);
+  }
+  const doc = JSON.parse(fs.readFileSync(path.resolve(start.path), 'utf8'));
+  const byId = new Map(doc.nodes.map((n) => [n.id, n]));
+  const visibleChain = (n) => {
+    let cur = n;
+    for (let d = 0; cur && d < 64; d++) {
+      if (cur.visible === false) return false;
+      cur = cur.parent ? byId.get(cur.parent) : null;
+    }
+    return true;
+  };
+  const compOf = (n) => n.components.find((c) => c.kind === 'MeshRenderer');
+  const nodes = doc.nodes.filter(
+    (n) =>
+      n.components.some((c) => c.kind === 'MeshRenderer' && c.enabled !== false) &&
+      visibleChain(n) &&
+      compOf(n).source?.type === 'builtin',
+  );
+  const background = nodes.filter((n) => compOf(n).background === true).map((n) => n.name);
+  return {
+    path: start.path,
+    objects: nodes.length,
+    hierarchy: nodes.length - background.length,
+    names: nodes.map((n) => n.name),
+    background,
+    category: Object.fromEntries(nodes.map((n) => [n.name, n.category ?? '道具'])),
+    pickable: Object.fromEntries(nodes.map((n) => [n.name, n.pickable ?? false])),
+  };
+}
+
 // ------------------------------------------------------------------ 断言记账
 
 const results = [];
@@ -353,9 +408,11 @@ async function main() {
     check('FPS 有读数（SwiftShader 下 10 左右属正常）', Number(hudFps) > 0, `fps=${hudFps}`);
 
     // ---- B2. 场景来自文件（ADR-010 / S1）----
-    // 关键判据：**不能只看物体数** —— 硬编码 fallback 与场景文件当前都是 13 个物体、
-    // 名字也一样。必须查 getSceneSource()，它为 null 就说明读的根本不是文件。
-    console.log('\nB2. 场景来自文件（ADR-010：场景是唯一数据载体）');
+    // 关键判据：**不能只看物体数** —— 硬编码 fallback 也可能与场景文件撞上同样的数量
+    // 与名字。必须查 getSceneSource()，它为 null 就说明读的根本不是文件；
+    // 而"应该有几个、叫什么"由起始场景文件本身推导（见 readStartSceneExpectation）。
+    console.log('\nB2. 场景来自文件（ADR-010：场景是唯一数据载体；期望值由真源推导）');
+    const expect = readStartSceneExpectation();
     const src = await cdp.eval(`(()=>window.__editor.renderer.getSceneSource())()`);
     check('场景来源非 null（不是硬编码 fallback）', src !== null, JSON.stringify(src));
     check(
@@ -364,44 +421,52 @@ async function main() {
       src === null ? 'null' : src.url,
     );
     check(
-      '物体数 = 13（场景文件 15 个节点减去光与相机）',
-      src !== null && src.objects === 13,
-      `objects=${src === null ? 'null' : src.objects}`,
+      `场景来源 = 项目文件的起始场景（${expect.path}）`,
+      src !== null && (src.url === expect.path || src.url.endsWith(expect.path)),
+      src === null ? 'null' : src.url,
+    );
+    check(
+      `物体数 = 起始场景的可渲染节点数（${expect.objects}）`,
+      src !== null && src.objects === expect.objects,
+      `objects=${src === null ? 'null' : src.objects} 期望=${expect.objects}`,
     );
 
     const sceneObjs = await cdp.eval(
       `(()=>window.__editor.renderer.getObjectList().map(o=>({n:o.name,c:o.category,p:o.pickable})))()`,
     );
     const byName = Object.fromEntries(sceneObjs.map((o) => [o.n, o]));
+    // 层级列表按定义排除 background（天空/虚空底）——逐个比对时同样要排除，
+    // 否则会拿"文档里有、列表里本就不该有"的名字去比（这正是上一版断言的错法）
+    const wantListed = expect.names.filter((n) => !expect.background.includes(n)).slice().sort();
+    const gotListed = sceneObjs.map((o) => o.n).slice().sort();
     check(
-      '物体名来自文件（地面/角色/敌人6 都在）',
-      ['地面 Ground', '角色 Character', '敌人 Enemy 6'].every((n) => byName[n] !== undefined),
-      `names=${sceneObjs.map((o) => o.n).join(',')}`.slice(0, 160),
-    );
-    // 层级面板只列 12 个：天空是 background=true，按设计不进层级、不拾取、不可选
-    check(
-      '天空不进层级面板（background 生效），故列表 12 个而场景 13 个',
-      sceneObjs.length === 12 && byName['天空 Sky'] === undefined,
-      `list=${sceneObjs.length} scene=${src === null ? 'null' : src.objects}`,
-    );
-    check(
-      'category 来自正式字段（S2a 转正；角色=角色，敌人6=敌人，地面=环境）',
-      byName['角色 Character']?.c === '角色' &&
-        byName['敌人 Enemy 6']?.c === '敌人' &&
-        byName['地面 Ground']?.c === '环境',
-      JSON.stringify({
-        角色: byName['角色 Character']?.c,
-        敌人6: byName['敌人 Enemy 6']?.c,
-        地面: byName['地面 Ground']?.c,
-      }),
+      `层级列表物体名与起始场景逐个一致（${wantListed.length} 个）`,
+      JSON.stringify(gotListed) === JSON.stringify(wantListed),
+      `多=${wantListed.filter((n) => !gotListed.includes(n)).join(',') || '无'} 少=${
+        gotListed.filter((n) => !wantListed.includes(n)).join(',') || '无'
+      }`.slice(0, 200),
     );
     check(
-      'pickable 来自文件（地面不可选，立方体可选）',
-      byName['地面 Ground']?.p === false && byName['立方体 Box']?.p === true,
-      JSON.stringify({
-        地面: byName['地面 Ground']?.p,
-        立方体: byName['立方体 Box']?.p,
-      }),
+      `层级列表 = 可渲染 − background（${expect.hierarchy}）`,
+      sceneObjs.length === expect.hierarchy &&
+        expect.background.every((n) => byName[n] === undefined),
+      `list=${sceneObjs.length} 期望=${expect.hierarchy} background=${expect.background.join(',')}`,
+    );
+    const catBad = sceneObjs.filter((o) => expect.category[o.n] !== undefined && expect.category[o.n] !== o.c);
+    check(
+      'category 来自场景文件（逐名比对）',
+      catBad.length === 0,
+      catBad.length === 0
+        ? `${sceneObjs.length} 个全对`
+        : catBad.map((o) => `${o.n}:${o.c}≠${expect.category[o.n]}`).join(' · ').slice(0, 200),
+    );
+    const pickBad = sceneObjs.filter((o) => expect.pickable[o.n] !== undefined && expect.pickable[o.n] !== o.p);
+    check(
+      'pickable 来自场景文件（逐名比对）',
+      pickBad.length === 0,
+      pickBad.length === 0
+        ? `${sceneObjs.length} 个全对`
+        : pickBad.map((o) => `${o.n}:${o.p}≠${expect.pickable[o.n]}`).join(' · ').slice(0, 200),
     );
 
     // ---- C. SelectionService ----
@@ -498,6 +563,271 @@ async function main() {
       `(()=>{const q=window.__editor.renderer.getObjectQuat(0);return q?q.length:0})()`,
     );
     check('getObjectQuat 返回 4 分量四元数', quat === 4, `len=${quat}`);
+
+    // ---- G2. 视口拖拽写回场景文档（复审 B1）----
+    //
+    // 过去 gizmo 拖拽只写渲染器内存：拖完点保存不落盘、点 Play 也看不见（文档里还是旧值），
+    // 是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。这条断言用**真实事件链**拖手柄，
+    // 然后拿「从文档重新解算出的世界位置」与「视口位置」对账 —— 这个判据能抓出
+    // 「世界值当局部值写进文件」（父偏移非恒等时，两者相差一个父位移）。
+    console.log('\nG2. 视口拖拽写回场景文档（不再有"两份真源"）');
+    const b1 = await cdp.eval(`(async () => {
+      const r = window.__editor.renderer;
+      const ve = window.__editor.viewportEdit;
+      const canvas = document.querySelector('canvas');
+      if (canvas === null) return { err: 'no canvas' };
+      const rect = canvas.getBoundingClientRect();
+      const frames = (n) => new Promise((res) => { let k = n; const step = () => (--k <= 0 ? res() : requestAnimationFrame(step)); requestAnimationFrame(step); });
+      const ev = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+        clientX: rect.left + x, clientY: rect.top + y,
+        bubbles: true, pointerId: 1, isPrimary: true,
+      }));
+      // ① 挑一个**局部 ≠ 世界**的物体（挂在带平移的父节点下）——这正是过去会写错的形态
+      const list = r.getObjectList();
+      let idx = -1, nodeId = null;
+      for (const item of list) {
+        const id = r.getObjectNodeId(item.index);
+        if (id === null) continue;
+        const w = ve.worldPosFromDoc(id), l = ve.localPos(id);
+        if (w === null || l === null) continue;
+        if (Math.hypot(w[0] - l[0], w[1] - l[1], w[2] - l[2]) > 1e-6) { idx = item.index; nodeId = id; break; }
+      }
+      if (idx < 0) return { found: false, reason: '起始场景里没有"局部≠世界"的网格节点' };
+      r.selectObject(idx, null);
+      await frames(2);
+      const posBefore = [...r.getObjectState(idx).pos];
+      const docBefore = ve.worldPosFromDoc(nodeId);
+      const undoBefore = ve.state().undoDepth;
+      // ② 扫格子找 gizmo 手柄（不硬编码坐标：换相机/换场景都不失效）
+      //    ⚠️ hitTestGizmo 收的是 **client** 坐标（内部 worldToScreen 也返回 client），
+      //    而 dispatchPointer 要的是 canvas 局部坐标 → 扫描要加 rect 偏移，别把两者混了
+      let hit = null, at = null;
+      outer: for (let y = 0; y < rect.height; y += 3) {
+        for (let x = 0; x < rect.width; x += 3) {
+          const h = ve.hitTest(rect.left + x, rect.top + y);
+          if (h !== null && h.axis >= 0) { hit = h; at = { x, y }; break outer; }
+        }
+      }
+      if (hit === null) return { found: true, hitFound: false };
+      // ③ 真事件链拖拽；轴向手柄可能对某些方向不敏感，四个方向里取第一个真出位移的
+      let usedDir = null, moved = 0;
+      for (const [dx, dy] of [[60, 0], [-60, 0], [0, 60], [0, -60], [45, 45], [-45, -45]]) {
+        ev('pointerdown', at.x, at.y);
+        ev('pointermove', at.x + dx, at.y + dy);
+        await frames(2);
+        ev('pointerup', at.x + dx, at.y + dy);
+        await frames(2);
+        const p = r.getObjectState(idx).pos;
+        moved = Math.hypot(p[0] - posBefore[0], p[1] - posBefore[1], p[2] - posBefore[2]);
+        if (moved > 1e-4) { usedDir = [dx, dy]; break; }
+      }
+      const posAfter = [...r.getObjectState(idx).pos];
+      const docAfter = ve.worldPosFromDoc(nodeId);
+      const docIfWrong = ve.localPos(nodeId); // 旧实现会把世界值写进局部：这条能暴露
+      const st = ve.state();
+      const consistency = Math.hypot(
+        docAfter[0] - posAfter[0], docAfter[1] - posAfter[1], docAfter[2] - posAfter[2],
+      );
+      // ④ 撤销一步：文档与视口都应回到起点
+      ve.undo();
+      await frames(2);
+      const posUndone = [...r.getObjectState(idx).pos];
+      const docUndone = ve.worldPosFromDoc(nodeId);
+      return {
+        found: true, hitFound: true, nodeId, axis: hit.axis, at, usedDir, moved,
+        posBefore, posAfter, docBefore, docAfter, docIfWrong, consistency,
+        undoBefore, undoAfterDrag: st.undoDepth, undoAfter: ve.state().undoDepth, dirtyAfterDrag: st.dirty,
+        backDelta: Math.hypot(posUndone[0] - posBefore[0], posUndone[1] - posBefore[1], posUndone[2] - posBefore[2]),
+        docBackDelta: Math.hypot(docUndone[0] - docBefore[0], docUndone[1] - docBefore[1], docUndone[2] - docBefore[2]),
+      };
+    })()`);
+    check('★ 找到视口里的 gizmo 手柄（可点中）', b1.found === true && b1.hitFound === true, JSON.stringify(b1.at ?? b1.reason ?? null));
+    check('★ 拖拽真的移动了物体（视口有反应）', b1.found === true && b1.moved > 1e-4, `moved=${b1.moved?.toFixed(4)}m 方向=${JSON.stringify(b1.usedDir ?? null)}`);
+    check(
+      '★ 文档被写入且与视口一致（从文档重算的世界位置 == 视口位置）',
+      b1.found === true &&
+        b1.consistency < 1e-6 &&
+        JSON.stringify(b1.docAfter) !== JSON.stringify(b1.docBefore),
+      `一致性=${b1.consistency?.toExponential(2)} 文档 ${JSON.stringify(b1.docBefore)} → ${JSON.stringify(b1.docAfter)}`,
+    );
+    check(
+      '★ 写入的是**局部**变换（不是把世界值当局部值写进去）',
+      b1.found === true && b1.docIfWrong !== null &&
+        Math.abs(b1.docIfWrong[0] - b1.posAfter[0]) > 1e-6,
+      `局部 ${JSON.stringify(b1.docIfWrong)} vs 世界 ${JSON.stringify(b1.posAfter)}`,
+    );
+    check(
+      '★ 一次拖拽 = 一条撤销编辑；撤销后文档与视口都回到起点',
+      b1.found === true &&
+        b1.undoAfterDrag === b1.undoBefore + 1 &&
+        b1.undoAfter === b1.undoBefore &&
+        b1.backDelta < 1e-6 &&
+        b1.docBackDelta < 1e-6,
+      `undo ${b1.undoBefore} →(拖拽后) ${b1.undoAfterDrag} →(撤销后) ${b1.undoAfter}；` +
+        `视口回退 ${b1.backDelta?.toExponential(2)} 文档回退 ${b1.docBackDelta?.toExponential(2)}`,
+    );
+    check('拖拽后 dirty 亮起（面板显示未保存）', b1.dirtyAfterDrag === true, `dirty=${b1.dirtyAfterDrag}`);
+
+    // ---- G2b. 拖父节点：可渲染子节点必须在视口里跟着走（codex 评审 P1）----
+    //
+    // 视口物体是**扁平**的（每个物体一份世界变换），而文档是层级：拖父节点时子物体在文档里
+    // 跟着走，视口里若不主动推就留在原地，松手/保存/Play 之后才跳过去 —— 又一份"两份真源"。
+    console.log('\nG2b. 拖父节点时子树跟随（视口物体是扁平的）');
+    const g2b = await cdp.eval(`(async () => {
+      const r = window.__editor.renderer;
+      const ve = window.__editor.viewportEdit;
+      const canvas = document.querySelector('canvas');
+      if (canvas === null) return { err: 'no canvas' };
+      const rect = canvas.getBoundingClientRect();
+      const frames = (n) => new Promise((res) => { let k = n; const step = () => (--k <= 0 ? res() : requestAnimationFrame(step)); requestAnimationFrame(step); });
+      const ev = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+        clientX: rect.left + x, clientY: rect.top + y, bubbles: true, pointerId: 1, isPrimary: true,
+      }));
+      const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      // 挑一个"带可渲染子节点"的物体（父节点编辑才会暴露这个问题）
+      let idx = -1, nodeId = null, kids = [];
+      for (const o of r.getObjectList()) {
+        const id = r.getObjectNodeId(o.index);
+        if (id === null) continue;
+        const renderable = (ve.childIds(id) ?? []).filter((k) => r.findObjectIndexByNodeId(k) !== null);
+        if (renderable.length > 0) { idx = o.index; nodeId = id; kids = renderable; break; }
+      }
+      if (idx < 0) return { found: false, reason: '起始场景里没有"带可渲染子节点"的节点' };
+      r.selectObject(idx, null);
+      await frames(2);
+      const parentBefore = [...r.getObjectState(idx).pos];
+      const childBefore = kids.map((k) => ({ k, pos: [...r.getObjectState(r.findObjectIndexByNodeId(k)).pos] }));
+      // 扫格子找手柄（不硬编码坐标）
+      let at = null;
+      outer2: for (let y = 0; y < rect.height; y += 3) {
+        for (let x = 0; x < rect.width; x += 3) {
+          const h = ve.hitTest(rect.left + x, rect.top + y);
+          if (h !== null && h.axis >= 0) { at = { x, y }; break outer2; }
+        }
+      }
+      if (at === null) return { found: true, hitFound: false };
+      let moved = 0;
+      for (const [dx, dy] of [[60, 0], [-60, 0], [0, 60], [0, -60], [45, 45], [-45, -45]]) {
+        ev('pointerdown', at.x, at.y);
+        ev('pointermove', at.x + dx, at.y + dy);
+        await frames(2);
+        ev('pointerup', at.x + dx, at.y + dy);
+        await frames(2);
+        moved = dist([...r.getObjectState(idx).pos], parentBefore);
+        if (moved > 1e-4) break;
+      }
+      const parentAfter = [...r.getObjectState(idx).pos];
+      const childAfter = childBefore.map(({ k }) => {
+        const i = r.findObjectIndexByNodeId(k);
+        return { k, view: [...r.getObjectState(i).pos], doc: ve.worldPosFromDoc(k) };
+      });
+      // 撤销：父与子都必须回到起点
+      ve.undo();
+      await frames(2);
+      const childUndone = childBefore.map(({ k }) => [...r.getObjectState(r.findObjectIndexByNodeId(k)).pos]);
+      return { found: true, hitFound: true, nodeId, kids, parentBefore, parentAfter, moved, childBefore, childAfter, childUndone };
+    })()`);
+    check('★ 找到"带可渲染子节点"的节点可拖（G2b 前提）', g2b.found === true && g2b.hitFound === true, JSON.stringify(g2b.reason ?? g2b.nodeId ?? null));
+    check('★ 父节点真的被拖动了（G2b 前提）', g2b.found === true && g2b.moved > 1e-4, `moved=${g2b.moved?.toFixed(4)}m`);
+    const g2bKidFollowed = g2b.found === true && g2b.hitFound === true &&
+      g2b.childAfter.every((c, i) => {
+        const before = g2b.childBefore[i].pos;
+        return Math.hypot(c.view[0] - c.doc[0], c.view[1] - c.doc[1], c.view[2] - c.doc[2]) < 1e-6 &&
+          Math.hypot(c.view[0] - before[0], c.view[1] - before[1], c.view[2] - before[2]) > 1e-4;
+      });
+    check(
+      '★ 拖父节点时子物体跟着走，且视口与文档一致',
+      g2bKidFollowed,
+      `节点 ${g2b.nodeId ?? '-'}：子 ${JSON.stringify(g2b.childAfter?.map((c, i) => {
+        const before = g2b.childBefore[i].pos;
+        return Math.hypot(c.view[0] - before[0], c.view[1] - before[1], c.view[2] - before[2]).toFixed(4);
+      }) ?? null)}（位移量）`,
+    );
+    const g2bUndone = g2b.found === true && g2b.hitFound === true &&
+      g2b.childUndone.every((p, i) => {
+        const before = g2b.childBefore[i].pos;
+        return Math.hypot(p[0] - before[0], p[1] - before[1], p[2] - before[2]) < 1e-6;
+      });
+    check('★ 撤销后子物体也回到起点（子树一起回写）', g2bUndone, `children=${g2b.kids?.length ?? 0}`);
+
+    // ---- G2c. 旋转拖拽也要落盘（codex / Copilot 评审 P1）----
+    //
+    // 曾经的漏项：把世界量反解成局部量时只取了位置与缩放，`local.rotation` 被直接丢弃；
+    // 纯旋转拖拽期间位置/缩放都没变 → 整条编辑被当成"值没有变化"丢掉，保存/Play 后
+    // 旋转回到旧值。这条断言用真事件链转手柄，把"文档重算的世界四元数"与"视口四元数"对账。
+    console.log('\nG2c. 旋转拖拽写回场景文档');
+    const g2c = await cdp.eval(`(async () => {
+      const r = window.__editor.renderer;
+      const ve = window.__editor.viewportEdit;
+      const canvas = document.querySelector('canvas');
+      if (canvas === null) return { err: 'no canvas' };
+      const rect = canvas.getBoundingClientRect();
+      const frames = (n) => new Promise((res) => { let k = n; const step = () => (--k <= 0 ? res() : requestAnimationFrame(step)); requestAnimationFrame(step); });
+      const ev = (type, x, y) => canvas.dispatchEvent(new PointerEvent(type, {
+        clientX: rect.left + x, clientY: rect.top + y, bubbles: true, pointerId: 1, isPrimary: true,
+      }));
+      const dot = (a, b) => Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
+      // 选一个有文档来源的物体
+      let idx = -1, nodeId = null;
+      for (const o of r.getObjectList()) {
+        const id = r.getObjectNodeId(o.index);
+        if (id !== null) { idx = o.index; nodeId = id; break; }
+      }
+      if (idx < 0) return { found: false };
+      r.setGizmoMode('rotate');
+      r.selectObject(idx, null);
+      await frames(3);
+      const viewBefore = [...r.getObjectQuat(idx)];
+      const docBefore = ve.quatOfDoc(nodeId);
+      const undoBefore = ve.state().undoDepth;
+      let at = null;
+      outer3: for (let y = 0; y < rect.height; y += 3) {
+        for (let x = 0; x < rect.width; x += 3) {
+          const h = ve.hitTest(rect.left + x, rect.top + y);
+          if (h !== null && h.axis >= 0) { at = { x, y }; break outer3; }
+        }
+      }
+      if (at === null) { r.setGizmoMode('translate'); return { found: true, hitFound: false }; }
+      // 圆环手柄：绕圈拖一段弧（同一方向连续两次，确保产生非零角）
+      ev('pointerdown', at.x, at.y);
+      for (const step of [[40, 0], [40, 30], [10, 50]]) {
+        ev('pointermove', at.x + step[0], at.y + step[1]);
+        await frames(2);
+      }
+      ev('pointerup', at.x + 40, at.y + 50);
+      await frames(2);
+      const viewAfter = [...r.getObjectQuat(idx)];
+      const docAfter = ve.quatOfDoc(nodeId);
+      const undoAfterDrag = ve.state().undoDepth;
+      ve.undo();
+      await frames(2);
+      const viewUndone = [...r.getObjectQuat(idx)];
+      const docUndone = ve.quatOfDoc(nodeId);
+      r.setGizmoMode('translate');
+      await frames(2);
+      return {
+        found: true, hitFound: true, nodeId, viewBefore, docBefore, viewAfter, docAfter,
+        viewUndone, docUndone, undoBefore, undoAfterDrag,
+        viewVsDoc: dot(viewAfter, docAfter), beforeVsAfter: dot(docBefore, docAfter),
+        undoneViewVsBefore: dot(viewUndone, viewBefore), undoneDocVsBefore: dot(docUndone, docBefore),
+      };
+    })()`);
+    check('★ 转到旋转手柄（G2c 前提）', g2c.found === true && g2c.hitFound === true, JSON.stringify(g2c.nodeId ?? null));
+    check(
+      '★★ 旋转拖拽写回文档（旋转真的变了，不是被丢弃）',
+      g2c.found === true && g2c.hitFound === true &&
+        g2c.beforeVsAfter < 1 - 1e-6 &&
+        Math.abs(g2c.viewVsDoc - 1) < 1e-6,
+      `文档旋转前后 |dot|=${g2c.beforeVsAfter?.toFixed(6)}（1 = 没变）；视口 vs 文档 |dot|=${g2c.viewVsDoc?.toFixed(6)}（1 = 一致）`,
+    );
+    check(
+      '★ 撤销旋转后文档与视口一起回到原姿态',
+      g2c.found === true && g2c.hitFound === true &&
+        Math.abs(g2c.undoneViewVsBefore - 1) < 1e-6 &&
+        Math.abs(g2c.undoneDocVsBefore - 1) < 1e-6 &&
+        g2c.undoAfterDrag === g2c.undoBefore + 1,
+      `undo ${g2c.undoBefore}→${g2c.undoAfterDrag}；视口回退 |dot|=${g2c.undoneViewVsBefore?.toFixed(6)} 文档回退 |dot|=${g2c.undoneDocVsBefore?.toFixed(6)}`,
+    );
 
     // ---- H. AnimationService（需 --glb）----
     console.log('\nH. AnimationService（蒙皮/动画）');

@@ -236,6 +236,34 @@ describe('滞回与最短持续', () => {
     expect(segments.length).toBe(0);
     expect(diagnostics.some((d) => d.code === 'MRC_SEGMENT_TOO_SHORT')).toBe(true);
   });
+
+  it('只在**最后一帧**进入接触：同样出诊断，不静默丢掉（复盘 P3）', () => {
+    // 旧实现的收尾只挂在「仍在接触」分支里，"恰好在最后一帧才进入"的接触被静默丢弃：
+    // 既不出段也不出 MRC_SEGMENT_TOO_SHORT，与本文件其它短段的处理不一致（排查时看不见）。
+    // 造法：最后 6 帧减速贴地，只有**末帧**同时满足"高度 ≤ 入口高度 + 速度 ≤ 入口速度"
+    //（前一帧高度 0.0205 仍高于入口 0.02；末帧下垂速度 0.09 m/s 仍低于入口 0.1 m/s）。
+    const fps = 60;
+    const t = timesAt(fps, 0.5);
+    const p = new Float64Array(t.length * 3);
+    const n = t.length;
+    const ladder = [0.12, 0.07, 0.05, 0.035, 0.0205, 0.019];
+    for (let f = 0; f < n; f++) {
+      const fromEnd = n - 1 - f;
+      p[f * 3 + 1] = fromEnd < ladder.length ? ladder[ladder.length - 1 - fromEnd]! : 0.3;
+    }
+    const { segments, diagnostics } = detectContactSegments({
+      times: t,
+      markers: [{ markerId: 'm', chainId: null, positions: p }],
+      plane: PLANE,
+      hSrcM: H,
+      detection: DET,
+      annotations: [],
+      canWorldLock: true,
+    });
+    // 单帧段短于 minDurationS → 仍被丢弃，但**必须**留下诊断（不是静默）
+    expect(segments.length).toBe(0);
+    expect(diagnostics.some((d) => d.code === 'MRC_SEGMENT_TOO_SHORT')).toBe(true);
+  });
 });
 
 // ───────────────────────── 标注覆盖 ─────────────────────────
