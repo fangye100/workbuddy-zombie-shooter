@@ -115,7 +115,7 @@ export interface SkeletonData {
   /** 关节显示名（Mixamo/HumanIK 约定名：Hips/Spine/...），用于权重可视化与 Mixamo 重定向映射 */
   jointNames: (string | null)[];
   /** inverseBindMatrices，列主序，length = joints.length * 16 */
-  inverseBind: Float32Array;
+  inverseBind: Float32Array<ArrayBuffer>;
   /** 每个节点的父节点下标，-1 = 场景根 */
   parent: number[];
   /** 每个节点的初始本地变换（bind pose 来源） */
@@ -128,7 +128,7 @@ export interface SkeletonData {
    * 蒙皮求值时会用它共轭关节矩阵，否则蒙皮与顶点不在同一空间 → 整体错位。
    * 已是 Y-up 居中模型时退化为单位阵。
    */
-  normalization: Float32Array;
+  normalization: Float32Array<ArrayBuffer>;
 }
 
 /** 一段动画轨道：驱动某个节点的某个变换路径 */
@@ -213,7 +213,7 @@ function readFloats(
   bin: ArrayBuffer,
   binStart: number,
   accessor: NonNullable<GltfJson['accessors']>[number],
-): Float32Array | null {
+): Float32Array<ArrayBuffer> | null {
   const compType = accessor.componentType ?? 0;
   const type = accessor.type ?? 'SCALAR';
   const count = accessor.count ?? 0;
@@ -324,7 +324,7 @@ function readInts(
   binStart: number,
   index: number,
   comps: number,
-): Float32Array | null {
+): Float32Array<ArrayBuffer> | null {
   const acc = json.accessors?.[index];
   if (acc === undefined) return null;
   const bv = json.bufferViews?.[acc.bufferView ?? -1];

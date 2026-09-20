@@ -75,8 +75,8 @@ export function packSkin(
 }
 
 export interface MeshData {
-  vertices: Float32Array;
-  indices: Uint32Array;
+  vertices: Float32Array<ArrayBuffer>;
+  indices: Uint32Array<ArrayBuffer>;
   /** 蒙皮关节索引（4/顶点，0..nJoints-1；末尾恒等关节 = nJoints）。无蒙皮为 null */
   joints?: Uint16Array | null;
   /** 蒙皮权重（4/顶点，已归一化）。无蒙皮为 null */

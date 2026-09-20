@@ -85,7 +85,7 @@ function tx(
 let scratch = new Float32Array(1 << 16);
 let scratchSeg = new Float32Array(1 << 16);
 
-function ensureScratch(slot: 'main' | 'seg', n: number): Float32Array {
+function ensureScratch(slot: 'main' | 'seg', n: number): Float32Array<ArrayBuffer> {
   let buf = slot === 'main' ? scratch : scratchSeg;
   if (buf.length < n) {
     let cap = buf.length;

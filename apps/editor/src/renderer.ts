@@ -169,7 +169,7 @@ export interface SceneObject {
   /** 蒙皮顶点缓冲（slot 1）：joints(u16×4) + weights(f32×4) */
   skinVb: GPUBuffer | null;
   /** 逐帧求值的关节矩阵暂存（CPU 侧，写进 skinBuffer 前的中转） */
-  skinScratch: Float32Array;
+  skinScratch: Float32Array<ArrayBuffer>;
   /** 动画播放状态；有骨骼时创建，否则 null */
   skinState: SkinState | null;
 }
@@ -273,7 +273,7 @@ function defaultSkinFields(device: GPUDevice, vertexCount: number): {
   skinBuffer: GPUBuffer;
   skinCount: number;
   skinVb: GPUBuffer;
-  skinScratch: Float32Array;
+  skinScratch: Float32Array<ArrayBuffer>;
   skinState: SkinState | null;
 } {
   const skinBuffer = device.createBuffer({
@@ -618,15 +618,15 @@ export class LabRenderer {
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
   /** 引擎帧绘制核心（services 通过它读 gizmo/相机矩阵与高亮 buffer） */
   public readonly core: RendererCore;
-  private readonly materialData: Float32Array;
-  private readonly transformData: Float32Array;
+  private readonly materialData: Float32Array<ArrayBuffer>;
+  private readonly transformData: Float32Array<ArrayBuffer>;
 
   /** 选中高亮用的独立 toon / material buffer（白色细描边），bind group 复用 outline 管线 */
-  private readonly selToonData: Float32Array;
-  private readonly selMatData: Float32Array;
+  private readonly selToonData: Float32Array<ArrayBuffer>;
+  private readonly selMatData: Float32Array<ArrayBuffer>;
   /** 层级面板悬停高亮（尸绿）用的独立 toon / material buffer，复用 outline 管线 */
-  private readonly hoverToonData: Float32Array;
-  private readonly hoverMatData: Float32Array;
+  private readonly hoverToonData: Float32Array<ArrayBuffer>;
+  private readonly hoverMatData: Float32Array<ArrayBuffer>;
 
   /** 模型浏览器：角色槽位（替换中心胶囊）。切换模型只动这一个 */
   public readonly characterIndex = 1;

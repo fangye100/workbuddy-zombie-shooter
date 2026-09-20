@@ -104,7 +104,7 @@ interface PreviewObject {
   skinVb: GPUBuffer | null;
   skinBuffer: GPUBuffer | null;
   skinCount: number;
-  skinScratch: Float32Array;
+  skinScratch: Float32Array<ArrayBuffer>;
   bindGroup: GPUBindGroup | null;
   texture: GPUTexture;
   ownsTexture: boolean;

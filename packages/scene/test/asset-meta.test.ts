@@ -265,3 +265,65 @@ describe('序列化往返', () => {
     expect(isAssetMetaValid(round)).toBe(true);
   });
 });
+
+// ───────────────────────── MR-01：AssetKind 'bvh' + retarget 挂载块 ─────────────────────────
+
+describe('validateAssetMeta · 重定向挂载（MR-01）', () => {
+  const base = (): AssetMeta => createDefaultAssetMeta(newAssetGuid(), 'gltf');
+
+  it('默认元数据带 retarget: null（显式空，不是 undefined）', () => {
+    expect(base().retarget).toBeNull();
+  });
+
+  it('kind = bvh 合法（源动画导入有正式类型，不冒充 gltf）', () => {
+    const m = { ...base(), kind: 'bvh' as const };
+    expect(codes(validateAssetMeta(m))).toEqual([]);
+    expect(isAssetMetaValid(m)).toBe(true);
+  });
+
+  it('旧 sidecar 缺 retarget 字段（undefined）同样合法——可选字段不强制重写存量', () => {
+    const m = base();
+    delete (m as Partial<AssetMeta>).retarget;
+    expect(codes(validateAssetMeta(m))).toEqual([]);
+  });
+
+  it('挂载块里的坏标定透传为 E_RTCAL_*（路径前缀 /retarget）', () => {
+    const m = base();
+    m.retarget = {
+      calibration: {
+        schemaVersion: 1,
+        side: 'target',
+        pelvisHeightM: 0,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'declared', confidence: 1 },
+        unitScale: 1,
+        upAxis: 'y',
+        markers: {},
+        rotationBaseline: 'direction',
+      },
+      recipe: null,
+    };
+    const d = validateAssetMeta(m);
+    expect(codes(d)).toContain('E_RTCAL_PELVIS');
+    expect(d.find((x) => x.code === 'E_RTCAL_PELVIS')!.path).toBe('/retarget/calibration/pelvisHeightM');
+  });
+
+  it('JSON 往返：retarget 块存取不丢（保存/重载合同）', () => {
+    const m = base();
+    m.retarget = {
+      calibration: {
+        schemaVersion: 1,
+        side: 'source',
+        pelvisHeightM: 0.98,
+        supportPlane: { origin: [0, 0, 0], normal: [0, 1, 0], source: 'fitted', confidence: 0.9 },
+        unitScale: 0.01,
+        upAxis: 'y',
+        markers: { 'LeftFoot.ball': { bone: 'LeftFoot', offset: [0, -0.03, 0.1], origin: 'manual' } },
+        rotationBaseline: 'direction',
+      },
+      recipe: null,
+    };
+    const round = JSON.parse(JSON.stringify(m)) as AssetMeta;
+    expect(round).toEqual(m);
+    expect(isAssetMetaValid(round)).toBe(true);
+  });
+});

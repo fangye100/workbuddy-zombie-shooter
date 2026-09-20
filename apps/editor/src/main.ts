@@ -31,17 +31,25 @@ import type { BindAnimationInput, BindExportStats } from './services/binding/bin
 import type { FitResult, JointPositions } from './services/binding/binding-math';
 import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
-import { summarizeMatch, createSkinState, selectClip, play } from '@aether/render';
+import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
   retargetSummary,
   clipToAnimClip,
   skeletonRestWorldPositions,
-  type RetargetClip,
-  type RetargetOptions,
   type RetargetReport,
+  type RetargetOptions,
 } from './services/binding/retarget';
+import {
+  RetargetSession,
+  type RetargetAnimPayload,
+  type RetargetSidecarStore,
+} from './services/binding/retarget-session';
+import {
+  RetargetWorkbench,
+  type RetargetWorkbenchState,
+} from './services/binding/retarget-workbench';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -1700,8 +1708,8 @@ async function boot(): Promise<void> {
   /** 一次绑定会话的素材：源网格（**当前姿态**）+ 索引 + 原始 baseColor 贴图 */
   interface BindingSession {
     name: string;
-    vertices: Float32Array;
-    indices: Uint32Array;
+    vertices: Float32Array<ArrayBuffer>;
+    indices: Uint32Array<ArrayBuffer>;
     image: Blob | null;
   }
   let bindingSession: BindingSession | null = null;
@@ -1712,12 +1720,38 @@ async function boot(): Promise<void> {
   let lastAssetPath: string | null = null;
 
   /**
-   * 已重定向的动画（**骨名**为键，还没绑到任何具体骨架上）。
-   *
-   * 这正是「通用」的关键：重定向的产物与骨架解耦，因此同一份 BVH 既能导进
-   * 绑定面板正在做的 T-pose GLB，也能直接挂到场景里任意一个已绑定模型上。
+   * 重定向会话（MR-06）：源 / 目标 / 标定 / 配方 / 结果统一由 session 管理，
+   * 两入口（绑定面板「载入动作」/ 层级「应用动画」）汇入同一会话。
+   * `animClip` 是会话**烘焙产物**（骨名为键、与骨架解耦）——导出与挂载共用同一份，
+   * 与预览同版本（session.requireResult 守门）；`animReport` 只是 L0 换基映射诊断
+   * （对齐角 / 映射表），不参与求解。
    */
-  let animClip: RetargetClip | null = null;
+  const retargetStore: RetargetSidecarStore = {
+    read: async (p) => {
+      const r = await readProjectFile(p);
+      return r.ok
+        ? { ok: true, json: (r.json && typeof r.json === 'object' ? r.json : null) as Record<string, unknown> | null }
+        : { ok: false, json: null, error: r.error ?? `HTTP ${r.status}` };
+    },
+    patch: async (p, patchBody) => {
+      const r = await writeProjectFile(p, { patch: patchBody });
+      return r.ok ? { ok: true } : { ok: false, error: r.error ?? `HTTP ${r.status}` };
+    },
+  };
+  const retargetSession = new RetargetSession(retargetStore);
+  let retargetWorkbench: RetargetWorkbench | null = null;
+  /** 当前入口：binding = 绑定面板 T-pose（导出动画），object = 场景物体（应用到角色） */
+  let retargetEntry: 'binding' | 'object' = 'binding';
+  let retargetTargetObject: SceneObject | null = null;
+  let previewFrame = 0;
+  /** 标定 sidecar 路径（工作台输入框的真值在 main，面板只回显） */
+  let retargetCalSrcPath = '';
+  let retargetCalTgtPath = '';
+  /** 上一次自动填入的源 sidecar 缺省值（用户手改过的路径不被下一次缺省值覆盖） */
+  let previousCalSrcDefault = '';
+  /** 一次性通知（如载入失败但已保留上一份结果）；下一次成功操作清除 */
+  let retargetNotice: string | null = null;
+  let animClip: RetargetAnimPayload | null = null;
   let animReport: RetargetReport | null = null;
 
   // ── 右键菜单：资产库与层级面板共用一套 DOM 与关闭逻辑 ──
@@ -1992,97 +2026,434 @@ async function boot(): Promise<void> {
     );
   }
 
-  /** 绑定面板侧栏的诊断 HTML：一句话看清这次重定向发生了什么 */
-  function animInfoHtml(r: RetargetReport): string {
+  /** 绑定面板侧栏的诊断 HTML：L0 映射诊断 + 会话状态，一句话看清这次重定向发生了什么 */
+  function animInfoHtml(): string {
     const row = (k: string, v: string): string =>
       `<div class="bd-row"><span class="bd-dim">${k}</span> ${v}</div>`;
-    const out: string[] = [`<div><b>${escapeHtml(r.clipName)}</b></div>`];
-    out.push(row('帧', `${r.frameCount} @ ${r.fps.toFixed(1)}fps · ${r.duration.toFixed(2)}s`));
+    const out: string[] = [];
+    const r = animReport;
+    const sum = retargetSession.summary();
+    if (r !== null) {
+      out.push(`<div><b>${escapeHtml(r.clipName)}</b></div>`);
+      out.push(row('帧', `${r.frameCount} @ ${r.fps.toFixed(1)}fps · ${r.duration.toFixed(2)}s`));
+      out.push(
+        row(
+          '骨',
+          `${r.mapped.length} 已映射` +
+            (r.missingBones.length > 0
+              ? ` · <span class="bd-warn">缺 ${escapeHtml(r.missingBones.join(' '))}</span>`
+              : ''),
+        ),
+      );
+      out.push(row('对齐', `最大 ${r.maxAlignAngleDeg.toFixed(2)}°`));
+      out.push(row('缩放', `${r.skeletonScale.toFixed(4)} · 源 ${r.srcUpAxis}-up`));
+      if (r.unmatchedBvh.length > 0) {
+        const list = r.unmatchedBvh.slice(0, 6).join(' ');
+        out.push(row('未用', escapeHtml(list) + (r.unmatchedBvh.length > 6 ? ' …' : '')));
+      }
+      for (const w of r.warnings) out.push(row('提示', `<span class="bd-warn">${escapeHtml(w)}</span>`));
+    }
+    const statusLabel: Record<string, string> = {
+      idle: '未载入', ready: '可生成', pass: '通过', partial: '部分完成', failed: '生成失败', stale: '结果待更新',
+    };
     out.push(
       row(
-        '骨',
-        `${r.mapped.length} 已映射` +
-          (r.missingBones.length > 0
-            ? ` · <span class="bd-warn">缺 ${escapeHtml(r.missingBones.join(' '))}</span>`
-            : ''),
+        '管线',
+        `<span class="${sum.status === 'pass' ? 'bd-ok' : 'bd-warn'}">${statusLabel[sum.status] ?? sum.status}</span>` +
+          (sum.coverage.length > 0 ? ` · 覆盖 ${escapeHtml(sum.coverage.join('/'))}` : ''),
       ),
     );
-    out.push(row('对齐', `最大 ${r.maxAlignAngleDeg.toFixed(2)}°`));
-    out.push(row('缩放', `${r.skeletonScale.toFixed(4)} · 源 ${r.srcUpAxis}-up`));
-    if (r.unmatchedBvh.length > 0) {
-      const list = r.unmatchedBvh.slice(0, 6).join(' ');
-      out.push(row('未用', escapeHtml(list) + (r.unmatchedBvh.length > 6 ? ' …' : '')));
+    if (animClip === null && sum.hasSource) {
+      out.push(row('产物', '<span class="bd-warn">无烘焙轨道（求解/烘焙失败，见重定向工作台）</span>'));
     }
-    for (const w of r.warnings) out.push(row('提示', `<span class="bd-warn">${escapeHtml(w)}</span>`));
     return out.join('');
   }
 
   /**
-   * 重定向一份 BVH 文本并缓存为 `animClip`（**骨名**为键，与具体骨架解耦）。
-   *
-   * @param targetPositions 目标骨架的 T-pose 关节世界位置，用于算根位移缩放。
-   *                        null = 退回 HumanIK 模板（姿势仍对，缩放按 1.7 m 模板算）。
+   * L0 换基映射诊断（对齐角 / 映射表 / 根通道）——侧栏与冒烟断言的数据源。
+   * 动画产物**不再**来自这条路径：求解 / 接触 / 烘焙全部走 retarget-session 管线。
    */
-  function retargetInto(
+  function l0MappingReport(
     text: string,
     clipName: string,
     targetPositions: JointPositions | null,
   ): RetargetReport {
     const opts: RetargetOptions = { clipName };
     if (targetPositions !== null) opts.targetPositions = targetPositions;
-    const res = retargetBvh(parseBvh(text), opts);
-    animClip = res.clip;
-    animReport = res.report;
-    return res.report;
+    return retargetBvh(parseBvh(text), opts).report;
+  }
+
+  /** 会话求解 → 烘焙产物缓存（animClip）→ 工作台 / 侧栏刷新。失败时 animClip 置空。 */
+  function solveAndRefresh(): void {
+    // 入口 A 的 fit 在绑定面板里随时可被拖改：求解前先同步目标，
+    // 解的一定是当前 fit（有变 → bump 失效 → 本次求解即重算）
+    if (retargetEntry === 'binding' && binding !== null) {
+      const sync = retargetSession.syncTarget({
+        fitPositions: binding.currentFit().tposePositions,
+        name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
+      });
+      // PR 复审 P1：fit 构建失败（invalid）不得继续求解——否则解的是旧目标，
+      // 与绑定面板显示的 fit 错配。拦下并保留上一份结果。
+      if (sync.state === 'invalid') {
+        retargetNotice = `目标同步失败：${sync.diagnostics[0]?.message ?? 'MRS'}（已保留上一份结果，请修正绑定 T-pose 后重试）`;
+        panel.setModelInfo(`生成被拦截：${retargetNotice}`);
+        updateRetargetWorkbench();
+        return;
+      }
+    }
+    const outcome = retargetSession.solve();
+    retargetNotice = null; // 求解完成（含失败：失败信息走诊断与 lastFailureCode）
+    animClip = null;
+    const baked = retargetSession.bake();
+    if (baked.ok) {
+      animClip = retargetSession.toAnimPayload(
+        baked.tracks,
+        retargetSession.sourceInfo()?.clipName ?? 'retargeted',
+      );
+    }
+    // 版本一致性（UX 复审 P1）：入口 B 重新生成成功后**自动重挂载**新轨道并恢复播放——
+    // 时间轴 scrub/播放驱动的蒙皮角色永远是当前版本，不再需要手动再点「应用到角色」
+    let autoApplied = false;
+    if (
+      outcome.status !== 'failed' && animClip !== null &&
+      retargetEntry === 'object' && retargetTargetObject !== null
+    ) {
+      autoApplied = applyAnimToObject(retargetTargetObject) !== null;
+    }
+    if (binding !== null && retargetEntry === 'binding') {
+      binding.setAnimationInfo(animInfoHtml());
+    }
+    const sum = retargetSession.summary();
+    if (outcome.status === 'failed') {
+      panel.setModelInfo(`重定向失败（${sum.lastFailureCode ?? 'MRC'}）：上一份可用结果已保留，详见工作台诊断`);
+    } else {
+      panel.setModelInfo(
+        `动画已重定向：${sum.status === 'pass' ? '通过' : '部分完成'} · ` +
+          `${sum.frames ?? 0} 帧 · 覆盖 ${sum.coverage.join('/') || '自由运动'}` +
+          (autoApplied && retargetTargetObject !== null ? ` · 新轨道已应用到 ${retargetTargetObject.name}` : '') +
+          (animReport !== null ? ` · ${retargetSummary(animReport)}` : ''),
+      );
+    }
+    console.log('[动画] 会话求解完成', {
+      status: sum.status,
+      coverage: sum.coverage,
+      metrics: sum.metrics,
+      hasPayload: animClip !== null,
+      autoApplied,
+    });
+    updateRetargetWorkbench();
+  }
+
+  /** 把当前会话状态快照灌进工作台（含当前帧的源 / 目标正视投影线段） */
+  function updateRetargetWorkbench(): void {
+    if (retargetWorkbench === null || !retargetWorkbench.isOpen()) return;
+    const sum = retargetSession.summary();
+    const frames = sum.frames ?? 0;
+    if (previewFrame >= frames) previewFrame = Math.max(0, frames - 1);
+
+    // 源骨架线段（HumanIK 名的父链关系）
+    let sourceSegments: RetargetWorkbenchState['sourceSegments'] = null;
+    const srcPos = retargetSession.sourceFramePositions(previewFrame);
+    if (srcPos !== null) {
+      const lines: Array<readonly [number, number, number, number]> = [];
+      for (const bone of Object.keys(srcPos)) {
+        const parent = retargetSession.sourceParentOf(bone);
+        if (parent === null || srcPos[parent] === undefined) continue;
+        const a = srcPos[bone]!;
+        const b = srcPos[parent]!;
+        lines.push([b[0], b[1], a[0], a[1]]);
+      }
+      sourceSegments = lines;
+    }
+
+    // 目标骨架线段 + 接触标记（来自当前结果的第 previewFrame 帧）
+    let targetSegments: RetargetWorkbenchState['targetSegments'] = null;
+    let markers: RetargetWorkbenchState['markers'] = [];
+    const view = retargetSession.resultFrameView(previewFrame);
+    const skelView = retargetSession.targetSkeletonView();
+    if (view !== null && skelView !== null) {
+      const lines: Array<readonly [number, number, number, number]> = [];
+      for (const bone of skelView.order) {
+        const parent = skelView.parentOf(bone);
+        if (parent === null) continue;
+        const a = view.bonePos[bone];
+        const b = view.bonePos[parent];
+        if (a === undefined || b === undefined) continue;
+        lines.push([b[0], b[1], a[0], a[1]]);
+      }
+      targetSegments = lines;
+      markers = Object.keys(skelView.markers)
+        .map((id) => {
+          const w = view.markerWorld(id);
+          return w === null ? null : ([w[0], w[1], id] as const);
+        })
+        .filter((v): v is readonly [number, number, string] => v !== null);
+    }
+
+    // 两视口统一包围盒（同尺度对比）
+    let bounds: RetargetWorkbenchState['bounds'] = null;
+    const all = [...(sourceSegments ?? []), ...(targetSegments ?? [])];
+    if (all.length > 0) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const [x1, y1, x2, y2] of all) {
+        minX = Math.min(minX, x1, x2); maxX = Math.max(maxX, x1, x2);
+        minY = Math.min(minY, y1, y2); maxY = Math.max(maxY, y1, y2);
+      }
+      for (const [mx, my] of markers) {
+        minX = Math.min(minX, mx); maxX = Math.max(maxX, mx);
+        minY = Math.min(minY, my); maxY = Math.max(maxY, my);
+      }
+      bounds = { minX, maxX, minY, maxY };
+    }
+
+    retargetWorkbench.update({
+      summary: sum,
+      source: retargetSession.sourceInfo(),
+      frame: previewFrame,
+      sourceSegments,
+      targetSegments,
+      markers,
+      bounds,
+      groundY: skelView?.planeY ?? null,
+      canApply: retargetEntry === 'object' && retargetTargetObject !== null,
+      canExport: retargetEntry === 'binding' && binding !== null,
+      entry: retargetEntry,
+      calSrcPath: retargetCalSrcPath,
+      calTgtPath: retargetCalTgtPath,
+      notice: retargetNotice,
+    });
+  }
+
+  /** 打开（或复用）工作台。entry 决定操作区的「应用到角色 / 导出动画」语义。 */
+  function openRetargetWorkbench(entry: 'binding' | 'object', obj: SceneObject | null): void {
+    // 换入口/换目标时，旧的入口 B 物体可能被上次 scrub 暂停——先恢复它的自动播放
+    if (retargetTargetObject !== null && retargetTargetObject !== obj && retargetTargetObject.skinState !== null) {
+      play(retargetTargetObject.skinState);
+    }
+    retargetEntry = entry;
+    retargetTargetObject = obj;
+    if (retargetWorkbench === null) {
+      const dock = document.getElementById('retarget-dock');
+      if (dock === null) return;
+      retargetWorkbench = new RetargetWorkbench(dock, {
+        onLoadBvh: () => pickBvhFile((t, n) => reloadBvhIntoSession(t, n)),
+        onSolve: () => solveAndRefresh(),
+        onApply: () => applyCurrentToTargetObject(),
+        onExport: () => void exportAnimGlb(),
+        onSpaceModeChange: (mode) => {
+          retargetSession.updateRecipeSettings({ spaceMode: mode });
+          // 状态立即变「结果待更新」：侧栏同步刷新（管线行），旧结果由消费点守门拦截
+          if (binding !== null && retargetEntry === 'binding') {
+            binding.setAnimationInfo(animInfoHtml());
+          }
+          updateRetargetWorkbench();
+        },
+        onRootMotionChange: (mode) => {
+          // 纠正动作位移声明（覆盖 buildSourceMotion 的根模式分类）→ 重采样 + 待更新
+          const r = retargetSession.setSourceRootMotion(mode);
+          retargetNotice = r.ok ? null : (r.diagnostics[0]?.message ?? '动作位移声明不可用');
+          if (binding !== null && retargetEntry === 'binding') {
+            binding.setAnimationInfo(animInfoHtml());
+          }
+          updateRetargetWorkbench();
+        },
+        onCalPathInput: (side, path) => {
+          if (side === 'source') retargetCalSrcPath = path;
+          else retargetCalTgtPath = path;
+          // 立即重渲染：路径从空变有效后「载入」按钮必须马上可用（UX 复审 P2）
+          updateRetargetWorkbench();
+        },
+        onCalAction: (side, action, path) => void handleCalAction(side, action, path),
+        onFrameChange: (f) => {
+          previewFrame = f;
+          seekAppliedObjectToFrame(f);
+          updateRetargetWorkbench();
+        },
+        onClose: () => {
+          retargetWorkbench?.close();
+          resumeAppliedObjectPlayback();
+        },
+      });
+    }
+    previewFrame = 0;
+    const srcInfo = retargetSession.sourceInfo();
+    if (srcInfo !== null) {
+      // 源 sidecar 缺省 = BVH 样材目录约定；用户可在输入框改（编辑后不再被默认值覆盖）
+      retargetCalSrcPath = retargetCalSrcPath !== '' && retargetCalSrcPath !== previousCalSrcDefault
+        ? retargetCalSrcPath
+        : `assets/characters/_tools/${srcInfo.clipName}.bvh.meta.json`;
+    }
+    previousCalSrcDefault = retargetCalSrcPath;
+    retargetCalTgtPath = entry === 'binding' ? (currentBindingMetaPath ?? '') : '';
+    retargetWorkbench.open();
+    updateRetargetWorkbench();
+  }
+
+  /** 标定 sidecar 载入 / 保存（工作台「角色标定」分区的动作） */
+  async function handleCalAction(
+    side: 'source' | 'target',
+    action: 'load' | 'save',
+    path: string,
+  ): Promise<void> {
+    if (path === '') {
+      retargetNotice = `请先填写${side === 'source' ? '源' : '目标'}标定的 sidecar 路径`;
+      updateRetargetWorkbench();
+      return;
+    }
+    if (action === 'load') {
+      const r = await retargetSession.loadCalibrationFromMeta(side, path);
+      retargetNotice = r.ok
+        ? `已从 ${path} 载入${side === 'source' ? '源' : '目标'}标定（结果待更新，请重新生成）`
+        : (r.diagnostics[0]?.message ?? `载入失败：${path}`);
+      if (binding !== null && retargetEntry === 'binding') {
+        binding.setAnimationInfo(animInfoHtml());
+      }
+      updateRetargetWorkbench();
+      return;
+    }
+    const r = await retargetSession.saveCalibrationToMeta(side, path);
+    retargetNotice = r.ok ? `已保存${side === 'source' ? '源' : '目标'}标定到 ${path}` : (r.error ?? '保存失败');
+    updateRetargetWorkbench();
+  }
+
+  /**
+   * 时间轴驱动真实角色（P1-3 的最小闭环）：入口 B 已应用动画的物体暂停自动播放、
+   * seek 到当前帧——工作台预览与主视口蒙皮角色逐帧对应。最终蒙皮播放即「应用到角色」
+   * 后的主视口动画；工作台双视口是求解器世界投影（诊断用），不冒充蒙皮验收。
+   */
+  function seekAppliedObjectToFrame(frame: number): void {
+    const obj = retargetTargetObject;
+    if (obj === null || obj === undefined || obj.skinState === null) return;
+    const times = animClip !== null ? animClip.times : null;
+    if (times === null || times.length === 0) return;
+    const t = frame < times.length ? times[frame]! : times[times.length - 1]!;
+    pause(obj.skinState);
+    seek(obj.skinState, t);
+    hudDirty = true;
+  }
+
+  /** 关工作台时恢复场景角色的自动播放（scrub 期间被暂停） */
+  function resumeAppliedObjectPlayback(): void {
+    const obj = retargetTargetObject;
+    if (obj !== null && obj !== undefined && obj.skinState !== null) play(obj.skinState);
+  }
+
+  /** 工作台内换一份 BVH（保留当前目标 / 入口语义） */
+  function reloadBvhIntoSession(text: string, clipName: string): void {
+    const fit = retargetEntry === 'binding' && binding !== null
+      ? binding.currentFit().tposePositions
+      : null;
+    const obj = retargetEntry === 'object' ? retargetTargetObject : null;
+    if (retargetEntry === 'binding' && binding !== null) {
+      loadBvhForBinding(text, clipName);
+    } else if (obj !== null && obj !== undefined) {
+      loadBvhForObject(text, clipName, obj);
+    } else if (fit !== null) {
+      loadBvhForBinding(text, clipName);
+    }
   }
 
   function clearAnim(): void {
     animClip = null;
     animReport = null;
+    previewFrame = 0;
+    retargetWorkbench?.close();
   }
 
-  /** 入口 A：绑定面板「载入 BVH…」—— 目标骨架就是面板里那个 T-pose */
+  /** 入口 A：绑定面板「载入动作」—— 目标骨架就是面板拟合的那个 T-pose */
   function loadBvhForBinding(text: string, clipName: string): RetargetReport | null {
     if (binding === null) return null;
     try {
-      const r = retargetInto(text, clipName, binding.currentFit().tposePositions);
-      binding.setAnimationInfo(animInfoHtml(r));
-      panel.setModelInfo(`动画已重定向：${retargetSummary(r)}`);
-      console.log('[动画] 重定向完成', r);
-      return r;
+      const report = l0MappingReport(text, clipName, binding.currentFit().tposePositions);
+      // PR 复审 P2：源+目标成对载入——任一失败回滚源快照，旧结果保持新鲜可消费
+      const sourceSnap = retargetSession.snapshotSourceState();
+      const load = retargetSession.loadSourceBvh(text, clipName);
+      if (!load.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      }
+      const tgt = retargetSession.setTarget({
+        fitPositions: binding.currentFit().tposePositions,
+        name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
+      });
+      if (!tgt.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      }
+      // 源+目标都成功才提交映射诊断（PR#5 评审 P2）：提交早于 setTarget 时，目标侧
+      // 失败的回滚不覆盖 animReport，侧栏会把保留的旧结果标成坏文件的名字与统计
+      animReport = report;
+      openRetargetWorkbench('binding', null);
+      solveAndRefresh();
+      return report;
     } catch (err) {
-      clearAnim();
-      binding.setAnimationInfo(null);
-      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      // 载入失败**不破坏已有工作状态**（UX 审核 P1）：会话源/结果未动（loadSourceBvh
+      // 失败先于状态变更），上一份可用结果与工作台保持打开，只亮一次性通知
+      retargetNotice = `BVH 载入失败：${String(err)}（已保留上一份结果）`;
+      panel.setModelInfo(`BVH 载入失败：${String(err)}（已保留上一份结果）`);
+      if (binding !== null && animReport !== null) binding.setAnimationInfo(animInfoHtml());
+      updateRetargetWorkbench();
       console.error('[动画] 重定向失败', err);
       return null;
     }
   }
 
   /**
-   * 入口 B：层级面板「应用动画 (BVH)…」—— 目标骨架是**场景里这个模型自己的**。
-   *
-   * 缩放按它自己的 rest 腿长算（不是模板身高），所以 2.05 m 的 E-04 接到
-   * 1.7 m 模板录的动捕上根位移不会被压扁。
+   * 入口 B：层级面板「应用动画」—— 目标骨架是**场景里这个模型自己的**。
+   * 载入即应用（保持既有 UX：用户挑完文件就看到动画挂上并播放），
+   * 工作台同步打开供看质量 / 修标定 / 重生成。
    */
   function loadBvhForObject(text: string, clipName: string, obj: SceneObject): RetargetReport | null {
     if (obj.skeleton === null) return null;
     try {
-      const r = retargetInto(text, clipName, skeletonRestWorldPositions(obj.skeleton));
+      const report = l0MappingReport(text, clipName, skeletonRestWorldPositions(obj.skeleton));
+      const sourceSnap = retargetSession.snapshotSourceState();
+      const load = retargetSession.loadSourceBvh(text, clipName);
+      if (!load.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(load.diagnostics[0]?.message ?? '源采样失败');
+      }
+      const tgt = retargetSession.setTarget({ skeleton: obj.skeleton, name: obj.name, assetKey: obj });
+      if (!tgt.ok) {
+        retargetSession.rollbackSourceTo(sourceSnap);
+        throw new Error(tgt.diagnostics[0]?.message ?? '目标骨架构建失败');
+      }
+      animReport = report; // 同入口 A：源+目标都成功才提交（目标失败时侧栏保持旧文件的诊断）
+      openRetargetWorkbench('object', obj);
+      solveAndRefresh();
       const applied = applyAnimToObject(obj);
       if (applied === null) return null;
       panel.setModelInfo(
         `${obj.name} 已应用 ${clipName} · ${applied.tracks} 条轨道 · ` +
-          `片段 #${applied.clip} · ${retargetSummary(r)}`,
+          `片段 #${applied.clip} · ${retargetSummary(report)}`,
       );
-      console.log('[动画] 已挂到场景物体', { obj: obj.name, ...applied, report: r });
-      return r;
+      console.log('[动画] 已挂到场景物体', { obj: obj.name, ...applied, report });
+      return report;
     } catch (err) {
-      clearAnim();
-      panel.setModelInfo(`BVH 载入失败：${String(err)}`);
+      // 同入口 A：失败不破坏已有工作状态
+      retargetNotice = `BVH 载入失败：${String(err)}（已保留上一份结果）`;
+      panel.setModelInfo(`BVH 载入失败：${String(err)}（已保留上一份结果）`);
+      updateRetargetWorkbench();
       console.error('[动画] 重定向失败', err);
       return null;
     }
+  }
+
+  /** 工作台「应用到角色」：把当前会话产物挂到入口 B 的目标物体 */
+  function applyCurrentToTargetObject(): void {
+    const obj = retargetTargetObject;
+    if (obj === null || obj === undefined) {
+      panel.setModelInfo('应用失败：入口目标物体不存在（从层级右键「应用动画」重新进入）');
+      return;
+    }
+    const applied = applyAnimToObject(obj);
+    if (applied === null) return;
+    panel.setModelInfo(
+      `${obj.name} 已应用 · ${applied.tracks} 条轨道 · 片段 #${applied.clip}`,
+    );
+    hudDirty = true;
   }
 
   /** 隐藏 file input：BVH 没有别的入口，只能从磁盘挑 */
@@ -2107,10 +2478,46 @@ async function boot(): Promise<void> {
     input.click();
   }
 
-  /** 导出「T-pose 网格 + 骨架 + 已重定向动画」的 GLB */
-  async function exportAnimGlb(): Promise<BindExportStats | null> {
+  /**
+   * 消费守门（导出 / 挂载共用）：stale、无结果、或入口 A 的 fit 已被拖改 → 拒绝并提示。
+   * 这是 session.requireResult 之外的第二道防线——绑定面板自带的「导出动画」按钮
+   * 不感知会话状态，真正的防线必须在消费点。
+   */
+  function guardedAnimForConsumption(): RetargetAnimPayload | null {
+    const guard = retargetSession.requireResult();
+    if (!guard.ok) {
+      panel.setModelInfo(`导出/应用被拦截：${guard.message}`);
+      return null;
+    }
+    if (retargetEntry === 'binding' && binding !== null) {
+      // fit 在求解后被拖改 → 解与导出骨架错配，必须重新生成
+      const sync = retargetSession.syncTarget({
+        fitPositions: binding.currentFit().tposePositions,
+        name: bindingSession?.name ?? 'binding',
+        assetKey: bindingSession ?? undefined,
+      });
+      if (sync.state === 'changed') {
+        panel.setModelInfo('导出被拦截：目标（绑定 T-pose）在生成后被修改，请重新「生成预览」再导出');
+        return null;
+      }
+      if (sync.state === 'invalid') {
+        panel.setModelInfo(`导出被拦截：目标骨架构建失败（${sync.diagnostics[0]?.message ?? 'MRS'}）`);
+        return null;
+      }
+    }
     const c = animClip;
-    if (c === null || binding === null) return null;
+    if (c === null) {
+      panel.setModelInfo('导出被拦截：没有烘焙产物（求解/烘焙失败，见重定向工作台诊断）');
+      return null;
+    }
+    return c;
+  }
+
+  /** 导出「T-pose 网格 + 骨架 + 会话烘焙动画」的 GLB（与预览同版本，双守门） */
+  async function exportAnimGlb(): Promise<BindExportStats | null> {
+    if (binding === null) return null;
+    const c = guardedAnimForConsumption();
+    if (c === null) return null;
     const anim: BindAnimationInput = {
       name: c.name,
       times: c.times,
@@ -2121,12 +2528,18 @@ async function boot(): Promise<void> {
   }
 
   /**
-   * 把已重定向的动画挂到一个**场景里已绑定的模型**上。
+   * 把会话烘焙的动画挂到一个**场景里已绑定的模型**上。
    *
    * 这是「通用」的另一半：不要求模型来自绑定面板，只要骨架命名能对上 HumanIK
    * （rig_character.py 产物、Mixamo 导出、绑定面板导出的 GLB 都满足）。
+   * 同名片段先移除再追加——工作台里反复「应用」不堆叠重复片段。
    */
   function applyAnimToObject(obj: SceneObject): { tracks: number; clip: number } | null {
+    const guard = retargetSession.requireResult();
+    if (!guard.ok) {
+      panel.setModelInfo(`应用被拦截：${guard.message}`);
+      return null;
+    }
     const c = animClip;
     if (c === null || obj.skeleton === null) return null;
     const clip = clipToAnimClip(c, obj.skeleton);
@@ -2136,7 +2549,7 @@ async function boot(): Promise<void> {
       );
       return null;
     }
-    obj.animations = [...obj.animations, clip];
+    obj.animations = [...obj.animations.filter((a) => a.name !== clip.name), clip];
     obj.skinState = createSkinState(obj.skeleton, obj.animations);
     selectClip(obj.skinState, obj.animations.length - 1);
     play(obj.skinState);
@@ -2211,7 +2624,10 @@ async function boot(): Promise<void> {
     ]);
   };
 
-  window.addEventListener('resize', () => binding?.resize());
+  window.addEventListener('resize', () => {
+    binding?.resize();
+    retargetWorkbench?.resize();
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 顶部菜单栏 Skeleton ▸ 绑定动作（外壳入口；绑定逻辑全在 services/binding）
@@ -2377,10 +2793,11 @@ async function boot(): Promise<void> {
         if (obj === undefined) return null;
         return loadBvhForObject(text, name, obj);
       },
-      /** 导出带动画的 GLB 走一遍全流程（不落盘），返回统计供断言 */
+      /** 导出带动画的 GLB 走一遍全流程（不落盘），返回统计供断言；与用户导出同守门 */
       exportDryRun: async () => {
-        const c = animClip;
-        if (c === null || binding === null) return null;
+        if (binding === null) return null;
+        const c = guardedAnimForConsumption();
+        if (c === null) return null;
         const anim: BindAnimationInput = {
           name: c.name,
           times: c.times,
@@ -2403,6 +2820,19 @@ async function boot(): Promise<void> {
       clear: () => {
         clearAnim();
         binding?.setAnimationInfo(null);
+      },
+      /**
+       * 重定向会话（MR-06）钩子：状态汇总 / 失效标记 / 重新求解。
+       * 与 load/applyTo 共用同一条会话路径——自动化断言的就是用户路径本身。
+       */
+      session: {
+        summary: () => retargetSession.summary(),
+        stale: () => retargetSession.isStale(),
+        solve: () => {
+          solveAndRefresh();
+          return retargetSession.summary();
+        },
+        frameView: (f: number) => retargetSession.resultFrameView(f),
       },
     };
   }
