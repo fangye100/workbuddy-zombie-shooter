@@ -89,7 +89,7 @@
 - CDP 探针：.workbuddy/tmp/light-probe.mjs / closeup-probe.mjs / png-sample.mjs（像素采样——眼睛会被对比度骗）。
 
 ## Retargeting（全文 docs/16/16A/16B；生产 binding/motion-retarget/ + retarget-session/retarget-workbench）
-- 状态：MR-01..06 已交付（16 轮审核全 PASS + 用户侧确认 05058af）；**剩真实 mocap 2m/0.5m 蒙皮验收、首次标定创建 UI（视口拾取）、MR-07/08**。
+- 状态：MR-01..06 已交付并随 PR#5 重新合入 main（f9e1be8，2026-09-20；09-17 曾被强推覆盖事故抹掉）（16 轮审核全 PASS + 用户侧确认 05058af）；**剩真实 mocap 2m/0.5m 蒙皮验收、首次标定创建 UI（视口拾取）、MR-07/08**。
 - 🔴 接触要求 SourceCalibration.markers **显式**足底标记（.heel/.ball 按骨名+部位身份对应）；未标定=不做世界锁脚，不从动画推导。`pelvisHeightM` 契约=骨盆到支撑面**相对量**，任何判据/管线不得再减 planeY。
 - 🔴 标定兼容判据（换骨架停用）：只用**骨盆相对骨架几何**（根 OFFSET/位置通道/世界摆放无关）+ **链推导足类**（3 骨腿链末端骨）逐标记 ±35% 带宽 + **资产归属**（assetKey：入口A=绑定会话、入口B=物体引用；完整标定与单位上下文都不跨资产沿用）。根 OFFSET ≠ 世界骨盆高（有位置通道时采样世界根由通道决定）。
 - 🔴 单位上下文（targetUnitCtx）独立保留：同资产编辑保留、换资产不沿用、cm 推断兜底（人形区间 [0.1,5]m）；setTarget/syncTarget/setTargetCalibration **全事务化**（构建失败完整回滚旧标定）。
