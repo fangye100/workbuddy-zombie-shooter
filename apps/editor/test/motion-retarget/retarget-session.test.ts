@@ -260,17 +260,38 @@ describe('retarget-session 失效与失败不覆盖', () => {
     expect(s.summary().status).toBe('stale');
   });
 
-  it('求解失败不覆盖 lastGood（换错目标 → failed，旧结果仍可看）', () => {
+  it('world-rest 目标标定在准入层被拒绝，且不留残留（复审 P1）', () => {
     const s = new RetargetSession(memStore().store);
     s.loadSourceBvh(walkBvh(), 'walk');
     s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
     const good = s.solve();
     expect(good.status).not.toBe('failed');
 
-    // 目标标定声明 world-rest 基准 → 与 direction 配方冲突 → 管线显式拒绝
+    // world-rest 需要源侧逐骨 rest 世界旋转，BVH 源不提供 → 本会话根本无法执行该基准。
+    // 旧实现「接受标定 + 每次 solve 必然 MRC_BASELINE_MODE_MISMATCH」还把模式粘进单位
+    // 上下文，清标定 / 换源都救不回来——现在必须在准入层拒绝。
     const bad = targetCalibration(1.0);
     bad.rotationBaseline = 'world-rest';
-    expect(s.setTargetCalibration(bad).ok).toBe(true);
+    const r = s.setTargetCalibration(bad);
+    expect(r.ok).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === 'MRS_CAL_BASELINE_UNSUPPORTED')).toBe(true);
+    expect(s.summary().targetCalibrated).toBe(false);
+    // 拒绝不留残留：会话照常解出同一结果（旧实现从这一刻起对该资产永久失败）
+    const after = s.solve();
+    expect(after.status).not.toBe('failed');
+    expect(after.dependencyFingerprint).toBe(good.dependencyFingerprint);
+  });
+
+  it('求解失败不覆盖 lastGood（清掉已绑定配方的标定 → failed，旧结果仍可看）', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    expect(s.setSourceCalibration(sourceCalibration()).ok).toBe(true);
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    const good = s.solve();
+    expect(good.status).not.toBe('failed');
+
+    // 配方已被绑上源标定指纹（R13），此刻清标定 → 下一次 solve 无法与输入对齐 → failed
+    expect(s.setSourceCalibration(null).ok).toBe(true);
     const outcome = s.solve();
     expect(outcome.status).toBe('failed');
     // 失败不覆盖：lastGood 与 lastFailure 分开保留
@@ -484,7 +505,13 @@ describe('retarget-session A16 标定持久化与单侧失效', () => {
     expect(s.setTargetCalibration(newTgt).ok).toBe(true);
     expect(s.isStale()).toBe(true);
     const after = s.solve();
-    expect(after.status).not.toBe('failed');
+    // 标定 h_t 与骨架实测差 5%（仍在准入带宽内）→ 锚点守不住：实测偏差 0.0070m > 限
+    // 0.0021m → 硬接触判 failed、不交付 clip（复审 P2：partial 会被入口 B 自动应用）
+    expect(after.status).toBe('failed');
+    expect(after.clip).toBeNull();
+    expect(after.diagnostics.some((d) => d.code === 'MRQ_ANCHOR')).toBe(true);
+    // 失败不覆盖：上一份可用结果（旧标定 h_t=1.0 那次）仍在
+    expect(s.result()!.dependencyFingerprint).toBe(before.dependencyFingerprint);
     expect(after.dependencyFingerprint).not.toBe(before.dependencyFingerprint); // 结果失效重算
     const recipe = s.recipeJson()!;
     const parsed = JSON.parse(recipe) as { sourceCalibrationFingerprint: string; targetCalibrationFingerprint: string };
@@ -736,9 +763,14 @@ describe('retarget-session 标定判据的坐标规则（三判 P1 反例回归�
     expect(r.state).toBe('changed');
     expect(s.summary().targetCalibrated).toBe(false);
     expect(s.summary().diagnostics.some((d) => d.code === 'MRS_TARGET_CAL_DETACHED')).toBe(true);
-    // 停用后求解用骨架自算 h_t（不再是旧标定的 1.0）；源标定不受影响 → 世界锁脚照常
+    // 停用后求解改用骨架自算 h_t（不再是旧标定的 1.0），而源仍是 1m 骨盆的动作 →
+    // 锚点偏差 0.0679m ≫ 限 0.0030m（管线同时报 MRP_REACH_OUTER「不可达已夹取」）：
+    // 硬接触没兑现 → 如实判 failed 且不交付 clip（复审 P2）。本用例要锁的仍是
+    // 「syncTarget 不得绕过标定兼容检查」，交付状态此刻如实反映几何未兑现。
     const out = s.solve();
-    expect(out.status).not.toBe('failed');
+    expect(out.status).toBe('failed');
+    expect(out.clip).toBeNull();
+    expect(out.diagnostics.some((d) => d.code === 'MRQ_ANCHOR')).toBe(true);
     expect(out.coverage).toContain('world-lock');
   });
 
@@ -1241,5 +1273,75 @@ describe('bakeOutputRigFromSkeleton · mid-chain 非关节中间节点（PR#5 bo
     expect(d.diagnostics.some((x) => x.code === 'MRS_NONJOINT_INTERMEDIATE')).toBe(false);
     const dc = bakeOutputRigFromSkeleton(skeletonWithContainer(tposeWorldPositions()), null, 'fp');
     expect(dc.diagnostics.some((x) => x.code === 'MRS_NONJOINT_INTERMEDIATE')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------- 复审回归（问题二）
+
+/**
+ * 把标准夹具的 `ROOT Hips` 包进一层容器根（OFFSET 0 0 0）——Blender / 3ds Max 导出的
+ * 常规形态（根关节 OFFSET 为 0，骨盆在第二层）。通道数保持自洽：容器接管根的 6 个通道，
+ * Hips 降为 3 个旋转通道；每帧位置取 `px, py−hipsOffsetY, pz`（Hips 世界位置不变）、
+ * Hips 旋转补零（本变体只用于未传 `rot` 的夹具，此时根旋转恒 0）。
+ */
+function withContainerRoot(text: string, hipsOffsetY: number): string {
+  const HIER = 'HIERARCHY\n';
+  const body = text.slice(HIER.length);
+  const at = body.indexOf('MOTION');
+  let hierarchy = body.slice(0, at);
+  const motion = body.slice(at);
+  const rootHead = 'ROOT Hips\n{\n  OFFSET 0 100 0\n  CHANNELS 6 Xposition Yposition Zposition Zrotation Yrotation Xrotation\n';
+  if (!hierarchy.startsWith(rootHead)) throw new Error('夹具形态已变：容器根变体只支持标准夹具头');
+  hierarchy = hierarchy.replace(
+    rootHead,
+    'ROOT RootAbove\n{\n  OFFSET 0 0 0\n  CHANNELS 6 Xposition Yposition Zposition Zrotation Yrotation Xrotation\n' +
+      '  JOINT Hips\n  {\n  OFFSET 0 100 0\n  CHANNELS 3 Zrotation Yrotation Xrotation\n',
+  );
+  // 原根的收尾 } 现在收 Hips，容器根需要再补一个
+  hierarchy = hierarchy.replace(/\n\}\n$/, '\n}\n}\n');
+  const rows = motion.split('\n').map((line, i) => {
+    if (i < 3) return line; // MOTION / Frames / Frame Time
+    const v = line.trim().split(/\s+/).map(Number);
+    if (v.length < 7 || v.some((n) => !Number.isFinite(n))) return line;
+    return [v[0]! - 0, v[1]! - hipsOffsetY, v[2]!, 0, 0, 0, 0, 0, 0, ...v.slice(6)].join(' ');
+  });
+  return HIER + hierarchy + rows.join('\n');
+}
+
+describe('复审回归（问题二）：源骨盆参照 / 目标骨名映射 / world-rest 准入', () => {
+  it('P1：Root → Hips 两层时源标定按「映射到 Hips 的关节」判骨盆高，不被误停用', () => {
+    const container = withContainerRoot(walkBvh(), 100); // cm 制：Hips 偏移 100
+    // 变体自校验：容器只多一个关节，采样几何须与标准夹具逐值一致（否则本回归无效）
+    const plain = sourceRestDirections(parseBvh(walkBvh()), 1);
+    const wrapped = sourceRestDirections(parseBvh(container), 1);
+    expect(Object.keys(wrapped).sort()).toEqual(Object.keys(plain).sort());
+    for (const k of Object.keys(plain)) expect(wrapped[k]).toEqual(plain[k]);
+
+    const s = new RetargetSession(memStore().store);
+    expect(s.loadSourceBvh(container, 'walk-container').ok).toBe(true);
+    // 旧实现把 BVH 根关节（OFFSET 0 0 0）当骨盆 → 骨盆高 0 → 合法标定被判「另一具骨架」、
+    // 载入即静默停用（复审 P1）
+    const r = s.setSourceCalibration(sourceCalibration());
+    expect(r.ok).toBe(true);
+    expect(r.diagnostics.some((d) => d.code === 'MRS_CAL_PELVIS_MISMATCH')).toBe(false);
+    // 两种层级形态共用同一份标定 → 等价可用
+    s.setTarget({ fitPositions: tposeWorldPositions(), name: 'binding-fit' });
+    expect(s.solve().status).not.toBe('failed');
+  });
+
+  it('P2：目标骨名与 HumanIK 不一致 → 显式 MRC_TARGET_BONE_UNMAPPED，不静默交参考姿势', () => {
+    const s = new RetargetSession(memStore().store);
+    s.loadSourceBvh(walkBvh(), 'walk');
+    const base = skeletonFromPositions(tposeWorldPositions());
+    // 只留 Hips 同名（否则被 MRR_NO_HIPS 直接拒），其余骨加前缀：外部骨架的常见形态
+    const renamed = {
+      ...base,
+      jointNames: base.jointNames.map((n) => (n === 'Hips' ? n : `rig:${n ?? ''}`)),
+    };
+    expect(s.setTarget({ skeleton: renamed, name: 'renamed-rig' }).ok).toBe(true);
+    const out = s.solve();
+    expect(out.diagnostics.map((d) => d.code)).toContain('MRC_TARGET_BONE_UNMAPPED');
+    // 骨名缺口属于能力缺口：不得再以 complete 交付（旧实现在此静默退化为参考姿势 + 根位移）
+    expect(out.status).toBe('partial');
   });
 });

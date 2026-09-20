@@ -151,7 +151,8 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
     peakMemoryEstMb: estimateMemoryMb(frames, rig),
   };
 
-  // 判定：硬接触超标 → failed 的候选（pipeline 可因能力缺口降为 partial）
+  // 违例清单：**硬接触类**（anchor/slide/penetration/unevaluable）与**能力缺口类**
+  // （不可达残差 / 未收敛 / 修正跳变 / 摆动相穿透）在下面按类归入 failed 与 partial
   const violations: QualityOutcome['violations'] = [];
   const check = (code: string, message: string, valueM: number, limitM: number): void => {
     if (valueM > limitM) violations.push({ code, message, valueM, limitM });
@@ -173,7 +174,23 @@ export function buildQualityReport(input: QualityInput): QualityOutcome {
     check('MRQ_SWING_PENETRATION', '摆动相穿透', -metrics.minSwingClearanceM, tolerances.penetrationH * hT);
   }
 
-  const status: 'complete' | 'partial' | 'failed' = violations.length === 0 ? 'complete' : 'partial';
+  // 判定（docs/16 §5/§8）：**硬接触承诺**超标 → failed——锚点 / 滑动 / 穿透三项只对
+  // 「已锚定支撑段」测量，它们超标意味着世界锁脚这个承诺本身没兑现；MRQ_ANCHOR_UNEVALUABLE
+  // 意味着约束无法评估（同样不得被当作合格）。这类**几何错误**必须与**能力缺口**在交付
+  // 语义上可区分：旧实现把全部违例一律降为 partial，而 partial 是可消费的（入口 B 的
+  // solveAndRefresh 会自动应用），等于把「姿态已经错了」与「这具骨架够不到」混为一谈，
+  // 也让 pipeline 的 failed 分支成为死代码（复审 P2）。
+  // 能力缺口类保持 partial：docs/16 §8「多接触不可达、不收敛 → 最佳预览 + partial/failed」
+  //「剩余时序违例 return partial」，以及「平面置信度低 → FK 可预览但 partial」。
+  const HARD_CONTACT_CODES: ReadonlySet<string> = new Set([
+    'MRQ_ANCHOR', 'MRQ_SLIDE', 'MRQ_PENETRATION', 'MRQ_ANCHOR_UNEVALUABLE',
+  ]);
+  const status: 'complete' | 'partial' | 'failed' =
+    violations.some((v) => HARD_CONTACT_CODES.has(v.code))
+      ? 'failed'
+      : violations.length === 0
+        ? 'complete'
+        : 'partial';
   return { metrics, status, violations };
 }
 

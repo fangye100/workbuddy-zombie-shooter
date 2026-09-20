@@ -506,7 +506,22 @@ export function computeDirectionBaseline(
     pre[b] = parent === null ? ID : conj(D[parent] ?? ID);
     post[b] = D[b]!;
   }
-  return { mode: 'direction', pre, post, diagnostics: [] };
+  // 静默退化守门（复审 P2）：解算按**源骨名**把运动写进目标骨（buildBaselineLocals 按
+  // source.boneNames 建表、pose-solver 按名查表，未命中即回落 restLocalR）。目标骨架的
+  // 骨名与 HumanIK 模板不一致时，这些骨一处也拿不到运动，结果退化成「参考姿势 + 根位移」，
+  // 而既有诊断全指向源侧（足底标记 / 支撑面），用户会去修源标定而不是修骨架命名。
+  // 这里对「源有该骨、目标骨架没有同名骨」显式告警（模板 / 绑定面板 fit 入口恒为空集）。
+  const diagnostics: RetargetDiagnostic[] = [];
+  const unmapped = Object.keys(input.srcDirections).filter((b) => targetRig.bones[b] === undefined);
+  if (unmapped.length > 0) {
+    const shown = unmapped.slice(0, 3).join('、');
+    diagnostics.push({
+      severity: 'warning',
+      code: 'MRC_TARGET_BONE_UNMAPPED',
+      message: `目标骨架缺少 ${unmapped.length} 根源骨的同名骨（${shown}${unmapped.length > 3 ? ' 等' : ''}）：这些骨的运动无法写入目标，结果会退化为参考姿势 + 根位移。目标骨架的骨名需与 HumanIK 模板一致，或改走绑定面板 fit 入口`,
+    });
+  }
+  return { mode: 'direction', pre, post, diagnostics };
 }
 
 /** 绕轴 twist 分量：四元数向量部分在轴上的投影 + 标量部分，归一化 */
