@@ -32,6 +32,7 @@ import type {
   NodeId,
   RoomVolumeComponent,
   SceneDocument,
+  SceneNodeRuntime,
   SpawnPointComponent,
 } from '@aether/scene';
 
@@ -138,6 +139,42 @@ function aabbToXZ(b: AabbData): { minX: number; maxX: number; minZ: number; maxZ
   };
 }
 
+/** `RoomVolume` / `NavZone` 的 bounds 与世界位置一致性容差（米）——生成器写的是同一份数值 */
+const BOUNDS_NODE_TOL_M = 1e-3;
+
+/**
+ * `RoomVolume` / `NavZone` 的 `bounds` 按**世界** XZ 解释（`aabbToXZ` 直接吃 center/size），
+ * 而同一装载函数里的 `Collider` / `SpawnPoint` 走节点**世界矩阵** —— 这是两套空间假设，
+ * schema 也没有声明 bounds 属于哪个空间。
+ *
+ * 今天不冲突（生成器把房间节点摆在与 bounds 中心相同的位置），但**编辑器里拖动房间节点
+ * 会破了它**：gizmo 写的是 `transform`，bounds 留在原地 → 触发区不动、里面的刷怪点跟着
+ * 走，而玩家侧碰撞照旧生效 —— 静默分家、排查成本极高。这里显式告警（复审 B4）。
+ *
+ * 只在**节点带网格代理**时告警：`instantiateScene` 只渲染 `MeshRenderer`，没有代理的语义
+ * 节点（生成器给导航区就不挂代理）在视口里根本选不中、拖不动，它的 transform 也不被任何
+ * 消费方读取 —— 对它告警等于常年喊狼来了，反而训练大家忽略红灯。
+ *
+ * 返回 null = 一致或不适用；否则返回给作者看的文案（发 diagnostic 由调用方做）。
+ */
+function boundsNodeMismatchMessage(
+  n: SceneNodeRuntime,
+  bounds: AabbData,
+  kindLabel: string,
+): string | null {
+  if (!n.components.some((c) => c.kind === 'MeshRenderer')) return null;
+  const dx = n.world.position[0] - bounds.center[0];
+  const dz = n.world.position[2] - bounds.center[2];
+  const d = Math.hypot(dx, dz);
+  if (d <= BOUNDS_NODE_TOL_M) return null;
+  return (
+    `${kindLabel} 的 bounds 按**世界** XZ 解释（节点变换不参与），但与节点世界位置差了 ${d.toFixed(3)}m：` +
+    `节点 xz=(${n.world.position[0].toFixed(3)}, ${n.world.position[2].toFixed(3)})，` +
+    `bounds 中心 xz=(${bounds.center[0].toFixed(3)}, ${bounds.center[2].toFixed(3)})。` +
+    `当前以 bounds 为准 —— 在视口里拖走该节点不会带上触发区，请同步更新 bounds`
+  );
+}
+
 /**
  * 碰撞体的**世界空间**障碍范围（XZ）。
  *
@@ -241,6 +278,8 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       if (c.kind === 'RoomVolume') {
         const r = c as RoomVolumeComponent;
         const b = aabbToXZ(r.bounds);
+        const mis = boundsNodeMismatchMessage(n, r.bounds, 'RoomVolume');
+        if (mis !== null) warn('W_BOUNDS_NODE_MISMATCH', mis, n.id);
         rooms.push({
           nodeId: n.id,
           name: n.name,
@@ -286,6 +325,17 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           );
         }
 
+        // wave 同理（复审 B6）：它被原样带进 SpawnDesc，但触发时按 `trigger` **全量投放**，
+        // 没有任何"等第 N 波"的语义 —— 作者把 wave 填成 2 会当场整批刷出。与 delaySec
+        // 同一把尺子：读了字段却没有执行语义，就必须明确告知。
+        if (s.wave !== 0) {
+          warn(
+            'W_SPAWN_WAVE_UNSUPPORTED',
+            `wave=${s.wave} 本轮未实现（没有波次推进语义），该刷怪点会在触发时**一次性全量**投放 count=${s.count}`,
+            n.id,
+          );
+        }
+
         spawns.push({
           nodeId: n.id,
           name: n.name,
@@ -325,6 +375,8 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           warn('W_NAV_MULTIPLE', `场景有多个 NavZone，本轮只取第一个（${nav.nodeId}）`, n.id);
           continue;
         }
+        const navMis = boundsNodeMismatchMessage(n, c.bounds, 'NavZone');
+        if (navMis !== null) warn('W_BOUNDS_NODE_MISMATCH', navMis, n.id);
         const b = aabbToXZ(c.bounds);
         nav = {
           nodeId: n.id,

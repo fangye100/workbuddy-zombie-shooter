@@ -543,6 +543,12 @@ async function boot(): Promise<void> {
       panel.params.pointColor = r.pointLight.color;
       panel.params.pointIntensity = r.pointLight.intensity;
       if (r.pointLight.range > 0) panel.params.pointRange = r.pointLight.range;
+      // 位置同样来自场景（复审 B5）：过去引擎按固定轨道摆放，场景声明的位置被无视
+      panel.params.pointPosition = [
+        r.pointLight.position[0],
+        r.pointLight.position[1],
+        r.pointLight.position[2],
+      ];
     }
     panel.syncAll();
     // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源

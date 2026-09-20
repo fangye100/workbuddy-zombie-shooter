@@ -164,10 +164,13 @@ function detectOneMarker(
     } else if (inContact) {
       worstSpeed = Math.max(worstSpeed, v[f]!);
       maxHeight = Math.max(maxHeight, d[f]!);
-      if (f === frames - 1) {
-        pushSegment(out, times, m, start, f, det, hSrcM, worstSpeed, maxHeight, diagnostics);
-        start = -1;
-      }
+    }
+    // 收尾：段跨到最后一帧仍未退出（或**恰好在最后一帧才进入**）→ 一样要出段/出诊断。
+    // 复盘 P3：这条收尾过去只挂在「仍在接触」分支里，于是"只存在于最后一帧的接触"
+    // 被静默丢掉 —— 既不出段也不出 MRC_SEGMENT_TOO_SHORT，与同一逻辑下其它短段不一致。
+    if (start >= 0 && f === frames - 1) {
+      pushSegment(out, times, m, start, f, det, hSrcM, worstSpeed, maxHeight, diagnostics);
+      start = -1;
     }
   }
   return out;

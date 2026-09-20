@@ -144,5 +144,22 @@ describe('旋转分配（A06）', () => {
     expect(got[0]).toBeCloseTo(cur[0], 9);
     expect(got[1]).toBeCloseTo(cur[1], 9);
     expect(got[2]).toBeCloseTo(cur[2], 9);
+
+    // 🔴 判别力（复审 P3）：上面三行是**代数恒真** —— 合成里 conj(parent)·parent 必然消去，
+    // 于是"父任意"把最需要判别的维度变成了恒等式：把实现改成 `return swing`（漏掉
+    // conj(parent)，局部值直接等于世界值）它照样全绿。真正要拦住的就是那一步，所以再钉：
+    // 不同父旋转必须给出**不同**的局部值，且恰好差一个 conj(parent)。
+    const localIdentityParent = alignBoneRotation([0, 0, 0, 1], rest, cur);
+    const expectedLocal = quatMul([-parent[0], -parent[1], -parent[2], parent[3]], localIdentityParent);
+    for (let k = 0; k < 4; k++) expect(local[k]).toBeCloseTo(expectedLocal[k]!, 9);
+    // 局部值必须**真的**与"世界值"（= 单位父下的局部值）不同：漏 conj 时两者逐位相等。
+    // 注意用四元数的整体距离，不要逐分量比 —— 绕 Z 轴旋转只有 z 分量会变，逐分量比会误判。
+    const gap = Math.hypot(
+      local[0]! - localIdentityParent[0]!,
+      local[1]! - localIdentityParent[1]!,
+      local[2]! - localIdentityParent[2]!,
+      local[3]! - localIdentityParent[3]!,
+    );
+    expect(gap).toBeGreaterThan(1e-3);
   });
 });

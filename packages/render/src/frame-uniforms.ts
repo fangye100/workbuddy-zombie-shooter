@@ -53,7 +53,13 @@ export interface LightPackParams {
   pointColor: string;
   pointIntensity: number;
   pointRange: number;
-  pointOrbit: boolean;
+  /**
+   * 点光的**世界位置**（米）。真源是场景里的 Light 节点（声明了就用它的世界坐标）。
+   *
+   * 复审 B5：这里**曾经**按 `time` 算一条固定轨道（半径 2.6 绕圈）—— 引擎侧动画既不可被
+   * 场景作者控制，又会盖过场景声明的位置（AGENTS.md §2.1：写死的灯光参数即 bug）。
+   */
+  pointPosition: readonly [number, number, number];
 
   fogColor: string;
   fogDensity: number;
@@ -183,10 +189,10 @@ export function packLights(dst: Float32Array, p: LightPackParams, time: number):
   dst[30] = fog[2];
   dst[31] = p.fogDensity;
 
-  const t = p.pointOrbit ? time * 0.8 : 0;
-  dst[32] = Math.cos(t) * 2.6;
-  dst[33] = 1.4;
-  dst[34] = Math.sin(t) * 2.6;
+  // 点光位置 = 场景数据（Light 节点的世界坐标），原样写入，不做任何引擎侧动画
+  dst[32] = p.pointPosition[0];
+  dst[33] = p.pointPosition[1];
+  dst[34] = p.pointPosition[2];
   dst[35] = p.pointRange;
 
   const pl = hexToLinear(p.pointColor);

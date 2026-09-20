@@ -38,7 +38,7 @@ const LIGHTS = {
   pointColor: '#FF6A3D',
   pointIntensity: 2.2,
   pointRange: 5,
-  pointOrbit: true,
+  pointPosition: [2.6, 1.4, 0] as const,
   fogColor: '#6E7A9A',
   fogDensity: 0.016,
 };
@@ -174,22 +174,23 @@ describe('packLights', () => {
     expect(d[39]).toBe(0);
   });
 
-  it('点光开启 + 环绕：位置随时间走圆（半径 2.6）', () => {
+  it('点光位置来自场景：原样写入，时间与开关都不改它（复审 B5）', () => {
     const a = new Float32Array(LIGHTS_FLOATS);
     const b = new Float32Array(LIGHTS_FLOATS);
     packLights(a, { ...LIGHTS, pointEnabled: true }, 0);
     packLights(b, { ...LIGHTS, pointEnabled: true }, 1.5);
     expect(a[39]).toBeCloseTo(LIGHTS.pointIntensity, 6);
-    expect(Math.hypot(a[32]!, a[34]!)).toBeCloseTo(2.6, 5);
-    expect(Math.hypot(b[32]!, b[34]!)).toBeCloseTo(2.6, 5);
-    // time 变了位置必须变；关闭环绕则 time 无效
-    expect(a[32]).not.toBeCloseTo(b[32]!, 3);
-
+    // 位置 = 入参的世界坐标，不随时间走圆（引擎侧的轨道动画已移除）
+    expect(a[32]).toBeCloseTo(LIGHTS.pointPosition[0], 6);
+    expect(a[33]).toBeCloseTo(LIGHTS.pointPosition[1], 6);
+    expect(a[34]).toBeCloseTo(LIGHTS.pointPosition[2], 6);
+    expect(a[32]).toBeCloseTo(b[32]!, 6);
+    expect(a[34]).toBeCloseTo(b[34]!, 6);
+    // 关灯只把强度写 0，位置字段照旧（它是场景数据，不属于开灯状态）
     const c = new Float32Array(LIGHTS_FLOATS);
-    const e = new Float32Array(LIGHTS_FLOATS);
-    packLights(c, { ...LIGHTS, pointOrbit: false }, 0);
-    packLights(e, { ...LIGHTS, pointOrbit: false }, 1.5);
-    expect(c[32]).toBeCloseTo(e[32]!, 6);
+    packLights(c, { ...LIGHTS, pointEnabled: false }, 1.5);
+    expect(c[32]).toBeCloseTo(LIGHTS.pointPosition[0], 6);
+    expect(c[39]).toBe(0);
   });
 });
 

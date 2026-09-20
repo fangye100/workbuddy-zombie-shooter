@@ -435,8 +435,18 @@ export interface SceneLoadResult {
    * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
    */
   keyLight?: { color: string; intensity: number; nodeId: string } | null;
-  /** 同规则选出的点光（null = 没有 point 灯）。位置仍由引擎轨道驱动（见已知遗留） */
-  pointLight?: { color: string; intensity: number; range: number; nodeId: string } | null;
+  /**
+   * 同规则选出的点光（null = 没有 point 灯）。
+   * `position` 是该 Light 节点的**世界坐标** —— 场景声明了点光就必须按它摆，
+   * 引擎不再自带轨道动画（复审 B5）。
+   */
+  pointLight?: {
+    color: string;
+    intensity: number;
+    range: number;
+    nodeId: string;
+    position: readonly [number, number, number];
+  } | null;
 }
 
 /** 一盏被选中的灯 */
@@ -991,11 +1001,14 @@ export class LabRenderer {
       keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId };
     }
     if (picked.point !== null) {
+      // 位置取该节点的**世界**变换（灯可以挂在带变换的父级下）：与碰撞体/刷怪点同一把尺子
+      const wo = graph.getNode(picked.point.nodeId)?.world.position;
       pointLight = {
         color: picked.point.color,
         intensity: picked.point.intensity,
         range: picked.point.range,
         nodeId: picked.point.nodeId,
+        position: wo === undefined ? [0, 0, 0] : [wo[0], wo[1], wo[2]],
       };
     }
     for (const w of picked.warnings) warnings.push(w);
