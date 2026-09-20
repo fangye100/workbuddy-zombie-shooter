@@ -111,9 +111,9 @@ function raySphere(
 /** 一批实例 + 它对应的实体身份（供选中反查） */
 interface BatchSlot {
   meshId: string;
-  vertices: Float32Array;
-  indices: Uint32Array;
-  instances: Float32Array;
+  vertices: Float32Array<ArrayBuffer>;
+  indices: Uint32Array<ArrayBuffer>;
+  instances: Float32Array<ArrayBuffer>;
   count: number;
   /** 与 instances 行号一一对应的实体视图，选中反查用 */
   entities: EntityView[];

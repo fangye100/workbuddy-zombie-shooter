@@ -207,10 +207,10 @@ export interface CoreDynamicBatch {
    */
   meshId: string;
   /** 交错顶点数组，stride = 15 floats（60 B），与 VERTEX_LAYOUT 一致 */
-  vertices: Float32Array;
-  indices: Uint32Array;
+  vertices: Float32Array<ArrayBuffer>;
+  indices: Uint32Array<ArrayBuffer>;
   /** 实例数组，长度 ≥ count × DYNAMIC_INSTANCE_FLOATS */
-  instances: Float32Array;
+  instances: Float32Array<ArrayBuffer>;
   /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
   count: number;
   /** 是否画 inverted-hull 描边（默认风格的动态实体建议开） */
