@@ -12,7 +12,8 @@
  *
  * 注册到 ZCode：见同目录 README.md。
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
@@ -67,6 +68,18 @@ const fsPort = {
   },
   writeText(abs, text) {
     writeFileSync(abs, text, 'utf8');
+  },
+  writeBinary(abs, data) {
+    // 导出到还不存在的子目录不该炸成 -32603 ENOENT（路径已过 resolveRepo 仓内校验）
+    mkdirSync(path.dirname(abs), { recursive: true });
+    writeFileSync(abs, Buffer.from(data));
+  },
+  exists(abs) {
+    return existsSync(abs);
+  },
+  // 与 tools/scene/gen-asset-meta.mjs 的 sha256Of 同算法（hex），保证 hash 门禁一致
+  sha256(abs) {
+    return createHash('sha256').update(readFileSync(abs)).digest('hex');
   },
 };
 
@@ -135,7 +148,9 @@ function sendError(id, code, message) {
   send({ jsonrpc: '2.0', id, error: { code, message } });
 }
 
-function handleRequest(req) {
+// WU-3 起 dispatchTool 是异步（export_glb 要 await Blob.arrayBuffer() 解码贴图）；
+// 响应按 id 配对，并发处理不影响正确性
+async function handleRequest(req) {
   const { id, method, params } = req;
   switch (method) {
     case 'initialize':
@@ -164,7 +179,7 @@ function handleRequest(req) {
     case 'tools/call': {
       const name = params?.name;
       try {
-        const r = dispatchTool(domain, name, params?.arguments);
+        const r = await dispatchTool(domain, name, params?.arguments);
         const content = [];
         if (r.image !== undefined) {
           const png = encodePng(r.image.width, r.image.height, r.image.rgba);
@@ -208,11 +223,10 @@ process.stdin.on('data', (chunk) => {
       continue; // 坏行忽略：stdio 上噪声不该打死 server
     }
     if (msg !== null && typeof msg === 'object' && 'id' in msg) {
-      try {
-        handleRequest(msg);
-      } catch (err) {
+      // 异步处理：拒绝必须兜成 -32603，不能让未捕获 rejection 打死 stdio 循环
+      handleRequest(msg).catch((err) => {
         sendError(msg.id, -32603, `internal: ${String(err)}`);
-      }
+      });
     }
   }
 });

@@ -9,8 +9,9 @@
  *    （targetHeight 默认 2.05 = models.ts 的 MODEL_RULER_HEIGHT_M，真源
  *     roster.json E-04 height），保证 MCP 里看到的体型与编辑器一致。
  *
- * 边界（本 WU 明确不做）：GLB **导出**不走 MCP —— 导出管线（re-gen 骨架 /
- * 烘 IBM / 写 GLB）在编辑器 main.ts `exportBound`，留给后续 WU 决定 Agent 化方式。
+ * 导出（WU-3 收口）：`export_glb` 直接复用编辑器 `exportBound` 同一条管线
+ * （binding-export `rigToTPoseWithImage`：当前姿态算权重 → 反解 T-pose → 写干净骨架），
+ * 产物经 FsPort 落盘仓内；动画烘焙（BVH 重定向）仍不走 MCP —— 那是 retarget 的领域。
  */
 
 import {
@@ -22,8 +23,12 @@ import {
   HUMANIK_ORDER,
   isTipBone,
 } from '../../../apps/editor/src/services/binding/humanik-template';
-import { boneSegments } from '../../../apps/editor/src/services/binding/binding-math';
-import { offsetSegmentEndpoints } from '../../../apps/editor/src/services/binding/skin-proxy';
+import { boneSegments, type JointPositions } from '../../../apps/editor/src/services/binding/binding-math';
+import {
+  offsetSegmentEndpoints,
+  type SkinCylinderMap,
+} from '../../../apps/editor/src/services/binding/skin-proxy';
+import { rigToTPoseWithImage } from '../../../apps/editor/src/services/binding/binding-export';
 import { parseGlb, validateAssetMeta } from '@aether/scene';
 import {
   renderOrthographic,
@@ -51,6 +56,12 @@ export interface FsPort {
   /** 文件不存在返回 null（区别于读失败抛错） */
   readText(abs: string): string | null;
   writeText(abs: string, text: string): void;
+  /** 写二进制（export_glb 的 GLB 产物落盘） */
+  writeBinary(abs: string, data: ArrayBuffer): void;
+  /** 文件是否存在（export_glb 的覆盖守卫） */
+  exists(abs: string): boolean;
+  /** 小写 hex sha256（export 后刷新 sidecar 的 sourceHash，与 scene:gen 同算法） */
+  sha256(abs: string): string;
 }
 
 export interface ToolResult {
@@ -128,6 +139,8 @@ export class BindingDomain {
   readonly session = new BindingSession();
   /** 当前载入模型的仓内相对路径（save / hydrate 的落盘锚点） */
   private glbPath: string | null = null;
+  /** parseGlb 抽出的 baseColor 贴图（export 时嵌回产物，与编辑器 s.image 同源） */
+  private image: Blob | null = null;
 
   constructor(private readonly fs: FsPort) {}
 
@@ -135,6 +148,13 @@ export class BindingDomain {
     const m = this.session.getMesh();
     if (m === null) throw new ToolError('未载入模型：先调 load_model');
     return m;
+  }
+
+  /** 已载入模型的仓内相对路径（loadModel 成功路径上与网格同时就位） */
+  private requireGlbPath(): string {
+    this.requireMesh();
+    // glbPath 与网格在 loadModel 里同一段成功路径赋值，mesh 在则 path 在
+    return this.glbPath!;
   }
 
   private metaPath(): string {
@@ -165,6 +185,7 @@ export class BindingDomain {
     const name = relPath.split(/[\\/]/).pop()!.replace(/\.glb$/i, '');
     this.session.setModel(name, model.mesh.vertices, model.mesh.indices, VERTEX_FLOATS);
     this.glbPath = relPath;
+    this.image = model.image;
     // 回填上次编辑态（与编辑器 bindAssetAt 同语义：没有 / 损坏都不影响打开）
     const ed = this.readBindingEditor();
     let hydrated = false;
@@ -350,6 +371,121 @@ export class BindingDomain {
       image,
     };
   }
+
+  /**
+   * export_glb：把当前会话态（骨架 + wrapper + 权重选项）导成干净 T-pose 的 rigged GLB。
+   *
+   * 与编辑器 main.ts `exportBound` 同一条管线（`rigToTPoseWithImage`）：当前姿态算权重
+   * （wrapper/distance → 镜像 → 平滑）→ 反解 T-pose → 骨架只采纳骨长、rotation 恒为单位
+   * 四元数。产物落盘仓内，**不回传字节**（token 纪律：GLB 以 MB 计，统计足够决策）。
+   *
+   * sidecar 纪律：目标已有 .meta.json 时只**外科式刷新** sourceHash/updatedAt（不碰其他键，
+   * 与 scene:gen 的 merge 语义一致）；没有则不代建 —— 首版 sidecar 要 roster 字段
+   * （characterId / normalizeHeightM），那是 scene:gen 的职责，结果里给 next 提示。
+   */
+  async exportGlb(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const mesh = this.requireMesh();
+    const srcRel = this.requireGlbPath();
+    const s = this.session;
+
+    const outRel = optStr(args, 'outPath') ?? srcRel.replace(/\.glb$/i, '_tpose.glb');
+    if (!outRel.toLowerCase().endsWith('.glb')) {
+      throw new ToolError(`导出目标必须是 .glb：${outRel}`);
+    }
+    // 守卫一律比**解析后的绝对路径**：resolve 会 collapse 掉 `./`、`sub/..` 段，
+    // 比原始相对串会被这些变体绕过（独立审核 P0-1 实测：源模型被穿透覆盖）
+    const norm = (p: string): string => p.replace(/\\/g, '/').toLowerCase();
+    const outAbs = this.fs.resolve(outRel);
+    if (norm(outAbs) === norm(this.fs.resolve(srcRel))) {
+      // 自覆盖硬拒（overwrite 也不放行）：产物反解成 T-pose 并嵌骨架，
+      // 盖掉源文件等于销毁绑定原料
+      throw new ToolError(`导出目标不能覆盖源模型：${outRel}`);
+    }
+    // 目标已存在默认拒：存在的可能是在版本管理下的别的资产，静默覆盖 + 刷新
+    // sidecar hash 会把 scene:check 门禁「洗白」（独立审核 P0-2 实测）。迭代重导
+    // 同一产物走显式 overwrite: true
+    const overwrite = optBool(args, 'overwrite') === true;
+    if (this.fs.exists(outAbs) && !overwrite) {
+      throw new ToolError(`目标已存在：${outRel}（确认覆盖请显式传 overwrite: true）`);
+    }
+    const outName = optStr(args, 'name') ?? s.getModelName() ?? 'bound';
+
+    // TOCTOU 防护（独立审核 P1-2 实测）：贴图解码的 await 会让出事件循环，并发的
+    // set_joint 会渗进活引用 —— 所有会话输入在第一个 await 之前同步深拷贝快照
+    const placed = JSON.parse(JSON.stringify(s.positions)) as JointPositions;
+    const cylLive = s.getWeightMode() === 'distance' ? null : s.getCylinders();
+    const cylinders = cylLive === null
+      ? undefined
+      : (JSON.parse(JSON.stringify(cylLive)) as SkinCylinderMap);
+    const smoothW = s.getSmoothWeights();
+    const smoothI = s.getSmoothIters();
+    const smoothL = s.getSmoothLambda();
+    const mirror = s.getMirrorWeights();
+
+    // 与 exportBound 的 base 包逐字段同构（动画除外：BVH 重定向不在 MCP 面内）
+    const res = await rigToTPoseWithImage({
+      name: outName,
+      vertices: mesh.vertices,
+      indices: mesh.indices,
+      image: this.image,
+      placed,
+      smoothWeights: smoothW,
+      smoothIters: smoothI,
+      smoothLambda: smoothL,
+      cylinders,
+      mirrorWeights: mirror,
+    });
+
+    this.fs.writeBinary(outAbs, res.glb);
+
+    // sidecar 存在 → 只刷新 sourceHash/updatedAt，让 scene:check 的哈希门禁立刻转绿；
+    // 不存在 → 不代建（roster 耦合字段是 gen-asset-meta 的职责），提示跑 scene:gen
+    const metaRel = `${outRel}.meta.json`;
+    const metaAbs = this.fs.resolve(metaRel);
+    const metaText = this.fs.readText(metaAbs);
+    let metaRefreshed = false;
+    let metaWarning: string | undefined;
+    if (metaText !== null) {
+      try {
+        const meta: unknown = JSON.parse(metaText);
+        if (meta === null || typeof meta !== 'object' || Array.isArray(meta)) {
+          metaWarning = 'sidecar 根节点不是对象，跳过 hash 刷新（不静默修数据）';
+        } else {
+          const m = meta as Record<string, unknown>;
+          m.sourceHash = `sha256:${this.fs.sha256(outAbs)}`;
+          m.updatedAt = new Date().toISOString();
+          this.fs.writeText(metaAbs, `${JSON.stringify(meta, null, 2)}\n`);
+          metaRefreshed = true;
+        }
+      } catch {
+        metaWarning = 'sidecar JSON 损坏，跳过 hash 刷新（不静默修数据）';
+      }
+    }
+
+    const st = res.stats;
+    return {
+      glbPath: outRel,
+      bytes: res.glb.byteLength,
+      metaRefreshed,
+      metaWarning,
+      // metaWarning 时 sidecar 是「在但坏」，「不存在跑 scene:gen」的提示会误导（P2）
+      next: metaRefreshed || metaWarning !== undefined
+        ? undefined
+        : 'sidecar 不存在：跑 pnpm run scene:gen 生成首版（roster 字段）并复核 scene:check',
+      stats: {
+        vertices: st.vertices,
+        triangles: st.triangles,
+        bones: st.bones,
+        maxPoseAngleDeg: st.maxPoseAngleDeg,
+        offAxisBones: st.offAxisBones,
+        heightBefore: st.heightBefore,
+        heightAfter: st.heightAfter,
+        zeroWeightVerts: st.zeroWeightVerts,
+        tipWeightSum: st.tipWeightSum,
+        tipRefVerts: st.tipRefVerts,
+      },
+    };
+  }
 }
 
 // ─────────────────────────── 工具表（tools/list 的唯一真源） ───────────────────────────
@@ -495,26 +631,54 @@ export const TOOLS_TABLE = [
     description: '从 sidecar 重新灌入编辑态（进历史，可 undo 回灌前）。',
     inputSchema: { type: 'object', properties: {} },
   },
+  {
+    name: 'export_glb',
+    description:
+      '把当前会话态导成干净 T-pose 的 rigged GLB 并落盘仓内（与编辑器 exportBound 同管线：当前姿态算权重 → 反解 T-pose → 骨架只采纳骨长）。只回统计不回字节；已有 sidecar 会外科式刷新 sourceHash，没有则提示跑 scene:gen。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        outPath: {
+          type: 'string',
+          description: '仓内相对输出路径，默认 <源文件去 .glb>_tpose.glb；不许覆盖源模型',
+        },
+        name: { type: 'string', description: '导出名（GLB 内 mesh/材质命名），默认载入模型名' },
+        overwrite: {
+          type: 'boolean',
+          description: '目标已存在时显式放行覆盖（重导迭代用）；覆盖源模型恒拒',
+        },
+      },
+    },
+  },
 ] as const;
 
 // ─────────────────────────── 调度 ───────────────────────────
 
 /**
- * 纯读工具（不触碰会话状态）。其余工具一律视为写操作，成功后 sealHistory 封口 ——
+ * 纯读工具（不改写会话状态；export_glb 读会话 + 写产物文件，不动 positions/权重，
+ * 历史栈无需封口）。其余工具一律视为写操作，成功后 sealHistory 封口 ——
  * MCP 调用没有 GUI 的手势边界（pointerup / 换选中），800ms 合并窗口会把 Agent
  * 脚本化的连续调用并成一步 undo（独立审核 P1-2 实测复现）。
  */
 const READONLY_TOOLS: ReadonlySet<string> = new Set([
-  'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data',
+  'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data', 'export_glb',
 ]);
 
-export function dispatchTool(domain: BindingDomain, name: string, rawArgs: unknown): ToolResult {
-  const result = dispatchInner(domain, name, rawArgs);
+export async function dispatchTool(
+  domain: BindingDomain,
+  name: string,
+  rawArgs: unknown,
+): Promise<ToolResult> {
+  const result = await dispatchInner(domain, name, rawArgs);
   if (!READONLY_TOOLS.has(name)) domain.session.sealHistory();
   return result;
 }
 
-function dispatchInner(domain: BindingDomain, name: string, rawArgs: unknown): ToolResult {
+async function dispatchInner(
+  domain: BindingDomain,
+  name: string,
+  rawArgs: unknown,
+): Promise<ToolResult> {
   const args = asObj(rawArgs);
   const s = domain.session;
   switch (name) {
@@ -693,6 +857,9 @@ function dispatchInner(domain: BindingDomain, name: string, rawArgs: unknown): T
 
     case 'hydrate':
       return { json: domain.hydrateFromDisk() };
+
+    case 'export_glb':
+      return { json: await domain.exportGlb(args) };
 
     default:
       throw new ToolError(`unknown tool: ${name}`);

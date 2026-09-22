@@ -1,7 +1,8 @@
-# tools/mcp-binding — 绑定领域 MCP server（WU-2）
+# tools/mcp-binding — 绑定领域 MCP server（WU-2 起）
 
 把 `BindingSession`（绑定编辑的唯一领域状态 owner）暴露成 MCP 工具，
-让 Agent 能**看见**自己的绑定操作结果（视觉反馈闭环），而不再只是盲调参数。
+让 Agent 能**看见**自己的绑定操作结果（视觉反馈闭环），并把调好的绑定
+**导出成干净 T-pose 的 rigged GLB**（WU-3 起，与编辑器 exportBound 同管线）。
 
 ```
 Agent ──MCP(stdio)──▶ server.mjs ──▶ dist/domain.mjs ──▶ BindingSession
@@ -41,7 +42,7 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 
 改了 `src/**` 必须重跑 `mcp-binding:check`（probe 每次自己先构建，dist 不会过期）。
 
-## 工具表（15 个）
+## 工具表（16 个）
 
 | 工具 | 语义 |
 |---|---|
@@ -54,8 +55,18 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 | `compute_skin` | 算权重只回统计（未包裹顶点数等），不回权重数组（token 纪律） |
 | `render` | **视觉反馈核心**：正/侧视 PNG 图像块，可选 heatBone 热力图、selectedJoint 高亮 |
 | `get_editor_data` / `save` / `hydrate` | 编辑态读 / 写 sidecar（validateAssetMeta 守门）/ 从 sidecar 重灌 |
+| `export_glb` | 导出干净 T-pose 的 rigged GLB（编辑器 exportBound 同管线 `rigToTPoseWithImage`）。只回统计不回字节；已有 sidecar 外科式刷新 sourceHash/updatedAt，没有则提示跑 `scene:gen`。目标已存在需显式 `overwrite:true`（覆盖源模型恒拒） |
 
-明确边界：GLB **导出**不在本 server（导出管线在编辑器 `exportBound`，Agent 化留待后续 WU）。
+两条导出边界（WU-3 定）：
+
+- **动画烘焙不走 MCP**：`BindAnimationInput`（BVH 重定向轨道）是 retarget 的领域，
+  编辑器面板独占；`export_glb` 产物只含静态 T-pose 绑定。
+- **首版 sidecar 不代建**：新资产的 roster 字段（characterId / normalizeHeightM）
+  是 `gen-asset-meta.mjs` 的职责；`export_glb` 只对**已存在**的 sidecar 刷新
+  sourceHash/updatedAt（重导场景立刻满足 scene:check 哈希门禁）。
+
+注：`export_glb` 不改会话的任何运行时标记——`get_state` 的 `bound/bindPoseFrozen`
+是编辑器面板的徽标语义（不进持久化），MCP 导出后它们不变是预期行为。
 
 ## 注册到 ZCode
 
@@ -87,4 +98,6 @@ load_model → render(front+side)            # 看见模型与模板骨架的错
   → render(heatBone=LeftArm)               # 看见权重热力
   → compute_skin（unwrappedVerts 是否归零）
   → save                                   # 落盘 sidecar（门禁 validateAssetMeta 守门）
+  → export_glb                             # 产出干净 T-pose rigged GLB（统计：零权重/tip 权重/身高守恒）
+  → pnpm run scene:gen && scene:check      # 首版 sidecar + 门禁（export 结果 metaRefreshed=false 时）
 ```
