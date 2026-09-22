@@ -169,6 +169,11 @@ export class BindingView3D {
 
   /** 更新要显示的网格（stride = VERTEX_FLOATS）。传 null 清空。 */
   setMesh(vertices: Float32Array<ArrayBuffer> | null, indices: Uint32Array<ArrayBuffer> | null): void {
+    // 面板每帧 drawView 都会调本方法，但传的几乎都是**同一对引用**。
+    // 必须按引用判等再递增版本：无条件 meshVersion++ 会让 rebuildMeshIfNeeded
+    // 每帧 destroy + createBuffer + writeBuffer 整个网格（拖拽时 15k 顶点 ×2 视图
+    // ≈ 1.8MB/帧 的缓冲 churn）。引用变了才说明网格真换了，才值得重建。
+    if (vertices === this.verts && indices === this.indices) return;
     this.verts = vertices;
     this.indices = indices;
     this.meshVersion++;

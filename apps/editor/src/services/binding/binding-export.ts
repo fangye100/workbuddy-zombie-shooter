@@ -48,6 +48,7 @@ import {
 export const BINDING_VERTEX_FLOATS = 15;
 const NORMAL_OFFSET = 3;
 const UV_OFFSET = 9;
+const COLOR_OFFSET = 11;
 
 /**
  * 一段待烘焙进 GLB 的动画（以**骨名**为键，与 glTF 节点索引解耦）。
@@ -189,14 +190,16 @@ function runExport(
       vertices, VF, vertexCount, placed, input.cylinders,
       { maxInfluences },
     );
-    if (input.mirrorWeights === true) {
-      skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
-    }
   } else {
     // 默认胶囊距离权重（旧行为，保证既有导出 / 测试不受影响）
     skin = computeLbsWeights(
       vertices, VF, vertexCount, segs, falloff, eps, maxInfluences,
     );
+  }
+  // 镜像权重对**两套**算法都生效：它描述的是「产物要左右对称」的用户意图，
+  // 只在圆柱体分支消费 = distance 模式下勾选框静默失效（2026-09-22 复审 N6）。
+  if (input.mirrorWeights === true) {
+    skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
   }
 
   // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
@@ -402,6 +405,10 @@ function buildGlb(
   const pos = new Float32Array(vertexCount * 3);
   const nrm = new Float32Array(vertexCount * 3);
   const uv = new Float32Array(vertexCount * 2);
+  // COLOR_0 必须随导出带走：本项目顶点色是真实数据通道
+  // （color.r = 描边倍率、color.g = 烘焙 AO，见 packages/scene/src/gltf.ts），
+  // 丢了一次绑定导出就把烘焙结果静默清掉了（2026-09-22 复审 N7）。
+  const col = new Float32Array(vertexCount * 4);
   const lo: [number, number, number] = [Infinity, Infinity, Infinity];
   const hi: [number, number, number] = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < vertexCount; i++) {
@@ -415,6 +422,10 @@ function buildGlb(
     nrm[i * 3 + 2] = verts[o + NORMAL_OFFSET + 2]!;
     uv[i * 2] = verts[o + UV_OFFSET]!;
     uv[i * 2 + 1] = verts[o + UV_OFFSET + 1]!;
+    col[i * 4] = verts[o + COLOR_OFFSET]!;
+    col[i * 4 + 1] = verts[o + COLOR_OFFSET + 1]!;
+    col[i * 4 + 2] = verts[o + COLOR_OFFSET + 2]!;
+    col[i * 4 + 3] = verts[o + COLOR_OFFSET + 3]!;
     if (x < lo[0]) lo[0] = x;
     if (x > hi[0]) hi[0] = x;
     if (y < lo[1]) lo[1] = y;
@@ -455,6 +466,13 @@ function buildGlb(
     componentType: COMPONENT_FLOAT,
     count: vertexCount,
     type: 'VEC2',
+  }) - 1;
+
+  const colAcc = accessors.push({
+    bufferView: parts.add(f32(col), TARGET_ARRAY_BUFFER),
+    componentType: COMPONENT_FLOAT,
+    count: vertexCount,
+    type: 'VEC4',
   }) - 1;
 
   const jntAcc = accessors.push({
@@ -586,6 +604,7 @@ function buildGlb(
           POSITION: posAcc,
           NORMAL: nrmAcc,
           TEXCOORD_0: uvAcc,
+          COLOR_0: colAcc,
           JOINTS_0: jntAcc,
           WEIGHTS_0: wgtAcc,
         },
@@ -601,8 +620,10 @@ function buildGlb(
     materials: [{
       name: `${name}_Mat`,
       pbrMetallicRoughness: {
-        metallicFactor: 1,
-        roughnessFactor: 1,
+        // 角色是皮肤/布料，不是金属：默认 metallic=1 会在 PBR 宿主里把
+        // baseColor 当 F0 反射率吃掉（2026-09-22 复审 N8）
+        metallicFactor: 0,
+        roughnessFactor: 0.9,
       },
     }],
   };
@@ -614,8 +635,8 @@ function buildGlb(
     json.textures = [{ source: 0 }];
     (json.materials as Array<Record<string, unknown>>)[0]!.pbrMetallicRoughness = {
       baseColorTexture: { index: 0 },
-      metallicFactor: 1,
-      roughnessFactor: 1,
+      metallicFactor: 0,
+      roughnessFactor: 0.9,
     };
   }
 

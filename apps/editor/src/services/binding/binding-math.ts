@@ -204,36 +204,66 @@ export function distToSegment(
 }
 
 /**
- * A-pose 的**世界矩阵**（含 45° 旋转），供 `reposeMesh` 把网格重姿态成 A-pose。
+ * A-pose 的**世界矩阵**（真含 45° 旋转），供 `reposeMesh` 把网格重姿态成 A-pose。
  *
- * 与 `humanik-template.aposeWorldPositions` 同源：手臂链每个骨相对父骨的偏移绕 Z
- * 旋转 ±45°（Left -45° / Right +45°）。区别是这里返回**带旋转的世界矩阵**，
- * 这样 `reposeMesh` 的 Δ_k = M_A_k · M_P_k⁻¹ 才能把 limb 真正旋转下去，而不只是平移。
+ * 与 `humanik-template.aposeWorldPositions` 严格同源：整条手臂链绕肩做**同一个**
+ * 世界 Z 轴 ±45° 刚性摆动（Left -45° / Right +45°）——
+ *   - 位置：每根骨的偏移从**基准姿态的父骨**量取、旋转后累加（链式望远镜 =
+ *     绕肩整体刚体摆 45°，不剪切）；
+ *   - 旋转：手臂骨的 R_world = 那一次摆动（**不**沿链累乘——刚性摆动下链内
+ *     相对旋转不变，累乘会变成 -90°/-135° 的过摆）；非手臂骨继承父骨旋转。
+ *
+ * 于是 Δ_k = M_A_k · M_P_k⁻¹ 在手臂链内是**精确刚体摆动**：落在关节上的顶点
+ * 重姿态后精确落在 A-pose 关节上（2026-09-22 复审 N2 修复；旧实现返回的是纯
+ * 平移矩阵，顶点只做逐骨平移剪切，指尖与骨架差 17.3cm）。
  */
 export function aposeWorld(placed: JointPositions): Record<string, Mat4> {
   const out: Record<string, Mat4> = {};
+  const aPos: JointPositions = {};
   for (const name of HUMANIK_ORDER) {
     const parent = HUMANIK_BONES[name]!.parent;
     if (parent === null) {
       const p = placed[name]!;
+      aPos[name] = [p[0], p[1], p[2]];
       out[name] = matTranslation(p[0], p[1], p[2]);
       continue;
     }
-    const pp = out[parent]!;
+    const isArm = ARM_BONES.has(name);
+    const a = (name.startsWith('Left') ? -45 : 45) * Math.PI / 180;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    // 偏移从**基准父骨**量取（刚性摆动的定义；从 A-pose 父骨量取会逐节剪切）
+    const bp = placed[parent]!;
     const p = placed[name]!;
-    let ox = p[0] - pp[12]!;
-    let oy = p[1] - pp[13]!;
-    const oz = p[2] - pp[14]!;
-    if (ARM_BONES.has(name)) {
-      const a = (name.startsWith('Left') ? -45 : 45) * Math.PI / 180;
-      const c = Math.cos(a);
-      const s = Math.sin(a);
+    let ox = p[0] - bp[0];
+    let oy = p[1] - bp[1];
+    const oz = p[2] - bp[2];
+    if (isArm) {
       const nx = c * ox - s * oy;
       const ny = s * ox + c * oy;
       ox = nx;
       oy = ny;
     }
-    out[name] = matMul(pp, matTranslation(ox, oy, oz));
+    const pp = aPos[parent]!;
+    const wp: [number, number, number] = [pp[0] + ox, pp[1] + oy, pp[2] + oz];
+    aPos[name] = wp;
+    // 旋转部分：手臂骨 = 那一次性摆动；非手臂骨 = 继承父骨（本模板里非手臂链恒单位）
+    const rot: Mat4 = isArm
+      ? (() => {
+          const m = matIdentity();
+          m[0] = c; m[1] = s; m[4] = -s; m[5] = c;
+          return m;
+        })()
+      : (() => {
+          // 取父矩阵的旋转部分（本模板非手臂链全为单位，但保持通用）
+          const pm = out[parent]!;
+          const m = matIdentity();
+          for (let col = 0; col < 3; col++) {
+            for (let row = 0; row < 3; row++) m[col * 4 + row] = pm[col * 4 + row]!;
+          }
+          return m;
+        })();
+    out[name] = matMul(matTranslation(wp[0], wp[1], wp[2]), rot);
   }
   return out;
 }
@@ -644,6 +674,10 @@ export function fitSkeleton(placed: JointPositions): FitResult {
  *
  * @param fromWorld 源姿态每骨世界矩阵（如当前姿态 posedWorld）
  * @param toWorld   目标姿态每骨世界矩阵（如 T-pose / A-pose 世界矩阵）
+ * @param normalOffset 可选：顶点布局里法线的 float 偏移（引擎布局 = 3）。
+ *    传入时法线同步按 Δ 的线性部分（纯刚体旋转，逆转置 = 自身）旋转并归一化，
+ *    否则法线保持原样。导出路径不用它（`unposeMesh` 后接 `unposeNormals`），
+ *    面板的 T/A 预览用它 —— 网格转了、法线不转，预览光照会留在旧姿态。
  *
  * 反解回 T-pose 只是本函数的特例（from=当前姿态，to=T-pose），见 `unposeMesh`。
  */
@@ -654,6 +688,7 @@ export function reposeMesh(
   skin: SkinWeights,
   fromWorld: Record<string, Mat4>,
   toWorld: Record<string, Mat4>,
+  normalOffset?: number,
 ): Float32Array<ArrayBuffer> {
   const order = HUMANIK_ORDER;
   // 预算每骨的 Δ_k = M_to_k · M_from_k⁻¹，避免逐顶点重复求逆
@@ -678,6 +713,26 @@ export function reposeMesh(
     out[o] = x;
     out[o + 1] = y;
     out[o + 2] = z;
+    if (normalOffset !== undefined) {
+      const nx = positions[o + normalOffset]!;
+      const ny = positions[o + normalOffset + 1]!;
+      const nz = positions[o + normalOffset + 2]!;
+      let rx = 0, ry = 0, rz = 0;
+      for (let k = 0; k < 4; k++) {
+        const w = skin.weights[i * 4 + k]!;
+        if (w <= 0) continue;
+        const m = delta[skin.joints[i * 4 + k]!]!;
+        rx += w * (m[0]! * nx + m[4]! * ny + m[8]! * nz);
+        ry += w * (m[1]! * nx + m[5]! * ny + m[9]! * nz);
+        rz += w * (m[2]! * nx + m[6]! * ny + m[10]! * nz);
+      }
+      const nl = Math.hypot(rx, ry, rz);
+      if (nl > 1e-12) {
+        out[o + normalOffset] = rx / nl;
+        out[o + normalOffset + 1] = ry / nl;
+        out[o + normalOffset + 2] = rz / nl;
+      }
+    }
   }
   return out;
 }

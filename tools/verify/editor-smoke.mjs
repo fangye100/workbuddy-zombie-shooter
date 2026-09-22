@@ -1684,7 +1684,9 @@ async function main() {
         // 避免 4 帧等待引入的非确定性（渲染/帧回调不会写半径，无需等帧）。
         const oRadiiImmediate = b.wrappers.cylinders()[other].radii.top;
         const posImmediate = b.state().positions[otherChild];
-        const oRadii = b.wrappers.cylinders()[other].radii;
+        // ⚠️ 必须快照副本，不能存引用：下面「还原」段的 setRadius 是原地改写，
+        //    存引用会在 return 序列化时读到还原后的旧值（假红，2026-09-22 踩过）
+        const oRadii = { ...b.wrappers.cylinders()[other].radii };
         // 持久性：再等几帧，确认没有任何渲染/帧回调把半径写回默认值
         await wait();
         const oRadiiPersist = b.wrappers.cylinders()[other].radii.top;
@@ -1772,6 +1774,75 @@ async function main() {
         '★ 自动适配结果在若干帧后仍保持（无帧回调覆盖半径）',
         sl.found === true && Math.abs((sl.oRadiiPersist ?? 0) - (sl.oRadiiImmediate ?? 0)) < 1e-9,
         `oRadiiImmediate=${sl.oRadiiImmediate} · oRadiiPersist=${sl.oRadiiPersist}`,
+      );
+
+      // ---- L2i. 中键平移后 骨轴/点选 与视图一致（pan 是视图变换，不是数据变换）----
+      //
+      // 两条回归锁（2026-09-22 复审 N1 / N13）：
+      //   N1:  点选 / 骨轴投影必须吃实时 originY —— 写死 0.92h 时，竖直 pan 之后
+      //        「画出来的」和「点得到的」分叉，用户在平移后的视图里点什么都不准。
+      //   N13: panning 标志必须在 pointerup 复位 —— 漏复位时松键后每一次普通
+      //        移动鼠标都会继续平移视图（视图「粘」在鼠标上）。
+      console.log('\nL2i. 中键平移（pan）与点选一致性');
+      const pan = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        b.setMode('skin');
+        await ${nFrames(2)};
+        const c = document.querySelector('[data-bd="front"]');
+        const rect = c.getBoundingClientRect();
+        const w = c.clientWidth, h = c.clientHeight;
+        const axisOf = () => b.wrappers.axis('Head', 'front');
+        const before = axisOf();
+        const ev = (type, x, y, button) => c.dispatchEvent(new PointerEvent(type, {
+          clientX: rect.left + x, clientY: rect.top + y,
+          bubbles: true, pointerId: 1, isPrimary: true, button: button ?? 0,
+        }));
+        // ① 中键按下 → 竖直拖 +60px（originY += 60 → 骨轴两端点应整体下移 60px）
+        ev('pointerdown', w / 2, h / 2, 1);
+        ev('pointermove', w / 2, h / 2 + 60, 1);
+        await ${nFrames(2)};
+        const panned = axisOf();
+        ev('pointerup', w / 2, h / 2 + 60, 1);
+        // ② N13：松开后再普通移动鼠标，视图绝不能再跟着走
+        ev('pointermove', w / 2, h / 2 + 110, 0);
+        await ${nFrames(2)};
+        const afterUp = axisOf();
+        // ③ N1：在 pan 后的新位置点选，必须点得到 Head（点选与绘制同源 originY）
+        const hit = panned === null ? null : b.wrappers.pick(
+          'front', (panned.a[0] + panned.b[0]) / 2, (panned.a[1] + panned.b[1]) / 2,
+        );
+        // ④ redraw（= resize → 重新 fit）把视图还原，别污染后面的像素断言段
+        b.redraw();
+        await ${nFrames(2)};
+        const restored = axisOf();
+        return { before, panned, afterUp, hit, restored };
+      })()`);
+      check(
+        '★ 中键拖拽 = 平移视图（Head 骨轴两端点竖直移动 +60px，水平不动）',
+        pan.before !== null && pan.panned !== null &&
+          Math.abs(pan.panned.a[1] - pan.before.a[1] - 60) < 0.5 &&
+          Math.abs(pan.panned.b[1] - pan.before.b[1] - 60) < 0.5 &&
+          Math.abs(pan.panned.a[0] - pan.before.a[0]) < 0.01,
+        `a ${JSON.stringify(pan.before?.a)} → ${JSON.stringify(pan.panned?.a)}`,
+      );
+      check(
+        '★ 松开中键后视图不再跟随鼠标（N13：panning 标志已复位）',
+        pan.panned !== null && pan.afterUp !== null &&
+          Math.abs(pan.afterUp.a[1] - pan.panned.a[1]) < 1e-6 &&
+          Math.abs(pan.afterUp.b[1] - pan.panned.b[1]) < 1e-6,
+        `afterUp ${JSON.stringify(pan.afterUp?.a)} vs panned ${JSON.stringify(pan.panned?.a)}`,
+      );
+      check(
+        '★ pan 后的新位置能点中 Head（点选与绘制同吃实时 originY，N1）',
+        pan.hit?.bone === 'Head',
+        `pick=${JSON.stringify(pan.hit ?? null)}`,
+      );
+      check(
+        '★ redraw 后视图回到 fit 基线（pan 不污染后续断言段）',
+        pan.before !== null && pan.restored !== null &&
+          Math.abs(pan.restored.a[1] - pan.before.a[1]) < 0.5 &&
+          Math.abs(pan.restored.b[1] - pan.before.b[1]) < 0.5,
+        `restored ${JSON.stringify(pan.restored?.a)} vs before ${JSON.stringify(pan.before?.a)}`,
       );
 
       // ---- L2f. 主 3D 视口：改半径 → 画面像素必须跟着变 ----
