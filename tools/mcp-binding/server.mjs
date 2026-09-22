@@ -12,7 +12,8 @@
  *
  * 注册到 ZCode：见同目录 README.md。
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
@@ -20,6 +21,8 @@ import zlib from 'node:zlib';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** 仓库根 = tools/mcp-binding 的上两级（与进程 cwd 解耦） */
 const REPO_ROOT = path.resolve(HERE, '..', '..');
+/** realpath 后的仓库根：写侧校验要与它同尺比较（根路径自身可能含 junction） */
+const REAL_ROOT = realpathSync(REPO_ROOT);
 
 // 领域层是 esbuild 构建产物：缺失时给出可操作的提示而不是裸 ERR_MODULE_NOT_FOUND
 const DOMAIN_BUNDLE = path.resolve(HERE, 'dist', 'domain.mjs');
@@ -55,6 +58,18 @@ function resolveRepo(rel) {
   return abs;
 }
 
+/**
+ * 写侧的真实路径校验：resolveRepo 是词法检查，writeFileSync 会跟随 symlink ——
+ * 仓内一个指出去的符号链接就能把写穿透到仓外（Codex PR #11）。realpath 父目录
+ * 再比对真实根。mkdir 在 assert 之前：穿过 symlink 顶多留下空目录，文件写不出去
+ */
+function assertRealInside(abs) {
+  const real = realpathSync(path.dirname(abs));
+  if (real !== REAL_ROOT && !real.startsWith(REAL_ROOT + path.sep)) {
+    throw new ToolError(`路径经符号链接越出仓库：${abs}`);
+  }
+}
+
 const fsPort = {
   resolve: resolveRepo,
   readBinary(abs) {
@@ -66,7 +81,31 @@ const fsPort = {
     return readFileSync(abs, 'utf8');
   },
   writeText(abs, text) {
+    assertRealInside(abs);
     writeFileSync(abs, text, 'utf8');
+  },
+  writeBinary(abs, data, exclusive) {
+    // 导出到还不存在的子目录不该炸成 -32603 ENOENT（路径已过 resolveRepo 仓内校验）
+    mkdirSync(path.dirname(abs), { recursive: true });
+    assertRealInside(abs);
+    // exclusive → wx：目标已存在抛 EEXIST，检查+写在 FS 层原子（防并发双写互盖）
+    writeFileSync(abs, Buffer.from(data), exclusive ? { flag: 'wx' } : undefined);
+  },
+  exists(abs) {
+    return existsSync(abs);
+  },
+  sameFile(a, b) {
+    try {
+      const sa = statSync(a);
+      const sb = statSync(b);
+      return sa.dev === sb.dev && sa.ino === sb.ino;
+    } catch {
+      return false;
+    }
+  },
+  // 与 tools/scene/gen-asset-meta.mjs 的 sha256Of 同算法（hex），保证 hash 门禁一致
+  sha256(abs) {
+    return createHash('sha256').update(readFileSync(abs)).digest('hex');
   },
 };
 
@@ -135,7 +174,9 @@ function sendError(id, code, message) {
   send({ jsonrpc: '2.0', id, error: { code, message } });
 }
 
-function handleRequest(req) {
+// WU-3 起 dispatchTool 是异步（export_glb 要 await Blob.arrayBuffer() 解码贴图）；
+// 响应按 id 配对，并发处理不影响正确性
+async function handleRequest(req) {
   const { id, method, params } = req;
   switch (method) {
     case 'initialize':
@@ -164,7 +205,7 @@ function handleRequest(req) {
     case 'tools/call': {
       const name = params?.name;
       try {
-        const r = dispatchTool(domain, name, params?.arguments);
+        const r = await dispatchTool(domain, name, params?.arguments);
         const content = [];
         if (r.image !== undefined) {
           const png = encodePng(r.image.width, r.image.height, r.image.rgba);
@@ -208,11 +249,10 @@ process.stdin.on('data', (chunk) => {
       continue; // 坏行忽略：stdio 上噪声不该打死 server
     }
     if (msg !== null && typeof msg === 'object' && 'id' in msg) {
-      try {
-        handleRequest(msg);
-      } catch (err) {
+      // 异步处理：拒绝必须兜成 -32603，不能让未捕获 rejection 打死 stdio 循环
+      handleRequest(msg).catch((err) => {
         sendError(msg.id, -32603, `internal: ${String(err)}`);
-      }
+      });
     }
   }
 });

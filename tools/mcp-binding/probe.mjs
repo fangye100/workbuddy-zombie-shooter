@@ -9,7 +9,8 @@
  * .workbuddy/tmp/mcp-binding-probe/ 的副本（已 gitignore），save 只落在那里。
  */
 import { spawn } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
@@ -37,6 +38,15 @@ console.log('build: dist/domain.mjs OK');
 
 // ── ② 准备隔离的测试模型副本（+ 真实 sidecar，save 要求 sidecar 已存在） ──
 mkdirSync(TMP, { recursive: true });
+// P0-3 幂等纪律：导出产物一律先清——「无 sidecar 时 metaRefreshed=false」的断言
+// 依赖产物 sidecar 不存在，上次跑留下来的会让门禁第二次必红
+for (const f of [
+  'probe_tpose.glb', 'probe_tpose.glb.meta.json',
+  'texprobe.glb', 'texprobe_tpose.glb', 'texprobe_tpose.glb.meta.json',
+  'texprobe_dist.glb', 'toc1.glb', 'toc2.glb', 'toc3.glb', 'par1.glb',
+]) {
+  try { rmSync(path.resolve(TMP, f)); } catch { /* 不存在才算干净 */ }
+}
 copyFileSync(path.resolve(REPO_ROOT, FIXTURE_GLB), path.resolve(TMP, 'probe.glb'));
 const fixtureMeta = `${FIXTURE_GLB}.meta.json`;
 const hasMeta = existsSync(path.resolve(REPO_ROOT, fixtureMeta));
@@ -163,6 +173,104 @@ const tool = async (name, args = {}) => {
   const r = await call('tools/call', { name, arguments: args });
   return r;
 };
+
+/** 解析 GLB 文件：返回 { json, binStart, binBytes }；魔数/版本不对返回 null */
+function parseGlbFile(abs) {
+  const buf = readFileSync(abs);
+  if (buf.length < 20 || buf.readUInt32LE(0) !== 0x46546c67) return null;
+  const jsonLen = buf.readUInt32LE(12);
+  if (buf.readUInt32LE(16) !== 0x4e4f534a) return null;
+  try {
+    return {
+      json: JSON.parse(buf.subarray(20, 20 + jsonLen).toString('utf8')),
+      binStart: 20 + jsonLen + 8,
+      binBytes: buf.length - (20 + jsonLen + 8),
+      totalBytes: buf.length,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── 合成「带内嵌贴图」的最小 GLB（P1-1：fixture E-04 无内嵌图，贴图嵌入路径要靠它覆盖） ──
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type, data) {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body), 0);
+  return Buffer.concat([len, body, crc]);
+}
+/** 1×1 红色 PNG */
+function png1x1() {
+  const sig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(1, 0);
+  ihdr.writeUInt32BE(1, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  const raw = Buffer.from([0, 200, 30, 30, 255]); // filter 0 + RGBA
+  return Buffer.concat([
+    sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+/** 单三角形 + 内嵌 baseColor PNG 的最小合法 GLB（baseColor 走 material→texture→image 链） */
+function buildTexGlb(png) {
+  const pos = new Float32Array([-0.5, 0, 0, 0.5, 0, 0, 0, 1, 0]);
+  const posBytes = Buffer.from(pos.buffer, pos.byteOffset, pos.byteLength);
+  const bin = Buffer.concat([posBytes, png]); // 36 字节已 4 对齐，png 紧跟其后
+  const json = {
+    asset: { version: '2.0' },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [{ mesh: 0 }],
+    meshes: [{ name: 'texprobe', primitives: [{ attributes: { POSITION: 0 }, material: 0 }] }],
+    materials: [{ name: 'm', pbrMetallicRoughness: { baseColorTexture: { index: 0 }, metallicFactor: 0 } }],
+    textures: [{ source: 0 }],
+    images: [{ bufferView: 1, mimeType: 'image/png', name: 'probe1x1' }],
+    accessors: [{
+      bufferView: 0, componentType: 5126, count: 3, type: 'VEC3',
+      min: [-0.5, 0, 0], max: [0.5, 1, 0],
+    }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: posBytes.length },
+      { buffer: 0, byteOffset: posBytes.length, byteLength: png.length },
+    ],
+    buffers: [{ byteLength: bin.length }],
+  };
+  let jb = Buffer.from(JSON.stringify(json), 'utf8');
+  const jPad = (4 - (jb.length % 4)) % 4;
+  if (jPad > 0) jb = Buffer.concat([jb, Buffer.alloc(jPad, 0x20)]);
+  const bPad = (4 - (bin.length % 4)) % 4;
+  const binPadded = bPad > 0 ? Buffer.concat([bin, Buffer.alloc(bPad)]) : bin;
+  const total = 12 + 8 + jb.length + 8 + binPadded.length;
+  const head = Buffer.alloc(12);
+  head.writeUInt32LE(0x46546c67, 0);
+  head.writeUInt32LE(2, 4);
+  head.writeUInt32LE(total, 8);
+  const jh = Buffer.alloc(8);
+  jh.writeUInt32LE(jb.length, 0);
+  jh.writeUInt32LE(0x4e4f534a, 4);
+  const bh = Buffer.alloc(8);
+  bh.writeUInt32LE(binPadded.length, 0);
+  bh.writeUInt32LE(0x004e4942, 4);
+  return Buffer.concat([head, jh, jb, bh, binPadded]);
+}
 /** 取工具的 JSON 文本块 */
 const toolJson = async (name, args = {}) => {
   const r = await tool(name, args);
@@ -192,9 +300,9 @@ try {
   const EXPECT = [
     'load_model', 'get_state', 'get_joints', 'set_joint', 'mirror', 'reset_pose',
     'undo', 'redo', 'cylinders', 'set_options', 'compute_skin', 'render',
-    'get_editor_data', 'save', 'hydrate',
+    'get_editor_data', 'save', 'hydrate', 'export_glb',
   ];
-  check('tools/list 含全部 15 个工具', EXPECT.every((n) => names.includes(n)) && names.length === EXPECT.length);
+  check('tools/list 含全部 16 个工具', EXPECT.every((n) => names.includes(n)) && names.length === EXPECT.length);
 
   // ── 前置条件：未载入模型时的错误路径（独立审核 P2 覆盖盲区） ──
   const preRender = await tool('render', {}).then(() => null, (e) => String(e));
@@ -203,6 +311,8 @@ try {
   check('未载入模型 compute_skin 报 -32602', typeof preSkin === 'string' && preSkin.includes('-32602'));
   const preSave = await tool('save').then(() => null, (e) => String(e));
   check('未载入模型 save 报 -32602', typeof preSave === 'string' && preSave.includes('-32602'));
+  const preExport = await tool('export_glb').then(() => null, (e) => String(e));
+  check('未载入模型 export_glb 报 -32602', typeof preExport === 'string' && preExport.includes('-32602'));
 
   // ── 路径防护：目录穿越与绝对路径都必须拒（独立审核 P2 覆盖盲区） ──
   const trav = await tool('load_model', { path: '../../outside.glb' }).then(() => null, (e) => String(e));
@@ -353,6 +463,155 @@ try {
     Object.keys(origMeta).every((k) => JSON.stringify(origMeta[k]) === JSON.stringify(metaOnDisk[k])));
   const hyd = await toolJson('hydrate');
   check('hydrate 从 sidecar 回灌', hyd?.hydrated === true);
+
+  // ── export_glb（WU-3）：默认路径导出 → 产物结构验证 → sidecar 刷新 → 守卫 → 回读 ──
+  const exp = await toolJson('export_glb');
+  const expRel = '.workbuddy/tmp/mcp-binding-probe/probe_tpose.glb';
+  const expAbs = path.resolve(TMP, 'probe_tpose.glb');
+  check('export_glb 默认路径 = <源>_tpose.glb', exp?.glbPath === expRel);
+  check('export_glb 返回 bytes 与落盘一致',
+    typeof exp?.bytes === 'number' && existsSync(expAbs) && exp.bytes === readFileSync(expAbs).length);
+  check('export_glb 无 sidecar 时 metaRefreshed=false 且提示 scene:gen',
+    exp?.metaRefreshed === false && typeof exp?.next === 'string' && exp.next.includes('scene:gen'));
+  check('export_glb 统计健康（零权重 0 / tip 权重 0 / 反解身高守恒）',
+    exp?.stats?.zeroWeightVerts === 0 && exp?.stats?.tipWeightSum === 0 &&
+    Math.abs(exp?.stats?.heightBefore - exp?.stats?.heightAfter) < 1e-3);
+
+  const glb = existsSync(expAbs) ? parseGlbFile(expAbs) : null;
+  check('产物是合法 GLB（魔数 + JSON chunk 可解析 + BIN 非空）', glb !== null && glb.binBytes > 0);
+  const prim = glb?.json?.meshes?.[0]?.primitives?.[0];
+  check('产物带 JOINTS_0/WEIGHTS_0/COLOR_0 属性',
+    prim?.attributes?.JOINTS_0 !== undefined && prim?.attributes?.WEIGHTS_0 !== undefined &&
+    prim?.attributes?.COLOR_0 !== undefined);
+  const skin0 = glb?.json?.skins?.[0];
+  const ibmAcc = skin0 !== undefined ? glb?.json?.accessors?.[skin0.inverseBindMatrices] : undefined;
+  check('骨架 27 节 + IBM 是 27×MAT4',
+    skin0?.joints?.length === 27 && ibmAcc?.count === 27 && ibmAcc?.type === 'MAT4');
+  const boneNodes = (glb?.json?.nodes ?? []).filter((n) => n?.mesh === undefined);
+  check('产物骨架是干净 T-pose（骨骼节点一律不写 rotation）',
+    boneNodes.length === 27 && boneNodes.every((n) => n.rotation === undefined));
+
+  // 覆盖守卫（P0-2）：目标已存在默认拒，显式 overwrite:true 才放行
+  const ovExist = await tool('export_glb', { outPath: expRel }).then(() => null, (e) => String(e));
+  check('目标已存在默认拒（-32602 提示 overwrite）',
+    typeof ovExist === 'string' && ovExist.includes('-32602') && ovExist.includes('overwrite'));
+
+  // sidecar 外科式刷新：预置一份带旧 hash 的 meta，重导后只有 sourceHash/updatedAt 应变
+  const fakeMeta = { schemaVersion: 1, guid: 'g-probe', kind: 'gltf', sourceHash: 'sha256:stale', keepMe: { a: 1 } };
+  writeFileSync(`${expAbs}.meta.json`, JSON.stringify(fakeMeta, null, 2) + '\n', 'utf8');
+  const exp2 = await toolJson('export_glb', { outPath: expRel, overwrite: true });
+  const meta2 = JSON.parse(readFileSync(`${expAbs}.meta.json`, 'utf8'));
+  const realHash = createHash('sha256').update(readFileSync(expAbs)).digest('hex');
+  check('重导刷新 sidecar sourceHash（与文件真值一致）',
+    exp2?.metaRefreshed === true && meta2?.sourceHash === `sha256:${realHash}`);
+  check('sidecar 刷新不碰其他键（guid/keepMe 保留）',
+    meta2?.guid === 'g-probe' && meta2?.keepMe?.a === 1);
+
+  // 守卫：覆盖源模型（含 ./ 变体绕过，P0-1）/ 非 .glb / 目录穿越
+  const ovSrc = await tool('export_glb', { outPath: PROBE_GLB, overwrite: true }).then(() => null, (e) => String(e));
+  check('拒绝覆盖源模型（overwrite 也不放行）', typeof ovSrc === 'string' && ovSrc.includes('-32602') && ovSrc.includes('覆盖源模型'));
+  const ovSrcDot = await tool('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/./probe.glb' }).then(() => null, (e) => String(e));
+  check('覆盖源模型的 ./ 路径变体同样被拒（P0-1）',
+    typeof ovSrcDot === 'string' && ovSrcDot.includes('-32602') && ovSrcDot.includes('覆盖源模型'));
+  const badExt = await tool('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/x.txt' }).then(() => null, (e) => String(e));
+  check('导出目标非 .glb 被拒', typeof badExt === 'string' && badExt.includes('-32602'));
+  const travOut = await tool('export_glb', { outPath: '../../escape.glb' }).then(() => null, (e) => String(e));
+  check('导出路径穿越被拒', typeof travOut === 'string' && travOut.includes('-32602'));
+
+  // 回读闭环：导出的 rigged GLB 能被 parseGlb 重新载入（顶点数守恒）
+  const reloaded = await toolJson('load_model', { path: expRel });
+  check('产物可被 load_model 回读且顶点数守恒',
+    reloaded?.vertices === loaded?.vertices && reloaded?.hydrated === false);
+
+  // ── 贴图嵌入路径（P1-1）：fixture E-04 无内嵌图，用合成 GLB 覆盖 await image 分支 ──
+  const png = png1x1();
+  writeFileSync(path.resolve(TMP, 'texprobe.glb'), buildTexGlb(png));
+  const texLoaded = await toolJson('load_model', { path: '.workbuddy/tmp/mcp-binding-probe/texprobe.glb' });
+  check('合成贴图 GLB 载入成功', texLoaded?.vertices === 3);
+  const expT = await toolJson('export_glb');
+  const texAbs = path.resolve(TMP, 'texprobe_tpose.glb');
+  const tg = existsSync(texAbs) ? parseGlbFile(texAbs) : null;
+  const imgView = tg?.json?.images?.[0]?.bufferView;
+  const imgBv = imgView !== undefined ? tg?.json?.bufferViews?.[imgView] : undefined;
+  const embedded = tg !== null && imgBv !== undefined
+    ? readFileSync(texAbs).subarray(tg.binStart + (imgBv.byteOffset ?? 0), tg.binStart + (imgBv.byteOffset ?? 0) + imgBv.byteLength)
+    : null;
+  check('带贴图导出：产物嵌回 baseColor 且字节守恒',
+    expT?.bytes > 0 && embedded !== null && embedded.equals(png) &&
+    tg?.json?.materials?.[0]?.pbrMetallicRoughness?.baseColorTexture?.index === 0);
+
+  // distance 模式导出（P2：cylinders=undefined 的关键分支与编辑器对齐）
+  await toolJson('set_options', { weightMode: 'distance' });
+  const expD = await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/texprobe_dist.glb' });
+  check('distance 模式导出成功且零权重为 0',
+    expD?.bytes > 0 && expD?.stats?.zeroWeightVerts === 0);
+
+  // TOCTOU 回归（P1-2）：贴图导出的 arrayBuffer await 会让出事件循环——同一 stdin
+  // chunk 里连发 export+set_joint，导出必须吃**调用时**的会话快照，不能掺入并发改动。
+  // （当前会话 = texprobe，带内嵌贴图 = 唯一有 await 让出点的导出路径）
+  const toc1 = path.resolve(TMP, 'toc1.glb');
+  const toc2 = path.resolve(TMP, 'toc2.glb');
+  const toc3 = path.resolve(TMP, 'toc3.glb');
+  await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/toc1.glb' });
+  const headNow = (await toolJson('get_joints'))?.positions?.Head;
+  const tocId1 = nextId++;
+  const tocId2 = nextId++;
+  const tocP1 = new Promise((resolve, reject) => pending.set(tocId1, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 toc1')), 15000) }));
+  const tocP2 = new Promise((resolve, reject) => pending.set(tocId2, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 toc2')), 15000) }));
+  // 关键：两帧写进同一个 chunk，保证 set_joint 在 export 的 await 窗口内被处理
+  child.stdin.write(
+    JSON.stringify({ jsonrpc: '2.0', id: tocId1, method: 'tools/call', params: { name: 'export_glb', arguments: { outPath: '.workbuddy/tmp/mcp-binding-probe/toc2.glb' } } }) + '\n' +
+    JSON.stringify({ jsonrpc: '2.0', id: tocId2, method: 'tools/call', params: { name: 'set_joint', arguments: { name: 'Head', position: [headNow[0], headNow[1] + 0.3, headNow[2]] } } }) + '\n',
+  );
+  await Promise.all([tocP1, tocP2]);
+  check('并发 set_joint 不渗入进行中的导出（吃调用时快照）',
+    readFileSync(toc1).equals(readFileSync(toc2)));
+  // 对照：set_joint 落地后的第三次导出必须不同（否则上面的相等是空转）
+  await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/toc3.glb' });
+  check('对照组：落地后的导出确实不同（断言非空转）',
+    !readFileSync(toc1).equals(readFileSync(toc3)));
+
+  // 并发双写同一新路径（Copilot #11）：wx 原子排他 —— 必须恰好一成一败
+  {
+    const parRel = '.workbuddy/tmp/mcp-binding-probe/par1.glb';
+    const parId1 = nextId++;
+    const parId2 = nextId++;
+    const mk = (id) => new Promise((resolve, reject) => pending.set(id, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 par')), 15000) }));
+    const pp1 = mk(parId1);
+    const pp2 = mk(parId2);
+    child.stdin.write(
+      JSON.stringify({ jsonrpc: '2.0', id: parId1, method: 'tools/call', params: { name: 'export_glb', arguments: { outPath: parRel } } }) + '\n' +
+      JSON.stringify({ jsonrpc: '2.0', id: parId2, method: 'tools/call', params: { name: 'export_glb', arguments: { outPath: parRel } } }) + '\n',
+    );
+    const [pr1, pr2] = await Promise.allSettled([pp1, pp2]);
+    const oks = [pr1, pr2].filter((r) => r.status === 'fulfilled').length;
+    const rej = [pr1, pr2].find((r) => r.status === 'rejected');
+    check('并发双写同一新路径恰好一成一败（EEXIST 原子排他）',
+      oks === 1 && rej !== undefined && String(rej.reason).includes('-32602') && String(rej.reason).includes('已存在'));
+  }
+
+  // 管道化双 set_joint 的历史粒度（Copilot #11：seal 必须赶在下个写工具进入前完成，
+  // 否则 800ms 合并窗把两次调用并成一步 undo）
+  {
+    const neckPre = (await toolJson('get_joints'))?.positions?.Neck;
+    const headPre2 = (await toolJson('get_joints'))?.positions?.Head;
+    const sjId1 = nextId++;
+    const sjId2 = nextId++;
+    const mk = (id) => new Promise((resolve, reject) => pending.set(id, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 sj')), 15000) }));
+    const sp1 = mk(sjId1);
+    const sp2 = mk(sjId2);
+    child.stdin.write(
+      JSON.stringify({ jsonrpc: '2.0', id: sjId1, method: 'tools/call', params: { name: 'set_joint', arguments: { name: 'Neck', position: [neckPre[0], neckPre[1] + 0.05, neckPre[2]] } } }) + '\n' +
+      JSON.stringify({ jsonrpc: '2.0', id: sjId2, method: 'tools/call', params: { name: 'set_joint', arguments: { name: 'Head', position: [headPre2[0], headPre2[1] + 0.05, headPre2[2]] } } }) + '\n',
+    );
+    await Promise.all([sp1, sp2]);
+    await toolJson('undo');
+    const after = await toolJson('get_joints');
+    check('管道化双 set_joint：undo 只回退最后一步（seal 不被 await 推迟）',
+      after?.positions?.Head?.[1] === headPre2[1] &&
+      Math.abs(after?.positions?.Neck?.[1] - (neckPre[1] + 0.05)) < 1e-9);
+    await toolJson('undo'); // 还原 Neck
+  }
 
   const unknown = await tool('nope').then(() => null, (e) => String(e));
   check('未知工具返回 -32602', typeof unknown === 'string' && unknown.includes('-32602'));

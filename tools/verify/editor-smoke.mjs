@@ -1437,6 +1437,30 @@ async function main() {
         wrap.verts > 0 && wrap.verts % 9 === 0,
         `verts=${wrap.verts}`,
       );
+      // 几何静止门禁（2026-09-23 L2e 假 FAIL 根治）：verts>0 只证明「画上了」，
+      // 不证明「settle 完了」——开启包裹层/skin 模式后的首几帧几何还在从过渡态
+      // 收敛到半径表驱动的稳态（实测首样本 11324.57 → 稳态 11821.74），c0 落在
+      // 收敛窗里就会把「同值写入对照组」污染成 Δ497。轮询到连续两次采样逐位相等
+      // （静止场景下重建是确定性的）再进 L2d/L2e。
+      const settle = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        let prev = -1;
+        let stable = 0;
+        let tries = 0;
+        while (tries < 120) {
+          const s = b.wrappers.stats()?.sum ?? -1;
+          if (s === prev && s >= 0) { stable++; if (stable >= 2) break; } else { stable = 0; }
+          prev = s;
+          await ${nFrames(2)};
+          tries++;
+        }
+        return { settled: stable >= 2, tries, sum: prev };
+      })()`);
+      check(
+        '★ 包裹器几何已静止（连续采样逐位相等，排除 settle 窗口污染）',
+        settle.settled === true,
+        JSON.stringify(settle),
+      );
       check('包裹器半径表非空（每 joint 一个 wrapper）', wrap.cyls > 0, `cyls=${wrap.cyls}`);
 
       // ---- L2d. tip（尖端）骨的三条硬约束 ----
@@ -1479,6 +1503,11 @@ async function main() {
         const orig = { ...src.radii };
         const set3 = (v) => ['top', 'medium', 'bottom'].forEach((s) => b.wrappers.setRadius('LeftArm', s, v));
 
+        // 诊断预采样（2026-09-23 假 FAIL 定位）：c0 之前空采 3 组，区分
+        // 「c0 采样太早（前置 settle 未完成）」与「同值写入真让几何漂移」
+        const pre = [];
+        for (let i = 0; i < 3; i++) { pre.push(b.wrappers.stats()?.sum ?? -1); await wait(); }
+
         // 对照组：写入**同一个值**（半径没变，但 refresh() 照样跑一遍）
         // → 量出「刷新副作用」本身带来的几何漂移，真变化必须显著大于它
         const c0 = snap();
@@ -1495,9 +1524,11 @@ async function main() {
         set3(orig.top);
         await wait();
         const restored = snap();
-        return { ok, c0, c1, before, after, restored, orig };
+        const playing = window.__editor.renderer.isAnimationPlaying?.() ?? null;
+        return { ok, pre, c0, c1, before, after, restored, orig, playing };
       })()`);
       const sum = (s) => s?.vp?.sum ?? 0;
+      console.log(`  诊断预采样: pre=[${(rad.pre ?? []).map((v) => v.toFixed(2)).join(', ')}] playing=${rad.playing}`);
       const dCtrlVp = Math.abs(sum(rad.c1) - sum(rad.c0));
       const dVp = Math.abs(sum(rad.after) - sum(rad.before));
       const dFront = Math.abs((rad.after?.v3d?.frontCylSum ?? 0) - (rad.before?.v3d?.frontCylSum ?? 0));
