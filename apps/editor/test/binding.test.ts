@@ -3,6 +3,7 @@ import {
   HUMANIK_BONES,
   HUMANIK_ORDER,
   TIP_BONES,
+  aposeWorldPositions,
   isTipBone,
   mirrorOf,
   skinBones,
@@ -10,6 +11,7 @@ import {
   tposeWorldPositions,
 } from '../src/services/binding/humanik-template';
 import {
+  aposeWorld,
   boneSegments,
   computeLbsWeights,
   distToSegment,
@@ -18,15 +20,19 @@ import {
   matMul,
   matPoint,
   quatFromUnitVectors,
+  reposeMesh,
+  smoothSkinWeights,
   unposeMesh,
   unposeNormals,
   type JointPositions,
+  type SkinWeights,
 } from '../src/services/binding/binding-math';
-import { rigToTPose } from '../src/services/binding/binding-export';
+import { rigToTPose, rigToTPoseWithImage } from '../src/services/binding/binding-export';
 import {
   defaultSkinCylinders,
   computeCylinderWeights,
   mirrorCylinders,
+  mirrorOffsetBetween,
   mirrorSkinWeights,
   boneLocalBasis,
   offsetSegmentEndpoints,
@@ -475,6 +481,11 @@ function makeMesh(n: number): { verts: Float32Array<ArrayBuffer>; idx: Uint32Arr
     verts[i * 15 + 3] = 1; // normal.x
     verts[i * 15 + 9] = t; // uv.x
     verts[i * 15 + 10] = 0.5;
+    // 顶点色是真实数据通道（r=描边倍率 / g=烘焙 AO），导出不许丢
+    verts[i * 15 + 11] = 0.8;
+    verts[i * 15 + 12] = 0.6;
+    verts[i * 15 + 13] = 0.4;
+    verts[i * 15 + 14] = 1;
   }
   const tri = Math.max(1, Math.floor(n / 3));
   const idx = new Uint32Array(tri * 3);
@@ -565,14 +576,14 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     }
   });
 
-  it('网格属性齐全：POSITION / NORMAL / TEXCOORD_0 / JOINTS_0 / WEIGHTS_0', () => {
+  it('网格属性齐全：POSITION / NORMAL / TEXCOORD_0 / COLOR_0 / JOINTS_0 / WEIGHTS_0', () => {
     const { verts, idx } = makeMesh(120);
     const res = rigToTPose({
       name: 'probe', vertices: verts, indices: idx, image: null, placed: T,
     });
-    const { json } = parseGlb(res.glb);
+    const { json, bin } = parseGlb(res.glb);
     const attrs = json.meshes[0]!.primitives[0]!.attributes;
-    for (const k of ['POSITION', 'NORMAL', 'TEXCOORD_0', 'JOINTS_0', 'WEIGHTS_0']) {
+    for (const k of ['POSITION', 'NORMAL', 'TEXCOORD_0', 'COLOR_0', 'JOINTS_0', 'WEIGHTS_0']) {
       expect(attrs[k], `缺属性 ${k}`).toBeTypeOf('number');
     }
     expect(json.accessors[attrs.POSITION!]!.count).toBe(120);
@@ -580,6 +591,44 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     expect(json.accessors[attrs.JOINTS_0!]!.componentType).toBe(5123); // UNSIGNED_SHORT
     expect(json.accessors[attrs.WEIGHTS_0!]!.componentType).toBe(5126); // FLOAT
     expect(json.scenes[0]!.nodes).toEqual([0]);
+
+    // ★ COLOR_0 必须把数据真带出来（r=描边倍率 / g=烘焙 AO），不是只挂个空 accessor
+    const colAcc = json.accessors[attrs.COLOR_0!]!;
+    expect(colAcc.type).toBe('VEC4');
+    expect(colAcc.componentType).toBe(5126); // FLOAT
+    expect(colAcc.count).toBe(120);
+    const colView = (json as unknown as { bufferViews: Array<{ byteOffset: number }> })
+      .bufferViews[(colAcc as unknown as { bufferView: number }).bufferView]!;
+    const col = new Float32Array(bin.buffer, bin.byteOffset + colView.byteOffset, 4);
+    expect(col[0]).toBeCloseTo(0.8, 6);
+    expect(col[1]).toBeCloseTo(0.6, 6);
+    expect(col[2]).toBeCloseTo(0.4, 6);
+    expect(col[3]).toBeCloseTo(1, 6);
+  });
+
+  it('材质不导出成全金属（N8）：metallicFactor=0 / roughnessFactor=0.9，贴图分支同值', async () => {
+    const { verts, idx } = makeMesh(30);
+    const pbrOf = (glb: ArrayBuffer): Record<string, unknown> =>
+      (parseGlb(glb).json as unknown as {
+        materials: Array<{ pbrMetallicRoughness: Record<string, unknown> }>;
+      }).materials[0]!.pbrMetallicRoughness;
+
+    const noImg = rigToTPose({
+      name: 'probe', vertices: verts, indices: idx, image: null, placed: T,
+    });
+    // 角色是皮肤/布料：metallic=1 会让 PBR 宿主把 baseColor 当 F0 反射率吃掉
+    expect(pbrOf(noImg.glb).metallicFactor).toBe(0);
+    expect(pbrOf(noImg.glb).roughnessFactor).toBe(0.9);
+
+    const withImg = await rigToTPoseWithImage({
+      name: 'probe', vertices: verts, indices: idx,
+      image: new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'image/png' }),
+      placed: T,
+    });
+    const pbrImg = pbrOf(withImg.glb);
+    expect(pbrImg.baseColorTexture).toBeDefined(); // 贴图确实嵌进去了
+    expect(pbrImg.metallicFactor).toBe(0);
+    expect(pbrImg.roughnessFactor).toBe(0.9);
   });
 
   it('统计口径：身高刚性不变、零权重顶点为 0', () => {
@@ -613,6 +662,48 @@ describe('rigToTPose：导出的 GLB 契约', () => {
     expect(() => rigToTPose({
       name: 'bad', vertices: bad, indices: new Uint32Array([0, 1, 2]), image: null, placed: T,
     })).toThrow(/不是 stride 15 的正整数倍/);
+  });
+
+  it('★ mirrorWeights 在 distance 权重模式同样生效（N6：不再只在圆柱体分支消费）', () => {
+    // 判别力设计：模板骨架是左右对称的，对称网格上「自然 LBS」与「镜像结果」数值
+    // 天然相同，分不清镜像是否真的执行。所以把右前臂（含 HandTip）拉长 2 倍 ——
+    // 源顶点（x<0，解剖右侧）贴在拉长骨段上拿近硬权重，其镜像位置落在左臂尖端
+    // 之外的空域，自然 LBS 只有 ~0.7：两个路径的数值被拉开，断言才有牙齿。
+    const placed: JointPositions = JSON.parse(JSON.stringify(T)) as JointPositions;
+    placed.RightHand = [T.RightHand![0] * 2, T.RightHand![1], T.RightHand![2]];
+    placed.RightHandTip = [T.RightHandTip![0] * 2, T.RightHandTip![1], T.RightHandTip![2]];
+    const rf = placed.RightForeArm!;
+    const rh = placed.RightHand!;
+    const p0: [number, number, number] = [
+      (rf[0] + rh[0]) / 2, (rf[1] + rh[1]) / 2, (rf[2] + rh[2]) / 2,
+    ];
+    const verts = new Float32Array(2 * 15);
+    verts[0] = p0[0]; verts[1] = p0[1]; verts[2] = p0[2];       // 源：x<0
+    verts[15] = -p0[0]; verts[16] = p0[1]; verts[17] = p0[2];    // 镜像伙伴：x>0
+    const idx = new Uint32Array([0, 1, 0]);
+
+    const mirrored = rigToTPose({
+      name: 'probe', vertices: verts, indices: idx, image: null, placed,
+      smoothWeights: false, mirrorWeights: true,
+    });
+    const srcW = mirrored.skin.weights[0]!;
+    expect(srcW).toBeGreaterThan(0.9); // 源顶点贴在骨段轴线上，近硬权重
+    // 右侧顶点（slot 0）= 源顶点 slot 0 的镜像：RightForeArm → LeftForeArm，权重照抄
+    expect(mirrored.skin.joints[4]).toBe(HUMANIK_ORDER.indexOf('LeftForeArm'));
+    expect(mirrored.skin.weights[4]).toBeCloseTo(srcW, 4);
+    let sum1 = 0;
+    for (let k = 0; k < 4; k++) sum1 += mirrored.skin.weights[4 + k]!;
+    expect(sum1).toBeCloseTo(1, 5); // 镜像后重新归一化
+
+    // 对照：不勾镜像时右侧顶点拿到的是自然 LBS，与镜像值差 > 0.1
+    // （没有这个对照，上面断言分不清「镜像生效」和「恰好对称」）
+    const natural = rigToTPose({
+      name: 'probe', vertices: verts, indices: idx, image: null, placed,
+      smoothWeights: false,
+    });
+    expect(
+      Math.abs(natural.skin.weights[4]! - mirrored.skin.weights[4]!),
+    ).toBeGreaterThan(0.1);
   });
 });
 
@@ -701,6 +792,68 @@ describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
     expect(mirrored.weights[4]!).toBeCloseTo(1, 9);
   });
 
+  it('★ mirrorSkinWeights：中轴骨槽也整向量照抄（不残留目标旧槽混合丢骨，PR#7）', () => {
+    // 对称网格：源（x<0，解剖右侧）= RightArm 50% + Spine 50% 混合；
+    // 目标（x>0）的自然权重故意给 RightForeArm 100% —— 旧实现中轴槽「跳过不写」，
+    // 目标 slot1 会残留 RightForeArm，与镜像来的 LeftArm 拼成混合向量、Spine 丢失
+    const positions = new Float32Array(2 * 15);
+    positions[0] = -0.3; positions[1] = 1; positions[2] = 0;
+    positions[15] = 0.3; positions[16] = 1; positions[17] = 0;
+    const ra = HUMANIK_ORDER.indexOf('RightArm');
+    const la = HUMANIK_ORDER.indexOf('LeftArm');
+    const si = HUMANIK_ORDER.indexOf('Spine');
+    const rf = HUMANIK_ORDER.indexOf('RightForeArm');
+    const joints = new Uint16Array([ra, si, 0, 0, rf, 0, 0, 0]);
+    const weights = new Float32Array([0.5, 0.5, 0, 0, 1, 0, 0, 0]);
+    const mirrored = mirrorSkinWeights({ joints, weights }, 15, 2, positions);
+    // 目标顶点 = 源顶点的完整影响向量：RightArm→LeftArm、Spine 保留骨 id，各 50%
+    expect(mirrored.joints[4]!).toBe(la);
+    expect(mirrored.joints[5]!).toBe(si);
+    expect(mirrored.weights[4]!).toBeCloseTo(0.5, 6);
+    expect(mirrored.weights[5]!).toBeCloseTo(0.5, 6);
+    let sum = 0;
+    for (let k = 0; k < 4; k++) sum += mirrored.weights[4 + k]!;
+    expect(sum).toBeCloseTo(1, 6);
+  });
+
+  it('★ mirrorOffsetBetween：经世界系 x 反射换算（局部元组直抄会把两侧推同侧，PR#7）', () => {
+    // 双腿情形：两段同向（都竖直向下）→ 局部基相同 → v1 分量必须翻号
+    // （「向左腿外侧 +X」镜像后必须是「向右腿外侧 −X」）
+    const leg = mirrorOffsetBetween(
+      [0.1, 1, 0], [0.1, 0.5, 0], [-0.1, 1, 0], [-0.1, 0.5, 0], [0, 0.1, 0],
+    );
+    expect(leg[0]).toBeCloseTo(0, 9);
+    expect(leg[1]).toBeCloseTo(-0.1, 9);
+    expect(leg[2]).toBeCloseTo(0, 9);
+    // 手臂情形：源骨 +X、目标骨 −X（局部基互为镜像）→ 轴向分量保留
+    // （仍指向各自子骨），侧向分量翻号
+    const arm = mirrorOffsetBetween(
+      [0.2, 1.4, 0], [0.5, 1.4, 0], [-0.2, 1.4, 0], [-0.5, 1.4, 0], [0.05, 0.1, 0],
+    );
+    expect(arm[0]).toBeCloseTo(0.05, 9);
+    expect(arm[1]).toBeCloseTo(-0.1, 9);
+    expect(arm[2]).toBeCloseTo(0, 9);
+  });
+
+  it('★ mirrorCylinders 带骨架时 offset 经世界系反射（源侧照抄、对侧换算）', () => {
+    const cyls = defaultSkinCylinders(T);
+    cyls.LeftArm!.offset = [0.05, 0.1, 0];
+    const out = mirrorCylinders(cyls, T);
+    // 源侧照抄（它就是镜像基准）
+    expect(out.LeftArm!.offset).toEqual([0.05, 0.1, 0]);
+    // 对侧与 mirrorOffsetBetween 的独立计算一致（接线正确），
+    // 且绝不是元组直抄（直抄正是被修掉的旧行为：模板手臂水平 → 侧向必翻号）
+    const segs = boneSegments(T);
+    const ss = segs.find((x) => x.bone === 'LeftArm')!;
+    const ds = segs.find((x) => x.bone === 'RightArm')!;
+    const exp = mirrorOffsetBetween(ss.a, ss.b, ds.a, ds.b, [0.05, 0.1, 0]);
+    const off = out.RightArm!.offset!;
+    expect(off[0]).toBeCloseTo(exp[0], 9);
+    expect(off[1]).toBeCloseTo(exp[1], 9);
+    expect(off[2]).toBeCloseTo(exp[2], 9);
+    expect(off[1]).not.toBeCloseTo(0.1, 6);
+  });
+
   it('★ offsetSegmentEndpoints：局部轴分量按 axial/v1/v2 正交基平移骨段', () => {
     const a: [number, number, number] = [0, 0, 0];
     const b: [number, number, number] = [0, 2, 0];
@@ -753,5 +906,144 @@ describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
     const namesB = [...skinB.joints].map((bi) => HUMANIK_ORDER[bi]!);
     const wUpB = skinB.weights[namesB.indexOf('LeftUpLeg') as number] ?? 0;
     expect(wUpB).toBeLessThan(0.5);
+  });
+});
+
+describe('smoothSkinWeights：按骨 id 聚合（P0-1 回归锁）', () => {
+  const A = HUMANIK_ORDER.indexOf('LeftForeArm');
+  const B = HUMANIK_ORDER.indexOf('LeftHand');
+  const HIPS = HUMANIK_ORDER.indexOf('Hips');
+  const TIP = HUMANIK_ORDER.indexOf('HeadTip');
+  const oneTri = new Uint32Array([0, 1, 2]);
+  // v0 的槽位 1/2/3 填着 w=0 的无关骨（Hips/HeadTip）——这正是旧实现的事故现场：
+  // 邻居槽位 1 的真实第二骨权重会被灌进这些「槽位相同、骨不同」的坑里
+  const baseSkin = (): SkinWeights => ({
+    joints: new Uint16Array([
+      A, HIPS, TIP, HIPS,   // v0: 100% A
+      A, B, HIPS, HIPS,     // v1: A 60 / B 40
+      B, A, HIPS, HIPS,     // v2: B 80 / A 20（槽位顺序与 v1 相反）
+    ]),
+    weights: new Float32Array([
+      1, 0, 0, 0,
+      0.6, 0.4, 0, 0,
+      0.8, 0.2, 0, 0,
+    ]),
+  });
+  const wOf = (s: SkinWeights, v: number, bone: number): number => {
+    for (let k = 0; k < 4; k++) if (s.joints[v * 4 + k] === bone) return s.weights[v * 4 + k]!;
+    return 0;
+  };
+
+  it('★ 槽位顺序不同的邻居按骨 id 聚合：v0 拿到 A=0.7 / B=0.3，无关骨零泄漏', () => {
+    const out = smoothSkinWeights(baseSkin(), oneTri, 3, 1, 0.5);
+    // 手工推导：v0 ← 0.5·self(A=1) + 0.25·v1(A.6/B.4) + 0.25·v2(B.8/A.2) → A=0.7, B=0.3
+    expect(wOf(out, 0, A)).toBeCloseTo(0.7, 6);
+    expect(wOf(out, 0, B)).toBeCloseTo(0.3, 6);
+    // v1 恰好是邻域均值的不动点（0.5·self + 0.25·v0 + 0.25·v2 仍得 A=0.6 / B=0.4）
+    expect(wOf(out, 1, A)).toBeCloseTo(0.6, 6);
+    expect(wOf(out, 1, B)).toBeCloseTo(0.4, 6);
+    for (let v = 0; v < 3; v++) {
+      // 旧 bug：v0 槽位 1 的 Hips 会吃掉邻居槽位 1 的 40%/20%（实测 18.8% 错骨）
+      expect(wOf(out, v, HIPS)).toBe(0);
+      expect(wOf(out, v, TIP)).toBe(0); // tip 绝不因扩散拿到权重
+      let sum = 0;
+      for (let k = 0; k < 4; k++) sum += out.weights[v * 4 + k]!;
+      expect(sum).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('★ weld：坐标重合的拆点顶点跨硬边参与扩散（不传 weld 则原地不动）', () => {
+    // v3 与 v0 坐标重合但不在任何三角面里 —— split-normal 硬边的另一侧
+    const positions = new Float32Array(4 * 15);
+    positions[15] = 0.1;         // v1 = (0.1, 0, 0)
+    positions[2 * 15 + 1] = 0.1; // v2 = (0, 0.1, 0)；v0/v3 都在原点
+    const skin4 = (): SkinWeights => ({
+      joints: new Uint16Array([
+        A, HIPS, TIP, HIPS,
+        A, B, HIPS, HIPS,
+        B, A, HIPS, HIPS,
+        A, HIPS, HIPS, HIPS,
+      ]),
+      weights: new Float32Array([
+        1, 0, 0, 0,
+        0.6, 0.4, 0, 0,
+        0.8, 0.2, 0, 0,
+        1, 0, 0, 0,
+      ]),
+    });
+
+    const noWeld = smoothSkinWeights(skin4(), oneTri, 4, 1, 0.5);
+    // 孤立顶点邻接为空 → 原样保留（扩散过不去硬边）
+    expect(wOf(noWeld, 3, A)).toBeCloseTo(1, 9);
+    expect(wOf(noWeld, 3, B)).toBe(0);
+
+    const welded = smoothSkinWeights(skin4(), oneTri, 4, 1, 0.5, {
+      positions, vertexFloats: 15,
+    });
+    // 焊接后 v3 共享 v0 的邻域 {1,2}（并集 + 同组互连）：
+    // A = 0.5·1 + (0.6+0.2+1)/6 = 0.8，B = (0.4+0.8)/6 = 0.2
+    expect(wOf(welded, 3, A)).toBeCloseTo(0.8, 5);
+    expect(wOf(welded, 3, B)).toBeCloseTo(0.2, 5);
+    // v0 的邻域同样纳入 v3 → 与 v3 结果一致
+    expect(wOf(welded, 0, A)).toBeCloseTo(wOf(welded, 3, A), 6);
+  });
+});
+
+describe('aposeWorld / aposeWorldPositions：手臂链刚性摆动（N2 回归锁）', () => {
+  it('手臂骨世界矩阵带真旋转（左 −45° / 右 +45°），非手臂骨旋转恒单位', () => {
+    const aw = aposeWorld(T);
+    const m = aw.LeftForeArm!;
+    // rotZ(−45°)：m[0]=c, m[1]=s=−√½, m[4]=−s=+√½, m[5]=c（列主序）
+    expect(m[0]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(m[1]).toBeCloseTo(-Math.SQRT1_2, 6);
+    expect(m[4]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(m[5]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(aw.RightForeArm![1]).toBeCloseTo(Math.SQRT1_2, 6); // 右侧镜像 +45°
+    // 非手臂骨（含腿/躯干/头）不跟着摆：旋转部分恒单位
+    for (const n of ['Hips', 'Spine', 'LeftUpLeg', 'Head'] as const) {
+      const nm = aw[n]!;
+      for (let col = 0; col < 3; col++) {
+        for (let row = 0; row < 3; row++) {
+          expect(nm[col * 4 + row]!).toBeCloseTo(col === row ? 1 : 0, 12);
+        }
+      }
+    }
+  });
+
+  it('★ 肩→指尖链长刚性保持（旧实现逐节剪切，链被拉长 ~26%）', () => {
+    const ap = aposeWorldPositions();
+    const d = (
+      a: readonly [number, number, number], b: readonly [number, number, number],
+    ): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    expect(d(ap.LeftShoulder!, ap.LeftHandTip!))
+      .toBeCloseTo(d(T.LeftShoulder!, T.LeftHandTip!), 9);
+    expect(d(ap.LeftShoulder!, ap.LeftHand!))
+      .toBeCloseTo(d(T.LeftShoulder!, T.LeftHand!), 9);
+    // 且手臂确实垂下去了（不是「长度对了但原地不动」）
+    expect(ap.LeftHand![1]).toBeLessThan(T.LeftHand![1] - 0.1);
+  });
+
+  it('★ 落在关节上的顶点 repose 后精确落在 A-pose 关节上，法线随 Δ 旋转', () => {
+    const fit = fitSkeleton(T);
+    const aw = aposeWorld(T);
+    const ap = aposeWorldPositions();
+    const lh = HUMANIK_ORDER.indexOf('LeftHand');
+    const verts = new Float32Array(15);
+    // 顶点放在 T-pose 指尖关节上，100% 权重给其父骨 LeftHand（tip 不参与 skin）
+    verts[0] = T.LeftHandTip![0]; verts[1] = T.LeftHandTip![1]; verts[2] = T.LeftHandTip![2];
+    verts[4] = 1; // 法线 +Y
+    const out = reposeMesh(
+      verts, 15, 1,
+      { joints: new Uint16Array([lh, 0, 0, 0]), weights: new Float32Array([1, 0, 0, 0]) },
+      fit.tposeWorld, aw, 3,
+    );
+    // Δ_LeftHand 是精确刚体摆动 → 关节上的顶点精确落在 A-pose 关节上
+    expect(out[0]).toBeCloseTo(ap.LeftHandTip![0], 6);
+    expect(out[1]).toBeCloseTo(ap.LeftHandTip![1], 6);
+    expect(out[2]).toBeCloseTo(ap.LeftHandTip![2], 6);
+    // 法线 +Y 绕 Z 轴 −45° → (√½, √½, 0)（normalOffset 路径；不传则法线不动）
+    expect(out[3]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(out[4]).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(out[5]).toBeCloseTo(0, 6);
   });
 });

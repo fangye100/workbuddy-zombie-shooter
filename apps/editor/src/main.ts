@@ -2982,6 +2982,8 @@ async function boot(): Promise<void> {
        * 网格是否已上 GPU + 本帧圆柱体顶点数（>0 才说明真的画了）。
        */
       view3d: () => binding?.getView3dStats() ?? null,
+      /** 当前显示网格的几何指纹（T/A 预览失效断言：权重输入变了它必须变） */
+      meshSum: () => binding?.previewMeshSum() ?? NaN,
       /** 切到蒙皮模式（半径表是惰性初始化的，不切模式拿不到 cylinders） */
       setMode: (m: 'skeleton' | 'skin') => binding?.setEditModeForAutomation(m),
       redraw: () => {

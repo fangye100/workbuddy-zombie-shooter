@@ -174,13 +174,17 @@ export function tposeDirections(): Record<string, Vec3> {
 }
 
 /**
- * A-pose 关节世界坐标：在标准 T-pose 基础上，把**整条手臂链绕肩旋转 45° 下垂**。
+ * A-pose 关节世界坐标：在基准摆放基础上，把**整条手臂链绕肩旋转 45° 下垂**。
  *
- * 做法：从根逐骨累加，遇到手臂骨时把「相对父骨的偏移」绕 Z 轴旋转
+ * 做法：从根逐骨累加，遇到手臂骨时把「相对**基准姿态父骨**的偏移」绕 Z 轴旋转
  *   - Left  -45°（顺时针，手臂向 -X/-Y 倒）
  *   - Right +45°（左手系对称）
- * 因为 T-pose 里手臂是沿 X 的共线链，对每个骨偏移施加同一角度的 Z 旋转，
- * 等价于把整条手臂刚体绕肩旋转 45°，世界坐标正确。
+ * 因为手臂是沿 X 的共线链，对每个骨偏移施加**同一个** Z 旋转，链式望远镜后
+ * 等价于把整条手臂**刚体**绕肩旋转 45°：肩→任意手臂骨的距离与夹角都保持不变。
+ *
+ * ⚠️ 偏移必须从**基准父骨**量取（`src[parent]`），不能从已摆动的 A-pose 父骨
+ * 量取 —— 后者每过一节就多摆一次，链被逐节剪切拉伸（旧实现肩→指尖被拉长
+ * ~26%，2026-09-22 复审 N2 修复）。
  *
  * @param base 基准摆放（默认 = 模板 T-pose）。传 `this.positions` 即可得到
  *             用**当前编辑骨长**算出的 A-pose（预览用，保留用户拖出的肢体长度）。
@@ -196,11 +200,12 @@ export function aposeWorldPositions(
       out[name] = [src[name]![0], src[name]![1], src[name]![2]];
       continue;
     }
-    const pp = out[parent]!;
+    const pp = out[parent]!;   // A-pose 父骨（摆动后的落点）
+    const bp = src[parent]!;   // 基准父骨（偏移的丈量起点）
     const p = src[name]!;
-    let ox = p[0] - pp[0];
-    let oy = p[1] - pp[1];
-    const oz = p[2] - pp[2];
+    let ox = p[0] - bp[0];
+    let oy = p[1] - bp[1];
+    const oz = p[2] - bp[2];
     if (ARM_BONES.has(name)) {
       const deg = name.startsWith('Left') ? -45 : 45;
       const a = (deg * Math.PI) / 180;

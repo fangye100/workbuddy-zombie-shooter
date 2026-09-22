@@ -271,26 +271,71 @@ export function computeCylinderWeights(
 }
 
 /**
+ * 包裹器偏移的镜像换算：源骨局部偏移 → 世界平移向量 → **x 取反** → 目标骨局部坐标。
+ *
+ * 局部元组直抄是错的：左右同名骨的局部基**不互为镜像**（双腿都竖直 → 两者 v1 同向），
+ * 直抄会把两侧 wrapper 推向世界的同一侧（2026-09-22 PR #7 复审）。
+ * 经世界系反射后，「向左腿外侧 +X」才能正确变成「向右腿外侧 −X」。
+ */
+export function mirrorOffsetBetween(
+  srcA: Vec3, srcB: Vec3, dstA: Vec3, dstB: Vec3, offset: Vec3,
+): Vec3 {
+  const sb = boneLocalBasis(srcA, srcB);
+  const db = boneLocalBasis(dstA, dstB);
+  // 源局部 → 世界平移向量（正交基：世界向量 = 各基向量 × 分量之和）
+  const wx = sb.axial[0]! * offset[0]! + sb.v1[0]! * offset[1]! + sb.v2[0]! * offset[2]!;
+  const wy = sb.axial[1]! * offset[0]! + sb.v1[1]! * offset[1]! + sb.v2[1]! * offset[2]!;
+  const wz = sb.axial[2]! * offset[0]! + sb.v1[2]! * offset[1]! + sb.v2[2]! * offset[2]!;
+  const mx = -wx; // 镜像 = 世界系 x 取反
+  // 世界 → 目标局部（正交基：分量 = 与基向量的点积）
+  return [
+    mx * db.axial[0]! + wy * db.axial[1]! + wz * db.axial[2]!,
+    mx * db.v1[0]! + wy * db.v1[1]! + wz * db.v1[2]!,
+    mx * db.v2[0]! + wy * db.v2[1]! + wz * db.v2[2]!,
+  ];
+}
+
+/**
  * 左右镜像 wrapper 几何：把左（或右）侧的半径抄到对侧同名骨。
  * 中轴骨（Hips/Spine 等）无镜像对，保持原样。
+ *
+ * @param positions 骨架当前坐标。提供时 offset 经 `mirrorOffsetBetween` 做世界系
+ *                  反射换算；缺省时退回元组直抄（仅限无骨架上下文的调用方）。
  */
-export function mirrorCylinders(map: SkinCylinderMap): SkinCylinderMap {
+export function mirrorCylinders(
+  map: SkinCylinderMap,
+  positions?: JointPositions,
+): SkinCylinderMap {
   const out: SkinCylinderMap = JSON.parse(JSON.stringify(map));
+  const segs = positions !== undefined ? boneSegments(positions) : null;
   for (const [l, r] of MIRROR_PAIRS) {
     const src = map[l] ?? map[r];
     if (src === undefined) continue;
-    // 镜像 = 把一侧的半径抄到对侧，也是手动动作 → manual 标记跟着走
-    // offset 一并抄（近似：局部轴向分量直接复制；侧向/前后分量在镜像下不反向，
-    // 因两侧骨局部基的左右翻转在此简化忽略，足够视觉对称）
-    out[r] = { bone: r, radii: { ...src.radii }, enabled: src.enabled, manual: src.manual === true, offset: src.offset !== undefined ? [...src.offset] : undefined };
-    out[l] = { bone: l, radii: { ...src.radii }, enabled: src.enabled, manual: src.manual === true, offset: src.offset !== undefined ? [...src.offset] : undefined };
+    // 镜像 = 把一侧的半径抄到对侧，也是手动动作 → manual 标记跟着走。
+    // offset 一并镜像：源侧照抄，对侧经世界系 x 反射换算（见 mirrorOffsetBetween）
+    const offsetFor = (dstBone: string): Vec3 | undefined => {
+      if (src.offset === undefined) return undefined;
+      if (dstBone === src.bone || segs === null) return [...src.offset];
+      const ss = segs.find((x) => x.bone === src.bone);
+      const ds = segs.find((x) => x.bone === dstBone);
+      if (ss === undefined || ds === undefined) return [...src.offset];
+      return mirrorOffsetBetween(ss.a, ss.b, ds.a, ds.b, src.offset);
+    };
+    out[r] = { bone: r, radii: { ...src.radii }, enabled: src.enabled, manual: src.manual === true, offset: offsetFor(r) };
+    out[l] = { bone: l, radii: { ...src.radii }, enabled: src.enabled, manual: src.manual === true, offset: offsetFor(l) };
   }
   return out;
 }
 
 /**
  * 镜像皮肤权重 L→R：把左半（x<0）顶点的权重，以骨名镜像后写到其右半对称点，
- * 使左右蒙皮对称。中轴骨的权重本就对称，跳过不写。
+ * 使左右蒙皮对称。
+ *
+ * ⚠️ 必须**整向量照抄**源顶点的 4 个槽位：侧骨映射为镜像骨、中轴骨保留原骨 id。
+ * 中轴槽「跳过不写」是错的 —— 目标顶点该槽会残留**它自己原来的**骨与权重，
+ * 与镜像来的槽位拼成一个既不像源也不像目标的混合向量，归一化后中轴骨可能
+ * 整个丢掉（如源 [RightArm .5, Spine .5] 变成目标 [LeftArm .33, RightForeArm .67]，
+ * 2026-09-22 PR #7 复审）。
  *
  * 对称配对靠「坐标取负」建立：对顶点坐标 (x,y,z) 在量化后查 (−x,y,z) 的伙伴顶点。
  * 量化精度 1mm，对 ≤ 几万顶点的角色网格是 O(N) 一次扫描。
@@ -323,8 +368,8 @@ export function mirrorSkinWeights(
       const bi = skin.joints[i * 4 + k]!;
       const w = skin.weights[i * 4 + k]!;
       const mb = mirrorOf(HUMANIK_ORDER[bi]!);
-      if (mb === null) continue; // 中轴骨：本就对称，保留原样
-      outJoints[j * 4 + k] = HUMANIK_ORDER.indexOf(mb);
+      // 整向量照抄：侧骨 → 镜像骨；中轴骨（mb === null）→ 保留原骨 id
+      outJoints[j * 4 + k] = mb === null ? bi : HUMANIK_ORDER.indexOf(mb);
       outWeights[j * 4 + k] = w;
     }
     let s = 0;
