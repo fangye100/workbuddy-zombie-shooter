@@ -2169,6 +2169,10 @@ async function boot(): Promise<void> {
         image: s.image,
         placed: binding.getState().positions,
         smoothWeights,
+        // 平滑迭代 / λ 由面板外置（旧评审 §2.4，进 .meta.json 可复现）；
+        // 面板未开（如顶部菜单直接导出）时退回 runExport 默认值
+        smoothIters: binding?.getSmoothIters() ?? 2,
+        smoothLambda: binding?.getSmoothLambda() ?? 0.5,
         // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重。
         // 权重算法由面板显式选择（默认 wrapper，保持历史行为）；选「距离衰减」时
         // 必须传 undefined，否则 runExport 会一直走圆柱体分支（cylinders 载入即建）。
@@ -2984,6 +2988,14 @@ async function boot(): Promise<void> {
       view3d: () => binding?.getView3dStats() ?? null,
       /** 当前显示网格的几何指纹（T/A 预览失效断言：权重输入变了它必须变） */
       meshSum: () => binding?.previewMeshSum() ?? NaN,
+      /** 诊断条文本（权重质量数字，与导出同源；§2.7） */
+      diag: () => binding?.diagText() ?? '',
+      /** 热力图状态：开关 + 当前热力骨（P0-3） */
+      heat: () => binding?.getHeatInfo() ?? null,
+      /** Undo/Redo（§2.6）：撤销 / 重做一步 + 栈深查询 */
+      undo: () => binding?.undo(),
+      redo: () => binding?.redo(),
+      history: () => binding?.historyDepth() ?? null,
       /** 切到蒙皮模式（半径表是惰性初始化的，不切模式拿不到 cylinders） */
       setMode: (m: 'skeleton' | 'skin') => binding?.setEditModeForAutomation(m),
       redraw: () => {

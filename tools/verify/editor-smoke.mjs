@@ -1897,6 +1897,142 @@ async function main() {
         `loaded=${reopenRes.loaded} checked=${reopenRes.checked}`,
       );
 
+      // ---- L2k. 旧评审遗留收口：诊断条 / 平滑参数 / 热力图 / 姿势预览 / Undo ----
+      //
+      //   §2.7 诊断条：数字必须与导出权重同源且常驻可见（影响骨数/零权重/未包裹）。
+      //   §2.4 平滑参数：迭代数默认 4、改它 T 预览几何指纹必须变（真的进了权重链）。
+      //   P0-3 热力图：选中骨 → 该骨高权重区画暖色；取消选中 → 暖色消失。
+      //   §1.3 姿势预览：拖测试骨架网格变形，但编辑骨架坐标一个数都不许动。
+      //   §2.6 Undo/Redo：键盘 Ctrl+Z 撤销半径修改，hook redo 重做回来。
+      console.log('\nL2k. 旧评审遗留收口（诊断条/平滑参数/热力图/姿势预览/Undo）');
+
+      const diagRes = await cdp.eval(`(() => {
+        const t = window.__editor.binding.diag();
+        return {
+          t,
+          ok: t.includes('影响骨数') && t.includes('零权重') && t.includes('未包裹'),
+        };
+      })()`);
+      check(
+        '★ 诊断条常驻且与导出同源（影响骨数 / 零权重 / 未包裹顶点数）',
+        diagRes.ok === true,
+        diagRes.t.replace(/\s+/g, ' ').slice(0, 110),
+      );
+
+      const smoothRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const si = document.querySelector('[data-bd="smooth-iters"]');
+        const def = si.value;
+        document.querySelector('[data-bd="pov-t"]').click();
+        await ${nFrames(3)};
+        const s1 = b.meshSum();
+        si.value = '1';
+        si.dispatchEvent(new Event('change', { bubbles: true }));
+        await ${nFrames(3)};
+        const s2 = b.meshSum();
+        // 还原：参数回位 + 回当前姿态预览
+        si.value = def;
+        si.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { def, s1, s2 };
+      })()`);
+      check(
+        '★ 平滑迭代数默认 4 且真实进权重链（改成 1 后 T 预览几何指纹跟着变）',
+        smoothRes.def === '4' &&
+          Number.isFinite(smoothRes.s1) && Number.isFinite(smoothRes.s2) &&
+          Math.abs(smoothRes.s2 - smoothRes.s1) > 1e-6,
+        `默认=${smoothRes.def} meshSum ${smoothRes.s1?.toFixed(4)} → ${smoothRes.s2?.toFixed(4)}`,
+      );
+
+      const heatRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const info0 = b.heat();
+        b.select('LeftUpLeg');
+        await ${nFrames(4)};
+        const seg = b.wrappers.axis('LeftUpLeg', 'front');
+        const cx = document.querySelector('[data-bd="front"]');
+        const ctx2 = cx.getContext('2d');
+        // 3×3 采样规避三角面抗锯齿发丝缝；+8px 避开骨线与 joint 圆点
+        const px = Math.round((seg.a[0] + seg.b[0]) / 2 + 8);
+        const py = Math.round((seg.a[1] + seg.b[1]) / 2);
+        const probe = () => {
+          const d = ctx2.getImageData(px - 1, py - 1, 3, 3).data;
+          let r = 0, g = 0, bl = 0, a = 0;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; bl += d[i+2]; a += d[i+3]; }
+          return { r: r / 9, g: g / 9, b: bl / 9, a: a / 9 };
+        };
+        const warm = probe();
+        b.select(null);
+        await ${nFrames(4)};
+        const cool = probe();
+        return { info0, warm, cool };
+      })()`);
+      check(
+        '★ 热力图：选中 LeftUpLeg 大腿区画暖色（R≫B），取消选中回暖色消失',
+        heatRes.info0?.enabled === true && heatRes.info0?.bone === null &&
+          heatRes.warm.r > heatRes.warm.b + 30 &&
+          !(heatRes.cool.r > heatRes.cool.b + 30),
+        `选中时 rgb(${heatRes.warm.r.toFixed(0)},${heatRes.warm.g.toFixed(0)},${heatRes.warm.b.toFixed(0)})` +
+          ` → 取消后 rgb(${heatRes.cool.r.toFixed(0)},${heatRes.cool.g.toFixed(0)},${heatRes.cool.b.toFixed(0)})`,
+      );
+
+      const poseRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        document.querySelector('[data-bd="pov-pose"]').click();
+        await ${nFrames(4)};
+        const s0 = b.meshSum();
+        const before = b.state().positions.LeftForeArm.slice();
+        const p = before.slice();
+        p[1] -= 0.15; // 测试骨架：左小臂下移 15cm
+        b.pose('LeftForeArm', p);
+        await ${nFrames(4)};
+        const s1 = b.meshSum();
+        const after = b.state().positions.LeftForeArm.slice();
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { s0, s1, before, after };
+      })()`);
+      check(
+        '★ 姿势预览：拖测试骨架网格蒙皮变形，但编辑骨架坐标纹丝不动',
+        Number.isFinite(poseRes.s0) && Number.isFinite(poseRes.s1) &&
+          Math.abs(poseRes.s1 - poseRes.s0) > 1e-6 &&
+          JSON.stringify(poseRes.before) === JSON.stringify(poseRes.after),
+        `meshSum ${poseRes.s0?.toFixed(4)} → ${poseRes.s1?.toFixed(4)}，` +
+          `编辑骨架 ${JSON.stringify(poseRes.before)} → ${JSON.stringify(poseRes.after)}`,
+      );
+
+      const undoRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const orig = b.wrappers.cylinders().LeftArm.radii.medium;
+        b.wrappers.setRadius('LeftArm', 'medium', 0.2);
+        await ${nFrames(2)};
+        const h1 = b.history();
+        // 键盘路径：Ctrl+Z 必须真的绑定在面板快捷键上
+        document.querySelector('[data-bd="front"]').dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }),
+        );
+        await ${nFrames(2)};
+        const r1 = b.wrappers.cylinders().LeftArm.radii.medium;
+        b.redo();
+        await ${nFrames(2)};
+        const r2 = b.wrappers.cylinders().LeftArm.radii.medium;
+        const h2 = b.history();
+        // 必须还原成原值：后面 L2f/L2c 的像素断言依赖原始半径
+        b.wrappers.setRadius('LeftArm', 'medium', orig);
+        await ${nFrames(2)};
+        return { orig, r1, r2, h1, h2 };
+      })()`);
+      check(
+        '★ Undo/Redo：Ctrl+Z 撤销半径修改，redo 重做回来（栈深同步）',
+        undoRes.h1?.undo >= 1 &&
+          Math.abs(undoRes.r1 - undoRes.orig) < 1e-9 &&
+          Math.abs(undoRes.r2 - 0.2) < 1e-9 &&
+          undoRes.h2?.redo === 0,
+        `原值 ${undoRes.orig} → 改 0.2 → Ctrl+Z 后 ${undoRes.r1} → redo 后 ${undoRes.r2}` +
+          `（栈 ${JSON.stringify(undoRes.h1)}→${JSON.stringify(undoRes.h2)}）`,
+      );
+
       // ---- L2f. 主 3D 视口：改半径 → 画面像素必须跟着变 ----
       //
       // L2e 证的是「几何数据变了」，这里证的是「用户眼睛看到的变了」。

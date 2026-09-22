@@ -29,6 +29,7 @@ import {
   ARM_BONES,
   HUMANIK_BONES,
   HUMANIK_ORDER,
+  MIRROR_PAIRS,
   isTipBone,
   tposeDirections,
   type Vec3,
@@ -288,6 +289,12 @@ export interface SkinWeights {
  * 这里**不能**改用「过滤掉 tip 项再算」—— `joints[]` 里写的是 segs 下标，
  * 而它必须等于 `HUMANIK_ORDER` 的下标（glTF joint index），过滤会让整体错位。
  * 保留槽位、置零权重，是唯一既对齐索引又满足「tip 不参与 skin」的做法。
+ *
+ * ⚠️ **跨侧抢权重排除**（旧评审 §2.3）：`1/(d+eps)³` 在 d 小时爆炸，但对侧镜像骨
+ * 仍能抢到千分之几的权重（左大腿中点的 RightUpLeg ≈ 0.8%）—— 大跨步时裆部/腋下
+ * 穿插（糖纸效应）的成因之一。规则：每对镜像骨里，较远一侧若「既更远、又远得离谱」
+ * （`d_far > max(2·d_near, d_near + 5cm)`）则权重置零。裆部正中这类**两侧都近**的
+ * 顶点不满足条件、双侧照常保留 —— 排除的是纯跨侧偷权重，不是解剖上的双侧影响。
  */
 export function computeLbsWeights(
   positions: Float32Array,
@@ -302,19 +309,37 @@ export function computeLbsWeights(
   const weights = new Float32Array(vertexCount * 4);
   const nBones = segs.length;
   const w = new Float64Array(nBones);
+  const d = new Float64Array(nBones);
   const idx = new Int32Array(nBones);
   // 预先标记 tip：内层循环每顶点 × 每骨都会查，别在热路径里做 Set 查找
   const isTip = new Uint8Array(nBones);
   for (let b = 0; b < nBones; b++) isTip[b] = isTipBone(segs[b]!.bone) ? 1 : 0;
+  // 镜像对的 seg 下标预算一次（MIRROR_PAIRS 是骨名对，顶点循环里不能每回 findIndex）
+  const pairIdx: Array<readonly [number, number]> = [];
+  for (const [l, r] of MIRROR_PAIRS) {
+    const li = segs.findIndex((s) => s.bone === l);
+    const ri = segs.findIndex((s) => s.bone === r);
+    if (li >= 0 && ri >= 0) pairIdx.push([li, ri]);
+  }
+  // 跨侧排除阈值：远侧距离 > 近侧的 2 倍、且至少多出 5cm，才认定是「跨侧偷权重」
+  const CROSS_SIDE_RATIO = 2;
+  const CROSS_SIDE_GAP = 0.05;
 
   for (let i = 0; i < vertexCount; i++) {
     const o = i * vertexFloats;
     const p: Vec3 = [positions[o]!, positions[o + 1]!, positions[o + 2]!];
     for (let b = 0; b < nBones; b++) {
-      if (isTip[b] === 1) { w[b] = 0; idx[b] = b; continue; }
-      const d = distToSegment(p, segs[b]!.a, segs[b]!.b);
-      w[b] = 1 / Math.pow(d + eps, falloff);
       idx[b] = b;
+      if (isTip[b] === 1) { w[b] = 0; d[b] = Infinity; continue; }
+      d[b] = distToSegment(p, segs[b]!.a, segs[b]!.b);
+      w[b] = 1 / Math.pow(d[b]! + eps, falloff);
+    }
+    // 跨侧镜像骨排除：较远一侧「远得离谱」时置零（两侧都近的裆部/腋下不受影响）
+    for (const [li, ri] of pairIdx) {
+      const dl = d[li]!;
+      const dr = d[ri]!;
+      if (dl > dr && dl > Math.max(CROSS_SIDE_RATIO * dr, dr + CROSS_SIDE_GAP)) w[li] = 0;
+      else if (dr > dl && dr > Math.max(CROSS_SIDE_RATIO * dl, dl + CROSS_SIDE_GAP)) w[ri] = 0;
     }
     // 取权重最大的 maxInfluences 个（nBones 很小，直接插入排序足够）
     for (let k = 0; k < maxInfluences; k++) {
@@ -330,8 +355,7 @@ export function computeLbsWeights(
       let bd = Infinity, bj = 0;
       for (let b = 0; b < nBones; b++) {
         if (isTip[b] === 1) continue;
-        const d = distToSegment(p, segs[b]!.a, segs[b]!.b);
-        if (d < bd) { bd = d; bj = b; }
+        if (d[b]! < bd) { bd = d[b]!; bj = b; }
       }
       joints[base] = bj;
       weights[base] = 1;
@@ -531,6 +555,82 @@ export function smoothSkinWeights(
   }
 
   return { joints: curJ, weights: curW };
+}
+
+// ─────────────────────────── 权重诊断 ───────────────────────────
+
+/**
+ * 权重质量数字（旧评审 §2.7：技美用数字工作，不是用眼睛猜）。
+ * 由 `computeSkinDiagnostics` 从任意一份 SkinWeights 算出，面板诊断条常驻显示；
+ * 纯函数、不碰 DOM，单测可直接锁。
+ */
+export interface SkinDiagnostics {
+  /** 至少影响一个顶点（w>0）的骨数 */
+  usedBones: number;
+  /** 四槽权重全 0 的顶点数（应为 0：两套权重算法都有兜底，非 0 就是回归） */
+  zeroWeightVerts: number;
+  /** 用满 4 个影响槽的顶点数（top-4 截断压力指示；多 = 关节区影响挤占严重） */
+  fullInfluenceVerts: number;
+  /** 每骨统计（只列 w>0 的骨，按 HUMANIK_ORDER 序）：影响顶点数 / 平均 / 最大权重 */
+  perBone: Array<{ bone: string; verts: number; mean: number; max: number }>;
+}
+
+export function computeSkinDiagnostics(
+  skin: SkinWeights,
+  vertexCount: number,
+): SkinDiagnostics {
+  const nBones = HUMANIK_ORDER.length;
+  const cnt = new Float64Array(nBones);
+  const sum = new Float64Array(nBones);
+  const mx = new Float64Array(nBones);
+  let zeroWeightVerts = 0;
+  let fullInfluenceVerts = 0;
+  for (let i = 0; i < vertexCount; i++) {
+    const base = i * 4;
+    let rowSum = 0;
+    for (let k = 0; k < 4; k++) rowSum += skin.weights[base + k]!;
+    if (rowSum <= 1e-12) zeroWeightVerts++;
+    // 按骨 id 去重：同一根骨占两个槽位（手工拼的 skin 可能出现）时，
+    // 「影响顶点数」只算一次、权重合并 —— 否则顶点数会被槽位数撑大
+    const ub = [-1, -1, -1, -1];
+    const uw = [0, 0, 0, 0];
+    let un = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = skin.weights[base + k]!;
+      if (w <= 0) continue;
+      const b = skin.joints[base + k]!;
+      let found = -1;
+      for (let u = 0; u < un; u++) if (ub[u] === b) { found = u; break; }
+      if (found >= 0) {
+        uw[found] = uw[found]! + w;
+      } else {
+        ub[un] = b;
+        uw[un] = w;
+        un++;
+      }
+    }
+    if (un >= 4) fullInfluenceVerts++;
+    for (let u = 0; u < un; u++) {
+      const b = ub[u]!;
+      const w = uw[u]!;
+      cnt[b] = cnt[b]! + 1;
+      sum[b] = sum[b]! + w;
+      if (w > mx[b]!) mx[b] = w;
+    }
+  }
+  const perBone: SkinDiagnostics['perBone'] = [];
+  let usedBones = 0;
+  for (let b = 0; b < nBones; b++) {
+    if (cnt[b]! <= 0) continue;
+    usedBones++;
+    perBone.push({
+      bone: HUMANIK_ORDER[b]!,
+      verts: cnt[b]!,
+      mean: sum[b]! / cnt[b]!,
+      max: mx[b]!,
+    });
+  }
+  return { usedBones, zeroWeightVerts, fullInfluenceVerts, perBone };
 }
 
 // ─────────────────────────── 姿态拟合与反解 ───────────────────────────
