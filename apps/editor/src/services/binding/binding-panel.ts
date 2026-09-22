@@ -1151,7 +1151,9 @@ export class BindingPanel {
   /** 三态姿态预览切换 */
   private setMode(mode: PreviewMode): void {
     if (mode === this.previewMode) return;
-    // 回到冻结的 Bind Pose：把编辑姿态恢复成拍下的 bind pose（只读预览，可随时重绑）
+    // 回到冻结的 Bind Pose：把编辑骨架**替换**成拍下的 bind pose —— Bind 之后
+    // 未导出的编辑被丢弃且不可 Ctrl+Z（历史语义：从绑定姿态重新微调再重绑；
+    // Bind 档不是只读预览，档内仍可拖拽编辑。隐患已在 PR #9 评审立项记录）
     if (mode === 'bind') {
       if (!this.session.restoreBindPose()) return;
     }

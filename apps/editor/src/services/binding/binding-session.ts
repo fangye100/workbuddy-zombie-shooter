@@ -16,9 +16,12 @@
  *    逐一核对过入栈点）；例外只有两类 —— ①**连续拖拽**这类手势流：手势起点调一次
  *    `beginEdit(kind)` / `beginEdit(kind, coalesceMs)`，过程中用 `setJointPosition`
  *    纯写，手势边界（pointerup / 表单 change / 换选中）调 `sealHistory()` 封口；
- *    ②`restoreBindPose()`：它是「切到 Bind 预览档」的副动作（只读预览的配套恢复），
- *    历史上从不入栈 —— 若未来要让 Agent/MCP 把它当编辑操作用，需先改成
- *    `beginEdit('restore-bind')` 并确认面板语义。
+ *    ②`restoreBindPose()`：面板「Bind 档」进入时的配套恢复——把编辑骨架**替换**
+ *    为冻结的 bind pose，Bind 之后未导出的编辑被丢弃且**不可 Ctrl+Z**（Bind 档
+ *    并非只读预览，档内仍可拖拽编辑，语义是「从绑定姿态重新微调再重绑」）。
+ *    历史上从不入栈 —— 若未来要让 Agent/MCP 把它当编辑操作用，或要把 Bind 档
+ *    改成不动编辑骨架的纯预览 overlay，需先改成 `beginEdit('restore-bind')`
+ *    并确认面板语义（隐患已在 PR #9 评审立项记录）。
  * 4. **持久化契约**：`getEditorData()` 的产物写进 `.meta.json` 的 `bindingEditor`
  *    键；`hydrate()` 做全形状校验，脏数据字段保持默认值（绝不静默修数据）。
  *    与 node 管线 `rig`（配方）/ `bindings`（数组）互不冲突 —— devfs patch
@@ -718,11 +721,14 @@ export class BindingSession {
   }
 
   /**
-   * 把编辑骨架恢复成冻结的 Bind Pose（未 Bind 过 = false，调用方保持原状）。
+   * 把编辑骨架**替换**为冻结的 Bind Pose（未 Bind 过 = false，调用方保持原状）。
    *
-   * ⚠️ 历史纪律例外（已登记，独立审核 P2-1）：本方法**不打历史快照** —— 它是面板
-   * 「切到 Bind 预览档」的配套恢复（只读预览语义），不是一次编辑操作。未来若有
-   * Agent/MCP 消费方把它当编辑用，必须先改为 `beginEdit('restore-bind')` 入栈。
+   * ⚠️ 历史纪律例外（已登记，独立审核 P2-1）：本方法**不打历史快照** —— 面板
+   * 「Bind 档」进入时调用，语义是「回到绑定姿态以便重绑」：Bind 之后未导出的
+   * 编辑被丢弃且**不可 Ctrl+Z**（Bind 档不是只读预览，档内仍可拖拽编辑）。
+   * 未来若有 Agent/MCP 消费方把它当编辑用，或要把 Bind 档改成不动编辑骨架的
+   * 纯预览 overlay，必须先改为 `beginEdit('restore-bind')` 入栈并确认面板语义
+   * （隐患已在 PR #9 评审立项记录）。
    */
   restoreBindPose(): boolean {
     if (this.bindPose === null) return false;
