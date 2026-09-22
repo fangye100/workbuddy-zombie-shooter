@@ -99,5 +99,5 @@ load_model → render(front+side)            # 看见模型与模板骨架的错
   → compute_skin（unwrappedVerts 是否归零）
   → save                                   # 落盘 sidecar（门禁 validateAssetMeta 守门）
   → export_glb                             # 产出干净 T-pose rigged GLB（统计：零权重/tip 权重/身高守恒）
-  → pnpm run scene:gen && scene:check      # 首版 sidecar + 门禁（export 结果 metaRefreshed=false 时）
+  → pnpm run scene:gen && pnpm run scene:check   # 首版 sidecar + 门禁（metaRefreshed=false 时）
 ```

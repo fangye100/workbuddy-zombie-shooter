@@ -43,7 +43,7 @@ mkdirSync(TMP, { recursive: true });
 for (const f of [
   'probe_tpose.glb', 'probe_tpose.glb.meta.json',
   'texprobe.glb', 'texprobe_tpose.glb', 'texprobe_tpose.glb.meta.json',
-  'texprobe_dist.glb', 'toc1.glb', 'toc2.glb', 'toc3.glb',
+  'texprobe_dist.glb', 'toc1.glb', 'toc2.glb', 'toc3.glb', 'par1.glb',
 ]) {
   try { rmSync(path.resolve(TMP, f)); } catch { /* 不存在才算干净 */ }
 }
@@ -570,6 +570,48 @@ try {
   await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/toc3.glb' });
   check('对照组：落地后的导出确实不同（断言非空转）',
     !readFileSync(toc1).equals(readFileSync(toc3)));
+
+  // 并发双写同一新路径（Copilot #11）：wx 原子排他 —— 必须恰好一成一败
+  {
+    const parRel = '.workbuddy/tmp/mcp-binding-probe/par1.glb';
+    const parId1 = nextId++;
+    const parId2 = nextId++;
+    const mk = (id) => new Promise((resolve, reject) => pending.set(id, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 par')), 15000) }));
+    const pp1 = mk(parId1);
+    const pp2 = mk(parId2);
+    child.stdin.write(
+      JSON.stringify({ jsonrpc: '2.0', id: parId1, method: 'tools/call', params: { name: 'export_glb', arguments: { outPath: parRel } } }) + '\n' +
+      JSON.stringify({ jsonrpc: '2.0', id: parId2, method: 'tools/call', params: { name: 'export_glb', arguments: { outPath: parRel } } }) + '\n',
+    );
+    const [pr1, pr2] = await Promise.allSettled([pp1, pp2]);
+    const oks = [pr1, pr2].filter((r) => r.status === 'fulfilled').length;
+    const rej = [pr1, pr2].find((r) => r.status === 'rejected');
+    check('并发双写同一新路径恰好一成一败（EEXIST 原子排他）',
+      oks === 1 && rej !== undefined && String(rej.reason).includes('-32602') && String(rej.reason).includes('已存在'));
+  }
+
+  // 管道化双 set_joint 的历史粒度（Copilot #11：seal 必须赶在下个写工具进入前完成，
+  // 否则 800ms 合并窗把两次调用并成一步 undo）
+  {
+    const neckPre = (await toolJson('get_joints'))?.positions?.Neck;
+    const headPre2 = (await toolJson('get_joints'))?.positions?.Head;
+    const sjId1 = nextId++;
+    const sjId2 = nextId++;
+    const mk = (id) => new Promise((resolve, reject) => pending.set(id, { resolve, reject, timer: setTimeout(() => reject(new Error('超时 sj')), 15000) }));
+    const sp1 = mk(sjId1);
+    const sp2 = mk(sjId2);
+    child.stdin.write(
+      JSON.stringify({ jsonrpc: '2.0', id: sjId1, method: 'tools/call', params: { name: 'set_joint', arguments: { name: 'Neck', position: [neckPre[0], neckPre[1] + 0.05, neckPre[2]] } } }) + '\n' +
+      JSON.stringify({ jsonrpc: '2.0', id: sjId2, method: 'tools/call', params: { name: 'set_joint', arguments: { name: 'Head', position: [headPre2[0], headPre2[1] + 0.05, headPre2[2]] } } }) + '\n',
+    );
+    await Promise.all([sp1, sp2]);
+    await toolJson('undo');
+    const after = await toolJson('get_joints');
+    check('管道化双 set_joint：undo 只回退最后一步（seal 不被 await 推迟）',
+      after?.positions?.Head?.[1] === headPre2[1] &&
+      Math.abs(after?.positions?.Neck?.[1] - (neckPre[1] + 0.05)) < 1e-9);
+    await toolJson('undo'); // 还原 Neck
+  }
 
   const unknown = await tool('nope').then(() => null, (e) => String(e));
   check('未知工具返回 -32602', typeof unknown === 'string' && unknown.includes('-32602'));

@@ -56,10 +56,16 @@ export interface FsPort {
   /** 文件不存在返回 null（区别于读失败抛错） */
   readText(abs: string): string | null;
   writeText(abs: string, text: string): void;
-  /** 写二进制（export_glb 的 GLB 产物落盘） */
-  writeBinary(abs: string, data: ArrayBuffer): void;
-  /** 文件是否存在（export_glb 的覆盖守卫） */
+  /**
+   * 写二进制。exclusive=true 时目标已存在必须抛 message 含 "EEXIST" 的错
+   * （底层用独占创建 —— 覆盖检查与写入必须原子，否则并发双导出同路径会双双通过
+   * 检查再互相覆盖，Copilot PR #11 评审）
+   */
+  writeBinary(abs: string, data: ArrayBuffer, exclusive: boolean): void;
+  /** 文件是否存在（export_glb 的覆盖守卫，提前报错省一次导出计算） */
   exists(abs: string): boolean;
+  /** 两路径是否指向同一文件（dev+ino；任一不存在返回 false）。防硬链/软链别名绕过自覆盖守卫 */
+  sameFile(a: string, b: string): boolean;
   /** 小写 hex sha256（export 后刷新 sidecar 的 sourceHash，与 scene:gen 同算法） */
   sha256(abs: string): string;
 }
@@ -393,10 +399,12 @@ export class BindingDomain {
       throw new ToolError(`导出目标必须是 .glb：${outRel}`);
     }
     // 守卫一律比**解析后的绝对路径**：resolve 会 collapse 掉 `./`、`sub/..` 段，
-    // 比原始相对串会被这些变体绕过（独立审核 P0-1 实测：源模型被穿透覆盖）
+    // 比原始相对串会被这些变体绕过（独立审核 P0-1 实测：源模型被穿透覆盖）。
+    // 再补 sameFile（dev+ino）：硬链/软链别名的绝对路径不同但指向同一文件
     const norm = (p: string): string => p.replace(/\\/g, '/').toLowerCase();
     const outAbs = this.fs.resolve(outRel);
-    if (norm(outAbs) === norm(this.fs.resolve(srcRel))) {
+    const srcAbs = this.fs.resolve(srcRel);
+    if (norm(outAbs) === norm(srcAbs) || this.fs.sameFile(outAbs, srcAbs)) {
       // 自覆盖硬拒（overwrite 也不放行）：产物反解成 T-pose 并嵌骨架，
       // 盖掉源文件等于销毁绑定原料
       throw new ToolError(`导出目标不能覆盖源模型：${outRel}`);
@@ -436,7 +444,16 @@ export class BindingDomain {
       mirrorWeights: mirror,
     });
 
-    this.fs.writeBinary(outAbs, res.glb);
+    // 独占创建写：exists 预检只是省计算的快速路径，原子性靠 wx —— 两个并发导出
+    // 同一新路径时，后到的在写边界收到 EEXIST 而不是静默覆盖先到的产物
+    try {
+      this.fs.writeBinary(outAbs, res.glb, !overwrite);
+    } catch (err) {
+      if (String(err).includes('EEXIST')) {
+        throw new ToolError(`目标已存在：${outRel}（确认覆盖请显式传 overwrite: true）`);
+      }
+      throw err;
+    }
 
     // sidecar 存在 → 只刷新 sourceHash/updatedAt，让 scene:check 的哈希门禁立刻转绿；
     // 不存在 → 不代建（roster 耦合字段是 gen-asset-meta 的职责），提示跑 scene:gen
@@ -669,9 +686,12 @@ export async function dispatchTool(
   name: string,
   rawArgs: unknown,
 ): Promise<ToolResult> {
-  const result = await dispatchInner(domain, name, rawArgs);
+  // 写工具路径在 dispatchInner 里**同步执行完毕**（只有 export_glb 内含 await），
+  // 所以封口必须赶在 await 让出事件循环之前：否则同一 stdin chunk 连发的下一个
+  // 写工具会撞见未关闭的 800ms 合并窗，两次调用被并成一步 undo（Copilot PR #11）
+  const p = dispatchInner(domain, name, rawArgs);
   if (!READONLY_TOOLS.has(name)) domain.session.sealHistory();
-  return result;
+  return await p;
 }
 
 async function dispatchInner(
