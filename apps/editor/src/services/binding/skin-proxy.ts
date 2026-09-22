@@ -24,6 +24,7 @@ import {
 } from './humanik-template';
 import {
   boneSegments,
+  distToSegment,
   type JointPositions,
   type SkinWeights,
 } from './binding-math';
@@ -165,6 +166,17 @@ export function autoFitCylinders(
 export interface CylinderWeightOptions {
   /** 每顶点最大影响骨数（默认 4） */
   maxInfluences?: number;
+  /**
+   * 传入即填：权重分配的过程统计（供面板诊断条把「未包裹顶点数」从隐形变可见，
+   * 旧评审 §2.7）。不改变权重本身。
+   */
+  stats?: CylinderWeightStats;
+}
+
+/** `computeCylinderWeights` 的过程统计（`CylinderWeightOptions.stats` 传入即填） */
+export interface CylinderWeightStats {
+  /** 未被任何启用中的 wrapper 包住（全部 gap>0）的顶点数 —— 软衰减晕带的覆盖量 */
+  unwrappedVerts: number;
 }
 
 /**
@@ -173,18 +185,27 @@ export interface CylinderWeightOptions {
  * 对每个顶点、每根启用中的 wrapper，算它到该 wrapper 表面的**有符号距离**
  * `gap = dr − r`（dr = 顶点到骨段轴的径向距离，r = 该子段半径）：
  *   - `gap ≤ 0`（被包住）→ 顶点属于该 joint 的包裹体积；
- *   - `gap >  0`（包裹外）→ 该 wrapper 不拥有此顶点。
+ *   - `gap >  0`（包裹外）→ 该 wrapper 不拥有此顶点，但按软衰减贡献一段晕带。
  *
- * 归属规则（用户指定）：
+ * 归属规则：
  *   - **被单独包住**（只有一根 wrapper 的 gap≤0）→ 该 joint 的「绝对体」，权重 ≈ 100%。
- *   - **被多根不同 joint 的 wrapper 包住** → 按「点到各 wrapper 表面的最近距离」做
- *     百分比分配：越深（穿透深度 `r−dr` 越大、离表面越远）的 wrapper 拿到越多权重，
- *     多根归一化后即各 joint 的百分比占比。
+ *   - **被多根不同 joint 的 wrapper 包住** → 按**归一化穿透深度** `(r−dr)/r` 做百分比
+ *     分配：穿入占本段半径的比例越大权重越大。用相对深度而非绝对米制（旧评审 §2.2）：
+ *     绝对深度让粗骨天然碾压细骨（上臂 0.08m 深 > 下臂 0.06m 深），且换个体型
+     *     （1.6m 瘦僵尸 ↔ 2.4m 暴君）同样几何比例拿到不同权重，尺度不变性被打破。
+ *   - **包裹外** → 软衰减晕带 `w = 1/(1+(gap/H)²)`（旧评审 §2.1 建议的形式）：
+ *     在 wrapper 表面处与 BASE 连续，向 cm 级宽度内自然衰减。晕带宽度
+ *     `H = min(r/4, 2.5cm)` —— 必须**窄带**：相对半径取比例时，大半径 wrapper
+ *     （Hips r≈0.22）表面外 3cm 处的顶点会拿到 ≈1 的晕带权重，把深包在别骨里的
+ *     顶点稀释到 0.77（实测）；cm 级窄带让「过渡」只发生在真正的边界附近。
+ *     僵尸题材大量几何长在包裹体之外（腐肉 / 外露骨 / 破布 / 背负物 / 外扩
+ *     描边壳），旧的「最近 wrapper 硬权重 1.0」兜底让这些顶点与平滑区之间出现
+ *     硬边接缝；晕带让包裹外有一段自然过渡带，top-4 里多根近处 wrapper 按比例分。
  *
- * 没有任何 wrapper 包住的顶点（天外飞点 / 全禁用）→ 兜底给「几何最近的 wrapper」
- * 权重 1，杜绝零权重顶点（旧实现用距离衰减，此处等价「最近骨」默认）。
+ * 一个启用中的 wrapper 都没有（全禁用）→ 兜底给「几何最近的骨段」（tip 除外）
+ * 权重 1，杜绝零权重顶点。
  *
- * 所有权重都来自「是否被包 + 包得多深」，与「包住即所属」的语义一致；
+ * 所有权重都来自「是否被包 + 包得多深 + 离表面多远」，与「包住即所属」的语义一致；
  * 下游 `binding-export` 的 `smoothSkinWeights` 会再做热扩散松弛，晕开骨交界硬切换。
  */
 export function computeCylinderWeights(
@@ -196,6 +217,8 @@ export function computeCylinderWeights(
   opts: CylinderWeightOptions = {},
 ): SkinWeights {
   const maxInfluences = opts.maxInfluences ?? 4;
+  const stats = opts.stats;
+  if (stats !== undefined) stats.unwrappedVerts = 0;
   const segs = boneSegments(placed); // 与 HUMANIK_ORDER 同序，seg 索引 = 骨索引
   const nBones = segs.length;
   const joints = new Uint16Array(vertexCount * 4);
@@ -203,17 +226,16 @@ export function computeCylinderWeights(
   const w = new Float64Array(nBones);
   const idx = new Int32Array(nBones);
 
-  // 被包顶点的基础权重：只需 > 0 即可压过「未包（=0）」，同时留出 penetration
-  // 差异空间做百分比分配。BASE 不必大（未包恒为 0，不存在旧方案里「内/外权重
-  // 同量级」的冲突）；penetration（米级 ~0..0.22）经 PEN_SCALE 放大后主导分配。
+  // 被包顶点的基础权重：只需 > 0 即可压过「未包（软衰减恒 < 1）」，同时留出穿透
+  // 深度差异空间做百分比分配。PEN_SCALE 乘的是**归一化**穿透深度 (r−dr)/r ∈ [0,1]，
+  // 最深（贴在骨轴上）= BASE + PEN_SCALE，与体型 / 半径绝对值无关（旧评审 §2.2）。
   const BASE = 1.0;
   const PEN_SCALE = 8.0;
 
   for (let i = 0; i < vertexCount; i++) {
     const o = i * vertexFloats;
     const p: Vec3 = [positions[o]!, positions[o + 1]!, positions[o + 2]!];
-    let nearestGap = Infinity;   // 未包顶点：到最近 wrapper 表面的间隙（取最小者作兜底 owner）
-    let nearestBone = 0;
+    let wrapped = false; // 是否被至少一根启用中的 wrapper 包住（诊断统计用）
     for (let b = 0; b < nBones; b++) {
       const seg = segs[b]!;
       const cyl = cyls[seg.bone];
@@ -240,13 +262,19 @@ export function computeCylinderWeights(
       const r = sub > 1e-6 ? sub : 1e-6;
       const gap = dr - r; // >0 包裹外；≤0 包裹内
       if (gap <= 0) {
-        // 被包住：到表面距离 = −gap = r − dr（穿透深度）。越深 → 离表面越远 → 权重越大。
-        w[b] = BASE + (-gap) * PEN_SCALE;
+        // 被包住：归一化穿透深度 (−gap)/r ∈ [0,1] —— 相对本段半径，尺度不变
+        wrapped = true;
+        w[b] = BASE + Math.min(1, -gap / r) * PEN_SCALE;
       } else {
-        w[b] = 0; // 未包：该 wrapper 不拥有此顶点
-        if (gap < nearestGap) { nearestGap = gap; nearestBone = b; }
+        // 包裹外：窄带软衰减。表面处 = 1 与 BASE 连续；宽度 H = min(r/4, 2.5cm)
+        // —— 窄带是刻意的：宽带会让「刚好在大半径 wrapper 表面外一点」的顶点拿到
+        // ≈1 的晕带权重，稀释深包顶点的归属（实测 Hips 晕带把大腿顶点冲到 0.77）
+        const halo = Math.min(0.25 * r, 0.025);
+        const g = gap / halo;
+        w[b] = 1 / (1 + g * g);
       }
     }
+    if (!wrapped && stats !== undefined) stats.unwrappedVerts++;
     // top-4（nBones=22 极小，插入排序足够）
     for (let k = 0; k < maxInfluences; k++) {
       let best = k;
@@ -257,8 +285,16 @@ export function computeCylinderWeights(
     let sum = 0;
     for (let k = 0; k < maxInfluences; k++) sum += w[idx[k]!]!;
     if (sum <= 1e-12) {
-      // 无任何 wrapper 包住 → 兜底给最近 wrapper 权重 1，杜绝零权重顶点
-      joints[base] = nearestBone;
+      // 一个启用中的 wrapper 都没有（全禁用）→ 几何最近骨段兜底（tip 永不承重），
+      // 杜绝零权重顶点
+      let bd = Infinity;
+      let bj = 0;
+      for (let b = 0; b < nBones; b++) {
+        if (isTipBone(segs[b]!.bone)) continue;
+        const d = distToSegment(p, segs[b]!.a, segs[b]!.b);
+        if (d < bd) { bd = d; bj = b; }
+      }
+      joints[base] = bj;
       weights[base] = 1;
     } else {
       for (let k = 0; k < maxInfluences; k++) {

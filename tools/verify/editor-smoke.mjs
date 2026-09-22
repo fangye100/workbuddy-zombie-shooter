@@ -308,7 +308,15 @@ async function main() {
     '--no-default-browser-check',
   ];
   if (HEADED) {
-    // headed + 真实 GPU：不需要 SwiftShader / Vulkan 软件回退
+    // headed + 真实 GPU：不需要 SwiftShader / Vulkan 软件回退。
+    // 反遮挡三件套（Windows）：窗口被别的窗口盖住时 Chrome 的原生遮挡追踪会
+    // 冻结 RAF/渲染 → 截图字节级不变（假「画面没更新」FAIL）或画布整块黑，
+    // 且墙钟 sleep 等不来帧。冒烟动辄跑几分钟，被盖住是常态而非例外。
+    flags.push(
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-features=CalculateNativeWinOcclusion',
+    );
   } else {
     flags.unshift('--headless=new');
     flags.push(
@@ -1362,6 +1370,38 @@ async function main() {
       // 这里要证的是渲染链路真的通 —— WGSL 编译错误 / usage 错配只在运行时暴露，
       // tsc 与 vite build 全绿也查不出来。
       console.log('\nL2. Skin Wrapper 圆柱体（主 3D 视口）');
+      // 帧等待辅助（本段及其后所有 L2x 共用）：等页面里真实的 RAF 帧，不是墙钟
+      // sleep —— 窗口被遮挡时 RAF 会被节流，sleep(600) 可能一帧都没过去（叠加层
+      // 顶点缓冲还没上传就被采样 → verts=0 的假 FAIL，2026-09-22 PR #8 复审期复现）。
+      const nFrames = (n) =>
+        `new Promise((r) => { let k = 0; const step = () => (++k >= ${n} ? r() : requestAnimationFrame(step)); requestAnimationFrame(step); })`;
+
+      // L 段的 applyTo 会同步打开重定向工作台：右侧 720px 覆盖式 dock（z-index 45），
+      // 恰好压住主视口右半 + 底部绑定面板的 3D 画布。不关掉它，后面所有
+      // 基于 Page.captureScreenshot 的采样（L2f 主视口像素 / L2c 面板 3D 健康度）
+      // 采到的都是工作台内容 —— 决定性假 FAIL（2026-09-22 排查：三次复跑的
+      // 「avg 27.416→27.416 / side mid=0.023」截图里全是工作台 UI）。
+      // L 段对工作台的断言已全部走 hook 完成，这里显式退出，恢复采样视野。
+      const rwClosed = await cdp.eval(`(() => {
+        const dock = document.getElementById('retarget-dock');
+        if (dock === null || !dock.classList.contains('open')) return 'not-open';
+        const btn = [...dock.querySelectorAll('button')].find((b) => b.textContent === '退出');
+        if (btn === undefined) return 'no-button';
+        btn.click();
+        return dock.classList.contains('open') ? 'still-open' : 'closed';
+      })()`);
+      check('重定向工作台已退出（不遮挡后续像素采样）', rwClosed !== 'still-open' && rwClosed !== 'no-button', rwClosed);
+
+      // 主视口包裹器叠加层每帧从「当前选中物体」的实时关节矩阵重建（main.ts 帧循环）。
+      // L 段 applyTo 后该物体正在自动播放 smoke_apose（0.167s 循环）—— 叠加层随动画
+      // 持续漂移，L2e 的「对照组 vs 真改」Δsum 比较就会变成抛硬币（漂移 >> 半径变化的
+      // 净效应，因为 Σ|coord| 对径向膨胀大面积抵消）。后续 L2e/L2f/L2c 都需要静止场景。
+      const paused = await cdp.eval(`(() => {
+        window.__editor.renderer.pauseAnimation();
+        return true;
+      })()`);
+      check('已暂停叠加层取数源的动画播放（后续采样需要静止场景）', paused === true);
+
       // 先切到「蒙皮包裹」模式：每 joint 的默认 wrapper 半径表是**惰性**初始化的，
       // 未进 skin 模式时 getCylinders() 为 null，3D 视口退回「骨长×0.35」默认半径。
       // 这里显式切模式，才能验证「面板半径 → 3D 几何」这条链路而不仅是默认值。
@@ -1374,12 +1414,19 @@ async function main() {
 
       const wrapOn = await cdp.eval(`(() => window.__editor.binding.wrappers.set(true))()`);
       check('3D 视口包裹器开关可打开', wrapOn === true, `set→${wrapOn}`);
-      await sleep(600); // 让几帧真正画过去（含圆柱体管线）
-      const wrap = await cdp.eval(`(() => ({
-        on: window.__editor.binding.wrappers.get(),
-        verts: window.__editor.binding.wrappers.verts(),
-        cyls: Object.keys(window.__editor.binding.wrappers.cylinders() || {}).length,
-      }))()`);
+      // 叠加层顶点缓冲是帧驱动上传的：轮询到 verts>0 再采样（上限 ~120 帧 ≈ 2s），
+      // 把「上传还没发生」与「管线真坏了」区分开。
+      const wrap = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        let tries = 0;
+        while (b.wrappers.verts() === 0 && tries < 120) { await ${nFrames(1)}; tries++; }
+        return {
+          on: b.wrappers.get(),
+          verts: b.wrappers.verts(),
+          cyls: Object.keys(b.wrappers.cylinders() || {}).length,
+          tries,
+        };
+      })()`);
       check(
         '★ 圆柱体几何已产出并送进管线（顶点数 > 0）',
         wrap.verts > 0,
@@ -1424,8 +1471,6 @@ async function main() {
       // 主 3D 视口与面板正/侧视两条路径都要验 —— 它们用不同的输入
       // （实时关节矩阵 vs boneSegments），一条通了不代表另一条通。
       console.log('\nL2e. 改半径 → 几何真的变');
-      const nFrames = (n) =>
-        `new Promise((r) => { let k = 0; const step = () => (++k >= ${n} ? r() : requestAnimationFrame(step)); requestAnimationFrame(step); })`;
       const rad = await cdp.eval(`(async () => {
         const b = window.__editor.binding;
         const wait = () => ${nFrames(4)};
@@ -1897,6 +1942,235 @@ async function main() {
         `loaded=${reopenRes.loaded} checked=${reopenRes.checked}`,
       );
 
+      // ---- L2k. 旧评审遗留收口：诊断条 / 平滑参数 / 热力图 / 姿势预览 / Undo ----
+      //
+      //   §2.7 诊断条：数字必须与导出权重同源且常驻可见（影响骨数/零权重/未包裹）。
+      //   §2.4 平滑参数：迭代数默认 4、改它 T 预览几何指纹必须变（真的进了权重链）。
+      //   P0-3 热力图：选中骨 → 该骨高权重区画暖色；取消选中 → 暖色消失。
+      //   §1.3 姿势预览：拖测试骨架网格变形，但编辑骨架坐标一个数都不许动。
+      //   §2.6 Undo/Redo：键盘 Ctrl+Z 撤销半径修改，hook redo 重做回来。
+      console.log('\nL2k. 旧评审遗留收口（诊断条/平滑参数/热力图/姿势预览/Undo）');
+
+      const diagRes = await cdp.eval(`(() => {
+        const t = window.__editor.binding.diag();
+        return {
+          t,
+          ok: t.includes('影响骨数') && t.includes('零权重') && t.includes('未包裹'),
+        };
+      })()`);
+      check(
+        '★ 诊断条常驻且与导出同源（影响骨数 / 零权重 / 未包裹顶点数）',
+        diagRes.ok === true,
+        diagRes.t.replace(/\s+/g, ' ').slice(0, 110),
+      );
+
+      const smoothRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const si = document.querySelector('[data-bd="smooth-iters"]');
+        const def = si.value;
+        document.querySelector('[data-bd="pov-t"]').click();
+        await ${nFrames(3)};
+        const s1 = b.meshSum();
+        si.value = '1';
+        si.dispatchEvent(new Event('change', { bubbles: true }));
+        await ${nFrames(3)};
+        const s2 = b.meshSum();
+        // 还原：参数回位 + 回当前姿态预览
+        si.value = def;
+        si.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { def, s1, s2 };
+      })()`);
+      check(
+        '★ 平滑迭代数默认 4 且真实进权重链（改成 1 后 T 预览几何指纹跟着变）',
+        smoothRes.def === '4' &&
+          Number.isFinite(smoothRes.s1) && Number.isFinite(smoothRes.s2) &&
+          Math.abs(smoothRes.s2 - smoothRes.s1) > 1e-6,
+        `默认=${smoothRes.def} meshSum ${smoothRes.s1?.toFixed(4)} → ${smoothRes.s2?.toFixed(4)}`,
+      );
+
+      const heatRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const info0 = b.heat();
+        b.select('LeftUpLeg');
+        await ${nFrames(4)};
+        const seg = b.wrappers.axis('LeftUpLeg', 'front');
+        const cx = document.querySelector('[data-bd="front"]');
+        const ctx2 = cx.getContext('2d');
+        // 3×3 采样规避三角面抗锯齿发丝缝；+8px 避开骨线与 joint 圆点
+        const px = Math.round((seg.a[0] + seg.b[0]) / 2 + 8);
+        const py = Math.round((seg.a[1] + seg.b[1]) / 2);
+        const probe = () => {
+          const d = ctx2.getImageData(px - 1, py - 1, 3, 3).data;
+          let r = 0, g = 0, bl = 0, a = 0;
+          for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; bl += d[i+2]; a += d[i+3]; }
+          return { r: r / 9, g: g / 9, b: bl / 9, a: a / 9 };
+        };
+        const warm = probe();
+        b.select(null);
+        await ${nFrames(4)};
+        const cool = probe();
+        return { info0, warm, cool };
+      })()`);
+      check(
+        '★ 热力图：选中 LeftUpLeg 大腿区画暖色（R≫B），取消选中回暖色消失',
+        heatRes.info0?.enabled === true && heatRes.info0?.bone === null &&
+          heatRes.warm.r > heatRes.warm.b + 30 &&
+          !(heatRes.cool.r > heatRes.cool.b + 30),
+        `选中时 rgb(${heatRes.warm.r.toFixed(0)},${heatRes.warm.g.toFixed(0)},${heatRes.warm.b.toFixed(0)})` +
+          ` → 取消后 rgb(${heatRes.cool.r.toFixed(0)},${heatRes.cool.g.toFixed(0)},${heatRes.cool.b.toFixed(0)})`,
+      );
+
+      const poseRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        document.querySelector('[data-bd="pov-pose"]').click();
+        await ${nFrames(4)};
+        const s0 = b.meshSum();
+        const before = b.state().positions.LeftForeArm.slice();
+        const p = before.slice();
+        p[1] -= 0.15; // 测试骨架：左小臂下移 15cm
+        b.pose('LeftForeArm', p);
+        await ${nFrames(4)};
+        const s1 = b.meshSum();
+        const after = b.state().positions.LeftForeArm.slice();
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { s0, s1, before, after };
+      })()`);
+      check(
+        '★ 姿势预览：拖测试骨架网格蒙皮变形，但编辑骨架坐标纹丝不动',
+        Number.isFinite(poseRes.s0) && Number.isFinite(poseRes.s1) &&
+          Math.abs(poseRes.s1 - poseRes.s0) > 1e-6 &&
+          JSON.stringify(poseRes.before) === JSON.stringify(poseRes.after),
+        `meshSum ${poseRes.s0?.toFixed(4)} → ${poseRes.s1?.toFixed(4)}，` +
+          `编辑骨架 ${JSON.stringify(poseRes.before)} → ${JSON.stringify(poseRes.after)}`,
+      );
+
+      const undoRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const orig = b.wrappers.cylinders().LeftArm.radii.medium;
+        b.wrappers.setRadius('LeftArm', 'medium', 0.2);
+        await ${nFrames(2)};
+        const h1 = b.history();
+        // 键盘路径：Ctrl+Z 必须真的绑定在面板快捷键上
+        document.querySelector('[data-bd="front"]').dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }),
+        );
+        await ${nFrames(2)};
+        const r1 = b.wrappers.cylinders().LeftArm.radii.medium;
+        b.redo();
+        await ${nFrames(2)};
+        const r2 = b.wrappers.cylinders().LeftArm.radii.medium;
+        const h2 = b.history();
+        // 必须还原成原值：后面 L2f/L2c 的像素断言依赖原始半径
+        b.wrappers.setRadius('LeftArm', 'medium', orig);
+        await ${nFrames(2)};
+        return { orig, r1, r2, h1, h2 };
+      })()`);
+      check(
+        '★ Undo/Redo：Ctrl+Z 撤销半径修改，redo 重做回来（栈深同步）',
+        undoRes.h1?.undo >= 1 &&
+          Math.abs(undoRes.r1 - undoRes.orig) < 1e-9 &&
+          Math.abs(undoRes.r2 - 0.2) < 1e-9 &&
+          undoRes.h2?.redo === 0,
+        `原值 ${undoRes.orig} → 改 0.2 → Ctrl+Z 后 ${undoRes.r1} → redo 后 ${undoRes.r2}` +
+          `（栈 ${JSON.stringify(undoRes.h1)}→${JSON.stringify(undoRes.h2)}）`,
+      );
+
+      // PR #8 复审收口一：快照是全量持久化态 → 设置变更也进历史，
+      // 撤销必须同时回滚内部状态与控件显示（否则控件与状态背离）。
+      const setUndoRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const sm = document.querySelector('[data-bd="smooth"]');
+        const orig = sm.checked;
+        const h0 = b.history().undo;
+        sm.checked = !orig;
+        sm.dispatchEvent(new Event('change', { bubbles: true }));
+        await ${nFrames(2)};
+        const h1 = b.history().undo;
+        b.undo();
+        await ${nFrames(2)};
+        const back = sm.checked;
+        b.redo();
+        await ${nFrames(2)};
+        const fwd = sm.checked;
+        // 还原到原状，不给后面的段落留脏状态
+        if (sm.checked !== orig) {
+          sm.checked = orig;
+          sm.dispatchEvent(new Event('change', { bubbles: true }));
+          await ${nFrames(2)};
+        }
+        return { orig, h0, h1, back, fwd };
+      })()`);
+      check(
+        '★ 设置变更进历史：平滑开关撤销/重做时状态与控件同步还原（全量快照）',
+        setUndoRes.h1 === setUndoRes.h0 + 1 &&
+          setUndoRes.back === setUndoRes.orig &&
+          setUndoRes.fwd === !setUndoRes.orig,
+        `栈深 ${setUndoRes.h0}→${setUndoRes.h1}，勾选 ${setUndoRes.orig} → 改 ${!setUndoRes.orig}` +
+          ` → undo 后 ${setUndoRes.back} → redo 后 ${setUndoRes.fwd}`,
+      );
+
+      // PR #8 复审收口二：合并窗口在手势边界封口 —— 流内（800ms 同 kind）并步，
+      // 但滑块松手补发的 change 之后，即使仍在 800ms 内也必须新起一步。
+      const coalesceRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const orig = b.wrappers.cylinders().LeftForeArm.radii.top;
+        const h0 = b.history().undo;
+        b.wrappers.setRadius('LeftForeArm', 'top', 0.31);
+        b.wrappers.setRadius('LeftForeArm', 'top', 0.32);
+        await ${nFrames(1)};
+        const h1 = b.history().undo;
+        // 手势封口信号：滑块松手时浏览器补发 change（rootEl 统一监听）
+        document.querySelector('[data-bd="r-top"]')
+          .dispatchEvent(new Event('change', { bubbles: true }));
+        b.wrappers.setRadius('LeftForeArm', 'top', 0.33);
+        await ${nFrames(1)};
+        const h2 = b.history().undo;
+        // 还原：不给后面 L2f/L2c 的像素断言留脏半径
+        b.wrappers.setRadius('LeftForeArm', 'top', orig);
+        await ${nFrames(1)};
+        return { orig, h0, h1, h2 };
+      })()`);
+      check(
+        '★ 合并窗口手势封口：流内并一步，change 封口后 800ms 内也新起一步',
+        coalesceRes.h1 === coalesceRes.h0 + 1 && coalesceRes.h2 === coalesceRes.h1 + 1,
+        `undo 深度 ${coalesceRes.h0} →（流内连改两次）${coalesceRes.h1} →（封口后再改）${coalesceRes.h2}`,
+      );
+
+      // PR #8 复审收口三：姿势档镜像只许动测试骨架 —— 编辑骨架坐标零变化、
+      // 不进历史；但姿势预览网格必须跟着镜像后的测试姿势变。
+      const poseMirrorRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        document.querySelector('[data-bd="pov-pose"]').click();
+        await ${nFrames(3)};
+        // 先把左小臂掰弯，让左右不对称（对称姿势镜像前后几何相同，断言没有判别力）
+        const arm = b.state().positions.LeftForeArm.slice();
+        arm[1] -= 0.12;
+        b.pose('LeftForeArm', arm);
+        await ${nFrames(3)};
+        const h0 = b.history().undo;
+        const s0 = b.meshSum();
+        const before = JSON.stringify(b.state().positions);
+        document.querySelector('[data-bd="mirror-lr"]').click();
+        await ${nFrames(3)};
+        const s1 = b.meshSum();
+        const after = JSON.stringify(b.state().positions);
+        const h1 = b.history().undo;
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { h0, h1, s0, s1, same: before === after };
+      })()`);
+      check(
+        '★ 姿势档镜像：编辑骨架零污染 + 不进历史，但预览网格跟着测试姿势变',
+        poseMirrorRes.same === true && poseMirrorRes.h1 === poseMirrorRes.h0 &&
+          Number.isFinite(poseMirrorRes.s0) && Number.isFinite(poseMirrorRes.s1) &&
+          Math.abs(poseMirrorRes.s1 - poseMirrorRes.s0) > 1e-6,
+        `编辑骨架不变=${poseMirrorRes.same}，栈深 ${poseMirrorRes.h0}→${poseMirrorRes.h1}，` +
+          `meshSum ${poseMirrorRes.s0?.toFixed(4)} → ${poseMirrorRes.s1?.toFixed(4)}`,
+      );
+
       // ---- L2f. 主 3D 视口：改半径 → 画面像素必须跟着变 ----
       //
       // L2e 证的是「几何数据变了」，这里证的是「用户眼睛看到的变了」。
@@ -1930,6 +2204,9 @@ async function main() {
       if (vpRect === null || vpRect.w < 2) {
         check('★ 主 3D 视口有可采样区域', false, JSON.stringify(vpRect));
       } else {
+        // 先等几帧真实呈现：上一段（L2k）刚改还原过半径，若呈现滞后会抓到
+        // 与 p1 字节相同的旧帧（avg 完全相等的假 FAIL，2026-09-22 复现）
+        await cdp.eval(`(async () => { await ${nFrames(3)}; return 1; })()`);
         const p0 = await grabAvg();
         // 把所有 wrapper 撑到最大：任何一个包裹器生效，画面都得动。
         // 撑完必须还原 —— 后面 L2c 的像素健康度断言依赖原始半径。
@@ -2019,6 +2296,9 @@ async function main() {
           check(`★ ${label} 3D 视图有可采样区域`, false, JSON.stringify(rect));
           continue;
         }
+        // 截图前等几帧真实呈现：WebGPU canvas 的上传/呈现若滞后于 JS 状态，
+        // 会采到一整块还没画出模型的旧帧（侧视曾因此误判「模型看不见」）
+        await cdp.eval(`(async () => { await ${nFrames(3)}; return 1; })()`);
         const snap = await cdp.send('Page.captureScreenshot', {
           format: 'png',
           clip: { x: rect.x, y: rect.y, width: rect.w, height: rect.h, scale: 1 },

@@ -14,6 +14,7 @@ import {
   aposeWorld,
   boneSegments,
   computeLbsWeights,
+  computeSkinDiagnostics,
   distToSegment,
   fitSkeleton,
   matInvertRigid,
@@ -1045,5 +1046,174 @@ describe('aposeWorld / aposeWorldPositions：手臂链刚性摆动（N2 回归�
     expect(out[3]).toBeCloseTo(Math.SQRT1_2, 6);
     expect(out[4]).toBeCloseTo(Math.SQRT1_2, 6);
     expect(out[5]).toBeCloseTo(0, 6);
+  });
+});
+
+describe('旧评审遗留收口（§2.1 软衰减 / §2.2 归一化穿透 / §2.3 跨侧排除 / §2.4 平滑参数 / §2.7 诊断）', () => {
+  /** 从 SkinWeights 里取某骨的权重（不在 top-4 = 0） */
+  const wOf = (skin: SkinWeights, bone: string, slot = 0): number => {
+    const bi = HUMANIK_ORDER.indexOf(bone);
+    for (let k = 0; k < 4; k++) {
+      if (skin.joints[slot * 4 + k] === bi) return skin.weights[slot * 4 + k]!;
+    }
+    return 0;
+  };
+  const oneVert = (p: readonly [number, number, number]): Float32Array<ArrayBuffer> => {
+    const v = new Float32Array(15);
+    v[0] = p[0]; v[1] = p[1]; v[2] = p[2];
+    return v;
+  };
+
+  it('★ §2.2 穿透深度归一化：绝对穿深相同语义改为相对半径比例（细骨不再被粗骨碾压）', () => {
+    // 两条竖直平行骨段：LeftArm 在 x=0（r=0.20），LeftUpLeg 在 x=0.12（r=0.08）。
+    // 顶点 (0.10,1.2,0)：dr_arm=0.10（绝对穿深 0.10，相对 0.5），
+    // dr_leg=0.02（绝对穿深 0.06，相对 0.75）。
+    // 旧绝对米制：arm 1.8 > leg 1.48（粗骨赢）；归一化后：arm 5 < leg 7（比例深者赢）。
+    const placed = JSON.parse(JSON.stringify(T)) as JointPositions;
+    placed.LeftArm = [0, 1.5, 0];
+    placed.LeftForeArm = [0, 1.0, 0];
+    placed.LeftUpLeg = [0.12, 1.5, 0];
+    placed.LeftLeg = [0.12, 1.0, 0];
+    const cyls = defaultSkinCylinders(placed);
+    for (const [k, c] of Object.entries(cyls)) {
+      c.enabled = k === 'LeftArm' || k === 'LeftUpLeg';
+      if (k === 'LeftArm') c.radii = { top: 0.2, medium: 0.2, bottom: 0.2 };
+      if (k === 'LeftUpLeg') c.radii = { top: 0.08, medium: 0.08, bottom: 0.08 };
+    }
+    const skin = computeCylinderWeights(oneVert([0.1, 1.2, 0]), 15, 1, placed, cyls);
+    const wArm = wOf(skin, 'LeftArm');
+    const wLeg = wOf(skin, 'LeftUpLeg');
+    // 精确比例：w = 1 + 8·相对穿深 → arm 5/12，leg 7/12
+    expect(wArm).toBeCloseTo(5 / 12, 5);
+    expect(wLeg).toBeCloseTo(7 / 12, 5);
+    expect(wLeg).toBeGreaterThan(wArm); // 旧公式下相反（判别力）
+  });
+
+  it('★ §2.1 包裹外顶点走软衰减晕带（不再硬权重 1.0 兜底），未包裹数可统计', () => {
+    const cyls = defaultSkinCylinders(T);
+    // 胸前 35cm 的空域点：所有 wrapper 的 gap>0 → 晕带按比例分，无独占 owner
+    const stats = { unwrappedVerts: -1 };
+    const skin = computeCylinderWeights(
+      oneVert([0, 1.35, 0.35]), 15, 1, T, cyls, { stats },
+    );
+    expect(stats.unwrappedVerts).toBe(1);
+    let sum = 0;
+    let max = 0;
+    for (let k = 0; k < 4; k++) {
+      sum += skin.weights[k]!;
+      if (skin.weights[k]! > max) max = skin.weights[k]!;
+      expect(Number.isFinite(skin.weights[k]!)).toBe(true);
+    }
+    expect(sum).toBeCloseTo(1, 5);
+    expect(max).toBeLessThan(0.95); // 关键：不再出现「最近 wrapper 硬权重 1.0」
+    // 镜像对称几何 + 对称半径表 + 中轴面上的点 → 左右同名骨权重必须相等
+    // （LeftShoulder/RightShoulder 或 LeftArm/RightArm，取决于谁进了 top-4）
+    const names = [...skin.joints].map((bi) => HUMANIK_ORDER[bi]!);
+    for (const n of names) {
+      if (!n.startsWith('Left')) continue;
+      const mirror = `Right${n.slice(4)}`;
+      expect(wOf(skin, mirror)).toBeCloseTo(wOf(skin, n), 4);
+    }
+    // 被包住的顶点不计入未包裹统计
+    const seg = boneSegments(T).find((s) => s.bone === 'LeftUpLeg')!;
+    const mid: [number, number, number] = [
+      (seg.a[0] + seg.b[0]) / 2, (seg.a[1] + seg.b[1]) / 2, (seg.a[2] + seg.b[2]) / 2,
+    ];
+    const stats2 = { unwrappedVerts: -1 };
+    computeCylinderWeights(oneVert(mid), 15, 1, T, cyls, { stats: stats2 });
+    expect(stats2.unwrappedVerts).toBe(0);
+  });
+
+  it('★ §2.3 距离衰减不再跨侧抢权重：左大腿顶点的 RightUpLeg 归零，裆部正中双侧保留', () => {
+    const segs = boneSegments(T);
+    // 左大腿中点：RightUpLeg/RightLeg 距离 2 倍以上且 >5cm → 跨侧排除
+    const up = segs.find((s) => s.bone === 'LeftUpLeg')!;
+    const mid: [number, number, number] = [
+      (up.a[0] + up.b[0]) / 2, (up.a[1] + up.b[1]) / 2, (up.a[2] + up.b[2]) / 2,
+    ];
+    const skin1 = computeLbsWeights(oneVert(mid), 15, 1, segs);
+    // 评审实测的肇事者 RightUpLeg（0.8%）：现在精确归零
+    expect(wOf(skin1, 'RightUpLeg')).toBe(0);
+    // RightLeg（右小腿）不适用镜像对规则（从左大腿看两条小腿都远）——
+    // 但跨侧远端只剩噪声级权重，糖纸效应的实质来源已被切断
+    expect(wOf(skin1, 'RightLeg')).toBeLessThan(0.001);
+    expect(wOf(skin1, 'LeftUpLeg')).toBeGreaterThan(0.9);
+    // 裆部正中（左右 UpLeg 等距）：两侧都近 → 不属于「跨侧偷权重」，双侧照常保留
+    const center: [number, number, number] = [
+      (up.a[0] + up.b[0]) / 2 - T.LeftUpLeg![0], // x 镜像到中轴面
+      (up.a[1] + up.b[1]) / 2,
+      (up.a[2] + up.b[2]) / 2,
+    ];
+    const skin2 = computeLbsWeights(oneVert(center), 15, 1, segs);
+    const wl = wOf(skin2, 'LeftUpLeg');
+    const wr = wOf(skin2, 'RightUpLeg');
+    expect(wl).toBeGreaterThan(0.02);
+    expect(wr).toBeGreaterThan(0.02);
+    expect(Math.abs(wl - wr)).toBeLessThan(1e-4); // 对称性没被排除规则打破
+  });
+
+  it('★ §2.4 平滑迭代 / λ 是真实导出入口参数（不同取值产出不同权重，归一化保持）', () => {
+    const { verts, idx } = makeMesh(120);
+    const base = {
+      name: 'probe', vertices: verts, indices: idx, image: null,
+      placed: poseLeftArm(T, -45), smoothWeights: true,
+    };
+    const s1 = rigToTPose({ ...base, smoothIters: 1, smoothLambda: 0.5 });
+    const s4 = rigToTPose({ ...base, smoothIters: 4, smoothLambda: 0.5 });
+    // 迭代次数真的进了导出链：至少一个顶点的权重不同
+    let diff = 0;
+    for (let i = 0; i < s1.skin.weights.length; i++) {
+      diff = Math.max(diff, Math.abs(s1.skin.weights[i]! - s4.skin.weights[i]!));
+    }
+    expect(diff).toBeGreaterThan(1e-4);
+    // 任一参数组合下每顶点归一化（Σ=1）都成立
+    const n = s4.skin.weights.length / 4;
+    for (let i = 0; i < n; i += 7) {
+      let sum = 0;
+      for (let k = 0; k < 4; k++) sum += s4.skin.weights[i * 4 + k]!;
+      expect(sum).toBeCloseTo(1, 4);
+    }
+  });
+
+  it('★ §2.7 computeSkinDiagnostics：影响骨数 / 零权重 / 满4影响 / 选中骨统计全部精确', () => {
+    const A = HUMANIK_ORDER.indexOf('LeftForeArm');
+    const B = HUMANIK_ORDER.indexOf('LeftHand');
+    const C = HUMANIK_ORDER.indexOf('Spine');
+    const D = HUMANIK_ORDER.indexOf('Hips');
+    // v0=[A:1]，v1=[A:.6,B:.4]，v2=[B:1]，v3=全零，
+    // v4=[A:.25,B:.25,C:.25,D:.25]（四根不同骨 → 满4影响），
+    // v5=[A:.25,B:.25,C:.25,A:.25]（A 占两槽 → 顶点数去重、权重合并 0.5）
+    const joints = new Uint16Array([
+      A, 0, 0, 0,
+      A, B, 0, 0,
+      B, 0, 0, 0,
+      0, 0, 0, 0,
+      A, B, C, D,
+      A, B, C, A,
+    ]);
+    const weights = new Float32Array([
+      1, 0, 0, 0,
+      0.6, 0.4, 0, 0,
+      1, 0, 0, 0,
+      0, 0, 0, 0,
+      0.25, 0.25, 0.25, 0.25,
+      0.25, 0.25, 0.25, 0.25,
+    ]);
+    const d = computeSkinDiagnostics({ joints, weights }, 6);
+    expect(d.usedBones).toBe(4); // A/B/C/D
+    expect(d.zeroWeightVerts).toBe(1); // v3
+    expect(d.fullInfluenceVerts).toBe(1); // 只有 v4 是 4 根不同骨；v5 去重后 3 根
+    const pa = d.perBone.find((x) => x.bone === 'LeftForeArm')!;
+    expect(pa.verts).toBe(4); // v0/v1/v4/v5（v5 里 A 占两槽也只算一个顶点）
+    expect(pa.mean).toBeCloseTo((1 + 0.6 + 0.25 + 0.5) / 4, 6);
+    expect(pa.max).toBeCloseTo(1, 9);
+    const pb = d.perBone.find((x) => x.bone === 'LeftHand')!;
+    expect(pb.verts).toBe(4); // v1/v2/v4/v5
+    expect(pb.mean).toBeCloseTo((0.4 + 1 + 0.25 + 0.25) / 4, 6);
+    const pc = d.perBone.find((x) => x.bone === 'Spine')!;
+    expect(pc.verts).toBe(2); // v4/v5
+    expect(pc.mean).toBeCloseTo(0.25, 9);
+    const pd = d.perBone.find((x) => x.bone === 'Hips')!;
+    expect(pd.verts).toBe(1);
   });
 });
