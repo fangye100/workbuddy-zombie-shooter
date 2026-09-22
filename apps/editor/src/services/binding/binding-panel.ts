@@ -12,6 +12,10 @@
  *    侧视图里 x 是深度轴、看不出镜像，所以 mirror 只挂在正视图上。
  * 4. **拟合产出两类数据**：骨长（采纳进 T-pose）与姿态旋转 ΔR（只是 currentPose 与
  *    T-pose 的差值，re-gen 时被消耗于网格反解，绝不进骨架）。详见 binding-math.ts。
+ * 5. **面板只是 BindingSession 的一个消费方**（docs/17 §3.4 Agent 优先）：
+ *    领域状态（关节坐标 / 包裹器 / 导出选项 / Undo 历史 / Bind Pose / 权重缓存）
+ *    全部归 `binding-session.ts` 持有与守卫，面板只剩 DOM、画布、交互与显示态。
+ *    未来的 MCP 入口与面板调用同一套 session 方法，不绕过校验、撤销与保存语义。
  *
  * ── 本轮（骨骼编辑 5 项反馈）新增 ───────────────────────────────────────────
  *  - 性能：网格渲染缓存到离屏 canvas，拖拽时只 blit 缓存 + 重画骨架；
@@ -30,7 +34,6 @@ import {
   MIRROR_PAIRS,
   isTipBone,
   mirrorOf,
-  tposeWorldPositions,
   aposeWorldPositions,
   type Vec3,
 } from './humanik-template';
@@ -38,9 +41,7 @@ import {
   boneSegments,
   distToSegment,
   fitSkeleton,
-  computeLbsWeights,
   computeSkinDiagnostics,
-  smoothSkinWeights,
   reposeMesh,
   aposeWorld,
   type FitResult,
@@ -48,18 +49,15 @@ import {
   type SkinWeights,
 } from './binding-math';
 import {
-  autoFitCylinders,
-  computeCylinderWeights,
-  defaultSkinCylinders,
-  mirrorCylinders,
-  mirrorOffsetBetween,
-  mirrorSkinWeights,
   offsetSegmentEndpoints,
-  type CylinderWeightStats,
   type SkinCylinderMap,
   type CylSegment,
 } from './skin-proxy';
+import { BindingSession } from './binding-session';
 import { BindingView3D } from './binding-view3d';
+
+export type { BindingEditorData, WeightMode } from './binding-session';
+import type { BindingEditorData, WeightMode } from './binding-session';
 
 /** 引擎 15-float 顶点布局里法线的偏移（pos3 / normal3 / …），预览重姿态时同步转法线 */
 const NORMAL_OFFSET = 3;
@@ -73,16 +71,11 @@ type ViewAxis = 'front' | 'side';
 type PreviewMode = 'current' | 'T' | 'A' | 'bind' | 'pose';
 /** 骨骼显示过滤 */
 type SideFilter = 'all' | 'mid' | 'hideL' | 'hideR';
-/**
- * 权重算法（导出时真正生效的分支，见 `binding-export.runExport`）：
- *  - `wrapper`  Skin Wrapper 包裹体：被圆柱体包住的顶点归属该 joint（二值，过渡窄）
- *  - `distance` 胶囊距离衰减：`1/(d+eps)^falloff` 取 top-4（过渡自然，但会跨侧抢权重）
- *
- * ⚠️ 之前这个选择是**隐式的**：`runExport` 靠 `cylinders !== undefined` 判断，而
- * `ensureCylinders()` 在 setModel 时载入即建 → 永远走 wrapper，distance 成了死代码，
- * 面板上也完全没有提示。现在显式化成一个下拉，用户看得到、选得动、存得下。
- */
-export type WeightMode = 'wrapper' | 'distance';
+
+// WeightMode / BindingEditorData 的真源已迁到 binding-session.ts（本文件顶部 re-export
+// 保持外部兼容）。⚠️ 历史教训：weightMode 之前是**隐式**的（runExport 靠
+// cylinders !== undefined 判断，而 ensureCylinders 载入即建 → 永远走 wrapper，
+// distance 成了死代码），现已显式化成下拉并持久化。
 
 const JOINT_HIT_PX = 9;
 const JOINT_R_PX = 4.5;
@@ -145,33 +138,8 @@ export interface BindingPanelHooks {
 
 /**
  * 编辑器侧持久化的绑定编辑数据 —— 存进 `.meta.json` 的 `bindingEditor` 槽位。
- *
- * 与 node 管线 `rig`（配方：positions/bindPose/skinCylinders）/ `bindings`（数组）
- * 互不冲突：devfs 的 patch 是浅合并，gen-asset-meta 的 mergeInto 只补缺失字段，
- * 都不会碰这个键。这样浏览器编辑与离线管线各存各的、互不覆盖。
+ * 真源在 binding-session.ts（顶部已 re-export）；此处不再重复定义。
  */
-export interface BindingEditorData {
-  /** 27 关节的 local 空间坐标（与 this.positions 同构） */
-  positions: Record<string, [number, number, number]>;
-  /** Skin Wrapper 半径表（null = 未进入蒙皮模式） */
-  cylinders: SkinCylinderMap | null;
-  /**
-   * 权重算法（可选，老文件没有此键 → 载入时按默认 wrapper 处理）。
-   * 存它是为了让「这个资产是用哪套算法绑的」可复现，而不是靠改代码时的默认值。
-   */
-  weightMode?: WeightMode;
-  /** 导出时是否做权重热扩散平滑（可选，老文件缺省 = true，与面板默认一致） */
-  smoothWeights?: boolean;
-  /** 平滑迭代次数（可选，老文件缺省 = 面板默认 4，旧评审 §2.4：2 次扩散半径不够） */
-  smoothIters?: number;
-  /** 平滑扩散强度 0..1（可选，老文件缺省 = 0.5） */
-  smoothLambda?: number;
-  /** 导出时是否镜像皮肤权重 L→R（可选，老文件缺省 = false） */
-  mirrorWeights?: boolean;
-  /** 写入时间戳（ISO），仅供排障 */
-  savedAt?: string | undefined;
-}
-
 export interface BindingPanelState {
   loaded: boolean;
   modelName: string | null;
@@ -187,6 +155,12 @@ export class BindingPanel {
   private readonly hooks: BindingPanelHooks;
   /** 3D 正交视图用的 GPU 上下文；null = 无 WebGPU，正/侧视降级为纯 2D */
   private readonly gpu: GpuContext | null;
+  /**
+   * 领域会话：关节坐标 / 包裹器 / 导出选项 / Undo 历史 / Bind Pose / 权重缓存的
+   * **唯一 owner**（docs/17 §3.5）。面板只剩 DOM、画布、交互与显示态；
+   * 未来 MCP 入口与面板调用同一套 session 方法。
+   */
+  private readonly session = new BindingSession();
 
   private frontCanvas!: HTMLCanvasElement;
   private sideCanvas!: HTMLCanvasElement;
@@ -208,23 +182,18 @@ export class BindingPanel {
   /** 头部「?」按钮与它折叠的操作说明块 */
   private helpBtn!: HTMLButtonElement;
   private helpTipEl!: HTMLElement;
-  /** 「● 未导出 / ✓ 已绑定」常驻徽标 */
+  /** 「● 未导出 / ✓ 已绑定」常驻徽标（数据 = session.editSig() 对 session.getBoundSig()） */
   private exportBadgeEl!: HTMLElement;
-  /**
-   * 上次 Bind Skin 成功瞬间的「编辑指纹」（关节坐标 + 包裹器半径）。
-   * `null` = 从未 Bind 过。与当前指纹不等即说明结果已过期 —— 比在十几个
-   * 改动点里逐个插 markDirty 更不容易漏，因为 refresh() 是所有改动的唯一出口。
-   */
-  private boundSig: string | null = null;
 
   /**
    * 模型顶点（stride 15：pos3 / normal3 / smoothNormal3 / uv2 / color4）
    *
-   * ⚠️ 两套指针，别合并：
-   *  - `srcVerts` = 载入时的**当前姿态**网格，**永不被反解覆盖**。导出永远基于它 ——
-   *    LBS 权重必须在当前姿态上算，若拿反解后的 T-pose 网格去算，A-pose 手臂权重全错。
-   *  - `meshVerts` = 当前**显示**用的网格（缓存到离屏 canvas；可能是 srcVerts、
-   *    反解后的 T-pose 网格、或重姿态成 T/A 的网格）。
+   * ⚠️ 这里是**显示缓存**：session 才是几何真源（导出永远基于它手上的当前姿态网格），
+   * 面板持有同一份只读数组的引用用于绘制与重姿态预览，两套指针指向同一数组，
+   * 面板绝不修改数组内容。
+   *  - `srcVerts` = 载入时的**当前姿态**网格（重姿态预览的源）；
+   *  - `meshVerts` = 当前**显示**用的网格（可能是 srcVerts、反解后的 T-pose 网格、
+   *    或重姿态成 T/A 的网格）。
    */
   private srcVerts: Float32Array<ArrayBuffer> | null = null;
   private meshVerts: Float32Array<ArrayBuffer> | null = null;
@@ -236,33 +205,17 @@ export class BindingPanel {
   /** 已应用的 T-pose 网格（apply 后回灌，供「当前」模式展示） */
   private tposeMesh: Float32Array<ArrayBuffer> | null = null;
 
-  /** 关节坐标：local 空间，可拖拽修改 */
-  private positions: Record<string, [number, number, number]> = tposeWorldPositions();
-  /**
-   * 冻结保存的 Bind Pose —— 点「Bind Skin」时拍下的、带 initial offset 的编辑姿态。
-   * 它「必须和模型对应起来」，所以一经绑定就持久存在：即便 Detach Skin 也不清空，
-   * 只有再次 Bind Skin 才会刷新。随时切到 Bind 预览即可回到它，免去每次重拖骨骼。
-   */
-  private bindPose: JointPositions | null = null;
+  /** 当前选中的关节（纯 UI 态） */
   private selected: string | null = null;
 
-  // ── Skin Wrapper（代理圆柱体蒙皮）状态 ──
+  // ── Skin Wrapper（代理圆柱体蒙皮）交互态（数据在 session） ──
   /** 编辑模式：关节骨架 / 蒙皮包裹。两者共用同一套正视/侧视 2D 视图 */
   private editMode: 'skeleton' | 'skin' = 'skeleton';
-  /** 每个 joint 的 Skin Wrapper（圆柱体）。null = 尚未进入 skin 模式 / 未载模型 */
-  private cylinders: SkinCylinderMap | null = null;
   /** 当前选中的 Skin Wrapper（= 一整根骨，joint 名）。
    *  top/medium/bottom 只是同一根骨的三个半径显示，**整段一并选中**，绝不分别选中子段。 */
   private selectedCyl: string | null = null;
   /** 视图里拖半径时抓的是哪一段（top/medium/bottom）—— 仅拖拽手感用，**不是选中状态** */
   private dragSeg: CylSegment = 'medium';
-  /** 导出时是否镜像皮肤权重 L→R */
-  private mirrorWeightsExport = false;
-  /**
-   * 导出时使用的权重算法（默认 wrapper，与历史行为一致，避免静默改变既有产物）。
-   * 切到 distance 时导出不传 cylinders，`runExport` 才会走 `computeLbsWeights`。
-   */
-  private weightMode: WeightMode = 'wrapper';
   /**
    * 是否在主 3D 视口画包裹器圆柱体（默认开）。
    * 面板只持有这个状态；真正的几何在 `cylinder-overlay.ts`，绘制由主循环驱动。
@@ -274,45 +227,23 @@ export class BindingPanel {
   private originX = 0;
   private originY = 0;
 
-  private fitCache: FitResult | null = null;
-
-  // ── 本轮新增状态 ──
+  // ── 显示层状态（previewMode / poseTest / 热力图 / 视图缓存） ──
   private previewMode: PreviewMode = 'current';
   private sideFilter: SideFilter = 'all';
-  private smoothWeights = true;
-  /**
-   * 平滑迭代次数与扩散强度（旧评审 §2.4：2 次 Jacobi 只能扩散 ~2 环顶点，
-   * 15k 面角色关节处仍会看到折角；默认 4 次，面板可调、进 `.meta.json` 可复现）
-   */
-  private smoothIters = 4;
-  private smoothLambda = 0.5;
   /**
    * 姿势变形测试的独立骨架快照（旧评审 §1.3 三件套之一）。
    * 进入「姿势」预览档时从编辑骨架拍下；该档位里拖 joint 改的是它，
-   * 编辑骨架 `positions` 不动 —— 试完切走即丢弃，绝不污染绑定数据。
+   * 编辑骨架（session.positions）不动 —— 试完切走即丢弃，绝不污染绑定数据。
    */
   private poseTest: JointPositions | null = null;
   /** 权重热力图开关（选中骨 → 顶点按该骨权重着色叠加，旧评审 P0-3） */
   private heatEnabled = true;
-  /**
-   * 「当前权重」共享缓存（T/A/姿势预览网格 + 热力图 + 诊断条同源）。
-   * 与导出严格同序：算法 → 镜像 → 平滑；键 = `editSig()`（权重输入的完整指纹），
-   * 命中即零成本复用 —— 拖 joint 之外的大多数 refresh（pan/zoom/选中）都不必重算。
-   */
-  private previewSkinCache: { sig: string; skin: SkinWeights } | null = null;
-  /** 与 previewSkinCache 同一次计算产出的 wrapper 统计（诊断条的「未包裹顶点数」） */
-  private cylinderStats: CylinderWeightStats | null = null;
   /** 热力图离屏缓存（按视图；键含 sig/选中骨/视图变换，网格引用变了也重建） */
   private heatCache: Partial<Record<ViewAxis, {
     key: string;
     mesh: Float32Array<ArrayBuffer> | null;
     cv: HTMLCanvasElement;
   }>> = {};
-  /** Undo/Redo 快照栈（JSON 字符串，单帧 <10KB，上限 50 步，旧评审 §2.6） */
-  private undoStack: string[] = [];
-  private redoStack: string[] = [];
-  /** 连续输入（拖拽流 / 滑块流 / 按键连发）的历史合并：同 kind 在窗口内只记一步 */
-  private lastPush: { kind: string; time: number } | null = null;
   private diagEl!: HTMLElement;
   /** 离屏网格缓存（按视图），仅在模型/姿态/缩放变化时重绘 */
   private cacheFront: HTMLCanvasElement | null = null;
@@ -553,7 +484,7 @@ export class BindingPanel {
     // 合并窗口在手势结束时封口（旧评审 §2.6 复审）：滑块/数字框的连续流走 'input'，
     // 松手（或回车/失焦）时浏览器补发 'change' —— 不封口的话，800ms 内的下一段
     // 手势（哪怕换了根骨）会被并进上一步，一次 Ctrl+Z 回滚两段手势。
-    this.rootEl.addEventListener('change', () => { this.lastPush = null; });
+    this.rootEl.addEventListener('change', () => { this.session.sealHistory(); });
 
     // 半显下拉
     const sel = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="sidefilter"]')!;
@@ -563,46 +494,30 @@ export class BindingPanel {
     });
 
     // 权重算法：决定 Bind Skin 走包裹体还是距离衰减（见 WeightMode 注释）。
-    // 持久化字段的每次变更都进历史（快照是全量持久化态，见 pushHistory），
+    // 持久化字段的每次变更都进历史（快照是全量持久化态，见 session.beginEdit），
     // 否则「撤销一步几何编辑」会把中途手动切过的算法一并回滚 —— 静默回滚是事故。
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]')!;
-    wm.value = this.weightMode;
+    wm.value = this.session.getWeightMode();
     wm.addEventListener('change', () => {
-      if (wm.value === this.weightMode) return;
-      this.pushHistory('settings');
-      this.weightMode = wm.value as WeightMode;
-      this.invalidatePreview();
+      if (this.session.setWeightMode(wm.value)) this.invalidatePreview();
     });
 
     // 权重平滑开关（它进导出指纹：改了要立刻把徽标刷成「● 未导出」）
     const smooth = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth"]')!;
     smooth.addEventListener('change', () => {
-      this.pushHistory('settings');
-      this.smoothWeights = smooth.checked;
-      this.invalidatePreview();
+      if (this.session.setSmoothWeights(smooth.checked)) this.invalidatePreview();
     });
 
     // 平滑参数（迭代 / λ）：两个数字框，改动进编辑指纹并立刻刷新预览与诊断
     const si = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-iters"]')!;
     si.addEventListener('change', () => {
-      const v = Math.round(parseFloat(si.value));
-      if (!Number.isFinite(v)) { si.value = String(this.smoothIters); return; }
-      const clamped = Math.min(12, Math.max(1, v));
-      si.value = String(clamped);
-      if (clamped === this.smoothIters) return;
-      this.pushHistory('settings');
-      this.smoothIters = clamped;
+      // 非有限数 / 越界由 session 钳制并返回实际生效值，输入框回显生效值
+      si.value = String(this.session.setSmoothIters(parseFloat(si.value)));
       this.invalidatePreview();
     });
     const sl = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-lambda"]')!;
     sl.addEventListener('change', () => {
-      const v = parseFloat(sl.value);
-      if (!Number.isFinite(v)) { sl.value = String(this.smoothLambda); return; }
-      const clamped = Math.min(1, Math.max(0, v));
-      sl.value = String(clamped);
-      if (clamped === this.smoothLambda) return;
-      this.pushHistory('settings');
-      this.smoothLambda = clamped;
+      sl.value = String(this.session.setSmoothLambda(parseFloat(sl.value)));
       this.invalidatePreview();
     });
 
@@ -630,9 +545,7 @@ export class BindingPanel {
       .addEventListener('click', () => this.unpinSelectedCylinder());
     const mw = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-mirror-w"]')!;
     mw.addEventListener('change', () => {
-      this.pushHistory('settings');
-      this.mirrorWeightsExport = mw.checked;
-      this.invalidatePreview();
+      if (this.session.setMirrorWeights(mw.checked)) this.invalidatePreview();
     });
 
     // 「在 3D 视图显示包裹器」：默认开 —— 切到蒙皮模式就是要看圆柱体，
@@ -715,6 +628,9 @@ export class BindingPanel {
    * 只取几何做正交投影，不碰材质/贴图 —— 对齐 joint 看剪影与明暗足够。
    */
   setModel(name: string, vertices: Float32Array<ArrayBuffer>, indices: Uint32Array<ArrayBuffer>, vertexFloats = 15): void {
+    // 领域状态（含导出选项 / 历史 / Bind Pose / 权重缓存，半径表载入即建）全部归 session
+    this.session.setModel(name, vertices, indices, vertexFloats);
+    // 显示缓存与交互态
     this.modelName = name;
     this.srcVerts = vertices;
     this.meshVerts = vertices;
@@ -725,38 +641,18 @@ export class BindingPanel {
     this.tposeMesh = null;
     this.previewMode = 'current';
     this.sideFilter = 'all';
-    this.bindPose = null;
-    this.boundSig = null;
     this.bindPoseBtn.disabled = true;
     this.editMode = 'skeleton';
-    this.cylinders = null;
     this.selectedCyl = null;
     this.dragSeg = 'medium';
-    this.mirrorWeightsExport = false;
-    // smoothWeights 也要重置：老 .meta.json 没有这三个键时 hydrate 不会碰它们，
-    // 不重置会把**上一个模型**的开关值带进新模型的预览与导出（PR #7 复审）
-    this.smoothWeights = true;
-    this.smoothIters = 4;
-    this.smoothLambda = 0.5;
-    this.weightMode = 'wrapper';
     this.poseTest = null;
-    this.previewSkinCache = null;
-    this.cylinderStats = null;
     this.heatCache = {};
-    this.undoStack = [];
-    this.redoStack = [];
-    this.lastPush = null;
     this.syncWeightModeSelect();
     this.syncExportOptionInputs();
     this.resetModeButtons();
     const sp = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]');
     if (sp !== null) sp.hidden = true;
     this.setAnimationInfo(null);
-    // 半径表**载入即建**：关节模式也要用它。
-    // 之前只在切到蒙皮模式时才建，关节模式的 3D 层拿到 null → 回退成
-    // 「骨长 ×0.35」的自动半径，于是「拖 joint 包裹器自己变大变小、手动调的
-    // 却看不到」—— 自动算法把手动值盖掉了。
-    this.ensureCylinders();
     this.computeViewFit();
     this.syncDisplay();
     this.refresh();
@@ -778,6 +674,7 @@ export class BindingPanel {
   }
 
   clear(): void {
+    this.session.clear();
     this.srcVerts = null;
     this.meshVerts = null;
     this.meshIndices = null;
@@ -786,31 +683,17 @@ export class BindingPanel {
     this.tposeMesh = null;
     this.previewMode = 'current';
     this.sideFilter = 'all';
-    this.bindPose = null;
-    this.boundSig = null;
     this.bindPoseBtn.disabled = true;
     this.editMode = 'skeleton';
-    this.cylinders = null;
     this.selectedCyl = null;
     this.dragSeg = 'medium';
-    this.mirrorWeightsExport = false;
-    this.smoothWeights = true;
-    this.smoothIters = 4;
-    this.smoothLambda = 0.5;
-    this.weightMode = 'wrapper';
     this.poseTest = null;
-    this.previewSkinCache = null;
-    this.cylinderStats = null;
     this.heatCache = {};
-    this.undoStack = [];
-    this.redoStack = [];
-    this.lastPush = null;
     this.syncWeightModeSelect();
     this.syncExportOptionInputs();
     this.resetModeButtons();
     const sp = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]');
     if (sp !== null) sp.hidden = true;
-    this.positions = tposeWorldPositions();
     this.selected = null;
     this.setAnimationInfo(null);
     this.syncDisplay();
@@ -859,8 +742,8 @@ export class BindingPanel {
       this.meshVerts = this.srcVerts;
     } else if (this.previewMode === 'pose') {
       // 姿势变形测试（旧评审 §1.3）：from = 编辑骨架当前姿态，to = 测试骨架快照。
-      // 拖测试 joint 时编辑指纹不变 → previewSkin() 缓存命中，每帧只付一次 reposeMesh。
-      if (this.poseTest === null) this.poseTest = this.clonePositions(this.positions);
+      // 拖测试 joint 时编辑指纹不变 → session.computeSkin() 缓存命中，每帧只付一次 reposeMesh。
+      if (this.poseTest === null) this.poseTest = this.clonePositions(this.session.positions);
       const poseSkin = this.previewSkin();
       if (poseSkin === null) {
         this.meshVerts = this.srcVerts;
@@ -883,7 +766,7 @@ export class BindingPanel {
       } else {
         const fit = this.currentFit();
         const n = this.srcVerts.length / this.vertexFloats;
-        const toWorld = this.previewMode === 'T' ? fit.tposeWorld : aposeWorld(this.positions);
+        const toWorld = this.previewMode === 'T' ? fit.tposeWorld : aposeWorld(this.session.positions);
         this.meshVerts = reposeMesh(
           this.srcVerts, this.vertexFloats, n,
           skin, fit.posedWorld, toWorld,
@@ -900,52 +783,22 @@ export class BindingPanel {
    * 当前权重（预览网格 / 热力图 / 诊断条的唯一来源，与 `binding-export.runExport`
    * 严格同序：算法 → 镜像 → 平滑）。
    *
-   * 缓存键 = `editSig()`：27 关节坐标 + 包裹器半径/启用/偏移 + 权重算法 + 镜像 +
-   * 平滑三参数 —— 权重输入的完整指纹。任何一个变了指纹就变、缓存自然失效；
-   * pan/zoom/选中切换不动指纹 → 零成本复用。注意姿势测试骨架 `poseTest`
-   * **不在**指纹里（它是显示层状态，不是权重输入）。
+   * 真源在 `session.computeSkin()`（缓存键 = `editSig()`：27 关节坐标 + 包裹器
+   * 半径/启用/偏移 + 权重算法 + 镜像 + 平滑三参数 —— 权重输入的完整指纹）。
+   * 注意姿势测试骨架 `poseTest` **不在**指纹里（它是显示层状态，不是权重输入）。
    */
   private previewSkin(): SkinWeights | null {
-    if (this.srcVerts === null || this.meshIndices === null) return null;
-    const sig = this.editSig();
-    if (sig === null) return null;
-    if (this.previewSkinCache !== null && this.previewSkinCache.sig === sig) {
-      return this.previewSkinCache.skin;
-    }
-    const n = this.srcVerts.length / this.vertexFloats;
-    let skin: SkinWeights;
-    if (this.weightMode === 'wrapper' && this.cylinders !== null) {
-      const stats: CylinderWeightStats = { unwrappedVerts: 0 };
-      skin = computeCylinderWeights(
-        this.srcVerts, this.vertexFloats, n, this.positions, this.cylinders, { stats },
-      );
-      this.cylinderStats = stats;
-    } else {
-      skin = computeLbsWeights(
-        this.srcVerts, this.vertexFloats, n, boneSegments(this.positions),
-      );
-      this.cylinderStats = null;
-    }
-    if (this.mirrorWeightsExport) {
-      skin = mirrorSkinWeights(skin, this.vertexFloats, n, this.srcVerts);
-    }
-    if (this.smoothWeights) {
-      skin = smoothSkinWeights(skin, this.meshIndices, n, this.smoothIters, this.smoothLambda, {
-        positions: this.srcVerts,
-        vertexFloats: this.vertexFloats,
-      });
-    }
-    this.previewSkinCache = { sig, skin };
-    return skin;
+    return this.session.computeSkin()?.skin ?? null;
   }
 
   /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose，bind=冻结的 Bind Pose，pose=测试骨架快照 */
   private overlayPositions(): JointPositions {
     if (this.previewMode === 'T') return this.currentFit().tposePositions;
-    if (this.previewMode === 'A') return aposeWorldPositions(this.positions);
-    if (this.previewMode === 'bind' && this.bindPose !== null) return this.bindPose;
+    if (this.previewMode === 'A') return aposeWorldPositions(this.session.positions);
+    const bindPose = this.session.getBindPose();
+    if (this.previewMode === 'bind' && bindPose !== null) return bindPose;
     if (this.previewMode === 'pose' && this.poseTest !== null) return this.poseTest;
-    return this.positions;
+    return this.session.positions;
   }
 
   /** 过滤后的可见关节（按 sideFilter） */
@@ -963,10 +816,11 @@ export class BindingPanel {
    * （半径保留，只让圆柱几何跳过绘制）。sideFilter=all 时直接返回原表，零分配。
    */
   private filteredCylinders(vis: Set<string>): SkinCylinderMap | null {
-    if (this.cylinders === null) return null;
-    if (this.sideFilter === 'all') return this.cylinders;
+    const cylinders = this.session.getCylinders();
+    if (cylinders === null) return null;
+    if (this.sideFilter === 'all') return cylinders;
     const out: SkinCylinderMap = {};
-    for (const [k, c] of Object.entries(this.cylinders)) {
+    for (const [k, c] of Object.entries(cylinders)) {
       out[k] = vis.has(k) ? c : { ...c, enabled: false };
     }
     return out;
@@ -974,9 +828,21 @@ export class BindingPanel {
 
   // ─────────────────────────── 交互 ───────────────────────────
 
-  /** 拖拽/微调真正要改的坐标表：姿势档 = 测试骨架快照，其余 = 编辑骨架 */
+  /** 拖拽/微调真正要改的坐标表：姿势档 = 测试骨架快照，其余 = 编辑骨架（session） */
   private editTarget(): JointPositions {
-    return this.previewMode === 'pose' && this.poseTest !== null ? this.poseTest : this.positions;
+    return this.previewMode === 'pose' && this.poseTest !== null ? this.poseTest : this.session.positions;
+  }
+
+  /**
+   * 写一个关节坐标（拖拽 / 方向键共用）：姿势档写测试骨架快照（面板本地，零污染），
+   * 其余档经 session（历史由手势起点的 `session.beginEdit` 负责）。
+   */
+  private writeJoint(name: string, p: [number, number, number]): void {
+    if (this.previewMode === 'pose' && this.poseTest !== null) {
+      this.poseTest[name] = p;
+      return;
+    }
+    this.session.setJointPosition(name, p);
   }
 
   private bindCanvas(canvas: HTMLCanvasElement, axis: ViewAxis): void {
@@ -1046,16 +912,16 @@ export class BindingPanel {
         // 选中 = 整根骨；top/medium/bottom 只是同一段的 3 个半径，不分别选中
         this.selectedCyl = hit?.bone ?? null;
         // 换选中骨 = 新手势上下文：合并窗口封口（800ms 内改另一根骨不许并步）
-        this.lastPush = null;
+        this.session.sealHistory();
         this.dragSeg = hit?.seg ?? 'medium';
         this.updateSkinPanel();
         this.refresh();
         if (hit === null) return;
         // 骨轴两端点用**整根骨**（不是子段），垂距才不会因为落在子段端点外而跳变；
         // 同时吃包裹器偏移，拖的是「看到的那根」（可能已被平移过）
-        const sg = boneSegments(this.positions).find((x) => x.bone === hit.bone);
+        const sg = boneSegments(this.session.positions).find((x) => x.bone === hit.bone);
         if (sg === undefined) return;
-        const cyl = this.cylinders?.[hit.bone];
+        const cyl = this.session.getCylinders()?.[hit.bone];
         const ends = offsetSegmentEndpoints(sg.a, sg.b, cyl?.offset);
         const A = this.project(ends.a, axis, canvas);
         const B = this.project(ends.b, axis, canvas);
@@ -1067,7 +933,7 @@ export class BindingPanel {
         const rPx = Math.max(4, (cyl?.radii?.[hit.seg] ?? 0.1) * this.scale);
         const axial = e.shiftKey || drPx < rPx * 0.45;
         if (axial) {
-          const off = this.getOffset(hit.bone);
+          const off = this.session.getOffset(hit.bone);
           axisDrag = { bone: hit.bone, p0: A, p1: B, startMx: mx, startMy: my, startOff: off[0] };
         } else {
           // 点中即开始拖半径
@@ -1082,11 +948,11 @@ export class BindingPanel {
       if (hit === null) return;
       dragging = hit;
       // 换选中骨 = 新手势上下文：合并窗口封口
-      if (hit !== this.selected) this.lastPush = null;
+      if (hit !== this.selected) this.session.sealHistory();
       this.selected = hit;
       canvas.focus();
       // 拖编辑骨架前打历史快照（每个拖动手势一步；姿势档改的是临时快照，不进历史）
-      if (this.previewMode === 'current') this.pushHistory('drag');
+      if (this.previewMode === 'current') this.session.beginEdit('drag');
       const rect = canvas.getBoundingClientRect();
       const p = this.editTarget()[hit]!;
       this.dragStart = {
@@ -1119,7 +985,7 @@ export class BindingPanel {
         const ux = dx / len, uy = dy / len;
         const dm = (mx - axisDrag.startMx) * ux + (my - axisDrag.startMy) * uy;
         const meters = dm / this.scale;
-        const off = this.getOffset(axisDrag.bone);
+        const off = this.session.getOffset(axisDrag.bone);
         off[0] = axisDrag.startOff + meters;
         if (this.setCylinderOffset(axisDrag.bone, off)) {
           this.updateSkinPanel();
@@ -1157,10 +1023,10 @@ export class BindingPanel {
       }
       if (axis === 'front') {
         const x = lockX ? this.dragStart!.x : (mx - this.originX) / this.scale;
-        target[dragging] = [x, lockY ? this.dragStart!.y : y, p[2]];
+        this.writeJoint(dragging, [x, lockY ? this.dragStart!.y : y, p[2]]);
       } else {
         const z = lockX ? this.dragStart!.z : (mx - this.originX) / this.scale;
-        target[dragging] = [p[0], lockY ? this.dragStart!.y : y, z];
+        this.writeJoint(dragging, [p[0], lockY ? this.dragStart!.y : y, z]);
       }
       // 姿势档：网格按测试骨架实时重姿态（权重缓存命中，只付 reposeMesh）
       if (this.previewMode === 'pose') this.syncDisplay();
@@ -1169,7 +1035,7 @@ export class BindingPanel {
 
     const end = (e: PointerEvent): void => {
       // 任何画布手势落地 = 合并窗口封口（下一段手势必须新起一步历史）
-      this.lastPush = null;
+      this.session.sealHistory();
       // ⚠️ panning 必须在这里复位 —— 旧实现漏了它，松键后 panning 恒为 true，
       // 后续每一次普通移动鼠标都会继续平移视图（2026-09-22 复审 N13）。
       if (panning) {
@@ -1212,8 +1078,8 @@ export class BindingPanel {
       }
       e.preventDefault();
       // 按键连发合并为一步历史（800ms 窗口；姿势档改临时快照不进历史）
-      if (this.previewMode === 'current') this.pushHistory('nudge', 800);
-      target[this.selected] = [x, y, z];
+      if (this.previewMode === 'current') this.session.beginEdit('nudge', 800);
+      this.writeJoint(this.selected, [x, y, z]);
       if (this.previewMode === 'pose') this.syncDisplay();
       this.refresh();
     });
@@ -1257,35 +1123,20 @@ export class BindingPanel {
    * 镜像：左右对称面 x=0，故 x 取反且互换左右骨名。骨架与 Skin Wrapper 半径一并镜像。
    *
    * 姿势档下镜像的是**测试姿势**（写 poseTest，不进历史、不碰真实绑定数据）——
-   * 直接写 this.positions 会戳破「姿势档零污染编辑骨架」的保证（PR #8 复审）。
-   * 其余档镜像编辑骨架 + wrapper，是真实编辑，进历史。
+   * 直接写 session 会戳破「姿势档零污染编辑骨架」的保证（PR #8 复审）。
+   * 其余档镜像编辑骨架 + wrapper（走 session.mirror，是真实编辑，进历史）。
    */
   private mirror(dir: 'L2R' | 'R2L'): void {
     const pose = this.previewMode === 'pose' && this.poseTest !== null ? this.poseTest : null;
-    if (pose === null) this.pushHistory('mirror');
-    const target = pose ?? this.positions;
-    for (const [l, r] of MIRROR_PAIRS) {
-      const src = dir === 'L2R' ? l : r;
-      const dst = dir === 'L2R' ? r : l;
-      const s = target[src]!;
-      target[dst] = [-s[0], s[1], s[2]];
-      // 包裹器半径一并镜像：否则骨架翻过去了，wrapper 半径还留在原侧（之前「skin wrapper 没法镜像」的真因）。
-      // 姿势档跳过：wrapper 是绑定定义不是姿势，镜像它等于趁预览偷改真实数据。
-      if (pose === null) {
-        const cyls = this.cylinders;
-        if (cyls !== null) {
-          const c = cyls[src];
-          if (c !== undefined) {
-            cyls[dst] = {
-              bone: dst,
-              radii: { ...c.radii },
-              enabled: c.enabled,
-              manual: c.manual === true,
-              offset: c.offset !== undefined ? [...c.offset] : undefined,
-            };
-          }
-        }
+    if (pose !== null) {
+      for (const [l, r] of MIRROR_PAIRS) {
+        const src = dir === 'L2R' ? l : r;
+        const dst = dir === 'L2R' ? r : l;
+        const s = pose[src]!;
+        pose[dst] = [-s[0], s[1], s[2]];
       }
+    } else {
+      this.session.mirror(dir);
     }
     // T/A/姿势预览的网格由权重/骨架重姿态而来：只 refresh() 预览会停在旧几何上
     // （权重输入变更的统一纪律就是走 invalidatePreview，镜像不是例外）。
@@ -1297,13 +1148,12 @@ export class BindingPanel {
     if (mode === this.previewMode) return;
     // 回到冻结的 Bind Pose：把编辑姿态恢复成拍下的 bind pose（只读预览，可随时重绑）
     if (mode === 'bind') {
-      if (this.bindPose === null) return;
-      this.positions = this.clonePositions(this.bindPose);
+      if (!this.session.restoreBindPose()) return;
     }
     // 姿势变形测试：进入时从编辑骨架拍一份独立快照（之后拖的是快照，编辑骨架不动）；
     // 切走即丢弃，下次进入重新拍 —— 测试姿势绝不混进绑定数据
     if (mode === 'pose') {
-      this.poseTest = this.clonePositions(this.positions);
+      this.poseTest = this.clonePositions(this.session.positions);
     } else {
       this.poseTest = null;
     }
@@ -1326,8 +1176,7 @@ export class BindingPanel {
   /** 安全重置：清空所有关节编辑（带确认，避免误丢数据）；可 Ctrl+Z 反悔 */
   private resetPose(): void {
     if (!window.confirm('重置会清空当前所有关节编辑，回到模板 T-pose。确定？')) return;
-    this.pushHistory('reset');
-    this.positions = tposeWorldPositions();
+    this.session.resetPositions();
     this.previewMode = 'current';
     // 强制退出姿势档却没走 setMode → 测试快照必须一并丢弃，否则残留的 poseTest
     // 会在下次进姿势档前一直占着内存（且语义上已失效）
@@ -1340,7 +1189,7 @@ export class BindingPanel {
 
   /**
    * Detach 皮肤：移除已应用的 T-pose 结果，但**保留 Bind Pose 与关节编辑**。
-   * bindPose 是独立字段，这里不动它 —— 所以切到 Bind 预览仍能回到冻结的绑定姿态。
+   * bindPose 是 session 的独立字段，这里不动它 —— 所以切到 Bind 预览仍能回到冻结的绑定姿态。
    */
   private detach(): void {
     if (!window.confirm('Detach 会移除已应用的绑定结果（Bind Pose 与关节编辑保留）。确定？')) return;
@@ -1348,7 +1197,7 @@ export class BindingPanel {
     this.tposeMesh = null;
     this.previewMode = 'current';
     // 结果没了 → 回到「未导出」
-    this.boundSig = null;
+    this.session.clearExportStamp();
     this.syncDisplay();
     this.refresh();
   }
@@ -1363,12 +1212,12 @@ export class BindingPanel {
   private applyTPose(): void {
     const fit = this.currentFit();
     // 冻结保存 Bind Pose（绑定瞬间的带 offset 姿态），永久存在；Detach 不清空，再 Bind 才刷新。
-    this.bindPose = this.clonePositions(this.positions);
+    this.session.freezeBindPose();
     this.bindPoseBtn.disabled = false;
-    this.hooks.onApply?.(fit, { smoothWeights: this.smoothWeights });
+    this.hooks.onApply?.(fit, { smoothWeights: this.session.getSmoothWeights() });
     // 注意：不复位 positions —— 骨骼保持 bind pose 不动（用户铁律）。
     // 记下这一刻的编辑指纹：徽标据此判断「之后动过没有」。
-    this.boundSig = this.editSig();
+    this.session.markExported();
     this.refresh();
   }
 
@@ -1377,17 +1226,15 @@ export class BindingPanel {
    * 但**骨骼保持 bind pose 不动** —— 绑定是动词，绑完骨架姿势即定，绝不跳回 T-pose。
    */
   showTPoseResult(fit: FitResult, verts: Float32Array<ArrayBuffer>): void {
+    void fit; // fit 由 session.currentFit() 现算（22 骨规模极小），无需缓存
     this.tposeMesh = verts;
     this.unposed = false;
-    this.fitCache = fit;
     this.syncDisplay();
     this.refresh();
   }
 
   currentFit(): FitResult {
-    // 22 骨规模极小，每次重算无性能压力，不做缓存失效判断
-    this.fitCache = fitSkeleton(this.positions);
-    return this.fitCache;
+    return this.session.currentFit();
   }
 
   /** 深拷贝一份关节坐标（冻结 Bind Pose 用，避免与实时编辑互相污染） */
@@ -1398,90 +1245,30 @@ export class BindingPanel {
   }
 
   // ─────────────────────────── Undo / Redo ───────────────────────────
-
-  /**
-   * 打一步历史快照（**全量持久化编辑态**：骨架坐标 + 包裹器 + 权重算法/平滑/镜像
-   * 导出选项，JSON 深拷贝 <10KB，上限 50 步）。
-   *
-   * 为什么是全量：快照与恢复必须严格对称 —— hydrate() 会同时改写几何与导出选项，
-   * 若快照只存几何，「撤销一次回填」就把骨架变回去、设置却留在新值，状态自相矛盾
-   * （PR #8 复审）。不变量因此定为：**任何持久化字段的变更之前都必须先打快照**，
-   * 设置类控件（算法/平滑/镜像）的 change 处理器同样是入栈点。
-   *
-   * 在**改动发生前**调用（快照存的是改前状态）。连续输入流（拖拽 / 滑块 / 按键
-   * 连发）按 `kind` + 时间窗合并：同 kind 且距上一步 <coalesceMs 就只刷新时间戳，
-   * 不再压栈 —— 一次滑块拖动 = 一步撤销，而不是八十步。合并窗口在手势边界封口
-   * （pointerup / 表单 change / 换选中骨），不跨手势并步。
-   * 任何新改动都会清空 redo 栈（标准线性历史语义）。
-   */
-  private snapshotState(): string {
-    return JSON.stringify({
-      positions: this.positions,
-      cylinders: this.cylinders,
-      weightMode: this.weightMode,
-      smoothWeights: this.smoothWeights,
-      smoothIters: this.smoothIters,
-      smoothLambda: this.smoothLambda,
-      mirrorWeights: this.mirrorWeightsExport,
-    });
-  }
-
-  private pushHistory(kind: string, coalesceMs = 0): void {
-    const now = performance.now();
-    if (
-      coalesceMs > 0 && this.lastPush !== null &&
-      this.lastPush.kind === kind && now - this.lastPush.time < coalesceMs
-    ) {
-      this.lastPush.time = now;
-      return;
-    }
-    this.undoStack.push(this.snapshotState());
-    if (this.undoStack.length > 50) this.undoStack.shift();
-    this.redoStack = [];
-    this.lastPush = { kind, time: now };
-  }
+  //
+  // 历史栈的真源在 session（快照 = 全量持久化编辑态：骨架 + 包裹器 + 导出选项，
+  // 详见 binding-session.ts 的 beginEdit 注释）。面板只在撤销/重做落地后把控件
+  // 回灌成快照值（设置是快照的一部分，控件不回灌就会显示与状态背离）。
 
   /** 撤销一步（Ctrl+Z）。空栈 = 无操作。 */
   undo(): void {
-    const prev = this.undoStack.pop();
-    if (prev === undefined) return;
-    this.redoStack.push(this.snapshotState());
-    this.restoreHistory(prev);
+    if (!this.session.undo()) return;
+    this.afterHistoryRestore();
   }
 
   /** 重做一步（Ctrl+Shift+Z / Ctrl+Y）。空栈 = 无操作。 */
   redo(): void {
-    const next = this.redoStack.pop();
-    if (next === undefined) return;
-    this.undoStack.push(this.snapshotState());
-    this.restoreHistory(next);
+    if (!this.session.redo()) return;
+    this.afterHistoryRestore();
   }
 
   /** 供冒烟断言：当前可撤销 / 可重做的步数 */
   historyDepth(): { undo: number; redo: number } {
-    return { undo: this.undoStack.length, redo: this.redoStack.length };
+    return this.session.historyDepth();
   }
 
-  private restoreHistory(json: string): void {
-    const s = JSON.parse(json) as {
-      positions: JointPositions;
-      cylinders: SkinCylinderMap | null;
-      weightMode: WeightMode;
-      smoothWeights: boolean;
-      smoothIters: number;
-      smoothLambda: number;
-      mirrorWeights: boolean;
-    };
-    this.positions = s.positions;
-    this.cylinders = s.cylinders;
-    this.weightMode = s.weightMode;
-    this.smoothWeights = s.smoothWeights;
-    this.smoothIters = s.smoothIters;
-    this.smoothLambda = s.smoothLambda;
-    this.mirrorWeightsExport = s.mirrorWeights;
-    // 打断合并窗口：撤销后的下一次改动必须新起一步，不能并回旧流
-    this.lastPush = null;
-    // 设置是快照的一部分 → 控件必须跟回快照值（否则显示与状态背离）
+  /** 撤销/重做落地后的控件回灌与预览失效（打断合并窗口已由 session 负责） */
+  private afterHistoryRestore(): void {
     this.syncWeightModeSelect();
     this.syncExportOptionInputs();
     this.updateSkinPanel();
@@ -1490,7 +1277,7 @@ export class BindingPanel {
 
   // ─────────────────────────── Skin Wrapper（代理圆柱体） ───────────────────────────
 
-  /** 切换编辑模式（关节骨架 / 蒙皮包裹）。进入 skin 模式时惰性初始化默认 wrapper */
+  /** 切换编辑模式（关节骨架 / 蒙皮包裹）。进入 skin 模式时确保半径表已建（session 侧） */
   private setEditMode(mode: 'skeleton' | 'skin'): void {
     if (mode === this.editMode) return;
     this.editMode = mode;
@@ -1500,26 +1287,26 @@ export class BindingPanel {
       .classList.toggle('active', mode === 'skin');
     const skinPanel = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-panel"]')!;
     skinPanel.hidden = mode !== 'skin';
-    if (mode === 'skin') this.ensureCylinders();
+    if (mode === 'skin') this.session.ensureCylinders();
     this.refresh();
   }
 
-  /** 把 this.weightMode 同步回下拉（换模型 / 清空 / 载入编辑态后调用） */
+  /** 把 session 的权重算法同步回下拉（换模型 / 清空 / 载入编辑态后调用） */
   private syncWeightModeSelect(): void {
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]');
-    if (wm !== null) wm.value = this.weightMode;
+    if (wm !== null) wm.value = this.session.getWeightMode();
   }
 
   /** 把导出选项（平滑 / 镜像权重 / 平滑参数）同步回控件（换模型 / 清空 / 回填后调用） */
   private syncExportOptionInputs(): void {
     const sm = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth"]');
-    if (sm !== null) sm.checked = this.smoothWeights;
+    if (sm !== null) sm.checked = this.session.getSmoothWeights();
     const mw = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-mirror-w"]');
-    if (mw !== null) mw.checked = this.mirrorWeightsExport;
+    if (mw !== null) mw.checked = this.session.getMirrorWeights();
     const si = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-iters"]');
-    if (si !== null) si.value = String(this.smoothIters);
+    if (si !== null) si.value = String(this.session.getSmoothIters());
     const sl = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-lambda"]');
-    if (sl !== null) sl.value = String(this.smoothLambda);
+    if (sl !== null) sl.value = String(this.session.getSmoothLambda());
   }
 
   private resetModeButtons(): void {
@@ -1529,46 +1316,18 @@ export class BindingPanel {
       .classList.toggle('active', false);
   }
 
-  private ensureCylinders(): void {
-    if (this.cylinders === null) {
-      this.cylinders = defaultSkinCylinders(this.positions);
-    }
-  }
-
   /** 把选中圆柱体（若有对侧同名骨）的半径镜像到对侧 */
   private mirrorSelectedCylinder(): void {
-    if (this.selectedCyl === null || this.cylinders === null) return;
-    const m = mirrorOf(this.selectedCyl);
-    if (m === null) return;
-    this.pushHistory('mirror');
-    const src = this.cylinders[this.selectedCyl]!;
-    // offset 必须一并镜像（复审 N5），且要经**世界系 x 反射**换算（PR #7 复审）：
-    // 左右同名骨的局部基不互为镜像（双腿同向 → v1 同向），局部元组直抄会把
-    // 两侧 wrapper 推向世界的同一侧。
-    let offset: Vec3 | undefined;
-    if (src.offset !== undefined) {
-      const segs = boneSegments(this.positions);
-      const ss = segs.find((x) => x.bone === this.selectedCyl);
-      const ds = segs.find((x) => x.bone === m);
-      offset = ss !== undefined && ds !== undefined
-        ? mirrorOffsetBetween(ss.a, ss.b, ds.a, ds.b, src.offset)
-        : [...src.offset];
+    if (this.selectedCyl === null) return;
+    if (this.session.mirrorCylinder(this.selectedCyl)) {
+      this.invalidatePreview();
     }
-    this.cylinders[m] = {
-      bone: m,
-      radii: { ...src.radii },
-      enabled: src.enabled,
-      manual: true,
-      offset,
-    };
-    this.invalidatePreview();
   }
 
   /** 全部 L↔R 镜像 wrapper 几何 */
   private mirrorAllCylinders(): void {
-    if (this.cylinders === null) return;
-    this.pushHistory('mirror');
-    this.cylinders = mirrorCylinders(this.cylinders, this.positions);
+    if (this.session.getCylinders() === null) return;
+    this.session.mirrorAllCylinders();
     this.updateSkinPanel();
     this.invalidatePreview();
   }
@@ -1627,42 +1386,23 @@ export class BindingPanel {
   /**
    * 设置某根骨某段的包裹器半径（滑块与自动化钩子共用同一条路径 —— 只有一条
    * 路径才不会出现「钩子能改、UI 改不动」这种对不上的假绿）。
+   * 历史与手动标记由 session 负责。
    *
    * @returns 是否真的写进去了（半径表未初始化 / 骨名不存在 / 值非法 = false）
    */
   setCylinderRadius(bone: string, seg: CylSegment, v: number): boolean {
-    const cyl = this.cylinders?.[bone];
-    if (cyl === undefined || !Number.isFinite(v)) return false;
-    // 滑块流 / 视图拖拽流 / 自动化流共用此入口 → 800ms 窗口合并为一步历史
-    this.pushHistory('radius', 800);
-    cyl.radii[seg] = v;
-    // 手动改过 → 打标记，自动适配从此不再碰这根骨
-    cyl.manual = true;
+    if (!this.session.setCylinderRadius(bone, seg, v)) return false;
     this.invalidatePreview();
     return true;
   }
 
-  /** 读某骨包裹器的当前偏移（未设置时返回 [0,0,0]，可变元祖便于就地改写单轴） */
-  private getOffset(bone: string): [number, number, number] {
-    const c = this.cylinders?.[bone];
-    return c?.offset !== undefined ? [c.offset[0], c.offset[1], c.offset[2]] : [0, 0, 0];
-  }
-
   /**
    * 设置整根包裹器的偏移（沿骨局部轴：x=轴向 / y=侧向 / z=前后）。
-   * 偏移全部为 0 时存 undefined（干净），否则存数组；手动标记一并打上。
-   * 画几何体与算权重都按此偏移，保证「看到的体积 == 算权重用的体积」。
+   * 历史与手动标记由 session 负责；画几何体与算权重都按此偏移，
+   * 保证「看到的体积 == 算权重用的体积」。
    */
   setCylinderOffset(bone: string, offset: Vec3): boolean {
-    const cyl = this.cylinders?.[bone];
-    if (
-      cyl === undefined ||
-      !Number.isFinite(offset[0]) || !Number.isFinite(offset[1]) || !Number.isFinite(offset[2])
-    ) return false;
-    this.pushHistory('offset', 800);
-    const zero = offset[0] === 0 && offset[1] === 0 && offset[2] === 0;
-    cyl.offset = zero ? undefined : [offset[0], offset[1], offset[2]];
-    cyl.manual = true;
+    if (!this.session.setCylinderOffset(bone, offset)) return false;
     this.invalidatePreview();
     return true;
   }
@@ -1672,7 +1412,7 @@ export class BindingPanel {
     if (this.selectedCyl === null) return;
     const v = parseFloat(value);
     if (!Number.isFinite(v)) return;
-    const off = this.getOffset(this.selectedCyl);
+    const off = this.session.getOffset(this.selectedCyl);
     const i = ax === 'x' ? 0 : ax === 'y' ? 1 : 2;
     off[i] = v;
     this.setCylinderOffset(this.selectedCyl, off);
@@ -1692,9 +1432,8 @@ export class BindingPanel {
    * 显式按钮才调，绝不每帧隐式跑（隐式跑 = 覆盖手动值）。
    */
   private autoFitCylinders(): void {
-    if (this.cylinders === null) return;
-    this.pushHistory('autofit');
-    const changed = autoFitCylinders(this.positions, this.cylinders);
+    if (this.session.getCylinders() === null) return;
+    const changed = this.session.autoFitCylinders();
     this.updateSkinPanel();
     this.invalidatePreview();
     this.hooks.onAutoFit?.(changed);
@@ -1702,14 +1441,11 @@ export class BindingPanel {
 
   /** 取消当前骨的手动标记，交还给自动适配 */
   private unpinSelectedCylinder(): void {
-    if (this.selectedCyl === null || this.cylinders === null) return;
-    const cyl = this.cylinders[this.selectedCyl];
-    if (cyl === undefined) return;
-    this.pushHistory('unpin');
-    cyl.manual = false;
-    autoFitCylinders(this.positions, this.cylinders);
-    this.updateSkinPanel();
-    this.invalidatePreview();
+    if (this.selectedCyl === null) return;
+    if (this.session.unpinCylinder(this.selectedCyl)) {
+      this.updateSkinPanel();
+      this.invalidatePreview();
+    }
   }
 
   /** 刷新 skin 属性面板（选中信息 + 三段半径滑块 + 偏移 + 镜像按钮可用性） */
@@ -1718,7 +1454,8 @@ export class BindingPanel {
     const sliders = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-sliders"]')!;
     const offBox = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-offset"]')!;
     const mirBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-mirror"]')!;
-    if (this.selectedCyl === null || this.cylinders === null) {
+    const cylinders = this.session.getCylinders();
+    if (this.selectedCyl === null || cylinders === null) {
       sel.textContent = '未选中圆柱体 · 在视图中点选一段';
       sliders.hidden = true;
       offBox.hidden = true;
@@ -1726,7 +1463,7 @@ export class BindingPanel {
       mirBtn.title = '先在正/侧视图里点选一段包裹器，才能镜像到对侧';
       return;
     }
-    const cyl = this.cylinders[this.selectedCyl]!;
+    const cyl = cylinders[this.selectedCyl]!;
     const m = mirrorOf(this.selectedCyl);
     sel.innerHTML = `<b>${this.selectedCyl}</b>${m !== null ? ` <span class="bd-mir">↔ ${m}</span>` : ''}` +
       ` · 整段 wrapper` +
@@ -1751,7 +1488,7 @@ export class BindingPanel {
         if (document.activeElement !== el) el.value = String(v);
       }
     }
-    const off = this.getOffset(this.selectedCyl);
+    const off = this.session.getOffset(this.selectedCyl);
     const axs = ['x', 'y', 'z'] as const;
     for (const ax of axs) {
       const i = ax === 'x' ? 0 : ax === 'y' ? 1 : 2;
@@ -1786,9 +1523,9 @@ export class BindingPanel {
   segmentScreen(
     bone: string, axis: ViewAxis, canvas: HTMLCanvasElement,
   ): { a: [number, number]; b: [number, number] } | null {
-    const sg = boneSegments(this.positions).find((x) => x.bone === bone);
+    const sg = boneSegments(this.session.positions).find((x) => x.bone === bone);
     if (sg === undefined) return null;
-    const cyl = this.cylinders?.[bone];
+    const cyl = this.session.getCylinders()?.[bone];
     const ends = offsetSegmentEndpoints(sg.a, sg.b, cyl?.offset);
     return { a: this.project(ends.a, axis, canvas), b: this.project(ends.b, axis, canvas) };
   }
@@ -1796,8 +1533,9 @@ export class BindingPanel {
   pickCylinderAt(
     mx: number, my: number, axis: ViewAxis, canvas: HTMLCanvasElement,
   ): { bone: string; seg: CylSegment } | null {
-    if (this.cylinders === null) return null;
-    const segs = boneSegments(this.positions);
+    const cylinders = this.session.getCylinders();
+    if (cylinders === null) return null;
+    const segs = boneSegments(this.session.positions);
     const s = this.scale;
     const ox = this.centerX(canvas);
     void canvas;
@@ -1811,7 +1549,7 @@ export class BindingPanel {
     let best: { bone: string; seg: CylSegment } | null = null;
     let bestD = Infinity;
     for (const seg of segs) {
-      const cyl = this.cylinders[seg.bone];
+      const cyl = cylinders[seg.bone];
       if (cyl === undefined || !cyl.enabled) continue;
       const A = to2d(seg.a);
       const B = to2d(seg.b);
@@ -1882,47 +1620,14 @@ export class BindingPanel {
 
   // ─────────────────────────── 产出状态徽标 ───────────────────────────
 
-  /**
-   * 当前编辑态指纹：27 关节坐标 + 全部包裹器半径 + **影响产物的导出选项**
-   * （权重算法 / 镜像权重 / 平滑开关 —— 它们不改几何但改变 Bind 产物，
-   *  漏掉会出现「改了算法徽标还显示 ✓ 已绑定」的假绿，2026-09-22 复审收口）。
-   * 只用于「自上次 Bind 后动过没有」的比对，不参与任何算法。
-   */
-  private editSig(): string | null {
-    if (this.modelName === null) return null;
-    const parts: string[] = [];
-    for (const n of HUMANIK_ORDER) {
-      const p = this.positions[n];
-      parts.push(p === undefined ? '-' : `${p[0].toFixed(5)},${p[1].toFixed(5)},${p[2].toFixed(5)}`);
-    }
-    if (this.cylinders !== null) {
-      for (const n of Object.keys(this.cylinders).sort()) {
-        const c = this.cylinders[n]!;
-        // offset / enabled 都进 computeCylinderWeights → 都改变 Bind 产物，
-        // 漏掉会出现「改了偏移/禁用徽标还显示 ✓ 已绑定」的假绿（PR #7 复审）
-        const off = c.offset === undefined
-          ? '-'
-          : `${c.offset[0].toFixed(5)},${c.offset[1].toFixed(5)},${c.offset[2].toFixed(5)}`;
-        parts.push(
-          `${n}:${c.radii.top.toFixed(5)}/${c.radii.medium.toFixed(5)}/${c.radii.bottom.toFixed(5)}` +
-          `|en:${c.enabled ? 1 : 0}|off:${off}`,
-        );
-      }
-    }
-    parts.push(`wm:${this.weightMode}`);
-    parts.push(`mw:${this.mirrorWeightsExport ? 1 : 0}`);
-    parts.push(`sm:${this.smoothWeights ? 1 : 0}`);
-    // 平滑迭代 / λ 同样改变 Bind 产物（旧评审 §2.4 参数外置后必须进指纹，
-    // 否则改了参数徽标还显示 ✓ 已绑定 —— 与当初漏 sm/mw 同类的假绿）
-    parts.push(`si:${this.smoothIters}`);
-    parts.push(`sl:${this.smoothLambda.toFixed(3)}`);
-    return parts.join('|');
-  }
+  // 编辑指纹（editSig）的真源在 session：27 关节坐标 + 全部包裹器半径/启用/偏移 +
+  // 影响产物的导出选项（算法/镜像/平滑/平滑参数）。只用于「自上次 Bind 后动过没有」
+  // 的比对与权重缓存键，不参与任何算法。
 
   /**
    * 诊断数字条（旧评审 §2.7：技美用数字工作）。
    *
-   * 数字全部来自 `previewSkin()` —— 与 Bind Skin 导出**同一份权重**，所以这条
+   * 数字全部来自 `session.computeSkin()` —— 与 Bind Skin 导出**同一份权重**，所以这条
    * 数字描述的就是将要导出的产物：影响骨数 / 零权重顶点（应为 0）/ 满 4 影响
    * 顶点数 / 未包裹顶点数（wrapper 模式，§2.1 的软衰减覆盖量由此从隐形变可见）。
    * 选中骨时追加该骨的顶点数 / 平均 / 最大权重。权重输入没变时缓存命中、零成本。
@@ -1935,22 +1640,22 @@ export class BindingPanel {
       el.textContent = '';
       return;
     }
-    const skin = this.previewSkin();
-    if (skin === null) {
+    const computed = this.session.computeSkin();
+    if (computed === null) {
       el.hidden = true;
       el.textContent = '';
       return;
     }
     const n = this.srcVerts.length / this.vertexFloats;
-    const d = computeSkinDiagnostics(skin, n);
+    const d = computeSkinDiagnostics(computed.skin, n);
     const warn = (v: number): string => (v > 0 ? '<b class="bd-warn">' : '<b>');
-    const unwrap = this.weightMode === 'wrapper' && this.cylinderStats !== null
-      ? ` · 未包裹 ${warn(this.cylinderStats.unwrappedVerts)}${this.cylinderStats.unwrappedVerts}</b>`
+    const unwrap = this.session.getWeightMode() === 'wrapper' && computed.stats !== null
+      ? ` · 未包裹 ${warn(computed.stats.unwrappedVerts)}${computed.stats.unwrappedVerts}</b>`
       : '';
     let html =
       `影响骨数 <b>${d.usedBones}</b> · 零权重 ${warn(d.zeroWeightVerts)}${d.zeroWeightVerts}</b>` +
       ` · 满4影响 <b>${d.fullInfluenceVerts}</b>${unwrap}` +
-      ` · <span class="bd-dim">撤销 ${this.undoStack.length}</span>`;
+      ` · <span class="bd-dim">撤销 ${this.session.historyDepth().undo}</span>`;
     const selBone = this.editMode === 'skin' ? this.selectedCyl : this.selected;
     if (selBone !== null) {
       const pb = d.perBone.find((x) => x.bone === selBone);
@@ -1971,7 +1676,7 @@ export class BindingPanel {
   private updateExportBadge(): void {
     const el = this.exportBadgeEl;
     if (el === undefined) return;
-    const sig = this.editSig();
+    const sig = this.session.editSig();
     if (sig === null) {
       el.hidden = true;
       el.className = 'bd-badge';
@@ -1980,10 +1685,11 @@ export class BindingPanel {
       return;
     }
     el.hidden = false;
-    const stale = this.boundSig === null || this.boundSig !== sig;
+    const boundSig = this.session.getBoundSig();
+    const stale = boundSig === null || boundSig !== sig;
     el.className = stale ? 'bd-badge bd-badge-warn' : 'bd-badge bd-badge-ok';
     el.textContent = stale ? '● 未导出' : '✓ 已绑定';
-    el.title = this.boundSig === null
+    el.title = boundSig === null
       ? '这个模型还没 Bind 过：骨架摆位与包裹器半径只存在于面板里，Bind Skin 后才会产出绑定结果'
       : stale
         ? '自上次 Bind Skin 起又改过关节或半径，已产出的绑定结果已过期，需要重新 Bind Skin'
@@ -2032,7 +1738,7 @@ export class BindingPanel {
     const L = fit.lengths[name]!;
     const q = fit.poseRotations[name]!;
     const ang = (2 * Math.acos(Math.min(1, Math.abs(q[3])))) * 180 / Math.PI;
-    const p = this.positions[name]!;
+    const p = this.session.positions[name]!;
     const mir = mirrorOf(name);
     this.infoEl.innerHTML = `
       <div class="bd-sel">${name}${mir !== null ? ` <span class="bd-mir">↔ ${mir}</span>` : ''}</div>
@@ -2067,7 +1773,7 @@ export class BindingPanel {
       // 「隐藏左/右/仅中轴」要**同时**过滤骨架与 Skin Wrapper：3D 层只画可见骨段，
       // 被过滤的 wrapper 把 enabled 置 false（半径保留）让圆柱几何跳过绘制。
       const vis = new Set(this.visibleJoints());
-      gl.setSegments(boneSegments(this.positions).filter((x) => vis.has(x.bone)));
+      gl.setSegments(boneSegments(this.session.positions).filter((x) => vis.has(x.bone)));
       // ⚠️ **两个模式都吃半径表**（不再传 null）。传 null 会让 3D 层回退成
       // 「骨长 ×0.35」的自动半径 —— 手动调的半径在关节模式下就全被盖掉了，
       // 表现正是「拖 joint 包裹器自己变大变小，侧边栏调的却不动」。
@@ -2212,7 +1918,7 @@ export class BindingPanel {
     if (skin === null) return;
     const dpr = window.devicePixelRatio || 1;
     const key =
-      `${this.editSig() ?? ''}|${boneName}|${this.scale.toFixed(3)}|` +
+      `${this.session.editSig() ?? ''}|${boneName}|${this.scale.toFixed(3)}|` +
       `${this.originX.toFixed(1)}|${this.originY.toFixed(1)}|${canvas.width}x${canvas.height}`;
     let e = this.heatCache[axis];
     if (e === undefined || e.key !== key || e.mesh !== this.meshVerts) {
@@ -2411,11 +2117,11 @@ export class BindingPanel {
     canvas: HTMLCanvasElement,
     axis: ViewAxis,
   ): void {
-    const cyls = this.cylinders;
+    const cyls = this.session.getCylinders();
     if (cyls === null) { this.drawSkeleton(ctx, canvas, axis); return; }
     // 骨骼淡显作对照
     this.drawSkeleton(ctx, canvas, axis, true);
-    const segs = boneSegments(this.positions);
+    const segs = boneSegments(this.session.positions);
     const s = this.scale;
     const ox = this.centerX(canvas);
     void canvas;
@@ -2500,7 +2206,7 @@ export class BindingPanel {
       loaded: this.meshVerts !== null,
       modelName: this.modelName,
       selected: this.selected,
-      positions: JSON.parse(JSON.stringify(this.positions)) as Record<string, [number, number, number]>,
+      positions: JSON.parse(JSON.stringify(this.session.positions)) as Record<string, [number, number, number]>,
       triangles: this.meshIndices !== null ? this.meshIndices.length / 3 : 0,
       vertices: this.meshVerts !== null ? this.meshVerts.length / this.vertexFloats : 0,
     };
@@ -2512,119 +2218,41 @@ export class BindingPanel {
    * 导出流程要用它做两件事，都必须在当前姿态上完成：
    *   ① 在当前姿态骨架上算 LBS 权重；② 由它反解出 T-pose 网格。
    * 若误传反解后的网格，① 会按 T 字形算权重 —— A-pose 的手臂权重全错。
+   * （真源在 session，这里只是透传）
    */
   getMesh(): { vertices: Float32Array<ArrayBuffer>; indices: Uint32Array<ArrayBuffer>; vertexFloats: number } | null {
-    if (this.srcVerts === null || this.meshIndices === null) return null;
-    return {
-      vertices: this.srcVerts,
-      indices: this.meshIndices,
-      vertexFloats: this.vertexFloats,
-    };
+    return this.session.getMesh();
   }
 
   /**
    * 供导出取用：当前 Skin Wrapper 半径表。
-   * 注意：半径表在 `setModel()` 时**载入即建**（`ensureCylinders()`），所以载入模型后
-   * 这里恒非 null —— 权重算法的真正开关是 `getWeightMode()`，外部据此决定传不传
-   * cylinders（distance 模式必须传 undefined，否则 runExport 永远走圆柱体分支）。
+   * 注意：半径表在 `setModel()` 时**载入即建**（session 侧 ensureCylinders），
+   * 所以载入模型后这里恒非 null —— 权重算法的真正开关是 `getWeightMode()`，
+   * 外部据此决定传不传 cylinders（distance 模式必须传 undefined）。
    */
   getCylinders(): SkinCylinderMap | null {
-    return this.cylinders;
+    return this.session.getCylinders();
   }
 
   /**
    * 导出当前编辑态（骨架摆位 + Skin Wrapper），供「保存绑定」写盘。
-   * 深拷贝避免与面板内部引用共享，落盘后 JSON 改动不反向污染编辑态。
+   * 深拷贝由 session 产出（避免落盘 JSON 反向污染编辑态）。
    */
   getEditorData(): BindingEditorData {
-    return {
-      positions: JSON.parse(JSON.stringify(this.positions)) as Record<string, [number, number, number]>,
-      cylinders: this.cylinders === null
-        ? null
-        : (JSON.parse(JSON.stringify(this.cylinders)) as SkinCylinderMap),
-      weightMode: this.weightMode,
-      smoothWeights: this.smoothWeights,
-      smoothIters: this.smoothIters,
-      smoothLambda: this.smoothLambda,
-      mirrorWeights: this.mirrorWeightsExport,
-      savedAt: new Date().toISOString(),
-    };
+    return this.session.getEditorData();
   }
 
   /**
    * 回填：打开资产时从 `.meta.json` 的 `bindingEditor` 槽位把上次的编辑态灌回来。
-   *
-   * 只在 key 形状对得上时才接纳，避免和未来模型骨骼集不一致导致错乱：
-   *  - positions：逐骨校验是有限数三元组，且本模型确有这跟骨才覆盖；
-   *  - cylinders：逐骨校验有 `radii.{top,medium,bottom}` 三个有限数才整体接纳。
-   *
-   * @param saved 来自磁盘 JSON 的 `bindingEditor` 节点（untrusted → 全程形状校验）
+   * 形状校验与字段取舍全部在 session.hydrate（untrusted → 全程校验）；
+   * 面板只负责把控件回灌成新值并重算显示。
    */
   hydrate(saved: unknown): void {
     if (saved === null || typeof saved !== 'object') return;
-    // 回填是一次性大改 → 进历史（可 Ctrl+Z 回到回填前）
-    this.pushHistory('hydrate');
-    const s = saved as {
-      positions?: unknown;
-      cylinders?: unknown;
-      weightMode?: unknown;
-      smoothWeights?: unknown;
-      smoothIters?: unknown;
-      smoothLambda?: unknown;
-      mirrorWeights?: unknown;
-    };
-
-    // 权重算法：只接受两个字面量，其余（老文件缺字段 / 脏数据）保持默认 wrapper
-    if (s.weightMode === 'distance' || s.weightMode === 'wrapper') {
-      this.weightMode = s.weightMode;
-      this.syncWeightModeSelect();
-    }
-
-    // 导出选项：只接受真布尔，老文件缺字段保持面板默认（smooth=true / mirror=false，
-    // 默认值由 setModel/clear 的重置保证，见那里的注释）
-    if (typeof s.smoothWeights === 'boolean') this.smoothWeights = s.smoothWeights;
-    if (typeof s.mirrorWeights === 'boolean') this.mirrorWeightsExport = s.mirrorWeights;
-    // 平滑参数：只接受合理域内的有限数（迭代取整 1..12，λ ∈ [0,1]），
-    // 老文件缺字段 / 脏数据保持面板默认 —— 与 weightMode 的「只接受合法字面量」同构
-    if (typeof s.smoothIters === 'number' && Number.isFinite(s.smoothIters) &&
-        s.smoothIters >= 1 && s.smoothIters <= 12) {
-      this.smoothIters = Math.round(s.smoothIters);
-    }
-    if (typeof s.smoothLambda === 'number' && Number.isFinite(s.smoothLambda) &&
-        s.smoothLambda >= 0 && s.smoothLambda <= 1) {
-      this.smoothLambda = s.smoothLambda;
-    }
+    this.session.hydrate(saved);
+    // 设置是持久化态的一部分 → 控件必须跟回（否则显示与状态背离）
+    this.syncWeightModeSelect();
     this.syncExportOptionInputs();
-
-    if (s.positions !== null && typeof s.positions === 'object') {
-      const map = s.positions as Record<string, unknown>;
-      for (const [bone, p] of Object.entries(map)) {
-        if (this.positions[bone] === undefined) continue;
-        if (!Array.isArray(p) || p.length !== 3) continue;
-        const ok = (p as unknown[]).every((n) => typeof n === 'number' && Number.isFinite(n));
-        if (!ok) continue;
-        const t = p as [number, number, number];
-        this.positions[bone] = [t[0], t[1], t[2]];
-      }
-    }
-
-    if (s.cylinders !== null && typeof s.cylinders === 'object') {
-      const map = s.cylinders as Record<string, unknown>;
-      let shapeOk = true;
-      for (const c of Object.values(map)) {
-        if (c === null || typeof c !== 'object') { shapeOk = false; break; }
-        const r = (c as { radii?: unknown }).radii;
-        if (r === null || typeof r !== 'object') { shapeOk = false; break; }
-        const rr = r as Record<string, unknown>;
-        if (typeof rr.top !== 'number' || typeof rr.medium !== 'number' || typeof rr.bottom !== 'number') {
-          shapeOk = false; break;
-        }
-      }
-      if (shapeOk) {
-        this.cylinders = JSON.parse(JSON.stringify(map)) as SkinCylinderMap;
-      }
-    }
-
     this.syncDisplay();
     this.refresh();
   }
@@ -2703,7 +2331,7 @@ export class BindingPanel {
 
   /** 供导出取用：是否镜像皮肤权重 L→R */
   getMirrorWeights(): boolean {
-    return this.mirrorWeightsExport;
+    return this.session.getMirrorWeights();
   }
 
   /**
@@ -2711,29 +2339,30 @@ export class BindingPanel {
    * `distance` 时外部**不要**传 cylinders，`runExport` 才会走 `computeLbsWeights`。
    */
   getWeightMode(): WeightMode {
-    return this.weightMode;
+    return this.session.getWeightMode();
   }
 
-  /** 载入 `.meta.json` 里存过的权重算法（老文件没有这个键时保持默认 wrapper） */
+  /** 兼容入口（历史上供 .meta.json 载入用；现在统一走 hydrate）。改动走 session（进历史） */
   setWeightMode(mode: WeightMode): void {
-    this.weightMode = mode === 'distance' ? 'distance' : 'wrapper';
-    this.syncWeightModeSelect();
-    this.invalidatePreview();
+    if (this.session.setWeightMode(mode)) {
+      this.syncWeightModeSelect();
+      this.invalidatePreview();
+    }
   }
 
   /** 供顶部菜单「导出 T-pose GLB」沿用面板里的平滑权重开关 */
   getSmoothWeights(): boolean {
-    return this.smoothWeights;
+    return this.session.getSmoothWeights();
   }
 
   /** 供导出取用：平滑迭代次数（旧评审 §2.4 参数外置，进 `.meta.json` 可复现） */
   getSmoothIters(): number {
-    return this.smoothIters;
+    return this.session.getSmoothIters();
   }
 
   /** 供导出取用：平滑扩散强度 λ（0..1） */
   getSmoothLambda(): number {
-    return this.smoothLambda;
+    return this.session.getSmoothLambda();
   }
 
   /** 供冒烟断言：诊断条当前文本（权重质量数字，与导出权重同源） */
@@ -2758,15 +2387,13 @@ export class BindingPanel {
       this.refresh();
       return;
     }
-    this.pushHistory('pose', 800);
-    this.positions[name] = p;
-    this.refresh();
+    if (this.session.poseJoint(name, p)) this.refresh();
   }
 
   select(name: string | null): void {
     const next = name !== null && HUMANIK_BONES[name] !== undefined ? name : null;
     // 换选中骨 = 新手势上下文：合并窗口封口（800ms 内微调另一根骨不许并步）
-    if (next !== this.selected) this.lastPush = null;
+    if (next !== this.selected) this.session.sealHistory();
     this.selected = next;
     this.refresh();
   }
@@ -2775,7 +2402,7 @@ export class BindingPanel {
   distanceToMesh(name: string): number {
     const v = this.meshVerts;
     if (v === null) return NaN;
-    const p = this.positions[name]!;
+    const p = this.session.positions[name]!;
     let best = Infinity;
     const n = v.length / this.vertexFloats;
     for (let i = 0; i < n; i++) {
@@ -2790,7 +2417,7 @@ export class BindingPanel {
   boneSegmentClearance(name: string): number {
     const v = this.meshVerts;
     if (v === null) return NaN;
-    const segs = boneSegments(this.positions);
+    const segs = boneSegments(this.session.positions);
     const seg = segs.find((x) => x.bone === name);
     if (seg === undefined) return NaN;
     const n = v.length / this.vertexFloats;
