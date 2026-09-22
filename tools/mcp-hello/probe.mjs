@@ -56,6 +56,48 @@ function notify(method) {
   child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method }) + '\n');
 }
 
+/**
+ * 单独验证版本协商：initialize 一会话只能握一次手，故另起一个短命子进程，
+ * 发 `version` 后只读 initialize 响应里的 protocolVersion。
+ */
+function negotiate(version) {
+  return new Promise((resolve) => {
+    const c = spawn(process.execPath, [SERVER], { stdio: ['pipe', 'pipe', 'inherit'] });
+    let b = '';
+    const finish = (v) => {
+      clearTimeout(timer);
+      c.kill();
+      resolve(v);
+    };
+    const timer = setTimeout(() => finish(null), 5000);
+    c.stdout.setEncoding('utf8');
+    c.stdout.on('data', (chunk) => {
+      b += chunk;
+      const nl = b.indexOf('\n');
+      if (nl < 0) return;
+      let msg;
+      try {
+        msg = JSON.parse(b.slice(0, nl).trim());
+      } catch {
+        return;
+      }
+      finish(msg?.result?.protocolVersion ?? null);
+    });
+    c.stdin.write(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: version,
+          capabilities: {},
+          clientInfo: { name: 'mcp-hello-probe', version: '0.1.0' },
+        },
+      }) + '\n',
+    );
+  });
+}
+
 const checks = [];
 const check = (name, ok) => {
   checks.push([name, ok]);
@@ -64,12 +106,16 @@ const check = (name, ok) => {
 
 try {
   const init = await call('initialize', {
-    protocolVersion: '2025-06-18',
+    protocolVersion: '2025-03-26', // 发支持集内的旧版本：验证 server 回显（协商成功）
     capabilities: {},
     clientInfo: { name: 'mcp-hello-probe', version: '0.1.0' },
   });
   check('initialize 返回 serverInfo', init?.serverInfo?.name === 'aether-mcp-hello');
   check('initialize 声明 tools 能力', init?.capabilities?.tools !== undefined);
+  check('协议版本回显支持集内的客户端版本', init?.protocolVersion === '2025-03-26');
+
+  const fallback = await negotiate('1999-01-01');
+  check('不支持版本回己方支持版本（不回显任意输入）', fallback === '2025-06-18');
 
   notify('notifications/initialized');
 

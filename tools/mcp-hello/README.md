@@ -31,4 +31,5 @@ node tools/mcp-hello/probe.mjs   # spawn server → initialize → tools/list �
 ```
 
 注册后**重启会话**生效（MCP server 在会话启动时连接）；状态看「Settings → MCP」。
-工具会以 `mcp__aether-hello_hello_ping` 的形式出现。
+工具会以 `mcp__aether-hello__hello_ping` 的形式出现（`mcp__<server>__<tool>`，
+server 与工具名之间是双下划线）。

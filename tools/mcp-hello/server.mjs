@@ -14,6 +14,12 @@
  */
 
 const SERVER_INFO = { name: 'aether-mcp-hello', version: '0.1.0' };
+/**
+ * 本 server 实际支持的协议版本。探针实现的 initialize / tools/list / tools/call /
+ * ping 在这两个版本下行为一致，故都声明支持。
+ */
+const SUPPORTED_VERSIONS = ['2025-03-26', '2025-06-18'];
+/** 兜底协议版本：客户端没报版本、或报的版本不在支持集里时，回己方最新支持版本 */
 const PROTOCOL_VERSION = '2025-06-18';
 
 const TOOLS = [
@@ -39,7 +45,14 @@ function handleRequest(req) {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: PROTOCOL_VERSION,
+          // 版本协商（MCP spec）：客户端所报版本 ∈ 支持集 → 回显；否则回己方
+          // 支持版本，由客户端决定是否断开。绝不回显任意输入——那会让不兼容的
+          // 客户端误以为协商成功（PR #9 bot 评审收口）。
+          protocolVersion:
+            typeof params?.protocolVersion === 'string' &&
+            SUPPORTED_VERSIONS.includes(params.protocolVersion)
+              ? params.protocolVersion
+              : PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: SERVER_INFO,
         },

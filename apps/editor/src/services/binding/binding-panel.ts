@@ -511,14 +511,19 @@ export class BindingPanel {
     // 平滑参数（迭代 / λ）：两个数字框，改动进编辑指纹并立刻刷新预览与诊断
     const si = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-iters"]')!;
     si.addEventListener('change', () => {
-      // 非有限数 / 越界由 session 钳制并返回实际生效值，输入框回显生效值
-      si.value = String(this.session.setSmoothIters(parseFloat(si.value)));
-      this.invalidatePreview();
+      // 非有限数 / 越界由 session 钳制并返回实际生效值，输入框回显生效值；
+      // 值没变（含 NaN 回显）不付预览失效的代价
+      const prev = this.session.getSmoothIters();
+      const applied = this.session.setSmoothIters(parseFloat(si.value));
+      si.value = String(applied);
+      if (applied !== prev) this.invalidatePreview();
     });
     const sl = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-lambda"]')!;
     sl.addEventListener('change', () => {
-      sl.value = String(this.session.setSmoothLambda(parseFloat(sl.value)));
-      this.invalidatePreview();
+      const prev = this.session.getSmoothLambda();
+      const applied = this.session.setSmoothLambda(parseFloat(sl.value));
+      sl.value = String(applied);
+      if (applied !== prev) this.invalidatePreview();
     });
 
     // 权重热力图开关（选中骨 → 顶点按权重着色；只动显示层，不进导出指纹）
@@ -1146,7 +1151,9 @@ export class BindingPanel {
   /** 三态姿态预览切换 */
   private setMode(mode: PreviewMode): void {
     if (mode === this.previewMode) return;
-    // 回到冻结的 Bind Pose：把编辑姿态恢复成拍下的 bind pose（只读预览，可随时重绑）
+    // 回到冻结的 Bind Pose：把编辑骨架**替换**成拍下的 bind pose —— Bind 之后
+    // 未导出的编辑被丢弃且不可 Ctrl+Z（历史语义：从绑定姿态重新微调再重绑；
+    // Bind 档不是只读预览，档内仍可拖拽编辑。隐患已在 PR #9 评审立项记录）
     if (mode === 'bind') {
       if (!this.session.restoreBindPose()) return;
     }
