@@ -331,3 +331,67 @@ describe('BindingSession 权重计算（computeSkin）', () => {
     expect(c).not.toBe(a);
   });
 });
+
+describe('BindingSession 批量导出选项（applyOptions，PR #10 评审收口）', () => {
+  it('多字段合并为一步历史：undo 一次全部回退', () => {
+    const s = readySession();
+    const before = s.historyDepth().undo;
+    s.applyOptions({ weightMode: 'distance', smoothWeights: false, smoothIters: 7 });
+    expect(s.historyDepth().undo).toBe(before + 1); // 一步，不是三步
+    expect(s.getWeightMode()).toBe('distance');
+    expect(s.getSmoothWeights()).toBe(false);
+    expect(s.getSmoothIters()).toBe(7);
+    s.undo();
+    expect(s.getWeightMode()).toBe('wrapper');
+    expect(s.getSmoothWeights()).toBe(true);
+    expect(s.getSmoothIters()).toBe(4);
+  });
+
+  it('值全没变化时不打历史（返回 false）；越界值按 setter 同款钳制', () => {
+    const s = readySession();
+    const before = s.historyDepth().undo;
+    expect(s.applyOptions({ smoothIters: 4, smoothLambda: 0.5 })).toBe(false);
+    expect(s.historyDepth().undo).toBe(before);
+    expect(s.applyOptions({ smoothIters: 99, smoothLambda: 5 })).toBe(true);
+    expect(s.getSmoothIters()).toBe(12);
+    expect(s.getSmoothLambda()).toBe(1);
+  });
+
+  it('非法 weightMode 字面量保持现值（与 setWeightMode 同纪律）', () => {
+    const s = readySession();
+    s.applyOptions({ weightMode: 'junk' });
+    expect(s.getWeightMode()).toBe('wrapper');
+  });
+});
+
+describe('BindingSession hydrate 原型链防护（PR #10 评审收口）', () => {
+  it('positions 白名单：constructor / __proto__ / 未知骨一律跳过，对象原型不被改写', () => {
+    const s = readySession();
+    // 模拟脏 sidecar：JSON.parse 会把 __proto__ 造成 own 属性（不走 setter）
+    const dirty = JSON.parse(
+      '{"positions":{"constructor":[1,2,3],"__proto__":[1,2,3],"NotABone":[1,2,3],"Head":[0,1.9,0]}}',
+    ) as unknown;
+    s.hydrate(dirty);
+    expect(s.positions.Head).toEqual([0, 1.9, 0]); // 好字段正常回填
+    expect(Object.hasOwn(s.positions, 'constructor')).toBe(false);
+    expect(Object.hasOwn(s.positions, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(s.positions)).toBe(Object.prototype); // 原型未被污染
+    // 导出产物也只含合法骨名（脏键不会经 getEditorData 回流到 sidecar）
+    for (const k of Object.keys(s.getEditorData().positions)) {
+      expect(HUMANIK_ORDER.includes(k)).toBe(true);
+    }
+  });
+
+  it('cylinders 白名单：原型链键被滤掉，合法骨正常回填', () => {
+    const s = readySession();
+    const dirty = JSON.parse(
+      '{"cylinders":{"LeftArm":{"radii":{"top":0.1,"medium":0.1,"bottom":0.1},"enabled":true},' +
+      '"constructor":{"radii":{"top":9,"medium":9,"bottom":9},"enabled":true}}}',
+    ) as unknown;
+    s.hydrate(dirty);
+    const cyls = s.getCylinders();
+    expect(cyls).not.toBeNull();
+    expect(cyls!.LeftArm?.radii.top).toBe(0.1);
+    expect(Object.hasOwn(cyls!, 'constructor')).toBe(false);
+  });
+});

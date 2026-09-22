@@ -4,7 +4,9 @@
   "private": true,
   "description": "WebGPU 游戏引擎 — 模块化、数据驱动、GPU-driven",
   "packageManager": "pnpm@9.0.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite --config apps/samples/00-init/vite.config.ts",
     "build": "vite build --config apps/samples/00-init/vite.config.ts",
@@ -29,15 +31,18 @@
     "runtime:build": "esbuild packages/runtime/src/index.ts --bundle --platform=node --format=cjs --outfile=.workbuddy/tmp/runtime/index.js --tsconfig=tsconfig.check.json",
     "sim": "npm run runtime:build && node tools/level/sim-level.mjs",
     "test": "vitest run",
+    "mcp-binding:build": "esbuild tools/mcp-binding/src/domain-entry.ts --bundle --platform=node --format=esm --outfile=tools/mcp-binding/dist/domain.mjs --tsconfig=tsconfig.check.json",
+    "mcp-binding:check": "node tools/mcp-binding/probe.mjs",
     "lab": "npm run editor",
     "lab:build": "npm run editor:build"
   },
   "devDependencies": {
+    "@webgpu/types": "^0.1.49",
+    "esbuild": "^0.28.2",
+    "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",
     "vite-plugin-wasm": "^3.3.0",
-    "tsup": "^8.3.0",
-    "vitest": "^2.1.0",
-    "@webgpu/types": "^0.1.49"
+    "vitest": "^2.1.0"
   }
 }
