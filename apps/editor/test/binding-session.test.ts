@@ -88,7 +88,7 @@ describe('BindingSession 编辑与历史纪律', () => {
 
   it('poseJoint 自带历史；undo 回滚坐标，redo 重做', () => {
     const s = new BindingSession();
-    const orig = [...s.positions.Head] as [number, number, number];
+    const orig = [...s.positions.Head!] as [number, number, number];
     s.poseJoint('Head', [0.1, 2.2, 0.05]);
     expect(s.positions.Head).toEqual([0.1, 2.2, 0.05]);
     expect(s.historyDepth().undo).toBe(1);
@@ -225,7 +225,7 @@ describe('BindingSession 持久化（hydrate / getEditorData）', () => {
   it('hydrate 脏数据：坏字段保持现值，好字段正常回填（不静默修数据）', () => {
     const s = readySession();
     s.setSmoothIters(8);
-    const headBefore = [...s.positions.Head];
+    const headBefore = [...s.positions.Head!];
     s.hydrate({
       weightMode: 'garbage', // 非法字面量 → 保持 wrapper
       smoothIters: 99, // 超域 → 保持 8

@@ -64,12 +64,13 @@ const check = (name, ok) => {
 
 try {
   const init = await call('initialize', {
-    protocolVersion: '2025-06-18',
+    protocolVersion: '2025-03-26', // 故意发旧版本：验证 server 回显客户端版本（协商）
     capabilities: {},
     clientInfo: { name: 'mcp-hello-probe', version: '0.1.0' },
   });
   check('initialize 返回 serverInfo', init?.serverInfo?.name === 'aether-mcp-hello');
   check('initialize 声明 tools 能力', init?.capabilities?.tools !== undefined);
+  check('协议版本回显客户端所报（协商）', init?.protocolVersion === '2025-03-26');
 
   notify('notifications/initialized');
 

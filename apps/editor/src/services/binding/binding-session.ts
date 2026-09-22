@@ -13,9 +13,12 @@
  *    本类的方法读写。`positions` 等 getter 暴露的活引用**只准读**，改动必须走
  *    方法（否则历史栈与缓存指纹会失同步）。
  * 3. **历史纪律**：所有改动持久化字段的方法内部先 `beginEdit()` 打快照（与旧面板
- *    逐一核对过入栈点）；唯一的例外是**连续拖拽**这类手势流 —— 手势起点调一次
+ *    逐一核对过入栈点）；例外只有两类 —— ①**连续拖拽**这类手势流：手势起点调一次
  *    `beginEdit(kind)` / `beginEdit(kind, coalesceMs)`，过程中用 `setJointPosition`
- *    纯写，手势边界（pointerup / 表单 change / 换选中）调 `sealHistory()` 封口。
+ *    纯写，手势边界（pointerup / 表单 change / 换选中）调 `sealHistory()` 封口；
+ *    ②`restoreBindPose()`：它是「切到 Bind 预览档」的副动作（只读预览的配套恢复），
+ *    历史上从不入栈 —— 若未来要让 Agent/MCP 把它当编辑操作用，需先改成
+ *    `beginEdit('restore-bind')` 并确认面板语义。
  * 4. **持久化契约**：`getEditorData()` 的产物写进 `.meta.json` 的 `bindingEditor`
  *    键；`hydrate()` 做全形状校验，脏数据字段保持默认值（绝不静默修数据）。
  *    与 node 管线 `rig`（配方）/ `bindings`（数组）互不冲突 —— devfs patch
@@ -714,7 +717,13 @@ export class BindingSession {
     this.bindPose = this.clonePositions(this._positions);
   }
 
-  /** 把编辑骨架恢复成冻结的 Bind Pose（未 Bind 过 = false，调用方保持原状） */
+  /**
+   * 把编辑骨架恢复成冻结的 Bind Pose（未 Bind 过 = false，调用方保持原状）。
+   *
+   * ⚠️ 历史纪律例外（已登记，独立审核 P2-1）：本方法**不打历史快照** —— 它是面板
+   * 「切到 Bind 预览档」的配套恢复（只读预览语义），不是一次编辑操作。未来若有
+   * Agent/MCP 消费方把它当编辑用，必须先改为 `beginEdit('restore-bind')` 入栈。
+   */
   restoreBindPose(): boolean {
     if (this.bindPose === null) return false;
     this._positions = this.clonePositions(this.bindPose);

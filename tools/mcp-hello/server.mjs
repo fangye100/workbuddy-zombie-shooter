@@ -14,6 +14,7 @@
  */
 
 const SERVER_INFO = { name: 'aether-mcp-hello', version: '0.1.0' };
+/** 兜底协议版本：客户端没带版本时回复本 server 支持的版本 */
 const PROTOCOL_VERSION = '2025-06-18';
 
 const TOOLS = [
@@ -39,7 +40,10 @@ function handleRequest(req) {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: PROTOCOL_VERSION,
+          // 版本协商：客户端报了支持的版本就回它的，没报回自己的兜底
+          //（正式 server 应在版本不支持时回己方版本并让对方降级，探针从简）
+          protocolVersion:
+            typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: SERVER_INFO,
         },

@@ -511,14 +511,19 @@ export class BindingPanel {
     // 平滑参数（迭代 / λ）：两个数字框，改动进编辑指纹并立刻刷新预览与诊断
     const si = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-iters"]')!;
     si.addEventListener('change', () => {
-      // 非有限数 / 越界由 session 钳制并返回实际生效值，输入框回显生效值
-      si.value = String(this.session.setSmoothIters(parseFloat(si.value)));
-      this.invalidatePreview();
+      // 非有限数 / 越界由 session 钳制并返回实际生效值，输入框回显生效值；
+      // 值没变（含 NaN 回显）不付预览失效的代价
+      const prev = this.session.getSmoothIters();
+      const applied = this.session.setSmoothIters(parseFloat(si.value));
+      si.value = String(applied);
+      if (applied !== prev) this.invalidatePreview();
     });
     const sl = this.rootEl.querySelector<HTMLInputElement>('[data-bd="smooth-lambda"]')!;
     sl.addEventListener('change', () => {
-      sl.value = String(this.session.setSmoothLambda(parseFloat(sl.value)));
-      this.invalidatePreview();
+      const prev = this.session.getSmoothLambda();
+      const applied = this.session.setSmoothLambda(parseFloat(sl.value));
+      sl.value = String(applied);
+      if (applied !== prev) this.invalidatePreview();
     });
 
     // 权重热力图开关（选中骨 → 顶点按权重着色；只动显示层，不进导出指纹）
