@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "servers": {
+      "aether-binding": {
+        "command": "node",
+        "args": [
+          "C:/Users/fangy/WorkBuddy/game-design-zombie/tools/mcp-binding/server.mjs"
+        ]
+      }
+    }
+  }
+}
