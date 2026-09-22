@@ -32,6 +32,7 @@ import {
   defaultSkinCylinders,
   computeCylinderWeights,
   mirrorCylinders,
+  mirrorOffsetBetween,
   mirrorSkinWeights,
   boneLocalBasis,
   offsetSegmentEndpoints,
@@ -789,6 +790,68 @@ describe('skin-proxy：代理圆柱体 Skin Wrapper', () => {
     // 右半顶点（index 1）现在应拿到 RightArm 权重（来自左半 LeftArm 的镜像）
     expect(mirrored.joints[4]!).toBe(ri);
     expect(mirrored.weights[4]!).toBeCloseTo(1, 9);
+  });
+
+  it('★ mirrorSkinWeights：中轴骨槽也整向量照抄（不残留目标旧槽混合丢骨，PR#7）', () => {
+    // 对称网格：源（x<0，解剖右侧）= RightArm 50% + Spine 50% 混合；
+    // 目标（x>0）的自然权重故意给 RightForeArm 100% —— 旧实现中轴槽「跳过不写」，
+    // 目标 slot1 会残留 RightForeArm，与镜像来的 LeftArm 拼成混合向量、Spine 丢失
+    const positions = new Float32Array(2 * 15);
+    positions[0] = -0.3; positions[1] = 1; positions[2] = 0;
+    positions[15] = 0.3; positions[16] = 1; positions[17] = 0;
+    const ra = HUMANIK_ORDER.indexOf('RightArm');
+    const la = HUMANIK_ORDER.indexOf('LeftArm');
+    const si = HUMANIK_ORDER.indexOf('Spine');
+    const rf = HUMANIK_ORDER.indexOf('RightForeArm');
+    const joints = new Uint16Array([ra, si, 0, 0, rf, 0, 0, 0]);
+    const weights = new Float32Array([0.5, 0.5, 0, 0, 1, 0, 0, 0]);
+    const mirrored = mirrorSkinWeights({ joints, weights }, 15, 2, positions);
+    // 目标顶点 = 源顶点的完整影响向量：RightArm→LeftArm、Spine 保留骨 id，各 50%
+    expect(mirrored.joints[4]!).toBe(la);
+    expect(mirrored.joints[5]!).toBe(si);
+    expect(mirrored.weights[4]!).toBeCloseTo(0.5, 6);
+    expect(mirrored.weights[5]!).toBeCloseTo(0.5, 6);
+    let sum = 0;
+    for (let k = 0; k < 4; k++) sum += mirrored.weights[4 + k]!;
+    expect(sum).toBeCloseTo(1, 6);
+  });
+
+  it('★ mirrorOffsetBetween：经世界系 x 反射换算（局部元组直抄会把两侧推同侧，PR#7）', () => {
+    // 双腿情形：两段同向（都竖直向下）→ 局部基相同 → v1 分量必须翻号
+    // （「向左腿外侧 +X」镜像后必须是「向右腿外侧 −X」）
+    const leg = mirrorOffsetBetween(
+      [0.1, 1, 0], [0.1, 0.5, 0], [-0.1, 1, 0], [-0.1, 0.5, 0], [0, 0.1, 0],
+    );
+    expect(leg[0]).toBeCloseTo(0, 9);
+    expect(leg[1]).toBeCloseTo(-0.1, 9);
+    expect(leg[2]).toBeCloseTo(0, 9);
+    // 手臂情形：源骨 +X、目标骨 −X（局部基互为镜像）→ 轴向分量保留
+    // （仍指向各自子骨），侧向分量翻号
+    const arm = mirrorOffsetBetween(
+      [0.2, 1.4, 0], [0.5, 1.4, 0], [-0.2, 1.4, 0], [-0.5, 1.4, 0], [0.05, 0.1, 0],
+    );
+    expect(arm[0]).toBeCloseTo(0.05, 9);
+    expect(arm[1]).toBeCloseTo(-0.1, 9);
+    expect(arm[2]).toBeCloseTo(0, 9);
+  });
+
+  it('★ mirrorCylinders 带骨架时 offset 经世界系反射（源侧照抄、对侧换算）', () => {
+    const cyls = defaultSkinCylinders(T);
+    cyls.LeftArm!.offset = [0.05, 0.1, 0];
+    const out = mirrorCylinders(cyls, T);
+    // 源侧照抄（它就是镜像基准）
+    expect(out.LeftArm!.offset).toEqual([0.05, 0.1, 0]);
+    // 对侧与 mirrorOffsetBetween 的独立计算一致（接线正确），
+    // 且绝不是元组直抄（直抄正是被修掉的旧行为：模板手臂水平 → 侧向必翻号）
+    const segs = boneSegments(T);
+    const ss = segs.find((x) => x.bone === 'LeftArm')!;
+    const ds = segs.find((x) => x.bone === 'RightArm')!;
+    const exp = mirrorOffsetBetween(ss.a, ss.b, ds.a, ds.b, [0.05, 0.1, 0]);
+    const off = out.RightArm!.offset!;
+    expect(off[0]).toBeCloseTo(exp[0], 9);
+    expect(off[1]).toBeCloseTo(exp[1], 9);
+    expect(off[2]).toBeCloseTo(exp[2], 9);
+    expect(off[1]).not.toBeCloseTo(0.1, 6);
   });
 
   it('★ offsetSegmentEndpoints：局部轴分量按 axial/v1/v2 正交基平移骨段', () => {

@@ -1845,6 +1845,58 @@ async function main() {
         `restored ${JSON.stringify(pan.restored?.a)} vs before ${JSON.stringify(pan.before?.a)}`,
       );
 
+      // ---- L2j. T/A 预览随权重输入失效重建 + 导出选项跨模型复位（PR #7 复审）----
+      //
+      //   A: T/A 预览的网格由权重重姿态而来；smooth/算法/半径/偏移变化只 refresh()
+      //      时预览停在旧权重上 —— 几何指纹（meshSum）必须跟着变。
+      //   C: smoothWeights 若在 setModel 不重置，老 .meta.json（无此键）会把上一个
+      //      模型的开关值带进来 —— 取消勾选后重开资产，必须复位为默认勾选。
+      //      （本资产的 .meta.json 没有 bindingEditor 键，hydrate 不会碰该值，
+      //       所以复不复位完全由 setModel 决定。）
+      console.log('\nL2j. T/A 预览失效重建 与 导出选项复位');
+      const prevInv = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        document.querySelector('[data-bd="pov-t"]').click();
+        await ${nFrames(3)};
+        const s1 = b.meshSum();
+        const sm = document.querySelector('[data-bd="smooth"]');
+        const orig = sm.checked;
+        sm.checked = !orig;
+        sm.dispatchEvent(new Event('change', { bubbles: true }));
+        await ${nFrames(3)};
+        const s2 = b.meshSum();
+        // 还原：开关回位 + 回当前姿态预览
+        sm.checked = orig;
+        sm.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector('[data-bd="pov-current"]').click();
+        await ${nFrames(2)};
+        return { s1, s2, orig };
+      })()`);
+      check(
+        '★ T 预览下切平滑开关，预览网格几何指纹跟着变（预览不停在旧权重）',
+        Number.isFinite(prevInv.s1) && Number.isFinite(prevInv.s2) &&
+          Math.abs(prevInv.s2 - prevInv.s1) > 1e-6,
+        `meshSum ${prevInv.s1?.toFixed(4)} → ${prevInv.s2?.toFixed(4)}（开关原值=${prevInv.orig}）`,
+      );
+      const reopenRes = await cdp.eval(`(async () => {
+        const b = window.__editor.binding;
+        const sm = document.querySelector('[data-bd="smooth"]');
+        sm.checked = false;
+        sm.dispatchEvent(new Event('change', { bubbles: true }));
+        await ${nFrames(2)};
+        b.open(${JSON.stringify(BIND_GLB)});
+        await new Promise((r) => setTimeout(r, 3500));
+        return {
+          loaded: b.state()?.loaded === true,
+          checked: document.querySelector('[data-bd="smooth"]').checked,
+        };
+      })()`);
+      check(
+        '★ 取消勾选平滑后重开资产，开关复位为默认勾选（不串上一模型的值）',
+        reopenRes.loaded === true && reopenRes.checked === true,
+        `loaded=${reopenRes.loaded} checked=${reopenRes.checked}`,
+      );
+
       // ---- L2f. 主 3D 视口：改半径 → 画面像素必须跟着变 ----
       //
       // L2e 证的是「几何数据变了」，这里证的是「用户眼睛看到的变了」。
