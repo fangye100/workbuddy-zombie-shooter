@@ -29,6 +29,8 @@
     "runtime:build": "esbuild packages/runtime/src/index.ts --bundle --platform=node --format=cjs --outfile=.workbuddy/tmp/runtime/index.js --tsconfig=tsconfig.check.json",
     "sim": "npm run runtime:build && node tools/level/sim-level.mjs",
     "test": "vitest run",
+    "mcp-binding:build": "esbuild tools/mcp-binding/src/domain-entry.ts --bundle --platform=node --format=esm --outfile=tools/mcp-binding/dist/domain.mjs --tsconfig=tsconfig.check.json",
+    "mcp-binding:check": "node tools/mcp-binding/probe.mjs",
     "lab": "npm run editor",
     "lab:build": "npm run editor:build"
   },
