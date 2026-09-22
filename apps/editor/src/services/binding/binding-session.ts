@@ -620,6 +620,49 @@ export class BindingSession {
     return true;
   }
 
+  /**
+   * 批量设置导出选项（MCP `set_options` 这类「一次调用改多字段」入口专用）：
+   * 合并为**一步**历史 —— 逐 setter 调用会各打一条快照（coalesceMs=0 的
+   * settings 不合并），undo 一次只回退最后一个字段，违反「一次调用 = 一步撤销」
+   * （PR #10 bot 评审实测）。全部字段没变化时不打历史。
+   *
+   * 逐字段语义与单字段 setter 一致：weightMode 只收合法字面量、平滑参数按同款
+   * 规则钳制。GUI 单字段控件仍走各 setter（一个控件一次只改一个字段）。
+   */
+  applyOptions(o: {
+    weightMode?: string;
+    smoothWeights?: boolean;
+    smoothIters?: number;
+    smoothLambda?: number;
+    mirrorWeights?: boolean;
+  }): boolean {
+    const wm: WeightMode =
+      o.weightMode === 'wrapper' || o.weightMode === 'distance' ? o.weightMode : this.weightMode;
+    const sw = o.smoothWeights ?? this.smoothWeights;
+    const mw = o.mirrorWeights ?? this.mirrorWeights;
+    const si =
+      o.smoothIters !== undefined && Number.isFinite(o.smoothIters)
+        ? Math.min(SMOOTH_ITERS_MAX, Math.max(SMOOTH_ITERS_MIN, Math.round(o.smoothIters)))
+        : this.smoothIters;
+    const sl =
+      o.smoothLambda !== undefined && Number.isFinite(o.smoothLambda)
+        ? Math.min(SMOOTH_LAMBDA_MAX, Math.max(SMOOTH_LAMBDA_MIN, o.smoothLambda))
+        : this.smoothLambda;
+    if (
+      wm === this.weightMode && sw === this.smoothWeights && mw === this.mirrorWeights &&
+      si === this.smoothIters && sl === this.smoothLambda
+    ) {
+      return false;
+    }
+    this.beginEdit('settings');
+    this.weightMode = wm;
+    this.smoothWeights = sw;
+    this.mirrorWeights = mw;
+    this.smoothIters = si;
+    this.smoothLambda = sl;
+    return true;
+  }
+
   // ─────────────────────────── 派生计算 ───────────────────────────
 
   /** 当前编辑姿态的骨架拟合（22 骨规模极小，每次重算无性能压力，不做缓存失效判断） */
@@ -822,7 +865,10 @@ export class BindingSession {
     if (s.positions !== null && typeof s.positions === 'object') {
       const map = s.positions as Record<string, unknown>;
       for (const [bone, p] of Object.entries(map)) {
-        if (this._positions[bone] === undefined) continue;
+        // 白名单而非 `this._positions[bone] === undefined`：后者走原型链，
+        // sidecar 里的 constructor / __proto__ 键会被当成合法骨 —— 写 __proto__
+        // 甚至会触发原型 setter 改变对象原型（PR #10 bot 评审，与 MCP 层 P1-1 同类）
+        if (!HUMANIK_ORDER.includes(bone)) continue;
         if (!Array.isArray(p) || p.length !== 3) continue;
         const ok = (p as unknown[]).every((n) => typeof n === 'number' && Number.isFinite(n));
         if (!ok) continue;
@@ -844,7 +890,13 @@ export class BindingSession {
         }
       }
       if (shapeOk) {
-        this.cylinders = JSON.parse(JSON.stringify(map)) as SkinCylinderMap;
+        // 同白名单纪律：只接纳合法骨名的键（防原型链键混进半径表）
+        const clean: Record<string, unknown> = {};
+        for (const [bone, c] of Object.entries(map)) {
+          if (!HUMANIK_ORDER.includes(bone)) continue;
+          clean[bone] = c;
+        }
+        this.cylinders = JSON.parse(JSON.stringify(clean)) as SkinCylinderMap;
       }
     }
     this.skinCache = null;

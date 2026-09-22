@@ -43,6 +43,11 @@ const PROTOCOL_VERSION = '2025-06-18';
 
 /** 仓内相对路径 → 绝对路径；解析结果必须仍在仓库内（防目录穿越） */
 function resolveRepo(rel) {
+  // 跨平台拒绝绝对路径：POSIX 的 path.resolve 不认 Windows 盘符，会把
+  // 'C:/Windows/x.glb' 当相对路径拼进仓库（PR #10 评审）——win32/posix 两套都查
+  if (path.win32.isAbsolute(rel) || path.posix.isAbsolute(rel)) {
+    throw new ToolError(`路径必须是仓内相对路径：${rel}`);
+  }
   const abs = path.resolve(REPO_ROOT, rel);
   if (abs !== REPO_ROOT && !abs.startsWith(REPO_ROOT + path.sep)) {
     throw new ToolError(`路径越出仓库：${rel}`);

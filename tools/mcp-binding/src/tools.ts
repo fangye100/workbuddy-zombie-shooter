@@ -226,7 +226,8 @@ export class BindingDomain {
     this.fs.writeText(abs, out);
     return {
       path: rel,
-      bytes: out.length,
+      // UTF-8 字节数（sidecar 常含中文节点名，out.length 是 UTF-16 码元数，会偏小）
+      bytes: new TextEncoder().encode(out).length,
       warnings: diags.filter((d) => d.severity !== 'error'),
     };
   }
@@ -433,7 +434,7 @@ export const TOOLS_TABLE = [
         },
         bone: { type: 'string', description: '目标骨（setRadius/setOffset/clearOffset/mirror/unpin 必填）' },
         seg: { type: 'string', enum: ['top', 'medium', 'bottom'], description: 'setRadius 必填；top 近子骨、bottom 近父骨' },
-        value: { type: 'number', description: 'setRadius 必填，半径（米）' },
+        value: { type: 'number', description: 'setRadius 必填，半径（米，必须 > 0；0/负数会被拒）' },
         offset: { ...VEC3_SCHEMA, description: 'setOffset 必填，骨局部坐标位移（x=沿骨轴）' },
       },
       required: ['action'],
@@ -590,6 +591,9 @@ function dispatchInner(domain: BindingDomain, name: string, rawArgs: unknown): T
           }
           const value = optNum(args, 'value');
           if (value === undefined) throw new ToolError('setRadius 缺 value（半径，米）');
+          // 半径必须为正：0/负数会在蒙皮算法里被静默替换成 1e-6（防除零），
+          // 产物几乎包不住任何顶点且非法值还被持久化（PR #10 评审）
+          if (value <= 0) throw new ToolError(`半径必须为正数（米）：${value}`);
           if (!s.setCylinderRadius(b, seg, value)) {
             throw new ToolError(`写入失败：${b}（值非法 / 未载入模型）`);
           }
@@ -638,15 +642,19 @@ function dispatchInner(domain: BindingDomain, name: string, rawArgs: unknown): T
       if (wm !== undefined && wm !== 'wrapper' && wm !== 'distance') {
         throw new ToolError(`weightMode 只能是 wrapper / distance：${wm}`);
       }
-      if (wm !== undefined) s.setWeightMode(wm);
+      // 批量设置走 session.applyOptions：多字段合并为一步历史（PR #10 评审），
+      // 逐 setter 调用会各打一条快照、undo 一次只回退最后一个字段
+      const batch: Parameters<BindingSession['applyOptions']>[0] = {};
+      if (wm !== undefined) batch.weightMode = wm;
       const sw = optBool(args, 'smoothWeights');
-      if (sw !== undefined) s.setSmoothWeights(sw);
+      if (sw !== undefined) batch.smoothWeights = sw;
       const mw = optBool(args, 'mirrorWeights');
-      if (mw !== undefined) s.setMirrorWeights(mw);
+      if (mw !== undefined) batch.mirrorWeights = mw;
       const si = optNum(args, 'smoothIters');
-      if (si !== undefined) s.setSmoothIters(si);
+      if (si !== undefined) batch.smoothIters = si;
       const sl = optNum(args, 'smoothLambda');
-      if (sl !== undefined) s.setSmoothLambda(sl);
+      if (sl !== undefined) batch.smoothLambda = sl;
+      s.applyOptions(batch);
       return {
         json: {
           applied: {

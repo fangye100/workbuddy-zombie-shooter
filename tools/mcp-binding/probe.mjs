@@ -208,7 +208,7 @@ try {
   const trav = await tool('load_model', { path: '../../outside.glb' }).then(() => null, (e) => String(e));
   check('目录穿越被拒（..）', typeof trav === 'string' && trav.includes('路径越出仓库'));
   const absPath = await tool('load_model', { path: 'C:/Windows/x.glb' }).then(() => null, (e) => String(e));
-  check('绝对路径被拒', typeof absPath === 'string' && absPath.includes('路径越出仓库'));
+  check('绝对路径被拒（盘符路径跨平台拒绝）', typeof absPath === 'string' && absPath.includes('-32602') && absPath.includes('路径'));
   const notGlb = await tool('load_model', { path: 'package.json' }).then(() => null, (e) => String(e));
   check('非 .glb 被拒', typeof notGlb === 'string' && notGlb.includes('.glb'));
 
@@ -263,6 +263,25 @@ try {
   // ── 导出选项钳制（面板同款规则） ──
   const opts = await toolJson('set_options', { smoothIters: 99, smoothLambda: 5 });
   check('set_options 钳制（99→12，5→1）', opts?.applied?.smoothIters === 12 && opts?.applied?.smoothLambda === 1);
+  await toolJson('set_options', { smoothIters: 4, smoothLambda: 0.5 }); // 还原默认值
+
+  // ── set_options 多字段 = 一步历史（PR #10 评审回归） ──
+  {
+    const before = (await toolJson('get_state'))?.options;
+    await toolJson('set_options', { weightMode: 'distance', smoothWeights: false, smoothIters: 7 });
+    await toolJson('undo');
+    const after = (await toolJson('get_state'))?.options;
+    check('set_options 多字段一步 undo 全回退',
+      after?.weightMode === before?.weightMode &&
+      after?.smoothWeights === before?.smoothWeights &&
+      after?.smoothIters === before?.smoothIters);
+  }
+
+  // ── 半径必须为正（0/负数会被蒙皮静默替换成 1e-6 并持久化非法值） ──
+  const zeroR = await tool('cylinders', { action: 'setRadius', bone: 'LeftArm', seg: 'top', value: 0 }).then(
+    () => null, (e) => String(e),
+  );
+  check('半径 0 被拒（-32602 必须为正）', typeof zeroR === 'string' && zeroR.includes('-32602') && zeroR.includes('正'));
 
   // ── wrapper 圆柱体 ──
   const cyls = await toolJson('cylinders', { action: 'get' });
