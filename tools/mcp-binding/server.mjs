@@ -14,14 +14,25 @@
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
-
-import { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool } from './dist/domain.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** 仓库根 = tools/mcp-binding 的上两级（与进程 cwd 解耦） */
 const REPO_ROOT = path.resolve(HERE, '..', '..');
+
+// 领域层是 esbuild 构建产物：缺失时给出可操作的提示而不是裸 ERR_MODULE_NOT_FOUND
+const DOMAIN_BUNDLE = path.resolve(HERE, 'dist', 'domain.mjs');
+if (!existsSync(DOMAIN_BUNDLE)) {
+  process.stderr.write(
+    '[aether-binding] 未找到 dist/domain.mjs —— 先跑 pnpm run mcp-binding:build\n',
+  );
+  process.exit(1);
+}
+// Windows 动态 import 必须走 file:// URL（裸路径会被当裸说明符解析）
+const { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool } = await import(
+  pathToFileURL(DOMAIN_BUNDLE).href
+);
 
 const SERVER_INFO = { name: 'aether-binding', version: '0.2.0' };
 /** 本 server 实际支持的协议版本（同 mcp-hello 探针：能力实现在这两个版本下一致） */

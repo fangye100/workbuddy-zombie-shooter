@@ -52,6 +52,8 @@ export interface Capsule {
   readonly b: Vec3;
   readonly rA: number;
   readonly rB: number;
+  /** 中段半径（三段 wrapper 的 medium）：给了在中点加画一道环，否则中段形状不可见 */
+  readonly rM?: number | undefined;
   readonly color: Rgb;
 }
 
@@ -140,7 +142,7 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
   for (const c of scene.capsules ?? []) {
     const [au, av] = plane(c.a, view);
     const [bu, bv] = plane(c.b, view);
-    const r = Math.max(c.rA, c.rB);
+    const r = Math.max(c.rA, c.rB, c.rM ?? 0);
     extend(au, av, r);
     extend(bu, bv, r);
   }
@@ -268,7 +270,7 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
     const len = Math.hypot(dx, dy);
     if (len < 1e-3) {
       // 骨轴几乎垂直于视平面 → 投影就是一个圆
-      drawCircle(ax, ay, Math.max(rA, rB), c.color, false);
+      drawCircle(ax, ay, Math.max(rA, rB, (c.rM ?? 0) * scale), c.color, false);
       continue;
     }
     const px = (-dy / len) * 1;
@@ -277,6 +279,9 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
     drawLine(ax - px * rA, ay - py * rA, bx - px * rB, by - py * rB, c.color);
     drawCircle(ax, ay, rA, c.color, false);
     drawCircle(bx, by, rB, c.color, false);
+    if (c.rM !== undefined) {
+      drawCircle((ax + bx) / 2, (ay + by) / 2, c.rM * scale, c.color, false);
+    }
   }
 
   for (const s of scene.segments ?? []) {

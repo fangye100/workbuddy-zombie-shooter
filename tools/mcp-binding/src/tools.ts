@@ -72,6 +72,19 @@ function reqStr(o: Record<string, unknown>, k: string): string {
   if (typeof v !== 'string' || v === '') throw new ToolError(`缺少必填字符串参数：${k}`);
   return v;
 }
+/**
+ * 骨名白名单校验。**不能用 `positions[name] === undefined` 查**：那会走原型链
+ * （`positions['constructor']` 命中 Object.prototype.constructor ≠ undefined），
+ * 非法骨名会被接受并以 own 属性写进 positions → 污染 save 产物（独立审核 P1-1，
+ * 实测复现）。合法骨名 = HUMANIK_ORDER 全集（含 tip）。
+ */
+function requireBone(o: Record<string, unknown>, k: string): string {
+  const b = reqStr(o, k);
+  if (!HUMANIK_ORDER.includes(b)) {
+    throw new ToolError(`未知骨名：${b}（合法值见 get_joints 的 order）`);
+  }
+  return b;
+}
 function optStr(o: Record<string, unknown>, k: string): string | undefined {
   const v = o[k];
   return typeof v === 'string' ? v : undefined;
@@ -149,7 +162,7 @@ export class BindingDomain {
     } catch (err) {
       throw new ToolError(`GLB 解析失败：${relPath}（${String(err)}）`);
     }
-    const name = relPath.split('/').pop()!.replace(/\.glb$/i, '');
+    const name = relPath.split(/[\\/]/).pop()!.replace(/\.glb$/i, '');
     this.session.setModel(name, model.mesh.vertices, model.mesh.indices, VERTEX_FLOATS);
     this.glbPath = relPath;
     // 回填上次编辑态（与编辑器 bindAssetAt 同语义：没有 / 损坏都不影响打开）
@@ -267,6 +280,7 @@ export class BindingDomain {
               // 三段约定：bottom 近 parent（= 骨段 a 端），top 近 child（= b 端）
               rA: c.radii.bottom,
               rB: c.radii.top,
+              rM: c.radii.medium,
               color: c.manual === true ? COLOR_CYL_MANUAL : COLOR_CYL_AUTO,
             });
           }
@@ -484,7 +498,22 @@ export const TOOLS_TABLE = [
 
 // ─────────────────────────── 调度 ───────────────────────────
 
+/**
+ * 纯读工具（不触碰会话状态）。其余工具一律视为写操作，成功后 sealHistory 封口 ——
+ * MCP 调用没有 GUI 的手势边界（pointerup / 换选中），800ms 合并窗口会把 Agent
+ * 脚本化的连续调用并成一步 undo（独立审核 P1-2 实测复现）。
+ */
+const READONLY_TOOLS: ReadonlySet<string> = new Set([
+  'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data',
+]);
+
 export function dispatchTool(domain: BindingDomain, name: string, rawArgs: unknown): ToolResult {
+  const result = dispatchInner(domain, name, rawArgs);
+  if (!READONLY_TOOLS.has(name)) domain.session.sealHistory();
+  return result;
+}
+
+function dispatchInner(domain: BindingDomain, name: string, rawArgs: unknown): ToolResult {
   const args = asObj(rawArgs);
   const s = domain.session;
   switch (name) {
@@ -521,10 +550,7 @@ export function dispatchTool(domain: BindingDomain, name: string, rawArgs: unkno
       return { json: { order: HUMANIK_ORDER, positions: s.positions } };
 
     case 'set_joint': {
-      const jointName = reqStr(args, 'name');
-      if (s.positions[jointName] === undefined) {
-        throw new ToolError(`未知关节：${jointName}（合法值见 get_joints 的 order）`);
-      }
+      const jointName = requireBone(args, 'name');
       const p = reqVec3(args, 'position');
       if (!s.poseJoint(jointName, p)) throw new ToolError('坐标非法（非有限数）');
       return { json: { ok: true, position: s.positions[jointName] } };
@@ -549,45 +575,46 @@ export function dispatchTool(domain: BindingDomain, name: string, rawArgs: unkno
 
     case 'cylinders': {
       const action = reqStr(args, 'action');
-      const bone = optStr(args, 'bone');
+      // 取骨名的 action 一律过白名单（P1-1：防原型链键污染 session 状态）
+      const bone = (): string => requireBone(args, 'bone');
       switch (action) {
         case 'get':
           return { json: { cylinders: s.getCylinders() } };
         case 'autoFit':
           return { json: { changed: s.autoFitCylinders() } };
         case 'setRadius': {
-          if (bone === undefined) throw new ToolError('setRadius 缺 bone');
+          const b = bone();
           const seg = reqStr(args, 'seg');
           if (seg !== 'top' && seg !== 'medium' && seg !== 'bottom') {
             throw new ToolError(`seg 只能是 top / medium / bottom：${seg}`);
           }
           const value = optNum(args, 'value');
           if (value === undefined) throw new ToolError('setRadius 缺 value（半径，米）');
-          if (!s.setCylinderRadius(bone, seg, value)) {
-            throw new ToolError(`写入失败：${bone}（骨名不存在 / 值非法 / 未载入模型）`);
+          if (!s.setCylinderRadius(b, seg, value)) {
+            throw new ToolError(`写入失败：${b}（值非法 / 未载入模型）`);
           }
-          return { json: { ok: true, cylinder: s.getCylinders()?.[bone] } };
+          return { json: { ok: true, cylinder: s.getCylinders()?.[b] } };
         }
         case 'setOffset': {
-          if (bone === undefined) throw new ToolError('setOffset 缺 bone');
+          const b = bone();
           const offset = reqVec3(args, 'offset');
-          if (!s.setCylinderOffset(bone, offset)) {
-            throw new ToolError(`写入失败：${bone}（骨名不存在 / 未载入模型）`);
+          if (!s.setCylinderOffset(b, offset)) {
+            throw new ToolError(`写入失败：${b}（未载入模型）`);
           }
-          return { json: { ok: true, offset: s.getOffset(bone) } };
+          return { json: { ok: true, offset: s.getOffset(b) } };
         }
         case 'clearOffset': {
-          if (bone === undefined) throw new ToolError('clearOffset 缺 bone');
+          const b = bone();
           // 全零位移在存储层归一为 undefined（session 约定：默认不写 = [0,0,0]）
-          if (!s.setCylinderOffset(bone, [0, 0, 0])) {
-            throw new ToolError(`写入失败：${bone}（骨名不存在 / 未载入模型）`);
+          if (!s.setCylinderOffset(b, [0, 0, 0])) {
+            throw new ToolError(`写入失败：${b}（未载入模型）`);
           }
-          return { json: { ok: true, offset: s.getOffset(bone) } };
+          return { json: { ok: true, offset: s.getOffset(b) } };
         }
         case 'mirror': {
-          if (bone === undefined) throw new ToolError('mirror 缺 bone');
-          if (!s.mirrorCylinder(bone)) {
-            throw new ToolError(`镜像失败：${bone}（无镜像对 / 骨名不存在 / 未载入模型）`);
+          const b = bone();
+          if (!s.mirrorCylinder(b)) {
+            throw new ToolError(`镜像失败：${b}（无镜像对 / 未载入模型）`);
           }
           return { json: { ok: true } };
         }
@@ -595,11 +622,11 @@ export function dispatchTool(domain: BindingDomain, name: string, rawArgs: unkno
           s.mirrorAllCylinders();
           return { json: { ok: true } };
         case 'unpin': {
-          if (bone === undefined) throw new ToolError('unpin 缺 bone');
-          if (!s.unpinCylinder(bone)) {
-            throw new ToolError(`unpin 失败：${bone}（骨名不存在 / 未载入模型）`);
+          const b = bone();
+          if (!s.unpinCylinder(b)) {
+            throw new ToolError(`unpin 失败：${b}（未载入模型）`);
           }
-          return { json: { ok: true, cylinder: s.getCylinders()?.[bone] } };
+          return { json: { ok: true, cylinder: s.getCylinders()?.[b] } };
         }
         default:
           throw new ToolError(`未知 action：${action}`);

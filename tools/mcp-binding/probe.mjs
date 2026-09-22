@@ -44,15 +44,16 @@ if (hasMeta) {
   copyFileSync(path.resolve(REPO_ROOT, fixtureMeta), path.resolve(TMP, 'probe.glb.meta.json'));
 }
 // hydrated 的期望真值 = sidecar 存在且确有 bindingEditor 槽位（有文件没槽位也不算回填）
-const expectHydrated = (() => {
-  if (!hasMeta) return false;
+const origMeta = (() => {
+  if (!hasMeta) return null;
   try {
-    const m = JSON.parse(readFileSync(path.resolve(REPO_ROOT, fixtureMeta), 'utf8'));
-    return m?.bindingEditor !== undefined && m?.bindingEditor !== null;
+    return JSON.parse(readFileSync(path.resolve(REPO_ROOT, fixtureMeta), 'utf8'));
   } catch {
-    return false;
+    return null;
   }
 })();
+const expectHydrated =
+  origMeta?.bindingEditor !== undefined && origMeta?.bindingEditor !== null;
 const PROBE_GLB = '.workbuddy/tmp/mcp-binding-probe/probe.glb';
 
 // ── ③ spawn server + NDJSON 客户端骨架（同 mcp-hello probe 的模式） ──
@@ -195,6 +196,22 @@ try {
   ];
   check('tools/list 含全部 15 个工具', EXPECT.every((n) => names.includes(n)) && names.length === EXPECT.length);
 
+  // ── 前置条件：未载入模型时的错误路径（独立审核 P2 覆盖盲区） ──
+  const preRender = await tool('render', {}).then(() => null, (e) => String(e));
+  check('未载入模型 render 报 -32602', typeof preRender === 'string' && preRender.includes('-32602'));
+  const preSkin = await tool('compute_skin').then(() => null, (e) => String(e));
+  check('未载入模型 compute_skin 报 -32602', typeof preSkin === 'string' && preSkin.includes('-32602'));
+  const preSave = await tool('save').then(() => null, (e) => String(e));
+  check('未载入模型 save 报 -32602', typeof preSave === 'string' && preSave.includes('-32602'));
+
+  // ── 路径防护：目录穿越与绝对路径都必须拒（独立审核 P2 覆盖盲区） ──
+  const trav = await tool('load_model', { path: '../../outside.glb' }).then(() => null, (e) => String(e));
+  check('目录穿越被拒（..）', typeof trav === 'string' && trav.includes('路径越出仓库'));
+  const absPath = await tool('load_model', { path: 'C:/Windows/x.glb' }).then(() => null, (e) => String(e));
+  check('绝对路径被拒', typeof absPath === 'string' && absPath.includes('路径越出仓库'));
+  const notGlb = await tool('load_model', { path: 'package.json' }).then(() => null, (e) => String(e));
+  check('非 .glb 被拒', typeof notGlb === 'string' && notGlb.includes('.glb'));
+
   // ── 载入真实 GLB ──
   const loaded = await toolJson('load_model', { path: PROBE_GLB });
   check('load_model 返回网格规模', loaded?.vertices > 0 && loaded?.triangles > 0);
@@ -208,20 +225,36 @@ try {
   const headBefore = joints?.positions?.Head;
   check('get_joints 返回 27 关节', joints?.order?.length === 27 && Array.isArray(headBefore));
 
-  // ── 摆关节 + undo/redo ──
-  const moved = await toolJson('set_joint', { name: 'Head', position: [0, headBefore[1] + 0.05, 0] });
-  check('set_joint 写入生效', moved?.ok === true && Math.abs(moved?.position?.[1] - (headBefore[1] + 0.05)) < 1e-9);
-  const undo = await toolJson('undo');
-  const jointsAfterUndo = await toolJson('get_joints');
-  check('undo 回退关节编辑', undo?.done === true && jointsAfterUndo?.positions?.Head?.[1] === headBefore[1]);
+  // ── 撤销粒度：两次连续 set_joint 必须各是一步（P1-2 回归：800ms 合并窗已封口） ──
+  const neckBefore = joints?.positions?.Neck;
+  await toolJson('set_joint', { name: 'Head', position: [0, headBefore[1] + 0.05, 0] });
+  await toolJson('set_joint', { name: 'Neck', position: [0, neckBefore[1] + 0.05, 0] });
+  await toolJson('undo');
+  const afterOneUndo = await toolJson('get_joints');
+  check('undo 只回退最近一步（合并窗已封口）',
+    afterOneUndo?.positions?.Neck?.[1] === neckBefore[1] &&
+    Math.abs(afterOneUndo?.positions?.Head?.[1] - (headBefore[1] + 0.05)) < 1e-9);
+  await toolJson('undo');
+  const afterTwoUndo = await toolJson('get_joints');
+  check('再 undo 回退上一步', afterTwoUndo?.positions?.Head?.[1] === headBefore[1]);
   const redo = await toolJson('redo');
   check('redo 重做', redo?.done === true);
+  await toolJson('undo'); // 还原到模板态，后续断言从干净状态开始
 
-  // ── 参数校验错误路径 ──
+  // ── 参数校验错误路径（含 P1-1 回归：原型链键必须被白名单拒掉） ──
   const badBone = await tool('set_joint', { name: 'Nope', position: [0, 0, 0] }).then(
     () => null, (e) => String(e),
   );
-  check('未知关节报 -32602', typeof badBone === 'string' && badBone.includes('-32602') && badBone.includes('未知关节'));
+  check('未知关节报 -32602', typeof badBone === 'string' && badBone.includes('-32602') && badBone.includes('未知'));
+  const protoBone = await tool('set_joint', { name: 'constructor', position: [0, 1, 0] }).then(
+    () => null, (e) => String(e),
+  );
+  check('原型链键 constructor 被白名单拒（P1-1）', typeof protoBone === 'string' && protoBone.includes('-32602'));
+  const protoCyl = await tool('cylinders', { action: 'setRadius', bone: 'constructor', seg: 'top', value: 0.1 }).then(
+    () => null, (e) => String(e),
+  );
+  check('cylinders 原型链键同样被拒且非 -32603（P1-1）',
+    typeof protoCyl === 'string' && protoCyl.includes('-32602') && !protoCyl.includes('-32603'));
   const badVec = await tool('set_joint', { name: 'Head', position: [0, null, 0] }).then(
     () => null, (e) => String(e),
   );
@@ -236,6 +269,28 @@ try {
   check('cylinders get 有 LeftArm', cyls?.cylinders?.LeftArm?.radii !== undefined);
   const setR = await toolJson('cylinders', { action: 'setRadius', bone: 'LeftArm', seg: 'medium', value: 0.2 });
   check('cylinders setRadius 生效', setR?.ok === true && Math.abs(setR?.cylinder?.radii?.medium - 0.2) < 1e-9);
+  const setOff = await toolJson('cylinders', { action: 'setOffset', bone: 'LeftArm', offset: [0.01, 0, 0] });
+  check('cylinders setOffset 生效', setOff?.ok === true && Math.abs(setOff?.offset?.[0] - 0.01) < 1e-9);
+  const clrOff = await toolJson('cylinders', { action: 'clearOffset', bone: 'LeftArm' });
+  check('cylinders clearOffset 归零', clrOff?.ok === true && clrOff?.offset?.every((v) => v === 0));
+  const autoF = await toolJson('cylinders', { action: 'autoFit' });
+  check('cylinders autoFit 返回 changed 列表', Array.isArray(autoF?.changed));
+  const unpin = await toolJson('cylinders', { action: 'unpin', bone: 'LeftUpLeg' });
+  check('cylinders unpin 生效', unpin?.ok === true && unpin?.cylinder?.manual === false);
+  const mirC = await toolJson('cylinders', { action: 'mirror', bone: 'LeftArm' });
+  check('cylinders mirror 单骨生效', mirC?.ok === true);
+  const mirAll = await toolJson('cylinders', { action: 'mirrorAll' });
+  check('cylinders mirrorAll 生效', mirAll?.ok === true);
+  const badAction = await tool('cylinders', { action: 'explode' }).then(() => null, (e) => String(e));
+  check('cylinders 未知 action 报 -32602', typeof badAction === 'string' && badAction.includes('-32602'));
+
+  // ── 骨架镜像与重置 ──
+  const mir = await toolJson('mirror', { dir: 'L2R' });
+  check('mirror L2R 生效', mir?.ok === true);
+  const badDir = await tool('mirror', { dir: 'X2Y' }).then(() => null, (e) => String(e));
+  check('mirror 非法 dir 报 -32602', typeof badDir === 'string' && badDir.includes('-32602'));
+  const rst = await toolJson('reset_pose');
+  check('reset_pose 生效', rst?.ok === true);
 
   // ── 权重计算统计 ──
   const skin = await toolJson('compute_skin');
@@ -261,8 +316,12 @@ try {
     () => null, (e) => String(e),
   );
   check('tip 骨画热力被拒（不参与蒙皮）', typeof heatTip === 'string' && heatTip.includes('tip'));
+  const heatBad = await tool('render', { heatBone: 'Nope' }).then(
+    () => null, (e) => String(e),
+  );
+  check('未知 heatBone 被拒', typeof heatBad === 'string' && heatBad.includes('-32602'));
 
-  // ── 持久化闭环：save → 读盘验证 → hydrate ──
+  // ── 持久化闭环：save → 读盘验证（逐键深比较，防「不碰其他键」断言空转） → hydrate ──
   const saved = await toolJson('save');
   const metaOnDisk = existsSync(path.resolve(TMP, 'probe.glb.meta.json'))
     ? JSON.parse(readFileSync(path.resolve(TMP, 'probe.glb.meta.json'), 'utf8'))
@@ -270,8 +329,9 @@ try {
   check('save 落盘且含 bindingEditor.positions',
     saved?.path?.endsWith('probe.glb.meta.json') === true &&
     metaOnDisk?.bindingEditor?.positions?.Head !== undefined);
-  check('save 不碰 sidecar 其他键',
-    !hasMeta || metaOnDisk?.source === JSON.parse(readFileSync(path.resolve(REPO_ROOT, fixtureMeta), 'utf8'))?.source);
+  check('save 不碰 sidecar 其他键（逐键深比较）',
+    origMeta !== null && metaOnDisk !== null &&
+    Object.keys(origMeta).every((k) => JSON.stringify(origMeta[k]) === JSON.stringify(metaOnDisk[k])));
   const hyd = await toolJson('hydrate');
   check('hydrate 从 sidecar 回灌', hyd?.hydrated === true);
 

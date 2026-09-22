@@ -23,6 +23,15 @@ Agent ──MCP(stdio)──▶ server.mjs ──▶ dist/domain.mjs ──▶ B
 仓库未装 `@types/node`，所以**任何 node API 只能出现在 .mjs shell 里**——
 这是分层存在的理由，不要把 node import 写进 src/。
 
+两条工具层语义（与 GUI 对齐，独立审核收口）：
+
+- **历史粒度 = 一次工具调用一步**：MCP 没有 GUI 的手势边界（pointerup），
+  每次写工具成功后立即 `sealHistory()` 封口 800ms 合并窗——Agent 脚本化连调
+  不会被并步，undo 粒度与工具调用一一对应。
+- **错误通道**：参数非法 / 前置条件不满足 → JSON-RPC `-32602`（带中文原因）；
+  实现 bug → `-32603`。骨名一律过 HUMANIK_ORDER 白名单（不用活引用键查，
+  防原型链键污染）。
+
 ## 构建与自检
 
 ```bash
