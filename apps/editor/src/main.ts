@@ -31,6 +31,8 @@ import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
 import type { FitResult, JointPositions } from './services/binding/binding-math';
+import { skeletonPositionsFromGltf } from './services/binding/import-skeleton';
+import type { SkeletonImportResult } from './services/binding/import-skeleton';
 import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
 import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
@@ -1936,6 +1938,8 @@ async function boot(): Promise<void> {
   let currentBindingMetaPath: string | null = null;
   // 资产库当前选中的资产路径（供顶部菜单「进入绑定」取目标 .glb）
   let lastAssetPath: string | null = null;
+  // 最近一次「导入文件骨架」的映射诊断（__editor.binding.importDiag 供自动化断言）
+  let lastSkeletonImport: SkeletonImportResult | null = null;
 
   /**
    * 重定向会话（MR-06）：源 / 目标 / 标定 / 配方 / 结果统一由 session 管理，
@@ -2780,13 +2784,46 @@ async function boot(): Promise<void> {
   }
 
   /** 入口一：资产库里右键 .glb → 「进入绑定」 */
-  async function bindAssetAt(relPath: string): Promise<void> {
+  async function bindAssetAt(relPath: string, opts?: { importSkeleton?: boolean }): Promise<void> {
     try {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
       // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+      lastSkeletonImport = null;
+
+      // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
+      // 不回填 sidecar 的 bindingEditor（那是「源网格 + 模板骨架」世界的会话）
+      if (opts?.importSkeleton === true) {
+        if (model.skeleton === null) {
+          panel.setModelInfo(
+            `导入文件骨架失败：${stemName(relPath)} 不含蒙皮骨架（纯网格）· 请用普通「进入绑定」`,
+          );
+          return;
+        }
+        // 落盘点只在「真的会打开」之后才切换：early return 时若已改指向，
+        // 旧会话的「保存绑定」会写进新纯网格的 sidecar（PR #13 评审）
+        currentBindingMetaPath = `${relPath}.meta.json`;
+        const imp = skeletonPositionsFromGltf(model.skeleton);
+        lastSkeletonImport = imp;
+        openBinding({
+          name: stemName(relPath),
+          vertices: model.mesh.vertices,
+          indices: model.mesh.indices,
+          image: model.image,
+        }, { positions: imp.positions });
+        // 以导入骨架为起点适配半径（与 autoFit 按钮同一条路径）
+        const changed = binding?.autoFit() ?? [];
+        const bits = [`已从文件骨架导入 ${imp.imported.length}/${imp.imported.length + imp.keptTemplate.length} 骨`];
+        if (imp.keptTemplate.length > 0) bits.push(`保持模板位：${imp.keptTemplate.join('、')}`);
+        if (imp.unknown.length > 0) bits.push(`未识别骨名：${imp.unknown.join('、')}`);
+        if (imp.duplicates.length > 0) bits.push(`重复骨名（取第一个）：${imp.duplicates.join('、')}`);
+        bits.push(`autoFit 适配 ${changed.length} 根骨`);
+        panel.setModelInfo(bits.join(' · '));
+        return;
+      }
+
       // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
       currentBindingMetaPath = `${relPath}.meta.json`;
       // 尝试回填上次的编辑态（bindingEditor 节点）；没有/损坏都不影响打开
@@ -2936,8 +2973,10 @@ async function boot(): Promise<void> {
     const hook = (window as unknown as { __editor: Record<string, unknown> }).__editor;
     hook.binding = {
       isOpen: () => bindingDockEl?.classList.contains('open') ?? false,
-      open: (p: string) => void bindAssetAt(p),
+      open: (p: string, o?: { importSkeleton?: boolean }) => void bindAssetAt(p, o),
       close: () => closeBinding(),
+      /** 最近一次「导入文件骨架」的映射诊断（未走过导入模式为 null） */
+      importDiag: () => lastSkeletonImport,
       state: () => binding?.getState() ?? null,
       fit: () => binding?.currentFit() ?? null,
       pose: (n: string, p: [number, number, number]) => binding?.poseJoint(n, p),
@@ -3124,6 +3163,13 @@ async function boot(): Promise<void> {
             label: isGlb ? '进入绑定 Binding…' : '进入绑定 Binding…（仅 .glb）',
             disabled: !isGlb,
             run: () => void bindAssetAt(path),
+          },
+          {
+            // rigged GLB 桥：把文件内嵌 skin 的骨架摆位灌进会话再加工；
+            // 纯网格点这个会在打开前收到明确报错（不静默退化成模板模式）
+            label: isGlb ? '进入绑定 Binding…（导入文件骨架）' : '进入绑定 · 导入文件骨架（仅 .glb）',
+            disabled: !isGlb,
+            run: () => void bindAssetAt(path, { importSkeleton: true }),
           },
           {
             label: isGlb ? '载入场景 Spawn' : '载入场景 Spawn（仅 .glb）',

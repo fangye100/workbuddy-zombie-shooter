@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   collectMeshInstances,
+  decomposeMatrixToTrs,
   nodeMatrix,
   normalMatrix,
   normalizeMeshHeight,
+  parseGlb,
   type MeshData,
 } from '@aether/scene';
 
@@ -260,5 +262,108 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
     );
     expect(many.heightMeters).toBeCloseTo(one.heightMeters, 6);
     expect(many.heightMeters).toBeCloseTo(2.05, 6);
+  });
+});
+
+describe('decomposeMatrixToTrs（matrix 节点 → TRS，PR #13 评审修复）', () => {
+  it('纯平移矩阵：t 取平移列，r/s 为单位', () => {
+    const d = decomposeMatrixToTrs([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 3, 4, 5, 1]);
+    expect(d.t).toEqual([3, 4, 5]);
+    expect(d.r).toEqual([0, 0, 0, 1]);
+    expect(d.s).toEqual([1, 1, 1]);
+  });
+
+  it('TRS 合成往返：nodeMatrix 输出分解回原文（t/s 精确，四元数 |dot|≈1）', () => {
+    const q90z = [0, 0, Math.SQRT1_2, Math.SQRT1_2] as [number, number, number, number];
+    const m = nodeMatrix({ translation: [1, 2, 3], rotation: q90z, scale: [2, 3, 4] });
+    const d = decomposeMatrixToTrs(m);
+    expect(d.t[0]).toBeCloseTo(1, 5);
+    expect(d.t[1]).toBeCloseTo(2, 5);
+    expect(d.t[2]).toBeCloseTo(3, 5);
+    expect(d.s[0]).toBeCloseTo(2, 5);
+    expect(d.s[1]).toBeCloseTo(3, 5);
+    expect(d.s[2]).toBeCloseTo(4, 5);
+    const dot =
+      d.r[0] * q90z[0] + d.r[1] * q90z[1] + d.r[2] * q90z[2] + d.r[3] * q90z[3];
+    expect(Math.abs(dot)).toBeCloseTo(1, 5);
+  });
+
+  it('镜像矩阵（行列式<0）：负号挂 sx，旋转为单位阵', () => {
+    const d = decomposeMatrixToTrs([-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]);
+    expect(d.t).toEqual([0, 1, 0]);
+    expect(d.s[0]).toBeCloseTo(-1, 6);
+    expect(d.s[1]).toBeCloseTo(1, 6);
+    expect(d.s[2]).toBeCloseTo(1, 6);
+    for (const [i, want] of [0, 0, 0, 1].entries()) expect(d.r[i]).toBeCloseTo(want, 6);
+  });
+
+  it('零缩放轴（退化文件）：旋转给单位四元数，t/s 仍保真', () => {
+    const d = decomposeMatrixToTrs([0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 7, 8, 9, 1]);
+    expect(d.t).toEqual([7, 8, 9]);
+    expect(d.s[0]).toBe(0);
+    expect(d.s[1]).toBeCloseTo(2, 6);
+    expect(d.s[2]).toBeCloseTo(3, 6);
+    expect(d.r).toEqual([0, 0, 0, 1]);
+  });
+});
+
+describe('parseGlb：matrix 属性关节的 locals 必须分解（顶点与蒙皮同值）', () => {
+  /** 最小合法 skinned GLB：node0=matrix 关节（scale2+t[0,1,0]），node1=网格（skin:0） */
+  function buildMatrixJointGlb(): ArrayBuffer {
+    const json = {
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [0, 1] }],
+      nodes: [
+        { name: 'Hips', matrix: [2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 1, 0, 1] },
+        { name: 'Body', mesh: 0, skin: 0 },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1 }] }],
+      skins: [{ joints: [0] }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 2, type: 'VEC3', min: [0, 0, 0], max: [0, 1, 0] },
+        { bufferView: 1, componentType: 5123, count: 3, type: 'SCALAR' },
+      ],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 24 },
+        { buffer: 0, byteOffset: 24, byteLength: 6 },
+      ],
+      buffers: [{ byteLength: 32 }],
+    };
+    const bin = new Uint8Array(32);
+    const dv = new DataView(bin.buffer);
+    dv.setFloat32(16, 1, true); // 第二个顶点 y=1（身高 1m）
+    dv.setUint16(26, 1, true); // 索引 [0,1,0]
+    const jsonBytes = new TextEncoder().encode(JSON.stringify(json));
+    const jsonPad = (4 - (jsonBytes.byteLength % 4)) % 4;
+    const total = 12 + 8 + jsonBytes.byteLength + jsonPad + 8 + bin.byteLength;
+    const out = new Uint8Array(total);
+    const odv = new DataView(out.buffer);
+    odv.setUint32(0, 0x46546c67, true);
+    odv.setUint32(4, 2, true);
+    odv.setUint32(8, total, true);
+    odv.setUint32(12, jsonBytes.byteLength + jsonPad, true);
+    odv.setUint32(16, 0x4e4f534a, true);
+    out.set(jsonBytes, 20);
+    for (let i = 0; i < jsonPad; i++) out[20 + jsonBytes.byteLength + i] = 0x20;
+    const binStart = 20 + jsonBytes.byteLength + jsonPad;
+    odv.setUint32(binStart, bin.byteLength, true);
+    odv.setUint32(binStart + 4, 0x004e4942, true);
+    out.set(bin, binStart + 8);
+    return out.buffer;
+  }
+
+  it('matrix 关节分解进 SkeletonData.locals（不再是单位 TRS）', () => {
+    const r = parseGlb(buildMatrixJointGlb(), TARGET_HEIGHT_M);
+    expect(r.skeleton).not.toBeNull();
+    const L = r.skeleton!.locals[0]!;
+    expect(L.t[0]).toBeCloseTo(0, 5);
+    expect(L.t[1]).toBeCloseTo(1, 5);
+    expect(L.t[2]).toBeCloseTo(0, 5);
+    expect(L.s[0]).toBeCloseTo(2, 5);
+    expect(L.s[1]).toBeCloseTo(2, 5);
+    expect(L.s[2]).toBeCloseTo(2, 5);
+    expect(L.r).toEqual([0, 0, 0, 1]);
+    expect(r.skeleton!.jointNames[0]).toBe('Hips');
   });
 });
