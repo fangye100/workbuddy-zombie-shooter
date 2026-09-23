@@ -9,7 +9,6 @@ import {
   type SelectionInfo,
 } from './params';
 import { LIGHT_PRESETS, MATERIAL_PRESETS } from './presets';
-import { BUILTIN_MODELS } from './models';
 import {
   type HierarchyNode,
   type HierarchySubNode,
@@ -236,10 +235,6 @@ export class Panel {
 
   onChange: (() => void) | null = null;
 
-  /** 模型浏览器：切换内置模型（null = 场景角色），GLB 文件导入 */
-  onModelSelect: ((id: string | null) => void) | null = null;
-  onModelFile: ((buffer: ArrayBuffer, name: string) => void) | null = null;
-
   // ---- 场景层级 Hierarchy 回调 ----
   /** 单击行 → 选中。subIndex 非 null = 点到的是子网格（mesh）节点 */
   onHierarchySelect: ((index: number, subIndex: number | null) => void) | null = null;
@@ -269,18 +264,16 @@ export class Panel {
   private selMaterial!: HTMLSelectElement;
   private selStats!: HTMLElement;
 
+  /** 顶栏状态行（原「模型预览」面板的信息行迁来，id 保持 #model-info 供自动化断言） */
   private modelInfo!: HTMLElement;
-  private modelSelect!: HTMLSelectElement;
 
-  // ---- 动画 Animation 面板 ----
+  // ---- 动画 Animation（检视页条件分组：选中带骨物体才显示）----
+  private animSection!: HTMLDetailsElement;
   private animClip!: HTMLSelectElement;
   private animPlayBtn!: HTMLButtonElement;
-  private animStopBtn!: HTMLButtonElement;
   private animLoop!: HTMLInputElement;
   private animSpeed!: { input: HTMLInputElement; val: HTMLElement };
   private animScrub!: { input: HTMLInputElement; val: HTMLElement };
-  private animWeight!: HTMLInputElement;
-  private animHint!: HTMLElement;
   /** 播放/暂停按钮当前语义，与渲染器 isAnimationPlaying 对齐 */
   private animPlaying = false;
   /** 用户正在拖时间轴时不让每帧 tick 抢写值 */
@@ -317,6 +310,10 @@ export class Panel {
     this.renderer = renderer;
     this.params = defaultParams();
 
+    // 顶栏状态行（index.html 静态 #model-info）：原「模型预览」面板收掉后，
+    // setModelInfo 的全部反馈（复制路径 / 重命名 / Play 拦截提示…）都落到这里
+    this.modelInfo = document.getElementById('model-info') as HTMLElement | null ?? document.createElement('span');
+
     for (const group of PARAM_GROUPS) {
       const details = document.createElement('details');
       details.className = 'group';
@@ -333,9 +330,6 @@ export class Panel {
       body.className = 'group-body';
       details.appendChild(body);
 
-      if (group.id === 'model') {
-        body.appendChild(this.buildModelBrowser());
-      }
       if (group.id === 'preset') {
         this.note = document.createElement('p');
         this.note.className = 'hint';
@@ -386,7 +380,11 @@ export class Panel {
       target.appendChild(details);
     }
 
-    leftRoot.appendChild(this.buildAnimation());
+    // 动画分组挂到右侧检视页（选中驱动的条件分组），不再占左栏。
+    // 默认隐藏：当前活跃物体带骨骼（hasAnimation）才显示，见 refreshAnimation。
+    this.animSection = this.buildAnimation();
+    this.animSection.hidden = true;
+    panes.inspector.appendChild(this.animSection);
 
     this.syncAll();
   }
@@ -398,85 +396,15 @@ export class Panel {
     return el;
   }
 
-  /** 模型浏览器：内置模型下拉 + GLB 导入 + 信息行 */
-  private buildModelBrowser(): HTMLElement {
-    const wrap = document.createElement('div');
-
-    const row = document.createElement('div');
-    row.className = 'row';
-    const head = document.createElement('div');
-    head.className = 'row-head';
-    const label = document.createElement('label');
-    label.textContent = t('角色模型');
-    head.appendChild(label);
-    row.appendChild(head);
-
-    const select = document.createElement('select');
-    const optScene = document.createElement('option');
-    optScene.value = 'scene';
-    optScene.textContent = t('场景角色（程序化胶囊）');
-    select.appendChild(optScene);
-    for (const bm of BUILTIN_MODELS) {
-      const o = document.createElement('option');
-      o.value = bm.id;
-      o.textContent = bm.label;
-      select.appendChild(o);
-    }
-    select.value = BUILTIN_MODELS[0]?.id ?? 'scene';
-    this.modelSelect = select;
-    select.addEventListener('change', () => {
-      this.onModelSelect?.(select.value === 'scene' ? null : select.value);
-    });
-    row.appendChild(select);
-    wrap.appendChild(row);
-
-    const fileRow = document.createElement('div');
-    fileRow.className = 'btn-row';
-    const btn = document.createElement('button');
-    btn.textContent = t('导入 GLB…');
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.glb,model/gltf-binary';
-    input.style.display = 'none';
-    btn.addEventListener('click', () => input.click());
-    input.addEventListener('change', () => {
-      const f = input.files?.[0];
-      if (f === undefined) return;
-      void f.arrayBuffer().then((buf) => {
-        this.onModelFile?.(buf, f.name);
-        input.value = '';
-      });
-    });
-    fileRow.append(btn, input);
-    wrap.appendChild(fileRow);
-
-    this.modelInfo = document.createElement('div');
-    this.modelInfo.className = 'hint';
-    this.modelInfo.style.marginTop = '6px';
-    this.modelInfo.textContent = '';
-    // 自动化钩子：无头冒烟（tools/verify/editor-smoke.mjs）靠这个 id 判定 GLB 是否真的
-    // 走完了 parseGlb → setCharacter 这条链路。没有它只能靠对象数判断，而 setCharacter
-    // 是「替换角色槽」而非新增物体，对象数根本不变。
-    this.modelInfo.id = 'model-info';
-    wrap.appendChild(this.modelInfo);
-
-    return wrap;
-  }
-
-  /** 模型信息行（顶点/面数/身高/贴图状态），由 main.ts 在加载后写入 */
+  /** 顶栏状态行：模型统计 / 复制路径 / 重命名等操作的反馈都写这里（原模型预览面板的职责迁移） */
   setModelInfo(text: string): void {
-    if (this.modelInfo !== undefined) this.modelInfo.textContent = text;
-  }
-
-  /** 让下拉框高亮项与当前实际加载的模型一致（默认加载的不一定是列表第一项） */
-  setSelectedModel(id: string): void {
-    if (this.modelSelect !== undefined) this.modelSelect.value = id;
+    this.modelInfo.textContent = text;
   }
 
   // ===================== 动画 Animation 面板 =====================
 
   /** 构建「动画」分组：片段下拉 + 播放/暂停/停止 + 循环 + 速率 + 时间轴 + 蒙皮权重可视化 */
-  private buildAnimation(): HTMLElement {
+  private buildAnimation(): HTMLDetailsElement {
     const details = document.createElement('details');
     details.className = 'group';
     details.id = 'animation';
@@ -488,13 +416,6 @@ export class Panel {
 
     const body = document.createElement('div');
     body.className = 'group-body';
-
-    const hint = document.createElement('div');
-    hint.className = 'hint';
-    hint.style.marginBottom = '8px';
-    hint.textContent = t('选中带骨骼的模型后可用。无骨骼动画时控件灰显。');
-    this.animHint = hint;
-    body.appendChild(hint);
 
     // 本地滑块构造器（与 buildSelectionControls 里的 mkSlider 同形，但挂在动画容器上）
     const mkSlider = (
@@ -530,7 +451,7 @@ export class Panel {
 
     // 片段下拉
     body.appendChild(
-      this.mkRow('片段 Clip', (row) => {
+      this.mkRow(t('片段'), (row) => {
         const sel = document.createElement('select');
         sel.dataset.anim = 'clip';
         sel.addEventListener('change', () => {
@@ -570,12 +491,11 @@ export class Panel {
       this.renderer.stopAnimation();
       this.setPlayLabel(false);
     });
-    this.animStopBtn = stop;
     btnRow.append(play, stop);
     body.appendChild(btnRow);
 
     // 循环
-    const loopWrap = this.toggleRow('循环 Loop', (checked) => {
+    const loopWrap = this.toggleRow(t('循环'), (checked) => {
       if (!this.renderer.hasAnimation()) return;
       this.renderer.setAnimationLoop(checked);
     });
@@ -583,7 +503,7 @@ export class Panel {
     body.appendChild(loopWrap.el);
 
     // 速率
-    const speed = mkSlider('速率 Speed', 0.1, 3, 0.05, (v) => {
+    const speed = mkSlider(t('速率'), 0.1, 3, 0.05, (v) => {
       if (!this.renderer.hasAnimation()) return;
       this.renderer.setAnimationSpeed(v);
     });
@@ -591,7 +511,7 @@ export class Panel {
     this.animSpeed = speed;
 
     // 时间轴
-    const scrub = mkSlider('时间 Time', 0, 1, 0.01, (v) => {
+    const scrub = mkSlider(t('时间'), 0, 1, 0.01, (v) => {
       if (!this.renderer.hasAnimation()) return;
       this.animScrubbing = true;
       this.renderer.seekAnimation(v);
@@ -606,12 +526,11 @@ export class Panel {
     this.animScrub = scrub;
 
     // 蒙皮权重可视化（切到 shader debugMode 9）
-    const weightWrap = this.toggleRow('蒙皮权重可视化 Skin Weights', (checked) => {
+    const weightWrap = this.toggleRow(t('蒙皮权重可视化'), (checked) => {
       this.params.debugMode = checked ? 9 : 0;
       this.syncValues();
       this.onChange?.();
     });
-    this.animWeight = weightWrap.input;
     body.appendChild(weightWrap.el);
 
     details.appendChild(body);
@@ -620,13 +539,18 @@ export class Panel {
 
   private setPlayLabel(playing: boolean): void {
     this.animPlaying = playing;
-    this.animPlayBtn.textContent = playing ? '⏸ 暂停' : '▶ 播放';
+    this.animPlayBtn.textContent = playing ? `⏸ ${t('暂停')}` : `▶ ${t('播放')}`;
   }
 
   /** 选中对象 / 导入模型后重建动画控件状态（片段列表、启用态、当前帧） */
   refreshAnimation(): void {
     if (this.animClip === undefined) return;
     const has = this.renderer.hasAnimation();
+
+    // 条件分组：活跃物体带骨骼才出现（检视页是选中驱动的，无骨时整组藏起，
+    // 不再是左栏那种「永远灰着」的死区）
+    this.animSection.hidden = !has;
+    if (!has) return;
 
     this.animClip.replaceChildren();
     const names = this.renderer.getClipNames();
@@ -639,31 +563,16 @@ export class Panel {
     const clip = this.renderer.getCurrentClip();
     if (clip >= 0 && clip < names.length) this.animClip.value = String(clip);
 
-    const dis = !has;
-    this.animClip.disabled = dis;
-    this.animPlayBtn.disabled = dis;
-    this.animStopBtn.disabled = dis;
-    this.animLoop.disabled = dis;
-    this.animSpeed.input.disabled = dis;
-    this.animScrub.input.disabled = dis;
-    this.animWeight.disabled = dis;
-
-    this.animHint.textContent = has
-      ? '骨骼动画已就绪。选择片段并播放即可预览。'
-      : '当前模型无骨骼动画（静态网格，或导入的 GLB 没有 skin/anim）。';
-
-    if (has) {
-      this.animLoop.checked = this.renderer.getAnimationLoop();
-      const sp = this.renderer.getAnimationSpeed();
-      this.animSpeed.input.value = String(sp);
-      this.animSpeed.val.textContent = fmt(sp, 0.05);
-      this.setPlayLabel(this.renderer.isAnimationPlaying());
-      const dur = this.renderer.getAnimationDuration();
-      this.animScrub.input.max = String(dur > 0 ? dur : 1);
-      const t = this.renderer.getAnimationTime();
-      this.animScrub.input.value = String(t);
-      this.animScrub.val.textContent = `${t.toFixed(2)}s`;
-    }
+    this.animLoop.checked = this.renderer.getAnimationLoop();
+    const sp = this.renderer.getAnimationSpeed();
+    this.animSpeed.input.value = String(sp);
+    this.animSpeed.val.textContent = fmt(sp, 0.05);
+    this.setPlayLabel(this.renderer.isAnimationPlaying());
+    const dur = this.renderer.getAnimationDuration();
+    this.animScrub.input.max = String(dur > 0 ? dur : 1);
+    const t = this.renderer.getAnimationTime();
+    this.animScrub.input.value = String(t);
+    this.animScrub.val.textContent = `${t.toFixed(2)}s`;
   }
 
   /** 每帧由渲染循环调用：把时间轴拖到当前播放位置，并同步播放按钮（处理播完自动停） */

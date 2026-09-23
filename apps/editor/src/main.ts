@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
+import { MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData } from '@aether/scene';
 import {
@@ -46,7 +46,7 @@ import {
 } from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
 import { t, setLang, getLang, applyStaticI18n } from './i18n';
-import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
+import { createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
@@ -325,61 +325,6 @@ async function boot(): Promise<void> {
     }
   }
 
-  async function loadBitmap(url: string): Promise<ImageBitmap | null> {
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) return null;
-      return await decodeTexture(await resp.blob(), url);
-    } catch (err) {
-      console.warn(`[模型] 贴图加载失败: ${url}`, err);
-      return null;
-    }
-  }
-
-  /**
-   * 模型替换的统一边界（复审 P1）。
-   *
-   * Play 中替换网格 = 改变对象的可序列化状态（快照只存变换/显隐/材质，**不存网格与骨架**），
-   * Stop 后恢复不回来 —— 原网格就这么没了。与增删同一约束：所有模型修改入口
-   * （内置下拉、文件导入、及其异步完成路径）都走这一个判定点。
-   */
-  function modelReplaceBlocked(): boolean {
-    if (!playCtl.isPlaying) return false;
-    console.warn('[play] Play 中禁止替换模型（快照不存网格/骨架，Stop 后无法恢复；先 Stop 再换）');
-    panel.setModelInfo(t('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop'));
-    hudDirty = true;
-    return true;
-  }
-
-  function applyBuiltin(id: string): void {
-    if (modelReplaceBlocked()) return;
-    const bm = BUILTIN_MODELS.find((b) => b.id === id);
-    if (bm === undefined) return;
-    void loadBitmap(bm.texUrl).then((bmp) => {
-      // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
-      if (modelReplaceBlocked()) return;
-      renderer.setCharacter(bm.mesh, bmp, null);
-      panel.setModelInfo(
-        `${bm.label} · ${bm.meta.vertices} 顶点 / ${bm.meta.triangles} 面 / ` +
-          `${bm.meta.heightMeters} m / 贴图${bmp !== null ? '已载入' : '缺失（平色预览）'}`,
-      );
-      panel.refreshHierarchy(); // 角色槽位的面数变了
-      panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
-      hudDirty = true;
-    });
-  }
-
-  panel.onModelSelect = (id) => {
-    if (modelReplaceBlocked()) return;
-    if (id === null) {
-      renderer.setCharacter(null, null);
-      panel.setModelInfo(t('程序化胶囊 · 材质在「材质」面板调'));
-      hudDirty = true;
-      return;
-    }
-    applyBuiltin(id);
-  };
-
   // ---- 场景层级 Hierarchy ----
   // 点到 mesh 子节点时连子网格一起选中：材质面板的作用对象就是它，描边也只描那一段
   panel.onHierarchySelect = (index, subIndex) => {
@@ -424,45 +369,10 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
 
-  panel.onModelFile = (buffer, name) => {
-    if (modelReplaceBlocked()) return;
-    try {
-      // 身高用与内置 LOD 同一把尺子（roster 真源），保证导入档与内置档体型一致
-      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-      void (async () => {
-        const bmp = model.image === null ? null : await decodeTexture(model.image, name);
-        // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
-        if (modelReplaceBlocked()) return;
-        // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
-        // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
-        renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree, model.skeleton, model.animations);
-        const texState =
-          model.image === null
-            ? '无贴图（平色预览）'
-            : bmp !== null
-              ? '贴图已载入'
-              : '⚠ 贴图解码失败（见控制台）';
-        // 换模型时旧材质绑定按「nodeId → 反向路径」两层匹配继承，结果一并告知
-        const inheritNote = summarizeMatch(renderer.getLastMatchReport() ?? []);
-        panel.setModelInfo(
-          `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 / ` +
-            `${model.heightMeters.toFixed(2)} m / ${texState}` +
-            (inheritNote === null ? '' : ` · ${inheritNote}`),
-        );
-        panel.refreshHierarchy(); // 导入模型替换了角色槽位，面数与子网格都变了
-        // 选中可能落在旧的（现已不存在的）子网格上，重挂一次
-        panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
-        hudDirty = true;
-      })();
-    } catch (err) {
-      panel.setModelInfo(`导入失败：${String(err)}`);
-      console.error('[模型] GLB 导入失败', err);
-    }
-  };
-
   // 不再默认加载任何内置模型：E-04 内置档（LOD 中间产物）已全部移除，
-  // 启动即为程序化胶囊，角色一律通过「导入 GLB…」载入原始模型（唯一真源）。
-  panel.setModelInfo(t('未载入模型 · 用「导入 GLB…」载入原始 .glb'));
+  // 模型进场景的唯一入口是底部资产库（双击/拖入 .glb）；「模型预览」面板与
+  // setCharacter 角色槽路径已于 2026-09-23 布局改造收掉（槽位假设在场景化世界会错伤场景物体）。
+  panel.setModelInfo(t('未载入模型 · 从底部资产库双击 .glb 生成进场景'));
 
   // 默认取景：target 落在角色身上才能居中构图，而不是看向角色前方的空地
   const DEFAULT_VIEW = { yaw: 0.35, distance: 9, target: [0, 0.95, 0] as [number, number, number] };
@@ -1842,7 +1752,7 @@ async function boot(): Promise<void> {
   // =====================================================================
   // 资产库 Asset Library + 属性 Inspector
   // 底部 dock 浏览项目文件；GLB 双击/拖入画布生成为新场景物体（renderer.addObject，
-  // 与「导入 GLB…」替换角色槽位是两条路）；选中资产在右侧 Inspector 显示静态属性。
+  // 生成进场景，不替换任何既有物体）；选中资产在右侧 Inspector 显示静态属性。
   // =====================================================================
 
   // 三栏宽度恢复 + 分界线拖拽（左侧栏 / 右侧 Inspector；dock 与目录树的把手在组件内部）
@@ -1896,7 +1806,7 @@ async function boot(): Promise<void> {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
-      // 与「导入 GLB…」同一把身高尺，保证资产库生成的与导入的体型一致
+      // 与 roster 同一把身高尺，保证资产库生成的角色体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
@@ -2816,7 +2726,7 @@ async function boot(): Promise<void> {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
-      // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
+      // 与 roster 同一把身高尺，保证绑定面板里的体型与场景里一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       lastSkeletonImport = null;
 

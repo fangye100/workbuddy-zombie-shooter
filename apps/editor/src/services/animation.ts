@@ -1,7 +1,11 @@
 /**
  * AnimationService —— 蒙皮动画播放控制 + 选中名查询。
  *
- * 当前可播动画的物体：优先「选中且带骨骼」的物体，否则退回角色槽位。
+ * 当前可播动画的物体：优先「选中且带骨骼」的物体；未选中时回退到**全场唯一**的
+ * 带骨物体（唯一的僵尸摆在那儿时，点开检视页就该能直接播）。全场有多个带骨物体
+ * 且没有选中 → 返回 null：静默挑一个等于把控制面指到用户看不见的目标上
+ * （2026-09-23 布局改造定：旧的「回退角色槽位 characterIndex=1」假设在场景化
+ * 世界里会把动画控件指到无关场景物体上，已废除）。
  * 播放 / 暂停 / 停止 / 循环 / 速率 / seek 都作用在 activeSkinObject 的 skinState 上
  * （skin 控制函数来自 @aether/render）。selectedName / selectedSubName 给 HUD 用。
  */
@@ -20,15 +24,15 @@ import {
 export class AnimationService {
   constructor(private readonly host: LabRenderer) {}
 
-  /** 当前可播动画的物体：优先「选中且带骨骼」的物体，否则退回角色槽位 */
+  /** 当前可播动画的物体：选中且带骨 → 全场唯一带骨 → null（必须显式选中） */
   private activeSkinObject(): SceneObject | null {
     const s = this.host.state;
     if (s.selectedIndex !== null) {
       const o = s.objects[s.selectedIndex];
       if (o !== undefined && o.skinState !== null) return o;
     }
-    const c = s.objects[this.host.characterIndex];
-    return c !== undefined && c.skinState !== null ? c : null;
+    const skinned = s.objects.filter((o) => o.skinState !== null);
+    return skinned.length === 1 ? skinned[0]! : null;
   }
 
   hasAnimation(): boolean {

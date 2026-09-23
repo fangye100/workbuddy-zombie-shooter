@@ -38,15 +38,12 @@
     display: flex;
     flex-direction: column;
   }
-  /* 中央列 = 画布 + 底部资产库 dock；画布吃满剩余高度 */
-  #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; height: 100%; }
+  /* 中央列 = 画布（+ 绑定/重定向浮层）；资产库 dock 已提出本列，挂到 mainrow 的 grid 第二行 */
+  #center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   canvas#gpu { display: block; width: 100%; flex: 1 1 auto; min-height: 0; background: #000; touch-action: none; }
 
   .panel {
-    width: var(--panel-w);
-    flex: 0 0 var(--panel-w);
-    height: 100%;
-    overflow-y: auto;
+    overflow-y: auto; /* 层级列变矮后内容用滚动条显示（下边缘止于资产库上缘） */
     background: var(--panel-deep);
     padding-bottom: 40px;
   }
@@ -428,6 +425,17 @@
   }
   .tb-brand { font-weight: 700; font-size: 14px; color: var(--bone); letter-spacing: 0.5px; white-space: nowrap; }
   .tb-brand em { color: var(--zombie); font-style: normal; }
+  /* 顶栏状态行：原「模型预览」面板的 model-info 行迁来，接管全部 setModelInfo 反馈 */
+  .tb-status {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 0 10px;
+  }
   .tb-menus { display: flex; align-items: center; gap: 4px; }
   .tb-menu { position: relative; }
   .tb-btn {
@@ -473,7 +481,24 @@
   .tb-item:disabled { color: var(--text-dim); cursor: default; }
   .tb-sep { height: 2px; background: var(--ink); margin: 4px 2px; }
 
-  #mainrow { flex: 1 1 auto; display: flex; min-height: 0; width: 100%; }
+  /* 主行改两行 grid（2026-09-23 布局改造）：
+     行1 = 左栏(场景层级) | 左分隔条 | 画布 | 右分隔条 | Inspector
+     行2 = 资产库 dock（从屏幕左缘横贯到 Inspector 前）
+     → 场景层级下边缘 = 资产库上边缘；Inspector 通高；dock 行高随 --dock-h / 收起态自适应 */
+  #mainrow {
+    flex: 1 1 auto;
+    display: grid;
+    min-height: 0;
+    width: 100%;
+    grid-template-columns: var(--panel-w) 6px 1fr 6px var(--insp-w);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .panel { grid-area: 1 / 1; }
+  #split-left { grid-area: 1 / 2; }
+  #center { grid-area: 1 / 3; }
+  #split-right { grid-area: 1 / 4; }
+  #inspector { grid-area: 1 / 5 / 3 / 6; }
+  #asset-dock { grid-area: 2 / 1 / 3 / 4; }
 
   /* ---- Transform Gizmo 顶部工具栏（Unity 风格）---- */
   #gizmo-bar {
@@ -1219,6 +1244,7 @@
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
 <div id="topbar" data-page-node-id="DWAspFABjPYSzYXohJSEZM">
   <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">末日尸潮 <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
+  <span class="tb-status" id="model-info"></span>
   <div class="tb-menus" data-page-node-id="vbJDAHfCbrcoMGMvC78aMX">
     <div class="tb-menu" id="skeleton-menu-btn" data-page-node-id="N7eBka9ze56EnwMDFJkARW">
       <button class="tb-btn" type="button" data-tb="skeleton" data-page-node-id="Tq5XZhd5MoZYTVMZV9GQ37">Skeleton</button>
@@ -1243,7 +1269,6 @@
 <div class="split-handle" id="split-left" title="拖拽调整左侧面板宽度" data-page-node-id="BwyYiG8ZrAcq7N1LF0XRms"></div>
 <div id="center" data-page-node-id="tnfONArFpWjeHhBxYM6zyz">
   <canvas id="gpu" data-page-node-id="ivFEi1oS94rS9xuDyqOhkd"></canvas>
-  <div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
   <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
   <div id="binding-dock" data-page-node-id="pDTPu4XOCe9JtvhJd81DtY"></div>
   <!-- 重定向工作台（MR-06：两入口汇入的统一会话 UI，内部 DOM 由 RetargetWorkbench 全量构建） -->
@@ -1272,6 +1297,10 @@
     </div>
   </div>
 </aside>
+
+<!-- 资产库 dock：从屏幕左缘横贯到 Inspector 前（grid 第二行），
+     左栏（场景层级）下边缘即本 dock 上边缘 -->
+<div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
 
 </div>
 <div id="gizmo-bar" data-page-node-id="7CiU4AxJIbgWbVYBtjyO6d">

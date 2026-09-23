@@ -34,7 +34,7 @@ const has = (name) => args.includes(`--${name}`);
 
 const PORT = Number(arg('port', 5100));
 const CDP_PORT = Number(arg('cdp', 9333));
-const GLB = arg('glb', null);
+const GLB = arg('glb', 'assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb').split(path.sep).join('/');
 /** 已绑定的 rigged GLB（22 根 HumanIK 骨）→ L 段「应用动画到场景物体」用 */
 const RIGGED_GLB = arg(
   'rigged',
@@ -864,58 +864,81 @@ async function main() {
       `undo ${g2c.undoBefore}→${g2c.undoAfterDrag}；视口回退 |dot|=${g2c.undoneViewVsBefore?.toFixed(6)} 文档回退 |dot|=${g2c.undoneDocVsBefore?.toFixed(6)}`,
     );
 
-    // ---- H. AnimationService（需 --glb）----
-    console.log('\nH. AnimationService（蒙皮/动画）');
-    if (GLB === null) {
-      skip('蒙皮动画断言', '未传 --glb，默认胶囊场景无骨骼；加 --glb <rigged.glb> 可启用');
-      skip('动画时间轴断言', '同上');
-      skip('动画播放状态机断言', '同上');
-    } else {
-      const absGlb = path.resolve(GLB);
-      if (!fs.existsSync(absGlb)) throw new Error(`--glb 文件不存在: ${absGlb}`);
-      const bytes = fs.readFileSync(absGlb);
-      const b64 = bytes.toString('base64');
-      // 走真实导入路径：给隐藏的 <input type=file> 塞 DataTransfer 的 FileList 再派发 change。
-      // Chromium 允许直接给 input.files 赋值，等价于用户点了「导入 GLB…」选文件，
-      // 因此这段断言覆盖的是 parseGlb → 建物体 → 建骨架的完整链路，不是绕过 UI 的后门。
-      // 注意：导入走的是 setCharacter（替换角色槽），不是 addObject，
-      // 所以「对象数变多」不是有效判据 —— 要看 #model-info 有没有写出新模型的统计行。
-      const info = await cdp.eval(`(async () => {
-        const bin = atob('${b64}');
-        const u8 = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-        const input = document.querySelector('input[type=file][accept*="glb"]');
-        if (input === null) return { err: '找不到 GLB 文件输入框' };
-        const dt = new DataTransfer();
-        dt.items.add(new File([u8], 'smoke.glb', { type: 'model/gltf-binary' }));
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        // parseGlb + 贴图解码 + GPU 上传全是异步的，等它落定
-        await new Promise((r) => setTimeout(r, 4000));
-        return {
-          info: (document.getElementById('model-info') || {}).innerText || '',
-          objects: window.__editor.renderer.getObjectList().length,
-        };
-      })()`);
-      check(
-        'GLB 经真实导入路径载入（#model-info 写出统计行）',
-        typeof info.info === 'string' && /顶点/.test(info.info) && /smoke\.glb/.test(info.info),
-        info.err ?? info.info.slice(0, 160),
-      );
-      check(
-        '导入后场景对象数不变（setCharacter 替换角色槽而非新增）',
-        info.objects === objCount,
-        `objects=${info.objects}（基线 ${objCount}）`,
-      );
-      const anim = await cdp.eval(
-        `(()=>{const r=window.__editor.renderer;return {has:r.hasAnimation(),clips:r.getClipNames()}})()`,
-      );
-      check('hasAnimation 为真且能列出 clip', anim.has === true && anim.clips.length > 0, JSON.stringify(anim));
-      const play = await cdp.eval(
-        `(()=>{const r=window.__editor.renderer;r.playAnimation(0);const a=r.isAnimationPlaying();r.setAnimationSpeed(0.5);r.seekAnimation(0.2);const t=r.getAnimationTime();r.pauseAnimation();const b=r.isAnimationPlaying();r.stopAnimation();return {a,b,t}})()`,
-      );
-      check('播放/暂停状态机正确', play.a === true && play.b === false, JSON.stringify(play));
-      check('seekAnimation 后时间被写入', Number.isFinite(play.t), `t=${play.t}`);
+    // ---- H. 动画面板（检视页条件分组 + 资产库生成路径）----
+    // 「模型预览」面板已收掉（2026-09-23 布局改造）：模型进场景的唯一路径是
+    // 底部资产库生成（addObject + 自动选中），不再走 setCharacter 换角色槽——
+    // 旧槽位假设在场景化世界里会把场景物体的网格换掉（导入"没反应"的根因）。
+    // 动画面板并入右侧检视页：选中带骨物体才出现。断言用的 rigged GLB 就在
+    // 仓库 assets/ 里，此段因此从「需 --glb」升级为常开。
+    console.log('\nH. 动画面板（检视页条件分组 / 资产库生成路径）');
+    {
+      if (!fs.existsSync(path.resolve(GLB))) {
+        skip('动画断言', `rigged GLB 不存在: ${GLB}`);
+      } else {
+        // 布局收敛断言：左栏只剩场景层级；动画分组在检视页且无骨时隐藏；顶栏状态行在位
+        const layout = await cdp.eval(`(() => {
+          const leftIds = [...document.querySelectorAll('#groups > details')].map((d) => d.id);
+          const dock = document.getElementById('asset-dock').getBoundingClientRect();
+          const leftCol = document.querySelector('#mainrow > .panel').getBoundingClientRect();
+          const insp = document.getElementById('inspector').getBoundingClientRect();
+          const animInInsp = document.querySelector('#inspector .insp-pane[data-pane=\"inspector\"] details#animation');
+          return {
+            leftIds,
+            modelPanelGone: document.querySelector('#groups details#model') === null,
+            animInLeft: document.querySelector('#groups details#animation') !== null,
+            animHidden: animInInsp !== null ? animInInsp.hidden : null,
+            topStatus: document.getElementById('model-info') !== null,
+            objects: window.__editor.renderer.getObjectList().length,
+            dockLeft: Math.round(dock.left),
+            dockRight: Math.round(dock.right),
+            inspLeft: Math.round(insp.left),
+            leftBottom: Math.round(leftCol.bottom),
+            dockTop: Math.round(dock.top),
+          };
+        })()`);
+        check('左栏不再有「模型预览」分组（面板已收掉）', layout.modelPanelGone === true);
+        check('动画分组不在左栏（已并入检视页）', layout.animInLeft === false);
+        check('动画分组在检视页且默认隐藏（场景无带骨物体）', layout.animHidden === true);
+        check('顶栏状态行 #model-info 存在（原模型预览信息行迁移）', layout.topStatus === true);
+        check('左栏分组只剩场景层级', layout.leftIds.join(',') === 'hierarchy', layout.leftIds.join(','));
+        check('资产库 dock 左缘贴屏幕（x=0）', layout.dockLeft === 0, `dockLeft=${layout.dockLeft}`);
+        check('资产库 dock 右缘接到 Inspector 前', layout.dockRight <= layout.inspLeft + 6, `dockRight=${layout.dockRight} inspLeft=${layout.inspLeft}`);
+        check('场景层级下边缘 = 资产库上边缘', Math.abs(layout.leftBottom - layout.dockTop) <= 1, `leftBottom=${layout.leftBottom} dockTop=${layout.dockTop}`);
+
+        // 资产库生成 → addObject + 自动选中 → 动画分组出现
+        const spawned = await cdp.eval(`(async () => {
+          window.__editor.spawnAsset(${JSON.stringify(GLB)});
+          await new Promise((r) => setTimeout(r, 4000));
+          const r = window.__editor.renderer;
+          const anim = document.querySelector('#inspector .insp-pane[data-pane=\"inspector\"] details#animation');
+          return {
+            objects: r.getObjectList().length,
+            animHidden: anim !== null ? anim.hidden : null,
+            has: r.hasAnimation(),
+            clips: r.getClipNames(),
+          };
+        })()`);
+        check(
+          '生成后对象数 +1（addObject 新增，不再替换角色槽）',
+          spawned.objects === layout.objects + 1,
+          `${layout.objects} → ${spawned.objects}`,
+        );
+        check('选中带骨物体后动画分组出现', spawned.animHidden === false);
+        check('hasAnimation 为真且能列出 clip', spawned.has === true && spawned.clips.length > 0, JSON.stringify({ has: spawned.has, clips: spawned.clips.length }));
+        const play = await cdp.eval(
+          `(()=>{const r=window.__editor.renderer;r.playAnimation(0);const a=r.isAnimationPlaying();r.setAnimationSpeed(0.5);r.seekAnimation(0.2);const t=r.getAnimationTime();r.pauseAnimation();const b=r.isAnimationPlaying();r.stopAnimation();return {a,b,t}})()`,
+        );
+        check('播放/暂停状态机正确', play.a === true && play.b === false, JSON.stringify(play));
+        check('seekAnimation 后时间被写入', Number.isFinite(play.t), `t=${play.t}`);
+
+        // 收尾：删掉生成的物体，对象数回落，不污染后续段（K/L 绑定段沿用基线）
+        const cleaned = await cdp.eval(`(() => {
+          const r = window.__editor.renderer;
+          r.removeObject(r.state.objects.length - 1);
+          return r.getObjectList().length;
+        })()`);
+        check('清理生成物体后对象数回落', cleaned === layout.objects, `${cleaned} vs 基线 ${layout.objects}`);
+      }
     }
 
     // ---- I. 渲染持续出帧 ----

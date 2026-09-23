@@ -413,6 +413,13 @@ const DICT: Record<string, string> = {
   '地面接触：不可用（源无世界轨迹）': 'Ground contact: unavailable (source has no world trajectory)',
   '地面接触：仅相位指导（原地 / 无可信轨迹，不做世界锁脚）': 'Ground contact: phase guidance only (in-place / no trusted trajectory, no world lock)',
   '地面接触：已启用世界锁脚（支撑段锚定）': 'Ground contact: world foot-lock enabled (stance anchoring)',
+
+  '片段': 'Clip',
+  '循环': 'Loop',
+  '速率': 'Speed',
+  '时间': 'Time',
+  '蒙皮权重可视化': 'Visualize Skin Weights',
+  '未载入模型 · 从底部资产库双击 .glb 生成进场景': 'No model loaded · double-click a .glb in the asset library below to spawn it',
 };
 
 
