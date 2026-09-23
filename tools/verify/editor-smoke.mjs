@@ -2391,6 +2391,129 @@ async function main() {
         return window.__editor.binding.isOpen();
       })()`);
       check('绑定面板已关闭（回到 3D 视图）', closed === false);
+
+      // ---- L3. 导入文件骨架（rigged GLB 桥）----
+      // 数学正确性（TRS 累乘 / normalization / 名称映射）由
+      // apps/editor/test/import-skeleton.test.ts 锁定；这里只守**接线**：
+      // 导入模式真的打开了面板、诊断四元组正确、摆位随文件走（不是模板兜底）、
+      // autoFit 真的跑了、纯网格给明确报错而不静默退化。
+      console.log('\nL3. 导入文件骨架（rigged GLB 桥）');
+      const MCP_GLB = 'assets/characters/models/E-01/rigged/E01_Shambler_900_mcpbound.glb';
+      const OLD_RIG_GLB = 'assets/characters/models/E-01/rigged/E01_Shambler_900_rigged.glb';
+      const BAKED_GLB = 'assets/characters/models/E-01/textured/E01_Shambler_900_baked.glb';
+      const lfsOk = (p) =>
+        fs.existsSync(path.resolve(p)) && fs.statSync(path.resolve(p)).size > 10000;
+      if (!lfsOk(MCP_GLB) || !lfsOk(OLD_RIG_GLB) || !lfsOk(BAKED_GLB)) {
+        skip('导入文件骨架', `GLB 缺失或 LFS 未 smudge: ${MCP_GLB} / ${OLD_RIG_GLB} / ${BAKED_GLB}`);
+      } else {
+        // ① MCP 导出（27 骨全命名）→ 全量映射
+        const imp27 = await cdp.eval(`(async () => {
+          window.__editor.binding.open(${JSON.stringify(MCP_GLB)}, { importSkeleton: true });
+          await new Promise((r) => setTimeout(r, 3500));
+          return {
+            open: window.__editor.binding.isOpen(),
+            diag: window.__editor.binding.importDiag(),
+            st: window.__editor.binding.state(),
+            cyls: window.__editor.binding.wrappers.cylinders(),
+          };
+        })()`);
+        check('L3 导入模式打开绑定面板（27 骨 GLB）', imp27.open === true);
+        check('L3 诊断已挂载（importDiag 非空）', imp27.diag !== null);
+        check(
+          'L3 27 骨全部从文件骨架映射（imported=27）',
+          imp27.diag !== null && imp27.diag.imported.length === 27,
+          `imported=${imp27.diag?.imported?.length}`,
+        );
+        check(
+          'L3 无缺骨保持模板位 / 无未识别骨名 / 无重复',
+          imp27.diag !== null && imp27.diag.keptTemplate.length === 0 &&
+            imp27.diag.unknown.length === 0 && imp27.diag.duplicates.length === 0,
+          `kept=${JSON.stringify(imp27.diag?.keptTemplate)} unknown=${JSON.stringify(imp27.diag?.unknown)} dup=${JSON.stringify(imp27.diag?.duplicates)}`,
+        );
+        const hips27 = imp27.st?.positions?.Hips;
+        check(
+          'L3 导入摆位已进会话（Hips 为有限三元组）',
+          Array.isArray(hips27) && hips27.length === 3 && hips27.every(Number.isFinite),
+          JSON.stringify(hips27),
+        );
+        // autoFit 强断言：半径必须等于**按导入骨长**算的公式值 clamp(骨长×0.35)
+        // （圆柱表在 setModel 时就建，只看「存在」证明不了 autoFit 真跑过）
+        const fa27 = imp27.st?.positions?.LeftForeArm;
+        const lh27 = imp27.st?.positions?.LeftHand;
+        const boneLen27 =
+          Array.isArray(fa27) && Array.isArray(lh27)
+            ? Math.hypot(lh27[0] - fa27[0], lh27[1] - fa27[1], lh27[2] - fa27[2])
+            : NaN;
+        const expectR = Math.min(0.22, Math.max(0.04, boneLen27 * 0.35));
+        const actualR = imp27.cyls?.LeftForeArm?.radii?.top;
+        check(
+          'L3 autoFit 已按导入骨长真跑（LeftForeArm 半径=clamp(骨长×0.35)）',
+          Number.isFinite(actualR) && Math.abs(actualR - expectR) < 1e-9,
+          `骨长=${boneLen27.toFixed(4)} 期望R=${expectR.toFixed(4)} 实际R=${actualR}`,
+        );
+
+        // ② 旧 22 骨 rig（缺 5 根 tip）→ 缺骨诊断精确
+        const imp22 = await cdp.eval(`(async () => {
+          window.__editor.binding.open(${JSON.stringify(OLD_RIG_GLB)}, { importSkeleton: true });
+          await new Promise((r) => setTimeout(r, 3500));
+          return {
+            open: window.__editor.binding.isOpen(),
+            diag: window.__editor.binding.importDiag(),
+            st: window.__editor.binding.state(),
+          };
+        })()`);
+        const TIPS = ['HeadTip', 'LeftHandTip', 'RightHandTip', 'LeftToeTip', 'RightToeTip'];
+        check('L3 导入模式打开绑定面板（22 骨 GLB）', imp22.open === true);
+        check(
+          'L3 旧 22 骨 rig：imported=22',
+          imp22.diag !== null && imp22.diag.imported.length === 22,
+          `imported=${imp22.diag?.imported?.length}`,
+        );
+        check(
+          'L3 旧 22 骨 rig：保持模板位的恰是 5 根 tip 骨',
+          imp22.diag !== null && JSON.stringify(imp22.diag.keptTemplate) === JSON.stringify(TIPS),
+          `kept=${JSON.stringify(imp22.diag?.keptTemplate)}`,
+        );
+        check(
+          'L3 旧 22 骨 rig：无未识别骨名',
+          imp22.diag !== null && imp22.diag.unknown.length === 0,
+          `unknown=${JSON.stringify(imp22.diag?.unknown)}`,
+        );
+
+        // ③ 摆位随文件走：两个文件的 LeftForeArm 静止位必须明显不同
+        // （mcpbound 长臂 0.409m vs 旧 rig 0.26m 上臂链——若相同说明是模板兜底）
+        const faA = imp27.st?.positions?.LeftForeArm;
+        const faB = imp22.st?.positions?.LeftForeArm;
+        const faDiff =
+          Array.isArray(faA) && Array.isArray(faB)
+            ? Math.hypot(faA[0] - faB[0], faA[1] - faB[1], faA[2] - faB[2])
+            : 0;
+        check(
+          'L3 摆位随文件走（两次导入的 LeftForeArm 差 > 0.05m）',
+          faDiff > 0.05,
+          `A=${JSON.stringify(faA)} B=${JSON.stringify(faB)} Δ=${faDiff.toFixed(3)}`,
+        );
+
+        // ④ 纯网格（baked.glb 无 skin）：明确报错，不静默退化成模板模式。
+        // 先关面板再点——early return 发生在 openBinding 之前，面板必须保持关闭。
+        const noSkin = await cdp.eval(`(async () => {
+          window.__editor.binding.close();
+          window.__editor.binding.open(${JSON.stringify(BAKED_GLB)}, { importSkeleton: true });
+          await new Promise((r) => setTimeout(r, 2500));
+          return {
+            diag: window.__editor.binding.importDiag(),
+            open: window.__editor.binding.isOpen(),
+          };
+        })()`);
+        check(
+          'L3 纯网格走导入模式：不产生导入诊断（importDiag=null）',
+          noSkin.diag === null,
+        );
+        check(
+          'L3 纯网格走导入模式：不打开新会话（面板保持关闭）',
+          noSkin.open === false,
+        );
+      }
     }
 
     // ---- 截图 ----

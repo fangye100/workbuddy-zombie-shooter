@@ -545,7 +545,7 @@ export class BindingPanel {
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="skin-mirror-all"]')!
       .addEventListener('click', () => this.mirrorAllCylinders());
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-autofit"]')!
-      .addEventListener('click', () => this.autoFitCylinders());
+      .addEventListener('click', () => this.autoFit());
     this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-unpin"]')!
       .addEventListener('click', () => this.unpinSelectedCylinder());
     const mw = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-mirror-w"]')!;
@@ -1436,14 +1436,17 @@ export class BindingPanel {
 
   /**
    * 自动适配：**未手动改过**的骨按骨长重算半径，手动改过的一个不碰。
-   * 显式按钮才调，绝不每帧隐式跑（隐式跑 = 覆盖手动值）。
+   * 显式调用才跑（按钮 / 导入文件骨架桥共用这一条路径），绝不每帧隐式跑
+   * （隐式跑 = 覆盖手动值）。圆柱表未初始化时先按默认公式建表再适配。
+   * @returns 半径发生变化的骨名列表
    */
-  private autoFitCylinders(): void {
-    if (this.session.getCylinders() === null) return;
+  autoFit(): string[] {
+    this.session.ensureCylinders();
     const changed = this.session.autoFitCylinders();
     this.updateSkinPanel();
     this.invalidatePreview();
     this.hooks.onAutoFit?.(changed);
+    return changed;
   }
 
   /** 取消当前骨的手动标记，交还给自动适配 */
