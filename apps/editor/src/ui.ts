@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import {
   PARAM_GROUPS,
   defaultParams,
@@ -406,14 +407,14 @@ export class Panel {
     const head = document.createElement('div');
     head.className = 'row-head';
     const label = document.createElement('label');
-    label.textContent = '角色模型';
+    label.textContent = t('角色模型');
     head.appendChild(label);
     row.appendChild(head);
 
     const select = document.createElement('select');
     const optScene = document.createElement('option');
     optScene.value = 'scene';
-    optScene.textContent = '场景角色（程序化胶囊）';
+    optScene.textContent = t('场景角色（程序化胶囊）');
     select.appendChild(optScene);
     for (const bm of BUILTIN_MODELS) {
       const o = document.createElement('option');
@@ -432,7 +433,7 @@ export class Panel {
     const fileRow = document.createElement('div');
     fileRow.className = 'btn-row';
     const btn = document.createElement('button');
-    btn.textContent = '导入 GLB…';
+    btn.textContent = t('导入 GLB…');
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.glb,model/gltf-binary';
@@ -482,7 +483,7 @@ export class Panel {
     details.open = true;
 
     const summary = document.createElement('summary');
-    summary.textContent = '动画 Animation';
+    summary.textContent = t('动画');
     details.appendChild(summary);
 
     const body = document.createElement('div');
@@ -491,7 +492,7 @@ export class Panel {
     const hint = document.createElement('div');
     hint.className = 'hint';
     hint.style.marginBottom = '8px';
-    hint.textContent = '选中带骨骼的模型后可用。无骨骼动画时控件灰显。';
+    hint.textContent = t('选中带骨骼的模型后可用。无骨骼动画时控件灰显。');
     this.animHint = hint;
     body.appendChild(hint);
 
@@ -547,7 +548,7 @@ export class Panel {
     const btnRow = document.createElement('div');
     btnRow.className = 'btn-row';
     const play = document.createElement('button');
-    play.textContent = '▶ 播放';
+    play.textContent = `▶ ${t('播放')}`;
     play.dataset.anim = 'play';
     play.addEventListener('click', () => {
       if (!this.renderer.hasAnimation()) return;
@@ -563,7 +564,7 @@ export class Panel {
     });
     this.animPlayBtn = play;
     const stop = document.createElement('button');
-    stop.textContent = '■ 停止';
+    stop.textContent = `■ ${t('停止')}`;
     stop.addEventListener('click', () => {
       if (!this.renderer.hasAnimation()) return;
       this.renderer.stopAnimation();
@@ -691,7 +692,7 @@ export class Panel {
 
     const empty = document.createElement('div');
     empty.className = 'hint';
-    empty.textContent = '点击场景中的物体（角色 / 敌人 / 道具）进行选择。地面不可选。';
+    empty.textContent = t('点击场景中的物体（角色 / 敌人 / 道具）进行选择。地面不可选。');
     this.selEmpty = empty;
     body.appendChild(empty);
 
@@ -703,7 +704,7 @@ export class Panel {
     const nameRow = document.createElement('div');
     nameRow.className = 'row';
     const nameLabel = document.createElement('label');
-    nameLabel.textContent = '已选对象';
+    nameLabel.textContent = t('已选对象');
     const nameVal = document.createElement('span');
     nameVal.className = 'val';
     nameVal.style.color = 'var(--accent, #FFC531)';
@@ -761,7 +762,7 @@ export class Panel {
     const matHead = document.createElement('div');
     matHead.className = 'row-head';
     const matLabel = document.createElement('label');
-    matLabel.textContent = '整体材质（所有 mesh）';
+    matLabel.textContent = t('整体材质（所有 mesh）');
     matHead.appendChild(matLabel);
     matRow.appendChild(matHead);
     const matSelect = document.createElement('select');
@@ -782,7 +783,7 @@ export class Panel {
     box.appendChild(matRow);
     const matHint = document.createElement('div');
     matHint.className = 'hint';
-    matHint.textContent = '给该物体所有 mesh 换成同一个共享材质，并清空各自的局部覆盖。要单独调某条 mesh，用上面的「Mesh 材质」面板。';
+    matHint.textContent = t('给该物体所有 mesh 换成同一个共享材质，并清空各自的局部覆盖。要单独调某条 mesh，用上面的「Mesh 材质」面板。');
     box.appendChild(matHint);
     this.selMaterial = matSelect;
 
@@ -790,7 +791,7 @@ export class Panel {
     btnRow.className = 'btn-row';
     btnRow.style.marginTop = '8px';
     const weld = document.createElement('button');
-    weld.textContent = 'Merge Points（焊接顶点）';
+    weld.textContent = t('Merge Points（焊接顶点）');
     weld.addEventListener('click', () => {
       if (this.selIndex === null) return;
       this.renderer.weldObject(this.selIndex);
@@ -798,7 +799,7 @@ export class Panel {
       if (info !== null) this.fillSelection(info);
     });
     const deselect = document.createElement('button');
-    deselect.textContent = '取消选择';
+    deselect.textContent = t('取消选择');
     deselect.addEventListener('click', () => {
       this.renderer.selectObject(null);
       this.setSelection(null);
@@ -829,7 +830,7 @@ export class Panel {
     wrap.appendChild(body);
     const empty = document.createElement('div');
     empty.className = 'hint';
-    empty.textContent = '场景里没有对象。';
+    empty.textContent = t('场景里没有对象。');
     empty.style.display = 'none';
     this.hierEmpty = empty;
     wrap.appendChild(empty);
@@ -926,7 +927,7 @@ export class Panel {
     const del = document.createElement('button');
     del.className = 'hier-del';
     del.type = 'button';
-    del.title = '从场景删除';
+    del.title = t('从场景删除');
     del.textContent = '✕';
     del.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1239,7 +1240,7 @@ export class Panel {
     const nameHead = document.createElement('div');
     nameHead.className = 'row-head';
     const nameLabel = document.createElement('label');
-    nameLabel.textContent = '实例名';
+    nameLabel.textContent = t('实例名');
     nameHead.appendChild(nameLabel);
     nameRow.appendChild(nameHead);
     const nameBox = document.createElement('div');
@@ -1248,7 +1249,7 @@ export class Panel {
     nameInput.type = 'text';
     nameInput.className = 'mm-input';
     const renameBtn = document.createElement('button');
-    renameBtn.textContent = '重命名';
+    renameBtn.textContent = t('重命名');
     renameBtn.addEventListener('click', () => {
       if (this.selIndex === null || this.selSub === null) return;
       const info = this.renderer.getSlotMaterial(this.selIndex, this.selSub);
@@ -1414,7 +1415,7 @@ export class Panel {
         this.applyBadge(after.source);
         this.mmBtnSave.disabled = false;
         this.mmBtnDiscard.disabled = false;
-        this.mmNotice.textContent = '已自动创建覆盖：你的改动只作用于这条 mesh，共享材质未被改动。';
+        this.mmNotice.textContent = t('已自动创建覆盖：你的改动只作用于这条 mesh，共享材质未被改动。');
         this.updateSubRowBadges();
       }
       return after?.state ?? null;
@@ -1503,20 +1504,20 @@ export class Panel {
     row.style.marginTop = '12px';
 
     const copy = document.createElement('button');
-    copy.textContent = '复制 JSON';
+    copy.textContent = t('复制 JSON');
     copy.addEventListener('click', () => {
       const text = JSON.stringify(this.exportState(), null, 2);
       if (navigator.clipboard !== undefined) {
         void navigator.clipboard.writeText(text);
       }
-      copy.textContent = '已复制 ✓';
+      copy.textContent = t('已复制 ✓');
       window.setTimeout(() => {
-        copy.textContent = '复制 JSON';
+        copy.textContent = t('复制 JSON');
       }, 1200);
     });
 
     const save = document.createElement('button');
-    save.textContent = '导出 .json';
+    save.textContent = t('导出 .json');
     save.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(this.exportState(), null, 2)], {
         type: 'application/json',
@@ -1535,7 +1536,7 @@ export class Panel {
     });
 
     const reset = document.createElement('button');
-    reset.textContent = '重置';
+    reset.textContent = t('重置');
     reset.addEventListener('click', () => {
       Object.assign(this.params, defaultParams());
       this.syncAll();

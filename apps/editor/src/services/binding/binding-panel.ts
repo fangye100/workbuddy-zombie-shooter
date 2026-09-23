@@ -27,6 +27,7 @@
  *    点 Bind Skin 时拍下、Detach 不清空、再 Bind Skin 才刷新；随时切回即可重绑。
  */
 
+import { t } from '../../i18n';
 import type { GpuContext } from '@aether/gfx';
 import {
   HUMANIK_BONES,
@@ -264,104 +265,104 @@ export class BindingPanel {
 
   private buildDom(): void {
     this.rootEl.innerHTML = `
-      <div class="bd-grip" data-bd="grip" title="拖拽下压面板，露出上方 3D 视图对照"></div>
+      <div class="bd-grip" data-bd="grip" title="${t('拖拽下压面板，露出上方 3D 视图对照')}"></div>
       <div class="bd-head">
-        <span class="bd-title">绑定<em>Binding</em></span>
-        <span class="bd-model" data-bd="stats">未加载模型</span>
+        <span class="bd-title">${t('绑定')}<em>Binding</em></span>
+        <span class="bd-model" data-bd="stats">${t('未加载模型')}</span>
         <div class="bd-head-group" data-group="编辑">
-          <span class="bd-glabel">编辑</span>
-          <button class="bd-btn mode active" data-bd="mode-skel" title="选择并编辑 27 关节（22 骨干 + 5 tip）：拖拽对齐模型解剖位置">选择 Skeleton</button>
-          <button class="bd-btn mode" data-bd="mode-skin" title="选择并编辑蒙皮包裹圆柱体 Skin Wrapper（整段 wrapper = 一根骨，top/medium/bottom 只调三个半径）">选择 Skin Wrapper</button>
-          <span class="bd-toplabel">显示</span>
-          <select class="bd-select" data-bd="sidefilter" title="隐藏 / 仅显某侧关节与 Skin Wrapper（左右都含包裹器）">
-            <option value="all">全部</option>
-            <option value="mid">仅中轴</option>
-            <option value="hideL">隐藏左</option>
-            <option value="hideR">隐藏右</option>
+          <span class="bd-glabel">${t('编辑')}</span>
+          <button class="bd-btn mode active" data-bd="mode-skel" title="${t('选择并编辑 27 关节（22 骨干 + 5 tip）：拖拽对齐模型解剖位置')}">${t('选择 Skeleton')}</button>
+          <button class="bd-btn mode" data-bd="mode-skin" title="${t('选择并编辑蒙皮包裹圆柱体 Skin Wrapper（整段 wrapper = 一根骨，top/medium/bottom 只调三个半径）')}">${t('选择 Skin Wrapper')}</button>
+          <span class="bd-toplabel">${t('显示')}</span>
+          <select class="bd-select" data-bd="sidefilter" title="${t('隐藏 / 仅显某侧关节与 Skin Wrapper（左右都含包裹器）')}">
+            <option value="all">${t('全部')}</option>
+            <option value="mid">${t('仅中轴')}</option>
+            <option value="hideL">${t('隐藏左')}</option>
+            <option value="hideR">${t('隐藏右')}</option>
           </select>
-          <label class="bd-check bd-check-head" title="在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新"><input type="checkbox" data-bd="skin-view3d">包裹器</label>
-          <label class="bd-check bd-check-head" title="权重热力图：选中一根骨（joint 或包裹器）后，网格顶点按该骨的权重着色（蓝=无影响 → 红=全权重），与 Bind Skin 导出的权重同源"><input type="checkbox" data-bd="skin-heat" checked>热力图</label>
+          <label class="bd-check bd-check-head" title="${t('在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新')}"><input type="checkbox" data-bd="skin-view3d">${t('包裹器')}</label>
+          <label class="bd-check bd-check-head" title="${t('权重热力图：选中一根骨（joint 或包裹器）后，网格顶点按该骨的权重着色（蓝=无影响 → 红=全权重），与 Bind Skin 导出的权重同源')}"><input type="checkbox" data-bd="skin-heat" checked>${t('热力图')}</label>
         </div>
         <div class="bd-head-group" data-group="镜像">
-          <span class="bd-glabel">镜像</span>
-          <button class="bd-btn" data-bd="mirror-lr" title="把左侧关节与 Skin Wrapper 半径一并镜像到右侧（x 取反）">镜像 L→R</button>
-          <button class="bd-btn" data-bd="mirror-rl" title="把右侧关节与 Skin Wrapper 半径一并镜像到左侧（x 取反）">镜像 R→L</button>
+          <span class="bd-glabel">${t('镜像')}</span>
+          <button class="bd-btn" data-bd="mirror-lr" title="${t('把左侧关节与 Skin Wrapper 半径一并镜像到右侧（x 取反）')}">${t('镜像 L→R')}</button>
+          <button class="bd-btn" data-bd="mirror-rl" title="${t('把右侧关节与 Skin Wrapper 半径一并镜像到左侧（x 取反）')}">${t('镜像 R→L')}</button>
         </div>
         <div class="bd-head-group" data-group="姿态">
-          <span class="bd-glabel">姿态</span>
-          <button class="bd-btn danger" data-bd="reset" title="回到模板 T-pose 的初始摆放（会清空全部关节编辑，有二次确认）">重置</button>
-          <button class="bd-btn" data-bd="bvh" title="载入一份 BVH 动捕，重定向到当前 T-pose 骨架">载入 BVH…</button>
+          <span class="bd-glabel">${t('姿态')}</span>
+          <button class="bd-btn danger" data-bd="reset" title="${t('回到模板 T-pose 的初始摆放（会清空全部关节编辑，有二次确认）')}">${t('重置')}</button>
+          <button class="bd-btn" data-bd="bvh" title="${t('载入一份 BVH 动捕，重定向到当前 T-pose 骨架')}">${t('载入 BVH…')}</button>
         </div>
         <div class="bd-head-group" data-group="产出">
-          <span class="bd-glabel">产出</span>
-          <span class="bd-toplabel">权重算法</span>
-          <select class="bd-select" data-bd="weightmode" title="Bind Skin 时真正生效的权重算法。包裹体：被 Skin Wrapper 圆柱体包住才归属该骨，边界较硬但可控，配合半径精细调整；距离衰减：按顶点到骨段距离衰减取 top-4，过渡自然、不用调半径，但对侧骨可能抢到少量权重">
-            <option value="wrapper">包裹体 Wrapper</option>
-            <option value="distance">距离衰减</option>
+          <span class="bd-glabel">${t('产出')}</span>
+          <span class="bd-toplabel">${t('权重算法')}</span>
+          <select class="bd-select" data-bd="weightmode" title="${t('Bind Skin 时真正生效的权重算法。包裹体：被 Skin Wrapper 圆柱体包住才归属该骨，边界较硬但可控，配合半径精细调整；距离衰减：按顶点到骨段距离衰减取 top-4，过渡自然、不用调半径，但对侧骨可能抢到少量权重')}">
+            <option value="wrapper">${t('包裹体 Wrapper')}</option>
+            <option value="distance">${t('距离衰减')}</option>
           </select>
-          <button class="bd-btn accent" data-bd="apply" title="用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose">Bind Skin</button>
-          <button class="bd-btn" data-bd="export-anim" title="把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB（需要先载入 BVH）" disabled>导出动画 GLB</button>
-          <button class="bd-btn danger" data-bd="detach" title="移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑（有二次确认）">Detach Skin</button>
+          <button class="bd-btn accent" data-bd="apply" title="${t('用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose')}">Bind Skin</button>
+          <button class="bd-btn" data-bd="export-anim" title="${t('把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB（需要先载入 BVH）')}" disabled>${t('导出动画 GLB')}</button>
+          <button class="bd-btn danger" data-bd="detach" title="${t('移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑（有二次确认）')}">Detach Skin</button>
         </div>
         <div class="bd-head-group bd-head-actions" data-group="保存">
-          <span class="bd-glabel">保存</span>
-          <button class="bd-btn save" data-bd="save" title="把当前骨架摆位与 Skin Wrapper 半径存回 <mesh>.meta.json（仅资产库入口有路径时可用）">保存绑定</button>
+          <span class="bd-glabel">${t('保存')}</span>
+          <button class="bd-btn save" data-bd="save" title="${t('把当前骨架摆位与 Skin Wrapper 半径存回 <mesh>.meta.json（仅资产库入口有路径时可用）')}">${t('保存绑定')}</button>
           <span class="bd-savestatus" data-bd="save-status"></span>
           <span class="bd-badge" data-bd="export-badge" hidden></span>
-          <button class="bd-btn bd-icon" data-bd="help" title="展开 / 收起操作说明" aria-expanded="false">?</button>
-          <button class="bd-btn bd-icon" data-bd="close" title="关闭绑定面板">✕</button>
+          <button class="bd-btn bd-icon" data-bd="help" title="${t('展开 / 收起操作说明')}" aria-expanded="false">?</button>
+          <button class="bd-btn bd-icon" data-bd="close" title="${t('关闭绑定面板')}">✕</button>
         </div>
       </div>
       <div class="bd-body">
         <div class="bd-view">
-          <div class="bd-vlabel">正视 Front · (x, y)</div>
+          <div class="bd-vlabel">${t('正视 Front · (x, y)')}</div>
           <div class="bd-stage" data-bd="stage-front">
             <canvas class="bd-gl" data-bd="front-gl"></canvas>
             <canvas class="bd-canvas" data-bd="front" tabindex="0"></canvas>
           </div>
         </div>
         <div class="bd-view">
-          <div class="bd-vlabel">侧视 Side · (z, y)</div>
+          <div class="bd-vlabel">${t('侧视 Side · (z, y)')}</div>
           <div class="bd-stage" data-bd="stage-side">
             <canvas class="bd-gl" data-bd="side-gl"></canvas>
             <canvas class="bd-canvas" data-bd="side" tabindex="0"></canvas>
           </div>
         </div>
         <div class="bd-side">
-          <div class="bd-info" data-bd="info">选中一个 joint 查看骨长与姿态偏移</div>
-          <div class="bd-anim" data-bd="anim">未载入动画</div>
+          <div class="bd-info" data-bd="info">${t('选中一个 joint 查看骨长与姿态偏移')}</div>
+          <div class="bd-anim" data-bd="anim">${t('未载入动画')}</div>
           <div class="bd-field">
-            <label>姿态预览</label>
+            <label>${t('姿态预览')}</label>
             <div class="bd-pov" data-bd="pov">
-              <button data-bd="pov-current" class="active" title="当前编辑姿态（可拖拽）">当前</button>
-              <button data-bd="pov-t" title="把网格重姿态为标准 T-pose 并叠加参考骨架">T</button>
-              <button data-bd="pov-a" title="把网格重姿态为标准 A-pose 并叠加参考骨架">A</button>
-              <button data-bd="pov-bind" title="回到冻结的 Bind Pose（带 offset 的绑定姿态，可随时重绑）" disabled>Bind</button>
-              <button data-bd="pov-pose" title="姿势变形测试：拖 joint 摆出任意姿势，网格按当前权重实时蒙皮变形（改的是测试骨架快照，编辑骨架不动；切走即丢弃）">姿势</button>
+              <button data-bd="pov-current" class="active" title="${t('当前编辑姿态（可拖拽）')}">${t('当前')}</button>
+              <button data-bd="pov-t" title="${t('把网格重姿态为标准 T-pose 并叠加参考骨架')}">T</button>
+              <button data-bd="pov-a" title="${t('把网格重姿态为标准 A-pose 并叠加参考骨架')}">A</button>
+              <button data-bd="pov-bind" title="${t('回到冻结的 Bind Pose（带 offset 的绑定姿态，可随时重绑）')}" disabled>Bind</button>
+              <button data-bd="pov-pose" title="${t('姿势变形测试：拖 joint 摆出任意姿势，网格按当前权重实时蒙皮变形（改的是测试骨架快照，编辑骨架不动；切走即丢弃）')}">${t('姿势')}</button>
             </div>
           </div>
           <label class="bd-check"><input type="checkbox" data-bd="smooth" checked> 优化皮肤权重（apply 时平滑）</label>
           <div class="bd-field bd-smooth-params">
-            <label title="热扩散松弛参数（旧评审 §2.4：默认 2 次只能扩散 ~2 环顶点，15k 面角色关节处仍有折角）">平滑迭代 / 强度 λ</label>
+            <label title="${t('热扩散松弛参数（旧评审 §2.4：默认 2 次只能扩散 ~2 环顶点，15k 面角色关节处仍有折角）')}">${t('平滑迭代 / 强度 λ')}</label>
             <div class="bd-rctl">
               <input type="number" class="bd-num" data-bd="smooth-iters" min="1" max="12" step="1"
-                title="平滑迭代次数（1..12，默认 4）。越大晕得越开，apply 时耗时线性增长">
+                title="${t('平滑迭代次数（1..12，默认 4）。越大晕得越开，apply 时耗时线性增长')}">
               <input type="number" class="bd-num" data-bd="smooth-lambda" min="0" max="1" step="0.05"
-                title="扩散强度 λ（0..1，默认 0.5）。每轮迭代向邻居均值靠近的比例，越大越糊">
+                title="${t('扩散强度 λ（0..1，默认 0.5）。每轮迭代向邻居均值靠近的比例，越大越糊')}">
             </div>
           </div>
           <div class="bd-diag" data-bd="diag" hidden></div>
           <div class="bd-legend">
-            <div class="bd-legend-row"><i class="bd-dot bd-dot-mid"></i>中轴骨</div>
-            <div class="bd-legend-row"><i class="bd-dot bd-dot-left"></i>左侧 L</div>
-            <div class="bd-legend-row"><i class="bd-dot bd-dot-right"></i>右侧 R</div>
+            <div class="bd-legend-row"><i class="bd-dot bd-dot-mid"></i>${t('中轴骨')}</div>
+            <div class="bd-legend-row"><i class="bd-dot bd-dot-left"></i>${t('左侧 L')}</div>
+            <div class="bd-legend-row"><i class="bd-dot bd-dot-right"></i>${t('右侧 R')}</div>
           </div>
           <div class="bd-tip" data-bd="tip" hidden>
             拖拽 joint 对齐模型解剖位置。<br>
             正视改 <b>x/y</b>，侧视改 <b>z/y</b>。<br>
-            <b>Shift 拖拽</b>锁定横/纵主轴；<b>方向键</b>微调（Shift 5mm）。<br>
-            <b>骨长</b>会被采纳进 T-pose；<br>
-            <b>方向偏移</b>只是当前姿态与 T-pose 的差，<br>
+            <b>${t('Shift 拖拽')}</b>${t('锁定横/纵主轴；')}<b>${t('方向键')}</b>${t('微调（Shift 5mm）。')}<br>
+            <b>${t('骨长')}</b>${t('会被采纳进 T-pose；')}<br>
+            <b>${t('方向偏移')}</b>${t('只是当前姿态与 T-pose 的差，')}<br>
             不会进骨架。<br>
             <b>Bind Skin</b> 绑定并冻结此姿态为 <b>Bind Pose</b>；<br>
             <b>Detach Skin</b> 移除结果但保留 Bind Pose；<br>
@@ -370,7 +371,7 @@ export class BindingPanel {
             <div class="bd-js" data-bd="js-section">
               <div class="bd-js-title">Joint Skeleton</div>
               <div class="bd-skin" data-bd="skin-panel" hidden>
-                <div class="bd-sel" data-bd="skin-sel">未选中圆柱体 · 在视图中点选一段</div>
+                <div class="bd-sel" data-bd="skin-sel">${t('未选中圆柱体 · 在视图中点选一段')}</div>
                 <div class="bd-field" data-bd="skin-sliders" hidden>
                   <label>Top 半径 <span data-bd="r-top-v"></span> m</label>
                   <div class="bd-rctl">
@@ -387,10 +388,10 @@ export class BindingPanel {
                     <input type="range" min="0.005" max="0.6" step="0.005" data-bd="r-bottom">
                     <input type="number" class="bd-num" min="0.005" max="0.6" step="0.005" data-bd="r-bottom-n">
                   </div>
-                  <div class="bd-tip bd-tip-inline">滑块与数字框双向同步；方向键微调，<b>Shift + 方向键</b> 10× 步进。</div>
+                  <div class="bd-tip bd-tip-inline">${t('滑块与数字框双向同步；方向键微调，')}<b>${t('Shift + 方向键')}</b> 10× 步进。</div>
                 </div>
                 <div class="bd-field bd-offset" data-bd="skin-offset" hidden>
-                  <label>偏移 Offset（沿骨局部轴，米）</label>
+                  <label>${t('偏移 Offset（沿骨局部轴，米）')}</label>
                   <label>轴向 X <span data-bd="o-x-v"></span></label>
                   <input type="number" step="0.005" data-bd="o-x">
                   <label>侧向 Y <span data-bd="o-y-v"></span></label>
@@ -398,19 +399,19 @@ export class BindingPanel {
                   <label>前后 Z <span data-bd="o-z-v"></span></label>
                   <input type="number" step="0.005" data-bd="o-z">
                   <div class="bd-skin-actions">
-                    <button class="bd-btn" data-bd="offset-reset" title="偏移归零：包裹器回到骨段原位">偏移归零</button>
+                    <button class="bd-btn" data-bd="offset-reset" title="${t('偏移归零：包裹器回到骨段原位')}">${t('偏移归零')}</button>
                   </div>
-                  <div class="bd-tip">在视图里点中包裹器后：拖<b>核心</b>或按住 <b>Shift</b> 沿骨轴拖动 = 移动；拖<b>边缘</b> = 改半径。</div>
+                  <div class="bd-tip">${t('在视图里点中包裹器后：拖')}<b>${t('核心')}</b>或按住 <b>Shift</b> 沿骨轴拖动 = 移动；拖<b>${t('边缘')}</b> = 改半径。</div>
                 </div>
                 <div class="bd-skin-actions">
-                  <button class="bd-btn" data-bd="cyl-mirror" disabled>镜像此圆柱 → 对侧</button>
-                  <button class="bd-btn" data-bd="skin-mirror-all">镜像全部 L→R</button>
+                  <button class="bd-btn" data-bd="cyl-mirror" disabled>${t('镜像此圆柱 → 对侧')}</button>
+                  <button class="bd-btn" data-bd="skin-mirror-all">${t('镜像全部 L→R')}</button>
                 </div>
                 <div class="bd-skin-actions">
                   <button class="bd-btn" data-bd="cyl-autofit"
-                    title="把未手动改过的骨半径重算为「骨长 ×0.35」；手动调过的骨不碰">自动适配半径</button>
+                    title="${t('把未手动改过的骨半径重算为「骨长 ×0.35」；手动调过的骨不碰')}">${t('自动适配半径')}</button>
                   <button class="bd-btn" data-bd="cyl-unpin"
-                    title="取消当前骨的手动标记，交还给自动适配">重置此骨为自动</button>
+                    title="${t('取消当前骨的手动标记，交还给自动适配')}">${t('重置此骨为自动')}</button>
                 </div>
                 <label class="bd-check"><input type="checkbox" data-bd="skin-mirror-w"> 导出时镜像皮肤权重 L→R</label>
               </div>
@@ -670,7 +671,7 @@ export class BindingPanel {
    */
   setAnimationInfo(html: string | null): void {
     if (html === null) {
-      this.animEl.innerHTML = '<span class="bd-dim">未载入动画</span>';
+      this.animEl.innerHTML = `<span class="bd-dim">${t('未载入动画')}</span>`;
       this.exportAnimBtn.disabled = true;
       return;
     }
@@ -1466,11 +1467,11 @@ export class BindingPanel {
     const mirBtn = this.rootEl.querySelector<HTMLButtonElement>('[data-bd="cyl-mirror"]')!;
     const cylinders = this.session.getCylinders();
     if (this.selectedCyl === null || cylinders === null) {
-      sel.textContent = '未选中圆柱体 · 在视图中点选一段';
+      sel.textContent = t('未选中圆柱体 · 在视图中点选一段');
       sliders.hidden = true;
       offBox.hidden = true;
       mirBtn.disabled = true;
-      mirBtn.title = '先在正/侧视图里点选一段包裹器，才能镜像到对侧';
+      mirBtn.title = t('先在正/侧视图里点选一段包裹器，才能镜像到对侧');
       return;
     }
     const cyl = cylinders[this.selectedCyl]!;
@@ -1740,7 +1741,7 @@ export class BindingPanel {
       : '未加载模型';
 
     if (this.selected === null) {
-      this.infoEl.innerHTML = `<div class="bd-dim">选中一个 joint 查看骨长与姿态偏移</div>`;
+      this.infoEl.innerHTML = `<div class="bd-dim">${t('选中一个 joint 查看骨长与姿态偏移')}</div>`;
       return;
     }
     const name = this.selected;
@@ -1752,10 +1753,10 @@ export class BindingPanel {
     const mir = mirrorOf(name);
     this.infoEl.innerHTML = `
       <div class="bd-sel">${name}${mir !== null ? ` <span class="bd-mir">↔ ${mir}</span>` : ''}</div>
-      <div class="bd-row"><span>父骨</span><b>${parent ?? '（根）'}</b></div>
-      <div class="bd-row"><span>位置 local</span><b>${p[0].toFixed(3)}, ${p[1].toFixed(3)}, ${p[2].toFixed(3)}</b></div>
-      <div class="bd-row"><span>骨长 <i>采纳</i></span><b class="bd-ok">${L.toFixed(3)} m</b></div>
-      <div class="bd-row"><span>姿态偏移 <i>不入骨架</i></span><b class="bd-warn">${ang.toFixed(1)}°</b></div>`;
+      <div class="bd-row"><span>${t('父骨')}</span><b>${parent ?? '（根）'}</b></div>
+      <div class="bd-row"><span>${t('位置 local')}</span><b>${p[0].toFixed(3)}, ${p[1].toFixed(3)}, ${p[2].toFixed(3)}</b></div>
+      <div class="bd-row"><span>骨长 <i>${t('采纳')}</i></span><b class="bd-ok">${L.toFixed(3)} m</b></div>
+      <div class="bd-row"><span>姿态偏移 <i>${t('不入骨架')}</i></span><b class="bd-warn">${ang.toFixed(1)}°</b></div>`;
   }
 
   private drawView(

@@ -389,10 +389,12 @@ async function main() {
     // 资产库 dock 高度（zh.ui.dockH，实测残留过 702px）带回本次 —— 底部 dock
     // 吃掉整个布局，画布被挤到几十像素高，gizmo 扫描 / pointerRay / 视口拖拽
     // 一整串断言全部假 FAIL（2026-09-23 踩过：canvas 622×1）。
-    // 冒烟必须从确定性的默认 UI 状态出发：清掉挤压画布的持久化项再刷新。
+    // 冒烟必须从确定性的默认 UI 状态出发：清掉挤压画布的持久化项再刷新；
+    // 同时锁定 zh——本文件全部标签断言按中文源文案写，N 段才切 en 验证多语言。
     await cdp.eval(`(() => {
       localStorage.removeItem('zh.ui.dockH');
       localStorage.removeItem('zh.assets.collapsed');
+      localStorage.setItem('zh.ui.lang', 'zh');
       location.reload();
     })()`);
     await sleep(4000);
@@ -1048,11 +1050,11 @@ async function main() {
       })()`);
       check('右键后菜单打开且条目被选中', menuRes.open === true && menuRes.sel === true);
       check('菜单恰好一条分隔线', menuRes.seps === 1, `seps=${menuRes.seps}`);
-      check('分隔线后依次是四个通用文件动作', menuRes.items.length === 7
-        && menuRes.items[3] === '复制相对路径 Copy Relative Path'
-        && menuRes.items[4] === '复制绝对路径 Copy Absolute Path'
-        && menuRes.items[5] === '重命名 Rename…'
-        && menuRes.items[6] === '在资源管理器中显示 Reveal in Explorer', JSON.stringify(menuRes.items));
+      check('分隔线后依次是四个通用文件动作（zh 源文案）', menuRes.items.length === 7
+        && menuRes.items[3] === '复制相对路径'
+        && menuRes.items[4] === '复制绝对路径'
+        && menuRes.items[5] === '重命名…'
+        && menuRes.items[6] === '在资源管理器中显示', JSON.stringify(menuRes.items));
 
       // 复制相对路径：菜单动作端到端（HUD 反馈 + 剪贴板尽力核对——无头环境剪贴板
       // 权限不一定给，剪贴板对不上不算 FAIL，但 HUD 必须有明确反馈）。
@@ -2667,6 +2669,44 @@ async function main() {
     const shotPath = path.join(OUT_DIR, 'editor-smoke.png');
     fs.writeFileSync(shotPath, Buffer.from(shot.data, 'base64'));
     console.log(`\n截图：${shotPath}`);
+
+    // ---- N. 多语言切换（i18n：zh 源文案 + en 词典 + 持久化刷新）----
+    // 前面所有断言都在 zh 下跑（boot 时显式锁定）；这里点**真按钮**切 en 验证
+    // 用户路径（持久化 + 整页刷新 + 词典生效），再点回 zh 收尾。
+    console.log('\nN. 多语言切换（zh ↔ en）');
+    {
+      const clicked = await cdp.eval(`(() => {
+        const btn = document.querySelector('[data-lang-toggle]');
+        if (btn === null) return false;
+        btn.click();
+        return true;
+      })()`);
+      check('语言切换按钮 [data-lang-toggle] 存在且可点', clicked === true);
+      await sleep(6000);
+      const enState = await cdp.eval(`(() => {
+        const title = document.querySelector('#asset-dock .asset-title');
+        const up = document.querySelector('#asset-dock .asset-up');
+        const filter = document.querySelector('#asset-dock .asset-filter');
+        return {
+          lang: localStorage.getItem('zh.ui.lang'),
+          title: title ? title.textContent.trim() : null,
+          upTitle: up ? up.title : null,
+          filterPh: filter ? filter.placeholder : null,
+        };
+      })()`);
+      check('点击后持久化 lang=en', enState.lang === 'en');
+      check('en 模式资产库标题 = Asset Library', enState.title === 'Asset Library', JSON.stringify(enState.title));
+      check('en 模式「上一层」tooltip = Up One Level', enState.upTitle === 'Up One Level', JSON.stringify(enState.upTitle));
+      check('en 模式筛选占位符已翻译', typeof enState.filterPh === 'string' && /filter/i.test(enState.filterPh), JSON.stringify(enState.filterPh));
+      // 点回 zh 收尾：不把 profile 留在英文态污染下一轮
+      await cdp.eval(`(() => { document.querySelector('[data-lang-toggle]').click(); return true; })()`);
+      await sleep(5000);
+      const backZh = await cdp.eval(`(() => ({
+        lang: localStorage.getItem('zh.ui.lang'),
+        title: (document.querySelector('#asset-dock .asset-title') || {}).textContent,
+      }))()`);
+      check('切回 zh 后标题恢复中文', backZh.lang === 'zh' && /资产库/.test(backZh.title ?? ''), JSON.stringify(backZh));
+    }
 
     // ---- 汇总 ----
     const passed = results.filter((r) => r.ok).length;

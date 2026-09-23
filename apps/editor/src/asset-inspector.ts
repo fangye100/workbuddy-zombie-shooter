@@ -22,6 +22,7 @@ import {
   listDir,
   type AssetSelection,
 } from './asset-util';
+import { t } from './i18n';
 import { parseGlb } from '@aether/scene';
 import { resolveModelHeightM } from './models';
 
@@ -48,7 +49,7 @@ export class AssetInspector {
   clear(): void {
     this.token++;
     this.rootEl.innerHTML = `
-      <div class="ai-head"><span class="ai-title">资产<em>属性</em></span></div>
+      <div class="ai-head"><span class="ai-title">${t('资产')}<em>${t('属性')}</em></span></div>
       <div class="ai-empty">在资产库中选中一个文件或文件夹<br>这里会显示它的静态资源属性</div>`;
   }
 
@@ -58,16 +59,16 @@ export class AssetInspector {
     const kind = kindOf(entry);
 
     this.rootEl.innerHTML = `
-      <div class="ai-head"><span class="ai-title">资产<em>属性</em></span></div>
+      <div class="ai-head"><span class="ai-title">${t('资产')}<em>${t('属性')}</em></span></div>
       <div class="ai-hero akind-${kind}">
         <span class="ai-ico">${iconSvg(kind)}</span>
         <span class="ai-name" title="${entry.name}">${entry.name}</span>
       </div>
       <div class="ai-rows">
-        <div class="ai-row"><span>类型</span><b>${KIND_LABEL[kind]}${entry.ext !== '' ? `（${entry.ext}）` : ''}</b></div>
-        ${entry.kind === 'file' ? `<div class="ai-row"><span>大小</span><b>${fmtSize(entry.size)}</b></div>` : ''}
-        ${entry.mtime > 0 ? `<div class="ai-row"><span>修改时间</span><b>${fmtTime(entry.mtime)}</b></div>` : ''}
-        <div class="ai-row ai-path"><span>路径</span><b title="${path === '' ? '(项目根)' : path}">${path === '' ? '(项目根)' : path}</b></div>
+        <div class="ai-row"><span>${t('类型')}</span><b>${t(KIND_LABEL[kind])}${entry.ext !== '' ? `（${entry.ext}）` : ''}</b></div>
+        ${entry.kind === 'file' ? `<div class="ai-row"><span>${t('大小')}</span><b>${fmtSize(entry.size)}</b></div>` : ''}
+        ${entry.mtime > 0 ? `<div class="ai-row"><span>${t('修改时间')}</span><b>${fmtTime(entry.mtime)}</b></div>` : ''}
+        <div class="ai-row ai-path"><span>${t('路径')}</span><b title="${path === '' ? t('(项目根)') : path}">${path === '' ? t('(项目根)') : path}</b></div>
       </div>
       <div class="ai-extra" data-ai="extra"></div>`;
 
@@ -79,7 +80,7 @@ export class AssetInspector {
         .then((kids) => {
           if (!alive()) return;
           const dirs = kids.filter((k) => k.kind === 'dir').length;
-          extra.innerHTML = `<div class="ai-row"><span>包含</span><b>${dirs} 个文件夹 / ${kids.length - dirs} 个文件</b></div>`;
+          extra.innerHTML = `<div class="ai-row"><span>${t('包含')}</span><b>${dirs} ${t('个文件夹')} / ${kids.length - dirs} ${t('个文件')}</b></div>`;
         })
         .catch(() => undefined);
       return;
@@ -95,7 +96,7 @@ export class AssetInspector {
         if (!alive()) return;
         const dim = document.createElement('div');
         dim.className = 'ai-row';
-        dim.innerHTML = `<span>尺寸</span><b>${img.naturalWidth} × ${img.naturalHeight} px</b>`;
+        dim.innerHTML = `<span>${t('尺寸')}</span><b>${img.naturalWidth} × ${img.naturalHeight} px</b>`;
         extra.appendChild(dim);
       });
       box.appendChild(img);
@@ -106,12 +107,12 @@ export class AssetInspector {
     if (entry.ext === '.glb') {
       const btn = document.createElement('button');
       btn.className = 'ai-spawn accent';
-      btn.textContent = '载入场景 Spawn';
+      btn.textContent = t('载入场景');
       btn.addEventListener('click', () => this.hooks.onSpawn(path));
       extra.appendChild(btn);
       const stat = document.createElement('div');
       stat.className = 'ai-dim';
-      stat.textContent = '解析模型中…';
+      stat.textContent = t('解析模型中…');
       extra.appendChild(stat);
       void fetch(fileUrl(path))
         .then(async (resp) => {
@@ -141,7 +142,7 @@ export class AssetInspector {
         })
         .catch((err) => {
           if (!alive()) return;
-          stat.textContent = `解析失败：${String(err)}`;
+          stat.textContent = `${t('解析失败')}：${String(err)}`;
         });
       return;
     }
@@ -164,7 +165,7 @@ export class AssetInspector {
     }
 
     if (['.gltf', '.obj', '.fbx', '.ply', '.stl', '.dae', '.usdz'].includes(entry.ext)) {
-      extra.innerHTML = `<div class="ai-dim">编辑器当前只支持 .glb 拖入场景；该格式请先转换</div>`;
+      extra.innerHTML = `<div class="ai-dim">${t('编辑器当前只支持 .glb 拖入场景；该格式请先转换')}</div>`;
     }
   }
 

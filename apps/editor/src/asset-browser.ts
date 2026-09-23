@@ -29,6 +29,7 @@ import {
   type FsEntry,
 } from './asset-util';
 import { makeSplitter, readCssVarPx, restoreCssVar } from './splitter';
+import { t } from './i18n';
 
 export interface AssetBrowserHooks {
   /** 选中变化（文件或文件夹；null = 无选中） */
@@ -103,14 +104,14 @@ export class AssetBrowser {
     this.dock.innerHTML = `
       <div class="asset-grip" data-asset="grip" title="拖拽调整资产库高度"></div>
       <div class="asset-head">
-        <span class="asset-title">资产库 <em>Asset Library</em></span>
-        <button class="asset-up" data-asset="up" title="返回上一层 Up One Level">↑</button>
+        <span class="asset-title">${t('资产库')}</span>
+        <button class="asset-up" data-asset="up" title="${t('返回上一层')}">↑</button>
         <span class="asset-crumb" data-asset="crumb"></span>
-        <input class="asset-filter" data-asset="filter" type="search" placeholder="筛选当前目录…">
-        <span class="asset-zoom-label">列表</span>
+        <input class="asset-filter" data-asset="filter" type="search" placeholder="${t('筛选当前目录…')}">
+        <span class="asset-zoom-label">${t('列表')}</span>
         <input class="asset-zoom" data-asset="zoom" type="range" min="0" max="100" step="1" title="视图缩放：列表 ↔ 大图标">
-        <span class="asset-zoom-label">图标</span>
-        <button class="asset-collapse" data-asset="collapse" title="收起 / 展开资产库">▾</button>
+        <span class="asset-zoom-label">${t('图标')}</span>
+        <button class="asset-collapse" data-asset="collapse" title="${t('收起 / 展开资产库')}">▾</button>
       </div>
       <div class="asset-body" data-asset="body">
         <div class="asset-tree" data-asset="tree"></div>
@@ -319,7 +320,7 @@ export class AssetBrowser {
       try {
         this.entries = await listDir(path);
       } catch (err) {
-        this.contentEl.innerHTML = `<div class="asset-empty">目录读取失败：${String(err)}</div>`;
+        this.contentEl.innerHTML = `<div class="asset-empty">${t('目录读取失败')}：${String(err)}</div>`;
         return;
       }
       this.renderCrumb();
@@ -346,7 +347,7 @@ export class AssetBrowser {
 
   private renderCrumb(): void {
     const segs = this.currentDir === '' ? [] : this.currentDir.split('/');
-    const parts: string[] = [`<span class="asset-cseg" data-path="">项目根</span>`];
+    const parts: string[] = [`<span class="asset-cseg" data-path="">${t('项目根')}</span>`];
     let cur = '';
     for (const s of segs) {
       cur = cur === '' ? s : `${cur}/${s}`;
@@ -391,7 +392,7 @@ export class AssetBrowser {
 
     this.contentEl.innerHTML = '';
     if (items.length === 0) {
-      const msg = this.entries.length === 0 ? '空目录' : '没有匹配筛选项';
+      const msg = this.entries.length === 0 ? t('空目录') : t('没有匹配筛选项');
       this.contentEl.innerHTML = `<div class="asset-empty">${msg}</div>`;
       return;
     }
@@ -399,7 +400,7 @@ export class AssetBrowser {
     if (isList) {
       const head = document.createElement('div');
       head.className = 'asset-row asset-lhead';
-      head.innerHTML = `<span class="asset-rname">名称</span><span class="asset-rsize">大小</span><span class="asset-rtime">修改时间</span>`;
+      head.innerHTML = `<span class="asset-rname">${t('名称')}</span><span class="asset-rsize">${t('大小')}</span><span class="asset-rtime">${t('修改时间')}</span>`;
       this.contentEl.appendChild(head);
     }
 
@@ -516,7 +517,7 @@ export class AssetBrowser {
     input.className = 'asset-rename';
     input.type = 'text';
     input.value = name;
-    input.title = 'Enter 提交 · Esc 取消';
+    input.title = t('Enter 提交 · Esc 取消');
     let done = false;
     const finish = (commit: boolean): void => {
       if (done) return;
