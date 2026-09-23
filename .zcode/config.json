@@ -2,7 +2,8 @@
   "mcp": {
     "servers": {
       "aether-binding": {
-        "command": "node",
+        "type": "stdio",
+        "command": "C:/Program Files/nodejs/node.exe",
         "args": [
           "C:/Users/fangy/WorkBuddy/game-design-zombie/tools/mcp-binding/server.mjs"
         ]
