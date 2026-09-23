@@ -433,6 +433,25 @@ async function main() {
     // h>200 是硬门槛：窗口几何残留把画布压扁（622×1）时，后面所有视口断言都会假失败
     check('canvas 尺寸有效（高度立得住，>200px）', canvas !== null && canvas.w > 0 && canvas.h > 200, JSON.stringify(canvas));
 
+    // 布局自适应回归（用户报告：窗口缩放后 3D 视图不自适应）：根因是持久化的
+    // zh.ui.dockH 在窗口缩小后超出窗口高度，把中心列挤到 1px。注入超大残留值
+    // → 重载 → 必须被启动钳制收敛，画布高度立得住。
+    const staleDock = await cdp.eval(`(async () => {
+      localStorage.setItem('zh.ui.dockH', '5000');
+      location.reload();
+      return true;
+    })()`);
+    await sleep(6000);
+    const clamped = await cdp.eval(
+      `(() => { const c = document.getElementById('gpu'); const v = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(), 10) || 0; return { w: c.width, h: c.height, dockH: v, vh: window.innerHeight }; })()`,
+    );
+    check('陈旧超大 dockH 被启动钳制（dock 高 ≤ 窗口-160）', clamped.dockH > 0 && clamped.dockH <= clamped.vh - 160 + 2, `dockH=${clamped.dockH} vh=${clamped.vh}`);
+    check('钳制后画布高度立得住（>100px，中心列未被挤死）', clamped.h > 100, JSON.stringify(clamped));
+
+    // 收尾还原：清掉注入的残留（按窗口高度钳出的 545px 对后续绑定段太高），回默认档
+    await cdp.eval(`(() => { localStorage.removeItem('zh.ui.dockH'); location.reload(); return true; })()`);
+    await sleep(6000);
+
     const gpuName = await cdp.eval(`(document.getElementById('hud')||{}).innerText||''`);
     check('HUD 拿到 GPU adapter 名', /GPU/.test(gpuName) && !/GPU\s*\?/.test(gpuName), (gpuName.match(/GPU.*/) || [''])[0].slice(0, 80));
 

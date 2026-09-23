@@ -44,7 +44,7 @@ import {
   revealInFileManager,
   type AssetSelection,
 } from './asset-util';
-import { makeSplitter, restoreCssVar } from './splitter';
+import { makeSplitter, restoreCssVar, readCssVarPx } from './splitter';
 import { t, setLang, getLang, applyStaticI18n } from './i18n';
 import { createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
@@ -2869,7 +2869,25 @@ async function boot(): Promise<void> {
     ]);
   };
 
+  /**
+   * 资产 dock 高度钳制（2026-09-23 布局自适应用户报告）：--dock-h 会持久化，
+   * 窗口缩小后旧值可能超出窗口高度，把中心列（画布 + 绑定/重定向浮层）挤到 1px。
+   * 拖拽时的 max 只在拖动瞬间求值，救不了「先拖大再缩窗」——启动与每次窗口
+   * resize 都重新钳制并回写持久化值。
+   */
+  function clampDockHeight(): void {
+    const cur = readCssVarPx('--dock-h', 260);
+    const max = Math.max(320, window.innerHeight - 160);
+    if (cur <= max) return;
+    document.documentElement.style.setProperty('--dock-h', `${max}px`);
+    try {
+      localStorage.setItem('zh.ui.dockH', String(max));
+    } catch {
+      /* 持久化失败不影响本轮布局 */
+    }
+  }
   window.addEventListener('resize', () => {
+    clampDockHeight();
     binding?.resize();
     retargetWorkbench?.resize();
   });
@@ -3256,6 +3274,10 @@ async function boot(): Promise<void> {
         ]);
       },
     });
+
+    // 钳制要在 AssetBrowser 构造**之后**：restoreCssVar 在 buildDom 里恢复持久化的
+    // --dock-h（可能是上一轮窗口更大时的残留超大值），先钳后恢复等于没钳
+    clampDockHeight();
 
     // 画布接收资产拖放：落点 = 视线与地面 y=0 的交点（落不出地面就退回原点）
     canvas.addEventListener('dragover', (e) => {
