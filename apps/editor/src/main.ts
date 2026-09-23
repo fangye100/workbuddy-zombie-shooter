@@ -2816,7 +2816,7 @@ async function boot(): Promise<void> {
       if (opts?.importSkeleton === true) {
         if (model.skeleton === null) {
           panel.setModelInfo(
-            `导入文件骨架失败：${stemName(relPath)} 不含蒙皮骨架（纯网格）· 请用普通「进入绑定」`,
+            `导入文件骨架失败：${stemName(relPath)} 不含蒙皮骨架（纯网格）· 请改用「进入绑定 · 纯网格」`,
           );
           return;
         }
@@ -3193,14 +3193,14 @@ async function boot(): Promise<void> {
         const isGlb = entry.kind === 'file' && entry.ext.toLowerCase() === '.glb';
         openCtxMenu(x, y, [
           {
-            label: isGlb ? '进入绑定 Binding…' : '进入绑定 Binding…（仅 .glb）',
+            label: isGlb ? '进入绑定 · 纯网格（继续上次编辑）…' : '进入绑定 · 纯网格（仅 .glb）',
             disabled: !isGlb,
             run: () => void bindAssetAt(path),
           },
           {
             // rigged GLB 桥：把文件内嵌 skin 的骨架摆位灌进会话再加工；
             // 纯网格点这个会在打开前收到明确报错（不静默退化成模板模式）
-            label: isGlb ? '进入绑定 Binding…（导入文件骨架）' : '进入绑定 · 导入文件骨架（仅 .glb）',
+            label: isGlb ? '进入绑定 · 已有骨骼（导入文件骨架）…' : '进入绑定 · 已有骨骼（仅 .glb）',
             disabled: !isGlb,
             run: () => void bindAssetAt(path, { importSkeleton: true }),
           },
