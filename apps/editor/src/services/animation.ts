@@ -24,12 +24,13 @@ import {
 export class AnimationService {
   constructor(private readonly host: LabRenderer) {}
 
-  /** 当前可播动画的物体：选中且带骨 → 全场唯一带骨 → null（必须显式选中） */
+  /** 当前可播动画的物体：选中且带骨 → （仅当什么都没选时）全场唯一带骨 → null。
+   * 选中了无骨物体时**不**回退：控制面不能指向用户没选的东西（Copilot 评审） */
   private activeSkinObject(): SceneObject | null {
     const s = this.host.state;
     if (s.selectedIndex !== null) {
       const o = s.objects[s.selectedIndex];
-      if (o !== undefined && o.skinState !== null) return o;
+      return o !== undefined && o.skinState !== null ? o : null;
     }
     const skinned = s.objects.filter((o) => o.skinState !== null);
     return skinned.length === 1 ? skinned[0]! : null;

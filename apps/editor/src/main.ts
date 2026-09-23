@@ -341,14 +341,20 @@ async function boot(): Promise<void> {
       refreshSpawnPanel();
       return;
     }
-    spawnSelActive = true;
     selectedSpawnNode = node.nodeId;
     renderer.selectObject(null); // 物体选中与功能体选中互斥
-    panel.setSelection(null); // 内部会清功能体高亮，下面马上设回
+    panel.setSelection(null); // 会触发 onFunctionalDeselect 清 flag，随后再立起
+    spawnSelActive = true;
     panel.setFunctionalSelection(node.nodeId);
     switchInspectorTab('inspector');
     refreshSpawnPanel();
     hudDirty = true;
+  };
+
+  // 物体选中挤掉功能体选中（ui.setSelection → onFunctionalDeselect）：收属性分组
+  panel.onFunctionalDeselect = () => {
+    spawnSelActive = false;
+    refreshSpawnPanel();
   };
   panel.onHierarchyToggle = (index, visible) => {
     renderer.setObjectVisible(index, visible);

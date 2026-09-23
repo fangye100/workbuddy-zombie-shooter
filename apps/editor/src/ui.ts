@@ -268,6 +268,8 @@ export class Panel {
   // ---- 功能体（场景里的非渲染功能节点，如刷怪点）----
   /** 点选功能体行 → 选中并请求显示它的属性（检视页条件分组） */
   onFunctionalSelect: ((node: FunctionalNodeInfo | null) => void) | null = null;
+  /** 物体选中/取消把功能体高亮清掉时通知外部（收起功能体属性分组）——与 onFunctionalSelect(null) 等价但语义独立 */
+  onFunctionalDeselect: (() => void) | null = null;
 
   private readonly renderer: LabRenderer;
 
@@ -660,8 +662,10 @@ export class Panel {
       input.type = 'number';
       input.step = '0.001';
       input.addEventListener('input', () => {
+        // 清空（''）与输入到一半（"1."）都不提交：Number('')===0 会把清空误当置零
+        if (input.value.trim() === '') return;
         const v = Number(input.value);
-        if (!Number.isFinite(v)) return; // 输入到一半（如 "1."）不提交
+        if (!Number.isFinite(v)) return;
         onInput(Math.round(v * 1000) / 1000);
       });
       row.appendChild(input);
@@ -847,7 +851,14 @@ export class Panel {
 
   /** 喂功能体列表（main.ts 在场景装载 / 功能体编辑后调）；同列表跳过不重绘 */
   setFunctionalNodes(list: FunctionalNodeInfo[]): void {
-    if (list.length === this.fnNodes.length && list.every((n, i) => n.nodeId === this.fnNodes[i]?.nodeId)) return;
+    // 全量深比较：radius/count 编辑只改 meta（×count · r 摘要），nodeId 相同也得重绘
+    const same = list.length === this.fnNodes.length
+      && list.every((n, i) => {
+        const o = this.fnNodes[i];
+        return o !== undefined && o.nodeId === n.nodeId && o.name === n.name
+          && o.kindLabel === n.kindLabel && (o.meta ?? '') === (n.meta ?? '');
+      });
+    if (same) return;
     this.fnNodes = list;
     this.renderFunctionalNodes();
   }
@@ -1144,8 +1155,12 @@ export class Panel {
     if (index !== null && sub === null && this.renderer.getSubMeshCount(index) === 1) sub = 0;
     this.selIndex = index;
     this.selSub = sub;
-    // 物体选中态与功能体选中态互斥：选物体（含取消选中）即清功能体高亮
-    if (this.fnSelected !== null) this.setFunctionalSelection(null);
+    // 物体选中态与功能体选中态互斥：选物体（含取消选中）即清功能体高亮，
+    // 并通知外部收起功能体属性分组（spawnSelActive 复位在 main.ts）
+    if (this.fnSelected !== null) {
+      this.setFunctionalSelection(null);
+      this.onFunctionalDeselect?.();
+    }
     this.syncHierarchySelection(); // 只 toggle 一个 class，不重建列表
     if (index === null) {
       this.selEmpty.style.display = '';

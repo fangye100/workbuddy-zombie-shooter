@@ -89,9 +89,13 @@
   }
   .hint { font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; }
 
-  /* 数字赋值框（检视页变换等精确输入）：面板深底 + 墨线描边，3 位小数 step */
-  input[type=number] {
-    width: 100%;
+  /* 行内属性行（检视页变换）：label 左、数字框右同一行。样式限定在 .row.numline
+     作用域内——不写裸 input[type=number]，否则会压过刷怪点面板 .sp-num 等既有定宽框（Copilot 评审） */
+  .row.numline { display: flex; align-items: center; gap: 8px; }
+  .row.numline > label { flex: 1 1 auto; min-width: 0; }
+  .row.numline > input[type=number] {
+    flex: 0 0 108px;
+    width: 108px;
     height: 22px;
     background: var(--panel-deep);
     color: var(--paper);
@@ -102,12 +106,8 @@
     font-family: inherit;
     font-variant-numeric: tabular-nums;
   }
-  input[type=number]:focus { outline: none; border-color: var(--zombie); }
-  input[type=number]::-webkit-inner-spin-button { opacity: .5; }
-  /* 行内属性行：label 左、数字框右，同一行 */
-  .row.numline { display: flex; align-items: center; gap: 8px; }
-  .row.numline > label { flex: 1 1 auto; min-width: 0; }
-  .row.numline > input[type=number] { flex: 0 0 108px; width: 108px; }
+  .row.numline > input[type=number]:focus { outline: none; border-color: var(--zombie); }
+  .row.numline > input[type=number]::-webkit-inner-spin-button { opacity: .5; }
 
   input[type=range] {
     width: 100%;
