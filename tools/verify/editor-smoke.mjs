@@ -2495,12 +2495,16 @@ async function main() {
         );
 
         // ④ 纯网格（baked.glb 无 skin）：明确报错，不静默退化成模板模式。
-        // 先关面板再点——early return 发生在 openBinding 之前，面板必须保持关闭。
+        // 面板保持 ② 的旧会话打开着点——early return 必须发生在 openBinding 之前：
+        // 旧会话不被顶掉（模型名不变）、不产生导入诊断。
+        // （保存落盘点的切换时序同理：校验通过前不切换，见 main.ts bindAssetAt 注释）
         const noSkin = await cdp.eval(`(async () => {
-          window.__editor.binding.close();
+          const before = window.__editor.binding.state()?.modelName ?? null;
           window.__editor.binding.open(${JSON.stringify(BAKED_GLB)}, { importSkeleton: true });
           await new Promise((r) => setTimeout(r, 2500));
           return {
+            before,
+            after: window.__editor.binding.state()?.modelName ?? null,
             diag: window.__editor.binding.importDiag(),
             open: window.__editor.binding.isOpen(),
           };
@@ -2510,9 +2514,13 @@ async function main() {
           noSkin.diag === null,
         );
         check(
-          'L3 纯网格走导入模式：不打开新会话（面板保持关闭）',
-          noSkin.open === false,
+          'L3 纯网格走导入模式：旧会话不被顶掉（面板开、模型名不变）',
+          noSkin.open === true && noSkin.after === noSkin.before && noSkin.after !== null,
+          `before=${noSkin.before} after=${noSkin.after} open=${noSkin.open}`,
         );
+
+        // 收尾：关面板，不污染最终截图
+        await cdp.eval(`(() => { window.__editor.binding.close(); return 1; })()`);
       }
     }
 

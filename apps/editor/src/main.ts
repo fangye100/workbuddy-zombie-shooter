@@ -2791,8 +2791,6 @@ async function boot(): Promise<void> {
       const buffer = await resp.arrayBuffer();
       // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-      // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
-      currentBindingMetaPath = `${relPath}.meta.json`;
       lastSkeletonImport = null;
 
       // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
@@ -2804,6 +2802,9 @@ async function boot(): Promise<void> {
           );
           return;
         }
+        // 落盘点只在「真的会打开」之后才切换：early return 时若已改指向，
+        // 旧会话的「保存绑定」会写进新纯网格的 sidecar（PR #13 评审）
+        currentBindingMetaPath = `${relPath}.meta.json`;
         const imp = skeletonPositionsFromGltf(model.skeleton);
         lastSkeletonImport = imp;
         openBinding({
@@ -2823,6 +2824,8 @@ async function boot(): Promise<void> {
         return;
       }
 
+      // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
+      currentBindingMetaPath = `${relPath}.meta.json`;
       // 尝试回填上次的编辑态（bindingEditor 节点）；没有/损坏都不影响打开
       let saved: unknown = undefined;
       const meta = await readProjectFile(currentBindingMetaPath);

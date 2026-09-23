@@ -534,6 +534,82 @@ export function nodeMatrix(n: NodeJson): Float32Array {
   return m;
 }
 
+/**
+ * 把 glTF `node.matrix`（列主序 16 数）分解成 TRS。
+ *
+ * `SkeletonData.locals` 是 TRS 语义（动画采样要逐通道插值、导入桥要累乘），
+ * 但 glTF 允许节点直接用 matrix 给局部变换——网格顶点路径的 `nodeMatrix`
+ * 认 matrix，locals 若不分解就只剩单位 TRS，蒙皮与顶点立刻错位（PR #13 评审）。
+ *
+ * 分解约定（与 three.js `Matrix4.decompose` 一致）：t = 平移列；s = 各列模长，
+ * 行列式 < 0（镜像）时 sx 取负；R = 归一化列重建后 Shepperd 法转四元数。
+ * 某轴缩放近零（退化文件）时旋转给单位四元数，属最优努力而非静默丢数据——
+ * 调用方拿到的 t/s 仍是真值。
+ */
+export function decomposeMatrixToTrs(m: Float32Array | number[]): NodeLocal {
+  const t: [number, number, number] = [m[12] ?? 0, m[13] ?? 0, m[14] ?? 0];
+  const c0 = [m[0] ?? 0, m[1] ?? 0, m[2] ?? 0];
+  const c1 = [m[4] ?? 0, m[5] ?? 0, m[6] ?? 0];
+  const c2 = [m[8] ?? 0, m[9] ?? 0, m[10] ?? 0];
+  const len = (v: number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
+  let sx = len(c0);
+  const sy = len(c1);
+  const sz = len(c2);
+  // 行列式（c0 · (c1 × c2)）< 0 = 镜像，按约定把负号挂在 sx 上
+  const det =
+    c0[0]! * (c1[1]! * c2[2]! - c1[2]! * c2[1]!) -
+    c0[1]! * (c1[0]! * c2[2]! - c1[2]! * c2[0]!) +
+    c0[2]! * (c1[0]! * c2[1]! - c1[1]! * c2[0]!);
+  if (det < 0) sx = -sx;
+  const s: [number, number, number] = [sx, sy, sz];
+
+  const EPS = 1e-12;
+  if (sx * sx < EPS || sy * sy < EPS || sz * sz < EPS) {
+    return { t, r: [0, 0, 0, 1], s };
+  }
+  // 归一化列（行主序读写便利：r{行}{列} = m[列*4+行] / s列）
+  const n = (v: number[], l: number): number[] => [v[0]! / l, v[1]! / l, v[2]! / l];
+  const u0 = n(c0, sx); // 镜像时 sx 已带负号，除完仍是单位列
+  const u1 = n(c1, sy);
+  const u2 = n(c2, sz);
+  const r00 = u0[0]!, r10 = u0[1]!, r20 = u0[2]!;
+  const r01 = u1[0]!, r11 = u1[1]!, r21 = u1[2]!;
+  const r02 = u2[0]!, r12 = u2[1]!, r22 = u2[2]!;
+
+  let x = 0, y = 0, z = 0, w = 1;
+  const trace = r00 + r11 + r22;
+  if (trace > 0) {
+    const k = Math.sqrt(trace + 1) * 2;
+    w = 0.25 * k;
+    x = (r21 - r12) / k;
+    y = (r02 - r20) / k;
+    z = (r10 - r01) / k;
+  } else if (r00 > r11 && r00 > r22) {
+    const k = Math.sqrt(1 + r00 - r11 - r22) * 2;
+    w = (r21 - r12) / k;
+    x = 0.25 * k;
+    y = (r01 + r10) / k;
+    z = (r02 + r20) / k;
+  } else if (r11 > r22) {
+    const k = Math.sqrt(1 + r11 - r00 - r22) * 2;
+    w = (r02 - r20) / k;
+    x = (r01 + r10) / k;
+    y = 0.25 * k;
+    z = (r12 + r21) / k;
+  } else {
+    const k = Math.sqrt(1 + r22 - r00 - r11) * 2;
+    w = (r10 - r01) / k;
+    x = (r02 + r20) / k;
+    y = (r12 + r21) / k;
+    z = 0.25 * k;
+  }
+  // 归一化兜底（浮点噪声；四元数必须单位长才能进旋转合成）
+  const ql = Math.hypot(x, y, z, w);
+  const r: [number, number, number, number] =
+    ql > EPS ? [x / ql, y / ql, z / ql, w / ql] : [0, 0, 0, 1];
+  return { t, r, s };
+}
+
 /** 4x4 取左上 3x3 的逆转置，行主序 9 个数（法线变换用；非等比缩放也正确） */
 export function normalMatrix(m: Float32Array): Float32Array {
   // 列主序 4x4 的 3x3 部分：a[col*4+row]
@@ -1116,11 +1192,17 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
         const locals: NodeLocal[] = [];
         for (let i = 0; i < nodeCount; i++) {
           const n = json.nodes?.[i];
-          locals.push({
-            t: (n?.translation as [number, number, number]) ?? [0, 0, 0],
-            r: (n?.rotation as [number, number, number, number]) ?? [0, 0, 0, 1],
-            s: (n?.scale as [number, number, number]) ?? [1, 1, 1],
-          });
+          // glTF 允许 matrix 直接给局部变换：与 nodeMatrix 同优先——matrix 在场
+          // 就分解它（否则顶点走 matrix、骨骼走单位 TRS，蒙皮与网格立刻错位）
+          locals.push(
+            n?.matrix !== undefined && n.matrix.length === 16
+              ? decomposeMatrixToTrs(n.matrix)
+              : {
+                  t: (n?.translation as [number, number, number]) ?? [0, 0, 0],
+                  r: (n?.rotation as [number, number, number, number]) ?? [0, 0, 0, 1],
+                  s: (n?.scale as [number, number, number]) ?? [1, 1, 1],
+                },
+          );
           for (const c of n?.children ?? []) if (c >= 0 && c < nodeCount) parent[c] = i;
         }
         const roots: number[] = [];
