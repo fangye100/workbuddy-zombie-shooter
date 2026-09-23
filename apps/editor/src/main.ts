@@ -3030,6 +3030,13 @@ async function boot(): Promise<void> {
         stats: () => renderer.debugCylinderStats(),
         setRadius: (bone: string, seg: 'top' | 'medium' | 'bottom', v: number) =>
           binding?.setCylinderRadius(bone, seg, v) ?? false,
+        /** 整根包裹器偏移（骨局部轴：x=轴向 / y=侧向 / z=前后）——MCP cylinders.setOffset 同语义 */
+        setOffset: (bone: string, off: [number, number, number]) =>
+          binding?.setCylinderOffset(bone, off) ?? false,
+        /** 偏移归零（回到骨段原位）——不依赖视图选中态 */
+        resetOffset: (bone: string) => binding?.setCylinderOffset(bone, [0, 0, 0]) ?? false,
+        /** 取消手动标记并按骨长重适配（MCP cylinders.unpin 同语义；面板 autoFit() 管全部未钉骨） */
+        unpin: (bone: string) => binding?.unpinCylinderForAutomation(bone) ?? false,
         /** 画布局部坐标点选圆柱体子段（与鼠标点选同一套判定） */
         pick: (axis: 'front' | 'side', x: number, y: number) => {
           const c = document.querySelector<HTMLCanvasElement>(`[data-bd="${axis}"]`);

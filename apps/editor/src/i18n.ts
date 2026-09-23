@@ -246,7 +246,7 @@ const DICT: Record<string, string> = {
   '回到冻结的 Bind Pose（带 offset 的绑定姿态，可随时重绑）': 'Return to the frozen Bind Pose (binding pose with offset; rebind anytime)',
   '回到模板 T-pose 的初始摆放（会清空全部关节编辑，有二次确认）': 'Reset to the template T-pose placement (clears all joint edits, asks twice)',
   '圆柱（emissive）': 'Cylinder (emissive)',
-  '在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新': 'Draw each joint\'s wrapper cylinder onto the model in the main 3D viewport (translucent X-ray, never hidden by the mesh), updating live with skeletal animation',
+  '包裹器 proxy 体积总开关：主 3D 视口与面板正/侧视同时生效（关掉 = 干净的网格+骨架视图，便于视觉对位）；数据保留，重新勾选即恢复': 'Wrapper proxy master toggle: applies to both the main 3D viewport and the panel front/side views (off = clean mesh+skeleton view for visual alignment); data is kept, re-check to restore',
   '在视图里点中包裹器后：拖': 'After picking a wrapper in the view: drag ',
   '地面': 'Ground',
   '地面反弹色': 'Ground Bounce Color',

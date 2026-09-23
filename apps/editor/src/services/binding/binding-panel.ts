@@ -280,7 +280,7 @@ export class BindingPanel {
             <option value="hideL">${t('隐藏左')}</option>
             <option value="hideR">${t('隐藏右')}</option>
           </select>
-          <label class="bd-check bd-check-head" title="${t('在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新')}"><input type="checkbox" data-bd="skin-view3d">${t('包裹器')}</label>
+          <label class="bd-check bd-check-head" title="${t('包裹器 proxy 体积总开关：主 3D 视口与面板正/侧视同时生效（关掉 = 干净的网格+骨架视图，便于视觉对位）；数据保留，重新勾选即恢复')}"><input type="checkbox" data-bd="skin-view3d">${t('包裹器')}</label>
           <label class="bd-check bd-check-head" title="${t('权重热力图：选中一根骨（joint 或包裹器）后，网格顶点按该骨的权重着色（蓝=无影响 → 红=全权重），与 Bind Skin 导出的权重同源')}"><input type="checkbox" data-bd="skin-heat" checked>${t('热力图')}</label>
         </div>
         <div class="bd-head-group" data-group="镜像">
@@ -555,12 +555,14 @@ export class BindingPanel {
     });
 
     // 「在 3D 视图显示包裹器」：默认开 —— 切到蒙皮模式就是要看圆柱体，
-    // 不该让用户再去猜一个开关。状态同步给外部（主循环据此画/不画叠加层）。
+    // 不该让用户再去猜一个开关。状态同步给外部（主循环据此画/不画叠加层）；
+    // 同时管面板正/侧视 GL 层的 proxy 体积（filteredCylinders 消费同一开关）。
     const v3d = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-view3d"]')!;
     v3d.checked = this.viewportCylinders;
     v3d.addEventListener('change', () => {
       this.viewportCylinders = v3d.checked;
       this.hooks.onToggleViewportCylinders?.(v3d.checked);
+      this.scheduleDraw();
     });
 
     // 半径：滑块 + 数字框双向同步，两条路径都走 setCylinderRadius 这一个入口。
@@ -820,10 +822,19 @@ export class BindingPanel {
   /**
    * 给 3D 层用的包裹器表：把被「隐藏左/右/仅中轴」过滤掉的骨标成 disabled
    * （半径保留，只让圆柱几何跳过绘制）。sideFilter=all 时直接返回原表，零分配。
+   * 「包裹器」勾选框关闭时返回全 disabled 表 —— 面板正/侧视也隐藏 proxy 体积，
+   * 数据（半径/偏移）原样保留，重新勾选即恢复；视觉对位需要干净的网格+骨架视图。
    */
   private filteredCylinders(vis: Set<string>): SkinCylinderMap | null {
     const cylinders = this.session.getCylinders();
     if (cylinders === null) return null;
+    if (!this.viewportCylinders) {
+      const out: SkinCylinderMap = {};
+      for (const [k, c] of Object.entries(cylinders)) {
+        out[k] = { ...c, enabled: false };
+      }
+      return out;
+    }
     if (this.sideFilter === 'all') return cylinders;
     const out: SkinCylinderMap = {};
     for (const [k, c] of Object.entries(cylinders)) {
@@ -1459,6 +1470,17 @@ export class BindingPanel {
     }
   }
 
+  /**
+   * 供自动化钩子：不依赖视图选中态的逐骨 unpin（MCP cylinders.unpin 同语义）。
+   * session 负责历史与「manual=false 后按骨长重适配」；面板负责缓存失效与属性栏刷新。
+   */
+  unpinCylinderForAutomation(bone: string): boolean {
+    if (!this.session.unpinCylinder(bone)) return false;
+    this.updateSkinPanel();
+    this.invalidatePreview();
+    return true;
+  }
+
   /** 刷新 skin 属性面板（选中信息 + 三段半径滑块 + 偏移 + 镜像按钮可用性） */
   private updateSkinPanel(): void {
     const sel = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-sel"]')!;
@@ -1546,6 +1568,9 @@ export class BindingPanel {
   ): { bone: string; seg: CylSegment } | null {
     const cylinders = this.session.getCylinders();
     if (cylinders === null) return null;
+    // 「包裹器」关闭 = proxy 不可点选：否则会出现「看不见却拖得动」的隐身交互，
+    // 拖的半径/偏移会静默进权重与 sidecar（2026-09-23 独立审核 P2）。
+    if (!this.viewportCylinders) return null;
     const segs = boneSegments(this.session.positions);
     const s = this.scale;
     const ox = this.centerX(canvas);
@@ -2129,7 +2154,9 @@ export class BindingPanel {
     axis: ViewAxis,
   ): void {
     const cyls = this.session.getCylinders();
-    if (cyls === null) { this.drawSkeleton(ctx, canvas, axis); return; }
+    // 无 WebGPU 降级与「包裹器」开关共用骨架直画出口：开关关闭时 2D 也不该画出 proxy
+    //（与 GL 层 filteredCylinders 的总开关语义一致，2026-09-23 独立审核 P3）。
+    if (cyls === null || !this.viewportCylinders) { this.drawSkeleton(ctx, canvas, axis); return; }
     // 骨骼淡显作对照
     this.drawSkeleton(ctx, canvas, axis, true);
     const segs = boneSegments(this.session.positions);
@@ -2322,12 +2349,13 @@ export class BindingPanel {
     return s;
   }
 
-  /** 供调试/冒烟：直接开关 3D 视口包裹器（同步勾选框） */
+  /** 供调试/冒烟：直接开关 3D 视口包裹器（同步勾选框；面板正/侧视同一开关） */
   setViewportCylinders(v: boolean): void {
     this.viewportCylinders = v;
     const box = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-view3d"]');
     if (box !== null) box.checked = v;
     this.hooks.onToggleViewportCylinders?.(v);
+    this.scheduleDraw();
   }
 
   /** 供主循环取用：当前是否处于蒙皮包裹（skin）编辑模式 */
