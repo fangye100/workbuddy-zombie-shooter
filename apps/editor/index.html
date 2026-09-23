@@ -89,6 +89,22 @@
   }
   .hint { font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; }
 
+  /* 数字赋值框（检视页变换等精确输入）：面板深底 + 墨线描边，3 位小数 step */
+  input[type=number] {
+    width: 100%;
+    height: 22px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type=number]:focus { outline: none; border-color: var(--zombie); }
+  input[type=number]::-webkit-inner-spin-button { opacity: .5; }
+
   input[type=range] {
     width: 100%;
     height: 16px;

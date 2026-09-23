@@ -278,9 +278,9 @@ export class Panel {
   private selEmpty!: HTMLElement;
   private selBox!: HTMLElement;
   private selName!: HTMLElement;
-  private selPos!: { input: HTMLInputElement; val: HTMLElement }[];
-  private selRot!: { input: HTMLInputElement; val: HTMLElement }[];
-  private selScale!: { input: HTMLInputElement; val: HTMLElement };
+  private selPos!: HTMLInputElement[];
+  private selRot!: HTMLInputElement[];
+  private selScale!: HTMLInputElement;
   private selMaterial!: HTMLSelectElement;
   private selStats!: HTMLElement;
 
@@ -645,49 +645,43 @@ export class Panel {
     box.appendChild(nameRow);
     this.selName = nameVal;
 
-    const mkSlider = (
+    // 数字赋值框：无滑杆的范围限制，step=0.001（3 位小数），提交值同样取 3 位
+    const mkNum = (
       lbl: string,
-      min: number,
-      max: number,
-      step: number,
       onInput: (v: number) => void,
-    ): { input: HTMLInputElement; val: HTMLElement } => {
+    ): HTMLInputElement => {
       const row = document.createElement('div');
       row.className = 'row';
       const head = document.createElement('div');
       head.className = 'row-head';
       const label = document.createElement('label');
       label.textContent = lbl;
-      const val = document.createElement('span');
-      val.className = 'val';
-      head.append(label, val);
+      head.appendChild(label);
       row.appendChild(head);
       const input = document.createElement('input');
-      input.type = 'range';
-      input.min = String(min);
-      input.max = String(max);
-      input.step = String(step);
+      input.type = 'number';
+      input.step = '0.001';
       input.addEventListener('input', () => {
         const v = Number(input.value);
-        val.textContent = fmt(v, step);
-        onInput(v);
+        if (!Number.isFinite(v)) return; // 输入到一半（如 "1."）不提交
+        onInput(Math.round(v * 1000) / 1000);
       });
       row.appendChild(input);
       box.appendChild(row);
-      return { input, val };
+      return input;
     };
 
     this.selPos = [
-      mkSlider('位置 X', -12, 12, 0.05, (v) => this.applySel((i) => this.renderer.setObjectPos(i, 0, v))),
-      mkSlider('位置 Y', -4, 6, 0.05, (v) => this.applySel((i) => this.renderer.setObjectPos(i, 1, v))),
-      mkSlider('位置 Z', -12, 12, 0.05, (v) => this.applySel((i) => this.renderer.setObjectPos(i, 2, v))),
+      mkNum('位置 X', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 0, v))),
+      mkNum('位置 Y', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 1, v))),
+      mkNum('位置 Z', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 2, v))),
     ];
     this.selRot = [
-      mkSlider('旋转 X°', -180, 180, 1, (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 0, v))),
-      mkSlider('旋转 Y°', -180, 180, 1, (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 1, v))),
-      mkSlider('旋转 Z°', -180, 180, 1, (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 2, v))),
+      mkNum('旋转 X°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 0, v))),
+      mkNum('旋转 Y°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 1, v))),
+      mkNum('旋转 Z°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 2, v))),
     ];
-    this.selScale = mkSlider('缩放', 0.1, 5, 0.05, (v) => this.applySel((i) => this.renderer.setObjectScale(i, v)));
+    this.selScale = mkNum('缩放', (v) => this.applySel((i) => this.renderer.setObjectScale(i, v)));
 
     const matRow = document.createElement('div');
     matRow.className = 'row';
@@ -1423,17 +1417,19 @@ export class Panel {
   /** 把渲染器返回的状态同步到选择面板控件 */
   private fillSelection(info: SelectionInfo): void {
     this.selName.textContent = info.name;
-    const setS = (s: { input: HTMLInputElement; val: HTMLElement }, v: number, step: number): void => {
-      s.input.value = String(v);
-      s.val.textContent = fmt(v, step);
+    // 数字框回填统一 3 位小数；正在聚焦输入的框不覆盖（gizmo 拖拽逐帧同步
+    // 会跟手输打架，失焦后下一帧自然对齐）
+    const setN = (input: HTMLInputElement, v: number): void => {
+      const next = v.toFixed(3);
+      if (document.activeElement !== input && input.value !== next) input.value = next;
     };
-    setS(this.selPos[0]!, info.pos[0], 0.05);
-    setS(this.selPos[1]!, info.pos[1], 0.05);
-    setS(this.selPos[2]!, info.pos[2], 0.05);
-    setS(this.selRot[0]!, (info.rot[0] * 180) / Math.PI, 1);
-    setS(this.selRot[1]!, (info.rot[1] * 180) / Math.PI, 1);
-    setS(this.selRot[2]!, (info.rot[2] * 180) / Math.PI, 1);
-    setS(this.selScale!, info.scale, 0.05);
+    setN(this.selPos[0]!, info.pos[0]);
+    setN(this.selPos[1]!, info.pos[1]);
+    setN(this.selPos[2]!, info.pos[2]);
+    setN(this.selRot[0]!, (info.rot[0] * 180) / Math.PI);
+    setN(this.selRot[1]!, (info.rot[1] * 180) / Math.PI);
+    setN(this.selRot[2]!, (info.rot[2] * 180) / Math.PI);
+    setN(this.selScale!, info.scale);
     this.selMaterial.value = String(info.materialIndex);
     const s = info.stats;
     const healthy = s.boundaryEdges === 0 && s.components === 1;

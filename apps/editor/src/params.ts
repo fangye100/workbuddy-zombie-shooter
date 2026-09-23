@@ -273,7 +273,7 @@ export const PARAM_GROUPS: GroupDef[] = [
   },
   {
     id: 'selection',
-    title: t('对象选择与变换'),
+    title: t('变换'),
     open: true,
     side: 'right',
     tab: 'inspector',
