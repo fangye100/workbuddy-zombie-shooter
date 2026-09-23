@@ -130,7 +130,7 @@ export interface SceneObject {
   /**
    * texture 是否由本物体独占（addObject 拖入的带贴图模型）。
    * 独占贴图在 removeObject / destroy 时必须连带销毁；共享的 whiteTex 与
-   * 角色槽的 charTexture（由 setCharacter 单独管理）都不能走这条路。
+   * 物体独占贴图（addObject 拖入的带贴图模型）都不能走这条路。
    */
   ownsTexture: boolean;
   /** 渲染时把 mat.flags.z 置 1：albedo 走贴图采样而非 uniform 平色 */
@@ -652,11 +652,8 @@ export class LabRenderer {
   private readonly hoverMatData: Float32Array<ArrayBuffer>;
 
   /** 模型浏览器：角色槽位（替换中心胶囊）。切换模型只动这一个 */
-  public readonly characterIndex = 1;
 
-  private sceneCapsule!: MeshData;
   public whiteTex!: GPUTexture;
-  private charTexture: GPUTexture | null = null;
 
   private readonly frameData = new Float32Array(FRAME_FLOATS);
   private readonly lightsData = new Float32Array(LIGHTS_FLOATS);
@@ -726,9 +723,6 @@ export class LabRenderer {
     // ---- 几何 ----
     // 场景内容不再写死在这里：初值由 buildDefaultSpecs() 兜底，
     // 真正的来源是 main.ts 调 loadScene() 读 assets/scenes/sandbox/default.scene.json。
-    const capsule = createCapsule(0.34, 1.0, 28, 10);
-    this.sceneCapsule = capsule;
-
     // 1x1 白色 fallback 贴图（rgba8unorm，raw sRGB 字节，与材质 albedo 同约定）
     // 必须在建物体之前就位，因为物体的 texture 字段要引用它
     this.whiteTex = this.device.createTexture({
@@ -1082,7 +1076,7 @@ export class LabRenderer {
 
   /**
    * 每个「子网格」一个 bind group：材质槽位按子网格取，变换槽位按物体取
-   * （同一物体的所有子网格共享同一个 model 矩阵）。角色槽位的 binding 5 在 setCharacter 后换成真贴图。
+   * （同一物体的所有子网格共享同一个 model 矩阵）。
    */
   private makeSubBindGroup(objIndex: number, subIndex: number): GPUBindGroup {
     const o = this.state.objects[objIndex];
@@ -1266,23 +1260,6 @@ export class LabRenderer {
     });
   }
 
-  /**
-   * 物体贴图/槽位变动后，重建指向它的高亮 bind group。
-   * 这些 bind group 缓存了 texture view，一旦物体换了贴图（setCharacter）而没重建，
-   * 就会继续引用一个已被 destroy() 的纹理 —— 属于「引用已销毁资源」的硬错误。
-   */
-  private refreshHighlightBindGroups(index: number): void {
-    if (this.state.selectedIndex === index) this.buildSelectionBindGroup(index);
-    if (this.state.hoveredIndex === index) {
-      this.state.hoverBindGroup = this.buildHighlightBindGroup(
-        index,
-        this.core.secondaryToonBuf,
-        this.core.secondaryMatBuf,
-        'hover-secondary',
-      );
-    }
-  }
-
   public buildSelectionBindGroup(index: number): void {
     this.state.selBindGroup = this.buildHighlightBindGroup(
       index,
@@ -1290,62 +1267,6 @@ export class LabRenderer {
       this.core.primaryMatBuf,
       'sel-primary',
     );
-  }
-
-  /**
-   * 模型浏览器入口：替换中心角色。
-   *   mesh 为 null → 恢复程序化胶囊（场景角色）；否则换成给定网格，脚底贴 y=0。
-   *   bitmap 为 null → 用材质平色；否则上传贴图，着色器切到纹理采样。
-   *   ranges 为 null/空 → 单条子网格覆盖全部；否则按 GLB primitive 拆成多条
-   *   （层级树里展开就是 身体/武器/盾牌 各自一个 mesh 节点 + 各自一个材质槽）。
-   *   tree 为 GLB 原始父子层级：层级面板按它还原树形；绑定继承见 applySubMeshes。
-   */
-  setCharacter(
-    mesh: MeshData | null,
-    bitmap: ImageBitmap | null,
-    ranges: SubMeshRange[] | null = null,
-    tree: GltfNodeTree[] | null = null,
-    skeleton: SkeletonData | null = null,
-    animations: AnimClip[] = [],
-  ): void {
-    const o = this.state.objects[this.characterIndex];
-    if (o === undefined || o.removed) return;
-
-    let m: MeshData;
-    if (mesh === null) {
-      m = this.sceneCapsule;
-      o.pos = [0, 0.84, 0];
-      o.useTex = false;
-    } else {
-      m = mesh;
-      o.pos = [0, 0, 0];
-      o.useTex = bitmap !== null;
-    }
-
-    // 蒙皮字段：先挂上骨架/动画，再上传网格（uploadMesh 按 skeleton 定关节缓冲大小）
-    o.skeleton = mesh === null ? null : skeleton;
-    o.animations = mesh === null ? [] : animations;
-    o.skinState = o.skeleton !== null ? createSkinState(o.skeleton, o.animations) : null;
-    this.uploadMesh(o, m, o.skeleton);
-
-    this.charTexture?.destroy();
-    this.charTexture = bitmap === null ? null : this.createTextureFromBitmap(bitmap);
-    o.texture = this.charTexture ?? this.whiteTex;
-
-    // 子网格重排 → slotBase 全部后移 → 所有 bind group 都得重建（不只是角色自己）
-    this.applySubMeshes(this.characterIndex, ranges, tree);
-    // 选中 + 悬停的高亮 bind group 都缓存了 texture view，必须一起重建
-    this.refreshHighlightBindGroups(this.characterIndex);
-    // 选中/悬停的子网格下标在换模型后可能越界
-    if (this.state.selectedIndex === this.characterIndex) {
-      this.state.selectedSub = this.clampSub(this.characterIndex, this.state.selectedSub);
-    }
-    if (this.state.hoveredIndex === this.characterIndex) {
-      this.state.hoveredSub = this.clampSub(this.characterIndex, this.state.hoveredSub);
-    }
-
-    // 统一走 recountTriangles：跳过 removed，否则删过物体后再换模型，HUD 面数会把墓碑算回去
-    this.recountTriangles();
   }
 
   /** 把子网格下标夹到合法范围；null（整个物体）原样返回 */
@@ -1877,7 +1798,8 @@ export class LabRenderer {
 
   /**
    * 骨骼类叠加层（X-ray 骨骼 / 包裹器圆柱体）的取数源：
-   * 主视图里「当前该显示」的那个带骨骼物体 —— 选中的，否则退回角色槽位。
+   * 主视图里「当前该显示」的那个带骨骼物体 —— 严格跟随选中（2026-09-23 删掉
+   * 「退回角色槽位」回退：角色槽假设在场景化世界会指向无关场景物体）。
    * 暴露给 main.ts，好让绑定模块拿到实时关节矩阵去算包裹器。
    */
   getSkeletonOverlaySource(): {
@@ -1885,7 +1807,7 @@ export class LabRenderer {
     skeleton: SkeletonData;
     modelMatrix: Float32Array;
   } | null {
-    const idx = this.state.selectedIndex ?? this.characterIndex;
+    const idx = this.state.selectedIndex;
     const so = idx !== null ? this.state.objects[idx] : undefined;
     if (so === undefined || so.skinState === null || so.skeleton === null) return null;
     return {
@@ -2394,7 +2316,6 @@ export class LabRenderer {
     // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图
     // （GPUSampler 在 @webgpu/types 0.1.49 无 destroy 方法，跟随 device 释放即可，不显式销毁）
     this.whiteTex.destroy();
-    this.charTexture?.destroy();
     for (const o of this.state.objects) {
       if (o.removed) continue; // 墓碑在 removeObject 时已释放，跳过避免二次 destroy
       o.vertexBuffer.destroy();

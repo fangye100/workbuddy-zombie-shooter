@@ -201,7 +201,7 @@ export class AssetPreview {
       <div class="ap-bar ap-view">
         <label class="ap-switch"><input type="checkbox" class="ap-sw-tex" checked><span>${t('贴图')}</span></label>
         <label class="ap-switch"><input type="checkbox" class="ap-sw-xray"><span>${t('骨骼')}</span></label>
-        <select class="ap-lod" title="LOD 档位" hidden></select>
+        <select class="ap-lod" title="${t('LOD 档位')}" hidden></select>
         <span class="ap-stats"></span>
       </div>`;
     previewEl.appendChild(this.panel);

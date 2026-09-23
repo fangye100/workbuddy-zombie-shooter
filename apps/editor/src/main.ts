@@ -5,8 +5,8 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -3107,36 +3107,17 @@ async function boot(): Promise<void> {
     assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
 
     // 资产库预览缓存：避免反复 fetch + 解析 GLB（贴图仍每次重新解码，因 ImageBitmap 已被 close）
-    // ---- 资产预览的 LOD 家族（assets/_data/asset-manifest.json，与 assets/asset-browser.html 同源） ----
-    interface ManifestLod { label?: unknown; file?: unknown }
-    let lodIndex: Map<string, { label: string; path: string }[]> | null = null;
-    async function getLodIndex(): Promise<Map<string, { label: string; path: string }[]>> {
-      if (lodIndex !== null) return lodIndex;
-      lodIndex = new Map();
-      const r = await readProjectFile('assets/_data/asset-manifest.json');
-      if (r.ok && r.json !== null && typeof r.json === 'object') {
-        const root = r.json as Record<string, unknown>;
-        for (const section of ['characters', 'environments']) {
-          const list = root[section];
-          if (!Array.isArray(list)) continue;
-          for (const e of list) {
-            if (e === null || typeof e !== 'object') continue;
-            const lods = (e as Record<string, unknown>).lods;
-            if (!Array.isArray(lods) || lods.length === 0) continue;
-            const family = lods
-              .filter((l): l is ManifestLod => l !== null && typeof l === 'object')
-              .map((l) => ({ label: String(l.label ?? 'LOD'), path: String(l.file ?? '') }))
-              .filter((l) => l.path !== '')
-              // manifest 路径相对 assets/：补全成项目根相对路径，否则 /__fs 取不到
-              .map((l) => (l.path.startsWith('assets/') ? l : { ...l, path: `assets/${l.path}` }));
-            if (family.length === 0) continue;
-            // manifest 的 file 相对 assets/（asset-browser.html 也在 assets/ 里用它）；
-            // 编辑器的资产路径带 assets/ 前缀——两种写法都登记，查找时命中任一形态
-            for (const l of family) lodIndex.set(l.path, family);
-          }
-        }
+    // ---- 资产预览的 LOD 家族：领域逻辑在 @aether/scene 的 asset-manifest（2026-09-23
+    // 上提成库，编辑器不再持有第二份解析实现）——这里只剩拉取清单 + 缓存 ----
+    let lodFamilies: Map<string, LodFamily> | null = null;
+    async function getLodFamilies(): Promise<Map<string, LodFamily>> {
+      if (lodFamilies === null) {
+        const r = await readProjectFile('assets/_data/asset-manifest.json');
+        const parsed = parseAssetManifest(r.ok ? r.json : null);
+        if (parsed.skipped > 0) console.warn(`[资产清单] ${parsed.skipped} 个坏条目被跳过`);
+        lodFamilies = parsed.families;
       }
-      return lodIndex;
+      return lodFamilies;
     }
 
     /** 按路径把 GLB 载入预览（选中流与 LOD 切换共用；不改资产库选中） */
@@ -3152,9 +3133,11 @@ async function boot(): Promise<void> {
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);
         await assetPreview?.load(model, bmp);
-        const family = (await getLodIndex()).get(path) ?? [];
+        const family = (await getLodFamilies()).get(path) ?? [];
         assetPreview?.setLods(family, path);
-        assetPreview?.setStats(`${Math.round(model.triangles)} tris · ${model.vertices} verts`);
+        // 统计行走库里的 formatLodStats（含 Δ vs LOD0 降幅）；无家族时退回实测数
+        const stats = formatLodStats(family, path);
+        assetPreview?.setStats(stats !== '' ? stats : `${Math.round(model.triangles)} tris · ${model.vertices} verts`);
       } catch (err) {
         console.error('[资产库] 预览解析失败', path, err);
         assetPreview?.setLods([], null);
@@ -3186,17 +3169,17 @@ async function boot(): Promise<void> {
       onRename: async (path, newName) => {
         const r = await renameProjectEntry(path, newName);
         if (!r.ok) {
-          panel.setModelInfo(`重命名失败：${r.error ?? '未知错误'}`);
+          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}`);
           hudDirty = true;
           return false;
         }
         const extras: string[] = [];
-        if (r.metaRenamed) extras.push('sidecar 已随迁');
-        if (r.projectUpdated) extras.push('项目登记已更新');
+        if (r.metaRenamed) extras.push(t('sidecar 已随迁'));
+        if (r.projectUpdated) extras.push(t('项目登记已更新'));
         // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
         // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
         if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
-        panel.setModelInfo(`已重命名 → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
+        panel.setModelInfo(`${t('已重命名')} → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
         hudDirty = true;
         return true;
       },
