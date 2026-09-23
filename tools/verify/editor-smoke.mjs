@@ -101,6 +101,10 @@ function readStartSceneExpectation() {
     background,
     category: Object.fromEntries(nodes.map((n) => [n.name, n.category ?? '道具'])),
     pickable: Object.fromEntries(nodes.map((n) => [n.name, n.pickable ?? false])),
+    // 功能体期望：场景文档里的 SpawnPoint 组件数（层级 ✦ 行数按它断言，换场景自动跟）
+    spawnPoints: doc.nodes.filter((n) =>
+      n.components.some((c) => c.kind === 'SpawnPoint'),
+    ).length,
   };
 }
 
@@ -904,6 +908,50 @@ async function main() {
         check('资产库 dock 左缘贴屏幕（x=0）', layout.dockLeft === 0, `dockLeft=${layout.dockLeft}`);
         check('资产库 dock 右缘接到 Inspector 前', layout.dockRight <= layout.inspLeft + 6, `dockRight=${layout.dockRight} inspLeft=${layout.inspLeft}`);
         check('场景层级下边缘 = 资产库上边缘', Math.abs(layout.leftBottom - layout.dockTop) <= 1, `leftBottom=${layout.leftBottom} dockTop=${layout.dockTop}`);
+
+        // 功能体（✦）模式：刷怪点进层级、选中才出属性分组、顶级 tab 已移除
+        const fn = await cdp.eval(`(() => {
+          const rows = [...document.querySelectorAll('#groups .hier-row.fn')];
+          const group = document.getElementById('spawn-group');
+          return {
+            spawnTabGone: document.querySelector('#inspector .insp-tab[data-tab="spawn"]') === null,
+            spawnPaneGone: document.querySelector('#inspector .insp-pane[data-pane="spawn"]') === null,
+            fnRows: rows.length,
+            groupExists: group !== null,
+            groupHidden: group !== null ? group.hidden : null,
+            firstFnNode: rows[0]?.dataset.fnNode ?? null,
+          };
+        })()`);
+        check('顶级「刷怪点」tab 与独立 pane 已移除', fn.spawnTabGone === true && fn.spawnPaneGone === true);
+        check(
+          `层级功能体（✦）行数 = 起始场景 SpawnPoint 组件数（${expect.spawnPoints}）`,
+          fn.fnRows === expect.spawnPoints,
+          `rows=${fn.fnRows}`,
+        );
+        check('刷怪点分组存在于检视页且未选中时隐藏（选中驱动）', fn.groupExists === true && fn.groupHidden === true);
+
+        if (fn.firstFnNode !== null) {
+          const FN_NODE_ID = fn.firstFnNode;
+          const picked = await cdp.eval(`(async () => {
+            document.querySelector('#groups .hier-row.fn').click();
+            await new Promise((r) => setTimeout(r, 300));
+            return {
+              groupHidden: document.getElementById('spawn-group')?.hidden ?? null,
+              sel: window.__editor.spawn.state().selectedNodeId,
+              rowSel: document.querySelector('#groups .hier-row.fn')?.classList.contains('sel') ?? false,
+            };
+          })()`);
+          check('点选 ✦ 功能体行后刷怪点分组出现', picked.groupHidden === false);
+          check('选中态回读到该功能体（selectedNodeId 一致）', picked.sel === FN_NODE_ID);
+          check('✦ 行高亮 .sel', picked.rowSel === true);
+          // 收尾取消选中，分组应收起（不污染后续断言）
+          const cleared = await cdp.eval(`(async () => {
+            window.__editor.spawn.select(null);
+            await new Promise((r) => setTimeout(r, 200));
+            return document.getElementById('spawn-group')?.hidden ?? null;
+          })()`);
+          check('取消选中后分组收起', cleared === true);
+        }
 
         // 资产库生成 → addObject + 自动选中 → 动画分组出现
         const spawned = await cdp.eval(`(async () => {

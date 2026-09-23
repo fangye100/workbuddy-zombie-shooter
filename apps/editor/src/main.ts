@@ -275,7 +275,7 @@ async function boot(): Promise<void> {
   // boot 依赖 camera / hudDirty（定义在后），实际执行挪到 __editor 钩子接线之后。
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
-  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset' | 'spawn'): void => {
+  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
     for (const t of document.querySelectorAll<HTMLElement>('#inspector .insp-tab')) {
       t.classList.toggle('active', t.dataset.tab === tab);
     }
@@ -287,7 +287,7 @@ async function boot(): Promise<void> {
   for (const t of document.querySelectorAll<HTMLButtonElement>('#inspector .insp-tab')) {
     t.addEventListener('click', () => {
       const tab = t.dataset.tab;
-      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset' || tab === 'spawn') {
+      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset') {
         switchInspectorTab(tab);
       }
     });
@@ -331,6 +331,23 @@ async function boot(): Promise<void> {
     renderer.selectObject(index, subIndex);
     panel.setSelection(index, subIndex);
     switchInspectorTab('inspector');
+    hudDirty = true;
+  };
+  // 功能体（✦）行点选：与物体选中互斥，切到检视页显示对应属性分组（当前唯一功能体 = 刷怪点）
+  panel.onFunctionalSelect = (node) => {
+    if (node === null) {
+      spawnSelActive = false;
+      panel.setFunctionalSelection(null);
+      refreshSpawnPanel();
+      return;
+    }
+    spawnSelActive = true;
+    selectedSpawnNode = node.nodeId;
+    renderer.selectObject(null); // 物体选中与功能体选中互斥
+    panel.setSelection(null); // 内部会清功能体高亮，下面马上设回
+    panel.setFunctionalSelection(node.nodeId);
+    switchInspectorTab('inspector');
+    refreshSpawnPanel();
     hudDirty = true;
   };
   panel.onHierarchyToggle = (index, visible) => {
@@ -582,7 +599,8 @@ async function boot(): Promise<void> {
         panel.setSelection(null);
         // 面板直接切到这只僵尸的来源刷怪点：「它是从哪冒出来的」就该一步到位
         if (hit.sourceNodeId !== null) selectedSpawnNode = hit.sourceNodeId;
-        switchInspectorTab('spawn');
+        spawnSelActive = true;
+        switchInspectorTab('inspector');
         refreshSpawnPanel();
         hudDirty = true;
         return;
@@ -1077,6 +1095,9 @@ async function boot(): Promise<void> {
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
   let selectedSpawnNode: string | null = null;
+  /** 刷怪点功能体被显式选中（层级行 / 面板列表 / Play 实体）。分组显隐只认它，
+   *  selectedSpawnNode 的「自动选第一个」不再连带显示（那等于变相常驻） */
+  let spawnSelActive = false;
   let spawnAb: { before: ScatterFingerprint; after: ScatterFingerprint; cmp: ScatterComparison } | null = null;
   let spawnMsg: { text: string; kind: 'info' | 'warn' | 'ok' } | null = null;
 
@@ -1086,6 +1107,8 @@ async function boot(): Promise<void> {
       : new SpawnPanel(spawnHost, {
           onSelect: (id) => {
             selectedSpawnNode = id;
+            spawnSelActive = true;
+            panel.setFunctionalSelection(id);
             refreshSpawnPanel();
           },
           onEdit: (field, value) => editSpawnField(field, value),
@@ -1104,6 +1127,7 @@ async function boot(): Promise<void> {
       refreshSpawnPanel();
       return;
     }
+    spawnSelActive = false; // 新场景：功能体未选中，分组收起
     spawnStore = new SpawnEditStore(doc);
     // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
     // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
@@ -1345,6 +1369,23 @@ async function boot(): Promise<void> {
     const store = spawnStore;
     const doc = store?.document ?? null;
     const ent = bridge.selectedEntity;
+    // 分组显隐（2026-09-23 布局改造）：刷怪点不再是顶级 tab，而是检视页条件分组。
+    // 编辑态 = 用户显式选中了刷怪点功能体（层级 ✦ 行 / 分组内列表）；运行态 = Play 中
+    // 选中了僵尸实体。场景里有没有刷怪点只决定层级面板显不显 ✦ 行，不决定本分组。
+    const spawnGroup = document.getElementById('spawn-group');
+    if (spawnGroup !== null) spawnGroup.hidden = !(spawnSelActive || ent !== null);
+    // 功能体喂层级面板（通用模式：场景装载/编辑后同步 ✦ 行）
+    panel.setFunctionalNodes(
+      doc === null
+        ? []
+        : listSpawnPoints(doc).map((sp) => ({
+            kind: 'spawn',
+            kindLabel: t('刷怪点'),
+            nodeId: sp.nodeId,
+            name: sp.name,
+            meta: `×${sp.count} · r${sp.radius.toFixed(1)}`,
+          })),
+    );
     const cmp = spawnAb?.cmp ?? null;
     const lines: string[] = [];
     let summary: string | null = null;
@@ -1422,6 +1463,8 @@ async function boot(): Promise<void> {
       },
       select: (id: string | null) => {
         selectedSpawnNode = id;
+        spawnSelActive = id !== null;
+        panel.setFunctionalSelection(id);
         refreshSpawnPanel();
       },
       edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
@@ -1441,7 +1484,8 @@ async function boot(): Promise<void> {
         if (e === undefined) return null;
         bridge.select(e.id, e.generation, e.runId);
         if (e.sourceNodeId !== null) selectedSpawnNode = e.sourceNodeId;
-        switchInspectorTab('spawn');
+        spawnSelActive = true;
+        switchInspectorTab('inspector');
         refreshSpawnPanel();
         return { id: e.id, generation: e.generation, sourceNodeId: e.sourceNodeId, characterId: e.characterId };
       },

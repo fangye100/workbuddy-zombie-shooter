@@ -1187,6 +1187,13 @@
   }
   .ctx-item:hover { background: var(--ink); color: var(--zombie); }
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
+  /* 功能体（✦ 刷怪点等非渲染功能节点）：与普通 GameObject 行区分 */
+  .hier-cat.fn { border-left: 3px solid var(--teal); }
+  .hier-cat.fn > summary { color: var(--teal); }
+  .hier-row.fn { color: var(--teal); }
+  .hier-row.fn .hier-fn-mark { flex: 0 0 auto; font-weight: 700; margin-right: 2px; }
+  .hier-row.fn .hier-name { font-style: italic; }
+
   /* 分隔线：菜单动作分组（编辑器动作 ↔ 通用文件动作） */
   .ctx-sep { height: 0; border-top: 2px solid var(--ink); margin: 4px 6px; }
   /* ---- 刷怪点编辑面板（WU-5）---- */
@@ -1280,20 +1287,24 @@
     <button class="insp-tab active" data-tab="inspector" data-page-node-id="cEMO2GWfcHF9AAUA46Xf2Q">检视</button>
     <button class="insp-tab" data-tab="scene" data-page-node-id="kSTHppUnagGT9wPcv3Fvqq">场景/光照</button>
     <button class="insp-tab" data-tab="render" data-page-node-id="FNRHc3KHABmmCW6EyqYmcG">渲染</button>
-    <button class="insp-tab" data-tab="asset" data-page-node-id="DYDFEWq3rIBYTVFY3Ouqcv">资产</button>
-    <button class="insp-tab" data-tab="spawn" data-page-node-id="SpAwNTab00000000001" title="刷怪点参数编辑（WU-5）">刷怪点</button>
+    <button class="insp-tab" data-tab="asset" data-page-node-id="DYFEWq3rIBYTVFY3Ouqcv">资产</button>
   </div>
   <div class="insp-panes" data-page-node-id="4kRrPUbWn9BQAA1DXM2GLf">
-    <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK"></div>
+    <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK">
+      <!-- 刷怪点（WU-5）：从顶级 tab 降级为检视页条件分组——场景含 SpawnPoint
+           组件（编辑态）或 Play 中选中僵尸实体（运行态）时显示，由 main.ts 控制 -->
+      <details class="group" id="spawn-group" hidden>
+        <summary>刷怪点</summary>
+        <div class="group-body">
+          <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
+        </div>
+      </details>
+    </div>
     <div class="insp-pane" data-pane="scene" data-page-node-id="Ht0prF6O4nFB58DEvN0Av5"></div>
     <div class="insp-pane" data-pane="render" data-page-node-id="4Buf15XQbE3rFgCO8zsmcb"></div>
     <div class="insp-pane" data-pane="asset" data-page-node-id="B5JRBF3dqcB8ZX37Ik3zRW">
       <div class="ai-host" data-page-node-id="f8HHSTMum6lFrQGZgU5eES"></div>
       <div id="asset-preview-host" data-page-node-id="5tt6WD9ZUHK6yCr0naAgDd"></div>
-    </div>
-    <!-- 刷怪点编辑（WU-5）：内部 DOM 由 services/spawn-panel.ts 全量构建 -->
-    <div class="insp-pane" data-pane="spawn" data-page-node-id="SpAwNPane0000000001">
-      <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
     </div>
   </div>
 </aside>

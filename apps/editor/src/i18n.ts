@@ -420,6 +420,9 @@ const DICT: Record<string, string> = {
   '时间': 'Time',
   '蒙皮权重可视化': 'Visualize Skin Weights',
   '未载入模型 · 从底部资产库双击 .glb 生成进场景': 'No model loaded · double-click a .glb in the asset library below to spawn it',
+
+  '功能体': 'Functional Nodes',
+  '刷怪点': 'Spawn Point',
 };
 
 

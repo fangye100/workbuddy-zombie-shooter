@@ -223,6 +223,22 @@ function gradeAt(p: LabParams, cIn: V3): V3 {
   return r;
 }
 
+/**
+ * 功能体：场景文档里**不产生渲染内容**的功能节点（刷怪点、未来的触发器/导航区…）。
+ * 它们不出现在渲染器的物体列表里，由 main.ts 从场景文档读出喂给层级面板，
+ * 以特殊符号（✦ + teal）与普通 GameObject 区分；选中后右侧检视页显示对应属性分组。
+ * 2026-09-23 布局改造立的通用模式：以后的功能体都走这条路，不再建顶级 tab/常驻面板。
+ */
+export interface FunctionalNodeInfo {
+  /** 功能体种类（路由检视页分组用，如 'spawn'） */
+  kind: string;
+  /** 显示用种类名（已本地化，如「刷怪点」） */
+  kindLabel: string;
+  nodeId: string;
+  name: string;
+  /** 行尾补充信息（如 数量×半径） */
+  meta?: string;
+}
 export class Panel {
   readonly params: LabParams;
 
@@ -248,6 +264,10 @@ export class Panel {
   onHierarchyContextMenu: ((index: number, clientX: number, clientY: number) => void) | null = null;
   /** 子网格的显隐开关 */
   onSubMeshToggle: ((index: number, subIndex: number, visible: boolean) => void) | null = null;
+
+  // ---- 功能体（场景里的非渲染功能节点，如刷怪点）----
+  /** 点选功能体行 → 选中并请求显示它的属性（检视页条件分组） */
+  onFunctionalSelect: ((node: FunctionalNodeInfo | null) => void) | null = null;
 
   private readonly renderer: LabRenderer;
 
@@ -281,6 +301,9 @@ export class Panel {
 
   // ---- 场景层级 ----
   private hierBody!: HTMLElement;
+  private hierFnBody!: HTMLElement;
+  private fnNodes: FunctionalNodeInfo[] = [];
+  private fnSelected: string | null = null;
   private hierEmpty!: HTMLElement;
   private hierSummary!: HTMLElement;
   /** 展开/收起状态按物体索引记；两个集合都没记的用默认值（子网格 > 1 才默认展开） */
@@ -737,6 +760,15 @@ export class Panel {
     const body = document.createElement('div');
     this.hierBody = body;
     wrap.appendChild(body);
+
+    const fnSec = document.createElement('details');
+    fnSec.className = 'hier-cat fn';
+    fnSec.open = true;
+    const fnSum = document.createElement('summary');
+    fnSum.textContent = t('功能体');
+    fnSec.appendChild(fnSum);
+    this.hierFnBody = fnSec;
+    wrap.appendChild(fnSec);
     const empty = document.createElement('div');
     empty.className = 'hint';
     empty.textContent = t('场景里没有对象。');
@@ -784,6 +816,53 @@ export class Panel {
       }
       this.hierBody.appendChild(details);
     }
+    this.renderFunctionalNodes();
+  }
+
+  /** 功能体行重建：✦ 前缀 + teal 配色与普通物体行区分；点选走 onFunctionalSelect */
+  private renderFunctionalNodes(): void {
+    if (this.hierFnBody === undefined) return;
+    const sec = this.hierFnBody;
+    for (const row of [...sec.querySelectorAll('.hier-row.fn')]) row.remove();
+    sec.style.display = this.fnNodes.length === 0 ? 'none' : '';
+    const sum = sec.querySelector('summary');
+    if (sum !== null) sum.textContent = `${t('功能体')} (${this.fnNodes.length})`;
+    for (const fn of this.fnNodes) {
+      const row = document.createElement('div');
+      row.className = 'hier-row fn' + (fn.nodeId === this.fnSelected ? ' sel' : '');
+      row.dataset.fnNode = fn.nodeId;
+      const mark = document.createElement('span');
+      mark.className = 'hier-fn-mark';
+      mark.textContent = '✦';
+      const name = document.createElement('span');
+      name.className = 'hier-name';
+      name.textContent = `${fn.kindLabel} · ${fn.name}`;
+      name.title = `${fn.kindLabel} · ${fn.name}`;
+      row.append(mark, name);
+      if (fn.meta !== undefined) {
+        const meta = document.createElement('span');
+        meta.className = 'hier-meta';
+        meta.textContent = fn.meta;
+        row.appendChild(meta);
+      }
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.onFunctionalSelect?.(fn);
+      });
+      sec.appendChild(row);
+    }
+  }
+
+  /** 喂功能体列表（main.ts 在场景装载 / 功能体编辑后调）；同列表跳过不重绘 */
+  setFunctionalNodes(list: FunctionalNodeInfo[]): void {
+    if (list.length === this.fnNodes.length && list.every((n, i) => n.nodeId === this.fnNodes[i]?.nodeId)) return;
+    this.fnNodes = list;
+    this.renderFunctionalNodes();
+  }
+
+  setFunctionalSelection(nodeId: string | null): void {
+    this.fnSelected = nodeId;
+    this.renderFunctionalNodes();
   }
 
   /** 对象节点：展开三角 + 眼睛 + 名称 + 面数 + 删除；下方挂子网格行 */
@@ -1073,6 +1152,8 @@ export class Panel {
     if (index !== null && sub === null && this.renderer.getSubMeshCount(index) === 1) sub = 0;
     this.selIndex = index;
     this.selSub = sub;
+    // 物体选中态与功能体选中态互斥：选物体（含取消选中）即清功能体高亮
+    if (this.fnSelected !== null) this.setFunctionalSelection(null);
     this.syncHierarchySelection(); // 只 toggle 一个 class，不重建列表
     if (index === null) {
       this.selEmpty.style.display = '';
