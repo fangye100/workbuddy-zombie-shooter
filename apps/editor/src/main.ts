@@ -3107,25 +3107,67 @@ async function boot(): Promise<void> {
     assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
 
     // 资产库预览缓存：避免反复 fetch + 解析 GLB（贴图仍每次重新解码，因 ImageBitmap 已被 close）
+    // ---- 资产预览的 LOD 家族（assets/_data/asset-manifest.json，与 assets/asset-browser.html 同源） ----
+    interface ManifestLod { label?: unknown; file?: unknown }
+    let lodIndex: Map<string, { label: string; path: string }[]> | null = null;
+    async function getLodIndex(): Promise<Map<string, { label: string; path: string }[]>> {
+      if (lodIndex !== null) return lodIndex;
+      lodIndex = new Map();
+      const r = await readProjectFile('assets/_data/asset-manifest.json');
+      if (r.ok && r.json !== null && typeof r.json === 'object') {
+        const root = r.json as Record<string, unknown>;
+        for (const section of ['characters', 'environments']) {
+          const list = root[section];
+          if (!Array.isArray(list)) continue;
+          for (const e of list) {
+            if (e === null || typeof e !== 'object') continue;
+            const lods = (e as Record<string, unknown>).lods;
+            if (!Array.isArray(lods) || lods.length === 0) continue;
+            const family = lods
+              .filter((l): l is ManifestLod => l !== null && typeof l === 'object')
+              .map((l) => ({ label: String(l.label ?? 'LOD'), path: String(l.file ?? '') }))
+              .filter((l) => l.path !== '')
+              // manifest 路径相对 assets/：补全成项目根相对路径，否则 /__fs 取不到
+              .map((l) => (l.path.startsWith('assets/') ? l : { ...l, path: `assets/${l.path}` }));
+            if (family.length === 0) continue;
+            // manifest 的 file 相对 assets/（asset-browser.html 也在 assets/ 里用它）；
+            // 编辑器的资产路径带 assets/ 前缀——两种写法都登记，查找时命中任一形态
+            for (const l of family) lodIndex.set(l.path, family);
+          }
+        }
+      }
+      return lodIndex;
+    }
+
+    /** 按路径把 GLB 载入预览（选中流与 LOD 切换共用；不改资产库选中） */
+    async function previewPath(path: string): Promise<void> {
+      try {
+        let model = previewCache.get(path);
+        if (model === undefined) {
+          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const buffer = await resp.arrayBuffer();
+          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+          previewCache.set(path, model);
+        }
+        const bmp = model.image === null ? null : await decodeTexture(model.image, path);
+        await assetPreview?.load(model, bmp);
+        const family = (await getLodIndex()).get(path) ?? [];
+        assetPreview?.setLods(family, path);
+        assetPreview?.setStats(`${Math.round(model.triangles)} tris · ${model.vertices} verts`);
+      } catch (err) {
+        console.error('[资产库] 预览解析失败', path, err);
+        assetPreview?.setLods([], null);
+        assetPreview?.setStats('');
+      }
+    }
+
     async function previewAsset(sel: AssetSelection): Promise<void> {
       if (sel.entry.kind !== 'file' || !sel.entry.ext.toLowerCase().endsWith('.glb')) {
         assetPreview?.clear();
         return;
       }
-      try {
-        let model = previewCache.get(sel.path);
-        if (model === undefined) {
-          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(sel.path)}`);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-          previewCache.set(sel.path, model);
-        }
-        const bmp = model.image === null ? null : await decodeTexture(model.image, sel.path);
-        await assetPreview?.load(model, bmp);
-      } catch (err) {
-        console.error('[资产库] 预览解析失败', sel.path, err);
-      }
+      await previewPath(sel.path);
     }
 
     const assets = new AssetBrowser(dockEl, {
@@ -3276,6 +3318,8 @@ async function boot(): Promise<void> {
       });
     };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
+    // LOD 下拉切换：只换预览内容，不动资产库选中
+    if (assetPreview !== null) assetPreview.onLoadLod = (p) => void previewPath(p);
     // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则只能绕 UI 后门。
     // renderer 在初始化钩子对象里已经挂过一次（简写属性），这里**不要重复赋值** ——
     // 两处指向同一个键，改一处会让人以为另一处是新的真源。

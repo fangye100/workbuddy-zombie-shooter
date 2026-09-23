@@ -424,7 +424,11 @@ const DICT: Record<string, string> = {
   '高光下界': 'Highlights Lower',
   '高光混色': 'Highlights Tint',
   '高光混色比例': 'Highlights Tint Amount',
-  '高光混色（bone）': 'Highlights Tint (bone)',};
+  '高光混色（bone）': 'Highlights Tint (bone)',
+  '贴图': 'Textured',
+  '白模': 'Clay',
+  'LOD 档位': 'LOD Level',
+};
 
 
 

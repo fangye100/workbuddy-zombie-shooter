@@ -14,6 +14,7 @@
  *   - 骨骼 X-ray 开关：开启时把骨骼以 line-list 透视网格画在最上层。
  */
 
+import { t } from '../i18n';
 import type { GpuContext } from '@aether/gfx';
 import {
   RendererCore,
@@ -115,6 +116,12 @@ interface PreviewObject {
   radius: number;
 }
 
+/** LOD 档位描述（label 来自 manifest，path 为项目内相对路径） */
+export interface PreviewLodInfo {
+  label: string;
+  path: string;
+}
+
 export class AssetPreview {
   private readonly gpu: GpuContext;
   private readonly canvas: HTMLCanvasElement;
@@ -138,6 +145,14 @@ export class AssetPreview {
 
   // 骨骼 X-ray
   private skeletonVisible = false;
+  /** LOD 下拉切换 → 外部按路径重载预览（不改变资产库选中） */
+  onLoadLod: ((path: string) => void) | null = null;
+  /** LOD 档位（数据来自 assets/_data/asset-manifest.json 的 lods[] 家族） */
+  private lods: PreviewLodInfo[] = [];
+  /** 当前物体是否带 albedo 贴图（setAlbedo 成功后立起；load 新物体时复位） */
+  private hasAlbedoTex = false;
+  /** 渲染风格：贴图（采样 albedo） / 白模（平色受光，用于检查形体） */
+  private style: 'textured' | 'clay' = 'textured';
 
   // ---- Timeline DOM 引用 ----
   private btnPlay!: HTMLButtonElement;
@@ -146,6 +161,8 @@ export class AssetPreview {
   private selSpeed!: HTMLSelectElement;
   private scrub!: HTMLInputElement;
   private lblTime!: HTMLElement;
+  private selLod!: HTMLSelectElement;
+  private lblStats!: HTMLElement;
   private lastClipCount = -1;
   private scrubbing = false;
 
@@ -174,7 +191,13 @@ export class AssetPreview {
         <button class="ap-xray" title="骨骼 X-ray 叠加">骨骼</button>
       </div>
       <input type="range" class="ap-scrub" min="0" max="1" step="0.001" value="0" disabled>
-      <div class="ap-time"><span class="ap-t">0.00</span> / <span class="ap-d">0.00</span> s</div>`;
+      <div class="ap-time"><span class="ap-t">0.00</span> / <span class="ap-d">0.00</span> s</div>
+      <div class="ap-bar ap-view">
+        <button class="ap-style" data-style="textured">${t('贴图')}</button>
+        <button class="ap-style" data-style="clay">${t('白模')}</button>
+        <select class="ap-lod" title="LOD 档位" hidden></select>
+        <span class="ap-stats"></span>
+      </div>`;
     previewEl.appendChild(this.panel);
 
     this.btnPlay = this.panel.querySelector('.ap-play')!;
@@ -183,6 +206,22 @@ export class AssetPreview {
     this.selSpeed = this.panel.querySelector('.ap-speed')!;
     this.scrub = this.panel.querySelector('.ap-scrub')!;
     this.lblTime = this.panel.querySelector('.ap-time')!;
+
+    // 风格切换 / LOD 切换（风格只改材质 flag；LOD 走 onLoadLod 由外部重载模型）
+    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.ap-style')) {
+      b.addEventListener('click', () => {
+        this.style = b.dataset.style === 'clay' ? 'clay' : 'textured';
+        this.syncStyleButtons();
+      });
+    }
+    this.selLod = this.panel.querySelector('.ap-lod')!;
+    this.lblStats = this.panel.querySelector('.ap-stats')!;
+    this.selLod.addEventListener('change', () => {
+      const idx = Number(this.selLod.value);
+      const lod = this.lods[idx];
+      if (lod !== undefined) this.onLoadLod?.(lod.path);
+    });
+    this.syncStyleButtons();
 
     this.core = new RendererCore(gpu, this.canvas);
 
@@ -217,12 +256,45 @@ export class AssetPreview {
   /** 隐藏预览（选中非 GLB 资产或清空选择时调用） */
   clear(): void {
     this.releaseObject();
+    this.setLods([], null);
+    this.setStats('');
+    this.hasAlbedoTex = false;
+    this.syncStyleButtons();
     this.showEmpty();
+  }
+
+  /** 风格按钮态：无贴图时禁用（白模与贴图同貌，切了没意义） */
+  private syncStyleButtons(): void {
+    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.ap-style')) {
+      const st = b.dataset.style === 'clay' ? 'clay' : 'textured';
+      b.classList.toggle('on', st === this.style);
+      b.disabled = !this.hasAlbedoTex;
+    }
+  }
+
+  /** LOD 家族注入（manifest 的 lods[]）；空数组 = 收起下拉 */
+  setLods(lods: PreviewLodInfo[], activePath: string | null): void {
+    this.lods = lods;
+    this.selLod.replaceChildren();
+    this.selLod.hidden = lods.length === 0;
+    lods.forEach((l, i) => {
+      const o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = l.label;
+      if (l.path === activePath) o.selected = true;
+      this.selLod.appendChild(o);
+    });
+  }
+
+  /** 统计行（顶点/面数；LOD 切换对比的核心读数） */
+  setStats(text: string): void {
+    this.lblStats.textContent = text;
   }
 
   /** 载入一个已解析的 GLB 模型（由 main.ts 负责 fetch + parseGlb） */
   async load(model: GltfResult, albedo: ImageBitmap | null): Promise<void> {
     this.releaseObject();
+    this.hasAlbedoTex = false; // 新物体：贴图未上传前按平色渲染，setAlbedo 成功后再立起
 
     const mesh = model.mesh;
     const device = this.gpu.device;
@@ -367,7 +439,9 @@ export class AssetPreview {
     if (this.obj.ownsTexture) this.obj.texture.destroy();
     this.obj.texture = tex;
     this.obj.ownsTexture = true;
+    this.hasAlbedoTex = true;
     this.rebuildBindGroup();
+    this.syncStyleButtons();
   }
 
   private rebuildBindGroup(): void {
@@ -601,6 +675,9 @@ export class AssetPreview {
 
     // 材质（平色 bone + 描边）
     packMaterial(this.materialData, 0, PREVIEW_MATERIAL);
+    // 🔴 flags.z（有贴图）位 packMaterial 恒写 0、由调用方置位——历史上漏了这一步，
+    // 且 packMaterial 每帧重打包，必须每帧在其后覆盖，否则贴图永远不生效
+    this.materialData[18] = this.hasAlbedoTex && this.style === 'textured' ? 1 : 0;
     // 变换（预览物体置于原点、单位缩放）
     this.transformData.set(o.modelMatrix, 0);
 
@@ -733,6 +810,10 @@ export class AssetPreview {
       duration: s !== null && s.clip >= 0 ? s.clips[s.clip]!.duration : 0,
       clip: s !== null ? currentClip(s) : -1,
       skeletonVisible: this.skeletonVisible,
+      textured: this.hasAlbedoTex && this.style === 'textured',
+      style: this.style,
+      tris: this.obj !== null ? Math.round(this.obj.indexCount / 3) : 0,
+      lodCount: this.lods.length,
     };
   }
 

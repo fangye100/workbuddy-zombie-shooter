@@ -1065,6 +1065,50 @@ async function main() {
       check('骨骼 X-ray 按钮激活', xray.active === true);
       check('预览骨骼 X-ray 叠加开启', xray.previewXray === true);
 
+      // 预览增强（2026-09-23）：贴图 / 渲染风格 / LOD 切换
+      const pv = await cdp.eval(`(async () => {
+        const st0 = window.__editor.preview.getState();
+        // ① 贴图根因：materialData 的「有贴图」flag 必须立起（历史上 packMaterial 每帧重置导致永假）
+        // ② 风格切换：白模 = textured false；切回贴图 = true
+        const clayBtn = document.querySelector('#asset-preview-host .ap-style[data-style=clay]');
+        const texBtn = document.querySelector('#asset-preview-host .ap-style[data-style=textured]');
+        const before = { textured: st0.textured, tris: st0.tris, lodCount: st0.lodCount };
+        clayBtn.click();
+        await new Promise((r) => setTimeout(r, 400));
+        const clay = window.__editor.preview.getState();
+        texBtn.click();
+        await new Promise((r) => setTimeout(r, 400));
+        const back = window.__editor.preview.getState();
+        return { before, clay: { style: clay.style, textured: clay.textured }, back: { style: back.style, textured: back.textured } };
+      })()`);
+      check('预览贴图生效（textured=true，根因：flags 位每帧被 packMaterial 重置）', pv.before.textured === true);
+      check('白模切换生效（textured=false）', pv.clay.style === 'clay' && pv.clay.textured === false);
+      check('切回贴图生效', pv.back.style === 'textured' && pv.back.textured === true);
+      check(
+        `LOD 家族下拉就位（≥2 档，manifest lods[]）`,
+        pv.before.lodCount >= 2,
+        `lodCount=${pv.before.lodCount}`,
+      );
+
+      if (pv.before.lodCount >= 2) {
+        const lod = await cdp.eval(`(async () => {
+          const sel = document.querySelector('#asset-preview-host .ap-lod');
+          const tris0 = window.__editor.preview.getState().tris;
+          sel.value = '0'; // LOD0（原生高模）
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise((r) => setTimeout(r, 5000)); // 高模 44MB：fetch+parse 给足
+          const st1 = window.__editor.preview.getState();
+          // 切回原档，不把后续段的预览留在大模型上
+          const orig = [...sel.options].findIndex((o) => o.selected);
+          sel.selectedIndex = Math.max(0, 1);
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise((r) => setTimeout(r, 3000));
+          return { tris0, tris1: st1.tris, back: window.__editor.preview.getState().tris };
+        })()`);
+        check('LOD0 切换后面数显著变化（高模 vs 低模）', lod.tris1 > lod.tris0 * 2, `${lod.tris0} → ${lod.tris1}`);
+        check('切回低档面数回落', lod.back <= lod.tris0 * 2, `back=${lod.back}`);
+      }
+
       const shot2 = await cdp.send('Page.captureScreenshot', { format: 'png' });
       const shot2Path = path.join(OUT_DIR, 'editor-preview-smoke.png');
       fs.writeFileSync(shot2Path, Buffer.from(shot2.data, 'base64'));
@@ -2100,7 +2144,9 @@ async function main() {
         );
         // ④ redraw（= resize → 重新 fit）把视图还原，别污染后面的像素断言段
         b.redraw();
-        await ${nFrames(2)};
+        // 除抖：重适配后的骨轴读数要等画布尺寸/相机完全落定（预览段载过 44MB 高模的
+        // 负载尖峰下 2 帧不够，实测残留 ~2.5px 漂移把 0.5px 容差断言打假失败）
+        await ${nFrames(4)};
         const restored = axisOf();
         return { before, panned, afterUp, hit, restored };
       })()`);

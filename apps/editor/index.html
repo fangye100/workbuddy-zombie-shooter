@@ -571,6 +571,11 @@
   }
   #asset-preview-host .ap-canvas { flex: 1 1 auto; width: 100%; min-height: 0; display: block; }
   #asset-preview-host .ap-panel { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; }
+  #asset-preview-host .ap-view { padding-top: 2px; border-top: 2px solid var(--ink); }
+  #asset-preview-host .ap-style.on { background: var(--zombie); color: var(--ink); font-weight: 700; }
+  #asset-preview-host .ap-style:disabled { opacity: .4; cursor: not-allowed; }
+  #asset-preview-host .ap-lod { max-width: 130px; font-size: 10.5px; }
+  #asset-preview-host .ap-stats { margin-left: auto; font-size: 10.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   #asset-preview-host .ap-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   #asset-preview-host .ap-play,
   #asset-preview-host .ap-xray {
