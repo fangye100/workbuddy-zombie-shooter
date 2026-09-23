@@ -17,7 +17,7 @@
     "characterId": "E-01",
     "characterName": "游荡者",
     "variant": "rigged",
-    "file": "E01_Shambler_900_mcp_rigged.glb"
+    "file": "E01_Shambler_900_mcpbound.glb"
   },
   "sourceHash": "sha256:c12c8b9bac80365e87791700674d854fb9f4e3af7e248ffea069b1fd3cedcdb4",
   "updatedAt": "2026-09-23T01:54:18.568Z"
