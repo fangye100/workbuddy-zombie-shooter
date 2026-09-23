@@ -386,10 +386,9 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
 
-  // 不再默认加载任何内置模型：E-04 内置档（LOD 中间产物）已全部移除，
   // 模型进场景的唯一入口是底部资产库（双击/拖入 .glb）；「模型预览」面板与
   // setCharacter 角色槽路径已于 2026-09-23 布局改造收掉（槽位假设在场景化世界会错伤场景物体）。
-  panel.setModelInfo(t('未载入模型 · 从底部资产库双击 .glb 生成进场景'));
+  // 顶栏状态行初始为空：只在真的有操作反馈（复制/重命名/拦截提示…）时才出现文字。
 
   // 默认取景：target 落在角色身上才能居中构图，而不是看向角色前方的空地
   const DEFAULT_VIEW = { yaw: 0.35, distance: 9, target: [0, 0.95, 0] as [number, number, number] };

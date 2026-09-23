@@ -396,32 +396,6 @@ const DICT: Record<string, string> = {
   '暂停': 'Pause',
   'Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop': 'Cannot swap models during Play (Stop cannot restore the original mesh) - Stop first',
   '程序化胶囊 · 材质在「材质」面板调': 'Procedural capsule · tune the material in the Material panel',
-  '未载入模型 · 用「导入 GLB…」载入原始 .glb': 'No model loaded · use Import GLB… to load a raw .glb',
-  'Play 中不能导入 / 生成资产，先 Stop': 'Cannot import / spawn assets during Play - Stop first',
-  '场景物体已达上限（64），先在层级里删掉一些再拖入': 'Scene object limit reached (64) - delete some in the hierarchy before dragging in',
-  '请先在底部资产库选中一个 .glb 模型，或右键场景物体 → 进入绑定': 'Select a .glb model in the asset library below, or right-click a scene object → Enter Binding',
-  '只有 .glb 模型能拖入场景（其他资产在右侧 Inspector 里预览）': 'Only .glb models can be dragged into the scene (preview other assets in the right Inspector)',
-
-  // ---- 重定向工作台 ----
-  '地面接触：先载入动作': 'Ground contact: load a motion first',
-  '生成预览': 'Generate Preview',
-  '载入动作 (BVH)…': 'Load Motion (BVH)…',
-
-  '◀ 问题帧': '◀ Problem Frame',
-  '先载入或设置标定后再保存': 'Load or set the calibration before saving',
-  '动作适配': 'Motion Adaptation',
-  '地面接触：不可用（源无世界轨迹）': 'Ground contact: unavailable (source has no world trajectory)',
-  '地面接触：仅相位指导（原地 / 无可信轨迹，不做世界锁脚）': 'Ground contact: phase guidance only (in-place / no trusted trajectory, no world lock)',
-  '地面接触：已启用世界锁脚（支撑段锚定）': 'Ground contact: world foot-lock enabled (stance anchoring)',
-
-  '片段': 'Clip',
-  '循环': 'Loop',
-  '速率': 'Speed',
-  '时间': 'Time',
-  '蒙皮权重可视化': 'Visualize Skin Weights',
-  '未载入模型 · 从底部资产库双击 .glb 生成进场景': 'No model loaded · double-click a .glb in the asset library below to spawn it',
-
-  '功能体': 'Functional Nodes',
   '刷怪点': 'Spawn Point',
 };
 
