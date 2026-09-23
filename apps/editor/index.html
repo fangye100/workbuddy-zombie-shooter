@@ -104,6 +104,10 @@
   }
   input[type=number]:focus { outline: none; border-color: var(--zombie); }
   input[type=number]::-webkit-inner-spin-button { opacity: .5; }
+  /* 行内属性行：label 左、数字框右，同一行 */
+  .row.numline { display: flex; align-items: center; gap: 8px; }
+  .row.numline > label { flex: 1 1 auto; min-width: 0; }
+  .row.numline > input[type=number] { flex: 0 0 108px; width: 108px; }
 
   input[type=range] {
     width: 100%;

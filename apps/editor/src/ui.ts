@@ -650,14 +650,12 @@ export class Panel {
       lbl: string,
       onInput: (v: number) => void,
     ): HTMLInputElement => {
+      // 标签与输入框同一行（label 左、框右），不拆两行
       const row = document.createElement('div');
-      row.className = 'row';
-      const head = document.createElement('div');
-      head.className = 'row-head';
+      row.className = 'row numline';
       const label = document.createElement('label');
       label.textContent = lbl;
-      head.appendChild(label);
-      row.appendChild(head);
+      row.appendChild(label);
       const input = document.createElement('input');
       input.type = 'number';
       input.step = '0.001';

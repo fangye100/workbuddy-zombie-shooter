@@ -261,7 +261,6 @@ const DICT: Record<string, string> = {
   '姿态预览': 'Pose Preview',
   '实例名': 'Instance Name',
 
-  '变换': 'Transform',
 };
 
 
