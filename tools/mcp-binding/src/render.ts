@@ -14,7 +14,7 @@
 
 export type Rgb = readonly [number, number, number];
 export type Vec3 = readonly [number, number, number];
-export type ViewAxis = 'front' | 'side';
+export type ViewAxis = 'front' | 'side' | 'top';
 
 export interface PointCloud {
   /**
@@ -116,6 +116,8 @@ function plane(p: Vec3, view: ViewAxis, rot?: { c: number; s: number }): readonl
     x = p[0] * rot.c + p[2] * rot.s;
     z = -p[0] * rot.s + p[2] * rot.c;
   }
+  // top（俯视，从 +Y 往下看）：右 = +X（角色左侧），上 = +Z（前方）
+  if (view === 'top') return [x, z];
   return view === 'front' ? [x, p[1]] : [z, p[1]];
 }
 
@@ -263,7 +265,7 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
       // ②③ 让用户在纯侧视重叠剪影里也能看到身体结构，而不只是外轮廓。
       const idx = pts.indices;
       const n = pts.count;
-      const d: Vec3 = view === 'front' ? [0, 0, 1] : [-1, 0, 0];
+      const d: Vec3 = view === 'front' ? [0, 0, 1] : view === 'side' ? [-1, 0, 0] : [0, 1, 0];
       const px = new Float64Array(n);
       const py = new Float64Array(n);
       const pdep = new Float64Array(n);
@@ -277,7 +279,7 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
         // 深度取旋转后坐标在视向上的投影（plane 内部已旋转，这里重算一次保持一致）
         const rx = rot !== undefined ? x * rot.c + z * rot.s : x;
         const rz = rot !== undefined ? -x * rot.s + z * rot.c : z;
-        pdep[i] = view === 'front' ? rz : -rx; // 越大越近（front: +z 近；side: −x 近）
+        pdep[i] = view === 'front' ? rz : view === 'side' ? -rx : y; // 越大越近（front:+z；side:−x；top:+y；绕Y旋转 y 不变）
       }
       const T = idx.length / 3;
       const order = new Int32Array(T);

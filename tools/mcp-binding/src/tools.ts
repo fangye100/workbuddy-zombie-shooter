@@ -273,7 +273,8 @@ export class BindingDomain {
   /** render：把当前会话状态装配成正交场景并光栅化 */
   render(args: Record<string, unknown>): ToolResult {
     const mesh = this.requireMesh();
-    const view: ViewAxis = optStr(args, 'view') === 'side' ? 'side' : 'front';
+    const v = optStr(args, 'view');
+    const view: ViewAxis = v === 'side' || v === 'top' ? v : 'front';
     const width = clampInt(optNum(args, 'width'), 64, 1024, 480);
     const height = clampInt(optNum(args, 'height'), 64, 1024, 640);
     const showMesh = optBool(args, 'showMesh') !== false;
@@ -624,11 +625,11 @@ export const TOOLS_TABLE = [
   {
     name: 'render',
     description:
-      '渲染正/侧视正交投影图（PNG 图像块）：网格点云 + 骨架 + wrapper 圆柱轮廓，可选 heatBone 画逐顶点权重热力。视觉反馈闭环的核心工具。',
+      '渲染正/侧视正交投影图（PNG 图像块）：网格点云 + 骨架 + wrapper 圆柱轮廓，可选 heatBone 画逐顶点权重热力。视觉反馈闭环的核心工具。⚠️ 骨骼对齐阶段必须传 showCylinders:false 先关掉圆柱 Skin Wrapper（半透明 proxy 会污染截图、干扰 joint 对位判读），骨骼验证通过后再显示 wrapper。',
     inputSchema: {
       type: 'object',
       properties: {
-        view: { type: 'string', enum: ['front', 'side'], description: '默认 front' },
+        view: { type: 'string', enum: ['front', 'side', 'top'], description: '默认 front；top = 俯视（右=+X 角色左侧，上=+Z 前方），查体姿偏航/脚外八用' },
         width: { type: 'integer', description: '64..1024，默认 480' },
         height: { type: 'integer', description: '64..1024，默认 640' },
         heatBone: { type: 'string', description: '画该骨权重热力图（tip 骨不参与蒙皮，会被拒）' },

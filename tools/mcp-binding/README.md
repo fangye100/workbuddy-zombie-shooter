@@ -8,6 +8,11 @@
 > [骨骼节点视觉修正流程](#🔴-骨骼节点视觉修正流程强制纪律) ——
 > 必须可视化（截图看图）修正，每轮核对必须过独立审核员子代理直到 PASS，
 > joint 经用户确认后才许进 wrapper 阶段。禁止盲调坐标。
+>
+> 🔴 **进行骨骼对齐时，先关掉圆柱体的 Skin Wrapper**（MCP 路径：`render` 传
+> `showCylinders:false`；编辑器路径：`__editor.binding.wrappers.set(false)`），
+> 等骨骼验证通过以后，再显示出这个 Skin Wrapper——半透明 proxy 圆柱会污染
+> 截图，干扰 joint 与模型关节的对位判读。
 
 ```
 Agent ──MCP(stdio)──▶ server.mjs ──▶ dist/domain.mjs ──▶ BindingSession
