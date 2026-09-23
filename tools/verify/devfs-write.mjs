@@ -296,6 +296,70 @@ try {
   check('reveal 拒绝 ../../ 穿越 (400)', rvEscape.status === 400);
   const rvMissing = await runReq(handler, `/__fs/reveal`, 'POST', { path: 'probe/ghost.json' });
   check('reveal 对不存在条目 404', rvMissing.status === 404);
+
+  // ── bot 评审收口回归（PR #14）──────────────────────────────────────────
+
+  // 根本身边份拒绝：`path: "."` resolve 成项目根，rename 会把 checkout 挪出锁外
+  const rnRoot = await runRename(handler, root, '.', 'escaped-root');
+  check('rename 项目根本身拒绝 (400)', rnRoot.status === 400);
+  const rnRoot2 = await runRename(handler, root, './', 'escaped-root');
+  check('rename 根（./ 写法）同样拒绝 (400)', rnRoot2.status === 400);
+
+  // 锚点大小写：大小写不敏感盘上 AETHER.PROJECT.JSON = 锚点本身，必须拒绝；
+  // 区分大小写的盘上该文件不存在 → 404（同样没被改名）
+  const rnAnchorCase = await runRename(handler, root, 'AETHER.PROJECT.JSON', 'nope.json');
+  if (rnAnchorCase.status === 400) {
+    check('rename 锚点大写变体拒绝 (400，大小写不敏感盘)', rnAnchorCase.status === 400);
+  } else {
+    check('rename 锚点大写变体按不存在拒绝 (404，区分大小写盘)', rnAnchorCase.status === 404);
+  }
+
+  // sidecar 目标位被孤儿占用：a.json(+meta) → b.json 时残留 b.json.meta.json → 409，
+  // 且源文件与源 sidecar 都不动（不被半执行）
+  writeFileSync(path.join(root, 'probe/sc.json'), '{}', 'utf8');
+  writeFileSync(path.join(root, 'probe/sc.json.meta.json'), '{"guid":"sc"}', 'utf8');
+  writeFileSync(path.join(root, 'probe/orphan-target.json.meta.json'), '{"guid":"orphan"}', 'utf8');
+  const rnSidecarClash = await runRename(handler, root, 'probe/sc.json', 'orphan-target.json');
+  check('sidecar 目标位被孤儿占用 → 409', rnSidecarClash.status === 409, JSON.stringify(rnSidecarClash.body));
+  check('409 后源文件未动', existsSync(path.join(root, 'probe/sc.json')));
+  check('409 后孤儿 sidecar 未被覆盖（guid 原样）',
+    readFileSync(path.join(root, 'probe/orphan-target.json.meta.json'), 'utf8').includes('orphan'));
+
+  // 登记同步覆盖**全部**路径字段：assetRoots/behaviorRoots/defaultStyle/inputMap/
+  // gameplayConfig/materialLibrary 都要跟着目录改名走
+  writeFileSync(path.join(root, 'aether.project.json'), JSON.stringify({
+    schemaVersion: 1,
+    scenes: [{ path: 'probe/newdir2/inner/deep.json', name: 'A' }],
+    assetRoots: ['probe/newdir2/assets', 'assets'],
+    behaviorRoots: ['probe/newdir2/behaviors'],
+    defaultStyle: 'probe/newdir2/styles/tokens.json',
+    inputMap: 'probe/newdir2/input.json',
+    gameplayConfig: 'probe/newdir2/gameplay.json',
+    materialLibrary: 'assets/materials/library.mat.json',
+  }, null, 2), 'utf8');
+  const rnAllFields = await runRename(handler, root, 'probe/newdir2', 'newdir3');
+  check('目录改名后 ok (200)', rnAllFields.status === 200);
+  const projAll = JSON.parse(readFileSync(path.join(root, 'aether.project.json'), 'utf8'));
+  check('scenes[].path 前缀改写', projAll.scenes[0].path === 'probe/newdir3/inner/deep.json');
+  check('assetRoots 命中项改写、未命中保留',
+    projAll.assetRoots[0] === 'probe/newdir3/assets' && projAll.assetRoots[1] === 'assets');
+  check('behaviorRoots 改写', projAll.behaviorRoots[0] === 'probe/newdir3/behaviors');
+  check('defaultStyle 改写', projAll.defaultStyle === 'probe/newdir3/styles/tokens.json');
+  check('inputMap 改写', projAll.inputMap === 'probe/newdir3/input.json');
+  check('gameplayConfig 改写', projAll.gameplayConfig === 'probe/newdir3/gameplay.json');
+  check('materialLibrary 未命中保持原样', projAll.materialLibrary === 'assets/materials/library.mat.json');
+
+  // 部分成功：改名落盘但项目文件不可读 → ok:true + projectError（浏览器仍会刷新）
+  rmSync(path.join(root, 'aether.project.json'), { force: true });
+  mkdirSync(path.join(root, 'aether.project.json'), { recursive: true }); // 目录 → readFile 抛 EISDIR
+  const rnPartial = await runRename(handler, root, 'probe/a2.json', 'a3.json');
+  check('部分成功：改名 ok=true', rnPartial.status === 200 && rnPartial.body?.ok === true);
+  check('部分成功：projectError 如实上报（非空字符串）',
+    typeof rnPartial.body?.projectError === 'string' && rnPartial.body.projectError.length > 0,
+    rnPartial.body?.projectError ?? '');
+  check('部分成功：文件确实已改名', existsSync(path.join(root, 'probe/a3.json'))
+    && !existsSync(path.join(root, 'probe/a2.json')));
+  rmSync(path.join(root, 'aether.project.json'), { recursive: true, force: true }); // 收尾拆掉假目录
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

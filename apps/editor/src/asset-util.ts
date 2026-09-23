@@ -205,10 +205,12 @@ export interface RenameProjectResult {
   path: string;
   metaRenamed: boolean;
   projectUpdated: boolean;
+  /** 改名已落盘但 aether.project.json 登记改写失败时的诊断（ok 仍为 true，UI 需提示） */
+  projectError: string | null;
   error: string | null;
 }
 
-/** 改名项目内文件/目录（服务端连带 sidecar 与 aether.project.json 场景登记） */
+/** 改名项目内文件/目录（服务端连带 sidecar 与 aether.project.json 路径登记） */
 export async function renameProjectEntry(rel: string, newName: string): Promise<RenameProjectResult> {
   try {
     const res = await fetch('/__fs/rename', {
@@ -217,17 +219,19 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
       body: JSON.stringify({ path: rel.replace(/^\/+/, ''), newName }),
     });
     const data = (await res.json()) as {
-      ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean; error?: string;
+      ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean;
+      projectError?: string; error?: string;
     };
     return {
       ok: res.ok && data.ok === true,
       path: data.path ?? '',
       metaRenamed: data.metaRenamed === true,
       projectUpdated: data.projectUpdated === true,
+      projectError: data.projectError ?? null,
       error: data.error ?? null,
     };
   } catch (e) {
-    return { ok: false, path: '', metaRenamed: false, projectUpdated: false, error: String(e) };
+    return { ok: false, path: '', metaRenamed: false, projectUpdated: false, projectError: null, error: String(e) };
   }
 }
 

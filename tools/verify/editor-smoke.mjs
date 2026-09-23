@@ -1067,10 +1067,11 @@ async function main() {
         return { hud: (document.getElementById('model-info') || {}).textContent || '', clip };
       })()`);
       check('复制相对路径有 HUD 反馈', /已复制相对路径|复制失败/.test(copyRes.hud), copyRes.hud);
-      if (copyRes.clip === PROBE) {
-        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, copyRes.clip);
+      if (copyRes.clip === null) {
+        // 读不到（无授权/无头环境）才降级为环境 skip；读到了但内容不对 = 真失败
+        skip('剪贴板内容核对', '当前环境读不到剪贴板（HUD 反馈已验证）');
       } else {
-        skip('剪贴板内容核对', '无头/无授权环境读不到剪贴板（HUD 反馈已验证）');
+        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, copyRes.clip);
       }
 
       // 行内重命名：Enter 提交 → 服务端落盘 → 浏览器刷新

@@ -3182,7 +3182,10 @@ async function boot(): Promise<void> {
         }
         const extras: string[] = [];
         if (r.metaRenamed) extras.push('sidecar 已随迁');
-        if (r.projectUpdated) extras.push('场景登记已更新');
+        if (r.projectUpdated) extras.push('项目登记已更新');
+        // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
+        // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
+        if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
         panel.setModelInfo(`已重命名 → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
         hudDirty = true;
         return true;
