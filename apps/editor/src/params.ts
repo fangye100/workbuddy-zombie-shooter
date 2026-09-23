@@ -272,15 +272,8 @@ export const PARAM_GROUPS: GroupDef[] = [
     controls: [],
   },
   {
-    id: 'model',
-    title: t('模型预览'),
-    open: true,
-    side: 'left',
-    controls: [],
-  },
-  {
     id: 'selection',
-    title: t('对象选择与变换'),
+    title: 'Transform Property',
     open: true,
     side: 'right',
     tab: 'inspector',

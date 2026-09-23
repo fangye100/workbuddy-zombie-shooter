@@ -15,6 +15,8 @@
     "editor": "vite --config apps/editor/vite.config.ts",
     "editor:build": "vite build --config apps/editor/vite.config.ts",
     "editor:smoke": "node tools/verify/editor-smoke.mjs",
+    "editor:smoke:binding": "node tools/verify/editor-binding-smoke.mjs",
+    "editor:smoke:all": "node tools/verify/editor-smoke.mjs && node tools/verify/editor-binding-smoke.mjs",
     "verify:glb": "node tools/verify/cdp-verify.mjs",
     "verify:uv": "node tools/verify/uv-regularity.mjs",
     "verify:facade": "python tools/verify/facade-metric.py apps/editor/src/renderer.ts",

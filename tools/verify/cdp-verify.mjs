@@ -229,28 +229,28 @@ try {
   if (!ready) throw new Error('应用启动超时');
   console.log('应用已启动（无致命错误）');
 
-  // 注入 GLB 触发真实导入
-  const doc = await cdp.send('DOM.getDocument', { depth: 0 });
-  const { nodeId } = await cdp.send('DOM.querySelector', {
-    nodeId: doc.root.nodeId,
-    selector: 'input[type=file]',
-  });
-  if (nodeId === 0) throw new Error('找不到文件输入框');
-  await cdp.send('DOM.setFileInputFiles', { files: [GLB], nodeId });
-  console.log('已注入 GLB，等待导入完成…');
-
-  // 等导入完成（模型信息行出现文件名）
+  // 生成 GLB 进场景（2026-09-23：原「导入 GLB…」文件框已随模型预览面板移除，
+  // spawnAsset 是模型进场景的唯一路径，也是真实用户路径）
+  console.log('spawnAsset 生成 GLB，等待装载…');
   let imported = false;
   for (let i = 0; i < 90; i++) {
-    const txt = await cdp.eval(`document.body.innerText`);
-    if (txt.includes('E04_20260901_010134.glb')) { imported = true; break; }
-    await sleep(1000);
+    imported = await cdp.eval(`(() => {
+      if (!window.__editor.spawnAsset) return false;
+      window.__editor.spawnAsset(${JSON.stringify(GLB).replace(/\\/g, '/')});
+      return true;
+    })()`);
+    if (imported) break;
+    await sleep(500);
   }
-  if (!imported) throw new Error('导入超时');
-  const info = await cdp.eval(`(() => {
-    const m = document.body.innerText.match(/E04_[^\\n]*\\.glb[^\\n]*/);
-    return m ? m[0] : '';
-  })()`);
+  if (!imported) throw new Error('spawnAsset 钩子不可用');
+  let objCount = 0;
+  for (let i = 0; i < 60; i++) {
+    objCount = await cdp.eval(`window.__editor.renderer.getObjectList().length`);
+    if (objCount > 0) break;
+    await sleep(500);
+  }
+  if (objCount === 0) throw new Error('生成超时');
+  const info = await cdp.eval(`window.__editor.renderer.selectedName() || ''`);
   console.log('模型信息行:', info);
 
   await sleep(2500); // 等首帧稳定
@@ -316,6 +316,66 @@ try {
     charRegion, groundRegion, uvRegion, detailRatio, info,
   }, null, 2));
   console.log('\n截图已保存:', path.join(OUT, 'import-default.png'), '|', path.join(OUT, 'import-uvchecker.png'));
+
+  // ================= 绑定面板 3D 视图像素健康度（原 editor-smoke L2c 迁入，docs/21 §2.2） =================
+  // 防过曝 / 全黑 / 被包裹器糊死。⚠️ 不能 drawImage(WebGPU canvas)——present 后
+  // drawing buffer 已丢弃，必须整页截图再按视口裁剪、页面内解码像素。
+  const BIND_GLB = 'assets/characters/models/E-01/rigged/E01_Shambler_900_rigged_animated.glb';
+  const opened = await cdp.eval(`window.__editor.binding.open(${JSON.stringify('BIND_PATH')})`.replace('BIND_PATH', BIND_GLB));
+  await sleep(3000); // 面板构建 + 首帧
+  console.log('\n绑定面板打开:', opened);
+
+  const FRAMES = `(async () => { for (let i = 0; i < 3; i++) await new Promise(r => requestAnimationFrame(r)); return 1; })()`;
+  for (const [key, label] of [['front', '正视'], ['side', '侧视']]) {
+    const rect = await cdp.eval(`(() => {
+      const e = document.querySelector('[data-bd="' + ${JSON.stringify(key)} + '-gl"]');
+      if (e === null) return null;
+      const r = e.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    })()`);
+    if (rect === null || rect.w < 2 || rect.h < 2) {
+      console.log(`  [FAIL] ${label} 3D 视图无可采样区域:`, JSON.stringify(rect));
+      process.exitCode = 1;
+      continue;
+    }
+    await cdp.eval(FRAMES);
+    const snap = await cdp.send('Page.captureScreenshot', {
+      format: 'png',
+      clip: { x: rect.x, y: rect.y, width: rect.w, height: rect.h, scale: 1 },
+    });
+    const pngPath = path.join(OUT, `binding-${key}-3d.png`);
+    fs.writeFileSync(pngPath, Buffer.from(snap.data, 'base64'));
+    const px = await cdp.eval(`(async (b64) => {
+      const blob = await (await fetch('data:image/png;base64,' + b64)).blob();
+      const bmp = await createImageBitmap(blob);
+      const c = document.createElement('canvas');
+      c.width = bmp.width; c.height = bmp.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(bmp, 0, 0);
+      const d = ctx.getImageData(0, 0, c.width, c.height).data;
+      let sum = 0, n = 0, white = 0, dark = 0, maxL = 0;
+      const hist = [0, 0, 0, 0, 0];
+      for (let i = 0; i < d.length; i += 4) {
+        const l = (d[i] + d[i + 1] + d[i + 2]) / 3;
+        sum += l; n++;
+        if (l > 235) white++;
+        if (l < 20) dark++;
+        if (l > maxL) maxL = l;
+        hist[Math.min(4, Math.floor(l / 51))]++;
+      }
+      return { avg: +(sum / n).toFixed(1), white: +(white / n).toFixed(3),
+               dark: +(dark / n).toFixed(3), maxL,
+               hist: hist.map((x) => +(x / n).toFixed(3)) };
+    })('${snap.data}')`);
+    const mid = px.hist[2] + px.hist[3] + px.hist[4];
+    console.log(`  ${label} 像素: ${JSON.stringify(px)} → ${pngPath}`);
+    const v1 = px.avg > 8 && px.dark < 0.98;
+    const v2 = px.white < 0.3;
+    const v3 = mid > 0.03 && mid < 0.6;
+    console.log(`  [${v1 ? 'PASS' : 'FAIL'}] ${label} 非全黑 | [${v2 ? 'PASS' : 'FAIL'}] 不过曝 | [${v3 ? 'PASS' : 'FAIL'}] 模型可见（中亮 ${(mid * 100).toFixed(1)}%）`);
+    if (!(v1 && v2 && v3)) process.exitCode = 1;
+  }
+  await cdp.eval(`(() => { window.__editor.binding.close(); return 1; })()`);
 } finally {
   try { chrome.kill(); } catch { /* ignore */ }
 }
