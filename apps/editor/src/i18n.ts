@@ -428,6 +428,16 @@ const DICT: Record<string, string> = {
   '贴图': 'Textured',
   '白模': 'Clay',
   'LOD 档位': 'LOD Level',
+
+  '空格：调大 3D 视图 · Shift+空格：调小': 'Space: enlarge 3D view · Shift+Space: shrink',
+
+  '骨骼': 'Skeleton',
+  '骨骼 X-ray 叠加（仅有骨架的资产可用）': 'Skeleton X-ray overlay (rigged assets only)',
+  '该资产无骨骼（纯网格）': 'No skeleton in this asset (mesh-only)',
+
+
+
+  '该资产无贴图（白模显示）': 'No texture in this asset (clay display)',
 };
 
 

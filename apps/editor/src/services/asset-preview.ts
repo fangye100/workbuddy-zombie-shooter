@@ -153,6 +153,10 @@ export class AssetPreview {
   private hasAlbedoTex = false;
   /** 渲染风格：贴图（采样 albedo） / 白模（平色受光，用于检查形体） */
   private style: 'textured' | 'clay' = 'textured';
+  /** 3D 视图高度档位（px）。空格循环切换：悬停预览时 Space=下一档、Shift+Space=上一档 */
+  private static readonly VIEW_TIERS = [200, 340, 480] as const;
+  private sizeTier = 0;
+  private hovered = false;
 
   // ---- Timeline DOM 引用 ----
   private btnPlay!: HTMLButtonElement;
@@ -161,7 +165,10 @@ export class AssetPreview {
   private selSpeed!: HTMLSelectElement;
   private scrub!: HTMLInputElement;
   private lblTime!: HTMLElement;
+  private keyOnSpace: ((e: KeyboardEvent) => void) | null = null;
   private selLod!: HTMLSelectElement;
+  private swTex!: HTMLInputElement;
+  private swXray!: HTMLInputElement;
   private lblStats!: HTMLElement;
   private lastClipCount = -1;
   private scrubbing = false;
@@ -188,13 +195,12 @@ export class AssetPreview {
           <option value="1" selected>1×</option>
           <option value="2">2×</option>
         </select>
-        <button class="ap-xray" title="骨骼 X-ray 叠加">骨骼</button>
       </div>
       <input type="range" class="ap-scrub" min="0" max="1" step="0.001" value="0" disabled>
       <div class="ap-time"><span class="ap-t">0.00</span> / <span class="ap-d">0.00</span> s</div>
       <div class="ap-bar ap-view">
-        <button class="ap-style" data-style="textured">${t('贴图')}</button>
-        <button class="ap-style" data-style="clay">${t('白模')}</button>
+        <label class="ap-switch"><input type="checkbox" class="ap-sw-tex" checked><span>${t('贴图')}</span></label>
+        <label class="ap-switch"><input type="checkbox" class="ap-sw-xray"><span>${t('骨骼')}</span></label>
         <select class="ap-lod" title="LOD 档位" hidden></select>
         <span class="ap-stats"></span>
       </div>`;
@@ -207,13 +213,28 @@ export class AssetPreview {
     this.scrub = this.panel.querySelector('.ap-scrub')!;
     this.lblTime = this.panel.querySelector('.ap-time')!;
 
-    // 风格切换 / LOD 切换（风格只改材质 flag；LOD 走 onLoadLod 由外部重载模型）
-    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.ap-style')) {
-      b.addEventListener('click', () => {
-        this.style = b.dataset.style === 'clay' ? 'clay' : 'textured';
-        this.syncStyleButtons();
-      });
-    }
+    // 3D 视图尺寸：悬停预览区时空格切换高度档（capture 先于全局 Play 的空格处理，
+    // 且 preventDefault + stopPropagation 双保险）
+    previewEl.addEventListener('pointerenter', () => { this.hovered = true; });
+    previewEl.addEventListener('pointerleave', () => { this.hovered = false; });
+    this.keyOnSpace = (e: KeyboardEvent) => {
+      if (!this.hovered || e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.cycleSize(e.shiftKey ? -1 : 1);
+    };
+    document.addEventListener('keydown', this.keyOnSpace, true);
+    this.applyTier();
+
+    // 显示开关（标准开关形式，排在 3D 视图下方）：贴图 on=贴图/off=白模；骨骼独立
+    this.swTex = this.panel.querySelector('.ap-sw-tex')!;
+    this.swXray = this.panel.querySelector('.ap-sw-xray')!;
+    this.swTex.addEventListener('change', () => {
+      this.style = this.swTex.checked ? 'textured' : 'clay';
+    });
+    this.swXray.addEventListener('change', () => {
+      this.skeletonVisible = this.swXray.checked;
+    });
     this.selLod = this.panel.querySelector('.ap-lod')!;
     this.lblStats = this.panel.querySelector('.ap-stats')!;
     this.selLod.addEventListener('change', () => {
@@ -263,13 +284,31 @@ export class AssetPreview {
     this.showEmpty();
   }
 
-  /** 风格按钮态：无贴图时禁用（白模与贴图同貌，切了没意义） */
+  /** 空格切档（dir=+1 下一档 / -1 上一档，循环）；自动化测试也直接调它 */
+  cycleSize(dir: number): void {
+    const tiers = AssetPreview.VIEW_TIERS.length;
+    this.sizeTier = ((this.sizeTier + dir) % tiers + tiers) % tiers;
+    this.applyTier();
+  }
+
+  private applyTier(): void {
+    // flex:1 会吞掉 height——切档后改为固定高度（flex:none），ResizeObserver 自动跟随重设渲染尺寸
+    this.canvas.style.flex = '0 0 auto';
+    this.canvas.style.height = `${AssetPreview.VIEW_TIERS[this.sizeTier]}px`;
+    this.canvas.title = t('空格：调大 3D 视图 · Shift+空格：调小');
+  }
+
+  /** 显示开关态同步：贴图开关（无贴图资产禁用）/ 骨骼开关（纯网格禁用+明示） */
   private syncStyleButtons(): void {
-    for (const b of this.panel.querySelectorAll<HTMLButtonElement>('.ap-style')) {
-      const st = b.dataset.style === 'clay' ? 'clay' : 'textured';
-      b.classList.toggle('on', st === this.style);
-      b.disabled = !this.hasAlbedoTex;
-    }
+    const hasSkel = this.obj?.skeleton ?? null;
+    this.swTex.checked = this.style === 'textured';
+    this.swTex.disabled = !this.hasAlbedoTex;
+    this.swTex.parentElement?.setAttribute('title',
+      this.hasAlbedoTex ? t('贴图') : t('该资产无贴图（白模显示）'));
+    this.swXray.checked = this.skeletonVisible;
+    this.swXray.disabled = hasSkel === null;
+    this.swXray.parentElement?.setAttribute('title',
+      hasSkel !== null ? t('骨骼 X-ray 叠加（仅有骨架的资产可用）') : t('该资产无骨骼（纯网格）'));
   }
 
   /** LOD 家族注入（manifest 的 lods[]）；空数组 = 收起下拉 */
@@ -295,6 +334,7 @@ export class AssetPreview {
   async load(model: GltfResult, albedo: ImageBitmap | null): Promise<void> {
     this.releaseObject();
     this.hasAlbedoTex = false; // 新物体：贴图未上传前按平色渲染，setAlbedo 成功后再立起
+    this.skeletonVisible = false; // 换资产复位骨骼开关（无骨架资产别残留开态）
 
     const mesh = model.mesh;
     const device = this.gpu.device;
@@ -379,6 +419,7 @@ export class AssetPreview {
     this.obj = obj;
     this.rebuildBindGroup();
     if (albedo !== null) this.setAlbedo(albedo);
+    this.syncStyleButtons(); // 骨骼按钮可用性取决于新物体的骨架
 
     // 相机取景：适配包围球，留 1.6 倍余量
     const fov = (45 * Math.PI) / 180;
@@ -516,16 +557,11 @@ export class AssetPreview {
       if (s === null || s === undefined) return;
       seek(s, parseFloat(this.scrub.value));
     });
-    const xray = this.panel.querySelector<HTMLButtonElement>('.ap-xray')!;
-    xray.addEventListener('click', () => {
-      this.skeletonVisible = !this.skeletonVisible;
-      xray.classList.toggle('active', this.skeletonVisible);
-    });
   }
 
   setSkeletonVisible(v: boolean): void {
     this.skeletonVisible = v;
-    this.panel.querySelector('.ap-xray')?.classList.toggle('active', v);
+    this.syncStyleButtons();
   }
 
   // ===================== 预览画布导航（与主视图同手感） =====================
@@ -814,10 +850,13 @@ export class AssetPreview {
       style: this.style,
       tris: this.obj !== null ? Math.round(this.obj.indexCount / 3) : 0,
       lodCount: this.lods.length,
+      sizeTier: this.sizeTier,
+      viewH: this.canvas.clientHeight,
     };
   }
 
   destroy(): void {
+    if (this.keyOnSpace !== null) document.removeEventListener('keydown', this.keyOnSpace, true);
     this.releaseObject();
     this.whiteTex?.destroy();
     this.whiteTex = null;

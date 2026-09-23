@@ -1070,13 +1070,14 @@ async function main() {
         const st0 = window.__editor.preview.getState();
         // ① 贴图根因：materialData 的「有贴图」flag 必须立起（历史上 packMaterial 每帧重置导致永假）
         // ② 风格切换：白模 = textured false；切回贴图 = true
-        const clayBtn = document.querySelector('#asset-preview-host .ap-style[data-style=clay]');
-        const texBtn = document.querySelector('#asset-preview-host .ap-style[data-style=textured]');
+        const swTex = document.querySelector('#asset-preview-host .ap-sw-tex');
         const before = { textured: st0.textured, tris: st0.tris, lodCount: st0.lodCount };
-        clayBtn.click();
+        swTex.checked = false; // 贴图开关 off = 白模
+        swTex.dispatchEvent(new Event('change', { bubbles: true }));
         await new Promise((r) => setTimeout(r, 400));
         const clay = window.__editor.preview.getState();
-        texBtn.click();
+        swTex.checked = true;
+        swTex.dispatchEvent(new Event('change', { bubbles: true }));
         await new Promise((r) => setTimeout(r, 400));
         const back = window.__editor.preview.getState();
         return { before, clay: { style: clay.style, textured: clay.textured }, back: { style: back.style, textured: back.textured } };
@@ -1094,13 +1095,13 @@ async function main() {
         const lod = await cdp.eval(`(async () => {
           const sel = document.querySelector('#asset-preview-host .ap-lod');
           const tris0 = window.__editor.preview.getState().tris;
+          const orig = sel.selectedIndex; // 切走前记住原档（骨骼开关等后续断言依赖它是有骨架的档）
           sel.value = '0'; // LOD0（原生高模）
           sel.dispatchEvent(new Event('change', { bubbles: true }));
           await new Promise((r) => setTimeout(r, 5000)); // 高模 44MB：fetch+parse 给足
           const st1 = window.__editor.preview.getState();
           // 切回原档，不把后续段的预览留在大模型上
-          const orig = [...sel.options].findIndex((o) => o.selected);
-          sel.selectedIndex = Math.max(0, 1);
+          sel.selectedIndex = orig >= 0 ? orig : sel.options.length - 1;
           sel.dispatchEvent(new Event('change', { bubbles: true }));
           await new Promise((r) => setTimeout(r, 3000));
           return { tris0, tris1: st1.tris, back: window.__editor.preview.getState().tris };
@@ -1109,6 +1110,56 @@ async function main() {
         check('切回低档面数回落', lod.back <= lod.tris0 * 2, `back=${lod.back}`);
       }
 
+      // 3D 视图尺寸空格调档 + 骨骼按钮进风格行（rigged 资产）
+      const sp = await cdp.eval(`(async () => {
+        const P = window.__editor.preview;
+        const host = document.getElementById('asset-preview-host');
+        const h0 = P.getState().viewH;
+        const tier0 = P.getState().sizeTier;
+        // ① 直接调 cycleSize（自动化入口）
+        P.cycleSize(1);
+        await new Promise((r) => setTimeout(r, 400));
+        const h1 = P.getState().viewH;
+        P.cycleSize(-1);
+        await new Promise((r) => setTimeout(r, 300));
+        const h2 = P.getState().viewH;
+        // ② 真键盘事件：悬停预览区按空格（capture 拦截，不触发全局 Play）
+        host.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 300));
+        const tierSpace = P.getState().sizeTier;
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', shiftKey: true, bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 300));
+        const tierShift = P.getState().sizeTier;
+        host.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false }));
+        P.cycleSize(-tierShift);
+        return { h0, h1, h2, tier0, tierSpace, tierShift };
+      })()`);
+      check('cycleSize(+1) 视图变高', sp.h1 > sp.h0, `${sp.h0} → ${sp.h1}px`);
+      check('cycleSize(-1) 回落', sp.h2 === sp.h0, `${sp.h1} → ${sp.h2}px`);
+      check('悬停空格 = 下一档（capture 拦截生效）', sp.tierSpace === (sp.tier0 + 1 + 3) % 3, `tier ${sp.tier0} → ${sp.tierSpace}`);
+      check('Shift+空格 = 上一档', sp.tierShift === (sp.tierSpace + 2) % 3, `tier ${sp.tierSpace} → ${sp.tierShift}`);
+
+      // 显示开关（标准开关形式）：贴图 / 骨骼 排在 3D 视图下方；rigged 可用、纯网格禁用
+      const xrow = await cdp.eval(`(async () => {
+        const switches = [...document.querySelectorAll('#asset-preview-host .ap-view .ap-switch > span')].map((b) => b.textContent.trim());
+        const swX = document.querySelector('#asset-preview-host .ap-sw-xray');
+        const riggedEnabled = swX ? !swX.disabled : null;
+        // 切到纯网格资产（baked，无骨架）验证禁用
+        window.__editor.previewShow('assets/characters/models/E-01/textured/E01_Shambler_900_baked.glb');
+        await new Promise((r) => setTimeout(r, 2500));
+        const swB = document.querySelector('#asset-preview-host .ap-sw-xray');
+        const baked = { disabled: swB?.disabled ?? null,
+                        checked: swB?.checked ?? null,
+                        title: swB?.parentElement?.title ?? '' };
+        // 切回 rigged
+        window.__editor.previewShow(${JSON.stringify('PREVIEW_GLB_PLACEHOLDER')});
+        await new Promise((r) => setTimeout(r, 2500));
+        return { switches, riggedEnabled, baked };
+      })()`.replace('PREVIEW_GLB_PLACEHOLDER', PREVIEW_GLB));
+      check('3D 视图下方标准开关：贴图 / 骨骼', xrow.switches.length === 2 && xrow.switches[0] === '贴图' && xrow.switches[1] === '骨骼', JSON.stringify(xrow.switches));
+      check('rigged 资产骨骼开关可用', xrow.riggedEnabled === true);
+      check('纯网格资产骨骼开关禁用 + 复位 + 明示原因', xrow.baked.disabled === true && xrow.baked.checked === false && /无骨骼/.test(xrow.baked.title), JSON.stringify(xrow.baked));
       const shot2 = await cdp.send('Page.captureScreenshot', { format: 'png' });
       const shot2Path = path.join(OUT_DIR, 'editor-preview-smoke.png');
       fs.writeFileSync(shot2Path, Buffer.from(shot2.data, 'base64'));
