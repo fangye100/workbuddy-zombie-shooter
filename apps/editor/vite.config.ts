@@ -24,6 +24,9 @@ const https = fs.existsSync(certFile) && fs.existsSync(keyFile)
 //   GET  /__fs/list?dir=<相对路径>   → 目录条目 JSON（懒加载，只列一层）
 //   GET  /__fs/file?path=<相对路径>  → 原始文件流（GLB fetch、图片缩略图）
 //   POST /__fs/write                 → 写回项目内文件（编辑器存盘底座）
+//   GET  /__fs/info?path=<相对路径>  → 绝对路径/类型（右键「复制绝对路径」）
+//   POST /__fs/rename                → 改名文件或目录（连带 sidecar 与场景登记）
+//   POST /__fs/reveal                → 在系统文件管理器里定位该条目
 // 根 = 工作区根目录（整个游戏项目）。
 // 逻辑抽到了 src/services/devfs.ts（可单测、root 可注入），这里只组装 dev server 插件。
 // =========================================================================

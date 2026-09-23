@@ -148,6 +148,108 @@ export async function listDir(dir: string): Promise<FsEntry[]> {
   return body.entries;
 }
 
+/**
+ * 复制文本到剪贴板，带 execCommand 降级。
+ * navigator.clipboard 只在 secure context 可用：localhost HTTP 与 Tailscale HTTPS 都算，
+ * 但证书缺失时退回纯 HTTP + 局域网 IP 访问就不算了 —— 这条降级路径保住那种场景。
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard !== undefined) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* 落到 execCommand 降级 */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** /__fs/info 的返回：abs = 平台原生分隔符的绝对路径 */
+export interface AssetInfoResult {
+  ok: boolean;
+  abs: string;
+  kind: 'file' | 'dir' | 'missing';
+  error: string | null;
+}
+
+/** 问服务端某条目的绝对路径（浏览器自己拼不准平台分隔符，让真源说话） */
+export async function fetchAssetInfo(rel: string): Promise<AssetInfoResult> {
+  try {
+    const res = await fetch(`/__fs/info?path=${encodeURIComponent(rel)}`);
+    const data = (await res.json()) as { ok?: boolean; abs?: string; kind?: AssetInfoResult['kind']; error?: string };
+    if (!res.ok || data.ok !== true || typeof data.abs !== 'string') {
+      return { ok: false, abs: '', kind: 'missing', error: data.error ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, abs: data.abs, kind: data.kind ?? 'missing', error: null };
+  } catch (e) {
+    return { ok: false, abs: '', kind: 'missing', error: String(e) };
+  }
+}
+
+export interface RenameProjectResult {
+  ok: boolean;
+  /** 成功后的新相对路径 */
+  path: string;
+  metaRenamed: boolean;
+  projectUpdated: boolean;
+  /** 改名已落盘但 aether.project.json 登记改写失败时的诊断（ok 仍为 true，UI 需提示） */
+  projectError: string | null;
+  error: string | null;
+}
+
+/** 改名项目内文件/目录（服务端连带 sidecar 与 aether.project.json 路径登记） */
+export async function renameProjectEntry(rel: string, newName: string): Promise<RenameProjectResult> {
+  try {
+    const res = await fetch('/__fs/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: rel.replace(/^\/+/, ''), newName }),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean;
+      projectError?: string; error?: string;
+    };
+    return {
+      ok: res.ok && data.ok === true,
+      path: data.path ?? '',
+      metaRenamed: data.metaRenamed === true,
+      projectUpdated: data.projectUpdated === true,
+      projectError: data.projectError ?? null,
+      error: data.error ?? null,
+    };
+  } catch (e) {
+    return { ok: false, path: '', metaRenamed: false, projectUpdated: false, projectError: null, error: String(e) };
+  }
+}
+
+/** 在系统文件管理器里定位该条目（Windows: 资源管理器选中；mac: Finder；Linux: 打开所在目录） */
+export async function revealInFileManager(rel: string): Promise<{ ok: boolean; error: string | null }> {
+  try {
+    const res = await fetch('/__fs/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: rel.replace(/^\/+/, '') }),
+    });
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    return { ok: res.ok && data.ok === true, error: data.error ?? null };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 export function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;

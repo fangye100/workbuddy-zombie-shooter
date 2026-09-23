@@ -12,6 +12,7 @@
  * 问题帧来自逐约束残差段与带帧号的诊断；点击跳帧、可播放。
  */
 
+import { t } from '../../i18n';
 import type {
   RetargetSessionSummary,
   RetargetSourceInfo,
@@ -176,14 +177,14 @@ export class RetargetWorkbench {
     this.badgeEl.className = 'rw-badge';
     const title = document.createElement('span');
     title.className = 'rw-title';
-    title.textContent = '重定向工作台';
+    title.textContent = t('重定向工作台');
     const loadBtn = document.createElement('button');
     loadBtn.type = 'button';
-    loadBtn.textContent = '载入动作 (BVH)…';
+    loadBtn.textContent = t('载入动作 (BVH)…');
     loadBtn.addEventListener('click', () => this.hooks.onLoadBvh());
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.textContent = '退出';
+    closeBtn.textContent = t('退出');
     closeBtn.addEventListener('click', () => this.hooks.onClose());
     head.append(title, this.flowEl, this.badgeEl, loadBtn, closeBtn);
     this.host.appendChild(head);
@@ -207,13 +208,13 @@ export class RetargetWorkbench {
     // 标定（载入 / 保存 sidecar —— 标定流程的闭环入口）
     const calSec = document.createElement('section');
     const calH = document.createElement('h4');
-    calH.textContent = '角色标定';
+    calH.textContent = t('角色标定');
     calSec.append(calH, this.buildCalRow('source'), this.buildCalRow('target'));
 
     // 动作适配
     const adaptSec = document.createElement('section');
     const adaptH = document.createElement('h4');
-    adaptH.textContent = '动作适配';
+    adaptH.textContent = t('动作适配');
     const rootRow = document.createElement('div');
     rootRow.className = 'rw-row';
     rootRow.innerHTML = '<span>动作位移</span>';
@@ -259,7 +260,7 @@ export class RetargetWorkbench {
     // 质量结果
     const qSec = document.createElement('section');
     const qH = document.createElement('h4');
-    qH.textContent = '质量结果';
+    qH.textContent = t('质量结果');
     this.metricsEl = document.createElement('div');
     this.violationsEl = document.createElement('div');
     this.violationsEl.style.cssText = 'font-size:10.5px';
@@ -268,21 +269,21 @@ export class RetargetWorkbench {
     // 操作区
     const actSec = document.createElement('section');
     const actH = document.createElement('h4');
-    actH.textContent = '操作';
+    actH.textContent = t('操作');
     const actions = document.createElement('div');
     actions.className = 'rw-actions';
     this.solveBtn = document.createElement('button');
     this.solveBtn.type = 'button';
     this.solveBtn.className = 'primary';
-    this.solveBtn.textContent = '生成预览';
+    this.solveBtn.textContent = t('生成预览');
     this.solveBtn.addEventListener('click', () => this.hooks.onSolve());
     this.applyBtn = document.createElement('button');
     this.applyBtn.type = 'button';
-    this.applyBtn.textContent = '应用到角色';
+    this.applyBtn.textContent = t('应用到角色');
     this.applyBtn.addEventListener('click', () => this.hooks.onApply());
     this.exportBtn = document.createElement('button');
     this.exportBtn.type = 'button';
-    this.exportBtn.textContent = '导出动画 GLB';
+    this.exportBtn.textContent = t('导出动画 GLB');
     this.exportBtn.addEventListener('click', () => this.hooks.onExport());
     this.actionNoteEl = document.createElement('span');
     this.actionNoteEl.className = 'rw-action-note';
@@ -292,7 +293,7 @@ export class RetargetWorkbench {
     // 诊断列表
     const diagSec = document.createElement('section');
     const diagH = document.createElement('h4');
-    diagH.textContent = '诊断';
+    diagH.textContent = t('诊断');
     this.diagsEl = document.createElement('div');
     diagSec.append(diagH, this.diagsEl);
 
@@ -326,11 +327,11 @@ export class RetargetWorkbench {
     else this.calTgtPathInput = input;
     const loadBtn = document.createElement('button');
     loadBtn.type = 'button';
-    loadBtn.textContent = '载入';
+    loadBtn.textContent = t('载入');
     loadBtn.addEventListener('click', () => this.hooks.onCalAction(side, 'load', input.value.trim()));
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
-    saveBtn.textContent = '保存';
+    saveBtn.textContent = t('保存');
     saveBtn.addEventListener('click', () => this.hooks.onCalAction(side, 'save', input.value.trim()));
     if (side === 'source') {
       this.calSrcLoadBtn = loadBtn;
@@ -385,15 +386,15 @@ export class RetargetWorkbench {
     controls.className = 'rw-tl-controls';
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.textContent = '◀ 问题帧';
+    prevBtn.textContent = t('◀ 问题帧');
     prevBtn.addEventListener('click', () => this.stepIssue(-1));
     this.playBtn = document.createElement('button');
     this.playBtn.type = 'button';
-    this.playBtn.textContent = '播放';
+    this.playBtn.textContent = t('播放');
     this.playBtn.addEventListener('click', () => this.togglePlay());
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.textContent = '问题帧 ▶';
+    nextBtn.textContent = t('问题帧 ▶');
     nextBtn.addEventListener('click', () => this.stepIssue(1));
     this.frameLabelEl = document.createElement('span');
     controls.append(prevBtn, this.playBtn, nextBtn, this.frameLabelEl);
@@ -472,20 +473,20 @@ export class RetargetWorkbench {
     const hasPath = path !== '';
     loadBtn.disabled = !hasPath;
     saveBtn.disabled = !hasPath || !calibrated;
-    if (saveBtn.disabled && calibrated && !hasPath) saveBtn.title = '该入口没有 sidecar 路径（场景物体不支持保存）';
-    else if (saveBtn.disabled && !calibrated) saveBtn.title = '先载入或设置标定后再保存';
+    if (saveBtn.disabled && calibrated && !hasPath) saveBtn.title = t('该入口没有 sidecar 路径（场景物体不支持保存）');
+    else if (saveBtn.disabled && !calibrated) saveBtn.title = t('先载入或设置标定后再保存');
     else saveBtn.title = '';
   }
 
   private contactNote(sum: RetargetSessionSummary): string {
-    if (!sum.hasSource) return '地面接触：先载入动作';
+    if (!sum.hasSource) return t('地面接触：先载入动作');
     if (sum.coverage.includes('contact-uncalibrated')) {
-      return '地面接触：能力受限 —— 源缺足底标定，本次为自由运动预览（不承诺世界锁脚）；SourceCalibration.markers 提供足底标记后可解锁';
+      return t('地面接触：能力受限 —— 源缺足底标定，本次为自由运动预览（不承诺世界锁脚）；SourceCalibration.markers 提供足底标记后可解锁');
     }
-    if (sum.coverage.includes('world-lock')) return '地面接触：已启用世界锁脚（支撑段锚定）';
-    if (sum.coverage.includes('phase-only')) return '地面接触：仅相位指导（原地 / 无可信轨迹，不做世界锁脚）';
-    if (sum.canWorldLock) return '地面接触：有可信轨迹，生成后按检测结果启用';
-    return '地面接触：不可用（源无世界轨迹）';
+    if (sum.coverage.includes('world-lock')) return t('地面接触：已启用世界锁脚（支撑段锚定）');
+    if (sum.coverage.includes('phase-only')) return t('地面接触：仅相位指导（原地 / 无可信轨迹，不做世界锁脚）');
+    if (sum.canWorldLock) return t('地面接触：有可信轨迹，生成后按检测结果启用');
+    return t('地面接触：不可用（源无世界轨迹）');
   }
 
   private renderMetrics(sum: RetargetSessionSummary): void {
@@ -590,9 +591,9 @@ export class RetargetWorkbench {
   }
 
   private actionNote(s: RetargetWorkbenchState): string {
-    if (s.summary.status === 'stale') return '结果待更新：重新「生成预览」后再应用 / 导出';
-    if (s.summary.status === 'failed') return '生成失败：上一份结果已保留（见诊断）';
-    if (s.summary.status === 'ready') return '输入就绪，点「生成预览」';
+    if (s.summary.status === 'stale') return t('结果待更新：重新「生成预览」后再应用 / 导出');
+    if (s.summary.status === 'failed') return t('生成失败：上一份结果已保留（见诊断）');
+    if (s.summary.status === 'ready') return t('输入就绪，点「生成预览」');
     return '';
   }
 
@@ -765,7 +766,7 @@ export class RetargetWorkbench {
       this.stopPlay();
     } else {
       this.playing = true;
-      this.playBtn.textContent = '暂停';
+      this.playBtn.textContent = t('暂停');
       const fps = this.state?.summary.fps ?? 30;
       const step = 1000 / Math.max(1, fps);
       this.playTimer = window.setInterval(() => {
@@ -782,7 +783,7 @@ export class RetargetWorkbench {
 
   private stopPlay(): void {
     this.playing = false;
-    this.playBtn.textContent = '播放';
+    this.playBtn.textContent = t('播放');
     if (this.playTimer !== 0) {
       window.clearInterval(this.playTimer);
       this.playTimer = 0;

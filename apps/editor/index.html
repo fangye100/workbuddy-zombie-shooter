@@ -607,6 +607,23 @@
   }
   .asset-title { font-weight: 700; font-size: 13px; color: var(--bone); white-space: nowrap; }
   .asset-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
+  /* 返回上一层（与收起按钮同一套观感；到项目根后置灰） */
+  .asset-up { flex: 0 0 auto; min-width: 0; padding: 3px 10px; font-weight: 700; }
+  .asset-up:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  /* 行内重命名输入框（列表行 / 图标格子共用） */
+  .asset-rename {
+    width: 100%;
+    min-width: 60px;
+    height: 20px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--zombie);
+    border-radius: 4px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-family: inherit;
+    outline: none;
+  }
   .asset-crumb {
     flex: 1 1 auto;
     min-width: 0;
@@ -1145,6 +1162,8 @@
   }
   .ctx-item:hover { background: var(--ink); color: var(--zombie); }
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
+  /* 分隔线：菜单动作分组（编辑器动作 ↔ 通用文件动作） */
+  .ctx-sep { height: 0; border-top: 2px solid var(--ink); margin: 4px 6px; }
   /* ---- 刷怪点编辑面板（WU-5）---- */
   .sp-head {
     display: flex; align-items: center; justify-content: space-between;
@@ -1289,6 +1308,7 @@
     <div class="gz-sep" data-page-node-id="bWsvQ8v6hY04l7COEEjMdO"></div>
     <div class="gz-group" data-page-node-id="6D2v828Z4ocfqZUtnlJiCE">
       <button class="gz-btn gz-xray" data-xray="1" title="骨骼 X-ray 叠加（主视图）" data-page-node-id="kZZmupbCWcrqNGO21TdOq0">骨骼 X</button>
+      <button class="gz-btn gz-lang" data-lang-toggle title="切换界面语言 Toggle UI language">中/EN</button>
     </div>
   </div>
 </div>

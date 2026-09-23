@@ -24,10 +24,12 @@ import {
   kindOf,
   listDir,
   fileUrl,
+  parentPath,
   type AssetSelection,
   type FsEntry,
 } from './asset-util';
 import { makeSplitter, readCssVarPx, restoreCssVar } from './splitter';
+import { t } from './i18n';
 
 export interface AssetBrowserHooks {
   /** 选中变化（文件或文件夹；null = 无选中） */
@@ -39,6 +41,11 @@ export interface AssetBrowserHooks {
    * 资产库自己不建菜单元素 —— 否则两处菜单样式/关闭逻辑会各写一遍而走样。
    */
   onContextMenu?(path: string, entry: FsEntry, clientX: number, clientY: number): void;
+  /**
+   * 行内重命名提交（右键菜单 Rename / beginRename 触发）。
+   * 返回 true = 服务端改名成功（浏览器随即刷新并清空选中）；false = 失败（HUD 已提示）。
+   */
+  onRename?(path: string, newName: string): Promise<boolean>;
 }
 
 interface TreeNode {
@@ -65,6 +72,7 @@ export class AssetBrowser {
   private treeEl!: HTMLElement;
   private contentEl!: HTMLElement;
   private crumbEl!: HTMLElement;
+  private upBtnEl!: HTMLButtonElement;
   private filterEl!: HTMLInputElement;
   private zoomEl!: HTMLInputElement;
   private bodyEl!: HTMLElement;
@@ -73,6 +81,8 @@ export class AssetBrowser {
   private filter = '';
   private entries: FsEntry[] = [];
   private selectedPath: string | null = null;
+  /** 正在行内重命名的输入框（同一时刻最多一个；null = 无编辑态） */
+  private renameInput: HTMLInputElement | null = null;
   private readonly nodes = new Map<string, TreeNode>();
   /** 展开状态跨 refresh 保留 */
   private readonly expandedPaths = new Set<string>(['']);
@@ -94,13 +104,14 @@ export class AssetBrowser {
     this.dock.innerHTML = `
       <div class="asset-grip" data-asset="grip" title="拖拽调整资产库高度"></div>
       <div class="asset-head">
-        <span class="asset-title">资产库 <em>Asset Library</em></span>
+        <span class="asset-title">${t('资产库')}</span>
+        <button class="asset-up" data-asset="up" title="${t('返回上一层')}">↑</button>
         <span class="asset-crumb" data-asset="crumb"></span>
-        <input class="asset-filter" data-asset="filter" type="search" placeholder="筛选当前目录…">
-        <span class="asset-zoom-label">列表</span>
+        <input class="asset-filter" data-asset="filter" type="search" placeholder="${t('筛选当前目录…')}">
+        <span class="asset-zoom-label">${t('列表')}</span>
         <input class="asset-zoom" data-asset="zoom" type="range" min="0" max="100" step="1" title="视图缩放：列表 ↔ 大图标">
-        <span class="asset-zoom-label">图标</span>
-        <button class="asset-collapse" data-asset="collapse" title="收起 / 展开资产库">▾</button>
+        <span class="asset-zoom-label">${t('图标')}</span>
+        <button class="asset-collapse" data-asset="collapse" title="${t('收起 / 展开资产库')}">▾</button>
       </div>
       <div class="asset-body" data-asset="body">
         <div class="asset-tree" data-asset="tree"></div>
@@ -111,6 +122,7 @@ export class AssetBrowser {
     this.treeEl = this.dock.querySelector('[data-asset="tree"]')!;
     this.contentEl = this.dock.querySelector('[data-asset="content"]')!;
     this.crumbEl = this.dock.querySelector('[data-asset="crumb"]')!;
+    this.upBtnEl = this.dock.querySelector('[data-asset="up"]')!;
     this.filterEl = this.dock.querySelector('[data-asset="filter"]')!;
     this.zoomEl = this.dock.querySelector('[data-asset="zoom"]')!;
     this.bodyEl = this.dock.querySelector('[data-asset="body"]')!;
@@ -149,6 +161,12 @@ export class AssetBrowser {
     this.filterEl.addEventListener('input', () => {
       this.filter = this.filterEl.value.trim().toLowerCase();
       this.renderContent();
+    });
+
+    // 返回上一层：目录到项目根后没有更上层，置灰而不是点了没反应
+    this.upBtnEl.addEventListener('click', () => {
+      if (this.currentDir === '') return;
+      void this.selectDir(parentPath(this.currentDir));
     });
 
     // 点内容区空白处取消选中（只注册一次；条目点击有 stopPropagation 不会误触）
@@ -302,7 +320,7 @@ export class AssetBrowser {
       try {
         this.entries = await listDir(path);
       } catch (err) {
-        this.contentEl.innerHTML = `<div class="asset-empty">目录读取失败：${String(err)}</div>`;
+        this.contentEl.innerHTML = `<div class="asset-empty">${t('目录读取失败')}：${String(err)}</div>`;
         return;
       }
       this.renderCrumb();
@@ -329,7 +347,7 @@ export class AssetBrowser {
 
   private renderCrumb(): void {
     const segs = this.currentDir === '' ? [] : this.currentDir.split('/');
-    const parts: string[] = [`<span class="asset-cseg" data-path="">项目根</span>`];
+    const parts: string[] = [`<span class="asset-cseg" data-path="">${t('项目根')}</span>`];
     let cur = '';
     for (const s of segs) {
       cur = cur === '' ? s : `${cur}/${s}`;
@@ -339,6 +357,8 @@ export class AssetBrowser {
     for (const el of this.crumbEl.querySelectorAll<HTMLElement>('.asset-cseg')) {
       el.addEventListener('click', () => void this.selectDir(el.dataset.path ?? ''));
     }
+    // 面包屑与「上一层」按钮同源：每次目录变化都同步可用态
+    this.upBtnEl.disabled = this.currentDir === '';
   }
 
   private get zoom(): number {
@@ -372,7 +392,7 @@ export class AssetBrowser {
 
     this.contentEl.innerHTML = '';
     if (items.length === 0) {
-      const msg = this.entries.length === 0 ? '空目录' : '没有匹配筛选项';
+      const msg = this.entries.length === 0 ? t('空目录') : t('没有匹配筛选项');
       this.contentEl.innerHTML = `<div class="asset-empty">${msg}</div>`;
       return;
     }
@@ -380,7 +400,7 @@ export class AssetBrowser {
     if (isList) {
       const head = document.createElement('div');
       head.className = 'asset-row asset-lhead';
-      head.innerHTML = `<span class="asset-rname">名称</span><span class="asset-rsize">大小</span><span class="asset-rtime">修改时间</span>`;
+      head.innerHTML = `<span class="asset-rname">${t('名称')}</span><span class="asset-rsize">${t('大小')}</span><span class="asset-rtime">${t('修改时间')}</span>`;
       this.contentEl.appendChild(head);
     }
 
@@ -478,16 +498,76 @@ export class AssetBrowser {
     }
   }
 
+  // ================= 行内重命名 =================
+
+  /**
+   * 行内重命名（右键菜单 Rename 的入口）：把条目名字原地换成输入框，
+   * Enter / 失焦提交、Esc 取消。提交走 hooks.onRename，成功后刷新目录并清空选中
+   * （新条目要等服务端改名落盘后再列出来，不在这里乐观改 UI）。
+   */
+  beginRename(path: string): boolean {
+    if (this.renameInput !== null) return false;
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    const el = this.contentEl.querySelector<HTMLElement>(`[data-name="${CSS.escape(name)}"]`);
+    if (el === null) return false;
+    const label = el.querySelector<HTMLElement>('.asset-name') ?? el.querySelector<HTMLElement>('.asset-rname-t');
+    if (label === null) return false;
+
+    const input = document.createElement('input');
+    input.className = 'asset-rename';
+    input.type = 'text';
+    input.value = name;
+    input.title = t('Enter 提交 · Esc 取消');
+    let done = false;
+    const finish = (commit: boolean): void => {
+      if (done) return;
+      done = true;
+      this.renameInput = null;
+      const v = input.value.trim();
+      input.replaceWith(label);
+      if (!commit || v === '' || v === name) return;
+      void (async () => {
+        const ok = (await this.hooks.onRename?.(path, v)) ?? false;
+        if (!ok) return;
+        await this.refresh();
+        this.selectedPath = null;
+        this.markContentSelection();
+        this.hooks.onSelect(null);
+      })();
+    };
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finish(true);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        finish(false);
+      }
+    });
+    // 输入框点击不冒泡：避免触发条目选中 / 内容区空白取消选中把编辑态搅掉
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('dblclick', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => finish(true));
+    label.replaceWith(input);
+    this.renameInput = input;
+    input.focus();
+    input.select();
+    return true;
+  }
+
   // ================= 自动化钩子 =================
 
   /** 给无头验证 / 控制台用：当前可见状态快照 */
-  getState(): { dir: string; zoom: number; collapsed: boolean; count: number; names: string[] } {
+  getState(): { dir: string; zoom: number; collapsed: boolean; count: number; names: string[]; upDisabled: boolean; renaming: boolean } {
     return {
       dir: this.currentDir,
       zoom: this.zoom,
       collapsed: this.dock.classList.contains('collapsed'),
       count: this.contentEl.querySelectorAll('[data-name]').length,
       names: [...this.contentEl.querySelectorAll<HTMLElement>('[data-name]')].map((e) => e.dataset.name ?? ''),
+      upDisabled: this.upBtnEl.disabled,
+      renaming: this.renameInput !== null,
     };
   }
 

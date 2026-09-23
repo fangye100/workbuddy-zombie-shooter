@@ -33,8 +33,19 @@ import type { BindAnimationInput, BindExportStats } from './services/binding/bin
 import type { FitResult, JointPositions } from './services/binding/binding-math';
 import { skeletonPositionsFromGltf } from './services/binding/import-skeleton';
 import type { SkeletonImportResult } from './services/binding/import-skeleton';
-import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
+import {
+  ASSET_MIME,
+  stemName,
+  readProjectFile,
+  writeProjectFile,
+  copyText,
+  fetchAssetInfo,
+  renameProjectEntry,
+  revealInFileManager,
+  type AssetSelection,
+} from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
+import { t, setLang, getLang, applyStaticI18n } from './i18n';
 import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
@@ -116,6 +127,14 @@ async function boot(): Promise<void> {
     showFatal('页面结构异常', '缺少 #gpu / #groups / #hud 节点。');
     return;
   }
+
+  // 多语言：index.html 里写死的静态文案（顶栏按钮 / dock 标题 / 占位符）在面板
+  // 构建前先翻一遍；面板与菜单文案在各自代码里走 t()。
+  applyStaticI18n(document.body);
+  // 语言切换按钮：gizmo-bar 尾部的「中/EN」。切换 = 持久化 + 整页刷新（见 i18n.ts）
+  document.querySelector<HTMLButtonElement>('[data-lang-toggle]')?.addEventListener('click', () => {
+    setLang(getLang() === 'zh' ? 'en' : 'zh');
+  });
 
   const gpu = await tryInitGpu(canvas);
   if (gpu === null) return;
@@ -237,12 +256,12 @@ async function boot(): Promise<void> {
     const playing = st !== 'stopped';
     if (btnPlay !== null) {
       btnPlay.classList.toggle('active', playing);
-      btnPlay.textContent = st === 'paused' ? '▶ 继续' : '▶ Play';
+      btnPlay.textContent = st === 'paused' ? `▶ ${t('继续')}` : '▶ Play';
     }
     if (btnPause !== null) {
       btnPause.disabled = !playing;
       btnPause.classList.toggle('active', st === 'paused');
-      btnPause.textContent = st === 'paused' ? '⏸ 已暂停' : '⏸ 暂停';
+      btnPause.textContent = st === 'paused' ? `⏸ ${t('已暂停')}` : `⏸ ${t('暂停')}`;
     }
     if (btnStep !== null) btnStep.disabled = st !== 'paused';
     if (btnReset !== null) btnReset.disabled = !playing;
@@ -327,7 +346,7 @@ async function boot(): Promise<void> {
   function modelReplaceBlocked(): boolean {
     if (!playCtl.isPlaying) return false;
     console.warn('[play] Play 中禁止替换模型（快照不存网格/骨架，Stop 后无法恢复；先 Stop 再换）');
-    panel.setModelInfo('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop');
+    panel.setModelInfo(t('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop'));
     hudDirty = true;
     return true;
   }
@@ -354,7 +373,7 @@ async function boot(): Promise<void> {
     if (modelReplaceBlocked()) return;
     if (id === null) {
       renderer.setCharacter(null, null);
-      panel.setModelInfo('程序化胶囊 · 材质在「材质」面板调');
+      panel.setModelInfo(t('程序化胶囊 · 材质在「材质」面板调'));
       hudDirty = true;
       return;
     }
@@ -443,7 +462,7 @@ async function boot(): Promise<void> {
 
   // 不再默认加载任何内置模型：E-04 内置档（LOD 中间产物）已全部移除，
   // 启动即为程序化胶囊，角色一律通过「导入 GLB…」载入原始模型（唯一真源）。
-  panel.setModelInfo('未载入模型 · 用「导入 GLB…」载入原始 .glb');
+  panel.setModelInfo(t('未载入模型 · 用「导入 GLB…」载入原始 .glb'));
 
   // 默认取景：target 落在角色身上才能居中构图，而不是看向角色前方的空地
   const DEFAULT_VIEW = { yaw: 0.35, distance: 9, target: [0, 0.95, 0] as [number, number, number] };
@@ -1869,7 +1888,7 @@ async function boot(): Promise<void> {
     // 这一条与层级删除 / Delete 键同一约束，所有入口统一。
     if (playCtl.isPlaying) {
       console.warn('[play] Play 中禁止导入 / 生成资产（Stop 后作者状态按索引恢复，数量必须一致）');
-      panel.setModelInfo('Play 中不能导入 / 生成资产，先 Stop');
+      panel.setModelInfo(t('Play 中不能导入 / 生成资产，先 Stop'));
       hudDirty = true;
       return;
     }
@@ -1892,7 +1911,7 @@ async function boot(): Promise<void> {
       // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
       const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
       if (idx === null) {
-        panel.setModelInfo('场景物体已达上限（64），先在层级里删掉一些再拖入');
+        panel.setModelInfo(t('场景物体已达上限（64），先在层级里删掉一些再拖入'));
         return;
       }
       renderer.selectObject(idx);
@@ -1980,6 +1999,8 @@ async function boot(): Promise<void> {
   interface CtxItem {
     label: string;
     disabled?: boolean;
+    /** 分隔线项：label 留空，只渲染横线（菜单动作分组用） */
+    separator?: boolean;
     run(): void;
   }
 
@@ -1987,6 +2008,12 @@ async function boot(): Promise<void> {
     if (ctxMenuEl === null) return;
     ctxMenuEl.replaceChildren();
     for (const it of items) {
+      if (it.separator === true) {
+        const sep = document.createElement('div');
+        sep.className = 'ctx-sep';
+        ctxMenuEl.appendChild(sep);
+        continue;
+      }
       const b = document.createElement('button');
       b.className = 'ctx-item';
       b.type = 'button';
@@ -2798,7 +2825,7 @@ async function boot(): Promise<void> {
       if (opts?.importSkeleton === true) {
         if (model.skeleton === null) {
           panel.setModelInfo(
-            `导入文件骨架失败：${stemName(relPath)} 不含蒙皮骨架（纯网格）· 请用普通「进入绑定」`,
+            `导入文件骨架失败：${stemName(relPath)} 不含蒙皮骨架（纯网格）· 请改用「进入绑定 · 纯网格」`,
           );
           return;
         }
@@ -2850,7 +2877,7 @@ async function boot(): Promise<void> {
     const obj = renderer.state.objects[index];
     openCtxMenu(x, y, [
       {
-        label: obj === undefined ? '进入绑定 Binding…（物体不存在）' : '进入绑定 Binding…',
+        label: obj === undefined ? t('进入绑定（物体不存在）') : t('进入绑定'),
         disabled: obj === undefined,
         run: () => {
           if (obj === undefined) return;
@@ -2879,7 +2906,7 @@ async function boot(): Promise<void> {
           pickBvhFile((t, n) => loadBvhForObject(t, n, obj));
         },
       },
-      { label: '聚焦 Focus', disabled: obj === undefined, run: () => focusOn(index) },
+      { label: t('聚焦'), disabled: obj === undefined, run: () => focusOn(index) },
     ]);
   };
 
@@ -2913,7 +2940,7 @@ async function boot(): Promise<void> {
       }
     }
     dockEl?.classList.remove('collapsed');
-    panel.setModelInfo('请先在底部资产库选中一个 .glb 模型，或右键场景物体 → 进入绑定');
+    panel.setModelInfo(t('请先在底部资产库选中一个 .glb 模型，或右键场景物体 → 进入绑定'));
     hudDirty = true;
   }
 
@@ -3155,26 +3182,92 @@ async function boot(): Promise<void> {
         }
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
-      // 右键条目 → 统一菜单（与层级面板共用一套 DOM）。只有 .glb 才给「进入绑定」
+      onRename: async (path, newName) => {
+        const r = await renameProjectEntry(path, newName);
+        if (!r.ok) {
+          panel.setModelInfo(`重命名失败：${r.error ?? '未知错误'}`);
+          hudDirty = true;
+          return false;
+        }
+        const extras: string[] = [];
+        if (r.metaRenamed) extras.push('sidecar 已随迁');
+        if (r.projectUpdated) extras.push('项目登记已更新');
+        // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
+        // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
+        if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
+        panel.setModelInfo(`已重命名 → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
+        hudDirty = true;
+        return true;
+      },
+      // 右键条目 → 统一菜单（与层级面板共用一套 DOM）。上面三段是编辑器动作，
+      // 分隔线以下是通用文件动作（复制路径 / 重命名 / 资源管理器定位）。只有 .glb 才给「进入绑定」
       onContextMenu: (path, entry, x, y) => {
         const isGlb = entry.kind === 'file' && entry.ext.toLowerCase() === '.glb';
         openCtxMenu(x, y, [
           {
-            label: isGlb ? '进入绑定 Binding…' : '进入绑定 Binding…（仅 .glb）',
+            label: isGlb ? t('进入绑定 · 纯网格（继续上次编辑）…') : t('进入绑定 · 纯网格（仅 .glb）'),
             disabled: !isGlb,
             run: () => void bindAssetAt(path),
           },
           {
             // rigged GLB 桥：把文件内嵌 skin 的骨架摆位灌进会话再加工；
             // 纯网格点这个会在打开前收到明确报错（不静默退化成模板模式）
-            label: isGlb ? '进入绑定 Binding…（导入文件骨架）' : '进入绑定 · 导入文件骨架（仅 .glb）',
+            label: isGlb ? t('进入绑定 · 已有骨骼（导入文件骨架）…') : t('进入绑定 · 已有骨骼（仅 .glb）'),
             disabled: !isGlb,
             run: () => void bindAssetAt(path, { importSkeleton: true }),
           },
           {
-            label: isGlb ? '载入场景 Spawn' : '载入场景 Spawn（仅 .glb）',
+            label: isGlb ? t('载入场景') : t('载入场景（仅 .glb）'),
             disabled: !isGlb,
             run: () => void spawnAssetAt(path, null),
+          },
+          { label: '', separator: true, run: () => {} },
+          {
+            label: t('复制相对路径'),
+            run: () => {
+              void (async () => {
+                const ok = await copyText(path);
+                panel.setModelInfo(ok ? `${t('已复制相对路径')}：${path}` : t('复制失败（剪贴板不可用）'));
+                hudDirty = true;
+              })();
+            },
+          },
+          {
+            label: t('复制绝对路径'),
+            run: () => {
+              void (async () => {
+                const info = await fetchAssetInfo(path);
+                if (!info.ok) {
+                  panel.setModelInfo(`${t('取绝对路径失败')}：${info.error ?? '未知错误'}`);
+                  hudDirty = true;
+                  return;
+                }
+                const ok = await copyText(info.abs);
+                panel.setModelInfo(ok ? `${t('已复制绝对路径')}：${info.abs}` : t('复制失败（剪贴板不可用）'));
+                hudDirty = true;
+              })();
+            },
+          },
+          {
+            label: `${t('重命名')}…`,
+            run: () => {
+              if (!assets.beginRename(path)) {
+                panel.setModelInfo('重命名：条目当前不可见（可能被筛选隐藏），先清除筛选再试');
+                hudDirty = true;
+              }
+            },
+          },
+          {
+            label: t('在资源管理器中显示'),
+            run: () => {
+              void (async () => {
+                const r = await revealInFileManager(path);
+                if (!r.ok) {
+                  panel.setModelInfo(`${t('打开文件位置失败')}：${r.error ?? '未知错误'}`);
+                  hudDirty = true;
+                }
+              })();
+            },
           },
         ]);
       },
@@ -3192,7 +3285,7 @@ async function boot(): Promise<void> {
       if (rel === undefined || rel === '') return;
       e.preventDefault();
       if (!rel.toLowerCase().endsWith('.glb')) {
-        panel.setModelInfo('只有 .glb 模型能拖入场景（其他资产在右侧 Inspector 里预览）');
+        panel.setModelInfo(t('只有 .glb 模型能拖入场景（其他资产在右侧 Inspector 里预览'));
         hudDirty = true;
         return;
       }

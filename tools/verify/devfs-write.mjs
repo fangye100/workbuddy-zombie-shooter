@@ -1,13 +1,17 @@
 /**
- * devfs 写端点回归测（纯 node，无需 dev server / 浏览器）。
+ * devfs 端点回归测（纯 node，无需 dev server / 浏览器）。
  *
  * 为什么独立成文件而不进 vitest：
  *   门禁 tsconfig.check.json 的 include 不含 node 类型，测试里用 node:fs 会触发
  *   TS 报错。devfs 本身是 server-only（放 apps/editor 根而非 src/），只能由 node
- *   直接跑。本文件用 `node --experimental-strip-types` 加载 devfs.ts，覆盖三项铁律：
+ *   直接跑。本文件用 `node --experimental-strip-types` 加载 devfs.ts，覆盖：
  *     ① 路径锁根：../../ 穿越被拒；
  *     ② .json only：其它扩展名被拒；
- *     ③ patch 浅合并保留兄弟键（importer / userData / rig / guid 不被 bindingEditor 覆盖）。
+ *     ③ patch 浅合并保留兄弟键（importer / userData / rig / guid 不被 bindingEditor 覆盖）；
+ *     ④ 乐观并发（baseHash）与逐路径写入队列（复审 P1/P2）；
+ *     ⑤ /__fs/info · /__fs/rename · /__fs/reveal（右键菜单底座）：
+ *        绝对路径解析、改名护栏（非法名/占用/穿越/项目锚点）、
+ *        sidecar 随迁、aether.project.json 场景登记同步。
  *
  * 用法：node tools/verify/devfs-write.mjs
  * 退出码：0 = 全过；1 = 有断言失败。
@@ -28,20 +32,6 @@ function check(name, cond) {
   }
 }
 
-function makeReq(url, method, bodyObj) {
-  const chunk = bodyObj === undefined ? null : Buffer.from(JSON.stringify(bodyObj));
-  const listeners = {};
-  return {
-    method,
-    url,
-    on(ev, cb) { (listeners[ev] ??= []).push(cb); },
-    emit() {
-      if (chunk !== null) (listeners.data ?? []).forEach((cb) => cb(chunk));
-      (listeners.end ?? []).forEach((cb) => cb());
-    },
-  };
-}
-
 function makeRes() {
   let resolveDone;
   const done = new Promise((r) => { resolveDone = r; });
@@ -56,12 +46,30 @@ function makeRes() {
   return { res, done: () => done.then(() => ({ status, body: body === '' ? null : JSON.parse(body) })) };
 }
 
-async function runWrite(handler, root, rel, bodyObj) {
-  const req = makeReq(`/__fs/write`, 'POST', { path: rel, ...bodyObj });
+async function runReq(handler, url, method = 'GET', bodyObj = undefined) {
+  const chunk = bodyObj === undefined ? null : Buffer.from(JSON.stringify(bodyObj));
+  const listeners = {};
+  const req = {
+    method,
+    url,
+    on(ev, cb) { (listeners[ev] ??= []).push(cb); },
+    emit() {
+      if (chunk !== null) (listeners.data ?? []).forEach((cb) => cb(chunk));
+      (listeners.end ?? []).forEach((cb) => cb());
+    },
+  };
   const { res, done } = makeRes();
   handler(req, res, () => {});
   req.emit();
   return done();
+}
+
+async function runWrite(handler, root, rel, bodyObj) {
+  return runReq(handler, `/__fs/write`, 'POST', { path: rel, ...bodyObj });
+}
+
+async function runRename(handler, root, rel, newName) {
+  return runReq(handler, `/__fs/rename`, 'POST', { path: rel, newName });
 }
 
 const root = mkdtempSync(path.join(tmpdir(), 'devfs-'));
@@ -198,6 +206,160 @@ try {
   // 队列内部状态不应无限增长：刚才这些路径的队列尾部都已离开（不能逐个断言 Map，
   // 用「连续成功 + 进程存活」作为健康证据；若 Map 泄漏会在长跑里显现）
   check('写端点在全部失败后仍存活且可服务', existsSync(concAbs));
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ⑤ /__fs/info · /__fs/rename · /__fs/reveal（右键菜单底座）
+  //    reveal 只测校验失败分支（穿越 400 / 不存在 404）——成功分支会真的弹出
+  //    资源管理器窗口，回归测试不能拿桌面开party。
+  // ────────────────────────────────────────────────────────────────────────
+  console.log('\ninfo / rename / reveal 端点：');
+
+  // info：绝对路径解析 + 锁根
+  mkdirSync(path.join(root, 'probe'), { recursive: true });
+  writeFileSync(path.join(root, 'probe/a.json'), '{}', 'utf8');
+  const infoOk = await runReq(handler, `/__fs/info?path=${encodeURIComponent('probe/a.json')}`);
+  check('info 返回 200 + 绝对路径在根内', infoOk.status === 200 && infoOk.body?.kind === 'file'
+    && infoOk.body?.abs === path.join(root, 'probe', 'a.json'));
+  const infoMissing = await runReq(handler, `/__fs/info?path=${encodeURIComponent('probe/none.json')}`);
+  check('info 对不存在条目报 kind=missing（200，查询不炸）', infoMissing.status === 200 && infoMissing.body?.kind === 'missing');
+  const infoEscape = await runReq(handler, `/__fs/info?path=${encodeURIComponent('../../etc/passwd')}`);
+  check('info 拒绝 ../../ 穿越 (400)', infoEscape.status === 400);
+
+  // rename：护栏（先测拒绝路径，再测成功路径，避免顺序耦合）
+  writeFileSync(path.join(root, 'probe/b.json'), '{}', 'utf8');
+  writeFileSync(path.join(root, 'probe/b.json.meta.json'), '{"guid":"g1"}', 'utf8');
+  const rnEscape = await runRename(handler, root, '../../evil', 'x');
+  check('rename 拒绝 ../../ 穿越 (400)', rnEscape.status === 400);
+  const rnMissing = await runRename(handler, root, 'probe/ghost.json', 'newname.json');
+  check('rename 对不存在条目 404', rnMissing.status === 404);
+  const rnSame = await runRename(handler, root, 'probe/b.json', 'b.json');
+  check('rename 同名拒绝 (400)', rnSame.status === 400);
+  const rnBadNames = await Promise.all([
+    runRename(handler, root, 'probe/b.json', 'a/b'),
+    runRename(handler, root, 'probe/b.json', '..'),
+    runRename(handler, root, 'probe/b.json', 'bad*name'),
+    runRename(handler, root, 'probe/b.json', 'bad:name'),
+    runRename(handler, root, 'probe/b.json', 'trailing.'),
+    runRename(handler, root, 'probe/b.json', 'trailing '),
+    runRename(handler, root, 'probe/b.json', 'con'),
+    runRename(handler, root, 'probe/b.json', ''),
+  ]);
+  check('rename 非法名全拒（分隔符/../保留字/结尾点空格/con/空）', rnBadNames.every((r) => r.status === 400),
+    rnBadNames.map((r) => r.status).join(','));
+  const rnTarget = await runRename(handler, root, 'probe/b.json', 'a.json');
+  check('rename 目标已占用 → 409', rnTarget.status === 409);
+
+  // rename 成功路径：文件 + sidecar 随迁
+  const rnOk = await runRename(handler, root, 'probe/b.json', 'renamed.json');
+  check('rename 文件成功 (200)', rnOk.status === 200 && rnOk.body?.ok === true && rnOk.body?.path === 'probe/renamed.json');
+  check('rename 后旧文件消失', !existsSync(path.join(root, 'probe/b.json')));
+  check('rename 后新文件存在', existsSync(path.join(root, 'probe/renamed.json')));
+  check('sidecar <名>.meta.json 随迁', existsSync(path.join(root, 'probe/renamed.json.meta.json'))
+    && !existsSync(path.join(root, 'probe/b.json.meta.json')));
+  check('响应里 metaRenamed=true', rnOk.body?.metaRenamed === true);
+
+  // rename 目录：内部条目整目录搬家
+  mkdirSync(path.join(root, 'probe/olddir/inner'), { recursive: true });
+  writeFileSync(path.join(root, 'probe/olddir/inner/deep.json'), '{"d":1}', 'utf8');
+  const rnDir = await runRename(handler, root, 'probe/olddir', 'newdir');
+  check('rename 目录成功 (200)', rnDir.status === 200 && rnDir.body?.path === 'probe/newdir');
+  check('目录内部条目跟着搬家', existsSync(path.join(root, 'probe/newdir/inner/deep.json')));
+
+  // 场景登记同步：scenes[].path 精确命中（文件改名）与前缀命中（目录改名）
+  writeFileSync(path.join(root, 'aether.project.json'), JSON.stringify({
+    schemaVersion: 1,
+    scenes: [
+      { path: 'probe/newdir/inner/deep.json', name: 'A' },
+      { path: 'probe/renamed.json', name: 'B' },
+      { path: 'probe/untouched.json', name: 'C' },
+    ],
+  }, null, 2), 'utf8');
+  const rnSceneFile = await runRename(handler, root, 'probe/renamed.json', 'renamed2.json');
+  check('rename .scene.json 命中登记 → projectUpdated', rnSceneFile.status === 200 && rnSceneFile.body?.projectUpdated === true);
+  const rnSceneDir = await runRename(handler, root, 'probe/newdir', 'newdir2');
+  check('rename 目录前缀命中登记 → projectUpdated', rnSceneDir.status === 200 && rnSceneDir.body?.projectUpdated === true);
+  const projAfter = JSON.parse(readFileSync(path.join(root, 'aether.project.json'), 'utf8'));
+  check('登记路径已改写（文件级）', projAfter.scenes.some((s) => s.path === 'probe/renamed2.json'));
+  check('登记路径已改写（目录前缀级）', projAfter.scenes.some((s) => s.path === 'probe/newdir2/inner/deep.json'));
+  check('未命中的登记保持原样', projAfter.scenes.some((s) => s.path === 'probe/untouched.json'));
+  // 无命中：改名的文件不在登记里（probe/a.json 没进过 scenes[]）→ 不动项目文件
+  const rnNoHit = await runRename(handler, root, 'probe/a.json', 'a2.json');
+  check('无登记命中 → projectUpdated=false（不动项目文件）', rnNoHit.status === 200 && rnNoHit.body?.projectUpdated === false);
+
+  // 项目锚点拒绝改名
+  const rnAnchor = await runRename(handler, root, 'aether.project.json', 'nope.json');
+  check('rename 项目锚点 aether.project.json 拒绝 (400)', rnAnchor.status === 400
+    && existsSync(path.join(root, 'aether.project.json')));
+
+  // reveal：只测校验失败分支（成功分支会弹资源管理器窗口）
+  const rvEscape = await runReq(handler, `/__fs/reveal`, 'POST', { path: '../../windows' });
+  check('reveal 拒绝 ../../ 穿越 (400)', rvEscape.status === 400);
+  const rvMissing = await runReq(handler, `/__fs/reveal`, 'POST', { path: 'probe/ghost.json' });
+  check('reveal 对不存在条目 404', rvMissing.status === 404);
+
+  // ── bot 评审收口回归（PR #14）──────────────────────────────────────────
+
+  // 根本身边份拒绝：`path: "."` resolve 成项目根，rename 会把 checkout 挪出锁外
+  const rnRoot = await runRename(handler, root, '.', 'escaped-root');
+  check('rename 项目根本身拒绝 (400)', rnRoot.status === 400);
+  const rnRoot2 = await runRename(handler, root, './', 'escaped-root');
+  check('rename 根（./ 写法）同样拒绝 (400)', rnRoot2.status === 400);
+
+  // 锚点大小写：大小写不敏感盘上 AETHER.PROJECT.JSON = 锚点本身，必须拒绝；
+  // 区分大小写的盘上该文件不存在 → 404（同样没被改名）
+  const rnAnchorCase = await runRename(handler, root, 'AETHER.PROJECT.JSON', 'nope.json');
+  if (rnAnchorCase.status === 400) {
+    check('rename 锚点大写变体拒绝 (400，大小写不敏感盘)', rnAnchorCase.status === 400);
+  } else {
+    check('rename 锚点大写变体按不存在拒绝 (404，区分大小写盘)', rnAnchorCase.status === 404);
+  }
+
+  // sidecar 目标位被孤儿占用：a.json(+meta) → b.json 时残留 b.json.meta.json → 409，
+  // 且源文件与源 sidecar 都不动（不被半执行）
+  writeFileSync(path.join(root, 'probe/sc.json'), '{}', 'utf8');
+  writeFileSync(path.join(root, 'probe/sc.json.meta.json'), '{"guid":"sc"}', 'utf8');
+  writeFileSync(path.join(root, 'probe/orphan-target.json.meta.json'), '{"guid":"orphan"}', 'utf8');
+  const rnSidecarClash = await runRename(handler, root, 'probe/sc.json', 'orphan-target.json');
+  check('sidecar 目标位被孤儿占用 → 409', rnSidecarClash.status === 409, JSON.stringify(rnSidecarClash.body));
+  check('409 后源文件未动', existsSync(path.join(root, 'probe/sc.json')));
+  check('409 后孤儿 sidecar 未被覆盖（guid 原样）',
+    readFileSync(path.join(root, 'probe/orphan-target.json.meta.json'), 'utf8').includes('orphan'));
+
+  // 登记同步覆盖**全部**路径字段：assetRoots/behaviorRoots/defaultStyle/inputMap/
+  // gameplayConfig/materialLibrary 都要跟着目录改名走
+  writeFileSync(path.join(root, 'aether.project.json'), JSON.stringify({
+    schemaVersion: 1,
+    scenes: [{ path: 'probe/newdir2/inner/deep.json', name: 'A' }],
+    assetRoots: ['probe/newdir2/assets', 'assets'],
+    behaviorRoots: ['probe/newdir2/behaviors'],
+    defaultStyle: 'probe/newdir2/styles/tokens.json',
+    inputMap: 'probe/newdir2/input.json',
+    gameplayConfig: 'probe/newdir2/gameplay.json',
+    materialLibrary: 'assets/materials/library.mat.json',
+  }, null, 2), 'utf8');
+  const rnAllFields = await runRename(handler, root, 'probe/newdir2', 'newdir3');
+  check('目录改名后 ok (200)', rnAllFields.status === 200);
+  const projAll = JSON.parse(readFileSync(path.join(root, 'aether.project.json'), 'utf8'));
+  check('scenes[].path 前缀改写', projAll.scenes[0].path === 'probe/newdir3/inner/deep.json');
+  check('assetRoots 命中项改写、未命中保留',
+    projAll.assetRoots[0] === 'probe/newdir3/assets' && projAll.assetRoots[1] === 'assets');
+  check('behaviorRoots 改写', projAll.behaviorRoots[0] === 'probe/newdir3/behaviors');
+  check('defaultStyle 改写', projAll.defaultStyle === 'probe/newdir3/styles/tokens.json');
+  check('inputMap 改写', projAll.inputMap === 'probe/newdir3/input.json');
+  check('gameplayConfig 改写', projAll.gameplayConfig === 'probe/newdir3/gameplay.json');
+  check('materialLibrary 未命中保持原样', projAll.materialLibrary === 'assets/materials/library.mat.json');
+
+  // 部分成功：改名落盘但项目文件不可读 → ok:true + projectError（浏览器仍会刷新）
+  rmSync(path.join(root, 'aether.project.json'), { force: true });
+  mkdirSync(path.join(root, 'aether.project.json'), { recursive: true }); // 目录 → readFile 抛 EISDIR
+  const rnPartial = await runRename(handler, root, 'probe/a2.json', 'a3.json');
+  check('部分成功：改名 ok=true', rnPartial.status === 200 && rnPartial.body?.ok === true);
+  check('部分成功：projectError 如实上报（非空字符串）',
+    typeof rnPartial.body?.projectError === 'string' && rnPartial.body.projectError.length > 0,
+    rnPartial.body?.projectError ?? '');
+  check('部分成功：文件确实已改名', existsSync(path.join(root, 'probe/a3.json'))
+    && !existsSync(path.join(root, 'probe/a2.json')));
+  rmSync(path.join(root, 'aether.project.json'), { recursive: true, force: true }); // 收尾拆掉假目录
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
