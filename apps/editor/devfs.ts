@@ -5,6 +5,9 @@
  *   GET  /__fs/list?dir=<相对路径>   → 目录条目 JSON（懒加载，只列一层）
  *   GET  /__fs/file?path=<相对路径>  → 原始文件流（GLB fetch、图片缩略图）
  *   POST /__fs/write                 → 写回项目内文件（编辑器存盘的底座）
+ *   GET  /__fs/info?path=<相对路径>  → 绝对路径 / 类型（右键「复制绝对路径」用）
+ *   POST /__fs/rename                → 改名文件或目录（右键 Rename；连带 sidecar 与场景登记）
+ *   POST /__fs/reveal                → 在系统文件管理器里定位（右键 Reveal in Explorer）
  *
  * 根 = 工作区根目录（整个游戏项目）。读端点只读；写端点做了三重护栏：
  *   ① 路径必须落在项目根内（resolveInside 防 `../../` 穿越）；
@@ -37,6 +40,7 @@
 
 import { createReadStream, existsSync, promises as fsp, statSync } from 'node:fs';
 import { realpathSync, writeFileSync as writeFileSyncCase, existsSync as existsSyncCase, rmSync as rmSyncCase } from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 // 与浏览器侧保存共用同一个指纹实现 —— 版本校验必须逐位一致，各算一份必然漂移。
@@ -322,6 +326,225 @@ async function performWrite(
 
 export type FsApiHandler = (req: IncomingMessage, res: ServerResponse, next: () => void) => void;
 
+// ------------------------------------------------------------ info / rename / reveal（右键菜单底座）
+
+/** 相对路径 → 平台原生分隔符的绝对路径（客户端「复制绝对路径」直接抄它） */
+function handleInfo(res: ServerResponse, root: string, rel: string): void {
+  const abs = resolveInside(root, rel);
+  if (abs === null) {
+    sendJson(res, 400, { error: '路径越出项目根（拒绝 ../../ 穿越）' });
+    return;
+  }
+  let kind: 'file' | 'dir' | 'missing' = 'missing';
+  try {
+    kind = statSync(abs).isDirectory() ? 'dir' : 'file';
+  } catch {
+    kind = 'missing';
+  }
+  sendJson(res, 200, { ok: true, path: rel, abs, kind });
+}
+
+/**
+ * 单段文件/目录名合法性：拒绝路径分隔符、`.`/`..`、控制字符、
+ * Windows 保留字符 `<>:"|?*` 与结尾的点/空格（NTFS 会静默剥掉，造成「改名成功但名字不对」）。
+ * 跨平台统一按最严标准拒 —— 反正这些名字在任何平台上都不是好名字。
+ */
+export function isValidEntryName(name: string): boolean {
+  if (name.length === 0 || name.length > 200) return false;
+  if (name === '.' || name === '..') return false;
+  if (/[\\/\0]/.test(name)) return false;
+  // 控制字符与 Windows 保留字符
+  if (/[\x00-\x1f<>:"|?*]/.test(name)) return false;
+  if (/[. ]$/.test(name)) return false;
+  // Windows 保留设备名（CON / PRN / AUX / NUL / COM1… / LPT1…）做目录/文件名都会出鬼
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name)) return false;
+  return true;
+}
+
+/** 把 POSIX 相对路径转回平台分隔符相对路径（registry 里存的是 POSIX 风格） */
+function toPosix(p: string): string {
+  return p.split(path.sep).join('/');
+}
+
+async function handleRename(
+  req: IncomingMessage,
+  res: ServerResponse,
+  root: string,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'rename 端点仅支持 POST' });
+    return;
+  }
+  let body: { path?: unknown; newName?: unknown };
+  try {
+    body = (await readJsonBody(req)) as { path?: unknown; newName?: unknown };
+  } catch {
+    sendJson(res, 400, { error: '请求体不是合法 JSON' });
+    return;
+  }
+  const rel = String(body.path ?? '').replace(/^\/+/, '');
+  const newName = String(body.newName ?? '');
+  if (!rel || !newName) {
+    sendJson(res, 400, { error: '缺少 path 或 newName' });
+    return;
+  }
+  const abs = resolveInside(root, rel);
+  if (abs === null) {
+    sendJson(res, 400, { error: '路径越出项目根（拒绝 ../../ 穿越）' });
+    return;
+  }
+  // 项目锚点改名会让整个编辑器失联（场景清单/层表全在里面），直接拒绝
+  if (toPosix(path.relative(root, abs)) === 'aether.project.json') {
+    sendJson(res, 400, { error: 'aether.project.json 是项目锚点，不允许改名' });
+    return;
+  }
+  let st: { isDirectory(): boolean };
+  try {
+    st = statSync(abs);
+  } catch {
+    sendJson(res, 404, { error: '要改名的条目不存在' });
+    return;
+  }
+  const oldName = path.basename(abs);
+  if (newName === oldName) {
+    sendJson(res, 400, { error: '新名字与当前名字相同' });
+    return;
+  }
+  if (!isValidEntryName(newName)) {
+    sendJson(res, 400, { error: '新名字不合法（不能含路径分隔符 / : * ? " < > |，不能以点或空格结尾）' });
+    return;
+  }
+  const target = path.join(path.dirname(abs), newName);
+  // 目标已被占用 → 409。大小写不敏感盘上「只改大小写」是同一个文件（身份键相等），放行
+  if (existsSync(target) && fileIdentityKey(root, target) !== fileIdentityKey(root, abs)) {
+    sendJson(res, 409, { error: `目标名字已存在：${newName}` });
+    return;
+  }
+
+  // sidecar 跟随：<源文件名>.meta.json 与源资产同生共死（agents.md §2.5）
+  const metaAbs = `${abs}.meta.json`;
+  const hasMeta = st.isDirectory() === false && existsSync(`${abs}.meta.json`);
+
+  try {
+    await fsp.rename(abs, target);
+  } catch (e) {
+    sendJson(res, 500, { error: `改名失败：${String(e)}` });
+    return;
+  }
+  let metaRenamed = false;
+  if (hasMeta) {
+    try {
+      await fsp.rename(metaAbs, `${target}.meta.json`);
+      metaRenamed = true;
+    } catch (e) {
+      // 源文件已改成功、sidecar 没跟上：回滚源文件，保持「要么都成、要么都不动」
+      await fsp.rename(target, abs).catch(() => undefined);
+      sendJson(res, 500, { error: `sidecar 改名失败，已回滚源文件：${String(e)}` });
+      return;
+    }
+  }
+
+  // 场景登记同步：scenes[].path 精确命中（文件改名）或前缀命中（目录改名）都改写。
+  // 场景内部的 AssetRef 引用按 guid 解析（sidecar 已跟着改名，guid 不变）。
+  let projectUpdated = false;
+  const projAbs = path.join(root, 'aether.project.json');
+  if (existsSync(projAbs)) {
+    try {
+      const proj = JSON.parse(await fsp.readFile(projAbs, 'utf8')) as { scenes?: { path?: string }[] };
+      const oldPosix = toPosix(path.relative(root, abs));
+      const newPosix = toPosix(path.relative(root, target));
+      let dirty = false;
+      if (Array.isArray(proj.scenes)) {
+        for (const s of proj.scenes) {
+          if (typeof s.path !== 'string') continue;
+          if (s.path === oldPosix || s.path.startsWith(`${oldPosix}/`)) {
+            s.path = newPosix + s.path.slice(oldPosix.length);
+            dirty = true;
+          }
+        }
+      }
+      if (dirty) {
+        const tmp = await uniqueTempPath(projAbs);
+        await fsp.writeFile(tmp, JSON.stringify(proj, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
+        try {
+          await fsp.rename(tmp, projAbs);
+        } catch (e) {
+          await fsp.rm(tmp, { force: true }).catch(() => undefined);
+          throw e;
+        }
+        projectUpdated = true;
+      }
+    } catch (e) {
+      // 登记改写失败不回滚改名（那是用户明确要的动作），但要把失败如实报回去
+      sendJson(res, 500, { ok: false, path: toPosix(path.relative(root, target)), metaRenamed, error: `改名已完成，但 aether.project.json 登记更新失败：${String(e)}` });
+      return;
+    }
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    path: toPosix(path.relative(root, target)),
+    metaRenamed,
+    projectUpdated,
+  });
+}
+
+/**
+ * 在系统文件管理器里定位到该条目（选中它，而不是只打开所在目录）。
+ * spawn 参数数组、不经 shell —— 路径里再有引号/分号也只是路径本身，没有注入面。
+ */
+function revealInFileManager(abs: string): void {
+  if (process.platform === 'win32') {
+    // explorer /select, 后跟完整路径；detached + ignore 让它独立于 dev server 生命周期
+    const child = spawn('explorer.exe', [`/select,${abs}`], { detached: true, stdio: 'ignore' });
+    child.unref();
+  } else if (process.platform === 'darwin') {
+    const child = spawn('open', ['-R', abs], { detached: true, stdio: 'ignore' });
+    child.unref();
+  } else {
+    // Linux 无统一「选中」协议，退而求其次打开所在目录
+    const child = spawn('xdg-open', [path.dirname(abs)], { detached: true, stdio: 'ignore' });
+    child.unref();
+  }
+}
+
+async function handleReveal(
+  req: IncomingMessage,
+  res: ServerResponse,
+  root: string,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'reveal 端点仅支持 POST' });
+    return;
+  }
+  let body: { path?: unknown };
+  try {
+    body = (await readJsonBody(req)) as { path?: unknown };
+  } catch {
+    sendJson(res, 400, { error: '请求体不是合法 JSON' });
+    return;
+  }
+  const rel = String(body.path ?? '').replace(/^\/+/, '');
+  const abs = resolveInside(root, rel);
+  if (abs === null) {
+    sendJson(res, 400, { error: '路径越出项目根（拒绝 ../../ 穿越）' });
+    return;
+  }
+  try {
+    statSync(abs);
+  } catch {
+    sendJson(res, 404, { error: '条目不存在（可能刚被外部移动/删除）' });
+    return;
+  }
+  try {
+    revealInFileManager(abs);
+  } catch (e) {
+    sendJson(res, 500, { error: `拉起文件管理器失败：${String(e)}` });
+    return;
+  }
+  sendJson(res, 200, { ok: true, path: rel });
+}
+
 /**
  * 生成一个项目根绑定的 FS API 中间件（handler）。root 可注入 → 单测用临时目录验证。
  */
@@ -379,6 +602,18 @@ export function createFsApiHandler(root: string): FsApiHandler {
         }
         if (u.pathname === '/__fs/write') {
           await handleWrite(req, res, root);
+          return;
+        }
+        if (u.pathname === '/__fs/info') {
+          handleInfo(res, root, u.searchParams.get('path') ?? '');
+          return;
+        }
+        if (u.pathname === '/__fs/rename') {
+          await handleRename(req, res, root);
+          return;
+        }
+        if (u.pathname === '/__fs/reveal') {
+          await handleReveal(req, res, root);
           return;
         }
         sendJson(res, 404, { error: '未知端点' });

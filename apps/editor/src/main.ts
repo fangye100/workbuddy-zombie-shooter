@@ -33,7 +33,17 @@ import type { BindAnimationInput, BindExportStats } from './services/binding/bin
 import type { FitResult, JointPositions } from './services/binding/binding-math';
 import { skeletonPositionsFromGltf } from './services/binding/import-skeleton';
 import type { SkeletonImportResult } from './services/binding/import-skeleton';
-import { ASSET_MIME, stemName, readProjectFile, writeProjectFile, type AssetSelection } from './asset-util';
+import {
+  ASSET_MIME,
+  stemName,
+  readProjectFile,
+  writeProjectFile,
+  copyText,
+  fetchAssetInfo,
+  renameProjectEntry,
+  revealInFileManager,
+  type AssetSelection,
+} from './asset-util';
 import { makeSplitter, restoreCssVar } from './splitter';
 import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
@@ -1980,6 +1990,8 @@ async function boot(): Promise<void> {
   interface CtxItem {
     label: string;
     disabled?: boolean;
+    /** 分隔线项：label 留空，只渲染横线（菜单动作分组用） */
+    separator?: boolean;
     run(): void;
   }
 
@@ -1987,6 +1999,12 @@ async function boot(): Promise<void> {
     if (ctxMenuEl === null) return;
     ctxMenuEl.replaceChildren();
     for (const it of items) {
+      if (it.separator === true) {
+        const sep = document.createElement('div');
+        sep.className = 'ctx-sep';
+        ctxMenuEl.appendChild(sep);
+        continue;
+      }
       const b = document.createElement('button');
       b.className = 'ctx-item';
       b.type = 'button';
@@ -3155,7 +3173,22 @@ async function boot(): Promise<void> {
         }
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
-      // 右键条目 → 统一菜单（与层级面板共用一套 DOM）。只有 .glb 才给「进入绑定」
+      onRename: async (path, newName) => {
+        const r = await renameProjectEntry(path, newName);
+        if (!r.ok) {
+          panel.setModelInfo(`重命名失败：${r.error ?? '未知错误'}`);
+          hudDirty = true;
+          return false;
+        }
+        const extras: string[] = [];
+        if (r.metaRenamed) extras.push('sidecar 已随迁');
+        if (r.projectUpdated) extras.push('场景登记已更新');
+        panel.setModelInfo(`已重命名 → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
+        hudDirty = true;
+        return true;
+      },
+      // 右键条目 → 统一菜单（与层级面板共用一套 DOM）。上面三段是编辑器动作，
+      // 分隔线以下是通用文件动作（复制路径 / 重命名 / 资源管理器定位）。只有 .glb 才给「进入绑定」
       onContextMenu: (path, entry, x, y) => {
         const isGlb = entry.kind === 'file' && entry.ext.toLowerCase() === '.glb';
         openCtxMenu(x, y, [
@@ -3175,6 +3208,54 @@ async function boot(): Promise<void> {
             label: isGlb ? '载入场景 Spawn' : '载入场景 Spawn（仅 .glb）',
             disabled: !isGlb,
             run: () => void spawnAssetAt(path, null),
+          },
+          { label: '', separator: true, run: () => {} },
+          {
+            label: '复制相对路径 Copy Relative Path',
+            run: () => {
+              void (async () => {
+                const ok = await copyText(path);
+                panel.setModelInfo(ok ? `已复制相对路径：${path}` : '复制失败（剪贴板不可用）');
+                hudDirty = true;
+              })();
+            },
+          },
+          {
+            label: '复制绝对路径 Copy Absolute Path',
+            run: () => {
+              void (async () => {
+                const info = await fetchAssetInfo(path);
+                if (!info.ok) {
+                  panel.setModelInfo(`取绝对路径失败：${info.error ?? '未知错误'}`);
+                  hudDirty = true;
+                  return;
+                }
+                const ok = await copyText(info.abs);
+                panel.setModelInfo(ok ? `已复制绝对路径：${info.abs}` : '复制失败（剪贴板不可用）');
+                hudDirty = true;
+              })();
+            },
+          },
+          {
+            label: '重命名 Rename…',
+            run: () => {
+              if (!assets.beginRename(path)) {
+                panel.setModelInfo('重命名：条目当前不可见（可能被筛选隐藏），先清除筛选再试');
+                hudDirty = true;
+              }
+            },
+          },
+          {
+            label: '在资源管理器中显示 Reveal in Explorer',
+            run: () => {
+              void (async () => {
+                const r = await revealInFileManager(path);
+                if (!r.ok) {
+                  panel.setModelInfo(`打开文件位置失败：${r.error ?? '未知错误'}`);
+                  hudDirty = true;
+                }
+              })();
+            },
           },
         ]);
       },

@@ -368,10 +368,34 @@ async function main() {
     });
 
     cdp = new Cdp(ws, sessionId);
+    // 剪贴板预授权（浏览器级命令，不带页面 sessionId）：无授权时页面一拿到焦点，
+    // navigator.clipboard.writeText 会挂起等权限弹窗 —— J2「复制路径」的 HUD 反馈
+    // 在 1.2s 内等不到落判。预授后成功路径可断言，readText 还能核对剪贴板内容。
+    try {
+      const bcdp = new Cdp(ws, undefined);
+      await bcdp.send('Browser.grantPermissions', {
+        permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
+        origin: new URL(APP_URL).origin,
+      });
+    } catch (e) {
+      console.log(`（剪贴板预授权跳过：${String(e)}）`);
+    }
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
     await cdp.send('Page.navigate', { url: APP_URL });
     await sleep(6000); // 软件光栅化启动慢，给它出几帧的时间
+
+    // 画布几何守门：chrome-profile 复用的 localStorage 会把上次会话拖出来的
+    // 资产库 dock 高度（zh.ui.dockH，实测残留过 702px）带回本次 —— 底部 dock
+    // 吃掉整个布局，画布被挤到几十像素高，gizmo 扫描 / pointerRay / 视口拖拽
+    // 一整串断言全部假 FAIL（2026-09-23 踩过：canvas 622×1）。
+    // 冒烟必须从确定性的默认 UI 状态出发：清掉挤压画布的持久化项再刷新。
+    await cdp.eval(`(() => {
+      localStorage.removeItem('zh.ui.dockH');
+      localStorage.removeItem('zh.assets.collapsed');
+      location.reload();
+    })()`);
+    await sleep(4000);
 
     // ---- A. 启动 ----
     console.log('\nA. 启动与 WebGPU 上下文');
@@ -400,7 +424,8 @@ async function main() {
     const canvas = await cdp.eval(
       `(()=>{const c=document.getElementById('gpu');return c?{w:c.width,h:c.height}:null})()`,
     );
-    check('canvas 尺寸有效', canvas !== null && canvas.w > 0 && canvas.h > 0, JSON.stringify(canvas));
+    // h>200 是硬门槛：窗口几何残留把画布压扁（622×1）时，后面所有视口断言都会假失败
+    check('canvas 尺寸有效（高度立得住，>200px）', canvas !== null && canvas.w > 0 && canvas.h > 200, JSON.stringify(canvas));
 
     const gpuName = await cdp.eval(`(document.getElementById('hud')||{}).innerText||''`);
     check('HUD 拿到 GPU adapter 名', /GPU/.test(gpuName) && !/GPU\s*\?/.test(gpuName), (gpuName.match(/GPU.*/) || [''])[0].slice(0, 80));
@@ -971,6 +996,118 @@ async function main() {
       const shot2Path = path.join(OUT_DIR, 'editor-preview-smoke.png');
       fs.writeFileSync(shot2Path, Buffer.from(shot2.data, 'base64'));
       console.log(`预览截图：${shot2Path}`);
+    }
+
+    // ---- J2. AssetBrowser UI（返回上一层 / 右键菜单 / 行内重命名）----
+    // 探针文件放 .workbuddy/tmp/（gitignored）：改名动作真实落盘，但不弄脏工作区。
+    console.log('\nJ2. AssetBrowser UI（上一层按钮 / 右键菜单四件套 / 行内重命名）');
+    {
+      const upDom = await cdp.eval(`(() => {
+        const b = document.querySelector('#asset-dock .asset-up');
+        return { exists: b !== null, disabled: b ? b.disabled : null };
+      })()`);
+      check('返回上一层按钮 .asset-up 存在', upDom.exists === true);
+
+      // 导航态 → 按钮可用 → 点击回上一层 → 到根后置灰
+      const nav = await cdp.eval(`(async () => {
+        const A = window.__editor.assets;
+        await A.selectDir('assets/scenes');
+        const s1 = A.getState();
+        document.querySelector('#asset-dock .asset-up').click();
+        await new Promise((r) => setTimeout(r, 300));
+        const s2 = A.getState();
+        await A.selectDir('');
+        const s3 = A.getState();
+        await A.selectDir('assets'); // 复位，别影响后面的段
+        return { s1, s2, s3 };
+      })()`);
+      check('子目录里上一层可用', nav.s1.dir === 'assets/scenes' && nav.s1.upDisabled === false);
+      check('点击上一层回到父目录', nav.s2.dir === 'assets' && nav.s2.upDisabled === false, nav.s2.dir);
+      check('项目根上置灰', nav.s3.dir === '' && nav.s3.upDisabled === true);
+
+      // 探针文件 + 右键菜单结构。每轮先清空探针目录：上一轮改名留下的
+      // probe2.json 会让「probe.json → probe2.json」撞目标占用 409，假失败。
+      const PROBE_DIR = '.workbuddy/tmp/ui-refine';
+      const PROBE = `${PROBE_DIR}/probe.json`;
+      fs.rmSync(path.resolve(PROBE_DIR), { recursive: true, force: true });
+      const menuRes = await cdp.eval(`(async () => {
+        const w = await fetch('/__fs/write', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: ${JSON.stringify(PROBE)}, content: '{"probe":1}' }) });
+        if (!(w.ok && (await w.json()).ok === true)) throw new Error('探针文件写入失败');
+        const A = window.__editor.assets;
+        await A.selectDir(${JSON.stringify(PROBE_DIR)});
+        const el = document.querySelector('.asset-content [data-name="probe.json"]');
+        if (el === null) throw new Error('探针条目未渲染');
+        el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 300, clientY: 300 }));
+        await new Promise((r) => setTimeout(r, 100));
+        const menu = document.getElementById('ctx-menu');
+        const items = [...menu.querySelectorAll('.ctx-item')].map((b) => b.textContent);
+        const seps = menu.querySelectorAll('.ctx-sep').length;
+        const open = menu.classList.contains('open');
+        return { open, items, seps, sel: A.getState().names.includes('probe.json') };
+      })()`);
+      check('右键后菜单打开且条目被选中', menuRes.open === true && menuRes.sel === true);
+      check('菜单恰好一条分隔线', menuRes.seps === 1, `seps=${menuRes.seps}`);
+      check('分隔线后依次是四个通用文件动作', menuRes.items.length === 7
+        && menuRes.items[3] === '复制相对路径 Copy Relative Path'
+        && menuRes.items[4] === '复制绝对路径 Copy Absolute Path'
+        && menuRes.items[5] === '重命名 Rename…'
+        && menuRes.items[6] === '在资源管理器中显示 Reveal in Explorer', JSON.stringify(menuRes.items));
+
+      // 复制相对路径：菜单动作端到端（HUD 反馈 + 剪贴板尽力核对——无头环境剪贴板
+      // 权限不一定给，剪贴板对不上不算 FAIL，但 HUD 必须有明确反馈）。
+      // 剪贴板权限挂起时 writeText 会停一会儿才落判，等 1.2s 而不是 400ms。
+      const copyRes = await cdp.eval(`(async () => {
+        const menu = document.getElementById('ctx-menu');
+        const btn = [...menu.querySelectorAll('.ctx-item')].find((b) => b.textContent.includes('复制相对路径'));
+        btn.click();
+        await new Promise((r) => setTimeout(r, 1200));
+        let clip = null;
+        try { clip = await navigator.clipboard.readText(); } catch { clip = null; }
+        return { hud: (document.getElementById('model-info') || {}).textContent || '', clip };
+      })()`);
+      check('复制相对路径有 HUD 反馈', /已复制相对路径|复制失败/.test(copyRes.hud), copyRes.hud);
+      if (copyRes.clip === PROBE) {
+        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, copyRes.clip);
+      } else {
+        skip('剪贴板内容核对', '无头/无授权环境读不到剪贴板（HUD 反馈已验证）');
+      }
+
+      // 行内重命名：Enter 提交 → 服务端落盘 → 浏览器刷新
+      const renameRes = await cdp.eval(`(async () => {
+        const A = window.__editor.assets;
+        const started = A.beginRename(${JSON.stringify(PROBE)});
+        const st = A.getState();
+        const input = document.querySelector('.asset-content .asset-rename');
+        if (input === null) return { started, st, disk: null, err: '输入框未出现' };
+        const v0 = input.value; // 预填旧名要在赋新值前读走
+        input.value = 'probe2.json';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 900));
+        const after = A.getState();
+        const check = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(`${PROBE_DIR}/probe2.json`)}));
+        const old = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(PROBE)}));
+        return { started, st: { renaming: st.renaming, v: v0 }, after, disk: { neu: check.status, old: old.status }, err: null };
+      })()`);
+      check('beginRename 进入编辑态（输入框出现且预填旧名）', renameRes.started === true && renameRes.st.renaming === true && renameRes.st.v === 'probe.json');
+      check('Enter 提交后编辑态退出 + 列表刷新出新名', renameRes.after.renaming === false && renameRes.after.names.includes('probe2.json'), JSON.stringify(renameRes.after.names));
+      check('改名真实落盘（新路径 200 / 旧路径 404）', renameRes.disk.neu === 200 && renameRes.disk.old === 404, JSON.stringify(renameRes.disk));
+
+      // Esc 取消：编辑态退出、名字不动
+      const escRes = await cdp.eval(`(async () => {
+        const A = window.__editor.assets;
+        A.beginRename(${JSON.stringify(`${PROBE_DIR}/probe2.json`)});
+        const input = document.querySelector('.asset-content .asset-rename');
+        input.value = 'should-not-exist.json';
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 200));
+        const ghost = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(`${PROBE_DIR}/should-not-exist.json`)}));
+        return { renaming: A.getState().renaming, names: A.getState().names, ghost: ghost.status };
+      })()`);
+      check('Esc 取消编辑态且不落盘', escRes.renaming === false && !escRes.names.includes('should-not-exist.json') && escRes.ghost === 404);
+
+      // 复位浏览目录，探针文件留在 .workbuddy/tmp（gitignored，不污染工作区）
+      await cdp.eval(`(async () => { await window.__editor.assets.selectDir('assets'); })()`);
     }
 
     // ---- K. 绑定面板 Binding（正/侧视图 · mirror · T-pose 反解导出）----
