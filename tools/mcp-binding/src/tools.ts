@@ -281,6 +281,11 @@ export class BindingDomain {
     const showCylinders = optBool(args, 'showCylinders') !== false;
     const selectedJoint = optStr(args, 'selectedJoint');
     const heatBone = optStr(args, 'heatBone');
+    // 视差观察角（度）：侧视 + azimuthDeg 时重叠的手臂/躯干轮廓在 z 向错开可读
+    const azRaw = optNum(args, 'azimuthDeg');
+    const azimuthDeg = azRaw === undefined ? 0 : Math.min(60, Math.max(-60, azRaw));
+    // 网格风格：toon = 实心填充 + 视向法线翻转边实体轮廓（2D 卡通效果，无线框）
+    const meshStyle = optStr(args, 'style') === 'toon' ? ('toon' as const) : ('wire' as const);
 
     const positions = this.session.positions;
     const segments: Segment[] = [];
@@ -362,13 +367,15 @@ export class BindingDomain {
       };
     }
 
-    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers };
+    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers, azimuthDeg, meshStyle };
     const image = renderOrthographic(scene);
     return {
       json: {
         view,
         width,
         height,
+        azimuthDeg,
+        meshStyle,
         vertices: mesh.vertices.length / mesh.vertexFloats,
         capsules: capsules.length,
         heatBone: heatBone ?? null,
@@ -629,6 +636,8 @@ export const TOOLS_TABLE = [
         showMesh: { type: 'boolean', description: '默认 true' },
         showSkeleton: { type: 'boolean', description: '默认 true' },
         showCylinders: { type: 'boolean', description: '默认 true' },
+        style: { type: 'string', enum: ['wire', 'toon'], description: '网格风格：wire=三角形线框（默认）；toon=实心填充+视向法线翻转边实体轮廓（2D 卡通轮廓，配 azimuthDeg 视差角判读重叠肢体）' },
+        azimuthDeg: { type: 'number', description: '视差观察角 -60..60（度，默认 0）：投影前绕 Y 旋转，侧视 + 30° 时左右重叠的手臂/躯干轮廓在 z 向错开，便于判读重叠部位' },
       },
     },
   },

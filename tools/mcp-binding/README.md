@@ -58,7 +58,7 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 | `cylinders` | wrapper 表操作：get / autoFit / setRadius / setOffset / clearOffset / mirror / mirrorAll / unpin |
 | `set_options` | 权重导出选项（weightMode / smooth* / mirrorWeights；越界按面板同款钳制） |
 | `compute_skin` | 算权重只回统计（未包裹顶点数等），不回权重数组（token 纪律） |
-| `render` | **视觉反馈核心**：正/侧视 PNG 图像块，可选 heatBone 热力图、selectedJoint 高亮 |
+| `render` | **视觉反馈核心**：正/侧视 PNG 图像块，可选 heatBone 热力图、selectedJoint 高亮；`style:'toon'` = 实心填充 + 深度台阶/掠射法线翻转边的实体轮廓线（2D 卡通效果，重叠在躯干上的四肢清晰可见，无线框噪音）；`azimuthDeg`（±60°）= 视差观察角，投影前绕 Y 旋转，错开重叠肢体判读 |
 | `get_editor_data` / `save` / `hydrate` | 编辑态读 / 写 sidecar（validateAssetMeta 守门）/ 从 sidecar 重灌 |
 | `export_glb` | 导出干净 T-pose 的 rigged GLB（编辑器 exportBound 同管线 `rigToTPoseWithImage`）。只回统计不回字节；已有 sidecar 外科式刷新 sourceHash/updatedAt，没有则提示跑 `scene:gen`。目标已存在需显式 `overwrite:true`（覆盖源模型恒拒） |
 
