@@ -33,6 +33,7 @@ import { parseGlb, validateAssetMeta } from '@aether/scene';
 import {
   renderOrthographic,
   type Capsule,
+  type GridSpec,
   type Marker,
   type OrthoScene,
   type PointCloud,
@@ -368,7 +369,18 @@ export class BindingDomain {
       };
     }
 
-    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers, azimuthDeg, meshStyle };
+    // 量化坐标参考线：审图时读出「这个关节偏高多少」靠它，不是靠肉眼估
+    const gridOn = optBool(args, 'grid') === true;
+    const gridStep = optNum(args, 'gridStep');
+    const gridMajor = optNum(args, 'gridMajor');
+    const grid: GridSpec | undefined = gridOn
+      ? {
+          ...(gridStep !== undefined ? { step: gridStep } : {}),
+          ...(gridMajor !== undefined ? { majorEvery: gridMajor } : {}),
+        }
+      : undefined;
+
+    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers, azimuthDeg, meshStyle, grid };
     const image = renderOrthographic(scene);
     return {
       json: {
@@ -377,6 +389,13 @@ export class BindingDomain {
         height,
         azimuthDeg,
         meshStyle,
+        grid: gridOn
+          ? {
+              stepM: grid?.step ?? 0.05,
+              majorEveryM: (grid?.step ?? 0.05) * (grid?.majorEvery ?? 5),
+              note: '网格为世界坐标等间距（正交投影下屏幕等距）：读数 = 数格子 × step',
+            }
+          : null,
         vertices: mesh.vertices.length / mesh.vertexFloats,
         capsules: capsules.length,
         heatBone: heatBone ?? null,
@@ -639,6 +658,9 @@ export const TOOLS_TABLE = [
         showCylinders: { type: 'boolean', description: '默认 true' },
         style: { type: 'string', enum: ['wire', 'toon'], description: '网格风格：wire=三角形线框（默认）；toon=实心填充+视向法线翻转边实体轮廓（2D 卡通轮廓，配 azimuthDeg 视差角判读重叠肢体）' },
         azimuthDeg: { type: 'number', description: '视差观察角 -60..60（度，默认 0）：投影前绕 Y 旋转，侧视 + 30° 时左右重叠的手臂/躯干轮廓在 z 向错开，便于判读重叠部位' },
+        grid: { type: 'boolean', description: '默认 false。画**量化坐标参考线**（工程图风格网格 + 刻度数值，单位米）：网格线在模型下层、数值在最上层带白描边。审图要「读出这个关节偏高多少」时开它 —— 正交投影下世界等间距 = 屏幕等间距，读数 = 数格子 × step，无需额外标定。⚠️ azimuthDeg≠0 时网格不再对齐世界轴，别叠用' },
+        gridStep: { type: 'number', description: '网格间距（米），默认 0.05。配合 grid:true' },
+        gridMajor: { type: 'number', description: '每几格一条主线并标数值，默认 5（即 0.25m 标一次）。配合 grid:true' },
       },
     },
   },

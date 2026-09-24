@@ -66,6 +66,52 @@ export interface Marker {
   readonly filled?: boolean | undefined;
 }
 
+/**
+ * 量化坐标参考线（工程图风格网格 + 刻度数值）。
+ *
+ * 存在的理由：审图时「这个关节偏高多少」必须能**读**出来，不能靠肉眼估。
+ * 网格线是屏幕空间等距的（世界坐标等间距投影后必然等距 —— 正交投影），
+ * 所以读数 = 数格子 × step，不需要额外的像素↔世界标定。
+ *
+ * 绘制分两层：网格线画在**底层**（模型盖住它，模型区不受干扰），
+ * 刻度数值画在**顶层且带白色描边**（保证在任何底色上可读）。
+ */
+export interface GridSpec {
+  /** 次网格间距（米），默认 0.05 */
+  readonly step?: number | undefined;
+  /** 每几次网格一条主线（加粗 + 标数值），默认 5（即 0.25m） */
+  readonly majorEvery?: number | undefined;
+  /** 是否标刻度数值，默认 true */
+  readonly labels?: boolean | undefined;
+  /** 次网格线色，默认淡蓝灰 */
+  readonly minorColor?: Rgb | undefined;
+  /** 主网格线色，默认中蓝灰 */
+  readonly majorColor?: Rgb | undefined;
+  /** 数值 / 轴名颜色，默认深灰 */
+  readonly labelColor?: Rgb | undefined;
+}
+
+/** 5×7 点阵字形 —— 只含刻度数值与轴名需要的字符（零依赖，纯 TS） */
+const GLYPH: Readonly<Record<string, readonly string[]>> = {
+  '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+  '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  '2': ['01110', '10001', '00001', '00110', '01000', '10000', '11111'],
+  '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+  '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+  '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+  '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+  '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  '.': ['00000', '00000', '00000', '00000', '00000', '00000', '00100'],
+  '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
+  ' ': ['00000', '00000', '00000', '00000', '00000', '00000', '00000'],
+  X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001'],
+  Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100'],
+  Z: ['11111', '00001', '00010', '00100', '01000', '10000', '11111'],
+  M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+};
+
 export interface OrthoScene {
   readonly view: ViewAxis;
   readonly width: number;
@@ -89,6 +135,12 @@ export interface OrthoScene {
    * 关系（画家算法）呈现，无线框噪音。toon 忽略 heat（热力走 wire）。
    */
   readonly meshStyle?: 'wire' | 'toon' | undefined;
+  /**
+   * 量化坐标参考线（工程图风格网格 + 刻度数值）。给了就默认画；
+   * 网格线在模型下层（不干扰模型区），刻度数值在最上层带白色描边。
+   * `azimuthDeg !== 0` 时不建议开（旋转后网格不再对齐世界轴）。
+   */
+  readonly grid?: GridSpec | undefined;
 }
 
 export interface RgbaImage {
@@ -244,6 +296,58 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
     }
   };
 
+  // ── 量化坐标参考线 ──
+  // 网格线画在**底层**（模型盖住它 → 模型区不受干扰），刻度数值画在**顶层**。
+  // 正交投影下世界等间距 → 屏幕等间距，所以读数 = 数格子 × step，无需再标定。
+  const grid = scene.grid;
+  const gridMinor: Rgb = grid?.minorColor ?? [208, 218, 232];
+  const gridMajor: Rgb = grid?.majorColor ?? [146, 166, 196];
+  const gridLabel: Rgb = grid?.labelColor ?? [48, 48, 60];
+  const hAxis = view === 'front' ? 'X' : view === 'side' ? 'Z' : 'X';
+  const gStep = grid !== undefined ? Math.max(1e-4, grid.step ?? 0.05) : 0;
+  const gMajor = grid !== undefined ? Math.max(1, Math.round(grid.majorEvery ?? 5)) : 1;
+  if (grid !== undefined) {
+    const uLo = cu - width / 2 / scale;
+    const uHi = cu + width / 2 / scale;
+    const vLo = cv - height / 2 / scale;
+    const vHi = cv + height / 2 / scale;
+    for (let i = Math.ceil(uLo / gStep); i <= Math.floor(uHi / gStep); i++) {
+      const major = ((i % gMajor) + gMajor) % gMajor === 0;
+      const X = Math.round(sx(i * gStep));
+      const c = major ? gridMajor : gridMinor;
+      for (let y = 0; y < height; y++) putPx(X, y, c);
+      if (major && X + 1 < width) for (let y = 0; y < height; y++) putPx(X + 1, y, c);
+    }
+    for (let j = Math.ceil(vLo / gStep); j <= Math.floor(vHi / gStep); j++) {
+      const major = ((j % gMajor) + gMajor) % gMajor === 0;
+      const Y = Math.round(sy(j * gStep));
+      const c = major ? gridMajor : gridMinor;
+      for (let x = 0; x < width; x++) putPx(x, Y, c);
+      if (major && Y + 1 < height) for (let x = 0; x < width; x++) putPx(x, Y + 1, c);
+    }
+  }
+
+  /** 5×7 点阵文字（白描边 + 本色），用于刻度数值与轴名 */
+  const drawGlyphText = (x0: number, y0: number, text: string, c: Rgb): void => {
+    const cells: Array<readonly [number, number]> = [];
+    for (let ci = 0; ci < text.length; ci++) {
+      const g = GLYPH[text[ci] ?? ''];
+      if (g === undefined) continue;
+      for (let ry = 0; ry < 7; ry++) {
+        const row = g[ry] ?? '';
+        for (let rx = 0; rx < 5; rx++) {
+          if (row[rx] === '1') cells.push([x0 + ci * 6 + rx, y0 + ry]);
+        }
+      }
+    }
+    for (const [cx, cy] of cells) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) putPx(cx + dx, cy + dy, [255, 255, 255]);
+      }
+    }
+    for (const [cx, cy] of cells) putPx(cx, cy, c);
+  };
+
   // ── 绘制顺序：网格（底）→ 胶囊 → 骨线 → 关节标记（顶） ──
   if (pts !== undefined) {
     const stride = pts.stride ?? 3;
@@ -281,6 +385,16 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
         const rz = rot !== undefined ? -x * rot.s + z * rot.c : z;
         pdep[i] = view === 'front' ? rz : view === 'side' ? -rx : y; // 越大越近（front:+z；side:−x；top:+y；绕Y旋转 y 不变）
       }
+      // 取旋转后坐标。写成**箭头函数**（而非 function 声明）：函数声明会被提升，
+      // TS 无法保证它在 `pts !== undefined` 收窄之后才被调用，`pts` 会退回可选类型。
+      const rot3r = (i: number): [number, number, number] => {
+        const x = pts.xyz[i * stride] ?? 0;
+        const y = pts.xyz[i * stride + 1] ?? 0;
+        const z = pts.xyz[i * stride + 2] ?? 0;
+        return rot !== undefined
+          ? [x * rot.c + z * rot.s, y, -x * rot.s + z * rot.c]
+          : [x, y, z];
+      };
       const T = idx.length / 3;
       const order = new Int32Array(T);
       const tdep = new Float64Array(T);
@@ -302,14 +416,6 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
         const nz = ux * vy - uy * vx;
         const len = Math.hypot(nx, ny, nz);
         tface[t] = len < 1e-12 ? 1 : (nx * d[0] + ny * d[1] + nz * d[2]) / len;
-      }
-      function rot3r(i: number): [number, number, number] {
-        const x = pts.xyz[i * stride] ?? 0;
-        const y = pts.xyz[i * stride + 1] ?? 0;
-        const z = pts.xyz[i * stride + 2] ?? 0;
-        return rot !== undefined
-          ? [x * rot.c + z * rot.s, y, -x * rot.s + z * rot.c]
-          : [x, y, z];
       }
       // 画家算法（远→近）打底，z-buffer 兜底保证重叠处近表面覆盖
       Array.prototype.sort.call(order, (a: number, b: number) => tdep[a]! - tdep[b]!);
@@ -469,6 +575,33 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
   for (const m of scene.markers ?? []) {
     const [u, v] = plane(m.p, view, rot);
     drawCircle(sx(u), sy(v), m.r, m.color, m.filled !== false);
+  }
+
+  // ── 刻度数值与轴名（顶层：白描边保证压在任何底色上都能读）──
+  if (grid !== undefined && grid.labels !== false) {
+    const fmt = (v: number): string => (Math.abs(v) < 1e-9 ? '0.00' : v.toFixed(2));
+    const uLo2 = cu - width / 2 / scale;
+    const uHi2 = cu + width / 2 / scale;
+    const vLo2 = cv - height / 2 / scale;
+    const vHi2 = cv + height / 2 / scale;
+    for (let i = Math.ceil(uLo2 / gStep); i <= Math.floor(uHi2 / gStep); i++) {
+      if (((i % gMajor) + gMajor) % gMajor !== 0) continue;
+      const txt = fmt(i * gStep);
+      const tw = txt.length * 6 - 1;
+      const X = Math.round(sx(i * gStep) - tw / 2);
+      if (X < 2 || X + tw > width - 3) continue;
+      drawGlyphText(X, height - 10, txt, gridLabel);
+    }
+    for (let j = Math.ceil(vLo2 / gStep); j <= Math.floor(vHi2 / gStep); j++) {
+      if (((j % gMajor) + gMajor) % gMajor !== 0) continue;
+      const Y = Math.round(sy(j * gStep));
+      if (Y < 2 || Y + 7 > height - 12) continue;
+      drawGlyphText(3, Y + 2, fmt(j * gStep), gridLabel);
+    }
+    // 轴名 + 单位（左下 = 垂直轴 Y；右下 = 水平轴）
+    drawGlyphText(3, height - 20, 'Y M', [16, 16, 20]);
+    const hTxt = `${hAxis} M`;
+    drawGlyphText(width - 3 - (hTxt.length * 6 - 1), height - 20, hTxt, [16, 16, 20]);
   }
 
   return { width, height, rgba };

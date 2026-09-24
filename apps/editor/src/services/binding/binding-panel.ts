@@ -228,6 +228,19 @@ export class BindingPanel {
   private originX = 0;
   private originY = 0;
 
+  /**
+   * 量化坐标参考线（工程图风格网格 + 刻度数值）。
+   *
+   * 默认**开启**：审图时「这个关节偏高多少」必须能直接**读**出来，不能靠肉眼估。
+   * 正交投影下世界等间距 → 屏幕等间距，所以读数 = 数格子 × step，
+   * 不需要额外做像素↔世界标定（这正是以往每次换截图方式都要重推标定的痛点来源）。
+   */
+  private gridOn = true;
+  /** 次网格间距（米） */
+  private gridStepM = 0.05;
+  /** 每几格一条主线并标数值（5 × 0.05 = 0.25m 标一次） */
+  private gridMajorEvery = 5;
+
   // ── 显示层状态（previewMode / poseTest / 热力图 / 视图缓存） ──
   private previewMode: PreviewMode = 'current';
   private sideFilter: SideFilter = 'all';
@@ -1849,9 +1862,85 @@ export class BindingPanel {
     ctx.lineTo(axisX, h);
     ctx.stroke();
 
+    // 量化坐标参考线：压在上面（半透明，不吃掉模型），刻度数值带白描边
+    if (this.gridOn) this.drawGrid(ctx, canvas, axis);
+
     // 骨架 / 包裹器手柄：2D 层永远画在最上面（X-ray 效果，与 3D 实体叠加）
     if (this.editMode === 'skin') this.drawSkin(ctx, canvas, axis);
     else this.drawSkeleton(ctx, canvas, axis);
+  }
+
+  /**
+   * 量化坐标参考线（工程图风格）。
+   *
+   * 与 `project()` **严格对称**地反算可见世界范围，所以网格线一定落在
+   * 「世界坐标是 step 整数倍」的位置上 —— 读数可信，不依赖任何外部标定。
+   * 分两层画：先次网格（淡）再主网格（浓），最后标主线数值。
+   */
+  private drawGrid(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, axis: ViewAxis): void {
+    const w = canvas.clientWidth || 320;
+    const h = canvas.clientHeight || 320;
+    const step = this.gridStepM;
+    const every = Math.max(1, Math.round(this.gridMajorEvery));
+    if (!(step > 0) || this.scale <= 0) return;
+
+    const s = this.scale;
+    // 可见世界范围（与 project() 对称：sx = originX + horiz·s，sy = originY − y·s）
+    const yHi = this.originY / s;
+    const yLo = (this.originY - h) / s;
+    const hLo = -this.originX / s;
+    const hHi = (w - this.originX) / s;
+    const isMajor = (k: number): boolean => ((k % every) + every) % every === 0;
+
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    // 次网格 → 主网格（两遍，避免主副线在同一 path 里互相盖住）
+    for (const major of [false, true]) {
+      ctx.strokeStyle = major ? 'rgba(152,192,255,0.40)' : 'rgba(152,192,255,0.16)';
+      ctx.beginPath();
+      for (let j = Math.ceil(yLo / step); j <= Math.floor(yHi / step); j++) {
+        if (isMajor(j) !== major) continue;
+        const py = Math.round(this.originY - j * step * s) + 0.5;
+        ctx.moveTo(0, py);
+        ctx.lineTo(w, py);
+      }
+      for (let i = Math.ceil(hLo / step); i <= Math.floor(hHi / step); i++) {
+        if (isMajor(i) !== major) continue;
+        const px = Math.round(this.originX + i * step * s) + 0.5;
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+      }
+      ctx.stroke();
+    }
+    // 主线刻度数值：白描边 + 深色字（压在任何底色上都能读）
+    ctx.font = '10px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    const label = (t: string, x: number, y: number): void => {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeText(t, x, y);
+      ctx.fillStyle = 'rgba(16,16,22,0.95)';
+      ctx.fillText(t, x, y);
+    };
+    for (let j = Math.ceil(yLo / step); j <= Math.floor(yHi / step); j++) {
+      if (!isMajor(j)) continue;
+      const py = Math.round(this.originY - j * step * s);
+      if (py < 12 || py > h - 14) continue;
+      label((j * step).toFixed(2), 20, py - 2);
+    }
+    ctx.textBaseline = 'alphabetic';
+    for (let i = Math.ceil(hLo / step); i <= Math.floor(hHi / step); i++) {
+      if (!isMajor(i)) continue;
+      const px = Math.round(this.originX + i * step * s);
+      if (px < 18 || px > w - 18) continue;
+      label((i * step).toFixed(2), px, h - 3);
+    }
+    // 轴名 + 单位
+    ctx.textAlign = 'left';
+    label(axis === 'front' ? 'X / m' : 'Z / m', 4, h - 16);
+    ctx.restore();
   }
 
   private centerX(canvas: HTMLCanvasElement): number {
