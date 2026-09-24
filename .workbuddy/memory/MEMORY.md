@@ -11,7 +11,13 @@
 
 ## 环境 / 引擎
 - 端口：编辑器 5100 / 游戏 5101；须 HTTPS + Tailscale。
-- 🔴 不用 `core/src/ecs/world.ts` 当场景骨架（remove 空实现/strideOf 硬编码）。静态物件走 SceneGraph，500 僵尸走 SoA+instancing。
+- 🔴 **5100 上的 dev server 属于主 worktree `game-design-zombie`**（不是本 worktree）——
+  浏览器看到的永远不是 `-worktree-01` 的代码，改动「验证不到」是假象。
+  查法：`Get-NetTCPConnection -LocalPort 5100` → PID → `Get-CimInstance Win32_Process` 看 CommandLine。
+  本 worktree 要验证自己起：`pnpm exec vite --config apps/editor/vite.config.ts --port 5200 --strictPort`
+  （run_in_background），再 `curl -sk https://localhost:5200/src/... | grep <新符号>` 确认是新代码。
+- 🔴 沙箱：`cmd &` 起的进程活不过命令结束（Chrome 也一样）→ 一律用 run_in_background。
+- 不用 `core/src/ecs/world.ts` 当场景骨架（remove 空实现/strideOf 硬编码）。静态物件走 SceneGraph，500 僵尸走 SoA+instancing。
 - 容量：MAX_OBJECTS=64（超限必须报错）、MAX_MATERIAL_SLOTS=256、LIGHTS_FLOATS=40 → 只 1 dir+1 point，落选灯标黄。
 - 🔴 项目文件走 `/__fs/file?path=` 端点（vite root=apps/editor，SPA fallback 会返 200+index.html 伪装成功）；统一入口 asset-util.ts，**路径先去掉前导斜杠**。仅 dev 中间件有。
 - 场景灯光已接线：`environment` + 第一个启用 `Light` → `applySceneEnvironment()`。主光基准 1.4；s1 材质 #707A8C。关卡背景 = 虚空底 + 雾渐变，**禁白 albedo 天穹**。
@@ -45,6 +51,20 @@
 - 下肢量测**必须用高模**（LOD 4209 点做 4cm 带只有 6–17 点，噪声极大）。
 - 新判据「**12 方向射线包围**」（高模横截层 12 方向 0.32m 内是否打到几何）：
   ≥11/12 在肉里 / ≤9 边缘 / ≤6 悬空。⚠️ 验证不了高度（改前的 0.900 也 11–12/12）。
+
+### 🔁 颈部审计（2026-09-24，用户指「脖子太低」）
+- **颈柱 = y 1.48–1.68**（高模 `|x|<0.08` 的 z 连通块：背壳/颈柱/下颌三块，下颌 1.64 起出现）。
+  柱轴斜向前上：1.50 中心 z=+0.060 → 1.62 +0.095 → 1.68 +0.100。
+- 当前 `Neck (0,1.610,+0.020)` 包围 12/12 但在**躯干实体**、颈柱后方 ~7cm；`Neck→Head=0.358` 过长。
+- 候选 A1.700 / **B1.660（推荐）** / C1.620 / D1.560；z 取颈柱值（1.660 处 +0.100）。**待用户定**。
+
+### 📐 量化坐标参考线（2026-09-24 新增，默认开）
+- 编辑器面板 `drawGrid()`（`binding-panel.ts`）+ MCP `render` 的 `grid` 参数。
+- 与 `project()` **严格对称**反算可见世界范围 → 读数 = 数格子 × step，**标定这一步被消掉**
+  （以往每次换截图方式都要重推像素↔世界，还读错过脚趾）。
+- 验证：网格 44/44 命中（≤1px）；关节标记偏差 ≤0.4px（面板 `scale=295.62`、`originY=h*0.92`）。
+- 🔴 **`render.ts` 的 auto-fit 无条件含 marker ±0.02**（不看 showMarkers）——
+  自写叠加脚本必须 `withMarkers:true` 才对齐（false 时错 2.66px，true 时 0.51px）。
 
 ## 绑定 / 蒙皮（全文 docs/15；当前主线 MCP 化）
 - P0 已修：按骨 id 聚合邻域；WeightMode 下拉；写 sidecar 前 validateAssetMeta。P1 未修：PEN_SCALE 不尺度不变、包裹体外硬权重 1.0、无权重视图热力图。
