@@ -40,8 +40,8 @@
       ],
       "Spine2": [
         0,
-        1.45,
-        -0.26
+        1.6,
+        -0.2
       ],
       "Neck": [
         0,
@@ -386,6 +386,6 @@
     "smoothIters": 4,
     "smoothLambda": 0.5,
     "mirrorWeights": false,
-    "savedAt": "2026-09-24T09:12:47.061Z"
+    "savedAt": "2026-09-24T09:31:29.439Z"
   }
 }
