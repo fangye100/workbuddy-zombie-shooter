@@ -45,8 +45,8 @@
       ],
       "Neck": [
         0,
-        1.61,
-        0.02
+        1.7,
+        0.1
       ],
       "Head": [
         0,
@@ -386,6 +386,6 @@
     "smoothIters": 4,
     "smoothLambda": 0.5,
     "mirrorWeights": false,
-    "savedAt": "2026-09-24T09:06:41.839Z"
+    "savedAt": "2026-09-24T09:12:47.061Z"
   }
 }
