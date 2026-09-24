@@ -25,7 +25,7 @@
     "positions": {
       "Hips": [
         0,
-        1,
+        1.04,
         -0.15
       ],
       "Spine": [
@@ -110,7 +110,7 @@
       ],
       "LeftUpLeg": [
         0.17,
-        0.9,
+        0.995,
         -0.13
       ],
       "LeftLeg": [
@@ -135,7 +135,7 @@
       ],
       "RightUpLeg": [
         -0.17,
-        0.9,
+        0.995,
         -0.13
       ],
       "RightLeg": [
@@ -168,12 +168,7 @@
           "bottom": 0.22
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          0,
-          0.06
-        ]
+        "manual": true
       },
       "Spine": {
         "bone": "Spine",
@@ -198,8 +193,8 @@
       "Spine2": {
         "bone": "Spine2",
         "radii": {
-          "top": 0.24,
-          "medium": 0.24,
+          "top": 0.2,
+          "medium": 0.21,
           "bottom": 0.24
         },
         "enabled": true,
@@ -208,9 +203,9 @@
       "Neck": {
         "bone": "Neck",
         "radii": {
-          "top": 0.09,
-          "medium": 0.09,
-          "bottom": 0.09
+          "top": 0.105,
+          "medium": 0.105,
+          "bottom": 0.105
         },
         "enabled": true,
         "manual": true
@@ -253,12 +248,7 @@
           "bottom": 0.08
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.08,
-          0.07
-        ]
+        "manual": true
       },
       "LeftHand": {
         "bone": "LeftHand",
@@ -268,12 +258,7 @@
           "bottom": 0.08
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.1,
-          0.14
-        ]
+        "manual": true
       },
       "RightShoulder": {
         "bone": "RightShoulder",
@@ -303,12 +288,7 @@
           "bottom": 0.08
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.08,
-          0.07
-        ]
+        "manual": true
       },
       "RightHand": {
         "bone": "RightHand",
@@ -318,12 +298,7 @@
           "bottom": 0.08
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.1,
-          0.14
-        ]
+        "manual": true
       },
       "LeftUpLeg": {
         "bone": "LeftUpLeg",
@@ -333,12 +308,7 @@
           "bottom": 0.12
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.06,
-          0.1
-        ]
+        "manual": true
       },
       "LeftLeg": {
         "bone": "LeftLeg",
@@ -348,12 +318,7 @@
           "bottom": 0.1
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.13,
-          0.2
-        ]
+        "manual": true
       },
       "LeftFoot": {
         "bone": "LeftFoot",
@@ -363,12 +328,7 @@
           "bottom": 0.09
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          -0.1,
-          -0.05,
-          0
-        ]
+        "manual": true
       },
       "LeftToeBase": {
         "bone": "LeftToeBase",
@@ -388,12 +348,7 @@
           "bottom": 0.12
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.06,
-          0.1
-        ]
+        "manual": true
       },
       "RightLeg": {
         "bone": "RightLeg",
@@ -403,12 +358,7 @@
           "bottom": 0.1
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          0,
-          -0.13,
-          0.2
-        ]
+        "manual": true
       },
       "RightFoot": {
         "bone": "RightFoot",
@@ -418,12 +368,7 @@
           "bottom": 0.09
         },
         "enabled": true,
-        "manual": true,
-        "offset": [
-          -0.1,
-          -0.05,
-          0
-        ]
+        "manual": true
       },
       "RightToeBase": {
         "bone": "RightToeBase",
@@ -441,6 +386,6 @@
     "smoothIters": 4,
     "smoothLambda": 0.5,
     "mirrorWeights": false,
-    "savedAt": "2026-09-24T03:17:13.345Z"
+    "savedAt": "2026-09-24T06:20:05.997Z"
   }
 }
