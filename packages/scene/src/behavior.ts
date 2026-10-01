@@ -1,6 +1,12 @@
 /**
  * 行为注册表（ADR-017「脚本 = 行为注册表」的执行侧，ADR-018 P1）。
  *
+ * ## 权威 owner
+ *
+ * **编辑会话持有唯一实例**，P3 由它把执行器注入 runtime（ADR-018 R3）。
+ * 不允许编辑器与 runtime-bridge 各建一张表——那会变成两张可独立修改的行为表
+ * （docs/17 §3.5：每类运行状态只能有一个权威 owner）。
+ *
  * ## 为什么存在这一层
  *
  * 场景只存 `{ behavior: 'spawn-wave', params: { count: 12 } }`（绝不存代码字符串，
@@ -18,10 +24,15 @@
  * 3. **失效一律 warning，绝不抛异常阻塞加载**。一个挂掉的行为不该让整个场景打不开
  *    （ADR-017 明写）。调用方拿到 `def === null` 就降级为空操作。
  *
- * ## 参数 schema 是必需项，不是可选项
+ * ## 参数 schema 的两道校验
  *
- * 如果行为只有 `run` 而不声明 `params`，Inspector 就画不出控件，Script 组件只能
- * 手改 JSON —— 功能等于没有。所以 `BehaviorDef.params` 缺失时这里会直接报错。
+ * - **注册期**：校验 schema 自身一致性（`default` 是否在范围内、enum 的 `default`
+ *   是否在候选里、`min <= max`……）。`default` 是使用频率最高的值，一个越界的
+ *   default 会让 Inspector 滑块画到界外、并让每个缺失该参数的场景静默拿到非法值，
+ *   所以必须在注册期就暴露，而不是等到场景加载。
+ * - **解析期**：校验场景里存的参数值，缺失补 `default`、越界钳制、类型不符回退。
+ *
+ * 注意：`params: []` 对**真正零参数**的行为是合法值，只给提示不视为错误。
  */
 
 import type { BehaviorDef, BehaviorParamSchema, BehaviorScalar } from './document';
@@ -46,11 +57,14 @@ export function defineBehavior<Ctx = unknown>(mod: BehaviorModule<Ctx>): Behavio
 /** 行为诊断码。全部是 warning 级——本层没有"致命错误"这个概念 */
 export type BehaviorDiagnosticCode =
   | 'BEHAVIOR_NOT_FOUND'
-  | 'BEHAVIOR_NO_PARAMS_SCHEMA'
+  | 'BEHAVIOR_DEF_INVALID'
+  | 'BEHAVIOR_NO_PARAMS'
+  | 'SCHEMA_INVALID'
   | 'PARAM_MISSING'
   | 'PARAM_UNKNOWN'
   | 'PARAM_TYPE_MISMATCH'
   | 'PARAM_OUT_OF_RANGE'
+  | 'PARAM_ENUM_NO_OPTIONS'
   | 'PARAM_ENUM_UNKNOWN';
 
 export interface BehaviorDiagnostic {
@@ -64,10 +78,27 @@ export interface BehaviorDiagnostic {
 /** `resolve()` 的结果。`def === null` 表示应降级为空操作 */
 export interface ResolvedBehavior<Ctx = unknown> {
   def: BehaviorModule<Ctx> | null;
-  /** 按 schema 修正后的参数（缺失补 default、越界已 clamp、多余项已剔除） */
+  /** 按 schema 修正后的参数（缺失补 default、越界已钳制、多余项已剔除） */
   params: Record<string, BehaviorScalar>;
   diagnostics: BehaviorDiagnostic[];
 }
+
+/** `registerAll()` 的结果：坏行为不影响好行为，逐个报诊断而不是整批炸掉 */
+export interface RegisterResult {
+  registered: string[];
+  rejected: BehaviorDiagnostic[];
+}
+
+const PARAM_KINDS = new Set([
+  'number',
+  'int',
+  'bool',
+  'string',
+  'color',
+  'nodeRef',
+  'assetRef',
+  'enum',
+]);
 
 /** 单个参数值的类型判定。返回 null 表示类型合法 */
 function typeError(schema: BehaviorParamSchema, v: unknown): string | null {
@@ -89,47 +120,276 @@ function typeError(schema: BehaviorParamSchema, v: unknown): string | null {
     case 'enum':
       return typeof v === 'string' ? null : `期望 string（${schema.kind}），实际 ${typeof v}`;
     default:
-      return null;
+      return `未知参数类型「${String(schema.kind)}」`;
   }
 }
 
-/** 数值范围钳制。非数值类型直接原样返回 */
-function clampNumber(schema: BehaviorParamSchema, v: BehaviorScalar): BehaviorScalar {
-  if (typeof v !== 'number' || !Number.isFinite(v)) return v;
-  let out = v;
-  if (schema.min !== undefined && out < schema.min) out = schema.min;
-  if (schema.max !== undefined && out > schema.max) out = schema.max;
+/**
+ * 注册期校验 schema 自身的一致性。返回诊断列表，空数组 = 合法。
+ */
+function validateSchema(
+  behaviorId: string,
+  params: readonly BehaviorParamSchema[],
+): BehaviorDiagnostic[] {
+  const out: BehaviorDiagnostic[] = [];
+  for (const s of params) {
+    if (s === null || typeof s !== 'object') {
+      out.push({
+        code: 'SCHEMA_INVALID',
+        behaviorId,
+        paramKey: null,
+        message: `参数 schema 不是对象`,
+      });
+      continue;
+    }
+    if (typeof s.key !== 'string' || s.key.length === 0) {
+      out.push({
+        code: 'SCHEMA_INVALID',
+        behaviorId,
+        paramKey: null,
+        message: `参数 schema 缺少合法的 key`,
+      });
+      continue;
+    }
+    if (!PARAM_KINDS.has(s.kind)) {
+      out.push({
+        code: 'SCHEMA_INVALID',
+        behaviorId,
+        paramKey: s.key,
+        message: `参数「${s.key}」的 kind「${String(s.kind)}」不是受支持的类型`,
+      });
+      continue;
+    }
+    if (s.kind === 'number' || s.kind === 'int') {
+      if (s.min !== undefined && s.max !== undefined && s.min > s.max) {
+        out.push({
+          code: 'SCHEMA_INVALID',
+          behaviorId,
+          paramKey: s.key,
+          message: `参数「${s.key}」的 min(${s.min}) > max(${s.max})`,
+        });
+      }
+      if (typeof s.default !== 'number' || !Number.isFinite(s.default)) {
+        out.push({
+          code: 'SCHEMA_INVALID',
+          behaviorId,
+          paramKey: s.key,
+          message: `参数「${s.key}」是 ${s.kind}，但 default 不是有限数字（${String(s.default)}）`,
+        });
+      } else if (
+        (s.min !== undefined && s.default < s.min) ||
+        (s.max !== undefined && s.default > s.max)
+      ) {
+        out.push({
+          code: 'SCHEMA_INVALID',
+          behaviorId,
+          paramKey: s.key,
+          message: `参数「${s.key}」的 default(${s.default}) 越界 [${s.min ?? '-∞'}, ${s.max ?? '+∞'}]`,
+        });
+      }
+    }
+    if (s.kind === 'enum') {
+      const opts = s.options ?? [];
+      if (opts.length === 0) {
+        out.push({
+          code: 'SCHEMA_INVALID',
+          behaviorId,
+          paramKey: s.key,
+          message: `参数「${s.key}」是 enum 但没有 options，Inspector 会画出空下拉`,
+        });
+      } else if (!opts.includes(String(s.default))) {
+        out.push({
+          code: 'SCHEMA_INVALID',
+          behaviorId,
+          paramKey: s.key,
+          message: `参数「${s.key}」的 default(${String(s.default)}) 不在候选 [${opts.join(', ')}] 内`,
+        });
+      }
+    }
+    if (s.kind === 'bool' && typeof s.default !== 'boolean') {
+      out.push({
+        code: 'SCHEMA_INVALID',
+        behaviorId,
+        paramKey: s.key,
+        message: `参数「${s.key}」是 bool，但 default 不是 boolean（${String(s.default)}）`,
+      });
+    }
+  }
   return out;
+}
+
+/**
+ * 把「原始取值 / 回退到 default」统一送进同一条后处理流水线。
+ *
+ * 🔴 这是「default 越界不被校验」的修复点：**default 与用户传入值走完全相同的
+ * 类型 → 范围 → enum 校验**，不存在"取了 default 就跳过校验"的短路分支。
+ */
+function coerce(
+  behaviorId: string,
+  schema: BehaviorParamSchema,
+  raw: BehaviorScalar | undefined,
+  has: boolean,
+  diagnostics: BehaviorDiagnostic[],
+): BehaviorScalar {
+  let v: BehaviorScalar;
+
+  if (!has) {
+    v = schema.default;
+    diagnostics.push({
+      code: 'PARAM_MISSING',
+      behaviorId,
+      paramKey: schema.key,
+      message: `参数「${schema.key}」缺失，已用默认值 ${String(schema.default)}`,
+    });
+  } else {
+    const err = typeError(schema, raw);
+    if (err !== null) {
+      v = schema.default;
+      diagnostics.push({
+        code: 'PARAM_TYPE_MISMATCH',
+        behaviorId,
+        paramKey: schema.key,
+        message: `参数「${schema.key}」类型不符：${err}，已回退默认值 ${String(schema.default)}`,
+      });
+    } else {
+      v = raw as BehaviorScalar;
+    }
+  }
+
+  // ---- 数值：范围钳制（int 必须保持整数）----
+  if (schema.kind === 'number' || schema.kind === 'int') {
+    if (typeof v !== 'number' || !Number.isFinite(v)) {
+      diagnostics.push({
+        code: 'PARAM_TYPE_MISMATCH',
+        behaviorId,
+        paramKey: schema.key,
+        message: `参数「${schema.key}」取值 ${String(v)} 不是有限数字，已兜底为 0`,
+      });
+      return 0;
+    }
+    let min = schema.min;
+    let max = schema.max;
+    if (schema.kind === 'int') {
+      // 边界先取整，否则会把 int 钳到小数上（如 max=10.5 → 钳出 10.5）
+      if (min !== undefined) min = Math.ceil(min);
+      if (max !== undefined) max = Math.floor(max);
+    }
+    let out = v;
+    if (min !== undefined && out < min) out = min;
+    if (max !== undefined && out > max) out = max;
+    if (schema.kind === 'int') out = Math.round(out);
+    if (out !== v) {
+      diagnostics.push({
+        code: 'PARAM_OUT_OF_RANGE',
+        behaviorId,
+        paramKey: schema.key,
+        message: `参数「${schema.key}」取值 ${String(v)} 超出 [${schema.min ?? '-∞'}, ${schema.max ?? '+∞'}]，已钳制为 ${String(out)}`,
+      });
+    }
+    return out;
+  }
+
+  // ---- enum：候选校验 ----
+  if (schema.kind === 'enum') {
+    const opts = schema.options ?? [];
+    if (opts.length === 0) {
+      diagnostics.push({
+        code: 'PARAM_ENUM_NO_OPTIONS',
+        behaviorId,
+        paramKey: schema.key,
+        message: `参数「${schema.key}」是 enum 但没有候选值，无法校验，原样放行`,
+      });
+      return v;
+    }
+    if (!opts.includes(String(v))) {
+      const fallback = opts.includes(String(schema.default)) ? schema.default : opts[0]!;
+      diagnostics.push({
+        code: 'PARAM_ENUM_UNKNOWN',
+        behaviorId,
+        paramKey: schema.key,
+        message: `参数「${schema.key}」取值「${String(v)}」不在候选 [${opts.join(', ')}] 内，已回退为 ${String(fallback)}`,
+      });
+      return fallback;
+    }
+    return v;
+  }
+
+  return v;
 }
 
 export class BehaviorRegistry {
   private readonly mods = new Map<string, BehaviorModule<unknown>>();
+  /** 注册期产出的 schema 诊断（供 Inspector / 门禁查询） */
+  private readonly schemaIssues: BehaviorDiagnostic[] = [];
 
   /** 已注册数量 */
   get size(): number {
     return this.mods.size;
   }
 
+  /** 注册期发现的 schema 自身问题（空数组 = 全部行为 schema 自洽） */
+  get schemaDiagnostics(): readonly BehaviorDiagnostic[] {
+    return this.schemaIssues;
+  }
+
   /**
-   * 注册一个行为。重复 id 直接抛错——静默覆盖会让「场景里明明写了 A 却跑成 B」
-   * 这种最难查的问题变成常态。
+   * 注册一个行为。
+   *
+   * 重复 id 与形状残缺都**拒绝注册**（抛错）。理由：注册期是代码资产装载期，
+   * 快速失败能让 Agent 立刻看到问题；同时保证注册表里没有坏条目，
+   * 从而 `resolve()` 永远不必面对畸形模块（ADR-017 的"不阻塞"是解析期的承诺）。
    */
   register<Ctx>(mod: BehaviorModule<Ctx>): void {
-    const found = this.mods.get(mod.id);
-    if (found !== undefined) {
+    if (mod === null || typeof mod !== 'object') {
+      throw new Error(`[behavior] 行为模块不是对象（${typeof mod}）`);
+    }
+    if (typeof mod.id !== 'string' || mod.id.length === 0) {
+      throw new Error(`[behavior] 行为模块缺少合法 id`);
+    }
+    if (!Array.isArray(mod.params)) {
+      throw new Error(
+        `[behavior] 行为「${mod.id}」的 params 必须是数组（实际 ${typeof mod.params}）`,
+      );
+    }
+    if (typeof mod.run !== 'function') {
+      throw new Error(`[behavior] 行为「${mod.id}」缺少 run 函数`);
+    }
+    if (this.mods.has(mod.id)) {
       throw new Error(`[behavior] 重复注册行为 id「${mod.id}」，已存在同 id 定义`);
     }
+
+    const issues = validateSchema(mod.id, mod.params);
+    this.schemaIssues.push(...issues);
     this.mods.set(mod.id, mod as unknown as BehaviorModule<unknown>);
   }
 
-  /** 批量注册。宿主 glob 收集后一次塞进来 */
-  registerAll(mods: readonly BehaviorModule<unknown>[]): void {
-    for (const m of mods) this.register(m);
+  /**
+   * 批量注册。**逐个独立 try/catch**：一个坏行为不该让整批注册炸掉并留下半张表
+   * （与 ADR-017「一个挂掉的行为不该让整个场景打不开」同一精神）。
+   */
+  registerAll(mods: readonly BehaviorModule<unknown>[]): RegisterResult {
+    const registered: string[] = [];
+    const rejected: BehaviorDiagnostic[] = [];
+    for (const m of mods) {
+      try {
+        this.register(m);
+        registered.push(m.id);
+      } catch (e) {
+        rejected.push({
+          code: 'BEHAVIOR_DEF_INVALID',
+          behaviorId: (m as { id?: string } | null)?.id ?? '(未知 id)',
+          paramKey: null,
+          message: `行为注册失败，已跳过：${e instanceof Error ? e.message : String(e)}`,
+        });
+      }
+    }
+    return { registered, rejected };
   }
 
   /** 清空（测试 / 重新收集前用） */
   clear(): void {
     this.mods.clear();
+    this.schemaIssues.length = 0;
   }
 
   has(id: string): boolean {
@@ -150,9 +410,12 @@ export class BehaviorRegistry {
    *
    * 这是「失效降级」的唯一入口。约定：
    * - 行为未注册 → `def = null` + `BEHAVIOR_NOT_FOUND`，调用方降级空操作（不阻塞加载）
-   * - 参数缺失 → 补 schema 的 `default` + warning
+   * - 参数缺失 → 补 schema 的 `default` + warning（default 同样要过范围/enum 校验）
    * - 参数多余 → 剔除 + warning（不能原样留着，否则行为内部可能读到脏键）
    * - 类型不符 / 越界 / enum 越界 → warning + 修正为合法值
+   *
+   * 🔴 整体包 try/catch：任何未预料到的异常都降级为 `def = null` 而不是抛出去。
+   * 本层的契约是「永不阻塞加载」，宁可少一个行为也不能让场景打不开。
    */
   resolve<Ctx = unknown>(
     behaviorId: string,
@@ -171,92 +434,56 @@ export class BehaviorRegistry {
       return { def: null, params: {}, diagnostics };
     }
 
-    if (def.params.length === 0) {
-      // schema 缺失不是致命错误，但必须抱怨：没有 schema 就没有 Inspector 控件
+    try {
+      if (!Array.isArray(def.params)) {
+        throw new Error(`行为「${behaviorId}」的 params 不是数组`);
+      }
+      if (def.params.length === 0) {
+        // 零参数行为合法，这里只是提示 Inspector 没有可调控件
+        diagnostics.push({
+          code: 'BEHAVIOR_NO_PARAMS',
+          behaviorId,
+          paramKey: null,
+          message: `行为「${behaviorId}」没有可调参数（params 为空），Inspector 不显示控件`,
+        });
+      }
+
+      const input = raw ?? {};
+      const out: Record<string, BehaviorScalar> = {};
+
+      for (const schema of def.params) {
+        if (schema === null || typeof schema !== 'object') continue;
+        const has = Object.prototype.hasOwnProperty.call(input, schema.key);
+        out[schema.key] = coerce(
+          behaviorId,
+          schema,
+          has ? input[schema.key] : undefined,
+          has,
+          diagnostics,
+        );
+      }
+
+      // ---- 剔除 schema 里没有的多余键 ----
+      for (const k of Object.keys(input)) {
+        if (!def.params.some((s) => s?.key === k)) {
+          diagnostics.push({
+            code: 'PARAM_UNKNOWN',
+            behaviorId,
+            paramKey: k,
+            message: `参数「${k}」不在行为「${behaviorId}」的 schema 中，已忽略（可能是参数改名后的残留）`,
+          });
+        }
+      }
+
+      return { def, params: out, diagnostics };
+    } catch (e) {
       diagnostics.push({
-        code: 'BEHAVIOR_NO_PARAMS_SCHEMA',
+        code: 'BEHAVIOR_DEF_INVALID',
         behaviorId,
         paramKey: null,
-        message: `行为「${behaviorId}」未声明 params schema，Inspector 无法生成控件`,
+        message: `行为「${behaviorId}」解析失败，已降级为空操作：${e instanceof Error ? e.message : String(e)}`,
       });
+      return { def: null, params: {}, diagnostics };
     }
-
-    const input = raw ?? {};
-    const out: Record<string, BehaviorScalar> = {};
-
-    // ---- 按 schema 逐个校验 ----
-    for (const schema of def.params) {
-      const has = Object.prototype.hasOwnProperty.call(input, schema.key);
-      if (!has) {
-        out[schema.key] = schema.default;
-        diagnostics.push({
-          code: 'PARAM_MISSING',
-          behaviorId,
-          paramKey: schema.key,
-          message: `参数「${schema.key}」缺失，已用默认值 ${String(schema.default)}`,
-        });
-        continue;
-      }
-
-      let v: BehaviorScalar = input[schema.key]!;
-      const err = typeError(schema, v);
-      if (err !== null) {
-        diagnostics.push({
-          code: 'PARAM_TYPE_MISMATCH',
-          behaviorId,
-          paramKey: schema.key,
-          message: `参数「${schema.key}」类型不符：${err}，已回退默认值 ${String(schema.default)}`,
-        });
-        v = schema.default;
-        out[schema.key] = v;
-        continue;
-      }
-
-      // enum 候选值
-      if (schema.kind === 'enum') {
-        const opts = schema.options ?? [];
-        if (opts.length > 0 && !opts.includes(String(v))) {
-          diagnostics.push({
-            code: 'PARAM_ENUM_UNKNOWN',
-            behaviorId,
-            paramKey: schema.key,
-            message: `参数「${schema.key}」取值「${String(v)}」不在候选 [${opts.join(', ')}] 内，已回退默认值 ${String(schema.default)}`,
-          });
-          out[schema.key] = schema.default;
-          continue;
-        }
-      }
-
-      // 数值范围
-      if (schema.kind === 'number' || schema.kind === 'int') {
-        const clamped = clampNumber(schema, v);
-        if (clamped !== v) {
-          diagnostics.push({
-            code: 'PARAM_OUT_OF_RANGE',
-            behaviorId,
-            paramKey: schema.key,
-            message: `参数「${schema.key}」取值 ${String(v)} 超出 [${schema.min ?? '-∞'}, ${schema.max ?? '+∞'}]，已钳制为 ${String(clamped)}`,
-          });
-        }
-        out[schema.key] = clamped;
-        continue;
-      }
-
-      out[schema.key] = v;
-    }
-
-    // ---- 剔除 schema 里没有的多余键 ----
-    for (const k of Object.keys(input)) {
-      if (!def.params.some((s) => s.key === k)) {
-        diagnostics.push({
-          code: 'PARAM_UNKNOWN',
-          behaviorId,
-          paramKey: k,
-          message: `参数「${k}」不在行为「${behaviorId}」的 schema 中，已忽略（可能是参数改名后的残留）`,
-        });
-      }
-    }
-
-    return { def, params: out, diagnostics };
   }
 }

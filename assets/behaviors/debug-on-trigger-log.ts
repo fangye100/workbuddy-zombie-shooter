@@ -6,7 +6,10 @@
  * 实际什么都不做"的空壳——那是本项目最忌讳的假象（docs/19：「明确未做，不是
  * 看起来像做了」）。
  *
- * 它的作用是让 P1 的目录、schema、注册链路有一条真实的端到端验证对象。
+ * 它的作用是给 P1 的「目录 → schema → 注册 → 执行」链路提供一个真实的验证对象：
+ * `packages/scene/test/behavior-assets.test.ts` 会用 `import.meta.glob` 收集本目录，
+ * 断言每个行为能被注册、schema 自洽、可被 resolve、run 可被调用。
+ * 本目录同时已被纳入 `tsconfig.check.json` 的 include，享受 typecheck 门禁。
  */
 
 import { defineBehavior } from '@aether/scene';
