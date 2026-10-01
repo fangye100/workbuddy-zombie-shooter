@@ -22,6 +22,7 @@
 | **ADR-015** | 项目容器 `aether.project.json` 是所有路径/场景清单/层表的**锚点** | 没有它，`.meta` 的 guid、"相对什么"、场景清单、`layer: 3` 是第几层全都靠口头约定 |
 | **ADR-016** | 资产附加数据走**同名 sidecar**（`<file>.meta.json`），不用集中索引 | 集中索引文件是合并冲突制造机；sidecar 跟着文件走，天然无冲突 |
 | **ADR-017** | 脚本 = **行为注册表**（代码资产 + 参数 schema），场景只存 `behavior id + params` | JSON 携带代码字符串 = 远程代码执行入口；且没有参数 schema 就没有 Inspector 控件 |
+| **ADR-018** | 编辑器可玩预览：**一次 Play = 一个封闭行为代次**（装载期冻结行为快照，与 `runId` 对齐）；行为属**内容层**（Agent 自由写 + params schema 反向暴露 GUI）；执行器**注入**而非 runtime import | 点 Play 即 gameplay；改代码**下一次 reload 生效**（非运行时热更，与 ADR-017 一致）；注入保住 runtime 纯 CPU/headless 与 parity；三问检验防止做成编辑器特供。全文见 `docs/22` |
 
 **头号风险（必须先看）**：当前渲染器 `MAX_OBJECTS = 64`（`packages/render/src/frame-uniforms.ts:23`）。
 场景里的静态物件受此硬限，而 GDD 要求的 **500 僵尸不能走这条路径**。见 §4.5 容量预算。
