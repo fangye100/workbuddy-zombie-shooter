@@ -28,6 +28,7 @@ export * from './asset-meta';
 export * from './asset-manifest';
 export * from './document';
 export * from './asset-server';
+export * from './behavior';
 export * from './graph';
 export * from './migrate';
 export * from './instantiate';
