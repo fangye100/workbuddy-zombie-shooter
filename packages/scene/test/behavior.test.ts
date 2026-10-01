@@ -73,11 +73,22 @@ describe('BehaviorRegistry · 注册与查询', () => {
   });
 
   it('clear 清空全部条目与 schema 诊断', () => {
-    const reg = makeRegistry();
+    const reg = new BehaviorRegistry();
+    // 先塞一个 schema 有问题的行为，才能验证 schemaDiagnostics 也被清掉
+    reg.register(
+      defineBehavior<Ctx>({
+        id: 'bad',
+        label: 'x',
+        params: [{ key: 'n', label: 'n', kind: 'int', default: 999, min: 1, max: 50 }],
+        run: () => undefined,
+      }),
+    );
     expect(reg.size).toBe(1);
+    expect(reg.schemaDiagnostics.length).toBeGreaterThan(0); // 前置：确实有诊断
     reg.clear();
     expect(reg.size).toBe(0);
-    expect(reg.get('test-wave')).toBeUndefined();
+    expect(reg.get('bad')).toBeUndefined();
+    expect(reg.schemaDiagnostics).toEqual([]); // 关键：schema 诊断也要清空
   });
 });
 
@@ -153,6 +164,21 @@ describe('BehaviorRegistry · 注册期 schema 自身校验', () => {
       }),
     );
     expect(reg.schemaDiagnostics.some((d) => d.code === 'SCHEMA_INVALID' && d.paramKey === 'm')).toBe(
+      true,
+    );
+  });
+
+  it('string 系（string/color/nodeRef/assetRef）的 default 非字符串 → SCHEMA_INVALID', () => {
+    const reg = new BehaviorRegistry();
+    reg.register(
+      defineBehavior<Ctx>({
+        id: 'bad-str',
+        label: 'x',
+        params: [{ key: 's', label: 's', kind: 'string', default: 5 as never }],
+        run: () => undefined,
+      }),
+    );
+    expect(reg.schemaDiagnostics.some((d) => d.code === 'SCHEMA_INVALID' && d.paramKey === 's')).toBe(
       true,
     );
   });
@@ -298,6 +324,22 @@ describe('BehaviorRegistry · 参数校验', () => {
     );
     const r = reg.resolve('no-opts', { m: 'WHATEVER' });
     expect(r.diagnostics.some((d) => d.code === 'PARAM_ENUM_NO_OPTIONS')).toBe(true);
+  });
+
+  it('🔴 default 类型本身错误时，解析期也要兜底成类型安全值（不能把 number 塞给 string）', () => {
+    const reg = new BehaviorRegistry();
+    reg.register(
+      defineBehavior<Ctx>({
+        id: 'bad-str-default',
+        label: 'x',
+        params: [{ key: 's', label: 's', kind: 'string', default: 5 as never }],
+        run: () => undefined,
+      }),
+    );
+    const r = reg.resolve('bad-str-default', {});
+    expect(typeof r.params.s).toBe('string'); // 不能是 number 5
+    expect(r.params.s).toBe('');
+    expect(r.diagnostics.some((d) => d.code === 'PARAM_TYPE_MISMATCH')).toBe(true);
   });
 
   it('多余参数 → 报 PARAM_UNKNOWN（结果键集合恰等于 schema 键集合）', () => {

@@ -73,6 +73,9 @@ export interface BehaviorDiagnostic {
   /** 出问题的参数键；与具体参数无关时（如 BEHAVIOR_NOT_FOUND）为 null */
   paramKey: string | null;
   message: string;
+  // TODO(P3)：与 `asset-server.ts` 的 MetaDiagnostic 对齐 severity / path 字段。
+  // 目前全部诊断都是 warning 级（本层没有致命错误），P3 接线时补上显式字段，
+  // 属纯增量，现有断言（只断言 code）不会受影响。
 }
 
 /** `resolve()` 的结果。`def === null` 表示应降级为空操作 */
@@ -214,8 +217,34 @@ function validateSchema(
         message: `参数「${s.key}」是 bool，但 default 不是 boolean（${String(s.default)}）`,
       });
     }
+    if (
+      (s.kind === 'string' || s.kind === 'color' || s.kind === 'nodeRef' || s.kind === 'assetRef') &&
+      typeof s.default !== 'string'
+    ) {
+      out.push({
+        code: 'SCHEMA_INVALID',
+        behaviorId,
+        paramKey: s.key,
+        message: `参数「${s.key}」是 ${s.kind}，但 default 不是 string（${String(s.default)}）`,
+      });
+    }
   }
   return out;
+}
+
+/** 类型兜底值：当 schema 的 default 本身类型就错了（注册期已报 SCHEMA_INVALID），解析期仍需产出类型安全的值 */
+function safeFallback(schema: BehaviorParamSchema): BehaviorScalar {
+  switch (schema.kind) {
+    case 'int':
+    case 'number':
+      return 0;
+    case 'bool':
+      return false;
+    case 'enum':
+      return schema.options?.[0] ?? '';
+    default:
+      return '';
+  }
 }
 
 /**
@@ -314,6 +343,19 @@ function coerce(
     return v;
   }
 
+  // ---- 安全网：schema 的 default 本身类型就错时（注册期已报 SCHEMA_INVALID），
+  // 解析期仍必须产出类型安全的值，不能把 number 塞给期望 string 的行为。
+  if (typeError(schema, v) !== null) {
+    const fb = safeFallback(schema);
+    diagnostics.push({
+      code: 'PARAM_TYPE_MISMATCH',
+      behaviorId,
+      paramKey: schema.key,
+      message: `参数「${schema.key}」最终取值 ${String(v)} 仍不符合 ${schema.kind}（schema 的 default 类型有误），已兜底为 ${String(fb)}`,
+    });
+    return fb;
+  }
+
   return v;
 }
 
@@ -338,6 +380,10 @@ export class BehaviorRegistry {
    * 重复 id 与形状残缺都**拒绝注册**（抛错）。理由：注册期是代码资产装载期，
    * 快速失败能让 Agent 立刻看到问题；同时保证注册表里没有坏条目，
    * 从而 `resolve()` 永远不必面对畸形模块（ADR-017 的"不阻塞"是解析期的承诺）。
+   *
+   * 🔴 宿主批量收集请一律用 `registerAll()`，**不要逐个调 `register()`**：
+   * 单个坏行为抛错会让整批收集中断并留下半张表。`registerAll` 逐个 try/catch，
+   * 坏行为只进 `rejected`，不影响其余。
    */
   register<Ctx>(mod: BehaviorModule<Ctx>): void {
     if (mod === null || typeof mod !== 'object') {

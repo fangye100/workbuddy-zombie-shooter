@@ -18,7 +18,9 @@ import { describe, expect, it } from 'vitest';
 import { BehaviorRegistry } from '../src/behavior';
 import type { BehaviorModule } from '../src/behavior';
 
-const modules = import.meta.glob('/assets/behaviors/*.ts', { eager: true }) as Record<
+// 用 ** 而非 *：将来行为放进子目录（如 assets/behaviors/combat/*.ts）也能被收集，
+// 单星会在那时静默漏掉整目录。
+const modules = import.meta.glob('/assets/behaviors/**/*.ts', { eager: true }) as Record<
   string,
   Record<string, unknown>
 >;
