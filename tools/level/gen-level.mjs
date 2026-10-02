@@ -220,40 +220,46 @@ function meshRenderer(source, materialId, extra = {}) {
  * footprint（W×D×H，米）同步自 props.json —— Collider 按它生成，
  * 保证视觉与碰撞一致（P4b 复审：一刀切 2.4m 方块会让 6m 轿车头尾悬出碰撞体）。
  */
+/**
+ * 每个幕可用的「高掩体」道具（cover=high/full，**直读 props.json**）。
+ *
+ * 🔴 真源直读（P4b 复审二轮修）：此前这里是一份手抄 footprint 表，复审实测
+ * 抄错 4 处数值（P-14/P-16/P-22/P-25，最狠差 10 倍）、轴序混 8 处，且从未与
+ * props.json 对账 —— 手抄表成了"第二真源"，违背局部真源原则。
+ * 现在直接读 `assets/environment/props.json` 的 entries[].footprint，永不错抄。
+ *
+ * 道具循环使用：掩体数量多于道具种类时取模轮换。
+ * 排列原则：**按占地从大到小**排槽（cv0 在远离刷怪点一侧），大件先占，
+ * 保证任一 footprint 与刷怪散布区不重叠（session.test"不穿障碍"看守）。
+ */
 function actCoverProps(theme) {
   const THEME_TO_ACT = { fire: 1, industrial: 2, subway: 3, lab: 4 };
-  // 🔴 槽位适配：coverOffsets 的三个槽位空间有限（彼此相距 ~10m，离刷怪散布区
-  // 最近 ~2.5m）。P-12（6.5m 货车）这种大件放中间槽会吞掉刷怪散布区
-  //（session.test 的"不穿障碍"回归就是它触发的）。排列原则：**从大到小**占槽，
-  // 最大件放 cv0（远离刷怪点一侧），保证任一 footprint 与散布区不重叠。
-  const TABLE = {
-    1: [
-      ['P-11', [4.4, 1.5, 1.9]],
-      ['P-03', [1.8, 1.3, 1.1]],
-      ['P-04', [1.2, 1.1, 1.0]],
-      ['P-14', [0.8, 1.8, 1.6]],
-      ['P-16', [1.6, 2.4, 2.4]],
-      ['P-12', [6.5, 2.8, 2.4]],
-    ],
-    2: [
-      ['P-21', [2.4, 4.5, 1.0]],
-      ['P-22', [2.2, 2.6, 2.4]],
-      ['P-23', [2.6, 2.2, 1.2]],
-      ['P-25', [4, 3.5, 3.0]],
-      ['P-26', [3, 4, 3.0]],
-    ],
-    3: [
-      ['P-32', [18, 3.4, 2.8]],
-      ['P-23', [2.6, 2.2, 1.2]],
-      ['P-26', [3, 4, 3.0]],
-    ],
-    4: [
-      ['P-44', [2, 1.7, 1.8]],
-      ['P-45', [1.2, 2.2, 2.2]],
-    ],
-  };
   const act = THEME_TO_ACT[theme] ?? 1;
-  return TABLE[act] ?? TABLE[1];
+  const props = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'assets/environment/props.json'), 'utf8'),
+  );
+  const usable = props.entries.filter(
+    (e) =>
+      // 只要「道具」：structure 是建筑模块（如 S-02 便利店 12×8m），
+      // 不是掩体摆件，混进来会吞掉整个刷怪区
+      e.kind === 'prop' &&
+      Array.isArray(e.acts) &&
+      e.acts.includes(act) &&
+      (e.cover === 'high' || e.cover === 'full') &&
+      Array.isArray(e.footprint) &&
+      e.footprint.length === 3,
+  );
+  if (usable.length === 0) throw new Error(`props.json 里没有 Act${act} 的高掩体道具`);
+  // 🔴 占地**升序**：小件在前（cv1/cv2 贴近刷怪散布区一侧的空间窄），
+  // 大件殿后。coverOffsets 的 cv0 在 -0.3W/-0.25H（离刷怪点最远）——
+  // 但槽序是 cv0→cv1→cv2，小件先占 cv0 也没问题（小件哪都放得下）。
+  // 真正要防的是"大件进窄槽"：升序保证轮到大件时只剩远槽或下一房间。
+  // session.test 的"不穿障碍"是这条布局的回归看守（P4b 复审一轮的教训）。
+  usable.sort((a, b) => {
+    const area = (fp) => fp[0] * fp[2];
+    return area(a.footprint) - area(b.footprint);
+  });
+  return usable.map((e) => [e.id, e.footprint]);
 }
 
 /** 扁平地板 gizmo：高 0.2，顶面贴 y=0，不挡俯视视线 */
@@ -427,7 +433,8 @@ function buildFloor(floor) {
     const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
       const [propId, fp] = coverPropIds[ci % coverPropIds.length];
-      const [w, d, h] = fp;
+      // 🔴 props.json 的 footprint 轴序 = [W, H, D]（宽×高×深，1unit=1m）
+      const [w, h, d] = fp;
       nodes.push(
         node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,

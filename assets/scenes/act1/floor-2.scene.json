@@ -298,7 +298,7 @@
     },
     {
       "id": "nd_f2r0_cv0",
-      "name": "掩体 1 · P-11",
+      "name": "掩体 1 · P-04",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -328,7 +328,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-11/tex/P-11_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
             }
           },
           "materials": [
@@ -353,9 +353,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              2.2,
-              0.95,
-              0.75
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -366,11 +366,79 @@
     },
     {
       "id": "nd_f2r0_cv1",
-      "name": "掩体 2 · P-03",
+      "name": "掩体 2 · P-14",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
           6,
+          0,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.4,
+              0.3,
+              0.9
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f2r0_cv2",
+      "name": "掩体 3 · P-03",
+      "parent": "nd_f2r0",
+      "transform": {
+        "position": [
+          -6,
           0,
           4
         ],
@@ -424,74 +492,6 @@
               0.9,
               0.55,
               0.65
-            ]
-          },
-          "isTrigger": false,
-          "layer": 0
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f2r0_cv2",
-      "name": "掩体 3 · P-04",
-      "parent": "nd_f2r0",
-      "transform": {
-        "position": [
-          -6,
-          0,
-          4
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "道具",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "asset",
-            "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
-            }
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s1"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        },
-        {
-          "kind": "Collider",
-          "enabled": true,
-          "shape": {
-            "type": "box",
-            "halfExtents": [
-              0.6,
-              0.5,
-              0.55
             ]
           },
           "isTrigger": false,
@@ -974,7 +974,7 @@
     },
     {
       "id": "nd_f2r2_cv0",
-      "name": "掩体 1 · P-11",
+      "name": "掩体 1 · P-04",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -1004,7 +1004,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-11/tex/P-11_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
             }
           },
           "materials": [
@@ -1029,9 +1029,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              2.2,
-              0.95,
-              0.75
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -1042,11 +1042,79 @@
     },
     {
       "id": "nd_f2r2_cv1",
-      "name": "掩体 2 · P-03",
+      "name": "掩体 2 · P-14",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
           6.6,
+          0,
+          4.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.4,
+              0.3,
+              0.9
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f2r2_cv2",
+      "name": "掩体 3 · P-03",
+      "parent": "nd_f2r2",
+      "transform": {
+        "position": [
+          -6.6,
           0,
           4.5
         ],
@@ -1100,74 +1168,6 @@
               0.9,
               0.55,
               0.65
-            ]
-          },
-          "isTrigger": false,
-          "layer": 0
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f2r2_cv2",
-      "name": "掩体 3 · P-04",
-      "parent": "nd_f2r2",
-      "transform": {
-        "position": [
-          -6.6,
-          0,
-          4.5
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "道具",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "asset",
-            "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
-            }
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "shared",
-                "id": "s1"
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        },
-        {
-          "kind": "Collider",
-          "enabled": true,
-          "shape": {
-            "type": "box",
-            "halfExtents": [
-              0.6,
-              0.5,
-              0.55
             ]
           },
           "isTrigger": false,
@@ -1487,8 +1487,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-02T04:52:47.850Z",
-    "updatedAt": "2026-10-02T04:52:47.850Z",
+    "createdAt": "2026-10-02T05:11:49.323Z",
+    "updatedAt": "2026-10-02T05:11:49.323Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }
