@@ -65,15 +65,16 @@ function insideAnyObstacle(s: RuntimeSession, x: number, z: number): boolean {
 describe('RuntimeSession —— 房间进入触发', () => {
   it('玩家出生所在的房间立即触发，未进入的房间不刷', () => {
     const s = make();
-    // 房间 1 = 5+4+3 = 12 只；房间 3 = 12 只（玩家在 x≈3，房间 3 在 x≈56）
-    expect(s.countNpc()).toBe(12);
+    // P5 C4：房间 1 分波，触发只投 wave1 = E-01×5 + E-02×3 = 8 只（wave2 的 E-01×4 等清空）；
+    // 房间 3 = 12 只（wave 全 0 = 单波全量）（玩家在 x≈3，房间 3 在 x≈56）
+    expect(s.countNpc()).toBe(8);
     expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
   });
 
   it('时间推进不会重复投放同一波（同一房间内跑 200 步）', () => {
     const s = make();
     s.run(200);
-    expect(s.countNpc()).toBe(12);
+    expect(s.countNpc()).toBe(8); // P5 C4：wave1 8 只（不死不投 wave2）
     expect(s.triggeredRooms()).toEqual(['nd_f1r0']);
   });
 
@@ -304,11 +305,11 @@ describe('RuntimeSession —— 确定性与容量', () => {
    * 否则"一只没刷"到底是房间没触发还是容量不够，从输出上无从区分。
    */
   it('容量不足 → StepReport 明确回传被拒房间（AGENTS.md §2.2 不静默）', () => {
-    const s = make({ capacity: 6 }); // 玩家占 1，房间 1 需要 12
+    const s = make({ capacity: 6 }); // 玩家占 1，房间 1 的 wave1 需要 8
     const r = s.step();
     expect(r.spawned).toBe(0);
     expect(r.rejectedRooms).toBe(1);
-    expect(r.rejections).toEqual([{ roomNodeId: 'nd_f1r0', needed: 12, free: 5 }]);
+    expect(r.rejections).toEqual([{ roomNodeId: 'nd_f1r0', needed: 8, free: 5 }]);
   });
 
   it('容量不足 → 运行期 diagnostic 可见，且同一房间只记一次', () => {
@@ -356,7 +357,7 @@ describe('RuntimeSession —— 确定性与容量', () => {
     s.run(30);
     s.reset();
     expect(s.tick).toBe(0);
-    expect(s.countNpc()).toBe(12);
+    expect(s.countNpc()).toBe(8); // P5 C4：重跑回到 wave1
   });
 });
 
@@ -369,14 +370,14 @@ describe('RuntimeSession —— 确定性与容量', () => {
  */
 describe('WU-3 验收：动态实体数量不受 MAX_OBJECTS(64) 约束', () => {
   it('同一关能同时存在远超静态上限的实体', () => {
-    const s = makeScaled(40, 512); // 3 个刷怪点 × 40 = 120 只 + 玩家
+    const s = makeScaled(40, 512); // wave1 两点 × 40 = 80 只 + 玩家（sp1 是 wave2 等清空）
     const v = s.view();
-    expect(s.countNpc()).toBe(120);
+    expect(s.countNpc()).toBe(80);
     expect(v.length).toBeGreaterThan(64);
   });
 
   it('超出容量时整批拒绝 —— 上限是显式声明的，不是悄悄截断', () => {
-    const s = makeScaled(40, 100); // 需要 121 槽位，只有 100
+    const s = makeScaled(40, 60); // wave1 需要 81 槽位（80+玩家），只有 60 → 整波原子拒绝
     expect(s.countNpc()).toBe(0);
     expect(s.triggeredRooms()).toEqual([]);
   });
@@ -386,7 +387,7 @@ describe('WU-3 验收：动态实体数量不受 MAX_OBJECTS(64) 约束', () => 
     s.run(60);
     const bad = s.view().filter((e) => e.kind === 'npc' && insideAnyObstacle(s, e.x, e.z));
     expect(bad).toEqual([]);
-    expect(s.countNpc()).toBe(60);
+    expect(s.countNpc()).toBe(40); // P5 C4：wave1 两点 × 20（sp1 是 wave2）
   });
 });
 
@@ -421,7 +422,7 @@ describe('docs/17 §8-2：房间触发与禁用语义', () => {
 
   it('禁用的刷怪点一个都不生成（enabled 是硬约束，不是提示）', () => {
     const s = withPatch('nd_f1r0_sp0', 'SpawnPoint', { enabled: false });
-    expect(s.countNpc()).toBe(7); // 房间 1 = 5+4+3，去掉 sp0 的 5
+    expect(s.countNpc()).toBe(3); // P5 C4：wave1 = sp0(5)+sp2(3)，禁 sp0 剩 E-02×3（sp1 是 wave2）
     expect(s.view().some((e) => e.sourceNodeId === 'nd_f1r0_sp0')).toBe(false);
   });
 
@@ -475,9 +476,9 @@ describe('WU-5 前置：改一处刷怪点不牵动其它刷怪点', () => {
       .map((e) => `${e.x.toFixed(6)},${e.z.toFixed(6)}`)
       .sort();
 
-  it('🔴 改 sp0 的 count，sp1 / sp2 的初始位置逐位不变', () => {
-    const base = posOf(withCount('nd_f1r0_sp0', 5), 'nd_f1r0_sp1');
-    const after = posOf(withCount('nd_f1r0_sp0', 13), 'nd_f1r0_sp1');
+  it('🔴 改 sp0 的 count，sp2 的初始位置逐位不变（sp1 是 wave2 初始不投，无位可比）', () => {
+    const base = posOf(withCount('nd_f1r0_sp0', 5), 'nd_f1r0_sp2');
+    const after = posOf(withCount('nd_f1r0_sp0', 13), 'nd_f1r0_sp2');
     expect(base.length).toBeGreaterThan(0);
     expect(after).toEqual(base);
   });
@@ -485,7 +486,7 @@ describe('WU-5 前置：改一处刷怪点不牵动其它刷怪点', () => {
   it('改 count 只影响被改的那一处，总数变化正确', () => {
     const s = withCount('nd_f1r0_sp0', 13);
     expect(s.view().filter((e) => e.sourceNodeId === 'nd_f1r0_sp0')).toHaveLength(13);
-    expect(s.countNpc()).toBe(20); // 13 + 4 + 3
+    expect(s.countNpc()).toBe(16); // P5 C4：wave1 = sp0(13) + sp2(3)；sp1 的 4 只是 wave2
   });
 
   it('派生流仍然随会话种子变化（局部性不是把种子废掉）', () => {

@@ -332,6 +332,38 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
     const r = migrateToLatest(docAt(1));
     expect(r.from).toBe(1);
     expect(r.to).toBe(SCHEMA_VERSION);
-    expect(r.applied).toEqual(['userdata-to-schema', 'add-player-start']);
+    expect(r.applied).toEqual(['userdata-to-schema', 'add-player-start', 'add-lose-condition']);
+  });
+});
+
+// ---------------------------------------------------------------- P5 C4：v3 → v4
+
+describe('migrateV3ToV4 —— 失败条件（P5 docs/23 §2.6）', () => {
+  function v3Doc(): Record<string, unknown> {
+    const d = docAt(2);
+    const r = migrateTo(d, 3);
+    return r.doc as unknown as Record<string, unknown>;
+  }
+
+  it('缺省补 loseCondition=player-death（唯一合法语义，非猜测）', () => {
+    const r = migrateTo(v3Doc(), 4);
+    expect(r.doc.loseCondition).toBe('player-death');
+  });
+
+  it('已有 loseCondition 的文档不被覆盖', () => {
+    const doc = v3Doc();
+    doc['loseCondition'] = 'player-death';
+    const r = migrateTo(doc, 4);
+    expect(r.doc.loseCondition).toBe('player-death');
+  });
+
+  it('迁移不产生 error 诊断', () => {
+    const r = migrateTo(v3Doc(), 4);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('v3 → v4 已注册进默认迁移链，版本高于 4 仍拒绝加载', () => {
+    expect(listMigrations().some((m) => m.from === 3 && m.to === 4)).toBe(true);
+    expect(SCHEMA_VERSION).toBe(4);
   });
 });

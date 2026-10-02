@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -519,6 +519,12 @@ export interface SceneDocument {
    * 不得回落到任何隐式默认值（ADR-010：静默修数据是最坏的做法）。
    */
   playerStart: NodeId | null;
+  /**
+   * 失败条件（P5，docs/23 §2.6）。第一步只硬编码 `'player-death'` 这一种；
+   * 留扩展位（护送/限时/波次生存等将来加 union 成员）。
+   * undefined = v4 之前的老场景（迁移链补默认值，见 migrateV3ToV4）。
+   */
+  loseCondition?: 'player-death';
   /** 资源依赖清单。保存时由引用收集自动重算——预加载与打包都靠它 */
   dependencies: AssetPath[];
   nodes: SceneNode[];
@@ -561,6 +567,7 @@ export function createEmptySceneDocument(name: string): SceneDocument {
     editorCamera: { target: [0, 1, 0], distance: 8, yaw: 0.6, elevation: 0.45 },
     entryCamera: cameraId,
     playerStart: null,
+    loseCondition: 'player-death',
     dependencies: [],
     nodes: [
       {

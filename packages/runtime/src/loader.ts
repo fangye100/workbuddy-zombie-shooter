@@ -342,16 +342,9 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           );
         }
 
-        // wave 同理（复审 B6）：它被原样带进 SpawnDesc，但触发时按 `trigger` **全量投放**，
-        // 没有任何"等第 N 波"的语义 —— 作者把 wave 填成 2 会当场整批刷出。与 delaySec
-        // 同一把尺子：读了字段却没有执行语义，就必须明确告知。
-        if (s.wave !== 0) {
-          warn(
-            'W_SPAWN_WAVE_UNSUPPORTED',
-            `wave=${s.wave} 本轮未实现（没有波次推进语义），该刷怪点会在触发时**一次性全量**投放 count=${s.count}`,
-            n.id,
-          );
-        }
+        // wave 语义已实现（P5 C4 WaveScheduler）：wave ≤ 0 归 1（旧数据=触发即全量），
+        // 正值 = 房间内第 N 波（清空前一波才投放）。「W_SPAWN_WAVE_UNSUPPORTED」
+        // 警告退役 —— 曾经的「读了字段没有语义」现在有了，不再警告。
 
         spawns.push({
           nodeId: n.id,

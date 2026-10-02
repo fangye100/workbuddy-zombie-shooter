@@ -146,6 +146,32 @@ export interface DamageResult {
   readonly hpAfter: number;
 }
 
+/**
+ * 会话级事件（P5，docs/23 §2.4/§2.5）：波次投放 / 房间清空 /（C5 的）胜负。
+ * 与 CombatEvent（实体级伤害）分开 —— 消费方不同（HUD 波次提示 / 关卡流程）。
+ */
+export interface SessionEvent {
+  readonly type: 'wave-start' | 'room-cleared';
+  readonly tick: number;
+  readonly roomNodeId: NodeId;
+  /** wave-start 专属：刚投放的波号（1 起） */
+  readonly wave?: number;
+}
+
+/** 一个房间的波次推进状态（WaveScheduler，docs/23 §2.4） */
+interface RoomWaveState {
+  /** 下一个待投放的波号；> lastWave = 全部投完（等清空 → cleared） */
+  nextWave: number;
+  /** 本房最大波号（max of spawn wave，≤0 归 1 后） */
+  lastWave: number;
+  /** 投放下一波的 tick；-1 = 正在等当前波清空 */
+  nextWaveAtTick: number;
+  cleared: boolean;
+}
+
+/** 两波之间的间隔。[PLACEHOLDER 2.0s] docs/23 §2.4（playtest 后调） */
+const INTER_WAVE_SEC = 2.0;
+
 /** 运行期诊断（与 loader 的装载期诊断分开：装载是一次性的，运行是每步的） */
 export interface RuntimeDiagnostic {
   code: string;
@@ -219,6 +245,24 @@ export class RuntimeSession {
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
+  /** 波次推进状态（P5 C4）：triggered 房间的 wave 调度器 */
+  private readonly waveRooms = new Map<NodeId, RoomWaveState>();
+  /** 会话事件缓冲（wave-start / room-cleared / C5 胜负） */
+  private readonly sessionEventBuf: SessionEvent[] = [];
+
+  /** 会话事件只读视图（波次提示 / 关卡流程消费） */
+  get sessionEvents(): readonly SessionEvent[] {
+    return this.sessionEventBuf;
+  }
+
+  /** 已清空的房间（C5 的 floor-clear 判定输入：全部 enabled 房间 cleared） */
+  clearedRooms(): NodeId[] {
+    const out: NodeId[] = [];
+    for (const [id, st] of this.waveRooms) {
+      if (st.cleared) out.push(id);
+    }
+    return out;
+  }
 
   // ---- 玩家输入与导航目标（复审 #7） ----
   /** 玩家移动输入（已归一化，长度 ≤ 1）。宿主每帧写，runtime 每个固定步消费 */
@@ -480,6 +524,7 @@ export class RuntimeSession {
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
     const r = this.triggerRooms();
+    this.updateWaves();
     this.movePlayer();
     this.moveNpcs();
     // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
@@ -613,6 +658,8 @@ export class RuntimeSession {
     this.diagSeen.clear();
     this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
     this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
+    this.sessionEventBuf.length = 0; // 波次/清房事件同理
+    this.waveRooms.clear(); // 波次状态随世界重建
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
@@ -652,12 +699,15 @@ export class RuntimeSession {
   }
 
   /**
-   * 房间进入触发。
+   * 房间进入触发（P5 C4 改造：wave 分组投放，docs/23 §2.4）。
    *
-   * 三条纪律：
+   * 三条纪律（沿用）：
    *  - 只触发一次（triggered 去重），再次跨越边界不重复投放同一波；
    *  - 禁用组件（enabled=false）的房间与刷怪点不触发；
-   *  - **整批原子**：容量不够就一个都不生成，不留半批实体。
+   *  - **整波原子**：容量不够就一波都不生成，不留半批实体。
+   *
+   * 触发时只投 wave 1（wave ≤ 0 的旧数据归 1，与旧行为「触发即全量」兼容——
+   * 全是 wave≤0 的房间等价于单波全量）；后续波由 updateWaves 按清空节奏投放。
    */
   private triggerRooms(): { spawned: number; rejections: SpawnRejection[] } {
     const rejections: SpawnRejection[] = [];
@@ -676,7 +726,13 @@ export class RuntimeSession {
       const pending = this.desc.spawns.filter(
         (s) => s.roomNodeId === room.nodeId && s.enabled && s.trigger === 'room-enter',
       );
-      const total = pending.reduce((a, s) => a + s.count, 0);
+      // wave 分组：≤0 归 1（旧数据兼容）；波号升序 = 投放顺序
+      const waves = new Set<number>();
+      for (const s of pending) waves.add(Math.max(1, s.wave));
+      const lastWave = waves.size === 0 ? 0 : Math.max(...waves);
+
+      const wave1 = pending.filter((s) => Math.max(1, s.wave) === 1);
+      const total = wave1.reduce((a, s) => a + s.count, 0);
       const free = this.table.capacity - this.table.aliveCount;
       if (total > free) {
         // 原子拒绝：宁可这一波不刷，也不能刷一半让调用方以为成功了。
@@ -686,10 +742,98 @@ export class RuntimeSession {
         continue;
       }
 
-      for (const s of pending) spawned += this.spawnBatch(s);
+      for (const s of wave1) spawned += this.spawnBatch(s);
+      if (lastWave >= 1) {
+        this.sessionEventBuf.push({ type: 'wave-start', tick: this.tickCount, roomNodeId: room.nodeId, wave: 1 });
+      }
+      this.waveRooms.set(room.nodeId, {
+        nextWave: 2,
+        lastWave,
+        nextWaveAtTick: -1,
+        cleared: lastWave <= 1,
+      });
+      // 单波房间触发即清空判定交给 updateWaves（当前波可能瞬间被打空——
+      // cleared 的唯一判定路径在 updateWaves，避免两处判定漂移）
       this.triggered.add(room.nodeId);
     }
     return { spawned, rejections };
+  }
+
+  /**
+   * 波次推进（P5 C4，docs/23 §2.4）：当前波清空 → 间隔 interWaveSec → 投下一波；
+   * 最后一波清空 → 房间 cleared（事件）。每个固定步在 triggerRooms 之后跑。
+   *
+   * 「房内敌数」按 sourceOf（出生刷怪点）归属房间统计，玩家不参与；
+   * 同种子重跑的波次时序确定性由：①文档序遍历 ②spawnBatch 的 nodeId 派生流
+   * ③tick 驱动（无墙钟）共同保证。
+   */
+  private updateWaves(): void {
+    if (this.waveRooms.size === 0) return;
+    const interWaveTicks = Math.max(1, Math.round(INTER_WAVE_SEC / this.fixedStep));
+
+    for (const room of this.desc.rooms) {
+      if (!room.enabled) continue;
+      const st = this.waveRooms.get(room.nodeId);
+      if (st === undefined || st.cleared) continue;
+
+      if (st.nextWaveAtTick >= 0) {
+        // 等投放：到点投下一波（整波原子，容量不足时这波被丢——诊断走
+        // W_SPAWN_CAPACITY 同款路径，见 step 的 rejections 汇总）
+        if (this.tickCount < st.nextWaveAtTick) continue;
+        const waveSpawns = this.desc.spawns.filter(
+          (s) =>
+            s.roomNodeId === room.nodeId &&
+            s.enabled &&
+            s.trigger === 'room-enter' &&
+            Math.max(1, s.wave) === st.nextWave,
+        );
+        const total = waveSpawns.reduce((a, s) => a + s.count, 0);
+        const free = this.table.capacity - this.table.aliveCount;
+        if (total > free) {
+          // 容量不足：保持等待，下一 tick 再试（波不丢，直到容量腾出）
+          st.nextWaveAtTick = this.tickCount + interWaveTicks;
+          this.pushDiag(
+            'W_SPAWN_CAPACITY',
+            `房间 ${room.nodeId} 第 ${st.nextWave} 波要 ${total} 只，剩余容量 ${free} —— 推迟投放`,
+            room.nodeId,
+          );
+          continue;
+        }
+        for (const s of waveSpawns) this.spawnBatch(s);
+        this.sessionEventBuf.push({
+          type: 'wave-start',
+          tick: this.tickCount,
+          roomNodeId: room.nodeId,
+          wave: st.nextWave,
+        });
+        st.nextWave += 1;
+        st.nextWaveAtTick = -1;
+        continue;
+      }
+
+      // 等清空：房内活敌（本房刷怪点出生的存活 NPC）为 0 ？
+      if (this.roomAliveEnemies(room.nodeId) > 0) continue;
+      if (st.nextWave <= st.lastWave) {
+        st.nextWaveAtTick = this.tickCount + interWaveTicks;
+      } else {
+        st.cleared = true;
+        this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
+      }
+    }
+  }
+
+  /** 房内存活敌数（该房刷怪点出生的 alive NPC；玩家不计） */
+  private roomAliveEnemies(roomNodeId: NodeId): number {
+    const nodeIds = new Set(
+      this.desc.spawns.filter((s) => s.roomNodeId === roomNodeId).map((s) => s.nodeId),
+    );
+    let n = 0;
+    for (let i = 0; i < this.table.capacity; i++) {
+      if (!this.table.isAlive(i) || this.kindOf[i] !== 1) continue;
+      const src = this.sourceOf[i] ?? null;
+      if (src !== null && nodeIds.has(src)) n++;
+    }
+    return n;
   }
 
   /** 返回实际生成的数量（供 StepReport.spawned 汇总） */

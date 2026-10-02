@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场",
   "act": "Act1",
@@ -40,6 +40,7 @@
   },
   "entryCamera": "nd_f1_cam",
   "playerStart": "nd_f1_start",
+  "loseCondition": "player-death",
   "dependencies": [],
   "nodes": [
     {
@@ -532,7 +533,7 @@
           "enabled": true,
           "characterId": "E-01",
           "count": 5,
-          "wave": 0,
+          "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,
@@ -600,7 +601,7 @@
           "enabled": true,
           "characterId": "E-01",
           "count": 4,
-          "wave": 0,
+          "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,
@@ -668,7 +669,7 @@
           "enabled": true,
           "characterId": "E-02",
           "count": 3,
-          "wave": 0,
+          "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,

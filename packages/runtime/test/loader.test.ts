@@ -197,16 +197,16 @@ describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5�
     expect(r.diagnostics.some((d) => d.code === 'E_NAV_MISSING')).toBe(true);
   });
 
-  it('wave 非零 → warning（读了字段却没有波次语义，触发时仍一次性全量投放）', () => {
+  it('P5 C4：wave 语义已实现 —— 非零 wave 不再警告（W_SPAWN_WAVE_UNSUPPORTED 退役）', () => {
+    // 曾经 wave 只是「读了字段没有语义」要警告（复审 B6）；WaveScheduler 落地后
+    // wave 有真实分波语义，警告整条退役 —— 非零 wave 合法、零值兼容旧「全量」。
     const doc = clone(floor1());
     const sp = findNode(doc, 'nd_f1r0_sp0').components.find((c) => c.kind === 'SpawnPoint');
-    (sp as { wave: number }).wave = 2;
+    (sp as { wave: number }).wave = 3;
     const r = loadLevelRuntime(doc);
     expect(r.desc).not.toBeNull();
-    const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED');
-    expect(d?.severity).toBe('warning');
-    expect(d?.nodeId).toBe('nd_f1r0_sp0');
-    // 真实关卡 wave 全为 0 → 不打扰作者
+    expect(r.diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED')).toBe(false);
+    // 真实关卡（floor-1 首房已分波，wave 1/2/1）同样零警告
     expect(
       loadLevelRuntime(floor1()).diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED'),
     ).toBe(false);

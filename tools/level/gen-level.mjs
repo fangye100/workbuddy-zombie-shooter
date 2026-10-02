@@ -34,7 +34,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
 const PROJECT_FILE = 'aether.project.json';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -138,7 +138,7 @@ const FLOORS = [
     name: '第一层 · 火场',
     rooms: [
       // 层 1 = 教学：只上 E-01，最后一个点混 2 只 E-02 给第一次「站桩会被打断」的信号
-      { type: 'combat', spawns: [{ count: 5, char: 'E-01' }, { count: 4, char: 'E-01' }, { count: 3, char: 'E-02' }] },
+      { type: 'combat', spawns: [{ count: 5, char: 'E-01', wave: 1 }, { count: 4, char: 'E-01', wave: 2 }, { count: 3, char: 'E-02', wave: 1 }] },
       { type: 'event', spawns: [] },
       { type: 'combat', spawns: [{ count: 4, char: 'E-01' }, { count: 4, char: 'E-02' }, { count: 4, char: 'E-01' }] },
     ],
@@ -475,7 +475,7 @@ function buildFloor(floor) {
               enabled: true,
               characterId: spawn.char,
               count: spawn.count,
-              wave: 0,
+              wave: spawn.wave ?? 0,
               trigger: 'room-enter',
               delaySec: 0,
               radius: isBoss ? 2.5 : 1.5,
@@ -555,6 +555,7 @@ function buildFloor(floor) {
     editorCamera: { target: [spanX / 2 - 10, 0, 0], distance: 62, yaw: 1.1, elevation: 0.75 },
     entryCamera: cameraId,
     playerStart: startId,
+    loseCondition: 'player-death',
     dependencies: [],
     nodes,
     meta: { createdAt: now, updatedAt: now, author: 'gen-level.mjs', notes: `GDD §4.1 层 ${floor.depth} · 主题 ${theme.label}` },

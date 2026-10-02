@@ -258,12 +258,36 @@ export const migrateV2ToV3: MigrationStep = {
  * 注册全部历史迁移。幂等：已注册则跳过（测试 clearMigrations 后再调不会重复抛）。
  * 模块加载时即调用一次，保证 migrateToLatest 在任何入口都可用。
  */
+// ---------------------------------------------------------------- P5 C4：v3 → v4 迁移
+
+/**
+ * v3 → v4：新增场景级 `loseCondition`（失败条件，P5 docs/23 §2.6）。
+ *
+ * 第一步只有 `'player-death'` 一种语义，缺省即它——这不是「猜」：v3 及之前的
+ * 场景事实上不存在第二种失败方式，补的默认值是唯一合法语义（与 v2→v3 的
+ * playerStart「只能填 null 不能猜」不同类：那里有多种候选起点，这里只有一个）。
+ */
+export const migrateV3ToV4: MigrationStep = {
+  from: 3,
+  to: 4,
+  name: 'add-lose-condition',
+  run(doc) {
+    if (doc['loseCondition'] === undefined) {
+      doc['loseCondition'] = 'player-death';
+    }
+    return doc;
+  },
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
   }
   if (!listMigrations().some((m) => m.from === 2 && m.to === 3)) {
     registerMigration(migrateV2ToV3);
+  }
+  if (!listMigrations().some((m) => m.from === 3 && m.to === 4)) {
+    registerMigration(migrateV3ToV4);
   }
 }
 
