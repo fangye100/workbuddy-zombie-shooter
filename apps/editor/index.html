@@ -3,7 +3,7 @@
 <head data-page-node-id="9rrMyCu50aotildlwpb3Px">
 <meta charset="UTF-8" data-page-node-id="foeH2nAegwlSZ0gR18YgyE">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" data-page-node-id="1arz6knwqRPi7le88bCFwM">
-<title>Aether Game Editor · 末日尸潮</title>
+<title>Web3D Editor</title>
 <style>
   :root {
     --ink: #14110F;
@@ -38,38 +38,17 @@
     display: flex;
     flex-direction: column;
   }
-  /* 中央列 = 画布 + 底部资产库 dock；画布吃满剩余高度 */
-  #center { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; height: 100%; }
+  /* 中央列 = 画布（+ 绑定/重定向浮层）；资产库 dock 已提出本列，挂到 mainrow 的 grid 第二行 */
+  #center { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   canvas#gpu { display: block; width: 100%; flex: 1 1 auto; min-height: 0; background: #000; touch-action: none; }
 
   .panel {
-    width: var(--panel-w);
-    flex: 0 0 var(--panel-w);
-    height: 100%;
-    overflow-y: auto;
+    overflow-y: auto; /* 层级列变矮后内容用滚动条显示（下边缘止于资产库上缘） */
     background: var(--panel-deep);
     padding-bottom: 40px;
   }
   .panel::-webkit-scrollbar { width: 8px; }
   .panel::-webkit-scrollbar-thumb { background: var(--panel); border-radius: 4px; }
-
-  .brand {
-    padding: 14px 16px 12px;
-    border-bottom: var(--stroke) solid var(--ink);
-    background: var(--panel);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .brand h1 {
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--bone);
-  }
-  .brand h1 em { color: var(--zombie); font-style: normal; }
-  .brand p { font-size: 11px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
-
   .group { border-bottom: 2px solid var(--ink); }
   .group > summary {
     padding: 9px 16px;
@@ -109,6 +88,26 @@
     font-variant-numeric: tabular-nums;
   }
   .hint { font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.45; }
+
+  /* 行内属性行（检视页变换）：label 左、数字框右同一行。样式限定在 .row.numline
+     作用域内——不写裸 input[type=number]，否则会压过刷怪点面板 .sp-num 等既有定宽框（Copilot 评审） */
+  .row.numline { display: flex; align-items: center; gap: 8px; }
+  .row.numline > label { flex: 1 1 auto; min-width: 0; }
+  .row.numline > input[type=number] {
+    flex: 0 0 108px;
+    width: 108px;
+    height: 22px;
+    background: var(--panel-deep);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  .row.numline > input[type=number]:focus { outline: none; border-color: var(--zombie); }
+  .row.numline > input[type=number]::-webkit-inner-spin-button { opacity: .5; }
 
   input[type=range] {
     width: 100%;
@@ -428,6 +427,17 @@
   }
   .tb-brand { font-weight: 700; font-size: 14px; color: var(--bone); letter-spacing: 0.5px; white-space: nowrap; }
   .tb-brand em { color: var(--zombie); font-style: normal; }
+  /* 顶栏状态行：原「模型预览」面板的 model-info 行迁来，接管全部 setModelInfo 反馈 */
+  .tb-status {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 0 10px;
+  }
   .tb-menus { display: flex; align-items: center; gap: 4px; }
   .tb-menu { position: relative; }
   .tb-btn {
@@ -473,7 +483,24 @@
   .tb-item:disabled { color: var(--text-dim); cursor: default; }
   .tb-sep { height: 2px; background: var(--ink); margin: 4px 2px; }
 
-  #mainrow { flex: 1 1 auto; display: flex; min-height: 0; width: 100%; }
+  /* 主行改两行 grid（2026-09-23 布局改造）：
+     行1 = 左栏(场景层级) | 左分隔条 | 画布 | 右分隔条 | Inspector
+     行2 = 资产库 dock（从屏幕左缘横贯到 Inspector 前）
+     → 场景层级下边缘 = 资产库上边缘；Inspector 通高；dock 行高随 --dock-h / 收起态自适应 */
+  #mainrow {
+    flex: 1 1 auto;
+    display: grid;
+    min-height: 0;
+    width: 100%;
+    grid-template-columns: var(--panel-w) 6px 1fr 6px var(--insp-w);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .panel { grid-area: 1 / 1; }
+  #split-left { grid-area: 1 / 2; }
+  #center { grid-area: 1 / 3; }
+  #split-right { grid-area: 1 / 4; }
+  #inspector { grid-area: 1 / 5 / 3 / 6; }
+  #asset-dock { grid-area: 2 / 1 / 3 / 4; }
 
   /* ---- Transform Gizmo 顶部工具栏（Unity 风格）---- */
   #gizmo-bar {
@@ -544,17 +571,25 @@
   }
   #asset-preview-host .ap-canvas { flex: 1 1 auto; width: 100%; min-height: 0; display: block; }
   #asset-preview-host .ap-panel { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; padding: 6px 8px; }
+  #asset-preview-host .ap-view { padding-top: 4px; border-top: 2px solid var(--ink); align-items: center; }
+  /* 标准开关（滑轨式）：贴图 / 骨骼 显示开关，排在 3D 视图下方 */
+  .ap-switch { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--paper); }
+  .ap-switch input { appearance: none; width: 26px; height: 14px; border-radius: 7px; background: var(--panel); border: 2px solid var(--ink); position: relative; cursor: pointer; transition: background .12s; margin: 0; }
+  .ap-switch input::after { content: ''; position: absolute; top: 0; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); transition: transform .12s, background .12s; }
+  .ap-switch input:checked { background: var(--ink); }
+  .ap-switch input:checked::after { transform: translateX(12px); background: var(--zombie); }
+  .ap-switch input:disabled { opacity: .4; cursor: not-allowed; }
+  #asset-preview-host .ap-lod { max-width: 130px; font-size: 10.5px; }
+  #asset-preview-host .ap-stats { margin-left: auto; font-size: 10.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   #asset-preview-host .ap-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  #asset-preview-host .ap-play,
-  #asset-preview-host .ap-xray {
+  #asset-preview-host .ap-play {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 30px; height: 26px; padding: 0 8px;
     background: var(--panel); color: var(--paper);
     border: 2px solid var(--ink); border-radius: 5px;
     font-size: 12px; font-weight: 700; cursor: pointer; user-select: none;
   }
-  #asset-preview-host .ap-play:hover,
-  #asset-preview-host .ap-xray:hover { background: var(--zombie); color: var(--ink); }
+  #asset-preview-host .ap-play:hover { background: var(--zombie); color: var(--ink); }
   #asset-preview-host .ap-xray.active { background: var(--zombie); color: var(--ink); }
   #asset-preview-host .ap-loop { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--paper); }
   #asset-preview-host .ap-clip, #asset-preview-host .ap-speed { height: 26px; font-size: 11px; }
@@ -1162,6 +1197,13 @@
   }
   .ctx-item:hover { background: var(--ink); color: var(--zombie); }
   .ctx-item:disabled { color: var(--text-dim); cursor: default; background: none; }
+  /* 功能体（✦ 刷怪点等非渲染功能节点）：与普通 GameObject 行区分 */
+  .hier-cat.fn { border-left: 3px solid var(--teal); }
+  .hier-cat.fn > summary { color: var(--teal); }
+  .hier-row.fn { color: var(--teal); }
+  .hier-row.fn .hier-fn-mark { flex: 0 0 auto; font-weight: 700; margin-right: 2px; }
+  .hier-row.fn .hier-name { font-style: italic; }
+
   /* 分隔线：菜单动作分组（编辑器动作 ↔ 通用文件动作） */
   .ctx-sep { height: 0; border-top: 2px solid var(--ink); margin: 4px 6px; }
   /* ---- 刷怪点编辑面板（WU-5）---- */
@@ -1218,7 +1260,8 @@
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
 <div id="topbar" data-page-node-id="DWAspFABjPYSzYXohJSEZM">
-  <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">末日尸潮 <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
+  <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">Web3D <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
+  <span class="tb-status" id="model-info"></span>
   <div class="tb-menus" data-page-node-id="vbJDAHfCbrcoMGMvC78aMX">
     <div class="tb-menu" id="skeleton-menu-btn" data-page-node-id="N7eBka9ze56EnwMDFJkARW">
       <button class="tb-btn" type="button" data-tb="skeleton" data-page-node-id="Tq5XZhd5MoZYTVMZV9GQ37">Skeleton</button>
@@ -1234,16 +1277,11 @@
 </div>
 <div id="mainrow" data-page-node-id="2Cxv2YNaoPTtxF2JK44Tph">
 <div class="panel" id="panel" data-page-node-id="SCyKf1cEE4HmfH8QmaT4B0">
-  <div class="brand" data-page-node-id="09ulbVZNUBtxNpyeQhrbqH">
-    <h1 data-page-node-id="TmsXkYvGEaaERG8ATQdXz0">Aether <em data-page-node-id="sRVmOUsrArVbJ5F8wN7bv0">Game Editor</em></h1>
-    <p data-page-node-id="ecWNI2oZAHmLNCQROT5vRe">末日尸潮 · 关卡物件编辑器<br data-page-node-id="dDBQL2ESzuFClxAMmqpPNS">轻点选中 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩放</p>
-  </div>
   <div id="groups" data-page-node-id="ZJ8AolQUgzk2QafDtoHRFM"></div>
 </div>
 <div class="split-handle" id="split-left" title="拖拽调整左侧面板宽度" data-page-node-id="BwyYiG8ZrAcq7N1LF0XRms"></div>
 <div id="center" data-page-node-id="tnfONArFpWjeHhBxYM6zyz">
   <canvas id="gpu" data-page-node-id="ivFEi1oS94rS9xuDyqOhkd"></canvas>
-  <div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
   <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
   <div id="binding-dock" data-page-node-id="pDTPu4XOCe9JtvhJd81DtY"></div>
   <!-- 重定向工作台（MR-06：两入口汇入的统一会话 UI，内部 DOM 由 RetargetWorkbench 全量构建） -->
@@ -1255,23 +1293,31 @@
     <button class="insp-tab active" data-tab="inspector" data-page-node-id="cEMO2GWfcHF9AAUA46Xf2Q">检视</button>
     <button class="insp-tab" data-tab="scene" data-page-node-id="kSTHppUnagGT9wPcv3Fvqq">场景/光照</button>
     <button class="insp-tab" data-tab="render" data-page-node-id="FNRHc3KHABmmCW6EyqYmcG">渲染</button>
-    <button class="insp-tab" data-tab="asset" data-page-node-id="DYDFEWq3rIBYTVFY3Ouqcv">资产</button>
-    <button class="insp-tab" data-tab="spawn" data-page-node-id="SpAwNTab00000000001" title="刷怪点参数编辑（WU-5）">刷怪点</button>
+    <button class="insp-tab" data-tab="asset" data-page-node-id="DYFEWq3rIBYTVFY3Ouqcv">资产</button>
   </div>
   <div class="insp-panes" data-page-node-id="4kRrPUbWn9BQAA1DXM2GLf">
-    <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK"></div>
+    <div class="insp-pane active" data-pane="inspector" data-page-node-id="HHtCYk6zBmVYpgmJ2f20aK">
+      <!-- 刷怪点（WU-5）：从顶级 tab 降级为检视页条件分组——场景含 SpawnPoint
+           组件（编辑态）或 Play 中选中僵尸实体（运行态）时显示，由 main.ts 控制 -->
+      <details class="group" id="spawn-group" hidden>
+        <summary>刷怪点</summary>
+        <div class="group-body">
+          <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
+        </div>
+      </details>
+    </div>
     <div class="insp-pane" data-pane="scene" data-page-node-id="Ht0prF6O4nFB58DEvN0Av5"></div>
     <div class="insp-pane" data-pane="render" data-page-node-id="4Buf15XQbE3rFgCO8zsmcb"></div>
     <div class="insp-pane" data-pane="asset" data-page-node-id="B5JRBF3dqcB8ZX37Ik3zRW">
       <div class="ai-host" data-page-node-id="f8HHSTMum6lFrQGZgU5eES"></div>
       <div id="asset-preview-host" data-page-node-id="5tt6WD9ZUHK6yCr0naAgDd"></div>
     </div>
-    <!-- 刷怪点编辑（WU-5）：内部 DOM 由 services/spawn-panel.ts 全量构建 -->
-    <div class="insp-pane" data-pane="spawn" data-page-node-id="SpAwNPane0000000001">
-      <div id="spawn-host" data-page-node-id="SpAwNHost0000000001"></div>
-    </div>
   </div>
 </aside>
+
+<!-- 资产库 dock：从屏幕左缘横贯到 Inspector 前（grid 第二行），
+     左栏（场景层级）下边缘即本 dock 上边缘 -->
+<div id="asset-dock" data-page-node-id="iosn45CrhuFEaEH8dK3qCD"></div>
 
 </div>
 <div id="gizmo-bar" data-page-node-id="7CiU4AxJIbgWbVYBtjyO6d">

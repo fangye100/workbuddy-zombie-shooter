@@ -4,9 +4,9 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { BUILTIN_MODELS, MODEL_RULER_HEIGHT_M } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData } from '@aether/scene';
+import { MODEL_RULER_HEIGHT_M } from './models';
+import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -44,9 +44,9 @@ import {
   revealInFileManager,
   type AssetSelection,
 } from './asset-util';
-import { makeSplitter, restoreCssVar } from './splitter';
+import { makeSplitter, restoreCssVar, readCssVarPx } from './splitter';
 import { t, setLang, getLang, applyStaticI18n } from './i18n';
-import { summarizeMatch, createSkinState, selectClip, play, pause, seek } from '@aether/render';
+import { createSkinState, selectClip, play, pause, seek } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
@@ -275,7 +275,7 @@ async function boot(): Promise<void> {
   // boot 依赖 camera / hudDirty（定义在后），实际执行挪到 __editor 钩子接线之后。
 
   /** 右侧 Inspector Tab 切换：选中场景物体→检视，选中资产→资产 */
-  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset' | 'spawn'): void => {
+  const switchInspectorTab = (tab: 'inspector' | 'scene' | 'render' | 'asset'): void => {
     for (const t of document.querySelectorAll<HTMLElement>('#inspector .insp-tab')) {
       t.classList.toggle('active', t.dataset.tab === tab);
     }
@@ -287,7 +287,7 @@ async function boot(): Promise<void> {
   for (const t of document.querySelectorAll<HTMLButtonElement>('#inspector .insp-tab')) {
     t.addEventListener('click', () => {
       const tab = t.dataset.tab;
-      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset' || tab === 'spawn') {
+      if (tab === 'inspector' || tab === 'scene' || tab === 'render' || tab === 'asset') {
         switchInspectorTab(tab);
       }
     });
@@ -325,61 +325,6 @@ async function boot(): Promise<void> {
     }
   }
 
-  async function loadBitmap(url: string): Promise<ImageBitmap | null> {
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) return null;
-      return await decodeTexture(await resp.blob(), url);
-    } catch (err) {
-      console.warn(`[模型] 贴图加载失败: ${url}`, err);
-      return null;
-    }
-  }
-
-  /**
-   * 模型替换的统一边界（复审 P1）。
-   *
-   * Play 中替换网格 = 改变对象的可序列化状态（快照只存变换/显隐/材质，**不存网格与骨架**），
-   * Stop 后恢复不回来 —— 原网格就这么没了。与增删同一约束：所有模型修改入口
-   * （内置下拉、文件导入、及其异步完成路径）都走这一个判定点。
-   */
-  function modelReplaceBlocked(): boolean {
-    if (!playCtl.isPlaying) return false;
-    console.warn('[play] Play 中禁止替换模型（快照不存网格/骨架，Stop 后无法恢复；先 Stop 再换）');
-    panel.setModelInfo(t('Play 中不能替换模型（Stop 后无法恢复原网格），先 Stop'));
-    hudDirty = true;
-    return true;
-  }
-
-  function applyBuiltin(id: string): void {
-    if (modelReplaceBlocked()) return;
-    const bm = BUILTIN_MODELS.find((b) => b.id === id);
-    if (bm === undefined) return;
-    void loadBitmap(bm.texUrl).then((bmp) => {
-      // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
-      if (modelReplaceBlocked()) return;
-      renderer.setCharacter(bm.mesh, bmp, null);
-      panel.setModelInfo(
-        `${bm.label} · ${bm.meta.vertices} 顶点 / ${bm.meta.triangles} 面 / ` +
-          `${bm.meta.heightMeters} m / 贴图${bmp !== null ? '已载入' : '缺失（平色预览）'}`,
-      );
-      panel.refreshHierarchy(); // 角色槽位的面数变了
-      panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
-      hudDirty = true;
-    });
-  }
-
-  panel.onModelSelect = (id) => {
-    if (modelReplaceBlocked()) return;
-    if (id === null) {
-      renderer.setCharacter(null, null);
-      panel.setModelInfo(t('程序化胶囊 · 材质在「材质」面板调'));
-      hudDirty = true;
-      return;
-    }
-    applyBuiltin(id);
-  };
-
   // ---- 场景层级 Hierarchy ----
   // 点到 mesh 子节点时连子网格一起选中：材质面板的作用对象就是它，描边也只描那一段
   panel.onHierarchySelect = (index, subIndex) => {
@@ -387,6 +332,29 @@ async function boot(): Promise<void> {
     panel.setSelection(index, subIndex);
     switchInspectorTab('inspector');
     hudDirty = true;
+  };
+  // 功能体（✦）行点选：与物体选中互斥，切到检视页显示对应属性分组（当前唯一功能体 = 刷怪点）
+  panel.onFunctionalSelect = (node) => {
+    if (node === null) {
+      spawnSelActive = false;
+      panel.setFunctionalSelection(null);
+      refreshSpawnPanel();
+      return;
+    }
+    selectedSpawnNode = node.nodeId;
+    renderer.selectObject(null); // 物体选中与功能体选中互斥
+    panel.setSelection(null); // 会触发 onFunctionalDeselect 清 flag，随后再立起
+    spawnSelActive = true;
+    panel.setFunctionalSelection(node.nodeId);
+    switchInspectorTab('inspector');
+    refreshSpawnPanel();
+    hudDirty = true;
+  };
+
+  // 物体选中挤掉功能体选中（ui.setSelection → onFunctionalDeselect）：收属性分组
+  panel.onFunctionalDeselect = () => {
+    spawnSelActive = false;
+    refreshSpawnPanel();
   };
   panel.onHierarchyToggle = (index, visible) => {
     renderer.setObjectVisible(index, visible);
@@ -424,45 +392,9 @@ async function boot(): Promise<void> {
     hudDirty = true;
   };
 
-  panel.onModelFile = (buffer, name) => {
-    if (modelReplaceBlocked()) return;
-    try {
-      // 身高用与内置 LOD 同一把尺子（roster 真源），保证导入档与内置档体型一致
-      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-      void (async () => {
-        const bmp = model.image === null ? null : await decodeTexture(model.image, name);
-        // 异步完成路径：贴图解码期间用户可能按了 Play —— 同样不能换
-        if (modelReplaceBlocked()) return;
-        // subMeshes：GLB 的每个 primitive 拆成一条子网格 → 层级树里可展开、各自一个材质槽；
-        // nodeTree：GLB 原始父子层级，层级面板按它还原树形（不再平铺）
-        renderer.setCharacter(model.mesh, bmp, model.subMeshes, model.nodeTree, model.skeleton, model.animations);
-        const texState =
-          model.image === null
-            ? '无贴图（平色预览）'
-            : bmp !== null
-              ? '贴图已载入'
-              : '⚠ 贴图解码失败（见控制台）';
-        // 换模型时旧材质绑定按「nodeId → 反向路径」两层匹配继承，结果一并告知
-        const inheritNote = summarizeMatch(renderer.getLastMatchReport() ?? []);
-        panel.setModelInfo(
-          `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 / ` +
-            `${model.heightMeters.toFixed(2)} m / ${texState}` +
-            (inheritNote === null ? '' : ` · ${inheritNote}`),
-        );
-        panel.refreshHierarchy(); // 导入模型替换了角色槽位，面数与子网格都变了
-        // 选中可能落在旧的（现已不存在的）子网格上，重挂一次
-        panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
-        hudDirty = true;
-      })();
-    } catch (err) {
-      panel.setModelInfo(`导入失败：${String(err)}`);
-      console.error('[模型] GLB 导入失败', err);
-    }
-  };
-
-  // 不再默认加载任何内置模型：E-04 内置档（LOD 中间产物）已全部移除，
-  // 启动即为程序化胶囊，角色一律通过「导入 GLB…」载入原始模型（唯一真源）。
-  panel.setModelInfo(t('未载入模型 · 用「导入 GLB…」载入原始 .glb'));
+  // 模型进场景的唯一入口是底部资产库（双击/拖入 .glb）；「模型预览」面板与
+  // setCharacter 角色槽路径已于 2026-09-23 布局改造收掉（槽位假设在场景化世界会错伤场景物体）。
+  // 顶栏状态行初始为空：只在真的有操作反馈（复制/重命名/拦截提示…）时才出现文字。
 
   // 默认取景：target 落在角色身上才能居中构图，而不是看向角色前方的空地
   const DEFAULT_VIEW = { yaw: 0.35, distance: 9, target: [0, 0.95, 0] as [number, number, number] };
@@ -672,7 +604,8 @@ async function boot(): Promise<void> {
         panel.setSelection(null);
         // 面板直接切到这只僵尸的来源刷怪点：「它是从哪冒出来的」就该一步到位
         if (hit.sourceNodeId !== null) selectedSpawnNode = hit.sourceNodeId;
-        switchInspectorTab('spawn');
+        spawnSelActive = true;
+        switchInspectorTab('inspector');
         refreshSpawnPanel();
         hudDirty = true;
         return;
@@ -1167,6 +1100,9 @@ async function boot(): Promise<void> {
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
   let selectedSpawnNode: string | null = null;
+  /** 刷怪点功能体被显式选中（层级行 / 面板列表 / Play 实体）。分组显隐只认它，
+   *  selectedSpawnNode 的「自动选第一个」不再连带显示（那等于变相常驻） */
+  let spawnSelActive = false;
   let spawnAb: { before: ScatterFingerprint; after: ScatterFingerprint; cmp: ScatterComparison } | null = null;
   let spawnMsg: { text: string; kind: 'info' | 'warn' | 'ok' } | null = null;
 
@@ -1176,6 +1112,8 @@ async function boot(): Promise<void> {
       : new SpawnPanel(spawnHost, {
           onSelect: (id) => {
             selectedSpawnNode = id;
+            spawnSelActive = true;
+            panel.setFunctionalSelection(id);
             refreshSpawnPanel();
           },
           onEdit: (field, value) => editSpawnField(field, value),
@@ -1194,6 +1132,7 @@ async function boot(): Promise<void> {
       refreshSpawnPanel();
       return;
     }
+    spawnSelActive = false; // 新场景：功能体未选中，分组收起
     spawnStore = new SpawnEditStore(doc);
     // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
     // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
@@ -1435,6 +1374,23 @@ async function boot(): Promise<void> {
     const store = spawnStore;
     const doc = store?.document ?? null;
     const ent = bridge.selectedEntity;
+    // 分组显隐（2026-09-23 布局改造）：刷怪点不再是顶级 tab，而是检视页条件分组。
+    // 编辑态 = 用户显式选中了刷怪点功能体（层级 ✦ 行 / 分组内列表）；运行态 = Play 中
+    // 选中了僵尸实体。场景里有没有刷怪点只决定层级面板显不显 ✦ 行，不决定本分组。
+    const spawnGroup = document.getElementById('spawn-group');
+    if (spawnGroup !== null) spawnGroup.hidden = !(spawnSelActive || ent !== null);
+    // 功能体喂层级面板（通用模式：场景装载/编辑后同步 ✦ 行）
+    panel.setFunctionalNodes(
+      doc === null
+        ? []
+        : listSpawnPoints(doc).map((sp) => ({
+            kind: 'spawn',
+            kindLabel: t('刷怪点'),
+            nodeId: sp.nodeId,
+            name: sp.name,
+            meta: `×${sp.count} · r${sp.radius.toFixed(1)}`,
+          })),
+    );
     const cmp = spawnAb?.cmp ?? null;
     const lines: string[] = [];
     let summary: string | null = null;
@@ -1512,6 +1468,8 @@ async function boot(): Promise<void> {
       },
       select: (id: string | null) => {
         selectedSpawnNode = id;
+        spawnSelActive = id !== null;
+        panel.setFunctionalSelection(id);
         refreshSpawnPanel();
       },
       edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
@@ -1531,7 +1489,8 @@ async function boot(): Promise<void> {
         if (e === undefined) return null;
         bridge.select(e.id, e.generation, e.runId);
         if (e.sourceNodeId !== null) selectedSpawnNode = e.sourceNodeId;
-        switchInspectorTab('spawn');
+        spawnSelActive = true;
+        switchInspectorTab('inspector');
         refreshSpawnPanel();
         return { id: e.id, generation: e.generation, sourceNodeId: e.sourceNodeId, characterId: e.characterId };
       },
@@ -1842,7 +1801,7 @@ async function boot(): Promise<void> {
   // =====================================================================
   // 资产库 Asset Library + 属性 Inspector
   // 底部 dock 浏览项目文件；GLB 双击/拖入画布生成为新场景物体（renderer.addObject，
-  // 与「导入 GLB…」替换角色槽位是两条路）；选中资产在右侧 Inspector 显示静态属性。
+  // 生成进场景，不替换任何既有物体）；选中资产在右侧 Inspector 显示静态属性。
   // =====================================================================
 
   // 三栏宽度恢复 + 分界线拖拽（左侧栏 / 右侧 Inspector；dock 与目录树的把手在组件内部）
@@ -1896,7 +1855,7 @@ async function boot(): Promise<void> {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
-      // 与「导入 GLB…」同一把身高尺，保证资产库生成的与导入的体型一致
+      // 与 roster 同一把身高尺，保证资产库生成的角色体型一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
@@ -2816,7 +2775,7 @@ async function boot(): Promise<void> {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
-      // 与「导入 GLB…」同一把身高尺，保证绑定面板里的体型与场景里一致
+      // 与 roster 同一把身高尺，保证绑定面板里的体型与场景里一致
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       lastSkeletonImport = null;
 
@@ -2910,7 +2869,25 @@ async function boot(): Promise<void> {
     ]);
   };
 
+  /**
+   * 资产 dock 高度钳制（2026-09-23 布局自适应用户报告）：--dock-h 会持久化，
+   * 窗口缩小后旧值可能超出窗口高度，把中心列（画布 + 绑定/重定向浮层）挤到 1px。
+   * 拖拽时的 max 只在拖动瞬间求值，救不了「先拖大再缩窗」——启动与每次窗口
+   * resize 都重新钳制并回写持久化值。
+   */
+  function clampDockHeight(): void {
+    const cur = readCssVarPx('--dock-h', 260);
+    const max = Math.max(320, window.innerHeight - 160);
+    if (cur <= max) return;
+    document.documentElement.style.setProperty('--dock-h', `${max}px`);
+    try {
+      localStorage.setItem('zh.ui.dockH', String(max));
+    } catch {
+      /* 持久化失败不影响本轮布局 */
+    }
+  }
   window.addEventListener('resize', () => {
+    clampDockHeight();
     binding?.resize();
     retargetWorkbench?.resize();
   });
@@ -3148,25 +3125,50 @@ async function boot(): Promise<void> {
     assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
 
     // 资产库预览缓存：避免反复 fetch + 解析 GLB（贴图仍每次重新解码，因 ImageBitmap 已被 close）
+    // ---- 资产预览的 LOD 家族：领域逻辑在 @aether/scene 的 asset-manifest（2026-09-23
+    // 上提成库，编辑器不再持有第二份解析实现）——这里只剩拉取清单 + 缓存 ----
+    let lodFamilies: Map<string, LodFamily> | null = null;
+    async function getLodFamilies(): Promise<Map<string, LodFamily>> {
+      if (lodFamilies === null) {
+        const r = await readProjectFile('assets/_data/asset-manifest.json');
+        const parsed = parseAssetManifest(r.ok ? r.json : null);
+        if (parsed.skipped > 0) console.warn(`[资产清单] ${parsed.skipped} 个坏条目被跳过`);
+        lodFamilies = parsed.families;
+      }
+      return lodFamilies;
+    }
+
+    /** 按路径把 GLB 载入预览（选中流与 LOD 切换共用；不改资产库选中） */
+    async function previewPath(path: string): Promise<void> {
+      try {
+        let model = previewCache.get(path);
+        if (model === undefined) {
+          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const buffer = await resp.arrayBuffer();
+          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+          previewCache.set(path, model);
+        }
+        const bmp = model.image === null ? null : await decodeTexture(model.image, path);
+        await assetPreview?.load(model, bmp);
+        const family = (await getLodFamilies()).get(path) ?? [];
+        assetPreview?.setLods(family, path);
+        // 统计行走库里的 formatLodStats（含 Δ vs LOD0 降幅）；无家族时退回实测数
+        const stats = formatLodStats(family, path);
+        assetPreview?.setStats(stats !== '' ? stats : `${Math.round(model.triangles)} tris · ${model.vertices} verts`);
+      } catch (err) {
+        console.error('[资产库] 预览解析失败', path, err);
+        assetPreview?.setLods([], null);
+        assetPreview?.setStats('');
+      }
+    }
+
     async function previewAsset(sel: AssetSelection): Promise<void> {
       if (sel.entry.kind !== 'file' || !sel.entry.ext.toLowerCase().endsWith('.glb')) {
         assetPreview?.clear();
         return;
       }
-      try {
-        let model = previewCache.get(sel.path);
-        if (model === undefined) {
-          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(sel.path)}`);
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-          previewCache.set(sel.path, model);
-        }
-        const bmp = model.image === null ? null : await decodeTexture(model.image, sel.path);
-        await assetPreview?.load(model, bmp);
-      } catch (err) {
-        console.error('[资产库] 预览解析失败', sel.path, err);
-      }
+      await previewPath(sel.path);
     }
 
     const assets = new AssetBrowser(dockEl, {
@@ -3185,17 +3187,17 @@ async function boot(): Promise<void> {
       onRename: async (path, newName) => {
         const r = await renameProjectEntry(path, newName);
         if (!r.ok) {
-          panel.setModelInfo(`重命名失败：${r.error ?? '未知错误'}`);
+          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}`);
           hudDirty = true;
           return false;
         }
         const extras: string[] = [];
-        if (r.metaRenamed) extras.push('sidecar 已随迁');
-        if (r.projectUpdated) extras.push('项目登记已更新');
+        if (r.metaRenamed) extras.push(t('sidecar 已随迁'));
+        if (r.projectUpdated) extras.push(t('项目登记已更新'));
         // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
         // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
         if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
-        panel.setModelInfo(`已重命名 → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
+        panel.setModelInfo(`${t('已重命名')} → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
         hudDirty = true;
         return true;
       },
@@ -3273,6 +3275,10 @@ async function boot(): Promise<void> {
       },
     });
 
+    // 钳制要在 AssetBrowser 构造**之后**：restoreCssVar 在 buildDom 里恢复持久化的
+    // --dock-h（可能是上一轮窗口更大时的残留超大值），先钳后恢复等于没钳
+    clampDockHeight();
+
     // 画布接收资产拖放：落点 = 视线与地面 y=0 的交点（落不出地面就退回原点）
     canvas.addEventListener('dragover', (e) => {
       if (e.dataTransfer !== null && e.dataTransfer.types.includes(ASSET_MIME)) {
@@ -3317,6 +3323,8 @@ async function boot(): Promise<void> {
       });
     };
     hook.spawnAsset = (p: string, pos?: [number, number, number]) => void spawnAssetAt(p, pos ?? null);
+    // LOD 下拉切换：只换预览内容，不动资产库选中
+    if (assetPreview !== null) assetPreview.onLoadLod = (p) => void previewPath(p);
     // 无头冒烟 / 自动化钩子需要直接摸到渲染器（对象列表、字符槽），否则只能绕 UI 后门。
     // renderer 在初始化钩子对象里已经挂过一次（简写属性），这里**不要重复赋值** ——
     // 两处指向同一个键，改一处会让人以为另一处是新的真源。

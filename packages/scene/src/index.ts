@@ -25,6 +25,7 @@ export * from './geometry';
 export * from './gltf';
 export * from './project';
 export * from './asset-meta';
+export * from './asset-manifest';
 export * from './document';
 export * from './asset-server';
 export * from './graph';
