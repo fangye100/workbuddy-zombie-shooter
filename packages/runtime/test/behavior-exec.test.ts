@@ -252,6 +252,13 @@ describe('RuntimeSession · 脚本真正被执行', () => {
 
   it('🔴 日志封顶 200：长时间跑不会无限增长，且保留最近的', () => {
     const doc = floor1Clean();
+    // P5 C5：终态会冻结世界（step 短路 → runScripts 停跑）——本用例要跑满
+    // 250 步日志，必须让玩家活着：禁用全部刷怪点（无怪 = 无伤害来源）
+    for (const n of doc.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'SpawnPoint') (c as { enabled: boolean }).enabled = false;
+      }
+    }
     // maxTick 设到上限，让它每 tick 都打日志
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { maxTick: 600, message: 'x' });
     const d = loadLevelRuntime(doc).desc!;

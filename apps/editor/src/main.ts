@@ -200,6 +200,8 @@ async function boot(): Promise<void> {
    * 这里**不自动进入 Play**：编辑器打开就该是编辑态，跑起来要用户显式点 ——
    * 否则每次改完参数刷新页面都会被"已经在跑的世界"干扰判断。
    */
+  /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
+  let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
     // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
     // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
@@ -1792,6 +1794,8 @@ async function boot(): Promise<void> {
   const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
   window.addEventListener('keyup', (e) => {
     playKeys.delete(e.key.toLowerCase());
+    // P5 C5：J 松开 = 停火（失焦路径由 clearPlayKeys 兜底）
+    if (e.key.toLowerCase() === 'j' && playCtl.isPlaying) playCtl.session.setFire(false);
   });
 
   /**
@@ -1803,6 +1807,7 @@ async function boot(): Promise<void> {
     if (playKeys.size === 0) return;
     playKeys.clear();
     if (playCtl.isPlaying) playCtl.session.setInput(0, 0);
+    playCtl.session.setFire(false); // P5 C5：开火键也随失焦释放（防卡键连发）
   };
   window.addEventListener('blur', clearPlayKeys);
   document.addEventListener('visibilitychange', () => {
@@ -1817,6 +1822,16 @@ async function boot(): Promise<void> {
     if (PLAY_KEYS.has(k)) {
       playKeys.add(k);
       if (playCtl.isPlaying) e.preventDefault(); // Play 中箭头键归玩家，不滚动页面
+      return;
+    }
+
+    // P5 C5：J = 手枪开火（按住连发，武器 CD 节流在 runtime 侧）。
+    // 不进 PLAY_KEYS（那是向量键集合）；终态冻结时 setFire 无效（fireStep 短路）。
+    if (k === 'j') {
+      if (playCtl.isPlaying) {
+        e.preventDefault();
+        playCtl.session.setFire(true);
+      }
       return;
     }
 
@@ -3736,6 +3751,25 @@ async function boot(): Promise<void> {
     }
     playCtl.update(dt);
     renderer.setDynamicBatches(bridge.batches());
+    // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
+    // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
+    if (playCtl.isPlaying) {
+      const oc = playCtl.session.outcome;
+      if (oc !== lastOutcomeShown) {
+        lastOutcomeShown = oc;
+        if (oc === 'game-over') {
+          spawnMsg = { text: '你死了 —— 世界已冻结（J 停止响应），点 ⏹ Stop 退出本局', kind: 'warn' };
+          refreshSpawnPanel();
+          hudDirty = true;
+        } else if (oc === 'floor-clear') {
+          spawnMsg = { text: '🏆 本层通关！全部房间已清空 —— 点 ⏹ Stop 退出', kind: 'ok' };
+          refreshSpawnPanel();
+          hudDirty = true;
+        }
+      }
+    } else {
+      lastOutcomeShown = 'running'; // Stop 后复位，下一局重新提示
+    }
     // 运行期诊断必须有消费者，否则"容量不足整批不生成"在 UI 上依旧是一片寂静，
     // 跟没产出这个信号没有区别（AGENTS.md §2.2：不静默）。
     drainRuntimeDiagnostics();

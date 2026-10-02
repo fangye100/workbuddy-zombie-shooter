@@ -151,12 +151,15 @@ export interface DamageResult {
  * 与 CombatEvent（实体级伤害）分开 —— 消费方不同（HUD 波次提示 / 关卡流程）。
  */
 export interface SessionEvent {
-  readonly type: 'wave-start' | 'room-cleared';
+  readonly type: 'wave-start' | 'room-cleared' | 'game-over' | 'floor-clear';
   readonly tick: number;
-  readonly roomNodeId: NodeId;
+  readonly roomNodeId: NodeId | null;
   /** wave-start 专属：刚投放的波号（1 起） */
   readonly wave?: number;
 }
+
+/** 会话终态（P5 C5，docs/23 §2.5）。终态即冻结：step 不再推进世界 */
+export type SessionOutcome = 'running' | 'game-over' | 'floor-clear';
 
 /** 一个房间的波次推进状态（WaveScheduler，docs/23 §2.4） */
 interface RoomWaveState {
@@ -242,6 +245,15 @@ export class RuntimeSession {
    * 不参与任何模拟计算 —— 不影响确定性，也别拿它当随机源。
    */
   runId: number;
+
+  /**
+   * 会话终态（P5 C5）。'running' 之外即冻结：step 直接短路返回，世界定格 ——
+   * game-over（玩家死亡）与 floor-clear（全房清空）都不自动清场，宿主决定何时退。
+   */
+  get outcome(): SessionOutcome {
+    return this.outcomeState;
+  }
+  private outcomeState: SessionOutcome = 'running';
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
@@ -461,6 +473,12 @@ export class RuntimeSession {
       sourceSlot,
     });
     if (died) this.kill(targetSlot);
+    // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。
+    // 🔴 不自动清场 —— 让玩家看清死状，UI 决定何时退（编辑器不自动 Stop）。
+    if (died && this.kindOf[targetSlot] === 0 && this.outcomeState === 'running') {
+      this.outcomeState = 'game-over';
+      this.sessionEventBuf.push({ type: 'game-over', tick: this.tickCount, roomNodeId: null });
+    }
     return { died, hpAfter };
   }
 
@@ -523,6 +541,11 @@ export class RuntimeSession {
 
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
+    // 终态冻结（P5 C5）：世界定格，tick 不再走。返回空报告 —— 宿主的累加器
+    // 可以继续调度（不需要各自判终态），但世界零变化。
+    if (this.outcomeState !== 'running') {
+      return { tick: this.tickCount, spawned: 0, rejectedRooms: 0, rejections: [] };
+    }
     const r = this.triggerRooms();
     this.updateWaves();
     this.movePlayer();
@@ -660,6 +683,7 @@ export class RuntimeSession {
     this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
     this.sessionEventBuf.length = 0; // 波次/清房事件同理
     this.waveRooms.clear(); // 波次状态随世界重建
+    this.outcomeState = 'running'; // 终态随换代复位（重跑新的一局）
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
@@ -750,10 +774,10 @@ export class RuntimeSession {
         nextWave: 2,
         lastWave,
         nextWaveAtTick: -1,
-        cleared: lastWave <= 1,
+        // 🔴 cleared 不许在投放时预置（单波房触发时怪还活着）；清空的唯一
+        // 判定路径在 updateWaves（投完全部波且房内活敌归零）——两处判定会漂移
+        cleared: false,
       });
-      // 单波房间触发即清空判定交给 updateWaves（当前波可能瞬间被打空——
-      // cleared 的唯一判定路径在 updateWaves，避免两处判定漂移）
       this.triggered.add(room.nodeId);
     }
     return { spawned, rejections };
@@ -818,8 +842,24 @@ export class RuntimeSession {
       } else {
         st.cleared = true;
         this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
+        this.checkFloorClear();
       }
     }
+  }
+
+  /**
+   * 本层通关判定（docs/23 §2.5）：全部 enabled 房间 cleared 且玩家存活。
+   * 只在 room-cleared 之后检查（清房是唯一让「全清」从假变真的转移点）。
+   */
+  private checkFloorClear(): void {
+    if (this.outcomeState !== 'running') return;
+    for (const room of this.desc.rooms) {
+      if (!room.enabled) continue;
+      const st = this.waveRooms.get(room.nodeId);
+      if (st === undefined || !st.cleared) return; // 有房间没触发或没清完
+    }
+    this.outcomeState = 'floor-clear';
+    this.sessionEventBuf.push({ type: 'floor-clear', tick: this.tickCount, roomNodeId: null });
   }
 
   /** 房内存活敌数（该房刷怪点出生的 alive NPC；玩家不计） */

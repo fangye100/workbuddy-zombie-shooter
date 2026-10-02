@@ -131,3 +131,64 @@ describe('WaveScheduler · 触发即投 wave1，wave2 等清空（docs/23 §2.4�
     expect(s.countNpc()).toBe(8); // 回到 wave1
   });
 });
+
+// ---------------------------------------------------------------------------
+// P5 C5：胜负终态（docs/23 §2.5）—— game-over 冻结 / floor-clear / 不自动清场
+// ---------------------------------------------------------------------------
+
+describe('胜负终态 · game-over 与 floor-clear', () => {
+  it('玩家被围殴致死 → game-over 事件 + 世界冻结（tick 不走、实体不清场）', () => {
+    const s = make();
+    s.setInput(0, 0); // 站桩挨打
+    let died = false;
+    for (let k = 0; k < 3000 && !died; k++) {
+      s.step();
+      died = s.table.health[s.playerEntityId]! <= 0;
+    }
+    expect(died).toBe(true); // wave1 的 8 只围殴致死（100hp）
+    expect(s.outcome).toBe('game-over');
+    expect(s.sessionEvents.some((e) => e.type === 'game-over')).toBe(true);
+    const tickAtDeath = s.tick;
+    const npcsAtDeath = s.countNpc();
+    s.run(50); // 冻结：世界定格
+    expect(s.tick).toBe(tickAtDeath);
+    expect(s.countNpc()).toBe(npcsAtDeath); // 不自动清场（死状保留）
+    expect(s.table.isAlive(s.playerEntityId)).toBe(true); // 玩家槽位保留
+  });
+
+  it('终态后 step 返回空报告（宿主无需各自判终态）', () => {
+    const s = make();
+    s.applyDamage(s.playerEntityId, 9999);
+    expect(s.outcome).toBe('game-over');
+    const r = s.step();
+    expect(r).toEqual({ tick: s.tick, spawned: 0, rejectedRooms: 0, rejections: [] });
+  });
+
+  it('全图清空 → floor-clear（触发全部房间并清完每间）', () => {
+    const s = make();
+    // 依次把玩家 teleport 进每个 enabled 房间触发，再清空全部波
+    for (const room of s.desc.rooms) {
+      if (!room.enabled) continue;
+      s.table.posX[s.playerEntityId] = (room.minX + room.maxX) / 2;
+      s.table.posZ[s.playerEntityId] = (room.minZ + room.maxZ) / 2;
+      s.step();
+      // 循环清波直到该房 cleared（wave2 等间隔投放）
+      for (let k = 0; k < 10 && !s.clearedRooms().includes(room.nodeId); k++) {
+        clearAllNpcs(s);
+        s.run(65); // 跨过 60 tick 波间隔
+      }
+      expect(s.clearedRooms()).toContain(room.nodeId);
+    }
+    expect(s.outcome).toBe('floor-clear');
+    expect(s.sessionEvents.some((e) => e.type === 'floor-clear')).toBe(true);
+  });
+
+  it('reset 复位终态：重跑是新的一局', () => {
+    const s = make();
+    s.applyDamage(s.playerEntityId, 9999);
+    expect(s.outcome).toBe('game-over');
+    s.reset();
+    expect(s.outcome).toBe('running');
+    expect(s.countNpc()).toBe(8);
+  });
+});

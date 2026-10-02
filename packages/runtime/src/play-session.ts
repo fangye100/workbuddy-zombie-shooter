@@ -218,6 +218,16 @@ export class PlaySession {
     this.session?.setInput(x, z);
   }
 
+  /** 转发开火输入（P5 C5）。语义见 `RuntimeSession.setFire` */
+  setFire(down: boolean): void {
+    this.session?.setFire(down);
+  }
+
+  /** 会话终态（P5 C5）：'running' 之外即世界冻结；无会话视为 running */
+  get outcome(): 'running' | 'game-over' | 'floor-clear' {
+    return this.session?.outcome ?? 'running';
+  }
+
   /** 同种子重跑。stopped 时无世界可重置，静默忽略 */
   reset(): void {
     if (this.session === null) return;
