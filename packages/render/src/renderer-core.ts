@@ -373,6 +373,8 @@ export class RendererCore {
   private dynamicPaletteBuf: GPUBuffer | null = null;
   /** 哑调色板（单个恒等 mat4）：palette 未设置时让 bind group 始终可建 */
   private readonly dummyPaletteBuf: GPUBuffer;
+  /** 诊断：setDynamicPalette 实际上传次数（探针断言「重传已发生」的可观测信号） */
+  paletteUploadCount = 0;
   /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
   private readonly dynamicMeshes = new Map<
     string,
@@ -809,6 +811,7 @@ export class RendererCore {
     });
     this.device.queue.writeBuffer(buf, 0, data);
     this.dynamicPaletteBuf = buf;
+    this.paletteUploadCount++;
   }
 
   /** 把若干批动态实例画进当前 pass；返回新增的 draw call 数 */

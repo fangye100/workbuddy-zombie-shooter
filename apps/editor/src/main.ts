@@ -251,6 +251,12 @@ async function boot(): Promise<void> {
     const ok = playCtl.start();
     if (ok) {
       shownRuntimeDiags.clear();
+      // 🔴 已缓存角色的调色板**同步**重传：attach() 会同步重建 actor 批次
+      //（ActorLibrary CPU 缓存命中），若只等 kickActorPreload 的异步链路，
+      // 头几帧 flags=1 的实例会绑着哑 palette 越界读全零 → 模型闪塌
+      //（PR #18 review 抓的窗口）。新角色的加载与追加上传仍走异步路径。
+      const cached = actorLib.buildPalette();
+      if (cached !== null) renderer.setDynamicPalette(cached);
       kickActorPreload();
     }
     return ok;
@@ -269,14 +275,12 @@ async function boot(): Promise<void> {
       // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
       // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
       await manifestReady;
-      await actorLib.preload('E-01');
+      const changed = await actorLib.preload('E-01');
       // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
       // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
-      //（AGENTS.md §2.4）。CPU 装配缓存不受影响，下轮 Play 会重传。
-      if (playCtl.state === 'stopped') return;
-      // 每次 Play 都要重新上传：Stop 时 releaseDynamicResources 已销毁 GPU 侧
-      // palette buffer，而 CPU 烘焙数据在库里跨 Play 复用（preload 幂等跳过重载）。
-      // 不重传的话蒙皮实例会查已销毁的 buffer → 哑 buffer 越界读全零 → 模型塌缩。
+      //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
+      // 这里只处理新装配角色（changed = true）的追加上传。
+      if (!changed || playCtl.state === 'stopped') return;
       const pal = actorLib.buildPalette();
       if (pal !== null) {
         renderer.setDynamicPalette(pal);
@@ -1540,6 +1544,9 @@ async function boot(): Promise<void> {
   function stopPlay(): void {
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
+    //（成功装配的缓存不动，见 ActorLibrary.resetFailures）
+    actorLib.resetFailures();
     if (src !== null) focusNode(src);
     hudDirty = true;
   }

@@ -10,8 +10,10 @@
  *
  * ## 生命周期
  *
- * - Play 开始时按需 `preload(characterId)`（幂等，失败不重试——一轮 Play 内
- *   缺资产就是缺资产，反复 fetch 只会把错误刷满控制台）。
+ * - Play 开始时按需 `preload(characterId)`（幂等；**一次 Play 会话内**失败不重试
+ *   ——反复 fetch 只会把错误刷满控制台。Stop 边界调 `resetFailures()`，下一轮
+ *   Play 允许重试一次瞬时故障（网络抖动不该让角色整个页面会话都变胶囊，
+ *   PR #18 review 抓的语义错位））。
  * - 每次成功注册新角色后调用方应 `buildPalette()` → `core.setDynamicPalette()`。
  * - Stop 时 core 侧 `releaseDynamicResources()` 释放 GPU buffer；本库的 CPU 数据
  *   （网格 + 烘焙帧）跨 Play 缓存复用，重新上传即可。
@@ -154,7 +156,11 @@ export class ActorLibrary {
         joints: mesh.joints,
         weights: mesh.weights,
         paletteBase: base,
-        restPose: bindPoseIndex(palette) - base,
+        // 🔴 bindPoseIndex 返回的是**本角色 palette 内**的局部下标（角色自身
+        // pose 总数-1），不是全局——shader 端「全局 = paletteBase + 相对量」，
+        // 所以这里直接存局部值，绝不能再减 base（第二个角色起会算出负值 →
+        // u32 巨数 → 越界读全零矩阵，PR #18 review 抓的正 bug）
+        restPose: bindPoseIndex(palette),
         feetOffset: meshMinY(mesh),
         palette,
       });
@@ -178,6 +184,14 @@ export class ActorLibrary {
       off += e.palette.data.length;
     }
     return out;
+  }
+
+  /**
+   * 清空「失败名单」（Stop 边界调用）：下一轮 Play 对瞬时故障（网络抖动等）
+   * 允许重试。已成功的装配缓存不动（跨 Play 复用）。
+   */
+  resetFailures(): void {
+    this.failed.clear();
   }
 
   /** 清空装配（编辑器卸载 / 换项目时；Play 间复用不要调） */

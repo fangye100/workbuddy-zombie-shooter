@@ -36,7 +36,7 @@ const { results, check, summary } = createRecorder();
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  const { url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
+  const { server, url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
   const { chrome, cdp } = await launchEditorSession({
     chromePath: CHROME,
     cdpPort: CDP_PORT,
@@ -100,6 +100,10 @@ async function main() {
     check('截图留档（M2 视觉复核）', true, shotPath);
 
     // ---- ④ Play → Stop → Play 循环（palette 重传回归）----
+    // 记录 Stop 前的 palette 上传计数：再 Play 后它必须**增长**——只看批次重建
+    // 不够（attach() 会同步重建 actor 批次，此时 bind group 可能还指着哑 palette，
+    // PR #18 review 抓的假阳性窗口）
+    const uploadsBeforeStop = await cdp.eval('window.__editor.renderer.core.paletteUploadCount');
     await cdp.eval(`(() => { document.querySelector('#btn-stop').click(); return true; })()`);
     await sleep(700);
     const afterStop = await cdp.eval(`(() => ({
@@ -121,10 +125,17 @@ async function main() {
       { timeout: 20000, interval: 500, label: '再 Play 激活' },
     );
     const again = await waitFor(
-      () => cdp.eval('(() => { const i = window.__editor.renderer.debugDynamicMeshIds(); return i.includes("actor:E-01") ? i : null; })()'),
-      { timeout: 20000, interval: 400, label: '再 Play 后 actor:E-01 批次重建（palette 重传）' },
-    ).catch(() => null);
-    check('再 Play：palette 重传 + 真模型批次恢复（循环回归）', again !== null, JSON.stringify(again));
+      () =>
+        cdp
+          .eval(
+            `(() => { const i = window.__editor.renderer.debugDynamicMeshIds();
+               const up = window.__editor.renderer.core.paletteUploadCount;
+               return i.includes("actor:E-01") && up > ${Number(uploadsBeforeStop) || 0} ? i : null; })()`,
+          )
+          .then((r) => r !== null),
+      { timeout: 20000, interval: 400, label: '再 Play 后 actor 批次重建 且 palette 确已重传' },
+    ).catch(() => false);
+    check('再 Play：palette 重传 + 真模型批次恢复（循环回归）', again === true, `uploads: ${uploadsBeforeStop} → 后续增长`);
 
     // ---- ⑤ console 卫生（WGSL 编译错误 / GPU validation error 在这里暴露）----
     await sleep(600);
@@ -132,6 +143,8 @@ async function main() {
     check('无未捕获异常', cdp.exceptions.length === 0, cdp.exceptions.slice(0, 3).join(' | ').slice(0, 400));
   } finally {
     await chrome.kill();
+    // 探针自起的 vite 必须带走（复用既有 server 时 server 为 null，不杀别人的）
+    if (server !== null) server.kill();
   }
 
   const code = summary(cdp.consoleErrors, cdp.exceptions);
