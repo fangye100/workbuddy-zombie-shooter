@@ -5,6 +5,7 @@ import {
   lodDeltaVsLod0,
   formatLodStats,
   findCharacterLodPath,
+  findAnimatedCharacterIds,
 } from '../src/asset-manifest';
 
 /** 最小可用清单夹具：一个角色（3 档 LOD）+ 一个环境（1 档）+ 各类坏条目 */
@@ -117,5 +118,35 @@ describe('findCharacterLodPath（运行时真角色装配，docs/20 §5）', () 
   it('有 lods 但没有一档带关键字 → null（找到角色≠找到档）', () => {
     const envOnly = { characters: [{ id: 'X-01', lods: [{ label: 'LOD0', file: 'x.glb' }] }] };
     expect(findCharacterLodPath(envOnly, 'X-01', '+动画')).toBeNull();
+  });
+});
+
+describe('findAnimatedCharacterIds（M3 全角色预载清单，禁手抄）', () => {
+  /** 顺序夹具：三个有档角色夹着无档/坏条目 —— 顺序与过滤都要对 */
+  const ORDERED = {
+    characters: [
+      { id: 'E-02', lods: [{ label: 'LOD3 · +动画', file: 'a2.glb' }] },
+      { id: 'B-02', lods: [{ label: 'LOD1 · 贴图低模', file: 'b2.glb' }] }, // 无动画档 → 过滤
+      { id: 'E-01', lods: [{ label: 'LOD3 · +动画', file: 'a1.glb' }] },
+      { id: 'E-03', lods: 'not-an-array' }, // 坏条目 → 安全过滤，不抛异常
+      { id: 'B-03', lods: [{ label: 'LOD3 · +动画', file: 'b3.glb' }] },
+    ],
+  };
+
+  it('按 manifest 顺序返回全部带「+动画」档的角色（顺序 = paletteBase 分配序）', () => {
+    expect(findAnimatedCharacterIds(ORDERED)).toEqual(['E-02', 'E-01', 'B-03']);
+  });
+
+  it('无档角色 / 坏条目被过滤，不抛异常', () => {
+    const ids = findAnimatedCharacterIds(ORDERED);
+    expect(ids).not.toContain('B-02');
+    expect(ids).not.toContain('E-03');
+  });
+
+  it('清单形状不对 / 空 characters → 空数组', () => {
+    expect(findAnimatedCharacterIds(null)).toEqual([]);
+    expect(findAnimatedCharacterIds('str')).toEqual([]);
+    expect(findAnimatedCharacterIds({})).toEqual([]);
+    expect(findAnimatedCharacterIds({ characters: [] })).toEqual([]);
   });
 });

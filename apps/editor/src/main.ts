@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -177,10 +177,14 @@ async function boot(): Promise<void> {
    * 清单异步后补（编辑器启动时 manifest 尚未到位），到位前 preload 一律退胶囊。
    */
   const actorLib = new ActorLibrary(null);
+  /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
+  let assetManifest: unknown = null;
   const manifestReady = (async () => {
     const r = await readProjectFile('assets/_data/asset-manifest.json');
-    if (r.ok) actorLib.setManifest(r.json);
-    else console.warn(`[actors] 资产清单加载失败，Play 全部退胶囊：${r.error ?? '?'}`);
+    if (r.ok) {
+      assetManifest = r.json;
+      actorLib.setManifest(r.json);
+    } else console.warn(`[actors] 资产清单加载失败，Play 全部退胶囊：${r.error ?? '?'}`);
   })();
 
   /**
@@ -263,9 +267,10 @@ async function boot(): Promise<void> {
   }
 
   /**
-   * Play 期真角色装配（docs/20 M2）：异步预载 E-01（首发角色；M3 扩到全部
-   * 有「+动画」档的角色）。不阻塞 Play——加载完成前实体照画胶囊，完成后
-   * `notifyActorsChanged()` 原地换真模型。防重入：reset/restart 快速连点只跑一份。
+   * Play 期真角色装配（docs/20 M2/M3）：预载**全部**带「+动画」档的角色（清单
+   * 从 manifest 数据派生，禁手抄——手抄 = 第二真源）。不阻塞 Play——加载完成前
+   * 实体照画胶囊，完成后 `notifyActorsChanged()` 原地换真模型；单角色失败独立
+   * warn 退胶囊（ActorLibrary.preload 内建）。防重入：reset/restart 快速连点只跑一份。
    */
   let actorPreloading = false;
   async function kickActorPreload(): Promise<void> {
@@ -275,16 +280,21 @@ async function boot(): Promise<void> {
       // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
       // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
       await manifestReady;
-      const changed = await actorLib.preload('E-01');
-      // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
-      // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
-      //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
-      // 这里只处理新装配角色（changed = true）的追加上传。
-      if (!changed || playCtl.state === 'stopped') return;
-      const pal = actorLib.buildPalette();
-      if (pal !== null) {
-        renderer.setDynamicPalette(pal);
-        bridge.notifyActorsChanged();
+      // 🔴 串行 await + manifest 序：preload 顺序决定 paletteBase 分配（注册序拼接），
+      // 并行完成的乱序会让注册序不稳定 → paletteBase 漂移 → 确定性被破坏。
+      for (const id of findAnimatedCharacterIds(assetManifest)) {
+        const changed = await actorLib.preload(id);
+        // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
+        // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
+        //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
+        // 这里只处理新装配角色（changed = true）的追加上传。Stop 后继续把剩余
+        // 角色装配进 CPU 缓存是安全的（下次 Play 直接命中，不产生 GPU 副作用）。
+        if (!changed || playCtl.state === 'stopped') continue;
+        const pal = actorLib.buildPalette();
+        if (pal !== null) {
+          renderer.setDynamicPalette(pal);
+          bridge.notifyActorsChanged();
+        }
       }
     } finally {
       actorPreloading = false;
