@@ -1179,6 +1179,17 @@ async function boot(): Promise<void> {
     scriptPanel.render(scripts);
   }
 
+  // 选中变化的**唯一收口**：任何路径改了选中（视口点选 / 层级点选 / 双击聚焦 /
+  // focusNode / 删除 / 隐藏 / 拖入资产后自动选中）都会回调这里，面板必然跟着刷。
+  // 之前靠每个调用点自己记得调刷新，漏了 7 条——其中 focusNode 那条会让
+  // stopPlay() 后显示停 Play 前选中的物体，属于"显示了错的东西"。
+  //
+  // 🔴 注册位置必须在 `scriptPanel` 初始化**之后**：回调一注册就可能被触发，
+  //    而 scriptPanel 是 const，在其初始化前访问会直接 ReferenceError（TDZ）。
+  panel.onObjectSelect = () => {
+    refreshSpawnPanel();
+  };
+
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
     if (doc === null) {

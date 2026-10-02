@@ -174,6 +174,14 @@ describe('disableControls · 只读态置灰', () => {
     expect(twice.match(/disabled/g)?.length).toBe(1);
   });
 
+  it('🔴 class / data-* 里的 "disabled" 字样不算属性，仍要置灰', () => {
+    // 只看"有没有这个词"会误判，导致只读态静默停止置灰（看起来置灰其实没有）
+    expect(disableControls('<input class="bh-disabled">')).toBe(
+      '<input disabled class="bh-disabled">',
+    );
+    expect(disableControls('<input data-mode="disabled-mode">')).toContain('<input disabled');
+  });
+
   it('只作用于控件标签，不误伤 label / div', () => {
     const out = disableControls('<div class="bh-row"><label>数量</label><input type="number"></div>');
     expect(out).not.toContain('<div disabled');

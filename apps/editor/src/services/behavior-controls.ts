@@ -155,10 +155,17 @@ export function parseControlValue(
  * 那是最难查的一类假象（用户以为改了，刷新一看还在原值）。
  */
 export function disableControls(html: string): string {
-  // 负向前瞻：标签内已经有 disabled 就跳过，保证**幂等**——
-  // 否则重复调用会产出 `<input disabled disabled`，虽然浏览器能容错，
-  // 但那属于"能跑就行"的脏输出，不该留。
-  return html.replace(/<(input|select|textarea)\b(?![^>]*\bdisabled\b)/g, '<$1 disabled');
+  // 负向前瞻：标签内**已经有 disabled 属性**就跳过，保证幂等（否则重复调用会产出
+  // `<input disabled disabled>`，浏览器虽能容错，但那属于"能跑就行"的脏输出）。
+  //
+  // 🔴 判定必须按**属性 token**，不能只搜"标签里有没有 disabled 这个词"：
+  //    `class="bh-disabled"` / `data-x="disabled-mode"` 都会命中词边界却不是属性，
+  //    那样只读态会**静默停止置灰**（看起来置灰其实没有）。
+  //    所以要求 disabled 前后是空白或引号/等号的**属性分隔符**。
+  return html.replace(
+    /<(input|select|textarea)\b(?![^>]*[\s"']disabled[\s"'>\/=])/g,
+    '<$1 disabled',
+  );
 }
 
 /**
