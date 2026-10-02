@@ -114,6 +114,17 @@ describe('planPlayCamera · 姿态计算', () => {
   it('锚点节点取不到世界坐标 → null（不要静默用原点）', () => {
     expect(planPlayCamera(entry, posOf({}))).toBeNull();
   });
+
+  it('🔴 数值守卫：字段缺失/非有限 → null（否则 distance=NaN 会让视口黑屏）', () => {
+    const base = { nodeId: 'cam1', cam: null as never };
+    const mk = (over: Record<string, unknown>) =>
+      ({ nodeId: 'cam1', cam: cam(over) as never }) as never;
+    void base;
+    expect(planPlayCamera(mk({ distance: undefined }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
+    expect(planPlayCamera(mk({ pitchDeg: 'x' }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
+    expect(planPlayCamera(mk({ distance: 0 }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
+    expect(planPlayCamera(mk({ distance: -5 }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
+  });
 });
 
 describe('PlayCameraController · 保存与还原', () => {
@@ -169,10 +180,15 @@ describe('PlayCameraController · 保存与还原', () => {
     const pc = new PlayCameraController(h.view);
 
     // follow
-    pc.attach(doc([node('cam1', [cam({ mode: 'orbit-follow' })])], 'cam1'), posOf({ cam1: [0, 0, 0] }));
-    pc.update({ x: 12, z: 8, yaw: 0 });
+    pc.attach(
+      doc([node('cam1', [cam({ mode: 'orbit-follow', yawOffsetDeg: 90 })])], 'cam1'),
+      posOf({ cam1: [0, 0, 0] }),
+    );
+    pc.update({ x: 12, z: 8, yaw: Math.PI });
     expect(h.cur.target[0]).toBe(12);
     expect(h.cur.target[2]).toBe(8);
+    // yaw = 玩家朝向 + yawOffsetDeg：是"相对目标朝向"，不是固定世界方向
+    expect(h.cur.yaw).toBeCloseTo(Math.PI + Math.PI / 2, 5);
 
     // fixed：即便传了玩家位置也不动
     const h2 = harness();

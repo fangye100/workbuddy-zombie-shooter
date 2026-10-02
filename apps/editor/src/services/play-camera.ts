@@ -99,6 +99,14 @@ export function planPlayCamera(
   baseYaw = 0,
 ): ViewCameraState | null {
   const { cam } = entry;
+  // 🔴 数值守卫：场景里 Camera 组件可能缺字段（sandbox/default.scene.json 就缺
+  // distance 与 yawOffsetDeg）。直接喂给相机会让 distance 变 NaN → 视口黑屏。
+  // 宁可按"没有可用相机"处理（保持编辑机位），也不要把视口弄黑。
+  for (const v of [cam.distance, cam.pitchDeg, cam.yawOffsetDeg]) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+  }
+  if (cam.distance <= 0) return null;
+
   const anchorId = cam.followTarget ?? entry.nodeId;
   const p = worldPosOf(anchorId);
   if (p === null) return null;
@@ -124,6 +132,8 @@ export class PlayCameraController {
   private plan: ViewCameraState | null = null;
   private mode: CameraComponent['mode'] | null = null;
   private anchorId: NodeId | null = null;
+  /** 相对目标朝向的偏航偏移（度）。schema 语义：相对目标，不是绝对世界方向 */
+  private yawOffsetDeg = 0;
 
   constructor(view: ViewCameraControl) {
     this.view = view;
@@ -146,6 +156,7 @@ export class PlayCameraController {
     this.plan = plan;
     this.mode = entry.cam.mode;
     this.anchorId = entry.cam.followTarget ?? entry.nodeId;
+    this.yawOffsetDeg = entry.cam.yawOffsetDeg;
     this.view.set(plan);
     return true;
   }
@@ -164,6 +175,9 @@ export class PlayCameraController {
     this.view.set({
       ...cur,
       target: [target.x, cur.target[1], target.z],
+      // yaw 也要跟：yawOffsetDeg 是"相对目标朝向"的偏移，玩家转身相机必须跟着转，
+      // 否则它退化成固定世界方向，与 schema 语义不符。
+      yaw: target.yaw + rad(this.yawOffsetDeg),
     });
   }
 
