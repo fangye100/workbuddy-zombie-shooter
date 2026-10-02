@@ -1,3 +1,15 @@
+# 🔴 行尾统一（2026-10-02 补）
+#
+# 没有这条规则时，行尾全靠各工具的本地行为决定 —— 实测后果：
+#   apps/editor/src/main.ts 曾被整文件写成 CRLF，之后又被某个**功能**提交整文件
+#   改回 LF（+3793/−3754，实质改动仅 39 行），git blame 对 3793 行全部指向那一个
+#   提交，PR diff 没人能审。
+# 有了这条规则，提交时统一规范化成 LF，工作区检出也是 LF —— 行尾不再进 diff。
+#
+# 必须放在**最前面**：gitattributes 后面的规则覆盖前面的，若放在 LFS 条目之后
+# 会反过来覆盖它们的 `-text`（LFS 文件绝不能被行尾转换，否则内容 hash 变了）。
+* text=auto eol=lf
+
 # 角色概念图（生成服务原图，二进制）
 assets/characters/images/** filter=lfs diff=lfs merge=lfs -text
 
