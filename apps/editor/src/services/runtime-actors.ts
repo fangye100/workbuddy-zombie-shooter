@@ -53,6 +53,24 @@ export interface ActorMesh {
   restPose: number;
   /** 网格原点 → 脚底的高度（实例 y = feetOffset 让模型踩在实体坐标上） */
   feetOffset: number;
+  /** 本角色的烘焙调色板（纯数据；M3 相位查表 poseIndexAt 的输入） */
+  palette: BakedPalette;
+  /**
+   * 动画片段元数据（M3）：从 palette.clips + clipBasePose 派生，全部是
+   * **角色 palette 内的局部**量 —— Bridge 选片（idle/walk）与打包
+   * inst[12]=frameCount / 相位推进（durationSec）用。
+   */
+  clips: ActorClipMeta[];
+}
+
+/** 单个动画片段的查表元数据（局部于本角色 palette；M3 动画相位用） */
+export interface ActorClipMeta {
+  name: string;
+  /** 该 clip 第 0 帧在本角色 palette 里的局部 pose 下标（= BakedPalette.clipBasePose[i]） */
+  basePose: number;
+  frameCount: number;
+  /** 片段时长（秒）——相位推进速度的分母 */
+  durationSec: number;
 }
 
 /** LOD 标签关键字：manifest 里「+动画」档 = rigged_animated GLB（docs/20 §5） */
@@ -115,7 +133,7 @@ export class ActorLibrary {
   /** asset-manifest.json 的原始 JSON（可后补，见 setManifest） */
   private manifestJson: unknown;
   /** characterId → 已装配角色（注册序即 palette 拼接序） */
-  private readonly entries = new Map<string, ActorMesh & { palette: BakedPalette }>();
+  private readonly entries = new Map<string, ActorMesh>();
   /** 本轮已失败的角色（不重试；clear() 后重新开始） */
   private readonly failed = new Set<string>();
   private readonly fetcher: (path: string) => Promise<ArrayBuffer>;
@@ -197,6 +215,13 @@ export class ActorLibrary {
       if (glb.animations.length === 0) throw new Error('GLB 无动画片段');
 
       const palette = bakePosePalette(sk, glb.animations);
+      // 片段元数据（M3）：合并 BakedPalette.clips 与 clipBasePose，Bridge 选片用
+      const clips: ActorClipMeta[] = palette.clips.map((c, i) => ({
+        name: c.name,
+        basePose: palette.clipBasePose[i]!,
+        frameCount: c.frameCount,
+        durationSec: c.durationSec,
+      }));
       // 全局 paletteBase = 已注册角色 pose 总数（注册序拼接；数学归 assemblePalettes）
       let base = 0;
       for (const e of this.entries.values()) base += palettePoseCount(e.palette);
@@ -216,6 +241,7 @@ export class ActorLibrary {
         restPose: bindPoseIndex(palette),
         feetOffset: meshMinY(mesh),
         palette,
+        clips,
       });
       return true;
     } catch (e) {
