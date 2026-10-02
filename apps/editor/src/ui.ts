@@ -270,6 +270,18 @@ export class Panel {
   onFunctionalSelect: ((node: FunctionalNodeInfo | null) => void) | null = null;
   /** 物体选中/取消把功能体高亮清掉时通知外部（收起功能体属性分组）——与 onFunctionalSelect(null) 等价但语义独立 */
   onFunctionalDeselect: (() => void) | null = null;
+  /**
+   * 物体选中变化的**唯一收口**通知。
+   *
+   * 为什么要这个钩子：此前每个调用点自己记得调刷新，结果 7 条选中路径漏掉
+   * （视口点选 / 层级点选 / 双击聚焦 / focusNode / 层级删除 / Delete 键 / 隐藏、
+   * 还有拖入资产后自动选中）。其中 focusNode 那条最糟——stopPlay() 后显示的是
+   * **停 Play 前选中的物体**，而不是刚定位到的来源节点。
+   *
+   * 收口在这里之后，"选中即刷"成为不变量：将来新增任何选中路径都不用再记得补刷新。
+   * 重复刷新是幂等的（面板全量重绘），多刷一次无害。
+   */
+  onObjectSelect: (() => void) | null = null;
 
   private readonly renderer: LabRenderer;
 
@@ -1161,6 +1173,9 @@ export class Panel {
       this.setFunctionalSelection(null);
       this.onFunctionalDeselect?.();
     }
+    // 选中变化统一在这里通知宿主，覆盖全部 return 分支（含 index=null 与
+    // 取不到状态的退化分支）——不要靠调用方各自记得刷新。
+    this.onObjectSelect?.();
     this.syncHierarchySelection(); // 只 toggle 一个 class，不重建列表
     if (index === null) {
       this.selEmpty.style.display = '';

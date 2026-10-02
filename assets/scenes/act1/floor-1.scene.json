@@ -124,6 +124,46 @@
       "prefab": null
     },
     {
+      "id": "nd_f1_demo_script",
+      "name": "演示脚本 · 触发记录",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "Script",
+          "enabled": true,
+          "behavior": "debug-on-trigger-log",
+          "params": {
+            "message": "火场心跳",
+            "maxTick": 3,
+            "enabled": true,
+            "tag": "info"
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
       "id": "nd_f1_void",
       "name": "虚空底",
       "parent": null,
@@ -259,12 +299,12 @@
     },
     {
       "id": "nd_f1r0_cv0",
-      "name": "掩体 1",
+      "name": "掩体 1 · P-04",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           -4
         ],
         "rotation": [
@@ -287,13 +327,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -317,9 +354,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -330,12 +367,12 @@
     },
     {
       "id": "nd_f1r0_cv1",
-      "name": "掩体 2",
+      "name": "掩体 2 · P-14",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
           6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -358,13 +395,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -388,9 +422,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.4,
+              0.3,
+              0.9
             ]
           },
           "isTrigger": false,
@@ -401,12 +435,12 @@
     },
     {
       "id": "nd_f1r0_cv2",
-      "name": "掩体 3",
+      "name": "掩体 3 · P-03",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -429,13 +463,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -459,9 +490,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.9,
+              0.55,
+              0.65
             ]
           },
           "isTrigger": false,
@@ -944,12 +975,12 @@
     },
     {
       "id": "nd_f1r2_cv0",
-      "name": "掩体 1",
+      "name": "掩体 1 · P-04",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           -4
         ],
         "rotation": [
@@ -972,13 +1003,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1002,9 +1030,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -1015,12 +1043,12 @@
     },
     {
       "id": "nd_f1r2_cv1",
-      "name": "掩体 2",
+      "name": "掩体 2 · P-14",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
           6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -1043,13 +1071,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1073,9 +1098,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.4,
+              0.3,
+              0.9
             ]
           },
           "isTrigger": false,
@@ -1086,12 +1111,12 @@
     },
     {
       "id": "nd_f1r2_cv2",
-      "name": "掩体 3",
+      "name": "掩体 3 · P-03",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -1114,13 +1139,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1144,9 +1166,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.9,
+              0.55,
+              0.65
             ]
           },
           "isTrigger": false,
@@ -1466,8 +1488,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-15T05:46:15.006Z",
-    "updatedAt": "2026-09-15T05:46:15.006Z",
+    "createdAt": "2026-10-02T06:29:38.540Z",
+    "updatedAt": "2026-10-02T06:29:38.540Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

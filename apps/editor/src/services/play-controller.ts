@@ -9,19 +9,46 @@
  *   2. 把 PlaySession 的世界推进同步给 Bridge（推进后 refresh 一次）；
  *   3. 把状态变化通知给 UI（按钮启用/禁用、层级面板刷新）。
  *
- * 相机按 A 方案：**不引入游戏相机，编辑相机在 Play 中照常自由移动**。
- * docs/17 要求的是「检查视角可以自由移动，不能反向改变玩家状态」——
- * 编辑相机写的是 `camera` 对象，玩家位置在 RuntimeSession 的实体表里，两条路径
- * 本来就互不干涉，加一个游戏相机反而会让"改之前/改之后"没法同机位对比。
+ * ## 相机（ADR-018 P6，已改）
+ *
+ * 早期（docs/17 WU-4）定的是 A 方案：**不引入游戏相机**，编辑相机在 Play 中
+ * 照常自由移动，理由是"改之前/改之后要能同机位对比"。
+ *
+ * 🔴 **该方案已被 P6 取代**：现在 Play 会切到场景的游戏相机（`entryCamera` →
+ * 第一个启用的 Camera 组件），Stop 精确还原编辑机位。上面那段旧说明已作废，
+ * 保留这段是为了说明"为什么变了"——别照旧注释理解现状。
+ *
+ * 不接管的情况（场景无可用 Camera / 未注入 viewCamera）仍保持编辑相机自由移动，
+ * 即旧的 A 方案行为，所以调试对比能力没有丢。
  */
 
 import { PlaySession, type PlayState } from '@aether/runtime';
+import type { BehaviorExecutor } from '@aether/runtime';
+import {
+  PlayCameraController,
+  type ViewCameraControl,
+  type WorldPosOf,
+} from './play-camera';
 import type { RuntimeBridge } from './runtime-bridge';
 import type { AuthorSnapshot, LabRenderer } from '../renderer';
 
 export interface PlayControllerOptions {
   seed?: number;
   capacity?: number;
+  /**
+   * 行为执行器（ADR-018 P3）。由**编辑器宿主**注入（`behavior-host.ts` 提供），
+   * runtime 侧保持纯 CPU、不 import 行为代码。
+   */
+  executor?: BehaviorExecutor;
+  /**
+   * 主视图相机控制（ADR-018 P6）。传入后 Play 会切到场景的游戏相机。
+   *
+   * **不传 = 保持编辑相机不动**（此前的行为）。必须显式传入，避免"悄悄改了视角"
+   * 这种没有声明的副作用。
+   */
+  viewCamera?: ViewCameraControl;
+  /** 取场景节点世界坐标（Play 相机定位用） */
+  worldPosOf?: WorldPosOf;
   /** 状态变化时回调（UI 据此刷新按钮与面板） */
   onStateChange?: () => void;
 }
@@ -31,6 +58,9 @@ export class PlayController {
   private readonly bridge: RuntimeBridge;
   private readonly renderer: LabRenderer;
   private readonly onStateChange: (() => void) | null;
+  /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
+  private readonly playCamera: PlayCameraController | null;
+  private readonly worldPosOf: WorldPosOf | null;
   private snap: AuthorSnapshot | null = null;
   private lastError: string | null = null;
 
@@ -38,7 +68,17 @@ export class PlayController {
     this.renderer = renderer;
     this.bridge = bridge;
     this.onStateChange = opts.onStateChange ?? null;
-    this.session = new PlaySession({ seed: opts.seed ?? 1, capacity: opts.capacity ?? 512 });
+    // 没传 viewCamera 就是"不接管相机"，此时控制器存在但 attach 恒为 false
+    this.playCamera =
+      opts.viewCamera === undefined
+        ? null
+        : new PlayCameraController(opts.viewCamera);
+    this.worldPosOf = opts.worldPosOf ?? null;
+    this.session = new PlaySession({
+      seed: opts.seed ?? 1,
+      capacity: opts.capacity ?? 512,
+      ...(opts.executor !== undefined ? { executor: opts.executor } : {}),
+    });
   }
 
   get state(): PlayState {
@@ -96,6 +136,21 @@ export class PlayController {
     }
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
+
+    // Play 相机（ADR-018 P6）。相机不在 AuthorSnapshot 里，所以必须自己存/还原：
+    // attach 内部先存编辑相机再切游戏相机，顺序反了就还原不回去。
+    if (this.playCamera !== null && this.worldPosOf !== null) {
+      const took = this.playCamera.attach(doc, this.worldPosOf);
+      if (took) {
+        // 🔴 登记顺序 = 释放顺序，勿随意调整。
+        // 相机登记在 bridge-batches（下面）**之前**，是为了保证 Stop 时先还原相机、
+        // 再摘 Bridge —— 反序会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
+        // stop() 里另有一句显式 detach 作为第一重保险；两重都在，去掉任一重仍成立，
+        // 但**不要两重都去**。
+        this.session.registerResource('play-camera', () => this.playCamera?.detach());
+      }
+    }
+
     this.bridge.attach(this.session.runtime);
     // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
     // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
@@ -155,16 +210,40 @@ export class PlayController {
       }
       this.snap = null;
     }
+    // 先还原相机，再断会话：反过来做的话，恢复期间画面还挂着游戏机位，
+    // 会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
+    this.playCamera?.detach();
     this.session.stop();
     this.bridge.attach(null);
     this.notify();
   }
 
-  /** 每帧调用：推进固定步 → 同步实例数据。返回本帧走的步数 */
+  /** 每帧调用：推进固定步 → 同步实例数据 → 跟随相机。返回本帧走的步数 */
   update(dt: number): number {
     const n = this.session.advance(dt);
-    if (n > 0) this.bridge.refresh();
+    if (n > 0) {
+      this.bridge.refresh();
+      this.syncPlayCamera();
+    }
     return n;
+  }
+
+  /**
+   * 让游戏相机跟随玩家（仅 orbit-follow 模式生效）。
+   *
+   * 玩家位置取自**运行时实体**而不是场景节点——场景里的节点是静态的，
+   * 只有玩家实体会在 Play 中移动。取不到玩家（还没生成/已死亡）就传 null，
+   * 相机保持上一次的位置，不抖动。
+   */
+  private syncPlayCamera(): void {
+    if (this.playCamera === null || !this.playCamera.active) return;
+    const rt = this.session.runtime;
+    if (rt === null) {
+      this.playCamera.update(null);
+      return;
+    }
+    const p = rt.view().find((e) => e.kind === 'player');
+    this.playCamera.update(p === undefined ? null : { x: p.x, z: p.z, yaw: p.yaw });
   }
 
   private notify(): void {

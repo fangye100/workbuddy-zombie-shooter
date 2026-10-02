@@ -1,5 +1,7 @@
 import { loadLevelRuntime, type LoadDiagnostic } from './loader';
 import { createSession } from './session';
+import type { BehaviorExecutor } from './behavior-executor';
+import { NULL_BEHAVIOR_EXECUTOR } from './behavior-executor';
 import type { RuntimeSession, EntityView, RuntimeDiagnostic } from './session';
 import type { SceneDocument } from '@aether/scene';
 
@@ -29,6 +31,11 @@ export interface PlaySessionOptions {
   capacity?: number;
   /** 单帧最多补几步。默认 5 —— 卡顿后补几百步等于瞬移，宁可慢放 */
   maxCatchUpSteps?: number;
+  /**
+   * 行为执行器（ADR-018 P3，宿主注入）。
+   * 不传 = 空执行器（每个脚本产出 W_BEHAVIOR_UNAVAILABLE，显式可见而非静默）。
+   */
+  executor?: BehaviorExecutor;
 }
 
 export interface PlayResult {
@@ -70,6 +77,8 @@ export class PlaySession {
   readonly seed: number;
   readonly fixedStep: number;
   readonly capacity: number;
+  /** 行为执行器（宿主注入）。本代 Play 内冻结，改代码必须 Stop 后重跑 */
+  readonly executor: BehaviorExecutor;
   readonly maxCatchUpSteps: number;
 
   /** 启停次数。资源账目平衡断言用它（浏览器侧配 draw call / 实例数回落） */
@@ -84,6 +93,8 @@ export class PlaySession {
     this.seed = opts.seed ?? 1;
     this.fixedStep = opts.fixedStep ?? 1 / 30;
     this.capacity = opts.capacity ?? 512;
+    // 行为执行器由宿主注入（ADR-018 R3）。冻结在会话上：本代 Play 内行为代码不可变。
+    this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
     this.maxCatchUpSteps = opts.maxCatchUpSteps ?? 5;
   }
 
@@ -175,6 +186,7 @@ export class PlaySession {
       seed: this.seed,
       capacity: this.capacity,
       fixedStep: this.fixedStep,
+      executor: this.executor,
     });
     this._state = 'playing';
     this.accumulator = 0;

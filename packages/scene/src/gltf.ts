@@ -776,7 +776,7 @@ export function collectMeshInstances(json: GltfJson): { mesh: number; m: Float32
   return collectSceneGraph(json).instances.map(({ mesh, m }) => ({ mesh, m }));
 }
 
-export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
+export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05): GltfResult {
   if (buf.byteLength < 20) throw new Error('文件太小，不是合法的 glb');
   const head = new DataView(buf);
   if (head.getUint32(0, true) !== 0x46546c67) throw new Error('不是 glTF 二进制（缺 glTF magic）');
@@ -1084,7 +1084,10 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
   const cx = (minX + maxX) / 2;
   const cz = (minZ + maxZ) / 2;
   const height = Math.max(1e-5, maxY - minY);
-  const s = targetHeight / height;
+  // targetHeight = null：保持资产原始尺寸（环境道具按 props.json 契约 1unit=1m
+  // 授权，**不该**被角色标尺归一 —— 否则轿车会被拉成 6m 长。仍做居中与
+  // Z-up→Y-up 旋转，只跳过缩放。
+  const s = targetHeight === null ? 1 : targetHeight / height;
 
   // 规整化矩阵 T：v' = s·(R·v − center) = Tc(−s·center) · S(s) · R（v 齐次）。
   // R 为 Z-up→Y-up 旋转（或 I），与上方顶点旋转一致；蒙皮求值端会用它共轭关节矩阵。
@@ -1257,7 +1260,8 @@ export function parseGlb(buf: ArrayBuffer, targetHeight = 2.05): GltfResult {
     name: meshName ?? img?.name ?? '',
     vertices: base,
     triangles: idxArr.length / 3,
-    heightMeters: targetHeight,
+    // 保持原始尺寸时，报告实际高度（不是 null）—— 消费方拿它做校验/显示
+    heightMeters: targetHeight ?? height,
     subMeshes,
     nodeTree: graph.tree,
     image,

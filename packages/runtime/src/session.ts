@@ -30,6 +30,14 @@ import { NPC_STATS, PLAYER_STATS, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
+import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from './behavior-executor';
+import { NULL_BEHAVIOR_EXECUTOR } from './behavior-executor';
+
+/**
+ * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
+ * 长时间跑不封顶会吃光内存，且冲掉的都是最早（往往最有用）的记录。
+ */
+const BEHAVIOR_LOG_LIMIT = 200;
 
 /** 线性同余伪随机。固定种子 → 完全可复现的散布 */
 export function makeRng(seed: number): () => number {
@@ -63,6 +71,13 @@ export interface SessionOptions {
   fixedStep?: number;
   /** 实体容量上限。超过则整批拒绝（原子性） */
   capacity?: number;
+  /**
+   * 行为执行器（ADR-018 P3）。**由宿主注入**，runtime 不 import 行为代码。
+   *
+   * 不传 = `NULL_BEHAVIOR_EXECUTOR`（全部返回 false → 每个脚本产出一条未注册诊断），
+   * 让"没接执行器"显式可见，而不是静默什么都不做。
+   */
+  executor?: BehaviorExecutor;
 }
 
 export type EntityKind = 'player' | 'npc';
@@ -190,6 +205,22 @@ export class RuntimeSession {
   private tickCount = 0;
   private readonly capacity: number;
 
+  /**
+   * 行为执行器（宿主注入，ADR-018 R3：runtime 不 import 行为代码）。
+   *
+   * **装载期冻结**：本代 Play 内行为代码不可变，改代码必须 Stop 后重跑
+   * （与 `runId` 代次对齐）。这不是限制，是为了不让新旧闭包混在同一帧里。
+   */
+  private readonly executor: BehaviorExecutor;
+
+  /** 行为日志（ctx.log 的落地处）。不落盘，供 UI / 测试查询 */
+  private readonly behaviorLogs: BehaviorLogEntry[] = [];
+
+  /** 行为日志只读视图（按时间顺序） */
+  get behaviorLog(): readonly BehaviorLogEntry[] {
+    return this.behaviorLogs;
+  }
+
   /** 运行期诊断累计（容量拒绝等）。与装载期诊断分开：装载一次性，运行每步都可能产生 */
   private readonly diags: RuntimeDiagnostic[] = [];
   private readonly diagSeen = new Set<string>();
@@ -202,6 +233,7 @@ export class RuntimeSession {
     const capacity = opts.capacity ?? 512;
     this.capacity = capacity;
     this.runId = NEXT_RUN_ID++;
+    this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
 
     this.tbl = new CharacterTable(this.capacity);
     this.sourceOf = new Array<NodeId | null>(capacity).fill(null);
@@ -342,6 +374,9 @@ export class RuntimeSession {
     this.movePlayer();
     this.moveNpcs();
     this.tickCount += 1;
+    // 脚本在移动之后执行：行为看到的是**本步最终位置**，
+    // 否则"判断僵尸是否进入某区域"这类逻辑会差一步。
+    this.runScripts();
     for (const j of r.rejections) {
       this.pushDiag(
         'W_SPAWN_CAPACITY',
@@ -373,6 +408,62 @@ export class RuntimeSession {
     this.diags.length = 0;
     this.diagSeen.clear();
     return out;
+  }
+
+  /**
+   * 执行场景节点上的脚本（ADR-018 P3）。
+   *
+   * 三条规定：
+   * - 顺序按 `desc.scripts` 的装载顺序（文档顺序 → 确定性可复现，不依赖 Map 迭代序）；
+   * - 单个行为不可用只记诊断，**不中断整批**（ADR-017：一个挂掉的行为
+   *   不该让整个场景打不开，更不能让其余脚本陪葬）；
+   * - 诊断按 (code, nodeId) 去重 —— 未注册的行为每个 tick 都会命中，
+   *   逐步 push 会把真正重要的那一条冲掉。
+   */
+  private runScripts(): void {
+    if (this.desc.scripts.length === 0) return;
+    for (const s of this.desc.scripts) {
+      const ctx: BehaviorContext = {
+        tick: this.tickCount,
+        runId: this.runId,
+        log: (message) => {
+          // 行为可能每 tick 都打日志，必须封顶——否则长时间跑会吃光内存，
+          // 而且冲掉的都是最早（往往最有用）的记录。封顶后丢最旧的。
+          if (this.behaviorLogs.length >= BEHAVIOR_LOG_LIMIT) this.behaviorLogs.shift();
+          this.behaviorLogs.push({
+            tick: this.tickCount,
+            nodeId: s.nodeId,
+            behavior: s.behavior,
+            message,
+          });
+        },
+      };
+      // 🔴 runtime 不信任执行器：行为代码是内容层（Agent 自由创作），
+      // 抛异常是常态而不是意外。执行器自己该兜住，但 runtime 不能把"运行时崩掉"
+      // 寄托在注入方的自觉上 —— 这里再兜一层，异常一律降级为跳过。
+      let ok = false;
+      try {
+        ok = this.executor.run(s, ctx);
+      } catch (e) {
+        // 记完 THREW 就 continue：不再叠加 UNAVAILABLE ——
+        // 一次失败出两条语义矛盾的诊断（PR#16 review）
+        this.pushDiag(
+          'W_BEHAVIOR_THREW',
+          `脚本「${s.behavior}」（节点 ${s.nodeId}）执行时抛出异常，本轮跳过：${
+            e instanceof Error ? e.message : String(e)
+          }`,
+          s.nodeId,
+        );
+        continue;
+      }
+      if (!ok) {
+        this.pushDiag(
+          'W_BEHAVIOR_UNAVAILABLE',
+          `脚本「${s.behavior}」（节点 ${s.nodeId}）未注册或不可用，本轮降级为空操作`,
+          s.nodeId,
+        );
+      }
+    }
   }
 
   private pushDiag(code: string, message: string, nodeId: NodeId | null): void {
@@ -407,6 +498,7 @@ export class RuntimeSession {
     this.tickCount = 0;
     this.diags.length = 0;
     this.diagSeen.clear();
+    this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
@@ -632,7 +724,7 @@ export class RuntimeSession {
 /** 便捷入口：装载 + 建会话。CLI 与浏览器都走这里，保证语义一致 */
 export function createSession(
   desc: LevelRuntimeDesc,
-  opts: { seed?: number; fixedStep?: number; capacity?: number } = {},
+  opts: { seed?: number; fixedStep?: number; capacity?: number; executor?: BehaviorExecutor } = {},
 ): RuntimeSession {
   return new RuntimeSession({ desc, ...opts });
 }

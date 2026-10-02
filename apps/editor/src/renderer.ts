@@ -38,6 +38,8 @@ import {
   migrateToLatest,
   SceneGraph,
   instantiateScene,
+  buildBuiltinMesh,
+  parseGlb,
   type MeshData,
 } from '@aether/scene';
 import * as m4 from '@aether/core';
@@ -939,9 +941,30 @@ export class LabRenderer {
 
     const specs: ObjectSpec[] = [];
     const warnings: string[] = [];
+    // 外部资产（source.type === 'asset'）在装载期用包围盒占位几何先上，
+    // 主场景就绪后由 loadSceneAssets() 异步补载真 GLB（P4b）。
+    // 之前是直接跳过 → "场景里引用的 GLB 永远不显示"，这正是本次要修的。
+    const pendingAssets: { index: number; path: string; submesh: string | null; name: string }[] = [];
     for (const o of inst.objects) {
-      if (o.mesh === null) {
-        warnings.push(`${o.name}：外部资产网格暂不支持在场景加载期同步取用，已跳过`);
+      let mesh = o.mesh;
+      if (mesh === null && o.source.type === 'asset') {
+        // 占位：按来源包围盒做一个 box 顶住，避免"物体凭空消失"。
+        // 尺寸后面由 parseGlb 的真实网格替换，这里只保证可拾取可定位。
+        const placeholder = buildBuiltinMesh('box', [1, 1, 1]);
+        if (placeholder === null) {
+          warnings.push(`${o.name}：占位几何构建失败，已跳过`);
+          continue;
+        }
+        mesh = placeholder;
+        pendingAssets.push({
+          index: specs.length,
+          path: o.source.ref.path,
+          submesh: o.source.ref.sub ?? null,
+          name: o.name,
+        });
+      }
+      if (mesh === null) {
+        warnings.push(`${o.name}：网格来源未知，已跳过`);
         continue;
       }
       // 材质 id → 共享材质槽位下标。'mat3' → 3；认不出来回落 mat0（不猜、不静默丢物体）
@@ -950,7 +973,7 @@ export class LabRenderer {
         warnings.push(`${o.name}：材质 id 「${o.materialId}」不是共享材质，已回落 mat0`);
       }
       specs.push({
-        mesh: o.mesh,
+        mesh,
         material: idx ?? 0,
         pos: [o.position[0], o.position[1], o.position[2]],
         quat: [o.quaternion[0], o.quaternion[1], o.quaternion[2], o.quaternion[3]],
@@ -1013,6 +1036,9 @@ export class LabRenderer {
     }
     for (const w of picked.warnings) warnings.push(w);
 
+    // 待补载的外部资产清单（P4b）。交给宿主在场景就绪后调 loadSceneAssets()。
+    this.pendingSceneAssets = pendingAssets;
+
     return {
       ok: true,
       url,
@@ -1025,6 +1051,75 @@ export class LabRenderer {
       pointLight,
     };
   }
+
+  /** 装载期收集的外部资产待补载清单（每轮 loadScene 重置） */
+  private pendingSceneAssets: { index: number; path: string; submesh: string | null; name: string }[] = [];
+
+  /** 待补载数量（宿主判断"要不要显示加载进度"用） */
+  get pendingAssetCount(): number {
+    return this.pendingSceneAssets.length;
+  }
+
+  /**
+   * 异步补载场景引用的外部 GLB（ADR-018 P4b）。
+   *
+   * 逐个 fetch → parseGlb → swapObjectAsset 原位替换占位几何。
+   * 单个失败只记 warning 并保留占位（不阻塞其余），全部失败也不算装载失败 ——
+   * 与"一个挂掉的行为不该让场景打不开"同一纪律。
+   *
+   * ## 尺寸语义（P4b 复审修）
+   *
+   * ruler 不再是一刀切的角色标尺：由 `resolveRuler` 按资产逐个给出 ——
+   * sidecar `importer.normalizeHeightM` 有值用它；为 null（环境道具的常态，
+   * props.json 契约 1unit=1m）则传 null 给 parseGlb **保持原始尺寸**。
+   * 此前一刀切 2.05m 会把 P-11 轿车拉成 6m 长、货车压成 0.65m 宽。
+   *
+   * 🔴 调用时机：场景装载完成**且未进 Play**。Play 中物体网格属于作者状态快照
+   * 的一部分，装载中途换网格会让 Stop 恢复的索引对不上号（复审 #3 同源问题）。
+   *
+   * @param fetchAsset 宿主注入的资产读取器（默认走 /__fs/file，见 asset-util）
+   * @param decode 宿主注入的贴图解码器
+   * @param resolveRuler 宿主注入的逐资产标尺（null = 保持原始尺寸）
+   */
+  public async loadSceneAssets(
+    fetchAsset: (rel: string) => Promise<ArrayBuffer>,
+    decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
+    resolveRuler: (rel: string) => Promise<number | null>,
+  ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
+    const failed: { name: string; reason: string }[] = [];
+    let swapped = 0;
+    for (const p of this.pendingSceneAssets) {
+      try {
+        const buffer = await fetchAsset(p.path);
+        const ruler = await resolveRuler(p.path);
+        const model = parseGlb(buffer, ruler);
+        const bmp = model.image === null ? null : await decode(model.image, p.path);
+        // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
+        // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。
+        if (this.onPlayStateCheck?.() === true) {
+          failed.push({ name: p.name, reason: '补载期间进入 Play，本轮中止（Stop 后重载场景恢复）' });
+          continue;
+        }
+        const ok = this.swapObjectAsset(
+          p.index,
+          model.mesh,
+          model.subMeshes,
+          bmp,
+          model.skeleton,
+          model.nodeTree,
+        );
+        if (ok) swapped++;
+        else failed.push({ name: p.name, reason: '物体索引已失效（可能已被删除）' });
+      } catch (e) {
+        failed.push({ name: p.name, reason: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    this.pendingSceneAssets = [];
+    return { swapped, failed };
+  }
+
+  /** 宿主注入的"是否已进入 Play"探针（loadSceneAssets 的竞态防御用） */
+  onPlayStateCheck: (() => boolean) | null = null;
 
   /**
    * 当前场景来源（null = 硬编码 fallback）。
@@ -1467,6 +1562,57 @@ export class LabRenderer {
     if (o === undefined || o.removed) return;
     this.uploadMesh(o, mesh, o.skeleton);
     this.recountTriangles();
+  }
+
+  /**
+   * 场景资产补载（ADR-018 P4b）：把一个已存在物体的占位几何换成外部 GLB。
+   *
+   * ## 为什么是"换"而不是 addObject
+   *
+   * 场景文件里该节点**本来就占一个物体槽位**（装载期用 builtin 占位几何顶着）。
+   * 若走 addObject 会加数 —— Play 的作者状态按**索引**恢复（复审 #3），
+   * 物体数变了 Stop 后就张冠李戴。所以必须原位替换。
+   *
+   * ## 资源纪律（AGENTS.md §2.4 同精神）
+   *
+   * 替换会销毁旧 vb/ib/skin buffer 并按新网格重建；贴图若提供了新 bitmap
+   * 则替换并销毁旧自有贴图（ownsTexture 才允许销毁，共享白图/网格图不能动）。
+   *
+   * @returns false = 索引无效或物体已被删（墓碑）。不抛异常：单个资产补载失败
+   *          不该让整场景装载失败，调用方决定降级（保留占位几何 + 提示）。
+   */
+  public swapObjectAsset(
+    index: number,
+    mesh: MeshData,
+    ranges: SubMeshRange[] | null,
+    bitmap: ImageBitmap | null,
+    skeleton: SkeletonData | null = null,
+    nodeTree: readonly GltfNodeTree[] = [],
+  ): boolean {
+    const o = this.state.objects[index];
+    if (o === undefined || o.removed) return false;
+
+    this.uploadMesh(o, mesh, skeleton);
+
+    // ---- 贴图：有新图就换（销毁旧自有图）；没有则保留原样 ----
+    if (bitmap !== null) {
+      if (o.ownsTexture && o.texture !== null) o.texture.destroy();
+      o.texture = this.createTextureFromBitmap(bitmap);
+      o.ownsTexture = true;
+      o.useTex = true;
+    }
+
+    // ---- 子网格区间 + 层级树：材质绑定 / 层级面板 / 描边都依赖它 ----
+    // applySubMeshes 内部会做材质槽位预算裁剪并触发 bind group 重建
+    this.applySubMeshes(
+      index,
+      ranges !== null && ranges.length > 0
+        ? ranges.map((r) => ({ ...r, visible: true, override: null }))
+        : null,
+      [...nodeTree],
+    );
+    this.recountTriangles();
+    return true;
   }
 
   private createTextureFromBitmap(bitmap: ImageBitmap): GPUTexture {

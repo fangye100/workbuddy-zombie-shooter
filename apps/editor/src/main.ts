@@ -4,9 +4,9 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { MODEL_RULER_HEIGHT_M } from './models';
+import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
 import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -20,6 +20,8 @@ import {
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint, TransformValues } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
+import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
+import { ScriptPanel } from './services/script-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
@@ -182,6 +184,35 @@ async function boot(): Promise<void> {
    * 否则每次改完参数刷新页面都会被"已经在跑的世界"干扰判断。
    */
   const playCtl = new PlayController(renderer, bridge, {
+    // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
+    // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
+    executor: createBehaviorExecutor(),
+    // 主视图相机（ADR-018 P6）。
+    // 🔴 必须写成**闭包**：camera 对象与 panel.params 都定义在后面（相机在 407 行附近），
+    // 这里直接读值会踩 TDZ。Play 只在用户点击后触发，那时都已初始化，闭包是安全的。
+    viewCamera: {
+      get: () => ({
+        target: [camera.target[0], camera.target[1], camera.target[2]] as [number, number, number],
+        distance: camera.distance,
+        yaw: camera.yaw,
+        elevationDeg: panel.params.cameraElevation,
+      }),
+      set: (s) => {
+        camera.target[0] = s.target[0];
+        camera.target[1] = s.target[1];
+        camera.target[2] = s.target[2];
+        camera.distance = s.distance;
+        camera.yaw = s.yaw;
+        panel.params.cameraElevation = s.elevationDeg;
+      },
+    },
+    worldPosOf: (nodeId) => {
+      const doc = renderer.getDocument();
+      if (doc === null) return null;
+      const n = graphOfDoc(doc).getNode(nodeId);
+      if (n === null) return null;
+      return [n.world.position[0], n.world.position[1], n.world.position[2]] as [number, number, number];
+    },
     onStateChange: () => {
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
@@ -331,6 +362,7 @@ async function boot(): Promise<void> {
     renderer.selectObject(index, subIndex);
     panel.setSelection(index, subIndex);
     switchInspectorTab('inspector');
+    refreshSpawnPanel(); // 同上：层级点选也是选中变化，脚本分组要跟着重算
     hudDirty = true;
   };
   // 功能体（✦）行点选：与物体选中互斥，切到检视页显示对应属性分组（当前唯一功能体 = 刷怪点）
@@ -498,6 +530,35 @@ async function boot(): Promise<void> {
       `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
     );
     if (r.editorCamera !== undefined) applySceneCamera(r.editorCamera);
+    // 外部资产补载（ADR-018 P4b）：场景里的 GLB 引用（掩体等）异步换成真网格。
+    // 失败只告警并保留占位几何，不让装载失败 —— 与 spawnAssetAt 同一 fetch 链路。
+    // 🔴 必须在 Play 之前完成：Play 的作者状态按索引快照，装载中途换网格会让
+    // Stop 恢复对不上号（复审 #3 同源问题）。这里在 boot 阶段就做完。
+    if (renderer.pendingAssetCount > 0) {
+      const n = renderer.pendingAssetCount;
+      // 与 spawnAssetAt 同一条 fetch 链路（/__fs/file 端点，见 asset-util.fileUrl 注释：
+      // 直接 fetch 项目路径会被 vite SPA fallback 挡成 HTTP 200 + index.html）
+      renderer.onPlayStateCheck = () => playCtl.isPlaying;
+      const res = await renderer.loadSceneAssets(
+        async (rel) => {
+          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(rel)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return await resp.arrayBuffer();
+        },
+        decodeTexture,
+        // 逐资产标尺：sidecar normalizeHeightM 有值用它；null（环境道具常态，
+        // 1unit=1m）保持原始尺寸 —— 一刀切 2.05 会把轿车拉成 6m（P4b 复审修）
+        async (rel) => {
+          const r = await resolveModelHeightM(rel);
+          return r.fromMeta ? r.meters : null;
+        },
+      );
+      renderer.onPlayStateCheck = null;
+      if (res.failed.length > 0) {
+        for (const f of res.failed) console.warn(`[boot] 资产补载失败：${f.name} — ${f.reason}`);
+      }
+      console.info(`[boot] 场景资产补载：${res.swapped}/${n} 个外部 GLB 已就位`);
+    }
     // 环境与场景灯光写进面板（真源是场景文件，面板滑块是它的读写器），
     // syncAll 让「场景/光照」「渲染」页的控件立即反映覆盖后的值。
     if (r.environment !== undefined) applySceneEnvironment(r.environment);
@@ -630,6 +691,9 @@ async function boot(): Promise<void> {
     renderer.selectObject(idx);
     panel.setSelection(idx);
     switchInspectorTab('inspector');
+    // 选中变了必须刷面板。之前漏了这一句：脚本分组只在"先点过刷怪点功能体"
+    // 的巧合路径下才出现，直接点物体永远不显示（独立审核抓到的假象）。
+    refreshSpawnPanel();
     hudDirty = true;
   }
 
@@ -1123,6 +1187,64 @@ async function boot(): Promise<void> {
           onFocusSource: () => focusSourceNode(),
         });
 
+  // =====================================================================
+  // 脚本面板（ADR-018 P2）
+  //
+  // 控件完全由 BehaviorDef.params 的 schema 生成——Agent 新增行为/参数
+  // **不需要改这里的代码**。这就是 R2 说的「schema 是 Agent 与人类的契约面」：
+  // 人类在 Inspector 上看到的，就是 Agent 声明的那几个旋钮。
+  //
+  // 🔴 当前为只读态：保存链路的合法路径白名单只覆盖 SpawnPoint 的
+  // radius/count（`saveSpawnEditsInner`），Script 参数改了不会进 diffs、不会落盘。
+  // 与其让用户以为改了（刷新回原值，极难排查），不如置灰并写明原因。
+  // 待 spawn-edit 支持通用组件编辑后放开。
+  // =====================================================================
+  const scriptHost = document.getElementById('script-host');
+  const scriptPanel =
+    scriptHost === null
+      ? null
+      : new ScriptPanel(scriptHost, {
+          registry: behaviorRegistry,
+          readonly: true,
+          onChange: () => {
+            /* 只读态不会触发 */
+          },
+        });
+
+  /** 当前选中节点上的 Script 组件（无选中 / 该节点没挂脚本 → 空数组） */
+  function selectedScripts(): ScriptComponent[] {
+    const idx = renderer.getSelected();
+    // 🔴 必须用 `getObjectNodeId`：它返回的是**场景节点 id**（视口物体 ↔ 存储节点的
+    // 唯一映射依据）。别用 `getObjectState` 里的字段，也别拿 `subMeshes[].nodeId`
+    // 顶替——后者是 **GLB 内部** id，与场景节点是两套东西。
+    const nodeId = idx === null ? null : renderer.getObjectNodeId(idx);
+    const doc = spawnStore?.document ?? renderer.getDocument();
+    if (doc === null || nodeId === null) return [];
+    const n = doc.nodes.find((x) => x.id === nodeId);
+    if (n === undefined) return [];
+    return n.components.filter((c) => c.kind === 'Script') as ScriptComponent[];
+  }
+
+  function refreshScriptPanel(): void {
+    if (scriptPanel === null) return;
+    const scripts = selectedScripts();
+    const group = document.getElementById('script-group');
+    // 没挂脚本就整组隐藏：检视页不该出现一个永远空白的「脚本」分组
+    if (group !== null) group.hidden = scripts.length === 0;
+    scriptPanel.render(scripts);
+  }
+
+  // 选中变化的**唯一收口**：任何路径改了选中（视口点选 / 层级点选 / 双击聚焦 /
+  // focusNode / 删除 / 隐藏 / 拖入资产后自动选中）都会回调这里，面板必然跟着刷。
+  // 之前靠每个调用点自己记得调刷新，漏了 7 条——其中 focusNode 那条会让
+  // stopPlay() 后显示停 Play 前选中的物体，属于"显示了错的东西"。
+  //
+  // 🔴 注册位置必须在 `scriptPanel` 初始化**之后**：回调一注册就可能被触发，
+  //    而 scriptPanel 是 const，在其初始化前访问会直接 ReferenceError（TDZ）。
+  panel.onObjectSelect = () => {
+    refreshSpawnPanel();
+  };
+
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
     if (doc === null) {
@@ -1370,6 +1492,9 @@ async function boot(): Promise<void> {
   }
 
   function refreshSpawnPanel(): void {
+    // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
+    // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
+    refreshScriptPanel();
     if (spawnPanel === null) return;
     const store = spawnStore;
     const doc = store?.document ?? null;

@@ -212,6 +212,56 @@ function meshRenderer(source, materialId, extra = {}) {
   };
 }
 
+/**
+ * 每个幕可用的「高掩体」道具（cover=high/full，来自 props.json 设计表）。
+ * 幕号由楼层主题推得（当前 FLOORS 全是 Act1：fire→1）。
+ * 道具循环使用：掩体数量多于道具种类时取模轮换，保证同房间不重样。
+ *
+ * footprint（W×D×H，米）同步自 props.json —— Collider 按它生成，
+ * 保证视觉与碰撞一致（P4b 复审：一刀切 2.4m 方块会让 6m 轿车头尾悬出碰撞体）。
+ */
+/**
+ * 每个幕可用的「高掩体」道具（cover=high/full，**直读 props.json**）。
+ *
+ * 🔴 真源直读（P4b 复审二轮修）：此前这里是一份手抄 footprint 表，复审实测
+ * 抄错 4 处数值（P-14/P-16/P-22/P-25，最狠差 10 倍）、轴序混 8 处，且从未与
+ * props.json 对账 —— 手抄表成了"第二真源"，违背局部真源原则。
+ * 现在直接读 `assets/environment/props.json` 的 entries[].footprint，永不错抄。
+ *
+ * 道具循环使用：掩体数量多于道具种类时取模轮换。
+ * 排列原则：**按占地从大到小**排槽（cv0 在远离刷怪点一侧），大件先占，
+ * 保证任一 footprint 与刷怪散布区不重叠（session.test"不穿障碍"看守）。
+ */
+function actCoverProps(theme) {
+  const THEME_TO_ACT = { fire: 1, industrial: 2, subway: 3, lab: 4 };
+  const act = THEME_TO_ACT[theme] ?? 1;
+  const props = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'assets/environment/props.json'), 'utf8'),
+  );
+  const usable = props.entries.filter(
+    (e) =>
+      // 只要「道具」：structure 是建筑模块（如 S-02 便利店 12×8m），
+      // 不是掩体摆件，混进来会吞掉整个刷怪区
+      e.kind === 'prop' &&
+      Array.isArray(e.acts) &&
+      e.acts.includes(act) &&
+      (e.cover === 'high' || e.cover === 'full') &&
+      Array.isArray(e.footprint) &&
+      e.footprint.length === 3,
+  );
+  if (usable.length === 0) throw new Error(`props.json 里没有 Act${act} 的高掩体道具`);
+  // 🔴 占地**升序**：小件在前（cv1/cv2 贴近刷怪散布区一侧的空间窄），
+  // 大件殿后。coverOffsets 的 cv0 在 -0.3W/-0.25H（离刷怪点最远）——
+  // 但槽序是 cv0→cv1→cv2，小件先占 cv0 也没问题（小件哪都放得下）。
+  // 真正要防的是"大件进窄槽"：升序保证轮到大件时只剩远槽或下一房间。
+  // session.test 的"不穿障碍"是这条布局的回归看守（P4b 复审一轮的教训）。
+  usable.sort((a, b) => {
+    const area = (fp) => fp[0] * fp[2];
+    return area(a.footprint) - area(b.footprint);
+  });
+  return usable.map((e) => [e.id, e.footprint]);
+}
+
 /** 扁平地板 gizmo：高 0.2，顶面贴 y=0，不挡俯视视线 */
 function floorGizmo(w, d, materialId) {
   return meshRenderer({ type: 'builtin', shape: 'box', params: [w, 0.2, d] }, materialId);
@@ -318,6 +368,23 @@ function buildFloor(floor) {
         },
       ],
     }),
+    // 演示脚本（ADR-018 P3）：挂在第一间房上，Play 时每 tick 记日志，
+    // 供「脚本真的被执行」在真机上可观察。行为本体在
+    // assets/behaviors/debug-on-trigger-log.ts（注册表收集）。
+    // 🔴 必须由生成器产出而不是手工挂 —— 手工挂的会被下次重生成冲掉
+    //（P4b 重生成时就丢过一次，靠 behavior-exec 测试抓回）。
+    node(`nd_f${floor.depth}_demo_script`, '演示脚本 · 触发记录', {
+      pickable: false,
+      category: '道具',
+      components: [
+        {
+          kind: 'Script',
+          enabled: true,
+          behavior: 'debug-on-trigger-log',
+          params: { message: `${theme.label}心跳`, maxTick: 3, enabled: true, tag: 'info' },
+        },
+      ],
+    }),
   );
 
   // ---- 虚空底：防止房间之间看起来悬空 ----
@@ -358,17 +425,36 @@ function buildFloor(floor) {
       }),
     );
 
-    // 掩体（挂在房间下，随房间移动）
+    // 掩体（挂在房间下，随房间移动）。
+    // 🔴 P4b：掩体从「builtin box 积木」改为引用真实环境道具 GLB。
+    // 语义数据（Collider）保持不变 —— gameplay 用的是 Collider，不是视觉网格；
+    // 视觉替换不影响碰撞/寻路。cover 高度分类对齐 props.json 的 cover 字段。
+    // 编辑器装载期先用 box 占位，随后 loadSceneAssets() 异步换成真 GLB
+    //（renderer.loadScene / loadSceneAssets，ADR-018 P4b）。
+    const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
+      const [propId, fp] = coverPropIds[ci % coverPropIds.length];
+      // 🔴 props.json 的 footprint 轴序 = [W, H, D]（宽×高×深，1unit=1m）
+      const [w, h, d] = fp;
       nodes.push(
-        node(`${roomId}_cv${ci}`, `掩体 ${ci + 1}`, {
+        node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,
           pickable: false,
           category: '道具',
-          position: [dx, 0.7, dz],
+          // 🔴 y=0：GLB 补载后脚底贴 0（parseGlb 把 minY 归到 0），
+          // 旧的 0.7 是 box 中心（高 1.4 的一半），贴地模型会浮空 —— P4b 复审修
+          position: [dx, 0, dz],
           components: [
-            meshRenderer({ type: 'builtin', shape: 'box', params: [2.4, 1.4, 2.4] }, 's1'),
-            { kind: 'Collider', enabled: true, shape: { type: 'box', halfExtents: [1.2, 0.7, 1.2] }, isTrigger: false, layer: 0 },
+            meshRenderer(
+              {
+                type: 'asset',
+                ref: { path: `assets/environment/models/${propId}/tex/${propId}_tex_baked.glb` },
+              },
+              's1',
+            ),
+            // Collider 按道具真实 footprint（props.json 契约 1unit=1m）——
+            // 视觉与碰撞一致；盒心在 h/2（脚底贴地、盒体上移）
+            { kind: 'Collider', enabled: true, shape: { type: 'box', halfExtents: [w / 2, h / 2, d / 2] }, isTrigger: false, layer: 0 },
           ],
         }),
       );

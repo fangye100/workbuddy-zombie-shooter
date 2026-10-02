@@ -15,6 +15,7 @@ function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDe
     rooms: [],
     spawns: [],
     obstacles,
+    scripts: [], // ADR-018 P3：无脚本的合成场景，行为执行器走空路径
     nav,
   };
 }
@@ -26,6 +27,10 @@ function desc(): LevelRuntimeDesc {
   const doc = (MODULES[key] as { default: unknown }).default as SceneDocument;
   const r = loadLevelRuntime(doc);
   if (r.desc === null) throw new Error('测试夹具装载失败：' + JSON.stringify(r.diagnostics));
+  // floor-1 带一个演示脚本（让真机 Play 有东西可看）。本文件关注的是移动/寻路/容量，
+  // 且没有注入执行器 —— 留着脚本会每步产出 W_BEHAVIOR_UNAVAILABLE，污染诊断断言。
+  // 脚本相关的行为执行由 behavior-exec.test.ts 专门覆盖。
+  r.desc.scripts = [];
   return r.desc;
 }
 

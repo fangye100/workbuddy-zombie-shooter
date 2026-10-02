@@ -16,6 +16,7 @@
  * gameplay（实体状态表）、ai（流场寻路），全是纯 CPU；不依赖 render 与编辑器。
  */
 export * from './loader';
+export * from './behavior-executor';
 export * from './session';
 export * from './play-session';
 export * from './doc-diff';
