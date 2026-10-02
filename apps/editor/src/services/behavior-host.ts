@@ -81,34 +81,35 @@ export function behaviorSchemaIssues() {
  * 解析不到那些模块，`verify:parity-host` 的 Node↔浏览器一致性立刻断。
  * 执行器持有 registry，是唯一知道"行为代码在哪"的地方。
  *
- * ## 失效语义
+ * ## 失效语义（PR#16 review 修正）
  *
- * 行为未注册 → 返回 false（runtime 会记 W_BEHAVIOR_UNAVAILABLE 并降级，不阻塞）。
- * 行为内部抛异常 → 捕获并返回 false：内容层是 Agent 自由创作区，
- * 一个写错的行为不该让整个 Play 崩掉（runtime 侧另有一层兜底，这里先兜）。
+ * - 行为未注册 → 返回 false（runtime 记 W_BEHAVIOR_UNAVAILABLE 并降级，不阻塞）。
+ * - 行为内部抛异常 → **这里不 catch**，异常冒泡到 runtime 的边界 catch，
+ *   由它记 W_BEHAVIOR_THREW（带真实错误消息）。宿主侧先 catch 会把"抛异常"
+ *   误报成"未注册"（两条矛盾诊断的根源）。
  */
 export function createBehaviorExecutor(): BehaviorExecutor {
+  // 参数修正诊断的去重缓存（PR#16 review）：resolve() 每个 tick 都返回同样的
+  // 修正警告，不缓存会以 ~30 条/秒刷爆 console。键 = 脚本身份（behavior+参数摘要），
+  // 同一代次只报一次。
+  const reported = new Set<string>();
   return {
     run(script: ScriptDesc, ctx: BehaviorContext): boolean {
       const r = behaviorRegistry.resolve(script.behavior, script.params);
       if (r.def === null) return false;
-      // 参数被 schema 修正过（缺失补默认、越界钳制）——作者应当知道
       if (r.diagnostics.length > 0) {
-        console.warn(
-          `[behavior] 脚本「${script.behavior}」参数已按 schema 修正：`,
-          r.diagnostics.map((d) => d.message),
-        );
+        const key = `${script.behavior}|${JSON.stringify(script.params)}`;
+        if (!reported.has(key)) {
+          reported.add(key);
+          console.warn(
+            `[behavior] 脚本「${script.behavior}」参数已按 schema 修正（本代次只报一次）：`,
+            r.diagnostics.map((d) => d.message),
+          );
+        }
       }
-      try {
-        r.def.run(ctx, r.params);
-        return true;
-      } catch (e) {
-        console.warn(
-          `[behavior] 脚本「${script.behavior}」执行时抛出异常，本轮跳过：`,
-          e instanceof Error ? e.message : String(e),
-        );
-        return false;
-      }
+      // 不 try/catch：异常交给 runtime 边界（W_BEHAVIOR_THREW 保留真实消息）
+      r.def.run(ctx, r.params);
+      return true;
     },
   };
 }

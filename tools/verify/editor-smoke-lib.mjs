@@ -335,7 +335,10 @@ export function readStartSceneExpectation() {
     (n) =>
       n.components.some((c) => c.kind === 'MeshRenderer' && c.enabled !== false) &&
       visibleChain(n) &&
-      compOf(n).source?.type === 'builtin',
+      // asset 来源的 MeshRenderer 装载期用占位几何顶住、随后补载真 GLB，
+      // 渲染器里它和 builtin 一样是渲染物体 —— truth 集必须包含（PR#16 review：
+      // 排除后掩体资产会让物体数期望 13 vs 实际 19，B2 假红）
+      (compOf(n).source?.type === 'builtin' || compOf(n).source?.type === 'asset'),
   );
   const background = nodes.filter((n) => compOf(n).background === true).map((n) => n.name);
   return {

@@ -151,6 +151,7 @@
       "components": [
         {
           "kind": "Script",
+          "enabled": true,
           "behavior": "debug-on-trigger-log",
           "params": {
             "message": "暗巷心跳",
@@ -1421,8 +1422,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-02T05:11:49.327Z",
-    "updatedAt": "2026-10-02T05:11:49.327Z",
+    "createdAt": "2026-10-02T06:29:38.596Z",
+    "updatedAt": "2026-10-02T06:29:38.596Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

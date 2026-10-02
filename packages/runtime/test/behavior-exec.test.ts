@@ -82,6 +82,7 @@ function attachScript(doc: SceneDocument, nodeId: string, behavior: string, para
   if (n === undefined) throw new Error(`夹具缺少节点 ${nodeId}`);
   n.components.push({
     kind: 'Script',
+    enabled: true,
     behavior,
     params: params as Record<string, number | string | boolean>,
   } as never);
@@ -115,6 +116,29 @@ describe('loader · 收集场景 Script 组件', () => {
     const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
     doc.nodes.find((x) => x.id === SCRIPT_NODE)!.visible = false;
+    const r = loadLevelRuntime(doc);
+    expect(r.desc!.scripts).toEqual([]);
+    expect(r.diagnostics.some((x) => x.code === 'W_SCRIPT_HIDDEN')).toBe(true);
+  });
+
+  it('🔴 组件 enabled=false → 不收集并报 W_SCRIPT_DISABLED（PR#16 review）', () => {
+    const doc = floor1Clean();
+    attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
+    const n = doc.nodes.find((x) => x.id === SCRIPT_NODE)!;
+    const sc = n.components.find((c) => c.kind === 'Script') as unknown as { enabled: boolean };
+    sc.enabled = false;
+    const r = loadLevelRuntime(doc);
+    expect(r.desc!.scripts).toEqual([]);
+    expect(r.diagnostics.some((x) => x.code === 'W_SCRIPT_DISABLED')).toBe(true);
+  });
+
+  it('🔴 祖先隐藏 = 整个子树隐藏（有效可见，PR#16 review）', () => {
+    const doc = floor1Clean();
+    // 掩体挂在房间 nd_f1r0 下（有父链），脚本挂它身上再藏房间
+    attachScript(doc, 'nd_f1r0_cv0', 'debug-on-trigger-log');
+    const parent = doc.nodes.find((x) => x.id === 'nd_f1r0');
+    expect(parent).toBeDefined();
+    parent!.visible = false; // 子自身 visible 保持 true
     const r = loadLevelRuntime(doc);
     expect(r.desc!.scripts).toEqual([]);
     expect(r.diagnostics.some((x) => x.code === 'W_SCRIPT_HIDDEN')).toBe(true);
@@ -252,7 +276,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
     expect(s.behaviorLog).toEqual([]);
   });
 
-  it('🔴 执行器抛异常 → step 不崩，记 W_BEHAVIOR_THREW 并继续推进', () => {
+  it('🔴 执行器抛异常 → step 不崩，只记 W_BEHAVIOR_THREW（不叠加矛盾诊断，PR#16 review）', () => {
     const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
     const d = loadLevelRuntime(doc).desc!;
@@ -270,7 +294,10 @@ describe('RuntimeSession · 脚本真正被执行', () => {
       s.step();
       s.step();
     }).not.toThrow();
-    expect(s.diagnostics().some((x) => x.code === 'W_BEHAVIOR_THREW')).toBe(true);
+    const diags = s.diagnostics();
+    // 只允许 THREW，不允许再出 UNAVAILABLE（一次失败两条矛盾诊断 = 误导）
+    expect(diags.some((x) => x.code === 'W_BEHAVIOR_THREW')).toBe(true);
+    expect(diags.some((x) => x.code === 'W_BEHAVIOR_UNAVAILABLE')).toBe(false);
     // 推进没被中断：tick 仍在走
     expect(s.tick).toBeGreaterThan(0);
   });

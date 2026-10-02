@@ -379,6 +379,7 @@ function buildFloor(floor) {
       components: [
         {
           kind: 'Script',
+          enabled: true,
           behavior: 'debug-on-trigger-log',
           params: { message: `${theme.label}心跳`, maxTick: 3, enabled: true, tag: 'info' },
         },

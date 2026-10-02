@@ -151,6 +151,7 @@
       "components": [
         {
           "kind": "Script",
+          "enabled": true,
           "behavior": "debug-on-trigger-log",
           "params": {
             "message": "尸潮心跳",
@@ -1487,8 +1488,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-02T05:11:49.323Z",
-    "updatedAt": "2026-10-02T05:11:49.323Z",
+    "createdAt": "2026-10-02T06:29:38.562Z",
+    "updatedAt": "2026-10-02T06:29:38.562Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

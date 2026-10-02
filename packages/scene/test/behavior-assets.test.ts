@@ -95,14 +95,12 @@ describe('assets/behaviors · 目录收集', () => {
     reg.registerAll(collectModules());
     for (const m of collectModules()) {
       // ctx 形状必须跟 runtime 的 BehaviorContext 对齐：{ tick, log(message) }。
-      // 早期版本用 `log: string[]`，P3 改成输出通道函数后这里不同步就会炸。
+      // 🔴 只断言"不抛"：log 输出不是 BehaviorModule 的合约（PR#16 review）——
+      // 纯状态更新或 no-op 行为同样合法，"必须输出日志"会误杀它们。
+      // debug-on-trigger-log 自己的输出行为由 behavior-exec.test.ts 覆盖。
       const r = reg.resolve<{ tick: number; log(m: string): void }>(m.id, {});
-      const seen: string[] = [];
-      const ctx = { tick: 0, log: (m: string) => seen.push(m) };
+      const ctx = { tick: 0, log: (_m: string) => undefined };
       expect(() => r.def!.run(ctx, r.params)).not.toThrow();
-      // 默认参数下应真的输出一条（enabled=true、tick 0 ≤ maxTick），
-      // 否则"run 能调"就退化成恒真断言了
-      expect(seen.length).toBeGreaterThan(0);
     }
   });
 });

@@ -408,10 +408,21 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
         // 这里做的是"登记待执行清单"，真正的执行由宿主注入的 BehaviorExecutor 完成
         // （ADR-018 R3：runtime 不 import 行为代码）。
         const sc = c as ScriptComponent;
-        if (!n.visible) {
+        // 组件级 enabled（ComponentBase 契约）：禁用的脚本不执行（PR#16 review）
+        if (!sc.enabled) {
+          warn(
+            'W_SCRIPT_DISABLED',
+            `节点「${n.name}」的脚本「${sc.behavior}」被禁用（enabled=false），不参与本次运行`,
+            n.id,
+          );
+          continue;
+        }
+        // 可见性用**有效可见**（祖先隐藏 = 整个子树隐藏），与渲染节点同一把尺子：
+        // 只查 n.visible 会出现"藏了分组，渲染停了但行为还在跑"（PR#16 review）
+        if (!graph.isEffectivelyVisible(n.id)) {
           warn(
             'W_SCRIPT_HIDDEN',
-            `节点「${n.name}」被隐藏（visible=false），其脚本「${sc.behavior}」不参与本次运行`,
+            `节点「${n.name}」被隐藏（自身或祖先 visible=false），其脚本「${sc.behavior}」不参与本次运行`,
             n.id,
           );
           continue;

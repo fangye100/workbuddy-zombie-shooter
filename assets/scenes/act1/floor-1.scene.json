@@ -151,6 +151,7 @@
       "components": [
         {
           "kind": "Script",
+          "enabled": true,
           "behavior": "debug-on-trigger-log",
           "params": {
             "message": "火场心跳",
@@ -1487,8 +1488,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-02T05:11:49.315Z",
-    "updatedAt": "2026-10-02T05:11:49.315Z",
+    "createdAt": "2026-10-02T06:29:38.540Z",
+    "updatedAt": "2026-10-02T06:29:38.540Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

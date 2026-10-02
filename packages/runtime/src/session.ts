@@ -445,6 +445,8 @@ export class RuntimeSession {
       try {
         ok = this.executor.run(s, ctx);
       } catch (e) {
+        // 记完 THREW 就 continue：不再叠加 UNAVAILABLE ——
+        // 一次失败出两条语义矛盾的诊断（PR#16 review）
         this.pushDiag(
           'W_BEHAVIOR_THREW',
           `脚本「${s.behavior}」（节点 ${s.nodeId}）执行时抛出异常，本轮跳过：${
@@ -452,7 +454,7 @@ export class RuntimeSession {
           }`,
           s.nodeId,
         );
-        ok = false;
+        continue;
       }
       if (!ok) {
         this.pushDiag(
