@@ -530,6 +530,28 @@ async function boot(): Promise<void> {
       `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
     );
     if (r.editorCamera !== undefined) applySceneCamera(r.editorCamera);
+    // 外部资产补载（ADR-018 P4b）：场景里的 GLB 引用（掩体等）异步换成真网格。
+    // 失败只告警并保留占位几何，不让装载失败 —— 与 spawnAssetAt 同一 fetch 链路。
+    // 🔴 必须在 Play 之前完成：Play 的作者状态按索引快照，装载中途换网格会让
+    // Stop 恢复对不上号（复审 #3 同源问题）。这里在 boot 阶段就做完。
+    if (renderer.pendingAssetCount > 0) {
+      const n = renderer.pendingAssetCount;
+      // 与 spawnAssetAt 同一条 fetch 链路（/__fs/file 端点，见 asset-util.fileUrl 注释：
+      // 直接 fetch 项目路径会被 vite SPA fallback 挡成 HTTP 200 + index.html）
+      const res = await renderer.loadSceneAssets(
+        async (rel) => {
+          const resp = await fetch(`/__fs/file?path=${encodeURIComponent(rel)}`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return await resp.arrayBuffer();
+        },
+        decodeTexture,
+        MODEL_RULER_HEIGHT_M,
+      );
+      if (res.failed.length > 0) {
+        for (const f of res.failed) console.warn(`[boot] 资产补载失败：${f.name} — ${f.reason}`);
+      }
+      console.info(`[boot] 场景资产补载：${res.swapped}/${n} 个外部 GLB 已就位`);
+    }
     // 环境与场景灯光写进面板（真源是场景文件，面板滑块是它的读写器），
     // syncAll 让「场景/光照」「渲染」页的控件立即反映覆盖后的值。
     if (r.environment !== undefined) applySceneEnvironment(r.environment);

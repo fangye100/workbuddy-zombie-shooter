@@ -124,6 +124,45 @@
       "prefab": null
     },
     {
+      "id": "nd_f2_demo_script",
+      "name": "演示脚本 · 触发记录",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "Script",
+          "behavior": "debug-on-trigger-log",
+          "params": {
+            "message": "尸潮心跳",
+            "maxTick": 3,
+            "enabled": true,
+            "tag": "info"
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
       "id": "nd_f2_void",
       "name": "虚空底",
       "parent": null,
@@ -259,7 +298,7 @@
     },
     {
       "id": "nd_f2r0_cv0",
-      "name": "掩体 1",
+      "name": "掩体 1 · P-11",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -287,13 +326,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-11/tex/P-11_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -330,7 +366,7 @@
     },
     {
       "id": "nd_f2r0_cv1",
-      "name": "掩体 2",
+      "name": "掩体 2 · P-12",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -358,13 +394,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-12/tex/P-12_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -401,7 +434,7 @@
     },
     {
       "id": "nd_f2r0_cv2",
-      "name": "掩体 3",
+      "name": "掩体 3 · P-14",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -429,13 +462,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -944,7 +974,7 @@
     },
     {
       "id": "nd_f2r2_cv0",
-      "name": "掩体 1",
+      "name": "掩体 1 · P-11",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -972,13 +1002,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-11/tex/P-11_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1015,7 +1042,7 @@
     },
     {
       "id": "nd_f2r2_cv1",
-      "name": "掩体 2",
+      "name": "掩体 2 · P-12",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -1043,13 +1070,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-12/tex/P-12_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1086,7 +1110,7 @@
     },
     {
       "id": "nd_f2r2_cv2",
-      "name": "掩体 3",
+      "name": "掩体 3 · P-14",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -1114,13 +1138,10 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.4,
-              1.4,
-              2.4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+            }
           },
           "materials": [
             {
@@ -1466,8 +1487,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-09-15T05:46:15.031Z",
-    "updatedAt": "2026-09-15T05:46:15.031Z",
+    "createdAt": "2026-10-02T04:19:59.187Z",
+    "updatedAt": "2026-10-02T04:19:59.187Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

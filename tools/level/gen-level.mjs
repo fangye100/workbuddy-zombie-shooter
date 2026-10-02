@@ -212,6 +212,23 @@ function meshRenderer(source, materialId, extra = {}) {
   };
 }
 
+/**
+ * 每个幕可用的「高掩体」道具（cover=high/full，来自 props.json 设计表）。
+ * 幕号由楼层主题推得（当前 FLOORS 全是 Act1：fire→1）。
+ * 道具循环使用：掩体数量多于道具种类时取模轮换，保证同房间不重样。
+ */
+function actCoverProps(theme) {
+  const THEME_TO_ACT = { fire: 1, industrial: 2, subway: 3, lab: 4 };
+  const TABLE = {
+    1: ['P-11', 'P-12', 'P-14', 'P-16', 'P-03', 'P-04'],
+    2: ['P-21', 'P-22', 'P-23', 'P-25', 'P-26'],
+    3: ['P-32', 'P-23', 'P-26'],
+    4: ['P-44', 'P-45'],
+  };
+  const act = THEME_TO_ACT[theme] ?? 1;
+  return TABLE[act] ?? TABLE[1];
+}
+
 /** 扁平地板 gizmo：高 0.2，顶面贴 y=0，不挡俯视视线 */
 function floorGizmo(w, d, materialId) {
   return meshRenderer({ type: 'builtin', shape: 'box', params: [w, 0.2, d] }, materialId);
@@ -318,6 +335,22 @@ function buildFloor(floor) {
         },
       ],
     }),
+    // 演示脚本（ADR-018 P3）：挂在第一间房上，Play 时每 tick 记日志，
+    // 供「脚本真的被执行」在真机上可观察。行为本体在
+    // assets/behaviors/debug-on-trigger-log.ts（注册表收集）。
+    // 🔴 必须由生成器产出而不是手工挂 —— 手工挂的会被下次重生成冲掉
+    //（P4b 重生成时就丢过一次，靠 behavior-exec 测试抓回）。
+    node(`nd_f${floor.depth}_demo_script`, '演示脚本 · 触发记录', {
+      pickable: false,
+      category: '道具',
+      components: [
+        {
+          kind: 'Script',
+          behavior: 'debug-on-trigger-log',
+          params: { message: `${theme.label}心跳`, maxTick: 3, enabled: true, tag: 'info' },
+        },
+      ],
+    }),
   );
 
   // ---- 虚空底：防止房间之间看起来悬空 ----
@@ -358,16 +391,29 @@ function buildFloor(floor) {
       }),
     );
 
-    // 掩体（挂在房间下，随房间移动）
+    // 掩体（挂在房间下，随房间移动）。
+    // 🔴 P4b：掩体从「builtin box 积木」改为引用真实环境道具 GLB。
+    // 语义数据（Collider）保持不变 —— gameplay 用的是 Collider，不是视觉网格；
+    // 视觉替换不影响碰撞/寻路。cover 高度分类对齐 props.json 的 cover 字段。
+    // 编辑器装载期先用 box 占位，随后 loadSceneAssets() 异步换成真 GLB
+    //（renderer.loadScene / loadSceneAssets，ADR-018 P4b）。
+    const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
+      const propId = coverPropIds[ci % coverPropIds.length];
       nodes.push(
-        node(`${roomId}_cv${ci}`, `掩体 ${ci + 1}`, {
+        node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,
           pickable: false,
           category: '道具',
           position: [dx, 0.7, dz],
           components: [
-            meshRenderer({ type: 'builtin', shape: 'box', params: [2.4, 1.4, 2.4] }, 's1'),
+            meshRenderer(
+              {
+                type: 'asset',
+                ref: { path: `assets/environment/models/${propId}/tex/${propId}_tex_baked.glb` },
+              },
+              's1',
+            ),
             { kind: 'Collider', enabled: true, shape: { type: 'box', halfExtents: [1.2, 0.7, 1.2] }, isTrigger: false, layer: 0 },
           ],
         }),

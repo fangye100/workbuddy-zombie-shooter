@@ -138,8 +138,8 @@ describe('loader · 收集场景 Script 组件', () => {
     expect(d.scripts.length).toBeGreaterThanOrEqual(1);
     const demo = d.scripts.find((s) => s.behavior === 'debug-on-trigger-log');
     expect(demo).toBeDefined();
-    // 挂在房间 1（带网格 → 视口能点中 → Inspector 能看到）
-    expect(demo!.nodeId).toBe('nd_f1r0');
+    // 挂在独立节点（生成器产出 nd_f1_demo_script，无 MeshRenderer 不渲染但被收集）
+    expect(demo!.nodeId).toBe('nd_f1_demo_script');
   });
 });
 
