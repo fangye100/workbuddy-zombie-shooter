@@ -58,6 +58,59 @@ export interface ActorMesh {
 /** LOD 标签关键字：manifest 里「+动画」档 = rigged_animated GLB（docs/20 §5） */
 const ANIMATED_LOD_LABEL = '+动画';
 
+// ------------------------------------------------ 装配数学（纯函数，M3 WU-1 抽出）
+
+/**
+ * 单个角色 palette 的 pose 总数（含末尾追加的 bind 帧）。
+ * `data.length` 是 float 数：每 pose 恒为 jointCount × 16（列主 mat4）。
+ */
+export function palettePoseCount(palette: BakedPalette): number {
+  return palette.data.length / 16 / palette.jointCount;
+}
+
+/** `assemblePalettes` 的输出：每角色的全局起始 pose + 拼接后的总调色板 */
+export interface PaletteAssembly {
+  /** 与输入等长：角色 i 的全局起始 pose = 前面角色的 pose 数之和（按输入顺序累加） */
+  readonly bases: readonly number[];
+  /** 按输入顺序拼接的总调色板；空输入 = null（无角色时没有可上传的数据） */
+  readonly data: Float32Array<ArrayBuffer> | null;
+}
+
+/**
+ * 装配数学（纯函数）：按**注册序**给每个角色分配全局起始 pose，并把各角色的
+ * 烘焙帧拼成一块总调色板。
+ *
+ * ActorLibrary 的 `preload`（base 分配）与 `buildPalette`（拼接）都走这里 ——
+ * 单一实现，Node 单测（runtime-actors.test.ts）与浏览器探针
+ *（dynamic-skin-probe.mjs）复算的是同一份不变量（第三道复审 C5 防线）。
+ *
+ * 不变量：
+ * - `bases[i]` = 前面角色 pose 数之和（**pose 单位**，不是 float 单位）；
+ * - `data` = 各角色 `palette.data` 顺序拼接；
+ * - 角色 i 的全局 bind pose 下标 = `bases[i] + bindPoseIndex(palette_i)`，
+ *   即该角色块的**最后一 pose**。`bindPoseIndex` 返回的是角色 palette 内的
+ *   **局部**下标，绝不能再减 base —— 第二个角色起会算出负数 → u32 巨数 →
+ *   shader 越界读全零矩阵（PR #18 review 抓的 P1）。
+ */
+export function assemblePalettes(palettes: readonly BakedPalette[]): PaletteAssembly {
+  const bases: number[] = [];
+  let next = 0;
+  let totalFloats = 0;
+  for (const p of palettes) {
+    bases.push(next);
+    next += palettePoseCount(p);
+    totalFloats += p.data.length;
+  }
+  if (palettes.length === 0) return { bases, data: null };
+  const data = new Float32Array(new ArrayBuffer(totalFloats * 4));
+  let off = 0;
+  for (const p of palettes) {
+    data.set(p.data, off);
+    off += p.data.length;
+  }
+  return { bases, data };
+}
+
 export class ActorLibrary {
   /** asset-manifest.json 的原始 JSON（可后补，见 setManifest） */
   private manifestJson: unknown;
@@ -144,9 +197,9 @@ export class ActorLibrary {
       if (glb.animations.length === 0) throw new Error('GLB 无动画片段');
 
       const palette = bakePosePalette(sk, glb.animations);
-      // 全局 paletteBase = 已注册角色烘焙帧总数（注册序拼接）
+      // 全局 paletteBase = 已注册角色 pose 总数（注册序拼接；数学归 assemblePalettes）
       let base = 0;
-      for (const e of this.entries.values()) base += e.palette.data.length / 16 / e.palette.jointCount;
+      for (const e of this.entries.values()) base += palettePoseCount(e.palette);
 
       this.entries.set(characterId, {
         characterId,
@@ -172,18 +225,9 @@ export class ActorLibrary {
     }
   }
 
-  /** 把全部角色的烘焙帧按注册序拼成一块（喂 core.setDynamicPalette） */
+  /** 把全部角色的烘焙帧按注册序拼成一块（喂 core.setDynamicPalette；数学归 assemblePalettes） */
   buildPalette(): Float32Array<ArrayBuffer> | null {
-    if (this.entries.size === 0) return null;
-    let total = 0;
-    for (const e of this.entries.values()) total += e.palette.data.length;
-    const out = new Float32Array(new ArrayBuffer(total * 4));
-    let off = 0;
-    for (const e of this.entries.values()) {
-      out.set(e.palette.data, off);
-      off += e.palette.data.length;
-    }
-    return out;
+    return assemblePalettes([...this.entries.values()].map((e) => e.palette)).data;
   }
 
   /**
