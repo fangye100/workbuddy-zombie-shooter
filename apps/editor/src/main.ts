@@ -187,6 +187,32 @@ async function boot(): Promise<void> {
     // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
     // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
     executor: createBehaviorExecutor(),
+    // 主视图相机（ADR-018 P6）。
+    // 🔴 必须写成**闭包**：camera 对象与 panel.params 都定义在后面（相机在 407 行附近），
+    // 这里直接读值会踩 TDZ。Play 只在用户点击后触发，那时都已初始化，闭包是安全的。
+    viewCamera: {
+      get: () => ({
+        target: [camera.target[0], camera.target[1], camera.target[2]] as [number, number, number],
+        distance: camera.distance,
+        yaw: camera.yaw,
+        elevationDeg: panel.params.cameraElevation,
+      }),
+      set: (s) => {
+        camera.target[0] = s.target[0];
+        camera.target[1] = s.target[1];
+        camera.target[2] = s.target[2];
+        camera.distance = s.distance;
+        camera.yaw = s.yaw;
+        panel.params.cameraElevation = s.elevationDeg;
+      },
+    },
+    worldPosOf: (nodeId) => {
+      const doc = renderer.getDocument();
+      if (doc === null) return null;
+      const n = graphOfDoc(doc).getNode(nodeId);
+      if (n === null) return null;
+      return [n.world.position[0], n.world.position[1], n.world.position[2]] as [number, number, number];
+    },
     onStateChange: () => {
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
