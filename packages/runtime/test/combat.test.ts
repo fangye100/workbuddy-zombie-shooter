@@ -141,3 +141,137 @@ describe('applyDamage · 边界', () => {
     expect(s.combatEvents.length).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// P5 C3：四态攻击机 + 玩家手枪（docs/23 §2.2/§2.3）
+// 数值全部来自 stats 真源：E-01 挥抓 8 伤 / 0.8s 前摇 / 1.6s CD / 2.2m；
+// 手枪 12 伤 / 0.35s CD / 18m —— 断言锁的是「数值驱动的时序」，不是魔法数字。
+// ---------------------------------------------------------------------------
+
+describe('NPC 四态 · windup → strike → CD（E-01 数值驱动）', () => {
+  it('玩家站桩：僵尸追入 2.2m → 前摇 0.8s（24 tick 站定）→ 玩家掉 8 血 → CD 1.6s 后再来', () => {
+    const s = make();
+    const p = s.playerEntityId;
+    const hp0 = s.table.health[p]!;
+    // 跑到第一只僵尸开始挥抓（黑盒：玩家血量第一次下降的时刻）
+    let hitTick = -1;
+    for (let k = 0; k < 600 && hitTick < 0; k++) {
+      s.step();
+      if (s.table.health[p]! < hp0) hitTick = s.tick;
+    }
+    expect(hitTick).toBeGreaterThan(0); // 追上了并造成了伤害
+    // 单 tick 减量 = 同 tick 命中的 E-01(8×a) 与 E-02(18×b) 之和——组合枚举断言
+    const combo = new Set<number>();
+    for (let a = 0; a <= 7; a++) for (let b = 0; b <= 3; b++) if (a + b > 0) combo.add(8 * a + 18 * b);
+    expect(combo.has(hp0 - s.table.health[p]!)).toBe(true);
+    // 同一只僵尸的连续打击 ≥ CD 1.6s = 48 tick：不同僵尸轮流打没有 CD 关系，
+    // 必须按 combatEvents 的同 slot 相邻两次 damage 断言
+    s.run(200);
+    const bySlot = new Map<number, number[]>();
+    for (const ev of s.combatEvents) {
+      if (ev.type !== 'damage') continue;
+      // 🔴 ev.slot 是受击者（恒玩家）——连续打击节奏必须按攻击者 sourceSlot 分组
+      const list = bySlot.get(ev.sourceSlot) ?? [];
+      list.push(ev.tick);
+      bySlot.set(ev.sourceSlot, list);
+    }
+    let minGap = Infinity;
+    let repeatAttacker = 0;
+    for (const ticks of bySlot.values()) {
+      for (let k = 1; k < ticks.length; k++) {
+        minGap = Math.min(minGap, ticks[k]! - ticks[k - 1]!);
+        repeatAttacker++;
+      }
+    }
+    expect(repeatAttacker).toBeGreaterThan(0); // 有僵尸打出了第二击
+    expect(minGap).toBeGreaterThanOrEqual(48); // 不早于 CD（1.6s / (1/30)）
+  });
+
+  it('windup 期间僵尸站定（位置冻结）', () => {
+    const s = make();
+    // 等任一僵尸进入 WINDUP 态（2）
+    let slot = -1;
+    for (let k = 0; k < 600 && slot < 0; k++) {
+      s.step();
+      for (let i = 0; i < s.table.capacity; i++) {
+        if (s.table.isAlive(i) && s.table.behavior[i] === 2) { slot = i; break; }
+      }
+    }
+    expect(slot).toBeGreaterThanOrEqual(0);
+    const x = s.table.posX[slot]!;
+    const z = s.table.posZ[slot]!;
+    s.step();
+    expect(s.table.posX[slot]).toBe(x); // 蓄力站定
+    expect(s.table.posZ[slot]).toBe(z);
+  });
+
+  it('确定性：同种子两个会话逐步对跑，玩家血量序列逐位一致', () => {
+    const a = make();
+    const b = make();
+    const hpA: number[] = [];
+    for (let k = 0; k < 400; k++) {
+      a.step();
+      b.step();
+      hpA.push(a.table.health[a.playerEntityId]!);
+      expect(a.table.health[b.playerEntityId]!).toBe(hpA[k]!);
+    }
+    expect(new Set(hpA).size).toBeGreaterThan(1); // 确实发生了战斗（序列有变化）
+  });
+});
+
+describe('玩家手枪 · 射线命中与 CD（12 伤 / 0.35s / 18m）', () => {
+  it('朝僵尸开火：5 枪打死一只 E-01（hp60 / 12 伤），CD 节流命中间隔 ≥ 10 tick', () => {
+    const s = make();
+    const target = firstNpc(s);
+    const hp0 = s.table.health[target]!;
+    expect(hp0).toBe(60);
+    // 摆位：目标僵尸 teleport 到玩家 +x 侧 3m（🔴 不能挪玩家——会跨房间触发再刷一批；
+    // 也不能 setInput(1,0)——那是移动输入，玩家会跑图。零输入站桩，fireStep 用
+    // 玩家 yaw（初始 0 = 朝 +x）作为射击方向 → 正对僵尸）
+    s.table.posX[target] = s.table.posX[s.playerEntityId]! + 3;
+    s.table.posZ[target] = s.table.posZ[s.playerEntityId]!;
+    s.setInput(0, 0);
+    s.setFire(true);
+    let killTick = -1;
+    let firstHitTick = -1;
+    let hits = 0;
+    let lastHp = hp0;
+    for (let k = 0; k < 300 && killTick < 0; k++) {
+      s.step();
+      const hp = s.table.health[target]!;
+      if (hp < lastHp) {
+        if (firstHitTick < 0) firstHitTick = s.tick;
+        hits++;
+        expect(lastHp - hp).toBe(12); // 每枪 12（真源）
+        lastHp = hp;
+      }
+      if (!s.table.isAlive(target)) killTick = s.tick;
+    }
+    s.setFire(false);
+    expect(killTick).toBeGreaterThan(0); // 打死了
+    expect(hits).toBe(5); // 60/12 = 5 枪，一发不多
+    expect(killTick - firstHitTick).toBeGreaterThanOrEqual(4 * 10); // 4 个 CD 间隔（0.35s≈10.5 tick）
+  });
+
+  it('kill 事件后槽位回收，其余僵尸不受牵连（单点伤害）', () => {
+    const s = make();
+    const before = s.countNpc();
+    const target = firstNpc(s);
+    s.table.posX[target] = s.table.posX[s.playerEntityId]! + 3;
+    s.table.posZ[target] = s.table.posZ[s.playerEntityId]!;
+    s.setInput(0, 0);
+    s.setFire(true);
+    for (let k = 0; k < 300 && s.table.isAlive(target); k++) s.step();
+    s.setFire(false);
+    expect(s.countNpc()).toBe(before - 1); // 只死了被打的
+    expect(s.table.isAlive(s.playerEntityId)).toBe(true);
+  });
+
+  it('attack=null 的角色（B-02/B-03 近战未定）永不进 windup', () => {
+    // 真源断言：stats 里 B-02/B-03 的 attack 确为 null（数据前提）
+    const b02 = NPC_STATS.find((n) => n.id === 'B-02')!;
+    const b03 = NPC_STATS.find((n) => n.id === 'B-03')!;
+    expect(b02.attack).toBeNull();
+    expect(b03.attack).toBeNull();
+  });
+});

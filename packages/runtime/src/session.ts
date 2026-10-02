@@ -23,10 +23,10 @@
  * - "进入房间"用矩形 bounds 包含玩家中心点判定，不用 Collider 触发器事件。
  */
 
-import { CharacterTable } from '@aether/gameplay';
+import { CharacterTable, rayCapsuleY } from '@aether/gameplay';
 import { CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
 import type { CrowdBuffers, CrowdParams } from '@aether/ai';
-import { NPC_STATS, PLAYER_STATS, lookupCharacterStats } from '@aether/content';
+import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
@@ -174,6 +174,14 @@ export interface StepReport {
 
 const BEHAVIOR_IDLE = 0;
 const BEHAVIOR_CHASE = 1;
+/** P5 四态扩展（docs/23 §2.2）：前摇蓄力中（站定；打断语义 [PLACEHOLDER 不实现]） */
+export const BEHAVIOR_WINDUP = 2;
+/**
+ * 打击瞬时态：windup 结束的那一 tick 执行扇形判定后立即回 CHASE + CD——
+ * 数据上只存在一 tick，打击的事实记录在 combatEvents（damage 事件）里。
+ * 导出给宿主消费（动画选片 / telegraph 渲染按四态语义驱动）。
+ */
+export const BEHAVIOR_STRIKE = 3;
 
 /**
  * 运行代次计数器。**只用于实体引用的有效期判定**（复审 #6），
@@ -452,11 +460,32 @@ export class RuntimeSession {
     this.inputZ = z * s;
   }
 
+  /**
+   * 开火输入（P5 C3，docs/23 §2.3）。与 setInput 同模式：宿主每帧写，
+   * runtime 在固定步里消费 —— 按住 = 持续射击（受武器 CD 节流）。
+   */
+  setFire(down: boolean): void {
+    this.fireHeld = down;
+  }
+
+  /** 开火键状态（宿主 UI 显示用） */
+  get firing(): boolean {
+    return this.fireHeld;
+  }
+
+  private fireHeld = false;
+  /** 玩家武器 CD 到点时刻（会话时钟秒；不占表列——玩家只有一个） */
+  private playerCooldownUntil = 0;
+
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
     const r = this.triggerRooms();
     this.movePlayer();
     this.moveNpcs();
+    // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
+    // 都用**本步最终位置**（与脚本的「看到最终位置」同一纪律）
+    this.combatStep();
+    this.fireStep();
     this.tickCount += 1;
     // 脚本在移动之后执行：行为看到的是**本步最终位置**，
     // 否则"判断僵尸是否进入某区域"这类逻辑会差一步。
@@ -590,6 +619,8 @@ export class RuntimeSession {
     // 输入与导航目标也要回到初始态 —— 否则 reset 后玩家还按着上一轮的摇杆
     this.inputX = 0;
     this.inputZ = 0;
+    this.fireHeld = false;
+    this.playerCooldownUntil = 0;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
     this.integrator.setGoal(this.goalX, this.goalZ);
@@ -752,12 +783,131 @@ export class RuntimeSession {
 
   // ------------------------------------------------------------ 内部：NPC 移动
 
+  /**
+   * NPC 攻击状态机（P5 C3，docs/23 §2.2 四态：idle/chase/windup/strike）。
+   *
+   * 数值全部走 stats 真源链（C1 的 attack 嵌套结构），代码里零魔法数字；
+   * attack = null 的角色（B-02/B-03 近战未定）永不进 windup，只能追。
+   * strike 是瞬时态：windup 归零的那一 tick 判定扇形命中并 applyDamage，
+   * 然后回 CHASE + cooldownUntil。会话时钟 now = tick × fixedStep。
+   */
+  private combatStep(): void {
+    const t = this.tbl;
+    const p = this.playerEntityId;
+    if (p < 0 || !t.isAlive(p)) return;
+    const px = t.posX[p]!;
+    const pz = t.posZ[p]!;
+    const now = this.tickCount * this.fixedStep;
+
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      const stats = this.defIdToStats.get(t.defId[i]!);
+      const atk = stats?.attack;
+      if (atk === null || atk === undefined) continue; // 近战未定：只追不打
+
+      const dx = t.posX[i]! - px;
+      const dz = t.posZ[i]! - pz;
+      const dist = Math.hypot(dx, dz);
+      const b = t.behavior[i]!;
+
+      if (b === BEHAVIOR_CHASE) {
+        if (dist <= atk.rangeM && now >= t.cooldownUntil[i]!) {
+          t.behavior[i] = BEHAVIOR_WINDUP;
+          t.windupRemain[i] = atk.windupSec;
+        }
+      } else if (b === BEHAVIOR_WINDUP) {
+        t.windupRemain[i] = t.windupRemain[i]! - this.fixedStep;
+        if (t.windupRemain[i]! <= 0) {
+          // strike（瞬时）：扇形判定 —— 攻击朝向 = 指向玩家的向量，命中 =
+          // 距离在 range 内且攻击朝向与「NPC→玩家」夹角 ≤ arcDeg/2。
+          // 无输入控制的朝向模型下这个夹角恒 0（打的就是眼前那只），
+          // 留判定结构给「挥空/侧身闪避」（GDD 走位玩法）接上。
+          const arc = atk.arcDeg ?? 90;
+          const hit = dist <= atk.rangeM + t.radius[p]!;
+          if (hit) {
+            const halfArc = (arc * Math.PI) / 360;
+            // NPC 朝向 = 移动朝向（yaw）；无移动记录时视为面向玩家（不出桩判定）
+            const yaw = t.yaw[i]!;
+            const facingX = Math.cos(yaw);
+            const facingZ = Math.sin(yaw);
+            const len = dist > 1e-6 ? dist : 1;
+            const cosA = (facingX * -dx + facingZ * -dz) / len;
+            if (cosA >= Math.cos(halfArc)) {
+              this.applyDamage(p, atk.damage, i);
+            }
+          }
+          // strike：瞬时态（见 BEHAVIOR_STRIKE 注释）——判定完直接回 CHASE 进 CD
+          t.behavior[i] = BEHAVIOR_CHASE;
+          t.cooldownUntil[i] = now + atk.cdSec;
+        }
+      }
+    }
+  }
+
+  /**
+   * 玩家手枪射击（P5 C3，docs/23 §2.3 最小闭环）。
+   *
+   * 按住开火 + 武器 CD 到点 → 朝玩家朝向射一条瞬时射线（无扫掠需求，
+   * docs/23 §2.1a 裁决），最近的存活 NPC 吃 applyDamage。未命中也进 CD
+   *（真实射空）。朝向 = 当前输入方向；无输入时保持最近一次移动朝向（yaw）。
+   */
+  private fireStep(): void {
+    const t = this.tbl;
+    const p = this.playerEntityId;
+    // 血量归零不再开火（C5 失败冻结的前哨：死了不能继续输出）
+    if (!this.fireHeld || p < 0 || !t.isAlive(p) || t.health[p]! <= 0) return;
+    const now = this.tickCount * this.fixedStep;
+    if (now < this.playerCooldownUntil) return;
+
+    const ix = this.inputX;
+    const iz = this.inputZ;
+    const len = Math.hypot(ix, iz);
+    let dx: number;
+    let dz: number;
+    if (len > 1e-6) {
+      dx = ix / len;
+      dz = iz / len;
+    } else {
+      dx = Math.cos(t.yaw[p]!);
+      dz = Math.sin(t.yaw[p]!);
+    }
+
+    let bestSlot = -1;
+    let bestT = Infinity;
+    const w = PLAYER_WEAPON;
+    // 射线打「胶囊中轴高度」：y=0 的贴地射线对站立胶囊恰好切线（下半球心
+    // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
+    const playerStats = this.defIdToStats.get(t.defId[p]!)!;
+    const rayY = playerStats.capsuleHeight / 2;
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      const stats = this.defIdToStats.get(t.defId[i]!);
+      if (stats === undefined) continue;
+      const hit = rayCapsuleY(
+        [t.posX[p]!, rayY, t.posZ[p]!],
+        [dx, 0, dz],
+        t.posX[i]!,
+        t.posZ[i]!,
+        t.radius[i]!,
+        stats.capsuleHeight,
+      );
+      if (hit !== null && hit <= w.rangeM && hit < bestT) {
+        bestT = hit;
+        bestSlot = i;
+      }
+    }
+    if (bestSlot >= 0) this.applyDamage(bestSlot, w.damage, p);
+    this.playerCooldownUntil = now + w.cdSec;
+  }
+
   private moveNpcs(): void {
     const b = this.buffers;
     const t = this.table;
     let n = 0;
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      // 前摇蓄力站定（docs/23 §2.2 windup 语义）：不进求解器 = 位置冻结
+      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
       b.posX[n] = t.posX[i]!;
       b.posZ[n] = t.posZ[i]!;
       b.velX[n] = t.velX[i]!;
@@ -775,7 +925,10 @@ export class RuntimeSession {
 
     let k = 0;
     for (let i = 0; i < t.capacity; i++) {
+      // 🔴 过滤条件必须与上方装填循环完全一致（含 WINDUP 跳过）——
+      // 两边不一致时 k 与装填序错位，速度/位置会写进错误的实体
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
       const vx = b.outX[k]!;
       const vz = b.outZ[k]!;
       t.velX[i] = vx;
