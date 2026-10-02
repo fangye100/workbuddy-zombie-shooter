@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { MODEL_RULER_HEIGHT_M } from './models';
+import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
 import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
 import {
@@ -538,6 +538,7 @@ async function boot(): Promise<void> {
       const n = renderer.pendingAssetCount;
       // 与 spawnAssetAt 同一条 fetch 链路（/__fs/file 端点，见 asset-util.fileUrl 注释：
       // 直接 fetch 项目路径会被 vite SPA fallback 挡成 HTTP 200 + index.html）
+      renderer.onPlayStateCheck = () => playCtl.isPlaying;
       const res = await renderer.loadSceneAssets(
         async (rel) => {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(rel)}`);
@@ -545,8 +546,14 @@ async function boot(): Promise<void> {
           return await resp.arrayBuffer();
         },
         decodeTexture,
-        MODEL_RULER_HEIGHT_M,
+        // 逐资产标尺：sidecar normalizeHeightM 有值用它；null（环境道具常态，
+        // 1unit=1m）保持原始尺寸 —— 一刀切 2.05 会把轿车拉成 6m（P4b 复审修）
+        async (rel) => {
+          const r = await resolveModelHeightM(rel);
+          return r.fromMeta ? r.meters : null;
+        },
       );
+      renderer.onPlayStateCheck = null;
       if (res.failed.length > 0) {
         for (const f of res.failed) console.warn(`[boot] 资产补载失败：${f.name} — ${f.reason}`);
       }

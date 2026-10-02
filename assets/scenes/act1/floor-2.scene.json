@@ -303,7 +303,7 @@
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           -4
         ],
         "rotation": [
@@ -353,9 +353,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              2.2,
+              0.95,
+              0.75
             ]
           },
           "isTrigger": false,
@@ -366,12 +366,12 @@
     },
     {
       "id": "nd_f2r0_cv1",
-      "name": "掩体 2 · P-12",
+      "name": "掩体 2 · P-03",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
           6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -396,7 +396,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-12/tex/P-12_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
             }
           },
           "materials": [
@@ -421,9 +421,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.9,
+              0.55,
+              0.65
             ]
           },
           "isTrigger": false,
@@ -434,12 +434,12 @@
     },
     {
       "id": "nd_f2r0_cv2",
-      "name": "掩体 3 · P-14",
+      "name": "掩体 3 · P-04",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
           -6,
-          0.7,
+          0,
           4
         ],
         "rotation": [
@@ -464,7 +464,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
             }
           },
           "materials": [
@@ -489,9 +489,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -979,7 +979,7 @@
       "transform": {
         "position": [
           -6.6,
-          0.7,
+          0,
           -4.5
         ],
         "rotation": [
@@ -1029,9 +1029,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              2.2,
+              0.95,
+              0.75
             ]
           },
           "isTrigger": false,
@@ -1042,12 +1042,12 @@
     },
     {
       "id": "nd_f2r2_cv1",
-      "name": "掩体 2 · P-12",
+      "name": "掩体 2 · P-03",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
           6.6,
-          0.7,
+          0,
           4.5
         ],
         "rotation": [
@@ -1072,7 +1072,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-12/tex/P-12_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
             }
           },
           "materials": [
@@ -1097,9 +1097,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.9,
+              0.55,
+              0.65
             ]
           },
           "isTrigger": false,
@@ -1110,12 +1110,12 @@
     },
     {
       "id": "nd_f2r2_cv2",
-      "name": "掩体 3 · P-14",
+      "name": "掩体 3 · P-04",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
           -6.6,
-          0.7,
+          0,
           4.5
         ],
         "rotation": [
@@ -1140,7 +1140,7 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
             }
           },
           "materials": [
@@ -1165,9 +1165,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              1.2,
-              0.7,
-              1.2
+              0.6,
+              0.5,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -1487,8 +1487,8 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-02T04:19:59.187Z",
-    "updatedAt": "2026-10-02T04:19:59.187Z",
+    "createdAt": "2026-10-02T04:52:47.850Z",
+    "updatedAt": "2026-10-02T04:52:47.850Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

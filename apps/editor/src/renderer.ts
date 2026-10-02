@@ -1067,24 +1067,39 @@ export class LabRenderer {
    * 单个失败只记 warning 并保留占位（不阻塞其余），全部失败也不算装载失败 ——
    * 与"一个挂掉的行为不该让场景打不开"同一纪律。
    *
+   * ## 尺寸语义（P4b 复审修）
+   *
+   * ruler 不再是一刀切的角色标尺：由 `resolveRuler` 按资产逐个给出 ——
+   * sidecar `importer.normalizeHeightM` 有值用它；为 null（环境道具的常态，
+   * props.json 契约 1unit=1m）则传 null 给 parseGlb **保持原始尺寸**。
+   * 此前一刀切 2.05m 会把 P-11 轿车拉成 6m 长、货车压成 0.65m 宽。
+   *
    * 🔴 调用时机：场景装载完成**且未进 Play**。Play 中物体网格属于作者状态快照
    * 的一部分，装载中途换网格会让 Stop 恢复的索引对不上号（复审 #3 同源问题）。
    *
    * @param fetchAsset 宿主注入的资产读取器（默认走 /__fs/file，见 asset-util）
    * @param decode 宿主注入的贴图解码器
+   * @param resolveRuler 宿主注入的逐资产标尺（null = 保持原始尺寸）
    */
   public async loadSceneAssets(
     fetchAsset: (rel: string) => Promise<ArrayBuffer>,
     decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
-    rulerHeightM: number,
+    resolveRuler: (rel: string) => Promise<number | null>,
   ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
     const failed: { name: string; reason: string }[] = [];
     let swapped = 0;
     for (const p of this.pendingSceneAssets) {
       try {
         const buffer = await fetchAsset(p.path);
-        const model = parseGlb(buffer, rulerHeightM);
+        const ruler = await resolveRuler(p.path);
+        const model = parseGlb(buffer, ruler);
         const bmp = model.image === null ? null : await decode(model.image, p.path);
+        // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
+        // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。
+        if (this.onPlayStateCheck?.() === true) {
+          failed.push({ name: p.name, reason: '补载期间进入 Play，本轮中止（Stop 后重载场景恢复）' });
+          continue;
+        }
         const ok = this.swapObjectAsset(
           p.index,
           model.mesh,
@@ -1102,6 +1117,9 @@ export class LabRenderer {
     this.pendingSceneAssets = [];
     return { swapped, failed };
   }
+
+  /** 宿主注入的"是否已进入 Play"探针（loadSceneAssets 的竞态防御用） */
+  onPlayStateCheck: (() => boolean) | null = null;
 
   /**
    * 当前场景来源（null = 硬编码 fallback）。

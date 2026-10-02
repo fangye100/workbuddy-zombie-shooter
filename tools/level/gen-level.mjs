@@ -216,14 +216,41 @@ function meshRenderer(source, materialId, extra = {}) {
  * 每个幕可用的「高掩体」道具（cover=high/full，来自 props.json 设计表）。
  * 幕号由楼层主题推得（当前 FLOORS 全是 Act1：fire→1）。
  * 道具循环使用：掩体数量多于道具种类时取模轮换，保证同房间不重样。
+ *
+ * footprint（W×D×H，米）同步自 props.json —— Collider 按它生成，
+ * 保证视觉与碰撞一致（P4b 复审：一刀切 2.4m 方块会让 6m 轿车头尾悬出碰撞体）。
  */
 function actCoverProps(theme) {
   const THEME_TO_ACT = { fire: 1, industrial: 2, subway: 3, lab: 4 };
+  // 🔴 槽位适配：coverOffsets 的三个槽位空间有限（彼此相距 ~10m，离刷怪散布区
+  // 最近 ~2.5m）。P-12（6.5m 货车）这种大件放中间槽会吞掉刷怪散布区
+  //（session.test 的"不穿障碍"回归就是它触发的）。排列原则：**从大到小**占槽，
+  // 最大件放 cv0（远离刷怪点一侧），保证任一 footprint 与散布区不重叠。
   const TABLE = {
-    1: ['P-11', 'P-12', 'P-14', 'P-16', 'P-03', 'P-04'],
-    2: ['P-21', 'P-22', 'P-23', 'P-25', 'P-26'],
-    3: ['P-32', 'P-23', 'P-26'],
-    4: ['P-44', 'P-45'],
+    1: [
+      ['P-11', [4.4, 1.5, 1.9]],
+      ['P-03', [1.8, 1.3, 1.1]],
+      ['P-04', [1.2, 1.1, 1.0]],
+      ['P-14', [0.8, 1.8, 1.6]],
+      ['P-16', [1.6, 2.4, 2.4]],
+      ['P-12', [6.5, 2.8, 2.4]],
+    ],
+    2: [
+      ['P-21', [2.4, 4.5, 1.0]],
+      ['P-22', [2.2, 2.6, 2.4]],
+      ['P-23', [2.6, 2.2, 1.2]],
+      ['P-25', [4, 3.5, 3.0]],
+      ['P-26', [3, 4, 3.0]],
+    ],
+    3: [
+      ['P-32', [18, 3.4, 2.8]],
+      ['P-23', [2.6, 2.2, 1.2]],
+      ['P-26', [3, 4, 3.0]],
+    ],
+    4: [
+      ['P-44', [2, 1.7, 1.8]],
+      ['P-45', [1.2, 2.2, 2.2]],
+    ],
   };
   const act = THEME_TO_ACT[theme] ?? 1;
   return TABLE[act] ?? TABLE[1];
@@ -399,13 +426,16 @@ function buildFloor(floor) {
     //（renderer.loadScene / loadSceneAssets，ADR-018 P4b）。
     const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
-      const propId = coverPropIds[ci % coverPropIds.length];
+      const [propId, fp] = coverPropIds[ci % coverPropIds.length];
+      const [w, d, h] = fp;
       nodes.push(
         node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,
           pickable: false,
           category: '道具',
-          position: [dx, 0.7, dz],
+          // 🔴 y=0：GLB 补载后脚底贴 0（parseGlb 把 minY 归到 0），
+          // 旧的 0.7 是 box 中心（高 1.4 的一半），贴地模型会浮空 —— P4b 复审修
+          position: [dx, 0, dz],
           components: [
             meshRenderer(
               {
@@ -414,7 +444,9 @@ function buildFloor(floor) {
               },
               's1',
             ),
-            { kind: 'Collider', enabled: true, shape: { type: 'box', halfExtents: [1.2, 0.7, 1.2] }, isTrigger: false, layer: 0 },
+            // Collider 按道具真实 footprint（props.json 契约 1unit=1m）——
+            // 视觉与碰撞一致；盒心在 h/2（脚底贴地、盒体上移）
+            { kind: 'Collider', enabled: true, shape: { type: 'box', halfExtents: [w / 2, h / 2, d / 2] }, isTrigger: false, layer: 0 },
           ],
         }),
       );
