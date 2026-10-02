@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { RuntimeBridge, type ActorSource } from '../src/services/runtime-bridge';
-import type { ActorMesh } from '../src/services/runtime-actors';
-import { DYNAMIC_INSTANCE_FLOATS } from '@aether/render';
+import { RuntimeBridge, type ActorSource, clipIndexForBehavior, animPhase } from '../src/services/runtime-bridge';
+import type { ActorMesh, ActorClipMeta } from '../src/services/runtime-actors';
+import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type BakedPalette } from '@aether/render';
 import { lookupCharacterStats } from '@aether/content';
 import { PlaySession } from '@aether/runtime';
 import type { SceneDocument } from '@aether/scene';
@@ -237,8 +237,19 @@ function stubActorMesh(characterId: string): ActorMesh {
     paletteBase: 7,
     restPose: 42,
     feetOffset: 0.031,
+    // 无片段元数据：M3 的「选不到片 → 回 bind pose」路径（inst[11] = restPose）
+    palette: STUB_PALETTE,
+    clips: [],
   };
 }
+
+/** 桩调色板：M2 静止路径不查表（poseIndexAt 不会被调到），形状合法即可 */
+const STUB_PALETTE: BakedPalette = {
+  jointCount: 3,
+  clips: [],
+  data: new Float32Array(new ArrayBuffer(3 * 16 * 4)),
+  clipBasePose: [],
+};
 
 function actorBridge(): RuntimeBridge {
   const e01 = stubActorMesh('E-01');
@@ -307,5 +318,177 @@ describe('RuntimeBridge —— 真模型批次（docs/20 M2，flags bit0 双路�
     expect(after.some((x) => x.meshId === 'actor:E-01')).toBe(true);
     // E-02 的胶囊批不受牵连
     expect(after.some((x) => x.meshId.startsWith('capsule:'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 动画相位（docs/20 M3）：tick → phase → poseIndexAt，确定性红线。
+// 夹具 = 手搓片段元数据（idle 1s/10 帧、walk 2s/20 帧），poseIndexAt 本体
+// 在 packages/render 已有独立测试 —— 这里只钉 Bridge 的打包契约。
+// ---------------------------------------------------------------------------
+
+/** 带片段元数据的 actor：idle(1s,10帧) + walk(2s,20帧)，与真实 GLB 的命名一致 */
+function animatedActorMesh(paletteBase: number): ActorMesh {
+  const palette: BakedPalette = {
+    jointCount: 3,
+    clips: [
+      { name: 'idle', frameCount: 10, durationSec: 1 },
+      { name: 'walk', frameCount: 20, durationSec: 2 },
+    ],
+    // poseIndexAt 只做下标算术不读矩阵值，数据全零即可；31 pose = 10+20+bind
+    data: new Float32Array(new ArrayBuffer(31 * 3 * 16 * 4)),
+    clipBasePose: [0, 10],
+  };
+  const m = stubActorMesh('E-01');
+  m.palette = palette;
+  m.clips = palette.clips.map(
+    (c, i): ActorClipMeta => ({
+      name: c.name,
+      basePose: palette.clipBasePose[i]!,
+      frameCount: c.frameCount,
+      durationSec: c.durationSec,
+    }),
+  );
+  m.restPose = 30; // 局部 bind = 10+20
+  m.paletteBase = paletteBase;
+  return m;
+}
+
+/** 装配了动画 actor 的会话桥（E-01 真模型，其余胶囊） */
+function animatedBridge(): { bridge: RuntimeBridge; play: PlaySession; actor: ActorMesh } {
+  const actor = animatedActorMesh(0);
+  const source: ActorSource = { get: (id) => (id === 'E-01' ? actor : null) };
+  const play = new PlaySession();
+  const r = play.play(floor1());
+  if (!r.ok) throw new Error('夹具装载失败：' + r.errors.join('；'));
+  const bridge = new RuntimeBridge(source);
+  bridge.attach(play.runtime);
+  return { bridge, play, actor };
+}
+
+describe('clipIndexForBehavior · 行为选片（M3）', () => {
+  const clips = [
+    { name: 'idle', basePose: 0, frameCount: 10, durationSec: 1 },
+    { name: 'walk', basePose: 10, frameCount: 20, durationSec: 2 },
+    { name: 'attack', basePose: 30, frameCount: 24, durationSec: 1 },
+  ] as ActorClipMeta[];
+
+  it('idle(0) → idle 片；chase(1) → walk 片', () => {
+    expect(clipIndexForBehavior(clips, 0)).toBe(0);
+    expect(clipIndexForBehavior(clips, 1)).toBe(1);
+  });
+  it('未知行为值回 idle；名字缺失回 clip 0；空片段表回 -1（→ bind）', () => {
+    expect(clipIndexForBehavior(clips, 7)).toBe(0);
+    expect(clipIndexForBehavior([{ name: 'run', basePose: 0, frameCount: 5, durationSec: 1 }] as ActorClipMeta[], 1)).toBe(0);
+    expect(clipIndexForBehavior([], 1)).toBe(-1);
+  });
+});
+
+describe('animPhase · 相位纯函数（确定性红线）', () => {
+  it('同输入同值；世界时间 = tick × 固定步长，与渲染帧率无关', () => {
+    expect(animPhase(15, 1 / 30, 0, 1)).toBeCloseTo(0.5, 12);
+    expect(animPhase(15, 1 / 30, 0, 1)).toBe(animPhase(15, 1 / 30, 0, 1));
+  });
+  it('整周期回绕到 0（相位始终在 [0,1)）', () => {
+    expect(animPhase(30, 1 / 30, 0, 1)).toBeCloseTo(0, 12);
+    expect(animPhase(90, 1 / 30, 0, 1)).toBeCloseTo(0, 12);
+    for (let tick = 0; tick < 100; tick++) {
+      const p = animPhase(tick, 1 / 30, 5, 2);
+      expect(p).toBeGreaterThanOrEqual(0);
+      expect(p).toBeLessThan(1);
+    }
+  });
+  it('实体相位偏移 = id × φ⁻¹ mod 1（不同实体错开，避免机械同步）', () => {
+    expect(animPhase(0, 1 / 30, 1, 1)).toBeCloseTo(0.6180339887498949, 12);
+    expect(animPhase(0, 1 / 30, 2, 1)).toBeCloseTo(0.2360679774997897, 12);
+    expect(animPhase(0, 1 / 30, 1, 1)).not.toBeCloseTo(animPhase(0, 1 / 30, 2, 1), 3);
+  });
+  it('时长 0 的退化片：相位恒 0（不除零、不 NaN）', () => {
+    expect(animPhase(5, 1 / 30, 3, 0)).toBe(0);
+  });
+});
+
+describe('RuntimeBridge —— 动画相位打包（docs/20 M3，inst[11]/[12]/[13]）', () => {
+  it('inst[12] 与实体 behavior 一致：chase → walk 帧数、idle → idle 帧数', () => {
+    const { bridge } = animatedBridge();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    const batch = bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    const e01 = bridge.entities.filter((e) => e.characterId === 'E-01');
+    expect(batch.count).toBe(e01.length);
+    expect(batch.count).toBeGreaterThan(0);
+    for (let i = 0; i < e01.length; i++) {
+      const want = e01[i]!.behavior === 1 ? 20 : 10;
+      expect(batch.instances[i * F + 12]).toBe(want);
+    }
+  });
+
+  it('inst[13] = 闭式相位、inst[11] = poseIndexAt(palette, clipIdx, phase)（局部下标）', () => {
+    const { bridge, actor } = animatedBridge();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    const batch = bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    const e01 = bridge.entities.filter((e) => e.characterId === 'E-01');
+    const tick = bridge.currentTick;
+    expect(tick).toBe(0);
+    for (let i = 0; i < e01.length; i++) {
+      const e = e01[i]!;
+      const clipIdx = e.behavior === 1 ? 1 : 0;
+      const dur = clipIdx === 1 ? 2 : 1;
+      // 闭式公式写死在测试里（不复用实现函数，防自证）：
+      // phase = (tick × 1/30 / dur + id × φ⁻¹ mod 1) mod 1。
+      // inst[13] 是 float32（精度 ~1e-7），比对精度放宽到 6 位十进制
+      const phase = (((tick / 30) / dur) + (e.id * 0.6180339887498949) % 1) % 1;
+      expect(batch.instances[i * F + 13]).toBeCloseTo(phase, 6);
+      expect(batch.instances[i * F + 11]).toBe(poseIndexAt(actor.palette, clipIdx, phase));
+    }
+  });
+
+  it('世界推进后同实体的 poseIndex 改变（动画在走，不依赖重挂会话）', () => {
+    const { bridge, play } = animatedBridge();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    const e01 = bridge.entities.filter((e) => e.characterId === 'E-01');
+    // 🔴 实例数组是槽位内的活缓冲（rebuild 原地重写）——必须拷贝快照再比
+    const before = bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!
+      .instances.slice() as Float32Array;
+    // advance(0.5) 受 maxCatchUpSteps=5 封顶实际走 5 tick：walk 片相位 +1/12
+    // 周期 → 帧号 +1~2（mod 20），所有实体的 poseIndex 必然改变
+    play.advance(0.5);
+    bridge.refresh();
+    const after = bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    expect(after.count).toBe(e01.length);
+    for (let i = 0; i < e01.length; i++) {
+      expect(after.instances[i * F + 11]).not.toBe(before[i * F + 11]);
+    }
+  });
+
+  it('同种子两个会话推到同一 tick：[11]/[13] 逐位一致（Node 侧确定性证据）', () => {
+    const mk = () => {
+      const s = animatedBridge();
+      s.play.advance(0.5);
+      s.bridge.refresh();
+      return s;
+    };
+    const a = mk();
+    const b = mk();
+    expect(a.bridge.currentTick).toBe(b.bridge.currentTick);
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    const ba = a.bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    const bb = b.bridge.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    expect(ba.count).toBe(bb.count);
+    for (let i = 0; i < ba.count; i++) {
+      expect(ba.instances[i * F + 11]).toBe(bb.instances[i * F + 11]);
+      expect(ba.instances[i * F + 13]).toBe(bb.instances[i * F + 13]);
+    }
+  });
+
+  it('无片段元数据的 actor：回 bind pose（restPose 局部下标进 [11]）', () => {
+    // stubActorMesh 的 clips 为空 → 选片 -1 → inst[11] = restPose（M2 路径保持）
+    const b = actorBridge();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    const batch = b.batches()!.find((x) => x.meshId === 'actor:E-01')!;
+    for (let i = 0; i < batch.count; i++) {
+      expect(batch.instances[i * F + 11]).toBe(42);
+      expect(batch.instances[i * F + 12]).toBe(0);
+      expect(batch.instances[i * F + 13]).toBe(0);
+    }
   });
 });

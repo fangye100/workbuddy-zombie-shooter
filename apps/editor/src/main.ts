@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -177,10 +177,14 @@ async function boot(): Promise<void> {
    * 清单异步后补（编辑器启动时 manifest 尚未到位），到位前 preload 一律退胶囊。
    */
   const actorLib = new ActorLibrary(null);
+  /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
+  let assetManifest: unknown = null;
   const manifestReady = (async () => {
     const r = await readProjectFile('assets/_data/asset-manifest.json');
-    if (r.ok) actorLib.setManifest(r.json);
-    else console.warn(`[actors] 资产清单加载失败，Play 全部退胶囊：${r.error ?? '?'}`);
+    if (r.ok) {
+      assetManifest = r.json;
+      actorLib.setManifest(r.json);
+    } else console.warn(`[actors] 资产清单加载失败，Play 全部退胶囊：${r.error ?? '?'}`);
   })();
 
   /**
@@ -263,31 +267,46 @@ async function boot(): Promise<void> {
   }
 
   /**
-   * Play 期真角色装配（docs/20 M2）：异步预载 E-01（首发角色；M3 扩到全部
-   * 有「+动画」档的角色）。不阻塞 Play——加载完成前实体照画胶囊，完成后
-   * `notifyActorsChanged()` 原地换真模型。防重入：reset/restart 快速连点只跑一份。
+   * Play 期真角色装配（docs/20 M2/M3）：预载**全部**带「+动画」档的角色（清单
+   * 从 manifest 数据派生，禁手抄——手抄 = 第二真源）。不阻塞 Play——加载完成前
+   * 实体照画胶囊，完成后 `notifyActorsChanged()` 原地换真模型；单角色失败独立
+   * warn 退胶囊（ActorLibrary.preload 内建）。代次守卫（PR #19 FR-A）：每次启动 +1、
+   * stopPlay 也 +1，旧循环核对代次失配即作废——替换旧的布尔防重入（布尔会把
+   * Stop 后应立刻启动的新循环也挡在外面）。
    */
-  let actorPreloading = false;
+  let actorPreloadGen = 0;
   async function kickActorPreload(): Promise<void> {
-    if (actorPreloading) return;
-    actorPreloading = true;
+    const gen = ++actorPreloadGen;
     try {
       // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
       // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
       await manifestReady;
-      const changed = await actorLib.preload('E-01');
-      // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
-      // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
-      //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
-      // 这里只处理新装配角色（changed = true）的追加上传。
-      if (!changed || playCtl.state === 'stopped') return;
-      const pal = actorLib.buildPalette();
-      if (pal !== null) {
-        renderer.setDynamicPalette(pal);
-        bridge.notifyActorsChanged();
+      // 🔴 串行 await：paletteBase 布局由库内 manifest rank 规范序保证（PR #19
+      // FR-B），与本循环的完成序无关；串行只是控制并发与失败可读性。
+      for (const id of findAnimatedCharacterIds(assetManifest)) {
+        if (gen !== actorPreloadGen) return; // 新循环已启动 / 已 Stop：本循环作废
+        const changed = await actorLib.preload(id);
+        if (gen !== actorPreloadGen) {
+          // 跨 Stop/新 Play 边界的迟到结果：成功注册无害（CPU 缓存，新轮 startPlay
+          // 同步重传直接命中）；但**迟到失败**会把 id 写回 failed、让新轮跳过它
+          // ——单角色清除，封死跨边界污染（FR-A）
+          actorLib.resetFailure(id);
+          return;
+        }
+        // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
+        // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
+        //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
+        // 这里只处理新装配角色（changed = true）的追加上传。Stop 后继续把剩余
+        // 角色装配进 CPU 缓存是安全的（下次 Play 直接命中，不产生 GPU 副作用）。
+        if (!changed || playCtl.state === 'stopped') continue;
+        const pal = actorLib.buildPalette();
+        if (pal !== null) {
+          renderer.setDynamicPalette(pal);
+          bridge.notifyActorsChanged();
+        }
       }
     } finally {
-      actorPreloading = false;
+      // 不复位任何状态：代次模型下旧循环自然终止，新循环随时可启动
     }
   }
 
@@ -539,6 +558,12 @@ async function boot(): Promise<void> {
      * 未装配角色仍为 `capsule:*`（降级是设计行为）。
      */
     actorLib,
+    /**
+     * 运行时桥（docs/17 WU-3）：探针读「世界 → 批次」翻译结果用 —— `batches()`
+     * 的实例数组就是每帧上传 GPU 的内容（M3 动画断言隔帧读 inst[11] poseIndex，
+     * 必须变化 = 动画在走）。公开 API，不暴露槽位内部状态。
+     */
+    bridge,
   };
 
   // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
@@ -1544,6 +1569,8 @@ async function boot(): Promise<void> {
   function stopPlay(): void {
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
+    actorPreloadGen++;
     // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
     //（成功装配的缓存不动，见 ActorLibrary.resetFailures）
     actorLib.resetFailures();

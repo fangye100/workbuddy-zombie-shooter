@@ -1,14 +1,23 @@
 /**
- * 动态通道 GPU 蒙皮验收探针（docs/20 M2）。
+ * 动态通道 GPU 蒙皮验收探针（docs/20 M2 + M3）。
  *
  * 断言的不是「像素好不好看」（那是人工 / cdp-verify 的事），而是**装配链贯通**：
- *   1. Play 后 ActorLibrary 装配 E-01（manifest LOD3「+动画」→ parseGlb → 烘焙调色板）
- *   2. 渲染批次 meshIds 含 actor:E-01（真模型）**且**仍含 capsule:*（E-02 无档降级）
+ *   1. Play 后 ActorLibrary 装配全部「+动画」档角色（manifest LOD3 → parseGlb →
+ *      烘焙调色板；期望清单从 asset-manifest.json 派生，禁手抄）
+ *   2. 渲染批次 meshIds 含 actor:*（真模型）**且**仍含 capsule:*（玩家 P-01
+ *      不在 manifest，永远胶囊）
  *   3. 实例 flags bit0 = 1（蒙皮路径）与 0（胶囊路径）同帧共存
- *   4. Play → Stop → Play 循环：Stop 释放 GPU palette，再 Play 必须重传
+ *   4. M3 装配数学：任一 paletteBase > 0 的角色，base/restPose 与该角色 palette
+ *      pose 数构成的不变量成立（rest = poses-1 局部末帧 bind；base 按注册序
+ *      以 pose 单位累加 —— PR #18 抓过的 P1，探针从公开字段独立复算）
+ *   5. M3 动画在走：两个相隔 >500ms 的时刻读同一 actor 实例的 inst[11]
+ *      （poseIndex，相对 paletteBase），值必须变化（tick 推相位）
+ *   6. M3 批次构成：actor 批 = 实体在场的有档角色；B-02 无档不装配
+ *      （floor-1 无 B-02 刷怪点，降级在库级验证）
+ *   7. Play → Stop → Play 循环：Stop 释放 GPU palette，再 Play 必须重传
  *      （2026-10-02 M2 实现期修掉的坑：preload 幂等返回 false 导致 palette 不重传，
  *       蒙皮实例查已销毁 buffer → 顶点全零塌缩）
- *   5. 全程 console 无 error / 无未捕获异常（WGSL 编译错误在这里暴露）
+ *   8. 全程 console 无 error / 无未捕获异常（WGSL 编译错误在这里暴露）
  *
  * 用法（本机一律 headed + 真实 GPU）：
  *   node tools/verify/dynamic-skin-probe.mjs --headed
@@ -34,7 +43,23 @@ const CHROME = arg('chrome', '') || 'C:\\Program Files\\Google\\Chrome\\Applicat
 
 const { results, check, summary } = createRecorder();
 
+/**
+ * 期望装配清单（探针侧 oracle，与 findAnimatedCharacterIds 同语义的独立重算）：
+ * manifest 里带「+动画」档的角色，按清单顺序。禁手抄 —— 手抄清单 = 第二真源。
+ */
+function expectedAnimatedIds() {
+  const manifest = JSON.parse(fs.readFileSync(path.resolve('assets/_data/asset-manifest.json'), 'utf8'));
+  return manifest.characters
+    .filter(
+      (c) =>
+        Array.isArray(c.lods) &&
+        c.lods.some((l) => typeof l.label === 'string' && l.label.includes('+动画')),
+    )
+    .map((c) => c.id);
+}
+
 async function main() {
+  const expected = expectedAnimatedIds();
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const { server, url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
   const { chrome, cdp } = await launchEditorSession({
@@ -64,8 +89,9 @@ async function main() {
       { timeout: 20000, interval: 500, label: 'Play 激活（场景 boot 后点击生效）' },
     );
     await waitFor(
-      () => cdp.eval('(() => window.__editor?.actorLib?.size ?? -1)()').then((n) => n === 1),
-      { timeout: 20000, interval: 400, label: 'E-01 装配完成（actorLib.size === 1）' },
+      () =>
+        cdp.eval('(() => window.__editor?.actorLib?.size ?? -1)()').then((n) => n === expected.length),
+      { timeout: 30000, interval: 400, label: `全部「+动画」档角色装配完成（actorLib.size === ${expected.length}）` },
     );
 
     // HUD / 渲染刷新间隔（0.4s 量级）之后读批次状态
@@ -76,9 +102,33 @@ async function main() {
       return { ids, actors: window.__editor.actorLib.size,
                playing: document.querySelector('#btn-pause') && !document.querySelector('#btn-pause').disabled };
     })()`);
-    check('E-01 已装配（actorLib.size = 1）', st.actors === 1, JSON.stringify(st.actors));
+    check(
+      `全部「+动画」档角色已装配（actorLib.size = ${expected.length}，清单从 manifest 派生）`,
+      st.actors === expected.length,
+      JSON.stringify(st.actors),
+    );
     check('动态批次含真模型网格 actor:E-01', st.ids.includes('actor:E-01'), st.ids.join(','));
-    check('未装配角色仍走胶囊（E-02 降级是设计行为）', st.ids.some((i) => i.startsWith('capsule:')), st.ids.join(','));
+    check('未装配角色仍走胶囊（玩家 P-01 不在 manifest，恒胶囊）', st.ids.some((i) => i.startsWith('capsule:')), st.ids.join(','));
+
+    // ---- M3 ③ 批次构成：actor 批 = 实体在场的有档角色；B-02 无档不装配 ----
+    const compose = await cdp.eval(`(() => {
+      const lib = window.__editor.actorLib;
+      const ids = window.__editor.renderer.debugDynamicMeshIds();
+      const actorIds = ids.filter((i) => i.startsWith('actor:')).map((i) => i.slice(6));
+      // 实体视图派生（不手抄场景）：在场角色按「装配库有没有」分成真模型/胶囊两组
+      const present = new Set(window.__editor.bridge.entities.map((e) => e.characterId));
+      const liveActor = [...present].filter((id) => lib.get(id) !== null).sort();
+      const liveCapsule = [...present].filter((id) => lib.get(id) === null).sort();
+      return { actorIds: [...new Set(actorIds)].sort(), liveActor, liveCapsule,
+               b02: lib.get('B-02'), present: [...present].sort() };
+    })()`);
+    check(
+      'actor 批次 = 实体在场的有档角色（批次按 characterId 分槽）',
+      JSON.stringify(compose.actorIds) === JSON.stringify(compose.liveActor) && compose.actorIds.length >= 2,
+      `batches=${JSON.stringify(compose.actorIds)} live=${JSON.stringify(compose.liveActor)}`,
+    );
+    check('B-02 无「+动画」档不装配（缺档退胶囊是库级设计行为）', compose.b02 === null, JSON.stringify(compose.b02));
+    check('在场无档角色走胶囊（floor-1 = 玩家 P-01）', compose.liveCapsule.length >= 1, JSON.stringify(compose.liveCapsule));
 
     // ---- ② 实例 flags 双路径（蒙皮位与胶囊位同帧共存）----
     const flags = await cdp.eval(`(() => {
@@ -91,6 +141,69 @@ async function main() {
     check('装配数据完整（skin 顶点 + paletteBase + restPose）',
       flags !== null && flags.joints > 0 && flags.weights > 0 && flags.paletteBase === 0 && flags.restPose >= 0,
       JSON.stringify(flags));
+
+    // ---- M3 ① 装配数学（双角色，从 ActorMesh 公开字段独立复算）----
+    // 任一 paletteBase > 0 的角色：base 按注册序以 pose 单位累加、restPose 是
+    // 角色 palette 局部末帧（= pose 数 - 1）、base + rest 指向该角色块最后一 pose。
+    // 探针不复用页面里的 assemblePalettes —— 独立重算才有防线价值。
+    const math = await cdp.eval(`(() => {
+      const lib = window.__editor.actorLib;
+      const ids = window.__editor.renderer.debugDynamicMeshIds()
+        .filter((i) => i.startsWith('actor:')).map((i) => i.slice(6));
+      return ids.map((id) => {
+        const a = lib.get(id);
+        const poses = a.palette.data.length / 16 / a.palette.jointCount;
+        return { id, base: a.paletteBase, rest: a.restPose, poses };
+      });
+    })()`);
+    const withBase = math.filter((m) => m.base > 0);
+    check('双角色在场（paletteBase > 0 的角色存在）', withBase.length >= 1, JSON.stringify(math));
+    if (withBase.length >= 1) {
+      const sorted = [...math].sort((a, b) => a.base - b.base);
+      let acc = 0;
+      let okChain = true;
+      let okRest = true;
+      let okRange = true;
+      for (const m of sorted) {
+        if (m.base !== acc) okChain = false;
+        if (m.rest !== m.poses - 1) okRest = false;
+        if (m.base + m.rest !== acc + m.poses - 1) okRange = false;
+        acc += m.poses;
+      }
+      const totalPoses = acc;
+      check('paletteBase 按注册序以 pose 单位累加（bases 首尾相接）', okChain, JSON.stringify(sorted));
+      check('restPose = 角色 palette 局部末帧（poses - 1，PR #18 P1 防线）', okRest, JSON.stringify(sorted));
+      check('base + rest = 该角色块末 pose（全局下标不越界）', okRange && sorted.every((m) => m.base + m.rest < totalPoses), JSON.stringify(sorted));
+    }
+
+    // ---- M3 ② 动画在走：隔 >500ms 两次读同一 actor 实例的 inst[11]（poseIndex）----
+    // inst 布局：[7] paletteBase / [11] poseIndex（局部）/ [12] frameCount /
+    // [13] phase01 / [14] flags。tick 推相位 → poseIndex 必随时间变化。
+    const samplePoses = () =>
+      cdp.eval(`(() => {
+        const batches = window.__editor.bridge.batches();
+        if (batches === null) return null;
+        const out = {};
+        for (const b of batches) {
+          if (!b.meshId.startsWith('actor:')) continue;
+          for (let i = 0; i < b.count; i++) {
+            out[b.meshId + '#' + i] = { pose: b.instances[i * 16 + 11], base: b.instances[i * 16 + 7] };
+          }
+        }
+        return out;
+      })()`);
+    const poseA = await samplePoses();
+    await sleep(900); // >500ms：30 tick/s 下 walk 片相位推进 ~0.45 周期，帧号必变
+    const poseB = await samplePoses();
+    const keysA = Object.keys(poseA ?? {});
+    const changed = keysA.filter((k) => poseB[k] !== undefined && poseB[k].pose !== poseA[k].pose);
+    check(
+      '动画在走（同一 actor 实例隔 900ms 的 poseIndex 全部变化）',
+      keysA.length > 0 && changed.length === keysA.length,
+      `${changed.length}/${keysA.length} 变化`,
+    );
+    const idxSafe = keysA.every((k) => poseA[k].pose >= 0 && poseA[k].pose < 1e9 && Number.isFinite(poseA[k].pose));
+    check('poseIndex 数值健康（有限非负，非 u32 巨数）', idxSafe, JSON.stringify(Object.values(poseA ?? {}).slice(0, 3)));
 
     // ---- ③ 截图留档（人工复核「真模型非胶囊」； headed + 反遮挡 flags 已加）----
     await sleep(1200);
@@ -111,7 +224,11 @@ async function main() {
       actors: window.__editor.actorLib.size,
     }))()`);
     check('Stop 后动态批次清空（渲染侧无残留）', afterStop.ids.length === 0, JSON.stringify(afterStop.ids));
-    check('Stop 只释放 GPU 侧，CPU 装配缓存保留（下次 Play 免重载）', afterStop.actors === 1, JSON.stringify(afterStop.actors));
+    check(
+      `Stop 只释放 GPU 侧，CPU 装配缓存保留（下次 Play 免重载）`,
+      afterStop.actors === expected.length,
+      JSON.stringify(afterStop.actors),
+    );
 
     await waitFor(
       () =>

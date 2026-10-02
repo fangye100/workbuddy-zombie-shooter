@@ -17,8 +17,8 @@
 import { createCapsule } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
-import { DYNAMIC_INSTANCE_FLOATS, type CoreDynamicBatch } from '@aether/render';
-import type { ActorMesh } from './runtime-actors';
+import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
+import type { ActorMesh, ActorClipMeta } from './runtime-actors';
 
 /**
  * Bridge 对装配库的全部依赖（窄接口）：只问「这个角色有没有真模型」。
@@ -33,6 +33,43 @@ const F = DYNAMIC_INSTANCE_FLOATS;
 
 /** 实例 flags：bit0 = 蒙皮（docs/20 §3.1；0 = 胶囊代理走老路径） */
 const FLAG_SKINNED = 1;
+
+/** 行为状态 → 片段名（EntityView.behavior：0 = idle、1 = chase；docs/20 M3） */
+const CLIP_FOR_BEHAVIOR: Record<number, string> = { 0: 'idle', 1: 'walk' };
+
+/** 黄金比共轭 φ⁻¹：实体相位偏移乘子（id × φ⁻¹ mod 1 分布均匀，避免全员机械同步） */
+const PHASE_OFFSET_GOLDEN = 0.6180339887498949;
+
+/**
+ * 动画相位（docs/20 M3，确定性红线）：
+ *
+ *     phase = (世界时间 / 片段时长 + id × φ⁻¹ mod 1) mod 1
+ *
+ * - 世界时间 = `tick × fixedStep`（RuntimeSession 固定步长 1/30s —— 渲染帧率
+ *   不影响动画相位，Node 与浏览器同 tick 同实体必然同值）；
+ * - 偏移在**周期单位**上：无论片段时长多少，实体间均匀错开；
+ * - 纯函数：无随机、无 Date —— 这是「同种子世界逐位可重放」的一部分。
+ */
+export function animPhase(tick: number, fixedStepSec: number, entityId: number, durationSec: number): number {
+  if (!(durationSec > 0)) return 0; // 时长 0 的退化片：相位恒 0（最近帧语义下静止）
+  const offset = (entityId * PHASE_OFFSET_GOLDEN) % 1;
+  const phase = (tick * fixedStepSec) / durationSec + offset;
+  return phase - Math.floor(phase);
+}
+
+/**
+ * 按行为状态选片（docs/20 M3）：chase → 'walk'（移动）、idle → 'idle'（站立）。
+ * 名字匹配不到回退 clip 0（真 GLB 六片 idle/run/attack/walk/hit/death 全有，
+ * 兜底防资产改名）；一个片都没有返回 -1，调用方回 bind pose（restPose）。
+ */
+export function clipIndexForBehavior(clips: readonly ActorClipMeta[], behavior: number): number {
+  if (clips.length === 0) return -1;
+  const wanted = CLIP_FOR_BEHAVIOR[behavior] ?? CLIP_FOR_BEHAVIOR[0]!;
+  for (let i = 0; i < clips.length; i++) {
+    if (clips[i]!.name === wanted) return i;
+  }
+  return 0;
+}
 
 /**
  * 代理体配色。**不是真源**——等真模型接进来后由材质决定，这里只为了让不同 NPC
@@ -292,6 +329,10 @@ export class RuntimeBridge {
     for (const s of this.slots.values()) s.entities.length = 0;
     if (this.session === null) return;
     const view = this.session.view();
+    // 动画相位的两个输入（M3）：tick 与固定步长都来自会话 —— 纯数据，
+    // 不读墙钟，Node 与浏览器逐位一致（docs/20 §5「动画相位 = f(tick)」）
+    const tick = this.session.tick;
+    const fixedStep = this.session.fixedStep;
 
     for (const e of view) {
       const stats = lookupCharacterStats(e.characterId);
@@ -366,11 +407,24 @@ export class RuntimeBridge {
         inst[o + 8] = base[0] * k;
         inst[o + 9] = base[1] * k;
         inst[o + 10] = base[2] * k;
-        // [11] poseIndex（相对 paletteBase）：M2 固定 bind pose；M3 由 tick 推 phase 取帧
-        inst[o + 11] = actor !== null ? actor.restPose : 0;
-        // [12..15] clipFrameCount / phase01 / flags / pad（flags bit0 = 是否蒙皮）
-        inst[o + 12] = 0;
-        inst[o + 13] = 0;
+        // [11] poseIndex（相对 paletteBase，局部量）：M3 按行为选片 + tick 推相位查表
+        //（poseIndexAt 返回本角色 palette 内的下标；shader 端全局 = paletteBase + 相对量，
+        //  与 restPose 同语义）。选不到片（资产改名 / 退化空片）回 bind pose。
+        let poseIdx = 0;
+        let frameCount = 0;
+        let phase01 = 0;
+        if (actor !== null) {
+          const clipIdx = clipIndexForBehavior(actor.clips, e.behavior);
+          const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
+          phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
+          poseIdx = clip !== null ? poseIndexAt(actor.palette, clipIdx, phase01) : actor.restPose;
+          frameCount = clip !== null ? clip.frameCount : 0;
+        }
+        inst[o + 11] = poseIdx;
+        // [12..15] clipFrameCount / phase01 / flags / pad（flags bit0 = 是否蒙皮；
+        // [12]/[13] 是信息位，shader 只读 [7]/[11]/[14] —— 探针 / 调试用）
+        inst[o + 12] = frameCount;
+        inst[o + 13] = phase01;
         inst[o + 14] = actor !== null ? FLAG_SKINNED : 0;
         inst[o + 15] = 0;
       }

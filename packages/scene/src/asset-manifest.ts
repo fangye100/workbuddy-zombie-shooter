@@ -154,3 +154,28 @@ export function formatLodStats(family: LodFamily, path: string): string {
   if (d !== null) parts.push(`Δ${d}`);
   return parts.join(' · ');
 }
+
+/**
+ * 列出全部带「+动画」档的角色 id，**按 manifest 顺序**返回（M3 全角色接入）。
+ *
+ * 运行时真角色装配的预载清单（docs/20 §5 / HANDOFF M3）：调用方逐个 preload，
+ * 顺序即 paletteBase 分配序 —— 清单序稳定是确定性的一部分。
+ * 🔴 禁手抄角色列表：手抄 = 第二真源（缺一个新角色 / 多一个已删角色都不会报错，
+ * 只会静默退胶囊），必须从 manifest 数据派生。
+ *
+ * 与 findCharacterLodPath 同一套「+动画」匹配语义（label.includes），无档角色
+ *（如 B-02 从未绑骨）自然被过滤 —— 「缺档退胶囊」是设计行为，不是错误。
+ */
+export function findAnimatedCharacterIds(json: unknown): string[] {
+  if (json === null || typeof json !== 'object') return [];
+  const list = (json as Record<string, unknown>).characters;
+  if (!Array.isArray(list)) return [];
+  const ids: string[] = [];
+  for (const e of list) {
+    if (e === null || typeof e !== 'object') continue;
+    const id = (e as Record<string, unknown>).id;
+    if (typeof id !== 'string') continue;
+    if (findCharacterLodPath(json, id, '+动画') !== null) ids.push(id);
+  }
+  return ids;
+}
