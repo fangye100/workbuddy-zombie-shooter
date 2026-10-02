@@ -213,6 +213,7 @@ export class CharacterTable {
     this.hitFlash[i] = 0;
     this.windupRemain[i] = 0;
     this.cooldownUntil[i] = 0;
+    this.poise[i] = 0;
     this.speedScale[i] = 1;
     this.animPhaseOffset[i] = hash01(i);
     this.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
@@ -263,6 +264,12 @@ export class CharacterTable {
     this.desiredVelZ[i] = 0;
     this.windupRemain[i] = 0;
     this.hitFlash[i] = 0;
+    // 池化防御（评审 P3）：CharacterPool.acquire→activate 复用槽位不走 alloc——
+    // 战斗列不在这里清，下一个生灵会带上一个生前的 CD/血量。当前池化零消费
+    //（session 走 spawn→alloc 全清），先把坑填上防未来踩。
+    this.health[i] = 0;
+    this.maxHp[i] = 0;
+    this.cooldownUntil[i] = 0;
   }
 
   stats(): CharacterStats {

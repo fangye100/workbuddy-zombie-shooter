@@ -206,9 +206,10 @@ const BEHAVIOR_CHASE = 1;
 /** P5 四态扩展（docs/23 §2.2）：前摇蓄力中（站定；打断语义 [PLACEHOLDER 不实现]） */
 export const BEHAVIOR_WINDUP = 2;
 /**
- * 打击瞬时态：windup 结束的那一 tick 执行扇形判定后立即回 CHASE + CD——
- * 数据上只存在一 tick，打击的事实记录在 combatEvents（damage 事件）里。
- * 导出给宿主消费（动画选片 / telegraph 渲染按四态语义驱动）。
+ * 打击瞬时态：windup 结束的那一 tick 执行扇形判定后立即写回 CHASE + CD。
+ * 🔴 数据上从不过夜（当 tick 即返回 CHASE）——宿主经 view() 永远观察不到 3，
+ * 打击的事实记录在 combatEvents（damage 事件）；动画选片应消费事件而非行为码。
+ * 常量保留导出是为了四态语义的完整对照表（docs/23 §2.2）。
  */
 export const BEHAVIOR_STRIKE = 3;
 

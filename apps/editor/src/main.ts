@@ -1800,7 +1800,7 @@ async function boot(): Promise<void> {
   window.addEventListener('keyup', (e) => {
     playKeys.delete(e.key.toLowerCase());
     // P5 C5：J 松开 = 停火（失焦路径由 clearPlayKeys 兜底）
-    if (e.key.toLowerCase() === 'j' && playCtl.isPlaying) playCtl.session.setFire(false);
+    if (e.key.toLowerCase() === 'j') playCtl.session.setFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
   });
 
   /**

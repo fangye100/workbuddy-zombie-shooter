@@ -200,7 +200,8 @@
         "extras": {
           "knockbackM": 3
         }
-      }
+      },
+      "attackSource": "作者数据：roster.bosses[B-01].attacks[0] 横扫 desc（肉钩 270° 横扫，前摇 0.9s，半径 4m，伤害 30+击退 3m）；CD desc 未写，[PLACEHOLDER 3.0]"
     },
     {
       "id": "B-02",

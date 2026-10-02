@@ -104,7 +104,7 @@ describe('WaveScheduler · 触发即投 wave1，wave2 等清空（docs/23 §2.4�
 
   it('wave=0 旧语义兼容：单波全量（第二间房触发时一次性投放，无 wave2）', () => {
     const s = make();
-    // 房间 r1（nd_f1r1）的刷怪点 wave 全 0 → 归 1 → 单波；玩家不动不触发，直接查 desc 语义：
+    // 第二间战斗房（nd_f1r2）的刷怪点 wave 全 0 → 归 1 → 单波；玩家不动不触发，直接查 desc 语义：
     const r1Spawns = s.desc.spawns.filter((sp) => sp.roomNodeId === 'nd_f1r2');
     expect(r1Spawns.length).toBeGreaterThan(0);
     // 合成触发：把玩家 teleport 进 r1 边界（房间边界从 desc.rooms 取）
@@ -190,5 +190,48 @@ describe('胜负终态 · game-over 与 floor-clear', () => {
     s.reset();
     expect(s.outcome).toBe('running');
     expect(s.countNpc()).toBe(8);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// P5 C4 补防线（评审 P2）：wave2 容量不足 → 推迟重试不丢波 + 诊断可见
+// ---------------------------------------------------------------------------
+
+describe('WaveScheduler · 容量不足的推迟重试（评审补防线）', () => {
+  /** wave2 的 sp1 count 放大到 20：清空 wave1 后 free=9 < 20 → 推迟循环 */
+  function makeTight(capacity: number): RuntimeSession {
+    const key = Object.keys(MODULES)[0]!;
+    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    for (const n of doc.nodes) {
+      if (n.id !== 'nd_f1r0_sp1') continue;
+      for (const c of n.components) {
+        if (c.kind === 'SpawnPoint') (c as { count: number }).count = 20;
+      }
+    }
+    const r = loadLevelRuntime(doc);
+    if (r.desc === null) throw new Error('夹具装载失败');
+    return new RuntimeSession({ desc: r.desc, seed: 7, capacity });
+  }
+
+  it('wave2 需求 > 剩余容量：推迟重试循环中不投放、不丢波、W_SPAWN_CAPACITY 诊断可见', () => {
+    const s = makeTight(10); // 玩家1+wave1 8=9，wave2 需 20 > 清空后 free 9
+    expect(s.countNpc()).toBe(8);
+    clearAllNpcs(s);
+    // 跨过多个重试间隔（60 tick × 4）：仍不投放、波未丢（nextWave 未跳过）
+    s.run(260);
+    expect(s.countNpc()).toBe(0);
+    expect(s.sessionEvents.some((e) => e.type === 'wave-start' && e.wave === 2)).toBe(false);
+    expect(s.diagnostics().some((d) => d.code === 'W_SPAWN_CAPACITY')).toBe(true);
+    expect(s.clearedRooms()).toEqual([]); // 波没投完，房间不 cleared
+  });
+
+  it('容量足够时同操作 wave2 正常投放（对照：推迟不是死锁）', () => {
+    const s = makeTight(64);
+    expect(s.countNpc()).toBe(8);
+    clearAllNpcs(s);
+    for (let k = 0; k < 75; k++) s.step();
+    expect(s.countNpc()).toBe(20);
+    expect(s.sessionEvents.some((e) => e.type === 'wave-start' && e.wave === 2)).toBe(true);
   });
 });

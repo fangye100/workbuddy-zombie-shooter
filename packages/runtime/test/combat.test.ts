@@ -267,7 +267,7 @@ describe('玩家手枪 · 射线命中与 CD（12 伤 / 0.35s / 18m）', () => {
     expect(s.table.isAlive(s.playerEntityId)).toBe(true);
   });
 
-  it('attack=null 的角色（B-02/B-03 近战未定）永不进 windup', () => {
+  it('真源断言：B-02/B-03 的 attack=null（combatStep 对 null 永不进 windup 的数据前提）', () => {
     // 真源断言：stats 里 B-02/B-03 的 attack 确为 null（数据前提）
     const b02 = NPC_STATS.find((n) => n.id === 'B-02')!;
     const b03 = NPC_STATS.find((n) => n.id === 'B-03')!;
