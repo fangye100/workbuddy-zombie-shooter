@@ -11,6 +11,26 @@
 //
 // 生成：npm run content:gen
 
+/** 单次攻击的战斗数值（P5，docs/23 §2.2/§2.6）。null = 该角色近战未定（四态机不 windup） */
+export interface AttackStats {
+  readonly windupSec: number;
+  readonly rangeM: number;
+  readonly damage: number;
+  /** 攻击 CD（秒）；0 = 无 CD（如 E-05 自爆一次性） */
+  readonly cdSec: number;
+  /** 扇形判定角（度）；null = 非扇形（直线/抛物线，本期近战内核按扇形缺省处理） */
+  readonly arcDeg: number | null;
+  /** 复合串语义标记（dps/knockback/stunSec/knockbackM）——本期不消费，防语义静默压扁 */
+  readonly extras: Record<string, unknown>;
+}
+
+/** 玩家武器数值（P5 手枪，docs/23 §2.3；类型在 weapons.ts，数值真源在 stats.json） */
+export interface WeaponStats {
+  readonly damage: number;
+  readonly cdSec: number;
+  readonly rangeM: number;
+}
+
 /** 单个角色的运行时参数。defId 是全局唯一的角色定义槽位 */
 export interface CharacterStatsEntry {
   readonly defId: number;
@@ -29,6 +49,11 @@ export interface CharacterStatsEntry {
   readonly attackRange: number;
   readonly prewarm: number;
   readonly max: number;
+  /** 血量上限（roster.hp 交叉校验；health 列的初始真源） */
+  readonly hp: number;
+  readonly attack: AttackStats | null;
+  /** 玩家武器（仅 PLAYER_STATS 有意义） */
+  readonly weapon?: WeaponStats;
 }
 
 export const PLAYER_STATS: CharacterStatsEntry = {
@@ -48,7 +73,11 @@ export const PLAYER_STATS: CharacterStatsEntry = {
   attackRange: 0,
   prewarm: 0,
   max: 1,
+  hp: 100,
+  attack: null,
 };
+
+export const PLAYER_WEAPON: WeaponStats = { damage: 12, cdSec: 0.35, rangeM: 18 };
 
 export const NPC_STATS: readonly CharacterStatsEntry[] = [
   {
@@ -68,6 +97,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 2.2,
     prewarm: 0,
     max: 300,
+    hp: 60,
+    attack: { windupSec: 0.8, rangeM: 2.2, damage: 8, cdSec: 1.6, arcDeg: 90, extras: {} },
   },
   {
     defId: 1,
@@ -86,6 +117,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 6,
     prewarm: 0,
     max: 120,
+    hp: 45,
+    attack: { windupSec: 0.5, rangeM: 6, damage: 18, cdSec: 3.2, arcDeg: null, extras: {} },
   },
   {
     defId: 2,
@@ -104,6 +137,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 9,
     prewarm: 0,
     max: 60,
+    hp: 70,
+    attack: { windupSec: 1.2, rangeM: 9, damage: 6, cdSec: 4, arcDeg: null, extras: {"dps":true} },
   },
   {
     defId: 3,
@@ -122,6 +157,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 2.5,
     prewarm: 0,
     max: 40,
+    hp: 220,
+    attack: { windupSec: 1, rangeM: 8, damage: 12, cdSec: 5, arcDeg: null, extras: {"knockback":true,"stunSec":0.6} },
   },
   {
     defId: 4,
@@ -140,6 +177,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 3,
     prewarm: 0,
     max: 40,
+    hp: 90,
+    attack: { windupSec: 1.5, rangeM: 3.5, damage: 35, cdSec: 0, arcDeg: null, extras: {"knockbackM":4} },
   },
   {
     defId: 5,
@@ -158,6 +197,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 3.5,
     prewarm: 0,
     max: 4,
+    hp: 4200,
+    attack: { windupSec: 0.9, rangeM: 4, damage: 30, cdSec: 3, arcDeg: 270, extras: {"knockbackM":3} },
   },
   {
     defId: 6,
@@ -176,6 +217,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 12,
     prewarm: 0,
     max: 2,
+    hp: 6000,
+    attack: null,
   },
   {
     defId: 7,
@@ -194,6 +237,8 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     attackRange: 3,
     prewarm: 0,
     max: 2,
+    hp: 9000,
+    attack: null,
   },
 ];
 

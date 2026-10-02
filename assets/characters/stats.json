@@ -21,7 +21,14 @@
     "attackRange": 0,
     "prewarm": 0,
     "max": 1,
-    "source": "GDD 横屏射击：玩家基础移速需显著高于 E-01(1.4) 才能拉开风筝空间；感知字段对玩家无意义，置 0"
+    "source": "GDD 横屏射击：玩家基础移速需显著高于 E-01(1.4) 才能拉开风筝空间；感知字段对玩家无意义，置 0；hp/weapon 为 P5 战斗内核作者数据",
+    "hp": 100,
+    "weapon": {
+      "damage": 12,
+      "cdSec": 0.35,
+      "rangeM": 18,
+      "source": "[PLACEHOLDER P5] 手枪基线：E-01 hp60 → 5 枪一只，验证 TTK 手感（docs/23 §2.3）"
+    }
   },
   "npcs": [
     {
@@ -40,7 +47,16 @@
       "attackRange": 2.2,
       "prewarm": 0,
       "max": 300,
-      "source": "moveSpeed/height 取 roster speed '1.4 m/s' / height '1.75 m'；attackRange 取 roster attack.range '扇形 90° / 2.2 m' 的 2.2；教学兵视野宽、转向慢"
+      "source": "moveSpeed/height 取 roster speed '1.4 m/s' / height '1.75 m'；attackRange 取 roster attack.range '扇形 90° / 2.2 m' 的 2.2；教学兵视野宽、转向慢",
+      "hp": 60,
+      "attack": {
+        "windupSec": 0.8,
+        "rangeM": 2.2,
+        "damage": 8,
+        "cdSec": 1.6,
+        "arcDeg": 90,
+        "extras": {}
+      }
     },
     {
       "id": "E-02",
@@ -58,7 +74,16 @@
       "attackRange": 6,
       "prewarm": 0,
       "max": 120,
-      "source": "moveSpeed 取 roster '3.2 m/s（扑跃 8 m/s）' 的常态值 3.2（扑跃 8 属技能，本轮未实现）；height 取直立体位 1.60，四足碰撞高取 1.30；attackRange 取 '直线 6 m' 的 6"
+      "source": "moveSpeed 取 roster '3.2 m/s（扑跃 8 m/s）' 的常态值 3.2（扑跃 8 属技能，本轮未实现）；height 取直立体位 1.60，四足碰撞高取 1.30；attackRange 取 '直线 6 m' 的 6",
+      "hp": 45,
+      "attack": {
+        "windupSec": 0.5,
+        "rangeM": 6,
+        "damage": 18,
+        "cdSec": 3.2,
+        "arcDeg": null,
+        "extras": {}
+      }
     },
     {
       "id": "E-03",
@@ -76,7 +101,18 @@
       "attackRange": 9,
       "prewarm": 0,
       "max": 60,
-      "source": "moveSpeed/height 取 roster '1.0 m/s' / '1.70 m'；巨大球腹使半径显著大于人形；attackRange 取 '9 m 抛物线' 的 9"
+      "source": "moveSpeed/height 取 roster '1.0 m/s' / '1.70 m'；巨大球腹使半径显著大于人形；attackRange 取 '9 m 抛物线' 的 9",
+      "hp": 70,
+      "attack": {
+        "windupSec": 1.2,
+        "rangeM": 9,
+        "damage": 6,
+        "cdSec": 4.0,
+        "arcDeg": null,
+        "extras": {
+          "dps": true
+        }
+      }
     },
     {
       "id": "E-04",
@@ -94,7 +130,19 @@
       "attackRange": 2.5,
       "prewarm": 0,
       "max": 40,
-      "source": "moveSpeed/height 取 roster '1.8 m/s（冲锋 6 m/s）' 常态值 / '2.05 m'；单侧巨盾遮挡视野，fovDeg 显著低于其他单位"
+      "source": "moveSpeed/height 取 roster '1.8 m/s（冲锋 6 m/s）' 常态值 / '2.05 m'；单侧巨盾遮挡视野，fovDeg 显著低于其他单位",
+      "hp": 220,
+      "attack": {
+        "windupSec": 1.0,
+        "rangeM": 8,
+        "damage": 12,
+        "cdSec": 5.0,
+        "arcDeg": null,
+        "extras": {
+          "knockback": true,
+          "stunSec": 0.6
+        }
+      }
     },
     {
       "id": "E-05",
@@ -112,7 +160,18 @@
       "attackRange": 3,
       "prewarm": 0,
       "max": 40,
-      "source": "moveSpeed/height 取 roster '1.1 m/s' / '1.60 m / 直径 1.50 m'；直径 1.50 → 半径 0.75"
+      "source": "moveSpeed/height 取 roster '1.1 m/s' / '1.60 m / 直径 1.50 m'；直径 1.50 → 半径 0.75",
+      "hp": 90,
+      "attack": {
+        "windupSec": 1.5,
+        "rangeM": 3.5,
+        "damage": 35,
+        "cdSec": 0.0,
+        "arcDeg": null,
+        "extras": {
+          "knockbackM": 4
+        }
+      }
     },
     {
       "id": "B-01",
@@ -130,7 +189,18 @@
       "attackRange": 3.5,
       "prewarm": 0,
       "max": 4,
-      "source": "moveSpeed/height 取 roster '2.2 m/s（冲锋 9 m/s）' 常态值 / '3.2 m'"
+      "source": "moveSpeed/height 取 roster '2.2 m/s（冲锋 9 m/s）' 常态值 / '3.2 m'",
+      "hp": 4200,
+      "attack": {
+        "windupSec": 0.9,
+        "rangeM": 4,
+        "damage": 30,
+        "cdSec": 3.0,
+        "arcDeg": 270,
+        "extras": {
+          "knockbackM": 3
+        }
+      }
     },
     {
       "id": "B-02",
@@ -148,7 +218,10 @@
       "attackRange": 12,
       "prewarm": 0,
       "max": 2,
-      "source": "roster 明确 '本体固定不可移动' → moveSpeed 0（不是缺失，是设计值）；height 取 '4.0 m（上半身 2.4 m）' 的碰撞体上半身 2.4"
+      "source": "roster 明确 '本体固定不可移动' → moveSpeed 0（不是缺失，是设计值）；height 取 '4.0 m（上半身 2.4 m）' 的碰撞体上半身 2.4",
+      "hp": 6000,
+      "attack": null,
+      "attackNote": "本体固定不可移动；roster 仅有产卵技描述，近战数值未定（不编造，四态机不 windup）"
     },
     {
       "id": "B-03",
@@ -166,7 +239,10 @@
       "attackRange": 3,
       "prewarm": 0,
       "max": 2,
-      "source": "moveSpeed/height 取 roster '3.0 m/s（P3 狂暴 ×1.6）' 基础值 3.0（狂暴倍率属战斗阶段，本轮未实现）/ '2.6 m'"
+      "source": "moveSpeed/height 取 roster '3.0 m/s（P3 狂暴 ×1.6）' 基础值 3.0（狂暴倍率属战斗阶段，本轮未实现）/ '2.6 m'",
+      "hp": 9000,
+      "attack": null,
+      "attackNote": "roster 仅有远程三连射描述，近战数值未定（不编造，四态机不 windup）"
     }
   ]
 }
