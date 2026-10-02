@@ -14,7 +14,7 @@
 
 export type Rgb = readonly [number, number, number];
 export type Vec3 = readonly [number, number, number];
-export type ViewAxis = 'front' | 'side';
+export type ViewAxis = 'front' | 'side' | 'top';
 
 export interface PointCloud {
   /**
@@ -66,6 +66,52 @@ export interface Marker {
   readonly filled?: boolean | undefined;
 }
 
+/**
+ * 量化坐标参考线（工程图风格网格 + 刻度数值）。
+ *
+ * 存在的理由：审图时「这个关节偏高多少」必须能**读**出来，不能靠肉眼估。
+ * 网格线是屏幕空间等距的（世界坐标等间距投影后必然等距 —— 正交投影），
+ * 所以读数 = 数格子 × step，不需要额外的像素↔世界标定。
+ *
+ * 绘制分两层：网格线画在**底层**（模型盖住它，模型区不受干扰），
+ * 刻度数值画在**顶层且带白色描边**（保证在任何底色上可读）。
+ */
+export interface GridSpec {
+  /** 次网格间距（米），默认 0.05 */
+  readonly step?: number | undefined;
+  /** 每几次网格一条主线（加粗 + 标数值），默认 5（即 0.25m） */
+  readonly majorEvery?: number | undefined;
+  /** 是否标刻度数值，默认 true */
+  readonly labels?: boolean | undefined;
+  /** 次网格线色，默认淡蓝灰 */
+  readonly minorColor?: Rgb | undefined;
+  /** 主网格线色，默认中蓝灰 */
+  readonly majorColor?: Rgb | undefined;
+  /** 数值 / 轴名颜色，默认深灰 */
+  readonly labelColor?: Rgb | undefined;
+}
+
+/** 5×7 点阵字形 —— 只含刻度数值与轴名需要的字符（零依赖，纯 TS） */
+const GLYPH: Readonly<Record<string, readonly string[]>> = {
+  '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+  '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  '2': ['01110', '10001', '00001', '00110', '01000', '10000', '11111'],
+  '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+  '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+  '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+  '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+  '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  '.': ['00000', '00000', '00000', '00000', '00000', '00000', '00100'],
+  '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
+  ' ': ['00000', '00000', '00000', '00000', '00000', '00000', '00000'],
+  X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001'],
+  Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100'],
+  Z: ['11111', '00001', '00010', '00100', '01000', '10000', '11111'],
+  M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+};
+
 export interface OrthoScene {
   readonly view: ViewAxis;
   readonly width: number;
@@ -76,12 +122,36 @@ export interface OrthoScene {
   readonly markers?: readonly Marker[] | undefined;
   /** 背景色，默认白（与面板画布一致，热力图在白底上对比最好） */
   readonly background?: Rgb | undefined;
+  /**
+   * 视差观察角（度）：投影前全体图元绕 Y 轴旋转 azimuthDeg ——
+   * 侧视 + 30° 时前后重叠的手臂/躯干在 z 向错开 ±x·sinθ，轮廓可分离判读；
+   * 0（默认）= 正交正/侧视，无旋转。
+   */
+  readonly azimuthDeg?: number | undefined;
+  /**
+   * 网格绘制风格：'wire' = 三角形线框（默认）；'toon' = 2D 卡通轮廓 ——
+   * 实心填充 + 视向法线翻转边用实体线勾边（对「视差求导」的轮廓：
+   * 面片朝向相对视线翻转处即深度不连续边界），重叠肢体以填充前后
+   * 关系（画家算法）呈现，无线框噪音。toon 忽略 heat（热力走 wire）。
+   */
+  readonly meshStyle?: 'wire' | 'toon' | undefined;
+  /**
+   * 量化坐标参考线（工程图风格网格 + 刻度数值）。给了就默认画；
+   * 网格线在模型下层（不干扰模型区），刻度数值在最上层带白色描边。
+   * `azimuthDeg !== 0` 时不建议开（旋转后网格不再对齐世界轴）。
+   */
+  readonly grid?: GridSpec | undefined;
 }
 
 export interface RgbaImage {
   readonly width: number;
   readonly height: number;
   readonly rgba: Uint8Array;
+  /**
+   * 实际生效的网格参数（渲染端归一化后）。渲染端会按分辨率对 step 设下限
+   * （每根线 ≥2px），调用方上报元数据必须取这份值，保证与图像一致。
+   */
+  readonly grid?: { step: number; majorEvery: number } | undefined;
 }
 
 /** 热力色带：0 → 蓝，0.5 → 绿，1 → 红（两段线性插值） */
@@ -95,13 +165,26 @@ export function heatRamp(t: number): Rgb {
   return [Math.round(255 * k), Math.round(255 * (1 - k)), 0];
 }
 
-/** 取图元在视图平面上的 (u, v)：front = (x, y)，side = (z, y) */
-function plane(p: Vec3, view: ViewAxis): readonly [number, number] {
-  return view === 'front' ? [p[0], p[1]] : [p[2], p[1]];
+/** 取图元在视图平面上的 (u, v)：front = (x, y)，side = (z, y)；rot 给定时先绕 Y 旋转（视差角） */
+function plane(p: Vec3, view: ViewAxis, rot?: { c: number; s: number }): readonly [number, number] {
+  let x = p[0];
+  let z = p[2];
+  if (rot !== undefined) {
+    x = p[0] * rot.c + p[2] * rot.s;
+    z = -p[0] * rot.s + p[2] * rot.c;
+  }
+  // top（俯视，从 +Y 往下看）：右 = +X（角色左侧），上 = +Z（前方）
+  if (view === 'top') return [x, z];
+  return view === 'front' ? [x, p[1]] : [z, p[1]];
 }
 
 export function renderOrthographic(scene: OrthoScene): RgbaImage {
   const { view, width, height } = scene;
+  const az = scene.azimuthDeg ?? 0;
+  const rot =
+    az !== 0
+      ? { c: Math.cos((az * Math.PI) / 180), s: Math.sin((az * Math.PI) / 180) }
+      : undefined;
   const bg: Rgb = scene.background ?? [255, 255, 255];
   const rgba = new Uint8Array(width * height * 4);
   for (let i = 0; i < width * height; i++) {
@@ -129,26 +212,26 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
       const x = pts.xyz[i * stride] ?? 0;
       const y = pts.xyz[i * stride + 1] ?? 0;
       const z = pts.xyz[i * stride + 2] ?? 0;
-      const [u, v] = plane([x, y, z], view);
+      const [u, v] = plane([x, y, z], view, rot);
       extend(u, v, 0);
     }
   }
   for (const s of scene.segments ?? []) {
-    const [au, av] = plane(s.a, view);
-    const [bu, bv] = plane(s.b, view);
+    const [au, av] = plane(s.a, view, rot);
+    const [bu, bv] = plane(s.b, view, rot);
     extend(au, av, 0);
     extend(bu, bv, 0);
   }
   for (const c of scene.capsules ?? []) {
-    const [au, av] = plane(c.a, view);
-    const [bu, bv] = plane(c.b, view);
+    const [au, av] = plane(c.a, view, rot);
+    const [bu, bv] = plane(c.b, view, rot);
     const r = Math.max(c.rA, c.rB, c.rM ?? 0);
     extend(au, av, r);
     extend(bu, bv, r);
   }
   // 标记的 r 是屏幕 px，不参与世界包围盒（只按圆心扩一点世界余量）
   for (const m of scene.markers ?? []) {
-    const [u, v] = plane(m.p, view);
+    const [u, v] = plane(m.p, view, rot);
     extend(u, v, 0.02);
   }
   if (!Number.isFinite(minU) || maxU - minU < 1e-6 || maxV - minV < 1e-6) {
@@ -218,6 +301,64 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
     }
   };
 
+  // ── 量化坐标参考线 ──
+  // 网格线画在**底层**（模型盖住它 → 模型区不受干扰），刻度数值画在**顶层**。
+  // 正交投影下世界等间距 → 屏幕等间距，所以读数 = 数格子 × step，无需再标定。
+  const grid = scene.grid;
+  const gridMinor: Rgb = grid?.minorColor ?? [208, 218, 232];
+  const gridMajor: Rgb = grid?.majorColor ?? [146, 166, 196];
+  const gridLabel: Rgb = grid?.labelColor ?? [48, 48, 60];
+  const hAxis = view === 'front' ? 'X' : view === 'side' ? 'Z' : 'X';
+  // 网格密度按分辨率设下限：每根线至少隔 MIN_PX_PER_LINE px。
+  // 否则 gridStep:1e-4 这类值会在 ~2m 模型上产生千万次同步像素写（每根线整行/列
+  // 重写、多根线映射同一像素），阻塞其他 MCP 请求。下限对网格线与刻度统一生效，
+  // 且生效值通过返回值上报（调用方元数据必须与图同源，不得自行另算）。
+  const MIN_PX_PER_LINE = 2;
+  const stepLo = MIN_PX_PER_LINE / Math.max(scale, 1e-9);
+  const gStep = grid !== undefined ? Math.max(Math.max(1e-4, grid.step ?? 0.05), stepLo) : 0;
+  const gMajor = grid !== undefined ? Math.max(1, Math.round(grid.majorEvery ?? 5)) : 1;
+  if (grid !== undefined) {
+    const uLo = cu - width / 2 / scale;
+    const uHi = cu + width / 2 / scale;
+    const vLo = cv - height / 2 / scale;
+    const vHi = cv + height / 2 / scale;
+    for (let i = Math.ceil(uLo / gStep); i <= Math.floor(uHi / gStep); i++) {
+      const major = ((i % gMajor) + gMajor) % gMajor === 0;
+      const X = Math.round(sx(i * gStep));
+      const c = major ? gridMajor : gridMinor;
+      for (let y = 0; y < height; y++) putPx(X, y, c);
+      if (major && X + 1 < width) for (let y = 0; y < height; y++) putPx(X + 1, y, c);
+    }
+    for (let j = Math.ceil(vLo / gStep); j <= Math.floor(vHi / gStep); j++) {
+      const major = ((j % gMajor) + gMajor) % gMajor === 0;
+      const Y = Math.round(sy(j * gStep));
+      const c = major ? gridMajor : gridMinor;
+      for (let x = 0; x < width; x++) putPx(x, Y, c);
+      if (major && Y + 1 < height) for (let x = 0; x < width; x++) putPx(x, Y + 1, c);
+    }
+  }
+
+  /** 5×7 点阵文字（白描边 + 本色），用于刻度数值与轴名 */
+  const drawGlyphText = (x0: number, y0: number, text: string, c: Rgb): void => {
+    const cells: Array<readonly [number, number]> = [];
+    for (let ci = 0; ci < text.length; ci++) {
+      const g = GLYPH[text[ci] ?? ''];
+      if (g === undefined) continue;
+      for (let ry = 0; ry < 7; ry++) {
+        const row = g[ry] ?? '';
+        for (let rx = 0; rx < 5; rx++) {
+          if (row[rx] === '1') cells.push([x0 + ci * 6 + rx, y0 + ry]);
+        }
+      }
+    }
+    for (const [cx, cy] of cells) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) putPx(cx + dx, cy + dy, [255, 255, 255]);
+      }
+    }
+    for (const [cx, cy] of cells) putPx(cx, cy, c);
+  };
+
   // ── 绘制顺序：网格（底）→ 胶囊 → 骨线 → 关节标记（顶） ──
   if (pts !== undefined) {
     const stride = pts.stride ?? 3;
@@ -226,9 +367,199 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
       const x = pts.xyz[i * stride] ?? 0;
       const y = pts.xyz[i * stride + 1] ?? 0;
       const z = pts.xyz[i * stride + 2] ?? 0;
-      return plane([x, y, z], view);
+      return plane([x, y, z], view, rot);
     };
-    if (pts.indices !== undefined) {
+    if (pts.indices !== undefined && scene.meshStyle === 'toon') {
+      // ── toon 模式：z-buffer 实心填充 + 三类轮廓线实体勾边 ──
+      // 轮廓判据（并集）：
+      //  ① 蒙版边界（外轮廓 + 破洞沿）—— 对渲染结果求导；
+      //  ② 深度梯度边 —— z-buffer 深度不连续处（重叠在躯干上的四肢与躯干的
+      //     深度台阶，无论是否露出背景）；
+      //  ③ 掠射法线翻转边 —— 面片朝向相对视线翻转且两侧都接近切向
+      //     （内部褶皱的类轮廓效果；只认二连边，破 cloth 洞沿不参与）。
+      // ②③ 让用户在纯侧视重叠剪影里也能看到身体结构，而不只是外轮廓。
+      const idx = pts.indices;
+      const n = pts.count;
+      const d: Vec3 = view === 'front' ? [0, 0, 1] : view === 'side' ? [-1, 0, 0] : [0, 1, 0];
+      const px = new Float64Array(n);
+      const py = new Float64Array(n);
+      const pdep = new Float64Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = pts.xyz[i * stride] ?? 0;
+        const y = pts.xyz[i * stride + 1] ?? 0;
+        const z = pts.xyz[i * stride + 2] ?? 0;
+        const [u, v] = plane([x, y, z], view, rot);
+        px[i] = sx(u);
+        py[i] = sy(v);
+        // 深度取旋转后坐标在视向上的投影（plane 内部已旋转，这里重算一次保持一致）
+        const rx = rot !== undefined ? x * rot.c + z * rot.s : x;
+        const rz = rot !== undefined ? -x * rot.s + z * rot.c : z;
+        pdep[i] = view === 'front' ? rz : view === 'side' ? -rx : y; // 越大越近（front:+z；side:−x；top:+y；绕Y旋转 y 不变）
+      }
+      // 取旋转后坐标。写成**箭头函数**（而非 function 声明）：函数声明会被提升，
+      // TS 无法保证它在 `pts !== undefined` 收窄之后才被调用，`pts` 会退回可选类型。
+      const rot3r = (i: number): [number, number, number] => {
+        const x = pts.xyz[i * stride] ?? 0;
+        const y = pts.xyz[i * stride + 1] ?? 0;
+        const z = pts.xyz[i * stride + 2] ?? 0;
+        return rot !== undefined
+          ? [x * rot.c + z * rot.s, y, -x * rot.s + z * rot.c]
+          : [x, y, z];
+      };
+      const T = idx.length / 3;
+      const order = new Int32Array(T);
+      const tdep = new Float64Array(T);
+      // 视向法线归一化点积（掠射判据用），按三角形存
+      const tface = new Float64Array(T);
+      for (let t = 0; t < T; t++) {
+        order[t] = t;
+        const ia = idx[t * 3] ?? 0;
+        const ib = idx[t * 3 + 1] ?? 0;
+        const ic = idx[t * 3 + 2] ?? 0;
+        tdep[t] = (pdep[ia]! + pdep[ib]! + pdep[ic]!) / 3;
+        const A = rot3r(ia);
+        const B = rot3r(ib);
+        const C = rot3r(ic);
+        const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2];
+        const vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+        const nx = uy * vz - uz * vy;
+        const ny = uz * vx - ux * vz;
+        const nz = ux * vy - uy * vx;
+        const len = Math.hypot(nx, ny, nz);
+        tface[t] = len < 1e-12 ? 1 : (nx * d[0] + ny * d[1] + nz * d[2]) / len;
+      }
+      // 画家算法（远→近）打底，z-buffer 兜底保证重叠处近表面覆盖
+      Array.prototype.sort.call(order, (a: number, b: number) => tdep[a]! - tdep[b]!);
+      const body: Rgb = [226, 214, 194]; // 卡通填充色（肤色），与面板网格观感一致
+      const mask = new Uint8Array(width * height);
+      const zbuf = new Float64Array(width * height).fill(-Infinity);
+      const fillTri = (
+        x0: number, y0: number, x1: number, y1: number, x2: number, y2: number,
+        c: Rgb, da: number, db: number, dc: number,
+      ): void => {
+        const minX = Math.max(0, Math.floor(Math.min(x0, x1, x2)));
+        const maxX = Math.min(width - 1, Math.ceil(Math.max(x0, x1, x2)));
+        const minY = Math.max(0, Math.floor(Math.min(y0, y1, y2)));
+        const maxY = Math.min(height - 1, Math.ceil(Math.max(y0, y1, y2)));
+        const den = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+        if (Math.abs(den) < 1e-9) return;
+        for (let yy = minY; yy <= maxY; yy++) {
+          for (let xx = minX; xx <= maxX; xx++) {
+            const w0 = ((y1 - y2) * (xx - x2) + (x2 - x1) * (yy - y2)) / den;
+            const w1 = ((y2 - y0) * (xx - x2) + (x0 - x2) * (yy - y2)) / den;
+            const w2 = 1 - w0 - w1;
+            if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+            const o = yy * width + xx;
+            const dep = w0 * da + w1 * db + w2 * dc;
+            if (dep <= zbuf[o]!) continue; // 远表面不覆盖近表面
+            putPx(xx, yy, c);
+            mask[o] = 1;
+            zbuf[o] = dep;
+          }
+        }
+      };
+      for (let k = 0; k < T; k++) {
+        const t = order[k]!;
+        const ia = idx[t * 3] ?? 0;
+        const ib = idx[t * 3 + 1] ?? 0;
+        const ic = idx[t * 3 + 2] ?? 0;
+        fillTri(px[ia]!, py[ia]!, px[ib]!, py[ib]!, px[ic]!, py[ic]!, body, pdep[ia]!, pdep[ib]!, pdep[ic]!);
+      }
+      const contour: Rgb = [40, 40, 40];
+      const isEdge = new Uint8Array(width * height);
+      // ① 蒙版边界（8 邻域内有背景即轮廓）
+      for (let yy = 1; yy < height - 1; yy++) {
+        for (let xx = 1; xx < width - 1; xx++) {
+          const o = yy * width + xx;
+          if (mask[o] === 0) continue;
+          if (
+            mask[o - 1] === 0 || mask[o + 1] === 0 ||
+            mask[o - width] === 0 || mask[o + width] === 0 ||
+            mask[o - width - 1] === 0 || mask[o - width + 1] === 0 ||
+            mask[o + width - 1] === 0 || mask[o + width + 1] === 0
+          ) {
+            isEdge[o] = 1;
+          }
+        }
+      }
+      // ② 深度台阶边：相邻像素深度差超过绝对阈值（约 1px 内跳 ≥8mm ——
+      //    四肢/躯干重叠处的深度台阶是 5–10cm 级；连续曲面坡度 ~2–4mm/px 不触发）
+      const DEPTH_STEP = 0.008;
+      for (let yy = 1; yy < height - 1; yy++) {
+        for (let xx = 1; xx < width - 1; xx++) {
+          const o = yy * width + xx;
+          if (zbuf[o]! === -Infinity) continue;
+          const gx = Math.abs(zbuf[o + 1]! - zbuf[o]!);
+          const gy = Math.abs(zbuf[o + width]! - zbuf[o]!);
+          if (gx > DEPTH_STEP || gy > DEPTH_STEP) isEdge[o] = 1;
+        }
+      }
+      // ③ 掠射法线翻转边（内部褶皱类轮廓；只认二连边，破洞沿不勾）。
+      //    画线前逐像素做深度测试：被前景表面挡住的折叠段不画 ——
+      //    否则藏在躯干后面的褶皱会以黑线浮在躯干表面上，误导对位判读。
+      //    端点深度取插值（pdep 是「越大越近」的视向深度）。
+      const drawLineDepth = (
+        x0: number, y0: number, d0: number, x1: number, y1: number, d1: number, c: Rgb,
+      ): void => {
+        let ax = Math.round(x0);
+        let ay = Math.round(y0);
+        const bx = Math.round(x1);
+        const by = Math.round(y1);
+        const dx = Math.abs(bx - ax);
+        const dy = Math.abs(by - ay);
+        const stepX = ax < bx ? 1 : -1;
+        const stepY = ay < by ? 1 : -1;
+        let err = dx - dy;
+        let t = 0;
+        const steps = Math.max(dx, dy, 1);
+        for (;;) {
+          const dep = d0 + ((d1 - d0) * t) / steps;
+          const o = ay * width + ax;
+          if (dep >= zbuf[o]! - 1e-9) putPx(ax, ay, c); // 只画不近于表面的段
+          if (ax === bx && ay === by) break;
+          const e2 = err * 2;
+          if (e2 > -dy) {
+            err -= dy;
+            ax += stepX;
+          }
+          if (e2 < dx) {
+            err += dx;
+            ay += stepY;
+          }
+          t++;
+        }
+      };
+      const edgeMap = new Map<number, { e1: number; a: number; b: number }>();
+      for (let t = 0; t < T; t++) {
+        for (let e = 0; e < 3; e++) {
+          const ia = idx[t * 3 + e] ?? 0;
+          const ib = idx[t * 3 + ((e + 1) % 3)] ?? 0;
+          const a = Math.min(ia, ib);
+          const b = Math.max(ia, ib);
+          const key = a * n + b;
+          const cur = edgeMap.get(key);
+          if (cur === undefined) {
+            edgeMap.set(key, { e1: tface[t]!, a, b });
+          } else if (Math.sign(cur.e1) !== Math.sign(tface[t]!) && Math.abs(cur.e1) < 0.5 && Math.abs(tface[t]!) < 0.5) {
+            drawLineDepth(
+              px[a]!, py[a]!, pdep[a]!,
+              px[b]!, py[b]!, pdep[b]!,
+              contour,
+            );
+          }
+        }
+      }
+      // 实体化：轮廓像素外扩 1px
+      for (let yy = 0; yy < height; yy++) {
+        for (let xx = 0; xx < width; xx++) {
+          const o = yy * width + xx;
+          if (isEdge[o] === 0) continue;
+          putPx(xx, yy, contour);
+          if (xx + 1 < width && mask[o + 1] === 0) putPx(xx + 1, yy, contour);
+          if (yy + 1 < height && mask[o + width] === 0) putPx(xx, yy + 1, contour);
+        }
+      }
+    } else if (pts.indices !== undefined) {
       // 线框模式：边色 = 两端点热力均值（无热力 = wireColor）
       const wire = pts.wireColor ?? gray;
       const idx = pts.indices;
@@ -257,8 +588,8 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
   }
 
   for (const c of scene.capsules ?? []) {
-    const [au, av] = plane(c.a, view);
-    const [bu, bv] = plane(c.b, view);
+    const [au, av] = plane(c.a, view, rot);
+    const [bu, bv] = plane(c.b, view, rot);
     const ax = sx(au);
     const ay = sy(av);
     const bx = sx(bu);
@@ -285,15 +616,51 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
   }
 
   for (const s of scene.segments ?? []) {
-    const [au, av] = plane(s.a, view);
-    const [bu, bv] = plane(s.b, view);
+    const [au, av] = plane(s.a, view, rot);
+    const [bu, bv] = plane(s.b, view, rot);
     drawLine(sx(au), sy(av), sx(bu), sy(bv), s.color);
   }
 
   for (const m of scene.markers ?? []) {
-    const [u, v] = plane(m.p, view);
+    const [u, v] = plane(m.p, view, rot);
     drawCircle(sx(u), sy(v), m.r, m.color, m.filled !== false);
   }
 
-  return { width, height, rgba };
+  // ── 刻度数值与轴名（顶层：白描边保证压在任何底色上都能读）──
+  if (grid !== undefined && grid.labels !== false) {
+    const fmt = (v: number): string => (Math.abs(v) < 1e-9 ? '0.00' : v.toFixed(2));
+    const uLo2 = cu - width / 2 / scale;
+    const uHi2 = cu + width / 2 / scale;
+    const vLo2 = cv - height / 2 / scale;
+    const vHi2 = cv + height / 2 / scale;
+    for (let i = Math.ceil(uLo2 / gStep); i <= Math.floor(uHi2 / gStep); i++) {
+      if (((i % gMajor) + gMajor) % gMajor !== 0) continue;
+      const txt = fmt(i * gStep);
+      const tw = txt.length * 6 - 1;
+      const X = Math.round(sx(i * gStep) - tw / 2);
+      if (X < 2 || X + tw > width - 3) continue;
+      drawGlyphText(X, height - 10, txt, gridLabel);
+    }
+    for (let j = Math.ceil(vLo2 / gStep); j <= Math.floor(vHi2 / gStep); j++) {
+      if (((j % gMajor) + gMajor) % gMajor !== 0) continue;
+      const Y = Math.round(sy(j * gStep));
+      if (Y < 2 || Y + 7 > height - 12) continue;
+      drawGlyphText(3, Y + 2, fmt(j * gStep), gridLabel);
+    }
+    // 轴名 + 单位（左下 = 垂直轴；右下 = 水平轴）。top 视图垂直轴是 Z
+    //（plane() 在 top 投影 [x, z]，垂直读数是前后方向不是高度）。
+    const vAxis = view === 'top' ? 'Z' : 'Y';
+    drawGlyphText(3, height - 20, `${vAxis} M`, [16, 16, 20]);
+    const hTxt = `${hAxis} M`;
+    drawGlyphText(width - 3 - (hTxt.length * 6 - 1), height - 20, hTxt, [16, 16, 20]);
+  }
+
+  return {
+    width,
+    height,
+    rgba,
+    // 实际生效的网格参数（经过分辨率下限 clamp 后的值）。调用方上报元数据
+    // 必须用这份值，不得用调用入参 —— 否则响应与图像标定不一致。
+    grid: grid !== undefined ? { step: gStep, majorEvery: gMajor } : undefined,
+  };
 }

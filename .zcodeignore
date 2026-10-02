@@ -1,0 +1,69 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 资产烘焙中间产物
+tools/**/dist/
+*.log
+
+# 冒烟测试的临时编译输出
+.smoke/
+
+# Python 缓存（gen_assets.py 生成 .ase / .cube 时产生）
+__pycache__/
+*.py[cod]
+
+# 会话过程产物：UI 验证截图，可随时重新生成
+# 注意：.workbuddy/memory/ 是项目记忆，需要入库
+.workbuddy/screenshots/
+
+# 会话诊断脚本与中间产物（~95MB；可复用脚本已转正到 assets/characters/_tools/）
+.workbuddy/tmp/
+
+# CDP 验证脚本生成的 Chrome 用户配置
+.workbuddy/tmp/chrome-profile/
+
+# 损坏的旧 .git 存档（灾难恢复证据，本地保留）
+.git.corrupt-20260902/
+
+# 资产回滚备份：原地保留（出问题可一条命令还原），但不入库。
+# pre-rebake = 贴图转移前的旧版；pre-uvkeep = 路线A重制前的旧版；v2-flower = 花脸中间版
+assets/**/*.pre-rebake.bak
+assets/**/*.pre-uvkeep.bak
+assets/**/*.v2-flower.keep
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+site-packages/
+venv/
+coverage/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）

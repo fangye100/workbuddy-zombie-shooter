@@ -228,6 +228,19 @@ export class BindingPanel {
   private originX = 0;
   private originY = 0;
 
+  /**
+   * 量化坐标参考线（工程图风格网格 + 刻度数值）。
+   *
+   * 默认**开启**：审图时「这个关节偏高多少」必须能直接**读**出来，不能靠肉眼估。
+   * 正交投影下世界等间距 → 屏幕等间距，所以读数 = 数格子 × step，
+   * 不需要额外做像素↔世界标定（这正是以往每次换截图方式都要重推标定的痛点来源）。
+   */
+  private gridOn = true;
+  /** 次网格间距（米） */
+  private gridStepM = 0.05;
+  /** 每几格一条主线并标数值（5 × 0.05 = 0.25m 标一次） */
+  private gridMajorEvery = 5;
+
   // ── 显示层状态（previewMode / poseTest / 热力图 / 视图缓存） ──
   private previewMode: PreviewMode = 'current';
   private sideFilter: SideFilter = 'all';
@@ -280,7 +293,7 @@ export class BindingPanel {
             <option value="hideL">${t('隐藏左')}</option>
             <option value="hideR">${t('隐藏右')}</option>
           </select>
-          <label class="bd-check bd-check-head" title="${t('在主 3D 视口里把每个 joint 的包裹圆柱体画到模型上（半透明 X-ray，不会被模型挡住），并随骨骼动画实时更新')}"><input type="checkbox" data-bd="skin-view3d">${t('包裹器')}</label>
+          <label class="bd-check bd-check-head" title="${t('包裹器 proxy 体积总开关：主 3D 视口与面板正/侧视同时生效（关掉 = 干净的网格+骨架视图，便于视觉对位）；数据保留，重新勾选即恢复')}"><input type="checkbox" data-bd="skin-view3d">${t('包裹器')}</label>
           <label class="bd-check bd-check-head" title="${t('权重热力图：选中一根骨（joint 或包裹器）后，网格顶点按该骨的权重着色（蓝=无影响 → 红=全权重），与 Bind Skin 导出的权重同源')}"><input type="checkbox" data-bd="skin-heat" checked>${t('热力图')}</label>
         </div>
         <div class="bd-head-group" data-group="镜像">
@@ -555,12 +568,14 @@ export class BindingPanel {
     });
 
     // 「在 3D 视图显示包裹器」：默认开 —— 切到蒙皮模式就是要看圆柱体，
-    // 不该让用户再去猜一个开关。状态同步给外部（主循环据此画/不画叠加层）。
+    // 不该让用户再去猜一个开关。状态同步给外部（主循环据此画/不画叠加层）；
+    // 同时管面板正/侧视 GL 层的 proxy 体积（filteredCylinders 消费同一开关）。
     const v3d = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-view3d"]')!;
     v3d.checked = this.viewportCylinders;
     v3d.addEventListener('change', () => {
       this.viewportCylinders = v3d.checked;
       this.hooks.onToggleViewportCylinders?.(v3d.checked);
+      this.scheduleDraw();
     });
 
     // 半径：滑块 + 数字框双向同步，两条路径都走 setCylinderRadius 这一个入口。
@@ -820,10 +835,19 @@ export class BindingPanel {
   /**
    * 给 3D 层用的包裹器表：把被「隐藏左/右/仅中轴」过滤掉的骨标成 disabled
    * （半径保留，只让圆柱几何跳过绘制）。sideFilter=all 时直接返回原表，零分配。
+   * 「包裹器」勾选框关闭时返回全 disabled 表 —— 面板正/侧视也隐藏 proxy 体积，
+   * 数据（半径/偏移）原样保留，重新勾选即恢复；视觉对位需要干净的网格+骨架视图。
    */
   private filteredCylinders(vis: Set<string>): SkinCylinderMap | null {
     const cylinders = this.session.getCylinders();
     if (cylinders === null) return null;
+    if (!this.viewportCylinders) {
+      const out: SkinCylinderMap = {};
+      for (const [k, c] of Object.entries(cylinders)) {
+        out[k] = { ...c, enabled: false };
+      }
+      return out;
+    }
     if (this.sideFilter === 'all') return cylinders;
     const out: SkinCylinderMap = {};
     for (const [k, c] of Object.entries(cylinders)) {
@@ -1459,6 +1483,17 @@ export class BindingPanel {
     }
   }
 
+  /**
+   * 供自动化钩子：不依赖视图选中态的逐骨 unpin（MCP cylinders.unpin 同语义）。
+   * session 负责历史与「manual=false 后按骨长重适配」；面板负责缓存失效与属性栏刷新。
+   */
+  unpinCylinderForAutomation(bone: string): boolean {
+    if (!this.session.unpinCylinder(bone)) return false;
+    this.updateSkinPanel();
+    this.invalidatePreview();
+    return true;
+  }
+
   /** 刷新 skin 属性面板（选中信息 + 三段半径滑块 + 偏移 + 镜像按钮可用性） */
   private updateSkinPanel(): void {
     const sel = this.rootEl.querySelector<HTMLElement>('[data-bd="skin-sel"]')!;
@@ -1546,6 +1581,9 @@ export class BindingPanel {
   ): { bone: string; seg: CylSegment } | null {
     const cylinders = this.session.getCylinders();
     if (cylinders === null) return null;
+    // 「包裹器」关闭 = proxy 不可点选：否则会出现「看不见却拖得动」的隐身交互，
+    // 拖的半径/偏移会静默进权重与 sidecar（2026-09-23 独立审核 P2）。
+    if (!this.viewportCylinders) return null;
     const segs = boneSegments(this.session.positions);
     const s = this.scale;
     const ox = this.centerX(canvas);
@@ -1824,9 +1862,85 @@ export class BindingPanel {
     ctx.lineTo(axisX, h);
     ctx.stroke();
 
+    // 量化坐标参考线：压在上面（半透明，不吃掉模型），刻度数值带白描边
+    if (this.gridOn) this.drawGrid(ctx, canvas, axis);
+
     // 骨架 / 包裹器手柄：2D 层永远画在最上面（X-ray 效果，与 3D 实体叠加）
     if (this.editMode === 'skin') this.drawSkin(ctx, canvas, axis);
     else this.drawSkeleton(ctx, canvas, axis);
+  }
+
+  /**
+   * 量化坐标参考线（工程图风格）。
+   *
+   * 与 `project()` **严格对称**地反算可见世界范围，所以网格线一定落在
+   * 「世界坐标是 step 整数倍」的位置上 —— 读数可信，不依赖任何外部标定。
+   * 分两层画：先次网格（淡）再主网格（浓），最后标主线数值。
+   */
+  private drawGrid(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, axis: ViewAxis): void {
+    const w = canvas.clientWidth || 320;
+    const h = canvas.clientHeight || 320;
+    const step = this.gridStepM;
+    const every = Math.max(1, Math.round(this.gridMajorEvery));
+    if (!(step > 0) || this.scale <= 0) return;
+
+    const s = this.scale;
+    // 可见世界范围（与 project() 对称：sx = originX + horiz·s，sy = originY − y·s）
+    const yHi = this.originY / s;
+    const yLo = (this.originY - h) / s;
+    const hLo = -this.originX / s;
+    const hHi = (w - this.originX) / s;
+    const isMajor = (k: number): boolean => ((k % every) + every) % every === 0;
+
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    // 次网格 → 主网格（两遍，避免主副线在同一 path 里互相盖住）
+    for (const major of [false, true]) {
+      ctx.strokeStyle = major ? 'rgba(152,192,255,0.40)' : 'rgba(152,192,255,0.16)';
+      ctx.beginPath();
+      for (let j = Math.ceil(yLo / step); j <= Math.floor(yHi / step); j++) {
+        if (isMajor(j) !== major) continue;
+        const py = Math.round(this.originY - j * step * s) + 0.5;
+        ctx.moveTo(0, py);
+        ctx.lineTo(w, py);
+      }
+      for (let i = Math.ceil(hLo / step); i <= Math.floor(hHi / step); i++) {
+        if (isMajor(i) !== major) continue;
+        const px = Math.round(this.originX + i * step * s) + 0.5;
+        ctx.moveTo(px, 0);
+        ctx.lineTo(px, h);
+      }
+      ctx.stroke();
+    }
+    // 主线刻度数值：白描边 + 深色字（压在任何底色上都能读）
+    ctx.font = '10px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    const label = (t: string, x: number, y: number): void => {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeText(t, x, y);
+      ctx.fillStyle = 'rgba(16,16,22,0.95)';
+      ctx.fillText(t, x, y);
+    };
+    for (let j = Math.ceil(yLo / step); j <= Math.floor(yHi / step); j++) {
+      if (!isMajor(j)) continue;
+      const py = Math.round(this.originY - j * step * s);
+      if (py < 12 || py > h - 14) continue;
+      label((j * step).toFixed(2), 20, py - 2);
+    }
+    ctx.textBaseline = 'alphabetic';
+    for (let i = Math.ceil(hLo / step); i <= Math.floor(hHi / step); i++) {
+      if (!isMajor(i)) continue;
+      const px = Math.round(this.originX + i * step * s);
+      if (px < 18 || px > w - 18) continue;
+      label((i * step).toFixed(2), px, h - 3);
+    }
+    // 轴名 + 单位
+    ctx.textAlign = 'left';
+    label(axis === 'front' ? 'X / m' : 'Z / m', 4, h - 16);
+    ctx.restore();
   }
 
   private centerX(canvas: HTMLCanvasElement): number {
@@ -2129,7 +2243,9 @@ export class BindingPanel {
     axis: ViewAxis,
   ): void {
     const cyls = this.session.getCylinders();
-    if (cyls === null) { this.drawSkeleton(ctx, canvas, axis); return; }
+    // 无 WebGPU 降级与「包裹器」开关共用骨架直画出口：开关关闭时 2D 也不该画出 proxy
+    //（与 GL 层 filteredCylinders 的总开关语义一致，2026-09-23 独立审核 P3）。
+    if (cyls === null || !this.viewportCylinders) { this.drawSkeleton(ctx, canvas, axis); return; }
     // 骨骼淡显作对照
     this.drawSkeleton(ctx, canvas, axis, true);
     const segs = boneSegments(this.session.positions);
@@ -2322,12 +2438,13 @@ export class BindingPanel {
     return s;
   }
 
-  /** 供调试/冒烟：直接开关 3D 视口包裹器（同步勾选框） */
+  /** 供调试/冒烟：直接开关 3D 视口包裹器（同步勾选框；面板正/侧视同一开关） */
   setViewportCylinders(v: boolean): void {
     this.viewportCylinders = v;
     const box = this.rootEl.querySelector<HTMLInputElement>('[data-bd="skin-view3d"]');
     if (box !== null) box.checked = v;
     this.hooks.onToggleViewportCylinders?.(v);
+    this.scheduleDraw();
   }
 
   /** 供主循环取用：当前是否处于蒙皮包裹（skin）编辑模式 */

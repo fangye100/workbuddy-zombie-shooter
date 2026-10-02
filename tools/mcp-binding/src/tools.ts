@@ -33,6 +33,7 @@ import { parseGlb, validateAssetMeta } from '@aether/scene';
 import {
   renderOrthographic,
   type Capsule,
+  type GridSpec,
   type Marker,
   type OrthoScene,
   type PointCloud,
@@ -273,7 +274,8 @@ export class BindingDomain {
   /** render：把当前会话状态装配成正交场景并光栅化 */
   render(args: Record<string, unknown>): ToolResult {
     const mesh = this.requireMesh();
-    const view: ViewAxis = optStr(args, 'view') === 'side' ? 'side' : 'front';
+    const v = optStr(args, 'view');
+    const view: ViewAxis = v === 'side' || v === 'top' ? v : 'front';
     const width = clampInt(optNum(args, 'width'), 64, 1024, 480);
     const height = clampInt(optNum(args, 'height'), 64, 1024, 640);
     const showMesh = optBool(args, 'showMesh') !== false;
@@ -281,6 +283,19 @@ export class BindingDomain {
     const showCylinders = optBool(args, 'showCylinders') !== false;
     const selectedJoint = optStr(args, 'selectedJoint');
     const heatBone = optStr(args, 'heatBone');
+    // 视差观察角（度）：侧视 + azimuthDeg 时重叠的手臂/躯干轮廓在 z 向错开可读
+    const azRaw = optNum(args, 'azimuthDeg');
+    const azimuthDeg = azRaw === undefined ? 0 : Math.min(60, Math.max(-60, azRaw));
+    // 网格风格：toon = 实心填充 + 视向法线翻转边实体轮廓（2D 卡通效果，无线框）
+    // 🔴 toon 画不了热力（实心填充忽略 heat）→ heatBone 请求强制走 wire，
+    // 保证图像与返回的 meshStyle 描述一致（否则图里根本没有权重信息）。
+    const styleRaw = optStr(args, 'style');
+    const styleFallbackNote =
+      styleRaw === 'toon' && heatBone !== undefined
+        ? 'style:toon 不支持热力（实心填充无逐顶点色）→ 已回退 wire 渲染'
+        : undefined;
+    const meshStyle =
+      styleRaw === 'toon' && heatBone === undefined ? ('toon' as const) : ('wire' as const);
 
     const positions = this.session.positions;
     const segments: Segment[] = [];
@@ -362,17 +377,38 @@ export class BindingDomain {
       };
     }
 
-    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers };
+    // 量化坐标参考线：审图时读出「这个关节偏高多少」靠它，不是靠肉眼估。
+    // step/majorEvery 先归一化再传渲染器 —— 返回的 grid 元数据与图必须同一份值
+    //（否则 gridStep:0 被渲染端 clamp 到 1e-4，响应却报 0，标定元数据失真）。
+    const gridOn = optBool(args, 'grid') === true;
+    const gridStepNorm = Math.max(1e-4, optNum(args, 'gridStep') ?? 0.05);
+    const gridMajorNorm = Math.max(1, Math.round(optNum(args, 'gridMajor') ?? 5));
+    const grid: GridSpec | undefined = gridOn
+      ? { step: gridStepNorm, majorEvery: gridMajorNorm }
+      : undefined;
+
+    const scene: OrthoScene = { view, width, height, points, segments, capsules, markers, azimuthDeg, meshStyle, grid };
     const image = renderOrthographic(scene);
     return {
       json: {
         view,
         width,
         height,
+        azimuthDeg,
+        meshStyle,
+        // 元数据取渲染端实际生效值（含分辨率下限 clamp），与图像严格同源
+        grid: gridOn
+          ? {
+              stepM: image.grid?.step ?? gridStepNorm,
+              majorEveryM: (image.grid?.step ?? gridStepNorm) * (image.grid?.majorEvery ?? gridMajorNorm),
+              note: '网格为世界坐标等间距（正交投影下屏幕等距）：读数 = 数格子 × step',
+            }
+          : null,
         vertices: mesh.vertices.length / mesh.vertexFloats,
         capsules: capsules.length,
         heatBone: heatBone ?? null,
         note: heatNote,
+        styleFallbackNote,
       },
       image,
     };
@@ -617,11 +653,11 @@ export const TOOLS_TABLE = [
   {
     name: 'render',
     description:
-      '渲染正/侧视正交投影图（PNG 图像块）：网格点云 + 骨架 + wrapper 圆柱轮廓，可选 heatBone 画逐顶点权重热力。视觉反馈闭环的核心工具。',
+      '渲染正/侧视正交投影图（PNG 图像块）：网格点云 + 骨架 + wrapper 圆柱轮廓，可选 heatBone 画逐顶点权重热力。视觉反馈闭环的核心工具。⚠️ 骨骼对齐阶段必须传 showCylinders:false 先关掉圆柱 Skin Wrapper（半透明 proxy 会污染截图、干扰 joint 对位判读），骨骼验证通过后再显示 wrapper。',
     inputSchema: {
       type: 'object',
       properties: {
-        view: { type: 'string', enum: ['front', 'side'], description: '默认 front' },
+        view: { type: 'string', enum: ['front', 'side', 'top'], description: '默认 front；top = 俯视（右=+X 角色左侧，上=+Z 前方），查体姿偏航/脚外八用' },
         width: { type: 'integer', description: '64..1024，默认 480' },
         height: { type: 'integer', description: '64..1024，默认 640' },
         heatBone: { type: 'string', description: '画该骨权重热力图（tip 骨不参与蒙皮，会被拒）' },
@@ -629,6 +665,11 @@ export const TOOLS_TABLE = [
         showMesh: { type: 'boolean', description: '默认 true' },
         showSkeleton: { type: 'boolean', description: '默认 true' },
         showCylinders: { type: 'boolean', description: '默认 true' },
+        style: { type: 'string', enum: ['wire', 'toon'], description: '网格风格：wire=三角形线框（默认）；toon=实心填充+视向法线翻转边实体轮廓（2D 卡通轮廓，配 azimuthDeg 视差角判读重叠肢体）' },
+        azimuthDeg: { type: 'number', description: '视差观察角 -60..60（度，默认 0）：投影前绕 Y 旋转，侧视 + 30° 时左右重叠的手臂/躯干轮廓在 z 向错开，便于判读重叠部位' },
+        grid: { type: 'boolean', description: '默认 false。画**量化坐标参考线**（工程图风格网格 + 刻度数值，单位米）：网格线在模型下层、数值在最上层带白描边。审图要「读出这个关节偏高多少」时开它 —— 正交投影下世界等间距 = 屏幕等间距，读数 = 数格子 × step，无需额外标定。⚠️ azimuthDeg≠0 时网格不再对齐世界轴，别叠用' },
+        gridStep: { type: 'number', description: '网格间距（米），默认 0.05。配合 grid:true' },
+        gridMajor: { type: 'number', description: '每几格一条主线并标数值，默认 5（即 0.25m 标一次）。配合 grid:true' },
       },
     },
   },
