@@ -5,5 +5,6 @@ export * from './binding';
 export * from './shaders';
 export * from './skin';
 export * from './pose-palette';
+export * from './quality';
 export * from './gizmo';
 export * from './renderer-core';

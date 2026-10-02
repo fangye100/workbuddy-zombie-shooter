@@ -23,7 +23,7 @@
  * - "进入房间"用矩形 bounds 包含玩家中心点判定，不用 Collider 触发器事件。
  */
 
-import { CharacterTable, rayCapsuleY } from '@aether/gameplay';
+import { CharacterTable, rayCapsuleY, updateLod, type LodThresholds } from '@aether/gameplay';
 import { CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
 import type { CrowdBuffers, CrowdParams } from '@aether/ai';
 import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
@@ -120,6 +120,11 @@ export interface EntityView {
    * （2026-10-02 审查发现）。
    */
   hitFlash: number;
+  /**
+   * LOD 档位（P4 M4）：0 = Full（真模型蒙皮）、1 = Vat、2 = Proxy（退胶囊）。
+   * 由宿主每帧调 `refreshLod()` 按相机距离更新 —— runtime 本身不知道相机在哪。
+   */
+  lodTier: number;
 }
 
 /** 一个房间因容量不足被整批拒绝的明细 */
@@ -149,6 +154,21 @@ export interface CombatEvent {
   /** 造成伤害的槽位；-1 = 系统/环境伤害 */
   readonly sourceSlot: number;
 }
+
+/**
+ * 默认 LOD 阈值（P4 M4「远处退胶囊」，docs/20 §M4）。
+ *
+ * - 25m 内：Full（真模型 + 蒙皮）
+ * - 25~60m：Vat（动态通道下与 Full 同批次，仅预留）
+ * - 60m 外：Proxy（退胶囊——200 只压测时这一档决定了 draw call 与顶点量）
+ * - hysteresis 10%：升级阈值比降级阈值宽，防止在边界反复横跳（每帧切档的开销
+ *   比"多画几只真模型"更大）
+ */
+export const DEFAULT_LOD_THRESHOLDS: LodThresholds = {
+  fullDistance: 25,
+  vatDistance: 60,
+  hysteresis: 0.1,
+};
 
 /** applyDamage 的结果（HUD/音效/测试消费，docs/23 §2.1a） */
 export interface DamageResult {
@@ -442,9 +462,23 @@ export class RuntimeSession {
         hp: this.table.health[i]!,
         maxHp: this.table.maxHp[i]!,
         hitFlash: this.table.hitFlash[i]!,
+        lodTier: this.table.lodTier[i]!,
       });
     }
     return out;
+  }
+
+  /**
+   * 按相机位置刷新 LOD 档位（P4 M4「远处退胶囊」，docs/20 §M4）。
+   *
+   * 🔴 **相机是宿主的事**（编辑器相机 / 游戏相机是两个东西），所以 runtime 不自己
+   * 持有相机，改由宿主每帧调用 —— 与 `setInput` 同一个"输入注入"模式。
+   * 不刷新的话 `lodTier` 永远停在初始值，远处真模型照画，200 只压测必掉帧。
+   *
+   * 返回本帧发生档位切换的实体数（压测诊断用：抖动大 = 阈值/迟滞没调好）。
+   */
+  refreshLod(cameraX: number, cameraZ: number, t: LodThresholds = DEFAULT_LOD_THRESHOLDS): number {
+    return updateLod(this.table, t, cameraX, cameraZ);
   }
 
   countNpc(): number {
@@ -916,6 +950,48 @@ export class RuntimeSession {
     return this.roomAlive.get(roomNodeId) ?? 0;
   }
 
+  /** 把一个刚 alloc 出来的槽位初始化成"追玩家的 NPC"（spawnBatch 与 debugSpawn 共用） */
+  private initNpcSlot(i: number, stats: CharacterStatsEntry, x: number, z: number): void {
+    this.table.posX[i] = x;
+    this.table.posZ[i] = z;
+    this.table.radius[i] = stats.capsuleRadius;
+    this.table.maxSpeed[i] = stats.moveSpeed;
+    this.table.speedScale[i] = 1;
+    this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
+    this.table.targetEntity[i] = this.playerId;
+    this.table.behavior[i] = BEHAVIOR_CHASE;
+    // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
+    this.table.maxHp[i] = stats.hp;
+    this.table.health[i] = stats.hp;
+    this.kindOf[i] = 1;
+  }
+
+  /**
+   * 压测 / 调试注入：在指定位置生成 count 个 NPC（P4 M4 的 200 只压测入口）。
+   *
+   * 🔴 这是**调试通道，不是玩法路径**：实体不挂任何出生刷怪点（sourceOf = null），
+   * 因此不计入房间存活数、不影响 WaveScheduler 的清空与推进判定 —— 压测要的是
+   * "屏幕上真有 200 只"，不能顺手把关卡流程搅乱。玩法生成一律走场景刷怪点。
+   *
+   * 返回实际生成数（容量不足时少于 count）。
+   */
+  debugSpawn(characterId: string, x: number, z: number, count: number, spreadM = 0): number {
+    const stats = lookupCharacterStats(characterId);
+    if (stats === undefined) return 0;
+    let made = 0;
+    for (let k = 0; k < count; k++) {
+      const i = this.table.spawn(stats.defId);
+      if (i < 0) break; // 容量用尽
+      // spreadM > 0 时按环形铺开（压测要的是分散的 200 只，不是叠在一个点上）
+      const ang = spreadM > 0 ? (k / count) * Math.PI * 2 : 0;
+      const r = spreadM > 0 ? Math.sqrt((k % 17) / 17) * spreadM : 0;
+      this.initNpcSlot(i, stats, x + Math.cos(ang) * r, z + Math.sin(ang) * r);
+      this.sourceOf[i] = null;
+      made++;
+    }
+    return made;
+  }
+
   /** 返回实际生成的数量（供 StepReport.spawned 汇总） */
   private spawnBatch(s: { nodeId: NodeId; characterId: string; count: number; radius: number; x: number; z: number }): number {
     const stats = lookupCharacterStats(s.characterId);
@@ -933,18 +1009,7 @@ export class RuntimeSession {
       // 圆内均匀取点：半径乘 sqrt(u)，否则会向圆心堆积
       const ang = rng() * Math.PI * 2;
       const r = Math.sqrt(rng()) * s.radius;
-      this.table.posX[i] = s.x + Math.cos(ang) * r;
-      this.table.posZ[i] = s.z + Math.sin(ang) * r;
-      this.table.radius[i] = stats.capsuleRadius;
-      this.table.maxSpeed[i] = stats.moveSpeed;
-      this.table.speedScale[i] = 1;
-      this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
-      this.table.targetEntity[i] = this.playerId;
-      this.table.behavior[i] = BEHAVIOR_CHASE;
-      // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
-      this.table.maxHp[i] = stats.hp;
-      this.table.health[i] = stats.hp;
-      this.kindOf[i] = 1;
+      this.initNpcSlot(i, stats, s.x + Math.cos(ang) * r, s.z + Math.sin(ang) * r);
       this.sourceOf[i] = s.nodeId;
       made++;
     }

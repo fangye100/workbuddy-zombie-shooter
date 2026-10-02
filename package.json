@@ -24,6 +24,7 @@
     "verify:fs": "node --experimental-strip-types tools/verify/devfs-write.mjs",
     "verify:parity": "npm run runtime:build && node tools/verify/runtime-parity.mjs --scene assets/scenes/sim/floor1-t5.scene.json --seed 7 --ticks 60",
     "verify:parity-host": "node tools/verify/editor-parity.mjs",
+    "verify:stress": "node tools/verify/stress-probe.mjs",
     "content:gen": "node packages/content/scripts/gen-content.mjs && node packages/content/scripts/gen-stats.mjs",
     "content:check": "node packages/content/scripts/gen-content.mjs --check && node packages/content/scripts/gen-stats.mjs --check",
     "scene:gen": "node tools/scene/gen-asset-meta.mjs",

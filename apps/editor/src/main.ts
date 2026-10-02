@@ -49,7 +49,7 @@ import {
 } from './asset-util';
 import { makeSplitter, restoreCssVar, readCssVarPx } from './splitter';
 import { t, setLang, getLang, applyStaticI18n } from './i18n';
-import { createSkinState, selectClip, play, pause, seek } from '@aether/render';
+import { createSkinState, selectClip, play, pause, seek, bakeProfileForTier } from '@aether/render';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
@@ -180,6 +180,17 @@ async function boot(): Promise<void> {
   /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
+    // 烘焙档位（P4 M4）：真源是项目文件的 render.targetTier，先于任何 preload 拿到 ——
+    // 否则先按默认桌面档烘完再改档位，已装配的角色不会重烘（显存没省下来）。
+    const proj = await readProjectFile('aether.project.json');
+    if (proj.ok) {
+      const tier = (proj.json as { render?: { targetTier?: string } })?.render?.targetTier;
+      actorLib.setBakeProfile(bakeProfileForTier(tier));
+      console.log(`[actors] 烘焙档位 targetTier=${tier ?? '缺省'} →`, actorLib.bakeProfile);
+    } else {
+      console.warn(`[actors] 项目文件读不到，烘焙走默认档：${proj.error ?? '?'}`);
+    }
+
     const r = await readProjectFile('assets/_data/asset-manifest.json');
     if (r.ok) {
       assetManifest = r.json;
@@ -576,6 +587,14 @@ async function boot(): Promise<void> {
       ids: behaviorRegistry.list().map((m) => m.id),
       schemaIssues: behaviorRegistry.schemaDiagnostics.length,
     }),
+    /**
+     * 当前帧率读数（P4 M4 压测探针用）。
+     * 与 HUD 同源的**同一个变量**，探针不另算一份 —— 否则"HUD 显示 60、探针报 45"
+     * 这种分歧会让人分不清谁对。闭包延迟求值（fps 定义在本对象之后）。
+     */
+    fps: () => fps,
+    /** 烘焙档位（P4 M4 mobile 档的证据面：压测时能看到当前跑的是哪一档） */
+    bakeProfile: () => actorLib.bakeProfile,
     /**
      * 运行时真角色装配库（docs/20 M2）。冒烟断言「动态蒙皮已激活」用：
      * Play 后 `actorLib.size > 0` 且 `renderer.debugDynamicMeshIds()` 含 `actor:*`，
@@ -3770,6 +3789,16 @@ async function boot(): Promise<void> {
       const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
       const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
       playCtl.session.setInput(ix, iz);
+    }
+    // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
+    // 🔴 必须在 batches() 之前 —— 批次按 lodTier 分流，晚一帧会让压测帧率抖动。
+    if (playCtl.isPlaying) {
+      // 眼位 = target + 水平投影距离（俯仰角越大，水平分量越短）
+      const horiz = camera.distance * Math.cos(panel.params.cameraElevation);
+      bridge.refreshLod(
+        camera.target[0] + Math.cos(camera.yaw) * horiz,
+        camera.target[2] + Math.sin(camera.yaw) * horiz,
+      );
     }
     playCtl.update(dt);
     renderer.setDynamicBatches(bridge.batches());
