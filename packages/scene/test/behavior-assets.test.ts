@@ -94,9 +94,15 @@ describe('assets/behaviors · 目录收集', () => {
     const reg = new BehaviorRegistry();
     reg.registerAll(collectModules());
     for (const m of collectModules()) {
-      const r = reg.resolve<{ log: string[] }>(m.id, {});
-      const ctx = { log: [] as string[] };
+      // ctx 形状必须跟 runtime 的 BehaviorContext 对齐：{ tick, log(message) }。
+      // 早期版本用 `log: string[]`，P3 改成输出通道函数后这里不同步就会炸。
+      const r = reg.resolve<{ tick: number; log(m: string): void }>(m.id, {});
+      const seen: string[] = [];
+      const ctx = { tick: 0, log: (m: string) => seen.push(m) };
       expect(() => r.def!.run(ctx, r.params)).not.toThrow();
+      // 默认参数下应真的输出一条（enabled=true、tick 0 ≤ maxTick），
+      // 否则"run 能调"就退化成恒真断言了
+      expect(seen.length).toBeGreaterThan(0);
     }
   });
 });

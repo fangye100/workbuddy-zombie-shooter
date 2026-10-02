@@ -149,13 +149,26 @@ export function parseControlValue(
 }
 
 /**
+ * 把整段控件 HTML 里的 input/select 全部置灰。
+ *
+ * 用于"能看不能改"的只读态——**宁可置灰也不要让控件看起来能改却存不下去**：
+ * 那是最难查的一类假象（用户以为改了，刷新一看还在原值）。
+ */
+export function disableControls(html: string): string {
+  return html.replace(/<(input|select|textarea)\b/g, '<$1 disabled');
+}
+
+/**
  * 整个行为参数面板的 HTML（label + 控件 + hint）。
  *
  * 没有可调参数时给出明确说明，而不是画一个空面板让人以为坏了。
+ *
+ * @param readonly 只读态。为 true 时所有控件置灰（见 `disableControls`）。
  */
 export function paramsPanelHtml(
   def: BehaviorDef,
   params: Readonly<Record<string, BehaviorScalar>>,
+  readonly = false,
 ): string {
   if (def.params.length === 0) {
     return (
@@ -163,11 +176,12 @@ export function paramsPanelHtml(
       `（schema 未声明 params）。</div>`
     );
   }
-  const rows = def.params
+    const rows = def.params
     .map((s) => {
       const v = Object.prototype.hasOwnProperty.call(params, s.key) ? params[s.key] : s.default;
       const label = `<label class="bh-label" for="bh-${escapeHtml(s.key)}">${escapeHtml(s.label)}</label>`;
-      const ctl = controlHtml(s, v);
+      const raw = controlHtml(s, v);
+      const ctl = readonly ? disableControls(raw) : raw;
       const hint =
         s.hint !== undefined ? `<div class="bh-hint">${escapeHtml(s.hint)}</div>` : '';
       return `<div class="bh-row">${label}<div class="bh-ctl">${ctl}${hint}</div></div>`;

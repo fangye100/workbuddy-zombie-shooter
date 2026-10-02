@@ -16,12 +16,18 @@
  */
 
 import { PlaySession, type PlayState } from '@aether/runtime';
+import type { BehaviorExecutor } from '@aether/runtime';
 import type { RuntimeBridge } from './runtime-bridge';
 import type { AuthorSnapshot, LabRenderer } from '../renderer';
 
 export interface PlayControllerOptions {
   seed?: number;
   capacity?: number;
+  /**
+   * 行为执行器（ADR-018 P3）。由**编辑器宿主**注入（`behavior-host.ts` 提供），
+   * runtime 侧保持纯 CPU、不 import 行为代码。
+   */
+  executor?: BehaviorExecutor;
   /** 状态变化时回调（UI 据此刷新按钮与面板） */
   onStateChange?: () => void;
 }
@@ -38,7 +44,11 @@ export class PlayController {
     this.renderer = renderer;
     this.bridge = bridge;
     this.onStateChange = opts.onStateChange ?? null;
-    this.session = new PlaySession({ seed: opts.seed ?? 1, capacity: opts.capacity ?? 512 });
+    this.session = new PlaySession({
+      seed: opts.seed ?? 1,
+      capacity: opts.capacity ?? 512,
+      ...(opts.executor !== undefined ? { executor: opts.executor } : {}),
+    });
   }
 
   get state(): PlayState {

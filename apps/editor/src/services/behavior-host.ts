@@ -24,6 +24,7 @@
  */
 
 import { BehaviorRegistry, type BehaviorModule } from '@aether/scene';
+import type { BehaviorContext, BehaviorExecutor, ScriptDesc } from '@aether/runtime';
 
 const modules = import.meta.glob('/assets/behaviors/**/*.ts', { eager: true }) as Record<
   string,
@@ -69,4 +70,45 @@ if (behaviorCollectResult.rejected.length > 0) {
 /** schema 自身有问题的行为（注册期发现，Agent 写完立刻可见） */
 export function behaviorSchemaIssues() {
   return behaviorRegistry.schemaDiagnostics;
+}
+
+/**
+ * 创建行为执行器，交给 runtime 注入（ADR-018 P3 的注入端）。
+ *
+ * ## 为什么执行器长在宿主侧
+ *
+ * runtime 只声明端口（`BehaviorExecutor`），不 import 任何行为代码——否则 CLI 宿主
+ * 解析不到那些模块，`verify:parity-host` 的 Node↔浏览器一致性立刻断。
+ * 执行器持有 registry，是唯一知道"行为代码在哪"的地方。
+ *
+ * ## 失效语义
+ *
+ * 行为未注册 → 返回 false（runtime 会记 W_BEHAVIOR_UNAVAILABLE 并降级，不阻塞）。
+ * 行为内部抛异常 → 捕获并返回 false：内容层是 Agent 自由创作区，
+ * 一个写错的行为不该让整个 Play 崩掉（runtime 侧另有一层兜底，这里先兜）。
+ */
+export function createBehaviorExecutor(): BehaviorExecutor {
+  return {
+    run(script: ScriptDesc, ctx: BehaviorContext): boolean {
+      const r = behaviorRegistry.resolve(script.behavior, script.params);
+      if (r.def === null) return false;
+      // 参数被 schema 修正过（缺失补默认、越界钳制）——作者应当知道
+      if (r.diagnostics.length > 0) {
+        console.warn(
+          `[behavior] 脚本「${script.behavior}」参数已按 schema 修正：`,
+          r.diagnostics.map((d) => d.message),
+        );
+      }
+      try {
+        r.def.run(ctx, r.params);
+        return true;
+      } catch (e) {
+        console.warn(
+          `[behavior] 脚本「${script.behavior}」执行时抛出异常，本轮跳过：`,
+          e instanceof Error ? e.message : String(e),
+        );
+        return false;
+      }
+    },
+  };
 }

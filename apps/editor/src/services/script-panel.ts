@@ -21,6 +21,13 @@ export interface ScriptPanelOptions {
   registry: BehaviorRegistry;
   /** 参数改动回调。index 是 Script 组件在节点上的序号（Script 允许重复挂载） */
   onChange: (index: number, params: Record<string, BehaviorScalar>) => void;
+  /**
+   * 只读态。**当前必须为 true**——保存链路的白名单只覆盖 SpawnPoint 的
+   * radius/count，Script 参数改了不会进 diffs、也就不会落盘。
+   * 与其让控件看起来能改却存不下去（刷新就回原值，极难排查），不如置灰并说明。
+   * 待 spawn-edit 支持通用组件编辑后可放开。
+   */
+  readonly?: boolean;
 }
 
 /**
@@ -82,14 +89,17 @@ export class ScriptPanel {
 
     // 按 schema 修正后渲染：场景里存了脏值也按合法值显示（与 resolve 一致）
     const resolved = this.opts.registry.resolve(s.behavior, s.params);
+    const ro = this.opts.readonly === true;
     return (
       `<div class="bh-script" data-bh-index="${index}">${head}` +
-      paramsPanelHtml(def, resolved.params) +
+      (ro ? `<div class="bh-ro">只读：保存链路暂未覆盖脚本参数，改了不会落盘</div>` : '') +
+      paramsPanelHtml(def, resolved.params, ro) +
       `</div>`
     );
   }
 
   private readonly onChangeEvent = (e: Event): void => {
+    if (this.opts.readonly === true) return; // 只读态不接受编辑
     const el = e.target;
     if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
     const key = el.getAttribute('data-bh');

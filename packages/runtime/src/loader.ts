@@ -33,8 +33,10 @@ import type {
   RoomVolumeComponent,
   SceneDocument,
   SceneNodeRuntime,
+  ScriptComponent,
   SpawnPointComponent,
 } from '@aether/scene';
+import type { ScriptDesc } from './behavior-executor';
 
 /** 装载诊断。与 SceneDiagnostic 同构，但额外带 NodeId 便于在运行期定位 */
 export interface LoadDiagnostic {
@@ -118,6 +120,14 @@ export interface LevelRuntimeDesc {
   spawns: SpawnDesc[];
   obstacles: ObstacleDesc[];
   nav: NavDesc | null;
+  /**
+   * 场景节点上的脚本（ADR-018 P3）。
+   *
+   * 只收**启用节点**的 Script 组件：层级里隐藏一个节点，作者的意图是"这个东西
+   * 现在不参与"，脚本跟着停用才符合直觉。节点级隐藏与组件 enabled 是正交的两件事，
+   * 这里按 visible 过滤（组件 enabled 的解释权归组件语义，本轮先不叠加）。
+   */
+  scripts: ScriptDesc[];
 }
 
 export interface LoadResult {
@@ -277,6 +287,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   const rooms: RoomDesc[] = [];
   const spawns: SpawnDesc[] = [];
   const obstacles: ObstacleDesc[] = [];
+  const scripts: ScriptDesc[] = [];
   let nav: NavDesc | null = null;
 
   graph.traverse((n) => {
@@ -392,6 +403,25 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           maxZ: b.maxZ,
           cellSize: c.cellSize,
         };
+      } else if (c.kind === 'Script') {
+        // Script 只存 behavior id + params，**绝不存代码字符串**（ADR-017）。
+        // 这里做的是"登记待执行清单"，真正的执行由宿主注入的 BehaviorExecutor 完成
+        // （ADR-018 R3：runtime 不 import 行为代码）。
+        const sc = c as ScriptComponent;
+        if (!n.visible) {
+          warn(
+            'W_SCRIPT_HIDDEN',
+            `节点「${n.name}」被隐藏（visible=false），其脚本「${sc.behavior}」不参与本次运行`,
+            n.id,
+          );
+          continue;
+        }
+        if (sc.behavior.trim() === '') {
+          warn('W_SCRIPT_EMPTY', `节点「${n.name}」的 Script 组件没有填 behavior id，已忽略`, n.id);
+          continue;
+        }
+        // params 必须拷贝：运行期若被行为改写，不能污染作者文档
+        scripts.push({ nodeId: n.id, behavior: sc.behavior, params: { ...sc.params } });
       }
     }
   });
@@ -422,6 +452,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       spawns,
       obstacles,
       nav,
+      scripts,
     },
     diagnostics: diags,
   };

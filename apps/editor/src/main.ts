@@ -6,7 +6,7 @@ import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gi
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M } from './models';
 import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -20,6 +20,8 @@ import {
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint, TransformValues } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
+import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
+import { ScriptPanel } from './services/script-panel';
 import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
@@ -182,6 +184,9 @@ async function boot(): Promise<void> {
    * 否则每次改完参数刷新页面都会被"已经在跑的世界"干扰判断。
    */
   const playCtl = new PlayController(renderer, bridge, {
+    // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
+    // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
+    executor: createBehaviorExecutor(),
     onStateChange: () => {
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
@@ -1123,6 +1128,53 @@ async function boot(): Promise<void> {
           onFocusSource: () => focusSourceNode(),
         });
 
+  // =====================================================================
+  // 脚本面板（ADR-018 P2）
+  //
+  // 控件完全由 BehaviorDef.params 的 schema 生成——Agent 新增行为/参数
+  // **不需要改这里的代码**。这就是 R2 说的「schema 是 Agent 与人类的契约面」：
+  // 人类在 Inspector 上看到的，就是 Agent 声明的那几个旋钮。
+  //
+  // 🔴 当前为只读态：保存链路的合法路径白名单只覆盖 SpawnPoint 的
+  // radius/count（`saveSpawnEditsInner`），Script 参数改了不会进 diffs、不会落盘。
+  // 与其让用户以为改了（刷新回原值，极难排查），不如置灰并写明原因。
+  // 待 spawn-edit 支持通用组件编辑后放开。
+  // =====================================================================
+  const scriptHost = document.getElementById('script-host');
+  const scriptPanel =
+    scriptHost === null
+      ? null
+      : new ScriptPanel(scriptHost, {
+          registry: behaviorRegistry,
+          readonly: true,
+          onChange: () => {
+            /* 只读态不会触发 */
+          },
+        });
+
+  /** 当前选中节点上的 Script 组件（无选中 / 该节点没挂脚本 → 空数组） */
+  function selectedScripts(): ScriptComponent[] {
+    const idx = renderer.getSelected();
+    // 🔴 必须用 `getObjectNodeId`：它返回的是**场景节点 id**（视口物体 ↔ 存储节点的
+    // 唯一映射依据）。别用 `getObjectState` 里的字段，也别拿 `subMeshes[].nodeId`
+    // 顶替——后者是 **GLB 内部** id，与场景节点是两套东西。
+    const nodeId = idx === null ? null : renderer.getObjectNodeId(idx);
+    const doc = spawnStore?.document ?? renderer.getDocument();
+    if (doc === null || nodeId === null) return [];
+    const n = doc.nodes.find((x) => x.id === nodeId);
+    if (n === undefined) return [];
+    return n.components.filter((c) => c.kind === 'Script') as ScriptComponent[];
+  }
+
+  function refreshScriptPanel(): void {
+    if (scriptPanel === null) return;
+    const scripts = selectedScripts();
+    const group = document.getElementById('script-group');
+    // 没挂脚本就整组隐藏：检视页不该出现一个永远空白的「脚本」分组
+    if (group !== null) group.hidden = scripts.length === 0;
+    scriptPanel.render(scripts);
+  }
+
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
     if (doc === null) {
@@ -1370,6 +1422,9 @@ async function boot(): Promise<void> {
   }
 
   function refreshSpawnPanel(): void {
+    // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
+    // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
+    refreshScriptPanel();
     if (spawnPanel === null) return;
     const store = spawnStore;
     const doc = store?.document ?? null;

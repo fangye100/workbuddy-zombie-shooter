@@ -15,6 +15,7 @@ function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDe
     rooms: [],
     spawns: [],
     obstacles,
+    scripts: [], // ADR-018 P3：无脚本的合成场景，行为执行器走空路径
     nav,
   };
 }
