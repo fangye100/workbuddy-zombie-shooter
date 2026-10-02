@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   controlHtml,
+  disableControls,
   escapeHtml,
   paramsPanelHtml,
   parseControlValue,
@@ -156,6 +157,54 @@ describe('parseControlValue · 控件值 → BehaviorScalar', () => {
     ] as const) {
       expect(parseControlValue(kind, v)).toBe(v === '8' ? 8 : v === '1.5' ? 1.5 : v);
     }
+  });
+});
+
+describe('disableControls · 只读态置灰', () => {
+  it('给 input / select / textarea 都加上 disabled', () => {
+    const out = disableControls('<input type="text"><select></select><textarea></textarea>');
+    expect(out).toContain('<input disabled');
+    expect(out).toContain('<select disabled');
+    expect(out).toContain('<textarea disabled');
+  });
+
+  it('幂等：重复调用不会叠加 disabled', () => {
+    const once = disableControls('<input type="text">');
+    const twice = disableControls(once);
+    expect(twice.match(/disabled/g)?.length).toBe(1);
+  });
+
+  it('只作用于控件标签，不误伤 label / div', () => {
+    const out = disableControls('<div class="bh-row"><label>数量</label><input type="number"></div>');
+    expect(out).not.toContain('<div disabled');
+    expect(out).not.toContain('<label disabled');
+    expect(out).toContain('<input disabled');
+  });
+});
+
+describe('paramsPanelHtml · readonly 参数', () => {
+  const def: BehaviorDef = {
+    id: 'ro',
+    label: '只读示例',
+    params: [
+      { key: 'n', label: '数量', kind: 'int', default: 8, min: 1, max: 50 },
+      { key: 'm', label: '模式', kind: 'enum', default: 'a', options: ['a', 'b'] },
+    ],
+  };
+
+  it('readonly=true → 产出含 disabled；readonly=false → 不含', () => {
+    expect(paramsPanelHtml(def, {}, true)).toContain('disabled');
+    expect(paramsPanelHtml(def, {}, false)).not.toContain('disabled');
+  });
+
+  it('默认（不传）是可编辑态，避免调用方忘了传就变成只读', () => {
+    expect(paramsPanelHtml(def, {})).not.toContain('disabled');
+  });
+
+  it('🔴 只读态下仍要显示参数值（置灰 ≠ 不显示）', () => {
+    const ro = paramsPanelHtml(def, { n: 12, m: 'b' }, true);
+    expect(ro).toContain('value="12"');
+    expect(ro).toContain('<option value="b" selected>');
   });
 });
 

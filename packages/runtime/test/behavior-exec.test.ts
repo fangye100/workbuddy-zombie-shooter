@@ -26,6 +26,20 @@ function floor1(): SceneDocument {
   return JSON.parse(JSON.stringify((SCENE[key] as { default: unknown }).default)) as SceneDocument;
 }
 
+/**
+ * 清空场景自带的 Script 组件后的副本。
+ *
+ * floor-1 本身挂了一个演示脚本（让真机 Play 有东西可看），但多数用例需要
+ * **精确控制**脚本集合，否则断言会随场景内容漂移（场景加一个脚本，一堆用例就红）。
+ */
+function floor1Clean(): SceneDocument {
+  const doc = floor1();
+  for (const n of doc.nodes) {
+    n.components = n.components.filter((c) => c.kind !== 'Script');
+  }
+  return doc;
+}
+
 /** 收集真实行为文件并注册（与编辑器侧 behavior-host.ts 同一套做法） */
 function realRegistry(): BehaviorRegistry {
   const reg = new BehaviorRegistry();
@@ -77,7 +91,7 @@ const SCRIPT_NODE = 'nd_f1_start'; // 玩家起点节点，一定存在
 
 describe('loader · 收集场景 Script 组件', () => {
   it('带 Script 组件的节点被收进 desc.scripts，含 nodeId 与 params', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { message: 'hello', maxTick: 2 });
     const d = loadLevelRuntime(doc).desc!;
     expect(d.scripts.length).toBe(1);
@@ -87,7 +101,7 @@ describe('loader · 收集场景 Script 组件', () => {
   });
 
   it('params 被拷贝：改 desc 不污染作者文档', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { message: 'orig' });
     const d = loadLevelRuntime(doc).desc!;
     (d.scripts[0]!.params as Record<string, unknown>).message = 'changed';
@@ -98,7 +112,7 @@ describe('loader · 收集场景 Script 组件', () => {
   });
 
   it('节点被隐藏（visible=false）→ 不收集并报 W_SCRIPT_HIDDEN', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
     doc.nodes.find((x) => x.id === SCRIPT_NODE)!.visible = false;
     const r = loadLevelRuntime(doc);
@@ -107,7 +121,7 @@ describe('loader · 收集场景 Script 组件', () => {
   });
 
   it('behavior id 为空 → 忽略并报 W_SCRIPT_EMPTY', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, '   ');
     const r = loadLevelRuntime(doc);
     expect(r.desc!.scripts).toEqual([]);
@@ -115,14 +129,23 @@ describe('loader · 收集场景 Script 组件', () => {
   });
 
   it('没有 Script 组件时 scripts 为空数组（不是 undefined）', () => {
-    const d = loadLevelRuntime(floor1()).desc!;
+    const d = loadLevelRuntime(floor1Clean()).desc!;
     expect(d.scripts).toEqual([]);
+  });
+
+  it('🔴 真实场景 floor-1 自带演示脚本能被收集（真机 Play 有东西可看的前提）', () => {
+    const d = loadLevelRuntime(floor1()).desc!;
+    expect(d.scripts.length).toBeGreaterThanOrEqual(1);
+    const demo = d.scripts.find((s) => s.behavior === 'debug-on-trigger-log');
+    expect(demo).toBeDefined();
+    // 挂在房间 1（带网格 → 视口能点中 → Inspector 能看到）
+    expect(demo!.nodeId).toBe('nd_f1r0');
   });
 });
 
 describe('RuntimeSession · 脚本真正被执行', () => {
   it('🔴 注入执行器后，step() 会让脚本产生可观测输出', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { message: 'ran', maxTick: 5 });
     const d = loadLevelRuntime(doc).desc!;
     const reg = realRegistry();
@@ -140,7 +163,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
   });
 
   it('ctx.tick 随推进递增（行为能感知当前步）', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { maxTick: 3 });
     const d = loadLevelRuntime(doc).desc!;
     const s = new RuntimeSession({ desc: d, seed: 1, executor: realExecutor(realRegistry()) });
@@ -153,7 +176,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
   });
 
   it('🔴 未注入执行器 → 每个脚本产出 W_BEHAVIOR_UNAVAILABLE，且**不抛异常、不中断推进**', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
     const d = loadLevelRuntime(doc).desc!;
     // 故意不传 executor
@@ -169,7 +192,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
   });
 
   it('行为未注册 → 记诊断并降级，其余步骤照常推进', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'no-such-behavior');
     const d = loadLevelRuntime(doc).desc!;
     const s = new RuntimeSession({ desc: d, seed: 1, executor: realExecutor(realRegistry()) });
@@ -180,7 +203,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
   });
 
   it('参数按 schema 修正后再交给 run（越界被钳制）', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     // maxTick 的 max 是 600，传 9999 应被钳到 600
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { maxTick: 9999, message: 'clamped' });
     const d = loadLevelRuntime(doc).desc!;
@@ -203,8 +226,23 @@ describe('RuntimeSession · 脚本真正被执行', () => {
     expect(seen[0]!.maxTick).toBe(600); // 已被钳制，不是 9999
   });
 
+  it('🔴 日志封顶 200：长时间跑不会无限增长，且保留最近的', () => {
+    const doc = floor1Clean();
+    // maxTick 设到上限，让它每 tick 都打日志
+    attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { maxTick: 600, message: 'x' });
+    const d = loadLevelRuntime(doc).desc!;
+    const s = new RuntimeSession({ desc: d, seed: 1, executor: realExecutor(realRegistry()) });
+
+    for (let i = 0; i < 250; i++) s.step();
+
+    // 250 条里丢掉最早的 50 条，保留最近 200 条（tick 51..250）
+    expect(s.behaviorLog.length).toBe(200);
+    expect(s.behaviorLog[0]!.tick).toBe(51);
+    expect(s.behaviorLog[199]!.tick).toBe(250);
+  });
+
   it('reset() 清空行为日志（跨代日志混进来会让"重跑了没"说不清）', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log', { maxTick: 5 });
     const d = loadLevelRuntime(doc).desc!;
     const s = new RuntimeSession({ desc: d, seed: 1, executor: realExecutor(realRegistry()) });
@@ -215,7 +253,7 @@ describe('RuntimeSession · 脚本真正被执行', () => {
   });
 
   it('🔴 执行器抛异常 → step 不崩，记 W_BEHAVIOR_THREW 并继续推进', () => {
-    const doc = floor1();
+    const doc = floor1Clean();
     attachScript(doc, SCRIPT_NODE, 'debug-on-trigger-log');
     const d = loadLevelRuntime(doc).desc!;
     const s = new RuntimeSession({

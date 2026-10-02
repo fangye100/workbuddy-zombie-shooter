@@ -336,6 +336,7 @@ async function boot(): Promise<void> {
     renderer.selectObject(index, subIndex);
     panel.setSelection(index, subIndex);
     switchInspectorTab('inspector');
+    refreshSpawnPanel(); // 同上：层级点选也是选中变化，脚本分组要跟着重算
     hudDirty = true;
   };
   // 功能体（✦）行点选：与物体选中互斥，切到检视页显示对应属性分组（当前唯一功能体 = 刷怪点）
@@ -635,6 +636,9 @@ async function boot(): Promise<void> {
     renderer.selectObject(idx);
     panel.setSelection(idx);
     switchInspectorTab('inspector');
+    // 选中变了必须刷面板。之前漏了这一句：脚本分组只在"先点过刷怪点功能体"
+    // 的巧合路径下才出现，直接点物体永远不显示（独立审核抓到的假象）。
+    refreshSpawnPanel();
     hudDirty = true;
   }
 

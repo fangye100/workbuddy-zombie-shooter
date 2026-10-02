@@ -155,7 +155,10 @@ export function parseControlValue(
  * 那是最难查的一类假象（用户以为改了，刷新一看还在原值）。
  */
 export function disableControls(html: string): string {
-  return html.replace(/<(input|select|textarea)\b/g, '<$1 disabled');
+  // 负向前瞻：标签内已经有 disabled 就跳过，保证**幂等**——
+  // 否则重复调用会产出 `<input disabled disabled`，虽然浏览器能容错，
+  // 但那属于"能跑就行"的脏输出，不该留。
+  return html.replace(/<(input|select|textarea)\b(?![^>]*\bdisabled\b)/g, '<$1 disabled');
 }
 
 /**

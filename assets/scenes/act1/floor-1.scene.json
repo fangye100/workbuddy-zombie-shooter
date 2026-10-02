@@ -253,6 +253,16 @@
           "visible": true,
           "layer": 0,
           "importScale": 1
+        },
+        {
+          "kind": "Script",
+          "behavior": "debug-on-trigger-log",
+          "params": {
+            "message": "房间1心跳",
+            "maxTick": 3,
+            "enabled": true,
+            "tag": "info"
+          }
         }
       ],
       "prefab": null
