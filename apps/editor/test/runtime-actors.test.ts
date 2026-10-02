@@ -2,9 +2,28 @@ import { describe, it, expect } from 'vitest';
 import {
   assemblePalettes,
   palettePoseCount,
+  rankOrderEntries,
 } from '../src/services/runtime-actors';
-import { bakePosePalette, bindPoseIndex } from '@aether/render';
+import { bakePosePalette, bindPoseIndex, type BakedPalette } from '@aether/render';
 import type { SkeletonData, AnimClip } from '@aether/scene';
+
+/** 指定 pose 数的可控 palette（duration=(n-1)/24 → 帧=n-1，+bind=n） */
+function makePalette(name: string, poseCount: number): BakedPalette {
+  const dur = (poseCount - 1) / 24;
+  const clip: AnimClip = {
+    name,
+    duration: dur,
+    tracks: [{
+      node: 0,
+      path: 'translation',
+      times: new Float32Array([0, dur]),
+      values: new Float32Array([0, 1, 0, 1, 1, 0]),
+      stride: 3,
+      interpolation: 'LINEAR',
+    }],
+  };
+  return bakePosePalette(makeSkeleton(), [clip], { fps: 24 });
+}
 
 /**
  * 装配数学的第三道防线（M3 WU-1，复审 C5）。
@@ -215,5 +234,64 @@ describe('assemblePalettes · 边界', () => {
     const asm = assemblePalettes([palA]);
     expect(asm.bases).toEqual([0]);
     expectSameFloats(asm.data!, palA.data);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rankOrderEntries · manifest 规范序（PR #19 review FR-B 的数学防线）
+//
+// 场景：E-02 瞬时失败 → E-03 先注册（注册序 [E-01, E-03]）→ resetFailures 后
+// E-02 重试成功（注册序 [E-01, E-03, E-02]）。paletteBase 布局必须仍按 manifest
+// rank（E-01 < E-02 < E-03），与注册历史无关 —— assemblePalettes 吃排序后的
+// 输入，base 与拼接同序，布局稳定。
+// ---------------------------------------------------------------------------
+
+describe('rankOrderEntries · 注册历史不污染 manifest 规范序', () => {
+  const rank = new Map([
+    ['E-01', 0],
+    ['E-02', 1],
+    ['E-03', 2],
+  ]);
+  const ids = (xs: string[]) => xs.map((characterId) => ({ characterId }));
+
+  it('乱序注册（重试场景）→ 输出按 rank 升序', () => {
+    // E-02 迟到注册在末尾 —— 规范序仍把它放回中间
+    const out = rankOrderEntries(ids(['E-01', 'E-03', 'E-02']), rank);
+    expect(out.map((e) => e.characterId)).toEqual(['E-01', 'E-02', 'E-03']);
+  });
+
+  it('rank 缺失的条目排末尾且按 id 字典序稳定（manifest 改名防御）', () => {
+    const out = rankOrderEntries(ids(['Z-09', 'E-03', 'A-00', 'E-01']), rank);
+    expect(out.map((e) => e.characterId)).toEqual(['E-01', 'E-03', 'A-00', 'Z-09']);
+  });
+
+  it('端到端：乱序注册的装配布局 == 规范序注册的装配布局（base 逐位一致）', () => {
+    const p1 = makePalette('a', 3); // 3 pose + bind
+    const p2 = makePalette('b', 5);
+    const p3 = makePalette('c', 4);
+    // 注册序 [b, c, a]（重试历史）vs 规范序 [a, b, c]：bases 必须一致
+    const messy = rankOrderEntries(
+      [
+        { characterId: 'E-02', palette: p2 },
+        { characterId: 'E-03', palette: p3 },
+        { characterId: 'E-01', palette: p1 },
+      ],
+      rank,
+    );
+    const clean = rankOrderEntries(
+      [
+        { characterId: 'E-01', palette: p1 },
+        { characterId: 'E-02', palette: p2 },
+        { characterId: 'E-03', palette: p3 },
+      ],
+      rank,
+    );
+    const messyAsm = assemblePalettes(messy.map((e) => e.palette));
+    const cleanAsm = assemblePalettes(clean.map((e) => e.palette));
+    expect([...messyAsm.bases]).toEqual([...cleanAsm.bases]);
+    expect(messyAsm.data).toEqual(cleanAsm.data);
+    // 规范序里 E-02 的 base 落在 E-03 之前 —— 按注册序拼接会得到相反布局
+    expect(messy.map((e) => e.characterId)).toEqual(['E-01', 'E-02', 'E-03']);
+    expect(messyAsm.bases[1]!).toBeLessThan(messyAsm.bases[2]!);
   });
 });

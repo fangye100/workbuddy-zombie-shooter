@@ -270,20 +270,29 @@ async function boot(): Promise<void> {
    * Play 期真角色装配（docs/20 M2/M3）：预载**全部**带「+动画」档的角色（清单
    * 从 manifest 数据派生，禁手抄——手抄 = 第二真源）。不阻塞 Play——加载完成前
    * 实体照画胶囊，完成后 `notifyActorsChanged()` 原地换真模型；单角色失败独立
-   * warn 退胶囊（ActorLibrary.preload 内建）。防重入：reset/restart 快速连点只跑一份。
+   * warn 退胶囊（ActorLibrary.preload 内建）。代次守卫（PR #19 FR-A）：每次启动 +1、
+   * stopPlay 也 +1，旧循环核对代次失配即作废——替换旧的布尔防重入（布尔会把
+   * Stop 后应立刻启动的新循环也挡在外面）。
    */
-  let actorPreloading = false;
+  let actorPreloadGen = 0;
   async function kickActorPreload(): Promise<void> {
-    if (actorPreloading) return;
-    actorPreloading = true;
+    const gen = ++actorPreloadGen;
     try {
       // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
       // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
       await manifestReady;
-      // 🔴 串行 await + manifest 序：preload 顺序决定 paletteBase 分配（注册序拼接），
-      // 并行完成的乱序会让注册序不稳定 → paletteBase 漂移 → 确定性被破坏。
+      // 🔴 串行 await：paletteBase 布局由库内 manifest rank 规范序保证（PR #19
+      // FR-B），与本循环的完成序无关；串行只是控制并发与失败可读性。
       for (const id of findAnimatedCharacterIds(assetManifest)) {
+        if (gen !== actorPreloadGen) return; // 新循环已启动 / 已 Stop：本循环作废
         const changed = await actorLib.preload(id);
+        if (gen !== actorPreloadGen) {
+          // 跨 Stop/新 Play 边界的迟到结果：成功注册无害（CPU 缓存，新轮 startPlay
+          // 同步重传直接命中）；但**迟到失败**会把 id 写回 failed、让新轮跳过它
+          // ——单角色清除，封死跨边界污染（FR-A）
+          actorLib.resetFailure(id);
+          return;
+        }
         // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
         // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
         //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
@@ -297,7 +306,7 @@ async function boot(): Promise<void> {
         }
       }
     } finally {
-      actorPreloading = false;
+      // 不复位任何状态：代次模型下旧循环自然终止，新循环随时可启动
     }
   }
 
@@ -1560,6 +1569,8 @@ async function boot(): Promise<void> {
   function stopPlay(): void {
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
+    actorPreloadGen++;
     // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
     //（成功装配的缓存不动，见 ActorLibrary.resetFailures）
     actorLib.resetFailures();

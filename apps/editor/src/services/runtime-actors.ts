@@ -28,6 +28,7 @@
 import {
   parseGlb,
   findCharacterLodPath,
+  findAnimatedCharacterIds,
   type MeshData,
 } from '@aether/scene';
 import { fileUrl } from '../asset-util';
@@ -95,8 +96,9 @@ export interface PaletteAssembly {
 }
 
 /**
- * 装配数学（纯函数）：按**注册序**给每个角色分配全局起始 pose，并把各角色的
- * 烘焙帧拼成一块总调色板。
+ * 装配数学（纯函数）：按**输入序**给每个角色分配全局起始 pose，并把各角色的
+ * 烘焙帧拼成一块总调色板。输入序由调用方保证 —— ActorLibrary 传 manifest
+ * 规范序（rankOrderEntries，PR #19 FR-B），测试直接传数组。
  *
  * ActorLibrary 的 `preload`（base 分配）与 `buildPalette`（拼接）都走这里 ——
  * 单一实现，Node 单测（runtime-actors.test.ts）与浏览器探针
@@ -129,10 +131,38 @@ export function assemblePalettes(palettes: readonly BakedPalette[]): PaletteAsse
   return { bases, data };
 }
 
+/**
+ * 按 manifest rank 给已装配角色排出**规范序**（PR #19 review FR-B）。
+ *
+ * 背景：重试会让注册序偏离 manifest 序（E-02 瞬时失败 → E-03 先注册 → E-02
+ * 下轮重试成功按 Map 插入序追加末尾），而 paletteBase 的分配序文档承诺是
+ * manifest 序。这里把「排序」抽成纯函数，ActorLibrary 的 base 分配与拼接
+ * 都以它的输出为准 —— 注册历史不再影响布局。
+ *
+ * 排序规则：rank 有的按 rank 升序；rank 缺失（manifest 后被改、角色不在
+ * 「+动画」清单里）的排末尾按 id 字典序稳定兜底 —— 永远全量重排，与
+ * 注册顺序无关。
+ */
+export function rankOrderEntries<T extends { characterId: string }>(
+  entries: readonly T[],
+  rank: ReadonlyMap<string, number>,
+): T[] {
+  return [...entries].sort((a, b) => {
+    const ra = rank.get(a.characterId);
+    const rb = rank.get(b.characterId);
+    if (ra !== undefined && rb !== undefined) return ra - rb;
+    if (ra !== undefined) return -1;
+    if (rb !== undefined) return 1;
+    return a.characterId < b.characterId ? -1 : a.characterId > b.characterId ? 1 : 0;
+  });
+}
+
 export class ActorLibrary {
   /** asset-manifest.json 的原始 JSON（可后补，见 setManifest） */
   private manifestJson: unknown;
-  /** characterId → 已装配角色（注册序即 palette 拼接序） */
+  /** characterId → manifest「+动画」清单序号（规范装配序；setManifest 时派生） */
+  private rank: ReadonlyMap<string, number> = new Map();
+  /** characterId → 已装配角色（注册序可能与规范序不同；装配布局一律走 rankOrderEntries） */
   private readonly entries = new Map<string, ActorMesh>();
   /** 本轮已失败的角色（不重试；clear() 后重新开始） */
   private readonly failed = new Set<string>();
@@ -155,6 +185,7 @@ export class ActorLibrary {
   ) {
     this.manifestJson = manifest;
     this.fetcher = fetcher;
+    this.recomputeRank();
   }
 
   get(characterId: string): ActorMesh | null {
@@ -172,6 +203,20 @@ export class ActorLibrary {
    */
   setManifest(json: unknown): void {
     this.manifestJson = json;
+    this.recomputeRank();
+    // 清单变化可能改变规范序 → 已装配角色的 base 布局全部重排（幂等，安全）
+    this.reassignBases();
+  }
+
+  /** 从当前清单派生 rank（manifest 缺省时为空表：全部走末尾字典序兜底） */
+  private recomputeRank(): void {
+    const ids =
+      this.manifestJson === null || this.manifestJson === undefined
+        ? []
+        : findAnimatedCharacterIds(this.manifestJson);
+    const map = new Map<string, number>();
+    for (let i = 0; i < ids.length; i++) map.set(ids[i]!, i);
+    this.rank = map;
   }
 
   /**
@@ -222,10 +267,11 @@ export class ActorLibrary {
         frameCount: c.frameCount,
         durationSec: c.durationSec,
       }));
-      // 全局 paletteBase = 已注册角色 pose 总数（注册序拼接；数学归 assemblePalettes）
-      let base = 0;
-      for (const e of this.entries.values()) base += palettePoseCount(e.palette);
 
+      // paletteBase 先占位 0，注册后 reassignBases 按 manifest 规范序全量重算
+      //（重试场景下注册序 ≠ manifest 序，内联累加会把重试历史焊进布局——
+      // PR #19 review FR-B。每次成功注册全量重排，已发放 ActorMesh 是同一
+      // 引用，改字段即对 Bridge 生效）
       this.entries.set(characterId, {
         characterId,
         meshId: `actor:${characterId}`,
@@ -233,7 +279,7 @@ export class ActorLibrary {
         indices: mesh.indices,
         joints: mesh.joints,
         weights: mesh.weights,
-        paletteBase: base,
+        paletteBase: 0,
         // 🔴 bindPoseIndex 返回的是**本角色 palette 内**的局部下标（角色自身
         // pose 总数-1），不是全局——shader 端「全局 = paletteBase + 相对量」，
         // 所以这里直接存局部值，绝不能再减 base（第二个角色起会算出负值 →
@@ -243,6 +289,7 @@ export class ActorLibrary {
         palette,
         clips,
       });
+      this.reassignBases();
       return true;
     } catch (e) {
       console.warn(`[actors] ${characterId} 装配失败（${path}），退回胶囊：`, e);
@@ -251,9 +298,26 @@ export class ActorLibrary {
     }
   }
 
-  /** 把全部角色的烘焙帧按注册序拼成一块（喂 core.setDynamicPalette；数学归 assemblePalettes） */
+  /**
+   * 按 manifest 规范序重排全部已装配角色的 paletteBase（数学归 assemblePalettes）。
+   * 调用时机：成功注册新角色 / setManifest。幂等。
+   */
+  private reassignBases(): void {
+    const ordered = rankOrderEntries([...this.entries.values()], this.rank);
+    const { bases } = assemblePalettes(ordered.map((e) => e.palette));
+    for (let i = 0; i < ordered.length; i++) {
+      ordered[i]!.paletteBase = bases[i]!;
+    }
+    this.orderedEntries = ordered;
+  }
+
+  /** 规范序快照（reassignBases 维护；buildPalette 与探针复算共用同一序） */
+  private orderedEntries: ActorMesh[] = [];
+
+  /** 把全部角色的烘焙帧按 **manifest 规范序**拼成一块（喂 core.setDynamicPalette；数学归 assemblePalettes） */
   buildPalette(): Float32Array<ArrayBuffer> | null {
-    return assemblePalettes([...this.entries.values()].map((e) => e.palette)).data;
+    if (this.orderedEntries.length !== this.entries.size) this.reassignBases();
+    return assemblePalettes(this.orderedEntries.map((e) => e.palette)).data;
   }
 
   /**
@@ -264,10 +328,21 @@ export class ActorLibrary {
     this.failed.clear();
   }
 
+  /**
+   * 单角色清除失败名单（PR #19 review FR-A）：main 的预载循环跨 Stop 边界后，
+   * 在飞的 fetch 才 reject 会把 id 迟到地写回 failed，下一轮 Play 因此跳过它
+   * ——违背「Stop 边界允许重试」。调用方（kickActorPreload 的代次守卫）在确认
+   * 循环已过期时对本轮 id 逐个清一次，封死跨边界污染窗口。幂等。
+   */
+  resetFailure(characterId: string): void {
+    this.failed.delete(characterId);
+  }
+
   /** 清空装配（编辑器卸载 / 换项目时；Play 间复用不要调） */
   clear(): void {
     this.entries.clear();
     this.failed.clear();
+    this.orderedEntries = [];
   }
 }
 
