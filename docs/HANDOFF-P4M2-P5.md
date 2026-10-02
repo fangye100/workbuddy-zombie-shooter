@@ -24,7 +24,53 @@
 
 ---
 
+## 0.8 蒙皮能力现状地图（先看这个，别重复建设）
+
+项目里有**四层蒙皮能力，三层已通、一层没通**。M2~M4 做的只是补第四层——
+**已有的 rig/动画资产一个都不用重做**：
+
+| 层 | 现状 | 用在哪 |
+|---|---|---|
+| ① 资产数据层 | ✅ 完整。8 角色 rigged GLB（22 关节 + IBM + 顶点权重 + 6 动画），09-18 验收过 | `assets/characters/models/*/rigged/` |
+| ② CPU 求值层 | ✅ 完整。`skin.ts` 的 `evalJointMatrices` | 编辑器单角色预览 |
+| ③ 静态通道 GPU 蒙皮 | ✅ 已通。`uploadMesh` 建 skinBuffer/skinVb，`scene.wgsl` binding 7 消费 | **编辑器导入的角色**（能看到动画就是它） |
+| ④ 动态通道 GPU 蒙皮 | ❌ **没通——这就是 M2~M4** | gameplay 的 500 只僵尸（instancing 路径） |
+
+**为什么③不能直接拿来跑游戏（不是忘了用，是结构性装不下）**：
+
+1. 静态通道上限 `MAX_OBJECTS=64`（transform uniform 槽位硬限）——500 只进去会把
+   关卡本身挤掉（AGENTS.md §2.3「500 僵尸属运行时热实体，不得走静态路径」的由来）
+2. 静态通道每帧每物体 CPU 求值——500 只 × ~27 次矩阵乘/帧，mobile 必掉帧
+
+所以 docs/20 的方案是**烘焙姿态调色板**（M1 已完成烘焙侧）：加载时逐帧烘进
+storage buffer，运行期 CPU 零重算，每实例只带"播到第几帧"，shader 查表蒙皮。
+M2 的本质 = **把只会画胶囊的 instancing 管线（`dynamic.wgsl` + 12 float 实例）
+升级成会查调色板蒙皮的管线（16 float + joints/weights + binding 4）**，
+然后接上现成的 rigged GLB。
+
+动态通道现状证据：`runtime-bridge.ts:267` `meshId = capsule:r…:h…`，
+`renderer-core.ts:191` `DYNAMIC_INSTANCE_FLOATS = 12`。
+
+---
+
 ## 1. P4 M2：GPU 蒙皮实例化（一个角色、关动画）
+
+### 🔴 先搞清楚：项目里"已有蒙皮"和"缺蒙皮"是两条不同通道（最易误解点）
+
+| 通道 | 现状 | 用途 |
+|---|---|---|
+| ① 资产数据层 | ✅ 完整（8 角色 rigged GLB：22 关节 + IBM + 权重 + 6 动画） | `assets/characters/models/*/rigged/` |
+| ② CPU 求值层 | ✅ 完整（`skin.ts` 的 `evalJointMatrices`） | 被③④共用 |
+| ③ **静态通道** GPU 蒙皮 | ✅ 已通（`uploadMesh` 建 skinBuffer/skinVb，`scene.wgsl` binding 7） | 编辑器导入的单角色预览 |
+| ④ **动态通道** GPU 蒙皮 | ❌ **没有 —— M2~M4 就是建这个** | gameplay 的 500 只僵尸（instancing） |
+
+**为什么③不能拿来跑游戏（不是"忘了用"，是结构性装不下）**：
+1. 静态通道上限 `MAX_OBJECTS=64`（transform uniform 槽位硬限）——500 只进去会把关卡本身挤掉（AGENTS.md §2.3：500 僵尸属运行时热实体，不得走静态物件路径）
+2. 静态通道每帧每物体 CPU 求值——500 只 × ~27 次矩阵乘/帧，mobile 必掉帧
+
+所以 docs/20 用**烘焙姿态调色板**：加载时逐帧烘进 storage buffer（M1 已完成），
+运行期 CPU 零重算，每实例只带"播到第几帧"，shader 查表蒙皮。
+**既有 rig/动画资产一个都不用重做**——缺的只是动态批量通道的消费端。
 
 ### 目标
 浏览器 Play 里看到 **1 个真模型**（非胶囊）站在固定 bind pose。
