@@ -110,6 +110,16 @@ export interface EntityView {
   targetId: number;
   /** 行为状态。0 = idle，1 = chase */
   behavior: number;
+  /** 当前血量（P5；HUD 血条与死亡判定的读点） */
+  hp: number;
+  /** 血量上限（stats.hp 真源；血条比例的分母） */
+  maxHp: number;
+  /**
+   * 受击高亮剩余秒（P5 §2.1；渲染层/HUD 消费点）。
+   * 🔴 会随 tick 衰减到 0 —— 不衰减的话它永远是 0.15，等于一个只写不读的死列
+   * （2026-10-02 审查发现）。
+   */
+  hitFlash: number;
 }
 
 /** 一个房间因容量不足被整批拒绝的明细 */
@@ -260,6 +270,14 @@ export class RuntimeSession {
   private readonly triggered = new Set<NodeId>();
   /** 波次推进状态（P5 C4）：triggered 房间的 wave 调度器 */
   private readonly waveRooms = new Map<NodeId, RoomWaveState>();
+  /**
+   * 房间存活敌数（**增量维护**）。
+   *
+   * 旧实现是 `roomAliveEnemies()` 每次遍历整张实体表（O(房间数 × 容量)/tick），
+   * 500 只规模下纯属浪费。生成时 +n、死亡回收时 −1 —— 计数与实体表的一致性
+   * 由「NPC 销毁只走 `kill()` 这一条路」保证（`destroy` 全仓库只此一处调用）。
+   */
+  private readonly roomAlive = new Map<NodeId, number>();
   /** 会话事件缓冲（wave-start / room-cleared / C5 胜负） */
   private readonly sessionEventBuf: SessionEvent[] = [];
 
@@ -421,6 +439,9 @@ export class RuntimeSession {
         sourceNodeId: this.sourceOf[i] ?? null,
         targetId: this.table.targetEntity[i]!,
         behavior: this.table.behavior[i]!,
+        hp: this.table.health[i]!,
+        maxHp: this.table.maxHp[i]!,
+        hitFlash: this.table.hitFlash[i]!,
       });
     }
     return out;
@@ -476,7 +497,15 @@ export class RuntimeSession {
     if (died) this.kill(targetSlot);
     // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。
     // 🔴 不自动清场 —— 让玩家看清死状，UI 决定何时退（编辑器不自动 Stop）。
-    if (died && this.kindOf[targetSlot] === 0 && this.outcomeState === 'running') {
+    // 🔴 **判定条件来自场景真源** `desc.loseCondition`（loader 从 SceneDocument 读）：
+    // 硬编码"玩家死 = 失败"会让作者对场景规则的修改失效（2026-10-02 审查：v4 的
+    // loseCondition 曾是有定义无消费的假载体）。场景没声明 → 不判负（装载期已 warn）。
+    if (
+      died &&
+      this.kindOf[targetSlot] === 0 &&
+      this.desc.loseCondition === 'player-death' &&
+      this.outcomeState === 'running'
+    ) {
       this.outcomeState = 'game-over';
       this.sessionEventBuf.push({ type: 'game-over', tick: this.tickCount, roomNodeId: null });
     }
@@ -490,7 +519,19 @@ export class RuntimeSession {
    */
   private kill(slot: number): void {
     if (this.kindOf[slot] === 0) return; // 玩家：见上，槽位与 alive 标记都保留
+    this.decRoomAlive(slot, -1);
     this.tbl.destroy(slot);
+  }
+
+  /** 房间存活计数 ±delta（槽位 → 出生刷怪点 → 所属房间） */
+  private decRoomAlive(slot: number, delta: number): void {
+    const src = this.sourceOf[slot] ?? null;
+    if (src === null) return;
+    const spawn = this.desc.spawns.find((s) => s.nodeId === src);
+    const roomId = spawn?.roomNodeId ?? null;
+    if (roomId === null) return;
+    const next = (this.roomAlive.get(roomId) ?? 0) + delta;
+    this.roomAlive.set(roomId, next < 0 ? 0 : next);
   }
 
   /** 战斗事件缓冲（只读视图；测试与宿主订阅用，缓冲归 session 拥有） */
@@ -549,6 +590,7 @@ export class RuntimeSession {
     }
     const r = this.triggerRooms();
     this.updateWaves();
+    this.decayHitFlash();
     this.movePlayer();
     this.moveNpcs();
     // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
@@ -684,6 +726,7 @@ export class RuntimeSession {
     this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
     this.sessionEventBuf.length = 0; // 波次/清房事件同理
     this.waveRooms.clear(); // 波次状态随世界重建
+    this.roomAlive.clear(); // 房间存活计数同理（整表重建，计数从头累积）
     this.outcomeState = 'running'; // 终态随换代复位（重跑新的一局）
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
@@ -863,18 +906,14 @@ export class RuntimeSession {
     this.sessionEventBuf.push({ type: 'floor-clear', tick: this.tickCount, roomNodeId: null });
   }
 
-  /** 房内存活敌数（该房刷怪点出生的 alive NPC；玩家不计） */
+  /**
+   * 房内存活敌数（该房刷怪点出生的 alive NPC；玩家不计）。
+   *
+   * 🔴 **增量计数，不再每 tick 全表扫**：spawnBatch 加、kill 减。500 只规模下
+   * 旧实现是 O(房间数 × 容量)/tick 的纯浪费（2026-10-02 审查提出）。
+   */
   private roomAliveEnemies(roomNodeId: NodeId): number {
-    const nodeIds = new Set(
-      this.desc.spawns.filter((s) => s.roomNodeId === roomNodeId).map((s) => s.nodeId),
-    );
-    let n = 0;
-    for (let i = 0; i < this.table.capacity; i++) {
-      if (!this.table.isAlive(i) || this.kindOf[i] !== 1) continue;
-      const src = this.sourceOf[i] ?? null;
-      if (src !== null && nodeIds.has(src)) n++;
-    }
-    return n;
+    return this.roomAlive.get(roomNodeId) ?? 0;
   }
 
   /** 返回实际生成的数量（供 StepReport.spawned 汇总） */
@@ -908,6 +947,11 @@ export class RuntimeSession {
       this.kindOf[i] = 1;
       this.sourceOf[i] = s.nodeId;
       made++;
+    }
+    // 房间存活计数（增量）：刷怪点归属房间从 desc 反查（低频，每波一次）
+    if (made > 0) {
+      const roomId = this.desc.spawns.find((sp) => sp.nodeId === s.nodeId)?.roomNodeId ?? null;
+      if (roomId !== null) this.roomAlive.set(roomId, (this.roomAlive.get(roomId) ?? 0) + made);
     }
     return made;
   }
@@ -1026,6 +1070,25 @@ export class RuntimeSession {
           t.cooldownUntil[i] = now + atk.cdSec;
         }
       }
+    }
+  }
+
+  /**
+   * 受击高亮衰减（P5 §2.1）。
+   *
+   * 🔴 缺了这一步，`hitFlash` 被 applyDamage 写成 0.15 之后**永远停在 0.15** ——
+   * 一个只写不读又不随时间变化的列就是死列（2026-10-02 审查发现）。消费方是
+   * `view().hitFlash`（HUD 血条闪红 / 渲染层 tint），语义 = "刚被打中，还剩多久"。
+   *
+   * 衰减在 `combatStep` **之前**：本 tick 刚受的伤先完整亮一 tick，下一 tick 才开始减。
+   */
+  private decayHitFlash(): void {
+    const t = this.tbl;
+    const dt = this.fixedStep;
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i)) continue;
+      const v = t.hitFlash[i]!;
+      if (v > 0) t.hitFlash[i] = Math.max(0, v - dt);
     }
   }
 

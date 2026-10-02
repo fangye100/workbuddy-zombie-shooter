@@ -1209,7 +1209,7 @@
           "enabled": true,
           "characterId": "E-01",
           "count": 4,
-          "wave": 0,
+          "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,
@@ -1277,7 +1277,7 @@
           "enabled": true,
           "characterId": "E-02",
           "count": 4,
-          "wave": 0,
+          "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,
@@ -1345,7 +1345,7 @@
           "enabled": true,
           "characterId": "E-01",
           "count": 4,
-          "wave": 0,
+          "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
           "radius": 1.5,
@@ -1490,7 +1490,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.540Z",
-    "updatedAt": "2026-10-02T06:29:38.540Z",
+    "updatedAt": "2026-10-02T15:57:14.956Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

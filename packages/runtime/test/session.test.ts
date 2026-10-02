@@ -10,11 +10,13 @@ function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDe
   return {
     sceneId: 'sc_input_test',
     sceneName: '输入测试',
-    schemaVersion: 3,
+    schemaVersion: 4,
     playerStart: { nodeId: 'nd_start', x: 0, z: 0 },
     rooms: [],
     spawns: [],
     obstacles,
+    // 合成场景显式声明失败条件（v4 真源）：玩家死亡 = 失败
+    loseCondition: 'player-death',
     scripts: [], // ADR-018 P3：无脚本的合成场景，行为执行器走空路径
     nav,
   };
@@ -338,8 +340,16 @@ describe('RuntimeSession —— 确定性与容量', () => {
       (sp) => sp.enabled && sp.trigger === 'room-enter' && sp.roomNodeId !== null && !triggered.includes(sp.roomNodeId),
     )!;
     const other = s.desc.rooms.find((r) => r.nodeId === seedSpawn.roomNodeId)!;
+    // 🔴 房间触发**只投 wave 1**：后续波由 WaveScheduler 按清空节奏投放
+    //（P5 C4；wave ≤ 0 归 1 = 旧数据单波全量的兼容语义）
     const want = s.desc.spawns
-      .filter((sp) => sp.roomNodeId === other.nodeId && sp.enabled && sp.trigger === 'room-enter')
+      .filter(
+        (sp) =>
+          sp.roomNodeId === other.nodeId &&
+          sp.enabled &&
+          sp.trigger === 'room-enter' &&
+          Math.max(1, sp.wave) === 1,
+      )
       .reduce((a, sp) => a + sp.count, 0);
     expect(want).toBeGreaterThan(0);
 

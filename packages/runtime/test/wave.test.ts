@@ -102,20 +102,52 @@ describe('WaveScheduler · 触发即投 wave1，wave2 等清空（docs/23 §2.4�
     expect(b.npcs).toEqual(a.npcs);
   });
 
-  it('wave=0 旧语义兼容：单波全量（第二间房触发时一次性投放，无 wave2）', () => {
+  it('第二间战斗房（nd_f1r2）：触发只投 wave1，wave2 等清空', () => {
     const s = make();
-    // 第二间战斗房（nd_f1r2）的刷怪点 wave 全 0 → 归 1 → 单波；玩家不动不触发，直接查 desc 语义：
+    // C4 数据重制后该房编成：wave1 = E-01×4 + E-02×4，wave2 = E-01×4
     const r1Spawns = s.desc.spawns.filter((sp) => sp.roomNodeId === 'nd_f1r2');
-    expect(r1Spawns.length).toBeGreaterThan(0);
-    // 合成触发：把玩家 teleport 进 r1 边界（房间边界从 desc.rooms 取）
+    expect(r1Spawns).toHaveLength(3);
+    const wave1Total = r1Spawns
+      .filter((sp) => Math.max(1, sp.wave) === 1)
+      .reduce((a, sp) => a + sp.count, 0);
+    expect(wave1Total).toBe(8);
+    // 合成触发：把玩家 teleport 进房间中心（边界从 desc.rooms 取）
     const r1 = s.desc.rooms.find((r) => r.nodeId === 'nd_f1r2')!;
     s.table.posX[s.playerEntityId] = (r1.minX + r1.maxX) / 2;
     s.table.posZ[s.playerEntityId] = (r1.minZ + r1.maxZ) / 2;
     s.step();
-    const total = r1Spawns.reduce((a, sp) => a + sp.count, 0);
-    expect(s.countNpc()).toBe(8 + total); // wave1 的 8 只还在 + r1 全量
-    // 单波房间：当前波清空即 cleared（没有 wave2）
-    expect(s.sessionEvents.some((e) => e.type === 'wave-start' && e.roomNodeId === 'nd_f1r2' && e.wave === 1)).toBe(true);
+    expect(s.countNpc()).toBe(8 + wave1Total); // 首房 wave1 的 8 只还在 + 本房 wave1
+    const starts = s.sessionEvents.filter((e) => e.type === 'wave-start' && e.roomNodeId === 'nd_f1r2');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]!.wave).toBe(1); // 🔴 wave2 不在触发时投放
+  });
+
+  it('wave≤0 旧数据兼容：整房刷怪点归 1 → 单波全量，清空即 cleared（无 wave2）', () => {
+    // 合成：把 nd_f1r2 的 wave 全抹成 0（模拟 C4 之前的旧场景），验证兼容语义仍在
+    const key = Object.keys(MODULES)[0]!;
+    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    let touched = 0;
+    for (const n of doc.nodes) {
+      for (const c of n.components) {
+        // 房间归属是运行时按 parent 链算的（组件上没有 roomNodeId），
+        // 所以直接把整层刷怪点的 wave 抹成 0 —— 这就是 C4 之前旧场景的真实形态
+        if (c.kind === 'SpawnPoint') {
+          (c as { wave: number }).wave = 0;
+          touched++;
+        }
+      }
+    }
+    expect(touched).toBe(6); // floor-1 共 6 个刷怪点
+    const r = loadLevelRuntime(doc);
+    if (r.desc === null) throw new Error('夹具装载失败');
+    const s = new RuntimeSession({ desc: r.desc, seed: 7 });
+    // 归 1 后整房单波：构造期首房触发即全量投放（E-01×5 + E-01×4 + E-02×3 = 12）
+    expect(s.countNpc()).toBe(12);
+    expect(s.sessionEvents.some((e) => e.type === 'wave-start' && e.wave === 2)).toBe(false);
+    // 清完这一波即 cleared（没有第二波可投）
+    for (const e of s.view()) if (e.kind === 'npc') s.applyDamage(e.id, s.table.health[e.id]!);
+    s.run(5);
+    expect(s.clearedRooms()).toContain('nd_f1r0');
   });
 
   it('reset 换代清空波次状态（重跑从 wave1 开始，无跨代残留）', () => {

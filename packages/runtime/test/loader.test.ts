@@ -347,3 +347,34 @@ describe('loadLevelRuntime —— 失败必须明确，不静默兜底', () => {
     expect(d?.nodeId).toBe('nd_f1r0_sp0');
   });
 });
+
+// ---------------------------------------------------------------------------
+// P5：失败条件真源链（docs/23 §2.6）
+// 装载器必须把场景声明带进运行描述 —— 运行时硬编码"玩家死=失败"会让作者对场景
+// 规则的修改失效（2026-10-02 审查：v4 曾是有定义无消费的假数据载体）。
+// ---------------------------------------------------------------------------
+
+describe('loadLevelRuntime —— loseCondition 真源链', () => {
+  it('场景声明 player-death → 原样带进运行描述', () => {
+    const d = loadLevelRuntime(floor1()).desc!;
+    expect(d.loseCondition).toBe('player-death');
+  });
+
+  it('缺字段 → warning + loseCondition=null（装载期不猜，静默补会造幽灵规则）', () => {
+    const doc = clone(floor1());
+    delete (doc as { loseCondition?: unknown }).loseCondition;
+    const r = loadLevelRuntime(doc);
+    expect(r.desc).not.toBeNull();
+    expect(r.desc!.loseCondition).toBeNull();
+    const d = r.diagnostics.find((x) => x.code === 'W_LOSE_CONDITION_UNSET');
+    expect(d?.severity).toBe('warning');
+  });
+
+  it('未知值 → error + 拒绝加载（不静默回落成默认语义）', () => {
+    const doc = clone(floor1());
+    (doc as { loseCondition: unknown }).loseCondition = 'timeout';
+    const r = loadLevelRuntime(doc);
+    expect(r.desc).toBeNull();
+    expect(r.diagnostics.some((x) => x.code === 'E_LOSE_CONDITION_UNKNOWN')).toBe(true);
+  });
+});
