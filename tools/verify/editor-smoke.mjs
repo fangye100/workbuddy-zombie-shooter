@@ -209,6 +209,28 @@ async function main() {
         : pickBad.map((o) => `${o.n}:${o.p}≠${expect.pickable[o.n]}`).join(' · ').slice(0, 200),
     );
 
+    // ---- B3. 行为注册表（glob 宿主分裂防线）----
+    // 🔴 这条断言是**防线**不是覆盖：import.meta.glob 在浏览器端零命中时，
+    // typecheck 与 vitest 都全绿（两个宿主 root 不同 → 同一行解析结果不同），
+    // 只有真实跑起来的编辑器能看见空注册表。2026-10-02 行为脚本曾因此从未注册。
+    console.log('\nB3. 行为注册表（glob 宿主分裂防线）');
+    const beh = await cdp.eval(`(()=>window.__editor.behaviors())()`);
+    check(
+      '行为注册表非空（glob 在浏览器端命中了 assets/behaviors）',
+      typeof beh?.size === 'number' && beh.size > 0,
+      JSON.stringify(beh),
+    );
+    check(
+      '注册表含 debug-on-trigger-log（真源清单：assets/behaviors/*.ts）',
+      Array.isArray(beh?.ids) && beh.ids.includes('debug-on-trigger-log'),
+      JSON.stringify(beh?.ids),
+    );
+    check(
+      '行为 schema 自洽（注册期零 schema 诊断）',
+      beh?.schemaIssues === 0,
+      `schemaIssues=${beh?.schemaIssues}`,
+    );
+
     // ---- C. SelectionService ----
     console.log('\nC. SelectionService（选中/悬停状态机）');
     const objCount = await cdp.eval('window.__editor.renderer.getObjectList().length');

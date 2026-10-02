@@ -560,6 +560,23 @@ async function boot(): Promise<void> {
      */
     playCtl,
     /**
+     * 行为注册表面（**自动化防线用**，不是调试便利）。
+     *
+     * 🔴 为什么必须暴露：`behavior-host.ts` 用 `import.meta.glob` 收集行为脚本，
+     * 一旦 glob 零命中（绝对路径在 vite 下按 root=apps/editor 解析 → 目录不存在），
+     * 注册表就是**空的，而 typecheck 与 vitest 全绿**（vitest 的 root 是仓库根，
+     * 同一行路径解析结果不同）。2026-10-02 这事真实发生过：行为脚本从第一天起
+     * 就没注册上，能力一直是空转，只有人手工开浏览器才看得见。
+     *
+     * 所以冒烟必须有一条「注册表非空」的硬断言 —— 它抓的是"编辑器断、测试绿"
+     * 这类宿主分裂，别的门禁都抓不到。
+     */
+    behaviors: () => ({
+      size: behaviorRegistry.size,
+      ids: behaviorRegistry.list().map((m) => m.id),
+      schemaIssues: behaviorRegistry.schemaDiagnostics.length,
+    }),
+    /**
      * 运行时真角色装配库（docs/20 M2）。冒烟断言「动态蒙皮已激活」用：
      * Play 后 `actorLib.size > 0` 且 `renderer.debugDynamicMeshIds()` 含 `actor:*`，
      * 未装配角色仍为 `capsule:*`（降级是设计行为）。
