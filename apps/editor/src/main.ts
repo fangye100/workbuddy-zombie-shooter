@@ -27,6 +27,7 @@ import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
 import { RuntimeBridge } from './services/runtime-bridge';
+import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
@@ -171,10 +172,22 @@ async function boot(): Promise<void> {
   renderer.attachParams(panel.params);
 
   /**
+   * 运行时真角色装配库（docs/20 §5，P4 M2）：按需加载 rigged_animated GLB、
+   * 烘焙姿态调色板。编辑器侧服务——runtime 保持纯 CPU，GPU 资源归 core。
+   * 清单异步后补（编辑器启动时 manifest 尚未到位），到位前 preload 一律退胶囊。
+   */
+  const actorLib = new ActorLibrary(null);
+  const manifestReady = (async () => {
+    const r = await readProjectFile('assets/_data/asset-manifest.json');
+    if (r.ok) actorLib.setManifest(r.json);
+    else console.warn(`[actors] 资产清单加载失败，Play 全部退胶囊：${r.error ?? '?'}`);
+  })();
+
+  /**
    * 运行时桥（WU-3）：headless 会话与渲染之间的**唯一**翻译层。
    * 它不产玩法，只把实体视图翻译成实例批次；真模型接进来后换代理网格即可。
    */
-  const bridge = new RuntimeBridge();
+  const bridge = new RuntimeBridge(actorLib);
 
   /**
    * Play 控制器（WU-4）：只做装配 —— 快照/恢复作者态、把推进同步给 Bridge、
@@ -236,8 +249,46 @@ async function boot(): Promise<void> {
    */
   function startPlay(): boolean {
     const ok = playCtl.start();
-    if (ok) shownRuntimeDiags.clear();
+    if (ok) {
+      shownRuntimeDiags.clear();
+      // 🔴 已缓存角色的调色板**同步**重传：attach() 会同步重建 actor 批次
+      //（ActorLibrary CPU 缓存命中），若只等 kickActorPreload 的异步链路，
+      // 头几帧 flags=1 的实例会绑着哑 palette 越界读全零 → 模型闪塌
+      //（PR #18 review 抓的窗口）。新角色的加载与追加上传仍走异步路径。
+      const cached = actorLib.buildPalette();
+      if (cached !== null) renderer.setDynamicPalette(cached);
+      kickActorPreload();
+    }
     return ok;
+  }
+
+  /**
+   * Play 期真角色装配（docs/20 M2）：异步预载 E-01（首发角色；M3 扩到全部
+   * 有「+动画」档的角色）。不阻塞 Play——加载完成前实体照画胶囊，完成后
+   * `notifyActorsChanged()` 原地换真模型。防重入：reset/restart 快速连点只跑一份。
+   */
+  let actorPreloading = false;
+  async function kickActorPreload(): Promise<void> {
+    if (actorPreloading) return;
+    actorPreloading = true;
+    try {
+      // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
+      // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
+      await manifestReady;
+      const changed = await actorLib.preload('E-01');
+      // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
+      // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
+      //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
+      // 这里只处理新装配角色（changed = true）的追加上传。
+      if (!changed || playCtl.state === 'stopped') return;
+      const pal = actorLib.buildPalette();
+      if (pal !== null) {
+        renderer.setDynamicPalette(pal);
+        bridge.notifyActorsChanged();
+      }
+    } finally {
+      actorPreloading = false;
+    }
   }
 
   /** 同种子重跑（**所有入口共用**）：runId 换代，去重集合同样要清空 */
@@ -482,6 +533,12 @@ async function boot(): Promise<void> {
       state: () => ({ dirty: spawnStore?.dirty ?? false, undoDepth: spawnStore?.undoDepth ?? 0 }),
       undo: () => undoSpawnEdit(),
     },
+    /**
+     * 运行时真角色装配库（docs/20 M2）。冒烟断言「动态蒙皮已激活」用：
+     * Play 后 `actorLib.size > 0` 且 `renderer.debugDynamicMeshIds()` 含 `actor:*`，
+     * 未装配角色仍为 `capsule:*`（降级是设计行为）。
+     */
+    actorLib,
   };
 
   // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
@@ -1487,6 +1544,9 @@ async function boot(): Promise<void> {
   function stopPlay(): void {
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
+    //（成功装配的缓存不动，见 ActorLibrary.resetFailures）
+    actorLib.resetFailures();
     if (src !== null) focusNode(src);
     hudDirty = true;
   }

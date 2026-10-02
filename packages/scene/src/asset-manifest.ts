@@ -114,6 +114,35 @@ export function lodDeltaVsLod0(family: LodFamily, path: string, key: 'tris' | 'v
   return `${pct >= 0 ? '+' : ''}${pct}%`;
 }
 
+/**
+ * 按 characterId 找该角色某一档 LOD 的项目根相对路径（找不到返回 null）。
+ *
+ * 用途：运行时真角色装配（docs/20 §5）—— 按标签关键字（如「+动画」→
+ * rigged_animated 档）定位 GLB。没有该档的角色（如 B-02 从未绑骨）返回
+ * null，调用方据此降级回胶囊代理 —— 「缺档退胶囊」是设计行为，不是错误。
+ */
+export function findCharacterLodPath(json: unknown, characterId: string, labelNeedle: string): string | null {
+  if (json === null || typeof json !== 'object') return null;
+  const list = (json as Record<string, unknown>).characters;
+  if (!Array.isArray(list)) return null;
+  for (const e of list) {
+    if (e === null || typeof e !== 'object') continue;
+    const rec = e as Record<string, unknown>;
+    if (rec.id !== characterId) continue;
+    const lods = rec.lods;
+    if (!Array.isArray(lods)) return null;
+    for (const l of lods) {
+      if (l === null || typeof l !== 'object') continue;
+      const lr = l as Record<string, unknown>;
+      const file = typeof lr.file === 'string' ? lr.file : '';
+      const label = typeof lr.label === 'string' ? lr.label : '';
+      if (file !== '' && label.includes(labelNeedle)) return normalizeManifestPath(file);
+    }
+    return null; // 找到角色但没有匹配档
+  }
+  return null;
+}
+
 /** 预览统计行：`79744 tris · 54414 verts` + （非 LOD0 时）`面数 −96%` 式降幅 */
 export function formatLodStats(family: LodFamily, path: string): string {
   const lod = family.find((l) => l.path === path);

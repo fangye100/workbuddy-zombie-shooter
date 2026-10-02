@@ -4,6 +4,7 @@ import {
   parseAssetManifest,
   lodDeltaVsLod0,
   formatLodStats,
+  findCharacterLodPath,
 } from '../src/asset-manifest';
 
 /** 最小可用清单夹具：一个角色（3 档 LOD）+ 一个环境（1 档）+ 各类坏条目 */
@@ -94,5 +95,27 @@ describe('LOD 统计', () => {
     expect(formatLodStats(fam, 'assets/characters/models/E-01/textured/E01_baked.glb')).toBe('3,000 tris · 4,209 verts · Δ-96%');
     expect(formatLodStats(fam, 'assets/characters/models/E-01/E01_raw.glb')).toBe('79,744 tris · 54,414 verts');
     expect(formatLodStats(fam, 'assets/not/in/family.glb')).toBe('');
+  });
+});
+
+describe('findCharacterLodPath（运行时真角色装配，docs/20 §5）', () => {
+  it('按 characterId + 标签关键字定位档位，路径已归一（补 assets/ 前缀）', () => {
+    expect(findCharacterLodPath(FIXTURE, 'E-01', '+动画')).toBe(
+      'assets/characters/models/E-01/rigged/E01_anim.glb',
+    );
+  });
+  it('角色存在但没有匹配档 → null（B-02 无 rigged 档的「缺档退胶囊」）', () => {
+    // E-02 的 lods 是坏条目；E-03 的 LOD 缺 file —— 都必须安全返回 null 而不是抛异常
+    expect(findCharacterLodPath(FIXTURE, 'E-02', '+动画')).toBeNull();
+    expect(findCharacterLodPath(FIXTURE, 'E-03', '+动画')).toBeNull();
+  });
+  it('角色不存在 / 清单形状不对 → null', () => {
+    expect(findCharacterLodPath(FIXTURE, 'B-02', '+动画')).toBeNull();
+    expect(findCharacterLodPath(null, 'E-01', '+动画')).toBeNull();
+    expect(findCharacterLodPath('not-json', 'E-01', '+动画')).toBeNull();
+  });
+  it('有 lods 但没有一档带关键字 → null（找到角色≠找到档）', () => {
+    const envOnly = { characters: [{ id: 'X-01', lods: [{ label: 'LOD0', file: 'x.glb' }] }] };
+    expect(findCharacterLodPath(envOnly, 'X-01', '+动画')).toBeNull();
   });
 });

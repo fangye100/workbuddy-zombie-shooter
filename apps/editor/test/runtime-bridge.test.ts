@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { RuntimeBridge } from '../src/services/runtime-bridge';
+import { RuntimeBridge, type ActorSource } from '../src/services/runtime-bridge';
+import type { ActorMesh } from '../src/services/runtime-actors';
 import { DYNAMIC_INSTANCE_FLOATS } from '@aether/render';
 import { lookupCharacterStats } from '@aether/content';
 import { PlaySession } from '@aether/runtime';
@@ -214,5 +215,97 @@ describe('RuntimeBridge —— 换世界', () => {
     b.refresh();
     expect(b.currentTick).toBe(0);
     expect(b.batches()!.reduce((n, x) => n + x.count, 0)).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 真模型批次（docs/20 M2）：装配了 ActorMesh 的角色走 GPU 蒙皮路径
+// （meshId actor:*、skin 顶点数据、实例 flags bit0=1、paletteBase / restPose
+// 打包进 [7]/[11]），未装配的仍走胶囊。floor-1 第一间房有 E-01 + E-02，
+// 桩只给 E-01 发真模型 —— 同一帧覆盖两条路径。
+// ---------------------------------------------------------------------------
+
+/** 手搓真模型（不依赖 GLB / fetch；字段语义见 ActorMesh） */
+function stubActorMesh(characterId: string): ActorMesh {
+  return {
+    characterId,
+    meshId: `actor:${characterId}`,
+    vertices: new Float32Array(new ArrayBuffer(15 * 4 * 3)), // 3 个顶点占位
+    indices: new Uint32Array(new ArrayBuffer(3 * 4)),
+    joints: new Uint16Array(12),
+    weights: new Float32Array(12),
+    paletteBase: 7,
+    restPose: 42,
+    feetOffset: 0.031,
+  };
+}
+
+function actorBridge(): RuntimeBridge {
+  const e01 = stubActorMesh('E-01');
+  const source: ActorSource = { get: (id) => (id === 'E-01' ? e01 : null) };
+  const play = new PlaySession();
+  const r = play.play(floor1());
+  if (!r.ok) throw new Error('夹具装载失败：' + r.errors.join('；'));
+  const bridge = new RuntimeBridge(source);
+  bridge.attach(play.runtime);
+  return bridge;
+}
+
+describe('RuntimeBridge —— 真模型批次（docs/20 M2，flags bit0 双路径）', () => {
+  it('夹具前提：floor-1 第一间房同时有 E-01（装配）与 E-02（未装配）', () => {
+    const { bridge: b } = started();
+    const ids = new Set(b.entities.filter((e) => e.kind === 'npc').map((e) => e.characterId));
+    expect(ids.has('E-01')).toBe(true);
+    expect(ids.has('E-02')).toBe(true);
+  });
+
+  it('装配角色：meshId actor:*、skin 非空、flags=1、paletteBase/restPose 进实例 [7]/[11]', () => {
+    const b = actorBridge();
+    const batch = b.batches()!.find((x) => x.meshId === 'actor:E-01');
+    expect(batch).toBeDefined();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    for (let i = 0; i < batch!.count; i++) {
+      const o = i * F;
+      expect(batch!.instances[o + 7]).toBe(7); // paletteBase
+      expect(batch!.instances[o + 11]).toBe(42); // restPose（相对 paletteBase）
+      expect(batch!.instances[o + 14]).toBe(1); // flags bit0 = 蒙皮
+      expect(batch!.instances[o + 1]).toBeCloseTo(0.031, 5); // y = feetOffset（贴脚底）
+    }
+    expect(batch!.skin).not.toBeNull();
+    expect(batch!.skin!.joints.length).toBeGreaterThan(0);
+    expect(batch!.skin!.weights.length).toBeGreaterThan(0);
+  });
+
+  it('未装配角色（同帧）：仍走胶囊 —— meshId capsule:*、skin=null、flags=0', () => {
+    const b = actorBridge();
+    const batch = b.batches()!.find((x) => x.meshId.startsWith('capsule:'));
+    expect(batch).toBeDefined();
+    const F = DYNAMIC_INSTANCE_FLOATS;
+    for (let i = 0; i < batch!.count; i++) {
+      const o = i * F;
+      expect(batch!.instances[o + 14]).toBe(0); // flags bit0 = 0 → shader 跳过蒙皮
+      expect(batch!.instances[o + 7]).toBe(0);
+      expect(batch!.instances[o + 11]).toBe(0);
+    }
+    expect(batch!.skin).toBeNull();
+  });
+
+  it('notifyActorsChanged：胶囊原地换真模型（Play 期异步加载完成的切换路径）', () => {
+    // 先以「没有装配」启动 → E-01 画胶囊；然后模拟装配完成 → 通知 → 变 actor 批次
+    let actor: ActorMesh | null = null;
+    const source: ActorSource = { get: (id) => (id === 'E-01' ? actor : null) };
+    const play = new PlaySession();
+    const r = play.play(floor1());
+    if (!r.ok) throw new Error('夹具装载失败：' + r.errors.join('；'));
+    const bridge = new RuntimeBridge(source);
+    bridge.attach(play.runtime);
+    expect(bridge.batches()!.some((x) => x.meshId === 'actor:E-01')).toBe(false);
+
+    actor = stubActorMesh('E-01');
+    bridge.notifyActorsChanged();
+    const after = bridge.batches()!;
+    expect(after.some((x) => x.meshId === 'actor:E-01')).toBe(true);
+    // E-02 的胶囊批不受牵连
+    expect(after.some((x) => x.meshId.startsWith('capsule:'))).toBe(true);
   });
 });

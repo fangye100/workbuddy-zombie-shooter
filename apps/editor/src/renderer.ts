@@ -1858,6 +1858,15 @@ export class LabRenderer {
   }
 
   /**
+   * 动态蒙皮调色板上传（docs/20 M2）：转发给 core 的 storage buffer。
+   * Play 装配期（ActorLibrary 注册新角色后）调一次；Stop 时随
+   * `releaseDynamicResources` 释放，CPU 侧烘焙数据在 ActorLibrary 缓存复用。
+   */
+  setDynamicPalette(data: Float32Array<ArrayBuffer> | null): void {
+    this.core.setDynamicPalette(data);
+  }
+
+  /**
    * Play 前的作者状态快照（WU-4）。
    *
    * 语义与 Unity 一致：Play 期间对场景的改动**在 Stop 后丢弃**。

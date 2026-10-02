@@ -15,7 +15,7 @@
 
 import type { GpuContext } from '@aether/gfx';
 import * as m4 from '@aether/core';
-import { VERTEX_LAYOUT, SKIN_LAYOUT } from '@aether/scene';
+import { VERTEX_LAYOUT, SKIN_LAYOUT, packSkin } from '@aether/scene';
 import { SCENE_WGSL } from './shaders/scene.wgsl';
 import { DYNAMIC_WGSL } from './shaders/dynamic.wgsl';
 import { POST_WGSL } from './shaders/post.wgsl';
@@ -181,14 +181,16 @@ export interface CoreCylinderOverlay {
 }
 
 /**
- * 一个动态实例的 CPU 端打包宽度（float 数）= 48 B：
- *   [0..3] posX, posY, posZ, yaw(弧度)
- *   [4..7] scaleX, scaleY, scaleZ, (pad)
- *   [8..11] albedoR, albedoG, albedoB, (pad)
+ * 一个动态实例的 CPU 端打包宽度（float 数）= 64 B（docs/20 §3.1）：
+ *   [0..3]   posX, posY, posZ, yaw(弧度)
+ *   [4..7]   scaleX, scaleY, scaleZ, paletteBase(该角色在总调色板里的起始 pose)
+ *   [8..11]  albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
+ *   [12..15] clipFrameCount, phase01, flags(bit0=蒙皮), (pad)
  *
- * 与 `dynamic.wgsl.ts` 的 `struct DInst`（3 × vec4f）一一对应；改一边必须改另一边。
+ * 与 `dynamic.wgsl.ts` 的 `struct DInst`（4 × vec4f）一一对应；改一边必须改另一边
+ * （三处同步的第三处在 runtime-bridge 的打包循环）。
  */
-export const DYNAMIC_INSTANCE_FLOATS = 12;
+export const DYNAMIC_INSTANCE_FLOATS = 16;
 
 /**
  * 一批动态实例的绘制描述（WU-3）。
@@ -209,6 +211,12 @@ export interface CoreDynamicBatch {
   /** 交错顶点数组，stride = 15 floats（60 B），与 VERTEX_LAYOUT 一致 */
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
+  /**
+   * 蒙皮顶点数据（4 关节下标 + 4 权重 / 顶点，docs/20 §3.3）。
+   * null = 代理网格（胶囊）：core 会上传全零的 skin slot，shader 按
+   * flags bit0=0 跳过蒙皮 —— 管线声明了 slot 1 就必须绑，哪怕不读。
+   */
+  skin: { joints: Uint16Array; weights: Float32Array } | null;
   /** 实例数组，长度 ≥ count × DYNAMIC_INSTANCE_FLOATS */
   instances: Float32Array<ArrayBuffer>;
   /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
@@ -357,8 +365,21 @@ export class RendererCore {
    * 见 PR #3 review（codex P1 / copilot）。
    */
   private dynamicInstSlots: { buf: GPUBuffer; bg: GPUBindGroup; cap: number }[] = [];
+  /**
+   * 烘焙姿态调色板 storage buffer（binding 4，docs/20 §3.2）：所有角色的
+   * 全部烘焙帧拼成一块，Play 装配完一次性 `setDynamicPalette` 上传，
+   * 整场不变。null = 本轮没有真模型角色（bind group 绑哑 buffer 兜底）。
+   */
+  private dynamicPaletteBuf: GPUBuffer | null = null;
+  /** 哑调色板（单个恒等 mat4）：palette 未设置时让 bind group 始终可建 */
+  private readonly dummyPaletteBuf: GPUBuffer;
+  /** 诊断：setDynamicPalette 实际上传次数（探针断言「重传已发生」的可观测信号） */
+  paletteUploadCount = 0;
   /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
-  private readonly dynamicMeshes = new Map<string, { vbuf: GPUBuffer; ibuf: GPUBuffer; indexCount: number }>();
+  private readonly dynamicMeshes = new Map<
+    string,
+    { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number }
+  >();
 
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
@@ -660,12 +681,17 @@ export class RendererCore {
           buffer: { type: 'uniform' },
         },
         { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        // 4：烘焙姿态调色板（storage 只读，仅顶点阶段查表蒙皮，docs/20 §3.2）
+        { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       ],
     });
     const dyVertex = {
       module: dyModule,
-      // 只接 slot 0（position/normal/smoothNormal/uv/color），**不接蒙皮 slot**
-      buffers: [VERTEX_LAYOUT],
+      // slot 0 = VERTEX_LAYOUT（location 0..4），slot 1 = SKIN_LAYOUT（location 5/6，
+      // joints uint16×4 + weights f32×4）—— 与静态通道同一套蒙皮顶点约定（docs/20 §3.3）。
+      // 胶囊批次没有蒙皮数据，core 会上传全零的 skin slot 顶点缓冲占位
+      // （管线声明了 slot 就必须绑，validation 不看 shader 是否真的读它）。
+      buffers: [VERTEX_LAYOUT, SKIN_LAYOUT],
     } as const;
     this.dynamicPipeline = this.device.createRenderPipeline({
       label: 'dynamic',
@@ -684,6 +710,17 @@ export class RendererCore {
       primitive: { topology: 'triangle-list', cullMode: 'front', frontFace: 'ccw' },
       depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'less' },
     });
+
+    // 哑调色板（单个恒等 mat4，64 B）：dynamicLayout 声明了 binding 4，实例 bind group
+    // 创建时必须给一个 storage buffer —— 纯胶囊 Play（未 setDynamicPalette）也要能画。
+    // flags bit0=0 的实例不读 palette，绑哑 buffer 只是满足 validation。
+    this.dummyPaletteBuf = this.device.createBuffer({
+      label: 'dynamic-palette-dummy',
+      size: 64,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    const identity = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    this.device.queue.writeBuffer(this.dummyPaletteBuf, 0, identity);
   }
 
   /** WGSL 编译错误默认只在控制台里一闪而过，这里把行号一起打出来 */
@@ -702,8 +739,14 @@ export class RendererCore {
    *
    * GPU buffer 由 core 持有并缓存（ADR-001）：调用方每帧传全量 `vertices`/`indices`
    * 也不会重复上传，只在 key 首次出现时用一次。改参数要换 key（如 `capsule:r0.35:h1.8`）。
+   *
+   * skin slot（stride 24 B/顶点，SKIN_LAYOUT）始终上传：真模型带 joints/weights，
+   * 代理网格传全零 —— 管线声明了 slot 1，draw 时缺绑即 validation error，
+   * 与 shader 是否读它无关。
    */
-  private dynamicMesh(b: CoreDynamicBatch): { vbuf: GPUBuffer; ibuf: GPUBuffer; indexCount: number } | null {
+  private dynamicMesh(
+    b: CoreDynamicBatch,
+  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number } | null {
     const hit = this.dynamicMeshes.get(b.meshId);
     if (hit !== undefined) return hit;
     if (b.vertices.length === 0 || b.indices.length === 0) return null;
@@ -719,7 +762,18 @@ export class RendererCore {
     });
     this.device.queue.writeBuffer(vbuf, 0, b.vertices);
     this.device.queue.writeBuffer(ibuf, 0, b.indices);
-    const mesh = { vbuf, ibuf, indexCount: b.indices.length };
+    const vcount = b.vertices.length / 15;
+    const skinVb = this.device.createBuffer({
+      label: `dyn-${b.meshId}-skin`,
+      size: Math.max(24, vcount * 24),
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(
+      skinVb,
+      0,
+      b.skin === null ? new Uint8Array(vcount * 24) : packSkin(b.skin.joints, b.skin.weights, vcount),
+    );
+    const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length };
     this.dynamicMeshes.set(b.meshId, mesh);
     return mesh;
   }
@@ -729,8 +783,35 @@ export class RendererCore {
     for (const m of this.dynamicMeshes.values()) {
       m.vbuf.destroy();
       m.ibuf.destroy();
+      m.skinVb.destroy();
     }
     this.dynamicMeshes.clear();
+  }
+
+  /**
+   * 上传（或撤下）烘焙姿态调色板（binding 4，docs/20 §3.2）。
+   *
+   * Play 装配期调一次：把所有角色拼接好的 `Float32Array[pose × jointCount × 16]`
+   * 一次性写进 storage buffer，整场不变。传 null = 撤下（Stop 时随
+   * `releaseDynamicResources` 自动发生，一般无需手动调）。
+   *
+   * buffer 更换后所有实例 bind group 都引用旧 buffer —— 直接作废全部 slot
+   * （惰性重建，成本一次性，且调色板只在装配期变，不在帧循环里）。
+   */
+  setDynamicPalette(data: Float32Array<ArrayBuffer> | null): void {
+    for (const s of this.dynamicInstSlots) s.buf.destroy();
+    this.dynamicInstSlots = [];
+    this.dynamicPaletteBuf?.destroy();
+    this.dynamicPaletteBuf = null;
+    if (data === null || data.length === 0) return;
+    const buf = this.device.createBuffer({
+      label: 'dynamic-palette',
+      size: data.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.device.queue.writeBuffer(buf, 0, data);
+    this.dynamicPaletteBuf = buf;
+    this.paletteUploadCount++;
   }
 
   /** 把若干批动态实例画进当前 pass；返回新增的 draw call 数 */
@@ -753,6 +834,7 @@ export class RendererCore {
       this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
       pass.setBindGroup(0, slot.bg);
       pass.setVertexBuffer(0, mesh.vbuf);
+      pass.setVertexBuffer(1, mesh.skinVb);
       pass.setIndexBuffer(mesh.ibuf, 'uint32');
       pass.setPipeline(this.dynamicPipeline);
       pass.drawIndexed(mesh.indexCount, n);
@@ -785,6 +867,9 @@ export class RendererCore {
           { binding: 1, resource: { buffer: this.lightsBuf } },
           { binding: 2, resource: { buffer: this.toonBuf } },
           { binding: 3, resource: { buffer: buf } },
+          // palette 未上传时绑哑 buffer：validation 要求 binding 4 存在，
+          // flags bit0=0 的实例不会真的读它
+          { binding: 4, resource: { buffer: this.dynamicPaletteBuf ?? this.dummyPaletteBuf } },
         ],
       });
       slot = { buf, bg, cap: buf.size };
@@ -794,14 +879,17 @@ export class RendererCore {
   }
 
   /**
-   * 释放全部动态实例资源（每批次实例 buffer + 缓存的代理网格）。
+   * 释放全部动态实例资源（每批次实例 buffer + 缓存的代理网格 + 姿态调色板）。
    *
    * Play Stop / 换关卡 / 换代理参数时必须调用 —— 否则账目上「Play 期资源已清零」，
    * GPU 侧却还留着这些 buffer。见 PR #3 review（copilot：disposer 只摘了 CPU 侧 bridge）。
+   * 调色板数据本身在编辑器侧（ActorLibrary）缓存，下次 Play 重新上传即可。
    */
   releaseDynamicResources(): void {
     for (const s of this.dynamicInstSlots) s.buf.destroy();
     this.dynamicInstSlots = [];
+    this.dynamicPaletteBuf?.destroy();
+    this.dynamicPaletteBuf = null;
     this.clearDynamicMeshes();
   }
 
@@ -1152,6 +1240,9 @@ export class RendererCore {
     this.cylinderTintBuf.destroy();
     for (const s of this.dynamicInstSlots) s.buf.destroy();
     this.dynamicInstSlots = [];
+    this.dynamicPaletteBuf?.destroy();
+    this.dynamicPaletteBuf = null;
+    this.dummyPaletteBuf.destroy();
     this.clearDynamicMeshes();
   }
 }
