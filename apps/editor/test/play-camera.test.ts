@@ -116,10 +116,8 @@ describe('planPlayCamera · 姿态计算', () => {
   });
 
   it('🔴 数值守卫：字段缺失/非有限 → null（否则 distance=NaN 会让视口黑屏）', () => {
-    const base = { nodeId: 'cam1', cam: null as never };
     const mk = (over: Record<string, unknown>) =>
       ({ nodeId: 'cam1', cam: cam(over) as never }) as never;
-    void base;
     expect(planPlayCamera(mk({ distance: undefined }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
     expect(planPlayCamera(mk({ pitchDeg: 'x' }), posOf({ cam1: [0, 0, 0] }))).toBeNull();
     expect(planPlayCamera(mk({ distance: 0 }), posOf({ cam1: [0, 0, 0] }))).toBeNull();

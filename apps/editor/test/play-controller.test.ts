@@ -16,10 +16,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { PlayController } from '../src/services/play-controller';
 import type { AuthorSnapshot, LabRenderer } from '../src/renderer';
 import type { RuntimeBridge } from '../src/services/runtime-bridge';
-import type {
-  ViewCameraControl,
-  ViewCameraState,
-  WorldPosOf,
+import {
+  resolveEntryCamera,
+  type ViewCameraControl,
+  type ViewCameraState,
+  type WorldPosOf,
 } from '../src/services/play-camera';
 import type { SceneDocument } from '@aether/scene';
 
@@ -218,16 +219,29 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
   // pitchDeg 55 / distance 12 / yawOffsetDeg 0）。回退链路上它应被直接命中。
   const camPos = { nd_f1_cam: [10, 0, 0] as [number, number, number] };
 
+  /**
+   * 期望的相机姿态**从场景组件读**，不要硬编码 12 / 55。
+   *
+   * 硬编码会让"有人改了 floor-1 的相机数值"变成"测试红但代码没错"——
+   * 这类误报会训练人忽略红灯，比没有测试更糟。
+   */
+  function expectedFromScene() {
+    const entry = resolveEntryCamera(scene());
+    if (entry === null) throw new Error('夹具 floor-1 应有可用 Camera 组件');
+    return { distance: entry.cam.distance, elevationDeg: entry.cam.pitchDeg };
+  }
+
   it('🔴 start 切到游戏相机，stop 精确还原编辑机位', () => {
     const vc = fakeViewCamera();
     const before = vc.view.get();
+    const exp = expectedFromScene();
     const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
 
     expect(ctl.start()).toBe(true);
     // 真的写了相机，且值来自场景的 Camera 组件
     expect(vc.writes.length).toBeGreaterThan(0);
-    expect(vc.cur.distance).toBe(12);
-    expect(vc.cur.elevationDeg).toBe(55);
+    expect(vc.cur.distance).toBe(exp.distance);
+    expect(vc.cur.elevationDeg).toBe(exp.elevationDeg);
     expect(vc.cur.target).toEqual([10, 0, 0]);
 
     ctl.stop();
@@ -270,10 +284,11 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
   it('20 次启停：相机始终还原，不累积（还原用错会越跑越偏）', () => {
     const vc = fakeViewCamera();
     const before = vc.view.get();
+    const exp = expectedFromScene();
     const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
     for (let i = 0; i < 20; i++) {
       expect(ctl.start()).toBe(true);
-      expect(vc.cur.distance).toBe(12);
+      expect(vc.cur.distance).toBe(exp.distance);
       ctl.stop();
       expect(vc.cur).toEqual(before);
     }

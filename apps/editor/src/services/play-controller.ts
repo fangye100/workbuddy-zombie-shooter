@@ -142,6 +142,11 @@ export class PlayController {
     if (this.playCamera !== null && this.worldPosOf !== null) {
       const took = this.playCamera.attach(doc, this.worldPosOf);
       if (took) {
+        // 🔴 登记顺序 = 释放顺序，勿随意调整。
+        // 相机登记在 bridge-batches（下面）**之前**，是为了保证 Stop 时先还原相机、
+        // 再摘 Bridge —— 反序会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
+        // stop() 里另有一句显式 detach 作为第一重保险；两重都在，去掉任一重仍成立，
+        // 但**不要两重都去**。
         this.session.registerResource('play-camera', () => this.playCamera?.detach());
       }
     }
