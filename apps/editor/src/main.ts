@@ -555,6 +555,11 @@ async function boot(): Promise<void> {
       undo: () => undoSpawnEdit(),
     },
     /**
+     * Play 控制器（P5 C5 战斗探针用）：state / outcome / session（setFire /
+     * applyDamage / combatEvents）。只读断言与确定性输入注入，不代替 UI 操作。
+     */
+    playCtl,
+    /**
      * 运行时真角色装配库（docs/20 M2）。冒烟断言「动态蒙皮已激活」用：
      * Play 后 `actorLib.size > 0` 且 `renderer.debugDynamicMeshIds()` 含 `actor:*`，
      * 未装配角色仍为 `capsule:*`（降级是设计行为）。
