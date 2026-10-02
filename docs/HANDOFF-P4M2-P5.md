@@ -1,6 +1,6 @@
 # HANDOFF：P4 M2~M4（角色真模型）+ P5 C1~C5（战斗实现）
 
-> 交接时间：2026-10-02 13:50 · 分支 `feat/ui-refine-layout-20260923` · HEAD `26edd92` · 未推送 = 0
+> 交接时间：2026-10-02 14:05 更新 · **分支 `feat/game-editor-play-20261002`**（PR #16，堆叠在 UI 分支 PR #15 上，先合 #15 再合 #16）· HEAD `bca1d26` · 未推送 = 0
 > 前序：ADR-018（docs/22）P1/P2/P3/P6/P4b 已完成并过独立审核；P5 设计（docs/23，ADR-019）三轮审核 PASS；P4 M1 已提交。
 > 基线：**typecheck 0 · pnpm test 1106 passed（57 文件）**
 
