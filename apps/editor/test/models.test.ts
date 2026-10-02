@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
-  BUILTIN_MODELS,
   MODEL_RULER_HEIGHT_M,
   normalizeMeshHeight,
   assetServer,
@@ -12,10 +11,8 @@ import { createDefaultAssetMeta, newAssetGuid } from '@aether/scene';
 /**
  * 内置模型清单的不变量测试（编辑器域）。
  *
- * 背景：BUILTIN_MODELS 目前是空数组（2026-09-01 把 E-04 三档 LOD 全清了，
- * 统一走「导入 GLB…」唯一路径）。空数组让这条测试变成空跑，但它守护的是
- * **将来**重新加内置档时那条最容易犯的错：忘记用同一把尺子归一化身高——
- * 历史上三档 LOD 身高 2.050/2.108/2.187，切档角色会长高最多 6.7%。
+ * 背景：BUILTIN_MODELS 内置档机制已于 2026-09-23 随「模型预览」面板移除
+ * （模型进场景统一走底部资产库）。保留的是身高标尺的溯源与不变量。
  *
  * 归一化实现本身已上提 `packages/scene`（引擎域纯几何），其回归见
  * `packages/scene/test/gltf.test.ts` 的「身高归一化」分组。
@@ -31,14 +28,7 @@ function meshHeight(m: { vertices: Float32Array }): number {
   return maxY - minY;
 }
 
-describe('内置模型清单', () => {
-  it('每条内置档的实际身高都等于 roster 真源身高（防漂移回归）', () => {
-    for (const bm of BUILTIN_MODELS) {
-      expect(meshHeight(bm.mesh)).toBeCloseTo(MODEL_RULER_HEIGHT_M, 3);
-      expect(bm.meta.heightMeters).toBeCloseTo(MODEL_RULER_HEIGHT_M, 6);
-    }
-  });
-
+describe('身高标尺（原内置模型清单）', () => {
   it('身高常量来自 roster.json 的 E-04 盾卫（2.05 m），不得就地魔改', () => {
     expect(MODEL_RULER_HEIGHT_M).toBeCloseTo(2.05, 6);
   });

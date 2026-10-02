@@ -97,3 +97,45 @@ describe('关卡场景（tools/level/gen-level.mjs 生成）', () => {
     expect(Number(depth)).toBeLessThanOrEqual(3);
   });
 });
+
+describe('关卡场景 · 外部资产引用（ADR-018 P4b 门禁）', () => {
+  // 与 gen-level.mjs 的 actCoverProps 一致：Act1 每层掩体应引用这些真实道具 GLB。
+  // 这条断言看守的是「重生成退化回纯 box 也全绿」的变异 —— 没有它，
+  // 删掉 renderer 的 pendingAssets.push 后 1085 条测试依然全绿（P4b 复审实测）。
+  const ENV_GLBS = import.meta.glob('/assets/environment/models/**/tex/*_tex_baked.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+  const knownPaths = new Set(
+    Object.keys(ENV_GLBS).map((k) => k.replace(/^\//, '').replace(/\\/g, '/')),
+  );
+  const levelFiles = Object.keys(levelModules);
+
+  it.each(levelFiles)('%s 掩体（category=道具 的 _cv 节点）全部引用真实 GLB', (file: string) => {
+    const doc = levelModules[file] as SceneDocument;
+    if (doc === undefined) return;
+    const covers = doc.nodes.filter((n) => /_cv\d+$/.test(n.id));
+    expect(covers.length).toBeGreaterThanOrEqual(3);
+    for (const n of covers) {
+      const mr = n.components.find((c) => c.kind === 'MeshRenderer') as
+        | { source: { type: string; ref: { path: string } } }
+        | undefined;
+      expect(mr).toBeDefined();
+      expect(mr!.source.type).toBe('asset');
+      // 引用的 GLB 必须真实存在（防手滑写错路径 → 编辑器补载静默失败）
+      expect(knownPaths.has(mr!.source.ref.path.replace(/\\/g, '/'))).toBe(true);
+    }
+  });
+
+  it.each(levelFiles)('%s 资产引用数量 ≥ 该层掩体数（补载有东西可换）', (file: string) => {
+    const doc = levelModules[file] as SceneDocument;
+    if (doc === undefined) return;
+    let assetCount = 0;
+    for (const n of doc.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'MeshRenderer' && (c as { source: { type: string } }).source.type === 'asset') {
+          assetCount++;
+        }
+      }
+    }
+    const covers = doc.nodes.filter((n) => /_cv\d+$/.test(n.id));
+    expect(assetCount).toBeGreaterThanOrEqual(covers.length);
+  });
+});

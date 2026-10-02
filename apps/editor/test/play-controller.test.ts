@@ -16,7 +16,50 @@ import { describe, expect, it, vi } from 'vitest';
 import { PlayController } from '../src/services/play-controller';
 import type { AuthorSnapshot, LabRenderer } from '../src/renderer';
 import type { RuntimeBridge } from '../src/services/runtime-bridge';
+import {
+  resolveEntryCamera,
+  type ViewCameraControl,
+  type ViewCameraState,
+  type WorldPosOf,
+} from '../src/services/play-camera';
 import type { SceneDocument } from '@aether/scene';
+
+/**
+ * 记录型主视图相机替身。
+ *
+ * 为什么需要它：`AuthorSnapshot` **不含相机**，P6 必须自己存/还原。
+ * 没有这个替身，"Stop 后相机还原了吗"就只能靠肉眼看——而删掉还原代码
+ * 测试依然全绿（独立审核的 M7/M8 变异），那就成了假象。
+ */
+function fakeViewCamera(initial?: Partial<ViewCameraState>) {
+  let cur: ViewCameraState = {
+    target: [0, 0.95, 0],
+    distance: 9,
+    yaw: 0.35,
+    elevationDeg: 20,
+    ...initial,
+  };
+  const writes: ViewCameraState[] = [];
+  const view: ViewCameraControl = {
+    get: () => ({ ...cur, target: [cur.target[0], cur.target[1], cur.target[2]] }),
+    set: (s: ViewCameraState) => {
+      cur = { ...s, target: [s.target[0], s.target[1], s.target[2]] };
+      writes.push({ ...cur, target: [...cur.target] as [number, number, number] });
+    },
+  };
+  return {
+    view,
+    writes,
+    get cur() {
+      return cur;
+    },
+  };
+}
+
+/** 只有指定节点有世界坐标，其余返回 null */
+function posOf(map: Record<string, [number, number, number]>): WorldPosOf {
+  return (id: string) => map[id] ?? null;
+}
 
 /** 最小替身：只实现 PlayController 真正用到的三个方法 */
 function fakeRenderer(doc: SceneDocument | null) {
@@ -78,10 +121,17 @@ const scene = (): SceneDocument => {
   return JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
 };
 
-function make(doc: SceneDocument | null = scene()) {
+function make(
+  doc: SceneDocument | null = scene(),
+  opts: { viewCamera?: ViewCameraControl; worldPosOf?: WorldPosOf } = {},
+) {
   const r = fakeRenderer(doc);
   const b = fakeBridge();
-  const ctl = new PlayController(r as unknown as LabRenderer, b as unknown as RuntimeBridge, { seed: 3 });
+  const ctl = new PlayController(r as unknown as LabRenderer, b as unknown as RuntimeBridge, {
+    seed: 3,
+    ...(opts.viewCamera !== undefined ? { viewCamera: opts.viewCamera } : {}),
+    ...(opts.worldPosOf !== undefined ? { worldPosOf: opts.worldPosOf } : {}),
+  });
   return { ctl, r, b };
 }
 
@@ -161,6 +211,87 @@ describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGEN
     expect(ctl.ledger.pending).toBe(0);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('PlayController —— Play 相机（ADR-018 P6）', () => {
+  // floor-1 自带：entryCamera = nd_f1_cam，Camera（enabled / orbit-follow /
+  // pitchDeg 55 / distance 12 / yawOffsetDeg 0）。回退链路上它应被直接命中。
+  const camPos = { nd_f1_cam: [10, 0, 0] as [number, number, number] };
+
+  /**
+   * 期望的相机姿态**从场景组件读**，不要硬编码 12 / 55。
+   *
+   * 硬编码会让"有人改了 floor-1 的相机数值"变成"测试红但代码没错"——
+   * 这类误报会训练人忽略红灯，比没有测试更糟。
+   */
+  function expectedFromScene() {
+    const entry = resolveEntryCamera(scene());
+    if (entry === null) throw new Error('夹具 floor-1 应有可用 Camera 组件');
+    return { distance: entry.cam.distance, elevationDeg: entry.cam.pitchDeg };
+  }
+
+  it('🔴 start 切到游戏相机，stop 精确还原编辑机位', () => {
+    const vc = fakeViewCamera();
+    const before = vc.view.get();
+    const exp = expectedFromScene();
+    const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
+
+    expect(ctl.start()).toBe(true);
+    // 真的写了相机，且值来自场景的 Camera 组件
+    expect(vc.writes.length).toBeGreaterThan(0);
+    expect(vc.cur.distance).toBe(exp.distance);
+    expect(vc.cur.elevationDeg).toBe(exp.elevationDeg);
+    expect(vc.cur.target).toEqual([10, 0, 0]);
+
+    ctl.stop();
+    // AuthorSnapshot 不含相机 → 这一条全靠 PlayController 自己还原
+    expect(vc.cur).toEqual(before);
+  });
+
+  it('🔴 场景没有可用相机时，相机一次都没被写（保持编辑机位）', () => {
+    const vc = fakeViewCamera();
+    const d = scene();
+    for (const n of d.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'Camera') (c as unknown as { enabled: boolean }).enabled = false;
+      }
+    }
+    const { ctl } = make(d, { viewCamera: vc.view, worldPosOf: posOf({}) });
+    expect(ctl.start()).toBe(true);
+    expect(vc.writes).toEqual([]); // 一次都没动
+  });
+
+  it('🔴 没注入 viewCamera 时不接管相机（不产生未声明的视角副作用）', () => {
+    const { ctl } = make(scene()); // 不传 viewCamera
+    expect(() => {
+      expect(ctl.start()).toBe(true);
+      ctl.stop();
+    }).not.toThrow();
+  });
+
+  it('相机进入资源账目：接管后 Stop 释放，pending 归零', () => {
+    const vc = fakeViewCamera();
+    const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
+    ctl.start();
+    // 原两项（Bridge 批次 + 动态实例）+ 相机 = 3
+    expect(ctl.ledger.pending).toBe(3);
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+    expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);
+  });
+
+  it('20 次启停：相机始终还原，不累积（还原用错会越跑越偏）', () => {
+    const vc = fakeViewCamera();
+    const before = vc.view.get();
+    const exp = expectedFromScene();
+    const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
+    for (let i = 0; i < 20; i++) {
+      expect(ctl.start()).toBe(true);
+      expect(vc.cur.distance).toBe(exp.distance);
+      ctl.stop();
+      expect(vc.cur).toEqual(before);
+    }
   });
 });
 

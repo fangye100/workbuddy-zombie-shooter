@@ -9,10 +9,10 @@
  * 由 gpu/gltf.ts 解析、按本文件的 MODEL_RULER_HEIGHT_M 归一身高。
  *
  * 若将来要恢复内置档：用 assets/characters/_tools/export_labmesh.py 从原始模型重新导出
- * `.mesh.ts`，把文件放进 src/，在 BUILTIN_MODELS 里加一条，贴图放 src/assets/ 并 import 进来。
+ * `.mesh.ts`。（2026-09-23：BUILTIN_MODELS 内置档机制随「模型预览」面板一并移除，
+ * 角色进场景一律走底部资产库；本文件只保留标尺与贴图工具。）
  */
 
-import type { MeshData } from '@aether/scene';
 import { AssetServer } from '@aether/scene';
 import { requireCharacter } from '@aether/content';
 
@@ -76,17 +76,3 @@ export async function resolveModelHeightM(
  * （docs/12 遗留项 L-4 已收口）。
  */
 export { normalizeMeshHeight } from '@aether/scene';
-
-export interface BuiltinModel {
-  id: string;
-  label: string;
-  mesh: MeshData;
-  texUrl: string;
-  meta: { vertices: number; triangles: number; heightMeters: number };
-}
-
-/**
- * 内置模型列表。**当前为空** —— 角色一律通过「导入 GLB…」载入原始模型，见文件头说明。
- * 加内置档的方式见文件头注释；加进来时记得用 normalizeMeshHeight 归一化身高。
- */
-export const BUILTIN_MODELS: BuiltinModel[] = [];

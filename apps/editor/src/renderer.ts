@@ -38,6 +38,8 @@ import {
   migrateToLatest,
   SceneGraph,
   instantiateScene,
+  buildBuiltinMesh,
+  parseGlb,
   type MeshData,
 } from '@aether/scene';
 import * as m4 from '@aether/core';
@@ -130,7 +132,7 @@ export interface SceneObject {
   /**
    * texture 是否由本物体独占（addObject 拖入的带贴图模型）。
    * 独占贴图在 removeObject / destroy 时必须连带销毁；共享的 whiteTex 与
-   * 角色槽的 charTexture（由 setCharacter 单独管理）都不能走这条路。
+   * 物体独占贴图（addObject 拖入的带贴图模型）都不能走这条路。
    */
   ownsTexture: boolean;
   /** 渲染时把 mat.flags.z 置 1：albedo 走贴图采样而非 uniform 平色 */
@@ -652,11 +654,8 @@ export class LabRenderer {
   private readonly hoverMatData: Float32Array<ArrayBuffer>;
 
   /** 模型浏览器：角色槽位（替换中心胶囊）。切换模型只动这一个 */
-  public readonly characterIndex = 1;
 
-  private sceneCapsule!: MeshData;
   public whiteTex!: GPUTexture;
-  private charTexture: GPUTexture | null = null;
 
   private readonly frameData = new Float32Array(FRAME_FLOATS);
   private readonly lightsData = new Float32Array(LIGHTS_FLOATS);
@@ -726,9 +725,6 @@ export class LabRenderer {
     // ---- 几何 ----
     // 场景内容不再写死在这里：初值由 buildDefaultSpecs() 兜底，
     // 真正的来源是 main.ts 调 loadScene() 读 assets/scenes/sandbox/default.scene.json。
-    const capsule = createCapsule(0.34, 1.0, 28, 10);
-    this.sceneCapsule = capsule;
-
     // 1x1 白色 fallback 贴图（rgba8unorm，raw sRGB 字节，与材质 albedo 同约定）
     // 必须在建物体之前就位，因为物体的 texture 字段要引用它
     this.whiteTex = this.device.createTexture({
@@ -945,9 +941,30 @@ export class LabRenderer {
 
     const specs: ObjectSpec[] = [];
     const warnings: string[] = [];
+    // 外部资产（source.type === 'asset'）在装载期用包围盒占位几何先上，
+    // 主场景就绪后由 loadSceneAssets() 异步补载真 GLB（P4b）。
+    // 之前是直接跳过 → "场景里引用的 GLB 永远不显示"，这正是本次要修的。
+    const pendingAssets: { index: number; path: string; submesh: string | null; name: string }[] = [];
     for (const o of inst.objects) {
-      if (o.mesh === null) {
-        warnings.push(`${o.name}：外部资产网格暂不支持在场景加载期同步取用，已跳过`);
+      let mesh = o.mesh;
+      if (mesh === null && o.source.type === 'asset') {
+        // 占位：按来源包围盒做一个 box 顶住，避免"物体凭空消失"。
+        // 尺寸后面由 parseGlb 的真实网格替换，这里只保证可拾取可定位。
+        const placeholder = buildBuiltinMesh('box', [1, 1, 1]);
+        if (placeholder === null) {
+          warnings.push(`${o.name}：占位几何构建失败，已跳过`);
+          continue;
+        }
+        mesh = placeholder;
+        pendingAssets.push({
+          index: specs.length,
+          path: o.source.ref.path,
+          submesh: o.source.ref.sub ?? null,
+          name: o.name,
+        });
+      }
+      if (mesh === null) {
+        warnings.push(`${o.name}：网格来源未知，已跳过`);
         continue;
       }
       // 材质 id → 共享材质槽位下标。'mat3' → 3；认不出来回落 mat0（不猜、不静默丢物体）
@@ -956,7 +973,7 @@ export class LabRenderer {
         warnings.push(`${o.name}：材质 id 「${o.materialId}」不是共享材质，已回落 mat0`);
       }
       specs.push({
-        mesh: o.mesh,
+        mesh,
         material: idx ?? 0,
         pos: [o.position[0], o.position[1], o.position[2]],
         quat: [o.quaternion[0], o.quaternion[1], o.quaternion[2], o.quaternion[3]],
@@ -1019,6 +1036,9 @@ export class LabRenderer {
     }
     for (const w of picked.warnings) warnings.push(w);
 
+    // 待补载的外部资产清单（P4b）。交给宿主在场景就绪后调 loadSceneAssets()。
+    this.pendingSceneAssets = pendingAssets;
+
     return {
       ok: true,
       url,
@@ -1031,6 +1051,75 @@ export class LabRenderer {
       pointLight,
     };
   }
+
+  /** 装载期收集的外部资产待补载清单（每轮 loadScene 重置） */
+  private pendingSceneAssets: { index: number; path: string; submesh: string | null; name: string }[] = [];
+
+  /** 待补载数量（宿主判断"要不要显示加载进度"用） */
+  get pendingAssetCount(): number {
+    return this.pendingSceneAssets.length;
+  }
+
+  /**
+   * 异步补载场景引用的外部 GLB（ADR-018 P4b）。
+   *
+   * 逐个 fetch → parseGlb → swapObjectAsset 原位替换占位几何。
+   * 单个失败只记 warning 并保留占位（不阻塞其余），全部失败也不算装载失败 ——
+   * 与"一个挂掉的行为不该让场景打不开"同一纪律。
+   *
+   * ## 尺寸语义（P4b 复审修）
+   *
+   * ruler 不再是一刀切的角色标尺：由 `resolveRuler` 按资产逐个给出 ——
+   * sidecar `importer.normalizeHeightM` 有值用它；为 null（环境道具的常态，
+   * props.json 契约 1unit=1m）则传 null 给 parseGlb **保持原始尺寸**。
+   * 此前一刀切 2.05m 会把 P-11 轿车拉成 6m 长、货车压成 0.65m 宽。
+   *
+   * 🔴 调用时机：场景装载完成**且未进 Play**。Play 中物体网格属于作者状态快照
+   * 的一部分，装载中途换网格会让 Stop 恢复的索引对不上号（复审 #3 同源问题）。
+   *
+   * @param fetchAsset 宿主注入的资产读取器（默认走 /__fs/file，见 asset-util）
+   * @param decode 宿主注入的贴图解码器
+   * @param resolveRuler 宿主注入的逐资产标尺（null = 保持原始尺寸）
+   */
+  public async loadSceneAssets(
+    fetchAsset: (rel: string) => Promise<ArrayBuffer>,
+    decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
+    resolveRuler: (rel: string) => Promise<number | null>,
+  ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
+    const failed: { name: string; reason: string }[] = [];
+    let swapped = 0;
+    for (const p of this.pendingSceneAssets) {
+      try {
+        const buffer = await fetchAsset(p.path);
+        const ruler = await resolveRuler(p.path);
+        const model = parseGlb(buffer, ruler);
+        const bmp = model.image === null ? null : await decode(model.image, p.path);
+        // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
+        // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。
+        if (this.onPlayStateCheck?.() === true) {
+          failed.push({ name: p.name, reason: '补载期间进入 Play，本轮中止（Stop 后重载场景恢复）' });
+          continue;
+        }
+        const ok = this.swapObjectAsset(
+          p.index,
+          model.mesh,
+          model.subMeshes,
+          bmp,
+          model.skeleton,
+          model.nodeTree,
+        );
+        if (ok) swapped++;
+        else failed.push({ name: p.name, reason: '物体索引已失效（可能已被删除）' });
+      } catch (e) {
+        failed.push({ name: p.name, reason: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    this.pendingSceneAssets = [];
+    return { swapped, failed };
+  }
+
+  /** 宿主注入的"是否已进入 Play"探针（loadSceneAssets 的竞态防御用） */
+  onPlayStateCheck: (() => boolean) | null = null;
 
   /**
    * 当前场景来源（null = 硬编码 fallback）。
@@ -1082,7 +1171,7 @@ export class LabRenderer {
 
   /**
    * 每个「子网格」一个 bind group：材质槽位按子网格取，变换槽位按物体取
-   * （同一物体的所有子网格共享同一个 model 矩阵）。角色槽位的 binding 5 在 setCharacter 后换成真贴图。
+   * （同一物体的所有子网格共享同一个 model 矩阵）。
    */
   private makeSubBindGroup(objIndex: number, subIndex: number): GPUBindGroup {
     const o = this.state.objects[objIndex];
@@ -1266,23 +1355,6 @@ export class LabRenderer {
     });
   }
 
-  /**
-   * 物体贴图/槽位变动后，重建指向它的高亮 bind group。
-   * 这些 bind group 缓存了 texture view，一旦物体换了贴图（setCharacter）而没重建，
-   * 就会继续引用一个已被 destroy() 的纹理 —— 属于「引用已销毁资源」的硬错误。
-   */
-  private refreshHighlightBindGroups(index: number): void {
-    if (this.state.selectedIndex === index) this.buildSelectionBindGroup(index);
-    if (this.state.hoveredIndex === index) {
-      this.state.hoverBindGroup = this.buildHighlightBindGroup(
-        index,
-        this.core.secondaryToonBuf,
-        this.core.secondaryMatBuf,
-        'hover-secondary',
-      );
-    }
-  }
-
   public buildSelectionBindGroup(index: number): void {
     this.state.selBindGroup = this.buildHighlightBindGroup(
       index,
@@ -1290,62 +1362,6 @@ export class LabRenderer {
       this.core.primaryMatBuf,
       'sel-primary',
     );
-  }
-
-  /**
-   * 模型浏览器入口：替换中心角色。
-   *   mesh 为 null → 恢复程序化胶囊（场景角色）；否则换成给定网格，脚底贴 y=0。
-   *   bitmap 为 null → 用材质平色；否则上传贴图，着色器切到纹理采样。
-   *   ranges 为 null/空 → 单条子网格覆盖全部；否则按 GLB primitive 拆成多条
-   *   （层级树里展开就是 身体/武器/盾牌 各自一个 mesh 节点 + 各自一个材质槽）。
-   *   tree 为 GLB 原始父子层级：层级面板按它还原树形；绑定继承见 applySubMeshes。
-   */
-  setCharacter(
-    mesh: MeshData | null,
-    bitmap: ImageBitmap | null,
-    ranges: SubMeshRange[] | null = null,
-    tree: GltfNodeTree[] | null = null,
-    skeleton: SkeletonData | null = null,
-    animations: AnimClip[] = [],
-  ): void {
-    const o = this.state.objects[this.characterIndex];
-    if (o === undefined || o.removed) return;
-
-    let m: MeshData;
-    if (mesh === null) {
-      m = this.sceneCapsule;
-      o.pos = [0, 0.84, 0];
-      o.useTex = false;
-    } else {
-      m = mesh;
-      o.pos = [0, 0, 0];
-      o.useTex = bitmap !== null;
-    }
-
-    // 蒙皮字段：先挂上骨架/动画，再上传网格（uploadMesh 按 skeleton 定关节缓冲大小）
-    o.skeleton = mesh === null ? null : skeleton;
-    o.animations = mesh === null ? [] : animations;
-    o.skinState = o.skeleton !== null ? createSkinState(o.skeleton, o.animations) : null;
-    this.uploadMesh(o, m, o.skeleton);
-
-    this.charTexture?.destroy();
-    this.charTexture = bitmap === null ? null : this.createTextureFromBitmap(bitmap);
-    o.texture = this.charTexture ?? this.whiteTex;
-
-    // 子网格重排 → slotBase 全部后移 → 所有 bind group 都得重建（不只是角色自己）
-    this.applySubMeshes(this.characterIndex, ranges, tree);
-    // 选中 + 悬停的高亮 bind group 都缓存了 texture view，必须一起重建
-    this.refreshHighlightBindGroups(this.characterIndex);
-    // 选中/悬停的子网格下标在换模型后可能越界
-    if (this.state.selectedIndex === this.characterIndex) {
-      this.state.selectedSub = this.clampSub(this.characterIndex, this.state.selectedSub);
-    }
-    if (this.state.hoveredIndex === this.characterIndex) {
-      this.state.hoveredSub = this.clampSub(this.characterIndex, this.state.hoveredSub);
-    }
-
-    // 统一走 recountTriangles：跳过 removed，否则删过物体后再换模型，HUD 面数会把墓碑算回去
-    this.recountTriangles();
   }
 
   /** 把子网格下标夹到合法范围；null（整个物体）原样返回 */
@@ -1546,6 +1562,57 @@ export class LabRenderer {
     if (o === undefined || o.removed) return;
     this.uploadMesh(o, mesh, o.skeleton);
     this.recountTriangles();
+  }
+
+  /**
+   * 场景资产补载（ADR-018 P4b）：把一个已存在物体的占位几何换成外部 GLB。
+   *
+   * ## 为什么是"换"而不是 addObject
+   *
+   * 场景文件里该节点**本来就占一个物体槽位**（装载期用 builtin 占位几何顶着）。
+   * 若走 addObject 会加数 —— Play 的作者状态按**索引**恢复（复审 #3），
+   * 物体数变了 Stop 后就张冠李戴。所以必须原位替换。
+   *
+   * ## 资源纪律（AGENTS.md §2.4 同精神）
+   *
+   * 替换会销毁旧 vb/ib/skin buffer 并按新网格重建；贴图若提供了新 bitmap
+   * 则替换并销毁旧自有贴图（ownsTexture 才允许销毁，共享白图/网格图不能动）。
+   *
+   * @returns false = 索引无效或物体已被删（墓碑）。不抛异常：单个资产补载失败
+   *          不该让整场景装载失败，调用方决定降级（保留占位几何 + 提示）。
+   */
+  public swapObjectAsset(
+    index: number,
+    mesh: MeshData,
+    ranges: SubMeshRange[] | null,
+    bitmap: ImageBitmap | null,
+    skeleton: SkeletonData | null = null,
+    nodeTree: readonly GltfNodeTree[] = [],
+  ): boolean {
+    const o = this.state.objects[index];
+    if (o === undefined || o.removed) return false;
+
+    this.uploadMesh(o, mesh, skeleton);
+
+    // ---- 贴图：有新图就换（销毁旧自有图）；没有则保留原样 ----
+    if (bitmap !== null) {
+      if (o.ownsTexture && o.texture !== null) o.texture.destroy();
+      o.texture = this.createTextureFromBitmap(bitmap);
+      o.ownsTexture = true;
+      o.useTex = true;
+    }
+
+    // ---- 子网格区间 + 层级树：材质绑定 / 层级面板 / 描边都依赖它 ----
+    // applySubMeshes 内部会做材质槽位预算裁剪并触发 bind group 重建
+    this.applySubMeshes(
+      index,
+      ranges !== null && ranges.length > 0
+        ? ranges.map((r) => ({ ...r, visible: true, override: null }))
+        : null,
+      [...nodeTree],
+    );
+    this.recountTriangles();
+    return true;
   }
 
   private createTextureFromBitmap(bitmap: ImageBitmap): GPUTexture {
@@ -1877,7 +1944,8 @@ export class LabRenderer {
 
   /**
    * 骨骼类叠加层（X-ray 骨骼 / 包裹器圆柱体）的取数源：
-   * 主视图里「当前该显示」的那个带骨骼物体 —— 选中的，否则退回角色槽位。
+   * 主视图里「当前该显示」的那个带骨骼物体 —— 严格跟随选中（2026-09-23 删掉
+   * 「退回角色槽位」回退：角色槽假设在场景化世界会指向无关场景物体）。
    * 暴露给 main.ts，好让绑定模块拿到实时关节矩阵去算包裹器。
    */
   getSkeletonOverlaySource(): {
@@ -1885,7 +1953,7 @@ export class LabRenderer {
     skeleton: SkeletonData;
     modelMatrix: Float32Array;
   } | null {
-    const idx = this.state.selectedIndex ?? this.characterIndex;
+    const idx = this.state.selectedIndex;
     const so = idx !== null ? this.state.objects[idx] : undefined;
     if (so === undefined || so.skinState === null || so.skeleton === null) return null;
     return {
@@ -2394,7 +2462,6 @@ export class LabRenderer {
     // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图
     // （GPUSampler 在 @webgpu/types 0.1.49 无 destroy 方法，跟随 device 释放即可，不显式销毁）
     this.whiteTex.destroy();
-    this.charTexture?.destroy();
     for (const o of this.state.objects) {
       if (o.removed) continue; // 墓碑在 removeObject 时已释放，跳过避免二次 destroy
       o.vertexBuffer.destroy();

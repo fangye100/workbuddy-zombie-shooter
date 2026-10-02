@@ -199,6 +199,30 @@ describe('parseGlb · 多 primitive → 子网格区间', () => {
     expect(r.subMeshes[0]!.indexCount).toBe(r.mesh.indices.length);
   });
 
+  it('🔴 targetHeight=null 保持原始尺寸（P4b：环境道具 1unit=1m，不被角色标尺归一）', async () => {
+    const { parseGlb } = await import('@aether/scene');
+    const { makeGlb } = await import('./testGlb');
+    // makeGlb 产出的三角形尺寸取决于夹具；两次解析同一 GLB，比较"归一 vs 保持"
+    const glb = makeGlb([{ name: '道具', triangles: 6 }]);
+    const normalized = parseGlb(glb, 2.05);
+    const original = parseGlb(glb, null);
+
+    // 归一版：高度必须是 2.05（语义本身）；保持版：heightMeters 报实际高度
+    expect(normalized.heightMeters).toBe(2.05);
+    expect(original.heightMeters).not.toBe(2.05);
+    expect(original.heightMeters).toBeGreaterThan(0);
+
+    // 保持版的包围盒与原始数据一致（不被拉伸）：x/z 范围应与 y 同比例 ——
+    // 归一版整体被缩放，两者顶点不应逐位相等
+    const nMin = Math.min(...normalized.mesh.vertices.filter((_, i) => i % 15 === 1));
+    const oMin = Math.min(...original.mesh.vertices.filter((_, i) => i % 15 === 1));
+    expect(oMin).toBeCloseTo(0, 5); // 保持版仍做贴地（minY → 0）
+    expect(nMin).toBeCloseTo(0, 5); // 归一版也是
+    // 关键：两者的"形状比例"一致但"尺度"不同 → 顶点不能相等（除非夹具恰好 2.05 高，
+    // 那就退化为恒等 —— 用高度不等断言把这种情况显式排除）
+    expect(original.heightMeters).not.toBe(normalized.heightMeters);
+  });
+
   /**
    * 命名优先级回归。glTF 的 primitive 就是按材质拆的（身体/武器/盾牌各一条），
    * 而同一 mesh 下的所有 primitive **共用 mesh.name**。Blender 导出的模型几乎都带
