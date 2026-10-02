@@ -549,6 +549,12 @@ async function boot(): Promise<void> {
      * 未装配角色仍为 `capsule:*`（降级是设计行为）。
      */
     actorLib,
+    /**
+     * 运行时桥（docs/17 WU-3）：探针读「世界 → 批次」翻译结果用 —— `batches()`
+     * 的实例数组就是每帧上传 GPU 的内容（M3 动画断言隔帧读 inst[11] poseIndex，
+     * 必须变化 = 动画在走）。公开 API，不暴露槽位内部状态。
+     */
+    bridge,
   };
 
   // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
