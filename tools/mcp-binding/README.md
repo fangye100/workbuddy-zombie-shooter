@@ -708,10 +708,17 @@ originY = h·0.92
 → PASS：截图给用户 → **🚧 门 1：等用户确认标杆侧**
 → 用户确认后 `mirror`（方向已确认）→ 逐对校验 Δ=0 → 出图 → **🚧 门 2**
 ── Wrapper 阶段（门 2 通过后才允许）──────────────────────
-⚠️ 第一步必须 unpin：圆柱只要被手动调过一次就带 manual 标记，
-   autoFitCylinders() 会**跳过**它并返回 changed=0——**静默空操作，不报错**。
-   E-01 实测：22 根全 manual 时 autoFit 一根不改，unwrappedVerts 仍
-   2160/4209（51.3%）。以为「跑过 autoFit 了」是最容易踩的坑。
+⚠️ unpin 的真实语义（先读这段再决定要不要按）：`unpinCylinder(bone)` 不只是
+   清 manual 标记——它**立即触发一次 autoFit**（binding-session.ts），会用算法
+   半径覆盖该骨现有的解剖半径（sidecar 恢复或手工调好的值会被冲掉）。
+   - 目的只是「让 autoFitCylinders() 不再跳过它」时：**不要 unpin**。
+     先 `cylinders setOffset [0,0,0]` 清 offset（清零不会重新 pin，manual
+     圆柱仍接受 setOffset/setRadius），再手工按密度峰值定半径。
+   - 只有当你明确想要「算法半径接管这根骨」时才 unpin（E-01 骨盆这类
+     公式偏小到不可用的骨，unpin 后仍需手工复核）。
+   （autoFitCylinders() 跳过 manual 骨并返回 changed=0 是**静默空操作**，
+   E-01 实测：22 根全 manual 时 autoFit 一根不改。以为「跑过 autoFit 了」
+   是最容易踩的坑——但解法不是无脑 unpin 全部。）
 → cylinders setOffset [0,0,0] × 全部（**先做这步再谈半径**，
    E-01 清零 offset 就把未包裹从 51.3% 砍到 28.0%）
 → 半径：用**密度峰值**（不用分位数）；或 unpin 后 autoFit 再手工修

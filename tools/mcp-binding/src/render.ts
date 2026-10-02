@@ -147,6 +147,11 @@ export interface RgbaImage {
   readonly width: number;
   readonly height: number;
   readonly rgba: Uint8Array;
+  /**
+   * 实际生效的网格参数（渲染端归一化后）。渲染端会按分辨率对 step 设下限
+   * （每根线 ≥2px），调用方上报元数据必须取这份值，保证与图像一致。
+   */
+  readonly grid?: { step: number; majorEvery: number } | undefined;
 }
 
 /** 热力色带：0 → 蓝，0.5 → 绿，1 → 红（两段线性插值） */
@@ -304,7 +309,13 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
   const gridMajor: Rgb = grid?.majorColor ?? [146, 166, 196];
   const gridLabel: Rgb = grid?.labelColor ?? [48, 48, 60];
   const hAxis = view === 'front' ? 'X' : view === 'side' ? 'Z' : 'X';
-  const gStep = grid !== undefined ? Math.max(1e-4, grid.step ?? 0.05) : 0;
+  // 网格密度按分辨率设下限：每根线至少隔 MIN_PX_PER_LINE px。
+  // 否则 gridStep:1e-4 这类值会在 ~2m 模型上产生千万次同步像素写（每根线整行/列
+  // 重写、多根线映射同一像素），阻塞其他 MCP 请求。下限对网格线与刻度统一生效，
+  // 且生效值通过返回值上报（调用方元数据必须与图同源，不得自行另算）。
+  const MIN_PX_PER_LINE = 2;
+  const stepLo = MIN_PX_PER_LINE / Math.max(scale, 1e-9);
+  const gStep = grid !== undefined ? Math.max(Math.max(1e-4, grid.step ?? 0.05), stepLo) : 0;
   const gMajor = grid !== undefined ? Math.max(1, Math.round(grid.majorEvery ?? 5)) : 1;
   if (grid !== undefined) {
     const uLo = cu - width / 2 / scale;
@@ -483,7 +494,41 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
           if (gx > DEPTH_STEP || gy > DEPTH_STEP) isEdge[o] = 1;
         }
       }
-      // ③ 掠射法线翻转边（内部褶皱类轮廓；只认二连边，破洞沿不勾）
+      // ③ 掠射法线翻转边（内部褶皱类轮廓；只认二连边，破洞沿不勾）。
+      //    画线前逐像素做深度测试：被前景表面挡住的折叠段不画 ——
+      //    否则藏在躯干后面的褶皱会以黑线浮在躯干表面上，误导对位判读。
+      //    端点深度取插值（pdep 是「越大越近」的视向深度）。
+      const drawLineDepth = (
+        x0: number, y0: number, d0: number, x1: number, y1: number, d1: number, c: Rgb,
+      ): void => {
+        let ax = Math.round(x0);
+        let ay = Math.round(y0);
+        const bx = Math.round(x1);
+        const by = Math.round(y1);
+        const dx = Math.abs(bx - ax);
+        const dy = Math.abs(by - ay);
+        const stepX = ax < bx ? 1 : -1;
+        const stepY = ay < by ? 1 : -1;
+        let err = dx - dy;
+        let t = 0;
+        const steps = Math.max(dx, dy, 1);
+        for (;;) {
+          const dep = d0 + ((d1 - d0) * t) / steps;
+          const o = ay * width + ax;
+          if (dep >= zbuf[o]! - 1e-9) putPx(ax, ay, c); // 只画不近于表面的段
+          if (ax === bx && ay === by) break;
+          const e2 = err * 2;
+          if (e2 > -dy) {
+            err -= dy;
+            ax += stepX;
+          }
+          if (e2 < dx) {
+            err += dx;
+            ay += stepY;
+          }
+          t++;
+        }
+      };
       const edgeMap = new Map<number, { e1: number; a: number; b: number }>();
       for (let t = 0; t < T; t++) {
         for (let e = 0; e < 3; e++) {
@@ -496,7 +541,11 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
           if (cur === undefined) {
             edgeMap.set(key, { e1: tface[t]!, a, b });
           } else if (Math.sign(cur.e1) !== Math.sign(tface[t]!) && Math.abs(cur.e1) < 0.5 && Math.abs(tface[t]!) < 0.5) {
-            drawLine(Math.round(px[a]!), Math.round(py[a]!), Math.round(px[b]!), Math.round(py[b]!), contour);
+            drawLineDepth(
+              px[a]!, py[a]!, pdep[a]!,
+              px[b]!, py[b]!, pdep[b]!,
+              contour,
+            );
           }
         }
       }
@@ -598,11 +647,20 @@ export function renderOrthographic(scene: OrthoScene): RgbaImage {
       if (Y < 2 || Y + 7 > height - 12) continue;
       drawGlyphText(3, Y + 2, fmt(j * gStep), gridLabel);
     }
-    // 轴名 + 单位（左下 = 垂直轴 Y；右下 = 水平轴）
-    drawGlyphText(3, height - 20, 'Y M', [16, 16, 20]);
+    // 轴名 + 单位（左下 = 垂直轴；右下 = 水平轴）。top 视图垂直轴是 Z
+    //（plane() 在 top 投影 [x, z]，垂直读数是前后方向不是高度）。
+    const vAxis = view === 'top' ? 'Z' : 'Y';
+    drawGlyphText(3, height - 20, `${vAxis} M`, [16, 16, 20]);
     const hTxt = `${hAxis} M`;
     drawGlyphText(width - 3 - (hTxt.length * 6 - 1), height - 20, hTxt, [16, 16, 20]);
   }
 
-  return { width, height, rgba };
+  return {
+    width,
+    height,
+    rgba,
+    // 实际生效的网格参数（经过分辨率下限 clamp 后的值）。调用方上报元数据
+    // 必须用这份值，不得用调用入参 —— 否则响应与图像标定不一致。
+    grid: grid !== undefined ? { step: gStep, majorEvery: gMajor } : undefined,
+  };
 }

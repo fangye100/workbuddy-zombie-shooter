@@ -287,7 +287,15 @@ export class BindingDomain {
     const azRaw = optNum(args, 'azimuthDeg');
     const azimuthDeg = azRaw === undefined ? 0 : Math.min(60, Math.max(-60, azRaw));
     // 网格风格：toon = 实心填充 + 视向法线翻转边实体轮廓（2D 卡通效果，无线框）
-    const meshStyle = optStr(args, 'style') === 'toon' ? ('toon' as const) : ('wire' as const);
+    // 🔴 toon 画不了热力（实心填充忽略 heat）→ heatBone 请求强制走 wire，
+    // 保证图像与返回的 meshStyle 描述一致（否则图里根本没有权重信息）。
+    const styleRaw = optStr(args, 'style');
+    const styleFallbackNote =
+      styleRaw === 'toon' && heatBone !== undefined
+        ? 'style:toon 不支持热力（实心填充无逐顶点色）→ 已回退 wire 渲染'
+        : undefined;
+    const meshStyle =
+      styleRaw === 'toon' && heatBone === undefined ? ('toon' as const) : ('wire' as const);
 
     const positions = this.session.positions;
     const segments: Segment[] = [];
@@ -369,15 +377,14 @@ export class BindingDomain {
       };
     }
 
-    // 量化坐标参考线：审图时读出「这个关节偏高多少」靠它，不是靠肉眼估
+    // 量化坐标参考线：审图时读出「这个关节偏高多少」靠它，不是靠肉眼估。
+    // step/majorEvery 先归一化再传渲染器 —— 返回的 grid 元数据与图必须同一份值
+    //（否则 gridStep:0 被渲染端 clamp 到 1e-4，响应却报 0，标定元数据失真）。
     const gridOn = optBool(args, 'grid') === true;
-    const gridStep = optNum(args, 'gridStep');
-    const gridMajor = optNum(args, 'gridMajor');
+    const gridStepNorm = Math.max(1e-4, optNum(args, 'gridStep') ?? 0.05);
+    const gridMajorNorm = Math.max(1, Math.round(optNum(args, 'gridMajor') ?? 5));
     const grid: GridSpec | undefined = gridOn
-      ? {
-          ...(gridStep !== undefined ? { step: gridStep } : {}),
-          ...(gridMajor !== undefined ? { majorEvery: gridMajor } : {}),
-        }
+      ? { step: gridStepNorm, majorEvery: gridMajorNorm }
       : undefined;
 
     const scene: OrthoScene = { view, width, height, points, segments, capsules, markers, azimuthDeg, meshStyle, grid };
@@ -389,10 +396,11 @@ export class BindingDomain {
         height,
         azimuthDeg,
         meshStyle,
+        // 元数据取渲染端实际生效值（含分辨率下限 clamp），与图像严格同源
         grid: gridOn
           ? {
-              stepM: grid?.step ?? 0.05,
-              majorEveryM: (grid?.step ?? 0.05) * (grid?.majorEvery ?? 5),
+              stepM: image.grid?.step ?? gridStepNorm,
+              majorEveryM: (image.grid?.step ?? gridStepNorm) * (image.grid?.majorEvery ?? gridMajorNorm),
               note: '网格为世界坐标等间距（正交投影下屏幕等距）：读数 = 数格子 × step',
             }
           : null,
@@ -400,6 +408,7 @@ export class BindingDomain {
         capsules: capsules.length,
         heatBone: heatBone ?? null,
         note: heatNote,
+        styleFallbackNote,
       },
       image,
     };
