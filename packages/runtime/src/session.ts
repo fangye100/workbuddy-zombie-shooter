@@ -121,6 +121,31 @@ export interface SpawnRejection {
   free: number;
 }
 
+/**
+ * 战斗事件（P5，docs/23 §2.1a/§2.7）。由 applyDamage 产生、宿主与（后续的）
+ * 行为脚本消费。事件不是轮询：伤害发生的那一刻就进缓冲，HUD / 音效 / 击杀
+ * 统计据此派生，不需要每步扫表。
+ */
+export interface CombatEvent {
+  readonly type: 'damage' | 'kill';
+  readonly tick: number;
+  /** 受击槽位 */
+  readonly slot: number;
+  readonly characterId: string;
+  /** 本次伤害量（kill 事件也带，便于统计贡献） */
+  readonly amount: number;
+  /** 伤害后的血量（kill 时为 0） */
+  readonly hpAfter: number;
+  /** 造成伤害的槽位；-1 = 系统/环境伤害 */
+  readonly sourceSlot: number;
+}
+
+/** applyDamage 的结果（HUD/音效/测试消费，docs/23 §2.1a） */
+export interface DamageResult {
+  readonly died: boolean;
+  readonly hpAfter: number;
+}
+
 /** 运行期诊断（与 loader 的装载期诊断分开：装载是一次性的，运行是每步的） */
 export interface RuntimeDiagnostic {
   code: string;
@@ -353,6 +378,65 @@ export class RuntimeSession {
 
   /**
    * 设置玩家的移动输入（XZ）。
+  /**
+   * 🔴 伤害的唯一事实出口（P5，docs/23 §2.1a）。
+   *
+   * 所有掉血必须走这里 —— 玩家射击、NPC 挥抓、未来的 Build 系统（届时
+   * DamagePipeline 在本方法**内部**做修饰，单入口不破）。任何路径直写
+   * `table.health` 都会漏掉：击杀事件、受击高亮、胜负判定、死亡回收 ——
+   * 这些派生反应全靠这个入口，绕过 = 不可审计。
+   *
+   * 减血 → ≤0 时 kill：NPC 槽位销毁回 freelist（generation+1 防旧引用冒名，
+   * view() 自动消失）；玩家不销毁（保留"死状"槽位，胜负判定是 C5 的消费方）。
+   */
+  applyDamage(targetSlot: number, amount: number, sourceSlot = -1): DamageResult {
+    if (!this.tbl.isAlive(targetSlot)) {
+      return { died: false, hpAfter: 0 };
+    }
+    const hpAfter = Math.max(0, this.tbl.health[targetSlot]! - amount);
+    this.tbl.health[targetSlot] = hpAfter;
+    // 受击高亮 [PLACEHOLDER 0.15]（docs/23 §2.1；渲染层消费，先给默认时长）
+    this.tbl.hitFlash[targetSlot] = 0.15;
+    const characterId = this.characterIdOf(targetSlot);
+    const died = hpAfter <= 0;
+    this.combatEventBuf.push({
+      type: died ? 'kill' : 'damage',
+      tick: this.tickCount,
+      slot: targetSlot,
+      characterId,
+      amount,
+      hpAfter,
+      sourceSlot,
+    });
+    if (died) this.kill(targetSlot);
+    return { died, hpAfter };
+  }
+
+  /**
+   * 死亡回收（只由 applyDamage 调用）。NPC：槽位销毁回 freelist —— aliveCount
+   * 有减有增，不再单调撞 512（docs/23 §1.1 的「死亡回收」缺口）。玩家：槽位
+   * 保留（死了要看得见死状，C5 的失败冻结接管语义，destroy 会让 view 丢实体）。
+   */
+  private kill(slot: number): void {
+    if (this.kindOf[slot] === 0) return; // 玩家：见上，槽位与 alive 标记都保留
+    this.tbl.destroy(slot);
+  }
+
+  /** 战斗事件缓冲（只读视图；测试与宿主订阅用，缓冲归 session 拥有） */
+  get combatEvents(): readonly CombatEvent[] {
+    return this.combatEventBuf;
+  }
+
+  private readonly combatEventBuf: CombatEvent[] = [];
+
+  /** 槽位 → characterId（事件/诊断用；defId 查表） */
+  private characterIdOf(slot: number): string {
+    const stats = this.defIdToStats.get(this.tbl.defId[slot]!);
+    return stats?.id ?? `slot#${slot}`;
+  }
+
+  /**
+   * 设定玩家移动输入。
    *
    * 这是**固定 tick 输入消费**的唯一入口（复审 #7）：宿主把虚拟摇杆的真实输入
    * 转成约定的运行输入（一个向量），runtime 每个固定步消费一次 —— 跟 NPC 一样
@@ -499,6 +583,7 @@ export class RuntimeSession {
     this.diags.length = 0;
     this.diagSeen.clear();
     this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
+    this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
@@ -530,6 +615,9 @@ export class RuntimeSession {
     // 玩家速度来自真源；是否移动只由**输入**决定，没有输入就是 0 位移
     this.table.maxSpeed[i] = stats.moveSpeed;
     this.table.behavior[i] = BEHAVIOR_IDLE;
+    // P5：血量真源（stats.player.hp，C1 落的真源链）
+    this.table.maxHp[i] = stats.hp;
+    this.table.health[i] = stats.hp;
   }
 
   /**
@@ -598,6 +686,9 @@ export class RuntimeSession {
       this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
       this.table.targetEntity[i] = this.playerId;
       this.table.behavior[i] = BEHAVIOR_CHASE;
+      // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
+      this.table.maxHp[i] = stats.hp;
+      this.table.health[i] = stats.hp;
       this.kindOf[i] = 1;
       this.sourceOf[i] = s.nodeId;
       made++;

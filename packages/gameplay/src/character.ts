@@ -114,8 +114,22 @@ export class CharacterTable {
   readonly animPhaseOffset: Float32Array;
   readonly lodTier: Uint8Array;
 
+  /**
+   * 血量（P5 战斗内核，docs/23 §2.1）。🔴 复用既有列作为真实血量 —— 伤害只准走
+   * RuntimeSession.applyDamage 单入口，任何路径直写本列都会漏掉击杀统计/受击
+   * 高亮/事件派发（审计灾难）。alloc 置 0（占位假血量会掩盖漏初始化），
+   * spawn 路径按 stats.hp 写真值。
+   */
   readonly health: Float32Array;
+  /** 血量上限（stats.hp 真源）；health 复用后的配套列 */
+  readonly maxHp: Float32Array;
+  /** 受击高亮剩余秒（渲染层消费，[PLACEHOLDER 0.15] docs/23 §2.1） */
+  readonly hitFlash: Float32Array;
+  /** 前摇剩余秒（>0 = 蓄力中；Montage 落地前的临时实现，见 docs/23 §2.1a） */
+  readonly windupRemain: Float32Array;
+  /** 保留闲置：霸体/削韧挂载点（GDD 硬核项②，本期不消费不删） */
   readonly poise: Float32Array;
+  /** 攻击 CD 到点时刻（秒，按会话时钟 = tick×fixedStep；docs/23 §2.1 复用裁决） */
   readonly cooldownUntil: Float32Array;
 
   private readonly freeList: Int32Array;
@@ -152,6 +166,9 @@ export class CharacterTable {
     this.animPhaseOffset = new Float32Array(capacity);
     this.lodTier = new Uint8Array(capacity);
     this.health = new Float32Array(capacity);
+    this.maxHp = new Float32Array(capacity);
+    this.hitFlash = new Float32Array(capacity);
+    this.windupRemain = new Float32Array(capacity);
     this.poise = new Float32Array(capacity);
     this.cooldownUntil = new Float32Array(capacity);
 
@@ -190,7 +207,12 @@ export class CharacterTable {
     const i = this.freeList[--this.freeTop]!;
     this.defId[i] = defId;
     this.generation[i] = this.generation[i]! + 1;
-    this.health[i] = 1;
+    // 战斗列归零（血量由 spawn 路径按 stats.hp 写真值；置 1 的旧占位会掩盖漏初始化）
+    this.health[i] = 0;
+    this.maxHp[i] = 0;
+    this.hitFlash[i] = 0;
+    this.windupRemain[i] = 0;
+    this.cooldownUntil[i] = 0;
     this.speedScale[i] = 1;
     this.animPhaseOffset[i] = hash01(i);
     this.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
@@ -239,6 +261,8 @@ export class CharacterTable {
     this.velZ[i] = 0;
     this.desiredVelX[i] = 0;
     this.desiredVelZ[i] = 0;
+    this.windupRemain[i] = 0;
+    this.hitFlash[i] = 0;
   }
 
   stats(): CharacterStats {
