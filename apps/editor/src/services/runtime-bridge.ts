@@ -9,17 +9,30 @@
  *     **一个静态槽位都不占**（MAX_OBJECTS = 64 是静态关卡的硬上限，500 只僵尸挤进去
  *     会把关卡本身挤掉）。
  *
- * 代理体（capsule）是**临时可视化**：真模型接进来后这里只换 `meshId` 对应的网格，
- * 批次与身份映射逻辑不动。
+ * 真模型（ActorLibrary，docs/20 §5）：装配好的 characterId 用真网格 + GPU 蒙皮
+ * （实例 flags bit0=1），未装配的退胶囊代理。胶囊仍是「临时可视化」——但降级
+ * 本身是**设计行为**（B-02 无 rigged 档 / 加载失败 / 远处 LOD 退档），不是待修 bug。
  */
 
 import { createCapsule } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, type CoreDynamicBatch } from '@aether/render';
+import type { ActorMesh } from './runtime-actors';
+
+/**
+ * Bridge 对装配库的全部依赖（窄接口）：只问「这个角色有没有真模型」。
+ * ActorLibrary 是正式实现；测试用手搓桩，不需要真 GLB / fetch。
+ */
+export interface ActorSource {
+  get(characterId: string): ActorMesh | null;
+}
 
 /** 实例的 CPU 端打包宽度（float），与 CoreDynamicBatch 契约一致 */
 const F = DYNAMIC_INSTANCE_FLOATS;
+
+/** 实例 flags：bit0 = 蒙皮（docs/20 §3.1；0 = 胶囊代理走老路径） */
+const FLAG_SKINNED = 1;
 
 /**
  * 代理体配色。**不是真源**——等真模型接进来后由材质决定，这里只为了让不同 NPC
@@ -113,19 +126,29 @@ interface BatchSlot {
   meshId: string;
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
+  /** 蒙皮顶点数据；胶囊代理为 null（core 上传全零 skin slot 占位） */
+  skin: { joints: Uint16Array; weights: Float32Array } | null;
   instances: Float32Array<ArrayBuffer>;
   count: number;
+  /** 该槽已装配的真模型（null = 胶囊槽）；实例打包要用 paletteBase / flags */
+  actor: ActorMesh | null;
   /** 与 instances 行号一一对应的实体视图，选中反查用 */
   entities: EntityView[];
 }
 
 export class RuntimeBridge {
   private session: RuntimeSession | null = null;
-  /** 按 characterId 分组的批次（网格尺寸不同 → 不同 meshId） */
+  /** 真角色装配库（null = 纯胶囊模式，Node 测试 / 资产缺失时） */
+  private readonly actors: ActorSource | null;
+  /** 按 characterId 分组的批次（网格不同 → 不同 meshId） */
   private readonly slots = new Map<string, BatchSlot>();
 
   /** 当前选中的实体（runId + id + generation 才是操作引用，跨代次必然失效） */
   private selected: { id: number; generation: number; runId: number } | null = null;
+
+  constructor(actors: ActorSource | null = null) {
+    this.actors = actors;
+  }
 
   get active(): boolean {
     return this.session !== null;
@@ -180,12 +203,24 @@ export class RuntimeBridge {
         meshId: s.meshId,
         vertices: s.vertices,
         indices: s.indices,
+        skin: s.skin,
         instances: s.instances,
         count: s.count,
         outline: true,
       });
     }
     return out.length > 0 ? out : null;
+  }
+
+  /**
+   * ActorLibrary 注册了新角色后调用：作废全部网格槽缓存，让下一次 rebuild
+   * 用真模型网格重建（Play 期异步加载完成 → 胶囊原地换真模型）。
+   * 只清 CPU 槽位；旧胶囊的 GPU buffer 仍留在 core 的 dynamicMeshes 缓存里
+   * （Play 期与真模型并存，几十 KB 一次性开销，Stop 时统一释放）。
+   */
+  notifyActorsChanged(): void {
+    this.slots.clear();
+    if (this.session !== null) this.rebuildSlots();
   }
 
   /**
@@ -247,8 +282,9 @@ export class RuntimeBridge {
   /**
    * 把实体视图按 characterId 分组成实例批次。
    *
-   * 网格按 (radius, height) 生成并缓存：`meshId` 带参数，改体型即换 key，
-   * core 侧按需上传一次，之后每帧只重传实例数组。
+   * 装配了真模型的角色用 `actor:<id>` 网格 + 蒙皮实例（flags bit0=1，paletteBase /
+   * poseIndex 指向烘焙调色板）；未装配的走胶囊（`capsule:r…:h…`，按体型缓存，
+   * 改体型即换 key，core 侧按需上传一次，之后每帧只重传实例数组）。
    */
   private rebuildSlots(): void {
     // 只清实体列表，**不 clear() slots**：网格（vertices/indices）缓存要留着，
@@ -264,17 +300,34 @@ export class RuntimeBridge {
       const key = e.characterId;
       let slot = this.slots.get(key);
       if (slot === undefined) {
-        const meshId = `capsule:r${radius.toFixed(3)}:h${height.toFixed(3)}`;
-        // 胶囊中心在原点，总高 = cylinderHeight + 2*radius
-        const mesh = createCapsule(radius, Math.max(0.01, height - 2 * radius), 16, 6);
-        slot = {
-          meshId,
-          vertices: mesh.vertices,
-          indices: mesh.indices,
-          instances: new Float32Array(0),
-          count: 0,
-          entities: [],
-        };
+        const actor = this.actors?.get(e.characterId) ?? null;
+        if (actor !== null) {
+          // 真模型：meshId 换 actor 档，蒙皮数据来自装配库（数组共享，不拷贝）
+          slot = {
+            meshId: actor.meshId,
+            vertices: actor.vertices,
+            indices: actor.indices,
+            skin: { joints: actor.joints, weights: actor.weights },
+            instances: new Float32Array(0),
+            count: 0,
+            actor,
+            entities: [],
+          };
+        } else {
+          // 胶囊代理：中心在原点，总高 = cylinderHeight + 2*radius
+          const meshId = `capsule:r${radius.toFixed(3)}:h${height.toFixed(3)}`;
+          const mesh = createCapsule(radius, Math.max(0.01, height - 2 * radius), 16, 6);
+          slot = {
+            meshId,
+            vertices: mesh.vertices,
+            indices: mesh.indices,
+            skin: null,
+            instances: new Float32Array(0),
+            count: 0,
+            actor: null,
+            entities: [],
+          };
+        }
         this.slots.set(key, slot);
       }
       slot.entities.push(e);
@@ -289,17 +342,20 @@ export class RuntimeBridge {
         const e = slot.entities[i]!;
         const stats = lookupCharacterStats(e.characterId);
         const height = stats?.capsuleHeight ?? 1.8;
+        const actor = slot.actor;
         const o = i * F;
-        // 胶囊中心在原点 → 抬到脚底之上半高，实体 (x, z) 才是它站的位置
+        // 真模型网格贴脚底（feetOffset 把 mesh 最低点抬到 y=0）；胶囊中心在
+        // 原点 → 抬到脚底之上半高。实体 (x, z) 才是它站的位置
         inst[o] = e.x;
-        inst[o + 1] = height / 2;
+        inst[o + 1] = actor !== null ? actor.feetOffset : height / 2;
         inst[o + 2] = e.z;
         inst[o + 3] = e.yaw;
-        // 网格已按真尺寸生成，缩放恒为 1（改体型走换 meshId，不走缩放）
+        // 网格已按真尺寸生成（胶囊按体型、真模型按资产），缩放恒为 1
         inst[o + 4] = 1;
         inst[o + 5] = 1;
         inst[o + 6] = 1;
-        inst[o + 7] = 0;
+        // [7] paletteBase：真模型 = 该角色在总调色板里的起始 pose；胶囊无蒙皮恒 0
+        inst[o + 7] = actor !== null ? actor.paletteBase : 0;
         const base = PROXY_COLORS[e.characterId] ?? FALLBACK_COLOR;
         // 选中 = 提亮。没有第二套高亮管线，成本最低且不会误伤静态关卡的高亮层。
         // 🔴 必须三代同检：reset() 后 runId 变了，但槽位 id 与 generation 会被复用，
@@ -310,7 +366,13 @@ export class RuntimeBridge {
         inst[o + 8] = base[0] * k;
         inst[o + 9] = base[1] * k;
         inst[o + 10] = base[2] * k;
-        inst[o + 11] = 0;
+        // [11] poseIndex（相对 paletteBase）：M2 固定 bind pose；M3 由 tick 推 phase 取帧
+        inst[o + 11] = actor !== null ? actor.restPose : 0;
+        // [12..15] clipFrameCount / phase01 / flags / pad（flags bit0 = 是否蒙皮）
+        inst[o + 12] = 0;
+        inst[o + 13] = 0;
+        inst[o + 14] = actor !== null ? FLAG_SKINNED : 0;
+        inst[o + 15] = 0;
       }
       slot.count = n;
     }

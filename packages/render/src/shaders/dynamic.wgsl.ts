@@ -13,14 +13,29 @@ import { COMMON_WGSL } from './common.wgsl';
  *   - 仍然画在 pass 1 的同一 MRT + 同一 depth 上 —— 于是自动参与 toon 分阶、
  *     雾、bloom / tonemap / 半调等全部后处理，与静态关卡视觉一致。
  *
- * 单一 bind group：0 Frame  1 Lights  2 Toon  3 Instances。
- * 顶点布局复用 `@aether/scene` 的 VERTEX_LAYOUT（slot 0：position/normal/smoothNormal/
- * uv/color），**不接蒙皮 slot** —— 动态实体在 MVP 阶段是胶囊代理，没有骨骼。
+ * 单一 bind group：0 Frame  1 Lights  2 Toon  3 Instances  4 姿态调色板。
+ * 顶点布局：slot 0 复用 `@aether/scene` 的 VERTEX_LAYOUT（position/normal/
+ * smoothNormal/uv/color），slot 1 复用 SKIN_LAYOUT（location 5 joints(uint16×4)、
+ * location 6 weights(f32×4)）—— 与静态通道（scene.wgsl + uploadMesh）同一套
+ * 蒙皮顶点约定（docs/20 §3.3）。
+ *
+ * 蒙皮（docs/20 §2 烘焙姿态调色板）：动画在加载期逐帧烘进 storage 调色板，
+ * 运行期 CPU 零重算；每实例只带「播到第几帧」（poseIndex），shader 查表蒙皮。
+ * flags bit0 = 0 的实例（未加载到真模型的 characterId）走胶囊代理老路，
+ * 顶点缓冲仍是全零的 skin slot —— 管线声明了 slot 1 就必须绑，哪怕不读。
  *
  * 实例数组由 CPU 端按 `DYNAMIC_INSTANCE_FLOATS` 打包（见 renderer-core.ts）。
  */
 export const DYNAMIC_WGSL = /* wgsl */ `
 ${COMMON_WGSL}
+
+/**
+ * 调色板每个 pose 的关节矩阵数 = 22 根蒙皮骨 + 末尾恒等关节（skin.ts 约定）。
+ * 与 _tools/humanik_skeleton.json / pose-palette.ts 的 jointCount 同源；
+ * 将来换骨架要同步改三处（ADR 索引对齐铁律）。装配侧加载时不符的角色
+ * 一律退回胶囊（flags bit0 = 0），不进调色板。
+ */
+const PALETTE_JOINT_COUNT = 23u;
 
 struct Frame {
   viewProj : mat4x4f,
@@ -51,17 +66,24 @@ struct Toon {
   flags : vec4f,
 };
 
-/** 一个动态实例：位置 + 朝向 + 缩放 + 颜色，共 48 B（12 float） */
+/**
+ * 一个动态实例：位置 + 朝向 + 缩放 + 颜色 + 蒙皮状态，共 64 B（16 float）。
+ * 布局与 docs/20 §3.1、renderer-core.ts 的 DYNAMIC_INSTANCE_FLOATS 一一对应，
+ * 改一边必须改另一边（三处同步：本文件 / renderer-core.ts / runtime-bridge.ts）。
+ */
 struct DInst {
-  posYaw : vec4f,
-  scale : vec4f,
-  color : vec4f,
+  posYaw : vec4f,   // posX, posY, posZ, yaw(弧度)
+  scale : vec4f,    // scaleX, scaleY, scaleZ, paletteBase(该角色在总调色板里的起始 pose)
+  color : vec4f,    // albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
+  anim : vec4f,     // clipFrameCount(信息位), phase01, flags(bit0=蒙皮), (pad)
 };
 
 @group(0) @binding(0) var<uniform> frame : Frame;
 @group(0) @binding(1) var<uniform> lights : Lights;
 @group(0) @binding(2) var<uniform> toon : Toon;
 @group(0) @binding(3) var<storage, read> inst : array<DInst>;
+/** 烘焙姿态调色板：[(paletteBase + poseIndex) * PALETTE_JOINT_COUNT + joint] 的 mat4 */
+@group(0) @binding(4) var<storage, read> palette : array<mat4x4f>;
 
 struct VSOut {
   @builtin(position) clip : vec4f,
@@ -86,19 +108,60 @@ fn place(i : DInst, p : vec3f) -> vec3f {
   return i.posYaw.xyz + rotated;
 }
 
+/**
+ * 蒙皮顶点位置（docs/20 §4）：4 权重各自过关节矩阵再累加（与静态通道
+ * scene.wgsl 的 skinMatrix 同一数学，只是矩阵来自烘焙调色板而非每帧上传）。
+ * flags bit0 = 0（胶囊代理 / 真模型未加载）原样返回 —— 这就是降级路径。
+ */
+fn skinPos(i : DInst, p : vec3f, joints : vec4u, w : vec4f) -> vec3f {
+  if ((u32(i.anim.z) & 1u) == 0u) { return p; }
+  let base = u32(i.scale.w) + u32(i.color.w);
+  var acc = vec3f(0.0);
+  for (var k = 0u; k < 4u; k = k + 1u) {
+    let wi = w[k];
+    if (wi <= 0.0) { continue; }
+    let m = palette[base * PALETTE_JOINT_COUNT + joints[k]];
+    acc = acc + wi * (m * vec4f(p, 1.0)).xyz;
+  }
+  return acc;
+}
+
+/**
+ * 蒙皮方向向量（法线 / smoothNormal）：与 skinPos 同一套权重，取矩阵的
+ * 线性部分（w=0）变换方向。蒙皮矩阵含非均匀缩放时严格做法是逆转置，
+ * 但骨架缩放接近均匀，混合后 normalize 的误差远小于 1 像素 —— 与静态通道
+ * scene.wgsl 的处理一致，不另算逆转置。
+ */
+fn skinDir(i : DInst, d : vec3f, joints : vec4u, w : vec4f) -> vec3f {
+  if ((u32(i.anim.z) & 1u) == 0u) { return d; }
+  let base = u32(i.scale.w) + u32(i.color.w);
+  var acc = vec3f(0.0);
+  for (var k = 0u; k < 4u; k = k + 1u) {
+    let wi = w[k];
+    if (wi <= 0.0) { continue; }
+    let m = palette[base * PALETTE_JOINT_COUNT + joints[k]];
+    acc = acc + wi * (m * vec4f(d, 0.0)).xyz;
+  }
+  return acc;
+}
+
 @vertex
 fn vs_main(
   @location(0) position : vec3f,
   @location(1) normal : vec3f,
+  @location(5) joints : vec4u,
+  @location(6) weights : vec4f,
   @builtin(instance_index) ii : u32,
 ) -> VSOut {
   let i = inst[ii];
   var out : VSOut;
-  let worldPos = place(i, position);
+  // 先蒙皮再放置：蒙皮在「实例本地空间」做（调色板矩阵已是模型空间），
+  // place() 的 yaw/缩放/平移随后叠加 —— 与静态通道「蒙皮矩阵 → 世界矩阵」同序
+  let worldPos = place(i, skinPos(i, position, joints, weights));
   out.worldPos = worldPos;
   // 非均匀缩放下的正确法线要乘逆转置；这里缩放只来自「胶囊半径 / 身高」两个标量，
   // 直接除以缩放再归一化就够（且能自动处理负值退化）
-  let n = normalize(normal / max(vec3f(1e-4), abs(i.scale.xyz)));
+  let n = normalize(skinDir(i, normal, joints, weights) / max(vec3f(1e-4), abs(i.scale.xyz)));
   let c = cos(i.posYaw.w);
   let s = sin(i.posYaw.w);
   out.normal = normalize(vec3f(n.x * c + n.z * s, n.y, -n.x * s + n.z * c));
@@ -112,15 +175,18 @@ fn vs_outline(
   @location(0) position : vec3f,
   @location(1) normal : vec3f,
   @location(2) smoothNormal : vec3f,
+  @location(5) joints : vec4u,
+  @location(6) weights : vec4f,
   @builtin(instance_index) ii : u32,
 ) -> VSOut {
   let i = inst[ii];
   var out : VSOut;
-  let worldPos = place(i, position);
+  let worldPos = place(i, skinPos(i, position, joints, weights));
 
   // 与 scene.wgsl 的 vs_outline 同理由：外扩必须用 smoothNormal，
-  // 硬边几何的着色法线在棱角处不连续，拿去外扩会让描边裂开
-  let n0 = normalize(smoothNormal / max(vec3f(1e-4), abs(i.scale.xyz)));
+  // 硬边几何的着色法线在棱角处不连续，拿去外扩会让描边裂开。
+  // smoothNormal 与 position 同过蒙皮（docs/20 §4：描边壳跟着姿态走）
+  let n0 = normalize(skinDir(i, smoothNormal, joints, weights) / max(vec3f(1e-4), abs(i.scale.xyz)));
   let c = cos(i.posYaw.w);
   let s = sin(i.posYaw.w);
   let n = normalize(vec3f(n0.x * c + n0.z * s, n0.y, -n0.x * s + n0.z * c));

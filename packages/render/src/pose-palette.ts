@@ -29,12 +29,13 @@ import { createSkinState, evalJointMatrices } from './skin';
 export const PALETTE_SAMPLE_FPS = 24;
 
 export interface BakedPalette {
-  /** 关节数（含末尾恒等关节，与 skeleton.joints.length 一致） */
+  /** 关节数 = skeleton.joints.length + 1（末尾恒等关节，与 skin.ts 求值输出一致） */
   jointCount: number;
   /** 每个 clip 的帧数与时长 */
   clips: { name: string; frameCount: number; durationSec: number }[];
   /**
-   * 姿态矩阵序列，行主展开：pose p 的关节 j 在
+   * 姿态矩阵序列，**列主**展开（evalJointMatrices 的输出主序，WGSL mat4x4f
+   * 内存布局恰为列主，shader 可直接索引）：pose p 的关节 j 在
    * `(p * jointCount + j) * 16`。总长 = ΣframeCount × jointCount × 16。
    */
   data: Float32Array;
