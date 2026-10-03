@@ -466,3 +466,56 @@ describe('TransformEdit —— 旋转（四元数）必须能持久化', () => {
     expect(formatAuthorEdit(r.edit!)).toContain('旋转');
   });
 });
+
+describe('Transform command exact history', () => {
+  it('uniform scale from nonuniform scale restores every axis, including scalar-equal first axis', () => {
+    const doc = fixture();
+    const id = doc.nodes[0]!.id;
+    doc.nodes[0]!.transform.scale = [1, 2, 3];
+    const store = new SpawnEditStore(doc);
+    expect(store.setTransform(id, { scale: 1 }).ok).toBe(true);
+    expect(findNode(store.document, id)!.transform.scale).toEqual([1, 1, 1]);
+    store.undo();
+    expect(store.document).toEqual(doc);
+    expect(store.dirty).toBe(false);
+    store.redo();
+    expect(findNode(store.document, id)!.transform.scale).toEqual([1, 1, 1]);
+    store.undo();
+    expect(store.document).toEqual(doc);
+  });
+
+  it('move/rotate preserve scale and redo branches are invalidated by a new edit', () => {
+    const doc = fixture();
+    const id = doc.nodes[0]!.id;
+    doc.nodes[0]!.transform.scale = [1, 2, 3];
+    const store = new SpawnEditStore(doc);
+    store.setTransform(id, { posX: 42, rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2] });
+    expect(findNode(store.document, id)!.transform.scale).toEqual([1, 2, 3]);
+    store.undo();
+    expect(store.redoDepth).toBe(1);
+    store.setTransform(id, { posZ: 17 });
+    expect(store.redo()).toBeNull();
+  });
+
+  it('redo during save receives a fresh identity and remains undoable', () => {
+    const store = new SpawnEditStore(fixture());
+    const id = store.document.nodes[0]!.id;
+    store.setTransform(id, { scale: 2 });
+    const snapshot = store.beginSave();
+    store.undo();
+    const redo = store.redo()!;
+    expect(redo.id).toBeGreaterThan(snapshot.lastEditId);
+    store.confirmSave(snapshot.doc, snapshot.lastEditId);
+    expect(store.undoDepth).toBe(1);
+    store.undo();
+    expect(store.dirty).toBe(true);
+  });
+
+  it('rejects malformed numeric fields before applying any part', () => {
+    const store = new SpawnEditStore(fixture());
+    const before = cloneDocument(store.document);
+    expect(store.setTransform(before.nodes[0]!.id, { posX: 8, scale: 'bad' } as never).ok).toBe(false);
+    expect(store.document).toEqual(before);
+    expect(store.undoDepth).toBe(0);
+  });
+});

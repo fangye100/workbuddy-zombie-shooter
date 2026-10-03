@@ -5,8 +5,8 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
+import { parseGlb, validateAssetMeta, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -18,7 +18,8 @@ import {
   formatAuthorEdit,
   findNode,
 } from '@aether/runtime';
-import type { ScatterComparison, ScatterFingerprint, TransformValues } from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import { AuthorTransformController, graphOfDoc } from './services/author-transform';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -568,6 +569,7 @@ async function boot(): Promise<void> {
       },
       state: () => ({ dirty: spawnStore?.dirty ?? false, undoDepth: spawnStore?.undoDepth ?? 0 }),
       undo: () => undoSpawnEdit(),
+      redo: () => reportAuthorTransform(authorTransform.history(true)),
     },
     /**
      * Play 控制器（P5 C5 战斗探针用）：state / outcome / session（setFire /
@@ -1005,6 +1007,7 @@ async function boot(): Promise<void> {
   let drag: DragStart | null = null;
 
   function beginGizmoDrag(hit: GizmoHit, clientX: number, clientY: number): void {
+    if (playCtl.isPlaying) return;
     const info = renderer.getGizmoInfo();
     if (info === null) return;
     const idx = renderer.getSelected();
@@ -1131,159 +1134,15 @@ async function boot(): Promise<void> {
     hudDirty = true;
   }
 
-  /** 从文档建一次图（父级世界变换的来源；几十个节点，按需建，不维护增量缓存） */
-  function graphOfDoc(doc: SceneDocument): SceneGraph {
-    const g = SceneGraph.fromDocument(doc);
-    g.updateWorldTransforms();
-    return g;
-  }
-
-  /** 节点父级的**世界**变换（根节点 → 单位变换） */
-  function parentWorldOf(graph: SceneGraph, nodeId: NodeId): TransformData | null {
-    const n = graph.getNode(nodeId);
-    if (n === null) return null;
-    if (n.parent === null) return identityTransform();
-    const p = graph.getNode(n.parent);
-    if (p === null) return identityTransform();
-    return {
-      position: [p.world.position[0], p.world.position[1], p.world.position[2]],
-      rotation: [p.world.rotation[0], p.world.rotation[1], p.world.rotation[2], p.world.rotation[3]],
-      scale: [p.world.scale[0], p.world.scale[1], p.world.scale[2]],
-    };
-  }
-
-  /** 把图里某节点的**世界**变换写进对应的渲染物体（没有对应物体时静默跳过） */
-  function pushWorldOfNode(graph: SceneGraph, nodeId: NodeId): void {
-    const idx = renderer.findObjectIndexByNodeId(nodeId);
-    if (idx === null) return;
-    const n = graph.getNode(nodeId);
-    if (n === null) return;
-    renderer.setObjectPos(idx, 0, n.world.position[0]);
-    renderer.setObjectPos(idx, 1, n.world.position[1]);
-    renderer.setObjectPos(idx, 2, n.world.position[2]);
-    renderer.setObjectQuat(idx, [
-      n.world.rotation[0], n.world.rotation[1], n.world.rotation[2], n.world.rotation[3],
-    ]);
-    renderer.setObjectScale(idx, n.world.scale[0]);
-  }
-
-  /**
-   * 文档 → 视口：把某节点**及其整棵子树**的世界变换写回渲染物体。
-   *
-   * 子树必须一起推：视口物体是**扁平**的，每个物体一份世界变换；而文档是层级 ——
-   * 拖父节点时（act1 的 `nd_f1r0` / `nd_f1r2` 各有 6 个可渲染子节点）子物体在文档里
-   * 跟着走，视口里却留在原地，松手/保存/Play 之后才跳过去（codex 评审 P1）。
-   * YAGNI 说明：不做整体重建 —— 重建会销毁并重传全部 GPU 资源、丢选中态与相机。
-   */
-  function pushSubtreeToView(graph: SceneGraph, nodeId: NodeId): void {
-    pushWorldOfNode(graph, nodeId);
-    for (const d of graph.descendantsOf(nodeId)) pushWorldOfNode(graph, d);
-  }
-
-  /**
-   * 拖拽**进行中**把子树同步到视口。
-   *
-   * 用拖拽开始时缓存的文档图（`d.docGraph`）逐帧重算：先把被拖节点的当前世界量反解成
-   * 局部量写进图，再 `updateWorldTransforms()`，然后推子树。逐帧成本 = 节点数（几十）。
-   * 不这么做的话，拖父节点期间子物体不动，只有松手才跟上 —— 正是"视口与文档不一致"。
-   */
   function pushDraggedSubtree(d: DragStart): void {
-    const g = d.docGraph;
-    const id = d.docNodeId;
-    if (g === null || id === null) return;
-    const st = renderer.getObjectState(d.objIndex);
-    const q = renderer.getObjectQuat(d.objIndex);
-    const parentWorld = parentWorldOf(g, id);
-    if (st === null || q === null || parentWorld === null) return;
-    const local = worldToLocalTransform(
-      parentWorld,
-      {
-        position: [st.pos[0], st.pos[1], st.pos[2]],
-        rotation: [q[0], q[1], q[2], q[3]],
-        scale: [st.scale, st.scale, st.scale],
-      },
-      identityTransform(),
-    );
-    if (local === null) return;
-    g.setLocalTransform(id, {
-      position: local.position,
-      rotation: local.rotation,
-      scale: local.scale,
-    });
-    g.updateWorldTransforms();
-    for (const child of g.descendantsOf(id)) pushWorldOfNode(g, child);
+    if (d.docGraph !== null && d.docNodeId !== null) {
+      authorTransform.preview(d.docGraph, d.docNodeId, d.objIndex, d.mode);
+    }
   }
 
-  /**
-   * gizmo 拖拽收尾：把渲染物体的**世界**变换换算成**局部**变换写回场景文档。
-   *
-   * 复审 B1 的修复本体。过去这里什么都不做：拖完点保存不落盘、点 Play 也看不见
-   * （文档里还是旧位置）—— 那是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。
-   * 现在走 `SpawnEditStore.setTransform`：一条拖拽 = 一条可撤销编辑，保存范围
-   * （`changedPaths`）自动包含它，Play 读同一份文档于是立刻生效。
-   *
-   * 🔴 旋转必须与位置/缩放一起写：`TransformValues` 的标量分量只覆盖位置与统一缩放，
-   * 纯旋转拖拽时位置/缩放都没变。曾经这里只写位置+缩放 → 旋转被丢弃，纯旋转既不进
-   * 撤销栈也不落盘（codex / Copilot 评审 P1）。
-   */
+  /** One drag produces one author command; transient renderer changes are only previews. */
   function commitGizmoTransform(d: DragStart): void {
-    const store = spawnStore;
-    if (store === null) return;
-    const idx = d.objIndex;
-    const nodeId = renderer.getObjectNodeId(idx);
-    const st = renderer.getObjectState(idx);
-    const q = renderer.getObjectQuat(idx);
-    if (nodeId === null || st === null || q === null) {
-      // 兜底场景与拖入的资产模型没有文档来源：明确说清"存不了"，而不是静默丢弃
-      spawnMsg = {
-        text: '该物体不属于场景文档（兜底场景或拖入的资产模型），变换不会被保存',
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const parentWorld = parentWorldOf(graphOfDoc(store.document), nodeId);
-    if (parentWorld === null) {
-      spawnMsg = { text: `场景文档里找不到父级链（节点 ${nodeId}），变换未写回`, kind: 'warn' };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const world: TransformData = {
-      position: [st.pos[0], st.pos[1], st.pos[2]],
-      rotation: [q[0], q[1], q[2], q[3]],
-      scale: [st.scale, st.scale, st.scale],
-    };
-    const local = worldToLocalTransform(parentWorld, world, identityTransform());
-    if (local === null) {
-      // 父级缩放含 0 → 世界量反解不出局部量。宁可拒绝也不写一个错变换进文件
-      spawnMsg = { text: '父级缩放为 0，无法把世界变换换算成局部变换：请先修正父节点缩放', kind: 'warn' };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const to: TransformValues = {
-      posX: local.position[0],
-      posY: local.position[1],
-      posZ: local.position[2],
-      scale: local.scale[0],
-      // 旋转与位置/缩放一起提交（纯旋转拖拽时标量分量都没变，漏了它就整条编辑丢失）
-      rotation: [local.rotation[0], local.rotation[1], local.rotation[2], local.rotation[3]],
-    };
-    // 拖回原处（或只点了一下手柄没真动）→ 不进撤销栈、不弹提示。
-    // 交给 store.setTransform 自己判定"值没变化"（它按 |四元数点积| 比旋转，q 与 −q
-    // 是同一姿态，逐分量比会把"转一圈回到原处"误报成一次编辑）。
-    const r = store.setTransform(nodeId, to);
-    if (r.ok) {
-      spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(r.edit!)}（↶ 撤销 可回退）`, kind: 'ok' };
-    } else if (r.error !== '值没有变化') {
-      spawnMsg = { text: r.error ?? '变换写回被拒绝', kind: 'warn' };
-    } else {
-      return; // 没真动：不刷面板、不提示
-    }
-    refreshSpawnPanel();
-    hudDirty = true;
+    reportAuthorTransform(authorTransform.gizmo(d.objIndex, d.mode));
   }
 
   function endGizmoDrag(): void {
@@ -1364,6 +1223,19 @@ async function boot(): Promise<void> {
   // =====================================================================
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
+  panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
+  panel.onAuthorUndo = () => undoSpawnEdit();
+  panel.onAuthorRedo = () => reportAuthorTransform(authorTransform.history(true));
+  panel.onAuthorSave = () => void saveSpawnEdits();
+
+  function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
+    if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
+    else if (result.error !== '值没有变化') spawnMsg = { text: result.error ?? '变换被拒绝', kind: 'warn' };
+    panel.syncSelectionFromRenderer(true);
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
   let selectedSpawnNode: string | null = null;
   /** 刷怪点功能体被显式选中（层级行 / 面板列表 / Play 实体）。分组显隐只认它，
    *  selectedSpawnNode 的「自动选第一个」不再连带显示（那等于变相常驻） */
@@ -1467,7 +1339,7 @@ async function boot(): Promise<void> {
 
   function editSpawnField(field: 'radius' | 'count', value: number): void {
     const store = spawnStore;
-    if (store === null || selectedSpawnNode === null) return;
+    if (store === null || selectedSpawnNode === null || playCtl.isPlaying) return;
     const seed = playCtl.session.seed;
     // A = 编辑前的同种子指纹；改完再抓一次 B。只展示"改后"看不出改动到底生没生效
     // （房间还没进 → 一个都没刷，params 变了但画面纹丝不动，作者会以为没保存）
@@ -1495,19 +1367,12 @@ async function boot(): Promise<void> {
   function undoSpawnEdit(): void {
     const store = spawnStore;
     if (store === null) return;
-    const undone = store.undo();
+    const undone = authorTransform.history().edit;
     if (undone === null) return;
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
     if (spawnAb !== null) {
       const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
       spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
-    }
-    // 变换编辑撤销后必须把视口也退回去：文档是唯一真源，但渲染物体是另一份表示，
-    // 不主动回写就会出现「文档已退、画面还留着」（复审 B1）。**连同子树**一起回写 ——
-    // 撤销父节点编辑时子物体在文档里也退回去了，视口不同步就会留下"错位的子物体"。
-    if (undone.kind === 'transform') {
-      const store2 = spawnStore;
-      if (store2 !== null) pushSubtreeToView(graphOfDoc(store2.document), undone.nodeId);
     }
     spawnMsg = { text: `已撤销：${formatAuthorEdit(undone)}`, kind: 'ok' };
     refreshSpawnPanel();
@@ -1701,6 +1566,8 @@ async function boot(): Promise<void> {
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
+    panel.setAuthorState(spawnStore?.dirty ?? false, spawnStore?.undoDepth ?? 0,
+      spawnStore?.redoDepth ?? 0, playCtl.isPlaying, spawnMsg?.text ?? null);
     if (spawnPanel === null) return;
     const store = spawnStore;
     const doc = store?.document ?? null;
@@ -1805,9 +1672,10 @@ async function boot(): Promise<void> {
       },
       edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
       undo: () => undoSpawnEdit(),
+      redo: () => reportAuthorTransform(authorTransform.history(true)),
       /** 全部撤回（不提交）。此前只有 API 没有任何入口 —— 探针/用户都到不了 */
       revertAll: () => {
-        spawnStore?.revertAll();
+        while (authorTransform.history().ok) { /* project each author inverse */ }
         refreshSpawnPanel();
         hudDirty = true;
       },
@@ -1960,6 +1828,16 @@ async function boot(): Promise<void> {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
+      e.preventDefault();
+      reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && k === 's') {
+      e.preventDefault();
+      void saveSpawnEdits();
+      return;
+    }
 
     // ---- 自由相机优先接管 ----
     // 必须在 PLAY_KEYS 与 gizmo 的 W/E/R 之前：飞行时 W 是"往前飞"而不是"切移动工具"，

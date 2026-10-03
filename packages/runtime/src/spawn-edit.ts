@@ -82,6 +82,8 @@ export const TRANSFORM_SCALE_MAX = 100;
 
 /** 逐分量的目标值。键集合 = 本次实际改动的分量（键不在 = 不动那个分量） */
 export type TransformValues = Partial<Record<TransformField, number>> & {
+  /** Exact scale used by command snapshots; scalar `scale` remains the public uniform operation. */
+  scale3?: readonly [number, number, number];
   /**
    * 旋转**真源是四元数**（不拆欧拉角：拆成三个分量会引入万向锁与「三分量各自独立」的假象）。
    * 分量级命令只覆盖位置/缩放；旋转整条一起写。
@@ -109,6 +111,37 @@ function numericOf(v: TransformValues): [TransformField, number][] {
     out.push([k as TransformField, x]);
   }
   return out;
+}
+
+function validateTransformValues(v: TransformValues, snapshot = false): string | null {
+  for (const [key, value] of Object.entries(v)) {
+    if (key === 'rotation') {
+      if (!Array.isArray(value)) return '旋转四元数必须是数组';
+      const err = validateQuat(value);
+      if (err !== null) return err;
+    } else if (key === 'scale3') {
+      if (!Array.isArray(value) || value.length !== 3) return '缩放必须是三轴值';
+      for (const axis of value) {
+        // An inverse restores valid loaded data even outside the author tool's input range.
+        if (snapshot && typeof axis === 'number' && Number.isFinite(axis)) continue;
+        const err = validateTransformValue('scale', axis);
+        if (err !== null) return err;
+      }
+    } else if (key === 'posX' || key === 'posY' || key === 'posZ' || key === 'scale') {
+      const err = validateTransformValue(key, value as number);
+      if (err !== null) return err;
+    } else return `不支持的变换字段：${key}`;
+  }
+  if (v.scale !== undefined && v.scale3 !== undefined) return '不能同时指定统一缩放与三轴缩放';
+  return null;
+}
+
+function copyTransformValues(v: TransformValues): TransformValues {
+  return {
+    ...v,
+    ...(v.rotation === undefined ? {} : { rotation: [...v.rotation] as [number, number, number, number] }),
+    ...(v.scale3 === undefined ? {} : { scale3: [...v.scale3] as [number, number, number] }),
+  };
 }
 
 /** 同一旋转的判据：q 与 −q 表示同一姿态，所以比 |点积| 而不是逐分量相等 */
@@ -329,14 +362,8 @@ export function applyTransformEdit(doc: SceneDocument, edit: TransformEdit): Edi
   const n = findNode(doc, edit.nodeId);
   if (n === null) return { ok: false, error: `场景里找不到节点 ${edit.nodeId}`, edit: null };
   const nums = numericOf(edit.to);
-  for (const [f, v] of nums) {
-    const err = validateTransformValue(f, v);
-    if (err !== null) return { ok: false, error: err, edit: null };
-  }
-  if (edit.to.rotation !== undefined) {
-    const err = validateQuat(edit.to.rotation);
-    if (err !== null) return { ok: false, error: err, edit: null };
-  }
+  const err = validateTransformValues(edit.to, true);
+  if (err !== null) return { ok: false, error: err, edit: null };
   for (const [f, v] of nums) {
     if (f === 'scale') {
       n.transform.scale = [v, v, v];
@@ -345,6 +372,7 @@ export function applyTransformEdit(doc: SceneDocument, edit: TransformEdit): Edi
       n.transform.position[axis] = v;
     }
   }
+  if (edit.to.scale3 !== undefined) n.transform.scale = [...edit.to.scale3];
   if (edit.to.rotation !== undefined) {
     const r = edit.to.rotation;
     n.transform.rotation = [r[0], r[1], r[2], r[3]];
@@ -400,6 +428,7 @@ export class SpawnEditStore {
   private committed: SceneDocument;
   private working: SceneDocument;
   private readonly undoStack: AuthorEdit[] = [];
+  private readonly redoStack: AuthorEdit[] = [];
   /** 编辑身份计数器。确认保存范围用它（复审 P2：栈长在"撤销+再编辑"下会骗人） */
   private nextEditId = 1;
 
@@ -433,6 +462,8 @@ export class SpawnEditStore {
     return this.undoStack.length;
   }
 
+  get redoDepth(): number { return this.redoStack.length; }
+
   /** 最近一次编辑（面板上显示"刚改了什么"） */
   get lastEdit(): AuthorEdit | null {
     return this.undoStack.length > 0 ? this.undoStack[this.undoStack.length - 1]! : null;
@@ -458,6 +489,7 @@ export class SpawnEditStore {
     const r = applySpawnEdit(this.working, edit);
     if (!r.ok) return r;
     this.undoStack.push(edit);
+    this.redoStack.length = 0;
     return { ok: true, error: null, edit };
   }
 
@@ -472,7 +504,9 @@ export class SpawnEditStore {
     const n = findNode(this.working, nodeId);
     if (n === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
     const nums = numericOf(to);
-    if (nums.length === 0 && to.rotation === undefined) {
+    const err = validateTransformValues(to);
+    if (err !== null) return { ok: false, error: err, edit: null };
+    if (nums.length === 0 && to.rotation === undefined && to.scale3 === undefined) {
       return { ok: false, error: '没有任何分量要写入', edit: null };
     }
     for (const [f, v] of nums) {
@@ -487,20 +521,25 @@ export class SpawnEditStore {
     for (const [f] of nums) {
       const cur = readTransformField(this.working, nodeId, f);
       if (cur === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
-      from[f] = cur;
+      if (f === 'scale') from.scale3 = [...n.transform.scale];
+      else from[f] = cur;
     }
+    if (to.scale3 !== undefined) from.scale3 = [...n.transform.scale];
     if (to.rotation !== undefined) {
       const r = n.transform.rotation;
       from.rotation = [r[0], r[1], r[2], r[3]];
     }
     // 无变化：标量逐位比较；旋转按 |点积|≈1（q 与 −q 是同一姿态）
-    const sameNums = nums.every(([f, v]) => Object.is(from[f], v));
+    const sameNums = nums.every(([f, v]) => f === 'scale'
+      ? n.transform.scale.every((axis) => Object.is(axis, v)) : Object.is(from[f], v));
+    const sameScale = to.scale3 === undefined || to.scale3.every((v, axis) => Object.is(n.transform.scale[axis], v));
     const sameRot = to.rotation === undefined || sameRotation(from.rotation!, to.rotation);
-    if (sameNums && sameRot) return { ok: false, error: '值没有变化', edit: null };
-    const edit: TransformEdit = { kind: 'transform', id: this.nextEditId++, nodeId, from, to: { ...to } };
+    if (sameNums && sameRot && sameScale) return { ok: false, error: '值没有变化', edit: null };
+    const edit: TransformEdit = { kind: 'transform', id: this.nextEditId++, nodeId, from, to: copyTransformValues(to) };
     const r = applyTransformEdit(this.working, edit);
     if (!r.ok) return r;
     this.undoStack.push(edit);
+    this.redoStack.length = 0;
     return { ok: true, error: null, edit };
   }
 
@@ -509,7 +548,19 @@ export class SpawnEditStore {
     const e = this.undoStack.pop();
     if (e === undefined) return null;
     applyAuthorEdit(this.working, invertAuthorEdit(e));
+    this.redoStack.push(e);
     return e;
+  }
+
+  /** Redo is a new edit identity, so an in-flight save cannot confirm an unsaved redo. */
+  redo(): AuthorEdit | null {
+    const previous = this.redoStack.pop();
+    if (previous === undefined) return null;
+    const edit = { ...previous, id: this.nextEditId++ };
+    const result = applyAuthorEdit(this.working, edit);
+    if (!result.ok) { this.redoStack.push(previous); return null; }
+    this.undoStack.push(edit);
+    return edit;
   }
 
   /** 全部撤回（不提交）。返回撤了几步 */
@@ -554,5 +605,6 @@ export class SpawnEditStore {
     this.committed = cloneDocument(doc);
     this.working = cloneDocument(doc);
     this.undoStack.length = 0;
+    this.redoStack.length = 0;
   }
 }
