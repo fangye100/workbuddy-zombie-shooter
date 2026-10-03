@@ -21,6 +21,7 @@ Token 通过 stdin 管道传入（--token-stdin），不出现在命令行 / 进
 
 import argparse
 import base64
+import glob
 import importlib.util
 import json
 import os
@@ -28,12 +29,42 @@ import sys
 import time
 import urllib.parse
 
-BUDDY_CLOUD = r"C:\Program Files\WorkBuddy\resources\app.asar.unpacked\resources\plugins\workbuddy-builtin\skills\buddy-multimodal-generation\scripts\buddy-cloud.py"
+# 🔴 客户端脚本的位置随 WorkBuddy 版本变化，且旧名 buddy-cloud.py 在新版本里已被
+#    重命名为 buddy-multimodal-generation.py —— 硬编码单条路径会让整条管线在某次升级后
+#    无声失败（「文件不存在」而不是「功能没了」）。按候选顺序探测，并允许用
+#    BUDDY_CLOUD_PY 环境变量显式指定。
+_SKILL_SCRIPTS = [
+    r"C:\Program Files\WorkBuddy\resources\app.asar.unpacked\resources\plugins"
+    r"\workbuddy-builtin\skills\buddy-multimodal-generation\scripts",
+    os.path.expandvars(r"%USERPROFILE%\.workbuddy\plugins\marketplaces\workbuddy-builtin"
+                       r"\skills\buddy-multimodal-generation\scripts"),
+]
+BUDDY_CLOUD_CANDIDATES = (
+    ([os.environ["BUDDY_CLOUD_PY"]] if os.environ.get("BUDDY_CLOUD_PY") else [])
+    + [os.path.join(d, n) for d in _SKILL_SCRIPTS
+       for n in ("buddy-multimodal-generation.py", "buddy-cloud.py")]
+    # 插件缓存目录带版本号，兜底扫一遍
+    + sorted(glob.glob(os.path.expandvars(
+        r"%USERPROFILE%\.workbuddy\plugins\cache\workbuddy-builtin"
+        r"\skill-buddy-multimodal-generation\*\scripts\buddy-cloud.py")))
+)
+
+
+def resolve_buddy() -> str:
+    for p in BUDDY_CLOUD_CANDIDATES:
+        if p and os.path.isfile(p):
+            return p
+    raise FileNotFoundError(
+        "找不到 buddy 多模态客户端脚本，已探测:\n  " + "\n  ".join(BUDDY_CLOUD_CANDIDATES)
+        + "\n可用 BUDDY_CLOUD_PY 环境变量显式指定路径。"
+    )
 
 
 def load_buddy():
-    """把 buddy-cloud.py 作为模块加载（文件名含连字符，不能用普通 import）。"""
-    spec = importlib.util.spec_from_file_location("buddy_cloud", BUDDY_CLOUD)
+    """把客户端脚本作为模块加载（文件名含连字符，不能用普通 import）。"""
+    path = resolve_buddy()
+    print(f"[INFO] 客户端脚本: {path}", file=sys.stderr)
+    spec = importlib.util.spec_from_file_location("buddy_cloud", path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["buddy_cloud"] = mod
     spec.loader.exec_module(mod)

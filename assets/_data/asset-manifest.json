@@ -31,7 +31,15 @@
     "tposeFront": "characters/images/H-01/tpose/front/H-01_tpose_front.png",
     "tposeSide": "characters/images/H-01/tpose/side/H-01_tpose_side.png"
    },
-   "lods": [],
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/H-01/H01_20261003_173137.glb",
+     "tris": 79980,
+     "verts": 56603,
+     "bytes": 35703848
+    }
+   ],
    "animations": [],
    "joints": 0
   },
