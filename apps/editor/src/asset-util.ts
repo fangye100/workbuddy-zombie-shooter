@@ -106,6 +106,8 @@ export interface WriteResult {
   conflict?: boolean;
   /** 冲突时服务端报告的当前磁盘指纹 */
   currentHash?: string | undefined;
+  /** Version of the actual accepted payload after a successful write. */
+  hash?: string | undefined;
 }
 
 /**
@@ -127,7 +129,7 @@ export async function writeProjectFile(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: rel.replace(/^\/+/, ''), ...body }),
     });
-    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string; code?: string; currentHash?: string };
+    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string; code?: string; currentHash?: string; hash?: string };
     return {
       ok: res.ok && data.ok === true,
       status: res.status,
@@ -135,6 +137,7 @@ export async function writeProjectFile(
       error: data.error ?? null,
       conflict: res.status === 409 && data.code === 'conflict',
       currentHash: data.currentHash,
+      hash: data.hash,
     };
   } catch (e) {
     return { ok: false, status: 0, error: String(e) };

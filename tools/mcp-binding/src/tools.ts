@@ -29,7 +29,10 @@ import {
   type SkinCylinderMap,
 } from '../../../apps/editor/src/services/binding/skin-proxy';
 import { rigToTPoseWithImage } from '../../../apps/editor/src/services/binding/binding-export';
-import { parseGlb, validateAssetMeta } from '@aether/scene';
+import { parseGlb } from '@aether/scene';
+import { sceneFingerprint } from '@aether/runtime';
+import { BindingPersistence } from '../../../apps/editor/src/services/binding/binding-persistence';
+import type { WriteResult } from '../../../apps/editor/src/asset-util';
 import {
   renderOrthographic,
   type Capsule,
@@ -57,6 +60,8 @@ export interface FsPort {
   /** 文件不存在返回 null（区别于读失败抛错） */
   readText(abs: string): string | null;
   writeText(abs: string, text: string): void;
+  /** Shared project lock + compare/patch/atomic replace, also used by the GUI devfs writer. */
+  comparePatchJson(abs: string, patch: Record<string, unknown>, baseHash: string): Promise<WriteResult>;
   /**
    * 写二进制。exclusive=true 时目标已存在必须抛 message 含 "EEXIST" 的错
    * （底层用独占创建 —— 覆盖检查与写入必须原子，否则并发双导出同路径会双双通过
@@ -148,6 +153,7 @@ export class BindingDomain {
   private glbPath: string | null = null;
   /** parseGlb 抽出的 baseColor 贴图（export 时嵌回产物，与编辑器 s.image 同源） */
   private image: Blob | null = null;
+  private readonly persistence = new BindingPersistence();
 
   constructor(private readonly fs: FsPort) {}
 
@@ -211,11 +217,13 @@ export class BindingDomain {
 
   /** 读 sidecar 的 bindingEditor 槽位；文件不存在 / 损坏 / 无此键 → undefined */
   private readBindingEditor(): unknown {
+    this.persistence.clear();
     const text = this.fs.readText(this.fs.resolve(this.metaPath()));
     if (text === null) return undefined;
     try {
       const meta: unknown = JSON.parse(text);
       if (meta === null || typeof meta !== 'object') return undefined;
+      if (this.persistence.accept(this.metaPath(), meta) !== null) return undefined;
       const ed = (meta as Record<string, unknown>).bindingEditor;
       return ed === undefined || ed === null ? undefined : ed;
     } catch {
@@ -224,40 +232,14 @@ export class BindingDomain {
   }
 
   /** save：把编辑态写进 sidecar 的 bindingEditor 槽（浅合并，不碰其他键） */
-  save(): Record<string, unknown> {
+  async save(): Promise<Record<string, unknown>> {
     this.requireMesh();
     const rel = this.metaPath();
-    const abs = this.fs.resolve(rel);
-    const text = this.fs.readText(abs);
-    if (text === null) {
-      throw new ToolError(`sidecar 不存在：${rel}（先跑 pnpm run scene:gen 生成）`);
-    }
-    let meta: unknown;
     try {
-      meta = JSON.parse(text);
-    } catch {
-      throw new ToolError(`sidecar JSON 损坏：${rel}（不静默修数据，先人工检查）`);
-    }
-    if (meta === null || typeof meta !== 'object' || Array.isArray(meta)) {
-      throw new ToolError(`sidecar 根节点不是对象：${rel}`);
-    }
-    (meta as Record<string, unknown>).bindingEditor = this.session.getEditorData();
-    // 写前走与编辑器 saveBinding 同一把守门尺
-    const diags = validateAssetMeta(meta);
-    const errors = diags.filter((d) => d.severity === 'error');
-    if (errors.length > 0) {
-      throw new ToolError(
-        `写前校验失败（未落盘）：${errors.map((d) => `${d.code} ${d.message}`).join('；')}`,
-      );
-    }
-    const out = `${JSON.stringify(meta, null, 2)}\n`;
-    this.fs.writeText(abs, out);
-    return {
-      path: rel,
-      // UTF-8 字节数（sidecar 常含中文节点名，out.length 是 UTF-16 码元数，会偏小）
-      bytes: new TextEncoder().encode(out).length,
-      warnings: diags.filter((d) => d.severity !== 'error'),
-    };
+      const result = await this.persistence.save(this.session.getEditorData(), (request) =>
+        this.fs.comparePatchJson(this.fs.resolve(request.path), request.patch, request.baseHash));
+      return { ...result, path: rel, localEditsRetained: !result.ok };
+    } catch (error) { throw new ToolError(`绑定保存失败：${rel}（${String(error)}），本地编辑已保留`); }
   }
 
   /** hydrate：从 sidecar 重新灌入编辑态（进历史，可 undo 回灌前） */
@@ -505,10 +487,11 @@ export class BindingDomain {
           metaWarning = 'sidecar 根节点不是对象，跳过 hash 刷新（不静默修数据）';
         } else {
           const m = meta as Record<string, unknown>;
-          m.sourceHash = `sha256:${this.fs.sha256(outAbs)}`;
-          m.updatedAt = new Date().toISOString();
-          this.fs.writeText(metaAbs, `${JSON.stringify(meta, null, 2)}\n`);
-          metaRefreshed = true;
+          const written = await this.fs.comparePatchJson(metaAbs, {
+            sourceHash: `sha256:${this.fs.sha256(outAbs)}`, updatedAt: new Date().toISOString(),
+          }, sceneFingerprint(m));
+          metaRefreshed = written.ok;
+          if (!written.ok) metaWarning = `sidecar 更新冲突：${written.currentHash ?? written.error}`;
         }
       } catch {
         metaWarning = 'sidecar JSON 损坏，跳过 hash 刷新（不静默修数据）';
@@ -914,7 +897,7 @@ async function dispatchInner(
       return { json: s.getEditorData() };
 
     case 'save':
-      return { json: domain.save() };
+      return { json: await domain.save() };
 
     case 'hydrate':
       return { json: domain.hydrateFromDisk() };

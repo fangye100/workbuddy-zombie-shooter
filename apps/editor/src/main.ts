@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
+import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -32,6 +32,7 @@ import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
+import { BindingPersistence } from './services/binding/binding-persistence';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
@@ -2128,6 +2129,7 @@ async function boot(): Promise<void> {
   let binding: BindingPanel | null = null;
   // 当前绑定会话对应的 .meta.json 落盘点（资产库入口才有；层级/场景物体入口为 null）
   let currentBindingMetaPath: string | null = null;
+  const bindingPersistence = new BindingPersistence();
   // 资产库当前选中的资产路径（供顶部菜单「进入绑定」取目标 .glb）
   let lastAssetPath: string | null = null;
   // 最近一次「导入文件骨架」的映射诊断（__editor.binding.importDiag 供自动化断言）
@@ -2265,55 +2267,27 @@ async function boot(): Promise<void> {
     binding?.clear();
     bindingSession = null;
     currentBindingMetaPath = null;
+    bindingPersistence.clear();
   }
 
-  /**
-   * 「保存绑定」：把当前编辑态（骨架摆位 + Skin Wrapper 半径）写回
-   * `<mesh>.meta.json` 的 `bindingEditor` 节点。
-   *
-   * - 仅资产库入口（currentBindingMetaPath 非空）能落盘；层级/场景物体入口无路径，
-   *   点保存会提示「无路径」而不写盘，避免误把数据写进无关文件。
-   * - 用 devfs 的 patch 模式浅合并：只动 `bindingEditor` 顶层键，保留
-   *   importer / userData / rig / bindings 等其余字段（含手改），与 node 管线互不踩。
-   */
+  /** Binding version and validation are shared with offline MCP; main only supplies the GUI port. */
   function saveBinding(): void {
     if (binding === null) return;
     if (currentBindingMetaPath === null) {
-      binding.setSaveStatus(false, '无路径：层级入口不支持存盘');
-      return;
+      binding.setSaveStatus(false, '无路径：层级入口不支持存盘'); return;
     }
-    const data = binding.getEditorData();
+    const current = binding;
     const path = currentBindingMetaPath;
-    void (async () => {
-      // 写盘前必须确认目标 sidecar 是合法的，否则一律拒绝写。
-      // 事故复现：patch 到一个「不存在 / 不完整」的 `.meta.json` 上，会产出只有
-      // bindingEditor、缺 schemaVersion/guid/kind/importer 的非法文件，
-      // 直接把 `scene:check` 打红（E04 的 40MB 原始产物就因此多了一个本不该存在的 sidecar
-      // —— 它命中 gen 脚本的 RAW_SOURCE_RE，压根不该有 meta）。
-      // 项目铁律是「不静默修数据」→ 这里只报错、不代补字段，指引用户跑 scene:gen。
-      const cur = await readProjectFile(path);
-      if (!cur.ok) {
-        binding?.setSaveStatus(
-          false,
-          `读不到 sidecar${cur.error ? ` (${cur.error})` : ''}，请先跑 npm run scene:gen`,
-        );
-        return;
-      }
-      const errs = validateAssetMeta(cur.json).filter((d) => d.severity === 'error');
-      if (errs.length > 0) {
-        binding?.setSaveStatus(
-          false,
-          `sidecar 不完整（${errs[0]!.code}），请先跑 npm run scene:gen`,
-        );
-        return;
-      }
-      const res = await writeProjectFile(path, { patch: { bindingEditor: data } });
-      if (res.ok) {
-        binding?.setSaveStatus(true, `已保存${res.bytes !== undefined ? ` ${res.bytes}B` : ''}`);
-      } else {
-        binding?.setSaveStatus(false, `保存失败 ${res.status}${res.error ? ` ${res.error}` : ''}`);
-      }
-    })();
+    void bindingPersistence.save(current.getEditorData(), (request) =>
+      writeProjectFile(request.path, { patch: request.patch, baseHash: request.baseHash }))
+      .then((result) => {
+        if (binding !== current || currentBindingMetaPath !== path) return;
+        current.setSaveStatus(result.ok, result.ok ? `已保存 ${result.bytes ?? '?'}B`
+          : result.conflict ? `保存冲突（磁盘 ${result.currentHash ?? '?'}）：本地修改已保留，请重新进入绑定接受最新版本`
+          : `保存失败：${result.error ?? result.status}。本地修改已保留`);
+      }).catch((error) => {
+        if (binding === current && currentBindingMetaPath === path) current.setSaveStatus(false, String(error));
+      });
   }
 
   /** 顶边把手：下压面板露出上方 3D 视图对照（只改 style.top） */
@@ -2993,6 +2967,9 @@ async function boot(): Promise<void> {
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       lastSkeletonImport = null;
 
+      const acceptedMetaPath = `${relPath}.meta.json`;
+      const acceptedMeta = await readProjectFile(acceptedMetaPath);
+
       // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
       // 不回填 sidecar 的 bindingEditor（那是「源网格 + 模板骨架」世界的会话）
       if (opts?.importSkeleton === true) {
@@ -3004,7 +2981,9 @@ async function boot(): Promise<void> {
         }
         // 落盘点只在「真的会打开」之后才切换：early return 时若已改指向，
         // 旧会话的「保存绑定」会写进新纯网格的 sidecar（PR #13 评审）
-        currentBindingMetaPath = `${relPath}.meta.json`;
+        currentBindingMetaPath = acceptedMetaPath;
+        if (acceptedMeta.ok) bindingPersistence.accept(acceptedMetaPath, acceptedMeta.json);
+        else bindingPersistence.clear();
         const imp = skeletonPositionsFromGltf(model.skeleton);
         lastSkeletonImport = imp;
         openBinding({
@@ -3025,10 +3004,12 @@ async function boot(): Promise<void> {
       }
 
       // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
-      currentBindingMetaPath = `${relPath}.meta.json`;
+      currentBindingMetaPath = acceptedMetaPath;
+      if (acceptedMeta.ok) bindingPersistence.accept(acceptedMetaPath, acceptedMeta.json);
+      else bindingPersistence.clear();
       // 尝试回填上次的编辑态（bindingEditor 节点）；没有/损坏都不影响打开
       let saved: unknown = undefined;
-      const meta = await readProjectFile(currentBindingMetaPath);
+      const meta = acceptedMeta;
       if (meta.ok && meta.json !== null && typeof meta.json === 'object') {
         const ed = (meta.json as Record<string, unknown>).bindingEditor;
         if (ed !== undefined && ed !== null) saved = ed;
@@ -3056,6 +3037,7 @@ async function boot(): Promise<void> {
           if (obj === undefined) return;
           // 层级入口无 GLB 路径 → 没有可落盘的 .meta.json，保存按钮会被拦下
           currentBindingMetaPath = null;
+          bindingPersistence.clear();
           openBinding({
             name: obj.name,
             // 拷贝一份：场景网格是渲染器的活引用，applyAo 之类会就地改它
@@ -3121,6 +3103,7 @@ async function boot(): Promise<void> {
       if (obj !== undefined && obj.mesh !== null) {
         // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
         currentBindingMetaPath = null;
+    bindingPersistence.clear();
         openBinding({
           name: obj.name,
           vertices: new Float32Array(obj.mesh.vertices),
