@@ -332,7 +332,12 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
     const r = migrateToLatest(docAt(1));
     expect(r.from).toBe(1);
     expect(r.to).toBe(SCHEMA_VERSION);
-    expect(r.applied).toEqual(['userdata-to-schema', 'add-player-start', 'add-lose-condition']);
+    expect(r.applied).toEqual([
+      'userdata-to-schema',
+      'add-player-start',
+      'add-lose-condition',
+      'add-camera-yaw-mode',
+    ]);
   });
 });
 
@@ -362,8 +367,71 @@ describe('migrateV3ToV4 —— 失败条件（P5 docs/23 §2.6）', () => {
     expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 
-  it('v3 → v4 已注册进默认迁移链，版本高于 4 仍拒绝加载', () => {
+  it('v3 → v4 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 3 && m.to === 4)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(4);
+  });
+});
+
+// ------------------------------------------------- v4 → v5：Camera 偏航跟随模式
+
+describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家转身）', () => {
+  function v4Doc(nodes: unknown[]): Record<string, unknown> {
+    const d = docAt(2);
+    const r = migrateTo(d, 4);
+    const out = r.doc as unknown as Record<string, unknown>;
+    out['nodes'] = nodes;
+    return out;
+  }
+
+  const camNode = (cam: Record<string, unknown>) => ({
+    id: 'n1',
+    name: 'cam',
+    parent: null,
+    transform: {},
+    visible: true,
+    pickable: true,
+    prefab: null,
+    components: [{ kind: 'Camera', enabled: true, ...cam }],
+  });
+
+  it('Camera 组件缺省补 yawMode=world（俯视上帝视角的正确语义）', () => {
+    const r = migrateTo(v4Doc([camNode({ mode: 'orbit-follow', distance: 12, pitchDeg: 40, yawOffsetDeg: 0 })]), 5);
+    const comps = (r.doc.nodes[0]?.components ?? []) as unknown as Record<string, unknown>[];
+    expect(comps[0]?.['yawMode']).toBe('world');
+  });
+
+  it('已有 yawMode 的文档不被覆盖', () => {
+    const r = migrateTo(v4Doc([camNode({ yawMode: 'target' })]), 5);
+    const comps = (r.doc.nodes[0]?.components ?? []) as unknown as Record<string, unknown>[];
+    expect(comps[0]?.['yawMode']).toBe('target');
+  });
+
+  it('非法 yawMode → 纠正为 world（不静默放行脏数据）', () => {
+    const r = migrateTo(v4Doc([camNode({ yawMode: 'sideways' })]), 5);
+    const comps = (r.doc.nodes[0]?.components ?? []) as unknown as Record<string, unknown>[];
+    expect(comps[0]?.['yawMode']).toBe('world');
+  });
+
+  it('🔴 只动 Camera 组件，别的组件不被塞字段', () => {
+    const nodes: unknown[] = [
+      {
+        id: 'n2',
+        name: 'mesh',
+        parent: null,
+        transform: {},
+        visible: true,
+        pickable: true,
+        prefab: null,
+        components: [{ kind: 'MeshRenderer', enabled: true }],
+      },
+    ];
+    const r = migrateTo(v4Doc(nodes), 5);
+    const comps = (r.doc.nodes[0]?.components ?? []) as unknown as Record<string, unknown>[];
+    expect(comps[0]?.['yawMode']).toBeUndefined();
+  });
+
+  it('v4 → v5 已注册进默认迁移链', () => {
+    expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
+    expect(SCHEMA_VERSION).toBe(5);
   });
 });

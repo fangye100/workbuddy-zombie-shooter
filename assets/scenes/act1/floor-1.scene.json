@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场",
   "act": "Act1",
@@ -119,7 +119,8 @@
           "followTarget": null,
           "pitchDeg": 55,
           "distance": 12,
-          "yawOffsetDeg": 0
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
         }
       ],
       "prefab": null

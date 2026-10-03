@@ -445,27 +445,44 @@ export class RuntimeSession {
     const out: EntityView[] = [];
     for (let i = 0; i < this.table.capacity; i++) {
       if (!this.table.isAlive(i)) continue;
-      const stats = this.defIdToStats.get(this.table.defId[i]!);
-      out.push({
-        id: i,
-        generation: this.table.generation[i]!,
-        runId: this.runId,
-        characterId: stats?.id ?? '?',
-        kind: this.kindOf[i] === 0 ? 'player' : 'npc',
-        x: this.table.posX[i]!,
-        z: this.table.posZ[i]!,
-        yaw: this.table.yaw[i]!,
-        alive: true,
-        sourceNodeId: this.sourceOf[i] ?? null,
-        targetId: this.table.targetEntity[i]!,
-        behavior: this.table.behavior[i]!,
-        hp: this.table.health[i]!,
-        maxHp: this.table.maxHp[i]!,
-        hitFlash: this.table.hitFlash[i]!,
-        lodTier: this.table.lodTier[i]!,
-      });
+      out.push(this.viewAt(i));
     }
     return out;
+  }
+
+  /**
+   * 玩家实体视图（O(1)）。
+   *
+   * 相机跟随每帧都要它 —— 用 `view().find()` 是每帧全表扫 + 建整个数组
+   * （500 只时是每帧几百次无谓遍历与一次大分配，HANDOFF 里的 P2-3）。
+   */
+  player(): EntityView | null {
+    const i = this.playerEntityId;
+    if (i < 0 || !this.table.isAlive(i)) return null;
+    return this.viewAt(i);
+  }
+
+  /** 单槽位视图（view() 与 player() 共用，避免两处构造逻辑漂移） */
+  private viewAt(i: number): EntityView {
+    const stats = this.defIdToStats.get(this.table.defId[i]!);
+    return {
+      id: i,
+      generation: this.table.generation[i]!,
+      runId: this.runId,
+      characterId: stats?.id ?? '?',
+      kind: this.kindOf[i] === 0 ? 'player' : 'npc',
+      x: this.table.posX[i]!,
+      z: this.table.posZ[i]!,
+      yaw: this.table.yaw[i]!,
+      alive: true,
+      sourceNodeId: this.sourceOf[i] ?? null,
+      targetId: this.table.targetEntity[i]!,
+      behavior: this.table.behavior[i]!,
+      hp: this.table.health[i]!,
+      maxHp: this.table.maxHp[i]!,
+      hitFlash: this.table.hitFlash[i]!,
+      lodTier: this.table.lodTier[i]!,
+    };
   }
 
   /**

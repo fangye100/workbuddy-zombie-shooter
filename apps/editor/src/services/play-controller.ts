@@ -242,8 +242,9 @@ export class PlayController {
       this.playCamera.update(null);
       return;
     }
-    const p = rt.view().find((e) => e.kind === 'player');
-    this.playCamera.update(p === undefined ? null : { x: p.x, z: p.z, yaw: p.yaw });
+    // O(1) 取玩家（旧实现是 view().find() —— 每帧全表扫 + 建整个数组）
+    const p = rt.player();
+    this.playCamera.update(p === null ? null : { x: p.x, z: p.z, yaw: p.yaw });
   }
 
   private notify(): void {

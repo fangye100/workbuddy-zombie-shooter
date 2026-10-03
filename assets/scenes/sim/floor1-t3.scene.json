@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "id": "sc_sim_floor1_t3",
   "name": "第一层 · 火场 · t=3s 快照（派生产物）",
   "act": "Act1",
@@ -118,7 +118,8 @@
           "followTarget": null,
           "pitchDeg": 55,
           "distance": 12,
-          "yawOffsetDeg": 0
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
         }
       ],
       "prefab": null

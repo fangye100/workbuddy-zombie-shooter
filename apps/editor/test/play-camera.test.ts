@@ -173,7 +173,7 @@ describe('PlayCameraController · 保存与还原', () => {
     expect(pc.active).toBe(false);
   });
 
-  it('🔴 orbit-follow 跟随玩家；fixed 模式钉住不动', () => {
+  it('🔴 orbit-follow 跟随玩家位置；fixed 模式钉住不动', () => {
     const h = harness();
     const pc = new PlayCameraController(h.view);
 
@@ -185,8 +185,6 @@ describe('PlayCameraController · 保存与还原', () => {
     pc.update({ x: 12, z: 8, yaw: Math.PI });
     expect(h.cur.target[0]).toBe(12);
     expect(h.cur.target[2]).toBe(8);
-    // yaw = 玩家朝向 + yawOffsetDeg：是"相对目标朝向"，不是固定世界方向
-    expect(h.cur.yaw).toBeCloseTo(Math.PI + Math.PI / 2, 5);
 
     // fixed：即便传了玩家位置也不动
     const h2 = harness();
@@ -194,6 +192,73 @@ describe('PlayCameraController · 保存与还原', () => {
     pc2.attach(doc([node('cam1', [cam({ mode: 'fixed' })])], 'cam1'), posOf({ cam1: [1, 0, 2] }));
     pc2.update({ x: 99, z: 99, yaw: 0 });
     expect(h2.cur.target).toEqual([1, 0, 2]); // 没被拖走
+  });
+
+  // =====================================================================
+  // 偏航跟随模式 yawMode（schema v5）
+  //
+  // 起因：用户实测反馈「第三人称上帝视角，但按左右移动时整个视角在跟着转」。
+  // 根因是 update() 无条件 `yaw = target.yaw + offset` —— 把俯视上帝视角做成了
+  // 肩后跟随视角。上帝视角下摇杆的"上"必须恒等于世界的某个方向，角色转身
+  // 不该带相机；否则操作感直接崩坏（而且这不是手感偏好问题，是设计错误）。
+  // =====================================================================
+  describe('PlayCameraController · yawMode 偏航跟随', () => {
+    function harness() {
+      let cur: ViewCameraState = { target: [0, 0, 0], distance: 40, yaw: 0, elevationDeg: 30 };
+      const view = { get: () => cur, set: (s: ViewCameraState) => { cur = s; } };
+      return { view, get cur() { return cur; } };
+    }
+
+    const follow = (over: Record<string, unknown>) =>
+      doc([node('cam1', [cam({ mode: 'orbit-follow', yawOffsetDeg: 90, ...over })])], 'cam1');
+
+    it('🔴 缺省（旧场景无 yawMode）→ world：玩家转身**不**带相机', () => {
+      const h = harness();
+      const pc = new PlayCameraController(h.view);
+      pc.attach(follow({}), posOf({ cam1: [0, 0, 0] }));
+      const yawAfterAttach = h.cur.yaw; // = 0 + 90° = π/2
+      expect(yawAfterAttach).toBeCloseTo(Math.PI / 2, 5);
+
+      // 玩家转身到 π，相机 yaw 必须纹丝不动
+      pc.update({ x: 1, z: 2, yaw: Math.PI });
+      expect(h.cur.yaw).toBeCloseTo(yawAfterAttach, 6);
+
+      // 再转几个角度都一样
+      for (const y of [-2.5, 0.3, 1.9, 3.0]) {
+        pc.update({ x: 0, z: 0, yaw: y });
+        expect(h.cur.yaw).toBeCloseTo(yawAfterAttach, 6);
+      }
+    });
+
+    it("yawMode='world' 明示：同上，位置跟随但朝向锁死", () => {
+      const h = harness();
+      const pc = new PlayCameraController(h.view);
+      pc.attach(follow({ yawMode: 'world' }), posOf({ cam1: [0, 0, 0] }));
+      pc.update({ x: 30, z: -12, yaw: 2.2 });
+      expect(h.cur.target[0]).toBe(30); // 位置照跟
+      expect(h.cur.target[2]).toBe(-12);
+      expect(h.cur.yaw).toBeCloseTo(Math.PI / 2, 6); // 朝向锁在 plan
+    });
+
+    it("yawMode='target' → 肩后跟随：yaw = 玩家朝向 + yawOffsetDeg", () => {
+      const h = harness();
+      const pc = new PlayCameraController(h.view);
+      pc.attach(follow({ yawMode: 'target' }), posOf({ cam1: [0, 0, 0] }));
+      pc.update({ x: 0, z: 0, yaw: Math.PI });
+      expect(h.cur.yaw).toBeCloseTo(Math.PI + Math.PI / 2, 5);
+      pc.update({ x: 0, z: 0, yaw: -Math.PI / 2 });
+      expect(h.cur.yaw).toBeCloseTo(-Math.PI / 2 + Math.PI / 2, 5);
+    });
+
+    it('两种模式都不动 pitch / distance（yawMode 只管偏航，别越权）', () => {
+      const h = harness();
+      const pc = new PlayCameraController(h.view);
+      pc.attach(follow({ yawMode: 'target' }), posOf({ cam1: [0, 0, 0] }));
+      const before = { d: h.cur.distance, e: h.cur.elevationDeg };
+      pc.update({ x: 4, z: 4, yaw: 1.1 });
+      expect(h.cur.distance).toBe(before.d);
+      expect(h.cur.elevationDeg).toBe(before.e);
+    });
   });
 
   it('没有 attach 时 update / detach 都是安全的空操作', () => {

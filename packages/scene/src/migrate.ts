@@ -279,6 +279,42 @@ export const migrateV3ToV4: MigrationStep = {
   },
 };
 
+// ---------------------------------------------------------------- v4 → v5 迁移
+
+/**
+ * v4 → v5：给 Camera 组件补 `yawMode`（玩家转身时相机转不转）。
+ *
+ * 缺省补 `'world'`（相机朝向锁定世界方向）—— 这不是"猜"：
+ * GDD 定死了本项目是**第三人称俯视上帝视角**（mobile 横屏 + 虚拟摇杆），
+ * 而旧实现无条件跟随目标朝向，实测在俯视下左右移动会让整个上帝视角旋转，
+ * 摇杆方向感随角色朝向漂移。俯视玩法下 `'world'` 是唯一正确的语义。
+ * 想要肩后视角的作者显式填 `'target'`。
+ */
+export const migrateV4ToV5: MigrationStep = {
+  from: 4,
+  to: 5,
+  name: 'add-camera-yaw-mode',
+  run(doc) {
+    const nodes = doc['nodes'];
+    if (!Array.isArray(nodes)) return doc;
+    for (const n of nodes) {
+      if (n === null || typeof n !== 'object') continue;
+      const comps = (n as Record<string, unknown>)['components'];
+      if (!Array.isArray(comps)) continue;
+      for (const c of comps) {
+        if (c === null || typeof c !== 'object') continue;
+        const kind = (c as Record<string, unknown>)['kind'];
+        if (kind !== 'Camera') continue;
+        const cam = c as Record<string, unknown>;
+        if (cam['yawMode'] !== 'world' && cam['yawMode'] !== 'target') {
+          cam['yawMode'] = 'world';
+        }
+      }
+    }
+    return doc;
+  },
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
@@ -288,6 +324,9 @@ export function registerSceneMigrations(): void {
   }
   if (!listMigrations().some((m) => m.from === 3 && m.to === 4)) {
     registerMigration(migrateV3ToV4);
+  }
+  if (!listMigrations().some((m) => m.from === 4 && m.to === 5)) {
+    registerMigration(migrateV4ToV5);
   }
 }
 

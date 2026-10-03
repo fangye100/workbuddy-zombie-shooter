@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -264,6 +264,20 @@ export interface CameraComponent extends ComponentBase {
   distance: number;
   /** 相对目标朝向的偏航偏移（度） */
   yawOffsetDeg: number;
+  /**
+   * 偏航跟随模式（v5）。**它决定了玩家转身时相机转不转**：
+   *
+   * - `'world'`（缺省）：相机朝向锁定为**世界方向** —— 进入 Play 时由
+   *   `yawOffsetDeg` 定好，之后玩家怎么转身相机都不动。第三人称俯视上帝视角
+   *   （GDD：mobile 横屏、虚拟摇杆 + 右侧动作键）必须是这个行为：屏幕方向恒定，
+   *   "上"永远是世界的"上"，否则摇杆方向感随角色朝向漂移，操作直接崩坏。
+   * - `'target'`：相机朝向 = 目标朝向 + `yawOffsetDeg`（肩后跟随视角，玩家转身
+   *   相机跟着转）。适合过肩视角玩法，不是本项目的默认形态。
+   *
+   * 可选字段：v4 及之前的场景没有它，迁移链补 `'world'`（2026-10-02 用户实测：
+   * 旧实现无条件跟随目标朝向，俯视下左右移动会让整个上帝视角旋转 —— 这是 bug）。
+   */
+  yawMode?: 'world' | 'target';
 }
 
 export interface ColliderComponent extends ComponentBase {

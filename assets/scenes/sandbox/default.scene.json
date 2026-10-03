@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "id": "sc_sandbox_default",
   "name": "Sandbox · 默认场景",
   "act": null,
@@ -114,7 +114,8 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 55
+          "pitchDeg": 55,
+          "yawMode": "world"
         }
       ]
     },
