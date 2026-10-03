@@ -10,8 +10,10 @@
 - **Python 读写文本毁行尾**：改已存在文件一律二进制 rb→replace→wb。
 - 🔴 **行尾纪律**：仓库标准是 LF，`.gitattributes` **没有** `text=auto eol=` 规则（只有 LFS 条目）→ 行尾靠工具自觉。曾发生 `main.ts` 被整文件写成 CRLF、后被某个功能 commit 整文件改回 LF（+3793/−3754，实质仅 39 行，blame 全毁）。**行尾规范化必须单独 commit，绝不混进功能提交。**
 - TS5.9 泛型 TypedArray 要在**源头**标 `<ArrayBuffer>`，不是调用点 cast。
-- 门禁：typecheck · vitest(`--no-file-parallelism`,判绿只认文件数，且**必须脱沙箱**：多 worker 抢写 ssr 缓存会 EPERM 静默掉整个文件) · editor:build · editor:smoke(`--headed`) · content:check · verify:prefix · scene:gen · scene:check。浏览器探针：`editor:smoke:all`（含 combat-probe / dynamic-skin-probe）、`verify:stress`（200 只压测）。
+- 门禁：typecheck · vitest(`--no-file-parallelism`,判绿只认文件数，且**必须脱沙箱**：多 worker 抢写 ssr 缓存会 EPERM 静默掉整个文件) · editor:build · editor:smoke(`--headed`) · content:check · verify:prefix · scene:gen · scene:check。浏览器探针：`editor:smoke:all`（含 combat-probe / dynamic-skin-probe）、`verify:stress`（200 只压测）、`verify:camera`（相机双问题防线）。
 - ⚠️ editor-smoke 收尾会清理 `.workbuddy/tmp/ui-refine`，历史临时文件攒到 50+ 会触发沙箱批量删除保护而中断（非产品回归）→ 跑前先手动清该目录。
+- 🔴 **本沙箱 headed Chrome 的 `navigator.clipboard.readText()` 稳定返回空串** → editor-smoke 剪贴板核对按"环境不可核对"skip；产品行为由 HUD 回显确切路径断言（不接受"复制失败"）。
+- 🔴 探针的 headed Chrome 若中途挂住会留僵尸进程占 `.workbuddy/tmp/chrome-profile`（后续启动附加到旧实例）→ 按命令行含该 user-data-dir 的**主进程**（无 `--type=`）杀。
 
 ## 环境 / 引擎
 - 端口：编辑器 5100 / 游戏 5101；须 HTTPS + Tailscale（本机 IP 100.124.237.93）。
@@ -38,6 +40,21 @@
 - 终态 `outcome`：game-over/floor-clear 即冻结（step 短路），**不自动清场**。
 - P4 M4 已完成（docs/24）：LOD 接线（Full 25m/Vat 60m/迟滞 10%，远处退胶囊）、mobile 烘焙档（`packages/render/src/quality.ts`，项目 targetTier 驱动）、200 只压测（`verify:stress`）。
 - ⚠️ `maxHp` 仍只写不读（HUD 属 P8，未接线）；`hitFlash` 已修（每 tick 衰减 + view() 暴露）。
+
+## 相机（2026-10-03 完成，用户实报双问题）
+- **编辑器自由相机**：`apps/editor/src/services/free-camera.ts`。🔴 eye 是状态量、target 是派生物
+  （转向=原地转头保 eye 不动）；基向量必须用 `m4.orbitEye()` 反查，**禁抄第二遍三角公式**
+  （曾 X/Z 写反 → forward/right 共线、斜向走不动）。操作：✈ 按钮/V 开关、Esc 退出、
+  WASD/QE/Shift、拖拽转头、滚轮调速 1–80 m/s。Play 期间拒入 + 进 Play 自动退出（§2.4）。
+- **上帝视角不跟转身**：scene **v5** `Camera.yawMode`（'world' 缺省锁世界方向 / 'target' 肩后），
+  migrateV4ToV5 补缺省，`play-camera.ts:190` 消费，validate 报 E_CAM_YAW_MODE。8 场景已迁 v5。
+- **机位归属**：编辑态也有多套写者 —— `applySceneCamera`（飞行中到达→暂存，退出补应用）、
+  `focusOn`（freeCamOn 直接忽略）、双指 pinch（飞行中忽略第二根）、freecam pointermove 分支
+  **必须累计 downMoved**（漏了 → 拖拽松手被当轻点拾取）。
+- 门禁 `verify:camera`（21 条）：K1 飞行/原地转头/Play 拒入/拖拽不拾取；K2 上帝视角
+  （yaw Δ<1e-6 + 判别力守卫：玩家位移>0.3m、朝向翻转≈π）。就绪闸门绑真源
+  （aether.project.json→startIndex→场景 editorCamera；场景弧度、主视图存度）。
+- Camera 组件无 Inspector UI（所有字段 JSON-only，既有状态）；'target' 需手改 JSON。
 
 ## 绑定 / 蒙皮（全文 docs/15）
 - P0 已修（按骨 id 聚合邻域 / WeightMode 下拉 / 写 sidecar 前 validateAssetMeta）。P1 未修：PEN_SCALE 不尺度不变、包裹体外硬权重 1.0、无权重视图热力图。
