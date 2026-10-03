@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -173,6 +173,8 @@ export interface ComponentBase {
  * 模型内部层级保留在资产的 nodeTree 里，只用于材质匹配与层级面板展示（现有行为不变）。
  */
 export interface MeshRendererComponent extends ComponentBase {
+  /** Authoring helper mesh. Hidden only in Play; restored with the author snapshot. */
+  editorOnly?: boolean;
   kind: typeof ComponentKind.MeshRenderer;
   source: MeshSource;
   /** 逐子网格材质绑定；未列出者回落资产自带默认材质 */
@@ -322,6 +324,8 @@ export interface RoomVolumeComponent extends ComponentBase {
   bounds: AabbData;
   /** 清场条件（GDD §4.2 表格） */
   clearRule: 'kill-all' | 'elite-dead' | 'interact' | 'none';
+  /** SpawnPoint NodeId whose full cohort must die for elite-dead. null means unconfigured. */
+  clearTarget?: NodeId | null;
   /** 楼层深度 1..3（GDD §4.1 固定 3 层） */
   depth: number;
 }
@@ -804,6 +808,22 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
           err(`${at}/wave`, 'E_SPAWN_WAVE', `wave=${s.wave} 不是整数：正值波号必须是整数（≤0 才按旧数据归 1）`);
         }
       }
+      if (c.kind === ComponentKind.RoomVolume) {
+        const r = c as RoomVolumeComponent;
+        if ((d.schemaVersion ?? 0) >= 6 && r.clearTarget === undefined) err(`${at}/clearTarget`, 'E_CLEAR_TARGET', 'v6 房间必须声明 clearTarget（无目标用 null）');
+        if (r.clearTarget != null && !d.nodes!.some(n => n?.id === r.clearTarget && Array.isArray(n.components) && n.components.some(c => c?.kind === ComponentKind.SpawnPoint))) {
+          err(`${at}/clearTarget`, 'E_CLEAR_TARGET', 'clearTarget 必须指向有效的 SpawnPoint 节点');
+        }
+        if (r.clearTarget != null) {
+          let target = d.nodes!.find(candidate => candidate?.id === r.clearTarget);
+          let owner: string | null = null;
+          for (let guard = 0; target && guard <= d.nodes!.length; guard++) {
+            target = d.nodes!.find(candidate => candidate?.id === target?.parent);
+            if (Array.isArray(target?.components) && target.components.some(component => component?.kind === ComponentKind.RoomVolume)) { owner = target.id; break; }
+          }
+          if (owner !== n.id) err(`${at}/clearTarget`, 'E_CLEAR_TARGET_OWNER', '精英清场目标必须属于当前房间');
+        }
+      }
     });
   });
 
@@ -896,6 +916,9 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       if (c?.kind !== ComponentKind.MeshRenderer) return;
       const at = `/nodes/${i}/components/${ci}`;
       const m = c as Partial<MeshRendererComponent>;
+      if (m.editorOnly !== undefined && typeof m.editorOnly !== 'boolean') {
+        err(`${at}/editorOnly`, 'E_EDITOR_ONLY', 'editorOnly 必须是布尔值');
+      }
 
       const src = m.source;
       if (typeof src !== 'object' || src === null) {

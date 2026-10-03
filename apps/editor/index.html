@@ -1258,6 +1258,38 @@
   .sp-ab { font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.6; color: var(--text-dim); }
   .sp-abline { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.06); word-break: break-all; }
   .sp-abline.changed { color: var(--warn); }
+
+  .editor-menu { position: relative; font-size: 12px; }
+  .editor-menu summary { cursor: pointer; list-style: none; padding: 8px 10px; border-radius: 4px; color: #d9dfdc; }
+  .editor-menu[open] summary, .editor-menu summary:hover { background: #303b34; color: #bce37c; }
+  .editor-menu-items { position: absolute; top: 100%; left: 0; z-index: 1200; min-width: 210px; padding: 6px; background: #202723; border: 1px solid #465347; box-shadow: 0 14px 40px #0008; border-radius: 6px; }
+  .editor-menu-items button { display: block; width: 100%; padding: 10px; text-align: left; background: transparent; border: 0; color: #e1e7e2; cursor: pointer; }
+  .editor-menu-items button:hover, .editor-menu-items button:focus-visible { background: #394c37; }
+  .scene-current { margin-left: auto; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #28342a; border: 1px solid #55604d; border-radius: 5px; color: #dbebc8; padding: 5px 10px; cursor: pointer; }
+  .scene-status { font-size: 11px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #a6b5a9; }
+  .scene-browser { width: min(720px, 90vw); max-height: 85vh; background: #171e1a; color: #edf1eb; border: 1px solid #5f705b; border-radius: 12px; padding: 24px; }
+  .scene-browser::backdrop { background: #000a; }
+  .scene-browser h2 { margin: 0 0 8px; } .scene-browser p { color: #abb9ad; }
+  .scene-browser input { box-sizing: border-box; width: 100%; padding: 12px; background: #0e1410; color: #fff; border: 1px solid #52624c; border-radius: 5px; }
+  .scene-browser-list { margin: 16px 0; max-height: 50vh; overflow-y: auto; }
+  .scene-choice { display: grid; grid-template-columns: 1fr auto; gap: 6px; width: 100%; text-align: left; padding: 14px; margin: 6px 0; color: #e4ebdf; background: #263127; border: 1px solid #3b493a; border-radius: 6px; cursor: pointer; }
+  .scene-choice:hover, .scene-choice:focus-visible { border-color: #b0d675; background: #303f2d; }
+  .scene-choice small { grid-row: 2; grid-column: 1 / -1; overflow-wrap: anywhere; color: #a6b5a1; }
+  .scene-choice span { font-size: 11px; color: #b4cd90; }
+  #asset-dock[hidden] { display: none; }
+  @media(max-width: 1100px) { #topbar { flex-wrap: wrap; height: auto; min-height: 40px; flex-basis: auto; } .scene-status, #model-info { display: none; } .editor-menu summary { padding: 8px 6px; } }
+
+  .game-hud { position: absolute; top: 16px; left: 16px; z-index: 20; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); padding: 16px; border-left: 4px solid #b6db64; background: #111b17e8; color: #eef1dc; box-sizing: border-box; pointer-events: none; box-shadow: 4px 5px 0 #0008; }
+  .game-hud[hidden], .game-hud [hidden] { display: none; }
+  .game-hud.hit { border-color: #ff6454; box-shadow: 0 0 24px #e8402a80; }
+  .game-hud strong { font-size: 18px; } .game-hud progress { width: 100%; height: 12px; accent-color: #b9dc64; }
+  .game-hud span, .game-hud small { font-size: 12px; color: #c2cebb; } .game-hud p { margin: 4px 0; }
+  .game-hud button { pointer-events: auto; cursor: pointer; background: #b5d86b; color: #152012; border: 0; padding: 9px 14px; margin-right: 6px; border-radius: 3px; font-weight: 700; }
+
+  #gizmo-bar { position: relative; top: auto; left: auto; right: auto; flex: 0 0 auto; width: 100%; overflow-x: auto; z-index: 21; background: #151d19; }
+  #gizmo-bar .gz-inner { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
+  #hud[hidden] { display: none; }
+  #hud { top: 100px; max-width: min(540px, 70vw); }
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">

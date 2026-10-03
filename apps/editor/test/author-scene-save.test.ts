@@ -112,3 +112,20 @@ describe('author scene save authority and snapshot contract', () => {
     expect(s.store.document).toEqual(s.disk()); expect(s.store.dirty).toBe(false);
   });
 });
+
+
+it('environment edits undo, redo and save while preserving unexposed fields', async () => {
+  const s = setup();
+  const before = structuredClone(s.store.document.environment);
+  const target = { ...structuredClone(before), exposure: 1.35, fog: { ...before.fog, color: '#243536' } };
+  expect(s.store.setEnvironment(target).ok).toBe(true);
+  expect(s.store.dirty).toBe(true);
+  s.store.undo(); expect(s.store.document.environment).toEqual(before);
+  s.store.redo(); expect(s.store.document.environment).toEqual(target);
+  expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('saved');
+  expect(s.disk().environment).toEqual(target);
+  expect(s.disk().environment.postOverride).toEqual(before.postOverride);
+  expect(s.store.setEnvironment({ ...target, exposure: NaN }).ok).toBe(false);
+  const invalid = cloneDocument(s.store.document); invalid.environment.postOverride = 'changed' as never;
+  expect(authorSaveViolations(s.store.document, invalid).length).toBeGreaterThan(0);
+});
