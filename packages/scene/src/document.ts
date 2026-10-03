@@ -536,9 +536,13 @@ export interface SceneDocument {
   /**
    * 失败条件（P5，docs/23 §2.6）。第一步只硬编码 `'player-death'` 这一种；
    * 留扩展位（护送/限时/波次生存等将来加 union 成员）。
-   * undefined = v4 之前的老场景（迁移链补默认值，见 migrateV3ToV4）。
+   *
+   * 🔴 **必填**（v4 起，评审 4166691678）：可选会允许一个"版本号写着 4/5、
+   * 却根本没有失败条件"的文档通过校验，绕过 v3→v4 迁移链；而运行时
+   * `loseCondition` 是真被消费的（`RuntimeSession.applyDamage` 据此判 game-over），
+   * 缺字段 = 玩家死了却不判负。老文档由迁移链负责补，不由校验器放行。
    */
-  loseCondition?: 'player-death';
+  loseCondition: 'player-death';
   /** 资源依赖清单。保存时由引用收集自动重算——预加载与打包都靠它 */
   dependencies: AssetPath[];
   nodes: SceneNode[];
@@ -792,6 +796,13 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if (!Number.isInteger(s.count) || s.count < 0) {
           err(`${at}/count`, 'E_SPAWN_COUNT', 'count 必须是非负整数');
         }
+        // wave 语义（P5 C4）：≤0 = 旧数据（装载时归 1，触发即全量），**正值必须是整数**。
+        // 小数（如 1.5）是致命的：调度器按整数 nextWave 推进，1.5 会参与 lastWave 的
+        // max 计算却永远匹配不上任何 nextWave —— 这个刷怪点被**静默跳过**，
+        // 作者看到的只是"怪怎么少了一批"。宁可校验期报错，也不让它在运行时消失。
+        if (typeof s.wave === 'number' && s.wave > 0 && !Number.isInteger(s.wave)) {
+          err(`${at}/wave`, 'E_SPAWN_WAVE', `wave=${s.wave} 不是整数：正值波号必须是整数（≤0 才按旧数据归 1）`);
+        }
       }
     });
   });
@@ -809,6 +820,18 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
     warn('/playerStart', 'W_PLAYER_START_UNSET', 'playerStart 未指定，Play 将拒绝启动（玩家出生点不能靠隐式推导）');
   } else if (d.playerStart !== undefined && !byId.has(d.playerStart)) {
     err('/playerStart', 'E_PLAYER_START', `playerStart 指向不存在的节点：${d.playerStart}`);
+  }
+
+  // ---- loseCondition（v4 起的必填字段；老版本交给迁移链）----
+  // 只对 **schemaVersion >= 4** 的文档强制：v3 及更早没有这个字段是合法的，
+  // 迁移链会补默认值，此时报 error 等于把"需要迁移"误判成"数据坏"。
+  // 反过来，v4/v5 文档缺它就说明有人手改过文件绕过了迁移 —— 必须显式报错。
+  if (typeof d.schemaVersion === 'number' && d.schemaVersion >= 4) {
+    if (d.loseCondition === undefined) {
+      err('/loseCondition', 'E_LOSE_CONDITION', `v${d.schemaVersion} 场景必须显式声明 loseCondition（当前只支持 'player-death'）`);
+    } else if (d.loseCondition !== 'player-death') {
+      err('/loseCondition', 'E_LOSE_CONDITION', `未知的 loseCondition：${String(d.loseCondition)}（当前只支持 'player-death'）`);
+    }
   }
 
   // ---- environment（全局单例环境，不是组件）----

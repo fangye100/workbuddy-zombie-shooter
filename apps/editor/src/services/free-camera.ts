@@ -113,22 +113,31 @@ export function stepFreeCamera(
   const rightX = Math.cos(yaw);
   const rightZ = -Math.sin(yaw);
 
-  // 轴长归一化：三轴两两正交，所以「输入向量长度 = 世界位移 / step」。
-  // 不归一化的话 W+D 斜向会比直线快 √2 倍（Unity/Unreal 的飞行相机也是归一化的）。
-  let f = clampAxis(input.forward);
-  let r = clampAxis(input.right);
-  let u = clampAxis(input.up);
-  const inLen = Math.hypot(f, r, u);
-  if (inLen > 1) {
-    f /= inLen;
-    r /= inLen;
-    u /= inLen;
+  const f = clampAxis(input.forward);
+  const r = clampAxis(input.right);
+  const u = clampAxis(input.up);
+
+  // 先合成**世界位移方向**，再钳长度。
+  // 🔴 钳的是世界位移的长度，不是输入三元组 (f, r, u) 的长度（评审 4171651575）：
+  // forward 在俯仰非零时带 Y 分量，而 up 恒为世界 Y —— 两轴**不正交**。
+  // 归一化输入三元组拦不住「朝天看 + W+Q」：两者同向叠加，世界位移长度可达 2 倍，
+  // 声明的匀速（FREE_CAM_SPEED_MPS）当场破功。三轴两两正交时（俯仰 0）
+  // 两种算法等价，所以这条只在有俯仰时才看得出差别 —— 正是最容易被漏掉的那类。
+  let dx = dirX * f + rightX * r;
+  let dy = dirY * f + u; // 升降走世界 Y，与朝向无关
+  let dz = dirZ * f + rightZ * r;
+  const outLen = Math.hypot(dx, dy, dz);
+  if (outLen > 1) {
+    const k = 1 / outLen;
+    dx *= k;
+    dy *= k;
+    dz *= k;
   }
 
   const step = dt > 0 ? speedMps * (input.boost ? FREE_CAM_BOOST : 1) * dt : 0;
-  const eyeX = eye[0] + (dirX * f + rightX * r) * step;
-  const eyeY = eye[1] + (dirY * f + u) * step; // 升降走世界 Y，与朝向无关
-  const eyeZ = eye[2] + (dirZ * f + rightZ * r) * step;
+  const eyeX = eye[0] + dx * step;
+  const eyeY = eye[1] + dy * step;
+  const eyeZ = eye[2] + dz * step;
 
   // ---- target 回写：target = eye − o·distance ----
   return {

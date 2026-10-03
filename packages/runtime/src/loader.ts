@@ -354,6 +354,19 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
         // wave 语义已实现（P5 C4 WaveScheduler）：wave ≤ 0 归 1（旧数据=触发即全量），
         // 正值 = 房间内第 N 波（清空前一波才投放）。「W_SPAWN_WAVE_UNSUPPORTED」
         // 警告退役 —— 曾经的「读了字段没有语义」现在有了，不再警告。
+        //
+        // 🔴 但正值必须是整数（评审 4171651605）：调度器按整数 `nextWave` 推进，
+        // wave=1.5 会参与 lastWave 的 max、却永远匹配不上任何整数 nextWave ——
+        // 这个刷怪点被**静默跳过**，作者只看到"怪少了一批"却查不到原因。
+        // 校验器（document.ts E_SPAWN_WAVE）已拦住入库文件；装载期再兜一道，
+        // 因为 desc 也可能来自测试/程序生成，不止磁盘 JSON 一条路。
+        if (s.wave > 0 && !Number.isInteger(s.wave)) {
+          warn(
+            'W_SPAWN_WAVE_FRACTIONAL',
+            `wave=${s.wave} 不是整数：调度器按整数波号推进，该刷怪点将**永不投放**（改成整数，或 ≤0 走旧数据归 1）`,
+            n.id,
+          );
+        }
 
         spawns.push({
           nodeId: n.id,

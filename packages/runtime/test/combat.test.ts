@@ -213,7 +213,10 @@ describe('NPC 四态 · windup → strike → CD（E-01 数值驱动）', () => 
       a.step();
       b.step();
       hpA.push(a.table.health[a.playerEntityId]!);
-      expect(a.table.health[b.playerEntityId]!).toBe(hpA[k]!);
+      // 🔴 读的是 **b** 的表（评审 4166691610）：原来写成 `a.table.health[b.playerEntityId]`
+      // —— 拿会话 A 的实体表去索引会话 B 的玩家槽位，等于"会话 A 自己跟自己比"，
+      // 于是这条确定性断言无论会话 B 跑成什么样都成立（假绿灯）。
+      expect(b.table.health[b.playerEntityId]!).toBe(hpA[k]!);
     }
     expect(new Set(hpA).size).toBeGreaterThan(1); // 确实发生了战斗（序列有变化）
   });
@@ -273,5 +276,77 @@ describe('玩家手枪 · 射线命中与 CD（12 伤 / 0.35s / 18m）', () => {
     const b03 = NPC_STATS.find((n) => n.id === 'B-03')!;
     expect(b02.attack).toBeNull();
     expect(b03.attack).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review）
+// ---------------------------------------------------------------------------
+
+describe('死亡一次性：0 血槽位不再接受伤害（评审 4166674712 / 4171651617）', () => {
+  it('玩家归零后再挨打：不再发第二条 kill 事件，也不再跑一遍死亡路径', () => {
+    const s = make();
+    const p = s.playerEntityId;
+    s.applyDamage(p, 9999); // 第一击致死（槽位保留）
+    expect(s.outcome).toBe('game-over');
+    const killsAfterFirst = s.combatEvents.filter((e) => e.type === 'kill').length;
+    expect(killsAfterFirst).toBe(1);
+
+    // 同一 tick 里第二只僵尸的挥抓（旧实现会再穿一次死亡路径）
+    const r = s.applyDamage(p, 9999);
+    expect(r).toEqual({ died: false, hpAfter: 0 }); // no-op，不再报"又死了一次"
+    const kills = s.combatEvents.filter((e) => e.type === 'kill');
+    expect(kills).toHaveLength(1); // 🔴 旧实现：2 条 kill（击杀统计/奖励重复计账）
+    expect(s.table.health[p]).toBe(0); // 血量不会变成负数、也不会被重复写
+  });
+
+  it('NPC 侧不受影响：槽位销毁后 isAlive=false，本来就走 no-op', () => {
+    const s = make();
+    const slot = firstNpc(s);
+    s.applyDamage(slot, s.table.health[slot]!);
+    expect(s.combatEvents.filter((e) => e.type === 'kill')).toHaveLength(1);
+    s.applyDamage(slot, 10);
+    expect(s.combatEvents.filter((e) => e.type === 'kill')).toHaveLength(1);
+  });
+});
+
+describe('战斗事件带身份：slot + generation + runId（评审 4166691436）', () => {
+  it('事件里的 generation 是受击那一刻的代次（槽位回收后可据此判定失效）', () => {
+    const s = make();
+    const slot = firstNpc(s);
+    const genBefore = s.table.generation[slot]!;
+    s.applyDamage(slot, 10, s.playerEntityId);
+    const ev = s.combatEvents.at(-1)!;
+    expect(ev.slot).toBe(slot);
+    expect(ev.generation).toBe(genBefore);
+    expect(ev.runId).toBe(s.runId);
+    expect(ev.sourceSlot).toBe(s.playerEntityId);
+    expect(ev.sourceGeneration).toBe(s.table.generation[s.playerEntityId]!);
+  });
+
+  it('槽位被顶替后，旧事件的 (slot, generation) 不再指向新实体 —— 延迟消费方不会记错账', () => {
+    const s = make();
+    const slot = firstNpc(s);
+    s.applyDamage(slot, 10, s.playerEntityId);
+    const ev = s.combatEvents.at(-1)!;
+    s.applyDamage(slot, s.table.health[slot]!); // 打死 → 槽位回 freelist
+    // 该槽位被新实体占用后代次必变，旧事件据此失效
+    for (let k = 0; k < 200; k++) s.step(); // 后续波次会把槽位重新分配出去
+    const evs = s.combatEvents;
+    const stale = evs.find((e) => e.slot === ev.slot && e.generation === ev.generation);
+    expect(stale).toBe(ev); // 同一条事件（不是被后来者顶替）
+    if (s.table.isAlive(ev.slot)) {
+      expect(s.table.generation[ev.slot]!).not.toBe(ev.generation);
+    }
+  });
+
+  it('reset 后 runId 递增：跨局保留的事件可据此判失效', () => {
+    const s = make();
+    const before = s.runId;
+    s.applyDamage(firstNpc(s), 10);
+    const ev = s.combatEvents.at(-1)!;
+    s.reset();
+    expect(s.runId).toBeGreaterThan(before);
+    expect(ev.runId).toBe(before); // 旧事件仍标着旧代次
   });
 });

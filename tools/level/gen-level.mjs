@@ -34,7 +34,11 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
 const PROJECT_FILE = 'aether.project.json';
-const SCHEMA_VERSION = 4;
+// 🔴 必须与 packages/scene/src/document.ts 的 SCHEMA_VERSION 一致。
+// 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
+// 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
+// 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
+const SCHEMA_VERSION = 5;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -365,6 +369,10 @@ function buildFloor(floor) {
           pitchDeg: 55,
           distance: 12,
           yawOffsetDeg: 0,
+          // v5：'world' = 上帝视角不随角色转身（第三人称顶视射击的默认）。
+          // 不写会退化成缺省值 —— 那是"读了字段没落数据"，迁移链会把它补回来
+          // 从而每次重生成都产生一次无意义 diff。
+          yawMode: 'world',
         },
       ],
     }),

@@ -378,3 +378,38 @@ describe('loadLevelRuntime —— loseCondition 真源链', () => {
     expect(r.diagnostics.some((x) => x.code === 'E_LOSE_CONDITION_UNKNOWN')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review 4171651605）：小数波号
+// ---------------------------------------------------------------------------
+
+describe('loadLevelRuntime —— 小数 wave 必须显式报警', () => {
+  /** 把首个刷怪点的 wave 改成指定值 */
+  function withWave(wave: number): SceneDocument {
+    const doc = clone(floor1());
+    for (const n of doc.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'SpawnPoint') {
+          (c as unknown as { wave: number }).wave = wave;
+          return doc;
+        }
+      }
+    }
+    throw new Error('夹具里没有刷怪点');
+  }
+
+  it('wave = 1.5 → W_SPAWN_WAVE_FRACTIONAL（否则这一批会被调度器静默跳过）', () => {
+    const r = loadLevelRuntime(withWave(1.5));
+    const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_WAVE_FRACTIONAL');
+    expect(d).toBeDefined();
+    expect(d!.severity).toBe('warning');
+    expect(d!.message).toContain('1.5');
+  });
+
+  it('整数 / ≤0 不报警（≤0 是文档化的旧数据映射）', () => {
+    for (const w of [0, -1, 1, 2]) {
+      const r = loadLevelRuntime(withWave(w));
+      expect(r.diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_FRACTIONAL')).toBe(false);
+    }
+  });
+});

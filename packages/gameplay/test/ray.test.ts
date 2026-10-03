@@ -73,8 +73,10 @@ describe('rayCapsuleY · 方向与边界', () => {
     const t = rayCapsuleY([0, 0.9, 0], [1, 0, 0], CX, CZ, R, H);
     expect(t).not.toBeNull();
     expect(t!).toBeGreaterThan(0);
-    // 内部起点：最近正向交点在球壳 x=0.3 处（下半球内），圆柱入口 0.5 更远
-    expect(t!).toBeCloseTo(0.3, 6);
+    // 内部起点：真正的出口是**圆柱壁** x=0.5。
+    // 0.3 是下半球 y=0.5 球壳上的点，但它 y=0.9 > 球心高度 → 落在**朝内**那半，
+    // 是胶囊内部的点而不是表面。修半球过滤前这里断言 0.3（把内壁当成了表面）。
+    expect(t!).toBeCloseTo(0.5, 6);
   });
 
   it('距离上限由调用方判（本函数不截断）：远命中照样返回真实 t', () => {

@@ -295,6 +295,13 @@ export const migrateV4ToV5: MigrationStep = {
   to: 5,
   name: 'add-camera-yaw-mode',
   run(doc) {
+    // 🔴 loseCondition 现在是 v4+ 的必填字段（评审 4166691678）：校验器会在
+    // v4/v5 文档缺它时报 E_LOSE_CONDITION。手写的 v4 文件可能漏了它，
+    // 迁移链是"补齐"的唯一合法入口 —— 不在这里补，那份文件就永远加载不了。
+    // 语义与 v3→v4 一致（'player-death' 是当时唯一合法的失败方式）。
+    if (doc['loseCondition'] !== 'player-death') {
+      doc['loseCondition'] = 'player-death';
+    }
     const nodes = doc['nodes'];
     if (!Array.isArray(nodes)) return doc;
     for (const n of nodes) {

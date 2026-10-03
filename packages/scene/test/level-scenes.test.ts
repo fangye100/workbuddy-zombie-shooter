@@ -19,7 +19,12 @@
  * 用 import.meta.glob 而非 node:fs（本仓库无 @types/node，types 是白名单）。
  */
 import { describe, it, expect } from 'vitest';
-import { ComponentKind, validateSceneDocument, type SceneDocument } from '../src/document';
+import {
+  ComponentKind,
+  SCHEMA_VERSION,
+  validateSceneDocument,
+  type SceneDocument,
+} from '../src/document';
 import { SceneGraph, MAX_NODES } from '../src/graph';
 import { instantiateScene } from '../src/instantiate';
 
@@ -137,5 +142,55 @@ describe('关卡场景 · 外部资产引用（ADR-018 P4b 门禁）', () => {
     }
     const covers = doc.nodes.filter((n) => /_cv\d+$/.test(n.id));
     expect(assetCount).toBeGreaterThanOrEqual(covers.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review）：关卡生成器不许落后于 schema 真源
+// ---------------------------------------------------------------------------
+
+/**
+ * 生成器源码（raw）。
+ *
+ * 为什么必须加这一层：生成器写死自己的 schema 版本号，schema 一抬版它就悄悄落后
+ * —— 落后时**没有任何自动化会报警**，直到有人重跑生成器，把作者楼层整体降级、
+ * `migrate-scenes --check` 才在另一个人手里炸开（PR #20 评审实测：gen-level 停在
+ * v4、sim-level 停在 v3，而真源已经是 v5）。
+ */
+const TOOL_SOURCES = import.meta.glob('/tools/level/*.mjs', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+}) as Record<string, string>;
+
+function tool(name: string): string {
+  const key = Object.keys(TOOL_SOURCES).find((k) => k.endsWith(`/${name}.mjs`));
+  if (key === undefined) throw new Error(`找不到工具源码：${name}.mjs`);
+  return TOOL_SOURCES[key]!;
+}
+
+describe('关卡工具 · schema 版本必须与真源一致（评审 4171651527 / 4171651540）', () => {
+  it('gen-level.mjs 的 SCHEMA_VERSION === document.ts 的 SCHEMA_VERSION', () => {
+    const m = /const SCHEMA_VERSION\s*=\s*(\d+)/.exec(tool('gen-level'));
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(SCHEMA_VERSION);
+  });
+
+  it('sim-level.mjs 的 SUPPORTED_SCHEMA === document.ts 的 SCHEMA_VERSION', () => {
+    const m = /const SUPPORTED_SCHEMA\s*=\s*(\d+)/.exec(tool('sim-level'));
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(SCHEMA_VERSION);
+  });
+
+  it('gen-level 生成的 Camera 组件带 v5 的 yawMode（否则重跑即产生降级 diff）', () => {
+    const src = tool('gen-level');
+    // 取 Camera 组件模板块（kind: 'Camera' 之后的 12 行内）
+    const i = src.indexOf("kind: 'Camera'");
+    expect(i).toBeGreaterThan(-1);
+    expect(src.slice(i, i + 400)).toContain('yawMode');
+  });
+
+  it('sim-level 的快照场景保留 loseCondition（派生产物不能丢真源字段）', () => {
+    expect(tool('sim-level')).toContain('loseCondition');
   });
 });

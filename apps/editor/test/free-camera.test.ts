@@ -178,3 +178,47 @@ describe('stepFreeCamera · 转向', () => {
     expect(s.distance).toBe(33);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review 4171651575）
+// ---------------------------------------------------------------------------
+
+describe('stepFreeCamera · 匀速：钳的是世界位移长度，不是输入三元组', () => {
+  /** 从 state 反算眼点（与实现同一真源 orbitEye） */
+  const eyeOf = (s: ViewCameraState): [number, number, number] =>
+    orbitEye(s.target, s.distance, s.yaw, s.elevationDeg) as [number, number, number];
+
+  it('仰视（elevation −89°，视线朝天）+ W + Q：两轴同向叠加，世界位移不得超过 speedMps×dt', () => {
+    // 俯仰为负 = 眼点在目标下方 = 视线朝上；此时 forward 与 world up 同向，
+    // 两个输入叠成 2 倍长 —— 这才是评审指出的超速工况。
+    //（elevation +89 是俯视，forward 与 up 反向，那是"互相抵消"，不是超速。）
+    const base: ViewCameraState = { target: [0, 0, 0], distance: 10, yaw: 0, elevationDeg: -89 };
+    const s = stepFreeCamera(base, inp({ forward: 1, up: 1 }), 1);
+    const e0 = eyeOf(base);
+    const e1 = eyeOf(s);
+    const moved = Math.hypot(e1[0] - e0[0], e1[1] - e0[1], e1[2] - e0[2]);
+    // 🔴 旧实现归一化输入三元组：forward 与 world up 在抬头时几乎同向，
+    // 合成后长度接近 2 → 实际速度是声明值的 2 倍（匀速承诺破功）。
+    expect(moved).toBeLessThanOrEqual(FREE_CAM_SPEED_MPS + 1e-6);
+    expect(moved).toBeCloseTo(FREE_CAM_SPEED_MPS, 6);
+  });
+
+  it('俯角 0 时 W+D 仍归一化（三轴正交，新旧算法等价 —— 回归保护）', () => {
+    const s = stepFreeCamera(BASE, inp({ forward: 1, right: 1 }), 1);
+    const e0 = eyeOf(BASE);
+    const e1 = eyeOf(s);
+    const moved = Math.hypot(e1[0] - e0[0], e1[1] - e0[1], e1[2] - e0[2]);
+    expect(moved).toBeCloseTo(FREE_CAM_SPEED_MPS, 6);
+  });
+
+  it('单轴 W 在任何俯仰角下都是整速（钳长不能把正常输入压慢）', () => {
+    for (const el of [-89, -45, 0, 45, 89]) {
+      const base: ViewCameraState = { target: [0, 0, 0], distance: 10, yaw: 0.7, elevationDeg: el };
+      const s = stepFreeCamera(base, inp({ forward: 1 }), 1);
+      const e0 = eyeOf(base);
+      const e1 = eyeOf(s);
+      const moved = Math.hypot(e1[0] - e0[0], e1[1] - e0[1], e1[2] - e0[2]);
+      expect(moved).toBeCloseTo(FREE_CAM_SPEED_MPS, 6);
+    }
+  });
+});

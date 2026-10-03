@@ -144,8 +144,19 @@ export interface SpawnRejection {
 export interface CombatEvent {
   readonly type: 'damage' | 'kill';
   readonly tick: number;
-  /** 受击槽位 */
+  /**
+   * 受击槽位。
+   *
+   * 🔴 **槽位不是身份**（评审 4166691436）：NPC 死亡后槽位回 freelist，
+   * 下一次 spawn 会把同一个下标分给另一个实体。事件缓冲是"延迟消费"的
+   * （宿主每帧取一次），只带裸槽位的话，晚到的消费方会把 slot 解析成
+   * 顶替上来的新实体 —— 击杀统计记到别人头上。所以必须同时带下面两项。
+   */
   readonly slot: number;
+  /** 受击槽位当时的代次（`slot + generation` 才构成实体身份） */
+  readonly generation: number;
+  /** 事件产生时的运行代次（reset() 会递增；跨局保留的事件据此失效） */
+  readonly runId: number;
   readonly characterId: string;
   /** 本次伤害量（kill 事件也带，便于统计贡献） */
   readonly amount: number;
@@ -153,6 +164,8 @@ export interface CombatEvent {
   readonly hpAfter: number;
   /** 造成伤害的槽位；-1 = 系统/环境伤害 */
   readonly sourceSlot: number;
+  /** 伤害来源的代次（同上，防顶替）；系统伤害为 -1 */
+  readonly sourceGeneration: number;
 }
 
 /**
@@ -530,6 +543,14 @@ export class RuntimeSession {
     if (!this.tbl.isAlive(targetSlot)) {
       return { died: false, hpAfter: 0 };
     }
+    // 🔴 已归零的槽位一律 no-op（评审 4166674712 / 4171651617）。
+    // 玩家死亡后槽位**故意**保留（要看得见死状），`isAlive` 仍为 true ——
+    // 于是不加这道闸的话，同一 tick 里第二只僵尸的挥抓会再走一遍完整死亡路径：
+    // 再发一条 kill 事件（击杀统计/奖励被重复计）、再跑一次 game-over 分支。
+    // 死亡必须是一次性的：血量已经是 0 就是死过了。
+    if (this.tbl.health[targetSlot]! <= 0) {
+      return { died: false, hpAfter: 0 };
+    }
     const hpAfter = Math.max(0, this.tbl.health[targetSlot]! - amount);
     this.tbl.health[targetSlot] = hpAfter;
     // 受击高亮 [PLACEHOLDER 0.15]（docs/23 §2.1；渲染层消费，先给默认时长）
@@ -540,10 +561,13 @@ export class RuntimeSession {
       type: died ? 'kill' : 'damage',
       tick: this.tickCount,
       slot: targetSlot,
+      generation: this.tbl.generation[targetSlot]!,
+      runId: this.runId,
       characterId,
       amount,
       hpAfter,
       sourceSlot,
+      sourceGeneration: sourceSlot < 0 ? -1 : this.tbl.generation[sourceSlot]!,
     });
     if (died) this.kill(targetSlot);
     // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。
@@ -640,7 +664,10 @@ export class RuntimeSession {
       return { tick: this.tickCount, spawned: 0, rejectedRooms: 0, rejections: [] };
     }
     const r = this.triggerRooms();
-    this.updateWaves();
+    // 🔴 updateWaves 的投放量必须并入报告（评审 4166674724）：它在一个 step 里
+    // 可能凭空生成**整波**实体，而旧实现只汇总 triggerRooms 的 spawned ——
+    // 于是"这一帧刷了 4 只"报成 spawned: 0，靠报告做指标/断言的调用方全被误导。
+    const w = this.updateWaves();
     this.decayHitFlash();
     this.movePlayer();
     this.moveNpcs();
@@ -661,7 +688,10 @@ export class RuntimeSession {
     }
     return {
       tick: this.tickCount,
-      spawned: r.spawned,
+      spawned: r.spawned + w.spawned,
+      // 🔴 rejections 仍只收 triggerRooms 的整批拒绝：updateWaves 的容量不足是
+      // **推迟重试**（波不丢，下一 tick 再试，并已单独 push W_SPAWN_CAPACITY 诊断），
+      // 把它算进 rejectedRooms 会让"这批怪永远不刷了"和"晚一点刷"混成同一个信号。
       rejectedRooms: r.rejections.length,
       rejections: r.rejections,
     };
@@ -846,11 +876,13 @@ export class RuntimeSession {
         (s) => s.roomNodeId === room.nodeId && s.enabled && s.trigger === 'room-enter',
       );
       // wave 分组：≤0 归 1（旧数据兼容）；波号升序 = 投放顺序
-      const waves = new Set<number>();
-      for (const s of pending) waves.add(Math.max(1, s.wave));
-      const lastWave = waves.size === 0 ? 0 : Math.max(...waves);
-
-      const wave1 = pending.filter((s) => Math.max(1, s.wave) === 1);
+      const waves = this.existingWaves(room.nodeId);
+      const lastWave = waves.length === 0 ? 0 : waves[waves.length - 1]!;
+      // 🔴 首波 = 实际存在的最小波号，不是硬编码 1（评审 4166691559）：
+      // 房间只写了 wave 3 时，旧的 `=== 1` 过滤得到空数组 → 一只不刷，
+      // 却照样发出 "wave 1 已投" 的 wave-start 事件（幽灵波）。
+      const first = waves.length === 0 ? 0 : waves[0]!;
+      const wave1 = pending.filter((s) => Math.max(1, Math.trunc(s.wave)) === first);
       const total = wave1.reduce((a, s) => a + s.count, 0);
       const free = this.table.capacity - this.table.aliveCount;
       if (total > free) {
@@ -862,11 +894,18 @@ export class RuntimeSession {
       }
 
       for (const s of wave1) spawned += this.spawnBatch(s);
-      if (lastWave >= 1) {
-        this.sessionEventBuf.push({ type: 'wave-start', tick: this.tickCount, roomNodeId: room.nodeId, wave: 1 });
+      // 真的投了才发事件：无刷怪点的房间（如 clearRule=interact 的过场房）
+      // 不该发出"wave 1 已投"——那是把"没有波"说成"投了一波"。
+      if (first !== 0) {
+        this.sessionEventBuf.push({
+          type: 'wave-start',
+          tick: this.tickCount,
+          roomNodeId: room.nodeId,
+          wave: first,
+        });
       }
       this.waveRooms.set(room.nodeId, {
-        nextWave: 2,
+        nextWave: waves.length > 1 ? waves[1]! : Number.POSITIVE_INFINITY,
         lastWave,
         nextWaveAtTick: -1,
         // 🔴 cleared 不许在投放时预置（单波房触发时怪还活着）；清空的唯一
@@ -885,9 +924,12 @@ export class RuntimeSession {
    * 「房内敌数」按 sourceOf（出生刷怪点）归属房间统计，玩家不参与；
    * 同种子重跑的波次时序确定性由：①文档序遍历 ②spawnBatch 的 nodeId 派生流
    * ③tick 驱动（无墙钟）共同保证。
+   *
+   * 🔴 房间清空按 `room.clearRule` 分派（评审 4166674700）：见 `isRoomSatisfied`。
    */
-  private updateWaves(): void {
-    if (this.waveRooms.size === 0) return;
+  private updateWaves(): { spawned: number } {
+    let spawned = 0;
+    if (this.waveRooms.size === 0) return { spawned };
     const interWaveTicks = Math.max(1, Math.round(INTER_WAVE_SEC / this.fixedStep));
 
     for (const room of this.desc.rooms) {
@@ -904,7 +946,7 @@ export class RuntimeSession {
             s.roomNodeId === room.nodeId &&
             s.enabled &&
             s.trigger === 'room-enter' &&
-            Math.max(1, s.wave) === st.nextWave,
+            Math.max(1, Math.trunc(s.wave)) === st.nextWave,
         );
         const total = waveSpawns.reduce((a, s) => a + s.count, 0);
         const free = this.table.capacity - this.table.aliveCount;
@@ -918,28 +960,83 @@ export class RuntimeSession {
           );
           continue;
         }
-        for (const s of waveSpawns) this.spawnBatch(s);
+        for (const s of waveSpawns) spawned += this.spawnBatch(s);
         this.sessionEventBuf.push({
           type: 'wave-start',
           tick: this.tickCount,
           roomNodeId: room.nodeId,
           wave: st.nextWave,
         });
-        st.nextWave += 1;
+        // 推进到**下一个实际存在**的波号（不是 ++）：投完 wave 1 而房间里只有
+        // wave 1 和 wave 5 时，++ 得到 2 —— 下一轮 filter 出空数组，照样发
+        // "wave 2 已投"（幽灵波），真正的 wave 5 却被跳到 Infinity 之后再也不投。
+        const after = this.nextExistingWave(room.nodeId, st.nextWave + 1);
+        st.nextWave = after ?? Number.POSITIVE_INFINITY;
         st.nextWaveAtTick = -1;
         continue;
       }
 
-      // 等清空：房内活敌（本房刷怪点出生的存活 NPC）为 0 ？
-      if (this.roomAliveEnemies(room.nodeId) > 0) continue;
-      if (st.nextWave <= st.lastWave) {
+      // 等清空：房内活敌（本房刷怪点出生的存活 NPC）为 0？
+      // 🔴 clearRule='none' 的房间**没有通关要求**（过场/纯通路），不等怪清空。
+      if (room.clearRule !== 'none' && this.roomAliveEnemies(room.nodeId) > 0) continue;
+
+      // 按**实际存在**的波号推进（评审 4166691559）：波号稀疏时（如只有 1 和 5）
+      // 旧的 `nextWave++` 会造出 wave 2/3/4 三条空的 wave-start 事件 + 三次 2s 空等，
+      // 作者看到的表现是"房间莫名卡住 6 秒还没怪"。
+      const next = this.nextExistingWave(room.nodeId, st.nextWave);
+      if (next !== null) {
+        st.nextWave = next;
         st.nextWaveAtTick = this.tickCount + interWaveTicks;
-      } else {
-        st.cleared = true;
-        this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
-        this.checkFloorClear();
+        continue;
       }
+
+      // 全部波已投完 → 按 clearRule 判"算不算清了"（评审 4166674700）
+      if (!this.isRoomSatisfied(room)) continue;
+      st.cleared = true;
+      this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
+      this.checkFloorClear();
     }
+    return { spawned };
+  }
+
+  /**
+   * 房间的通关条件是否已满足（评审 4166674700）。
+   *
+   * 调用点保证「本房所有波都已投完且（除 'none' 外）房内活敌归零」。
+   * 剩下的差异就是 clearRule：**"怪清完" 不等于 "房间通关"** ——
+   * floor-1 的 nd_f1r1 是 `interact`（要玩家交互某物件）、floor-2 有 `elite-dead`
+   * （要击杀精英），它们没有战斗波，旧实现进入房间那一刻就把它判成已清，
+   * 于是 `checkFloorClear()` 会发出**假的 floor-clear**（本层其实没通）。
+   *
+   * 未实现的规则一律**不冒充已清**并产出诊断（静默放行 = 假胜利；静默当 kill-all
+   * 也是假胜利）。宁可让作者看见"这间房卡住了"，也不能让通关判定说谎。
+   */
+  private isRoomSatisfied(room: LevelRuntimeDesc['rooms'][number]): boolean {
+    if (room.clearRule === 'kill-all' || room.clearRule === 'none') return true;
+    this.pushDiag(
+      'W_ROOM_CLEAR_RULE_UNSUPPORTED',
+      `房间 ${room.nodeId} 的 clearRule="${room.clearRule}" 本轮未实现：不判清空（也不会冒充已清去触发假的 floor-clear）`,
+      room.nodeId,
+    );
+    return false;
+  }
+
+  /** 本房（enabled + room-enter 刷怪点的）波号集合，升序、去重、≤0 归 1 */
+  private existingWaves(roomNodeId: NodeId): number[] {
+    const set = new Set<number>();
+    for (const s of this.desc.spawns) {
+      if (s.roomNodeId !== roomNodeId || !s.enabled || s.trigger !== 'room-enter') continue;
+      set.add(Math.max(1, Math.trunc(s.wave)));
+    }
+    return [...set].sort((a, b) => a - b);
+  }
+
+  /** 大于等于 `from` 的最小**实际存在**波号；没有（= 全部投完）返回 null */
+  private nextExistingWave(roomNodeId: NodeId, from: number): number | null {
+    for (const w of this.existingWaves(roomNodeId)) {
+      if (w >= from) return w;
+    }
+    return null;
   }
 
   /**

@@ -1942,10 +1942,14 @@ async function boot(): Promise<void> {
    */
   const clearPlayKeys = (): void => {
     freeCamKeys.clear(); // 飞行键同理：切窗口回来发现相机还在自己飞，是最难自查的那类 bug
+    // 🔴 停火必须**无条件**执行，不能跟着下面的早退一起跳过（评审 4166674734 /
+    // 4171651555）：J 键故意不进 playKeys（它不是向量键），所以"只按住 J 时失焦"
+    // 会命中 `playKeys.size === 0` 的早退 → fireHeld 永远停在 true。
+    // 页面随后收不到 J 的 keyup，焦点回来就自动继续开火 —— 玩家没按键却在打子弹。
+    playCtl.session.setFire(false);
     if (playKeys.size === 0) return;
     playKeys.clear();
     if (playCtl.isPlaying) playCtl.session.setInput(0, 0);
-    playCtl.session.setFire(false); // P5 C5：开火键也随失焦释放（防卡键连发）
   };
   window.addEventListener('blur', clearPlayKeys);
   document.addEventListener('visibilitychange', () => {

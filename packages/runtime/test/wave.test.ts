@@ -22,6 +22,16 @@ function make(): RuntimeSession {
   return new RuntimeSession({ desc: r.desc, seed: 7 });
 }
 
+/** 在装载前改夹具（评审回归用：改 clearRule / 波号 / wave 值） */
+function makeWith(mutate: (doc: SceneDocument) => void, capacity?: number): RuntimeSession {
+  const key = Object.keys(MODULES)[0]!;
+  const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+  mutate(doc);
+  const r = loadLevelRuntime(doc);
+  if (r.desc === null) throw new Error('夹具装载失败：' + JSON.stringify(r.diagnostics));
+  return new RuntimeSession({ desc: r.desc, seed: 7, ...(capacity === undefined ? {} : { capacity }) });
+}
+
 /** 清空当前全部存活 NPC（走 applyDamage 单入口——也是对本轮红线的一次复用） */
 function clearAllNpcs(s: RuntimeSession): void {
   for (const e of s.view()) {
@@ -197,7 +207,16 @@ describe('胜负终态 · game-over 与 floor-clear', () => {
   });
 
   it('全图清空 → floor-clear（触发全部房间并清完每间）', () => {
-    const s = make();
+    // 🔴 floor-1 的 nd_f1r1 是 clearRule='interact'（要玩家交互某物件），本轮未实现
+    // → 它不能被判为已清，于是"全清"在这份数据上**永远不成立**（评审 4166674700）。
+    // 通关判定本身的正向用例必须建立在"每间房都是 kill-all"的数据上。
+    const s = makeWith((doc) => {
+      for (const n of doc.nodes) {
+        for (const c of n.components) {
+          if (c.kind === 'RoomVolume') (c as { clearRule: string }).clearRule = 'kill-all';
+        }
+      }
+    });
     // 依次把玩家 teleport 进每个 enabled 房间触发，再清空全部波
     for (const room of s.desc.rooms) {
       if (!room.enabled) continue;
@@ -265,5 +284,159 @@ describe('WaveScheduler · 容量不足的推迟重试（评审补防线）', ()
     for (let k = 0; k < 75; k++) s.step();
     expect(s.countNpc()).toBe(20);
     expect(s.sessionEvents.some((e) => e.type === 'wave-start' && e.wave === 2)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review）
+// ---------------------------------------------------------------------------
+
+describe('房间清空按 clearRule 分派（评审 4166674700）', () => {
+  /** floor-1 的房间规则真源：nd_f1r0/nd_f1r2 = kill-all，nd_f1r1 = interact */
+  it('楼层数据的前提断言：floor-1 确实有一间 interact 房', () => {
+    const s = make();
+    const rules = s.desc.rooms.map((r) => `${r.nodeId}:${r.clearRule}`);
+    expect(rules).toContain('nd_f1r1:interact');
+  });
+
+  it('clearRule=interact 的房间不被判为已清，也不产出假的 floor-clear', () => {
+    const s = make();
+    // 逐房触发并清光所有怪（交互房没有战斗波，进入即"无怪"）
+    for (const room of s.desc.rooms) {
+      s.table.posX[s.playerEntityId] = (room.minX + room.maxX) / 2;
+      s.table.posZ[s.playerEntityId] = (room.minZ + room.maxZ) / 2;
+      s.step();
+      for (let k = 0; k < 10; k++) {
+        clearAllNpcs(s);
+        s.run(65);
+      }
+    }
+    // 战斗房清了，交互房**没**清 —— 通关不成立
+    expect(s.clearedRooms()).toContain('nd_f1r0');
+    expect(s.clearedRooms()).not.toContain('nd_f1r1');
+    expect(s.outcome).toBe('running'); // 🔴 旧实现在这里已经发出 floor-clear（假胜利）
+    expect(s.sessionEvents.some((e) => e.type === 'floor-clear')).toBe(false);
+    // 不静默：作者必须看见"这间房为什么卡住"
+    const w = s.diagnostics().filter((d) => d.code === 'W_ROOM_CLEAR_RULE_UNSUPPORTED');
+    expect(w).toHaveLength(1);
+    expect(w[0]!.nodeId).toBe('nd_f1r1');
+    expect(w[0]!.message).toContain('interact');
+  });
+
+  it('把 interact 改成 kill-all 后同一份数据即可通关（对照：不是把通关判死了）', () => {
+    const s = makeWith((doc) => {
+      for (const n of doc.nodes) {
+        for (const c of n.components) {
+          if (c.kind === 'RoomVolume' && n.id === 'nd_f1r1') {
+            (c as { clearRule: string }).clearRule = 'kill-all';
+          }
+        }
+      }
+    });
+    for (const room of s.desc.rooms) {
+      s.table.posX[s.playerEntityId] = (room.minX + room.maxX) / 2;
+      s.table.posZ[s.playerEntityId] = (room.minZ + room.maxZ) / 2;
+      s.step();
+      for (let k = 0; k < 10 && !s.clearedRooms().includes(room.nodeId); k++) {
+        clearAllNpcs(s);
+        s.run(65);
+      }
+    }
+    expect(s.outcome).toBe('floor-clear');
+  });
+
+  it('无刷怪点的房间不发幽灵 "wave 1 已投" 事件', () => {
+    const s = make();
+    const noSpawnRooms = s.desc.rooms.filter(
+      (r) => !s.desc.spawns.some((sp) => sp.roomNodeId === r.nodeId && sp.enabled),
+    );
+    expect(noSpawnRooms.length).toBeGreaterThan(0); // 数据前提：确实存在无怪房
+    for (const room of noSpawnRooms) {
+      s.table.posX[s.playerEntityId] = (room.minX + room.maxX) / 2;
+      s.table.posZ[s.playerEntityId] = (room.minZ + room.maxZ) / 2;
+      s.step();
+    }
+    for (const room of noSpawnRooms) {
+      const starts = s.sessionEvents.filter(
+        (e) => e.type === 'wave-start' && e.roomNodeId === room.nodeId,
+      );
+      expect(starts).toHaveLength(0); // 🔴 旧实现无条件发 wave-start(wave 1)
+    }
+  });
+});
+
+describe('波次投放量并入 StepReport（评审 4166674724）', () => {
+  it('updateWaves 投出的那一波必须出现在 step 报告的 spawned 里', () => {
+    const s = make();
+    s.run(10);
+    clearAllNpcs(s);
+    // 跨过 2s 间隔，逐 step 收集报告：必然有一步报告了 wave2 的实际投放量
+    const reports = s.run(70);
+    const spawnStep = reports.find((r) => r.spawned > 0);
+    expect(spawnStep).toBeDefined(); // 🔴 旧实现：整波投完却全 step spawned=0
+    expect(spawnStep!.spawned).toBe(4); // floor-1 nd_f1r0 的 wave2 = E-01×4
+    expect(s.countNpc()).toBe(4); // 报告数字与世界一致（不是凭空补的）
+  });
+
+  it('推迟重试（容量不足）不计入 rejectedRooms —— 那不是"这批不刷了"', () => {
+    // wave2 的 sp1 放大到 20 只，容量只给 9（与"容量不足的推迟重试"同一夹具思路）
+    const s = makeWith((doc) => {
+      for (const n of doc.nodes) {
+        if (n.id !== 'nd_f1r0_sp1') continue;
+        for (const c of n.components) {
+          if (c.kind === 'SpawnPoint') (c as { count: number }).count = 20;
+        }
+      }
+    }, 9);
+    clearAllNpcs(s);
+    const reports = s.run(140);
+    // 波没丢 → 一直推迟，报告里既没有 spawned 也没有 rejectedRooms
+    expect(reports.every((r) => r.spawned === 0)).toBe(true);
+    expect(reports.every((r) => r.rejectedRooms === 0)).toBe(true);
+    expect(s.diagnostics().some((d) => d.code === 'W_SPAWN_CAPACITY')).toBe(true);
+  });
+});
+
+describe('按实际存在的波号推进（评审 4166691559）', () => {
+  /** 把 nd_f1r0 的 wave2 刷怪点改成 wave 5：波号稀疏（1 和 5，中间空 2/3/4） */
+  function makeSparse(): RuntimeSession {
+    return makeWith((doc) => {
+      for (const n of doc.nodes) {
+        for (const c of n.components) {
+          if (c.kind !== 'SpawnPoint') continue;
+          const sp = c as { wave: number };
+          if (n.id === 'nd_f1r0_sp1' && sp.wave === 2) sp.wave = 5;
+        }
+      }
+    });
+  }
+
+  it('稀疏波号：只发 1 和 5 两条 wave-start，中间的 2/3/4 是幽灵波', () => {
+    const s = makeSparse();
+    expect(s.countNpc()).toBe(8); // wave1 照旧
+    clearAllNpcs(s);
+    s.run(200); // 远超 3×60 tick（旧实现会空等三轮 2s）
+    const waves = s.sessionEvents
+      .filter((e) => e.type === 'wave-start')
+      .map((e) => e.wave);
+    expect(waves).toEqual([1, 5]); // 🔴 旧实现：[1, 2, 3, 4]（wave 5 永远不投）
+    expect(s.countNpc()).toBe(4); // wave 5 真的投出来了
+  });
+
+  it('房间只写 wave 3 时：首波就是 3，不会因为硬编码 wave1 而一只不刷', () => {
+    const s = makeWith((doc) => {
+      for (const n of doc.nodes) {
+        for (const c of n.components) {
+          if (c.kind === 'SpawnPoint' && n.id.startsWith('nd_f1r0')) {
+            (c as { wave: number }).wave = 3;
+          }
+        }
+      }
+    });
+    // 两个刷怪点都归到 wave 3 → 首波一次投 8+4=12 只
+    //（🔴 旧实现：`=== 1` 过滤得到空数组 → 一只不刷，却照样发 wave-start(1)）
+    expect(s.countNpc()).toBe(12);
+    const first = s.sessionEvents.find((e) => e.type === 'wave-start');
+    expect(first!.wave).toBe(3);
   });
 });

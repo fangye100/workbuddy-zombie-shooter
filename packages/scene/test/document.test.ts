@@ -332,3 +332,78 @@ describe('序列化往返', () => {
     expect(round.nodes).toHaveLength(doc.nodes.length);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review）
+// ---------------------------------------------------------------------------
+
+describe('loseCondition 是 v4+ 的必填字段（评审 4166691678）', () => {
+  it('v5 文档缺 loseCondition → E_LOSE_CONDITION（不许绕过迁移链）', () => {
+    const doc = createEmptySceneDocument('No Lose');
+    delete (doc as { loseCondition?: unknown }).loseCondition;
+    const d = validateSceneDocument(doc);
+    expect(codes(d)).toContain('E_LOSE_CONDITION');
+  });
+
+  it('v5 文档塞未知值 → E_LOSE_CONDITION（本版只支持 player-death）', () => {
+    const doc = createEmptySceneDocument('Bad Lose');
+    (doc as { loseCondition: unknown }).loseCondition = 'timeout';
+    const d = validateSceneDocument(doc);
+    expect(codes(d)).toContain('E_LOSE_CONDITION');
+  });
+
+  it('填了合法值就零 error（正向对照）', () => {
+    const doc = createEmptySceneDocument('Ok');
+    expect(doc.loseCondition).toBe('player-death');
+    expect(codes(validateSceneDocument(doc))).toEqual([]);
+  });
+
+  it('v3 老文档缺该字段**不**报错 —— 那是迁移链的活，不是数据坏', () => {
+    const doc = createEmptySceneDocument('Old') as unknown as Record<string, unknown>;
+    doc['schemaVersion'] = 3;
+    delete doc['loseCondition'];
+    const d = validateSceneDocument(doc);
+    expect(codes(d)).not.toContain('E_LOSE_CONDITION');
+  });
+});
+
+describe('SpawnPoint.wave 正值必须是整数（评审 4171651605）', () => {
+  /** 一份带刷怪点的最小合法场景 */
+  function docWithWave(wave: number): SceneDocument {
+    const doc = createEmptySceneDocument('Wave');
+    doc.nodes.push({
+      id: 'nd_spawn',
+      name: '刷怪点',
+      parent: null,
+      transform: identityTransform(),
+      visible: true,
+      pickable: true,
+      category: '刷怪点',
+      prefab: null,
+      components: [
+        {
+          kind: ComponentKind.SpawnPoint,
+          enabled: true,
+          characterId: 'E-01',
+          count: 3,
+          wave,
+          trigger: 'room-enter',
+          delaySec: 0,
+          radius: 1,
+        } as never,
+      ],
+    });
+    return doc;
+  }
+
+  it('wave = 1.5 → E_SPAWN_WAVE（否则该刷怪点会被调度器静默跳过）', () => {
+    const d = validateSceneDocument(docWithWave(1.5));
+    expect(codes(d)).toContain('E_SPAWN_WAVE');
+  });
+
+  it('wave = 0 / 负 / 正整数 都合法（≤0 是旧数据的合法映射）', () => {
+    expect(codes(validateSceneDocument(docWithWave(0)))).not.toContain('E_SPAWN_WAVE');
+    expect(codes(validateSceneDocument(docWithWave(-2)))).not.toContain('E_SPAWN_WAVE');
+    expect(codes(validateSceneDocument(docWithWave(3)))).not.toContain('E_SPAWN_WAVE');
+  });
+});
