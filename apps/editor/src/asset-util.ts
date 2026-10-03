@@ -106,6 +106,8 @@ export interface WriteResult {
   conflict?: boolean;
   /** 冲突时服务端报告的当前磁盘指纹 */
   currentHash?: string | undefined;
+  /** Version of the actual accepted payload after a successful write. */
+  hash?: string | undefined;
 }
 
 /**
@@ -127,7 +129,7 @@ export async function writeProjectFile(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: rel.replace(/^\/+/, ''), ...body }),
     });
-    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string; code?: string; currentHash?: string };
+    const data = (await res.json()) as { ok?: boolean; bytes?: number; error?: string; code?: string; currentHash?: string; hash?: string };
     return {
       ok: res.ok && data.ok === true,
       status: res.status,
@@ -135,6 +137,7 @@ export async function writeProjectFile(
       error: data.error ?? null,
       conflict: res.status === 409 && data.code === 'conflict',
       currentHash: data.currentHash,
+      hash: data.hash,
     };
   } catch (e) {
     return { ok: false, status: 0, error: String(e) };
@@ -205,8 +208,13 @@ export interface RenameProjectResult {
   path: string;
   metaRenamed: boolean;
   projectUpdated: boolean;
-  /** 改名已落盘但 aether.project.json 登记改写失败时的诊断（ok 仍为 true，UI 需提示） */
+  /** Compatibility field; transactional rename never reports a partially successful project update. */
   projectError: string | null;
+  oldPath?: string;
+  directory?: boolean;
+  updatedFiles?: string[];
+  recoveryPath?: string;
+  diagnostics?: string[];
   error: string | null;
 }
 
@@ -220,7 +228,7 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
     });
     const data = (await res.json()) as {
       ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean;
-      projectError?: string; error?: string;
+      projectError?: string; error?: string; oldPath?: string; directory?: boolean; updatedFiles?: string[]; recoveryPath?: string; diagnostics?: string[];
     };
     return {
       ok: res.ok && data.ok === true,
@@ -229,6 +237,11 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
       projectUpdated: data.projectUpdated === true,
       projectError: data.projectError ?? null,
       error: data.error ?? null,
+      oldPath: data.oldPath ?? rel,
+      directory: data.directory ?? false,
+      updatedFiles: data.updatedFiles ?? [],
+      diagnostics: data.diagnostics ?? [],
+      ...(data.recoveryPath === undefined ? {} : { recoveryPath: data.recoveryPath }),
     };
   } catch (e) {
     return { ok: false, path: '', metaRenamed: false, projectUpdated: false, projectError: null, error: String(e) };

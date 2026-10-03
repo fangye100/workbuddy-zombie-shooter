@@ -32,6 +32,7 @@ import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from './behavior-executor';
 import { NULL_BEHAVIOR_EXECUTOR } from './behavior-executor';
+import { nearestSolidHit } from './solid-ray';
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -1306,6 +1307,7 @@ export class RuntimeSession {
     // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
     const playerStats = this.defIdToStats.get(t.defId[p]!)!;
     const rayY = playerStats.capsuleHeight / 2;
+    const wallT = nearestSolidHit([t.posX[p]!, rayY, t.posZ[p]!], [dx, 0, dz], this.desc.shotColliders, w.rangeM);
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
       const stats = this.defIdToStats.get(t.defId[i]!);
@@ -1323,7 +1325,8 @@ export class RuntimeSession {
         bestSlot = i;
       }
     }
-    if (bestSlot >= 0) this.applyDamage(bestSlot, w.damage, p);
+    // Equal-distance boundary belongs to the solid: ordinary bullets never penetrate it.
+    if (bestSlot >= 0 && (wallT === null || bestT < wallT)) this.applyDamage(bestSlot, w.damage, p);
     this.playerCooldownUntil = now + w.cdSec;
   }
 

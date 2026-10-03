@@ -1129,6 +1129,10 @@ export class LabRenderer {
     return this.loadedScene;
   }
 
+  public setSceneSourcePath(url: string): void {
+    if (this.loadedScene !== null) this.loadedScene = { ...this.loadedScene, url };
+  }
+
   /**
    * 换掉作者文档（WU-5）。
    *

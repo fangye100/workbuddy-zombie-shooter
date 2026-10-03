@@ -67,9 +67,17 @@ const out = { characters: [], environments: [] };
 
 // ---------------- 角色 ----------------
 const roster = JSON.parse(fs.readFileSync(path.join(ASSETS, 'characters/roster.json'), 'utf8'));
-for (const c of [...roster.npcs, ...roster.bosses]) {
+// 🔴 数组顺序即浏览器页展示顺序：主人公排最前。
+// kind 由所属列表决定，不用「bosses.includes(c)」反查 —— 每加一个分组都要改判定式，必漏。
+const chars = [
+  { list: roster.protagonists ?? [], kind: 'player' },
+  { list: roster.npcs ?? [], kind: 'npc' },
+  { list: roster.bosses ?? [], kind: 'boss' },
+].flatMap(({ list, kind }) => list.map((c) => ({ c, kind })));
+for (const { c, kind } of chars) {
   const base = `characters/models/${c.id}`;
   const dir = path.join(ASSETS, 'characters/models', c.id);
+  const dirExists = fs.existsSync(dir);
   const riggedDir = path.join(dir, 'rigged');
   const texturedDir = path.join(dir, 'textured');
 
@@ -84,12 +92,18 @@ for (const c of [...roster.npcs, ...roster.bosses]) {
   const infoSrc = animated ?? riggedOnly;
   const info = infoSrc ? glbInfo(path.join(riggedDir, infoSrc)) : null;
 
+  // 常规三视图 + 可选的 T-pose 绑定参考（tpose/front、tpose/side 二级目录）。
+  // key 即 manifest 里的视图名，浏览器页按它取中文标签。
+  const VIEW_DIRS = {
+    front: 'front', side: 'side', attack: 'attack',
+    tposeFront: 'tpose/front', tposeSide: 'tpose/side',
+  };
   const views = {};
-  for (const v of ['front', 'side', 'attack']) {
-    const imgDir = path.join(ASSETS, 'characters/images', c.id, v);
+  for (const [key, sub] of Object.entries(VIEW_DIRS)) {
+    const imgDir = path.join(ASSETS, 'characters/images', c.id, sub);
     if (fs.existsSync(imgDir)) {
       const f = fs.readdirSync(imgDir).find((x) => x.endsWith('.png'));
-      if (f) views[v] = `characters/images/${c.id}/${v}/${f}`;
+      if (f) views[key] = `characters/images/${c.id}/${sub}/${f}`;
     }
   }
 
@@ -98,7 +112,11 @@ for (const c of [...roster.npcs, ...roster.bosses]) {
   // 旧 LOD0（textured/*_baked.glb）是「原贴图→顶点色→逐面平涂」的有损中间产物，不是原生模型。
   // 🔴 每档的 tris/verts/bytes 一律**实测**（读 glb accessor），不用 roster 的预算值——
   //    预算值（如 E-01 的 900）与实际产出（现在 3000）早已脱节，拿它做 LOD 对比会误导。
-  const rawGlb = fs.readdirSync(dir).find((f) => new RegExp(`^${c.id.replace(/-/g, '')}_\\d{8}_\\d{6}\\.glb$`).test(f)) ?? null;
+  // 🔴 主人公目前只有 2D 概念图、没有 GLB —— 目录不存在时 readdirSync 会直接抛，
+  //    整个 manifest 就生成不出来。缺模型是合法状态（浏览器页按「仅 2D」渲染）。
+  const rawGlb = dirExists
+    ? fs.readdirSync(dir).find((f) => new RegExp(`^${c.id.replace(/-/g, '')}_\\d{8}_\\d{6}\\.glb$`).test(f)) ?? null
+    : null;
   const mk = (label, file, abs) => {
     const inf = glbInfo(abs);
     return { label, file, tris: inf?.tris ?? c.tris, verts: inf?.verts ?? null,
@@ -110,7 +128,7 @@ for (const c of [...roster.npcs, ...roster.bosses]) {
   if (animated) lods.push(mk('LOD3 · +动画', `${base}/rigged/${animated}`, path.join(riggedDir, animated)));
 
   out.characters.push({
-    id: c.id, name: c.name, en: c.en ?? '', kind: roster.bosses.includes(c) ? 'boss' : 'npc',
+    id: c.id, name: c.name, en: c.en ?? '', kind,
     threat: c.threat ?? '', role: c.role ?? '', height: c.height, tris: c.tris,
     silhouette: c.silhouette ?? '', look: c.look ?? '', accent: c.accent ?? '',
     hp: c.hp, speed: c.speed, attack: c.attack, weakness: c.weakness,

@@ -128,7 +128,8 @@ const state = {
 
 /* ---------------- 2D 列表 ---------------- */
 
-const KIND_COL = { npc: '#2BC4D6', boss: '#E5484D' };
+// 主人公单独一色：金 = 玩家 / 青 = 杂兵 / 红 = Boss。三色在 god view 下都不同相。
+const KIND_COL = { player: '#FFC531', npc: '#2BC4D6', boss: '#E5484D' };
 const COVER_LABEL = { none:'不挡', low:'半掩体', high:'全掩体', full:'全阻断', overhead:'头顶遮蔽' };
 
 async function loadManifest() {
@@ -143,7 +144,11 @@ function cardHTML(e, isChar) {
   const kindCol = isChar ? KIND_COL[e.kind] : (e.kind === 'structure' ? '#FFC531' : '#9AA0A6');
   const tags = [];
   if (isChar) {
-    tags.push(`<span class="tag gold">${e.lods.length} LOD</span>`);
+    // 🔴 零 LOD 是合法状态（主人公 P-01 只有 2D 概念图，GLB 尚未产出）。
+    // 卡片必须自己说清楚，否则用户点进去会以为 3D 坏了。
+    tags.push(e.lods.length
+      ? `<span class="tag gold">${e.lods.length} LOD</span>`
+      : `<span class="tag">仅 2D</span>`);
     if (e.animations.length) tags.push(`<span class="tag teal">${e.animations.length} 动画</span>`);
     if (e.joints) tags.push(`<span class="tag teal">${e.joints} 骨节</span>`);
     tags.push(`<span class="tag">${e.tris} tris</span>`);
@@ -171,6 +176,8 @@ function renderCards() {
     el.addEventListener('click', (ev) => {
       if (ev.target.tagName === 'IMG') return; // 图片点击走大图
       const entry = list.find((x) => x.id === el.dataset.id);
+      // 零 LOD → 只开 2D。进 openViewer 会拿到 lods[0] === undefined，loadLOD 直接崩。
+      if (state.tab === 'char' && !(entry.lods ?? []).length) { open2D(entry); return; }
       openViewer(entry, state.tab === 'char');
     });
   }
@@ -503,11 +510,13 @@ function toggleSkeleton(on) {
 let ui = {}; // 按钮引用
 
 function sidebarHTML(e, isChar) {
+  // 🔴 e.attack 是对象（{name, en, windup, ...}），直接插值会渲染成 "[object Object]"
+  const atkName = e.attack?.name ?? e.attack ?? '—';
   const rows = isChar
     ? `<dt>身高</dt><dd>${e.height}</dd>
        <dt>定位</dt><dd>${e.role}</dd>
-       <dt>HP / 速度 / 攻击</dt><dd>${e.hp} / ${e.speed} / ${e.attack}</dd>
-       <dt>弱点</dt><dd>${e.weakness ?? '—'}</dd>`
+       <dt>HP / 速度 / 攻击</dt><dd>${e.hp} / ${e.speed} / ${atkName}</dd>
+       <dt>${e.kind === 'player' ? '设计约束' : '弱点'}</dt><dd>${e.weakness ?? '—'}</dd>`
     : `<dt>占地</dt><dd>${e.footprint.join(' × ')} m</dd>
        <dt>掩体</dt><dd>${COVER_LABEL[e.cover] ?? e.cover}</dd>
        <dt>挡视线 / 挡移动</dt><dd>${e.blocksSight ? '是' : '否'} / ${e.blocksMove ? '是' : '否'}</dd>
@@ -518,14 +527,14 @@ function sidebarHTML(e, isChar) {
   <dl>${rows}</dl>
   ${e.silhouette ? `<h4>剪影</h4><p style="font-size:12px;margin:0">${e.silhouette}</p>` : ''}
   ${e.look ? `<h4>外观</h4><p style="font-size:12px;margin:0">${e.look}</p>` : ''}
-  <h4>LOD 层级</h4><div class="btnrow" id="lodbtns">
+  ${e.lods.length ? `<h4>LOD 层级</h4><div class="btnrow" id="lodbtns">
     ${e.lods.map((l, i) => `<button data-lod="${i}">${l.label}</button>`).join('')}
   </div>
   <h4>显示模式</h4><div class="btnrow" id="viewbtns">
     <button data-view="textured">贴图/顶点色</button>
     <button data-view="clay">白膜</button>
     <button data-view="wire">线框</button>
-  </div>
+  </div>` : ''}
   ${e.animations.length ? `<h4>Animation（${e.animations.length}）</h4><div class="btnrow" id="animlist">
     ${e.animations.map((a) => `<button data-anim="${a}">${a}</button>`).join('')}
   </div>` : ''}
@@ -533,7 +542,8 @@ function sidebarHTML(e, isChar) {
     <button id="skbtn">🦴 骨骼 X-Ray（${e.joints} 骨节）</button>
   </div>` : ''}
   ${isChar && Object.keys(e.views).length ? `<h4>2D 设计图</h4><div class="btnrow" id="v2dbtns">
-    ${Object.keys(e.views).map((v) => `<button data-img="${e.views[v]}">${{front:'正面',side:'侧面',attack:'攻击'}[v]}</button>`).join('')}
+    ${Object.keys(e.views).map((v) => `<button data-img="${e.views[v]}">${
+      {front:'正面',side:'侧面',attack:'攻击',tposeFront:'T姿·正',tposeSide:'T姿·侧'}[v] ?? v}</button>`).join('')}
   </div>` : (!isChar && e.img ? `<h4>2D 设计图</h4><div class="btnrow">
     <button data-img="${e.img}">参考图</button></div>` : '')}
   <p class="hint">拖动旋转 · 滚轮缩放 · 右键平移</p>`;
@@ -568,11 +578,42 @@ function syncSidebarButtons() {
   if (ui.sk) ui.sk.classList.toggle('on', !!state.skeletonOn);
 }
 
+/**
+ * 只有 2D 设计图的角色（主人公 P-01 尚无 GLB）：不开 3D、不启渲染循环，
+ * 直接在 3D 区铺一块说明，侧栏照常出 2D 按钮。
+ */
+function open2D(entry) {
+  state.entry = entry;
+  stopLoop();
+  disposeCurrent();
+  document.getElementById('viewer').classList.add('open');
+  const v3d = document.getElementById('v3d');
+  // 之前开过 3D 的话 canvas 还在，会露出上一帧的冻结画面 —— 藏掉
+  const cv = v3d.querySelector('canvas');
+  if (cv) cv.style.display = 'none';
+  if (!v3d.querySelector('#no3d')) {
+    v3d.insertAdjacentHTML('afterbegin',
+      `<div id="no3d" style="position:absolute;inset:0;display:grid;place-items:center;
+        color:var(--dim);font-size:14px;text-align:center;line-height:2;pointer-events:none">
+        <div>该角色暂无 3D 模型<br>
+        <span style="font-size:12px">GLB 产出后重跑 <code>gen_manifest.mjs</code> 即自动接入</span></div>
+      </div>`);
+  }
+  document.getElementById('vhud')?.classList.add('hidden');
+  const vstat = document.getElementById('vstat');
+  vstat.classList.remove('hidden');
+  vstat.textContent = `${entry.id} · 仅 2D 设计图`;
+  renderSidebar();
+}
+
 function openViewer(entry, isChar) {
   state.entry = entry;
   state.viewMode = 'textured';
   state.curLOD = 0;
   document.getElementById('viewer').classList.add('open');
+  // 从 2D 专用态切回：移除占位、恢复 canvas
+  document.getElementById('no3d')?.remove();
+  document.querySelector('#v3d canvas')?.style.removeProperty('display');
   ensureRenderer();
   // 默认加载策略：**信息最全的最轻版**——
   // 角色 = rigged_animated（带骨骼+动画）；环境 = tex2/tex baked（带贴图的低模）。

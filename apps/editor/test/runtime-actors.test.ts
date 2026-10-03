@@ -3,9 +3,24 @@ import {
   assemblePalettes,
   palettePoseCount,
   rankOrderEntries,
+  ActorLibrary,
 } from '../src/services/runtime-actors';
 import { bakePosePalette, bindPoseIndex, type BakedPalette } from '@aether/render';
 import type { SkeletonData, AnimClip } from '@aether/scene';
+
+it('resource rename cache invalidation prevents late old fetch from repopulating entries or failure list', async () => {
+  const manifest = { characters: [{ id: 'E-test', lods: [{ label: '+动画', file: 'old.glb' }] }] };
+  let rejectOld!: (e: Error) => void; let calls = 0;
+  const library = new ActorLibrary(manifest, async () => {
+    calls++;
+    if (calls === 1) return new Promise<ArrayBuffer>((_resolve, reject) => { rejectOld = reject; });
+    throw new Error('new path fetch reached');
+  });
+  const old = library.preload('E-test'); library.clear();
+  library.setManifest({ characters: [{ id: 'E-test', lods: [{ label: '+动画', file: 'new.glb' }] }] });
+  rejectOld(new Error('old path disappeared')); expect(await old).toBe(false); expect(library.size).toBe(0);
+  await library.preload('E-test'); expect(calls).toBe(2);
+});
 
 /** 指定 pose 数的可控 palette（duration=(n-1)/24 → 帧=n-1，+bind=n） */
 function makePalette(name: string, poseCount: number): BakedPalette {

@@ -17,6 +17,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
+import { comparePatchJson } from '../fs/project-write.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** 仓库根 = tools/mcp-binding 的上两级（与进程 cwd 解耦） */
@@ -33,7 +34,7 @@ if (!existsSync(DOMAIN_BUNDLE)) {
   process.exit(1);
 }
 // Windows 动态 import 必须走 file:// URL（裸路径会被当裸说明符解析）
-const { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool } = await import(
+const { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool, sceneFingerprint } = await import(
   pathToFileURL(DOMAIN_BUNDLE).href
 );
 
@@ -83,6 +84,10 @@ const fsPort = {
   writeText(abs, text) {
     assertRealInside(abs);
     writeFileSync(abs, text, 'utf8');
+  },
+  async comparePatchJson(abs, patch, baseHash) {
+    assertRealInside(abs);
+    return comparePatchJson(REPO_ROOT, abs, patch, baseHash, sceneFingerprint);
   },
   writeBinary(abs, data, exclusive) {
     // 导出到还不存在的子目录不该炸成 -32603 ENOENT（路径已过 resolveRepo 仓内校验）

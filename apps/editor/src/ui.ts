@@ -1,3 +1,4 @@
+import type { InspectorTransformInput } from './services/author-transform';
 import { t } from './i18n';
 import {
   PARAM_GROUPS,
@@ -282,6 +283,22 @@ export class Panel {
    * 重复刷新是幂等的（面板全量重绘），多刷一次无害。
    */
   onObjectSelect: (() => void) | null = null;
+  onTransformEdit: ((index: number, input: InspectorTransformInput) => void) | null = null;
+  onAuthorUndo: (() => void) | null = null;
+  onAuthorRedo: (() => void) | null = null;
+  onAuthorSave: (() => void) | null = null;
+  private authorUndo!: HTMLButtonElement;
+  private authorRedo!: HTMLButtonElement;
+  private authorSave!: HTMLButtonElement;
+  private authorMessage!: HTMLElement;
+
+  setAuthorState(dirty: boolean, undo: number, redo: number, playing: boolean, message: string | null): void {
+    this.authorUndo.disabled = playing || undo === 0;
+    this.authorRedo.disabled = playing || redo === 0;
+    this.authorSave.disabled = playing || !dirty;
+    for (const input of [...this.selPos, ...this.selRot, this.selScale]) input.disabled = playing;
+    this.authorMessage.textContent = message ?? (dirty ? '场景有未保存修改' : '场景已保存');
+  }
 
   private readonly renderer: LabRenderer;
 
@@ -673,11 +690,11 @@ export class Panel {
       const input = document.createElement('input');
       input.type = 'number';
       input.step = '0.001';
-      input.addEventListener('input', () => {
+      input.addEventListener('change', () => {
         // 清空（''）与输入到一半（"1."）都不提交：Number('')===0 会把清空误当置零
-        if (input.value.trim() === '') return;
+        if (input.value.trim() === '') { this.syncSelectionFromRenderer(true); return; }
         const v = Number(input.value);
-        if (!Number.isFinite(v)) return;
+        if (!Number.isFinite(v)) { this.syncSelectionFromRenderer(true); return; }
         onInput(Math.round(v * 1000) / 1000);
       });
       row.appendChild(input);
@@ -686,16 +703,29 @@ export class Panel {
     };
 
     this.selPos = [
-      mkNum('位置 X', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 0, v))),
-      mkNum('位置 Y', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 1, v))),
-      mkNum('位置 Z', (v) => this.applySel((i) => this.renderer.setObjectPos(i, 2, v))),
+      mkNum('世界位置 X', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'position', axis: 0, value: v }))),
+      mkNum('世界位置 Y', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'position', axis: 1, value: v }))),
+      mkNum('世界位置 Z', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'position', axis: 2, value: v }))),
     ];
     this.selRot = [
-      mkNum('旋转 X°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 0, v))),
-      mkNum('旋转 Y°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 1, v))),
-      mkNum('旋转 Z°', (v) => this.applySel((i) => this.renderer.setObjectRotDeg(i, 2, v))),
+      mkNum('旋转 X°', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'rotation', axis: 0, value: v }))),
+      mkNum('旋转 Y°', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'rotation', axis: 1, value: v }))),
+      mkNum('旋转 Z°', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'rotation', axis: 2, value: v }))),
     ];
-    this.selScale = mkNum('缩放', (v) => this.applySel((i) => this.renderer.setObjectScale(i, v)));
+    this.selScale = mkNum('缩放', (v) => this.applySel((i) => this.onTransformEdit?.(i, { kind: 'scale', value: v })));
+
+    const actions = document.createElement('div');
+    actions.className = 'row';
+    const button = (label: string, action: () => void): HTMLButtonElement => {
+      const btn = document.createElement('button'); btn.textContent = label;
+      btn.addEventListener('click', action); actions.appendChild(btn); return btn;
+    };
+    this.authorUndo = button('↶ 撤销', () => this.onAuthorUndo?.());
+    this.authorRedo = button('↷ 重做', () => this.onAuthorRedo?.());
+    this.authorSave = button('保存场景', () => this.onAuthorSave?.());
+    box.appendChild(actions);
+    this.authorMessage = document.createElement('div');
+    this.authorMessage.className = 'hint'; box.appendChild(this.authorMessage);
 
     const matRow = document.createElement('div');
     matRow.className = 'row';
@@ -1436,20 +1466,20 @@ export class Panel {
   }
 
   /** gizmo 拖拽时把面板滑块同步到渲染器最新状态（不重切显示态） */
-  syncSelectionFromRenderer(): void {
+  syncSelectionFromRenderer(force = false): void {
     if (this.selIndex === null) return;
     const info = this.renderer.getObjectState(this.selIndex);
-    if (info !== null) this.fillSelection(info);
+    if (info !== null) this.fillSelection(info, force);
   }
 
   /** 把渲染器返回的状态同步到选择面板控件 */
-  private fillSelection(info: SelectionInfo): void {
+  private fillSelection(info: SelectionInfo, force = false): void {
     this.selName.textContent = info.name;
     // 数字框回填统一 3 位小数；正在聚焦输入的框不覆盖（gizmo 拖拽逐帧同步
     // 会跟手输打架，失焦后下一帧自然对齐）
     const setN = (input: HTMLInputElement, v: number): void => {
       const next = v.toFixed(3);
-      if (document.activeElement !== input && input.value !== next) input.value = next;
+      if (force || document.activeElement !== input && input.value !== next) input.value = next;
     };
     setN(this.selPos[0]!, info.pos[0]);
     setN(this.selPos[1]!, info.pos[1]);

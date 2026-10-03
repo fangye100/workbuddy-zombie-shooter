@@ -5,8 +5,8 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
-import { parseGlb, validateAssetMeta, SceneGraph, worldToLocalTransform, identityTransform, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
-import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, TransformData, LodFamily, ScriptComponent } from '@aether/scene';
+import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
+import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
   SpawnEditStore,
@@ -18,7 +18,9 @@ import {
   formatAuthorEdit,
   findNode,
 } from '@aether/runtime';
-import type { ScatterComparison, ScatterFingerprint, TransformValues } from '@aether/runtime';
+import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import { AuthorTransformController, graphOfDoc } from './services/author-transform';
+import { AuthorSceneSaver } from './services/author-scene-save';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -30,6 +32,8 @@ import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
+import { BindingPersistence } from './services/binding/binding-persistence';
+import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
@@ -568,6 +572,7 @@ async function boot(): Promise<void> {
       },
       state: () => ({ dirty: spawnStore?.dirty ?? false, undoDepth: spawnStore?.undoDepth ?? 0 }),
       undo: () => undoSpawnEdit(),
+      redo: () => reportAuthorTransform(authorTransform.history(true)),
     },
     /**
      * Play 控制器（P5 C5 战斗探针用）：state / outcome / session（setFire /
@@ -1005,6 +1010,7 @@ async function boot(): Promise<void> {
   let drag: DragStart | null = null;
 
   function beginGizmoDrag(hit: GizmoHit, clientX: number, clientY: number): void {
+    if (playCtl.isPlaying) return;
     const info = renderer.getGizmoInfo();
     if (info === null) return;
     const idx = renderer.getSelected();
@@ -1131,159 +1137,15 @@ async function boot(): Promise<void> {
     hudDirty = true;
   }
 
-  /** 从文档建一次图（父级世界变换的来源；几十个节点，按需建，不维护增量缓存） */
-  function graphOfDoc(doc: SceneDocument): SceneGraph {
-    const g = SceneGraph.fromDocument(doc);
-    g.updateWorldTransforms();
-    return g;
-  }
-
-  /** 节点父级的**世界**变换（根节点 → 单位变换） */
-  function parentWorldOf(graph: SceneGraph, nodeId: NodeId): TransformData | null {
-    const n = graph.getNode(nodeId);
-    if (n === null) return null;
-    if (n.parent === null) return identityTransform();
-    const p = graph.getNode(n.parent);
-    if (p === null) return identityTransform();
-    return {
-      position: [p.world.position[0], p.world.position[1], p.world.position[2]],
-      rotation: [p.world.rotation[0], p.world.rotation[1], p.world.rotation[2], p.world.rotation[3]],
-      scale: [p.world.scale[0], p.world.scale[1], p.world.scale[2]],
-    };
-  }
-
-  /** 把图里某节点的**世界**变换写进对应的渲染物体（没有对应物体时静默跳过） */
-  function pushWorldOfNode(graph: SceneGraph, nodeId: NodeId): void {
-    const idx = renderer.findObjectIndexByNodeId(nodeId);
-    if (idx === null) return;
-    const n = graph.getNode(nodeId);
-    if (n === null) return;
-    renderer.setObjectPos(idx, 0, n.world.position[0]);
-    renderer.setObjectPos(idx, 1, n.world.position[1]);
-    renderer.setObjectPos(idx, 2, n.world.position[2]);
-    renderer.setObjectQuat(idx, [
-      n.world.rotation[0], n.world.rotation[1], n.world.rotation[2], n.world.rotation[3],
-    ]);
-    renderer.setObjectScale(idx, n.world.scale[0]);
-  }
-
-  /**
-   * 文档 → 视口：把某节点**及其整棵子树**的世界变换写回渲染物体。
-   *
-   * 子树必须一起推：视口物体是**扁平**的，每个物体一份世界变换；而文档是层级 ——
-   * 拖父节点时（act1 的 `nd_f1r0` / `nd_f1r2` 各有 6 个可渲染子节点）子物体在文档里
-   * 跟着走，视口里却留在原地，松手/保存/Play 之后才跳过去（codex 评审 P1）。
-   * YAGNI 说明：不做整体重建 —— 重建会销毁并重传全部 GPU 资源、丢选中态与相机。
-   */
-  function pushSubtreeToView(graph: SceneGraph, nodeId: NodeId): void {
-    pushWorldOfNode(graph, nodeId);
-    for (const d of graph.descendantsOf(nodeId)) pushWorldOfNode(graph, d);
-  }
-
-  /**
-   * 拖拽**进行中**把子树同步到视口。
-   *
-   * 用拖拽开始时缓存的文档图（`d.docGraph`）逐帧重算：先把被拖节点的当前世界量反解成
-   * 局部量写进图，再 `updateWorldTransforms()`，然后推子树。逐帧成本 = 节点数（几十）。
-   * 不这么做的话，拖父节点期间子物体不动，只有松手才跟上 —— 正是"视口与文档不一致"。
-   */
   function pushDraggedSubtree(d: DragStart): void {
-    const g = d.docGraph;
-    const id = d.docNodeId;
-    if (g === null || id === null) return;
-    const st = renderer.getObjectState(d.objIndex);
-    const q = renderer.getObjectQuat(d.objIndex);
-    const parentWorld = parentWorldOf(g, id);
-    if (st === null || q === null || parentWorld === null) return;
-    const local = worldToLocalTransform(
-      parentWorld,
-      {
-        position: [st.pos[0], st.pos[1], st.pos[2]],
-        rotation: [q[0], q[1], q[2], q[3]],
-        scale: [st.scale, st.scale, st.scale],
-      },
-      identityTransform(),
-    );
-    if (local === null) return;
-    g.setLocalTransform(id, {
-      position: local.position,
-      rotation: local.rotation,
-      scale: local.scale,
-    });
-    g.updateWorldTransforms();
-    for (const child of g.descendantsOf(id)) pushWorldOfNode(g, child);
+    if (d.docGraph !== null && d.docNodeId !== null) {
+      authorTransform.preview(d.docGraph, d.docNodeId, d.objIndex, d.mode);
+    }
   }
 
-  /**
-   * gizmo 拖拽收尾：把渲染物体的**世界**变换换算成**局部**变换写回场景文档。
-   *
-   * 复审 B1 的修复本体。过去这里什么都不做：拖完点保存不落盘、点 Play 也看不见
-   * （文档里还是旧位置）—— 那是「编辑器拥有场景状态」的活标本（AGENTS.md §2.1）。
-   * 现在走 `SpawnEditStore.setTransform`：一条拖拽 = 一条可撤销编辑，保存范围
-   * （`changedPaths`）自动包含它，Play 读同一份文档于是立刻生效。
-   *
-   * 🔴 旋转必须与位置/缩放一起写：`TransformValues` 的标量分量只覆盖位置与统一缩放，
-   * 纯旋转拖拽时位置/缩放都没变。曾经这里只写位置+缩放 → 旋转被丢弃，纯旋转既不进
-   * 撤销栈也不落盘（codex / Copilot 评审 P1）。
-   */
+  /** One drag produces one author command; transient renderer changes are only previews. */
   function commitGizmoTransform(d: DragStart): void {
-    const store = spawnStore;
-    if (store === null) return;
-    const idx = d.objIndex;
-    const nodeId = renderer.getObjectNodeId(idx);
-    const st = renderer.getObjectState(idx);
-    const q = renderer.getObjectQuat(idx);
-    if (nodeId === null || st === null || q === null) {
-      // 兜底场景与拖入的资产模型没有文档来源：明确说清"存不了"，而不是静默丢弃
-      spawnMsg = {
-        text: '该物体不属于场景文档（兜底场景或拖入的资产模型），变换不会被保存',
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const parentWorld = parentWorldOf(graphOfDoc(store.document), nodeId);
-    if (parentWorld === null) {
-      spawnMsg = { text: `场景文档里找不到父级链（节点 ${nodeId}），变换未写回`, kind: 'warn' };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const world: TransformData = {
-      position: [st.pos[0], st.pos[1], st.pos[2]],
-      rotation: [q[0], q[1], q[2], q[3]],
-      scale: [st.scale, st.scale, st.scale],
-    };
-    const local = worldToLocalTransform(parentWorld, world, identityTransform());
-    if (local === null) {
-      // 父级缩放含 0 → 世界量反解不出局部量。宁可拒绝也不写一个错变换进文件
-      spawnMsg = { text: '父级缩放为 0，无法把世界变换换算成局部变换：请先修正父节点缩放', kind: 'warn' };
-      refreshSpawnPanel();
-      hudDirty = true;
-      return;
-    }
-    const to: TransformValues = {
-      posX: local.position[0],
-      posY: local.position[1],
-      posZ: local.position[2],
-      scale: local.scale[0],
-      // 旋转与位置/缩放一起提交（纯旋转拖拽时标量分量都没变，漏了它就整条编辑丢失）
-      rotation: [local.rotation[0], local.rotation[1], local.rotation[2], local.rotation[3]],
-    };
-    // 拖回原处（或只点了一下手柄没真动）→ 不进撤销栈、不弹提示。
-    // 交给 store.setTransform 自己判定"值没变化"（它按 |四元数点积| 比旋转，q 与 −q
-    // 是同一姿态，逐分量比会把"转一圈回到原处"误报成一次编辑）。
-    const r = store.setTransform(nodeId, to);
-    if (r.ok) {
-      spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(r.edit!)}（↶ 撤销 可回退）`, kind: 'ok' };
-    } else if (r.error !== '值没有变化') {
-      spawnMsg = { text: r.error ?? '变换写回被拒绝', kind: 'warn' };
-    } else {
-      return; // 没真动：不刷面板、不提示
-    }
-    refreshSpawnPanel();
-    hudDirty = true;
+    reportAuthorTransform(authorTransform.gizmo(d.objIndex, d.mode));
   }
 
   function endGizmoDrag(): void {
@@ -1364,6 +1226,24 @@ async function boot(): Promise<void> {
   // =====================================================================
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
+  const authorSaver = new AuthorSceneSaver();
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
+  panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
+  panel.onAuthorUndo = () => undoSpawnEdit();
+  panel.onAuthorRedo = () => reportAuthorTransform(authorTransform.history(true));
+  panel.onAuthorSave = () => void saveSpawnEdits();
+
+  function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
+    if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
+    else if (result.error !== '值没有变化') spawnMsg = { text: result.error ?? '变换被拒绝', kind: 'warn' };
+    if (result.ok && spawnAb !== null && spawnStore !== null) {
+      const after = captureInitialScatter(spawnStore.document, { seed: playCtl.session.seed });
+      spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
+    }
+    panel.syncSelectionFromRenderer(true);
+    refreshSpawnPanel();
+    hudDirty = true;
+  }
   let selectedSpawnNode: string | null = null;
   /** 刷怪点功能体被显式选中（层级行 / 面板列表 / Play 实体）。分组显隐只认它，
    *  selectedSpawnNode 的「自动选第一个」不再连带显示（那等于变相常驻） */
@@ -1395,8 +1275,8 @@ async function boot(): Promise<void> {
   // **不需要改这里的代码**。这就是 R2 说的「schema 是 Agent 与人类的契约面」：
   // 人类在 Inspector 上看到的，就是 Agent 声明的那几个旋钮。
   //
-  // 🔴 当前为只读态：保存链路的合法路径白名单只覆盖 SpawnPoint 的
-  // radius/count（`saveSpawnEditsInner`），Script 参数改了不会进 diffs、不会落盘。
+  // 🔴 当前为只读态：作者命令与保存合同只覆盖 Transform 与 SpawnPoint 的
+  // radius/count，Script 参数还不属于可编辑合同。
   // 与其让用户以为改了（刷新回原值，极难排查），不如置灰并写明原因。
   // 待 spawn-edit 支持通用组件编辑后放开。
   // =====================================================================
@@ -1467,7 +1347,7 @@ async function boot(): Promise<void> {
 
   function editSpawnField(field: 'radius' | 'count', value: number): void {
     const store = spawnStore;
-    if (store === null || selectedSpawnNode === null) return;
+    if (store === null || selectedSpawnNode === null || playCtl.isPlaying) return;
     const seed = playCtl.session.seed;
     // A = 编辑前的同种子指纹；改完再抓一次 B。只展示"改后"看不出改动到底生没生效
     // （房间还没进 → 一个都没刷，params 变了但画面纹丝不动，作者会以为没保存）
@@ -1495,149 +1375,36 @@ async function boot(): Promise<void> {
   function undoSpawnEdit(): void {
     const store = spawnStore;
     if (store === null) return;
-    const undone = store.undo();
+    const undone = authorTransform.history().edit;
     if (undone === null) return;
+    panel.syncSelectionFromRenderer(true);
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
     if (spawnAb !== null) {
       const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
       spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
-    }
-    // 变换编辑撤销后必须把视口也退回去：文档是唯一真源，但渲染物体是另一份表示，
-    // 不主动回写就会出现「文档已退、画面还留着」（复审 B1）。**连同子树**一起回写 ——
-    // 撤销父节点编辑时子物体在文档里也退回去了，视口不同步就会留下"错位的子物体"。
-    if (undone.kind === 'transform') {
-      const store2 = spawnStore;
-      if (store2 !== null) pushSubtreeToView(graphOfDoc(store2.document), undone.nodeId);
     }
     spawnMsg = { text: `已撤销：${formatAuthorEdit(undone)}`, kind: 'ok' };
     refreshSpawnPanel();
     hudDirty = true;
   }
 
-  /**
-   * 保存。
-   *
-   * 写盘前先做一次**改动集合自检**：
-   *
-   *   ① 路径必须落在**某个 `SpawnPoint` 组件**的 radius / count 上
-   *      —— 光匹配正则不够：`Collider{sphere}.radius` 或任何组件上的 `count`
-   *      都能骗过 `/components\[\d+\]\.(radius|count)$/`，等于放行；
-   *   ② 至少要有一条改动（零改动就没必要写盘）。
-   *
-   * ⚠️ 这里**不能**限制"恰好一条"：作者完全可能连续改两个刷怪点再保存，
-   * 那时 2 处改动是合法的。曾经这么写过，结果把合法保存给拒了（复审抓出来的回归）。
-   * "一次编辑只产生一处改动"这条性质由 `spawn-edit.test.ts` 在 runtime 侧断言，
-   * 不该在保存这一步用条数来卡。
-   *
-   * 这条兜底的意义：store 的实现保证了它不会去碰别的字段，但把断言放在保存这一步，
-   * 才能保证将来有人加了新命令也不会悄悄破坏这个性质。
-   */
+  /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
+    if (playCtl.isPlaying) {
+      spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
     const store = spawnStore;
-    const src = renderer.getSceneSource();
-    if (store === null || src === null) {
+    const source = renderer.getSceneSource();
+    if (store === null || source === null) {
       spawnMsg = { text: '没有可保存的场景文件', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
+    } else {
+      const result = await authorSaver.save(store, source.url);
+      // A scene switch during I/O must not attach an old scene's message to the new document.
+      if (spawnStore !== store) return;
+      spawnMsg = { text: result.message, kind: result.ok ? 'ok' : 'warn' };
     }
-    // 🔴 重复保存必须串行（复审 P2）：上一次保存还在写盘，这次的快照/确认
-    // 会跟它交错 —— 确认范围是按编辑身份记的，交错会把还没包含进快照的编辑
-    // 当成已保存。客户端这里先拒，服务端对同一路径还有队列兜底。
-    if (saveInFlight) {
-      spawnMsg = { text: '上一次保存尚未完成，稍候再试', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    const diffs = store.changedPaths();
-    if (diffs.length === 0) {
-      spawnMsg = { text: '没有改动需要保存', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    saveInFlight = true;
-    try {
-      await saveSpawnEditsInner(store, src, diffs);
-    } finally {
-      saveInFlight = false;
-    }
-  }
-
-  let saveInFlight = false;
-
-  /** saveSpawnEdits 的主体（串行门在外层） */
-  async function saveSpawnEditsInner(store: SpawnEditStore, src: { url: string }, diffs: ReturnType<SpawnEditStore['changedPaths']>): Promise<void> {
-    // 合法路径集合 = 全文所有 SpawnPoint 组件的 radius / count（按 kind 限定，不是按路径形状）
-    const doc = store.document;
-    const expected = new Set<string>();
-    if (Array.isArray(doc.nodes)) {
-      for (let i = 0; i < doc.nodes.length; i++) {
-        const comps = doc.nodes[i]!.components;
-        for (let c = 0; c < comps.length; c++) {
-          if (comps[c]!.kind !== 'SpawnPoint') continue;
-          expected.add(`nodes[${i}].components[${c}].radius`);
-          expected.add(`nodes[${i}].components[${c}].count`);
-        }
-      }
-    }
-    const unexpected = diffs.filter((d) => !expected.has(d.path));
-    if (unexpected.length > 0) {
-      spawnMsg = {
-        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-
-    // ① 竞态边界：**快照**这次要发送的版本。保存是异步 IO，从序列化到写盘返回之间
-    // 作者可能继续编辑；确认时只提交快照（按编辑身份，不按栈长 —— 复审 P2）。
-    const snap = store.beginSave();
-    // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
-    // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
-    const content = `${JSON.stringify(snap.doc, null, 2)}\n`;
-    const baseFp = sceneFingerprint(store.committedDocument);
-
-    // ② 提前提示（不是判定）：先读盘看一眼有没有明显的外部修改，
-    // 能早一步给作者更清楚的中文提示。
-    const disk = await readProjectFile(src.url);
-    if (!disk.ok) {
-      spawnMsg = { text: `保存失败：读不到磁盘基准版本（${disk.error ?? '未知'}）`, kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    const diskFp = sceneFingerprint(disk.json);
-    if (diskFp !== baseFp) {
-      spawnMsg = {
-        text:
-          `拒绝保存：磁盘上的场景已被外部修改（基准 ${baseFp} → 磁盘 ${diskFp}）。` +
-          '为避免覆盖对方内容，本次未写盘；本地编辑已保留。重新装载或人工合并后再保存。',
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-
-    // ③ 写盘：**基准指纹随请求一起交给服务端**，版本校验与写入在同一个受控操作里
-    // （复审 P1：浏览器两步之间被注入修改的 TOCTOU 窗口，由服务端队列 + 校验封死）。
-    const res = await writeProjectFile(src.url, { content, baseHash: baseFp });
-    if (!res.ok) {
-      spawnMsg = {
-        text: res.conflict
-          ? `拒绝保存：服务端确认磁盘已被外部修改（当前 ${res.currentHash ?? '?'}）。本地编辑已保留，请重新装载或人工合并。`
-          : `保存失败：${res.error ?? `HTTP ${res.status}`}`,
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-    store.confirmSave(snap.doc, snap.lastEditId);
-    const kept = store.undoDepth;
-    spawnMsg = {
-      text:
-        `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留` +
-        (kept > 0 ? `（另有 ${kept} 处保存期间的编辑仍为未保存）` : ''),
-      kind: 'ok',
-    };
     refreshSpawnPanel();
     hudDirty = true;
   }
@@ -1701,6 +1468,8 @@ async function boot(): Promise<void> {
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
+    panel.setAuthorState(spawnStore?.dirty ?? false, spawnStore?.undoDepth ?? 0,
+      spawnStore?.redoDepth ?? 0, playCtl.isPlaying, spawnMsg?.text ?? null);
     if (spawnPanel === null) return;
     const store = spawnStore;
     const doc = store?.document ?? null;
@@ -1805,9 +1574,11 @@ async function boot(): Promise<void> {
       },
       edit: (field: 'radius' | 'count', value: number) => editSpawnField(field, value),
       undo: () => undoSpawnEdit(),
+      redo: () => reportAuthorTransform(authorTransform.history(true)),
       /** 全部撤回（不提交）。此前只有 API 没有任何入口 —— 探针/用户都到不了 */
       revertAll: () => {
-        spawnStore?.revertAll();
+        while (authorTransform.history().ok) { /* project each author inverse */ }
+        panel.syncSelectionFromRenderer(true);
         refreshSpawnPanel();
         hudDirty = true;
       },
@@ -1960,6 +1731,16 @@ async function boot(): Promise<void> {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
+      e.preventDefault();
+      reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && k === 's') {
+      e.preventDefault();
+      void saveSpawnEdits();
+      return;
+    }
 
     // ---- 自由相机优先接管 ----
     // 必须在 PLAY_KEYS 与 gizmo 的 W/E/R 之前：飞行时 W 是"往前飞"而不是"切移动工具"，
@@ -2349,6 +2130,7 @@ async function boot(): Promise<void> {
   let binding: BindingPanel | null = null;
   // 当前绑定会话对应的 .meta.json 落盘点（资产库入口才有；层级/场景物体入口为 null）
   let currentBindingMetaPath: string | null = null;
+  const bindingPersistence = new BindingPersistence();
   // 资产库当前选中的资产路径（供顶部菜单「进入绑定」取目标 .glb）
   let lastAssetPath: string | null = null;
   // 最近一次「导入文件骨架」的映射诊断（__editor.binding.importDiag 供自动化断言）
@@ -2486,55 +2268,27 @@ async function boot(): Promise<void> {
     binding?.clear();
     bindingSession = null;
     currentBindingMetaPath = null;
+    bindingPersistence.clear();
   }
 
-  /**
-   * 「保存绑定」：把当前编辑态（骨架摆位 + Skin Wrapper 半径）写回
-   * `<mesh>.meta.json` 的 `bindingEditor` 节点。
-   *
-   * - 仅资产库入口（currentBindingMetaPath 非空）能落盘；层级/场景物体入口无路径，
-   *   点保存会提示「无路径」而不写盘，避免误把数据写进无关文件。
-   * - 用 devfs 的 patch 模式浅合并：只动 `bindingEditor` 顶层键，保留
-   *   importer / userData / rig / bindings 等其余字段（含手改），与 node 管线互不踩。
-   */
+  /** Binding version and validation are shared with offline MCP; main only supplies the GUI port. */
   function saveBinding(): void {
     if (binding === null) return;
     if (currentBindingMetaPath === null) {
-      binding.setSaveStatus(false, '无路径：层级入口不支持存盘');
-      return;
+      binding.setSaveStatus(false, '无路径：层级入口不支持存盘'); return;
     }
-    const data = binding.getEditorData();
+    const current = binding;
     const path = currentBindingMetaPath;
-    void (async () => {
-      // 写盘前必须确认目标 sidecar 是合法的，否则一律拒绝写。
-      // 事故复现：patch 到一个「不存在 / 不完整」的 `.meta.json` 上，会产出只有
-      // bindingEditor、缺 schemaVersion/guid/kind/importer 的非法文件，
-      // 直接把 `scene:check` 打红（E04 的 40MB 原始产物就因此多了一个本不该存在的 sidecar
-      // —— 它命中 gen 脚本的 RAW_SOURCE_RE，压根不该有 meta）。
-      // 项目铁律是「不静默修数据」→ 这里只报错、不代补字段，指引用户跑 scene:gen。
-      const cur = await readProjectFile(path);
-      if (!cur.ok) {
-        binding?.setSaveStatus(
-          false,
-          `读不到 sidecar${cur.error ? ` (${cur.error})` : ''}，请先跑 npm run scene:gen`,
-        );
-        return;
-      }
-      const errs = validateAssetMeta(cur.json).filter((d) => d.severity === 'error');
-      if (errs.length > 0) {
-        binding?.setSaveStatus(
-          false,
-          `sidecar 不完整（${errs[0]!.code}），请先跑 npm run scene:gen`,
-        );
-        return;
-      }
-      const res = await writeProjectFile(path, { patch: { bindingEditor: data } });
-      if (res.ok) {
-        binding?.setSaveStatus(true, `已保存${res.bytes !== undefined ? ` ${res.bytes}B` : ''}`);
-      } else {
-        binding?.setSaveStatus(false, `保存失败 ${res.status}${res.error ? ` ${res.error}` : ''}`);
-      }
-    })();
+    void bindingPersistence.save(current.getEditorData(), (request) =>
+      writeProjectFile(request.path, { patch: request.patch, baseHash: request.baseHash }))
+      .then((result) => {
+        if (binding !== current || currentBindingMetaPath !== path) return;
+        current.setSaveStatus(result.ok, result.ok ? `已保存 ${result.bytes ?? '?'}B`
+          : result.conflict ? `保存冲突（磁盘 ${result.currentHash ?? '?'}）：本地修改已保留，请重新进入绑定接受最新版本`
+          : `保存失败：${result.error ?? result.status}。本地修改已保留`);
+      }).catch((error) => {
+        if (binding === current && currentBindingMetaPath === path) current.setSaveStatus(false, String(error));
+      });
   }
 
   /** 顶边把手：下压面板露出上方 3D 视图对照（只改 style.top） */
@@ -3214,6 +2968,9 @@ async function boot(): Promise<void> {
       const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
       lastSkeletonImport = null;
 
+      const acceptedMetaPath = `${relPath}.meta.json`;
+      const acceptedMeta = await readProjectFile(acceptedMetaPath);
+
       // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
       // 不回填 sidecar 的 bindingEditor（那是「源网格 + 模板骨架」世界的会话）
       if (opts?.importSkeleton === true) {
@@ -3225,7 +2982,9 @@ async function boot(): Promise<void> {
         }
         // 落盘点只在「真的会打开」之后才切换：early return 时若已改指向，
         // 旧会话的「保存绑定」会写进新纯网格的 sidecar（PR #13 评审）
-        currentBindingMetaPath = `${relPath}.meta.json`;
+        currentBindingMetaPath = acceptedMetaPath;
+        if (acceptedMeta.ok) bindingPersistence.accept(acceptedMetaPath, acceptedMeta.json);
+        else bindingPersistence.clear();
         const imp = skeletonPositionsFromGltf(model.skeleton);
         lastSkeletonImport = imp;
         openBinding({
@@ -3246,10 +3005,12 @@ async function boot(): Promise<void> {
       }
 
       // 落盘点：与 GLB 同目录同名的 .meta.json（gen-asset-meta 已生成过）
-      currentBindingMetaPath = `${relPath}.meta.json`;
+      currentBindingMetaPath = acceptedMetaPath;
+      if (acceptedMeta.ok) bindingPersistence.accept(acceptedMetaPath, acceptedMeta.json);
+      else bindingPersistence.clear();
       // 尝试回填上次的编辑态（bindingEditor 节点）；没有/损坏都不影响打开
       let saved: unknown = undefined;
-      const meta = await readProjectFile(currentBindingMetaPath);
+      const meta = acceptedMeta;
       if (meta.ok && meta.json !== null && typeof meta.json === 'object') {
         const ed = (meta.json as Record<string, unknown>).bindingEditor;
         if (ed !== undefined && ed !== null) saved = ed;
@@ -3277,6 +3038,7 @@ async function boot(): Promise<void> {
           if (obj === undefined) return;
           // 层级入口无 GLB 路径 → 没有可落盘的 .meta.json，保存按钮会被拦下
           currentBindingMetaPath = null;
+          bindingPersistence.clear();
           openBinding({
             name: obj.name,
             // 拷贝一份：场景网格是渲染器的活引用，applyAo 之类会就地改它
@@ -3342,6 +3104,7 @@ async function boot(): Promise<void> {
       if (obj !== undefined && obj.mesh !== null) {
         // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
         currentBindingMetaPath = null;
+        bindingPersistence.clear();
         openBinding({
           name: obj.name,
           vertices: new Float32Array(obj.mesh.vertices),
@@ -3627,17 +3390,48 @@ async function boot(): Promise<void> {
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
       onRename: async (path, newName) => {
+        if (playCtl.isPlaying || spawnStore?.dirty) {
+          panel.setModelInfo('重命名冲突：请先停止 Play 并保存或处理作者修改；本地编辑已保留');
+          hudDirty = true;
+          return false;
+        }
         const r = await renameProjectEntry(path, newName);
         if (!r.ok) {
-          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}`);
+          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}${r.recoveryPath ? `；恢复证据：${r.recoveryPath}` : ''}`);
           hudDirty = true;
           return false;
         }
         const extras: string[] = [];
+        extras.push(...r.diagnostics ?? []);
+        lodFamilies = null;
+        assetPreview?.clear();
+        if (lastAssetPath !== null) lastAssetPath = renamedResourcePath(lastAssetPath, r);
+        if (currentBindingMetaPath !== null && renamedResourcePath(currentBindingMetaPath, r) !== currentBindingMetaPath) {
+          currentBindingMetaPath = renamedResourcePath(currentBindingMetaPath, r);
+          bindingPersistence.clear();
+          binding?.setSaveStatus(false, '资源已改名，本地绑定修改已保留；请重新进入绑定接受新路径版本后保存');
+        }
+        const source = renderer.getSceneSource();
+        const store = spawnStore;
+        if (source !== null && store !== null) {
+          const refreshed = await refreshAuthorResources(store, source.url, r, readProjectFile, () => spawnStore === store && !playCtl.isPlaying);
+          renderer.setSceneSourcePath(refreshed.source);
+          if (refreshed.status === 'refreshed' && spawnStore === store && !playCtl.isPlaying) {
+            renderer.setDocument(store.document);
+            refreshSpawnPanel();
+          }
+          if (refreshed.message) extras.push(refreshed.message);
+        }
+        if (r.updatedFiles?.includes('assets/_data/asset-manifest.json')) {
+          actorPreloadGen++;
+          actorLib.clear();
+          const latest = await readProjectFile('assets/_data/asset-manifest.json');
+          if (latest.ok) { assetManifest = latest.json; actorLib.setManifest(assetManifest); }
+          else extras.push('角色清单重新载入失败，请重新打开编辑器');
+        }
         if (r.metaRenamed) extras.push(t('sidecar 已随迁'));
         if (r.projectUpdated) extras.push(t('项目登记已更新'));
-        // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
-        // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
+        // The transaction reports explicit recovery information on failure; successful paths are complete.
         if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
         panel.setModelInfo(`${t('已重命名')} → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
         hudDirty = true;

@@ -1,6 +1,49 @@
 {
  "characters": [
   {
+   "id": "H-01",
+   "name": "清道夫",
+   "en": "THE SCAVENGER",
+   "kind": "player",
+   "threat": "",
+   "role": "玩家化身 · 全场唯一可操作单位 · 靠走位与换弹节奏活着",
+   "height": "1.80 m",
+   "tris": 3500,
+   "silhouette": "直立对称 · 右肩单肩背包隆起 · 长枪斜挎成对角 · 护目镜单点高光",
+   "look": "沙褐战术风衣下摆撕裂，骨白围巾遮住口鼻，青光护目镜，右肩单肩背包，左前臂护甲板，双手持突击步枪，厚重膝护与军靴；正常暖色皮肤 —— 全场唯一不是尸绿的",
+   "accent": "teal",
+   "hp": 100,
+   "speed": "4.2 m/s",
+   "attack": {
+    "name": "突击步枪 · 三连发",
+    "en": "Burst Fire",
+    "windup": "0.05 s",
+    "range": "直线 25 m",
+    "damage": 12,
+    "cd": "0.12 s",
+    "telegraph": "无 —— 玩家是输出方"
+   },
+   "weakness": "换弹 1.6 s 是唯一不可动作窗口；被三面合围即死 —— 走位空间就是血量",
+   "views": {
+    "front": "characters/images/H-01/front/H-01_front.png",
+    "side": "characters/images/H-01/side/H-01_side.png",
+    "attack": "characters/images/H-01/attack/H-01_attack.png",
+    "tposeFront": "characters/images/H-01/tpose/front/H-01_tpose_front.png",
+    "tposeSide": "characters/images/H-01/tpose/side/H-01_tpose_side.png"
+   },
+   "lods": [
+    {
+     "label": "LOD0 · 原生高模(混元raw ~80k面)",
+     "file": "characters/models/H-01/H01_20261003_173137.glb",
+     "tris": 79980,
+     "verts": 56603,
+     "bytes": 35703848
+    }
+   ],
+   "animations": [],
+   "joints": 0
+  },
+  {
    "id": "E-01",
    "name": "游荡者",
    "en": "Shambler",

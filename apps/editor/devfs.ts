@@ -16,23 +16,12 @@
  *
  * ## 写入协议（复审 P1，如实声明保护边界）
  *
- * **`POST /__fs/write` 是唯一受协调的写路径。** 规则：
- *
- *   1. 客户端带 `baseHash`（它认为磁盘当前的版本指纹）→ 服务端在**逐路径串行队列**内
- *      先核后写：不一致 → **409 conflict**（回传 `currentHash`），绝不覆盖。
- *   2. 浏览器保存（编辑器）与 Agent 写入**都必须走这里**。直接 `fsp.writeFile` 的写入
- *      **不受保护** —— 进程内队列约束不了别的进程/程序。
- *   3. 即使用队列 + 即时校验，`rename` 前仍存在毫秒级窗口（别的进程此时写入仍可能
- *      被覆盖）。这个窗口**无法在本机无锁文件系统上彻底消除**。因此：**不要宣称
- *      队列提供了"完整保护"**。它的准确保证是：
- *        - 经过 API 的写者**互不可覆盖**（同基准并发 → 一个 200、一个 409）；
- *        - 直接写文件者**没有 HTTP 响应、也不会被"判出 409"** —— 409 只存在于
- *          HTTP API 内。直接写者造成的版本漂移，要等**之后某次经过 API 的保存**
- *          在核对基准时才可能被检出；那次保存返回 409，但写入本身早已发生。
- *   4. 写入失败（500）不会终止进程、不会卡死队列：下一次同路径写入照常执行。
- *   5. 队列按**文件身份**（realpath + 平台大小写语义）分桶，不是按路径字符串：
- *      Windows/macOS 上 `case.json` 与 `CASE.JSON` 指向同一文件，进同一队列；
- *      Linux 上大小写是两个文件，**不**强行转小写。
+ * devfs 写入、离线 MCP sidecar 保存及 rename 共用 tools/fs/project-write.mjs 的项目锁。
+ * 锁内完成读取、baseHash 比较、合并及原子替换；相同基准的参与写者只能一方成功。
+ * GUI/MCP 的 baseline 来自 load/hydrate，不能在保存前读最新版本冒充旧基准。
+ * 正常失败 finally 释放锁；异常退出留下 owner 信息，显式报告 busy，确认进程已停止后
+ * 才能人工恢复。直接文件写者不受此协议约束，其漂移只能在后续比较中检出。
+ * 进程内逐文件身份队列仍保留，按 realpath 和卷的实际大小写语义串行。
  *
  * ⚠️ 该中间件仅 dev 存在（`vite dev` 的 `zh-fs-api` 插件）；生产构建产物里没有。
  *    生产部署时需在托管产物的 Node server 复刻同一套写路由。
@@ -47,6 +36,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 // ⚠️ 必须带 .ts 扩展名：vite/esbuild 能解析无扩展名 import，但 `node --experimental-strip-types`
 // （verify:fs 的执行环境）按 Node ESM 规则要求显式扩展名 —— 漏掉就是 ERR_MODULE_NOT_FOUND。
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
+import { withProjectWriteLock } from '../../tools/fs/project-write.mjs';
+import { renameProject } from '../../tools/fs/rename-project.mjs';
+import { SCHEMA_VERSION } from '../../packages/scene/src/document.ts';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -203,7 +195,7 @@ async function handleWrite(
   // `CASE.JSON` 是同一个文件，按大小写敏感分桶会让它们跑进两条队列（复审 P1）。
   const qKey = fileIdentityKey(root, abs);
   const prev = writeQueues.get(qKey) ?? Promise.resolve();
-  const task = prev.catch(() => undefined).then(() => performWrite(abs, rel, body, res));
+  const task = prev.catch(() => undefined).then(() => withProjectWriteLock(root, () => performWrite(abs, rel, body, res)));
   // 🔴 队列里存的是**尾巴本身**，且这里 await 的也是它（复审 P1）：
   // 曾经存 `task.finally()` 派生的新 Promise、却只 await 原始 task ——
   // 写入失败后派生 Promise 的拒绝无人消费，进程会以 unhandled rejection 崩掉；
@@ -321,7 +313,7 @@ async function performWrite(
     throw e;
   }
   const st = statSync(abs);
-  sendJson(res, 200, { ok: true, path: rel, bytes: st.size });
+  sendJson(res, 200, { ok: true, path: rel, bytes: st.size, hash: sceneFingerprint(JSON.parse(out)) });
 }
 
 export type FsApiHandler = (req: IncomingMessage, res: ServerResponse, next: () => void) => void;
@@ -409,9 +401,8 @@ async function handleRename(
     sendJson(res, 400, { error: 'aether.project.json 是项目锚点，不允许改名' });
     return;
   }
-  let st: { isDirectory(): boolean };
   try {
-    st = statSync(abs);
+    statSync(abs);
   } catch {
     sendJson(res, 404, { error: '要改名的条目不存在' });
     return;
@@ -426,106 +417,12 @@ async function handleRename(
     return;
   }
   const target = path.join(path.dirname(abs), newName);
-  // 目标已被占用 → 409。大小写不敏感盘上「只改大小写」是同一个文件（身份键相等），放行。
-  // ⚠️ 这是 TOCTOU 预检不是锁：检查与 rename 之间别的进程仍可能占住目标 —— POSIX
-  // rename 会静默替换目标文件，这个残余窗口在无锁文件系统上无法彻底消除（与
-  // /__fs/write 的诚实声明同款），不宣称它提供完整保护（Copilot 评审）。
-  if (existsSync(target) && fileIdentityKey(root, target) !== fileIdentityKey(root, abs)) {
-    sendJson(res, 409, { error: `目标名字已存在：${newName}` });
-    return;
-  }
-
-  // sidecar 跟随：<源文件名>.meta.json 与源资产同生共死（agents.md §2.5）。
-  // sidecar 的目标位同样不能被占：源 a.glb → b.glb 时若残留着孤儿 b.glb.meta.json，
-  // 跟随改名会静默覆盖它 —— 数据丢失路径，rename 前先拒（codex 评审 P1）。
-  const metaAbs = `${abs}.meta.json`;
-  const targetMeta = `${target}.meta.json`;
-  const hasMeta = st.isDirectory() === false && existsSync(metaAbs);
-  if (hasMeta && existsSync(targetMeta) && fileIdentityKey(root, targetMeta) !== fileIdentityKey(root, metaAbs)) {
-    sendJson(res, 409, { error: `目标的 sidecar 已存在（${path.basename(targetMeta)}），先处理它再改名` });
-    return;
-  }
-
   try {
-    await fsp.rename(abs, target);
-  } catch (e) {
-    sendJson(res, 500, { error: `改名失败：${String(e)}` });
-    return;
+    const result = await renameProject(root, abs, target, isCaseInsensitiveFs(root), SCHEMA_VERSION);
+    sendJson(res, result.status, result);
+  } catch (error) {
+    sendJson(res, 400, { ok: false, error: `改名前预检失败：${String(error)}` });
   }
-  let metaRenamed = false;
-  if (hasMeta) {
-    try {
-      await fsp.rename(metaAbs, targetMeta);
-      metaRenamed = true;
-    } catch (e) {
-      // 源文件已改成功、sidecar 没跟上：回滚源文件，保持「要么都成、要么都不动」
-      await fsp.rename(target, abs).catch(() => undefined);
-      sendJson(res, 500, { error: `sidecar 改名失败，已回滚源文件：${String(e)}` });
-      return;
-    }
-  }
-
-  // 项目登记同步：AetherProject 里**所有**路径字段都跟随改写 —— 不只 scenes[].path，
-  // 还有 assetRoots / defaultStyle / inputMap / gameplayConfig / materialLibrary /
-  // behaviorRoots（codex 评审 P2：漏一个就是改名后静默断链）。
-  // 命中规则：文件改名 = 精确相等；目录改名 = 前缀 `old/`（含目录本身）。
-  // 场景内部的 AssetRef 引用按 guid 解析（sidecar 已跟着改名，guid 不变）。
-  let projectUpdated = false;
-  let projectError: string | null = null;
-  const projAbs = path.join(root, 'aether.project.json');
-  if (existsSync(projAbs)) {
-    const oldPosix = toPosix(path.relative(root, abs));
-    const newPosix = toPosix(path.relative(root, target));
-    const rewrite = (p: string): string =>
-      p === oldPosix || p.startsWith(`${oldPosix}/`) ? newPosix + p.slice(oldPosix.length) : p;
-    try {
-      const proj = JSON.parse(await fsp.readFile(projAbs, 'utf8')) as Record<string, unknown>;
-      let dirty = false;
-      const touch = (p: unknown): unknown => {
-        if (typeof p !== 'string') return p;
-        const next = rewrite(p);
-        if (next !== p) dirty = true;
-        return next;
-      };
-      if (Array.isArray(proj.scenes)) {
-        for (const s of proj.scenes) {
-          if (s !== null && typeof s === 'object' && typeof (s as { path?: unknown }).path === 'string') {
-            (s as { path: string }).path = touch((s as { path: string }).path) as string;
-          }
-        }
-      }
-      for (const key of ['assetRoots', 'behaviorRoots'] as const) {
-        if (Array.isArray(proj[key])) proj[key] = proj[key].map(touch);
-      }
-      for (const key of ['defaultStyle', 'inputMap', 'gameplayConfig', 'materialLibrary'] as const) {
-        if (typeof proj[key] === 'string') proj[key] = touch(proj[key]);
-      }
-      if (dirty) {
-        const tmp = await uniqueTempPath(projAbs);
-        await fsp.writeFile(tmp, JSON.stringify(proj, null, 2) + '\n', { encoding: 'utf8', flag: 'wx' });
-        try {
-          await fsp.rename(tmp, projAbs);
-        } catch (e) {
-          await fsp.rm(tmp, { force: true }).catch(() => undefined);
-          throw e;
-        }
-        projectUpdated = true;
-      }
-    } catch (e) {
-      // 登记改写失败不回滚改名（文件已移动是既成事实），也不谎报整体失败 ——
-      // 报 ok:true 让浏览器照常刷新列表，失败信息放 projectError 由 HUD 告知
-      // （codex/Copilot 评审：ok:false 会让 UI 停留在旧名字上）。
-      projectError = `aether.project.json 登记更新失败：${String(e)}`;
-    }
-  }
-
-  sendJson(res, 200, {
-    ok: true,
-    path: toPosix(path.relative(root, target)),
-    metaRenamed,
-    projectUpdated,
-    projectError,
-  });
 }
 
 /**

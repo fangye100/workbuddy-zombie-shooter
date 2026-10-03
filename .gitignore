@@ -37,3 +37,7 @@ __pycache__/
 assets/**/*.pre-rebake.bak
 assets/**/*.pre-uvkeep.bak
 assets/**/*.v2-flower.keep
+
+# Runtime project write lock and recoverable rename transaction journals
+.workbuddy/cache/fs-coordination.lock/
+.workbuddy/cache/rename-recovery/

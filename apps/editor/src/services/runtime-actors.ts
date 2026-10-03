@@ -173,6 +173,7 @@ export class ActorLibrary {
   private readonly entries = new Map<string, ActorMesh>();
   /** 本轮已失败的角色（不重试；clear() 后重新开始） */
   private readonly failed = new Set<string>();
+  private cacheGeneration = 0;
   private readonly fetcher: (path: string) => Promise<ArrayBuffer>;
   /** 烘焙档位（P4 M4）：采样率与片段数上限，来自项目 render.targetTier */
   private bake: BakeProfile;
@@ -266,6 +267,7 @@ export class ActorLibrary {
    * 这是可重试状态，调用方等 manifest 到位后再来（见 main.ts 的 manifestReady）。
    */
   async preload(characterId: string): Promise<boolean> {
+    const generation = this.cacheGeneration;
     if (this.entries.has(characterId) || this.failed.has(characterId)) return false;
     if (this.manifestJson === null || this.manifestJson === undefined) return false;
 
@@ -279,6 +281,7 @@ export class ActorLibrary {
 
     try {
       const buf = await this.fetcher(path);
+      if (generation !== this.cacheGeneration) return false;
       // targetHeight = null：不做身高规整。碰撞/选中的真源是 stats 的胶囊尺寸，
       // 网格保持资产原尺寸（1.895m 家族）；强行归一化会把两者基差焊死在渲染里
       const glb = parseGlb(buf, null);
@@ -333,6 +336,7 @@ export class ActorLibrary {
       this.reassignBases();
       return true;
     } catch (e) {
+      if (generation !== this.cacheGeneration) return false;
       console.warn(`[actors] ${characterId} 装配失败（${path}），退回胶囊：`, e);
       this.failed.add(characterId);
       return false;
@@ -381,6 +385,7 @@ export class ActorLibrary {
 
   /** 清空装配（编辑器卸载 / 换项目时；Play 间复用不要调） */
   clear(): void {
+    this.cacheGeneration++;
     this.entries.clear();
     this.failed.clear();
     this.orderedEntries = [];

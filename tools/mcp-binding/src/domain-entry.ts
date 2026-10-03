@@ -8,3 +8,4 @@
 export { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool } from './tools';
 export type { FsPort, ToolResult } from './tools';
 export type { RgbaImage } from './render';
+export { sceneFingerprint } from '@aether/runtime';

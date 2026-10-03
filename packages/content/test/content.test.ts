@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_COLORS, GRADING, TOON_RAMP } from '@aether/content';
 import { ROSTER_CHARACTERS, requireCharacter } from '@aether/content';
+import { NPC_STATS, PLAYER_STATS, lookupCharacterStats } from '@aether/content';
 
 /**
  * content/ 生成层回归测试（ADR-008：验证资产与结论同入库）
@@ -62,11 +63,24 @@ describe('B. toonRamp（生产分阶唯一真源）', () => {
 });
 
 describe('C. roster 解析规则', () => {
-  it('共 8 个角色：npc 5 + boss 3，id 唯一', () => {
-    expect(ROSTER_CHARACTERS).toHaveLength(8);
+  it('共 9 个角色：npc 5 + boss 3 + protagonist 1，id 唯一', () => {
+    expect(ROSTER_CHARACTERS).toHaveLength(9);
     expect(ROSTER_CHARACTERS.filter((c) => c.kind === 'npc')).toHaveLength(5);
     expect(ROSTER_CHARACTERS.filter((c) => c.kind === 'boss')).toHaveLength(3);
-    expect(new Set(ROSTER_CHARACTERS.map((c) => c.id)).size).toBe(8);
+    expect(ROSTER_CHARACTERS.filter((c) => c.kind === 'protagonist')).toHaveLength(1);
+    expect(new Set(ROSTER_CHARACTERS.map((c) => c.id)).size).toBe(9);
+  });
+
+  it('主人公派生身高与真源一致，保持独立于 NPC 刷怪战斗表', () => {
+    const hero = requireCharacter('H-01');
+    expect(hero.kind).toBe('protagonist');
+    expect(hero.heightRaw).toBe('1.80 m');
+    expect(hero.heightMeters).toBe(1.8);
+    expect(hero.hp).toBe(100);
+    expect(hero.acts).toEqual([1, 2, 3, 4]);
+    expect(lookupCharacterStats('H-01')).toBeUndefined();
+    expect(NPC_STATS).toHaveLength(8);
+    expect(PLAYER_STATS.hp).toBe(100);
   });
 
   it('简单身高串取数值', () => {

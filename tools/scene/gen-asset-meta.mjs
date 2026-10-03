@@ -15,7 +15,7 @@
  *    生成脚本冲掉用户数据是资产管线最常见的灾难。
  * 2. **身高值复用生成层**：从 `roster.generated.ts` 读已解析好的 `heightMeters`，
  *    不自己再解析一遍 `roster.json` 的复合串（ADR-002：资料库经生成层进入引擎）。
- *    提取后断言角色数 == 8，正则一旦失效立刻炸，不静默产出错误数据。
+ *    提取后断言角色数 == 9（包含主人公），正则一旦失效立刻炸，不静默产出错误数据。
  *
  * ## 用法
  *
@@ -36,7 +36,7 @@ const ROSTER_GEN = join(ROOT, 'packages', 'content', 'src', 'generated', 'roster
 
 const META_SUFFIX = '.meta.json';
 /** 期望的名册角色数。正则提取的结果必须等于它，否则说明生成物格式变了 */
-const EXPECTED_ROSTER_COUNT = 8;
+const EXPECTED_ROSTER_COUNT = 9;
 
 // ---------------------------------------------------------------- 名册
 
@@ -74,8 +74,9 @@ function loadRoster() {
 /** 跳过的目录：破损备份、UV 保留中间产物、obj 中间产物 */
 const SKIP_DIR_RE = /(^|[\\/])(_broken_backup[^\\/]*|uvkeep|obj_[^\\/]*|lab)([\\/]|$)/;
 
-/** 原始混元产物：`E04_20260901_010134.glb` —— 40~50MB，是减面管线的输入，不是游戏资产 */
-const RAW_SOURCE_RE = /^[EB]-\d{2}_\d{8}_\d{6}\.glb$/;
+/** 原始混元产物：`E04_20260901_010134.glb` —— 40~50MB，是减面管线的输入，不是游戏资产。
+ *  文件名里的连字符被 tag 规则剥掉（cid.replace('-','')），所以只按数字段匹配前缀字母。 */
+const RAW_SOURCE_RE = /^[EBH]\d{2}_\d{8}_\d{6}\.glb$/;
 
 /**
  * 成品所在的目录（这些目录下的 GLB 才生成 meta）。
@@ -109,9 +110,11 @@ function variantOf(relPath) {
   return dir;
 }
 
-/** 从路径提取角色 id：`models/E-04/...` → `E-04` */
+/** 从路径提取角色 id：`models/E-04/...` → `E-04`。
+ *  🔴 前缀清单要与 roster 的分组对齐：E=敌、B=Boss、H=主人公（H-01 起加入）。
+ *     写死 [EB] 会让新主人公的 sidecar 拿到 null 角色 id。 */
 function characterIdOf(relPath) {
-  const m = /models[\\/]([EB]-\d{2})[\\/]/.exec(relPath);
+  const m = /models[\\/]([EBH]-\d{2})[\\/]/.exec(relPath);
   return m?.[1] ?? null;
 }
 
