@@ -15,6 +15,14 @@
 - 🔴 **本沙箱 headed Chrome 的 `navigator.clipboard.readText()` 稳定返回空串** → editor-smoke 剪贴板核对按"环境不可核对"skip；产品行为由 HUD 回显确切路径断言（不接受"复制失败"）。
 - 🔴 探针的 headed Chrome 若中途挂住会留僵尸进程占 `.workbuddy/tmp/chrome-profile`（后续启动附加到旧实例）→ 按命令行含该 user-data-dir 的**主进程**（无 `--type=`）杀。
 
+## PR / 评审闭环（pr-bot-review skill 的实测要点）
+- 申请 Copilot review 只走 GitHub 官方 MCP `request_copilot_review`（参数 camelCase `pullNumber`，空 body = 已受理，需轮询 reviews）；REST `requested_reviewers` 传 Copilot 是死路。
+- 🔴 **首个 bot review 到达后再等 3–5 分钟**：本次 Copilot 第二轮是在我 push 之后才到的，7 条新 comment 里含 2 条 High。
+- 定型前**不做任何修复**；每条 comment 先复现再判定；**每条都要回复**（认可 👍 + commit，拒绝给 file:line 依据）。
+- 批量回复用脚本 + `gh api ... -F body=@file`（中文/反引号在 shell 里必炸）。
+- `gh pr view --json` 没有 `merged` 字段（只有 `state`/`closedAt`）。
+- 🔴 **schema 抬版时 `tools/level/*.mjs` 里的版本号常量是零报警盲区** —— 已补 `level-scenes.test.ts` 用 `?raw` glob 断言工具常量 === `SCHEMA_VERSION` 真源。
+
 ## 环境 / 引擎
 - 端口：编辑器 5100 / 游戏 5101；须 HTTPS + Tailscale（本机 IP 100.124.237.93）。
 - 🔴 **5100 上的 dev server 属于主 worktree `game-design-zombie`** —— 别的 worktree 改代码在浏览器里验证不到（假象）。查法：`Get-NetTCPConnection -LocalPort 5100` → PID → 看 CommandLine。本 worktree 自证要另起 5200。
@@ -37,7 +45,10 @@
 - **红线：`RuntimeSession.applyDamage()` 是掉血唯一出口**（击杀事件/受击高亮/胜负/回收全挂在这）。任何直写 `table.health` = 不可审计。
 - 数值零魔法数字：NPC 四态走 `stats.attack`，手枪走 `PLAYER_WEAPON`，血量真源 `stats.hp`（E-01=60、玩家=100）。
 - WaveScheduler：`wave≤0` 归 1（旧数据兼容）；清空→2s 间隔→下一波；容量不足**推迟重试不丢波**（`W_SPAWN_CAPACITY` 诊断按 code|nodeId 去重）。
+- 🔴 波号按**实际存在**的推进（`existingWaves`/`nextExistingWave`）：硬编码首波=1、`nextWave++` 会造幽灵 wave-start、稀疏波号跳波、wave=1.5 静默跳过（schema 加 `E_SPAWN_WAVE` + 装载期 `W_SPAWN_WAVE_FRACTIONAL`）。
+- 🔴 房间清空按 `clearRule` 分派（`isRoomSatisfied`）：kill-all/none 才清；interact/elite-dead 本轮未实现 → `W_ROOM_CLEAR_RULE_UNSUPPORTED` + **不冒充已清**（旧实现会发假 floor-clear）。后果：floor-1 的 nd_f1r1 是 interact，**该层现在打不通**（真相如此）。
 - 终态 `outcome`：game-over/floor-clear 即冻结（step 短路），**不自动清场**。
+- 0 血槽位 no-op（`applyDamage` 开头）：玩家死后槽位保留（isAlive 仍 true），不闸住会重复 kill 事件 + 重跑死亡路径。`CombatEvent` 带 `generation`/`runId`/`sourceGeneration`（裸 slot 会被回收顶替）。
 - P4 M4 已完成（docs/24）：LOD 接线（Full 25m/Vat 60m/迟滞 10%，远处退胶囊）、mobile 烘焙档（`packages/render/src/quality.ts`，项目 targetTier 驱动）、200 只压测（`verify:stress`）。
 - ⚠️ `maxHp` 仍只写不读（HUD 属 P8，未接线）；`hitFlash` 已修（每 tick 衰减 + view() 暴露）。
 
