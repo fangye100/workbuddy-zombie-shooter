@@ -10,6 +10,39 @@
     { "act": 4, "name": "生化医院", "en": "Biohazard Hospital", "waves": "10–12", "color": "gold", "enemies": ["E-01", "E-02", "E-03", "E-04", "E-05"], "boss": "B-03", "arena": "天台开阔 + 病房迷宫双层，风向影响毒息" }
   ],
   "threatColors": { "低": "teal", "中": "warn", "高": "blood", "极高": "gold" },
+  "protagonists": [
+    {
+      "id": "H-01",
+      "name": "清道夫",
+      "en": "THE SCAVENGER",
+      "threat": "",
+      "acts": [1, 2, 3, 4],
+      "role": "玩家化身 · 全场唯一可操作单位 · 靠走位与换弹节奏活着",
+      "silhouette": "直立对称 · 右肩单肩背包隆起 · 长枪斜挎成对角 · 护目镜单点高光",
+      "look": "沙褐战术风衣下摆撕裂，骨白围巾遮住口鼻，青光护目镜，右肩单肩背包，左前臂护甲板，双手持突击步枪，厚重膝护与军靴；正常暖色皮肤 —— 全场唯一不是尸绿的",
+      "height": "1.80 m",
+      "tris": 3500,
+      "hp": 100,
+      "speed": "4.2 m/s",
+      "attack": {
+        "name": "突击步枪 · 三连发",
+        "en": "Burst Fire",
+        "windup": "0.05 s",
+        "range": "直线 25 m",
+        "damage": 12,
+        "cd": "0.12 s",
+        "telegraph": "无 —— 玩家是输出方"
+      },
+      "weakness": "换弹 1.6 s 是唯一不可动作窗口；被三面合围即死 —— 走位空间就是血量",
+      "accent": "teal",
+      "ai": {
+        "base": "Living human survivor hero and protagonist, NOT a zombie and NOT undead, warm tan healthy skin with no green tint, no decay, no rotting flesh, no wounds, shaved head wearing a tight dark tactical skull cap with no hair visible, upright balanced posture, torn sand-brown tactical trenchcoat with shredded hem, bone-white scarf covering nose and mouth, glowing teal visor goggles, single-strap backpack bulging on right shoulder, armor plate on left forearm, assault rifle held in both hands, heavy knee pads and combat boots",
+        "front": "front facing orthographic view, standing ready, assault rifle held at low ready angled down-forward, upright symmetrical posture, full body",
+        "side": "side profile orthographic view of one single character standing alone in frame, no repeated copies, no turnaround grid, showing straight upright spine, bulging backpack and the diagonal line of the slung rifle, full body not cropped",
+        "attack": "front three-quarter view mid-burst, assault rifle braced at shoulder firing, muzzle flash and ejected shell casings, teal tracer streaks, recoil kick"
+      }
+    }
+  ],
   "npcs": [
     {
       "id": "E-01",

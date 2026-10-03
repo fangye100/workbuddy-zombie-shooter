@@ -29,7 +29,8 @@ VIEW_LABEL = {"front": "正面", "side": "侧面", "attack": "攻击"}
 
 def load_units() -> list[dict]:
     data = json.loads(ROSTER.read_text(encoding="utf-8"))
-    units = data["npcs"] + data["bosses"]
+    # 顺序与 gen_manifest.mjs 一致：主人公在前（新分组进 roster 时同步加这里）
+    units = data.get("protagonists", []) + data["npcs"] + data["bosses"]
     return data, units
 
 

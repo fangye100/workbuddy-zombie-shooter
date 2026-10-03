@@ -135,7 +135,7 @@ def silhouette_section(units: list[dict]) -> str:
     return f"""
 <section>
   <h2>48px 剪影验收</h2>
-  <div class="sub">把 24 张图缩到游戏内实际可读尺寸，8 角色必须 0.3s 可辨。重点看 E-03（球腹细腿）vs E-05（正圆球）、B-02（上下双体）vs B-03（瘦高）。</div>
+  <div class="sub">把全部图缩到游戏内实际可读尺寸，每个角色必须 0.3s 可辨。重点看 E-03（球腹细腿）vs E-05（正圆球）、B-02（上下双体）vs B-03（瘦高）。</div>
   <div class="sil-row">{''.join(groups)}</div>
 </section>
 """
@@ -145,10 +145,15 @@ def stat_block(label: str, value) -> str:
     return f'<div class="stat"><div class="stat-k">{esc(label)}</div><div class="stat-v">{esc(value)}</div></div>'
 
 
-def card(unit: dict, is_boss: bool, threat_colors: dict) -> str:
-    threat = unit.get("threat", "")
-    threat_color = threat_colors.get(threat, "teal")
+def card(unit: dict, kind: str, threat_colors: dict) -> str:
     uid = unit["id"]
+    is_boss = kind == "boss"
+    # 主人公没有威胁度：徽章显示「玩家」，用角色自己的 accent 色
+    if kind == "player":
+        threat, threat_color = "玩家", unit.get("accent", "teal")
+    else:
+        threat = unit.get("threat", "")
+        threat_color = threat_colors.get(threat, "teal")
 
     views = []
     for key, label in VIEWS:
@@ -202,12 +207,20 @@ def card(unit: dict, is_boss: bool, threat_colors: dict) -> str:
 """
 
 
+def _kind_of(u: dict, protos: list, bosses: list) -> str:
+    return "player" if u in protos else ("boss" if u in bosses else "npc")
+
+
 def character_section(units: list[dict], threat_colors: dict) -> str:
-    all_units = units["npcs"] + units["bosses"]
-    cards = "".join(card(u, u in units["bosses"], threat_colors) for u in all_units)
+    # 顺序约定与 gen_manifest.mjs / check_assets.py 一致：主人公排最前
+    protos = units.get("protagonists", [])
+    all_units = protos + units["npcs"] + units["bosses"]
+    cards = "".join(
+        card(u, _kind_of(u, protos, units["bosses"]), threat_colors) for u in all_units
+    )
     return f"""
 <section>
-  <h2>角色卡 · 8 个单位 × 3 视图</h2>
+  <h2>角色卡 · {len(all_units)} 个单位 × 3 视图</h2>
   <div class="sub">真源驱动的卡片，改设定请改 roster.json，然后重跑脚本。</div>
   <div class="grid">{cards}</div>
 </section>
@@ -216,7 +229,7 @@ def character_section(units: list[dict], threat_colors: dict) -> str:
 
 def telegraph_matrix(units: list[dict]) -> str:
     rows = []
-    for u in units["npcs"] + units["bosses"]:
+    for u in units.get("protagonists", []) + units["npcs"] + units["bosses"]:
         is_boss = u in units["bosses"]
         if is_boss:
             shapes = " / ".join(f"{a['key']}={a['telegraph'].split('，')[0].split('。')[0]}" for a in u.get("attacks", []))
@@ -275,7 +288,7 @@ def spawn_matrix(roster: dict) -> str:
 
 def build() -> str:
     roster, colors = load()
-    all_units = roster["npcs"] + roster["bosses"]
+    all_units = roster.get("protagonists", []) + roster["npcs"] + roster["bosses"]
     done = sum(1 for u in all_units for k, _ in VIEWS if img_exists(u["id"], k))
     total = len(all_units) * len(VIEWS)
 
