@@ -23,10 +23,10 @@
  * - "进入房间"用矩形 bounds 包含玩家中心点判定，不用 Collider 触发器事件。
  */
 
-import { CharacterTable } from '@aether/gameplay';
+import { CharacterTable, rayCapsuleY, updateLod, type LodThresholds } from '@aether/gameplay';
 import { CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
 import type { CrowdBuffers, CrowdParams } from '@aether/ai';
-import { NPC_STATS, PLAYER_STATS, lookupCharacterStats } from '@aether/content';
+import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
@@ -110,6 +110,21 @@ export interface EntityView {
   targetId: number;
   /** 行为状态。0 = idle，1 = chase */
   behavior: number;
+  /** 当前血量（P5；HUD 血条与死亡判定的读点） */
+  hp: number;
+  /** 血量上限（stats.hp 真源；血条比例的分母） */
+  maxHp: number;
+  /**
+   * 受击高亮剩余秒（P5 §2.1；渲染层/HUD 消费点）。
+   * 🔴 会随 tick 衰减到 0 —— 不衰减的话它永远是 0.15，等于一个只写不读的死列
+   * （2026-10-02 审查发现）。
+   */
+  hitFlash: number;
+  /**
+   * LOD 档位（P4 M4）：0 = Full（真模型蒙皮）、1 = Vat、2 = Proxy（退胶囊）。
+   * 由宿主每帧调 `refreshLod()` 按相机距离更新 —— runtime 本身不知道相机在哪。
+   */
+  lodTier: number;
 }
 
 /** 一个房间因容量不足被整批拒绝的明细 */
@@ -120,6 +135,88 @@ export interface SpawnRejection {
   /** 当时剩余的容量 */
   free: number;
 }
+
+/**
+ * 战斗事件（P5，docs/23 §2.1a/§2.7）。由 applyDamage 产生、宿主与（后续的）
+ * 行为脚本消费。事件不是轮询：伤害发生的那一刻就进缓冲，HUD / 音效 / 击杀
+ * 统计据此派生，不需要每步扫表。
+ */
+export interface CombatEvent {
+  readonly type: 'damage' | 'kill';
+  readonly tick: number;
+  /**
+   * 受击槽位。
+   *
+   * 🔴 **槽位不是身份**（评审 4166691436）：NPC 死亡后槽位回 freelist，
+   * 下一次 spawn 会把同一个下标分给另一个实体。事件缓冲是"延迟消费"的
+   * （宿主每帧取一次），只带裸槽位的话，晚到的消费方会把 slot 解析成
+   * 顶替上来的新实体 —— 击杀统计记到别人头上。所以必须同时带下面两项。
+   */
+  readonly slot: number;
+  /** 受击槽位当时的代次（`slot + generation` 才构成实体身份） */
+  readonly generation: number;
+  /** 事件产生时的运行代次（reset() 会递增；跨局保留的事件据此失效） */
+  readonly runId: number;
+  readonly characterId: string;
+  /** 本次伤害量（kill 事件也带，便于统计贡献） */
+  readonly amount: number;
+  /** 伤害后的血量（kill 时为 0） */
+  readonly hpAfter: number;
+  /** 造成伤害的槽位；-1 = 系统/环境伤害 */
+  readonly sourceSlot: number;
+  /** 伤害来源的代次（同上，防顶替）；系统伤害为 -1 */
+  readonly sourceGeneration: number;
+}
+
+/**
+ * 默认 LOD 阈值（P4 M4「远处退胶囊」，docs/20 §M4）。
+ *
+ * - 25m 内：Full（真模型 + 蒙皮）
+ * - 25~60m：Vat（动态通道下与 Full 同批次，仅预留）
+ * - 60m 外：Proxy（退胶囊——200 只压测时这一档决定了 draw call 与顶点量）
+ * - hysteresis 10%：升级阈值比降级阈值宽，防止在边界反复横跳（每帧切档的开销
+ *   比"多画几只真模型"更大）
+ */
+export const DEFAULT_LOD_THRESHOLDS: LodThresholds = {
+  fullDistance: 25,
+  vatDistance: 60,
+  hysteresis: 0.1,
+};
+
+/** applyDamage 的结果（HUD/音效/测试消费，docs/23 §2.1a） */
+export interface DamageResult {
+  readonly died: boolean;
+  readonly hpAfter: number;
+}
+
+/**
+ * 会话级事件（P5，docs/23 §2.4/§2.5）：波次投放 / 房间清空 /（C5 的）胜负。
+ * 与 CombatEvent（实体级伤害）分开 —— 消费方不同（HUD 波次提示 / 关卡流程）。
+ */
+export interface SessionEvent {
+  readonly type: 'wave-start' | 'room-cleared' | 'game-over' | 'floor-clear';
+  readonly tick: number;
+  readonly roomNodeId: NodeId | null;
+  /** wave-start 专属：刚投放的波号（1 起） */
+  readonly wave?: number;
+}
+
+/** 会话终态（P5 C5，docs/23 §2.5）。终态即冻结：step 不再推进世界 */
+export type SessionOutcome = 'running' | 'game-over' | 'floor-clear';
+
+/** 一个房间的波次推进状态（WaveScheduler，docs/23 §2.4） */
+interface RoomWaveState {
+  /** 下一个待投放的波号；> lastWave = 全部投完（等清空 → cleared） */
+  nextWave: number;
+  /** 本房最大波号（max of spawn wave，≤0 归 1 后） */
+  lastWave: number;
+  /** 投放下一波的 tick；-1 = 正在等当前波清空 */
+  nextWaveAtTick: number;
+  cleared: boolean;
+}
+
+/** 两波之间的间隔。[PLACEHOLDER 2.0s] docs/23 §2.4（playtest 后调） */
+const INTER_WAVE_SEC = 2.0;
 
 /** 运行期诊断（与 loader 的装载期诊断分开：装载是一次性的，运行是每步的） */
 export interface RuntimeDiagnostic {
@@ -149,6 +246,15 @@ export interface StepReport {
 
 const BEHAVIOR_IDLE = 0;
 const BEHAVIOR_CHASE = 1;
+/** P5 四态扩展（docs/23 §2.2）：前摇蓄力中（站定；打断语义 [PLACEHOLDER 不实现]） */
+export const BEHAVIOR_WINDUP = 2;
+/**
+ * 打击瞬时态：windup 结束的那一 tick 执行扇形判定后立即写回 CHASE + CD。
+ * 🔴 数据上从不过夜（当 tick 即返回 CHASE）——宿主经 view() 永远观察不到 3，
+ * 打击的事实记录在 combatEvents（damage 事件）；动画选片应消费事件而非行为码。
+ * 常量保留导出是为了四态语义的完整对照表（docs/23 §2.2）。
+ */
+export const BEHAVIOR_STRIKE = 3;
 
 /**
  * 运行代次计数器。**只用于实体引用的有效期判定**（复审 #6），
@@ -184,8 +290,43 @@ export class RuntimeSession {
    */
   runId: number;
 
+  /**
+   * 会话终态（P5 C5）。'running' 之外即冻结：step 直接短路返回，世界定格 ——
+   * game-over（玩家死亡）与 floor-clear（全房清空）都不自动清场，宿主决定何时退。
+   */
+  get outcome(): SessionOutcome {
+    return this.outcomeState;
+  }
+  private outcomeState: SessionOutcome = 'running';
+
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
+  /** 波次推进状态（P5 C4）：triggered 房间的 wave 调度器 */
+  private readonly waveRooms = new Map<NodeId, RoomWaveState>();
+  /**
+   * 房间存活敌数（**增量维护**）。
+   *
+   * 旧实现是 `roomAliveEnemies()` 每次遍历整张实体表（O(房间数 × 容量)/tick），
+   * 500 只规模下纯属浪费。生成时 +n、死亡回收时 −1 —— 计数与实体表的一致性
+   * 由「NPC 销毁只走 `kill()` 这一条路」保证（`destroy` 全仓库只此一处调用）。
+   */
+  private readonly roomAlive = new Map<NodeId, number>();
+  /** 会话事件缓冲（wave-start / room-cleared / C5 胜负） */
+  private readonly sessionEventBuf: SessionEvent[] = [];
+
+  /** 会话事件只读视图（波次提示 / 关卡流程消费） */
+  get sessionEvents(): readonly SessionEvent[] {
+    return this.sessionEventBuf;
+  }
+
+  /** 已清空的房间（C5 的 floor-clear 判定输入：全部 enabled 房间 cleared） */
+  clearedRooms(): NodeId[] {
+    const out: NodeId[] = [];
+    for (const [id, st] of this.waveRooms) {
+      if (st.cleared) out.push(id);
+    }
+    return out;
+  }
 
   // ---- 玩家输入与导航目标（复审 #7） ----
   /** 玩家移动输入（已归一化，长度 ≤ 1）。宿主每帧写，runtime 每个固定步消费 */
@@ -317,23 +458,57 @@ export class RuntimeSession {
     const out: EntityView[] = [];
     for (let i = 0; i < this.table.capacity; i++) {
       if (!this.table.isAlive(i)) continue;
-      const stats = this.defIdToStats.get(this.table.defId[i]!);
-      out.push({
-        id: i,
-        generation: this.table.generation[i]!,
-        runId: this.runId,
-        characterId: stats?.id ?? '?',
-        kind: this.kindOf[i] === 0 ? 'player' : 'npc',
-        x: this.table.posX[i]!,
-        z: this.table.posZ[i]!,
-        yaw: this.table.yaw[i]!,
-        alive: true,
-        sourceNodeId: this.sourceOf[i] ?? null,
-        targetId: this.table.targetEntity[i]!,
-        behavior: this.table.behavior[i]!,
-      });
+      out.push(this.viewAt(i));
     }
     return out;
+  }
+
+  /**
+   * 玩家实体视图（O(1)）。
+   *
+   * 相机跟随每帧都要它 —— 用 `view().find()` 是每帧全表扫 + 建整个数组
+   * （500 只时是每帧几百次无谓遍历与一次大分配，HANDOFF 里的 P2-3）。
+   */
+  player(): EntityView | null {
+    const i = this.playerEntityId;
+    if (i < 0 || !this.table.isAlive(i)) return null;
+    return this.viewAt(i);
+  }
+
+  /** 单槽位视图（view() 与 player() 共用，避免两处构造逻辑漂移） */
+  private viewAt(i: number): EntityView {
+    const stats = this.defIdToStats.get(this.table.defId[i]!);
+    return {
+      id: i,
+      generation: this.table.generation[i]!,
+      runId: this.runId,
+      characterId: stats?.id ?? '?',
+      kind: this.kindOf[i] === 0 ? 'player' : 'npc',
+      x: this.table.posX[i]!,
+      z: this.table.posZ[i]!,
+      yaw: this.table.yaw[i]!,
+      alive: true,
+      sourceNodeId: this.sourceOf[i] ?? null,
+      targetId: this.table.targetEntity[i]!,
+      behavior: this.table.behavior[i]!,
+      hp: this.table.health[i]!,
+      maxHp: this.table.maxHp[i]!,
+      hitFlash: this.table.hitFlash[i]!,
+      lodTier: this.table.lodTier[i]!,
+    };
+  }
+
+  /**
+   * 按相机位置刷新 LOD 档位（P4 M4「远处退胶囊」，docs/20 §M4）。
+   *
+   * 🔴 **相机是宿主的事**（编辑器相机 / 游戏相机是两个东西），所以 runtime 不自己
+   * 持有相机，改由宿主每帧调用 —— 与 `setInput` 同一个"输入注入"模式。
+   * 不刷新的话 `lodTier` 永远停在初始值，远处真模型照画，200 只压测必掉帧。
+   *
+   * 返回本帧发生档位切换的实体数（压测诊断用：抖动大 = 阈值/迟滞没调好）。
+   */
+  refreshLod(cameraX: number, cameraZ: number, t: LodThresholds = DEFAULT_LOD_THRESHOLDS): number {
+    return updateLod(this.table, t, cameraX, cameraZ);
   }
 
   countNpc(): number {
@@ -353,6 +528,102 @@ export class RuntimeSession {
 
   /**
    * 设置玩家的移动输入（XZ）。
+  /**
+   * 🔴 伤害的唯一事实出口（P5，docs/23 §2.1a）。
+   *
+   * 所有掉血必须走这里 —— 玩家射击、NPC 挥抓、未来的 Build 系统（届时
+   * DamagePipeline 在本方法**内部**做修饰，单入口不破）。任何路径直写
+   * `table.health` 都会漏掉：击杀事件、受击高亮、胜负判定、死亡回收 ——
+   * 这些派生反应全靠这个入口，绕过 = 不可审计。
+   *
+   * 减血 → ≤0 时 kill：NPC 槽位销毁回 freelist（generation+1 防旧引用冒名，
+   * view() 自动消失）；玩家不销毁（保留"死状"槽位，胜负判定是 C5 的消费方）。
+   */
+  applyDamage(targetSlot: number, amount: number, sourceSlot = -1): DamageResult {
+    if (!this.tbl.isAlive(targetSlot)) {
+      return { died: false, hpAfter: 0 };
+    }
+    // 🔴 已归零的槽位一律 no-op（评审 4166674712 / 4171651617）。
+    // 玩家死亡后槽位**故意**保留（要看得见死状），`isAlive` 仍为 true ——
+    // 于是不加这道闸的话，同一 tick 里第二只僵尸的挥抓会再走一遍完整死亡路径：
+    // 再发一条 kill 事件（击杀统计/奖励被重复计）、再跑一次 game-over 分支。
+    // 死亡必须是一次性的：血量已经是 0 就是死过了。
+    if (this.tbl.health[targetSlot]! <= 0) {
+      return { died: false, hpAfter: 0 };
+    }
+    const hpAfter = Math.max(0, this.tbl.health[targetSlot]! - amount);
+    this.tbl.health[targetSlot] = hpAfter;
+    // 受击高亮 [PLACEHOLDER 0.15]（docs/23 §2.1；渲染层消费，先给默认时长）
+    this.tbl.hitFlash[targetSlot] = 0.15;
+    const characterId = this.characterIdOf(targetSlot);
+    const died = hpAfter <= 0;
+    this.combatEventBuf.push({
+      type: died ? 'kill' : 'damage',
+      tick: this.tickCount,
+      slot: targetSlot,
+      generation: this.tbl.generation[targetSlot]!,
+      runId: this.runId,
+      characterId,
+      amount,
+      hpAfter,
+      sourceSlot,
+      sourceGeneration: sourceSlot < 0 ? -1 : this.tbl.generation[sourceSlot]!,
+    });
+    if (died) this.kill(targetSlot);
+    // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。
+    // 🔴 不自动清场 —— 让玩家看清死状，UI 决定何时退（编辑器不自动 Stop）。
+    // 🔴 **判定条件来自场景真源** `desc.loseCondition`（loader 从 SceneDocument 读）：
+    // 硬编码"玩家死 = 失败"会让作者对场景规则的修改失效（2026-10-02 审查：v4 的
+    // loseCondition 曾是有定义无消费的假载体）。场景没声明 → 不判负（装载期已 warn）。
+    if (
+      died &&
+      this.kindOf[targetSlot] === 0 &&
+      this.desc.loseCondition === 'player-death' &&
+      this.outcomeState === 'running'
+    ) {
+      this.outcomeState = 'game-over';
+      this.sessionEventBuf.push({ type: 'game-over', tick: this.tickCount, roomNodeId: null });
+    }
+    return { died, hpAfter };
+  }
+
+  /**
+   * 死亡回收（只由 applyDamage 调用）。NPC：槽位销毁回 freelist —— aliveCount
+   * 有减有增，不再单调撞 512（docs/23 §1.1 的「死亡回收」缺口）。玩家：槽位
+   * 保留（死了要看得见死状，C5 的失败冻结接管语义，destroy 会让 view 丢实体）。
+   */
+  private kill(slot: number): void {
+    if (this.kindOf[slot] === 0) return; // 玩家：见上，槽位与 alive 标记都保留
+    this.decRoomAlive(slot, -1);
+    this.tbl.destroy(slot);
+  }
+
+  /** 房间存活计数 ±delta（槽位 → 出生刷怪点 → 所属房间） */
+  private decRoomAlive(slot: number, delta: number): void {
+    const src = this.sourceOf[slot] ?? null;
+    if (src === null) return;
+    const spawn = this.desc.spawns.find((s) => s.nodeId === src);
+    const roomId = spawn?.roomNodeId ?? null;
+    if (roomId === null) return;
+    const next = (this.roomAlive.get(roomId) ?? 0) + delta;
+    this.roomAlive.set(roomId, next < 0 ? 0 : next);
+  }
+
+  /** 战斗事件缓冲（只读视图；测试与宿主订阅用，缓冲归 session 拥有） */
+  get combatEvents(): readonly CombatEvent[] {
+    return this.combatEventBuf;
+  }
+
+  private readonly combatEventBuf: CombatEvent[] = [];
+
+  /** 槽位 → characterId（事件/诊断用；defId 查表） */
+  private characterIdOf(slot: number): string {
+    const stats = this.defIdToStats.get(this.tbl.defId[slot]!);
+    return stats?.id ?? `slot#${slot}`;
+  }
+
+  /**
+   * 设定玩家移动输入。
    *
    * 这是**固定 tick 输入消费**的唯一入口（复审 #7）：宿主把虚拟摇杆的真实输入
    * 转成约定的运行输入（一个向量），runtime 每个固定步消费一次 —— 跟 NPC 一样
@@ -368,11 +639,42 @@ export class RuntimeSession {
     this.inputZ = z * s;
   }
 
+  /**
+   * 开火输入（P5 C3，docs/23 §2.3）。与 setInput 同模式：宿主每帧写，
+   * runtime 在固定步里消费 —— 按住 = 持续射击（受武器 CD 节流）。
+   */
+  setFire(down: boolean): void {
+    this.fireHeld = down;
+  }
+
+  /** 开火键状态（宿主 UI 显示用） */
+  get firing(): boolean {
+    return this.fireHeld;
+  }
+
+  private fireHeld = false;
+  /** 玩家武器 CD 到点时刻（会话时钟秒；不占表列——玩家只有一个） */
+  private playerCooldownUntil = 0;
+
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
+    // 终态冻结（P5 C5）：世界定格，tick 不再走。返回空报告 —— 宿主的累加器
+    // 可以继续调度（不需要各自判终态），但世界零变化。
+    if (this.outcomeState !== 'running') {
+      return { tick: this.tickCount, spawned: 0, rejectedRooms: 0, rejections: [] };
+    }
     const r = this.triggerRooms();
+    // 🔴 updateWaves 的投放量必须并入报告（评审 4166674724）：它在一个 step 里
+    // 可能凭空生成**整波**实体，而旧实现只汇总 triggerRooms 的 spawned ——
+    // 于是"这一帧刷了 4 只"报成 spawned: 0，靠报告做指标/断言的调用方全被误导。
+    const w = this.updateWaves();
+    this.decayHitFlash();
     this.movePlayer();
     this.moveNpcs();
+    // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
+    // 都用**本步最终位置**（与脚本的「看到最终位置」同一纪律）
+    this.combatStep();
+    this.fireStep();
     this.tickCount += 1;
     // 脚本在移动之后执行：行为看到的是**本步最终位置**，
     // 否则"判断僵尸是否进入某区域"这类逻辑会差一步。
@@ -386,7 +688,10 @@ export class RuntimeSession {
     }
     return {
       tick: this.tickCount,
-      spawned: r.spawned,
+      spawned: r.spawned + w.spawned,
+      // 🔴 rejections 仍只收 triggerRooms 的整批拒绝：updateWaves 的容量不足是
+      // **推迟重试**（波不丢，下一 tick 再试，并已单独 push W_SPAWN_CAPACITY 诊断），
+      // 把它算进 rejectedRooms 会让"这批怪永远不刷了"和"晚一点刷"混成同一个信号。
       rejectedRooms: r.rejections.length,
       rejections: r.rejections,
     };
@@ -499,12 +804,19 @@ export class RuntimeSession {
     this.diags.length = 0;
     this.diagSeen.clear();
     this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
+    this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
+    this.sessionEventBuf.length = 0; // 波次/清房事件同理
+    this.waveRooms.clear(); // 波次状态随世界重建
+    this.roomAlive.clear(); // 房间存活计数同理（整表重建，计数从头累积）
+    this.outcomeState = 'running'; // 终态随换代复位（重跑新的一局）
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
     // 输入与导航目标也要回到初始态 —— 否则 reset 后玩家还按着上一轮的摇杆
     this.inputX = 0;
     this.inputZ = 0;
+    this.fireHeld = false;
+    this.playerCooldownUntil = 0;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
     this.integrator.setGoal(this.goalX, this.goalZ);
@@ -530,15 +842,21 @@ export class RuntimeSession {
     // 玩家速度来自真源；是否移动只由**输入**决定，没有输入就是 0 位移
     this.table.maxSpeed[i] = stats.moveSpeed;
     this.table.behavior[i] = BEHAVIOR_IDLE;
+    // P5：血量真源（stats.player.hp，C1 落的真源链）
+    this.table.maxHp[i] = stats.hp;
+    this.table.health[i] = stats.hp;
   }
 
   /**
-   * 房间进入触发。
+   * 房间进入触发（P5 C4 改造：wave 分组投放，docs/23 §2.4）。
    *
-   * 三条纪律：
+   * 三条纪律（沿用）：
    *  - 只触发一次（triggered 去重），再次跨越边界不重复投放同一波；
    *  - 禁用组件（enabled=false）的房间与刷怪点不触发；
-   *  - **整批原子**：容量不够就一个都不生成，不留半批实体。
+   *  - **整波原子**：容量不够就一波都不生成，不留半批实体。
+   *
+   * 触发时只投 wave 1（wave ≤ 0 的旧数据归 1，与旧行为「触发即全量」兼容——
+   * 全是 wave≤0 的房间等价于单波全量）；后续波由 updateWaves 按清空节奏投放。
    */
   private triggerRooms(): { spawned: number; rejections: SpawnRejection[] } {
     const rejections: SpawnRejection[] = [];
@@ -557,7 +875,15 @@ export class RuntimeSession {
       const pending = this.desc.spawns.filter(
         (s) => s.roomNodeId === room.nodeId && s.enabled && s.trigger === 'room-enter',
       );
-      const total = pending.reduce((a, s) => a + s.count, 0);
+      // wave 分组：≤0 归 1（旧数据兼容）；波号升序 = 投放顺序
+      const waves = this.existingWaves(room.nodeId);
+      const lastWave = waves.length === 0 ? 0 : waves[waves.length - 1]!;
+      // 🔴 首波 = 实际存在的最小波号，不是硬编码 1（评审 4166691559）：
+      // 房间只写了 wave 3 时，旧的 `=== 1` 过滤得到空数组 → 一只不刷，
+      // 却照样发出 "wave 1 已投" 的 wave-start 事件（幽灵波）。
+      const first = waves.length === 0 ? 0 : waves[0]!;
+      const wave1 = pending.filter((s) => Math.max(1, Math.trunc(s.wave)) === first);
+      const total = wave1.reduce((a, s) => a + s.count, 0);
       const free = this.table.capacity - this.table.aliveCount;
       if (total > free) {
         // 原子拒绝：宁可这一波不刷，也不能刷一半让调用方以为成功了。
@@ -567,10 +893,217 @@ export class RuntimeSession {
         continue;
       }
 
-      for (const s of pending) spawned += this.spawnBatch(s);
+      for (const s of wave1) spawned += this.spawnBatch(s);
+      // 真的投了才发事件：无刷怪点的房间（如 clearRule=interact 的过场房）
+      // 不该发出"wave 1 已投"——那是把"没有波"说成"投了一波"。
+      if (first !== 0) {
+        this.sessionEventBuf.push({
+          type: 'wave-start',
+          tick: this.tickCount,
+          roomNodeId: room.nodeId,
+          wave: first,
+        });
+      }
+      this.waveRooms.set(room.nodeId, {
+        nextWave: waves.length > 1 ? waves[1]! : Number.POSITIVE_INFINITY,
+        lastWave,
+        nextWaveAtTick: -1,
+        // 🔴 cleared 不许在投放时预置（单波房触发时怪还活着）；清空的唯一
+        // 判定路径在 updateWaves（投完全部波且房内活敌归零）——两处判定会漂移
+        cleared: false,
+      });
       this.triggered.add(room.nodeId);
     }
     return { spawned, rejections };
+  }
+
+  /**
+   * 波次推进（P5 C4，docs/23 §2.4）：当前波清空 → 间隔 interWaveSec → 投下一波；
+   * 最后一波清空 → 房间 cleared（事件）。每个固定步在 triggerRooms 之后跑。
+   *
+   * 「房内敌数」按 sourceOf（出生刷怪点）归属房间统计，玩家不参与；
+   * 同种子重跑的波次时序确定性由：①文档序遍历 ②spawnBatch 的 nodeId 派生流
+   * ③tick 驱动（无墙钟）共同保证。
+   *
+   * 🔴 房间清空按 `room.clearRule` 分派（评审 4166674700）：见 `isRoomSatisfied`。
+   */
+  private updateWaves(): { spawned: number } {
+    let spawned = 0;
+    if (this.waveRooms.size === 0) return { spawned };
+    const interWaveTicks = Math.max(1, Math.round(INTER_WAVE_SEC / this.fixedStep));
+
+    for (const room of this.desc.rooms) {
+      if (!room.enabled) continue;
+      const st = this.waveRooms.get(room.nodeId);
+      if (st === undefined || st.cleared) continue;
+
+      if (st.nextWaveAtTick >= 0) {
+        // 等投放：到点投下一波（整波原子，容量不足时这波被丢——诊断走
+        // W_SPAWN_CAPACITY 同款路径，见 step 的 rejections 汇总）
+        if (this.tickCount < st.nextWaveAtTick) continue;
+        const waveSpawns = this.desc.spawns.filter(
+          (s) =>
+            s.roomNodeId === room.nodeId &&
+            s.enabled &&
+            s.trigger === 'room-enter' &&
+            Math.max(1, Math.trunc(s.wave)) === st.nextWave,
+        );
+        const total = waveSpawns.reduce((a, s) => a + s.count, 0);
+        const free = this.table.capacity - this.table.aliveCount;
+        if (total > free) {
+          // 容量不足：保持等待，下一 tick 再试（波不丢，直到容量腾出）
+          st.nextWaveAtTick = this.tickCount + interWaveTicks;
+          this.pushDiag(
+            'W_SPAWN_CAPACITY',
+            `房间 ${room.nodeId} 第 ${st.nextWave} 波要 ${total} 只，剩余容量 ${free} —— 推迟投放`,
+            room.nodeId,
+          );
+          continue;
+        }
+        for (const s of waveSpawns) spawned += this.spawnBatch(s);
+        this.sessionEventBuf.push({
+          type: 'wave-start',
+          tick: this.tickCount,
+          roomNodeId: room.nodeId,
+          wave: st.nextWave,
+        });
+        // 推进到**下一个实际存在**的波号（不是 ++）：投完 wave 1 而房间里只有
+        // wave 1 和 wave 5 时，++ 得到 2 —— 下一轮 filter 出空数组，照样发
+        // "wave 2 已投"（幽灵波），真正的 wave 5 却被跳到 Infinity 之后再也不投。
+        const after = this.nextExistingWave(room.nodeId, st.nextWave + 1);
+        st.nextWave = after ?? Number.POSITIVE_INFINITY;
+        st.nextWaveAtTick = -1;
+        continue;
+      }
+
+      // 等清空：房内活敌（本房刷怪点出生的存活 NPC）为 0？
+      // 🔴 clearRule='none' 的房间**没有通关要求**（过场/纯通路），不等怪清空。
+      if (room.clearRule !== 'none' && this.roomAliveEnemies(room.nodeId) > 0) continue;
+
+      // 按**实际存在**的波号推进（评审 4166691559）：波号稀疏时（如只有 1 和 5）
+      // 旧的 `nextWave++` 会造出 wave 2/3/4 三条空的 wave-start 事件 + 三次 2s 空等，
+      // 作者看到的表现是"房间莫名卡住 6 秒还没怪"。
+      const next = this.nextExistingWave(room.nodeId, st.nextWave);
+      if (next !== null) {
+        st.nextWave = next;
+        st.nextWaveAtTick = this.tickCount + interWaveTicks;
+        continue;
+      }
+
+      // 全部波已投完 → 按 clearRule 判"算不算清了"（评审 4166674700）
+      if (!this.isRoomSatisfied(room)) continue;
+      st.cleared = true;
+      this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
+      this.checkFloorClear();
+    }
+    return { spawned };
+  }
+
+  /**
+   * 房间的通关条件是否已满足（评审 4166674700）。
+   *
+   * 调用点保证「本房所有波都已投完且（除 'none' 外）房内活敌归零」。
+   * 剩下的差异就是 clearRule：**"怪清完" 不等于 "房间通关"** ——
+   * floor-1 的 nd_f1r1 是 `interact`（要玩家交互某物件）、floor-2 有 `elite-dead`
+   * （要击杀精英），它们没有战斗波，旧实现进入房间那一刻就把它判成已清，
+   * 于是 `checkFloorClear()` 会发出**假的 floor-clear**（本层其实没通）。
+   *
+   * 未实现的规则一律**不冒充已清**并产出诊断（静默放行 = 假胜利；静默当 kill-all
+   * 也是假胜利）。宁可让作者看见"这间房卡住了"，也不能让通关判定说谎。
+   */
+  private isRoomSatisfied(room: LevelRuntimeDesc['rooms'][number]): boolean {
+    if (room.clearRule === 'kill-all' || room.clearRule === 'none') return true;
+    this.pushDiag(
+      'W_ROOM_CLEAR_RULE_UNSUPPORTED',
+      `房间 ${room.nodeId} 的 clearRule="${room.clearRule}" 本轮未实现：不判清空（也不会冒充已清去触发假的 floor-clear）`,
+      room.nodeId,
+    );
+    return false;
+  }
+
+  /** 本房（enabled + room-enter 刷怪点的）波号集合，升序、去重、≤0 归 1 */
+  private existingWaves(roomNodeId: NodeId): number[] {
+    const set = new Set<number>();
+    for (const s of this.desc.spawns) {
+      if (s.roomNodeId !== roomNodeId || !s.enabled || s.trigger !== 'room-enter') continue;
+      set.add(Math.max(1, Math.trunc(s.wave)));
+    }
+    return [...set].sort((a, b) => a - b);
+  }
+
+  /** 大于等于 `from` 的最小**实际存在**波号；没有（= 全部投完）返回 null */
+  private nextExistingWave(roomNodeId: NodeId, from: number): number | null {
+    for (const w of this.existingWaves(roomNodeId)) {
+      if (w >= from) return w;
+    }
+    return null;
+  }
+
+  /**
+   * 本层通关判定（docs/23 §2.5）：全部 enabled 房间 cleared 且玩家存活。
+   * 只在 room-cleared 之后检查（清房是唯一让「全清」从假变真的转移点）。
+   */
+  private checkFloorClear(): void {
+    if (this.outcomeState !== 'running') return;
+    for (const room of this.desc.rooms) {
+      if (!room.enabled) continue;
+      const st = this.waveRooms.get(room.nodeId);
+      if (st === undefined || !st.cleared) return; // 有房间没触发或没清完
+    }
+    this.outcomeState = 'floor-clear';
+    this.sessionEventBuf.push({ type: 'floor-clear', tick: this.tickCount, roomNodeId: null });
+  }
+
+  /**
+   * 房内存活敌数（该房刷怪点出生的 alive NPC；玩家不计）。
+   *
+   * 🔴 **增量计数，不再每 tick 全表扫**：spawnBatch 加、kill 减。500 只规模下
+   * 旧实现是 O(房间数 × 容量)/tick 的纯浪费（2026-10-02 审查提出）。
+   */
+  private roomAliveEnemies(roomNodeId: NodeId): number {
+    return this.roomAlive.get(roomNodeId) ?? 0;
+  }
+
+  /** 把一个刚 alloc 出来的槽位初始化成"追玩家的 NPC"（spawnBatch 与 debugSpawn 共用） */
+  private initNpcSlot(i: number, stats: CharacterStatsEntry, x: number, z: number): void {
+    this.table.posX[i] = x;
+    this.table.posZ[i] = z;
+    this.table.radius[i] = stats.capsuleRadius;
+    this.table.maxSpeed[i] = stats.moveSpeed;
+    this.table.speedScale[i] = 1;
+    this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
+    this.table.targetEntity[i] = this.playerId;
+    this.table.behavior[i] = BEHAVIOR_CHASE;
+    // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
+    this.table.maxHp[i] = stats.hp;
+    this.table.health[i] = stats.hp;
+    this.kindOf[i] = 1;
+  }
+
+  /**
+   * 压测 / 调试注入：在指定位置生成 count 个 NPC（P4 M4 的 200 只压测入口）。
+   *
+   * 🔴 这是**调试通道，不是玩法路径**：实体不挂任何出生刷怪点（sourceOf = null），
+   * 因此不计入房间存活数、不影响 WaveScheduler 的清空与推进判定 —— 压测要的是
+   * "屏幕上真有 200 只"，不能顺手把关卡流程搅乱。玩法生成一律走场景刷怪点。
+   *
+   * 返回实际生成数（容量不足时少于 count）。
+   */
+  debugSpawn(characterId: string, x: number, z: number, count: number, spreadM = 0): number {
+    const stats = lookupCharacterStats(characterId);
+    if (stats === undefined) return 0;
+    let made = 0;
+    for (let k = 0; k < count; k++) {
+      const i = this.table.spawn(stats.defId);
+      if (i < 0) break; // 容量用尽
+      // spreadM > 0 时按环形铺开（压测要的是分散的 200 只，不是叠在一个点上）
+      const ang = spreadM > 0 ? (k / count) * Math.PI * 2 : 0;
+      const r = spreadM > 0 ? Math.sqrt((k % 17) / 17) * spreadM : 0;
+      this.initNpcSlot(i, stats, x + Math.cos(ang) * r, z + Math.sin(ang) * r);
+      this.sourceOf[i] = null;
+      made++;
+    }
+    return made;
   }
 
   /** 返回实际生成的数量（供 StepReport.spawned 汇总） */
@@ -590,17 +1123,14 @@ export class RuntimeSession {
       // 圆内均匀取点：半径乘 sqrt(u)，否则会向圆心堆积
       const ang = rng() * Math.PI * 2;
       const r = Math.sqrt(rng()) * s.radius;
-      this.table.posX[i] = s.x + Math.cos(ang) * r;
-      this.table.posZ[i] = s.z + Math.sin(ang) * r;
-      this.table.radius[i] = stats.capsuleRadius;
-      this.table.maxSpeed[i] = stats.moveSpeed;
-      this.table.speedScale[i] = 1;
-      this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
-      this.table.targetEntity[i] = this.playerId;
-      this.table.behavior[i] = BEHAVIOR_CHASE;
-      this.kindOf[i] = 1;
+      this.initNpcSlot(i, stats, s.x + Math.cos(ang) * r, s.z + Math.sin(ang) * r);
       this.sourceOf[i] = s.nodeId;
       made++;
+    }
+    // 房间存活计数（增量）：刷怪点归属房间从 desc 反查（低频，每波一次）
+    if (made > 0) {
+      const roomId = this.desc.spawns.find((sp) => sp.nodeId === s.nodeId)?.roomNodeId ?? null;
+      if (roomId !== null) this.roomAlive.set(roomId, (this.roomAlive.get(roomId) ?? 0) + made);
     }
     return made;
   }
@@ -661,12 +1191,150 @@ export class RuntimeSession {
 
   // ------------------------------------------------------------ 内部：NPC 移动
 
+  /**
+   * NPC 攻击状态机（P5 C3，docs/23 §2.2 四态：idle/chase/windup/strike）。
+   *
+   * 数值全部走 stats 真源链（C1 的 attack 嵌套结构），代码里零魔法数字；
+   * attack = null 的角色（B-02/B-03 近战未定）永不进 windup，只能追。
+   * strike 是瞬时态：windup 归零的那一 tick 判定扇形命中并 applyDamage，
+   * 然后回 CHASE + cooldownUntil。会话时钟 now = tick × fixedStep。
+   */
+  private combatStep(): void {
+    const t = this.tbl;
+    const p = this.playerEntityId;
+    if (p < 0 || !t.isAlive(p)) return;
+    const px = t.posX[p]!;
+    const pz = t.posZ[p]!;
+    const now = this.tickCount * this.fixedStep;
+
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      const stats = this.defIdToStats.get(t.defId[i]!);
+      const atk = stats?.attack;
+      if (atk === null || atk === undefined) continue; // 近战未定：只追不打
+
+      const dx = t.posX[i]! - px;
+      const dz = t.posZ[i]! - pz;
+      const dist = Math.hypot(dx, dz);
+      const b = t.behavior[i]!;
+
+      if (b === BEHAVIOR_CHASE) {
+        if (dist <= atk.rangeM && now >= t.cooldownUntil[i]!) {
+          t.behavior[i] = BEHAVIOR_WINDUP;
+          t.windupRemain[i] = atk.windupSec;
+        }
+      } else if (b === BEHAVIOR_WINDUP) {
+        t.windupRemain[i] = t.windupRemain[i]! - this.fixedStep;
+        if (t.windupRemain[i]! <= 0) {
+          // strike（瞬时）：扇形判定 —— 攻击朝向 = 指向玩家的向量，命中 =
+          // 距离在 range 内且攻击朝向与「NPC→玩家」夹角 ≤ arcDeg/2。
+          // 无输入控制的朝向模型下这个夹角恒 0（打的就是眼前那只），
+          // 留判定结构给「挥空/侧身闪避」（GDD 走位玩法）接上。
+          const arc = atk.arcDeg ?? 90;
+          const hit = dist <= atk.rangeM + t.radius[p]!;
+          if (hit) {
+            const halfArc = (arc * Math.PI) / 360;
+            // NPC 朝向 = 移动朝向（yaw）；无移动记录时视为面向玩家（不出桩判定）
+            const yaw = t.yaw[i]!;
+            const facingX = Math.cos(yaw);
+            const facingZ = Math.sin(yaw);
+            const len = dist > 1e-6 ? dist : 1;
+            const cosA = (facingX * -dx + facingZ * -dz) / len;
+            if (cosA >= Math.cos(halfArc)) {
+              this.applyDamage(p, atk.damage, i);
+            }
+          }
+          // strike：瞬时态（见 BEHAVIOR_STRIKE 注释）——判定完直接回 CHASE 进 CD
+          t.behavior[i] = BEHAVIOR_CHASE;
+          t.cooldownUntil[i] = now + atk.cdSec;
+        }
+      }
+    }
+  }
+
+  /**
+   * 受击高亮衰减（P5 §2.1）。
+   *
+   * 🔴 缺了这一步，`hitFlash` 被 applyDamage 写成 0.15 之后**永远停在 0.15** ——
+   * 一个只写不读又不随时间变化的列就是死列（2026-10-02 审查发现）。消费方是
+   * `view().hitFlash`（HUD 血条闪红 / 渲染层 tint），语义 = "刚被打中，还剩多久"。
+   *
+   * 衰减在 `combatStep` **之前**：本 tick 刚受的伤先完整亮一 tick，下一 tick 才开始减。
+   */
+  private decayHitFlash(): void {
+    const t = this.tbl;
+    const dt = this.fixedStep;
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i)) continue;
+      const v = t.hitFlash[i]!;
+      if (v > 0) t.hitFlash[i] = Math.max(0, v - dt);
+    }
+  }
+
+  /**
+   * 玩家手枪射击（P5 C3，docs/23 §2.3 最小闭环）。
+   *
+   * 按住开火 + 武器 CD 到点 → 朝玩家朝向射一条瞬时射线（无扫掠需求，
+   * docs/23 §2.1a 裁决），最近的存活 NPC 吃 applyDamage。未命中也进 CD
+   *（真实射空）。朝向 = 当前输入方向；无输入时保持最近一次移动朝向（yaw）。
+   */
+  private fireStep(): void {
+    const t = this.tbl;
+    const p = this.playerEntityId;
+    // 血量归零不再开火（C5 失败冻结的前哨：死了不能继续输出）
+    if (!this.fireHeld || p < 0 || !t.isAlive(p) || t.health[p]! <= 0) return;
+    const now = this.tickCount * this.fixedStep;
+    if (now < this.playerCooldownUntil) return;
+
+    const ix = this.inputX;
+    const iz = this.inputZ;
+    const len = Math.hypot(ix, iz);
+    let dx: number;
+    let dz: number;
+    if (len > 1e-6) {
+      dx = ix / len;
+      dz = iz / len;
+    } else {
+      dx = Math.cos(t.yaw[p]!);
+      dz = Math.sin(t.yaw[p]!);
+    }
+
+    let bestSlot = -1;
+    let bestT = Infinity;
+    const w = PLAYER_WEAPON;
+    // 射线打「胶囊中轴高度」：y=0 的贴地射线对站立胶囊恰好切线（下半球心
+    // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
+    const playerStats = this.defIdToStats.get(t.defId[p]!)!;
+    const rayY = playerStats.capsuleHeight / 2;
+    for (let i = 0; i < t.capacity; i++) {
+      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      const stats = this.defIdToStats.get(t.defId[i]!);
+      if (stats === undefined) continue;
+      const hit = rayCapsuleY(
+        [t.posX[p]!, rayY, t.posZ[p]!],
+        [dx, 0, dz],
+        t.posX[i]!,
+        t.posZ[i]!,
+        t.radius[i]!,
+        stats.capsuleHeight,
+      );
+      if (hit !== null && hit <= w.rangeM && hit < bestT) {
+        bestT = hit;
+        bestSlot = i;
+      }
+    }
+    if (bestSlot >= 0) this.applyDamage(bestSlot, w.damage, p);
+    this.playerCooldownUntil = now + w.cdSec;
+  }
+
   private moveNpcs(): void {
     const b = this.buffers;
     const t = this.table;
     let n = 0;
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      // 前摇蓄力站定（docs/23 §2.2 windup 语义）：不进求解器 = 位置冻结
+      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
       b.posX[n] = t.posX[i]!;
       b.posZ[n] = t.posZ[i]!;
       b.velX[n] = t.velX[i]!;
@@ -684,7 +1352,10 @@ export class RuntimeSession {
 
     let k = 0;
     for (let i = 0; i < t.capacity; i++) {
+      // 🔴 过滤条件必须与上方装填循环完全一致（含 WINDUP 跳过）——
+      // 两边不一致时 k 与装填序错位，速度/位置会写进错误的实体
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
       const vx = b.outX[k]!;
       const vz = b.outZ[k]!;
       t.velX[i] = vx;

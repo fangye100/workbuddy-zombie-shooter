@@ -15,6 +15,7 @@
  */
 
 import { createCapsule } from '@aether/scene';
+import { rayCapsuleY } from '@aether/gameplay';
 import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
@@ -91,72 +92,13 @@ const PROXY_COLORS: Record<string, [number, number, number]> = {
 const FALLBACK_COLOR: [number, number, number] = [0.56, 0.72, 0.38];
 
 /**
- * 射线与「竖直胶囊」求交：脚底在 y=0，轴为 (x, *, z)，总高 h、半径 r。
- * 解析解 = 无限圆柱（xz 平面二次方程）+ 两端半球；返回最近的正向 t，未命中 null。
+ * LodTier.Proxy 的数值（= 2）。
+ *
+ * 🔴 不直接 `import { LodTier }`：那是 `const enum`，跨模块引用在 esbuild/vite 的
+ * isolatedModules 下不可靠（编译期内联，运行时取不到）。这里用普通常量并对齐注释。
  */
-function rayCapsuleY(
-  o: readonly [number, number, number],
-  d: readonly [number, number, number],
-  cx: number,
-  cz: number,
-  r: number,
-  h: number,
-): number | null {
-  const y0 = r; // 下半球心
-  const y1 = Math.max(r, h - r); // 上半球心
-  let best: number | null = null;
+const LOD_TIER_PROXY = 2;
 
-  // ---- 圆柱段：xz 平面上的圆求交 ----
-  const ox = o[0] - cx;
-  const oz = o[2] - cz;
-  const a = d[0] * d[0] + d[2] * d[2];
-  if (a > 1e-9) {
-    const b = 2 * (ox * d[0] + oz * d[2]);
-    const c = ox * ox + oz * oz - r * r;
-    const disc = b * b - 4 * a * c;
-    if (disc >= 0) {
-      const sq = Math.sqrt(disc);
-      for (const t of [(-b - sq) / (2 * a), (-b + sq) / (2 * a)]) {
-        if (t <= 0) continue;
-        const y = o[1] + d[1] * t;
-        if (y >= y0 && y <= y1) {
-          if (best === null || t < best) best = t;
-        }
-      }
-    }
-  }
-
-  // ---- 两端半球 ----
-  for (const cy of [y0, y1]) {
-    const t = raySphere(o, d, cx, cy, cz, r);
-    if (t !== null && (best === null || t < best)) best = t;
-  }
-  return best;
-}
-
-/** 射线与球求交，返回最近的正向 t，未命中 null */
-function raySphere(
-  o: readonly [number, number, number],
-  d: readonly [number, number, number],
-  cx: number,
-  cy: number,
-  cz: number,
-  r: number,
-): number | null {
-  const ex = o[0] - cx;
-  const ey = o[1] - cy;
-  const ez = o[2] - cz;
-  const b = 2 * (ex * d[0] + ey * d[1] + ez * d[2]);
-  const c = ex * ex + ey * ey + ez * ez - r * r;
-  const disc = b * b - 4 * c; // |d| = 1 → a = 1
-  if (disc < 0) return null;
-  const sq = Math.sqrt(disc);
-  const t0 = (-b - sq) / 2;
-  const t1 = (-b + sq) / 2;
-  if (t0 > 0) return t0;
-  if (t1 > 0) return t1;
-  return null;
-}
 
 /** 一批实例 + 它对应的实体身份（供选中反查） */
 interface BatchSlot {
@@ -179,12 +121,29 @@ export class RuntimeBridge {
   private readonly actors: ActorSource | null;
   /** 按 characterId 分组的批次（网格不同 → 不同 meshId） */
   private readonly slots = new Map<string, BatchSlot>();
+  /** LOD 降级是否启用（宿主调过 refreshLod 才算启用，见 refreshLod 注释） */
+  private lodEnabled = false;
 
   /** 当前选中的实体（runId + id + generation 才是操作引用，跨代次必然失效） */
   private selected: { id: number; generation: number; runId: number } | null = null;
 
   constructor(actors: ActorSource | null = null) {
     this.actors = actors;
+  }
+
+  /**
+   * 按相机位置刷新 LOD（P4 M4 降级）。转发给会话；会话未建（编辑态）时 no-op。
+   *
+   * 🔴 必须在 `batches()` **之前**调用 —— 批次是按 lodTier 分流的，顺序反了
+   * LOD 会晚一帧生效（200 只压测时这一帧的抖动会污染帧率采样）。
+   */
+  refreshLod(cameraX: number, cameraZ: number): number {
+    // 🔴 调用即视为宿主启用 LOD。未启用的宿主（Node 测试、无相机回路）必须保持
+    // 「按 characterId 分组」的旧行为：CharacterTable.alloc 把 lodTier 初始化成
+    // Proxy(2)（语义 = 尚未定档），若不看这个开关就分流，所有实体会一上来就退胶囊，
+    // 真模型批次的断言全废（2026-10-02 M4 接线时实测踩到）。
+    this.lodEnabled = true;
+    return this.session?.refreshLod(cameraX, cameraZ) ?? 0;
   }
 
   get active(): boolean {
@@ -338,10 +297,15 @@ export class RuntimeBridge {
       const stats = lookupCharacterStats(e.characterId);
       const radius = stats?.capsuleRadius ?? 0.35;
       const height = stats?.capsuleHeight ?? 1.8;
-      const key = e.characterId;
+      // P4 M4 降级：远处（Proxy）实体一律退胶囊 —— 真模型批次的实例数与顶点量
+      // 是 200 只压测能不能跑的决定项，而 60m 外的僵尸玩家根本分辨不出模型。
+      // 胶囊 key 按**体型**（不是 characterId）：同体型的落同一批，draw call 不涨。
+      const capsuleKey = `capsule:r${radius.toFixed(3)}:h${height.toFixed(3)}`;
+      const proxy = this.lodEnabled && e.lodTier >= LOD_TIER_PROXY;
+      const key = proxy ? capsuleKey : e.characterId;
       let slot = this.slots.get(key);
       if (slot === undefined) {
-        const actor = this.actors?.get(e.characterId) ?? null;
+        const actor = proxy ? null : (this.actors?.get(e.characterId) ?? null);
         if (actor !== null) {
           // 真模型：meshId 换 actor 档，蒙皮数据来自装配库（数组共享，不拷贝）
           slot = {

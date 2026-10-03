@@ -209,6 +209,28 @@ async function main() {
         : pickBad.map((o) => `${o.n}:${o.p}≠${expect.pickable[o.n]}`).join(' · ').slice(0, 200),
     );
 
+    // ---- B3. 行为注册表（glob 宿主分裂防线）----
+    // 🔴 这条断言是**防线**不是覆盖：import.meta.glob 在浏览器端零命中时，
+    // typecheck 与 vitest 都全绿（两个宿主 root 不同 → 同一行解析结果不同），
+    // 只有真实跑起来的编辑器能看见空注册表。2026-10-02 行为脚本曾因此从未注册。
+    console.log('\nB3. 行为注册表（glob 宿主分裂防线）');
+    const beh = await cdp.eval(`(()=>window.__editor.behaviors())()`);
+    check(
+      '行为注册表非空（glob 在浏览器端命中了 assets/behaviors）',
+      typeof beh?.size === 'number' && beh.size > 0,
+      JSON.stringify(beh),
+    );
+    check(
+      '注册表含 debug-on-trigger-log（真源清单：assets/behaviors/*.ts）',
+      Array.isArray(beh?.ids) && beh.ids.includes('debug-on-trigger-log'),
+      JSON.stringify(beh?.ids),
+    );
+    check(
+      '行为 schema 自洽（注册期零 schema 诊断）',
+      beh?.schemaIssues === 0,
+      `schemaIssues=${beh?.schemaIssues}`,
+    );
+
     // ---- C. SelectionService ----
     console.log('\nC. SelectionService（选中/悬停状态机）');
     const objCount = await cdp.eval('window.__editor.renderer.getObjectList().length');
@@ -928,12 +950,24 @@ async function main() {
         try { clip = await navigator.clipboard.readText(); } catch { clip = null; }
         return { hud: (document.getElementById('model-info') || {}).textContent || '', clip };
       })()`);
-      check('复制相对路径有 HUD 反馈', /已复制相对路径|复制失败/.test(copyRes.hud), copyRes.hud);
-      if (copyRes.clip === null) {
-        // 读不到（无授权/无头环境）才降级为环境 skip；读到了但内容不对 = 真失败
-        skip('剪贴板内容核对', '当前环境读不到剪贴板（HUD 反馈已验证）');
+      // 产品的行为断言收紧：HUD 必须回显**确切的相对路径**（以前接受"复制失败"，
+      // 等于产品啥都没验证）。真正端到端的行为以 HUD 为准 —— 它由应用在 writeText
+      // 成功路径上用同一个字符串生成。
+      check(
+        '复制相对路径 HUD 回显确切相对路径',
+        /已复制相对路径/.test(copyRes.hud) && copyRes.hud.includes(PROBE),
+        copyRes.hud,
+      );
+      if (copyRes.clip === null || copyRes.clip === '') {
+        // 读不到（无授权）或读到空串（本沙箱 headed Chrome 实测稳定返回 ''，write 端
+        // 成功与否读端无法区分）→ 环境不可核对，降级 skip。读到**非空**但内容不对
+        // 才算真失败（那说明复制写坏了别的字符串）。
+        skip(
+          '剪贴板内容核对',
+          `当前环境读不到有效剪贴板内容（读到 ${JSON.stringify(copyRes.clip)}）；产品行为已由 HUD 断言验证`,
+        );
       } else {
-        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, copyRes.clip);
+        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, JSON.stringify(copyRes.clip));
       }
 
       // 行内重命名：Enter 提交 → 服务端落盘 → 浏览器刷新

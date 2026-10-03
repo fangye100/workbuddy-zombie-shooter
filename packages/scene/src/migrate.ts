@@ -258,12 +258,82 @@ export const migrateV2ToV3: MigrationStep = {
  * 注册全部历史迁移。幂等：已注册则跳过（测试 clearMigrations 后再调不会重复抛）。
  * 模块加载时即调用一次，保证 migrateToLatest 在任何入口都可用。
  */
+// ---------------------------------------------------------------- P5 C4：v3 → v4 迁移
+
+/**
+ * v3 → v4：新增场景级 `loseCondition`（失败条件，P5 docs/23 §2.6）。
+ *
+ * 第一步只有 `'player-death'` 一种语义，缺省即它——这不是「猜」：v3 及之前的
+ * 场景事实上不存在第二种失败方式，补的默认值是唯一合法语义（与 v2→v3 的
+ * playerStart「只能填 null 不能猜」不同类：那里有多种候选起点，这里只有一个）。
+ */
+export const migrateV3ToV4: MigrationStep = {
+  from: 3,
+  to: 4,
+  name: 'add-lose-condition',
+  run(doc) {
+    if (doc['loseCondition'] === undefined) {
+      doc['loseCondition'] = 'player-death';
+    }
+    return doc;
+  },
+};
+
+// ---------------------------------------------------------------- v4 → v5 迁移
+
+/**
+ * v4 → v5：给 Camera 组件补 `yawMode`（玩家转身时相机转不转）。
+ *
+ * 缺省补 `'world'`（相机朝向锁定世界方向）—— 这不是"猜"：
+ * GDD 定死了本项目是**第三人称俯视上帝视角**（mobile 横屏 + 虚拟摇杆），
+ * 而旧实现无条件跟随目标朝向，实测在俯视下左右移动会让整个上帝视角旋转，
+ * 摇杆方向感随角色朝向漂移。俯视玩法下 `'world'` 是唯一正确的语义。
+ * 想要肩后视角的作者显式填 `'target'`。
+ */
+export const migrateV4ToV5: MigrationStep = {
+  from: 4,
+  to: 5,
+  name: 'add-camera-yaw-mode',
+  run(doc) {
+    // 🔴 loseCondition 现在是 v4+ 的必填字段（评审 4166691678）：校验器会在
+    // v4/v5 文档缺它时报 E_LOSE_CONDITION。手写的 v4 文件可能漏了它，
+    // 迁移链是"补齐"的唯一合法入口 —— 不在这里补，那份文件就永远加载不了。
+    // 语义与 v3→v4 一致（'player-death' 是当时唯一合法的失败方式）。
+    if (doc['loseCondition'] !== 'player-death') {
+      doc['loseCondition'] = 'player-death';
+    }
+    const nodes = doc['nodes'];
+    if (!Array.isArray(nodes)) return doc;
+    for (const n of nodes) {
+      if (n === null || typeof n !== 'object') continue;
+      const comps = (n as Record<string, unknown>)['components'];
+      if (!Array.isArray(comps)) continue;
+      for (const c of comps) {
+        if (c === null || typeof c !== 'object') continue;
+        const kind = (c as Record<string, unknown>)['kind'];
+        if (kind !== 'Camera') continue;
+        const cam = c as Record<string, unknown>;
+        if (cam['yawMode'] !== 'world' && cam['yawMode'] !== 'target') {
+          cam['yawMode'] = 'world';
+        }
+      }
+    }
+    return doc;
+  },
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
   }
   if (!listMigrations().some((m) => m.from === 2 && m.to === 3)) {
     registerMigration(migrateV2ToV3);
+  }
+  if (!listMigrations().some((m) => m.from === 3 && m.to === 4)) {
+    registerMigration(migrateV3ToV4);
+  }
+  if (!listMigrations().some((m) => m.from === 4 && m.to === 5)) {
+    registerMigration(migrateV4ToV5);
   }
 }
 

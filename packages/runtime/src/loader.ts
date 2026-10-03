@@ -121,6 +121,15 @@ export interface LevelRuntimeDesc {
   obstacles: ObstacleDesc[];
   nav: NavDesc | null;
   /**
+   * 失败条件（P5，docs/23 §2.6）。**真源是场景的 `loseCondition`** —— 运行时不得
+   * 硬编码"玩家死了就失败"，否则作者改场景里这条规则不会生效（schema 字段有定义
+   * 却没人读 = 假数据载体，2026-10-02 审查抓到的空迁移）。
+   *
+   * `null` = 场景没声明（v4 之前且未走迁移链的文档）：**不猜**，玩家死亡不设终态，
+   * 装载时出 warning 让作者看见（AGENTS.md §2.2：不静默修数据）。
+   */
+  loseCondition: 'player-death' | null;
+  /**
    * 场景节点上的脚本（ADR-018 P3）。
    *
    * 只收**启用节点**的 Script 组件：层级里隐藏一个节点，作者的意图是"这个东西
@@ -342,13 +351,19 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           );
         }
 
-        // wave 同理（复审 B6）：它被原样带进 SpawnDesc，但触发时按 `trigger` **全量投放**，
-        // 没有任何"等第 N 波"的语义 —— 作者把 wave 填成 2 会当场整批刷出。与 delaySec
-        // 同一把尺子：读了字段却没有执行语义，就必须明确告知。
-        if (s.wave !== 0) {
+        // wave 语义已实现（P5 C4 WaveScheduler）：wave ≤ 0 归 1（旧数据=触发即全量），
+        // 正值 = 房间内第 N 波（清空前一波才投放）。「W_SPAWN_WAVE_UNSUPPORTED」
+        // 警告退役 —— 曾经的「读了字段没有语义」现在有了，不再警告。
+        //
+        // 🔴 但正值必须是整数（评审 4171651605）：调度器按整数 `nextWave` 推进，
+        // wave=1.5 会参与 lastWave 的 max、却永远匹配不上任何整数 nextWave ——
+        // 这个刷怪点被**静默跳过**，作者只看到"怪少了一批"却查不到原因。
+        // 校验器（document.ts E_SPAWN_WAVE）已拦住入库文件；装载期再兜一道，
+        // 因为 desc 也可能来自测试/程序生成，不止磁盘 JSON 一条路。
+        if (s.wave > 0 && !Number.isInteger(s.wave)) {
           warn(
-            'W_SPAWN_WAVE_UNSUPPORTED',
-            `wave=${s.wave} 本轮未实现（没有波次推进语义），该刷怪点会在触发时**一次性全量**投放 count=${s.count}`,
+            'W_SPAWN_WAVE_FRACTIONAL',
+            `wave=${s.wave} 不是整数：调度器按整数波号推进，该刷怪点将**永不投放**（改成整数，或 ≤0 走旧数据归 1）`,
             n.id,
           );
         }
@@ -448,6 +463,25 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
     warn('W_NO_ROOM', '场景没有 RoomVolume，room-enter 触发的刷怪点永远不会投放');
   }
 
+  // ---------------------------------------------------------- 失败条件（P5 §2.6）
+  // 真源在场景里。缺字段 = 老文档未走迁移链 → **不猜**（补默认值是迁移链的活，
+  // 装载期静默补会让"作者以为有规则"变成幽灵）；未知值 = error，拒绝造半运行世界。
+  let loseCondition: LevelRuntimeDesc['loseCondition'] = null;
+  const rawLose = doc.loseCondition as string | undefined;
+  if (rawLose === undefined || rawLose === null) {
+    warn(
+      'W_LOSE_CONDITION_UNSET',
+      `场景未声明 loseCondition（schemaVersion=${doc.schemaVersion}）。玩家死亡将**不**判定失败 —— 请用迁移链升级到 v4 或在场景里显式声明。`,
+    );
+  } else if (rawLose !== 'player-death') {
+    err(
+      'E_LOSE_CONDITION_UNKNOWN',
+      `未知的 loseCondition：${rawLose}（本版只支持 'player-death'）；拒绝加载而不是当默认值处理。`,
+    );
+  } else {
+    loseCondition = 'player-death';
+  }
+
   const hasError = diags.some((d) => d.severity === 'error');
   if (hasError || playerStart === null) {
     return { desc: null, diagnostics: diags };
@@ -463,6 +497,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       spawns,
       obstacles,
       nav,
+      loseCondition,
       scripts,
     },
     diagnostics: diags,

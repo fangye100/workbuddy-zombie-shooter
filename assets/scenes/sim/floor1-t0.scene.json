@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "id": "sc_sim_floor1_t0",
   "name": "第一层 · 火场 · t=0s 快照（派生产物）",
   "act": "Act1",
@@ -118,7 +118,8 @@
           "followTarget": null,
           "pitchDeg": 55,
           "distance": 12,
-          "yawOffsetDeg": 0
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
         }
       ],
       "prefab": null
@@ -2224,5 +2225,6 @@
     "updatedAt": "2026-09-18T15:10:08.448Z",
     "author": "sim-level.mjs",
     "notes": "派生产物：种子 1 · 固定步 1/30 · t=0s。不要手改，重跑即被覆盖。"
-  }
+  },
+  "loseCondition": "player-death"
 }

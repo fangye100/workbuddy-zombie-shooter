@@ -32,7 +32,14 @@ import {
   type MeshData,
 } from '@aether/scene';
 import { fileUrl } from '../asset-util';
-import { bakePosePalette, bindPoseIndex, type BakedPalette } from '@aether/render';
+import {
+  bakePosePalette,
+  bindPoseIndex,
+  DEFAULT_BAKE_PROFILE,
+  limitClips,
+  type BakedPalette,
+  type BakeProfile,
+} from '@aether/render';
 
 /** 调色板每个 pose 的关节数（与 dynamic.wgsl 的 PALETTE_JOINT_COUNT 同源，见其注释） */
 export const PALETTE_JOINT_COUNT = 23;
@@ -167,6 +174,8 @@ export class ActorLibrary {
   /** 本轮已失败的角色（不重试；clear() 后重新开始） */
   private readonly failed = new Set<string>();
   private readonly fetcher: (path: string) => Promise<ArrayBuffer>;
+  /** 烘焙档位（P4 M4）：采样率与片段数上限，来自项目 render.targetTier */
+  private bake: BakeProfile;
 
   /**
    * @param manifest asset-manifest.json 的原始 JSON（解析归 findCharacterLodPath）
@@ -182,10 +191,40 @@ export class ActorLibrary {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.arrayBuffer();
       }),
+    /**
+     * 烘焙档位（P4 M4，docs/20 §M4）。
+     *
+     * 调色板显存 = 帧数 × 关节数 × 16 float，mobile 上全片段 24fps 的开销撑不住
+     * 200 只。默认桌面档；mobile（t0/t1）降到 16fps 且只烘 1~2 个片段。
+     * 档位真源在项目文件 `render.targetTier`，由调用方传入（本类不读项目文件）。
+     */
+    bake: BakeProfile = DEFAULT_BAKE_PROFILE,
   ) {
     this.manifestJson = manifest;
     this.fetcher = fetcher;
+    this.bake = bake;
     this.recomputeRank();
+  }
+
+  /** 当前烘焙档位（HUD / 探针显示用） */
+  get bakeProfile(): BakeProfile {
+    return this.bake;
+  }
+
+  /**
+   * 设定烘焙档位（P4 M4）。
+   *
+   * 🔴 **必须早于任何 preload**：已装配的角色不会因改档位而重烘 —— 重烘会换掉
+   * palette 的帧数与布局，而 paletteBase 已经发给了 Bridge 与 GPU（重排就要整套
+   * 重传，且已发出的 ActorMesh 是同一引用，改字段会静默错位）。
+   * 正常启动路径档位在 manifest 之前就设好了（main.ts），这里只在真出问题时告警。
+   */
+  setBakeProfile(p: BakeProfile): void {
+    if (this.entries.size > 0) {
+      console.warn('[actors] 已有角色装配完成 —— 改烘焙档位不会重烘（档位必须在 preload 前设定）');
+      return;
+    }
+    this.bake = p;
   }
 
   get(characterId: string): ActorMesh | null {
@@ -259,7 +298,9 @@ export class ActorLibrary {
       }
       if (glb.animations.length === 0) throw new Error('GLB 无动画片段');
 
-      const palette = bakePosePalette(sk, glb.animations);
+      // P4 M4：按档位裁剪片段 + 降采样（mobile 档省显存/CPU 的关键一步）
+      const bakeClips = [...limitClips(glb.animations, this.bake.maxClips)];
+      const palette = bakePosePalette(sk, bakeClips, { fps: this.bake.fps });
       // 片段元数据（M3）：合并 BakedPalette.clips 与 clipBasePose，Bridge 选片用
       const clips: ActorClipMeta[] = palette.clips.map((c, i) => ({
         name: c.name,

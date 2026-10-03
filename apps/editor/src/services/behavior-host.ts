@@ -26,7 +26,14 @@
 import { BehaviorRegistry, type BehaviorModule } from '@aether/scene';
 import type { BehaviorContext, BehaviorExecutor, ScriptDesc } from '@aether/runtime';
 
-const modules = import.meta.glob('/assets/behaviors/**/*.ts', { eager: true }) as Record<
+// 🔴 必须用**相对路径**且层级精确（'../../../../' = 仓库根）：
+// vite 的绝对路径 glob（'/assets/…'）按 root（=apps/editor）解析 →
+// apps/editor/assets/ 不存在 → 零命中 → 注册表空 —— 浏览器端 W_BEHAVIOR_
+// UNAVAILABLE 的根因（2026-10-02 用户手动 Play 实锤：编译产物 modules={}）。
+// 而同一行 '/assets/…' 在 vitest（root=仓库根）下命中 —— 「编辑器断、测试绿」
+// 正是两个宿主 root 的分裂。相对路径按本文件位置解析，两边命中同一份文件；
+// 层级差一级就落到 apps/assets（同样不存在），改文件位置时同步核这里。
+const modules = import.meta.glob('../../../../assets/behaviors/**/*.ts', { eager: true }) as Record<
   string,
   Record<string, unknown>
 >;

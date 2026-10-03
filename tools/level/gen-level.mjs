@@ -34,7 +34,11 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
 const PROJECT_FILE = 'aether.project.json';
-const SCHEMA_VERSION = 3;
+// 🔴 必须与 packages/scene/src/document.ts 的 SCHEMA_VERSION 一致。
+// 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
+// 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
+// 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
+const SCHEMA_VERSION = 5;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -138,9 +142,9 @@ const FLOORS = [
     name: '第一层 · 火场',
     rooms: [
       // 层 1 = 教学：只上 E-01，最后一个点混 2 只 E-02 给第一次「站桩会被打断」的信号
-      { type: 'combat', spawns: [{ count: 5, char: 'E-01' }, { count: 4, char: 'E-01' }, { count: 3, char: 'E-02' }] },
+      { type: 'combat', spawns: [{ count: 5, char: 'E-01', wave: 1 }, { count: 4, char: 'E-01', wave: 2 }, { count: 3, char: 'E-02', wave: 1 }] },
       { type: 'event', spawns: [] },
-      { type: 'combat', spawns: [{ count: 4, char: 'E-01' }, { count: 4, char: 'E-02' }, { count: 4, char: 'E-01' }] },
+      { type: 'combat', spawns: [{ count: 4, char: 'E-01', wave: 1 }, { count: 4, char: 'E-02', wave: 1 }, { count: 4, char: 'E-01', wave: 2 }] },
     ],
   },
   {
@@ -150,10 +154,10 @@ const FLOORS = [
     name: '第二层 · 尸潮',
     rooms: [
       // 层 2 = 压力升级：三系混编（GDD §4.4 战斗房 14–20）
-      { type: 'combat', spawns: [{ count: 6, char: 'E-01' }, { count: 6, char: 'E-02' }, { count: 6, char: 'E-03' }] },
+      { type: 'combat', spawns: [{ count: 6, char: 'E-01', wave: 1 }, { count: 6, char: 'E-02', wave: 1 }, { count: 6, char: 'E-03', wave: 2 }] },
       { type: 'event', spawns: [] },
       // 精英房：1 精英 + 小兵（GDD §4.2 清场条件 = 精英死）
-      { type: 'elite', spawns: [{ count: 1, char: 'E-04' }, { count: 8, char: 'E-01' }, { count: 8, char: 'E-02' }] },
+      { type: 'elite', spawns: [{ count: 1, char: 'E-04', wave: 1 }, { count: 8, char: 'E-01', wave: 1 }, { count: 8, char: 'E-02', wave: 2 }] },
     ],
   },
   {
@@ -163,9 +167,9 @@ const FLOORS = [
     name: '第三层 · 暗巷',
     rooms: [
       // 层 3 前置（GDD：10 只）
-      { type: 'elite', spawns: [{ count: 1, char: 'E-04' }, { count: 5, char: 'E-02' }, { count: 4, char: 'E-03' }] },
+      { type: 'elite', spawns: [{ count: 1, char: 'E-04', wave: 1 }, { count: 5, char: 'E-02', wave: 1 }, { count: 4, char: 'E-03', wave: 2 }] },
       // BOSS 房：1 BOSS + 爆尸/呕吐者（E-05 可被引爆，给玩家环境解法）
-      { type: 'boss', spawns: [{ count: 1, char: BOSS_OF_RUN }, { count: 4, char: 'E-05' }, { count: 4, char: 'E-03' }] },
+      { type: 'boss', spawns: [{ count: 1, char: BOSS_OF_RUN, wave: 1 }, { count: 4, char: 'E-05', wave: 1 }, { count: 4, char: 'E-03', wave: 2 }] },
     ],
   },
 ];
@@ -365,6 +369,10 @@ function buildFloor(floor) {
           pitchDeg: 55,
           distance: 12,
           yawOffsetDeg: 0,
+          // v5：'world' = 上帝视角不随角色转身（第三人称顶视射击的默认）。
+          // 不写会退化成缺省值 —— 那是"读了字段没落数据"，迁移链会把它补回来
+          // 从而每次重生成都产生一次无意义 diff。
+          yawMode: 'world',
         },
       ],
     }),
@@ -475,7 +483,7 @@ function buildFloor(floor) {
               enabled: true,
               characterId: spawn.char,
               count: spawn.count,
-              wave: 0,
+              wave: spawn.wave ?? 0,
               trigger: 'room-enter',
               delaySec: 0,
               radius: isBoss ? 2.5 : 1.5,
@@ -555,6 +563,7 @@ function buildFloor(floor) {
     editorCamera: { target: [spanX / 2 - 10, 0, 0], distance: 62, yaw: 1.1, elevation: 0.75 },
     entryCamera: cameraId,
     playerStart: startId,
+    loseCondition: 'player-death',
     dependencies: [],
     nodes,
     meta: { createdAt: now, updatedAt: now, author: 'gen-level.mjs', notes: `GDD §4.1 层 ${floor.depth} · 主题 ${theme.label}` },
@@ -563,11 +572,47 @@ function buildFloor(floor) {
 
 // ---------------------------------------------------------------- 落盘
 
+/**
+ * 剥离 meta 时间戳后的规范化文本 —— 用于判定"真的改了没有"。
+ *
+ * 🔴 幂等（2026-10-02 审查发现）：旧实现每次都把 `meta.createdAt/updatedAt` 写成
+ * 当前时间，导致 `node tools/level/gen-level.mjs` 重跑必然产生 3 个文件的 diff
+ *（内容与上次完全一致，只有时间戳在动）。这种"改了但没改"的 diff 会淹没真正的
+ * 数据变更，也让「生成器幂等」的约定失效。
+ */
+function canonical(text) {
+  let d;
+  try {
+    d = JSON.parse(text);
+  } catch {
+    return text; // 解析不了就退化成原文比较（保守：判为有变化）
+  }
+  if (d && typeof d === 'object' && d.meta && typeof d.meta === 'object') {
+    delete d.meta.createdAt;
+    delete d.meta.updatedAt;
+  }
+  return JSON.stringify(d, null, 2);
+}
+
 function writeJson(relPath, data) {
   const abs = path.join(ROOT, relPath);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
+  if (fs.existsSync(abs)) {
+    const prevRaw = fs.readFileSync(abs, 'utf8');
+    const nextRaw = JSON.stringify(data, null, 2);
+    if (canonical(prevRaw) === canonical(nextRaw)) {
+      return { abs, changed: false }; // 内容一致：连时间戳都不刷新
+    }
+    // 内容真变了：保留原 createdAt（创建时间不是"最后一次生成的时间"）
+    try {
+      const prev = JSON.parse(prevRaw);
+      if (prev?.meta?.createdAt && data.meta) data.meta.createdAt = prev.meta.createdAt;
+    } catch {
+      /* 坏文件就按新建处理 */
+    }
+  }
   fs.writeFileSync(abs, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-  return abs;
+  return { abs, changed: true };
 }
 
 /**

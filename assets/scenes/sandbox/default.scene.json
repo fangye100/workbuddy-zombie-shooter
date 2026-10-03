@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 5,
   "id": "sc_sandbox_default",
   "name": "Sandbox · 默认场景",
   "act": null,
@@ -114,7 +114,8 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 55
+          "pitchDeg": 55,
+          "yawMode": "world"
         }
       ]
     },
@@ -895,5 +896,7 @@
     "updatedAt": "2026-09-04T07:04:02.154Z",
     "author": "scene:gen",
     "notes": "搬运自 renderer.ts 构造函数的硬编码几何（13 个物体）"
-  }
+  },
+  "playerStart": null,
+  "loseCondition": "player-death"
 }

@@ -132,8 +132,13 @@ export class PlayCameraController {
   private plan: ViewCameraState | null = null;
   private mode: CameraComponent['mode'] | null = null;
   private anchorId: NodeId | null = null;
-  /** 相对目标朝向的偏航偏移（度）。schema 语义：相对目标，不是绝对世界方向 */
+  /** 相对目标朝向的偏航偏移（度） */
   private yawOffsetDeg = 0;
+  /**
+   * 偏航跟随模式（v5）：'world' = 相机朝向锁世界方向（俯视上帝视角，缺省）；
+   * 'target' = 相机朝向跟目标转身（肩后视角）。见 `CameraComponent.yawMode`。
+   */
+  private yawMode: NonNullable<CameraComponent['yawMode']> = 'world';
 
   constructor(view: ViewCameraControl) {
     this.view = view;
@@ -157,6 +162,7 @@ export class PlayCameraController {
     this.mode = entry.cam.mode;
     this.anchorId = entry.cam.followTarget ?? entry.nodeId;
     this.yawOffsetDeg = entry.cam.yawOffsetDeg;
+    this.yawMode = entry.cam.yawMode ?? 'world';
     this.view.set(plan);
     return true;
   }
@@ -166,6 +172,12 @@ export class PlayCameraController {
    *
    * 🔴 只有 `orbit-follow` 才跟随；`fixed` 模式一旦定位就不再动，
    * 否则作者摆好的固定机位会被玩家拖着走，语义就反了。
+   *
+   * **偏航（yaw）是否跟随由 `yawMode` 决定**（v5，2026-10-02 修复）：
+   * - `'world'`（缺省）：yaw 锁在 `plan` 定好的世界方向，**玩家转身不带相机**。
+   *   俯视上帝视角必须是这个行为 —— 否则摇杆的"上"随角色朝向漂移，
+   *   左右移动时整个画面在转，操作感直接崩坏（用户实测报的正是这个）。
+   * - `'target'`：yaw = 目标朝向 + yawOffsetDeg（肩后跟随视角）。
    */
   update(target: PlayCameraTarget | null): void {
     if (this.saved === null || this.plan === null) return;
@@ -175,9 +187,7 @@ export class PlayCameraController {
     this.view.set({
       ...cur,
       target: [target.x, cur.target[1], target.z],
-      // yaw 也要跟：yawOffsetDeg 是"相对目标朝向"的偏移，玩家转身相机必须跟着转，
-      // 否则它退化成固定世界方向，与 schema 语义不符。
-      yaw: target.yaw + rad(this.yawOffsetDeg),
+      yaw: this.yawMode === 'target' ? target.yaw + rad(this.yawOffsetDeg) : this.plan.yaw,
     });
   }
 

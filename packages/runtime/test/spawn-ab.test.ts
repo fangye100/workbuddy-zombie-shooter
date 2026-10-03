@@ -26,8 +26,8 @@ describe('captureInitialScatter —— 初始散布指纹', () => {
     const fp = captureInitialScatter(doc, { seed: SEED });
     expect(fp.error).toBeNull();
     expect(fp.spawns.length).toBe(listSpawnPoints(doc).length);
-    // 房间 1 = 5+4+3 = 12 只（与 session.test 的触发断言一致），房间 3 未进入 → 0
-    expect(fp.npcCount).toBe(12);
+    // P5 C4：房间 1 只投 wave1 = 5+3 = 8 只（与 session.test 的触发断言一致），房间 3 未进入 → 0
+    expect(fp.npcCount).toBe(8);
     expect(fp.spawns.filter((s) => s.spawned > 0).length).toBeGreaterThan(0);
     expect(fp.spawns.filter((s) => s.spawned === 0).length).toBeGreaterThan(0);
   });

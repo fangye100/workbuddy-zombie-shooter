@@ -197,16 +197,16 @@ describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5�
     expect(r.diagnostics.some((d) => d.code === 'E_NAV_MISSING')).toBe(true);
   });
 
-  it('wave 非零 → warning（读了字段却没有波次语义，触发时仍一次性全量投放）', () => {
+  it('P5 C4：wave 语义已实现 —— 非零 wave 不再警告（W_SPAWN_WAVE_UNSUPPORTED 退役）', () => {
+    // 曾经 wave 只是「读了字段没有语义」要警告（复审 B6）；WaveScheduler 落地后
+    // wave 有真实分波语义，警告整条退役 —— 非零 wave 合法、零值兼容旧「全量」。
     const doc = clone(floor1());
     const sp = findNode(doc, 'nd_f1r0_sp0').components.find((c) => c.kind === 'SpawnPoint');
-    (sp as { wave: number }).wave = 2;
+    (sp as { wave: number }).wave = 3;
     const r = loadLevelRuntime(doc);
     expect(r.desc).not.toBeNull();
-    const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED');
-    expect(d?.severity).toBe('warning');
-    expect(d?.nodeId).toBe('nd_f1r0_sp0');
-    // 真实关卡 wave 全为 0 → 不打扰作者
+    expect(r.diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED')).toBe(false);
+    // 真实关卡（floor-1 首房已分波，wave 1/2/1）同样零警告
     expect(
       loadLevelRuntime(floor1()).diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_UNSUPPORTED'),
     ).toBe(false);
@@ -345,5 +345,71 @@ describe('loadLevelRuntime —— 失败必须明确，不静默兜底', () => {
     const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_TRIGGER_UNSUPPORTED');
     expect(d?.severity).toBe('warning');
     expect(d?.nodeId).toBe('nd_f1r0_sp0');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P5：失败条件真源链（docs/23 §2.6）
+// 装载器必须把场景声明带进运行描述 —— 运行时硬编码"玩家死=失败"会让作者对场景
+// 规则的修改失效（2026-10-02 审查：v4 曾是有定义无消费的假数据载体）。
+// ---------------------------------------------------------------------------
+
+describe('loadLevelRuntime —— loseCondition 真源链', () => {
+  it('场景声明 player-death → 原样带进运行描述', () => {
+    const d = loadLevelRuntime(floor1()).desc!;
+    expect(d.loseCondition).toBe('player-death');
+  });
+
+  it('缺字段 → warning + loseCondition=null（装载期不猜，静默补会造幽灵规则）', () => {
+    const doc = clone(floor1());
+    delete (doc as { loseCondition?: unknown }).loseCondition;
+    const r = loadLevelRuntime(doc);
+    expect(r.desc).not.toBeNull();
+    expect(r.desc!.loseCondition).toBeNull();
+    const d = r.diagnostics.find((x) => x.code === 'W_LOSE_CONDITION_UNSET');
+    expect(d?.severity).toBe('warning');
+  });
+
+  it('未知值 → error + 拒绝加载（不静默回落成默认语义）', () => {
+    const doc = clone(floor1());
+    (doc as { loseCondition: unknown }).loseCondition = 'timeout';
+    const r = loadLevelRuntime(doc);
+    expect(r.desc).toBeNull();
+    expect(r.diagnostics.some((x) => x.code === 'E_LOSE_CONDITION_UNKNOWN')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 评审回归（PR #20 · bot review 4171651605）：小数波号
+// ---------------------------------------------------------------------------
+
+describe('loadLevelRuntime —— 小数 wave 必须显式报警', () => {
+  /** 把首个刷怪点的 wave 改成指定值 */
+  function withWave(wave: number): SceneDocument {
+    const doc = clone(floor1());
+    for (const n of doc.nodes) {
+      for (const c of n.components) {
+        if (c.kind === 'SpawnPoint') {
+          (c as unknown as { wave: number }).wave = wave;
+          return doc;
+        }
+      }
+    }
+    throw new Error('夹具里没有刷怪点');
+  }
+
+  it('wave = 1.5 → W_SPAWN_WAVE_FRACTIONAL（否则这一批会被调度器静默跳过）', () => {
+    const r = loadLevelRuntime(withWave(1.5));
+    const d = r.diagnostics.find((x) => x.code === 'W_SPAWN_WAVE_FRACTIONAL');
+    expect(d).toBeDefined();
+    expect(d!.severity).toBe('warning');
+    expect(d!.message).toContain('1.5');
+  });
+
+  it('整数 / ≤0 不报警（≤0 是文档化的旧数据映射）', () => {
+    for (const w of [0, -1, 1, 2]) {
+      const r = loadLevelRuntime(withWave(w));
+      expect(r.diagnostics.some((x) => x.code === 'W_SPAWN_WAVE_FRACTIONAL')).toBe(false);
+    }
   });
 });
