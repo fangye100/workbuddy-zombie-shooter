@@ -68,6 +68,7 @@ import {
   RetargetWorkbench,
   type RetargetWorkbenchState,
 } from './services/binding/retarget-workbench';
+import { FREE_CAM_SPEED_MPS, stepFreeCamera } from './services/free-camera';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -265,6 +266,9 @@ async function boot(): Promise<void> {
    * 统一管理（复审 #8），不能在按钮里各写一份 —— 漏一个入口就是吞一类告警。
    */
   function startPlay(): boolean {
+    // 进 Play 前强制退出自由相机：Play 的相机归 PlayCameraController（场景 Camera 组件），
+    // 飞行模式会继续每帧写 camera，两套机位抢同一个对象 —— 用户只会看到"游戏相机乱飘"。
+    if (freeCamOn) setFreeCam(false);
     const ok = playCtl.start();
     if (ok) {
       shownRuntimeDiags.clear();
@@ -596,6 +600,12 @@ async function boot(): Promise<void> {
     /** 烘焙档位（P4 M4 mobile 档的证据面：压测时能看到当前跑的是哪一档） */
     bakeProfile: () => actorLib.bakeProfile,
     /**
+     * 自由相机的可验证面（冒烟 K 段用）。
+     * 读的是**同一份**状态变量，不是另开一路 —— 否则"按钮亮着但没进模式"查不出来。
+     */
+    freeCam: () => ({ on: freeCamOn, speed: freeCamSpeed }),
+    setFreeCam,
+    /**
      * 运行时真角色装配库（docs/20 M2）。冒烟断言「动态蒙皮已激活」用：
      * Play 后 `actorLib.size > 0` 且 `renderer.debugDynamicMeshIds()` 含 `actor:*`，
      * 未装配角色仍为 `capsule:*`（降级是设计行为）。
@@ -731,12 +741,56 @@ async function boot(): Promise<void> {
   const ZOOM_MAX = 120; // 全览一层的距离（关卡 editorCamera.distance=62，40 会一滚轮就被拽回来）
   const FOVY = (45 * Math.PI) / 180; // 与 renderer.render 的 perspective 保持一致
 
+  // =====================================================================
+  // 自由相机 Free Camera（编辑态的 Scene View 飞行机位）
+  //
+  // 为什么不是「改 orbit 参数」就完事：orbit 永远是**绕 target 转**，进不去关卡
+  // 内部（走廊、房间深处）。Unity/Unreal 的答案是「WASD 自由飞行 + 拖拽转头」。
+  //
+  // 为什么是**模式**而不是「按住某键临时生效」：飞行要同时占用鼠标拖拽与
+  // WASD/QE，临时生效得一直按着修饰键，且会和右键平移抢键位。做成显式模式，
+  // 退出后视角留在飞到的地方（这正是它的用途：飞进去看，再切回 orbit 编辑）。
+  //
+  // 为什么 Play 期间必须关掉：AGENTS.md §2.4 —— 编辑器相机与游戏相机严格分离，
+  // Play 的相机归 PlayCameraController（由场景 Camera 组件决定）。两套机位同时
+  // 写 camera 会互相打架，且用户会以为「游戏相机坏了」。
+  // =====================================================================
+  const FREE_CAM_MIN_SPEED = 1;
+  const FREE_CAM_MAX_SPEED = 80;
+  let freeCamOn = false;
+  let freeCamSpeed = FREE_CAM_SPEED_MPS;
+  const freeCamKeys = new Set<string>();
+  /** 本帧累计的鼠标转向位移（像素）。帧循环消费后清零，避免丢帧时把转向丢掉 */
+  let freeCamDxPx = 0;
+  let freeCamDyPx = 0;
+
+  function setFreeCam(on: boolean): void {
+    if (on && playCtl.isPlaying) {
+      // 不静默失败：用户点了按钮却没反应，比报错更难排查
+      console.warn('[freecam] Play 期间相机归游戏相机，先停止 Play 再进自由相机');
+      spawnMsg = { text: '自由相机不可用：Play 期间相机归游戏相机（先停止 Play）', kind: 'warn' };
+      refreshSpawnPanel();
+      hudDirty = true;
+      return;
+    }
+    freeCamOn = on;
+    freeCamKeys.clear();
+    freeCamDxPx = 0;
+    freeCamDyPx = 0;
+    focusAnim = null; // 聚焦动画与飞行抢 camera，立即让位
+    if (on) panel.params.autoOrbit = false; // 自动环绕会和飞行叠加，视角会飘
+    document.querySelector<HTMLButtonElement>('#btn-freecam')?.classList.toggle('active', on);
+    if (canvas !== null) canvas.style.cursor = on ? 'crosshair' : '';
+    hudDirty = true;
+    panel.syncValues();
+  }
+
   interface Ptr {
     x: number;
     y: number;
   }
   const pointers = new Map<number, Ptr>();
-  let gesture: 'orbit' | 'pan' | 'pinch' | 'gizmo' = 'orbit';
+  let gesture: 'orbit' | 'pan' | 'pinch' | 'gizmo' | 'freecam' = 'orbit';
   let lastX = 0;
   let lastY = 0;
   let downX = 0;
@@ -1833,10 +1887,30 @@ async function boot(): Promise<void> {
   // 宿主（这里）只负责把真实输入转成约定的运行输入向量，消费全在 runtime 的固定步里。
   const playKeys = new Set<string>();
   const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
+
+  // ---- 自由相机键位表 ----
+  // WASD 前后左右 / Q E 升降（**注意 E 与 gizmo 的旋转快捷键撞车**，所以自由相机
+  // 模式下必须在 gizmo 分支之前拦截，见 keydown）。箭头键也接上：习惯摇杆那套的人
+  // 不用改手。Shift 加速、V 开关、Esc 退出。
+  const FREE_CAM_KEYS: Record<string, [axis: 'forward' | 'right' | 'up', sign: number]> = {
+    w: ['forward', 1],
+    s: ['forward', -1],
+    a: ['right', -1],
+    d: ['right', 1],
+    e: ['up', 1],
+    q: ['up', -1],
+    arrowup: ['forward', 1],
+    arrowdown: ['forward', -1],
+    arrowleft: ['right', -1],
+    arrowright: ['right', 1],
+  };
+
   window.addEventListener('keyup', (e) => {
-    playKeys.delete(e.key.toLowerCase());
+    const k = e.key.toLowerCase();
+    playKeys.delete(k);
+    freeCamKeys.delete(k); // 飞行键同样要松开即停（只靠 keyup 会漏掉失焦路径，见下）
     // P5 C5：J 松开 = 停火（失焦路径由 clearPlayKeys 兜底）
-    if (e.key.toLowerCase() === 'j') playCtl.session.setFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
+    if (k === 'j') playCtl.session.setFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
   });
 
   /**
@@ -1845,6 +1919,7 @@ async function boot(): Promise<void> {
    * 不能等下一帧：失焦后 rAF 可能直接被节流停掉，那时候"等 frame 再提交"等于不提交。
    */
   const clearPlayKeys = (): void => {
+    freeCamKeys.clear(); // 飞行键同理：切窗口回来发现相机还在自己飞，是最难自查的那类 bug
     if (playKeys.size === 0) return;
     playKeys.clear();
     if (playCtl.isPlaying) playCtl.session.setInput(0, 0);
@@ -1859,6 +1934,28 @@ async function boot(): Promise<void> {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+
+    // ---- 自由相机优先接管 ----
+    // 必须在 PLAY_KEYS 与 gizmo 的 W/E/R 之前：飞行时 W 是"往前飞"而不是"切移动工具"，
+    // 箭头键是"飞"而不是"走"。Play 期间 freeCamOn 恒为 false（setFreeCam 会拒绝），
+    // 所以这里的拦截不会抢走玩家操作。
+    if (freeCamOn) {
+      if (k === 'v' || k === 'escape') {
+        e.preventDefault();
+        setFreeCam(false);
+        return;
+      }
+      if (k === 'shift' || FREE_CAM_KEYS[k] !== undefined) {
+        freeCamKeys.add(k);
+        e.preventDefault(); // 空格/方向键在飞行模式下不滚动页面
+        return;
+      }
+      // 其余键（F 聚焦 / Delete 删除…）照常放行
+    } else if (k === 'v') {
+      e.preventDefault();
+      setFreeCam(true);
+      return;
+    }
 
     if (PLAY_KEYS.has(k)) {
       playKeys.add(k);
@@ -1945,6 +2042,17 @@ async function boot(): Promise<void> {
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 1) {
+      // 自由相机：任何键按下都是「转视角」，不抓 gizmo 手柄（飞行中拖手柄没有意义，
+      // 而且手柄判定会抢走拖拽，导致转头时手柄跟着一起动）
+      if (freeCamOn) {
+        gesture = 'freecam';
+        lastX = e.clientX;
+        lastY = e.clientY;
+        downX = e.clientX;
+        downY = e.clientY;
+        downMoved = 0;
+        return;
+      }
       // gizmo 手柄抓取：仅普通左键（右键/中键/Shift+左键永远归视角导航，绝不抢）
       if (e.button === 0 && !e.shiftKey && renderer.getSelected() !== null) {
         const hit = hitTestGizmo(e.clientX, e.clientY);
@@ -1983,8 +2091,11 @@ async function boot(): Promise<void> {
       // 悬停（无按键按下）：gizmo 手柄上显示抓手，提示此处点击是拖手柄而非转视角。
       // 先算好再比对旧值：无条件写 style.cursor 会让每次鼠标移动都触发一次样式失效，
       // 而绝大多数移动光标形态根本没变。
-      const next =
-        renderer.getSelected() !== null && hitTestGizmo(e.clientX, e.clientY) !== null ? 'grab' : '';
+      const next = freeCamOn
+        ? 'crosshair'
+        : renderer.getSelected() !== null && hitTestGizmo(e.clientX, e.clientY) !== null
+          ? 'grab'
+          : '';
       if (canvas.style.cursor !== next) canvas.style.cursor = next;
       return;
     }
@@ -1992,7 +2103,12 @@ async function boot(): Promise<void> {
     pt.y = e.clientY;
     if (pointers.size === 1) {
       downMoved = Math.hypot(e.clientX - downX, e.clientY - downY);
-      if (gesture === 'gizmo') {
+      if (gesture === 'freecam') {
+        // 累计而不是直接改相机：转向在帧循环里和键盘位移**同一帧**合成，
+        // 否则一帧内多次 pointermove 会各转一次、和 dt 无关地甩视角。
+        freeCamDxPx += e.clientX - lastX;
+        freeCamDyPx += e.clientY - lastY;
+      } else if (gesture === 'gizmo') {
         updateGizmoDrag(e.clientX, e.clientY);
       } else if (gesture === 'orbit') {
         camera.yaw -= (e.clientX - lastX) * ORBIT_RAD_PER_PX;
@@ -2061,6 +2177,17 @@ async function boot(): Promise<void> {
     (e) => {
       e.preventDefault();
       focusAnim = null;
+      // 自由相机下滚轮**不缩放**：缩放改的是 orbit 半径，会把你刚飞到的位置又拽回去。
+      // 这里改成调飞行速度 —— 大关卡要飞快、对准细节要飞慢，这才是真需求。
+      if (freeCamOn) {
+        freeCamSpeed = clamp(
+          freeCamSpeed * Math.exp(-e.deltaY * 0.0012),
+          FREE_CAM_MIN_SPEED,
+          FREE_CAM_MAX_SPEED,
+        );
+        hudDirty = true;
+        return;
+      }
       zoomBy(Math.exp(e.deltaY * 0.0012));
     },
     { passive: false },
@@ -3614,6 +3741,11 @@ async function boot(): Promise<void> {
         renderer.setSkeletonVisible(on);
       });
     }
+
+    // 自由相机开关（gizmo-bar 上的「✈ 自由相机」按钮 / V 键）
+    document.querySelector<HTMLButtonElement>('#btn-freecam')?.addEventListener('click', () => {
+      setFreeCam(!freeCamOn);
+    });
   }
 
   // ---- 尺寸 ----
@@ -3643,6 +3775,15 @@ async function boot(): Promise<void> {
       `<b>视图</b> ${name}`,
       `<b>GPU</b> ${gpu.info.vendor || '?'} ${gpu.info.architecture || ''}`,
     ];
+
+    // 自由相机是**模式**，必须让用户随时看见自己在模式里 —— 否则「鼠标拖了却选不中物体」
+    // 会当成 bug 报上来，实际上是飞行模式把拖拽吃掉了。
+    if (freeCamOn) {
+      rows.push(
+        `<b style="color:#FF9F1C">✈ 自由相机</b> 速度 ${freeCamSpeed.toFixed(1)} m/s　` +
+          `<span class="hint">WASD 飞行 · Q/E 升降 · Shift 加速 · 拖拽转视角 · 滚轮调速 · V 或 Esc 退出</span>`,
+      );
+    }
 
     const selName = renderer.selectedName();
     const subName = renderer.selectedSubName();
@@ -3745,6 +3886,51 @@ async function boot(): Promise<void> {
     if (panel.params.autoOrbit) {
       camera.yaw += dt * 0.25;
       hudDirty = true;
+    }
+
+    // 自由相机：把「按键轴 + 累计鼠标位移」在一帧里合成一次。
+    // 只在**真的有输入**时才写回并标脏 —— 否则开着模式啥也不按也会每帧刷 HUD。
+    if (freeCamOn) {
+      let fwd = 0;
+      let rgt = 0;
+      let up = 0;
+      for (const k of freeCamKeys) {
+        const a = FREE_CAM_KEYS[k];
+        if (a === undefined) continue; // 'shift' 之类只作修饰键
+        if (a[0] === 'forward') fwd += a[1];
+        else if (a[0] === 'right') rgt += a[1];
+        else up += a[1];
+      }
+      const active = fwd !== 0 || rgt !== 0 || up !== 0 || freeCamDxPx !== 0 || freeCamDyPx !== 0;
+      if (active) {
+        const next = stepFreeCamera(
+          {
+            target: [camera.target[0], camera.target[1], camera.target[2]],
+            distance: camera.distance,
+            yaw: camera.yaw,
+            elevationDeg: panel.params.cameraElevation,
+          },
+          {
+            forward: fwd,
+            right: rgt,
+            up,
+            dxPx: freeCamDxPx,
+            dyPx: freeCamDyPx,
+            boost: freeCamKeys.has('shift'),
+          },
+          dt,
+          freeCamSpeed,
+        );
+        camera.target[0] = next.target[0];
+        camera.target[1] = next.target[1];
+        camera.target[2] = next.target[2];
+        camera.yaw = next.yaw;
+        panel.params.cameraElevation = next.elevationDeg;
+        panel.syncValues();
+        hudDirty = true;
+      }
+      freeCamDxPx = 0;
+      freeCamDyPx = 0;
     }
 
     // 聚焦动画：easeOutCubic 平滑过渡 target 与 distance

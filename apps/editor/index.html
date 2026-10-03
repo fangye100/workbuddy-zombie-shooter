@@ -554,6 +554,8 @@
   /* Play 控制（WU-4）：播放中用尸绿高亮，暂停用警示黄，与 mode/space 的语义色区分开 */
   #gizmo-bar .gz-btn.active[data-play] { background: var(--zombie); color: var(--ink); }
   #gizmo-bar .gz-btn.active[data-play="pause"] { background: var(--warn); }
+  /* 自由相机：用橙色。gizmo 模式已占用红/绿/青，Play 占用绿/黄，撞色就分不清在哪种模式 */
+  #gizmo-bar .gz-btn.active[data-freecam] { background: var(--gold); color: var(--ink); }
   #gizmo-bar .gz-btn:disabled { opacity: .35; cursor: not-allowed; }
   #gizmo-bar .gz-btn:disabled:hover { background: var(--panel); color: var(--paper); }
   #gizmo-bar .gz-btn:disabled:active { transform: none; }
@@ -1360,6 +1362,10 @@
       <button class="gz-btn gz-space" data-space="local" title="局部坐标" data-page-node-id="Xr2sGne1SRWC5h8ZZTY1uE">Local</button>
     </div>
     <div class="gz-sep" data-page-node-id="bWsvQ8v6hY04l7COEEjMdO"></div>
+    <div class="gz-group" data-page-node-id="FreeCamGrp000000000001">
+      <button class="gz-btn gz-freecam" data-freecam="1" id="btn-freecam" title="自由相机（V）：WASD 飞行 / Q E 升降 / Shift 加速 / 按住拖拽转视角 / 滚轮调速" data-page-node-id="FreeCamBtn000000000001">✈ 自由相机 V</button>
+    </div>
+    <div class="gz-sep" data-page-node-id="FreeCamSep000000000001"></div>
     <div class="gz-group" data-page-node-id="6D2v828Z4ocfqZUtnlJiCE">
       <button class="gz-btn gz-xray" data-xray="1" title="骨骼 X-ray 叠加（主视图）" data-page-node-id="kZZmupbCWcrqNGO21TdOq0">骨骼 X</button>
       <button class="gz-btn gz-lang" data-lang-toggle title="切换界面语言 Toggle UI language">中/EN</button>
