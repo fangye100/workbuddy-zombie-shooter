@@ -55,6 +55,7 @@ export interface RoomDesc {
   roomType: RoomVolumeComponent['roomType'];
   theme: RoomVolumeComponent['theme'];
   clearRule: RoomVolumeComponent['clearRule'];
+  clearTarget?: NodeId | null;
   depth: number;
   minX: number;
   maxX: number;
@@ -316,6 +317,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           roomType: r.roomType,
           theme: r.theme,
           clearRule: r.clearRule,
+          clearTarget: r.clearTarget ?? null,
           depth: r.depth,
           minX: b.minX,
           maxX: b.maxX,

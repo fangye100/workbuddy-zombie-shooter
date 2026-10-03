@@ -23,3 +23,4 @@ export * from './doc-diff';
 export * from './spawn-edit';
 export * from './spawn-ab';
 export * from './solid-ray';
+export * from './environment-edit';

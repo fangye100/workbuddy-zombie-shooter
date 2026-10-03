@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场",
   "act": "Act1",
@@ -54,10 +54,10 @@
           0
         ],
         "rotation": [
+          -0.23035094753260413,
           0,
-          0,
-          0,
-          1
+          -0.2745171292071211,
+          0.9335838402322055
         ],
         "scale": [
           1,
@@ -111,6 +111,7 @@
       "components": [
         {
           "kind": "Camera",
+          "yawMode": "world",
           "enabled": true,
           "fovDeg": 45,
           "near": 0.1,
@@ -119,8 +120,7 @@
           "followTarget": null,
           "pitchDeg": 55,
           "distance": 12,
-          "yawOffsetDeg": 0,
-          "yawMode": "world"
+          "yawOffsetDeg": 0
         }
       ],
       "prefab": null
@@ -266,6 +266,7 @@
             ]
           },
           "clearRule": "kill-all",
+          "clearTarget": null,
           "depth": 1
         },
         {
@@ -287,8 +288,480 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s0"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#435357",
+                  "roughness": 0.92,
+                  "metallic": 0,
+                  "outlineScale": 0.4,
+                  "halftoneScale": 0.35
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_edge_n",
+      "name": "道路边线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          -7.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              19.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_edge_s",
+      "name": "道路边线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          7.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              19.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_lane_0",
+      "name": "道路导向标线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -6.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_lane_1",
+      "name": "道路导向标线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -3.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_lane_2",
+      "name": "道路导向标线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_lane_3",
+      "name": "道路导向标线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          3.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_lane_4",
+      "name": "道路导向标线",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          6.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
               }
             }
           ],
@@ -331,7 +804,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb",
+              "guid": "as_t7vz3snf"
             }
           },
           "materials": [
@@ -399,7 +873,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb",
+              "guid": "as_215cbgda"
             }
           },
           "materials": [
@@ -467,7 +942,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb",
+              "guid": "as_hbtmvvfm"
             }
           },
           "materials": [
@@ -566,7 +1042,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -634,7 +1111,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -702,7 +1180,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -808,6 +1287,7 @@
             ]
           },
           "clearRule": "interact",
+          "clearTarget": null,
           "depth": 1
         },
         {
@@ -829,8 +1309,480 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s5"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#807252",
+                  "roughness": 0.92,
+                  "metallic": 0,
+                  "outlineScale": 0.4,
+                  "halftoneScale": 0.35
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_edge_n",
+      "name": "道路边线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          -6.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              13.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_edge_s",
+      "name": "道路边线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          6.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              13.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_lane_0",
+      "name": "道路导向标线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          -4.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.1666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_lane_1",
+      "name": "道路导向标线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          -2.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.1666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_lane_2",
+      "name": "道路导向标线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.1666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_lane_3",
+      "name": "道路导向标线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          2.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.1666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_lane_4",
+      "name": "道路导向标线",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          4.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.1666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
               }
             }
           ],
@@ -942,6 +1894,7 @@
             ]
           },
           "clearRule": "kill-all",
+          "clearTarget": null,
           "depth": 1
         },
         {
@@ -963,8 +1916,480 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s0"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#435357",
+                  "roughness": 0.92,
+                  "metallic": 0,
+                  "outlineScale": 0.4,
+                  "halftoneScale": 0.35
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_edge_n",
+      "name": "道路边线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          -7.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              19.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_edge_s",
+      "name": "道路边线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          7.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              19.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_lane_0",
+      "name": "道路导向标线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -6.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_lane_1",
+      "name": "道路导向标线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -3.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_lane_2",
+      "name": "道路导向标线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_lane_3",
+      "name": "道路导向标线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          3.3333333333333335,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_lane_4",
+      "name": "道路导向标线",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          6.666666666666667,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.6666666666666667,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
               }
             }
           ],
@@ -1007,7 +2432,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb",
+              "guid": "as_t7vz3snf"
             }
           },
           "materials": [
@@ -1075,7 +2501,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb",
+              "guid": "as_215cbgda"
             }
           },
           "materials": [
@@ -1143,7 +2570,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb",
+              "guid": "as_hbtmvvfm"
             }
           },
           "materials": [
@@ -1242,7 +2670,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1310,7 +2739,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1378,7 +2808,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1491,7 +2922,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.540Z",
-    "updatedAt": "2026-10-02T15:57:14.956Z",
+    "updatedAt": "2026-10-03T19:50:28.202Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

@@ -19,13 +19,10 @@
  *   刷怪点 → 细圆柱（s4 亮红 unlit，最醒目）
  * 语义数据仍在 RoomVolume / SpawnPoint 组件里，gizmo 只是它长什么样。
  *
- * ## 🔴 材质：只能用共享材质 id（s0..s6）
- * `resolveMaterialId()` 遇到 `override` 只剥到最内层 base 取 id，**patch 会被丢弃**，
- * 所以现在给 gizmo 指定自定义颜色是无效的。颜色语义化要等 S2 让 override 真正生效。
- * 当前色板（apps/editor/src/params.ts 的共享材质默认值）：
- *   s0 亮绿 #8FD14F · s1 深蓝黑 #1B1F2B · s2 亮绿 #8FD14F
- *   s3 金属灰 #7A8290（青色自发光）· s4 亮红 #E8402A（unlit 发光）
- *   s5 米色 #C8B89A · s6 白（天空穹顶）
+ * ## Materials
+ * Serialized override patches define the road palette. The editor resolves them
+ * after builtin instantiation and again after external GLB primitives are loaded.
+ * Spawn marker meshes are editorOnly and restored when Play stops.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +35,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -127,6 +124,12 @@ const CLEAR_RULE = {
  */
 const BOSS_OF_RUN = 'B-01';
 
+function propRef(id) {
+  const rel = `assets/environment/models/${id}/tex/${id}_tex_baked.glb`;
+  const meta = JSON.parse(fs.readFileSync(path.join(ROOT, `${rel}.meta.json`), 'utf8'));
+  return { path: rel, guid: meta.guid };
+}
+
 /** 走廊尺寸（连接相邻房间） */
 const CORRIDOR = { len: 6, width: 4 };
 
@@ -199,8 +202,9 @@ function baseEnvironment() {
 }
 
 /** 共享材质绑定。index:0 = 整个网格用这一个材质 */
-function binding(materialId) {
-  return [{ match: { by: 'index', value: 0 }, material: { type: 'shared', id: materialId } }];
+function binding(materialId, patch = null) {
+  const base = { type: 'shared', id: materialId };
+  return [{ match: { by: 'index', value: 0 }, material: patch ? { type: 'override', base, patch } : base }];
 }
 
 function meshRenderer(source, materialId, extra = {}) {
@@ -276,7 +280,7 @@ function node(id, name, opts) {
     id,
     name,
     parent: opts.parent ?? null,
-    transform: identityTransform(opts.position ?? [0, 0, 0]),
+    transform: { ...identityTransform(opts.position ?? [0, 0, 0]), rotation: opts.rotation ? opts.rotation.map(v => v / Math.hypot(...opts.rotation)) : [0, 0, 0, 1] },
     visible: true,
     pickable: opts.pickable ?? true,
     ...(opts.category ? { category: opts.category } : {}),
@@ -337,6 +341,8 @@ function buildFloor(floor) {
   const cameraId = `nd_f${floor.depth}_cam`;
   nodes.push(
     node(keyLightId, 'Key Light', {
+      // 48 degree elevation, 130 degree azimuth: readable contrast from the god-view camera.
+      rotation: [-0.230350, 0, -0.274516, 0.933580],
       pickable: false,
       category: '灯光',
       components: [
@@ -360,6 +366,7 @@ function buildFloor(floor) {
       components: [
         {
           kind: 'Camera',
+          yawMode: 'world',
           enabled: true,
           fovDeg: 45,
           near: 0.1,
@@ -372,7 +379,6 @@ function buildFloor(floor) {
           // v5：'world' = 上帝视角不随角色转身（第三人称顶视射击的默认）。
           // 不写会退化成缺省值 —— 那是"读了字段没落数据"，迁移链会把它补回来
           // 从而每次重生成都产生一次无意义 diff。
-          yawMode: 'world',
         },
       ],
     }),
@@ -426,12 +432,27 @@ function buildFloor(floor) {
             theme: floor.theme,
             bounds: { center: [room.x, 0, room.z], size: [spec.w, 4, spec.h] },
             clearRule: CLEAR_RULE[room.type] ?? 'none',
+            clearTarget: room.type === 'elite' ? `${roomId}_sp0` : null,
             depth: floor.depth,
           },
-          floorGizmo(spec.w, spec.h, spec.floorMat),
+          { ...floorGizmo(spec.w, spec.h, spec.floorMat), materials: binding('s1', { albedo: room.type === 'event' ? '#807252' : '#435357', roughness: 0.92, metallic: 0, outlineScale: 0.4, halftoneScale: 0.35 }) },
         ],
       }),
     );
+
+    // Highway ground treatment: readable lanes and edge strips from the Act1 art brief.
+    for (const side of [-1, 1]) {
+      nodes.push(node(`${roomId}_edge_${side < 0 ? 'n' : 's'}`, '道路边线', {
+        parent: roomId, pickable: false, category: '环境', position: [0, 0.13, side * (spec.h / 2 - 0.35)],
+        components: [{ ...floorGizmo(spec.w - 0.5, 0.12, 's5'), materials: binding('s5', { albedo: '#b8a87b', roughness: 1, outlineScale: 0, halftoneScale: 0.15 }) }],
+      }));
+    }
+    for (let mark = 0; mark < 5; mark++) {
+      nodes.push(node(`${roomId}_lane_${mark}`, '道路导向标线', {
+        parent: roomId, pickable: false, category: '环境', position: [(mark - 2) * (spec.w / 6), 0.13, 0],
+        components: [{ ...floorGizmo(spec.w / 12, 0.14, 's5'), materials: binding('s5', { albedo: '#d4ae57', roughness: 1, outlineScale: 0, halftoneScale: 0.15 }) }],
+      }));
+    }
 
     // 掩体（挂在房间下，随房间移动）。
     // 🔴 P4b：掩体从「builtin box 积木」改为引用真实环境道具 GLB。
@@ -456,7 +477,7 @@ function buildFloor(floor) {
             meshRenderer(
               {
                 type: 'asset',
-                ref: { path: `assets/environment/models/${propId}/tex/${propId}_tex_baked.glb` },
+                ref: propRef(propId),
               },
               's1',
             ),
@@ -492,6 +513,7 @@ function buildFloor(floor) {
             meshRenderer(
               { type: 'builtin', shape: 'cylinder', params: isBoss ? [1.2, 2.2, 12] : [0.6, 1.6, 8] },
               's4',
+              { editorOnly: true },
             ),
           ],
         }),

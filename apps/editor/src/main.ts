@@ -28,6 +28,10 @@ import { AssetBrowser } from './asset-browser';
 import { AssetInspector } from './asset-inspector';
 import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
+import { EditorMenu } from './services/editor-menu';
+import { readSceneChoices, nextPlayableScene, sceneUrl } from './services/scene-workspace';
+import { GameHud } from './services/game-hud';
+import { environmentFromParams } from './services/scene-environment';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
@@ -139,6 +143,8 @@ async function boot(): Promise<void> {
   // 多语言：index.html 里写死的静态文案（顶栏按钮 / dock 标题 / 占位符）在面板
   // 构建前先翻一遍；面板与菜单文案在各自代码里走 t()。
   applyStaticI18n(document.body);
+  hud.hidden = true;
+  document.getElementById('topbar')!.after(document.getElementById('gizmo-bar')!);
   // 语言切换按钮：gizmo-bar 尾部的「中/EN」。切换 = 持久化 + 整页刷新（见 i18n.ts）
   document.querySelector<HTMLButtonElement>('[data-lang-toggle]')?.addEventListener('click', () => {
     setLang(getLang() === 'zh' ? 'en' : 'zh');
@@ -270,6 +276,9 @@ async function boot(): Promise<void> {
    * 统一管理（复审 #8），不能在按钮里各写一份 —— 漏一个入口就是吞一类告警。
    */
   function startPlay(): boolean {
+    if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
+      editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
+    }
     // 进 Play 前强制退出自由相机：Play 的相机归 PlayCameraController（场景 Camera 组件），
     // 飞行模式会继续每帧写 camera，两套机位抢同一个对象 —— 用户只会看到"游戏相机乱飘"。
     if (freeCamOn) setFreeCam(false);
@@ -365,6 +374,7 @@ async function boot(): Promise<void> {
       shownRuntimeDiags.add(key);
       console.warn(`[runtime] ${d.code}: ${d.message}`);
       spawnMsg = { text: `运行告警：${d.message}`, kind: 'warn' };
+      editorMenu.message(spawnMsg.text);
       refreshSpawnPanel();
       hudDirty = true;
     }
@@ -667,14 +677,25 @@ async function boot(): Promise<void> {
     p.exposure = env.exposure;
   };
 
+  let editorMenu!: EditorMenu;
   void (async () => {
     const start = await resolveStartScenePath();
     if (start.warning !== null) {
       console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
     }
-    const r = await renderer.loadScene(start.path);
+    let requested = start.path;
+    const selected = new URLSearchParams(window.location.search).get('scene');
+    if (selected !== null) {
+      try {
+        const choices = await readSceneChoices();
+        const entry = choices.find(c => c.path === selected.replace(/^\/+/, ''));
+        if (!entry) throw new Error('该场景未登记在项目中');
+        requested = entry.path;
+      } catch (e) { editorMenu.message(`打开失败：${String(e)}`); return; }
+    }
+    const r = await renderer.loadScene(requested);
     if (!r.ok) {
-      console.warn(`[boot] 场景加载失败（${r.reason ?? '未知'}），保留硬编码 fallback 场景`);
+      editorMenu.message(`场景加载失败：${r.reason ?? '未知'}`);
       return;
     }
     for (const w of r.warnings ?? []) console.warn(`[boot] 场景告警：${w}`);
@@ -717,6 +738,8 @@ async function boot(): Promise<void> {
     if (r.keyLight) {
       panel.params.keyColor = r.keyLight.color;
       panel.params.keyIntensity = r.keyLight.intensity;
+      panel.params.keyAzimuth = r.keyLight.azimuth;
+      panel.params.keyElevation = r.keyLight.elevation;
     }
     // 点光同样来自场景（priority 最高的那一盏）。位置仍由引擎轨道驱动 —— 见已知遗留：
     // 场景 schema 有点光的 color/intensity/range，但没有位置字段。
@@ -742,6 +765,8 @@ async function boot(): Promise<void> {
     // loadScene 是绕过 UI 的直接路径（构造期 fallback → 整体替换），
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();
+    editorMenu.message(r.warnings?.length ? `已打开 · ${r.warnings.length} 条场景警告（见控制台）` : '已打开');
+    if (new URLSearchParams(window.location.search).get('play') === '1') startPlay();
   })();
 
   // ---- 相机交互：环绕 / 平移 / 缩放 + 拾取 ----
@@ -1227,13 +1252,35 @@ async function boot(): Promise<void> {
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
   const authorSaver = new AuthorSceneSaver();
+  editorMenu = new EditorMenu({
+    document: () => spawnStore?.document ?? null,
+    dirty: () => spawnStore?.dirty ?? false,
+    playing: () => playCtl.isPlaying,
+    current: () => {
+      const s = renderer.getSceneSource(); const d = renderer.getDocument();
+      return s && d ? { path: s.url, name: d.name } : null;
+    },
+    save: saveSpawnEdits,
+    undo: () => undoSpawnEdit(),
+    redo: () => reportAuthorTransform(authorTransform.history(true)),
+    inspect: switchInspectorTab,
+  });
   const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
+  panel.onChange = () => {
+    hudDirty = true;
+    if (spawnStore !== null && !playCtl.isPlaying) {
+      const result = spawnStore.setEnvironment(environmentFromParams(spawnStore.document.environment, panel.params));
+      if (result.ok) editorMenu.message('场景环境已修改，保存场景后生效于文件');
+    }
+  };
   panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
   panel.onAuthorUndo = () => undoSpawnEdit();
   panel.onAuthorRedo = () => reportAuthorTransform(authorTransform.history(true));
   panel.onAuthorSave = () => void saveSpawnEdits();
 
   function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
+    if (result.edit?.kind === 'environment' && spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
+    editorMenu.refresh();
     if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
     else if (result.error !== '值没有变化') spawnMsg = { text: result.error ?? '变换被拒绝', kind: 'warn' };
     if (result.ok && spawnAb !== null && spawnStore !== null) {
@@ -1377,6 +1424,7 @@ async function boot(): Promise<void> {
     if (store === null) return;
     const undone = authorTransform.history().edit;
     if (undone === null) return;
+    if (undone.kind === 'environment') { applySceneEnvironment(store.document.environment); panel.syncAll(); }
     panel.syncSelectionFromRenderer(true);
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
     if (spawnAb !== null) {
@@ -1405,6 +1453,7 @@ async function boot(): Promise<void> {
       if (spawnStore !== store) return;
       spawnMsg = { text: result.message, kind: result.ok ? 'ok' : 'warn' };
     }
+    editorMenu.message(spawnMsg?.text ?? '');
     refreshSpawnPanel();
     hudDirty = true;
   }
@@ -1453,8 +1502,10 @@ async function boot(): Promise<void> {
    * 顺序：先取出来源 id（stop 会摘掉会话、清空实体选中），再 stop，最后定位。
    */
   function stopPlay(): void {
+    clearPlayKeys();
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    if (spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
     actorPreloadGen++;
     // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
@@ -1680,6 +1731,7 @@ async function boot(): Promise<void> {
   // 宿主（这里）只负责把真实输入转成约定的运行输入向量，消费全在 runtime 的固定步里。
   const playKeys = new Set<string>();
   const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
+  const PLAY_WASD: Record<string, string> = { w: 'arrowup', a: 'arrowleft', s: 'arrowdown', d: 'arrowright' };
 
   // ---- 自由相机键位表 ----
   // WASD 前后左右 / Q E 升降（**注意 E 与 gizmo 的旋转快捷键撞车**，所以自由相机
@@ -1701,6 +1753,7 @@ async function boot(): Promise<void> {
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
     playKeys.delete(k);
+    if (PLAY_WASD[k]) playKeys.delete(PLAY_WASD[k]!);
     freeCamKeys.delete(k); // 飞行键同样要松开即停（只靠 keyup 会漏掉失焦路径，见下）
     // P5 C5：J 松开 = 停火（失焦路径由 clearPlayKeys 兜底）
     if (k === 'j') playCtl.session.setFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
@@ -1731,6 +1784,12 @@ async function boot(): Promise<void> {
     const t = e.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     const k = e.key.toLowerCase();
+    if (playCtl.isPlaying && !e.ctrlKey && !e.metaKey && PLAY_WASD[k]) {
+      e.preventDefault(); playKeys.add(PLAY_WASD[k]!); return;
+    }
+    if (playCtl.isPlaying && k === 'e') {
+      e.preventDefault(); if (!e.repeat) playCtl.session.interact(); return;
+    }
     if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
       e.preventDefault();
       reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
@@ -3594,6 +3653,23 @@ async function boot(): Promise<void> {
   resize();
 
   // ---- HUD ----
+  let lastWorkspaceUiTime = -1;
+  const gameHud = new GameHud({
+    interact: () => { playCtl.session.interact(); },
+    retry: () => { clearPlayKeys(); stopPlay(); startPlay(); },
+    stop: () => stopPlay(),
+    next: async () => {
+      if (playCtl.session.outcome !== 'floor-clear') return;
+      const source = renderer.getSceneSource(); const doc = renderer.getDocument();
+      if (!source || !doc) return;
+      try {
+        const next = await nextPlayableScene(source.url, doc.act);
+        if (!next) { editorMenu.message('全部楼层已完成！可以再来一局或返回编辑。'); return; }
+        const url = new URL(sceneUrl(window.location.href, next.path)); url.searchParams.set('play', '1');
+        window.location.assign(url.href);
+      } catch (e) { editorMenu.message(`下一层读取失败：${String(e)}`); }
+    },
+  });
   const updateHud = (fps: number): void => {
     const p = panel.params;
     const s = renderer.stats;
@@ -3821,6 +3897,11 @@ async function boot(): Promise<void> {
       );
     }
     playCtl.update(dt);
+    if (elapsed - lastWorkspaceUiTime >= 0.1) {
+      lastWorkspaceUiTime = elapsed;
+      gameHud.update(playCtl.session.runtime, playCtl.isPaused);
+      editorMenu.refresh();
+    }
     renderer.setDynamicBatches(bridge.batches());
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。

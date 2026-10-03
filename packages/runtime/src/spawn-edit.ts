@@ -28,6 +28,8 @@
  */
 
 import { ComponentKind } from '@aether/scene';
+import type { EnvironmentData } from '@aether/scene';
+import { validEnvironmentValues } from './environment-edit';
 import type { NodeId, SceneDocument, SceneNode, SpawnPointComponent } from '@aether/scene';
 import { changedJsonPaths, type JsonDiffEntry } from './doc-diff';
 
@@ -167,7 +169,8 @@ export interface TransformEdit {
  * 两条命令族用显式 `kind` 判别（`field` 的取值域本来也不相交，但显式标签让
  * 「以后再加第三条命令族」这件事不需要重新论证判别方式）。
  */
-export type AuthorEdit = SpawnEdit | TransformEdit;
+export interface EnvironmentEdit { kind: 'environment'; id: number; from: EnvironmentData; to: EnvironmentData }
+export type AuthorEdit = SpawnEdit | TransformEdit | EnvironmentEdit;
 
 export interface EditResult {
   ok: boolean;
@@ -393,16 +396,23 @@ export function invertTransformEdit(edit: TransformEdit): TransformEdit {
 
 /** 按 `kind` 分发应用（撤销栈里两条命令族共用一条 LIFO） */
 export function applyAuthorEdit(doc: SceneDocument, edit: AuthorEdit): EditResult {
+  if (edit.kind === 'environment') {
+    if (!validEnvironmentValues(edit.to)) return { ok: false, error: '环境参数无效', edit: null };
+    doc.environment = structuredClone(edit.to);
+    return { ok: true, error: null, edit };
+  }
   return edit.kind === 'transform' ? applyTransformEdit(doc, edit) : applySpawnEdit(doc, edit);
 }
 
 /** 按 `kind` 分发取逆 */
 export function invertAuthorEdit(edit: AuthorEdit): AuthorEdit {
+  if (edit.kind === 'environment') return { ...edit, from: structuredClone(edit.to), to: structuredClone(edit.from) };
   return edit.kind === 'transform' ? invertTransformEdit(edit) : invertSpawnEdit(edit);
 }
 
 /** 面板/状态行用的一句话描述（"刚改了什么"）。UI 不该自己拼字段名 */
 export function formatAuthorEdit(edit: AuthorEdit): string {
+  if (edit.kind === 'environment') return '场景环境与光照';
   if (edit.kind === 'spawn') {
     return `${FIELD_LABEL[edit.field]}：${edit.from} → ${edit.to}`;
   }
@@ -544,6 +554,15 @@ export class SpawnEditStore {
   }
 
   /** 撤销一步，返回被撤销的命令（栈空则 null） */
+  setEnvironment(to: EnvironmentData): EditResult {
+    if (!validEnvironmentValues(to)) return { ok: false, error: '环境参数无效', edit: null };
+    if (JSON.stringify(to) === JSON.stringify(this.working.environment)) return { ok: false, error: '值没有变化', edit: null };
+    const edit: EnvironmentEdit = { kind: 'environment', id: this.nextEditId++, from: structuredClone(this.working.environment), to: structuredClone(to) };
+    const result = applyAuthorEdit(this.working, edit);
+    if (result.ok) { this.undoStack.push(edit); this.redoStack.length = 0; }
+    return result;
+  }
+
   undo(): AuthorEdit | null {
     const e = this.undoStack.pop();
     if (e === undefined) return null;

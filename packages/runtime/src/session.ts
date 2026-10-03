@@ -302,6 +302,21 @@ export class RuntimeSession {
 
   /** 已触发过的房间。防"再次跨越边界重复投放同一波" */
   private readonly triggered = new Set<NodeId>();
+  private readonly interactedRooms = new Set<NodeId>();
+
+  /** Explicit player action, accepted only inside an entered, peaceful interaction room. */
+  interact(): boolean {
+    if (this.outcomeState !== 'running') return false;
+    const player = this.player();
+    if (!player || player.hp <= 0) return false;
+    const room = this.desc.rooms.find(r => r.enabled && r.clearRule === 'interact'
+      && player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ);
+    if (!room || !this.triggered.has(room.nodeId) || this.interactedRooms.has(room.nodeId)
+      || this.roomAliveEnemies(room.nodeId) > 0) return false;
+    this.interactedRooms.add(room.nodeId);
+    this.updateWaves();
+    return true;
+  }
   /** 波次推进状态（P5 C4）：triggered 房间的 wave 调度器 */
   private readonly waveRooms = new Map<NodeId, RoomWaveState>();
   /**
@@ -801,6 +816,7 @@ export class RuntimeSession {
     this.sourceOf.fill(null);
     this.kindOf.fill(0);
     this.triggered.clear();
+    this.interactedRooms.clear();
     this.tickCount = 0;
     this.diags.length = 0;
     this.diagSeen.clear();
@@ -938,6 +954,13 @@ export class RuntimeSession {
       const st = this.waveRooms.get(room.nodeId);
       if (st === undefined || st.cleared) continue;
 
+      if (room.clearRule === 'elite-dead' && this.eliteSatisfied(room, st)) {
+        st.cleared = true;
+        this.sessionEventBuf.push({ type: 'room-cleared', tick: this.tickCount, roomNodeId: room.nodeId });
+        this.checkFloorClear();
+        continue;
+      }
+
       if (st.nextWaveAtTick >= 0) {
         // 等投放：到点投下一波（整波原子，容量不足时这波被丢——诊断走
         // W_SPAWN_CAPACITY 同款路径，见 step 的 rejections 汇总）
@@ -1014,12 +1037,24 @@ export class RuntimeSession {
    */
   private isRoomSatisfied(room: LevelRuntimeDesc['rooms'][number]): boolean {
     if (room.clearRule === 'kill-all' || room.clearRule === 'none') return true;
+    if (room.clearRule === 'interact') return this.interactedRooms.has(room.nodeId);
+    if (room.clearRule === 'elite-dead' && room.clearTarget) return this.eliteSatisfied(room, this.waveRooms.get(room.nodeId)!);
     this.pushDiag(
       'W_ROOM_CLEAR_RULE_UNSUPPORTED',
       `房间 ${room.nodeId} 的 clearRule="${room.clearRule}" 本轮未实现：不判清空（也不会冒充已清去触发假的 floor-clear）`,
       room.nodeId,
     );
     return false;
+  }
+
+  private eliteSatisfied(room: LevelRuntimeDesc['rooms'][number], state: RoomWaveState): boolean {
+    const target = this.desc.spawns.find(s => s.nodeId === room.clearTarget && s.roomNodeId === room.nodeId
+      && s.enabled && s.count > 0 && s.trigger === 'room-enter');
+    if (!target || Math.max(1, Math.trunc(target.wave)) >= state.nextWave) return false;
+    for (const entity of this.view()) {
+      if (entity.kind === 'npc' && entity.alive && entity.sourceNodeId === target.nodeId) return false;
+    }
+    return true;
   }
 
   /** 本房（enabled + room-enter 刷怪点的）波号集合，升序、去重、≤0 归 1 */

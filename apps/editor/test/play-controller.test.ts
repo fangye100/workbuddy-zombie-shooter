@@ -63,10 +63,12 @@ function posOf(map: Record<string, [number, number, number]>): WorldPosOf {
 
 /** 最小替身：只实现 PlayController 真正用到的三个方法 */
 function fakeRenderer(doc: SceneDocument | null) {
-  let objects = doc === null ? [] : doc.nodes.map((n) => ({ name: n.name }));
+  let objects = doc === null ? [] : doc.nodes.map((n) => ({ name: n.name, visible: true }));
   let selectedIndex: number | null = 0;
   return {
     getDocument: () => doc,
+    findObjectIndexByNodeId: (id: string) => { const i = doc?.nodes.findIndex(n => n.id === id) ?? -1; return i < 0 ? null : i; },
+    setObjectVisible: vi.fn((index: number, visible: boolean) => { objects[index]!.visible = visible; }),
     snapshotAuthorState: (): AuthorSnapshot => ({
       count: objects.length,
       objects: objects.map((o) => ({
@@ -75,7 +77,7 @@ function fakeRenderer(doc: SceneDocument | null) {
         quat: [0, 0, 0, 1] as [number, number, number, number],
         scale: 1,
         bob: 0,
-        visible: true,
+        visible: o.visible,
         removed: false,
         pickable: true,
         name: o.name,
@@ -85,20 +87,20 @@ function fakeRenderer(doc: SceneDocument | null) {
       selectedIndex,
     }),
     restoreAuthorState: (snap: AuthorSnapshot) => {
-      objects = snap.objects.map((o) => ({ name: o.name }));
+      objects = snap.objects.map((o) => ({ name: o.name, visible: o.visible }));
       selectedIndex = snap.selectedIndex;
       return { restored: Math.min(snap.objects.length, snap.objects.length), mismatched: false };
     },
     /** 测试钩子：模拟 Play 期间作者改动了场景 */
     mutateDuringPlay: (name: string, sel: number | null) => {
-      objects = objects.map((o, i) => (i === 0 ? { name } : o));
+      objects = objects.map((o, i) => (i === 0 ? { ...o, name } : o));
       selectedIndex = sel;
     },
     // Play 期渲染侧 GPU 资源的释放入口（动态实例 buffer + 代理网格缓存）。
     // PlayController 必须把它登记进 PlaySession 的账目，否则账目显示 pending = 0
     // 而 GPU 上仍留着 Play 期分配物（PR #3 review）。
     core: { releaseDynamicResources: vi.fn() },
-    read: () => ({ count: objects.length, names: objects.map((o) => o.name), selectedIndex }),
+    read: () => ({ count: objects.length, names: objects.map((o) => o.name), visible: objects.map(o => o.visible), selectedIndex }),
   };
 }
 
@@ -311,4 +313,16 @@ describe('PlayController —— 状态机透传', () => {
     ctl.stop();
     expect(ctl.state).toBe('stopped');
   });
+});
+
+
+it('hides editor helpers only during Play and restores original visibility on Stop', () => {
+  const doc = scene();
+  const helperIndices = doc.nodes.flatMap((n, i) => n.components.some(c => c.kind === 'MeshRenderer' && c.editorOnly) ? [i] : []);
+  expect(helperIndices.length).toBeGreaterThan(0);
+  const { ctl, r } = make(doc); const before = r.read();
+  expect(ctl.start()).toBe(true);
+  for (const i of helperIndices) expect(r.read().visible[i]).toBe(false);
+  expect(r.read().visible.filter(v => !v)).toHaveLength(helperIndices.length);
+  ctl.stop(); expect(r.read()).toEqual(before);
 });
