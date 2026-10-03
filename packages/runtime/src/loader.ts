@@ -26,6 +26,7 @@
 
 import { SceneGraph } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
+import { solidCollider, type SolidColliderDesc } from './solid-ray';
 import type {
   AabbData,
   ColliderComponent,
@@ -119,6 +120,8 @@ export interface LevelRuntimeDesc {
   rooms: RoomDesc[];
   spawns: SpawnDesc[];
   obstacles: ObstacleDesc[];
+  /** Actual finite 3D Collider solids, separate from the navigation XZ projection. */
+  shotColliders: SolidColliderDesc[];
   nav: NavDesc | null;
   /**
    * 失败条件（P5，docs/23 §2.6）。**真源是场景的 `loseCondition`** —— 运行时不得
@@ -296,6 +299,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   const rooms: RoomDesc[] = [];
   const spawns: SpawnDesc[] = [];
   const obstacles: ObstacleDesc[] = [];
+  const shotColliders: SolidColliderDesc[] = [];
   const scripts: ScriptDesc[] = [];
   let nav: NavDesc | null = null;
 
@@ -385,6 +389,10 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       } else if (c.kind === 'Collider') {
         const col = c as ColliderComponent;
         if (col.isTrigger) continue; // 触发器不挡路
+        if (col.enabled && graph.isEffectivelyVisible(n.id)) {
+          try { shotColliders.push(solidCollider(n.id, col.shape, graph.worldMatrix(n.id))); }
+          catch (e) { err('E_SHOT_COLLIDER', String(e), n.id); }
+        }
         // 🔴 必须按**世界矩阵**（含旋转、缩放与父级链）算障碍范围。
         // 曾经直接用 `halfExtents` 当世界半宽 —— 旋转过的长条盒在世界系里可能
         // 反而更长（低估 → 僵尸穿墙），缩放过的则直接算错。
@@ -496,6 +504,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       rooms,
       spawns,
       obstacles,
+      shotColliders,
       nav,
       loseCondition,
       scripts,

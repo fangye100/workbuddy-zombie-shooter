@@ -15,6 +15,7 @@ function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDe
     rooms: [],
     spawns: [],
     obstacles,
+    shotColliders: [],
     // 合成场景显式声明失败条件（v4 真源）：玩家死亡 = 失败
     loseCondition: 'player-death',
     scripts: [], // ADR-018 P3：无脚本的合成场景，行为执行器走空路径
