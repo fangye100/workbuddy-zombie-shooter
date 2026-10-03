@@ -69,10 +69,27 @@ async function main() {
       { timeout: 20000, interval: 300, label: '编辑器就绪' },
     );
 
-    // ---- 场景机位就绪闸门（独立审核 P1-1）----
-    // 场景 editorCamera 是**异步**施加的（main.ts applySceneCamera），比"画布立起"
+    // ---- 场景机位就绪闸门（独立审核 P1-1 / 复审 P2-6）----
+    // 场景 editorCamera 是**异步**施加的（main.ts applySceneCamera），比"画布就绪"
     // 晚约 100ms。基线若取在它落地前，位移里会混进一次 DEFAULT_VIEW→场景机位的
-    // 整机瞬移（distance 9→62、cos 被拉到 -0.6），防线哑火。等相机连续两拍不变。
+    // 整机瞬移（distance 9→62、cos 被拉到 -0.6），防线哑火。
+    // 期望值从**真源**反推（aether.project.json → startIndex → 场景 editorCamera），
+    // 不硬编码、也不靠"连续两拍不变"的启发式 —— 启发式在冷启动慢盘上会假就绪。
+    let expectedSig = null;
+    try {
+      const proj = JSON.parse(fs.readFileSync('aether.project.json', 'utf8'));
+      const entry = (proj.scenes ?? [])[proj.startIndex ?? 0];
+      const scene = JSON.parse(fs.readFileSync(entry.path, 'utf8'));
+      const ec = scene.editorCamera;
+      const el = (ec.elevation * 180) / Math.PI; // 主视图存的是度（panel.params.cameraElevation）
+      expectedSig = [ec.target[0], ec.target[1], ec.target[2], ec.distance, ec.yaw, el]
+        .map((v) => +Number(v).toFixed(6))
+        .join(',');
+      console.log(`期望机位（真源 ${entry.path}）：${expectedSig}`);
+    } catch (e) {
+      // 真源解析失败不阻断（结构变了不该让探针直接崩），退回启发式：连续两拍不变
+      console.warn(`[camera-probe] 真源期望机位解析失败，退回启发式闸门：${e.message}`);
+    }
     const camSig = () =>
       cdp.eval(
         `(() => { const c = window.__editor.camera;
@@ -83,11 +100,20 @@ async function main() {
     await waitFor(
       async () => {
         const s = await camSig();
-        const stable = prevSig !== null && s === prevSig;
+        if (expectedSig !== null) return s === expectedSig;
+        const stable = prevSig !== null && s === prevSig; // 启发式兜底
         prevSig = s;
         return stable;
       },
-      { timeout: 10000, interval: 250, label: '场景机位就绪（相机连续两拍不变）' },
+      { timeout: 10000, interval: 250, label: '场景机位就绪（等于真源期望值）' },
+    );
+    // 超时也要能看出来：waitFor 不抛错只返回 last，这里显式核对一次，
+    // 不匹配就把期望值打进失败信息（否则闸门失效会伪装成后面的断言失败）
+    const readySig = await camSig();
+    check(
+      '🔴 场景机位已按真源落地（基线不被 DEFAULT_VIEW 污染）',
+      expectedSig === null || readySig === expectedSig,
+      expectedSig === null ? `启发式就绪：${readySig}` : `期望 ${expectedSig} 实际 ${readySig}`,
     );
 
     // =================================================================

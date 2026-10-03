@@ -622,12 +622,17 @@ async function boot(): Promise<void> {
   // boot 场景加载：应用场景 editorCamera 到主视图 —— 关卡物件常在 x=0..70m，
   // 不应用的话相机停在 DEFAULT_VIEW（target 原点 distance 9），用户看到的是
   // 局部特写，会误以为"关卡没加载出来"。
+  /** 飞行中到达的场景机位先暂存，退出自由相机时补应用（不丢） */
+  let pendingSceneCamera: EditorCameraData | null = null;
   const applySceneCamera = (ec: EditorCameraData): void => {
     // 自由相机是当前机位的**归属者**（编辑态内部也有两套写者）：飞行途中异步
     // 落地的场景机位如果照写，用户刚飞到的地方会被整机瞬移走（独立审核 P1-2
-    // 抓到的可达路径）。机位让位由 setFreeCam 集中管理，这里只让路。
+    // 抓到的可达路径）。机位让位由 setFreeCam 集中管理，这里只让路 —— 但要
+    // 暂存，否则退出飞行后场景机位永久丢失、用户被留在 DEFAULT_VIEW 局部特写
+    // 里（复审 P2-5）。
     if (freeCamOn) {
-      console.warn('[freecam] 场景机位未应用：自由相机持有中（退出后可再载入场景取景）');
+      pendingSceneCamera = ec;
+      console.warn('[freecam] 场景机位暂存：自由相机持有中，退出后自动应用');
       return;
     }
     camera.target = [...ec.target] as [number, number, number];
@@ -786,6 +791,12 @@ async function boot(): Promise<void> {
     freeCamDyPx = 0;
     focusAnim = null; // 聚焦动画与飞行抢 camera，立即让位
     if (on) panel.params.autoOrbit = false; // 自动环绕会和飞行叠加，视角会飘
+    if (!on && pendingSceneCamera !== null) {
+      // 退出飞行后补应用暂存的场景机位（先清再调，避免 applySceneCamera 再暂存一次）
+      const ec = pendingSceneCamera;
+      pendingSceneCamera = null;
+      applySceneCamera(ec);
+    }
     document.querySelector<HTMLButtonElement>('#btn-freecam')?.classList.toggle('active', on);
     if (canvas !== null) canvas.style.cursor = on ? 'crosshair' : '';
     hudDirty = true;
@@ -2085,6 +2096,9 @@ async function boot(): Promise<void> {
       downY = e.clientY;
       downMoved = 0;
     } else if (pointers.size === 2) {
+      // 自由相机不吃双指手势：第二根手指直接忽略，保持单指转视角。
+      // 否则 pinch/pan 会写 distance 与 target，把飞行机位拽走（触屏可达路径）。
+      if (freeCamOn) return;
       downMoved = CLICK_THRESHOLD + 1; // 双指手势绝不触发拾取
       const pts = [...pointers.values()];
       const a = pts[0]!;
@@ -2112,14 +2126,20 @@ async function boot(): Promise<void> {
     }
     pt.x = e.clientX;
     pt.y = e.clientY;
+    // 自由相机的转视角**不限指针数**：飞行中第二根手指落下后 pointers.size 变 2，
+    // 若把它塞进 size===1 分支，第一根手指就会停止转向（手感像"卡住"）。
+    if (gesture === 'freecam') {
+      // 累计而不是直接改相机：转向在帧循环里和键盘位移**同一帧**合成，
+      // 否则一帧内多次 pointermove 会各转一次、和 dt 无关地甩视角。
+      freeCamDxPx += e.clientX - lastX;
+      freeCamDyPx += e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      return;
+    }
     if (pointers.size === 1) {
       downMoved = Math.hypot(e.clientX - downX, e.clientY - downY);
-      if (gesture === 'freecam') {
-        // 累计而不是直接改相机：转向在帧循环里和键盘位移**同一帧**合成，
-        // 否则一帧内多次 pointermove 会各转一次、和 dt 无关地甩视角。
-        freeCamDxPx += e.clientX - lastX;
-        freeCamDyPx += e.clientY - lastY;
-      } else if (gesture === 'gizmo') {
+      if (gesture === 'gizmo') {
         updateGizmoDrag(e.clientX, e.clientY);
       } else if (gesture === 'orbit') {
         camera.yaw -= (e.clientX - lastX) * ORBIT_RAD_PER_PX;
@@ -2173,7 +2193,8 @@ async function boot(): Promise<void> {
       downX = rest.x;
       downY = rest.y;
       downMoved = CLICK_THRESHOLD + 1;
-      gesture = 'orbit';
+      // 回到单指：自由相机持有中仍归飞行（不能落回 orbit，否则剩下一根手指在甩机位）
+      gesture = freeCamOn ? 'freecam' : 'orbit';
     }
   };
   canvas.addEventListener('pointerup', endPointer);
