@@ -69,6 +69,27 @@ async function main() {
       { timeout: 20000, interval: 300, label: '编辑器就绪' },
     );
 
+    // ---- 场景机位就绪闸门（独立审核 P1-1）----
+    // 场景 editorCamera 是**异步**施加的（main.ts applySceneCamera），比"画布立起"
+    // 晚约 100ms。基线若取在它落地前，位移里会混进一次 DEFAULT_VIEW→场景机位的
+    // 整机瞬移（distance 9→62、cos 被拉到 -0.6），防线哑火。等相机连续两拍不变。
+    const camSig = () =>
+      cdp.eval(
+        `(() => { const c = window.__editor.camera;
+          return [c.target[0], c.target[1], c.target[2], c.distance, c.yaw, window.__editor.elevation()]
+            .map((v) => +v.toFixed(6)).join(','); })()`,
+      );
+    let prevSig = null;
+    await waitFor(
+      async () => {
+        const s = await camSig();
+        const stable = prevSig !== null && s === prevSig;
+        prevSig = s;
+        return stable;
+      },
+      { timeout: 10000, interval: 250, label: '场景机位就绪（相机连续两拍不变）' },
+    );
+
     // =================================================================
     // K1 · 自由相机（编辑态）
     // =================================================================

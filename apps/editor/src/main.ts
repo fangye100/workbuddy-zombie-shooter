@@ -623,6 +623,13 @@ async function boot(): Promise<void> {
   // 不应用的话相机停在 DEFAULT_VIEW（target 原点 distance 9），用户看到的是
   // 局部特写，会误以为"关卡没加载出来"。
   const applySceneCamera = (ec: EditorCameraData): void => {
+    // 自由相机是当前机位的**归属者**（编辑态内部也有两套写者）：飞行途中异步
+    // 落地的场景机位如果照写，用户刚飞到的地方会被整机瞬移走（独立审核 P1-2
+    // 抓到的可达路径）。机位让位由 setFreeCam 集中管理，这里只让路。
+    if (freeCamOn) {
+      console.warn('[freecam] 场景机位未应用：自由相机持有中（退出后可再载入场景取景）');
+      return;
+    }
     camera.target = [...ec.target] as [number, number, number];
     camera.distance = ec.distance;
     camera.yaw = ec.yaw;
@@ -1310,6 +1317,10 @@ async function boot(): Promise<void> {
 
   /** 聚焦到某物体（null = 无选中，回默认取景）。距离按包围球适配视锥，留 1.5 倍余量 */
   function focusOn(index: number | null): void {
+    // 自由相机持有期间不聚焦：focusAnim 在帧循环里排在飞行块之后，会每帧覆写
+    // target 和 distance，把刚飞到的机位拽走（独立审核 P1-2）。飞行中"飞过去看"
+    // 本来就是自由相机的职责，聚焦没有意义。
+    if (freeCamOn) return;
     let toT: [number, number, number];
     let toD: number;
     if (index === null) {
@@ -1947,7 +1958,7 @@ async function boot(): Promise<void> {
       }
       if (k === 'shift' || FREE_CAM_KEYS[k] !== undefined) {
         freeCamKeys.add(k);
-        e.preventDefault(); // 空格/方向键在飞行模式下不滚动页面
+        e.preventDefault(); // 方向键在飞行模式下不滚动页面（空格不放行，归 Play 控制）
         return;
       }
       // 其余键（F 聚焦 / Delete 删除…）照常放行

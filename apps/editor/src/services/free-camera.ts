@@ -40,7 +40,7 @@ export interface FreeCamInput {
   forward: number;
   /** +1 = 向右平移（D），−1 = 向左（A）。**水平**右向，不受俯仰影响 */
   right: number;
-  /** +1 = 世界上升（E / Space），−1 = 下降（Q） */
+  /** +1 = 世界上升（E），−1 = 下降（Q）。**世界 Y 轴**，与朝向无关。注意空格不在此列（空格归 Play 控制） */
   up: number;
   /** 本帧鼠标横向位移（像素）。右拖为正 */
   dxPx: number;

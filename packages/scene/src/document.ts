@@ -626,6 +626,7 @@ export function createEmptySceneDocument(name: string): SceneDocument {
             pitchDeg: 55,
             distance: 9,
             yawOffsetDeg: 0,
+            yawMode: 'world',
           },
         ],
       },
@@ -957,6 +958,26 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         };
         checkRef(b?.material, `${bt}/material`, 0);
       });
+    });
+  });
+
+  // ---- Camera 组件内部（yawMode 枚举；v5）----
+  // 文件是外部输入，类型断言不构成保证。手写 JSON 塞脏值必须显式报错，
+  // 不能靠运行时 `=== 'target'` 的安全退化静默吞掉（脏数据静默放行 = 说谎）。
+  d.nodes.forEach((n, i) => {
+    const comps = n?.components;
+    if (!Array.isArray(comps)) return;
+    comps.forEach((c, ci) => {
+      if (c?.kind !== ComponentKind.Camera) return;
+      const at = `/nodes/${i}/components/${ci}`;
+      const cam = c as Partial<CameraComponent>;
+      if (cam.yawMode !== undefined && cam.yawMode !== 'world' && cam.yawMode !== 'target') {
+        err(
+          `${at}/yawMode`,
+          'E_CAM_YAW_MODE',
+          `未知的 yawMode：${String(cam.yawMode)}（只接受 'world' | 'target'，缺省按 'world' 处理）`,
+        );
+      }
     });
   });
 

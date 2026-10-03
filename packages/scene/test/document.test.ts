@@ -283,6 +283,27 @@ describe('validateSceneDocument · 跨节点引用', () => {
   });
 });
 
+describe('validateSceneDocument · Camera.yawMode（v5）', () => {
+  const docWithCam = (yawMode: unknown): SceneDocument => {
+    const doc = createEmptySceneDocument('yaw 校验');
+    const cam = doc.nodes.flatMap((n) => n.components).find((c) => c.kind === ComponentKind.Camera)!;
+    (cam as unknown as Record<string, unknown>)['yawMode'] = yawMode;
+    return doc;
+  };
+
+  it('缺省不报错（等价 world）', () => {
+    expect(codes(validateSceneDocument(createEmptySceneDocument('x')))).toEqual([]);
+  });
+  it("'world' / 'target' 合法", () => {
+    expect(codes(validateSceneDocument(docWithCam('world')))).toEqual([]);
+    expect(codes(validateSceneDocument(docWithCam('target')))).toEqual([]);
+  });
+  it('🔴 脏值显式报 E_CAM_YAW_MODE，不静默放行', () => {
+    expect(codes(validateSceneDocument(docWithCam('sideways')))).toContain('E_CAM_YAW_MODE');
+    expect(codes(validateSceneDocument(docWithCam(42)))).toContain('E_CAM_YAW_MODE');
+  });
+});
+
 describe('序列化往返', () => {
   it('JSON 往返后仍通过校验，且引用的对象语义不变', () => {
     const doc = createEmptySceneDocument('Act1 · 城郊公路');
