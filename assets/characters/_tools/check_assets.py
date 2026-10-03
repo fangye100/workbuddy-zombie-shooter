@@ -24,7 +24,13 @@ ROSTER = ROOT / "characters" / "roster.json"
 IMGDIR = ROOT / "characters" / "images"
 
 VIEWS = ("front", "side", "attack")
-VIEW_LABEL = {"front": "正面", "side": "侧面", "attack": "攻击"}
+VIEW_LABEL = {"front": "正面", "side": "侧面", "attack": "攻击",
+              "tpose_front": "T姿正", "tpose_side": "T姿侧"}
+
+# 可选视图：绑定参考用的 T-pose（现役角色不一定都有，有就该出).
+# 不进 VIEWS 的「必出」判定，但必须在 stray 白名单里 —— 否则日常核对会一直报噪声。
+TPOSE_VIEWS = ("tpose_front", "tpose_side")
+ALL_VIEWS = tuple(VIEWS) + TPOSE_VIEWS
 
 
 def load_units() -> list[dict]:
@@ -35,6 +41,10 @@ def load_units() -> list[dict]:
 
 
 def img_path(uid: str, view: str) -> Path:
+    """指定视图的标准落地路径。T-pose 走 tpose/<子视图>/ 二级目录，与常规三视图隔开。"""
+    if view in TPOSE_VIEWS:
+        sub = view.split("_", 1)[1]
+        return IMGDIR / uid / "tpose" / sub / f"{uid}_{view}.png"
     return IMGDIR / uid / view / f"{uid}_{view}.png"
 
 
@@ -99,7 +109,7 @@ def main() -> int:
         str(p.relative_to(ROOT))
         for p in IMGDIR.rglob("*.png")
         if not any(p.samefile(img_path(r["id"], v))
-                   for r in rows for v in VIEWS if img_path(r["id"], v).is_file())
+                   for r in rows for v in ALL_VIEWS if img_path(r["id"], v).is_file())
     ]
     if stray:
         print(f"\n未归入标准命名的文件 {len(stray)} 个：")

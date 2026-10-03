@@ -89,11 +89,17 @@ def pipeline(cid, roster, token=None, skip_gen=False, size=1024, skip_rig=False)
     tag = cid.replace("-", "")
     tris = int(c.get("tris", 1600))
     mdir = os.path.join(_CHARS, "models", cid)
-    img = os.path.join(_CHARS, "images", cid, "front", f"{cid}_front.png")
+    # 🔴 图生 3D 的输入必须是**绑定友好的 T-pose**（双手空出、躯干无遮挡），
+    #    不能是持枪的概念图 —— 枪会被烤进网格，武器就无法作为独立道具挂 socket。
+    #    有 tpose/front 就优先，没有才回落到常规概念图（老角色不受影响）。
+    img_tpose = os.path.join(_CHARS, "images", cid, "tpose", "front", f"{cid}_tpose_front.png")
+    img_front = os.path.join(_CHARS, "images", cid, "front", f"{cid}_front.png")
+    img = img_tpose if os.path.isfile(img_tpose) else img_front
+    img_src = "tpose" if img == img_tpose else "front(概念图)"
     stem = f"{tag}_{en}_{tris}"
 
     print(f"\n{'=' * 66}\n角色 {cid} {c.get('name')} ({en})  tris预算={tris}  "
-          f"height={c.get('height')}\n{'=' * 66}", flush=True)
+          f"height={c.get('height')}  输入图={img_src}\n{'=' * 66}", flush=True)
 
     # --- [1] 混元图生3D ------------------------------------------------------
     hi_glb = newest(os.path.join(mdir, "*.glb"))

@@ -542,7 +542,8 @@ function sidebarHTML(e, isChar) {
     <button id="skbtn">🦴 骨骼 X-Ray（${e.joints} 骨节）</button>
   </div>` : ''}
   ${isChar && Object.keys(e.views).length ? `<h4>2D 设计图</h4><div class="btnrow" id="v2dbtns">
-    ${Object.keys(e.views).map((v) => `<button data-img="${e.views[v]}">${{front:'正面',side:'侧面',attack:'攻击'}[v]}</button>`).join('')}
+    ${Object.keys(e.views).map((v) => `<button data-img="${e.views[v]}">${
+      {front:'正面',side:'侧面',attack:'攻击',tposeFront:'T姿·正',tposeSide:'T姿·侧'}[v] ?? v}</button>`).join('')}
   </div>` : (!isChar && e.img ? `<h4>2D 设计图</h4><div class="btnrow">
     <button data-img="${e.img}">参考图</button></div>` : '')}
   <p class="hint">拖动旋转 · 滚轮缩放 · 右键平移</p>`;

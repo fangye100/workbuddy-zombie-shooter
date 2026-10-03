@@ -92,12 +92,18 @@ for (const { c, kind } of chars) {
   const infoSrc = animated ?? riggedOnly;
   const info = infoSrc ? glbInfo(path.join(riggedDir, infoSrc)) : null;
 
+  // 常规三视图 + 可选的 T-pose 绑定参考（tpose/front、tpose/side 二级目录）。
+  // key 即 manifest 里的视图名，浏览器页按它取中文标签。
+  const VIEW_DIRS = {
+    front: 'front', side: 'side', attack: 'attack',
+    tposeFront: 'tpose/front', tposeSide: 'tpose/side',
+  };
   const views = {};
-  for (const v of ['front', 'side', 'attack']) {
-    const imgDir = path.join(ASSETS, 'characters/images', c.id, v);
+  for (const [key, sub] of Object.entries(VIEW_DIRS)) {
+    const imgDir = path.join(ASSETS, 'characters/images', c.id, sub);
     if (fs.existsSync(imgDir)) {
       const f = fs.readdirSync(imgDir).find((x) => x.endsWith('.png'));
-      if (f) views[v] = `characters/images/${c.id}/${v}/${f}`;
+      if (f) views[key] = `characters/images/${c.id}/${sub}/${f}`;
     }
   }
 

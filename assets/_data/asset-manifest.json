@@ -27,7 +27,9 @@
    "views": {
     "front": "characters/images/H-01/front/H-01_front.png",
     "side": "characters/images/H-01/side/H-01_side.png",
-    "attack": "characters/images/H-01/attack/H-01_attack.png"
+    "attack": "characters/images/H-01/attack/H-01_attack.png",
+    "tposeFront": "characters/images/H-01/tpose/front/H-01_tpose_front.png",
+    "tposeSide": "characters/images/H-01/tpose/side/H-01_tpose_side.png"
    },
    "lods": [],
    "animations": [],
