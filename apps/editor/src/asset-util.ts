@@ -208,8 +208,12 @@ export interface RenameProjectResult {
   path: string;
   metaRenamed: boolean;
   projectUpdated: boolean;
-  /** 改名已落盘但 aether.project.json 登记改写失败时的诊断（ok 仍为 true，UI 需提示） */
+  /** Compatibility field; transactional rename never reports a partially successful project update. */
   projectError: string | null;
+  oldPath?: string;
+  directory?: boolean;
+  updatedFiles?: string[];
+  recoveryPath?: string;
   error: string | null;
 }
 
@@ -223,7 +227,7 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
     });
     const data = (await res.json()) as {
       ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean;
-      projectError?: string; error?: string;
+      projectError?: string; error?: string; oldPath?: string; directory?: boolean; updatedFiles?: string[]; recoveryPath?: string;
     };
     return {
       ok: res.ok && data.ok === true,
@@ -232,6 +236,10 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
       projectUpdated: data.projectUpdated === true,
       projectError: data.projectError ?? null,
       error: data.error ?? null,
+      oldPath: data.oldPath ?? rel,
+      directory: data.directory ?? false,
+      updatedFiles: data.updatedFiles ?? [],
+      ...(data.recoveryPath === undefined ? {} : { recoveryPath: data.recoveryPath }),
     };
   } catch (e) {
     return { ok: false, path: '', metaRenamed: false, projectUpdated: false, projectError: null, error: String(e) };

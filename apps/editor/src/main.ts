@@ -33,6 +33,7 @@ import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
+import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
 import type { BindAnimationInput, BindExportStats } from './services/binding/binding-export';
@@ -3103,7 +3104,7 @@ async function boot(): Promise<void> {
       if (obj !== undefined && obj.mesh !== null) {
         // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
         currentBindingMetaPath = null;
-    bindingPersistence.clear();
+        bindingPersistence.clear();
         openBinding({
           name: obj.name,
           vertices: new Float32Array(obj.mesh.vertices),
@@ -3389,17 +3390,47 @@ async function boot(): Promise<void> {
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
       onRename: async (path, newName) => {
+        if (playCtl.isPlaying || spawnStore?.dirty) {
+          panel.setModelInfo('重命名冲突：请先停止 Play 并保存或处理作者修改；本地编辑已保留');
+          hudDirty = true;
+          return false;
+        }
         const r = await renameProjectEntry(path, newName);
         if (!r.ok) {
-          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}`);
+          panel.setModelInfo(`${t('重命名失败')}：${r.error ?? '未知错误'}${r.recoveryPath ? `；恢复证据：${r.recoveryPath}` : ''}`);
           hudDirty = true;
           return false;
         }
         const extras: string[] = [];
+        lodFamilies = null;
+        assetPreview?.clear();
+        if (lastAssetPath !== null) lastAssetPath = renamedResourcePath(lastAssetPath, r);
+        if (currentBindingMetaPath !== null && renamedResourcePath(currentBindingMetaPath, r) !== currentBindingMetaPath) {
+          currentBindingMetaPath = renamedResourcePath(currentBindingMetaPath, r);
+          bindingPersistence.clear();
+          binding?.setSaveStatus(false, '资源已改名，本地绑定修改已保留；请重新进入绑定接受新路径版本后保存');
+        }
+        const source = renderer.getSceneSource();
+        const store = spawnStore;
+        if (source !== null && store !== null) {
+          const refreshed = await refreshAuthorResources(store, source.url, r, readProjectFile, () => spawnStore === store && !playCtl.isPlaying);
+          renderer.setSceneSourcePath(refreshed.source);
+          if (refreshed.status === 'refreshed' && spawnStore === store && !playCtl.isPlaying) {
+            renderer.setDocument(store.document);
+            refreshSpawnPanel();
+          }
+          if (refreshed.message) extras.push(refreshed.message);
+        }
+        if (r.updatedFiles?.includes('assets/_data/asset-manifest.json')) {
+          actorPreloadGen++;
+          actorLib.clear();
+          const latest = await readProjectFile('assets/_data/asset-manifest.json');
+          if (latest.ok) { assetManifest = latest.json; actorLib.setManifest(assetManifest); }
+          else extras.push('角色清单重新载入失败，请重新打开编辑器');
+        }
         if (r.metaRenamed) extras.push(t('sidecar 已随迁'));
         if (r.projectUpdated) extras.push(t('项目登记已更新'));
-        // 部分成功：改名已落盘（列表会刷新），但项目文件登记没跟上 —— 必须显式告知，
-        // 不能静默吞掉（scene:check 会抓到断链，但用户得先知道为什么）
+        // The transaction reports explicit recovery information on failure; successful paths are complete.
         if (r.projectError !== null) extras.push(`⚠ ${r.projectError}`);
         panel.setModelInfo(`${t('已重命名')} → ${r.path}${extras.length > 0 ? `（${extras.join('，')}）` : ''}`);
         hudDirty = true;

@@ -349,16 +349,14 @@ try {
   check('gameplayConfig 改写', projAll.gameplayConfig === 'probe/newdir3/gameplay.json');
   check('materialLibrary 未命中保持原样', projAll.materialLibrary === 'assets/materials/library.mat.json');
 
-  // 部分成功：改名落盘但项目文件不可读 → ok:true + projectError（浏览器仍会刷新）
+  // 项目文件不可读时必须在移动前拒绝，不能返回部分成功并留下断链。
   rmSync(path.join(root, 'aether.project.json'), { force: true });
   mkdirSync(path.join(root, 'aether.project.json'), { recursive: true }); // 目录 → readFile 抛 EISDIR
   const rnPartial = await runRename(handler, root, 'probe/a2.json', 'a3.json');
-  check('部分成功：改名 ok=true', rnPartial.status === 200 && rnPartial.body?.ok === true);
-  check('部分成功：projectError 如实上报（非空字符串）',
-    typeof rnPartial.body?.projectError === 'string' && rnPartial.body.projectError.length > 0,
-    rnPartial.body?.projectError ?? '');
-  check('部分成功：文件确实已改名', existsSync(path.join(root, 'probe/a3.json'))
-    && !existsSync(path.join(root, 'probe/a2.json')));
+  check('项目预检失败：拒绝改名', rnPartial.status === 400 && rnPartial.body?.ok === false);
+  check('项目预检失败：明确诊断', typeof rnPartial.body?.error === 'string' && rnPartial.body.error.includes('预检'));
+  check('项目预检失败：源文件保持原位', existsSync(path.join(root, 'probe/a2.json'))
+    && !existsSync(path.join(root, 'probe/a3.json')));
   rmSync(path.join(root, 'aether.project.json'), { recursive: true, force: true }); // 收尾拆掉假目录
 } finally {
   rmSync(root, { recursive: true, force: true });
