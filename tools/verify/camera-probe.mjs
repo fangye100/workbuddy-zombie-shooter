@@ -213,6 +213,63 @@ async function main() {
       check('🔴 转视角是原地转头：eye 漂移 < 0.05m（orbit 甩动会漂移数米）', eyeDrift < 0.05, `eye 漂移=${eyeDrift.toFixed(4)}m`);
     }
 
+    // ---- 🔴 拖拽绝不能被当成轻点拾取（终审抓的回归防线）----
+    // 必须在**自由相机开启时**做（回归只发生在 freecam 手势路径），所以放在 Esc 退出之前。
+    // 飞行分支若漏算 downMoved，松手就会被 endPointer 当成轻点 → 拖拽看完一圈，
+    // 选中的物体莫名其妙变了。这里**运行时**扫网格找出「可拾取点 P」与「空点 E」，
+    // 不硬编码像素（画布尺寸不固定）：先点 E 清空选中，再从 E 拖到 P ——
+    // 修复生效 → 松手不拾取、选中仍为 null；回归 → P 处的物体被选中。
+    {
+      const pts = await cdp.eval(`(() => {
+        const c = document.getElementById('gpu'); const r = c.getBoundingClientRect(); const out = [];
+        for (let gy = 0.25; gy <= 0.75; gy += 0.08) for (let gx = 0.25; gx <= 0.75; gx += 0.08)
+          out.push([Math.round(r.left + r.width * gx), Math.round(r.top + r.height * gy)]);
+        return out;
+      })()`);
+      const getSel = () => cdp.eval('(() => window.__editor.renderer.getSelected())()');
+      const tap = async (x, y) => {
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1, buttons: 1 });
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1, buttons: 0 });
+        await sleep(90);
+      };
+      let P = null;
+      let E = null;
+      for (const [x, y] of pts) {
+        await tap(x, y);
+        const sel = await getSel();
+        if (sel !== null && P === null) P = { x, y };
+        if (sel === null && E === null) E = { x, y };
+        if (P !== null && E !== null) break;
+      }
+      if (P !== null && E !== null) {
+        await tap(E.x, E.y); // 清空选中
+        const selCleared = await getSel();
+        check('拖拽拾取防线前置条件：已找到可拾取点与空点并清空选中', selCleared === null, `sel=${selCleared}`);
+        // 从 E 拖到 P（带中间步，确保是拖拽不是点击）
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: E.x, y: E.y, button: 'left', clickCount: 1, buttons: 1 });
+        for (let i = 1; i <= 5; i++) {
+          await cdp.send('Input.dispatchMouseEvent', {
+            type: 'mouseMoved',
+            x: Math.round(E.x + ((P.x - E.x) * i) / 5),
+            y: Math.round(E.y + ((P.y - E.y) * i) / 5),
+            button: 'left',
+            buttons: 1,
+          });
+          await sleep(30);
+        }
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: P.x, y: P.y, button: 'left', clickCount: 1, buttons: 0 });
+        await sleep(200);
+        const selAfterDrag = await getSel();
+        check(
+          '🔴 飞行中拖拽松手**不**触发拾取（downMoved 必须累计）',
+          selAfterDrag === null,
+          `拖拽后选中=${selAfterDrag}（非 null 即回归：拖拽被当成了轻点）`,
+        );
+      } else {
+        skip('拖拽拾取防线', `画布上找不到${P === null ? '可拾取点' : '空点'}，无法构造对照（不影响相机本体断言）`);
+      }
+    }
+
     // ---- Esc 退出 ----
     await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });

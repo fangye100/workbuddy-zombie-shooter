@@ -2129,6 +2129,10 @@ async function boot(): Promise<void> {
     // 自由相机的转视角**不限指针数**：飞行中第二根手指落下后 pointers.size 变 2，
     // 若把它塞进 size===1 分支，第一根手指就会停止转向（手感像"卡住"）。
     if (gesture === 'freecam') {
+      // downMoved 必须在这里也累计（终审抓的回归）：它在 endPointer 里决定
+      // 「松手算不算轻点拾取」。飞行分支早退时漏掉它，拖拽转视角松手就会被
+      // 当成轻点 → 每次看完一圈场景，选中的物体莫名其妙变了。
+      downMoved = Math.hypot(e.clientX - downX, e.clientY - downY);
       // 累计而不是直接改相机：转向在帧循环里和键盘位移**同一帧**合成，
       // 否则一帧内多次 pointermove 会各转一次、和 dt 无关地甩视角。
       freeCamDxPx += e.clientX - lastX;
