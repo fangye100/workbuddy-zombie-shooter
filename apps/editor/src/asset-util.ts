@@ -214,6 +214,7 @@ export interface RenameProjectResult {
   directory?: boolean;
   updatedFiles?: string[];
   recoveryPath?: string;
+  diagnostics?: string[];
   error: string | null;
 }
 
@@ -227,7 +228,7 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
     });
     const data = (await res.json()) as {
       ok?: boolean; path?: string; metaRenamed?: boolean; projectUpdated?: boolean;
-      projectError?: string; error?: string; oldPath?: string; directory?: boolean; updatedFiles?: string[]; recoveryPath?: string;
+      projectError?: string; error?: string; oldPath?: string; directory?: boolean; updatedFiles?: string[]; recoveryPath?: string; diagnostics?: string[];
     };
     return {
       ok: res.ok && data.ok === true,
@@ -239,6 +240,7 @@ export async function renameProjectEntry(rel: string, newName: string): Promise<
       oldPath: data.oldPath ?? rel,
       directory: data.directory ?? false,
       updatedFiles: data.updatedFiles ?? [],
+      diagnostics: data.diagnostics ?? [],
       ...(data.recoveryPath === undefined ? {} : { recoveryPath: data.recoveryPath }),
     };
   } catch (e) {

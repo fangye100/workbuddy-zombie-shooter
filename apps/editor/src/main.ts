@@ -3402,6 +3402,7 @@ async function boot(): Promise<void> {
           return false;
         }
         const extras: string[] = [];
+        extras.push(...r.diagnostics ?? []);
         lodFamilies = null;
         assetPreview?.clear();
         if (lastAssetPath !== null) lastAssetPath = renamedResourcePath(lastAssetPath, r);

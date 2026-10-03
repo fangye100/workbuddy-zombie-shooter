@@ -8,6 +8,7 @@ import { createFsApiHandler } from '../../apps/editor/devfs.ts';
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
 import { withProjectWriteLock } from '../fs/project-write.mjs';
 import { validateSceneDocument } from '../../packages/scene/src/document.ts';
+import { createDefaultRecipe, retargetFingerprint, validateRetargetAssetBlock } from '../../packages/scene/src/retarget-meta.ts';
 const repo = fileURLToPath(new URL('../..', import.meta.url));
 const root = await mkdtemp(path.join(tmpdir(), 'resource-rename-'));
 assert.ok(path.resolve(root).startsWith(path.resolve(tmpdir()) + path.sep + 'resource-rename-'));
@@ -43,6 +44,8 @@ try {
   const source = path.join(repo, 'assets/characters/models/E-04/game_ready/E04_20260901_010134_1600tris.glb');
   await copyFile(source, path.join(root, asset));
   const meta = JSON.parse(await readFile(`${source}.meta.json`, 'utf8')); meta.guid = 'as_probe';
+  meta.retarget = { calibration: null, recipe: createDefaultRecipe(
+    { guid: meta.guid, path: asset, contentHash: meta.sourceHash }, { guid: meta.guid, path: asset, contentHash: meta.sourceHash }) };
   await put(`${asset}.meta.json`, meta);
   await put('assets/_data/asset-manifest.json', { characters: [{ id: 'E-PROBE', lods: [{ label: '+动画', file: 'models/model.glb' }, { label: 'same rooted', file: asset }], views: {} }], environments: [] });
   const result = await rename(asset, 'renamed.glb'); assert.equal(result.status, 200, JSON.stringify(result));
@@ -52,6 +55,14 @@ try {
   for (const id of ['nd_f1r0_cv0', 'nd_rename_noguid']) assert.equal(saved.nodes.find((n) => n.id === id).components.find((c) => c.kind === 'MeshRenderer').source.ref.path, renamed);
   assert.equal(saved.nodes.find((n) => n.id === 'nd_f1r0_cv0').components[0].source.ref.guid, 'as_probe');
   assert.deepEqual(saved.userData, scene.userData); assert.equal((await get(`${renamed}.meta.json`)).guid, 'as_probe');
+  const afterMeta = await get(`${renamed}.meta.json`);
+  assert.deepEqual(validateRetargetAssetBlock(afterMeta.retarget).filter((d) => d.severity === 'error'), []);
+  assert.equal(afterMeta.retarget.recipe.source.path, renamed); assert.equal(afterMeta.retarget.recipe.target.path, renamed);
+  assert.equal(afterMeta.retarget.recipe.source.guid, meta.guid); assert.equal(afterMeta.retarget.recipe.source.contentHash, meta.sourceHash);
+  assert.equal(afterMeta.retarget.calibration, meta.retarget.calibration);
+  assert.notEqual(retargetFingerprint(afterMeta.retarget.recipe), retargetFingerprint(meta.retarget.recipe));
+  assert.match(result.body.diagnostics.join('\n'), /原结果已过期/);
+  console.log('PASS typed retarget source/target resolve after rename; guid/content hash/calibration retained, schema valid, changed recipe fingerprint and explicit stale diagnostic');
   const manifest = await get('assets/_data/asset-manifest.json'); assert.equal(manifest.characters[0].lods[0].file, 'models/renamed.glb'); assert.equal(manifest.characters[0].lods[1].file, renamed);
   assert.deepEqual(await readFile(path.join(root, renamed)), await readFile(source));
   console.log('PASS real GLB rename: source+sidecar, stable guid/absent guid, scene consumer paths, manifest relative/rooted LOD, unknown annotation retained');

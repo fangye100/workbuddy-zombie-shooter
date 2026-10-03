@@ -98,7 +98,10 @@ export async function renameProject(root, abs, target, insensitive, maxSceneVers
       }
       return { status: 500, ok: false, error: `改名事务失败${rollbackErrors.length ? '，需要恢复' : '，已完整回滚'}：${error}`, recoveryPath: journalDir, rollbackErrors };
     }
-    return { status: 200, ok: true, oldPath, directory, path: newPath, metaRenamed: hasMeta,
+    const diagnostics = updates.filter((u) => u.kind === 'meta' && u.json.retarget?.recipe &&
+      JSON.stringify(JSON.parse(u.text).retarget?.recipe) !== JSON.stringify(u.json.retarget.recipe))
+      .map((u) => `${posix(path.relative(root, u.after))}: 重定向配方路径已更新，原结果已过期，需按新配方重新计算；guid、内容hash和标定数据已保留`);
+    return { status: 200, ok: true, oldPath, directory, path: newPath, metaRenamed: hasMeta, diagnostics,
       projectUpdated: updates.some((u) => u.kind === 'project'), projectError: null,
       updatedFiles: updates.map((u) => posix(path.relative(root, u.after))), recoveryPath: journalDir };
   });

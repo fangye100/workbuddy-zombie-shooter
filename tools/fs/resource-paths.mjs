@@ -49,6 +49,7 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
     }
   } else if (kind === 'meta') {
     for (const binding of json.bindings ?? []) for (const primitive of binding.prims ?? []) material(primitive.material);
+    ref(json.retarget?.recipe?.source); ref(json.retarget?.recipe?.target);
   } else if (kind === 'manifest') {
     for (const section of ['characters', 'environments']) for (const entry of json[section] ?? []) {
       const manifestTouch = (obj, key) => {
