@@ -15,7 +15,7 @@
  *    生成脚本冲掉用户数据是资产管线最常见的灾难。
  * 2. **身高值复用生成层**：从 `roster.generated.ts` 读已解析好的 `heightMeters`，
  *    不自己再解析一遍 `roster.json` 的复合串（ADR-002：资料库经生成层进入引擎）。
- *    提取后断言角色数 == 8，正则一旦失效立刻炸，不静默产出错误数据。
+ *    提取后断言角色数 == 9（包含主人公），正则一旦失效立刻炸，不静默产出错误数据。
  *
  * ## 用法
  *
@@ -36,7 +36,7 @@ const ROSTER_GEN = join(ROOT, 'packages', 'content', 'src', 'generated', 'roster
 
 const META_SUFFIX = '.meta.json';
 /** 期望的名册角色数。正则提取的结果必须等于它，否则说明生成物格式变了 */
-const EXPECTED_ROSTER_COUNT = 8;
+const EXPECTED_ROSTER_COUNT = 9;
 
 // ---------------------------------------------------------------- 名册
 

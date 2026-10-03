@@ -25,7 +25,7 @@
  */
 
 
-export type CharacterKind = 'npc' | 'boss';
+export type CharacterKind = 'npc' | 'boss' | 'protagonist';
 
 export interface RosterCharacter {
   readonly id: string;
@@ -172,6 +172,21 @@ export const ROSTER_CHARACTERS: readonly RosterCharacter[] = [
     hp: 9000,
     tris: 5200,
     accent: "toxic",
+  },
+  {
+    id: "H-01",
+    kind: "protagonist",
+    name: "清道夫",
+    en: "THE SCAVENGER",
+    threat: "",
+    acts: [1, 2, 3, 4],
+    heightRaw: "1.80 m",
+    heightMeters: 1.8,
+    speedRaw: "4.2 m/s",
+    speedMps: 4.2,
+    hp: 100,
+    tris: 3500,
+    accent: "teal",
   },
 ];
 

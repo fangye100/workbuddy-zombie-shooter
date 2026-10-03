@@ -144,6 +144,7 @@ function buildCharacter(c, kind) {
 const characters = [
   ...roster.npcs.map((c) => buildCharacter(c, 'npc')),
   ...roster.bosses.map((c) => buildCharacter(c, 'boss')),
+  ...(roster.protagonists ?? []).map((c) => buildCharacter(c, 'protagonist')),
 ];
 
 /* ==========================================================================
@@ -271,7 +272,7 @@ function renderRoster() {
     'assets/characters/roster.json',
   ], gapBlock + '\n')}
 
-export type CharacterKind = 'npc' | 'boss';
+export type CharacterKind = 'npc' | 'boss' | 'protagonist';
 
 export interface RosterCharacter {
   readonly id: string;
@@ -359,7 +360,7 @@ if (check) {
   console.log('✅ content 生成物与真源同步。');
 } else {
   console.log(
-    `\n共 ${characters.length} 个角色（npc ${roster.npcs.length} / boss ${roster.bosses.length}）`,
+    `\n共 ${characters.length} 个角色（npc ${roster.npcs.length} / boss ${roster.bosses.length} / protagonist ${roster.protagonists?.length ?? 0}）`,
   );
   console.log(`不可派生字段 ${UNDERIVABLE.length} 项，已写进 roster.generated.ts 头部。`);
 }

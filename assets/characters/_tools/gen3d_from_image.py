@@ -44,9 +44,10 @@ BUDDY_CLOUD_CANDIDATES = (
     + [os.path.join(d, n) for d in _SKILL_SCRIPTS
        for n in ("buddy-multimodal-generation.py", "buddy-cloud.py")]
     # 插件缓存目录带版本号，兜底扫一遍
-    + sorted(glob.glob(os.path.expandvars(
+    + [p for name in ("buddy-multimodal-generation.py", "buddy-cloud.py")
+       for p in sorted(glob.glob(os.path.expandvars(
         r"%USERPROFILE%\.workbuddy\plugins\cache\workbuddy-builtin"
-        r"\skill-buddy-multimodal-generation\*\scripts\buddy-cloud.py")))
+        rf"\skill-buddy-multimodal-generation\*\scripts\{name}")))]
 )
 
 

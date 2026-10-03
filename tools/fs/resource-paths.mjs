@@ -30,6 +30,10 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
     for (const k of ['defaultStyle', 'inputMap', 'gameplayConfig', 'materialLibrary']) touch(json, k);
   } else if (kind === 'scene') {
     if (!Array.isArray(json.nodes) || !Number.isInteger(json.schemaVersion) || json.schemaVersion < 1 || json.schemaVersion > maxSceneVersion) throw new Error('场景/预制体结构或版本不受支持');
+    touch(json.environment, 'postOverride');
+    if (Array.isArray(json.dependencies)) json.dependencies = json.dependencies.map((p) => {
+      const next = rewrite(p); if (next !== p) changed = true; return next;
+    });
     for (const node of json.nodes) {
       ref(node.prefab?.ref); unsupported(node.prefab?.overrides, `nodes[${node.id}].prefab.overrides`);
       if (!Array.isArray(node.components)) throw new Error(`nodes[${node.id}].components 不合法`);
