@@ -20,6 +20,7 @@ import {
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
+import { AuthorSceneSaver } from './services/author-scene-save';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -1223,6 +1224,7 @@ async function boot(): Promise<void> {
   // =====================================================================
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
+  const authorSaver = new AuthorSceneSaver();
   const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
   panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
   panel.onAuthorUndo = () => undoSpawnEdit();
@@ -1232,6 +1234,10 @@ async function boot(): Promise<void> {
   function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
     if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
     else if (result.error !== '值没有变化') spawnMsg = { text: result.error ?? '变换被拒绝', kind: 'warn' };
+    if (result.ok && spawnAb !== null && spawnStore !== null) {
+      const after = captureInitialScatter(spawnStore.document, { seed: playCtl.session.seed });
+      spawnAb = { before: spawnAb.before, after, cmp: compareScatter(spawnAb.before, after) };
+    }
     panel.syncSelectionFromRenderer(true);
     refreshSpawnPanel();
     hudDirty = true;
@@ -1267,8 +1273,8 @@ async function boot(): Promise<void> {
   // **不需要改这里的代码**。这就是 R2 说的「schema 是 Agent 与人类的契约面」：
   // 人类在 Inspector 上看到的，就是 Agent 声明的那几个旋钮。
   //
-  // 🔴 当前为只读态：保存链路的合法路径白名单只覆盖 SpawnPoint 的
-  // radius/count（`saveSpawnEditsInner`），Script 参数改了不会进 diffs、不会落盘。
+  // 🔴 当前为只读态：作者命令与保存合同只覆盖 Transform 与 SpawnPoint 的
+  // radius/count，Script 参数还不属于可编辑合同。
   // 与其让用户以为改了（刷新回原值，极难排查），不如置灰并写明原因。
   // 待 spawn-edit 支持通用组件编辑后放开。
   // =====================================================================
@@ -1369,6 +1375,7 @@ async function boot(): Promise<void> {
     if (store === null) return;
     const undone = authorTransform.history().edit;
     if (undone === null) return;
+    panel.syncSelectionFromRenderer(true);
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
     if (spawnAb !== null) {
       const after = captureInitialScatter(store.document, { seed: playCtl.session.seed });
@@ -1379,130 +1386,23 @@ async function boot(): Promise<void> {
     hudDirty = true;
   }
 
-  /**
-   * 保存。
-   *
-   * 写盘前先做一次**改动集合自检**：
-   *
-   *   ① 路径必须落在**某个 `SpawnPoint` 组件**的 radius / count 上
-   *      —— 光匹配正则不够：`Collider{sphere}.radius` 或任何组件上的 `count`
-   *      都能骗过 `/components\[\d+\]\.(radius|count)$/`，等于放行；
-   *   ② 至少要有一条改动（零改动就没必要写盘）。
-   *
-   * ⚠️ 这里**不能**限制"恰好一条"：作者完全可能连续改两个刷怪点再保存，
-   * 那时 2 处改动是合法的。曾经这么写过，结果把合法保存给拒了（复审抓出来的回归）。
-   * "一次编辑只产生一处改动"这条性质由 `spawn-edit.test.ts` 在 runtime 侧断言，
-   * 不该在保存这一步用条数来卡。
-   *
-   * 这条兜底的意义：store 的实现保证了它不会去碰别的字段，但把断言放在保存这一步，
-   * 才能保证将来有人加了新命令也不会悄悄破坏这个性质。
-   */
+  /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
+    if (playCtl.isPlaying) {
+      spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
+      refreshSpawnPanel();
+      return;
+    }
     const store = spawnStore;
-    const src = renderer.getSceneSource();
-    if (store === null || src === null) {
+    const source = renderer.getSceneSource();
+    if (store === null || source === null) {
       spawnMsg = { text: '没有可保存的场景文件', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
+    } else {
+      const result = await authorSaver.save(store, source.url);
+      // A scene switch during I/O must not attach an old scene's message to the new document.
+      if (spawnStore !== store) return;
+      spawnMsg = { text: result.message, kind: result.ok ? 'ok' : 'warn' };
     }
-    // 🔴 重复保存必须串行（复审 P2）：上一次保存还在写盘，这次的快照/确认
-    // 会跟它交错 —— 确认范围是按编辑身份记的，交错会把还没包含进快照的编辑
-    // 当成已保存。客户端这里先拒，服务端对同一路径还有队列兜底。
-    if (saveInFlight) {
-      spawnMsg = { text: '上一次保存尚未完成，稍候再试', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    const diffs = store.changedPaths();
-    if (diffs.length === 0) {
-      spawnMsg = { text: '没有改动需要保存', kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    saveInFlight = true;
-    try {
-      await saveSpawnEditsInner(store, src, diffs);
-    } finally {
-      saveInFlight = false;
-    }
-  }
-
-  let saveInFlight = false;
-
-  /** saveSpawnEdits 的主体（串行门在外层） */
-  async function saveSpawnEditsInner(store: SpawnEditStore, src: { url: string }, diffs: ReturnType<SpawnEditStore['changedPaths']>): Promise<void> {
-    // 合法路径集合 = 全文所有 SpawnPoint 组件的 radius / count（按 kind 限定，不是按路径形状）
-    const doc = store.document;
-    const expected = new Set<string>();
-    if (Array.isArray(doc.nodes)) {
-      for (let i = 0; i < doc.nodes.length; i++) {
-        const comps = doc.nodes[i]!.components;
-        for (let c = 0; c < comps.length; c++) {
-          if (comps[c]!.kind !== 'SpawnPoint') continue;
-          expected.add(`nodes[${i}].components[${c}].radius`);
-          expected.add(`nodes[${i}].components[${c}].count`);
-        }
-      }
-    }
-    const unexpected = diffs.filter((d) => !expected.has(d.path));
-    if (unexpected.length > 0) {
-      spawnMsg = {
-        text: `拒绝保存：检测到 ${unexpected.length} 处非刷怪点字段的改动（如 ${unexpected[0]!.path}）`,
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-
-    // ① 竞态边界：**快照**这次要发送的版本。保存是异步 IO，从序列化到写盘返回之间
-    // 作者可能继续编辑；确认时只提交快照（按编辑身份，不按栈长 —— 复审 P2）。
-    const snap = store.beginSave();
-    // 行尾补一个换行：场景文件是进 git 的，每次保存都把最后一个换行吃掉的话，
-    // diff 里会永远挂着一条 "\ No newline at end of file" 的噪声。
-    const content = `${JSON.stringify(snap.doc, null, 2)}\n`;
-    const baseFp = sceneFingerprint(store.committedDocument);
-
-    // ② 提前提示（不是判定）：先读盘看一眼有没有明显的外部修改，
-    // 能早一步给作者更清楚的中文提示。
-    const disk = await readProjectFile(src.url);
-    if (!disk.ok) {
-      spawnMsg = { text: `保存失败：读不到磁盘基准版本（${disk.error ?? '未知'}）`, kind: 'warn' };
-      refreshSpawnPanel();
-      return;
-    }
-    const diskFp = sceneFingerprint(disk.json);
-    if (diskFp !== baseFp) {
-      spawnMsg = {
-        text:
-          `拒绝保存：磁盘上的场景已被外部修改（基准 ${baseFp} → 磁盘 ${diskFp}）。` +
-          '为避免覆盖对方内容，本次未写盘；本地编辑已保留。重新装载或人工合并后再保存。',
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-
-    // ③ 写盘：**基准指纹随请求一起交给服务端**，版本校验与写入在同一个受控操作里
-    // （复审 P1：浏览器两步之间被注入修改的 TOCTOU 窗口，由服务端队列 + 校验封死）。
-    const res = await writeProjectFile(src.url, { content, baseHash: baseFp });
-    if (!res.ok) {
-      spawnMsg = {
-        text: res.conflict
-          ? `拒绝保存：服务端确认磁盘已被外部修改（当前 ${res.currentHash ?? '?'}）。本地编辑已保留，请重新装载或人工合并。`
-          : `保存失败：${res.error ?? `HTTP ${res.status}`}`,
-        kind: 'warn',
-      };
-      refreshSpawnPanel();
-      return;
-    }
-    store.confirmSave(snap.doc, snap.lastEditId);
-    const kept = store.undoDepth;
-    spawnMsg = {
-      text:
-        `已保存 ${res.bytes ?? content.length} 字节 · ${diffs.length} 处改动 · 未消费组件与无关字段原样保留` +
-        (kept > 0 ? `（另有 ${kept} 处保存期间的编辑仍为未保存）` : ''),
-      kind: 'ok',
-    };
     refreshSpawnPanel();
     hudDirty = true;
   }
@@ -1676,6 +1576,7 @@ async function boot(): Promise<void> {
       /** 全部撤回（不提交）。此前只有 API 没有任何入口 —— 探针/用户都到不了 */
       revertAll: () => {
         while (authorTransform.history().ok) { /* project each author inverse */ }
+        panel.syncSelectionFromRenderer(true);
         refreshSpawnPanel();
         hudDirty = true;
       },
