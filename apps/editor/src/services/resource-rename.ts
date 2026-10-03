@@ -3,11 +3,17 @@ import type { SceneDocument } from '@aether/scene';
 import type { SpawnEditStore } from '@aether/runtime';
 import type { RenameProjectResult, ProjectFileResult } from '../asset-util';
 
+/** Scene boot exposes /assets/... URLs; devfs reports project-relative POSIX paths.
+ * Match their project identity at this adapter boundary, as the file APIs do. */
+function projectRelativePath(path: string): string { return path.replace(/^\/+/, ''); }
+
 export function renamedResourcePath(path: string, rename: RenameProjectResult): string {
-  const old = rename.oldPath;
+  path = projectRelativePath(path);
+  const old = rename.oldPath ? projectRelativePath(rename.oldPath) : null;
+  const target = projectRelativePath(rename.path);
   if (!old) return path;
-  if (path === old || (rename.directory && path.startsWith(`${old}/`))) return rename.path + path.slice(old.length);
-  if (!rename.directory && path === `${old}.meta.json`) return `${rename.path}.meta.json`;
+  if (path === old || (rename.directory && path.startsWith(`${old}/`))) return target + path.slice(old.length);
+  if (!rename.directory && path === `${old}.meta.json`) return `${target}.meta.json`;
   return path;
 }
 
@@ -17,8 +23,10 @@ export async function refreshAuthorResources(
   read: (path: string) => Promise<ProjectFileResult>,
   canAccept: () => boolean = () => true,
 ): Promise<{ status: 'unaffected' | 'refreshed' | 'conflict' | 'failed'; source: string; message: string }> {
-  const next = renamedResourcePath(source, rename);
-  if (next === source && !rename.updatedFiles?.includes(next)) return { status: 'unaffected', source: next, message: '' };
+  const current = projectRelativePath(source);
+  const next = renamedResourcePath(current, rename);
+  const updated = rename.updatedFiles?.some((path) => projectRelativePath(path) === next);
+  if (next === current && !updated) return { status: 'unaffected', source: next, message: '' };
   const conflict = () => ({ status: 'conflict' as const, source: next, message: '资源改名已落盘；本地作者修改已保留，磁盘引用版本已变化，请先处理保存冲突再重新打开场景' });
   if (store.dirty || !canAccept()) return conflict();
   const result = await read(next);
