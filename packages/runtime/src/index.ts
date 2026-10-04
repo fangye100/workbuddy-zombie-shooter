@@ -25,3 +25,4 @@ export * from './spawn-ab';
 export * from './solid-ray';
 export * from './environment-edit';
 export * from './run-progress';
+export * from './scene-authoring';

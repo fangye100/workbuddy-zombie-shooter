@@ -30,6 +30,7 @@
 import { ComponentKind } from '@aether/scene';
 import type { EnvironmentData } from '@aether/scene';
 import { validEnvironmentValues } from './environment-edit';
+import { validateAuthorNodes } from './scene-authoring';
 import type { NodeId, SceneDocument, SceneNode, SpawnPointComponent } from '@aether/scene';
 import { changedJsonPaths, type JsonDiffEntry } from './doc-diff';
 
@@ -170,7 +171,8 @@ export interface TransformEdit {
  * 「以后再加第三条命令族」这件事不需要重新论证判别方式）。
  */
 export interface EnvironmentEdit { kind: 'environment'; id: number; from: EnvironmentData; to: EnvironmentData }
-export type AuthorEdit = SpawnEdit | TransformEdit | EnvironmentEdit;
+export interface NodesEdit { kind: 'nodes'; id: number; label: string; from: SceneNode[]; to: SceneNode[] }
+export type AuthorEdit = SpawnEdit | TransformEdit | EnvironmentEdit | NodesEdit;
 
 export interface EditResult {
   ok: boolean;
@@ -396,6 +398,10 @@ export function invertTransformEdit(edit: TransformEdit): TransformEdit {
 
 /** 按 `kind` 分发应用（撤销栈里两条命令族共用一条 LIFO） */
 export function applyAuthorEdit(doc: SceneDocument, edit: AuthorEdit): EditResult {
+  if (edit.kind === 'nodes') {
+    doc.nodes = structuredClone(edit.to);
+    return { ok: true, error: null, edit };
+  }
   if (edit.kind === 'environment') {
     if (!validEnvironmentValues(edit.to)) return { ok: false, error: '环境参数无效', edit: null };
     doc.environment = structuredClone(edit.to);
@@ -406,12 +412,14 @@ export function applyAuthorEdit(doc: SceneDocument, edit: AuthorEdit): EditResul
 
 /** 按 `kind` 分发取逆 */
 export function invertAuthorEdit(edit: AuthorEdit): AuthorEdit {
+  if (edit.kind === 'nodes') return { ...edit, from: structuredClone(edit.to), to: structuredClone(edit.from) };
   if (edit.kind === 'environment') return { ...edit, from: structuredClone(edit.to), to: structuredClone(edit.from) };
   return edit.kind === 'transform' ? invertTransformEdit(edit) : invertSpawnEdit(edit);
 }
 
 /** 面板/状态行用的一句话描述（"刚改了什么"）。UI 不该自己拼字段名 */
 export function formatAuthorEdit(edit: AuthorEdit): string {
+  if (edit.kind === 'nodes') return edit.label;
   if (edit.kind === 'environment') return '场景环境与光照';
   if (edit.kind === 'spawn') {
     return `${FIELD_LABEL[edit.field]}：${edit.from} → ${edit.to}`;
@@ -441,10 +449,32 @@ export class SpawnEditStore {
   private readonly redoStack: AuthorEdit[] = [];
   /** 编辑身份计数器。确认保存范围用它（复审 P2：栈长在"撤销+再编辑"下会骗人） */
   private nextEditId = 1;
+  private approvedNodes: SceneNode[];
 
   constructor(doc: SceneDocument) {
     this.committed = cloneDocument(doc);
     this.working = cloneDocument(doc);
+    this.approvedNodes = structuredClone(doc.nodes);
+  }
+
+  /** Save authority is a command-produced snapshot, never the externally exposed mutable view. */
+  get authorizedNodes(): SceneNode[] { return structuredClone(this.approvedNodes); }
+  private get hasUntrackedNodes(): boolean { return JSON.stringify(this.working.nodes) !== JSON.stringify(this.approvedNodes); }
+
+  editNodes(label: string, mutate: (nodes: SceneNode[]) => void): EditResult {
+    if (JSON.stringify(this.working.nodes) !== JSON.stringify(this.approvedNodes)) {
+      return { ok: false, error: '场景存在未经作者命令写入的节点修改，请重载后重试', edit: null };
+    }
+    const nodes = structuredClone(this.working.nodes);
+    try { mutate(nodes); } catch (e) { return { ok: false, error: String(e), edit: null }; }
+    const error = validateAuthorNodes({ ...this.working, nodes });
+    if (error) return { ok: false, error, edit: null };
+    if (JSON.stringify(nodes) === JSON.stringify(this.working.nodes)) return { ok: false, error: '值没有变化', edit: null };
+    const edit: NodesEdit = { kind: 'nodes', id: this.nextEditId++, label, from: structuredClone(this.working.nodes), to: nodes };
+    applyAuthorEdit(this.working, edit);
+    this.approvedNodes = structuredClone(this.working.nodes);
+    this.undoStack.push(edit); this.redoStack.length = 0;
+    return { ok: true, error: null, edit };
   }
 
   /** 工作副本。**唯一真源**：渲染 / Play / 保存都读它 */
@@ -486,6 +516,7 @@ export class SpawnEditStore {
    * 但也不算失败 —— 调用方按 `edit === null && ok === false` 区分"拒绝了"和"没变化"。
    */
   set(nodeId: NodeId, field: SpawnEditField, value: number): EditResult {
+    if (this.hasUntrackedNodes) return { ok: false, error: '场景存在未经作者命令写入的节点修改', edit: null };
     const c = findSpawnComponent(this.working, nodeId);
     if (c === null) {
       return { ok: false, error: `场景里找不到刷怪点节点 ${nodeId}`, edit: null };
@@ -500,6 +531,7 @@ export class SpawnEditStore {
     if (!r.ok) return r;
     this.undoStack.push(edit);
     this.redoStack.length = 0;
+    this.approvedNodes = structuredClone(this.working.nodes);
     return { ok: true, error: null, edit };
   }
 
@@ -511,6 +543,7 @@ export class SpawnEditStore {
    * 全部目标值都与当前值相同 → 不算一次编辑（拖了但没动的拖拽不该进撤销栈）。
    */
   setTransform(nodeId: NodeId, to: TransformValues): EditResult {
+    if (this.hasUntrackedNodes) return { ok: false, error: '场景存在未经作者命令写入的节点修改', edit: null };
     const n = findNode(this.working, nodeId);
     if (n === null) return { ok: false, error: `场景里找不到节点 ${nodeId}`, edit: null };
     const nums = numericOf(to);
@@ -550,6 +583,7 @@ export class SpawnEditStore {
     if (!r.ok) return r;
     this.undoStack.push(edit);
     this.redoStack.length = 0;
+    this.approvedNodes = structuredClone(this.working.nodes);
     return { ok: true, error: null, edit };
   }
 
@@ -564,21 +598,25 @@ export class SpawnEditStore {
   }
 
   undo(): AuthorEdit | null {
+    if (this.hasUntrackedNodes) return null;
     const e = this.undoStack.pop();
     if (e === undefined) return null;
     applyAuthorEdit(this.working, invertAuthorEdit(e));
+    this.approvedNodes = structuredClone(this.working.nodes);
     this.redoStack.push(e);
     return e;
   }
 
   /** Redo is a new edit identity, so an in-flight save cannot confirm an unsaved redo. */
   redo(): AuthorEdit | null {
+    if (this.hasUntrackedNodes) return null;
     const previous = this.redoStack.pop();
     if (previous === undefined) return null;
     const edit = { ...previous, id: this.nextEditId++ };
     const result = applyAuthorEdit(this.working, edit);
     if (!result.ok) { this.redoStack.push(previous); return null; }
     this.undoStack.push(edit);
+    this.approvedNodes = structuredClone(this.working.nodes);
     return edit;
   }
 
@@ -623,6 +661,7 @@ export class SpawnEditStore {
   reload(doc: SceneDocument): void {
     this.committed = cloneDocument(doc);
     this.working = cloneDocument(doc);
+    this.approvedNodes = structuredClone(doc.nodes);
     this.undoStack.length = 0;
     this.redoStack.length = 0;
   }

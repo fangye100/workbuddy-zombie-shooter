@@ -21,6 +21,9 @@ import {
 import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
 import { AuthorSceneSaver } from './services/author-scene-save';
+import { SceneAuthorPanel } from './services/scene-author-panel';
+import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
+import { removeNodeTree, newAuthorNode } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -281,15 +284,20 @@ async function boot(): Promise<void> {
    */
   const runTransfer = new RunTransfer();
   const runProfile = new RunProfile(localStorage);
+  let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
+    if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
+    if (sceneAuthorPanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
     // 进 Play 前强制退出自由相机：Play 的相机归 PlayCameraController（场景 Camera 组件），
     // 飞行模式会继续每帧写 camera，两套机位抢同一个对象 —— 用户只会看到"游戏相机乱飘"。
     if (freeCamOn) setFreeCam(false);
+    const paramsBeforePlay = structuredClone(panel.params);
     const ok = playCtl.start();
     if (ok) {
+      playAuthorParams ??= paramsBeforePlay;
       try {
         const progress = playCtl.session.runtime?.progress;
         if (progress) progress.setUnlocked(runProfile.read(progress.rules.campaign).unlocked);
@@ -512,7 +520,8 @@ async function boot(): Promise<void> {
     refreshSpawnPanel();
   };
   panel.onHierarchyToggle = (index, visible) => {
-    renderer.setObjectVisible(index, visible);
+    const id = renderer.getObjectNodeId(index);
+    if (id) editAuthorNodes('节点显隐', nodes => { nodes.find(n => n.id === id)!.visible = visible; }, true);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub()); // 隐藏被选中的物体时同步清掉选中面板
     hudDirty = true;
   };
@@ -529,7 +538,7 @@ async function boot(): Promise<void> {
       hudDirty = true;
       return;
     }
-    renderer.removeObject(index);
+    deleteAuthorObject(index);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
     panel.refreshHierarchy();
     hudDirty = true;
@@ -1278,10 +1287,57 @@ async function boot(): Promise<void> {
   // =====================================================================
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
+  let authorProjectionBusy = false;
+  let authorMaterialBaseline = materialSnapshot(renderer);
+  let authorLightBaseline = lightSnapshot(panel.params);
+  const authorHost = document.createElement('div');
+  document.querySelector('.insp-pane[data-pane="scene"]')!.prepend(authorHost);
+  const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
+    document: () => spawnStore?.document ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    edit: editAuthorNodes,
+  });
+  function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
+    if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
+    const result = spawnStore.editNodes(label, mutate);
+    if (result.ok) {
+      editorMenu.message('场景已修改，请保存');
+      if (rebuild) void rebuildAuthorScene();
+    } else if (result.error !== '值没有变化') editorMenu.message(result.error ?? '修改被拒绝');
+    return result;
+  }
+  function deleteAuthorObject(index: number): void {
+    const id = renderer.getObjectNodeId(index);
+    if (!id) { editorMenu.message('该物体没有场景节点，无法持久化删除'); return; }
+    editAuthorNodes('删除节点及子节点', nodes => removeNodeTree(nodes, id), true);
+  }
+  async function rebuildAuthorScene(): Promise<void> {
+    const store = spawnStore, source = renderer.getSceneSource();
+    if (!store || !source || authorProjectionBusy) return;
+    authorProjectionBusy = true;
+    try {
+      const r = await renderer.loadScene(source.url, async () => ({ ok: true, status: 200, json: store.document }));
+      if (!r.ok) throw new Error(r.reason);
+      await renderer.loadSceneAssets(async rel => {
+        const response = await fetch(`/__fs/file?path=${encodeURIComponent(rel)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.arrayBuffer();
+      }, decodeTexture, async rel => { const h = await resolveModelHeightM(rel); return h.fromMeta ? h.meters : null; }, async rel => {
+        const meta = await assetServer.loadMeta(rel); return meta.missing || meta.errors.length ? 'auto' : meta.meta.importer.upAxisFlip ? 'z' : 'y';
+      }).then(result => { if (result.failed.length) throw new Error(result.failed.map(f => `${f.name}: ${f.reason}`).join('; ')); });
+      if (r.keyLight) Object.assign(panel.params, { keyColor: r.keyLight.color, keyIntensity: r.keyLight.intensity, keyAzimuth: r.keyLight.azimuth, keyElevation: r.keyLight.elevation });
+      if (r.pointLight) Object.assign(panel.params, { pointColor: r.pointLight.color, pointIntensity: r.pointLight.intensity, pointRange: r.pointLight.range, pointPosition: r.pointLight.position });
+      applySceneEnvironment(store.document.environment);
+      for (const warning of r.warnings ?? []) console.warn(`[scene] ${warning}`);
+    } catch (e) { editorMenu.message(`场景视图更新失败，文档修改已保留：${String(e)}`); }
+    finally {
+      renderer.setDocument(store.document); authorMaterialBaseline = materialSnapshot(renderer); authorLightBaseline = lightSnapshot(panel.params);
+      authorProjectionBusy = false; panel.setSelection(null); panel.refreshHierarchy(); panel.syncAll(); refreshSpawnPanel(); editorMenu.refresh(); hudDirty = true;
+    }
+  }
   const authorSaver = new AuthorSceneSaver();
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => spawnStore?.dirty ?? false,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1293,10 +1349,18 @@ async function boot(): Promise<void> {
     inspect: switchInspectorTab,
     resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
   });
-  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying || authorProjectionBusy, renderer);
   panel.onChange = () => {
     hudDirty = true;
-    if (spawnStore !== null && !playCtl.isPlaying) {
+    if (spawnStore !== null && !playCtl.isPlaying && !authorProjectionBusy) {
+      const nextMaterials = materialSnapshot(renderer);
+      const nextLights = lightSnapshot(panel.params);
+      const materialEdit = spawnStore.editNodes('场景材质与灯光', nodes => {
+        applyMaterialChanges(nodes, authorMaterialBaseline, nextMaterials);
+        applyLightChanges({ ...spawnStore!.document, nodes }, authorLightBaseline, nextLights);
+      });
+      if (materialEdit.ok) { authorMaterialBaseline = nextMaterials; authorLightBaseline = nextLights; editorMenu.message('材质与灯光已写入场景，请保存'); }
+      else if (materialEdit.error !== '值没有变化') { editorMenu.message(materialEdit.error ?? '修改被拒绝'); void rebuildAuthorScene(); }
       const result = spawnStore.setEnvironment(environmentFromParams(spawnStore.document.environment, panel.params));
       if (result.ok) editorMenu.message('场景环境已修改，保存场景后生效于文件');
     }
@@ -1307,6 +1371,7 @@ async function boot(): Promise<void> {
   panel.onAuthorSave = () => void saveSpawnEdits();
 
   function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
+    if (result.edit?.kind === 'nodes') void rebuildAuthorScene();
     if (result.edit?.kind === 'environment' && spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     editorMenu.refresh();
     if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
@@ -1412,6 +1477,8 @@ async function boot(): Promise<void> {
     }
     spawnSelActive = false; // 新场景：功能体未选中，分组收起
     spawnStore = new SpawnEditStore(doc);
+    authorMaterialBaseline = materialSnapshot(renderer);
+    authorLightBaseline = lightSnapshot(panel.params);
     // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
     // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
     renderer.setDocument(spawnStore.document);
@@ -1452,6 +1519,7 @@ async function boot(): Promise<void> {
     if (store === null) return;
     const undone = authorTransform.history().edit;
     if (undone === null) return;
+    if (undone.kind === 'nodes') void rebuildAuthorScene();
     if (undone.kind === 'environment') { applySceneEnvironment(store.document.environment); panel.syncAll(); }
     panel.syncSelectionFromRenderer(true);
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
@@ -1466,6 +1534,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
+    if (sceneAuthorPanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1533,6 +1602,7 @@ async function boot(): Promise<void> {
     clearPlayKeys();
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    if (playAuthorParams) { Object.assign(panel.params, playAuthorParams); playAuthorParams = null; }
     if (clearRun) runTransfer.restart();
     if (spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
@@ -1545,6 +1615,7 @@ async function boot(): Promise<void> {
   }
 
   function refreshSpawnPanel(): void {
+    sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
@@ -1911,7 +1982,7 @@ async function boot(): Promise<void> {
       const idx = renderer.getSelected();
       if (idx !== null && !playCtl.isPlaying) {
         e.preventDefault();
-        renderer.removeObject(idx);
+        deleteAuthorObject(idx);
         panel.setSelection(renderer.getSelected());
         panel.refreshHierarchy();
         hudDirty = true;
@@ -2157,35 +2228,23 @@ async function boot(): Promise<void> {
       return;
     }
     try {
-      const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const buffer = await resp.arrayBuffer();
-      // 与 roster 同一把身高尺，保证资产库生成的角色体型一致
-      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
-      const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
-      // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
-      // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
-      if (playCtl.isPlaying) {
-        console.warn('[play] 资产载入完成时已进入 Play，本次导入被丢弃（Stop 后可重新导入）');
-        panel.setModelInfo(`已进入 Play，${stemName(relPath)} 的导入被丢弃；Stop 后重新导入`);
-        hudDirty = true;
-        return;
-      }
-      const name = uniqueObjectName(stemName(relPath));
-      // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
-      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
-      if (idx === null) {
-        panel.setModelInfo(t('场景物体已达上限（64），先在层级里删掉一些再拖入'));
-        return;
-      }
-      renderer.selectObject(idx);
-      panel.setSelection(idx);
+      const store = spawnStore;
+      if (!store || authorProjectionBusy) throw new Error('场景尚未准备好');
+      const meta = await assetServer.loadMeta(relPath);
+      if (meta.missing || meta.errors.length) throw new Error('资产缺少有效元数据，请先完成资产导入');
+      if (spawnStore !== store || playCtl.isPlaying || authorProjectionBusy) throw new Error('场景状态已变化，请重试');
+      const node = newAuthorNode(`nd_${crypto.randomUUID()}`, uniqueObjectName(stemName(relPath)), true);
+      node.transform.position = pos ?? [0, 0, 0];
+      const mesh = node.components[0]!;
+      if (mesh.kind !== 'MeshRenderer') return;
+      mesh.source = { type: 'asset', ref: Object.assign({ path: relPath }, { guid: meta.meta.guid }) };
+      const result = editAuthorNodes('添加资产节点', nodes => nodes.push(node), false);
+      if (!result.ok) throw new Error(result.error ?? '节点添加失败');
+      await rebuildAuthorScene();
+      const idx = renderer.findObjectIndexByNodeId(node.id);
+      if (idx !== null) { renderer.selectObject(idx); panel.setSelection(idx); focusOn(idx); }
       switchInspectorTab('inspector');
-      panel.refreshHierarchy();
-      panel.setModelInfo(
-        `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 · 来自资产库 ${relPath}`,
-      );
-      focusOn(idx);
+      panel.setModelInfo(`${node.name} · 已添加到场景文档，请保存`);
       hudDirty = true;
     } catch (err) {
       panel.setModelInfo(`资产载入失败：${stemName(relPath)} · ${String(err)}`);
