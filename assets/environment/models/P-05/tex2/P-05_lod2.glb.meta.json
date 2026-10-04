@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_xrmuxo4f",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-05_lod2.glb"
+  },
+  "sourceHash": "sha256:beb7108b7e904167e75b303356470683481d1d8f792eaf6aeb87f37569ab9373",
+  "updatedAt": "2026-10-04T11:05:16.382Z"
+}

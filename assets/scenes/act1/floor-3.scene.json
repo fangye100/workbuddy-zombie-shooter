@@ -331,7 +331,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
+              "guid": "as_y1xpmedt"
             }
           },
           "materials": [
@@ -357,8 +358,8 @@
             "type": "box",
             "halfExtents": [
               0.6,
-              0.5,
-              0.55
+              0.55,
+              0.5
             ]
           },
           "isTrigger": false,
@@ -399,7 +400,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
+              "guid": "as_rhe434dp"
             }
           },
           "materials": [
@@ -425,8 +427,8 @@
             "type": "box",
             "halfExtents": [
               0.4,
-              0.3,
-              0.9
+              0.9,
+              0.3
             ]
           },
           "isTrigger": false,
@@ -467,7 +469,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
+              "guid": "as_2sfno5jv"
             }
           },
           "materials": [
@@ -493,8 +496,8 @@
             "type": "box",
             "halfExtents": [
               0.9,
-              0.55,
-              0.65
+              0.65,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -873,7 +876,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
+              "guid": "as_y1xpmedt"
             }
           },
           "materials": [
@@ -899,8 +903,8 @@
             "type": "box",
             "halfExtents": [
               0.6,
-              0.5,
-              0.55
+              0.55,
+              0.5
             ]
           },
           "isTrigger": false,
@@ -941,7 +945,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
+              "guid": "as_rhe434dp"
             }
           },
           "materials": [
@@ -967,8 +972,8 @@
             "type": "box",
             "halfExtents": [
               0.4,
-              0.3,
-              0.9
+              0.9,
+              0.3
             ]
           },
           "isTrigger": false,
@@ -1009,7 +1014,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
+              "guid": "as_2sfno5jv"
             }
           },
           "materials": [
@@ -1035,8 +1041,8 @@
             "type": "box",
             "halfExtents": [
               0.9,
-              0.55,
-              0.65
+              0.65,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -1077,7 +1083,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-16/tex/P-16_tex_baked.glb"
+              "path": "assets/environment/models/P-16/tex2/P-16_baked.glb",
+              "guid": "as_tv1nvn4c"
             }
           },
           "materials": [
@@ -1103,8 +1110,8 @@
             "type": "box",
             "halfExtents": [
               0.8,
-              0.8,
-              1.2
+              1.2,
+              0.8
             ]
           },
           "isTrigger": false,

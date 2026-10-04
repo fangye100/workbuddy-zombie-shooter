@@ -3,7 +3,7 @@ import { SceneGraph, identityTransform, worldToLocalTransform } from '@aether/sc
 import type { SceneDocument, NodeId, TransformData } from '@aether/scene';
 import { eulerToQuat, quatToEuler } from '@aether/core';
 import { SpawnEditStore } from '@aether/runtime';
-import type { EditResult, TransformValues } from '@aether/runtime';
+import type { AssetNodeEdit, EditResult, TransformValues } from '@aether/runtime';
 import type { LabRenderer } from '../renderer';
 
 export type InspectorTransformInput = { kind: 'position' | 'rotation'; axis: 0 | 1 | 2; value: number }
@@ -55,7 +55,8 @@ export function worldEditValues(graph: SceneGraph, id: NodeId, world: TransformD
 
 export class AuthorTransformController {
   constructor(private readonly store: () => SpawnEditStore | null, private readonly playing: () => boolean,
-    private readonly view: TransformView) {}
+    private readonly view: TransformView,
+    private readonly projectAsset?: (edit: AssetNodeEdit, redo: boolean) => string | null) {}
 
   private reject(error: string): EditResult { return { ok: false, error, edit: null }; }
 
@@ -121,6 +122,13 @@ export class AuthorTransformController {
     const store = this.store();
     if (store === null) return this.reject('没有作者文档');
     const edit = redo ? store.redo() : store.undo();
+    if (edit?.kind === 'asset-node') {
+      const error = this.projectAsset?.(edit, redo) ?? (this.projectAsset ? null : '资产投影不可用');
+      if (error !== null) {
+        if (redo) store.undo(); else store.redo();
+        return this.reject(error);
+      }
+    }
     if (edit?.kind === 'transform') pushSubtreeToView(this.view, graphOfDoc(store.document), edit.nodeId);
     return { ok: edit !== null, error: edit === null ? '没有可撤销/重做的编辑' : null, edit };
   }

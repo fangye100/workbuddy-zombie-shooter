@@ -167,9 +167,12 @@ for (const e of props.entries) {
     return { label, file, tris: inf?.tris ?? e.tris, verts: inf?.verts ?? null,
              bytes: inf?.bytes ?? (fs.existsSync(abs) ? fs.statSync(abs).size : null) };
   };
+  const metaPath = path.join(dir, 'tex2', `${e.id}_baked.glb.meta.json`);
+  const build = fs.existsSync(metaPath)
+    ? JSON.parse(fs.readFileSync(metaPath, 'utf8')).userData?.lodBuildResult : null;
   if (raw) lods.push(mkE('LOD0 · 高模(raw ~50万面)', raw, path.join(dir, `${e.id}.glb`)));
-  // 🔴 tex2（原贴图转移版）优先于 tex（顶点色烘焙版）优先于顶点色 OBJ：
-  // tex2 = raw 混元原贴图经三维空间对应转移到低模 UV（真色）；tex = 顶点色放大（旧法，弃用）。
+  if (raw && build) lods[0].placementMatrix = build.sourcePlacementMatrix;
+  // Prefer the authored, UV-preserving GLBs; retain fallback for legacy assets.
   const tex2 = fs.existsSync(path.join(dir, 'tex2'))
     ? fs.readdirSync(path.join(dir, 'tex2')).filter((f) => f.endsWith('_baked.glb')) : [];
   const texGlbs = fs.existsSync(path.join(dir, 'tex'))
@@ -179,41 +182,36 @@ for (const e of props.entries) {
   } else if (texGlbs.length) {
     lods.push(mkE('LOD1 · 低模+贴图', `${base}/tex/${texGlbs[0]}`, path.join(dir, 'tex', texGlbs[0])));
   }
-  if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
+  const lod2 = `${e.id}_lod2.glb`;
+  if (fs.existsSync(path.join(dir, 'tex2', lod2))) {
+    lods.push(mkE('LOD2 · 远景低模+原贴图', `${base}/tex2/${lod2}`, path.join(dir, 'tex2', lod2)));
+  } else if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
 
-  // 🔴 LOD 算法溯源（2026-10-04 起）：浏览器页要能一眼看出这批 LOD 是哪套算法产的。
-  //   routeA  = 角色侧现行路线 A（decimate_uvkeep：焊点 + 保纹理 QEM + 内嵌原生贴图）
-  //   transfer= 旧的环境转移烘焙（env_transfer：顶点色有损压缩 → 贴图发灰，已弃用）
-  //
-  // 🔴 判据在assets/_data/lod-quality.json 里（由 assets/environment/_tools/
-  //    audit_lod_quality.py 生成），本文件只读不判。两个原因不能就地判：
-  //  1. 贴图是 JPEG（路线 A 产物）或 PNG（旧产物），Node 端解图要zlib+滤波实现，
-  //     属于该由 Python 侧做的活（那边有 PIL，且同一套 PIL 已在做资产质检）。
-  //  2. 更要紧的是**不能靠 pre-lodregen.bak 备份在不在**——备份已 gitignore，
-  //     换机器/重新克隆后不在，全部资产会被误标成旧法。
-  //     （也别用彩度阈值：旧产物彩度是连续长尾0%~43%、与路线 A 的 87% 有重叠，
-  //      P-05=43% / P-43=38% / P-11=37% 都是旧产物但彩度不低 → 必然误判。
-  //      现用的结构性判据是「JPEG+4096² vs PNG+512²」，零阈值。）
+  // Provenance and measured stats are owned by audit_lod_quality.py.
   const lq = LOD_QUALITY.environments?.[e.id] ?? null;
   const lod1Alg = lq?.alg ?? null;
   const lod1Colorful = lq?.colorful ?? null;
 
   out.environments.push({
     id: e.id, name: e.name, en: e.en ?? '', kind: e.kind,
-    act: e.act ? actName[e.act] ?? `Act${e.act}` : '通用',
+    act: e.acts?.length === 1 ? actName[e.acts[0]] : '通用',
     footprint: e.footprint, tris: e.tris,
     cover: e.cover ?? '', blocksSight: e.blocksSight, blocksMove: e.blocksMove,
     destructible: e.destructible ?? null,
     silhouette: e.silhouette ?? '', look: e.look ?? '', accent: e.accent ?? '',
     placement: e.placement ?? '',
     img, preview, lods,
-    lod1Alg,// 'routeA' | 'transfer'（见上，自证判据 = 实测彩度）
+    lod1Alg,
     lod1Colorful,                       // LOD1 贴图彩色占比实测值（浏览器端可复核）
+    lod2Alg: lq?.lod2?.alg ?? null,
+    placementReady: build?.levels?.length === 2 && build.levels.every((level) =>
+      level.failures?.length === 0 && level.visualReview?.status === 'reviewed'),
     animations: [], joints: 0,
   });
 }
 
 const outDir = path.join(ASSETS, '_data');
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, 'asset-manifest.json'), JSON.stringify(out, null, 1), 'utf8');
+fs.writeFileSync(path.join(outDir, 'asset-manifest.json.pending'), JSON.stringify(out, null, 1), 'utf8');
+fs.renameSync(path.join(outDir, 'asset-manifest.json.pending'), path.join(outDir, 'asset-manifest.json'));
 console.log(`manifest: ${out.characters.length} 角色 / ${out.environments.length} 环境 → assets/_data/asset-manifest.json`);

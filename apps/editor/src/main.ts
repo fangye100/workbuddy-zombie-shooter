@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
+import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
@@ -20,6 +20,7 @@ import {
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
+import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
@@ -1227,7 +1228,13 @@ async function boot(): Promise<void> {
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
   const authorSaver = new AuthorSceneSaver();
-  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
+  const authorAssets = new AuthorAssetController(() => spawnStore, renderer);
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer, (edit, redo) => {
+    const error = authorAssets.project(edit, redo);
+    panel.refreshHierarchy();
+    panel.syncSelectionFromRenderer(true);
+    return error;
+  });
   panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
   panel.onAuthorUndo = () => undoSpawnEdit();
   panel.onAuthorRedo = () => reportAuthorTransform(authorTransform.history(true));
@@ -1328,6 +1335,7 @@ async function boot(): Promise<void> {
 
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
+    authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
       spawnAb = null;
@@ -1403,6 +1411,7 @@ async function boot(): Promise<void> {
       const result = await authorSaver.save(store, source.url);
       // A scene switch during I/O must not attach an old scene's message to the new document.
       if (spawnStore !== store) return;
+      if (result.ok && store.undoDepth === 0 && store.redoDepth === 0) authorAssets.clear();
       spawnMsg = { text: result.message, kind: result.ok ? 'ok' : 'warn' };
     }
     refreshSpawnPanel();
@@ -2059,6 +2068,8 @@ async function boot(): Promise<void> {
    * pos 为 null 时放原点；拖放路径会把落点（视线与地面交点）传进来。
    */
   async function spawnAssetAt(relPath: string, pos: [number, number, number] | null): Promise<void> {
+    const store = spawnStore;
+    if (store === null) { panel.setModelInfo('请先打开场景，再从资产库添加模型'); return; }
     // 🔴 Play 中禁止增删（复审 #3）：作者状态按索引恢复，物体数变了就会张冠李戴。
     // 这一条与层级删除 / Delete 键同一约束，所有入口统一。
     if (playCtl.isPlaying) {
@@ -2071,28 +2082,29 @@ async function boot(): Promise<void> {
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
-      // 与 roster 同一把身高尺，保证资产库生成的角色体型一致
-      const model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+      const metadata = await assetServer.loadMeta(relPath);
+      if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
+      // Respect explicit metre-scale environment imports as well as character heights.
+      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath));
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
       // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
-      if (playCtl.isPlaying) {
-        console.warn('[play] 资产载入完成时已进入 Play，本次导入被丢弃（Stop 后可重新导入）');
-        panel.setModelInfo(`已进入 Play，${stemName(relPath)} 的导入被丢弃；Stop 后重新导入`);
+      if (playCtl.isPlaying || spawnStore !== store) {
+        bmp?.close();
+        const reason = playCtl.isPlaying ? '已进入 Play' : '场景已切换';
+        console.warn(`[资产库] ${reason}，丢弃尚未完成的导入`);
+        panel.setModelInfo(`${reason}，请重新导入 ${stemName(relPath)}`);
         hudDirty = true;
         return;
       }
       const name = uniqueObjectName(stemName(relPath));
-      // nodeTree 一并传入：拖入的资产在层级面板同样按 GLB 父子结构成树
-      const idx = renderer.addObject(model.mesh, bmp, model.subMeshes, name, pos ?? [0, 0, 0], model.nodeTree, model.skeleton, model.animations);
-      if (idx === null) {
-        panel.setModelInfo(t('场景物体已达上限（64），先在层级里删掉一些再拖入'));
-        return;
-      }
+      const node = assetSceneNode(`nd_asset_${crypto.randomUUID()}`, name, relPath, metadata.meta.guid, pos ?? [0, 0, 0]);
+      const idx = authorAssets.insert(store, node, model, bmp);
       renderer.selectObject(idx);
       panel.setSelection(idx);
       switchInspectorTab('inspector');
       panel.refreshHierarchy();
+      refreshSpawnPanel();
       panel.setModelInfo(
         `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 · 来自资产库 ${relPath}`,
       );
@@ -3351,7 +3363,7 @@ async function boot(): Promise<void> {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+          model = parseGlb(buffer, await resolveAssetImportHeightM(path));
           previewCache.set(path, model);
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);

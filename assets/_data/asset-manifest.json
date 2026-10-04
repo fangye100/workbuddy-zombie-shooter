@@ -581,25 +581,45 @@
      "file": "environment/models/P-01/P-01.glb",
      "tris": 500000,
      "verts": 283217,
-     "bytes": 33791976
+     "bytes": 33791976,
+     "placementMatrix": [
+      0.9152536261054955,
+      0,
+      0,
+      0,
+      0,
+      0.8874146223102499,
+      0,
+      0,
+      0,
+      0,
+      0.9197205229407919,
+      0,
+      -0.00223138274283329,
+      -3.268686129614331e-8,
+      -0.001817381475359507,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-01/tex2/P-01_baked.glb",
-     "tris": 180,
-     "verts": 291,
-     "bytes": 2367336
+     "tris": 30000,
+     "verts": 23660,
+     "bytes": 3294272
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-01/P-01_low.obj",
-     "tris": 180,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-01/tex2/P-01_lod2.glb",
+     "tris": 15000,
+     "verts": 13190,
+     "bytes": 2869232
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.4577,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.4588,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -631,25 +651,45 @@
      "file": "environment/models/P-02/P-02.glb",
      "tris": 500000,
      "verts": 309838,
-     "bytes": 30377896
+     "bytes": 30377896,
+     "placementMatrix": [
+      1.612704869655127e-16,
+      1.5979915853930213,
+      0,
+      0,
+      -2.633746923240162,
+      9.78487640057984e-17,
+      0,
+      0,
+      0,
+      0,
+      1.1729586078954333,
+      0,
+      -0.0011535543697297288,
+      1.1963954920603678e-24,
+      0.002352354037794691,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-02/tex2/P-02_baked.glb",
-     "tris": 220,
-     "verts": 458,
-     "bytes": 2978176
+     "tris": 30000,
+     "verts": 26968,
+     "bytes": 4005384
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-02/P-02_low.obj",
-     "tris": 220,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-02/tex2/P-02_lod2.glb",
+     "tris": 15000,
+     "verts": 15407,
+     "bytes": 3545428
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.178,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.1623,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -681,25 +721,45 @@
      "file": "environment/models/P-03/P-03.glb",
      "tris": 500000,
      "verts": 282239,
-     "bytes": 25587352
+     "bytes": 25587352,
+     "placementMatrix": [
+      0,
+      0,
+      -1.8769184424056655,
+      0,
+      -1.8901110709014417,
+      1.1089060194887081e-16,
+      0,
+      0,
+      1.1573592365062133e-16,
+      1.8109809624469222,
+      0,
+      0,
+      -0.007381838128221668,
+      5.958062623892515e-25,
+      0.010766942691399292,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-03/tex2/P-03_baked.glb",
-     "tris": 260,
-     "verts": 519,
-     "bytes": 2285348
+     "tris": 30000,
+     "verts": 24718,
+     "bytes": 3238360
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-03/P-03_low.obj",
-     "tris": 260,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-03/tex2/P-03_lod2.glb",
+     "tris": 15000,
+     "verts": 14176,
+     "bytes": 2811016
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.92,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9152,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -731,25 +791,45 @@
      "file": "environment/models/P-04/P-04.glb",
      "tris": 499674,
      "verts": 298561,
-     "bytes": 24755268
+     "bytes": 24755268,
+     "placementMatrix": [
+      0,
+      0,
+      -1.4663078656261552,
+      0,
+      -1.562211184296086,
+      1.0584009341097985e-16,
+      0,
+      0,
+      9.565784632201987e-17,
+      1.728499898659268,
+      0,
+      0,
+      -0.03145356306262825,
+      7.465087283166331e-25,
+      -0.006091780933261433,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-04/tex2/P-04_baked.glb",
-     "tris": 300,
-     "verts": 700,
-     "bytes": 2382560
+     "tris": 30000,
+     "verts": 27761,
+     "bytes": 3426916
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-04/P-04_low.obj",
-     "tris": 300,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-04/tex2/P-04_lod2.glb",
+     "tris": 15000,
+     "verts": 15895,
+     "bytes": 2957200
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9503,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9676,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -781,25 +861,45 @@
      "file": "environment/models/P-05/P-05.glb",
      "tris": 520937,
      "verts": 365050,
-     "bytes": 25912444
+     "bytes": 25912444,
+     "placementMatrix": [
+      1.0068488283888066,
+      0,
+      0,
+      0,
+      0,
+      5.481740195308785e-17,
+      -1.0066888983464515,
+      0,
+      0,
+      0.895236112016197,
+      6.164191685485786e-17,
+      0,
+      0.0014508710667567126,
+      1.7482112164724322e-26,
+      0.0030391838773174496,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-05/tex2/P-05_baked.glb",
-     "tris": 384,
-     "verts": 606,
-     "bytes": 49080
+     "tris": 29999,
+     "verts": 38637,
+     "bytes": 3456812
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-05/P-05_low.obj",
-     "tris": 320,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-05/tex2/P-05_lod2.glb",
+     "tris": 14999,
+     "verts": 21543,
+     "bytes": 2819796
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.4309,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9194,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -831,25 +931,45 @@
      "file": "environment/models/P-06/P-06.glb",
      "tris": 500000,
      "verts": 295792,
-     "bytes": 25953252
+     "bytes": 25953252,
+     "placementMatrix": [
+      0,
+      0,
+      -0.9264786101051206,
+      0,
+      -2.4484569024157206,
+      8.18800254063809e-17,
+      0,
+      0,
+      1.4992474541968276e-16,
+      1.3372022931573244,
+      0,
+      0,
+      0.006883815743329949,
+      0.4258481356694715,
+      0.35,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-06/tex2/P-06_baked.glb",
-     "tris": 280,
-     "verts": 618,
-     "bytes": 1988720
+     "tris": 30000,
+     "verts": 26391,
+     "bytes": 2991980
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-06/P-06_low.obj",
-     "tris": 280,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-06/tex2/P-06_lod2.glb",
+     "tris": 15000,
+     "verts": 15264,
+     "bytes": 2545912
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.986,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9868,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -858,7 +978,7 @@
    "name": "翻覆轿车",
    "en": "Overturned Sedan",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     4.4,
     1.9,
@@ -881,25 +1001,45 @@
      "file": "environment/models/P-11/P-11.glb",
      "tris": 500000,
      "verts": 314835,
-     "bytes": 30243328
+     "bytes": 30243328,
+     "placementMatrix": [
+      0,
+      0,
+      -4.417330666124744,
+      0,
+      -3.775955389764876,
+      1.545857402526121e-16,
+      0,
+      0,
+      2.3121058408993762e-16,
+      2.5245767246562965,
+      0,
+      0,
+      0.05346372955474625,
+      0.7467293932968136,
+      0.9499999999999998,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-11/tex2/P-11_baked.glb",
-     "tris": 700,
-     "verts": 1387,
-     "bytes": 3081816
+     "tris": 30000,
+     "verts": 28643,
+     "bytes": 4130000
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-11/P-11_low.obj",
-     "tris": 700,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-11/tex2/P-11_lod2.glb",
+     "tris": 15000,
+     "verts": 16432,
+     "bytes": 3649248
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.534,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.51,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -908,7 +1048,7 @@
    "name": "厢式货车残骸",
    "en": "Box Truck Wreck",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     6.5,
     2.4,
@@ -931,25 +1071,45 @@
      "file": "environment/models/P-12/P-12.glb",
      "tris": 500000,
      "verts": 326484,
-     "bytes": 25971036
+     "bytes": 25971036,
+     "placementMatrix": [
+      0,
+      0,
+      -5.582226298739424,
+      0,
+      -5.919724830154904,
+      3.5831509665420776e-16,
+      0,
+      0,
+      3.6247860325411566e-16,
+      5.8517296073232,
+      0,
+      0,
+      0.3709121905986748,
+      -3.292658089755452e-24,
+      0.013129392251268485,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-12/tex2/P-12_baked.glb",
-     "tris": 900,
-     "verts": 1894,
-     "bytes": 2241636
+     "tris": 30000,
+     "verts": 31508,
+     "bytes": 3364080
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-12/P-12_low.obj",
-     "tris": 900,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-12/tex2/P-12_lod2.glb",
+     "tris": 15000,
+     "verts": 18569,
+     "bytes": 2860028
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.2012,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.192,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -958,7 +1118,7 @@
    "name": "公路护栏",
    "en": "Guardrail",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     4,
     0.3,
@@ -981,25 +1141,45 @@
      "file": "environment/models/P-13/P-13.glb",
      "tris": 500000,
      "verts": 304212,
-     "bytes": 24928492
+     "bytes": 24928492,
+     "placementMatrix": [
+      2.1516192358633047e-16,
+      2.3140247497256774,
+      0,
+      0,
+      -3.513860873782295,
+      1.4169315014496529e-16,
+      0,
+      0,
+      0,
+      0,
+      1.6041151073461835,
+      0,
+      -0.09328073605609538,
+      -1.3603338794342406e-24,
+      0.03413797471960078,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-13/tex2/P-13_baked.glb",
-     "tris": 200,
-     "verts": 486,
-     "bytes": 2307920
+     "tris": 30000,
+     "verts": 27537,
+     "bytes": 3352556
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-13/P-13_low.obj",
-     "tris": 200,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-13/tex2/P-13_lod2.glb",
+     "tris": 15000,
+     "verts": 15871,
+     "bytes": 2889240
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9998,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 1,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1008,7 +1188,7 @@
    "name": "加油机",
    "en": "Fuel Pump",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     0.8,
     0.6,
@@ -1031,25 +1211,45 @@
      "file": "environment/models/P-14/P-14.glb",
      "tris": 499962,
      "verts": 303839,
-     "bytes": 35420828
+     "bytes": 35420828,
+     "placementMatrix": [
+      1.5202391693160207,
+      0,
+      0,
+      0,
+      0,
+      1.6475682811672483,
+      0,
+      0,
+      0,
+      0,
+      1.9637489338377316,
+      0,
+      0.019920453968180794,
+      2.8806942991238238e-8,
+      0.02173869521430327,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-14/tex2/P-14_baked.glb",
-     "tris": 400,
-     "verts": 769,
-     "bytes": 2639940
+     "tris": 30000,
+     "verts": 28852,
+     "bytes": 3716400
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-14/P-14_low.obj",
-     "tris": 400,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-14/tex2/P-14_lod2.glb",
+     "tris": 15000,
+     "verts": 16805,
+     "bytes": 3240896
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9503,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9588,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1058,7 +1258,7 @@
    "name": "路边广告牌",
    "en": "Roadside Billboard",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     6,
     0.4,
@@ -1081,25 +1281,45 @@
      "file": "environment/models/P-15/P-15.glb",
      "tris": 499998,
      "verts": 312801,
-     "bytes": 27137828
+     "bytes": 27137828,
+     "placementMatrix": [
+      4.104062476692615e-16,
+      6.025686325707552,
+      0,
+      0,
+      -6.702442662733488,
+      3.6896687357218644e-16,
+      0,
+      0,
+      0,
+      0,
+      1.6560609949606935,
+      0,
+      -0.003867327940261231,
+      2.2662996840174663e-24,
+      -0.002178549211351144,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-15/tex2/P-15_baked.glb",
-     "tris": 718,
-     "verts": 1533,
-     "bytes": 2523800
+     "tris": 30000,
+     "verts": 30665,
+     "bytes": 3631912
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-15/P-15_low.obj",
-     "tris": 500,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-15/tex2/P-15_lod2.glb",
+     "tris": 15000,
+     "verts": 17779,
+     "bytes": 3129556
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.7834,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8113,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1108,7 +1328,7 @@
    "name": "收费站亭",
    "en": "Toll Booth",
    "kind": "prop",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     1.6,
     1.6,
@@ -1131,25 +1351,45 @@
      "file": "environment/models/P-16/P-16.glb",
      "tris": 499500,
      "verts": 305629,
-     "bytes": 34392516
+     "bytes": 34392516,
+     "placementMatrix": [
+      2.6258089974314687,
+      0,
+      0,
+      0,
+      0,
+      2.5943809960839226,
+      0,
+      0,
+      0,
+      0,
+      2.9209766545635873,
+      0,
+      0.04141163784038325,
+      5.356459835242361e-8,
+      -0.02393467593496158,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-16/tex2/P-16_baked.glb",
-     "tris": 450,
-     "verts": 996,
-     "bytes": 2241528
+     "tris": 30000,
+     "verts": 29193,
+     "bytes": 3321332
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-16/P-16_low.obj",
-     "tris": 450,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-16/tex2/P-16_lod2.glb",
+     "tris": 15000,
+     "verts": 17080,
+     "bytes": 2843712
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.3247,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.3158,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1158,7 +1398,7 @@
    "name": "加油站雨棚",
    "en": "Gas Station Canopy",
    "kind": "structure",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     16,
     12,
@@ -1181,25 +1421,45 @@
      "file": "environment/models/S-01/S-01.glb",
      "tris": 500000,
      "verts": 279719,
-     "bytes": 25994508
+     "bytes": 25994508,
+     "placementMatrix": [
+      1.1196169363055046e-15,
+      12.113443388052632,
+      0,
+      0,
+      -18.28473217069649,
+      7.417344835915663e-16,
+      0,
+      0,
+      0,
+      0,
+      16.539382437117983,
+      0,
+      0.04511754341241423,
+      -7.49374505849278e-24,
+      -0.024321264273294077,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-01/tex2/S-01_baked.glb",
-     "tris": 1800,
-     "verts": 2439,
-     "bytes": 2207460
+     "tris": 30000,
+     "verts": 24481,
+     "bytes": 3082192
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-01/S-01_low.obj",
-     "tris": 1800,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-01/tex2/S-01_lod2.glb",
+     "tris": 15000,
+     "verts": 14202,
+     "bytes": 2663264
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.1479,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.1403,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1208,7 +1468,7 @@
    "name": "便利店",
    "en": "Convenience Store",
    "kind": "structure",
-   "act": "通用",
+   "act": "城郊公路",
    "footprint": [
     12,
     8,
@@ -1231,25 +1491,45 @@
      "file": "environment/models/S-02/S-02.glb",
      "tris": 499608,
      "verts": 296508,
-     "bytes": 26451764
+     "bytes": 26451764,
+     "placementMatrix": [
+      8.324861721934074e-16,
+      9.784281302776291,
+      0,
+      0,
+      -13.595530936315951,
+      5.99114438970114e-16,
+      0,
+      0,
+      0,
+      0,
+      9.92596467244853,
+      0,
+      -0.12519445186521175,
+      -4.918620344918916e-24,
+      0.6312962710628495,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-02/tex2/S-02_baked.glb",
-     "tris": 2000,
-     "verts": 3316,
-     "bytes": 2431320
+     "tris": 30000,
+     "verts": 28362,
+     "bytes": 3400980
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-02/S-02_low.obj",
-     "tris": 2000,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-02/tex2/S-02_lod2.glb",
+     "tris": 15000,
+     "verts": 16788,
+     "bytes": 2940608
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.1148,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.0984,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1258,7 +1538,7 @@
    "name": "重型货架",
    "en": "Heavy Shelving",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     2.4,
     1,
@@ -1281,25 +1561,45 @@
      "file": "environment/models/P-21/P-21.glb",
      "tris": 499630,
      "verts": 301031,
-     "bytes": 35124052
+     "bytes": 35124052,
+     "placementMatrix": [
+      3.035707554769529,
+      0,
+      0,
+      0,
+      0,
+      5.2330562028118885,
+      0,
+      0,
+      0,
+      0,
+      3.2004297738645873,
+      0,
+      -0.03262778161986909,
+      8.580090718114522e-8,
+      -0.021071624414994144,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-21/tex2/P-21_baked.glb",
-     "tris": 800,
-     "verts": 1619,
-     "bytes": 2913780
+     "tris": 30000,
+     "verts": 28602,
+     "bytes": 3952636
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-21/P-21_low.obj",
-     "tris": 800,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-21/tex2/P-21_lod2.glb",
+     "tris": 15000,
+     "verts": 16741,
+     "bytes": 3483080
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9993,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9996,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1308,7 +1608,7 @@
    "name": "冷库门",
    "en": "Freezer Door",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     2.2,
     0.5,
@@ -1331,25 +1631,45 @@
      "file": "environment/models/P-22/P-22.glb",
      "tris": 499970,
      "verts": 284443,
-     "bytes": 34858928
+     "bytes": 34858928,
+     "placementMatrix": [
+      3.232888511128497,
+      0,
+      0,
+      0,
+      0,
+      2.7283007096960086,
+      0,
+      0,
+      0,
+      0,
+      1.537084880386203,
+      0,
+      -0.018566468797921978,
+      -1.7025039971602315e-8,
+      0.0676401345439762,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-22/tex2/P-22_baked.glb",
-     "tris": 400,
-     "verts": 765,
-     "bytes": 2282188
+     "tris": 30000,
+     "verts": 25046,
+     "bytes": 3236980
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-22/P-22_low.obj",
-     "tris": 400,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-22/tex2/P-22_lod2.glb",
+     "tris": 15000,
+     "verts": 14332,
+     "bytes": 2804132
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.7698,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.7787,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1358,7 +1678,7 @@
    "name": "叉车",
    "en": "Forklift",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     2.6,
     1.2,
@@ -1381,25 +1701,45 @@
      "file": "environment/models/P-23/P-23.glb",
      "tris": 498302,
      "verts": 316961,
-     "bytes": 26872992
+     "bytes": 26872992,
+     "placementMatrix": [
+      1.5936216642530096e-16,
+      3.3911105929336958,
+      0,
+      0,
+      -2.602581683735345,
+      2.0764563665954668e-16,
+      0,
+      0,
+      0,
+      0,
+      2.59343946480953,
+      0,
+      0.1134777786690891,
+      -1.2874388207171914e-24,
+      -0.0005705586114294514,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-23/tex2/P-23_baked.glb",
-     "tris": 952,
-     "verts": 2014,
-     "bytes": 2857680
+     "tris": 30000,
+     "verts": 32718,
+     "bytes": 4014696
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-23/P-23_low.obj",
-     "tris": 700,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-23/tex2/P-23_lod2.glb",
+     "tris": 15000,
+     "verts": 19085,
+     "bytes": 3488436
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8946,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9203,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1408,7 +1748,7 @@
    "name": "传送带段",
    "en": "Conveyor Section",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     6,
     1,
@@ -1431,25 +1771,45 @@
      "file": "environment/models/P-24/P-24.glb",
      "tris": 498926,
      "verts": 296685,
-     "bytes": 23336768
+     "bytes": 23336768,
+     "placementMatrix": [
+      4.0964890069490344e-16,
+      1.3763972061665024,
+      0,
+      0,
+      -6.690074248021829,
+      8.428002164435834e-17,
+      0,
+      0,
+      0,
+      0,
+      1.5459056280855288,
+      0,
+      0.3585311454595896,
+      2.9378484109630934e-25,
+      0.032443927664674105,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-24/tex2/P-24_baked.glb",
-     "tris": 500,
-     "verts": 989,
-     "bytes": 1880724
+     "tris": 30000,
+     "verts": 27360,
+     "bytes": 2901800
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-24/P-24_low.obj",
-     "tris": 500,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-24/tex2/P-24_lod2.glb",
+     "tris": 15000,
+     "verts": 15654,
+     "bytes": 2437204
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.7879,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8588,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1458,7 +1818,7 @@
    "name": "卷帘门",
    "en": "Rolling Shutter",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     4,
     0.3,
@@ -1481,25 +1841,45 @@
      "file": "environment/models/P-25/P-25.glb",
      "tris": 500000,
      "verts": 302257,
-     "bytes": 36302056
+     "bytes": 36302056,
+     "placementMatrix": [
+      5.510233969266644,
+      0,
+      0,
+      0,
+      0,
+      3.6940789902165534,
+      0,
+      0,
+      0,
+      0,
+      1.7135891432533943,
+      0,
+      -0.01455248605175323,
+      1.2360161198814165e-8,
+      0.009968712459114073,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-25/tex2/P-25_baked.glb",
-     "tris": 350,
-     "verts": 639,
-     "bytes": 2545320
+     "tris": 30000,
+     "verts": 27364,
+     "bytes": 3578624
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-25/P-25_low.obj",
-     "tris": 350,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-25/tex2/P-25_lod2.glb",
+     "tris": 15000,
+     "verts": 15956,
+     "bytes": 3123564
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.6433,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.6609,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1508,7 +1888,7 @@
    "name": "储油罐",
    "en": "Storage Tank",
    "kind": "prop",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     3,
     3,
@@ -1531,25 +1911,45 @@
      "file": "environment/models/P-26/P-26.glb",
      "tris": 499390,
      "verts": 313721,
-     "bytes": 36834240
+     "bytes": 36834240,
+     "placementMatrix": [
+      6.314526517288822,
+      0,
+      0,
+      0,
+      0,
+      3.7882730611015334,
+      0,
+      0,
+      0,
+      0,
+      5.59014118385472,
+      0,
+      0.03742937556295523,
+      -8.907188855336192e-8,
+      -0.3425612678233513,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-26/tex2/P-26_baked.glb",
-     "tris": 600,
-     "verts": 1148,
-     "bytes": 2690656
+     "tris": 30000,
+     "verts": 29561,
+     "bytes": 3776468
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-26/P-26_low.obj",
-     "tris": 600,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-26/tex2/P-26_lod2.glb",
+     "tris": 15000,
+     "verts": 17051,
+     "bytes": 3286144
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8698,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8722,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1558,7 +1958,7 @@
    "name": "仓库外壳",
    "en": "Warehouse Shell",
    "kind": "structure",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     40,
     30,
@@ -1581,25 +1981,45 @@
      "file": "environment/models/S-03/S-03.glb",
      "tris": 499880,
      "verts": 282358,
-     "bytes": 22484840
+     "bytes": 22484840,
+     "placementMatrix": [
+      2.8290873148100128e-15,
+      16.448750893409507,
+      0,
+      0,
+      -46.2025020892511,
+      1.007195506579306e-15,
+      0,
+      0,
+      0,
+      0,
+      40.72799823466538,
+      0,
+      -0.0678715298096037,
+      -4.806922424758785e-25,
+      0.9300645565782223,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-03/tex2/S-03_baked.glb",
-     "tris": 2400,
-     "verts": 3002,
-     "bytes": 1636108
+     "tris": 30000,
+     "verts": 24804,
+     "bytes": 2499564
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-03/S-03_low.obj",
-     "tris": 2400,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-03/tex2/S-03_lod2.glb",
+     "tris": 15000,
+     "verts": 14455,
+     "bytes": 2078396
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8266,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8212,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1608,7 +2028,7 @@
    "name": "冷库房",
    "en": "Cold Storage Room",
    "kind": "structure",
-   "act": "通用",
+   "act": "废弃仓库",
    "footprint": [
     10,
     8,
@@ -1631,25 +2051,45 @@
      "file": "environment/models/S-04/S-04.glb",
      "tris": 500000,
      "verts": 293245,
-     "bytes": 34867764
+     "bytes": 34867764,
+     "placementMatrix": [
+      13.77357355924976,
+      0,
+      0,
+      0,
+      0,
+      4.310237479167433,
+      0,
+      0,
+      0,
+      0,
+      19.10429385476825,
+      0,
+      -0.08203552849897278,
+      9.174338506012175e-8,
+      0.5804254848744711,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-04/tex2/S-04_baked.glb",
-     "tris": 1600,
-     "verts": 2532,
-     "bytes": 2455480
+     "tris": 30000,
+     "verts": 27249,
+     "bytes": 3417012
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-04/S-04_low.obj",
-     "tris": 1600,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-04/tex2/S-04_lod2.glb",
+     "tris": 15000,
+     "verts": 15981,
+     "bytes": 2966436
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.6719,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.6804,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1658,7 +2098,7 @@
    "name": "铁轨段",
    "en": "Rail Track Segment",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     8,
     2.4,
@@ -1681,25 +2121,45 @@
      "file": "environment/models/P-31/P-31.glb",
      "tris": 499510,
      "verts": 321927,
-     "bytes": 28880744
+     "bytes": 28880744,
+     "placementMatrix": [
+      4.854229020278875e-16,
+      2.4618415076952647,
+      0,
+      0,
+      -7.927557600540137,
+      1.50744316120355e-16,
+      0,
+      0,
+      0,
+      0,
+      2.45835142968505,
+      0,
+      -0.017559524284152524,
+      1.92173949027472e-24,
+      0.017791058204314404,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-31/tex2/P-31_baked.glb",
-     "tris": 350,
-     "verts": 745,
-     "bytes": 2794748
+     "tris": 30000,
+     "verts": 31213,
+     "bytes": 3947824
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-31/P-31_low.obj",
-     "tris": 350,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-31/tex2/P-31_lod2.glb",
+     "tris": 20000,
+     "verts": 22285,
+     "bytes": 3602124
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.6553,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.6491,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1708,7 +2168,7 @@
    "name": "废弃车厢",
    "en": "Derelict Subway Car",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     18,
     2.8,
@@ -1731,25 +2191,45 @@
      "file": "environment/models/P-32/P-32.glb",
      "tris": 499936,
      "verts": 316993,
-     "bytes": 29875364
+     "bytes": 29875364,
+     "placementMatrix": [
+      0,
+      0,
+      -5.109563726780497,
+      0,
+      -17.38586219550262,
+      3.3804754458305195e-16,
+      0,
+      0,
+      1.064577024406963e-15,
+      5.520735363345804,
+      0,
+      0,
+      0.22036558280800747,
+      8.34634800135471e-24,
+      0.007500853838138393,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-32/tex2/P-32_baked.glb",
-     "tris": 1600,
-     "verts": 3138,
-     "bytes": 3289700
+     "tris": 30000,
+     "verts": 32384,
+     "bytes": 4396164
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-32/P-32_low.obj",
-     "tris": 1600,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-32/tex2/P-32_lod2.glb",
+     "tris": 15000,
+     "verts": 19057,
+     "bytes": 3879700
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.7435,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.7498,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1758,7 +2238,7 @@
    "name": "电缆管线",
    "en": "Cable Conduit",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     6,
     0.3,
@@ -1781,25 +2261,45 @@
      "file": "environment/models/P-33/P-33.glb",
      "tris": 499332,
      "verts": 309760,
-     "bytes": 34122792
+     "bytes": 34122792,
+     "placementMatrix": [
+      3.529529117048366e-16,
+      0.3924462075659015,
+      0,
+      0,
+      -5.764158481458918,
+      2.4030399596654952e-17,
+      0,
+      0,
+      0,
+      0,
+      0.7465509607959049,
+      0,
+      2.9999998925839266,
+      0.13578913081235378,
+      0.008335201269500405,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-33/tex2/P-33_baked.glb",
-     "tris": 520,
-     "verts": 1087,
-     "bytes": 2227424
+     "tris": 30000,
+     "verts": 29898,
+     "bytes": 3326452
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-33/P-33_low.obj",
-     "tris": 520,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-33/tex2/P-33_lod2.glb",
+     "tris": 15000,
+     "verts": 17210,
+     "bytes": 2830432
     }
    ],
-   "lod1Alg": "routeA",
+   "lod1Alg": "routeA-v2",
    "lod1Colorful": 0.9204,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1808,7 +2308,7 @@
    "name": "检修平台",
    "en": "Maintenance Platform",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     3,
     1.2,
@@ -1831,25 +2331,45 @@
      "file": "environment/models/P-34/P-34.glb",
      "tris": 499812,
      "verts": 293318,
-     "bytes": 33380576
+     "bytes": 33380576,
+     "placementMatrix": [
+      0,
+      0,
+      -2.194735244337673,
+      0,
+      0,
+      2.8396797742654543,
+      0,
+      0,
+      4.265950735045695,
+      0,
+      0,
+      0,
+      -0.2371423685308259,
+      7.787609945468045e-8,
+      -0.060520922409432326,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-34/tex2/P-34_baked.glb",
-     "tris": 450,
-     "verts": 992,
-     "bytes": 2539956
+     "tris": 30000,
+     "verts": 26886,
+     "bytes": 3546060
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-34/P-34_low.obj",
-     "tris": 450,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-34/tex2/P-34_lod2.glb",
+     "tris": 15000,
+     "verts": 15826,
+     "bytes": 3102140
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9913,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9966,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1858,7 +2378,7 @@
    "name": "站台长椅",
    "en": "Platform Bench",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     2,
     0.6,
@@ -1881,25 +2401,45 @@
      "file": "environment/models/P-35/P-35.glb",
      "tris": 499574,
      "verts": 298910,
-     "bytes": 26461080
+     "bytes": 26461080,
+     "placementMatrix": [
+      1.2289431737048072e-16,
+      1.34211977762375,
+      0,
+      0,
+      -2.007016512124876,
+      8.218113448696414e-17,
+      0,
+      0,
+      0,
+      0,
+      0.7581893861329999,
+      0,
+      0.07747286653763245,
+      8.392444347683003e-25,
+      -0.010395154676190446,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-35/tex2/P-35_baked.glb",
-     "tris": 220,
-     "verts": 457,
-     "bytes": 2334824
+     "tris": 30000,
+     "verts": 27384,
+     "bytes": 3375372
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-35/P-35_low.obj",
-     "tris": 220,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-35/tex2/P-35_lod2.glb",
+     "tris": 15000,
+     "verts": 15189,
+     "bytes": 2895128
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8474,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8441,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1908,7 +2448,7 @@
    "name": "通风管道",
    "en": "Ventilation Duct",
    "kind": "prop",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     5,
     1.2,
@@ -1931,25 +2471,45 @@
      "file": "environment/models/P-36/P-36.glb",
      "tris": 500000,
      "verts": 268787,
-     "bytes": 23058980
+     "bytes": 23058980,
+     "placementMatrix": [
+      3.4165599558095227e-16,
+      2.5411292319186027,
+      0,
+      0,
+      -5.579665840286791,
+      1.5559928900444446e-16,
+      0,
+      0,
+      0,
+      0,
+      1.7905130285084416,
+      0,
+      -0.7960201933611845,
+      0.5443911918398242,
+      -0.6,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-36/tex2/P-36_baked.glb",
-     "tris": 400,
-     "verts": 591,
-     "bytes": 1552284
+     "tris": 30000,
+     "verts": 21496,
+     "bytes": 2399048
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-36/P-36_low.obj",
-     "tris": 400,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-36/tex2/P-36_lod2.glb",
+     "tris": 15000,
+     "verts": 12155,
+     "bytes": 2010136
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9276,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9252,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -1958,7 +2518,7 @@
    "name": "隧道段模块",
    "en": "Tunnel Module",
    "kind": "structure",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     20,
     8,
@@ -1981,25 +2541,45 @@
      "file": "environment/models/S-05/S-05.glb",
      "tris": 500000,
      "verts": 270288,
-     "bytes": 27595672
+     "bytes": 27595672,
+     "placementMatrix": [
+      1.3763122957379713e-15,
+      9.243126579399448,
+      0,
+      0,
+      -22.476885526442622,
+      5.659782689787679e-16,
+      0,
+      0,
+      0,
+      0,
+      11.631034329463679,
+      0,
+      0.2685649791267219,
+      3.051655228526664,
+      -3.9999999999999996,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-05/tex2/S-05_baked.glb",
-     "tris": 2000,
-     "verts": 2022,
-     "bytes": 2600964
+     "tris": 30000,
+     "verts": 20885,
+     "bytes": 3372772
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-05/S-05_low.obj",
-     "tris": 2000,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-05/tex2/S-05_lod2.glb",
+     "tris": 15000,
+     "verts": 11659,
+     "bytes": 2987536
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.7491,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.7435,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2008,7 +2588,7 @@
    "name": "地铁站台",
    "en": "Subway Platform",
    "kind": "structure",
-   "act": "通用",
+   "act": "地铁隧道",
    "footprint": [
     40,
     6,
@@ -2031,25 +2611,45 @@
      "file": "environment/models/S-06/S-06.glb",
      "tris": 498686,
      "verts": 297565,
-     "bytes": 26138896
+     "bytes": 26138896,
+     "placementMatrix": [
+      0,
+      0,
+      -10.405989688369885,
+      0,
+      -41.40418267679148,
+      1.383737379322953e-16,
+      0,
+      0,
+      2.5352749893222487e-15,
+      2.259814634368644,
+      0,
+      0,
+      -2.854693660931455,
+      1.9239014432134496e-24,
+      -0.4571090929075025,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-06/tex2/S-06_baked.glb",
-     "tris": 1400,
-     "verts": 2626,
-     "bytes": 2347088
+     "tris": 30000,
+     "verts": 29138,
+     "bytes": 3367264
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-06/S-06_low.obj",
-     "tris": 1400,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-06/tex2/S-06_lod2.glb",
+     "tris": 15000,
+     "verts": 17292,
+     "bytes": 2898192
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.6731,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.6695,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2058,7 +2658,7 @@
    "name": "病床",
    "en": "Hospital Bed",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     2.1,
     0.9,
@@ -2081,25 +2681,45 @@
      "file": "environment/models/P-41/P-41.glb",
      "tris": 499924,
      "verts": 304859,
-     "bytes": 36569276
+     "bytes": 36569276,
+     "placementMatrix": [
+      2.701054899475803,
+      0,
+      0,
+      0,
+      0,
+      1.0522315327280378,
+      0,
+      0,
+      0,
+      0,
+      1.3619007515633021,
+      0,
+      0.012419468271233887,
+      -4.22976235489521e-8,
+      0.013114412924301625,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-41/tex2/P-41_baked.glb",
-     "tris": 1500,
-     "verts": 2990,
-     "bytes": 2676468
+     "tris": 30000,
+     "verts": 29858,
+     "bytes": 3707440
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-41/P-41_low.obj",
-     "tris": 1500,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-41/tex2/P-41_lod2.glb",
+     "tris": 15000,
+     "verts": 17727,
+     "bytes": 3229244
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8385,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8387,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2108,7 +2728,7 @@
    "name": "输液架",
    "en": "IV Pole",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     0.5,
     0.5,
@@ -2131,25 +2751,45 @@
      "file": "environment/models/P-42/P-42.glb",
      "tris": 500000,
      "verts": 296437,
-     "bytes": 27907720
+     "bytes": 27907720,
+     "placementMatrix": [
+      1.0977502723238846,
+      0,
+      0,
+      0,
+      0,
+      1.623313454444572,
+      0,
+      0,
+      0,
+      0,
+      1.0123177379637573,
+      0,
+      -0.004445334088145523,
+      4.6900541108652007e-8,
+      -0.0008473127168137574,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-42/tex2/P-42_baked.glb",
-     "tris": 800,
-     "verts": 1535,
-     "bytes": 1420108
+     "tris": 30000,
+     "verts": 27183,
+     "bytes": 2416240
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-42/P-42_low.obj",
-     "tris": 800,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-42/tex2/P-42_lod2.glb",
+     "tris": 15000,
+     "verts": 15649,
+     "bytes": 1957152
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.9329,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.936,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2158,7 +2798,7 @@
    "name": "轮椅",
    "en": "Wheelchair",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     1,
     0.7,
@@ -2181,25 +2821,45 @@
      "file": "environment/models/P-43/P-43.glb",
      "tris": 480322,
      "verts": 310512,
-     "bytes": 24712516
+     "bytes": 24712516,
+     "placementMatrix": [
+      0,
+      0,
+      -1.021945558663457,
+      0,
+      -1.1110802352914062,
+      8.138004067242704e-17,
+      0,
+      0,
+      6.803404268727544e-17,
+      1.3290369227941803,
+      0,
+      0,
+      -0.019742231644498107,
+      2.305215397214701e-25,
+      -0.0030382342069026967,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-43/tex2/P-43_baked.glb",
-     "tris": 401,
-     "verts": 696,
-     "bytes": 47432
+     "tris": 30000,
+     "verts": 37049,
+     "bytes": 3262768
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-43/P-43_low.obj",
-     "tris": 420,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-43/tex2/P-43_lod2.glb",
+     "tris": 15000,
+     "verts": 22650,
+     "bytes": 2711996
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.3817,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9651,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2208,7 +2868,7 @@
    "name": "隔断屏风",
    "en": "Privacy Screen",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     2,
     0.1,
@@ -2231,25 +2891,45 @@
      "file": "environment/models/P-44/P-44.glb",
      "tris": 500000,
      "verts": 287925,
-     "bytes": 29740276
+     "bytes": 29740276,
+     "placementMatrix": [
+      3.424592922755573,
+      0,
+      0,
+      0,
+      0,
+      1.7076654896608516,
+      0,
+      0,
+      0,
+      0,
+      0.2184769614677034,
+      0,
+      -0.03216548876570601,
+      -4.963957020621972e-8,
+      0.0032507047853994686,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-44/tex2/P-44_baked.glb",
-     "tris": 300,
-     "verts": 568,
-     "bytes": 1551096
+     "tris": 30000,
+     "verts": 25892,
+     "bytes": 2539872
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-44/P-44_low.obj",
-     "tris": 300,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-44/tex2/P-44_lod2.glb",
+     "tris": 15000,
+     "verts": 15202,
+     "bytes": 2107788
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.0193,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.007,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2258,7 +2938,7 @@
    "name": "培养舱",
    "en": "Bio Containment Pod",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     1.2,
     1.2,
@@ -2281,25 +2961,45 @@
      "file": "environment/models/P-45/P-45.glb",
      "tris": 500000,
      "verts": 309277,
-     "bytes": 31235640
+     "bytes": 31235640,
+     "placementMatrix": [
+      1.9398516522645524,
+      0,
+      0,
+      0,
+      0,
+      2.2103573028252725,
+      0,
+      0,
+      0,
+      0,
+      1.860623507525752,
+      0,
+      -0.0005470179418840169,
+      9.062051119712042e-8,
+      0.008249058172962134,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-45/tex2/P-45_baked.glb",
-     "tris": 600,
-     "verts": 1085,
-     "bytes": 1685776
+     "tris": 30000,
+     "verts": 27312,
+     "bytes": 2701640
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-45/P-45_low.obj",
-     "tris": 600,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-45/tex2/P-45_lod2.glb",
+     "tris": 15000,
+     "verts": 15484,
+     "bytes": 2233140
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.987,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.9876,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2308,7 +3008,7 @@
    "name": "医疗推车",
    "en": "Medical Cart",
    "kind": "prop",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     0.8,
     0.5,
@@ -2331,25 +3031,45 @@
      "file": "environment/models/P-46/P-46.glb",
      "tris": 499188,
      "verts": 296842,
-     "bytes": 32650612
+     "bytes": 32650612,
+     "placementMatrix": [
+      0,
+      0,
+      -0.9164121808002185,
+      0,
+      0,
+      1.0055404272188282,
+      0,
+      0,
+      1.249281534028669,
+      0,
+      0,
+      0,
+      -0.06487280728271347,
+      -3.462142603963831e-8,
+      -0.014565451317765942,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-46/tex2/P-46_baked.glb",
-     "tris": 350,
-     "verts": 802,
-     "bytes": 2117156
+     "tris": 30000,
+     "verts": 27875,
+     "bytes": 3161596
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/P-46/P-46_low.obj",
-     "tris": 350,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/P-46/tex2/P-46_lod2.glb",
+     "tris": 15000,
+     "verts": 16190,
+     "bytes": 2697676
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.8396,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.8365,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2358,7 +3078,7 @@
    "name": "病房模块",
    "en": "Ward Module",
    "kind": "structure",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     8,
     8,
@@ -2381,25 +3101,45 @@
      "file": "environment/models/S-07/S-07.glb",
      "tris": 499066,
      "verts": 291125,
-     "bytes": 34762388
+     "bytes": 34762388,
+     "placementMatrix": [
+      12.129261418994432,
+      0,
+      0,
+      0,
+      0,
+      4.160160692760354,
+      0,
+      0,
+      0,
+      0,
+      12.207457901184641,
+      0,
+      -1.2080380445215684,
+      -1.2391181761713937e-7,
+      -0.7914037401870966,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-07/tex2/S-07_baked.glb",
-     "tris": 1800,
-     "verts": 2641,
-     "bytes": 2389448
+     "tris": 30000,
+     "verts": 26737,
+     "bytes": 3329912
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-07/S-07_low.obj",
-     "tris": 1800,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-07/tex2/S-07_lod2.glb",
+     "tris": 15000,
+     "verts": 15547,
+     "bytes": 2881828
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.2951,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.2836,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   },
@@ -2408,7 +3148,7 @@
    "name": "天台机房与水塔",
    "en": "Rooftop Utility & Water Tower",
    "kind": "structure",
-   "act": "通用",
+   "act": "生化医院",
    "footprint": [
     6,
     6,
@@ -2431,25 +3171,45 @@
      "file": "environment/models/S-08/S-08.glb",
      "tris": 500000,
      "verts": 309386,
-     "bytes": 36438364
+     "bytes": 36438364,
+     "placementMatrix": [
+      10.025230166409786,
+      0,
+      0,
+      0,
+      0,
+      7.903566368494617,
+      0,
+      0,
+      0,
+      0,
+      10.11166541814613,
+      0,
+      -0.005965045698653798,
+      -2.0092371163774224e-7,
+      -0.00579433831493893,
+      1
+     ]
     },
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-08/tex2/S-08_baked.glb",
-     "tris": 2200,
-     "verts": 3618,
-     "bytes": 2842052
+     "tris": 30000,
+     "verts": 29893,
+     "bytes": 3849844
     },
     {
-     "label": "LOD2 · 低模(顶点色)",
-     "file": "environment/models/S-08/S-08_low.obj",
-     "tris": 2200,
-     "verts": null,
-     "bytes": null
+     "label": "LOD2 · 远景低模+原贴图",
+     "file": "environment/models/S-08/tex2/S-08_lod2.glb",
+     "tris": 15000,
+     "verts": 17616,
+     "bytes": 3366980
     }
    ],
-   "lod1Alg": "routeA",
-   "lod1Colorful": 0.6869,
+   "lod1Alg": "routeA-v2",
+   "lod1Colorful": 0.6917,
+   "lod2Alg": "routeA-v2",
+   "placementReady": true,
    "animations": [],
    "joints": 0
   }

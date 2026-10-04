@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_zvtnugdm",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-14_lod2.glb"
+  },
+  "sourceHash": "sha256:c21c26ffc6a884efd58690bf5d5f62ffea948be688d03257ee89f5b4ca99cfd2",
+  "updatedAt": "2026-10-04T11:05:17.126Z"
+}

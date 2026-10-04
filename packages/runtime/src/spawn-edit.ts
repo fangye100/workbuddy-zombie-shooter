@@ -28,6 +28,7 @@
  */
 
 import { ComponentKind } from '@aether/scene';
+import { applyAssetNodeEdit, type AssetNodeEdit } from './asset-node-edit';
 import type { NodeId, SceneDocument, SceneNode, SpawnPointComponent } from '@aether/scene';
 import { changedJsonPaths, type JsonDiffEntry } from './doc-diff';
 
@@ -167,7 +168,7 @@ export interface TransformEdit {
  * 两条命令族用显式 `kind` 判别（`field` 的取值域本来也不相交，但显式标签让
  * 「以后再加第三条命令族」这件事不需要重新论证判别方式）。
  */
-export type AuthorEdit = SpawnEdit | TransformEdit;
+export type AuthorEdit = SpawnEdit | TransformEdit | AssetNodeEdit;
 
 export interface EditResult {
   ok: boolean;
@@ -391,18 +392,21 @@ export function invertTransformEdit(edit: TransformEdit): TransformEdit {
   };
 }
 
-/** 按 `kind` 分发应用（撤销栈里两条命令族共用一条 LIFO） */
+/** Dispatch the shared spawn/transform/asset-insertion LIFO history. */
 export function applyAuthorEdit(doc: SceneDocument, edit: AuthorEdit): EditResult {
+  if (edit.kind === 'asset-node') return applyAssetNodeEdit(doc, edit);
   return edit.kind === 'transform' ? applyTransformEdit(doc, edit) : applySpawnEdit(doc, edit);
 }
 
 /** 按 `kind` 分发取逆 */
 export function invertAuthorEdit(edit: AuthorEdit): AuthorEdit {
+  if (edit.kind === 'asset-node') return { ...edit, remove: !edit.remove };
   return edit.kind === 'transform' ? invertTransformEdit(edit) : invertSpawnEdit(edit);
 }
 
 /** 面板/状态行用的一句话描述（"刚改了什么"）。UI 不该自己拼字段名 */
 export function formatAuthorEdit(edit: AuthorEdit): string {
+  if (edit.kind === 'asset-node') return `添加资产：${edit.node.name}`;
   if (edit.kind === 'spawn') {
     return `${FIELD_LABEL[edit.field]}：${edit.from} → ${edit.to}`;
   }
@@ -422,7 +426,7 @@ export function formatAuthorEdit(edit: AuthorEdit): string {
  *    重开才生效」这个问题根本不存在：重开就是重新装载同一个对象。
  *  - 不做 IO。保存由编辑器调 `writeProjectFile` 之后再 `commit()` 回调这里 ——
  *    IO 失败不该让内存里的未保存状态被清空。
- *  - 撤销栈只存 `SpawnEdit`（几十字节），不存整份文档快照。
+ *  - 撤销栈存领域命令；资产插入携带节点数据，不存整份文档或 GPU 资源。
  */
 export class SpawnEditStore {
   private committed: SceneDocument;
@@ -431,6 +435,20 @@ export class SpawnEditStore {
   private readonly redoStack: AuthorEdit[] = [];
   /** 编辑身份计数器。确认保存范围用它（复审 P2：栈长在"撤销+再编辑"下会骗人） */
   private nextEditId = 1;
+  private readonly assetInsertions = new Map<NodeId, SceneNode>();
+
+  /** Only these exact inserted nodes may extend the save authority. */
+  get insertedAssetNodes(): SceneNode[] { return structuredClone([...this.assetInsertions.values()]); }
+
+  insertAsset(node: SceneNode): EditResult {
+    const edit: AssetNodeEdit = { kind: 'asset-node', id: this.nextEditId++, nodeId: node.id, node: structuredClone(node), remove: false };
+    const result = applyAssetNodeEdit(this.working, edit);
+    if (!result.ok) return result;
+    this.assetInsertions.set(node.id, structuredClone(node));
+    this.undoStack.push(edit);
+    this.redoStack.length = 0;
+    return result;
+  }
 
   constructor(doc: SceneDocument) {
     this.committed = cloneDocument(doc);
@@ -547,7 +565,8 @@ export class SpawnEditStore {
   undo(): AuthorEdit | null {
     const e = this.undoStack.pop();
     if (e === undefined) return null;
-    applyAuthorEdit(this.working, invertAuthorEdit(e));
+    const result = applyAuthorEdit(this.working, invertAuthorEdit(e));
+    if (!result.ok) { this.undoStack.push(e); return null; }
     this.redoStack.push(e);
     return e;
   }
@@ -602,6 +621,7 @@ export class SpawnEditStore {
 
   /** 换了场景（或放弃编辑重新装载） */
   reload(doc: SceneDocument): void {
+    this.assetInsertions.clear();
     this.committed = cloneDocument(doc);
     this.working = cloneDocument(doc);
     this.undoStack.length = 0;

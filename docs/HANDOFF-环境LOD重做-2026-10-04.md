@@ -1,5 +1,12 @@
 # 环境 LOD 重做 —— 交接文档
 
+> **Updated 2026-10-04:** The initial investigation below is historical and superseded by
+> [the completed audit and delivery report](ENVIRONMENT-LOD-VALIDATION-2026-10-04.md).
+> All 38 environment assets now have reviewed, textured LOD1 and LOD2 GLBs. UV chart counts
+> are not a count of planes/shells or a proven minimum triangle budget. The raw sources are
+> not uniformly watertight. See the new report for measured topology, placement, visual
+> evidence, scene persistence, and the separate mobile performance limitation.
+
 > 接手人先读这一篇，不用翻聊天记录。
 > 分支 `fix/lod-regen-20261004`（从 `origin/main` @ `5aade8f` 开出）。
 > 文档时间：2026-10-04 18:00。**工作区有 38 个文件未提交**（见 §7），先读§7 再动手。

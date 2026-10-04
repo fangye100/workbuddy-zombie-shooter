@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_dczw25e1",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-45_lod2.glb"
+  },
+  "sourceHash": "sha256:325189abc82bdff7a6541cdaae428142bf5b52901efe61eb74b0767eb3b112e9",
+  "updatedAt": "2026-10-04T11:05:18.681Z"
+}

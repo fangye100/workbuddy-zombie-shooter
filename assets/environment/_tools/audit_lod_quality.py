@@ -1,30 +1,11 @@
 # -*- coding: utf-8 -*-
-"""生成 assets/_data/lod-quality.json —— asset browser 的 LOD 算法溯源数据。
-
-用途
-----
-`asset-browser.html` 要能一眼看出每件道具的 LOD1 是「路线 A」还是「旧转移烘焙」，
-让 2026-10-04 那批 LOD 重做的成果在页面上可见、可查、可复核。
-
-判据（结构性、零阈值、100% 自证）
-----------------------------------
-  LOD1 内嵌贴图 = JPEG + 4096²  → routeA   （decimate_uvkeep 直接内嵌混元原生 4096²
-                                           贴图，>4MB 自动转 JPEG q92）
-  LOD1 内嵌贴图 = PNG  + 512²   → transfer（env_transfer 用 --size 512 烘的顶点色转移版）
-实测 38 件 → JPEG 27 / PNG 11，与「pre-lodregen.bak 备份在不在」的判定 27/11 完全一致。
-
-🔴 为什么不用备份文件判定：备份是本地回滚用、已 gitignore，换机器/重新克隆后不在，
-   全部资产会被误标成旧法。
-🔴 为什么不用彩度阈值判定：旧产物的彩度是连续长尾（0% ~ 43%，中位 26.4%），
-   与路线 A 产物（87.0%）**有重叠**（P-05=43% / P-43=38% / P-11=37% 都是旧产物但彩度不低）
-   → 单一阈值必然误判。贴图格式+尺寸是结构性的，不存在这个问题。
-
-用法
-----
-  python audit_lod_quality.py            # 写入 assets/_data/lod-quality.json
-  python audit_lod_quality.py --check    # 只校验现文件与实测是否一致（门禁用）
+"""Audit both environment LODs using GLB provenance, hashes and generation reports.
+Texture format is only a legacy heuristic, never proof of geometric/visual quality.
+Colour coverage is measured on a 256-pixel thumbnail for human diagnostics.
+Run without arguments to refresh lod-quality.json; --check rejects stale/failed data.
 """
 import argparse
+import hashlib
 import json
 import os
 import struct
@@ -74,30 +55,42 @@ def probe(path):
     bv = js["bufferViews"][im["bufferView"]]
     blob = bd[bv.get("byteOffset", 0): bv.get("byteOffset", 0) + bv["byteLength"]]
     img = Image.open(BytesIO(blob)).convert("RGB")
+    width, height = img.size
+    img.thumbnail((256, 256))
     a = np.asarray(img, dtype=np.float32) / 255.0
     mx, mn = a.max(2), a.min(2)
     sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-9), 0)
     mime = im.get("mimeType")
     return {
         "mime": mime,
-        "texW": img.size[0],
-        "texH": img.size[1],
+        "texW": width,
+        "texH": height,
         "colorful": round(float((sat > 0.25).mean()), 4),
         # 🔴 结构性判据：JPEG + 4096² = 路线 A 内嵌的混元原生贴图
-        "alg": "routeA" if (mime == "image/jpeg" and img.size[0] >= 4096) else "transfer",
+        "alg": ("routeA-v2" if js.get('asset', {}).get('generator') == 'aether environment uvkeep-v2'
+                else "routeA" if (mime == "image/jpeg" and width >= 4096) else "transfer"),
+        "sha256": hashlib.sha256(open(path, 'rb').read()).hexdigest(),
+        "tris": sum(js['accessors'][p['indices']]['count'] // 3 for m in js['meshes'] for p in m['primitives']),
+        "baseColorFactor": mats[prim.get('material', 0)].get('pbrMetallicRoughness', {}).get('baseColorFactor', [1, 1, 1, 1]),
     }
 
 
 def collect():
     rows = {}
-    for eid in sorted(os.listdir(MODELS)):
+    expected = json.load(open(os.path.join(ENV, 'props.json'), encoding='utf-8'))['entries']
+    for eid in sorted(e['id'] for e in expected):
         lod = os.path.join(MODELS, eid, "tex2", f"{eid}_baked.glb")
         if not os.path.exists(lod):
+            rows[eid] = {'alg': 'unknown', 'error': 'missing LOD1'}
             continue
         try:
             r = probe(lod)
             if r:
+                lod2 = os.path.join(MODELS, eid, 'tex2', f'{eid}_lod2.glb')
+                r['lod2'] = probe(lod2) if os.path.exists(lod2) else None
                 rows[eid] = r
+            else:
+                rows[eid] = {'alg': 'unknown', 'error': 'missing embedded baseColor texture'}
         except Exception as ex:
             rows[eid] = {"alg": "unknown", "error": type(ex).__name__}
     return rows
@@ -107,8 +100,7 @@ def build(rows):
     return {
         "_comment": "本文件由 assets/environment/_tools/audit_lod_quality.py 生成，"
                     "gen_manifest.mjs 读它给 asset browser 打算法标记。别手改。",
-        "_judge": "LOD1 内嵌贴图 JPEG+4096²=路线A(decimate_uvkeep 直接内嵌混元原生贴图)；"
-                  "PNG+512²=旧转移烘焙(env_transfer --size 512)。结构性判据，无阈值。",
+        "_judge": "v2 uses explicit generator provenance plus source/output hashes and numeric reports; legacy texture format is only a heuristic.",
         "_colorful": "LOD1 贴图彩色占比 = 饱和度>0.25 的像素比例。仅供人工判读，"
                      "不做算法判定（旧产物彩度与路线 A 有重叠，见脚本 docstring）。",
         "_generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -122,7 +114,7 @@ def main():
     args = ap.parse_args()
     rows = collect()
     doc = build(rows)
-    rA = [k for k, v in rows.items() if v["alg"] == "routeA"]
+    rA = [k for k, v in rows.items() if v["alg"] in ("routeA", "routeA-v2")]
 
     if args.check:
         if not os.path.exists(OUT):
@@ -135,10 +127,32 @@ def main():
             c = curEnv.get(k)
             if not c:
                 bad.append(f"{k}: 现文件缺该件")
-            elif c.get("alg") != v["alg"]:
-                bad.append(f"{k}: alg 现={c.get('alg')} 实测={v['alg']}")
-            elif c.get("mime") != v["mime"] or c.get("texW") != v["texW"]:
-                bad.append(f"{k}: 贴图 {c.get('mime')} {c.get('texW')} ≠ 实测 {v['mime']} {v['texW']}")
+            elif c != v:
+                bad.append(f"{k}: LOD hash/texture/material/geometry data is stale")
+            if v.get('alg') == 'unknown':
+                bad.append(f'{k}: cannot inspect model')
+            for level in (v, v.get('lod2')):
+                if level and level.get('baseColorFactor') != [1, 1, 1, 1]:
+                    bad.append(f'{k}: baseColorFactor must be white')
+            if v.get('alg') == 'routeA-v2':
+                second = v.get('lod2')
+                if not second or second.get('alg') != 'routeA-v2' or second['tris'] >= v['tris']:
+                    bad.append(f'{k}: missing/invalid textured LOD2')
+                meta = json.load(open(os.path.join(MODELS, k, 'tex2', f'{k}_baked.glb.meta.json'), encoding='utf-8'))
+                report = meta.get('userData', {}).get('lodBuildResult', {})
+                if report.get('config') != meta.get('userData', {}).get('lodBuild'):
+                    bad.append(f'{k}: stale generation settings')
+                props = json.load(open(os.path.join(ENV, 'props.json'), encoding='utf-8'))['entries']
+                if report.get('footprint') != next(e['footprint'] for e in props if e['id'] == k):
+                    bad.append(f'{k}: stale placement dimensions')
+                source = os.path.join(MODELS, k, f'{k}.glb')
+                if report.get('sourceHash') != hashlib.sha256(open(source, 'rb').read()).hexdigest():
+                    bad.append(f'{k}: stale LOD source')
+                levels = report.get('levels', [])
+                if len(levels) != 2 or any(x.get('failures') for x in levels):
+                    bad.append(f'{k}: missing/failed generation checks')
+                elif levels[0]['sha256'] != v['sha256'] or not second or levels[1]['sha256'] != second['sha256']:
+                    bad.append(f'{k}: generation report does not match delivered LODs')
         for k in curEnv:
             if k not in rows:
                 bad.append(f"{k}: 现文件多出该件")
@@ -154,12 +168,13 @@ def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     # 🔴 必须 newline="" + 显式指定换行，否则 Windows 上 Python 文本模式默认写 CRLF，
     #    git 会拒收（fatal: CRLF would be replaced by LF）且仓库标准是 LF。
-    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+    with open(OUT + ".pending", "w", encoding="utf-8", newline="\n") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
         f.write("\n")
+    os.replace(OUT + ".pending", OUT)
     print(f"写入 {OUT}")
     print(f"routeA {len(rA)} / transfer {len(rows) - len(rA)}")
-    print("transfer: " + " ".join(k for k, v in rows.items() if v["alg"] != "routeA"))
+    print("transfer: " + " ".join(k for k, v in rows.items() if v["alg"] not in ("routeA", "routeA-v2")))
     return 0
 
 

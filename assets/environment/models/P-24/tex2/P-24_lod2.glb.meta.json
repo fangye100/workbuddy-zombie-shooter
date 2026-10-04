@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_k14gik2g",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-24_lod2.glb"
+  },
+  "sourceHash": "sha256:c0809dc7bab95967eb8b6aa079280db5435e26370edd4a264d045096759fcc48",
+  "updatedAt": "2026-10-04T11:05:17.512Z"
+}

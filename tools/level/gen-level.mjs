@@ -260,7 +260,7 @@ function actCoverProps(theme) {
   // 真正要防的是"大件进窄槽"：升序保证轮到大件时只剩远槽或下一房间。
   // session.test 的"不穿障碍"是这条布局的回归看守（P4b 复审一轮的教训）。
   usable.sort((a, b) => {
-    const area = (fp) => fp[0] * fp[2];
+    const area = (fp) => fp[0] * fp[1];
     return area(a.footprint) - area(b.footprint);
   });
   return usable.map((e) => [e.id, e.footprint]);
@@ -442,8 +442,10 @@ function buildFloor(floor) {
     const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
       const [propId, fp] = coverPropIds[ci % coverPropIds.length];
-      // 🔴 props.json 的 footprint 轴序 = [W, H, D]（宽×高×深，1unit=1m）
-      const [w, h, d] = fp;
+      // props.json footprint is [width, depth, height], in metres.
+      const [w, d, h] = fp;
+      const assetPath = `assets/environment/models/${propId}/tex2/${propId}_baked.glb`;
+      const assetMeta = JSON.parse(fs.readFileSync(path.join(ROOT, `${assetPath}.meta.json`), 'utf8'));
       nodes.push(
         node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,
@@ -456,7 +458,7 @@ function buildFloor(floor) {
             meshRenderer(
               {
                 type: 'asset',
-                ref: { path: `assets/environment/models/${propId}/tex/${propId}_tex_baked.glb` },
+                ref: { path: assetPath, guid: assetMeta.guid },
               },
               's1',
             ),

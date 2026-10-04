@@ -164,6 +164,7 @@ const COMPONENT_SIZE: Record<number, number> = {
 const TYPE_SIZE: Record<string, number> = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 
 interface GltfJson {
+  asset?: { extras?: { coordinateSystem?: string } };
   buffers?: { byteLength?: number; uri?: string }[];
   bufferViews?: {
     buffer?: number;
@@ -1050,7 +1051,9 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05): 
       minZ = Math.min(minZ, posArr[i + 2]!);
       maxZ = Math.max(maxZ, posArr[i + 2]!);
     }
-    zUp = (maxZ - minZ) > (maxY - minY) * 1.5;
+    // Authored metre-scale environments may be much deeper than they are tall.
+    // Respect their explicit up axis; retain the legacy heuristic for unmarked imports.
+    zUp = json.asset?.extras?.coordinateSystem !== 'Y-up' && (maxZ - minZ) > (maxY - minY) * 1.5;
     if (zUp) {
       // (x, y, z) → (x, -z, y)，det=+1 纯旋转，绕序与法线方向都保持不变
       // 混元产物脚底在 z-max（+Z 朝下），必须带这个 180° X 翻转才正立；

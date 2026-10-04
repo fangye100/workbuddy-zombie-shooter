@@ -51,6 +51,12 @@
       "id": "sc_sim_floor1_t5",
       "enabled": true,
       "name": "第一层 · 火场 · t=5s 快照（派生产物）"
+    },
+    {
+      "path": "assets/scenes/sandbox/environment-lod-validation.scene.json",
+      "id": "sc_environment_lod_validation",
+      "enabled": true,
+      "name": "Environment LOD validation"
     }
   ],
   "startIndex": 1,

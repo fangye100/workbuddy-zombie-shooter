@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_112y98t8",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "S-08_lod2.glb"
+  },
+  "sourceHash": "sha256:13735578e5b01371f9c165a2509b0eaa0262eeaf43157fb35addc05a7d41632a",
+  "updatedAt": "2026-10-04T11:05:19.504Z"
+}
