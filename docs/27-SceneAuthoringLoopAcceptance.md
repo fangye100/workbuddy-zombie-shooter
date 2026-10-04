@@ -32,3 +32,15 @@ Local evidence remains under `.workbuddy/tmp/author-loop-acceptance.png` and `.w
 ## Scope boundaries
 
 Scene-local material appearance is persisted here. Cross-scene material-library instance creation/rename/deletion is not implemented by this change; those legacy actions are hidden for scene-authored objects instead of promising persistence. Submesh eye toggles are explicitly labelled temporary preview; whole-node visibility is persisted. Script parameters and unexposed component types retain their existing read-only behavior. This task does not claim to finish the separate game-design/art-refinement work.
+
+## Integration with the environment asset delivery
+
+Integrated main `6206c4a` (PR #23). Asset insertion remains an `AssetNodeEdit` in `SpawnEditStore`; general node edits and asset commands now share the same validated save-authority snapshot. `AuthorAssetController` continues to own the derived asset view and temporary CPU texture history. Its undo/redo failures retain the document/history rollback behavior. External uncommanded mutations cannot acquire authority by importing another asset.
+
+The headed acceptance used the actual branch worktree (verified through `/__fs/info`) and NVIDIA Lovelace. A new disposable floor-1 copy was created and registered through File > Save as. This time P-01 LOD2 was added by a real asset-library double click, rather than a debug invocation. The imported asset retained GUID `as_cax4jr7q`, a stable node ID, metre scale and 15,000 triangles.
+
+The visible route exercised material color `#ff4400`, naming, deletion, menu undo, transform input, saving and reopening. The reopened document and renderer retained the material override and position X=4.001. A stale untouched form after material edits was reproduced and repaired; uncommitted user drafts still keep their conflict guard. RunRules magazine 23 and heal cost 27 survived disk reload; Play displayed 23/120 ammunition. This was a parameter-propagation check, not a gameplay balance run (the idle player died). Stop restored the 63 authored objects and a clean author document; no browser errors were recorded.
+
+Evidence: `.workbuddy/tmp/author-loop-merged-acceptance.png`, `author-loop-merged-play.png` and `author-loop-merged-accepted.scene.json`. The disposable scene and its project entry were removed after validation. Production floor layouts and character production assets were not edited.
+
+Final integration gates: 266 related tests in 18 suites, typecheck and editor production build passed. `scene:check` verified 145 synchronized asset sidecars, nine v7 scenes, 12 scene-file tests and the 38-asset LOD audit. Existing Vite CJS and chunk-size warnings remain.

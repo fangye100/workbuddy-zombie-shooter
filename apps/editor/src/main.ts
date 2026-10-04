@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, assetServer } from './models';
+import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
@@ -20,10 +20,11 @@ import {
 } from '@aether/runtime';
 import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
+import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
-import { removeNodeTree, newAuthorNode } from '@aether/runtime';
+import { removeNodeTree } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -1335,6 +1336,14 @@ async function boot(): Promise<void> {
     }
   }
   const authorSaver = new AuthorSceneSaver();
+  const authorAssets = new AuthorAssetController(() => spawnStore, renderer);
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying || authorProjectionBusy, renderer, (edit, redo) => {
+    const error = authorAssets.project(edit, redo);
+    authorMaterialBaseline = materialSnapshot(renderer);
+    panel.refreshHierarchy();
+    panel.syncSelectionFromRenderer(true);
+    return error;
+  });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
     dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft,
@@ -1349,7 +1358,6 @@ async function boot(): Promise<void> {
     inspect: switchInspectorTab,
     resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
   });
-  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying || authorProjectionBusy, renderer);
   panel.onChange = () => {
     hudDirty = true;
     if (spawnStore !== null && !playCtl.isPlaying && !authorProjectionBusy) {
@@ -1363,6 +1371,9 @@ async function boot(): Promise<void> {
       else if (materialEdit.error !== '值没有变化') { editorMenu.message(materialEdit.error ?? '修改被拒绝'); void rebuildAuthorScene(); }
       const result = spawnStore.setEnvironment(environmentFromParams(spawnStore.document.environment, panel.params));
       if (result.ok) editorMenu.message('场景环境已修改，保存场景后生效于文件');
+      // Keep an untouched node form current after edits through the material/light pane.
+      // SceneAuthorPanel.render preserves a user's in-progress draft and its conflict guard.
+      refreshSpawnPanel();
     }
   };
   panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
@@ -1468,6 +1479,7 @@ async function boot(): Promise<void> {
 
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
+    authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
       spawnAb = null;
@@ -1548,6 +1560,7 @@ async function boot(): Promise<void> {
       const result = await authorSaver.save(store, source.url);
       // A scene switch during I/O must not attach an old scene's message to the new document.
       if (spawnStore !== store) return;
+      if (result.ok && store.undoDepth === 0 && store.redoDepth === 0) authorAssets.clear();
       spawnMsg = { text: result.message, kind: result.ok ? 'ok' : 'warn' };
     }
     editorMenu.message(spawnMsg?.text ?? '');
@@ -2219,6 +2232,8 @@ async function boot(): Promise<void> {
    * pos 为 null 时放原点；拖放路径会把落点（视线与地面交点）传进来。
    */
   async function spawnAssetAt(relPath: string, pos: [number, number, number] | null): Promise<void> {
+    const store = spawnStore;
+    if (store === null) { panel.setModelInfo('请先打开场景，再从资产库添加模型'); return; }
     // 🔴 Play 中禁止增删（复审 #3）：作者状态按索引恢复，物体数变了就会张冠李戴。
     // 这一条与层级删除 / Delete 键同一约束，所有入口统一。
     if (playCtl.isPlaying) {
@@ -2228,23 +2243,38 @@ async function boot(): Promise<void> {
       return;
     }
     try {
-      const store = spawnStore;
-      if (!store || authorProjectionBusy) throw new Error('场景尚未准备好');
-      const meta = await assetServer.loadMeta(relPath);
-      if (meta.missing || meta.errors.length) throw new Error('资产缺少有效元数据，请先完成资产导入');
-      if (spawnStore !== store || playCtl.isPlaying || authorProjectionBusy) throw new Error('场景状态已变化，请重试');
-      const node = newAuthorNode(`nd_${crypto.randomUUID()}`, uniqueObjectName(stemName(relPath)), true);
-      node.transform.position = pos ?? [0, 0, 0];
-      const mesh = node.components[0]!;
-      if (mesh.kind !== 'MeshRenderer') return;
-      mesh.source = { type: 'asset', ref: Object.assign({ path: relPath }, { guid: meta.meta.guid }) };
-      const result = editAuthorNodes('添加资产节点', nodes => nodes.push(node), false);
-      if (!result.ok) throw new Error(result.error ?? '节点添加失败');
-      await rebuildAuthorScene();
-      const idx = renderer.findObjectIndexByNodeId(node.id);
-      if (idx !== null) { renderer.selectObject(idx); panel.setSelection(idx); focusOn(idx); }
+      if (authorProjectionBusy) throw new Error('场景尚未准备好');
+      const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const buffer = await resp.arrayBuffer();
+      const metadata = await assetServer.loadMeta(relPath);
+      if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
+      // Respect explicit metre-scale environment imports as well as character heights.
+      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath));
+      const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
+      // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
+      // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
+      if (playCtl.isPlaying || authorProjectionBusy || spawnStore !== store) {
+        bmp?.close();
+        const reason = playCtl.isPlaying ? '已进入 Play' : '场景状态已变化';
+        console.warn(`[资产库] ${reason}，丢弃尚未完成的导入`);
+        panel.setModelInfo(`${reason}，请重新导入 ${stemName(relPath)}`);
+        hudDirty = true;
+        return;
+      }
+      const name = uniqueObjectName(stemName(relPath));
+      const node = assetSceneNode(`nd_asset_${crypto.randomUUID()}`, name, relPath, metadata.meta.guid, pos ?? [0, 0, 0]);
+      const idx = authorAssets.insert(store, node, model, bmp);
+      authorMaterialBaseline = materialSnapshot(renderer);
+      renderer.selectObject(idx);
+      panel.setSelection(idx);
       switchInspectorTab('inspector');
-      panel.setModelInfo(`${node.name} · 已添加到场景文档，请保存`);
+      panel.refreshHierarchy();
+      refreshSpawnPanel();
+      panel.setModelInfo(
+        `${name} · ${model.vertices} 顶点 / ${model.triangles} 面 · 来自资产库 ${relPath}`,
+      );
+      focusOn(idx);
       hudDirty = true;
     } catch (err) {
       panel.setModelInfo(`资产载入失败：${stemName(relPath)} · ${String(err)}`);
@@ -3499,7 +3529,7 @@ async function boot(): Promise<void> {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, MODEL_RULER_HEIGHT_M);
+          model = parseGlb(buffer, await resolveAssetImportHeightM(path));
           previewCache.set(path, model);
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);

@@ -33,6 +33,7 @@
   .tag{font-size:10px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--dim)}
   .tag.gold{color:var(--gold);border-color:var(--gold)}
   .tag.teal{color:var(--teal);border-color:var(--teal)}
+  .tag.red{color:var(--red);border-color:var(--red)}
   .kind{font-size:10px;color:#14110F;font-weight:700;border-radius:5px;padding:1px 7px}
 
   /* ---------- 3D Viewer 弹层 ---------- */
@@ -154,9 +155,20 @@ function cardHTML(e, isChar) {
     tags.push(`<span class="tag">${e.tris} tris</span>`);
   } else {
     tags.push(`<span class="tag gold">${e.lods.length} LOD</span>`);
-    tags.push(`<span class="tag">${e.tris} tris</span>`);
+    tags.push(`<span class="tag">LOD1 ${e.lods[1]?.tris?.toLocaleString() ?? '—'} / LOD2 ${e.lods[2]?.tris?.toLocaleString() ?? '—'} tris</span>`);
     tags.push(`<span class="tag">${COVER_LABEL[e.cover] ?? e.cover}</span>`);
     tags.push(`<span class="tag">${e.act}</span>`);
+    // 🔴 LOD 算法标记（2026-10-04）：绿 = 路线 A（保 UV QEM + 内嵌混元原生 4096²贴图，
+    //    贴图真色）；红 = 旧转移烘焙（顶点色有损压缩 → 贴图发灰，已弃用）。
+    //    这批道具 27/29 已重做；剩 P-05 / P-43 是碎壳体（17255 / 6208 连通壳）
+    //    QEM 处理不了，连同「色差本来就小 / 原生即灰」的 9 件仍是旧产物。
+    //    彩度（饱和度>0.25 的像素比例）一并显示，方便人工判读。
+    if (e.lod1Alg === 'routeA-v2' && e.lod2Alg === 'routeA-v2') tags.push(`<span class="tag teal">LOD1/2 保UV</span>`);
+    else if (e.lod1Alg === 'routeA') tags.push(`<span class="tag teal">路线A</span>`);
+    else if (e.lod1Alg === 'transfer') tags.push(`<span class="tag red">贴图旧法</span>`);
+    if (e.lod1Colorful != null) {
+      tags.push(`<span class="tag" title="LOD1 贴图彩色占比（饱和度>0.25 的像素比例）">彩 ${(e.lod1Colorful * 100).toFixed(0)}%</span>`);
+    }
   }
   return `<article class="card" data-id="${e.id}">
     <div class="thumb">${img
@@ -218,7 +230,7 @@ function ensureRenderer() {
   const grid = new THREE.GridHelper(20, 40, 0x3a3550, 0x262040);
   grid.position.y = -0.001; scene.add(grid);
   Object.assign(state, { renderer: r, scene, camera, controls });
-  // 调试钩子：headless harness 用它量世界包围盒（朝向体检）
+  // Read-only developer inspection of world bounds and GPU state.
   window.__viewer = { state, THREE };
   new ResizeObserver(() => {
     const w = host.clientWidth, h = host.clientHeight;
@@ -277,31 +289,42 @@ function frameObject(root) {
   };
   const pre = measure();
   const ps = pre.getSize(new THREE.Vector3());
-  if (ps.z > ps.y * 1.3 && ps.z > ps.x * 1.3) {
+  const orientCharacter = state.tab === 'char';
+  // Environment meshes already carry their authored Y-up transform. A long
+  // bed, rail or conduit must not be rotated upright like a character.
+  if (orientCharacter && ps.z > ps.y * 1.3 && ps.z > ps.x * 1.3) {
     root.rotateX(Math.PI / 2); // Z-up → Y-up
-  } else if (ps.x > ps.y * 1.3 && ps.x > ps.z * 1.3) {
+  } else if (orientCharacter && ps.x > ps.y * 1.3 && ps.x > ps.z * 1.3) {
     root.rotateZ(Math.PI / 2); // X-up → Y-up
   }
   // 🔴 B-02 型边界 case：躺姿但三轴接近（z=0.92 只比 y=0.71 高 1.3 倍不到），
   // 上面的阈值没触发。二次判定：仍非 Y 最大（容差 1.1）且 z>y → 强制按 Z-up 翻。
   const pre2 = measure();
   const ps2 = pre2.getSize(new THREE.Vector3());
-  if (ps2.z > ps2.y * 1.1 && ps2.z >= ps2.x) {
+  if (orientCharacter && ps2.z > ps2.y * 1.1 && ps2.z >= ps2.x) {
     root.rotateX(Math.PI / 2);
-  } else if (ps2.x > ps2.y * 1.1 && ps2.x >= ps2.z) {
+  } else if (orientCharacter && ps2.x > ps2.y * 1.1 && ps2.x >= ps2.z) {
     root.rotateZ(Math.PI / 2);
   }
   const box = measure();
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  root.position.sub(center); root.position.y += size.y / 2; // 居中 + 贴地
+  if (orientCharacter) {
+    root.position.sub(center); root.position.y += size.y / 2;
+  }
   const maxDim = Math.max(size.x, size.y, size.z);
   const camDist = maxDim * 1.9;
+  // Metre-scale buildings exceed the old character-sized fog range (18..42 m).
+  state.scene.fog.near = Math.max(18, maxDim * 3);
+  state.scene.fog.far = Math.max(42, maxDim * 7);
+  state.camera.far = Math.max(200, maxDim * 12);
+  state.camera.updateProjectionMatrix();
   // 🔴 量化 HUD 固定在左上，会压住模型。把注视点沿 -X 移一小段（模型因此落在画面偏右），
   // 并抬高相机让整体下移，模型就完整落在 HUD 右侧的可视区里。
   const panX = maxDim * 0.42;
-  state.camera.position.set(camDist * 0.7 - panX, maxDim * 1.1, camDist * 0.9);
-  state.controls.target.set(-panX, size.y * 0.45, 0);
+  const focus = orientCharacter ? new THREE.Vector3(0, size.y * 0.45, 0) : center;
+  state.camera.position.set(focus.x + camDist * 0.7 - panX, focus.y + maxDim * 0.7, focus.z + camDist * 0.9);
+  state.controls.target.set(focus.x - panX, focus.y, focus.z);
   state.controls.update();
 }
 
@@ -388,6 +411,11 @@ function renderHud() {
     ['顶点', c.verts.toLocaleString(), delta(c.verts, base?.verts)],
     ['Mesh', String(c.meshes), ''],
   ];
+  if (state.tab === 'env' && state.assetBounds) {
+    const { size, minY } = state.assetBounds;
+    rows.push(['尺寸 X/Y/Z', size.map(v => v.toFixed(3)).join(' / ') + ' m', '']);
+    rows.push(['底部 Y', minY.toFixed(4) + ' m', '']);
+  }
   if (c.skinned) rows.push(['骨骼', `${c.bones} joints`, '']);
   if (state.gltfAnimations?.length) rows.push(['动画', `${state.gltfAnimations.length} 段`, '']);
   rows.push(['贴图', c.withTex ? '有' : '无', '']);
@@ -440,6 +468,12 @@ async function loadLOD(lod, index = null) {
         });
       } });
     }
+    if (state.tab === 'env' && lod.placementMatrix) {
+      root.applyMatrix4(new THREE.Matrix4().fromArray(lod.placementMatrix));
+    }
+    root.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(root);
+    state.assetBounds = { size: bounds.getSize(new THREE.Vector3()).toArray(), minY: bounds.min.y };
     state.current = root;
     state.scene.add(root);
     // 有动画 → 建 mixer 并推到首帧（frameObject 的立姿检测要用摆好姿势的骨骼）

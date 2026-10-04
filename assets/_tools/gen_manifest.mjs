@@ -65,6 +65,17 @@ function firstExists(dir, names) {
 
 const out = { characters: [], environments: [] };
 
+// LOD 质量/算法溯源数据（由 assets/environment/_tools/audit_lod_quality.py 生成）。
+// 缺文件不阻塞 —— 页面只是少个标记，数据仍能正常索引。
+const LOD_QUALITY_PATH = path.join(ASSETS, '_data/lod-quality.json');
+const LOD_QUALITY = fs.existsSync(LOD_QUALITY_PATH)
+  ? JSON.parse(fs.readFileSync(LOD_QUALITY_PATH, 'utf8'))
+  : { environments: {} };
+if (!fs.existsSync(LOD_QUALITY_PATH)) {
+  console.warn('[warn] _data/lod-quality.json 不存在 → 环境 LOD 不显示算法标记'
+    + '（生成：python assets/environment/_tools/audit_lod_quality.py）');
+}
+
 // ---------------- 角色 ----------------
 const roster = JSON.parse(fs.readFileSync(path.join(ASSETS, 'characters/roster.json'), 'utf8'));
 // 🔴 数组顺序即浏览器页展示顺序：主人公排最前。
@@ -156,9 +167,12 @@ for (const e of props.entries) {
     return { label, file, tris: inf?.tris ?? e.tris, verts: inf?.verts ?? null,
              bytes: inf?.bytes ?? (fs.existsSync(abs) ? fs.statSync(abs).size : null) };
   };
+  const metaPath = path.join(dir, 'tex2', `${e.id}_baked.glb.meta.json`);
+  const build = fs.existsSync(metaPath)
+    ? JSON.parse(fs.readFileSync(metaPath, 'utf8')).userData?.lodBuildResult : null;
   if (raw) lods.push(mkE('LOD0 · 高模(raw ~50万面)', raw, path.join(dir, `${e.id}.glb`)));
-  // 🔴 tex2（原贴图转移版）优先于 tex（顶点色烘焙版）优先于顶点色 OBJ：
-  // tex2 = raw 混元原贴图经三维空间对应转移到低模 UV（真色）；tex = 顶点色放大（旧法，弃用）。
+  if (raw && build) lods[0].placementMatrix = build.sourcePlacementMatrix;
+  // Prefer the authored, UV-preserving GLBs; retain fallback for legacy assets.
   const tex2 = fs.existsSync(path.join(dir, 'tex2'))
     ? fs.readdirSync(path.join(dir, 'tex2')).filter((f) => f.endsWith('_baked.glb')) : [];
   const texGlbs = fs.existsSync(path.join(dir, 'tex'))
@@ -168,22 +182,36 @@ for (const e of props.entries) {
   } else if (texGlbs.length) {
     lods.push(mkE('LOD1 · 低模+贴图', `${base}/tex/${texGlbs[0]}`, path.join(dir, 'tex', texGlbs[0])));
   }
-  if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
+  const lod2 = `${e.id}_lod2.glb`;
+  if (fs.existsSync(path.join(dir, 'tex2', lod2))) {
+    lods.push(mkE('LOD2 · 远景低模+原贴图', `${base}/tex2/${lod2}`, path.join(dir, 'tex2', lod2)));
+  } else if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
+
+  // Provenance and measured stats are owned by audit_lod_quality.py.
+  const lq = LOD_QUALITY.environments?.[e.id] ?? null;
+  const lod1Alg = lq?.alg ?? null;
+  const lod1Colorful = lq?.colorful ?? null;
 
   out.environments.push({
     id: e.id, name: e.name, en: e.en ?? '', kind: e.kind,
-    act: e.act ? actName[e.act] ?? `Act${e.act}` : '通用',
+    act: e.acts?.length === 1 ? actName[e.acts[0]] : '通用',
     footprint: e.footprint, tris: e.tris,
     cover: e.cover ?? '', blocksSight: e.blocksSight, blocksMove: e.blocksMove,
     destructible: e.destructible ?? null,
     silhouette: e.silhouette ?? '', look: e.look ?? '', accent: e.accent ?? '',
     placement: e.placement ?? '',
     img, preview, lods,
+    lod1Alg,
+    lod1Colorful,                       // LOD1 贴图彩色占比实测值（浏览器端可复核）
+    lod2Alg: lq?.lod2?.alg ?? null,
+    placementReady: build?.levels?.length === 2 && build.levels.every((level) =>
+      level.failures?.length === 0 && level.visualReview?.status === 'reviewed'),
     animations: [], joints: 0,
   });
 }
 
 const outDir = path.join(ASSETS, '_data');
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, 'asset-manifest.json'), JSON.stringify(out, null, 1), 'utf8');
+fs.writeFileSync(path.join(outDir, 'asset-manifest.json.pending'), JSON.stringify(out, null, 1), 'utf8');
+fs.renameSync(path.join(outDir, 'asset-manifest.json.pending'), path.join(outDir, 'asset-manifest.json'));
 console.log(`manifest: ${out.characters.length} 角色 / ${out.environments.length} 环境 → assets/_data/asset-manifest.json`);

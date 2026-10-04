@@ -10,7 +10,8 @@ const files = import.meta.glob('/aether.project.json', { eager: true, import: 'd
 describe('scene workspace', () => {
   it('discovers project scenes and identifies the project start without hiding editor-only entries', () => {
     const list = sceneChoices(files['/aether.project.json']);
-    expect(list).toHaveLength(8);
+    expect(list).toHaveLength(9);
+    expect(list.some(s => s.path === 'assets/scenes/sandbox/environment-lod-validation.scene.json')).toBe(true);
     expect(list.find(s => s.start)?.path).toBe('assets/scenes/act1/floor-1.scene.json');
     expect(() => sceneChoices({ scenes: [] })).toThrow();
   });

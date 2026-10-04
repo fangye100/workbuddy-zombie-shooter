@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_gbprqqjs",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-42_lod2.glb"
+  },
+  "sourceHash": "sha256:edb06263ab93945556bc7435b42ca97fb1575494308731791a0a972eafd9094c",
+  "updatedAt": "2026-10-04T11:05:18.453Z"
+}

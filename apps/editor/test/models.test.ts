@@ -4,6 +4,7 @@ import {
   normalizeMeshHeight,
   assetServer,
   resolveModelHeightM,
+  resolveAssetImportHeightM,
 } from '../src/models';
 import { ROSTER_CHARACTERS, requireCharacter } from '@aether/content';
 import { createDefaultAssetMeta, newAssetGuid } from '@aether/scene';
@@ -124,6 +125,26 @@ describe('resolveModelHeightM · .meta 接线', () => {
     await resolveModelHeightM(B02);
 
     expect(seen).toEqual([`/__fs/file?path=${encodeURIComponent(`${B02.slice(1)}.meta.json`)}`]);
+  });
+
+  it('资产库保留环境的米制尺寸，角色仍使用自己的身高', async () => {
+    const meta = createDefaultAssetMeta(newAssetGuid(), 'gltf');
+    if (meta.importer) meta.importer.normalizeHeightM = null;
+    stubFetch(() => ({ status: 200, body: JSON.stringify(meta) }));
+    assetServer.clearCache();
+    await expect(resolveAssetImportHeightM('environment.glb')).resolves.toBeNull();
+    if (meta.importer) meta.importer.normalizeHeightM = 4;
+    assetServer.clearCache();
+    await expect(resolveAssetImportHeightM('character.glb')).resolves.toBe(4);
+  });
+
+  it('资产库缺失或损坏的 sidecar 保留旧标尺降级', async () => {
+    stubFetch(() => ({ status: 404 }));
+    assetServer.clearCache();
+    await expect(resolveAssetImportHeightM('missing.glb')).resolves.toBe(MODEL_RULER_HEIGHT_M);
+    stubFetch(() => ({ status: 200, body: '{broken' }));
+    assetServer.clearCache();
+    await expect(resolveAssetImportHeightM('broken.glb')).resolves.toBe(MODEL_RULER_HEIGHT_M);
   });
 
   afterEach(() => {

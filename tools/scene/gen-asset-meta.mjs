@@ -25,7 +25,7 @@
  * 归属：S0c。schema 真源 `packages/scene/src/asset-meta.ts`。
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -249,7 +249,10 @@ function main() {
     }
 
     // 显式 LF：Windows 下 Python 会偷偷转 CRLF（本项目踩过），Node 不会，但显式确认更安全
-    writeFileSync(metaPath, nextText.replace(/\r\n/g, '\n'), 'utf8');
+    // Atomic replacement also avoids truncating files currently read by the asset server.
+    const pendingPath = `${metaPath}.pending`;
+    writeFileSync(pendingPath, nextText.replace(/\r\n/g, '\n'), 'utf8');
+    renameSync(pendingPath, metaPath);
     if (existed) updated++;
     else created++;
   }
