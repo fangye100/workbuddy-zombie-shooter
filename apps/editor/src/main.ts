@@ -292,6 +292,8 @@ async function boot(): Promise<void> {
       const cached = actorLib.buildPalette();
       if (cached !== null) renderer.setDynamicPalette(cached);
       kickActorPreload();
+    } else {
+      editorMenu.message(`${t('无法启动')}：${playCtl.error ?? t('场景装载失败')}`);
     }
     return ok;
   }
@@ -3666,7 +3668,7 @@ async function boot(): Promise<void> {
         const next = await nextPlayableScene(source.url, doc.act);
         if (!next) { editorMenu.message('全部楼层已完成！可以再来一局或返回编辑。'); return; }
         const url = new URL(sceneUrl(window.location.href, next.path)); url.searchParams.set('play', '1');
-        window.location.assign(url.href);
+        editorMenu.navigate(url.href);
       } catch (e) { editorMenu.message(`下一层读取失败：${String(e)}`); }
     },
   });

@@ -15,8 +15,8 @@
       "groundIntensity": 0.3
     },
     "fog": {
-      "color": "#14100c",
-      "density": 0.015,
+      "color": "#303731",
+      "density": 0.004,
       "heightFalloff": 0.08
     },
     "rim": {
@@ -2922,7 +2922,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.562Z",
-    "updatedAt": "2026-10-03T19:50:28.220Z",
+    "updatedAt": "2026-10-04T01:24:27.589Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

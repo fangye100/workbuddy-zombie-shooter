@@ -1,57 +1,84 @@
-# 场景工作区与关卡体验改进（待可见验收）
+# Scene workspace and gameplay refinement — acceptance record
 
-## 基线与范围
+## Verdict (2026-10-04)
 
-基于远端 `origin/main` 的 `5aade8f`，在独立分支 `codex/scene-game-refine` 开发。原工作区及角色资产处理均未改动。设计依据为 `docs/13-玩法与关卡设计GDD.md`、本地环境概念图 S-01/P-11 和 `assets/environment/props.json`。
+**The scene workspace workflow passed the scoped functional acceptance below. The requested comprehensive game-quality refinement has NOT passed acceptance. PR #22 remains a draft and must not be represented as a finished game or merged on the strength of unit tests alone.**
 
-基线确实通过项目 `startIndex` 自动加载第一层，顶部仅有 Skeleton 菜单，缺少项目场景选择入口。运行时已有移动、射击、波次和胜负状态，但事件房的 interact 与精英房的 elite-dead 未实现，三层关卡无法按作者设定完成。材质 override 已有存储契约，却未完整应用到编辑器渲染槽。
+The branch is `codex/scene-game-refine`, based on `origin/main` at `5aade8f`. The original checkout and the ongoing character asset work were preserved. This work owns scene authoring, scene persistence, runtime room-completion semantics and their editor presentation; it does not own character asset production.
 
-腾讯设计页尚未读取：浏览器控制未发现用户 Chrome，打开请求超时。不能据此宣称与在线设计一致。
+Design sources actually inspected: `docs/13-玩法与关卡设计GDD.md`, local environment concept references S-01/P-11, `assets/environment/props.json`, and the authenticated Ardot file https://ardot.tencent.com/file/720788949675822?node_id=0%3A1 in the user's Chrome profile. Its nine boards cover the main menu, battle HUD, three-choice upgrades, supply store, settlement, elite encounter, low-health swarm, ultimate skill and wave loot. The earlier Chrome/service access limitation is resolved and is not a current blocker.
 
-## 本次实现与责任
+## Implementation and data ownership
 
-| 责任 | 实现 |
+| Owner | Delivered behavior |
 | --- | --- |
-| EditorMenu / scene-workspace | 文件、编辑、场景、渲染、资产、运行、视图菜单；项目场景搜索、打开、新建、另存为、重载、保存与脏状态提示；URL 显式选场景，默认仍服从项目 startIndex |
-| devfs / create-scene | 校验新文档，限制场景路径，拒绝覆盖和重复 ID，持项目写锁登记 scenes；不改变 startIndex |
-| SpawnEditStore / AuthorSceneSaver | 复用原作者状态、撤销重做、CAS 保存；增加环境光、半球光、雾、轮廓光和曝光的持久化，保留未暴露字段 |
-| scene schema / migration | v6 增加房间 clearTarget 稳定 NodeId 与可选 MeshRenderer.editorOnly；v5 迁移明确补 null，不猜精英目标；目标须指向本房间刷怪点 |
-| RuntimeSession / PlaySession | 空间范围内显式事件交互；指定精英死亡清场；重复交互拒绝、重开复位；三层作者关卡可达到 floor-clear |
-| GameHud | 生命、时间、敌人数、房间进度、目标、交互、失败重试和下一层；HUD 仅读取 runtime，动作返回 PlaySession |
-| Renderer / scene-material / scene-light | 消费嵌套材质 override，稳定 primitive 匹配优先于下标；不修改共享材质；主光方向来自场景世界旋转 |
-| 场景生成器 / 作者场景 | 灰蓝道路、暖色事件区域、路缘与道路标线、材质粗糙度和描边、侧向主光；显式资产 guid；编辑标柱在 Play 隐藏，Stop 恢复 |
+| EditorMenu / scene-workspace | File, Edit, Scene, Rendering, Asset, Run and View menus; searchable project scene picker; create, duplicate, reload and save; explicit URL selection with project startIndex as default |
+| devfs / create-scene | Validate scene documents and paths, reject overwrite/duplicate IDs, register new files in project scenes under a write lock |
+| SpawnEditStore / AuthorSceneSaver | Existing author command history and CAS persistence; environment lighting, fog, rim and exposure edits serialize without overwriting unrelated fields |
+| Scene schema / migration | v6 clearTarget uses a stable NodeId, constrained to this room's SpawnPoint; editorOnly mesh markers; v5 migration adds null rather than guessing a target |
+| RuntimeSession / PlaySession | Spatial event interaction and designated elite death completion; common interaction eligibility for commands and HUD; terminal state and reset |
+| GameHud | Health, enemies, room progress, objectives, interaction, defeat/retry, next floor and final-floor completion feedback |
+| Scene material / light resolution | Nested material overrides; stable primitive matching; missing instance fallback to its declared base with diagnostics; world-rotation-derived directional light |
+| Scene generator / authored floors | Road edges and markings, differentiated room surfaces, serialized material treatment and lights, editor-only marker visibility |
 
-新增场景使用已有合法空场景模板；空场景没有玩家出生点时，Play 明确拒绝。新建时文件先以 `wx` 写入，再更新项目清单；普通更新失败会回滚新文件，但这不是跨进程崩溃的多文件原子事务。崩溃后仍可能留下未登记文件，应显式检查、恢复登记，不能静默覆盖。
+Scene creation uses exclusive file creation followed by project registration. Ordinary registration failure rolls back the new file. This is not a crash-atomic multi-file transaction; an interrupted process may leave an unregistered file requiring explicit recovery. Character files were not modified.
 
-## 已执行验证
+## Headed acceptance and repairs
 
-- TypeScript 类型检查通过。
-- 相关场景、运行时和编辑器测试：31 个测试文件、602 项通过；随后新增的精英目标归属与编辑标记回滚验证所在两文件共 51 项通过。
-- `node tools/verify/scene-create.mjs`：创建登记、禁止覆盖、路径越界拒绝、并发重复 ID 冲突通过；测试仅写隔离临时目录。
-- `pnpm run scene:check`：105 个资产元数据同步，8 个场景已为 v6，12 项场景文件检查通过。
-- `pnpm run editor:build` 通过；保留 Vite 现有大 chunk 提示。
-- 原工作区可见基线已通过 HTTPS 打开，HUD 显示 NVIDIA Lovelace。该证据仅证明原版使用真实 GPU，**不属于本次新版视觉验收**。
+Tests ran against this worktree on the fixed HTTPS port 5100, temporarily replacing the original Vite service with authorization. Chrome's real rendering diagnostic reported **nvidia lovelace**. Foreground observation reached 59–60 FPS; background throttling was not used as performance evidence. This was not headless/SwiftShader validation.
 
-运行时三层通关测试直接施加伤害来验证清场状态机，不能替代玩家操作与难度平衡测试。
+| Check | Actual result |
+| --- | --- |
+| Project picker and creation | UI created a duplicate and an empty scene; actual files and project entries matched their new stable IDs; opening selected the requested document |
+| Edit/save/reload | Ambient intensity changed via UI, Undo and Redo restored expected values, Save wrote the file, Reload retained the saved value |
+| Dirty navigation | Added explicit Save and Continue / Discard and Continue / Cancel dialog after native-only protection proved insufficient; all three routes exercised |
+| Failed save while leaving | Controlled external disk change caused a CAS conflict; Save and Continue stayed on the original dirty scene with an error, without overwriting external content; exact authored file restored after the probe |
+| Empty scene Play | Play correctly rejected missing playerStart/NavZone; fixed the previously invisible error so the editor displays the cause |
+| Chinese / English and layout | New menus/dialogs translated in English; checked 1000×720 layout, persistent status and toolbar overflow; restored Chinese and temporary viewport overrides |
+| Play / pause / step / Stop | Editor helper markers hidden in Play and restored on Stop; pause held simulation, one Step advanced exactly one tick; author camera restored |
+| Real gameplay input path | Keyboard-event movement and J shooting produced player movement, damage and kill events; defeat and UI retry reset the player. This does not establish a full normal-input playthrough or balanced difficulty |
+| Floor progression, controlled probe | Direct runtime positioning/damage intentionally isolated room-completion integration from combat skill: floor 1 → floor 2 → floor 3 UI navigation worked, elite target death completed a room with escorts alive, last floor displayed campaign completion without another scene |
+| Resource disposal | Final Stop ledger: registered 3, disposed 3, pending 0 |
+| Browser errors | No captured warning/error console entries in the final checked editor tab |
 
-## 尚待完成的验收与设计工作
+The controlled terminal probes are **not** player-playthrough evidence. The new explicit navigation guard also protects next-floor navigation. Reduced excessive authored fog improves overview readability; it is not proof of artistic parity.
 
-新版服务需要占用项目固定 5100 端口，目前该端口属于原工作区。已询问是否允许临时切换并在验收后恢复，尚未获答复，因此未重启服务、未另开端口。
+Two test-only scenes and their project entries were removed after preserving evidence. The project file was restored byte-for-byte after verifying that no other change would be lost. The conflict probe restored its exact source backup. No test-only scene is committed.
 
-获准后应在 headed、真实 GPU 下逐项验证：菜单开合和窄屏布局；场景搜索切换；未保存离开与取消；新建及另存为登记；编辑/保存/刷新一致性；环境撤销重做；Play 编辑标记隐藏与 Stop 恢复；真实移动射击、事件交互、精英击杀、失败重试、三层跳转；记录 GPU、截图和控制台错误。
+Local evidence is retained under `.workbuddy/tmp/acceptance-20261004/`: `editor-overview.png`, `play-combat.png`, `save-conflict-preserves-edit.png`, `menus-1000-en.png`, `menus-1000-final.png`, `floor3-terminal-controlled.png`, `ardot-design-board.png`, and the two temporary scene documents. These are local diagnostic artifacts, not a claim that a normal playthrough passed.
 
-连接用户已登录的 Chrome 后，继续阅读腾讯在线概念设计，对照场景构图、角色尺度、光照与材质。当前没有宣称完成视觉对齐或 Shader 质量验收。
+## Automated verification
 
-GDD 的完整掉落与货币循环、天赋和商店选择、可交互事件内容、专属 Boss/危险区机制及 5–8 分钟节奏平衡尚未实现。本次事件动作只完成房间通关语义；下一层通过场景重载进入，不携带跨层成长状态。原有结构编辑与任意材质面板参数也未全部纳入保存白名单；本次新增可保存范围仅为已列明环境字段。这些限制必须随交付公开，不能把本分支视为“全面提升已完成”。
+After test-scene cleanup and behavior fixes:
 
+- `pnpm run typecheck`: passed.
+- Six targeted suites (scene workspace, game HUD, author scene save, Play controller, runtime room actions and spawn editing): **70 tests passed**.
+- `pnpm run scene:check`: **105 asset metadata records synchronized, eight scenes at schema v6, 12 scene-file tests passed**.
+- `pnpm run editor:build`: passed; existing Vite CJS deprecation and >500 kB chunk warnings remain.
+- `git diff --check`: passed.
 
-## Copilot review follow-up (2026-10-04)
+Earlier implementation verification included 602 targeted tests across 31 files and the isolated scene-creation verifier (registration, overwrite/path rejection and duplicate-ID concurrency). The later Copilot-fix verification passed 74 tests across six affected suites. These earlier runs are historical evidence, not freshly rerun totals for this acceptance patch.
 
-All four findings from review 5403675361 were confirmed against the reviewed commit and addressed:
+## Copilot review adjudication
 
-- 4175606600: `RuntimeSession.interactionTarget()` is the read-only eligibility source for both the interaction command and HUD prompts/buttons. The regression covers an untriggered room, live combat enemies, successful interaction, repeat rejection, reset and player death.
-- 4175606628: material resolution checks loaded instance definitions explicitly. Missing instances fall back to their serialized base with a diagnostic, including bindings wrapped in overrides. Tests also preserve loaded instance state and shared material isolation.
-- 4175606644: elite checks read the entity table and source slots directly. The regression forbids `view()` while an active elite room runs and clears with surviving escorts.
-- 4175606660: dynamic menu/dialog labels, placeholders, accessible names and local status messages use the established translation path and English dictionary entries. Authored scene names and paths remain unchanged.
+The review snapshot is review `5403675361` on `d86322fb00c4854cd348da598a1a11321dfbc23c`, submitted 2026-10-04 00:57:50 UTC. Its overview explicitly reports **Balanced** effort. The review had settled before the latest snapshot, with no requested reviewers and no additional issue comments. These findings were fixed in `f680baf`; no approval on the latest head is claimed and no redundant review request was sent.
 
-Validation: 74 tests across the six affected runtime/editor suites passed, TypeScript passed, editor production build passed, and all 77 literal menu/dialog translation calls resolved without Chinese fallback in English mode. Existing Vite chunk-size warning remains. No assets or scene documents changed in this follow-up. Headed UI/GPU acceptance and the previously documented design work remain outstanding. These are implementation fixes, not a claim of Copilot approval; review threads have not been marked resolved.
+| Comment | Finding | Decision | Evidence / fix |
+| --- | --- | --- | --- |
+| 4175606600 | HUD advertises ineligible interaction | Accepted | Runtime interactionTarget is shared by command and HUD; regression includes untriggered/live-enemy/repeat/reset/dead-player cases |
+| 4175606628 | Serialized instance base ignored | Accepted | Missing instance falls back to declared base with warning, including nested overrides; loaded instances and shared state remain intact |
+| 4175606644 | Elite check allocates full views each tick | Accepted | Entity table/source slots scanned directly; regression forbids view() while active and during elite death with surviving escorts |
+| 4175606660 | New menus bypass localization | Accepted | Menu/dialog strings use t() and English dictionary; English-mode browser check confirmed new labels |
+
+The installed `C:/Users/fangy/.codex/skills/pr-bot-review/SKILL.md` was located and read during acceptance. Its workflow is used for the existing PR; earlier statements that the skill was unavailable are superseded.
+
+## Failed / outstanding product acceptance
+
+The following are required by the original brief and remain unfinished; they are not waived merely because the editor checks passed:
+
+1. **Visual design parity fails:** authored rooms remain sparse separated road planes and props, substantially unlike the dense illustrated urban environment in the local and online references. Final scene composition, material/shader quality, lighting and existing-character presentation need further implementation and comparison.
+2. **Core game loop is incomplete:** loot/currency, meaningful build choices within the opening 90 seconds, store/altar interactions, cross-floor progression, dedicated Boss/danger mechanics and settlement are missing. The event action currently completes room semantics only.
+3. **Normal player acceptance is incomplete:** automated keyboard-path checks demonstrated movement/combat/retry, but did not establish a complete three-floor normal-input run or the GDD's 5–8 minute pacing. Controlled runtime damage cannot substitute for it.
+4. **Authoring coverage remains bounded:** arbitrary structural edits and all material-panel parameters are not yet covered by the author save whitelist. The new supported persistence scope is the documented environment fields plus existing transforms/spawn edits.
+
+No character asset production should be taken over to address these gaps. The current PR is an incremental implementation under review, not delivery of the full requested quality target. It stays draft pending completion and acceptance of the outstanding scope.

@@ -49,7 +49,7 @@ const THEMES = {
     env: {
       ambient: { color: '#4a2a12', intensity: 0.5 },
       hemisphere: { sky: '#d98f4f', skyIntensity: 0.55, ground: '#3a1a08', groundIntensity: 0.35 },
-      fog: { color: '#2a1206', density: 0.02, heightFalloff: 0.1 },
+      fog: { color: '#3b3030', density: 0.004, heightFalloff: 0.1 },
       rim: { color: '#ffb066', intensity: 0.7, power: 2.5, topBias: 0.35 },
       exposure: 1.05,
     },
@@ -59,7 +59,7 @@ const THEMES = {
     env: {
       ambient: { color: '#3a3428', intensity: 0.5 },
       hemisphere: { sky: '#9aa88c', skyIntensity: 0.55, ground: '#2a2418', groundIntensity: 0.3 },
-      fog: { color: '#14100c', density: 0.015, heightFalloff: 0.08 },
+      fog: { color: '#303731', density: 0.004, heightFalloff: 0.08 },
       rim: { color: '#d8e0c0', intensity: 0.5, power: 2.5, topBias: 0.35 },
       exposure: 1.0,
     },
@@ -79,7 +79,7 @@ const THEMES = {
     env: {
       ambient: { color: '#1a1f2a', intensity: 0.3 },
       hemisphere: { sky: '#4a5a72', skyIntensity: 0.32, ground: '#14161c', groundIntensity: 0.2 },
-      fog: { color: '#05070a', density: 0.035, heightFalloff: 0.12 },
+      fog: { color: '#161d2b', density: 0.006, heightFalloff: 0.12 },
       rim: { color: '#9fb4d9', intensity: 0.45, power: 2.8, topBias: 0.4 },
       exposure: 0.85,
     },

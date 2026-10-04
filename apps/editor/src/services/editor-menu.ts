@@ -18,6 +18,7 @@ export class EditorMenu {
   private readonly status: HTMLElement;
   private readonly sceneLabel: HTMLButtonElement;
   private readonly dialog = document.createElement('dialog');
+  private leaving = false;
   constructor(private readonly actions: EditorMenuActions) {
     const host = document.querySelector<HTMLElement>('.tb-menus')!;
     const groups: [string, [string, () => void][]][] = [
@@ -63,7 +64,7 @@ export class EditorMenu {
     this.status = document.createElement('span'); this.status.className = 'scene-status'; this.status.setAttribute('role', 'status');
     document.getElementById('topbar')!.append(this.sceneLabel, this.status);
     this.dialog.className = 'scene-browser'; document.body.append(this.dialog);
-    window.addEventListener('beforeunload', e => { if (actions.dirty()) { e.preventDefault(); e.returnValue = ''; } });
+    window.addEventListener('beforeunload', e => { if (!this.leaving && actions.dirty()) { e.preventDefault(); e.returnValue = ''; } });
     this.refresh();
   }
   refresh(): void {
@@ -106,9 +107,32 @@ export class EditorMenu {
     if (this.actions.playing()) { this.message(t('请先停止运行，再切换场景')); return; }
     try {
       await checkScene(path);
-      // Browser beforeunload is the single discard confirmation; cancelling leaves everything intact.
-      window.location.assign(sceneUrl(window.location.href, path));
+      this.navigate(sceneUrl(window.location.href, path));
     } catch (e) { this.message(String(e)); }
+  }
+  /** In-app navigation has an explicit save/discard decision; beforeunload guards external exits. */
+  navigate(url: string): void {
+    const leave = (): void => { this.leaving = true; window.location.assign(url); };
+    if (!this.actions.dirty()) { leave(); return; }
+    this.dialog.replaceChildren();
+    const title = document.createElement('h2'); title.textContent = t('当前场景有未保存修改');
+    const hint = document.createElement('p'); hint.textContent = t('保存后继续，或明确放弃修改。取消将保留当前场景。');
+    const save = document.createElement('button'); save.textContent = t('保存并继续');
+    const discard = document.createElement('button'); discard.textContent = t('放弃修改并继续');
+    const cancel = document.createElement('button'); cancel.textContent = t('取消');
+    cancel.onclick = () => this.dialog.close();
+    discard.onclick = leave;
+    save.onclick = async () => {
+      save.disabled = true; discard.disabled = true; cancel.disabled = true;
+      try {
+        await this.actions.save();
+        if (!this.actions.dirty()) leave();
+        else hint.textContent = t('保存未完成，当前场景已保留。');
+      } catch (e) { hint.textContent = `${t('保存未完成，当前场景已保留。')} ${String(e)}`; }
+      finally { save.disabled = false; discard.disabled = false; cancel.disabled = false; }
+    };
+    this.dialog.append(title, hint, save, discard, cancel);
+    if (!this.dialog.open) this.dialog.showModal(); cancel.focus();
   }
   async openScenes(): Promise<void> {
     this.dialog.replaceChildren();

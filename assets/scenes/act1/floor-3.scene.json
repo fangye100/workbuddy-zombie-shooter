@@ -15,8 +15,8 @@
       "groundIntensity": 0.2
     },
     "fog": {
-      "color": "#05070a",
-      "density": 0.035,
+      "color": "#161d2b",
+      "density": 0.006,
       "heightFalloff": 0.12
     },
     "rim": {
@@ -2384,7 +2384,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.596Z",
-    "updatedAt": "2026-10-03T19:50:28.231Z",
+    "updatedAt": "2026-10-04T01:24:27.603Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

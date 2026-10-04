@@ -1268,6 +1268,7 @@
   .scene-current { margin-left: auto; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #28342a; border: 1px solid #55604d; border-radius: 5px; color: #dbebc8; padding: 5px 10px; cursor: pointer; }
   .scene-status { font-size: 11px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #a6b5a9; }
   .scene-browser { width: min(720px, 90vw); max-height: 85vh; background: #171e1a; color: #edf1eb; border: 1px solid #5f705b; border-radius: 12px; padding: 24px; }
+  .scene-browser > button { margin: 12px 8px 0 0; padding: 10px 16px; border-radius: 5px; border: 1px solid #7e945f; background: #33432a; color: #f0f3e9; cursor: pointer; }
   .scene-browser::backdrop { background: #000a; }
   .scene-browser h2 { margin: 0 0 8px; } .scene-browser p { color: #abb9ad; }
   .scene-browser input { box-sizing: border-box; width: 100%; padding: 12px; background: #0e1410; color: #fff; border: 1px solid #52624c; border-radius: 5px; }
@@ -1277,7 +1278,7 @@
   .scene-choice small { grid-row: 2; grid-column: 1 / -1; overflow-wrap: anywhere; color: #a6b5a1; }
   .scene-choice span { font-size: 11px; color: #b4cd90; }
   #asset-dock[hidden] { display: none; }
-  @media(max-width: 1100px) { #topbar { flex-wrap: wrap; height: auto; min-height: 40px; flex-basis: auto; } .scene-status, #model-info { display: none; } .editor-menu summary { padding: 8px 6px; } }
+  @media(max-width: 1100px) { #topbar { flex-wrap: wrap; height: auto; min-height: 40px; flex-basis: auto; } #model-info { display: none; } .scene-status { display: block; flex-basis: 100%; max-width: 100%; padding: 0 8px 4px; } .editor-menu summary { padding: 8px 6px; } }
 
   .game-hud { position: absolute; top: 16px; left: 16px; z-index: 20; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); padding: 16px; border-left: 4px solid #b6db64; background: #111b17e8; color: #eef1dc; box-sizing: border-box; pointer-events: none; box-shadow: 4px 5px 0 #0008; }
   .game-hud[hidden], .game-hud [hidden] { display: none; }
@@ -1287,7 +1288,7 @@
   .game-hud button { pointer-events: auto; cursor: pointer; background: #b5d86b; color: #152012; border: 0; padding: 9px 14px; margin-right: 6px; border-radius: 3px; font-weight: 700; }
 
   #gizmo-bar { position: relative; top: auto; left: auto; right: auto; flex: 0 0 auto; width: 100%; overflow-x: auto; z-index: 21; background: #151d19; }
-  #gizmo-bar .gz-inner { border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
+  #gizmo-bar .gz-inner { flex: 0 0 auto; width: max-content; min-width: 100%; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
   #hud[hidden] { display: none; }
   #hud { top: 100px; max-width: min(540px, 70vw); }
 </style>

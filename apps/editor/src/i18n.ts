@@ -83,6 +83,12 @@ export function applyStaticI18n(root: ParentNode): void {
 // ================================================================ 词典（zh → en）
 
 const DICT: Record<string, string> = {
+  '当前场景有未保存修改': 'This scene has unsaved changes',
+  '保存后继续，或明确放弃修改。取消将保留当前场景。': 'Save before continuing, or discard your changes. Cancel keeps the current scene open.',
+  '保存并继续': 'Save and Continue',
+  '放弃修改并继续': 'Discard and Continue',
+  '保存未完成，当前场景已保留。': 'Save did not complete. The current scene remains open.',
+
   // ---- Scene workspace menus and dialogs ----
   "新建场景…": "New Scene…",
   "打开场景…  Ctrl+O": "Open Scene…  Ctrl+O",
