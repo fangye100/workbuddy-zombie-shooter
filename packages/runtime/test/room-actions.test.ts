@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
 import type { SceneDocument } from '@aether/scene';
@@ -42,4 +42,15 @@ describe('room actions', () => {
       expect(s.outcome).toBe('floor-clear');
     }
   });
+});
+
+
+it('elite checks do not materialize entity views while a populated room runs or clears', () => {
+  const s = make(2); enter(s, 'nd_f2r2');
+  const target = s.view().find(e => e.sourceNodeId === 'nd_f2r2_sp0')!;
+  const view = vi.spyOn(s, 'view').mockImplementation(() => { throw new Error('hot-path entity allocation'); });
+  s.run(5); expect(s.clearedRooms()).not.toContain('nd_f2r2');
+  s.applyDamage(target.id, target.maxHp); s.step();
+  expect(s.clearedRooms()).toContain('nd_f2r2'); expect(s.countNpc()).toBeGreaterThan(0);
+  expect(view).not.toHaveBeenCalled(); view.mockRestore();
 });

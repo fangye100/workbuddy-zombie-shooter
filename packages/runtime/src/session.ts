@@ -304,16 +304,23 @@ export class RuntimeSession {
   private readonly triggered = new Set<NodeId>();
   private readonly interactedRooms = new Set<NodeId>();
 
-  /** Explicit player action, accepted only inside an entered, peaceful interaction room. */
-  interact(): boolean {
-    if (this.outcomeState !== 'running') return false;
+  /** Read-only eligibility shared by the HUD and the interaction command. */
+  interactionTarget(): NodeId | null {
+    if (this.outcomeState !== 'running') return null;
     const player = this.player();
-    if (!player || player.hp <= 0) return false;
+    if (!player || player.hp <= 0) return null;
     const room = this.desc.rooms.find(r => r.enabled && r.clearRule === 'interact'
       && player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ);
     if (!room || !this.triggered.has(room.nodeId) || this.interactedRooms.has(room.nodeId)
-      || this.roomAliveEnemies(room.nodeId) > 0) return false;
-    this.interactedRooms.add(room.nodeId);
+      || this.roomAliveEnemies(room.nodeId) > 0) return null;
+    return room.nodeId;
+  }
+
+  /** Explicit player action, accepted only when the read-only query permits it. */
+  interact(): boolean {
+    const target = this.interactionTarget();
+    if (target === null) return false;
+    this.interactedRooms.add(target);
     this.updateWaves();
     return true;
   }
@@ -1051,8 +1058,8 @@ export class RuntimeSession {
     const target = this.desc.spawns.find(s => s.nodeId === room.clearTarget && s.roomNodeId === room.nodeId
       && s.enabled && s.count > 0 && s.trigger === 'room-enter');
     if (!target || Math.max(1, Math.trunc(target.wave)) >= state.nextWave) return false;
-    for (const entity of this.view()) {
-      if (entity.kind === 'npc' && entity.alive && entity.sourceNodeId === target.nodeId) return false;
+    for (let i = 0; i < this.table.capacity; i++) {
+      if (this.table.isAlive(i) && this.kindOf[i] === 1 && this.sourceOf[i] === target.nodeId) return false;
     }
     return true;
   }

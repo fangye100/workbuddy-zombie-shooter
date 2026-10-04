@@ -43,3 +43,15 @@
 连接用户已登录的 Chrome 后，继续阅读腾讯在线概念设计，对照场景构图、角色尺度、光照与材质。当前没有宣称完成视觉对齐或 Shader 质量验收。
 
 GDD 的完整掉落与货币循环、天赋和商店选择、可交互事件内容、专属 Boss/危险区机制及 5–8 分钟节奏平衡尚未实现。本次事件动作只完成房间通关语义；下一层通过场景重载进入，不携带跨层成长状态。原有结构编辑与任意材质面板参数也未全部纳入保存白名单；本次新增可保存范围仅为已列明环境字段。这些限制必须随交付公开，不能把本分支视为“全面提升已完成”。
+
+
+## Copilot review follow-up (2026-10-04)
+
+All four findings from review 5403675361 were confirmed against the reviewed commit and addressed:
+
+- 4175606600: `RuntimeSession.interactionTarget()` is the read-only eligibility source for both the interaction command and HUD prompts/buttons. The regression covers an untriggered room, live combat enemies, successful interaction, repeat rejection, reset and player death.
+- 4175606628: material resolution checks loaded instance definitions explicitly. Missing instances fall back to their serialized base with a diagnostic, including bindings wrapped in overrides. Tests also preserve loaded instance state and shared material isolation.
+- 4175606644: elite checks read the entity table and source slots directly. The regression forbids `view()` while an active elite room runs and clears with surviving escorts.
+- 4175606660: dynamic menu/dialog labels, placeholders, accessible names and local status messages use the established translation path and English dictionary entries. Authored scene names and paths remain unchanged.
+
+Validation: 74 tests across the six affected runtime/editor suites passed, TypeScript passed, editor production build passed, and all 77 literal menu/dialog translation calls resolved without Chinese fallback in English mode. Existing Vite chunk-size warning remains. No assets or scene documents changed in this follow-up. Headed UI/GPU acceptance and the previously documented design work remain outstanding. These are implementation fixes, not a claim of Copilot approval; review threads have not been marked resolved.

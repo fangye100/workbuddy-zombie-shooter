@@ -1135,7 +1135,8 @@ export class LabRenderer {
       object.subMeshes.forEach((slot, index) => {
         const ref = findSceneBinding(mesh.materials, slot, index);
         if (ref === null) return;
-        const resolved = resolveSceneMaterial(ref, id => this.state.library.resolve(this.state.params, id));
+        const resolved = resolveSceneMaterial(ref, id => this.state.library.resolve(this.state.params, id),
+          id => this.state.library.find(id)?.state ?? null);
         slot.materialId = resolved.id;
         slot.override = ref.type === 'override' ? resolved.state : null;
         warnings.push(...resolved.warnings.map(w => `${object.name}：${w}`));

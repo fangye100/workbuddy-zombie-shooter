@@ -4,6 +4,7 @@ import { createEmptySceneDocument, migrateToLatest } from '@aether/scene';
 import { findSceneBinding, resolveSceneMaterial } from '../src/services/scene-material';
 import { lightAngles } from '../src/services/scene-light';
 import { defaultParams } from '../src/params';
+import { MaterialLibrary, slotState } from '../src/materials';
 
 const files = import.meta.glob('/aether.project.json', { eager: true, import: 'default' });
 describe('scene workspace', () => {
@@ -51,4 +52,26 @@ it('directional light rotation supplies the shader direction including parent wo
   expect(lightAngles([0, 0, 0, 1]).elevation).toBeCloseTo(90);
   const angles = lightAngles([Math.SQRT1_2, 0, 0, Math.SQRT1_2]);
   expect(angles.elevation).toBeCloseTo(0); expect(angles.azimuth).toBeCloseTo(0);
+});
+
+
+it('restores missing serialized instances from their declared base, including outer overrides', () => {
+  const params = defaultParams(); const lib = new MaterialLibrary();
+  const ref = { type: 'instance' as const, id: 'i42', base: 's3' };
+  const resolve = (binding: Parameters<typeof resolveSceneMaterial>[0]) => resolveSceneMaterial(
+    binding, id => lib.resolve(params, id), id => lib.find(id)?.state ?? null);
+  const direct = resolve(ref);
+  expect(direct.id).toBe('s3'); expect(direct.state).toEqual(params.materials[3]);
+  expect(direct.warnings.join(' ')).toContain('i42');
+  expect(direct.warnings.join(' ')).toContain('s3');
+  expect(slotState({ materialId: direct.id, override: null }, lib, params)).toBe(params.materials[3]);
+  const patched = resolve({ type: 'override', base: ref, patch: { roughness: 0.27 } });
+  expect(patched.state).toEqual({ ...params.materials[3], roughness: 0.27 });
+  expect(patched.warnings).toEqual(direct.warnings);
+  expect(params.materials[3]!.roughness).not.toBe(0.27);
+
+  const id = lib.createInstance({ ...params.materials[3]!, albedo: '#123456' }, 's3', 'test');
+  const loaded = resolve({ type: 'instance', id, base: 's3' });
+  expect(loaded.id).toBe(id); expect(loaded.state.albedo).toBe('#123456');
+  expect(loaded.warnings).toEqual([]);
 });

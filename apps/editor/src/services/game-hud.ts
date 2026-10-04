@@ -6,6 +6,7 @@ export function gameHudModel(runtime: RuntimeSession) {
   const rooms = runtime.desc.rooms.filter(r => r.enabled);
   const current = player ? rooms.find(r => player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ) : undefined;
   const cleared = runtime.clearedRooms();
+  const canInteract = !!current && runtime.interactionTarget() === current.nodeId;
   const wave = [...runtime.sessionEvents].reverse().find(e => e.type === 'wave-start' && e.roomNodeId === current?.nodeId)?.wave;
   return {
     title: runtime.desc.sceneName,
@@ -13,10 +14,10 @@ export function gameHudModel(runtime: RuntimeSession) {
     time: Math.floor(runtime.tick * runtime.fixedStep), enemies: runtime.countNpc(),
     progress: `${cleared.length} / ${rooms.length}`,
     room: current?.name ?? '前往下一个房间',
-    objective: current?.clearRule === 'interact' && !cleared.includes(current.nodeId) ? '按 E 交互，完成事件房'
+    objective: canInteract ? '按 E 交互，完成事件房'
       : current && cleared.includes(current.nodeId) ? '房间已完成 · 沿道路继续前进'
       : current?.clearRule === 'elite-dead' ? '击败精英目标' : wave ? `第 ${wave} 波 · 消灭敌人` : '探索并清理房间',
-    canInteract: !!current && current.clearRule === 'interact' && !cleared.includes(current.nodeId),
+    canInteract,
     outcome: runtime.outcome,
   };
 }
