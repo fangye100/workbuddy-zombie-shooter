@@ -586,9 +586,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-01/tex2/P-01_baked.glb",
-     "tris": 171,
-     "verts": 199,
-     "bytes": 27828
+     "tris": 180,
+     "verts": 291,
+     "bytes": 2367336
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -598,8 +598,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.2344,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.4577,
    "animations": [],
    "joints": 0
   },
@@ -636,9 +636,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-02/tex2/P-02_baked.glb",
-     "tris": 233,
-     "verts": 241,
-     "bytes": 23888
+     "tris": 220,
+     "verts": 458,
+     "bytes": 2978176
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -648,8 +648,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.0544,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.178,
    "animations": [],
    "joints": 0
   },
@@ -788,7 +788,7 @@
      "file": "environment/models/P-05/tex2/P-05_baked.glb",
      "tris": 384,
      "verts": 606,
-     "bytes": 49084
+     "bytes": 49080
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -886,9 +886,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-11/tex2/P-11_baked.glb",
-     "tris": 697,
-     "verts": 833,
-     "bytes": 70048
+     "tris": 700,
+     "verts": 1387,
+     "bytes": 3081816
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -898,8 +898,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.3738,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.534,
    "animations": [],
    "joints": 0
   },
@@ -936,9 +936,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-12/tex2/P-12_baked.glb",
-     "tris": 877,
-     "verts": 1331,
-     "bytes": 87412
+     "tris": 900,
+     "verts": 1894,
+     "bytes": 2241636
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -948,8 +948,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.155,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.2012,
    "animations": [],
    "joints": 0
   },
@@ -1136,9 +1136,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-16/tex2/P-16_baked.glb",
-     "tris": 462,
-     "verts": 694,
-     "bytes": 54292
+     "tris": 450,
+     "verts": 996,
+     "bytes": 2241528
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -1148,8 +1148,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.1833,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.3247,
    "animations": [],
    "joints": 0
   },
@@ -1186,9 +1186,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-01/tex2/S-01_baked.glb",
-     "tris": 1790,
-     "verts": 1557,
-     "bytes": 77032
+     "tris": 1800,
+     "verts": 2439,
+     "bytes": 2207460
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -1198,8 +1198,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.0271,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.1479,
    "animations": [],
    "joints": 0
   },
@@ -1236,9 +1236,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-02/tex2/S-02_baked.glb",
-     "tris": 1903,
-     "verts": 2609,
-     "bytes": 118716
+     "tris": 2000,
+     "verts": 3316,
+     "bytes": 2431320
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -1248,8 +1248,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.0247,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.1148,
    "animations": [],
    "joints": 0
   },
@@ -2064,7 +2064,7 @@
     0.9,
     0.9
    ],
-   "tris": 500,
+   "tris": 1500,
    "cover": "low",
    "blocksSight": false,
    "blocksMove": true,
@@ -2086,14 +2086,14 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-41/tex2/P-41_baked.glb",
-     "tris": 520,
-     "verts": 1206,
-     "bytes": 2613496
+     "tris": 1500,
+     "verts": 2990,
+     "bytes": 2676468
     },
     {
      "label": "LOD2 · 低模(顶点色)",
      "file": "environment/models/P-41/P-41_low.obj",
-     "tris": 500,
+     "tris": 1500,
      "verts": null,
      "bytes": null
     }
@@ -2236,9 +2236,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/P-44/tex2/P-44_baked.glb",
-     "tris": 302,
-     "verts": 464,
-     "bytes": 28920
+     "tris": 300,
+     "verts": 568,
+     "bytes": 1551096
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -2248,8 +2248,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.0018,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.0193,
    "animations": [],
    "joints": 0
   },
@@ -2386,9 +2386,9 @@
     {
      "label": "LOD1 · 低模+原贴图",
      "file": "environment/models/S-07/tex2/S-07_baked.glb",
-     "tris": 1707,
-     "verts": 2165,
-     "bytes": 119596
+     "tris": 1800,
+     "verts": 2641,
+     "bytes": 2389448
     },
     {
      "label": "LOD2 · 低模(顶点色)",
@@ -2398,8 +2398,8 @@
      "bytes": null
     }
    ],
-   "lod1Alg": "transfer",
-   "lod1Colorful": 0.1929,
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.2951,
    "animations": [],
    "joints": 0
   },

@@ -35,9 +35,11 @@ __pycache__/
 # 资产回滚备份：原地保留（出问题可一条命令还原），但不入库。
 # pre-rebake = 贴图转移前的旧版；pre-uvkeep = 路线A重制前的旧版；v2-flower = 花脸中间版
 # pre-lodregen = 环境 LOD1 批量重做（env_transfer → 路线A）前的旧版
+# pre-bcf = 修baseColorFactor（trimesh 的 0.4 灰乘子）之前的旧版
 assets/**/*.pre-rebake.bak
 assets/**/*.pre-uvkeep.bak
 assets/**/*.pre-lodregen.bak
+assets/**/*.pre-bcf.bak
 assets/**/*.v2-flower.keep
 
 # Runtime project write lock and recoverable rename transaction journals

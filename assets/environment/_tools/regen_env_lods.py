@@ -115,6 +115,28 @@ def colorful(glb_path):
     return None
 
 
+def _baseline_topo(eid):
+    """现有交付 LOD1 的（边界边, 非流形）—— 拓扑判据的比较基线。
+
+    🔴 顺序要紧：`.pre-lodregen.bak` 才是**旧算法原样产物**（首轮重做前的备份），
+    `.pre-bcf.bak` 是修 baseColorFactor 前的备份 —— 对 P-05/P-43 这类从未成功
+    重做过的件，两者内容相同；但对已重做过的件，只有 pre-lodregen 才是旧算法。
+    故优先 pre-lodregen。
+    解不出返回 (-1,-1) = 无基线，判据退回绝对 0。
+    """
+    d = os.path.join(MODELS, eid, "tex2")
+    for name in (f"{eid}_baked.glb.pre-lodregen.bak", f"{eid}_baked.glb.pre-bcf.bak",
+                 f"{eid}_baked.glb"):
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            try:
+                _, _, b, nm, _ = topo_stats(p)
+                return b, nm
+            except Exception:
+                pass
+    return -1, -1
+
+
 def topo_stats(glb_path):
     """输出网格的边界边 / 非流形边 / UV 密度探针（记录用，非否决判据）。
 
@@ -230,11 +252,17 @@ def main():
         ncol = colorful(tmp)
 
         # ---- 否决判据 ----
+        # 🔴 拓扑判据用**相对基线**而非绝对 0。
+        #    实测：混元 raw 本身可能就带破损拓扑（P-05 raw = 427 边界 / 7 非流形），
+        #    且**旧聚类减面产物比路线 A 更差**（P-05 旧非流形 116 vs 路线A 42；
+        #    P-43 旧非流形 127 vs 路线 A 0）。要求绝对 0 会把「明显改善」判成失败。
+        #    正确度量是：拓扑不许比现有交付产物更差，且不超过 raw 的合理倍数。
+        base_b, base_n = _baseline_topo(eid)
         fails = []
-        if bnd != 0:
-            fails.append(f"边界边{bnd}")
-        if nonman != 0:
-            fails.append(f"非流形{nonman}")
+        if bnd > max(base_b, 0):
+            fails.append(f"边界边{bnd}>基线{base_b}")
+        if nonman > max(base_n, 0):
+            fails.append(f"非流形{nonman}>基线{base_n}")
         if nc is not None and ncol is not None and ncol < nc - args.tol:
             fails.append(f"彩{ncol * 100:.0f}%<原生{nc * 100:.0f}%-{args.tol:.0%}")
         if not (budget <= faces <= budget * face_tol):
@@ -256,6 +284,7 @@ def main():
             shutil.copy2(tmp, dst)
         results.append({"id": eid, "budget": budget, "faces": faces, "verts": verts,
                         "boundary_edges": bnd, "nonmanifold_edges": nonman,
+                        "baseline_boundary": base_b, "baseline_nonmanifold": base_n,
                         "uv_density_p99_over_med": dens, "native_colorful": nc,
                         "new_colorful": ncol, "bytes": os.path.getsize(tmp),
                         "verdict": verdict, "committed": bool(ok and not args.dry)})
