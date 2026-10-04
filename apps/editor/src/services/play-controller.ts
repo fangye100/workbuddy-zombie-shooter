@@ -31,8 +31,10 @@ import {
 } from './play-camera';
 import type { RuntimeBridge } from './runtime-bridge';
 import type { AuthorSnapshot, LabRenderer } from '../renderer';
+import type { PlayerPresentation } from './player-presentation';
 
 export interface PlayControllerOptions {
+  playerPresentation?: PlayerPresentation;
   seed?: number;
   capacity?: number;
   /**
@@ -63,9 +65,11 @@ export class PlayController {
   private readonly worldPosOf: WorldPosOf | null;
   private snap: AuthorSnapshot | null = null;
   private lastError: string | null = null;
+  private readonly playerPresentation: PlayerPresentation | null;
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
+    this.playerPresentation = opts.playerPresentation ?? null;
     this.bridge = bridge;
     this.onStateChange = opts.onStateChange ?? null;
     // 没传 viewCamera 就是"不接管相机"，此时控制器存在但 attach 恒为 false
@@ -129,6 +133,9 @@ export class PlayController {
       this.lastError = '场景尚未加载，无法进入 Play';
       return false;
     }
+    let playerNode: string | null = null;
+    try { playerNode = this.playerPresentation?.prepare(doc) ?? null; }
+    catch (error) { this.lastError = String(error); return false; }
     const r = this.session.play(doc);
     if (!r.ok) {
       this.lastError = r.errors.length > 0 ? r.errors.join('；') : '场景装载失败';
@@ -137,7 +144,8 @@ export class PlayController {
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
     for (const node of doc.nodes) {
-      if (!node.components.some(c => c.kind === 'MeshRenderer' && c.editorOnly === true)) continue;
+      if (!node.components.some(c => c.kind === 'MeshRenderer' &&
+        (c.editorOnly === true || (node.id === doc.playerStart && playerNode === null)))) continue;
       const index = this.renderer.findObjectIndexByNodeId(node.id);
       if (index !== null) this.renderer.setObjectVisible(index, false);
     }
@@ -157,6 +165,8 @@ export class PlayController {
     }
 
     this.bridge.attach(this.session.runtime);
+    if (this.playerPresentation) this.bridge.setPlayerPresentation(playerNode);
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
     // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
     // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
     this.session.registerResource('bridge-batches', () => this.bridge.attach(null));
@@ -187,6 +197,8 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+    this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
   }
@@ -194,6 +206,8 @@ export class PlayController {
   /** 同种子重跑 */
   reset(): void {
     this.session.reset();
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+    this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
   }
@@ -205,6 +219,7 @@ export class PlayController {
    * 上一帧的动态实例，会闪一下"僵尸还在但关卡回到编辑态"的鬼影。
    */
   stop(): void {
+    this.playerPresentation?.detach();
     if (this.snap !== null) {
       const res = this.renderer.restoreAuthorState(this.snap);
       if (res.mismatched) {
@@ -227,6 +242,7 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     if (n > 0) {
+      this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
       this.bridge.refresh();
       this.syncPlayCamera();
     }

@@ -103,6 +103,8 @@ const HOVER_COLOR = '#8FD14F';
 
 
 export interface SceneObject {
+  /** Successfully decoded scene asset; absent on unresolved placeholder geometry. */
+  loadedAssetPath?: string;
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
   indexCount: number;
@@ -1113,7 +1115,10 @@ export class LabRenderer {
           model.skeleton,
           model.nodeTree,
         );
-        if (ok) swapped++;
+        if (ok) {
+          this.state.objects[p.index]!.loadedAssetPath = p.path;
+          swapped++;
+        }
         else failed.push({ name: p.name, reason: '物体索引已失效（可能已被删除）' });
       } catch (e) {
         failed.push({ name: p.name, reason: e instanceof Error ? e.message : String(e) });
@@ -1622,6 +1627,8 @@ export class LabRenderer {
   ): boolean {
     const o = this.state.objects[index];
     if (o === undefined || o.removed) return false;
+    // A replacement must be associated with its new source by the scene loader.
+    delete o.loadedAssetPath;
 
     this.uploadMesh(o, mesh, skeleton);
 

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "id": "sc_act1_floor3",
   "name": "第三层 · 暗巷撤离站",
   "act": "Act1",
@@ -53,6 +53,7 @@
     "assets/environment/models/P-44/tex2/P-44_lod2.glb",
     "assets/environment/models/P-45/tex2/P-45_baked.glb",
     "assets/environment/models/P-46/tex2/P-46_lod2.glb",
+    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
     "assets/environment/models/P-31/tex2/P-31_lod2.glb",
     "assets/environment/models/P-32/tex2/P-32_lod2.glb",
     "assets/environment/models/P-33/tex2/P-33_lod2.glb",
@@ -3511,12 +3512,12 @@
     },
     {
       "id": "nd_f3_start",
-      "name": "玩家起点",
+      "name": "玩家 · 清道夫（T-pose）",
       "parent": null,
       "transform": {
         "position": [
           3,
-          0.9,
+          0.02,
           0
         ],
         "rotation": [
@@ -3539,14 +3540,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.35,
-              1.1,
-              8,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+              "guid": "as_yrsn456i"
+            }
           },
           "materials": [
             {
@@ -3555,14 +3553,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s3"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 5,
-          "importScale": 1
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false
         }
       ],
       "prefab": null
@@ -3910,7 +3921,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.596Z",
-    "updatedAt": "2026-10-04T13:35:55.091Z",
+    "updatedAt": "2026-10-04T17:12:31.563Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

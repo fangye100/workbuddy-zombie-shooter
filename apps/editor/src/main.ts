@@ -44,6 +44,7 @@ import { environmentFromParams } from './services/scene-environment';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
+import { PlayerPresentation } from './services/player-presentation';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -234,6 +235,10 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
+    playerPresentation: new PlayerPresentation(nodeId => {
+      const index = renderer.findObjectIndexByNodeId(nodeId);
+      return index === null ? null : renderer.state.objects[index] ?? null;
+    }),
     // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
     // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
     executor: createBehaviorExecutor(),

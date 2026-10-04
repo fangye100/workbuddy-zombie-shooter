@@ -88,6 +88,17 @@ export class SceneAuthorPanel {
         }
       };
       fields(form, draft as unknown as Record<string, unknown>, ['name', 'visible', 'pickable', 'category', 'transform'], 'node');
+      if (draft.id === doc.playerStart) {
+        const mesh = draft.components.find(c => c.kind === 'MeshRenderer');
+        if (mesh?.kind === 'MeshRenderer' && mesh.source.type === 'asset') {
+          const label = document.createElement('label'); label.textContent = t('作为 Play 玩家外观（保留模型姿态）');
+          const input = document.createElement('input'); input.type = 'checkbox';
+          input.setAttribute('aria-label', 'MeshRenderer.playBinding'); input.checked = mesh.playBinding === 'player';
+          input.onchange = () => { if (input.checked) { mesh.playBinding = 'player'; mesh.editorOnly = false; } else delete mesh.playBinding; dirty(); };
+          label.append(input); form.append(label);
+          fields(form, mesh.source.ref as unknown as Record<string, unknown>, ['path', 'guid'], 'MeshRenderer.asset');
+        }
+      }
       for (const component of draft.components) if (component.kind === 'Light') fields(form, component as unknown as Record<string, unknown>, Object.keys(component).filter(k => k !== 'type'), 'Light');
       const parentLabel = document.createElement('label'); parentLabel.textContent = t('父节点');
       const parents = document.createElement('select'); parents.setAttribute('aria-label', 'node.parent'); parents.add(new Option(t('根节点'), ''));

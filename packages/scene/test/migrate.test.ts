@@ -339,6 +339,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'add-camera-yaw-mode',
       'add-room-clear-target',
       'support-authored-run-rules',
+      'support-player-mesh-binding',
     ]);
   });
 });
@@ -434,6 +435,6 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(7);
+    expect(SCHEMA_VERSION).toBe(8);
   });
 });

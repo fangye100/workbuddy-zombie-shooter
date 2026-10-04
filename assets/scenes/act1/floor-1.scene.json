@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -58,6 +58,7 @@
     "assets/environment/models/P-06/tex2/P-06_lod2.glb",
     "assets/environment/models/P-03/tex2/P-03_lod2.glb",
     "assets/environment/models/P-05/tex2/P-05_lod2.glb",
+    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
     "assets/environment/models/P-01/tex2/P-01_lod2.glb",
     "assets/environment/models/P-13/tex2/P-13_lod2.glb",
     "assets/environment/models/P-14/tex2/P-14_lod2.glb"
@@ -4265,12 +4266,12 @@
     },
     {
       "id": "nd_f1_start",
-      "name": "玩家起点",
+      "name": "玩家 · 清道夫（T-pose）",
       "parent": null,
       "transform": {
         "position": [
           3,
-          0.9,
+          0.02,
           0
         ],
         "rotation": [
@@ -4293,14 +4294,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.35,
-              1.1,
-              8,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+              "guid": "as_yrsn456i"
+            }
           },
           "materials": [
             {
@@ -4309,14 +4307,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s3"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 5,
-          "importScale": 1
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false
         }
       ],
       "prefab": null
@@ -4856,7 +4867,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.540Z",
-    "updatedAt": "2026-10-04T14:08:16.995Z",
+    "updatedAt": "2026-10-04T16:59:35.682Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }

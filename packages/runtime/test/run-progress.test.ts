@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadLevelRuntime, RuntimeSession, RunProgress } from '../src';
-import { migrateToLatest, validRunRules, validateSceneDocument, type SceneDocument, type RunRulesComponent } from '@aether/scene';
+import { SCHEMA_VERSION, migrateToLatest, validRunRules, validateSceneDocument, type SceneDocument, type RunRulesComponent } from '@aether/scene';
 const docs = import.meta.glob('../../../assets/scenes/act1/*.scene.json', { eager: true, import: 'default' });
 function doc(n = 1): SceneDocument { return structuredClone(docs[`../../../assets/scenes/act1/floor-${n}.scene.json`] as SceneDocument); }
 function session(n = 1) { const d = loadLevelRuntime(doc(n)); expect(d.desc).not.toBeNull(); return new RuntimeSession({ desc: d.desc!, seed: 7 }); }
@@ -76,7 +76,7 @@ describe('authored run progression', () => {
   it('migrates old scenes without silently opting them into new gameplay', () => {
     const d = doc(); d.schemaVersion = 6; d.nodes = d.nodes.filter(n => !n.components.some(c => c.kind === 'RunRules'));
     const r = migrateToLatest(d);
-    expect(r.doc.schemaVersion).toBe(7); expect(r.applied).toContain('support-authored-run-rules');
+    expect(r.doc.schemaVersion).toBe(SCHEMA_VERSION); expect(r.applied).toContain('support-authored-run-rules');
     expect(loadLevelRuntime(r.doc).desc!.runRules).toBeNull();
   });
   it('rejects invalid tuning, duplicate IDs and duplicate rule owners', () => {

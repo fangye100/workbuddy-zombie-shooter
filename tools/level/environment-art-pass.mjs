@@ -145,6 +145,16 @@ export function applyEnvironmentArtPass(doc, root) {
     // continuous underlay below room/corridor surfaces to avoid coplanar z-fighting.
     if (n.id.endsWith('_street')) n.transform.position[1] = -0.23;
   }
+  const player = find(doc.playerStart);
+  const playerMesh = mesh(player);
+  const playerFile = 'assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb';
+  const playerMeta = JSON.parse(fs.readFileSync(path.join(root, `${playerFile}.meta.json`), 'utf8'));
+  player.name = '玩家 · 清道夫（T-pose）';
+  player.transform.position[1] = 0.02;
+  playerMesh.source = { type: 'asset', ref: { path: playerFile, guid: playerMeta.guid } };
+  playerMesh.playBinding = 'player';
+  playerMesh.editorOnly = false;
+  playerMesh.materials = patch('#ffffff', { roughness: 0.85, metallic: 0, outlineScale: 0.55, halftoneScale: 0.1 });
   doc.dependencies = [...new Set(doc.nodes.flatMap(n => n.components.flatMap(c => c.kind === 'MeshRenderer' && c.source.type === 'asset' ? [c.source.ref.path] : [])))];
   const count = doc.nodes.filter(n => n.components.some(c => c.kind === 'MeshRenderer')).length;
   if (count > 64) throw new Error(`Art pass exceeds object budget: ${doc.id}: ${count}`);

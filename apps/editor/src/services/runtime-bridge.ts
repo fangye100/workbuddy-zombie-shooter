@@ -116,6 +116,13 @@ interface BatchSlot {
 }
 
 export class RuntimeBridge {
+  private presentedPlayerSource: string | null = null;
+
+  /** Suppress only the player proxy whose authored mesh is bound by the host. */
+  setPlayerPresentation(nodeId: string | null): void {
+    this.presentedPlayerSource = nodeId;
+    this.notifyActorsChanged();
+  }
   private session: RuntimeSession | null = null;
   /** 真角色装配库（null = 纯胶囊模式，Node 测试 / 资产缺失时） */
   private readonly actors: ActorSource | null;
@@ -169,6 +176,7 @@ export class RuntimeBridge {
     this.session = session;
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
+      this.presentedPlayerSource = null;
       this.slots.clear();
       this.selected = null;
       return;
@@ -294,6 +302,7 @@ export class RuntimeBridge {
     const fixedStep = this.session.fixedStep;
 
     for (const e of view) {
+      if (e.kind === 'player' && this.presentedPlayerSource !== null && e.sourceNodeId === this.presentedPlayerSource) continue;
       const stats = lookupCharacterStats(e.characterId);
       const radius = stats?.capsuleRadius ?? 0.35;
       const height = stats?.capsuleHeight ?? 1.8;

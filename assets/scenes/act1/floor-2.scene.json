@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -51,7 +51,8 @@
     "assets/environment/models/P-25/tex2/P-25_lod2.glb",
     "assets/environment/models/P-22/tex2/P-22_lod2.glb",
     "assets/environment/models/P-24/tex2/P-24_lod2.glb",
-    "assets/environment/models/P-06/tex2/P-06_lod2.glb"
+    "assets/environment/models/P-06/tex2/P-06_lod2.glb",
+    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb"
   ],
   "nodes": [
     {
@@ -4254,12 +4255,12 @@
     },
     {
       "id": "nd_f2_start",
-      "name": "玩家起点",
+      "name": "玩家 · 清道夫（T-pose）",
       "parent": null,
       "transform": {
         "position": [
           3,
-          0.9,
+          0.02,
           0
         ],
         "rotation": [
@@ -4282,14 +4283,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.35,
-              1.1,
-              8,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+              "guid": "as_yrsn456i"
+            }
           },
           "materials": [
             {
@@ -4298,14 +4296,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s3"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 5,
-          "importScale": 1
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false
         }
       ],
       "prefab": null
@@ -4313,7 +4324,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.562Z",
-    "updatedAt": "2026-10-04T13:35:55.069Z",
+    "updatedAt": "2026-10-04T17:12:31.544Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

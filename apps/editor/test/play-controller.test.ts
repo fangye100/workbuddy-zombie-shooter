@@ -323,6 +323,7 @@ it('hides editor helpers only during Play and restores original visibility on St
   const { ctl, r } = make(doc); const before = r.read();
   expect(ctl.start()).toBe(true);
   for (const i of helperIndices) expect(r.read().visible[i]).toBe(false);
-  expect(r.read().visible.filter(v => !v)).toHaveLength(helperIndices.length);
+  // No presentation host in this fixture: the player start mesh is also a marker.
+  expect(r.read().visible.filter(v => !v)).toHaveLength(helperIndices.length + 1);
   ctl.stop(); expect(r.read()).toEqual(before);
 });

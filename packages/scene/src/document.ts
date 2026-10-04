@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -176,6 +176,11 @@ export interface ComponentBase {
  * 模型内部层级保留在资产的 nodeTree 里，只用于材质匹配与层级面板展示（现有行为不变）。
  */
 export interface MeshRendererComponent extends ComponentBase {
+  /** Reuse this authored mesh for the single player during Play. Only valid on playerStart.
+   * Runtime updates its presentation transform; physics remains owned by the player entity.
+   * Missing binding preserves the legacy capsule. Stop restores the author transform.
+   */
+  playBinding?: 'player';
   /** Authoring helper mesh. Hidden only in Play; restored with the author snapshot. */
   editorOnly?: boolean;
   kind: typeof ComponentKind.MeshRenderer;
@@ -978,6 +983,14 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       if (c?.kind !== ComponentKind.MeshRenderer) return;
       const at = `/nodes/${i}/components/${ci}`;
       const m = c as Partial<MeshRendererComponent>;
+      if (m.playBinding !== undefined) {
+        if (m.playBinding !== 'player' || n.id !== d.playerStart) {
+          err(`${at}/playBinding`, 'E_PLAY_BINDING', 'player 绑定只允许配置在 playerStart 节点');
+        }
+        if (m.editorOnly === true || m.source?.type !== 'asset') {
+          err(`${at}/playBinding`, 'E_PLAY_BINDING_SOURCE', '玩家外观必须使用非 editorOnly 的资产网格');
+        }
+      }
       if (m.editorOnly !== undefined && typeof m.editorOnly !== 'boolean') {
         err(`${at}/editorOnly`, 'E_EDITOR_ONLY', 'editorOnly 必须是布尔值');
       }

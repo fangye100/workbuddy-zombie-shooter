@@ -83,6 +83,7 @@ export function applyStaticI18n(root: ParentNode): void {
 // ================================================================ 词典（zh → en）
 
 const DICT: Record<string, string> = {
+  '作为 Play 玩家外观（保留模型姿态）': 'Use as Play player appearance (keep model pose)',
   '临时隐藏这个 mesh（不写入场景）': 'Temporarily hide mesh (not saved to scene)',
   '临时显示这个 mesh（不写入场景）': 'Temporarily show mesh (not saved to scene)',
   '材质修改写入当前场景的局部覆盖；请使用保存场景。': 'Material edits become scene-local overrides. Use Save Scene.',
@@ -556,5 +557,4 @@ const DICT: Record<string, string> = {
 
   '该资产无贴图（白模显示）': 'No texture in this asset (clay display)',
 };
-
 
