@@ -3,9 +3,9 @@
  * 关卡生成器：GDD §4.1–4.4 的关卡设计表 → assets/scenes/act1/floor-N.scene.json
  *
  * ## 为什么是脚本而不是手写 JSON
- * S2（保存 / Inspector）还没做完 —— 编辑器打开场景后**改了存不回去**。
- * 所以关卡数据只能靠"源设计 → 生成"单向产出，任何人工在编辑器里的微调都会丢。
- * 本脚本必须**可重复运行**（幂等）：同一份设计表永远产出同一份场景。
+ * This explicit rebuild tool produces the baseline campaign, including its art pass.
+ * The editor can save scene edits directly. Regeneration replaces those authored edits;
+ * review the diff before committing. Runtime reads the persisted scene JSON only.
  *
  * ## 粒度：一层一关（一关 = 一个 .scene.json）
  * GDD §4.1 固定 3 层，每层只有 2–3 个房间，物件预算远低于 MAX_OBJECTS=64，
@@ -27,6 +27,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -741,7 +742,7 @@ function main() {
   const register = [];
 
   for (const floor of FLOORS) {
-    const doc = buildFloor(floor);
+    const doc = applyEnvironmentArtPass(buildFloor(floor), ROOT);
     const relPath = `${SCENE_DIR}/floor-${floor.depth}.scene.json`;
     writeJson(relPath, doc);
     register.push({ path: relPath, id: doc.id, enabled: true });

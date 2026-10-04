@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_5xbuqmer",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-14x14.glb"
+  },
+  "sourceHash": "sha256:93c332eca7631be31eb0e27b3797f6a8d28d192a1db2f6e3cf0eb2c6be63e19a",
+  "updatedAt": "2026-10-04T13:38:26.631Z"
+}

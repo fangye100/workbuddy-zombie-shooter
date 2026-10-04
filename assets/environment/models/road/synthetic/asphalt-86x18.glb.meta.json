@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_oebq8ua9",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-86x18.glb"
+  },
+  "sourceHash": "sha256:d477331683d9c342336ea31ce95d60425d62cadba6eaa2621e149ebf763a42ab",
+  "updatedAt": "2026-10-04T13:38:26.637Z"
+}

@@ -24,6 +24,7 @@ import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
+import { applySceneLightParams } from './services/scene-light';
 import { removeNodeTree } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
@@ -295,6 +296,8 @@ async function boot(): Promise<void> {
     // 进 Play 前强制退出自由相机：Play 的相机归 PlayCameraController（场景 Camera 组件），
     // 飞行模式会继续每帧写 camera，两套机位抢同一个对象 —— 用户只会看到"游戏相机乱飘"。
     if (freeCamOn) setFreeCam(false);
+    focusAnim = null;
+    pointers.clear();
     const paramsBeforePlay = structuredClone(panel.params);
     const ok = playCtl.start();
     if (ok) {
@@ -772,25 +775,7 @@ async function boot(): Promise<void> {
     // 环境与场景灯光写进面板（真源是场景文件，面板滑块是它的读写器），
     // syncAll 让「场景/光照」「渲染」页的控件立即反映覆盖后的值。
     if (r.environment !== undefined) applySceneEnvironment(r.environment);
-    if (r.keyLight) {
-      panel.params.keyColor = r.keyLight.color;
-      panel.params.keyIntensity = r.keyLight.intensity;
-      panel.params.keyAzimuth = r.keyLight.azimuth;
-      panel.params.keyElevation = r.keyLight.elevation;
-    }
-    // 点光同样来自场景（priority 最高的那一盏）。位置仍由引擎轨道驱动 —— 见已知遗留：
-    // 场景 schema 有点光的 color/intensity/range，但没有位置字段。
-    if (r.pointLight) {
-      panel.params.pointColor = r.pointLight.color;
-      panel.params.pointIntensity = r.pointLight.intensity;
-      if (r.pointLight.range > 0) panel.params.pointRange = r.pointLight.range;
-      // 位置同样来自场景（复审 B5）：过去引擎按固定轨道摆放，场景声明的位置被无视
-      panel.params.pointPosition = [
-        r.pointLight.position[0],
-        r.pointLight.position[1],
-        r.pointLight.position[2],
-      ];
-    }
+    applySceneLightParams(panel.params, r);
     panel.syncAll();
     // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源
     setSpawnScene(renderer.getDocument());
@@ -1325,8 +1310,7 @@ async function boot(): Promise<void> {
       }, decodeTexture, async rel => { const h = await resolveModelHeightM(rel); return h.fromMeta ? h.meters : null; }, async rel => {
         const meta = await assetServer.loadMeta(rel); return meta.missing || meta.errors.length ? 'auto' : meta.meta.importer.upAxisFlip ? 'z' : 'y';
       }).then(result => { if (result.failed.length) throw new Error(result.failed.map(f => `${f.name}: ${f.reason}`).join('; ')); });
-      if (r.keyLight) Object.assign(panel.params, { keyColor: r.keyLight.color, keyIntensity: r.keyLight.intensity, keyAzimuth: r.keyLight.azimuth, keyElevation: r.keyLight.elevation });
-      if (r.pointLight) Object.assign(panel.params, { pointColor: r.pointLight.color, pointIntensity: r.pointLight.intensity, pointRange: r.pointLight.range, pointPosition: r.pointLight.position });
+      applySceneLightParams(panel.params, r);
       applySceneEnvironment(store.document.environment);
       for (const warning of r.warnings ?? []) console.warn(`[scene] ${warning}`);
     } catch (e) { editorMenu.message(`场景视图更新失败，文档修改已保留：${String(e)}`); }
@@ -2010,6 +1994,7 @@ async function boot(): Promise<void> {
   // 双击：第一下轻点已把光标下的物体选上，双击事件紧接着聚焦过去；双击空白 = 回默认取景
   canvas.addEventListener('dblclick', (e) => {
     e.preventDefault();
+    if (playCtl.isPlaying) return;
     if (performance.now() < suppressDblclickUntil) return;
     focusOn(renderer.getSelected());
   });
@@ -2018,6 +2003,8 @@ async function boot(): Promise<void> {
   setGizmoSpaceUI('world');
 
   canvas.addEventListener('pointerdown', (e) => {
+    // Author orbit/pan/picking must not overwrite the scene-owned game camera.
+    if (playCtl.isPlaying) return;
     focusAnim = null; // 用户接管相机，聚焦动画立即让位
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -2069,6 +2056,7 @@ async function boot(): Promise<void> {
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (playCtl.isPlaying) return;
     const pt = pointers.get(e.pointerId);
     if (pt === undefined) {
       // 悬停（无按键按下）：gizmo 手柄上显示抓手，提示此处点击是拖手柄而非转视角。
@@ -2170,6 +2158,7 @@ async function boot(): Promise<void> {
     'wheel',
     (e) => {
       e.preventDefault();
+      if (playCtl.isPlaying) return;
       focusAnim = null;
       // 自由相机下滚轮**不缩放**：缩放改的是 orbit 半径，会把你刚飞到的位置又拽回去。
       // 这里改成调飞行速度 —— 大关卡要飞快、对准细节要飞慢，这才是真需求。
@@ -4025,12 +4014,9 @@ async function boot(): Promise<void> {
     // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
     // 🔴 必须在 batches() 之前 —— 批次按 lodTier 分流，晚一帧会让压测帧率抖动。
     if (playCtl.isPlaying) {
-      // 眼位 = target + 水平投影距离（俯仰角越大，水平分量越短）
-      const horiz = camera.distance * Math.cos(panel.params.cameraElevation);
-      bridge.refreshLod(
-        camera.target[0] + Math.cos(camera.yaw) * horiz,
-        camera.target[2] + Math.sin(camera.yaw) * horiz,
-      );
+      // Use the renderer's eye projection (degree pitch and identical yaw axes).
+      const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, panel.params.cameraElevation);
+      bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
