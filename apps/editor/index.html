@@ -1291,6 +1291,30 @@
   #gizmo-bar .gz-inner { flex: 0 0 auto; width: max-content; min-width: 100%; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
   #hud[hidden] { display: none; }
   #hud { top: 100px; max-width: min(540px, 70vw); }
+  .run-hud { position:absolute; z-index:24; bottom:18px; left:18px; right:18px; max-width:650px; color:#fff6e2; background:#171327eb; border:2px solid #5d506e; border-radius:10px; padding:12px; white-space:pre-line; font-size:12px; line-height:1.6; }
+  .run-hud[hidden], .run-hud [hidden] { display:none; }
+  .run-settlement { position:absolute; top:18px; right:18px; z-index:23; width:260px; padding:16px; color:#fff6e2; background:#171327f2; border:2px solid #ffd451; border-radius:8px; box-shadow:4px 5px 0 #0008; }
+  .run-settlement[hidden] { display:none; }
+  .run-settlement button { background:#ffd451; color:#171327; border:0; padding:10px; border-radius:4px; cursor:pointer; } .run-settlement button:disabled { opacity:.5; cursor:default; }
+  .run-hud button { color:#fff6e2; background:#322744; border:1px solid #847093; border-radius:6px; padding:10px; cursor:pointer; font:inherit; }
+  .run-hud button:hover { border-color:#ffd451; background:#493753; }
+  .run-hud button:disabled { opacity:.45; cursor:default; }
+  .run-hud.choosing { bottom:auto; top:50%; left:50%; right:auto; transform:translate(-50%,-50%); width:calc(100% - 56px); box-shadow:0 0 0 2000px #110d2099,5px 8px 0 #0009; padding:20px; border-color:#ffd451; }
+  .talent-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0; }
+  .talent-choices:empty { display:none; }
+  .talent-choices > strong { grid-column:1/-1; font-size:20px; color:#ffd451; }
+  .talent-choices button { display:grid; gap:12px; text-align:left; min-height:125px; border-top:4px solid #f07846; }
+  .talent-choices button strong { font-size:16px; color:#ffd451; }
+  .run-supply { display:flex; gap:10px; margin-top:10px; }
+  @media(max-width:1000px) { .talent-choices { grid-template-columns:1fr; } .talent-choices button { min-height:0; } .run-hud { font-size:11px; } }
+  .combat-feedback { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:19; }
+  .combat-feedback[hidden] { display:none; }
+  /* On narrow screens, Play temporarily uses the full workspace; Stop restores author panels. */
+  @media(max-width:1200px) {
+    #mainrow:has(.game-hud:not([hidden])) { grid-template-columns:0 0 minmax(0,1fr) 0 0; }
+    #mainrow:has(.game-hud:not([hidden])) > :is(#panel,#inspector,#split-left,#split-right,#asset-dock) { display:none; }
+    .run-hud.choosing { max-height:calc(100% - 36px); overflow-y:auto; box-sizing:border-box; }
+  }
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">

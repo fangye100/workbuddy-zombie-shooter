@@ -1,4 +1,6 @@
 import type { RuntimeSession } from '@aether/runtime';
+import { RunHud } from './run-hud';
+import { CombatOverlay, type WorldProjection } from './combat-overlay';
 
 /** Read-only projection of simulation state; interaction goes back through PlaySession. */
 export function gameHudModel(runtime: RuntimeSession) {
@@ -23,6 +25,8 @@ export function gameHudModel(runtime: RuntimeSession) {
 }
 
 export class GameHud {
+  private readonly runHud = new RunHud();
+  private readonly feedback: CombatOverlay | null;
   private readonly root = document.createElement('section');
   private readonly title = document.createElement('strong');
   private readonly health = document.createElement('progress');
@@ -32,26 +36,37 @@ export class GameHud {
   private readonly interact = document.createElement('button');
   private readonly next = document.createElement('button');
   private readonly retry = document.createElement('button');
+  private readonly resume = document.createElement('button');
   private stamp = '';
-  constructor(actions: { interact(): void; retry(): void; next(): Promise<void>; stop(): void }) {
+  private nextBusy = false;
+  private campaignComplete = false;
+  private currentRun = -1;
+  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void }, project?: WorldProjection) {
+    this.feedback = project ? new CombatOverlay(project) : null;
     this.root.className = 'game-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '游戏状态');
     this.health.max = 100; this.health.setAttribute('aria-label', '生命值');
     this.objective.setAttribute('aria-live', 'polite');
     this.interact.textContent = '交互 E'; this.interact.onclick = actions.interact;
-    this.retry.textContent = '再来一局'; this.retry.onclick = actions.retry;
+    this.retry.textContent = '再来一局'; this.retry.onclick = () => { this.retry.disabled = true; void Promise.resolve(actions.retry()).finally(() => { this.retry.disabled = false; }); };
+    this.resume.textContent = '准备好了 · 继续战斗'; this.resume.onclick = actions.resume;
     this.next.textContent = '继续下一层'; this.next.onclick = () => {
-      this.next.disabled = true;
-      void actions.next().finally(() => { this.next.disabled = false; });
+      this.nextBusy = true; this.next.disabled = true;
+      void actions.next().then(result => {
+        if (result === 'complete') { this.campaignComplete = true; this.next.textContent = '全部楼层已完成'; }
+      }).finally(() => { this.nextBusy = false; this.next.disabled = this.campaignComplete; });
     };
     const stop = document.createElement('button'); stop.textContent = '返回编辑'; stop.onclick = actions.stop;
     const help = document.createElement('small'); help.textContent = 'WASD / 方向键移动 · J 射击 · E 交互 · 空格暂停';
     this.result.append(this.retry, this.next, stop);
-    this.root.append(this.title, this.health, this.stats, this.objective, this.interact, help, this.result);
+    this.root.append(this.title, this.health, this.stats, this.objective, this.interact, help, this.resume, this.result);
     document.getElementById('center')!.append(this.root);
   }
   update(runtime: RuntimeSession | null, paused: boolean): void {
+    this.runHud.update(runtime);
     this.root.hidden = runtime === null;
     if (!runtime) { this.stamp = ''; return; }
+    if (this.currentRun !== runtime.runId) { this.currentRun = runtime.runId; this.campaignComplete = false; this.next.textContent = '继续下一层'; }
+    this.next.disabled = this.nextBusy || this.campaignComplete || !!runtime.progress?.choosing;
     const m = gameHudModel(runtime); const stamp = JSON.stringify([m, paused]);
     if (stamp === this.stamp) return; this.stamp = stamp;
     this.root.classList.toggle('hit', m.hit);
@@ -62,7 +77,10 @@ export class GameHud {
     this.objective.textContent = m.outcome === 'game-over' ? '本局结束 · 再试一次'
       : m.outcome === 'floor-clear' ? '本层通关！' : paused ? '已暂停' : `${m.room} · ${m.objective}`;
     this.result.hidden = m.outcome === 'running';
+    this.resume.hidden = !paused || m.outcome !== 'running';
     this.interact.hidden = !m.canInteract || m.outcome !== 'running'; this.interact.disabled = paused;
     this.next.hidden = m.outcome !== 'floor-clear';
+    this.next.disabled = this.nextBusy || this.campaignComplete || !!runtime.progress?.choosing;
   }
+  updateFeedback(runtime: RuntimeSession | null): void { this.feedback?.update(runtime); }
 }

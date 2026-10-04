@@ -33,6 +33,7 @@ import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from './behavior-executor';
 import { NULL_BEHAVIOR_EXECUTOR } from './behavior-executor';
 import { nearestSolidHit } from './solid-ray';
+import { RunProgress, type RunCarry } from './run-progress';
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -143,6 +144,8 @@ export interface SpawnRejection {
  * 统计据此派生，不需要每步扫表。
  */
 export interface CombatEvent {
+  readonly x?: number;
+  readonly z?: number;
   readonly type: 'damage' | 'kill';
   readonly tick: number;
   /**
@@ -264,6 +267,52 @@ export const BEHAVIOR_STRIKE = 3;
 let NEXT_RUN_ID = 1;
 
 export class RuntimeSession {
+  lastShot: { tick: number; from: [number, number, number]; to: [number, number, number]; hit: boolean } | null = null;
+  danger: { x: number; z: number; radius: number; remaining: number; duration: number } | null = null;
+  private nextBossAttack = 0;
+  private bossStep(): void {
+    const attack = this.desc.runRules?.bossAttack;
+    if (!attack) return;
+    let boss = -1;
+    for (let i = 0; i < this.table.capacity; i++) if (this.table.isAlive(i) && this.kindOf[i] === 1 && this.sourceOf[i] === attack.source) { boss = i; break; }
+    if (boss < 0 || this.table.health[this.playerId]! <= 0) { this.danger = null; return; }
+    const now = this.tick * this.fixedStep;
+    if (this.danger) {
+      this.danger.remaining -= this.fixedStep;
+      if (this.danger.remaining <= 0) {
+        if (Math.hypot(this.table.posX[this.playerId]! - this.danger.x, this.table.posZ[this.playerId]! - this.danger.z) <= attack.radius)
+          this.applyDamage(this.playerId, attack.damage, boss);
+        this.danger = null; this.nextBossAttack = now + attack.cooldownSec;
+      }
+    } else if (now >= this.nextBossAttack) {
+      this.danger = { x: this.table.posX[this.playerId]!, z: this.table.posZ[this.playerId]!, radius: attack.radius, remaining: attack.windupSec, duration: attack.windupSec };
+    }
+  }
+  progress: RunProgress | null = null;
+  aimAssist = false;
+  /** Carries only run state; never writes the author scene. Invalid carry is rejected atomically. */
+  restoreRun(value: unknown): boolean {
+    const p = this.playerId;
+    if (this.tick !== 0 || !this.progress || !this.progress.restore(value, this.table.maxHp[p]!)) return false;
+    this.table.health[p] = (value as RunCarry).hp;
+    return true;
+  }
+  chooseTalent(id: string): boolean { return this.outcome !== 'game-over' && !!this.progress?.choose(id); }
+  get atSupply(): boolean {
+    if (!this.progress || this.progress.choosing || this.outcome === 'game-over') return false;
+    if (this.outcome === 'floor-clear') return true;
+    const p = this.player();
+    return !!p && this.desc.rooms.some(r => r.enabled && ['event', 'shop', 'rest'].includes(r.roomType)
+      && this.clearedRooms().includes(r.nodeId) && p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
+  }
+  buyHeal(): boolean {
+    if (!this.atSupply) return false;
+    const p = this.playerId; const amount = this.progress!.payHeal(this.table.health[p]!, this.table.maxHp[p]!);
+    this.table.health[p] = this.table.health[p]! + amount; return amount > 0;
+  }
+  buyTalent(): boolean { return this.atSupply && this.progress!.shopTalent(); }
+  buyAmmo(): boolean { return this.atSupply && this.progress!.buyAmmo(); }
+  reload(): boolean { return this.outcome === 'running' && !!this.progress?.reload(); }
   private tbl: CharacterTable;
 
   /** 实体状态表。唯一权威（docs/18 §1.5）—— 不要在别处再维护第二张 */
@@ -321,6 +370,7 @@ export class RuntimeSession {
     const target = this.interactionTarget();
     if (target === null) return false;
     this.interactedRooms.add(target);
+    this.progress?.rewardEvent();
     this.updateWaves();
     return true;
   }
@@ -392,6 +442,8 @@ export class RuntimeSession {
   constructor(opts: SessionOptions) {
     this.desc = opts.desc;
     this.seed = opts.seed ?? 1;
+    this.progress = opts.desc.runRules ? new RunProgress(opts.desc.runRules, this.seed) : null;
+    this.aimAssist = opts.desc.runRules?.aimAssist ?? false;
     this.initialSeed = this.seed;
     this.fixedStep = opts.fixedStep ?? 1 / 30;
     const capacity = opts.capacity ?? 512;
@@ -587,11 +639,13 @@ export class RuntimeSession {
       generation: this.tbl.generation[targetSlot]!,
       runId: this.runId,
       characterId,
+      x: this.tbl.posX[targetSlot]!, z: this.tbl.posZ[targetSlot]!,
       amount,
       hpAfter,
       sourceSlot,
       sourceGeneration: sourceSlot < 0 ? -1 : this.tbl.generation[sourceSlot]!,
     });
+    if (died && this.kindOf[targetSlot] === 1 && sourceSlot === this.playerId) this.progress?.recordKill();
     if (died) this.kill(targetSlot);
     // 玩家死亡 = 本局失败终态（docs/23 §2.5）：事件当场发、世界本 step 后冻结。
     // 🔴 不自动清场 —— 让玩家看清死状，UI 决定何时退（编辑器不自动 Stop）。
@@ -683,7 +737,7 @@ export class RuntimeSession {
   step(): StepReport {
     // 终态冻结（P5 C5）：世界定格，tick 不再走。返回空报告 —— 宿主的累加器
     // 可以继续调度（不需要各自判终态），但世界零变化。
-    if (this.outcomeState !== 'running') {
+    if (this.outcomeState !== 'running' || this.progress?.choosing) {
       return { tick: this.tickCount, spawned: 0, rejectedRooms: 0, rejections: [] };
     }
     const r = this.triggerRooms();
@@ -691,13 +745,18 @@ export class RuntimeSession {
     // 可能凭空生成**整波**实体，而旧实现只汇总 triggerRooms 的 spawned ——
     // 于是"这一帧刷了 4 只"报成 spawned: 0，靠报告做指标/断言的调用方全被误导。
     const w = this.updateWaves();
+    if (this.outcome !== 'running') {
+      return { tick: this.tickCount, spawned: r.spawned + w.spawned, rejectedRooms: r.rejections.length, rejections: r.rejections };
+    }
     this.decayHitFlash();
     this.movePlayer();
     this.moveNpcs();
     // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
     // 都用**本步最终位置**（与脚本的「看到最终位置」同一纪律）
     this.combatStep();
+    this.progress?.advanceReload(this.fixedStep);
     this.fireStep();
+    this.bossStep();
     this.tickCount += 1;
     // 脚本在移动之后执行：行为看到的是**本步最终位置**，
     // 否则"判断僵尸是否进入某区域"这类逻辑会差一步。
@@ -825,6 +884,7 @@ export class RuntimeSession {
     this.triggered.clear();
     this.interactedRooms.clear();
     this.tickCount = 0;
+    this.lastShot = null; this.danger = null; this.nextBossAttack = 0;
     this.diags.length = 0;
     this.diagSeen.clear();
     this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
@@ -833,6 +893,8 @@ export class RuntimeSession {
     this.waveRooms.clear(); // 波次状态随世界重建
     this.roomAlive.clear(); // 房间存活计数同理（整表重建，计数从头累积）
     this.outcomeState = 'running'; // 终态随换代复位（重跑新的一局）
+    this.progress = this.desc.runRules ? new RunProgress(this.desc.runRules, this.seed) : null;
+    this.aimAssist = this.desc.runRules?.aimAssist ?? false;
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
@@ -1094,6 +1156,7 @@ export class RuntimeSession {
       if (st === undefined || !st.cleared) return; // 有房间没触发或没清完
     }
     this.outcomeState = 'floor-clear';
+    this.progress?.finishFloor();
     this.sessionEventBuf.push({ type: 'floor-clear', tick: this.tickCount, roomNodeId: null });
   }
 
@@ -1190,7 +1253,7 @@ export class RuntimeSession {
     if (this.playerId < 0 || !this.table.isAlive(this.playerId)) return;
     if (this.inputX === 0 && this.inputZ === 0) return;
     const i = this.playerId;
-    const speed = this.table.maxSpeed[i]!;
+    const speed = this.table.maxSpeed[i]! * (1 + (this.progress?.strength('speed') ?? 0));
     if (speed <= 0) return;
 
     const nx = this.table.posX[i]! + this.inputX * speed * this.fixedStep;
@@ -1283,7 +1346,9 @@ export class RuntimeSession {
             const facingZ = Math.sin(yaw);
             const len = dist > 1e-6 ? dist : 1;
             const cosA = (facingX * -dx + facingZ * -dz) / len;
-            if (cosA >= Math.cos(halfArc)) {
+            const height = (this.defIdToStats.get(t.defId[p]!)?.capsuleHeight ?? 1.8) / 2;
+            const blocked = dist > 1e-6 && nearestSolidHit([t.posX[i]!, height, t.posZ[i]!], [-dx / dist, 0, -dz / dist], this.desc.shotColliders, dist) !== null;
+            if (cosA >= Math.cos(halfArc) && !blocked) {
               this.applyDamage(p, atk.damage, i);
             }
           }
@@ -1328,6 +1393,7 @@ export class RuntimeSession {
     if (!this.fireHeld || p < 0 || !t.isAlive(p) || t.health[p]! <= 0) return;
     const now = this.tickCount * this.fixedStep;
     if (now < this.playerCooldownUntil) return;
+    if (this.progress && !this.progress.takeRound()) return;
 
     const ix = this.inputX;
     const iz = this.inputZ;
@@ -1349,6 +1415,19 @@ export class RuntimeSession {
     // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
     const playerStats = this.defIdToStats.get(t.defId[p]!)!;
     const rayY = playerStats.capsuleHeight / 2;
+    if (this.aimAssist) {
+      let nearest = w.rangeM;
+      for (let i = 0; i < t.capacity; i++) {
+        if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
+        const x = t.posX[i]! - t.posX[p]!; const z = t.posZ[i]! - t.posZ[p]!;
+        const distance = Math.hypot(x, z);
+        if (distance < 0.001 || distance >= nearest) continue;
+        const solid = nearestSolidHit([t.posX[p]!, rayY, t.posZ[p]!], [x / distance, 0, z / distance], this.desc.shotColliders, distance);
+        if (solid !== null && solid < distance - t.radius[i]!) continue;
+        nearest = distance; dx = x / distance; dz = z / distance;
+      }
+      t.yaw[p] = Math.atan2(dz, dx);
+    }
     const wallT = nearestSolidHit([t.posX[p]!, rayY, t.posZ[p]!], [dx, 0, dz], this.desc.shotColliders, w.rangeM);
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
@@ -1368,8 +1447,25 @@ export class RuntimeSession {
       }
     }
     // Equal-distance boundary belongs to the solid: ordinary bullets never penetrate it.
-    if (bestSlot >= 0 && (wallT === null || bestT < wallT)) this.applyDamage(bestSlot, w.damage, p);
-    this.playerCooldownUntil = now + w.cdSec;
+    const hit = bestSlot >= 0 && (wallT === null || bestT < wallT);
+    const length = hit ? bestT : wallT ?? w.rangeM;
+    this.lastShot = { tick: this.tick, from: [t.posX[p]!, rayY, t.posZ[p]!], to: [t.posX[p]! + dx * length, rayY, t.posZ[p]! + dz * length], hit };
+    if (hit) {
+      const damage = w.damage * (1 + (this.progress?.strength('damage') ?? 0));
+      const x = t.posX[bestSlot]!; const z = t.posZ[bestSlot]!;
+      const dealt = Math.min(damage, t.health[bestSlot]!);
+      this.applyDamage(bestSlot, damage, p);
+      const heal = dealt * (this.progress?.strength('leech') ?? 0);
+      t.health[p] = Math.min(t.maxHp[p]!, t.health[p]! + heal);
+      const blast = this.progress?.strength('blast') ?? 0;
+      if (blast > 0) for (let i = 0; i < t.capacity; i++) {
+        if (i === bestSlot || !t.isAlive(i) || this.kindOf[i] !== 1 || Math.hypot(t.posX[i]! - x, t.posZ[i]! - z) > blast) continue;
+        const bx = t.posX[i]! - x, bz = t.posZ[i]! - z, distance = Math.hypot(bx, bz);
+        if (distance > 0.001 && nearestSolidHit([x, rayY, z], [bx / distance, 0, bz / distance], this.desc.shotColliders, distance) !== null) continue;
+        this.applyDamage(i, damage / 2, p);
+      }
+    }
+    this.playerCooldownUntil = now + w.cdSec / (1 + (this.progress?.strength('haste') ?? 0));
   }
 
   private moveNpcs(): void {

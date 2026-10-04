@@ -4,7 +4,7 @@ import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, type LabParams } from './params';
-import { MODEL_RULER_HEIGHT_M, resolveModelHeightM } from './models';
+import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
@@ -31,6 +31,10 @@ import { resolveStartScenePath } from './scene-boot';
 import { EditorMenu } from './services/editor-menu';
 import { readSceneChoices, nextPlayableScene, sceneUrl } from './services/scene-workspace';
 import { GameHud } from './services/game-hud';
+import { RunTransfer } from './services/run-transfer';
+import { RunProfile } from './services/run-profile';
+import { RunSettlement } from './services/run-settlement';
+import { renderPixelRatio } from './services/render-resolution';
 import { environmentFromParams } from './services/scene-environment';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
@@ -107,10 +111,6 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
-function dpr(): number {
-  return Math.min(2, window.devicePixelRatio || 1);
-}
-
 async function tryInitGpu(target: HTMLCanvasElement): Promise<GpuContext | null> {
   try {
     return await initGpu(target);
@@ -135,10 +135,14 @@ function frontNdotL(p: LabParams, camera: CameraState): number {
 }
 
 async function boot(): Promise<void> {
+  let nativeResolution = false;
   if (canvas === null || groups === null || hud === null) {
     showFatal('页面结构异常', '缺少 #gpu / #groups / #hud 节点。');
     return;
   }
+
+  const renderCanvas = canvas;
+  const dpr = (): number => renderPixelRatio(renderCanvas.clientWidth, renderCanvas.clientHeight, window.devicePixelRatio, nativeResolution);
 
   // 多语言：index.html 里写死的静态文案（顶栏按钮 / dock 标题 / 占位符）在面板
   // 构建前先翻一遍；面板与菜单文案在各自代码里走 t()。
@@ -275,6 +279,8 @@ async function boot(): Promise<void> {
    * Play 里同类的"容量不足"告警会被上一轮的记录吞掉。清理要归会话生命周期
    * 统一管理（复审 #8），不能在按钮里各写一份 —— 漏一个入口就是吞一类告警。
    */
+  const runTransfer = new RunTransfer();
+  const runProfile = new RunProfile(localStorage);
   function startPlay(): boolean {
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
@@ -284,6 +290,14 @@ async function boot(): Promise<void> {
     if (freeCamOn) setFreeCam(false);
     const ok = playCtl.start();
     if (ok) {
+      try {
+        const progress = playCtl.session.runtime?.progress;
+        if (progress) progress.setUnlocked(runProfile.read(progress.rules.campaign).unlocked);
+        const carry = runTransfer.read(renderer.getSceneSource()!.url);
+        if (carry && !playCtl.session.runtime?.restoreRun(carry)) throw new Error('跨层成长存档不符合当前场景规则');
+      } catch (error) {
+          stopPlay(false); runTransfer.retryRead(); editorMenu.message(String(error)); return false;
+      }
       shownRuntimeDiags.clear();
       // 🔴 已缓存角色的调色板**同步**重传：attach() 会同步重建 actor 批次
       //（ActorLibrary CPU 缓存命中），若只等 kickActorPreload 的异步链路，
@@ -344,7 +358,13 @@ async function boot(): Promise<void> {
 
   /** 同种子重跑（**所有入口共用**）：runId 换代，去重集合同样要清空 */
   function resetPlay(): void {
+    runTransfer.restart();
     playCtl.reset();
+    const progress = playCtl.session.runtime?.progress;
+    if (progress) {
+      try { progress.setUnlocked(runProfile.read(progress.rules.campaign).unlocked); }
+      catch (e) { stopPlay(); editorMenu.message(String(e)); }
+    }
     shownRuntimeDiags.clear();
   }
 
@@ -727,6 +747,11 @@ async function boot(): Promise<void> {
           const r = await resolveModelHeightM(rel);
           return r.fromMeta ? r.meters : null;
         },
+        async rel => {
+          const result = await assetServer.loadMeta(rel);
+          if (result.missing || result.errors.length) { console.warn(`[scene] ${rel} 缺少有效轴向元数据，使用兼容推断`); return 'auto'; }
+          return result.meta.importer.upAxisFlip ? 'z' : 'y';
+        },
       );
       renderer.onPlayStateCheck = null;
       if (res.failed.length > 0) {
@@ -768,7 +793,7 @@ async function boot(): Promise<void> {
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();
     editorMenu.message(r.warnings?.length ? `已打开 · ${r.warnings.length} 条场景警告（见控制台）` : '已打开');
-    if (new URLSearchParams(window.location.search).get('play') === '1') startPlay();
+    if (new URLSearchParams(window.location.search).get('play') === '1' && startPlay()) playCtl.pause();
   })();
 
   // ---- 相机交互：环绕 / 平移 / 缩放 + 拾取 ----
@@ -1266,6 +1291,7 @@ async function boot(): Promise<void> {
     undo: () => undoSpawnEdit(),
     redo: () => reportAuthorTransform(authorTransform.history(true)),
     inspect: switchInspectorTab,
+    resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
   });
   const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer);
   panel.onChange = () => {
@@ -1503,10 +1529,11 @@ async function boot(): Promise<void> {
    *
    * 顺序：先取出来源 id（stop 会摘掉会话、清空实体选中），再 stop，最后定位。
    */
-  function stopPlay(): void {
+  function stopPlay(clearRun = true): void {
     clearPlayKeys();
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    if (clearRun) runTransfer.restart();
     if (spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
     actorPreloadGen++;
@@ -1792,6 +1819,7 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying && k === 'e') {
       e.preventDefault(); if (!e.repeat) playCtl.session.interact(); return;
     }
+    if (playCtl.isPlaying && k === 'r') { e.preventDefault(); playCtl.session.runtime?.reload(); return; }
     if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
       e.preventDefault();
       reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
@@ -3656,22 +3684,38 @@ async function boot(): Promise<void> {
 
   // ---- HUD ----
   let lastWorkspaceUiTime = -1;
+  const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
   const gameHud = new GameHud({
     interact: () => { playCtl.session.interact(); },
-    retry: () => { clearPlayKeys(); stopPlay(); startPlay(); },
+    resume: () => playCtl.resume(),
+    retry: async () => {
+      try {
+        const source = renderer.getSceneSource(), doc = renderer.getDocument();
+        if (!source || !doc) return;
+        const first = await nextPlayableScene(null, doc.act);
+        if (first && first.path !== source.url.replace(/^\/+/, '')) {
+          const url = new URL(sceneUrl(window.location.href, first.path)); url.searchParams.set('play', '1');
+          editorMenu.navigate(url.href);
+        } else { stopPlay(); startPlay(); }
+      } catch (e) { editorMenu.message(`重新开始失败：${String(e)}`); }
+    },
     stop: () => stopPlay(),
     next: async () => {
-      if (playCtl.session.outcome !== 'floor-clear') return;
+      if (playCtl.session.outcome !== 'floor-clear') return 'blocked';
+      if (playCtl.session.runtime?.progress?.choosing) return 'blocked';
       const source = renderer.getSceneSource(); const doc = renderer.getDocument();
-      if (!source || !doc) return;
+      if (!source || !doc) return 'blocked';
       try {
         const next = await nextPlayableScene(source.url, doc.act);
-        if (!next) { editorMenu.message('全部楼层已完成！可以再来一局或返回编辑。'); return; }
+        if (!next) { editorMenu.message('全部楼层已完成！可以再来一局或返回编辑。'); return 'complete'; }
         const url = new URL(sceneUrl(window.location.href, next.path)); url.searchParams.set('play', '1');
+        const running = playCtl.session.runtime;
+        if (running?.progress) url.searchParams.set('run', runTransfer.prepare(next.path, running.progress.snapshot(running.player()!.hp)));
         editorMenu.navigate(url.href);
-      } catch (e) { editorMenu.message(`下一层读取失败：${String(e)}`); }
+        return 'navigating';
+      } catch (e) { editorMenu.message(`下一层读取失败：${String(e)}`); return 'blocked'; }
     },
-  });
+  }, p => renderer.worldToScreen(p));
   const updateHud = (fps: number): void => {
     const p = panel.params;
     const s = renderer.stats;
@@ -3781,11 +3825,12 @@ async function boot(): Promise<void> {
 
   const frame = (now: number): void => {
     if (disposed) return;
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const wallDt = Math.max(0, (now - last) / 1000);
+    const dt = Math.min(0.1, wallDt);
     last = now;
     elapsed += dt;
     frames++;
-    hudTimer += dt;
+    hudTimer += wallDt;
 
     if (hudTimer > 0.4 || hudDirty) {
       if (hudTimer > 0.001) fps = frames / hudTimer;
@@ -3902,9 +3947,11 @@ async function boot(): Promise<void> {
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;
       gameHud.update(playCtl.session.runtime, playCtl.isPaused);
+      runSettlement.update(playCtl.session.runtime);
       editorMenu.refresh();
     }
     renderer.setDynamicBatches(bridge.batches());
+    gameHud.updateFeedback(playCtl.session.runtime);
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
     if (playCtl.isPlaying) {

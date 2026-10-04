@@ -1089,6 +1089,7 @@ export class LabRenderer {
     fetchAsset: (rel: string) => Promise<ArrayBuffer>,
     decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
     resolveRuler: (rel: string) => Promise<number | null>,
+    resolveUpAxis: (rel: string) => Promise<'auto' | 'y' | 'z'> = async () => 'auto',
   ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
     const failed: { name: string; reason: string }[] = [];
     let swapped = 0;
@@ -1096,7 +1097,7 @@ export class LabRenderer {
       try {
         const buffer = await fetchAsset(p.path);
         const ruler = await resolveRuler(p.path);
-        const model = parseGlb(buffer, ruler);
+        const model = parseGlb(buffer, ruler, await resolveUpAxis(p.path));
         const bmp = model.image === null ? null : await decode(model.image, p.path);
         // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
         // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。

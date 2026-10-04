@@ -19,6 +19,7 @@ export function sceneUrl(current: string, path: string): string {
   const url = new URL(current);
   url.searchParams.set('scene', path.replace(/^\/+/, ''));
   url.searchParams.delete('play');
+  url.searchParams.delete('run');
   return url.href;
 }
 /** Preflight before navigation: unreadable/invalid documents must not evict the current work. */
@@ -30,11 +31,11 @@ export async function checkScene(path: string): Promise<void> {
   if (error) throw new Error(`场景校验失败：${error.path} ${error.code}`);
 }
 /** Play progression uses enabled scenes in the same act, never derived simulation snapshots. */
-export async function nextPlayableScene(currentPath: string, act: string | null): Promise<SceneChoice | null> {
+export async function nextPlayableScene(currentPath: string | null, act: string | null): Promise<SceneChoice | null> {
   if (act === null) return null;
   const choices = await readSceneChoices();
-  const index = choices.findIndex(c => c.path === currentPath.replace(/^\/+/, ''));
-  if (index < 0) return null;
+  const index = currentPath === null ? -1 : choices.findIndex(c => c.path === currentPath.replace(/^\/+/, ''));
+  if (currentPath !== null && index < 0) return null;
   for (const c of choices.slice(index + 1)) {
     if (!c.enabled || c.path.startsWith('assets/scenes/sim/')) continue;
     const r = await readProjectFile(c.path);

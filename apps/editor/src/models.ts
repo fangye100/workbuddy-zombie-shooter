@@ -15,6 +15,7 @@
 
 import { AssetServer } from '@aether/scene';
 import { requireCharacter } from '@aether/content';
+import { fileUrl } from './asset-util';
 
 /**
  * 模型归一化标尺（米）—— **不是**"角色身高"。
@@ -43,7 +44,7 @@ export const MODEL_RULER_HEIGHT_M = requireCharacter('E-04').heightMeters;
  * **降级即默认**：sidecar 缺失 / 损坏一律返回默认 meta + 诊断，**不抛异常**。
  * 所以它永远不会让资产加载失败 —— 它是便利层，不是链路上的单点故障。
  */
-export const assetServer = new AssetServer();
+export const assetServer = new AssetServer({ fetchImpl: path => fetch(fileUrl(path.replace(/^\/+/, ''))) });
 
 /**
  * 归一化身高：**优先问资产自己的 sidecar，没有才回落全局标尺**。

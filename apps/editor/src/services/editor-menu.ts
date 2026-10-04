@@ -11,6 +11,7 @@ export interface EditorMenuActions {
   undo(): void;
   redo(): void;
   inspect(tab: 'inspector' | 'scene' | 'render' | 'asset'): void;
+  resolution(native: boolean): void;
 }
 
 /** Menus only dispatch existing author/play commands; no parallel document state. */
@@ -27,7 +28,8 @@ export class EditorMenu {
         [t('重新载入当前场景'), () => { const s = actions.current(); if (s) void this.openPath(s.path); }]]],
       [t('编辑'), [[t('撤销  Ctrl+Z'), actions.undo], [t('重做  Ctrl+Y'), actions.redo]]],
       [t('场景'), [[t('场景与光照'), () => actions.inspect('scene')], [t('物体检视'), () => actions.inspect('inspector')]]],
-      [t('渲染'), [[t('材质、描边与后处理'), () => actions.inspect('render')]]],
+      [t('渲染'), [[t('材质、描边与后处理'), () => actions.inspect('render')],
+        [t('平衡分辨率（推荐）'), () => actions.resolution(false)], [t('原生分辨率'), () => actions.resolution(true)]]],
       [t('资产'), [[t('资产检视'), () => actions.inspect('asset')], [t('显示 / 隐藏资产库'), () => {
         const dock = document.getElementById('asset-dock'); if (dock) dock.hidden = !dock.hidden;
       }]]],

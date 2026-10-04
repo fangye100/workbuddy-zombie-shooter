@@ -336,6 +336,11 @@ export const migrateV5ToV6: MigrationStep = {
   },
 };
 
+/** Existing scenes keep their existing combat behavior; progression must be explicitly authored. */
+export const migrateV6ToV7: MigrationStep = {
+  from: 6, to: 7, name: 'support-authored-run-rules', run: doc => doc,
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
@@ -350,6 +355,7 @@ export function registerSceneMigrations(): void {
     registerMigration(migrateV4ToV5);
   }
   if (!listMigrations().some((m) => m.from === 5 && m.to === 6)) registerMigration(migrateV5ToV6);
+  if (!listMigrations().some((m) => m.from === 6 && m.to === 7)) registerMigration(migrateV6ToV7);
 }
 
 registerSceneMigrations();

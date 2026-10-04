@@ -102,6 +102,10 @@ const DICT: Record<string, string> = {
   "物体检视": "Object Inspector",
   "渲染": "Rendering",
   "材质、描边与后处理": "Materials, Outlines and Post-processing",
+  "平衡分辨率（推荐）": "Balanced Resolution (Recommended)",
+  "原生分辨率": "Native Resolution",
+  "已切换原生分辨率": "Native resolution enabled",
+  "已切换平衡分辨率": "Balanced resolution enabled",
   "资产检视": "Asset Inspector",
   "显示 / 隐藏资产库": "Show / Hide Asset Library",
   "运行": "Run",
@@ -485,6 +489,5 @@ const DICT: Record<string, string> = {
 
   '该资产无贴图（白模显示）': 'No texture in this asset (clay display)',
 };
-
 
 

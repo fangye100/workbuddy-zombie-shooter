@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -157,6 +157,7 @@ export const ComponentKind = {
   RoomVolume: 'RoomVolume',
   NavZone: 'NavZone',
   Script: 'Script',
+  RunRules: 'RunRules',
 } as const;
 export type ComponentKind = (typeof ComponentKind)[keyof typeof ComponentKind];
 
@@ -393,7 +394,61 @@ export interface ScriptComponent extends ComponentBase {
   params: Record<string, BehaviorScalar>;
 }
 
+/** Authored run economy and upgrade tuning. Values are prototype hypotheses, not measured balance. */
+export interface RunTalent {
+  id: string;
+  name: string;
+  description: string;
+  effect: 'damage' | 'haste' | 'leech' | 'blast' | 'speed';
+  value: number;
+  maxStacks: number;
+  unlockCost?: number;
+}
+export interface RunRulesComponent extends ComponentBase {
+  kind: 'RunRules';
+  campaign: string;
+  scrapPerKill: number;
+  firstChoiceKills: number;
+  choiceEveryKills: number;
+  eventScrap: number;
+  healCost: number;
+  healAmount: number;
+  talentCost: number;
+  floorEssence: number;
+  aimAssist: boolean;
+  talents: RunTalent[];
+  weapon: { magazineSize: number; reserveRounds: number; reloadSec: number; ammoPerKill: number; ammoCost: number; ammoSupply: number };
+  bossAttack?: { source: NodeId; radius: number; windupSec: number; cooldownSec: number; damage: number } | null;
+}
+
+export function validRunRules(value: unknown): value is RunRulesComponent {
+  if (!value || typeof value !== 'object') return false;
+  const r = value as RunRulesComponent;
+  if (r.kind !== 'RunRules' || typeof r.enabled !== 'boolean' || typeof r.campaign !== 'string' || !r.campaign.trim() || typeof r.aimAssist !== 'boolean') return false;
+  const positive = [r.firstChoiceKills, r.choiceEveryKills, r.healCost, r.healAmount, r.talentCost];
+  const nonnegative = [r.scrapPerKill, r.eventScrap, r.floorEssence];
+  if (!positive.every(n => Number.isSafeInteger(n) && n > 0 && n <= 100000) || !nonnegative.every(n => Number.isSafeInteger(n) && n >= 0 && n <= 100000)) return false;
+  if (!Array.isArray(r.talents) || r.talents.length < 3 || r.talents.length > 32) return false;
+  if (!r.weapon || ![r.weapon.magazineSize, r.weapon.reserveRounds, r.weapon.ammoCost, r.weapon.ammoSupply].every(n => Number.isSafeInteger(n) && n > 0 && n <= 10000)
+    || !Number.isSafeInteger(r.weapon.ammoPerKill) || r.weapon.ammoPerKill < 0 || r.weapon.ammoPerKill > 1000
+    || !Number.isFinite(r.weapon.reloadSec) || r.weapon.reloadSec <= 0 || r.weapon.reloadSec > 30) return false;
+  if (r.talents.filter(t => t && t.unlockCost === undefined).length < 3) return false;
+  if (r.bossAttack != null && (typeof r.bossAttack.source !== 'string' || !r.bossAttack.source
+    || ![r.bossAttack.radius, r.bossAttack.windupSec, r.bossAttack.cooldownSec, r.bossAttack.damage].every(n => Number.isFinite(n) && n > 0 && n <= 1000))) return false;
+  const ids = new Set<string>();
+  return r.talents.every(t => {
+    if (!t || typeof t.id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(t.id) || ids.has(t.id)) return false;
+    ids.add(t.id);
+    return typeof t.name === 'string' && !!t.name.trim() && typeof t.description === 'string'
+      && ['damage', 'haste', 'leech', 'blast', 'speed'].includes(t.effect)
+      && Number.isFinite(t.value) && t.value > 0 && t.value <= 5
+      && (t.unlockCost === undefined || (Number.isSafeInteger(t.unlockCost) && t.unlockCost > 0 && t.unlockCost <= 100000))
+      && Number.isInteger(t.maxStacks) && t.maxStacks >= 1 && t.maxStacks <= 10;
+  });
+}
+
 export type ComponentData =
+  | RunRulesComponent
   | MeshRendererComponent
   | LightComponent
   | CameraComponent
@@ -784,6 +839,11 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         seen.set(c.kind, ci);
       }
 
+      if (c.kind === ComponentKind.RunRules) {
+        if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
+        if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');
+        if (c.enabled && d.nodes!.some((other, ni) => ni < i && other?.components?.some(x => x.kind === 'RunRules' && x.enabled))) err(at, 'E_RUN_RULES_DUP', '一个场景只能启用一份 RunRules');
+      }
       if (c.kind === ComponentKind.Light) {
         const l = c as LightComponent;
         if (!HEX_RE.test(l.color)) err(`${at}/color`, 'E_COLOR', `灯光颜色格式非法：${String(l.color)}`);

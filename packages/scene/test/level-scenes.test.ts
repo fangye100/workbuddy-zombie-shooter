@@ -107,7 +107,7 @@ describe('关卡场景 · 外部资产引用（ADR-018 P4b 门禁）', () => {
   // 与 gen-level.mjs 的 actCoverProps 一致：Act1 每层掩体应引用这些真实道具 GLB。
   // 这条断言看守的是「重生成退化回纯 box 也全绿」的变异 —— 没有它，
   // 删掉 renderer 的 pendingAssets.push 后 1085 条测试依然全绿（P4b 复审实测）。
-  const ENV_GLBS = import.meta.glob('/assets/environment/models/**/tex/*_tex_baked.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+  const ENV_GLBS = import.meta.glob('/assets/environment/models/**/tex2/*_baked.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
   const knownPaths = new Set(
     Object.keys(ENV_GLBS).map((k) => k.replace(/^\//, '').replace(/\\/g, '/')),
   );

@@ -35,7 +35,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -47,8 +47,8 @@ const THEMES = {
   fire: {
     label: '火场',
     env: {
-      ambient: { color: '#4a2a12', intensity: 0.5 },
-      hemisphere: { sky: '#d98f4f', skyIntensity: 0.55, ground: '#3a1a08', groundIntensity: 0.35 },
+      ambient: { color: '#66708e', intensity: 0.55 },
+      hemisphere: { sky: '#a0b0d3', skyIntensity: 0.55, ground: '#342d43', groundIntensity: 0.35 },
       fog: { color: '#3b3030', density: 0.004, heightFalloff: 0.1 },
       rim: { color: '#ffb066', intensity: 0.7, power: 2.5, topBias: 0.35 },
       exposure: 1.05,
@@ -57,7 +57,7 @@ const THEMES = {
   swarm: {
     label: '尸潮',
     env: {
-      ambient: { color: '#3a3428', intensity: 0.5 },
+      ambient: { color: '#8d8b83', intensity: 0.7 },
       hemisphere: { sky: '#9aa88c', skyIntensity: 0.55, ground: '#2a2418', groundIntensity: 0.3 },
       fog: { color: '#303731', density: 0.004, heightFalloff: 0.08 },
       rim: { color: '#d8e0c0', intensity: 0.5, power: 2.5, topBias: 0.35 },
@@ -77,8 +77,8 @@ const THEMES = {
   dark: {
     label: '暗巷',
     env: {
-      ambient: { color: '#1a1f2a', intensity: 0.3 },
-      hemisphere: { sky: '#4a5a72', skyIntensity: 0.32, ground: '#14161c', groundIntensity: 0.2 },
+      ambient: { color: '#737e9b', intensity: 0.6 },
+      hemisphere: { sky: '#899bbd', skyIntensity: 0.5, ground: '#38364b', groundIntensity: 0.3 },
       fog: { color: '#161d2b', density: 0.006, heightFalloff: 0.12 },
       rim: { color: '#9fb4d9', intensity: 0.45, power: 2.8, topBias: 0.4 },
       exposure: 0.85,
@@ -124,10 +124,25 @@ const CLEAR_RULE = {
  */
 const BOSS_OF_RUN = 'B-01';
 
+const assetManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/_data/asset-manifest.json'), 'utf8'));
 function propRef(id) {
-  const rel = `assets/environment/models/${id}/tex/${id}_tex_baked.glb`;
+  const entry = assetManifest.environments.find(c => c.id === id);
+  const lod = entry?.lods.find(l => l.label.includes('原贴图') && l.file.endsWith('.glb'));
+  if (!lod) throw new Error(`环境资产 ${id} 缺少清单中的原贴图成品`);
+  const rel = `assets/${lod.file}`;
   const meta = JSON.parse(fs.readFileSync(path.join(ROOT, `${rel}.meta.json`), 'utf8'));
   return { path: rel, guid: meta.guid };
+}
+function storefrontMesh() {
+  const rel = 'assets/environment/models/S-02/synthetic/storefront.glb';
+  const meta = JSON.parse(fs.readFileSync(path.join(ROOT, `${rel}.meta.json`), 'utf8'));
+  const palette = { masonry: '#bdbda0', trim: '#303746', interior: '#121a21', glass: '#81c8bd', sign: '#b84440', accent: '#e6bd4b' };
+  return meshRenderer({ type: 'asset', ref: { path: rel, guid: meta.guid } }, 's1', {
+    materials: Object.entries(palette).map(([name, albedo]) => ({
+      match: { by: 'primitiveKey', value: name }, material: { type: 'override', base: { type: 'shared', id: 's1' },
+        patch: { albedo, roughness: name === 'glass' ? 0.35 : 0.9, metallic: 0, outlineScale: 0.7, halftoneScale: 0.4 } },
+    })),
+  });
 }
 
 /** 走廊尺寸（连接相邻房间） */
@@ -312,7 +327,9 @@ function spawnOffsets(count, roomW, roomH) {
   const radius = Math.min(roomW, roomH) * 0.28;
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * Math.PI * 2 + 0.6;
-    return [Math.cos(angle) * radius, Math.sin(angle) * radius * 0.7];
+    // Entrances are on the west edge. Keep the entry lane clear for reaction/kiting;
+    // enemy stats stay untouched, and the authored points remain editable.
+    return [radius * (0.45 + Math.cos(angle) * 0.3), Math.sin(angle) * radius * 0.7];
   });
 }
 
@@ -335,6 +352,27 @@ function buildFloor(floor) {
 
   const placed = layoutRooms(floor.rooms);
   const nodes = [];
+  const beaconRoom = placed.find(r => r.type === 'event') ?? placed[placed.length - 1];
+  nodes.push(node(`nd_f${floor.depth}_beacon`, '街区暖光', { position: [beaconRoom.x, 4.5, -3], category: '灯光',
+    components: [{ kind: 'Light', enabled: true, type: 'point', color: '#ffc56c', intensity: 2.2, range: 15, spotAngle: 0, castShadow: false, priority: 100 }] }));
+  // GDD §5–6 prototype tuning. Hypothesis: a first-kill choice establishes a build
+  // before 90 s, then every eight kills; validate timing and purchase choices in playtests.
+  nodes.push(node(`nd_f${floor.depth}_run`, '局内成长与补给规则', { category: '游戏规则', components: [{
+    kind: 'RunRules', enabled: true, campaign: 'act1', scrapPerKill: 3,
+    firstChoiceKills: 1, choiceEveryKills: 8, eventScrap: 25,
+    healCost: 18, healAmount: 35, talentCost: 30, floorEssence: floor.depth * 5, aimAssist: true,
+    weapon: { magazineSize: 18, reserveRounds: 120, reloadSec: 1.6, ammoPerKill: 8, ammoCost: 12, ammoSupply: 60 },
+    // [PLACEHOLDER] 1.8 s telegraph permits a 3 m escape at base speed; verify with headed play.
+    bossAttack: floor.depth === 3 ? { source: 'nd_f3r1_sp0', radius: 3, windupSec: 1.8, cooldownSec: 5, damage: 28 } : null,
+    talents: [
+      { id: 'heavy', name: '重型弹头', description: '每层伤害 +35%；叠满三层形成高伤流派。', effect: 'damage', value: 0.35, maxStacks: 3 },
+      { id: 'rapid', name: '快速供弹', description: '每层射速 +30%，持续压制尸潮。', effect: 'haste', value: 0.3, maxStacks: 3 },
+      { id: 'leech', name: '尸髓回流', description: '命中恢复实际伤害的 8% 生命。', effect: 'leech', value: 0.08, maxStacks: 3 },
+      { id: 'shock', name: '震荡弹池', description: '解锁新的范围流派选项：每层 2 米半额冲击波。', effect: 'blast', value: 2, maxStacks: 3, unlockCost: 15 },
+      { id: 'blast', name: '破片弹药', description: '命中造成半额范围伤害；每层扩大 1.2 米。', effect: 'blast', value: 1.2, maxStacks: 3 },
+      { id: 'dash', name: '轻装步伐', description: '每层移动速度 +15%，更容易拉开距离。', effect: 'speed', value: 0.15, maxStacks: 3 },
+    ],
+  }] }));
 
   // ---- 主光 + 游戏相机（无 MeshRenderer，不占物件槽位）----
   const keyLightId = `nd_f${floor.depth}_key`;
@@ -374,7 +412,7 @@ function buildFloor(floor) {
           mode: 'orbit-follow',
           followTarget: null,
           pitchDeg: 55,
-          distance: 12,
+          distance: 26,
           yawOffsetDeg: 0,
           // v5：'world' = 上帝视角不随角色转身（第三人称顶视射击的默认）。
           // 不写会退化成缺省值 —— 那是"读了字段没落数据"，迁移链会把它补回来
@@ -406,12 +444,20 @@ function buildFloor(floor) {
   // 更贴主题。白 albedo 穹顶试过 —— toon 分阶下背光半边变灰紫，把主题氛围洗掉，弃用。
   // 引擎侧已给 background 物件做雾豁免（mat.flags.w），sandbox 的穹顶渐变受益。
   const spanX = placed[placed.length - 1].x + placed[placed.length - 1].spec.w / 2 + 20;
+  // A continuous street bed keeps rooms visually connected; room volumes and
+  // authored collision remain independent. Total meshes stay below 64.
+  nodes.push(node(`nd_f${floor.depth}_street`, '连续街道', { position: [spanX / 2 - 10, -0.23, 0], category: '环境', pickable: false,
+    components: [{ ...floorGizmo(spanX, 18, 's1'), materials: binding('s1', { albedo: '#435357', roughness: 1, outlineScale: 0, halftoneScale: 0.25 }) }] }));
+  for (const side of [-1, 1]) nodes.push(node(`nd_f${floor.depth}_curb_${side}`, '连续路肩', { position: [spanX / 2 - 10, -0.18, side * 9.25], category: '环境', pickable: false,
+    components: [{ ...floorGizmo(spanX, 0.5, 's1'), materials: binding('s1', { albedo: '#9c9b91', roughness: 1, outlineScale: 0.3 }) }] }));
+  for (let stripe = 0; stripe < 6; stripe++) nodes.push(node(`nd_f${floor.depth}_crosswalk_${stripe}`, '街口斑马线', { position: [placed[0].spec.w + 3, -0.115, -5 + stripe * 2], category: '环境', pickable: false,
+    components: [{ ...floorGizmo(3.4, 0.65, 's1'), materials: binding('s1', { albedo: '#d7c998', roughness: 1, outlineScale: 0, halftoneScale: 0.15 }) }] }));
   nodes.push(
-    node(`nd_f${floor.depth}_void`, '虚空底', {
+    node(`nd_f${floor.depth}_void`, '街区地基', {
       pickable: false,
       category: '环境',
       position: [spanX / 2 - 10, -0.6, 0],
-      components: [meshRenderer({ type: 'builtin', shape: 'plane', params: [220, 1] }, 's1', { background: true })],
+      components: [meshRenderer({ type: 'builtin', shape: 'plane', params: [220, 1] }, 's1', { materials: binding('s1', { albedo: '#505263', roughness: 1, outlineScale: 0, halftoneScale: 0.15 }) })],
     }),
   );
 
@@ -454,6 +500,25 @@ function buildFloor(floor) {
       }));
     }
 
+    // Framed roadside streets: authored buildings and sidewalks, outside the combat lanes.
+    // References remain existing assets with GUIDs; no character production is touched.
+    for (const side of [-1, 1]) {
+      nodes.push(node(`${roomId}_walk_${side}`, '路边人行道', {
+        parent: roomId, category: '环境', position: [0, 0.16, side * (spec.h / 2 + 1.2)],
+        components: [{ ...floorGizmo(spec.w + 2, 2.4, 's1'), materials: binding('s1', { albedo: '#7b8295', roughness: 1, outlineScale: 0.6 }) }],
+      }));
+      const structure = side === 1 && room.type === 'event' ? 'S-01' : 'S-02';
+      nodes.push(node(`${roomId}_building_${side}`, structure === 'S-01' ? '路边加油站' : '街区便利店', {
+        parent: roomId, category: '建筑', position: [0, 0.1, side * (spec.h / 2 + 6)],
+        rotation: side < 0 ? [0, 1, 0, 0] : [0, 0, 0, 1],
+        components: [structure === 'S-02' ? storefrontMesh() : meshRenderer({ type: 'asset', ref: propRef(structure) }, 's1')],
+      }));
+    }
+    if (room.type === 'event') nodes.push(node(`${roomId}_supply`, '补给站 · 按 E 开启', {
+      parent: roomId, category: '道具', position: [0, 0.1, -3],
+      components: [meshRenderer({ type: 'asset', ref: propRef('P-14') }, 's1')],
+    }));
+
     // 掩体（挂在房间下，随房间移动）。
     // 🔴 P4b：掩体从「builtin box 积木」改为引用真实环境道具 GLB。
     // 语义数据（Collider）保持不变 —— gameplay 用的是 Collider，不是视觉网格；
@@ -463,8 +528,8 @@ function buildFloor(floor) {
     const coverPropIds = actCoverProps(floor.theme);
     coverOffsets(spec.cover, spec.w, spec.h).forEach(([dx, dz], ci) => {
       const [propId, fp] = coverPropIds[ci % coverPropIds.length];
-      // 🔴 props.json 的 footprint 轴序 = [W, H, D]（宽×高×深，1unit=1m）
-      const [w, h, d] = fp;
+      // props.json uses width × depth × height; the collider uses XYZ.
+      const [w, d, h] = fp;
       nodes.push(
         node(`${roomId}_cv${ci}`, `掩体 ${ci + 1} · ${propId}`, {
           parent: roomId,

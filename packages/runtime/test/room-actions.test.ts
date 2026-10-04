@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
-import type { SceneDocument } from '@aether/scene';
+import type { SceneDocument, SpawnPointComponent } from '@aether/scene';
 const docs = import.meta.glob('../../../assets/scenes/act1/*.scene.json', { eager: true, import: 'default' });
 function make(depth: number) {
   const doc = docs[`../../../assets/scenes/act1/floor-${depth}.scene.json`] as SceneDocument;
@@ -14,6 +14,17 @@ function enter(s: RuntimeSession, id: string) {
   s.table.posZ[s.playerEntityId] = (r.minZ + r.maxZ) / 2; s.step();
 }
 describe('room actions', () => {
+  it.each(['disabled', 'empty', 'trigger'] as const)('rejects an unusable elite target: %s', mode => {
+    const doc = structuredClone(docs['../../../assets/scenes/act1/floor-2.scene.json']) as SceneDocument;
+    const node = doc.nodes.find(n => n.id === 'nd_f2r2_sp0')!;
+    const spawn = node.components.find(c => c.kind === 'SpawnPoint') as SpawnPointComponent;
+    if (mode === 'disabled') spawn.enabled = false;
+    if (mode === 'empty') spawn.count = 0;
+    if (mode === 'trigger') spawn.trigger = 'timer';
+    const result = loadLevelRuntime(doc);
+    expect(result.desc).toBeNull();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: 'E_CLEAR_TARGET_UNAVAILABLE', severity: 'error', nodeId: 'nd_f2r2' }));
+  });
   it('interaction is spatial, explicit, once per run, and resets', () => {
     const s = make(1); expect(s.interact()).toBe(false);
     enter(s, 'nd_f1r1'); expect(s.clearedRooms()).not.toContain('nd_f1r1');

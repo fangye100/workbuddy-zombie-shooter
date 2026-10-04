@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "id": "sc_sim_floor1_t5",
   "name": "第一层 · 火场 · t=5s 快照（派生产物）",
   "act": "Act1",

@@ -123,7 +123,7 @@ describe('resolveModelHeightM · .meta 接线', () => {
 
     await resolveModelHeightM(B02);
 
-    expect(seen).toEqual([`${B02}.meta.json`]);
+    expect(seen).toEqual([`/__fs/file?path=${encodeURIComponent(`${B02.slice(1)}.meta.json`)}`]);
   });
 
   afterEach(() => {
