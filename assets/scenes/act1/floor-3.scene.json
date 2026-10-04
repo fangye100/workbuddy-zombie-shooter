@@ -1,22 +1,22 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 7,
   "id": "sc_act1_floor3",
   "name": "第三层 · 暗巷",
   "act": "Act1",
   "environment": {
     "ambient": {
-      "color": "#1a1f2a",
-      "intensity": 0.3
+      "color": "#737e9b",
+      "intensity": 0.6
     },
     "hemisphere": {
-      "sky": "#4a5a72",
-      "skyIntensity": 0.32,
-      "ground": "#14161c",
-      "groundIntensity": 0.2
+      "sky": "#899bbd",
+      "skyIntensity": 0.5,
+      "ground": "#38364b",
+      "groundIntensity": 0.3
     },
     "fog": {
-      "color": "#05070a",
-      "density": 0.035,
+      "color": "#161d2b",
+      "density": 0.006,
       "heightFalloff": 0.12
     },
     "rim": {
@@ -44,8 +44,48 @@
   "dependencies": [],
   "nodes": [
     {
-      "id": "nd_f3_key",
-      "name": "Key Light",
+      "id": "nd_f3_beacon",
+      "name": "街区暖光",
+      "parent": null,
+      "transform": {
+        "position": [
+          43,
+          4.5,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "point",
+          "color": "#ffc56c",
+          "intensity": 2.2,
+          "range": 15,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_run",
+      "name": "局内成长与补给规则",
       "parent": null,
       "transform": {
         "position": [
@@ -58,6 +98,115 @@
           0,
           0,
           1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "游戏规则",
+      "components": [
+        {
+          "kind": "RunRules",
+          "enabled": true,
+          "campaign": "act1",
+          "scrapPerKill": 3,
+          "firstChoiceKills": 1,
+          "choiceEveryKills": 8,
+          "eventScrap": 25,
+          "healCost": 18,
+          "healAmount": 35,
+          "talentCost": 30,
+          "floorEssence": 15,
+          "aimAssist": true,
+          "weapon": {
+            "magazineSize": 18,
+            "reserveRounds": 120,
+            "reloadSec": 1.6,
+            "ammoPerKill": 8,
+            "ammoCost": 12,
+            "ammoSupply": 60
+          },
+          "bossAttack": {
+            "source": "nd_f3r1_sp0",
+            "radius": 3,
+            "windupSec": 1.8,
+            "cooldownSec": 5,
+            "damage": 28
+          },
+          "talents": [
+            {
+              "id": "heavy",
+              "name": "重型弹头",
+              "description": "每层伤害 +35%；叠满三层形成高伤流派。",
+              "effect": "damage",
+              "value": 0.35,
+              "maxStacks": 3
+            },
+            {
+              "id": "rapid",
+              "name": "快速供弹",
+              "description": "每层射速 +30%，持续压制尸潮。",
+              "effect": "haste",
+              "value": 0.3,
+              "maxStacks": 3
+            },
+            {
+              "id": "leech",
+              "name": "尸髓回流",
+              "description": "命中恢复实际伤害的 8% 生命。",
+              "effect": "leech",
+              "value": 0.08,
+              "maxStacks": 3
+            },
+            {
+              "id": "shock",
+              "name": "震荡弹池",
+              "description": "解锁新的范围流派选项：每层 2 米半额冲击波。",
+              "effect": "blast",
+              "value": 2,
+              "maxStacks": 3,
+              "unlockCost": 15
+            },
+            {
+              "id": "blast",
+              "name": "破片弹药",
+              "description": "命中造成半额范围伤害；每层扩大 1.2 米。",
+              "effect": "blast",
+              "value": 1.2,
+              "maxStacks": 3
+            },
+            {
+              "id": "dash",
+              "name": "轻装步伐",
+              "description": "每层移动速度 +15%，更容易拉开距离。",
+              "effect": "speed",
+              "value": 0.15,
+              "maxStacks": 3
+            }
+          ]
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_key",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          -0.23035094753260413,
+          0,
+          -0.2745171292071211,
+          0.9335838402322055
         ],
         "scale": [
           1,
@@ -111,6 +260,7 @@
       "components": [
         {
           "kind": "Camera",
+          "yawMode": "world",
           "enabled": true,
           "fovDeg": 45,
           "near": 0.1,
@@ -118,9 +268,8 @@
           "mode": "orbit-follow",
           "followTarget": null,
           "pitchDeg": 55,
-          "distance": 12,
-          "yawOffsetDeg": 0,
-          "yawMode": "world"
+          "distance": 26,
+          "yawOffsetDeg": 0
         }
       ],
       "prefab": null
@@ -166,8 +315,600 @@
       "prefab": null
     },
     {
+      "id": "nd_f3_street",
+      "name": "连续街道",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          -0.23,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              78,
+              0.2,
+              18
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#435357",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.25
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_curb_-1",
+      "name": "连续路肩",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          -0.18,
+          -9.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              78,
+              0.2,
+              0.5
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#9c9b91",
+                  "roughness": 1,
+                  "outlineScale": 0.3
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_curb_1",
+      "name": "连续路肩",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          -0.18,
+          9.25
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              78,
+              0.2,
+              0.5
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#9c9b91",
+                  "roughness": 1,
+                  "outlineScale": 0.3
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_0",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          -5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_1",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_2",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_3",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_4",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3_crosswalk_5",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          25,
+          -0.115,
+          5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              3.4,
+              0.2,
+              0.65
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7c998",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
       "id": "nd_f3_void",
-      "name": "虚空底",
+      "name": "街区地基",
       "parent": null,
       "transform": {
         "position": [
@@ -209,15 +950,23 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#505263",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1,
-          "background": true
+          "importScale": 1
         }
       ],
       "prefab": null
@@ -266,6 +1015,7 @@
             ]
           },
           "clearRule": "elite-dead",
+          "clearTarget": "nd_f3r0_sp0",
           "depth": 3
         },
         {
@@ -287,8 +1037,940 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s3"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#435357",
+                  "roughness": 0.92,
+                  "metallic": 0,
+                  "outlineScale": 0.4,
+                  "halftoneScale": 0.35
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_edge_n",
+      "name": "道路边线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          -8.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              21.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_edge_s",
+      "name": "道路边线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          8.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              21.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_lane_0",
+      "name": "道路导向标线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          -7.333333333333333,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.8333333333333333,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_lane_1",
+      "name": "道路导向标线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          -3.6666666666666665,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.8333333333333333,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_lane_2",
+      "name": "道路导向标线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.8333333333333333,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_lane_3",
+      "name": "道路导向标线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          3.6666666666666665,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.8333333333333333,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_lane_4",
+      "name": "道路导向标线",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          7.333333333333333,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1.8333333333333333,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_walk_-1",
+      "name": "路边人行道",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.16,
+          -10.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              24,
+              0.2,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#7b8295",
+                  "roughness": 1,
+                  "outlineScale": 0.6
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_building_-1",
+      "name": "街区便利店",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          -15
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
+              "guid": "as_178zk6nf"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "masonry"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#bdbda0",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "trim"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#303746",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "interior"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#121a21",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "glass"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#81c8bd",
+                  "roughness": 0.35,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "sign"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b84440",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "accent"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e6bd4b",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_walk_1",
+      "name": "路边人行道",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.16,
+          10.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              24,
+              0.2,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#7b8295",
+                  "roughness": 1,
+                  "outlineScale": 0.6
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_building_1",
+      "name": "街区便利店",
+      "parent": "nd_f3r0",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          15
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
+              "guid": "as_178zk6nf"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "masonry"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#bdbda0",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "trim"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#303746",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "interior"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#121a21",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "glass"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#81c8bd",
+                  "roughness": 0.35,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "sign"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b84440",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "accent"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e6bd4b",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
               }
             }
           ],
@@ -331,7 +2013,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
+              "guid": "as_y1xpmedt"
             }
           },
           "materials": [
@@ -357,8 +2040,8 @@
             "type": "box",
             "halfExtents": [
               0.6,
-              0.5,
-              0.55
+              0.55,
+              0.5
             ]
           },
           "isTrigger": false,
@@ -399,7 +2082,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
+              "guid": "as_rhe434dp"
             }
           },
           "materials": [
@@ -425,8 +2109,8 @@
             "type": "box",
             "halfExtents": [
               0.4,
-              0.3,
-              0.9
+              0.9,
+              0.3
             ]
           },
           "isTrigger": false,
@@ -467,7 +2151,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
+              "guid": "as_2sfno5jv"
             }
           },
           "materials": [
@@ -493,8 +2178,8 @@
             "type": "box",
             "halfExtents": [
               0.9,
-              0.55,
-              0.65
+              0.65,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -509,7 +2194,7 @@
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          4.159691499144779,
+          3.515907449743434,
           0.8,
           1.992058646137685
         ],
@@ -566,7 +2251,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -577,7 +2263,7 @@
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          -4.544379168691919,
+          0.9046862493924247,
           0.8,
           1.5256496340470458
         ],
@@ -634,7 +2320,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -645,7 +2332,7 @@
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          0.3846876695471361,
+          2.383406300864141,
           0.8,
           -3.517708280184731
         ],
@@ -702,7 +2389,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -808,6 +2496,7 @@
             ]
           },
           "clearRule": "kill-all",
+          "clearTarget": null,
           "depth": 3
         },
         {
@@ -829,8 +2518,940 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#435357",
+                  "roughness": 0.92,
+                  "metallic": 0,
+                  "outlineScale": 0.4,
+                  "halftoneScale": 0.35
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_edge_n",
+      "name": "道路边线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          -11.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              29.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_edge_s",
+      "name": "道路边线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          11.65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              29.5,
+              0.2,
+              0.12
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#b8a87b",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_lane_0",
+      "name": "道路导向标线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          -10,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.5,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_lane_1",
+      "name": "道路导向标线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          -5,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.5,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_lane_2",
+      "name": "道路导向标线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.5,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_lane_3",
+      "name": "道路导向标线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          5,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.5,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_lane_4",
+      "name": "道路导向标线",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          10,
+          0.13,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              2.5,
+              0.2,
+              0.14
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s5"
+                },
+                "patch": {
+                  "albedo": "#d4ae57",
+                  "roughness": 1,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.15
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_walk_-1",
+      "name": "路边人行道",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.16,
+          -13.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              32,
+              0.2,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#7b8295",
+                  "roughness": 1,
+                  "outlineScale": 0.6
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_building_-1",
+      "name": "街区便利店",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          -18
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
+              "guid": "as_178zk6nf"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "masonry"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#bdbda0",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "trim"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#303746",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "interior"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#121a21",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "glass"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#81c8bd",
+                  "roughness": 0.35,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "sign"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b84440",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "accent"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e6bd4b",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_walk_1",
+      "name": "路边人行道",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.16,
+          13.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              32,
+              0.2,
+              2.4
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#7b8295",
+                  "roughness": 1,
+                  "outlineScale": 0.6
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r1_building_1",
+      "name": "街区便利店",
+      "parent": "nd_f3r1",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          18
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
+              "guid": "as_178zk6nf"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "masonry"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#bdbda0",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "trim"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#303746",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "interior"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#121a21",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "glass"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#81c8bd",
+                  "roughness": 0.35,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "sign"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b84440",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
+              }
+            },
+            {
+              "match": {
+                "by": "primitiveKey",
+                "value": "accent"
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e6bd4b",
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "outlineScale": 0.7,
+                  "halftoneScale": 0.4
+                }
               }
             }
           ],
@@ -873,7 +3494,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex/P-04_tex_baked.glb"
+              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
+              "guid": "as_y1xpmedt"
             }
           },
           "materials": [
@@ -899,8 +3521,8 @@
             "type": "box",
             "halfExtents": [
               0.6,
-              0.5,
-              0.55
+              0.55,
+              0.5
             ]
           },
           "isTrigger": false,
@@ -941,7 +3563,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex/P-14_tex_baked.glb"
+              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
+              "guid": "as_rhe434dp"
             }
           },
           "materials": [
@@ -967,8 +3590,8 @@
             "type": "box",
             "halfExtents": [
               0.4,
-              0.3,
-              0.9
+              0.9,
+              0.3
             ]
           },
           "isTrigger": false,
@@ -1009,7 +3632,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex/P-03_tex_baked.glb"
+              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
+              "guid": "as_2sfno5jv"
             }
           },
           "materials": [
@@ -1035,8 +3659,8 @@
             "type": "box",
             "halfExtents": [
               0.9,
-              0.55,
-              0.65
+              0.65,
+              0.55
             ]
           },
           "isTrigger": false,
@@ -1077,7 +3701,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-16/tex/P-16_tex_baked.glb"
+              "path": "assets/environment/models/P-16/tex2/P-16_baked.glb",
+              "guid": "as_tv1nvn4c"
             }
           },
           "materials": [
@@ -1103,8 +3728,8 @@
             "type": "box",
             "halfExtents": [
               0.8,
-              0.8,
-              1.2
+              1.2,
+              0.8
             ]
           },
           "isTrigger": false,
@@ -1119,7 +3744,7 @@
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          5.546255332193039,
+          4.687876599657912,
           1.1,
           2.6560781948502465
         ],
@@ -1176,7 +3801,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1187,7 +3813,7 @@
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          -6.059172224922559,
+          1.206248332523233,
           0.8,
           2.0341995120627274
         ],
@@ -1244,7 +3870,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1255,7 +3882,7 @@
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          0.5129168927295148,
+          3.1778750678188548,
           0.8,
           -4.6902777069129735
         ],
@@ -1312,7 +3939,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1425,7 +4053,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.596Z",
-    "updatedAt": "2026-10-02T15:57:15.018Z",
+    "updatedAt": "2026-10-04T04:00:03.520Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

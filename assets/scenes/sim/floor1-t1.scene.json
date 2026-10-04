@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 7,
   "id": "sc_sim_floor1_t1",
   "name": "第一层 · 火场 · t=1s 快照（派生产物）",
   "act": "Act1",
@@ -225,7 +225,8 @@
             ]
           },
           "clearRule": "kill-all",
-          "depth": 1
+          "depth": 1,
+          "clearTarget": null
         },
         {
           "kind": "MeshRenderer",
@@ -776,7 +777,8 @@
             ]
           },
           "clearRule": "interact",
-          "depth": 1
+          "depth": 1,
+          "clearTarget": null
         },
         {
           "kind": "MeshRenderer",
@@ -910,7 +912,8 @@
             ]
           },
           "clearRule": "kill-all",
-          "depth": 1
+          "depth": 1,
+          "clearTarget": null
         },
         {
           "kind": "MeshRenderer",

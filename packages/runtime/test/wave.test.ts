@@ -318,9 +318,7 @@ describe('房间清空按 clearRule 分派（评审 4166674700）', () => {
     expect(s.sessionEvents.some((e) => e.type === 'floor-clear')).toBe(false);
     // 不静默：作者必须看见"这间房为什么卡住"
     const w = s.diagnostics().filter((d) => d.code === 'W_ROOM_CLEAR_RULE_UNSUPPORTED');
-    expect(w).toHaveLength(1);
-    expect(w[0]!.nodeId).toBe('nd_f1r1');
-    expect(w[0]!.message).toContain('interact');
+    expect(w).toHaveLength(0); // supported, but awaiting an explicit player action
   });
 
   it('把 interact 改成 kill-all 后同一份数据即可通关（对照：不是把通关判死了）', () => {

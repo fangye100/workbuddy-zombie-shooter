@@ -368,9 +368,10 @@ export class RuntimeBridge {
         // 与 selectedEntity 的判定保持一致，见 PR #3 review。
         const k = sel !== null && sel.runId === e.runId
           && sel.id === e.id && sel.generation === e.generation ? 1.9 : 1;
-        inst[o + 8] = base[0] * k;
-        inst[o + 9] = base[1] * k;
-        inst[o + 10] = base[2] * k;
+        const flash = Math.min(1, Math.max(0, e.hitFlash / 0.15));
+        inst[o + 8] = base[0] * k * (1 - flash) + flash;
+        inst[o + 9] = base[1] * k * (1 - flash) + flash * 0.82;
+        inst[o + 10] = base[2] * k * (1 - flash) + flash * 0.55;
         // [11] poseIndex（相对 paletteBase，局部量）：M3 按行为选片 + tick 推相位查表
         //（poseIndexAt 返回本角色 palette 内的下标；shader 端全局 = paletteBase + 相对量，
         //  与 restPose 同语义）。选不到片（资产改名 / 退化空片）回 bind pose。

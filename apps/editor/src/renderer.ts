@@ -1,4 +1,6 @@
 import type { GpuContext } from '@aether/gfx';
+import { findSceneBinding, resolveSceneMaterial } from './services/scene-material';
+import { lightAngles } from './services/scene-light';
 import {
   type GizmoMode,
   type GizmoSpace,
@@ -434,9 +436,9 @@ export interface SceneLoadResult {
   environment?: EnvironmentData;
   /**
    * 场景里按 `priority` 选出的主光（directional；ok=true 时带回；null = 没声明）。
-   * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
+   * 方向从灯光节点世界旋转派生：局部 -Y 为照射方向。
    */
-  keyLight?: { color: string; intensity: number; nodeId: string } | null;
+  keyLight?: { color: string; intensity: number; nodeId: string; azimuth: number; elevation: number } | null;
   /**
    * 同规则选出的点光（null = 没有 point 灯）。
    * `position` 是该 Light 节点的**世界坐标** —— 场景声明了点光就必须按它摆，
@@ -1009,9 +1011,10 @@ export class LabRenderer {
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
     this.document = migrated.doc;
+    this.applyDocumentMaterials(warnings);
 
     // 场景灯光：按 `priority` 降序取 top-1（directional key）。
-    // 场景 schema 目前只有颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    // 颜色与强度取 Light，方向取节点世界旋转（含父级变换）。
     //
     // 🔴 这里曾经是「取节点顺序里第一个启用的 Light」—— 与 `priority` 完全无关，
     // 落选的灯也不给任何提示。AGENTS.md §2.3 的要求是：场景可声明任意多盏，
@@ -1021,7 +1024,8 @@ export class LabRenderer {
     let keyLight: SceneLoadResult['keyLight'] = null;
     let pointLight: SceneLoadResult['pointLight'] = null;
     if (picked.key !== null) {
-      keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId };
+      const rotation = graph.getNode(picked.key.nodeId)?.world.rotation ?? [0, 0, 0, 1];
+      keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId, ...lightAngles(rotation) };
     }
     if (picked.point !== null) {
       // 位置取该节点的**世界**变换（灯可以挂在带变换的父级下）：与碰撞体/刷怪点同一把尺子
@@ -1085,6 +1089,7 @@ export class LabRenderer {
     fetchAsset: (rel: string) => Promise<ArrayBuffer>,
     decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
     resolveRuler: (rel: string) => Promise<number | null>,
+    resolveUpAxis: (rel: string) => Promise<'auto' | 'y' | 'z'> = async () => 'auto',
   ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
     const failed: { name: string; reason: string }[] = [];
     let swapped = 0;
@@ -1092,7 +1097,7 @@ export class LabRenderer {
       try {
         const buffer = await fetchAsset(p.path);
         const ruler = await resolveRuler(p.path);
-        const model = parseGlb(buffer, ruler);
+        const model = parseGlb(buffer, ruler, await resolveUpAxis(p.path));
         const bmp = model.image === null ? null : await decode(model.image, p.path);
         // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
         // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。
@@ -1115,7 +1120,29 @@ export class LabRenderer {
       }
     }
     this.pendingSceneAssets = [];
+    const materialWarnings: string[] = [];
+    this.applyDocumentMaterials(materialWarnings);
+    for (const warning of materialWarnings) console.warn(`[scene-material] ${warning}`);
     return { swapped, failed };
+  }
+
+  /** Apply serialized bindings again after GLB replacement reveals the real primitive identities. */
+  private applyDocumentMaterials(warnings: string[]): void {
+    if (this.document === null) return;
+    for (const object of this.state.objects) {
+      const node = this.document.nodes.find(n => n.id === object.nodeId);
+      const mesh = node?.components.find(c => c.kind === 'MeshRenderer');
+      if (mesh?.kind !== 'MeshRenderer') continue;
+      object.subMeshes.forEach((slot, index) => {
+        const ref = findSceneBinding(mesh.materials, slot, index);
+        if (ref === null) return;
+        const resolved = resolveSceneMaterial(ref, id => this.state.library.resolve(this.state.params, id),
+          id => this.state.library.find(id)?.state ?? null);
+        slot.materialId = resolved.id;
+        slot.override = ref.type === 'override' ? resolved.state : null;
+        warnings.push(...resolved.warnings.map(w => `${object.name}：${w}`));
+      });
+    }
   }
 
   /** 宿主注入的"是否已进入 Play"探针（loadSceneAssets 的竞态防御用） */

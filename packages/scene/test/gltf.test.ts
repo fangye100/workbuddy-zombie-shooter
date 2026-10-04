@@ -20,6 +20,18 @@ import {
  */
 const TARGET_HEIGHT_M = 2.05;
 
+it('honors declared Y-up for a building deeper than it is tall', async () => {
+  const { makeGlb } = await import('./testGlb');
+  const glb = makeGlb([{ name: 'wide building', triangles: 6 }]);
+  const view = new DataView(glb), jsonLength = view.getUint32(12, true);
+  const positions = new Float32Array(glb, 20 + jsonLength + 8);
+  for (let i = 2; i < positions.length; i += 3) positions[i] = positions[i]! * 12;
+  const declared = parseGlb(glb, null, 'y');
+  expect(meshHeight(declared.mesh)).toBeCloseTo(17 / 18, 5);
+  expect(meshHeight(parseGlb(glb, null).mesh)).toBeGreaterThan(9);
+  expect(meshHeight(parseGlb(glb, null, 'z').mesh)).toBeGreaterThan(9);
+});
+
 /** 造一个 stride 15 的最小网格（两个顶点，高度 h） */
 function makeMesh(h: number, footY = 0): MeshData {
   const v = new Float32Array(2 * 15);
