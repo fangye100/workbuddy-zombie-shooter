@@ -65,6 +65,17 @@ function firstExists(dir, names) {
 
 const out = { characters: [], environments: [] };
 
+// LOD 质量/算法溯源数据（由 assets/environment/_tools/audit_lod_quality.py 生成）。
+// 缺文件不阻塞 —— 页面只是少个标记，数据仍能正常索引。
+const LOD_QUALITY_PATH = path.join(ASSETS, '_data/lod-quality.json');
+const LOD_QUALITY = fs.existsSync(LOD_QUALITY_PATH)
+  ? JSON.parse(fs.readFileSync(LOD_QUALITY_PATH, 'utf8'))
+  : { environments: {} };
+if (!fs.existsSync(LOD_QUALITY_PATH)) {
+  console.warn('[warn] _data/lod-quality.json 不存在 → 环境 LOD 不显示算法标记'
+    + '（生成：python assets/environment/_tools/audit_lod_quality.py）');
+}
+
 // ---------------- 角色 ----------------
 const roster = JSON.parse(fs.readFileSync(path.join(ASSETS, 'characters/roster.json'), 'utf8'));
 // 🔴 数组顺序即浏览器页展示顺序：主人公排最前。
@@ -170,6 +181,23 @@ for (const e of props.entries) {
   }
   if (low) lods.push({ label: 'LOD2 · 低模(顶点色)', file: low, tris: e.tris, verts: null, bytes: null });
 
+  // 🔴 LOD 算法溯源（2026-10-04 起）：浏览器页要能一眼看出这批 LOD 是哪套算法产的。
+  //   routeA  = 角色侧现行路线 A（decimate_uvkeep：焊点 + 保纹理 QEM + 内嵌原生贴图）
+  //   transfer= 旧的环境转移烘焙（env_transfer：顶点色有损压缩 → 贴图发灰，已弃用）
+  //
+  // 🔴 判据在assets/_data/lod-quality.json 里（由 assets/environment/_tools/
+  //    audit_lod_quality.py 生成），本文件只读不判。两个原因不能就地判：
+  //  1. 贴图是 JPEG（路线 A 产物）或 PNG（旧产物），Node 端解图要zlib+滤波实现，
+  //     属于该由 Python 侧做的活（那边有 PIL，且同一套 PIL 已在做资产质检）。
+  //  2. 更要紧的是**不能靠 pre-lodregen.bak 备份在不在**——备份已 gitignore，
+  //     换机器/重新克隆后不在，全部资产会被误标成旧法。
+  //     （也别用彩度阈值：旧产物彩度是连续长尾0%~43%、与路线 A 的 87% 有重叠，
+  //      P-05=43% / P-43=38% / P-11=37% 都是旧产物但彩度不低 → 必然误判。
+  //      现用的结构性判据是「JPEG+4096² vs PNG+512²」，零阈值。）
+  const lq = LOD_QUALITY.environments?.[e.id] ?? null;
+  const lod1Alg = lq?.alg ?? null;
+  const lod1Colorful = lq?.colorful ?? null;
+
   out.environments.push({
     id: e.id, name: e.name, en: e.en ?? '', kind: e.kind,
     act: e.act ? actName[e.act] ?? `Act${e.act}` : '通用',
@@ -179,6 +207,8 @@ for (const e of props.entries) {
     silhouette: e.silhouette ?? '', look: e.look ?? '', accent: e.accent ?? '',
     placement: e.placement ?? '',
     img, preview, lods,
+    lod1Alg,// 'routeA' | 'transfer'（见上，自证判据 = 实测彩度）
+    lod1Colorful,                       // LOD1 贴图彩色占比实测值（浏览器端可复核）
     animations: [], joints: 0,
   });
 }

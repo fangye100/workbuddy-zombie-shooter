@@ -1,0 +1,274 @@
+{
+ "_comment": "本文件由 assets/environment/_tools/audit_lod_quality.py 生成，gen_manifest.mjs 读它给 asset browser 打算法标记。别手改。",
+ "_judge": "LOD1 内嵌贴图 JPEG+4096²=路线A(decimate_uvkeep 直接内嵌混元原生贴图)；PNG+512²=旧转移烘焙(env_transfer --size 512)。结构性判据，无阈值。",
+ "_colorful": "LOD1 贴图彩色占比 = 饱和度>0.25 的像素比例。仅供人工判读，不做算法判定（旧产物彩度与路线 A 有重叠，见脚本 docstring）。",
+ "_generatedAt": "2026-10-04T05:27:05Z",
+ "environments": {
+  "P-01": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.2344,
+   "alg": "transfer"
+  },
+  "P-02": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.0544,
+   "alg": "transfer"
+  },
+  "P-03": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.92,
+   "alg": "routeA"
+  },
+  "P-04": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9503,
+   "alg": "routeA"
+  },
+  "P-05": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.4309,
+   "alg": "transfer"
+  },
+  "P-06": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.986,
+   "alg": "routeA"
+  },
+  "P-11": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.3738,
+   "alg": "transfer"
+  },
+  "P-12": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.155,
+   "alg": "transfer"
+  },
+  "P-13": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9998,
+   "alg": "routeA"
+  },
+  "P-14": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9503,
+   "alg": "routeA"
+  },
+  "P-15": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.7834,
+   "alg": "routeA"
+  },
+  "P-16": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.1833,
+   "alg": "transfer"
+  },
+  "P-21": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9993,
+   "alg": "routeA"
+  },
+  "P-22": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.7698,
+   "alg": "routeA"
+  },
+  "P-23": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8946,
+   "alg": "routeA"
+  },
+  "P-24": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.7879,
+   "alg": "routeA"
+  },
+  "P-25": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.6433,
+   "alg": "routeA"
+  },
+  "P-26": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8698,
+   "alg": "routeA"
+  },
+  "P-31": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.6553,
+   "alg": "routeA"
+  },
+  "P-32": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.7435,
+   "alg": "routeA"
+  },
+  "P-33": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9204,
+   "alg": "routeA"
+  },
+  "P-34": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9913,
+   "alg": "routeA"
+  },
+  "P-35": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8474,
+   "alg": "routeA"
+  },
+  "P-36": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9276,
+   "alg": "routeA"
+  },
+  "P-41": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8385,
+   "alg": "routeA"
+  },
+  "P-42": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.9329,
+   "alg": "routeA"
+  },
+  "P-43": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.3817,
+   "alg": "transfer"
+  },
+  "P-44": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.0018,
+   "alg": "transfer"
+  },
+  "P-45": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.987,
+   "alg": "routeA"
+  },
+  "P-46": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8396,
+   "alg": "routeA"
+  },
+  "S-01": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.0271,
+   "alg": "transfer"
+  },
+  "S-02": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.0247,
+   "alg": "transfer"
+  },
+  "S-03": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.8266,
+   "alg": "routeA"
+  },
+  "S-04": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.6719,
+   "alg": "routeA"
+  },
+  "S-05": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.7491,
+   "alg": "routeA"
+  },
+  "S-06": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.6731,
+   "alg": "routeA"
+  },
+  "S-07": {
+   "mime": "image/png",
+   "texW": 512,
+   "texH": 512,
+   "colorful": 0.1929,
+   "alg": "transfer"
+  },
+  "S-08": {
+   "mime": "image/jpeg",
+   "texW": 4096,
+   "texH": 4096,
+   "colorful": 0.6869,
+   "alg": "routeA"
+  }
+ }
+}

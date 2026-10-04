@@ -598,6 +598,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.2344,
    "animations": [],
    "joints": 0
   },
@@ -646,6 +648,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.0544,
    "animations": [],
    "joints": 0
   },
@@ -694,6 +698,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.92,
    "animations": [],
    "joints": 0
   },
@@ -742,6 +748,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9503,
    "animations": [],
    "joints": 0
   },
@@ -790,6 +798,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.4309,
    "animations": [],
    "joints": 0
   },
@@ -838,6 +848,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.986,
    "animations": [],
    "joints": 0
   },
@@ -886,6 +898,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.3738,
    "animations": [],
    "joints": 0
   },
@@ -934,6 +948,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.155,
    "animations": [],
    "joints": 0
   },
@@ -982,6 +998,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9998,
    "animations": [],
    "joints": 0
   },
@@ -1030,6 +1048,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9503,
    "animations": [],
    "joints": 0
   },
@@ -1078,6 +1098,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.7834,
    "animations": [],
    "joints": 0
   },
@@ -1126,6 +1148,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.1833,
    "animations": [],
    "joints": 0
   },
@@ -1174,6 +1198,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.0271,
    "animations": [],
    "joints": 0
   },
@@ -1222,6 +1248,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.0247,
    "animations": [],
    "joints": 0
   },
@@ -1270,6 +1298,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9993,
    "animations": [],
    "joints": 0
   },
@@ -1318,6 +1348,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.7698,
    "animations": [],
    "joints": 0
   },
@@ -1366,6 +1398,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8946,
    "animations": [],
    "joints": 0
   },
@@ -1414,6 +1448,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.7879,
    "animations": [],
    "joints": 0
   },
@@ -1462,6 +1498,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.6433,
    "animations": [],
    "joints": 0
   },
@@ -1510,6 +1548,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8698,
    "animations": [],
    "joints": 0
   },
@@ -1558,6 +1598,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8266,
    "animations": [],
    "joints": 0
   },
@@ -1606,6 +1648,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.6719,
    "animations": [],
    "joints": 0
   },
@@ -1654,6 +1698,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.6553,
    "animations": [],
    "joints": 0
   },
@@ -1702,6 +1748,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.7435,
    "animations": [],
    "joints": 0
   },
@@ -1750,6 +1798,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9204,
    "animations": [],
    "joints": 0
   },
@@ -1798,6 +1848,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9913,
    "animations": [],
    "joints": 0
   },
@@ -1846,6 +1898,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8474,
    "animations": [],
    "joints": 0
   },
@@ -1894,6 +1948,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9276,
    "animations": [],
    "joints": 0
   },
@@ -1942,6 +1998,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.7491,
    "animations": [],
    "joints": 0
   },
@@ -1990,6 +2048,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.6731,
    "animations": [],
    "joints": 0
   },
@@ -2038,6 +2098,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8385,
    "animations": [],
    "joints": 0
   },
@@ -2086,6 +2148,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.9329,
    "animations": [],
    "joints": 0
   },
@@ -2134,6 +2198,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.3817,
    "animations": [],
    "joints": 0
   },
@@ -2182,6 +2248,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.0018,
    "animations": [],
    "joints": 0
   },
@@ -2230,6 +2298,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.987,
    "animations": [],
    "joints": 0
   },
@@ -2278,6 +2348,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.8396,
    "animations": [],
    "joints": 0
   },
@@ -2326,6 +2398,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "transfer",
+   "lod1Colorful": 0.1929,
    "animations": [],
    "joints": 0
   },
@@ -2374,6 +2448,8 @@
      "bytes": null
     }
    ],
+   "lod1Alg": "routeA",
+   "lod1Colorful": 0.6869,
    "animations": [],
    "joints": 0
   }

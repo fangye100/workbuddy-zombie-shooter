@@ -33,6 +33,7 @@
   .tag{font-size:10px;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--dim)}
   .tag.gold{color:var(--gold);border-color:var(--gold)}
   .tag.teal{color:var(--teal);border-color:var(--teal)}
+  .tag.red{color:var(--red);border-color:var(--red)}
   .kind{font-size:10px;color:#14110F;font-weight:700;border-radius:5px;padding:1px 7px}
 
   /* ---------- 3D Viewer 弹层 ---------- */
@@ -157,6 +158,16 @@ function cardHTML(e, isChar) {
     tags.push(`<span class="tag">${e.tris} tris</span>`);
     tags.push(`<span class="tag">${COVER_LABEL[e.cover] ?? e.cover}</span>`);
     tags.push(`<span class="tag">${e.act}</span>`);
+    // 🔴 LOD 算法标记（2026-10-04）：绿 = 路线 A（保 UV QEM + 内嵌混元原生 4096²贴图，
+    //    贴图真色）；红 = 旧转移烘焙（顶点色有损压缩 → 贴图发灰，已弃用）。
+    //    这批道具 27/29 已重做；剩 P-05 / P-43 是碎壳体（17255 / 6208 连通壳）
+    //    QEM 处理不了，连同「色差本来就小 / 原生即灰」的 9 件仍是旧产物。
+    //    彩度（饱和度>0.25 的像素比例）一并显示，方便人工判读。
+    if (e.lod1Alg === 'routeA') tags.push(`<span class="tag teal">路线A</span>`);
+    else if (e.lod1Alg === 'transfer') tags.push(`<span class="tag red">贴图旧法</span>`);
+    if (e.lod1Colorful != null) {
+      tags.push(`<span class="tag" title="LOD1 贴图彩色占比（饱和度>0.25 的像素比例）">彩 ${(e.lod1Colorful * 100).toFixed(0)}%</span>`);
+    }
   }
   return `<article class="card" data-id="${e.id}">
     <div class="thumb">${img
