@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vmkgd52p",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-12_lod2.glb"
+  },
+  "sourceHash": "sha256:e448696b7cbdd24f7ae10052d269c91f87c9297e11fa26736acf6e143ed3a302",
+  "updatedAt": "2026-10-04T11:05:16.914Z"
+}

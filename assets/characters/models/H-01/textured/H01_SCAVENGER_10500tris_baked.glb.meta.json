@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_yrsn456i",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.8,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "H-01",
+    "characterName": "清道夫",
+    "variant": "textured",
+    "file": "H01_SCAVENGER_10500tris_baked.glb"
+  },
+  "sourceHash": "sha256:05673bb5c33f52ed46bd1e2962b4a0187d0c65ccf884c507343a97da8e150c15",
+  "updatedAt": "2026-10-04T04:44:48.235Z"
+}

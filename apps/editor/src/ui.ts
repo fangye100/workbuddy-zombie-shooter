@@ -1493,7 +1493,7 @@ export class Panel {
     const healthy = s.boundaryEdges === 0 && s.components === 1;
     this.selStats.textContent =
       `顶点 ${s.vertices} · 面 ${s.triangles} · 边界边 ${s.boundaryEdges} · 连通分量 ${s.components}` +
-      (healthy ? ' ✓ 拓扑完整' : ' ⚠ 网格破碎，点 Merge Points');
+      (healthy ? ' ✓ 索引连通' : ' · 按索引统计（UV 接缝/独立部件也会产生边界）');
   }
 
   private buildPresetButtons(): HTMLElement {

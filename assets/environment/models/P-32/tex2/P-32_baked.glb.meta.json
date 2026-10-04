@@ -15,8 +15,128 @@
   "animations": null,
   "userData": {
     "variant": "tex2",
-    "file": "P-32_baked.glb"
+    "file": "P-32_baked.glb",
+    "lodBuild": {
+      "algorithm": "uvkeep-v2",
+      "targets": [
+        30000,
+        15000
+      ],
+      "sourceRotationDeg": [
+        -90,
+        0,
+        0
+      ]
+    },
+    "lodBuildResult": {
+      "id": "P-32",
+      "generator": "aether environment uvkeep-v2",
+      "sourceHash": "95f730927d68be047aa3f4f93ffb69e5b29ee2c41d54da2beedbf86ae25be30e",
+      "sourceFaces": 499936,
+      "sourcePlacementMatrix": [
+        0,
+        0,
+        -5.109563726780497,
+        0,
+        -17.38586219550262,
+        3.3804754458305195e-16,
+        0,
+        0,
+        1.064577024406963e-15,
+        5.520735363345804,
+        0,
+        0,
+        0.22036558280800747,
+        8.34634800135471e-24,
+        0.007500853838138393,
+        1
+      ],
+      "footprint": [
+        18,
+        2.8,
+        3.4
+      ],
+      "config": {
+        "algorithm": "uvkeep-v2",
+        "targets": [
+          30000,
+          15000
+        ],
+        "sourceRotationDeg": [
+          -90,
+          0,
+          0
+        ]
+      },
+      "levels": [
+        {
+          "level": "LOD1",
+          "file": "P-32_baked.glb",
+          "tris": 30000,
+          "target": 30000,
+          "surfaceAreaRatio": 0.9834813573579921,
+          "topology": {
+            "v": 14822,
+            "f": 30000,
+            "edges": 45000,
+            "boundary": 0,
+            "nonmanifold": 0
+          },
+          "dimensions": [
+            18.00466017195271,
+            3.4033984786,
+            2.8014850649614402
+          ],
+          "boundsRelativeError": 0.0009995525294117513,
+          "groundCorrectionM": -0.0024018910922545818,
+          "sha256": "724583f322d6e6434effca43f1ee4dca4e966f42bfb05d1ed3b319d30fac1e42",
+          "bytes": 4396164,
+          "failures": [],
+          "visualReview": {
+            "status": "reviewed",
+            "evidence": "docs/evidence/environment-lods-2026-10-04/08-S-04.jpg",
+            "scope": "Headed Asset Browser textured LOD switching; identity, silhouette, texture, up axis and grounding. Render-vertex compaction subsequently checked attribute-exact for every triangle."
+          }
+        },
+        {
+          "level": "LOD2",
+          "file": "P-32_lod2.glb",
+          "tris": 15000,
+          "target": 15000,
+          "surfaceAreaRatio": 0.9591691934537655,
+          "topology": {
+            "v": 7322,
+            "f": 15000,
+            "edges": 22500,
+            "boundary": 0,
+            "nonmanifold": 0
+          },
+          "dimensions": [
+            18.028447776374314,
+            3.4107611347702385,
+            2.8001218506631664
+          ],
+          "boundsRelativeError": 0.003165039638305389,
+          "groundCorrectionM": -0.007581440982938657,
+          "sha256": "c7e8c82912746d25cc0b0c834ab8beb4365da7d9fb7bb76a3ca210b34dbb6907",
+          "bytes": 3879700,
+          "failures": [],
+          "visualReview": {
+            "status": "reviewed",
+            "evidence": "docs/evidence/environment-lods-2026-10-04/08-S-04.jpg",
+            "scope": "Headed Asset Browser textured LOD switching; identity, silhouette, texture, up axis and grounding. Render-vertex compaction subsequently checked attribute-exact for every triangle."
+          }
+        }
+      ],
+      "sourceTopology": {
+        "v": 249790,
+        "f": 499936,
+        "edges": 749904,
+        "boundary": 0,
+        "nonmanifold": 0
+      }
+    }
   },
-  "sourceHash": "sha256:3d69d60b729fc339d0fe9f4d2e0dfa139a2a8a70755440149743d4270b471eea",
+  "sourceHash": "sha256:724583f322d6e6434effca43f1ee4dca4e966f42bfb05d1ed3b319d30fac1e42",
   "updatedAt": "2026-09-18T15:11:46.304Z"
 }

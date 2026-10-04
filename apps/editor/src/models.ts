@@ -44,7 +44,18 @@ export const MODEL_RULER_HEIGHT_M = requireCharacter('E-04').heightMeters;
  * **降级即默认**：sidecar 缺失 / 损坏一律返回默认 meta + 诊断，**不抛异常**。
  * 所以它永远不会让资产加载失败 —— 它是便利层，不是链路上的单点故障。
  */
-export const assetServer = new AssetServer({ fetchImpl: path => fetch(fileUrl(path.replace(/^\/+/, ''))) });
+export const assetServer = new AssetServer({
+  fetchImpl: (path) => fetch(fileUrl(path.replace(/^\/+/, ''))),
+});
+
+/** A valid null height means preserve authored metres, not use the character ruler. */
+export async function resolveAssetImportHeightM(assetPath: string): Promise<number | null> {
+  const load = await assetServer.loadMeta(assetPath);
+  if (!load.missing && load.errors.length === 0 && load.meta.importer) {
+    return load.meta.importer.normalizeHeightM;
+  }
+  return MODEL_RULER_HEIGHT_M;
+}
 
 /**
  * 归一化身高：**优先问资产自己的 sidecar，没有才回落全局标尺**。

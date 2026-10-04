@@ -279,7 +279,7 @@ function actCoverProps(theme) {
   // 真正要防的是"大件进窄槽"：升序保证轮到大件时只剩远槽或下一房间。
   // session.test 的"不穿障碍"是这条布局的回归看守（P4b 复审一轮的教训）。
   usable.sort((a, b) => {
-    const area = (fp) => fp[0] * fp[2];
+    const area = (fp) => fp[0] * fp[1];
     return area(a.footprint) - area(b.footprint);
   });
   return usable.map((e) => [e.id, e.footprint]);

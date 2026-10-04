@@ -112,6 +112,36 @@ describe('关卡场景 · 外部资产引用（ADR-018 P4b 门禁）', () => {
     Object.keys(ENV_GLBS).map((k) => k.replace(/^\//, '').replace(/\\/g, '/')),
   );
   const levelFiles = Object.keys(levelModules);
+  const sidecars = import.meta.glob('/assets/environment/models/**/tex2/*_baked.glb.meta.json', { eager: true, import: 'default' }) as Record<string, { guid: string }>;
+  const propModules = import.meta.glob('/assets/environment/props.json', { eager: true, import: 'default' }) as Record<string, { entries: { id: string; footprint: number[] }[] }>;
+
+  it('optional asset GUIDs round-trip and reject invalid values', () => {
+    const doc = JSON.parse(JSON.stringify(levelModules[levelFiles[0]!])) as SceneDocument;
+    const cover = doc.nodes.find((node) => /_cv\d+$/.test(node.id))!;
+    const mr = cover.components.find((c) => c.kind === 'MeshRenderer');
+    if (mr?.kind !== 'MeshRenderer' || mr.source.type !== 'asset') throw new Error('Missing cover');
+    expect(mr.source.ref.guid).toBeTruthy();
+    mr.source.ref.guid = '';
+    expect(validateSceneDocument(doc).map((d) => d.code)).toContain('E_MESH_GUID');
+    delete mr.source.ref.guid;
+    expect(validateSceneDocument(doc).filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it.each(levelFiles)('%s environment GUIDs and collision dimensions match their assets', (file: string) => {
+    const doc = levelModules[file] as SceneDocument;
+    const props = Object.values(propModules)[0]!.entries;
+    for (const n of doc.nodes.filter((node) => /_cv\d+$/.test(node.id))) {
+      const mr = n.components.find((c) => c.kind === 'MeshRenderer');
+      if (mr?.kind !== 'MeshRenderer' || mr.source.type !== 'asset') throw new Error('Missing cover asset');
+      const ref = mr.source.ref;
+      expect(ref.guid).toBe(sidecars[`/${ref.path}.meta.json`]!.guid);
+      const id = /models\/([^/]+)\//.exec(ref.path)![1]!;
+      const [w, d, h] = props.find((e) => e.id === id)!.footprint as [number, number, number];
+      const collider = n.components.find((c) => c.kind === 'Collider');
+      if (collider?.kind !== 'Collider' || collider.shape.type !== 'box') throw new Error('Missing cover collider');
+      expect(collider.shape.halfExtents).toEqual([w / 2, h / 2, d / 2]);
+    }
+  });
 
   it.each(levelFiles)('%s 掩体（category=道具 的 _cv 节点）全部引用真实 GLB', (file: string) => {
     const doc = levelModules[file] as SceneDocument;

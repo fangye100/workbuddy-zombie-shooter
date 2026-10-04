@@ -1187,7 +1187,7 @@ export class LabRenderer {
     if (nodeId === '') return null;
     const objs = this.state.objects;
     for (let i = 0; i < objs.length; i++) {
-      if (objs[i]!.nodeId === nodeId) return i;
+      if (!objs[i]!.removed && objs[i]!.nodeId === nodeId) return i;
     }
     return null;
   }
@@ -1646,7 +1646,7 @@ export class LabRenderer {
     return true;
   }
 
-  private createTextureFromBitmap(bitmap: ImageBitmap): GPUTexture {
+  private createTextureFromBitmap(bitmap: ImageBitmap, closeBitmap = true): GPUTexture {
     const tex = this.device.createTexture({
       label: 'model-albedo',
       size: [bitmap.width, bitmap.height],
@@ -1660,8 +1660,8 @@ export class LabRenderer {
       { width: bitmap.width, height: bitmap.height },
     );
     // ImageBitmap 占的是 native 内存（4096² ≈ 67MB），GC 不保证及时回收。
-    // 上传完 GPU 就再没人需要它，显式 close —— 反复导入模型时不 close 会稳定吃掉几个 G。
-    bitmap.close();
+    // Normally release after upload. Author insertion history explicitly retains it for redo.
+    if (closeBitmap) bitmap.close();
     return tex;
   }
 
@@ -1743,6 +1743,8 @@ export class LabRenderer {
     tree: GltfNodeTree[] | null = null,
     skeleton: SkeletonData | null = null,
     animations: AnimClip[] = [],
+    nodeId: string | null = null,
+    retainBitmap = false,
   ): number | null {
     const reused = this.state.objects.findIndex((o) => o.removed);
     if (reused < 0 && this.state.objects.length >= MAX_OBJECTS) {
@@ -1777,13 +1779,12 @@ export class LabRenderer {
       mesh: cloned,
       modelMatrix: m4.mat4(),
       ...localBounds(cloned),
-      texture: bitmap === null ? this.whiteTex : this.createTextureFromBitmap(bitmap),
+      texture: bitmap === null ? this.whiteTex : this.createTextureFromBitmap(bitmap, !retainBitmap),
       ownsTexture: bitmap !== null,
       useTex: bitmap !== null,
       name,
       category: '资产',
-      // 拖入的资产模型不属于任何场景节点（保存链路不管它），没有文档来源
-      nodeId: null,
+      nodeId,
       subMeshes: [
         {
           name,

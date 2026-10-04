@@ -991,7 +991,7 @@
         0.9,
         0.9
       ],
-      "tris": 500,
+      "tris": 1500,
       "cover": "low",
       "blocksSight": false,
       "blocksMove": true,

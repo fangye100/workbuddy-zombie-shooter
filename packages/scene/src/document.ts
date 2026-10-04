@@ -46,6 +46,8 @@ export type Quat = [number, number, number, number];
  */
 export interface AssetRef {
   path: AssetPath;
+  /** Stable sidecar identity; optional for backward-compatible path-only scenes. */
+  guid?: string;
   /**
    * 资产内部定位。GLB 约定（与 packages/scene/gltf.ts 的 SubMeshRange 对齐）：
    *   `'prim:Body#0'`  primitiveKey（最稳，首选）
@@ -1004,6 +1006,8 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         const ref = src.ref;
         if (typeof ref !== 'object' || ref === null || typeof ref.path !== 'string') {
           err(`${at}/source/ref`, 'E_MESH_REF', 'asset 类型的 source 必须有 ref.path');
+        } else if (ref.guid !== undefined && (typeof ref.guid !== 'string' || ref.guid.length === 0)) {
+          err(`${at}/source/ref/guid`, 'E_MESH_GUID', 'asset ref.guid 必须为非空字符串');
         }
       } else {
         err(`${at}/source/type`, 'E_MESH_SOURCE_TYPE', `source.type 必须是 'builtin' 或 'asset'`);
