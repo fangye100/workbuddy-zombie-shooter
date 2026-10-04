@@ -2,6 +2,7 @@
 import { validateSceneDocument, type SceneDocument, type SceneNode } from '@aether/scene';
 import { changedJsonPaths, cloneDocument, sceneFingerprint, validateQuat, validateSpawnValue } from '@aether/runtime';
 import type { JsonDiffEntry, SpawnEditStore } from '@aether/runtime';
+import { ENVIRONMENT_EDIT_PATHS, validEnvironmentValues } from '@aether/runtime';
 import { readProjectFile, writeProjectFile } from '../asset-util';
 import type { ProjectFileResult, WriteResult } from '../asset-util';
 
@@ -23,6 +24,9 @@ export function authorSaveViolations(base: SceneDocument, saved: SceneDocument, 
     )];
   }
   const allowed = new Set<string>();
+  if (validEnvironmentValues(saved.environment)) {
+    for (const path of ENVIRONMENT_EDIT_PATHS) allowed.add(`environment.${path}`);
+  }
   for (let index = 0; index < base.nodes.length; index++) {
     const node = base.nodes[index]!;
     const next = saved.nodes[index];

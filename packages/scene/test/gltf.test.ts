@@ -30,9 +30,22 @@ describe('authored environment coordinates', () => {
     const zs = Array.from(mesh.vertices).filter((_, i) => i % 15 === 2);
     expect(Math.min(...ys)).toBeCloseTo(0, 6);
     expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(7);
+    expect(meshHeight(parseGlb(source, null, 'z').mesh)).toBeGreaterThan(7);
     const legacy = parseGlb(makeGlb([{ name: 'legacy', triangles: 6 }], undefined, { zScale: 10 }), null);
     expect(meshHeight(legacy.mesh)).toBeGreaterThan(7);
   });
+});
+
+it('honors declared Y-up for a building deeper than it is tall', async () => {
+  const { makeGlb } = await import('./testGlb');
+  const glb = makeGlb([{ name: 'wide building', triangles: 6 }]);
+  const view = new DataView(glb), jsonLength = view.getUint32(12, true);
+  const positions = new Float32Array(glb, 20 + jsonLength + 8);
+  for (let i = 2; i < positions.length; i += 3) positions[i] = positions[i]! * 12;
+  const declared = parseGlb(glb, null, 'y');
+  expect(meshHeight(declared.mesh)).toBeCloseTo(17 / 18, 5);
+  expect(meshHeight(parseGlb(glb, null).mesh)).toBeGreaterThan(9);
+  expect(meshHeight(parseGlb(glb, null, 'z').mesh)).toBeGreaterThan(9);
 });
 
 /** 造一个 stride 15 的最小网格（两个顶点，高度 h） */

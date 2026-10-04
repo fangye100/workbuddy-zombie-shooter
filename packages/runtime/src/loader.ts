@@ -24,7 +24,7 @@
  * position"，那只对了没有旋转和缩放的场景 —— 一旦有父级缩放，刷怪点就会飘。
  */
 
-import { SceneGraph } from '@aether/scene';
+import { SceneGraph, validRunRules, type RunRulesComponent } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
 import { solidCollider, type SolidColliderDesc } from './solid-ray';
 import type {
@@ -55,6 +55,7 @@ export interface RoomDesc {
   roomType: RoomVolumeComponent['roomType'];
   theme: RoomVolumeComponent['theme'];
   clearRule: RoomVolumeComponent['clearRule'];
+  clearTarget?: NodeId | null;
   depth: number;
   minX: number;
   maxX: number;
@@ -112,6 +113,7 @@ export interface NavDesc {
 
 /** 运行描述：装载产物，RuntimeSession 的唯一输入（除种子与固定步长外） */
 export interface LevelRuntimeDesc {
+  runRules?: RunRulesComponent | null;
   sceneId: string;
   sceneName: string;
   /** 场景 schemaVersion + 本装载器的契约版本，用于复现比对 */
@@ -316,6 +318,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           roomType: r.roomType,
           theme: r.theme,
           clearRule: r.clearRule,
+          clearTarget: r.clearTarget ?? null,
           depth: r.depth,
           minX: b.minX,
           maxX: b.maxX,
@@ -490,6 +493,17 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
     loseCondition = 'player-death';
   }
 
+  const ruleComponents = doc.nodes.filter(n => graph.isEffectivelyVisible(n.id)).flatMap(n => n.components.filter(c => c.kind === 'RunRules' && c.enabled));
+  for (const room of rooms) {
+    if (!room.enabled || room.clearRule !== 'elite-dead' || !room.clearTarget) continue;
+    if (!spawns.some(s => s.nodeId === room.clearTarget && s.roomNodeId === room.nodeId
+      && s.enabled && s.count > 0 && s.trigger === 'room-enter')) {
+      err('E_CLEAR_TARGET_UNAVAILABLE', '精英清场目标必须是当前房间内启用、数量大于零且由进入房间触发的刷怪点', room.nodeId);
+    }
+  }
+  if (ruleComponents.length > 1 || ruleComponents.some(c => !validRunRules(c))) err('E_RUN_RULES', '场景成长规则无效或重复');
+  const runRules = ruleComponents[0] as RunRulesComponent | undefined;
+  if (runRules?.bossAttack && !spawns.some(s => s.nodeId === runRules.bossAttack!.source && s.enabled)) err('E_BOSS_SOURCE', 'Boss 攻击必须引用可用的刷怪点');
   const hasError = diags.some((d) => d.severity === 'error');
   if (hasError || playerStart === null) {
     return { desc: null, diagnostics: diags };
@@ -498,6 +512,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   return {
     desc: {
       sceneId: doc.id,
+      runRules: runRules ? structuredClone(runRules) : null,
       sceneName: doc.name,
       schemaVersion: doc.schemaVersion,
       playerStart,

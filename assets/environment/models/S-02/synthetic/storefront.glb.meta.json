@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_178zk6nf",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "storefront.glb"
+  },
+  "sourceHash": "sha256:2ba4d2c72e2a8d45690a50b7e6ae374477bcbef94b592920e9b7677e17cb85ec",
+  "updatedAt": "2026-10-04T03:24:08.890Z"
+}

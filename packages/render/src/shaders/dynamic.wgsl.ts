@@ -257,9 +257,9 @@ fn fs_main(in : VSOut) -> FragOut {
   var color = keyTerm + fillTerm + ambTerm + pointTerm + rimTermColor;
   color = applyFog(color, in.worldPos);
 
-  // 动态实体不参与半调（aux.r = 0）也不写描边 mask（aux.a = 0）。
-  // debug 视图同理保持 0：动态实体是运行时产物，不该污染静态场景的诊断视图。
-  out.aux = vec4f(0.0, 0.0, 0.0, 0.0);
+  // Share the comic halftone pass with the street, at half strength for silhouette
+  // readability. The global post toggle still owns enablement; debug views stay clean.
+  out.aux = vec4f(select(0.0, 0.5, toon.flags.x < 0.5), 0.0, 0.0, 0.0);
   out.hdr = vec4f(max(vec3f(0.0), color), 1.0);
   return out;
 }

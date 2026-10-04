@@ -115,3 +115,11 @@ Validation completed: focused Python regression tests (placement, UV connectivit
 This is a geometry/texture/placement and authoring-persistence acceptance, not mobile performance acceptance. Current targets are 30k LOD1 and 15k LOD2 (P-31 20k), with native-resolution textures. The older small mobile triangle budgets are not met. No automatic distance-based runtime LOD selector, texture streaming, exhaustive collision/playthrough acceptance or mobile frame-time profiling was added. Fine source-art defects remain candidates for asset-specific art repair.
 
 The validation editor service was started detached from this worktree on port 5100; logs are `.workbuddy/tmp/lod-audit/editor.stdout.log` and `.stderr.log`. At delivery its owned PID was 69956 (`Stop-Process -Id 69956` only after rechecking ownership). The existing Asset Browser service on port 5612 was reused.
+
+## Main integration before PR merge
+
+Integrated `origin/main` at `7f8121c` (PR #22) before merging this delivery. Scene workspace, environment edits and all floor node identities/transforms were retained (68/68/55 nodes). The parser combines caller-provided axis selection with the new GLB Y-up provenance; explicit caller axes retain priority. The existing manifest-driven prop reference helper remains the generator owner.
+
+The validation scene was migrated through the existing chain to schema v7 and is available through File > Open Scene > Environment LOD validation. Headed Chrome confirmed both LOD meshes loaded through that menu, plus asset-dock insertion/undo/redo with the integrated editor. Test insertions were undone, leaving the saved scene intact.
+
+Integration validation: 633 related tests passed across the completed run and focused rerun (the scene-list expectation was updated for the registered ninth scene); typecheck, editor build and scene:check passed (145 metadata files, 9 v7 scenes, 38 reviewed environment pairs). Copilot review was explicitly waived by the user for this PR.

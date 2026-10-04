@@ -83,6 +83,61 @@ export function applyStaticI18n(root: ParentNode): void {
 // ================================================================ 词典（zh → en）
 
 const DICT: Record<string, string> = {
+  '当前场景有未保存修改': 'This scene has unsaved changes',
+  '保存后继续，或明确放弃修改。取消将保留当前场景。': 'Save before continuing, or discard your changes. Cancel keeps the current scene open.',
+  '保存并继续': 'Save and Continue',
+  '放弃修改并继续': 'Discard and Continue',
+  '保存未完成，当前场景已保留。': 'Save did not complete. The current scene remains open.',
+
+  // ---- Scene workspace menus and dialogs ----
+  "新建场景…": "New Scene…",
+  "打开场景…  Ctrl+O": "Open Scene…  Ctrl+O",
+  "保存场景  Ctrl+S": "Save Scene  Ctrl+S",
+  "另存为新场景…": "Save as New Scene…",
+  "重新载入当前场景": "Reload Current Scene",
+  "撤销  Ctrl+Z": "Undo  Ctrl+Z",
+  "重做  Ctrl+Y": "Redo  Ctrl+Y",
+  "场景": "Scene",
+  "场景与光照": "Scene and Lighting",
+  "物体检视": "Object Inspector",
+  "渲染": "Rendering",
+  "材质、描边与后处理": "Materials, Outlines and Post-processing",
+  "平衡分辨率（推荐）": "Balanced Resolution (Recommended)",
+  "原生分辨率": "Native Resolution",
+  "已切换原生分辨率": "Native resolution enabled",
+  "已切换平衡分辨率": "Balanced resolution enabled",
+  "资产检视": "Asset Inspector",
+  "显示 / 隐藏资产库": "Show / Hide Asset Library",
+  "运行": "Run",
+  "播放 / 继续": "Play / Resume",
+  "单步": "Step",
+  "重跑": "Restart",
+  "性能与诊断信息": "Performance and Diagnostics",
+  "自由相机  V": "Free Camera  V",
+  "选择场景…": "Select Scene…",
+  "打开项目场景": "Open Project Scene",
+  "请先停止运行": "Stop Play first",
+  "另存为新场景": "Save as New Scene",
+  "新建场景": "New Scene",
+  "场景名称": "Scene Name",
+  "新场景路径": "New Scene Path",
+  "创建并登记": "Create and Register",
+  "取消": "Cancel",
+  "请填写场景名称与路径": "Enter a scene name and path",
+  "没有可复制的作者场景": "No author scene is available to copy",
+  "已创建并登记；打开新场景前请保存或放弃当前场景的修改。": "Created and registered. Save or discard changes to the current scene before opening the new one.",
+  "打开新场景": "Open New Scene",
+  "请先停止运行，再切换场景": "Stop Play before switching scenes",
+  "项目场景": "Project Scenes",
+  "选择场景开始编辑 · 起始场景由项目设置决定": "Select a scene to edit · The project settings determine the starting scene",
+  "搜索名称或路径": "Search name or path",
+  "搜索场景": "Search Scenes",
+  "关闭": "Close",
+  "模拟快照": "Simulation Snapshot",
+  "仅编辑器": "Editor Only",
+  "没有匹配的场景": "No matching scenes",
+  "无法读取场景清单：": "Cannot read scene list: ",
+
   // ---- 通用 / 顶栏 / gizmo ----
   移动: 'Move',
   旋转: 'Rotate',
@@ -434,6 +489,5 @@ const DICT: Record<string, string> = {
 
   '该资产无贴图（白模显示）': 'No texture in this asset (clay display)',
 };
-
 
 
