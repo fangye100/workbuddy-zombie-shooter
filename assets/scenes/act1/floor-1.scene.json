@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -41,7 +41,13 @@
         0.49999999999999994,
         -0.49673176489215387
       ],
-      "sunSize": 0.065
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 40
     },
     "comic": {
       "tonemapMode": 2,
@@ -72,6 +78,7 @@
   "loseCondition": "player-death",
   "dependencies": [
     "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+    "assets/art/models/road/game_ready/crosswalk.glb",
     "assets/environment/models/road/synthetic/asphalt-20x16.glb",
     "assets/environment/models/S-02/tex2/S-02_baked.glb",
     "assets/environment/models/P-12/tex2/P-12_lod2.glb",
@@ -91,7 +98,12 @@
     "assets/environment/models/P-01/tex2/P-01_lod2.glb",
     "assets/environment/models/P-13/tex2/P-13_lod2.glb",
     "assets/environment/models/P-14/tex2/P-14_lod2.glb",
-    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb"
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod0.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod0.glb",
+    "assets/art/textures/SKY-01/SKY-01.png"
   ],
   "nodes": [
     {
@@ -585,353 +597,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/road/game_ready/crosswalk.glb",
+              "guid": "as_8761e2c880ff"
             }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f1_crosswalk_1",
-      "name": "街口斑马线",
-      "parent": null,
-      "transform": {
-        "position": [
-          23,
-          0.015,
-          -3
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f1_crosswalk_2",
-      "name": "街口斑马线",
-      "parent": null,
-      "transform": {
-        "position": [
-          23,
-          0.015,
-          -1
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f1_crosswalk_3",
-      "name": "街口斑马线",
-      "parent": null,
-      "transform": {
-        "position": [
-          23,
-          0.015,
-          1
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f1_crosswalk_4",
-      "name": "街口斑马线",
-      "parent": null,
-      "transform": {
-        "position": [
-          23,
-          0.015,
-          3
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f1_crosswalk_5",
-      "name": "街口斑马线",
-      "parent": null,
-      "transform": {
-        "position": [
-          23,
-          0.015,
-          5
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              3.4,
-              0.012,
-              0.65
-            ]
           },
           "materials": [
             {
@@ -4896,17 +4566,17 @@
     },
     {
       "id": "nd_f1_backdrop",
-      "name": "远景街区 · 冷色剪影",
+      "name": "ENV-FAR-01 · 冷色城市天际线",
       "parent": null,
       "prefab": null,
       "visible": true,
-      "pickable": false,
-      "category": "背景",
+      "pickable": true,
+      "category": "远景",
       "transform": {
         "position": [
-          33,
-          -0.4,
-          -27
+          0,
+          -0.2,
+          -60
         ],
         "rotation": [
           0,
@@ -4925,13 +4595,13 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "visible": true,
-          "layer": 0,
+          "layer": 3,
           "importScale": 1,
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
-              "guid": "as_4vcbbdgd"
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+              "guid": "as_l792u0n7"
             }
           },
           "materials": [
@@ -4950,9 +4620,344 @@
                   "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.18,
-                  "halftoneScale": 0.6,
                   "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.12,
+                  "unlit": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_far_repeat",
+      "prefab": null,
+      "name": "ENV-FAR-01 · 远侧城市延伸",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          64,
+          -0.2,
+          -67
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+              "guid": "as_l792u0n7"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.12,
+                  "unlit": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid01",
+      "prefab": null,
+      "name": "ENV-MID-01 · 红砖公寓",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "中景",
+      "transform": {
+        "position": [
+          -7,
+          0,
+          -24
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.25,
+                  "halftoneScale": 0.12,
+                  "unlit": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid02",
+      "prefab": null,
+      "name": "ENV-MID-02 · 街角楼",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "中景",
+      "transform": {
+        "position": [
+          14,
+          0,
+          -27
+        ],
+        "rotation": [
+          0,
+          -0.14943813247359922,
+          0,
+          0.9887710779360422
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+              "guid": "as_pl5xllzm"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.25,
+                  "halftoneScale": 0.12,
+                  "unlit": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid03",
+      "prefab": null,
+      "name": "ENV-MID-03 · 修车库【占位·待正式资产】",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "中景",
+      "transform": {
+        "position": [
+          48,
+          0,
+          -26
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod0.glb",
+              "guid": "as_q5jqjyii"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.25,
+                  "halftoneScale": 0.12,
+                  "unlit": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_far02",
+      "prefab": null,
+      "name": "ENV-FAR-02 · 工业天际线【占位·待正式资产】",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          48,
+          0,
+          -88
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod0.glb",
+              "guid": "as_8os4us8v"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.12,
                   "unlit": true
                 }
               }

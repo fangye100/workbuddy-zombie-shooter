@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_xo8fin9z",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "game_ready",
+    "file": "ENV-FAR-01_lod2.glb",
+    "assetId": "ENV-FAR-01",
+    "status": "scene-trial",
+    "lod": 2,
+    "provenance": "assets/art/sources/ENV-FAR-01/ENV-FAR-01_source.glb",
+    "replacementContract": "Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.",
+    "report": "assets/art/models/ENV-FAR-01/lod-report.json",
+    "visualEvidence": "docs/evidence/p0-art-intake-2026-10-05/lod-gallery.png"
+  },
+  "sourceHash": "sha256:6d424e1f71544ef0e111baabad1dfe53b55ae17c7d7beede2f59e0b239994aad",
+  "updatedAt": "2026-10-05T07:55:37.085Z"
+}

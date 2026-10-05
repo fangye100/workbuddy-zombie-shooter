@@ -1,0 +1,49 @@
+{
+  "id": "ENV-FAR-01",
+  "priority": "P0",
+  "status": "delivered",
+  "files": {
+    "sourceGlb": "ENV-FAR-01_source.glb",
+    "baseColor": "ENV-FAR-01_basecolor.png"
+  },
+  "unit": "m (source normalized ~1m box, rescale at integration)",
+  "upAxis": "as-generated (see probe); normalize at integration",
+  "forwardAxis": "unknown (single-view reconstruction)",
+  "prompt": "为第三人称俯视的末日僵尸游戏生成单件可复用 3D 资产。美式漫画、手绘色块、两至三档明暗、清晰有力的轮廓、适量粗黑结构线，暖灰米白的亮面、冷蓝灰与灰紫阴影，锈红或褪色橙作少量强调色。磨损应是有组织的大色块、接缝和少量裂痕。顶部与侧面同样完整。独立物体，不带地台/地面/背景/人物/UI/文字/水印。不烘焙太阳、投射阴影、泛光、景深或雾。不要双层外扩描边壳。 单件描述: 6–8 幢旧公寓与商业楼连续远景组合，屋顶高低错落、前后两排错位、塔楼占一角；灰蓝灰紫低饱和，窗为大色块。64×18×28m，LOD0 5000 tris，1024²。",
+  "referenceImage": "_ref/（见 _ref 目录，单件单视角）",
+  "tool": "hunyuan-3d-3.1-normal",
+  "jobId": "1498568334907424768",
+  "credits": 20,
+  "unmet": [
+    "源模为混元高模（~50万 tris），远超 LOD0 预算 —— 按文档 §7 由接入方本地减面产出 LOD0/1/2",
+    "源模包围盒约 1m 且轴向未标准化（多为 Z-up / 长轴不一定是 Z），需按 §2 缩放到目标米数并校正朝向",
+    "LOD1/LOD2 由需求方本地管线生成，不在本批交付内"
+  ],
+  "measured": {
+    "triangles": 500920,
+    "vertices": 340404,
+    "materials": 1,
+    "images": 1,
+    "bboxMinMax": {
+      "X": [
+        -0.5104,
+        0.4145
+      ],
+      "Y": [
+        -0.3261,
+        0.3461
+      ],
+      "Z": [
+        -0.3872,
+        0
+      ]
+    },
+    "sizeXYZ": {
+      "X": 0.9249,
+      "Y": 0.6722,
+      "Z": 0.3872
+    },
+    "generator": "Khronos glTF Blender I/O v4.0.43"
+  },
+  "preview": "preview_hunyuan.png"
+}

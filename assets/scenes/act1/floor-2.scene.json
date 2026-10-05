@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -41,7 +41,13 @@
         0.49999999999999994,
         -0.49673176489215387
       ],
-      "sunSize": 0.065
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 40
     },
     "comic": {
       "tonemapMode": 2,
@@ -87,7 +93,8 @@
     "assets/environment/models/P-24/tex2/P-24_lod2.glb",
     "assets/environment/models/P-06/tex2/P-06_lod2.glb",
     "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
-    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb"
+    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+    "assets/art/textures/SKY-01/SKY-01.png"
   ],
   "nodes": [
     {

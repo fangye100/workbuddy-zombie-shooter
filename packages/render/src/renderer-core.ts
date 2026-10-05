@@ -1250,6 +1250,8 @@ export class RendererCore {
   }
 
   /** 释放本核心持有的全部 GPU 资源（幂等） */
+  setSkyTexture(bitmap: ImageBitmap | null): void { this.skyPass.setTexture(bitmap); }
+
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;

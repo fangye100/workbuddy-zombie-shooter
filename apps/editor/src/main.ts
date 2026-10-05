@@ -702,6 +702,7 @@ async function boot(): Promise<void> {
   // 不应用的话火场/暗巷等主题环境全部失效，画面永远是编辑器默认的那套冷灰参数。
   // 覆盖的字段与 EnvironmentData 一一对应；key 方位角/仰角场景 schema 没有，保持编辑器值。
   const applySceneEnvironment = (env: EnvironmentData): void => {
+    renderer.syncSkyTexture(env);
     const p = panel.params;
     p.ambientColor = env.ambient.color;
     p.ambientIntensity = env.ambient.intensity;
@@ -1298,6 +1299,7 @@ async function boot(): Promise<void> {
   const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
   const atmospherePanel = new AtmospherePanel(atmosphereHost, {
     environment: () => spawnStore?.document.environment ?? null,
+    diagnostic: () => renderer.skyTextureDiagnostic,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
     apply: env => {
       if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return {ok:false, edit:null, error:'请先停止 Play 并等待场景加载'};
@@ -1306,6 +1308,7 @@ async function boot(): Promise<void> {
       return result;
     },
   });
+  renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
   function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
     if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
     const result = spawnStore.editNodes(label, mutate);

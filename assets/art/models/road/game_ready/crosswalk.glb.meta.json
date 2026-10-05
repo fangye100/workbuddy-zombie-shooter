@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_8761e2c880ff",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "status": "authored",
+    "provenance": "tools/art/prepare-p0-meta.mjs",
+    "variant": "game_ready",
+    "file": "crosswalk.glb"
+  },
+  "sourceHash": "sha256:b3ddc51a3501428e4cd4e582f9a546d431767eccda913d83de9cc6a778ead40f",
+  "updatedAt": "2026-10-05T07:55:37.096Z"
+}

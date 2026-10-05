@@ -366,6 +366,10 @@ export function registerSceneMigrations(): void {
     from: 8, to: 9, name: 'support-authored-comic-atmosphere',
     run(doc) { return { ...doc }; },
   });
+  if (!listMigrations().some((m) => m.from === 9 && m.to === 10)) registerMigration({
+    from: 9, to: 10, name: 'support-authored-art-textures',
+    run(doc) { return { ...doc }; },
+  });
 }
 
 registerSceneMigrations();

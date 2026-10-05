@@ -30,6 +30,8 @@ describe('author scene save authority and snapshot contract', () => {
     const environment = cloneDocument(s.store.document).environment;
     environment.sky!.cloudCoverage = 0.6; environment.sky!.sunDirection[0] = 0.5;
     environment.comic!.contactShadowOpacity = 0.3;
+    environment.sky!.textureYaw = 123; environment.sky!.textureMix = 0.4;
+    environment.sky!.texture = {path:'assets/other-sky.png',guid:'as_abc123'};
     expect(s.store.setEnvironment(environment).ok).toBe(true);
     expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('saved');
     expect(s.disk().environment).toEqual(environment);
