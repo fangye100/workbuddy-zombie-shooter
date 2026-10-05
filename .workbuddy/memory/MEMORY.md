@@ -92,8 +92,10 @@
 
 ## 3D 资产管线（docs/06）
 - 管线：front.png → 混元图生3D → decimate_cluster(面积保持>80%) → bake_lowpoly(xatlas) → rig_character → retarget_bvh → validate_glb。两套 Python：云端/绑骨 versions/3.13.12；减面/烘焙 envs/default。混元图生3D 5 次/天(429)、不能带 --prompt。
+- 🔴 **混元3D 现走 WorkBuddy 内置链路**（2026-10-05）：自备 key 的 hunyuan-3d skill 已失效（401）。用 `connect_cloud_service` 拿 clientTempToken（**15 分钟过期**，401 即重取）→ `buddy-multimodal-generation.py 3d --image-base64`（命令行传不了大 base64，用 wrapper 在 python 内部读文件转 base64，`.workbuddy/tmp/gen3d_wrapper.py`）。限额：**日 5 次、并发 2**（429 会浪费提交机会，先查并发再提）。GLB+预览图下载用 urllib 后台跑（前台 Invoke-WebRequest 被沙箱拦）。
 - **LOD 铁律**：花脸根因是几何（聚类减面跨部位）→ 焊点 + `quadric_edge_collapse_with_texture(preserveboundary=False)`；glTF UV 逐顶点 ≠ OBJ vt 逐面角 → 必须 wedge 分裂；glb 手写容器 JSON 填 0x20、BIN 填 \x00、双 chunk 4 字节对齐；绑骨侧网格缩放到 2.05m 且脚底 y=0；LOD2/3 复用骨架必须 `prune_base`。
 - 面数 = roster.tris × 3（下限 3000）。🔴 **B-02 从未绑骨**（无 rigged/）。
+- 🔴 **ImageGen `background:transparent` 不可信**：返回 RGB 实底，常见白底或**棋盘格假透明**；VFX 源帧抠底用 `.workbuddy/tmp/keyout.py`（白底 flood-fill 保黑边内白核 / 棋盘格亮度阈值+开运算+最大连通域；`--inner-clear` 清环内填充、`--no-loose` 保白色内容）。
 
 ## 浏览器验证（AGENTS.md §4）
 - **headed Chrome + 真实 GPU**，禁 headless+SwiftShader；不加 `--no-sandbox`/`--disable-dev-shm-usage`；必加 `--ignore-certificate-errors`；固定 profile `.workbuddy/tmp/chrome-profile`。
