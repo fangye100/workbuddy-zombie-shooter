@@ -1,5 +1,6 @@
 import type { RuntimeSession } from '@aether/runtime';
 import { NPC_STATS } from '@aether/content';
+import { drawImpactInk, drawShotInk, visibleImpacts } from './combat-ink';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
@@ -15,8 +16,10 @@ export class CombatOverlay {
     this.canvas.hidden = !runtime;
     if (!runtime) return;
     const rect = this.canvas.getBoundingClientRect();
-    if (this.canvas.width !== Math.round(rect.width) || this.canvas.height !== Math.round(rect.height)) { this.canvas.width = Math.round(rect.width); this.canvas.height = Math.round(rect.height); }
-    const c = this.ctx; c.clearRect(0, 0, rect.width, rect.height);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const width = Math.round(rect.width * dpr), height = Math.round(rect.height * dpr);
+    if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
+    const c = this.ctx; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0, 0, rect.width, rect.height);
     if (runtime.outcome !== 'running') return;
     const point = (p: readonly [number, number, number]) => { const q = this.project(p); return { x: q.x - rect.left, y: q.y - rect.top, behind: q.behind }; };
     const shot = runtime.lastShot;
@@ -37,9 +40,9 @@ export class CombatOverlay {
       }
       c.closePath(); c.fillStyle = '#ef67452e'; c.strokeStyle = '#f49b56b0'; c.lineWidth = 1.5; c.fill(); c.stroke(); shown++;
     }
-    if (shot && (runtime.tick - shot.tick) * runtime.fixedStep < 0.12) {
+    if (shot) {
       const a = point(shot.from), b = point(shot.to);
-      if (!a.behind && !b.behind) { c.strokeStyle = shot.hit ? '#ffe780' : '#f4b55c'; c.lineWidth = 3; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); c.fillStyle = '#fff6e2'; c.beginPath(); c.arc(b.x, b.y, shot.hit ? 6 : 2, 0, Math.PI * 2); c.fill(); }
+      if (!a.behind && !b.behind) drawShotInk(c,a,b,(runtime.tick - shot.tick) * runtime.fixedStep);
     }
     const danger = runtime.danger;
     if (danger) {
@@ -51,15 +54,10 @@ export class CombatOverlay {
       c.fillStyle = '#e74c3d55'; c.strokeStyle = '#ffce5b'; c.lineWidth = 3; c.fill(); c.stroke();
       const p = point([danger.x, 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`, p.x, p.y);
     }
-    const events = runtime.combatEvents;
-    for (let i = Math.max(0, events.length - 24); i < events.length; i++) {
-      const e = events[i]!; const age = (runtime.tick - e.tick) * runtime.fixedStep;
-      if (age > 0.65 || e.x === undefined || e.z === undefined) continue;
-      const p = point([e.x, 2, e.z]); if (p.behind) continue;
-      c.font = 'bold 18px sans-serif'; c.textAlign = 'center'; c.lineWidth = 3;
-      const label = e.type === 'kill' ? (e.slot === runtime.playerEntityId ? '倒下' : '击杀！') : `${Math.ceil(e.amount)}`;
-      c.strokeStyle = '#171327'; c.strokeText(label, p.x, p.y - age * 36);
-      c.fillStyle = e.slot === runtime.playerEntityId ? '#ff7764' : '#ffe875'; c.fillText(label, p.x, p.y - age * 36);
+    for (const e of visibleImpacts(runtime.combatEvents,runtime.runId,runtime.tick,runtime.fixedStep)) {
+      const age = (runtime.tick - e.tick) * runtime.fixedStep;
+      const p = point([e.x!, 1.2, e.z!]); if (p.behind) continue;
+      drawImpactInk(c,p.x,p.y,age,e.amount,e.type === 'kill',e.slot === runtime.playerEntityId,e.slot + e.generation + e.tick);
     }
   }
 }
