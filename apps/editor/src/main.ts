@@ -42,6 +42,7 @@ import { RunSettlement } from './services/run-settlement';
 import { renderPixelRatio } from './services/render-resolution';
 import { environmentFromParams } from './services/scene-environment';
 import { AtmospherePanel } from './services/atmosphere-panel';
+import { EditorAgent, connectEditorAgent } from './services/editor-agent';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
@@ -725,29 +726,15 @@ async function boot(): Promise<void> {
   };
 
   let editorMenu!: EditorMenu;
-  void (async () => {
-    const start = await resolveStartScenePath();
-    if (start.warning !== null) {
-      console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
-    }
-    let requested = start.path;
-    const selected = new URLSearchParams(window.location.search).get('scene');
-    if (selected !== null) {
-      try {
-        const choices = await readSceneChoices();
-        const entry = choices.find(c => c.path === selected.replace(/^\/+/, ''));
-        if (!entry) throw new Error('该场景未登记在项目中');
-        requested = entry.path;
-      } catch (e) { editorMenu.message(`打开失败：${String(e)}`); return; }
-    }
+  async function loadAuthorScene(requested: string) {
+    const assetFailures: unknown[] = [];
     const r = await renderer.loadScene(requested);
     if (!r.ok) {
-      editorMenu.message(`场景加载失败：${r.reason ?? '未知'}`);
-      return;
+      throw new Error(`场景加载失败：${r.reason ?? '未知'}`);
     }
     for (const w of r.warnings ?? []) console.warn(`[boot] 场景告警：${w}`);
     console.info(
-      `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${start.path}`,
+      `[boot] 场景已加载：${r.objects} 个物体（跳过 ${r.skipped ?? 0} 个非渲染节点），来自 ${requested}`,
     );
     if (r.editorCamera !== undefined) applySceneCamera(r.editorCamera);
     // 外部资产补载（ADR-018 P4b）：场景里的 GLB 引用（掩体等）异步换成真网格。
@@ -779,6 +766,7 @@ async function boot(): Promise<void> {
         },
       );
       renderer.onPlayStateCheck = null;
+      assetFailures.push(...res.failed);
       if (res.failed.length > 0) {
         for (const f of res.failed) console.warn(`[boot] 资产补载失败：${f.name} — ${f.reason}`);
       }
@@ -800,8 +788,26 @@ async function boot(): Promise<void> {
     // 不刷 Hierarchy 的话面板还显示构造时的 12 个 fallback 对象（陈旧快照）。
     panel.refreshHierarchy();
     editorMenu.message(r.warnings?.length ? `已打开 · ${r.warnings.length} 条场景警告（见控制台）` : '已打开');
+    return { objects: r.objects, warnings: r.warnings ?? [], assetFailures };
+  }
+  void (async () => {
+    const start = await resolveStartScenePath();
+    if (start.warning !== null) {
+      console.warn(`[boot] 起始场景解析：${start.warning}，回落到 ${start.path}`);
+    }
+    let requested = start.path;
+    const selected = new URLSearchParams(window.location.search).get('scene');
+    if (selected !== null) {
+      try {
+        const choices = await readSceneChoices();
+        const entry = choices.find(c => c.path === selected.replace(/^\/+/, ''));
+        if (!entry) throw new Error('该场景未登记在项目中');
+        requested = entry.path;
+      } catch (e) { editorMenu.message(`打开失败：${String(e)}`); return; }
+    }
+    await loadAuthorScene(requested);
     if (new URLSearchParams(window.location.search).get('play') === '1' && startPlay()) playCtl.pause();
-  })();
+  })().catch(error => editorMenu.message(String(error)));
 
   // ---- 相机交互：环绕 / 平移 / 缩放 + 拾取 ----
   // 鼠标与触屏统一走 Pointer Events：单指=环绕，双指=捏合缩放+质心平移，
@@ -1320,7 +1326,7 @@ async function boot(): Promise<void> {
     if (!id) { editorMenu.message('该物体没有场景节点，无法持久化删除'); return; }
     editAuthorNodes('删除节点及子节点', nodes => removeNodeTree(nodes, id), true);
   }
-  async function rebuildAuthorScene(): Promise<void> {
+  async function rebuildAuthorScene(reportFailure = false): Promise<void> {
     const store = spawnStore, source = renderer.getSceneSource();
     if (!store || !source || authorProjectionBusy) return;
     authorProjectionBusy = true;
@@ -1336,7 +1342,7 @@ async function boot(): Promise<void> {
       applySceneLightParams(panel.params, r);
       applySceneEnvironment(store.document.environment);
       for (const warning of r.warnings ?? []) console.warn(`[scene] ${warning}`);
-    } catch (e) { editorMenu.message(`场景视图更新失败，文档修改已保留：${String(e)}`); }
+    } catch (e) { editorMenu.message(`场景视图更新失败，文档修改已保留：${String(e)}`); if (reportFailure) throw e; }
     finally {
       renderer.setDocument(store.document); authorMaterialBaseline = materialSnapshot(renderer); authorLightBaseline = lightSnapshot(panel.params);
       authorProjectionBusy = false; panel.setSelection(null); panel.refreshHierarchy(); panel.syncAll(); refreshSpawnPanel(); editorMenu.refresh(); hudDirty = true;
@@ -3927,6 +3933,45 @@ async function boot(): Promise<void> {
   let elapsed = 0;
   let last = performance.now();
 
+  const editorAgent = new EditorAgent({
+    store: () => spawnStore,
+    path: () => renderer.getSceneSource()?.url ?? null,
+    busy: () => authorProjectionBusy,
+    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    playing: () => playCtl.isPlaying,
+    pendingAssets: () => renderer.pendingAssetCount,
+    open: async path => {
+      authorProjectionBusy = true;
+      try { const result = await loadAuthorScene(path); const url = new URL(location.href); url.searchParams.set('scene', path); url.searchParams.delete('play'); history.replaceState(null, '', url); return result; }
+      finally { authorProjectionBusy = false; refreshSpawnPanel(); }
+    },
+    rebuild: () => rebuildAuthorScene(true),
+    environmentChanged: () => { if(spawnStore) applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); refreshSpawnPanel(); editorMenu.message('Agent 已修改场景环境，请保存'); },
+    history: async redo => {
+      const result = authorTransform.history(redo);
+      if(result.edit?.kind === 'nodes') await rebuildAuthorScene(true);
+      else if(result.edit?.kind === 'environment' && spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
+      panel.syncSelectionFromRenderer(true); refreshSpawnPanel(); editorMenu.refresh(); return result;
+    },
+    save: async () => {
+      const store = spawnStore, source = renderer.getSceneSource();
+      if(!store || !source) throw new Error('No author scene');
+      const result = await authorSaver.save(store, source.url);
+      if(result.ok && store.undoDepth===0 && store.redoDepth===0) authorAssets.clear();
+      editorMenu.message(result.message); refreshSpawnPanel(); return result;
+    },
+    play: (action, steps) => {
+      if(action === 'start') { if(playCtl.isPlaying || !startPlay()) throw new Error(playCtl.error ?? 'Play start rejected'); playCtl.pause(); }
+      else if(action === 'stop') stopPlay();
+      else if(action === 'pause') { if(!playCtl.isPlaying) throw new Error('Play is stopped'); playCtl.pause(); }
+      else if(action === 'resume') { if(!playCtl.isPaused) throw new Error('Play is not paused'); playCtl.resume(); }
+      else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
+    },
+    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
+      diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size}),
+    capture: () => editorAgentConnection.capture(),
+  });
+  const editorAgentConnection = connectEditorAgent(editorAgent);
   const frame = (now: number): void => {
     if (disposed) return;
     const wallDt = Math.max(0, (now - last) / 1000);
@@ -4077,6 +4122,7 @@ async function boot(): Promise<void> {
     drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
+    editorAgentConnection.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);
     requestAnimationFrame(frame);
