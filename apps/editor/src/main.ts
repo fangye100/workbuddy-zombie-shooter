@@ -1640,6 +1640,7 @@ async function boot(): Promise<void> {
   }
 
   function refreshSpawnPanel(): void {
+    authorAssets.prune();
     sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
     atmospherePanel.render();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，

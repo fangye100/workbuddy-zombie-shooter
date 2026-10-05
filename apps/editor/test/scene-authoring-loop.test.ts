@@ -3,7 +3,12 @@ import { SpawnEditStore, cloneDocument, loadLevelRuntime, newAuthorNode, newRunR
 import type { SceneDocument } from '@aether/scene';
 import { AuthorSceneSaver } from '../src/services/author-scene-save';
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
-function fixture(): SceneDocument { return cloneDocument((Object.values(modules)[0] as { default: SceneDocument }).default); }
+function fixture(): SceneDocument {
+  const doc = cloneDocument((Object.values(modules)[0] as { default: SceneDocument }).default);
+  // Scene composition can fill all 64 slots; authoring tests need explicit headroom.
+  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer');
+  return doc;
+}
 function setup() {
   const store = new SpawnEditStore(fixture()); let disk = cloneDocument(store.document);
   const saver = new AuthorSceneSaver({ read: async () => ({ ok: true, status: 200, json: disk, error: null }),

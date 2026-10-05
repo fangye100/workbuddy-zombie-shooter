@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { migrateToLatest, validateSceneDocument, type SceneDocument } from '@aether/scene';
+import { SCHEMA_VERSION, migrateToLatest, validateSceneDocument, type SceneDocument } from '@aether/scene';
 import { PlayerPresentation } from '../src/services/player-presentation';
 import { PlayController } from '../src/services/play-controller';
 import { RuntimeBridge } from '../src/services/runtime-bridge';
@@ -45,8 +45,8 @@ describe('scene-authored player presentation', () => {
     const { doc, mesh } = setup();
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
-    expect(result.to).toBe(8);
-    expect(result.applied).toEqual(['support-player-mesh-binding']);
+    expect(result.to).toBe(SCHEMA_VERSION);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });

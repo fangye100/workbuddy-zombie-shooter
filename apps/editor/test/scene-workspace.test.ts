@@ -10,7 +10,10 @@ const files = import.meta.glob('/aether.project.json', { eager: true, import: 'd
 describe('scene workspace', () => {
   it('discovers project scenes and identifies the project start without hiding editor-only entries', () => {
     const list = sceneChoices(files['/aether.project.json']);
-    expect(list).toHaveLength(9);
+    expect(list.map(s => s.path).sort()).toEqual(
+      (files['/aether.project.json'] as { scenes: { path: string }[] }).scenes.map(s => s.path).sort(),
+    );
+    expect(list.some(s => s.path === 'assets/scenes/sandbox/p0-art-gallery.scene.json')).toBe(true);
     expect(list.some(s => s.path === 'assets/scenes/sandbox/environment-lod-validation.scene.json')).toBe(true);
     expect(list.find(s => s.start)?.path).toBe('assets/scenes/act1/floor-1.scene.json');
     expect(() => sceneChoices({ scenes: [] })).toThrow();
