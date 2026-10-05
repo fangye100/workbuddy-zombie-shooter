@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "sourceBatch": "P0-20261005",
+  "description": "Source custody and reproducible processing recipe; actual results live in per-asset sidecars. Sizes are uniform-scale art fits, not collider contracts.",
+  "models": [
+    {
+      "id": "ENV-MID-01",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "y",
+      "scaleMeters": 13,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        12000,
+        6000,
+        3000
+      ],
+      "textureSize": 2048,
+      "originalTargets": [
+        12000,
+        6000,
+        2000
+      ],
+      "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+    },
+    {
+      "id": "ENV-MID-02",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 12,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        14000,
+        10000,
+        8000
+      ],
+      "textureSize": 2048,
+      "originalTargets": [
+        14000,
+        7000,
+        2500
+      ],
+      "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+    },
+    {
+      "id": "ENV-FAR-01",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 64,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        20000,
+        14000,
+        10000
+      ],
+      "textureSize": 1024,
+      "originalTargets": [
+        5000,
+        2000,
+        600
+      ],
+      "budgetAdjustment": "Original targets failed surface retention; headed scene review then required 20000/14000/10000 to reduce visible skyline UV stretching."
+    },
+    {
+      "id": "WPN-01",
+      "kind": "weapon",
+      "status": "delivered",
+      "scaleAxis": "z",
+      "scaleMeters": 0.28,
+      "rotationDeg": [
+        0,
+        -90,
+        0
+      ],
+      "pivotFraction": [
+        0.2,
+        0.28,
+        0.5
+      ],
+      "targets": [
+        3000,
+        1500,
+        650
+      ],
+      "textureSize": 1024,
+      "originalTargets": [
+        3000,
+        1500,
+        500
+      ],
+      "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+    },
+    {
+      "id": "ENV-MID-03",
+      "kind": "environment",
+      "status": "placeholder",
+      "size": [
+        18,
+        9,
+        6
+      ],
+      "reason": "WorkBuddy 2026-10-05 daily 3D quota exhausted"
+    },
+    {
+      "id": "ENV-FAR-02",
+      "kind": "environment",
+      "status": "placeholder",
+      "size": [
+        72,
+        22,
+        36
+      ],
+      "reason": "WorkBuddy 2026-10-05 daily 3D quota exhausted"
+    }
+  ]
+}

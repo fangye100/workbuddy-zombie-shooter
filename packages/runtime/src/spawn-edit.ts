@@ -520,6 +520,15 @@ export class SpawnEditStore {
 
   get redoDepth(): number { return this.redoStack.length; }
 
+  /** CPU asset projections are needed only while their insertion can be undone/redone. */
+  get assetHistoryNodeIds(): ReadonlySet<NodeId> {
+    const ids = new Set<NodeId>();
+    for (const edit of [...this.undoStack, ...this.redoStack]) {
+      if (edit.kind === 'asset-node') ids.add(edit.nodeId);
+    }
+    return ids;
+  }
+
   /** 最近一次编辑（面板上显示"刚改了什么"） */
   get lastEdit(): AuthorEdit | null {
     return this.undoStack.length > 0 ? this.undoStack[this.undoStack.length - 1]! : null;

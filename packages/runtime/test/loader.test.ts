@@ -44,7 +44,8 @@ describe('loadLevelRuntime —— 真实关卡 floor-1', () => {
     const d = loadLevelRuntime(floor1()).desc!;
     expect(d.rooms).toHaveLength(3);
     expect(d.spawns).toHaveLength(6);
-    expect(d.obstacles).toHaveLength(6);
+    const authored = floor1().nodes.filter(n => n.components.some(c => c.kind === 'Collider' && c.enabled && !c.isTrigger));
+    expect(d.obstacles.map(o => o.nodeId).sort()).toEqual(authored.map(n => n.id).sort());
     expect(d.nav).not.toBeNull();
   });
 
@@ -70,8 +71,12 @@ describe('loadLevelRuntime —— 真实关卡 floor-1', () => {
  */
 describe('loadLevelRuntime —— 碰撞体世界变换（复审 #4）', () => {
   type N = SceneDocument['nodes'][number];
-  const findColliderNode = (d: SceneDocument): N =>
-    d.nodes.find((x) => x.components.some((c) => c.kind === 'Collider' && !(c as { isTrigger: boolean }).isTrigger))!;
+  const findColliderNode = (d: SceneDocument): N => {
+    const node = d.nodes.find((x) => x.components.some((c) => c.kind === 'Collider' && !(c as { isTrigger: boolean }).isTrigger))!;
+    // Isolate each mathematical transform from the art placement's baseline yaw/scale.
+    node.transform.rotation = [0, 0, 0, 1]; node.transform.scale = [1, 1, 1];
+    return node;
+  };
   const colOf = (n: N) => n.components.find((c) => c.kind === 'Collider' && !(c as { isTrigger: boolean }).isTrigger)! as ColliderComponent;
   const obOf = (desc: import('../src/loader').LevelRuntimeDesc, nodeId: string) => desc.obstacles.find((o) => o.nodeId === nodeId)!;
 
@@ -216,10 +221,17 @@ describe('loadLevelRuntime —— 未支持字段必须显式诊断（复审 #5�
 // ---------------------------------------------------------------- bounds 空间一致性（复审 B4）
 
 describe('loadLevelRuntime —— RoomVolume / NavZone 的 bounds 空间（复审 B4）', () => {
+  function builtinRoomProxy(doc: SceneDocument) {
+    const room = findNode(doc, 'nd_f1r0');
+    const mesh = room.components.find(c => c.kind === 'MeshRenderer')!;
+    // Campaign art now uses an asynchronous asset; explicitly create the builtin proxy under test.
+    mesh.source = { type: 'builtin', shape: 'box', params: [1, 0.1, 1] };
+    return room;
+  }
   it('带网格代理的房间节点被挪走（bounds 不动）→ 显式告警，不静默分家', () => {
     const doc = clone(floor1());
     // 把房间 1 的节点拖到 30m 外（bounds 不动）——正是「视口里拖走房间、触发区留在原地」的形态
-    findNode(doc, 'nd_f1r0').transform.position = [40, -0.1, 0];
+    builtinRoomProxy(doc).transform.position = [40, -0.1, 0];
     const r = loadLevelRuntime(doc);
     const d = r.diagnostics.find((x) => x.code === 'W_BOUNDS_NODE_MISMATCH' && x.nodeId === 'nd_f1r0');
     expect(d?.severity).toBe('warning');
@@ -275,7 +287,7 @@ describe('loadLevelRuntime —— RoomVolume / NavZone 的 bounds 空间（复�
       mutate: (comp: Record<string, unknown>) => void,
     ): ReturnType<typeof loadLevelRuntime> => {
       const doc = clone(floor1());
-      const room = findNode(doc, 'nd_f1r0');
+      const room = builtinRoomProxy(doc);
       const comp = room.components.find((c) => c.kind === 'MeshRenderer');
       expect(comp).toBeDefined();
       mutate(comp as unknown as Record<string, unknown>);

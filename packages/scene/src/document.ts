@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -529,6 +529,10 @@ export interface SceneNode {
  */
 /** Infinite, camera-centred atmosphere. No scene object slots or baked geometry. */
 export interface ComicSkyData {
+  /** Authored cloud-band texture; runtime fades it toward the poles and horizon. */
+  texture?: AssetRef | null;
+  textureMix?: number;
+  textureYaw?: number;
   zenith: ColorHex;
   horizon: ColorHex;
   ground: ColorHex;
@@ -987,6 +991,14 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
     group('hemisphere', ['sky', 'ground'], ['skyIntensity', 'groundIntensity']);
     group('fog', ['color'], ['density', 'heightFalloff']);
     group('rim', ['color'], ['intensity', 'power', 'topBias']);
+    const artRef = (ref: unknown, at: string) => {
+      if (ref === undefined || ref === null) return;
+      const r = ref as AssetRef;
+      if (typeof ref !== 'object' || typeof r.path !== 'string' || !r.path.startsWith('assets/')
+        || r.path.split('/').includes('..') || !/^as_[0-9a-z]{4,16}$/.test(r.guid ?? '')) {
+        err(at, 'E_ART_REF', '美术贴图必须引用项目 assets 路径和稳定 guid');
+      }
+    };
     for (const key of ['sky', 'comic'] as const) {
       const value = env[key];
       if (value === undefined || value === null) continue;
@@ -1005,6 +1017,11 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max) err(`/environment/${key}/${field}`, 'E_ENV_NUM', `${field} 必须在 ${min}–${max} 范围内`);
       }
       if (key === 'sky') {
+        artRef(env.sky!.texture, '/environment/sky/texture');
+        for (const [field, max] of [['textureMix', 1], ['textureYaw', 360]] as const) {
+          const v = env.sky![field];
+          if (v !== undefined && (!Number.isFinite(v) || v < 0 || v > max)) err(`/environment/sky/${field}`, 'E_ENV_NUM', `${field} 必须在 0–${max} 范围内`);
+        }
         const dir = env.sky!.sunDirection;
         if (!isVec3(dir) || Math.hypot(...dir) < 0.001) err('/environment/sky/sunDirection', 'E_ENV_SKY', '太阳方向必须是非零的有限三维向量');
       }

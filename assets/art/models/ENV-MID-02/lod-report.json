@@ -1,0 +1,119 @@
+{
+  "id": "ENV-MID-02",
+  "sourceHash": "675fd92eed6751d79e807c0fd72d53efed8fa6f908cf817fd0a7cbc53f971ce7",
+  "recipe": {
+    "id": "ENV-MID-02",
+    "kind": "environment",
+    "status": "delivered",
+    "scaleAxis": "x",
+    "scaleMeters": 12,
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "targets": [
+      14000,
+      10000,
+      8000
+    ],
+    "textureSize": 2048,
+    "originalTargets": [
+      14000,
+      7000,
+      2500
+    ],
+    "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+  },
+  "sourceTriangles": 499882,
+  "dimensions": [
+    12.0,
+    11.040663683235113,
+    11.875899928726193
+  ],
+  "scale": 15.953352315024492,
+  "pivot": [
+    -0.0016535073518753052,
+    -4.101411659991624e-08,
+    -0.006604908408306492
+  ],
+  "textureSize": [
+    2048,
+    2048
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "file": "ENV-MID-02_lod0.glb",
+      "triangles": 14000,
+      "surfaceRatio": 0.9418618227313761,
+      "boundsDrift": 0.004989230374456977,
+      "sourceTopology": {
+        "v": 249839,
+        "f": 499882,
+        "edges": 749823,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 6898,
+        "f": 14000,
+        "edges": 21000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "68c5e8fd982540fd55724520d2959ab9ae0cb06fcdd3dc54fef7e97b058dcf9a",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    },
+    {
+      "level": 1,
+      "file": "ENV-MID-02_lod1.glb",
+      "triangles": 10000,
+      "surfaceRatio": 0.9207589502535861,
+      "boundsDrift": 0.010772555362282166,
+      "sourceTopology": {
+        "v": 249839,
+        "f": 499882,
+        "edges": 749823,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 4898,
+        "f": 10000,
+        "edges": 15000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "1897f95b84be982dfa2ca1092eb4e976f162ac1b6781d9743532c416bc755537",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    },
+    {
+      "level": 2,
+      "file": "ENV-MID-02_lod2.glb",
+      "triangles": 8000,
+      "surfaceRatio": 0.9062955230465636,
+      "boundsDrift": 0.00707894592797198,
+      "sourceTopology": {
+        "v": 249839,
+        "f": 499882,
+        "edges": 749823,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 3898,
+        "f": 8000,
+        "edges": 12000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "3d265bbe5c54cdbd446f02eaca15c507e8111574aa979b4a94d7a556dce5efb8",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    }
+  ],
+  "visualEvidence": "docs/evidence/p0-art-intake-2026-10-05/lod-gallery.png"
+}

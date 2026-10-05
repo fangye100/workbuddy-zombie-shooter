@@ -14,6 +14,7 @@ FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
 | [05-NPC角色控制系统](./docs/05-NPC角色控制系统.md) | 四层解耦（Agent/Locomotion/Avatar/Combat）、角色装配与池化、VAT 表现 LOD、感知与 Utility 决策、流场寻路与群体避让、帧数据与扫掠命中、攻击名额与包围圈配额 |
 | [16-Retargeting 设计与开发计划](./docs/16-MotionMatch动画匹配设计.md) | 根与末端空间补偿、接触约束、共享骨盆及全身求解、数据契约、开发队列与验收 |
 | [16A-Retargeting 运动空间补偿算法研究](./docs/16A-Retargeting运动空间补偿算法研究.md) | HumanIK 等公开证据、可复现公式、接触策略、数值验证及完整脚本 |
+| [Visual quality playbook](./docs/art/visual-quality-playbook.md) | Comic art matching, composition, color/shader diagnosis, textured LODs, placeholders, sky/atlas handling and evidence-based acceptance |
 
 ## 目录
 

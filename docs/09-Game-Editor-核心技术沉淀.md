@@ -1,5 +1,7 @@
 # 09 · Game Editor 核心技术沉淀（WebGPU 编辑器）
 
+> Updated visual-quality knowledge: [Comic game visual quality playbook](art/visual-quality-playbook.md) (2026-10-05). It records current scene refinement, LOD/texture pitfalls and validation boundaries. The implementation map and browser recipes below are historical; current project rules govern execution.
+
 > 源项目：末日尸潮 · Game Editor（前身 Shader Lab），`apps/lab/shader-lab`
 > 技术栈：TypeScript + 原生 WebGPU（不依赖 three.js）+ Vite；UI 用原生 DOM 直改，刻意不把交互热路径接进框架状态树。
 > 标注 **【refine】** 的技术点 = 2026-09-01 代码审计轮（对标混元 Preview 4 水准）复核修正过的内容，附缺陷根因——低档模型产出被逐模块复核后留下的可复用结论。

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_df66195b51c9",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "assetId": "VFX-ATLAS-01",
+    "status": "quarantined",
+    "layout": "assets/art/textures/VFX-ATLAS-01/delivered-layout.json",
+    "reason": "Explosion has rectangular residue; smoke clips cells. Sequences are affine variants. GPU integration pending repaired alpha/padding acceptance."
+  },
+  "sourceHash": "sha256:7053a88b612e297818024195574efa15a6a1774dcdccfa2bcf5f5e8160212302",
+  "updatedAt": "2026-10-05T07:55:37.096Z"
+}

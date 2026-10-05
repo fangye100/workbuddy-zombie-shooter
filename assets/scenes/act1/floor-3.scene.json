@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "id": "sc_act1_floor3",
   "name": "第三层 · 暗巷撤离站",
   "act": "Act1",
@@ -41,7 +41,13 @@
         0.49999999999999994,
         -0.49673176489215387
       ],
-      "sunSize": 0.065
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 40
     },
     "comic": {
       "tonemapMode": 2,
@@ -92,7 +98,8 @@
     "assets/environment/models/P-33/tex2/P-33_lod2.glb",
     "assets/environment/models/P-42/tex2/P-42_lod2.glb",
     "assets/environment/models/P-43/tex2/P-43_lod2.glb",
-    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb"
+    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+    "assets/art/textures/SKY-01/SKY-01.png"
   ],
   "nodes": [
     {

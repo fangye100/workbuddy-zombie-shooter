@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_nva99fgn",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "game_ready",
+    "file": "WPN-01_lod2.glb",
+    "assetId": "WPN-01",
+    "status": "scene-trial",
+    "lod": 2,
+    "provenance": "assets/art/sources/WPN-01/WPN-01_source.glb",
+    "replacementContract": "Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.",
+    "report": "assets/art/models/WPN-01/lod-report.json",
+    "visualEvidence": "docs/evidence/p0-art-intake-2026-10-05/lod-gallery.png"
+  },
+  "sourceHash": "sha256:0f4f1a313a15182a158fa2f727ec46334047049ccfbd84a3b011bcd07e8091b2",
+  "updatedAt": "2026-10-05T07:55:37.155Z"
+}

@@ -4,6 +4,7 @@ export const ENVIRONMENT_EDIT_PATHS = ['ambient.color', 'ambient.intensity', 'he
   'hemisphere.ground', 'hemisphere.groundIntensity', 'fog.color', 'fog.density', 'rim.color', 'rim.intensity',
   'rim.power', 'rim.topBias', 'exposure'] as const;
 export const ATMOSPHERE_EDIT_PATHS = ['sky', 'comic',
+  'sky.texture', 'sky.texture.path', 'sky.texture.guid', 'sky.textureMix', 'sky.textureYaw',
   ...['zenith', 'horizon', 'ground', 'cloud', 'cloudCoverage', 'cloudScale', 'cloudSpeed', 'sunColor', 'sunSize',
     'sunDirection[0]', 'sunDirection[1]', 'sunDirection[2]'].map(key => `sky.${key}`),
   ...['tonemapMode', 'contactShadowOpacity', 'outlineWidth', 'inkColor', 'shadowMult', 'shadowMix', 'shadowTint',

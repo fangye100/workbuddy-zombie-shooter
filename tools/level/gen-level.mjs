@@ -28,6 +28,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
+import { applyP0Art } from '../art/apply-p0-art.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -36,7 +37,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -742,7 +743,7 @@ function main() {
   const register = [];
 
   for (const floor of FLOORS) {
-    const doc = applyEnvironmentArtPass(buildFloor(floor), ROOT);
+    const doc = applyP0Art(applyEnvironmentArtPass(buildFloor(floor), ROOT), ROOT);
     const relPath = `${SCENE_DIR}/floor-${floor.depth}.scene.json`;
     writeJson(relPath, doc);
     register.push({ path: relPath, id: doc.id, enabled: true });

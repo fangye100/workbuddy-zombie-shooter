@@ -341,6 +341,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'support-authored-run-rules',
       'support-player-mesh-binding',
       'support-authored-comic-atmosphere',
+      'support-authored-art-textures',
     ]);
   });
 });
@@ -436,6 +437,6 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(9);
+    expect(SCHEMA_VERSION).toBe(10);
   });
 });

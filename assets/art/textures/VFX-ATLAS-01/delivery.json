@@ -1,0 +1,19 @@
+{
+  "id": "VFX-ATLAS-01",
+  "priority": "P0",
+  "status": "delivered",
+  "files": {
+    "atlas": "VFX-ATLAS-01.png",
+    "uvMeta": "comic-vfx-atlas-v1.json",
+    "sourceFrames": "source-frames/（23 张 AI 代表帧，非运行时目录）"
+  },
+  "size": "4096x4096 RGBA PNG, 8x8 grid, 512px cell, 16px 保护带, 内容 480px",
+  "prompt": "统一不规则黑色墨线、暖白核心、橙黄爆闪、灰紫烟团、青色能量、黄绿腐蚀；两至三档色块、粗形状、少量网点；straight alpha，透明像素 RGB 未外扩（接入时注意）",
+  "tool": "WorkBuddy ImageGen（23 张代表帧）+ 本地抠底(flood-fill/棋盘格阈值) + 程序变体拼图 + UV JSON 生成",
+  "unmet": [
+    "序列帧（MUZZLE/IMPACT/EXPLOSION/SMOKE/FIRE/SHOCK/ELECTRIC）由单张代表帧程序变体（缩放/旋转/淡出）生成，非逐帧手绘 —— 逐帧连贯性未满足，验收时重点看",
+    "源帧中 9 张为棋盘格假透明底、1 张带水印，已程序抠除，边缘可能有轻微残留",
+    "透明像素 RGB 未做邻近外扩（bleed），接入预乘前建议先做 bleed",
+    "DEC-PAPER-01 要求 5-7 片纸片互不跨格，实际为整幅内容缩放放入单格"
+  ]
+}

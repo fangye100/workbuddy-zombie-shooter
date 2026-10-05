@@ -29,7 +29,7 @@
     "content:gen": "node packages/content/scripts/gen-content.mjs && node packages/content/scripts/gen-stats.mjs",
     "content:check": "node packages/content/scripts/gen-content.mjs --check && node packages/content/scripts/gen-stats.mjs --check",
     "scene:gen": "node tools/scene/gen-asset-meta.mjs",
-    "scene:check": "node tools/scene/gen-asset-meta.mjs --check && node tools/level/migrate-scenes.mjs --check && vitest run packages/scene/test/scene-files.test.ts && python assets/environment/_tools/audit_lod_quality.py --check",
+    "scene:check": "node tools/scene/gen-asset-meta.mjs --check && node tools/level/migrate-scenes.mjs --check && vitest run packages/scene/test/scene-files.test.ts && python assets/environment/_tools/audit_lod_quality.py --check && node tools/art/check-p0-art.mjs",
     "bake": "node tools/baker/dist/cli.js",
     "shaderlab": "node tools/shaderlab/dist/cli.js",
     "runtime:build": "esbuild packages/runtime/src/index.ts --bundle --platform=node --format=cjs --outfile=.workbuddy/tmp/runtime/index.js --tsconfig=tsconfig.check.json",

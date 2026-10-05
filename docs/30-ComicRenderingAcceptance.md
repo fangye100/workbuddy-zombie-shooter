@@ -55,3 +55,13 @@ AgX reference: [three.js tone-mapping shader](https://github.com/mrdoob/three.js
 ## Automation boundary
 
 The repository's current domain MCP is `tools/mcp-binding`, covering bone/skin authoring and sidecar persistence; its `render` tool produces binding projections, not a live game render. Scene file operations and runtime hooks already exist beneath the UI, but are not exposed as a scene-editing MCP tool family. Repeated state checks should use those interfaces; visible UI remains necessary for validating the real save/navigation path and final GPU appearance.
+
+The initial scene MCP prototype is parked and pushed separately on `codex/editor-mcp-coverage` (`d5eed7a`). It is not part of this quality branch and is not a completed full-development MCP interface.
+
+## Combat presentation follow-up
+
+Actual shot events now draw ink-edged tracers, a short origin flash and powder puff. Actual damage events draw a deterministic impact burst, rising damage amount and a separate kill caption. Presentation does not invent critical hits, change damage or own new gameplay entities. Event positions survive enemy despawn; old-run, future and invalid events are filtered. Pause uses the simulation clock. The overlay accounts for device pixel ratio, capped at 2.
+
+Three focused combat/HUD tests, typecheck and editor build passed. In a separate visible Chrome tab on NVIDIA Lovelace, Play/pause followed by the existing runtime fire-input hook and one simulation step produced a real hit: tick 3, 12 damage, target HP 33. [The screenshot](evidence/comic-matching-2026-10-05/combat-ink.png) shows its tracer, flash and damage number. This is deterministic input-hook coverage with visible rendering, not a claim of a new keyboard-path or campaign acceptance run. Subsequent stepping advanced beyond the effect lifetime; enemy telegraph drawings remained valid. Stop hid the feedback canvas; no warning/error appeared in the captured console snapshot. The dedicated test tab was closed.
+
+These effects are still Canvas illustrations. They do not claim shared-atlas GPU rendering or depth-occluded world particles. The requested asset-generation brief and future atlas layout are in [the art handoff](31-美漫画风资产需求与生成提示词.md).

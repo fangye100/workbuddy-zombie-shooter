@@ -128,31 +128,19 @@
 - 大二进制资产（角色概念图、模型 `*.glb/*.fbx/*.obj/*.zip/*.ply`、贴图等）走 **Git LFS**
   （见 `.gitattributes`），`git add` 会被自动转成 LFS 指针，不要手动绕过。
 
-## 4. 浏览器运行时验证（WebGPU）纪律
+## 4. 浏览器与 Web 操作 → 统一走 web-debug skill
 
-> 门禁 `editor:smoke` = `tools/verify/editor-smoke.mjs`；手写 CDP 连已运行 dev server 用
-> `tools/verify/cdp-verify.mjs`。本沙箱（win11 + nvidia lovelace）的坑见下，**照抄可省一次重踩**。
+> 🔴 **所有 web/浏览器操作（运行时验证、页面自动化、截图、登录授权、dev server 探活）
+> 一律先加载 `web-debug` skill（`~/.agents/skills/web-debug/SKILL.md`），按其方向路由
+> 执行。** 通用方法与坑（实例枚举/profile 选择/Chrome 136+ 端口限制/CDP 机制/登录墙
+> 停下问用户/headed+真实 GPU/截图 base64 回传/vite·SPA·自签 HTTPS 坑）已全部迁移至该
+> skill，**此处只保留本项目锚点**：
 
-### 4.1 必须用 headed + 真实 GPU，禁止 headless + SwiftShader
-- 本机 **headless Chrome + `--enable-unsafe-swiftshader` 起不来 CDP**（进程直接退出、日志空）。
-  验证 WebGPU 运行时（WGSL 编译、bind group、uniform 对齐）一律走 **headed Chrome + 真实 GPU**。
-- 启动 flag（已固化在 `editor-smoke.mjs --headed` 与 `cdp-verify.mjs`）：
-  `--enable-unsafe-webgpu --remote-debugging-port=<CDP> --user-data-dir=.workbuddy/tmp/chrome-profile --window-size=1280,800 --no-first-run`。
-  🔴 **不要加 `--no-sandbox` / `--disable-dev-shm-usage`** —— 本沙箱里这俩反而让 Chrome 起不来 CDP。
-- `editor-smoke.mjs` 已支持 `--headed` 开关（默认仍 headless 以兼容 CI），本机验证一律带 `--headed`。
-
-### 4.2 🔴 优先复用已打开的 tab / 已连上的浏览器（默认行为）
-- 跑 headed 验证时，**优先复用已经打开的 Chrome 实例与已连上的 tab**，不要每次都新起一个浏览器：
-  - **手测**：直接在已开的浏览器（指向 `https://localhost:5100` 或 Tailscale 域名）里操作看效果，
-    别再 spawn 新 Chrome。
-  - **自动化**：CDP 连到**已运行的** dev server（`http://localhost:5100/`），复用固定的
-    `.workbuddy/tmp/chrome-profile` 这个 profile，避免重复冷启。
-- 固定 profile 的好处：证书/登录态/窗口状态保留，且 `editor-smoke.mjs` 的 `--headed` 路径默认复用它。
-
-### 4.3 自签 HTTPS 与 vite 输出坑（冒烟在本环境能跑通的前提）
-- 自签证书下 `fetch()`（undici）TLS 握手会挂/抛错 → 探针 `alive()` 必须退回原生
-  `https.get`/`http.get`（`rejectUnauthorized:false`）。
-- vite 往 pipe 写带 ANSI 颜色码，会把 `localhost:5188/` 拆成 `localhost:\x1b[1m5188\x1b[22m/`
-  → 正则匹配端口前必须先 `stripAnsi(buf)`。
-- 手动后台起的 vite 会占端口、与 `editor-smoke.mjs` 自带 `strictPort` 冲突
-  → 跑冒烟前先 `TaskStop` 掉自己起的 vite，让冒烟用全新空闲端口（如 5197）。
+- 门禁工具：`editor:smoke` = `tools/verify/editor-smoke.mjs`（已支持 `--headed`，默认
+  headless 兼容 CI；**本机验证一律带 `--headed`**）；手写 CDP 连已运行 dev server 用
+  `tools/verify/cdp-verify.mjs`。
+- 本项目自动化固定 profile：`.workbuddy/tmp/chrome-profile`（已 gitignore；保留
+  证书/登录态/窗口状态，`editor-smoke.mjs --headed` 默认复用它，不要删除重建）。
+- 本机环境：win11 + NVIDIA Lovelace —— 属 skill ref A/D 里的「headless+SwiftShader
+  起不来 CDP、禁止 `--no-sandbox`/`--disable-dev-shm-usage`」机器类别。
+- 编辑器地址：`https://localhost:5100` / Tailscale 域名（见 §1）；冒烟跑前先探活（skill ref F §1）。

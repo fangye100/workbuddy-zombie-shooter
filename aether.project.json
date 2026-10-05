@@ -57,6 +57,12 @@
       "id": "sc_environment_lod_validation",
       "enabled": true,
       "name": "Environment LOD validation"
+    },
+    {
+      "id": "sc_p0_art_gallery",
+      "path": "assets/scenes/sandbox/p0-art-gallery.scene.json",
+      "name": "P0 · LOD 与占位资产验收",
+      "enabled": true
     }
   ],
   "startIndex": 1,

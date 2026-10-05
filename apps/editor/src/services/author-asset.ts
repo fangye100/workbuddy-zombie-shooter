@@ -25,13 +25,24 @@ export class AuthorAssetController {
     this.owner = null;
   }
 
+  /** New commands discard redo history; release the CPU copies it no longer owns. */
+  prune(): void {
+    if (this.owner !== this.store()) { this.clear(); return; }
+    const retained = this.owner?.assetHistoryNodeIds;
+    for (const [id, asset] of this.assets) {
+      if (!retained?.has(id)) { asset.bitmap?.close(); this.assets.delete(id); }
+    }
+  }
+
   insert(store: SpawnEditStore, node: SceneNode, model: Model, bitmap: ImageBitmap | null): number {
     if (this.owner !== store) { this.clear(); this.owner = store; }
+    this.prune();
     const index = this.add(node, model, bitmap);
     if (index === null) { bitmap?.close(); throw new Error('场景物体已达上限（64）'); }
     const result = store.insertAsset(node);
     if (!result.ok) { this.view.removeObject(index); bitmap?.close(); throw new Error(result.error!); }
     this.assets.set(node.id, { model, bitmap });
+    this.prune();
     return index;
   }
 
