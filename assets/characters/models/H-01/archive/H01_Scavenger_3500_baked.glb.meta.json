@@ -16,8 +16,9 @@
   "userData": {
     "characterId": "H-01",
     "characterName": "清道夫",
-    "variant": "textured",
-    "file": "H01_Scavenger_3500_baked.glb"
+    "variant": "archived-duplicate",
+    "file": "H01_Scavenger_3500_baked.glb",
+    "archivedDuplicateOf": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb"
   },
   "sourceHash": "sha256:05673bb5c33f52ed46bd1e2962b4a0187d0c65ccf884c507343a97da8e150c15",
   "updatedAt": "2026-10-03T17:18:12.923Z",

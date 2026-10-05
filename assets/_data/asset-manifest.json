@@ -45,10 +45,17 @@
      "tris": 10500,
      "verts": 11984,
      "bytes": 2476356
+    },
+    {
+     "label": "LOD2 · +骨骼",
+     "file": "characters/models/H-01/rigged/H01_Scavenger_3500_rigged.glb",
+     "tris": 10500,
+     "verts": 11984,
+     "bytes": 2960064
     }
    ],
    "animations": [],
-   "joints": 0
+   "joints": 27
   },
   {
    "id": "E-01",
