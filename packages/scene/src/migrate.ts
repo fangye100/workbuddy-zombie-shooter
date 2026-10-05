@@ -362,6 +362,10 @@ export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 5 && m.to === 6)) registerMigration(migrateV5ToV6);
   if (!listMigrations().some((m) => m.from === 6 && m.to === 7)) registerMigration(migrateV6ToV7);
   if (!listMigrations().some((m) => m.from === 7 && m.to === 8)) registerMigration(migrateV7ToV8);
+  if (!listMigrations().some((m) => m.from === 8 && m.to === 9)) registerMigration({
+    from: 8, to: 9, name: 'support-authored-comic-atmosphere',
+    run(doc) { return { ...doc }; },
+  });
 }
 
 registerSceneMigrations();

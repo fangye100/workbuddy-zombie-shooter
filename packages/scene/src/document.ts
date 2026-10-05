@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -527,7 +527,38 @@ export interface SceneNode {
  * 引入场景后它们成为**场景内容**：每个场景（火场 / 暗巷）可以有自己的环境，
  * 见 GDD §4.3 楼层主题。
  */
+/** Infinite, camera-centred atmosphere. No scene object slots or baked geometry. */
+export interface ComicSkyData {
+  zenith: ColorHex;
+  horizon: ColorHex;
+  ground: ColorHex;
+  cloud: ColorHex;
+  cloudCoverage: number;
+  cloudScale: number;
+  cloudSpeed: number;
+  sunColor: ColorHex;
+  sunDirection: [number, number, number];
+  sunSize: number;
+}
+
+/** Authored art direction; field names also identify the editor's render controls. */
+export interface ComicStyleData {
+  tonemapMode: number;
+  contactShadowOpacity: number;
+  outlineWidth: number;
+  inkColor: ColorHex;
+  shadowMult: number;
+  shadowMix: number;
+  shadowTint: ColorHex;
+  litSat: number;
+  halftoneStrength: number;
+  halftoneSize: number;
+  vignette: number;
+}
+
 export interface EnvironmentData {
+  sky?: ComicSkyData | null;
+  comic?: ComicStyleData | null;
   ambient: { color: ColorHex; intensity: number };
   /** 半球补光：天空色 + 地面反弹色 */
   hemisphere: {
@@ -956,6 +987,29 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
     group('hemisphere', ['sky', 'ground'], ['skyIntensity', 'groundIntensity']);
     group('fog', ['color'], ['density', 'heightFalloff']);
     group('rim', ['color'], ['intensity', 'power', 'topBias']);
+    for (const key of ['sky', 'comic'] as const) {
+      const value = env[key];
+      if (value === undefined || value === null) continue;
+      if (typeof value !== 'object' || Array.isArray(value)) {
+        err(`/environment/${key}`, 'E_ENV_GROUP', `${key} 必须是对象或 null`); continue;
+      }
+      const colors = key === 'sky' ? ['zenith', 'horizon', 'ground', 'cloud', 'sunColor'] : ['inkColor', 'shadowTint'];
+      for (const field of colors) {
+        if (!HEX_RE.test(String((value as unknown as Record<string, unknown>)[field]))) err(`/environment/${key}/${field}`, 'E_COLOR', `${field} 颜色格式非法`);
+      }
+      const ranges: Record<string, [number, number]> = key === 'sky'
+        ? { cloudCoverage: [0, 1], cloudScale: [0.1, 20], cloudSpeed: [0, 0.1], sunSize: [0.005, 0.5] }
+        : { tonemapMode: [0, 3], contactShadowOpacity: [0, 0.8], outlineWidth: [0, 8], shadowMult: [0, 1.5], shadowMix: [0, 1], litSat: [0, 2], halftoneStrength: [0, 0.25], halftoneSize: [2, 12], vignette: [0, 1] };
+      for (const [field, [min, max]] of Object.entries(ranges)) {
+        const n = (value as unknown as Record<string, unknown>)[field];
+        if (typeof n !== 'number' || !Number.isFinite(n) || n < min || n > max) err(`/environment/${key}/${field}`, 'E_ENV_NUM', `${field} 必须在 ${min}–${max} 范围内`);
+      }
+      if (key === 'sky') {
+        const dir = env.sky!.sunDirection;
+        if (!isVec3(dir) || Math.hypot(...dir) < 0.001) err('/environment/sky/sunDirection', 'E_ENV_SKY', '太阳方向必须是非零的有限三维向量');
+      }
+      if (key === 'comic' && !Number.isInteger(env.comic!.tonemapMode)) err('/environment/comic/tonemapMode', 'E_ENV_NUM', '色调映射必须是整数枚举');
+    }
     if (typeof env.exposure !== 'number' || !Number.isFinite(env.exposure)) {
       err('/environment/exposure', 'E_ENV_NUM', 'exposure 必须是有限数');
     }

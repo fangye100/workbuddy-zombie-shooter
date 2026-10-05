@@ -1,10 +1,12 @@
 import type { GpuContext } from '@aether/gfx';
 import { findSceneBinding, resolveSceneMaterial } from './services/scene-material';
 import { lightAngles } from './services/scene-light';
+import { SceneContacts } from './services/scene-contacts';
 import {
   type GizmoMode,
   type GizmoSpace,
   RendererCore,
+  createAlbedoTexture,
   type CoreObjectDraw,
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
@@ -637,6 +639,7 @@ function buildDefaultSpecs(): ObjectSpec[] {
 }
 
 export class LabRenderer {
+  private readonly sceneContacts = new SceneContacts();
   private readonly device: GPUDevice;
 
   /** 公开统计（HUD / 面板读）；底层存于 EditorState */
@@ -1654,18 +1657,7 @@ export class LabRenderer {
   }
 
   private createTextureFromBitmap(bitmap: ImageBitmap, closeBitmap = true): GPUTexture {
-    const tex = this.device.createTexture({
-      label: 'model-albedo',
-      size: [bitmap.width, bitmap.height],
-      format: 'rgba8unorm',
-      // copyExternalImageToTexture 要求 COPY_DST + RENDER_ATTACHMENT 双 usage（Dawn 实测）
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    this.device.queue.copyExternalImageToTexture(
-      { source: bitmap, flipY: false },
-      { texture: tex },
-      { width: bitmap.width, height: bitmap.height },
-    );
+    const tex = createAlbedoTexture(this.device, bitmap);
     // ImageBitmap 占的是 native 内存（4096² ≈ 67MB），GC 不保证及时回收。
     // Normally release after upload. Author insertion history explicitly retains it for redo.
     if (closeBitmap) bitmap.close();
@@ -2454,6 +2446,12 @@ export class LabRenderer {
     }
 
     const input: RenderFrameInput = {
+      sky: this.document?.environment.sky ?? null,
+      contacts: this.document?.environment.comic ? {
+        data: this.sceneContacts.build(this.state.objects, this.dynamicBatches),
+        color: m4.hexToLinear(this.document.environment.comic.shadowTint),
+        opacity: this.document.environment.comic.contactShadowOpacity,
+      } : null,
       p: {
         outlineEnabled: p.outlineEnabled,
         debugMode: p.debugMode,

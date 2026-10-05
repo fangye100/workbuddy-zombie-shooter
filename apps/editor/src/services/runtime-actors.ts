@@ -46,6 +46,8 @@ export const PALETTE_JOINT_COUNT = 23;
 
 /** 一个已装配好的真角色（RuntimeBridge 消费，字段全部是纯数据） */
 export interface ActorMesh {
+  /** Decoded CPU texture cache; GPU copies belong to RendererCore and die at Stop. */
+  albedo?: ImageBitmap | null;
   characterId: string;
   /** core 动态网格缓存键：`actor:<characterId>`（与胶囊 `capsule:r…:h…` 区分） */
   meshId: string;
@@ -316,7 +318,14 @@ export class ActorLibrary {
       //（重试场景下注册序 ≠ manifest 序，内联累加会把重试历史焊进布局——
       // PR #19 review FR-B。每次成功注册全量重排，已发放 ActorMesh 是同一
       // 引用，改字段即对 Bridge 生效）
+      let albedo: ImageBitmap | null = null;
+      if (glb.image) {
+        try { albedo = await createImageBitmap(glb.image, { colorSpaceConversion: 'none' }); }
+        catch (error) { console.warn(`[actors] ${characterId} 贴图解码失败，使用代理色`, error); }
+      }
+      if (generation !== this.cacheGeneration) { albedo?.close(); return false; }
       this.entries.set(characterId, {
+        albedo,
         characterId,
         meshId: `actor:${characterId}`,
         vertices: mesh.vertices,
@@ -386,6 +395,7 @@ export class ActorLibrary {
   /** 清空装配（编辑器卸载 / 换项目时；Play 间复用不要调） */
   clear(): void {
     this.cacheGeneration++;
+    for (const actor of this.entries.values()) actor.albedo?.close();
     this.entries.clear();
     this.failed.clear();
     this.orderedEntries = [];

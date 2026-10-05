@@ -76,8 +76,16 @@ fn agxContrastApprox(x: vec3f) -> vec3f {
 }
 
 fn tonemapAgx(c: vec3f) -> vec3f {
-  let v = AGX_INSET * c;
-  return clamp(AGX_OUTSET * agxContrastApprox(v), vec3f(0.0), vec3f(1.0));
+  // AgX operates on normalized log exposure in Rec.2020, not linear HDR values.
+  // Reference: three.js tonemapping_pars_fragment (Filament / Blender AgX).
+  let to2020 = mat3x3f(0.6274,0.0691,0.0164, 0.3293,0.9195,0.0880, 0.0433,0.0113,0.8956);
+  let to709 = mat3x3f(1.6605,-0.1246,-0.0182, -0.5876,1.1329,-0.1006, -0.0728,-0.0083,1.1187);
+  let inset = AGX_INSET * (to2020 * c);
+  let logExposure = (log2(max(inset, vec3f(1e-10))) + 12.47393) / 16.499999;
+  let encoded = AGX_OUTSET * agxContrastApprox(clamp(logExposure, vec3f(0), vec3f(1)));
+  // Return linear-sRGB: post.wgsl applies the display transfer exactly once.
+  let linear = pow(max(encoded, vec3f(0)), vec3f(2.2));
+  return clamp(to709 * linear, vec3f(0), vec3f(1));
 }
 
 fn tonemapAces(c: vec3f) -> vec3f {

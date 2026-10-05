@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_uvm8disd",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-22x18.glb"
+  },
+  "sourceHash": "sha256:fc86a9f6b5928edec64c357f0b9be503ae19fa7c4b3ec507171aa84bfb388c7a",
+  "updatedAt": "2026-10-05T05:11:39.064Z"
+}

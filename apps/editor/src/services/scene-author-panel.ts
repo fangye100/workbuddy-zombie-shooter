@@ -19,6 +19,7 @@ const enums: Record<string, string[]> = { effect: ['damage', 'haste', 'leech', '
 
 export class SceneAuthorPanel {
   get hasDraft(): boolean { return this.draftDirty; }
+  resetDraft(): void { this.draftDirty = false; this.key = ''; this.draft = null; }
   private selected = '';
   private key = '';
   private draft: SceneNode | null = null;

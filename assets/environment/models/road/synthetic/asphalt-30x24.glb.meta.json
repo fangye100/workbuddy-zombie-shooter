@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_dsrnchsr",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-30x24.glb"
+  },
+  "sourceHash": "sha256:baeacb33ad0b32f32f789dce0bc2e051d3fc7044020275cc763b4b34c8547791",
+  "updatedAt": "2026-10-05T05:11:39.067Z"
+}

@@ -21,6 +21,10 @@ import { DYNAMIC_WGSL } from './shaders/dynamic.wgsl';
 import { POST_WGSL } from './shaders/post.wgsl';
 import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
+import { ComicSkyPass } from './comic-sky';
+import { ContactShadowPass } from './contact-shadows';
+import { createAlbedoTexture } from './albedo-texture';
+import type { ComicSkyData } from '@aether/scene';
 
 /**
  * 正交投影的裁剪体半深度（世界单位）。正交下相机 distance 只决定裁剪范围，
@@ -203,6 +207,7 @@ export const DYNAMIC_INSTANCE_FLOATS = 16;
  * GPU 资源归 core 所有）；之后每帧只需重传 `instances`。
  */
 export interface CoreDynamicBatch {
+  albedo?: ImageBitmap | null;
   /**
    * 网格缓存键。同一个 key 的顶点/索引只上传一次，之后忽略 `vertices`/`indices`。
    * 建议带参数（如 `capsule:r0.35:h1.8`），改参数即换 key，避免旧网格阴魂不散。
@@ -243,6 +248,8 @@ export interface CoreFrameUniforms {
 
 /** drawFrame 的完整输入：一份已完全解析的帧 */
 export interface RenderFrameInput {
+  sky?: ComicSkyData | null;
+  contacts?: { data: Float32Array<ArrayBuffer>; color: readonly number[]; opacity: number } | null;
   p: RenderFrameParams;
   camera: RenderCamera;
   time: number;
@@ -294,6 +301,8 @@ interface CoreGizmoHandle {
 }
 
 export class RendererCore {
+  private readonly skyPass: ComicSkyPass;
+  private readonly contactPass: ContactShadowPass;
   readonly device: GPUDevice;
   private readonly canvas: HTMLCanvasElement;
   /**
@@ -352,6 +361,7 @@ export class RendererCore {
 
   // ---- 动态实例（instancing，绕开 transformBuf 的 64 静态槽位；见 CoreDynamicBatch）----
   private readonly dynamicLayout: GPUBindGroupLayout;
+  private readonly dynamicMaterialLayout: GPUBindGroupLayout;
   private readonly dynamicPipeline: GPURenderPipeline;
   private readonly dynamicOutlinePipeline: GPURenderPipeline;
   /** 实例数组 storage buffer，按需求惰性扩容（容量只增不减） */
@@ -378,7 +388,7 @@ export class RendererCore {
   /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
   private readonly dynamicMeshes = new Map<
     string,
-    { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number }
+    { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number; texture: GPUTexture; material: GPUBindGroup }
   >();
 
   // ---- 渲染目标 ----
@@ -413,6 +423,8 @@ export class RendererCore {
   constructor(gpu: GpuContext, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.device = gpu.device;
+    this.skyPass = new ComicSkyPass(this.device, HDR_FORMAT, DEPTH_FORMAT);
+    this.contactPass = new ContactShadowPass(this.device, HDR_FORMAT, DEPTH_FORMAT);
     this.format = gpu.format;
 
     // 独占画布上下文：configure 自己的 canvas，使本核心独立于任何「主画布」上下文
@@ -479,6 +491,8 @@ export class RendererCore {
     this.sampler = this.device.createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
+      mipmapFilter: 'linear',
+      maxAnisotropy: 8,
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
     });
@@ -693,9 +707,13 @@ export class RendererCore {
       // （管线声明了 slot 就必须绑，validation 不看 shader 是否真的读它）。
       buffers: [VERTEX_LAYOUT, SKIN_LAYOUT],
     } as const;
+    this.dynamicMaterialLayout = this.device.createBindGroupLayout({ label: 'dynamic-material', entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ] });
     this.dynamicPipeline = this.device.createRenderPipeline({
       label: 'dynamic',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout] }),
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout, this.dynamicMaterialLayout] }),
       vertex: { ...dyVertex, entryPoint: 'vs_main' },
       fragment: { module: dyModule, entryPoint: 'fs_main', targets },
       primitive: { topology: 'triangle-list', cullMode: 'none', frontFace: 'ccw' },
@@ -703,7 +721,7 @@ export class RendererCore {
     });
     this.dynamicOutlinePipeline = this.device.createRenderPipeline({
       label: 'dynamic-outline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout] }),
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout, this.dynamicMaterialLayout] }),
       vertex: { ...dyVertex, entryPoint: 'vs_outline' },
       fragment: { module: dyModule, entryPoint: 'fs_outline', targets },
       // inverted hull：只画背面，让外扩的壳只在轮廓外圈露出一条边
@@ -746,7 +764,7 @@ export class RendererCore {
    */
   private dynamicMesh(
     b: CoreDynamicBatch,
-  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number } | null {
+  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number; texture: GPUTexture; material: GPUBindGroup } | null {
     const hit = this.dynamicMeshes.get(b.meshId);
     if (hit !== undefined) return hit;
     if (b.vertices.length === 0 || b.indices.length === 0) return null;
@@ -773,7 +791,16 @@ export class RendererCore {
       0,
       b.skin === null ? new Uint8Array(vcount * 24) : packSkin(b.skin.joints, b.skin.weights, vcount),
     );
-    const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length };
+    const bitmap = b.albedo;
+    const texture = bitmap ? createAlbedoTexture(this.device, bitmap) : this.device.createTexture({ label: `dyn-${b.meshId}-albedo`,
+      size: [1, 1], format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    if (!bitmap) this.device.queue.writeTexture({texture}, new Uint8Array([255,255,255,255]), {bytesPerRow:4}, [1,1]);
+    const material = this.device.createBindGroup({ layout: this.dynamicMaterialLayout, entries: [
+      {binding:0, resource: texture.createView()}, {binding:1, resource:this.sampler},
+    ] });
+    const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length, texture, material };
     this.dynamicMeshes.set(b.meshId, mesh);
     return mesh;
   }
@@ -784,6 +811,7 @@ export class RendererCore {
       m.vbuf.destroy();
       m.ibuf.destroy();
       m.skinVb.destroy();
+      m.texture.destroy();
     }
     this.dynamicMeshes.clear();
   }
@@ -833,6 +861,7 @@ export class RendererCore {
       const slot = this.dynamicInstSlot(bi, n);
       this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
       pass.setBindGroup(0, slot.bg);
+      pass.setBindGroup(1, mesh.material);
       pass.setVertexBuffer(0, mesh.vbuf);
       pass.setVertexBuffer(1, mesh.skinVb);
       pass.setIndexBuffer(mesh.ibuf, 'uint32');
@@ -886,6 +915,7 @@ export class RendererCore {
    * 调色板数据本身在编辑器侧（ActorLibrary）缓存，下次 Play 重新上传即可。
    */
   releaseDynamicResources(): void {
+    this.contactPass.clear();
     for (const s of this.dynamicInstSlots) s.buf.destroy();
     this.dynamicInstSlots = [];
     this.dynamicPaletteBuf?.destroy();
@@ -1090,6 +1120,14 @@ export class RendererCore {
       draws += this.drawDynamicBatches(pass, dyn, wantOutline);
     }
 
+    if (input.contacts && p.debugMode === 0) {
+      draws += this.contactPass.draw(pass, input.contacts.data, this.viewProj, input.contacts.color, input.contacts.opacity);
+    }
+    if (input.sky && p.debugMode === 0) {
+      this.skyPass.draw(pass, input.sky, this.invViewProj, eye, input.time);
+      draws++;
+    }
+
     pass.end();
 
     // ---- Pass 3：后处理 ----
@@ -1215,6 +1253,8 @@ export class RendererCore {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.skyPass.destroy();
+    this.contactPass.destroy();
     this.hdrTex?.destroy();
     this.auxTex?.destroy();
     this.depthTex?.destroy();

@@ -46,7 +46,7 @@ export function applyEnvironmentArtPass(doc, root) {
   doc.nodes = doc.nodes.filter(n => !/_lane_[13]$/.test(n.id));
   for (const n of doc.nodes) {
     const m = mesh(n); if (!m || m.source.type !== 'builtin') continue;
-    if (n.id.endsWith('_void')) m.materials = patch(depth === 1 ? '#85806b' : '#646574', { outlineScale: 0 });
+    if (n.id.endsWith('_void')) m.materials = patch(depth === 1 ? '#566f75' : '#4c536b', { outlineScale: 0 });
     else if (n.id.endsWith('_street') || /^nd_f\dr\d$/.test(n.id) || /^nd_f\dc\d$/.test(n.id)) {
       m.materials = patch(depth === 1 ? '#7d8885' : '#747e89', { outlineScale: 0 });
     } else if (n.id.includes('_walk_')) m.materials = patch('#898c84', { outlineScale: 0.15 });
@@ -120,23 +120,34 @@ export function applyEnvironmentArtPass(doc, root) {
 
   const warm = depth === 1;
   const key = find(`${prefix}_key`).components.find(c => c.kind === 'Light');
-  key.color = warm ? '#ffe4b0' : '#c9ddf4'; key.intensity = warm ? 1.15 : 1.1;
+  key.color = warm ? '#ffe6c2' : '#d8e4fa'; key.intensity = 1.1;
+  // Low side key retains visible shadow planes from the authored god-view camera.
+  const azimuth = 125 * Math.PI / 180, elevation = 30 * Math.PI / 180;
+  const dir = [Math.cos(elevation) * Math.sin(azimuth), Math.sin(elevation), Math.cos(elevation) * Math.cos(azimuth)];
+  const qw = Math.sqrt((1 + dir[1]) / 2);
+  find(`${prefix}_key`).transform.rotation = [dir[2] / (2 * qw), 0, -dir[0] / (2 * qw), qw];
   doc.environment = { ...doc.environment,
-    ambient: { color: warm ? '#667889' : '#60768d', intensity: 0.36 },
-    hemisphere: { sky: '#99b7cd', skyIntensity: 0.48, ground: warm ? '#6c5144' : '#38334e', groundIntensity: 0.24 },
-    fog: { color: warm ? '#55545b' : '#343d52', density: 0.003, heightFalloff: 0.1 },
-    rim: { color: warm ? '#eab579' : '#75aecb', intensity: 0.25, power: 3, topBias: 0.25 }, exposure: 1,
+    ambient: { color: '#737b9c', intensity: 0.28 },
+    hemisphere: { sky: '#9ebcdb', skyIntensity: 0.42, ground: '#5e536e', groundIntensity: 0.2 },
+    fog: { color: warm ? '#81949c' : '#667899', density: 0.008, heightFalloff: 0.1 },
+    rim: { color: '#9bdbe0', intensity: 0.3, power: 3, topBias: 0.45 }, exposure: 0.9,
+    sky: { zenith: warm ? '#364662' : '#292e50', horizon: warm ? '#dbb695' : '#8a92ad',
+      ground: warm ? '#425566' : '#373e58', cloud: '#d6cbbb', cloudCoverage: 0.54, cloudScale: 1.7,
+      cloudSpeed: 0.002, sunColor: '#ffe3a0', sunDirection: dir, sunSize: 0.065 },
+    comic: { tonemapMode: 2, contactShadowOpacity: 0.45, outlineWidth: 1.6, inkColor: '#14110f', shadowMult: 0.72, shadowMix: 0.2, shadowTint: '#30283e',
+      litSat: 1.08, halftoneStrength: 0.18, halftoneSize: 5, vignette: 0.04 },
   };
   const point = find(`${prefix}_beacon`).components.find(c => c.kind === 'Light');
   point.enabled = true; point.intensity = 2.4; point.range = 11; point.color = warm ? '#ffc06b' : '#6ce0cb';
   const camera = find(`${prefix}_cam`).components.find(c => c.kind === 'Camera');
   camera.distance = 24; camera.pitchDeg = 52; camera.yawOffsetDeg = -15;
-  if (depth === 1) for (const n of doc.nodes) {
-    if (!(n.id.endsWith('_street') || /^nd_f1[rc]\d$/.test(n.id))) continue;
+  for (const n of doc.nodes) {
+    if (!(n.id.endsWith('_street') || /^nd_f[123][rc]\d$/.test(n.id))) continue;
     const m = mesh(n);
     const dims = m.source.type === 'builtin' ? [m.source.params[0], m.source.params[2]]
       : /asphalt-(\d+)x(\d+)/.exec(m.source.ref.path)?.slice(1).map(Number);
     if (!dims) throw new Error(`Missing road dimensions: ${n.id}`);
+    if (n.id.endsWith('_street')) dims[0] = 130;
     const file = `assets/environment/models/road/synthetic/asphalt-${dims[0]}x${dims[1]}.glb`;
     const meta = JSON.parse(fs.readFileSync(path.join(root, `${file}.meta.json`), 'utf8'));
     m.source = { type: 'asset', ref: { path: file, guid: meta.guid } };
@@ -155,6 +166,21 @@ export function applyEnvironmentArtPass(doc, root) {
   playerMesh.playBinding = 'player';
   playerMesh.editorOnly = false;
   playerMesh.materials = patch('#ffffff', { roughness: 0.85, metallic: 0, outlineScale: 0.55, halftoneScale: 0.1 });
+  const backdropFile = 'assets/environment/models/backdrop/synthetic/industrial-quarter.glb';
+  const backdropMeta = JSON.parse(fs.readFileSync(path.join(root, `${backdropFile}.meta.json`), 'utf8'));
+  const backdropId = `${prefix}_backdrop`;
+  doc.nodes = doc.nodes.filter(n => n.id !== backdropId);
+  doc.nodes.push({ id: backdropId, name: '远景街区 · 冷色剪影', parent: null, prefab: null,
+    visible: true, pickable: false, category: '背景',
+    transform: { position: [33, -0.4, -27], rotation: [0,0,0,1], scale: [1,1,1] },
+    components: [{ kind: 'MeshRenderer', enabled: true, visible: true, layer: 0, importScale: 1,
+      source: { type: 'asset', ref: { path: backdropFile, guid: backdropMeta.guid } },
+      materials: patch('#ffffff', { outlineScale: 0.18, halftoneScale: 0.6, unlit: true }),
+    }],
+  });
+  // Continue the visual road behind the entry camera without extending playable bounds.
+  const street = find(`${prefix}_street`);
+  street.transform.scale = [1, 1, 1];
   doc.dependencies = [...new Set(doc.nodes.flatMap(n => n.components.flatMap(c => c.kind === 'MeshRenderer' && c.source.type === 'asset' ? [c.source.ref.path] : [])))];
   const count = doc.nodes.filter(n => n.components.some(c => c.kind === 'MeshRenderer')).length;
   if (count > 64) throw new Error(`Art pass exceeds object budget: ${doc.id}: ${count}`);

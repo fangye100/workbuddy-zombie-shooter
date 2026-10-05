@@ -1,32 +1,61 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
   "environment": {
     "ambient": {
-      "color": "#60768d",
-      "intensity": 0.36
+      "color": "#737b9c",
+      "intensity": 0.28
     },
     "hemisphere": {
-      "sky": "#99b7cd",
-      "skyIntensity": 0.48,
-      "ground": "#38334e",
-      "groundIntensity": 0.24
+      "sky": "#9ebcdb",
+      "skyIntensity": 0.42,
+      "ground": "#5e536e",
+      "groundIntensity": 0.2
     },
     "fog": {
-      "color": "#343d52",
-      "density": 0.003,
+      "color": "#667899",
+      "density": 0.008,
       "heightFalloff": 0.1
     },
     "rim": {
-      "color": "#75aecb",
-      "intensity": 0.25,
+      "color": "#9bdbe0",
+      "intensity": 0.3,
       "power": 3,
-      "topBias": 0.25
+      "topBias": 0.45
     },
-    "exposure": 1,
-    "postOverride": null
+    "exposure": 0.9,
+    "postOverride": null,
+    "sky": {
+      "zenith": "#292e50",
+      "horizon": "#8a92ad",
+      "ground": "#373e58",
+      "cloud": "#d6cbbb",
+      "cloudCoverage": 0.54,
+      "cloudScale": 1.7,
+      "cloudSpeed": 0.002,
+      "sunColor": "#ffe3a0",
+      "sunDirection": [
+        0.7094064799162227,
+        0.49999999999999994,
+        -0.49673176489215387
+      ],
+      "sunSize": 0.065
+    },
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.45,
+      "outlineWidth": 1.6,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0.18,
+      "halftoneSize": 5,
+      "vignette": 0.04
+    }
   },
   "editorCamera": {
     "target": [
@@ -42,17 +71,23 @@
   "playerStart": "nd_f2_start",
   "loseCondition": "player-death",
   "dependencies": [
+    "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+    "assets/environment/models/road/synthetic/asphalt-20x16.glb",
     "assets/environment/models/S-03/tex2/S-03_lod2.glb",
     "assets/environment/models/P-26/tex2/P-26_lod2.glb",
     "assets/environment/models/P-23/tex2/P-23_baked.glb",
     "assets/environment/models/P-21/tex2/P-21_lod2.glb",
     "assets/environment/models/P-04/tex2/P-04_lod2.glb",
+    "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+    "assets/environment/models/road/synthetic/asphalt-14x14.glb",
     "assets/environment/models/S-04/tex2/S-04_lod2.glb",
     "assets/environment/models/P-25/tex2/P-25_lod2.glb",
+    "assets/environment/models/road/synthetic/asphalt-22x18.glb",
     "assets/environment/models/P-22/tex2/P-22_lod2.glb",
     "assets/environment/models/P-24/tex2/P-24_lod2.glb",
     "assets/environment/models/P-06/tex2/P-06_lod2.glb",
-    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb"
+    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb"
   ],
   "nodes": [
     {
@@ -209,10 +244,10 @@
           0
         ],
         "rotation": [
-          -0.23035094753260413,
+          -0.28678821817552297,
           0,
-          -0.2745171292071211,
-          0.9335838402322055
+          -0.40957602214449607,
+          0.8660254037844386
         ],
         "scale": [
           1,
@@ -228,7 +263,7 @@
           "kind": "Light",
           "enabled": true,
           "type": "directional",
-          "color": "#c9ddf4",
+          "color": "#d8e4fa",
           "intensity": 1.1,
           "range": 0,
           "spotAngle": 0,
@@ -350,13 +385,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              88,
-              0.2,
-              18
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+              "guid": "as_ybcment1"
+            }
           },
           "materials": [
             {
@@ -371,11 +404,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -976,7 +1009,7 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#646574",
+                  "albedo": "#4c536b",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
@@ -1044,13 +1077,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              20,
-              0.2,
-              16
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-20x16.glb",
+              "guid": "as_5u6dq11d"
+            }
           },
           "materials": [
             {
@@ -1065,11 +1096,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -2177,13 +2208,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              6,
-              0.2,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+              "guid": "as_ddds4fuj"
+            }
           },
           "materials": [
             {
@@ -2198,11 +2227,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -2266,13 +2295,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              14,
-              0.2,
-              14
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-14x14.glb",
+              "guid": "as_5xbuqmer"
+            }
           },
           "materials": [
             {
@@ -2287,11 +2314,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -3014,13 +3041,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              6,
-              0.2,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+              "guid": "as_ddds4fuj"
+            }
           },
           "materials": [
             {
@@ -3035,11 +3060,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -3103,13 +3128,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              22,
-              0.2,
-              18
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-22x18.glb",
+              "guid": "as_uvm8disd"
+            }
           },
           "materials": [
             {
@@ -3124,11 +3147,11 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#747e89",
+                  "albedo": "#ffffff",
                   "roughness": 0.94,
                   "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
+                  "halftoneScale": 0.1,
                   "specMix": 0
                 }
               }
@@ -4320,11 +4343,78 @@
         }
       ],
       "prefab": null
+    },
+    {
+      "id": "nd_f2_backdrop",
+      "name": "远景街区 · 冷色剪影",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": false,
+      "category": "背景",
+      "transform": {
+        "position": [
+          33,
+          -0.4,
+          -27
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+              "guid": "as_4vcbbdgd"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.18,
+                  "halftoneScale": 0.6,
+                  "specMix": 0,
+                  "unlit": true
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.562Z",
-    "updatedAt": "2026-10-04T17:12:31.544Z",
+    "updatedAt": "2026-10-05T05:11:39.404Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

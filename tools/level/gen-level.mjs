@@ -36,7 +36,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 

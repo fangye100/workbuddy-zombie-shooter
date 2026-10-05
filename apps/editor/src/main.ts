@@ -3,7 +3,7 @@ import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
-import { DEBUG_OPTIONS, type LabParams } from './params';
+import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
@@ -41,6 +41,7 @@ import { RunProfile } from './services/run-profile';
 import { RunSettlement } from './services/run-settlement';
 import { renderPixelRatio } from './services/render-resolution';
 import { environmentFromParams } from './services/scene-environment';
+import { AtmospherePanel } from './services/atmosphere-panel';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
@@ -294,7 +295,7 @@ async function boot(): Promise<void> {
   let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
-    if (sceneAuthorPanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
@@ -715,6 +716,12 @@ async function boot(): Promise<void> {
     p.rimPower = env.rim.power;
     p.rimTopBias = env.rim.topBias;
     p.exposure = env.exposure;
+    const defaults = defaultParams();
+    for (const key of ['tonemapMode', 'outlineWidth', 'inkColor', 'shadowMult', 'shadowMix', 'shadowTint', 'litSat', 'halftoneStrength', 'halftoneSize', 'vignette'] as const) {
+      Object.assign(p, { [key]: env.comic?.[key] ?? defaults[key] });
+    }
+    p.outlineEnabled = true; p.outlineDistanceComp = true; p.outlinePostExempt = true;
+    p.halftoneEnabled = true; p.halftoneThreshold = 0.45;
   };
 
   let editorMenu!: EditorMenu;
@@ -1288,6 +1295,17 @@ async function boot(): Promise<void> {
     locked: () => playCtl.isPlaying || authorProjectionBusy,
     edit: editAuthorNodes,
   });
+  const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
+  const atmospherePanel = new AtmospherePanel(atmosphereHost, {
+    environment: () => spawnStore?.document.environment ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    apply: env => {
+      if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return {ok:false, edit:null, error:'请先停止 Play 并等待场景加载'};
+      const result = spawnStore.setEnvironment(env);
+      if (result.ok) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); editorMenu.message('天空与画风已写入场景，请保存'); }
+      return result;
+    },
+  });
   function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
     if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
     const result = spawnStore.editNodes(label, mutate);
@@ -1335,7 +1353,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1468,6 +1486,8 @@ async function boot(): Promise<void> {
 
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
+    sceneAuthorPanel.resetDraft();
+    atmospherePanel.resetDraft();
     authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
@@ -1535,7 +1555,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
-    if (sceneAuthorPanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1618,6 +1638,7 @@ async function boot(): Promise<void> {
 
   function refreshSpawnPanel(): void {
     sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
+    atmospherePanel.render();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();

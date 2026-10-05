@@ -84,12 +84,15 @@ struct DInst {
 @group(0) @binding(3) var<storage, read> inst : array<DInst>;
 /** 烘焙姿态调色板：[(paletteBase + poseIndex) * PALETTE_JOINT_COUNT + joint] 的 mat4 */
 @group(0) @binding(4) var<storage, read> palette : array<mat4x4f>;
+@group(1) @binding(0) var albedoTex : texture_2d<f32>;
+@group(1) @binding(1) var albedoSampler : sampler;
 
 struct VSOut {
   @builtin(position) clip : vec4f,
   @location(0) worldPos : vec3f,
   @location(1) normal : vec3f,
   @location(2) albedo : vec3f,
+  @location(3) uv : vec2f,
 };
 
 struct FragOut {
@@ -149,6 +152,7 @@ fn skinDir(i : DInst, d : vec3f, joints : vec4u, w : vec4f) -> vec3f {
 fn vs_main(
   @location(0) position : vec3f,
   @location(1) normal : vec3f,
+  @location(3) uv : vec2f,
   @location(5) joints : vec4u,
   @location(6) weights : vec4f,
   @builtin(instance_index) ii : u32,
@@ -166,6 +170,7 @@ fn vs_main(
   let s = sin(i.posYaw.w);
   out.normal = normalize(vec3f(n.x * c + n.z * s, n.y, -n.x * s + n.z * c));
   out.albedo = i.color.rgb;
+  out.uv = uv;
   out.clip = frame.viewProj * vec4f(worldPos, 1.0);
   return out;
 }
@@ -200,6 +205,7 @@ fn vs_outline(
   out.worldPos = expanded;
   out.normal = n;
   out.albedo = i.color.rgb;
+  out.uv = vec2f(0);
   out.clip = frame.viewProj * vec4f(expanded, 1.0);
   return out;
 }
@@ -217,7 +223,7 @@ fn fs_main(in : VSOut) -> FragOut {
   let V = normalize(frame.cameraPos.xyz - in.worldPos);
   let L = normalize(lights.keyDir.xyz);
 
-  let albedo = srgbToLinear(in.albedo);
+  let albedo = srgbToLinear(textureSample(albedoTex, albedoSampler, in.uv).rgb * in.albedo);
 
   // 与 scene.wgsl 同一套分阶参数，保证动态实体和静态关卡看起来是同一束光打的
   let shadowEnd = toon.params0.x;

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_ybcment1",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-130x18.glb"
+  },
+  "sourceHash": "sha256:ca29704b6d383340eb169905783d3aa6a8b46da29c25a09b5f65e7a06749f332",
+  "updatedAt": "2026-10-05T04:42:35.928Z"
+}
