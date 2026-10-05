@@ -1,31 +1,20 @@
 /** Supported author mutations and snapshot-based scene persistence. No UI or renderer state. */
-import { validateSceneDocument, type SceneDocument, type SceneNode } from '@aether/scene';
+import type { SceneDocument, SceneNode } from '@aether/scene';
+import { validateAuthorNodes } from '@aether/runtime';
 import { changedJsonPaths, cloneDocument, sceneFingerprint, validateQuat, validateSpawnValue } from '@aether/runtime';
 import type { JsonDiffEntry, SpawnEditStore } from '@aether/runtime';
-import { ENVIRONMENT_EDIT_PATHS, validEnvironmentValues } from '@aether/runtime';
+import { ENVIRONMENT_EDIT_PATHS, ATMOSPHERE_EDIT_PATHS, validEnvironmentValues } from '@aether/runtime';
 import { readProjectFile, writeProjectFile } from '../asset-util';
 import type { ProjectFileResult, WriteResult } from '../asset-util';
 
 /** Field authority follows node/component identity, not just a permissive path regexp. */
-export function authorSaveViolations(base: SceneDocument, saved: SceneDocument, inserted: SceneNode[] = []): JsonDiffEntry[] {
-  if (inserted.length > 0) {
-    const ids = new Set(inserted.map((node) => node.id));
-    const violations: JsonDiffEntry[] = [];
-    for (const original of inserted) {
-      const next = saved.nodes.find((node) => node.id === original.id);
-      if (next) violations.push(...authorSaveViolations({ ...base, nodes: [original] }, { ...base, nodes: [next] }));
-    }
-    for (const diagnostic of validateSceneDocument(saved).filter((d) => d.severity === 'error')) {
-      violations.push({ path: diagnostic.message, before: null, after: 'invalid scene' });
-    }
-    return [...violations, ...authorSaveViolations(
-      { ...base, nodes: base.nodes.filter((node) => !ids.has(node.id)) },
-      { ...saved, nodes: saved.nodes.filter((node) => !ids.has(node.id)) },
-    )];
-  }
+export function authorSaveViolations(base: SceneDocument, saved: SceneDocument, authorizedNodes?: SceneNode[]): JsonDiffEntry[] {
+  const nodesAuthorized = authorizedNodes !== undefined && JSON.stringify(saved.nodes) === JSON.stringify(authorizedNodes)
+    && validateAuthorNodes(saved) === null;
   const allowed = new Set<string>();
   if (validEnvironmentValues(saved.environment)) {
     for (const path of ENVIRONMENT_EDIT_PATHS) allowed.add(`environment.${path}`);
+    for (const path of ATMOSPHERE_EDIT_PATHS) allowed.add(`environment.${path}`);
   }
   for (let index = 0; index < base.nodes.length; index++) {
     const node = base.nodes[index]!;
@@ -46,7 +35,8 @@ export function authorSaveViolations(base: SceneDocument, saved: SceneDocument, 
       }
     }
   }
-  return changedJsonPaths(base, saved).filter((change) => !allowed.has(change.path));
+  return changedJsonPaths(base, saved).filter((change) => !allowed.has(change.path)
+    && !(nodesAuthorized && (change.path === 'nodes' || change.path.startsWith('nodes['))));
 }
 
 export interface AuthorSceneSavePort {
@@ -76,7 +66,7 @@ export class AuthorSceneSaver {
       const base = cloneDocument(store.committedDocument);
       const diffs = changedJsonPaths(base, snapshot.doc);
       if (diffs.length === 0) return result('noop', '没有改动需要保存');
-      const violations = authorSaveViolations(base, snapshot.doc, store.insertedAssetNodes);
+      const violations = authorSaveViolations(base, snapshot.doc, store.authorizedNodes);
       if (violations.length > 0) return result('rejected',
         `拒绝保存：检测到 ${violations.length} 处不受支持的作者字段改动（如 ${violations[0]!.path}）`, diffs.length);
       const baseHash = sceneFingerprint(base);

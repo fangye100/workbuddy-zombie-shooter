@@ -107,13 +107,30 @@ describe('关卡场景 · 外部资产引用（ADR-018 P4b 门禁）', () => {
   // 与 gen-level.mjs 的 actCoverProps 一致：Act1 每层掩体应引用这些真实道具 GLB。
   // 这条断言看守的是「重生成退化回纯 box 也全绿」的变异 —— 没有它，
   // 删掉 renderer 的 pendingAssets.push 后 1085 条测试依然全绿（P4b 复审实测）。
-  const ENV_GLBS = import.meta.glob('/assets/environment/models/**/tex2/*_baked.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+  const ENV_GLBS = import.meta.glob('/assets/environment/models/**/tex2/*.glb', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
   const knownPaths = new Set(
     Object.keys(ENV_GLBS).map((k) => k.replace(/^\//, '').replace(/\\/g, '/')),
   );
   const levelFiles = Object.keys(levelModules);
-  const sidecars = import.meta.glob('/assets/environment/models/**/tex2/*_baked.glb.meta.json', { eager: true, import: 'default' }) as Record<string, { guid: string }>;
+  const sidecars = import.meta.glob('/assets/environment/models/**/tex2/*.glb.meta.json', { eager: true, import: 'default' }) as Record<string, { guid: string }>;
   const propModules = import.meta.glob('/assets/environment/props.json', { eager: true, import: 'default' }) as Record<string, { entries: { id: string; footprint: number[] }[] }>;
+
+  it('places every delivered environment model in the campaign with resolved GUIDs and dependencies', () => {
+    const placed = new Set<string>();
+    for (const doc of Object.values(levelModules)) {
+      for (const node of doc.nodes) for (const c of node.components) {
+        if (c.kind !== 'MeshRenderer' || c.source.type !== 'asset') continue;
+        const ref = c.source.ref;
+        if (!/assets\/environment\/models\/[PS]-\d+\//.test(ref.path)) continue;
+        expect(knownPaths.has(ref.path), node.id).toBe(true);
+        expect(ref.guid, node.id).toBe(sidecars[`/${ref.path}.meta.json`]?.guid);
+        expect(doc.dependencies, node.id).toContain(ref.path);
+        expect(node.visible, node.id).toBe(true);
+        placed.add(/models\/([^/]+)\//.exec(ref.path)![1]!);
+      }
+    }
+    expect([...placed].sort()).toEqual(Object.values(propModules)[0]!.entries.map(p => p.id).sort());
+  });
 
   it('optional asset GUIDs round-trip and reject invalid values', () => {
     const doc = JSON.parse(JSON.stringify(levelModules[levelFiles[0]!])) as SceneDocument;

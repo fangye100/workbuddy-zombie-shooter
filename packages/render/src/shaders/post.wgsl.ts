@@ -6,7 +6,7 @@ import { COMMON_WGSL } from './common.wgsl';
  * 顺序严格遵循 tokens.json：半调与 LUT 在 Tonemap 之后、Grading 之前，
  * 且 grading 的工作空间是 sRGB display-referred（不是 linear）。
  *
- * 描边像素（aux.a = 1）在开启豁免后只走 tonemap + sRGB，跳过半调 / grading / 暗角，
+ * 描边像素（aux.a = 1）在开启豁免后直接输出 display ink，跳过色调映射 / 半调 / grading / 暗角，
  * 否则纯 ink 色会被提亮染色，描边会发灰（文档 §4.4）。
  */
 export const POST_WGSL = /* wgsl */ `
@@ -107,7 +107,8 @@ fn gradeThreeBand(c : vec3f) -> vec3f {
 
   var r = c;
   r = gradeBand(r, mShadow, post.shadowG.x, post.nightDeep.rgb, post.shadowG.y, post.shadowG.z);
-  r = gradeBand(r, mMid, post.midG.x, c, 0.0, post.midG.y);
+  // packPost stores saturation at float 10 (midG.z); .y is padding = 0.
+  r = gradeBand(r, mMid, post.midG.x, c, 0.0, post.midG.z);
   r = gradeBand(r, mLight, post.lightG.x, post.bone.rgb, post.lightG.y, post.lightG.z);
   return r;
 }
@@ -141,6 +142,7 @@ fn fs_post(in : VSOut) -> @location(0) vec4f {
   hdrColor *= post.post.y;
 
   var display = linearToSrgb(tonemapApply(hdrColor, post.post.x));
+  if (exempt) { display = post.ink.rgb; }
 
   // 无条件求值（导数要求 uniform control flow），再用 exempt 决定是否采用
   let ht = halftoneAmount(in.clip.xy, luma(display), aux.r) * select(1.0, 0.0, exempt);

@@ -66,6 +66,21 @@ function insideAnyObstacle(s: RuntimeSession, x: number, z: number): boolean {
 }
 
 describe('RuntimeSession —— 房间进入触发', () => {
+  it('authored floor-one scenery leaves the central road traversable from entry to checkpoint', () => {
+    const layout = desc();
+    // Isolate navigation from combat damage without changing authored obstacle geometry.
+    layout.spawns = [];
+    const s = new RuntimeSession({ desc: layout, seed: 1 });
+    s.setInput(1, 0);
+    for (let i = 0; i < 410; i++) {
+      s.step();
+      const p = s.player()!;
+      expect(insideAnyObstacle(s, p.x, p.z)).toBe(false);
+    }
+    expect(s.player()!.x).toBeGreaterThan(63);
+    expect(Math.abs(s.player()!.z)).toBeLessThan(0.1);
+  });
+
   it('玩家出生所在的房间立即触发，未进入的房间不刷', () => {
     const s = make();
     // P5 C4：房间 1 分波，触发只投 wave1 = E-01×5 + E-02×3 = 8 只（wave2 的 E-01×4 等清空）；

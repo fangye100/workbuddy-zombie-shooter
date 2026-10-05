@@ -1,6 +1,7 @@
 import type { RuntimeSession } from '@aether/runtime';
 import { RunHud } from './run-hud';
 import { CombatOverlay, type WorldProjection } from './combat-overlay';
+import './game-hud.css';
 
 /** Read-only projection of simulation state; interaction goes back through PlaySession. */
 export function gameHudModel(runtime: RuntimeSession) {
@@ -30,6 +31,8 @@ export class GameHud {
   private readonly root = document.createElement('section');
   private readonly title = document.createElement('strong');
   private readonly health = document.createElement('progress');
+  private readonly healthText = document.createElement('b');
+  private readonly radar = document.createElement('canvas');
   private readonly stats = document.createElement('span');
   private readonly objective = document.createElement('p');
   private readonly result = document.createElement('div');
@@ -58,13 +61,20 @@ export class GameHud {
     const stop = document.createElement('button'); stop.textContent = '返回编辑'; stop.onclick = actions.stop;
     const help = document.createElement('small'); help.textContent = 'WASD / 方向键移动 · J 射击 · E 交互 · 空格暂停';
     this.result.append(this.retry, this.next, stop);
-    this.root.append(this.title, this.health, this.stats, this.objective, this.interact, help, this.resume, this.result);
+    const life = document.createElement('div'); life.className = 'hud-life';
+    this.healthText.className = 'hud-health-value'; life.append(this.title, this.health, this.healthText);
+    this.stats.className = 'hud-wave';
+    const prompt = document.createElement('div'); prompt.className = 'hud-objective'; prompt.append(this.objective, this.interact, this.resume, this.result);
+    help.className = 'hud-help';
+    this.radar.className = 'hud-radar'; this.radar.width = 180; this.radar.height = 180; this.radar.setAttribute('aria-label','附近敌人雷达 · 范围 20 米');
+    this.root.append(life, this.stats, prompt, help, this.radar);
     document.getElementById('center')!.append(this.root);
   }
   update(runtime: RuntimeSession | null, paused: boolean): void {
     this.runHud.update(runtime);
     this.root.hidden = runtime === null;
     if (!runtime) { this.stamp = ''; return; }
+    this.drawRadar(runtime);
     if (this.currentRun !== runtime.runId) { this.currentRun = runtime.runId; this.campaignComplete = false; this.next.textContent = '继续下一层'; }
     this.next.disabled = this.nextBusy || this.campaignComplete || !!runtime.progress?.choosing;
     const m = gameHudModel(runtime); const stamp = JSON.stringify([m, paused]);
@@ -73,7 +83,8 @@ export class GameHud {
     this.title.textContent = m.title;
     this.health.max = m.maxHp; this.health.value = Math.max(0, m.hp);
     this.health.setAttribute('aria-valuetext', `${Math.ceil(m.hp)} / ${m.maxHp}`);
-    this.stats.textContent = `生命 ${Math.ceil(m.hp)}/${m.maxHp}  ·  敌人 ${m.enemies}  ·  房间 ${m.progress}  ·  ${Math.floor(m.time / 60)}:${String(m.time % 60).padStart(2, '0')}`;
+    this.healthText.textContent = `${Math.ceil(m.hp)} / ${m.maxHp}`;
+    this.stats.textContent = `敌人 ${m.enemies}　·　房间 ${m.progress}\n${Math.floor(m.time / 60)}:${String(m.time % 60).padStart(2, '0')}`;
     this.objective.textContent = m.outcome === 'game-over' ? '本局结束 · 再试一次'
       : m.outcome === 'floor-clear' ? '本层通关！' : paused ? '已暂停' : `${m.room} · ${m.objective}`;
     this.result.hidden = m.outcome === 'running';
@@ -83,4 +94,19 @@ export class GameHud {
     this.next.disabled = this.nextBusy || this.campaignComplete || !!runtime.progress?.choosing;
   }
   updateFeedback(runtime: RuntimeSession | null): void { this.feedback?.update(runtime); }
+  private drawRadar(runtime: RuntimeSession): void {
+    const c=this.radar.getContext('2d'); if(!c)return;
+    c.clearRect(0,0,180,180);c.fillStyle='#171327';c.beginPath();c.arc(90,90,85,0,Math.PI*2);c.fill();
+    c.strokeStyle='#2bc4d650';c.lineWidth=1;
+    for(const r of [30,60,83]){c.beginPath();c.arc(90,90,r,0,Math.PI*2);c.stroke();}
+    c.beginPath();c.moveTo(7,90);c.lineTo(173,90);c.moveTo(90,7);c.lineTo(90,173);c.stroke();
+    const player=runtime.player();if(!player)return;
+    const table=runtime.table;c.fillStyle='#e8402a';
+    for(let i=0;i<table.capacity;i++){
+      if(!table.isAlive(i)||i===runtime.playerEntityId)continue;
+      const x=(table.posX[i]!-player.x)*4,z=(table.posZ[i]!-player.z)*4;
+      if(x*x+z*z>80*80)continue;c.beginPath();c.arc(90+x,90+z,3.5,0,Math.PI*2);c.fill();
+    }
+    c.save();c.translate(90,90);c.rotate(player.yaw);c.fillStyle='#ffc531';c.beginPath();c.moveTo(8,0);c.lineTo(-5,-5);c.lineTo(-3,0);c.lineTo(-5,5);c.closePath();c.fill();c.restore();
+  }
 }

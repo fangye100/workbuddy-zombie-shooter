@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_4vcbbdgd",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "industrial-quarter.glb"
+  },
+  "sourceHash": "sha256:4a8ef923e4fa924caf2bfb21d0dcfd14ede2a8514be1ed91dd1d673529b636e2",
+  "updatedAt": "2026-10-05T04:34:39.577Z"
+}

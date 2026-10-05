@@ -1,10 +1,13 @@
+import { SkyTextureLoader } from './services/sky-texture';
 import type { GpuContext } from '@aether/gfx';
 import { findSceneBinding, resolveSceneMaterial } from './services/scene-material';
 import { lightAngles } from './services/scene-light';
+import { SceneContacts } from './services/scene-contacts';
 import {
   type GizmoMode,
   type GizmoSpace,
   RendererCore,
+  createAlbedoTexture,
   type CoreObjectDraw,
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
@@ -103,6 +106,8 @@ const HOVER_COLOR = '#8FD14F';
 
 
 export interface SceneObject {
+  /** Successfully decoded scene asset; absent on unresolved placeholder geometry. */
+  loadedAssetPath?: string;
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
   indexCount: number;
@@ -635,6 +640,7 @@ function buildDefaultSpecs(): ObjectSpec[] {
 }
 
 export class LabRenderer {
+  private readonly sceneContacts = new SceneContacts();
   private readonly device: GPUDevice;
 
   /** 公开统计（HUD / 面板读）；底层存于 EditorState */
@@ -645,6 +651,10 @@ export class LabRenderer {
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
   /** 引擎帧绘制核心（services 通过它读 gizmo/相机矩阵与高亮 buffer） */
   public readonly core: RendererCore;
+  private readonly skyTextures: SkyTextureLoader;
+  get skyTextureDiagnostic(): string { return this.skyTextures.diagnostic; }
+  onSkyTextureStatusChange: (() => void) | null = null;
+  syncSkyTexture(env: EnvironmentData): void { this.skyTextures.sync(env.sky?.texture); }
   private readonly materialData: Float32Array<ArrayBuffer>;
   private readonly transformData: Float32Array<ArrayBuffer>;
 
@@ -773,6 +783,7 @@ export class LabRenderer {
     // ★ 引擎帧绘制核心：拥有 sceneLayout / 4 条 pipeline / 全部 uniform buffer /
     // 采样器 / gizmo 资源，并执行 4-pass 编码（ADR-001：编辑器是消费者）。
     this.core = new RendererCore(gpu, canvas);
+    this.skyTextures = new SkyTextureLoader(bitmap => this.core.setSkyTexture(bitmap), undefined, () => this.onSkyTextureStatusChange?.());
 
     // 绑定组按「子网格」建（依赖 core 的 sceneLayout / frameBuf / sampler 等）
     this.rebuildAllBindGroups();
@@ -1011,6 +1022,7 @@ export class LabRenderer {
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
     this.document = migrated.doc;
+    this.skyTextures.sync(this.document.environment.sky?.texture);
     this.applyDocumentMaterials(warnings);
 
     // 场景灯光：按 `priority` 降序取 top-1（directional key）。
@@ -1061,7 +1073,7 @@ export class LabRenderer {
 
   /** 待补载数量（宿主判断"要不要显示加载进度"用） */
   get pendingAssetCount(): number {
-    return this.pendingSceneAssets.length;
+    return this.pendingSceneAssets.length + Number(this.skyTextures.pending);
   }
 
   /**
@@ -1113,12 +1125,17 @@ export class LabRenderer {
           model.skeleton,
           model.nodeTree,
         );
-        if (ok) swapped++;
+        if (ok) {
+          this.state.objects[p.index]!.loadedAssetPath = p.path;
+          swapped++;
+        }
         else failed.push({ name: p.name, reason: '物体索引已失效（可能已被删除）' });
       } catch (e) {
         failed.push({ name: p.name, reason: e instanceof Error ? e.message : String(e) });
       }
     }
+    await this.skyTextures.ready();
+    if (this.skyTextures.diagnostic) failed.push({name: '天空贴图', reason: this.skyTextures.diagnostic});
     this.pendingSceneAssets = [];
     const materialWarnings: string[] = [];
     this.applyDocumentMaterials(materialWarnings);
@@ -1169,6 +1186,7 @@ export class LabRenderer {
    */
   public setDocument(doc: SceneDocument): void {
     this.document = doc;
+    this.skyTextures.sync(doc.environment.sky?.texture);
   }
 
   /**
@@ -1622,6 +1640,8 @@ export class LabRenderer {
   ): boolean {
     const o = this.state.objects[index];
     if (o === undefined || o.removed) return false;
+    // A replacement must be associated with its new source by the scene loader.
+    delete o.loadedAssetPath;
 
     this.uploadMesh(o, mesh, skeleton);
 
@@ -1647,18 +1667,7 @@ export class LabRenderer {
   }
 
   private createTextureFromBitmap(bitmap: ImageBitmap, closeBitmap = true): GPUTexture {
-    const tex = this.device.createTexture({
-      label: 'model-albedo',
-      size: [bitmap.width, bitmap.height],
-      format: 'rgba8unorm',
-      // copyExternalImageToTexture 要求 COPY_DST + RENDER_ATTACHMENT 双 usage（Dawn 实测）
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    this.device.queue.copyExternalImageToTexture(
-      { source: bitmap, flipY: false },
-      { texture: tex },
-      { width: bitmap.width, height: bitmap.height },
-    );
+    const tex = createAlbedoTexture(this.device, bitmap);
     // ImageBitmap 占的是 native 内存（4096² ≈ 67MB），GC 不保证及时回收。
     // Normally release after upload. Author insertion history explicitly retains it for redo.
     if (closeBitmap) bitmap.close();
@@ -2447,6 +2456,12 @@ export class LabRenderer {
     }
 
     const input: RenderFrameInput = {
+      sky: this.document?.environment.sky ?? null,
+      contacts: this.document?.environment.comic ? {
+        data: this.sceneContacts.build(this.state.objects, this.dynamicBatches),
+        color: m4.hexToLinear(this.document.environment.comic.shadowTint),
+        opacity: this.document.environment.comic.contactShadowOpacity,
+      } : null,
       p: {
         outlineEnabled: p.outlineEnabled,
         debugMode: p.debugMode,
@@ -2498,6 +2513,7 @@ export class LabRenderer {
     this.destroyed = true;
 
     // 引擎核心持有的全部 GPU 资源（HDR/AUX/Depth 纹理、uniform buffer、gizmo 几何）由 core 释放
+    this.skyTextures.destroy();
     this.core.destroy();
 
     // 编辑器侧独占资源：白图、角色贴图、物体网格与独占贴图

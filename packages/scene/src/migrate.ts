@@ -341,6 +341,11 @@ export const migrateV6ToV7: MigrationStep = {
   from: 6, to: 7, name: 'support-authored-run-rules', run: doc => doc,
 };
 
+/** Opt-in presentation binding: old scenes retain their original player proxy. */
+export const migrateV7ToV8: MigrationStep = {
+  from: 7, to: 8, name: 'support-player-mesh-binding', run: doc => ({ ...doc }),
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
@@ -356,6 +361,15 @@ export function registerSceneMigrations(): void {
   }
   if (!listMigrations().some((m) => m.from === 5 && m.to === 6)) registerMigration(migrateV5ToV6);
   if (!listMigrations().some((m) => m.from === 6 && m.to === 7)) registerMigration(migrateV6ToV7);
+  if (!listMigrations().some((m) => m.from === 7 && m.to === 8)) registerMigration(migrateV7ToV8);
+  if (!listMigrations().some((m) => m.from === 8 && m.to === 9)) registerMigration({
+    from: 8, to: 9, name: 'support-authored-comic-atmosphere',
+    run(doc) { return { ...doc }; },
+  });
+  if (!listMigrations().some((m) => m.from === 9 && m.to === 10)) registerMigration({
+    from: 9, to: 10, name: 'support-authored-art-textures',
+    run(doc) { return { ...doc }; },
+  });
 }
 
 registerSceneMigrations();

@@ -1029,7 +1029,7 @@ export class Panel {
     const eye = document.createElement('button');
     eye.className = 'hier-eye';
     eye.type = 'button';
-    eye.title = sm.visible ? '隐藏这个 mesh' : '显示这个 mesh';
+    eye.title = sm.visible ? t('临时隐藏这个 mesh（不写入场景）') : t('临时显示这个 mesh（不写入场景）');
     eye.textContent = sm.visible ? '◉' : '◌';
     eye.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1037,7 +1037,7 @@ export class Panel {
       this.onSubMeshToggle?.(objIndex, subIndex, next);
       sm.visible = next;
       eye.textContent = next ? '◉' : '◌';
-      eye.title = next ? '隐藏这个 mesh' : '显示这个 mesh';
+      eye.title = next ? t('临时隐藏这个 mesh（不写入场景）') : t('临时显示这个 mesh（不写入场景）');
       row.classList.toggle('hidden', !next);
     });
 
@@ -1401,11 +1401,17 @@ export class Panel {
     this.mmLib.value = info.materialId;
 
     const isInst = info.source === 'instance';
-    this.mmNameRow.style.display = isInst ? '' : 'none';
+    const sceneAuthored = this.renderer.getDocument() !== null;
+    this.mmNameRow.style.display = isInst && !sceneAuthored ? '' : 'none';
     if (isInst) this.mmName.value = info.materialName;
     this.mmBtnSave.disabled = !info.hasOverride;
     this.mmBtnDiscard.disabled = !info.hasOverride;
     this.mmBtnDelete.style.display = isInst ? '' : 'none';
+    // Scene files persist local overrides; library instance lifecycle belongs to the asset library.
+    for (const key of ['instance', 'save', 'delete']) {
+      const button = this.mmBox.querySelector<HTMLButtonElement>(`[data-mm="${key}"]`);
+      if (button) button.hidden = sceneAuthored;
+    }
     this.mmNotice.textContent = this.slotNotice(info);
     this.syncSlotControls();
   }
@@ -1422,6 +1428,7 @@ export class Panel {
   }
 
   private slotNotice(info: MaterialSlotInfo): string {
+    if (this.renderer.getDocument() !== null) return t('材质修改写入当前场景的局部覆盖；请使用保存场景。');
     if (info.source === 'override') {
       return '覆盖中：改动只作用于这一条 mesh。点「保存覆盖」把这份修改存进材质库，共享材质不受影响。';
     }

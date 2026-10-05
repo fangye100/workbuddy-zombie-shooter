@@ -421,7 +421,7 @@ describe('TransformEdit —— 旋转（四元数）必须能持久化', () => {
     // 撤销把旋转也退回去
     const undone = store.undo();
     expect(undone!.kind).toBe('transform');
-    expect(findNode(store.document, COVER)!.transform.rotation).toEqual([0, 0, 0, 1]);
+    expect(findNode(store.document, COVER)!.transform.rotation).toEqual(findNode(doc, COVER)!.transform.rotation);
     expect(store.dirty).toBe(false);
   });
 
@@ -434,8 +434,8 @@ describe('TransformEdit —— 旋转（四元数）必须能持久化', () => {
     expect(n.transform.rotation).toEqual([...YAW90]);
     store.undo();
     const back = findNode(store.document, COVER)!;
-    expect(back.transform.position[0]).toBe(-6); // 夹具初值
-    expect(back.transform.rotation).toEqual([0, 0, 0, 1]);
+    expect(back.transform.position).toEqual(findNode(doc, COVER)!.transform.position);
+    expect(back.transform.rotation).toEqual(findNode(doc, COVER)!.transform.rotation);
   });
 
   it('q 与 −q 是同一姿态 → 不算一次编辑（转一圈回到原处不该进撤销栈）', () => {

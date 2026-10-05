@@ -1,0 +1,1415 @@
+{
+  "schemaVersion": 10,
+  "id": "sc_p0_art_gallery",
+  "name": "P0 · LOD 与占位资产验收",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#737b9c",
+      "intensity": 0.28
+    },
+    "hemisphere": {
+      "sky": "#9ebcdb",
+      "skyIntensity": 0.42,
+      "ground": "#5e536e",
+      "groundIntensity": 0.2
+    },
+    "fog": {
+      "color": "#81949c",
+      "density": 0,
+      "heightFalloff": 0.1
+    },
+    "rim": {
+      "color": "#9bdbe0",
+      "intensity": 0.3,
+      "power": 3,
+      "topBias": 0.45
+    },
+    "exposure": 0.9,
+    "postOverride": null,
+    "sky": {
+      "zenith": "#364662",
+      "horizon": "#dbb695",
+      "ground": "#425566",
+      "cloud": "#d6cbbb",
+      "cloudCoverage": 0.54,
+      "cloudScale": 1.7,
+      "cloudSpeed": 0.002,
+      "sunColor": "#ffe3a0",
+      "sunDirection": [
+        0.7094064799162227,
+        0.49999999999999994,
+        -0.49673176489215387
+      ],
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 65
+    },
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.45,
+      "outlineWidth": 1.6,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0.18,
+      "halftoneSize": 5,
+      "vignette": 0.04
+    }
+  },
+  "editorCamera": {
+    "target": [
+      4,
+      0,
+      9.5
+    ],
+    "distance": 29,
+    "yaw": 0.4,
+    "elevation": 0.85
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": null,
+  "loseCondition": "player-death",
+  "dependencies": [
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod0.glb",
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod2.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod0.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod2.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod0.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+    "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+    "assets/art/models/WPN-01/game_ready/WPN-01_lod1.glb",
+    "assets/art/models/WPN-01/game_ready/WPN-01_lod2.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod0.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod2.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod0.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod2.glb",
+    "assets/art/textures/SKY-01/SKY-01.png"
+  ],
+  "nodes": [
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 55,
+          "distance": 9,
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_beacon",
+      "name": "街区暖光",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          4.5,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "point",
+          "color": "#ffc06b",
+          "intensity": 2.4,
+          "range": 11,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_p0_key",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          -0.28678821817552297,
+          0,
+          -0.40957602214449607,
+          0.8660254037844386
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#ffe6c2",
+          "intensity": 1.1,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_p0_0_0",
+      "name": "ENV-MID-01 · LOD0 · 展示比例 0.215",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-01",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.21538461538461537,
+          0.21538461538461537,
+          0.21538461538461537
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod0.glb",
+              "guid": "as_nmkxsq8f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_0_1",
+      "name": "ENV-MID-01 · LOD1 · 展示比例 0.215",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-01",
+      "transform": {
+        "position": [
+          4,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.21538461538461537,
+          0.21538461538461537,
+          0.21538461538461537
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_0_2",
+      "name": "ENV-MID-01 · LOD2 · 展示比例 0.215",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-01",
+      "transform": {
+        "position": [
+          8,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.21538461538461537,
+          0.21538461538461537,
+          0.21538461538461537
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod2.glb",
+              "guid": "as_m2c5wd12"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_1_0",
+      "name": "ENV-MID-02 · LOD0 · 展示比例 0.233",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-02",
+      "transform": {
+        "position": [
+          0,
+          0,
+          3.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.2333333333333333,
+          0.2333333333333333,
+          0.2333333333333333
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod0.glb",
+              "guid": "as_mllknqxy"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_1_1",
+      "name": "ENV-MID-02 · LOD1 · 展示比例 0.233",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-02",
+      "transform": {
+        "position": [
+          4,
+          0,
+          3.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.2333333333333333,
+          0.2333333333333333,
+          0.2333333333333333
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+              "guid": "as_pl5xllzm"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_1_2",
+      "name": "ENV-MID-02 · LOD2 · 展示比例 0.233",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-02",
+      "transform": {
+        "position": [
+          8,
+          0,
+          3.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.2333333333333333,
+          0.2333333333333333,
+          0.2333333333333333
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod2.glb",
+              "guid": "as_cjt5ole5"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_2_0",
+      "name": "ENV-FAR-01 · LOD0 · 展示比例 0.044",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-01",
+      "transform": {
+        "position": [
+          0,
+          0,
+          7.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.04375,
+          0.04375,
+          0.04375
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod0.glb",
+              "guid": "as_pdav0fmg"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_2_1",
+      "name": "ENV-FAR-01 · LOD1 · 展示比例 0.044",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-01",
+      "transform": {
+        "position": [
+          4,
+          0,
+          7.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.04375,
+          0.04375,
+          0.04375
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+              "guid": "as_l792u0n7"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_2_2",
+      "name": "ENV-FAR-01 · LOD2 · 展示比例 0.044",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-01",
+      "transform": {
+        "position": [
+          8,
+          0,
+          7.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.04375,
+          0.04375,
+          0.04375
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+              "guid": "as_xo8fin9z"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_3_0",
+      "name": "WPN-01 · LOD0 · 展示比例 10.000",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "WPN-01",
+      "transform": {
+        "position": [
+          0,
+          0,
+          11.399999999999999
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          9.999999999999998,
+          9.999999999999998,
+          9.999999999999998
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+              "guid": "as_e4ugmrq3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_3_1",
+      "name": "WPN-01 · LOD1 · 展示比例 10.000",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "WPN-01",
+      "transform": {
+        "position": [
+          4,
+          0,
+          11.399999999999999
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          9.999999999999998,
+          9.999999999999998,
+          9.999999999999998
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod1.glb",
+              "guid": "as_ubw76sg4"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_3_2",
+      "name": "WPN-01 · LOD2 · 展示比例 10.000",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "WPN-01",
+      "transform": {
+        "position": [
+          8,
+          0,
+          11.399999999999999
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          9.999999999999998,
+          9.999999999999998,
+          9.999999999999998
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod2.glb",
+              "guid": "as_nva99fgn"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_4_0",
+      "name": "ENV-MID-03 · LOD0【占位】 · 展示比例 0.156",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-03",
+      "transform": {
+        "position": [
+          0,
+          0,
+          15.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.15555555555555556,
+          0.15555555555555556,
+          0.15555555555555556
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod0.glb",
+              "guid": "as_q5jqjyii"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_4_1",
+      "name": "ENV-MID-03 · LOD1【占位】 · 展示比例 0.156",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-03",
+      "transform": {
+        "position": [
+          4,
+          0,
+          15.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.15555555555555556,
+          0.15555555555555556,
+          0.15555555555555556
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+              "guid": "as_ajnc9xf8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_4_2",
+      "name": "ENV-MID-03 · LOD2【占位】 · 展示比例 0.156",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-MID-03",
+      "transform": {
+        "position": [
+          8,
+          0,
+          15.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.15555555555555556,
+          0.15555555555555556,
+          0.15555555555555556
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod2.glb",
+              "guid": "as_49mfjgq1"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_5_0",
+      "name": "ENV-FAR-02 · LOD0【占位】 · 展示比例 0.039",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-02",
+      "transform": {
+        "position": [
+          0,
+          0,
+          19
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.03888888888888889,
+          0.03888888888888889,
+          0.03888888888888889
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod0.glb",
+              "guid": "as_8os4us8v"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_5_1",
+      "name": "ENV-FAR-02 · LOD1【占位】 · 展示比例 0.039",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-02",
+      "transform": {
+        "position": [
+          4,
+          0,
+          19
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.03888888888888889,
+          0.03888888888888889,
+          0.03888888888888889
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+              "guid": "as_fja39hbm"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_p0_5_2",
+      "name": "ENV-FAR-02 · LOD2【占位】 · 展示比例 0.039",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "ENV-FAR-02",
+      "transform": {
+        "position": [
+          8,
+          0,
+          19
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.03888888888888889,
+          0.03888888888888889,
+          0.03888888888888889
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 4,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod2.glb",
+              "guid": "as_mw2vrprk"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0.1,
+                  "roughness": 0.9,
+                  "metallic": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-05T08:05:45.018Z",
+    "updatedAt": "2026-10-05T08:05:45.018Z"
+  }
+}

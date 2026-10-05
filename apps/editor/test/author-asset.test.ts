@@ -7,7 +7,10 @@ import { AuthorTransformController, type TransformView } from '../src/services/a
 
 const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
 function setup() {
-  const store = new SpawnEditStore(cloneDocument((Object.values(MODULES)[0] as { default: SceneDocument }).default));
+  const doc = cloneDocument((Object.values(MODULES)[0] as { default: SceneDocument }).default);
+  // Retain scene semantics/NodeIds but leave render slots for insertion regressions.
+  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer');
+  const store = new SpawnEditStore(doc);
   const node = assetSceneNode('asset-test', 'LOD2', 'assets/environment/models/P-01/tex2/P-01_lod2.glb', 'guid-test', [2, 0, 3]);
   return { store, node };
 }
@@ -18,7 +21,7 @@ describe('asset browser document insertion', () => {
     const original = cloneDocument(store.document);
     expect(store.insertAsset(node).ok).toBe(true);
     store.setTransform(node.id, { posX: 5 });
-    expect(authorSaveViolations(original, store.document, store.insertedAssetNodes)).toEqual([]);
+    expect(authorSaveViolations(original, store.document, store.authorizedNodes)).toEqual([]);
     expect(store.document.nodes.at(-1)!.transform.position).toEqual([5, 0, 3]);
     store.undo(); store.undo();
     expect(store.document).toEqual(original);
@@ -41,6 +44,39 @@ describe('asset browser document insertion', () => {
     expect(store.undoDepth).toBe(1);
   });
 
+  it('keeps imported assets in the same property/delete history and save authority', () => {
+    const { store, node } = setup();
+    const original = cloneDocument(store.document);
+    expect(store.insertAsset(node).ok).toBe(true);
+    expect(store.editNodes('rename imported asset', nodes => {
+      nodes.find(n => n.id === node.id)!.name = 'Edited LOD2';
+    }).ok).toBe(true);
+    expect(store.setTransform(node.id, { posX: 7 }).ok).toBe(true);
+    const edited = cloneDocument(store.document);
+    expect(store.editNodes('delete imported asset', nodes => {
+      nodes.splice(nodes.findIndex(n => n.id === node.id), 1);
+    }).ok).toBe(true);
+    expect(store.undo()?.kind).toBe('nodes');
+    expect(store.document).toEqual(edited);
+    expect(authorSaveViolations(original, store.document, store.authorizedNodes)).toEqual([]);
+    store.undo(); store.undo(); store.undo();
+    expect(store.document).toEqual(original);
+    store.redo(); store.redo(); store.redo();
+    expect(store.document).toEqual(edited);
+    const snapshot = store.beginSave();
+    store.confirmSave(snapshot.doc, snapshot.lastEditId);
+    expect(store.dirty).toBe(false);
+    expect(new SpawnEditStore(snapshot.doc).document.nodes.at(-1)).toEqual(edited.nodes.at(-1));
+  });
+
+  it('cannot authorize external mutations by inserting another asset', () => {
+    const { store, node } = setup();
+    store.document.nodes[0]!.name = 'untracked';
+    expect(store.insertAsset(node).ok).toBe(false);
+    expect(store.undoDepth).toBe(0);
+    expect(authorSaveViolations(store.committedDocument, store.document, store.authorizedNodes)).not.toEqual([]);
+  });
+
   it('does not extend save authority to uncommanded nodes or changed asset paths', () => {
     const { store, node } = setup();
     store.document.nodes.push(structuredClone(node));
@@ -48,7 +84,7 @@ describe('asset browser document insertion', () => {
     store.document.nodes.pop(); store.insertAsset(node);
     const mesh = store.document.nodes.at(-1)!.components[0]!;
     if (mesh.kind === 'MeshRenderer' && mesh.source.type === 'asset') mesh.source.ref.path = 'assets/unrelated.glb';
-    expect(authorSaveViolations(store.committedDocument, store.document, store.insertedAssetNodes)).not.toEqual([]);
+    expect(authorSaveViolations(store.committedDocument, store.document, store.authorizedNodes)).not.toEqual([]);
   });
 
   it('preserves an undo during an in-flight insertion save as an authorized dirty removal', () => {
@@ -57,7 +93,7 @@ describe('asset browser document insertion', () => {
     const snapshot = store.beginSave(); store.undo();
     store.confirmSave(snapshot.doc, snapshot.lastEditId);
     expect(store.dirty).toBe(true);
-    expect(authorSaveViolations(store.committedDocument, store.document, store.insertedAssetNodes)).toEqual([]);
+    expect(authorSaveViolations(store.committedDocument, store.document, store.authorizedNodes)).toEqual([]);
   });
 
   it('destroys the view on undo and rolls back capacity failure on redo', () => {
@@ -97,5 +133,40 @@ describe('asset browser document insertion', () => {
     assets.project(edit, false); store.redo(); assets.project(edit, true);
     expect(closed).toBe(false);
     assets.clear(); expect(closed).toBe(true);
+  });
+
+  it('releases undone bitmaps when a new command discards redo without closing retained insertions', () => {
+    const { store, node } = setup();
+    const closed: string[] = [];
+    const view = { addObject: () => 1, removeObject: () => {}, findObjectIndexByNodeId: () => 1 };
+    const assets = new AuthorAssetController(() => store, view);
+    const bitmap = (id: string): ImageBitmap => ({ width: 1, height: 1, close: () => { closed.push(id); } });
+    assets.insert(store, node, {} as ReturnType<typeof parseGlb>, bitmap('first'));
+    const second = structuredClone(node); second.id = 'asset-second';
+    assets.insert(store, second, {} as ReturnType<typeof parseGlb>, bitmap('second'));
+    const undone = store.undo()!;
+    if (undone.kind !== 'asset-node') throw new Error('wrong command');
+    assets.project(undone, false); assets.prune();
+    expect(closed).toEqual([]);
+    expect(store.setTransform(node.id, { posX: 9 }).ok).toBe(true);
+    assets.prune();
+    expect(closed).toEqual(['second']);
+    expect(store.redoDepth).toBe(0);
+    assets.prune(); expect(closed).toEqual(['second']);
+    assets.clear(); expect(closed).toEqual(['second', 'first']);
+  });
+
+  it('retains redo resources after a rejected edit and releases them when the store is replaced', () => {
+    const { store, node } = setup();
+    let current: SpawnEditStore | null = store;
+    let closes = 0;
+    const view = { addObject: () => 1, removeObject: () => {}, findObjectIndexByNodeId: () => 1 };
+    const assets = new AuthorAssetController(() => current, view);
+    assets.insert(store, node, {} as ReturnType<typeof parseGlb>, { width: 1, height: 1, close: () => { closes++; } });
+    store.undo();
+    expect(store.setTransform('missing', { posX: 9 }).ok).toBe(false);
+    assets.prune(); expect(closes).toBe(0); expect(store.redoDepth).toBe(1);
+    current = null; assets.prune(); expect(closes).toBe(1);
+    assets.clear(); expect(closes).toBe(1);
   });
 });

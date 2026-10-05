@@ -3,7 +3,7 @@ import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
 import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
-import { DEBUG_OPTIONS, type LabParams } from './params';
+import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
@@ -22,6 +22,10 @@ import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
+import { SceneAuthorPanel } from './services/scene-author-panel';
+import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
+import { applySceneLightParams } from './services/scene-light';
+import { removeNodeTree } from '@aether/runtime';
 import { SpawnPanel } from './services/spawn-panel';
 import { behaviorRegistry, createBehaviorExecutor } from './services/behavior-host';
 import { ScriptPanel } from './services/script-panel';
@@ -37,9 +41,11 @@ import { RunProfile } from './services/run-profile';
 import { RunSettlement } from './services/run-settlement';
 import { renderPixelRatio } from './services/render-resolution';
 import { environmentFromParams } from './services/scene-environment';
+import { AtmospherePanel } from './services/atmosphere-panel';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
+import { PlayerPresentation } from './services/player-presentation';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -230,6 +236,10 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
+    playerPresentation: new PlayerPresentation(nodeId => {
+      const index = renderer.findObjectIndexByNodeId(nodeId);
+      return index === null ? null : renderer.state.objects[index] ?? null;
+    }),
     // 行为执行器由宿主注入（ADR-018 R3）：runtime 不 import 行为代码，
     // 编辑器把"去哪儿找 behaviors/*.ts"这件事自己扛下来。
     executor: createBehaviorExecutor(),
@@ -282,15 +292,22 @@ async function boot(): Promise<void> {
    */
   const runTransfer = new RunTransfer();
   const runProfile = new RunProfile(localStorage);
+  let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
+    if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
     // 进 Play 前强制退出自由相机：Play 的相机归 PlayCameraController（场景 Camera 组件），
     // 飞行模式会继续每帧写 camera，两套机位抢同一个对象 —— 用户只会看到"游戏相机乱飘"。
     if (freeCamOn) setFreeCam(false);
+    focusAnim = null;
+    pointers.clear();
+    const paramsBeforePlay = structuredClone(panel.params);
     const ok = playCtl.start();
     if (ok) {
+      playAuthorParams ??= paramsBeforePlay;
       try {
         const progress = playCtl.session.runtime?.progress;
         if (progress) progress.setUnlocked(runProfile.read(progress.rules.campaign).unlocked);
@@ -513,7 +530,8 @@ async function boot(): Promise<void> {
     refreshSpawnPanel();
   };
   panel.onHierarchyToggle = (index, visible) => {
-    renderer.setObjectVisible(index, visible);
+    const id = renderer.getObjectNodeId(index);
+    if (id) editAuthorNodes('节点显隐', nodes => { nodes.find(n => n.id === id)!.visible = visible; }, true);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub()); // 隐藏被选中的物体时同步清掉选中面板
     hudDirty = true;
   };
@@ -530,7 +548,7 @@ async function boot(): Promise<void> {
       hudDirty = true;
       return;
     }
-    renderer.removeObject(index);
+    deleteAuthorObject(index);
     panel.setSelection(renderer.getSelected(), renderer.getSelectedSub());
     panel.refreshHierarchy();
     hudDirty = true;
@@ -684,6 +702,7 @@ async function boot(): Promise<void> {
   // 不应用的话火场/暗巷等主题环境全部失效，画面永远是编辑器默认的那套冷灰参数。
   // 覆盖的字段与 EnvironmentData 一一对应；key 方位角/仰角场景 schema 没有，保持编辑器值。
   const applySceneEnvironment = (env: EnvironmentData): void => {
+    renderer.syncSkyTexture(env);
     const p = panel.params;
     p.ambientColor = env.ambient.color;
     p.ambientIntensity = env.ambient.intensity;
@@ -698,6 +717,12 @@ async function boot(): Promise<void> {
     p.rimPower = env.rim.power;
     p.rimTopBias = env.rim.topBias;
     p.exposure = env.exposure;
+    const defaults = defaultParams();
+    for (const key of ['tonemapMode', 'outlineWidth', 'inkColor', 'shadowMult', 'shadowMix', 'shadowTint', 'litSat', 'halftoneStrength', 'halftoneSize', 'vignette'] as const) {
+      Object.assign(p, { [key]: env.comic?.[key] ?? defaults[key] });
+    }
+    p.outlineEnabled = true; p.outlineDistanceComp = true; p.outlinePostExempt = true;
+    p.halftoneEnabled = true; p.halftoneThreshold = 0.45;
   };
 
   let editorMenu!: EditorMenu;
@@ -763,25 +788,7 @@ async function boot(): Promise<void> {
     // 环境与场景灯光写进面板（真源是场景文件，面板滑块是它的读写器），
     // syncAll 让「场景/光照」「渲染」页的控件立即反映覆盖后的值。
     if (r.environment !== undefined) applySceneEnvironment(r.environment);
-    if (r.keyLight) {
-      panel.params.keyColor = r.keyLight.color;
-      panel.params.keyIntensity = r.keyLight.intensity;
-      panel.params.keyAzimuth = r.keyLight.azimuth;
-      panel.params.keyElevation = r.keyLight.elevation;
-    }
-    // 点光同样来自场景（priority 最高的那一盏）。位置仍由引擎轨道驱动 —— 见已知遗留：
-    // 场景 schema 有点光的 color/intensity/range，但没有位置字段。
-    if (r.pointLight) {
-      panel.params.pointColor = r.pointLight.color;
-      panel.params.pointIntensity = r.pointLight.intensity;
-      if (r.pointLight.range > 0) panel.params.pointRange = r.pointLight.range;
-      // 位置同样来自场景（复审 B5）：过去引擎按固定轨道摆放，场景声明的位置被无视
-      panel.params.pointPosition = [
-        r.pointLight.position[0],
-        r.pointLight.position[1],
-        r.pointLight.position[2],
-      ];
-    }
+    applySceneLightParams(panel.params, r);
     panel.syncAll();
     // WU-5：场景一载入就把作者文档交给 SpawnEditStore，之后它就是唯一真源
     setSpawnScene(renderer.getDocument());
@@ -1279,17 +1286,77 @@ async function boot(): Promise<void> {
   // =====================================================================
   const spawnHost = document.getElementById('spawn-host');
   let spawnStore: SpawnEditStore | null = null;
+  let authorProjectionBusy = false;
+  let authorMaterialBaseline = materialSnapshot(renderer);
+  let authorLightBaseline = lightSnapshot(panel.params);
+  const authorHost = document.createElement('div');
+  document.querySelector('.insp-pane[data-pane="scene"]')!.prepend(authorHost);
+  const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
+    document: () => spawnStore?.document ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    edit: editAuthorNodes,
+  });
+  const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
+  const atmospherePanel = new AtmospherePanel(atmosphereHost, {
+    environment: () => spawnStore?.document.environment ?? null,
+    diagnostic: () => renderer.skyTextureDiagnostic,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    apply: env => {
+      if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return {ok:false, edit:null, error:'请先停止 Play 并等待场景加载'};
+      const result = spawnStore.setEnvironment(env);
+      if (result.ok) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); editorMenu.message('天空与画风已写入场景，请保存'); }
+      return result;
+    },
+  });
+  renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
+  function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
+    if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
+    const result = spawnStore.editNodes(label, mutate);
+    if (result.ok) {
+      editorMenu.message('场景已修改，请保存');
+      if (rebuild) void rebuildAuthorScene();
+    } else if (result.error !== '值没有变化') editorMenu.message(result.error ?? '修改被拒绝');
+    return result;
+  }
+  function deleteAuthorObject(index: number): void {
+    const id = renderer.getObjectNodeId(index);
+    if (!id) { editorMenu.message('该物体没有场景节点，无法持久化删除'); return; }
+    editAuthorNodes('删除节点及子节点', nodes => removeNodeTree(nodes, id), true);
+  }
+  async function rebuildAuthorScene(): Promise<void> {
+    const store = spawnStore, source = renderer.getSceneSource();
+    if (!store || !source || authorProjectionBusy) return;
+    authorProjectionBusy = true;
+    try {
+      const r = await renderer.loadScene(source.url, async () => ({ ok: true, status: 200, json: store.document }));
+      if (!r.ok) throw new Error(r.reason);
+      await renderer.loadSceneAssets(async rel => {
+        const response = await fetch(`/__fs/file?path=${encodeURIComponent(rel)}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.arrayBuffer();
+      }, decodeTexture, async rel => { const h = await resolveModelHeightM(rel); return h.fromMeta ? h.meters : null; }, async rel => {
+        const meta = await assetServer.loadMeta(rel); return meta.missing || meta.errors.length ? 'auto' : meta.meta.importer.upAxisFlip ? 'z' : 'y';
+      }).then(result => { if (result.failed.length) throw new Error(result.failed.map(f => `${f.name}: ${f.reason}`).join('; ')); });
+      applySceneLightParams(panel.params, r);
+      applySceneEnvironment(store.document.environment);
+      for (const warning of r.warnings ?? []) console.warn(`[scene] ${warning}`);
+    } catch (e) { editorMenu.message(`场景视图更新失败，文档修改已保留：${String(e)}`); }
+    finally {
+      renderer.setDocument(store.document); authorMaterialBaseline = materialSnapshot(renderer); authorLightBaseline = lightSnapshot(panel.params);
+      authorProjectionBusy = false; panel.setSelection(null); panel.refreshHierarchy(); panel.syncAll(); refreshSpawnPanel(); editorMenu.refresh(); hudDirty = true;
+    }
+  }
   const authorSaver = new AuthorSceneSaver();
   const authorAssets = new AuthorAssetController(() => spawnStore, renderer);
-  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying, renderer, (edit, redo) => {
+  const authorTransform = new AuthorTransformController(() => spawnStore, () => playCtl.isPlaying || authorProjectionBusy, renderer, (edit, redo) => {
     const error = authorAssets.project(edit, redo);
+    authorMaterialBaseline = materialSnapshot(renderer);
     panel.refreshHierarchy();
     panel.syncSelectionFromRenderer(true);
     return error;
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => spawnStore?.dirty ?? false,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1303,9 +1370,20 @@ async function boot(): Promise<void> {
   });
   panel.onChange = () => {
     hudDirty = true;
-    if (spawnStore !== null && !playCtl.isPlaying) {
+    if (spawnStore !== null && !playCtl.isPlaying && !authorProjectionBusy) {
+      const nextMaterials = materialSnapshot(renderer);
+      const nextLights = lightSnapshot(panel.params);
+      const materialEdit = spawnStore.editNodes('场景材质与灯光', nodes => {
+        applyMaterialChanges(nodes, authorMaterialBaseline, nextMaterials);
+        applyLightChanges({ ...spawnStore!.document, nodes }, authorLightBaseline, nextLights);
+      });
+      if (materialEdit.ok) { authorMaterialBaseline = nextMaterials; authorLightBaseline = nextLights; editorMenu.message('材质与灯光已写入场景，请保存'); }
+      else if (materialEdit.error !== '值没有变化') { editorMenu.message(materialEdit.error ?? '修改被拒绝'); void rebuildAuthorScene(); }
       const result = spawnStore.setEnvironment(environmentFromParams(spawnStore.document.environment, panel.params));
       if (result.ok) editorMenu.message('场景环境已修改，保存场景后生效于文件');
+      // Keep an untouched node form current after edits through the material/light pane.
+      // SceneAuthorPanel.render preserves a user's in-progress draft and its conflict guard.
+      refreshSpawnPanel();
     }
   };
   panel.onTransformEdit = (index, input) => reportAuthorTransform(authorTransform.inspector(index, input));
@@ -1314,6 +1392,7 @@ async function boot(): Promise<void> {
   panel.onAuthorSave = () => void saveSpawnEdits();
 
   function reportAuthorTransform(result: import('@aether/runtime').EditResult): void {
+    if (result.edit?.kind === 'nodes') void rebuildAuthorScene();
     if (result.edit?.kind === 'environment' && spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     editorMenu.refresh();
     if (result.ok) spawnMsg = { text: `已写入场景文档：${formatAuthorEdit(result.edit!)}`, kind: 'ok' };
@@ -1410,6 +1489,8 @@ async function boot(): Promise<void> {
 
   /** 场景换了一份（或首次载入）：store 成为作者文档的唯一所有者 */
   function setSpawnScene(doc: SceneDocument | null): void {
+    sceneAuthorPanel.resetDraft();
+    atmospherePanel.resetDraft();
     authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
@@ -1420,6 +1501,8 @@ async function boot(): Promise<void> {
     }
     spawnSelActive = false; // 新场景：功能体未选中，分组收起
     spawnStore = new SpawnEditStore(doc);
+    authorMaterialBaseline = materialSnapshot(renderer);
+    authorLightBaseline = lightSnapshot(panel.params);
     // 渲染器与 PlayController 从此只读 store 的工作副本：刷怪点参数不产生可渲染
     // 内容，改完不需要同步给谁 —— 重新装载（点「重跑」）时自然读到新值。
     renderer.setDocument(spawnStore.document);
@@ -1460,6 +1543,7 @@ async function boot(): Promise<void> {
     if (store === null) return;
     const undone = authorTransform.history().edit;
     if (undone === null) return;
+    if (undone.kind === 'nodes') void rebuildAuthorScene();
     if (undone.kind === 'environment') { applySceneEnvironment(store.document.environment); panel.syncAll(); }
     panel.syncSelectionFromRenderer(true);
     // 撤销后 A/B 的"改前"保持不变，只有 B 端点重抓 —— 撤销也要能证明它真的撤了
@@ -1474,6 +1558,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1542,6 +1627,7 @@ async function boot(): Promise<void> {
     clearPlayKeys();
     const src = bridge.selectedEntity?.sourceNodeId ?? null;
     playCtl.stop();
+    if (playAuthorParams) { Object.assign(panel.params, playAuthorParams); playAuthorParams = null; }
     if (clearRun) runTransfer.restart();
     if (spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
     // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
@@ -1554,6 +1640,9 @@ async function boot(): Promise<void> {
   }
 
   function refreshSpawnPanel(): void {
+    authorAssets.prune();
+    sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
+    atmospherePanel.render();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
@@ -1920,7 +2009,7 @@ async function boot(): Promise<void> {
       const idx = renderer.getSelected();
       if (idx !== null && !playCtl.isPlaying) {
         e.preventDefault();
-        renderer.removeObject(idx);
+        deleteAuthorObject(idx);
         panel.setSelection(renderer.getSelected());
         panel.refreshHierarchy();
         hudDirty = true;
@@ -1935,6 +2024,7 @@ async function boot(): Promise<void> {
   // 双击：第一下轻点已把光标下的物体选上，双击事件紧接着聚焦过去；双击空白 = 回默认取景
   canvas.addEventListener('dblclick', (e) => {
     e.preventDefault();
+    if (playCtl.isPlaying) return;
     if (performance.now() < suppressDblclickUntil) return;
     focusOn(renderer.getSelected());
   });
@@ -1943,6 +2033,8 @@ async function boot(): Promise<void> {
   setGizmoSpaceUI('world');
 
   canvas.addEventListener('pointerdown', (e) => {
+    // Author orbit/pan/picking must not overwrite the scene-owned game camera.
+    if (playCtl.isPlaying) return;
     focusAnim = null; // 用户接管相机，聚焦动画立即让位
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1994,6 +2086,7 @@ async function boot(): Promise<void> {
   });
 
   canvas.addEventListener('pointermove', (e) => {
+    if (playCtl.isPlaying) return;
     const pt = pointers.get(e.pointerId);
     if (pt === undefined) {
       // 悬停（无按键按下）：gizmo 手柄上显示抓手，提示此处点击是拖手柄而非转视角。
@@ -2095,6 +2188,7 @@ async function boot(): Promise<void> {
     'wheel',
     (e) => {
       e.preventDefault();
+      if (playCtl.isPlaying) return;
       focusAnim = null;
       // 自由相机下滚轮**不缩放**：缩放改的是 orbit 半径，会把你刚飞到的位置又拽回去。
       // 这里改成调飞行速度 —— 大关卡要飞快、对准细节要飞慢，这才是真需求。
@@ -2168,6 +2262,7 @@ async function boot(): Promise<void> {
       return;
     }
     try {
+      if (authorProjectionBusy) throw new Error('场景尚未准备好');
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
@@ -2178,9 +2273,9 @@ async function boot(): Promise<void> {
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
       // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
-      if (playCtl.isPlaying || spawnStore !== store) {
+      if (playCtl.isPlaying || authorProjectionBusy || spawnStore !== store) {
         bmp?.close();
-        const reason = playCtl.isPlaying ? '已进入 Play' : '场景已切换';
+        const reason = playCtl.isPlaying ? '已进入 Play' : '场景状态已变化';
         console.warn(`[资产库] ${reason}，丢弃尚未完成的导入`);
         panel.setModelInfo(`${reason}，请重新导入 ${stemName(relPath)}`);
         hudDirty = true;
@@ -2189,6 +2284,7 @@ async function boot(): Promise<void> {
       const name = uniqueObjectName(stemName(relPath));
       const node = assetSceneNode(`nd_asset_${crypto.randomUUID()}`, name, relPath, metadata.meta.guid, pos ?? [0, 0, 0]);
       const idx = authorAssets.insert(store, node, model, bmp);
+      authorMaterialBaseline = materialSnapshot(renderer);
       renderer.selectObject(idx);
       panel.setSelection(idx);
       switchInspectorTab('inspector');
@@ -3948,12 +4044,9 @@ async function boot(): Promise<void> {
     // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
     // 🔴 必须在 batches() 之前 —— 批次按 lodTier 分流，晚一帧会让压测帧率抖动。
     if (playCtl.isPlaying) {
-      // 眼位 = target + 水平投影距离（俯仰角越大，水平分量越短）
-      const horiz = camera.distance * Math.cos(panel.params.cameraElevation);
-      bridge.refreshLod(
-        camera.target[0] + Math.cos(camera.yaw) * horiz,
-        camera.target[2] + Math.sin(camera.yaw) * horiz,
-      );
+      // Use the renderer's eye projection (degree pitch and identical yaw axes).
+      const eye = m4.orbitEye(camera.target, camera.distance, camera.yaw, panel.params.cameraElevation);
+      bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {

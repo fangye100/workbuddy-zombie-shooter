@@ -1,32 +1,67 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 10,
   "id": "sc_act1_floor3",
-  "name": "第三层 · 暗巷",
+  "name": "第三层 · 暗巷撤离站",
   "act": "Act1",
   "environment": {
     "ambient": {
-      "color": "#737e9b",
-      "intensity": 0.6
+      "color": "#737b9c",
+      "intensity": 0.28
     },
     "hemisphere": {
-      "sky": "#899bbd",
-      "skyIntensity": 0.5,
-      "ground": "#38364b",
-      "groundIntensity": 0.3
+      "sky": "#9ebcdb",
+      "skyIntensity": 0.42,
+      "ground": "#5e536e",
+      "groundIntensity": 0.2
     },
     "fog": {
-      "color": "#161d2b",
-      "density": 0.006,
-      "heightFalloff": 0.12
+      "color": "#667899",
+      "density": 0.008,
+      "heightFalloff": 0.1
     },
     "rim": {
-      "color": "#9fb4d9",
-      "intensity": 0.45,
-      "power": 2.8,
-      "topBias": 0.4
+      "color": "#9bdbe0",
+      "intensity": 0.3,
+      "power": 3,
+      "topBias": 0.45
     },
-    "exposure": 0.85,
-    "postOverride": null
+    "exposure": 0.9,
+    "postOverride": null,
+    "sky": {
+      "zenith": "#292e50",
+      "horizon": "#8a92ad",
+      "ground": "#373e58",
+      "cloud": "#d6cbbb",
+      "cloudCoverage": 0.54,
+      "cloudScale": 1.7,
+      "cloudSpeed": 0.002,
+      "sunColor": "#ffe3a0",
+      "sunDirection": [
+        0.7094064799162227,
+        0.49999999999999994,
+        -0.49673176489215387
+      ],
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 40
+    },
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.45,
+      "outlineWidth": 1.6,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0.18,
+      "halftoneSize": 5,
+      "vignette": 0.04
+    }
   },
   "editorCamera": {
     "target": [
@@ -41,7 +76,31 @@
   "entryCamera": "nd_f3_cam",
   "playerStart": "nd_f3_start",
   "loseCondition": "player-death",
-  "dependencies": [],
+  "dependencies": [
+    "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+    "assets/environment/models/road/synthetic/asphalt-22x18.glb",
+    "assets/environment/models/S-05/tex2/S-05_lod2.glb",
+    "assets/environment/models/S-06/tex2/S-06_lod2.glb",
+    "assets/environment/models/P-34/tex2/P-34_lod2.glb",
+    "assets/environment/models/P-35/tex2/P-35_lod2.glb",
+    "assets/environment/models/P-36/tex2/P-36_lod2.glb",
+    "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+    "assets/environment/models/road/synthetic/asphalt-30x24.glb",
+    "assets/environment/models/S-07/tex2/S-07_lod2.glb",
+    "assets/environment/models/S-08/tex2/S-08_lod2.glb",
+    "assets/environment/models/P-41/tex2/P-41_lod2.glb",
+    "assets/environment/models/P-44/tex2/P-44_lod2.glb",
+    "assets/environment/models/P-45/tex2/P-45_baked.glb",
+    "assets/environment/models/P-46/tex2/P-46_lod2.glb",
+    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+    "assets/environment/models/P-31/tex2/P-31_lod2.glb",
+    "assets/environment/models/P-32/tex2/P-32_lod2.glb",
+    "assets/environment/models/P-33/tex2/P-33_lod2.glb",
+    "assets/environment/models/P-42/tex2/P-42_lod2.glb",
+    "assets/environment/models/P-43/tex2/P-43_lod2.glb",
+    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+    "assets/art/textures/SKY-01/SKY-01.png"
+  ],
   "nodes": [
     {
       "id": "nd_f3_beacon",
@@ -73,9 +132,9 @@
           "kind": "Light",
           "enabled": true,
           "type": "point",
-          "color": "#ffc56c",
-          "intensity": 2.2,
-          "range": 15,
+          "color": "#6ce0cb",
+          "intensity": 2.4,
+          "range": 11,
           "spotAngle": 0,
           "castShadow": false,
           "priority": 100
@@ -203,10 +262,10 @@
           0
         ],
         "rotation": [
-          -0.23035094753260413,
+          -0.28678821817552297,
           0,
-          -0.2745171292071211,
-          0.9335838402322055
+          -0.40957602214449607,
+          0.8660254037844386
         ],
         "scale": [
           1,
@@ -222,8 +281,8 @@
           "kind": "Light",
           "enabled": true,
           "type": "directional",
-          "color": "#fff3e0",
-          "intensity": 1.4,
+          "color": "#d8e4fa",
+          "intensity": 1.1,
           "range": 0,
           "spotAngle": 0,
           "castShadow": false,
@@ -267,9 +326,9 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 55,
-          "distance": 26,
-          "yawOffsetDeg": 0
+          "pitchDeg": 52,
+          "distance": 24,
+          "yawOffsetDeg": -15
         }
       ],
       "prefab": null
@@ -344,13 +403,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              78,
-              0.2,
-              18
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+              "guid": "as_ybcment1"
+            }
           },
           "materials": [
             {
@@ -365,10 +422,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#435357",
-                  "roughness": 1,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.25
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -517,7 +576,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           -5
         ],
         "rotation": [
@@ -544,7 +603,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -561,10 +620,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -583,7 +644,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           -3
         ],
         "rotation": [
@@ -610,7 +671,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -627,10 +688,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -649,7 +712,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           -1
         ],
         "rotation": [
@@ -676,7 +739,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -693,10 +756,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -715,7 +780,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           1
         ],
         "rotation": [
@@ -742,7 +807,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -759,10 +824,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -781,7 +848,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           3
         ],
         "rotation": [
@@ -808,7 +875,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -825,10 +892,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -847,7 +916,7 @@
       "transform": {
         "position": [
           25,
-          -0.115,
+          0.015,
           5
         ],
         "rotation": [
@@ -874,7 +943,7 @@
             "shape": "box",
             "params": [
               3.4,
-              0.2,
+              0.012,
               0.65
             ]
           },
@@ -891,10 +960,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d7c998",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -956,10 +1027,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#505263",
-                  "roughness": 1,
+                  "albedo": "#4c536b",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.18,
+                  "specMix": 0
                 }
               }
             }
@@ -1022,13 +1095,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              22,
-              0.2,
-              18
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-22x18.glb",
+              "guid": "as_uvm8disd"
+            }
           },
           "materials": [
             {
@@ -1043,11 +1114,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#435357",
-                  "roughness": 0.92,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.4,
-                  "halftoneScale": 0.35
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1066,7 +1138,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           -8.65
         ],
         "rotation": [
@@ -1093,7 +1165,7 @@
             "shape": "box",
             "params": [
               21.5,
-              0.2,
+              0.012,
               0.12
             ]
           },
@@ -1107,13 +1179,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#b8a87b",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1132,7 +1206,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           8.65
         ],
         "rotation": [
@@ -1159,7 +1233,7 @@
             "shape": "box",
             "params": [
               21.5,
-              0.2,
+              0.012,
               0.12
             ]
           },
@@ -1173,13 +1247,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#b8a87b",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1198,7 +1274,7 @@
       "transform": {
         "position": [
           -7.333333333333333,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -1225,7 +1301,7 @@
             "shape": "box",
             "params": [
               1.8333333333333333,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -1239,79 +1315,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_lane_1",
-      "name": "道路导向标线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          -3.6666666666666665,
-          0.13,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              1.8333333333333333,
-              0.2,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s5"
-                },
-                "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1330,7 +1342,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -1357,7 +1369,7 @@
             "shape": "box",
             "params": [
               1.8333333333333333,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -1371,79 +1383,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_lane_3",
-      "name": "道路导向标线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          3.6666666666666665,
-          0.13,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              1.8333333333333333,
-              0.2,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s5"
-                },
-                "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1462,7 +1410,7 @@
       "transform": {
         "position": [
           7.333333333333333,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -1489,7 +1437,7 @@
             "shape": "box",
             "params": [
               1.8333333333333333,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -1503,13 +1451,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -1572,9 +1522,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#7b8295",
-                  "roughness": 1,
-                  "outlineScale": 0.6
+                  "albedo": "#898c84",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.15,
+                  "halftoneScale": 0.18,
+                  "specMix": 0
                 }
               }
             }
@@ -1588,7 +1541,7 @@
     },
     {
       "id": "nd_f3r0_building_-1",
-      "name": "街区便利店",
+      "name": "封闭隧道 · 远侧边界",
       "parent": "nd_f3r0",
       "transform": {
         "position": [
@@ -1598,9 +1551,9 @@
         ],
         "rotation": [
           0,
-          1,
           0,
-          0
+          0,
+          1
         ],
         "scale": [
           1,
@@ -1618,15 +1571,15 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
-              "guid": "as_178zk6nf"
+              "path": "assets/environment/models/S-05/tex2/S-05_lod2.glb",
+              "guid": "as_wompnqa5"
             }
           },
           "materials": [
             {
               "match": {
-                "by": "primitiveKey",
-                "value": "masonry"
+                "by": "index",
+                "value": 0
               },
               "material": {
                 "type": "override",
@@ -1635,118 +1588,21 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#bdbda0",
-                  "roughness": 0.9,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "trim"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#303746",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "interior"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#121a21",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "glass"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#81c8bd",
-                  "roughness": 0.35,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "sign"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#b84440",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "accent"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#e6bd4b",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
                 }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
         }
       ],
       "prefab": null
@@ -1802,9 +1658,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#7b8295",
-                  "roughness": 1,
-                  "outlineScale": 0.6
+                  "albedo": "#898c84",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.15,
+                  "halftoneScale": 0.18,
+                  "specMix": 0
                 }
               }
             }
@@ -1818,13 +1677,13 @@
     },
     {
       "id": "nd_f3r0_building_1",
-      "name": "街区便利店",
+      "name": "撤离站台",
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          0,
+          9,
           0.1,
-          15
+          13
         ],
         "rotation": [
           0,
@@ -1848,15 +1707,15 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
-              "guid": "as_178zk6nf"
+              "path": "assets/environment/models/S-06/tex2/S-06_lod2.glb",
+              "guid": "as_owdv0oon"
             }
           },
           "materials": [
             {
               "match": {
-                "by": "primitiveKey",
-                "value": "masonry"
+                "by": "index",
+                "value": 0
               },
               "material": {
                 "type": "override",
@@ -1865,131 +1724,34 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#bdbda0",
-                  "roughness": 0.9,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "trim"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#303746",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "interior"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#121a21",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "glass"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#81c8bd",
-                  "roughness": 0.35,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "sign"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#b84440",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "accent"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#e6bd4b",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
                 }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.42
         }
       ],
       "prefab": null
     },
     {
       "id": "nd_f3r0_cv0",
-      "name": "掩体 1 · P-04",
+      "name": "P-34 · 检修平台",
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          -6.6,
-          0,
-          -4.5
+          -6.5,
+          0.1,
+          -6
         ],
         "rotation": [
           0,
@@ -2013,8 +1775,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
-              "guid": "as_y1xpmedt"
+              "path": "assets/environment/models/P-34/tex2/P-34_lod2.glb",
+              "guid": "as_uaczkjxz"
             }
           },
           "materials": [
@@ -2024,14 +1786,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
         },
         {
           "kind": "Collider",
@@ -2039,9 +1814,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.6,
-              0.55,
-              0.5
+              1.5,
+              1.3,
+              0.6
             ]
           },
           "isTrigger": false,
@@ -2052,13 +1827,13 @@
     },
     {
       "id": "nd_f3r0_cv1",
-      "name": "掩体 2 · P-14",
+      "name": "P-35 · 站台长椅",
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          6.6,
-          0,
-          4.5
+          7,
+          0.1,
+          6
         ],
         "rotation": [
           0,
@@ -2082,8 +1857,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
-              "guid": "as_rhe434dp"
+              "path": "assets/environment/models/P-35/tex2/P-35_lod2.glb",
+              "guid": "as_onndr3jb"
             }
           },
           "materials": [
@@ -2093,14 +1868,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
         },
         {
           "kind": "Collider",
@@ -2108,8 +1896,8 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.4,
-              0.9,
+              1,
+              0.45,
               0.3
             ]
           },
@@ -2121,13 +1909,13 @@
     },
     {
       "id": "nd_f3r0_cv2",
-      "name": "掩体 3 · P-03",
+      "name": "P-36 · 通风管道",
       "parent": "nd_f3r0",
       "transform": {
         "position": [
-          -6.6,
-          0,
-          4.5
+          -6,
+          0.1,
+          6
         ],
         "rotation": [
           0,
@@ -2151,8 +1939,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
-              "guid": "as_2sfno5jv"
+              "path": "assets/environment/models/P-36/tex2/P-36_lod2.glb",
+              "guid": "as_zmce2idy"
             }
           },
           "materials": [
@@ -2162,14 +1950,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.42
         },
         {
           "kind": "Collider",
@@ -2177,9 +1978,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.9,
-              0.65,
-              0.55
+              2.5,
+              0.6,
+              0.6
             ]
           },
           "isTrigger": false,
@@ -2425,13 +2226,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              6,
-              0.2,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+              "guid": "as_ddds4fuj"
+            }
           },
           "materials": [
             {
@@ -2440,8 +2239,19 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
               }
             }
           ],
@@ -2503,13 +2313,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              30,
-              0.2,
-              24
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-30x24.glb",
+              "guid": "as_dsrnchsr"
+            }
           },
           "materials": [
             {
@@ -2524,11 +2332,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#435357",
-                  "roughness": 0.92,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.4,
-                  "halftoneScale": 0.35
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -2547,7 +2356,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           -11.65
         ],
         "rotation": [
@@ -2574,7 +2383,7 @@
             "shape": "box",
             "params": [
               29.5,
-              0.2,
+              0.012,
               0.12
             ]
           },
@@ -2588,13 +2397,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#b8a87b",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -2613,7 +2424,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           11.65
         ],
         "rotation": [
@@ -2640,7 +2451,7 @@
             "shape": "box",
             "params": [
               29.5,
-              0.2,
+              0.012,
               0.12
             ]
           },
@@ -2654,13 +2465,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#b8a87b",
-                  "roughness": 1,
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -2679,7 +2492,7 @@
       "transform": {
         "position": [
           -10,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -2706,7 +2519,7 @@
             "shape": "box",
             "params": [
               2.5,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -2720,79 +2533,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_lane_1",
-      "name": "道路导向标线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          -5,
-          0.13,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.5,
-              0.2,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s5"
-                },
-                "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -2811,7 +2560,7 @@
       "transform": {
         "position": [
           0,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -2838,7 +2587,7 @@
             "shape": "box",
             "params": [
               2.5,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -2852,79 +2601,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_lane_3",
-      "name": "道路导向标线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          5,
-          0.13,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.5,
-              0.2,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s5"
-                },
-                "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -2943,7 +2628,7 @@
       "transform": {
         "position": [
           10,
-          0.13,
+          0.115,
           0
         ],
         "rotation": [
@@ -2970,7 +2655,7 @@
             "shape": "box",
             "params": [
               2.5,
-              0.2,
+              0.012,
               0.14
             ]
           },
@@ -2984,13 +2669,15 @@
                 "type": "override",
                 "base": {
                   "type": "shared",
-                  "id": "s5"
+                  "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#d4ae57",
-                  "roughness": 1,
+                  "albedo": "#d6b66a",
+                  "roughness": 0.94,
+                  "metallic": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.15
+                  "halftoneScale": 0.1,
+                  "specMix": 0
                 }
               }
             }
@@ -3053,9 +2740,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#7b8295",
-                  "roughness": 1,
-                  "outlineScale": 0.6
+                  "albedo": "#898c84",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.15,
+                  "halftoneScale": 0.18,
+                  "specMix": 0
                 }
               }
             }
@@ -3069,19 +2759,19 @@
     },
     {
       "id": "nd_f3r1_building_-1",
-      "name": "街区便利店",
+      "name": "临时隔离病房",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          0,
+          6,
           0.1,
-          -18
+          -17
         ],
         "rotation": [
           0,
           1,
           0,
-          0
+          6.123233995736766e-17
         ],
         "scale": [
           1,
@@ -3099,15 +2789,15 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
-              "guid": "as_178zk6nf"
+              "path": "assets/environment/models/S-07/tex2/S-07_lod2.glb",
+              "guid": "as_5s9abc11"
             }
           },
           "materials": [
             {
               "match": {
-                "by": "primitiveKey",
-                "value": "masonry"
+                "by": "index",
+                "value": 0
               },
               "material": {
                 "type": "override",
@@ -3116,118 +2806,21 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#bdbda0",
-                  "roughness": 0.9,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "trim"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#303746",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "interior"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#121a21",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "glass"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#81c8bd",
-                  "roughness": 0.35,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "sign"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#b84440",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "accent"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#e6bd4b",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
                 }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
         }
       ],
       "prefab": null
@@ -3283,9 +2876,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#7b8295",
-                  "roughness": 1,
-                  "outlineScale": 0.6
+                  "albedo": "#898c84",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.15,
+                  "halftoneScale": 0.18,
+                  "specMix": 0
                 }
               }
             }
@@ -3299,13 +2895,13 @@
     },
     {
       "id": "nd_f3r1_building_1",
-      "name": "街区便利店",
+      "name": "S-08 · 天台机房与水塔",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          0,
+          8,
           0.1,
-          18
+          17
         ],
         "rotation": [
           0,
@@ -3329,15 +2925,15 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/S-02/synthetic/storefront.glb",
-              "guid": "as_178zk6nf"
+              "path": "assets/environment/models/S-08/tex2/S-08_lod2.glb",
+              "guid": "as_112y98t8"
             }
           },
           "materials": [
             {
               "match": {
-                "by": "primitiveKey",
-                "value": "masonry"
+                "by": "index",
+                "value": 0
               },
               "material": {
                 "type": "override",
@@ -3346,131 +2942,34 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#bdbda0",
-                  "roughness": 0.9,
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
                   "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "trim"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#303746",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "interior"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#121a21",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "glass"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#81c8bd",
-                  "roughness": 0.35,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "sign"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#b84440",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
-                }
-              }
-            },
-            {
-              "match": {
-                "by": "primitiveKey",
-                "value": "accent"
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#e6bd4b",
-                  "roughness": 0.9,
-                  "metallic": 0,
-                  "outlineScale": 0.7,
-                  "halftoneScale": 0.4
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
                 }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
         }
       ],
       "prefab": null
     },
     {
       "id": "nd_f3r1_cv0",
-      "name": "掩体 1 · P-04",
+      "name": "P-41 · 病床",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          -9,
-          0,
-          -6
+          -10,
+          0.1,
+          -7
         ],
         "rotation": [
           0,
@@ -3494,8 +2993,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-04/tex2/P-04_baked.glb",
-              "guid": "as_y1xpmedt"
+              "path": "assets/environment/models/P-41/tex2/P-41_lod2.glb",
+              "guid": "as_qrd2wz8q"
             }
           },
           "materials": [
@@ -3505,14 +3004,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
         },
         {
           "kind": "Collider",
@@ -3520,9 +3032,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.6,
-              0.55,
-              0.5
+              1.05,
+              0.45,
+              0.45
             ]
           },
           "isTrigger": false,
@@ -3533,19 +3045,19 @@
     },
     {
       "id": "nd_f3r1_cv1",
-      "name": "掩体 2 · P-14",
+      "name": "P-44 · 隔断屏风",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          9,
-          0,
-          6
+          10,
+          0.1,
+          8
         ],
         "rotation": [
           0,
+          0.09983341664682815,
           0,
-          0,
-          1
+          0.9950041652780257
         ],
         "scale": [
           1,
@@ -3563,8 +3075,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
-              "guid": "as_rhe434dp"
+              "path": "assets/environment/models/P-44/tex2/P-44_lod2.glb",
+              "guid": "as_0pymv03f"
             }
           },
           "materials": [
@@ -3574,14 +3086,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.595
         },
         {
           "kind": "Collider",
@@ -3589,9 +3114,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.4,
-              0.9,
-              0.3
+              1,
+              0.85,
+              0.05
             ]
           },
           "isTrigger": false,
@@ -3602,13 +3127,13 @@
     },
     {
       "id": "nd_f3r1_cv2",
-      "name": "掩体 3 · P-03",
+      "name": "P-45 · 培养舱",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          -9,
-          0,
-          6
+          -10,
+          0.1,
+          7
         ],
         "rotation": [
           0,
@@ -3632,8 +3157,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-03/tex2/P-03_baked.glb",
-              "guid": "as_2sfno5jv"
+              "path": "assets/environment/models/P-45/tex2/P-45_baked.glb",
+              "guid": "as_tv2hi8sg"
             }
           },
           "materials": [
@@ -3643,14 +3168,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
         },
         {
           "kind": "Collider",
@@ -3658,9 +3196,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.9,
-              0.65,
-              0.55
+              0.6,
+              1.1,
+              0.6
             ]
           },
           "isTrigger": false,
@@ -3671,13 +3209,13 @@
     },
     {
       "id": "nd_f3r1_cv3",
-      "name": "掩体 4 · P-16",
+      "name": "P-46 · 医疗推车",
       "parent": "nd_f3r1",
       "transform": {
         "position": [
-          9,
-          0,
-          -6
+          10,
+          0.1,
+          -8
         ],
         "rotation": [
           0,
@@ -3701,8 +3239,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/P-16/tex2/P-16_baked.glb",
-              "guid": "as_tv1nvn4c"
+              "path": "assets/environment/models/P-46/tex2/P-46_lod2.glb",
+              "guid": "as_968680mp"
             }
           },
           "materials": [
@@ -3712,14 +3250,27 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s1"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
         },
         {
           "kind": "Collider",
@@ -3727,9 +3278,9 @@
           "shape": {
             "type": "box",
             "halfExtents": [
-              0.8,
-              1.2,
-              0.8
+              0.4,
+              0.45,
+              0.25
             ]
           },
           "isTrigger": false,
@@ -3994,12 +3545,12 @@
     },
     {
       "id": "nd_f3_start",
-      "name": "玩家起点",
+      "name": "玩家 · 清道夫（T-pose）",
       "parent": null,
       "transform": {
         "position": [
           3,
-          0.9,
+          0.02,
           0
         ],
         "rotation": [
@@ -4022,14 +3573,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "capsule",
-            "params": [
-              0.35,
-              1.1,
-              8,
-              4
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+              "guid": "as_yrsn456i"
+            }
           },
           "materials": [
             {
@@ -4038,22 +3586,442 @@
                 "value": 0
               },
               "material": {
-                "type": "shared",
-                "id": "s3"
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
               }
             }
           ],
           "visible": true,
           "layer": 5,
-          "importScale": 1
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false
         }
       ],
       "prefab": null
+    },
+    {
+      "id": "nd_f3r0_track",
+      "name": "P-31 · 铁轨段",
+      "parent": "nd_f3r0",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          -10.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-31/tex2/P-31_lod2.glb",
+              "guid": "as_qot7tpno"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.0875
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f3r0_carriage",
+      "name": "P-32 · 废弃车厢",
+      "parent": "nd_f3r0",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          5,
+          0.1,
+          -11.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-32/tex2/P-32_lod2.glb",
+              "guid": "as_gtjhkb0d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f3r0_cable",
+      "name": "P-33 · 电缆管线",
+      "parent": "nd_f3r0",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          -7,
+          0.1,
+          -8.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-33/tex2/P-33_lod2.glb",
+              "guid": "as_8kl3pje7"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.105
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f3r1_iv",
+      "name": "P-42 · 输液架",
+      "parent": "nd_f3r1",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          -10.8,
+          0.1,
+          -8.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-42/tex2/P-42_lod2.glb",
+              "guid": "as_gbprqqjs"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.63
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f3r1_wheelchair",
+      "name": "P-43 · 轮椅",
+      "parent": "nd_f3r1",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          10,
+          0.1,
+          9.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-43/tex2/P-43_lod2.glb",
+              "guid": "as_e3m6zlc5"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.385
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f3_backdrop",
+      "name": "远景街区 · 冷色剪影",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": false,
+      "category": "背景",
+      "transform": {
+        "position": [
+          33,
+          -0.4,
+          -27
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+              "guid": "as_4vcbbdgd"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.18,
+                  "halftoneScale": 0.6,
+                  "specMix": 0,
+                  "unlit": true
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.596Z",
-    "updatedAt": "2026-10-04T04:00:03.520Z",
+    "updatedAt": "2026-10-05T05:11:39.420Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 3 · 主题 暗巷"
   }

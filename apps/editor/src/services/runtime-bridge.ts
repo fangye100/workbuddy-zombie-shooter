@@ -116,6 +116,13 @@ interface BatchSlot {
 }
 
 export class RuntimeBridge {
+  private presentedPlayerSource: string | null = null;
+
+  /** Suppress only the player proxy whose authored mesh is bound by the host. */
+  setPlayerPresentation(nodeId: string | null): void {
+    this.presentedPlayerSource = nodeId;
+    this.notifyActorsChanged();
+  }
   private session: RuntimeSession | null = null;
   /** 真角色装配库（null = 纯胶囊模式，Node 测试 / 资产缺失时） */
   private readonly actors: ActorSource | null;
@@ -169,6 +176,7 @@ export class RuntimeBridge {
     this.session = session;
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
+      this.presentedPlayerSource = null;
       this.slots.clear();
       this.selected = null;
       return;
@@ -200,6 +208,7 @@ export class RuntimeBridge {
         vertices: s.vertices,
         indices: s.indices,
         skin: s.skin,
+        albedo: s.actor?.albedo ?? null,
         instances: s.instances,
         count: s.count,
         outline: true,
@@ -294,6 +303,7 @@ export class RuntimeBridge {
     const fixedStep = this.session.fixedStep;
 
     for (const e of view) {
+      if (e.kind === 'player' && this.presentedPlayerSource !== null && e.sourceNodeId === this.presentedPlayerSource) continue;
       const stats = lookupCharacterStats(e.characterId);
       const radius = stats?.capsuleRadius ?? 0.35;
       const height = stats?.capsuleHeight ?? 1.8;
@@ -361,7 +371,7 @@ export class RuntimeBridge {
         inst[o + 6] = 1;
         // [7] paletteBase：真模型 = 该角色在总调色板里的起始 pose；胶囊无蒙皮恒 0
         inst[o + 7] = actor !== null ? actor.paletteBase : 0;
-        const base = PROXY_COLORS[e.characterId] ?? FALLBACK_COLOR;
+        const base: readonly [number, number, number] = slot.actor?.albedo ? [1, 1, 1] : (PROXY_COLORS[e.characterId] ?? FALLBACK_COLOR);
         // 选中 = 提亮。没有第二套高亮管线，成本最低且不会误伤静态关卡的高亮层。
         // 🔴 必须三代同检：reset() 后 runId 变了，但槽位 id 与 generation 会被复用，
         // 只比后两者的话「旧引用已失效」的实体仍会被画成选中态（视口与 Inspector 打架）。

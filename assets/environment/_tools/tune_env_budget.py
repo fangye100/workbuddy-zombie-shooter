@@ -19,6 +19,7 @@
 import argparse
 import importlib.util
 import json
+import math
 import os
 import shutil
 import sys
@@ -101,8 +102,11 @@ def main():
     ap.add_argument("--max-factor", type=float, default=12.0,
                     help="面数最多放大到原预算的多少倍")
     args = ap.parse_args()
+    if not math.isfinite(args.max_factor) or args.max_factor <= 0:
+        ap.error('--max-factor must be finite and positive')
 
-    props = {e["id"]: e for e in json.load(open(PROPS, encoding="utf-8"))["entries"]}
+    with open(PROPS, encoding="utf-8") as source:
+        props = {e["id"]: e for e in json.load(source)["entries"]}
     if args.only:
         ids = [args.only]
     else:
@@ -126,9 +130,11 @@ def main():
         # 🔴 探针起点必须贴着预算往上：P-41 预算 500，1500 面就能到 UVd3.7（3×），
         #    但从 12× 起步会一路探到 6000 才return，白烧 5 倍时间还给出 4 倍偏高的建议。
         tmpdir = tempfile.mkdtemp(prefix=f"tune_{eid}_")
+        best = None
         try:
-            ladder = [int(budget * m) for m in (1, 2, 3, 4, 6, 8, 12)
-                      if m == 1 or int(budget * m) != int(budget * (m - 1))]
+            factors = [m for m in (1, 2, 3, 4, 6, 8, 12) if m <= args.max_factor]
+            factors.append(args.max_factor)
+            ladder = sorted({int(budget * m) for m in factors if int(budget * m) > 0})
             hits = []
             for t in ladder:
                 r = try_target(raw, t, tmpdir)
@@ -163,7 +169,9 @@ def main():
         print("\n建议的新面数（可直接写回 props.json 的 tris）：")
         print(json.dumps(sug, ensure_ascii=False))
         rep = os.path.join(ASSETS, "..", ".workbuddy", "tmp", "lodtest", "budget_suggest.json")
-        json.dump(out, open(rep, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        os.makedirs(os.path.dirname(rep), exist_ok=True)
+        with open(rep, "w", encoding="utf-8") as report:
+            json.dump(out, report, ensure_ascii=False, indent=1)
         print("报告：" + os.path.normpath(rep))
     return 0
 

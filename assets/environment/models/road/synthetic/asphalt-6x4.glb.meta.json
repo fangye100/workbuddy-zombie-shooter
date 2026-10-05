@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_ddds4fuj",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "synthetic",
+    "file": "asphalt-6x4.glb"
+  },
+  "sourceHash": "sha256:67b4f95fc2ee3c8903eb680ede9c0c009ba3d03eeb8f0ff5eb0a69027bcd8782",
+  "updatedAt": "2026-10-04T13:38:26.635Z"
+}

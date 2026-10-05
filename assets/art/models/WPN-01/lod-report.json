@@ -1,0 +1,124 @@
+{
+  "id": "WPN-01",
+  "sourceHash": "e4e3d3f2d26d6b5181c47100e0e20fd6433b0e0149b4241fe02407dfca542c11",
+  "recipe": {
+    "id": "WPN-01",
+    "kind": "weapon",
+    "status": "delivered",
+    "scaleAxis": "z",
+    "scaleMeters": 0.28,
+    "rotationDeg": [
+      0,
+      -90,
+      0
+    ],
+    "pivotFraction": [
+      0.2,
+      0.28,
+      0.5
+    ],
+    "targets": [
+      3000,
+      1500,
+      650
+    ],
+    "textureSize": 1024,
+    "originalTargets": [
+      3000,
+      1500,
+      500
+    ],
+    "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+  },
+  "sourceTriangles": 500000,
+  "dimensions": [
+    0.04639293972476388,
+    0.1951254859016156,
+    0.28
+  ],
+  "scale": 0.26537392048262415,
+  "pivot": [
+    0.0003094730584792701,
+    0.2058798239911085,
+    -0.18639699220657346
+  ],
+  "textureSize": [
+    1024,
+    1024
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-01_lod0.glb",
+      "triangles": 3000,
+      "surfaceRatio": 0.9598309924772066,
+      "boundsDrift": 0.007158478803166224,
+      "sourceTopology": {
+        "v": 250000,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 1500,
+        "f": 3000,
+        "edges": 4500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "90e5b77f9139eeec98b949d864a915c4880a8a906ae8012a4137f1fdff906113",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    },
+    {
+      "level": 1,
+      "file": "WPN-01_lod1.glb",
+      "triangles": 1500,
+      "surfaceRatio": 0.9365203520733562,
+      "boundsDrift": 0.004617059492352471,
+      "sourceTopology": {
+        "v": 250000,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 750,
+        "f": 1500,
+        "edges": 2250,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "b3494eb79a4edfa887e05fcf9c8bc44be379fcaa9cba7262d18e2e56c17faf0d",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    },
+    {
+      "level": 2,
+      "file": "WPN-01_lod2.glb",
+      "triangles": 650,
+      "surfaceRatio": 0.9067734750448393,
+      "boundsDrift": 0.0049383067915118595,
+      "sourceTopology": {
+        "v": 250000,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 325,
+        "f": 650,
+        "edges": 975,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "hash": "0f4f1a313a15182a158fa2f727ec46334047049ccfbd84a3b011bcd07e8091b2",
+      "errors": [],
+      "visual": "reviewed-in-headed-gallery-2026-10-05"
+    }
+  ],
+  "visualEvidence": "docs/evidence/p0-art-intake-2026-10-05/lod-gallery.png"
+}

@@ -1280,7 +1280,7 @@
   #asset-dock[hidden] { display: none; }
   @media(max-width: 1100px) { #topbar { flex-wrap: wrap; height: auto; min-height: 40px; flex-basis: auto; } #model-info { display: none; } .scene-status { display: block; flex-basis: 100%; max-width: 100%; padding: 0 8px 4px; } .editor-menu summary { padding: 8px 6px; } }
 
-  .game-hud { position: absolute; top: 16px; left: 16px; z-index: 20; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); padding: 16px; border-left: 4px solid #b6db64; background: #111b17e8; color: #eef1dc; box-sizing: border-box; pointer-events: none; box-shadow: 4px 5px 0 #0008; }
+  .game-hud { position: absolute; top: 16px; left: 16px; z-index: 20; display: grid; gap: 5px; width: min(370px, calc(100% - 32px)); padding: 12px; border-left: 4px solid #b6db64; background: #111b17dc; color: #eef1dc; box-sizing: border-box; pointer-events: none; box-shadow: 4px 5px 0 #0008; }
   .game-hud[hidden], .game-hud [hidden] { display: none; }
   .game-hud.hit { border-color: #ff6454; box-shadow: 0 0 24px #e8402a80; }
   .game-hud strong { font-size: 18px; } .game-hud progress { width: 100%; height: 12px; accent-color: #b9dc64; }
@@ -1309,11 +1309,12 @@
   @media(max-width:1000px) { .talent-choices { grid-template-columns:1fr; } .talent-choices button { min-height:0; } .run-hud { font-size:11px; } }
   .combat-feedback { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:19; }
   .combat-feedback[hidden] { display:none; }
-  /* On narrow screens, Play temporarily uses the full workspace; Stop restores author panels. */
+  /* Play uses the game viewport at every desktop width; Stop restores exact author layout. */
+  #mainrow:has(.game-hud:not([hidden])) { grid-template-columns:0 0 minmax(0,1fr) 0 0; grid-template-rows:minmax(0,1fr) 0; }
+  #mainrow:has(.game-hud:not([hidden])) > :is(#panel,#inspector,#split-left,#split-right,#asset-dock) { display:none; }
+  .run-hud.choosing { max-height:calc(100% - 36px); overflow-y:auto; box-sizing:border-box; }
   @media(max-width:1200px) {
-    #mainrow:has(.game-hud:not([hidden])) { grid-template-columns:0 0 minmax(0,1fr) 0 0; }
-    #mainrow:has(.game-hud:not([hidden])) > :is(#panel,#inspector,#split-left,#split-right,#asset-dock) { display:none; }
-    .run-hud.choosing { max-height:calc(100% - 36px); overflow-y:auto; box-sizing:border-box; }
+    .game-hud { top:10px; left:10px; padding:10px; }
   }
 </style>
 </head>

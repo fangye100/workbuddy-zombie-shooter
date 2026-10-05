@@ -16,6 +16,7 @@ export class RunHud {
   private offerStamp = '';
   constructor() {
     this.root.className = 'run-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '本局成长与补给');
+    this.info.className = 'run-build-info'; this.assist.className = 'run-assist'; this.reload.className = 'run-ammo';
     this.choices.className = 'talent-choices'; this.choices.setAttribute('aria-label', '选择一项强化');
     this.heal.onclick = () => this.current?.buyHeal();
     this.buy.onclick = () => this.current?.buyTalent();

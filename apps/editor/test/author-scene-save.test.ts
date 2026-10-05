@@ -25,6 +25,23 @@ function setup() {
 }
 
 describe('author scene save authority and snapshot contract', () => {
+  it('saves atmosphere edits and sky enable/disable while rejecting out-of-range values', async () => {
+    const s = setup();
+    const environment = cloneDocument(s.store.document).environment;
+    environment.sky!.cloudCoverage = 0.6; environment.sky!.sunDirection[0] = 0.5;
+    environment.comic!.contactShadowOpacity = 0.3;
+    environment.sky!.textureYaw = 123; environment.sky!.textureMix = 0.4;
+    environment.sky!.texture = {path:'assets/other-sky.png',guid:'as_abc123'};
+    expect(s.store.setEnvironment(environment).ok).toBe(true);
+    expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('saved');
+    expect(s.disk().environment).toEqual(environment);
+    expect(s.store.setEnvironment({...environment, sky:null}).ok).toBe(true);
+    expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('saved');
+    expect(s.store.setEnvironment(environment).ok).toBe(true);
+    expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('saved');
+    s.store.document.environment.sky!.cloudCoverage = 1.2;
+    expect((await s.saver.save(s.store, 'fixture.scene.json')).status).toBe('rejected');
+  });
   it('saves mixed position/rotation/scale/spawn edits, reopens identically, and preserves unknown fields', async () => {
     const s = setup();
     const sp = listSpawnPoints(s.store.document)[0]!.nodeId;
