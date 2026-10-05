@@ -38,7 +38,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
 import { withProjectWriteLock } from '../../tools/fs/project-write.mjs';
 import { renameProject } from '../../tools/fs/rename-project.mjs';
-import { SCHEMA_VERSION } from '../../packages/scene/src/document.ts';
+import { SCHEMA_VERSION, validateSceneDocument } from '../../packages/scene/src/document.ts';
+import { validateProject } from '../../packages/scene/src/project.ts';
+import { createProjectScene } from '../../tools/fs/create-scene.mjs';
 
 const MIME: Record<string, string> = {
   '.png': 'image/png',
@@ -499,6 +501,14 @@ export function createFsApiHandler(root: string): FsApiHandler {
     void (async (): Promise<void> => {
       try {
         const u = new URL(url, 'http://localhost');
+        if (u.pathname === '/__fs/create-scene') {
+          if (req.method !== 'POST') { sendJson(res, 405, { error: '仅支持 POST' }); return; }
+          const body = await readJsonBody(req) as { path?: unknown; document?: unknown };
+          const errors = validateSceneDocument(body.document).filter(d => d.severity === 'error');
+          if (errors.length) { sendJson(res, 400, { error: `场景校验失败：${errors[0]!.code}` }); return; }
+          const result = await createProjectScene(root, String(body.path ?? ''), body.document, validateProject);
+          sendJson(res, 200, result); return;
+        }
         if (u.pathname === '/__fs/list') {
           const dir = u.searchParams.get('dir') ?? '';
           const abs = resolveInside(root, dir);

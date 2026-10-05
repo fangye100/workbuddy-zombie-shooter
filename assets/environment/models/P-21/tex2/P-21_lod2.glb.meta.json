@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_pxmm862n",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-21_lod2.glb"
+  },
+  "sourceHash": "sha256:06536215f6e43040f7aa0aa1e1e7b78af4ff312893ba8cbafb1bd310ad50e050",
+  "updatedAt": "2026-10-04T11:05:17.323Z"
+}

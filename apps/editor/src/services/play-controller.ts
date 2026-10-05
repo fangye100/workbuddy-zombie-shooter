@@ -136,6 +136,11 @@ export class PlayController {
     }
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
+    for (const node of doc.nodes) {
+      if (!node.components.some(c => c.kind === 'MeshRenderer' && c.editorOnly === true)) continue;
+      const index = this.renderer.findObjectIndexByNodeId(node.id);
+      if (index !== null) this.renderer.setObjectVisible(index, false);
+    }
 
     // Play 相机（ADR-018 P6）。相机不在 AuthorSnapshot 里，所以必须自己存/还原：
     // attach 内部先存编辑相机再切游戏相机，顺序反了就还原不回去。

@@ -322,6 +322,25 @@ export const migrateV4ToV5: MigrationStep = {
   },
 };
 
+export const migrateV5ToV6: MigrationStep = {
+  from: 5, to: 6, name: 'add-room-clear-target',
+  run(doc) {
+    if (!Array.isArray(doc['nodes'])) return doc;
+    for (const node of doc['nodes']) {
+      if (!Array.isArray(node?.components)) continue;
+      for (const component of node.components) {
+        if (component?.kind === 'RoomVolume' && component.clearTarget === undefined) component.clearTarget = null;
+      }
+    }
+    return doc;
+  },
+};
+
+/** Existing scenes keep their existing combat behavior; progression must be explicitly authored. */
+export const migrateV6ToV7: MigrationStep = {
+  from: 6, to: 7, name: 'support-authored-run-rules', run: doc => doc,
+};
+
 export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
@@ -335,6 +354,8 @@ export function registerSceneMigrations(): void {
   if (!listMigrations().some((m) => m.from === 4 && m.to === 5)) {
     registerMigration(migrateV4ToV5);
   }
+  if (!listMigrations().some((m) => m.from === 5 && m.to === 6)) registerMigration(migrateV5ToV6);
+  if (!listMigrations().some((m) => m.from === 6 && m.to === 7)) registerMigration(migrateV6ToV7);
 }
 
 registerSceneMigrations();

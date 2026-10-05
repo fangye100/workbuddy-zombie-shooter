@@ -1,4 +1,6 @@
 import type { GpuContext } from '@aether/gfx';
+import { findSceneBinding, resolveSceneMaterial } from './services/scene-material';
+import { lightAngles } from './services/scene-light';
 import {
   type GizmoMode,
   type GizmoSpace,
@@ -434,9 +436,9 @@ export interface SceneLoadResult {
   environment?: EnvironmentData;
   /**
    * 场景里按 `priority` 选出的主光（directional；ok=true 时带回；null = 没声明）。
-   * 只带 color / intensity —— 方向信息场景 schema 目前没有，方位角/仰角仍归编辑器。
+   * 方向从灯光节点世界旋转派生：局部 -Y 为照射方向。
    */
-  keyLight?: { color: string; intensity: number; nodeId: string } | null;
+  keyLight?: { color: string; intensity: number; nodeId: string; azimuth: number; elevation: number } | null;
   /**
    * 同规则选出的点光（null = 没有 point 灯）。
    * `position` 是该 Light 节点的**世界坐标** —— 场景声明了点光就必须按它摆，
@@ -1009,9 +1011,10 @@ export class LabRenderer {
     this.rebuildAllBindGroups();
     this.loadedScene = { url, objects: specs.length, at: new Date().toISOString() };
     this.document = migrated.doc;
+    this.applyDocumentMaterials(warnings);
 
     // 场景灯光：按 `priority` 降序取 top-1（directional key）。
-    // 场景 schema 目前只有颜色 + 强度，方向仍归编辑器的方位角/仰角滑块。
+    // 颜色与强度取 Light，方向取节点世界旋转（含父级变换）。
     //
     // 🔴 这里曾经是「取节点顺序里第一个启用的 Light」—— 与 `priority` 完全无关，
     // 落选的灯也不给任何提示。AGENTS.md §2.3 的要求是：场景可声明任意多盏，
@@ -1021,7 +1024,8 @@ export class LabRenderer {
     let keyLight: SceneLoadResult['keyLight'] = null;
     let pointLight: SceneLoadResult['pointLight'] = null;
     if (picked.key !== null) {
-      keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId };
+      const rotation = graph.getNode(picked.key.nodeId)?.world.rotation ?? [0, 0, 0, 1];
+      keyLight = { color: picked.key.color, intensity: picked.key.intensity, nodeId: picked.key.nodeId, ...lightAngles(rotation) };
     }
     if (picked.point !== null) {
       // 位置取该节点的**世界**变换（灯可以挂在带变换的父级下）：与碰撞体/刷怪点同一把尺子
@@ -1085,6 +1089,7 @@ export class LabRenderer {
     fetchAsset: (rel: string) => Promise<ArrayBuffer>,
     decode: (blob: Blob, label: string) => Promise<ImageBitmap | null>,
     resolveRuler: (rel: string) => Promise<number | null>,
+    resolveUpAxis: (rel: string) => Promise<'auto' | 'y' | 'z'> = async () => 'auto',
   ): Promise<{ swapped: number; failed: { name: string; reason: string }[] }> {
     const failed: { name: string; reason: string }[] = [];
     let swapped = 0;
@@ -1092,7 +1097,7 @@ export class LabRenderer {
       try {
         const buffer = await fetchAsset(p.path);
         const ruler = await resolveRuler(p.path);
-        const model = parseGlb(buffer, ruler);
+        const model = parseGlb(buffer, ruler, await resolveUpAxis(p.path));
         const bmp = model.image === null ? null : await decode(model.image, p.path);
         // 🔴 与 spawnAssetAt 同一防御：补载中途用户可能已按 Play，
         // 此时继续换网格会让"Play 前快照"与磁盘上的节点定义漂移。
@@ -1115,7 +1120,29 @@ export class LabRenderer {
       }
     }
     this.pendingSceneAssets = [];
+    const materialWarnings: string[] = [];
+    this.applyDocumentMaterials(materialWarnings);
+    for (const warning of materialWarnings) console.warn(`[scene-material] ${warning}`);
     return { swapped, failed };
+  }
+
+  /** Apply serialized bindings again after GLB replacement reveals the real primitive identities. */
+  private applyDocumentMaterials(warnings: string[]): void {
+    if (this.document === null) return;
+    for (const object of this.state.objects) {
+      const node = this.document.nodes.find(n => n.id === object.nodeId);
+      const mesh = node?.components.find(c => c.kind === 'MeshRenderer');
+      if (mesh?.kind !== 'MeshRenderer') continue;
+      object.subMeshes.forEach((slot, index) => {
+        const ref = findSceneBinding(mesh.materials, slot, index);
+        if (ref === null) return;
+        const resolved = resolveSceneMaterial(ref, id => this.state.library.resolve(this.state.params, id),
+          id => this.state.library.find(id)?.state ?? null);
+        slot.materialId = resolved.id;
+        slot.override = ref.type === 'override' ? resolved.state : null;
+        warnings.push(...resolved.warnings.map(w => `${object.name}：${w}`));
+      });
+    }
   }
 
   /** 宿主注入的"是否已进入 Play"探针（loadSceneAssets 的竞态防御用） */
@@ -1160,7 +1187,7 @@ export class LabRenderer {
     if (nodeId === '') return null;
     const objs = this.state.objects;
     for (let i = 0; i < objs.length; i++) {
-      if (objs[i]!.nodeId === nodeId) return i;
+      if (!objs[i]!.removed && objs[i]!.nodeId === nodeId) return i;
     }
     return null;
   }
@@ -1619,7 +1646,7 @@ export class LabRenderer {
     return true;
   }
 
-  private createTextureFromBitmap(bitmap: ImageBitmap): GPUTexture {
+  private createTextureFromBitmap(bitmap: ImageBitmap, closeBitmap = true): GPUTexture {
     const tex = this.device.createTexture({
       label: 'model-albedo',
       size: [bitmap.width, bitmap.height],
@@ -1633,8 +1660,8 @@ export class LabRenderer {
       { width: bitmap.width, height: bitmap.height },
     );
     // ImageBitmap 占的是 native 内存（4096² ≈ 67MB），GC 不保证及时回收。
-    // 上传完 GPU 就再没人需要它，显式 close —— 反复导入模型时不 close 会稳定吃掉几个 G。
-    bitmap.close();
+    // Normally release after upload. Author insertion history explicitly retains it for redo.
+    if (closeBitmap) bitmap.close();
     return tex;
   }
 
@@ -1716,6 +1743,8 @@ export class LabRenderer {
     tree: GltfNodeTree[] | null = null,
     skeleton: SkeletonData | null = null,
     animations: AnimClip[] = [],
+    nodeId: string | null = null,
+    retainBitmap = false,
   ): number | null {
     const reused = this.state.objects.findIndex((o) => o.removed);
     if (reused < 0 && this.state.objects.length >= MAX_OBJECTS) {
@@ -1750,13 +1779,12 @@ export class LabRenderer {
       mesh: cloned,
       modelMatrix: m4.mat4(),
       ...localBounds(cloned),
-      texture: bitmap === null ? this.whiteTex : this.createTextureFromBitmap(bitmap),
+      texture: bitmap === null ? this.whiteTex : this.createTextureFromBitmap(bitmap, !retainBitmap),
       ownsTexture: bitmap !== null,
       useTex: bitmap !== null,
       name,
       category: '资产',
-      // 拖入的资产模型不属于任何场景节点（保存链路不管它），没有文档来源
-      nodeId: null,
+      nodeId,
       subMeshes: [
         {
           name,

@@ -1,0 +1,167 @@
+{
+  "source": {
+    "url": "/assets/scenes/sandbox/environment-lod-validation.scene.json",
+    "objects": 3,
+    "at": "2026-10-04T12:17:46.840Z"
+  },
+  "state": {
+    "dirty": false,
+    "undoDepth": 0
+  },
+  "nodes": [
+    {
+      "id": "nd_asset_86dd0f8f-e598-47dc-bfc3-dc1a2272a312",
+      "name": "P-01_baked",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "资产",
+      "transform": {
+        "position": [
+          -0.7,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+              "guid": "as_74w6e6hg"
+            }
+          },
+          "materials": []
+        }
+      ]
+    },
+    {
+      "id": "nd_asset_fc3493cf-a4dc-4833-8967-23ab316c43ed",
+      "name": "P-01_lod2",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "资产",
+      "transform": {
+        "position": [
+          0.7,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_lod2.glb",
+              "guid": "as_cax4jr7q"
+            }
+          },
+          "materials": []
+        }
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "nodeId": "nd_asset_86dd0f8f-e598-47dc-bfc3-dc1a2272a312",
+      "state": {
+        "name": "P-01_baked",
+        "pos": [
+          -0.7,
+          0,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1,
+        "materialIndex": 0,
+        "stats": {
+          "vertices": 23660,
+          "triangles": 30000,
+          "boundaryEdges": 16720,
+          "components": 565
+        }
+      },
+      "bounds": {
+        "center": [
+          -0.699999988079071,
+          0.45041146874427795,
+          0
+        ],
+        "radius": 0.6188137160636195
+      }
+    },
+    {
+      "nodeId": "nd_asset_fc3493cf-a4dc-4833-8967-23ab316c43ed",
+      "state": {
+        "name": "P-01_lod2",
+        "pos": [
+          0.7,
+          0,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1,
+        "materialIndex": 0,
+        "stats": {
+          "vertices": 13190,
+          "triangles": 15000,
+          "boundaryEdges": 10822,
+          "components": 443
+        }
+      },
+      "bounds": {
+        "center": [
+          0.699999988079071,
+          0.45068860054016113,
+          0
+        ],
+        "radius": 0.6188109015417753
+      }
+    }
+  ]
+}

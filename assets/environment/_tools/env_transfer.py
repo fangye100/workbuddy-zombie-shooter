@@ -306,6 +306,39 @@ def pack_glb(verts, faces, uvs, tex_png_path, out_path):
     mesh = trimesh.Trimesh(vertices=verts, faces=faces, visual=trimesh.visual.TextureVisuals(
         uv=uvs, image=Image.open(tex_png_path)))
     mesh.export(out_path)
+    _fix_base_color_factor(out_path)
+
+
+# 🔴 trimesh 的 TextureVisuals 导出的 glb，材质里会带
+#    pbrMetallicRoughness.baseColorFactor = [0.4, 0.4, 0.4, 1]。
+#    glTF 规范里baseColorFactor 是**乘在贴图上**的整体色调 —— 0.4 灰乘子等于
+#    把贴图压暗到 40%，贴图本身再准也全灰（这正是「LOD 色彩没继承」的真正原因，
+#    与 UV/贴图内容无关）。trimesh 不暴露这个参数，只能导出后改 JSON。
+#    判据：与 LOD0 raw 的 baseColorFactor 保持一致（raw 是 1,1,1 → LOD1 也必须是 1,1,1）。
+def _fix_base_color_factor(glb_path):
+    raw = open(glb_path, "rb").read()
+    json_len = struct.unpack_from("<I", raw, 12)[0]
+    js = json.loads(raw[20:20 + json_len].decode("utf-8"))
+    changed = []
+    for m in js.get("materials") or []:
+        pbr = m.setdefault("pbrMetallicRoughness", {})
+        f = pbr.get("baseColorFactor")
+        if f and any(abs(v - 1.0) > 1e-3 for v in f[:3]):
+            pbr["baseColorFactor"] = [1.0, 1.0, 1.0, 1.0]
+            changed.append(f)
+    if not changed:
+        return 0
+    new_json = json.dumps(js, separators=(",", ":")).encode("utf-8")
+    new_json += b" " * ((4 - len(new_json) % 4) % 4)          # JSON chunk 用空格补齐（0x20）
+    bin_off = 20 + len(raw[20:20 + json_len]) + ((4 - json_len % 4) % 4)
+    bin_chunk = raw[bin_off:]
+    total = 12 + 8 + len(new_json) + len(bin_chunk)
+    out = bytearray()
+    out += struct.pack("<III", 0x46546C67, 2, total)
+    out += struct.pack("<II", len(new_json), 0x4E4F534A) + new_json
+    out += bin_chunk
+    open(glb_path, "wb").write(bytes(out))
+    return len(changed)
 
 
 def main():

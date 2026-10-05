@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_zmce2idy",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "tex2",
+    "file": "P-36_lod2.glb"
+  },
+  "sourceHash": "sha256:023be0e8882f0caa7448058b6aa435619fd38598d96354b930fa8cf60bec9c3b",
+  "updatedAt": "2026-10-04T11:05:18.309Z"
+}

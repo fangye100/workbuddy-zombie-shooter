@@ -407,3 +407,17 @@ describe('SpawnPoint.wave 正值必须是整数（评审 4171651605）', () => {
     expect(codes(validateSceneDocument(docWithWave(3)))).not.toContain('E_SPAWN_WAVE');
   });
 });
+
+
+const authoredFloors = import.meta.glob('../../../assets/scenes/act1/floor-2.scene.json', { eager: true, import: 'default' });
+it('rejects elite targets from another room and malformed editor-only flags', () => {
+  const doc = structuredClone(Object.values(authoredFloors)[0]) as SceneDocument;
+  const room = doc.nodes.find(n => n.id === 'nd_f2r2')!.components.find(c => c.kind === 'RoomVolume')!;
+  expect(room.kind).toBe('RoomVolume');
+  if (room.kind !== 'RoomVolume') throw new Error('fixture missing room');
+  room.clearTarget = 'nd_f2r0_sp0';
+  expect(codes(validateSceneDocument(doc))).toContain('E_CLEAR_TARGET_OWNER');
+  const mesh = doc.nodes.flatMap(n => n.components).find(c => c.kind === 'MeshRenderer')!;
+  Object.assign(mesh, { editorOnly: 'false' });
+  expect(codes(validateSceneDocument(doc))).toContain('E_EDITOR_ONLY');
+});

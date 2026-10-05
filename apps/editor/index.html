@@ -1258,12 +1258,68 @@
   .sp-ab { font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.6; color: var(--text-dim); }
   .sp-abline { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.06); word-break: break-all; }
   .sp-abline.changed { color: var(--warn); }
+
+  .editor-menu { position: relative; font-size: 12px; }
+  .editor-menu summary { cursor: pointer; list-style: none; padding: 8px 10px; border-radius: 4px; color: #d9dfdc; }
+  .editor-menu[open] summary, .editor-menu summary:hover { background: #303b34; color: #bce37c; }
+  .editor-menu-items { position: absolute; top: 100%; left: 0; z-index: 1200; min-width: 210px; padding: 6px; background: #202723; border: 1px solid #465347; box-shadow: 0 14px 40px #0008; border-radius: 6px; }
+  .editor-menu-items button { display: block; width: 100%; padding: 10px; text-align: left; background: transparent; border: 0; color: #e1e7e2; cursor: pointer; }
+  .editor-menu-items button:hover, .editor-menu-items button:focus-visible { background: #394c37; }
+  .scene-current { margin-left: auto; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: #28342a; border: 1px solid #55604d; border-radius: 5px; color: #dbebc8; padding: 5px 10px; cursor: pointer; }
+  .scene-status { font-size: 11px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #a6b5a9; }
+  .scene-browser { width: min(720px, 90vw); max-height: 85vh; background: #171e1a; color: #edf1eb; border: 1px solid #5f705b; border-radius: 12px; padding: 24px; }
+  .scene-browser > button { margin: 12px 8px 0 0; padding: 10px 16px; border-radius: 5px; border: 1px solid #7e945f; background: #33432a; color: #f0f3e9; cursor: pointer; }
+  .scene-browser::backdrop { background: #000a; }
+  .scene-browser h2 { margin: 0 0 8px; } .scene-browser p { color: #abb9ad; }
+  .scene-browser input { box-sizing: border-box; width: 100%; padding: 12px; background: #0e1410; color: #fff; border: 1px solid #52624c; border-radius: 5px; }
+  .scene-browser-list { margin: 16px 0; max-height: 50vh; overflow-y: auto; }
+  .scene-choice { display: grid; grid-template-columns: 1fr auto; gap: 6px; width: 100%; text-align: left; padding: 14px; margin: 6px 0; color: #e4ebdf; background: #263127; border: 1px solid #3b493a; border-radius: 6px; cursor: pointer; }
+  .scene-choice:hover, .scene-choice:focus-visible { border-color: #b0d675; background: #303f2d; }
+  .scene-choice small { grid-row: 2; grid-column: 1 / -1; overflow-wrap: anywhere; color: #a6b5a1; }
+  .scene-choice span { font-size: 11px; color: #b4cd90; }
+  #asset-dock[hidden] { display: none; }
+  @media(max-width: 1100px) { #topbar { flex-wrap: wrap; height: auto; min-height: 40px; flex-basis: auto; } #model-info { display: none; } .scene-status { display: block; flex-basis: 100%; max-width: 100%; padding: 0 8px 4px; } .editor-menu summary { padding: 8px 6px; } }
+
+  .game-hud { position: absolute; top: 16px; left: 16px; z-index: 20; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); padding: 16px; border-left: 4px solid #b6db64; background: #111b17e8; color: #eef1dc; box-sizing: border-box; pointer-events: none; box-shadow: 4px 5px 0 #0008; }
+  .game-hud[hidden], .game-hud [hidden] { display: none; }
+  .game-hud.hit { border-color: #ff6454; box-shadow: 0 0 24px #e8402a80; }
+  .game-hud strong { font-size: 18px; } .game-hud progress { width: 100%; height: 12px; accent-color: #b9dc64; }
+  .game-hud span, .game-hud small { font-size: 12px; color: #c2cebb; } .game-hud p { margin: 4px 0; }
+  .game-hud button { pointer-events: auto; cursor: pointer; background: #b5d86b; color: #152012; border: 0; padding: 9px 14px; margin-right: 6px; border-radius: 3px; font-weight: 700; }
+
+  #gizmo-bar { position: relative; top: auto; left: auto; right: auto; flex: 0 0 auto; width: 100%; overflow-x: auto; z-index: 21; background: #151d19; }
+  #gizmo-bar .gz-inner { flex: 0 0 auto; width: max-content; min-width: 100%; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
+  #hud[hidden] { display: none; }
+  #hud { top: 100px; max-width: min(540px, 70vw); }
+  .run-hud { position:absolute; z-index:24; bottom:18px; left:18px; right:18px; max-width:650px; color:#fff6e2; background:#171327eb; border:2px solid #5d506e; border-radius:10px; padding:12px; white-space:pre-line; font-size:12px; line-height:1.6; }
+  .run-hud[hidden], .run-hud [hidden] { display:none; }
+  .run-settlement { position:absolute; top:18px; right:18px; z-index:23; width:260px; padding:16px; color:#fff6e2; background:#171327f2; border:2px solid #ffd451; border-radius:8px; box-shadow:4px 5px 0 #0008; }
+  .run-settlement[hidden] { display:none; }
+  .run-settlement button { background:#ffd451; color:#171327; border:0; padding:10px; border-radius:4px; cursor:pointer; } .run-settlement button:disabled { opacity:.5; cursor:default; }
+  .run-hud button { color:#fff6e2; background:#322744; border:1px solid #847093; border-radius:6px; padding:10px; cursor:pointer; font:inherit; }
+  .run-hud button:hover { border-color:#ffd451; background:#493753; }
+  .run-hud button:disabled { opacity:.45; cursor:default; }
+  .run-hud.choosing { bottom:auto; top:50%; left:50%; right:auto; transform:translate(-50%,-50%); width:calc(100% - 56px); box-shadow:0 0 0 2000px #110d2099,5px 8px 0 #0009; padding:20px; border-color:#ffd451; }
+  .talent-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0; }
+  .talent-choices:empty { display:none; }
+  .talent-choices > strong { grid-column:1/-1; font-size:20px; color:#ffd451; }
+  .talent-choices button { display:grid; gap:12px; text-align:left; min-height:125px; border-top:4px solid #f07846; }
+  .talent-choices button strong { font-size:16px; color:#ffd451; }
+  .run-supply { display:flex; gap:10px; margin-top:10px; }
+  @media(max-width:1000px) { .talent-choices { grid-template-columns:1fr; } .talent-choices button { min-height:0; } .run-hud { font-size:11px; } }
+  .combat-feedback { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:19; }
+  .combat-feedback[hidden] { display:none; }
+  /* On narrow screens, Play temporarily uses the full workspace; Stop restores author panels. */
+  @media(max-width:1200px) {
+    #mainrow:has(.game-hud:not([hidden])) { grid-template-columns:0 0 minmax(0,1fr) 0 0; }
+    #mainrow:has(.game-hud:not([hidden])) > :is(#panel,#inspector,#split-left,#split-right,#asset-dock) { display:none; }
+    .run-hud.choosing { max-height:calc(100% - 36px); overflow-y:auto; box-sizing:border-box; }
+  }
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
 <div id="topbar" data-page-node-id="DWAspFABjPYSzYXohJSEZM">
   <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">Web3D <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
-  <span class="tb-status" id="model-info"></span>
   <div class="tb-menus" data-page-node-id="vbJDAHfCbrcoMGMvC78aMX">
     <div class="tb-menu" id="skeleton-menu-btn" data-page-node-id="N7eBka9ze56EnwMDFJkARW">
       <button class="tb-btn" type="button" data-tb="skeleton" data-page-node-id="Tq5XZhd5MoZYTVMZV9GQ37">Skeleton</button>
@@ -1276,6 +1332,7 @@
       </div>
     </div>
   </div>
+  <span class="tb-status" id="model-info"></span>
 </div>
 <div id="mainrow" data-page-node-id="2Cxv2YNaoPTtxF2JK44Tph">
 <div class="panel" id="panel" data-page-node-id="SCyKf1cEE4HmfH8QmaT4B0">

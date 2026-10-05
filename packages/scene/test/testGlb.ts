@@ -29,7 +29,7 @@ function ringVertices(triangles: number, yBase: number, radius: number): Float32
 }
 
 interface GltfLike {
-  asset: { version: string };
+  asset: { version: string; extras?: { coordinateSystem: string } };
   scene: number;
   scenes: { nodes: number[] }[];
   nodes: { mesh: number }[];
@@ -48,7 +48,7 @@ interface GltfLike {
  * @param meshName 可选：给 mesh 设 name。Blender 导出的模型几乎都带这个名字，
  *                 而同一 mesh 下所有 primitive 共用它 —— 命名优先级回归测试需要这个开关。
  */
-export function makeGlb(prims: TestPrim[], meshName?: string): ArrayBuffer {
+export function makeGlb(prims: TestPrim[], meshName?: string, options?: { coordinateSystem?: string; zScale?: number }): ArrayBuffer {
   const bins: Uint8Array[] = [];
   const bufferViews: { buffer: number; byteOffset: number; byteLength: number }[] = [];
   const accessors: { bufferView: number; componentType: number; count: number; type: string }[] = [];
@@ -58,6 +58,7 @@ export function makeGlb(prims: TestPrim[], meshName?: string): ArrayBuffer {
   let offset = 0;
   for (const prim of prims) {
     const verts = ringVertices(Math.max(1, prim.triangles), 0, 0.4);
+    for (let i = 2; i < verts.length; i += 3) verts[i] = verts[i]! * (options?.zScale ?? 1);
     const bytes = new Uint8Array(verts.buffer.slice(0));
     bins.push(bytes);
     bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: bytes.byteLength });
@@ -76,7 +77,7 @@ export function makeGlb(prims: TestPrim[], meshName?: string): ArrayBuffer {
   }
 
   const json: GltfLike = {
-    asset: { version: '2.0' },
+    asset: { version: '2.0', ...(options?.coordinateSystem ? { extras: { coordinateSystem: options.coordinateSystem } } : {}) },
     scene: 0,
     scenes: [{ nodes: [0] }],
     nodes: [{ mesh: 0 }],

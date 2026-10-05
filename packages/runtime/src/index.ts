@@ -21,5 +21,8 @@ export * from './session';
 export * from './play-session';
 export * from './doc-diff';
 export * from './spawn-edit';
+export * from './asset-node-edit';
 export * from './spawn-ab';
 export * from './solid-ray';
+export * from './environment-edit';
+export * from './run-progress';

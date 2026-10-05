@@ -104,7 +104,7 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     store.set(id, 'radius', before + 4);
     const undone = store.undo();
     expect(undone).not.toBeNull();
-    expect(undone!.from).toBe(before);
+    expect(undone?.kind === 'spawn' ? undone.from : null).toBe(before);
     expect(readSpawnField(store.document, id, 'radius')).toBe(before);
     expect(changedPathsOnly(store.committedDocument, store.document)).toEqual([]);
     expect(store.dirty).toBe(false);
@@ -117,7 +117,8 @@ describe('SpawnEditStore —— 领域编辑命令', () => {
     store.set(id, 'radius', r0 + 1);
     store.set(id, 'radius', r0 + 2);
     expect(store.undoDepth).toBe(2);
-    expect(store.undo()!.from).toBeCloseTo(r0 + 1, 6);
+    const undone = store.undo();
+    expect(undone?.kind === 'spawn' ? undone.from : null).toBeCloseTo(r0 + 1, 6);
     expect(readSpawnField(store.document, id, 'radius')).toBeCloseTo(r0 + 1, 6);
     expect(store.undo()).not.toBeNull();
     expect(store.undo()).toBeNull();

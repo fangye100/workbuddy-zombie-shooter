@@ -316,9 +316,13 @@ def roster_target(cid):
     故按同一比例（≈3×）放大其余角色；下限 3000 是为了不让最小的怪低于已验收的 E-01。
     """
     roster = json.load(open(os.path.join(ASSETS, "characters", "roster.json"), encoding="utf-8"))
-    for c in roster["npcs"] + roster["bosses"]:
-        if c["id"] == cid:
-            return max(3000, int(round(int(c.get("tris", 1000)) * 3)))
+    # 🔴 protagonists 必须一起查：H-01（玩家角色，清道夫）在 roster 里属
+    # protagonists 而非 npcs，只查 npcs+bosses 会静默 fallback 到 3000 面
+    # （预算 3500×3=10500），把玩家角色做成全场最简的几何。
+    for key in ("protagonists", "npcs", "bosses"):
+        for c in roster.get(key, []):
+            if c["id"] == cid:
+                return max(3000, int(round(int(c.get("tris", 1000)) * 3)))
     return 3000
 
 
@@ -340,22 +344,21 @@ def process(cid, target=None, only=None, tex_weight=1.0, quality=0.6, keep_png=F
     # ---- LOD1：贴图低模（原尺度，不缩放 —— 与既有 LOD1 及各角色保持一致）----
     if not skip_lod1:
         tex_dir = os.path.join(os.path.dirname(raw), "textured")
-        baked = None
-        if os.path.isdir(tex_dir):
-            cand = [f for f in os.listdir(tex_dir) if f.endswith("_baked.glb")]
-            baked = cand[0] if cand else None
-        if baked:
-            out1 = os.path.join(tex_dir, baked)
-            if os.path.exists(out1) and not os.path.exists(out1 + ".pre-uvkeep.bak"):
-                import shutil
-                shutil.copy2(out1, out1 + ".pre-uvkeep.bak")
-            size1, g1 = uk.build_glb(out1, geo["V"], geo["pairs"], geo["VT"], tex, mime, N=geo["N"])
-            log(f"      [lod1] → {baked}  {size1/1e6:.2f}MB  {g1['gltf_faces']} 面 / "
-                f"{g1['gltf_vertices']} 顶点")
-            results.append(dict(tag="lod1", out=out1, size=size1, faces=g1["gltf_faces"],
-                                verts=g1["gltf_vertices"], align_med_mm=None, align_p95_mm=None))
-        else:
-            log("      [lod1] textured/ 下没有 *_baked.glb，跳过")
+        os.makedirs(tex_dir, exist_ok=True)
+        cand = [f for f in os.listdir(tex_dir) if f.endswith("_baked.glb")]
+        # 🔴 命名跟角色 id 走（E-01 → E01_...）。H-01 这类「从未做过 LOD」的角色
+        # 目录下没有既有 baked，若沿用「只覆盖不新建」会静默跳过 LOD1，
+        # 缺口就永远补不上。这里按 <无连字符大写id>_<Name>_<target>tris_baked.glb 兜底新建。
+        baked = cand[0] if cand else f"{cid.replace('-', '')}_{cid}_{target}tris_baked.glb"
+        out1 = os.path.join(tex_dir, baked)
+        if os.path.exists(out1) and not os.path.exists(out1 + ".pre-uvkeep.bak"):
+            import shutil
+            shutil.copy2(out1, out1 + ".pre-uvkeep.bak")
+        size1, g1 = uk.build_glb(out1, geo["V"], geo["pairs"], geo["VT"], tex, mime, N=geo["N"])
+        log(f"      [lod1] → {baked}{'（新建）' if not cand else ''}  {size1/1e6:.2f}MB  "
+            f"{g1['gltf_faces']} 面 / {g1['gltf_vertices']} 顶点")
+        results.append(dict(tag="lod1", out=out1, size=size1, faces=g1["gltf_faces"],
+                            verts=g1["gltf_vertices"], align_med_mm=None, align_p95_mm=None))
 
     # ---- LOD2/LOD3：复用既有骨架 + 权重转移 ----
     # 🔴 缩放到骨架空间（见文件头「尺度铁律」）
