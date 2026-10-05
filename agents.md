@@ -131,10 +131,11 @@
 ## 4. 浏览器与 Web 操作 → 统一走 web-debug skill
 
 > 🔴 **所有 web/浏览器操作（运行时验证、页面自动化、截图、登录授权、dev server 探活）
-> 一律先加载 `web-debug` skill（`~/.agents/skills/web-debug/SKILL.md`），按其方向路由
-> 执行。** 通用方法与坑（实例枚举/profile 选择/Chrome 136+ 端口限制/CDP 机制/登录墙
+> 先检查 `web-debug` skill（`~/.agents/skills/web-debug/SKILL.md`），存在时加载并按其方向路由。
+> **未安装时，先读取仓库内 [浏览器验证入口](docs/browser-verification.md)，使用其受支持工具与门禁路径。**
+> 通用方法与坑（实例枚举/profile 选择/Chrome 136+ 端口限制/CDP 机制/登录墙
 > 停下问用户/headed+真实 GPU/截图 base64 回传/vite·SPA·自签 HTTPS 坑）已全部迁移至该
-> skill，**此处只保留本项目锚点**：
+> skill；缺少该本机 Skill 不阻断仓库内已有的验证路径。此处保留本项目锚点：
 
 - 门禁工具：`editor:smoke` = `tools/verify/editor-smoke.mjs`（已支持 `--headed`，默认
   headless 兼容 CI；**本机验证一律带 `--headed`**）；手写 CDP 连已运行 dev server 用

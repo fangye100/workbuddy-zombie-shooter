@@ -3937,7 +3937,7 @@ async function boot(): Promise<void> {
   let elapsed = 0;
   let last = performance.now();
 
-  const editorAgent = new EditorAgent({
+  const editorAgent: EditorAgent = new EditorAgent({
     store: () => spawnStore,
     path: () => renderer.getSceneSource()?.url ?? null,
     busy: () => authorProjectionBusy,
@@ -3973,9 +3973,9 @@ async function boot(): Promise<void> {
     },
     runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size}),
-    capture: () => editorAgentConnection.capture(),
+    capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
-  const editorAgentConnection = connectEditorAgent(editorAgent);
+  const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;
   const frame = (now: number): void => {
     if (disposed) return;
     const wallDt = Math.max(0, (now - last) / 1000);
@@ -4126,7 +4126,7 @@ async function boot(): Promise<void> {
     drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
-    editorAgentConnection.afterFrame(canvas!);
+    editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);
     requestAnimationFrame(frame);

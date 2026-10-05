@@ -39,4 +39,18 @@ The full suite initially exposed old test assumptions after the art changes: flo
 - `content:check`, `verify:prefix` and `git diff --check` pass.
 - Existing headed NVIDIA visual evidence and its boundaries remain in [the scene report](../28-EnvironmentSceneQualityPass.md), [comic report](../30-ComicRenderingAcceptance.md) and [P0 report](../32-P0-asset-intake-2026-10-05.md). This integration check does not invent a new GPU or full-campaign acceptance run.
 
-The final merge/LFS audit will verify current main against the development tips, then hydrate and hash-check tracked LFS files in the primary checkout. Merely having a branch or a local LFS pointer is insufficient evidence of delivery.
+## Final integration checks
+
+PR #25 merged scene quality as `0c081ce`. The MCP integration uses `AETHER_EDITOR_MCP=1` on the Vite server and `agent=1` on the selected browser tab; ordinary editor sessions leave the prototype inactive. It is not registered as a user MCP and still lacks complete live authoring acceptance.
+
+After integration, all 87 Vitest files / 1,416 tests pass. Four Node broker tests pass. Typecheck, editor build and `scene:check` pass (173 active product GLBs, ten v10 scenes, existing environment and P0 gates). This is a new full CPU/build integration run, not a new headed GPU run. Existing hardware evidence remains linked above.
+
+PR #24 received three further comments before finalization:
+
+| Comment ID | Decision | Resolution |
+|---|---|---|
+| 4182451267 | Accepted | Regenerate the asset manifest so H-01 exposes the retained 27-joint rigged LOD. This indexes the asset without changing the scene's selected player model. |
+| 4182451276 | Accepted | Both textured GLBs hash to `05673bb5c33f52ed46bd1e2962b4a0187d0c65ccf884c507343a97da8e150c15`. Keep one canonical `textured` candidate with the current GUID and merged binding-editor state. Move the duplicate and its legacy GUID/sidecar into an explicitly annotated `archive` directory, retaining all bytes in Git LFS while removing ambiguous manifest selection. |
+| 4182451281 | Accepted | `web-debug` is absent on this host. Project rules now name a portable [repository verification entry](../browser-verification.md) for that case, preserving current browser-tool, ownership, headed and hardware requirements. No global Skill/configuration was changed. |
+
+The final merge/LFS audit verifies current main against development tips, then hydrates and hash-checks tracked LFS files in the primary checkout. Merely having a branch or a local LFS pointer is insufficient evidence of delivery. Original delivery files, temporary files and worktrees remain in place.

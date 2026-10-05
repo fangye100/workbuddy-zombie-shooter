@@ -47,7 +47,7 @@ function fsApiPlugin(): Plugin {
 
 export default defineConfig({
   root,
-  plugins: [fsApiPlugin(), editorAgentPlugin()],
+  plugins: [fsApiPlugin(), ...(process.env.AETHER_EDITOR_MCP === '1' ? [editorAgentPlugin()] : [])],
   // 包体基座以 @aether/* 命名空间消费（ADR-005），避免深相对路径跨包。
   // 仅匹配 `@aether/<pkg>`（不含子路径），解析到 packages/<pkg>/src。
   resolve: {
