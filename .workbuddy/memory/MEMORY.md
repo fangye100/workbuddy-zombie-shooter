@@ -2,6 +2,12 @@
 
 > 2026-10-02 精简重写：合并重复条目、删除已完结的过程细节。完整历史见 `docs/` 与 `.workbuddy/memory/YYYY-MM-DD.md`。
 
+## Visual quality knowledge — 2026-10-05
+
+- Canonical reusable guide: [Visual quality playbook](../../docs/art/visual-quality-playbook.md). Covers gameplay-camera composition, comic color/lighting, AgX and uniform-packing pitfalls, dynamic albedo, UV-aware LOD gates, stable placeholder replacement, sky texture lifecycle and atlas acceptance.
+- Read the guide's linked acceptance reports for revision-specific evidence. Numeric LOD checks do not prove UV quality; asset-browser visibility does not prove player integration; a desktop sample does not prove mobile performance. Atlas repairs/GPU integration and final quota-blocked models remain open at the documented revision.
+- Historical rendering and validation notes below describe earlier states. For this quality work, use the guide and current project rules instead of reusing old fixed lighting values, service-port assumptions or browser launch recipes.
+
 ## 🔴 铁律
 - **git**：提交即推送（逐笔），禁攒本地；只 add 本会话改的文件，禁 `git add -A`；中文 message。
 - **未经许可禁碰 `.git` 内部**（fsck/删文件/建 refs/碰 pack/gc/rebase 改历史），异常只报告症状。长 git 操作用 run_in_background。
