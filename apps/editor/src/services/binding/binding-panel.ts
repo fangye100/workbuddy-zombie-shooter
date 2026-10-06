@@ -208,6 +208,7 @@ export class BindingPanel {
 
   /** 当前选中的关节（纯 UI 态） */
   private selected: string | null = null;
+  private savedEditSig: string | null = null;
 
   // ── Skin Wrapper（代理圆柱体蒙皮）交互态（数据在 session） ──
   /** 编辑模式：关节骨架 / 蒙皮包裹。两者共用同一套正视/侧视 2D 视图 */
@@ -342,6 +343,16 @@ export class BindingPanel {
           </div>
         </div>
         <div class="bd-side">
+          <div class="bd-field bd-joint-editor">
+            <label>关节 <select data-bd="joint" aria-label="骨骼关节"></select></label>
+            <div class="bd-joint-coords">
+              <label>X <input class="bd-num" type="number" step="0.005" data-bd="joint-x" aria-label="关节 X" disabled></label>
+              <label>Y <input class="bd-num" type="number" step="0.005" data-bd="joint-y" aria-label="关节 Y" disabled></label>
+              <label>Z <input class="bd-num" type="number" step="0.005" data-bd="joint-z" aria-label="关节 Z" disabled></label>
+            </div>
+            <button class="bd-btn" data-bd="joint-apply">应用坐标</button>
+            <small>模型坐标（m）· 拖动视图或输入数值</small>
+          </div>
           <div class="bd-info" data-bd="info">${t('选中一个 joint 查看骨长与姿态偏移')}</div>
           <div class="bd-anim" data-bd="anim">${t('未载入动画')}</div>
           <div class="bd-field">
@@ -434,6 +445,27 @@ export class BindingPanel {
       </div>`;
 
     this.frontCanvas = this.rootEl.querySelector<HTMLCanvasElement>('[data-bd="front"]')!;
+    const jointSelect = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="joint"]')!;
+    jointSelect.add(new Option('选择关节…', ''));
+    for (const name of HUMANIK_ORDER) jointSelect.add(new Option(name, name));
+    jointSelect.addEventListener('change', () => this.select(jointSelect.value || null));
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="joint-apply"]')!.addEventListener('click', () => {
+      if (this.selected === null || this.previewMode !== 'current') return;
+      const p = ['x', 'y', 'z'].map(axis => this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!.valueAsNumber);
+      if (p.every(Number.isFinite)) this.poseJoint(this.selected, [p[0]!, p[1]!, p[2]!]);
+      else this.refresh();
+    });
+    for (const [index, axis] of ['x', 'y', 'z'].entries()) {
+      const input = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!;
+      input.addEventListener('change', () => {
+        if (this.selected === null || this.previewMode !== 'current') return;
+        const value = input.valueAsNumber;
+        if (!Number.isFinite(value)) { this.refresh(); return; }
+        const position: [number, number, number] = [...this.session.positions[this.selected]!];
+        position[index] = value;
+        this.poseJoint(this.selected, position);
+      });
+    }
     this.sideCanvas = this.rootEl.querySelector<HTMLCanvasElement>('[data-bd="side"]')!;
     this.frontCtx = this.frontCanvas.getContext('2d')!;
     this.sideCtx = this.sideCanvas.getContext('2d')!;
@@ -1765,6 +1797,14 @@ export class BindingPanel {
   }
 
   private updateInfo(fit: FitResult): void {
+    const selector = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="joint"]')!;
+    selector.value = this.selected ?? '';
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="joint-apply"]')!.disabled = this.selected === null || this.previewMode !== 'current' || this.modelName === null;
+    for (const [index, axis] of ['x', 'y', 'z'].entries()) {
+      const input = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!;
+      input.disabled = this.selected === null || this.previewMode !== 'current' || this.modelName === null;
+      input.value = this.selected === null ? '' : String(this.session.positions[this.selected]![index]);
+    }
     const v = this.meshVerts;
     const tris = this.meshIndices !== null ? this.meshIndices.length / 3 : 0;
     const verts = v !== null ? v.length / this.vertexFloats : 0;
@@ -2516,6 +2556,12 @@ export class BindingPanel {
       return;
     }
     if (this.session.poseJoint(name, p)) this.refresh();
+  }
+
+  editSignature(): string | null { return this.session.editSig(); }
+  markSaved(signature = this.editSignature()): void { this.savedEditSig = signature; }
+  hasUnsavedChanges(): boolean {
+    return this.modelName !== null && this.savedEditSig !== null && this.savedEditSig !== this.editSignature();
   }
 
   select(name: string | null): void {

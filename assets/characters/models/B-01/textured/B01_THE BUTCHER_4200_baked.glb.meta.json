@@ -20,5 +20,350 @@
     "file": "B01_THE BUTCHER_4200_baked.glb"
   },
   "sourceHash": "sha256:9f68eac08df8417f5aebdd893a52a87c736994470898a04f4b67a741033ba177",
-  "updatedAt": "2026-09-04T03:48:29.674Z"
+  "updatedAt": "2026-09-04T03:48:29.674Z",
+  "bindingEditor": {
+    "positions": {
+      "Hips": [
+        0,
+        1.01,
+        -0.08
+      ],
+      "Spine": [
+        0,
+        1.2,
+        -0.11
+      ],
+      "Spine1": [
+        0,
+        1.4,
+        -0.18
+      ],
+      "Spine2": [
+        0,
+        1.6,
+        -0.2
+      ],
+      "Neck": [
+        0,
+        1.73,
+        -0.07
+      ],
+      "Head": [
+        0,
+        1.9,
+        0.045
+      ],
+      "HeadTip": [
+        0,
+        2.035,
+        0.01
+      ],
+      "LeftShoulder": [
+        0.15,
+        1.64,
+        -0.15
+      ],
+      "LeftArm": [
+        0.38,
+        1.62,
+        -0.15
+      ],
+      "LeftForeArm": [
+        0.48,
+        1.25,
+        -0.13
+      ],
+      "LeftHand": [
+        0.54,
+        0.99,
+        0.12
+      ],
+      "LeftHandTip": [
+        0.55,
+        0.8,
+        0.31
+      ],
+      "RightShoulder": [
+        -0.15,
+        1.64,
+        -0.15
+      ],
+      "RightArm": [
+        -0.38,
+        1.62,
+        -0.15
+      ],
+      "RightForeArm": [
+        -0.46,
+        1.25,
+        -0.16
+      ],
+      "RightHand": [
+        -0.51,
+        1.01,
+        0.07
+      ],
+      "RightHandTip": [
+        -0.53,
+        0.81,
+        0.15
+      ],
+      "LeftUpLeg": [
+        0.2,
+        0.97,
+        -0.1
+      ],
+      "LeftLeg": [
+        0.24,
+        0.51,
+        0.01
+      ],
+      "LeftFoot": [
+        0.27,
+        0.13,
+        -0.12
+      ],
+      "LeftToeBase": [
+        0.3,
+        0.04,
+        0.13
+      ],
+      "LeftToeTip": [
+        0.39,
+        0.04,
+        0.23
+      ],
+      "RightUpLeg": [
+        -0.2,
+        0.97,
+        -0.1
+      ],
+      "RightLeg": [
+        -0.24,
+        0.51,
+        0.01
+      ],
+      "RightFoot": [
+        -0.27,
+        0.13,
+        -0.12
+      ],
+      "RightToeBase": [
+        -0.3,
+        0.04,
+        0.13
+      ],
+      "RightToeTip": [
+        -0.39,
+        0.04,
+        0.23
+      ]
+    },
+    "cylinders": {
+      "Hips": {
+        "bone": "Hips",
+        "radii": {
+          "top": 0.05249999999999996,
+          "medium": 0.05249999999999996,
+          "bottom": 0.05249999999999996
+        },
+        "enabled": true
+      },
+      "Spine": {
+        "bone": "Spine",
+        "radii": {
+          "top": 0.05249999999999996,
+          "medium": 0.05249999999999996,
+          "bottom": 0.05249999999999996
+        },
+        "enabled": true
+      },
+      "Spine1": {
+        "bone": "Spine1",
+        "radii": {
+          "top": 0.05249999999999996,
+          "medium": 0.05249999999999996,
+          "bottom": 0.05249999999999996
+        },
+        "enabled": true
+      },
+      "Spine2": {
+        "bone": "Spine2",
+        "radii": {
+          "top": 0.05249999999999996,
+          "medium": 0.05249999999999996,
+          "bottom": 0.05249999999999996
+        },
+        "enabled": true
+      },
+      "Neck": {
+        "bone": "Neck",
+        "radii": {
+          "top": 0.06999999999999998,
+          "medium": 0.06999999999999998,
+          "bottom": 0.06999999999999998
+        },
+        "enabled": true
+      },
+      "Head": {
+        "bone": "Head",
+        "radii": {
+          "top": 0.04899999999999996,
+          "medium": 0.04899999999999996,
+          "bottom": 0.04899999999999996
+        },
+        "enabled": true
+      },
+      "LeftShoulder": {
+        "bone": "LeftShoulder",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      },
+      "LeftArm": {
+        "bone": "LeftArm",
+        "radii": {
+          "top": 0.091,
+          "medium": 0.091,
+          "bottom": 0.091
+        },
+        "enabled": true
+      },
+      "LeftForeArm": {
+        "bone": "LeftForeArm",
+        "radii": {
+          "top": 0.0875,
+          "medium": 0.0875,
+          "bottom": 0.0875
+        },
+        "enabled": true
+      },
+      "LeftHand": {
+        "bone": "LeftHand",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      },
+      "RightShoulder": {
+        "bone": "RightShoulder",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      },
+      "RightArm": {
+        "bone": "RightArm",
+        "radii": {
+          "top": 0.091,
+          "medium": 0.091,
+          "bottom": 0.091
+        },
+        "enabled": true
+      },
+      "RightForeArm": {
+        "bone": "RightForeArm",
+        "radii": {
+          "top": 0.0875,
+          "medium": 0.0875,
+          "bottom": 0.0875
+        },
+        "enabled": true
+      },
+      "RightHand": {
+        "bone": "RightHand",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      },
+      "LeftUpLeg": {
+        "bone": "LeftUpLeg",
+        "radii": {
+          "top": 0.147,
+          "medium": 0.147,
+          "bottom": 0.147
+        },
+        "enabled": true
+      },
+      "LeftLeg": {
+        "bone": "LeftLeg",
+        "radii": {
+          "top": 0.1575,
+          "medium": 0.1575,
+          "bottom": 0.1575
+        },
+        "enabled": true
+      },
+      "LeftFoot": {
+        "bone": "LeftFoot",
+        "radii": {
+          "top": 0.049,
+          "medium": 0.049,
+          "bottom": 0.049
+        },
+        "enabled": true
+      },
+      "LeftToeBase": {
+        "bone": "LeftToeBase",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      },
+      "RightUpLeg": {
+        "bone": "RightUpLeg",
+        "radii": {
+          "top": 0.147,
+          "medium": 0.147,
+          "bottom": 0.147
+        },
+        "enabled": true
+      },
+      "RightLeg": {
+        "bone": "RightLeg",
+        "radii": {
+          "top": 0.1575,
+          "medium": 0.1575,
+          "bottom": 0.1575
+        },
+        "enabled": true
+      },
+      "RightFoot": {
+        "bone": "RightFoot",
+        "radii": {
+          "top": 0.049,
+          "medium": 0.049,
+          "bottom": 0.049
+        },
+        "enabled": true
+      },
+      "RightToeBase": {
+        "bone": "RightToeBase",
+        "radii": {
+          "top": 0.04,
+          "medium": 0.04,
+          "bottom": 0.04
+        },
+        "enabled": true
+      }
+    },
+    "weightMode": "wrapper",
+    "smoothWeights": true,
+    "smoothIters": 4,
+    "smoothLambda": 0.5,
+    "mirrorWeights": false,
+    "savedAt": "2026-10-06T08:03:46.848Z"
+  }
 }

@@ -52,6 +52,7 @@ import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
+import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
@@ -2348,6 +2349,8 @@ async function boot(): Promise<void> {
   }
   let bindingSession: BindingSession | null = null;
   let binding: BindingPanel | null = null;
+  let characterBindingBar: CharacterBindingBar | null = null;
+  let bindingLoadVersion = 0;
   // 当前绑定会话对应的 .meta.json 落盘点（资产库入口才有；层级/场景物体入口为 null）
   let currentBindingMetaPath: string | null = null;
   const bindingPersistence = new BindingPersistence();
@@ -2449,6 +2452,7 @@ async function boot(): Promise<void> {
     if (binding === null) {
       binding = new BindingPanel(bindingDockEl, {
         onClose: () => closeBinding(),
+        onChange: () => characterBindingBar?.setDirty(binding?.hasUnsavedChanges() ?? false),
         onApply: (fit, opts) => void applyBinding(fit, opts?.smoothWeights ?? true),
         onLoadBvh: () => pickBvhFile((t, n) => loadBvhForBinding(t, n)),
         onExportAnim: () => void exportAnimGlb(),
@@ -2469,12 +2473,18 @@ async function boot(): Promise<void> {
           );
         },
       }, gpu);
+      characterBindingBar = new CharacterBindingBar(bindingDockEl, characterBindingChoices(assetManifest),
+        (path) => void bindAssetAt(path));
       wireBindingGrip();
     }
     bindingDockEl.classList.add('open');
+    // Each source starts with its own template/sidecar, never the previous character's pose.
+    binding.clear();
     binding.setModel(session.name, session.vertices, session.indices);
     // 资产库入口会把上次写进 .meta.json 的编辑态灌回来（有则回填，无则保持模板默认）
     if (saved !== undefined) binding.hydrate(saved);
+    binding.markSaved();
+    characterBindingBar?.setSource(currentBindingMetaPath?.replace(/\.meta\.json$/, '') ?? null, saved !== undefined);
     // canvas 必须等 open 之后才量得到 clientWidth，晚一帧再重算视图缩放
     requestAnimationFrame(() => binding?.resize());
     panel.setModelInfo(
@@ -2484,6 +2494,8 @@ async function boot(): Promise<void> {
   }
 
   function closeBinding(): void {
+    if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，关闭并放弃这些修改？')) return;
+    bindingLoadVersion++;
     bindingDockEl?.classList.remove('open');
     binding?.clear();
     bindingSession = null;
@@ -2499,15 +2511,22 @@ async function boot(): Promise<void> {
     }
     const current = binding;
     const path = currentBindingMetaPath;
+    const version = bindingLoadVersion;
+    const savedSignature = current.editSignature();
     void bindingPersistence.save(current.getEditorData(), (request) =>
       writeProjectFile(request.path, { patch: request.patch, baseHash: request.baseHash }))
       .then((result) => {
-        if (binding !== current || currentBindingMetaPath !== path) return;
+        if (binding !== current || currentBindingMetaPath !== path || bindingLoadVersion !== version) return;
+        if (result.ok) {
+          current.markSaved(savedSignature);
+          characterBindingBar?.saved();
+          characterBindingBar?.setDirty(current.hasUnsavedChanges());
+        }
         current.setSaveStatus(result.ok, result.ok ? `已保存 ${result.bytes ?? '?'}B`
           : result.conflict ? `保存冲突（磁盘 ${result.currentHash ?? '?'}）：本地修改已保留，请重新进入绑定接受最新版本`
           : `保存失败：${result.error ?? result.status}。本地修改已保留`);
       }).catch((error) => {
-        if (binding === current && currentBindingMetaPath === path) current.setSaveStatus(false, String(error));
+        if (binding === current && currentBindingMetaPath === path && bindingLoadVersion === version) current.setSaveStatus(false, String(error));
       });
   }
 
@@ -3180,7 +3199,11 @@ async function boot(): Promise<void> {
 
   /** 入口一：资产库里右键 .glb → 「进入绑定」 */
   async function bindAssetAt(relPath: string, opts?: { importSkeleton?: boolean }): Promise<void> {
+    if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换/重载并放弃这些修改？')) return;
+    const version = ++bindingLoadVersion;
+    const previousSignature = binding?.editSignature();
     try {
+      await manifestReady;
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
@@ -3190,6 +3213,11 @@ async function boot(): Promise<void> {
 
       const acceptedMetaPath = `${relPath}.meta.json`;
       const acceptedMeta = await readProjectFile(acceptedMetaPath);
+      if (version !== bindingLoadVersion) return;
+      if (binding?.editSignature() !== previousSignature) {
+        panel.setModelInfo('载入期间绑定已被编辑，本地修改已保留；请保存后重新打开角色');
+        return;
+      }
 
       // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
       // 不回填 sidecar 的 bindingEditor（那是「源网格 + 模板骨架」世界的会话）
@@ -3242,6 +3270,7 @@ async function boot(): Promise<void> {
         image: model.image,
       }, saved);
     } catch (err) {
+      if (version !== bindingLoadVersion) return;
       panel.setModelInfo(`进入绑定失败：${stemName(relPath)} · ${String(err)}`);
       console.error('[绑定] 载入失败', relPath, err);
     }
@@ -3257,6 +3286,8 @@ async function boot(): Promise<void> {
         run: () => {
           if (obj === undefined) return;
           // 层级入口无 GLB 路径 → 没有可落盘的 .meta.json，保存按钮会被拦下
+          if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换并放弃这些修改？')) return;
+          bindingLoadVersion++;
           currentBindingMetaPath = null;
           bindingPersistence.clear();
           openBinding({
@@ -3323,6 +3354,8 @@ async function boot(): Promise<void> {
       const obj = renderer.state.objects[idx];
       if (obj !== undefined && obj.mesh !== null) {
         // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
+        if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换并放弃这些修改？')) return;
+        bindingLoadVersion++;
         currentBindingMetaPath = null;
         bindingPersistence.clear();
         openBinding({
@@ -3366,6 +3399,12 @@ async function boot(): Promise<void> {
         setOpen(false);
         const a = item.dataset.tbAction;
         if (a === 'enter') enterBindingFromMenu();
+        else if (a === 'characters') void (async () => {
+          await manifestReady;
+          const source = currentBindingMetaPath?.replace(/\.meta\.json$/, '') ?? characterBindingChoices(assetManifest)[0]?.path;
+          if (source !== undefined) await bindAssetAt(source);
+          else panel.setModelInfo('角色清单中没有可绑定的 GLB');
+        })();
         else if (a === 'export') void exportTposeFromMenu();
         else if (a === 'bvh') loadBvhFromMenu();
         else if (a === 'close') closeBinding();

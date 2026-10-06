@@ -921,6 +921,13 @@
     min-height: 0;
   }
   #binding-dock.open { display: flex; }
+  .bd-assets { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--ink); font-size:11px; }
+  .bd-assets select { max-width:240px; }
+  .bd-metapath { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; color:var(--muted); }
+  .bd-joint-coords { display:flex; gap:4px; margin:6px 0; }
+  .bd-joint-coords label { min-width:0; flex:1; }
+  .bd-joint-coords input { width:100%; box-sizing:border-box; }
+  .bd-joint-editor select { max-width:100%; }
   .bd-grip { flex: 0 0 6px; height: 6px; background: var(--ink); cursor: row-resize; transition: background .12s; }
   .bd-grip:hover, .bd-grip.dragging { background: var(--zombie); }
   .bd-head {
@@ -934,16 +941,16 @@
     border-bottom: 3px solid var(--ink);
   }
   /* 头部按语义分 5 组（编辑 / 镜像 / 姿态 / 产出 / 保存），组间竖分隔线。
-     组内 nowrap（组是整体，一起换行），组间可换行 —— 破坏性操作与常用操作
-     不再平铺在一起抢视觉权重。 */
+     组间换行，窄工作区里组内也允许换行，控件不覆盖右侧 Inspector。 */
   .bd-head-group {
     display: flex; align-items: center; gap: 6px;
-    flex: 0 0 auto; flex-wrap: nowrap;
+    flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; box-sizing: border-box;
     padding-left: 10px;
     border-left: 2px solid var(--ink);
   }
   .bd-head-group:first-of-type { border-left: none; padding-left: 0; }
   .bd-head-actions { margin-left: auto; }
+  .bd-head-group .bd-select { width: auto; min-width: 0; max-width: 100%; }
   .bd-glabel {
     font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
     color: var(--text-dim); opacity: .7; white-space: nowrap;
@@ -971,7 +978,7 @@
   .bd-tip-inline { border-top: none; padding-top: 0; }
   .bd-title { font-weight: 700; font-size: 13px; color: var(--bone); white-space: nowrap; }
   .bd-title em { color: var(--zombie); font-style: normal; font-size: 11px; }
-  .bd-model { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .bd-model { font-size: 11px; color: var(--text-dim); white-space: nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
   .bd-btn {
     flex: 0 0 auto;
     padding: 4px 10px;
@@ -1338,6 +1345,7 @@
       <button class="tb-btn" type="button" data-tb="skeleton" data-page-node-id="Tq5XZhd5MoZYTVMZV9GQ37">Skeleton</button>
       <div class="tb-dropdown" id="skeleton-dropdown" hidden data-page-node-id="KOoVYjCxsGYdnAyb9J4uUa">
         <button class="tb-item" type="button" data-tb-action="enter" data-page-node-id="z1sv7a72GvbHMqBmWKdghq">进入绑定 Binding…</button>
+        <button class="tb-item" type="button" data-tb-action="characters">角色绑定数据…</button>
         <button class="tb-item" type="button" data-tb-action="export" data-page-node-id="EZAZ8uXGx1yzrrN1chlsPH">导出 T-pose GLB</button>
         <button class="tb-item" type="button" data-tb-action="bvh" data-page-node-id="9eCoZaNSGYcYl4rBf4magb">载入 BVH 动画…</button>
         <div class="tb-sep" data-page-node-id="XCVR6ZM8ycfPLiKA0kOn5P"></div>

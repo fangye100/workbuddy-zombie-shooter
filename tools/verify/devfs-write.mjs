@@ -104,6 +104,8 @@ try {
   check('写出字节数 > 0', typeof w.body?.bytes === 'number' && w.body.bytes > 0);
 
   const after = JSON.parse(readFileSync(metaAbs, 'utf8'));
+  check('patch 输出符合 sidecar 门禁的 JSON + LF 格式',
+    readFileSync(metaAbs, 'utf8') === `${JSON.stringify(after, null, 2)}\n`);
   check('bindingEditor 已写入', after.bindingEditor !== undefined);
   check('bindingEditor.cylinders 形状被保留', after.bindingEditor?.cylinders?.Hip?.radii?.top === 0.2);
   check('兄弟键 guid 未被覆盖', after.guid === 'guid-abc-123');
