@@ -383,9 +383,9 @@
     },
     "weightMode": "wrapper",
     "smoothWeights": true,
-    "smoothIters": 4,
+    "smoothIters": 6,
     "smoothLambda": 0.5,
     "mirrorWeights": false,
-    "savedAt": "2026-09-24T15:05:41.237Z"
+    "savedAt": "2026-10-06T10:04:07.996Z"
   }
 }

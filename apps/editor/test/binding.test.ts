@@ -29,6 +29,8 @@ import {
   type SkinWeights,
 } from '../src/services/binding/binding-math';
 import { rigToTPose, rigToTPoseWithImage } from '../src/services/binding/binding-export';
+import { parseGlb as parseRigGlb } from '@aether/scene';
+import { createSkinState, evalJointMatrices } from '../../../packages/render/src/skin';
 import {
   defaultSkinCylinders,
   computeCylinderWeights,
@@ -49,7 +51,7 @@ import {
  *
  * 一旦有人把 ΔR 写进骨架（比如给 node 加 rotation、或让 tposeWorld 带上旋转），
  * bind pose 就不再是干净 T-pose，接入 BVH / 动捕会整条带 offset ——
- * 下面的「T-pose 骨架必须无旋转」「A-pose 手臂在 T-pose 里仍是水平的」两组断言
+ * 下面的默认导出「T-pose 骨架必须无旋转」「A-pose 手臂在 T-pose 里仍是水平的」两组断言
  * 就是专门拦这个回归的。
  */
 
@@ -217,6 +219,35 @@ describe('fitSkeleton：骨长采纳 / 姿态旋转不入骨架', () => {
 });
 
 describe('unposeMesh：网格反解回 T-pose', () => {
+  it('整条刚性下垂的手臂逐骨反解回原位置，不重复累乘弯曲角', () => {
+    const posed = poseLeftArm(T, -65);
+    const fit = fitSkeleton(posed);
+    for (const bone of ['LeftArm', 'LeftForeArm', 'LeftHand'] as const) {
+      const seg = boneSegments(T).find(s => s.bone === bone)!;
+      const vT = seg.a.map((v, k) => (v + seg.b[k]!) / 2 + (k === 2 ? 0.025 : 0)) as [number, number, number];
+      const vP = rotZ(vT, T.LeftArm!, -65);
+      const verts = new Float32Array(15); verts.set(vP);
+      const out = unposeMesh(verts, 15, 1, {
+        joints: new Uint16Array([HUMANIK_ORDER.indexOf(bone), 0, 0, 0]),
+        weights: new Float32Array([1, 0, 0, 0]),
+      }, fit);
+      for (let k = 0; k < 3; k++) expect(out[k], bone).toBeCloseTo(vT[k]!, 6);
+    }
+  });
+
+  it('每根蒙皮骨段的世界矩阵把标准骨段方向对齐到实际子关节', () => {
+    const posed = poseLeftArm(T, -55);
+    posed.LeftLeg = [0.22, 0.62, 0.4];
+    posed.LeftFoot = [0.18, 0.12, 0.05];
+    const fit = fitSkeleton(posed);
+    for (const seg of boneSegments(posed).filter(s => !isTipBone(s.bone))) {
+      const canon = boneSegments(fit.tposePositions).find(s => s.bone === seg.bone)!;
+      const direction = canon.b.map((v,k) => v-canon.a[k]!);
+      const end = matPoint(fit.posedWorld[seg.bone]!, direction as [number,number,number]);
+      for (let k=0;k<3;k++) expect(end[k], seg.bone).toBeCloseTo(seg.b[k]!, 6);
+    }
+  });
+
   it('★ 单骨权重下反解是精确刚体逆变换（A-pose 顶点被打回 T-pose）', () => {
     const posed = poseLeftArm(T, -45);
     const fit = fitSkeleton(posed);
@@ -495,6 +526,40 @@ function makeMesh(n: number): { verts: Float32Array<ArrayBuffer>; idx: Uint32Arr
 }
 
 describe('rigToTPose：导出的 GLB 契约', () => {
+  it('源姿态模式保留网格，真实 GLB 导入后所有 bind-pose 蒙皮矩阵为恒等', () => {
+    const { verts, idx } = makeMesh(120);
+    const placed = poseLeftArm(T, -65);
+    const res = rigToTPose({ name: 'source-pose', vertices: verts, indices: idx,
+      image: null, placed, bindPose: 'source' });
+    expect(res.tposeVertices).toEqual(verts);
+    const parsed = parseRigGlb(res.glb, null, 'y');
+    const sk = parsed.skeleton!;
+    expect(sk.joints).toHaveLength(27);
+    const palette = new Float32Array((sk.joints.length + 1) * 16);
+    evalJointMatrices(createSkinState(sk, []), palette);
+    for (let k = 0; k < sk.joints.length; k++) {
+      for (let j = 0; j < 16; j++) {
+        expect(palette[k * 16 + j], `${sk.jointNames[k]} matrix[${j}]`).toBeCloseTo(j % 5 === 0 ? 1 : 0, 5);
+      }
+    }
+    const { json } = parseGlb(res.glb);
+    expect(json.nodes.some(n => Array.isArray(n.rotation) && Math.abs((n.rotation as number[])[2]!) > .1)).toBe(true);
+    for (let i = 0; i < sk.joints.length; i++) {
+      // inverse bind 的逆矩阵给出原始世界关节位置，不能采用展开后的 T-pose 坐标。
+      const world = matInvertRigid(Float64Array.from(sk.inverseBind.slice(i * 16, i * 16 + 16)));
+      const expected = placed[sk.jointNames[i]!]!;
+      for (let a = 0; a < 3; a++) expect(world[12 + a]).toBeCloseTo(expected[a]!, 5);
+    }
+  });
+
+  it('源姿态模式拒绝直接嵌入以 T-pose 为目标的动画', () => {
+    const { verts, idx } = makeMesh(120);
+    expect(() => rigToTPose({ name: 'source-pose', vertices: verts, indices: idx,
+      image: null, placed: poseLeftArm(T, -45), bindPose: 'source',
+      animation: { name: 'wrong-rest', times: new Float32Array([0, 1]), rotations: {}, translation: null },
+    })).toThrow('请对导出骨架运行 retarget');
+  });
+
   it('★ 27 根骨骼节点全部无 rotation 字段（ΔR 绝不进骨架）', () => {
     const { verts, idx } = makeMesh(120);
     const res = rigToTPose({

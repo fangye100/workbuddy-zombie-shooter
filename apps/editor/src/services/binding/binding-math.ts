@@ -688,7 +688,7 @@ export interface FitResult {
   lengths: Record<string, number>;
   /** 每骨的姿态旋转 ΔR（四元数 xyzw）= currentPose 与 T-pose 的差值，**不进 T-pose 骨架 */
   poseRotations: Record<string, Quat>;
-  /** 当前姿态的骨世界矩阵 M_P（含 ΔR） */
+  /** 当前姿态的骨世界矩阵 M_P（朝向本骨的蒙皮骨段，不累乘世界空间测量值） */
   posedWorld: Record<string, Mat4>;
   /** 重建的 T-pose 骨世界矩阵 M_T（只有采纳骨长，旋转为 identity） */
   tposeWorld: Record<string, Mat4>;
@@ -705,7 +705,6 @@ export function fitSkeleton(placed: JointPositions): FitResult {
   const dirs = tposeDirections();
   const lengths: Record<string, number> = {};
   const poseRotations: Record<string, Quat> = {};
-  const localDelta: Record<string, [number, number, number]> = {};
 
   // ① 骨长 = 实际摆放的两点距离；② ΔR = T-pose 朝向 → 实际朝向
   for (const name of HUMANIK_ORDER) {
@@ -713,26 +712,41 @@ export function fitSkeleton(placed: JointPositions): FitResult {
     if (parent === null) {
       lengths[name] = 0;
       poseRotations[name] = [0, 0, 0, 1];
-      localDelta[name] = [0, 0, 0];
       continue;
     }
     const a = placed[parent]!, b = placed[name]!;
     const d: [number, number, number] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    localDelta[name] = d;
     lengths[name] = Math.hypot(d[0], d[1], d[2]);
     const actual = normalize3(d);
     const canonical = dirs[name]!;
     poseRotations[name] = quatFromUnitVectors(canonical, actual);
   }
 
-  // 当前姿态世界矩阵：R_world 逐级累乘，M_P_i = T(pos_i)·R_world_i
+  // Skin weights belong to joint → first child (boneSegments), not parent → joint.
+  // Directions measured from placed positions already live in world space. Multiplying
+  // them down the hierarchy applies the same bend again at each descendant (a rigid
+  // 45° arm becomes 45°/90°/135°). Fit each skin segment directly instead.
+  // Keep the incoming poseRotations above for existing joint-offset diagnostics.
+  const childOf: Record<string, string> = {};
+  for (const name of HUMANIK_ORDER) {
+    const parent = HUMANIK_BONES[name]!.parent;
+    if (parent !== null && childOf[parent] === undefined) childOf[parent] = name;
+  }
   const rotWorld: Record<string, Quat> = {};
   const posedWorld: Record<string, Mat4> = {};
   for (const name of HUMANIK_ORDER) {
     const parent = HUMANIK_BONES[name]!.parent;
-    rotWorld[name] = parent === null
-      ? [0, 0, 0, 1]
-      : quatMul(rotWorld[parent]!, poseRotations[name]!);
+    const child = childOf[name];
+    if (child === undefined) {
+      // Tips have no skin volume; inherit the terminal segment's frame.
+      rotWorld[name] = parent === null ? [0, 0, 0, 1] : rotWorld[parent]!;
+    } else {
+      const a = placed[name]!, b = placed[child]!;
+      const d = normalize3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
+      rotWorld[name] = Math.hypot(...d) < 1e-12
+        ? (parent === null ? [0, 0, 0, 1] : rotWorld[parent]!)
+        : quatFromUnitVectors(dirs[child]!, d);
+    }
     const p = placed[name]!;
     posedWorld[name] = matMul(matTranslation(p[0], p[1], p[2]), quatToMat(rotWorld[name]!));
   }

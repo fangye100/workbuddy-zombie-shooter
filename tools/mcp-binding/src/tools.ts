@@ -412,7 +412,10 @@ export class BindingDomain {
     const srcRel = this.requireGlbPath();
     const s = this.session;
 
-    const outRel = optStr(args, 'outPath') ?? srcRel.replace(/\.glb$/i, '_tpose.glb');
+    const bindPose = optStr(args, 'bindPose') ?? 'tpose';
+    if (bindPose !== 'tpose' && bindPose !== 'source') throw new ToolError('bindPose 必须是 tpose 或 source');
+
+    const outRel = optStr(args, 'outPath') ?? srcRel.replace(/\.glb$/i, bindPose === 'source' ? '_source_rig.glb' : '_tpose.glb');
     if (!outRel.toLowerCase().endsWith('.glb')) {
       throw new ToolError(`导出目标必须是 .glb：${outRel}`);
     }
@@ -450,6 +453,7 @@ export class BindingDomain {
 
     // 与 exportBound 的 base 包逐字段同构（动画除外：BVH 重定向不在 MCP 面内）
     const res = await rigToTPoseWithImage({
+      bindPose,
       name: outName,
       vertices: mesh.vertices,
       indices: mesh.indices,
@@ -501,6 +505,7 @@ export class BindingDomain {
     const st = res.stats;
     return {
       glbPath: outRel,
+      bindPose,
       bytes: res.glb.byteLength,
       metaRefreshed,
       metaWarning,
@@ -675,15 +680,16 @@ export const TOOLS_TABLE = [
   {
     name: 'export_glb',
     description:
-      '把当前会话态导成干净 T-pose 的 rigged GLB 并落盘仓内（与编辑器 exportBound 同管线：当前姿态算权重 → 反解 T-pose → 骨架只采纳骨长）。只回统计不回字节；已有 sidecar 会外科式刷新 sourceHash，没有则提示跑 scene:gen。',
+      '导出 rigged GLB 并落盘仓内。默认 tpose：当前姿态算权重 → 反解 T-pose；显式 source：保留源网格与源姿态绑定帧，动画须 retarget 到此骨架。只回统计不回字节；已有 sidecar 刷新 sourceHash，没有则提示跑 scene:gen。',
     inputSchema: {
       type: 'object',
       properties: {
         outPath: {
           type: 'string',
-          description: '仓内相对输出路径，默认 <源文件去 .glb>_tpose.glb；不许覆盖源模型',
+          description: '仓内相对输出路径；默认 tpose 用 <源>_tpose.glb，source 用 <源>_source_rig.glb；不许覆盖源模型',
         },
         name: { type: 'string', description: '导出名（GLB 内 mesh/材质命名），默认载入模型名' },
+        bindPose: { type: 'string', enum: ['tpose', 'source'], description: '默认 tpose；source 保留源网格形状与源姿态绑定矩阵，动画须 retarget 到此骨架' },
         overwrite: {
           type: 'boolean',
           description: '目标已存在时显式放行覆盖（重导迭代用）；覆盖源模型恒拒',

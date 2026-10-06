@@ -42,6 +42,7 @@ mkdirSync(TMP, { recursive: true });
 // 依赖产物 sidecar 不存在，上次跑留下来的会让门禁第二次必红
 for (const f of [
   'probe_tpose.glb', 'probe_tpose.glb.meta.json',
+  'probe_source_rig.glb', 'probe_source_rig.glb.meta.json',
   'texprobe.glb', 'texprobe_tpose.glb', 'texprobe_tpose.glb.meta.json',
   'texprobe_dist.glb', 'toc1.glb', 'toc2.glb', 'toc3.glb', 'par1.glb',
 ]) {
@@ -490,6 +491,14 @@ try {
   const boneNodes = (glb?.json?.nodes ?? []).filter((n) => n?.mesh === undefined);
   check('产物骨架是干净 T-pose（骨骼节点一律不写 rotation）',
     boneNodes.length === 27 && boneNodes.every((n) => n.rotation === undefined));
+
+  const badPose = await tool('export_glb', { bindPose: 'unknown' }).then(() => null, e => String(e));
+  check('未知 bindPose 被拒（-32602）', typeof badPose === 'string' && badPose.includes('-32602'));
+  const sourceExp = await toolJson('export_glb', { bindPose: 'source' });
+  const sourceGlb = parseGlbFile(path.resolve(REPO_ROOT, sourceExp.glbPath));
+  check('显式源姿态导出使用独立文件名并写入 rest rotations',
+    sourceExp.bindPose === 'source' && sourceExp.glbPath.endsWith('_source_rig.glb') &&
+    sourceGlb.json.skins[0].joints.every(i => Array.isArray(sourceGlb.json.nodes[i].rotation)));
 
   // 覆盖守卫（P0-2）：目标已存在默认拒，显式 overwrite:true 才放行
   const ovExist = await tool('export_glb', { outPath: expRel }).then(() => null, (e) => String(e));
