@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_hpnf387i",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.8,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "characterId": "H-01",
+    "characterName": "清道夫",
+    "variant": "rigged",
+    "file": "H01_SCAVENGER_LOD0_animation_ready.glb",
+    "sourceAsset": {
+      "path": "assets/characters/models/H-01/H01_20261003_173137.glb",
+      "guid": "as_a3203510801d"
+    },
+    "sourceHash": "sha256:9dfb9b9615ba946defab9423ec136a9752e3fea61f0b6e0745f33c87c077ca91",
+    "animationReady": true,
+    "skeletonConvention": "HumanIK 27 joints / 22 deforming joints",
+    "bindingRulerHeightM": 2.05,
+    "weightSmoothing": {
+      "algorithm": "wrapper",
+      "iterations": 8,
+      "lambda": 0.5
+    },
+    "embeddedAnimationClips": 0
+  },
+  "sourceHash": "sha256:582be8801b6f7674b8df7cb0eeee1976be5029ac202e33d9fada210f40428259",
+  "updatedAt": "2026-10-06T03:41:46.771Z"
+}
