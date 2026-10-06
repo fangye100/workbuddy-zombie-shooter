@@ -442,7 +442,9 @@ export class BindingDomain {
     // TOCTOU 防护（独立审核 P1-2 实测）：贴图解码的 await 会让出事件循环，并发的
     // set_joint 会渗进活引用 —— 所有会话输入在第一个 await 之前同步深拷贝快照
     const placed = JSON.parse(JSON.stringify(s.positions)) as JointPositions;
-    const cylLive = s.getWeightMode() === 'distance' ? null : s.getCylinders();
+    const weightMode = s.getWeightMode();
+    const volumetric = s.getVolumetricOptions();
+    const cylLive = weightMode === 'wrapper' ? s.getCylinders() : null;
     const cylinders = cylLive === null
       ? undefined
       : (JSON.parse(JSON.stringify(cylLive)) as SkinCylinderMap);
@@ -454,6 +456,8 @@ export class BindingDomain {
     // 与 exportBound 的 base 包逐字段同构（动画除外：BVH 重定向不在 MCP 面内）
     const res = await rigToTPoseWithImage({
       bindPose,
+      weightMode,
+      volumetric,
       name: outName,
       vertices: mesh.vertices,
       indices: mesh.indices,
@@ -524,6 +528,7 @@ export class BindingDomain {
         zeroWeightVerts: st.zeroWeightVerts,
         tipWeightSum: st.tipWeightSum,
         tipRefVerts: st.tipRefVerts,
+        volumetric: st.volumetric ?? null,
       },
     };
   }
@@ -624,7 +629,12 @@ export const TOOLS_TABLE = [
     inputSchema: {
       type: 'object',
       properties: {
-        weightMode: { type: 'string', enum: ['wrapper', 'distance'] },
+        weightMode: { type: 'string', enum: ['wrapper', 'distance', 'volumetric'] },
+        volumetric: { type: 'object', additionalProperties: false, properties: {
+          resolution: { type: 'integer', minimum: 16, maximum: 96 },
+          depth: { type: 'integer', minimum: 0, maximum: 2 },
+          tolerance: { type: 'number', minimum: 0.0001, maximum: 0.01 },
+        }, description: '体积扩散配置，未指定的字段保留当前值' },
         smoothWeights: { type: 'boolean' },
         smoothIters: { type: 'integer', description: '1..12' },
         smoothLambda: { type: 'number', description: '0..1' },
@@ -748,6 +758,7 @@ async function dispatchInner(
               },
           options: {
             weightMode: s.getWeightMode(),
+            volumetric: s.getVolumetricOptions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -853,13 +864,24 @@ async function dispatchInner(
 
     case 'set_options': {
       const wm = optStr(args, 'weightMode');
-      if (wm !== undefined && wm !== 'wrapper' && wm !== 'distance') {
-        throw new ToolError(`weightMode 只能是 wrapper / distance：${wm}`);
+      if (wm !== undefined && wm !== 'wrapper' && wm !== 'distance' && wm !== 'volumetric') {
+        throw new ToolError(`weightMode 只能是 wrapper / distance / volumetric：${wm}`);
       }
       // 批量设置走 session.applyOptions：多字段合并为一步历史（PR #10 评审），
       // 逐 setter 调用会各打一条快照、undo 一次只回退最后一个字段
       const batch: Parameters<BindingSession['applyOptions']>[0] = {};
       if (wm !== undefined) batch.weightMode = wm;
+      if (args.volumetric !== undefined) {
+        const value = args.volumetric;
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new ToolError('volumetric 必须为对象');
+        const vo = value as Record<string, unknown>, next = s.getVolumetricOptions();
+        for (const key of Object.keys(vo)) {
+          if (key !== 'resolution' && key !== 'depth' && key !== 'tolerance') throw new ToolError(`未知体积蒙皮参数：${key}`);
+          if (typeof vo[key] !== 'number') throw new ToolError(`volumetric.${key} 必须为数值`);
+          next[key] = vo[key];
+        }
+        batch.volumetric = next;
+      }
       const sw = optBool(args, 'smoothWeights');
       if (sw !== undefined) batch.smoothWeights = sw;
       const mw = optBool(args, 'mirrorWeights');
@@ -868,11 +890,12 @@ async function dispatchInner(
       if (si !== undefined) batch.smoothIters = si;
       const sl = optNum(args, 'smoothLambda');
       if (sl !== undefined) batch.smoothLambda = sl;
-      s.applyOptions(batch);
+      try { s.applyOptions(batch); } catch (error) { throw new ToolError(String(error)); }
       return {
         json: {
           applied: {
             weightMode: s.getWeightMode() satisfies WeightMode,
+            volumetric: s.getVolumetricOptions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -890,8 +913,9 @@ async function dispatchInner(
           weightMode: s.getWeightMode(),
           vertices: s.vertexCount(),
           unwrappedVerts: r.stats?.unwrappedVerts ?? null,
+          volumetric: r.volumetric ?? null,
           pipeline: '算法 → 镜像 → 平滑（与导出同序）',
-          note: r.stats === null ? 'distance 模式无 wrapper 统计' : undefined,
+          note: r.stats === null ? '此算法无 wrapper 统计；体积模式请查看 volumetric 诊断' : undefined,
         },
       };
     }

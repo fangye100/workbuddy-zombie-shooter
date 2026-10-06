@@ -43,6 +43,7 @@ mkdirSync(TMP, { recursive: true });
 for (const f of [
   'probe_tpose.glb', 'probe_tpose.glb.meta.json',
   'probe_source_rig.glb', 'probe_source_rig.glb.meta.json',
+  'probe_volumetric.glb', 'probe_volumetric.glb.meta.json',
   'texprobe.glb', 'texprobe_tpose.glb', 'texprobe_tpose.glb.meta.json',
   'texprobe_dist.glb', 'toc1.glb', 'toc2.glb', 'toc3.glb', 'par1.glb',
 ]) {
@@ -375,6 +376,22 @@ try {
   const opts = await toolJson('set_options', { smoothIters: 99, smoothLambda: 5 });
   check('set_options 钳制（99→12，5→1）', opts?.applied?.smoothIters === 12 && opts?.applied?.smoothLambda === 1);
   await toolJson('set_options', { smoothIters: 4, smoothLambda: 0.5 }); // 还原默认值
+  {
+    const before = (await toolJson('get_state'))?.options;
+    const applied = await toolJson('set_options', { weightMode: 'volumetric', volumetric: { resolution: 16, depth: 0, tolerance: .01 } });
+    check('volumetric 参数进入领域会话', applied?.applied?.volumetric?.resolution === 16 && applied?.applied?.weightMode === 'volumetric');
+    const skin = await toolJson('compute_skin');
+    check('MCP 真正运行体积扩散', skin?.volumetric?.algorithm === 'adaptive-volume-diffusion-v1' && skin?.volumetric?.cells > 0);
+    const exported = await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/probe_volumetric.glb', bindPose: 'source' });
+    check('MCP GLB 导出使用相同体积求解', exported?.stats?.volumetric?.cells === skin?.volumetric?.cells && exported?.stats?.zeroWeightVerts === 0);
+    const saved = await toolJson('get_editor_data');
+    check('体积配置可持久化', saved?.volumetric?.depth === 0 && saved?.weightMode === 'volumetric');
+    const bad = await tool('set_options', { weightMode: 'distance', volumetric: { resolution: 999 } }).then(()=>null,e=>String(e));
+    check('非法体积配置拒绝且不半写', bad?.includes('-32602') && (await toolJson('get_state'))?.options?.weightMode === 'volumetric');
+    await toolJson('undo');
+    const after = (await toolJson('get_state'))?.options;
+    check('体积配置和模式一步撤销', after?.weightMode === before?.weightMode && after?.volumetric?.resolution === before?.volumetric?.resolution);
+  }
 
   // ── set_options 多字段 = 一步历史（PR #10 评审回归） ──
   {

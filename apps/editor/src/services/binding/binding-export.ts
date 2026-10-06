@@ -50,6 +50,8 @@ import {
   type SkinCylinderMap,
 } from './skin-proxy';
 import { decomposeMatrixToTrs } from '@aether/scene';
+import { computeVolumetricWeights, type VolumetricOptions, type VolumetricStats } from './volumetric-skin';
+import type { WeightMode } from './binding-session';
 
 /** 引擎顶点布局：pos3 / normal3 / smoothNormal3 / uv2 / color4 */
 export const BINDING_VERTEX_FLOATS = 15;
@@ -83,6 +85,11 @@ export interface BindExportInput {
   placed: JointPositions;
   /** 默认 tpose；source 保留网格和当前绑定帧，动画需向该骨架重新 retarget。 */
   bindPose?: 'tpose' | 'source';
+  weightMode?: WeightMode;
+  volumetric?: VolumetricOptions;
+  /** Already-final weights from the same session snapshot (Worker preview/export parity). */
+  computedSkin?: SkinWeights;
+  volumetricStats?: VolumetricStats;
   falloff?: number;
   eps?: number;
   maxInfluences?: number;
@@ -137,6 +144,7 @@ export interface BindExportStats {
   animChannels: number;
   /** animations[] 里的片段名（没有动画时为空数组） */
   animClips: string[];
+  volumetric?: VolumetricStats;
 }
 
 export interface BindExportResult {
@@ -197,7 +205,14 @@ function runExport(
   // ② 在**当前姿态**骨架上算权重（此时骨架与模型真实肢体重合）
   const segs = boneSegments(placed);
   let skin: SkinWeights;
-  if (input.cylinders !== undefined) {
+  let volumetric = input.volumetricStats;
+  if (input.computedSkin !== undefined) {
+    skin = input.computedSkin;
+    if (skin.weights.length !== vertexCount * 4 || skin.joints.length !== vertexCount * 4) throw new Error('预计算蒙皮与网格顶点数不匹配');
+  } else if (input.weightMode === 'volumetric') {
+    const result = computeVolumetricWeights(vertices, VF, indices, placed, input.volumetric);
+    skin = result.skin; volumetric = result.volumetric;
+  } else if (input.weightMode !== 'distance' && input.cylinders !== undefined) {
     // Skin Wrapper 模式：权重由圆柱体包裹范围定义（被包顶点归属对应 joint）
     skin = computeCylinderWeights(
       vertices, VF, vertexCount, placed, input.cylinders,
@@ -211,14 +226,14 @@ function runExport(
   }
   // 镜像权重对**两套**算法都生效：它描述的是「产物要左右对称」的用户意图，
   // 只在圆柱体分支消费 = distance 模式下勾选框静默失效（2026-09-22 复审 N6）。
-  if (input.mirrorWeights === true) {
+  if (input.computedSkin === undefined && input.mirrorWeights === true) {
     skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
   }
 
   // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
   //    传 weld：位置重合但索引不同的顶点（split-normal 硬边）互为邻居，
   //    否则扩散在描边模型的硬边处断裂，裂缝两侧各跟各的骨。
-  if (smoothWeights) {
+  if (input.computedSkin === undefined && smoothWeights) {
     skin = smoothSkinWeights(skin, indices, vertexCount, smoothIters, smoothLambda, {
       positions: vertices,
       vertexFloats: VF,
@@ -234,6 +249,7 @@ function runExport(
     name, tposeVertices, indices, VF, vertexCount, skin, fit, imageBytes, mime, anim, input.bindPose === 'source',
   );
   const stats = buildStats(vertices, tposeVertices, VF, vertexCount, indices, fit, skin);
+  if (volumetric) stats.volumetric = volumetric;
   const animInfo = anim === null
     ? { animChannels: 0, animClips: [] as string[] }
     : countAnimChannels(anim);

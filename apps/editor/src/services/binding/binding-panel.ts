@@ -58,7 +58,9 @@ import { BindingSession } from './binding-session';
 import { BindingView3D } from './binding-view3d';
 
 export type { BindingEditorData, WeightMode } from './binding-session';
-import type { BindingEditorData, WeightMode } from './binding-session';
+import type { BindingEditorData, WeightMode, BindingSkinResult } from './binding-session';
+import { solveVolumeInWorker } from './volumetric-worker-client';
+import type { VolumetricOptions } from './volumetric-skin';
 
 /** 引擎 15-float 顶点布局里法线的偏移（pos3 / normal3 / …），预览重姿态时同步转法线 */
 const NORMAL_OFFSET = 3;
@@ -152,6 +154,8 @@ export interface BindingPanelState {
 }
 
 export class BindingPanel {
+  private volumeTask: { sig: string; abort: AbortController; promise: Promise<BindingSkinResult | null> } | null = null;
+  private volumeError: { sig: string; message: string } | null = null;
   private readonly rootEl: HTMLElement;
   private readonly hooks: BindingPanelHooks;
   /** 3D 正交视图用的 GPU 上下文；null = 无 WebGPU，正/侧视降级为纯 2D */
@@ -313,7 +317,14 @@ export class BindingPanel {
           <select class="bd-select" data-bd="weightmode" title="${t('Bind Skin 时真正生效的权重算法。包裹体：被 Skin Wrapper 圆柱体包住才归属该骨，边界较硬但可控，配合半径精细调整；距离衰减：按顶点到骨段距离衰减取 top-4，过渡自然、不用调半径，但对侧骨可能抢到少量权重')}">
             <option value="wrapper">${t('包裹体 Wrapper')}</option>
             <option value="distance">${t('距离衰减')}</option>
+            <option value="volumetric">${t('体积扩散 Volumetric')}</option>
           </select>
+          <span data-bd="volume-options" hidden>
+            <label>体素分辨率 <input class="bd-num" type="number" data-bd="volume-resolution" min="16" max="96" step="1" value="48"></label>
+            <label>细分深度 <input class="bd-num" type="number" data-bd="volume-depth" min="0" max="2" step="1" value="1"></label>
+            <label>精度 <select class="bd-select" data-bd="volume-tolerance"><option value="0.01">快速</option><option value="0.001" selected>均衡</option><option value="0.0001">高</option></select></label>
+            <button class="bd-btn" data-bd="volume-retry">重新计算</button>
+          </span>
           <button class="bd-btn accent" data-bd="apply" title="${t('用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose')}">Bind Skin</button>
           <button class="bd-btn" data-bd="export-anim" title="${t('把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB（需要先载入 BVH）')}" disabled>${t('导出动画 GLB')}</button>
           <button class="bd-btn danger" data-bd="detach" title="${t('移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑（有二次确认）')}">Detach Skin</button>
@@ -545,7 +556,21 @@ export class BindingPanel {
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]')!;
     wm.value = this.session.getWeightMode();
     wm.addEventListener('change', () => {
-      if (this.session.setWeightMode(wm.value)) this.invalidatePreview();
+      if (this.session.setWeightMode(wm.value)) { this.syncWeightModeSelect(); this.invalidatePreview(); }
+    });
+    for (const field of ['resolution', 'depth', 'tolerance'] as const) {
+      const input = this.rootEl.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-bd="volume-${field}"]`)!;
+      input.addEventListener('change', () => {
+        const options = this.session.getVolumetricOptions();
+        options[field] = Number(input.value);
+        try { if (this.session.applyOptions({ volumetric: options })) this.invalidatePreview(); }
+        catch (error) { this.volumeError = { sig: this.session.editSig() ?? '', message: String(error) }; }
+        this.syncWeightModeSelect(); this.refresh();
+      });
+    }
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="volume-retry"]')!.addEventListener('click', () => {
+      this.volumeTask?.abort.abort(); this.volumeTask = null;
+      this.volumeError = null; this.session.clearSkinCache(); this.requestSkin(); this.refresh();
     });
 
     // 权重平滑开关（它进导出指纹：改了要立刻把徽标刷成「● 未导出」）
@@ -727,6 +752,7 @@ export class BindingPanel {
   }
 
   clear(): void {
+    this.volumeTask?.abort.abort(); this.volumeTask = null; this.volumeError = null;
     this.session.clear();
     this.srcVerts = null;
     this.meshVerts = null;
@@ -841,8 +867,40 @@ export class BindingPanel {
    * 注意姿势测试骨架 `poseTest` **不在**指纹里（它是显示层状态，不是权重输入）。
    */
   private previewSkin(): SkinWeights | null {
-    return this.session.computeSkin()?.skin ?? null;
+    return this.requestSkin()?.skin ?? null;
   }
+
+  private requestSkin(): BindingSkinResult | null {
+    if (this.session.getWeightMode() !== 'volumetric') {
+      this.volumeTask?.abort.abort(); this.volumeTask = null;
+      return this.session.computeSkin();
+    }
+    const cached = this.session.getCachedSkin(); if (cached) return cached;
+    const sig = this.session.editSig(); if (!sig || this.volumeError?.sig === sig) return null;
+    if (this.volumeTask?.sig === sig) return null;
+    this.volumeTask?.abort.abort();
+    const abort = new AbortController();
+    const promise = this.session.computeSkinAsync(input => solveVolumeInWorker(input, abort.signal));
+    const task = { sig, abort, promise }; this.volumeTask = task;
+    void promise.then(() => {
+      if (this.volumeTask !== task) return;
+      this.volumeTask = null; this.volumeError = null; this.invalidatePreview();
+    }, error => {
+      if (this.volumeTask !== task) return;
+      this.volumeTask = null;
+      if (this.session.editSig() === sig) this.volumeError = { sig, message: String(error) };
+      this.refresh();
+    });
+    return null;
+  }
+
+  /** Bind Skin waits for the same Worker result used by preview and diagnostics. */
+  async prepareSkin(): Promise<BindingSkinResult | null> {
+    const result = this.requestSkin(); if (result) return result;
+    if (this.volumeTask) return this.volumeTask.promise;
+    throw new Error(this.volumeError?.message ?? '没有可用于绑定的网格');
+  }
+  getVolumetricOptions(): VolumetricOptions { return this.session.getVolumetricOptions(); }
 
   /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose，bind=冻结的 Bind Pose，pose=测试骨架快照 */
   private overlayPositions(): JointPositions {
@@ -1359,6 +1417,13 @@ export class BindingPanel {
   private syncWeightModeSelect(): void {
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]');
     if (wm !== null) wm.value = this.session.getWeightMode();
+    const volume = this.rootEl.querySelector<HTMLElement>('[data-bd="volume-options"]');
+    if (volume) volume.hidden = this.session.getWeightMode() !== 'volumetric';
+    const options = this.session.getVolumetricOptions();
+    for (const field of ['resolution', 'depth', 'tolerance'] as const) {
+      const input = this.rootEl.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-bd="volume-${field}"]`);
+      if (input) input.value = String(options[field]);
+    }
   }
 
   /** 把导出选项（平滑 / 镜像权重 / 平滑参数）同步回控件（换模型 / 清空 / 回填后调用） */
@@ -1721,10 +1786,14 @@ export class BindingPanel {
       el.textContent = '';
       return;
     }
-    const computed = this.session.computeSkin();
+    if (this.volumeError?.sig === this.session.editSig()) {
+      el.hidden = false; el.textContent = this.volumeError.message; return;
+    }
+    const computed = this.requestSkin();
     if (computed === null) {
-      el.hidden = true;
-      el.textContent = '';
+      el.hidden = false;
+      el.textContent = this.volumeError?.sig === this.session.editSig()
+        ? this.volumeError.message : '体积蒙皮正在计算…（可继续编辑，旧计算会取消）';
       return;
     }
     const n = this.srcVerts.length / this.vertexFloats;
@@ -1736,7 +1805,13 @@ export class BindingPanel {
     let html =
       `影响骨数 <b>${d.usedBones}</b> · 零权重 ${warn(d.zeroWeightVerts)}${d.zeroWeightVerts}</b>` +
       ` · 满4影响 <b>${d.fullInfluenceVerts}</b>${unwrap}` +
-      ` · <span class="bd-dim">撤销 ${this.session.historyDepth().undo}</span>`;
+          ` · <span class="bd-dim">撤销 ${this.session.historyDepth().undo}</span>`;
+    if (computed.volumetric) {
+      const v = computed.volumetric;
+      html += `<br>体素 ${v.cells} · 局部细分 ${v.refinedCells} · ${(v.elapsedMs / 1000).toFixed(2)}s` +
+        ` · ${v.converged ? '已收敛' : '⚠ 未收敛'} · 外部骨骼 ${v.outsideBones.length}` +
+        ` · 无种子部件 ${v.unseededComponents} · 兜底顶点 ${v.fallbackVertices}`;
+    }
     const selBone = this.editMode === 'skin' ? this.selectedCyl : this.selected;
     if (selBone !== null) {
       const pb = d.perBone.find((x) => x.bone === selBone);

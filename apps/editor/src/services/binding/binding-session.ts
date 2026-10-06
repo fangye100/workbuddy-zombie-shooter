@@ -28,7 +28,7 @@
  *    浅合并不碰别的键，gen-asset-meta 的 mergeInto 不碰这个键。
  *
  * 权重管线的顺序约定（与 `binding-export.runExport` 严格同序，旧评审 P0-3）：
- *   **算法（wrapper / distance）→ 镜像 → 平滑**。
+ *   **算法（wrapper / distance / volumetric）→ 镜像 → 平滑**。
  *   `computeSkin()` 是预览 / 热力图 / 诊断条的唯一权重来源，改顺序必须两边一起改。
  */
 
@@ -59,13 +59,18 @@ import {
   type SkinCylinderMap,
   type CylSegment,
 } from './skin-proxy';
+import {
+  computeVolumetricWeights, DEFAULT_VOLUMETRIC_OPTIONS, validateVolumetricOptions,
+  type VolumetricOptions, type VolumetricResult, type VolumetricStats,
+} from './volumetric-skin';
 
 /**
  * 权重算法（导出时真正生效的分支，见 `binding-export.runExport`）：
  *  - `wrapper`  Skin Wrapper 包裹体：被圆柱体包住的顶点归属该 joint（二值，过渡窄）
  *  - `distance` 胶囊距离衰减：`1/(d+eps)^falloff` 取 top-4（过渡自然，但会跨侧抢权重）
+ *  - `volumetric` 自适应体素实体内扩散，浏览器经 Worker 求解。
  */
-export type WeightMode = 'wrapper' | 'distance';
+export type WeightMode = 'wrapper' | 'distance' | 'volumetric';
 
 /**
  * 编辑器侧持久化的绑定编辑数据 —— 存进 `.meta.json` 的 `bindingEditor` 槽位。
@@ -84,6 +89,7 @@ export interface BindingEditorData {
    * 存它是为了让「这个资产是用哪套算法绑的」可复现，而不是靠改代码时的默认值。
    */
   weightMode?: WeightMode;
+  volumetric?: VolumetricOptions;
   /** 导出时是否做权重热扩散平滑（可选，老文件缺省 = true，与面板默认一致） */
   smoothWeights?: boolean;
   /** 平滑迭代次数（可选，老文件缺省 = 面板默认 4，旧评审 §2.4：2 次扩散半径不够） */
@@ -108,6 +114,7 @@ export interface BindingSkinResult {
   skin: SkinWeights;
   /** wrapper 模式的统计；distance 模式为 null */
   stats: CylinderWeightStats | null;
+  volumetric?: VolumetricStats;
 }
 
 /** Undo/Redo 栈深（诊断条与冒烟断言用） */
@@ -139,6 +146,7 @@ export class BindingSession {
   private cylinders: SkinCylinderMap | null = null;
   /** 权重算法（默认 wrapper，与历史行为一致，避免静默改变既有产物） */
   private weightMode: WeightMode = 'wrapper';
+  private volumetric: VolumetricOptions = { ...DEFAULT_VOLUMETRIC_OPTIONS };
   private smoothWeights = true;
   /** 旧评审 §2.4：默认 2 次只能扩散 ~2 环顶点，15k 面角色关节处仍有折角；默认 4 次 */
   private smoothIters = 4;
@@ -198,6 +206,7 @@ export class BindingSession {
     this.smoothIters = 4;
     this.smoothLambda = 0.5;
     this.weightMode = 'wrapper';
+    this.volumetric = { ...DEFAULT_VOLUMETRIC_OPTIONS };
     this.skinCache = null;
     this.undoStack = [];
     this.redoStack = [];
@@ -220,6 +229,7 @@ export class BindingSession {
     this.smoothIters = 4;
     this.smoothLambda = 0.5;
     this.weightMode = 'wrapper';
+    this.volumetric = { ...DEFAULT_VOLUMETRIC_OPTIONS };
     this.skinCache = null;
     this.undoStack = [];
     this.redoStack = [];
@@ -265,6 +275,8 @@ export class BindingSession {
   getWeightMode(): WeightMode {
     return this.weightMode;
   }
+
+  getVolumetricOptions(): VolumetricOptions { return { ...this.volumetric }; }
 
   getSmoothWeights(): boolean {
     return this.smoothWeights;
@@ -359,6 +371,7 @@ export class BindingSession {
       positions: this._positions,
       cylinders: this.cylinders,
       weightMode: this.weightMode,
+      volumetric: this.volumetric,
       smoothWeights: this.smoothWeights,
       smoothIters: this.smoothIters,
       smoothLambda: this.smoothLambda,
@@ -371,6 +384,7 @@ export class BindingSession {
       positions: JointPositions;
       cylinders: SkinCylinderMap | null;
       weightMode: WeightMode;
+      volumetric: VolumetricOptions;
       smoothWeights: boolean;
       smoothIters: number;
       smoothLambda: number;
@@ -379,6 +393,7 @@ export class BindingSession {
     this._positions = s.positions;
     this.cylinders = s.cylinders;
     this.weightMode = s.weightMode;
+    this.volumetric = { ...s.volumetric };
     this.smoothWeights = s.smoothWeights;
     this.smoothIters = s.smoothIters;
     this.smoothLambda = s.smoothLambda;
@@ -563,12 +578,12 @@ export class BindingSession {
   // ─────────────────────────── 导出选项（权重算法 / 平滑 / 镜像） ───────────────────────────
 
   /**
-   * 切权重算法。只接受 'wrapper' / 'distance' 字面量，其余拒绝（保持现值）。
+   * 切权重算法。只接受已实现的字面量，其余拒绝（保持现值）。
    * 值没变化时不打历史、不动缓存。
    * @returns 是否真的改了
    */
   setWeightMode(mode: string): boolean {
-    if (mode !== 'wrapper' && mode !== 'distance') return false;
+    if (mode !== 'wrapper' && mode !== 'distance' && mode !== 'volumetric') return false;
     if (mode === this.weightMode) return false;
     this.beginEdit('settings');
     this.weightMode = mode;
@@ -631,13 +646,16 @@ export class BindingSession {
    */
   applyOptions(o: {
     weightMode?: string;
+    volumetric?: VolumetricOptions;
     smoothWeights?: boolean;
     smoothIters?: number;
     smoothLambda?: number;
     mirrorWeights?: boolean;
   }): boolean {
     const wm: WeightMode =
-      o.weightMode === 'wrapper' || o.weightMode === 'distance' ? o.weightMode : this.weightMode;
+      o.weightMode === 'wrapper' || o.weightMode === 'distance' || o.weightMode === 'volumetric' ? o.weightMode : this.weightMode;
+    const vo = o.volumetric ?? this.volumetric;
+    validateVolumetricOptions(vo);
     const sw = o.smoothWeights ?? this.smoothWeights;
     const mw = o.mirrorWeights ?? this.mirrorWeights;
     const si =
@@ -650,12 +668,13 @@ export class BindingSession {
         : this.smoothLambda;
     if (
       wm === this.weightMode && sw === this.smoothWeights && mw === this.mirrorWeights &&
-      si === this.smoothIters && sl === this.smoothLambda
+      si === this.smoothIters && sl === this.smoothLambda && JSON.stringify(vo) === JSON.stringify(this.volumetric)
     ) {
       return false;
     }
     this.beginEdit('settings');
     this.weightMode = wm;
+    this.volumetric = { ...vo };
     this.smoothWeights = sw;
     this.mirrorWeights = mw;
     this.smoothIters = si;
@@ -699,6 +718,7 @@ export class BindingSession {
       }
     }
     parts.push(`wm:${this.weightMode}`);
+    parts.push(`volume:v1:${this.volumetric.resolution}/${this.volumetric.depth}/${this.volumetric.tolerance}`);
     parts.push(`mw:${this.mirrorWeights ? 1 : 0}`);
     parts.push(`sm:${this.smoothWeights ? 1 : 0}`);
     // 平滑迭代 / λ 同样改变 Bind 产物（旧评审 §2.4 参数外置后必须进指纹，
@@ -726,7 +746,11 @@ export class BindingSession {
     const n = this.srcVerts.length / this.vertexFloats;
     let skin: SkinWeights;
     let stats: CylinderWeightStats | null = null;
-    if (this.weightMode === 'wrapper' && this.cylinders !== null) {
+    let volumetric: VolumetricStats | undefined;
+    if (this.weightMode === 'volumetric') {
+      const result = computeVolumetricWeights(this.srcVerts, this.vertexFloats, this.meshIndices, this._positions, this.volumetric);
+      skin = result.skin; volumetric = result.volumetric;
+    } else if (this.weightMode === 'wrapper' && this.cylinders !== null) {
       const st: CylinderWeightStats = { unwrappedVerts: 0 };
       skin = computeCylinderWeights(
         this.srcVerts, this.vertexFloats, n, this._positions, this.cylinders, { stats: st },
@@ -746,7 +770,35 @@ export class BindingSession {
         vertexFloats: this.vertexFloats,
       });
     }
-    this.skinCache = { sig, result: { skin, stats } };
+    this.skinCache = { sig, result: { skin, stats, ...(volumetric ? { volumetric } : {}) } };
+    return this.skinCache.result;
+  }
+
+  /** Browser preview uses an injected Worker; headless callers retain the synchronous API.
+   * Late results cannot overwrite a newer edit, replacement model, or Undo/Redo state.
+   */
+  getCachedSkin(): BindingSkinResult | null {
+    return this.skinCache !== null && this.skinCache.sig === this.editSig() ? this.skinCache.result : null;
+  }
+  /** Explicit retry invalidates derived data without changing saved settings or history. */
+  clearSkinCache(): void { this.skinCache = null; }
+
+  async computeSkinAsync(solve: (input: {
+    vertices: Float32Array<ArrayBuffer>; indices: Uint32Array<ArrayBuffer>; stride: number;
+    placed: JointPositions; options: VolumetricOptions;
+  }) => Promise<VolumetricResult>): Promise<BindingSkinResult | null> {
+    if (this.weightMode !== 'volumetric') return this.computeSkin();
+    const cached = this.getCachedSkin(); if (cached) return cached;
+    const mesh = this.getMesh(), sig = this.editSig(); if (!mesh || !sig) return null;
+    const mirror = this.mirrorWeights, smooth = this.smoothWeights, iters = this.smoothIters, lambda = this.smoothLambda;
+    const raw = await solve({ vertices: mesh.vertices, indices: mesh.indices, stride: mesh.vertexFloats,
+      placed: this.clonePositions(this._positions), options: { ...this.volumetric } });
+    if (this.srcVerts !== mesh.vertices || this.editSig() !== sig) throw new Error('蒙皮输入已变更，请重新计算');
+    const n = mesh.vertices.length / mesh.vertexFloats;
+    let skin = raw.skin;
+    if (mirror) skin = mirrorSkinWeights(skin, mesh.vertexFloats, n, mesh.vertices);
+    if (smooth) skin = smoothSkinWeights(skin, mesh.indices, n, iters, lambda, { positions: mesh.vertices, vertexFloats: mesh.vertexFloats });
+    this.skinCache = { sig, result: { skin, stats: null, volumetric: raw.volumetric } };
     return this.skinCache.result;
   }
 
@@ -809,6 +861,7 @@ export class BindingSession {
         ? null
         : (JSON.parse(JSON.stringify(this.cylinders)) as SkinCylinderMap),
       weightMode: this.weightMode,
+      volumetric: { ...this.volumetric },
       smoothWeights: this.smoothWeights,
       smoothIters: this.smoothIters,
       smoothLambda: this.smoothLambda,
@@ -831,12 +884,18 @@ export class BindingSession {
    */
   hydrate(saved: unknown): void {
     if (saved === null || typeof saved !== 'object') return;
+    const incoming = saved as { volumetric?: unknown };
+    if (incoming.volumetric !== undefined) {
+      if (!incoming.volumetric || typeof incoming.volumetric !== 'object') throw new Error('体积蒙皮配置必须为对象');
+      validateVolumetricOptions(incoming.volumetric as VolumetricOptions);
+    }
     // 回填是一次性大改 → 进历史（可撤销回到回填前）
     this.beginEdit('hydrate');
     const s = saved as {
       positions?: unknown;
       cylinders?: unknown;
       weightMode?: unknown;
+      volumetric?: unknown;
       smoothWeights?: unknown;
       smoothIters?: unknown;
       smoothLambda?: unknown;
@@ -844,8 +903,14 @@ export class BindingSession {
     };
 
     // 权重算法：只接受两个字面量，其余（老文件缺字段 / 脏数据）保持默认 wrapper
-    if (s.weightMode === 'distance' || s.weightMode === 'wrapper') {
+    if (s.weightMode === 'distance' || s.weightMode === 'wrapper' || s.weightMode === 'volumetric') {
       this.weightMode = s.weightMode;
+    }
+    if (s.volumetric !== undefined) {
+      if (!s.volumetric || typeof s.volumetric !== 'object') throw new Error('体积蒙皮配置必须为对象');
+      const v = s.volumetric as VolumetricOptions;
+      validateVolumetricOptions(v);
+      this.volumetric = { resolution: v.resolution, depth: v.depth, tolerance: v.tolerance };
     }
 
     // 导出选项：只接受真布尔，老文件缺字段保持默认（smooth=true / mirror=false）

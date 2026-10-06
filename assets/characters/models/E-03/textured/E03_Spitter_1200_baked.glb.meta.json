@@ -381,11 +381,16 @@
         "manual": true
       }
     },
-    "weightMode": "wrapper",
+    "weightMode": "volumetric",
+    "volumetric": {
+      "resolution": 48,
+      "depth": 1,
+      "tolerance": 0.001
+    },
     "smoothWeights": true,
     "smoothIters": 6,
     "smoothLambda": 0.5,
     "mirrorWeights": false,
-    "savedAt": "2026-10-06T10:04:09.378Z"
+    "savedAt": "2026-10-06T10:55:32.698Z"
   }
 }

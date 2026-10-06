@@ -1,5 +1,12 @@
 # tools/mcp-binding — 绑定领域 MCP server（WU-2 起）
 
+Volumetric binding is available through `set_options` with
+`weightMode: "volumetric"` and `volumetric: { resolution: 48, depth: 1, tolerance: 0.001 }`.
+`compute_skin` returns volume/seed/convergence diagnostics; `save` preserves the
+configuration and `export_glb` uses the same solver. See the
+[volumetric skinning guide](../../docs/rigging/volumetric-skinning.md) for CPU Worker
+behavior, limits and visual acceptance. Existing wrapper/distance defaults remain.
+
 把 `BindingSession`（绑定编辑的唯一领域状态 owner）暴露成 MCP 工具，
 让 Agent 能**看见**自己的绑定操作结果（视觉反馈闭环），并把调好的绑定
 **导出成干净 T-pose 的 rigged GLB**（WU-3 起，与编辑器 exportBound 同管线）。

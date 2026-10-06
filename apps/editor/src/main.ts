@@ -2580,13 +2580,20 @@ async function boot(): Promise<void> {
     const mesh = binding.getMesh();
     if (mesh === null) return null;
     try {
+      const weightMode = binding.getWeightMode();
+      const inputSig = binding.editSignature();
+      const computed = weightMode === 'volumetric' ? await binding.prepareSkin() : null;
+      if (s !== bindingSession || mesh.vertices !== binding.getMesh()?.vertices || inputSig !== binding.editSignature()) throw new Error('导出期间角色或蒙皮输入已变更');
       const base = {
         name: s.name,
         vertices: mesh.vertices,
         indices: mesh.indices,
         image: s.image,
-        placed: binding.getState().positions,
+        placed: structuredClone(binding.getState().positions),
         smoothWeights,
+        weightMode,
+        volumetric: binding.getVolumetricOptions(),
+        ...(computed ? { computedSkin: computed.skin, ...(computed.volumetric ? { volumetricStats: computed.volumetric } : {}) } : {}),
         // 平滑迭代 / λ 由面板外置（旧评审 §2.4，进 .meta.json 可复现）；
         // 面板未开（如顶部菜单直接导出）时退回 runExport 默认值
         smoothIters: binding?.getSmoothIters() ?? 2,
@@ -2594,15 +2601,14 @@ async function boot(): Promise<void> {
         // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重。
         // 权重算法由面板显式选择（默认 wrapper，保持历史行为）；选「距离衰减」时
         // 必须传 undefined，否则 runExport 会一直走圆柱体分支（cylinders 载入即建）。
-        cylinders: binding?.getWeightMode() === 'distance'
-          ? undefined
-          : (binding?.getCylinders() ?? undefined),
+        cylinders: weightMode === 'wrapper' ? (structuredClone(binding.getCylinders()) ?? undefined) : undefined,
         mirrorWeights: binding?.getMirrorWeights() ?? false,
       };
       // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
       const res = await rigToTPoseWithImage(
         anim === null ? base : { ...base, animation: anim },
       );
+      if (s !== bindingSession || inputSig !== binding.editSignature()) throw new Error('导出期间蒙皮输入已变更');
       const file = `${s.name}${suffix}.glb`;
       if (download) {
         downloadBlob(file, new Blob([res.glb], { type: 'model/gltf-binary' }));
