@@ -63,6 +63,12 @@
       "path": "assets/scenes/sandbox/p0-art-gallery.scene.json",
       "name": "P0 · LOD 与占位资产验收",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+      "id": "sc_shared_motion_runtime",
+      "name": "Shared Motion · Runtime Retarget",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -15,23 +15,24 @@
  *   Play 允许重试一次瞬时故障（网络抖动不该让角色整个页面会话都变胶囊，
  *   PR #18 review 抓的语义错位））。
  * - 每次成功注册新角色后调用方应 `buildPalette()` → `core.setDynamicPalette()`。
- * - Stop 时 core 侧 `releaseDynamicResources()` 释放 GPU buffer；本库的 CPU 数据
- *   （网格 + 烘焙帧）跨 Play 缓存复用，重新上传即可。
+ * - Stop releases GPU resources. Shared-motion Play re-reads rig/sidecar data;
+ *   target-local solved clips remain reusable in the content-keyed motion service.
  *
  * ## 降级（flags bit0 = 0 的胶囊路径）
  *
- * 任何一步失败——角色没有「+动画」档（B-02 从未绑骨）、fetch/解析失败、
- * 关节数与 shader 常量不符——都只 console.warn + 不注册，RuntimeBridge 继续
+ * 任何一步失败——角色无绑定骨架、fetch/解析失败、共享动作配置损坏——
+ * 都产出 diagnostics + 不注册，RuntimeBridge 继续
  * 画胶囊。一个缺资产不该让 Play 崩，也不该让其余角色陪葬（AGENTS.md §2.5 同精神）。
  */
 
 import {
   parseGlb,
   findCharacterLodPath,
-  findAnimatedCharacterIds,
+  findRiggedCharacterIds,
   type MeshData,
 } from '@aether/scene';
 import { fileUrl } from '../asset-util';
+import type { SharedMotionRuntime, ResolvedMotion } from './shared-motion-runtime';
 import {
   bakePosePalette,
   bindPoseIndex,
@@ -41,11 +42,10 @@ import {
   type BakeProfile,
 } from '@aether/render';
 
-/** 调色板每个 pose 的关节数（与 dynamic.wgsl 的 PALETTE_JOINT_COUNT 同源，见其注释） */
-export const PALETTE_JOINT_COUNT = 23;
-
 /** 一个已装配好的真角色（RuntimeBridge 消费，字段全部是纯数据） */
 export interface ActorMesh {
+  /** Shared source results and diagnostics, generated for this target at load time. */
+  motion?: ResolvedMotion;
   /** Decoded CPU texture cache; GPU copies belong to RendererCore and die at Stop. */
   albedo?: ImageBitmap | null;
   characterId: string;
@@ -57,7 +57,7 @@ export interface ActorMesh {
   /** 4 关节下标 + 4 权重 / 顶点（SKIN_LAYOUT 消费；类型对齐 MeshData 的宽标注） */
   joints: Uint16Array;
   weights: Float32Array;
-  /** 该角色在全局调色板里的起始 pose（实例 [7]） */
+  /** Global matrix offset (instance [7]); pose stride is this actor's jointCount. */
   paletteBase: number;
   /** bind pose 相对 paletteBase 的下标（M2 静止姿态；M3 换 clip 帧时同样取相对量） */
   restPose: number;
@@ -98,14 +98,14 @@ export function palettePoseCount(palette: BakedPalette): number {
 
 /** `assemblePalettes` 的输出：每角色的全局起始 pose + 拼接后的总调色板 */
 export interface PaletteAssembly {
-  /** 与输入等长：角色 i 的全局起始 pose = 前面角色的 pose 数之和（按输入顺序累加） */
+  /** Global matrix offsets, allowing different joint counts in the same GPU buffer. */
   readonly bases: readonly number[];
   /** 按输入顺序拼接的总调色板；空输入 = null（无角色时没有可上传的数据） */
   readonly data: Float32Array<ArrayBuffer> | null;
 }
 
 /**
- * 装配数学（纯函数）：按**输入序**给每个角色分配全局起始 pose，并把各角色的
+ * 装配数学（纯函数）：按**输入序**给每个角色分配全局起始矩阵，并把各角色的
  * 烘焙帧拼成一块总调色板。输入序由调用方保证 —— ActorLibrary 传 manifest
  * 规范序（rankOrderEntries，PR #19 FR-B），测试直接传数组。
  *
@@ -114,9 +114,9 @@ export interface PaletteAssembly {
  *（dynamic-skin-probe.mjs）复算的是同一份不变量（第三道复审 C5 防线）。
  *
  * 不变量：
- * - `bases[i]` = 前面角色 pose 数之和（**pose 单位**，不是 float 单位）；
+ * - `bases[i]` = preceding matrix count (not float count or pose count);
  * - `data` = 各角色 `palette.data` 顺序拼接；
- * - 角色 i 的全局 bind pose 下标 = `bases[i] + bindPoseIndex(palette_i)`，
+ * - global bind matrix = bases[i] + bindPoseIndex(palette_i) * palette_i.jointCount,
  *   即该角色块的**最后一 pose**。`bindPoseIndex` 返回的是角色 palette 内的
  *   **局部**下标，绝不能再减 base —— 第二个角色起会算出负数 → u32 巨数 →
  *   shader 越界读全零矩阵（PR #18 review 抓的 P1）。
@@ -127,7 +127,7 @@ export function assemblePalettes(palettes: readonly BakedPalette[]): PaletteAsse
   let totalFloats = 0;
   for (const p of palettes) {
     bases.push(next);
-    next += palettePoseCount(p);
+    next += p.data.length / 16;
     totalFloats += p.data.length;
   }
   if (palettes.length === 0) return { bases, data: null };
@@ -167,6 +167,8 @@ export function rankOrderEntries<T extends { characterId: string }>(
 }
 
 export class ActorLibrary {
+  private sharedMotions: SharedMotionRuntime | null = null;
+  setSharedMotions(motions: SharedMotionRuntime): void { this.sharedMotions = motions; }
   /** asset-manifest.json 的原始 JSON（可后补，见 setManifest） */
   private manifestJson: unknown;
   /** characterId → manifest「+动画」清单序号（规范装配序；setManifest 时派生） */
@@ -175,6 +177,8 @@ export class ActorLibrary {
   private readonly entries = new Map<string, ActorMesh>();
   /** 本轮已失败的角色（不重试；clear() 后重新开始） */
   private readonly failed = new Set<string>();
+  private readonly errors = new Map<string, string>();
+  get diagnostics(): string[] { return [...this.errors].map(([id, message]) => `${id}: ${message}`); }
   private cacheGeneration = 0;
   private readonly fetcher: (path: string) => Promise<ArrayBuffer>;
   /** 烘焙档位（P4 M4）：采样率与片段数上限，来自项目 render.targetTier */
@@ -235,6 +239,8 @@ export class ActorLibrary {
   }
 
   /** 已装配角色数（探针 / HUD 用） */
+  get assembledIds(): string[] { return this.orderedEntries.map(a => a.characterId); }
+
   get size(): number {
     return this.entries.size;
   }
@@ -255,7 +261,7 @@ export class ActorLibrary {
     const ids =
       this.manifestJson === null || this.manifestJson === undefined
         ? []
-        : findAnimatedCharacterIds(this.manifestJson);
+        : findRiggedCharacterIds(this.manifestJson);
     const map = new Map<string, number>();
     for (let i = 0; i < ids.length; i++) map.set(ids[i]!, i);
     this.rank = map;
@@ -273,15 +279,24 @@ export class ActorLibrary {
     if (this.entries.has(characterId) || this.failed.has(characterId)) return false;
     if (this.manifestJson === null || this.manifestJson === undefined) return false;
 
-    const path = findCharacterLodPath(this.manifestJson, characterId, ANIMATED_LOD_LABEL);
-    if (path === null) {
+    let path = findCharacterLodPath(this.manifestJson, characterId, ANIMATED_LOD_LABEL);
+    const rigPath = this.sharedMotions ? findCharacterLodPath(this.manifestJson, characterId, '+骨骼') : null;
+    if (path === null && rigPath === null) {
       // B-02 等从未绑骨的角色走这里——「没档」是数据事实，降级到 warn 即可
       console.warn(`[actors] ${characterId} 无「${ANIMATED_LOD_LABEL}」LOD 档，退回胶囊`);
+      this.errors.set(characterId, '缺少带骨架的角色资产，显示胶囊代理');
       this.failed.add(characterId);
       return false;
     }
 
     try {
+      // Rig-only assets with a configured library are authoritative. A broken binding
+      // is reported rather than silently falling back to stale embedded animations.
+      let meta = rigPath ? await this.sharedMotions!.assetMeta(rigPath) : null;
+      if (meta?.sharedMotion) path = rigPath;
+      else meta = path && this.sharedMotions ? await this.sharedMotions.assetMeta(path) : null;
+      if (!path) throw new Error('Rig-only GLB requires a shared motion binding');
+      if (generation !== this.cacheGeneration) return false;
       const buf = await this.fetcher(path);
       if (generation !== this.cacheGeneration) return false;
       // targetHeight = null：不做身高规整。碰撞/选中的真源是 stats 的胶囊尺寸，
@@ -298,13 +313,19 @@ export class ActorLibrary {
       if (mesh.joints.length < vcount * 4 || mesh.weights.length < vcount * 4) {
         throw new Error(`蒙皮数据不足（joints ${mesh.joints.length} / weights ${mesh.weights.length} < ${vcount * 4}）`);
       }
-      if (sk.joints.length + 1 !== PALETTE_JOINT_COUNT) {
-        throw new Error(`关节数 ${sk.joints.length + 1} ≠ shader 常量 ${PALETTE_JOINT_COUNT}（换骨架要改三处）`);
+      let motion: ResolvedMotion | undefined;
+      let animations = glb.animations;
+      if (this.sharedMotions) {
+        if (meta?.sharedMotion) {
+          motion = await this.sharedMotions.resolve(sk, meta.sharedMotion, meta);
+          animations = motion.clips;
+        }
       }
-      if (glb.animations.length === 0) throw new Error('GLB 无动画片段');
+      if (generation !== this.cacheGeneration) return false;
+      if (animations.length === 0) throw new Error('GLB 无动画片段，且未配置共享动作库');
 
       // P4 M4：按档位裁剪片段 + 降采样（mobile 档省显存/CPU 的关键一步）
-      const bakeClips = [...limitClips(glb.animations, this.bake.maxClips)];
+      const bakeClips = [...limitClips(animations, this.bake.maxClips)];
       const palette = bakePosePalette(sk, bakeClips, { fps: this.bake.fps });
       // 片段元数据（M3）：合并 BakedPalette.clips 与 clipBasePose，Bridge 选片用
       const clips: ActorClipMeta[] = palette.clips.map((c, i) => ({
@@ -325,6 +346,7 @@ export class ActorLibrary {
       }
       if (generation !== this.cacheGeneration) { albedo?.close(); return false; }
       this.entries.set(characterId, {
+        ...(motion ? { motion } : {}),
         albedo,
         characterId,
         meshId: `actor:${characterId}`,
@@ -334,7 +356,7 @@ export class ActorLibrary {
         weights: mesh.weights,
         paletteBase: 0,
         // 🔴 bindPoseIndex 返回的是**本角色 palette 内**的局部下标（角色自身
-        // pose 总数-1），不是全局——shader 端「全局 = paletteBase + 相对量」，
+        // pose 总数-1），不是全局——shader 端 matrix = base + pose * jointCount，
         // 所以这里直接存局部值，绝不能再减 base（第二个角色起会算出负值 →
         // u32 巨数 → 越界读全零矩阵，PR #18 review 抓的正 bug）
         restPose: bindPoseIndex(palette),
@@ -347,6 +369,7 @@ export class ActorLibrary {
     } catch (e) {
       if (generation !== this.cacheGeneration) return false;
       console.warn(`[actors] ${characterId} 装配失败（${path}），退回胶囊：`, e);
+      this.errors.set(characterId, String(e));
       this.failed.add(characterId);
       return false;
     }
@@ -380,7 +403,11 @@ export class ActorLibrary {
    */
   resetFailures(): void {
     this.failed.clear();
+    this.errors.clear();
   }
+
+  /** New Play re-reads authored rig/binding data. Solved motion caches remain content-keyed. */
+  beginPlay(): void { if (this.sharedMotions) this.clear(); else this.resetFailures(); }
 
   /**
    * 单角色清除失败名单（PR #19 review FR-A）：main 的预载循环跨 Stop 边界后，
@@ -390,6 +417,7 @@ export class ActorLibrary {
    */
   resetFailure(characterId: string): void {
     this.failed.delete(characterId);
+    this.errors.delete(characterId);
   }
 
   /** 清空装配（编辑器卸载 / 换项目时；Play 间复用不要调） */
@@ -398,6 +426,7 @@ export class ActorLibrary {
     for (const actor of this.entries.values()) actor.albedo?.close();
     this.entries.clear();
     this.failed.clear();
+    this.errors.clear();
     this.orderedEntries = [];
   }
 }

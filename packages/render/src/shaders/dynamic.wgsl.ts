@@ -29,13 +29,7 @@ import { COMMON_WGSL } from './common.wgsl';
 export const DYNAMIC_WGSL = /* wgsl */ `
 ${COMMON_WGSL}
 
-/**
- * 调色板每个 pose 的关节矩阵数 = 22 根蒙皮骨 + 末尾恒等关节（skin.ts 约定）。
- * 与 _tools/humanik_skeleton.json / pose-palette.ts 的 jointCount 同源；
- * 将来换骨架要同步改三处（ADR 索引对齐铁律）。装配侧加载时不符的角色
- * 一律退回胶囊（flags bit0 = 0），不进调色板。
- */
-const PALETTE_JOINT_COUNT = 23u;
+// Per-instance anim.w carries the palette joint stride (including the identity joint).
 
 struct Frame {
   viewProj : mat4x4f,
@@ -73,9 +67,9 @@ struct Toon {
  */
 struct DInst {
   posYaw : vec4f,   // posX, posY, posZ, yaw(弧度)
-  scale : vec4f,    // scaleX, scaleY, scaleZ, paletteBase(该角色在总调色板里的起始 pose)
+  scale : vec4f,    // scaleX, scaleY, scaleZ, paletteBase (matrix offset)
   color : vec4f,    // albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
-  anim : vec4f,     // clipFrameCount(信息位), phase01, flags(bit0=蒙皮), (pad)
+  anim : vec4f,     // clipFrameCount, phase01, flags(bit0=蒙皮), jointCount
 };
 
 @group(0) @binding(0) var<uniform> frame : Frame;
@@ -118,12 +112,12 @@ fn place(i : DInst, p : vec3f) -> vec3f {
  */
 fn skinPos(i : DInst, p : vec3f, joints : vec4u, w : vec4f) -> vec3f {
   if ((u32(i.anim.z) & 1u) == 0u) { return p; }
-  let base = u32(i.scale.w) + u32(i.color.w);
+  let base = u32(i.scale.w) + u32(i.color.w) * u32(i.anim.w);
   var acc = vec3f(0.0);
   for (var k = 0u; k < 4u; k = k + 1u) {
     let wi = w[k];
     if (wi <= 0.0) { continue; }
-    let m = palette[base * PALETTE_JOINT_COUNT + joints[k]];
+    let m = palette[base + joints[k]];
     acc = acc + wi * (m * vec4f(p, 1.0)).xyz;
   }
   return acc;
@@ -137,12 +131,12 @@ fn skinPos(i : DInst, p : vec3f, joints : vec4u, w : vec4f) -> vec3f {
  */
 fn skinDir(i : DInst, d : vec3f, joints : vec4u, w : vec4f) -> vec3f {
   if ((u32(i.anim.z) & 1u) == 0u) { return d; }
-  let base = u32(i.scale.w) + u32(i.color.w);
+  let base = u32(i.scale.w) + u32(i.color.w) * u32(i.anim.w);
   var acc = vec3f(0.0);
   for (var k = 0u; k < 4u; k = k + 1u) {
     let wi = w[k];
     if (wi <= 0.0) { continue; }
-    let m = palette[base * PALETTE_JOINT_COUNT + joints[k]];
+    let m = palette[base + joints[k]];
     acc = acc + wi * (m * vec4f(d, 0.0)).xyz;
   }
   return acc;

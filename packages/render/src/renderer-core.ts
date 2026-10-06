@@ -187,9 +187,9 @@ export interface CoreCylinderOverlay {
 /**
  * 一个动态实例的 CPU 端打包宽度（float 数）= 64 B（docs/20 §3.1）：
  *   [0..3]   posX, posY, posZ, yaw(弧度)
- *   [4..7]   scaleX, scaleY, scaleZ, paletteBase(该角色在总调色板里的起始 pose)
- *   [8..11]  albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
- *   [12..15] clipFrameCount, phase01, flags(bit0=蒙皮), (pad)
+ *   [4..7]   scaleX, scaleY, scaleZ, paletteBase(global matrix offset)
+ *   [8..11]  albedoR, albedoG, albedoB, poseIndex(local pose index)
+ *   [12..15] clipFrameCount, phase01, flags(bit0=蒙皮), jointStride
  *
  * 与 `dynamic.wgsl.ts` 的 `struct DInst`（4 × vec4f）一一对应；改一边必须改另一边
  * （三处同步的第三处在 runtime-bridge 的打包循环）。

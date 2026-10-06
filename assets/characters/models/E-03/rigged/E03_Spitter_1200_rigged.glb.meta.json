@@ -20,5 +20,14 @@
     "file": "E03_Spitter_1200_rigged.glb"
   },
   "sourceHash": "sha256:6a3d002365bef621005eb8073713e58cdecfb56b647b9c1b9415079030771f98",
-  "updatedAt": "2026-09-04T03:48:29.872Z"
+  "updatedAt": "2026-09-04T03:48:29.872Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

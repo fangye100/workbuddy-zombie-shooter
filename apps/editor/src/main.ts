@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
-import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
+import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findRiggedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -23,6 +23,7 @@ import { AuthorTransformController, graphOfDoc } from './services/author-transfo
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
+import { RuntimeMotionPanel } from './services/runtime-motion-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
 import { applySceneLightParams } from './services/scene-light';
 import { removeNodeTree } from '@aether/runtime';
@@ -47,6 +48,8 @@ import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { PlayerPresentation } from './services/player-presentation';
+import { SharedMotionRuntime } from './services/shared-motion-runtime';
+import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -200,6 +203,12 @@ async function boot(): Promise<void> {
    * 清单异步后补（编辑器启动时 manifest 尚未到位），到位前 preload 一律退胶囊。
    */
   const actorLib = new ActorLibrary(null);
+  const sharedMotionLibrary = new SharedMotionRuntime();
+  actorLib.setSharedMotions(sharedMotionLibrary);
+  const sceneMotions = new RuntimeSceneMotion(sharedMotionLibrary, nodeId => {
+    const index = renderer.findObjectIndexByNodeId(nodeId);
+    return index === null ? null : renderer.state.objects[index] ?? null;
+  }, () => { hudDirty = true; });
   /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
@@ -237,6 +246,7 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
+    sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
       const index = renderer.findObjectIndexByNodeId(nodeId);
       return index === null ? null : renderer.state.objects[index] ?? null;
@@ -306,6 +316,7 @@ async function boot(): Promise<void> {
     focusAnim = null;
     pointers.clear();
     const paramsBeforePlay = structuredClone(panel.params);
+    actorLib.beginPlay();
     const ok = playCtl.start();
     if (ok) {
       playAuthorParams ??= paramsBeforePlay;
@@ -348,7 +359,7 @@ async function boot(): Promise<void> {
       await manifestReady;
       // 🔴 串行 await：paletteBase 布局由库内 manifest rank 规范序保证（PR #19
       // FR-B），与本循环的完成序无关；串行只是控制并发与失败可读性。
-      for (const id of findAnimatedCharacterIds(assetManifest)) {
+      for (const id of findRiggedCharacterIds(assetManifest)) {
         if (gen !== actorPreloadGen) return; // 新循环已启动 / 已 Stop：本循环作废
         const changed = await actorLib.preload(id);
         if (gen !== actorPreloadGen) {
@@ -581,6 +592,10 @@ async function boot(): Promise<void> {
 
   // 调试/自动化钩子：控制台与无头 CDP 验证直接读写相机/材质状态（都是引用，读到即实时值）
   (window as unknown as { __editor: unknown }).__editor = {
+    motions: {
+      summary: () => sceneMotions.summary(),
+      setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
+    },
     camera,
     elevation: () => panel.params.cameraElevation,
     params: panel.params,
@@ -1297,6 +1312,8 @@ async function boot(): Promise<void> {
   let authorLightBaseline = lightSnapshot(panel.params);
   const authorHost = document.createElement('div');
   document.querySelector('.insp-pane[data-pane="scene"]')!.prepend(authorHost);
+  const motionHost = document.createElement('div'); motionHost.id = 'runtime-motion-panel'; document.body.append(motionHost);
+  const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
   const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
     document: () => spawnStore?.document ?? null,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
@@ -3895,6 +3912,14 @@ async function boot(): Promise<void> {
     );
 
     if (playCtl.isPlaying) {
+      const motion = sceneMotions.summary();
+      const partial = motion.nodes.filter(n => n.reports.some(r => r.status === 'partial')).length;
+      rows.push(`<b>共享动作</b> ${motion.nodes.length} 个角色 · 加载 ${motion.pending} · 部分能力 ${partial} · 缓存命中 ${motion.stats.cacheHits}`);
+      for (const error of motion.errors) {
+        const line = document.createElement('span'); line.className = 'warn';
+        line.textContent = `⚠ 动作 ${error.nodeId}：${error.message}`;
+        rows.push(line.outerHTML);
+      }
       const ents = bridge.entities;
       const npc = ents.filter((e) => e.kind === 'npc').length;
       rows.push(
@@ -3918,6 +3943,7 @@ async function boot(): Promise<void> {
     }
 
     hud.innerHTML = rows.join('<br>');
+    runtimeMotionPanel.render(playCtl.isPlaying);
   };
 
   // ---- 主循环 ----

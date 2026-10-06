@@ -179,3 +179,14 @@ export function findAnimatedCharacterIds(json: unknown): string[] {
   }
   return ids;
 }
+
+/** Runtime candidates: rig-only models may reference a shared motion library in their sidecar. */
+export function findRiggedCharacterIds(json: unknown): string[] {
+  if (json === null || typeof json !== 'object') return [];
+  const list = (json as Record<string, unknown>).characters;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap(e => {
+    const id = e && typeof e === 'object' ? (e as Record<string, unknown>).id : null;
+    return typeof id === 'string' && (findCharacterLodPath(json, id, '+骨骼') || findCharacterLodPath(json, id, '+动画')) ? [id] : [];
+  });
+}

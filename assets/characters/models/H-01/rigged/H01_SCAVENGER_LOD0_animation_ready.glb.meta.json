@@ -34,5 +34,14 @@
     "embeddedAnimationClips": 0
   },
   "sourceHash": "sha256:582be8801b6f7674b8df7cb0eeee1976be5029ac202e33d9fada210f40428259",
-  "updatedAt": "2026-10-06T03:41:46.771Z"
+  "updatedAt": "2026-10-06T03:41:46.771Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "player",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

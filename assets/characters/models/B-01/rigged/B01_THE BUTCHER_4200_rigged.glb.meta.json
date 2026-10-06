@@ -20,5 +20,14 @@
     "file": "B01_THE BUTCHER_4200_rigged.glb"
   },
   "sourceHash": "sha256:d270b29592a056943fa9ec5b99705f5134016480f836af04f307bb5108142615",
-  "updatedAt": "2026-09-04T03:48:29.672Z"
+  "updatedAt": "2026-09-04T03:48:29.672Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

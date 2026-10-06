@@ -20,5 +20,14 @@
     "file": "B03_PATIENT ZERO_5200_rigged.glb"
   },
   "sourceHash": "sha256:3dc731eb722ad5b8470e5dddbd7fa229309be181418e5286e808a8a0b39b6e17",
-  "updatedAt": "2026-09-04T04:20:14.339Z"
+  "updatedAt": "2026-09-04T04:20:14.339Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

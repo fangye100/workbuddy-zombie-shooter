@@ -20,5 +20,14 @@
     "file": "H01_Scavenger_3500_rigged.glb"
   },
   "sourceHash": "sha256:c238cd8369bd66b67b7d5d22d7242401c49b62601343d8154fb3324ec1918b8c",
-  "updatedAt": "2026-10-03T17:49:04.378Z"
+  "updatedAt": "2026-10-03T17:49:04.378Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "player",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

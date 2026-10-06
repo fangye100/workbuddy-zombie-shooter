@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_player_punching",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:97c7db1d06f104fcd8deb965c18173872b21c748d8d52c15b7ab58aba77ffeba",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:ada1cc7f012c17d0b7a68a3cdb16c01a4a8d007d795fc4e37ca3eb69449405a5"
+}

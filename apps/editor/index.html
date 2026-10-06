@@ -237,6 +237,18 @@
   #hud b { color: var(--paper); font-weight: 400; }
   #hud .warn { color: var(--blood); }
 
+  #runtime-motion-panel {
+    position: fixed; right: 14px; top: 86px; z-index: 80;
+    max-width: 340px; max-height: 68vh; overflow: auto;
+    padding: 8px; background: var(--panel); border: 2px solid var(--ink);
+    border-radius: 6px; font-size: 11px;
+  }
+  #runtime-motion-panel[hidden] { display: none; }
+  #runtime-motion-panel summary { cursor: pointer; }
+  #runtime-motion-panel fieldset { margin-top: 8px; }
+  #runtime-motion-panel button { margin: 3px; }
+  #runtime-motion-panel .hint { overflow-wrap: anywhere; }
+
   #fatal {
     position: fixed;
     inset: 0;

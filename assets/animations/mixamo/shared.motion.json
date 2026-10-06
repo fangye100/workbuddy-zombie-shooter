@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "as_mixamo_shared_motion",
+  "clips": {
+    "player_walking": {
+      "source": {
+        "path": "assets/animations/mixamo/player_walking.bvh",
+        "guid": "as_motion_player_walking"
+      },
+      "loop": true,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 2.0147938183938208
+    },
+    "player_running": {
+      "source": {
+        "path": "assets/animations/mixamo/player_running.bvh",
+        "guid": "as_motion_player_running"
+      },
+      "loop": true,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 5.329401772698774
+    },
+    "player_jump_up": {
+      "source": {
+        "path": "assets/animations/mixamo/player_jump_up.bvh",
+        "guid": "as_motion_player_jump_up"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "player_shoot_rifle": {
+      "source": {
+        "path": "assets/animations/mixamo/player_shoot_rifle.bvh",
+        "guid": "as_motion_player_shoot_rifle"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "player_punching": {
+      "source": {
+        "path": "assets/animations/mixamo/player_punching.bvh",
+        "guid": "as_motion_player_punching"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "zombie_idle": {
+      "source": {
+        "path": "assets/animations/mixamo/zombie_idle.bvh",
+        "guid": "as_motion_zombie_idle"
+      },
+      "loop": true,
+      "rootPolicy": "in-place"
+    },
+    "zombie_walk": {
+      "source": {
+        "path": "assets/animations/mixamo/zombie_walk.bvh",
+        "guid": "as_motion_zombie_walk"
+      },
+      "loop": true,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 0.3969500075490386
+    },
+    "zombie_attack": {
+      "source": {
+        "path": "assets/animations/mixamo/zombie_attack.bvh",
+        "guid": "as_motion_zombie_attack"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "zombie_death": {
+      "source": {
+        "path": "assets/animations/mixamo/zombie_death.bvh",
+        "guid": "as_motion_zombie_death"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "zombie_scream": {
+      "source": {
+        "path": "assets/animations/mixamo/zombie_scream.bvh",
+        "guid": "as_motion_zombie_scream"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "player_ready": {
+      "source": {
+        "path": "assets/animations/mixamo/player_shoot_rifle.bvh",
+        "guid": "as_motion_player_shoot_rifle"
+      },
+      "loop": true,
+      "rootPolicy": "in-place",
+      "poseAtS": 0
+    }
+  },
+  "profiles": {
+    "player": {
+      "idle": "player_ready",
+      "walk": "player_walking",
+      "run": "player_running",
+      "jump": "player_jump_up",
+      "shoot": "player_shoot_rifle",
+      "attack": "player_punching"
+    },
+    "npc": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "zombie_attack",
+      "death": "zombie_death",
+      "scream": "zombie_scream"
+    }
+  }
+}

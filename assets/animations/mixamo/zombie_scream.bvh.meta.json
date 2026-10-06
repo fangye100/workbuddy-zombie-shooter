@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_zombie_scream",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:dd1163c5cf1e1ab6d032b39c40f535022243ccadb39613447ed5c26b3dd30790",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:b0a93b306184c1f781a22dec53998d207378162c8057326c79ef322e709c7621"
+}

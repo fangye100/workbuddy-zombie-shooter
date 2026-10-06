@@ -20,5 +20,14 @@
     "file": "E01_Shambler_900_rigged.glb"
   },
   "sourceHash": "sha256:76a8a38e80c7d4f8ae53d6be8b61c0b4b79200e78491b58f6709b09821103703",
-  "updatedAt": "2026-09-04T03:48:29.719Z"
+  "updatedAt": "2026-09-04T03:48:29.719Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

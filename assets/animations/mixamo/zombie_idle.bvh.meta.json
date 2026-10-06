@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_zombie_idle",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:b61d7c2afcf52492525ce908e636881db5120a7d86e701b4f786a45fc8942f63",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:dd6c3dcd5687d3e84ab3d7a9e8d80ccb69bf11884080b698f17da276957539a3"
+}

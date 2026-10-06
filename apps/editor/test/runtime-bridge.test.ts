@@ -409,6 +409,24 @@ describe('animPhase · 相位纯函数（确定性红线）', () => {
 });
 
 describe('RuntimeBridge —— 动画相位打包（docs/20 M3，inst[11]/[12]/[13]）', () => {
+  it('advances shared gait by actual displacement and packs the actor joint stride', () => {
+    const { bridge, play, actor } = animatedBridge();
+    actor.motion = { key: 'shared', clips: [], states: { walk: { loop: true, nominalSpeedMps: .8 } }, reports: [] };
+    bridge.refresh();
+    const beforeEntities = bridge.entities.filter(e => e.characterId === 'E-01').map(e => ({ ...e }));
+    const before = bridge.batches()!.find(b => b.meshId === 'actor:E-01')!.instances.slice();
+    play.advance(.1); bridge.refresh();
+    const after = bridge.batches()!.find(b => b.meshId === 'actor:E-01')!.instances.slice();
+    const entities = bridge.entities.filter(e => e.characterId === 'E-01');
+    for (let i = 0; i < entities.length; i++) {
+      const a = beforeEntities[i]!, b = entities[i]!;
+      if (a.behavior !== 1 || b.behavior !== 1) continue;
+      const expected = (before[i * DYNAMIC_INSTANCE_FLOATS + 13]! + Math.hypot(b.x - a.x, b.z - a.z) / (.8 * 2)) % 1;
+      expect(after[i * DYNAMIC_INSTANCE_FLOATS + 13]).toBeCloseTo(expected, 6);
+      expect(after[i * DYNAMIC_INSTANCE_FLOATS + 15]).toBe(3);
+    }
+    bridge.refresh(); expect(bridge.batches()!.find(b => b.meshId === 'actor:E-01')!.instances).toEqual(after);
+  });
   it('inst[12] 与实体 behavior 一致：chase → walk 帧数、idle → idle 帧数', () => {
     const { bridge } = animatedBridge();
     const F = DYNAMIC_INSTANCE_FLOATS;

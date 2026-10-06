@@ -24,6 +24,9 @@ import { describe, it, expect } from 'vitest';
 import { validateProject, PROJECT_FILE_NAME } from '../src/project';
 import { validateAssetMeta, META_FILE_SUFFIX } from '../src/asset-meta';
 import { validateSceneDocument } from '../src/document';
+import type { AssetMeta } from '../src/asset-meta';
+import type { SceneDocument } from '../src/document';
+import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
 
 /** eager + import:'default' → 直接拿解析后的 JSON 对象 */
 const projectModules = import.meta.glob('/aether.project.json', {
@@ -43,6 +46,33 @@ const sceneModules = import.meta.glob('/assets/**/*.scene.json', {
 
 /** eager:false 只拿键不加载内容 —— 用于孤儿检查（清单比内容便宜） */
 const allAssetPaths = Object.keys(import.meta.glob('/assets/**/*', { eager: false }));
+const motionModules = import.meta.glob('/assets/**/*.motion.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+
+describe('shared motion references', () => {
+  it('validates libraries and all source and binding identities across actual assets', () => {
+    const failures: string[] = [];
+    const check = (owner: string, ref: { path: string; guid?: string }) => {
+      const meta = metaModules[`/${ref.path}.meta.json`] as AssetMeta | undefined;
+      if (!ref.guid || !allAssetPaths.includes(`/${ref.path}`) || meta?.guid !== ref.guid) failures.push(`${owner}: missing or mismatched ${ref.path}`);
+    };
+    const binding = (owner: string, b: SharedMotionBinding | null | undefined) => {
+      if (!b) return;
+      check(owner, b.library);
+      const lib = motionModules[`/${b.library.path}`] as SharedMotionLibrary | undefined;
+      if (!lib || lib.id !== b.library.guid || !lib.profiles[b.profile]?.[b.defaultState]) failures.push(`${owner}: invalid motion profile/default state`);
+    };
+    for (const [path, data] of Object.entries(motionModules)) {
+      failures.push(...validateSharedMotionLibrary(data).map(e => `${path}: ${e}`));
+      const lib = data as SharedMotionLibrary;
+      for (const clip of Object.values(lib.clips)) check(path, clip.source);
+    }
+    for (const [path, meta] of Object.entries(metaModules)) binding(path, (meta as AssetMeta).sharedMotion);
+    for (const [path, data] of Object.entries(sceneModules)) for (const node of (data as SceneDocument).nodes) {
+      for (const c of node.components) if (c.kind === 'MeshRenderer') binding(`${path}:${node.id}`, c.sharedMotion);
+    }
+    expect(failures).toEqual([]);
+  });
+});
 
 describe('项目文件', () => {
   const key = `/${PROJECT_FILE_NAME}`;

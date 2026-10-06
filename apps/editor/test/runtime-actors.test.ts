@@ -46,7 +46,7 @@ function makePalette(name: string, poseCount: number): BakedPalette {
  * ActorLibrary.preload/buildPalette 的 base 分配与拼接已纯函数化
  *（assemblePalettes），本文件用**手搓骨架**（不依赖真 GLB）断言双角色装配的
  * 三条不变量：
- *   ① base 按注册序以 **pose 单位** 累加（不是 float 单位，不同 jointCount 也能对上）
+ *   ① base accumulates matrix counts, allowing different jointCount per actor.
  *   ② 拼接顺序 = 注册序，块内逐 float 与各自 palette 一致
  *   ③ restPose 是角色 palette 的**局部**下标，base + rest 才是全局 —— 全局指向
  *      该角色块的末帧 bind（PR #18 抓的 P1：局部当全局用 → 负数 → u32 巨数 →
@@ -123,11 +123,9 @@ function makeRunClip(): AnimClip {
 }
 
 /**
- * 双角色夹具：A = 单 clip（25 pose）；B = 双 clip（49 pose）。同一骨架
- *（jointCount 一致是生产不变量：ActorLibrary.preload 强制全部角色
- * == PALETTE_JOINT_COUNT，shader 用单一编译期常量索引全局 pose —— 异构
- * jointCount 下全局下标无定义，装配期就被拒）。「按 float 累加」的错实现
- * 会把 B 的 base 算成 1200 而不是 25，在下面的不变量上炸。
+ * Two same-skeleton fixtures: A has 25 poses, B has 49.
+ * Base is a matrix offset (75 for B), not a pose offset or float offset.
+ * A separate mixed-skeleton test verifies per-actor pose strides.
  */
 function dualCharacters() {
   const sk = makeSkeleton();
@@ -162,17 +160,17 @@ function expectSameFloats(got: Float32Array, want: Float32Array): void {
 
 // ---------------------------------------------------------------- 测试
 
-describe('assemblePalettes · ① base 按注册序以 pose 单位累加', () => {
-  it('第二个角色的 base = 第一个角色的 pose 总数（含 bind 帧）', () => {
+describe('assemblePalettes · ① base accumulates matrix counts', () => {
+  it('second base equals the preceding pose count times joint stride', () => {
     const { palA, palB } = dualCharacters();
     // 夹具自检：A = 24 walk 帧 + 1 bind = 25 pose；B = 24 + 24 + 1 = 49 pose
     expect(palettePoseCount(palA)).toBe(25);
     expect(palettePoseCount(palB)).toBe(49);
     expect(palA.jointCount).toBe(3);
-    expect(palB.jointCount).toBe(3); // 同骨架：jointCount 一致是全局索引的前提（preload 强制）
+    expect(palB.jointCount).toBe(3); // This fixture uses the same rig; production also supports mixed rigs.
 
     const asm = assemblePalettes([palA, palB]);
-    expect(asm.bases).toEqual([0, 25]);
+    expect(asm.bases).toEqual([0, 75]); // matrix offsets: 25 poses * 3 joints
   });
 
   it('pose 计数 = data.length / 16 / jointCount（末尾 bind 帧计入）', () => {
@@ -185,6 +183,16 @@ describe('assemblePalettes · ① base 按注册序以 pose 单位累加', () =>
 });
 
 describe('assemblePalettes · ② 拼接顺序 = 注册序', () => {
+  it('mixed skeleton strides address the second actor without padding or cross-actor reads', () => {
+    const a = { jointCount: 2, clips: [], clipBasePose: [], data: new Float32Array(3 * 2 * 16).fill(7) };
+    const b = { jointCount: 4, clips: [], clipBasePose: [], data: new Float32Array(2 * 4 * 16).fill(13) };
+    const asm = assemblePalettes([a, b]);
+    expect(asm.bases).toEqual([0, 6]);
+    // Shader address = base matrices + local pose * own jointCount + joint.
+    const matrix = asm.bases[1]! + 1 * b.jointCount + 3;
+    expect(Array.from(asm.data!.subarray(matrix * 16, matrix * 16 + 16))).toEqual(Array(16).fill(13));
+    expect(asm.data!.length).toBe(14 * 16);
+  });
   it('总长 = 各块之和；前段逐 float = A，后段逐 float = B', () => {
     const { palA, palB } = dualCharacters();
     const asm = assemblePalettes([palA, palB]);
@@ -210,10 +218,10 @@ describe('assemblePalettes · ③ restPose 局部性 + 全局 bind 指向本角�
     const [baseA, baseB] = [asm.bases[0]!, asm.bases[1]!];
 
     // A 的全局 bind：0 + 24 = 24（A 块末帧）
-    const bindA = baseA + bindPoseIndex(palA);
+    const bindA = baseA / palA.jointCount + bindPoseIndex(palA);
     expect(bindA).toBe(24);
     // B 的全局 bind：25 + 48 = 73 = 总 pose 数 - 1（总块的最末 pose 恰是 B 的 bind）
-    const bindB = baseB + bindPoseIndex(palB);
+    const bindB = baseB / palB.jointCount + bindPoseIndex(palB);
     expect(bindB).toBe(palettePoseCount(palA) + palettePoseCount(palB) - 1);
     // 两处都是单位阵，且逐 float 等于各自 palette 的末帧
     expect(isIdentity(matAt(data, palA.jointCount, bindA, 0))).toBe(true);
@@ -233,7 +241,7 @@ describe('assemblePalettes · ③ restPose 局部性 + 全局 bind 指向本角�
     // 不是单位阵 —— 一旦「局部当全局」，B 的静止姿态会变成走路中间帧
     expect(isIdentity(matAt(data, palB.jointCount, restB, 0))).toBe(false);
     // 而 base_B + rest_B 才是真正的静止姿态
-    expect(isIdentity(matAt(data, palB.jointCount, asm.bases[1]! + restB, 0))).toBe(true);
+    expect(isIdentity(matAt(data, palB.jointCount, asm.bases[1]! / palB.jointCount + restB, 0))).toBe(true);
   });
 });
 
