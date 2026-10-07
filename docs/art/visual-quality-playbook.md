@@ -191,3 +191,29 @@ remain historical rather than current acceptance claims.
 - After merging animation work, explicit scene regeneration must retain the latest
   player's rig, shared-motion library and game camera. Verify those actual components
   before and after regeneration; an assertion on a missing node proves nothing.
+
+## 10. Crowd cadence and attack readability — 2026-10-07
+
+Increasing NPC count also increases overlapping attacks. Persist the ordinary attacker
+budget and timing ranges in scene rules; keep elites explicitly separate. Start windup
+only within the authored trigger distance and after cooldown/permission checks. Lock a
+target at anticipation, then resolve the real trajectory and collision; a large sector
+must not substitute for a designed projectile, pounce or charge.
+
+Give each NPC an independent seeded timing stream for perception, chase decisions,
+windup, recovery and cooldown. Preserve reproduction with the same seed, stagger
+equal-distance actors in a test, and verify outside-range actors never enter windup.
+Damage/death remain immediate facts. Per-actor attack animation starts at its own
+windup; adding random loop offsets alone does not stagger gameplay decisions.
+
+Separate debugging geometry from purposeful anticipation: ordinary attack wedges
+belong behind a debug switch; acid landings, charge routes and explosion warnings
+remain readable gameplay cues. Draw effects from simulation time and facts so pause
+freezes appearance and the renderer never deals damage.
+
+Validate keyboard/mouse through actual visible inputs, and independent touch sticks
+through pointer ownership, cancellation and pause/blur cleanup. Label synthetic
+multi-pointer fixtures separately from real mobile hardware evidence. A responsive
+viewport and a desktop GPU spot sample do not certify phone performance. See
+[combat delivery](../37-CombatInputAndPopulationQuality.md) and
+[additional asset brief](../38-GameplayActionAndVfxAssetBrief.md).

@@ -55,7 +55,8 @@
         "damage": 8,
         "cdSec": 1.6,
         "arcDeg": 90,
-        "extras": {}
+        "extras": {},
+        "kind": "melee"
       }
     },
     {
@@ -82,7 +83,10 @@
         "damage": 18,
         "cdSec": 3.2,
         "arcDeg": null,
-        "extras": {}
+        "extras": {},
+        "kind": "pounce",
+        "speedMps": 8,
+        "impactRadiusM": 1.6
       }
     },
     {
@@ -111,7 +115,11 @@
         "arcDeg": null,
         "extras": {
           "dps": true
-        }
+        },
+        "kind": "acid",
+        "flightSec": 0.8,
+        "poolRadiusM": 2,
+        "poolSeconds": 4
       }
     },
     {
@@ -141,7 +149,10 @@
         "extras": {
           "knockback": true,
           "stunSec": 0.6
-        }
+        },
+        "kind": "charge",
+        "speedMps": 6,
+        "impactRadiusM": 0.8
       }
     },
     {
@@ -170,7 +181,9 @@
         "arcDeg": null,
         "extras": {
           "knockbackM": 4
-        }
+        },
+        "kind": "explode",
+        "triggerRangeM": 2.5
       }
     },
     {
@@ -199,7 +212,8 @@
         "arcDeg": 270,
         "extras": {
           "knockbackM": 3
-        }
+        },
+        "kind": "melee"
       },
       "attackSource": "作者数据：roster.bosses[B-01].attacks[0] 横扫 desc（肉钩 270° 横扫，前摇 0.9s，半径 4m，伤害 30+击退 3m）；CD desc 未写，[PLACEHOLDER 3.0]"
     },

@@ -1,3 +1,4 @@
+import { smallCampaignFixture } from './campaign-fixture';
 import { describe, it, expect } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
@@ -27,7 +28,7 @@ const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 
 function desc(): LevelRuntimeDesc {
   const key = Object.keys(MODULES)[0]!;
-  const doc = (MODULES[key] as { default: unknown }).default as SceneDocument;
+  const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
   const r = loadLevelRuntime(doc);
   if (r.desc === null) throw new Error('测试夹具装载失败：' + JSON.stringify(r.diagnostics));
   // floor-1 带一个演示脚本（让真机 Play 有东西可看）。本文件关注的是移动/寻路/容量，
@@ -44,7 +45,7 @@ function make(opts: { seed?: number; capacity?: number } = {}): RuntimeSession {
 /** 把全部刷怪点的数量改写成 n，用来造「超过静态上限」的压测场景 */
 function makeScaled(count: number, capacity: number): RuntimeSession {
   const key = Object.keys(MODULES)[0]!;
-  const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+  const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
   for (const n of doc.nodes) {
     for (const c of n.components) {
       if (c.kind === 'SpawnPoint') (c as { count: number }).count = count;
@@ -429,7 +430,7 @@ describe('docs/17 §8-2：房间触发与禁用语义', () => {
   /** 改指定节点上某类组件的字段，返回新会话 */
   function withPatch(nodeId: string, kind: string, patch: Record<string, unknown>): RuntimeSession {
     const key = Object.keys(MODULES)[0]!;
-    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
     let found = false;
     for (const n of doc.nodes) {
       if (n.id !== nodeId) continue;
@@ -478,7 +479,7 @@ describe('WU-5 前置：改一处刷怪点不牵动其它刷怪点', () => {
   /** 只改指定刷怪点的 count，返回一个新会话 */
   function withCount(nodeId: string, count: number): RuntimeSession {
     const key = Object.keys(MODULES)[0]!;
-    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
     let found = false;
     for (const n of doc.nodes) {
       if (n.id !== nodeId) continue;

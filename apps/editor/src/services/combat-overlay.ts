@@ -1,10 +1,13 @@
 import type { RuntimeSession } from '@aether/runtime';
 import { NPC_STATS } from '@aether/content';
 import { drawImpactInk, drawShotInk, visibleImpacts } from './combat-ink';
+import { gameText as g } from './game-language';
+import { drawEnemyAttack, drawAttackCue } from './enemy-attack-ink';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
 export class CombatOverlay {
+  debugRanges = false;
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
   constructor(private readonly project: WorldProjection) {
@@ -32,6 +35,9 @@ export class CombatOverlay {
       if (!attack) continue;
       const x = table.posX[slot]!, z = table.posZ[slot]!, yaw = table.yaw[slot]!;
       const center = point([x, 0.07, z]); if (center.behind) continue;
+      const target = runtime.enemyAttacks.target(slot,table.generation[slot]!);
+      drawAttackCue(c,point,attack,x,z,yaw,table.windupRemain[slot]!,target);
+      if (!this.debugRanges) continue;
       const arc = (attack.arcDeg ?? 90) * Math.PI / 180;
       c.beginPath(); c.moveTo(center.x, center.y);
       for (let j = 0; j <= 16; j++) {
@@ -52,8 +58,9 @@ export class CombatOverlay {
         if (i === 0) c.moveTo(p.x, p.y); else c.lineTo(p.x, p.y);
       }
       c.fillStyle = '#e74c3d55'; c.strokeStyle = '#ffce5b'; c.lineWidth = 3; c.fill(); c.stroke();
-      const p = point([danger.x, 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`, p.x, p.y);
+      const p = point([danger.x, 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(g(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`), p.x, p.y);
     }
+    for (const effect of runtime.enemyAttacks.effects) drawEnemyAttack(c,point,effect,(runtime.tick-effect.startTick)*runtime.fixedStep);
     for (const e of visibleImpacts(runtime.combatEvents,runtime.runId,runtime.tick,runtime.fixedStep)) {
       const age = (runtime.tick - e.tick) * runtime.fixedStep;
       const p = point([e.x!, 1.2, e.z!]); if (p.behind) continue;

@@ -31,3 +31,52 @@
  #center .run-hud { width:280px; bottom:10px; padding:8px 12px; }
 }
 @media(max-height:560px) { .hud-objective {top:125px;} .run-build-info {font-size:10px;} #center .run-hud {padding:6px 10px;} }
+
+/* Play presentation has its own controls; editor panes remain available on return. */
+body.game-view #topbar,body.game-view #panel,body.game-view #inspector,body.game-view .split-handle,
+body.game-view #asset-dock,body.game-view #gizmo-bar,body.game-view #statusbar { display:none!important; }
+body.game-view #mainrow {position:fixed;inset:0;width:100%;height:100%;}
+body.game-view #center {width:100%;height:100%;flex:1;min-width:0;}
+.game-aim-cursor {cursor:crosshair!important;}
+.game-toolbar {position:absolute;right:18px;top:183px;display:flex;gap:5px;max-width:330px;flex-wrap:wrap;justify-content:flex-end;pointer-events:auto;}
+#center .game-toolbar button {background:#221e33ef;border:2px solid #14110f;border-radius:8px;color:#fff6e2;padding:7px 9px;min-height:36px;font:700 11px system-ui;}
+#center .game-toolbar button[aria-pressed="true"] {background:#ffc531;color:#171327;}
+.game-touch-controls {position:absolute;inset:0;pointer-events:none;z-index:25;}
+.game-touch-controls[hidden] {display:none;}
+#center .game-touch-controls button {position:absolute;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;border:3px solid #14110f;color:#fff6e2;font:800 13px system-ui;box-shadow:3px 5px 0 #14110f88;}
+#center .game-stick {width:126px;height:126px;bottom:max(20px,env(safe-area-inset-bottom));border-radius:50%;background:#221e33a0;padding-top:74px;}
+#center .game-stick::before {content:'';position:absolute;left:38px;top:36px;width:44px;height:44px;border:3px solid #14110f;border-radius:50%;background:#ffc531b0;transform:translate(var(--stick-x,0px),var(--stick-y,0px));}
+.move-stick {left:max(24px,env(safe-area-inset-left));}
+.aim-stick {right:max(24px,env(safe-area-inset-right));}
+#center .aim-stick {background:#e8402aad;}
+#center .aim-stick::before {background:#fff6e2a0;}
+#center .touch-reload,#center .touch-interact {right:164px;width:62px;height:62px;border-radius:50%;background:#9b5de5;bottom:32px;}
+#center .touch-interact {bottom:105px;background:#2bc4d6;color:#171327;}
+#center .game-touch-controls button:disabled {opacity:.35;}
+@media(max-width:1000px),(max-height:560px) {
+ body.game-view .hud-life {top:10px;left:12px;width:190px;padding:8px 10px;gap:4px;}
+ body.game-view #center .hud-life strong {font-size:13px;}
+ body.game-view #center .hud-wave {top:10px;min-width:138px;font-size:13px;padding:5px 10px;}
+ body.game-view .hud-radar {width:92px;height:92px;top:8px;right:12px;}
+ body.game-view .game-toolbar {top:102px;right:12px;max-width:290px;}
+ body.game-view .hud-objective {top:98px;left:12px;max-width:210px;padding:4px 9px;font-size:11px;}
+ body.game-view #center .run-hud {width:260px;bottom:12px;padding:6px 10px;}
+ body.game-view #center .run-hud .run-ammo {font-size:16px;}
+ body.game-view #center .game-hud .hud-help {bottom:164px;left:16px;font-size:10px;width:180px;}
+ body.game-view #center .run-hud.choosing {top:48%;bottom:auto;width:min(650px,calc(100% - 48px));max-height:calc(100% - 36px);overflow:auto;}
+ body.game-view .run-hud.choosing .talent-choices {display:flex;gap:6px;flex-wrap:wrap;}
+ body.game-view .run-hud.choosing .talent-choices>strong {width:100%;}
+ body.game-view .run-hud.choosing .talent-choices button {flex:1;min-width:120px;}
+}
+@media(max-width:600px) and (orientation:portrait) {
+ body.game-view .hud-radar {display:none;}
+ body.game-view #center .hud-wave {left:auto;right:10px;transform:none;min-width:105px;}
+ body.game-view .game-toolbar {top:180px;}
+ body.game-view #center .run-hud {bottom:168px;width:calc(100% - 52px);}
+ #center .game-stick {width:112px;height:112px;}
+ #center .game-stick::before {left:30px;top:30px;}
+ #center .touch-reload {bottom:148px;right:32px;}
+ #center .touch-interact {bottom:148px;right:110px;}
+}
+
+body.game-view #hud,body.game-view #runtime-motion-panel {display:none!important;}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createEmptySceneDocument, validateSceneDocument, type SceneDocument } from '../src/document';
+import { createEmptySceneDocument, validateSceneDocument, SCHEMA_VERSION, type SceneDocument } from '../src/document';
 import { migrateToLatest } from '../src/migrate';
 const level = Object.values(import.meta.glob('/assets/scenes/act1/floor-1.scene.json', { eager: true, import: 'default' }))[0] as SceneDocument;
 
@@ -8,7 +8,7 @@ describe('authored comic atmosphere', () => {
     const doc = JSON.parse(JSON.stringify(level)) as SceneDocument;
     expect(validateSceneDocument(doc).filter(d => d.severity === 'error')).toEqual([]);
     expect(doc.environment.sky?.sunDirection).toEqual(level.environment.sky!.sunDirection);
-    expect(doc.environment.comic?.contactShadowOpacity).toBe(0.45);
+    expect(doc.environment.comic?.contactShadowOpacity).toBe(level.environment.comic?.contactShadowOpacity);
   });
   it('migrates legacy scenes without inventing a sky or changing their palette', () => {
     const doc = createEmptySceneDocument('legacy');
@@ -27,7 +27,7 @@ describe('authored comic atmosphere', () => {
   it('v9 to v10 preserves prior presentation and round-trips an authored texture reference', () => {
     const old=structuredClone(level); old.schemaVersion=9; delete old.environment.sky!.texture;
     const migrated=migrateToLatest(old);
-    expect(migrated.doc.schemaVersion).toBe(10);
+    expect(migrated.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(migrated.doc.environment.sky!.texture).toBeUndefined();
     const doc=structuredClone(level);
     doc.environment.sky!.texture={path:'assets/sky.png',guid:'as_1234'};

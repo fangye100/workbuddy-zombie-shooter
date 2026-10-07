@@ -1,3 +1,4 @@
+import { smallCampaignFixture } from './campaign-fixture';
 import { describe, it, expect } from 'vitest';
 import type { SceneDocument } from '@aether/scene';
 import { SpawnEditStore, listSpawnPoints } from '../src/spawn-edit';
@@ -8,7 +9,7 @@ const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 
 function fixture(): SceneDocument {
   const key = Object.keys(MODULES)[0]!;
-  return JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+  return smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
 }
 
 const SEED = 7;

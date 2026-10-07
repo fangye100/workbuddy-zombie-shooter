@@ -1,4 +1,5 @@
 import type { CombatEvent } from '@aether/runtime';
+import { gameText as g } from './game-language';
 
 const INK = '#14110f';
 const PAPER = '#fff6e2';
@@ -82,7 +83,7 @@ export function drawImpactInk(c: CanvasRenderingContext2D, x: number, y: number,
   c.strokeText(label,0,0); c.fillStyle = player ? '#ff917b' : PAPER; c.fillText(label,0,0);
   if (killed) {
     c.font = '900 16px system-ui, sans-serif'; c.lineWidth = 4;
-    const caption = player ? '倒下' : '击杀！';
+    const caption = g(player ? '倒下' : '击杀！');
     c.strokeText(caption,0,-27); c.fillStyle = accent; c.fillText(caption,0,-27);
   }
   c.restore();

@@ -1,3 +1,4 @@
+import { GameControls } from './services/game-controls';
 import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
 import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
@@ -1880,6 +1881,7 @@ async function boot(): Promise<void> {
   // ---- Play 期玩家输入（虚拟摇杆的键盘装配，复审 #7 的编辑器侧）----
   // 用**箭头键**而不是 WASD：W/E/R 已被 gizmo 快捷键占用，混用会一边走一边切模式。
   // 宿主（这里）只负责把真实输入转成约定的运行输入向量，消费全在 runtime 的固定步里。
+  let gameControls: GameControls | null = null;
   const playKeys = new Set<string>();
   const PLAY_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
   const PLAY_WASD: Record<string, string> = { w: 'arrowup', a: 'arrowleft', s: 'arrowdown', d: 'arrowright' };
@@ -1907,7 +1909,7 @@ async function boot(): Promise<void> {
     if (PLAY_WASD[k]) playKeys.delete(PLAY_WASD[k]!);
     freeCamKeys.delete(k); // 飞行键同样要松开即停（只靠 keyup 会漏掉失焦路径，见下）
     // P5 C5：J 松开 = 停火（失焦路径由 clearPlayKeys 兜底）
-    if (k === 'j') playCtl.session.setFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
+    if (k === 'j') gameControls?.setKeyboardFire(false); // 无 isPlaying 守卫：暂停中松开也停火（stopped 时 PlaySession 内部 no-op）
   });
 
   /**
@@ -1921,6 +1923,7 @@ async function boot(): Promise<void> {
     // 4171651555）：J 键故意不进 playKeys（它不是向量键），所以"只按住 J 时失焦"
     // 会命中 `playKeys.size === 0` 的早退 → fireHeld 永远停在 true。
     // 页面随后收不到 J 的 keyup，焦点回来就自动继续开火 —— 玩家没按键却在打子弹。
+    gameControls?.clear();
     playCtl.session.setFire(false);
     if (playKeys.size === 0) return;
     playKeys.clear();
@@ -1986,7 +1989,7 @@ async function boot(): Promise<void> {
     if (k === 'j') {
       if (playCtl.isPlaying) {
         e.preventDefault();
-        playCtl.session.setFire(true);
+        gameControls?.setKeyboardFire(true);
       }
       return;
     }
@@ -3862,7 +3865,10 @@ async function boot(): Promise<void> {
   // ---- HUD ----
   let lastWorkspaceUiTime = -1;
   const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
+  gameControls = new GameControls(canvas,(x,y)=>renderer.pointerRay(x,y),()=>camera.yaw);
   const gameHud = new GameHud({
+    pause: () => playCtl.togglePause(),
+    toggleTouch: () => { gameControls!.clear();gameControls!.touch=!gameControls!.touch;return gameControls!.touch; },
     interact: () => { playCtl.session.interact(); },
     resume: () => playCtl.resume(),
     retry: async () => {
@@ -4156,8 +4162,9 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying) {
       const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
       const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
-      playCtl.session.setInput(ix, iz);
+      gameControls?.update(playCtl.session.runtime,playCtl.isPaused,ix,iz);
     }
+    if (!playCtl.isPlaying) gameControls?.update(null,false,0,0);
     // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
     // 🔴 必须在 batches() 之前 —— 批次按 lodTier 分流，晚一帧会让压测帧率抖动。
     if (playCtl.isPlaying) {

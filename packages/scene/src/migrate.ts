@@ -370,6 +370,20 @@ export function registerSceneMigrations(): void {
     from: 9, to: 10, name: 'support-authored-art-textures',
     run(doc) { return { ...doc }; },
   });
+  if (!listMigrations().some((m) => m.from === 11 && m.to === 12)) registerMigration({
+    from: 11, to: 12, name: 'authored-crowd-attack-budget',
+    run(doc) {
+      const next = structuredClone(doc);
+      if (Array.isArray(next.nodes)) for (const node of next.nodes) {
+        if (!Array.isArray(node?.components)) continue;
+        for (const c of node.components) if (c?.kind === 'RunRules') {
+          if(c.attackTokenCount === undefined)c.attackTokenCount=4;
+          if(c.npcTiming === undefined)c.npcTiming={decisionMinSec:.08,decisionMaxSec:.35,recoveryMinSec:.2,recoveryMaxSec:.55,windupJitterFrac:.15,cooldownJitterFrac:.35};
+        }
+      }
+      return next;
+    },
+  });
   if (!listMigrations().some((m) => m.from === 10 && m.to === 11)) registerMigration({
     from: 10, to: 11, name: 'shared-motion-node-overrides',
     run(doc) { return { ...doc }; },

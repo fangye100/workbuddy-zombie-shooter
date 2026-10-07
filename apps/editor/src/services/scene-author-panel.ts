@@ -7,7 +7,8 @@ import './scene-author.css';
 const labels: Record<string, string> = {
   name: '名称', parent: '父节点', visible: '可见', pickable: '可拾取', category: '分类', transform: '局部变换',
   position: '位置', rotation: '旋转四元数', scale: '缩放', enabled: '启用', campaign: '战役标识',
-  scrapPerKill: '击杀废料', firstChoiceKills: '首次强化击杀数', choiceEveryKills: '强化间隔击杀数',
+  npcTiming: 'NPC 节奏', decisionMinSec: '最短决策间隔', decisionMaxSec: '最长决策间隔', recoveryMinSec: '最短恢复时间', recoveryMaxSec: '最长恢复时间', windupJitterFrac: '前摇随机比例', cooldownJitterFrac: '冷却随机比例',
+  attackTokenCount: '普通敌人并发攻击数', scrapPerKill: '击杀废料', firstChoiceKills: '首次强化击杀数', choiceEveryKills: '强化间隔击杀数',
   eventScrap: '事件废料', healCost: '治疗费用', healAmount: '治疗量', talentCost: '强化费用', floorEssence: '通关精华',
   aimAssist: '辅助瞄准', weapon: '武器与弹药', magazineSize: '弹匣容量', reserveRounds: '备用弹药', reloadSec: '换弹秒数',
   ammoPerKill: '击杀弹药', ammoCost: '弹药费用', ammoSupply: '补给弹药', bossAttack: 'Boss 攻击',

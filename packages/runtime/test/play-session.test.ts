@@ -43,6 +43,15 @@ describe('PlaySession —— 状态机', () => {
     expect(s.state).toBe('playing');
   });
 
+  it('暂停清除持续移动与射击，单步或继续不会重放未释放的输入', () => {
+    const s = new PlaySession();s.play(floor1());
+    const r = s.runtime!;const p = r.player()!;
+    r.setInput(1,0);r.setAim(20,0);r.setFire(true);
+    s.pause();expect(r.firing).toBe(false);
+    s.stepOnce();expect(r.player()!.x).toBe(p.x);expect(r.lastShot).toBeNull();
+    s.resume();s.advance(1/30);expect(r.player()!.x).toBe(p.x);expect(r.lastShot).toBeNull();
+  });
+
   it('stop → stopped 且世界被释放（引用断开，不留半运行世界）', () => {
     const s = new PlaySession();
     s.play(floor1());

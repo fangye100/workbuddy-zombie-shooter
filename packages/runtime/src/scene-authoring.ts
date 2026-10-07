@@ -46,7 +46,7 @@ export function newAuthorNode(id: string, name: string, box = false): SceneNode 
 
 /** Explicit opt-in seed for the authoring button, never injected while loading old scenes. */
 export function newRunRules(): RunRulesComponent {
-  return { kind: 'RunRules', enabled: true, campaign: 'custom', scrapPerKill: 2, firstChoiceKills: 3, choiceEveryKills: 6,
+  return { kind: 'RunRules', enabled: true, attackTokenCount: 4, npcTiming: {decisionMinSec:.08,decisionMaxSec:.35,recoveryMinSec:.2,recoveryMaxSec:.55,windupJitterFrac:.15,cooldownJitterFrac:.35}, campaign: 'custom', scrapPerKill: 2, firstChoiceKills: 3, choiceEveryKills: 6,
     eventScrap: 10, healCost: 10, healAmount: 25, talentCost: 15, floorEssence: 10, aimAssist: true,
     weapon: { magazineSize: 12, reserveRounds: 120, reloadSec: 1.2, ammoPerKill: 8, ammoCost: 10, ammoSupply: 60 },
     talents: [

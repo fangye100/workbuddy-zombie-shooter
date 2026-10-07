@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -177,6 +177,15 @@
         {
           "kind": "RunRules",
           "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 0.08,
+            "decisionMaxSec": 0.35,
+            "recoveryMinSec": 0.2,
+            "recoveryMaxSec": 0.55,
+            "windupJitterFrac": 0.15,
+            "cooldownJitterFrac": 0.35
+          },
           "campaign": "act1",
           "scrapPerKill": 3,
           "firstChoiceKills": 1,
@@ -1385,7 +1394,7 @@
     },
     {
       "id": "nd_f2r0_sp0",
-      "name": "刷怪点 1 · E-01 ×6",
+      "name": "刷怪点 1 · E-01 ×24",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -1413,11 +1422,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 6,
+          "count": 24,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -1454,7 +1463,7 @@
     },
     {
       "id": "nd_f2r0_sp1",
-      "name": "刷怪点 2 · E-02 ×6",
+      "name": "刷怪点 2 · E-02 ×24",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -1482,11 +1491,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-02",
-          "count": 6,
+          "count": 24,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -1523,7 +1532,7 @@
     },
     {
       "id": "nd_f2r0_sp2",
-      "name": "刷怪点 3 · E-03 ×6",
+      "name": "刷怪点 3 · E-03 ×24",
       "parent": "nd_f2r0",
       "transform": {
         "position": [
@@ -1551,11 +1560,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-03",
-          "count": 6,
+          "count": 24,
           "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2520,7 +2529,7 @@
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2557,7 +2566,7 @@
     },
     {
       "id": "nd_f2r2_sp1",
-      "name": "刷怪点 2 · E-01 ×8",
+      "name": "刷怪点 2 · E-01 ×32",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -2585,11 +2594,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 8,
+          "count": 32,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2626,7 +2635,7 @@
     },
     {
       "id": "nd_f2r2_sp2",
-      "name": "刷怪点 3 · E-02 ×8",
+      "name": "刷怪点 3 · E-02 ×32",
       "parent": "nd_f2r2",
       "transform": {
         "position": [
@@ -2654,11 +2663,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-02",
-          "count": 8,
+          "count": 32,
           "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -4310,7 +4319,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.562Z",
-    "updatedAt": "2026-10-05T05:11:39.404Z",
+    "updatedAt": "2026-10-07T06:41:28.454Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 2 · 主题 尸潮"
   }

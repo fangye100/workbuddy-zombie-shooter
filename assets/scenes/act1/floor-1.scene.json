@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -184,6 +184,15 @@
         {
           "kind": "RunRules",
           "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 0.08,
+            "decisionMaxSec": 0.35,
+            "recoveryMinSec": 0.2,
+            "recoveryMaxSec": 0.55,
+            "windupJitterFrac": 0.15,
+            "cooldownJitterFrac": 0.35
+          },
           "campaign": "act1",
           "scrapPerKill": 3,
           "firstChoiceKills": 1,
@@ -1050,7 +1059,7 @@
     },
     {
       "id": "nd_f1r0_sp0",
-      "name": "刷怪点 1 · E-01 ×5",
+      "name": "刷怪点 1 · E-01 ×15",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
@@ -1078,11 +1087,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 5,
+          "count": 15,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -1119,7 +1128,7 @@
     },
     {
       "id": "nd_f1r0_sp1",
-      "name": "刷怪点 2 · E-01 ×4",
+      "name": "刷怪点 2 · E-01 ×12",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
@@ -1147,11 +1156,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 4,
+          "count": 12,
           "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -1188,7 +1197,7 @@
     },
     {
       "id": "nd_f1r0_sp2",
-      "name": "刷怪点 3 · E-02 ×3",
+      "name": "刷怪点 3 · E-02 ×9",
       "parent": "nd_f1r0",
       "transform": {
         "position": [
@@ -1216,11 +1225,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-02",
-          "count": 3,
+          "count": 9,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2167,7 +2176,7 @@
     },
     {
       "id": "nd_f1r2_sp0",
-      "name": "刷怪点 1 · E-01 ×4",
+      "name": "刷怪点 1 · E-01 ×12",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
@@ -2195,11 +2204,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 4,
+          "count": 12,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2236,7 +2245,7 @@
     },
     {
       "id": "nd_f1r2_sp1",
-      "name": "刷怪点 2 · E-02 ×4",
+      "name": "刷怪点 2 · E-02 ×12",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
@@ -2264,11 +2273,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-02",
-          "count": 4,
+          "count": 12,
           "wave": 1,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -2305,7 +2314,7 @@
     },
     {
       "id": "nd_f1r2_sp2",
-      "name": "刷怪点 3 · E-01 ×4",
+      "name": "刷怪点 3 · E-01 ×12",
       "parent": "nd_f1r2",
       "transform": {
         "position": [
@@ -2333,11 +2342,11 @@
           "kind": "SpawnPoint",
           "enabled": true,
           "characterId": "E-01",
-          "count": 4,
+          "count": 12,
           "wave": 2,
           "trigger": "room-enter",
           "delaySec": 0,
-          "radius": 1.5,
+          "radius": 3.5,
           "prefab": null
         },
         {
@@ -4521,7 +4530,7 @@
   ],
   "meta": {
     "createdAt": "2026-10-02T06:29:38.540Z",
-    "updatedAt": "2026-10-05T04:51:37.082Z",
+    "updatedAt": "2026-10-07T06:41:27.706Z",
     "author": "gen-level.mjs",
     "notes": "GDD §4.1 层 1 · 主题 火场"
   }
