@@ -2593,6 +2593,7 @@ async function boot(): Promise<void> {
         smoothWeights,
         weightMode,
         volumetric: binding.getVolumetricOptions(),
+        rigidRegions: binding.getEditorData().rigidRegions ?? [],
         ...(computed ? { computedSkin: computed.skin, ...(computed.volumetric ? { volumetricStats: computed.volumetric } : {}) } : {}),
         // 平滑迭代 / λ 由面板外置（旧评审 §2.4，进 .meta.json 可复现）；
         // 面板未开（如顶部菜单直接导出）时退回 runExport 默认值

@@ -92,7 +92,7 @@
     "assets/environment/models/P-44/tex2/P-44_lod2.glb",
     "assets/environment/models/P-45/tex2/P-45_baked.glb",
     "assets/environment/models/P-46/tex2/P-46_lod2.glb",
-    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
     "assets/environment/models/P-31/tex2/P-31_lod2.glb",
     "assets/environment/models/P-32/tex2/P-32_lod2.glb",
     "assets/environment/models/P-33/tex2/P-33_lod2.glb",
@@ -3575,8 +3575,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
-              "guid": "as_yrsn456i"
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
             }
           },
           "materials": [
@@ -3606,7 +3606,16 @@
           "layer": 5,
           "importScale": 1,
           "playBinding": "player",
-          "editorOnly": false
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1
+          }
         }
       ],
       "prefab": null

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_c26d46b85d00debc",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 2.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "sourceHash": "sha256:05b6dee9dbaff4816b0a8112c773100d4551af1e329c1ecea0bd9848555dadc1",
+  "updatedAt": "2026-10-07T03:13:13.912Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  },
+  "userData": {
+    "characterId": "B-03",
+    "characterName": "零号",
+    "variant": "rigged",
+    "file": "B03_PATIENT ZERO_5200_animation_ready.glb",
+    "animationReady": true,
+    "sourceAsset": {
+      "path": "assets/characters/models/B-03/textured/B03_PATIENT ZERO_5200_baked.glb",
+      "guid": "as_soppwo40"
+    },
+    "sourceHash": "sha256:43edf7842c69b913248dde4ed4e5880db4031e35e084891b4df71eb3ad9e086e",
+    "bindingSession": "assets/characters/models/B-03/textured/B03_PATIENT ZERO_5200_baked.glb.meta.json",
+    "bindingRulerHeightM": 2.05,
+    "exportedHeightM": 2.6,
+    "bindPose": "source",
+    "weightSmoothing": {
+      "algorithm": "adaptive-volume-diffusion-v2",
+      "iterations": 6,
+      "lambda": 0.5
+    },
+    "rigidSelections": [
+      {
+        "name": "输液架 + 吊袋 + 管线（完整 UV 岛选择）",
+        "bone": "LeftHand",
+        "vertices": 3060
+      }
+    ],
+    "embeddedAnimationClips": 0
+  }
+}

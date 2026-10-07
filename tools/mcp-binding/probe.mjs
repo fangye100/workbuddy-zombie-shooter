@@ -381,7 +381,7 @@ try {
     const applied = await toolJson('set_options', { weightMode: 'volumetric', volumetric: { resolution: 16, depth: 0, tolerance: .01 } });
     check('volumetric 参数进入领域会话', applied?.applied?.volumetric?.resolution === 16 && applied?.applied?.weightMode === 'volumetric');
     const skin = await toolJson('compute_skin');
-    check('MCP 真正运行体积扩散', skin?.volumetric?.algorithm === 'adaptive-volume-diffusion-v1' && skin?.volumetric?.cells > 0);
+    check('MCP 真正运行体积扩散', skin?.volumetric?.algorithm === 'adaptive-volume-diffusion-v2' && skin?.volumetric?.cells > 0);
     const exported = await toolJson('export_glb', { outPath: '.workbuddy/tmp/mcp-binding-probe/probe_volumetric.glb', bindPose: 'source' });
     check('MCP GLB 导出使用相同体积求解', exported?.stats?.volumetric?.cells === skin?.volumetric?.cells && exported?.stats?.zeroWeightVerts === 0);
     const saved = await toolJson('get_editor_data');
@@ -394,6 +394,19 @@ try {
   }
 
   // ── set_options 多字段 = 一步历史（PR #10 评审回归） ──
+  {
+    const region = {name:'MCP held prop',bone:'LeftHand',start:[0,0,0],end:[0,1,0],radius:.05,feather:.02};
+    await toolJson('set_options', {rigidRegions:[region]});
+    check('MCP 刚性约束在状态与持久化数据中一致',
+      JSON.stringify((await toolJson('get_state'))?.options?.rigidRegions) === JSON.stringify([region]) &&
+      JSON.stringify((await toolJson('get_editor_data'))?.rigidRegions) === JSON.stringify([region]));
+    const bad = await tool('set_options',{weightMode:'distance',rigidRegions:[{...region,bone:'LeftHandTip'}]}).then(()=>null,e=>String(e));
+    check('MCP 非法部件约束拒绝且不半写',bad?.includes('-32602') && (await toolJson('get_state'))?.options?.rigidRegions?.[0]?.bone === 'LeftHand');
+    await toolJson('save'); await toolJson('load_model',{path:PROBE_GLB});
+    check('MCP 部件约束保存后回填', (await toolJson('get_state'))?.options?.rigidRegions?.[0]?.feather === .02);
+    await toolJson('set_options',{rigidRegions:[]});
+  }
+
   {
     const before = (await toolJson('get_state'))?.options;
     await toolJson('set_options', { weightMode: 'distance', smoothWeights: false, smoothIters: 7 });

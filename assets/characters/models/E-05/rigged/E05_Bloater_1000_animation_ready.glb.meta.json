@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_d46a030e1f5b10f6",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.6,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "sourceHash": "sha256:b14ec22ea16557854b9fe8760612a8a6931248eda6968279d2b4b2d5e981454d",
+  "updatedAt": "2026-10-07T03:12:31.744Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  },
+  "userData": {
+    "characterId": "E-05",
+    "characterName": "爆尸",
+    "variant": "rigged",
+    "file": "E05_Bloater_1000_animation_ready.glb",
+    "animationReady": true,
+    "sourceAsset": {
+      "path": "assets/characters/models/E-05/textured/E05_Bloater_1000_baked.glb",
+      "guid": "as_6lpeo704"
+    },
+    "sourceHash": "sha256:ca83333d815dd605ea1d7e06a89c6b1411c4b3dff091822ba1951b0ae1f4e683",
+    "bindingSession": "assets/characters/models/E-05/textured/E05_Bloater_1000_baked.glb.meta.json",
+    "bindingRulerHeightM": 2.05,
+    "exportedHeightM": 1.6,
+    "bindPose": "source",
+    "weightSmoothing": {
+      "algorithm": "adaptive-volume-diffusion-v2",
+      "iterations": 6,
+      "lambda": 0.5
+    },
+    "rigidSelections": [],
+    "embeddedAnimationClips": 0
+  }
+}

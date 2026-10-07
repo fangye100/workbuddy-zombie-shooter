@@ -71,6 +71,7 @@ import {
  *  - `volumetric` 自适应体素实体内扩散，浏览器经 Worker 求解。
  */
 export type WeightMode = 'wrapper' | 'distance' | 'volumetric';
+import { applyRigidRegions, skinSelectionHash, validateRigidRegions, type RigidSkinRegion } from './rigid-skin-regions';
 
 /**
  * 编辑器侧持久化的绑定编辑数据 —— 存进 `.meta.json` 的 `bindingEditor` 槽位。
@@ -90,6 +91,7 @@ export interface BindingEditorData {
    */
   weightMode?: WeightMode;
   volumetric?: VolumetricOptions;
+  rigidRegions?: RigidSkinRegion[];
   /** 导出时是否做权重热扩散平滑（可选，老文件缺省 = true，与面板默认一致） */
   smoothWeights?: boolean;
   /** 平滑迭代次数（可选，老文件缺省 = 面板默认 4，旧评审 §2.4：2 次扩散半径不够） */
@@ -147,6 +149,7 @@ export class BindingSession {
   /** 权重算法（默认 wrapper，与历史行为一致，避免静默改变既有产物） */
   private weightMode: WeightMode = 'wrapper';
   private volumetric: VolumetricOptions = { ...DEFAULT_VOLUMETRIC_OPTIONS };
+  private rigidRegions: RigidSkinRegion[] = [];
   private smoothWeights = true;
   /** 旧评审 §2.4：默认 2 次只能扩散 ~2 环顶点，15k 面角色关节处仍有折角；默认 4 次 */
   private smoothIters = 4;
@@ -207,6 +210,7 @@ export class BindingSession {
     this.smoothLambda = 0.5;
     this.weightMode = 'wrapper';
     this.volumetric = { ...DEFAULT_VOLUMETRIC_OPTIONS };
+    this.rigidRegions = [];
     this.skinCache = null;
     this.undoStack = [];
     this.redoStack = [];
@@ -230,6 +234,7 @@ export class BindingSession {
     this.smoothLambda = 0.5;
     this.weightMode = 'wrapper';
     this.volumetric = { ...DEFAULT_VOLUMETRIC_OPTIONS };
+    this.rigidRegions = [];
     this.skinCache = null;
     this.undoStack = [];
     this.redoStack = [];
@@ -277,6 +282,7 @@ export class BindingSession {
   }
 
   getVolumetricOptions(): VolumetricOptions { return { ...this.volumetric }; }
+  getRigidRegions(): RigidSkinRegion[] { return structuredClone(this.rigidRegions); }
 
   getSmoothWeights(): boolean {
     return this.smoothWeights;
@@ -372,6 +378,7 @@ export class BindingSession {
       cylinders: this.cylinders,
       weightMode: this.weightMode,
       volumetric: this.volumetric,
+      rigidRegions: this.rigidRegions,
       smoothWeights: this.smoothWeights,
       smoothIters: this.smoothIters,
       smoothLambda: this.smoothLambda,
@@ -385,6 +392,7 @@ export class BindingSession {
       cylinders: SkinCylinderMap | null;
       weightMode: WeightMode;
       volumetric: VolumetricOptions;
+      rigidRegions: RigidSkinRegion[];
       smoothWeights: boolean;
       smoothIters: number;
       smoothLambda: number;
@@ -394,6 +402,7 @@ export class BindingSession {
     this.cylinders = s.cylinders;
     this.weightMode = s.weightMode;
     this.volumetric = { ...s.volumetric };
+    this.rigidRegions = s.rigidRegions ?? [];
     this.smoothWeights = s.smoothWeights;
     this.smoothIters = s.smoothIters;
     this.smoothLambda = s.smoothLambda;
@@ -647,6 +656,7 @@ export class BindingSession {
   applyOptions(o: {
     weightMode?: string;
     volumetric?: VolumetricOptions;
+    rigidRegions?: RigidSkinRegion[];
     smoothWeights?: boolean;
     smoothIters?: number;
     smoothLambda?: number;
@@ -656,6 +666,9 @@ export class BindingSession {
       o.weightMode === 'wrapper' || o.weightMode === 'distance' || o.weightMode === 'volumetric' ? o.weightMode : this.weightMode;
     const vo = o.volumetric ?? this.volumetric;
     validateVolumetricOptions(vo);
+    const regions = o.rigidRegions ?? this.rigidRegions;
+    validateRigidRegions(regions, this.vertexCount());
+    if (regions.some(r => r.vertices && r.selectionHash !== skinSelectionHash(this.srcVerts!))) throw new Error('刚性部件顶点选择与源网格不匹配，请重新选择');
     const sw = o.smoothWeights ?? this.smoothWeights;
     const mw = o.mirrorWeights ?? this.mirrorWeights;
     const si =
@@ -668,13 +681,15 @@ export class BindingSession {
         : this.smoothLambda;
     if (
       wm === this.weightMode && sw === this.smoothWeights && mw === this.mirrorWeights &&
-      si === this.smoothIters && sl === this.smoothLambda && JSON.stringify(vo) === JSON.stringify(this.volumetric)
+      si === this.smoothIters && sl === this.smoothLambda && JSON.stringify(vo) === JSON.stringify(this.volumetric) &&
+      JSON.stringify(regions) === JSON.stringify(this.rigidRegions)
     ) {
       return false;
     }
     this.beginEdit('settings');
     this.weightMode = wm;
     this.volumetric = { ...vo };
+    this.rigidRegions = structuredClone(regions);
     this.smoothWeights = sw;
     this.mirrorWeights = mw;
     this.smoothIters = si;
@@ -718,7 +733,8 @@ export class BindingSession {
       }
     }
     parts.push(`wm:${this.weightMode}`);
-    parts.push(`volume:v1:${this.volumetric.resolution}/${this.volumetric.depth}/${this.volumetric.tolerance}`);
+    parts.push(`volume:v2:${this.volumetric.resolution}/${this.volumetric.depth}/${this.volumetric.tolerance}`);
+    parts.push(`rigid:v1:${JSON.stringify(this.rigidRegions)}`);
     parts.push(`mw:${this.mirrorWeights ? 1 : 0}`);
     parts.push(`sm:${this.smoothWeights ? 1 : 0}`);
     // 平滑迭代 / λ 同样改变 Bind 产物（旧评审 §2.4 参数外置后必须进指纹，
@@ -770,6 +786,7 @@ export class BindingSession {
         vertexFloats: this.vertexFloats,
       });
     }
+    skin = applyRigidRegions(skin, this.srcVerts, this.vertexFloats, this.rigidRegions);
     this.skinCache = { sig, result: { skin, stats, ...(volumetric ? { volumetric } : {}) } };
     return this.skinCache.result;
   }
@@ -798,6 +815,7 @@ export class BindingSession {
     let skin = raw.skin;
     if (mirror) skin = mirrorSkinWeights(skin, mesh.vertexFloats, n, mesh.vertices);
     if (smooth) skin = smoothSkinWeights(skin, mesh.indices, n, iters, lambda, { positions: mesh.vertices, vertexFloats: mesh.vertexFloats });
+    skin = applyRigidRegions(skin, mesh.vertices, mesh.vertexFloats, this.rigidRegions);
     this.skinCache = { sig, result: { skin, stats: null, volumetric: raw.volumetric } };
     return this.skinCache.result;
   }
@@ -862,6 +880,7 @@ export class BindingSession {
         : (JSON.parse(JSON.stringify(this.cylinders)) as SkinCylinderMap),
       weightMode: this.weightMode,
       volumetric: { ...this.volumetric },
+      rigidRegions: this.getRigidRegions(),
       smoothWeights: this.smoothWeights,
       smoothIters: this.smoothIters,
       smoothLambda: this.smoothLambda,
@@ -884,13 +903,18 @@ export class BindingSession {
    */
   hydrate(saved: unknown): void {
     if (saved === null || typeof saved !== 'object') return;
-    const incoming = saved as { volumetric?: unknown };
+    const incoming = saved as { volumetric?: unknown; rigidRegions?: unknown };
+    if (incoming.rigidRegions !== undefined) {
+      validateRigidRegions(incoming.rigidRegions, this.vertexCount());
+      if (incoming.rigidRegions.some(r => r.vertices && r.selectionHash !== skinSelectionHash(this.srcVerts!))) throw new Error('刚性部件顶点选择与源网格不匹配，请重新选择');
+    }
     if (incoming.volumetric !== undefined) {
       if (!incoming.volumetric || typeof incoming.volumetric !== 'object') throw new Error('体积蒙皮配置必须为对象');
       validateVolumetricOptions(incoming.volumetric as VolumetricOptions);
     }
     // 回填是一次性大改 → 进历史（可撤销回到回填前）
     this.beginEdit('hydrate');
+    this.rigidRegions = incoming.rigidRegions === undefined ? [] : structuredClone(incoming.rigidRegions);
     const s = saved as {
       positions?: unknown;
       cylinders?: unknown;

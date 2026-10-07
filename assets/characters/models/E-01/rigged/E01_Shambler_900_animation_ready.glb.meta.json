@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_af984d0b1589bf78",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.75,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "sourceHash": "sha256:d22c8e049c17cded12b3cf3e7d973f65602dc909bc01d2fa771b3ab03e2a1c60",
+  "updatedAt": "2026-10-07T03:11:49.934Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  },
+  "userData": {
+    "characterId": "E-01",
+    "characterName": "游荡者",
+    "variant": "rigged",
+    "file": "E01_Shambler_900_animation_ready.glb",
+    "animationReady": true,
+    "sourceAsset": {
+      "path": "assets/characters/models/E-01/textured/E01_Shambler_900_baked.glb",
+      "guid": "as_lmcps9i0"
+    },
+    "sourceHash": "sha256:a45fb71c1c10dacda7443359173568307db0ff5695bf8744c4e5dfd18a93d932",
+    "bindingSession": "assets/characters/models/E-01/textured/E01_Shambler_900_baked.glb.meta.json",
+    "bindingRulerHeightM": 2.05,
+    "exportedHeightM": 1.75,
+    "bindPose": "source",
+    "weightSmoothing": {
+      "algorithm": "adaptive-volume-diffusion-v2",
+      "iterations": 6,
+      "lambda": 0.5
+    },
+    "rigidSelections": [],
+    "embeddedAnimationClips": 0
+  }
+}

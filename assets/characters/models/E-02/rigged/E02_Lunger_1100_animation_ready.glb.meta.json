@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_69a88817d71ee0b7",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.25,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "sourceHash": "sha256:0fd7f5d6fc4f9639a0b03d18499cb050c3702dbfa5bee58ba7feb89136371a74",
+  "updatedAt": "2026-10-07T03:11:58.285Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  },
+  "userData": {
+    "characterId": "E-02",
+    "characterName": "扑跃者",
+    "variant": "rigged",
+    "file": "E02_Lunger_1100_animation_ready.glb",
+    "animationReady": true,
+    "sourceAsset": {
+      "path": "assets/characters/models/E-02/textured/E02_Lunger_1100_baked.glb",
+      "guid": "as_t2nau5b6"
+    },
+    "sourceHash": "sha256:88050a48b89bc03ddb00abe88872da620f3526de0e91627cf168855d121f7716",
+    "bindingSession": "assets/characters/models/E-02/textured/E02_Lunger_1100_baked.glb.meta.json",
+    "bindingRulerHeightM": 2.05,
+    "exportedHeightM": 1.25,
+    "bindPose": "source",
+    "weightSmoothing": {
+      "algorithm": "adaptive-volume-diffusion-v2",
+      "iterations": 6,
+      "lambda": 0.5
+    },
+    "rigidSelections": [],
+    "embeddedAnimationClips": 0
+  }
+}

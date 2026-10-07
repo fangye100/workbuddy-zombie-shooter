@@ -61,6 +61,7 @@ export type { BindingEditorData, WeightMode } from './binding-session';
 import type { BindingEditorData, WeightMode, BindingSkinResult } from './binding-session';
 import { solveVolumeInWorker } from './volumetric-worker-client';
 import type { VolumetricOptions } from './volumetric-skin';
+import type { RigidSkinRegion } from './rigid-skin-regions';
 
 /** 引擎 15-float 顶点布局里法线的偏移（pos3 / normal3 / …），预览重姿态时同步转法线 */
 const NORMAL_OFFSET = 3;
@@ -338,6 +339,13 @@ export class BindingPanel {
           <button class="bd-btn bd-icon" data-bd="close" title="${t('关闭绑定面板')}">✕</button>
         </div>
       </div>
+      <details style="padding:4px 8px;flex-shrink:0">
+        <summary>刚性部件约束（武器 / 道具）</summary>
+        <p>指定 bone 控制胶囊范围；start / end / radius 为源模型米制坐标，feather 为软边宽度。也可用 vertices + selectionHash 精确选择。平滑后应用，后项优先；空数组清除。</p>
+        <textarea data-bd="rigid-regions" aria-label="刚性部件约束 JSON" rows="4" style="width:100%;max-height:120px;background:#181824;color:#ddd">[]</textarea>
+        <button class="bd-btn" data-bd="rigid-apply">应用部件约束</button>
+        <span data-bd="rigid-status" role="status"></span>
+      </details>
       <div class="bd-body">
         <div class="bd-view">
           <div class="bd-vlabel">${t('正视 Front · (x, y)')}</div>
@@ -555,6 +563,16 @@ export class BindingPanel {
     // 否则「撤销一步几何编辑」会把中途手动切过的算法一并回滚 —— 静默回滚是事故。
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]')!;
     wm.value = this.session.getWeightMode();
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="rigid-apply"]')!.addEventListener('click', () => {
+      const text = this.rootEl.querySelector<HTMLTextAreaElement>('[data-bd="rigid-regions"]')!;
+      const status = this.rootEl.querySelector<HTMLElement>('[data-bd="rigid-status"]')!;
+      try {
+        const regions = JSON.parse(text.value) as RigidSkinRegion[];
+        if (this.session.applyOptions({rigidRegions:regions})) this.invalidatePreview();
+        status.textContent = `已应用 ${this.session.getRigidRegions().length} 个部件约束`;
+      } catch (error) { status.textContent = String(error); }
+      this.refresh();
+    });
     wm.addEventListener('change', () => {
       if (this.session.setWeightMode(wm.value)) { this.syncWeightModeSelect(); this.invalidatePreview(); }
     });
@@ -1417,6 +1435,8 @@ export class BindingPanel {
   private syncWeightModeSelect(): void {
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]');
     if (wm !== null) wm.value = this.session.getWeightMode();
+    const rigid = this.rootEl.querySelector<HTMLTextAreaElement>('[data-bd="rigid-regions"]');
+    if (rigid) rigid.value = JSON.stringify(this.session.getRigidRegions(), null, 2);
     const volume = this.rootEl.querySelector<HTMLElement>('[data-bd="volume-options"]');
     if (volume) volume.hidden = this.session.getWeightMode() !== 'volumetric';
     const options = this.session.getVolumetricOptions();
@@ -1809,7 +1829,7 @@ export class BindingPanel {
     if (computed.volumetric) {
       const v = computed.volumetric;
       html += `<br>体素 ${v.cells} · 局部细分 ${v.refinedCells} · ${(v.elapsedMs / 1000).toFixed(2)}s` +
-        ` · ${v.converged ? '已收敛' : '⚠ 未收敛'} · 外部骨骼 ${v.outsideBones.length}` +
+        ` · ${v.converged ? '已收敛' : '⚠ 未收敛'} · 外部骨骼 ${v.outsideBones.length} · 近表面种子投影 ${v.projectedBones?.length ?? 0}` +
         ` · 无种子部件 ${v.unseededComponents} · 兜底顶点 ${v.fallbackVertices}`;
     }
     const selBone = this.editMode === 'skin' ? this.selectedCyl : this.selected;

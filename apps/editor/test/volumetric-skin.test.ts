@@ -26,6 +26,12 @@ function placed() {
   return p;
 }
 describe('Adaptive volumetric diffusion', () => {
+  it('projects only nearby missing seeds onto thin volume and reports the distance',()=>{
+    const mesh=boxes([0]),p=placed();p.LeftArm=[.13,-.2,0];p.LeftForeArm=[.13,.2,0];p.RightArm=[5,5,5];p.RightForeArm=[5,6,5];
+    const result=computeVolumetricWeights(mesh.vertices,15,mesh.indices,p,options);
+    expect(result.volumetric.projectedBones?.some(p=>p.bone==='LeftArm'&&p.distance>0)).toBe(true);
+    expect(result.volumetric.outsideBones).toContain('RightArm');
+  });
   it('keeps two near surfaces disconnected, refines boundaries, and preserves geometry', () => {
     const mesh = boxes([-.12,.12]), before = mesh.vertices.slice();
     const volume = buildSolidVolume(mesh.vertices,15,mesh.indices,16,1);
@@ -77,7 +83,7 @@ describe('Adaptive volumetric diffusion', () => {
     s.hydrate({positions:placed(),weightMode:'volumetric',volumetric:options,smoothWeights:false});
     const skin=s.computeSkin()!;
     const out=rigToTPose({name:'boxes',...mesh,image:null,placed:s.positions,bindPose:'source',weightMode:'volumetric',volumetric:options,smoothWeights:false});
-    expect(out.skin).toEqual(skin.skin);expect(out.stats.volumetric?.algorithm).toBe('adaptive-volume-diffusion-v1');
+    expect(out.skin).toEqual(skin.skin);expect(out.stats.volumetric?.algorithm).toBe('adaptive-volume-diffusion-v2');
     const copy=new BindingSession();copy.setModel('boxes',mesh.vertices,mesh.indices);copy.hydrate(s.getEditorData());
     expect(copy.getVolumetricOptions()).toEqual(options);expect(copy.getWeightMode()).toBe('volumetric');
     const sig=s.editSig();s.applyOptions({volumetric:{...options,depth:0}});expect(s.editSig()).not.toBe(sig);

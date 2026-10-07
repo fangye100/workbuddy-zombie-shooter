@@ -50,8 +50,9 @@ if (checks.find(c => c.node === 'nd_motion_h01').key !== checks.find(c => c.node
 const actorLib = new ActorLibrary(json('assets/_data/asset-manifest.json'), async p => bytes(p)); actorLib.setSharedMotions(motions);
 // This CPU gate does not decode textures. Headed acceptance verifies actual albedo/GPU upload.
 globalThis.createImageBitmap = async () => ({ close() {} });
-for (const id of ['H-01', 'E-01', 'E-04']) if (!await actorLib.preload(id)) throw new Error(`NPC assembly failed: ${id}`);
-const actors = ['H-01', 'E-01', 'E-04'].map(id => actorLib.get(id));
+const ids = json('assets/_data/asset-manifest.json').characters.map(c => c.id);
+for (const id of ids) if (!await actorLib.preload(id)) throw new Error(`NPC assembly failed: ${id}: ${actorLib.diagnostics.join('; ')}`);
+const actors = ids.map(id => actorLib.get(id));
 const palette = actorLib.buildPalette();
 if (!palette.every(Number.isFinite)) throw new Error('Non-finite NPC palette');
 for (const a of actors) {

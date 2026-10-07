@@ -444,6 +444,7 @@ export class BindingDomain {
     const placed = JSON.parse(JSON.stringify(s.positions)) as JointPositions;
     const weightMode = s.getWeightMode();
     const volumetric = s.getVolumetricOptions();
+    const rigidRegions = s.getRigidRegions();
     const cylLive = weightMode === 'wrapper' ? s.getCylinders() : null;
     const cylinders = cylLive === null
       ? undefined
@@ -458,6 +459,7 @@ export class BindingDomain {
       bindPose,
       weightMode,
       volumetric,
+      rigidRegions,
       name: outName,
       vertices: mesh.vertices,
       indices: mesh.indices,
@@ -630,6 +632,16 @@ export const TOOLS_TABLE = [
       type: 'object',
       properties: {
         weightMode: { type: 'string', enum: ['wrapper', 'distance', 'volumetric'] },
+        rigidRegions: { type: 'array', maxItems: 64, items: { type: 'object', additionalProperties: false,
+          required: ['name','bone','start','end','radius'], properties: {
+            name: {type:'string'}, bone: {type:'string'},
+            start: {type:'array',items:{type:'number'},minItems:3,maxItems:3},
+            end: {type:'array',items:{type:'number'},minItems:3,maxItems:3},
+            radius: {type:'number',exclusiveMinimum:0,maximum:2},
+            feather: {type:'number',minimum:0,maximum:2},
+            vertices: {type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:200000},
+            selectionHash: {type:'string',pattern:'^fnv1a32:[0-9a-f]{8}$'},
+          } }, description: '胶囊或带 selectionHash 的 vertices 精确选择刚性跟随 bone；平滑之后应用，后项优先' },
         volumetric: { type: 'object', additionalProperties: false, properties: {
           resolution: { type: 'integer', minimum: 16, maximum: 96 },
           depth: { type: 'integer', minimum: 0, maximum: 2 },
@@ -759,6 +771,7 @@ async function dispatchInner(
           options: {
             weightMode: s.getWeightMode(),
             volumetric: s.getVolumetricOptions(),
+            rigidRegions: s.getRigidRegions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -870,6 +883,7 @@ async function dispatchInner(
       // 批量设置走 session.applyOptions：多字段合并为一步历史（PR #10 评审），
       // 逐 setter 调用会各打一条快照、undo 一次只回退最后一个字段
       const batch: Parameters<BindingSession['applyOptions']>[0] = {};
+      if (args.rigidRegions !== undefined) batch.rigidRegions = args.rigidRegions as NonNullable<typeof batch.rigidRegions>;
       if (wm !== undefined) batch.weightMode = wm;
       if (args.volumetric !== undefined) {
         const value = args.volumetric;
@@ -896,6 +910,7 @@ async function dispatchInner(
           applied: {
             weightMode: s.getWeightMode() satisfies WeightMode,
             volumetric: s.getVolumetricOptions(),
+            rigidRegions: s.getRigidRegions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -914,7 +929,7 @@ async function dispatchInner(
           vertices: s.vertexCount(),
           unwrappedVerts: r.stats?.unwrappedVerts ?? null,
           volumetric: r.volumetric ?? null,
-          pipeline: '算法 → 镜像 → 平滑（与导出同序）',
+          pipeline: '算法 → 镜像 → 平滑 → 刚性部件约束（与导出同序）',
           note: r.stats === null ? '此算法无 wrapper 统计；体积模式请查看 volumetric 诊断' : undefined,
         },
       };

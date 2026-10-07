@@ -15,13 +15,14 @@ export interface VolumetricOptions {
 }
 export const DEFAULT_VOLUMETRIC_OPTIONS: Readonly<VolumetricOptions> = {resolution:48,depth:1,tolerance:0.001};
 export interface VolumetricStats {
-  algorithm: 'adaptive-volume-diffusion-v1';
+  algorithm: 'adaptive-volume-diffusion-v1' | 'adaptive-volume-diffusion-v2';
   cells: number;
   refinedCells: number;
   cellSize: number;
   components: number;
   unseededComponents: number;
   outsideBones: string[];
+  projectedBones?: {bone:string;distance:number}[];
   fallbackVertices: number;
   surfaceOnlyCells: number;
   maxResidual: number;
@@ -48,7 +49,7 @@ export function computeVolumetricWeights(vertices:Float32Array,stride:number,ind
   if(segs.some(s=>[...s.a,...s.b].some(x=>!Number.isFinite(x))))throw new Error('体积蒙皮：骨骼坐标无效');
   const volume=buildSolidVolume(vertices,stride,indices,options.resolution,options.depth);
   const {cells,neighbors}=volume,N=cells.length,B=segs.length;
-  const stats:VolumetricStats={algorithm:'adaptive-volume-diffusion-v1',cells:N,refinedCells:volume.refinedCells,
+  const stats:VolumetricStats={algorithm:'adaptive-volume-diffusion-v2',cells:N,refinedCells:volume.refinedCells,
     cellSize:volume.cellSize,components:0,unseededComponents:0,outsideBones:[],fallbackVertices:0,
     surfaceOnlyCells:volume.surfaceOnlyCells,maxResidual:0,maxIterations:0,converged:true,elapsedMs:0};
   // Bone-axis seeds. Restrict snapping so an exterior bone cannot pull an entire remote part.
@@ -63,7 +64,16 @@ export function computeVolumetricWeights(vertices:Float32Array,stride:number,ind
       if(distance(c.center,s.a,s.b)>limit)continue;
       if(!seedSources[i]!.has(b)){seedSources[i]!.add(b);seedCounts[b]=seedCounts[b]!+1;}
     }
-    if(!seedCounts[b])stats.outsideBones.push(s.bone);
+    if(!seedCounts[b]){
+      // Thin/open generated legs may surround an empty volume cell. Permit a
+      // bounded projection to nearby surface volume, with an explicit diagnostic.
+      // Distant bones stay invalid; no joint or volume connectivity is modified.
+      let best=-1,nearest=Infinity;
+      for(let i=0;i<N;i++){const d=distance(cells[i]!.center,s.a,s.b);if(d<nearest){nearest=d;best=i;}}
+      const limit=Math.min(.12,length*.25,volume.coarseCellSize*2);
+      if(best>=0&&nearest<=limit){seedSources[best]!.add(b);seedCounts[b]=1;(stats.projectedBones??=[]).push({bone:s.bone,distance:nearest});}
+      else stats.outsideBones.push(s.bone);
+    }
   }
   // A disconnected unseeded accessory has no harmonic boundary data. Anchor its
   // nearest cell/bone explicitly and report it, instead of silent distance fallback.

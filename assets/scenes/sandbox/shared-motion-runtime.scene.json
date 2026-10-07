@@ -291,7 +291,7 @@
     },
     {
       "id": "nd_motion_E-01",
-      "name": "游荡者 · 同一 Walking · 22 bones",
+      "name": "游荡者 · 同一 Walking · 27 bones",
       "parent": null,
       "transform": {
         "position": [
@@ -321,8 +321,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/characters/models/E-01/rigged/E01_Shambler_900_rigged.glb",
-              "guid": "as_vhoxpaf2"
+              "path": "assets/characters/models/E-01/rigged/E01_Shambler_900_animation_ready.glb",
+              "guid": "as_af984d0b1589bf78"
             }
           },
           "materials": [
@@ -367,7 +367,7 @@
     },
     {
       "id": "nd_motion_E-04",
-      "name": "盾卫 · 同一 Walking · 22 bones",
+      "name": "盾卫 · 同一 Walking · 27 bones",
       "parent": null,
       "transform": {
         "position": [
@@ -397,8 +397,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
-              "guid": "as_iagl0pct"
+              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_animation_ready.glb",
+              "guid": "as_08f37057b48bb7ee"
             }
           },
           "materials": [

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_39e296eba875ab21",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": 1.7,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "sourceHash": "sha256:a1e7016fd6ff32eff59673b024cb3b3e8db1b74d45e0a7301e36294534d3848f",
+  "updatedAt": "2026-10-07T03:12:06.597Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  },
+  "userData": {
+    "characterId": "E-03",
+    "characterName": "呕吐者",
+    "variant": "rigged",
+    "file": "E03_Spitter_1200_animation_ready.glb",
+    "animationReady": true,
+    "sourceAsset": {
+      "path": "assets/characters/models/E-03/textured/E03_Spitter_1200_baked.glb",
+      "guid": "as_n8n3inf3"
+    },
+    "sourceHash": "sha256:cf8c03e56655781e9ffe7fe916974e73961f8ef7656d9a8e446b9c162d503a0b",
+    "bindingSession": "assets/characters/models/E-03/textured/E03_Spitter_1200_baked.glb.meta.json",
+    "bindingRulerHeightM": 2.05,
+    "exportedHeightM": 1.7,
+    "bindPose": "source",
+    "weightSmoothing": {
+      "algorithm": "adaptive-volume-diffusion-v2",
+      "iterations": 6,
+      "lambda": 0.5
+    },
+    "rigidSelections": [],
+    "embeddedAnimationClips": 0
+  }
+}

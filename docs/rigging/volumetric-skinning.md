@@ -3,7 +3,8 @@
 Select **Volumetric** in the binding panel's weight algorithm dropdown. The solver
 uses the saved source-pose joints and source mesh; it does not move joints or modify
 the author mesh. Preview, heatmap, MCP and GLB export use the same BindingSession
-pipeline: weight generation, optional mirror, optional surface smoothing.
+pipeline: weight generation, optional mirror, optional surface smoothing, authored
+rigid prop constraints.
 
 ## Method and ownership
 
@@ -48,8 +49,35 @@ The sidecar `bindingEditor` stores `weightMode: "volumetric"` and:
 
 Invalid parameters fail before editing history/state. Old sidecars keep the
 existing wrapper default. Save/reload and Undo/Redo preserve volumetric settings.
-Algorithm revision `adaptive-volume-diffusion-v1` participates in the cache key
+Algorithm revision `adaptive-volume-diffusion-v2` participates in the cache key
 and is returned with diagnostics.
+
+V2 can project an otherwise unseeded bone onto the nearest occupied cell only
+within the minimum of 12cm, one quarter of its segment length and two coarse cells.
+It reports `projectedBones` with distances. It preserves saved joint positions;
+larger placement errors remain `outsideBones` and require author correction.
+
+## Held props and exact source selections
+
+The panel's **刚性部件约束** JSON and MCP `set_options.rigidRegions` share the same
+validated, saved, undoable configuration. Capsules use `name`, a deforming `bone`,
+`start`, `end`, `radius` and optional `feather`, in source binding coordinates (meters).
+Their interior becomes 100% rigid; the feather blends into existing normalized
+weights. Constraints apply after surface smoothing, and later entries win.
+
+For a prop fused into another body part, capsule boundaries can cut triangles.
+An exact region may also contain `vertices` (source vertex indices) and
+`selectionHash` from `skinSelectionHash(sourceVertices)`. This overrides the capsule
+selection and locks each selected vertex to one bone. Invalid indices or a changed
+source mesh are rejected before editing state; no silent remapping occurs. The hash
+is a geometry change guard, not a cryptographic provenance signature. The sidecar's
+SHA-256 remains the asset provenance guard.
+
+B-03's IV stand/bag/tubes use complete source UV islands selected through geometry
+review, assigned to `LeftHand` (3,060 source vertices). The body's weight field still
+uses volumetric diffusion. The selection is stored in the textured source sidecar;
+generated rigs point back to that authoring session rather than hydrating source
+vertex selections onto a normalized output mesh.
 
 MCP example:
 
@@ -77,7 +105,7 @@ Thin sheets, physically touching surfaces, fused weapons and incorrectly placed
 bones still need author review. A successful or converged solve alone does not
 establish animation readiness. Review idle/walk/attack/death in the headed editor
 on hardware GPU, with identical clips and cameras for comparisons. Preserve
-manual joint placement and require visual approval before publishing final rigs.
+manual joint placement and perform headed visual review before publishing final rigs.
 
 Run focused tests with:
 

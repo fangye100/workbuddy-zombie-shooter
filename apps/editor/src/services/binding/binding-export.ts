@@ -52,6 +52,7 @@ import {
 import { decomposeMatrixToTrs } from '@aether/scene';
 import { computeVolumetricWeights, type VolumetricOptions, type VolumetricStats } from './volumetric-skin';
 import type { WeightMode } from './binding-session';
+import { applyRigidRegions, type RigidSkinRegion } from './rigid-skin-regions';
 
 /** 引擎顶点布局：pos3 / normal3 / smoothNormal3 / uv2 / color4 */
 export const BINDING_VERTEX_FLOATS = 15;
@@ -87,6 +88,7 @@ export interface BindExportInput {
   bindPose?: 'tpose' | 'source';
   weightMode?: WeightMode;
   volumetric?: VolumetricOptions;
+  rigidRegions?: RigidSkinRegion[];
   /** Already-final weights from the same session snapshot (Worker preview/export parity). */
   computedSkin?: SkinWeights;
   volumetricStats?: VolumetricStats;
@@ -240,6 +242,7 @@ function runExport(
     });
   }
 
+  if (input.computedSkin === undefined) skin = applyRigidRegions(skin, vertices, VF, input.rigidRegions ?? []);
   // ③ 反解：顶点 → T-pose，法线同步旋转
   let tposeVertices = input.bindPose === 'source'
     ? new Float32Array(vertices) : unposeMesh(vertices, VF, vertexCount, skin, fit);

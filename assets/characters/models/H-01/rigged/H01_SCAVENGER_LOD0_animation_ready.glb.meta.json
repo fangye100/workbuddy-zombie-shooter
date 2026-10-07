@@ -31,10 +31,11 @@
       "iterations": 8,
       "lambda": 0.5
     },
-    "embeddedAnimationClips": 0
+    "embeddedAnimationClips": 0,
+    "exportedHeightM": 1.8
   },
-  "sourceHash": "sha256:582be8801b6f7674b8df7cb0eeee1976be5029ac202e33d9fada210f40428259",
-  "updatedAt": "2026-10-06T03:41:46.771Z",
+  "sourceHash": "sha256:4cb127bddaefd616eb32454ba4be5b16278d6acc3719830e9a858091c8d09ee5",
+  "updatedAt": "2026-10-07T03:13:14.214Z",
   "sharedMotion": {
     "library": {
       "path": "assets/animations/mixamo/shared.motion.json",
