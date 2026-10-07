@@ -2,6 +2,13 @@
 
 > 2026-10-02 精简重写：合并重复条目、删除已完结的过程细节。完整历史见 `docs/` 与 `.workbuddy/memory/YYYY-MM-DD.md`。
 
+## Gameplay development knowledge — 2026-10-08
+
+- Current entry: [Gameplay development workflow](../../docs/43-GameplayDevelopmentWorkflow.md). It maps durable scene/asset authority, author history/save, architectural LOD, NPC timing/input, accepted weapon events/IK ports, and audio intake/mix/lifetime to development and acceptance steps.
+- [Game Editor MCP](../../tools/mcp-editor/README.md): opt-in v0.2 adapter, `editor_workflow` discovery before instance selection, shared author/save/reopen commands, copied weapon diagnostics and audio lifecycle counters in `editor_runtime`. Client registration and full semantic authoring coverage remain separate work.
+- Reports 36/37/39/42 carry revision-specific evidence. Current documented schema baseline is v14; discover the live document version instead of assuming a historical value. Weapon procedural rendering and provisional sound families are explicit placeholders; current audio playback still needs in-game listening feedback.
+- Preserve WorkBuddy delivery/daily-log ownership and the separate HumanIK owner. Historical notes below are not current acceptance results.
+
 ## Visual quality knowledge — 2026-10-05
 
 - Canonical reusable guide: [Visual quality playbook](../../docs/art/visual-quality-playbook.md). Covers gameplay-camera composition, comic color/lighting, AgX and uniform-packing pitfalls, dynamic albedo, UV-aware LOD gates, stable placeholder replacement, sky texture lifecycle and atlas acceptance.

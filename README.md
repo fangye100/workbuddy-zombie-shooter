@@ -5,6 +5,8 @@ FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
 
 ## 文档索引
 
+Current development starts at [Gameplay development workflow](./docs/43-GameplayDevelopmentWorkflow.md): scene persistence, comic materials/LOD, NPC/input, unified weapons/IK ports, audio and scoped acceptance. [Game Editor MCP](./tools/mcp-editor/README.md) exposes workflow discovery and the shared authoring/diagnostic path.
+
 | 文档 | 内容 |
 |---|---|
 | [01-架构总览与主循环](./docs/01-架构总览与主循环.md) | 七层架构、包划分、一帧时序、Job 调度、技术选型决策表、M0–M8 路线图、编码规范 |

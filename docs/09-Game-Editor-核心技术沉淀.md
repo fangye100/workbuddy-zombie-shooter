@@ -1,5 +1,7 @@
 # 09 · Game Editor 核心技术沉淀（WebGPU 编辑器）
 
+> Current development entry (2026-10-08): [Gameplay development workflow](43-GameplayDevelopmentWorkflow.md) connects scene/material/LOD, NPC/input, weapon hooks and audio owners to the author/save/reopen/Play/Stop process. [Game Editor MCP](../tools/mcp-editor/README.md) documents workflow discovery and read-only weapon/audio diagnostics. Use these current contracts before the historical implementation map below.
+
 > Updated visual-quality knowledge: [Comic game visual quality playbook](art/visual-quality-playbook.md) (2026-10-05). It records current scene refinement, LOD/texture pitfalls and validation boundaries. The implementation map and browser recipes below are historical; current project rules govern execution.
 
 > 源项目：末日尸潮 · Game Editor（前身 Shader Lab），`apps/lab/shader-lab`

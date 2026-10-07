@@ -55,7 +55,10 @@ describe('Game Editor agent commands',()=>{
     expect((r.state as {revision:string}).revision).toBe(sceneFingerprint(s.store.document));
   });
   it('keeps capture and diagnostics read-only and rejects unsupported commands',async()=>{
-    const s=setup();expect((await s.agent.call('editor_capture',{})).image).toEqual({data:'png'});
+    const s=setup();s.port.runtime=()=>({state:'stopped',weapons:null,audio:{state:'closed',voices:0,buffers:0}});
+    expect((await s.agent.call('editor_runtime',{})).runtime).toEqual({state:'stopped',weapons:null,audio:{state:'closed',voices:0,buffers:0}});
+    expect(s.port.play).not.toHaveBeenCalled();
+    expect((await s.agent.call('editor_capture',{})).image).toEqual({data:'png'});
     expect((await s.agent.call('scene_validate',{})).valid).toBe(true);
     expect((await s.edit('eval',{code:'anything'})).code).toBe('UNKNOWN_TOOL');
     expect((await s.edit('editor_play',{action:'step',steps:601})).code).toBe('INVALID_ARGUMENTS');

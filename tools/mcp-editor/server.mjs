@@ -1,4 +1,5 @@
 /** MCP stdio adapter. No business state, filesystem authoring or browser automation. */
+import { EDITOR_INSTRUCTIONS } from './workflow.mjs';
 import http from 'node:http';
 import https from 'node:https';
 import { readFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ async function handle(req) {
   if(req.id===undefined)return;
   try {
     let result;
-    if(req.method==='initialize')result={protocolVersion:supported.includes(req.params?.protocolVersion)?req.params.protocolVersion:supported.at(-1),capabilities:{tools:{}},serverInfo:{name:'aether-editor',version:'0.1.0'}};
+    if(req.method==='initialize')result={protocolVersion:supported.includes(req.params?.protocolVersion)?req.params.protocolVersion:supported.at(-1),capabilities:{tools:{}},serverInfo:{name:'aether-editor',version:'0.2.0'},instructions:EDITOR_INSTRUCTIONS};
     else if(req.method==='ping')result={};
     else if(req.method==='tools/list')result=await request('/__editor/tools');
     else if(req.method==='tools/call') {

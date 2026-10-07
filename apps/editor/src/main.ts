@@ -1,5 +1,6 @@
 import { GameControls } from './services/game-controls';
 import { GameAudio } from './services/game-audio';
+import { weaponDiagnostics } from './services/weapon-diagnostics';
 import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
 import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
@@ -4055,7 +4056,8 @@ async function boot(): Promise<void> {
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
     runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
-      diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size}),
+      diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
+      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot()}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;

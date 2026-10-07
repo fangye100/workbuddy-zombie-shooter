@@ -9,6 +9,7 @@ const edit = (name, description, properties = {}, required = []) => scoped(name,
   { expectedRevision: revision, ...properties }, ['expectedRevision', ...required]);
 
 export const EDITOR_TOOLS = [
+  tool('editor_workflow', 'Read the development workflow, source contracts, author/save/verify sequence, failure recovery and capability limits. No live instance required.'),
   tool('editor_instances', 'List connected Game Editor instances and their scene/ready/dirty/play state. Explicitly target one instance in subsequent calls.'),
   scoped('scene_list', 'List registered project scenes. Uses the project scenes manifest.'),
   scoped('scene_get', 'Read the current author scene, stable NodeIds, environment and revision. Runtime state never overwrites this document.'),
@@ -24,6 +25,6 @@ export const EDITOR_TOOLS = [
   edit('scene_save', 'Persist the author scene with the existing disk-conflict checks. Never bypass UI drafts, Play locks or author field authority.'),
   edit('editor_play', 'Start paused, resume, pause, single-step or stop using PlayController. stop restores the author scene and releases Play resources.',
     {action:{enum:['start','resume','pause','step','stop']},steps:{type:'integer',minimum:1,maximum:600}}, ['action']),
-  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, diagnostics and Play GPU resource ledger.'),
+  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, copied weapon ammo/action/grip/recoil facts and audio decode/voice/lifecycle diagnostics. Read-only; no firing or playback command.'),
   scoped('editor_capture', 'Capture the next actual GPU viewport frame as PNG. This is the 3D canvas, not the DOM HUD. Requires a live rendered editor; timeout is explicit.'),
 ];

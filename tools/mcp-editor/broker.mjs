@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EDITOR_TOOLS } from './catalog.mjs';
+import { editorWorkflow } from './workflow.mjs';
 
 /** Vite transport only. Every business command executes against one live editor owner. */
 export function editorAgentPlugin() {
@@ -36,6 +37,7 @@ export function editorAgentPlugin() {
         if(!tool) return respond(400,{ok:false,code:'UNKNOWN_TOOL',message:String(name)});
         if(!args||typeof args!=='object'||Array.isArray(args))return respond(400,{ok:false,code:'INVALID_ARGUMENTS'});
         if(tool.inputSchema.required.some(key=>!(key in args)) || Object.keys(args).some(key=>!(key in tool.inputSchema.properties))) return respond(400,{ok:false,code:'INVALID_ARGUMENTS',message:'Missing required or unknown argument'});
+        if(name==='editor_workflow') return respond(200,{ok:true,workflow:editorWorkflow()});
         for(const [id,entry] of instances) if(!server.ws.clients.has(entry.client))instances.delete(id);
         if(name==='editor_instances') return respond(200,{ok:true,instances:[...instances.values()].map(e=>({...e.metadata,lastSeen:e.seen}))});
         const entry=instances.get(args.instanceId);
