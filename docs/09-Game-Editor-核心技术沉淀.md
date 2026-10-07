@@ -211,6 +211,17 @@ git diff --stat --ignore-cr-at-eol   # 34 insertions   ← 相同 = 没有整文
 
 ## 9. 遗留与后续项
 
+### Rigging knowledge, 2026-10-07
+
+The [character rigging workflow](rigging/character-rigging-workflow.md) records the
+nine-character source-pose pipeline, volume solver, whole-rig physical scaling,
+held-prop constraints, shared-motion ownership and facing/control acceptance.
+Binding MCP `get_workflow` exposes the same operational boundaries for clients;
+`get_state` identifies source coordinates and `compute_skin.weightQuality`
+checks final postprocessed weights. GUI/MCP reuse BindingSession and version-checked
+sidecars. Runtime samples cached target motion and never reruns volume skinning.
+See the linked delivery/control records for actual acceptance and art limitations.
+
 - smoothNormals 两级键（数值哈希 + 桶内坐标校验）——大模型时再做；
 - 撤销/重做命令栈（当前 Delete 不可撤销）；
 - 万向锁等价欧拉解消显示跳变；

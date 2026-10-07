@@ -10,7 +10,7 @@
  *     roster.json E-04 height），保证 MCP 里看到的体型与编辑器一致。
  *
  * 导出（WU-3 收口）：`export_glb` 直接复用编辑器 `exportBound` 同一条管线
- * （binding-export `rigToTPoseWithImage`：当前姿态算权重 → 反解 T-pose → 写干净骨架），
+ * （binding-export `rigToTPoseWithImage`：当前姿态算权重 → 源姿态或反解 T-pose → 写骨架），
  * 产物经 FsPort 落盘仓内；动画烘焙（BVH 重定向）仍不走 MCP —— 那是 retarget 的领域。
  */
 
@@ -31,6 +31,9 @@ import {
 import { rigToTPoseWithImage } from '../../../apps/editor/src/services/binding/binding-export';
 import { parseGlb } from '@aether/scene';
 import { sceneFingerprint } from '@aether/runtime';
+import { requireCharacter } from '@aether/content';
+import { skinSelectionHash } from '../../../apps/editor/src/services/binding/rigid-skin-regions';
+import { BINDING_WORKFLOW } from './workflow';
 import { BindingPersistence } from '../../../apps/editor/src/services/binding/binding-persistence';
 import type { WriteResult } from '../../../apps/editor/src/asset-util';
 import {
@@ -48,6 +51,7 @@ import {
 
 /** 引擎顶点布局 stride（packages/scene/src/gltf.ts 的 VF：pos3+normal3+smoothNormal3+uv2+color4） */
 const VERTEX_FLOATS = 15;
+const BINDING_HEIGHT_M = requireCharacter('E-04').heightMeters;
 
 /** 工具参数 / 前置条件错误（→ JSON-RPC -32602）；实现 bug 走未知错误（→ -32603） */
 export class ToolError extends Error {}
@@ -157,6 +161,13 @@ export class BindingDomain {
 
   constructor(private readonly fs: FsPort) {}
 
+  modelContext(): Record<string, unknown> {
+    const mesh = this.requireMesh();
+    return { sourcePath: this.requireGlbPath(), metaPath: this.metaPath(),
+      bindingHeightM: BINDING_HEIGHT_M, coordinateSpace: 'normalized-source-local-metres',
+      selectionHash: skinSelectionHash(mesh.vertices) };
+  }
+
   private requireMesh(): BindingMesh {
     const m = this.session.getMesh();
     if (m === null) throw new ToolError('未载入模型：先调 load_model');
@@ -191,7 +202,7 @@ export class BindingDomain {
     try {
       // targetHeight 用默认值 2.05 —— 即 MODEL_RULER_HEIGHT_M（roster E-04），
       // 与编辑器 bindAssetAt 的 parseGlb(buffer, MODEL_RULER_HEIGHT_M) 同尺
-      model = parseGlb(buf);
+      model = parseGlb(buf, BINDING_HEIGHT_M);
     } catch (err) {
       throw new ToolError(`GLB 解析失败：${relPath}（${String(err)}）`);
     }
@@ -212,6 +223,7 @@ export class BindingDomain {
       vertices: this.session.vertexCount(),
       triangles: this.session.triangleCount(),
       hydrated,
+      ...this.modelContext(),
     };
   }
 
@@ -397,11 +409,12 @@ export class BindingDomain {
   }
 
   /**
-   * export_glb：把当前会话态（骨架 + wrapper + 权重选项）导成干净 T-pose 的 rigged GLB。
+   * export_glb：把当前会话态导为源姿态或 T-pose 的 rig-only GLB。
    *
    * 与编辑器 main.ts `exportBound` 同一条管线（`rigToTPoseWithImage`）：当前姿态算权重
-   * （wrapper/distance → 镜像 → 平滑）→ 反解 T-pose → 骨架只采纳骨长、rotation 恒为单位
-   * 四元数。产物落盘仓内，**不回传字节**（token 纪律：GLB 以 MB 计，统计足够决策）。
+   * （wrapper/distance/volume → 镜像 → 平滑 → 刚性约束）→ 指定的绑定姿态。
+   * 源姿态保留当前 TRS 和对应 inverse binds；T-pose 反解生成干净骨架。
+   * 产物落盘仓内，**不回传字节**（token 纪律：GLB 以 MB 计，统计足够决策）。
    *
    * sidecar 纪律：目标已有 .meta.json 时只**外科式刷新** sourceHash/updatedAt（不碰其他键，
    * 与 scene:gen 的 merge 语义一致）；没有则不代建 —— 首版 sidecar 要 roster 字段
@@ -412,7 +425,10 @@ export class BindingDomain {
     const srcRel = this.requireGlbPath();
     const s = this.session;
 
-    const outRel = optStr(args, 'outPath') ?? srcRel.replace(/\.glb$/i, '_tpose.glb');
+    const bindPose = optStr(args, 'bindPose') ?? 'tpose';
+    if (bindPose !== 'tpose' && bindPose !== 'source') throw new ToolError('bindPose 必须是 tpose 或 source');
+
+    const outRel = optStr(args, 'outPath') ?? srcRel.replace(/\.glb$/i, bindPose === 'source' ? '_source_rig.glb' : '_tpose.glb');
     if (!outRel.toLowerCase().endsWith('.glb')) {
       throw new ToolError(`导出目标必须是 .glb：${outRel}`);
     }
@@ -439,7 +455,10 @@ export class BindingDomain {
     // TOCTOU 防护（独立审核 P1-2 实测）：贴图解码的 await 会让出事件循环，并发的
     // set_joint 会渗进活引用 —— 所有会话输入在第一个 await 之前同步深拷贝快照
     const placed = JSON.parse(JSON.stringify(s.positions)) as JointPositions;
-    const cylLive = s.getWeightMode() === 'distance' ? null : s.getCylinders();
+    const weightMode = s.getWeightMode();
+    const volumetric = s.getVolumetricOptions();
+    const rigidRegions = s.getRigidRegions();
+    const cylLive = weightMode === 'wrapper' ? s.getCylinders() : null;
     const cylinders = cylLive === null
       ? undefined
       : (JSON.parse(JSON.stringify(cylLive)) as SkinCylinderMap);
@@ -450,6 +469,10 @@ export class BindingDomain {
 
     // 与 exportBound 的 base 包逐字段同构（动画除外：BVH 重定向不在 MCP 面内）
     const res = await rigToTPoseWithImage({
+      bindPose,
+      weightMode,
+      volumetric,
+      rigidRegions,
       name: outName,
       vertices: mesh.vertices,
       indices: mesh.indices,
@@ -501,6 +524,7 @@ export class BindingDomain {
     const st = res.stats;
     return {
       glbPath: outRel,
+      bindPose,
       bytes: res.glb.byteLength,
       metaRefreshed,
       metaWarning,
@@ -519,6 +543,7 @@ export class BindingDomain {
         zeroWeightVerts: st.zeroWeightVerts,
         tipWeightSum: st.tipWeightSum,
         tipRefVerts: st.tipRefVerts,
+        volumetric: st.volumetric ?? null,
       },
     };
   }
@@ -536,6 +561,12 @@ const VEC3_SCHEMA = {
 
 export const TOOLS_TABLE = [
   {
+    name: 'get_workflow',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    description: '只读：源姿态 rigging 全流程、体积蒙皮建议、刚性道具、发布脚本、共享动作与 headed 验收边界；无需加载模型。',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
     name: 'load_model',
     description:
       '载入仓内 .glb 并归一到编辑器同一把身高尺（2.05m）；若 sidecar .meta.json 有 bindingEditor 存档会自动回填。返回网格规模与是否回填。',
@@ -549,7 +580,7 @@ export const TOOLS_TABLE = [
   },
   {
     name: 'get_state',
-    description: '会话总览：模型 / 权重导出选项 / Undo 深度 / Bind 指纹。',
+    description: '会话总览：源路径、sidecar、归一化坐标尺与精确选择 selectionHash / 权重选项 / Undo 深度 / Bind 指纹。',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -615,11 +646,26 @@ export const TOOLS_TABLE = [
   {
     name: 'set_options',
     description:
-      '设权重导出选项（只动传入的键；越界值按面板同款规则钳制）。管线顺序铁律：算法 → 镜像 → 平滑。',
+      '设权重导出选项（只动传入键；平滑值按 GUI 钳制，体积/刚性约束非法值拒绝）。顺序：算法 → 镜像 → 平滑 → 刚性部件约束；rigidRegions:[] 清空，省略保留。',
     inputSchema: {
       type: 'object',
       properties: {
-        weightMode: { type: 'string', enum: ['wrapper', 'distance'] },
+        weightMode: { type: 'string', enum: ['wrapper', 'distance', 'volumetric'] },
+        rigidRegions: { type: 'array', maxItems: 64, items: { type: 'object', additionalProperties: false,
+          required: ['name','bone','start','end','radius'], properties: {
+            name: {type:'string'}, bone: {type:'string'},
+            start: {type:'array',items:{type:'number'},minItems:3,maxItems:3},
+            end: {type:'array',items:{type:'number'},minItems:3,maxItems:3},
+            radius: {type:'number',exclusiveMinimum:0,maximum:2},
+            feather: {type:'number',minimum:0,maximum:2},
+            vertices: {type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:200000},
+            selectionHash: {type:'string',pattern:'^fnv1a32:[0-9a-f]{8}$'},
+          } }, description: '胶囊或带 selectionHash 的 vertices 精确选择刚性跟随 bone；平滑之后应用，后项优先' },
+        volumetric: { type: 'object', additionalProperties: false, properties: {
+          resolution: { type: 'integer', minimum: 16, maximum: 96 },
+          depth: { type: 'integer', minimum: 0, maximum: 2 },
+          tolerance: { type: 'number', minimum: 0.0001, maximum: 0.01 },
+        }, description: '体积扩散配置，未指定的字段保留当前值' },
         smoothWeights: { type: 'boolean' },
         smoothIters: { type: 'integer', description: '1..12' },
         smoothLambda: { type: 'number', description: '0..1' },
@@ -630,7 +676,7 @@ export const TOOLS_TABLE = [
   {
     name: 'compute_skin',
     description:
-      '算一遍当前权重（算法 → 镜像 → 平滑，与导出同序），只返回统计不返回权重数组（token 纪律）：未包裹顶点数等。',
+      '计算并检查最终 top-4 权重：算法 → 镜像 → 平滑 → 刚性约束；回 weightQuality 和 wrapper/volume 诊断，不回大数组。outsideBones/兜底需审核，数值通过不等于动作视觉通过。',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -675,15 +721,16 @@ export const TOOLS_TABLE = [
   {
     name: 'export_glb',
     description:
-      '把当前会话态导成干净 T-pose 的 rigged GLB 并落盘仓内（与编辑器 exportBound 同管线：当前姿态算权重 → 反解 T-pose → 骨架只采纳骨长）。只回统计不回字节；已有 sidecar 会外科式刷新 sourceHash，没有则提示跑 scene:gen。',
+      '导出 rigged GLB 并落盘仓内。默认 tpose：当前姿态算权重 → 反解 T-pose；显式 source：保留源网格与源姿态绑定帧，动画须 retarget 到此骨架。只回统计不回字节；已有 sidecar 刷新 sourceHash，没有则提示跑 scene:gen。',
     inputSchema: {
       type: 'object',
       properties: {
         outPath: {
           type: 'string',
-          description: '仓内相对输出路径，默认 <源文件去 .glb>_tpose.glb；不许覆盖源模型',
+          description: '仓内相对输出路径；默认 tpose 用 <源>_tpose.glb，source 用 <源>_source_rig.glb；不许覆盖源模型',
         },
         name: { type: 'string', description: '导出名（GLB 内 mesh/材质命名），默认载入模型名' },
+        bindPose: { type: 'string', enum: ['tpose', 'source'], description: '默认 tpose；source 保留源网格形状与源姿态绑定矩阵，动画须 retarget 到此骨架' },
         overwrite: {
           type: 'boolean',
           description: '目标已存在时显式放行覆盖（重导迭代用）；覆盖源模型恒拒',
@@ -702,7 +749,7 @@ export const TOOLS_TABLE = [
  * 脚本化的连续调用并成一步 undo（独立审核 P1-2 实测复现）。
  */
 const READONLY_TOOLS: ReadonlySet<string> = new Set([
-  'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data', 'export_glb',
+  'get_workflow', 'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data', 'export_glb',
 ]);
 
 export async function dispatchTool(
@@ -726,6 +773,8 @@ async function dispatchInner(
   const args = asObj(rawArgs);
   const s = domain.session;
   switch (name) {
+    case 'get_workflow':
+      return { json: BINDING_WORKFLOW };
     case 'load_model':
       return { json: domain.loadModel(reqStr(args, 'path')) };
 
@@ -739,9 +788,12 @@ async function dispatchInner(
                 name: s.getModelName(),
                 vertices: s.vertexCount(),
                 triangles: s.triangleCount(),
+                ...domain.modelContext(),
               },
           options: {
             weightMode: s.getWeightMode(),
+            volumetric: s.getVolumetricOptions(),
+            rigidRegions: s.getRigidRegions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -847,13 +899,25 @@ async function dispatchInner(
 
     case 'set_options': {
       const wm = optStr(args, 'weightMode');
-      if (wm !== undefined && wm !== 'wrapper' && wm !== 'distance') {
-        throw new ToolError(`weightMode 只能是 wrapper / distance：${wm}`);
+      if (wm !== undefined && wm !== 'wrapper' && wm !== 'distance' && wm !== 'volumetric') {
+        throw new ToolError(`weightMode 只能是 wrapper / distance / volumetric：${wm}`);
       }
       // 批量设置走 session.applyOptions：多字段合并为一步历史（PR #10 评审），
       // 逐 setter 调用会各打一条快照、undo 一次只回退最后一个字段
       const batch: Parameters<BindingSession['applyOptions']>[0] = {};
+      if (args.rigidRegions !== undefined) batch.rigidRegions = args.rigidRegions as NonNullable<typeof batch.rigidRegions>;
       if (wm !== undefined) batch.weightMode = wm;
+      if (args.volumetric !== undefined) {
+        const value = args.volumetric;
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new ToolError('volumetric 必须为对象');
+        const vo = value as Record<string, unknown>, next = s.getVolumetricOptions();
+        for (const key of Object.keys(vo)) {
+          if (key !== 'resolution' && key !== 'depth' && key !== 'tolerance') throw new ToolError(`未知体积蒙皮参数：${key}`);
+          if (typeof vo[key] !== 'number') throw new ToolError(`volumetric.${key} 必须为数值`);
+          next[key] = vo[key];
+        }
+        batch.volumetric = next;
+      }
       const sw = optBool(args, 'smoothWeights');
       if (sw !== undefined) batch.smoothWeights = sw;
       const mw = optBool(args, 'mirrorWeights');
@@ -862,11 +926,13 @@ async function dispatchInner(
       if (si !== undefined) batch.smoothIters = si;
       const sl = optNum(args, 'smoothLambda');
       if (sl !== undefined) batch.smoothLambda = sl;
-      s.applyOptions(batch);
+      try { s.applyOptions(batch); } catch (error) { throw new ToolError(String(error)); }
       return {
         json: {
           applied: {
             weightMode: s.getWeightMode() satisfies WeightMode,
+            volumetric: s.getVolumetricOptions(),
+            rigidRegions: s.getRigidRegions(),
             smoothWeights: s.getSmoothWeights(),
             smoothIters: s.getSmoothIters(),
             smoothLambda: s.getSmoothLambda(),
@@ -879,13 +945,26 @@ async function dispatchInner(
     case 'compute_skin': {
       const r = s.computeSkin();
       if (r === null) throw new ToolError('未载入模型：先调 load_model');
+      let zeroWeightVerts = 0, invalidWeightVerts = 0, maxNormalizationError = 0;
+      for (let v = 0; v < s.vertexCount(); v++) {
+        let sum = 0, invalid = false;
+        for (let j = 0; j < 4; j++) {
+          const w = r.skin.weights[v * 4 + j]!;
+          invalid ||= !Number.isFinite(w) || w < 0;
+          sum += w;
+        }
+        if (invalid || !Number.isFinite(sum)) invalidWeightVerts++;
+        else { if (sum <= 0) zeroWeightVerts++; maxNormalizationError = Math.max(maxNormalizationError, Math.abs(sum - 1)); }
+      }
       return {
         json: {
           weightMode: s.getWeightMode(),
           vertices: s.vertexCount(),
           unwrappedVerts: r.stats?.unwrappedVerts ?? null,
-          pipeline: '算法 → 镜像 → 平滑（与导出同序）',
-          note: r.stats === null ? 'distance 模式无 wrapper 统计' : undefined,
+          volumetric: r.volumetric ?? null,
+          weightQuality: { zeroWeightVerts, invalidWeightVerts, maxNormalizationError, stage: 'after-rigid-constraints' },
+          pipeline: '算法 → 镜像 → 平滑 → 刚性部件约束（与导出同序）',
+          note: r.stats === null ? '此算法无 wrapper 统计；体积模式请查看 volumetric 诊断' : undefined,
         },
       };
     }

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_player_walking",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:55617be50038c353d5eeafd899408aef06e6cc6366caf456c9c8bbdad2ebb438",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:66968704471520c6f487aeb52743f9f3bd3f2a838890065a6631f82c9bbc95ee"
+}

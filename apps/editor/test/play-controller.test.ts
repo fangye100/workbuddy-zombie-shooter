@@ -298,6 +298,22 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
 });
 
 describe('PlayController —— 状态机透传', () => {
+  it('converts runtime heading for a target-follow camera and restores the authored camera', () => {
+    const doc = scene();
+    for (const node of doc.nodes) for (const c of node.components) if (c.kind === 'Camera') {
+      c.mode = 'orbit-follow'; c.yawMode = 'target'; c.yawOffsetDeg = 0;
+    }
+    const vc = fakeViewCamera(), before = vc.view.get();
+    const { ctl } = make(doc, { viewCamera: vc.view,
+      worldPosOf: id => doc.nodes.find(n => n.id === id)?.transform.position ?? null });
+    expect(ctl.start()).toBe(true);
+    for (const [x, z] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+      ctl.session.setInput(x!, z!); ctl.update(1 / 30);
+      expect(Math.sin(vc.cur.yaw)).toBeCloseTo(x!, 5);
+      expect(Math.cos(vc.cur.yaw)).toBeCloseTo(z!, 5);
+    }
+    ctl.stop(); expect(vc.cur).toEqual(before);
+  });
   it('pause / resume / step 的语义由 PlaySession 保证，控制器只做透传', () => {
     const { ctl } = make();
     expect(ctl.state).toBe('stopped');

@@ -290,7 +290,8 @@ async function performWrite(
         return;
       }
     }
-    out = JSON.stringify({ ...existing, ...body.patch }, null, 2);
+    // Match the sidecar generator and offline MCP writer, including the final LF.
+    out = `${JSON.stringify({ ...existing, ...body.patch }, null, 2)}\n`;
   } else if (body.content !== undefined) {
     out = String(body.content);
     try { JSON.parse(out); } catch {

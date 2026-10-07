@@ -1124,6 +1124,7 @@ export class LabRenderer {
           bmp,
           model.skeleton,
           model.nodeTree,
+          model.animations,
         );
         if (ok) {
           this.state.objects[p.index]!.loadedAssetPath = p.path;
@@ -1637,6 +1638,7 @@ export class LabRenderer {
     bitmap: ImageBitmap | null,
     skeleton: SkeletonData | null = null,
     nodeTree: readonly GltfNodeTree[] = [],
+    animations: AnimClip[] = [],
   ): boolean {
     const o = this.state.objects[index];
     if (o === undefined || o.removed) return false;
@@ -1644,6 +1646,9 @@ export class LabRenderer {
     delete o.loadedAssetPath;
 
     this.uploadMesh(o, mesh, skeleton);
+    o.skeleton = skeleton;
+    o.animations = animations;
+    o.skinState = skeleton ? createSkinState(skeleton, animations) : null;
 
     // ---- 贴图：有新图就换（销毁旧自有图）；没有则保留原样 ----
     if (bitmap !== null) {

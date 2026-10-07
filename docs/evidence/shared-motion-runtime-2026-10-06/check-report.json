@@ -1,0 +1,125 @@
+{
+  "sources": 10,
+  "nodes": [
+    {
+      "node": "nd_motion_player",
+      "joints": 27,
+      "key": "fp1_e7bd987eba141130224a3068",
+      "states": [
+        "idle",
+        "walk",
+        "run",
+        "jump",
+        "shoot",
+        "attack"
+      ],
+      "warnings": [
+        "MRR_DERIVED_MARKERS",
+        "MRC_HS_DERIVED",
+        "MRC_CONTACT_UNCALIBRATED",
+        "MRC_CAPABILITY_GAP"
+      ]
+    },
+    {
+      "node": "nd_motion_h01",
+      "joints": 27,
+      "key": "fp1_e7bd987eba141130224a3068",
+      "states": [
+        "idle",
+        "walk",
+        "run",
+        "jump",
+        "shoot",
+        "attack"
+      ],
+      "warnings": [
+        "MRR_DERIVED_MARKERS",
+        "MRC_HS_DERIVED",
+        "MRC_CONTACT_UNCALIBRATED",
+        "MRC_CAPABILITY_GAP"
+      ]
+    },
+    {
+      "node": "nd_motion_E-01",
+      "joints": 22,
+      "key": "fp1_4ee03ab2069732e4110561ad",
+      "states": [
+        "idle",
+        "walk",
+        "run",
+        "jump",
+        "shoot",
+        "attack"
+      ],
+      "warnings": [
+        "MRR_DERIVED_MARKERS",
+        "MRC_HS_DERIVED",
+        "MRC_CONTACT_UNCALIBRATED",
+        "MRC_CAPABILITY_GAP"
+      ]
+    },
+    {
+      "node": "nd_motion_E-04",
+      "joints": 22,
+      "key": "fp1_71883d456d7aa25f1e8a9830",
+      "states": [
+        "idle",
+        "walk",
+        "run",
+        "jump",
+        "shoot",
+        "attack"
+      ],
+      "warnings": [
+        "MRR_DERIVED_MARKERS",
+        "MRC_HS_DERIVED",
+        "MRC_CONTACT_UNCALIBRATED",
+        "MRC_CAPABILITY_GAP"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "H-01",
+      "stride": 28,
+      "matrixBase": 0,
+      "states": [
+        "idle",
+        "walk",
+        "run",
+        "jump",
+        "shoot",
+        "attack"
+      ]
+    },
+    {
+      "id": "E-01",
+      "stride": 23,
+      "matrixBase": 3556,
+      "states": [
+        "idle",
+        "walk",
+        "attack",
+        "death",
+        "scream"
+      ]
+    },
+    {
+      "id": "E-04",
+      "stride": 23,
+      "matrixBase": 14987,
+      "states": [
+        "idle",
+        "walk",
+        "attack",
+        "death",
+        "scream"
+      ]
+    }
+  ],
+  "stats": {
+    "solves": 34,
+    "cacheHits": 1,
+    "failures": 0
+  }
+}

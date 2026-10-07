@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_player_shoot_rifle",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:aab3b05c92ec578bde55237d093202d323ca2d61722c44a46d000f4138de848d",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:cf3afe6e840ac8b5de867418a125c8297f23ab508f988475ba3864b234ccc954"
+}

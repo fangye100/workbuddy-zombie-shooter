@@ -20,6 +20,7 @@ import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
+import { characterYaw } from './character-facing';
 
 /**
  * Bridge 对装配库的全部依赖（窄接口）：只问「这个角色有没有真模型」。
@@ -116,6 +117,7 @@ interface BatchSlot {
 }
 
 export class RuntimeBridge {
+  private gait = new Map<string, { x: number; z: number; clip: string; cycles: number }>();
   private presentedPlayerSource: string | null = null;
 
   /** Suppress only the player proxy whose authored mesh is bound by the host. */
@@ -174,6 +176,7 @@ export class RuntimeBridge {
    */
   attach(session: RuntimeSession | null): void {
     this.session = session;
+    this.gait.clear();
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
       this.presentedPlayerSource = null;
@@ -301,6 +304,7 @@ export class RuntimeBridge {
     // 不读墙钟，Node 与浏览器逐位一致（docs/20 §5「动画相位 = f(tick)」）
     const tick = this.session.tick;
     const fixedStep = this.session.fixedStep;
+    const gaitKeys = new Set<string>();
 
     for (const e of view) {
       if (e.kind === 'player' && this.presentedPlayerSource !== null && e.sourceNodeId === this.presentedPlayerSource) continue;
@@ -364,12 +368,12 @@ export class RuntimeBridge {
         inst[o] = e.x;
         inst[o + 1] = actor !== null ? actor.feetOffset : height / 2;
         inst[o + 2] = e.z;
-        inst[o + 3] = e.yaw;
+        inst[o + 3] = characterYaw(e.yaw);
         // 网格已按真尺寸生成（胶囊按体型、真模型按资产），缩放恒为 1
         inst[o + 4] = 1;
         inst[o + 5] = 1;
         inst[o + 6] = 1;
-        // [7] paletteBase：真模型 = 该角色在总调色板里的起始 pose；胶囊无蒙皮恒 0
+        // [7] paletteBase: global matrix offset; [11] is a local pose, [15] its joint stride.
         inst[o + 7] = actor !== null ? actor.paletteBase : 0;
         const base: readonly [number, number, number] = slot.actor?.albedo ? [1, 1, 1] : (PROXY_COLORS[e.characterId] ?? FALLBACK_COLOR);
         // 选中 = 提亮。没有第二套高亮管线，成本最低且不会误伤静态关卡的高亮层。
@@ -383,27 +387,39 @@ export class RuntimeBridge {
         inst[o + 9] = base[1] * k * (1 - flash) + flash * 0.82;
         inst[o + 10] = base[2] * k * (1 - flash) + flash * 0.55;
         // [11] poseIndex（相对 paletteBase，局部量）：M3 按行为选片 + tick 推相位查表
-        //（poseIndexAt 返回本角色 palette 内的下标；shader 端全局 = paletteBase + 相对量，
+        //（poseIndexAt 返回本角色 palette 内的下标；shader 端 matrix = base + pose * stride，
         //  与 restPose 同语义）。选不到片（资产改名 / 退化空片）回 bind pose。
         let poseIdx = 0;
         let frameCount = 0;
         let phase01 = 0;
         if (actor !== null) {
-          const clipIdx = clipIndexForBehavior(actor.clips, e.behavior);
+          // Anchored actors can acquire a chase target while their authored speed
+          // remains zero. Their idle motion uses time, not a frozen walking gait.
+          const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
+          const clipIdx = clipIndexForBehavior(actor.clips, behavior);
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
+          const nominal = clip ? actor.motion?.states[clip.name]?.nominalSpeedMps : undefined;
+          if (clip && nominal && clip.durationSec > 0) {
+            const key = `${e.runId}:${e.id}:${e.generation}`; gaitKeys.add(key);
+            const previous = this.gait.get(key);
+            const cycles = previous?.clip === clip.name ? previous.cycles + Math.hypot(e.x - previous.x, e.z - previous.z) / (nominal * clip.durationSec) : phase01;
+            this.gait.set(key, { x: e.x, z: e.z, clip: clip.name, cycles });
+            phase01 = cycles % 1;
+          }
           poseIdx = clip !== null ? poseIndexAt(actor.palette, clipIdx, phase01) : actor.restPose;
           frameCount = clip !== null ? clip.frameCount : 0;
         }
         inst[o + 11] = poseIdx;
-        // [12..15] clipFrameCount / phase01 / flags / pad（flags bit0 = 是否蒙皮；
-        // [12]/[13] 是信息位，shader 只读 [7]/[11]/[14] —— 探针 / 调试用）
+        // [12..15] clipFrameCount / phase01 / flags / jointStride.
         inst[o + 12] = frameCount;
         inst[o + 13] = phase01;
         inst[o + 14] = actor !== null ? FLAG_SKINNED : 0;
-        inst[o + 15] = 0;
+        // Each actor has its own palette stride; 22- and 27-joint rigs coexist.
+        inst[o + 15] = actor?.palette.jointCount ?? 0;
       }
       slot.count = n;
     }
+    for (const key of this.gait.keys()) if (!gaitKeys.has(key)) this.gait.delete(key);
   }
 }

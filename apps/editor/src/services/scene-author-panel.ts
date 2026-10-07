@@ -101,6 +101,16 @@ export class SceneAuthorPanel {
         }
       }
       for (const component of draft.components) if (component.kind === 'Light') fields(form, component as unknown as Record<string, unknown>, Object.keys(component).filter(k => k !== 'type'), 'Light');
+      for (const mesh of draft.components) if (mesh.kind === 'MeshRenderer' && mesh.source.type === 'asset') {
+        const section = document.createElement('fieldset'), legend = document.createElement('legend');
+        legend.textContent = t('共享动作库 · Runtime 重定向'); section.append(legend); form.append(section);
+        if (mesh.sharedMotion) fields(section, mesh.sharedMotion as unknown as Record<string, unknown>, ['library', 'profile', 'defaultState', 'speed'], 'MeshRenderer.sharedMotion');
+        button('绑定共享动作库', () => {
+          mesh.sharedMotion = { library: { path: '', guid: '' }, profile: '', defaultState: 'idle', speed: 1 }; redrawDraft();
+        }, section);
+        button('继承资产动作配置', () => { delete mesh.sharedMotion; redrawDraft(); }, section);
+        button('禁用共享动作', () => { mesh.sharedMotion = null; redrawDraft(); }, section);
+      }
       const parentLabel = document.createElement('label'); parentLabel.textContent = t('父节点');
       const parents = document.createElement('select'); parents.setAttribute('aria-label', 'node.parent'); parents.add(new Option(t('根节点'), ''));
       for (const n of doc.nodes) if (n.id !== draft.id) parents.add(new Option(n.name, n.id)); parents.value = draft.parent ?? '';

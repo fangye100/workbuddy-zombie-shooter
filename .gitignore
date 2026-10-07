@@ -45,3 +45,6 @@ assets/**/*.v2-flower.keep
 # Runtime project write lock and recoverable rename transaction journals
 .workbuddy/cache/fs-coordination.lock/
 .workbuddy/cache/rename-recovery/
+
+# Mixamo 原始 FBX（Adobe 版权：允许嵌入本项目，禁止再分发——绝不入库/公开托管）
+assets-src/mixamo/

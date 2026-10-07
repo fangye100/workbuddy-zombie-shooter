@@ -47,11 +47,11 @@
      "bytes": 2476356
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/H-01/rigged/H01_Scavenger_3500_rigged.glb",
-     "tris": 10500,
-     "verts": 11984,
-     "bytes": 2960064
+     "label": "LOD0 · +骨骼 · 动作就绪",
+     "file": "characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+     "tris": 79980,
+     "verts": 56603,
+     "bytes": 20670092
     }
    ],
    "animations": [],
@@ -102,11 +102,11 @@
      "bytes": 2963204
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/E-01/rigged/E01_Shambler_900_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/E-01/rigged/E01_Shambler_900_animation_ready.glb",
      "tris": 3000,
      "verts": 4209,
-     "bytes": 3068220
+     "bytes": 3138612
     },
     {
      "label": "LOD3 · +动画",
@@ -124,7 +124,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "E-02",
@@ -171,11 +171,11 @@
      "bytes": 3057780
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/E-02/rigged/E02_Lunger_1100_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/E-02/rigged/E02_Lunger_1100_animation_ready.glb",
      "tris": 3300,
      "verts": 5350,
-     "bytes": 3190172
+     "bytes": 3278528
     },
     {
      "label": "LOD3 · +动画",
@@ -193,7 +193,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "E-03",
@@ -240,11 +240,11 @@
      "bytes": 2757264
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/E-03/rigged/E03_Spitter_1200_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/E-03/rigged/E03_Spitter_1200_animation_ready.glb",
      "tris": 3600,
      "verts": 4862,
-     "bytes": 2877948
+     "bytes": 2958636
     },
     {
      "label": "LOD3 · +动画",
@@ -262,7 +262,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "E-04",
@@ -309,11 +309,11 @@
      "bytes": 2710468
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/E-04/rigged/E04_Bulwark_1600_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/E-04/rigged/E04_Bulwark_1600_animation_ready.glb",
      "tris": 4800,
      "verts": 6515,
-     "bytes": 2870824
+     "bytes": 2977888
     },
     {
      "label": "LOD3 · +动画",
@@ -331,7 +331,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "E-05",
@@ -378,11 +378,11 @@
      "bytes": 3018736
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/E-05/rigged/E05_Bloater_1000_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/E-05/rigged/E05_Bloater_1000_animation_ready.glb",
      "tris": 3000,
      "verts": 4172,
-     "bytes": 3122856
+     "bytes": 3192592
     },
     {
      "label": "LOD3 · +动画",
@@ -400,7 +400,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "B-01",
@@ -437,11 +437,11 @@
      "bytes": 3095792
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/B-01/rigged/B01_THE BUTCHER_4200_animation_ready.glb",
      "tris": 12600,
      "verts": 17306,
-     "bytes": 3515140
+     "bytes": 3795068
     },
     {
      "label": "LOD3 · +动画",
@@ -459,7 +459,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   },
   {
    "id": "B-02",
@@ -494,10 +494,17 @@
      "tris": 18000,
      "verts": 21049,
      "bytes": 3440496
+    },
+    {
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/B-02/rigged/B02_THE BROODMOTHER_6000_animation_ready.glb",
+     "tris": 18000,
+     "verts": 21049,
+     "bytes": 4288464
     }
    ],
    "animations": [],
-   "joints": 0
+   "joints": 27
   },
   {
    "id": "B-03",
@@ -534,11 +541,11 @@
      "bytes": 3395568
     },
     {
-     "label": "LOD2 · +骨骼",
-     "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_rigged.glb",
+     "label": "LOD2 · +骨骼 · 体积蒙皮",
+     "file": "characters/models/B-03/rigged/B03_PATIENT ZERO_5200_animation_ready.glb",
      "tris": 15600,
      "verts": 17521,
-     "bytes": 3820076
+     "bytes": 4103412
     },
     {
      "label": "LOD3 · +动画",
@@ -556,7 +563,7 @@
     "hit",
     "death"
    ],
-   "joints": 22
+   "joints": 27
   }
  ],
  "environments": [

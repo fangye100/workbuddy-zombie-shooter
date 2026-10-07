@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -94,7 +94,7 @@
     "assets/environment/models/P-06/tex2/P-06_lod2.glb",
     "assets/environment/models/P-03/tex2/P-03_lod2.glb",
     "assets/environment/models/P-05/tex2/P-05_lod2.glb",
-    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
     "assets/environment/models/P-01/tex2/P-01_lod2.glb",
     "assets/environment/models/P-13/tex2/P-13_lod2.glb",
     "assets/environment/models/P-14/tex2/P-14_lod2.glb",
@@ -3996,8 +3996,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
-              "guid": "as_yrsn456i"
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
             }
           },
           "materials": [
@@ -4027,7 +4027,16 @@
           "layer": 5,
           "importScale": 1,
           "playBinding": "player",
-          "editorOnly": false
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1
+          }
         }
       ],
       "prefab": null

@@ -20,5 +20,14 @@
     "file": "E02_Lunger_1100_rigged.glb"
   },
   "sourceHash": "sha256:36cac41b199cca4d3065d585cdab08c421d2a0670f98d63b354e188cb19cb7e4",
-  "updatedAt": "2026-09-04T03:48:29.805Z"
+  "updatedAt": "2026-09-04T03:48:29.805Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

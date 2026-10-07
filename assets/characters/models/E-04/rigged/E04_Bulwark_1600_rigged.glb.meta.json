@@ -20,5 +20,14 @@
     "file": "E04_Bulwark_1600_rigged.glb"
   },
   "sourceHash": "sha256:caf2d1271a1be54fa17c397a0c61f0ff916f5234d54749b890ea9e1a350e389e",
-  "updatedAt": "2026-09-04T03:48:30.007Z"
+  "updatedAt": "2026-09-04T03:48:30.007Z",
+  "sharedMotion": {
+    "library": {
+      "path": "assets/animations/mixamo/shared.motion.json",
+      "guid": "as_mixamo_shared_motion"
+    },
+    "profile": "npc",
+    "defaultState": "idle",
+    "speed": 1
+  }
 }

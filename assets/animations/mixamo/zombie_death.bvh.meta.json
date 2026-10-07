@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_zombie_death",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:364a42a134cec886bc245dfd4d087048da81451681eb07075dbed67f76c1a0ee",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:2a9b0f8053aaaaabef2a6f345861e15c2232d52a14814aeb019327202787a4b1"
+}

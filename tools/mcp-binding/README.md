@@ -1,5 +1,49 @@
 # tools/mcp-binding — 绑定领域 MCP server（WU-2 起）
 
+## Current rigging workflow (2026-10-07)
+
+Server version **0.3.0** exposes 17 tools. Start with read-only `get_workflow`:
+it returns source-authoring ownership, the current NPC preset, rigid prop rules,
+publication commands, shared-motion boundaries and headed acceptance requirements.
+The [project workflow](../../docs/rigging/character-rigging-workflow.md) is the
+human-readable entry; initialize also advertises concise client instructions.
+
+`load_model` and `get_state.model` now expose `sourcePath`, `metaPath`,
+`bindingHeightM`, `coordinateSpace` and `selectionHash`. Exact rigid selections
+must use this fingerprint with indices from the current normalized source mesh.
+`compute_skin.weightQuality` reports final zero/invalid-weight vertex counts and
+maximum normalization error **after** smoothing and rigid constraints, alongside
+volume diagnostics. Structural checks do not grant visual acceptance.
+
+```jsonc
+{ "name": "get_workflow", "arguments": {} }
+{ "name": "set_options", "arguments": {
+  "weightMode": "volumetric",
+  "volumetric": { "resolution": 48, "depth": 1, "tolerance": 0.001 },
+  "smoothWeights": true, "smoothIters": 6, "smoothLambda": 0.5,
+  "mirrorWeights": false
+} }
+{ "name": "compute_skin", "arguments": {} }
+// save must return ok:true; authoring is separate from output publication.
+{ "name": "save", "arguments": {} }
+{ "name": "export_glb", "arguments": {
+  "bindPose": "source", "outPath": ".workbuddy/tmp/character_source_rig.glb"
+} }
+```
+
+`set_options` preserves omitted keys; `rigidRegions:[]` explicitly clears prop
+constraints. For fused props, complete source UV islands avoid cutting triangles.
+Export preserves the source pose at the editor ruler scale; roster normalization,
+sharedMotion metadata and scene registration remain explicit publication steps.
+MCP/GUI share domain code and sidecars, not one live process or undo stack.
+
+Volumetric binding is available through `set_options` with
+`weightMode: "volumetric"` and `volumetric: { resolution: 48, depth: 1, tolerance: 0.001 }`.
+`compute_skin` returns volume/seed/convergence diagnostics; `save` preserves the
+configuration and `export_glb` uses the same solver. See the
+[volumetric skinning guide](../../docs/rigging/volumetric-skinning.md) for CPU Worker
+behavior, limits and visual acceptance. Existing wrapper/distance defaults remain.
+
 把 `BindingSession`（绑定编辑的唯一领域状态 owner）暴露成 MCP 工具，
 让 Agent 能**看见**自己的绑定操作结果（视觉反馈闭环），并把调好的绑定
 **导出成干净 T-pose 的 rigged GLB**（WU-3 起，与编辑器 exportBound 同管线）。
@@ -75,10 +119,11 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 
 改了 `src/**` 必须重跑 `mcp-binding:check`（probe 每次自己先构建，dist 不会过期）。
 
-## 工具表（16 个）
+## 工具表（17 个）
 
 | 工具 | 语义 |
 |---|---|
+| `get_workflow` | Read-only source-pose rigging workflow, parameters, prop rules, publication and validation boundaries; available before model loading |
 | `load_model` | 载入仓内 .glb（parseGlb 默认 2.05m 标尺 = 编辑器同尺）；sidecar 有 bindingEditor 自动回填 |
 | `get_state` / `get_joints` | 会话总览 / 27 关节坐标 + 合法骨名表 |
 | `set_joint` / `mirror` / `reset_pose` | 摆关节（自带历史）/ 左右镜像 / 回模板 T-pose。`mirror` 参数 `dir` = `'L2R'` \| `'R2L'`：**`R2L` = 以角色右侧为准镜像到左侧，右侧一字不动**（圆柱一起复制）。🔴 **方向必须先跟用户确认** —— 用户说「镜像到另外一边」时，若他先前对某一侧做过专门修正，那一侧就是标杆；搞反会覆盖掉他的决定 |
@@ -88,7 +133,13 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 | `compute_skin` | 算权重只回统计（未包裹顶点数等），不回权重数组（token 纪律） |
 | `render` | **视觉反馈核心**：正/侧视 PNG 图像块，可选 heatBone 热力图、selectedJoint 高亮；`style:'toon'` = 实心填充 + 深度台阶/掠射法线翻转边的实体轮廓线（2D 卡通效果，重叠在躯干上的四肢清晰可见，无线框噪音）；`azimuthDeg`（±60°）= 视差观察角，投影前绕 Y 旋转，错开重叠肢体判读；<br>🔴 `grid:true` = **量化坐标参考线**（工程图风格网格 + 刻度数值，单位米）。**给用户看的图必须开**。配套 `gridStep`（默认 0.05）/ `gridMajor`（默认 5 → 0.25m 标数值）。网格线画在模型下层、数值在最上层带白描边；回包给 `grid.stepM` / `grid.majorEveryM`，不用猜间距。⚠️ `azimuthDeg≠0` 时网格不再对齐世界轴，别叠用。<br>⚠️ `width/height` **静默钳制到 64..1024** —— 要 1400×1900 会拿到 1024×1024，不要以为出图失败；要更细看就**裁切放大** |
 | `get_editor_data` / `save` / `hydrate` | 编辑态读 / 写 sidecar（validateAssetMeta 守门）/ 从 sidecar 重灌 |
-| `export_glb` | 导出干净 T-pose 的 rigged GLB（编辑器 exportBound 同管线 `rigToTPoseWithImage`）。只回统计不回字节；已有 sidecar 外科式刷新 sourceHash/updatedAt，没有则提示跑 `scene:gen`。目标已存在需显式 `overwrite:true`（覆盖源模型恒拒） |
+| `export_glb` | 默认导出干净 T-pose 的 rigged GLB（编辑器 exportBound 同管线 `rigToTPoseWithImage`）；`bindPose:'source'` 保留源网格和源姿态绑定帧。只回统计不回字节；已有 sidecar 外科式刷新 sourceHash/updatedAt，没有则提示跑 `scene:gen`。目标已存在需显式 `overwrite:true`（覆盖源模型恒拒） |
+
+### 非 T-pose 模型的源姿态导出
+
+`export_glb({bindPose:'source', outPath:'…_source_rig.glb'})` 在摆好的当前姿态上计算和平滑权重，保留源网格的 POSITION/NORMAL/UV/COLOR，并写入当前关节的 local TRS 与对应 inverseBind。省略 outPath 时使用 `<源>_source_rig.glb`；默认 T-pose 导出及 GUI 导出行为保持原契约。
+
+这种 GLB 的 rest pose 是源姿态。动画必须向其实际 rest TRS 运行 retarget；禁止直接嵌入绑定面板产生的 T-pose 动画，导出函数会显式拒绝该组合。共享 BVH runtime 管线使用现有 `direction` 换基，并非启用 `world-rest` 基准。源姿态导出保证 bind pose 网格不被反解拉伸，不保证播放时衣物、道具、足底接触已经合格；仍需动作视觉核对。
 
 ### 工具调用速查（参数名已核实，可直接翻译成 JSON）
 

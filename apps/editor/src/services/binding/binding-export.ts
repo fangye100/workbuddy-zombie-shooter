@@ -19,6 +19,10 @@
  *
  * 产物 bind pose 是干净的 T-pose，BVH / Mixamo / 动捕动画可以直接接进来，
  * 不会带任何 A-pose 的 offset。
+ *
+ * `bindPose:'source'` 是显式替代导出：保留原网格与当前关节世界帧，以对应的
+ * inverseBind 写入 GLB。此模式不承诺网格展开为 T-pose；动画必须基于产物的
+ * 实际 rest TRS 重新 retarget，不能直接嵌入面板生成的 T-pose 动画。
  */
 
 import {
@@ -31,6 +35,8 @@ import {
   boneSegments,
   computeLbsWeights,
   fitSkeleton,
+  matInvertRigid,
+  matMul,
   smoothSkinWeights,
   unposeMesh,
   unposeNormals,
@@ -43,6 +49,10 @@ import {
   mirrorSkinWeights,
   type SkinCylinderMap,
 } from './skin-proxy';
+import { decomposeMatrixToTrs } from '@aether/scene';
+import { computeVolumetricWeights, type VolumetricOptions, type VolumetricStats } from './volumetric-skin';
+import type { WeightMode } from './binding-session';
+import { applyRigidRegions, type RigidSkinRegion } from './rigid-skin-regions';
 
 /** 引擎顶点布局：pos3 / normal3 / smoothNormal3 / uv2 / color4 */
 export const BINDING_VERTEX_FLOATS = 15;
@@ -74,6 +84,14 @@ export interface BindExportInput {
   image: Blob | null;
   /** 用户摆放的关节坐标（当前姿态、模型 local 空间、Y-up） */
   placed: JointPositions;
+  /** 默认 tpose；source 保留网格和当前绑定帧，动画需向该骨架重新 retarget。 */
+  bindPose?: 'tpose' | 'source';
+  weightMode?: WeightMode;
+  volumetric?: VolumetricOptions;
+  rigidRegions?: RigidSkinRegion[];
+  /** Already-final weights from the same session snapshot (Worker preview/export parity). */
+  computedSkin?: SkinWeights;
+  volumetricStats?: VolumetricStats;
   falloff?: number;
   eps?: number;
   maxInfluences?: number;
@@ -128,13 +146,14 @@ export interface BindExportStats {
   animChannels: number;
   /** animations[] 里的片段名（没有动画时为空数组） */
   animClips: string[];
+  volumetric?: VolumetricStats;
 }
 
 export interface BindExportResult {
   glb: ArrayBuffer;
   fit: FitResult;
   skin: SkinWeights;
-  /** T-pose 网格顶点（可回灌编辑器显示，让用户立刻看到「摆正了」） */
+  /** 导出网格顶点（历史字段名；source 模式为原网格，默认模式为 T-pose 网格）。 */
   tposeVertices: Float32Array<ArrayBuffer>;
   stats: BindExportStats;
 }
@@ -149,14 +168,15 @@ export function rigToTPose(input: BindExportInput): BindExportResult {
 /** 异步导出：先把 Blob 贴图解成字节再嵌进 GLB（Blob 只能在主线程异步读） */
 export async function rigToTPoseWithImage(input: BindExportInput): Promise<BindExportResult> {
   if (input.image === null) return runExport(input, null, '');
+  let bytes: Uint8Array;
   try {
-    const bytes = new Uint8Array(await input.image.arrayBuffer());
-    if (bytes.byteLength === 0) return runExport(input, null, '');
-    return runExport(input, bytes, input.image.type || 'image/png');
+    bytes = new Uint8Array(await input.image.arrayBuffer());
   } catch (err) {
     console.warn('[绑定] 贴图解码失败，导出将不带贴图', err);
     return runExport(input, null, '');
   }
+  if (bytes.byteLength === 0) return runExport(input, null, '');
+  return runExport(input, bytes, input.image.type || 'image/png');
 }
 
 // ─────────────────────────── 主流程 ───────────────────────────
@@ -177,6 +197,9 @@ function runExport(
     throw new Error(`顶点数组长度 ${vertices.length} 不是 stride ${VF} 的正整数倍`);
   }
   const anim = input.animation ?? null;
+  if (input.bindPose === 'source' && anim !== null) {
+    throw new Error('源姿态绑定不能直接嵌入 T-pose 动画；请对导出骨架运行 retarget');
+  }
 
   // ① 拟合：拆出「采纳的骨长」与「不入骨架的 ΔR」
   const fit = fitSkeleton(placed);
@@ -184,7 +207,14 @@ function runExport(
   // ② 在**当前姿态**骨架上算权重（此时骨架与模型真实肢体重合）
   const segs = boneSegments(placed);
   let skin: SkinWeights;
-  if (input.cylinders !== undefined) {
+  let volumetric = input.volumetricStats;
+  if (input.computedSkin !== undefined) {
+    skin = input.computedSkin;
+    if (skin.weights.length !== vertexCount * 4 || skin.joints.length !== vertexCount * 4) throw new Error('预计算蒙皮与网格顶点数不匹配');
+  } else if (input.weightMode === 'volumetric') {
+    const result = computeVolumetricWeights(vertices, VF, indices, placed, input.volumetric);
+    skin = result.skin; volumetric = result.volumetric;
+  } else if (input.weightMode !== 'distance' && input.cylinders !== undefined) {
     // Skin Wrapper 模式：权重由圆柱体包裹范围定义（被包顶点归属对应 joint）
     skin = computeCylinderWeights(
       vertices, VF, vertexCount, placed, input.cylinders,
@@ -198,28 +228,31 @@ function runExport(
   }
   // 镜像权重对**两套**算法都生效：它描述的是「产物要左右对称」的用户意图，
   // 只在圆柱体分支消费 = distance 模式下勾选框静默失效（2026-09-22 复审 N6）。
-  if (input.mirrorWeights === true) {
+  if (input.computedSkin === undefined && input.mirrorWeights === true) {
     skin = mirrorSkinWeights(skin, VF, vertexCount, vertices);
   }
 
   // ②b 权重平滑：胶囊权重算完后做热扩散松弛，消除骨交界硬切换（默认开启）
   //    传 weld：位置重合但索引不同的顶点（split-normal 硬边）互为邻居，
   //    否则扩散在描边模型的硬边处断裂，裂缝两侧各跟各的骨。
-  if (smoothWeights) {
+  if (input.computedSkin === undefined && smoothWeights) {
     skin = smoothSkinWeights(skin, indices, vertexCount, smoothIters, smoothLambda, {
       positions: vertices,
       vertexFloats: VF,
     });
   }
 
+  if (input.computedSkin === undefined) skin = applyRigidRegions(skin, vertices, VF, input.rigidRegions ?? []);
   // ③ 反解：顶点 → T-pose，法线同步旋转
-  let tposeVertices = unposeMesh(vertices, VF, vertexCount, skin, fit);
-  tposeVertices = unposeNormals(tposeVertices, VF, vertexCount, skin, fit, NORMAL_OFFSET);
+  let tposeVertices = input.bindPose === 'source'
+    ? new Float32Array(vertices) : unposeMesh(vertices, VF, vertexCount, skin, fit);
+  if (input.bindPose !== 'source') tposeVertices = unposeNormals(tposeVertices, VF, vertexCount, skin, fit, NORMAL_OFFSET);
 
   const glb = buildGlb(
-    name, tposeVertices, indices, VF, vertexCount, skin, fit, imageBytes, mime, anim,
+    name, tposeVertices, indices, VF, vertexCount, skin, fit, imageBytes, mime, anim, input.bindPose === 'source',
   );
   const stats = buildStats(vertices, tposeVertices, VF, vertexCount, indices, fit, skin);
+  if (volumetric) stats.volumetric = volumetric;
   const animInfo = anim === null
     ? { animChannels: 0, animClips: [] as string[] }
     : countAnimChannels(anim);
@@ -397,6 +430,7 @@ function buildGlb(
   imageBytes: Uint8Array | null,
   mime: string,
   anim: BindAnimationInput | null,
+  sourcePose = false,
 ): ArrayBuffer {
   const parts = new GlbParts();
   const accessors: Accessor[] = [];
@@ -490,9 +524,13 @@ function buildGlb(
   }) - 1;
 
   // inverseBind = M_T⁻¹。T-pose 世界矩阵是纯平移 T(p)（旋转 identity），故逆即 T(−p)。
-  // 这里就是「ΔR 不进骨架」的最终落点：产物里再也找不到任何当前姿态的旋转。
+  // 默认 T-pose 的 ΔR 不进骨架；源姿态导出则使用完整的刚体 inverseBind。
   const ibm = new Float32Array(HUMANIK_ORDER.length * 16);
   HUMANIK_ORDER.forEach((n, i) => {
+    if (sourcePose) {
+      ibm.set(matInvertRigid(fit.posedWorld[n]!), i * 16);
+      return;
+    }
     const p = fit.tposePositions[n]!;
     ibm.set(new Float32Array([
       1, 0, 0, 0,
@@ -519,13 +557,21 @@ function buildGlb(
     const u = dirs[n]!;
     const L = fit.lengths[n]!;
     const node: Record<string, unknown> = { name: n };
-    if (parent === null) {
+    if (sourcePose) {
+      const local = parent === null ? fit.posedWorld[n]!
+        : matMul(matInvertRigid(fit.posedWorld[parent]!), fit.posedWorld[n]!);
+      const trs = decomposeMatrixToTrs(Array.from(local));
+      node.translation = trs.t;
+      node.rotation = trs.r;
+    } else if (parent === null) {
       // 根骨：沿用用户摆放的 Hips 位置（T-pose 里骨盆的高度就是它）
       const p = fit.tposePositions[n]!;
       node.translation = [p[0], p[1], p[2]];
     } else {
       // 子骨：translation = T-pose 标准朝向 × 采纳骨长；不写 rotation = 单位四元数
       node.translation = [u[0] * L, u[1] * L, u[2] * L];
+    }
+    if (parent !== null) {
       const pn = nodeOfJoint[parent]!;
       const kids = nodes[pn]!.children as unknown[] | undefined;
       if (kids === undefined) nodes[pn]!.children = [nodes.length];

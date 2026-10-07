@@ -139,7 +139,7 @@ async function main() {
                      verts: e01.vertices.length / 15, feetOffset: e01.feetOffset } : null;
     })()`);
     check('装配数据完整（skin 顶点 + paletteBase + restPose）',
-      flags !== null && flags.joints > 0 && flags.weights > 0 && flags.paletteBase === 0 && flags.restPose >= 0,
+      flags !== null && flags.joints > 0 && flags.weights > 0 && flags.paletteBase >= 0 && flags.restPose >= 0,
       JSON.stringify(flags));
 
     // ---- M3 ① 装配数学（双角色，从 ActorMesh 公开字段独立复算）----
@@ -148,12 +148,11 @@ async function main() {
     // 探针不复用页面里的 assemblePalettes —— 独立重算才有防线价值。
     const math = await cdp.eval(`(() => {
       const lib = window.__editor.actorLib;
-      const ids = window.__editor.renderer.debugDynamicMeshIds()
-        .filter((i) => i.startsWith('actor:')).map((i) => i.slice(6));
+      const ids = lib.assembledIds;
       return ids.map((id) => {
         const a = lib.get(id);
         const poses = a.palette.data.length / 16 / a.palette.jointCount;
-        return { id, base: a.paletteBase, rest: a.restPose, poses };
+        return { id, base: a.paletteBase, rest: a.restPose, poses, joints: a.palette.jointCount };
       });
     })()`);
     const withBase = math.filter((m) => m.base > 0);
@@ -167,13 +166,13 @@ async function main() {
       for (const m of sorted) {
         if (m.base !== acc) okChain = false;
         if (m.rest !== m.poses - 1) okRest = false;
-        if (m.base + m.rest !== acc + m.poses - 1) okRange = false;
-        acc += m.poses;
+        if (m.base + m.rest * m.joints !== acc + (m.poses - 1) * m.joints) okRange = false;
+        acc += m.poses * m.joints;
       }
       const totalPoses = acc;
-      check('paletteBase 按注册序以 pose 单位累加（bases 首尾相接）', okChain, JSON.stringify(sorted));
+      check('paletteBase 按注册序以 matrix 单位累加（bases 首尾相接）', okChain, JSON.stringify(sorted));
       check('restPose = 角色 palette 局部末帧（poses - 1，PR #18 P1 防线）', okRest, JSON.stringify(sorted));
-      check('base + rest = 该角色块末 pose（全局下标不越界）', okRange && sorted.every((m) => m.base + m.rest < totalPoses), JSON.stringify(sorted));
+      check('base + rest*stride = 该角色块末 pose（矩阵下标不越界）', okRange && sorted.every((m) => m.base + m.rest * m.joints < totalPoses), JSON.stringify(sorted));
     }
 
     // ---- M3 ② 动画在走：隔 >500ms 两次读同一 actor 实例的 inst[11]（poseIndex）----

@@ -1,0 +1,115 @@
+[
+  {
+    "id": "player_walking",
+    "path": "assets/animations/mixamo/player_walking.bvh",
+    "frames": 32,
+    "fps": 30,
+    "duration": 1.0333333015441895,
+    "maxFkErrorM": 1.311969766116816e-7,
+    "maxSerializedFkErrorM": 1.33788285693607e-7,
+    "nominalSpeedMps": 2.0147938183938208,
+    "rootEndpointDisplacementM": 2.0265579223728383e-8,
+    "sourceFbxHash": "sha256:55617be50038c353d5eeafd899408aef06e6cc6366caf456c9c8bbdad2ebb438"
+  },
+  {
+    "id": "player_running",
+    "path": "assets/animations/mixamo/player_running.bvh",
+    "frames": 22,
+    "fps": 30,
+    "duration": 0.699999988079071,
+    "maxFkErrorM": 1.3230288615442911e-7,
+    "maxSerializedFkErrorM": 1.2730198217168016e-7,
+    "nominalSpeedMps": 5.329401772698774,
+    "rootEndpointDisplacementM": 0,
+    "sourceFbxHash": "sha256:625be69d6bf6a92c9aa5ffc513e14cf3a6fd7a54a19cce45599d77f17b4cf933"
+  },
+  {
+    "id": "player_jump_up",
+    "path": "assets/animations/mixamo/player_jump_up.bvh",
+    "frames": 17,
+    "fps": 30,
+    "duration": 0.5333333611488342,
+    "maxFkErrorM": 1.2801579137194173e-7,
+    "maxSerializedFkErrorM": 1.2139012360461863e-7,
+    "rootEndpointDisplacementM": 0.01773768705773186,
+    "sourceFbxHash": "sha256:672ba9ec6b7f21f365e64dfd2675c6ff35097d7d6cd16ad3acfe066807f44170"
+  },
+  {
+    "id": "player_shoot_rifle",
+    "path": "assets/animations/mixamo/player_shoot_rifle.bvh",
+    "frames": 29,
+    "fps": 30,
+    "duration": 0.9333333373069763,
+    "maxFkErrorM": 1.319098771740484e-7,
+    "maxSerializedFkErrorM": 1.3125692693737207e-7,
+    "rootEndpointDisplacementM": 0.000040646731897860355,
+    "sourceFbxHash": "sha256:aab3b05c92ec578bde55237d093202d323ca2d61722c44a46d000f4138de848d"
+  },
+  {
+    "id": "player_punching",
+    "path": "assets/animations/mixamo/player_punching.bvh",
+    "frames": 31,
+    "fps": 30,
+    "duration": 1,
+    "maxFkErrorM": 1.2821441168314657e-7,
+    "maxSerializedFkErrorM": 2.0110283414640555e-7,
+    "rootEndpointDisplacementM": 9.379023342782876e-8,
+    "sourceFbxHash": "sha256:97c7db1d06f104fcd8deb965c18173872b21c748d8d52c15b7ab58aba77ffeba"
+  },
+  {
+    "id": "zombie_idle",
+    "path": "assets/animations/mixamo/zombie_idle.bvh",
+    "frames": 184,
+    "fps": 30,
+    "duration": 6.099999904632568,
+    "maxFkErrorM": 1.3289840467708533e-7,
+    "maxSerializedFkErrorM": 0.000007426181269205874,
+    "rootEndpointDisplacementM": 6.236893433824922e-7,
+    "sourceFbxHash": "sha256:b61d7c2afcf52492525ce908e636881db5120a7d86e701b4f786a45fc8942f63"
+  },
+  {
+    "id": "zombie_walk",
+    "path": "assets/animations/mixamo/zombie_walk.bvh",
+    "frames": 122,
+    "fps": 30,
+    "duration": 4.0333333015441895,
+    "maxFkErrorM": 1.2764449115245202e-7,
+    "maxSerializedFkErrorM": 1.2702378363127777e-7,
+    "nominalSpeedMps": 0.3969500075490386,
+    "rootEndpointDisplacementM": 6.752972144331534e-8,
+    "sourceFbxHash": "sha256:bbb2d9ebdbcfd447f6dc6018b58b8b705e7eb4a82cb39f8ee73a21f6fd43417b"
+  },
+  {
+    "id": "zombie_attack",
+    "path": "assets/animations/mixamo/zombie_attack.bvh",
+    "frames": 140,
+    "fps": 30,
+    "duration": 4.633333206176758,
+    "maxFkErrorM": 1.5890597224550362e-7,
+    "maxSerializedFkErrorM": 0.00016271442736911658,
+    "rootEndpointDisplacementM": 3.445875402977035e-8,
+    "sourceFbxHash": "sha256:558a1cc541d46c42d35b2fab7559671518fce737b37c5a902f76591c197a10bf"
+  },
+  {
+    "id": "zombie_death",
+    "path": "assets/animations/mixamo/zombie_death.bvh",
+    "frames": 90,
+    "fps": 30,
+    "duration": 2.9666666984558105,
+    "maxFkErrorM": 1.360332541361404e-7,
+    "maxSerializedFkErrorM": 1.4947316288609698e-7,
+    "rootEndpointDisplacementM": 1.1749814459515657,
+    "sourceFbxHash": "sha256:364a42a134cec886bc245dfd4d087048da81451681eb07075dbed67f76c1a0ee"
+  },
+  {
+    "id": "zombie_scream",
+    "path": "assets/animations/mixamo/zombie_scream.bvh",
+    "frames": 85,
+    "fps": 30,
+    "duration": 2.799999952316284,
+    "maxFkErrorM": 1.3711291888453627e-7,
+    "maxSerializedFkErrorM": 2.6026279557635775e-7,
+    "rootEndpointDisplacementM": 0.000032139250935329467,
+    "sourceFbxHash": "sha256:dd1163c5cf1e1ab6d032b39c40f535022243ccadb39613447ed5c26b3dd30790"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_mixamo_shared_motion",
+  "kind": "motion-library",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:625a2e375e7d3fd2b6676e1d742910f8e3354e5839aef11a52da9f86aa925c7a"
+}

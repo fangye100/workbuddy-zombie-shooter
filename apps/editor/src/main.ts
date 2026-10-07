@@ -5,7 +5,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
-import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findAnimatedCharacterIds } from '@aether/scene';
+import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findRiggedCharacterIds } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -23,6 +23,7 @@ import { AuthorTransformController, graphOfDoc } from './services/author-transfo
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
+import { RuntimeMotionPanel } from './services/runtime-motion-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
 import { applySceneLightParams } from './services/scene-light';
 import { removeNodeTree } from '@aether/runtime';
@@ -47,8 +48,11 @@ import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { PlayerPresentation } from './services/player-presentation';
+import { SharedMotionRuntime } from './services/shared-motion-runtime';
+import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
+import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
 import { buildCylinderOverlay } from './services/binding/cylinder-overlay';
 import { rigToTPoseWithImage, downloadBlob } from './services/binding/binding-export';
@@ -200,6 +204,12 @@ async function boot(): Promise<void> {
    * 清单异步后补（编辑器启动时 manifest 尚未到位），到位前 preload 一律退胶囊。
    */
   const actorLib = new ActorLibrary(null);
+  const sharedMotionLibrary = new SharedMotionRuntime();
+  actorLib.setSharedMotions(sharedMotionLibrary);
+  const sceneMotions = new RuntimeSceneMotion(sharedMotionLibrary, nodeId => {
+    const index = renderer.findObjectIndexByNodeId(nodeId);
+    return index === null ? null : renderer.state.objects[index] ?? null;
+  }, () => { hudDirty = true; });
   /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
@@ -237,6 +247,7 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
+    sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
       const index = renderer.findObjectIndexByNodeId(nodeId);
       return index === null ? null : renderer.state.objects[index] ?? null;
@@ -306,6 +317,7 @@ async function boot(): Promise<void> {
     focusAnim = null;
     pointers.clear();
     const paramsBeforePlay = structuredClone(panel.params);
+    actorLib.beginPlay();
     const ok = playCtl.start();
     if (ok) {
       playAuthorParams ??= paramsBeforePlay;
@@ -348,7 +360,7 @@ async function boot(): Promise<void> {
       await manifestReady;
       // 🔴 串行 await：paletteBase 布局由库内 manifest rank 规范序保证（PR #19
       // FR-B），与本循环的完成序无关；串行只是控制并发与失败可读性。
-      for (const id of findAnimatedCharacterIds(assetManifest)) {
+      for (const id of findRiggedCharacterIds(assetManifest)) {
         if (gen !== actorPreloadGen) return; // 新循环已启动 / 已 Stop：本循环作废
         const changed = await actorLib.preload(id);
         if (gen !== actorPreloadGen) {
@@ -581,6 +593,10 @@ async function boot(): Promise<void> {
 
   // 调试/自动化钩子：控制台与无头 CDP 验证直接读写相机/材质状态（都是引用，读到即实时值）
   (window as unknown as { __editor: unknown }).__editor = {
+    motions: {
+      summary: () => sceneMotions.summary(),
+      setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
+    },
     camera,
     elevation: () => panel.params.cameraElevation,
     params: panel.params,
@@ -1297,6 +1313,8 @@ async function boot(): Promise<void> {
   let authorLightBaseline = lightSnapshot(panel.params);
   const authorHost = document.createElement('div');
   document.querySelector('.insp-pane[data-pane="scene"]')!.prepend(authorHost);
+  const motionHost = document.createElement('div'); motionHost.id = 'runtime-motion-panel'; document.body.append(motionHost);
+  const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
   const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
     document: () => spawnStore?.document ?? null,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
@@ -2331,6 +2349,8 @@ async function boot(): Promise<void> {
   }
   let bindingSession: BindingSession | null = null;
   let binding: BindingPanel | null = null;
+  let characterBindingBar: CharacterBindingBar | null = null;
+  let bindingLoadVersion = 0;
   // 当前绑定会话对应的 .meta.json 落盘点（资产库入口才有；层级/场景物体入口为 null）
   let currentBindingMetaPath: string | null = null;
   const bindingPersistence = new BindingPersistence();
@@ -2432,6 +2452,7 @@ async function boot(): Promise<void> {
     if (binding === null) {
       binding = new BindingPanel(bindingDockEl, {
         onClose: () => closeBinding(),
+        onChange: () => characterBindingBar?.setDirty(binding?.hasUnsavedChanges() ?? false),
         onApply: (fit, opts) => void applyBinding(fit, opts?.smoothWeights ?? true),
         onLoadBvh: () => pickBvhFile((t, n) => loadBvhForBinding(t, n)),
         onExportAnim: () => void exportAnimGlb(),
@@ -2452,12 +2473,18 @@ async function boot(): Promise<void> {
           );
         },
       }, gpu);
+      characterBindingBar = new CharacterBindingBar(bindingDockEl, characterBindingChoices(assetManifest),
+        (path) => void bindAssetAt(path));
       wireBindingGrip();
     }
     bindingDockEl.classList.add('open');
+    // Each source starts with its own template/sidecar, never the previous character's pose.
+    binding.clear();
     binding.setModel(session.name, session.vertices, session.indices);
     // 资产库入口会把上次写进 .meta.json 的编辑态灌回来（有则回填，无则保持模板默认）
     if (saved !== undefined) binding.hydrate(saved);
+    binding.markSaved();
+    characterBindingBar?.setSource(currentBindingMetaPath?.replace(/\.meta\.json$/, '') ?? null, saved !== undefined);
     // canvas 必须等 open 之后才量得到 clientWidth，晚一帧再重算视图缩放
     requestAnimationFrame(() => binding?.resize());
     panel.setModelInfo(
@@ -2467,6 +2494,8 @@ async function boot(): Promise<void> {
   }
 
   function closeBinding(): void {
+    if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，关闭并放弃这些修改？')) return;
+    bindingLoadVersion++;
     bindingDockEl?.classList.remove('open');
     binding?.clear();
     bindingSession = null;
@@ -2482,15 +2511,22 @@ async function boot(): Promise<void> {
     }
     const current = binding;
     const path = currentBindingMetaPath;
+    const version = bindingLoadVersion;
+    const savedSignature = current.editSignature();
     void bindingPersistence.save(current.getEditorData(), (request) =>
       writeProjectFile(request.path, { patch: request.patch, baseHash: request.baseHash }))
       .then((result) => {
-        if (binding !== current || currentBindingMetaPath !== path) return;
+        if (binding !== current || currentBindingMetaPath !== path || bindingLoadVersion !== version) return;
+        if (result.ok) {
+          current.markSaved(savedSignature);
+          characterBindingBar?.saved();
+          characterBindingBar?.setDirty(current.hasUnsavedChanges());
+        }
         current.setSaveStatus(result.ok, result.ok ? `已保存 ${result.bytes ?? '?'}B`
           : result.conflict ? `保存冲突（磁盘 ${result.currentHash ?? '?'}）：本地修改已保留，请重新进入绑定接受最新版本`
           : `保存失败：${result.error ?? result.status}。本地修改已保留`);
       }).catch((error) => {
-        if (binding === current && currentBindingMetaPath === path) current.setSaveStatus(false, String(error));
+        if (binding === current && currentBindingMetaPath === path && bindingLoadVersion === version) current.setSaveStatus(false, String(error));
       });
   }
 
@@ -2544,13 +2580,21 @@ async function boot(): Promise<void> {
     const mesh = binding.getMesh();
     if (mesh === null) return null;
     try {
+      const weightMode = binding.getWeightMode();
+      const inputSig = binding.editSignature();
+      const computed = weightMode === 'volumetric' ? await binding.prepareSkin() : null;
+      if (s !== bindingSession || mesh.vertices !== binding.getMesh()?.vertices || inputSig !== binding.editSignature()) throw new Error('导出期间角色或蒙皮输入已变更');
       const base = {
         name: s.name,
         vertices: mesh.vertices,
         indices: mesh.indices,
         image: s.image,
-        placed: binding.getState().positions,
+        placed: structuredClone(binding.getState().positions),
         smoothWeights,
+        weightMode,
+        volumetric: binding.getVolumetricOptions(),
+        rigidRegions: binding.getEditorData().rigidRegions ?? [],
+        ...(computed ? { computedSkin: computed.skin, ...(computed.volumetric ? { volumetricStats: computed.volumetric } : {}) } : {}),
         // 平滑迭代 / λ 由面板外置（旧评审 §2.4，进 .meta.json 可复现）；
         // 面板未开（如顶部菜单直接导出）时退回 runExport 默认值
         smoothIters: binding?.getSmoothIters() ?? 2,
@@ -2558,15 +2602,14 @@ async function boot(): Promise<void> {
         // Skin Wrapper（代理圆柱体）蒙皮：有则按圆柱体包裹算权重，否则退回胶囊权重。
         // 权重算法由面板显式选择（默认 wrapper，保持历史行为）；选「距离衰减」时
         // 必须传 undefined，否则 runExport 会一直走圆柱体分支（cylinders 载入即建）。
-        cylinders: binding?.getWeightMode() === 'distance'
-          ? undefined
-          : (binding?.getCylinders() ?? undefined),
+        cylinders: weightMode === 'wrapper' ? (structuredClone(binding.getCylinders()) ?? undefined) : undefined,
         mirrorWeights: binding?.getMirrorWeights() ?? false,
       };
       // exactOptionalPropertyTypes：`animation?: T` 不接受显式 undefined，只能整包展开
       const res = await rigToTPoseWithImage(
         anim === null ? base : { ...base, animation: anim },
       );
+      if (s !== bindingSession || inputSig !== binding.editSignature()) throw new Error('导出期间蒙皮输入已变更');
       const file = `${s.name}${suffix}.glb`;
       if (download) {
         downloadBlob(file, new Blob([res.glb], { type: 'model/gltf-binary' }));
@@ -3163,7 +3206,11 @@ async function boot(): Promise<void> {
 
   /** 入口一：资产库里右键 .glb → 「进入绑定」 */
   async function bindAssetAt(relPath: string, opts?: { importSkeleton?: boolean }): Promise<void> {
+    if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换/重载并放弃这些修改？')) return;
+    const version = ++bindingLoadVersion;
+    const previousSignature = binding?.editSignature();
     try {
+      await manifestReady;
       const resp = await fetch(`/__fs/file?path=${encodeURIComponent(relPath)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const buffer = await resp.arrayBuffer();
@@ -3173,6 +3220,11 @@ async function boot(): Promise<void> {
 
       const acceptedMetaPath = `${relPath}.meta.json`;
       const acceptedMeta = await readProjectFile(acceptedMetaPath);
+      if (version !== bindingLoadVersion) return;
+      if (binding?.editSignature() !== previousSignature) {
+        panel.setModelInfo('载入期间绑定已被编辑，本地修改已保留；请保存后重新打开角色');
+        return;
+      }
 
       // 导入文件骨架模式：摆位来自 GLB 内嵌 skin（rigged GLB 桥），
       // 不回填 sidecar 的 bindingEditor（那是「源网格 + 模板骨架」世界的会话）
@@ -3225,6 +3277,7 @@ async function boot(): Promise<void> {
         image: model.image,
       }, saved);
     } catch (err) {
+      if (version !== bindingLoadVersion) return;
       panel.setModelInfo(`进入绑定失败：${stemName(relPath)} · ${String(err)}`);
       console.error('[绑定] 载入失败', relPath, err);
     }
@@ -3240,6 +3293,8 @@ async function boot(): Promise<void> {
         run: () => {
           if (obj === undefined) return;
           // 层级入口无 GLB 路径 → 没有可落盘的 .meta.json，保存按钮会被拦下
+          if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换并放弃这些修改？')) return;
+          bindingLoadVersion++;
           currentBindingMetaPath = null;
           bindingPersistence.clear();
           openBinding({
@@ -3306,6 +3361,8 @@ async function boot(): Promise<void> {
       const obj = renderer.state.objects[idx];
       if (obj !== undefined && obj.mesh !== null) {
         // 场景物体入口无 .meta.json 路径 → 保存按钮会被拦下
+        if (binding?.hasUnsavedChanges() && !window.confirm('当前绑定有未保存修改，切换并放弃这些修改？')) return;
+        bindingLoadVersion++;
         currentBindingMetaPath = null;
         bindingPersistence.clear();
         openBinding({
@@ -3349,6 +3406,12 @@ async function boot(): Promise<void> {
         setOpen(false);
         const a = item.dataset.tbAction;
         if (a === 'enter') enterBindingFromMenu();
+        else if (a === 'characters') void (async () => {
+          await manifestReady;
+          const source = currentBindingMetaPath?.replace(/\.meta\.json$/, '') ?? characterBindingChoices(assetManifest)[0]?.path;
+          if (source !== undefined) await bindAssetAt(source);
+          else panel.setModelInfo('角色清单中没有可绑定的 GLB');
+        })();
         else if (a === 'export') void exportTposeFromMenu();
         else if (a === 'bvh') loadBvhFromMenu();
         else if (a === 'close') closeBinding();
@@ -3895,6 +3958,14 @@ async function boot(): Promise<void> {
     );
 
     if (playCtl.isPlaying) {
+      const motion = sceneMotions.summary();
+      const partial = motion.nodes.filter(n => n.reports.some(r => r.status === 'partial')).length;
+      rows.push(`<b>共享动作</b> ${motion.nodes.length} 个角色 · 加载 ${motion.pending} · 部分能力 ${partial} · 缓存命中 ${motion.stats.cacheHits}`);
+      for (const error of motion.errors) {
+        const line = document.createElement('span'); line.className = 'warn';
+        line.textContent = `⚠ 动作 ${error.nodeId}：${error.message}`;
+        rows.push(line.outerHTML);
+      }
       const ents = bridge.entities;
       const npc = ents.filter((e) => e.kind === 'npc').length;
       rows.push(
@@ -3918,6 +3989,7 @@ async function boot(): Promise<void> {
     }
 
     hud.innerHTML = rows.join('<br>');
+    runtimeMotionPanel.render(playCtl.isPlaying);
   };
 
   // ---- 主循环 ----

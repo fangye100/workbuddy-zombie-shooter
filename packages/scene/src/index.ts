@@ -33,3 +33,4 @@ export * from './graph';
 export * from './migrate';
 export * from './instantiate';
 export * from './retarget-meta';
+export * from './shared-motion';

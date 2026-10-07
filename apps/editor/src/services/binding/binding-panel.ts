@@ -58,7 +58,10 @@ import { BindingSession } from './binding-session';
 import { BindingView3D } from './binding-view3d';
 
 export type { BindingEditorData, WeightMode } from './binding-session';
-import type { BindingEditorData, WeightMode } from './binding-session';
+import type { BindingEditorData, WeightMode, BindingSkinResult } from './binding-session';
+import { solveVolumeInWorker } from './volumetric-worker-client';
+import type { VolumetricOptions } from './volumetric-skin';
+import type { RigidSkinRegion } from './rigid-skin-regions';
 
 /** 引擎 15-float 顶点布局里法线的偏移（pos3 / normal3 / …），预览重姿态时同步转法线 */
 const NORMAL_OFFSET = 3;
@@ -152,6 +155,8 @@ export interface BindingPanelState {
 }
 
 export class BindingPanel {
+  private volumeTask: { sig: string; abort: AbortController; promise: Promise<BindingSkinResult | null> } | null = null;
+  private volumeError: { sig: string; message: string } | null = null;
   private readonly rootEl: HTMLElement;
   private readonly hooks: BindingPanelHooks;
   /** 3D 正交视图用的 GPU 上下文；null = 无 WebGPU，正/侧视降级为纯 2D */
@@ -208,6 +213,7 @@ export class BindingPanel {
 
   /** 当前选中的关节（纯 UI 态） */
   private selected: string | null = null;
+  private savedEditSig: string | null = null;
 
   // ── Skin Wrapper（代理圆柱体蒙皮）交互态（数据在 session） ──
   /** 编辑模式：关节骨架 / 蒙皮包裹。两者共用同一套正视/侧视 2D 视图 */
@@ -312,7 +318,14 @@ export class BindingPanel {
           <select class="bd-select" data-bd="weightmode" title="${t('Bind Skin 时真正生效的权重算法。包裹体：被 Skin Wrapper 圆柱体包住才归属该骨，边界较硬但可控，配合半径精细调整；距离衰减：按顶点到骨段距离衰减取 top-4，过渡自然、不用调半径，但对侧骨可能抢到少量权重')}">
             <option value="wrapper">${t('包裹体 Wrapper')}</option>
             <option value="distance">${t('距离衰减')}</option>
+            <option value="volumetric">${t('体积扩散 Volumetric')}</option>
           </select>
+          <span data-bd="volume-options" hidden>
+            <label>体素分辨率 <input class="bd-num" type="number" data-bd="volume-resolution" min="16" max="96" step="1" value="48"></label>
+            <label>细分深度 <input class="bd-num" type="number" data-bd="volume-depth" min="0" max="2" step="1" value="1"></label>
+            <label>精度 <select class="bd-select" data-bd="volume-tolerance"><option value="0.01">快速</option><option value="0.001" selected>均衡</option><option value="0.0001">高</option></select></label>
+            <button class="bd-btn" data-bd="volume-retry">重新计算</button>
+          </span>
           <button class="bd-btn accent" data-bd="apply" title="${t('用当前编辑姿态（带 offset）做绑定并导出；同时把此姿态冻结记录为 Bind Pose')}">Bind Skin</button>
           <button class="bd-btn" data-bd="export-anim" title="${t('把 T-pose 网格 + 骨骼 + 已重定向的动画一起导出 GLB（需要先载入 BVH）')}" disabled>${t('导出动画 GLB')}</button>
           <button class="bd-btn danger" data-bd="detach" title="${t('移除已应用的皮肤结果，但保留 Bind Pose 与关节编辑（有二次确认）')}">Detach Skin</button>
@@ -326,6 +339,13 @@ export class BindingPanel {
           <button class="bd-btn bd-icon" data-bd="close" title="${t('关闭绑定面板')}">✕</button>
         </div>
       </div>
+      <details style="padding:4px 8px;flex-shrink:0">
+        <summary>刚性部件约束（武器 / 道具）</summary>
+        <p>指定 bone 控制胶囊范围；start / end / radius 为源模型米制坐标，feather 为软边宽度。也可用 vertices + selectionHash 精确选择。平滑后应用，后项优先；空数组清除。</p>
+        <textarea data-bd="rigid-regions" aria-label="刚性部件约束 JSON" rows="4" style="width:100%;max-height:120px;background:#181824;color:#ddd">[]</textarea>
+        <button class="bd-btn" data-bd="rigid-apply">应用部件约束</button>
+        <span data-bd="rigid-status" role="status"></span>
+      </details>
       <div class="bd-body">
         <div class="bd-view">
           <div class="bd-vlabel">${t('正视 Front · (x, y)')}</div>
@@ -342,6 +362,16 @@ export class BindingPanel {
           </div>
         </div>
         <div class="bd-side">
+          <div class="bd-field bd-joint-editor">
+            <label>关节 <select data-bd="joint" aria-label="骨骼关节"></select></label>
+            <div class="bd-joint-coords">
+              <label>X <input class="bd-num" type="number" step="0.005" data-bd="joint-x" aria-label="关节 X" disabled></label>
+              <label>Y <input class="bd-num" type="number" step="0.005" data-bd="joint-y" aria-label="关节 Y" disabled></label>
+              <label>Z <input class="bd-num" type="number" step="0.005" data-bd="joint-z" aria-label="关节 Z" disabled></label>
+            </div>
+            <button class="bd-btn" data-bd="joint-apply">应用坐标</button>
+            <small>模型坐标（m）· 拖动视图或输入数值</small>
+          </div>
           <div class="bd-info" data-bd="info">${t('选中一个 joint 查看骨长与姿态偏移')}</div>
           <div class="bd-anim" data-bd="anim">${t('未载入动画')}</div>
           <div class="bd-field">
@@ -434,6 +464,27 @@ export class BindingPanel {
       </div>`;
 
     this.frontCanvas = this.rootEl.querySelector<HTMLCanvasElement>('[data-bd="front"]')!;
+    const jointSelect = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="joint"]')!;
+    jointSelect.add(new Option('选择关节…', ''));
+    for (const name of HUMANIK_ORDER) jointSelect.add(new Option(name, name));
+    jointSelect.addEventListener('change', () => this.select(jointSelect.value || null));
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="joint-apply"]')!.addEventListener('click', () => {
+      if (this.selected === null || this.previewMode !== 'current') return;
+      const p = ['x', 'y', 'z'].map(axis => this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!.valueAsNumber);
+      if (p.every(Number.isFinite)) this.poseJoint(this.selected, [p[0]!, p[1]!, p[2]!]);
+      else this.refresh();
+    });
+    for (const [index, axis] of ['x', 'y', 'z'].entries()) {
+      const input = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!;
+      input.addEventListener('change', () => {
+        if (this.selected === null || this.previewMode !== 'current') return;
+        const value = input.valueAsNumber;
+        if (!Number.isFinite(value)) { this.refresh(); return; }
+        const position: [number, number, number] = [...this.session.positions[this.selected]!];
+        position[index] = value;
+        this.poseJoint(this.selected, position);
+      });
+    }
     this.sideCanvas = this.rootEl.querySelector<HTMLCanvasElement>('[data-bd="side"]')!;
     this.frontCtx = this.frontCanvas.getContext('2d')!;
     this.sideCtx = this.sideCanvas.getContext('2d')!;
@@ -512,8 +563,32 @@ export class BindingPanel {
     // 否则「撤销一步几何编辑」会把中途手动切过的算法一并回滚 —— 静默回滚是事故。
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]')!;
     wm.value = this.session.getWeightMode();
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="rigid-apply"]')!.addEventListener('click', () => {
+      const text = this.rootEl.querySelector<HTMLTextAreaElement>('[data-bd="rigid-regions"]')!;
+      const status = this.rootEl.querySelector<HTMLElement>('[data-bd="rigid-status"]')!;
+      try {
+        const regions = JSON.parse(text.value) as RigidSkinRegion[];
+        if (this.session.applyOptions({rigidRegions:regions})) this.invalidatePreview();
+        status.textContent = `已应用 ${this.session.getRigidRegions().length} 个部件约束`;
+      } catch (error) { status.textContent = String(error); }
+      this.refresh();
+    });
     wm.addEventListener('change', () => {
-      if (this.session.setWeightMode(wm.value)) this.invalidatePreview();
+      if (this.session.setWeightMode(wm.value)) { this.syncWeightModeSelect(); this.invalidatePreview(); }
+    });
+    for (const field of ['resolution', 'depth', 'tolerance'] as const) {
+      const input = this.rootEl.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-bd="volume-${field}"]`)!;
+      input.addEventListener('change', () => {
+        const options = this.session.getVolumetricOptions();
+        options[field] = Number(input.value);
+        try { if (this.session.applyOptions({ volumetric: options })) this.invalidatePreview(); }
+        catch (error) { this.volumeError = { sig: this.session.editSig() ?? '', message: String(error) }; }
+        this.syncWeightModeSelect(); this.refresh();
+      });
+    }
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="volume-retry"]')!.addEventListener('click', () => {
+      this.volumeTask?.abort.abort(); this.volumeTask = null;
+      this.volumeError = null; this.session.clearSkinCache(); this.requestSkin(); this.refresh();
     });
 
     // 权重平滑开关（它进导出指纹：改了要立刻把徽标刷成「● 未导出」）
@@ -695,6 +770,7 @@ export class BindingPanel {
   }
 
   clear(): void {
+    this.volumeTask?.abort.abort(); this.volumeTask = null; this.volumeError = null;
     this.session.clear();
     this.srcVerts = null;
     this.meshVerts = null;
@@ -809,8 +885,40 @@ export class BindingPanel {
    * 注意姿势测试骨架 `poseTest` **不在**指纹里（它是显示层状态，不是权重输入）。
    */
   private previewSkin(): SkinWeights | null {
-    return this.session.computeSkin()?.skin ?? null;
+    return this.requestSkin()?.skin ?? null;
   }
+
+  private requestSkin(): BindingSkinResult | null {
+    if (this.session.getWeightMode() !== 'volumetric') {
+      this.volumeTask?.abort.abort(); this.volumeTask = null;
+      return this.session.computeSkin();
+    }
+    const cached = this.session.getCachedSkin(); if (cached) return cached;
+    const sig = this.session.editSig(); if (!sig || this.volumeError?.sig === sig) return null;
+    if (this.volumeTask?.sig === sig) return null;
+    this.volumeTask?.abort.abort();
+    const abort = new AbortController();
+    const promise = this.session.computeSkinAsync(input => solveVolumeInWorker(input, abort.signal));
+    const task = { sig, abort, promise }; this.volumeTask = task;
+    void promise.then(() => {
+      if (this.volumeTask !== task) return;
+      this.volumeTask = null; this.volumeError = null; this.invalidatePreview();
+    }, error => {
+      if (this.volumeTask !== task) return;
+      this.volumeTask = null;
+      if (this.session.editSig() === sig) this.volumeError = { sig, message: String(error) };
+      this.refresh();
+    });
+    return null;
+  }
+
+  /** Bind Skin waits for the same Worker result used by preview and diagnostics. */
+  async prepareSkin(): Promise<BindingSkinResult | null> {
+    const result = this.requestSkin(); if (result) return result;
+    if (this.volumeTask) return this.volumeTask.promise;
+    throw new Error(this.volumeError?.message ?? '没有可用于绑定的网格');
+  }
+  getVolumetricOptions(): VolumetricOptions { return this.session.getVolumetricOptions(); }
 
   /** 当前应叠加绘制的骨架（参考姿态）：当前=编辑骨架，T=重建 T-pose，A=A-pose，bind=冻结的 Bind Pose，pose=测试骨架快照 */
   private overlayPositions(): JointPositions {
@@ -1327,6 +1435,15 @@ export class BindingPanel {
   private syncWeightModeSelect(): void {
     const wm = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="weightmode"]');
     if (wm !== null) wm.value = this.session.getWeightMode();
+    const rigid = this.rootEl.querySelector<HTMLTextAreaElement>('[data-bd="rigid-regions"]');
+    if (rigid) rigid.value = JSON.stringify(this.session.getRigidRegions(), null, 2);
+    const volume = this.rootEl.querySelector<HTMLElement>('[data-bd="volume-options"]');
+    if (volume) volume.hidden = this.session.getWeightMode() !== 'volumetric';
+    const options = this.session.getVolumetricOptions();
+    for (const field of ['resolution', 'depth', 'tolerance'] as const) {
+      const input = this.rootEl.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-bd="volume-${field}"]`);
+      if (input) input.value = String(options[field]);
+    }
   }
 
   /** 把导出选项（平滑 / 镜像权重 / 平滑参数）同步回控件（换模型 / 清空 / 回填后调用） */
@@ -1689,10 +1806,14 @@ export class BindingPanel {
       el.textContent = '';
       return;
     }
-    const computed = this.session.computeSkin();
+    if (this.volumeError?.sig === this.session.editSig()) {
+      el.hidden = false; el.textContent = this.volumeError.message; return;
+    }
+    const computed = this.requestSkin();
     if (computed === null) {
-      el.hidden = true;
-      el.textContent = '';
+      el.hidden = false;
+      el.textContent = this.volumeError?.sig === this.session.editSig()
+        ? this.volumeError.message : '体积蒙皮正在计算…（可继续编辑，旧计算会取消）';
       return;
     }
     const n = this.srcVerts.length / this.vertexFloats;
@@ -1704,7 +1825,13 @@ export class BindingPanel {
     let html =
       `影响骨数 <b>${d.usedBones}</b> · 零权重 ${warn(d.zeroWeightVerts)}${d.zeroWeightVerts}</b>` +
       ` · 满4影响 <b>${d.fullInfluenceVerts}</b>${unwrap}` +
-      ` · <span class="bd-dim">撤销 ${this.session.historyDepth().undo}</span>`;
+          ` · <span class="bd-dim">撤销 ${this.session.historyDepth().undo}</span>`;
+    if (computed.volumetric) {
+      const v = computed.volumetric;
+      html += `<br>体素 ${v.cells} · 局部细分 ${v.refinedCells} · ${(v.elapsedMs / 1000).toFixed(2)}s` +
+        ` · ${v.converged ? '已收敛' : '⚠ 未收敛'} · 外部骨骼 ${v.outsideBones.length} · 近表面种子投影 ${v.projectedBones?.length ?? 0}` +
+        ` · 无种子部件 ${v.unseededComponents} · 兜底顶点 ${v.fallbackVertices}`;
+    }
     const selBone = this.editMode === 'skin' ? this.selectedCyl : this.selected;
     if (selBone !== null) {
       const pb = d.perBone.find((x) => x.bone === selBone);
@@ -1765,6 +1892,14 @@ export class BindingPanel {
   }
 
   private updateInfo(fit: FitResult): void {
+    const selector = this.rootEl.querySelector<HTMLSelectElement>('[data-bd="joint"]')!;
+    selector.value = this.selected ?? '';
+    this.rootEl.querySelector<HTMLButtonElement>('[data-bd="joint-apply"]')!.disabled = this.selected === null || this.previewMode !== 'current' || this.modelName === null;
+    for (const [index, axis] of ['x', 'y', 'z'].entries()) {
+      const input = this.rootEl.querySelector<HTMLInputElement>(`[data-bd="joint-${axis}"]`)!;
+      input.disabled = this.selected === null || this.previewMode !== 'current' || this.modelName === null;
+      input.value = this.selected === null ? '' : String(this.session.positions[this.selected]![index]);
+    }
     const v = this.meshVerts;
     const tris = this.meshIndices !== null ? this.meshIndices.length / 3 : 0;
     const verts = v !== null ? v.length / this.vertexFloats : 0;
@@ -2516,6 +2651,12 @@ export class BindingPanel {
       return;
     }
     if (this.session.poseJoint(name, p)) this.refresh();
+  }
+
+  editSignature(): string | null { return this.session.editSig(); }
+  markSaved(signature = this.editSignature()): void { this.savedEditSig = signature; }
+  hasUnsavedChanges(): boolean {
+    return this.modelName !== null && this.savedEditSig !== null && this.savedEditSig !== this.editSignature();
   }
 
   select(name: string | null): void {

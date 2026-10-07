@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -92,7 +92,7 @@
     "assets/environment/models/P-22/tex2/P-22_lod2.glb",
     "assets/environment/models/P-24/tex2/P-24_lod2.glb",
     "assets/environment/models/P-06/tex2/P-06_lod2.glb",
-    "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
+    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
     "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
     "assets/art/textures/SKY-01/SKY-01.png"
   ],
@@ -4315,8 +4315,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/characters/models/H-01/textured/H01_SCAVENGER_10500tris_baked.glb",
-              "guid": "as_yrsn456i"
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
             }
           },
           "materials": [
@@ -4346,7 +4346,16 @@
           "layer": 5,
           "importScale": 1,
           "playBinding": "player",
-          "editorOnly": false
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1
+          }
         }
       ],
       "prefab": null

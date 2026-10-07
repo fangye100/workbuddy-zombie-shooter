@@ -60,6 +60,7 @@
 import type { AssetPath, Vec3 } from './document';
 import type { MaterialBindingRef } from './document';
 import { validateRetargetAssetBlock, type RetargetAssetMeta } from './retarget-meta';
+import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
 
 export const META_FILE_SUFFIX = '.meta.json';
 export const META_SCHEMA_VERSION = 1;
@@ -308,7 +309,7 @@ export interface AnimationClipMeta {
 // ---------------------------------------------------------------- 主结构
 
 // bvh：BVH 动捕源资产（MR-01 起）。源动画导入有正式类型，不冒充 glTF、不藏 userData
-export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh';
+export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh' | 'motion-library';
 
 /**
  * 资产 sidecar 元数据。文件名 = `<源资产文件名>.meta.json`，与源资产同目录。
@@ -334,6 +335,8 @@ export interface AssetMeta {
    * （gen-asset-meta 的 merge 只补列出的字段，不受本块影响）。
    */
   retarget?: RetargetAssetMeta | null;
+  /** Asset-default shared motion binding; runtime generates target-specific tracks in memory. */
+  sharedMotion?: SharedMotionBinding | null;
   /**
    * 用户自定义标注（Inspector 不解释，原样透传）。
    * 用于"这个模型是 P2 批次" / "artist 备注：盾牌可拆"这类项目自有的元数据。
@@ -408,9 +411,12 @@ export function validateAssetMeta(meta: unknown): MetaDiagnostic[] {
   if (typeof m.guid !== 'string' || m.guid.length === 0) err('/guid', 'E_META_GUID', 'guid 必须是非空字符串');
   else if (!GUID_RE.test(m.guid)) warn('/guid', 'W_META_GUID_FORM', `guid 格式异常：${m.guid}（建议 as_xxxxxxxx）`);
 
-  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh'];
+  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh', 'motion-library'];
   if (typeof m.kind !== 'string' || !kinds.includes(m.kind as AssetKind)) {
     err('/kind', 'E_META_KIND', `kind 必须是 ${kinds.join(' / ')} 之一`);
+  }
+  if (m.sharedMotion !== undefined && m.sharedMotion !== null) {
+    for (const message of validateSharedMotionBinding(m.sharedMotion)) err('/sharedMotion', 'E_META_SHARED_MOTION', message);
   }
 
   // ---- 绑定 ----

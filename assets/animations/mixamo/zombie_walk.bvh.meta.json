@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_zombie_walk",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:bbb2d9ebdbcfd447f6dc6018b58b8b705e7eb4a82cb39f8ee73a21f6fd43417b",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:58805c338e435d2c042807f3f0bc302b7d2d895a55aba754b835e742099ac599"
+}

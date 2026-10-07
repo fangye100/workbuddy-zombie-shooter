@@ -20,5 +20,378 @@
     "file": "E03_Spitter_1200_baked.glb"
   },
   "sourceHash": "sha256:cf8c03e56655781e9ffe7fe916974e73961f8ef7656d9a8e446b9c162d503a0b",
-  "updatedAt": "2026-09-04T03:48:29.894Z"
+  "updatedAt": "2026-09-04T03:48:29.894Z",
+  "bindingEditor": {
+    "positions": {
+      "Hips": [
+        0,
+        0.6,
+        -0.13
+      ],
+      "Spine": [
+        0,
+        0.8983516609582117,
+        -0.13369949447324955
+      ],
+      "Spine1": [
+        0,
+        1.1293132688802892,
+        -0.11637737387909373
+      ],
+      "Spine2": [
+        0,
+        1.37,
+        -0.11
+      ],
+      "Neck": [
+        0,
+        1.6,
+        -0.11
+      ],
+      "Head": [
+        0,
+        1.6857619370133103,
+        -0.09330204621855827
+      ],
+      "HeadTip": [
+        0,
+        2.02,
+        -0.07
+      ],
+      "LeftShoulder": [
+        0.11,
+        1.44,
+        -0.1
+      ],
+      "LeftArm": [
+        0.28,
+        1.4,
+        -0.09
+      ],
+      "LeftForeArm": [
+        0.43,
+        1.0531043600094443,
+        -0.13013749539115735
+      ],
+      "LeftHand": [
+        0.59,
+        0.6595730549282137,
+        -0.07666856807033796
+      ],
+      "LeftHandTip": [
+        0.54,
+        0.289457870271018,
+        -0.05386507934329386
+      ],
+      "RightShoulder": [
+        -0.11,
+        1.44,
+        -0.1
+      ],
+      "RightArm": [
+        -0.28,
+        1.4,
+        -0.09
+      ],
+      "RightForeArm": [
+        -0.43,
+        1.0531043600094443,
+        -0.13013749539115735
+      ],
+      "RightHand": [
+        -0.59,
+        0.6595730549282137,
+        -0.07666856807033796
+      ],
+      "RightHandTip": [
+        -0.54,
+        0.289457870271018,
+        -0.05386507934329386
+      ],
+      "LeftUpLeg": [
+        0.2,
+        0.56,
+        -0.1
+      ],
+      "LeftLeg": [
+        0.24,
+        0.2936147416179404,
+        -0.08367898608746274
+      ],
+      "LeftFoot": [
+        0.24,
+        0.09,
+        -0.15
+      ],
+      "LeftToeBase": [
+        0.32,
+        0.04,
+        0.08
+      ],
+      "LeftToeTip": [
+        0.43,
+        0.04,
+        0.16
+      ],
+      "RightUpLeg": [
+        -0.2,
+        0.56,
+        -0.1
+      ],
+      "RightLeg": [
+        -0.24,
+        0.2936147416179404,
+        -0.08367898608746274
+      ],
+      "RightFoot": [
+        -0.24,
+        0.09,
+        -0.15
+      ],
+      "RightToeBase": [
+        -0.32,
+        0.04,
+        0.08
+      ],
+      "RightToeTip": [
+        -0.43,
+        0.04,
+        0.16
+      ]
+    },
+    "cylinders": {
+      "Hips": {
+        "bone": "Hips",
+        "radii": {
+          "top": 0.32,
+          "medium": 0.35,
+          "bottom": 0.35
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "Spine": {
+        "bone": "Spine",
+        "radii": {
+          "top": 0.43,
+          "medium": 0.46,
+          "bottom": 0.44
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "Spine1": {
+        "bone": "Spine1",
+        "radii": {
+          "top": 0.44,
+          "medium": 0.38,
+          "bottom": 0.32
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "Spine2": {
+        "bone": "Spine2",
+        "radii": {
+          "top": 0.3,
+          "medium": 0.3,
+          "bottom": 0.28
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "Neck": {
+        "bone": "Neck",
+        "radii": {
+          "top": 0.22,
+          "medium": 0.205,
+          "bottom": 0.22
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "Head": {
+        "bone": "Head",
+        "radii": {
+          "top": 0.265,
+          "medium": 0.245,
+          "bottom": 0.325
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftShoulder": {
+        "bone": "LeftShoulder",
+        "radii": {
+          "top": 0.105,
+          "medium": 0.105,
+          "bottom": 0.125
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftArm": {
+        "bone": "LeftArm",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.105,
+          "bottom": 0.125
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftForeArm": {
+        "bone": "LeftForeArm",
+        "radii": {
+          "top": 0.105,
+          "medium": 0.065,
+          "bottom": 0.065
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftHand": {
+        "bone": "LeftHand",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.105,
+          "bottom": 0.125
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightShoulder": {
+        "bone": "RightShoulder",
+        "radii": {
+          "top": 0.145,
+          "medium": 0.125,
+          "bottom": 0.125
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightArm": {
+        "bone": "RightArm",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.105,
+          "bottom": 0.125
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightForeArm": {
+        "bone": "RightForeArm",
+        "radii": {
+          "top": 0.105,
+          "medium": 0.085,
+          "bottom": 0.065
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightHand": {
+        "bone": "RightHand",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.105,
+          "bottom": 0.085
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftUpLeg": {
+        "bone": "LeftUpLeg",
+        "radii": {
+          "top": 0.29,
+          "medium": 0.265,
+          "bottom": 0.145
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftLeg": {
+        "bone": "LeftLeg",
+        "radii": {
+          "top": 0.09,
+          "medium": 0.09,
+          "bottom": 0.09
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftFoot": {
+        "bone": "LeftFoot",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.085,
+          "bottom": 0.085
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "LeftToeBase": {
+        "bone": "LeftToeBase",
+        "radii": {
+          "top": 0.065,
+          "medium": 0.065,
+          "bottom": 0.085
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightUpLeg": {
+        "bone": "RightUpLeg",
+        "radii": {
+          "top": 0.29,
+          "medium": 0.285,
+          "bottom": 0.145
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightLeg": {
+        "bone": "RightLeg",
+        "radii": {
+          "top": 0.09,
+          "medium": 0.09,
+          "bottom": 0.09
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightFoot": {
+        "bone": "RightFoot",
+        "radii": {
+          "top": 0.085,
+          "medium": 0.085,
+          "bottom": 0.085
+        },
+        "enabled": true,
+        "manual": true
+      },
+      "RightToeBase": {
+        "bone": "RightToeBase",
+        "radii": {
+          "top": 0.065,
+          "medium": 0.065,
+          "bottom": 0.085
+        },
+        "enabled": true,
+        "manual": true
+      }
+    },
+    "weightMode": "volumetric",
+    "volumetric": {
+      "resolution": 48,
+      "depth": 1,
+      "tolerance": 0.001
+    },
+    "rigidRegions": [],
+    "smoothWeights": true,
+    "smoothIters": 6,
+    "smoothLambda": 0.5,
+    "mirrorWeights": false,
+    "savedAt": "2026-10-07T03:11:58.309Z"
+  }
 }

@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-06",
+  "branch": "codex/shared-motion-runtime-retarget-20261006",
+  "scene": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+  "hardware": {
+    "secure": true,
+    "vendor": "nvidia",
+    "architecture": "lovelace",
+    "isFallback": false
+  },
+  "firstPlay": {
+    "stats": {
+      "solves": 59,
+      "cacheHits": 1,
+      "failures": 0
+    },
+    "errors": [],
+    "actorErrors": [],
+    "actorIds": [
+      "H-01",
+      "E-01",
+      "E-02",
+      "E-03",
+      "E-04",
+      "E-05",
+      "B-01",
+      "B-03"
+    ],
+    "batches": [
+      {
+        "mesh": "actor:E-01",
+        "count": 1,
+        "instance": [
+          -4.97092342376709,
+          0,
+          -4.045627593994141,
+          0.749699056148529,
+          1,
+          1,
+          1,
+          952,
+          1,
+          1,
+          1,
+          140,
+          65,
+          0.6563849449157715,
+          1,
+          23
+        ]
+      },
+      {
+        "mesh": "actor:E-04",
+        "count": 1,
+        "instance": [
+          4.946737766265869,
+          0,
+          -3.936035394668579,
+          2.383965253829956,
+          1,
+          1,
+          1,
+          12268,
+          1,
+          1,
+          1,
+          24,
+          98,
+          0.25246143341064453,
+          1,
+          23
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "id": "nd_motion_player",
+        "joints": 27,
+        "key": "fp1_fd7e9089be20598beef6d49a",
+        "state": "shoot"
+      },
+      {
+        "id": "nd_motion_h01",
+        "joints": 27,
+        "key": "fp1_fd7e9089be20598beef6d49a",
+        "state": "walk"
+      },
+      {
+        "id": "nd_motion_E-01",
+        "joints": 22,
+        "key": "fp1_ba52f3f2c8b8ed485470f2ac",
+        "state": "walk"
+      },
+      {
+        "id": "nd_motion_E-04",
+        "joints": 22,
+        "key": "fp1_71883d456d7aa25f1e8a9830",
+        "state": "walk"
+      }
+    ]
+  },
+  "stop": {
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    },
+    "instances": 0,
+    "nodes": 0,
+    "author": [
+      {
+        "clips": 0,
+        "clip": -1
+      },
+      {
+        "clips": 0,
+        "clip": -1
+      },
+      {
+        "clips": 0,
+        "clip": -1
+      },
+      {
+        "clips": 0,
+        "clip": -1
+      }
+    ]
+  },
+  "restart": {
+    "stats": {
+      "solves": 59,
+      "cacheHits": 13,
+      "failures": 0
+    },
+    "pending": 0,
+    "errors": [],
+    "actorErrors": []
+  },
+  "visibleUi": [
+    "Play/Pause/Step/Stop",
+    "action switching jump/run/attack",
+    "rerun restores configured defaults",
+    "Apply/Save/Reload speed restored to 1"
+  ],
+  "inputHook": {
+    "playerDisplacementM": 0.30000001192092896,
+    "states": [
+      "run",
+      "shoot"
+    ],
+    "scope": "fixed-step input-hook coverage, not held-key UI proof"
+  },
+  "browserErrors": []
+}

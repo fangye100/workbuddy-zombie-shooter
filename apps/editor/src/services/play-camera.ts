@@ -43,6 +43,7 @@ export interface ViewCameraControl {
 export interface PlayCameraTarget {
   x: number;
   z: number;
+  /** Render Y rotation (+Z forward), converted from the runtime planar heading. */
   yaw: number;
 }
 

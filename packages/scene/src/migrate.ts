@@ -370,6 +370,10 @@ export function registerSceneMigrations(): void {
     from: 9, to: 10, name: 'support-authored-art-textures',
     run(doc) { return { ...doc }; },
   });
+  if (!listMigrations().some((m) => m.from === 10 && m.to === 11)) registerMigration({
+    from: 10, to: 11, name: 'shared-motion-node-overrides',
+    run(doc) { return { ...doc }; },
+  });
 }
 
 registerSceneMigrations();

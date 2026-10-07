@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_zombie_attack",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:558a1cc541d46c42d35b2fab7559671518fce737b37c5a902f76591c197a10bf",
+    "importer": "fbx-world-rest-basis-v1"
+  },
+  "sourceHash": "sha256:445f96d1ad3375ee06a2ec5e2ae82866debd8299d138a09ae22400a10bccd11a"
+}
