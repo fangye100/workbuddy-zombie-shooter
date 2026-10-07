@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_beee82dc33065833bf3a09e8",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-E02-POUNCE-WARN",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-E02-POUNCE-WARN",
+    "file": "SFX-E02-POUNCE-WARN__v02.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 17280,
+    "loopStartSample": null,
+    "loopEndSample": null
+  },
+  "sourceHash": "sha256:f309926410854e53584d4523e7d3a94a028743840f7728f8592ddaf356c5e038"
+}

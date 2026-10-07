@@ -39,6 +39,12 @@ body.game-view #mainrow {position:fixed;inset:0;width:100%;height:100%;}
 body.game-view #center {width:100%;height:100%;flex:1;min-width:0;}
 .game-aim-cursor {cursor:crosshair!important;}
 .game-toolbar {position:absolute;right:18px;top:183px;display:flex;gap:5px;max-width:330px;flex-wrap:wrap;justify-content:flex-end;pointer-events:auto;}
+.game-audio {position:relative;pointer-events:auto;font:700 11px system-ui;color:#fff6e2;}
+.game-audio summary {cursor:pointer;list-style:none;padding:7px 9px;min-height:36px;box-sizing:border-box;display:flex;align-items:center;border:2px solid #14110f;border-radius:8px;background:#221e33ef;}
+.game-audio-panel {position:absolute;right:0;top:calc(100% + 4px);width:230px;padding:10px;background:#221e33;border:2px solid #14110f;border-radius:8px;z-index:40;box-shadow:3px 5px 0 #14110f88;}
+.game-audio-panel input {display:block;width:100%;margin:12px 0;min-height:32px;}
+.game-audio-panel small {display:block;white-space:pre-wrap;overflow-wrap:anywhere;max-height:100px;overflow:auto;}
+#center:has(.game-touch-controls:not([hidden])) .game-audio summary {min-height:44px;}
 #center .game-toolbar button {background:#221e33ef;border:2px solid #14110f;border-radius:8px;color:#fff6e2;padding:7px 9px;min-height:36px;font:700 11px system-ui;}
 #center .game-toolbar button[aria-pressed="true"] {background:#ffc531;color:#171327;}
 .game-touch-controls {position:absolute;inset:0;pointer-events:none;z-index:25;}
@@ -73,7 +79,7 @@ body.game-view #center {width:100%;height:100%;flex:1;min-width:0;}
  body.game-view .hud-life {width:calc(100% - 24px);}
  body.game-view #center .hud-wave {top:102px;left:12px;right:12px;transform:none;min-width:0;}
  body.game-view .hud-objective {top:162px;}
- body.game-view .game-toolbar {top:244px;}
+ body.game-view .game-toolbar {top:244px;max-width:none;left:12px;right:12px;}
  body.game-view #center .run-hud {bottom:168px;width:calc(100% - 52px);}
  body.game-view #center .run-hud:not(.choosing) .run-build-info {height:16px;max-height:16px;overflow:hidden;margin-bottom:0;}
  body.game-view #center .run-hud:not(.choosing) .run-assist {display:none;}

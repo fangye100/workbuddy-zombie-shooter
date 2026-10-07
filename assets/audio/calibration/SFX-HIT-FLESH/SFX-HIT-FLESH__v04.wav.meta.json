@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_a4632b2d13f25a558198c3be",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-HIT-FLESH",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-HIT-FLESH",
+    "file": "SFX-HIT-FLESH__v04.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 8640,
+    "loopStartSample": null,
+    "loopEndSample": null
+  },
+  "sourceHash": "sha256:eea0e7eb53b3a2d32fa4ce4408c8210822d75487fe0dd05850153fecee84988c"
+}

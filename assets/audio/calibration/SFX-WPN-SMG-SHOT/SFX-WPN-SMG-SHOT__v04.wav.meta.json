@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_7b8a4e9953eb548fa6067d7d",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-WPN-SMG-SHOT",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-WPN-SMG-SHOT",
+    "file": "SFX-WPN-SMG-SHOT__v04.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 6240,
+    "loopStartSample": null,
+    "loopEndSample": null
+  },
+  "sourceHash": "sha256:3f359f3734d0e3bb3162805bb9d171522ef5f7b915ab780bb565c4f22755da96"
+}

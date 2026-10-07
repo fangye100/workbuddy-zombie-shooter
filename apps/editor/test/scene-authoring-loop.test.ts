@@ -16,6 +16,14 @@ function setup() {
   return { store, saver, disk: () => disk };
 }
 describe('scene authoring loop', () => {
+  it('saves and reopens authored audio gain and stable resource identities', async () => {
+    const s=setup();
+    expect(s.store.editNodes('audio', nodes=>{const r=nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')!;if(r.kind==='RunRules')r.audio!.masterGain=.4;}).ok).toBe(true);
+    expect((await s.saver.save(s.store,'qa.scene.json')).status).toBe('saved');
+    const runtime=loadLevelRuntime(new SpawnEditStore(s.disk()).document);
+    expect(runtime.desc!.runRules!.audio!.masterGain).toBe(.4);
+    expect(runtime.desc!.runRules!.audio!.cues[0]!.variants[0]!.guid).toBeTruthy();
+  });
   it('mixes rules, structure, materials and transforms, saves/reopens and runs the authored rules', async () => {
     const s = setup();
     expect(s.store.editNodes('rules', nodes => {

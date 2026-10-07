@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_71f8b4add9455486b076694c",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-WPN-FLAME-LOOP",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-WPN-FLAME-LOOP",
+    "file": "SFX-WPN-FLAME-LOOP__v01.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 72000,
+    "loopStartSample": 0,
+    "loopEndSample": 72000
+  },
+  "sourceHash": "sha256:985e54079264947f96085e3228bfe23e83a750ef8cdd304ae009dc988cc9526b"
+}

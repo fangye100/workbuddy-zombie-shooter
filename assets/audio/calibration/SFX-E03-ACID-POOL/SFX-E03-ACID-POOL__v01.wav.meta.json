@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_0e06b98abf60551291ccbbbc",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-E03-ACID-POOL",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-E03-ACID-POOL",
+    "file": "SFX-E03-ACID-POOL__v01.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 72000,
+    "loopStartSample": 0,
+    "loopEndSample": 72000
+  },
+  "sourceHash": "sha256:39c9cbaa6bb99811d3f34d62026f0fe65b86177be8f7e836ffff4aec05f12a35"
+}

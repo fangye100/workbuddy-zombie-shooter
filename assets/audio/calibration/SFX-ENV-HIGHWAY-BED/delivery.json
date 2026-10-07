@@ -1,0 +1,27 @@
+{
+  "id": "SFX-ENV-HIGHWAY-BED",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-ENV-HIGHWAY-BED__v01.wav",
+      "variant": "v01",
+      "sha256": "a07eb8e2038a4838f713a5b645780b75f07f87ff038fdcbc4915b14a0c914ada",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 2,
+      "durationS": 30.0,
+      "frames": 1440000,
+      "peakDbfs": -3.0,
+      "loopStartSample": 0,
+      "loopEndSample": 1440000,
+      "playback": "loop"
+    }
+  ]
+}

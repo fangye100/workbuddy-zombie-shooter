@@ -45,3 +45,5 @@ docs/evidence/street-quality-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -tex
 docs/evidence/combat-quality-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text
 
 docs/evidence/weapons-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text
+assets/audio/**/*.wav filter=lfs diff=lfs merge=lfs -text
+docs/evidence/audio-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text

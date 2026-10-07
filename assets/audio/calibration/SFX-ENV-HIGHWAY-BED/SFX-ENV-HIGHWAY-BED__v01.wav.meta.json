@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_348fff9d005a5641bdb47e38",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-ENV-HIGHWAY-BED",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-ENV-HIGHWAY-BED",
+    "file": "SFX-ENV-HIGHWAY-BED__v01.wav"
+  },
+  "audio": {
+    "channels": 2,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 1440000,
+    "loopStartSample": 0,
+    "loopEndSample": 1440000
+  },
+  "sourceHash": "sha256:a07eb8e2038a4838f713a5b645780b75f07f87ff038fdcbc4915b14a0c914ada"
+}

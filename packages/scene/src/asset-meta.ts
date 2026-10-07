@@ -61,6 +61,7 @@ import type { AssetPath, Vec3 } from './document';
 import type { MaterialBindingRef } from './document';
 import { validateRetargetAssetBlock, type RetargetAssetMeta } from './retarget-meta';
 import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
+import { validAudioAssetInfo, type AudioAssetInfo } from './audio';
 
 export const META_FILE_SUFFIX = '.meta.json';
 export const META_SCHEMA_VERSION = 1;
@@ -309,7 +310,7 @@ export interface AnimationClipMeta {
 // ---------------------------------------------------------------- 主结构
 
 // bvh：BVH 动捕源资产（MR-01 起）。源动画导入有正式类型，不冒充 glTF、不藏 userData
-export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh' | 'motion-library';
+export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh' | 'motion-library' | 'audio';
 
 /**
  * 资产 sidecar 元数据。文件名 = `<源资产文件名>.meta.json`，与源资产同目录。
@@ -321,6 +322,7 @@ export interface AssetMeta {
   /** 稳定资产 id，跨重命名/移动保持不变 */
   guid: AssetGuid;
   kind: AssetKind;
+  audio?: AudioAssetInfo | null;
   /** 导入设置。按 kind 分化——目前只有 gltf 有实质内容 */
   importer: GlbImporterSettings;
   /** 逐 mesh 节点的默认材质绑定（换模型继承的真源） */
@@ -411,7 +413,8 @@ export function validateAssetMeta(meta: unknown): MetaDiagnostic[] {
   if (typeof m.guid !== 'string' || m.guid.length === 0) err('/guid', 'E_META_GUID', 'guid 必须是非空字符串');
   else if (!GUID_RE.test(m.guid)) warn('/guid', 'W_META_GUID_FORM', `guid 格式异常：${m.guid}（建议 as_xxxxxxxx）`);
 
-  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh', 'motion-library'];
+  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh', 'motion-library', 'audio'];
+  if(m.kind==='audio' && !validAudioAssetInfo(m.audio))err('/audio','E_AUDIO_META','音频采样与循环区间无效');
   if (typeof m.kind !== 'string' || !kinds.includes(m.kind as AssetKind)) {
     err('/kind', 'E_META_KIND', `kind 必须是 ${kinds.join(' / ')} 之一`);
   }

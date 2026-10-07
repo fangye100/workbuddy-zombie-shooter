@@ -1,0 +1,264 @@
+{
+  "enabled": true,
+  "masterGain": 0.65,
+  "maxVoices": 24,
+  "maxImpactVoices": 4,
+  "decodedBudgetMiB": 24,
+  "distanceM": 28,
+  "warningDistanceM": 18,
+  "cues": [
+    {
+      "id": "SFX-WPN-PISTOL-SHOT",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v01.wav",
+          "guid": "as_1708bbad45af52c797d6f0a8"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v02.wav",
+          "guid": "as_d1e18ed99aa651619e81661c"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v03.wav",
+          "guid": "as_7322cd1698b95b23b1b100f3"
+        }
+      ],
+      "loop": false,
+      "gain": 0.7,
+      "priority": 6,
+      "cooldownSec": 0,
+      "bus": "weapon"
+    },
+    {
+      "id": "SFX-WPN-SMG-SHOT",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v01.wav",
+          "guid": "as_b2cc40a39371508591967cca"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v02.wav",
+          "guid": "as_bca63d52d1e25957be078251"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v03.wav",
+          "guid": "as_bbcb9f1d77e35ef29b63af48"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v04.wav",
+          "guid": "as_7b8a4e9953eb548fa6067d7d"
+        }
+      ],
+      "loop": false,
+      "gain": 0.7,
+      "priority": 6,
+      "cooldownSec": 0,
+      "bus": "weapon"
+    },
+    {
+      "id": "SFX-HIT-FLESH",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v01.wav",
+          "guid": "as_bdf9e61fedd45210b1c218ba"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v02.wav",
+          "guid": "as_d4ae79059b285188a8fd2a82"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v03.wav",
+          "guid": "as_8bd7f943fefb599ba62d44f3"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v04.wav",
+          "guid": "as_a4632b2d13f25a558198c3be"
+        }
+      ],
+      "loop": false,
+      "gain": 0.27,
+      "priority": 4,
+      "cooldownSec": 0.1,
+      "bus": "impact"
+    },
+    {
+      "id": "SFX-WPN-FLAME-LOOP",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v01.wav",
+          "guid": "as_71f8b4add9455486b076694c"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v02.wav",
+          "guid": "as_acd015093ccf573ab6cfa98b"
+        }
+      ],
+      "loop": true,
+      "gain": 0.3,
+      "priority": 6,
+      "cooldownSec": 0,
+      "bus": "weapon"
+    },
+    {
+      "id": "SFX-E03-ACID-POOL",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v01.wav",
+          "guid": "as_0e06b98abf60551291ccbbbc"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v02.wav",
+          "guid": "as_173fa76401d551aab33111e8"
+        }
+      ],
+      "loop": true,
+      "gain": 0.3,
+      "priority": 3,
+      "cooldownSec": 0,
+      "bus": "enemy"
+    },
+    {
+      "id": "SFX-E03-ACID-LAUNCH",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v01.wav",
+          "guid": "as_63b63e001c58581a90a66539"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v02.wav",
+          "guid": "as_16fec97c0e1d5d698117ec64"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v03.wav",
+          "guid": "as_e6078c3ba7b65e888a5224f5"
+        }
+      ],
+      "loop": false,
+      "gain": 0.3,
+      "priority": 3,
+      "cooldownSec": 0,
+      "bus": "enemy"
+    },
+    {
+      "id": "SFX-E02-POUNCE-WARN",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v01.wav",
+          "guid": "as_4980700b78225240a405af06"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v02.wav",
+          "guid": "as_beee82dc33065833bf3a09e8"
+        },
+        {
+          "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v03.wav",
+          "guid": "as_0d6beee715985530b1e68e22"
+        }
+      ],
+      "loop": false,
+      "gain": 0.3,
+      "priority": 8,
+      "cooldownSec": 0,
+      "bus": "enemy"
+    },
+    {
+      "id": "SFX-ENV-HIGHWAY-BED",
+      "variants": [
+        {
+          "path": "assets/audio/calibration/SFX-ENV-HIGHWAY-BED/SFX-ENV-HIGHWAY-BED__v01.wav",
+          "guid": "as_348fff9d005a5641bdb47e38"
+        }
+      ],
+      "loop": true,
+      "gain": 0.18,
+      "priority": 0,
+      "cooldownSec": 0,
+      "bus": "ambience"
+    }
+  ],
+  "ambience": {
+    "cue": "SFX-ENV-HIGHWAY-BED",
+    "rate": 1,
+    "gain": 1
+  },
+  "weapons": {
+    "pistol": {
+      "fire": {
+        "cue": "SFX-WPN-PISTOL-SHOT",
+        "rate": 1,
+        "gain": 1
+      },
+      "loop": null
+    },
+    "smg": {
+      "fire": {
+        "cue": "SFX-WPN-SMG-SHOT",
+        "rate": 1,
+        "gain": 1
+      },
+      "loop": null
+    },
+    "shotgun": {
+      "fire": {
+        "cue": "SFX-WPN-PISTOL-SHOT",
+        "rate": 0.7,
+        "gain": 1
+      },
+      "loop": null
+    },
+    "sniper": {
+      "fire": {
+        "cue": "SFX-WPN-PISTOL-SHOT",
+        "rate": 0.8,
+        "gain": 1
+      },
+      "loop": null
+    },
+    "launcher": {
+      "fire": {
+        "cue": "SFX-WPN-PISTOL-SHOT",
+        "rate": 0.6,
+        "gain": 0.7
+      },
+      "loop": null
+    },
+    "chainsaw": {
+      "fire": null,
+      "loop": {
+        "cue": "SFX-WPN-FLAME-LOOP",
+        "rate": 0.6,
+        "gain": 0.7
+      }
+    },
+    "flame": {
+      "fire": null,
+      "loop": {
+        "cue": "SFX-WPN-FLAME-LOOP",
+        "rate": 1,
+        "gain": 1
+      }
+    }
+  },
+  "warnings": {
+    "E-02": {
+      "cue": "SFX-E02-POUNCE-WARN",
+      "rate": 1,
+      "gain": 1
+    }
+  },
+  "fleshHit": {
+    "cue": "SFX-HIT-FLESH",
+    "rate": 1,
+    "gain": 1
+  },
+  "acidLaunch": {
+    "cue": "SFX-E03-ACID-LAUNCH",
+    "rate": 1,
+    "gain": 1
+  },
+  "acidPool": {
+    "cue": "SFX-E03-ACID-POOL",
+    "rate": 1,
+    "gain": 1
+  }
+}

@@ -7,6 +7,8 @@ export function setGameLanguage(next: GameLanguage): void {
   try { localStorage.setItem('zombie.game.language', next); } catch { /* Continue in memory. */ }
 }
 const phrases: Record<string, string> = {
+  '声音：关':'Sound: OFF','声音：开':'Sound: ON','声音：部分缺失':'Sound: partial','声音：加载中':'Sound: loading','声音：点击开启':'Sound: enable',
+  '开启声音':'Enable sound','关闭声音':'Mute sound','音量':'Volume',
   '火场公路': 'Burning highway', '尸潮仓储区': 'Warehouse swarm', '暗巷撤离站': 'Alley extraction',
   '本局结算 · 流派归零，尸髓保留': 'Run results · Build reset, essence retained', '楼层结算 · 成长带入下一层': 'Floor results · Carry your build onward',
   '本局累计尸髓':'Run essence', '永久尸髓余额':'Permanent essence balance', '已解锁':'Unlocked', '解锁':'Unlock',

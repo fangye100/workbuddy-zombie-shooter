@@ -1,4 +1,5 @@
 import { GameControls } from './services/game-controls';
+import { GameAudio } from './services/game-audio';
 import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
 import { LabRenderer, type CameraState, type SceneObject } from './renderer';
 import { Panel } from './ui';
@@ -247,6 +248,7 @@ async function boot(): Promise<void> {
    */
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
+  const gameAudio = new GameAudio();
   const playCtl = new PlayController(renderer, bridge, {
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
@@ -283,6 +285,7 @@ async function boot(): Promise<void> {
       return [n.world.position[0], n.world.position[1], n.world.position[2]] as [number, number, number];
     },
     onStateChange: () => {
+      gameAudio.update(playCtl.session,camera.yaw);
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
       hudDirty = true;
@@ -594,6 +597,7 @@ async function boot(): Promise<void> {
 
   // 调试/自动化钩子：控制台与无头 CDP 验证直接读写相机/材质状态（都是引用，读到即实时值）
   (window as unknown as { __editor: unknown }).__editor = {
+    audio: () => gameAudio.snapshot(),
     motions: {
       summary: () => sceneMotions.summary(),
       setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
@@ -3867,6 +3871,7 @@ async function boot(): Promise<void> {
   const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
   gameControls = new GameControls(canvas,(x,y)=>renderer.pointerRay(x,y),()=>camera.yaw);
   const gameHud = new GameHud({
+    audioControl: gameAudio.control,
     pause: () => playCtl.togglePause(),
     toggleTouch: () => { gameControls!.clear();gameControls!.touch=!gameControls!.touch;return gameControls!.touch; },
     interact: () => { playCtl.session.interact(); },
@@ -4173,6 +4178,7 @@ async function boot(): Promise<void> {
       bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
+    gameAudio.update(playCtl.session,camera.yaw);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;
       gameHud.update(playCtl.session.runtime, playCtl.isPaused);

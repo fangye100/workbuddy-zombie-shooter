@@ -38,7 +38,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -370,6 +370,7 @@ function buildFloor(floor) {
     firstChoiceKills: 1, choiceEveryKills: 8, eventScrap: 25,
     healCost: 18, healAmount: 35, talentCost: 30, floorEssence: floor.depth * 5, aimAssist: true,
     arsenal: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/weapons/prototype.weapons.json'), 'utf8')),
+    audio: JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/audio/calibration/gameplay-audio.json'), 'utf8')),
     weapon: { magazineSize: 18, reserveRounds: 120, reloadSec: 1.6, ammoPerKill: 8, ammoCost: 12, ammoSupply: 60 },
     // [PLACEHOLDER] 1.8 s telegraph permits a 3 m escape at base speed; verify with headed play.
     bossAttack: floor.depth === 3 ? { source: 'nd_f3r1_sp0', radius: 3, windupSec: 1.8, cooldownSec: 5, damage: 28 } : null,

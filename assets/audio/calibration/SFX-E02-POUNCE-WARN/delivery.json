@@ -1,0 +1,49 @@
+{
+  "id": "SFX-E02-POUNCE-WARN",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-E02-POUNCE-WARN__v01.wav",
+      "variant": "v01",
+      "sha256": "b64007a5d22dfd2e70f04baef99818f0b1fd799fc62079ae0b1b48116643762d",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.36,
+      "frames": 17280,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-E02-POUNCE-WARN__v02.wav",
+      "variant": "v02",
+      "sha256": "f309926410854e53584d4523e7d3a94a028743840f7728f8592ddaf356c5e038",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.36,
+      "frames": 17280,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-E02-POUNCE-WARN__v03.wav",
+      "variant": "v03",
+      "sha256": "81fe8f4aa9a60acf86fcbdf34a5e5fd4d804a1864e6ce214a4385ea000f12c77",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.36,
+      "frames": 17280,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "SFX-HIT-FLESH",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-HIT-FLESH__v01.wav",
+      "variant": "v01",
+      "sha256": "f66d3200f403847fda60d54cfedcf71e6dbceccaf233d543879564d06d86cab5",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.18,
+      "frames": 8640,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-HIT-FLESH__v02.wav",
+      "variant": "v02",
+      "sha256": "8bad90ea6a1b4b2d33659bdf7955aeed05bc1e022454883f5c9f97e36e6c688f",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.18,
+      "frames": 8640,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-HIT-FLESH__v03.wav",
+      "variant": "v03",
+      "sha256": "3c8b7c87bf0fff0f4433034745afaff1eba49de7d2b840d3f619f536e96d0a5c",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.18,
+      "frames": 8640,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-HIT-FLESH__v04.wav",
+      "variant": "v04",
+      "sha256": "eea0e7eb53b3a2d32fa4ce4408c8210822d75487fe0dd05850153fecee84988c",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.18,
+      "frames": 8640,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    }
+  ]
+}

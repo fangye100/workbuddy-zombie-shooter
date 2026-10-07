@@ -54,7 +54,7 @@ export class GameHud {
   private nextBusy = false;
   private campaignComplete = false;
   private currentRun = -1;
-  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean }, project?: WorldProjection) {
+  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean; audioControl?:HTMLElement }, project?: WorldProjection) {
     this.feedback = project ? new CombatOverlay(project) : null;
     this.root.className = 'game-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '游戏状态');
     this.health.max = 100; this.health.setAttribute('aria-label', '生命值');
@@ -77,6 +77,7 @@ export class GameHud {
     this.view.onclick=()=>{this.gameView=!this.gameView;};
     this.touch.onclick=()=>{this.touch.dataset.touch=String(actions.toggleTouch());};
     this.toolbar.append(this.language,this.pause,this.touch,this.view,this.debug);
+    if(actions.audioControl)this.toolbar.append(actions.audioControl);
     this.result.append(this.retry, this.next, stop);
     const life = document.createElement('div'); life.className = 'hud-life';
     this.healthText.className = 'hud-health-value'; life.append(this.title, this.health, this.healthText);

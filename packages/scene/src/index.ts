@@ -35,3 +35,4 @@ export * from './instantiate';
 export * from './retarget-meta';
 export * from './shared-motion';
 export * from './weapons';
+export * from './audio';

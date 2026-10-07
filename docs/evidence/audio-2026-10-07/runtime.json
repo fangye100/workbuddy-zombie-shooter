@@ -1,0 +1,105 @@
+{
+  "gpu": {
+    "vendor": "nvidia",
+    "architecture": "lovelace"
+  },
+  "decoded": {
+    "buffers": 22,
+    "bytes": 13405440,
+    "pending": 0
+  },
+  "userPath": {
+    "pistol": 1,
+    "smg": 3,
+    "fleshHit": 5,
+    "pounceWarn": 31,
+    "flameLoop": 1,
+    "heldFlameLoopsIncludingBed": 2,
+    "pauseVoices": 0,
+    "pauseLoops": 0
+  },
+  "notes": [
+    "Mouse firing and HUD weapon selection used actual UI.",
+    "Temporary player health fixture used for lengthy playback checks; restored by final reload.",
+    "Auditory style acceptance remains the user decision.",
+    "Acid second-wave fixture removed first-wave enemies via applyDamage without player kill rewards; second-wave NPC attacks used normal simulation. Observations span HMR reloads and two scene loads."
+  ],
+  "stop": {
+    "audio": {
+      "state": "closed",
+      "runId": -1,
+      "pending": 0,
+      "buffers": 0,
+      "decodedBytes": 0,
+      "voices": 0,
+      "loops": 0,
+      "peakVoices": 0,
+      "played": {},
+      "skipped": 1,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    },
+    "state": "stopped"
+  },
+  "acidSecondWave": {
+    "audio": {
+      "state": "running",
+      "runId": 1,
+      "pending": 0,
+      "buffers": 22,
+      "decodedBytes": 13405440,
+      "voices": 3,
+      "loops": 3,
+      "peakVoices": 5,
+      "played": {
+        "SFX-ENV-HIGHWAY-BED": 1,
+        "SFX-E02-POUNCE-WARN": 8,
+        "SFX-E03-ACID-LAUNCH": 107,
+        "SFX-E03-ACID-POOL": 107
+      },
+      "skipped": 1,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    },
+    "acidNPCs": 24,
+    "effects": [
+      {
+        "kind": "acid",
+        "phase": "pool",
+        "blocked": false
+      },
+      {
+        "kind": "acid",
+        "phase": "pool",
+        "blocked": false
+      }
+    ]
+  },
+  "acidPaused": {
+    "state": "running",
+    "runId": 1,
+    "pending": 0,
+    "buffers": 22,
+    "decodedBytes": 13405440,
+    "voices": 0,
+    "loops": 0,
+    "peakVoices": 5,
+    "played": {
+      "SFX-ENV-HIGHWAY-BED": 1,
+      "SFX-E02-POUNCE-WARN": 8,
+      "SFX-E03-ACID-LAUNCH": 109,
+      "SFX-E03-ACID-POOL": 107
+    },
+    "skipped": 1,
+    "muted": false,
+    "gain": 1,
+    "errors": []
+  }
+}

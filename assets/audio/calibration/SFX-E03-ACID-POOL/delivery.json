@@ -1,0 +1,41 @@
+{
+  "id": "SFX-E03-ACID-POOL",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-E03-ACID-POOL__v01.wav",
+      "variant": "v01",
+      "sha256": "39c9cbaa6bb99811d3f34d62026f0fe65b86177be8f7e836ffff4aec05f12a35",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 1.5,
+      "frames": 72000,
+      "peakDbfs": -3.0,
+      "loopStartSample": 0,
+      "loopEndSample": 72000,
+      "playback": "loop"
+    },
+    {
+      "file": "SFX-E03-ACID-POOL__v02.wav",
+      "variant": "v02",
+      "sha256": "48317ca3c846c7bc6651b19e2a70cc8c80b198d8b30a8989474b4ba1309f6755",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 1.5,
+      "frames": 72000,
+      "peakDbfs": -3.0,
+      "loopStartSample": 0,
+      "loopEndSample": 72000,
+      "playback": "loop"
+    }
+  ]
+}

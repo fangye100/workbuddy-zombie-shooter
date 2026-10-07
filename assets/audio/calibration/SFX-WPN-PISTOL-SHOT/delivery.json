@@ -1,0 +1,49 @@
+{
+  "id": "SFX-WPN-PISTOL-SHOT",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-WPN-PISTOL-SHOT__v01.wav",
+      "variant": "v01",
+      "sha256": "03dff7d1c7b30fcb2fdc907bd468f385e86620106e4a8fb518f84e5ba9cd5a65",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.28,
+      "frames": 13440,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-WPN-PISTOL-SHOT__v02.wav",
+      "variant": "v02",
+      "sha256": "e32aa7944deb4d72ed1d15cf7dad2adc22fbc19706c840803ce0e2c95f91ef98",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.28,
+      "frames": 13440,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-WPN-PISTOL-SHOT__v03.wav",
+      "variant": "v03",
+      "sha256": "7f94a52c364e7d71f66a3f7a55f623f8cb30e036ccc9fb83760130eb8954ac01",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.28,
+      "frames": 13440,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    }
+  ]
+}

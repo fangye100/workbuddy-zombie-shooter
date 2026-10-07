@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_e6078c3ba7b65e888a5224f5",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-E03-ACID-LAUNCH",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-E03-ACID-LAUNCH",
+    "file": "SFX-E03-ACID-LAUNCH__v03.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 10560,
+    "loopStartSample": null,
+    "loopEndSample": null
+  },
+  "sourceHash": "sha256:65d19014052bc2bb5a5ee274c8852ad536c00c13d744011edfb2d861fdb5fef1"
+}

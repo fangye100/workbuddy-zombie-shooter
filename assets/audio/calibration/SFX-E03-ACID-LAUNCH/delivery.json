@@ -1,0 +1,49 @@
+{
+  "id": "SFX-E03-ACID-LAUNCH",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-E03-ACID-LAUNCH__v01.wav",
+      "variant": "v01",
+      "sha256": "04a30fbf318d69c550f0c67c3247ebbcbfdbf3fff7542c969cd4133d2ad77351",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.22,
+      "frames": 10560,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-E03-ACID-LAUNCH__v02.wav",
+      "variant": "v02",
+      "sha256": "bbebe186502ab477f735d9f1fae2ffb2be144e8438983e27deda990e7f69887e",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.22,
+      "frames": 10560,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-E03-ACID-LAUNCH__v03.wav",
+      "variant": "v03",
+      "sha256": "65d19014052bc2bb5a5ee274c8852ad536c00c13d744011edfb2d861fdb5fef1",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.22,
+      "frames": 10560,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    }
+  ]
+}

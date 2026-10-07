@@ -12,7 +12,9 @@ The current seven weapon prototypes are pistol, shotgun, SMG, sniper, chainsaw,
 flamethrower and a grenade launcher extension. Runtime exposes accepted weapon
 actions, reload stages, combat damage/kill events and enemy attack effects.
 The Asset Browser recognizes audio extensions, and the AI package exposes an
-SFX notify callback. These are integration surfaces, not a working audio mixer.
+SFX notify callback. The eight-family calibration batch is now wired into campaign
+Play Mode; playback, provisional bindings and listening acceptance are tracked in
+[docs 42](42-GameplayAudioIntegration.md). The remaining brief is still pending.
 No audio files were found under `assets` during this inventory; no playback
 service was found in the inspected editor, sample or runtime code.
 

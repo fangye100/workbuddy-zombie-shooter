@@ -122,7 +122,7 @@ function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (e.name.endsWith('.glb')) out.push(p);
+    else if (e.name.endsWith('.glb') || e.name.endsWith('.wav') && relative(ASSETS,p).split(sep)[0]==='audio') out.push(p);
   }
   return out;
 }
@@ -144,10 +144,12 @@ function buildMeta(relPath, hash, roster) {
   const parts = relPath.split(/[\\/]/);
   const now = new Date().toISOString();
 
+  const audio=relPath.endsWith('.wav')?wavInfo(join(ROOT,relPath)):null;
   return {
     schemaVersion: 1,
     guid: newGuid(),
-    kind: 'gltf',
+    kind: audio?'audio':'gltf',
+    ...(audio?{audio}:{}),
     importer: {
       // 角色资产按名册身高归一化；非角色（synthetic）不归一化
       normalizeHeightM: entry === null ? null : entry.heightMeters,
@@ -168,6 +170,21 @@ function buildMeta(relPath, hash, roster) {
     sourceHash: `sha256:${hash}`,
     updatedAt: now,
   };
+}
+
+function wavInfo(file) {
+  const b=readFileSync(file);let fmt=null,bytes=0;
+  if(b.toString('ascii',0,4)!=='RIFF' || b.toString('ascii',8,12)!=='WAVE')throw new Error(`Invalid WAV: ${file}`);
+  for(let at=12;at+8<=b.length;){const id=b.toString('ascii',at,at+4),size=b.readUInt32LE(at+4),start=at+8;
+    if(start+size>b.length)throw new Error(`Truncated WAV: ${file}`);
+    if(id==='fmt '){
+      if(size<16 || b.readUInt16LE(start)!==1)throw new Error(`Expected PCM WAV: ${file}`);
+      fmt={channels:b.readUInt16LE(start+2),sampleRate:b.readUInt32LE(start+4),bitDepth:b.readUInt16LE(start+14)};
+    }
+    if(id==='data')bytes+=size;at=start+size+(size&1);
+  }
+  if(!fmt || !bytes)throw new Error(`Empty WAV: ${file}`);
+  return {...fmt,frames:bytes/(fmt.channels*fmt.bitDepth/8),loopStartSample:null,loopEndSample:null};
 }
 
 /**
@@ -206,7 +223,7 @@ function main() {
   const all = walk(ASSETS);
   const targets = all
     .map((abs) => ({ abs, rel: relative(ROOT, abs).split(sep).join('/') }))
-    .filter(({ rel }) => isTarget(rel))
+    .filter(({ rel }) => rel.startsWith('assets/audio/') && rel.endsWith('.wav') || isTarget(rel))
     .sort((a, b) => a.rel.localeCompare(b.rel));
 
   if (targets.length === 0) {
@@ -233,6 +250,7 @@ function main() {
       next = mergeInto(existing, fresh);
       // hash 必须跟随源文件：重导 GLB 后旧 hash 会让派生产物失效检测失灵
       next.sourceHash = `sha256:${hash}`;
+      if(fresh.audio)next.audio={...fresh.audio,loopStartSample:existing.audio?.loopStartSample??null,loopEndSample:existing.audio?.loopEndSample??null};
     }
 
     const nextText = JSON.stringify(next, null, 2) + '\n';

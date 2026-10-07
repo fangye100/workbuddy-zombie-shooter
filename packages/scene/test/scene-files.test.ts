@@ -48,6 +48,19 @@ const sceneModules = import.meta.glob('/assets/**/*.scene.json', {
 const allAssetPaths = Object.keys(import.meta.glob('/assets/**/*', { eager: false }));
 const motionModules = import.meta.glob('/assets/**/*.motion.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 
+it('scene audio resolves actual WAV identities, cue IDs and loop metadata', () => {
+  const errors:string[]=[];
+  for(const [path,data] of Object.entries(sceneModules)) for(const node of (data as SceneDocument).nodes) for(const c of node.components) {
+    if(c.kind!=='RunRules' || !c.audio)continue;
+    for(const cue of c.audio.cues) for(const ref of cue.variants) {
+      const meta=metaModules[`/${ref.path}.meta.json`] as AssetMeta|undefined;
+      if(!allAssetPaths.includes(`/${ref.path}`) || meta?.guid!==ref.guid || meta?.kind!=='audio' || meta.userData?.cueId!==cue.id
+        || !meta.audio || cue.loop !== (meta.audio.loopStartSample!==null && meta.audio.loopEndSample!==null))errors.push(`${path}: ${cue.id}: ${ref.path}`);
+    }
+  }
+  expect(errors).toEqual([]);
+});
+
 describe('shared motion references', () => {
   it('validates libraries and all source and binding identities across actual assets', () => {
     const failures: string[] = [];

@@ -1,0 +1,61 @@
+{
+  "id": "SFX-WPN-SMG-SHOT",
+  "version": "v02",
+  "status": "delivered-synthetic-prototype",
+  "synthesis": {
+    "tool": "tools/audio/sfx_synth.py (procedural, numpy+scipy)",
+    "seedBasis": "SHA256 of per-generator family + variant; first 8 bytes little-endian",
+    "note": "程序化合成原型，非生成式 AI，非录音素材；用于风格校准与响度对齐"
+  },
+  "license": "project-original, no third-party sample",
+  "variants": [
+    {
+      "file": "SFX-WPN-SMG-SHOT__v01.wav",
+      "variant": "v01",
+      "sha256": "75178021aa90f582ff55a4aa5bd98a707f765670af14f26a3abf7bfef2eaa775",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.13,
+      "frames": 6240,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-WPN-SMG-SHOT__v02.wav",
+      "variant": "v02",
+      "sha256": "ee7ae4b0d4fb31ef53c84caa1acfabf333422fcc6ed9a6352a72f8106667d476",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.13,
+      "frames": 6240,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-WPN-SMG-SHOT__v03.wav",
+      "variant": "v03",
+      "sha256": "e15687ade178da253d52f327acd41e49e1ce88100cb08c4e289163a23c8f7932",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.13,
+      "frames": 6240,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    },
+    {
+      "file": "SFX-WPN-SMG-SHOT__v04.wav",
+      "variant": "v04",
+      "sha256": "3f359f3734d0e3bb3162805bb9d171522ef5f7b915ab780bb565c4f22755da96",
+      "sampleRate": 48000,
+      "bitDepth": 24,
+      "channels": 1,
+      "durationS": 0.13,
+      "frames": 6240,
+      "peakDbfs": -3.0,
+      "playback": "one-shot"
+    }
+  ]
+}

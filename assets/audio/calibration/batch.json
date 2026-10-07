@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "cues": [
+    {
+      "id": "SFX-WPN-PISTOL-SHOT",
+      "variants": 3,
+      "channels": 1,
+      "playback": "one-shot"
+    },
+    {
+      "id": "SFX-WPN-SMG-SHOT",
+      "variants": 4,
+      "channels": 1,
+      "playback": "one-shot"
+    },
+    {
+      "id": "SFX-HIT-FLESH",
+      "variants": 4,
+      "channels": 1,
+      "playback": "one-shot"
+    },
+    {
+      "id": "SFX-WPN-FLAME-LOOP",
+      "variants": 2,
+      "channels": 1,
+      "playback": "loop"
+    },
+    {
+      "id": "SFX-E03-ACID-POOL",
+      "variants": 2,
+      "channels": 1,
+      "playback": "loop"
+    },
+    {
+      "id": "SFX-E03-ACID-LAUNCH",
+      "variants": 3,
+      "channels": 1,
+      "playback": "one-shot"
+    },
+    {
+      "id": "SFX-E02-POUNCE-WARN",
+      "variants": 3,
+      "channels": 1,
+      "playback": "one-shot"
+    },
+    {
+      "id": "SFX-ENV-HIGHWAY-BED",
+      "variants": 1,
+      "channels": 2,
+      "playback": "loop"
+    }
+  ]
+}

@@ -32,3 +32,4 @@ export * from './enemy-attacks';
 
 export * from './weapon-system';
 export * from './weapon-combat';
+export * from './audio-frame';

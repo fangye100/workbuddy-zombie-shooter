@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_1708bbad45af52c797d6f0a8",
+  "kind": "audio",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "cueId": "SFX-WPN-PISTOL-SHOT",
+    "deliveryVersion": "v02",
+    "status": "in-game-calibration",
+    "variant": "SFX-WPN-PISTOL-SHOT",
+    "file": "SFX-WPN-PISTOL-SHOT__v01.wav"
+  },
+  "audio": {
+    "channels": 1,
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "frames": 13440,
+    "loopStartSample": null,
+    "loopEndSample": null
+  },
+  "sourceHash": "sha256:03dff7d1c7b30fcb2fdc907bd468f385e86620106e4a8fb518f84e5ba9cd5a65"
+}
