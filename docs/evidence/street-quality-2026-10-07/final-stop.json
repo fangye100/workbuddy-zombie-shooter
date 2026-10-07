@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "runtime": {
+    "state": "stopped",
+    "tick": 0,
+    "player": null,
+    "npcCount": 0,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 48,
+      "disposed": 48,
+      "pending": 0
+    },
+    "instances": 0,
+    "meshIds": [],
+    "actorLibrarySize": 9
+  },
+  "state": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "88a721d1",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  }
+}

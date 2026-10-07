@@ -1,0 +1,101 @@
+{
+  "initial": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "0e282d35",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  },
+  "stop": {
+    "ok": true,
+    "runtime": {
+      "state": "stopped",
+      "tick": 0,
+      "player": null,
+      "npcCount": 0,
+      "diagnostics": [],
+      "runtimeDiagnostics": [],
+      "ledger": {
+        "registered": 18,
+        "disposed": 18,
+        "pending": 0
+      },
+      "instances": 8,
+      "meshIds": [
+        "actor:E-01",
+        "actor:E-02"
+      ],
+      "actorLibrarySize": 9
+    },
+    "state": {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "name": "第一层 · 火场公路",
+      "revision": "0e282d35",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "firstSave": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "7f193b8f",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "firstReload": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "7f193b8f",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "restoredSave": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "0e282d35",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "restoredReload": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "0e282d35",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "validation": {
+    "ok": true,
+    "valid": true,
+    "diagnostics": [],
+    "authorError": null,
+    "state": {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "name": "第一层 · 火场公路",
+      "revision": "0e282d35",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "materialPersistedAndRestored": true
+}

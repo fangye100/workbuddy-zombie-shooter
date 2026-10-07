@@ -1,8 +1,11 @@
 {
   "id": "ENV-FAR-02",
   "priority": "P0",
-  "status": "pending-quota",
-  "files": {},
+  "status": "delivered",
+  "files": {
+    "sourceGlb": "ENV-FAR-02_source.glb",
+    "baseColor": "ENV-FAR-02_basecolor.png"
+  },
   "unit": "m (source normalized ~1m box, rescale at integration)",
   "upAxis": "as-generated (see probe); normalize at integration",
   "forwardAxis": "unknown (single-view reconstruction)",
@@ -12,10 +15,35 @@
   "jobId": null,
   "credits": null,
   "unmet": [
-    "3D 源模未生成（日配额限制）",
     "源模为混元高模（~50万 tris），远超 LOD0 预算 —— 按文档 §7 由接入方本地减面产出 LOD0/1/2",
     "源模包围盒约 1m 且轴向未标准化（多为 Z-up / 长轴不一定是 Z），需按 §2 缩放到目标米数并校正朝向",
     "LOD1/LOD2 由需求方本地管线生成，不在本批交付内"
   ],
-  "note": "混元3D 日配额 5/5 已用满（2026-10-05），参考图已就位，配额刷新后重提交即可"
+  "measured": {
+    "triangles": 499328,
+    "vertices": 315691,
+    "materials": 1,
+    "images": 1,
+    "bboxMinMax": {
+      "X": [
+        -0.5011,
+        0.4616
+      ],
+      "Y": [
+        -0.5072,
+        0.3798
+      ],
+      "Z": [
+        -0.495,
+        0
+      ]
+    },
+    "sizeXYZ": {
+      "X": 0.9626,
+      "Y": 0.887,
+      "Z": 0.495
+    },
+    "generator": "Khronos glTF Blender I/O v4.0.43"
+  },
+  "preview": "preview_hunyuan.png"
 }

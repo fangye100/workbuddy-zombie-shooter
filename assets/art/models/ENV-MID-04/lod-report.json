@@ -1,0 +1,146 @@
+{
+  "id": "ENV-MID-04",
+  "sourceHash": "258eda92222fc4ab62ca5cba248d509c35fbc4dbdb39a4655d2c50ac6f49dcc4",
+  "recipe": {
+    "id": "ENV-MID-04",
+    "kind": "environment",
+    "status": "delivered",
+    "scaleAxis": "x",
+    "scaleMeters": 20,
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "targets": [
+      32000,
+      22000,
+      15000
+    ],
+    "textureSize": 2048,
+    "simplification": {
+      "profile": "architecture-v2",
+      "optimalPlacement": false,
+      "preserveNormal": true,
+      "qualityThreshold": 0.7,
+      "planarQuadric": true,
+      "textureWeight": 2
+    },
+    "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
+  },
+  "sourceTriangles": 500000,
+  "dimensions": [
+    20,
+    11.848816329848221,
+    12.740592755917707
+  ],
+  "scale": 21.983288487015095,
+  "pivot": [
+    0.0011200010776519775,
+    3.7951807997862075e-8,
+    0.0009870531341010236
+  ],
+  "textureSize": [
+    2048,
+    2048
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "file": "ENV-MID-04_lod0.glb",
+      "triangles": 32000,
+      "surfaceRatio": 0.9793344679834971,
+      "boundsDrift": 0.00023745516032958047,
+      "sourceTopology": {
+        "v": 249978,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 15978,
+        "f": 32000,
+        "edges": 48000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "structure": {
+        "planarArea": 0,
+        "coverage": 0,
+        "status": "insufficient-planar-coverage",
+        "limits": {}
+      },
+      "hash": "d56438436d2aab96efc846dd48dccfe7d958eeafd0a0d10644ec1e292ac4c7a6",
+      "errors": [],
+      "visual": "accepted-desktop-gallery",
+      "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-MID-04.jpg"
+    },
+    {
+      "level": 1,
+      "file": "ENV-MID-04_lod1.glb",
+      "triangles": 22000,
+      "surfaceRatio": 0.966602017589913,
+      "boundsDrift": 0.00037458387167099705,
+      "sourceTopology": {
+        "v": 249978,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 10978,
+        "f": 22000,
+        "edges": 33000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "structure": {
+        "planarArea": 0.00037321023746953694,
+        "coverage": 0.00007819565655972367,
+        "status": "insufficient-planar-coverage",
+        "inventedSlopeAreaRatio": 0,
+        "planeOffsetP95DiagonalRatio": 0.0005687119100170457,
+        "limits": {}
+      },
+      "hash": "de4b7d3c4f89543f6c365efb2157afdd7738b01cd3a5c244f674b95d5c0da2ca",
+      "errors": [],
+      "visual": "accepted-desktop-gallery",
+      "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-MID-04.jpg"
+    },
+    {
+      "level": 2,
+      "file": "ENV-MID-04_lod2.glb",
+      "triangles": 15000,
+      "surfaceRatio": 0.9489933978416283,
+      "boundsDrift": 0.00037458387167099705,
+      "sourceTopology": {
+        "v": 249978,
+        "f": 500000,
+        "edges": 750000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 7478,
+        "f": 15000,
+        "edges": 22500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "structure": {
+        "planarArea": 0,
+        "coverage": 0,
+        "status": "insufficient-planar-coverage",
+        "limits": {}
+      },
+      "hash": "a3d691bf332a8362170f7e6831aa7c655d9d88d3e162e88d892f9defdd45a1f0",
+      "errors": [],
+      "visual": "accepted-desktop-gallery",
+      "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-MID-04.jpg"
+    }
+  ],
+  "structureMethodHash": "35f5d22529c2f04ce1488507a00ca0efe4d525963ad3e9644693a94ba2f56851",
+  "visualScope": "Headed NVIDIA Lovelace gallery comparison at 35 degrees, 17 metre inspection orbit; visible roofs, parapets, window silhouettes, bridge deck and pillars. Gameplay uses authored LOD1/2. No mobile-performance certification or source-geometry repair claim."
+}

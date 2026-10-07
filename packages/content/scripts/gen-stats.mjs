@@ -158,6 +158,9 @@ function validate() {
       if (a.windupSec <= 0) errors.push(`${at}.attack.windupSec 必须 > 0（零前摇无法风控）`);
       if (a.rangeM <= 0) errors.push(`${at}.attack.rangeM 必须 > 0`);
       if (a.damage <= 0) errors.push(`${at}.attack.damage 必须 > 0`);
+      if (!['melee','pounce','charge','acid','explode'].includes(a.kind ?? 'melee')) errors.push(`${at}.attack.kind invalid`);
+      const required = a.kind === 'acid' ? ['flightSec','poolRadiusM','poolSeconds'] : ['pounce','charge'].includes(a.kind) ? ['speedMps','impactRadiusM'] : a.kind === 'explode' ? ['triggerRangeM'] : [];
+      for (const f of required) if (!Number.isFinite(a[f]) || a[f] <= 0) errors.push(`${at}.attack.${f} must be positive`);
       if (a.arcDeg !== null && (typeof a.arcDeg !== 'number' || !(a.arcDeg > 0 && a.arcDeg <= 360))) {
         errors.push(`${at}.attack.arcDeg 必须是 (0,360] 或 null，实际 ${JSON.stringify(a.arcDeg)}`);
       }
@@ -238,7 +241,7 @@ function renderEntry(e, indent) {
   const attack =
     e.attack == null // 同时捕 null 与 undefined（player 条目无 attack 字段）
       ? 'null'
-      : `{ windupSec: ${e.attack.windupSec}, rangeM: ${e.attack.rangeM}, damage: ${e.attack.damage}, cdSec: ${e.attack.cdSec}, arcDeg: ${e.attack.arcDeg ?? 'null'}, extras: ${JSON.stringify(e.attack.extras)} }`;
+      : JSON.stringify(e.attack);
   const lines = [
     `{`,
     `${pad}  defId: ${e.defId},`,
@@ -277,6 +280,13 @@ function generate() {
 
 /** 单次攻击的战斗数值（P5，docs/23 §2.2/§2.6）。null = 该角色近战未定（四态机不 windup） */
 export interface AttackStats {
+  readonly kind?: 'melee' | 'pounce' | 'charge' | 'acid' | 'explode';
+  readonly speedMps?: number;
+  readonly impactRadiusM?: number;
+  readonly triggerRangeM?: number;
+  readonly flightSec?: number;
+  readonly poolRadiusM?: number;
+  readonly poolSeconds?: number;
   readonly windupSec: number;
   readonly rangeM: number;
   readonly damage: number;

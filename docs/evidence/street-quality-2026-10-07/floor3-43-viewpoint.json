@@ -1,0 +1,77 @@
+{
+  "before": {
+    "path": "assets/scenes/act1/floor-3.scene.json",
+    "name": "第三层 · 暗巷撤离站",
+    "revision": "2fd7a258",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  },
+  "stop": {
+    "state": "stopped",
+    "tick": 0,
+    "player": null,
+    "npcCount": 0,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 39,
+      "disposed": 39,
+      "pending": 0
+    },
+    "instances": 6,
+    "meshIds": [
+      "actor:E-04",
+      "actor:E-02"
+    ],
+    "actorLibrarySize": 9
+  },
+  "editState": {
+    "path": "assets/scenes/act1/floor-3.scene.json",
+    "name": "第三层 · 暗巷撤离站",
+    "revision": "0c8e1e0a",
+    "dirty": true,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "step": {
+    "state": "paused",
+    "tick": 1,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 14,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 43,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_f3_start",
+      "targetId": -1,
+      "behavior": 0,
+      "hp": 100,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 1
+    },
+    "npcCount": 5,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 42,
+      "disposed": 39,
+      "pending": 3
+    },
+    "instances": 5,
+    "meshIds": [
+      "capsule:r0.850:h3.200",
+      "capsule:r0.750:h1.600"
+    ],
+    "actorLibrarySize": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_065160f53d75",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "status": "authored",
+    "provenance": "tools/art/refine-streets.mjs",
+    "variant": "game_ready",
+    "file": "floor-2-road.glb"
+  },
+  "sourceHash": "sha256:c84c30e0286b75a5dac4157042dd1dbc34acc2c23d83925aca76688e23e0b364",
+  "updatedAt": "2026-10-05T07:55:37.096Z"
+}

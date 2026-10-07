@@ -37,7 +37,7 @@ const F = DYNAMIC_INSTANCE_FLOATS;
 const FLAG_SKINNED = 1;
 
 /** 行为状态 → 片段名（EntityView.behavior：0 = idle、1 = chase；docs/20 M3） */
-const CLIP_FOR_BEHAVIOR: Record<number, string> = { 0: 'idle', 1: 'walk' };
+const CLIP_FOR_BEHAVIOR: Record<number, string> = { 0: 'idle', 1: 'walk', 2: 'attack', 4: 'idle' };
 
 /** 黄金比共轭 φ⁻¹：实体相位偏移乘子（id × φ⁻¹ mod 1 分布均匀，避免全员机械同步） */
 const PHASE_OFFSET_GOLDEN = 0.6180339887498949;
@@ -399,6 +399,7 @@ export class RuntimeBridge {
           const clipIdx = clipIndexForBehavior(actor.clips, behavior);
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
+          if (behavior===2) phase01=Math.min(.999,Math.max(0,e.behaviorPhase??0));
           const nominal = clip ? actor.motion?.states[clip.name]?.nominalSpeedMps : undefined;
           if (clip && nominal && clip.durationSec > 0) {
             const key = `${e.runId}:${e.id}:${e.generation}`; gaitKeys.add(key);

@@ -152,18 +152,20 @@ describe('NPC 四态 · windup → strike → CD（E-01 数值驱动）', () => 
   it('玩家站桩：僵尸追入 2.2m → 前摇 0.8s（24 tick 站定）→ 玩家掉 8 血 → CD 1.6s 后再来', () => {
     const s = make();
     const p = s.playerEntityId;
-    const hp0 = s.table.health[p]!;
+    // The campaign now has a larger horde. Keep this cooldown observation alive
+    // long enough to see a repeat strike; separate tests cover death/freeze.
+    s.table.health[p] = 10000;
     // 跑到第一只僵尸开始挥抓（黑盒：玩家血量第一次下降的时刻）
     let hitTick = -1;
     for (let k = 0; k < 600 && hitTick < 0; k++) {
       s.step();
-      if (s.table.health[p]! < hp0) hitTick = s.tick;
+      if (s.table.health[p]! < 10000) hitTick = s.tick;
     }
     expect(hitTick).toBeGreaterThan(0); // 追上了并造成了伤害
     // 单 tick 减量 = 同 tick 命中的 E-01(8×a) 与 E-02(18×b) 之和——组合枚举断言
     const combo = new Set<number>();
     for (let a = 0; a <= 7; a++) for (let b = 0; b <= 3; b++) if (a + b > 0) combo.add(8 * a + 18 * b);
-    expect(combo.has(hp0 - s.table.health[p]!)).toBe(true);
+    expect(combo.has(10000 - s.table.health[p]!)).toBe(true);
     // 同一只僵尸的连续打击 ≥ CD 1.6s = 48 tick：不同僵尸轮流打没有 CD 关系，
     // 必须按 combatEvents 的同 slot 相邻两次 damage 断言
     s.run(200);

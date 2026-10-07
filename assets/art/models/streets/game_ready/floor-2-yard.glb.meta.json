@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_9cc4da6ff093",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "status": "authored",
+    "provenance": "tools/art/refine-streets.mjs",
+    "variant": "game_ready",
+    "file": "floor-2-yard.glb"
+  },
+  "sourceHash": "sha256:70ead664d3609fdb04cf0a5f30fbc9d0bbb8ffa75a0856cd9ade54e5b7c920cb",
+  "updatedAt": "2026-10-05T07:55:37.096Z"
+}

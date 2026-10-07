@@ -22,7 +22,7 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -417,6 +417,9 @@ export interface RunTalent {
 }
 export interface RunRulesComponent extends ComponentBase {
   kind: 'RunRules';
+  /** Concurrent ordinary attackers. Elites/bosses keep their authored encounter slot. */
+  attackTokenCount: number;
+  npcTiming: { decisionMinSec: number; decisionMaxSec: number; recoveryMinSec: number; recoveryMaxSec: number; windupJitterFrac: number; cooldownJitterFrac: number };
   campaign: string;
   scrapPerKill: number;
   firstChoiceKills: number;
@@ -436,6 +439,9 @@ export function validRunRules(value: unknown): value is RunRulesComponent {
   if (!value || typeof value !== 'object') return false;
   const r = value as RunRulesComponent;
   if (r.kind !== 'RunRules' || typeof r.enabled !== 'boolean' || typeof r.campaign !== 'string' || !r.campaign.trim() || typeof r.aimAssist !== 'boolean') return false;
+  if (!Number.isSafeInteger(r.attackTokenCount) || r.attackTokenCount < 1 || r.attackTokenCount > 32) return false;
+  const timing=r.npcTiming;
+  if (!timing || ![timing.decisionMinSec,timing.decisionMaxSec,timing.recoveryMinSec,timing.recoveryMaxSec].every(n=>Number.isFinite(n)&&n>=0&&n<=5) || timing.decisionMaxSec < timing.decisionMinSec || timing.recoveryMaxSec < timing.recoveryMinSec || ![timing.windupJitterFrac,timing.cooldownJitterFrac].every(n=>Number.isFinite(n)&&n>=0&&n<=1)) return false;
   const positive = [r.firstChoiceKills, r.choiceEveryKills, r.healCost, r.healAmount, r.talentCost];
   const nonnegative = [r.scrapPerKill, r.eventScrap, r.floorEssence];
   if (!positive.every(n => Number.isSafeInteger(n) && n > 0 && n <= 100000) || !nonnegative.every(n => Number.isSafeInteger(n) && n >= 0 && n <= 100000)) return false;

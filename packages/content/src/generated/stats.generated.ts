@@ -13,6 +13,13 @@
 
 /** 单次攻击的战斗数值（P5，docs/23 §2.2/§2.6）。null = 该角色近战未定（四态机不 windup） */
 export interface AttackStats {
+  readonly kind?: 'melee' | 'pounce' | 'charge' | 'acid' | 'explode';
+  readonly speedMps?: number;
+  readonly impactRadiusM?: number;
+  readonly triggerRangeM?: number;
+  readonly flightSec?: number;
+  readonly poolRadiusM?: number;
+  readonly poolSeconds?: number;
   readonly windupSec: number;
   readonly rangeM: number;
   readonly damage: number;
@@ -98,7 +105,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 300,
     hp: 60,
-    attack: { windupSec: 0.8, rangeM: 2.2, damage: 8, cdSec: 1.6, arcDeg: 90, extras: {} },
+    attack: {"windupSec":0.8,"rangeM":2.2,"damage":8,"cdSec":1.6,"arcDeg":90,"extras":{},"kind":"melee"},
   },
   {
     defId: 1,
@@ -118,7 +125,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 120,
     hp: 45,
-    attack: { windupSec: 0.5, rangeM: 6, damage: 18, cdSec: 3.2, arcDeg: null, extras: {} },
+    attack: {"windupSec":0.5,"rangeM":6,"damage":18,"cdSec":3.2,"arcDeg":null,"extras":{},"kind":"pounce","speedMps":8,"impactRadiusM":1.6},
   },
   {
     defId: 2,
@@ -138,7 +145,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 60,
     hp: 70,
-    attack: { windupSec: 1.2, rangeM: 9, damage: 6, cdSec: 4, arcDeg: null, extras: {"dps":true} },
+    attack: {"windupSec":1.2,"rangeM":9,"damage":6,"cdSec":4,"arcDeg":null,"extras":{"dps":true},"kind":"acid","flightSec":0.8,"poolRadiusM":2,"poolSeconds":4},
   },
   {
     defId: 3,
@@ -158,7 +165,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 40,
     hp: 220,
-    attack: { windupSec: 1, rangeM: 8, damage: 12, cdSec: 5, arcDeg: null, extras: {"knockback":true,"stunSec":0.6} },
+    attack: {"windupSec":1,"rangeM":8,"damage":12,"cdSec":5,"arcDeg":null,"extras":{"knockback":true,"stunSec":0.6},"kind":"charge","speedMps":6,"impactRadiusM":0.8},
   },
   {
     defId: 4,
@@ -178,7 +185,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 40,
     hp: 90,
-    attack: { windupSec: 1.5, rangeM: 3.5, damage: 35, cdSec: 0, arcDeg: null, extras: {"knockbackM":4} },
+    attack: {"windupSec":1.5,"rangeM":3.5,"damage":35,"cdSec":0,"arcDeg":null,"extras":{"knockbackM":4},"kind":"explode","triggerRangeM":2.5},
   },
   {
     defId: 5,
@@ -198,7 +205,7 @@ export const NPC_STATS: readonly CharacterStatsEntry[] = [
     prewarm: 0,
     max: 4,
     hp: 4200,
-    attack: { windupSec: 0.9, rangeM: 4, damage: 30, cdSec: 3, arcDeg: 270, extras: {"knockbackM":3} },
+    attack: {"windupSec":0.9,"rangeM":4,"damage":30,"cdSec":3,"arcDeg":270,"extras":{"knockbackM":3},"kind":"melee"},
   },
   {
     defId: 6,

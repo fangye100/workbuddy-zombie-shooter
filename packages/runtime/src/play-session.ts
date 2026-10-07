@@ -196,6 +196,9 @@ export class PlaySession {
 
   pause(): void {
     if (this._state !== 'playing') return;
+    this.session?.setInput(0, 0);
+    this.session?.setFire(false);
+    this.session?.setAim(null, null);
     this._state = 'paused';
     // 丢弃已累积的时间：暂停 10 秒后恢复不该瞬间补 300 步
     this.accumulator = 0;

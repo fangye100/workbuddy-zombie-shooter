@@ -56,6 +56,7 @@ describe('RuntimeBridge —— 挂接与摘下', () => {
   it('世界推进后 refresh 才更新实例位置（读批次不能有推进副作用）', () => {
     const { bridge, play } = started();
     const before = bridge.batches()!.flatMap((b) => [...b.instances.slice(0, DYNAMIC_INSTANCE_FLOATS)].slice(0, 3));
+    play.setInput(1,0); // Observe an explicit move independently of randomized NPC wakeup.
     play.advance(1);
     // 没 refresh：位置还是旧的
     const stale = bridge.batches()!.flatMap((b) => [...b.instances.slice(0, DYNAMIC_INSTANCE_FLOATS)].slice(0, 3));
@@ -377,6 +378,8 @@ describe('clipIndexForBehavior · 行为选片（M3）', () => {
   it('idle(0) → idle 片；chase(1) → walk 片', () => {
     expect(clipIndexForBehavior(clips, 0)).toBe(0);
     expect(clipIndexForBehavior(clips, 1)).toBe(1);
+    expect(clipIndexForBehavior(clips, 2)).toBe(2);
+    expect(clipIndexForBehavior(clips, 4)).toBe(0);
   });
   it('未知行为值回 idle；名字缺失回 clip 0；空片段表回 -1（→ bind）', () => {
     expect(clipIndexForBehavior(clips, 7)).toBe(0);

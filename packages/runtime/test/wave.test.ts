@@ -1,3 +1,4 @@
+import { smallCampaignFixture } from './campaign-fixture';
 import { describe, it, expect } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
@@ -16,7 +17,7 @@ const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 
 function make(): RuntimeSession {
   const key = Object.keys(MODULES)[0]!;
-  const doc = (MODULES[key] as { default: unknown }).default as SceneDocument;
+  const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
   const r = loadLevelRuntime(doc);
   if (r.desc === null) throw new Error('夹具装载失败：' + JSON.stringify(r.diagnostics));
   return new RuntimeSession({ desc: r.desc, seed: 7 });
@@ -25,7 +26,7 @@ function make(): RuntimeSession {
 /** 在装载前改夹具（评审回归用：改 clearRule / 波号 / wave 值） */
 function makeWith(mutate: (doc: SceneDocument) => void, capacity?: number): RuntimeSession {
   const key = Object.keys(MODULES)[0]!;
-  const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+  const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
   mutate(doc);
   const r = loadLevelRuntime(doc);
   if (r.desc === null) throw new Error('夹具装载失败：' + JSON.stringify(r.diagnostics));
@@ -135,7 +136,7 @@ describe('WaveScheduler · 触发即投 wave1，wave2 等清空（docs/23 §2.4�
   it('wave≤0 旧数据兼容：整房刷怪点归 1 → 单波全量，清空即 cleared（无 wave2）', () => {
     // 合成：把 nd_f1r2 的 wave 全抹成 0（模拟 C4 之前的旧场景），验证兼容语义仍在
     const key = Object.keys(MODULES)[0]!;
-    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
     let touched = 0;
     for (const n of doc.nodes) {
       for (const c of n.components) {
@@ -253,7 +254,7 @@ describe('WaveScheduler · 容量不足的推迟重试（评审补防线）', ()
   /** wave2 的 sp1 count 放大到 20：清空 wave1 后 free=9 < 20 → 推迟循环 */
   function makeTight(capacity: number): RuntimeSession {
     const key = Object.keys(MODULES)[0]!;
-    const doc = JSON.parse(JSON.stringify((MODULES[key] as { default: unknown }).default)) as SceneDocument;
+    const doc = smallCampaignFixture((MODULES[key] as { default: unknown }).default as SceneDocument);
     for (const n of doc.nodes) {
       if (n.id !== 'nd_f1r0_sp1') continue;
       for (const c of n.components) {

@@ -29,6 +29,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 import { applyP0Art } from '../art/apply-p0-art.mjs';
+import { refineStreet } from '../art/refine-streets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -37,7 +38,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 12;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -193,6 +194,11 @@ const FLOORS = [
     ],
   },
 ];
+
+// Gameplay density revision: preserve encounter roles and unique elites, multiply fodder.
+for (const floor of FLOORS) for (const room of floor.rooms) for (const spawn of room.spawns) {
+  if (!spawn.char.startsWith('B-') && spawn.char !== 'E-04') spawn.count *= floor.theme === 'swarm' ? 4 : 3;
+}
 
 // ---------------------------------------------------------------- 构造原语
 
@@ -360,7 +366,7 @@ function buildFloor(floor) {
   // GDD §5–6 prototype tuning. Hypothesis: a first-kill choice establishes a build
   // before 90 s, then every eight kills; validate timing and purchase choices in playtests.
   nodes.push(node(`nd_f${floor.depth}_run`, '局内成长与补给规则', { category: '游戏规则', components: [{
-    kind: 'RunRules', enabled: true, campaign: 'act1', scrapPerKill: 3,
+    kind: 'RunRules', enabled: true, attackTokenCount: 4, npcTiming: {decisionMinSec:.08,decisionMaxSec:.35,recoveryMinSec:.2,recoveryMaxSec:.55,windupJitterFrac:.15,cooldownJitterFrac:.35}, campaign: 'act1', scrapPerKill: 3,
     firstChoiceKills: 1, choiceEveryKills: 8, eventScrap: 25,
     healCost: 18, healAmount: 35, talentCost: 30, floorEssence: floor.depth * 5, aimAssist: true,
     weapon: { magazineSize: 18, reserveRounds: 120, reloadSec: 1.6, ammoPerKill: 8, ammoCost: 12, ammoSupply: 60 },
@@ -574,7 +580,7 @@ function buildFloor(floor) {
               wave: spawn.wave ?? 0,
               trigger: 'room-enter',
               delaySec: 0,
-              radius: isBoss ? 2.5 : 1.5,
+              radius: isBoss ? 2.5 : 3.5,
               prefab: null,
             },
             meshRenderer(
@@ -743,8 +749,22 @@ function main() {
   const register = [];
 
   for (const floor of FLOORS) {
-    const doc = applyP0Art(applyEnvironmentArtPass(buildFloor(floor), ROOT), ROOT);
     const relPath = `${SCENE_DIR}/floor-${floor.depth}.scene.json`;
+    const previousFile=path.join(ROOT,relPath);
+    const previous=fs.existsSync(previousFile)?JSON.parse(fs.readFileSync(previousFile,'utf8')):null;
+    const doc = refineStreet(applyP0Art(applyEnvironmentArtPass(buildFloor(floor), ROOT), ROOT));
+    // Preserve latest rig/shared-motion presentation instead of reverting the player.
+    const previousPlayer=previous?.nodes.find(n=>n.id===previous.playerStart);
+    const player=doc.nodes.find(n=>n.id===doc.playerStart);
+    const previousMesh=previousPlayer?.components.find(c=>c.kind==='MeshRenderer');
+    if(previousMesh){player.components=player.components.map(c=>c.kind==='MeshRenderer'?structuredClone(previousMesh):c);player.name=previousPlayer.name;}
+    const previousCamera=previous?.nodes.find(n=>n.id===previous.entryCamera)?.components.find(c=>c.kind==='Camera');
+    if(previousCamera){const cameraNode=doc.nodes.find(n=>n.id===doc.entryCamera);cameraNode.components=cameraNode.components.map(c=>c.kind==='Camera'?structuredClone(previousCamera):c);}
+    doc.dependencies=[...new Set([...doc.nodes.flatMap(n=>n.components.flatMap(c=>c.kind==='MeshRenderer'&&c.source.type==='asset'?[c.source.ref.path,...(c.sharedMotion?[c.sharedMotion.library.path]:[])]:[])),...(doc.environment.sky?.texture?[doc.environment.sky.texture.path]:[])])];
+    if(previous){
+      const order=new Map(previous.nodes.map((n,i)=>[n.id,i]));doc.nodes.sort((a,b)=>(order.get(a.id)??999)-(order.get(b.id)??999));
+      const dependencyOrder=new Map(previous.dependencies.map((p,i)=>[p,i]));doc.dependencies.sort((a,b)=>(dependencyOrder.get(a)??999)-(dependencyOrder.get(b)??999));
+    }
     writeJson(relPath, doc);
     register.push({ path: relPath, id: doc.id, enabled: true });
 

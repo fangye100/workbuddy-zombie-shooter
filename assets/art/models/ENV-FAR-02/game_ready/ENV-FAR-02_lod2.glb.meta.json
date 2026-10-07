@@ -17,13 +17,14 @@
     "variant": "game_ready",
     "file": "ENV-FAR-02_lod2.glb",
     "assetId": "ENV-FAR-02",
-    "status": "placeholder",
+    "status": "runtime-candidate",
     "lod": 2,
-    "provenance": "tools/art/build-p0-placeholders.mjs",
+    "provenance": "assets/art/sources/ENV-FAR-02/ENV-FAR-02_source.glb",
     "replacementContract": "Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.",
-    "reason": "WorkBuddy 2026-10-05 daily 3D quota exhausted",
-    "identicalPlaceholderLODs": true
+    "report": "assets/art/models/ENV-FAR-02/lod-report.json",
+    "visualReview": "accepted-desktop-gallery",
+    "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-FAR-02.jpg"
   },
-  "sourceHash": "sha256:2dfaa5557aa0c7b5779f3539f9e2be54c49b5dc3f9fedecbda2ec4e2b131a866",
+  "sourceHash": "sha256:3373a5bf360cfc2177851f7790a96e61939ae722b77c649e8f0695442da89942",
   "updatedAt": "2026-10-05T07:55:37.089Z"
 }

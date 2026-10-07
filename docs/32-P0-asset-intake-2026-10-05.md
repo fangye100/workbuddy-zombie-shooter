@@ -1,5 +1,9 @@
 # P0 asset intake and scene integration — 2026-10-05
 
+Historical intake record. MID-03/FAR-02 have since arrived with MID-04/05/06;
+the [2026-10-07 street pass](36-StreetQualityAndArchitecturalLOD.md) records their
+replacement, current architectural budgets and later validation.
+
 ## Delivered scope
 
 The WorkBuddy delivery was read from `assets/_delivery/P0-20261005` in the original checkout. That directory and the separate character-production worktree were not modified. Source GLBs, embedded/extracted BaseColor images, previews, delivery manifests and reference images are retained under `assets/art/sources`. Runtime derivatives are under `assets/art/models`; all GLB/PNG files use Git LFS.

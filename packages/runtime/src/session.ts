@@ -1,3 +1,4 @@
+import { EnemyAttacks, type EnemyAttackWorld } from './enemy-attacks';
 /**
  * RuntimeSession —— 可控运行会话（WU-1c + WU-2）。
  *
@@ -24,7 +25,7 @@
  */
 
 import { CharacterTable, rayCapsuleY, updateLod, type LodThresholds } from '@aether/gameplay';
-import { CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
+import { AttackTokenPool, CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
 import type { CrowdBuffers, CrowdParams } from '@aether/ai';
 import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
@@ -110,8 +111,10 @@ export interface EntityView {
   sourceNodeId: NodeId | null;
   /** 当前目标实体槽位；-1 = 无目标 */
   targetId: number;
-  /** 行为状态。0 = idle，1 = chase */
+  /** 0 idle, 1 chase, 2 windup, 3 instantaneous strike, 4 recovery. */
   behavior: number;
+  /** Authoritative anticipation phase for a one-shot attack clip (not a looping random phase). */
+  behaviorPhase?: number;
   /** 当前血量（P5；HUD 血条与死亡判定的读点） */
   hp: number;
   /** 血量上限（stats.hp 真源；血条比例的分母） */
@@ -259,6 +262,7 @@ export const BEHAVIOR_WINDUP = 2;
  * 常量保留导出是为了四态语义的完整对照表（docs/23 §2.2）。
  */
 export const BEHAVIOR_STRIKE = 3;
+export const BEHAVIOR_RECOVER = 4;
 
 /**
  * 运行代次计数器。**只用于实体引用的有效期判定**（复审 #6），
@@ -267,6 +271,28 @@ export const BEHAVIOR_STRIKE = 3;
 let NEXT_RUN_ID = 1;
 
 export class RuntimeSession {
+  readonly enemyAttacks = new EnemyAttacks();
+  private attackTokens: AttackTokenPool | null = null;
+  private readonly npcDecisionAt: Float64Array;
+  private readonly npcRecoveryUntil: Float64Array;
+  private readonly npcRng: Uint32Array;
+  private readonly npcWindupDuration: Float64Array;
+  private randomNpc(slot:number):number { let x=this.npcRng[slot]!;x^=x<<13;x^=x>>>17;x^=x<<5;this.npcRng[slot]=x>>>0;return (x>>>0)/4294967296; }
+  private npcDecisionDelay(slot:number):number {const timing=this.desc.runRules?.npcTiming;return timing ? timing.decisionMinSec+(timing.decisionMaxSec-timing.decisionMinSec)*this.randomNpc(slot):0;}
+  private readonly attackHolders = new Map<number,number>();
+  private aimPoint: [number, number] | null = null;
+  setAim(x: number | null, z: number | null): void {
+    this.aimPoint = x !== null && z !== null && Number.isFinite(x) && Number.isFinite(z) ? [x,z] : null;
+  }
+  private attackWorld(): EnemyAttackWorld {
+    const t = this.table;
+    return { player: this.playerEntityId,
+      actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
+      damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
+      move: (slot,x,z) => { const [cx,cz] = this.resolvePlayerCollision(x,z,t.radius[slot]!); t.posX[slot]=cx;t.posZ[slot]=cz;return [cx,0,cz]; },
+      obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
+    };
+  }
   lastShot: { tick: number; from: [number, number, number]; to: [number, number, number]; hit: boolean } | null = null;
   danger: { x: number; z: number; radius: number; remaining: number; duration: number } | null = null;
   private nextBossAttack = 0;
@@ -280,6 +306,7 @@ export class RuntimeSession {
     if (this.danger) {
       this.danger.remaining -= this.fixedStep;
       if (this.danger.remaining <= 0) {
+        this.enemyAttacks.impact('slam',boss,this.table.generation[boss]!,this.danger.x,this.danger.z,attack.radius,this.tick);
         if (Math.hypot(this.table.posX[this.playerId]! - this.danger.x, this.table.posZ[this.playerId]! - this.danger.z) <= attack.radius)
           this.applyDamage(this.playerId, attack.damage, boss);
         this.danger = null; this.nextBossAttack = now + attack.cooldownSec;
@@ -444,10 +471,12 @@ export class RuntimeSession {
     this.seed = opts.seed ?? 1;
     this.progress = opts.desc.runRules ? new RunProgress(opts.desc.runRules, this.seed) : null;
     this.aimAssist = opts.desc.runRules?.aimAssist ?? false;
+    this.attackTokens=opts.desc.runRules?new AttackTokenPool(opts.desc.runRules.attackTokenCount,0):null;
     this.initialSeed = this.seed;
     this.fixedStep = opts.fixedStep ?? 1 / 30;
     const capacity = opts.capacity ?? 512;
     this.capacity = capacity;
+    this.npcDecisionAt=new Float64Array(capacity);this.npcRecoveryUntil=new Float64Array(capacity);this.npcRng=new Uint32Array(capacity);this.npcWindupDuration=new Float64Array(capacity);
     this.runId = NEXT_RUN_ID++;
     this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
 
@@ -566,6 +595,7 @@ export class RuntimeSession {
       sourceNodeId: this.sourceOf[i] ?? null,
       targetId: this.table.targetEntity[i]!,
       behavior: this.table.behavior[i]!,
+      behaviorPhase: this.table.behavior[i]===BEHAVIOR_WINDUP ? Math.max(0,Math.min(1,1-this.table.windupRemain[i]!/Math.max(.001,this.npcWindupDuration[i]!))) : 0,
       hp: this.table.health[i]!,
       maxHp: this.table.maxHp[i]!,
       hitFlash: this.table.hitFlash[i]!,
@@ -754,6 +784,8 @@ export class RuntimeSession {
     // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
     // 都用**本步最终位置**（与脚本的「看到最终位置」同一纪律）
     this.combatStep();
+    this.enemyAttacks.step(this.tickCount,this.fixedStep,this.attackWorld());
+    if (this.aimPoint && this.playerId >= 0) this.table.yaw[this.playerId] = Math.atan2(this.aimPoint[1]-this.table.posZ[this.playerId]!,this.aimPoint[0]-this.table.posX[this.playerId]!);
     this.progress?.advanceReload(this.fixedStep);
     this.fireStep();
     this.bossStep();
@@ -884,6 +916,8 @@ export class RuntimeSession {
     this.triggered.clear();
     this.interactedRooms.clear();
     this.tickCount = 0;
+    this.enemyAttacks.clear(); this.aimPoint = null;
+    this.attackHolders.clear();this.attackTokens=this.desc.runRules?new AttackTokenPool(this.desc.runRules.attackTokenCount,0):null;
     this.lastShot = null; this.danger = null; this.nextBossAttack = 0;
     this.diags.length = 0;
     this.diagSeen.clear();
@@ -1179,7 +1213,10 @@ export class RuntimeSession {
     this.table.speedScale[i] = 1;
     this.table.dodgeBias[i] = (i & 1) === 0 ? 1 : -1;
     this.table.targetEntity[i] = this.playerId;
-    this.table.behavior[i] = BEHAVIOR_CHASE;
+    this.npcRng[i]=mixSeed(this.initialSeed,`npc:${i}:${this.table.generation[i]}`)||1;
+    this.npcDecisionAt[i]=this.tickCount*this.fixedStep+this.npcDecisionDelay(i);
+    this.npcRecoveryUntil[i]=0;
+    this.table.behavior[i] = this.desc.runRules?.npcTiming ? BEHAVIOR_IDLE : BEHAVIOR_CHASE;
     // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
     this.table.maxHp[i] = stats.hp;
     this.table.health[i] = stats.hp;
@@ -1298,12 +1335,12 @@ export class RuntimeSession {
   // ------------------------------------------------------------ 内部：NPC 移动
 
   /**
-   * NPC 攻击状态机（P5 C3，docs/23 §2.2 四态：idle/chase/windup/strike）。
+   * NPC 攻击状态机：idle/chase/windup/瞬时 strike/recover。
    *
    * 数值全部走 stats 真源链（C1 的 attack 嵌套结构），代码里零魔法数字；
    * attack = null 的角色（B-02/B-03 近战未定）永不进 windup，只能追。
-   * strike 是瞬时态：windup 归零的那一 tick 判定扇形命中并 applyDamage，
-   * 然后回 CHASE + cooldownUntil。会话时钟 now = tick × fixedStep。
+   * 攻击距离只控制起手；锁定目标后按攻击类型运行轨迹与命中。
+   * RunRules 持久化各阶段随机间隔，同一种子可复现。会话时钟 now = tick × fixedStep。
    */
   private combatStep(): void {
     const t = this.tbl;
@@ -1313,32 +1350,53 @@ export class RuntimeSession {
     const pz = t.posZ[p]!;
     const now = this.tickCount * this.fixedStep;
 
+    for (const [slot,generation] of this.attackHolders) {
+      if (!t.isAlive(slot) || t.generation[slot] !== generation || (t.behavior[slot] !== BEHAVIOR_WINDUP && !this.enemyAttacks.moving(slot,generation) && now >= t.cooldownUntil[slot]!)) {this.attackTokens?.release(slot);this.attackHolders.delete(slot);}
+    }
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
       const stats = this.defIdToStats.get(t.defId[i]!);
       const atk = stats?.attack;
-      if (atk === null || atk === undefined) continue; // 近战未定：只追不打
+      if (!stats) continue;
 
       const dx = t.posX[i]! - px;
       const dz = t.posZ[i]! - pz;
       const dist = Math.hypot(dx, dz);
       const b = t.behavior[i]!;
 
-      if (b === BEHAVIOR_CHASE) {
-        if (dist <= atk.rangeM && now >= t.cooldownUntil[i]!) {
+      if (this.enemyAttacks.moving(i,t.generation[i]!)) continue;
+      if (b === BEHAVIOR_IDLE || b === BEHAVIOR_RECOVER) {
+        if(now < this.npcDecisionAt[i]! || b===BEHAVIOR_RECOVER && now<this.npcRecoveryUntil[i]!) continue;
+        t.behavior[i]=dist<=stats!.sightRange?BEHAVIOR_CHASE:BEHAVIOR_IDLE;
+        this.npcDecisionAt[i]=now+this.npcDecisionDelay(i);
+      } else if (b === BEHAVIOR_CHASE) {
+        if(now<this.npcDecisionAt[i]!)continue;
+        this.npcDecisionAt[i]=now+this.npcDecisionDelay(i);
+        if(this.desc.runRules?.npcTiming && dist>stats!.sightRange*1.1){t.behavior[i]=BEHAVIOR_IDLE;continue;}
+        if (!atk) continue; // Undefined attacks can still acquire/lose a chase target.
+        if (dist <= (atk.triggerRangeM ?? atk.rangeM) && now >= t.cooldownUntil[i]!) {
+          const elite = stats!.id.startsWith('B-') || stats!.id === 'E-04';
+          if (!elite && this.attackTokens && !this.attackTokens.request(i)) continue;
+          if (!elite && this.attackTokens) this.attackHolders.set(i,t.generation[i]!);
           t.behavior[i] = BEHAVIOR_WINDUP;
-          t.windupRemain[i] = atk.windupSec;
+          t.windupRemain[i] = atk.windupSec*(1+(this.desc.runRules?.npcTiming.windupJitterFrac??0)*this.randomNpc(i));
+          this.npcWindupDuration[i]=t.windupRemain[i]!;
+          t.yaw[i] = Math.atan2(-dz,-dx);
+          this.enemyAttacks.lock(i,t.generation[i]!,px,pz);
         }
       } else if (b === BEHAVIOR_WINDUP) {
+        if (!atk) { t.behavior[i]=BEHAVIOR_CHASE;continue; }
         t.windupRemain[i] = t.windupRemain[i]! - this.fixedStep;
         if (t.windupRemain[i]! <= 0) {
           // strike（瞬时）：扇形判定 —— 攻击朝向 = 指向玩家的向量，命中 =
           // 距离在 range 内且攻击朝向与「NPC→玩家」夹角 ≤ arcDeg/2。
           // 无输入控制的朝向模型下这个夹角恒 0（打的就是眼前那只），
           // 留判定结构给「挥空/侧身闪避」（GDD 走位玩法）接上。
+          const world = this.attackWorld();
+          const handled = this.enemyAttacks.strike(i,world.actor(i)!,atk,this.tickCount,world.actor(p)!,world);
           const arc = atk.arcDeg ?? 90;
           const hit = dist <= atk.rangeM + t.radius[p]!;
-          if (hit) {
+          if (hit && !handled) {
             const halfArc = (arc * Math.PI) / 360;
             // NPC 朝向 = 移动朝向（yaw）；无移动记录时视为面向玩家（不出桩判定）
             const yaw = t.yaw[i]!;
@@ -1352,9 +1410,12 @@ export class RuntimeSession {
               this.applyDamage(p, atk.damage, i);
             }
           }
-          // strike：瞬时态（见 BEHAVIOR_STRIKE 注释）——判定完直接回 CHASE 进 CD
-          t.behavior[i] = BEHAVIOR_CHASE;
-          t.cooldownUntil[i] = now + atk.cdSec;
+          // strike 后恢复与冷却分别计时；恢复期间不参与普通追击。
+          const timing=this.desc.runRules?.npcTiming;
+          t.behavior[i] = timing?BEHAVIOR_RECOVER:BEHAVIOR_CHASE;
+          this.npcRecoveryUntil[i]=now+(timing?timing.recoveryMinSec+(timing.recoveryMaxSec-timing.recoveryMinSec)*this.randomNpc(i):0);
+          this.npcDecisionAt[i]=this.npcRecoveryUntil[i]!+this.npcDecisionDelay(i);
+          t.cooldownUntil[i] = now + atk.cdSec*(1+(timing?.cooldownJitterFrac??0)*this.randomNpc(i));
         }
       }
     }
@@ -1400,7 +1461,10 @@ export class RuntimeSession {
     const len = Math.hypot(ix, iz);
     let dx: number;
     let dz: number;
-    if (len > 1e-6) {
+    if (this.aimPoint) {
+      const ax=this.aimPoint[0]-t.posX[p]!, az=this.aimPoint[1]-t.posZ[p]!, al=Math.hypot(ax,az);
+      dx=al>1e-6?ax/al:Math.cos(t.yaw[p]!); dz=al>1e-6?az/al:Math.sin(t.yaw[p]!);
+    } else if (len > 1e-6) {
       dx = ix / len;
       dz = iz / len;
     } else {
@@ -1415,7 +1479,7 @@ export class RuntimeSession {
     // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
     const playerStats = this.defIdToStats.get(t.defId[p]!)!;
     const rayY = playerStats.capsuleHeight / 2;
-    if (this.aimAssist) {
+    if (this.aimAssist && !this.aimPoint) {
       let nearest = w.rangeM;
       for (let i = 0; i < t.capacity; i++) {
         if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
@@ -1475,7 +1539,7 @@ export class RuntimeSession {
     for (let i = 0; i < t.capacity; i++) {
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
       // 前摇蓄力站定（docs/23 §2.2 windup 语义）：不进求解器 = 位置冻结
-      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
+      if (t.behavior[i] !== BEHAVIOR_CHASE || this.enemyAttacks.moving(i,t.generation[i]!)) {t.velX[i]=0;t.velZ[i]=0;continue;}
       b.posX[n] = t.posX[i]!;
       b.posZ[n] = t.posZ[i]!;
       b.velX[n] = t.velX[i]!;
@@ -1496,7 +1560,7 @@ export class RuntimeSession {
       // 🔴 过滤条件必须与上方装填循环完全一致（含 WINDUP 跳过）——
       // 两边不一致时 k 与装填序错位，速度/位置会写进错误的实体
       if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
-      if (t.behavior[i] === BEHAVIOR_WINDUP) continue;
+      if (t.behavior[i] !== BEHAVIOR_CHASE || this.enemyAttacks.moving(i,t.generation[i]!)) continue;
       const vx = b.outX[k]!;
       const vz = b.outZ[k]!;
       t.velX[i] = vx;

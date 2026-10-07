@@ -17,13 +17,14 @@
     "variant": "game_ready",
     "file": "ENV-MID-01_lod2.glb",
     "assetId": "ENV-MID-01",
-    "status": "scene-trial",
+    "status": "runtime-candidate",
     "lod": 2,
     "provenance": "assets/art/sources/ENV-MID-01/ENV-MID-01_source.glb",
     "replacementContract": "Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.",
     "report": "assets/art/models/ENV-MID-01/lod-report.json",
-    "visualEvidence": "docs/evidence/p0-art-intake-2026-10-05/lod-gallery.png"
+    "visualReview": "accepted-desktop-gallery",
+    "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-MID-01.jpg"
   },
-  "sourceHash": "sha256:b080b64c1db5032ce496ecc1e0cd3a1c8ea66e6758305010a14f8b224a7a4653",
+  "sourceHash": "sha256:aedb36290f7d4f4a6bbaff2bc31d8233c7b6b35b6559435023b788c468ec4af4",
   "updatedAt": "2026-10-05T07:55:37.112Z"
 }

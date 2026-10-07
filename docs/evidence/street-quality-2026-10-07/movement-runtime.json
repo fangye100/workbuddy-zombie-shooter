@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "runtime": {
+    "state": "paused",
+    "tick": 121,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 16,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 20.999971389770508,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "behavior": 0,
+      "hp": 46,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 0
+    },
+    "npcCount": 8,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 48,
+      "disposed": 45,
+      "pending": 3
+    },
+    "instances": 8,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02"
+    ],
+    "actorLibrarySize": 9
+  },
+  "state": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "88a721d1",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  }
+}

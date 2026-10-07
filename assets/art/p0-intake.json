@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "sourceBatch": "P0-20261005",
   "description": "Source custody and reproducible processing recipe; actual results live in per-asset sidecars. Sizes are uniform-scale art fits, not collider contracts.",
   "models": [
@@ -15,9 +15,9 @@
         0
       ],
       "targets": [
-        12000,
-        6000,
-        3000
+        28000,
+        20000,
+        14000
       ],
       "textureSize": 2048,
       "originalTargets": [
@@ -25,7 +25,15 @@
         6000,
         2000
       ],
-      "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required.",
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      }
     },
     {
       "id": "ENV-MID-02",
@@ -39,9 +47,9 @@
         0
       ],
       "targets": [
-        14000,
-        10000,
-        8000
+        30000,
+        22000,
+        16000
       ],
       "textureSize": 2048,
       "originalTargets": [
@@ -49,7 +57,15 @@
         7000,
         2500
       ],
-      "budgetAdjustment": "Initial requested budgets failed the source surface-retention gate; raised targets are explicit, pending visual review."
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required.",
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      }
     },
     {
       "id": "ENV-FAR-01",
@@ -63,9 +79,9 @@
         0
       ],
       "targets": [
-        20000,
-        14000,
-        10000
+        32000,
+        24000,
+        18000
       ],
       "textureSize": 1024,
       "originalTargets": [
@@ -73,7 +89,15 @@
         2000,
         600
       ],
-      "budgetAdjustment": "Original targets failed surface retention; headed scene review then required 20000/14000/10000 to reduce visible skyline UV stretching."
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required.",
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      }
     },
     {
       "id": "WPN-01",
@@ -107,24 +131,137 @@
     {
       "id": "ENV-MID-03",
       "kind": "environment",
-      "status": "placeholder",
-      "size": [
-        18,
-        9,
-        6
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 18,
+      "rotationDeg": [
+        0,
+        0,
+        0
       ],
-      "reason": "WorkBuddy 2026-10-05 daily 3D quota exhausted"
+      "targets": [
+        28000,
+        18000,
+        12000
+      ],
+      "textureSize": 2048,
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      },
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
     },
     {
       "id": "ENV-FAR-02",
       "kind": "environment",
-      "status": "placeholder",
-      "size": [
-        72,
-        22,
-        36
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 72,
+      "rotationDeg": [
+        0,
+        0,
+        0
       ],
-      "reason": "WorkBuddy 2026-10-05 daily 3D quota exhausted"
+      "targets": [
+        32000,
+        22000,
+        16000
+      ],
+      "textureSize": 1024,
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      },
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
+    },
+    {
+      "id": "ENV-MID-04",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 20,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        32000,
+        22000,
+        15000
+      ],
+      "textureSize": 2048,
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      },
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
+    },
+    {
+      "id": "ENV-MID-05",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 12,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        22000,
+        15000,
+        10000
+      ],
+      "textureSize": 2048,
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      },
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
+    },
+    {
+      "id": "ENV-MID-06",
+      "kind": "environment",
+      "status": "delivered",
+      "scaleAxis": "x",
+      "scaleMeters": 24,
+      "rotationDeg": [
+        0,
+        0,
+        0
+      ],
+      "targets": [
+        30000,
+        20000,
+        14000
+      ],
+      "textureSize": 2048,
+      "simplification": {
+        "profile": "architecture-v2",
+        "optimalPlacement": false,
+        "preserveNormal": true,
+        "qualityThreshold": 0.7,
+        "planarQuadric": true,
+        "textureWeight": 2
+      },
+      "budgetAdjustment": "Retain original vertex positions, normal orientation and planar quadrics; budgets raised for roof/facade/bridge structure. Numeric and gameplay visual gates both required."
     }
   ]
 }

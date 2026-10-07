@@ -1,0 +1,190 @@
+{
+  "camera": {
+    "distance": 24,
+    "target": [
+      20.999971389770508,
+      0,
+      0
+    ],
+    "yaw": -0.2617993877991494
+  },
+  "motions": {
+    "errors": [],
+    "nodes": [
+      {
+        "clips": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ],
+        "joints": 27,
+        "key": "fp1_b90074b97b621faba7620e05",
+        "name": "玩家 · 清道夫（T-pose）",
+        "nodeId": "nd_f1_start",
+        "reports": [
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 15,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": 0.101230410907898,
+              "peakMemoryEstMb": 0.043365478515625
+            },
+            "state": "idle",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          },
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 8,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": -0.0006097331909409864,
+              "peakMemoryEstMb": 0.0478515625
+            },
+            "state": "walk",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          },
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 2,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": 0.034264965278871545,
+              "peakMemoryEstMb": 0.03289794921875
+            },
+            "state": "run",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          },
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 2,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": -0.0007940775855424798,
+              "peakMemoryEstMb": 0.025421142578125
+            },
+            "state": "jump",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          },
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 4,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": 0.101230410907898,
+              "peakMemoryEstMb": 0.043365478515625
+            },
+            "state": "shoot",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          },
+          {
+            "metrics": {
+              "converged": true,
+              "cumulativeSlideM": 0,
+              "durationMs": 3,
+              "iterations": 0,
+              "jointLimitViolations": 0,
+              "maxAnchorDeviationM": 0,
+              "maxPenetrationM": 0,
+              "maxReachResidualInnerM": 0,
+              "maxReachResidualOuterM": 0,
+              "maxRootCorrectionM": 0,
+              "maxSwitchJumpMps": 0,
+              "minSwingClearanceM": 0.022745224981696024,
+              "peakMemoryEstMb": 0.046356201171875
+            },
+            "state": "attack",
+            "status": "partial",
+            "warnings": [
+              "MRR_DERIVED_MARKERS",
+              "MRC_HS_DERIVED",
+              "MRC_CONTACT_UNCALIBRATED",
+              "MRC_CAPABILITY_GAP"
+            ]
+          }
+        ],
+        "state": "run",
+        "time": 0.438599305961636
+      }
+    ],
+    "pending": 0,
+    "stats": {
+      "cacheHits": 150,
+      "failures": 0,
+      "solves": 52
+    }
+  }
+}

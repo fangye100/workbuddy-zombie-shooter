@@ -1,3 +1,4 @@
+import { gameText as g, gameLanguage, setGameLanguage } from './game-language';
 import type { RuntimeSession } from '@aether/runtime';
 import { RunHud } from './run-hud';
 import { CombatOverlay, type WorldProjection } from './combat-overlay';
@@ -12,14 +13,14 @@ export function gameHudModel(runtime: RuntimeSession) {
   const canInteract = !!current && runtime.interactionTarget() === current.nodeId;
   const wave = [...runtime.sessionEvents].reverse().find(e => e.type === 'wave-start' && e.roomNodeId === current?.nodeId)?.wave;
   return {
-    title: runtime.desc.sceneName,
+    title: g(runtime.desc.sceneName),
     hp: player?.hp ?? 0, maxHp: player?.maxHp ?? 1, hit: (player?.hitFlash ?? 0) > 0,
     time: Math.floor(runtime.tick * runtime.fixedStep), enemies: runtime.countNpc(),
     progress: `${cleared.length} / ${rooms.length}`,
-    room: current?.name ?? '前往下一个房间',
-    objective: canInteract ? '按 E 交互，完成事件房'
+    room: g(current?.name ?? '前往下一个房间'),
+    objective: g(canInteract ? '按 E 交互，完成事件房'
       : current && cleared.includes(current.nodeId) ? '房间已完成 · 沿道路继续前进'
-      : current?.clearRule === 'elite-dead' ? '击败精英目标' : wave ? `第 ${wave} 波 · 消灭敌人` : '探索并清理房间',
+      : current?.clearRule === 'elite-dead' ? '击败精英目标' : wave ? `第 ${wave} 波 · 消灭敌人` : '探索并清理房间'),
     canInteract,
     outcome: runtime.outcome,
   };
@@ -40,11 +41,20 @@ export class GameHud {
   private readonly next = document.createElement('button');
   private readonly retry = document.createElement('button');
   private readonly resume = document.createElement('button');
+  private readonly help = document.createElement('small');
+  private readonly toolbar = document.createElement('nav');
+  private readonly pause = document.createElement('button');
+  private readonly language = document.createElement('button');
+  private readonly debug = document.createElement('button');
+  private readonly view = document.createElement('button');
+  private readonly touch = document.createElement('button');
+  private gameView = new URLSearchParams(location.search).has('game') || matchMedia('(pointer: coarse)').matches;
+  private stopButton: HTMLButtonElement;
   private stamp = '';
   private nextBusy = false;
   private campaignComplete = false;
   private currentRun = -1;
-  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void }, project?: WorldProjection) {
+  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean }, project?: WorldProjection) {
     this.feedback = project ? new CombatOverlay(project) : null;
     this.root.className = 'game-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '游戏状态');
     this.health.max = 100; this.health.setAttribute('aria-label', '生命值');
@@ -58,8 +68,15 @@ export class GameHud {
         if (result === 'complete') { this.campaignComplete = true; this.next.textContent = '全部楼层已完成'; }
       }).finally(() => { this.nextBusy = false; this.next.disabled = this.campaignComplete; });
     };
-    const stop = document.createElement('button'); stop.textContent = '返回编辑'; stop.onclick = actions.stop;
-    const help = document.createElement('small'); help.textContent = 'WASD / 方向键移动 · J 射击 · E 交互 · 空格暂停';
+    this.stopButton = document.createElement('button'); const stop = this.stopButton; stop.textContent = '返回编辑'; stop.onclick = actions.stop;
+    const help = this.help;
+    this.toolbar.className='game-toolbar';
+    this.language.onclick=()=>{setGameLanguage(gameLanguage()==='zh'?'en':'zh');this.stamp='';};
+    this.pause.onclick=actions.pause;
+    this.debug.onclick=()=>{if(this.feedback)this.feedback.debugRanges=!this.feedback.debugRanges;};
+    this.view.onclick=()=>{this.gameView=!this.gameView;};
+    this.touch.onclick=()=>{this.touch.dataset.touch=String(actions.toggleTouch());};
+    this.toolbar.append(this.language,this.pause,this.touch,this.view,this.debug);
     this.result.append(this.retry, this.next, stop);
     const life = document.createElement('div'); life.className = 'hud-life';
     this.healthText.className = 'hud-health-value'; life.append(this.title, this.health, this.healthText);
@@ -67,26 +84,36 @@ export class GameHud {
     const prompt = document.createElement('div'); prompt.className = 'hud-objective'; prompt.append(this.objective, this.interact, this.resume, this.result);
     help.className = 'hud-help';
     this.radar.className = 'hud-radar'; this.radar.width = 180; this.radar.height = 180; this.radar.setAttribute('aria-label','附近敌人雷达 · 范围 20 米');
-    this.root.append(life, this.stats, prompt, help, this.radar);
+    this.root.append(life, this.stats, prompt, help, this.radar,this.toolbar);
     document.getElementById('center')!.append(this.root);
   }
   update(runtime: RuntimeSession | null, paused: boolean): void {
-    this.runHud.update(runtime);
+    this.runHud.update(runtime, paused);
+    document.body.classList.toggle('game-view',!!runtime && this.gameView);
+    this.language.textContent=gameLanguage()==='zh'?'EN':'中文';this.language.setAttribute('aria-label',gameLanguage()==='zh'?'Switch game to English':'切换游戏为中文');
+    this.pause.disabled=!!runtime && runtime.outcome!=='running';
+    this.pause.textContent=g(paused?'继续':'暂停');this.view.textContent=g(this.gameView?'编辑器视图':'游戏视图');
+    this.touch.textContent=g(this.touch.dataset.touch==='true'?'键鼠':'触控');
+    this.debug.textContent=g('调试范围');this.debug.setAttribute('aria-pressed',String(this.feedback?.debugRanges ?? false));
+    this.retry.textContent=g('再来一局');this.resume.textContent=g('准备好了 · 继续战斗');this.stopButton.textContent=g('返回编辑');this.interact.textContent=g('交互 E');
+    this.next.textContent=g(this.campaignComplete?'全部楼层已完成':'继续下一层');
+    this.help.textContent=g(this.touch.dataset.touch==='true' || matchMedia('(pointer: coarse)').matches?'左摇杆移动 · 右摇杆瞄准射击 · 点击按钮换弹与交互':'WASD / 方向键移动 · 鼠标瞄准 · 左键射击 · R 换弹 · E 交互 · 空格暂停');
+    this.root.setAttribute('aria-label',g('游戏状态'));this.health.setAttribute('aria-label',g('生命值'));this.radar.setAttribute('aria-label',g('附近敌人雷达 · 范围 20 米'));
     this.root.hidden = runtime === null;
     if (!runtime) { this.stamp = ''; return; }
     this.drawRadar(runtime);
     if (this.currentRun !== runtime.runId) { this.currentRun = runtime.runId; this.campaignComplete = false; this.next.textContent = '继续下一层'; }
     this.next.disabled = this.nextBusy || this.campaignComplete || !!runtime.progress?.choosing;
-    const m = gameHudModel(runtime); const stamp = JSON.stringify([m, paused]);
+    const m = gameHudModel(runtime); const stamp = JSON.stringify([m, paused,gameLanguage()]);
     if (stamp === this.stamp) return; this.stamp = stamp;
     this.root.classList.toggle('hit', m.hit);
     this.title.textContent = m.title;
     this.health.max = m.maxHp; this.health.value = Math.max(0, m.hp);
     this.health.setAttribute('aria-valuetext', `${Math.ceil(m.hp)} / ${m.maxHp}`);
     this.healthText.textContent = `${Math.ceil(m.hp)} / ${m.maxHp}`;
-    this.stats.textContent = `敌人 ${m.enemies}　·　房间 ${m.progress}\n${Math.floor(m.time / 60)}:${String(m.time % 60).padStart(2, '0')}`;
-    this.objective.textContent = m.outcome === 'game-over' ? '本局结束 · 再试一次'
-      : m.outcome === 'floor-clear' ? '本层通关！' : paused ? '已暂停' : `${m.room} · ${m.objective}`;
+    this.stats.textContent = g(`敌人 ${m.enemies}　·　房间 ${m.progress}\n${Math.floor(m.time / 60)}:${String(m.time % 60).padStart(2, '0')}`);
+    this.objective.textContent = g(m.outcome === 'game-over' ? '本局结束 · 再试一次'
+      : m.outcome === 'floor-clear' ? '本层通关！' : paused ? '已暂停' : `${m.room} · ${m.objective}`);
     this.result.hidden = m.outcome === 'running';
     this.resume.hidden = !paused || m.outcome !== 'running';
     this.interact.hidden = !m.canInteract || m.outcome !== 'running'; this.interact.disabled = paused;

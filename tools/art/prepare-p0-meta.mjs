@@ -12,6 +12,7 @@ function annotate(file,kind,userData){
  const absolute=path.join(root,file), side=absolute+'.meta.json';
  const meta=fs.existsSync(side)?JSON.parse(fs.readFileSync(side,'utf8')):{...structuredClone(template),guid:'as_'+createHash('sha256').update(file).digest('hex').slice(0,12),kind,userData:{}};
  meta.sourceHash='sha256:'+createHash('sha256').update(fs.readFileSync(absolute)).digest('hex');
+ if(userData.status==='runtime-candidate')for(const key of ['reason','identicalPlaceholderLODs','visualEvidence'])delete meta.userData[key];
  meta.userData={...meta.userData,...userData};
  write(file+'.meta.json',meta);
 }
@@ -20,7 +21,7 @@ for(const e of read('assets/art/p0-intake.json').models)for(let lod=0;lod<3;lod+
   assetId:e.id,status:e.status==='placeholder'?'placeholder':'runtime-candidate',lod,
   provenance:e.status==='placeholder'?'tools/art/build-p0-placeholders.mjs':`assets/art/sources/${e.id}/${e.id}_source.glb`,
   replacementContract:'Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.',
-  ...(e.status==='placeholder'?{reason:e.reason,identicalPlaceholderLODs:true}:{report:`assets/art/models/${e.id}/lod-report.json`}),
+  ...(e.status==='placeholder'?{reason:e.reason,identicalPlaceholderLODs:true}:{report:`assets/art/models/${e.id}/lod-report.json`,visualReview:'pending'}),
  });
 }
 annotate('assets/art/textures/SKY-01/SKY-01.png','texture',{assetId:'SKY-01',status:'runtime-candidate',mapping:'cloud-band-upper-hemisphere-pole-fade',sourceDelivery:'P0-20261005'});

@@ -1,0 +1,77 @@
+{
+  "before": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "88a721d1",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  },
+  "stop": {
+    "state": "stopped",
+    "tick": 0,
+    "player": null,
+    "npcCount": 0,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 24,
+      "disposed": 24,
+      "pending": 0
+    },
+    "instances": 8,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02"
+    ],
+    "actorLibrarySize": 9
+  },
+  "editState": {
+    "path": "assets/scenes/act1/floor-1.scene.json",
+    "name": "第一层 · 火场公路",
+    "revision": "0d44abef",
+    "dirty": true,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "step": {
+    "state": "paused",
+    "tick": 1,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 9,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 56,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "behavior": 0,
+      "hp": 100,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 2
+    },
+    "npcCount": 8,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 27,
+      "disposed": 24,
+      "pending": 3
+    },
+    "instances": 8,
+    "meshIds": [
+      "capsule:r0.340:h1.750",
+      "capsule:r0.400:h1.300"
+    ],
+    "actorLibrarySize": 0
+  }
+}
