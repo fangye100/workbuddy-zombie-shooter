@@ -26,7 +26,7 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   if (!('gpu' in navigator) || navigator.gpu === undefined) {
     throw new GpuUnavailableError(
       '当前浏览器不支持 WebGPU',
-      '需要 Chrome 113+ / Edge 113+ / Safari 18+。' +
+      '需要 Chrome 113+ / Edge 113+ / Safari 26+。' +
         '在 Chrome 地址栏访问 <code>chrome://gpu</code> 可以确认 WebGPU 的启用状态。',
     );
   }

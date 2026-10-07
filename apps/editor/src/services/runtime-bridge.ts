@@ -28,6 +28,7 @@ import { characterYaw } from './character-facing';
  */
 export interface ActorSource {
   get(characterId: string): ActorMesh | null;
+  request?(characterId: string): void;
 }
 
 /** 实例的 CPU 端打包宽度（float），与 CoreDynamicBatch 契约一致 */
@@ -327,6 +328,7 @@ export class RuntimeBridge {
       let slot = this.slots.get(key);
       if (slot === undefined) {
         const actor = proxy ? null : (this.actors?.get(e.characterId) ?? null);
+        if (!proxy && actor === null) this.actors?.request?.(e.characterId);
         if (actor !== null) {
           // 真模型：meshId 换 actor 档，蒙皮数据来自装配库（数组共享，不拷贝）
           slot = {

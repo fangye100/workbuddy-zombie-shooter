@@ -48,6 +48,11 @@ export function bakeProfileForTier(tier: string | null | undefined): BakeProfile
   return p ?? DEFAULT_BAKE_PROFILE;
 }
 
+/** Same authored quality tier bounds decoded CPU and GPU NPC albedo residency. */
+export function actorAlbedoSizeForTier(tier: string | null | undefined): number {
+  return tier === 't0' || tier === 't1' ? 1024 : 4096;
+}
+
 /** 按上限裁剪片段列表（maxClips 为 null 时原样返回） */
 export function limitClips<T>(clips: readonly T[], maxClips: number | null): readonly T[] {
   if (maxClips === null || maxClips >= clips.length) return clips;

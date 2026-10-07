@@ -6,7 +6,7 @@ import * as m4 from '@aether/core';
 import { axisPlaneNormal, rotatePlaneBasis, angleInPlane, wrapAngle } from './gizmo';
 import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
-import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats, findRiggedCharacterIds } from '@aether/scene';
+import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
 import {
   PlaySession,
@@ -76,7 +76,8 @@ import {
 } from './asset-util';
 import { makeSplitter, restoreCssVar, readCssVarPx } from './splitter';
 import { t, setLang, getLang, applyStaticI18n } from './i18n';
-import { createSkinState, selectClip, play, pause, seek, bakeProfileForTier } from '@aether/render';
+import { createSkinState, selectClip, play, pause, seek, bakeProfileForTier, actorAlbedoSizeForTier } from '@aether/render';
+import { ActorPreloader } from './services/actor-preloader';
 import { parseBvh } from './services/binding/bvh-parser';
 import {
   retargetBvh,
@@ -220,7 +221,7 @@ async function boot(): Promise<void> {
     const index = renderer.findObjectIndexByNodeId(nodeId);
     return index === null ? null : renderer.state.objects[index]?.pos ?? null;
   }, height => gameControls?.targetWorld(height) ?? null, () => { hudDirty = true; });
-  /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
+  /** Asset catalog for authoring and actor asset lookup; not a runtime preload list. */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
     // 烘焙档位（P4 M4）：真源是项目文件的 render.targetTier，先于任何 preload 拿到 ——
@@ -229,6 +230,7 @@ async function boot(): Promise<void> {
     if (proj.ok) {
       const tier = (proj.json as { render?: { targetTier?: string } })?.render?.targetTier;
       actorLib.setBakeProfile(bakeProfileForTier(tier));
+      actorLib.setAlbedoSizeLimit(actorAlbedoSizeForTier(tier));
       console.log(`[actors] 烘焙档位 targetTier=${tier ?? '缺省'} →`, actorLib.bakeProfile);
     } else {
       console.warn(`[actors] 项目文件读不到，烘焙走默认档：${proj.error ?? '?'}`);
@@ -315,6 +317,12 @@ async function boot(): Promise<void> {
    */
   const runTransfer = new RunTransfer();
   const runProfile = new RunProfile(localStorage);
+  const actorPreloader = new ActorPreloader(actorLib, manifestReady, () => {
+    if (fatalShown || playCtl.state === 'stopped') return;
+    const palette = actorLib.buildPalette();
+    if (palette) { renderer.setDynamicPalette(palette); bridge.notifyActorsChanged(); }
+  }, error => { console.error('[actors] Runtime preload failed', error); editorMenu.message(`角色装配失败：${String(error)}`); });
+  actorLib.setRequestHandler(id => actorPreloader.request(id));
   let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
@@ -328,6 +336,7 @@ async function boot(): Promise<void> {
     focusAnim = null;
     pointers.clear();
     const paramsBeforePlay = structuredClone(panel.params);
+    actorPreloader.stop();
     actorLib.beginPlay();
     const ok = playCtl.start();
     if (ok) {
@@ -354,48 +363,9 @@ async function boot(): Promise<void> {
     return ok;
   }
 
-  /**
-   * Play 期真角色装配（docs/20 M2/M3）：预载**全部**带「+动画」档的角色（清单
-   * 从 manifest 数据派生，禁手抄——手抄 = 第二真源）。不阻塞 Play——加载完成前
-   * 实体照画胶囊，完成后 `notifyActorsChanged()` 原地换真模型；单角色失败独立
-   * warn 退胶囊（ActorLibrary.preload 内建）。代次守卫（PR #19 FR-A）：每次启动 +1、
-   * stopPlay 也 +1，旧循环核对代次失配即作废——替换旧的布尔防重入（布尔会把
-   * Stop 后应立刻启动的新循环也挡在外面）。
-   */
-  let actorPreloadGen = 0;
-  async function kickActorPreload(): Promise<void> {
-    const gen = ++actorPreloadGen;
-    try {
-      // 🔴 先等清单到位：页面刚 reload 就点 Play 的竞态下，manifest 尚未 fetch 完，
-      // preload 会因清单为 null 直接跳过（不记失败）——这里等它，装配就不会被吞。
-      await manifestReady;
-      // 🔴 串行 await：paletteBase 布局由库内 manifest rank 规范序保证（PR #19
-      // FR-B），与本循环的完成序无关；串行只是控制并发与失败可读性。
-      for (const id of findRiggedCharacterIds(assetManifest)) {
-        if (gen !== actorPreloadGen) return; // 新循环已启动 / 已 Stop：本循环作废
-        const changed = await actorLib.preload(id);
-        if (gen !== actorPreloadGen) {
-          // 跨 Stop/新 Play 边界的迟到结果：成功注册无害（CPU 缓存，新轮 startPlay
-          // 同步重传直接命中）；但**迟到失败**会把 id 写回 failed、让新轮跳过它
-          // ——单角色清除，封死跨边界污染（FR-A）
-          actorLib.resetFailure(id);
-          return;
-        }
-        // 迟到保护：fetch/烘焙飞行期间用户已 Stop 的话不再上传——否则新 palette
-        // buffer 悬挂到下一轮 Play/Stop，违反「Stop 释放全部 Play 期 GPU 资源」
-        //（AGENTS.md §2.4）。已缓存角色的重传由 startPlay 的同步路径负责，
-        // 这里只处理新装配角色（changed = true）的追加上传。Stop 后继续把剩余
-        // 角色装配进 CPU 缓存是安全的（下次 Play 直接命中，不产生 GPU 副作用）。
-        if (!changed || playCtl.state === 'stopped') continue;
-        const pal = actorLib.buildPalette();
-        if (pal !== null) {
-          renderer.setDynamicPalette(pal);
-          bridge.notifyActorsChanged();
-        }
-      }
-    } finally {
-      // 不复位任何状态：代次模型下旧循环自然终止，新循环随时可启动
-    }
+  function kickActorPreload(): void {
+    const document = renderer.getDocument();
+    if (document) actorPreloader.start(document);
   }
 
   /** 同种子重跑（**所有入口共用**）：runId 换代，去重集合同样要清空 */
@@ -1671,8 +1641,8 @@ async function boot(): Promise<void> {
     if (playAuthorParams) { Object.assign(panel.params, playAuthorParams); playAuthorParams = null; }
     if (clearRun) runTransfer.restart();
     if (spawnStore) { applySceneEnvironment(spawnStore.document.environment); panel.syncAll(); }
-    // 预载代次 +1：在飞的 kickActorPreload 立即作废（其迟到失败由代次守卫清理）
-    actorPreloadGen++;
+    // Invalidate pending actor requests before releasing the Play GPU resources.
+    actorPreloader.stop();
     // 瞬时装配失败（网络抖动等）在会话边界解禁：下一轮 Play 允许重试
     //（成功装配的缓存不动，见 ActorLibrary.resetFailures）
     actorLib.resetFailures();
@@ -3708,7 +3678,7 @@ async function boot(): Promise<void> {
           if (refreshed.message) extras.push(refreshed.message);
         }
         if (r.updatedFiles?.includes('assets/_data/asset-manifest.json')) {
-          actorPreloadGen++;
+          actorPreloader.stop();
           actorLib.clear();
           const latest = await readProjectFile('assets/_data/asset-manifest.json');
           if (latest.ok) { assetManifest = latest.json; actorLib.setManifest(assetManifest); }
@@ -4022,6 +3992,7 @@ async function boot(): Promise<void> {
   if (import.meta.hot !== undefined) {
     import.meta.hot.dispose(() => {
       disposed = true;
+      actorPreloader.stop();
       renderer.destroy();
     });
   }
@@ -4072,7 +4043,7 @@ async function boot(): Promise<void> {
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;
   const frame = (now: number): void => {
-    if (disposed) return;
+    if (disposed || fatalShown) return;
     const wallDt = Math.max(0, (now - last) / 1000);
     const dt = Math.min(0.1, wallDt);
     last = now;
@@ -4228,6 +4199,15 @@ async function boot(): Promise<void> {
     requestAnimationFrame(frame);
   };
 
+  void gpu.device.lost.then(info => {
+    if (disposed || fatalShown) return;
+    fatalShown = true;
+    stopPlay();
+    console.error('[WebGPU] Device lost', info.reason, info.message);
+    const detail = document.createElement('p');
+    detail.textContent = `GPU 设备连接中断（${info.reason}）：${info.message || '浏览器未提供原因'}`;
+    showFatal('GPU 设备连接中断', `${detail.outerHTML}<p>运行已停止，请重新加载页面。若再次发生，请保留这条错误信息。</p>`);
+  });
   requestAnimationFrame(frame);
 }
 

@@ -32,6 +32,7 @@ import {
   type MeshData,
 } from '@aether/scene';
 import { fileUrl } from '../asset-util';
+import { decodeBoundedBitmap } from './bounded-bitmap';
 import type { SharedMotionRuntime, ResolvedMotion } from './shared-motion-runtime';
 import {
   bakePosePalette,
@@ -167,6 +168,16 @@ export function rankOrderEntries<T extends { characterId: string }>(
 }
 
 export class ActorLibrary {
+  private requestHandler: ((id: string) => void) | null = null;
+  setRequestHandler(handler: (id: string) => void): void { this.requestHandler = handler; }
+  request(id: string): void { this.requestHandler?.(id); }
+  private albedoLimit = 4096;
+  get albedoSizeLimit(): number { return this.albedoLimit; }
+  setAlbedoSizeLimit(limit: number): void {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 4096) throw new Error('Actor texture limit must be 1..4096');
+    if (this.entries.size) throw new Error('Set actor texture limit before preload');
+    this.albedoLimit = limit;
+  }
   private sharedMotions: SharedMotionRuntime | null = null;
   setSharedMotions(motions: SharedMotionRuntime): void { this.sharedMotions = motions; }
   /** asset-manifest.json 的原始 JSON（可后补，见 setManifest） */
@@ -341,8 +352,12 @@ export class ActorLibrary {
       // 引用，改字段即对 Bridge 生效）
       let albedo: ImageBitmap | null = null;
       if (glb.image) {
-        try { albedo = await createImageBitmap(glb.image, { colorSpaceConversion: 'none' }); }
-        catch (error) { console.warn(`[actors] ${characterId} 贴图解码失败，使用代理色`, error); }
+        try { albedo = await decodeBoundedBitmap(glb.image, this.albedoLimit); }
+        catch (error) {
+          if (generation !== this.cacheGeneration) return false;
+          console.warn(`[actors] ${characterId} 贴图解码失败，使用代理色`, error);
+          this.errors.set(characterId, `贴图解码失败，使用代理色：${String(error)}`);
+        }
       }
       if (generation !== this.cacheGeneration) { albedo?.close(); return false; }
       this.entries.set(characterId, {
