@@ -2,6 +2,7 @@ import { quatMul, quatToEuler, type Quat } from '@aether/core';
 import type { SceneDocument } from '@aether/scene';
 import type { EntityView } from '@aether/runtime';
 import type { SceneObject } from '../renderer';
+import { characterYaw } from './character-facing';
 
 export type PlayerVisualObject = Pick<SceneObject,
   'pos' | 'quat' | 'rot' | 'visible' | 'pickable' | 'bob' | 'removed' | 'loadedAssetPath'>;
@@ -35,7 +36,8 @@ export class PlayerPresentation {
     object.visible = player !== null && player.alive && player.hp > 0 && player.sourceNodeId === nodeId;
     if (!object.visible || !player) return;
     object.pos = [player.x, y, player.z];
-    object.quat = quatMul([0, Math.sin(player.yaw / 2), 0, Math.cos(player.yaw / 2)], rotation);
+    const yaw = characterYaw(player.yaw);
+    object.quat = quatMul([0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], rotation);
     object.rot = quatToEuler(object.quat);
     object.pickable = false;
     object.bob = 0;

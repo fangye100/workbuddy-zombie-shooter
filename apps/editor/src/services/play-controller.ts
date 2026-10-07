@@ -33,6 +33,7 @@ import type { RuntimeBridge } from './runtime-bridge';
 import type { AuthorSnapshot, LabRenderer } from '../renderer';
 import type { PlayerPresentation } from './player-presentation';
 import type { RuntimeSceneMotion } from './runtime-scene-motion';
+import { characterYaw } from './character-facing';
 
 export interface PlayControllerOptions {
   sharedMotions?: RuntimeSceneMotion;
@@ -275,7 +276,7 @@ export class PlayController {
     }
     // O(1) 取玩家（旧实现是 view().find() —— 每帧全表扫 + 建整个数组）
     const p = rt.player();
-    this.playCamera.update(p === null ? null : { x: p.x, z: p.z, yaw: p.yaw });
+    this.playCamera.update(p === null ? null : { x: p.x, z: p.z, yaw: characterYaw(p.yaw) });
   }
 
   private notify(): void {

@@ -31,12 +31,28 @@ function setup(doc = structuredClone(scenes[0]!)) {
 }
 
 describe('scene-authored player presentation', () => {
+  it('faces actual runtime movement in all eight directions and keeps combat heading intact', () => {
+    for (const [x, z] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const { visual, ctl, object } = setup();
+      expect(ctl.start()).toBe(true);
+      const rt = ctl.session.runtime!;
+      rt.setInput(x!, z!); ctl.update(1 / 30);
+      const p = rt.player()!; visual.sync(p);
+      const [qx, qy, qz, qw] = object.quat;
+      // Quaternion transforms asset +Z into the gameplay input direction.
+      const fx = 2 * (qx * qz + qw * qy), fz = 1 - 2 * (qx * qx + qy * qy);
+      const len = Math.hypot(x!, z!);
+      expect(fx).toBeCloseTo(x! / len, 5); expect(fz).toBeCloseTo(z! / len, 5);
+      expect(Math.cos(p.yaw)).toBeCloseTo(fx, 5); expect(Math.sin(p.yaw)).toBeCloseTo(fz, 5);
+      ctl.stop();
+    }
+  });
   it('all campaign floors persist the same asset identity and explicit binding', () => {
     for (const doc of scenes) {
       const { mesh } = setup(structuredClone(doc));
       expect(validateSceneDocument(doc).filter(d => d.severity === 'error')).toEqual([]);
       expect(mesh.playBinding).toBe('player');
-      expect(mesh.source).toMatchObject({ type: 'asset', ref: { guid: 'as_yrsn456i' } });
+      expect(mesh.source).toMatchObject({ type: 'asset', ref: { guid: 'as_hpnf387i' } });
       if (mesh.source.type === 'asset') expect(doc.dependencies).toContain(mesh.source.ref.path);
     }
   });
@@ -46,7 +62,7 @@ describe('scene-authored player presentation', () => {
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
     expect(result.to).toBe(SCHEMA_VERSION);
-    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures']);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });
@@ -82,7 +98,8 @@ describe('scene-authored player presentation', () => {
       const p = rt.player()!;
       expect(p.x).toBeGreaterThan(before.pos[0]);
       expect(object.pos).toEqual([p.x, before.pos[1], p.z]);
-      const yaw = [0, Math.sin(p.yaw / 2), 0, Math.cos(p.yaw / 2)];
+      const angle = Math.PI / 2 - p.yaw;
+      const yaw = [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
       object.quat.forEach((v, i) => expect(v).toBeCloseTo(yaw[i]!, 5));
       ctl.pause(); rt.setInput(0, 1); ctl.step();
       expect(object.pos[2]).toBeCloseTo(rt.player()!.z);

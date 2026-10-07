@@ -20,6 +20,7 @@ import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
+import { characterYaw } from './character-facing';
 
 /**
  * Bridge 对装配库的全部依赖（窄接口）：只问「这个角色有没有真模型」。
@@ -367,7 +368,7 @@ export class RuntimeBridge {
         inst[o] = e.x;
         inst[o + 1] = actor !== null ? actor.feetOffset : height / 2;
         inst[o + 2] = e.z;
-        inst[o + 3] = e.yaw;
+        inst[o + 3] = characterYaw(e.yaw);
         // 网格已按真尺寸生成（胶囊按体型、真模型按资产），缩放恒为 1
         inst[o + 4] = 1;
         inst[o + 5] = 1;
@@ -392,7 +393,10 @@ export class RuntimeBridge {
         let frameCount = 0;
         let phase01 = 0;
         if (actor !== null) {
-          const clipIdx = clipIndexForBehavior(actor.clips, e.behavior);
+          // Anchored actors can acquire a chase target while their authored speed
+          // remains zero. Their idle motion uses time, not a frozen walking gait.
+          const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
+          const clipIdx = clipIndexForBehavior(actor.clips, behavior);
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
           const nominal = clip ? actor.motion?.states[clip.name]?.nominalSpeedMps : undefined;

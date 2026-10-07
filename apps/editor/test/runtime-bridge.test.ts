@@ -18,6 +18,7 @@ import type { SceneDocument } from '@aether/scene';
  */
 // 从 apps/editor/test/ 回到仓库根要三级：editor/test → editor → apps → 根
 const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
+const GALLERY = import.meta.glob('../../../assets/scenes/sandbox/character-rig-validation.scene.json', { eager: true });
 
 function floor1(): SceneDocument {
   const key = Object.keys(MODULES)[0]!;
@@ -409,6 +410,36 @@ describe('animPhase · 相位纯函数（确定性红线）', () => {
 });
 
 describe('RuntimeBridge —— 动画相位打包（docs/20 M3，inst[11]/[12]/[13]）', () => {
+  it('anchored Broodmother in chase advances idle animation while its position stays fixed', () => {
+    const doc = structuredClone((Object.values(GALLERY)[0] as { default: SceneDocument }).default);
+    const actor = animatedActorMesh(0); actor.characterId = 'B-02'; actor.meshId = 'actor:B-02';
+    actor.motion = { key: 'broodmother', clips: [], states: { walk: { loop: true, nominalSpeedMps: .4 } }, reports: [] };
+    const play = new PlaySession(); expect(play.play(doc).ok).toBe(true);
+    const bridge = new RuntimeBridge({ get: id => id === 'B-02' ? actor : null }); bridge.attach(play.runtime);
+    const before = { ...bridge.entities.find(e => e.characterId === 'B-02')! };
+    const batchBefore = bridge.batches()!.find(b => b.meshId === actor.meshId)!.instances.slice();
+    for (let tick = 0; tick < 5; tick++) play.advance(1 / 30);
+    bridge.refresh();
+    const after = bridge.entities.find(e => e.characterId === 'B-02')!;
+    const inst = bridge.batches()!.find(b => b.meshId === actor.meshId)!.instances;
+    expect(after.behavior).toBe(1); expect(after.x).toBe(before.x); expect(after.z).toBe(before.z);
+    expect(inst[12]).toBe(10); // idle rather than displacement-driven walk
+    expect(inst[11]).not.toBe(batchBefore[11]); expect(inst[13]).not.toBe(batchBefore[13]);
+    bridge.refresh(); expect(bridge.batches()!.find(b => b.meshId === actor.meshId)!.instances).toEqual(inst);
+  });
+  it('moving NPC +Z fronts align with actual velocity headings through the shader Y rotation', () => {
+    const { bridge, play } = animatedBridge();
+    const before = new Map(bridge.entities.map(e => [e.id, { x: e.x, z: e.z }]));
+    play.advance(1 / 30); bridge.refresh();
+    for (const batch of bridge.batches()!) for (let i = 0; i < batch.count; i++) {
+      const o = i * DYNAMIC_INSTANCE_FLOATS;
+      const e = bridge.entities.find(e => Math.abs(e.x - batch.instances[o]!) < 1e-4 && Math.abs(e.z - batch.instances[o + 2]!) < 1e-4)!;
+      const old = before.get(e.id)!; const dx = e.x - old.x, dz = e.z - old.z, len = Math.hypot(dx, dz);
+      if (len < 1e-5) continue;
+      expect(Math.sin(batch.instances[o + 3]!)).toBeCloseTo(dx / len, 4);
+      expect(Math.cos(batch.instances[o + 3]!)).toBeCloseTo(dz / len, 4);
+    }
+  });
   it('advances shared gait by actual displacement and packs the actor joint stride', () => {
     const { bridge, play, actor } = animatedBridge();
     actor.motion = { key: 'shared', clips: [], states: { walk: { loop: true, nominalSpeedMps: .8 } }, reports: [] };
