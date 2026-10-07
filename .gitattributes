@@ -43,3 +43,6 @@ docs/evidence/shared-motion-runtime-2026-10-06/*.png filter=lfs diff=lfs merge=l
 docs/evidence/street-quality-2026-10-07/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/street-quality-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text
 docs/evidence/combat-quality-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text
+
+docs/evidence/crowd-performance-2026-10-07/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/crowd-performance-2026-10-07/*.zip filter=lfs diff=lfs merge=lfs -text

@@ -17,6 +17,7 @@ FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
 | [Character rigging workflow](./docs/rigging/character-rigging-workflow.md) | Source-pose joint authoring, volumetric skin, rigid props, GLB delivery, shared motion and control acceptance |
 | [Binding MCP](./tools/mcp-binding/README.md) | Read-only workflow discovery, authoring tools, final-weight diagnostics, persistence and rig export |
 | [Visual quality playbook](./docs/art/visual-quality-playbook.md) | Comic art matching, composition, color/shader diagnosis, textured LODs, placeholders, sky/atlas handling and evidence-based acceptance |
+| [Crowd performance baseline — 2026-10-07](./docs/39-CrowdPerformanceBaseline-2026-10-07.md) | Running/shooting with upper-body IK, 500–2,500 NPC samples, CPU/GPU timings, sustained stability boundaries and archived evidence |
 
 ## 目录
 

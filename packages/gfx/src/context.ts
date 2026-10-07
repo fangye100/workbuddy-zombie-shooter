@@ -45,6 +45,8 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
 
   const device = await adapter.requestDevice({
     label: 'aether-game-editor',
+    // Optional capability: profiling uses pass timestamps, never a blocking queue wait.
+    requiredFeatures: adapter.features.has('timestamp-query') ? ['timestamp-query'] : [],
     requiredLimits: {
       maxBindGroups: 4,
     },
