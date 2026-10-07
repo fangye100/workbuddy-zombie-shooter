@@ -26,6 +26,17 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('uses successful weapon action phase and retriggers the same clip; held input alone cannot animate a shot',async()=>{
+    const f=fixture();f.result.states.shoot={loop:false};f.result.clips.push({name:'shoot',duration:.5,tracks:[]});
+    f.motion.start(f.doc);await vi.waitFor(()=>expect(f.motion.summary().pending).toBe(0));
+    f.motion.sync(f.rt(0,0));
+    const rt=(tick:number,action:string,phase:number,startTick:number)=>({...f.rt(tick,0),firing:true,weapons:{animation:{action,phase,startTick,weaponId:'pistol',clip:'pistol-fire',fallback:'attack'}}}) as unknown as RuntimeSession;
+    f.motion.sync(rt(1,'idle',0,0));expect(f.motion.summary().nodes[0]!.state).toBe('idle');
+    f.motion.sync(rt(2,'fire',.5,2));expect(f.motion.summary().nodes[0]!.state).toBe('shoot');expect(f.object.skinState.time).toBe(.25);
+    f.motion.sync(rt(5,'fire',0,5));expect(f.object.skinState.time).toBe(0);
+    f.motion.sync(rt(5,'fire',0,5));expect(f.object.skinState.time).toBe(0);
+    f.motion.stop();expect(f.object.animations).toBe(f.oldClips);
+  });
   it('restores configured default state for display characters on rerun', async () => {
     const f = fixture(); f.doc.playerStart = null;
     f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));

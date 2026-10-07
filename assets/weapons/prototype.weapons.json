@@ -1,0 +1,1140 @@
+{
+  "equipped": "pistol",
+  "switchSec": 0.4,
+  "definitions": [
+    {
+      "id": "pistol",
+      "name": "手枪",
+      "nameEn": "Pistol",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "hitscan",
+      "damage": 12,
+      "cooldownSec": 0.35,
+      "rangeM": 18,
+      "spreadDeg": 0,
+      "pellets": 1,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0
+      },
+      "ammo": {
+        "magazineSize": 18,
+        "reserveRounds": 120,
+        "reloadSec": 1.6,
+        "perShot": 1,
+        "reloadMode": "magazine"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "pistol",
+        "color": "#ffc531",
+        "lengthM": 0.3,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.12,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.3,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.036,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.09,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "pistol-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "pistol-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "pistol-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "pistol-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "pistol-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "shotgun",
+      "name": "霰弹枪",
+      "nameEn": "Shotgun",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "pellets",
+      "damage": 8,
+      "cooldownSec": 0.85,
+      "rangeM": 9,
+      "spreadDeg": 32,
+      "pellets": 7,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0.8
+      },
+      "ammo": {
+        "magazineSize": 6,
+        "reserveRounds": 48,
+        "reloadSec": 0.55,
+        "perShot": 1,
+        "reloadMode": "shell"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "shotgun",
+        "color": "#ef934b",
+        "lengthM": 0.98,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.392,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.98,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.1176,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.294,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "shotgun-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "shotgun-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "shotgun-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "shotgun-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "shotgun-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "smg",
+      "name": "冲锋枪",
+      "nameEn": "SMG",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "hitscan",
+      "damage": 6,
+      "cooldownSec": 0.09,
+      "rangeM": 16,
+      "spreadDeg": 5,
+      "pellets": 1,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0
+      },
+      "ammo": {
+        "magazineSize": 32,
+        "reserveRounds": 192,
+        "reloadSec": 1.8,
+        "perShot": 1,
+        "reloadMode": "magazine"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "smg",
+        "color": "#d5df8a",
+        "lengthM": 0.58,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.23199999999999998,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.58,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.0696,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.174,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "smg-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "smg-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "smg-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "smg-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "smg-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "sniper",
+      "name": "狙击枪",
+      "nameEn": "Sniper",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "piercing",
+      "damage": 70,
+      "cooldownSec": 1.1,
+      "rangeM": 38,
+      "spreadDeg": 0,
+      "pellets": 1,
+      "penetration": 3,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0
+      },
+      "ammo": {
+        "magazineSize": 5,
+        "reserveRounds": 30,
+        "reloadSec": 2.1,
+        "perShot": 1,
+        "reloadMode": "magazine"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "sniper",
+        "color": "#92d2e9",
+        "lengthM": 1.18,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.472,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              1.18,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.14159999999999998,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.354,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "sniper-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "sniper-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "sniper-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "sniper-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "sniper-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "chainsaw",
+      "name": "电锯",
+      "nameEn": "Chainsaw",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "melee",
+      "damage": 9,
+      "cooldownSec": 0.12,
+      "rangeM": 2.3,
+      "spreadDeg": 115,
+      "pellets": 1,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0.25,
+        "slowSec": 0.4,
+        "knockbackM": 0
+      },
+      "ammo": {
+        "magazineSize": 0,
+        "reserveRounds": 0,
+        "reloadSec": 0,
+        "perShot": 0,
+        "reloadMode": "none"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 0
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "chainsaw",
+        "color": "#f8a247",
+        "lengthM": 0.85,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.34,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.85,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.102,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.255,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "chainsaw-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "chainsaw-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "chainsaw-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "chainsaw-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "chainsaw-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "flame",
+      "name": "火焰喷射器",
+      "nameEn": "Flamethrower",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "flame",
+      "damage": 3,
+      "cooldownSec": 0.1,
+      "rangeM": 6,
+      "spreadDeg": 40,
+      "pellets": 1,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 0,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 0
+      },
+      "effects": {
+        "blastRadiusM": 0,
+        "burnDps": 6,
+        "burnSec": 2,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0
+      },
+      "ammo": {
+        "magazineSize": 60,
+        "reserveRounds": 240,
+        "reloadSec": 2.2,
+        "perShot": 1,
+        "reloadMode": "magazine"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "flame",
+        "color": "#ff7045",
+        "lengthM": 0.8,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.32000000000000006,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.8,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.096,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.24,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.02,
+          "recoilPitchDeg": 3,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "flame-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "flame-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "flame-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "flame-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "flame-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    },
+    {
+      "id": "launcher",
+      "name": "榴弹发射器",
+      "nameEn": "Grenade prototype",
+      "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+      "behavior": "projectile",
+      "damage": 42,
+      "cooldownSec": 1.1,
+      "rangeM": 16,
+      "spreadDeg": 0,
+      "pellets": 1,
+      "penetration": 1,
+      "projectile": {
+        "speedMps": 12,
+        "gravity": 5,
+        "radiusM": 0.12,
+        "lifetimeSec": 3,
+        "launchSpeedY": 3
+      },
+      "effects": {
+        "blastRadiusM": 3,
+        "burnDps": 0,
+        "burnSec": 0,
+        "slowFrac": 0,
+        "slowSec": 0,
+        "knockbackM": 0.8
+      },
+      "ammo": {
+        "magazineSize": 4,
+        "reserveRounds": 24,
+        "reloadSec": 2.4,
+        "perShot": 1,
+        "reloadMode": "magazine"
+      },
+      "upgrades": {
+        "maxLevel": 5,
+        "baseCost": 15,
+        "costStep": 10,
+        "damageStep": 0.2,
+        "hasteStep": 0.08,
+        "magazineStep": 2
+      },
+      "presentation": {
+        "model": null,
+        "placeholder": "launcher",
+        "color": "#a7dc7c",
+        "lengthM": 0.75,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.75,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "procedural": {
+          "recoilM": 0.055,
+          "recoilPitchDeg": 8,
+          "recoilSec": 0.2,
+          "magazineOutPhase": 0.2,
+          "magazineInPhase": 0.65,
+          "chamberPhase": 0.85
+        },
+        "animations": {
+          "idle": {
+            "clip": "launcher-idle",
+            "fallback": "idle",
+            "resource": null
+          },
+          "fire": {
+            "clip": "launcher-fire",
+            "fallback": "attack",
+            "resource": null
+          },
+          "reload": {
+            "clip": "launcher-reload",
+            "fallback": "idle",
+            "resource": null
+          },
+          "equip": {
+            "clip": "launcher-equip",
+            "fallback": "idle",
+            "resource": null
+          },
+          "unequip": {
+            "clip": "launcher-unequip",
+            "fallback": "idle",
+            "resource": null
+          }
+        },
+        "vfx": {
+          "muzzle": "ink-flash",
+          "trail": "ink-tracer",
+          "impact": "ink-hit",
+          "resource": null
+        }
+      }
+    }
+  ]
+}

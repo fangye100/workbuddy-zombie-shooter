@@ -1,4 +1,5 @@
 import type { RunRulesComponent, RunTalent } from '@aether/scene';
+import { WeaponSystem, type WeaponCarry } from './weapon-system';
 
 export interface RunCarry {
   campaign: string;
@@ -9,6 +10,7 @@ export interface RunCarry {
   stacks: Record<string, number>;
   magazine: number;
   reserve: number;
+  weapons?: WeaponCarry;
 }
 
 /** Owns run rewards and decisions. No DOM, clock, storage or author-document mutation. */
@@ -22,30 +24,24 @@ export class RunProgress {
   private choicesDue = 0;
   private rewardedFloor = false;
   notice = '';
-  magazine: number;
-  reserve: number;
-  reloadRemaining = 0;
+  get magazine():number { return this.weapons.state.magazine; }
+  set magazine(n:number) { this.weapons.state.magazine=n; }
+  get reserve():number { return this.weapons.state.reserve; }
+  set reserve(n:number) { this.weapons.state.reserve=n; }
+  get reloadRemaining():number { return this.weapons.reloadRemaining; }
   private unlocked = new Set<string>();
-  constructor(readonly rules: RunRulesComponent, private readonly seed: number) { this.magazine = rules.weapon.magazineSize; this.reserve = rules.weapon.reserveRounds; }
+  constructor(readonly rules: RunRulesComponent, private readonly seed: number, readonly weapons=new WeaponSystem(rules.arsenal)) {}
   reload(): boolean {
-    if (this.choosing || this.reloadRemaining > 0 || this.magazine >= this.rules.weapon.magazineSize || this.reserve <= 0) return false;
-    this.reloadRemaining = this.rules.weapon.reloadSec; return true;
+    return !this.choosing && this.weapons.reload();
   }
   advanceReload(dt: number): void {
-    if (this.reloadRemaining <= 0) return;
-    this.reloadRemaining = Math.max(0, this.reloadRemaining - dt);
-    if (this.reloadRemaining === 0) {
-      const n = Math.min(this.rules.weapon.magazineSize - this.magazine, this.reserve);
-      this.magazine += n; this.reserve -= n;
-    }
+    this.weapons.advance(dt);
   }
   takeRound(): boolean {
-    if (this.reloadRemaining > 0) return false;
-    if (this.magazine <= 0) { this.reload(); return false; }
-    this.magazine--; return true;
+    return !this.choosing && this.weapons.consumeRound();
   }
   buyAmmo(): boolean {
-    if (this.choosing || this.scrap < this.rules.weapon.ammoCost) return false;
+    if (this.choosing || this.weapons.active.ammo.reloadMode==='none' || this.scrap < this.rules.weapon.ammoCost) return false;
     this.scrap -= this.rules.weapon.ammoCost; this.reserve += this.rules.weapon.ammoSupply;
     this.notice = `补充 ${this.rules.weapon.ammoSupply} 发备用弹药`; return true;
   }
@@ -60,7 +56,7 @@ export class RunProgress {
   recordKill(): void {
     this.kills++;
     this.scrap += this.rules.scrapPerKill;
-    this.reserve += this.rules.weapon.ammoPerKill;
+    if(this.weapons.active.ammo.reloadMode!=='none')this.reserve += this.rules.weapon.ammoPerKill;
     this.notice = `击杀 +${this.rules.scrapPerKill} 废料`;
     if (this.kills >= this.rules.firstChoiceKills && (this.kills - this.rules.firstChoiceKills) % this.rules.choiceEveryKills === 0) this.choicesDue++;
     this.offerNext();
@@ -112,21 +108,25 @@ export class RunProgress {
     this.notice = `楼层完成 +${this.rules.floorEssence} 尸髓`;
   }
   snapshot(hp: number): RunCarry {
-    return { campaign: this.rules.campaign, kills: this.kills, scrap: this.scrap, essence: this.essence, hp, stacks: Object.fromEntries(this.stacks), magazine: this.magazine, reserve: this.reserve };
+    return { campaign: this.rules.campaign, kills: this.kills, scrap: this.scrap, essence: this.essence, hp, stacks: Object.fromEntries(this.stacks), magazine: this.magazine, reserve: this.reserve, weapons:this.weapons.snapshot() };
   }
   restore(value: unknown, maxHp: number): boolean {
     if (!value || typeof value !== 'object') return false;
     const s = value as RunCarry;
     if (s.campaign !== this.rules.campaign || ![s.kills, s.scrap, s.essence].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 10000000)
-      || !Number.isSafeInteger(s.magazine) || s.magazine < 0 || s.magazine > this.rules.weapon.magazineSize
+      || !Number.isSafeInteger(s.magazine) || s.magazine < 0 || (!s.weapons && s.magazine > this.rules.weapon.magazineSize)
       || !Number.isSafeInteger(s.reserve) || s.reserve < 0 || s.reserve > 10000000
       || !Number.isFinite(s.hp) || s.hp <= 0 || s.hp > maxHp || !s.stacks || typeof s.stacks !== 'object' || Array.isArray(s.stacks)) return false;
     for (const [id, n] of Object.entries(s.stacks)) {
       const t = this.rules.talents.find(t => t.id === id);
       if (!t || !Number.isInteger(n) || n < 1 || n > t.maxStacks) return false;
     }
+    if(s.weapons && (!this.weapons.validCarry(s.weapons) || s.weapons.states.find(w=>w.id===s.weapons!.equipped)?.magazine!==s.magazine || s.weapons.states.find(w=>w.id===s.weapons!.equipped)?.reserve!==s.reserve)) return false;
+    if(!s.weapons && this.weapons.definitions.length!==1)return false;
+    const carry=s.weapons ?? this.weapons.snapshot();
+    if(!s.weapons){carry.states[0]!.magazine=s.magazine;carry.states[0]!.reserve=s.reserve;}
+    if(!this.weapons.restore(carry))return false;
     this.kills = s.kills; this.scrap = s.scrap; this.essence = s.essence;
-    this.magazine = s.magazine; this.reserve = s.reserve; this.reloadRemaining = 0;
     this.stacks.clear(); for (const [id, n] of Object.entries(s.stacks)) this.stacks.set(id, n);
     this.offers = []; this.choicesDue = 0; this.rewardedFloor = false;
     return true;

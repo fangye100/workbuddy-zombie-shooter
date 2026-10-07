@@ -63,3 +63,28 @@
 - **UI-TOUCH-COMIC-01 / P1**：移动/瞄准射击/换弹/交互的透明美漫按钮符号；粗黑外轮廓、奶黄/暗红强调，四种图标共用1024²图集，4×4格、16px保护带。不要把按钮底座、文字或摇杆背景烘焙进去；代码提供中英文字、可访问名称和按压状态。
 
 新增环境模型需求继续以 docs/31 未完成项为准。此次不为已有街景重复采购。所有交付先做目检、动作/UV/透明验证，再接入场景并跑 `scene:check`；源资产到货不等于运行时验收完成。
+
+## Unified weapon resource addendum (2026-10-07)
+
+These are resource requests, not claims of completed asset integration. The weapon
+system operates with explicit null AssetRefs and procedural ink placeholders.
+Reuse WPN-01 and WPN-02 through WPN-06 specifications from docs 31; do not
+regenerate accepted sources. Deliver each source GLB, BaseColor, preview and
+delivery.json through the existing handoff directory.
+
+| ID | Art and geometry | Runtime target after local reduction |
+|---|---|---|
+| WPN-SOCKETS-ALL / P0 | For pistol, shotgun, SMG, sniper, chainsaw and flame: primary right-hand grip, support left-hand grip, muzzle, magazine and chamber positions plus quaternion orientations. Weapon-local metres, Y up, +X barrel; retain actual source calibration/normalization separately. Include orthographic side/front/top previews with labelled sockets; do not change the character rig | JSON per weapon; socket metadata adds no triangles |
+| WPN-07-LAUNCHER / P1 | Optional projectile prototype: chunky comic industrial grenade launcher, dark slate tube, warm yellow hazard bands without text/logos, one readable large barrel and grip. Length 0.75m, width 0.18m, height 0.3m. Single material, BaseColor 1024 square, separated magazine if provided | LOD0 <=3000 tris, LOD1 <=1500, LOD2 <=500; local pipeline creates LODs |
+| WPN-MAG-ALL / P1 | Reusable detached pistol/SMG/sniper magazines, a shotgun shell, flame fuel canister and launcher round. Match the existing source weapon palette; clean silhouettes, no microscopic engraved text. Magazines approx 0.04 x 0.025 x 0.11m; shell diameter 0.025m/length 0.07m; fuel cylinder diameter 0.12m/length 0.25m | Each magazine/shell <=400 tris; canister <=800; one shared 1024 square material atlas where compatible |
+| ANI-P-WEAPON-HOLD-{family} / P0 | Six upper-body hold loops for the existing player. Rifle support hand on forward grip, chainsaw elbows separated and weighted stance, flame nozzle held clear of torso. Legs remain available for locomotion blending. Preserve exported skeleton/rest pose and use In Place | 1.5-2s loop, >=30 FPS; no mesh duplication |
+| ANI-P-WEAPON-FIRE-{family} / P0 | Six distinct release/recovery clips. Pistol short wrist recoil; shotgun stronger shoulder impulse; SMG short repeatable burst; sniper bolt recovery separated from recoil; chainsaw powered contact vibration; flame sustained braced grip. Do not move the world root | 0.09-1.1s depending on family; release at 0, normalized action timing owned by runtime |
+| ANI-P-WEAPON-RELOAD-{family} / P0 | Magazine out/in/chamber actions for pistol/SMG/sniper/launcher; shotgun one-shell insert repeatable segment plus end; flame fuel-can replacement. Chainsaw needs no ammo reload in current gameplay. Show both hands without flipping wrists or losing the main grip | Match current authored reload periods: pistol 1.6s, shotgun shell 0.55s, SMG 1.8s, sniper 2.1s, flame 2.2s, launcher 2.4s. Mark normalized phases 0.2 out / 0.65 in / 0.85 chamber; provide measured timings |
+| ANI-P-WEAPON-EQUIP-ALL / P1 | Generic release/acquire upper-body motion compatible with each grip calibration, no baked weapon mesh, no root displacement | Unequip/equip each approx 0.2s, retimed to scene switchSec |
+| VFX-WEAPON-ATLAS / P1 | One 4096 square, 8x8 atlas, 512 square cells with 16px guard. Rough black comic edges, amber muzzle flashes, paper-white pellet sparks, cyan sniper streaks, orange/yellow flame tongues, cream chainsaw slashes, grenade smoke and starburst blast. Straight alpha with RGB bleed and deep/light-background previews; no fake checkerboard or watermarks | Flash 8 cells, hit 8, flame 16, saw 8, smoke 8, explosion 16. UV metadata per effect: id/cells/fps/loop/pivot/worldSize/blend; shared texture only reduces draws when blend/depth/batching are compatible |
+
+Calibration batch: WPN-SOCKETS-ALL for the accepted pistol, one hold/fire/reload
+triple on the existing player, and flash/flame atlas samples. Confirm metre scale,
+wrist orientation and FBX-to-IK blend before producing the full batch. Clouds that
+only generate static meshes cannot satisfy the animation rows; report missing
+capability instead of passing off a pose as motion.

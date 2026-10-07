@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import './scene-author.css';
 
 const labels: Record<string, string> = {
+  arsenal: '武器系统', equipped: '初始装备', definitions: '武器定义', switchSec: '换装秒数', presentation: '武器表现', markers: '持握与附件标记', primaryGrip: '主握点', supportGrip: '辅助握点', muzzle: '枪口', magazine: '弹匣标记', chamber: '拉栓标记', procedural: '程序化动作', animations: '动作 hook', effects: '伤害效果', upgrades: '武器升级', ammo: '弹药配置',
   name: '名称', parent: '父节点', visible: '可见', pickable: '可拾取', category: '分类', transform: '局部变换',
   position: '位置', rotation: '旋转四元数', scale: '缩放', enabled: '启用', campaign: '战役标识',
   npcTiming: 'NPC 节奏', decisionMinSec: '最短决策间隔', decisionMaxSec: '最长决策间隔', recoveryMinSec: '最短恢复时间', recoveryMaxSec: '最长恢复时间', windupJitterFrac: '前摇随机比例', cooldownJitterFrac: '冷却随机比例',
@@ -16,7 +17,7 @@ const labels: Record<string, string> = {
   talents: '强化选项', id: '标识', description: '说明', effect: '效果', value: '数值', maxStacks: '叠加上限', unlockCost: '解锁费用',
   color: '灯光颜色', intensity: '灯光强度', range: '照明范围', castShadow: '投射阴影', priority: '灯光优先级', spotAngle: '聚光角度',
 };
-const enums: Record<string, string[]> = { effect: ['damage', 'haste', 'leech', 'blast', 'speed'] };
+const enums: Record<string, string[]> = { behavior: ['hitscan','pellets','piercing','projectile','melee','flame'], reloadMode:['magazine','shell','none'], effector:['right-hand','left-hand','none'], placeholder:['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'], effect: ['damage', 'haste', 'leech', 'blast', 'speed'] };
 
 export class SceneAuthorPanel {
   get hasDraft(): boolean { return this.draftDirty; }
@@ -72,8 +73,9 @@ export class SceneAuthorPanel {
         for (const key of keys) {
           const value = object[key], path = `${prefix}.${key}`;
           if (key === 'kind' || value === undefined || value === null) continue;
+          if(prefix==='RunRules.weapon' && ['magazineSize','reserveRounds','reloadSec'].includes(key))continue; // v12 compatibility fields; arsenal owns these in v13.
           if (typeof value === 'object') {
-            const group = document.createElement('details'); group.open = key !== 'transform' && key !== 'talents';
+            const group = document.createElement('details'); group.open = !['transform','talents','definitions'].includes(key);
             const summary = document.createElement('summary'); summary.textContent = t(labels[key] ?? key); group.append(summary);
             fields(group, value as Record<string, unknown>, Object.keys(value), path); parent.append(group); continue;
           }

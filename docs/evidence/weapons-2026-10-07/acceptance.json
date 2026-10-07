@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-07",
+  "branch": "codex/scene-authoring-loop",
+  "baseCommit": "b6f4f86909ad7c05ffead9fcbb0f8366a4ee9f91",
+  "revisionScope": "Uncommitted weapon implementation delivered together with this record",
+  "browser": { "headed": true, "secureContext": true, "gpuVendor": "nvidia", "gpuArchitecture": "lovelace", "dedicatedTab": true },
+  "automated": {
+    "comprehensiveTests": 675,
+    "comprehensiveFiles": 37,
+    "subsequentRegressionTests": 31,
+    "subsequentWeaponTests": 14,
+    "distinctTests": 677,
+    "typecheck": "passed",
+    "editorBuild": "passed with existing Vite CJS and large-chunk warnings",
+    "contentCheck": "passed",
+    "sceneCheck": "passed: 206 sidecars, 12 v13 scenes, 38 environment LOD records and P0 assets"
+  },
+  "interaction": {
+    "desktop": "Actual dropdown, 1-7 keyboard selection, mouse aim/fire, reload and upgrade clicks",
+    "shotgunReload": { "reserveBefore": 48, "reserveAfter": 47 },
+    "upgrade": { "scrapBefore": 100, "scrapAfter": 85, "levelAfter": 2 },
+    "sniper": { "damage": 70, "sharedMotionState": "shoot" },
+    "launcher": { "fireTick": 1167, "explosionTick": 1174, "damage": 42 },
+    "touch": { "weapon": "smg", "ammoBefore": 32, "ammoAfter": 31, "input": "Actual right-stick drag" },
+    "responsiveViewports": [[844, 450], [390, 844]],
+    "touchWeaponControlHeightPx": 44,
+    "temporaryViewportCleared": true,
+    "languageRestored": "zh"
+  },
+  "stop": {
+    "before": { "registered": 3, "disposed": 0, "pending": 3 },
+    "after": { "registered": 3, "disposed": 3, "pending": 0 },
+    "state": "stopped",
+    "runtimeRemoved": true,
+    "authorDirty": false,
+    "authorUndoDepth": 0
+  },
+  "boundaries": [
+    "Captures use temporary runtime-only stationary NPC/high player HP/scrap fixtures and hook-triggered pause; normal damage/ammo/collision remain active",
+    "No fixture was persisted to an authored scene; later reload discarded them",
+    "Touch layout verified on headed desktop Chrome, not on physical mobile hardware",
+    "Actual wrist attachment, HumanIK solving and FBX upper-body blending belong to the separate IK branch",
+    "New model/animation/VFX references remain null and use procedural presentation; arbitrary non-null references require a later rendering adapter",
+    "Transient HMR module error during editing was repaired before successful page acceptance"
+  ],
+  "screenshots": ["sniper-desktop.jpg", "flame-desktop.jpg", "launcher-desktop.jpg", "mobile-landscape-en.jpg", "mobile-portrait-en.jpg"]
+}

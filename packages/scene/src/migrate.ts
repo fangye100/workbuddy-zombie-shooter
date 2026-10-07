@@ -28,6 +28,7 @@ import {
   type SceneDiagnostic,
   type SceneDocument,
 } from './document';
+import { legacyWeaponArsenal } from './weapons';
 
 /** 一档迁移。`to` 必须等于 `from + 1` —— 不允许跨版本直跳 */
 export interface MigrationStep {
@@ -347,6 +348,11 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if (!listMigrations().some(m=>m.from===12 && m.to===13)) registerMigration({from:12,to:13,name:'unified-weapon-arsenal',run(doc){
+    const next=structuredClone(doc);
+    if(Array.isArray(next.nodes))for(const n of next.nodes)if(Array.isArray(n?.components))for(const c of n.components)if(c?.kind==='RunRules' && c.arsenal===undefined && c.weapon)c.arsenal=legacyWeaponArsenal(c.weapon);
+    return next;
+  }});
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
   }

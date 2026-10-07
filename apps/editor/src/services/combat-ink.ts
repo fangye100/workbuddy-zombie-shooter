@@ -79,7 +79,7 @@ export function drawImpactInk(c: CanvasRenderingContext2D, x: number, y: number,
   const pop = 1 + 0.18 * Math.max(0,1 - age / 0.12); c.scale(pop,pop);
   c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
   c.font = '900 25px system-ui, sans-serif'; c.lineWidth = 5; c.strokeStyle = INK;
-  const label = `−${Math.ceil(amount)}`;
+  const label = `−${Number(amount.toFixed(1))}`;
   c.strokeText(label,0,0); c.fillStyle = player ? '#ff917b' : PAPER; c.fillText(label,0,0);
   if (killed) {
     c.font = '900 16px system-ui, sans-serif'; c.lineWidth = 4;

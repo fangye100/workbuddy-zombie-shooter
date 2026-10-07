@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SpawnEditStore, cloneDocument, loadLevelRuntime, newAuthorNode, newRunRules, removeNodeTree } from '@aether/runtime';
+import { SpawnEditStore, cloneDocument, loadLevelRuntime, newAuthorNode, newRunRules, removeNodeTree,RuntimeSession } from '@aether/runtime';
 import type { SceneDocument } from '@aether/scene';
 import { AuthorSceneSaver } from '../src/services/author-scene-save';
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
@@ -20,7 +20,7 @@ describe('scene authoring loop', () => {
     const s = setup();
     expect(s.store.editNodes('rules', nodes => {
       const r = nodes.flatMap(n => n.components).find(c => c.kind === 'RunRules')!;
-      if (r.kind === 'RunRules') { r.weapon.magazineSize = 17; r.healCost = 27; }
+      if (r.kind === 'RunRules') { r.arsenal.definitions[0]!.ammo.magazineSize = 17; r.arsenal.definitions[0]!.presentation.markers.supportGrip.position=[.15,0,0]; r.healCost = 27; }
       const node = newAuthorNode('qa', 'QA', true); nodes.push(node);
       const mesh = node.components[0]!;
       if (mesh.kind === 'MeshRenderer') mesh.materials = [{ match: { by: 'index', value: 0 }, material: { type: 'override', base: { type: 'shared', id: 's0' }, patch: { albedo: '#ffaa00', roughness: 0.8 } } }];
@@ -31,12 +31,14 @@ describe('scene authoring loop', () => {
     s.store.redo(); s.store.redo(); expect(s.store.document).toEqual(wanted);
     expect((await s.saver.save(s.store, 'qa.scene.json')).status).toBe('saved');
     const reopened = new SpawnEditStore(s.disk()); expect(reopened.document).toEqual(wanted);
-    const runtime = loadLevelRuntime(reopened.document); expect(runtime.desc?.runRules?.weapon.magazineSize).toBe(17);
+    const runtime = loadLevelRuntime(reopened.document); expect(runtime.desc?.runRules?.arsenal.definitions[0]!.ammo.magazineSize).toBe(17);
     expect(runtime.desc?.runRules?.healCost).toBe(27);
+    const session=new RuntimeSession({desc:runtime.desc!});expect(session.weapons.state.magazine).toBe(17);
+    expect(session.weapons.poseIntent.markers.supportGrip.position).toEqual([.15,0,0]);
   });
   it('rejects invalid rules, cyclic parenting and dangling references atomically', () => {
     const s = setup(), before = cloneDocument(s.store.document);
-    expect(s.store.editNodes('invalid', nodes => { const r = nodes.flatMap(n => n.components).find(c => c.kind === 'RunRules')!; if (r.kind === 'RunRules') r.weapon.magazineSize = 0; }).ok).toBe(false);
+    expect(s.store.editNodes('invalid', nodes => { const r = nodes.flatMap(n => n.components).find(c => c.kind === 'RunRules')!; if (r.kind === 'RunRules') r.arsenal.definitions[0]!.ammo.magazineSize = 0; }).ok).toBe(false);
     expect(s.store.editNodes('cycle', nodes => { nodes[0]!.parent = nodes[0]!.id; }).ok).toBe(false);
     expect(s.store.editNodes('reference', nodes => { const r = nodes.flatMap(n => n.components).find(c => c.kind === 'RunRules')!; if (r.kind === 'RunRules') r.bossAttack = { source: 'missing', radius: 1, damage: 1, cooldownSec: 1, windupSec: 1 }; }).ok).toBe(false);
     expect(s.store.document).toEqual(before); expect(s.store.undoDepth).toBe(0);

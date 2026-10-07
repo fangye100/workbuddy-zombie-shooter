@@ -13,7 +13,7 @@ const phrases: Record<string, string> = {
   '（加入后续强化选项，不直接增加属性）':' (Adds an upgrade option; no direct stat boost)',
   '存档失败：':'Save failed: ', '结算保存失败：':'Result save failed: ', '。奖励仍保留在本局。':'. Rewards remain in this run.', '重试结算':'Retry save',
   '鼠标 / J 开火':'Mouse / J to fire',
-  'WASD / 方向键移动 · 鼠标瞄准 · 左键射击 · R 换弹 · E 交互 · 空格暂停': 'WASD / arrows: move · Mouse: aim · Left click: fire · R: reload · E: interact · Space: pause',
+  'WASD / 方向键移动 · 鼠标瞄准 · 左键射击 · R 换弹 · 1–7 换武器 · E 交互 · 空格暂停': 'WASD / arrows: move · Mouse: aim · Left click: fire · R: reload · 1–7: weapons · E: interact · Space: pause',
   '左摇杆移动 · 右摇杆瞄准射击 · 点击按钮换弹与交互': 'Left stick: move · Right stick: aim and fire · Tap buttons to reload and interact',
   '准备好了 · 继续战斗': 'Ready · Resume', '全部楼层已完成': 'Campaign complete', '继续下一层': 'Next floor',
   '房间已完成 · 沿道路继续前进': 'Room cleared · Continue down the street', '前往下一个房间': 'Move to the next room',

@@ -97,7 +97,7 @@ export class GameHud {
     this.debug.textContent=g('调试范围');this.debug.setAttribute('aria-pressed',String(this.feedback?.debugRanges ?? false));
     this.retry.textContent=g('再来一局');this.resume.textContent=g('准备好了 · 继续战斗');this.stopButton.textContent=g('返回编辑');this.interact.textContent=g('交互 E');
     this.next.textContent=g(this.campaignComplete?'全部楼层已完成':'继续下一层');
-    this.help.textContent=g(this.touch.dataset.touch==='true' || matchMedia('(pointer: coarse)').matches?'左摇杆移动 · 右摇杆瞄准射击 · 点击按钮换弹与交互':'WASD / 方向键移动 · 鼠标瞄准 · 左键射击 · R 换弹 · E 交互 · 空格暂停');
+    this.help.textContent=g(this.touch.dataset.touch==='true' || matchMedia('(pointer: coarse)').matches?'左摇杆移动 · 右摇杆瞄准射击 · 点击按钮换弹与交互':'WASD / 方向键移动 · 鼠标瞄准 · 左键射击 · R 换弹 · 1–7 换武器 · E 交互 · 空格暂停');
     this.root.setAttribute('aria-label',g('游戏状态'));this.health.setAttribute('aria-label',g('生命值'));this.radar.setAttribute('aria-label',g('附近敌人雷达 · 范围 20 米'));
     this.root.hidden = runtime === null;
     if (!runtime) { this.stamp = ''; return; }

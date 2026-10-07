@@ -1,8 +1,9 @@
 import type { RuntimeSession } from '@aether/runtime';
 import { NPC_STATS } from '@aether/content';
-import { drawImpactInk, drawShotInk, visibleImpacts } from './combat-ink';
+import { drawImpactInk, visibleImpacts } from './combat-ink';
 import { gameText as g } from './game-language';
 import { drawEnemyAttack, drawAttackCue } from './enemy-attack-ink';
+import { drawHeldWeapon, drawWeaponEffect } from './weapon-ink';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
@@ -25,7 +26,9 @@ export class CombatOverlay {
     const c = this.ctx; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0, 0, rect.width, rect.height);
     if (runtime.outcome !== 'running') return;
     const point = (p: readonly [number, number, number]) => { const q = this.project(p); return { x: q.x - rect.left, y: q.y - rect.top, behind: q.behind }; };
-    const shot = runtime.lastShot;
+    drawHeldWeapon(c,point,runtime,this.debugRanges);
+    for(const effect of runtime.weaponCombat.effects)drawWeaponEffect(c,point,effect,(runtime.tick-effect.tick)*runtime.fixedStep);
+    for(const burn of runtime.weaponCombat.burning){const t=runtime.table;if(!t.isAlive(burn.id) || t.generation[burn.id]!==burn.generation)continue;const p=point([t.posX[burn.id]!,runtime.weaponMount.position[1],t.posZ[burn.id]!]);if(p.behind)continue;c.fillStyle='#ff7045';c.font='bold 14px system-ui';c.fillText('♨',p.x,p.y);}
     // Windup geometry uses the same authoritative ranges, arcs and facing as combat.
     const table = runtime.table;
     let shown = 0;
@@ -45,10 +48,6 @@ export class CombatOverlay {
         const p = point([x + Math.cos(angle) * attack.rangeM, 0.07, z + Math.sin(angle) * attack.rangeM]); c.lineTo(p.x, p.y);
       }
       c.closePath(); c.fillStyle = '#ef67452e'; c.strokeStyle = '#f49b56b0'; c.lineWidth = 1.5; c.fill(); c.stroke(); shown++;
-    }
-    if (shot) {
-      const a = point(shot.from), b = point(shot.to);
-      if (!a.behind && !b.behind) drawShotInk(c,a,b,(runtime.tick - shot.tick) * runtime.fixedStep);
     }
     const danger = runtime.danger;
     if (danger) {

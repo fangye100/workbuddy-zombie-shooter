@@ -396,12 +396,16 @@ export class RuntimeBridge {
           // Anchored actors can acquire a chase target while their authored speed
           // remains zero. Their idle motion uses time, not a frozen walking gait.
           const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
-          const clipIdx = clipIndexForBehavior(actor.clips, behavior);
+          const weapon=e.kind==='player'?this.session.weapons.animation:null;
+          const weaponClip=weapon && weapon.action!=='idle'?actor.clips.findIndex(c=>c.name===weapon.clip):-1;
+          const fallbackClip=weapon && weapon.action!=='idle'?actor.clips.findIndex(c=>c.name===(weapon.action==='fire'?'shoot':weapon.action)):-1;
+          const clipIdx = weaponClip>=0?weaponClip:fallbackClip>=0?fallbackClip:weapon && weapon.action==='fire'?clipIndexForBehavior(actor.clips,2):clipIndexForBehavior(actor.clips, behavior);
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
           if (behavior===2) phase01=Math.min(.999,Math.max(0,e.behaviorPhase??0));
+          if(weapon && weapon.action!=='idle')phase01=Math.min(.999,weapon.phase);
           const nominal = clip ? actor.motion?.states[clip.name]?.nominalSpeedMps : undefined;
-          if (clip && nominal && clip.durationSec > 0) {
+          if (clip && nominal && clip.durationSec > 0 && (!weapon || weapon.action==='idle')) {
             const key = `${e.runId}:${e.id}:${e.generation}`; gaitKeys.add(key);
             const previous = this.gait.get(key);
             const cycles = previous?.clip === clip.name ? previous.cycles + Math.hypot(e.x - previous.x, e.z - previous.z) / (nominal * clip.durationSec) : phase01;

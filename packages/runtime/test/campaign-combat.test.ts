@@ -29,7 +29,7 @@ it('v11 migrates a persisted attack budget; invalid authored budgets are rejecte
   const rule=old.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
   delete (rule as unknown as Record<string,unknown>).attackTokenCount;
   delete (rule as unknown as Record<string,unknown>).npcTiming;
-  const migrated=migrateToLatest(old);expect(migrated.applied).toEqual(['authored-crowd-attack-budget']);
+  const migrated=migrateToLatest(old);expect(migrated.applied).toEqual(['authored-crowd-attack-budget','unified-weapon-arsenal']);
   const next=migrated.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
   expect(next.attackTokenCount).toBe(4);expect(validRunRules(next)).toBe(true);
   expect(next.npcTiming.decisionMaxSec).toBeGreaterThan(next.npcTiming.decisionMinSec);

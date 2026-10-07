@@ -29,3 +29,6 @@ export * from './run-progress';
 export * from './scene-authoring';
 
 export * from './enemy-attacks';
+
+export * from './weapon-system';
+export * from './weapon-combat';

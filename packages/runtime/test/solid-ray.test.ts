@@ -14,6 +14,11 @@ function geometry(shape: ColliderComponent['shape'], position: [number, number, 
   return solidCollider(n.id, shape, SceneGraph.fromDocument(doc).worldMatrix(n.id));
 }
 describe('finite solid ray geometry in world distance', () => {
+  it('swept projectile radius hits a grazing box while an ordinary bullet ray remains unobstructed',()=>{
+    const s=geometry(box,[3,0,0]);
+    expect(raySolid([0,.8,1.1],[1,0,0],s)).toBeNull();
+    expect(raySolid([0,.8,1.1],[1,0,0],s,.15)).toBeCloseTo(2.65,5);
+  });
   it('box has finite height and returns zero if the muzzle starts inside the solid', () => {
     const s = geometry(box, [3, 0, 0]);
     expect(raySolid([0, 0.8, 0], [1, 0, 0], s)).toBeCloseTo(2.8, 5);

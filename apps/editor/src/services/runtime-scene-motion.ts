@@ -11,6 +11,7 @@ interface Entry {
   defaultState: string; result: ResolvedMotion; state: string; startTick: number;
   manual: boolean;
   elapsed: number; lastTick: number;
+  weaponActionStamp?: string;
 }
 export class RuntimeSceneMotion {
   private generation = 0;
@@ -99,7 +100,13 @@ export class RuntimeSceneMotion {
       const clipConfig = entry.result.states[entry.state]!;
       if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) entry.manual = false;
       if (entry.player && !entry.manual) {
-        const state = runtime.firing && entry.result.states.shoot ? 'shoot' : this.playerSpeed > 2.5 && entry.result.states.run ? 'run' : this.playerSpeed > .05 ? 'walk' : 'idle';
+        const action=runtime.weapons?.animation;
+        const locomotion=this.playerSpeed>2.5 && entry.result.states.run?'run':this.playerSpeed>.05?'walk':'idle';
+        const requested=action && action.action!=='idle'?[action.clip,action.action==='fire'?'shoot':action.action,action.fallback].find(s=>!!entry.result.states[s]):undefined;
+        const state=requested ?? (!action && runtime.firing && entry.result.states.shoot?'shoot':locomotion);
+        const stamp=action && action.action!=='idle'?`${runtime.runId}:${action.weaponId}:${action.action}:${action.startTick}`:'';
+        if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,true);entry.manual=false;}
+        entry.weaponActionStamp=stamp;
         this.select(entry, entry.result.states[state] ? state : entry.defaultState, false);
       }
       const config = entry.result.states[entry.state]!, clip = skin.clips[skin.clip]!;
@@ -107,7 +114,9 @@ export class RuntimeSceneMotion {
       entry.elapsed += Math.max(0, this.tick - entry.lastTick) * this.step * entry.speed * gait;
       entry.lastTick = this.tick;
       const time = entry.elapsed;
-      skin.time = config.loop && clip.duration > 0 ? time % clip.duration : Math.min(time, clip.duration);
+      const weapon=entry.player && !entry.manual?runtime.weapons?.animation:null;
+      const isWeaponClip=weapon && weapon.action!=='idle' && [weapon.clip,weapon.action==='fire'?'shoot':weapon.action,weapon.fallback].includes(entry.state);
+      skin.time = isWeaponClip?weapon.phase*clip.duration:config.loop && clip.duration > 0 ? time % clip.duration : Math.min(time, clip.duration);
       skin.loop = config.loop; skin.playing = false;
     }
   }

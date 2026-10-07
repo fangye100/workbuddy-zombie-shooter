@@ -35,6 +35,9 @@ import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from './beha
 import { NULL_BEHAVIOR_EXECUTOR } from './behavior-executor';
 import { nearestSolidHit } from './solid-ray';
 import { RunProgress, type RunCarry } from './run-progress';
+import { legacyWeaponArsenal } from '@aether/scene';
+import { WeaponSystem } from './weapon-system';
+import { WeaponCombat, type WeaponWorld } from './weapon-combat';
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -271,6 +274,17 @@ export const BEHAVIOR_RECOVER = 4;
 let NEXT_RUN_ID = 1;
 
 export class RuntimeSession {
+  weapons: WeaponSystem;
+  weaponCombat: WeaponCombat;
+  get weaponMount():{position:[number,number,number];rotation:[number,number,number,number]} {
+    const p=this.playerEntityId,t=this.table,y=this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,yaw=t.yaw[p]!;
+    return {position:[t.posX[p]!,y,t.posZ[p]!],rotation:[0,-Math.sin(yaw/2),0,Math.cos(yaw/2)]};
+  }
+  private createWeapons():WeaponSystem {
+    return new WeaponSystem(this.desc.runRules?.arsenal ?? legacyWeaponArsenal({magazineSize:10000,reserveRounds:10000000,reloadSec:.1},{damage:PLAYER_WEAPON.damage,cooldownSec:PLAYER_WEAPON.cdSec,rangeM:PLAYER_WEAPON.rangeM}));
+  }
+  equipWeapon(id:string):boolean { return this.outcome==='running' && !this.progress?.choosing && this.weapons.equip(id); }
+  upgradeWeapon():boolean {return this.outcome==='running' && !!this.progress && !this.progress.choosing && this.weapons.upgrade(cost=>{if(this.progress!.scrap<cost)return false;this.progress!.scrap-=cost;return true;});}
   readonly enemyAttacks = new EnemyAttacks();
   private attackTokens: AttackTokenPool | null = null;
   private readonly npcDecisionAt: Float64Array;
@@ -339,7 +353,7 @@ export class RuntimeSession {
   }
   buyTalent(): boolean { return this.atSupply && this.progress!.shopTalent(); }
   buyAmmo(): boolean { return this.atSupply && this.progress!.buyAmmo(); }
-  reload(): boolean { return this.outcome === 'running' && !!this.progress?.reload(); }
+  reload(): boolean { return this.outcome === 'running' && !this.progress?.choosing && this.weapons.reload(); }
   private tbl: CharacterTable;
 
   /** 实体状态表。唯一权威（docs/18 §1.5）—— 不要在别处再维护第二张 */
@@ -469,7 +483,8 @@ export class RuntimeSession {
   constructor(opts: SessionOptions) {
     this.desc = opts.desc;
     this.seed = opts.seed ?? 1;
-    this.progress = opts.desc.runRules ? new RunProgress(opts.desc.runRules, this.seed) : null;
+    this.weapons=this.createWeapons();this.weaponCombat=new WeaponCombat(this.seed);
+    this.progress = opts.desc.runRules ? new RunProgress(opts.desc.runRules, this.seed,this.weapons) : null;
     this.aimAssist = opts.desc.runRules?.aimAssist ?? false;
     this.attackTokens=opts.desc.runRules?new AttackTokenPool(opts.desc.runRules.attackTokenCount,0):null;
     this.initialSeed = this.seed;
@@ -760,8 +775,6 @@ export class RuntimeSession {
   }
 
   private fireHeld = false;
-  /** 玩家武器 CD 到点时刻（会话时钟秒；不占表列——玩家只有一个） */
-  private playerCooldownUntil = 0;
 
   /** 推进一个固定步。**不读墙钟**，浏览器宿主要自己用累加器调度 */
   step(): StepReport {
@@ -786,7 +799,8 @@ export class RuntimeSession {
     this.combatStep();
     this.enemyAttacks.step(this.tickCount,this.fixedStep,this.attackWorld());
     if (this.aimPoint && this.playerId >= 0) this.table.yaw[this.playerId] = Math.atan2(this.aimPoint[1]-this.table.posZ[this.playerId]!,this.aimPoint[0]-this.table.posX[this.playerId]!);
-    this.progress?.advanceReload(this.fixedStep);
+    this.weapons.advance(this.fixedStep,this.tickCount);
+    this.weaponCombat.step(this.tickCount,this.fixedStep,this.weaponWorld());
     this.fireStep();
     this.bossStep();
     this.tickCount += 1;
@@ -927,7 +941,8 @@ export class RuntimeSession {
     this.waveRooms.clear(); // 波次状态随世界重建
     this.roomAlive.clear(); // 房间存活计数同理（整表重建，计数从头累积）
     this.outcomeState = 'running'; // 终态随换代复位（重跑新的一局）
-    this.progress = this.desc.runRules ? new RunProgress(this.desc.runRules, this.seed) : null;
+    this.weapons=this.createWeapons();this.weaponCombat=new WeaponCombat(this.seed);
+    this.progress = this.desc.runRules ? new RunProgress(this.desc.runRules, this.seed,this.weapons) : null;
     this.aimAssist = this.desc.runRules?.aimAssist ?? false;
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
@@ -936,7 +951,6 @@ export class RuntimeSession {
     this.inputX = 0;
     this.inputZ = 0;
     this.fireHeld = false;
-    this.playerCooldownUntil = 0;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
     this.integrator.setGoal(this.goalX, this.goalZ);
@@ -1440,96 +1454,51 @@ export class RuntimeSession {
     }
   }
 
-  /**
-   * 玩家手枪射击（P5 C3，docs/23 §2.3 最小闭环）。
-   *
-   * 按住开火 + 武器 CD 到点 → 朝玩家朝向射一条瞬时射线（无扫掠需求，
-   * docs/23 §2.1a 裁决），最近的存活 NPC 吃 applyDamage。未命中也进 CD
-   *（真实射空）。朝向 = 当前输入方向；无输入时保持最近一次移动朝向（yaw）。
-   */
+  /** Adapter over the authoritative entity table and finite scene solids. */
+  private weaponWorld(): WeaponWorld {
+    const t=this.table,p=this.playerEntityId;
+    const actor=(id:number)=>t.isAlive(id) && this.kindOf[id]===1?{id,generation:t.generation[id]!,x:t.posX[id]!,z:t.posZ[id]!,radius:t.radius[id]!,hp:t.health[id]!}:null;
+    const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.desc.shotColliders,l)!==null;};
+    return {actor,actors:()=>{const out=[];for(let i=0;i<t.capacity;i++){const a=actor(i);if(a)out.push(a);}return out;},blocked,
+      trace:(from,direction,range,ignore,radius=0)=>{
+        let distance=nearestSolidHit(from,direction,this.desc.shotColliders,range,radius)??range, target=null;
+        for(let i=0;i<t.capacity;i++){const a=actor(i);if(!a || ignore.has(i))continue;
+          const stats=this.defIdToStats.get(t.defId[i]!);if(!stats)continue;
+          const h=rayCapsuleY([from[0],from[1]+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
+          if(h!==null && h<distance){distance=h;target=a;}
+        }
+        return {actor:target,distance,point:[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance]};
+      },
+      damage:(id,damage)=>{
+        const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p);
+        t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));
+        const blast=this.progress?.strength('blast')??0;
+        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.z-a.z)>blast || blocked([a.x,1,a.z],[b.x,1,b.z]))continue;this.applyDamage(i,damage/2,p);}
+        return dealt;
+      },
+      displace:(id,from,distance)=>{
+        const a=actor(id);if(!a || distance<=0)return;const dx=a.x-from[0],dz=a.z-from[2],l=Math.hypot(dx,dz);if(l<1e-6)return;
+        const n=Math.ceil(distance/.1);for(let k=0;k<n;k++){const [x,z]=this.resolvePlayerCollision(t.posX[id]!+dx/l*distance/n,t.posZ[id]!+dz/l*distance/n,a.radius);t.posX[id]=x;t.posZ[id]=z;}
+      }
+    };
+  }
   private fireStep(): void {
-    const t = this.tbl;
-    const p = this.playerEntityId;
-    // 血量归零不再开火（C5 失败冻结的前哨：死了不能继续输出）
-    if (!this.fireHeld || p < 0 || !t.isAlive(p) || t.health[p]! <= 0) return;
-    const now = this.tickCount * this.fixedStep;
-    if (now < this.playerCooldownUntil) return;
-    if (this.progress && !this.progress.takeRound()) return;
-
-    const ix = this.inputX;
-    const iz = this.inputZ;
-    const len = Math.hypot(ix, iz);
-    let dx: number;
-    let dz: number;
-    if (this.aimPoint) {
-      const ax=this.aimPoint[0]-t.posX[p]!, az=this.aimPoint[1]-t.posZ[p]!, al=Math.hypot(ax,az);
-      dx=al>1e-6?ax/al:Math.cos(t.yaw[p]!); dz=al>1e-6?az/al:Math.sin(t.yaw[p]!);
-    } else if (len > 1e-6) {
-      dx = ix / len;
-      dz = iz / len;
-    } else {
-      dx = Math.cos(t.yaw[p]!);
-      dz = Math.sin(t.yaw[p]!);
-    }
-
-    let bestSlot = -1;
-    let bestT = Infinity;
-    const w = PLAYER_WEAPON;
-    // 射线打「胶囊中轴高度」：y=0 的贴地射线对站立胶囊恰好切线（下半球心
-    // y=r），目标稍一横向漂移就脱靶——中轴高度稳定穿过圆柱段
-    const playerStats = this.defIdToStats.get(t.defId[p]!)!;
-    const rayY = playerStats.capsuleHeight / 2;
-    if (this.aimAssist && !this.aimPoint) {
-      let nearest = w.rangeM;
-      for (let i = 0; i < t.capacity; i++) {
-        if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
-        const x = t.posX[i]! - t.posX[p]!; const z = t.posZ[i]! - t.posZ[p]!;
-        const distance = Math.hypot(x, z);
-        if (distance < 0.001 || distance >= nearest) continue;
-        const solid = nearestSolidHit([t.posX[p]!, rayY, t.posZ[p]!], [x / distance, 0, z / distance], this.desc.shotColliders, distance);
-        if (solid !== null && solid < distance - t.radius[i]!) continue;
-        nearest = distance; dx = x / distance; dz = z / distance;
-      }
-      t.yaw[p] = Math.atan2(dz, dx);
-    }
-    const wallT = nearestSolidHit([t.posX[p]!, rayY, t.posZ[p]!], [dx, 0, dz], this.desc.shotColliders, w.rangeM);
-    for (let i = 0; i < t.capacity; i++) {
-      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
-      const stats = this.defIdToStats.get(t.defId[i]!);
-      if (stats === undefined) continue;
-      const hit = rayCapsuleY(
-        [t.posX[p]!, rayY, t.posZ[p]!],
-        [dx, 0, dz],
-        t.posX[i]!,
-        t.posZ[i]!,
-        t.radius[i]!,
-        stats.capsuleHeight,
-      );
-      if (hit !== null && hit <= w.rangeM && hit < bestT) {
-        bestT = hit;
-        bestSlot = i;
-      }
-    }
-    // Equal-distance boundary belongs to the solid: ordinary bullets never penetrate it.
-    const hit = bestSlot >= 0 && (wallT === null || bestT < wallT);
-    const length = hit ? bestT : wallT ?? w.rangeM;
-    this.lastShot = { tick: this.tick, from: [t.posX[p]!, rayY, t.posZ[p]!], to: [t.posX[p]! + dx * length, rayY, t.posZ[p]! + dz * length], hit };
-    if (hit) {
-      const damage = w.damage * (1 + (this.progress?.strength('damage') ?? 0));
-      const x = t.posX[bestSlot]!; const z = t.posZ[bestSlot]!;
-      const dealt = Math.min(damage, t.health[bestSlot]!);
-      this.applyDamage(bestSlot, damage, p);
-      const heal = dealt * (this.progress?.strength('leech') ?? 0);
-      t.health[p] = Math.min(t.maxHp[p]!, t.health[p]! + heal);
-      const blast = this.progress?.strength('blast') ?? 0;
-      if (blast > 0) for (let i = 0; i < t.capacity; i++) {
-        if (i === bestSlot || !t.isAlive(i) || this.kindOf[i] !== 1 || Math.hypot(t.posX[i]! - x, t.posZ[i]! - z) > blast) continue;
-        const bx = t.posX[i]! - x, bz = t.posZ[i]! - z, distance = Math.hypot(bx, bz);
-        if (distance > 0.001 && nearestSolidHit([x, rayY, z], [bx / distance, 0, bz / distance], this.desc.shotColliders, distance) !== null) continue;
-        this.applyDamage(i, damage / 2, p);
-      }
-    }
-    this.playerCooldownUntil = now + w.cdSec / (1 + (this.progress?.strength('haste') ?? 0));
+    const t=this.table,p=this.playerEntityId,w=this.weapons.active;
+    if(!this.fireHeld || this.progress?.choosing || p<0 || !t.isAlive(p) || t.health[p]!<=0)return;
+    if(!this.weaponCombat.canFire(w)){this.pushDiag('W_WEAPON_CAPACITY','Projectile pool is full; shot deferred',null);return;}
+    if(!this.weapons.beginFire(1+(this.progress?.strength('haste')??0)))return;
+    let dx=Math.cos(t.yaw[p]!),dz=Math.sin(t.yaw[p]!);
+    const target=this.aimPoint ?? (Math.hypot(this.inputX,this.inputZ)>1e-6?[t.posX[p]!+this.inputX,t.posZ[p]!+this.inputZ]:null);
+    if(target){const x=target[0]!-t.posX[p]!,z=target[1]!-t.posZ[p]!,l=Math.hypot(x,z);if(l>1e-6){dx=x/l;dz=z/l;}}
+    const y=this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,world=this.weaponWorld();
+    if(this.aimAssist && !this.aimPoint){let nearest=w.rangeM;for(const a of world.actors()){const x=a.x-t.posX[p]!,z=a.z-t.posZ[p]!,l=Math.hypot(x,z);if(l>.001 && l<nearest && !world.blocked([t.posX[p]!,y,t.posZ[p]!],[a.x,y,a.z])){nearest=l;dx=x/l;dz=z/l;}}}
+    t.yaw[p]=Math.atan2(dz,dx);
+    const marker=w.presentation.markers.muzzle.position;
+    const from:[number,number,number]=[t.posX[p]!+dx*marker[0]-dz*marker[2],y+marker[1],t.posZ[p]!+dz*marker[0]+dx*marker[2]];
+    const origin:[number,number,number]=[t.posX[p]!,y,t.posZ[p]!];
+    if(world.blocked(origin,from)) {const hit=world.trace(origin,[dx,0,dz],Math.hypot(from[0]-origin[0],from[2]-origin[2]),new Set());this.weaponCombat.effect(w,'shot',origin,hit.point,this.tick,.12,0,false);this.lastShot={tick:this.tick,from:origin,to:hit.point,hit:false};return;}
+    this.weaponCombat.fire(w,from,[dx,0,dz],w.damage*this.weapons.damageMultiplier*(1+(this.progress?.strength('damage')??0)),this.tick,world);
+    const effect=this.weaponCombat.effects[this.weaponCombat.effects.length-1];if(effect)this.lastShot={tick:this.tick,from:effect.from,to:effect.to,hit:effect.hit};
   }
 
   private moveNpcs(): void {
@@ -1546,7 +1515,7 @@ export class RuntimeSession {
       b.velZ[n] = t.velZ[i]!;
       b.radius[n] = t.radius[i]!;
       b.maxSpeed[n] = t.maxSpeed[i]!;
-      b.speedScale[n] = t.speedScale[i]!;
+      b.speedScale[n] = t.speedScale[i]! * this.weaponCombat.slow(i,t.generation[i]!);
       b.dodgeBias[n] = t.dodgeBias[i]!;
       n++;
     }

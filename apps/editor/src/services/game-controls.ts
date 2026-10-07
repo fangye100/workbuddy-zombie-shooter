@@ -42,6 +42,11 @@ export class GameControls {
     canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);canvas.addEventListener('lostpointercapture',end);
     canvas.addEventListener('pointerleave',()=>{if(!this.pointerFire)this.mouse=null;});
     window.addEventListener('blur',()=>this.clear());
+    window.addEventListener('keydown',e=>{
+      if(!this.enabled || e.repeat || e.ctrlKey || e.altKey || e.metaKey || (e.target instanceof HTMLElement && (e.target.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))))return;
+      const index=Number(e.key)-1;
+      if(Number.isInteger(index) && index>=0 && index<(this.runtime?.weapons.definitions.length??0)){e.preventDefault();this.runtime!.equipWeapon(this.runtime!.weapons.definitions[index]!.id);}
+    });
     document.addEventListener('visibilitychange',()=>{if(document.hidden)this.clear();});
   }
   private stick(button: HTMLButtonElement, firing: boolean): void {

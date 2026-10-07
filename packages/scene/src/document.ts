@@ -18,11 +18,12 @@
  */
 
 import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
+import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -432,12 +433,14 @@ export interface RunRulesComponent extends ComponentBase {
   aimAssist: boolean;
   talents: RunTalent[];
   weapon: { magazineSize: number; reserveRounds: number; reloadSec: number; ammoPerKill: number; ammoCost: number; ammoSupply: number };
+  arsenal: WeaponArsenal;
   bossAttack?: { source: NodeId; radius: number; windupSec: number; cooldownSec: number; damage: number } | null;
 }
 
 export function validRunRules(value: unknown): value is RunRulesComponent {
   if (!value || typeof value !== 'object') return false;
   const r = value as RunRulesComponent;
+  if (!validWeaponArsenal(r.arsenal)) return false;
   if (r.kind !== 'RunRules' || typeof r.enabled !== 'boolean' || typeof r.campaign !== 'string' || !r.campaign.trim() || typeof r.aimAssist !== 'boolean') return false;
   if (!Number.isSafeInteger(r.attackTokenCount) || r.attackTokenCount < 1 || r.attackTokenCount > 32) return false;
   const timing=r.npcTiming;

@@ -70,13 +70,26 @@ body.game-view #center {width:100%;height:100%;flex:1;min-width:0;}
 }
 @media(max-width:600px) and (orientation:portrait) {
  body.game-view .hud-radar {display:none;}
- body.game-view #center .hud-wave {left:auto;right:10px;transform:none;min-width:105px;}
- body.game-view .game-toolbar {top:180px;}
+ body.game-view .hud-life {width:calc(100% - 24px);}
+ body.game-view #center .hud-wave {top:102px;left:12px;right:12px;transform:none;min-width:0;}
+ body.game-view .hud-objective {top:162px;}
+ body.game-view .game-toolbar {top:244px;}
  body.game-view #center .run-hud {bottom:168px;width:calc(100% - 52px);}
+ body.game-view #center .run-hud:not(.choosing) .run-build-info {height:16px;max-height:16px;overflow:hidden;margin-bottom:0;}
+ body.game-view #center .run-hud:not(.choosing) .run-assist {display:none;}
+ body.game-view #center .game-hud .hud-help {display:none;}
  #center .game-stick {width:112px;height:112px;}
  #center .game-stick::before {left:30px;top:30px;}
- #center .touch-reload {bottom:148px;right:32px;}
- #center .touch-interact {bottom:148px;right:110px;}
+ #center .touch-reload {top:172px;bottom:auto;right:18px;}
+ #center .touch-interact {top:338px;bottom:auto;right:18px;}
 }
 
 body.game-view #hud,body.game-view #runtime-motion-panel {display:none!important;}
+
+#center .weapon-select { width:100%; min-height:36px; color:#fff6e2; background:#353047; border:2px solid #14110f; border-radius:8px; padding:6px; font:700 13px system-ui; margin-top:5px; }
+.weapon-info {display:block;color:#b7beca;font:11px system-ui;margin:5px 0;}
+#center:has(.game-touch-controls:not([hidden])) .weapon-select {min-height:44px;font-size:14px;}
+#center:has(.game-touch-controls:not([hidden])) .weapon-upgrade {min-height:44px;font-size:13px;}
+#center .weapon-upgrade {min-height:32px;width:100%;border-radius:8px;border:2px solid #14110f;color:#171327;background:#7bdbe4;font:700 12px system-ui;}
+#center .weapon-upgrade:disabled {opacity:.5;}
+@media(max-height:560px) { #center .run-hud:not(.choosing) .run-build-info {max-height:28px;overflow:hidden;} #center .weapon-select {min-height:32px;margin-top:2px;} .weapon-info {margin:2px 0;} }

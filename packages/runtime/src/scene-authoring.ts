@@ -1,5 +1,5 @@
 /** Authoring transactions validate references and capacity before changing the working document. */
-import { validateSceneDocument, type SceneDocument, type SceneNode, type RunRulesComponent } from '@aether/scene';
+import { legacyWeaponArsenal, validateSceneDocument, type SceneDocument, type SceneNode, type RunRulesComponent } from '@aether/scene';
 
 export function validateAuthorNodes(doc: SceneDocument): string | null {
   try {
@@ -49,6 +49,7 @@ export function newRunRules(): RunRulesComponent {
   return { kind: 'RunRules', enabled: true, attackTokenCount: 4, npcTiming: {decisionMinSec:.08,decisionMaxSec:.35,recoveryMinSec:.2,recoveryMaxSec:.55,windupJitterFrac:.15,cooldownJitterFrac:.35}, campaign: 'custom', scrapPerKill: 2, firstChoiceKills: 3, choiceEveryKills: 6,
     eventScrap: 10, healCost: 10, healAmount: 25, talentCost: 15, floorEssence: 10, aimAssist: true,
     weapon: { magazineSize: 12, reserveRounds: 120, reloadSec: 1.2, ammoPerKill: 8, ammoCost: 10, ammoSupply: 60 },
+    arsenal: legacyWeaponArsenal({magazineSize:12,reserveRounds:120,reloadSec:1.2}),
     talents: [
       { id: 'damage', name: 'Damage', description: '', effect: 'damage', value: 0.2, maxStacks: 5 },
       { id: 'haste', name: 'Haste', description: '', effect: 'haste', value: 0.15, maxStacks: 5 },

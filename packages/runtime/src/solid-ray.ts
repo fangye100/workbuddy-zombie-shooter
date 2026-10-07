@@ -26,7 +26,7 @@ export function solidCollider(nodeId: NodeId, shape: ColliderComponent['shape'],
 
 /** Unit world direction -> world distance for the supplied SceneGraph world matrix.
  * Parent transforms follow the graph's established TRS composition. */
-export function raySolid(origin: V3, direction: V3, solid: SolidColliderDesc): number | null {
+export function raySolid(origin: V3, direction: V3, solid: SolidColliderDesc, sweepRadius=0): number | null {
   const m = solid.worldToLocal;
   const transform = (v: V3, point: boolean): [number, number, number] => [
     m[0]! * v[0] + m[4]! * v[1] + m[8]! * v[2] + (point ? m[12]! : 0),
@@ -38,27 +38,30 @@ export function raySolid(origin: V3, direction: V3, solid: SolidColliderDesc): n
   if (!Number.isFinite(length) || length <= 0) return null;
   const d: [number, number, number] = [vector[0] / length, vector[1] / length, vector[2] / length];
   const s = solid.shape; let hit: number | null;
+  const inflate:[number,number,number]=[Math.hypot(m[0]!,m[4]!,m[8]!),Math.hypot(m[1]!,m[5]!,m[9]!),Math.hypot(m[2]!,m[6]!,m[10]!)].map(n=>n*sweepRadius) as [number,number,number];
+  const radial=Math.max(...inflate);
   if (s.type === 'box') {
-    const h = s.halfExtents;
+    // Conservative Minkowski bounds for swept spheres; exact finite solids for ordinary rays.
+    const h = s.halfExtents.map((n,i)=>n+inflate[i]!) as [number,number,number];
     const t = rayAabb(...o, ...d, [-h[0], -h[1], -h[2]], h);
     hit = t < 0 ? null : t;
   } else if (s.type === 'sphere') {
-    if (Math.hypot(...o) <= s.radius) return 0;
-    hit = raySphere(o, d, 0, 0, 0, s.radius);
+    if (Math.hypot(...o) <= s.radius+radial) return 0;
+    hit = raySphere(o, d, 0, 0, 0, s.radius+radial);
   } else {
     const halfSegment = Math.max(0, s.height / 2 - s.radius);
     const closestY = Math.max(-halfSegment, Math.min(halfSegment, o[1]));
-    if (Math.hypot(o[0], o[1] - closestY, o[2]) <= s.radius) return 0;
-    const height = 2 * (halfSegment + s.radius);
-    hit = rayCapsuleY([o[0], o[1] + height / 2, o[2]], d, 0, 0, s.radius, height);
+    if (Math.hypot(o[0], o[1] - closestY, o[2]) <= s.radius+radial) return 0;
+    const height = 2 * (halfSegment + s.radius+radial);
+    hit = rayCapsuleY([o[0], o[1] + height / 2, o[2]], d, 0, 0, s.radius+radial, height);
   }
   return hit === null ? null : hit / length;
 }
 
-export function nearestSolidHit(origin: V3, direction: V3, solids: readonly SolidColliderDesc[], range: number): number | null {
+export function nearestSolidHit(origin: V3, direction: V3, solids: readonly SolidColliderDesc[], range: number,sweepRadius=0): number | null {
   let nearest = Infinity;
   for (const solid of solids) {
-    const hit = raySolid(origin, direction, solid);
+    const hit = raySolid(origin, direction, solid,sweepRadius);
     if (hit !== null && hit <= range && hit < nearest) nearest = hit;
   }
   return nearest === Infinity ? null : nearest;
