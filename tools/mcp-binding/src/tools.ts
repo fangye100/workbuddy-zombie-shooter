@@ -10,7 +10,7 @@
  *     roster.json E-04 height），保证 MCP 里看到的体型与编辑器一致。
  *
  * 导出（WU-3 收口）：`export_glb` 直接复用编辑器 `exportBound` 同一条管线
- * （binding-export `rigToTPoseWithImage`：当前姿态算权重 → 反解 T-pose → 写干净骨架），
+ * （binding-export `rigToTPoseWithImage`：当前姿态算权重 → 源姿态或反解 T-pose → 写骨架），
  * 产物经 FsPort 落盘仓内；动画烘焙（BVH 重定向）仍不走 MCP —— 那是 retarget 的领域。
  */
 
@@ -31,6 +31,9 @@ import {
 import { rigToTPoseWithImage } from '../../../apps/editor/src/services/binding/binding-export';
 import { parseGlb } from '@aether/scene';
 import { sceneFingerprint } from '@aether/runtime';
+import { requireCharacter } from '@aether/content';
+import { skinSelectionHash } from '../../../apps/editor/src/services/binding/rigid-skin-regions';
+import { BINDING_WORKFLOW } from './workflow';
 import { BindingPersistence } from '../../../apps/editor/src/services/binding/binding-persistence';
 import type { WriteResult } from '../../../apps/editor/src/asset-util';
 import {
@@ -48,6 +51,7 @@ import {
 
 /** 引擎顶点布局 stride（packages/scene/src/gltf.ts 的 VF：pos3+normal3+smoothNormal3+uv2+color4） */
 const VERTEX_FLOATS = 15;
+const BINDING_HEIGHT_M = requireCharacter('E-04').heightMeters;
 
 /** 工具参数 / 前置条件错误（→ JSON-RPC -32602）；实现 bug 走未知错误（→ -32603） */
 export class ToolError extends Error {}
@@ -157,6 +161,13 @@ export class BindingDomain {
 
   constructor(private readonly fs: FsPort) {}
 
+  modelContext(): Record<string, unknown> {
+    const mesh = this.requireMesh();
+    return { sourcePath: this.requireGlbPath(), metaPath: this.metaPath(),
+      bindingHeightM: BINDING_HEIGHT_M, coordinateSpace: 'normalized-source-local-metres',
+      selectionHash: skinSelectionHash(mesh.vertices) };
+  }
+
   private requireMesh(): BindingMesh {
     const m = this.session.getMesh();
     if (m === null) throw new ToolError('未载入模型：先调 load_model');
@@ -191,7 +202,7 @@ export class BindingDomain {
     try {
       // targetHeight 用默认值 2.05 —— 即 MODEL_RULER_HEIGHT_M（roster E-04），
       // 与编辑器 bindAssetAt 的 parseGlb(buffer, MODEL_RULER_HEIGHT_M) 同尺
-      model = parseGlb(buf);
+      model = parseGlb(buf, BINDING_HEIGHT_M);
     } catch (err) {
       throw new ToolError(`GLB 解析失败：${relPath}（${String(err)}）`);
     }
@@ -212,6 +223,7 @@ export class BindingDomain {
       vertices: this.session.vertexCount(),
       triangles: this.session.triangleCount(),
       hydrated,
+      ...this.modelContext(),
     };
   }
 
@@ -397,11 +409,12 @@ export class BindingDomain {
   }
 
   /**
-   * export_glb：把当前会话态（骨架 + wrapper + 权重选项）导成干净 T-pose 的 rigged GLB。
+   * export_glb：把当前会话态导为源姿态或 T-pose 的 rig-only GLB。
    *
    * 与编辑器 main.ts `exportBound` 同一条管线（`rigToTPoseWithImage`）：当前姿态算权重
-   * （wrapper/distance → 镜像 → 平滑）→ 反解 T-pose → 骨架只采纳骨长、rotation 恒为单位
-   * 四元数。产物落盘仓内，**不回传字节**（token 纪律：GLB 以 MB 计，统计足够决策）。
+   * （wrapper/distance/volume → 镜像 → 平滑 → 刚性约束）→ 指定的绑定姿态。
+   * 源姿态保留当前 TRS 和对应 inverse binds；T-pose 反解生成干净骨架。
+   * 产物落盘仓内，**不回传字节**（token 纪律：GLB 以 MB 计，统计足够决策）。
    *
    * sidecar 纪律：目标已有 .meta.json 时只**外科式刷新** sourceHash/updatedAt（不碰其他键，
    * 与 scene:gen 的 merge 语义一致）；没有则不代建 —— 首版 sidecar 要 roster 字段
@@ -548,6 +561,12 @@ const VEC3_SCHEMA = {
 
 export const TOOLS_TABLE = [
   {
+    name: 'get_workflow',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    description: '只读：源姿态 rigging 全流程、体积蒙皮建议、刚性道具、发布脚本、共享动作与 headed 验收边界；无需加载模型。',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
     name: 'load_model',
     description:
       '载入仓内 .glb 并归一到编辑器同一把身高尺（2.05m）；若 sidecar .meta.json 有 bindingEditor 存档会自动回填。返回网格规模与是否回填。',
@@ -561,7 +580,7 @@ export const TOOLS_TABLE = [
   },
   {
     name: 'get_state',
-    description: '会话总览：模型 / 权重导出选项 / Undo 深度 / Bind 指纹。',
+    description: '会话总览：源路径、sidecar、归一化坐标尺与精确选择 selectionHash / 权重选项 / Undo 深度 / Bind 指纹。',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -627,7 +646,7 @@ export const TOOLS_TABLE = [
   {
     name: 'set_options',
     description:
-      '设权重导出选项（只动传入的键；越界值按面板同款规则钳制）。管线顺序铁律：算法 → 镜像 → 平滑。',
+      '设权重导出选项（只动传入键；平滑值按 GUI 钳制，体积/刚性约束非法值拒绝）。顺序：算法 → 镜像 → 平滑 → 刚性部件约束；rigidRegions:[] 清空，省略保留。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -657,7 +676,7 @@ export const TOOLS_TABLE = [
   {
     name: 'compute_skin',
     description:
-      '算一遍当前权重（算法 → 镜像 → 平滑，与导出同序），只返回统计不返回权重数组（token 纪律）：未包裹顶点数等。',
+      '计算并检查最终 top-4 权重：算法 → 镜像 → 平滑 → 刚性约束；回 weightQuality 和 wrapper/volume 诊断，不回大数组。outsideBones/兜底需审核，数值通过不等于动作视觉通过。',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -730,7 +749,7 @@ export const TOOLS_TABLE = [
  * 脚本化的连续调用并成一步 undo（独立审核 P1-2 实测复现）。
  */
 const READONLY_TOOLS: ReadonlySet<string> = new Set([
-  'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data', 'export_glb',
+  'get_workflow', 'get_state', 'get_joints', 'compute_skin', 'render', 'get_editor_data', 'export_glb',
 ]);
 
 export async function dispatchTool(
@@ -754,6 +773,8 @@ async function dispatchInner(
   const args = asObj(rawArgs);
   const s = domain.session;
   switch (name) {
+    case 'get_workflow':
+      return { json: BINDING_WORKFLOW };
     case 'load_model':
       return { json: domain.loadModel(reqStr(args, 'path')) };
 
@@ -767,6 +788,7 @@ async function dispatchInner(
                 name: s.getModelName(),
                 vertices: s.vertexCount(),
                 triangles: s.triangleCount(),
+                ...domain.modelContext(),
               },
           options: {
             weightMode: s.getWeightMode(),
@@ -923,12 +945,24 @@ async function dispatchInner(
     case 'compute_skin': {
       const r = s.computeSkin();
       if (r === null) throw new ToolError('未载入模型：先调 load_model');
+      let zeroWeightVerts = 0, invalidWeightVerts = 0, maxNormalizationError = 0;
+      for (let v = 0; v < s.vertexCount(); v++) {
+        let sum = 0, invalid = false;
+        for (let j = 0; j < 4; j++) {
+          const w = r.skin.weights[v * 4 + j]!;
+          invalid ||= !Number.isFinite(w) || w < 0;
+          sum += w;
+        }
+        if (invalid || !Number.isFinite(sum)) invalidWeightVerts++;
+        else { if (sum <= 0) zeroWeightVerts++; maxNormalizationError = Math.max(maxNormalizationError, Math.abs(sum - 1)); }
+      }
       return {
         json: {
           weightMode: s.getWeightMode(),
           vertices: s.vertexCount(),
           unwrappedVerts: r.stats?.unwrappedVerts ?? null,
           volumetric: r.volumetric ?? null,
+          weightQuality: { zeroWeightVerts, invalidWeightVerts, maxNormalizationError, stage: 'after-rigid-constraints' },
           pipeline: '算法 → 镜像 → 平滑 → 刚性部件约束（与导出同序）',
           note: r.stats === null ? '此算法无 wrapper 统计；体积模式请查看 volumetric 诊断' : undefined,
         },

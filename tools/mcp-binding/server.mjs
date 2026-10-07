@@ -38,7 +38,7 @@ const { TOOLS_TABLE, BindingDomain, ToolError, dispatchTool, sceneFingerprint } 
   pathToFileURL(DOMAIN_BUNDLE).href
 );
 
-const SERVER_INFO = { name: 'aether-binding', version: '0.2.0' };
+const SERVER_INFO = { name: 'aether-binding', version: '0.3.0' };
 /** 本 server 实际支持的协议版本（同 mcp-hello 探针：能力实现在这两个版本下一致） */
 const SUPPORTED_VERSIONS = ['2025-03-26', '2025-06-18'];
 const PROTOCOL_VERSION = '2025-06-18';
@@ -198,6 +198,7 @@ async function handleRequest(req) {
               : PROTOCOL_VERSION,
           capabilities: { tools: {} },
           serverInfo: SERVER_INFO,
+          instructions: 'Start with get_workflow. Source binding coordinates use the 2.05m editor ruler; get_state exposes the source sidecar and exact-selection hash. Preserve saved joints, inspect final weightQuality and volume diagnostics, save authoring data, export source-pose rigs separately, then validate shared motion in headed Game Editor. This server does not operate the live GUI or automatically publish scene assets.',
         },
       });
       return;

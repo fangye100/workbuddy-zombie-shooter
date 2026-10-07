@@ -1,5 +1,42 @@
 # tools/mcp-binding — 绑定领域 MCP server（WU-2 起）
 
+## Current rigging workflow (2026-10-07)
+
+Server version **0.3.0** exposes 17 tools. Start with read-only `get_workflow`:
+it returns source-authoring ownership, the current NPC preset, rigid prop rules,
+publication commands, shared-motion boundaries and headed acceptance requirements.
+The [project workflow](../../docs/rigging/character-rigging-workflow.md) is the
+human-readable entry; initialize also advertises concise client instructions.
+
+`load_model` and `get_state.model` now expose `sourcePath`, `metaPath`,
+`bindingHeightM`, `coordinateSpace` and `selectionHash`. Exact rigid selections
+must use this fingerprint with indices from the current normalized source mesh.
+`compute_skin.weightQuality` reports final zero/invalid-weight vertex counts and
+maximum normalization error **after** smoothing and rigid constraints, alongside
+volume diagnostics. Structural checks do not grant visual acceptance.
+
+```jsonc
+{ "name": "get_workflow", "arguments": {} }
+{ "name": "set_options", "arguments": {
+  "weightMode": "volumetric",
+  "volumetric": { "resolution": 48, "depth": 1, "tolerance": 0.001 },
+  "smoothWeights": true, "smoothIters": 6, "smoothLambda": 0.5,
+  "mirrorWeights": false
+} }
+{ "name": "compute_skin", "arguments": {} }
+// save must return ok:true; authoring is separate from output publication.
+{ "name": "save", "arguments": {} }
+{ "name": "export_glb", "arguments": {
+  "bindPose": "source", "outPath": ".workbuddy/tmp/character_source_rig.glb"
+} }
+```
+
+`set_options` preserves omitted keys; `rigidRegions:[]` explicitly clears prop
+constraints. For fused props, complete source UV islands avoid cutting triangles.
+Export preserves the source pose at the editor ruler scale; roster normalization,
+sharedMotion metadata and scene registration remain explicit publication steps.
+MCP/GUI share domain code and sidecars, not one live process or undo stack.
+
 Volumetric binding is available through `set_options` with
 `weightMode: "volumetric"` and `volumetric: { resolution: 48, depth: 1, tolerance: 0.001 }`.
 `compute_skin` returns volume/seed/convergence diagnostics; `save` preserves the
@@ -82,10 +119,11 @@ pnpm run mcp-binding:check   # = probe：构建 + 全链路断言（真实 GLB /
 
 改了 `src/**` 必须重跑 `mcp-binding:check`（probe 每次自己先构建，dist 不会过期）。
 
-## 工具表（16 个）
+## 工具表（17 个）
 
 | 工具 | 语义 |
 |---|---|
+| `get_workflow` | Read-only source-pose rigging workflow, parameters, prop rules, publication and validation boundaries; available before model loading |
 | `load_model` | 载入仓内 .glb（parseGlb 默认 2.05m 标尺 = 编辑器同尺）；sidecar 有 bindingEditor 自动回填 |
 | `get_state` / `get_joints` | 会话总览 / 27 关节坐标 + 合法骨名表 |
 | `set_joint` / `mirror` / `reset_pose` | 摆关节（自带历史）/ 左右镜像 / 回模板 T-pose。`mirror` 参数 `dir` = `'L2R'` \| `'R2L'`：**`R2L` = 以角色右侧为准镜像到左侧，右侧一字不动**（圆柱一起复制）。🔴 **方向必须先跟用户确认** —— 用户说「镜像到另外一边」时，若他先前对某一侧做过专门修正，那一侧就是标杆；搞反会覆盖掉他的决定 |

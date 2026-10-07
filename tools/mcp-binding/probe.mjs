@@ -292,6 +292,7 @@ try {
     protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'probe', version: '0.2.0' },
   });
   check('initialize 返回 serverInfo', init?.serverInfo?.name === 'aether-binding');
+  check('initialize 暴露当前 rigging 工作流入口', init?.serverInfo?.version === '0.3.0' && init?.instructions?.includes('get_workflow'));
   check('协议版本回显支持集内的客户端版本', init?.protocolVersion === '2025-03-26');
   check('不支持版本回己方支持版本', (await negotiate('1999-01-01')) === '2025-06-18');
   notify('notifications/initialized');
@@ -300,11 +301,14 @@ try {
   const list = await call('tools/list');
   const names = (list?.tools ?? []).map((t) => t.name);
   const EXPECT = [
-    'load_model', 'get_state', 'get_joints', 'set_joint', 'mirror', 'reset_pose',
+    'get_workflow', 'load_model', 'get_state', 'get_joints', 'set_joint', 'mirror', 'reset_pose',
     'undo', 'redo', 'cylinders', 'set_options', 'compute_skin', 'render',
     'get_editor_data', 'save', 'hydrate', 'export_glb',
   ];
-  check('tools/list 含全部 16 个工具', EXPECT.every((n) => names.includes(n)) && names.length === EXPECT.length);
+  check('tools/list 含全部 17 个工具', EXPECT.every((n) => names.includes(n)) && names.length === EXPECT.length);
+  const workflow = await toolJson('get_workflow');
+  check('无需加载模型即可读取真实工作流入口', workflow?.version === 1 && workflow.docs.every(p => existsSync(path.resolve(REPO_ROOT, p))) &&
+    workflow.stages.every(stage => stage.tools.every(n => names.includes(n))));
 
   // ── 前置条件：未载入模型时的错误路径（独立审核 P2 覆盖盲区） ──
   const preRender = await tool('render', {}).then(() => null, (e) => String(e));
@@ -330,6 +334,10 @@ try {
   check('load_model 按 sidecar 有无回填 hydrated', loaded?.hydrated === expectHydrated);
 
   const state = await toolJson('get_state');
+  check('源坐标与选择指纹在 load/state 中一致', loaded?.sourcePath === PROBE_GLB && state?.model?.metaPath === `${PROBE_GLB}.meta.json` &&
+    loaded?.bindingHeightM === 2.05 && loaded?.selectionHash === state?.model?.selectionHash && /^fnv1a32:[0-9a-f]{8}$/.test(loaded.selectionHash));
+  await toolJson('get_workflow');
+  check('get_workflow 不改会话或历史', JSON.stringify(await toolJson('get_state')) === JSON.stringify(state));
   check('get_state 默认选项（wrapper / 4 次平滑）',
     state?.options?.weightMode === 'wrapper' && state?.options?.smoothIters === 4);
 
@@ -404,6 +412,13 @@ try {
     check('MCP 非法部件约束拒绝且不半写',bad?.includes('-32602') && (await toolJson('get_state'))?.options?.rigidRegions?.[0]?.bone === 'LeftHand');
     await toolJson('save'); await toolJson('load_model',{path:PROBE_GLB});
     check('MCP 部件约束保存后回填', (await toolJson('get_state'))?.options?.rigidRegions?.[0]?.feather === .02);
+    const exact = {...region, vertices:[0,1], selectionHash:(await toolJson('get_state')).model.selectionHash};
+    await toolJson('set_options',{rigidRegions:[exact]});
+    const quality = (await toolJson('compute_skin')).weightQuality;
+    check('MCP 源选择指纹可用于刚性约束且返回最终权重质量', quality?.stage === 'after-rigid-constraints' &&
+      quality?.zeroWeightVerts === 0 && quality?.invalidWeightVerts === 0 && quality?.maxNormalizationError < 1e-5);
+    const stale = await tool('set_options',{rigidRegions:[{...exact,selectionHash: exact.selectionHash === 'fnv1a32:00000000' ? 'fnv1a32:11111111' : 'fnv1a32:00000000'}]}).then(()=>null,e=>String(e));
+    check('MCP 拒绝过期精确选择并保留原约束', stale?.includes('-32602') && (await toolJson('get_state')).options.rigidRegions[0].selectionHash === exact.selectionHash);
     await toolJson('set_options',{rigidRegions:[]});
   }
 

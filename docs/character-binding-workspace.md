@@ -6,7 +6,7 @@ Choose a joint in **骨骼关节**, drag it in the front/side views, or enter mo
 
 **保存绑定** persists the current `bindingEditor` to `<source>.glb.meta.json` through the existing version-checked persistence service. **重载 meta** reads it back. Switching, reloading, or closing a dirty binding asks before discarding changes. Loads superseded by another load/close are ignored; edits made during loading are retained. Each character starts with its own session, so absent metadata cannot inherit the preceding character's joint positions.
 
-The E-02, E-03, E-04, E-05, B-01 and B-03 sidecars now contain editable source-pose drafts from the NPC fitting review. Their joint anatomy still needs review. Existing E-01 and H-01 bindings are retained. Saving metadata does not export a rig or replace an existing rigged GLB; wrapper fitting, smooth skin and animation validation remain later steps.
+As of 2026-10-07, all nine characters have delivered rig assets and shared-motion integration. NPC source sidecars retain the user-saved source-pose joints and volume settings; B-03 additionally retains the complete IV prop's LeftHand selection. Saving metadata still does not regenerate a rig: follow the [rigging workflow](rigging/character-rigging-workflow.md) to compute, inspect, export, normalize and publish. See the [delivery record](rigging/character-rig-delivery-2026-10-07.md) for per-asset results and remaining art limits. The earlier verification below covers authoring persistence, rather than asserting current final skin quality.
 
 ## Verification, 2026-10-06
 
