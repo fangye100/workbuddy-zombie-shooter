@@ -10,9 +10,9 @@
     },
     "hemisphere": {
       "sky": "#9ebcdb",
-      "skyIntensity": 0.42,
+      "skyIntensity": 0.36,
       "ground": "#5e536e",
-      "groundIntensity": 0.2
+      "groundIntensity": 0.18
     },
     "fog": {
       "color": "#667899",
@@ -51,14 +51,14 @@
     },
     "comic": {
       "tonemapMode": 2,
-      "contactShadowOpacity": 0.45,
+      "contactShadowOpacity": 0.48,
       "outlineWidth": 1.6,
       "inkColor": "#14110f",
       "shadowMult": 0.72,
       "shadowMix": 0.2,
       "shadowTint": "#30283e",
       "litSat": 1.08,
-      "halftoneStrength": 0.18,
+      "halftoneStrength": 0.1,
       "halftoneSize": 5,
       "vignette": 0.04
     }
@@ -77,7 +77,8 @@
   "playerStart": "nd_f3_start",
   "loseCondition": "player-death",
   "dependencies": [
-    "assets/environment/models/road/synthetic/asphalt-130x18.glb",
+    "assets/art/models/streets/game_ready/floor-3-road.glb",
+    "assets/art/models/streets/game_ready/floor-3-yard.glb",
     "assets/environment/models/road/synthetic/asphalt-22x18.glb",
     "assets/environment/models/S-05/tex2/S-05_lod2.glb",
     "assets/environment/models/S-06/tex2/S-06_lod2.glb",
@@ -93,12 +94,24 @@
     "assets/environment/models/P-45/tex2/P-45_baked.glb",
     "assets/environment/models/P-46/tex2/P-46_lod2.glb",
     "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+    "assets/animations/mixamo/shared.motion.json",
     "assets/environment/models/P-31/tex2/P-31_lod2.glb",
     "assets/environment/models/P-32/tex2/P-32_lod2.glb",
     "assets/environment/models/P-33/tex2/P-33_lod2.glb",
     "assets/environment/models/P-42/tex2/P-42_lod2.glb",
     "assets/environment/models/P-43/tex2/P-43_lod2.glb",
-    "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+    "assets/art/models/ENV-MID-04/game_ready/ENV-MID-04_lod1.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+    "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+    "assets/art/models/ENV-MID-06/game_ready/ENV-MID-06_lod1.glb",
+    "assets/art/models/streets/game_ready/floor-3-curbs.glb",
+    "assets/art/models/streets/game_ready/floor-3-paint.glb",
+    "assets/art/models/streets/game_ready/floor-3-walks.glb",
     "assets/art/textures/SKY-01/SKY-01.png"
   ],
   "nodes": [
@@ -379,8 +392,8 @@
       "parent": null,
       "transform": {
         "position": [
-          29,
-          -0.23,
+          33,
+          -0.12,
           0
         ],
         "rotation": [
@@ -405,8 +418,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/road/synthetic/asphalt-130x18.glb",
-              "guid": "as_ybcment1"
+              "path": "assets/art/models/streets/game_ready/floor-3-road.glb",
+              "guid": "as_ac5a6860ec5f"
             }
           },
           "materials": [
@@ -423,141 +436,11 @@
                 },
                 "patch": {
                   "albedo": "#ffffff",
-                  "roughness": 0.94,
+                  "roughness": 0.96,
                   "metallic": 0,
+                  "specMix": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3_curb_-1",
-      "name": "连续路肩",
-      "parent": null,
-      "transform": {
-        "position": [
-          29,
-          -0.18,
-          -9.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              78,
-              0.2,
-              0.5
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#9c9b91",
-                  "roughness": 1,
-                  "outlineScale": 0.3
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3_curb_1",
-      "name": "连续路肩",
-      "parent": null,
-      "transform": {
-        "position": [
-          29,
-          -0.18,
-          9.25
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              78,
-              0.2,
-              0.5
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#9c9b91",
-                  "roughness": 1,
-                  "outlineScale": 0.3
+                  "halftoneScale": 0.04
                 }
               }
             }
@@ -983,9 +866,9 @@
       "parent": null,
       "transform": {
         "position": [
-          29,
-          -0.6,
-          0
+          33,
+          -0.14,
+          -30
         ],
         "rotation": [
           0,
@@ -1007,12 +890,11 @@
           "kind": "MeshRenderer",
           "enabled": true,
           "source": {
-            "type": "builtin",
-            "shape": "plane",
-            "params": [
-              220,
-              1
-            ]
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-3-yard.glb",
+              "guid": "as_5ff371c120bb"
+            }
           },
           "materials": [
             {
@@ -1027,12 +909,12 @@
                   "id": "s1"
                 },
                 "patch": {
-                  "albedo": "#4c536b",
-                  "roughness": 0.94,
+                  "albedo": "#c3c9ca",
+                  "roughness": 0.96,
                   "metallic": 0,
+                  "specMix": 0,
                   "outlineScale": 0,
-                  "halftoneScale": 0.18,
-                  "specMix": 0
+                  "halftoneScale": 0
                 }
               }
             }
@@ -1126,415 +1008,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_edge_n",
-      "name": "道路边线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          -8.65
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              21.5,
-              0.012,
-              0.12
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_edge_s",
-      "name": "道路边线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          8.65
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              21.5,
-              0.012,
-              0.12
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_lane_0",
-      "name": "道路导向标线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          -7.333333333333333,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              1.8333333333333333,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_lane_2",
-      "name": "道路导向标线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              1.8333333333333333,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_lane_4",
-      "name": "道路导向标线",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          7.333333333333333,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              1.8333333333333333,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_walk_-1",
-      "name": "路边人行道",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          0,
-          0.16,
-          -10.2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              24,
-              0.2,
-              2.4
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#898c84",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0.15,
-                  "halftoneScale": 0.18,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -1603,74 +1078,6 @@
           "importScale": 1,
           "aoMin": 0,
           "aoMax": 0.65
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r0_walk_1",
-      "name": "路边人行道",
-      "parent": "nd_f3r0",
-      "transform": {
-        "position": [
-          0,
-          0.16,
-          10.2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              24,
-              0.2,
-              2.4
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#898c84",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0.15,
-                  "halftoneScale": 0.18,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
         }
       ],
       "prefab": null
@@ -2257,7 +1664,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -2344,415 +1752,8 @@
           ],
           "visible": true,
           "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_edge_n",
-      "name": "道路边线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          -11.65
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              29.5,
-              0.012,
-              0.12
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_edge_s",
-      "name": "道路边线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          11.65
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              29.5,
-              0.012,
-              0.12
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#beb9a3",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_lane_0",
-      "name": "道路导向标线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          -10,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.5,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_lane_2",
-      "name": "道路导向标线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          0,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.5,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_lane_4",
-      "name": "道路导向标线",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          10,
-          0.115,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": false,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              2.5,
-              0.012,
-              0.14
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#d6b66a",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0,
-                  "halftoneScale": 0.1,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_walk_-1",
-      "name": "路边人行道",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          0,
-          0.16,
-          -13.2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              32,
-              0.2,
-              2.4
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#898c84",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0.15,
-                  "halftoneScale": 0.18,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
+          "importScale": 1,
+          "editorOnly": true
         }
       ],
       "prefab": null
@@ -2821,74 +1822,6 @@
           "importScale": 1,
           "aoMin": 0,
           "aoMax": 0.65
-        }
-      ],
-      "prefab": null
-    },
-    {
-      "id": "nd_f3r1_walk_1",
-      "name": "路边人行道",
-      "parent": "nd_f3r1",
-      "transform": {
-        "position": [
-          0,
-          0.16,
-          13.2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
-      },
-      "visible": true,
-      "pickable": true,
-      "category": "环境",
-      "components": [
-        {
-          "kind": "MeshRenderer",
-          "enabled": true,
-          "source": {
-            "type": "builtin",
-            "shape": "box",
-            "params": [
-              32,
-              0.2,
-              2.4
-            ]
-          },
-          "materials": [
-            {
-              "match": {
-                "by": "index",
-                "value": 0
-              },
-              "material": {
-                "type": "override",
-                "base": {
-                  "type": "shared",
-                  "id": "s1"
-                },
-                "patch": {
-                  "albedo": "#898c84",
-                  "roughness": 0.94,
-                  "metallic": 0,
-                  "outlineScale": 0.15,
-                  "halftoneScale": 0.18,
-                  "specMix": 0
-                }
-              }
-            }
-          ],
-          "visible": true,
-          "layer": 0,
-          "importScale": 1
         }
       ],
       "prefab": null
@@ -3962,17 +2895,1305 @@
     },
     {
       "id": "nd_f3_backdrop",
-      "name": "远景街区 · 冷色剪影",
+      "name": "ENV-FAR-01 · 街区",
       "parent": null,
       "prefab": null,
       "visible": true,
-      "pickable": false,
-      "category": "背景",
+      "pickable": true,
+      "category": "远景",
       "transform": {
         "position": [
-          33,
-          -0.4,
-          -27
+          0,
+          0,
+          -63
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.85,
+          0.85,
+          0.85
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+              "guid": "as_l792u0n7"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#c5d5e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f3_street_building_0",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+              "guid": "as_ajnc9xf8"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-03 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -25,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_art_mid01",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-01 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -7,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_art_mid02",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+              "guid": "as_pl5xllzm"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-02 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          14,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_building_3",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-04/game_ready/ENV-MID-04_lod1.glb",
+              "guid": "as_tiramaqo"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-04 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          36,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_art_mid03",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-01 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          58,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_building_5",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+              "guid": "as_ajnc9xf8"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-03 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          80,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_building_6",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+              "guid": "as_pl5xllzm"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#e7eaf6",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-02 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          103,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_art_far_repeat",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+              "guid": "as_xo8fin9z"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#c5d5e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-FAR-01 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          76,
+          0,
+          -65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.85,
+          0.85,
+          0.85
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_art_far02",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+              "guid": "as_fja39hbm"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b8c9dc",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-FAR-02 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          35,
+          0,
+          -100
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.6,
+          0.6,
+          0.6
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_0",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -21,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_1",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -4,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_2",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          13,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_3",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          30,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_4",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          47,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_5",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          64,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_6",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          81,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_wall_7",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          98,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_street_overpass",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-06/game_ready/ENV-MID-06_lod1.glb",
+              "guid": "as_zbkq4emj"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d5e2e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "高架桥 · 城市入口",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -30,
+          0,
+          -3
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          0.8
+        ]
+      }
+    },
+    {
+      "id": "nd_f3_curb_-1",
+      "name": "连续路缘 · 合批",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          -0.2800000011920929,
+          0
         ],
         "rotation": [
           0,
@@ -3986,18 +4207,18 @@
           1
         ]
       },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
       "components": [
         {
           "kind": "MeshRenderer",
           "enabled": true,
-          "visible": true,
-          "layer": 0,
-          "importScale": 1,
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/environment/models/backdrop/synthetic/industrial-quarter.glb",
-              "guid": "as_4vcbbdgd"
+              "path": "assets/art/models/streets/game_ready/floor-3-curbs.glb",
+              "guid": "as_1339dd0534fd"
             }
           },
           "materials": [
@@ -4014,18 +4235,153 @@
                 },
                 "patch": {
                   "albedo": "#ffffff",
-                  "roughness": 0.94,
+                  "roughness": 0.96,
                   "metallic": 0,
-                  "outlineScale": 0.18,
-                  "halftoneScale": 0.6,
                   "specMix": 0,
-                  "unlit": true
+                  "outlineScale": 0,
+                  "halftoneScale": 0
                 }
               }
             }
-          ]
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
         }
-      ]
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_edge_n",
+      "name": "道路涂装 · 合批",
+      "parent": null,
+      "transform": {
+        "position": [
+          29,
+          0.008999999612569809,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-3-paint.glb",
+              "guid": "as_6f8a897fc876"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f3r0_walk_-1",
+      "name": "连续铺装人行道",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.06499999761581421,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-3-walks.glb",
+              "guid": "as_f7246a64755b"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
     }
   ],
   "meta": {

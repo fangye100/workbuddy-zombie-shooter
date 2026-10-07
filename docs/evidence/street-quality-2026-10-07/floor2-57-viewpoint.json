@@ -1,0 +1,77 @@
+{
+  "before": {
+    "path": "assets/scenes/act1/floor-2.scene.json",
+    "name": "第二层 · 尸潮仓储区",
+    "revision": "f0b0cced",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  },
+  "stop": {
+    "state": "stopped",
+    "tick": 0,
+    "player": null,
+    "npcCount": 0,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 30,
+      "disposed": 30,
+      "pending": 0
+    },
+    "instances": 12,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02"
+    ],
+    "actorLibrarySize": 9
+  },
+  "editState": {
+    "path": "assets/scenes/act1/floor-2.scene.json",
+    "name": "第二层 · 尸潮仓储区",
+    "revision": "4ba5fe3c",
+    "dirty": true,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  },
+  "step": {
+    "state": "paused",
+    "tick": 1,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 11,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 57,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_f2_start",
+      "targetId": -1,
+      "behavior": 0,
+      "hp": 100,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 2
+    },
+    "npcCount": 9,
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 33,
+      "disposed": 30,
+      "pending": 3
+    },
+    "instances": 9,
+    "meshIds": [
+      "capsule:r0.500:h2.050",
+      "capsule:r0.340:h1.750"
+    ],
+    "actorLibrarySize": 0
+  }
+}

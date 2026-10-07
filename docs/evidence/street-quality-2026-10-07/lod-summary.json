@@ -1,0 +1,194 @@
+[
+  {
+    "id": "ENV-MID-01",
+    "level": 0,
+    "triangles": 28000,
+    "surfaceRatio": 0.9796451589401255,
+    "boundsDrift": 0.0012833253928483668,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-01",
+    "level": 1,
+    "triangles": 20000,
+    "surfaceRatio": 0.9713913402747186,
+    "boundsDrift": 0.0012833253928483668,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-01",
+    "level": 2,
+    "triangles": 14000,
+    "surfaceRatio": 0.9592267279524623,
+    "boundsDrift": 0.0012833253928483668,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-02",
+    "level": 0,
+    "triangles": 30000,
+    "surfaceRatio": 0.9617039813684237,
+    "boundsDrift": 0.0005690080746343362,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-02",
+    "level": 1,
+    "triangles": 22000,
+    "surfaceRatio": 0.9501479173486873,
+    "boundsDrift": 0.0012991024066194568,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-02",
+    "level": 2,
+    "triangles": 16000,
+    "surfaceRatio": 0.9345977087579834,
+    "boundsDrift": 0.0015825468073531468,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-01",
+    "level": 0,
+    "triangles": 32000,
+    "surfaceRatio": 0.9632028357132159,
+    "boundsDrift": 0.0010305129096572774,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-01",
+    "level": 1,
+    "triangles": 24000,
+    "surfaceRatio": 0.9519899415376684,
+    "boundsDrift": 0.001113150911650096,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-01",
+    "level": 2,
+    "triangles": 18000,
+    "surfaceRatio": 0.9392757477842306,
+    "boundsDrift": 0.001113150911650096,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-03",
+    "level": 0,
+    "triangles": 28000,
+    "surfaceRatio": 0.9869632822371034,
+    "boundsDrift": 0.000680202754867576,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-03",
+    "level": 1,
+    "triangles": 18000,
+    "surfaceRatio": 0.9808670728140865,
+    "boundsDrift": 0.000680202754867576,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-03",
+    "level": 2,
+    "triangles": 12000,
+    "surfaceRatio": 0.972956594316763,
+    "boundsDrift": 0.0007148096173165142,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-02",
+    "level": 0,
+    "triangles": 32000,
+    "surfaceRatio": 0.9856652628881418,
+    "boundsDrift": 0.00025037518792048186,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-02",
+    "level": 1,
+    "triangles": 22000,
+    "surfaceRatio": 0.979216170015515,
+    "boundsDrift": 0.00025037518792048186,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-FAR-02",
+    "level": 2,
+    "triangles": 16000,
+    "surfaceRatio": 0.9704315972686082,
+    "boundsDrift": 0.00025037518792048186,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-04",
+    "level": 0,
+    "triangles": 32000,
+    "surfaceRatio": 0.9793344679834971,
+    "boundsDrift": 0.00023745516032958047,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-04",
+    "level": 1,
+    "triangles": 22000,
+    "surfaceRatio": 0.966602017589913,
+    "boundsDrift": 0.00037458387167099705,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-04",
+    "level": 2,
+    "triangles": 15000,
+    "surfaceRatio": 0.9489933978416283,
+    "boundsDrift": 0.00037458387167099705,
+    "structure": "insufficient-planar-coverage"
+  },
+  {
+    "id": "ENV-MID-05",
+    "level": 0,
+    "triangles": 22000,
+    "surfaceRatio": 0.9698083596764093,
+    "boundsDrift": 0.0008648345972308569,
+    "structure": "measured"
+  },
+  {
+    "id": "ENV-MID-05",
+    "level": 1,
+    "triangles": 15000,
+    "surfaceRatio": 0.9644371193220402,
+    "boundsDrift": 0.0008648345972308569,
+    "structure": "measured"
+  },
+  {
+    "id": "ENV-MID-05",
+    "level": 2,
+    "triangles": 10000,
+    "surfaceRatio": 0.9531277788845789,
+    "boundsDrift": 0.004158698355181012,
+    "structure": "measured"
+  },
+  {
+    "id": "ENV-MID-06",
+    "level": 0,
+    "triangles": 30000,
+    "surfaceRatio": 0.9961574283828548,
+    "boundsDrift": 0.00015076857167084512,
+    "structure": "measured"
+  },
+  {
+    "id": "ENV-MID-06",
+    "level": 1,
+    "triangles": 20000,
+    "surfaceRatio": 0.9940263323847373,
+    "boundsDrift": 0.00033925783456822955,
+    "structure": "measured"
+  },
+  {
+    "id": "ENV-MID-06",
+    "level": 2,
+    "triangles": 14000,
+    "surfaceRatio": 0.9916047933036274,
+    "boundsDrift": 0.00033925783456822955,
+    "structure": "measured"
+  }
+]

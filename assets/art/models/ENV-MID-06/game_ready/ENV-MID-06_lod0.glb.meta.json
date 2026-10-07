@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_jzpk0bv6",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "game_ready",
+    "file": "ENV-MID-06_lod0.glb",
+    "assetId": "ENV-MID-06",
+    "status": "runtime-candidate",
+    "lod": 0,
+    "provenance": "assets/art/sources/ENV-MID-06/ENV-MID-06_source.glb",
+    "replacementContract": "Keep runtime path, sidecar GUID, metre scale and ground/grip pivot.",
+    "report": "assets/art/models/ENV-MID-06/lod-report.json",
+    "visualReview": "accepted-desktop-gallery",
+    "visualEvidence": "docs/evidence/street-quality-2026-10-07/lods-ENV-MID-06.jpg"
+  },
+  "sourceHash": "sha256:bacc6a730155aa55f6af90f35b89a5a2208f8aac19d3632ad6c1fd66a521c06a",
+  "updatedAt": "2026-10-07T04:33:09.283Z"
+}

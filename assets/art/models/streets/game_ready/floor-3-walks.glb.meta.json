@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_f7246a64755b",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "status": "authored",
+    "provenance": "tools/art/refine-streets.mjs",
+    "variant": "game_ready",
+    "file": "floor-3-walks.glb"
+  },
+  "sourceHash": "sha256:104bdce3b76c12aa3c6c738b4eb5324ad495c87bc730f946225fbc2f0377a007",
+  "updatedAt": "2026-10-05T07:55:37.096Z"
+}

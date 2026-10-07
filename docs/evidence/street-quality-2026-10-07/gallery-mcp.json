@@ -1,0 +1,75 @@
+{
+  "stop": {
+    "ok": true,
+    "runtime": {
+      "state": "stopped",
+      "tick": 0,
+      "player": null,
+      "npcCount": 0,
+      "diagnostics": [],
+      "runtimeDiagnostics": [],
+      "ledger": {
+        "registered": 15,
+        "disposed": 15,
+        "pending": 0
+      },
+      "instances": 6,
+      "meshIds": [
+        "actor:E-04",
+        "actor:E-02"
+      ],
+      "actorLibrarySize": 9
+    },
+    "state": {
+      "path": "assets/scenes/act1/floor-3.scene.json",
+      "name": "第三层 · 暗巷撤离站",
+      "revision": "867292f8",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "open": {
+    "ok": true,
+    "loaded": {
+      "objects": 27,
+      "warnings": [],
+      "assetFailures": []
+    },
+    "state": {
+      "path": "assets/scenes/sandbox/p0-art-gallery.scene.json",
+      "name": "P0 · 建筑结构与 LOD 验收",
+      "revision": "b44e90c1",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "validation": {
+    "ok": true,
+    "valid": true,
+    "diagnostics": [
+      {
+        "severity": "warning",
+        "path": "/playerStart",
+        "code": "W_PLAYER_START_UNSET",
+        "message": "playerStart 未指定，Play 将拒绝启动（玩家出生点不能靠隐式推导）"
+      }
+    ],
+    "authorError": null,
+    "state": {
+      "path": "assets/scenes/sandbox/p0-art-gallery.scene.json",
+      "name": "P0 · 建筑结构与 LOD 验收",
+      "revision": "b44e90c1",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  }
+}

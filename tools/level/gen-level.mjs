@@ -29,6 +29,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 import { applyP0Art } from '../art/apply-p0-art.mjs';
+import { refineStreet } from '../art/refine-streets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -37,7 +38,7 @@ const PROJECT_FILE = 'aether.project.json';
 // 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
 // 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
 // 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -743,8 +744,18 @@ function main() {
   const register = [];
 
   for (const floor of FLOORS) {
-    const doc = applyP0Art(applyEnvironmentArtPass(buildFloor(floor), ROOT), ROOT);
     const relPath = `${SCENE_DIR}/floor-${floor.depth}.scene.json`;
+    const previousFile=path.join(ROOT,relPath);
+    const previous=fs.existsSync(previousFile)?JSON.parse(fs.readFileSync(previousFile,'utf8')):null;
+    const doc = refineStreet(applyP0Art(applyEnvironmentArtPass(buildFloor(floor), ROOT), ROOT));
+    // Preserve latest rig/shared-motion presentation instead of reverting the player.
+    const previousPlayer=previous?.nodes.find(n=>n.id===previous.playerStart);
+    const player=doc.nodes.find(n=>n.id===doc.playerStart);
+    const previousMesh=previousPlayer?.components.find(c=>c.kind==='MeshRenderer');
+    if(previousMesh){player.components=player.components.map(c=>c.kind==='MeshRenderer'?structuredClone(previousMesh):c);player.name=previousPlayer.name;}
+    const previousCamera=previous?.nodes.find(n=>n.id===previous.entryCamera)?.components.find(c=>c.kind==='Camera');
+    if(previousCamera){const cameraNode=doc.nodes.find(n=>n.id===doc.entryCamera);cameraNode.components=cameraNode.components.map(c=>c.kind==='Camera'?structuredClone(previousCamera):c);}
+    doc.dependencies=[...new Set([...doc.nodes.flatMap(n=>n.components.flatMap(c=>c.kind==='MeshRenderer'&&c.source.type==='asset'?[c.source.ref.path,...(c.sharedMotion?[c.sharedMotion.library.path]:[])]:[])),...(doc.environment.sky?.texture?[doc.environment.sky.texture.path]:[])])];
     writeJson(relPath, doc);
     register.push({ path: relPath, id: doc.id, enabled: true });
 

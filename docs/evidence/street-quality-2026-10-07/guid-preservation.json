@@ -1,0 +1,92 @@
+[
+  {
+    "id": "ENV-MID-01",
+    "lod": 0,
+    "guid": "as_nmkxsq8f",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-01",
+    "lod": 1,
+    "guid": "as_rbmicl5d",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-01",
+    "lod": 2,
+    "guid": "as_m2c5wd12",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-02",
+    "lod": 0,
+    "guid": "as_mllknqxy",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-02",
+    "lod": 1,
+    "guid": "as_pl5xllzm",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-02",
+    "lod": 2,
+    "guid": "as_cjt5ole5",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-03",
+    "lod": 0,
+    "guid": "as_q5jqjyii",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-03",
+    "lod": 1,
+    "guid": "as_ajnc9xf8",
+    "preserved": true
+  },
+  {
+    "id": "ENV-MID-03",
+    "lod": 2,
+    "guid": "as_49mfjgq1",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-01",
+    "lod": 0,
+    "guid": "as_pdav0fmg",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-01",
+    "lod": 1,
+    "guid": "as_l792u0n7",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-01",
+    "lod": 2,
+    "guid": "as_xo8fin9z",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-02",
+    "lod": 0,
+    "guid": "as_8os4us8v",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-02",
+    "lod": 1,
+    "guid": "as_fja39hbm",
+    "preserved": true
+  },
+  {
+    "id": "ENV-FAR-02",
+    "lod": 2,
+    "guid": "as_mw2vrprk",
+    "preserved": true
+  }
+]

@@ -159,3 +159,35 @@ A desktop FPS spot sample is not sustained/mobile performance certification. A p
 - [P0 intake](../32-P0-asset-intake-2026-10-05.md): current asset budgets, gallery, sky persistence/failure evidence and Play/Stop scope.
 
 As of the documented revision, final MID-03/FAR-02 models, atlas repair/GPU integration, player weapon attachment, mobile profiling and further design matching remain open. The pistol is available in the gallery/asset browser; that is not a completed player-weapon integration. Full editor MCP coverage remains separate development work.
+
+## 9. Architectural LOD and continuous streets — 2026-10-07 update
+
+MID-03/FAR-02 have now arrived, together with MID-04/05/06. See the
+[street quality delivery](../36-StreetQualityAndArchitecturalLOD.md) for the new
+budgets, scene counts and revision-specific evidence; the earlier numbers above
+remain historical rather than current acceptance claims.
+
+- For buildings, compare endpoint-preserving textured QEM against unconstrained
+  vertex relocation. Preserve normals, boundaries and UV seams, enable planar
+  quadrics, and raise roof/window/bridge budgets before accepting visible folds.
+  None of these options guarantees a straight source or a perfect simplification.
+- Global area/bounds checks can miss a locally folded roof. Compare local output
+  normals and offsets against coherent source planes. Report the qualifying coverage;
+  noisy generated surfaces may make the metric inconclusive. Do not turn insufficient
+  coverage into an automatic artistic pass, or classify intentional gables/damage as
+  invented slopes. Keep textured near views and the actual gameplay view as separate
+  acceptance checks.
+- Batch only decorations whose identities are not referenced and whose transforms
+  the authoring tool can correctly bake. Keep gameplay nodes separate, preserve the
+  retained NodeId and reject unsupported parent scale/rotation instead of guessing.
+- Check the importer's pivot contract. This project's GLB parser recenters X/Z and
+  grounds Y even when scale normalization is disabled. A world-space baked street
+  batch therefore needs its original center/minimum restored in the scene transform.
+  Otherwise a valid GLB can shift curbs or bury road paint.
+- Replace disconnected road/walk fragments with continuous authored surfaces and
+  extend the apron beneath the skyline. A repeated building does not conceal a ground
+  plane that ends before its base. Judge near/middle/far coverage from the whole
+  playable street, including entry, supply area and last-room viewpoints.
+- After merging animation work, explicit scene regeneration must retain the latest
+  player's rig, shared-motion library and game camera. Verify those actual components
+  before and after regeneration; an assertion on a missing node proves nothing.

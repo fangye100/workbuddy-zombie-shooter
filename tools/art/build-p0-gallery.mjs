@@ -9,12 +9,13 @@ await build({entryPoints:[path.join(root,'packages/scene/src/index.ts')],bundle:
 const {createEmptySceneDocument}=await import(pathToFileURL(bundle).href);
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8'));
 const write=(p,v)=>fs.writeFileSync(path.join(root,p),JSON.stringify(v,null,2)+'\n');
-const doc=createEmptySceneDocument('P0 · LOD 与占位资产验收');doc.id='sc_p0_art_gallery';
+const doc=createEmptySceneDocument('P0 · 建筑结构与 LOD 验收');doc.id='sc_p0_art_gallery';
 const floor=read('assets/scenes/act1/floor-1.scene.json');
 doc.environment=structuredClone(floor.environment);doc.environment.fog.density=0;doc.environment.sky.textureYaw=65;
 doc.editorCamera={target:[4,0,9.5],distance:29,yaw:.4,elevation:.85};
 doc.nodes=doc.nodes.filter(n=>n.id===doc.entryCamera).concat(floor.nodes.filter(n=>n.components.some(c=>c.kind==='Light')).map(n=>({...n,id:n.id.replace('nd_f1','nd_p0')})));
 const entries=read('assets/art/p0-intake.json').models;
+doc.editorCamera={target:[4,0,(entries.length-1)*1.9],distance:entries.length*4.6,yaw:.4,elevation:.85};
 entries.forEach((e,row)=>{
  const dimensions=e.status==='delivered'?read(`assets/art/models/${e.id}/lod-report.json`).dimensions:[e.size[0],e.size[2],e.size[1]];
  const scale=2.8/Math.max(...dimensions);
