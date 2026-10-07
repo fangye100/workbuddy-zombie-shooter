@@ -1,5 +1,7 @@
 # 战斗动作与特效追加资产需求（WorkBuddy 执行稿）
 
+Related sound-effect production requirements: [Gameplay audio asset brief](40-GameplayAudioAssetBrief.md).
+
 版本 2026-10-07。延续 docs/31 的美漫规范；本清单是新增资源需求，不接管正在进行的角色绑定工作。现有环境模型及 LOD 复用，不要求重新生成角色 mesh。
 
 ## 交付约定

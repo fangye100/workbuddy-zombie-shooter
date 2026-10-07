@@ -1,5 +1,8 @@
 # Unified weapons and animation integration
 
+Sound-effect IDs, production specifications and proposed event mappings are in
+[the gameplay audio asset brief](40-GameplayAudioAssetBrief.md).
+
 The six weapon families in GDD 13 section 5.1 now share one equipment, ammo,
 upgrade and animation lifecycle. An additional launcher exercises the projectile
 extension. Its tuning is a prototype, not an addition to the approved GDD roster.
