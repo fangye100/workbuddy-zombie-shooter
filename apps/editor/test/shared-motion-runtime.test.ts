@@ -25,6 +25,9 @@ describe('shared motions at runtime', () => {
     files.set(binding.library.path, JSON.stringify(lib));
     const [a, b] = await Promise.all([runtime.resolve(sk, binding), runtime.resolve(sk, { ...binding, speed: 2, defaultState: 'idle' })]);
     expect(a).toBe(b); expect(runtime.stats.solves).toBe(2); expect(runtime.stats.cacheHits).toBe(1);
+    const slower = await runtime.resolve(sk, { ...binding, transitionSec: 1 });
+    expect(slower.clips).toBe(a.clips); expect(slower.transitionSec).toBe(1);
+    expect(a.transitionSec).toBe(.2); expect(runtime.stats.solves).toBe(2);
   });
   it('keeps different limb lengths intact and scales nominal gait speed by pelvis height', async () => {
     const { runtime, files } = fixture(), sk = skeletonFromFitPositions(tposeWorldPositions());

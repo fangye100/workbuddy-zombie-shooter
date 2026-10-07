@@ -1,6 +1,6 @@
 /** Structured author form. Draft input is local; only Apply enters the shared document/history. */
 import type { SceneDocument, SceneNode, RunRulesComponent } from '@aether/scene';
-import { BODY_IK_PARTS, newBodyIkControl } from '@aether/scene';
+import { BODY_IK_PARTS, DEFAULT_MOTION_TRANSITION_SEC, newBodyIkControl } from '@aether/scene';
 import { newAuthorNode, newRunRules, removeNodeTree, type EditResult } from '@aether/runtime';
 import { t } from '../i18n';
 import './scene-author.css';
@@ -136,7 +136,15 @@ export class SceneAuthorPanel {
         button('禁用程序化 IK', () => { mesh.bodyIk = null; redrawDraft(); }, ikSection);
         const section = document.createElement('fieldset'), legend = document.createElement('legend');
         legend.textContent = t('共享动作库 · Runtime 重定向'); section.append(legend); form.append(section);
-        if (mesh.sharedMotion) fields(section, mesh.sharedMotion as unknown as Record<string, unknown>, ['library', 'profile', 'defaultState', 'speed'], 'MeshRenderer.sharedMotion');
+        if (mesh.sharedMotion) {
+          fields(section, mesh.sharedMotion as unknown as Record<string, unknown>, ['library', 'profile', 'defaultState', 'speed'], 'MeshRenderer.sharedMotion');
+          const label = document.createElement('label'); label.textContent = '姿态过渡时长 (秒，0 = 直接切换)';
+          const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.max = '5'; input.step = '.01';
+          input.value = String(mesh.sharedMotion.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC);
+          input.setAttribute('aria-label', 'MeshRenderer.sharedMotion.transitionSec');
+          input.oninput = () => { mesh.sharedMotion!.transitionSec = input.value.trim() ? Number(input.value) : NaN; dirty(); };
+          label.append(input); section.append(label);
+        }
         button('绑定共享动作库', () => {
           mesh.sharedMotion = { library: { path: '', guid: '' }, profile: '', defaultState: 'idle', speed: 1 }; redrawDraft();
         }, section);

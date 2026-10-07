@@ -1,7 +1,7 @@
 /** Play-owned animation presentation for authored skinned scene nodes. */
-import type { SceneDocument } from '@aether/scene';
+import { DEFAULT_MOTION_TRANSITION_SEC, type SceneDocument } from '@aether/scene';
 import type { RuntimeSession } from '@aether/runtime';
-import { createSkinState, selectClip } from '@aether/render';
+import { advancePoseTransition, createSkinState, selectClip } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';
 import { bodyAimActive } from './runtime-body-ik';
@@ -70,11 +70,11 @@ export class RuntimeSceneMotion {
     const entry = this.entries.get(nodeId); if (!entry || !entry.result.states[state]) return false;
     this.select(entry, state, true); return true;
   }
-  private select(entry: Entry, state: string, manual: boolean): void {
+  private select(entry: Entry, state: string, manual: boolean, immediate = false): void {
     const skin = entry.object.skinState;
     if (!skin || !entry.result.states[state]) return;
-    if (entry.state !== state || manual) {
-      selectClip(skin, skin.clips.findIndex(c => c.name === state)); entry.startTick = this.tick;
+    if (entry.state !== state || manual || immediate) {
+      selectClip(skin, skin.clips.findIndex(c => c.name === state), immediate || !entry.state ? 0 : entry.result.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC); entry.startTick = this.tick;
       entry.elapsed = 0; entry.lastTick = this.tick;
     }
     entry.state = state; entry.manual = manual; skin.playing = false;
@@ -87,7 +87,7 @@ export class RuntimeSceneMotion {
     if (player && this.runId !== player.runId) {
       this.runId = player.runId; this.lastPlayer = null; this.playerSpeed = 0;
       for (const entry of this.entries.values()) {
-        this.select(entry, entry.defaultState, false);
+        this.select(entry, entry.defaultState, false, true);
         entry.startTick = runtime.tick; entry.manual = false; entry.elapsed = 0; entry.lastTick = runtime.tick;
       }
     }
@@ -106,7 +106,9 @@ export class RuntimeSceneMotion {
       }
       const config = entry.result.states[entry.state]!, clip = skin.clips[skin.clip]!;
       const gait = entry.player && !entry.manual && config.nominalSpeedMps ? this.playerSpeed / (config.nominalSpeedMps * entry.object.scale) : 1;
-      entry.elapsed += Math.max(0, this.tick - entry.lastTick) * this.step * entry.speed * gait;
+      const dt = Math.max(0, this.tick - entry.lastTick) * this.step;
+      advancePoseTransition(skin, dt);
+      entry.elapsed += dt * entry.speed * gait;
       entry.lastTick = this.tick;
       const time = entry.elapsed;
       skin.time = config.loop && clip.duration > 0 ? time % clip.duration : Math.min(time, clip.duration);
@@ -116,6 +118,7 @@ export class RuntimeSceneMotion {
   summary() {
     return { pending: this.pending, errors: [...this.errors], stats: { ...this.library.stats }, nodes: [...this.entries.values()].map(e => ({
       nodeId: e.nodeId, name: e.name, key: e.result.key, state: e.state, time: e.object.skinState?.time,
+      transition: e.object.skinState?.transition ? { elapsed: e.object.skinState.transition.elapsed, duration: e.object.skinState.transition.duration } : null,
       clips: e.result.clips.map(c => c.name), joints: e.object.skeleton?.joints.length,
       reports: e.result.reports.map(r => ({ state: r.state, status: r.status, warnings: [...new Set(r.diagnostics.filter(d => d.severity !== 'info').map(d => d.code))], metrics: r.metrics })),
     })) };

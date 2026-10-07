@@ -3,6 +3,7 @@
 The animation module evaluates the existing clip first, then applies authored
 HumanIK controls to selected bone chains. Imported FBX motion baked into the
 target's `AnimClip` and shared runtime retarget clips use the same sampler.
+State changes now use [pose transitions](pose-transitions.md) before the IK layer.
 Weight zero retains the sampled motion; weight one applies the full IK result.
 Effective weight is `binding.weight * control.weight`, using shortest-arc local
 quaternion interpolation. Translation, scale, hips and unrelated local tracks

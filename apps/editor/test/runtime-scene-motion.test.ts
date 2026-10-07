@@ -27,6 +27,18 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('advances transitions only on fixed ticks, clears them on rerun and restores author state on Stop', async () => {
+    const f = fixture(), original = f.object.skinState; f.result.transitionSec = .2;
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    f.motion.sync(f.rt(0,0)); f.motion.setState('player','walk');
+    expect(f.object.skinState.transition!.elapsed).toBe(0);
+    f.motion.sync(f.rt(3,0)); expect(f.object.skinState.transition!.elapsed).toBeCloseTo(.1);
+    f.motion.sync(f.rt(3,0)); expect(f.object.skinState.transition!.elapsed).toBeCloseTo(.1);
+    f.motion.setState('player','run'); expect(f.object.skinState.transition!.elapsed).toBe(0);
+    f.motion.sync(f.rt(6,0)); f.motion.sync(f.rt(9,0)); expect(f.object.skinState.transition).toBeUndefined();
+    f.motion.setState('player','walk'); f.motion.sync(f.rt(0,0,2)); expect(f.object.skinState.transition).toBeUndefined();
+    f.motion.setState('player','walk'); f.motion.stop(); expect(f.object.skinState).toBe(original); expect(original.transition).toBeUndefined();
+  });
   it('keeps gait while procedural aim is active and returns to shoot when IK weight is zero', async () => {
     const f = fixture(); f.result.states.shoot = { loop: false }; f.result.clips.push({ name: 'shoot', duration: .5, tracks: [] });
     f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));

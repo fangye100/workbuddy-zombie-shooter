@@ -72,7 +72,7 @@ describe('scene-authored player presentation', () => {
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
     expect(result.to).toBe(SCHEMA_VERSION);
-    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'humanik-procedural-body-controls']);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'humanik-procedural-body-controls', 'motion-pose-transitions']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });

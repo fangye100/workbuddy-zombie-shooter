@@ -20,7 +20,7 @@ import { COMMON_WGSL } from './common.wgsl';
  * 蒙皮顶点约定（docs/20 §3.3）。
  *
  * 蒙皮（docs/20 §2 烘焙姿态调色板）：动画在加载期逐帧烘进 storage 调色板，
- * 运行期 CPU 零重算；每实例只带「播到第几帧」（poseIndex），shader 查表蒙皮。
+ * 运行期按 poseIndex 查表；状态切换时快照当前混合矩阵，shader 混合到新动作。
  * flags bit0 = 0 的实例（未加载到真模型的 characterId）走胶囊代理老路，
  * 顶点缓冲仍是全零的 skin slot —— 管线声明了 slot 1 就必须绑，哪怕不读。
  *
@@ -61,7 +61,7 @@ struct Toon {
 };
 
 /**
- * 一个动态实例：位置 + 朝向 + 缩放 + 颜色 + 蒙皮状态，共 64 B（16 float）。
+ * 一个动态实例：位置 + 朝向 + 缩放 + 颜色 + 蒙皮/过渡状态，共 80 B（20 float）。
  * 布局与 docs/20 §3.1、renderer-core.ts 的 DYNAMIC_INSTANCE_FLOATS 一一对应，
  * 改一边必须改另一边（三处同步：本文件 / renderer-core.ts / runtime-bridge.ts）。
  */
@@ -70,6 +70,7 @@ struct DInst {
   scale : vec4f,    // scaleX, scaleY, scaleZ, paletteBase (matrix offset)
   color : vec4f,    // albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
   anim : vec4f,     // clipFrameCount, phase01, flags(bit0=蒙皮), jointCount
+  blend : vec4f,    // target weight, snapshot matrix base, reserved, reserved
 };
 
 @group(0) @binding(0) var<uniform> frame : Frame;
@@ -78,6 +79,7 @@ struct DInst {
 @group(0) @binding(3) var<storage, read> inst : array<DInst>;
 /** 烘焙姿态调色板：[(paletteBase + poseIndex) * PALETTE_JOINT_COUNT + joint] 的 mat4 */
 @group(0) @binding(4) var<storage, read> palette : array<mat4x4f>;
+@group(0) @binding(5) var<storage, read> snapshots : array<mat4x4f>;
 @group(1) @binding(0) var albedoTex : texture_2d<f32>;
 @group(1) @binding(1) var albedoSampler : sampler;
 
@@ -96,6 +98,15 @@ struct FragOut {
 
 const OUTLINE_REF_DIST : f32 = 6.0;
 
+fn poseMatrix(i : DInst, joint : u32) -> mat4x4f {
+  let poseB = palette[u32(i.scale.w) + u32(i.color.w) * u32(i.anim.w) + joint];
+  if (i.blend.x >= 1.0) { return poseB; }
+  let poseA = snapshots[u32(i.blend.y) + joint];
+  let t = clamp(i.blend.x, 0.0, 1.0);
+  return mat4x4f(mix(poseA[0], poseB[0], t), mix(poseA[1], poseB[1], t),
+    mix(poseA[2], poseB[2], t), mix(poseA[3], poseB[3], t));
+}
+
 /** 绕 Y 轴旋转（yaw），再平移到实例位置。动态实体不俯仰不翻滚 */
 fn place(i : DInst, p : vec3f) -> vec3f {
   let c = cos(i.posYaw.w);
@@ -112,12 +123,11 @@ fn place(i : DInst, p : vec3f) -> vec3f {
  */
 fn skinPos(i : DInst, p : vec3f, joints : vec4u, w : vec4f) -> vec3f {
   if ((u32(i.anim.z) & 1u) == 0u) { return p; }
-  let base = u32(i.scale.w) + u32(i.color.w) * u32(i.anim.w);
   var acc = vec3f(0.0);
   for (var k = 0u; k < 4u; k = k + 1u) {
     let wi = w[k];
     if (wi <= 0.0) { continue; }
-    let m = palette[base + joints[k]];
+    let m = poseMatrix(i, joints[k]);
     acc = acc + wi * (m * vec4f(p, 1.0)).xyz;
   }
   return acc;
@@ -131,12 +141,11 @@ fn skinPos(i : DInst, p : vec3f, joints : vec4u, w : vec4f) -> vec3f {
  */
 fn skinDir(i : DInst, d : vec3f, joints : vec4u, w : vec4f) -> vec3f {
   if ((u32(i.anim.z) & 1u) == 0u) { return d; }
-  let base = u32(i.scale.w) + u32(i.color.w) * u32(i.anim.w);
   var acc = vec3f(0.0);
   for (var k = 0u; k < 4u; k = k + 1u) {
     let wi = w[k];
     if (wi <= 0.0) { continue; }
-    let m = palette[base + joints[k]];
+    let m = poseMatrix(i, joints[k]);
     acc = acc + wi * (m * vec4f(d, 0.0)).xyz;
   }
   return acc;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mat4, invert, eulerToQuat } from '@aether/core';
-import { createBodyIkState, createSkinState, evalJointMatrices } from '@aether/render';
+import { advancePoseTransition, createBodyIkState, createSkinState, evalJointMatrices, sampleAnimationPose, selectClip } from '@aether/render';
 import { newBodyIkControl, type BodyIkPart, type BodyIkBinding } from '@aether/scene';
 import { skeletonFromFitPositions } from '../../../apps/editor/src/services/binding/retarget-session';
 import { tposeWorldPositions } from '../../../apps/editor/src/services/binding/humanik-template';
@@ -21,6 +21,13 @@ function fixture(part: BodyIkPart = 'leftHand') {
   return { sk, skin, binding, control, out, position };
 }
 describe('post-animation HumanIK blending', () => {
+  it('applies IK after pose transition and never captures IK into the next animation snapshot', () => {
+    const f = fixture(); f.skin.clips = [{ name:'A', duration:1, tracks:[] },{ name:'B', duration:1, tracks:[] }];
+    f.skin.clip=0; const solved=f.out(); selectClip(f.skin,1,.2); advancePoseTransition(f.skin,.1);
+    expect(sampleAnimationPose(f.skin)).toEqual(f.sk.locals);
+    expect(f.out()).toEqual(solved);
+    selectClip(f.skin,0,.2); expect(sampleAnimationPose(f.skin)).toEqual(f.sk.locals); expect(f.out()).toEqual(solved);
+  });
   it('reaches a hand target at full weight, retaining hips and both legs', () => {
     const f = fixture(), old = structuredClone(f.sk.locals);
     f.skin.bodyIk!.binding.weight = 0; const base = f.out();

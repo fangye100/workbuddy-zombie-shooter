@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "id": "sc_body_ik_validation",
   "name": "HumanIK · 分部位动画混合",
   "act": null,
@@ -311,7 +311,8 @@
             },
             "profile": "player",
             "defaultState": "run",
-            "speed": 1
+            "speed": 1,
+            "transitionSec": 0.6
           },
           "bodyIk": {
             "enabled": true,

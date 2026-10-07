@@ -186,7 +186,8 @@ async function main() {
         for (const b of batches) {
           if (!b.meshId.startsWith('actor:')) continue;
           for (let i = 0; i < b.count; i++) {
-            out[b.meshId + '#' + i] = { pose: b.instances[i * 16 + 11], base: b.instances[i * 16 + 7] };
+            const stride = window.__editor.bridge.instanceStride;
+            out[b.meshId + '#' + i] = { pose: b.instances[i * stride + 11], base: b.instances[i * stride + 7] };
           }
         }
         return out;
