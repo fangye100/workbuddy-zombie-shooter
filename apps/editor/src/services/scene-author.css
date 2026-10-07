@@ -1,4 +1,11 @@
 #scene-author-panel { padding: 10px; border-bottom: 1px solid #38404b; }
+#runtime-body-ik-panel { position: fixed; right: 14px; bottom: 14px; z-index: 80; max-width: 340px; max-height: 55vh; overflow: auto; padding: 8px; background: var(--panel); border: 2px solid var(--ink); border-radius: 6px; font-size: 11px; }
+#runtime-body-ik-panel[hidden], body.game-view #runtime-body-ik-panel { display: none !important; }
+#runtime-body-ik-panel summary { cursor: pointer; }
+#runtime-body-ik-panel label { display: flex; gap: 6px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+#runtime-body-ik-panel input[type=range] { width: 140px; }
+#runtime-body-ik-panel .warn { overflow-wrap: anywhere; color: #edc482; }
+@media (max-width: 800px) { #runtime-body-ik-panel { right: 10px; bottom: 10px; max-width: 270px; max-height: 40vh; } }
 .atmosphere-panel { padding: 10px; border-bottom: 1px solid #38404b; }
 .atmosphere-panel fieldset { border: 0; padding: 6px 0; min-width: 0; }
 .atmosphere-panel label { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:7px 0; font-size:11px; }

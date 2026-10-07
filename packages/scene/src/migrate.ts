@@ -347,6 +347,10 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if (!listMigrations().some(m => m.from === 12 && m.to === 13)) registerMigration({
+    from: 12, to: 13, name: 'humanik-procedural-body-controls',
+    run: doc => ({ ...doc }),
+  });
   if (!listMigrations().some((m) => m.from === 1 && m.to === 2)) {
     registerMigration(migrateV1ToV2);
   }

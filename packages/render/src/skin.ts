@@ -17,9 +17,11 @@
 
 import * as m4 from '@aether/core';
 import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene';
+import { applyBodyIk, type BodyIkState } from './body-ik';
 
 /** 一个物体的蒙皮动画播放状态 */
 export interface SkinState {
+  bodyIk?: BodyIkState;
   skeleton: SkeletonData;
   clips: AnimClip[];
   /** 当前片段下标；-1 = 停在 bind pose（不播） */
@@ -247,6 +249,7 @@ export function evalJointMatrices(state: SkinState, out: Float32Array): void {
   const n = sk.joints.length;
   const clip = state.clip >= 0 ? state.clips[state.clip]! : null;
   const locals = sampleLocals(sk, clip, state.time);
+  if (state.bodyIk) applyBodyIk(sk, locals, state.bodyIk);
 
   // 逐节点世界矩阵（父子链累乘，与 gltf.ts 解析 inverseBind 同空间）
   while (SCRATCH_WORLD.length < sk.parent.length) SCRATCH_WORLD.push(m4.mat4());

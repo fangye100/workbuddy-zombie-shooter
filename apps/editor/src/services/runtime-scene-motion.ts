@@ -4,6 +4,7 @@ import type { RuntimeSession } from '@aether/runtime';
 import { createSkinState, selectClip } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';
+import { bodyAimActive } from './runtime-body-ik';
 
 type MotionObject = Pick<SceneObject, 'skeleton' | 'animations' | 'skinState' | 'loadedAssetPath' | 'removed' | 'scale'>;
 interface Entry {
@@ -99,7 +100,8 @@ export class RuntimeSceneMotion {
       const clipConfig = entry.result.states[entry.state]!;
       if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) entry.manual = false;
       if (entry.player && !entry.manual) {
-        const state = runtime.firing && entry.result.states.shoot ? 'shoot' : this.playerSpeed > 2.5 && entry.result.states.run ? 'run' : this.playerSpeed > .05 ? 'walk' : 'idle';
+        const keepGait = skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk);
+        const state = runtime.firing && !keepGait && entry.result.states.shoot ? 'shoot' : this.playerSpeed > 2.5 && entry.result.states.run ? 'run' : this.playerSpeed > .05 ? 'walk' : 'idle';
         this.select(entry, entry.result.states[state] ? state : entry.defaultState, false);
       }
       const config = entry.result.states[entry.state]!, clip = skin.clips[skin.clip]!;

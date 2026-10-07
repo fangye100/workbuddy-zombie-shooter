@@ -51,6 +51,8 @@ import { PlayController } from './services/play-controller';
 import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
+import { RuntimeBodyIk } from './services/runtime-body-ik';
+import { BodyIkPanel } from './services/body-ik-panel';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
@@ -211,6 +213,13 @@ async function boot(): Promise<void> {
     const index = renderer.findObjectIndexByNodeId(nodeId);
     return index === null ? null : renderer.state.objects[index] ?? null;
   }, () => { hudDirty = true; });
+  const bodyIk = new RuntimeBodyIk(nodeId => {
+    const index = renderer.findObjectIndexByNodeId(nodeId);
+    return index === null ? null : renderer.state.objects[index] ?? null;
+  }, path => sharedMotionLibrary.assetMeta(path), nodeId => {
+    const index = renderer.findObjectIndexByNodeId(nodeId);
+    return index === null ? null : renderer.state.objects[index]?.pos ?? null;
+  }, height => gameControls?.targetWorld(height) ?? null, () => { hudDirty = true; });
   /** manifest 原始 JSON：kickActorPreload 从它派生预载清单（findAnimatedCharacterIds） */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
@@ -248,6 +257,7 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const playCtl = new PlayController(renderer, bridge, {
+    bodyIk,
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
       const index = renderer.findObjectIndexByNodeId(nodeId);
@@ -597,6 +607,10 @@ async function boot(): Promise<void> {
     motions: {
       summary: () => sceneMotions.summary(),
       setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
+    },
+    bodyIk: {
+      summary: () => bodyIk.summary(),
+      setWeight: (nodeId: string, controlId: string | null, weight: number) => bodyIk.setWeight(nodeId, controlId, weight),
     },
     camera,
     elevation: () => panel.params.cameraElevation,
@@ -1316,6 +1330,8 @@ async function boot(): Promise<void> {
   document.querySelector('.insp-pane[data-pane="scene"]')!.prepend(authorHost);
   const motionHost = document.createElement('div'); motionHost.id = 'runtime-motion-panel'; document.body.append(motionHost);
   const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
+  const ikHost = document.createElement('div'); ikHost.id = 'runtime-body-ik-panel'; motionHost.after(ikHost);
+  const bodyIkPanel = new BodyIkPanel(ikHost, bodyIk);
   const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
     document: () => spawnStore?.document ?? null,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
@@ -3996,6 +4012,7 @@ async function boot(): Promise<void> {
 
     hud.innerHTML = rows.join('<br>');
     runtimeMotionPanel.render(playCtl.isPlaying);
+    bodyIkPanel.render(playCtl.isPlaying);
   };
 
   // ---- 主循环 ----

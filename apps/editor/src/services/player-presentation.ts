@@ -12,7 +12,7 @@ export type PlayerVisualObject = Pick<SceneObject,
  * Enemy crowds continue to use RuntimeBridge instancing.
  */
 export class PlayerPresentation {
-  private bound: { nodeId: string; object: PlayerVisualObject; rotation: Quat; y: number } | null = null;
+  private bound: { nodeId: string; object: PlayerVisualObject; rotation: Quat; y: number; last: [number, number] | null; heading: number | null; runId: number | null } | null = null;
 
   constructor(private readonly objectForNode: (nodeId: string) => PlayerVisualObject | null) {}
 
@@ -26,17 +26,23 @@ export class PlayerPresentation {
       || object.loadedAssetPath !== mesh.source.ref.path) {
       throw new Error('玩家外观资产尚未成功加载，请等待加载完成；加载失败时请重新打开场景');
     }
-    this.bound = { nodeId: node.id, object, rotation: [...object.quat], y: object.pos[1] };
+    this.bound = { nodeId: node.id, object, rotation: [...object.quat], y: object.pos[1], last: null, heading: null, runId: null };
     return node.id;
   }
 
-  sync(player: EntityView | null): void {
+  sync(player: EntityView | null, locomotionFacing = false): void {
     if (!this.bound) return;
     const { object, rotation, y, nodeId } = this.bound;
     object.visible = player !== null && player.alive && player.hp > 0 && player.sourceNodeId === nodeId;
     if (!object.visible || !player) return;
     object.pos = [player.x, y, player.z];
-    const yaw = characterYaw(player.yaw);
+    if (this.bound.runId !== player.runId) { this.bound.last = null; this.bound.heading = null; this.bound.runId = player.runId; }
+    if (this.bound.last) {
+      const dx = player.x - this.bound.last[0], dz = player.z - this.bound.last[1];
+      if (Math.hypot(dx, dz) > 1e-5) this.bound.heading = Math.atan2(dz, dx);
+    }
+    this.bound.last = [player.x, player.z];
+    const yaw = characterYaw(locomotionFacing ? this.bound.heading ?? player.yaw : player.yaw);
     object.quat = quatMul([0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)], rotation);
     object.rot = quatToEuler(object.quat);
     object.pickable = false;

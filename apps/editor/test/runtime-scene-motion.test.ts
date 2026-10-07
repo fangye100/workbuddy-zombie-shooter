@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEmptySceneDocument, type SceneNode, type SharedMotionBinding } from '@aether/scene';
 import type { RuntimeSession } from '@aether/runtime';
-import { createSkinState } from '@aether/render';
+import { createBodyIkState, createSkinState } from '@aether/render';
+import { newBodyIkControl } from '@aether/scene';
 import { RuntimeSceneMotion } from '../src/services/runtime-scene-motion';
 import { SharedMotionRuntime, type ResolvedMotion } from '../src/services/shared-motion-runtime';
 import { skeletonFromFitPositions } from '../src/services/binding/retarget-session';
@@ -26,6 +27,16 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('keeps gait while procedural aim is active and returns to shoot when IK weight is zero', async () => {
+    const f = fixture(); f.result.states.shoot = { loop: false }; f.result.clips.push({ name: 'shoot', duration: .5, tracks: [] });
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    const c = newBodyIkControl('upperBody'); c.target = { kind: 'position', position: [0, 1.5, 2] };
+    f.object.skinState.bodyIk = createBodyIkState(f.object.skeleton, { enabled: true, weight: 1, locomotionWhileAiming: true, controls: [c] });
+    f.motion.sync(f.rt(0, 0)); f.motion.sync({ ...f.rt(1, .2), firing: true } as RuntimeSession);
+    expect(f.motion.summary().nodes[0]!.state).toBe('run');
+    f.object.skinState.bodyIk.binding.weight = 0; f.motion.sync({ ...f.rt(2, .4), firing: true } as RuntimeSession);
+    expect(f.motion.summary().nodes[0]!.state).toBe('shoot'); f.motion.stop();
+  });
   it('restores configured default state for display characters on rerun', async () => {
     const f = fixture(); f.doc.playerStart = null;
     f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));

@@ -53,7 +53,7 @@ export class SharedMotionRuntime {
       throw error;
     }
     const meta = JSON.parse(text) as AssetMeta;
-    if (meta.sharedMotion) {
+    if (meta.sharedMotion || meta.bodyIk) {
       const errors = validateAssetMeta(meta).filter(d => d.severity === 'error');
       if (errors.length) throw new SharedMotionError('MOTION_META', errors.map(d => d.message).join('; '));
     }

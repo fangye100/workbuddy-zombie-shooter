@@ -4,6 +4,8 @@ export * from './materials';
 export * from './binding';
 export * from './shaders';
 export * from './skin';
+export * from './body-ik';
+export * from './two-bone-ik';
 export * from './pose-palette';
 export * from './quality';
 export * from './gizmo';

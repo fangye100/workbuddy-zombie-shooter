@@ -31,6 +31,7 @@ export * from './asset-server';
 export * from './behavior';
 export * from './graph';
 export * from './migrate';
+export * from './body-ik';
 export * from './instantiate';
 export * from './retarget-meta';
 export * from './shared-motion';
