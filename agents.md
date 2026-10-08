@@ -14,7 +14,7 @@
   | 服务 | 脚本 | 端口 | 配置 |
   |---|---|---|---|
   | Game Editor (WebGPU) | `pnpm run lab` / `pnpm run editor` | **5100** | `apps/editor/vite.config.ts` |
-  | 最终游戏 | `pnpm run dev` | **5101** | `apps/samples/00-init/vite.config.ts` |
+  | M0 GPU 初始化示例（完整玩法走编辑器 Play） | `pnpm run dev` | **5101** | `apps/samples/00-init/vite.config.ts` |
 - vite `server` 必须保持：`host: true`（监听所有网卡含 Tailscale 虚拟网卡
   100.124.237.93 / `*.ts.net`）、`allowedHosts: true`（放行 `*.ts.net` 避免 403）、
   `strictPort: true`（端口被占直接报错，不漂到 5101+/5102+）。
@@ -23,7 +23,7 @@
   HTTP 下 `navigator.gpu` 为 `undefined` → 黑屏。证书由 `tailscale cert <magicdns>` 生成
   （`fangye-win11-office.tail6b29a2.ts.net.crt/.key`），放 `.workbuddy/tmp/certs/`（已 gitignore），
   vite 检测到即自动走 HTTPS；缺失则退回 HTTP（仅本机 localhost 可用）。
-- 访问地址（以 5100 为例，最终游戏把端口换成 5101）：
+- 访问地址（以 5100 为例，M0 示例把端口换成 5101）：
   - `https://localhost:5100`（本机）
   - `https://100.124.237.93:5100`（Tailscale IP）
   - `https://fangye-win11-office.tail6b29a2.ts.net:5100`（Tailscale MagicDNS 域名，推荐）
@@ -145,3 +145,45 @@
 - 本机环境：win11 + NVIDIA Lovelace —— 属 skill ref A/D 里的「headless+SwiftShader
   起不来 CDP、禁止 `--no-sandbox`/`--disable-dev-shm-usage`」机器类别。
 - 编辑器地址：`https://localhost:5100` / Tailscale 域名（见 §1）；冒烟跑前先探活（skill ref F §1）。
+
+
+## 5. CodeGraph-first code navigation
+
+- For project/module structure, responsibility discovery, dependency/call analysis,
+  impact assessment and refactoring, **query CodeGraph first**. Do not begin by
+  rebuilding the project's architecture with broad grep/rg searches. Start with
+  `project_map` / `module_overview`, then narrow to file-qualified `get_ast_node`,
+  `get_call_graph`, `find_references`, `semantic_code_search` or `ast_search` as
+  appropriate; supported arguments come from the installed MCP tool schema.
+- Before using results, confirm the intended checkout/worktree, branch/commit,
+  tool version, source roots/exclusions and indexing completion. Initialize or
+  refresh through supported operations when necessary, including after changes.
+  The audited roots are `apps`, `assets`, `packages`, `tools`; check root-level
+  configuration separately. `.code-graph/` is a local derived cache, not business
+  data or a Git-distributed artifact; another checkout's index is not a substitute.
+- Use graph results to locate the relevant source, then read it to verify critical
+  callers, receiver types, ownership and failure paths. Targeted text search is
+  for filling known graph gaps and confirming facts, rather than the primary
+  means of discovering code structure. Simple exact text edits do not require
+  unnecessary whole-project graph analysis.
+- If CodeGraph MCP/index is unavailable, fails after a reasonable attempt, or
+  cannot cover the needed relation, state the concrete limitation and use source
+  reads/targeted search as fallback. Do not silently skip graph-first navigation,
+  fabricate graph evidence, or turn a local tool limitation into a full task block.
+- Follow truncated/paginated results and inspect parser errors/unresolved calls.
+  File/symbol coverage does not prove correct call resolution. Distinguish
+  extracted/inferred/ambiguous edges, production/tests, type/runtime imports and
+  dormant/active modules. Verify same-name set/has/find receivers before using
+  their edges as evidence of coupling.
+- Trace Worker URL/messages, import.meta.glob registration/injection and
+  HTTP/WebSocket/MCP dispatch across both endpoints when relevant; a missing
+  static edge is not evidence of dead code. A type import is not runtime use.
+- Do not infer runtime cost, execution frequency or refactoring priority from
+  incoming counts/centrality alone. Architecture reports record source snapshot,
+  query scope/count definitions/confidence and representative source evidence;
+  Agent-written summaries follow the same rule regardless of model capability.
+- Read [the verified structure map](docs/44-CodeGraph代码结构图谱.md) for owners and
+  known limitations. Source, schemas and ADRs remain authoritative. Graph checks
+  supplement affected-owner tests and acceptance gates: default Vitest covers
+  apps/packages TS tests, while tools' Node/Python tests use separate runners;
+  scene/content/motion gates and headed Play/GPU validation still apply.
