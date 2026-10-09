@@ -2181,6 +2181,28 @@
         "scene-schema",
         "scene-migrations"
       ]
+    },
+    {
+      "id": "doc-e89350b6b693",
+      "path": "docs/45-AnimationVisualDebugging.md",
+      "title": "动画可视化调试",
+      "role": "editor",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "debug",
+        "observation",
+        "ik",
+        "pose",
+        "editor"
+      ],
+      "read": "两种视图的含义；观察控制；职责与成本；定向验证",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-shared-motion"
+      ]
     }
   ]
 }

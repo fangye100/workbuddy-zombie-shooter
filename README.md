@@ -34,6 +34,7 @@ FrameGraph、更完整 GPU-driven 剔除及全部子系统架构仍是设计方�
 | [品质提升指南](docs/art/visual-quality-playbook.md) | 美漫画风、构图、Shader、贴图 LOD、占位替换、天空/图集及证据验收 |
 | [2026-10-07 群体性能基线](docs/39-CrowdPerformanceBaseline-2026-10-07.md) | 上半身 IK、500–2,500 NPC 样本、CPU/GPU 时间与持续稳定边界 |
 | [2026-10-07 iPhone Play 缓解](docs/40-IPhonePlayCrashMitigation-2026-10-07.md) | 按场景需求装载、运行纹理限制、GPU 丢失处理及设备验证边界 |
+| [动画可视化调试](docs/45-AnimationVisualDebugging.md) | 选定角色的只读规则/姿态图、有界切换历史、观察冻结及 CPU/GPU 管线边界 |
 
 ## 当前目录与职责
 

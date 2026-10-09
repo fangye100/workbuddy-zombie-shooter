@@ -5,6 +5,8 @@ import { SceneGraph, validateBodyIkBinding, type SceneDocument, type AssetMeta }
 import { createBodyIkState, rotateVec3, type BodyIkState, type SkinState } from '@aether/render';
 import type { RuntimeSession } from '@aether/zombie-game';
 import type { SceneObject } from '../renderer';
+import { observeIk } from './animation-debug/ik-observation';
+import { noIk, type DebugIk } from './animation-debug/contracts';
 
 export type IkObject = Pick<SceneObject, 'pos' | 'quat' | 'scale' | 'skeleton' | 'skinState' | 'removed' | 'loadedAssetPath'>;
 interface Entry { nodeId: string; name: string; object: IkObject; state: BodyIkState; original: SkinState; clone: SkinState }
@@ -20,6 +22,14 @@ export class RuntimeBodyIk {
   private targetDocument: SceneDocument | null = null;
   private targetGraph: SceneGraph | null = null;
   private restoreAuthors: (() => void)[] = [];
+  private loadingNodes = new Set<string>();
+  /** Detached selected-node projection, including resolved targets and current solver diagnostics. */
+  debugSnapshot(nodeId: string): DebugIk {
+    const entry = this.entries.get(nodeId);
+    if (entry) return observeIk(entry.state);
+    const errors = this.errors.filter(e => e.nodeId === nodeId).map(e => e.message);
+    return { ...noIk(errors.length ? 'failed' : this.loadingNodes.has(nodeId) ? 'pending' : 'unconfigured'), diagnostics: errors };
+  }
   constructor(private readonly objectForNode: (id: string) => IkObject | null,
     private readonly meta: (path: string) => Promise<AssetMeta | null>,
     private readonly worldPos: (id: string) => Vec3 | null,
@@ -38,6 +48,7 @@ export class RuntimeBodyIk {
         continue;
       }
       this.pending++;
+      this.loadingNodes.add(node.id);
       const authorSkin = object.skinState, authorValues = { ...authorSkin }, skeleton = object.skeleton;
       this.restoreAuthors.push(() => { Object.assign(authorSkin, authorValues); });
       void (async () => {
@@ -52,7 +63,7 @@ export class RuntimeBodyIk {
           object.skinState = clone;
           this.entries.set(node.id, { nodeId: node.id, name: node.name, object, state, original, clone });
         } catch (error) { if (generation === this.generation) this.errors.push({ nodeId: node.id, message: String(error) }); }
-        finally { if (generation === this.generation) { this.pending--; this.changed(); } }
+        finally { if (generation === this.generation) { this.pending--; this.loadingNodes.delete(node.id); this.changed(); } }
       })();
     }
     this.changed();
@@ -67,6 +78,7 @@ export class RuntimeBodyIk {
     this.restoreAuthors = [];
     this.targetDocument = null; this.targetGraph = null;
     this.entries.clear(); this.pending = 0;
+    this.loadingNodes.clear();
   }
   sync(runtime: RuntimeSession | null, preservePointer = false): void {
     let enemies: ReturnType<RuntimeSession['view']> | undefined;

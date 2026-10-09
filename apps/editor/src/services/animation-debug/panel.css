@@ -1,0 +1,32 @@
+.animation-debug { position:absolute; left:12px; bottom:12px; z-index:85; font:12px/1.45 system-ui,sans-serif; color:var(--paper,#eee7d5); pointer-events:auto; }
+.animation-debug button,.animation-debug select { font:inherit; color:inherit; background:var(--panel,#262335); border:1px solid #797181; border-radius:5px; padding:5px 8px; cursor:pointer; }
+.animation-debug button:hover { border-color:#ffc531; }
+.animation-debug button:focus-visible,.animation-debug select:focus-visible,.animation-debug-node:focus-visible { outline:2px solid #ffc531; outline-offset:2px; }
+.animation-debug button[aria-pressed=true] { background:#314838; border-color:#8edd9b; }
+.animation-debug button:disabled { opacity:.5; cursor:default; }
+.animation-debug-toggle { box-shadow:0 2px 8px #0008; }
+.animation-debug-body { position:absolute; bottom:40px; left:0; width:min(760px,calc(100vw - var(--panel-w,330px) - var(--insp-w,300px) - 60px)); max-height:62vh; overflow:auto; background:var(--panel,#262335); border:2px solid var(--ink,#161320); border-radius:9px; padding:10px; box-shadow:0 8px 30px #0009; }
+.animation-debug [hidden] { display:none!important; }
+.animation-debug-toolbar,.animation-debug-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:7px; }
+.animation-debug-toolbar { justify-content:space-between; }
+.animation-debug-controls label { display:flex; align-items:center; gap:4px; max-width:100%; }
+.animation-debug-controls select { max-width:290px; }
+.animation-debug-controls span { color:#c4bbc8; font-size:11px; }
+.animation-debug-status { color:#f0d48e; overflow-wrap:anywhere; }
+.animation-debug-viewport { height:260px; overflow:auto; border:1px solid #625967; border-radius:6px; background:#171520; overscroll-behavior:contain; touch-action:pan-x pan-y; }
+.animation-debug-viewport svg { display:block; min-width:0; }
+.animation-debug-edge { fill:none; stroke:#716a80; stroke-width:2; stroke-dasharray:5 4; }
+.animation-debug-edge.active { stroke:#8ee5a4; stroke-width:3; stroke-dasharray:none; }
+.animation-debug-node { cursor:pointer; }
+.animation-debug-node rect { fill:#292637; stroke:#776b83; stroke-width:1.5; }
+.animation-debug-node.active rect { fill:#203d30; stroke:#8ee5a4; stroke-width:2; }
+.animation-debug-node.warning rect { stroke:#ffcd78; }
+.animation-debug-node.selected rect { stroke:#ffc531; stroke-width:3; }
+.animation-debug-node text { fill:#f7efde; font:14px system-ui,sans-serif; pointer-events:none; }
+.animation-debug-node text.subtitle { fill:#d1cbd8; font-size:12px; }
+.animation-debug-detail { padding:9px; margin:8px 0; border-left:3px solid #8ee5a4; background:#191722; max-height:150px; overflow:auto; overflow-wrap:anywhere; }
+.animation-debug-detail p { margin:4px 0; }
+.animation-debug-history { display:flex; gap:5px; padding:5px 0; margin:0; overflow-x:auto; list-style:none; max-height:75px; }
+.animation-debug-history li { flex:0 0 auto; }
+.animation-debug-history button { max-width:270px; white-space:normal; text-align:left; }
+@media(max-width:900px) { .animation-debug-body { width:min(720px,calc(100vw - 48px)); max-height:58vh; } .animation-debug-viewport { height:220px; } }

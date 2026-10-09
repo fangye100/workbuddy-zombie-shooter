@@ -46,6 +46,9 @@ import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { RuntimeBodyIk } from './services/runtime-body-ik';
 import { BodyIkPanel } from './services/body-ik-panel';
+import { AnimationDebugCollector } from './services/animation-debug/collector';
+import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
+import { AnimationDebugPanel } from './services/animation-debug/panel';
 import { BindingPanel } from './services/binding/binding-panel';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
@@ -1298,6 +1301,14 @@ async function boot(): Promise<void> {
   const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
   const ikHost = document.createElement('div'); ikHost.id = 'runtime-body-ik-panel'; motionHost.after(ikHost);
   const bodyIkPanel = new BodyIkPanel(ikHost, bodyIk);
+  const animationDebugHost = document.createElement('div'); document.getElementById('center')!.append(animationDebugHost);
+  const animationDebugPanel = new AnimationDebugPanel(animationDebugHost, new AnimationDebugCollector(new RuntimeAnimationDebugSource({
+    runtime: () => playCtl.session.runtime,
+    document: () => renderer.getDocument(),
+    skin: nodeId => { const index = renderer.findObjectIndexByNodeId(nodeId); return index === null ? null : renderer.state.objects[index]?.skinState ?? null; },
+    actorDiagnostics: () => actorLib.diagnostics,
+  }, sceneMotions, bridge, bodyIk)));
+  (window as unknown as { __editor: Record<string, unknown> }).__editor.animationDebug = { snapshot: () => animationDebugPanel.snapshot() };
   const sceneAuthorPanel = new SceneAuthorPanel(authorHost, {
     document: () => spawnStore?.document ?? null,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
@@ -3990,6 +4001,7 @@ async function boot(): Promise<void> {
     import.meta.hot.dispose(() => {
       disposed = true;
       actorPreloader.stop();
+      animationDebugPanel.dispose();
       renderer.destroy();
     });
   }
@@ -4192,6 +4204,7 @@ async function boot(): Promise<void> {
     drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
+    animationDebugPanel.update(now);
     editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);

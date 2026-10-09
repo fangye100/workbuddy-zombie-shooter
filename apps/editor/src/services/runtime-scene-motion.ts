@@ -1,18 +1,23 @@
 /** Play-owned animation presentation for authored skinned scene nodes. */
 import { DEFAULT_MOTION_TRANSITION_SEC, type SceneDocument } from '@aether/scene';
 import type { RuntimeSession } from '@aether/zombie-game';
-import { advancePoseTransition, createSkinState, selectClip } from '@aether/render';
+import { advancePoseTransition, createSkinState, selectClip, poseTransitionWeight } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';
 import { bodyAimActive } from './runtime-body-ik';
+import { sceneChoice, type SceneChoiceInput } from './animation-debug/selection';
+import { deliver, noIk, type AnimationSink, type AnimationSnapshot } from './animation-debug/contracts';
+import { observeIk } from './animation-debug/ik-observation';
 
 type MotionObject = Pick<SceneObject, 'skeleton' | 'animations' | 'skinState' | 'loadedAssetPath' | 'removed' | 'scale'>;
 interface Entry {
   nodeId: string; name: string; object: MotionObject; player: boolean; speed: number;
   defaultState: string; result: ResolvedMotion; state: string; startTick: number;
   manual: boolean;
+  manualCompleted?: boolean;
   elapsed: number; lastTick: number;
   weaponActionStamp?: string;
+  revision: number; fromState: string; choice?: SceneChoiceInput;
 }
 export class RuntimeSceneMotion {
   private generation = 0;
@@ -25,6 +30,44 @@ export class RuntimeSceneMotion {
   private playerSpeed = 0;
   private errors: { nodeId: string; message: string }[] = [];
   private pending = 0;
+  private nodeStatus = new Map<string, 'pending' | 'failed' | 'unconfigured'>();
+  private debugNode: string | null = null;
+  private debugSink: AnimationSink | null = null;
+  /** Replaces only the debug subscriber; never selects an animation. */
+  watchDebug(nodeId: string | null, sink: AnimationSink | null): void {
+    this.debugNode = nodeId; this.debugSink = sink;
+  }
+  debugSnapshot(nodeId: string): AnimationSnapshot | null {
+    const e = this.entries.get(nodeId);
+    if (!e) {
+      const status = this.nodeStatus.get(nodeId); if (!status) return null;
+      return { identity: { kind: 'scene', nodeId, runId: this.runId ?? 0, generation: this.generation }, label: nodeId,
+        tick: this.tick, revision: 0, pipeline: 'cpu-scene', status,
+        decision: { requested: '—', actual: '—', source: status, fallback: null, actionStamp: '', rules: [] },
+        clip: null, transition: null, ik: noIk(), diagnostics: this.errors.filter(x => x.nodeId === nodeId).map(x => x.message) };
+    }
+    const skin = e.object.skinState, clip = skin?.clips[skin.clip];
+    const decision = e.choice && !e.manual ? sceneChoice(e.choice, true).decision! : {
+      requested: e.state, actual: e.state, source: e.manual ? 'manual' : e.manualCompleted ? 'manual-completed' : 'configured-default', fallback: null, actionStamp: '', rules: [],
+    };
+    if (e.manual) decision.rules.push({ id: 'manual', label: '已有控制面板手动覆盖', matched: true, selected: true,
+      reason: e.player ? '循环动作保持；非循环结束后恢复自动选择' : '循环动作保持；非循环结束后保留当前片段输出' });
+    else if (e.manualCompleted) decision.rules.push({ id: 'manual-completed', label: '手动动作已完成，保留输出', matched: true, selected: true,
+      reason: `${e.state} 非循环手动动作已完成；场景节点保留当前片段末帧，未重新选择默认 ${e.defaultState}` });
+    else if (!e.choice) decision.rules.push({ id: 'configured-default', label: '配置默认状态', matched: true, selected: true,
+      reason: `已选择配置默认状态 ${e.defaultState}；${e.player ? '自动选择器尚未执行，不推断当前输入' : '场景节点保持配置状态'}` });
+    return { identity: { kind: 'scene', nodeId, runId: this.runId ?? 0, generation: this.generation }, label: e.name,
+      tick: this.tick, revision: e.revision, pipeline: 'cpu-scene', status: 'ready', decision,
+      clip: clip && skin ? { name: clip.name, index: skin.clip, time: skin.time, duration: clip.duration,
+        phase: clip.duration > 0 ? skin.time / clip.duration : 0, loop: skin.loop } : null,
+      transition: skin?.transition ? { from: e.fromState || 'initial pose', to: e.state,
+        elapsed: skin.transition.elapsed, duration: skin.transition.duration,
+        weight: poseTransitionWeight(skin.transition.elapsed, skin.transition.duration), source: 'local-pose-snapshot' } : null,
+      ik: observeIk(skin?.bodyIk), diagnostics: e.result.reports.filter(r => r.state === e.state).flatMap(r => r.diagnostics.filter(d => d.severity !== 'info').map(d => `${d.code}: ${d.message}`)) };
+  }
+  private emitDebug(nodeId: string): void {
+    if (this.debugSink && this.debugNode === nodeId) deliver(this.debugSink, this.debugSnapshot(nodeId));
+  }
   constructor(readonly library: SharedMotionRuntime, private readonly objectForNode: (id: string) => MotionObject | null,
     private readonly changed: () => void = () => {}) {}
   start(doc: SceneDocument): void {
@@ -32,20 +75,23 @@ export class RuntimeSceneMotion {
     const generation = this.generation;
     for (const node of doc.nodes) {
       const mesh = node.components.find(c => c.kind === 'MeshRenderer' && c.enabled && c.visible && !c.editorOnly);
-      if (mesh?.kind !== 'MeshRenderer' || mesh.source.type !== 'asset' || !node.visible || mesh.sharedMotion === null) continue;
+      if (mesh?.kind !== 'MeshRenderer' || mesh.source.type !== 'asset' || !node.visible) continue;
+      if (mesh.sharedMotion === null) { this.nodeStatus.set(node.id, 'unconfigured'); continue; }
       const path = mesh.source.ref.path, object = this.objectForNode(node.id);
       if (!object || !object.skeleton || object.removed || object.loadedAssetPath !== path) {
         if (mesh.sharedMotion) this.errors.push({ nodeId: node.id, message: '共享动作目标骨架尚未加载' });
+        this.nodeStatus.set(node.id, 'failed');
         continue;
       }
       this.pending++;
+      this.nodeStatus.set(node.id, 'pending');
       const authorAnimations = object.animations, authorSkin = object.skinState;
       const authorSkinValues = authorSkin ? { ...authorSkin } : null;
       void (async () => {
         try {
           const meta = await this.library.assetMeta(path);
           const binding = mesh.sharedMotion ?? meta?.sharedMotion;
-          if (!binding) return;
+          if (!binding) { if (generation === this.generation) this.nodeStatus.set(node.id, 'unconfigured'); return; }
           const result = await this.library.resolve(object.skeleton!, binding, meta);
           if (generation !== this.generation) return;
           this.restore.push(() => {
@@ -54,11 +100,11 @@ export class RuntimeSceneMotion {
           });
           object.animations = result.clips; object.skinState = createSkinState(object.skeleton!, result.clips);
           const entry: Entry = { nodeId: node.id, name: node.name, object, player: node.id === doc.playerStart && mesh.playBinding === 'player',
-            speed: binding.speed, defaultState: binding.defaultState, result, state: '', startTick: this.tick, manual: false, elapsed: 0, lastTick: this.tick };
+            speed: binding.speed, defaultState: binding.defaultState, result, state: '', startTick: this.tick, manual: false, elapsed: 0, lastTick: this.tick, revision: 0, fromState: '' };
           this.entries.set(node.id, entry); this.select(entry, binding.defaultState, false); this.changed();
         } catch (error) {
-          if (generation === this.generation) { this.errors.push({ nodeId: node.id, message: String(error) }); this.changed(); }
-        } finally { if (generation === this.generation) { this.pending--; this.changed(); } }
+          if (generation === this.generation) { this.nodeStatus.set(node.id, 'failed'); this.errors.push({ nodeId: node.id, message: String(error) }); this.changed(); }
+        } finally { if (generation === this.generation) { this.pending--; this.changed(); this.emitDebug(node.id); } }
       })();
     }
     this.changed();
@@ -66,19 +112,24 @@ export class RuntimeSceneMotion {
   stop(): void {
     this.generation++; for (const restore of this.restore) restore();
     this.restore = []; this.entries.clear(); this.pending = 0; this.runId = null; this.lastPlayer = null; this.playerSpeed = 0;
+    this.nodeStatus.clear(); deliver(this.debugSink, null);
   }
   setState(nodeId: string, state: string): boolean {
     const entry = this.entries.get(nodeId); if (!entry || !entry.result.states[state]) return false;
-    this.select(entry, state, true); return true;
+    this.select(entry, state, true); this.emitDebug(nodeId); return true;
   }
-  private select(entry: Entry, state: string, manual: boolean, immediate = false): void {
+  private select(entry: Entry, state: string, manual: boolean, immediate = false, replay = false): void {
     const skin = entry.object.skinState;
     if (!skin || !entry.result.states[state]) return;
-    if (entry.state !== state || manual || immediate) {
+    const changedPose = entry.state !== state || manual || immediate || replay;
+    if (changedPose) {
+      entry.fromState = entry.state; entry.revision++;
       selectClip(skin, skin.clips.findIndex(c => c.name === state), immediate || !entry.state ? 0 : entry.result.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC); entry.startTick = this.tick;
       entry.elapsed = 0; entry.lastTick = this.tick;
     }
-    entry.state = state; entry.manual = manual; skin.playing = false;
+    entry.state = state; entry.manual = manual; entry.manualCompleted = false; skin.playing = false;
+    // Capture the start even when this fixed-tick delta completes a short transition.
+    if (changedPose) this.emitDebug(entry.nodeId);
   }
   sync(runtime: RuntimeSession | null): void {
     if (!runtime) return;
@@ -90,6 +141,7 @@ export class RuntimeSceneMotion {
       for (const entry of this.entries.values()) {
         this.select(entry, entry.defaultState, false, true);
         entry.startTick = runtime.tick; entry.manual = false; entry.elapsed = 0; entry.lastTick = runtime.tick;
+        delete entry.choice; delete entry.weaponActionStamp;
       }
     }
     if (player && this.lastPlayer && this.tick > this.lastPlayer.tick) {
@@ -99,16 +151,19 @@ export class RuntimeSceneMotion {
     for (const entry of this.entries.values()) {
       const skin = entry.object.skinState; if (!skin) continue;
       const clipConfig = entry.result.states[entry.state]!;
-      if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) entry.manual = false;
+      if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) {
+        entry.manual = false; entry.manualCompleted = !entry.player;
+      }
       if (entry.player && !entry.manual) {
         const action=runtime.weapons?.animation;
         const keepGait=!!skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk);
-        const locomotion=this.playerSpeed>2.5 && entry.result.states.run?'run':this.playerSpeed>.05?'walk':'idle';
-        const requested=action && action.action!=='idle' && !(action.action==='fire' && keepGait)
-          ?[action.clip,action.action==='fire'?'shoot':action.action,action.fallback].find(s=>!!entry.result.states[s]):undefined;
-        const state=requested ?? (!action && runtime.firing && !keepGait && entry.result.states.shoot?'shoot':locomotion);
-        const stamp=action && action.action!=='idle'?`${runtime.runId}:${action.weaponId}:${action.action}:${action.startTick}`:'';
-        if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,true);entry.manual=false;}
+        const input: SceneChoiceInput = { states: entry.result.states, defaultState: entry.defaultState, speed: this.playerSpeed, keepGait,
+          weapon: action, firing: runtime.firing, runId: runtime.runId };
+        const { requested, state, stamp } = sceneChoice(input);
+        // Retain the last executed resolver inputs even when another actor is observed.
+        // This is lightweight presentation metadata; snapshots/history remain selected-only.
+        entry.choice = input;
+        if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,false,false,true);}
         entry.weaponActionStamp=stamp;
         this.select(entry, entry.result.states[state] ? state : entry.defaultState, false);
       }
@@ -123,6 +178,7 @@ export class RuntimeSceneMotion {
       const isWeaponClip=weapon && weapon.action!=='idle' && !(weapon.action==='fire' && skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk)) && [weapon.clip,weapon.action==='fire'?'shoot':weapon.action,weapon.fallback].includes(entry.state);
       skin.time = isWeaponClip?weapon.phase*clip.duration:config.loop && clip.duration > 0 ? time % clip.duration : Math.min(time, clip.duration);
       skin.loop = config.loop; skin.playing = false;
+      this.emitDebug(entry.nodeId);
     }
   }
   summary() {
