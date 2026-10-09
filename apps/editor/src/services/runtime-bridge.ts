@@ -21,7 +21,7 @@ import type { RuntimeSession, EntityView } from '@aether/runtime';
 import { DYNAMIC_INSTANCE_FLOATS, PalettePoseTransitions, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
 import { characterYaw } from './character-facing';
-import { behaviorClipIndex, paletteChoice } from './animation-debug/selection';
+import { behaviorClipIndex, paletteChoice, type WeaponMotion } from './animation-debug/selection';
 import { deliver, noIk, type AnimationIdentity, type AnimationSink, type AnimationSnapshot } from './animation-debug/contracts';
 
 /**
@@ -100,6 +100,8 @@ const LOD_TIER_PROXY = 2;
 
 /** 一批实例 + 它对应的实体身份（供选中反查） */
 interface BatchSlot {
+  /** Selection input already read when packing the GPU player, retained without a debug clone. */
+  playerWeapon?: WeaponMotion | null;
   poseTransitions?: { data: Float32Array<ArrayBuffer>; revision: number };
   poseSources?: (Float32Array<ArrayBuffer> | null)[];
   meshId: string;
@@ -124,12 +126,46 @@ export class RuntimeBridge {
   private debugIdentity: Extract<AnimationIdentity, { kind: 'entity' }> | null = null;
   private debugSink: AnimationSink | null = null;
   private debugLast: AnimationSnapshot | null = null;
+  private presentedTick = 0;
   /** Independent of viewport selection/highlighting. No batch rebuild or animation control. */
   watchDebug(identity: Extract<AnimationIdentity, { kind: 'entity' }> | null, sink: AnimationSink | null): void {
     this.debugIdentity = identity ? { ...identity } : null; this.debugSink = sink; this.debugLast = null;
   }
   debugSnapshot(): AnimationSnapshot | null {
-    return this.debugLast ? structuredClone(this.debugLast) : null;
+    const identity = this.debugIdentity;
+    if (!identity || !this.debugSink || this.session?.runId !== identity.runId) return null;
+    if (this.debugLast) return structuredClone(this.debugLast);
+    // First subscription can happen while paused. Read the existing CPU instance
+    // rows and transition metadata; never rebuild batches or sample a new pose.
+    for (const slot of this.slots.values()) {
+      for (let row = 0; row < slot.count; row++) {
+        const e = slot.entities[row];
+        if (e && e.id === identity.id && e.generation === identity.generation && e.runId === identity.runId) return this.describePresented(slot, row, this.presentedTick);
+      }
+    }
+    return null;
+  }
+  private describePresented(slot: BatchSlot, row: number, tick: number): AnimationSnapshot {
+    const e = slot.entities[row]!, actor = slot.actor, o = row * F;
+    const tr = this.poseTransitions.describe(`${e.runId}:${e.id}:${e.generation}`);
+    const clipIndex = tr?.clip ?? -1, clip = actor?.clips[clipIndex], phase = slot.instances[o + 13]!;
+    const stats = lookupCharacterStats(e.characterId);
+    const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
+    const decision = actor ? paletteChoice(actor.clips, behavior, e.kind === 'player' ? slot.playerWeapon ?? null : null, true).decision! : null;
+    if (decision) {
+      decision.actual = clip?.name ?? 'bind pose';
+      decision.rules.unshift({ id: 'anchor', label: '静止角色行为归一化', matched: e.behavior === 1 && stats?.moveSpeed === 0,
+        selected: e.behavior === 1 && stats?.moveSpeed === 0, reason: `原始 behavior=${e.behavior}; 实际 behavior=${behavior}; moveSpeed=${stats?.moveSpeed ?? '未知'}` });
+    }
+    return { identity: { kind: 'entity', id: e.id, runId: e.runId, generation: e.generation }, label: `${e.characterId} #${e.id}`,
+      characterId: e.characterId, tick, revision: tr?.revision ?? 0, pipeline: actor ? 'gpu-palette' : 'proxy', status: actor ? 'ready' : 'unavailable',
+      decision: decision ?? { requested: '—', actual: '胶囊代理', source: 'proxy', fallback: '未执行骨架动画', actionStamp: '', rules: [] },
+      clip: clip ? { name: clip.name, index: clipIndex, time: phase * clip.durationSec, duration: clip.durationSec, phase, loop: null } : null,
+      transition: tr?.active ? { from: actor?.clips[tr.fromClip]?.name ?? 'bind pose', to: clip?.name ?? 'bind pose', elapsed: tr.elapsed,
+        duration: tr.duration, weight: slot.instances[o + 16]!, source: 'palette-matrix-snapshot' } : null,
+      ik: noIk('unsupported'), diagnostics: actor ? ['GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU'] : [
+        this.lodEnabled && e.lodTier >= LOD_TIER_PROXY ? 'LOD Proxy：未执行骨架动画' : '模型未装配：可能加载中、无 rig 或加载失败；显示胶囊代理',
+      ] };
   }
 
   /** Suppress only the player proxy whose authored mesh is bound by the host. */
@@ -382,8 +418,6 @@ export class RuntimeBridge {
         const actor = slot.actor;
         const observing = !!this.debugSink && this.debugIdentity?.id === e.id && this.debugIdentity.generation === e.generation && this.debugIdentity.runId === e.runId;
         if (observing) debugSeen = true;
-        let decision: ReturnType<typeof paletteChoice>['decision'] | null = null;
-        let clipIndex = -1;
         const o = i * F;
         // 真模型网格贴脚底（feetOffset 把 mesh 最低点抬到 y=0）；胶囊中心在
         // 原点 → 抬到脚底之上半高。实体 (x, z) 才是它站的位置
@@ -420,13 +454,8 @@ export class RuntimeBridge {
           // remains zero. Their idle motion uses time, not a frozen walking gait.
           const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
           const weapon=e.kind==='player'?this.session.weapons.animation:null;
-          const choice = paletteChoice(actor.clips, behavior, weapon, observing);
-          const clipIdx = choice.index; clipIndex = clipIdx;
-          if (observing) {
-            decision = choice.decision!;
-            decision.rules.unshift({ id: 'anchor', label: '静止角色行为归一化', matched: e.behavior === 1 && stats?.moveSpeed === 0,
-              selected: e.behavior === 1 && stats?.moveSpeed === 0, reason: `原始 behavior=${e.behavior}; 实际 behavior=${behavior}; moveSpeed=${stats?.moveSpeed ?? '未知'}` });
-          }
+          if (e.kind === 'player') slot.playerWeapon = weapon;
+          const clipIdx = paletteChoice(actor.clips, behavior, weapon).index;
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
           if (behavior===2) phase01=Math.min(.999,Math.max(0,e.behaviorPhase??0));
@@ -467,22 +496,13 @@ export class RuntimeBridge {
         // Each actor has its own palette stride; 22- and 27-joint rigs coexist.
         inst[o + 15] = actor?.palette.jointCount ?? 0;
         if (observing) {
-          const clip = actor?.clips[clipIndex], tr = this.poseTransitions.describe(`${e.runId}:${e.id}:${e.generation}`);
-          this.debugLast = { identity: { kind: 'entity', id: e.id, runId: e.runId, generation: e.generation }, label: `${e.characterId} #${e.id}`,
-            characterId: e.characterId,
-            tick, revision: tr?.revision ?? 0, pipeline: actor ? 'gpu-palette' : 'proxy', status: actor ? 'ready' : 'unavailable',
-            decision: decision ?? { requested: '—', actual: '胶囊代理', source: 'proxy', fallback: '未执行骨架动画', actionStamp: '', rules: [] },
-            clip: clip ? { name: clip.name, index: clipIndex, time: phase01 * clip.durationSec, duration: clip.durationSec, phase: phase01, loop: null } : null,
-            transition: tr?.active ? { from: actor?.clips[tr.fromClip]?.name ?? 'bind pose', to: clip?.name ?? 'bind pose', elapsed: tr.elapsed,
-              duration: tr.duration, weight: tr.weight, source: 'palette-matrix-snapshot' } : null,
-            ik: noIk('unsupported'), diagnostics: actor ? ['GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU'] : [
-              this.lodEnabled && e.lodTier >= LOD_TIER_PROXY ? 'LOD Proxy：未执行骨架动画' : '模型未装配：可能加载中、无 rig 或加载失败；显示胶囊代理',
-            ] };
+          this.debugLast = this.describePresented(slot, i, tick);
           deliver(this.debugSink, structuredClone(this.debugLast));
         }
       }
       slot.count = n;
     }
+    this.presentedTick = tick;
     for (const key of this.gait.keys()) if (!gaitKeys.has(key)) this.gait.delete(key);
     this.poseTransitions.prune(poseKeys);
     if (this.debugSink && !debugSeen) { this.debugLast = null; deliver(this.debugSink, null); }

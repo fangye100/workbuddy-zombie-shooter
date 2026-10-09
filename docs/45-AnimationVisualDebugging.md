@@ -76,6 +76,9 @@ and disposes it with the editor.
 
 Only the selected actor produces debug snapshots. Execution events are captured
 independently of the UI refresh; the UI refreshes at most eight times per second.
+When a GPU actor is first selected, the observer reads its already-packed CPU
+instance row and transition metadata immediately, including while Play is paused.
+This does not rebuild batches, sample/advance a pose, or advance the world.
 History retains at most 32 detached snapshots, so brief transitions and consecutive
 same-clip weapon actions can be inspected without per-frame crowd cloning. The
 target dropdown enumerates current identities at UI frequency; it does not copy
