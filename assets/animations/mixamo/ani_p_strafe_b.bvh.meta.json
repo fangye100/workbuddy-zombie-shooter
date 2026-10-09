@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_p_strafe_b",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:79a59be94d524be812f1e816d37423a4469537d7a8df398249381db021df516e",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-STRAFE-B",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0
+  },
+  "sourceHash": "sha256:83266a73d94d64e5db3581c2ed01e96e4ebea93e84d0e16ec1d5bd09df36f167"
+}

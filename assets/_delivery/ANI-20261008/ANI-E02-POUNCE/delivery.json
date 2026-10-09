@@ -1,0 +1,30 @@
+{
+  "id": "ANI-E02-POUNCE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-02",
+  "tool": "Adobe Mixamo (stock motion library), 30fps；实测含蒙皮网格，导入时仅提取骨骼动作",
+  "mixamoClip": "Vampiric Bite (Lunging Forward To Bite)",
+  "mixamoModelId": 115210901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-E02-POUNCE__v01.fbx",
+      "sha256": "20da2fec960ac23d1bc29cc2a4afb7bcbda583b5849dfa07f3305b9337c233b9",
+      "bytes": 17855840,
+      "durationS": 3.033,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": false,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "tracks": 59,
+      "keyframes": 4882
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "Mixamo 无突扑；以向前扑咬替代，In Place",
+  "dupeOfLocal": null,
+  "sourceCorrection": "实测原 FBX 含蒙皮网格；原始文件只在本机归档，项目导入仅提取骨骼动作，不发布该网格"
+}

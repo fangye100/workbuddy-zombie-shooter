@@ -1,7 +1,7 @@
 /** Real assets, runtime solver, render sampling and heterogeneous NPC palette gate.
  * Does not require ignored original FBXs or a browser/GPU; headed acceptance is separate.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -20,9 +20,10 @@ for (const p of ['assets/animations/mixamo/shared.motion.json', ...sources]) {
   const actual = `sha256:${createHash('sha256').update(readFileSync(resolve(root, p))).digest('hex')}`;
   if (json(`${p}.meta.json`).sourceHash !== actual) throw new Error(`Stale source metadata: ${p}`);
 }
-const scene = json('assets/scenes/sandbox/shared-motion-runtime.scene.json');
+const validationPaths = ['assets/scenes/sandbox/shared-motion-runtime.scene.json',
+  'assets/scenes/sandbox/ani-20261008-intake.scene.json'].filter(p => existsSync(resolve(root, p)));
 const checks = [];
-for (const n of scene.nodes) {
+for (const scenePath of validationPaths) for (const n of json(scenePath).nodes) {
   const mesh = n.components.find(c => c.kind === 'MeshRenderer' && c.sharedMotion);
   if (!mesh) continue;
   const sk = parseGlb(bytes(mesh.source.ref.path)).skeleton;
@@ -43,13 +44,13 @@ for (const n of scene.nodes) {
     }
   }
   if (JSON.stringify(sk.locals) !== locals) throw new Error(`${n.id}: mutated target rest pose`);
-  checks.push({ node: n.id, joints: sk.joints.length, key: result.key, states: result.clips.map(c => c.name),
+  checks.push({ scene: scenePath, node: n.id, joints: sk.joints.length, key: result.key, states: result.clips.map(c => c.name),
     warnings: [...new Set(result.reports.flatMap(r => r.diagnostics.filter(d => d.severity !== 'info').map(d => d.code)))] });
 }
 if (checks.find(c => c.node === 'nd_motion_h01').key !== checks.find(c => c.node === 'nd_motion_player').key) throw new Error('Identical target did not share cache');
 const actorLib = new ActorLibrary(json('assets/_data/asset-manifest.json'), async p => bytes(p)); actorLib.setSharedMotions(motions);
 // This CPU gate does not decode textures. Headed acceptance verifies actual albedo/GPU upload.
-globalThis.createImageBitmap = async () => ({ close() {} });
+globalThis.createImageBitmap = async () => ({ width: 1, height: 1, close() {} });
 const ids = json('assets/_data/asset-manifest.json').characters.map(c => c.id);
 for (const id of ids) if (!await actorLib.preload(id)) throw new Error(`NPC assembly failed: ${id}: ${actorLib.diagnostics.join('; ')}`);
 const actors = ids.map(id => actorLib.get(id));

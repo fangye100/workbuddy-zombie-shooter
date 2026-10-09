@@ -1,0 +1,30 @@
+{
+  "id": "ANI-P-PISTOL-FIRE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), 30fps；实测含蒙皮网格，导入时仅提取骨骼动作",
+  "mixamoClip": "Shooting Gun (Shooting Handgun)",
+  "mixamoModelId": 112400901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-PISTOL-FIRE__v01.fbx",
+      "sha256": "b465c3d3584c711edbf5481f2906a4e18273fa6ad9dd4af0c802edcbb132e94b",
+      "bytes": 17984032,
+      "durationS": 5.3,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": false,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "tracks": 59,
+      "keyframes": 8009
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null,
+  "sourceCorrection": "实测原 FBX 含蒙皮网格；原始文件只在本机归档，项目导入仅提取骨骼动作，不发布该网格"
+}

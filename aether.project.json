@@ -81,6 +81,12 @@
       "id": "sc_body_ik_validation",
       "name": "HumanIK · 分部位动画混合",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+      "id": "sc_ani_20261008_intake",
+      "name": "ANI-20261008 · 动作候选检视（未验收）",
+      "enabled": true
     }
   ],
   "startIndex": 1,

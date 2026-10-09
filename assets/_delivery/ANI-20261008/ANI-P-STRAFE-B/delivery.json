@@ -1,0 +1,29 @@
+{
+  "id": "ANI-P-STRAFE-B",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Pistol Walk Backward (Walking Backward With An Aimed Pistol)",
+  "mixamoModelId": 128270901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-STRAFE-B__v01.fbx",
+      "sha256": "79a59be94d524be812f1e816d37423a4469537d7a8df398249381db021df516e",
+      "bytes": 378608,
+      "durationS": 1.033,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 772
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

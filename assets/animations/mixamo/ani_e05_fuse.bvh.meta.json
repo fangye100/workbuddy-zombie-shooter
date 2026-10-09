@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_e05_fuse",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:3ae39cfb75751525c0d8eb4803b13a8a4aa7e7998b29ed00b518a6cffeb4530c",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-E05-FUSE",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0
+  },
+  "sourceHash": "sha256:0196a73bfa1c870bd672fe7a55efaa9ff6fb4d8074584461dc8fa03825d1ac5a"
+}

@@ -1,0 +1,48 @@
+{
+  "id": "ANI-NPC-HIT-LIGHT",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-01/02/03",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Zombie Reaction Hit：Flinches / Stumble Back",
+  "mixamoModelId": null,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-NPC-HIT-LIGHT__v01-a.fbx",
+      "sha256": "181de7aa8346c7ff29691011f60341f314a1edbb6ab5aefd3aeb7ee7b4e08e7b",
+      "bytes": 527968,
+      "durationS": 2,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "mixamoClip": "Zombie Reaction Hit (Flinches)",
+      "mixamoModelId": null,
+      "provenance": "来源动作名按下载方反馈记录；原 model-id 因同 ID 记录覆盖而缺失，不补造",
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 3239
+    },
+    {
+      "file": "source/ANI-NPC-HIT-LIGHT__v01.fbx",
+      "sha256": "2b939737df9056f8b0d7b18619f2b316e23169f9d2ead5ac0cc811b59723155d",
+      "bytes": 547952,
+      "durationS": 2.167,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "mixamoClip": "Zombie Reaction Hit (Zombie Reaction Hit Stumble Back)",
+      "mixamoModelId": 102460902,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 3504
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "两个变体均为候选；Flinches 的来源 model-id 缺失，实际 2.0/2.167s 长于需求 0.2–0.35s，仍需裁剪和姿态验收",
+  "dupeOfLocal": null
+}

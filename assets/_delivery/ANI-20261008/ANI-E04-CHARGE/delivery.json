@@ -1,0 +1,30 @@
+{
+  "id": "ANI-E04-CHARGE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-04",
+  "tool": "Adobe Mixamo (stock motion library), 30fps；实测含蒙皮网格，导入时仅提取骨骼动作",
+  "mixamoClip": "Charge (Pointing Onward Charge)",
+  "mixamoModelId": 110030901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-E04-CHARGE__v01.fbx",
+      "sha256": "d29d1f0e0a94ef4579cb7fa3e483600ef3850c278995513aaf139ef21f5a1adf",
+      "bytes": 18033984,
+      "durationS": 5.7,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": false,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "tracks": 59,
+      "keyframes": 9122
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "Pointing Onward 属指向/号令候选，不能验收为肩撞冲锋，不替换当前冲锋表现",
+  "dupeOfLocal": null,
+  "sourceCorrection": "实测原 FBX 含蒙皮网格；原始文件只在本机归档，项目导入仅提取骨骼动作，不发布该网格"
+}

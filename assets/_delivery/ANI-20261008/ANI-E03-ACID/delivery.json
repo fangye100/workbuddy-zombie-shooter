@@ -1,0 +1,29 @@
+{
+  "id": "ANI-E03-ACID",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-03",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Mutant Roaring (Mutant Roaring)",
+  "mixamoModelId": 121560902,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-E03-ACID__v01.fbx",
+      "sha256": "50b01159bd46a1836ad3294f0da29271faba68d5efbbe8a8ab7590475079cb07",
+      "bytes": 798384,
+      "durationS": 5.4,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 8483
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "Mixamo 无喷吐；以张口咆哮姿态替代，酸液发射由运行时 socket 处理",
+  "dupeOfLocal": null
+}

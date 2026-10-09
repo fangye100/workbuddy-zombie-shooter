@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_p_reload",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:232fbe822035e9b2981b95aba532c8634a79fb4c9dcdca79b3fad4c6c79d2ca0",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-RELOAD",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 1
+  },
+  "sourceHash": "sha256:75925b237ffc06f14da652d5f6dad44149f6dff1a4318e1a68459b36506184c4"
+}

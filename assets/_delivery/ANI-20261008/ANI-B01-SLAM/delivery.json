@@ -1,0 +1,29 @@
+{
+  "id": "ANI-B01-SLAM",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "B-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Bash (Overhead Bashing Swing)",
+  "mixamoModelId": 115480901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-B01-SLAM__v01.fbx",
+      "sha256": "1e7420b484e80c7b345f08c3b0418c7613631a7844d16203aa15729b17f0084b",
+      "bytes": 767728,
+      "durationS": 4,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 6419
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "双手抡砸替代拍地砸地",
+  "dupeOfLocal": null
+}

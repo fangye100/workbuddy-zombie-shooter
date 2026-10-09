@@ -1,0 +1,29 @@
+{
+  "id": "ANI-P-STRAFE-R",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Pistol Strafe (Strafe Right With An Aimed Pistol)",
+  "mixamoModelId": 128290901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-STRAFE-R__v01.fbx",
+      "sha256": "1ac0ba2aa8697c98ae1507c18d0ee3b69dffb6a0e1928ad17fea189337bc5255",
+      "bytes": 340704,
+      "durationS": 0.6,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 473
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

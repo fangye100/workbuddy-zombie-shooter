@@ -1,0 +1,29 @@
+{
+  "id": "ANI-P-AIM-IDLE-ALT",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Rifle Aiming Idle (Rifle Standing Aiming Idle)",
+  "mixamoModelId": 115690901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-AIM-IDLE-ALT__v01.fbx",
+      "sha256": "ffb80ccefa87a4e0c33025b331c038bb53de156fd4f2fd16a25524886e3780de",
+      "bytes": 643104,
+      "durationS": 3.1,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": false,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 4523
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "步枪族瞄准待机，备用",
+  "dupeOfLocal": null
+}

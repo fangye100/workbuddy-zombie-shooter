@@ -1,0 +1,166 @@
+{
+  "id": "ANI-20261008",
+  "schemaVersion": 1,
+  "source": "Adobe Mixamo",
+  "generated": "2026-10-08T09:58:32.877Z",
+  "note": "交付元数据及源副本：原始 FBX 和本批 source/*.fbx 都只在本机归档，不入库；运行时仅使用派生 BVH。下载完成不等于动作/游戏内验收通过。",
+  "items": [
+    {
+      "req": "ANI-P-AIM-IDLE",
+      "file": "ani_p_aim_idle.fbx",
+      "durationS": 4,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-AIM-IDLE-ALT",
+      "file": "ani_p_aim_idle_alt.fbx",
+      "durationS": 3.1,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-STRAFE-F",
+      "file": "ani_p_strafe_f.fbx",
+      "durationS": 0.8,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-STRAFE-B",
+      "file": "ani_p_strafe_b.fbx",
+      "durationS": 1.033,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-STRAFE-L",
+      "file": "ani_p_strafe_l.fbx",
+      "durationS": 0.567,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-STRAFE-R",
+      "file": "ani_p_strafe_r.fbx",
+      "durationS": 0.6,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-PISTOL-FIRE",
+      "file": "ani_p_pistol_fire.fbx",
+      "durationS": 5.3,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-P-RELOAD",
+      "file": "ani_p_reload.fbx",
+      "durationS": 3.3,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-E01-MELEE",
+      "file": "ani_e01_melee.fbx",
+      "durationS": 2.633,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-E01-MELEE-ALT",
+      "file": "ani_e01_melee_alt.fbx",
+      "durationS": 4.633,
+      "bones": 73,
+      "dupeOfLocal": "zombie_attack.bvh (duration match 4.633s)"
+    },
+    {
+      "req": "ANI-E02-POUNCE",
+      "file": "ani_e02_pounce.fbx",
+      "durationS": 3.033,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-E03-ACID",
+      "file": "ani_e03_acid.fbx",
+      "durationS": 5.4,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-E04-CHARGE",
+      "file": "ani_e04_charge.fbx",
+      "durationS": 5.7,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-E05-FUSE",
+      "file": "ani_e05_fuse.fbx",
+      "durationS": 11.633,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-B01-HOOK",
+      "file": "ani_b01_hook.fbx",
+      "durationS": 1.1,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-B01-SLAM",
+      "file": "ani_b01_slam.fbx",
+      "durationS": 4,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-NPC-HIT-LIGHT",
+      "file": "ani_npc_hit_light_a.fbx",
+      "durationS": 2,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-NPC-HIT-LIGHT",
+      "file": "ani_npc_hit_light_b.fbx",
+      "durationS": 2.167,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-NPC-DEATH-F",
+      "file": "ani_npc_death_f.fbx",
+      "durationS": 3.333,
+      "bones": 73,
+      "dupeOfLocal": null
+    },
+    {
+      "req": "ANI-NPC-DEATH-B",
+      "file": "ani_npc_death_b.fbx",
+      "durationS": 2.967,
+      "bones": 73,
+      "dupeOfLocal": "zombie_death.bvh (duration match 2.967s)"
+    }
+  ],
+  "dedupe": [
+    "ani_e01_melee_alt = 本地 zombie_attack.bvh（下载方按名称/时长判为重复，源件已移除，帧级一致未验证）",
+    "ani_npc_death_b = 本地 zombie_death.bvh（下载方按名称/时长判为重复，源件已移除，帧级一致未验证；后倒死亡由本地资产覆盖）"
+  ],
+  "pendingResume": "下载已完成；循环接缝、动作裁剪、时间标记、目标角色与游戏内验收仍待完成。",
+  "counts": {
+    "plannedRequirementIds": 19,
+    "newRequirementIds": 17,
+    "newFbxFiles": 18,
+    "duplicateRequirementIds": 2
+  },
+  "sourceAudit": {
+    "boneOnlyFbx": 14,
+    "skinnedFbx": 4,
+    "hitVariantARecovered": true,
+    "duplicateMotionDataVerified": false
+  }
+}

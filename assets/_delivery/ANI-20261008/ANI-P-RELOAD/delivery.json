@@ -1,0 +1,30 @@
+{
+  "id": "ANI-P-RELOAD",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), 30fps；实测含蒙皮网格，导入时仅提取骨骼动作",
+  "mixamoClip": "Reloading (Reloading Rifle While Standing)",
+  "mixamoModelId": 113030901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-RELOAD__v01.fbx",
+      "sha256": "232fbe822035e9b2981b95aba532c8634a79fb4c9dcdca79b3fad4c6c79d2ca0",
+      "bytes": 17890480,
+      "durationS": 3.3,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": false,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "tracks": 59,
+      "keyframes": 5432
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "Mixamo 无手枪换弹；以站姿步枪换弹代替，换弹时间轴需接入时重映射",
+  "dupeOfLocal": null,
+  "sourceCorrection": "实测原 FBX 含蒙皮网格；原始文件只在本机归档，项目导入仅提取骨骼动作，不发布该网格"
+}

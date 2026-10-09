@@ -1,0 +1,29 @@
+{
+  "id": "ANI-E05-FUSE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-05",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Zombie Agonizing (Zombie In Agony)",
+  "mixamoModelId": 104160901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-E05-FUSE__v01.fbx",
+      "sha256": "3ae39cfb75751525c0d8eb4803b13a8a4aa7e7998b29ed00b518a6cffeb4530c",
+      "bytes": 1092640,
+      "durationS": 11.633,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 12972
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "Mixamo 无膨胀爆裂；以抽搐循环替代，爆裂帧由运行时叠加",
+  "dupeOfLocal": null
+}

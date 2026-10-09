@@ -1,0 +1,29 @@
+{
+  "id": "ANI-E01-MELEE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "E-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Zombie Punching (Zombie Attack With Right Hand)",
+  "mixamoModelId": 102320902,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-E01-MELEE__v01.fbx",
+      "sha256": "2f70c940e2b12f9f10e75b636c94c0845ea15759ca5844922edf66609d67a551",
+      "bytes": 552704,
+      "durationS": 2.633,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 2824
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

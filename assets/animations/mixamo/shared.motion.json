@@ -93,6 +93,154 @@
       "loop": true,
       "rootPolicy": "in-place",
       "poseAtS": 0
+    },
+    "ani_p_aim_idle": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_aim_idle.bvh",
+        "guid": "as_motion_ani_p_aim_idle"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_p_aim_idle_alt": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_aim_idle_alt.bvh",
+        "guid": "as_motion_ani_p_aim_idle_alt"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_p_strafe_f": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_strafe_f.bvh",
+        "guid": "as_motion_ani_p_strafe_f"
+      },
+      "loop": false,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 2.957363118548857
+    },
+    "ani_p_strafe_b": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_strafe_b.bvh",
+        "guid": "as_motion_ani_p_strafe_b"
+      },
+      "loop": false,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 1.6570995177160894
+    },
+    "ani_p_strafe_l": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_strafe_l.bvh",
+        "guid": "as_motion_ani_p_strafe_l"
+      },
+      "loop": false,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 2.5428107151373855
+    },
+    "ani_p_strafe_r": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_strafe_r.bvh",
+        "guid": "as_motion_ani_p_strafe_r"
+      },
+      "loop": false,
+      "rootPolicy": "in-place",
+      "nominalSpeedMps": 2.7799848814993395
+    },
+    "ani_p_pistol_fire": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_pistol_fire.bvh",
+        "guid": "as_motion_ani_p_pistol_fire"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_p_reload": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_reload.bvh",
+        "guid": "as_motion_ani_p_reload"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_e01_melee": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_e01_melee.bvh",
+        "guid": "as_motion_ani_e01_melee"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_e02_pounce": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_e02_pounce.bvh",
+        "guid": "as_motion_ani_e02_pounce"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_e03_acid": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_e03_acid.bvh",
+        "guid": "as_motion_ani_e03_acid"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_e04_charge": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_e04_charge.bvh",
+        "guid": "as_motion_ani_e04_charge"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_e05_fuse": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_e05_fuse.bvh",
+        "guid": "as_motion_ani_e05_fuse"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_b01_hook": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_b01_hook.bvh",
+        "guid": "as_motion_ani_b01_hook"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_b01_slam": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_b01_slam.bvh",
+        "guid": "as_motion_ani_b01_slam"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_npc_hit_light_a": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_npc_hit_light_a.bvh",
+        "guid": "as_motion_ani_npc_hit_light_a"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_npc_hit_light_b": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_npc_hit_light_b.bvh",
+        "guid": "as_motion_ani_npc_hit_light_b"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
+    },
+    "ani_npc_death_f": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_npc_death_f.bvh",
+        "guid": "as_motion_ani_npc_death_f"
+      },
+      "loop": false,
+      "rootPolicy": "in-place"
     }
   },
   "profiles": {
@@ -110,6 +258,26 @@
       "attack": "zombie_attack",
       "death": "zombie_death",
       "scream": "zombie_scream"
+    },
+    "ani-20261008-preview": {
+      "ani_p_aim_idle": "ani_p_aim_idle",
+      "ani_p_aim_idle_alt": "ani_p_aim_idle_alt",
+      "ani_p_strafe_f": "ani_p_strafe_f",
+      "ani_p_strafe_b": "ani_p_strafe_b",
+      "ani_p_strafe_l": "ani_p_strafe_l",
+      "ani_p_strafe_r": "ani_p_strafe_r",
+      "ani_p_pistol_fire": "ani_p_pistol_fire",
+      "ani_p_reload": "ani_p_reload",
+      "ani_e01_melee": "ani_e01_melee",
+      "ani_e02_pounce": "ani_e02_pounce",
+      "ani_e03_acid": "ani_e03_acid",
+      "ani_e04_charge": "ani_e04_charge",
+      "ani_e05_fuse": "ani_e05_fuse",
+      "ani_b01_hook": "ani_b01_hook",
+      "ani_b01_slam": "ani_b01_slam",
+      "ani_npc_hit_light_a": "ani_npc_hit_light_a",
+      "ani_npc_hit_light_b": "ani_npc_hit_light_b",
+      "ani_npc_death_f": "ani_npc_death_f"
     }
   }
 }

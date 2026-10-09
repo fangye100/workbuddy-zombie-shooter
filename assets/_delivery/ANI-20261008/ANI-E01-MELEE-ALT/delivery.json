@@ -1,0 +1,16 @@
+{
+  "id": "ANI-E01-MELEE-ALT",
+  "version": "v01",
+  "status": "skipped-duplicate-of-local-asset",
+  "character": "E-01",
+  "tool": "Adobe Mixamo；下载方报告 30fps/bone-only，新增源件已移除，本次未验证源格式",
+  "mixamoClip": "Zombie Attack (Zombie Overhead Two-Hand Attack)",
+  "mixamoModelId": 102320906,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "双手劈砸替代件；与本地 zombie_attack.bvh 时长比对后择一",
+  "dupeOfLocal": "zombie_attack.bvh (duration match 4.633s)",
+  "dedupeNote": "与本地 assets/animations/mixamo/zombie_attack.bvh 被下载方按名称和时长判断为同一 Mixamo 动作（未核验帧数据）（时长 4.633s 完全一致），按去重要求不重复交付；本地已有资产即 ANI-E01 的双手劈砸候选",
+  "dedupeVerification": "下载方已删除新增源件；现记录仅有动作名/时长依据，不能完成新旧帧数据对照。本次复用已有候选，不宣称帧级去重已证实"
+}

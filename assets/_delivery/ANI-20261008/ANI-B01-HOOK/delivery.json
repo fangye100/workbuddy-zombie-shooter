@@ -1,0 +1,29 @@
+{
+  "id": "ANI-B01-HOOK",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "B-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Right Hook (Right Hook Punch From Idle)",
+  "mixamoModelId": 118370901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-B01-HOOK__v01.fbx",
+      "sha256": "30f6ceafe992423346bcb1a8810a9b978f7f1dcb2c7f294b518a125b6b80d226",
+      "bytes": 408192,
+      "durationS": 1.1,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 1478
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

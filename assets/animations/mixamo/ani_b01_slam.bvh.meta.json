@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_b01_slam",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:1e7420b484e80c7b345f08c3b0418c7613631a7844d16203aa15729b17f0084b",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-B01-SLAM",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0
+  },
+  "sourceHash": "sha256:71c2630923f060472cfbd0e5b8bcf0a91e63decbc5a4d3fe442072670a07898d"
+}

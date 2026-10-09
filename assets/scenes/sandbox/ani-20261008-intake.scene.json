@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 15,
+  "id": "sc_ani_20261008_intake",
+  "name": "ANI-20261008 · 动作候选检视（未验收）",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      1,
+      0
+    ],
+    "distance": 9,
+    "yaw": 0.12,
+    "elevation": 0.22
+  },
+  "entryCamera": null,
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_ground0000",
+      "name": "地面 Ground",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "plane",
+            "params": [
+              80,
+              24
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null,
+      "category": "环境"
+    },
+    {
+      "id": "nd_ani_20261008_player",
+      "name": "Player · 动作候选检视（未验收）",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          2.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "playBinding": "player",
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "ani-20261008-preview",
+            "defaultState": "ani_p_aim_idle",
+            "speed": 1
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ani_20261008_h01",
+      "name": "清道夫 · 动作候选检视（未验收）",
+      "parent": null,
+      "transform": {
+        "position": [
+          -2.8,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "ani-20261008-preview",
+            "defaultState": "ani_p_aim_idle",
+            "speed": 1
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ani_20261008_E-01",
+      "name": "游荡者 · 动作候选检视（未验收）",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/E-01/rigged/E01_Shambler_900_animation_ready.glb",
+              "guid": "as_af984d0b1589bf78"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "ani-20261008-preview",
+            "defaultState": "ani_p_aim_idle",
+            "speed": 1
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ani_20261008_E-04",
+      "name": "盾卫 · 动作候选检视（未验收）",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.8,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_animation_ready.glb",
+              "guid": "as_08f37057b48bb7ee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "ani-20261008-preview",
+            "defaultState": "ani_p_aim_idle",
+            "speed": 1
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ani_20261008_room",
+      "name": "Runtime NPC test room",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              30,
+              4,
+              20
+            ]
+          },
+          "clearRule": "kill-all",
+          "clearTarget": null,
+          "depth": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ani_20261008_nav",
+      "name": "导航区",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              30,
+              4,
+              20
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ],
+      "prefab": null
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-09T00:00:00Z",
+    "updatedAt": "2026-10-09T00:00:00Z",
+    "author": "ANI-20261008 intake",
+    "notes": "仅为候选动作检视。Play 后用已有角色动画控制逐一选择 ani_* 动作；18 个片段均保持 one-shot，尚未验收循环接缝、短动作裁剪、业务时间标记和目标角色姿态。默认游戏和角色 sidecar 保持原配置。"
+  },
+  "playerStart": "nd_ani_20261008_player",
+  "loseCondition": "player-death"
+}

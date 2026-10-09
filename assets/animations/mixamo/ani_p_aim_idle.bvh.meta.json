@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_p_aim_idle",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:a89a8b069d9104ab3be90ce5f26682536cc6cb79dffe8b572e681aba95e1f766",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-AIM-IDLE",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0
+  },
+  "sourceHash": "sha256:6022902e365493dbbe754e8ed446a06c32b418488ce51dc19dbe7b6fa21310ed"
+}

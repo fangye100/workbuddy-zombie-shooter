@@ -1,0 +1,29 @@
+{
+  "id": "ANI-P-AIM-IDLE",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "P-01",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Pistol Idle (Ready Alert Two Hand Pistol Grip)",
+  "mixamoModelId": 104200901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-P-AIM-IDLE__v01.fbx",
+      "sha256": "a89a8b069d9104ab3be90ce5f26682536cc6cb79dffe8b572e681aba95e1f766",
+      "bytes": 629488,
+      "durationS": 4,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 2579
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

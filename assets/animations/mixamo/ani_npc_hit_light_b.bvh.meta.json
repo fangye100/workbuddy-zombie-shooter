@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_npc_hit_light_b",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:2b939737df9056f8b0d7b18619f2b316e23169f9d2ead5ac0cc811b59723155d",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-NPC-HIT-LIGHT",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0
+  },
+  "sourceHash": "sha256:7bf61965081f7f01cf8653417672e46a1594211a76683922249c3e89be4ceb50"
+}

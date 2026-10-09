@@ -2203,6 +2203,25 @@
         "architecture-policy",
         "scene-shared-motion"
       ]
+    },
+    {
+      "id": "ani-20261008-intake",
+      "path": "docs/animation/ani-20261008-intake.md",
+      "title": "ANI-20261008 动作核验与候选接入记录",
+      "role": "animation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "mixamo",
+        "intake",
+        "retarget"
+      ],
+      "read": "接收修正；可重复导入；候选场景；实际验证及正式映射前的缺项",
+      "sourceRefs": [
+        "project-rules",
+        "scene-shared-motion"
+      ]
     }
   ]
 }

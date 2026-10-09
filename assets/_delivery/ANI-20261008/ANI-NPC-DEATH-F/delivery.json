@@ -1,0 +1,29 @@
+{
+  "id": "ANI-NPC-DEATH-F",
+  "version": "v01",
+  "status": "delivered-mixamo-stock",
+  "character": "NPC",
+  "tool": "Adobe Mixamo (stock motion library), exported via session API at 30fps, bone-only (skin=false)",
+  "mixamoClip": "Zombie Dying (Zombie Getting Hit And Falling Forward)",
+  "mixamoModelId": 122180901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [
+    {
+      "file": "source/ANI-NPC-DEATH-F__v01.fbx",
+      "sha256": "ceb5b428e72b22707ced0c1d2afe0d27c2350e19285da35da3d4d5368d31e15b",
+      "bytes": 687808,
+      "durationS": 3.333,
+      "fps": 30,
+      "bones": 73,
+      "inPlace": true,
+      "boneOnly": true,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "tracks": 59,
+      "keyframes": 5359
+    }
+  ],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": null,
+  "dupeOfLocal": null
+}

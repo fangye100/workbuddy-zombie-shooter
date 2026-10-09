@@ -48,3 +48,6 @@ assets/**/*.v2-flower.keep
 
 # Mixamo 原始 FBX（Adobe 版权：允许嵌入本项目，禁止再分发——绝不入库/公开托管）
 assets-src/mixamo/
+
+# ANI 批次的 Mixamo 原始源副本同样只在本机归档；交付元数据可以入库。
+assets/_delivery/ANI-20261008/**/source/*.fbx

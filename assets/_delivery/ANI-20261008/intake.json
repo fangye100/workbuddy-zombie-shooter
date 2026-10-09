@@ -1,0 +1,907 @@
+{
+  "schemaVersion": 1,
+  "id": "ANI-20261008-intake",
+  "date": "2026-10-09",
+  "baseCommit": "9a5594bb15cd07643c2e2e1a38f1e539b4fcb814",
+  "status": "candidate-not-visual-accepted",
+  "counts": {
+    "plannedRequirementIds": 19,
+    "newRequirementIds": 17,
+    "newFbxFiles": 18,
+    "duplicateRequirementIds": 2
+  },
+  "previewScene": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+  "profile": "ani-20261008-preview",
+  "sourceAudit": {
+    "findings": [],
+    "report": [
+      {
+        "requirement": "ANI-P-AIM-IDLE",
+        "path": "assets-src/mixamo/animations/ani_p_aim_idle.fbx",
+        "sha256": "a89a8b069d9104ab3be90ce5f26682536cc6cb79dffe8b572e681aba95e1f766",
+        "bytes": 629488,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 4,
+        "tracks": 59,
+        "keyframes": 2579,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-AIM-IDLE-ALT",
+        "path": "assets-src/mixamo/animations/ani_p_aim_idle_alt.fbx",
+        "sha256": "ffb80ccefa87a4e0c33025b331c038bb53de156fd4f2fd16a25524886e3780de",
+        "bytes": 643104,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 3.0999999046325684,
+        "tracks": 59,
+        "keyframes": 4523,
+        "deviation": "步枪族瞄准待机，备用"
+      },
+      {
+        "requirement": "ANI-P-STRAFE-F",
+        "path": "assets-src/mixamo/animations/ani_p_strafe_f.fbx",
+        "sha256": "dade9095c31ec6c2923da631c0b460a531d2e434dd316350e31415f70156668d",
+        "bytes": 358192,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 0.800000011920929,
+        "tracks": 59,
+        "keyframes": 611,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-STRAFE-B",
+        "path": "assets-src/mixamo/animations/ani_p_strafe_b.fbx",
+        "sha256": "79a59be94d524be812f1e816d37423a4469537d7a8df398249381db021df516e",
+        "bytes": 378608,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 1.0333333015441895,
+        "tracks": 59,
+        "keyframes": 772,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-STRAFE-L",
+        "path": "assets-src/mixamo/animations/ani_p_strafe_l.fbx",
+        "sha256": "bf06e901d22ba0f0d60f822944d8a024f0d4c11ae55b9f894e1b38f08ca308c2",
+        "bytes": 337776,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 0.5666666626930237,
+        "tracks": 59,
+        "keyframes": 450,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-STRAFE-R",
+        "path": "assets-src/mixamo/animations/ani_p_strafe_r.fbx",
+        "sha256": "1ac0ba2aa8697c98ae1507c18d0ee3b69dffb6a0e1928ad17fea189337bc5255",
+        "bytes": 340704,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 0.6000000238418579,
+        "tracks": 59,
+        "keyframes": 473,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-PISTOL-FIRE",
+        "path": "assets-src/mixamo/animations/ani_p_pistol_fire.fbx",
+        "sha256": "b465c3d3584c711edbf5481f2906a4e18273fa6ad9dd4af0c802edcbb132e94b",
+        "bytes": 17984032,
+        "bones": 73,
+        "meshes": 1,
+        "skinnedMeshes": 1,
+        "duration": 5.300000190734863,
+        "tracks": 59,
+        "keyframes": 8009,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-P-RELOAD",
+        "path": "assets-src/mixamo/animations/ani_p_reload.fbx",
+        "sha256": "232fbe822035e9b2981b95aba532c8634a79fb4c9dcdca79b3fad4c6c79d2ca0",
+        "bytes": 17890480,
+        "bones": 73,
+        "meshes": 1,
+        "skinnedMeshes": 1,
+        "duration": 3.299999952316284,
+        "tracks": 59,
+        "keyframes": 5432,
+        "deviation": "Mixamo 无手枪换弹；以站姿步枪换弹代替，换弹时间轴需接入时重映射"
+      },
+      {
+        "requirement": "ANI-E01-MELEE",
+        "path": "assets-src/mixamo/animations/ani_e01_melee.fbx",
+        "sha256": "2f70c940e2b12f9f10e75b636c94c0845ea15759ca5844922edf66609d67a551",
+        "bytes": 552704,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 2.633333444595337,
+        "tracks": 59,
+        "keyframes": 2824,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-E02-POUNCE",
+        "path": "assets-src/mixamo/animations/ani_e02_pounce.fbx",
+        "sha256": "20da2fec960ac23d1bc29cc2a4afb7bcbda583b5849dfa07f3305b9337c233b9",
+        "bytes": 17855840,
+        "bones": 73,
+        "meshes": 1,
+        "skinnedMeshes": 1,
+        "duration": 3.0333333015441895,
+        "tracks": 59,
+        "keyframes": 4882,
+        "deviation": "Mixamo 无突扑；以向前扑咬替代，In Place"
+      },
+      {
+        "requirement": "ANI-E03-ACID",
+        "path": "assets-src/mixamo/animations/ani_e03_acid.fbx",
+        "sha256": "50b01159bd46a1836ad3294f0da29271faba68d5efbbe8a8ab7590475079cb07",
+        "bytes": 798384,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 5.400000095367432,
+        "tracks": 59,
+        "keyframes": 8483,
+        "deviation": "Mixamo 无喷吐；以张口咆哮姿态替代，酸液发射由运行时 socket 处理"
+      },
+      {
+        "requirement": "ANI-E04-CHARGE",
+        "path": "assets-src/mixamo/animations/ani_e04_charge.fbx",
+        "sha256": "d29d1f0e0a94ef4579cb7fa3e483600ef3850c278995513aaf139ef21f5a1adf",
+        "bytes": 18033984,
+        "bones": 73,
+        "meshes": 1,
+        "skinnedMeshes": 1,
+        "duration": 5.699999809265137,
+        "tracks": 59,
+        "keyframes": 9122,
+        "deviation": "Pointing Onward 属指向/号令候选，不能验收为肩撞冲锋，不替换当前冲锋表现"
+      },
+      {
+        "requirement": "ANI-E05-FUSE",
+        "path": "assets-src/mixamo/animations/ani_e05_fuse.fbx",
+        "sha256": "3ae39cfb75751525c0d8eb4803b13a8a4aa7e7998b29ed00b518a6cffeb4530c",
+        "bytes": 1092640,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 11.633333206176758,
+        "tracks": 59,
+        "keyframes": 12972,
+        "deviation": "Mixamo 无膨胀爆裂；以抽搐循环替代，爆裂帧由运行时叠加"
+      },
+      {
+        "requirement": "ANI-B01-HOOK",
+        "path": "assets-src/mixamo/animations/ani_b01_hook.fbx",
+        "sha256": "30f6ceafe992423346bcb1a8810a9b978f7f1dcb2c7f294b518a125b6b80d226",
+        "bytes": 408192,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 1.100000023841858,
+        "tracks": 59,
+        "keyframes": 1478,
+        "deviation": null
+      },
+      {
+        "requirement": "ANI-B01-SLAM",
+        "path": "assets-src/mixamo/animations/ani_b01_slam.fbx",
+        "sha256": "1e7420b484e80c7b345f08c3b0418c7613631a7844d16203aa15729b17f0084b",
+        "bytes": 767728,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 4,
+        "tracks": 59,
+        "keyframes": 6419,
+        "deviation": "双手抡砸替代拍地砸地"
+      },
+      {
+        "requirement": "ANI-NPC-HIT-LIGHT",
+        "path": "assets-src/mixamo/animations/ani_npc_hit_light_a.fbx",
+        "sha256": "181de7aa8346c7ff29691011f60341f314a1edbb6ab5aefd3aeb7ee7b4e08e7b",
+        "bytes": 527968,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 2,
+        "tracks": 59,
+        "keyframes": 3239,
+        "deviation": "两个变体均为候选；Flinches 的来源 model-id 缺失，实际 2.0/2.167s 长于需求 0.2–0.35s，仍需裁剪和姿态验收"
+      },
+      {
+        "requirement": "ANI-NPC-HIT-LIGHT",
+        "path": "assets-src/mixamo/animations/ani_npc_hit_light_b.fbx",
+        "sha256": "2b939737df9056f8b0d7b18619f2b316e23169f9d2ead5ac0cc811b59723155d",
+        "bytes": 547952,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 2.1666667461395264,
+        "tracks": 59,
+        "keyframes": 3504,
+        "deviation": "两个变体均为候选；Flinches 的来源 model-id 缺失，实际 2.0/2.167s 长于需求 0.2–0.35s，仍需裁剪和姿态验收"
+      },
+      {
+        "requirement": "ANI-NPC-DEATH-F",
+        "path": "assets-src/mixamo/animations/ani_npc_death_f.fbx",
+        "sha256": "ceb5b428e72b22707ced0c1d2afe0d27c2350e19285da35da3d4d5368d31e15b",
+        "bytes": 687808,
+        "bones": 73,
+        "meshes": 0,
+        "skinnedMeshes": 0,
+        "duration": 3.3333332538604736,
+        "tracks": 59,
+        "keyframes": 5359,
+        "deviation": null
+      }
+    ]
+  },
+  "conversion": [
+    {
+      "id": "ani_p_aim_idle",
+      "path": "assets/animations/mixamo/ani_p_aim_idle.bvh",
+      "frames": 121,
+      "fps": 30,
+      "duration": 4,
+      "maxFkErrorM": 1.4033569852718598e-7,
+      "maxSerializedFkErrorM": 1.419396125859791e-7,
+      "rootEndpointDisplacementM": 1.3072319149544726e-8,
+      "sourceFbxHash": "sha256:a89a8b069d9104ab3be90ce5f26682536cc6cb79dffe8b572e681aba95e1f766",
+      "guid": "as_motion_ani_p_aim_idle",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_aim_idle_alt",
+      "path": "assets/animations/mixamo/ani_p_aim_idle_alt.bvh",
+      "frames": 94,
+      "fps": 30,
+      "duration": 3.0999999046325684,
+      "maxFkErrorM": 1.3364962177353276e-7,
+      "maxSerializedFkErrorM": 1.3472105514835734e-7,
+      "rootEndpointDisplacementM": 0.000006665035834255476,
+      "sourceFbxHash": "sha256:ffb80ccefa87a4e0c33025b331c038bb53de156fd4f2fd16a25524886e3780de",
+      "guid": "as_motion_ani_p_aim_idle_alt",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_strafe_f",
+      "path": "assets/animations/mixamo/ani_p_strafe_f.bvh",
+      "frames": 25,
+      "fps": 30,
+      "duration": 0.800000011920929,
+      "maxFkErrorM": 1.46459767970158e-7,
+      "maxSerializedFkErrorM": 1.689409529996148e-7,
+      "nominalSpeedMps": 2.957363118548857,
+      "rootEndpointDisplacementM": 2.6727794329481854e-8,
+      "sourceFbxHash": "sha256:dade9095c31ec6c2923da631c0b460a531d2e434dd316350e31415f70156668d",
+      "guid": "as_motion_ani_p_strafe_f",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_strafe_b",
+      "path": "assets/animations/mixamo/ani_p_strafe_b.bvh",
+      "frames": 32,
+      "fps": 30,
+      "duration": 1.0333333015441895,
+      "maxFkErrorM": 1.2346546186089039e-7,
+      "maxSerializedFkErrorM": 1.204623731614136e-7,
+      "nominalSpeedMps": 1.6570995177160894,
+      "rootEndpointDisplacementM": 2.1696418193354033e-8,
+      "sourceFbxHash": "sha256:79a59be94d524be812f1e816d37423a4469537d7a8df398249381db021df516e",
+      "guid": "as_motion_ani_p_strafe_b",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_strafe_l",
+      "path": "assets/animations/mixamo/ani_p_strafe_l.bvh",
+      "frames": 18,
+      "fps": 30,
+      "duration": 0.5666666626930237,
+      "maxFkErrorM": 1.2881302855696495e-7,
+      "maxSerializedFkErrorM": 2.5430781648256983e-7,
+      "nominalSpeedMps": 2.5428107151373855,
+      "rootEndpointDisplacementM": 2.9004871989923868e-8,
+      "sourceFbxHash": "sha256:bf06e901d22ba0f0d60f822944d8a024f0d4c11ae55b9f894e1b38f08ca308c2",
+      "guid": "as_motion_ani_p_strafe_l",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_strafe_r",
+      "path": "assets/animations/mixamo/ani_p_strafe_r.bvh",
+      "frames": 19,
+      "fps": 30,
+      "duration": 0.6000000238418579,
+      "maxFkErrorM": 1.5934413287974282e-7,
+      "maxSerializedFkErrorM": 1.5642542559894214e-7,
+      "nominalSpeedMps": 2.7799848814993395,
+      "rootEndpointDisplacementM": 2.1627249867660763e-8,
+      "sourceFbxHash": "sha256:1ac0ba2aa8697c98ae1507c18d0ee3b69dffb6a0e1928ad17fea189337bc5255",
+      "guid": "as_motion_ani_p_strafe_r",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_pistol_fire",
+      "path": "assets/animations/mixamo/ani_p_pistol_fire.bvh",
+      "frames": 160,
+      "fps": 30,
+      "duration": 5.300000190734863,
+      "maxFkErrorM": 1.326179136944592e-7,
+      "maxSerializedFkErrorM": 1.3236055486980395e-7,
+      "rootEndpointDisplacementM": 1.8138174104927536e-8,
+      "sourceFbxHash": "sha256:b465c3d3584c711edbf5481f2906a4e18273fa6ad9dd4af0c802edcbb132e94b",
+      "guid": "as_motion_ani_p_pistol_fire",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_p_reload",
+      "path": "assets/animations/mixamo/ani_p_reload.bvh",
+      "frames": 100,
+      "fps": 30,
+      "duration": 3.299999952316284,
+      "maxFkErrorM": 1.3560837040125766e-7,
+      "maxSerializedFkErrorM": 0.00000956096741947513,
+      "rootEndpointDisplacementM": 0.0000036695374942634747,
+      "sourceFbxHash": "sha256:232fbe822035e9b2981b95aba532c8634a79fb4c9dcdca79b3fad4c6c79d2ca0",
+      "guid": "as_motion_ani_p_reload",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_e01_melee",
+      "path": "assets/animations/mixamo/ani_e01_melee.bvh",
+      "frames": 80,
+      "fps": 30,
+      "duration": 2.633333444595337,
+      "maxFkErrorM": 1.396045881616794e-7,
+      "maxSerializedFkErrorM": 0.0000015020313214404794,
+      "rootEndpointDisplacementM": 2.6849896328419157e-7,
+      "sourceFbxHash": "sha256:2f70c940e2b12f9f10e75b636c94c0845ea15759ca5844922edf66609d67a551",
+      "guid": "as_motion_ani_e01_melee",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_e02_pounce",
+      "path": "assets/animations/mixamo/ani_e02_pounce.bvh",
+      "frames": 92,
+      "fps": 30,
+      "duration": 3.0333333015441895,
+      "maxFkErrorM": 1.3365980018245517e-7,
+      "maxSerializedFkErrorM": 4.116696938905734e-7,
+      "rootEndpointDisplacementM": 3.0994415282111585e-8,
+      "sourceFbxHash": "sha256:20da2fec960ac23d1bc29cc2a4afb7bcbda583b5849dfa07f3305b9337c233b9",
+      "guid": "as_motion_ani_e02_pounce",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_e03_acid",
+      "path": "assets/animations/mixamo/ani_e03_acid.bvh",
+      "frames": 163,
+      "fps": 30,
+      "duration": 5.400000095367432,
+      "maxFkErrorM": 1.5847791856463657e-7,
+      "maxSerializedFkErrorM": 1.5621839051078317e-7,
+      "rootEndpointDisplacementM": 2.2106805703945474e-7,
+      "sourceFbxHash": "sha256:50b01159bd46a1836ad3294f0da29271faba68d5efbbe8a8ab7590475079cb07",
+      "guid": "as_motion_ani_e03_acid",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_e04_charge",
+      "path": "assets/animations/mixamo/ani_e04_charge.bvh",
+      "frames": 172,
+      "fps": 30,
+      "duration": 5.699999809265137,
+      "maxFkErrorM": 1.4040278490238337e-7,
+      "maxSerializedFkErrorM": 1.4224357018926577e-7,
+      "rootEndpointDisplacementM": 0,
+      "sourceFbxHash": "sha256:d29d1f0e0a94ef4579cb7fa3e483600ef3850c278995513aaf139ef21f5a1adf",
+      "guid": "as_motion_ani_e04_charge",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 1,
+      "sourceSkinnedMeshes": 1,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_e05_fuse",
+      "path": "assets/animations/mixamo/ani_e05_fuse.bvh",
+      "frames": 350,
+      "fps": 30,
+      "duration": 11.633333206176758,
+      "maxFkErrorM": 1.4933857674570608e-7,
+      "maxSerializedFkErrorM": 0.0000012079216705028548,
+      "rootEndpointDisplacementM": 1.4367686950487782e-7,
+      "sourceFbxHash": "sha256:3ae39cfb75751525c0d8eb4803b13a8a4aa7e7998b29ed00b518a6cffeb4530c",
+      "guid": "as_motion_ani_e05_fuse",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_b01_hook",
+      "path": "assets/animations/mixamo/ani_b01_hook.bvh",
+      "frames": 34,
+      "fps": 30,
+      "duration": 1.100000023841858,
+      "maxFkErrorM": 1.3658436939056265e-7,
+      "maxSerializedFkErrorM": 1.3641631528706389e-7,
+      "rootEndpointDisplacementM": 0.00007332690333146094,
+      "sourceFbxHash": "sha256:30f6ceafe992423346bcb1a8810a9b978f7f1dcb2c7f294b518a125b6b80d226",
+      "guid": "as_motion_ani_b01_hook",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_b01_slam",
+      "path": "assets/animations/mixamo/ani_b01_slam.bvh",
+      "frames": 121,
+      "fps": 30,
+      "duration": 4,
+      "maxFkErrorM": 1.2983361104797297e-7,
+      "maxSerializedFkErrorM": 1.2500579115536602e-7,
+      "rootEndpointDisplacementM": 1.966049969807234e-8,
+      "sourceFbxHash": "sha256:1e7420b484e80c7b345f08c3b0418c7613631a7844d16203aa15729b17f0084b",
+      "guid": "as_motion_ani_b01_slam",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_npc_hit_light_a",
+      "path": "assets/animations/mixamo/ani_npc_hit_light_a.bvh",
+      "frames": 61,
+      "fps": 30,
+      "duration": 2,
+      "maxFkErrorM": 1.2728844639632102e-7,
+      "maxSerializedFkErrorM": 0.000022944567141377887,
+      "rootEndpointDisplacementM": 0,
+      "sourceFbxHash": "sha256:181de7aa8346c7ff29691011f60341f314a1edbb6ab5aefd3aeb7ee7b4e08e7b",
+      "guid": "as_motion_ani_npc_hit_light_a",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_npc_hit_light_b",
+      "path": "assets/animations/mixamo/ani_npc_hit_light_b.bvh",
+      "frames": 66,
+      "fps": 30,
+      "duration": 2.1666667461395264,
+      "maxFkErrorM": 1.3799064001405423e-7,
+      "maxSerializedFkErrorM": 0.000031144158583438934,
+      "rootEndpointDisplacementM": 0.847131739440876,
+      "sourceFbxHash": "sha256:2b939737df9056f8b0d7b18619f2b316e23169f9d2ead5ac0cc811b59723155d",
+      "guid": "as_motion_ani_npc_hit_light_b",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    },
+    {
+      "id": "ani_npc_death_f",
+      "path": "assets/animations/mixamo/ani_npc_death_f.bvh",
+      "frames": 101,
+      "fps": 30,
+      "duration": 3.3333332538604736,
+      "maxFkErrorM": 1.90698572845276e-7,
+      "maxSerializedFkErrorM": 1.7030755136657204e-7,
+      "rootEndpointDisplacementM": 1.3931450903164169,
+      "sourceFbxHash": "sha256:ceb5b428e72b22707ced0c1d2afe0d27c2350e19285da35da3d4d5368d31e15b",
+      "guid": "as_motion_ani_npc_death_f",
+      "sourceBoneCount": 73,
+      "sourceMeshes": 0,
+      "sourceSkinnedMeshes": 0,
+      "publishedJoints": 22
+    }
+  ],
+  "runtimeCheck": {
+    "sources": 28,
+    "nodes": [
+      {
+        "scene": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+        "node": "nd_motion_player",
+        "joints": 27,
+        "key": "fp1_ac77dea376d28305e27bb139",
+        "states": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+        "node": "nd_motion_h01",
+        "joints": 27,
+        "key": "fp1_ac77dea376d28305e27bb139",
+        "states": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+        "node": "nd_motion_E-01",
+        "joints": 27,
+        "key": "fp1_1c2ee570c6e2f32a5facd4cb",
+        "states": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/shared-motion-runtime.scene.json",
+        "node": "nd_motion_E-04",
+        "joints": 27,
+        "key": "fp1_183457360bd6b57cfa341aae",
+        "states": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+        "node": "nd_ani_20261008_player",
+        "joints": 27,
+        "key": "fp1_d550fecdd0d6e22f7aff323e",
+        "states": [
+          "ani_p_aim_idle",
+          "ani_p_aim_idle_alt",
+          "ani_p_strafe_f",
+          "ani_p_strafe_b",
+          "ani_p_strafe_l",
+          "ani_p_strafe_r",
+          "ani_p_pistol_fire",
+          "ani_p_reload",
+          "ani_e01_melee",
+          "ani_e02_pounce",
+          "ani_e03_acid",
+          "ani_e04_charge",
+          "ani_e05_fuse",
+          "ani_b01_hook",
+          "ani_b01_slam",
+          "ani_npc_hit_light_a",
+          "ani_npc_hit_light_b",
+          "ani_npc_death_f"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+        "node": "nd_ani_20261008_h01",
+        "joints": 27,
+        "key": "fp1_d550fecdd0d6e22f7aff323e",
+        "states": [
+          "ani_p_aim_idle",
+          "ani_p_aim_idle_alt",
+          "ani_p_strafe_f",
+          "ani_p_strafe_b",
+          "ani_p_strafe_l",
+          "ani_p_strafe_r",
+          "ani_p_pistol_fire",
+          "ani_p_reload",
+          "ani_e01_melee",
+          "ani_e02_pounce",
+          "ani_e03_acid",
+          "ani_e04_charge",
+          "ani_e05_fuse",
+          "ani_b01_hook",
+          "ani_b01_slam",
+          "ani_npc_hit_light_a",
+          "ani_npc_hit_light_b",
+          "ani_npc_death_f"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+        "node": "nd_ani_20261008_E-01",
+        "joints": 27,
+        "key": "fp1_37357412c9600d8c780b3ef7",
+        "states": [
+          "ani_p_aim_idle",
+          "ani_p_aim_idle_alt",
+          "ani_p_strafe_f",
+          "ani_p_strafe_b",
+          "ani_p_strafe_l",
+          "ani_p_strafe_r",
+          "ani_p_pistol_fire",
+          "ani_p_reload",
+          "ani_e01_melee",
+          "ani_e02_pounce",
+          "ani_e03_acid",
+          "ani_e04_charge",
+          "ani_e05_fuse",
+          "ani_b01_hook",
+          "ani_b01_slam",
+          "ani_npc_hit_light_a",
+          "ani_npc_hit_light_b",
+          "ani_npc_death_f"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "scene": "assets/scenes/sandbox/ani-20261008-intake.scene.json",
+        "node": "nd_ani_20261008_E-04",
+        "joints": 27,
+        "key": "fp1_a2a671a4e7a31a9af4b74e3e",
+        "states": [
+          "ani_p_aim_idle",
+          "ani_p_aim_idle_alt",
+          "ani_p_strafe_f",
+          "ani_p_strafe_b",
+          "ani_p_strafe_l",
+          "ani_p_strafe_r",
+          "ani_p_pistol_fire",
+          "ani_p_reload",
+          "ani_e01_melee",
+          "ani_e02_pounce",
+          "ani_e03_acid",
+          "ani_e04_charge",
+          "ani_e05_fuse",
+          "ani_b01_hook",
+          "ani_b01_slam",
+          "ani_npc_hit_light_a",
+          "ani_npc_hit_light_b",
+          "ani_npc_death_f"
+        ],
+        "warnings": [
+          "MRR_DERIVED_MARKERS",
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "id": "H-01",
+        "stride": 28,
+        "matrixBase": 0,
+        "states": [
+          "idle",
+          "walk",
+          "run",
+          "jump",
+          "shoot",
+          "attack"
+        ]
+      },
+      {
+        "id": "E-01",
+        "stride": 28,
+        "matrixBase": 3556,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "E-02",
+        "stride": 28,
+        "matrixBase": 17472,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "E-03",
+        "stride": 28,
+        "matrixBase": 31388,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "E-04",
+        "stride": 28,
+        "matrixBase": 45304,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "E-05",
+        "stride": 28,
+        "matrixBase": 59220,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "B-01",
+        "stride": 28,
+        "matrixBase": 73136,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "B-02",
+        "stride": 28,
+        "matrixBase": 87052,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      },
+      {
+        "id": "B-03",
+        "stride": 28,
+        "matrixBase": 100968,
+        "states": [
+          "idle",
+          "walk",
+          "attack",
+          "death",
+          "scream"
+        ]
+      }
+    ],
+    "stats": {
+      "solves": 118,
+      "cacheHits": 2,
+      "failures": 0
+    }
+  },
+  "validation": {
+    "sceneCheck": "passed",
+    "focusedTests": {
+      "files": 5,
+      "tests": 46
+    },
+    "typecheck": "passed",
+    "architectureCheck": {
+      "files": 264,
+      "errors": 0
+    },
+    "gpuPlay": "not-run",
+    "note": "仅 CPU 求解/采样，纹理解码为 stub；不认证真实 GPU、姿态质量、时间标记或循环接缝",
+    "importFailureTests": {
+      "tests": 6,
+      "result": "passed"
+    },
+    "editorBuild": "passed"
+  },
+  "pending": [
+    "target-pose-and-grip-acceptance",
+    "timing-crops-and-markers",
+    "loop-seams-and-foot-contact",
+    "replace-e04-charge-gesture",
+    "headed-play-and-stop-ledger"
+  ]
+}

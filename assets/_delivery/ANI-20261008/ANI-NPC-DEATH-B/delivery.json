@@ -1,0 +1,16 @@
+{
+  "id": "ANI-NPC-DEATH-B",
+  "version": "v01",
+  "status": "skipped-duplicate-of-local-asset",
+  "character": "NPC",
+  "tool": "Adobe Mixamo；下载方报告 30fps/bone-only，新增源件已移除，本次未验证源格式",
+  "mixamoClip": "Zombie Death (Zombie Getting Hit And Falling Onto Back)",
+  "mixamoModelId": 121380901,
+  "license": "Adobe Mixamo content — embedded in this project only; raw FBX archived in gitignored assets-src/mixamo/, NOT for redistribution",
+  "variants": [],
+  "markers": "pending-integration (anticipation/release/impact/recovery 由 retarget 接入阶段按实际曲线标注)",
+  "deviation": "与本地 zombie_death.bvh 时长比对，疑似同一源",
+  "dupeOfLocal": "zombie_death.bvh (duration match 2.967s)",
+  "dedupeNote": "与本地 assets/animations/mixamo/zombie_death.bvh 被下载方按名称和时长判断为同一 Mixamo 动作（未核验帧数据）（时长 2.967s 完全一致）；后倒死亡需求由本地既有资产覆盖",
+  "dedupeVerification": "下载方已删除新增源件；现记录仅有动作名/时长依据，不能完成新旧帧数据对照。本次复用已有候选，不宣称帧级去重已证实"
+}

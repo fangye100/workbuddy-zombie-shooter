@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_ani_e04_charge",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:d29d1f0e0a94ef4579cb7fa3e483600ef3850c278995513aaf139ef21f5a1adf",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-E04-CHARGE",
+    "batchId": "ANI-20261008",
+    "acceptance": "candidate-not-visual-accepted",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 1
+  },
+  "sourceHash": "sha256:f5204e556673c862fd0e4b0dac317f36aa1ce00eaeb5d5d896ccf6a787ebf966"
+}

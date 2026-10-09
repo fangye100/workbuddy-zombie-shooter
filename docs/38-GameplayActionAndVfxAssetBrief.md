@@ -1,6 +1,11 @@
 # 战斗动作与特效追加资产需求（WorkBuddy 执行稿）
 
-Related sound-effect production requirements: [Gameplay audio asset brief](40-GameplayAudioAssetBrief.md).
+相关音效需求：[游戏音效资产清单](40-GameplayAudioAssetBrief.md)。
+
+2026-10-09 接入进度：[ANI-20261008 核验与候选接入记录](animation/ani-20261008-intake.md)。
+18 个新 FBX 已派生为共享 BVH 并登记检视场景；正式玩法映射、时间标记和视觉验收尚未完成。
+本批 Mixamo 原始 FBX 仅本机归档，不提交原件；需求中的 P-01 名称与当前 H-01 玩家映射
+须按现有角色数据核实，不据旧名称改写角色资产。
 
 版本 2026-10-07。延续 docs/31 的美漫规范；本清单是新增资源需求，不接管正在进行的角色绑定工作。现有环境模型及 LOD 复用，不要求重新生成角色 mesh。
 
