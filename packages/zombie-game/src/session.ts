@@ -113,8 +113,10 @@ export interface EntityView {
   targetId: number;
   /** 0 idle, 1 chase, 2 windup, 3 instantaneous strike, 4 recovery. */
   behavior: number;
-  /** Authoritative anticipation phase for a one-shot attack clip (not a looping random phase). */
+  /** Authoritative windup/recovery phase; rendering does not own attack clocks. */
   behaviorPhase?: number;
+  /** 可叠加的 Boss 动作由游戏规则提供阶段；宿主只选择已发布片段。 */
+  motionCue?: { state: 'slam' | 'slam_recover'; phase: number };
   /** 当前血量（P5；HUD 血条与死亡判定的读点） */
   hp: number;
   /** 血量上限（stats.hp 真源；血条比例的分母） */
@@ -147,6 +149,8 @@ export interface SpawnRejection {
  * 统计据此派生，不需要每步扫表。
  */
 export interface CombatEvent {
+  /** 击杀前的 NPC 只读快照，供表现尾部消费；不代表仍存活的模拟实体。 */
+  readonly defeated?: EntityView;
   readonly x?: number;
   readonly z?: number;
   readonly type: 'damage' | 'kill';
@@ -286,6 +290,7 @@ export class RuntimeSession {
   private attackTokens: AttackTokenPool | null = null;
   private readonly npcDecisionAt: Float64Array;
   private readonly npcRecoveryUntil: Float64Array;
+  private readonly npcRecoveryStartedAt: Float64Array;
   private readonly npcRng: Uint32Array;
   private readonly npcWindupDuration: Float64Array;
   private randomNpc(slot:number):number { let x=this.npcRng[slot]!;x^=x<<13;x^=x>>>17;x^=x<<5;this.npcRng[slot]=x>>>0;return (x>>>0)/4294967296; }
@@ -488,7 +493,7 @@ export class RuntimeSession {
     this.fixedStep = opts.fixedStep ?? 1 / 30;
     const capacity = opts.capacity ?? 512;
     this.capacity = capacity;
-    this.npcDecisionAt=new Float64Array(capacity);this.npcRecoveryUntil=new Float64Array(capacity);this.npcRng=new Uint32Array(capacity);this.npcWindupDuration=new Float64Array(capacity);
+    this.npcDecisionAt=new Float64Array(capacity);this.npcRecoveryUntil=new Float64Array(capacity);this.npcRecoveryStartedAt=new Float64Array(capacity);this.npcRng=new Uint32Array(capacity);this.npcWindupDuration=new Float64Array(capacity);
     this.runId = NEXT_RUN_ID++;
     this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
 
@@ -594,6 +599,10 @@ export class RuntimeSession {
   /** 单槽位视图（view() 与 player() 共用，避免两处构造逻辑漂移） */
   private viewAt(i: number): EntityView {
     const stats = this.defIdToStats.get(this.table.defId[i]!);
+    const bossSource = this.desc.runRules?.bossAttack?.source;
+    const slam = bossSource && this.sourceOf[i] === bossSource ? this.enemyAttacks.effects.find(e => e.kind === 'slam' && e.source === i && e.generation === this.table.generation[i]) : null;
+    const cue = bossSource && this.sourceOf[i] === bossSource && this.danger ? { state: 'slam' as const, phase: 1-this.danger.remaining/Math.max(.001,this.danger.duration) }
+      : slam ? { state: 'slam_recover' as const, phase: (this.tickCount-slam.startTick)*this.fixedStep/Math.max(.001,slam.duration) } : null;
     return {
       id: i,
       generation: this.table.generation[i]!,
@@ -607,7 +616,9 @@ export class RuntimeSession {
       sourceNodeId: this.sourceOf[i] ?? null,
       targetId: this.table.targetEntity[i]!,
       behavior: this.table.behavior[i]!,
-      behaviorPhase: this.table.behavior[i]===BEHAVIOR_WINDUP ? Math.max(0,Math.min(1,1-this.table.windupRemain[i]!/Math.max(.001,this.npcWindupDuration[i]!))) : 0,
+      ...(cue ? { motionCue: { ...cue, phase: Math.max(0,Math.min(1,cue.phase)) } } : {}),
+      behaviorPhase: this.table.behavior[i]===BEHAVIOR_WINDUP ? Math.max(0,Math.min(1,1-this.table.windupRemain[i]!/Math.max(.001,this.npcWindupDuration[i]!)))
+        : this.table.behavior[i]===BEHAVIOR_RECOVER ? Math.max(0,Math.min(1,(this.tickCount*this.fixedStep-this.npcRecoveryStartedAt[i]!)/Math.max(.001,this.npcRecoveryUntil[i]!-this.npcRecoveryStartedAt[i]!))) : 0,
       hp: this.table.health[i]!,
       maxHp: this.table.maxHp[i]!,
       hitFlash: this.table.hitFlash[i]!,
@@ -675,6 +686,7 @@ export class RuntimeSession {
     const characterId = this.characterIdOf(targetSlot);
     const died = hpAfter <= 0;
     this.combatEventBuf.push({
+      ...(died && this.kindOf[targetSlot] === 1 ? { defeated: this.viewAt(targetSlot) } : {}),
       type: died ? 'kill' : 'damage',
       tick: this.tickCount,
       slot: targetSlot,
@@ -1227,6 +1239,7 @@ export class RuntimeSession {
     this.npcRng[i]=mixSeed(this.initialSeed,`npc:${i}:${this.table.generation[i]}`)||1;
     this.npcDecisionAt[i]=this.tickCount*this.fixedStep+this.npcDecisionDelay(i);
     this.npcRecoveryUntil[i]=0;
+    this.npcRecoveryStartedAt[i]=0;
     this.table.behavior[i] = this.desc.runRules?.npcTiming ? BEHAVIOR_IDLE : BEHAVIOR_CHASE;
     // P5：血量真源（stats.npc[].hp，roster 交叉校验过）
     this.table.maxHp[i] = stats.hp;
@@ -1424,6 +1437,7 @@ export class RuntimeSession {
           // strike 后恢复与冷却分别计时；恢复期间不参与普通追击。
           const timing=this.desc.runRules?.npcTiming;
           t.behavior[i] = timing?BEHAVIOR_RECOVER:BEHAVIOR_CHASE;
+          this.npcRecoveryStartedAt[i]=now;
           this.npcRecoveryUntil[i]=now+(timing?timing.recoveryMinSec+(timing.recoveryMaxSec-timing.recoveryMinSec)*this.randomNpc(i):0);
           this.npcDecisionAt[i]=this.npcRecoveryUntil[i]!+this.npcDecisionDelay(i);
           t.cooldownUntil[i] = now + atk.cdSec*(1+(timing?.cooldownJitterFrac??0)*this.randomNpc(i));

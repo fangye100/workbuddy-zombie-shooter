@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "id": "ANI-20261008-GAMEPLAY",
+  "description": "有界面候选检视后的人工剪辑点；帧号为 0 起，末帧包含。时间轴按模拟阶段重映射，不反改伤害/冷却。替代动作不等于最终美术验收。",
+  "clips": [
+    {
+      "id": "game_aim",
+      "source": "ani_p_aim_idle",
+      "startFrame": 0,
+      "endFrame": 120,
+      "seamFrames": 6
+    },
+    {
+      "id": "game_walk_f",
+      "source": "ani_p_strafe_f",
+      "startFrame": 0,
+      "endFrame": 24,
+      "seamFrames": 3
+    },
+    {
+      "id": "game_walk_b",
+      "source": "ani_p_strafe_b",
+      "startFrame": 0,
+      "endFrame": 31,
+      "seamFrames": 3
+    },
+    {
+      "id": "game_walk_l",
+      "source": "ani_p_strafe_l",
+      "startFrame": 0,
+      "endFrame": 17,
+      "seamFrames": 3
+    },
+    {
+      "id": "game_walk_r",
+      "source": "ani_p_strafe_r",
+      "startFrame": 0,
+      "endFrame": 18,
+      "seamFrames": 3
+    },
+    {
+      "id": "game_pistol_fire",
+      "source": "ani_p_pistol_fire",
+      "startFrame": 0,
+      "endFrame": 21,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_reload",
+      "source": "ani_p_reload",
+      "startFrame": 0,
+      "endFrame": 99,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e01_windup",
+      "source": "ani_e01_melee",
+      "startFrame": 0,
+      "endFrame": 36,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e01_recover",
+      "source": "ani_e01_melee",
+      "startFrame": 36,
+      "endFrame": 78,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e02_windup",
+      "source": "ani_e02_pounce",
+      "startFrame": 0,
+      "endFrame": 30,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e02_recover",
+      "source": "ani_e02_pounce",
+      "startFrame": 30,
+      "endFrame": 90,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e03_windup",
+      "source": "ani_e03_acid",
+      "startFrame": 0,
+      "endFrame": 60,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e03_recover",
+      "source": "ani_e03_acid",
+      "startFrame": 60,
+      "endFrame": 162,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_b01_windup",
+      "source": "ani_b01_hook",
+      "startFrame": 0,
+      "endFrame": 18,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_b01_recover",
+      "source": "ani_b01_hook",
+      "startFrame": 18,
+      "endFrame": 33,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_b01_slam_windup",
+      "source": "ani_b01_slam",
+      "startFrame": 0,
+      "endFrame": 48,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_b01_slam_recover",
+      "source": "ani_b01_slam",
+      "startFrame": 48,
+      "endFrame": 120,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_e05_windup",
+      "source": "ani_e05_fuse",
+      "startFrame": 0,
+      "endFrame": 60,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_hit",
+      "source": "ani_npc_hit_light_a",
+      "startFrame": 0,
+      "endFrame": 18,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_hit_b",
+      "source": "ani_npc_hit_light_b",
+      "startFrame": 0,
+      "endFrame": 18,
+      "seamFrames": 0
+    },
+    {
+      "id": "game_death_f",
+      "source": "ani_npc_death_f",
+      "startFrame": 0,
+      "endFrame": 99,
+      "seamFrames": 0
+    }
+  ],
+  "profiles": {
+    "player": {
+      "idle": "game_aim",
+      "walk": "game_walk_f",
+      "run": "player_running",
+      "jump": "player_jump_up",
+      "shoot": "game_pistol_fire",
+      "attack": "player_punching",
+      "walk_f": "game_walk_f",
+      "walk_b": "game_walk_b",
+      "walk_l": "game_walk_l",
+      "walk_r": "game_walk_r",
+      "reload": "game_reload"
+    },
+    "npc": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "zombie_attack",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b"
+    },
+    "npc-e01": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e01_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e01_recover"
+    },
+    "npc-e02": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e02_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e02_recover"
+    },
+    "npc-e03": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e03_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e03_recover"
+    },
+    "npc-e05": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e05_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b"
+    },
+    "npc-b01": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_b01_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_b01_recover",
+      "slam": "game_b01_slam_windup",
+      "slam_recover": "game_b01_slam_recover"
+    }
+  }
+}

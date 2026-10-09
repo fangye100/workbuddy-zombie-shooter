@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_reload",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:232fbe822035e9b2981b95aba532c8634a79fb4c9dcdca79b3fad4c6c79d2ca0",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-RELOAD",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 1,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_p_reload.bvh",
+      "guid": "as_motion_ani_p_reload"
+    },
+    "derivedSourceHash": "sha256:75925b237ffc06f14da652d5f6dad44149f6dff1a4318e1a68459b36506184c4",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 99,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:f5915b8758908435c794928a693c2167d310639e2d46fa737a3fac6e11646847"
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_b01_recover",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:30f6ceafe992423346bcb1a8810a9b978f7f1dcb2c7f294b518a125b6b80d226",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-B01-HOOK",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_b01_hook.bvh",
+      "guid": "as_motion_ani_b01_hook"
+    },
+    "derivedSourceHash": "sha256:43f8679b5998cb558370bdea26cb4d0d105125150a6920d0d6ea19565f8e2f6c",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 18,
+    "endFrame": 33,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:6da923f424375082fa38f8143e0f24f27bcd7f4fbe064c3af14c6ab949868b14"
+}

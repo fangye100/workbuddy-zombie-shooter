@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_e02_recover",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:20da2fec960ac23d1bc29cc2a4afb7bcbda583b5849dfa07f3305b9337c233b9",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-E02-POUNCE",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 1,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_e02_pounce.bvh",
+      "guid": "as_motion_ani_e02_pounce"
+    },
+    "derivedSourceHash": "sha256:0d770a56949c554dad8fcc91f25e5ea2bf65b4e1201bc7afe7feb169e54b5fa0",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 30,
+    "endFrame": 90,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:4a4527191cc2a12f394a71962cf66e0ed073bcda74a1f817893328f1f2caacdb"
+}

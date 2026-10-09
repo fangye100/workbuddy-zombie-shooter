@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_b01_slam_recover",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:1e7420b484e80c7b345f08c3b0418c7613631a7844d16203aa15729b17f0084b",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-B01-SLAM",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_b01_slam.bvh",
+      "guid": "as_motion_ani_b01_slam"
+    },
+    "derivedSourceHash": "sha256:71c2630923f060472cfbd0e5b8bcf0a91e63decbc5a4d3fe442072670a07898d",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 48,
+    "endFrame": 120,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:4fed7f11b122eab8474717e2ad5c0449e6e65e8dfd4061655b2068836c80ceba"
+}

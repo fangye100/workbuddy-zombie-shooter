@@ -20,7 +20,7 @@
       "path": "assets/animations/mixamo/shared.motion.json",
       "guid": "as_mixamo_shared_motion"
     },
-    "profile": "npc",
+    "profile": "npc-b01",
     "defaultState": "idle",
     "speed": 1
   },

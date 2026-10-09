@@ -241,23 +241,202 @@
       },
       "loop": false,
       "rootPolicy": "in-place"
+    },
+    "game_aim": {
+      "source": {
+        "path": "assets/animations/gameplay/game_aim.bvh",
+        "guid": "as_motion_game_aim"
+      },
+      "rootPolicy": "in-place",
+      "loop": true
+    },
+    "game_walk_f": {
+      "source": {
+        "path": "assets/animations/gameplay/game_walk_f.bvh",
+        "guid": "as_motion_game_walk_f"
+      },
+      "rootPolicy": "in-place",
+      "loop": true,
+      "nominalSpeedMps": 2.957363118548857
+    },
+    "game_walk_b": {
+      "source": {
+        "path": "assets/animations/gameplay/game_walk_b.bvh",
+        "guid": "as_motion_game_walk_b"
+      },
+      "rootPolicy": "in-place",
+      "loop": true,
+      "nominalSpeedMps": 1.6570995177160894
+    },
+    "game_walk_l": {
+      "source": {
+        "path": "assets/animations/gameplay/game_walk_l.bvh",
+        "guid": "as_motion_game_walk_l"
+      },
+      "rootPolicy": "in-place",
+      "loop": true,
+      "nominalSpeedMps": 2.5428107151373855
+    },
+    "game_walk_r": {
+      "source": {
+        "path": "assets/animations/gameplay/game_walk_r.bvh",
+        "guid": "as_motion_game_walk_r"
+      },
+      "rootPolicy": "in-place",
+      "loop": true,
+      "nominalSpeedMps": 2.7799848814993395
+    },
+    "game_pistol_fire": {
+      "source": {
+        "path": "assets/animations/gameplay/game_pistol_fire.bvh",
+        "guid": "as_motion_game_pistol_fire"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_reload": {
+      "source": {
+        "path": "assets/animations/gameplay/game_reload.bvh",
+        "guid": "as_motion_game_reload"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e01_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e01_windup.bvh",
+        "guid": "as_motion_game_e01_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e01_recover": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e01_recover.bvh",
+        "guid": "as_motion_game_e01_recover"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e02_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e02_windup.bvh",
+        "guid": "as_motion_game_e02_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e02_recover": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e02_recover.bvh",
+        "guid": "as_motion_game_e02_recover"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e03_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e03_windup.bvh",
+        "guid": "as_motion_game_e03_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e03_recover": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e03_recover.bvh",
+        "guid": "as_motion_game_e03_recover"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_b01_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_b01_windup.bvh",
+        "guid": "as_motion_game_b01_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_b01_recover": {
+      "source": {
+        "path": "assets/animations/gameplay/game_b01_recover.bvh",
+        "guid": "as_motion_game_b01_recover"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_b01_slam_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_b01_slam_windup.bvh",
+        "guid": "as_motion_game_b01_slam_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_b01_slam_recover": {
+      "source": {
+        "path": "assets/animations/gameplay/game_b01_slam_recover.bvh",
+        "guid": "as_motion_game_b01_slam_recover"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_e05_windup": {
+      "source": {
+        "path": "assets/animations/gameplay/game_e05_windup.bvh",
+        "guid": "as_motion_game_e05_windup"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_hit": {
+      "source": {
+        "path": "assets/animations/gameplay/game_hit.bvh",
+        "guid": "as_motion_game_hit"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_hit_b": {
+      "source": {
+        "path": "assets/animations/gameplay/game_hit_b.bvh",
+        "guid": "as_motion_game_hit_b"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
+    },
+    "game_death_f": {
+      "source": {
+        "path": "assets/animations/gameplay/game_death_f.bvh",
+        "guid": "as_motion_game_death_f"
+      },
+      "rootPolicy": "in-place",
+      "loop": false
     }
   },
   "profiles": {
     "player": {
-      "idle": "player_ready",
-      "walk": "player_walking",
+      "idle": "game_aim",
+      "walk": "game_walk_f",
       "run": "player_running",
       "jump": "player_jump_up",
-      "shoot": "player_shoot_rifle",
-      "attack": "player_punching"
+      "shoot": "game_pistol_fire",
+      "attack": "player_punching",
+      "walk_f": "game_walk_f",
+      "walk_b": "game_walk_b",
+      "walk_l": "game_walk_l",
+      "walk_r": "game_walk_r",
+      "reload": "game_reload"
     },
     "npc": {
       "idle": "zombie_idle",
       "walk": "zombie_walk",
       "attack": "zombie_attack",
-      "death": "zombie_death",
-      "scream": "zombie_scream"
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b"
     },
     "ani-20261008-preview": {
       "ani_p_aim_idle": "ani_p_aim_idle",
@@ -278,6 +457,57 @@
       "ani_npc_hit_light_a": "ani_npc_hit_light_a",
       "ani_npc_hit_light_b": "ani_npc_hit_light_b",
       "ani_npc_death_f": "ani_npc_death_f"
+    },
+    "npc-e01": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e01_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e01_recover"
+    },
+    "npc-e02": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e02_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e02_recover"
+    },
+    "npc-e03": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e03_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_e03_recover"
+    },
+    "npc-e05": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_e05_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b"
+    },
+    "npc-b01": {
+      "idle": "zombie_idle",
+      "walk": "zombie_walk",
+      "attack": "game_b01_windup",
+      "death": "game_death_f",
+      "scream": "zombie_scream",
+      "hit": "game_hit",
+      "hit_b": "game_hit_b",
+      "recover": "game_b01_recover",
+      "slam": "game_b01_slam_windup",
+      "slam_recover": "game_b01_slam_recover"
     }
   }
 }

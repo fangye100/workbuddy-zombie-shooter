@@ -18,6 +18,7 @@ import { createCapsule, DEFAULT_MOTION_TRANSITION_SEC } from '@aether/scene';
 import { rayCapsuleY } from '@aether/gameplay';
 import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/zombie-game';
+import { NpcMotionPresentation } from '@aether/zombie-game/presentation/npc-motion';
 import { DYNAMIC_INSTANCE_FLOATS, PalettePoseTransitions, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
 import { characterYaw } from './character-facing';
@@ -120,6 +121,7 @@ interface BatchSlot {
 export class RuntimeBridge {
   readonly instanceStride = DYNAMIC_INSTANCE_FLOATS;
   private readonly poseTransitions = new PalettePoseTransitions();
+  private readonly npcMotion = new NpcMotionPresentation();
   private gait = new Map<string, { x: number; z: number; clip: string; cycles: number }>();
   private presentedPlayerSource: string | null = null;
   get presentedPlayerNodeId(): string | null { return this.presentedPlayerSource; }
@@ -154,6 +156,11 @@ export class RuntimeBridge {
     const decision = actor ? paletteChoice(actor.clips, behavior, e.kind === 'player' ? slot.playerWeapon ?? null : null, true).decision! : null;
     if (decision) {
       decision.actual = clip?.name ?? 'bind pose';
+      const cue = this.npcMotion.cue(e, tick, this.session!.fixedStep);
+      if (cue && clip && (clip.name === cue.state || cue.state === 'hit_b' && clip.name === 'hit')) {
+        decision.requested = cue.state; decision.source = e.alive && e.motionCue ? 'game-cue' : 'combat-event'; decision.fallback = clip.name === cue.state ? null : `${cue.state} → ${clip.name}`;
+        decision.rules.unshift({ id: decision.source, label: '游戏动作表现', matched: true, selected: true, reason: `身份含 runId / generation；${cue.state} phase=${cue.phase.toFixed(3)}；不修改模拟` });
+      }
       decision.rules.unshift({ id: 'anchor', label: '静止角色行为归一化', matched: e.behavior === 1 && stats?.moveSpeed === 0,
         selected: e.behavior === 1 && stats?.moveSpeed === 0, reason: `原始 behavior=${e.behavior}; 实际 behavior=${behavior}; moveSpeed=${stats?.moveSpeed ?? '未知'}` });
     }
@@ -227,6 +234,7 @@ export class RuntimeBridge {
     this.session = session;
     this.gait.clear();
     this.poseTransitions.clear();
+    this.npcMotion.clear();
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
       this.presentedPlayerSource = null;
@@ -350,7 +358,7 @@ export class RuntimeBridge {
     // 否则每帧都要重新 createCapsule —— 那 500 只僵尸的 CPU 开销就全在造网格上了
     for (const s of this.slots.values()) s.entities.length = 0;
     if (this.session === null) return;
-    const view = this.session.view();
+    const view = this.npcMotion.frames(this.session.view(), this.session.combatEvents, this.session.tick, this.session.fixedStep, this.session.runId);
     // 动画相位的两个输入（M3）：tick 与固定步长都来自会话 —— 纯数据，
     // 不读墙钟，Node 与浏览器逐位一致（docs/20 §5「动画相位 = f(tick)」）
     const tick = this.session.tick;
@@ -455,11 +463,15 @@ export class RuntimeBridge {
           const behavior = e.behavior === 1 && stats?.moveSpeed === 0 ? 0 : e.behavior;
           const weapon=e.kind==='player'?this.session.weapons.animation:null;
           if (e.kind === 'player') slot.playerWeapon = weapon;
-          const clipIdx = paletteChoice(actor.clips, behavior, weapon).index;
+          const cue = this.npcMotion.cue(e, tick, fixedStep);
+          let cueIndex = cue ? actor.clips.findIndex(c => c.name === cue.state) : -1;
+          if (cueIndex < 0 && cue?.state === 'hit_b') cueIndex = actor.clips.findIndex(c => c.name === 'hit');
+          const clipIdx = cueIndex >= 0 ? cueIndex : paletteChoice(actor.clips, behavior, weapon).index;
           const clip = clipIdx >= 0 ? actor.clips[clipIdx]! : null;
           phase01 = clip !== null ? animPhase(tick, fixedStep, e.id, clip.durationSec) : 0;
-          if (behavior===2) phase01=Math.min(.999,Math.max(0,e.behaviorPhase??0));
+          if (behavior===2 || behavior===4 && clip?.name==='recover') phase01=Math.min(.999,Math.max(0,e.behaviorPhase??0));
           if(weapon && weapon.action!=='idle')phase01=Math.min(.999,weapon.phase);
+          if(cueIndex >= 0)phase01=cue!.phase;
           const nominal = clip ? actor.motion?.states[clip.name]?.nominalSpeedMps : undefined;
           if (clip && nominal && clip.durationSec > 0 && (!weapon || weapon.action==='idle')) {
             const key = `${e.runId}:${e.id}:${e.generation}`; gaitKeys.add(key);

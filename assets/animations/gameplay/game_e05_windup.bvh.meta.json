@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_e05_windup",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:3ae39cfb75751525c0d8eb4803b13a8a4aa7e7998b29ed00b518a6cffeb4530c",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-E05-FUSE",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_e05_fuse.bvh",
+      "guid": "as_motion_ani_e05_fuse"
+    },
+    "derivedSourceHash": "sha256:0196a73bfa1c870bd672fe7a55efaa9ff6fb4d8074584461dc8fa03825d1ac5a",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 60,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:67614bddff8651f7420ea2ba827cefb4876f5eed433c1955a60963b3d4a049b5"
+}

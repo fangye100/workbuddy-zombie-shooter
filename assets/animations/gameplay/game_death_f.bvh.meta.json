@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_death_f",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:ceb5b428e72b22707ced0c1d2afe0d27c2350e19285da35da3d4d5368d31e15b",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-NPC-DEATH-F",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_npc_death_f.bvh",
+      "guid": "as_motion_ani_npc_death_f"
+    },
+    "derivedSourceHash": "sha256:56acfd8854e34fd72f55d03fbebbda74c0fc97eef82c3d2a5ce8e43c8d33bb35",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 99,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:03c7ba6dcb4eee22b28a72552e7cfe926f1cf3a97fbfcc74a69931a460ed2939"
+}

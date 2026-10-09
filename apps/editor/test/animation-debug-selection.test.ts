@@ -3,6 +3,14 @@ import { sceneChoice, paletteChoice, type SceneChoiceInput } from '../src/servic
 const input: SceneChoiceInput = { states: { idle: {}, walk: {}, run: {}, shoot: {}, reload: {} }, defaultState: 'idle',
   speed: 3, keepGait: false, firing: true, runId: 7, weapon: { action: 'fire', clip: 'pistol-fire', fallback: 'reload', phase: .4, weaponId: 'pistol', startTick: 4 } };
 describe('execution selection explanations', () => {
+  it('四向步态保留武器优先级，收势缺片时回到 idle', () => {
+    const directional = { ...input, locomotionState: 'walk_l', states: { ...input.states, walk_l: {} } };
+    expect(sceneChoice(directional).state).toBe('shoot');
+    expect(sceneChoice({ ...directional, keepGait: true }).state).toBe('walk_l');
+    expect(sceneChoice({ ...directional, speed: 0, weapon: null, firing: false }).state).toBe('idle');
+    expect(paletteChoice([{ name: 'walk' }, { name: 'idle' }], 4, null).index).toBe(1);
+    expect(paletteChoice([{ name: 'idle' }, { name: 'recover' }], 4, null).index).toBe(1);
+  });
   it('preserves weapon candidate order, gait priority, legacy firing, and missing locomotion fallback', () => {
     expect(sceneChoice(input, true).decision).toMatchObject({ requested: 'pistol-fire', actual: 'shoot', fallback: 'pistol-fire → shoot' });
     expect(sceneChoice({ ...input, keepGait: true }).state).toBe('run');

@@ -1,0 +1,768 @@
+{
+  "device": {
+    "vendor": "nvidia",
+    "architecture": "lovelace",
+    "headed": true
+  },
+  "floors": [
+    {
+      "floor": 2,
+      "npcCount": 48,
+      "types": [
+        {
+          "id": "E-01",
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        },
+        {
+          "id": "E-02",
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        }
+      ],
+      "motionErrors": [],
+      "actorErrors": []
+    }
+  ],
+  "probes": [
+    {
+      "kind": "hit",
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 1,
+          "runId": 1,
+          "generation": 1
+        },
+        "label": "E-01 #1",
+        "characterId": "E-01",
+        "tick": 33,
+        "revision": 2,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "hit_b",
+          "actual": "hit_b",
+          "source": "combat-event",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"
+            },
+            {
+              "id": "combat-event",
+              "label": "受击 / 死亡表现尾部",
+              "matched": true,
+              "selected": true,
+              "reason": "身份含 runId / generation；hit_b phase=0.333；不修改模拟"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "hit_b",
+          "index": 6,
+          "time": 0.20000001390775068,
+          "duration": 0.6000000238418579,
+          "phase": 0.3333333432674408,
+          "loop": null
+        },
+        "transition": {
+          "from": "walk",
+          "to": "hit_b",
+          "elapsed": 0.06666666666666687,
+          "duration": 0.2,
+          "weight": 0.25925925374031067,
+          "source": "palette-matrix-snapshot"
+        },
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      }
+    },
+    {
+      "kind": "death",
+      "tick": 94,
+      "npcCount": 23,
+      "batches": [
+        {
+          "mesh": "actor:E-01",
+          "count": 15
+        },
+        {
+          "mesh": "actor:E-02",
+          "count": 9
+        }
+      ],
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 1,
+          "runId": 1,
+          "generation": 1
+        },
+        "label": "E-01 #1",
+        "characterId": "E-01",
+        "tick": 94,
+        "revision": 3,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "death",
+          "actual": "death",
+          "source": "combat-event",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"
+            },
+            {
+              "id": "combat-event",
+              "label": "受击 / 死亡表现尾部",
+              "matched": true,
+              "selected": true,
+              "reason": "身份含 runId / generation；death phase=0.616；不修改模拟"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "death",
+          "index": 3,
+          "time": 2.0333333973330667,
+          "duration": 3.299999952316284,
+          "phase": 0.6161616444587708,
+          "loop": null
+        },
+        "transition": null,
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      }
+    },
+    {
+      "kind": "death-final-pose",
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 1,
+          "runId": 1,
+          "generation": 1
+        },
+        "label": "E-01 #1",
+        "characterId": "E-01",
+        "tick": 109,
+        "revision": 3,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "death",
+          "actual": "death",
+          "source": "combat-event",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"
+            },
+            {
+              "id": "combat-event",
+              "label": "受击 / 死亡表现尾部",
+              "matched": true,
+              "selected": true,
+              "reason": "身份含 runId / generation；death phase=0.768；不修改模拟"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "death",
+          "index": 3,
+          "time": 2.53333330666176,
+          "duration": 3.299999952316284,
+          "phase": 0.7676767706871033,
+          "loop": null
+        },
+        "transition": null,
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      }
+    },
+    {
+      "kind": "death-expired",
+      "tick": 159,
+      "npcCount": 23,
+      "renderCount": 23,
+      "snapshot": null
+    },
+    {
+      "kind": "acid-windup",
+      "tick": 180,
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 40,
+          "runId": 2,
+          "generation": 2
+        },
+        "label": "E-03 #40",
+        "characterId": "E-03",
+        "tick": 180,
+        "revision": 0,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "attack",
+          "actual": "attack",
+          "source": "behavior",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=2; 实际 behavior=2; moveSpeed=1"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=2; requested=attack; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "attack",
+          "index": 2,
+          "time": 1.0014046430587769,
+          "duration": 2,
+          "phase": 0.5007023215293884,
+          "loop": null
+        },
+        "transition": null,
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "kind": "acid-flight",
+      "tick": 200,
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 40,
+          "runId": 2,
+          "generation": 2
+        },
+        "label": "E-03 #40",
+        "characterId": "E-03",
+        "tick": 200,
+        "revision": 1,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "recover",
+          "actual": "recover",
+          "source": "behavior",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=4; 实际 behavior=4; moveSpeed=1"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=4; requested=recover; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "recover",
+          "index": 7,
+          "time": 0.4823137567622169,
+          "duration": 3.4000000953674316,
+          "phase": 0.14185698330402374,
+          "loop": null
+        },
+        "transition": {
+          "from": "attack",
+          "to": "recover",
+          "elapsed": 0,
+          "duration": 0.2,
+          "weight": 0,
+          "source": "palette-matrix-snapshot"
+        },
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      },
+      "effects": [
+        {
+          "kind": "acid",
+          "phase": "flight",
+          "blocked": false
+        }
+      ]
+    },
+    {
+      "kind": "boss-slam",
+      "tick": 22,
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 17,
+          "runId": 3,
+          "generation": 1
+        },
+        "label": "B-01 #17",
+        "characterId": "B-01",
+        "tick": 22,
+        "revision": 0,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "slam",
+          "actual": "slam",
+          "source": "combat-event",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=2.2"
+            },
+            {
+              "id": "combat-event",
+              "label": "受击 / 死亡表现尾部",
+              "matched": true,
+              "selected": true,
+              "reason": "身份含 runId / generation；slam phase=0.389；不修改模拟"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "slam",
+          "index": 8,
+          "time": 0.6222222420904373,
+          "duration": 1.600000023841858,
+          "phase": 0.3888888955116272,
+          "loop": null
+        },
+        "transition": null,
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      },
+      "boss": {
+        "id": 17,
+        "generation": 1,
+        "runId": 3,
+        "characterId": "B-01",
+        "kind": "npc",
+        "x": 47.38360595703125,
+        "z": 3.350994825363159,
+        "yaw": -2.483102321624756,
+        "alive": true,
+        "sourceNodeId": "nd_f3r1_sp0",
+        "targetId": 0,
+        "behavior": 1,
+        "motionCue": {
+          "state": "slam",
+          "phase": 0.38888888888889006
+        },
+        "behaviorPhase": 0,
+        "hp": 4200,
+        "maxHp": 4200,
+        "hitFlash": 0,
+        "lodTier": 0
+      }
+    },
+    {
+      "kind": "fuse",
+      "tick": 31,
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 27,
+          "runId": 3,
+          "generation": 1
+        },
+        "label": "E-05 #27",
+        "characterId": "E-05",
+        "tick": 31,
+        "revision": 0,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "attack",
+          "actual": "attack",
+          "source": "behavior",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=2; 实际 behavior=2; moveSpeed=1.1"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=2; requested=attack; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "attack",
+          "index": 2,
+          "time": 0.8432954549789429,
+          "duration": 2,
+          "phase": 0.42164772748947144,
+          "loop": null
+        },
+        "transition": null,
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      }
+    },
+    {
+      "kind": "boss-recover",
+      "tick": 55,
+      "snapshot": {
+        "identity": {
+          "kind": "entity",
+          "id": 17,
+          "runId": 3,
+          "generation": 1
+        },
+        "label": "B-01 #17",
+        "characterId": "B-01",
+        "tick": 55,
+        "revision": 1,
+        "pipeline": "gpu-palette",
+        "status": "ready",
+        "decision": {
+          "requested": "slam_recover",
+          "actual": "slam_recover",
+          "source": "combat-event",
+          "fallback": null,
+          "actionStamp": "",
+          "rules": [
+            {
+              "id": "anchor",
+              "label": "静止角色行为归一化",
+              "matched": false,
+              "selected": false,
+              "reason": "原始 behavior=2; 实际 behavior=2; moveSpeed=2.2"
+            },
+            {
+              "id": "combat-event",
+              "label": "受击 / 死亡表现尾部",
+              "matched": true,
+              "selected": true,
+              "reason": "身份含 runId / generation；slam_recover phase=0.074；不修改模拟"
+            },
+            {
+              "id": "weapon",
+              "label": "武器 clip → action 别名",
+              "matched": false,
+              "selected": false,
+              "reason": "NPC / 无活动武器动作"
+            },
+            {
+              "id": "behavior",
+              "label": "行为映射",
+              "matched": true,
+              "selected": true,
+              "reason": "behavior=2; requested=attack; 缺片回 clip 0，空库回 bind pose"
+            }
+          ]
+        },
+        "clip": {
+          "name": "slam_recover",
+          "index": 9,
+          "time": 0.1777777861665797,
+          "duration": 2.4000000953674316,
+          "phase": 0.07407407462596893,
+          "loop": null
+        },
+        "transition": {
+          "from": "slam",
+          "to": "slam_recover",
+          "elapsed": 0,
+          "duration": 0.2,
+          "weight": 0,
+          "source": "palette-matrix-snapshot"
+        },
+        "ik": {
+          "status": "unsupported",
+          "enabled": false,
+          "weight": 0,
+          "controls": [],
+          "diagnostics": []
+        },
+        "diagnostics": [
+          "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+        ]
+      },
+      "effects": [
+        {
+          "kind": "slam",
+          "phase": "strike"
+        }
+      ]
+    },
+    {
+      "kind": "stop",
+      "state": "stopped",
+      "pending": 0,
+      "batches": null,
+      "motions": 0,
+      "gpu": {
+        "vendor": "nvidia",
+        "architecture": "lovelace"
+      },
+      "runtimeReleased": true
+    }
+  ],
+  "notes": [
+    "运行时探针使用真实 Play/渲染，临时提高玩家生命和单步推进，不认证实体手机或真实键鼠输入。"
+  ],
+  "date": "2026-10-10",
+  "baselineCommit": "bab7673c75b89e429a7a9eacd43443dff93ce80e",
+  "branch": "codex/architecture-boundaries-20261009",
+  "directionStability": [
+    {
+      "direction": "f",
+      "tick": 37,
+      "state": "walk_f",
+      "repeat": "walk_f",
+      "revisionStable": true,
+      "timeStable": true,
+      "hp": 100
+    },
+    {
+      "direction": "b",
+      "tick": 43,
+      "state": "walk_b",
+      "repeat": "walk_b",
+      "revisionStable": true,
+      "timeStable": true,
+      "hp": 100
+    },
+    {
+      "direction": "r",
+      "tick": 49,
+      "state": "walk_r",
+      "repeat": "walk_r",
+      "revisionStable": true,
+      "timeStable": true,
+      "hp": 100
+    },
+    {
+      "direction": "l",
+      "tick": 55,
+      "state": "walk_l",
+      "repeat": "walk_l",
+      "revisionStable": true,
+      "timeStable": true,
+      "hp": 100
+    }
+  ],
+  "directionStop": {
+    "tick": 56,
+    "state": "idle",
+    "hp": 100
+  },
+  "finalStop": {
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    },
+    "author": {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "name": "第一层 · 火场公路",
+      "revision": "90ed0617",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  }
+}

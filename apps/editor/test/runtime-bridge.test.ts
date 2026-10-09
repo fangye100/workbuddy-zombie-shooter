@@ -380,10 +380,24 @@ function animatedBridge(): { bridge: RuntimeBridge; play: PlaySession; actor: Ac
 }
 
 describe('RuntimeBridge pose transition packing', () => {
+  it('受击变体先精确选择 hit_b，只有缺片才回退 hit', () => {
+    const f=animatedBridge(),base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
+    f.actor.clips[0]!.name='hit';f.actor.clips[1]!.name='hit_b';
+    const entity={...base,behavior:1};
+    const runtime={runId:base.runId,tick:0,fixedStep:1/30,view:()=>[entity],combatEvents:[]} as unknown as RuntimeSession;
+    const bridge=new RuntimeBridge({get:()=>f.actor});bridge.attach(runtime);
+    const damageTick=base.id%2===0?1:0;
+    (runtime.combatEvents as unknown as object[]).push({type:'damage',tick:damageTick,slot:base.id,generation:base.generation,runId:base.runId});
+    (runtime as unknown as {tick:number}).tick=damageTick+1;bridge.refresh();
+    bridge.watchDebug({kind:'entity',id:base.id,generation:base.generation,runId:base.runId},()=>{});
+    expect(bridge.debugSnapshot()?.decision).toMatchObject({requested:'hit_b',actual:'hit_b',source:'combat-event',fallback:null});
+    f.actor.clips[1]!.name='walk';bridge.refresh();
+    expect(bridge.debugSnapshot()?.decision.actual).toBe('hit');
+  });
   it('reports the selected GPU entity clip, phase and transition weight from the packed pipeline', () => {
     const f = animatedBridge(), base = f.bridge.entities.find(e => e.characterId === 'E-01')!;
     const entities = [{ ...base, behavior: 0 }];
-    const runtime = { runId: base.runId, tick: 0, fixedStep: 1 / 30, view: () => entities } as unknown as RuntimeSession;
+    const runtime = { combatEvents: [], runId: base.runId, tick: 0, fixedStep: 1 / 30, view: () => entities } as unknown as RuntimeSession;
     const bridge = new RuntimeBridge({ get: () => f.actor }); bridge.attach(runtime);
     bridge.watchDebug({ kind: 'entity', id: base.id, generation: base.generation, runId: base.runId }, () => {});
     entities[0]!.behavior = 1; bridge.refresh();
@@ -399,7 +413,7 @@ describe('RuntimeBridge pose transition packing', () => {
     const f=animatedBridge(), actor=f.actor, base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
     for (let p=0;p<31;p++) for (let j=0;j<3;j++) actor.palette.data[p*48+j*16+12]=p;
     const entities=[{...base,id:100,behavior:0},{...base,id:101,behavior:0}];
-    const rt={tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
+    const rt={combatEvents:[],tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
     const bridge=new RuntimeBridge({get:()=>actor}); bridge.attach(rt);
     const first=bridge.batches()![0]!.instances.slice();
     entities[0]!.behavior=1; bridge.refresh();
@@ -422,7 +436,7 @@ describe('RuntimeBridge pose transition packing', () => {
   it('honors zero transition duration without allocating pose snapshots', () => {
     const f=animatedBridge(),actor=f.actor,base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
     actor.motion={key:'instant',clips:[],states:{},reports:[],transitionSec:0};
-    const entities=[{...base,behavior:0}],rt={tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
+    const entities=[{...base,behavior:0}],rt={combatEvents:[],tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
     const bridge=new RuntimeBridge({get:()=>actor}); bridge.attach(rt); entities[0]!.behavior=1; bridge.refresh();
     expect(bridge.batches()![0]!.instances[16]).toBe(1); expect(bridge.batches()![0]!.poseTransitions).toBeUndefined();
   });

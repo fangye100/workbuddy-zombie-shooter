@@ -2222,6 +2222,28 @@
         "project-rules",
         "scene-shared-motion"
       ]
+    },
+    {
+      "id": "ani-gameplay-integration",
+      "path": "docs/animation/ani-gameplay-integration.md",
+      "title": "共享动作进入实际玩法与验收指南",
+      "role": "animation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "mixamo",
+        "gameplay",
+        "retarget",
+        "gpu",
+        "npc"
+      ],
+      "read": "裁剪配方与 owner；攻击/武器相位；t1 状态保留；受击/死亡尾部；真实 GPU 证据及限制",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-shared-motion"
+      ]
     }
   ]
 }

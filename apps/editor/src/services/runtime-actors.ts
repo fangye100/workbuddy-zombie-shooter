@@ -213,7 +213,9 @@ export class ActorLibrary {
      * 烘焙档位（P4 M4，docs/20 §M4）。
      *
      * 调色板显存 = 帧数 × 关节数 × 16 float，mobile 上全片段 24fps 的开销撑不住
-     * 200 只。默认桌面档；mobile（t0/t1）降到 16fps 且只烘 1~2 个片段。
+     * 默认桌面档；t0/t1 降到 16fps。旧 GLB 可选片段限制为 1~2；
+     * 已声明共享 profile 保留完整状态。调色板按角色类型共享，不按实体复制。
+     * 增加状态会增加类型级显存，实际手机容量仍需设备验收。
      * 档位真源在项目文件 `render.targetTier`，由调用方传入（本类不读项目文件）。
      */
     bake: BakeProfile = DEFAULT_BAKE_PROFILE,
@@ -335,8 +337,11 @@ export class ActorLibrary {
       if (generation !== this.cacheGeneration) return false;
       if (animations.length === 0) throw new Error('GLB 无动画片段，且未配置共享动作库');
 
-      // P4 M4：按档位裁剪片段 + 降采样（mobile 档省显存/CPU 的关键一步）
-      const bakeClips = [...limitClips(animations, this.bake.maxClips)];
+      // A declared shared-motion profile is a state contract. Trimming its first
+      // two clips silently removes attack/death/reload at t1. Keep that finite
+      // authored profile; quality still controls sample rate and actor demand loading.
+      // Legacy embedded libraries retain their optional-clip budget.
+      const bakeClips = [...(motion ? animations : limitClips(animations, this.bake.maxClips))];
       const palette = bakePosePalette(sk, bakeClips, { fps: this.bake.fps });
       // 片段元数据（M3）：合并 BakedPalette.clips 与 clipBasePose，Bridge 选片用
       const clips: ActorClipMeta[] = palette.clips.map((c, i) => ({

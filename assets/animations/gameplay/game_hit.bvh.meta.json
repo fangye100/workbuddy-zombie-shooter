@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_hit",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:181de7aa8346c7ff29691011f60341f314a1edbb6ab5aefd3aeb7ee7b4e08e7b",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-NPC-HIT-LIGHT",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_npc_hit_light_a.bvh",
+      "guid": "as_motion_ani_npc_hit_light_a"
+    },
+    "derivedSourceHash": "sha256:9ce4b20cd0f684da07779e281b2e2987b42ab30409056b4aa016b1305441da88",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 18,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:e5920928f0facf1f0c337b74a8f3bac9810a990a1e5e125808b4fe4acbead99e"
+}

@@ -54,6 +54,26 @@ it('seeded transitions stay reproducible and stagger perception, windup and reco
   expect(new Set(a.filter(x=>x.endsWith(':1')).map(x=>x.split(':')[0])).size).toBeGreaterThan(1);
   expect(a.some(x=>x.endsWith(':4'))).toBe(true);
 });
+it('前摇与收势提供单调阶段相位，收势不随机循环且不延迟模拟死亡',()=>{
+  const desc=loadLevelRuntime(document(1)).desc!;desc.shotColliders=[];desc.obstacles=[];
+  const s=new RuntimeSession({desc,seed:7});s.table.health[s.playerEntityId]=10000;
+  for(const e of s.view().filter(e=>e.kind==='npc')){s.table.posX[e.id]=4;s.table.posZ[e.id]=0;s.table.maxSpeed[e.id]=0;}
+  const last=new Map<number,{behavior:number;phase:number}>();let recoverSamples=0;
+  for(let tick=0;tick<180;tick++){
+    s.step();for(const e of s.view().filter(e=>e.kind==='npc')){
+      if(e.behavior!==2 && e.behavior!==4)continue;
+      expect(e.behaviorPhase).toBeGreaterThanOrEqual(0);expect(e.behaviorPhase).toBeLessThanOrEqual(1);
+      const p=last.get(e.id);if(p?.behavior===e.behavior)expect(e.behaviorPhase!).toBeGreaterThanOrEqual(p.phase);
+      last.set(e.id,{behavior:e.behavior,phase:e.behaviorPhase!});if(e.behavior===4)recoverSamples++;
+    }
+    // Clear last on every other state so a later attack starts its own phase.
+    for(const e of s.view())if(e.behavior!==2 && e.behavior!==4)last.delete(e.id);
+  }
+  expect(recoverSamples).toBeGreaterThan(0);
+  const npc=s.view().find(e=>e.kind==='npc')!;s.applyDamage(npc.id,10000);
+  expect(s.view().some(e=>e.id===npc.id)).toBe(false);
+  expect(s.combatEvents.at(-1)?.defeated).toMatchObject({id:npc.id,generation:npc.generation,runId:npc.runId});
+});
 it('an NPC cannot begin windup outside its authored attack distance, even while chasing',()=>{
   const desc=loadLevelRuntime(document(1)).desc!;desc.shotColliders=[];desc.obstacles=[];
   const s=new RuntimeSession({desc,seed:7});s.table.health[s.playerEntityId]=10000;

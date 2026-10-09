@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_walk_f",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:dade9095c31ec6c2923da631c0b460a531d2e434dd316350e31415f70156668d",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-STRAFE-F",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_p_strafe_f.bvh",
+      "guid": "as_motion_ani_p_strafe_f"
+    },
+    "derivedSourceHash": "sha256:1d2caa8f7c09f45018659ca287d73d18ed30ac9b3b8841a2a71b73b0df538365",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 24,
+    "seamFrames": 3,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:a754ac062e7e758dda03c3435b4c5d67740a3653393469744cbd45c658704060"
+}

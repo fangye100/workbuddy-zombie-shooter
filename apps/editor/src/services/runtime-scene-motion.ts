@@ -1,6 +1,7 @@
 /** Play-owned animation presentation for authored skinned scene nodes. */
 import { DEFAULT_MOTION_TRANSITION_SEC, type SceneDocument } from '@aether/scene';
 import type { RuntimeSession } from '@aether/zombie-game';
+import { motionDirection } from '@aether/runtime';
 import { advancePoseTransition, createSkinState, selectClip, poseTransitionWeight } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';
@@ -28,6 +29,7 @@ export class RuntimeSceneMotion {
   private step = 1 / 30;
   private lastPlayer: { x: number; z: number; tick: number } | null = null;
   private playerSpeed = 0;
+  private playerDirection: ReturnType<typeof motionDirection> = null;
   private errors: { nodeId: string; message: string }[] = [];
   private pending = 0;
   private nodeStatus = new Map<string, 'pending' | 'failed' | 'unconfigured'>();
@@ -112,6 +114,7 @@ export class RuntimeSceneMotion {
   stop(): void {
     this.generation++; for (const restore of this.restore) restore();
     this.restore = []; this.entries.clear(); this.pending = 0; this.runId = null; this.lastPlayer = null; this.playerSpeed = 0;
+    this.playerDirection = null;
     this.nodeStatus.clear(); deliver(this.debugSink, null);
   }
   setState(nodeId: string, state: string): boolean {
@@ -138,6 +141,7 @@ export class RuntimeSceneMotion {
     const player = runtime.player();
     if (player && this.runId !== player.runId) {
       this.runId = player.runId; this.lastPlayer = null; this.playerSpeed = 0;
+      this.playerDirection = null;
       for (const entry of this.entries.values()) {
         this.select(entry, entry.defaultState, false, true);
         entry.startTick = runtime.tick; entry.manual = false; entry.elapsed = 0; entry.lastTick = runtime.tick;
@@ -146,6 +150,7 @@ export class RuntimeSceneMotion {
     }
     if (player && this.lastPlayer && this.tick > this.lastPlayer.tick) {
       this.playerSpeed = Math.hypot(player.x - this.lastPlayer.x, player.z - this.lastPlayer.z) / ((this.tick - this.lastPlayer.tick) * this.step);
+      this.playerDirection = motionDirection(player.x - this.lastPlayer.x, player.z - this.lastPlayer.z, player.yaw);
     }
     if (player) this.lastPlayer = { x: player.x, z: player.z, tick: this.tick };
     for (const entry of this.entries.values()) {
@@ -158,7 +163,7 @@ export class RuntimeSceneMotion {
         const action=runtime.weapons?.animation;
         const keepGait=!!skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk);
         const input: SceneChoiceInput = { states: entry.result.states, defaultState: entry.defaultState, speed: this.playerSpeed, keepGait,
-          weapon: action, firing: runtime.firing, runId: runtime.runId };
+          weapon: action, firing: runtime.firing, runId: runtime.runId, ...(this.playerDirection ? { locomotionState: `walk_${this.playerDirection}` } : {}) };
         const { requested, state, stamp } = sceneChoice(input);
         // Retain the last executed resolver inputs even when another actor is observed.
         // This is lightweight presentation metadata; snapshots/history remain selected-only.

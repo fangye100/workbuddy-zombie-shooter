@@ -34,6 +34,10 @@ HUD 才能使用引擎。
   刷怪 A/B 和游戏 `PlaySession` 归 `@aether/zombie-game`；全部宿主使用同一实现。
 - 输入、视口投影、存储和可信音频交互由宿主提供；渲染/DOM 不计算伤害或奖励。
   Stop 恢复编辑状态并释放完整 Play 资源账目。
+- 动作阶段与击杀快照属于游戏内核；NPC 受击/死亡显示尾部属于公共表现子路径
+  `npc-motion`，不复活模拟实体。四向速度转换属于 Framework；源动作裁剪点和 profile
+  属于资产内容，Editor 仅装配/打包/观察。实现及验证边界见
+  [动作接入指南](../animation/ani-gameplay-integration.md)。
 - `game:build` 生成分离的 Framework/游戏 bundle；`runtime:build` 只构建 Framework。
   一致性检查/模拟使用游戏 bundle。旧消费者必须改引用，不能用反向导出兼容层规避分层。
 

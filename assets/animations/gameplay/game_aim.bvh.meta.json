@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_aim",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:a89a8b069d9104ab3be90ce5f26682536cc6cb79dffe8b572e681aba95e1f766",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-AIM-IDLE",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_p_aim_idle.bvh",
+      "guid": "as_motion_ani_p_aim_idle"
+    },
+    "derivedSourceHash": "sha256:6022902e365493dbbe754e8ed446a06c32b418488ce51dc19dbe7b6fa21310ed",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 120,
+    "seamFrames": 6,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:0e0376d48494184be9af7c54258c6f8c3b88584f2a3cb7914a7d4b3f3666bafd"
+}

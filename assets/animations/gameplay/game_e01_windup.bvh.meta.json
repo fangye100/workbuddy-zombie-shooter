@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_e01_windup",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:2f70c940e2b12f9f10e75b636c94c0845ea15759ca5844922edf66609d67a551",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-E01-MELEE",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 0,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_e01_melee.bvh",
+      "guid": "as_motion_ani_e01_melee"
+    },
+    "derivedSourceHash": "sha256:235f8dae7d67c05d0b384d979336462e50cad29284337f744445bc13f755bc94",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 36,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:4f63c1724bdb09023ffa749047282ccce186f30782bcef26016c3e906f18b9fa"
+}

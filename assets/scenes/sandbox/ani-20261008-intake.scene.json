@@ -484,7 +484,7 @@
               20
             ]
           },
-          "clearRule": "kill-all",
+          "clearRule": "interact",
           "clearTarget": null,
           "depth": 1
         }

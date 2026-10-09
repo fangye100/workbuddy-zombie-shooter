@@ -28,6 +28,26 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('保留同一固定 tick 的四向步态，停止位移和重新开始时清空方向', async () => {
+    const f = fixture();
+    for (const name of ['walk_f','walk_b','walk_l','walk_r']) {
+      f.result.states[name] = { loop: true };
+      f.result.clips.push({ name, duration: 1, tracks: [] });
+    }
+    const rt = (tick: number, x: number, z: number, runId = 1) => ({ ...f.rt(tick,x,runId), player: () => ({x,z,yaw:0,runId}) }) as unknown as RuntimeSession;
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    f.motion.sync(rt(0,0,0)); f.motion.sync(rt(1,0,.1)); f.motion.sync(rt(2,0,.2));
+    const before = f.motion.debugSnapshot('player')!;
+    expect(before.decision.actual).toBe('walk_r');
+    f.motion.sync(rt(2,0,.2));
+    expect(f.motion.debugSnapshot('player')!.revision).toBe(before.revision);
+    expect(f.motion.debugSnapshot('player')!.clip!.time).toBe(before.clip!.time);
+    expect(f.motion.summary().nodes[0]!.state).toBe('walk_r');
+    f.motion.sync(rt(3,0,.2)); expect(f.motion.summary().nodes[0]!.state).toBe('idle');
+    f.motion.sync(rt(4,-.1,.2)); expect(f.motion.summary().nodes[0]!.state).toBe('walk_b');
+    f.motion.sync(rt(0,0,0,2)); expect(f.motion.summary().nodes[0]!.state).toBe('idle');
+    f.motion.stop();
+  });
   it('captures an automatic short transition even when it completes before the next view refresh', async () => {
     const f = fixture(); f.result.transitionSec = .02;
     f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0)); f.motion.sync(f.rt(0, 0));

@@ -3,12 +3,14 @@ export interface WeaponMotion { action: string; clip: string; fallback: string; 
 export interface SceneChoiceInput {
   states: Record<string, unknown>; defaultState: string; speed: number; keepGait: boolean;
   firing: boolean; weapon: WeaponMotion | null | undefined; runId: number;
+  locomotionState?: string;
 }
 /** Shared by execution and observation. Ordering intentionally preserves the presentation owner. */
 export function sceneChoice(i: SceneChoiceInput, trace = false) {
   const has = (name: string): boolean => !!i.states[name];
   const w = i.weapon;
-  const locomotion = i.speed > 2.5 && has('run') ? 'run' : i.speed > .05 ? 'walk' : 'idle';
+  const locomotion = i.speed > .05 && i.locomotionState && has(i.locomotionState) ? i.locomotionState
+    : i.speed > 2.5 && has('run') ? 'run' : i.speed > .05 ? 'walk' : 'idle';
   const candidates = w && w.action !== 'idle' && !(w.action === 'fire' && i.keepGait)
     ? [w.clip, w.action === 'fire' ? 'shoot' : w.action, w.fallback] : [];
   const requested = candidates.find(has);
@@ -31,11 +33,12 @@ export function sceneChoice(i: SceneChoiceInput, trace = false) {
   return { requested, state: resolved, stamp, decision };
 }
 export function behaviorClipName(behavior: number): string {
-  return ({ 0: 'idle', 1: 'walk', 2: 'attack', 4: 'idle' } as Record<number, string>)[behavior] ?? 'idle';
+  return ({ 0: 'idle', 1: 'walk', 2: 'attack', 4: 'recover' } as Record<number, string>)[behavior] ?? 'idle';
 }
 export function behaviorClipIndex(clips: readonly { name: string }[], behavior: number): number {
   if (!clips.length) return -1;
-  const index = clips.findIndex(c => c.name === behaviorClipName(behavior));
+  let index = clips.findIndex(c => c.name === behaviorClipName(behavior));
+  if (index < 0 && behavior === 4) index = clips.findIndex(c => c.name === 'idle');
   return index < 0 ? 0 : index;
 }
 export function paletteChoice(clips: readonly { name: string }[], behavior: number, weapon: WeaponMotion | null, trace = false) {

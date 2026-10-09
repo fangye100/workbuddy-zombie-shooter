@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_motion_game_pistol_fire",
+  "kind": "bvh",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "source": "Mixamo",
+    "sourceFbxHash": "sha256:b465c3d3584c711edbf5481f2906a4e18273fa6ad9dd4af0c802edcbb132e94b",
+    "importer": "fbx-world-rest-basis-v1",
+    "requirementId": "ANI-P-PISTOL-FIRE",
+    "batchId": "ANI-20261008",
+    "acceptance": "gameplay-derived",
+    "sourceBoneCount": 73,
+    "strippedSourceMeshes": 1,
+    "derivedFrom": {
+      "path": "assets/animations/mixamo/ani_p_pistol_fire.bvh",
+      "guid": "as_motion_ani_p_pistol_fire"
+    },
+    "derivedSourceHash": "sha256:32241c7d9e773787211899ff4f3b2a8b1709417ffc84d4d63a0405dc2a05bae0",
+    "recipe": "assets/animations/gameplay/ani-20261008.recipe.json",
+    "startFrame": 0,
+    "endFrame": 21,
+    "seamFrames": 0,
+    "timingBasis": "authored-after-headed-preview"
+  },
+  "sourceHash": "sha256:d965806767fd6d6579eb74eb381a539acc7c574b28b2ae1a37514bf66d0387e2"
+}

@@ -60,7 +60,16 @@ for (const a of actors) {
   const begin = a.paletteBase * 16;
   if (!a.motion || !palette.slice(begin, begin + a.palette.data.length).every((v, i) => v === a.palette.data[i])) throw new Error(`${a.characterId}: palette offset mismatch`);
 }
+// t1 must retain authored attack/recovery/hit/death states, not only idle/walk.
+const tier1 = new ActorLibrary(json('assets/_data/asset-manifest.json'), async p => bytes(p), { fps: 16, maxClips: 2 });
+tier1.setSharedMotions(motions);
+for (const id of ids) {
+  if (!await tier1.preload(id)) throw new Error(`${id}: t1 assembly failed`);
+  const actor = tier1.get(id);
+  if (Object.keys(actor.motion.states).some(state => !actor.clips.some(c => c.name === state))) throw new Error(`${id}: t1 silently dropped a required state`);
+  if (!actor.palette.data.every(Number.isFinite)) throw new Error(`${id}: t1 invalid palette`);
+}
 const report = { sources: sources.length, nodes: checks, actors: actors.map(a => ({ id: a.characterId, stride: a.palette.jointCount,
-  matrixBase: a.paletteBase, states: a.clips.map(c => c.name) })), stats: motions.stats };
+  matrixBase: a.paletteBase, states: a.clips.map(c => c.name) })), tier1: ids.map(id => ({ id, states: tier1.get(id).clips.map(c => c.name), bytes: tier1.get(id).palette.data.byteLength })), stats: motions.stats };
 writeFileSync(resolve(out, 'check-report.json'), `${JSON.stringify(report, null, 2)}\n`);
 console.log(`Shared motion PASS: ${sources.length} sources; ${checks.length} scene targets; NPC strides ${actors.map(a => a.palette.jointCount).join('/')}; ${motions.stats.solves} solves, ${motions.stats.cacheHits} cache hits.`);
