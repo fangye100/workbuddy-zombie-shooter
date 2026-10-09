@@ -15,7 +15,7 @@ import { skeletonFromFitPositions } from '../src/services/binding/retarget-sessi
 import { tposeWorldPositions } from '../src/services/binding/humanik-template';
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true, import: 'default' });
 const auditScenes = import.meta.glob('../../../assets/scenes/sandbox/{shared-motion-runtime,body-ik-validation}.scene.json', { eager: true, import: 'default' });
-function connectedFixture(doc: SceneDocument, sharedPlayer = false) {
+function connectedFixture(doc: SceneDocument, sharedPlayer = false, motionNodeId = doc.playerStart!) {
   const actor: ActorMesh = { characterId: 'E-01', meshId: 'actor:E-01', vertices: new Float32Array(0), indices: new Uint32Array(0),
     joints: new Uint16Array(0), weights: new Float32Array(0), paletteBase: 0, restPose: 3, feetOffset: 0,
     palette: { jointCount: 1, data: new Float32Array(4 * 16), clipBasePose: [0, 1, 2], clips: ['idle', 'walk', 'attack'].map(name => ({ name, frameCount: 1, durationSec: 1 })) },
@@ -26,22 +26,22 @@ function connectedFixture(doc: SceneDocument, sharedPlayer = false) {
     core: { releaseDynamicResources: () => {} } } as unknown as LabRenderer;
   const skeleton = skeletonFromFitPositions(tposeWorldPositions());
   const skin = createSkinState(skeleton, [{ name: 'native-idle', duration: 1, tracks: [] }]);
-  const mesh = doc.nodes.find(n => n.id === doc.playerStart)!.components.find(c => c.kind === 'MeshRenderer');
+  const mesh = doc.nodes.find(n => n.id === motionNodeId)!.components.find(c => c.kind === 'MeshRenderer');
   const object = { skeleton, animations: skin.clips, skinState: skin, removed: false, scale: 1,
     loadedAssetPath: mesh?.kind === 'MeshRenderer' && mesh.source.type === 'asset' ? mesh.source.ref.path : '' };
   const library = new SharedMotionRuntime(async () => '{}');
   if (sharedPlayer) {
-    const names = ['idle', 'walk', 'run', 'shoot', 'reload', 'equip'];
+    const names = ['idle', 'walk', 'run', 'shoot', 'attack', 'reload', 'equip'];
     const result: ResolvedMotion = { key: 'loaded-player', clips: names.map(name => ({ name, duration: 1, tracks: [] })),
       states: Object.fromEntries(names.map(name => [name, { loop: ['idle', 'walk', 'run'].includes(name) }])), reports: [] };
     vi.spyOn(library, 'assetMeta').mockResolvedValue(null); vi.spyOn(library, 'resolve').mockResolvedValue(result);
   }
-  const motions = new RuntimeSceneMotion(library, id => sharedPlayer && id === doc.playerStart ? object : null);
+  const motions = new RuntimeSceneMotion(library, id => sharedPlayer && id === motionNodeId ? object : null);
   const controller = new PlayController(renderer, bridge, sharedPlayer ? { sharedMotions: motions } : {}); expect(controller.start()).toBe(true);
   const ik = new RuntimeBodyIk(() => null, async () => null, () => null, () => null);
   bridge.setPlayerPresentation(doc.playerStart);
   const source = new RuntimeAnimationDebugSource({ runtime: () => controller.session.runtime, document: () => doc,
-    skin: id => id === doc.playerStart ? object.skinState : null, actorDiagnostics: () => [] }, motions, bridge, ik);
+    skin: id => id === motionNodeId ? object.skinState : null, actorDiagnostics: () => [] }, motions, bridge, ik);
   const collector = new AnimationDebugCollector(source);
   const npc = source.targets().find(t => t.kind === 'entity' && t.label.includes('E-01'))!; expect(npc).toBeDefined();
   return { controller, bridge, source, collector, npc, motions, object };
@@ -59,6 +59,36 @@ function fixture() {
   return { play, bridge, source, skin };
 }
 describe('animation debug runtime adapter', () => {
+  it('explains a completed non-Player manual clip without restoring its configured default or advancing on observation', async () => {
+    const nodeId = 'nd_motion_h01';
+    const f = connectedFixture(structuredClone(auditScenes['../../../assets/scenes/sandbox/shared-motion-runtime.scene.json']) as SceneDocument, true, nodeId);
+    await vi.waitFor(() => expect(f.motions.summary().pending).toBe(0)); f.controller.update(1 / 30);
+    const target = f.source.targets().find(t => t.kind === 'scene' && t.nodeId === nodeId)!;
+    f.controller.pause(); f.collector.setOpen(true); f.collector.update(0); f.collector.select(target);
+    expect(f.collector.update(1)!.snapshot!.decision).toMatchObject({ actual: 'walk', source: 'configured-default' });
+    // Simulate the existing animation control panel, not a debug control.
+    expect(f.motions.setState(nodeId, 'attack')).toBe(true); f.controller.resume(); f.controller.update(1 / 30); f.controller.pause();
+    const unfinished = f.collector.update(126)!.snapshot!;
+    expect(unfinished.decision.source).toBe('manual'); expect(unfinished.clip!.name).toBe('attack');
+    f.collector.setOpen(false); expect(f.motions.setState(nodeId, 'attack')).toBe(true);
+    expect(f.object.skinState.time).toBe(0); // The existing manual control replays the same clip.
+    f.controller.resume(); f.controller.update(1 / 30); expect(f.object.skinState.time).toBeCloseTo(1 / 30);
+    for (let i = 0; i < 31; i++) f.controller.update(1 / 30); f.controller.pause();
+    expect(f.object.skinState.clips[f.object.skinState.clip]!.name).toBe('attack'); expect(f.object.skinState.time).toBe(1);
+    const before = { tick: f.controller.tick, clip: f.object.skinState.clip, time: f.object.skinState.time, transition: structuredClone(f.object.skinState.transition) };
+    const sync = vi.spyOn(f.motions, 'sync'), advance = vi.spyOn(f.controller.session, 'advance'), refresh = vi.spyOn(f.bridge, 'refresh');
+    f.collector.setOpen(true); f.collector.update(127); f.collector.select(target); const view = f.collector.update(128)!;
+    expect(view.snapshot!.decision).toMatchObject({ actual: 'attack', source: 'manual-completed', rules: [
+      { id: 'manual-completed', matched: true, selected: true, reason: expect.stringContaining('attack') },
+    ] }); expect(view.snapshot!.clip!.name).toBe('attack'); expect(view.history).toHaveLength(1);
+    expect(f.motions.summary().nodes.find(n => n.nodeId === nodeId)!.state).toBe('attack');
+    expect({ tick: f.controller.tick, clip: f.object.skinState.clip, time: f.object.skinState.time, transition: f.object.skinState.transition }).toEqual(before);
+    expect(sync).not.toHaveBeenCalled(); expect(advance).not.toHaveBeenCalled(); expect(refresh).not.toHaveBeenCalled();
+    const runId = view.snapshot!.identity.runId; f.controller.reset(); f.collector.update(253); f.collector.select(target);
+    const reset = f.collector.update(254)!;
+    expect(reset.snapshot!.identity.runId).not.toBe(runId); expect(reset.snapshot!.decision).toMatchObject({ actual: 'walk', source: 'configured-default', rules: [{ id: 'configured-default', selected: true }] });
+    expect(reset.snapshot!.clip!.name).toBe('walk'); expect(reset.history).toHaveLength(1); f.collector.dispose();
+  });
   it('explains the actually selected load default on first paused Player observation before an automatic tick', async () => {
     const f = connectedFixture(structuredClone(Object.values(auditScenes)[0]) as SceneDocument, true);
     await vi.waitFor(() => expect(f.motions.summary().pending).toBe(0)); f.controller.pause();

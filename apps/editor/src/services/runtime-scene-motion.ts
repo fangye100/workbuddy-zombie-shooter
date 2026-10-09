@@ -14,6 +14,7 @@ interface Entry {
   nodeId: string; name: string; object: MotionObject; player: boolean; speed: number;
   defaultState: string; result: ResolvedMotion; state: string; startTick: number;
   manual: boolean;
+  manualCompleted?: boolean;
   elapsed: number; lastTick: number;
   weaponActionStamp?: string;
   revision: number; fromState: string; choice?: SceneChoiceInput;
@@ -47,11 +48,14 @@ export class RuntimeSceneMotion {
     }
     const skin = e.object.skinState, clip = skin?.clips[skin.clip];
     const decision = e.choice && !e.manual ? sceneChoice(e.choice, true).decision! : {
-      requested: e.state, actual: e.state, source: e.manual ? 'manual' : 'configured-default', fallback: null, actionStamp: '', rules: [],
+      requested: e.state, actual: e.state, source: e.manual ? 'manual' : e.manualCompleted ? 'manual-completed' : 'configured-default', fallback: null, actionStamp: '', rules: [],
     };
-    if (e.manual) decision.rules.push({ id: 'manual', label: '已有控制面板手动覆盖', matched: true, selected: true, reason: '循环动作保持；非循环结束后恢复自动选择' });
+    if (e.manual) decision.rules.push({ id: 'manual', label: '已有控制面板手动覆盖', matched: true, selected: true,
+      reason: e.player ? '循环动作保持；非循环结束后恢复自动选择' : '循环动作保持；非循环结束后保留当前片段输出' });
+    else if (e.manualCompleted) decision.rules.push({ id: 'manual-completed', label: '手动动作已完成，保留输出', matched: true, selected: true,
+      reason: `${e.state} 非循环手动动作已完成；场景节点保留当前片段末帧，未重新选择默认 ${e.defaultState}` });
     else if (!e.choice) decision.rules.push({ id: 'configured-default', label: '配置默认状态', matched: true, selected: true,
-      reason: `已在加载时选择 ${e.defaultState}；${e.player ? '自动选择器尚未执行，不推断当前输入' : '场景节点保持配置状态'}` });
+      reason: `已选择配置默认状态 ${e.defaultState}；${e.player ? '自动选择器尚未执行，不推断当前输入' : '场景节点保持配置状态'}` });
     return { identity: { kind: 'scene', nodeId, runId: this.runId ?? 0, generation: this.generation }, label: e.name,
       tick: this.tick, revision: e.revision, pipeline: 'cpu-scene', status: 'ready', decision,
       clip: clip && skin ? { name: clip.name, index: skin.clip, time: skin.time, duration: clip.duration,
@@ -123,7 +127,7 @@ export class RuntimeSceneMotion {
       selectClip(skin, skin.clips.findIndex(c => c.name === state), immediate || !entry.state ? 0 : entry.result.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC); entry.startTick = this.tick;
       entry.elapsed = 0; entry.lastTick = this.tick;
     }
-    entry.state = state; entry.manual = manual; skin.playing = false;
+    entry.state = state; entry.manual = manual; entry.manualCompleted = false; skin.playing = false;
     // Capture the start even when this fixed-tick delta completes a short transition.
     if (changedPose) this.emitDebug(entry.nodeId);
   }
@@ -147,7 +151,9 @@ export class RuntimeSceneMotion {
     for (const entry of this.entries.values()) {
       const skin = entry.object.skinState; if (!skin) continue;
       const clipConfig = entry.result.states[entry.state]!;
-      if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) entry.manual = false;
+      if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) {
+        entry.manual = false; entry.manualCompleted = !entry.player;
+      }
       if (entry.player && !entry.manual) {
         const action=runtime.weapons?.animation;
         const keepGait=!!skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk);
