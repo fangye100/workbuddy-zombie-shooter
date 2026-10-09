@@ -27,6 +27,20 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('observes only the selected node, detaches snapshots, captures same-clip replay, and cannot interrupt animation', async () => {
+    const f = fixture(); f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    const sink = vi.fn(); f.motion.watchDebug('other-node', sink); f.motion.sync(f.rt(0, 0)); expect(sink).not.toHaveBeenCalled();
+    f.motion.watchDebug('player', sink); f.motion.sync(f.rt(1, .2));
+    const snapshot = f.motion.debugSnapshot('player')!; expect(snapshot.decision.actual).toBe('run');
+    snapshot.decision.rules.length = 0; snapshot.clip!.name = 'corrupt';
+    expect(f.motion.debugSnapshot('player')!.clip!.name).toBe('run');
+    const revision = snapshot.revision; f.motion.setState('player', 'run');
+    expect(f.motion.debugSnapshot('player')!.revision).toBe(revision + 1);
+    expect(f.motion.debugSnapshot('player')!.decision.source).toBe('manual');
+    f.motion.watchDebug('player', () => { throw new Error('broken consumer'); });
+    expect(() => f.motion.sync(f.rt(2, .4))).not.toThrow();
+    f.motion.watchDebug(null, null); sink.mockClear(); f.motion.sync(f.rt(3, .6)); expect(sink).not.toHaveBeenCalled();
+  });
   it('keeps locomotion under IK for accepted weapon fire, without applying weapon phase to the gait clip', async () => {
     const f=fixture(); f.result.states.shoot={loop:false}; f.result.clips.push({name:'shoot',duration:.5,tracks:[]});
     f.motion.start(f.doc); await vi.waitFor(()=>expect(f.motion.summary().pending).toBe(0));

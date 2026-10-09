@@ -37,6 +37,16 @@ function started(doc: SceneDocument = floor1()): { bridge: RuntimeBridge; play: 
 }
 
 describe('RuntimeBridge —— 挂接与摘下', () => {
+  it('debug observation is independent of selection, preserves exact packed results and rejects rerun identity', () => {
+    const { bridge: b, play } = started(); const e = b.entities.find(x => x.kind === 'npc')!;
+    const before = b.batches()!.map(batch => Array.from(batch.instances));
+    const snapshots: unknown[] = []; b.watchDebug({ kind: 'entity', id: e.id, generation: e.generation, runId: e.runId }, s => snapshots.push(s));
+    b.refresh(); expect(b.batches()!.map(batch => Array.from(batch.instances))).toEqual(before);
+    expect(b.selectedEntity).toBeNull(); expect(b.debugSnapshot()).toMatchObject({ pipeline: 'proxy', ik: { status: 'unsupported' } });
+    const s = b.debugSnapshot()!; s.diagnostics.length = 0; expect(b.debugSnapshot()!.diagnostics.length).toBeGreaterThan(0);
+    play.runtime!.reset(); b.refresh(); expect(b.debugSnapshot()).toBeNull(); expect(snapshots.at(-1)).toBeNull();
+    b.watchDebug(null, null); const count = snapshots.length; b.refresh(); expect(snapshots).toHaveLength(count);
+  });
   it('挂上真实关卡 floor-1 的会话：玩家 + 第一间房的僵尸', () => {
     const { bridge } = started();
     expect(bridge.active).toBe(true);
