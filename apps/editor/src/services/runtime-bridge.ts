@@ -120,6 +120,7 @@ export class RuntimeBridge {
   private readonly poseTransitions = new PalettePoseTransitions();
   private gait = new Map<string, { x: number; z: number; clip: string; cycles: number }>();
   private presentedPlayerSource: string | null = null;
+  get presentedPlayerNodeId(): string | null { return this.presentedPlayerSource; }
   private debugIdentity: Extract<AnimationIdentity, { kind: 'entity' }> | null = null;
   private debugSink: AnimationSink | null = null;
   private debugLast: AnimationSnapshot | null = null;

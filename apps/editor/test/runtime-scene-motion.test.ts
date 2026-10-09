@@ -7,6 +7,7 @@ import { RuntimeSceneMotion } from '../src/services/runtime-scene-motion';
 import { SharedMotionRuntime, type ResolvedMotion } from '../src/services/shared-motion-runtime';
 import { skeletonFromFitPositions } from '../src/services/binding/retarget-session';
 import { tposeWorldPositions } from '../src/services/binding/humanik-template';
+import type { AnimationSnapshot } from '../src/services/animation-debug/contracts';
 
 const binding: SharedMotionBinding = { library: { path: 'assets/motion.json', guid: 'as_motion' }, profile: 'player', defaultState: 'idle', speed: 1 };
 function fixture() {
@@ -27,6 +28,16 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('captures an automatic short transition even when it completes before the next view refresh', async () => {
+    const f = fixture(); f.result.transitionSec = .02;
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0)); f.motion.sync(f.rt(0, 0));
+    const snapshots: AnimationSnapshot[] = []; f.motion.watchDebug('player', s => { if (s) snapshots.push(s); });
+    f.motion.sync(f.rt(3, 1));
+    expect(snapshots.some(s => s.transition?.duration === .02 && s.transition.weight === 0)).toBe(true);
+    f.motion.sync(f.rt(6, 2));
+    expect(snapshots.at(-1)!.transition).toBeNull();
+    expect(snapshots.at(-1)!.decision.actual).toBe('run');
+  });
   it('observes only the selected node, detaches snapshots, captures same-clip replay, and cannot interrupt animation', async () => {
     const f = fixture(); f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
     const sink = vi.fn(); f.motion.watchDebug('other-node', sink); f.motion.sync(f.rt(0, 0)); expect(sink).not.toHaveBeenCalled();

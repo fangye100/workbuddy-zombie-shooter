@@ -112,15 +112,18 @@ export class RuntimeSceneMotion {
     const entry = this.entries.get(nodeId); if (!entry || !entry.result.states[state]) return false;
     this.select(entry, state, true); this.emitDebug(nodeId); return true;
   }
-  private select(entry: Entry, state: string, manual: boolean, immediate = false): void {
+  private select(entry: Entry, state: string, manual: boolean, immediate = false, replay = false): void {
     const skin = entry.object.skinState;
     if (!skin || !entry.result.states[state]) return;
-    if (entry.state !== state || manual || immediate) {
+    const changedPose = entry.state !== state || manual || immediate || replay;
+    if (changedPose) {
       entry.fromState = entry.state; entry.revision++;
       selectClip(skin, skin.clips.findIndex(c => c.name === state), immediate || !entry.state ? 0 : entry.result.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC); entry.startTick = this.tick;
       entry.elapsed = 0; entry.lastTick = this.tick;
     }
     entry.state = state; entry.manual = manual; skin.playing = false;
+    // Capture the start even when this fixed-tick delta completes a short transition.
+    if (changedPose) this.emitDebug(entry.nodeId);
   }
   sync(runtime: RuntimeSession | null): void {
     if (!runtime) return;
@@ -150,7 +153,7 @@ export class RuntimeSceneMotion {
           weapon: action, firing: runtime.firing, runId: runtime.runId };
         const { requested, state, stamp } = sceneChoice(input);
         if (this.debugSink && this.debugNode === entry.nodeId) entry.choice = input;
-        if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,true);entry.manual=false;}
+        if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,false,false,true);}
         entry.weaponActionStamp=stamp;
         this.select(entry, entry.result.states[state] ? state : entry.defaultState, false);
       }
