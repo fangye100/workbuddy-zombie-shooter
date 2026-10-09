@@ -17,6 +17,15 @@ function fixture() {
   return { sk, object, original, binding, doc, read, mouse, service };
 }
 describe('Play-owned body IK assembly', () => {
+  it('returns detached resolved targets, effective weights and missing target facts', () => {
+    const f = fixture(); f.service.start(f.doc); f.service.sync(null);
+    const snapshot = f.service.debugSnapshot('actor');
+    expect(snapshot.controls[0]).toMatchObject({ target: [1, 1, 1], valid: true, effectiveWeight: .8 });
+    snapshot.controls[0]!.target![0] = 999; expect(f.object.skinState.bodyIk!.targets.upperBody![0]).toBe(1);
+    f.mouse.mockReturnValue(null!); f.service.sync(null); const absent = f.service.debugSnapshot('actor');
+    expect(absent.controls[0]).toMatchObject({ target: null, valid: false, effectiveWeight: 0 });
+    f.service.stop(); expect(f.service.debugSnapshot('actor').status).toBe('unconfigured');
+  });
   it('resolves empty target nodes through their authored parent transform', () => {
     const f = fixture();
     for (const node of f.doc.nodes) { node.parent = null; node.transform = identityTransform(); }

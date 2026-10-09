@@ -37,6 +37,16 @@ function started(doc: SceneDocument = floor1()): { bridge: RuntimeBridge; play: 
 }
 
 describe('RuntimeBridge —— 挂接与摘下', () => {
+  it('debug observation is independent of selection, preserves exact packed results and rejects rerun identity', () => {
+    const { bridge: b, play } = started(); const e = b.entities.find(x => x.kind === 'npc')!;
+    const before = b.batches()!.map(batch => Array.from(batch.instances));
+    const snapshots: unknown[] = []; b.watchDebug({ kind: 'entity', id: e.id, generation: e.generation, runId: e.runId }, s => snapshots.push(s));
+    b.refresh(); expect(b.batches()!.map(batch => Array.from(batch.instances))).toEqual(before);
+    expect(b.selectedEntity).toBeNull(); expect(b.debugSnapshot()).toMatchObject({ pipeline: 'proxy', ik: { status: 'unsupported' } });
+    const s = b.debugSnapshot()!; s.diagnostics.length = 0; expect(b.debugSnapshot()!.diagnostics.length).toBeGreaterThan(0);
+    play.runtime!.reset(); b.refresh(); expect(b.debugSnapshot()).toBeNull(); expect(snapshots.at(-1)).toBeNull();
+    b.watchDebug(null, null); const count = snapshots.length; b.refresh(); expect(snapshots).toHaveLength(count);
+  });
   it('挂上真实关卡 floor-1 的会话：玩家 + 第一间房的僵尸', () => {
     const { bridge } = started();
     expect(bridge.active).toBe(true);
@@ -370,6 +380,21 @@ function animatedBridge(): { bridge: RuntimeBridge; play: PlaySession; actor: Ac
 }
 
 describe('RuntimeBridge pose transition packing', () => {
+  it('reports the selected GPU entity clip, phase and transition weight from the packed pipeline', () => {
+    const f = animatedBridge(), base = f.bridge.entities.find(e => e.characterId === 'E-01')!;
+    const entities = [{ ...base, behavior: 0 }];
+    const runtime = { runId: base.runId, tick: 0, fixedStep: 1 / 30, view: () => entities } as unknown as RuntimeSession;
+    const bridge = new RuntimeBridge({ get: () => f.actor }); bridge.attach(runtime);
+    bridge.watchDebug({ kind: 'entity', id: base.id, generation: base.generation, runId: base.runId }, () => {});
+    entities[0]!.behavior = 1; bridge.refresh();
+    const snapshot = bridge.debugSnapshot()!, packed = bridge.batches()![0]!.instances;
+    expect(snapshot.pipeline).toBe('gpu-palette'); expect(snapshot.clip!.name).toBe('walk');
+    expect(snapshot.clip!.phase).toBeCloseTo(packed[13]!, 6); expect(snapshot.transition!.weight).toBe(packed[16]);
+    expect(snapshot.transition).toMatchObject({ from: 'idle', to: 'walk', source: 'palette-matrix-snapshot' });
+    (runtime as unknown as { tick: number }).tick = 3; bridge.refresh();
+    expect(bridge.debugSnapshot()!.transition!.weight).toBeCloseTo(bridge.batches()![0]!.instances[16]!, 6);
+    expect(bridge.debugSnapshot()!.ik.status).toBe('unsupported');
+  });
   it('preserves displayed NPC poses on switches/interruption, isolates rows and reuses source uploads', () => {
     const f=animatedBridge(), actor=f.actor, base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
     for (let p=0;p<31;p++) for (let j=0;j<3;j++) actor.palette.data[p*48+j*16+12]=p;

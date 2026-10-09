@@ -21,6 +21,7 @@ Current development starts at [Gameplay development workflow](./docs/43-Gameplay
 | [Visual quality playbook](./docs/art/visual-quality-playbook.md) | Comic art matching, composition, color/shader diagnosis, textured LODs, placeholders, sky/atlas handling and evidence-based acceptance |
 | [Crowd performance baseline — 2026-10-07](./docs/39-CrowdPerformanceBaseline-2026-10-07.md) | Running/shooting with upper-body IK, 500–2,500 NPC samples, CPU/GPU timings, sustained stability boundaries and archived evidence |
 | [iPhone Play crash mitigation — 2026-10-07](./docs/40-IPhonePlayCrashMitigation-2026-10-07.md) | Scene-demand actor loading, bounded runtime textures, GPU loss handling and device verification limits |
+| [Animation visual debugging](./docs/45-AnimationVisualDebugging.md) | Read-only selected-actor rule and pose graphs, bounded transition history, observation freeze and CPU/GPU pipeline boundaries |
 
 ## 目录
 
