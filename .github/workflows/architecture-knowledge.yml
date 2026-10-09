@@ -1,0 +1,27 @@
+name: Architecture and shared knowledge
+on:
+  push:
+    branches: [main, 'codex/**']
+    paths: ['apps/**', 'packages/**', 'tools/**', 'assets/behaviors/**', 'docs/**', '.workbuddy/memory/**', 'AGENTS.md', 'package.json', 'pnpm-lock.yaml', '.github/workflows/architecture-knowledge.yml']
+  pull_request:
+    paths: ['apps/**', 'packages/**', 'tools/**', 'assets/behaviors/**', 'docs/**', '.workbuddy/memory/**', 'AGENTS.md', 'package.json', 'pnpm-lock.yaml', '.github/workflows/architecture-knowledge.yml']
+permissions:
+  contents: read
+jobs:
+  ownership-and-discovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run architecture:test
+      - run: pnpm run knowledge:test
+      - run: pnpm run architecture:check
+      - run: pnpm run knowledge:check

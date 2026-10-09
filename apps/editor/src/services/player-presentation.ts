@@ -1,6 +1,6 @@
 import { quatMul, quatToEuler, type Quat } from '@aether/core';
 import type { SceneDocument } from '@aether/scene';
-import type { EntityView } from '@aether/runtime';
+import type { EntityView } from '@aether/zombie-game';
 import type { SceneObject } from '../renderer';
 import { characterYaw } from './character-facing';
 

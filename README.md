@@ -1,5 +1,14 @@
 # Aether — WebGPU 游戏引擎设计与骨架
 
+## Agent development entrypoints
+
+Read [project rules](AGENTS.md), [shared knowledge](docs/README.md),
+[layer ownership](docs/architecture/layers.md), and
+[CodeGraph MCP usage](docs/knowledge/codegraph.md) before cross-module changes.
+Zombie simulation/presentation uses `packages/zombie-game`; reusable mechanisms
+remain framework packages. Run `pnpm run architecture:check` and
+`pnpm run knowledge:check` with the affected tests.
+
 以 WebGPU 为一等公民的模块化游戏引擎：数据驱动（ECS + SoA）、GPU-driven 剔除、
 FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
 

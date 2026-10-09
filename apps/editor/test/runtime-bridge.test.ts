@@ -3,9 +3,9 @@ import { RuntimeBridge, type ActorSource, clipIndexForBehavior, animPhase } from
 import type { ActorMesh, ActorClipMeta } from '../src/services/runtime-actors';
 import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type BakedPalette } from '@aether/render';
 import { lookupCharacterStats } from '@aether/content';
-import { PlaySession } from '@aether/runtime';
+import { PlaySession } from '@aether/zombie-game';
 import type { SceneDocument } from '@aether/scene';
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 
 /**
  * WU-3 的渲染桥接测试。

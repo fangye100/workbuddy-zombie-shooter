@@ -36,6 +36,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const RUNTIME = path.resolve('.workbuddy/tmp/runtime/index.js');
+const GAME = path.resolve('.workbuddy/tmp/zombie-game/index.js');
 
 function arg(name, def) {
   const i = process.argv.indexOf(`--${name}`);
@@ -138,11 +139,11 @@ if (!has('compare') && !has('scene')) {
   );
   process.exit(4);
 }
-if (!fs.existsSync(RUNTIME)) {
-  console.error(`缺少 runtime 打包产物 ${RUNTIME} —— 先跑 \`npm run runtime:build\``);
+if (!fs.existsSync(RUNTIME) || !fs.existsSync(GAME)) {
+  console.error('Missing framework/game bundles: run pnpm run game:build');
   process.exit(2);
 }
-const rt = require(RUNTIME);
+const rt = { ...require(RUNTIME), ...require(GAME) };
 
 // ------------------------------------------------------------ 比对模式
 if (compare !== null) {

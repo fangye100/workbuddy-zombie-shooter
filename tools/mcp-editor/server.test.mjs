@@ -30,7 +30,7 @@ test('actual stdio adapter discovers workflow through a loopback broker without 
   assert.equal(init.result.serverInfo.version,'0.2.0'); assert.match(init.result.instructions,/editor_workflow/);
   const listed=await call('tools/list'); assert.equal(listed.result.tools.length,14);
   const workflow=await call('tools/call',{name:'editor_workflow',arguments:{}});
-  assert.equal(workflow.result.isError,false); assert.equal(workflow.result.structuredContent.workflow.contractVersion,1);
+  assert.equal(workflow.result.isError,false); assert.equal(workflow.result.structuredContent.workflow.contractVersion,2);
   assert.equal((await call('tools/call',{name:'editor_instances',arguments:{}})).result.structuredContent.instances.length,0);
   const invalid=await call('tools/call',{name:'editor_workflow',arguments:{instanceId:'unexpected'}});
   assert.equal(invalid.result.isError,true); assert.equal(invalid.result.structuredContent.code,'INVALID_ARGUMENTS');

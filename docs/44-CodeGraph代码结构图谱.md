@@ -1,5 +1,13 @@
 # 44 - CodeGraph structure map and development workflow
 
+## Current Agent entrypoint, 2026-10-09
+
+For current owners use [the layer contract](architecture/layers.md); for connecting
+and querying the installed MCP use [the portable CodeGraph guide](knowledge/codegraph.md).
+Zombie simulation and presentation have moved to `packages/zombie-game`.
+The measurements and file paths below remain evidence at the explicitly recorded
+2026-10-08 source snapshot; refresh the intended checkout before applying them.
+
 ## 1. Evidence and scope
 
 Reviewed on 2026-10-08 (Asia/Singapore), against source commit

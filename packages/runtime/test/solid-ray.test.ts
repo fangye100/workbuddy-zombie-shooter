@@ -3,8 +3,8 @@ import { SceneGraph, createEmptySceneDocument, identityTransform } from '@aether
 import type { ColliderComponent, SceneDocument, SceneNode } from '@aether/scene';
 import { PLAYER_STATS } from '@aether/content';
 import { solidCollider, raySolid } from '../src/solid-ray';
-import { loadLevelRuntime } from '../src/loader';
-import { RuntimeSession } from '../src/session';
+import { loadLevelRuntime } from "@aether/zombie-game";
+import { RuntimeSession } from "@aether/zombie-game";
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
 const fixture = () => JSON.parse(JSON.stringify((Object.values(modules)[0] as { default: SceneDocument }).default)) as SceneDocument;
 const node = (id: string): SceneNode => ({ id, name: id, parent: null, transform: identityTransform(), visible: true, pickable: true, components: [], prefab: null, userData: {} });

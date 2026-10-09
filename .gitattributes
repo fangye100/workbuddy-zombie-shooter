@@ -50,3 +50,4 @@ docs/evidence/audio-2026-10-07/*.jpg filter=lfs diff=lfs merge=lfs -text
 docs/evidence/crowd-performance-2026-10-07/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/crowd-performance-2026-10-07/*.zip filter=lfs diff=lfs merge=lfs -text
 docs/evidence/branch-integration-2026-10-09/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/architecture-2026-10-09/*.png filter=lfs diff=lfs merge=lfs -text

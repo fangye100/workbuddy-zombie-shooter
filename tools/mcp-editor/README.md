@@ -2,6 +2,11 @@
 
 Adapter v0.2 adds structured workflow discovery and weapon/audio runtime inspection. Read the [gameplay development guide](../../docs/43-GameplayDevelopmentWorkflow.md) for contracts, ownership and acceptance. The adapter remains opt-in and unregistered in the user's MCP configuration. This update does not establish full agent-friendly coverage or production readiness.
 
+`editor_workflow` contract v2 also returns portable knowledge/catalog, layer and
+CodeGraph guide paths. All Agents can read [the shared index](../../docs/README.md)
+without the WorkBuddy memory service. Simulation and game presentation now live
+in `packages/zombie-game`; generic author/weapon/collision APIs stay framework.
+
 ## Setup and responsibility
 
 `server.mjs` adapts MCP stdio to a loopback-only Vite broker. Requests explicitly identify a connected editor instance. The browser dispatcher delegates to the existing author store, validation, shared undo/redo, save service and PlayController. It does not own a second scene state or automate DOM clicks.

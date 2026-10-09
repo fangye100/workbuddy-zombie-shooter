@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "sourceRoots": ["apps", "packages", "assets/behaviors", "tools"],
+  "frameworkPackages": ["core", "gfx", "framegraph", "scene", "render", "ai", "gameplay", "runtime"],
+  "gamePackages": ["content", "zombie-game"],
+  "presentationRoot": "packages/zombie-game/src/presentation/",
+  "hostFiles": ["apps/editor/vite.config.ts", "apps/editor/devfs.ts"],
+  "publicGameSubpaths": ["game-language", "game-controls", "game-audio", "game-audio-assets", "game-hud", "run-hud", "run-profile", "run-transfer", "run-settlement", "combat-overlay", "combat-ink", "enemy-attack-ink", "weapon-ink"],
+  "allowed": {
+    "framework": ["framework"],
+    "game-core": ["framework", "game-core", "game-data"],
+    "game-presentation": ["framework", "game-core", "game-data", "game-presentation"],
+    "game-data": ["game-data"],
+    "editor": ["framework", "game-core", "game-presentation", "game-data", "editor"],
+    "host": ["framework", "game-core", "game-presentation", "game-data", "editor", "host", "tool"],
+    "tool": ["framework", "game-core", "game-presentation", "game-data", "editor", "host", "tool"]
+  }
+}

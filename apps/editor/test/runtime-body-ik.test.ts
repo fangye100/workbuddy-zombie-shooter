@@ -4,7 +4,7 @@ import { createEmptySceneDocument, identityTransform, newBodyIkControl, type Sce
 import { RuntimeBodyIk, worldToActor } from '../src/services/runtime-body-ik';
 import { skeletonFromFitPositions } from '../src/services/binding/retarget-session';
 import { tposeWorldPositions } from '../src/services/binding/humanik-template';
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 
 function fixture() {
   const sk = skeletonFromFitPositions(tposeWorldPositions()), original = createSkinState(sk, []);

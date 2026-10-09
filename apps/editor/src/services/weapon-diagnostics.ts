@@ -1,4 +1,4 @@
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 
 /** Copy public facts only. Inspection must not advance actions, invoke hooks or retain live references. */
 export function weaponDiagnostics(runtime: Pick<RuntimeSession, 'weapons' | 'weaponCombat'> | null) {

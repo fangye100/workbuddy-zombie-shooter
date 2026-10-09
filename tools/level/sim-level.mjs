@@ -5,7 +5,8 @@
  * ## 这个文件的职责边界
  *
  * 它**只做三件事**：解析参数、调用共享能力、把结果显式导出。
- * 场景怎么解释、实体怎么生成、移动怎么受障碍约束，全在 `@aether/runtime` 里 ——
+ * Zombie scene interpretation and simulation live in `@aether/zombie-game`;
+ * reusable collision, weapons and author commands stay in `@aether/runtime`.
  * 以前这些逻辑就写在本文件里，编辑器要做 Play 时只能复制一份，两份语义必然漂移。
  * 现在 CLI 与浏览器共用同一个入口（docs/17 §4）。
  *
@@ -29,8 +30,8 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-// 共享能力：esbuild 打出来的 CJS bundle（npm run runtime:build）
-const { loadLevelRuntime, createSession } = require(join(ROOT, '.workbuddy/tmp/runtime/index.js'));
+// Shared headless game composition: pnpm run game:build.
+const { loadLevelRuntime, createSession } = require(join(ROOT, '.workbuddy/tmp/zombie-game/index.js'));
 
 const PROJECT_FILE = 'aether.project.json';
 // 🔴 必须与 packages/scene/src/document.ts 的 SCHEMA_VERSION 一致（作者楼层的版本）。

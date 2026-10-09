@@ -1,5 +1,16 @@
 # Gameplay development: contracts, workflow and agent entry points
 
+## Current ownership and knowledge routing, 2026-10-09
+
+Read the [shared documentation index](README.md), [layer contract](architecture/layers.md)
+and [CodeGraph MCP guide](knowledge/codegraph.md) for current owners and discovery.
+Scene schema is now v15 after the [branch integration](review/branch-integration-2026-10-09.md).
+Zombie simulation, progression and audio-event projection live in
+`packages/zombie-game/src`; HUD/input/audio rendering in its `presentation` directory.
+Generic author commands, weapons and collision remain `packages/runtime`.
+Paths and v14 acceptance claims in the original report below describe its
+recorded revision; they are not the current source layout or a new acceptance run.
+
 This is the current development entry point for the scene-quality branch, through the weapon and audio integration delivered on 2026-10-07. It connects the implementation contracts to a repeatable authoring and acceptance process. Specialized reports retain their own dates, revisions and evidence; their historical test counts are not results of a new run. Current source and project rules take precedence over older notes.
 
 ## Responsibilities and sources of truth

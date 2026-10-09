@@ -53,6 +53,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@aether\/zombie-game\/presentation\/(.+)$/,
+        replacement: fileURLToPath(new URL('../../packages/zombie-game/src/presentation/$1.ts', import.meta.url)),
+      },
+      {
         find: /^@aether\/([^/]+)$/,
         // 直接解析到包的 index.ts 入口，避免目录解析歧义
         // config 位于 apps/editor，回退两级到项目根再进 packages

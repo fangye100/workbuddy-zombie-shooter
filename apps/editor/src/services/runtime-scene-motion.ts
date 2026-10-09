@@ -1,6 +1,6 @@
 /** Play-owned animation presentation for authored skinned scene nodes. */
 import { DEFAULT_MOTION_TRANSITION_SEC, type SceneDocument } from '@aether/scene';
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 import { advancePoseTransition, createSkinState, selectClip } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';

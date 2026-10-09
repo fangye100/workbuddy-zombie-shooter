@@ -9,6 +9,7 @@ test('workflow references actual tools and repository contracts without exposing
   const workflow = editorWorkflow(), names = new Set(EDITOR_TOOLS.map(t => t.name));
   for (const stage of workflow.stages) for (const name of stage.tools) assert.ok(names.has(name), name);
   const paths = [workflow.guide, workflow.transport, ...Object.values(workflow.sources),
+    workflow.knowledge.entry, workflow.knowledge.catalog, workflow.knowledge.architecture, workflow.knowledge.codeGraph,
     ...workflow.topics.flatMap(t => [t.guide, t.reusable, t.resourceBrief].filter(Boolean))];
   for (const path of paths) assert.ok(existsSync(fileURLToPath(new URL(`../../${path}`, import.meta.url))), path);
   workflow.stages[0].tools.length = 0;

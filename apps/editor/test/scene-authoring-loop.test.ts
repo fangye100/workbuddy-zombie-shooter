@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SpawnEditStore, cloneDocument, loadLevelRuntime, newAuthorNode, newRunRules, removeNodeTree,RuntimeSession } from '@aether/runtime';
+import { SpawnEditStore, cloneDocument, newAuthorNode, newRunRules, removeNodeTree } from '@aether/runtime';
+import { loadLevelRuntime, RuntimeSession } from '@aether/zombie-game';
 import type { SceneDocument } from '@aether/scene';
 import { AuthorSceneSaver } from '../src/services/author-scene-save';
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });

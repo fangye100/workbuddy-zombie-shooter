@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
+      "@aether/zombie-game/presentation/*": ["packages/zombie-game/src/presentation/*"],
       "@aether/*": ["packages/*/src/index.ts"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
@@ -22,6 +23,8 @@
     "noEmit": true
   },
   "include": [
+    "packages/zombie-game/src/**/*.ts",
+    "packages/zombie-game/test/**/*.ts",
     "packages/core/src/**/*.ts",
     "packages/core/test/**/*.ts",
     "packages/scene/src/**/*.ts",

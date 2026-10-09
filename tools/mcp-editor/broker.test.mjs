@@ -30,7 +30,7 @@ test('broker refuses remote/origin requests and malformed tool arguments', async
     const r=await f.request('editor_instances',{},options); assert.equal(r.status,403); assert.equal(r.body.code,'LOCAL_ONLY');
   }
   const workflow=await f.request('editor_workflow');
-  assert.equal(workflow.status,200);assert.equal(workflow.body.workflow.contractVersion,1);
+  assert.equal(workflow.status,200);assert.equal(workflow.body.workflow.contractVersion,2);
   assert.equal((await f.request('editor_workflow',{instanceId:'unexpected'})).body.code,'INVALID_ARGUMENTS');
   assert.equal((await f.request('editor_workflow',{}, {headers:{origin:'https://other.example'}})).body.code,'LOCAL_ONLY');
   assert.equal((await f.request('scene_get',{})).body.code,'INVALID_ARGUMENTS');

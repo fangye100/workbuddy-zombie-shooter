@@ -1,0 +1,2020 @@
+{
+  "schemaVersion": 1,
+  "indexedAt": "2026-10-09",
+  "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
+  "entries": [
+    {
+      "id": "project-rules",
+      "path": "AGENTS.md",
+      "title": "project-rules",
+      "role": "navigation",
+      "authority": "rule",
+      "status": "current",
+      "topics": [
+        "navigation"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "scene-schema",
+      "path": "packages/scene/src/document.ts",
+      "title": "scene-schema",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "framework"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "project-schema",
+      "path": "packages/scene/src/project.ts",
+      "title": "project-schema",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "framework"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "asset-metadata",
+      "path": "packages/scene/src/asset-meta.ts",
+      "title": "asset-metadata",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "framework"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "project-manifest",
+      "path": "aether.project.json",
+      "title": "project-manifest",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "game"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "architecture-policy",
+      "path": "tools/architecture/layers.json",
+      "title": "architecture-policy",
+      "role": "navigation",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "navigation"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "editor-mcp-workflow",
+      "path": "tools/mcp-editor/workflow.mjs",
+      "title": "editor-mcp-workflow",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "editor"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "zombie-game-entry",
+      "path": "packages/zombie-game/src/index.ts",
+      "title": "zombie-game-entry",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "game"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "framework-runtime-entry",
+      "path": "packages/runtime/src/index.ts",
+      "title": "framework-runtime-entry",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "framework"
+      ],
+      "read": "Contract and exported API",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-c9ae7b8fa54e",
+      "path": ".workbuddy/memory/2026-08-31.md",
+      "title": "2026-08-31",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-95919be3b144",
+      "path": ".workbuddy/memory/2026-09-01.md",
+      "title": "2026-09-01",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-7f4d2aa169c1",
+      "path": ".workbuddy/memory/2026-09-02.md",
+      "title": "2026-09-02",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-8f6755076450",
+      "path": ".workbuddy/memory/2026-09-03.md",
+      "title": "2026-09-03",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-e0b6084294b1",
+      "path": ".workbuddy/memory/2026-09-04.md",
+      "title": "2026-09-04",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-d704b93f7680",
+      "path": ".workbuddy/memory/2026-09-05.md",
+      "title": "2026-09-05",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-ec12cbb949eb",
+      "path": ".workbuddy/memory/2026-09-06.md",
+      "title": "2026-09-06 工作日志",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-1d5864e62c8f",
+      "path": ".workbuddy/memory/2026-09-07.md",
+      "title": "2026-09-07",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "05ef392730df0433d093f144abbae1604710baf3",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-c23e50eb2546",
+      "path": ".workbuddy/memory/2026-09-08.md",
+      "title": "2026-09-08",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "5d250cb350c9ad647c0da7f585dd2b37fd6b819a",
+        "date": "2026-09-08"
+      }
+    },
+    {
+      "id": "doc-7003d5a3b528",
+      "path": ".workbuddy/memory/2026-09-09.md",
+      "title": "2026-09-09",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "doc-f3bc6de7f09f",
+      "path": ".workbuddy/memory/2026-09-10.md",
+      "title": "2026-09-10",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "doc-e84cedd2f815",
+      "path": ".workbuddy/memory/2026-09-14.md",
+      "title": "2026-09-14",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "doc-75e55c6b7128",
+      "path": ".workbuddy/memory/2026-09-15.md",
+      "title": "2026-09-15",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "448b05d1b13ddd1f6d5c8efddc6c9380d802ae66",
+        "date": "2026-09-16"
+      }
+    },
+    {
+      "id": "doc-19b082246e87",
+      "path": ".workbuddy/memory/2026-09-16.md",
+      "title": "2026-09-16",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "doc-ca7fdbf4cf31",
+      "path": ".workbuddy/memory/2026-09-17.md",
+      "title": "2026-09-17",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "doc-a0cc434caea6",
+      "path": ".workbuddy/memory/2026-09-18.md",
+      "title": "2026-09-18",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "71ded783a53070bb8c0e13869f8385244bc584e8",
+        "date": "2026-09-19"
+      }
+    },
+    {
+      "id": "doc-60a434baab10",
+      "path": ".workbuddy/memory/2026-09-19.md",
+      "title": "2026-09-19",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "43ea5011ca884149a4680825cedfae73a84ef5bb",
+        "date": "2026-09-19"
+      }
+    },
+    {
+      "id": "doc-0a3b9bd55e10",
+      "path": ".workbuddy/memory/2026-09-20.md",
+      "title": "2026-09-20",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "fff100158e40d39b6aa2b9e5f7f98a06d20ea187",
+        "date": "2026-09-20"
+      }
+    },
+    {
+      "id": "doc-489842c0f872",
+      "path": ".workbuddy/memory/2026-09-23.md",
+      "title": "2026-09-23",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "94e6a61324b6f8ed7ad94111ed8ef0c5cae435ee",
+        "date": "2026-09-26"
+      }
+    },
+    {
+      "id": "doc-0ea924571b25",
+      "path": ".workbuddy/memory/2026-09-24.md",
+      "title": "2026-09-24",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "54f650f7d218c96985f008e22d7c8c480226d254",
+        "date": "2026-09-24"
+      }
+    },
+    {
+      "id": "doc-705aeb90d5f3",
+      "path": ".workbuddy/memory/2026-09-26.md",
+      "title": "2026-09-26",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "6f710f579852807f16ceb3ee4b4aedf7b5fb1b98",
+        "date": "2026-09-26"
+      }
+    },
+    {
+      "id": "doc-27d28f56ad2b",
+      "path": ".workbuddy/memory/2026-09-27.md",
+      "title": "2026-09-27",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cc4776b3dcfab26c61854ab800eb13b59af7db01",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-35f59d9964ab",
+      "path": ".workbuddy/memory/2026-10-01.md",
+      "title": "2026-10-01",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "553b05ace79cbaf07b33b40220e305bbdca5f7f0",
+        "date": "2026-10-02"
+      }
+    },
+    {
+      "id": "doc-cf9af1ee10d2",
+      "path": ".workbuddy/memory/2026-10-02-pr17-mcp.md",
+      "title": "2026-10-02",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cc4776b3dcfab26c61854ab800eb13b59af7db01",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-519e318b6edf",
+      "path": ".workbuddy/memory/2026-10-02.md",
+      "title": "2026-10-02：P4 M2 动态通道 GPU 蒙皮（PR #18，已 merge）",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "c226cba54a9021dca0afa7bbbb59193a561752eb",
+        "date": "2026-10-03"
+      }
+    },
+    {
+      "id": "doc-042ae9a41112",
+      "path": ".workbuddy/memory/2026-10-03.md",
+      "title": "2026-10-03 · 相机双问题修复（用户实报）+ 三轮独立审核闭环",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "b3c7b9bbdd7a5df00d7c5dcaee24342183e74aee",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-49ab27f4859c",
+      "path": ".workbuddy/memory/2026-10-04.md",
+      "title": "2026-10-04",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0b77b8060741a24bd0acb96020262a23f3f21f94",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-29dbc234172f",
+      "path": ".workbuddy/memory/2026-10-05.md",
+      "title": "2026-10-05",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "b3c7b9bbdd7a5df00d7c5dcaee24342183e74aee",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-4e4a8e6ad397",
+      "path": ".workbuddy/memory/MEMORY.md",
+      "title": "项目长期记忆（末日尸潮 / Aether Game Editor）",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history",
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "indexedWorkingTreeBase": "90d6427"
+    },
+    {
+      "id": "doc-0bfc1a81a0c8",
+      "path": ".workbuddy/memory/automations/0eed4f98-8f58-41ed-b2d4-0a8a35567732/ROSTER_STATUS.md",
+      "title": "末日尸潮 · 角色绑骨名册状态（2026-09-02 续跑）",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-4d529d344e75",
+      "path": ".workbuddy/memory/automations/0eed4f98-8f58-41ed-b2d4-0a8a35567732/memory.md",
+      "title": "Automation 0eed4f98-... · 执行摘要",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-274c19596d18",
+      "path": ".workbuddy/memory/automations/795db6fd-98bc-43d3-97e7-2b9faa637e06/memory.md",
+      "title": "自动化任务记忆 · Game Editor 重构质量审计与加固",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "9100d1aedf9703e6a43a0a6eece4848f05aa4ae7",
+        "date": "2026-09-03"
+      }
+    },
+    {
+      "id": "doc-9f7973604b25",
+      "path": ".workbuddy/memory/automations/842a6104-5548-405c-8516-b7a7292243d7/memory.md",
+      "title": "自动化执行记录",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-c279a87a50c8",
+      "path": ".workbuddy/memory/automations/ee920a56-6588-43a2-a397-d83c82f5966c/memory.md",
+      "title": "自动化任务记忆 · Game Editor 低档模型产出代码审计",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
+        "date": "2026-09-02"
+      }
+    },
+    {
+      "id": "doc-2d0fd813ae5e",
+      "path": "docs/01-架构总览与主循环.md",
+      "title": "WebGPU 游戏引擎 — 架构总览与主循环",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-b3648b4c2ecd",
+      "path": "docs/02-WebGPU设备资源层与FrameGraph.md",
+      "title": "L1/L2 — WebGPU 设备、资源层与 FrameGraph",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-16ba701ca97c",
+      "path": "docs/03-渲染管线.md",
+      "title": "L3 — 渲染管线设计",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-8751cf386e42",
+      "path": "docs/04-子系统.md",
+      "title": "L4/L5 — 场景与子系统",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-1ed237edad74",
+      "path": "docs/05-NPC角色控制系统.md",
+      "title": "NPC / 角色控制系统（AI · 动画 · 寻路 · 战斗）",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-e9864fb13491",
+      "path": "docs/06-从2D概念图到3D游戏模型管线.md",
+      "title": "06 · 从 2D 概念图到 3D 游戏模型管线",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-8167afc26cdc",
+      "path": "docs/07-灯光与材质系统.md",
+      "title": "07 · 灯光与材质系统",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-9f950c0a73cc",
+      "path": "docs/08-代码审计-Game-Editor（低档模型产出复核）.md",
+      "title": "08 · 代码审计：Game Editor（低档模型产出复核）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-6d0b45b4b551",
+      "path": "docs/09-Game-Editor-核心技术沉淀.md",
+      "title": "09 · Game Editor 核心技术沉淀（WebGPU 编辑器）",
+      "role": "editor",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "mcp",
+        "authoring"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-bdf369495f6e",
+      "path": "docs/10-整体架构设计与长期发展规划.md",
+      "title": "10 · 整体架构设计与长期发展规划",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-63727219dd73",
+      "path": "docs/11-Game-Editor结构优化设计.md",
+      "title": "11 · Game Editor 结构优化设计（包体基座 + 编辑器消费者）",
+      "role": "editor",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "mcp",
+        "authoring"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-e3d32da3e08b",
+      "path": "docs/12-Game-Editor-重构质量审计与加固.md",
+      "title": "12 · Game Editor 重构质量审计与加固",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-0a706288e765",
+      "path": "docs/13-玩法与关卡设计GDD.md",
+      "title": "13 · 末日尸潮 — 玩法与关卡设计 GDD",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-170fe530cff3",
+      "path": "docs/14-Scene系统与场景数据持久化架构设计.md",
+      "title": "14 · Scene 系统 —— 以场景为唯一数据载体的架构设计",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "framework",
+        "scene",
+        "architecture"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-0f6d9f9cf042",
+      "path": "docs/15-绑定与蒙皮面板技术美术评审.md",
+      "title": "绑定（Bind Skin）流程与 UI 面板 · 技术美术评审",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-43124de71dee",
+      "path": "docs/16-MotionMatch动画匹配设计.md",
+      "title": "Retargeting 空间补偿与接触求解：设计及开发计划",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-18c962ec083a",
+      "path": "docs/16A-Retargeting运动空间补偿算法研究.md",
+      "title": "不同体型角色的运动空间补偿：源码、论文与可实现算法",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-a483e2a4fd33",
+      "path": "docs/16B-RetargetingCoreReviewAndRefinement.md",
+      "title": "Retargeting core: independent review and refinement",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "21f68a40b28adeea17d97a886c8868df027f9d56",
+        "date": "2026-09-16"
+      }
+    },
+    {
+      "id": "doc-0b298cf9c060",
+      "path": "docs/17-Agent优先GameEditor架构与开发指导.md",
+      "title": "Agent 优先 Game Editor：架构与下一阶段开发指导",
+      "role": "editor",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "mcp",
+        "authoring"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-f02a43aec540",
+      "path": "docs/18-运行时责任收敛与取舍记录.md",
+      "title": "18 · 运行时责任收敛与取舍记录（WU-0）",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-c693eab6e7ae",
+      "path": "docs/19-最终开发报告（headless-runtime）.md",
+      "title": "19 · 最终开发报告（Agent 优先 Game Editor · WU-0 → WU-6）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-696635d93acc",
+      "path": "docs/20-运行时角色实例化蒙皮设计.md",
+      "title": "20 · 运行时角色实例化蒙皮设计（GPU Skinning + Instancing）",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-5e1e07cabde6",
+      "path": "docs/21-编辑器冒烟测试精简与模块化划分报告.md",
+      "title": "21-编辑器冒烟测试精简与模块化划分报告",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-664b67794af6",
+      "path": "docs/22-编辑器可玩预览阶段（ADR-018）.md",
+      "title": "22 · 编辑器可玩预览阶段（ADR-018）",
+      "role": "editor",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "mcp",
+        "authoring"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-f0db418afb95",
+      "path": "docs/23-战斗层设计（ADR-019）.md",
+      "title": "23 · 战斗层设计（ADR-019）",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-dcb475ab7e28",
+      "path": "docs/24-P4-M4-规模与降级报告.md",
+      "title": "24 · P4 M4：规模与降级（docs/20 §M4 交付）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-a91c95128af6",
+      "path": "docs/25-主库审查问题修复开发计划.md",
+      "title": "Game Editor 主库审查问题修复开发计划",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-71ba86c969c8",
+      "path": "docs/26-SceneWorkspaceAndGameplayRefinement.md",
+      "title": "Scene workspace and gameplay refinement — acceptance record",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "7f8121c5666435f50eb460c26d421cf99a5b9129",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-3984fcf45bd8",
+      "path": "docs/27-SceneAuthoringLoopAcceptance.md",
+      "title": "Scene authoring loop acceptance",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0776a8afabb01b17e0670ba38b2245a3e2651ec1",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-37e5bdd38c44",
+      "path": "docs/28-EnvironmentSceneQualityPass.md",
+      "title": "Environment scene quality pass",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "319c43ffd0d887d08e7238d45505375a8d78eed8",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-c30b78ed5446",
+      "path": "docs/29-PlayerAppearanceAcceptance.md",
+      "title": "Scene-authored Scavenger player appearance",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0c511d38caa321e194a12433bbb56ad00cbf9333",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-9f3199e77a75",
+      "path": "docs/30-ComicRenderingAcceptance.md",
+      "title": "Comic rendering and scene atmosphere — 2026-10-05",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "31726481cb4adfb0dcab067bb3ed93ef27326664",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-6ddbfbc0bd21",
+      "path": "docs/31-美漫画风资产需求与生成提示词.md",
+      "title": "美漫画风资产需求与生成提示词",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-0506cf2b8502",
+      "path": "docs/32-P0-asset-intake-2026-10-05.md",
+      "title": "P0 asset intake and scene integration — 2026-10-05",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0bac8ccba9b4ffb948e8e44ebcd8a430de7833a0",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-b63511104ce5",
+      "path": "docs/35-SharedMotionRuntimeRetarget.md",
+      "title": "Shared motion runtime retargeting",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "cf68a40283f62be4e2c180f0d36cfd55e8b85772",
+        "date": "2026-10-06"
+      }
+    },
+    {
+      "id": "doc-25e2e321d242",
+      "path": "docs/36-StreetQualityAndArchitecturalLOD.md",
+      "title": "Street quality and architectural LOD — 2026-10-07",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0bac8ccba9b4ffb948e8e44ebcd8a430de7833a0",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-7e54cf2bad8d",
+      "path": "docs/37-CombatInputAndPopulationQuality.md",
+      "title": "战斗密度、攻击节奏与游戏输入验收",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "46f6d217b2065fa90d3bfa35ec0d6db9bae50ecb",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-22002c62c8ae",
+      "path": "docs/38-GameplayActionAndVfxAssetBrief.md",
+      "title": "战斗动作与特效追加资产需求（WorkBuddy 执行稿）",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0668eb6768127d2b24944715ca90521a47dcea66",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-0c079b104146",
+      "path": "docs/39-CrowdPerformanceBaseline-2026-10-07.md",
+      "title": "Crowd performance baseline — 2026-10-07",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a13bb750834667b7434bc0192312296f2124bddc",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-2674c132ef83",
+      "path": "docs/39-Unified-weapons-and-animation-hooks.md",
+      "title": "Unified weapons and animation integration",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "0668eb6768127d2b24944715ca90521a47dcea66",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-07bb5be8c3df",
+      "path": "docs/40-GameplayAudioAssetBrief.md",
+      "title": "Gameplay sound-effect asset brief",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "779db010e27b0294f767b6c0b7321fe9b4bbd08d",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-57b06e547de9",
+      "path": "docs/40-IPhonePlayCrashMitigation-2026-10-07.md",
+      "title": "iPhone Play 崩溃排查与资源减负（2026-10-07）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "38d2d19fe32dd317d07f293d45392c147dd2eaf5",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-cc604379da3d",
+      "path": "docs/42-GameplayAudioIntegration.md",
+      "title": "Gameplay audio integration and in-game calibration",
+      "role": "game",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "779db010e27b0294f767b6c0b7321fe9b4bbd08d",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-d630d2112868",
+      "path": "docs/43-GameplayDevelopmentWorkflow.md",
+      "title": "Gameplay development: contracts, workflow and agent entry points",
+      "role": "game",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "gameplay",
+        "weapons",
+        "audio",
+        "game"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "indexedWorkingTreeBase": "90d6427"
+    },
+    {
+      "id": "doc-c6d88add7ec3",
+      "path": "docs/44-CodeGraph代码结构图谱.md",
+      "title": "44 - CodeGraph structure map and development workflow",
+      "role": "navigation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "indexedWorkingTreeBase": "90d6427"
+    },
+    {
+      "id": "doc-2df35aad0aa8",
+      "path": "docs/ENVIRONMENT-LOD-VALIDATION-2026-10-04.md",
+      "title": "Environment LOD audit and delivery — 2026-10-04",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "c7c9ef9c3c833edcba9715fb1984c700192f5ab0",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-1bc80f1d1efe",
+      "path": "docs/HANDOFF-P4M2-P5.md",
+      "title": "HANDOFF：P4 M2~M4（角色真模型）+ P5 C1~C5（战斗实现）",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "553b05ace79cbaf07b33b40220e305bbdca5f7f0",
+        "date": "2026-10-02"
+      }
+    },
+    {
+      "id": "doc-455b41432e02",
+      "path": "docs/HANDOFF-环境LOD重做-2026-10-04.md",
+      "title": "环境 LOD 重做 —— 交接文档",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-b2940197da8a",
+      "path": "docs/LOD重做范围调查-2026-10-04.md",
+      "title": "LOD 重做范围调查（2026-10-04）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-0b5ca119d2be",
+      "path": "docs/README.md",
+      "title": "Project knowledge for every Agent",
+      "role": "navigation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "doc-86a653d56d3e",
+      "path": "docs/animation/body-ik-blending.md",
+      "title": "HumanIK procedural animation blending",
+      "role": "animation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "lastChanged": {
+        "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-db6a9bf0e0a7",
+      "path": "docs/animation/pose-transitions.md",
+      "title": "Runtime pose transitions",
+      "role": "animation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "lastChanged": {
+        "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-f12dc63859b8",
+      "path": "docs/architecture/layers.md",
+      "title": "Editor, framework and game ownership",
+      "role": "navigation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "architecture-policy",
+        "zombie-game-entry",
+        "framework-runtime-entry"
+      ]
+    },
+    {
+      "id": "doc-5a38eb434e0e",
+      "path": "docs/art/H01-LOD0-rig-delivery-2026-10-06.md",
+      "title": "H-01 Scavenger LOD0 rig delivery",
+      "role": "art",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "e798a57ae91570e1385428d32be5652bf204b874",
+        "date": "2026-10-06"
+      }
+    },
+    {
+      "id": "doc-d944818e811d",
+      "path": "docs/art/visual-quality-playbook.md",
+      "title": "Visual quality playbook — comic zombie game",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "art",
+        "lod",
+        "materials",
+        "assets"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "lastChanged": {
+        "commit": "46f6d217b2065fa90d3bfa35ec0d6db9bae50ecb",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-be0be2ab87ec",
+      "path": "docs/browser-verification.md",
+      "title": "Browser verification entry",
+      "role": "history",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "history"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "lastChanged": {
+        "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-2d52032d1065",
+      "path": "docs/character-binding-workspace.md",
+      "title": "Character binding workspace",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "192d99039a41c1929c6054dbd90b616814224f37",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-0ca8689a6e93",
+      "path": "docs/evidence/scene-art-pass-2026-10-04/model-placement.md",
+      "title": "Environment placement manifest",
+      "role": "history",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "319c43ffd0d887d08e7238d45505375a8d78eed8",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "id": "doc-b2435e51a574",
+      "path": "docs/knowledge/codegraph.md",
+      "title": "CodeGraph MCP for development Agents",
+      "role": "navigation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "architecture-policy",
+        "project-rules"
+      ]
+    },
+    {
+      "id": "doc-25065c16bb3d",
+      "path": "docs/review/QC-2026-09-26-分支质量检查.md",
+      "title": "分支质量检查报告 — followup/pr1-copilot-review",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-050b6b3e5078",
+      "path": "docs/review/QC-2026-10-02-P5战斗分支质量审查.md",
+      "title": "QC · `feat/combat-p5-20261002` 分支质量审查",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-a3d1b7cf6faa",
+      "path": "docs/review/branch-integration-2026-10-05.md",
+      "title": "Branch integration audit — 2026-10-05",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "id": "doc-f899497c39d4",
+      "path": "docs/review/branch-integration-2026-10-09.md",
+      "title": "Development branch integration, 2026-10-09",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-ac438d8f6092",
+      "path": "docs/review/review-a-架构与铁律合规.md",
+      "title": "A 组评审报告 · 架构与铁律合规",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-00c82645914a",
+      "path": "docs/review/review-a2-阻断闭合验证.md",
+      "title": "第二轮独立评审（只读复验）· `feature/headless-runtime`",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-828c3be33aa4",
+      "path": "docs/review/review-a3-终审.md",
+      "title": "第三轮独立评审报告（review-a3）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-3aa24ae0466f",
+      "path": "docs/review/review-b-证据与可复现性.md",
+      "title": "评审报告 B · 证据与可复现性（只读复核）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-5b182f7c50d3",
+      "path": "docs/review/review-b2-证据可复现性.md",
+      "title": "评审报告 B2 · 证据与可复现性（第二轮只读复核）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-5fac08ad6c91",
+      "path": "docs/review/review-c-代码风险与遗留.md",
+      "title": "C 组评审报告 · 代码风险与遗留（只读评审）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-5d6c15515ce5",
+      "path": "docs/review/review-c2-代码风险终查.md",
+      "title": "C 组第二轮评审报告 · 代码风险与遗留（只读复审）",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "validation",
+        "history"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": []
+    },
+    {
+      "id": "doc-88f5a88777a7",
+      "path": "docs/rigging/character-control-2026-10-07.md",
+      "title": "Character control verification — 2026-10-07",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "5eb7d2f5b96318f2161c5523cc8c155d7e233a24",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-bdf3adbc4bf2",
+      "path": "docs/rigging/character-rig-delivery-2026-10-07.md",
+      "title": "角色 Rig 接入记录 · 2026-10-07",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a7e2f67163857c8f8f035e5757a5ffa5b09777fe",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-0a37851e010a",
+      "path": "docs/rigging/character-rigging-workflow.md",
+      "title": "Character rigging: source authoring to runtime delivery",
+      "role": "animation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules"
+      ],
+      "lastChanged": {
+        "commit": "192d99039a41c1929c6054dbd90b616814224f37",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-5ac0edd110f0",
+      "path": "docs/rigging/volumetric-skinning.md",
+      "title": "Volumetric skinning in Skeleton / Skin Process",
+      "role": "animation",
+      "authority": "design",
+      "status": "historical",
+      "topics": [
+        "animation",
+        "rigging",
+        "retarget",
+        "ik"
+      ],
+      "read": "Recorded design/revision; verify current source before use",
+      "sourceRefs": [],
+      "lastChanged": {
+        "commit": "a7e2f67163857c8f8f035e5757a5ffa5b09777fe",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "id": "doc-e7452dea4653",
+      "path": "tools/mcp-editor/README.md",
+      "title": "Game Editor MCP — opt-in authoring and diagnostics",
+      "role": "navigation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Owner, contracts, workflow and validation sections",
+      "sourceRefs": [
+        "editor-mcp-workflow",
+        "scene-schema"
+      ]
+    },
+    {
+      "id": "architecture-acceptance-20261009",
+      "path": "docs/architecture/acceptance-2026-10-09.md",
+      "title": "Ownership and shared-knowledge delivery, 2026-10-09",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "architecture",
+        "knowledge",
+        "validation",
+        "codegraph"
+      ],
+      "read": "Source scope, actual checks and remaining consolidation",
+      "sourceRefs": [
+        "architecture-policy",
+        "zombie-game-entry",
+        "framework-runtime-entry"
+      ]
+    }
+  ]
+}

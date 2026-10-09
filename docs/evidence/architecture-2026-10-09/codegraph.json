@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-09",
+  "branch": "codex/architecture-boundaries-20261009",
+  "baseCommit": "90d6427",
+  "scope": "Uncommitted working-tree refactor; four configured source roots",
+  "transport": "MCP stdio, initialize + tools/list + tools/call",
+  "server": {
+    "name": "code-graph-mcp",
+    "version": "0.167.0"
+  },
+  "queries": [
+    {
+      "name": "project_map",
+      "arguments": {
+        "max_tokens": 100000
+      },
+      "resultPath": null,
+      "budget": null,
+      "depth1": [],
+      "exportFiles": []
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/runtime/src/index.ts",
+        "include_deps": true,
+        "max_tokens": 20000
+      },
+      "resultPath": "packages/runtime/src/index.ts",
+      "budget": null,
+      "depth1": [
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/asset-node-edit.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/behavior-executor.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/doc-diff.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/environment-edit.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/scene-authoring.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/solid-ray.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/spawn-edit.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/weapon-combat.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/weapon-system.ts",
+          "symbols": 1
+        }
+      ],
+      "exportFiles": []
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/zombie-game/src/presentation/game-controls.ts",
+        "include_deps": true,
+        "max_tokens": 20000
+      },
+      "resultPath": "packages/zombie-game/src/presentation/game-controls.ts",
+      "budget": null,
+      "depth1": [
+        {
+          "depth": 1,
+          "file": "packages/zombie-game/src/session.ts",
+          "symbols": 6
+        },
+        {
+          "depth": 1,
+          "file": "packages/zombie-game/src/play-session.ts",
+          "symbols": 3
+        },
+        {
+          "depth": 1,
+          "file": "apps/editor/src/ui.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/ai/src/combat.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/gfx/src/device.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/runtime/src/spawn-edit.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/scene/src/behavior.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/scene/src/graph.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/zombie-game/src/presentation/game-language.ts",
+          "symbols": 1
+        },
+        {
+          "depth": 1,
+          "file": "packages/zombie-game/src/run-progress.ts",
+          "symbols": 1
+        }
+      ],
+      "exportFiles": [
+        "packages/zombie-game/src/presentation/game-controls.ts"
+      ]
+    }
+  ],
+  "limits": [
+    "Concurrent index-lock warning during supported incremental update; no foreign process stopped or cache/lock deleted",
+    "Four Tree-sitter parser-error flags; TypeScript typecheck passed",
+    "Map/set/find/clear inferred depth-2 edges verified in source rather than assumed coupling",
+    "Directory overview dependencies_unavailable does not imply no dependencies"
+  ]
+}

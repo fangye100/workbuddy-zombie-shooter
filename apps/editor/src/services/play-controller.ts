@@ -22,7 +22,7 @@
  * 即旧的 A 方案行为，所以调试对比能力没有丢。
  */
 
-import { PlaySession, type PlayState } from '@aether/runtime';
+import { PlaySession, type PlayState } from '@aether/zombie-game';
 import type { BehaviorExecutor } from '@aether/runtime';
 import {
   PlayCameraController,

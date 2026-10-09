@@ -3,7 +3,12 @@ export const EDITOR_INSTRUCTIONS = 'Read editor_workflow, then editor_instances 
 
 export function editorWorkflow() {
   return {
-    contractVersion: 1,
+    contractVersion: 2,
+    knowledge: {
+      entry:'docs/README.md', catalog:'docs/knowledge/catalog.json',
+      architecture:'docs/architecture/layers.md', codeGraph:'docs/knowledge/codegraph.md',
+      rule:'Source contracts govern behavior; design intent and historical acceptance are separately classified. Query CodeGraph before architecture/dependency changes.',
+    },
     guide: 'docs/43-GameplayDevelopmentWorkflow.md',
     transport: 'tools/mcp-editor/README.md',
     instructions: EDITOR_INSTRUCTIONS,
@@ -34,7 +39,7 @@ export function editorWorkflow() {
       TIMEOUT:'The write may have executed. Inspect state and disk before any retry.',
       EDITOR_DISCONNECTED:'Rediscover instances; never substitute another tab automatically.',
     },
-    checks: { transport:'node --test tools/mcp-editor/*.test.mjs', types:'pnpm run typecheck', build:'pnpm run editor:build', assets:'pnpm run scene:check' },
+    checks: { transport:'node --test tools/mcp-editor/*.test.mjs', types:'pnpm run typecheck', build:'pnpm run editor:build', assets:'pnpm run scene:check', architecture:'pnpm run architecture:check', knowledge:'pnpm run knowledge:check' },
     limits: [
       'Opt-in broker and selected tab; client registration is a separate setup action.',
       'Generic component editing exists; semantic asset/component discovery and dedicated weapon/audio authoring commands are not implemented.',

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEmptySceneDocument, type SceneNode, type SharedMotionBinding } from '@aether/scene';
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 import { createBodyIkState, createSkinState } from '@aether/render';
 import { newBodyIkControl } from '@aether/scene';
 import { RuntimeSceneMotion } from '../src/services/runtime-scene-motion';

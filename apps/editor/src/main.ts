@@ -1,5 +1,5 @@
-import { GameControls } from './services/game-controls';
-import { GameAudio } from './services/game-audio';
+import { GameControls } from "@aether/zombie-game/presentation/game-controls";
+import { GameAudio } from "@aether/zombie-game/presentation/game-audio";
 import { weaponDiagnostics } from './services/weapon-diagnostics';
 import { GpuUnavailableError, initGpu, type GpuContext } from '@aether/gfx';
 import { LabRenderer, type CameraState, type SceneObject } from './renderer';
@@ -10,18 +10,9 @@ import { DEBUG_OPTIONS, defaultParams, type LabParams } from './params';
 import { MODEL_RULER_HEIGHT_M, resolveModelHeightM, resolveAssetImportHeightM, assetServer } from './models';
 import { parseGlb, SceneGraph, parseAssetManifest, formatLodStats } from '@aether/scene';
 import type { EditorCameraData, EnvironmentData, GltfResult, SceneDocument, NodeId, LodFamily, ScriptComponent } from '@aether/scene';
-import {
-  PlaySession,
-  SpawnEditStore,
-  captureInitialScatter,
-  compareScatter,
-  describeDelta,
-  listSpawnPoints,
-  sceneFingerprint,
-  formatAuthorEdit,
-  findNode,
-} from '@aether/runtime';
-import type { ScatterComparison, ScatterFingerprint } from '@aether/runtime';
+import { SpawnEditStore, listSpawnPoints, sceneFingerprint, formatAuthorEdit, findNode } from '@aether/runtime';
+import { PlaySession, captureInitialScatter, compareScatter, describeDelta } from '@aether/zombie-game';
+import type { ScatterComparison, ScatterFingerprint } from '@aether/zombie-game';
 import { AuthorTransformController, graphOfDoc } from './services/author-transform';
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
@@ -39,10 +30,10 @@ import { AssetPreview } from './services/asset-preview';
 import { resolveStartScenePath } from './scene-boot';
 import { EditorMenu } from './services/editor-menu';
 import { readSceneChoices, nextPlayableScene, sceneUrl } from './services/scene-workspace';
-import { GameHud } from './services/game-hud';
-import { RunTransfer } from './services/run-transfer';
-import { RunProfile } from './services/run-profile';
-import { RunSettlement } from './services/run-settlement';
+import { GameHud } from "@aether/zombie-game/presentation/game-hud";
+import { RunTransfer } from "@aether/zombie-game/presentation/run-transfer";
+import { RunProfile } from "@aether/zombie-game/presentation/run-profile";
+import { RunSettlement } from "@aether/zombie-game/presentation/run-settlement";
 import { renderPixelRatio } from './services/render-resolution';
 import { environmentFromParams } from './services/scene-environment';
 import { AtmospherePanel } from './services/atmosphere-panel';

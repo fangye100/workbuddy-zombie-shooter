@@ -3,7 +3,7 @@
 import { type Vec3 } from '@aether/core';
 import { SceneGraph, validateBodyIkBinding, type SceneDocument, type AssetMeta } from '@aether/scene';
 import { createBodyIkState, rotateVec3, type BodyIkState, type SkinState } from '@aether/render';
-import type { RuntimeSession } from '@aether/runtime';
+import type { RuntimeSession } from '@aether/zombie-game';
 import type { SceneObject } from '../renderer';
 
 export type IkObject = Pick<SceneObject, 'pos' | 'quat' | 'scale' | 'skeleton' | 'skinState' | 'removed' | 'loadedAssetPath'>;

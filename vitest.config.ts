@@ -14,6 +14,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@aether\/zombie-game\/presentation\/(.+)$/,
+        replacement: fileURLToPath(new URL('./packages/zombie-game/src/presentation/$1.ts', import.meta.url)),
+      },
+      {
         find: /^@aether\/([^/]+)$/,
         replacement: fileURLToPath(new URL('./packages/$1/src/index.ts', import.meta.url)),
       },

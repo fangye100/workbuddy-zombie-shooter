@@ -17,7 +17,7 @@
 import { createCapsule, DEFAULT_MOTION_TRANSITION_SEC } from '@aether/scene';
 import { rayCapsuleY } from '@aether/gameplay';
 import { lookupCharacterStats } from '@aether/content';
-import type { RuntimeSession, EntityView } from '@aether/runtime';
+import type { RuntimeSession, EntityView } from '@aether/zombie-game';
 import { DYNAMIC_INSTANCE_FLOATS, PalettePoseTransitions, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
 import { characterYaw } from './character-facing';

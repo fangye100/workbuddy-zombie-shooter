@@ -1,5 +1,14 @@
 # 项目长期记忆（末日尸潮 / Aether Game Editor）
 
+> Cross-Agent entry: [repository knowledge](../../docs/README.md),
+> [catalog](../../docs/knowledge/catalog.json),
+> [current layer contract](../../docs/architecture/layers.md) and
+> [CodeGraph MCP guide](../../docs/knowledge/codegraph.md). This memory preserves
+> historical context. Older rules, paths, schema versions, port assumptions and
+> acceptance claims below may be superseded; current AGENTS/source contracts win.
+> The integrated scene schema is v15. Zombie simulation/presentation now belongs
+> to `packages/zombie-game`; older runtime/editor paths are historical.
+
 > 2026-10-02 精简重写：合并重复条目、删除已完结的过程细节。完整历史见 `docs/` 与 `.workbuddy/memory/YYYY-MM-DD.md`。
 
 ## Gameplay development knowledge — 2026-10-08

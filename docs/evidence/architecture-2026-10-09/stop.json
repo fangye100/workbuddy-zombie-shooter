@@ -1,0 +1,1 @@
+{"state":"stopped","ledger":{"registered":4,"disposed":4,"pending":0},"audio":{"state":"closed","runId":-1,"pending":0,"buffers":0,"decodedBytes":0,"voices":0,"loops":0,"peakVoices":2,"played":{"SFX-ENV-HIGHWAY-BED":1,"SFX-E02-POUNCE-WARN":4},"skipped":1,"muted":false,"gain":1,"errors":[]},"schema":15,"authoredWeapon":"pistol"}
