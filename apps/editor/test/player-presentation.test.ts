@@ -31,6 +31,16 @@ function setup(doc = structuredClone(scenes[0]!)) {
 }
 
 describe('scene-authored player presentation', () => {
+  it('keeps lower-body facing movement while gameplay aims across it, and clears heading on rerun', () => {
+    const { visual, ctl, object } = setup(); expect(ctl.start()).toBe(true);
+    const p = ctl.session.runtime!.player()!;
+    visual.sync({ ...p, x: 0, z: 0, yaw: 0 }, true);
+    visual.sync({ ...p, x: 0, z: 1, yaw: 0 }, true);
+    expect(object.quat[1]).toBeCloseTo(0); // +Z movement, +X gameplay aim
+    visual.sync({ ...p, x: 0, z: 1, yaw: Math.PI }, true); expect(object.quat[1]).toBeCloseTo(0);
+    visual.sync({ ...p, runId: p.runId + 1, x: 0, z: 0, yaw: Math.PI / 2 }, true); expect(object.quat[1]).toBeCloseTo(0);
+    ctl.stop();
+  });
   it('faces actual runtime movement in all eight directions and keeps combat heading intact', () => {
     for (const [x, z] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
       const { visual, ctl, object } = setup();
@@ -62,7 +72,7 @@ describe('scene-authored player presentation', () => {
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
     expect(result.to).toBe(SCHEMA_VERSION);
-    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides']);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'unified-weapon-arsenal', 'scene-audio-cue-mapping', 'integrated-weapons-audio-body-ik']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });

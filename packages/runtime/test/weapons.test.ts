@@ -32,7 +32,7 @@ describe('scene-owned weapon contract',()=>{
     const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
     const keep=structuredClone(rules.arsenal);expect(migrateToLatest(doc).doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')).toMatchObject({arsenal:keep});
     delete (rules as unknown as Record<string,unknown>).arsenal;
-    const migrated=migrateToLatest(doc);expect(migrated.applied).toEqual(['unified-weapon-arsenal','scene-audio-cue-mapping']);
+    const migrated=migrateToLatest(doc);expect(migrated.applied).toEqual(['unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik']);
     const next=migrated.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
     expect(next.arsenal.definitions).toHaveLength(1);expect(next.arsenal.definitions[0]!.ammo.magazineSize).toBe(rules.weapon.magazineSize);
     expect(validateSceneDocument(migrated.doc).filter(d=>d.severity==='error')).toEqual([]);

@@ -5,6 +5,7 @@
 import {
   retargetFingerprint, RETARGET_ALGORITHM_VERSION, validateAssetMeta,
   validateSharedMotionBinding, validateSharedMotionLibrary,
+  DEFAULT_MOTION_TRANSITION_SEC,
   type AssetMeta, type AnimClip, type AnimTrack, type SkeletonData,
   type SharedMotionBinding, type SharedMotionLibrary, type SharedMotionClip,
 } from '@aether/scene';
@@ -16,6 +17,7 @@ import type { RetargetDiagnostic, RetargetMetrics } from './binding/motion-retar
 import { fileUrl } from '../asset-util';
 
 export interface ResolvedMotion {
+  transitionSec?: number;
   key: string;
   clips: AnimClip[];
   states: Record<string, { loop: boolean; nominalSpeedMps?: number }>;
@@ -53,7 +55,7 @@ export class SharedMotionRuntime {
       throw error;
     }
     const meta = JSON.parse(text) as AssetMeta;
-    if (meta.sharedMotion) {
+    if (meta.sharedMotion || meta.bodyIk) {
       const errors = validateAssetMeta(meta).filter(d => d.severity === 'error');
       if (errors.length) throw new SharedMotionError('MOTION_META', errors.map(d => d.message).join('; '));
     }
@@ -83,11 +85,13 @@ export class SharedMotionRuntime {
       target: { joints: sk.joints, names: sk.jointNames, parent: sk.parent, locals: sk.locals, roots: sk.roots,
         normalization: Array.from(sk.normalization), inverseBind: Array.from(sk.inverseBind) }, calibration: meta?.retarget?.calibration ?? null });
     const cached = this.results.get(key);
-    if (cached) { this.stats.cacheHits++; return cached; }
-    const result = this.generate(sk, key, sources, meta);
+    const transitionSec = binding.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC;
+    const present = (result: ResolvedMotion): ResolvedMotion => result.transitionSec === transitionSec ? result : { ...result, transitionSec };
+    if (cached) { this.stats.cacheHits++; return present(await cached); }
+    const result = this.generate(sk, key, sources, meta).then(r => ({ ...r, transitionSec: DEFAULT_MOTION_TRANSITION_SEC }));
     this.results.set(key, result);
     result.catch(() => { if (this.results.get(key) === result) this.results.delete(key); this.stats.failures++; });
-    return result;
+    return present(await result);
   }
   private async generate(sk: SkeletonData, key: string, sources: {
     state: string; config: SharedMotionClip; text: string; sourceMeta: AssetMeta;

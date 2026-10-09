@@ -20,11 +20,12 @@
 import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
+import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -180,6 +181,8 @@ export interface ComponentBase {
  * 模型内部层级保留在资产的 nodeTree 里，只用于材质匹配与层级面板展示（现有行为不变）。
  */
 export interface MeshRendererComponent extends ComponentBase {
+  /** Undefined inherits the asset assembly; null disables procedural controls. */
+  bodyIk?: BodyIkBinding | null;
   /** Undefined inherits the asset default; null explicitly disables shared motions for this node. */
   sharedMotion?: SharedMotionBinding | null;
   /** Reuse this authored mesh for the single player during Play. Only valid on playerStart.
@@ -1071,6 +1074,16 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       if (c?.kind !== ComponentKind.MeshRenderer) return;
       const at = `/nodes/${i}/components/${ci}`;
       const m = c as Partial<MeshRendererComponent>;
+      if (m.bodyIk !== undefined && m.bodyIk !== null) {
+        const errors = validateBodyIkBinding(m.bodyIk);
+        for (const message of errors) err(`${at}/bodyIk`, 'E_BODY_IK', message);
+        if (m.source?.type !== 'asset') err(`${at}/bodyIk`, 'E_BODY_IK_SOURCE', 'Body IK requires a skinned asset mesh');
+        if (!errors.length) for (const control of m.bodyIk.controls) {
+          const target = control.target;
+          if (target.kind === 'node' && !d.nodes!.some(node => node?.id === target.nodeId))
+            err(`${at}/bodyIk/${control.id}`, 'E_BODY_IK_TARGET', 'Body IK target NodeId is missing');
+        }
+      }
       if (m.sharedMotion !== undefined && m.sharedMotion !== null) {
         for (const message of validateSharedMotionBinding(m.sharedMotion)) err(`${at}/sharedMotion`, 'E_SHARED_MOTION', message);
         if (m.source?.type !== 'asset') err(`${at}/sharedMotion`, 'E_SHARED_MOTION_SOURCE', '共享动作需要带骨架的资产网格');

@@ -72,8 +72,8 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping']);
-    expect(result.doc.schemaVersion).toBe(14);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik']);
+    expect(result.doc.schemaVersion).toBe(15);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
   });
@@ -357,7 +357,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'support-authored-art-textures',
       'shared-motion-node-overrides',
       'authored-crowd-attack-budget',
-      'unified-weapon-arsenal','scene-audio-cue-mapping',
+      'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik',
     ]);
   });
 });
@@ -453,6 +453,6 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(14);
+    expect(SCHEMA_VERSION).toBe(15);
   });
 });

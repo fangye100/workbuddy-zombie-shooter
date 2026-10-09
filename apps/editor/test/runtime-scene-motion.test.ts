@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEmptySceneDocument, type SceneNode, type SharedMotionBinding } from '@aether/scene';
 import type { RuntimeSession } from '@aether/runtime';
-import { createSkinState } from '@aether/render';
+import { createBodyIkState, createSkinState } from '@aether/render';
+import { newBodyIkControl } from '@aether/scene';
 import { RuntimeSceneMotion } from '../src/services/runtime-scene-motion';
 import { SharedMotionRuntime, type ResolvedMotion } from '../src/services/shared-motion-runtime';
 import { skeletonFromFitPositions } from '../src/services/binding/retarget-session';
@@ -26,6 +27,18 @@ function fixture() {
   return { doc, object, motion, resolve, result, rt, oldClips };
 }
 describe('Play-owned shared scene motion', () => {
+  it('keeps locomotion under IK for accepted weapon fire, without applying weapon phase to the gait clip', async () => {
+    const f=fixture(); f.result.states.shoot={loop:false}; f.result.clips.push({name:'shoot',duration:.5,tracks:[]});
+    f.motion.start(f.doc); await vi.waitFor(()=>expect(f.motion.summary().pending).toBe(0));
+    const c=newBodyIkControl('upperBody');c.target={kind:'position',position:[0,1.5,2]};
+    f.object.skinState.bodyIk=createBodyIkState(f.object.skeleton,{enabled:true,weight:1,locomotionWhileAiming:true,controls:[c]});
+    f.motion.sync(f.rt(0,0));
+    const rt=(tick:number,x:number)=>({...f.rt(tick,x),firing:true,weapons:{animation:{action:'fire',phase:.8,startTick:tick,weaponId:'pistol',clip:'pistol-fire',fallback:'run'}}}) as unknown as RuntimeSession;
+    f.motion.sync(rt(1,.2)); expect(f.motion.summary().nodes[0]!.state).toBe('run');
+    expect(f.object.skinState.time).not.toBeCloseTo(.8*f.object.skinState.clips[f.object.skinState.clip]!.duration);
+    f.object.skinState.bodyIk.binding.weight=0;f.motion.sync(rt(2,.4));
+    expect(f.motion.summary().nodes[0]!.state).toBe('shoot');f.motion.stop();
+  });
   it('uses successful weapon action phase and retriggers the same clip; held input alone cannot animate a shot',async()=>{
     const f=fixture();f.result.states.shoot={loop:false};f.result.clips.push({name:'shoot',duration:.5,tracks:[]});
     f.motion.start(f.doc);await vi.waitFor(()=>expect(f.motion.summary().pending).toBe(0));
@@ -36,6 +49,28 @@ describe('Play-owned shared scene motion', () => {
     f.motion.sync(rt(5,'fire',0,5));expect(f.object.skinState.time).toBe(0);
     f.motion.sync(rt(5,'fire',0,5));expect(f.object.skinState.time).toBe(0);
     f.motion.stop();expect(f.object.animations).toBe(f.oldClips);
+  });
+  it('advances transitions only on fixed ticks, clears them on rerun and restores author state on Stop', async () => {
+    const f = fixture(), original = f.object.skinState; f.result.transitionSec = .2;
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    f.motion.sync(f.rt(0,0)); f.motion.setState('player','walk');
+    expect(f.object.skinState.transition!.elapsed).toBe(0);
+    f.motion.sync(f.rt(3,0)); expect(f.object.skinState.transition!.elapsed).toBeCloseTo(.1);
+    f.motion.sync(f.rt(3,0)); expect(f.object.skinState.transition!.elapsed).toBeCloseTo(.1);
+    f.motion.setState('player','run'); expect(f.object.skinState.transition!.elapsed).toBe(0);
+    f.motion.sync(f.rt(6,0)); f.motion.sync(f.rt(9,0)); expect(f.object.skinState.transition).toBeUndefined();
+    f.motion.setState('player','walk'); f.motion.sync(f.rt(0,0,2)); expect(f.object.skinState.transition).toBeUndefined();
+    f.motion.setState('player','walk'); f.motion.stop(); expect(f.object.skinState).toBe(original); expect(original.transition).toBeUndefined();
+  });
+  it('keeps gait while procedural aim is active and returns to shoot when IK weight is zero', async () => {
+    const f = fixture(); f.result.states.shoot = { loop: false }; f.result.clips.push({ name: 'shoot', duration: .5, tracks: [] });
+    f.motion.start(f.doc); await vi.waitFor(() => expect(f.motion.summary().pending).toBe(0));
+    const c = newBodyIkControl('upperBody'); c.target = { kind: 'position', position: [0, 1.5, 2] };
+    f.object.skinState.bodyIk = createBodyIkState(f.object.skeleton, { enabled: true, weight: 1, locomotionWhileAiming: true, controls: [c] });
+    f.motion.sync(f.rt(0, 0)); f.motion.sync({ ...f.rt(1, .2), firing: true } as RuntimeSession);
+    expect(f.motion.summary().nodes[0]!.state).toBe('run');
+    f.object.skinState.bodyIk.binding.weight = 0; f.motion.sync({ ...f.rt(2, .4), firing: true } as RuntimeSession);
+    expect(f.motion.summary().nodes[0]!.state).toBe('shoot'); f.motion.stop();
   });
   it('restores configured default state for display characters on rerun', async () => {
     const f = fixture(); f.doc.playerStart = null;

@@ -348,6 +348,17 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  // Both published v14 branches are accepted. IK v14 lacked an arsenal; keep all
+  // authored IK/transition/audio fields and explicitly upgrade only legacy ammo.
+  if (!listMigrations().some(m => m.from === 14 && m.to === 15)) registerMigration({
+    from: 14, to: 15, name: 'integrated-weapons-audio-body-ik', run(doc) {
+      const next = structuredClone(doc);
+      if (Array.isArray(next.nodes)) for (const n of next.nodes) if (Array.isArray(n?.components))
+        for (const c of n.components) if (c?.kind === 'RunRules' && c.arsenal === undefined && c.weapon)
+          c.arsenal = legacyWeaponArsenal(c.weapon);
+      return next;
+    },
+  });
   if (!listMigrations().some(m=>m.from===13 && m.to===14)) registerMigration({from:13,to:14,name:'scene-audio-cue-mapping',run:doc=>structuredClone(doc)});
   if (!listMigrations().some(m=>m.from===12 && m.to===13)) registerMigration({from:12,to:13,name:'unified-weapon-arsenal',run(doc){
     const next=structuredClone(doc);

@@ -1,5 +1,6 @@
 /** Structured author form. Draft input is local; only Apply enters the shared document/history. */
 import type { SceneDocument, SceneNode, RunRulesComponent } from '@aether/scene';
+import { BODY_IK_PARTS, DEFAULT_MOTION_TRANSITION_SEC, newBodyIkControl } from '@aether/scene';
 import { newAuthorNode, newRunRules, removeNodeTree, type EditResult } from '@aether/runtime';
 import { t } from '../i18n';
 import './scene-author.css';
@@ -7,6 +8,7 @@ import './scene-author.css';
 const labels: Record<string, string> = {
   audio: '游戏音效', cues: '音效资源', masterGain: '主音量', maxVoices: '最大同时发声数', maxImpactVoices: '最大命中声数', decodedBudgetMiB: '音频内存预算 MiB', distanceM: '声音衰减距离', warningDistanceM: '预警距离', variants: '声音变体', gain: '音量', rate: '播放速率', bus: '声音分组', ambience: '环境音', warnings: '敌人预警', fleshHit: '肉体命中', acidLaunch: '酸液发射', acidPool: '酸池循环',
   arsenal: '武器系统', equipped: '初始装备', definitions: '武器定义', switchSec: '换装秒数', presentation: '武器表现', markers: '持握与附件标记', primaryGrip: '主握点', supportGrip: '辅助握点', muzzle: '枪口', magazine: '弹匣标记', chamber: '拉栓标记', procedural: '程序化动作', animations: '动作 hook', effects: '伤害效果', upgrades: '武器升级', ammo: '弹药配置',
+  weight: 'IK 混合权重 (0–1)', locomotionWhileAiming: '瞄准时保留下半身移动', pole: '弯曲参考方向', forward: '瞄准轴 (骨骼局部)', maxAngleDeg: '最大瞄准角 (度)', height: '目标世界高度 (米)', offset: '目标世界偏移 (米)', nodeId: '目标节点',
   name: '名称', parent: '父节点', visible: '可见', pickable: '可拾取', category: '分类', transform: '局部变换',
   position: '位置', rotation: '旋转四元数', scale: '缩放', enabled: '启用', campaign: '战役标识',
   npcTiming: 'NPC 节奏', decisionMinSec: '最短决策间隔', decisionMaxSec: '最长决策间隔', recoveryMinSec: '最短恢复时间', recoveryMaxSec: '最长恢复时间', windupJitterFrac: '前摇随机比例', cooldownJitterFrac: '冷却随机比例',
@@ -81,7 +83,7 @@ export class SceneAuthorPanel {
             fields(group, value as Record<string, unknown>, Object.keys(value), path); parent.append(group); continue;
           }
           const label = document.createElement('label'); label.textContent = t(labels[key] ?? key);
-          const choices = enums[key] ?? (key === 'source' && prefix.endsWith('bossAttack') ? doc.nodes.filter(n => n.components.some(c => c.kind === 'SpawnPoint')).map(n => n.id) : null);
+          const choices = enums[key] ?? (key === 'nodeId' ? doc.nodes.map(n => n.id) : key === 'source' && prefix.endsWith('bossAttack') ? doc.nodes.filter(n => n.components.some(c => c.kind === 'SpawnPoint')).map(n => n.id) : null);
           const input = choices ? document.createElement('select') : document.createElement('input');
           input.setAttribute('aria-label', path); input.dataset.authorField = path;
           if (input instanceof HTMLSelectElement) { for (const v of choices!) input.add(new Option(v, v)); input.value = String(value); }
@@ -106,9 +108,46 @@ export class SceneAuthorPanel {
       }
       for (const component of draft.components) if (component.kind === 'Light') fields(form, component as unknown as Record<string, unknown>, Object.keys(component).filter(k => k !== 'type'), 'Light');
       for (const mesh of draft.components) if (mesh.kind === 'MeshRenderer' && mesh.source.type === 'asset') {
+        const ikSection = document.createElement('fieldset'), ikLegend = document.createElement('legend');
+        ikLegend.textContent = 'HumanIK · 分部位程序化混合'; ikSection.append(ikLegend); form.append(ikSection);
+        const ikHint = document.createElement('p'); ikHint.textContent = '先播放原动作，再按权重叠加 IK。固定位置与弯曲方向使用角色局部米；节点偏移使用世界米。'; ikSection.append(ikHint);
+        if (mesh.bodyIk) {
+          const ik = mesh.bodyIk;
+          fields(ikSection, ik as unknown as Record<string, unknown>, ['enabled', 'weight', 'locomotionWhileAiming'], 'MeshRenderer.bodyIk');
+          for (const c of ik.controls) {
+            const group = document.createElement('fieldset'), legend = document.createElement('legend'); legend.textContent = c.part; group.append(legend); ikSection.append(group);
+            const prefix = `MeshRenderer.bodyIk.${c.id}`;
+            fields(group, c as unknown as Record<string, unknown>, ['enabled', 'weight', 'pole', 'forward', 'maxAngleDeg'], prefix);
+            const targetLabel = document.createElement('label'); targetLabel.textContent = '目标来源';
+            const target = document.createElement('select'); target.setAttribute('aria-label', `${prefix}.target.kind`);
+            for (const [value, text] of [['position', '固定局部位置'], ['mouse', '鼠标 / 瞄准摇杆'], ['node', '场景节点'], ['enemy', '最近存活敌人']]) target.add(new Option(text, value));
+            target.value = c.target.kind;
+            target.onchange = () => {
+              c.target = target.value === 'position' ? { kind: 'position', position: [0, 1.5, 1] } :
+                target.value === 'node' ? { kind: 'node', nodeId: doc.nodes.find(n => n.id !== draft.id)?.id ?? '', offset: [0, 1.5, 0] } :
+                { kind: target.value === 'enemy' ? 'enemy' : 'mouse', height: 1.5 };
+              redrawDraft();
+            };
+            targetLabel.append(target); group.append(targetLabel);
+            fields(group, c.target as unknown as Record<string, unknown>, Object.keys(c.target), `${prefix}.target`);
+            button(`移除 ${c.part}`, () => { ik.controls = ik.controls.filter(x => x.id !== c.id); redrawDraft(); }, group);
+          }
+          for (const part of BODY_IK_PARTS) if (!ik.controls.some(c => c.part === part)) button(`添加 IK ${part}`, () => { ik.controls.push(newBodyIkControl(part)); redrawDraft(); }, ikSection);
+        }
+        button('设置分部位 IK', () => { mesh.bodyIk = { enabled: true, weight: 1, locomotionWhileAiming: true, controls: [newBodyIkControl('upperBody')] }; redrawDraft(); }, ikSection);
+        button('继承资产 IK 装配', () => { delete mesh.bodyIk; redrawDraft(); }, ikSection);
+        button('禁用程序化 IK', () => { mesh.bodyIk = null; redrawDraft(); }, ikSection);
         const section = document.createElement('fieldset'), legend = document.createElement('legend');
         legend.textContent = t('共享动作库 · Runtime 重定向'); section.append(legend); form.append(section);
-        if (mesh.sharedMotion) fields(section, mesh.sharedMotion as unknown as Record<string, unknown>, ['library', 'profile', 'defaultState', 'speed'], 'MeshRenderer.sharedMotion');
+        if (mesh.sharedMotion) {
+          fields(section, mesh.sharedMotion as unknown as Record<string, unknown>, ['library', 'profile', 'defaultState', 'speed'], 'MeshRenderer.sharedMotion');
+          const label = document.createElement('label'); label.textContent = '姿态过渡时长 (秒，0 = 直接切换)';
+          const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.max = '5'; input.step = '.01';
+          input.value = String(mesh.sharedMotion.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC);
+          input.setAttribute('aria-label', 'MeshRenderer.sharedMotion.transitionSec');
+          input.oninput = () => { mesh.sharedMotion!.transitionSec = input.value.trim() ? Number(input.value) : NaN; dirty(); };
+          label.append(input); section.append(label);
+        }
         button('绑定共享动作库', () => {
           mesh.sharedMotion = { library: { path: '', guid: '' }, profile: '', defaultState: 'idle', speed: 1 }; redrawDraft();
         }, section);

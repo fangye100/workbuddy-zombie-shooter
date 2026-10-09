@@ -1,0 +1,1150 @@
+{
+  "schemaVersion": 15,
+  "id": "sc_body_ik_validation",
+  "name": "HumanIK · 分部位动画混合",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      1,
+      1
+    ],
+    "distance": 8,
+    "yaw": 0.15,
+    "elevation": 0.25
+  },
+  "entryCamera": null,
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_ground0000",
+      "name": "地面 Ground",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "plane",
+            "params": [
+              80,
+              24
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
+                "type": "shared",
+                "id": "s1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null,
+      "category": "环境"
+    },
+    {
+      "id": "nd_motion_player",
+      "name": "玩家 · 下半身移动 + 鼠标瞄准",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          2.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "playBinding": "player",
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "upperBody",
+                "part": "upperBody",
+                "enabled": true,
+                "weight": 1,
+                "target": {
+                  "kind": "mouse",
+                  "height": 1.5
+                },
+                "pole": [
+                  0,
+                  0,
+                  1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_h01",
+      "name": "清道夫 · Run + 躯干与手部 IK",
+      "parent": null,
+      "transform": {
+        "position": [
+          -2.8,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "run",
+            "speed": 1,
+            "transitionSec": 0.6
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "upperBody",
+                "part": "upperBody",
+                "enabled": true,
+                "weight": 0.75,
+                "target": {
+                  "kind": "node",
+                  "nodeId": "nd_ik_target",
+                  "offset": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              },
+              {
+                "id": "leftHand",
+                "part": "leftHand",
+                "enabled": true,
+                "weight": 0.85,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0.3,
+                    1.5,
+                    0.3
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  -1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_E-01",
+      "name": "游荡者 · Walk + 头部与脚部 IK",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/E-01/rigged/E01_Shambler_900_animation_ready.glb",
+              "guid": "as_af984d0b1589bf78"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "walk",
+            "speed": 1
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "head",
+                "part": "head",
+                "enabled": true,
+                "weight": 0.7,
+                "target": {
+                  "kind": "node",
+                  "nodeId": "nd_ik_target",
+                  "offset": [
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              },
+              {
+                "id": "leftFoot",
+                "part": "leftFoot",
+                "enabled": true,
+                "weight": 0.6,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0.13,
+                    0.2,
+                    0.25
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_E-04",
+      "name": "盾卫 · Walk + 最近敌人瞄准",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.8,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_animation_ready.glb",
+              "guid": "as_08f37057b48bb7ee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "walk",
+            "speed": 1
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "upperBody",
+                "part": "upperBody",
+                "enabled": true,
+                "weight": 0.7,
+                "target": {
+                  "kind": "enemy",
+                  "height": 1.5
+                },
+                "pole": [
+                  0,
+                  0,
+                  1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 75
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_room",
+      "name": "Runtime NPC test room",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              30,
+              4,
+              20
+            ]
+          },
+          "clearRule": "kill-all",
+          "clearTarget": null,
+          "depth": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_nav",
+      "name": "导航区",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              30,
+              4,
+              20
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_spawn_E-01",
+      "name": "Shared NPC · E-01",
+      "parent": "nd_motion_room",
+      "transform": {
+        "position": [
+          -12,
+          0,
+          -8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 8,
+          "radius": 0.1,
+          "prefab": null
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_motion_spawn_E-04",
+      "name": "Shared NPC · E-04",
+      "parent": "nd_motion_room",
+      "transform": {
+        "position": [
+          12,
+          0,
+          -8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-04",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 8,
+          "radius": 0.1,
+          "prefab": null
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_ik_target",
+      "name": "IK 瞄准目标",
+      "parent": null,
+      "transform": {
+        "position": [
+          -1.1,
+          1.5,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "sphere",
+            "params": [
+              0.12,
+              16,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffb84d",
+                  "roughness": 0.5,
+                  "metallic": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_ik_rules",
+      "name": "IK inspection · delayed NPC decisions",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "RunRules",
+          "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 5,
+            "decisionMaxSec": 5,
+            "recoveryMinSec": 5,
+            "recoveryMaxSec": 5,
+            "windupJitterFrac": 0,
+            "cooldownJitterFrac": 0
+          },
+          "campaign": "act1",
+          "scrapPerKill": 3,
+          "firstChoiceKills": 1,
+          "choiceEveryKills": 8,
+          "eventScrap": 25,
+          "healCost": 18,
+          "healAmount": 35,
+          "talentCost": 30,
+          "floorEssence": 5,
+          "aimAssist": true,
+          "weapon": {
+            "magazineSize": 18,
+            "reserveRounds": 120,
+            "reloadSec": 1.6,
+            "ammoPerKill": 8,
+            "ammoCost": 12,
+            "ammoSupply": 60
+          },
+          "bossAttack": null,
+          "talents": [
+            {
+              "id": "heavy",
+              "name": "重型弹头",
+              "description": "每层伤害 +35%；叠满三层形成高伤流派。",
+              "effect": "damage",
+              "value": 0.35,
+              "maxStacks": 3
+            },
+            {
+              "id": "rapid",
+              "name": "快速供弹",
+              "description": "每层射速 +30%，持续压制尸潮。",
+              "effect": "haste",
+              "value": 0.3,
+              "maxStacks": 3
+            },
+            {
+              "id": "leech",
+              "name": "尸髓回流",
+              "description": "命中恢复实际伤害的 8% 生命。",
+              "effect": "leech",
+              "value": 0.08,
+              "maxStacks": 3
+            },
+            {
+              "id": "shock",
+              "name": "震荡弹池",
+              "description": "解锁新的范围流派选项：每层 2 米半额冲击波。",
+              "effect": "blast",
+              "value": 2,
+              "maxStacks": 3,
+              "unlockCost": 15
+            },
+            {
+              "id": "blast",
+              "name": "破片弹药",
+              "description": "命中造成半额范围伤害；每层扩大 1.2 米。",
+              "effect": "blast",
+              "value": 1.2,
+              "maxStacks": 3
+            },
+            {
+              "id": "dash",
+              "name": "轻装步伐",
+              "description": "每层移动速度 +15%，更容易拉开距离。",
+              "effect": "speed",
+              "value": 0.15,
+              "maxStacks": 3
+            }
+          ],
+          "arsenal": {
+            "equipped": "pistol",
+            "switchSec": 0.35,
+            "definitions": [
+              {
+                "id": "pistol",
+                "name": "手枪",
+                "nameEn": "Pistol",
+                "description": "Legacy pistol compatibility",
+                "behavior": "hitscan",
+                "damage": 12,
+                "cooldownSec": 0.35,
+                "rangeM": 18,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 30,
+                  "launchSpeedY": 0,
+                  "gravity": 0,
+                  "radiusM": 0,
+                  "lifetimeSec": 2
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 18,
+                  "reserveRounds": 120,
+                  "reloadSec": 1.6,
+                  "ammoPerKill": 8,
+                  "ammoCost": 12,
+                  "ammoSupply": 60,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": null,
+                  "placeholder": "pistol",
+                  "color": "#ffc531",
+                  "lengthM": 0.3,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.12,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.3,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.036,
+                        -0.1,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.09,
+                        0.04,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "pistol-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "pistol-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "pistol-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "pistol-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "pistol-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-09-04T07:04:02.154Z",
+    "updatedAt": "2026-09-04T07:04:02.154Z",
+    "author": "scene:gen",
+    "notes": "Post-animation HumanIK controls: run + upper-body aim/hand IK; walk + head/foot IK; mouse/stick, node and nearest living enemy targets. Play sliders are transient; scene author settings persist."
+  },
+  "playerStart": "nd_motion_player",
+  "loseCondition": "player-death"
+}

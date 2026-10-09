@@ -7,6 +7,10 @@ export class RuntimeMotionPanel {
     private readonly actorErrors: () => string[] = () => []) {}
   render(active: boolean): void {
     const summary = this.motions.summary();
+    for (const node of summary.nodes) {
+      const output = [...this.host.querySelectorAll<HTMLElement>('[data-motion-transition]')].find(e => e.dataset.motionTransition === node.nodeId);
+      if (output) output.textContent = node.transition ? `姿态过渡 ${Math.min(100, Math.round(node.transition.elapsed / node.transition.duration * 100))}% · ${node.transition.duration.toFixed(2)} 秒` : '姿态过渡完成';
+    }
     const actorErrors = this.actorErrors();
     const key = JSON.stringify([active, summary.pending, summary.errors, actorErrors, summary.nodes.map(n => [n.nodeId, n.state, n.key])]);
     if (key === this.key) return;
@@ -25,6 +29,8 @@ export class RuntimeMotionPanel {
     for (const node of summary.nodes) {
       const group = document.createElement('fieldset'), legend = document.createElement('legend');
       legend.textContent = node.name.includes('bones') ? node.name : `${node.name} · ${node.joints} bones`; group.append(legend);
+      const transition = document.createElement('p'); transition.dataset.motionTransition = node.nodeId;
+      transition.textContent = node.transition ? `姿态过渡 0% · ${node.transition.duration.toFixed(2)} 秒` : '姿态过渡完成'; group.append(transition);
       for (const state of node.clips) {
         const button = document.createElement('button'); button.textContent = state; button.type = 'button';
         button.setAttribute('aria-label', `${node.name}: ${state}`); button.classList.toggle('active', node.state === state);

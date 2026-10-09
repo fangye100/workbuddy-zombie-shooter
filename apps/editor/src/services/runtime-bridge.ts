@@ -14,11 +14,11 @@
  * 本身是**设计行为**（B-02 无 rigged 档 / 加载失败 / 远处 LOD 退档），不是待修 bug。
  */
 
-import { createCapsule } from '@aether/scene';
+import { createCapsule, DEFAULT_MOTION_TRANSITION_SEC } from '@aether/scene';
 import { rayCapsuleY } from '@aether/gameplay';
 import { lookupCharacterStats } from '@aether/content';
 import type { RuntimeSession, EntityView } from '@aether/runtime';
-import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
+import { DYNAMIC_INSTANCE_FLOATS, PalettePoseTransitions, poseIndexAt, type CoreDynamicBatch } from '@aether/render';
 import type { ActorMesh, ActorClipMeta } from './runtime-actors';
 import { characterYaw } from './character-facing';
 
@@ -28,6 +28,7 @@ import { characterYaw } from './character-facing';
  */
 export interface ActorSource {
   get(characterId: string): ActorMesh | null;
+  request?(characterId: string): void;
 }
 
 /** 实例的 CPU 端打包宽度（float），与 CoreDynamicBatch 契约一致 */
@@ -103,6 +104,8 @@ const LOD_TIER_PROXY = 2;
 
 /** 一批实例 + 它对应的实体身份（供选中反查） */
 interface BatchSlot {
+  poseTransitions?: { data: Float32Array<ArrayBuffer>; revision: number };
+  poseSources?: (Float32Array<ArrayBuffer> | null)[];
   meshId: string;
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
@@ -117,6 +120,8 @@ interface BatchSlot {
 }
 
 export class RuntimeBridge {
+  readonly instanceStride = DYNAMIC_INSTANCE_FLOATS;
+  private readonly poseTransitions = new PalettePoseTransitions();
   private gait = new Map<string, { x: number; z: number; clip: string; cycles: number }>();
   private presentedPlayerSource: string | null = null;
 
@@ -177,6 +182,7 @@ export class RuntimeBridge {
   attach(session: RuntimeSession | null): void {
     this.session = session;
     this.gait.clear();
+    this.poseTransitions.clear();
     for (const s of this.slots.values()) s.entities.length = 0;
     if (session === null) {
       this.presentedPlayerSource = null;
@@ -215,6 +221,7 @@ export class RuntimeBridge {
         instances: s.instances,
         count: s.count,
         outline: true,
+        ...(s.poseTransitions ? { poseTransitions: s.poseTransitions } : {}),
       });
     }
     return out.length > 0 ? out : null;
@@ -305,6 +312,7 @@ export class RuntimeBridge {
     const tick = this.session.tick;
     const fixedStep = this.session.fixedStep;
     const gaitKeys = new Set<string>();
+    const poseKeys = new Set<string>();
 
     for (const e of view) {
       if (e.kind === 'player' && this.presentedPlayerSource !== null && e.sourceNodeId === this.presentedPlayerSource) continue;
@@ -320,6 +328,7 @@ export class RuntimeBridge {
       let slot = this.slots.get(key);
       if (slot === undefined) {
         const actor = proxy ? null : (this.actors?.get(e.characterId) ?? null);
+        if (!proxy && actor === null) this.actors?.request?.(e.characterId);
         if (actor !== null) {
           // 真模型：meshId 换 actor 档，蒙皮数据来自装配库（数组共享，不拷贝）
           slot = {
@@ -392,6 +401,7 @@ export class RuntimeBridge {
         let poseIdx = 0;
         let frameCount = 0;
         let phase01 = 0;
+        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = 0; inst[o + 19] = 0;
         if (actor !== null) {
           // Anchored actors can acquire a chase target while their authored speed
           // remains zero. Their idle motion uses time, not a frozen walking gait.
@@ -414,6 +424,23 @@ export class RuntimeBridge {
           }
           poseIdx = clip !== null ? poseIndexAt(actor.palette, clipIdx, phase01) : actor.restPose;
           frameCount = clip !== null ? clip.frameCount : 0;
+          const poseKey = `${e.runId}:${e.id}:${e.generation}`; poseKeys.add(poseKey);
+          const transition = this.poseTransitions.sample(poseKey, actor.palette, clipIdx, poseIdx,
+            tick * fixedStep, actor.motion?.transitionSec ?? DEFAULT_MOTION_TRANSITION_SEC);
+          inst[o + 16] = transition.weight;
+          if (transition.from) {
+            const stride = actor.palette.jointCount * 16;
+            if (!slot.poseTransitions || slot.poseTransitions.data.length < n * stride) {
+              slot.poseTransitions = { data: new Float32Array(n * stride), revision: 0 };
+              slot.poseSources = [];
+            }
+            if (slot.poseSources?.[i] !== transition.from) {
+              slot.poseTransitions.data.set(transition.from, i * stride);
+              slot.poseTransitions.revision++;
+            }
+            (slot.poseSources ??= [])[i] = transition.from;
+            inst[o + 17] = i * actor.palette.jointCount;
+          } else if (slot.poseSources) slot.poseSources[i] = null;
         }
         inst[o + 11] = poseIdx;
         // [12..15] clipFrameCount / phase01 / flags / jointStride.
@@ -426,5 +453,6 @@ export class RuntimeBridge {
       slot.count = n;
     }
     for (const key of this.gait.keys()) if (!gaitKeys.has(key)) this.gait.delete(key);
+    this.poseTransitions.prune(poseKeys);
   }
 }

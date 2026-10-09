@@ -33,9 +33,11 @@ import type { RuntimeBridge } from './runtime-bridge';
 import type { AuthorSnapshot, LabRenderer } from '../renderer';
 import type { PlayerPresentation } from './player-presentation';
 import type { RuntimeSceneMotion } from './runtime-scene-motion';
+import type { RuntimeBodyIk } from './runtime-body-ik';
 import { characterYaw } from './character-facing';
 
 export interface PlayControllerOptions {
+  bodyIk?: RuntimeBodyIk;
   sharedMotions?: RuntimeSceneMotion;
   playerPresentation?: PlayerPresentation;
   seed?: number;
@@ -70,11 +72,13 @@ export class PlayController {
   private lastError: string | null = null;
   private readonly playerPresentation: PlayerPresentation | null;
   private readonly sharedMotions: RuntimeSceneMotion | null;
+  private readonly bodyIk: RuntimeBodyIk | null;
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
     this.playerPresentation = opts.playerPresentation ?? null;
     this.sharedMotions = opts.sharedMotions ?? null;
+    this.bodyIk = opts.bodyIk ?? null;
     this.bridge = bridge;
     this.onStateChange = opts.onStateChange ?? null;
     // 没传 viewCamera 就是"不接管相机"，此时控制器存在但 attach 恒为 false
@@ -171,8 +175,9 @@ export class PlayController {
 
     this.bridge.attach(this.session.runtime);
     this.sharedMotions?.start(doc);
+    this.bodyIk?.start(doc);
     if (this.playerPresentation) this.bridge.setPlayerPresentation(playerNode);
-    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.sharedMotions?.sync(this.session.runtime);
     // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
     // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
@@ -205,7 +210,8 @@ export class PlayController {
   step(): void {
     this.session.stepOnce();
     this.sharedMotions?.sync(this.session.runtime);
-    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
+    this.bodyIk?.sync(this.session.runtime, true);
     this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
@@ -215,7 +221,8 @@ export class PlayController {
   reset(): void {
     this.session.reset();
     this.sharedMotions?.sync(this.session.runtime);
-    this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+    this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
+    this.bodyIk?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
@@ -228,6 +235,7 @@ export class PlayController {
    * 上一帧的动态实例，会闪一下"僵尸还在但关卡回到编辑态"的鬼影。
    */
   stop(): void {
+    this.bodyIk?.stop();
     this.sharedMotions?.stop();
     this.playerPresentation?.detach();
     if (this.snap !== null) {
@@ -253,10 +261,11 @@ export class PlayController {
     const n = this.session.advance(dt);
     if (n > 0) {
       this.sharedMotions?.sync(this.session.runtime);
-      this.playerPresentation?.sync(this.session.runtime?.player() ?? null);
+      this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
       this.bridge.refresh();
       this.syncPlayCamera();
     }
+    if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
     return n;
   }
 

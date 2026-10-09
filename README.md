@@ -19,6 +19,8 @@ Current development starts at [Gameplay development workflow](./docs/43-Gameplay
 | [Character rigging workflow](./docs/rigging/character-rigging-workflow.md) | Source-pose joint authoring, volumetric skin, rigid props, GLB delivery, shared motion and control acceptance |
 | [Binding MCP](./tools/mcp-binding/README.md) | Read-only workflow discovery, authoring tools, final-weight diagnostics, persistence and rig export |
 | [Visual quality playbook](./docs/art/visual-quality-playbook.md) | Comic art matching, composition, color/shader diagnosis, textured LODs, placeholders, sky/atlas handling and evidence-based acceptance |
+| [Crowd performance baseline — 2026-10-07](./docs/39-CrowdPerformanceBaseline-2026-10-07.md) | Running/shooting with upper-body IK, 500–2,500 NPC samples, CPU/GPU timings, sustained stability boundaries and archived evidence |
+| [iPhone Play crash mitigation — 2026-10-07](./docs/40-IPhonePlayCrashMitigation-2026-10-07.md) | Scene-demand actor loading, bounded runtime textures, GPU loss handling and device verification limits |
 
 ## 目录
 
@@ -44,7 +46,7 @@ pnpm typecheck  # 全量 TypeScript 严格检查
 pnpm smoke:nav  # 导航层冒烟测试（纯 CPU，无需浏览器）
 ```
 
-需要 Chrome 113+ / Edge 113+ / Safari 18+。M0 验收标准：稳定 60fps 清屏，
+需要 Chrome 113+ / Edge 113+ / Safari 26+。M0 验收标准：稳定 60fps 清屏，
 HUD 能读出 tier、format、maxBindGroups、timestamp 支持情况。
 
 ## 一句话设计主张

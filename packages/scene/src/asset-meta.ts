@@ -62,6 +62,7 @@ import type { MaterialBindingRef } from './document';
 import { validateRetargetAssetBlock, type RetargetAssetMeta } from './retarget-meta';
 import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
 import { validAudioAssetInfo, type AudioAssetInfo } from './audio';
+import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 
 export const META_FILE_SUFFIX = '.meta.json';
 export const META_SCHEMA_VERSION = 1;
@@ -339,6 +340,8 @@ export interface AssetMeta {
   retarget?: RetargetAssetMeta | null;
   /** Asset-default shared motion binding; runtime generates target-specific tracks in memory. */
   sharedMotion?: SharedMotionBinding | null;
+  /** Reusable actor-local assembly. Scene-specific targets belong in the scene override. */
+  bodyIk?: BodyIkBinding | null;
   /**
    * 用户自定义标注（Inspector 不解释，原样透传）。
    * 用于"这个模型是 P2 批次" / "artist 备注：盾牌可拆"这类项目自有的元数据。
@@ -420,6 +423,9 @@ export function validateAssetMeta(meta: unknown): MetaDiagnostic[] {
   }
   if (m.sharedMotion !== undefined && m.sharedMotion !== null) {
     for (const message of validateSharedMotionBinding(m.sharedMotion)) err('/sharedMotion', 'E_META_SHARED_MOTION', message);
+  }
+  if (m.bodyIk !== undefined && m.bodyIk !== null) {
+    for (const message of validateBodyIkBinding(m.bodyIk, false)) err('/bodyIk', 'E_META_BODY_IK', message);
   }
 
   // ---- 绑定 ----

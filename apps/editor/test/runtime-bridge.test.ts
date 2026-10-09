@@ -5,6 +5,7 @@ import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type BakedPalette } from '@aether
 import { lookupCharacterStats } from '@aether/content';
 import { PlaySession } from '@aether/runtime';
 import type { SceneDocument } from '@aether/scene';
+import type { RuntimeSession } from '@aether/runtime';
 
 /**
  * WU-3 的渲染桥接测试。
@@ -367,6 +368,40 @@ function animatedBridge(): { bridge: RuntimeBridge; play: PlaySession; actor: Ac
   bridge.attach(play.runtime);
   return { bridge, play, actor };
 }
+
+describe('RuntimeBridge pose transition packing', () => {
+  it('preserves displayed NPC poses on switches/interruption, isolates rows and reuses source uploads', () => {
+    const f=animatedBridge(), actor=f.actor, base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
+    for (let p=0;p<31;p++) for (let j=0;j<3;j++) actor.palette.data[p*48+j*16+12]=p;
+    const entities=[{...base,id:100,behavior:0},{...base,id:101,behavior:0}];
+    const rt={tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
+    const bridge=new RuntimeBridge({get:()=>actor}); bridge.attach(rt);
+    const first=bridge.batches()![0]!.instances.slice();
+    entities[0]!.behavior=1; bridge.refresh();
+    let batch=bridge.batches()![0]!;
+    expect(batch.instances[16]).toBe(0); expect(batch.instances[20+16]).toBe(1);
+    expect(batch.poseTransitions!.data[12]).toBe(first[11]);
+    const data=batch.poseTransitions!.data, revision=batch.poseTransitions!.revision;
+    bridge.refresh(); expect(bridge.batches()![0]!.poseTransitions!.data).toBe(data);
+    expect(bridge.batches()![0]!.poseTransitions!.revision).toBe(revision);
+    (rt as {tick:number}).tick=3; bridge.refresh(); batch=bridge.batches()![0]!;
+    expect(batch.instances[16]).toBeCloseTo(.5);
+    const displayed=batch.poseTransitions!.data[12]!*.5+batch.instances[11]!*.5;
+    entities[0]!.behavior=0; bridge.refresh(); batch=bridge.batches()![0]!;
+    expect(batch.instances[16]).toBe(0); expect(batch.poseTransitions!.data[12]).toBeCloseTo(displayed);
+    entities.reverse(); bridge.refresh(); batch=bridge.batches()![0]!;
+    expect(batch.instances[20+16]).toBe(0); expect(batch.poseTransitions!.data[48+12]).toBeCloseTo(displayed);
+    (rt as {tick:number}).tick=10; bridge.refresh(); expect(bridge.batches()![0]!.instances[20+16]).toBe(1);
+    bridge.attach(null); expect(bridge.batches()).toBeNull();
+  });
+  it('honors zero transition duration without allocating pose snapshots', () => {
+    const f=animatedBridge(),actor=f.actor,base=f.bridge.entities.find(e=>e.characterId==='E-01')!;
+    actor.motion={key:'instant',clips:[],states:{},reports:[],transitionSec:0};
+    const entities=[{...base,behavior:0}],rt={tick:0,fixedStep:1/30,view:()=>entities} as unknown as RuntimeSession;
+    const bridge=new RuntimeBridge({get:()=>actor}); bridge.attach(rt); entities[0]!.behavior=1; bridge.refresh();
+    expect(bridge.batches()![0]!.instances[16]).toBe(1); expect(bridge.batches()![0]!.poseTransitions).toBeUndefined();
+  });
+});
 
 describe('clipIndexForBehavior · 行为选片（M3）', () => {
   const clips = [

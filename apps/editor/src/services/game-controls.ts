@@ -19,6 +19,7 @@ export class GameControls {
   private move: [number,number] = [0,0];
   private aim: [number,number] = [0,0];
   private mouse: [number,number] | null = null;
+  private aimWorld: [number, number] | null = null;
   private pointerFire=false;
   private keyboardFire=false;
   private runtime: RuntimeSession | null = null;
@@ -65,6 +66,7 @@ export class GameControls {
   }
   setKeyboardFire(down:boolean): void { this.keyboardFire=down; if(this.enabled)this.runtime?.setFire(down || this.pointerFire); }
   clear(): void {
+    this.aimWorld = null;
     this.move=[0,0];this.aim=[0,0];this.mouse=null;this.pointerFire=false;this.keyboardFire=false;
     for(const [element,id] of this.pointers)if(element.hasPointerCapture(id))element.releasePointerCapture(id);
     this.pointers.clear();
@@ -83,9 +85,18 @@ export class GameControls {
     if(!enabled || !runtime)return;
     const input=screenMovement(keyboardX+this.move[0],keyboardZ+this.move[1],this.yaw());runtime.setInput(...input);
     const p=runtime.player();if(!p)return;
-    if(this.mouse){const point=groundAim(this.ray(...this.mouse),.9);if(point)runtime.setAim(...point);}
-    else if(Math.hypot(...this.aim)>.1){const [x,z]=screenMovement(...this.aim,this.yaw());runtime.setAim(p.x+x*20,p.z+z*20);}
+    this.aimWorld = null;
+    if(this.mouse){const point=groundAim(this.ray(...this.mouse),.9);if(point){runtime.setAim(...point);this.aimWorld=point;}}
+    else if(Math.hypot(...this.aim)>.1){const [x,z]=screenMovement(...this.aim,this.yaw());this.aimWorld=[p.x+x*20,p.z+z*20];runtime.setAim(...this.aimWorld);}
     else runtime.setAim(null,null);
     runtime.setFire(this.pointerFire || this.keyboardFire);
+  }
+  /** Same visible pointer/stick used by gameplay, lifted to the authored aim height. */
+  targetWorld(height: number): [number, number, number] | null {
+    if (this.mouse) {
+      const point = groundAim(this.ray(...this.mouse), height);
+      return point ? [point[0], height, point[1]] : null;
+    }
+    return this.aimWorld ? [this.aimWorld[0], height, this.aimWorld[1]] : null;
   }
 }

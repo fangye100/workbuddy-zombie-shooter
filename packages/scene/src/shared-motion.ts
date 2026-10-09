@@ -2,7 +2,10 @@
 import type { AssetRef } from './document';
 
 export const MOTION_LIBRARY_VERSION = 1;
+export const DEFAULT_MOTION_TRANSITION_SEC = .2;
 export interface SharedMotionBinding {
+  /** Pose transition duration in simulation seconds. Zero selects immediately. */
+  transitionSec?: number;
   library: AssetRef;
   profile: string;
   defaultState: string;
@@ -39,6 +42,7 @@ export function validateSharedMotionBinding(v: unknown): string[] {
   if (typeof v.profile !== 'string' || !v.profile) errors.push('Motion profile is required');
   if (typeof v.defaultState !== 'string' || !v.defaultState) errors.push('Default motion state is required');
   if (typeof v.speed !== 'number' || !Number.isFinite(v.speed) || v.speed <= 0) errors.push('Motion speed must be positive');
+  if (v.transitionSec !== undefined && (typeof v.transitionSec !== 'number' || !Number.isFinite(v.transitionSec) || v.transitionSec < 0 || v.transitionSec > 5)) errors.push('Motion transitionSec must be in [0,5] seconds');
   return errors;
 }
 export function validateSharedMotionLibrary(v: unknown): string[] {

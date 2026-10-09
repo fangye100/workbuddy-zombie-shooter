@@ -17,9 +17,14 @@
 
 import * as m4 from '@aether/core';
 import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene';
+import { applyBodyIk, type BodyIkState } from './body-ik';
+import { poseTransitionWeight } from './pose-transition';
 
 /** 一个物体的蒙皮动画播放状态 */
 export interface SkinState {
+  /** Pre-IK local pose snapshot; transient, never serialized. */
+  transition?: { from: NodeLocal[]; elapsed: number; duration: number };
+  bodyIk?: BodyIkState;
   skeleton: SkeletonData;
   clips: AnimClip[];
   /** 当前片段下标；-1 = 停在 bind pose（不播） */
@@ -58,8 +63,12 @@ export function currentClip(s: SkinState): number {
   return s.clip;
 }
 
-export function selectClip(s: SkinState, index: number): void {
+export function selectClip(s: SkinState, index: number, transitionSec = 0): void {
   if (index < -1 || index >= s.clips.length) return;
+  if (!Number.isFinite(transitionSec) || transitionSec < 0) return;
+  const from = transitionSec > 0 ? sampleAnimationPose(s) : null;
+  if (from) s.transition = { from, elapsed: 0, duration: transitionSec };
+  else delete s.transition;
   s.clip = index;
   s.time = 0;
   s.playing = index >= 0;
@@ -98,6 +107,7 @@ export function seek(s: SkinState, time: number): void {
 /** 推进时间（dt 秒，真实增量；speed 在内部再乘） */
 export function advance(s: SkinState, dt: number): void {
   if (!s.playing || s.clip < 0) return;
+  advancePoseTransition(s, dt);
   const clip = s.clips[s.clip]!;
   const dur = clip.duration;
   if (dur <= 0) return;
@@ -115,8 +125,8 @@ export function advance(s: SkinState, dt: number): void {
 
 /** 四元数球面线性插值（glTF 规范：rotation 轨道按 xyzw 存储，与 math.ts Quat 同序） */
 function slerp(
-  a: Float32Array,
-  b: Float32Array,
+  a: ArrayLike<number>,
+  b: ArrayLike<number>,
   f: number,
   ao: number,
   bo: number,
@@ -193,6 +203,27 @@ function sampleLocals(sk: SkeletonData, clip: AnimClip | null, time: number): No
   return locals;
 }
 
+/** Snapshot/evaluation excludes procedural IK, which is applied exactly once afterwards. */
+export function sampleAnimationPose(state: SkinState): NodeLocal[] {
+  const locals = sampleLocals(state.skeleton, state.clip >= 0 ? state.clips[state.clip]! : null, state.time);
+  const transition = state.transition;
+  if (!transition) return locals;
+  const weight = poseTransitionWeight(transition.elapsed, transition.duration);
+  for (let i = 0; i < locals.length; i++) {
+    const a = transition.from[i]!, b = locals[i]!;
+    b.r = slerp(a.r, b.r, weight, 0, 0);
+    b.t = a.t.map((x, j) => x * (1 - weight) + b.t[j]! * weight) as [number, number, number];
+    b.s = a.s.map((x, j) => x * (1 - weight) + b.s[j]! * weight) as [number, number, number];
+  }
+  return locals;
+}
+/** Explicit simulation clock for hosts which keep SkinState.playing=false. */
+export function advancePoseTransition(state: SkinState, dt: number): void {
+  if (!state.transition || !Number.isFinite(dt) || dt <= 0) return;
+  state.transition.elapsed += dt;
+  if (state.transition.elapsed + 1e-8 >= state.transition.duration) delete state.transition;
+}
+
 /** 本地 TRS → 列主序 mat4（per-axis 缩放 + 四元数旋转 + 平移） */
 function trsToMat4(out: m4.Mat4, t: readonly number[], r: readonly number[], s: readonly number[]): void {
   const x = r[0]!, y = r[1]!, z = r[2]!, w = r[3]!;
@@ -245,8 +276,8 @@ const SCRATCH_JM = m4.mat4();
 export function evalJointMatrices(state: SkinState, out: Float32Array): void {
   const sk = state.skeleton;
   const n = sk.joints.length;
-  const clip = state.clip >= 0 ? state.clips[state.clip]! : null;
-  const locals = sampleLocals(sk, clip, state.time);
+  const locals = sampleAnimationPose(state);
+  if (state.bodyIk) applyBodyIk(sk, locals, state.bodyIk);
 
   // 逐节点世界矩阵（父子链累乘，与 gltf.ts 解析 inverseBind 同空间）
   while (SCRATCH_WORLD.length < sk.parent.length) SCRATCH_WORLD.push(m4.mat4());
