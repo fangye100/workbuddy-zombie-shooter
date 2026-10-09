@@ -76,6 +76,10 @@ and disposes it with the editor.
 
 Only the selected actor produces debug snapshots. Execution events are captured
 independently of the UI refresh; the UI refreshes at most eight times per second.
+The scene Player retains the last executed selector inputs as lightweight
+presentation metadata, so first observation or switching back while paused reads
+current rules without advancing animation. Before its first automatic tick, the
+graph explains the default actually selected at load time.
 When a GPU actor is first selected, the observer reads its already-packed CPU
 instance row and transition metadata immediately, including while Play is paused.
 This does not rebuild batches, sample/advance a pose, or advance the world.
@@ -95,7 +99,7 @@ no controls. The visible panel is still the acceptance path.
 Model/service gates:
 
 ```powershell
-pnpm exec vitest run apps/editor/test/animation-debug-selection.test.ts apps/editor/test/animation-debug-collector.test.ts apps/editor/test/runtime-scene-motion.test.ts apps/editor/test/runtime-body-ik.test.ts apps/editor/test/runtime-bridge.test.ts packages/render/test/pose-transition.test.ts
+pnpm exec vitest run apps/editor/test/animation-debug-selection.test.ts apps/editor/test/animation-debug-collector.test.ts apps/editor/test/animation-debug-source.test.ts apps/editor/test/runtime-scene-motion.test.ts apps/editor/test/runtime-body-ik.test.ts apps/editor/test/runtime-bridge.test.ts packages/render/test/pose-transition.test.ts
 pnpm run typecheck
 pnpm run editor:build
 ```

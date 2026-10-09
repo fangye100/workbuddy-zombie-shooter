@@ -50,6 +50,8 @@ export class RuntimeSceneMotion {
       requested: e.state, actual: e.state, source: e.manual ? 'manual' : 'configured-default', fallback: null, actionStamp: '', rules: [],
     };
     if (e.manual) decision.rules.push({ id: 'manual', label: '已有控制面板手动覆盖', matched: true, selected: true, reason: '循环动作保持；非循环结束后恢复自动选择' });
+    else if (!e.choice) decision.rules.push({ id: 'configured-default', label: '配置默认状态', matched: true, selected: true,
+      reason: `已在加载时选择 ${e.defaultState}；${e.player ? '自动选择器尚未执行，不推断当前输入' : '场景节点保持配置状态'}` });
     return { identity: { kind: 'scene', nodeId, runId: this.runId ?? 0, generation: this.generation }, label: e.name,
       tick: this.tick, revision: e.revision, pipeline: 'cpu-scene', status: 'ready', decision,
       clip: clip && skin ? { name: clip.name, index: skin.clip, time: skin.time, duration: clip.duration,
@@ -152,7 +154,9 @@ export class RuntimeSceneMotion {
         const input: SceneChoiceInput = { states: entry.result.states, defaultState: entry.defaultState, speed: this.playerSpeed, keepGait,
           weapon: action, firing: runtime.firing, runId: runtime.runId };
         const { requested, state, stamp } = sceneChoice(input);
-        if (this.debugSink && this.debugNode === entry.nodeId) entry.choice = input;
+        // Retain the last executed resolver inputs even when another actor is observed.
+        // This is lightweight presentation metadata; snapshots/history remain selected-only.
+        entry.choice = input;
         if(requested && stamp!==entry.weaponActionStamp){this.select(entry,state,false,false,true);}
         entry.weaponActionStamp=stamp;
         this.select(entry, entry.result.states[state] ? state : entry.defaultState, false);
