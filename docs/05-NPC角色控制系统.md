@@ -1,5 +1,11 @@
 # NPC / 角色控制系统（AI · 动画 · 寻路 · 战斗）
 
+> Historical design / baseline: implementation coverage and original dependency
+> diagrams below are not current delivery claims. For new work, use the
+> [current ownership contract](architecture/layers.md) and [shared knowledge](README.md).
+> Scene schema is currently v15; Zombie simulation/presentation is game-owned.
+> The current renderer uses direct passes; FrameGraph remains dormant.
+
 > 本文是 L5 层的核心 gameplay 设计。它是 `04-子系统.md` 中 `animation / physics / script` 的**上层消费者**，
 > 本身也是一个 Plugin：`AetherCharacterPlugin`。
 >

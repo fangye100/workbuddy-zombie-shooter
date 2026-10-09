@@ -1,5 +1,11 @@
 # Agent 优先 Game Editor：架构与下一阶段开发指导
 
+> Historical design / baseline: implementation coverage and original dependency
+> diagrams below are not current delivery claims. For new work, use the
+> [current ownership contract](architecture/layers.md) and [shared knowledge](README.md).
+> Scene schema is currently v15; Zombie simulation/presentation is game-owned.
+> The current renderer uses direct passes; FrameGraph remains dormant.
+
 本文供后续开发 Agent 直接执行。目标是保留现有 headless 成果，建立可观察、可控制、可局部修改的游戏开发闭环。
 
 ## 1. 决策与范围

@@ -12,8 +12,13 @@ start time and keeps the existing gait-distance or attack-phase clock.
 0.2; zero means immediate selection. Scene overrides belong in
 `MeshRenderer.sharedMotion`, reusable defaults in the asset `.meta.json`.
 The visible scene author form exposes the duration. Apply and save use the
-existing document/history/conflict checks. Scene schema v14 adds the opt-in field;
-the v13 migration preserves existing bindings rather than writing generated poses.
+existing document/history/conflict checks. Current integrated schema is v15.
+The original IK branch added this opt-in field at v14; that is historical version
+provenance, not the current v13→v14 migration's meaning. The merged migration chain
+retains `scene-audio-cue-mapping` for v13→v14 and
+`integrated-weapons-audio-body-ik` for v14→v15. Authored transitions are preserved
+and missing fields retain sampler defaults; generated poses are never serialized.
+See [the migration source](../../packages/scene/src/migrate.ts).
 NPCs inherit the duration from their asset's resolved motion binding.
 
 - `skin.ts` owns transient pre-IK local pose snapshots and TRS evaluation.
@@ -67,7 +72,8 @@ palette identity and row changes, zero-duration selection, cache reuse, and
 scene/asset validation and migration. Headed hardware acceptance additionally
 checks actual shader/pipeline compilation and visible motion controls.
 
-The focused suite passed 428 tests across 28 files. `pnpm run typecheck`,
+Historical validation on the IK branch (2026-10-07): the focused suite passed
+428 tests across 28 files. `pnpm run typecheck`,
 `pnpm run editor:build`, `pnpm run build`, and `pnpm run scene:check` passed;
 the scene gate checked 206 assets and all 13 scenes at schema v14.
 
@@ -87,6 +93,9 @@ and clip/time/playing values matched the pre-Play snapshot exactly. The counter
 was removed after verification. These are integration/lifecycle checks, not
 crowd volume-preservation or mobile stress acceptance.
 
-The existing HumanIK demo at QA port 5197 exposes transitions and IK together.
-Its detached service working directory, logs, PID and stop command remain in
-[the IK workflow](body-ik-blending.md#validation).
+That historical HumanIK demo used a separate worktree's QA service on 5197.
+The registered validation scene remains available in the current project; service
+ownership and current schema must be checked before rerunning it. The
+[IK workflow](body-ik-blending.md#validation) and
+[v15 integration report](../review/branch-integration-2026-10-09.md) distinguish
+the original validation from later integration evidence.

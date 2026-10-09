@@ -1,5 +1,11 @@
 # 19 · 最终开发报告（Agent 优先 Game Editor · WU-0 → WU-6）
 
+> Historical evidence: file paths, line numbers, findings and test counts below
+> belong to the recorded review/delivery, not today's source or new validation.
+> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
+> Use the [current ownership contract](architecture/layers.md) and [shared knowledge](README.md)
+> before reusing a command or treating an old finding as a current defect.
+
 - 分支：`feature/headless-runtime` —— **已通过 PR #3 合并进 `main`**（merge commit `4091ec3`，2026-09-18；合并时领先 22 笔、全部已推送）。
 - 依据：`docs/17-Agent优先GameEditor架构与开发指导.md` §8 业务证明、§9 报告要求。
 - 取舍过程：`docs/18-运行时责任收敛与取舍记录.md`（WU-0 → WU-6 逐节，含踩坑与仍未解决项）。

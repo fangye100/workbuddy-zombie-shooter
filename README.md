@@ -9,8 +9,11 @@ Zombie simulation/presentation uses `packages/zombie-game`; reusable mechanisms
 remain framework packages. Run `pnpm run architecture:check` and
 `pnpm run knowledge:check` with the affected tests.
 
-以 WebGPU 为一等公民的模块化游戏引擎：数据驱动（ECS + SoA）、GPU-driven 剔除、
-FrameGraph 驱动的渲染管线，配套编辑器与资产烘焙工具链。
+A modular WebGPU engine, Game Editor and Zombie campaign. The current playable
+path is **Editor Play on port 5100**. `RendererCore` schedules direct GPU passes,
+including instanced actors and GPU pose sampling. FrameGraph, broader GPU-driven
+culling and the full subsystem architecture remain design directions; their
+presence in design documents does not establish an active runtime path.
 
 ## 文档索引
 
@@ -18,7 +21,8 @@ Current development starts at [Gameplay development workflow](./docs/43-Gameplay
 
 | 文档 | 内容 |
 |---|---|
-| [01-架构总览与主循环](./docs/01-架构总览与主循环.md) | 七层架构、包划分、一帧时序、Job 调度、技术选型决策表、M0–M8 路线图、编码规范 |
+| [Current structure map](./docs/44-CodeGraph代码结构图谱.md) | Current source owners and execution paths, CodeGraph scope/limitations, plus the preserved historical audit |
+| [01-架构总览与主循环](./docs/01-架构总览与主循环.md) | Original architecture design and roadmap; read the current layer contract before applying its dependency diagram |
 | [02-WebGPU设备资源层与FrameGraph](./docs/02-WebGPU设备资源层与FrameGraph.md) | 能力分级、句柄系统、五种分配器、绑定组频率模型、ShaderLab 变体、FrameGraph 编译四件事、GPU-driven 路径、Timestamp 剖析 |
 | [03-渲染管线](./docs/03-渲染管线.md) | Clustered Forward+ 选型、一帧 Pass 拓扑、阴影/GI/材质/透明/后处理、RenderWorld 解耦、排序与合批 |
 | [04-子系统](./docs/04-子系统.md) | ECS、场景、资产、动画、物理、VFX、UI、音频、输入、脚本、网络、地形、存档、i18n、剖析器、依赖矩阵 |
@@ -35,30 +39,49 @@ Current development starts at [Gameplay development workflow](./docs/43-Gameplay
 
 ```
 packages/
-  core/        app(插件/Stage/调度) + ecs(Archetype+SoA) + math
-  gfx/         handle(句柄与注册表) + device(能力/分配器/缓存三件套)
-  framegraph/  声明式 Pass DAG、生命周期推导、内存别名
-  render/      RenderFeature 接口、管线配置装配、Pass 顺序表
-  ai/          流场寻路(Dial's Dijkstra) + 空间哈希 + 群体避让 + 感知 + Utility 决策 + 战斗帧数据
-  gameplay/    CharacterDef / CharacterTable(SoA) / 池化与分帧装配 / 表现 LOD
-apps/samples/00-init   最小可运行基座（M0 验收）
-docs/                  架构、产品设计、专项开发计划与研究参考
-tools/                 baker / shaderlab / trace（规划中）
+  core/         ECS, math and application contracts
+  gfx/          Device, resource handles, uniform/staging rings
+  framegraph/   Pass/resource planning; dormant in the current renderer
+  scene/        Project/scene/sidecar schemas, migrations and data contracts
+  render/       RendererCore direct passes, shaders, skinning, IK and pose blending
+  ai/           Navigation, spatial hash, crowd and combat primitives
+  gameplay/     Reusable character table/pool, assembly, LOD and ray primitives
+  runtime/      Reusable author commands, behavior ports, weapons and collision
+  content/      Generated character APIs; roster/stat JSON is authoritative
+  zombie-game/  Campaign simulation/progression; separate presentation subpaths
+apps/editor/            Authoring UI and render/Play adapters; port 5100
+apps/samples/00-init/   M0 GPU initialization sample; port 5101
+docs/                   Shared guides, designs and dated evidence; see docs/README.md
+tools/                  MCP, file transactions, art/audio/scene/rigging pipelines and gates
 ```
 
 ## 快速开始
 
-```bash
+```powershell
 pnpm install
-pnpm dev        # 打开 apps/samples/00-init
-pnpm typecheck  # 全量 TypeScript 严格检查
-pnpm smoke:nav  # 导航层冒烟测试（纯 CPU，无需浏览器）
+git lfs pull
+pnpm run editor       # Game Editor and complete Play path, fixed port 5100
+pnpm run typecheck
+pnpm run architecture:check
+pnpm run knowledge:check
 ```
 
-需要 Chrome 113+ / Edge 113+ / Safari 26+。M0 验收标准：稳定 60fps 清屏，
-HUD 能读出 tier、format、maxBindGroups、timestamp 支持情况。
+Use the configured certificate hostname for HTTPS/Tailscale access; see
+[project network/browser rules](AGENTS.md). Confirm a secure context and the
+actual WebGPU hardware adapter. Browser support and device acceptance must be
+verified on the target device, not inferred from a version label.
 
-## 一句话设计主张
+`pnpm run dev` starts only the M0 clear/capability sample on 5101. For headless
+campaign tooling, `pnpm run game:build` builds separate framework/game bundles.
+`pnpm run sim` exports derived snapshots and can alter startup selection with
+`--focus`; it is not a read-only check. `pnpm run verify:parity` produces a Node
+sample; cross-host equivalence additionally requires a matching browser snapshot
+and explicit comparison. Inspect the tool arguments before generation.
+
+## Original design direction
+
+The statement below describes a target architecture, not the current execution
+path. New work follows the [enforced layer contract](docs/architecture/layers.md).
 
 > WebGPU 的价值不在"画得更好看"，而在于 **compute + indirect draw 让 CPU 从每帧数千次
 > 绑定调用里解放出来**。所以这套架构的重心是把剔除、排序、蒙皮、粒子全部推到 GPU，

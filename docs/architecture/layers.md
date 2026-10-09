@@ -7,7 +7,7 @@
 | Framework | `packages/core`, `gfx`, `framegraph`, `scene`, `render`, `ai`, `gameplay`, `runtime`; `@aether/<package>` | Reusable data contracts, resources, rendering, math, navigation, weapon mechanics, collision and author commands |
 | Zombie game, headless | `packages/zombie-game/src/index.ts`; `@aether/zombie-game` | Concrete roster consumption, scene-to-campaign loading, rooms/waves, NPC attacks, run rewards, game Play composition and audio-event projection |
 | Zombie game, presentation | `packages/zombie-game/src/presentation`; named `@aether/zombie-game/presentation/<module>` entries | HUD, language, controls, overlays, run storage and Web Audio playback; reads game facts and calls game commands |
-| Game content | `packages/content`, `assets/scenes`, `assets/behaviors`, asset sidecars | Authored/generated game data; scene remains the sole game-content SOT |
+| Game content | `packages/content`, `assets/scenes`, `assets/behaviors`, asset sidecars | Scene files own scene instances/configuration; roster/stat JSON, project manifest and reusable asset sidecars retain their separate authority; generated APIs are derivatives |
 | Editor | `apps/editor/src` | Authoring UX, binding, inspectors, history/save and editor-specific render/Play adapters |
 | Host and tools | sample entrypoints, editor Vite/devfs, `tools` | Composition, process/file/network adapters, MCP transport, offline generation and validation |
 
@@ -29,6 +29,10 @@ it must not require editing Zombie rewards, actor IDs or HUD to use the engine.
 - Scene/schema/project/sidecar authority stays in `packages/scene`; no alternate
   scene cache or inline assets were introduced by this move. Stable NodeIds,
   GUID-bearing AssetRefs, migration diagnostics and registered scenes still apply.
+- "Scene is the sole content carrier" prohibits hardcoded scene instances; it
+  does not duplicate roster definitions or reusable asset metadata into each scene.
+  `aether.project.json` owns scene registration/start selection, roster/stat JSON
+  owns character definitions, and same-name sidecars own reusable asset settings.
 - Generic author commands, behavior ports, segment/solid collision, ammunition,
   equipment timing and weapon strategies remain `@aether/runtime`.
 - `RuntimeSession`, Zombie level loading, `RunProgress`, enemy attacks,

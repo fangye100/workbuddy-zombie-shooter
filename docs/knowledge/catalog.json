@@ -1450,32 +1450,47 @@
       "status": "current",
       "topics": [
         "gameplay",
+        "scene",
         "weapons",
         "audio",
-        "game"
+        "ik",
+        "ownership"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Responsibilities and sources of truth; Repeatable development and delivery process; Agent workflow through the current MCP",
       "sourceRefs": [
         "scene-schema",
+        "scene-migrations",
+        "zombie-game-entry",
+        "framework-runtime-entry",
+        "editor-mcp-workflow",
         "project-rules"
       ],
-      "indexedWorkingTreeBase": "90d6427"
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-c6d88add7ec3",
       "path": "docs/44-CodeGraph代码结构图谱.md",
       "title": "44 - CodeGraph structure map and development workflow",
       "role": "navigation",
-      "authority": "design",
-      "status": "historical",
+      "authority": "guide",
+      "status": "current",
       "topics": [
-        "navigation",
+        "architecture",
         "codegraph",
-        "knowledge"
+        "ownership",
+        "test-routing"
       ],
-      "read": "Recorded design/revision; verify current source before use",
-      "sourceRefs": [],
-      "indexedWorkingTreeBase": "90d6427"
+      "read": "Current source review, 2026-10-09; preserved 2026-10-08 audit is historical",
+      "sourceRefs": [
+        "architecture-policy",
+        "zombie-game-entry",
+        "framework-runtime-entry",
+        "scene-schema",
+        "project-rules"
+      ],
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-2df35aad0aa8",
@@ -1551,11 +1566,13 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Authority and citation; Task routes; Find and maintain knowledge",
       "sourceRefs": [
         "project-rules",
         "architecture-policy"
-      ]
+      ],
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-86a653d56d3e",
@@ -1570,15 +1587,18 @@
         "retarget",
         "ik"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Ownership and persistence; Controls and target spaces; Capability boundaries; historical Validation",
       "sourceRefs": [
-        "scene-schema",
+        "scene-body-ik",
+        "scene-migrations",
         "project-rules"
       ],
       "lastChanged": {
         "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
         "date": "2026-10-07"
-      }
+      },
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-db6a9bf0e0a7",
@@ -1593,15 +1613,18 @@
         "retarget",
         "ik"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Configuration and ownership; Continuity and IK ordering; Reset and boundaries; historical Validation",
       "sourceRefs": [
-        "scene-schema",
+        "scene-shared-motion",
+        "scene-migrations",
         "project-rules"
       ],
       "lastChanged": {
         "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
         "date": "2026-10-07"
-      }
+      },
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-f12dc63859b8",
@@ -1611,16 +1634,21 @@
       "authority": "guide",
       "status": "current",
       "topics": [
-        "navigation",
-        "codegraph",
-        "knowledge"
+        "architecture",
+        "ownership",
+        "dependencies",
+        "scene",
+        "game",
+        "framework"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Required boundaries; Data and failure ownership; Enforced gate and review obligations; Remaining consolidation",
       "sourceRefs": [
         "architecture-policy",
         "zombie-game-entry",
         "framework-runtime-entry"
-      ]
+      ],
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-5a38eb434e0e",
@@ -1655,35 +1683,42 @@
         "materials",
         "assets"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Rendering/LOD/lifecycle techniques; section 11 for current owners and resource boundaries; dated evidence remains historical",
       "sourceRefs": [
         "scene-schema",
+        "render-frame-uniforms",
         "project-rules"
       ],
       "lastChanged": {
         "commit": "46f6d217b2065fa90d3bfa35ec0d6db9bae50ecb",
         "date": "2026-10-07"
-      }
+      },
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-be0be2ab87ec",
       "path": "docs/browser-verification.md",
       "title": "Browser verification entry",
-      "role": "history",
+      "role": "validation",
       "authority": "guide",
       "status": "current",
       "topics": [
-        "history"
+        "browser",
+        "gpu",
+        "headed",
+        "acceptance"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Interactive work; Checked-in local acceptance",
       "sourceRefs": [
-        "scene-schema",
         "project-rules"
       ],
       "lastChanged": {
         "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
         "date": "2026-10-05"
-      }
+      },
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-2d52032d1065",
@@ -1731,11 +1766,13 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Connect to the intended checkout; Interpretation and fallback",
       "sourceRefs": [
         "architecture-policy",
         "project-rules"
-      ]
+      ],
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-25065c16bb3d",
@@ -1948,15 +1985,18 @@
         "retarget",
         "ik"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Owners and spaces; source/skin/export workflow; Runtime motion and control acceptance",
       "sourceRefs": [
+        "asset-metadata",
         "scene-schema",
         "project-rules"
       ],
       "lastChanged": {
         "commit": "192d99039a41c1929c6054dbd90b616814224f37",
         "date": "2026-10-07"
-      }
+      },
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "doc-5ac0edd110f0",
@@ -1982,19 +2022,24 @@
       "id": "doc-e7452dea4653",
       "path": "tools/mcp-editor/README.md",
       "title": "Game Editor MCP — opt-in authoring and diagnostics",
-      "role": "navigation",
+      "role": "editor",
       "authority": "guide",
       "status": "current",
       "topics": [
-        "navigation",
-        "codegraph",
-        "knowledge"
+        "mcp",
+        "authoring",
+        "weapons",
+        "audio",
+        "workflow"
       ],
-      "read": "Owner, contracts, workflow and validation sections",
+      "read": "Setup and responsibility; Tools and sequence; Runtime diagnostics; Failure handling; remaining coverage",
       "sourceRefs": [
         "editor-mcp-workflow",
+        "editor-mcp-catalog",
         "scene-schema"
-      ]
+      ],
+      "reviewedAt": "2026-10-09",
+      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
     },
     {
       "id": "architecture-acceptance-20261009",
@@ -2014,6 +2059,127 @@
         "architecture-policy",
         "zombie-game-entry",
         "framework-runtime-entry"
+      ]
+    },
+    {
+      "id": "scene-migrations",
+      "path": "packages/scene/src/migrate.ts",
+      "title": "scene-migrations",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "schema",
+        "migration"
+      ],
+      "read": "registerSceneMigrations and migration failure behavior",
+      "sourceRefs": []
+    },
+    {
+      "id": "scene-body-ik",
+      "path": "packages/scene/src/body-ik.ts",
+      "title": "scene-body-ik",
+      "role": "animation",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "ik",
+        "schema"
+      ],
+      "read": "BodyIkBinding and validation",
+      "sourceRefs": []
+    },
+    {
+      "id": "scene-shared-motion",
+      "path": "packages/scene/src/shared-motion.ts",
+      "title": "scene-shared-motion",
+      "role": "animation",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "animation",
+        "retarget",
+        "transition"
+      ],
+      "read": "SharedMotionBinding, transition defaults and validation",
+      "sourceRefs": []
+    },
+    {
+      "id": "scene-weapons",
+      "path": "packages/scene/src/weapons.ts",
+      "title": "scene-weapons",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapons",
+        "schema"
+      ],
+      "read": "WeaponArsenal, markers and validation",
+      "sourceRefs": []
+    },
+    {
+      "id": "scene-audio",
+      "path": "packages/scene/src/audio.ts",
+      "title": "scene-audio",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "audio",
+        "schema"
+      ],
+      "read": "GameplayAudioConfig and AudioAssetInfo validation",
+      "sourceRefs": []
+    },
+    {
+      "id": "render-frame-uniforms",
+      "path": "packages/render/src/frame-uniforms.ts",
+      "title": "render-frame-uniforms",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "gpu",
+        "materials",
+        "capacity"
+      ],
+      "read": "Capacity/layout constants and production packers",
+      "sourceRefs": []
+    },
+    {
+      "id": "editor-mcp-catalog",
+      "path": "tools/mcp-editor/catalog.mjs",
+      "title": "editor-mcp-catalog",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "mcp",
+        "schema"
+      ],
+      "read": "Live tool names, arguments and mutation guards",
+      "sourceRefs": []
+    },
+    {
+      "id": "documentation-audit-20261009",
+      "path": "docs/review/documentation-audit-2026-10-09.md",
+      "title": "Documentation audit against current source and CodeGraph",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "documentation",
+        "architecture",
+        "codegraph",
+        "knowledge"
+      ],
+      "read": "Reviewed scope, repaired findings, verification and remaining limits",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "scene-migrations"
       ]
     }
   ]

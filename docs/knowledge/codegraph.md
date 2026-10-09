@@ -24,6 +24,8 @@ registration or grant new MCP permissions.
    (`code-graph incremental-index` in the verified version). Respect another
    indexer holding the lock. Report an incomplete/stale refresh; never delete the
    lock or interrupt another session merely to get a “fresh” map.
+   Some versions print a lock warning yet continue indexing. Record both warning
+   and returned completion; that does not prove an exclusive, race-free refresh.
 4. Discover current arguments with `tools/list`; use `project_map` and a path-scoped
    `module_overview`, then file-qualified AST/reference/call queries. Prefer small
    scoped queries; follow budget omissions/pagination or a supported full export.
@@ -35,7 +37,7 @@ Example MCP calls, after initialization:
 ```
 
 ```json
-{"name":"module_overview","arguments":{"path":"packages/zombie-game/src/session.ts","include_deps":true,"max_tokens":10000}}
+{"name":"module_overview","arguments":{"path":"packages/zombie-game/src/session.ts","include_deps":true,"deps_depth":1,"max_tokens":10000}}
 ```
 
 ## Interpretation and fallback
@@ -46,7 +48,12 @@ extracted/inferred/ambiguous calls. This version's directory overview may report
 `dependencies_unavailable`; query the specific file rather than treating it as
 no dependencies. Same-name `set`, `find`, `clear` calls can produce ambiguous
 receiver edges. During this refactor such edges in the controls overview were
-confirmed with source imports instead of accepted as couplings.
+confirmed with source imports instead of accepted as couplings. This also occurs
+at dependency depth 1: its relationship list is not an AST import manifest.
+Export-only barrels can report `files_count: 0`/“No files found” while returning
+their export dependencies; read the barrel and source gate before claiming a file
+or package is missing. `project_map.entry_points: []` likewise does not mean the
+editor has no entrypoint.
 
 Trace Worker URL/message endpoints, `import.meta.glob`, injected registries and
 HTTP/WebSocket/MCP dispatch explicitly. Missing static edges do not establish
@@ -58,8 +65,9 @@ MCP client/stdio call can still obtain its tools and results. If neither route
 works after a reasonable attempt, state the concrete error and use targeted
 source reads/search. The rest of the task continues. Do not invent graph results.
 
-The [2026-10-08 map](../44-CodeGraph代码结构图谱.md) is historical evidence at its
-recorded commit. [Current ownership](../architecture/layers.md) and the
+The [structure map](../44-CodeGraph代码结构图谱.md) separates the current
+2026-10-09 source review from the preserved 2026-10-08 measurements.
+[Current ownership](../architecture/layers.md) and the
 `architecture:check` source-edge gate govern new code. Refresh after a move;
 typecheck, owner tests, scene/content/motion checks and headed GPU paths still
 provide the required runtime evidence.

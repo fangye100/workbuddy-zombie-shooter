@@ -24,6 +24,7 @@ Untracked deliveries and draft briefs are not published knowledge.
 | Task | Read first | Live source / owner |
 |---|---|---|
 | Ownership, dependency analysis, refactoring | [Layer contract](architecture/layers.md), [CodeGraph MCP](knowledge/codegraph.md) | `tools/architecture/layers.json`; current checkout source |
+| Current implementation versus original architecture | [Current structure map](44-CodeGraph代码结构图谱.md#current-source-review-2026-10-09) | Source-qualified owners, direct GPU path and explicit dormant/design features; earlier numerical audit remains historical |
 | Scene authoring and persistence | [Development workflow](43-GameplayDevelopmentWorkflow.md), [scene design](14-Scene系统与场景数据持久化架构设计.md) | `packages/scene/src/document.ts`, `project.ts`, `asset-meta.ts`; `@aether/runtime` author stores |
 | Gameplay, NPCs, rewards and audio events | [Gameplay design](13-玩法与关卡设计GDD.md), [workflow](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`; `assets/scenes`; `packages/content` data |
 | Generic weapons, ray collision and timing | [Weapons report](39-Unified-weapons-and-animation-hooks.md), [layer contract](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`, `weapon-combat.ts`, `solid-ray.ts` |
@@ -50,6 +51,13 @@ when publishing a guide or durable design decision; export important session
 conclusions into a focused `docs/` guide with owner, contracts, failure behavior,
 verification and remaining work. Daily logs remain immutable historical context.
 Do not bulk promote their obsolete commands or temporary parameters into rules.
+
+The [2026-10-09 documentation audit](review/documentation-audit-2026-10-09.md)
+records corrected routes and verification scope. Current guides must be repaired
+internally after source moves; an added routing banner alone is insufficient.
+Historical reports keep their original paths/counts, with a notice directing new
+work to the current contract. Architecture designs are intent, not blanket proof
+that their FrameGraph, export, subsystem or MCP roadmap has shipped.
 
 The CodeGraph cache is derived and checkout-local. It supplements source reads
 and this catalog; neither graph centrality nor document age determines truth.

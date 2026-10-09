@@ -1,0 +1,497 @@
+{
+  "date": "2026-10-09",
+  "timezone": "Asia/Singapore",
+  "checkout": "C:\\Users\\fangy\\WorkBuddy\\game-design-zombie",
+  "branch": "codex/architecture-boundaries-20261009",
+  "sourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd",
+  "sourceRoots": [
+    "apps",
+    "assets",
+    "packages",
+    "tools"
+  ],
+  "server": {
+    "name": "code-graph-mcp",
+    "version": "0.167.0"
+  },
+  "transport": "Actual installed stdio MCP; initialize, tools/list, tools/call. No global client registration changed.",
+  "refresh": {
+    "command": "code-graph incremental-index --json",
+    "filesUpdated": 18,
+    "filesRemoved": 1,
+    "nodesCreated": 83,
+    "warning": "Another process holds index.lock; installed CLI continued and reported completion. Exclusive refresh is not established; no lock deleted or foreign process stopped."
+  },
+  "health": {
+    "conversion_metric": "empty",
+    "db_size_bytes": 70344704,
+    "edges": 15670,
+    "embedding_coverage_pct": 100,
+    "embedding_progress": "6437/6437",
+    "embedding_status": "complete",
+    "files": 965,
+    "files_with_parse_errors": 4,
+    "healthy": true,
+    "index_age": "11m ago",
+    "index_version_stale": false,
+    "integrity": {
+      "fts_drift": 0,
+      "orphan_vectors": 0,
+      "quick_check": "skipped_large"
+    },
+    "last_indexed_at": 1791513355,
+    "model_available": true,
+    "model_download": "model downloaded successfully",
+    "model_files_present": true,
+    "model_files_state": "ready",
+    "nodes": 6504,
+    "parse_error_files": [
+      "apps/editor/src/main.ts",
+      "packages/runtime/src/weapon-combat.ts",
+      "packages/zombie-game/src/presentation/game-audio.ts",
+      "packages/zombie-game/src/presentation/weapon-ink.ts"
+    ],
+    "resolution": {
+      "edges_by_language": {
+        "javascript": {
+          "calls": 827,
+          "exports": 43,
+          "imports": 400,
+          "references": 40
+        },
+        "python": {
+          "calls": 596,
+          "imports": 392,
+          "references": 16
+        },
+        "typescript": {
+          "calls": 6253,
+          "exports": 1167,
+          "implements": 3,
+          "imports": 2536,
+          "inherits": 12,
+          "references": 3385
+        }
+      },
+      "pending_unresolved_calls": 6870
+    },
+    "schema_version": 10,
+    "search_mode": "hybrid",
+    "snapshot": {
+      "commit_drift": null,
+      "fetched_at": null,
+      "source_commit": null,
+      "source_url": null,
+      "status": "absent"
+    },
+    "watching": false
+  },
+  "querySchemaDiscovery": [
+    {
+      "name": "get_ast_node",
+      "inputSchema": {
+        "properties": {
+          "compact": {
+            "description": "Compact mode: type+signature+location only, no code_content (saves tokens)",
+            "type": "boolean"
+          },
+          "context_lines": {
+            "description": "Surrounding source lines to include (default 0, default 3 when using node_id; range 0-100)",
+            "type": "integer"
+          },
+          "file_path": {
+            "description": "File path (with symbol_name)",
+            "type": "string"
+          },
+          "include_impact": {
+            "description": "Include impact summary: risk level, caller count, affected files/routes (default false)",
+            "type": "boolean"
+          },
+          "include_references": {
+            "description": "Include callers/callees (default false)",
+            "type": "boolean"
+          },
+          "include_similar": {
+            "description": "Include embedding-similar nodes (default false; requires embed-model + indexed embeddings)",
+            "type": "boolean"
+          },
+          "include_tests": {
+            "description": "Include test callers in references (default false)",
+            "type": "boolean"
+          },
+          "max_tokens": {
+            "description": "Token cap (bytes/3, range 100-100000): least-called items shrink, then drop; budget.next returns them",
+            "type": "integer"
+          },
+          "min_confidence": {
+            "description": "For include_impact: min caller-edge confidence counted toward risk (default 'inferred'). Folds the ambiguous by-name fan-out (a name shared by many defs) out of the blast radius; pass 'ambiguous' to count every resolved caller. `impact.ambiguous_callers_excluded` discloses what was folded.",
+            "enum": [
+              "extracted",
+              "inferred",
+              "ambiguous"
+            ],
+            "type": "string"
+          },
+          "node_id": {
+            "description": "Node ID (alternative to file_path+symbol_name)",
+            "type": "integer"
+          },
+          "similar_top_k": {
+            "description": "With include_similar: max similar results (default 5, range 1-50)",
+            "type": "integer"
+          },
+          "symbol_name": {
+            "description": "Symbol name (with file_path, or alone for auto-resolve). A call must carry symbol_name or node_id — file_path alone names a file, not a symbol, and is refused. So is a name with several definitions in the one file (cfg-gated alternates, overloads, repeated headings): the reply lists their node_ids, pick one.",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      }
+    },
+    {
+      "name": "project_map",
+      "inputSchema": {
+        "properties": {
+          "centrality_limit": {
+            "description": "With include_centrality: max ranked results (default 10, range 1-100)",
+            "type": "integer"
+          },
+          "compact": {
+            "description": "Compact mode: paths+counts+key_symbols, trimmed hot_functions (saves tokens)",
+            "type": "boolean"
+          },
+          "include_centrality": {
+            "description": "Include architectural chokepoints (betweenness centrality — functions on the most shortest call paths; high score = structural bridge). Default false.",
+            "type": "boolean"
+          },
+          "max_tokens": {
+            "description": "Token cap (bytes/3, range 100-100000): least-called items shrink, then drop; budget.next returns them",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      }
+    },
+    {
+      "name": "module_overview",
+      "inputSchema": {
+        "properties": {
+          "compact": {
+            "description": "Compact mode: name+type+callers only, no signatures (saves tokens)",
+            "type": "boolean"
+          },
+          "dead_min_lines": {
+            "description": "With include_dead: min line count to flag (default 3)",
+            "type": "integer"
+          },
+          "deps_depth": {
+            "description": "With include_deps: max transitive depth (default 2, range 1-10)",
+            "type": "integer"
+          },
+          "deps_direction": {
+            "description": "With include_deps: direction filter (default 'both')",
+            "enum": [
+              "outgoing",
+              "incoming",
+              "both"
+            ],
+            "type": "string"
+          },
+          "include_dead": {
+            "description": "Include unreferenced symbols (orphans + exported-unused) under this path (default false). Macro/shell-invoked entry points are pre-filtered. Results are candidates to verify: receiver-method calls (obj.method()) and cross-file const/type uses are not edge-tracked, so a flagged symbol may still be used.",
+            "type": "boolean"
+          },
+          "include_deps": {
+            "description": "When path is a single file: include outgoing/incoming file dependencies (default false)",
+            "type": "boolean"
+          },
+          "max_tokens": {
+            "description": "Token cap (bytes/3, range 100-100000): least-called items shrink, then drop; budget.next returns them",
+            "type": "integer"
+          },
+          "path": {
+            "description": "File or directory path (e.g. 'src/auth/')",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "find_references",
+      "inputSchema": {
+        "properties": {
+          "compact": {
+            "description": "Compact mode: name+file+relation+confidence+node_id only, no code or signature (saves tokens)",
+            "type": "boolean"
+          },
+          "file_path": {
+            "description": "Disambiguate same-name symbols across files",
+            "type": "string"
+          },
+          "include_tests": {
+            "description": "Include references from test code (default true — tests are usage sites for rename audits). Set false to see production callers only.",
+            "type": "boolean"
+          },
+          "min_confidence": {
+            "description": "Min edge confidence to KEEP. Default: no floor — every reference is returned, each tagged with its own `confidence` ('extracted' = same-file precise, 'inferred' = import-resolved, 'ambiguous' = by-name fan-out that may point at a same-named symbol elsewhere). Pass 'inferred' to drop the ambiguous tier; `confidence_filtered` in the response counts what was dropped.",
+            "enum": [
+              "extracted",
+              "inferred",
+              "ambiguous"
+            ],
+            "type": "string"
+          },
+          "node_id": {
+            "description": "Exact node from a prior suggestion — overrides symbol_name. Use to disambiguate same-name defs in one file.",
+            "type": "integer"
+          },
+          "relation": {
+            "description": "Relation type filter (default 'all')",
+            "enum": [
+              "calls",
+              "imports",
+              "inherits",
+              "implements",
+              "references",
+              "exports",
+              "routes_to",
+              "all"
+            ],
+            "type": "string"
+          },
+          "symbol_name": {
+            "description": "Symbol to find references for. A call must carry symbol_name or node_id; a call naming neither is refused.",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "name": "project_map",
+      "arguments": {
+        "max_tokens": 100000
+      },
+      "moduleGroups": 52,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/zombie-game/src/index.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 0,
+      "budget": null,
+      "warning": "No files found for path 'packages/zombie-game/src/index.ts'. Check that the path is relative to the project root.",
+      "returnedDependencyPaths": [
+        "packages/zombie-game/src/audio-frame.ts",
+        "packages/zombie-game/src/enemy-attacks.ts",
+        "packages/zombie-game/src/loader.ts",
+        "packages/zombie-game/src/play-session.ts",
+        "packages/zombie-game/src/run-progress.ts",
+        "packages/zombie-game/src/session.ts",
+        "packages/zombie-game/src/spawn-ab.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/zombie-game/src/session.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [
+        "packages/ai/src/navigation.ts",
+        "packages/zombie-game/src/run-progress.ts",
+        "packages/runtime/src/weapon-combat.ts",
+        "packages/gameplay/src/character.ts",
+        "packages/zombie-game/src/enemy-attacks.ts",
+        "packages/content/src/generated/stats.generated.ts",
+        "packages/ai/src/combat.ts",
+        "packages/core/src/ecs/world.ts",
+        "packages/runtime/src/behavior-executor.ts",
+        "packages/runtime/src/weapon-system.ts",
+        "packages/gfx/src/device.ts",
+        "packages/zombie-game/src/loader.ts",
+        "packages/gameplay/src/ray.ts",
+        "packages/render/src/comic-sky.ts",
+        "packages/render/src/contact-shadows.ts",
+        "packages/render/src/renderer-core.ts",
+        "packages/runtime/src/solid-ray.ts",
+        "packages/runtime/src/spawn-edit.ts",
+        "packages/scene/src/behavior.ts",
+        "packages/scene/src/document.ts",
+        "packages/scene/src/geometry.ts",
+        "packages/scene/src/gltf.ts",
+        "packages/scene/src/graph.ts",
+        "packages/scene/src/weapons.ts",
+        "packages/zombie-game/src/play-session.ts",
+        "packages/zombie-game/src/presentation/game-audio.ts",
+        "packages/zombie-game/src/presentation/game-controls.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/zombie-game/src/presentation/game-audio-assets.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [
+        "packages/scene/src/audio.ts",
+        "packages/scene/src/document.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/scene/src/document.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [
+        "packages/scene/src/audio.ts",
+        "packages/scene/src/body-ik.ts",
+        "packages/scene/src/shared-motion.ts",
+        "packages/scene/src/weapons.ts",
+        "apps/editor/src/materials.ts",
+        "apps/editor/src/services/binding/volumetric-volume.ts",
+        "packages/core/src/ecs/world.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "packages/render/src/renderer-core.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [
+        "packages/core/src/math.ts",
+        "packages/render/src/frame-uniforms.ts",
+        "packages/render/src/comic-sky.ts",
+        "packages/render/src/contact-shadows.ts",
+        "packages/scene/src/geometry.ts",
+        "packages/framegraph/src/graph.ts",
+        "packages/render/src/gizmo.ts",
+        "packages/ai/src/navigation.ts",
+        "packages/gfx/src/context.ts",
+        "packages/gfx/src/device.ts",
+        "packages/render/src/albedo-texture.ts",
+        "packages/render/src/pose-transition.ts",
+        "packages/render/src/shaders/dynamic.wgsl.ts",
+        "packages/render/src/shaders/gizmo.wgsl.ts",
+        "packages/render/src/shaders/post.wgsl.ts",
+        "packages/render/src/shaders/scene.wgsl.ts",
+        "packages/runtime/src/spawn-edit.ts",
+        "packages/scene/src/document.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "apps/editor/src/services/runtime-body-ik.ts",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [
+        "packages/scene/src/graph.ts",
+        "packages/render/src/body-ik.ts",
+        "packages/zombie-game/src/session.ts",
+        "apps/editor/src/renderer.ts",
+        "apps/editor/src/services/binding/bvh-parser.ts",
+        "apps/editor/src/services/binding/humanik-template.ts",
+        "apps/editor/src/services/binding/motion-retarget/space-targets.ts",
+        "apps/editor/src/services/binding/volumetric-volume.ts",
+        "apps/editor/src/services/runtime-actors.ts",
+        "packages/core/src/ecs/world.ts",
+        "packages/gfx/src/device.ts",
+        "packages/gfx/src/handle.ts",
+        "packages/render/src/skin.ts",
+        "packages/runtime/src/spawn-edit.ts",
+        "packages/runtime/src/weapon-system.ts",
+        "packages/scene/src/asset-meta.ts",
+        "packages/scene/src/body-ik.ts",
+        "packages/scene/src/document.ts",
+        "packages/zombie-game/src/run-progress.ts"
+      ],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    },
+    {
+      "name": "module_overview",
+      "arguments": {
+        "path": "tools/mcp-editor/workflow.mjs",
+        "include_deps": true,
+        "deps_depth": 1,
+        "max_tokens": 16000
+      },
+      "filesCount": 1,
+      "budget": null,
+      "warning": null,
+      "returnedDependencyPaths": [],
+      "confidence": "Graph navigation only. Receiver-call inference can contaminate even depth-1 dependency lists; source imports/barrels were read for actual ownership."
+    }
+  ],
+  "verifiedSourceFiles": [
+    "packages/runtime/src/index.ts",
+    "packages/zombie-game/src/index.ts",
+    "packages/zombie-game/src/session.ts",
+    "packages/zombie-game/src/presentation/game-audio-assets.ts",
+    "packages/scene/src/document.ts",
+    "packages/scene/src/migrate.ts",
+    "packages/render/src/frame-uniforms.ts",
+    "packages/render/src/shaders/scene.wgsl.ts",
+    "packages/render/src/shaders/post.wgsl.ts",
+    "packages/render/src/feature.ts",
+    "packages/framegraph/src/graph.ts",
+    "apps/editor/src/services/runtime-scene-motion.ts",
+    "tools/mcp-editor/workflow.mjs",
+    "package.json"
+  ],
+  "limits": [
+    "No new runtime/GPU/device/listening acceptance.",
+    "Health counts include documents, data and tests; not production ownership or cost.",
+    "Parser/unresolved-call flags remain. Empty entrypoints or barrel files_count do not establish absence.",
+    "Local receipt excludes SQLite/index cache and embedding vectors."
+  ]
+}

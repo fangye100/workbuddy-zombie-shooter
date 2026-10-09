@@ -1,5 +1,11 @@
 # L1/L2 — WebGPU 设备、资源层与 FrameGraph
 
+> Historical design / baseline: implementation coverage and original dependency
+> diagrams below are not current delivery claims. For new work, use the
+> [current ownership contract](architecture/layers.md) and [shared knowledge](README.md).
+> Scene schema is currently v15; Zombie simulation/presentation is game-owned.
+> The current renderer uses direct passes; FrameGraph remains dormant.
+
 WebGPU 是显式 API：所有同步、生命周期、内存别名都要开发者负责。这一层的目标是用
 **缓存 + 句柄 + 帧图** 把复杂度收敛，同时保留 escape hatch。
 

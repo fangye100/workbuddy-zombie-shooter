@@ -1,5 +1,11 @@
 # 第三轮独立评审报告（review-a3）
 
+> Historical evidence: file paths, line numbers, findings and test counts below
+> belong to the recorded review/delivery, not today's source or new validation.
+> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
+> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
+> before reusing a command or treating an old finding as a current defect.
+
 - 项目：`game-design-zombie`，分支 `feature/headless-runtime`，HEAD = `25d6d64`（评审整改 5）
 - 评审方式：只读。未改任何源文件 / assets / `.git`；唯一写入是本报告。
 - 日期：2026-09-16

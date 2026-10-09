@@ -1,12 +1,88 @@
 # 44 - CodeGraph structure map and development workflow
 
-## Current Agent entrypoint, 2026-10-09
+## Current source review, 2026-10-09
 
 For current owners use [the layer contract](architecture/layers.md); for connecting
 and querying the installed MCP use [the portable CodeGraph guide](knowledge/codegraph.md).
-Zombie simulation and presentation have moved to `packages/zombie-game`.
-The measurements and file paths below remain evidence at the explicitly recorded
-2026-10-08 source snapshot; refresh the intended checkout before applying them.
+Reviewed checkout: `codex/architecture-boundaries-20261009`, source `e6c2278`.
+Main integration is `90d6427`; this source includes weapons/audio and HumanIK/pose
+transitions. The current scene schema is v15, with the integrated v14→v15 migration
+in `packages/scene/src/migrate.ts`. This is a documentation/source review, not a
+new gameplay, GPU or device acceptance run.
+
+Actual MCP `project_map` and seven file-qualified `module_overview` queries used
+server `code-graph-mcp 0.167.0`. The map returned 52 directory groups, including
+tests/docs/tooling; they are not 52 production packages. Full query budgets were
+used without reported budget omissions. The incremental update completed with
+18 updated / 1 removed file but also emitted a concurrent-lock warning. Four
+parser flags and 6,870 unresolved calls remained in the subsequent health result.
+See [audit scope and receipt](review/documentation-audit-2026-10-09.md).
+
+The graph's same-name call resolution also contaminates depth-1 dependency lists:
+`RuntimeSession` showed unrelated renderer/device calls and `SceneDocument` showed
+unrelated editor `find` receivers. Those are not confirmed imports. Source reads
+and the TypeScript-AST architecture gate determine the dependency findings here.
+The game barrel's “No files found” warning despite returned export dependencies
+was checked against the real file; the package is present.
+
+### Current execution and data paths
+
+```text
+Editor authoring (:5100)
+  -> framework author commands / shared history
+  -> editor projection / devfs -> tools/fs coordinated write -> scene/project/sidecar
+Editor Play (:5100)
+  -> zombie-game PlaySession / RuntimeSession / RunProgress / EnemyAttacks
+       -> framework weapons, collision, navigation and character primitives
+       -> content-generated roster/stat APIs (JSON remains authoritative)
+  -> zombie-game presentation: HUD, controls, audio and combat/weapon ink
+  -> editor host adapters: actors, game camera, shared motion, IK and render bridge
+       -> render RendererCore / skin / body-ik / pose-transition / direct GPU passes
+            -> gfx / core / scene contracts
+MCP: stdio -> loopback broker -> WebSocket -> selected EditorAgent -> same services
+M0 sample (:5101): gfx initialization/capability HUD; not the campaign Play path
+```
+
+| Source owner | Current location / limits |
+|---|---|
+| Reusable framework runtime | `packages/runtime/src`: author commands, behavior ports, weapons and solid-ray collision; no reverse game exports |
+| Zombie simulation/progression | `packages/zombie-game/src`: loader, session, PlaySession, spawn A/B, RunProgress, EnemyAttacks and AudioFramePlanner; public headless barrel |
+| Game presentation | `packages/zombie-game/src/presentation`: 13 modules plus HUD CSS; explicit public subpaths, no editor dependency |
+| Editor adapters | `apps/editor/src/services`: authoring, binding, actor/render/Play integration and game-camera/IK adapters; bootstrap still needs consolidation |
+| Generic IK/pose sampling | `packages/render/src/body-ik.ts`, `two-bone-ik.ts`, `skin.ts`, `pose-transition.ts`; scene/sidecar contracts remain in `packages/scene` |
+| Rendering status | Direct passes in `RendererCore` are active. `FrameGraph` / `RenderFeature` are dormant design infrastructure, not the current GPU scheduler |
+
+Git-tracked recursive `src/**/*.ts` counts at this source: runtime 10, Zombie
+game 21 (8 headless including barrel + 13 presentation), render 22, editor 92.
+These counts include barrels/WGSL TS modules; they are navigation scope, not
+activity, complexity, memory or performance measurements.
+
+### Current test and tool routes
+
+Select the affected subset; commands here are current routes, not a claim that
+all were executed during this documentation review.
+
+```powershell
+pnpm exec vitest run packages/zombie-game/test/run-progress.test.ts packages/zombie-game/test/audio-frame.test.ts packages/runtime/test/solid-ray.test.ts
+pnpm exec vitest run packages/render/test/pose-palette.test.ts packages/zombie-game/test/presentation/game-hud.test.ts packages/zombie-game/test/presentation/game-audio-assets.test.ts
+node --test tools/mcp-editor/*.test.mjs
+pnpm run architecture:check
+pnpm run knowledge:check
+```
+
+`game:build` builds separate headless game/framework bundles; `runtime:build`
+alone no longer exports Zombie simulation. Default Vitest still covers only
+apps/packages tests. Node/Python tools need their own runners. `verify:parity`
+alone samples Node; explicit matching-browser comparison is needed for a
+cross-host claim. Assets/scenes still require `scene:check`; graphical behavior
+requires the headed/hardware path under project rules.
+
+## Preserved historical audit — 2026-10-08
+
+Sections 1–8 below retain the original source snapshot and measurements. Old
+runtime/editor file paths and test commands describe that revision; use the
+current owner/test routes above for new work. Do not copy historical counts or
+unexecuted checks into a current acceptance claim.
 
 ## 1. Evidence and scope
 
@@ -41,7 +117,7 @@ and named-declaration checks. File/symbol coverage does not prove complete or
 correct call resolution. The audit did not execute runtime tests, browser/GPU
 validation, or MCP reindexing. Schemas, ADRs and project rules remain authoritative.
 
-## 2. Current execution paths
+## 2. Historical execution paths
 
 ```text
 apps/editor (:5100)
@@ -200,7 +276,7 @@ No fixed “first 32 files refreshed per query” guarantee was independently ve
 A query response alone does not prove index freshness. Graph results complement
 source/schema/ADR contracts and behavior-specific tests, not replace them.
 
-## 8. Test ownership
+## 8. Historical test ownership
 
 The default [Vitest configuration](../vitest.config.ts) includes only
 `apps/**/*.test.ts` and `packages/**/*.test.ts`, excluding tools/assets. `pnpm test`

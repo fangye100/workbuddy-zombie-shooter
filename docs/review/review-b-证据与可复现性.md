@@ -1,5 +1,11 @@
 # 评审报告 B · 证据与可复现性（只读复核）
 
+> Historical evidence: file paths, line numbers, findings and test counts below
+> belong to the recorded review/delivery, not today's source or new validation.
+> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
+> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
+> before reusing a command or treating an old finding as a current defect.
+
 - 对象：`feature/headless-runtime`（17 笔，`9a550cc` → `ba5e093`），报告 `docs/19-最终开发报告（headless-runtime）.md`
 - 规格：`docs/17` §8（八条业务证明 + 验证范围纪律）、§9（报告七项）
 - 立场：独立复核，**未修改任何源文件 / assets / .git**。仅执行只读命令与门禁脚本（`runtime:build` 产物落在 gitignore 的 `.workbuddy/tmp/runtime/`，复核后 `git status` 仍只有评审前已有的 4 项他人改动）。

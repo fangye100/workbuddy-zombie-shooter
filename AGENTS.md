@@ -1,6 +1,8 @@
-# 项目协作规则 (agents.md)
+# Project collaboration rules (AGENTS.md)
 
-本文件是给 AI 协作会话（WorkBuddy Agent）的项目级硬性规则。**改项目前先读本文件。**
+This is the mandatory repository entry for every development Agent, including
+WorkBuddy and Codex. Read it before changing the project; discover task-specific
+contracts through [the shared knowledge index](docs/README.md).
 
 ## 0. 包管理器：pnpm（2026-09-15 定）
 
@@ -65,7 +67,9 @@
   | `MAX_OBJECTS` | **64** | 场景**静态物件**上限（变换 uniform 槽位） |
   | `MAX_MATERIAL_SLOTS` | 256 | 材质槽位（逐子网格） |
   | `LIGHTS_FLOATS` | 40 | 10×vec4 → **1 主光(directional) + 1 点光** |
-- **500 僵尸属运行时热实体，不得走场景静态物件路径**，必须走 instancing / 批处理（Phase 2）。
+- Runtime crowds, including a 500-NPC configuration, must use the dynamic
+  instancing/batch path and never consume static scene-object slots. This path
+  exists; that does not certify every population or device's performance.
 - 多灯降级：场景可声明任意多盏灯，运行时按 `priority` 取 top-1 + top-1，落选者在编辑器里**标黄提示**。
 
 ### 2.4 Play Mode 纪律
@@ -84,7 +88,9 @@
 - **资产附加数据必须落 sidecar `<源文件名>.meta.json`**（真源 `packages/scene/src/asset-meta.ts`），
   与源资产同目录。**禁止只在内存里保存** —— 绑定继承快照、身高归一化系数、骨骼绑定会话、
   T/A-pose 反解结果、动画配置、导入参数（焊接/AO/up-flip/拆子网格）全部属于这一类，
-  现在它们刷新即丢，这是正在发生的数据丢失。
+  Do not describe every such field as already implemented: inspect its schema,
+  writer and reload path. Any implemented reusable author data must survive
+  save/reload in its sidecar; an in-memory-only implementation is a persistence bug.
   - **归属判定**：问一句「换一个全新的空场景，这个数据还在不在？」
     在 → `.meta.json`；不在 / 场景特有 → `.scene.json`。
   - **sidecar 不用集中索引**：集中 `assetdb.json` 是合并冲突制造机。
@@ -236,3 +242,8 @@
   run `pnpm run knowledge:check`. Preserve historical logs and unrelated drafts.
   Do not promote obsolete memory instructions into current rules, or adopt
   untracked deliveries as published/accepted assets.
+- A current guide must contain current source/test paths, runnable scoped commands,
+  and explicit capability limits. A banner alone does not repair obsolete commands
+  inside it. After owner/schema changes, update affected guides and catalog routes;
+  preserve historical measurements with their original date/revision and link to
+  the replacement contract. Index freshness and a build do not renew acceptance.

@@ -8,23 +8,27 @@ Scene schema is now v15 after the [branch integration](review/branch-integration
 Zombie simulation, progression and audio-event projection live in
 `packages/zombie-game/src`; HUD/input/audio rendering in its `presentation` directory.
 Generic author commands, weapons and collision remain `packages/runtime`.
-Paths and v14 acceptance claims in the original report below describe its
-recorded revision; they are not the current source layout or a new acceptance run.
+The workflows and source/test paths below were reviewed against `e6c2278`.
+Acceptance measurements retain their original dates and revisions; this review
+does not renew runtime, artistic or device acceptance.
 
-This is the current development entry point for the scene-quality branch, through the weapon and audio integration delivered on 2026-10-07. It connects the implementation contracts to a repeatable authoring and acceptance process. Specialized reports retain their own dates, revisions and evidence; their historical test counts are not results of a new run. Current source and project rules take precedence over older notes.
+This is the current development entry point after the main-branch integration and
+editor/framework/game separation. It connects implementation contracts to a
+repeatable authoring and acceptance process. Specialized reports retain their own
+dates, revisions and evidence. Current source and project rules take precedence.
 
 ## Responsibilities and sources of truth
 
 | Area | Durable authority | Execution owner / technical rule |
 |---|---|---|
-| Scene selection and content | `aether.project.json`, registered `assets/scenes/**`, `packages/scene/src/document.ts` | The editor reads and writes scene files. Stable NodeId references, complete components and AssetRef path/GUID pairs survive reload. Schema v14 is the current documented baseline; discover the actual loaded version with `scene_get`. |
+| Scene selection and content | `aether.project.json`, registered `assets/scenes/**`, `packages/scene/src/document.ts` | The editor reads and writes scene files. Stable NodeId references, complete components and AssetRef path/GUID pairs survive reload. Current schema is v15; read `scene_get` and the source constant rather than assuming an older report's version. |
 | Authoring, history and save | `SpawnEditStore`, author commands, `author-scene-save.ts` | UI and MCP share one author store/history. Disk conflicts are explicit. A dirty form is distinct from a committed author edit. |
 | Environment and material overrides | Scene environment and Mesh components; project material library | Tune a reproducible game-camera composition. Renderer objects are projections, never the durable author state. |
 | Art and LOD derivatives | `assets/art/sources/**`, runtime GLBs, sidecars and build manifests | Preserve the source, normalization recipe, hashes and GUIDs. Each LOD derives from the original, preserving UV/straight structural features. |
-| NPC attacks and timing | Scene gameplay components and character definitions | `RuntimeSession` / enemy attack logic own range eligibility, attack tokens, seeded independent timing, damage and attack effects. Presentation consumes actual accepted state. |
+| NPC attacks and timing | Scene gameplay components and character definitions | `packages/zombie-game/src/session.ts` / `enemy-attacks.ts` own range eligibility, attack tokens, seeded independent timing, damage and attack effects. Presentation consumes accepted state. |
 | Weapon definitions | Scene `RunRules.arsenal`; schema in `packages/scene/src/weapons.ts` | `WeaponSystem` owns equipment, ammo, reload, upgrades and accepted action events. `WeaponCombat` implements hitscan, pellets, penetration, projectiles, melee and flame. |
-| Weapon animation / future IK | Weapon presentation markers, animation selectors and procedural parameters | Accepted events drive animation hooks. Local primary/support grip, muzzle, magazine and chamber markers plus recoil/reload intent are consumer ports. HumanIK authoring/blending is a separate owner; these ports do not implement a solver. |
-| Audio | Scene `RunRules.audio`; WAV AssetRefs and measured `.meta.json` | `AudioFramePlanner` projects accepted facts. `GameAudio` owns decoding, mix, voices and cleanup. It must not mutate combat, replace weapon hooks or consume gameplay RNG. |
+| Weapon animation / IK | Weapon presentation markers, animation selectors and procedural parameters | Accepted events drive clip/phase selection. The editor motion adapter preserves locomotion while active torso/head IK aims during fire. Grip/muzzle/magazine/chamber markers and recoil/reload intent remain consumer ports; automatic hand placement and procedural reload are not implemented. |
+| Audio | Scene `RunRules.audio`; WAV AssetRefs and measured `.meta.json` | `packages/zombie-game/src/audio-frame.ts` projects accepted facts; `presentation/game-audio.ts` owns decoding, mix, voices and cleanup. It must not mutate combat, replace weapon hooks or consume gameplay RNG. |
 | Controls and HUD | Game controls, game language and HUD services | Desktop mouse/keyboard and touch controls use the same runtime actions. English/Chinese labels exist; phone emulation is only layout evidence. |
 | Play lifetime | `PlaySession` / `PlayController` and their resource ledger | Snapshot author data before Play; run a runtime copy. Stop rolls back author state and releases registered Play resources, including audio. |
 | Game Editor MCP | `tools/mcp-editor`, live `EditorAgent` dispatcher | Stdio → loopback broker → explicitly selected browser instance → existing business services. No second scene store, simulation, DOM-click engine or arbitrary code evaluation. |
@@ -45,7 +49,7 @@ This is the current development entry point for the scene-quality branch, throug
 
 1. **Establish the baseline.** Inspect branch, upstream and existing dirt; preserve other sessions' work. Read current project rules and relevant design/evidence. For integrations, fetch and verify ancestry before saying a feature is merged. Identify owners and acceptance criteria before crossing scene/runtime/presentation contracts. Do not replace another session's service or take over rig/IK assets.
 2. **Make the data contract first.** A new scene semantic starts in `packages/scene/src/document.ts` or its dedicated schema module, with validation and migration tests. Each schema increment needs its migration link. Register new scenes transactionally. Missing optional resources remain explicit placeholders or diagnostics, rather than invented finished assets.
-3. **Implement at the existing owner.** Runtime decides accepted gameplay facts; presentation/audio consume them. Author commands update the shared store and history. Avoid independently cached ammo, scene copies, clocks or duplicate random streams. Carry/save/reset must preserve their documented invariants.
+3. **Implement at the existing owner.** Zombie sessions decide game facts; framework owns reusable weapon/collision mechanisms; game presentation/audio consume accepted facts. Editor adapters inject ports. Author commands update the shared store and history. Avoid independently cached ammo, scene copies, clocks or duplicate random streams. Run the architecture gate for cross-layer changes.
 4. **Complete authoring persistence.** Edit → validate → save → reopen → compare changed fields on disk and in the loaded author document. Check both rejected edits and conflicts. Never serialize runtime QA fixtures or GPU objects into a scene. Stop Play before writing author content.
 5. **Validate according to the change.** Run related CPU/contract tests, typecheck and the affected build. Changed `assets/**` requires `scene:check`; new/changed GLBs require merging sidecar generation without overwriting rig/bindings/user data. Roster changes additionally require content generation/checking. Real rendering changes require headed hardware-GPU comparisons; follow browser/GPU rules before connecting or probing the dev service.
 6. **Exercise the reachable product path.** Use visible Open/Save/Play controls, actual mouse/keyboard/touch events and a trusted audio-ready gesture where relevant. Inspect live attacks, weapon action/ammo/VFX, audio/mute/pause and Stop cleanup. MCP single steps and injected QA fixtures establish narrow logic coverage, not full user-path or campaign acceptance. Restore temporary fixtures and authored settings.
@@ -56,18 +60,20 @@ Typical checks (choose the affected subset; these are commands, not a claim of a
 ```powershell
 node --test tools/mcp-editor/*.test.mjs
 pnpm exec vitest run apps/editor/test/editor-agent.test.ts apps/editor/test/weapon-diagnostics.test.ts --no-file-parallelism
-pnpm exec vitest run packages/runtime/test/weapons.test.ts packages/runtime/test/audio-frame.test.ts apps/editor/test/game-audio.test.ts --no-file-parallelism
+pnpm exec vitest run packages/zombie-game/test/weapons.test.ts packages/zombie-game/test/audio-frame.test.ts packages/zombie-game/test/presentation/game-audio.test.ts packages/zombie-game/test/presentation/game-audio-assets.test.ts --no-file-parallelism
 python -m unittest tools/audio/test_audio.py
 pnpm run typecheck
 pnpm run editor:build
 pnpm run scene:check
+pnpm run architecture:check
+pnpm run knowledge:check
 ```
 
 Art authoring scripts are in `tools/art/`; the architectural build is `tools/art/build-p0-lods.py`. Audio synthesis, intake and checking are in `tools/audio/`. Review their arguments and affected outputs before running generation/publish; these scripts can rewrite runtime assets or all campaign scenes. Checking is distinct from regeneration.
 
 ## Agent workflow through the current MCP
 
-Read [transport setup, schemas and examples](../tools/mcp-editor/README.md). Normal sessions remain opt-in: Vite needs `AETHER_EDITOR_MCP=1`, the deliberately selected tab needs `agent=1`, and client registration is separate. Fixed editor/game ports remain 5100/5101.
+Read [transport setup, schemas and examples](../tools/mcp-editor/README.md). Normal sessions remain opt-in: Vite needs `AETHER_EDITOR_MCP=1`, the deliberately selected tab needs `agent=1`, and client registration is separate. The editor and complete Play path use 5100; 5101 is the M0 GPU initialization sample.
 
 1. Call **`editor_workflow`** without an instance to discover this guide, source paths, stage tools, failure recovery and coverage gaps. The broker must be running, but a browser instance is not required.
 2. Call **`editor_instances`**; select the exact intended instance UUID. Then **`scene_list`** and **`scene_get`** give registered paths, the complete author document, schema version and `state.revision`. Never select the first arbitrary tab.
@@ -82,6 +88,6 @@ On stale revision, reread and rebase; on human drafts, coordinate apply/discard;
 
 Existing reports establish specific observed results: [street material Edit → Save → Reload and LOD comparisons](36-StreetQualityAndArchitecturalLOD.md), [NPC/input checks](37-CombatInputAndPopulationQuality.md), [weapon combat/input/hook checks](39-Unified-weapons-and-animation-hooks.md), and [22-take audio playback/cleanup checks](42-GameplayAudioIntegration.md). These are historical evidence, not a rerun caused by this documentation update. None establishes complete concept-art matching, full-campaign correctness or sustained phone performance.
 
-Remaining work includes in-game human listening feedback; dedicated missing SFX and final weapon/animation resources; BGM/VO intake; HumanIK consumption/blending of weapon ports; and full agent-friendly asset/component discovery, dedicated semantic authoring, reconnect/race hardening and client setup. That broader MCP coverage remains a separate development scope. WorkBuddy's untracked `docs/41` and delivery folders retain their original ownership; this guide does not approve or commit those deliveries.
+Remaining work includes in-game human listening feedback; dedicated missing SFX and final weapon/animation resources; BGM/VO intake; weapon-marker-driven hand IK and procedural recoil/reload; and full agent-friendly asset/component discovery, dedicated semantic authoring, reconnect/race hardening and client setup. Basic HumanIK and pose transitions are integrated, with the limits in [the IK guide](animation/body-ik-blending.md). Broader MCP coverage remains separate development scope. WorkBuddy's untracked `docs/41` and delivery folders retain their original ownership; this guide does not approve or commit those deliveries.
 
 The 2026-10-08 documentation/MCP update passed six Node transport/workflow tests, ten tests across editor-agent, weapon diagnostics and game audio, TypeScript checking, editor production build and 19 local document-link checks. The stdio test uses a real adapter process and controlled loopback broker without a browser. No assets, schemas, rendering or gameplay behavior changed, so this update does not add fresh GPU/visual/listening acceptance. Existing Vite CJS and chunk-size warnings remain.

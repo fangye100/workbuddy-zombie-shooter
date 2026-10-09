@@ -90,7 +90,7 @@ Source: [P0 builder](../../tools/art/build-p0-lods.py), [intake recipe](../../as
 
 All placements, atmosphere and light parameters belong to scene JSON. Offline generators can author assets and scene data; rendering code consumes them. New semantics start in the scene schema, with migration and validation, before runtime/UI implementation. Use stable NodeIds and AssetRef path/GUID pairs; register scenes in the project container.
 
-Placeholders should carry the same logical asset identity and replacement contract as the future source: metres, axes, pivot, stable paths/GUIDs, explicit status and visible hierarchy labels. P0 MID-03/FAR-02 have three identical cheap placeholder files, explicitly declared as such. This keeps references usable without claiming three separately simplified quality levels. Replace bytes and update metadata only after the final model is reviewed; preserve identity and placement.
+Placeholders should carry the same logical asset identity and replacement contract as the future source: metres, axes, pivot, stable paths/GUIDs, explicit status and visible hierarchy labels. The original P0 MID-03/FAR-02 delivery used three identical cheap placeholder files; the later delivered replacements are recorded in §9. Identical placeholders keep references usable without claiming three separately simplified quality levels. Replace bytes and update metadata only after the final model is reviewed; preserve identity and placement.
 
 Respect capacity while improving composition. Floor 1 had only 64 static slots: six decorative crosswalk strips were combined into one offline GLB, retaining the first node's identity and removing only redundant decorative nodes. This recovered five slots without raising the engine limit. Do not merge gameplay-semantic nodes merely to save draw slots. NPCs use the runtime instanced path.
 
@@ -122,7 +122,7 @@ The delivered atlas remains quarantined because of residue and cell-edge clippin
 
 A shared texture can reduce texture changes. Draw-call reduction additionally requires compatible pipeline/blend/depth state and batching or instancing; merely sampling different UV offsets does not automatically batch separate draws.
 
-Source: [combat ink](../../apps/editor/src/services/combat-ink.ts), [requested atlas contract](comic-vfx-atlas-v1.json), [actual delivered layout](../../assets/art/textures/VFX-ATLAS-01/delivered-layout.json), [intake disposition](../32-P0-asset-intake-2026-10-05.md).
+Source: [combat ink](../../packages/zombie-game/src/presentation/combat-ink.ts), [requested atlas contract](comic-vfx-atlas-v1.json), [actual delivered layout](../../assets/art/textures/VFX-ATLAS-01/delivered-layout.json), [intake disposition](../32-P0-asset-intake-2026-10-05.md).
 
 ## 7. Troubleshooting map
 
@@ -158,7 +158,7 @@ A desktop FPS spot sample is not sustained/mobile performance certification. A p
 - [Comic rendering](../30-ComicRenderingAcceptance.md): color probes, dynamic textures, sky/contact foundation, actual validation and combat-feedback limitations.
 - [P0 intake](../32-P0-asset-intake-2026-10-05.md): current asset budgets, gallery, sky persistence/failure evidence and Play/Stop scope.
 
-As of the documented revision, final MID-03/FAR-02 models, atlas repair/GPU integration, player weapon attachment, mobile profiling and further design matching remain open. The pistol is available in the gallery/asset browser; that is not a completed player-weapon integration. Full editor MCP coverage remains separate development work.
+At the original P0 revision, final MID-03/FAR-02 models, atlas repair/GPU integration, player weapon attachment, mobile profiling and further design matching remained open. MID-03/FAR-02 were subsequently delivered (§9); do not reuse that old missing-model list. The gallery pistol alone did not establish player-weapon integration. Later procedural weapon presentation is distinguished from final authored resources below. Full editor MCP coverage remains separate development work.
 
 ## 9. Architectural LOD and continuous streets — 2026-10-07 update
 
@@ -217,3 +217,26 @@ multi-pointer fixtures separately from real mobile hardware evidence. A responsi
 viewport and a desktop GPU spot sample do not certify phone performance. See
 [combat delivery](../37-CombatInputAndPopulationQuality.md) and
 [additional asset brief](../38-GameplayActionAndVfxAssetBrief.md).
+
+## 11. Current owners and resource boundaries — 2026-10-09
+
+After the integration and architecture split, authored content still lives in
+scene/asset files, reusable GPU/shader mechanisms in `packages/render`, and
+game HUD/ink/audio in `packages/zombie-game/src/presentation`. Editor adapters
+project author/runtime facts; they must not acquire game damage/reward formulas.
+Use [the layer contract](../architecture/layers.md) for new work.
+
+Seven weapon behaviors and accepted action hooks have business implementations.
+The [procedural weapon presenter](../../packages/zombie-game/src/presentation/weapon-ink.ts)
+uses grip/muzzle/reload intent, but does not load arbitrary weapon-model AssetRefs
+or automatically bind hands to them. HumanIK torso/head aiming and firing gait
+are integrated; final grip/recoil/reload resource consumption remains distinct.
+The shared VFX atlas is still not a completed GPU atlas renderer. Availability,
+business implementation, procedural presentation and final artistic acceptance
+must be reported separately.
+
+The moved [audio asset resolver](../../packages/zombie-game/src/presentation/game-audio-assets.ts)
+uses Vite glob keys relative to its module. A path move can break real assets even
+when mocked tests and a build pass. Check actual scene AssetRefs/GUIDs against the
+glob, then run the reachable Play path. [Refactor evidence](../architecture/acceptance-2026-10-09.md)
+records 22 loaded takes and Stop cleanup; it is not new human listening or concept-art approval.

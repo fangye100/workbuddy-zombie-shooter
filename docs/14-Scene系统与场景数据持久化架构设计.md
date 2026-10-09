@@ -1,5 +1,11 @@
 # 14 · Scene 系统 —— 以场景为唯一数据载体的架构设计
 
+> Historical design / baseline: implementation coverage and original dependency
+> diagrams below are not current delivery claims. For new work, use the
+> [current ownership contract](architecture/layers.md) and [shared knowledge](README.md).
+> Scene schema is currently v15; Zombie simulation/presentation is game-owned.
+> The current renderer uses direct passes; FrameGraph remains dormant.
+
 > 角色：引擎架构师
 > 时间：2026-09-04 ｜ 基线：agents.md 规则 + docs/10 架构定案 + 当前代码盘点
 > 数据字典真源：`packages/scene/src/document.ts`（本文不重复 schema，只解释**为什么这么定**）

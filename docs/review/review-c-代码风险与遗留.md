@@ -1,5 +1,11 @@
 # C 组评审报告 · 代码风险与遗留（只读评审）
 
+> Historical evidence: file paths, line numbers, findings and test counts below
+> belong to the recorded review/delivery, not today's source or new validation.
+> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
+> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
+> before reusing a command or treating an old finding as a current defect.
+
 - 分支：`feature/headless-runtime`，HEAD `ba5e093`（WU-6 2/2）
 - 评审范围：`packages/runtime/src/**`、`apps/editor/src/{main.ts,renderer.ts,services/**}`、
   `packages/render/src/renderer-core.ts`、`packages/runtime/test/**`、`apps/editor/test/runtime-bridge.test.ts`、

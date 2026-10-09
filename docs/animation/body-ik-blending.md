@@ -23,8 +23,13 @@ are preserved. Each frame starts from the sampled pose, preventing accumulation.
 Undefined inherits; null disables. Reusable asset defaults may use actor-local
 positions, pointer targets or nearest-enemy targets. Stable scene NodeId targets
 belong in scene overrides. No sampled pose, executable code or GPU resources are
-serialized. Scene schema v13 adds an opt-in migration from v12. Existing scenes
-retain their animation behavior without inventing controls.
+serialized. Current integrated scene schema is v15. HumanIK's original branch
+introduced its field at v13, but the merged v12→v13 step is the weapon-arsenal
+migration, not an IK migration. The v14→v15 integration preserves authored IK,
+pose-transition, weapon and audio fields from both published v14 histories;
+missing controls remain absent. Use [the migration source](../../packages/scene/src/migrate.ts)
+and [integration evidence](../review/branch-integration-2026-10-09.md), not the
+original branch version number, when preparing data.
 
 ## Controls and target spaces
 
@@ -58,6 +63,12 @@ targets first pass through the inverse actor translation, rotation and scale.
 has a valid target, including while firing. The player mesh faces movement while
 the gameplay heading continues to own aiming and shot direction. Disabling IK
 or setting its weight to zero restores existing full-body shoot selection.
+
+The current [motion adapter](../../apps/editor/src/services/runtime-scene-motion.ts)
+consumes accepted weapon actions. During fire with active aiming IK it keeps the
+locomotion clip and gait clock; it does not overwrite that gait with the shot's
+normalized phase. Reload/equip still select their available configured clips and
+action phase. Weapon markers are not automatically converted into hand targets.
 
 ## Editor workflow
 
@@ -102,7 +113,8 @@ scene, real GPU/secure context, visible Apply/save/reload and Play weight contro
 source-clip changes on the intended actor, and exact Stop restoration. A successful
 build or matrix test alone is not visual acceptance.
 
-Verified on Windows, headed Chrome with a secure context and NVIDIA Lovelace:
+Historical acceptance on 2026-10-07, before the v15 integration, used Windows,
+headed Chrome, a secure context and NVIDIA Lovelace:
 
 - Visible master slider 0/1 comparison at the same Run sample time: hips and both
   legs had zero joint-matrix difference; the upper body changed (maximum matrix
@@ -116,9 +128,12 @@ Verified on Windows, headed Chrome with a secure context and NVIDIA Lovelace:
 - 358 focused tests across 23 files passed, along with typecheck, editor build and
   scene:check (206 assets, 13 scenes, 38 environment LOD pairs).
 
-The isolated demonstration server uses temporary QA port 5197 so it does not
-take over another checkout's fixed 5100 service. Working directory is this
-checkout; logs and PID are in `.workbuddy/tmp/body-ik/server.log`,
-`server.err.log`, and `server.pid`. Stop it in PowerShell with
-`Stop-Process -Id ([int](Get-Content .workbuddy/tmp/body-ik/server.pid))`.
-The project's normal development ports and HTTPS settings are unchanged.
+That run used a separate worktree's QA server on 5197, with local logs/PID under
+`.workbuddy/tmp/body-ik/`. This is historical service provenance, not an instruction
+to start or stop a server in the current checkout. Verify live ownership before
+any process action; normal editor/M0 ports remain 5100/5101.
+
+Later v15 integration and refactor acceptance are recorded in the
+[integration report](../review/branch-integration-2026-10-09.md) and
+[architecture report](../architecture/acceptance-2026-10-09.md). They do not rerun
+every original anatomical comparison, phone check or crowd stress test.

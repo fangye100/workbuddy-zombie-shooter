@@ -1,5 +1,11 @@
 # 第二轮独立评审（只读复验）· `feature/headless-runtime`
 
+> Historical evidence: file paths, line numbers, findings and test counts below
+> belong to the recorded review/delivery, not today's source or new validation.
+> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
+> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
+> before reusing a command or treating an old finding as a current defect.
+
 评审对象：`C:\Users\fangy\WorkBuddy\game-design-zombie`，HEAD = `26f8c22`，20 笔提交。
 评审方式：只读。未修改任何源文件、未提交、未动 `.git`。唯一写入是本报告。
 （注：工作区里 `agents.md` 的未提交改动是评审开始前就存在的他人改动，与本次评审无关。）
