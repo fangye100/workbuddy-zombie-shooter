@@ -47,7 +47,7 @@ describe('selected animation debug collection', () => {
   it('projects actual selector and pose facts without invented state edges or GPU IK', () => {
     const s = sample(); const graph = selectionGraph(s); expect(graph.edges).toContainEqual({ from: 'behavior', to: 'selector', active: true });
     expect(graph.nodes.find(n => n.id === 'actual')!.subtitle).toBe(s.decision.actual);
-    const pose = poseGraph(s); expect(pose.nodes.find(n => n.id === 'ik')!.subtitle).toBe('unsupported');
+    const pose = poseGraph(s); expect(pose.nodes.find(n => n.id === 'ik')!.subtitle).toBe('此管线不支持 IK');
     expect(pose.nodes.find(n => n.id === 'transition')!.details.join(' ')).toContain('前一显示姿态快照');
   });
 });

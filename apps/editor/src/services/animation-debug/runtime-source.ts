@@ -31,7 +31,14 @@ export class RuntimeAnimationDebugSource implements AnimationDebugSource {
   }
   watch(target: DebugTarget | null, sink: AnimationSink | null): void {
     this.motions.watchDebug(target?.kind === 'scene' ? target.nodeId : null, target?.kind === 'scene' ? sink : null);
-    this.bridge.watchDebug(target?.kind === 'entity' ? { kind: 'entity', id: target.id, generation: target.generation, runId: target.runId } : null, target?.kind === 'entity' ? sink : null);
+    this.bridge.watchDebug(target?.kind === 'entity' ? { kind: 'entity', id: target.id, generation: target.generation, runId: target.runId } : null,
+      target?.kind === 'entity' && sink ? snapshot => sink(this.decorateEntity(snapshot)) : null);
+  }
+  private decorateEntity(snapshot: AnimationSnapshot | null): AnimationSnapshot | null {
+    if (!snapshot || snapshot.pipeline !== 'proxy' || !snapshot.characterId) return snapshot;
+    const errors = this.host.actorDiagnostics().filter(message => message.startsWith(`${snapshot.characterId}:`));
+    if (errors.length) { snapshot.status = 'failed'; snapshot.diagnostics.push(...errors); }
+    return snapshot;
   }
   read(target: DebugTarget): AnimationSnapshot | null {
     const runtime = this.host.runtime(); if (!runtime) return null;
@@ -41,9 +48,8 @@ export class RuntimeAnimationDebugSource implements AnimationDebugSource {
       if (!e) return null;
       const snapshot = this.bridge.debugSnapshot();
       if (!snapshot) return null;
-      const errors = this.host.actorDiagnostics().filter(message => message.startsWith(`${e.characterId}:`));
-      if (errors.length && snapshot.pipeline === 'proxy') { snapshot.status = 'failed'; snapshot.diagnostics.push(...errors); }
-      return snapshot;
+      if (snapshot.identity.kind !== 'entity' || snapshot.identity.id !== target.id || snapshot.identity.generation !== target.generation || snapshot.identity.runId !== target.runId) return null;
+      return this.decorateEntity(snapshot);
     }
     const node = this.host.document()?.nodes.find(n => n.id === target.nodeId);
     if (!node) return null;

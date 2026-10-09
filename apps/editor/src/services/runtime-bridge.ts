@@ -469,6 +469,7 @@ export class RuntimeBridge {
         if (observing) {
           const clip = actor?.clips[clipIndex], tr = this.poseTransitions.describe(`${e.runId}:${e.id}:${e.generation}`);
           this.debugLast = { identity: { kind: 'entity', id: e.id, runId: e.runId, generation: e.generation }, label: `${e.characterId} #${e.id}`,
+            characterId: e.characterId,
             tick, revision: tr?.revision ?? 0, pipeline: actor ? 'gpu-palette' : 'proxy', status: actor ? 'ready' : 'unavailable',
             decision: decision ?? { requested: '—', actual: '胶囊代理', source: 'proxy', fallback: '未执行骨架动画', actionStamp: '', rules: [] },
             clip: clip ? { name: clip.name, index: clipIndex, time: phase01 * clip.durationSec, duration: clip.durationSec, phase: phase01, loop: null } : null,

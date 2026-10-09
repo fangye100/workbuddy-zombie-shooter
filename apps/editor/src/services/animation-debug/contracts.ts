@@ -19,6 +19,7 @@ export interface DebugIk {
 }
 export interface AnimationSnapshot {
   identity: AnimationIdentity; label: string; tick: number; revision: number;
+  characterId?: string;
   pipeline: 'cpu-scene' | 'gpu-palette' | 'proxy';
   status: 'ready' | 'pending' | 'failed' | 'unconfigured' | 'unavailable';
   decision: DebugDecision;

@@ -21,7 +21,8 @@ export function poseGraph(s: AnimationSnapshot): DebugGraph {
     [s.clip ? `phase=${s.clip.phase.toFixed(3)}; duration=${s.clip.duration.toFixed(3)}s; loop=${s.clip.loop ?? '由行为/相位控制'}` : '未执行动画采样', 'retarget / palette baking 属加载期，不是每帧节点']),
     n('transition', '姿态过渡', tr ? `${Math.round(tr.weight * 100)}% 实际目标权重` : '无活动过渡', 280, 80, true, false,
       tr ? [`${tr.from} → ${tr.to}`, `elapsed=${tr.elapsed.toFixed(3)} / ${tr.duration.toFixed(3)}s`, `source=${tr.source}`, '来源是前一显示姿态快照，并非两个片段持续同时播放'] : ['当前姿态直接输出']),
-    n('ik', '身体部位 IK', s.ik.status === 'configured' ? `总权重 ${s.ik.weight.toFixed(2)} · ${s.ik.enabled ? '启用' : '禁用'}` : s.ik.status,
+    n('ik', '身体部位 IK', s.ik.status === 'configured' ? `总权重 ${s.ik.weight.toFixed(2)} · ${s.ik.enabled ? '启用' : '禁用'}` :
+      ({ unconfigured: '未配置', pending: '加载中', failed: '加载失败', unsupported: '此管线不支持 IK' } as const)[s.ik.status],
       540, 80, ikActive, s.ik.status === 'failed', [...s.ik.diagnostics,
         s.ik.status === 'unsupported' ? 'GPU 实例管线未执行身体 IK' : s.ik.status !== 'configured' ? '此角色没有生效的 IK 层' : '按当前实际目标与诊断显示有效权重']),
     n('output', '渲染输出', s.pipeline, 800, 80, true, s.status !== 'ready', [`${s.label} · tick ${s.tick}`, ...s.diagnostics])];
