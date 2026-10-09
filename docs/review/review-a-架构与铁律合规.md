@@ -1,10 +1,8 @@
 # A 组评审报告 · 架构与铁律合规
 
-> Historical evidence: file paths, line numbers, findings and test counts below
-> belong to the recorded review/delivery, not today's source or new validation.
-> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
-> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
-> before reusing a command or treating an old finding as a current defect.
+> 历史证据说明：下文路径、行号、问题和测试数量属于当时的评审/交付，不代表当前源码或新验证。
+> 僵尸模拟及测试已从 runtime 迁到 `packages/zombie-game`。
+> 复用命令或将旧问题判断为当前缺陷前，先读[当前分层契约](../architecture/layers.md)和[共享知识入口](../README.md)。
 
 - 评审对象：分支 `feature/headless-runtime`（HEAD `ba5e093`，17 笔提交，WU-0 → WU-6）
 - 评审范围：单一 owner / 依赖方向 / ADR 合规 / 容量与降级 / Play 资源生命周期 / 失败矩阵

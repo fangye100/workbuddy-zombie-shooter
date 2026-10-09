@@ -1,52 +1,44 @@
-# Development branch integration, 2026-10-09
+# 开发分支集成报告（2026-10-09）
 
-## Integrated sources
+## 合入来源
 
-- `codex/scene-authoring-loop`: `32e16895c1ce4330606ae7a7eb3fa9bd42fb65c1`;
-  fast-forwarded and pushed to `main` before the second merge.
-- `codex/animation-body-ik-20261007`: `38d2d19fe32dd317d07f293d45392c147dd2eaf5`.
-- Binding workspace, H-01 rig and shared-motion branches were already ancestors
-  of main. Their existing tips were retained; no duplicate cherry-picks.
+- `codex/scene-authoring-loop`：`32e16895c1ce4330606ae7a7eb3fa9bd42fb65c1`；
+  第二次合并前已快进到 `main` 并推送。
+- `codex/animation-body-ik-20261007`：`38d2d19fe32dd317d07f293d45392c147dd2eaf5`。
+- 绑定工作区、H-01 骨架和共享动作分支此前已是 main 的祖先。原分支末端保留，没有重复
+  cherry-pick。
 
-## Contract reconciliation
+## 契约协调
 
-Both branches published scene schema v14 with different migration histories.
-The combined schema is v15. Migration `integrated-weapons-audio-body-ik` accepts
-either v14 shape: preserves authored arsenal/audio/IK/transitions and derives the
-legacy single-weapon arsenal only when absent. Source input is not mutated.
-All 13 registered scenes were migrated through the supported migration tool.
+两个分支都发布过场景 schema v14，但迁移历史不同。集成后版本为 v15。
+`integrated-weapons-audio-body-ik` 接受两种 v14 数据：保留已有武器库、音频、IK 和动作
+过渡字段，仅在武器库缺失时从旧单武器配置派生。迁移不修改源输入。
+13 个已登记场景均通过受支持的迁移工具升级。
 
-Weapon animations remain driven by accepted weapon events. An active IK aim
-binding with locomotion enabled retains the gait during fire, and the weapon
-phase is not applied to the gait clip. Reload/equip retain their action routing.
+武器动画仍由实际接受的武器事件驱动。启用瞄准 IK 且允许保持移动时，开火保留步态，
+武器动作阶段不会覆盖步态片段的采样时钟。换弹和换装仍沿用各自动作路由。
 
-## Verification
+## 实际验证
 
-- Affected-owner Vitest suite: 105 files, 1,485 tests. Two initial failures were
-  stale expected migration names, repaired and verified by a focused 21-test
-  rerun. The additional gait/weapon regression passed in an 8-test motion run.
-- Typecheck, editor build and M0 sample build passed.
-- `scene:check` passed: asset hashes, 13 v15 scenes, environment/art/audio checks.
-- MCP editor/performance Node tests: 17 passed. Audio Python tests: 5 passed.
-- Headed Chrome, secure Tailscale editor URL, WebGPU NVIDIA Lovelace adapter.
-  Floor 1 Play loaded the seven-weapon arsenal and all 22 audio buffers; gameplay
-  audio events played without audio errors. Stop ledger: 8 registered, 8 disposed,
-  pending 0; audio closed with no buffers or voices.
-- Registered HumanIK validation scene: four authored motion/IK characters loaded,
-  pending 0, loading errors empty. Changed upper-body Play weight from 0.75 to 0.5
-  via the visible slider, confirmed in runtime summary; Stop restored authored
-  weight 0.75 and disposed both registered resources (pending 0).
+- 相关 owner 的 Vitest 套件：105 个文件、1,485 项测试。初次有 2 项迁移名称预期过期，
+  修复后定向重跑 21 项通过；新增步态/武器回归在 8 项动作测试中通过。
+- 类型检查、编辑器构建及 M0 示例构建通过。
+- `scene:check` 通过：资产哈希、13 个 v15 场景及环境/美术/音频检查。
+- 编辑器 MCP/性能 Node 测试 17 项通过，音频 Python 测试 5 项通过。
+- 有界面 Chrome、HTTPS Tailscale 编辑器地址、真实 WebGPU NVIDIA Lovelace 适配器。
+  第一层 Play 装载 7 种武器和全部 22 个音频缓冲；玩法音频事件正常播放，无音频错误。
+  Stop 账目：登记 8、释放 8、待释放 0；音频关闭，无缓冲和播放声音残留。
+- 已登记的 HumanIK 验证场景装载 4 个动作/IK 角色，待加载 0、加载错误为空。
+  通过可见滑块把 Play 上半身权重从 0.75 改为 0.5，并在运行时摘要中确认；Stop 恢复
+  场景权重 0.75，释放全部 2 个已登记资源，待释放 0。
 
-Evidence: [Play](../evidence/branch-integration-2026-10-09/ik-play.json),
-[Stop](../evidence/branch-integration-2026-10-09/ik-stop.json),
-[headed capture](../evidence/branch-integration-2026-10-09/ik-play.png).
+证据：[Play](../evidence/branch-integration-2026-10-09/ik-play.json)、
+[Stop](../evidence/branch-integration-2026-10-09/ik-stop.json)、
+[有界面截图](../evidence/branch-integration-2026-10-09/ik-play.png)。
 
-Validation limits: desktop device only; no new physical iPhone acceptance or
-human audio-quality judgment. Retarget reports still mark existing contact
-calibration/capability gaps as partial. Missing mouse target falls back to
-animation with an explicit diagnostic; authored angle limits clamp as designed.
-This merge does not claim those pre-existing limitations were repaired.
+验证只覆盖桌面设备，没有新增实体 iPhone 验收或人工音质判断。Retarget 报告仍将接触
+标定和能力缺口标为部分完成。鼠标目标缺失时带诊断回退至动画；角度限制按配置钳制。
+本次合并没有声称修复这些已有边界。
 
-Concurrent WorkBuddy daily logs, untracked deliveries and draft music/voice brief
-were preserved outside the merge commit. Further classification work continues
-on a separate development branch.
+其他会话的 WorkBuddy 日志、未跟踪资产交付及音乐/语音草稿未纳入合并提交。
+后续代码分类工作在独立开发分支继续。

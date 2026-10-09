@@ -1,242 +1,227 @@
-# Visual quality playbook — comic zombie game
+# 美漫僵尸游戏画面品质提升指南
 
-Distilled from the scene-quality work of 2026-10-04–05. This is the reusable project knowledge entry; delivery reports retain the revision-specific results. Implementation statements below describe the quality branch through `e3bc6c4`, not an assertion that the branch has merged or that artistic matching is complete. Current project rules and source contracts take precedence over historical notes.
+沉淀自 2026-10-04–05 场景品质开发，是可复用知识入口；交付报告保留版本特定结果。
+早期实现说明描述品质分支至 `e3bc6c4`，不代表分支已合入或美术匹配完成。
+后续更新见第 9–11 节，当前规则和源码契约优先于历史记录。
 
-## 1. Match an art language before adding detail
+## 1. 先统一美术语言，再增加细节
 
-The reviewed gameplay reference combines dark ink, restrained background detail, warm danger colors, cyan utility accents, purple UI panels and layered urban scenery. Levels keep their different gameplay rules while sharing this language. Keep the local GDD's god-view camera: copying the illustration's shoulder-level framing would change the gameplay contract.
+Gameplay 参考使用深色描边、克制背景、暖色危险提示、青色功能点、紫色 UI 及多层街景。
+各关玩法不同，美术语言统一。保留本地 GDD 的俯视相机，不能为了复制插画肩部高度构图
+改变玩法契约。
 
-Use this refinement order:
+精修顺序：
 
-1. Lock a reproducible gameplay view and identify the player, threats, traversable lane and interaction targets.
-2. Establish large silhouettes and near/middle/far value separation. Fill missing background planes before spending effort on small surface marks.
-3. Align the key light, cool fill, material palette and tone mapping. Preserve visible shadow planes on characters and buildings.
-4. Add grounded contact, restrained outlines and stable texture detail.
-5. Add readable, event-driven combat accents. Recheck the scene during movement and combat, not only when empty.
+1. 固定可复现游戏视角，明确玩家、威胁、可通行路径和交互目标。
+2. 建立大轮廓及近/中/远明度分离，先填背景大面，再处理细碎表面。
+3. 对齐主光、冷填光、材质色板和色调映射，保留角色/建筑阴影面。
+4. 加地面接触、克制描边及稳定纹理细节。
+5. 加实际事件驱动的战斗强调，移动/战斗中再检查，不只看空场景。
 
-A high-angle game view exposes roofs and ground more than façades. Request complete roofs, parapets, setbacks and awnings from asset generation. Prefer large hand-painted patches and structural lines over dense scan noise. Source previews need to survive the actual toon shader, exposure and projected size.
+高角度更暴露屋顶/地面，生成资产需完整屋顶、女儿墙、退台、雨篷。优先大手绘色块和
+结构线，不用密集扫描噪点；源预览须经实际 toon、曝光和投影尺寸检查。
+曾发现补给店/棚/泵遮挡道路，移到路后改善交互可见性且不动玩法节点；远 skyline 同样
+放在玩法空间后。增加遮挡屋顶细节不能解决构图问题。
+程序化几何适合构图、重复道路、大轮廓及明确缺资产；特色中景可用定制源模型，两种来源
+都不自动证明最终品质。见[需求](../31-美漫画风资产需求与生成提示词.md)、
+[场景精修](../28-EnvironmentSceneQualityPass.md)、[参考比较](../30-ComicRenderingAcceptance.md)。
 
-**Observed composition correction:** the supply store/canopy/pump blocked the playable road from the game camera. Moving these decorative pieces behind the road improved interaction visibility without moving gameplay nodes. Likewise, the deep P0 skyline was placed behind the playable space. Increasing detail on an occluding foreground roof would not solve this problem.
+## 2. 先诊断渲染，再重画资产
 
-Treat procedural geometry as useful for composition, repeatable roads, broad silhouettes and explicitly tracked missing assets. Distinctive middle-distance architecture benefits from authored source assets. Neither provenance automatically establishes final quality.
+### 颜色与 uniform 契约
 
-Sources: [art brief](../31-美漫画风资产需求与生成提示词.md), [scene pass](../28-EnvironmentSceneQualityPass.md), [reference comparison](../30-ComicRenderingAcceptance.md).
+曾有两个让优质纹理显示错误的缺陷：AgX 未对线性输入做对数曝光编码；饱和度读取 padding。
+当前 AgX 转工作空间、编码曝光、施加对比曲线后回线性 sRGB，post 只做一次显示转换。
+饱和度在 float 10、`midG.z`，`midG.y` 是 padding；CPU 对象正确不证明 Shader 读对位置。
 
-## 2. Diagnose rendering before repainting assets
+回归用生产 packer 和 Shader 一起测黑、灰、亮度单调、中灰、高光及 RGB 分离，测饱和度
+0/1 和显示空间 ink 例外；这些探针分离颜色数学与构图，并补充可见比较。不要用极端
+曝光/纹理色修饰坏转换，先确定 sRGB 解码、线性照明、tone mapping 和显示编码边界。
+保留暗描边，同时不压死材质暗部。
+源码：[common Shader](../../packages/render/src/shaders/common.wgsl.ts)、
+[post Shader](../../packages/render/src/shaders/post.wgsl.ts)、
+[装箱](../../packages/render/src/frame-uniforms.ts)、[历史 GPU 探针](../evidence/comic-matching-2026-10-05/gpu-probes.json)。
 
-### Color and uniform contracts
+### 光、线与接地
 
-The session found two defects that could make good source textures look wrong:
+- 主光方向与视线应有区分以显形体。高角度下先比较侧低光/正面高光，再提高对比。
+  参数落场景，不把单一强度当普适规则。
+- 按屏幕尺寸调背景线重；重建小碎面配强描边会发黑，必要时降低远景材质描边。
+- 当前接触椭圆帮助道具/角色接地，不是方向阴影贴图，不能证明屋顶真实遮光。
+- 静态 Shader 的 `unlit` 只跳过主光分阶，仍乘主光并加填光等，不是可靠独立照明诊断，
+  不能靠开启它修拉伸 UV。
 
-- AgX received linear values without the required logarithmic exposure encoding. The current implementation transforms to its working space, encodes exposure, applies the contrast curve and returns linear sRGB; the post pass applies the display transfer once.
-- Post saturation read padding rather than the packed value. The current saturation field is float 10, `midG.z`; `midG.y` is padding. A correct-looking CPU parameter object does not prove the shader reads that parameter.
+源码：[场景 Shader](../../packages/render/src/shaders/scene.wgsl.ts)、
+[接触 Pass](../../packages/render/src/contact-shadows.ts)、[接触投影](../../apps/editor/src/services/scene-contacts.ts)。
 
-For regressions, use the production packer and shader together. Probe black, neutral gray, monotonic brightness, middle gray, highlight rolloff and RGB separation on the real adapter. Check saturation zero and one, plus the explicit display-space ink exemption. These narrow probes isolate color math from scene composition; they complement the visible scene comparison.
+### 静态与动画材质都要成立
 
-Do not compensate for a broken transfer function with extreme exposure or painted textures. First establish where sRGB decoding, linear lighting, tone mapping and display encoding happen. Keep ink dark without crushing all material shadow detail.
+动画批次曾只用代理颜色、静态显示贴图。BaseColor 必须进入实例角色路径，包括绑定与
+生命周期，Asset Browser 贴图预览不能证明玩家/群体接入。生成 albedo mip 和各向异性
+采样减远处闪烁；移动中检查稳定性，替换/Stop 检查自有纹理释放。不可把不透明 albedo
+假设直接用于透明 VFX。
+源码：[albedo](../../packages/render/src/albedo-texture.ts)、
+[动态 Shader](../../packages/render/src/shaders/dynamic.wgsl.ts)、[资源职责](../../packages/render/src/renderer-core.ts)。
 
-Source: [common shader](../../packages/render/src/shaders/common.wgsl.ts), [post shader](../../packages/render/src/shaders/post.wgsl.ts), [uniform packing](../../packages/render/src/frame-uniforms.ts), [recorded GPU probes](../evidence/comic-matching-2026-10-05/gpu-probes.json).
+## 3. 将生成源转成可用资产
 
-### Light, line and grounding
+### 明确配方，只归一化一次
 
-- Keep key-light direction sufficiently distinct from the view direction to reveal form. Under a steep camera, compare a lower side key against a high frontal key before increasing global contrast. Light settings belong to scene data; no single intensity is a universal art rule.
-- Tune background line weight at its actual screen size. Tiny reconstructed facets can produce excessive black noise with strong outlines. Reduce per-material outline strength for distant scenery when this occurs.
-- Current contact ellipses provide grounding for props and actors. They are not directional shadow maps and cannot establish whether a roof truly occludes light.
-- In the current static shader, `unlit` bypasses key-light quantization but still receives key multiplication and additive lighting terms. It is not a reliable lighting-independent diagnostic mode. Switching it on will not repair stretched UVs.
+原始源、提取 BaseColor、预览及来源与运行派生分开。约 50 万三角形源不会因命名 LOD0
+而适合运行；P0 的运行 LOD0 本身已优化。先应用 glTF 层级再判断 up：原始顶点像 Z-up，
+但节点旋转已变 Y-up，二次校正会把建筑放倒。保持等比，建筑底部中心 pivot，武器明确
+持握/前向；不对建筑套角色身高归一化。需求 W×D×H 对应 X×Z×Y，GLB bounds 是 X/Y/Z；
+展示缩放不等于物理尺寸。
 
-Source: [scene shader](../../packages/render/src/shaders/scene.wgsl.ts), [contact pass](../../packages/render/src/contact-shadows.ts), [scene contact projection](../../apps/editor/src/services/scene-contacts.ts).
+### 每级都从同一原始源生成
 
-### Static and animated materials must both work
+纹理感知减面，保护 UV seam；不同 UV 岛的同位置顶点不可互换。各级独立从原始源生成，
+不逐级连减。记录源 hash、配方、目标、输出 hash 和实测，识别过期输出。
 
-The animated batches previously used proxy colors while static models displayed textures. BaseColor has to reach the instanced actor path, including its binding and lifetime, for the art direction to be consistent. A textured Asset Browser preview alone cannot prove this.
-
-Generated albedo mip chains and anisotropic sampling reduce distant shimmer on both paths. Check texture stability while moving, and check owned texture destruction on replacement and Stop. Do not copy these opaque-albedo assumptions blindly into transparent VFX.
-
-Source: [albedo texture creation](../../packages/render/src/albedo-texture.ts), [dynamic shader](../../packages/render/src/shaders/dynamic.wgsl.ts), [renderer ownership](../../packages/render/src/renderer-core.ts).
-
-## 3. Convert generated sources into usable assets
-
-### Normalize once, with an explicit recipe
-
-Keep the untouched source, extracted BaseColor, preview and provenance separate from runtime derivatives. A roughly 500k-triangle generated source is not a suitable runtime LOD0 merely because it has that filename. P0 runtime LOD0 is itself an optimized derivative.
-
-Apply the glTF node hierarchy transforms before judging up-axis. The P0 raw vertex arrays looked Z-up, but their node rotation already produced Y-up. A second correction would rotate a valid building onto its side. Preserve uniform proportions; use a ground-centred building pivot and a documented grip/forward convention for weapons. Do not apply character-height normalization to buildings.
-
-Dimension notation also matters: the generation brief uses W×D×H = X×Z×Y, whereas a GLB bounds vector is X/Y/Z. Gallery presentation scale is separate from the physical dimensions of the asset.
-
-### Generate each LOD from the same original
-
-Use texture-aware simplification and preserve UV seams. Positions shared across different UV islands are not interchangeable. Generate each level independently from the original rather than repeatedly decimating the previous level. Record source hash, normalization recipe, target, output hash and measured results so stale output is detectable.
-
-The current P0 pipeline checks:
-
-| Gate | P0 threshold | What it cannot establish |
+| P0 数值门禁 | 阈值 | 不能证明 |
 |---|---|---|
-| Position/UV validity | Finite attributes | Artistic surface quality |
-| Surface area | 90–110% of source | Local window/roof distortion |
-| Bounds drift | At most 5% | Correct silhouette at every angle |
-| Triangle target | Within 5% | Frame time on a target device |
-| Topology | No added boundary/nonmanifold counts relative to welded source | Repair of defects already present in the source |
+| 位置/UV | 属性有限 | 美术表面品质 |
+| 面积 | 源 90–110% | 局部窗/顶变形 |
+| bounds 漂移 | ≤5% | 全角度轮廓 |
+| 面数目标 | 误差 ≤5% | 设备帧时间 |
+| 拓扑 | 相对焊接源不增边界/非流形数量 | 修复源本身缺陷 |
 
-These are the implemented P0 gates, not universal thresholds for every future asset class. Stage outputs before publishing. Publishing validates recipe/source/output hashes and numerical gates; **it does not enforce visual acceptance**. Regeneration marks visual review pending.
+这是 P0 实现门禁，不是所有资产通用标准。先暂存，再发布；发布检查配方/源/输出 hash
+和数值，**不强制视觉通过**，重新生成使视觉待复核。
+反例：FAR-01 的 6k 模型过数值门禁，却把窗纹理拉成三角形；改为 20k/14k/10k 并在
+场景选 14k LOD1 后改善。弱描边/改灯不能修 UV；调整配方，另量性能，不为原预算降门禁。
 
-**Counterexample worth retaining:** FAR-01 at 6k triangles passed numerical gates but stretched window textures into triangular shapes in the scene. Increasing the family to 20k/14k/10k and placing its 14k LOD1 improved the inspected result. Reducing outline strength or changing lighting could not repair that underlying UV loss. Do not weaken the geometric gate simply to satisfy the original face budget; revise the recipe and measure performance separately.
+并排检查各级，再从游戏相机近看 UV、远看轮廓/噪点。三份文件不等于自动距离切换、流式
+装载或手机预算；环境当前选择明确 LOD 引用。
+见[构建器](../../tools/art/build-p0-lods.py)、[配方](../../assets/art/p0-intake.json)、
+[原交付与预算](../32-P0-asset-intake-2026-10-05.md)、[比较画廊](../evidence/p0-art-intake-2026-10-05/lod-gallery.png)。
 
-Inspect all levels side by side, then inspect the chosen level from the game camera, close enough to expose UV damage and far enough to judge silhouette/noise. Generating three files does not implement automatic distance switching, streaming or a mobile performance budget. Environment placements currently choose explicit LOD references.
+## 4. 精修必须可编辑、可替换
 
-Source: [P0 builder](../../tools/art/build-p0-lods.py), [intake recipe](../../assets/art/p0-intake.json), [intake report and final budgets](../32-P0-asset-intake-2026-10-05.md), [comparison gallery](../evidence/p0-art-intake-2026-10-05/lod-gallery.png).
+摆放、氛围/光都在场景 JSON，离线工具编辑资产/场景，渲染消费。新语义先 schema/迁移/
+验证，再运行时/UI；稳定 NodeId、AssetRef path/GUID、新场景登记。
+占位与未来资源共用米制、轴/pivot、稳定路径/GUID、明确状态及可见层级标签。早期 P0
+MID-03/FAR-02 使用 3 份相同廉价占位，后续替换见第 9 节；相同占位不冒充独立减面级。
+最终模型审核后替 bytes/更新 meta，保持身份和摆放。
 
-## 4. Keep visual refinement editable and replaceable
+精修遵守容量：第一层 64 静态槽，6 条装饰斑马线离线并为 1 个 GLB，保留首 NodeId，
+只删冗余装饰，回收 5 槽而不改引擎上限。玩法语义节点不能这样合并；NPC 走实例路径。
+可复用资产事实进 sidecar，场景选择进场景；生成/注释合并并保 GUID。重生成可能覆盖
+手工编辑，接受前看 diff。
+见[契约](../../packages/scene/src/document.ts)、[占位构建](../../tools/art/build-p0-placeholders.mjs)、
+[美术编辑](../../tools/art/apply-p0-art.mjs)、[meta 合并](../../tools/art/prepare-p0-meta.mjs)、
+[画廊](../../tools/art/build-p0-gallery.mjs)。
 
-All placements, atmosphere and light parameters belong to scene JSON. Offline generators can author assets and scene data; rendering code consumes them. New semantics start in the scene schema, with migration and validation, before runtime/UI implementation. Use stable NodeIds and AssetRef path/GUID pairs; register scenes in the project container.
+## 5. 天空/背景同时检查映射与生命周期
 
-Placeholders should carry the same logical asset identity and replacement contract as the future source: metres, axes, pivot, stable paths/GUIDs, explicit status and visible hierarchy labels. The original P0 MID-03/FAR-02 delivery used three identical cheap placeholder files; the later delivered replacements are recorded in §9. Identical placeholders keep references usable without claiming three separately simplified quality levels. Replace bytes and update metadata only after the final model is reviewed; preserve identity and placement.
+左右无缝不等于真实等距柱状全景。SKY-01 是绘制云带，当前上半球映射并在地平线/极区
+淡出以遮不适合区域，是表现折衷，不是重建缺失全景。天空位于无穷远，不占静态槽；
+blend/yaw/AssetRef 落场景。俯视相机可只见少量天空，还要精修可见 skyline/地面，不能
+为天空截图改游戏相机。
 
-Respect capacity while improving composition. Floor 1 had only 64 static slots: six decorative crosswalk strips were combined into one offline GLB, retaining the first node's identity and removing only redundant decorative nodes. This recovered five slots without raising the engine limit. Do not merge gameplay-semantic nodes merely to save draw slots. NPCs use the runtime instanced path.
+异步旧场景 decode 不得覆盖新场景。当前 loader 校 path/GUID，用 generation 拒绝迟到
+结果，关闭 bitmap，显式报错并回退程序天空；替换/清除 GPU 纹理释放。测试失败路径及
+Apply→Save→Reload。`editorCamera.elevation` 存弧度，面板 cameraElevation 是度；
+面板输入 0.5 近地平线，不是约 29°。保留转换边界，编辑/游戏相机分离。
+见[天空 Pass](../../packages/render/src/comic-sky.ts)、[异步 loader](../../apps/editor/src/services/sky-texture.ts)、
+[氛围编辑](../../apps/editor/src/services/atmosphere-panel.ts)、[相机转换](../../apps/editor/src/main.ts)。
 
-Store reusable asset facts in sidecars and scene-specific decisions in scene files. Sidecar generation/annotation must merge existing data and retain GUIDs. Scene regeneration can replace authored content: inspect its diff before accepting it, especially after manual editor adjustments.
+## 6. 漫画反馈与共享图集
 
-Source: [scene contract](../../packages/scene/src/document.ts), [placeholder builder](../../tools/art/build-p0-placeholders.mjs), [art authoring pass](../../tools/art/apply-p0-art.mjs), [metadata merge](../../tools/art/prepare-p0-meta.mjs), [gallery authoring](../../tools/art/build-p0-gallery.mjs).
+战斗 ink 跟随实际射击/伤害：曳光、起点闪、粉尘、命中、伤害数字和击杀字。表现不制造
+伤害/暴击，实体移除后保事件位置，过滤旧 run，用模拟时间让暂停反馈冻结。当前是
+Canvas 反馈，不是带深度遮挡的 GPU 粒子。
 
-## 5. Sky and background need both mapping and lifecycle
+图集清单需效果 ID、帧数/时间、像素矩形、UV offset/scale、pivot 和 alpha 约定。
+按 bytes 核验，不信交付摘要：P0 实际 23 效果/64 格，摘要却写 16。明暗底检查假棋盘、
+矩形残留、裁烟和被抠掉细线；缩放/旋转/淡出单帧不是独立手绘序列，必须看运动。
+交付图集因残底/格边裁切隔离；GPU 接入前修 alpha、RGB bleed/padding、明确 straight/
+premultiplied-alpha，并验证缩小/mip 不串格。**这些修复和共享 GPU 图集渲染未完成。**
+共享纹理减少纹理切换；减少 draw call 还需兼容管线/混合/深度和合批/实例，不是改 UV
+就自动合批。
+见[combat ink](../../packages/zombie-game/src/presentation/combat-ink.ts)、[需求契约](comic-vfx-atlas-v1.json)、
+[实际布局](../../assets/art/textures/VFX-ATLAS-01/delivered-layout.json)、[接入处理](../32-P0-asset-intake-2026-10-05.md)。
 
-A seamless left/right edge does not make an image a true equirectangular panorama. SKY-01 is a painted cloud band. The current pass maps it over the upper hemisphere and fades its influence near the horizon/pole to conceal unsuitable regions. This is a deliberate presentation compromise, not reconstruction of missing panoramic information.
+## 7. 排障索引
 
-The sky is directional at infinity and consumes no static mesh slot. Keep blend, yaw and AssetRef in scene data; the editor camera only changes inspection. A downward gameplay camera can legitimately show little sky, so spend matching effort on the visible skyline and ground too. Do not replace the game camera just to produce a sky screenshot.
-
-Async texture loading is part of quality: an old scene's decode must not overwrite the newly opened scene. The current loader validates path/GUID, uses a generation token to reject late results, closes decoded bitmaps, reports failures visibly and provides a procedural fallback. Replacing/clearing the GPU texture releases its allocation. Test these failure paths along with successful Apply → Save → Reload.
-
-**Unit trap:** saved `editorCamera.elevation` is radians; the panel's `cameraElevation` is degrees. Entering `0.5` into the latter gives a near-horizon view, not about 29°. Use the existing conversion boundaries; keep author and gameplay camera state separate.
-
-Source: [sky pass](../../packages/render/src/comic-sky.ts), [async loader](../../apps/editor/src/services/sky-texture.ts), [atmosphere authoring](../../apps/editor/src/services/atmosphere-panel.ts), [camera conversions](../../apps/editor/src/main.ts).
-
-## 6. Comic feedback and shared atlases
-
-Current combat ink follows actual shot/damage events: tracers, origin flash, powder, impact burst, damage numbers and kill captions. Presentation does not create damage or invent critical hits. Preserve event positions after entity removal, filter obsolete runs, and use simulation time so pause freezes feedback consistently. The implemented feedback is Canvas-based, not depth-occluded GPU particles.
-
-For a future atlas, require a manifest with effect IDs, frame counts/timing, pixel rectangles, normalized UV offsets/scales, pivots and alpha convention. Validate the bytes against that manifest instead of trusting a delivery summary: the P0 delivery actually contains 23 effect IDs in 64 cells, despite its summary saying 16.
-
-Transparent backgrounds need visual inspection on light and dark surfaces. Check for fake checkerboards, rectangular residue, clipped smoke and thin lines lost during extraction. Single-frame scale/rotation/fade variants are not independently illustrated animation frames. Review the moving sequence, not only an atlas contact sheet.
-
-The delivered atlas remains quarantined because of residue and cell-edge clipping. Before GPU integration, the recommended next steps are to repair alpha, provide appropriate RGB bleed/padding, choose a consistent straight/premultiplied-alpha pipeline and validate minification/mip sampling without adjacent-cell leakage. **These repairs and the shared GPU-atlas renderer are not completed in this session.**
-
-A shared texture can reduce texture changes. Draw-call reduction additionally requires compatible pipeline/blend/depth state and batching or instancing; merely sampling different UV offsets does not automatically batch separate draws.
-
-Source: [combat ink](../../packages/zombie-game/src/presentation/combat-ink.ts), [requested atlas contract](comic-vfx-atlas-v1.json), [actual delivered layout](../../assets/art/textures/VFX-ATLAS-01/delivered-layout.json), [intake disposition](../32-P0-asset-intake-2026-10-05.md).
-
-## 7. Troubleshooting map
-
-| Symptom | First discriminating check | Direction supported by this session |
+| 症状 | 优先区分检查 | 处理方向 |
 |---|---|---|
-| Everything looks washed out or unexpectedly gray | Production post packing plus gray/color probes | Fix transfer/offset errors before retuning assets |
-| Static preview is textured, animated enemy is flat | Inspect the dynamic material/texture binding | Carry BaseColor through the instanced path |
-| Distant buildings sparkle or turn black | Compare mip usage, outline strength and projected size | Stabilize texture sampling and reduce line noise |
-| Windows become triangles after optimization | Compare textured source and LOD under identical light | Preserve UVs or raise the simplification target |
-| Building lies sideways or changes size between LODs | Evaluate node transforms and normalization recipe | Normalize once; preserve metres, pivot and proportions |
-| Decorative asset hides a supply interaction | Inspect from the actual game camera | Reposition scenery while preserving gameplay semantics |
-| Sky is acceptable at horizon but stretches overhead | Check source projection and poles | Use documented fade/mapping compromise or better source |
-| Wrong sky appears after switching scenes | Delay an earlier decode intentionally | Reject stale completion and dispose its bitmap |
-| Atlas has boxes/halos or clipped motion | Inspect alpha on contrasting backgrounds and animate | Quarantine; repair extraction/padding before integration |
+| 泛白/异常灰 | 生产 post 装箱与灰/色探针 | 先修转换/偏移 |
+| 静态有贴图，动画平色 | 动态材质/纹理绑定 | BaseColor 进入实例路径 |
+| 远建筑闪/黑 | mip、描边、投影尺寸 | 稳定采样，减线噪 |
+| 减面后窗变三角 | 同光贴图源/LOD 比较 | 保护 UV 或增预算 |
+| 建筑倒下/LOD 尺寸变 | 节点变换/配方 | 只归一化一次，保米制/pivot |
+| 道具挡补给 | 真游戏相机 | 移装饰，不改玩法语义 |
+| 天空地平线可用/头顶拉伸 | 源投影/极区 | 约定淡出或更好源 |
+| 换场景出现旧天空 | 故意延迟旧 decode | 拒迟到并释放 bitmap |
+| 图集盒/光晕/裁切 | 明暗底 alpha 和动画 | 隔离，修抠图/保护带 |
 
-## 8. Acceptance and evidence discipline
+## 8. 验收与证据纪律
 
-For each refinement, record the revision, scene, selected asset/LOD, game camera, viewport/DPR/render scale, relevant lighting/exposure and runtime state. Compare the same framing; change one suspected cause at a time. A temporary inspection camera is useful evidence but must be labelled and restored.
+记录版本、场景、资产/LOD、游戏相机、视口/DPR/render scale、灯光/曝光和运行状态。
+同构图比较，每次改一个疑因；临时观察相机需标记并恢复。分别检查：
 
-Use four distinct checks:
+1. **数据**：GUID、schema/迁移、源/派生 hash、引用/容量；改资产/场景跑 scene:check。
+   不重新生成 meta 来掩盖未 smudge 的 LFS 指针。
+2. **行为**：编辑、保存、异步失败、资源职责测试；构建/类型只证明编译。
+3. **可见编辑**：开正确场景、等资产完成、edit/apply/save/reload、检查坏引用、Play/Stop
+   恢复。直接 input hook 只证明该 hook，不证明未走的键盘/菜单。
+4. **真实 GPU**：有界面、安全上下文、硬件 adapter、玩法/比较视图、GPU/浏览器错误。
+   按当前规则，不复制历史启动 flags；空控制台不是美术通过。
 
-1. **Data:** scene/sidecar GUIDs, schema/migrations, source and derived hashes, references and capacity. Run `pnpm run scene:check` after asset or scene changes. Never regenerate metadata to hide unsmudged LFS pointer files.
-2. **Behavior:** relevant tests for author commands, persistence, async failure and resource ownership. Build/typecheck establish compilation, not appearance.
-3. **Visible authoring:** open the intended scene, wait for actual asset completion, edit/apply/save/reload, inspect invalid references, and verify Play/Stop restores author state. A direct input hook proves that hook's behavior, not an untested keyboard/menu path.
-4. **Real GPU appearance:** use the required headed browser, verify secure context and actual hardware adapter, inspect gameplay and comparison views, and check GPU/browser errors. Follow current browser/GPU rules rather than copying historical launch flags. A clean console is necessary evidence, not artistic acceptance by itself.
+桌面 FPS 点样不证明持续/手机性能；旧全关卡运行不自动认证新美术。区分完成关卡、
+装载/回滚、视觉及设备性能，每个结论绑定实际版本。
 
-A desktop FPS spot sample is not sustained/mobile performance certification. A previous full-level run cannot automatically certify later art changes. Keep each claim attached to its tested revision and distinguish level completion, loading/rollback, visual quality and target-device performance.
+### 历史证据与待完成项
 
-### Evidence and remaining work
+- [环境精修](../28-EnvironmentSceneQualityPass.md)：构图、摆放及早期第一层输入运行。
+- [玩家外观](../29-PlayerAppearanceAcceptance.md)：已有 H-01 表现范围。
+- [美漫渲染](../30-ComicRenderingAcceptance.md)：色探针、动画贴图、天空/接地和反馈限制。
+- [P0 接入](../32-P0-asset-intake-2026-10-05.md)：当时预算、画廊、天空持久化/失败及 Play/Stop。
 
-- [Environment pass](../28-EnvironmentSceneQualityPass.md): composition changes, placement mapping and the earlier full first-floor input run.
-- [Player appearance](../29-PlayerAppearanceAcceptance.md): existing H-01 presentation scope.
-- [Comic rendering](../30-ComicRenderingAcceptance.md): color probes, dynamic textures, sky/contact foundation, actual validation and combat-feedback limitations.
-- [P0 intake](../32-P0-asset-intake-2026-10-05.md): current asset budgets, gallery, sky persistence/failure evidence and Play/Stop scope.
+原 P0 时 MID-03/FAR-02、图集修复/GPU、玩家武器接入、手机剖析和设计匹配未完成；
+MID-03/FAR-02 后续已交付（第 9 节），不可沿用旧缺模型清单。画廊手枪不证明玩家接入，
+后续程序武器与最终资源区分如下。完整 MCP 仍独立开发范围。
 
-At the original P0 revision, final MID-03/FAR-02 models, atlas repair/GPU integration, player weapon attachment, mobile profiling and further design matching remained open. MID-03/FAR-02 were subsequently delivered (§9); do not reuse that old missing-model list. The gallery pistol alone did not establish player-weapon integration. Later procedural weapon presentation is distinguished from final authored resources below. Full editor MCP coverage remains separate development work.
+## 9. 建筑 LOD 与连续街道（2026-10-07 更新）
 
-## 9. Architectural LOD and continuous streets — 2026-10-07 update
+MID-03/FAR-02 已到货，同时收到 MID-04/05/06，预算/场景/版本证据见
+[街景交付](../36-StreetQualityAndArchitecturalLOD.md)，上方早期数据不是当前验收。
 
-MID-03/FAR-02 have now arrived, together with MID-04/05/06. See the
-[street quality delivery](../36-StreetQualityAndArchitecturalLOD.md) for the new
-budgets, scene counts and revision-specific evidence; the earlier numbers above
-remain historical rather than current acceptance claims.
+- 比较保端点贴图 QEM 与自由顶点迁移。保护法线/边界/UV seam，开启 planar quadrics，
+  屋顶/窗/桥预算不足就提高；配置不能保证源或减面完美直线。
+- 全局面积/bounds 可漏局部折顶。输出局部法线/偏移对相干源平面比较，报告覆盖率；
+  噪声源可能使指标不确定，不能把覆盖不足当通过，或把原斜顶/破损当新增折面。
+  近距离贴图与游戏视图分开验收。
+- 只合批无引用身份且工具能正确烘焙变换的装饰，保留玩法节点/保留 NodeId，不猜不支持的
+  父缩放/旋转。
+- GLB parser 即使禁归一化仍重置 X/Z 中心、Y 接地；世界空间烘焙街道必须在场景恢复
+  原中心/最小 Y，否则有效 GLB 也会挪路缘/埋路漆。
+- 断开的道路/人行面改连续表面，外围地面铺到 skyline 下。重复建筑不能藏露底空缺；从入口、
+  补给区、末房检查整条近/中/远景。
+- 合并动画后重生成保最新玩家 rig、共享动作和游戏相机，生成前后核真实组件；断言缺失节点
+  不能证明保留。
 
-- For buildings, compare endpoint-preserving textured QEM against unconstrained
-  vertex relocation. Preserve normals, boundaries and UV seams, enable planar
-  quadrics, and raise roof/window/bridge budgets before accepting visible folds.
-  None of these options guarantees a straight source or a perfect simplification.
-- Global area/bounds checks can miss a locally folded roof. Compare local output
-  normals and offsets against coherent source planes. Report the qualifying coverage;
-  noisy generated surfaces may make the metric inconclusive. Do not turn insufficient
-  coverage into an automatic artistic pass, or classify intentional gables/damage as
-  invented slopes. Keep textured near views and the actual gameplay view as separate
-  acceptance checks.
-- Batch only decorations whose identities are not referenced and whose transforms
-  the authoring tool can correctly bake. Keep gameplay nodes separate, preserve the
-  retained NodeId and reject unsupported parent scale/rotation instead of guessing.
-- Check the importer's pivot contract. This project's GLB parser recenters X/Z and
-  grounds Y even when scale normalization is disabled. A world-space baked street
-  batch therefore needs its original center/minimum restored in the scene transform.
-  Otherwise a valid GLB can shift curbs or bury road paint.
-- Replace disconnected road/walk fragments with continuous authored surfaces and
-  extend the apron beneath the skyline. A repeated building does not conceal a ground
-  plane that ends before its base. Judge near/middle/far coverage from the whole
-  playable street, including entry, supply area and last-room viewpoints.
-- After merging animation work, explicit scene regeneration must retain the latest
-  player's rig, shared-motion library and game camera. Verify those actual components
-  before and after regeneration; an assertion on a missing node proves nothing.
+## 10. 群体节奏与攻击可读性（2026-10-07）
 
-## 10. Crowd cadence and attack readability — 2026-10-07
+增加 NPC 增加重叠攻击；普通名额和时序范围落场景，精英明确区分。距离/冷却/许可满足
+才 windup，预备锁目标，再真实运动/碰撞；大范围扇形不能代替投射物/扑击/冲刺。
+每 NPC 独立种子流用于感知、追击决策、预备、恢复、冷却，同 seed 可复现；测试同距离错峰
+和距离外不预备。伤害/死亡即时，动画从自己的预备起点开始，随机循环偏移不等于决策错峰。
+普通攻击楔形归 debug，酸落点、冲刺路和爆炸预警保玩法可读。效果只消费模拟时间/事实。
+键鼠走可见真实输入；触摸检查 pointer 归属、取消、暂停/blur 清理。合成多指夹具与实体手机
+分开，不用响应式布局/桌面点样认证手机。见[战斗交付](../37-CombatInputAndPopulationQuality.md)
+及[追加资源](../38-GameplayActionAndVfxAssetBrief.md)。
 
-Increasing NPC count also increases overlapping attacks. Persist the ordinary attacker
-budget and timing ranges in scene rules; keep elites explicitly separate. Start windup
-only within the authored trigger distance and after cooldown/permission checks. Lock a
-target at anticipation, then resolve the real trajectory and collision; a large sector
-must not substitute for a designed projectile, pounce or charge.
+## 11. 当前职责与资源边界（2026-10-09）
 
-Give each NPC an independent seeded timing stream for perception, chase decisions,
-windup, recovery and cooldown. Preserve reproduction with the same seed, stagger
-equal-distance actors in a test, and verify outside-range actors never enter windup.
-Damage/death remain immediate facts. Per-actor attack animation starts at its own
-windup; adding random loop offsets alone does not stagger gameplay decisions.
-
-Separate debugging geometry from purposeful anticipation: ordinary attack wedges
-belong behind a debug switch; acid landings, charge routes and explosion warnings
-remain readable gameplay cues. Draw effects from simulation time and facts so pause
-freezes appearance and the renderer never deals damage.
-
-Validate keyboard/mouse through actual visible inputs, and independent touch sticks
-through pointer ownership, cancellation and pause/blur cleanup. Label synthetic
-multi-pointer fixtures separately from real mobile hardware evidence. A responsive
-viewport and a desktop GPU spot sample do not certify phone performance. See
-[combat delivery](../37-CombatInputAndPopulationQuality.md) and
-[additional asset brief](../38-GameplayActionAndVfxAssetBrief.md).
-
-## 11. Current owners and resource boundaries — 2026-10-09
-
-After the integration and architecture split, authored content still lives in
-scene/asset files, reusable GPU/shader mechanisms in `packages/render`, and
-game HUD/ink/audio in `packages/zombie-game/src/presentation`. Editor adapters
-project author/runtime facts; they must not acquire game damage/reward formulas.
-Use [the layer contract](../architecture/layers.md) for new work.
-
-Seven weapon behaviors and accepted action hooks have business implementations.
-The [procedural weapon presenter](../../packages/zombie-game/src/presentation/weapon-ink.ts)
-uses grip/muzzle/reload intent, but does not load arbitrary weapon-model AssetRefs
-or automatically bind hands to them. HumanIK torso/head aiming and firing gait
-are integrated; final grip/recoil/reload resource consumption remains distinct.
-The shared VFX atlas is still not a completed GPU atlas renderer. Availability,
-business implementation, procedural presentation and final artistic acceptance
-must be reported separately.
-
-The moved [audio asset resolver](../../packages/zombie-game/src/presentation/game-audio-assets.ts)
-uses Vite glob keys relative to its module. A path move can break real assets even
-when mocked tests and a build pass. Check actual scene AssetRefs/GUIDs against the
-glob, then run the reachable Play path. [Refactor evidence](../architecture/acceptance-2026-10-09.md)
-records 22 loaded takes and Stop cleanup; it is not new human listening or concept-art approval.
+场景/资产保内容，render 保通用 GPU/Shader，游戏 HUD/ink/audio 在 zombie-game/presentation。
+Editor 投影编辑/运行事实，不增加伤害/奖励公式。见[分层契约](../architecture/layers.md)。
+7 种武器有业务行为和接受动作 hook。[程序化武器表现](../../packages/zombie-game/src/presentation/weapon-ink.ts)
+消费持握/枪口/换弹意图，但不装载任意武器模型 AssetRef 或自动绑手。HumanIK torso/head
+瞄准和开火步态已集成；最终持握/后坐/填装资源消费独立。共享 VFX 图集 GPU 渲染仍未完成。
+资源可用、业务实现、程序化表现、最终美术验收分别报告。
+[音频 resolver](../../packages/zombie-game/src/presentation/game-audio-assets.ts)使用相对模块的
+Vite glob，迁移可让 mock/构建通过但真实资源失效；先核场景 AssetRef/GUID 和 glob，再
+走真实 Play。[重构证据](../architecture/acceptance-2026-10-09.md)记录 22 take 装载/清理，
+不代表新的人工审听或概念图通过。

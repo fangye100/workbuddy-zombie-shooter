@@ -1,8 +1,15 @@
-# Project collaboration rules (AGENTS.md)
+# 项目协作规则（AGENTS.md）
 
-This is the mandatory repository entry for every development Agent, including
-WorkBuddy and Codex. Read it before changing the project; discover task-specific
-contracts through [the shared knowledge index](docs/README.md).
+本文件是全部开发 Agent（含 WorkBuddy、Codex）的项目级必读入口。**改项目前先读本文件**，
+再通过[共享知识入口](docs/README.md)定位任务相关契约。
+
+## 文档语言约定
+
+- **本项目报告、设计说明、开发指南、验收记录及新增文档默认使用简体中文。**
+- 中文约定适用于所有开发 Agent，优先于本机“文档优先英文”等默认设置。
+- 代码标识、API/协议字段、路径、命令、稳定 ID 和必须精确引用的错误原文保持原样；
+  机器可读目录的字段/分类值不翻译，面向人的标题、说明和建议章节使用中文。
+- 更新旧文档时延续项目的中文风格；历史测量、提交、证据和结论不得因翻译而改写。
 
 ## 0. 包管理器：pnpm（2026-09-15 定）
 
@@ -67,9 +74,8 @@ contracts through [the shared knowledge index](docs/README.md).
   | `MAX_OBJECTS` | **64** | 场景**静态物件**上限（变换 uniform 槽位） |
   | `MAX_MATERIAL_SLOTS` | 256 | 材质槽位（逐子网格） |
   | `LIGHTS_FLOATS` | 40 | 10×vec4 → **1 主光(directional) + 1 点光** |
-- Runtime crowds, including a 500-NPC configuration, must use the dynamic
-  instancing/batch path and never consume static scene-object slots. This path
-  exists; that does not certify every population or device's performance.
+- 运行时群体（含 500-NPC 配置）必须走动态 instancing/批处理，不占用静态场景槽位。
+  当前已有该路径，但不能据此认证任意数量或设备的性能。
 - 多灯降级：场景可声明任意多盏灯，运行时按 `priority` 取 top-1 + top-1，落选者在编辑器里**标黄提示**。
 
 ### 2.4 Play Mode 纪律
@@ -88,9 +94,8 @@ contracts through [the shared knowledge index](docs/README.md).
 - **资产附加数据必须落 sidecar `<源文件名>.meta.json`**（真源 `packages/scene/src/asset-meta.ts`），
   与源资产同目录。**禁止只在内存里保存** —— 绑定继承快照、身高归一化系数、骨骼绑定会话、
   T/A-pose 反解结果、动画配置、导入参数（焊接/AO/up-flip/拆子网格）全部属于这一类，
-  Do not describe every such field as already implemented: inspect its schema,
-  writer and reload path. Any implemented reusable author data must survive
-  save/reload in its sidecar; an in-memory-only implementation is a persistence bug.
+  不得笼统认定这些字段均已实现，应检查 schema、写入和重载路径。已实现的可复用编辑数据
+  必须通过 sidecar 保存/重载；只留内存的实现属于持久化缺陷。
   - **归属判定**：问一句「换一个全新的空场景，这个数据还在不在？」
     在 → `.meta.json`；不在 / 场景特有 → `.scene.json`。
   - **sidecar 不用集中索引**：集中 `assetdb.json` 是合并冲突制造机。
@@ -153,97 +158,64 @@ contracts through [the shared knowledge index](docs/README.md).
 - 编辑器地址：`https://localhost:5100` / Tailscale 域名（见 §1）；冒烟跑前先探活（skill ref F §1）。
 
 
-## 5. CodeGraph-first code navigation
+## 5. CodeGraph 优先的代码导航
 
-- CodeGraph is an installed MCP capability, not optional project memory. Read the
-  [portable MCP connection/query guide](docs/knowledge/codegraph.md). Discover
-  its current tools through the selected client's `tools/list`; if tool exposure
-  is missing, try the installed supported stdio server before declaring it absent.
-- For project/module structure, responsibility discovery, dependency/call analysis,
-  impact assessment and refactoring, **query CodeGraph first**. Do not begin by
-  rebuilding the project's architecture with broad grep/rg searches. Start with
-  `project_map` / `module_overview`, then narrow to file-qualified `get_ast_node`,
-  `get_call_graph`, `find_references`, `semantic_code_search` or `ast_search` as
-  appropriate; supported arguments come from the installed MCP tool schema.
-- Before using results, confirm the intended checkout/worktree, branch/commit,
-  tool version, source roots/exclusions and indexing completion. Initialize or
-  refresh through supported operations when necessary, including after changes.
-  The audited roots are `apps`, `assets`, `packages`, `tools`; check root-level
-  configuration separately. `.code-graph/` is a local derived cache, not business
-  data or a Git-distributed artifact; another checkout's index is not a substitute.
-- Use graph results to locate the relevant source, then read it to verify critical
-  callers, receiver types, ownership and failure paths. Targeted text search is
-  for filling known graph gaps and confirming facts, rather than the primary
-  means of discovering code structure. Simple exact text edits do not require
-  unnecessary whole-project graph analysis.
-- If CodeGraph MCP/index is unavailable, fails after a reasonable attempt, or
-  cannot cover the needed relation, state the concrete limitation and use source
-  reads/targeted search as fallback. Do not silently skip graph-first navigation,
-  fabricate graph evidence, or turn a local tool limitation into a full task block.
-- Follow truncated/paginated results and inspect parser errors/unresolved calls.
-  File/symbol coverage does not prove correct call resolution. Distinguish
-  extracted/inferred/ambiguous edges, production/tests, type/runtime imports and
-  dormant/active modules. Verify same-name set/has/find receivers before using
-  their edges as evidence of coupling.
-- Trace Worker URL/messages, import.meta.glob registration/injection and
-  HTTP/WebSocket/MCP dispatch across both endpoints when relevant; a missing
-  static edge is not evidence of dead code. A type import is not runtime use.
-- Do not infer runtime cost, execution frequency or refactoring priority from
-  incoming counts/centrality alone. Architecture reports record source snapshot,
-  query scope/count definitions/confidence and representative source evidence;
-  Agent-written summaries follow the same rule regardless of model capability.
-- Read [the verified structure map](docs/44-CodeGraph代码结构图谱.md) for owners and
-  known limitations. Source, schemas and ADRs remain authoritative. Graph checks
-  supplement affected-owner tests and acceptance gates: default Vitest covers
-  apps/packages TS tests, while tools' Node/Python tests use separate runners;
-  scene/content/motion gates and headed Play/GPU validation still apply.
+- CodeGraph 是已安装的 MCP 能力，不是可选的项目记忆。先读[连接与查询指南](docs/knowledge/codegraph.md)。
+  通过所选客户端的 `tools/list` 发现工具；未暴露时，先尝试已安装且受支持的 stdio 服务，
+  不能直接断言工具不存在。
+- 项目/模块结构、职责、依赖/调用、影响分析和重构必须**先查 CodeGraph**，不得先用大范围
+  grep/rg 重建架构。先 `project_map`/`module_overview`，再按需使用指定文件的
+  `get_ast_node`、`get_call_graph`、`find_references`、`semantic_code_search` 或
+  `ast_search`；参数以已安装 MCP schema 为准。
+- 使用结果前确认目标检出目录/worktree、分支/提交、工具版本、源码根/排除项和索引完成
+  状态。按需用受支持接口初始化/刷新，改动后同样适用。核对根目录为 `apps`、`assets`、
+  `packages`、`tools`；根级配置另外检查。`.code-graph/` 是本地派生缓存，不是业务数据
+  或 Git 交付物，其他检出目录的索引不能代替当前索引。
+- 图谱用于定位源码，再读源码验证关键调用者、接收者类型、职责及失败路径。定向文本搜索
+  用于补图谱盲区和确认事实，不是主要结构发现手段。简单精确文本编辑不要求整项目图分析。
+- MCP/索引不可用、合理尝试后仍失败或不能覆盖所需关系时，说明具体限制，回退源码阅读/
+  定向搜索。不得静默跳过、编造图谱证据或把局部工具限制扩大为整项阻断。
+- 跟进截断/分页，检查解析错误和未解析调用。文件/符号覆盖不证明调用解析正确。
+  区分 extracted/inferred/ambiguous、生产/测试、类型/运行时引用和未启用/活跃模块。
+  使用同名 set/has/find 关系判断耦合前核对接收者。
+- Worker URL/消息、`import.meta.glob` 注册/注入及 HTTP/WebSocket/MCP 派发须追踪两端。
+  静态关系缺失不能证明死代码；类型 import 不等于运行时使用。
+- 不根据入边次数/中心性推导运行成本、频率或重构优先级。架构报告必须说明源码快照、
+  查询范围、计数口径、可信度及代表性源码证据；Agent 报告遵循同一规则。
+- 阅读[已核对结构图谱](docs/44-CodeGraph代码结构图谱.md)了解职责和限制；源码、schema、
+  ADR 仍是真源。图谱检查补充 owner 测试/验收：默认 Vitest 覆盖 apps/packages TS 测试，
+  tools 的 Node/Python 测试使用独立运行器；scene/content/motion 门禁及有界面 Play/GPU
+  验证仍须按任务执行。
 
-## 6. Mandatory Editor / Framework / Game separation
+## 6. 强制区分 Editor / Framework / Game
 
-- Read [the ownership contract](docs/architecture/layers.md) before cross-module
-  development. `tools/architecture/layers.json` is the enforced dependency map.
-  Framework packages provide reusable mechanisms and data contracts; Zombie
-  rules/state live in `packages/zombie-game`, authored content in scene/asset data,
-  and authoring UX/adapters in `apps/editor`.
-- Framework must not depend on game/content/editor. Game core must not depend on
-  DOM presentation/editor. Game presentation must not depend on editor. Type-only,
-  re-export, dynamic-import, Worker and glob dependencies also obey these rules.
-  Cross-package consumers use public `@aether` entries; no reverse compatibility
-  re-exports, duplicate game state or new gameplay formulas in editor bootstrap.
-- Generic weapons/collision/author commands remain `@aether/runtime`; Zombie
-  level loading, campaign simulation, rewards, attack policies and game Play
-  composition use `@aether/zombie-game`. HUD/input/audio have explicit game
-  presentation subpaths. A new game gets its own package and supplies policies;
-  do not patch Zombie-specific behavior into reusable framework classes.
-- Run `pnpm run architecture:check` after source/dependency moves or cross-layer
-  changes, plus affected-owner tests. The gate is also in CI. New package ownership
-  and public entries must be explicit in the manifest. Do not weaken the manifest
-  or add exceptions just to pass a failing check; repair ownership or inject a port.
-- The gate checks source edges, not semantic reuse. Review game-specific constants,
-  generated code and message dispatch in source. Legacy v15 game-oriented scene
-  contracts require explicit schema/migration work before extension extraction;
-  their preservation is not permission to add unrelated responsibilities there.
+- 跨模块开发前读[分层契约](docs/architecture/layers.md)。`tools/architecture/layers.json`
+  是强制依赖清单。Framework 提供通用机制/数据契约；僵尸游戏规则/状态在
+  `packages/zombie-game`，内容在场景/资产数据，编辑 UX/适配器在 `apps/editor`。
+- Framework 禁止依赖 game/content/editor；游戏内核禁止依赖 DOM 表现/editor；游戏表现
+  禁止依赖 editor。类型、重新导出、动态 import、Worker 和 glob 同样遵守边界。
+  跨包使用公共 `@aether` 入口，禁止反向兼容导出、重复游戏状态或在编辑器启动处新增玩法公式。
+- 通用武器/碰撞/编辑命令属于 `@aether/runtime`；僵尸关卡装载、模拟、奖励、攻击策略和
+  游戏 Play 组合属于 `@aether/zombie-game`。HUD/输入/音频使用明确的表现层子路径。
+  新游戏使用自己的包和策略，不能将僵尸专有行为塞进可复用 Framework。
+- 源码/依赖迁移或跨层改动后运行 `pnpm run architecture:check` 及相关 owner 测试；CI
+  同样执行门禁。新包职责/公共入口须在清单中声明。不得为通过检查削弱清单或加例外，
+  应修正职责或注入接口。
+- 门禁检查源码依赖，不认证语义复用；仍需评审游戏常量、生成代码及消息派发。
+  v15 中旧游戏特有场景契约的抽离需要明确 schema/迁移任务，保留旧字段不代表可以继续
+  添加不相关职责。
 
-## 7. Repository knowledge is shared by all Agents
+## 7. 全部 Agent 共享仓库知识
 
-- Start documentation discovery at [docs/README.md](docs/README.md) and the
-  [knowledge catalog](docs/knowledge/catalog.json). Use `pnpm run knowledge:find
-  -- --topic <topic>` or filter by role/status. No WorkBuddy-only memory service
-  is required. Read the relevant source/guide rather than loading all daily logs.
-- Current source/schema/project data is authoritative for implementation.
-  Design docs describe intent; acceptance reports and WorkBuddy logs are historical
-  evidence at their recorded revision. Check current source before reusing a
-  historical command, value, ownership claim or acceptance result.
-- Cite full repository paths and headings, plus commits for historical evidence.
-  Catalog IDs remain stable across renames; numeric document prefixes are not
-  unique. Important session conclusions must become versioned `docs/` guides
-  with owner, contracts, failure paths, actual validation and remaining work.
-- Add/update catalog entries when publishing documents or changing source routes;
-  run `pnpm run knowledge:check`. Preserve historical logs and unrelated drafts.
-  Do not promote obsolete memory instructions into current rules, or adopt
-  untracked deliveries as published/accepted assets.
-- A current guide must contain current source/test paths, runnable scoped commands,
-  and explicit capability limits. A banner alone does not repair obsolete commands
-  inside it. After owner/schema changes, update affected guides and catalog routes;
-  preserve historical measurements with their original date/revision and link to
-  the replacement contract. Index freshness and a build do not renew acceptance.
+- 从 [docs/README.md](docs/README.md) 和[知识目录](docs/knowledge/catalog.json)查找文档。
+  使用 `pnpm run knowledge:find -- --topic <topic>` 或按职责/状态过滤，不依赖 WorkBuddy
+  专有记忆服务。读取相关源码/指南，不必加载全部日报。
+- 当前源码/schema/项目数据定义实现；设计表达意图，验收/WorkBuddy 日志是对应版本的
+  历史证据。复用旧命令、参数、职责或验收结论前确认当前源码。
+- 引用完整仓库路径和章节，历史证据还带提交。目录 ID 在重命名后保持稳定，数字前缀不唯一。
+  重要会话结论应形成版本化 `docs/` 指南，说明职责、契约、失败路径、实际验证和剩余工作。
+- 发布文档或改源码入口时更新目录，并运行 `pnpm run knowledge:check`。保留历史日志及
+  其他会话草稿，不把过期记忆指令提升成当前规则，也不把未跟踪交付当作已发布/已验收资产。
+- 当前指南必须使用当前源码/测试路径、有效的定向命令及明确能力限制。单加提示不足以修复
+  正文中的旧命令。职责/schema 变更后更新相关指南和目录；历史测量保留原日期/版本并指向
+  替代契约。索引刷新或构建成功不会自动更新验收结论。

@@ -6,118 +6,118 @@
     {
       "id": "project-rules",
       "path": "AGENTS.md",
-      "title": "project-rules",
+      "title": "项目协作规则",
       "role": "navigation",
       "authority": "rule",
       "status": "current",
       "topics": [
         "navigation"
       ],
-      "read": "Contract and exported API",
+      "read": "项目约束、任务入口与交付纪律",
       "sourceRefs": []
     },
     {
       "id": "scene-schema",
       "path": "packages/scene/src/document.ts",
-      "title": "scene-schema",
+      "title": "场景数据 schema",
       "role": "framework",
       "authority": "source",
       "status": "current",
       "topics": [
         "framework"
       ],
-      "read": "Contract and exported API",
+      "read": "场景数据字典、组件与校验",
       "sourceRefs": []
     },
     {
       "id": "project-schema",
       "path": "packages/scene/src/project.ts",
-      "title": "project-schema",
+      "title": "项目容器 schema",
       "role": "framework",
       "authority": "source",
       "status": "current",
       "topics": [
         "framework"
       ],
-      "read": "Contract and exported API",
+      "read": "项目容器、场景清单与项目校验",
       "sourceRefs": []
     },
     {
       "id": "asset-metadata",
       "path": "packages/scene/src/asset-meta.ts",
-      "title": "asset-metadata",
+      "title": "资产附加数据契约",
       "role": "framework",
       "authority": "source",
       "status": "current",
       "topics": [
         "framework"
       ],
-      "read": "Contract and exported API",
+      "read": "资产 sidecar 数据与校验",
       "sourceRefs": []
     },
     {
       "id": "project-manifest",
       "path": "aether.project.json",
-      "title": "project-manifest",
+      "title": "项目场景与资源清单",
       "role": "game",
       "authority": "source",
       "status": "current",
       "topics": [
         "game"
       ],
-      "read": "Contract and exported API",
+      "read": "场景登记、层表和资源入口",
       "sourceRefs": []
     },
     {
       "id": "architecture-policy",
       "path": "tools/architecture/layers.json",
-      "title": "architecture-policy",
+      "title": "分层依赖清单",
       "role": "navigation",
       "authority": "source",
       "status": "current",
       "topics": [
         "navigation"
       ],
-      "read": "Contract and exported API",
+      "read": "代码层归属与依赖允许关系",
       "sourceRefs": []
     },
     {
       "id": "editor-mcp-workflow",
       "path": "tools/mcp-editor/workflow.mjs",
-      "title": "editor-mcp-workflow",
+      "title": "编辑器 MCP 流程契约",
       "role": "editor",
       "authority": "source",
       "status": "current",
       "topics": [
         "editor"
       ],
-      "read": "Contract and exported API",
+      "read": "工作流返回值、知识导航与导出 API",
       "sourceRefs": []
     },
     {
       "id": "zombie-game-entry",
       "path": "packages/zombie-game/src/index.ts",
-      "title": "zombie-game-entry",
+      "title": "僵尸游戏无界面公共入口",
       "role": "game",
       "authority": "source",
       "status": "current",
       "topics": [
         "game"
       ],
-      "read": "Contract and exported API",
+      "read": "游戏会话和玩法模块的导出 API",
       "sourceRefs": []
     },
     {
       "id": "framework-runtime-entry",
       "path": "packages/runtime/src/index.ts",
-      "title": "framework-runtime-entry",
+      "title": "Framework 运行机制公共入口",
       "role": "framework",
       "authority": "source",
       "status": "current",
       "topics": [
         "framework"
       ],
-      "read": "Contract and exported API",
+      "read": "通用运行机制的导出 API",
       "sourceRefs": []
     },
     {
@@ -131,7 +131,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
@@ -149,7 +149,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
@@ -167,7 +167,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -185,7 +185,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -203,7 +203,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -221,7 +221,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -239,7 +239,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -257,7 +257,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "05ef392730df0433d093f144abbae1604710baf3",
@@ -275,7 +275,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "5d250cb350c9ad647c0da7f585dd2b37fd6b819a",
@@ -293,7 +293,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
@@ -311,7 +311,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
@@ -329,7 +329,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
@@ -347,7 +347,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "448b05d1b13ddd1f6d5c8efddc6c9380d802ae66",
@@ -365,7 +365,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
@@ -383,7 +383,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf206b9a93236ce8b003f8d8ab113b5ee07046bd",
@@ -401,7 +401,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "71ded783a53070bb8c0e13869f8385244bc584e8",
@@ -419,7 +419,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "43ea5011ca884149a4680825cedfae73a84ef5bb",
@@ -437,7 +437,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "fff100158e40d39b6aa2b9e5f7f98a06d20ea187",
@@ -455,7 +455,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "94e6a61324b6f8ed7ad94111ed8ef0c5cae435ee",
@@ -473,7 +473,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "54f650f7d218c96985f008e22d7c8c480226d254",
@@ -491,7 +491,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "6f710f579852807f16ceb3ee4b4aedf7b5fb1b98",
@@ -509,7 +509,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cc4776b3dcfab26c61854ab800eb13b59af7db01",
@@ -527,7 +527,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "553b05ace79cbaf07b33b40220e305bbdca5f7f0",
@@ -545,7 +545,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cc4776b3dcfab26c61854ab800eb13b59af7db01",
@@ -563,7 +563,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "c226cba54a9021dca0afa7bbbb59193a561752eb",
@@ -581,7 +581,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "b3c7b9bbdd7a5df00d7c5dcaee24342183e74aee",
@@ -599,7 +599,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0b77b8060741a24bd0acb96020262a23f3f21f94",
@@ -617,7 +617,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "b3c7b9bbdd7a5df00d7c5dcaee24342183e74aee",
@@ -638,7 +638,7 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "indexedWorkingTreeBase": "90d6427"
     },
@@ -653,7 +653,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
@@ -671,7 +671,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
@@ -689,7 +689,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "9100d1aedf9703e6a43a0a6eece4848f05aa4ae7",
@@ -707,7 +707,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a92396fbd5f1949e79652a6ba6728e974b29ebf3",
@@ -725,7 +725,7 @@
         "workbuddy",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "3dcddacefcb6bb9e3a3787cabd066dde4934d1a6",
@@ -744,7 +744,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -759,7 +759,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -774,7 +774,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -789,7 +789,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -805,7 +805,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -821,7 +821,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -837,7 +837,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -851,7 +851,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -866,7 +866,7 @@
         "mcp",
         "authoring"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -881,7 +881,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -896,7 +896,7 @@
         "mcp",
         "authoring"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -910,7 +910,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -926,7 +926,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -941,7 +941,7 @@
         "scene",
         "architecture"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -955,7 +955,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -971,7 +971,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -987,7 +987,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1003,7 +1003,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "21f68a40b28adeea17d97a886c8868df027f9d56",
@@ -1022,7 +1022,7 @@
         "mcp",
         "authoring"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1035,7 +1035,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1049,7 +1049,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1065,7 +1065,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1079,7 +1079,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1094,7 +1094,7 @@
         "mcp",
         "authoring"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1110,7 +1110,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1124,7 +1124,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1138,7 +1138,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1154,7 +1154,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "7f8121c5666435f50eb460c26d421cf99a5b9129",
@@ -1172,7 +1172,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0776a8afabb01b17e0670ba38b2245a3e2651ec1",
@@ -1192,7 +1192,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "319c43ffd0d887d08e7238d45505375a8d78eed8",
@@ -1210,7 +1210,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0c511d38caa321e194a12433bbb56ad00cbf9333",
@@ -1228,7 +1228,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "31726481cb4adfb0dcab067bb3ed93ef27326664",
@@ -1248,7 +1248,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1261,7 +1261,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0bac8ccba9b4ffb948e8e44ebcd8a430de7833a0",
@@ -1281,7 +1281,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "cf68a40283f62be4e2c180f0d36cfd55e8b85772",
@@ -1301,7 +1301,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0bac8ccba9b4ffb948e8e44ebcd8a430de7833a0",
@@ -1318,7 +1318,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "46f6d217b2065fa90d3bfa35ec0d6db9bae50ecb",
@@ -1338,7 +1338,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0668eb6768127d2b24944715ca90521a47dcea66",
@@ -1356,7 +1356,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a13bb750834667b7434bc0192312296f2124bddc",
@@ -1376,7 +1376,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "0668eb6768127d2b24944715ca90521a47dcea66",
@@ -1396,7 +1396,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "779db010e27b0294f767b6c0b7321fe9b4bbd08d",
@@ -1414,7 +1414,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "38d2d19fe32dd317d07f293d45392c147dd2eaf5",
@@ -1434,7 +1434,7 @@
         "audio",
         "game"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "779db010e27b0294f767b6c0b7321fe9b4bbd08d",
@@ -1444,7 +1444,7 @@
     {
       "id": "doc-d630d2112868",
       "path": "docs/43-GameplayDevelopmentWorkflow.md",
-      "title": "Gameplay development: contracts, workflow and agent entry points",
+      "title": "游戏开发：契约、流程与 Agent 入口",
       "role": "game",
       "authority": "guide",
       "status": "current",
@@ -1456,7 +1456,7 @@
         "ik",
         "ownership"
       ],
-      "read": "Responsibilities and sources of truth; Repeatable development and delivery process; Agent workflow through the current MCP",
+      "read": "职责与真源；可重复的开发交付流程；当前 MCP 的 Agent 流程",
       "sourceRefs": [
         "scene-schema",
         "scene-migrations",
@@ -1471,7 +1471,7 @@
     {
       "id": "doc-c6d88add7ec3",
       "path": "docs/44-CodeGraph代码结构图谱.md",
-      "title": "44 - CodeGraph structure map and development workflow",
+      "title": "44 — CodeGraph 代码结构图谱与开发流程",
       "role": "navigation",
       "authority": "guide",
       "status": "current",
@@ -1481,7 +1481,7 @@
         "ownership",
         "test-routing"
       ],
-      "read": "Current source review, 2026-10-09; preserved 2026-10-08 audit is historical",
+      "read": "当前源码复核（2026-10-09）；保留的 2026-10-08 审计属于历史证据",
       "sourceRefs": [
         "architecture-policy",
         "zombie-game-entry",
@@ -1503,7 +1503,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "c7c9ef9c3c833edcba9715fb1984c700192f5ab0",
@@ -1520,7 +1520,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "553b05ace79cbaf07b33b40220e305bbdca5f7f0",
@@ -1537,7 +1537,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1551,13 +1551,13 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
       "id": "doc-0b5ca119d2be",
       "path": "docs/README.md",
-      "title": "Project knowledge for every Agent",
+      "title": "全部开发 Agent 的项目知识入口",
       "role": "navigation",
       "authority": "guide",
       "status": "current",
@@ -1566,7 +1566,7 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Authority and citation; Task routes; Find and maintain knowledge",
+      "read": "权威层级与引用方式；按任务选择入口；查询与维护",
       "sourceRefs": [
         "project-rules",
         "architecture-policy"
@@ -1577,7 +1577,7 @@
     {
       "id": "doc-86a653d56d3e",
       "path": "docs/animation/body-ik-blending.md",
-      "title": "HumanIK procedural animation blending",
+      "title": "HumanIK 分部位程序化动画混合",
       "role": "animation",
       "authority": "guide",
       "status": "current",
@@ -1587,7 +1587,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Ownership and persistence; Controls and target spaces; Capability boundaries; historical Validation",
+      "read": "职责与持久化；控制部位与目标空间；能力边界；历史验证",
       "sourceRefs": [
         "scene-body-ik",
         "scene-migrations",
@@ -1603,7 +1603,7 @@
     {
       "id": "doc-db6a9bf0e0a7",
       "path": "docs/animation/pose-transitions.md",
-      "title": "Runtime pose transitions",
+      "title": "运行时姿态过渡",
       "role": "animation",
       "authority": "guide",
       "status": "current",
@@ -1613,7 +1613,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Configuration and ownership; Continuity and IK ordering; Reset and boundaries; historical Validation",
+      "read": "配置与职责；连续性与 IK 顺序；Reset 与边界；历史验证",
       "sourceRefs": [
         "scene-shared-motion",
         "scene-migrations",
@@ -1629,7 +1629,7 @@
     {
       "id": "doc-f12dc63859b8",
       "path": "docs/architecture/layers.md",
-      "title": "Editor, framework and game ownership",
+      "title": "Editor、Framework 与游戏代码分层契约",
       "role": "navigation",
       "authority": "guide",
       "status": "current",
@@ -1641,7 +1641,7 @@
         "game",
         "framework"
       ],
-      "read": "Required boundaries; Data and failure ownership; Enforced gate and review obligations; Remaining consolidation",
+      "read": "必须遵守的职责边界；数据与失败行为归属；强制门禁与评审责任；后续整理",
       "sourceRefs": [
         "architecture-policy",
         "zombie-game-entry",
@@ -1663,7 +1663,7 @@
         "materials",
         "assets"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "e798a57ae91570e1385428d32be5652bf204b874",
@@ -1673,7 +1673,7 @@
     {
       "id": "doc-d944818e811d",
       "path": "docs/art/visual-quality-playbook.md",
-      "title": "Visual quality playbook — comic zombie game",
+      "title": "美漫僵尸游戏画面品质提升指南",
       "role": "art",
       "authority": "guide",
       "status": "current",
@@ -1683,7 +1683,7 @@
         "materials",
         "assets"
       ],
-      "read": "Rendering/LOD/lifecycle techniques; section 11 for current owners and resource boundaries; dated evidence remains historical",
+      "read": "渲染、LOD 与生命周期技巧；第 11 节当前职责与资源边界；按日期记录的证据仍属于历史",
       "sourceRefs": [
         "scene-schema",
         "render-frame-uniforms",
@@ -1699,7 +1699,7 @@
     {
       "id": "doc-be0be2ab87ec",
       "path": "docs/browser-verification.md",
-      "title": "Browser verification entry",
+      "title": "浏览器验证入口",
       "role": "validation",
       "authority": "guide",
       "status": "current",
@@ -1709,7 +1709,7 @@
         "headed",
         "acceptance"
       ],
-      "read": "Interactive work; Checked-in local acceptance",
+      "read": "交互验证；仓库内本地验收路径",
       "sourceRefs": [
         "project-rules"
       ],
@@ -1730,7 +1730,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "192d99039a41c1929c6054dbd90b616814224f37",
@@ -1747,7 +1747,7 @@
       "topics": [
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "319c43ffd0d887d08e7238d45505375a8d78eed8",
@@ -1757,7 +1757,7 @@
     {
       "id": "doc-b2435e51a574",
       "path": "docs/knowledge/codegraph.md",
-      "title": "CodeGraph MCP for development Agents",
+      "title": "开发 Agent 的 CodeGraph MCP 使用指南",
       "role": "navigation",
       "authority": "guide",
       "status": "current",
@@ -1766,7 +1766,7 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Connect to the intended checkout; Interpretation and fallback",
+      "read": "连接目标检出目录；解读与回退",
       "sourceRefs": [
         "architecture-policy",
         "project-rules"
@@ -1785,7 +1785,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1799,7 +1799,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1813,7 +1813,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
@@ -1823,7 +1823,7 @@
     {
       "id": "doc-f899497c39d4",
       "path": "docs/review/branch-integration-2026-10-09.md",
-      "title": "Development branch integration, 2026-10-09",
+      "title": "开发分支集成报告（2026-10-09）",
       "role": "validation",
       "authority": "evidence",
       "status": "historical",
@@ -1831,7 +1831,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1845,7 +1845,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1859,7 +1859,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1873,7 +1873,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1887,7 +1887,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1901,7 +1901,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1915,7 +1915,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1929,7 +1929,7 @@
         "validation",
         "history"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": []
     },
     {
@@ -1945,7 +1945,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "5eb7d2f5b96318f2161c5523cc8c155d7e233a24",
@@ -1965,7 +1965,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a7e2f67163857c8f8f035e5757a5ffa5b09777fe",
@@ -1975,7 +1975,7 @@
     {
       "id": "doc-0a37851e010a",
       "path": "docs/rigging/character-rigging-workflow.md",
-      "title": "Character rigging: source authoring to runtime delivery",
+      "title": "角色绑定：源编辑到运行时交付流程",
       "role": "animation",
       "authority": "guide",
       "status": "current",
@@ -1985,7 +1985,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Owners and spaces; source/skin/export workflow; Runtime motion and control acceptance",
+      "read": "职责与坐标空间；源编辑、权重与导出流程；运行时动作与控制验收",
       "sourceRefs": [
         "asset-metadata",
         "scene-schema",
@@ -2011,7 +2011,7 @@
         "retarget",
         "ik"
       ],
-      "read": "Recorded design/revision; verify current source before use",
+      "read": "记录当时的设计或版本；复用前核对当前源码",
       "sourceRefs": [],
       "lastChanged": {
         "commit": "a7e2f67163857c8f8f035e5757a5ffa5b09777fe",
@@ -2021,7 +2021,7 @@
     {
       "id": "doc-e7452dea4653",
       "path": "tools/mcp-editor/README.md",
-      "title": "Game Editor MCP — opt-in authoring and diagnostics",
+      "title": "Game Editor MCP：显式启用的编辑与诊断",
       "role": "editor",
       "authority": "guide",
       "status": "current",
@@ -2032,7 +2032,7 @@
         "audio",
         "workflow"
       ],
-      "read": "Setup and responsibility; Tools and sequence; Runtime diagnostics; Failure handling; remaining coverage",
+      "read": "配置与职责；工具与顺序；运行诊断；失败处理；历史证据与覆盖缺口",
       "sourceRefs": [
         "editor-mcp-workflow",
         "editor-mcp-catalog",
@@ -2044,7 +2044,7 @@
     {
       "id": "architecture-acceptance-20261009",
       "path": "docs/architecture/acceptance-2026-10-09.md",
-      "title": "Ownership and shared-knowledge delivery, 2026-10-09",
+      "title": "分层与共享知识交付验收报告（2026-10-09）",
       "role": "validation",
       "authority": "evidence",
       "status": "historical",
@@ -2054,7 +2054,7 @@
         "validation",
         "codegraph"
       ],
-      "read": "Source scope, actual checks and remaining consolidation",
+      "read": "源码范围、实际检查与后续整理",
       "sourceRefs": [
         "architecture-policy",
         "zombie-game-entry",
@@ -2064,7 +2064,7 @@
     {
       "id": "scene-migrations",
       "path": "packages/scene/src/migrate.ts",
-      "title": "scene-migrations",
+      "title": "场景迁移链",
       "role": "framework",
       "authority": "source",
       "status": "current",
@@ -2072,13 +2072,13 @@
         "schema",
         "migration"
       ],
-      "read": "registerSceneMigrations and migration failure behavior",
+      "read": "registerSceneMigrations 与迁移失败行为",
       "sourceRefs": []
     },
     {
       "id": "scene-body-ik",
       "path": "packages/scene/src/body-ik.ts",
-      "title": "scene-body-ik",
+      "title": "身体 IK 数据契约",
       "role": "animation",
       "authority": "source",
       "status": "current",
@@ -2086,13 +2086,13 @@
         "ik",
         "schema"
       ],
-      "read": "BodyIkBinding and validation",
+      "read": "BodyIkBinding 与数据校验",
       "sourceRefs": []
     },
     {
       "id": "scene-shared-motion",
       "path": "packages/scene/src/shared-motion.ts",
-      "title": "scene-shared-motion",
+      "title": "共享动作数据契约",
       "role": "animation",
       "authority": "source",
       "status": "current",
@@ -2101,13 +2101,13 @@
         "retarget",
         "transition"
       ],
-      "read": "SharedMotionBinding, transition defaults and validation",
+      "read": "SharedMotionBinding、过渡缺省值与校验",
       "sourceRefs": []
     },
     {
       "id": "scene-weapons",
       "path": "packages/scene/src/weapons.ts",
-      "title": "scene-weapons",
+      "title": "武器库与标记数据契约",
       "role": "game",
       "authority": "source",
       "status": "current",
@@ -2115,13 +2115,13 @@
         "weapons",
         "schema"
       ],
-      "read": "WeaponArsenal, markers and validation",
+      "read": "WeaponArsenal、持握标记与校验",
       "sourceRefs": []
     },
     {
       "id": "scene-audio",
       "path": "packages/scene/src/audio.ts",
-      "title": "scene-audio",
+      "title": "玩法音频数据契约",
       "role": "game",
       "authority": "source",
       "status": "current",
@@ -2129,13 +2129,13 @@
         "audio",
         "schema"
       ],
-      "read": "GameplayAudioConfig and AudioAssetInfo validation",
+      "read": "GameplayAudioConfig 与 AudioAssetInfo 校验",
       "sourceRefs": []
     },
     {
       "id": "render-frame-uniforms",
       "path": "packages/render/src/frame-uniforms.ts",
-      "title": "render-frame-uniforms",
+      "title": "渲染帧 uniform 布局",
       "role": "framework",
       "authority": "source",
       "status": "current",
@@ -2144,13 +2144,13 @@
         "materials",
         "capacity"
       ],
-      "read": "Capacity/layout constants and production packers",
+      "read": "容量、布局常量与生产打包函数",
       "sourceRefs": []
     },
     {
       "id": "editor-mcp-catalog",
       "path": "tools/mcp-editor/catalog.mjs",
-      "title": "editor-mcp-catalog",
+      "title": "编辑器 MCP 工具与参数 schema",
       "role": "editor",
       "authority": "source",
       "status": "current",
@@ -2158,13 +2158,13 @@
         "mcp",
         "schema"
       ],
-      "read": "Live tool names, arguments and mutation guards",
+      "read": "实际工具名称、参数与写入保护",
       "sourceRefs": []
     },
     {
       "id": "documentation-audit-20261009",
       "path": "docs/review/documentation-audit-2026-10-09.md",
-      "title": "Documentation audit against current source and CodeGraph",
+      "title": "当前代码与 CodeGraph 文档复核报告",
       "role": "validation",
       "authority": "evidence",
       "status": "historical",
@@ -2174,7 +2174,7 @@
         "codegraph",
         "knowledge"
       ],
-      "read": "Reviewed scope, repaired findings, verification and remaining limits",
+      "read": "复核范围、已修问题、实际验证与剩余边界",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",

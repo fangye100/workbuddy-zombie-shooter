@@ -1,28 +1,24 @@
 # 项目长期记忆（末日尸潮 / Aether Game Editor）
 
-> Cross-Agent entry: [repository knowledge](../../docs/README.md),
-> [catalog](../../docs/knowledge/catalog.json),
-> [current layer contract](../../docs/architecture/layers.md) and
-> [CodeGraph MCP guide](../../docs/knowledge/codegraph.md). This memory preserves
-> historical context. Older rules, paths, schema versions, port assumptions and
-> acceptance claims below may be superseded; current AGENTS/source contracts win.
-> The integrated scene schema is v15. Zombie simulation/presentation now belongs
-> to `packages/zombie-game`; older runtime/editor paths are historical.
+> 跨 Agent 入口：[共享知识](../../docs/README.md)、[目录](../../docs/knowledge/catalog.json)、
+> [当前分层契约](../../docs/architecture/layers.md)、[CodeGraph MCP](../../docs/knowledge/codegraph.md)。
+> 本文件保留历史语境，旧规则/路径/schema/端口/验收可能已更新；当前 AGENTS/源码契约优先。
+> 集成 schema 为 v15，僵尸模拟与表现属于 `packages/zombie-game`，旧 runtime/editor 路径保留为历史记录。
 
 > 2026-10-02 精简重写：合并重复条目、删除已完结的过程细节。完整历史见 `docs/` 与 `.workbuddy/memory/YYYY-MM-DD.md`。
 
-## Gameplay development knowledge — 2026-10-08
+## 游戏开发知识（2026-10-08）
 
-- Current entry: [Gameplay development workflow](../../docs/43-GameplayDevelopmentWorkflow.md). It maps durable scene/asset authority, author history/save, architectural LOD, NPC timing/input, accepted weapon events/IK ports, and audio intake/mix/lifetime to development and acceptance steps.
-- [Game Editor MCP](../../tools/mcp-editor/README.md): opt-in v0.2 adapter, `editor_workflow` discovery before instance selection, shared author/save/reopen commands, copied weapon diagnostics and audio lifecycle counters in `editor_runtime`. Client registration and full semantic authoring coverage remain separate work.
-- Reports 36/37/39/42 carry revision-specific evidence. Those reports used schema v14; the integrated schema is now v15. Discover the live document version rather than reusing a historical report value. Weapon procedural rendering and provisional sound families are explicit placeholders; current audio playback still needs in-game listening feedback.
-- Preserve WorkBuddy delivery/daily-log ownership and the separate HumanIK owner. Historical notes below are not current acceptance results.
+- 当前入口：[游戏开发流程](../../docs/43-GameplayDevelopmentWorkflow.md)。它将场景/资产真源、编辑历史/保存、建筑 LOD、NPC 时序/输入、已接受武器事件/IK 接口，以及音频接入/混音/生命周期串联到开发和验收步骤。
+- [Game Editor MCP](../../tools/mcp-editor/README.md)：v0.2 适配器需要显式启用，选择实例前调用 `editor_workflow`；提供共享编辑/保存/重新打开命令、复制的武器诊断及 `editor_runtime` 音频生命周期计数。客户端登记及完整语义编辑覆盖仍是独立工作。
+- 36/37/39/42 报告属于各自版本的证据，原使用 v14，当前集成版本为 v15；应读取实时文档版本，不沿用历史报告的值。武器程序化表现和暂用声音明确属于占位资源，当前音频仍需游戏内审听反馈。
+- 保留 WorkBuddy 交付/日报及 HumanIK 的独立职责。下方历史说明不代表当前验收结果。
 
-## Visual quality knowledge — 2026-10-05
+## 画面品质知识（2026-10-05）
 
-- Canonical reusable guide: [Visual quality playbook](../../docs/art/visual-quality-playbook.md). Covers gameplay-camera composition, comic color/lighting, AgX and uniform-packing pitfalls, dynamic albedo, UV-aware LOD gates, stable placeholder replacement, sky texture lifecycle and atlas acceptance.
-- Read the guide's linked acceptance reports for revision-specific evidence. Numeric LOD checks do not prove UV quality; asset-browser visibility does not prove player integration; a desktop sample does not prove mobile performance. Atlas repairs/GPU integration and final quota-blocked models remain open at the documented revision.
-- Historical rendering and validation notes below describe earlier states. For this quality work, use the guide and current project rules instead of reusing old fixed lighting values, service-port assumptions or browser launch recipes.
+- 可复用入口：[品质提升指南](../../docs/art/visual-quality-playbook.md)，覆盖游戏相机构图、美漫颜色/灯光、AgX 与 uniform 打包问题、动画 albedo、保留 UV 的 LOD 门禁、稳定占位替换、天空纹理生命周期及图集验收。
+- 指南链接的验收报告属于特定版本的证据。数值 LOD 检查不证明 UV 品质，Asset Browser 可见不证明玩家接入，桌面样本不证明手机性能。在原记录版本中，图集修复/GPU 接入及受配额阻断的最终模型仍未完成；当前状态以指南的后续更新为准。
+- 下方渲染/验证说明保留早期语境。品质开发应使用当前指南和项目规则，不复用旧固定光照值、服务端口假设或浏览器启动配方。
 
 ## 🔴 铁律
 - **git**：提交即推送（逐笔），禁攒本地；只 add 本会话改的文件，禁 `git add -A`；中文 message。

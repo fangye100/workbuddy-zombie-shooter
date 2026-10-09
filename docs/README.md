@@ -1,41 +1,38 @@
-# Project knowledge for every Agent
+# 全部开发 Agent 的项目知识入口
 
-This is the repository-owned entrypoint for Codex, WorkBuddy and other development
-Agents. Reading it needs no WorkBuddy memory service or browser. Start with
-[`AGENTS.md`](../AGENTS.md), then select the relevant sources below.
+这是由仓库维护、供 Codex、WorkBuddy 及其他开发 Agent 共用的文档入口，不依赖
+WorkBuddy 记忆服务或浏览器。先读 [`AGENTS.md`](../AGENTS.md)，再按任务选择真源。
+项目报告、指南和新增说明默认使用简体中文；路径、标识、协议字段及命令保持原样。
 
-## Authority and citation
+## 权威层级与引用方式
 
-1. Current user instructions and project `AGENTS.md` govern work.
-2. Live source contracts, project/scene data and tests define actual behavior.
-3. Current guides route work to those contracts; design documents describe intent.
-4. Acceptance reports and daily logs are evidence at their recorded revision,
-   not current execution rules or proof that a design was implemented.
+1. 当前用户指令与项目 `AGENTS.md` 约束工作。
+2. 当前源码契约、项目/场景数据和测试定义实际行为。
+3. 当前指南用于定位这些契约；设计文档表达设计意图。
+4. 验收报告、日报只证明其记录版本的观察，不自动成为当前执行规则或实现完成证明。
 
-Use [the machine-readable catalog](knowledge/catalog.json) to find documents by
-stable ID, role, topic and status. IDs are independent of numbering: two `39-*`
-and two `40-*` documents exist. Cite the full repository path plus heading (and
-commit when a historical result matters). Never cite only “document 39” or an
-unavailable conversation. Relative links make references portable to any checkout.
-Untracked deliveries and draft briefs are not published knowledge.
+通过[机器可读目录](knowledge/catalog.json)按稳定 ID、职责、主题和状态查找。
+ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引用完整仓库路径和章节，
+历史结论还应注明提交；不要只说“文档 39”或依赖他人无法读取的会话。
+相对链接支持不同检出目录。未跟踪资产交付和草稿不是已发布知识。
 
-## Task routes
+## 按任务选择入口
 
-| Task | Read first | Live source / owner |
+| 任务 | 优先读取 | 当前真源与职责 |
 |---|---|---|
-| Ownership, dependency analysis, refactoring | [Layer contract](architecture/layers.md), [CodeGraph MCP](knowledge/codegraph.md) | `tools/architecture/layers.json`; current checkout source |
-| Current implementation versus original architecture | [Current structure map](44-CodeGraph代码结构图谱.md#current-source-review-2026-10-09) | Source-qualified owners, direct GPU path and explicit dormant/design features; earlier numerical audit remains historical |
-| Scene authoring and persistence | [Development workflow](43-GameplayDevelopmentWorkflow.md), [scene design](14-Scene系统与场景数据持久化架构设计.md) | `packages/scene/src/document.ts`, `project.ts`, `asset-meta.ts`; `@aether/runtime` author stores |
-| Gameplay, NPCs, rewards and audio events | [Gameplay design](13-玩法与关卡设计GDD.md), [workflow](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`; `assets/scenes`; `packages/content` data |
-| Generic weapons, ray collision and timing | [Weapons report](39-Unified-weapons-and-animation-hooks.md), [layer contract](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`, `weapon-combat.ts`, `solid-ray.ts` |
-| HUD, language, touch/mouse and game audio | [Input report](37-CombatInputAndPopulationQuality.md), [audio guide](42-GameplayAudioIntegration.md) | `packages/zombie-game/src/presentation`; host supplies viewport/input/Play ports |
-| Rigging, retarget and IK | [Rigging workflow](rigging/character-rigging-workflow.md), [body IK](animation/body-ik-blending.md), [transitions](animation/pose-transitions.md) | `packages/render`, `packages/scene` contracts; editor binding adapters |
-| Scene art, materials, architectural LOD | [Visual quality playbook](art/visual-quality-playbook.md), [street report](36-StreetQualityAndArchitecturalLOD.md) | Scene/asset files; generic renderer; art validation tools |
-| Browser or GPU acceptance | [Browser entry](browser-verification.md), project browser/GPU rules | Headed target checkout; runtime evidence, not a build alone |
-| Agent authoring via MCP | [Editor MCP](../tools/mcp-editor/README.md) | `editor_workflow` → explicit instance selection → live schema/revision |
-| Earlier choices and incident evidence | Catalog entries with `historical` status | `docs/review`, `docs/evidence`, `.workbuddy/memory`; verify against source |
+| 职责、依赖分析与重构 | [分层契约](architecture/layers.md)、[CodeGraph MCP](knowledge/codegraph.md) | `tools/architecture/layers.json` 与当前检出源码 |
+| 当前实现与原架构设计的区别 | [当前结构图谱](44-CodeGraph代码结构图谱.md#current-source-review-2026-10-09) | 已核实的源码职责、直接 GPU 路径及未启用/规划功能；旧测量保留历史属性 |
+| 场景编辑与持久化 | [开发流程](43-GameplayDevelopmentWorkflow.md)、[场景设计](14-Scene系统与场景数据持久化架构设计.md) | `packages/scene/src/document.ts`、`project.ts`、`asset-meta.ts`；`@aether/runtime` 编辑状态 |
+| 玩法、NPC、奖励和音频事件 | [玩法设计](13-玩法与关卡设计GDD.md)、[开发流程](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`、`assets/scenes`、`packages/content` |
+| 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
+| HUD、语言、触摸/鼠标和游戏音频 | [输入报告](37-CombatInputAndPopulationQuality.md)、[音频指南](42-GameplayAudioIntegration.md) | `packages/zombie-game/src/presentation`；宿主提供视口、输入和 Play 端口 |
+| 绑定、Retarget 与 IK | [绑定流程](rigging/character-rigging-workflow.md)、[身体 IK](animation/body-ik-blending.md)、[动作过渡](animation/pose-transitions.md) | `packages/render`、`packages/scene` 契约与编辑器绑定适配器 |
+| 场景美术、材质与建筑 LOD | [品质提升指南](art/visual-quality-playbook.md)、[街景报告](36-StreetQualityAndArchitecturalLOD.md) | 场景/资产文件、通用渲染器与美术验证工具 |
+| 浏览器或 GPU 验收 | [浏览器入口](browser-verification.md)、项目浏览器/GPU 规则 | 有界面目标检出环境及运行证据，不能只用构建代替 |
+| Agent 通过 MCP 编辑 | [编辑器 MCP](../tools/mcp-editor/README.md) | `editor_workflow` → 明确选择实例 → 当前 schema/revision |
+| 历史决策和事故证据 | 目录中 `historical` 项 | `docs/review`、`docs/evidence`、`.workbuddy/memory`；复用前核对源码 |
 
-## Find and maintain knowledge
+## 查询与维护
 
 ```powershell
 pnpm run knowledge:find -- --topic animation
@@ -44,20 +41,14 @@ pnpm run knowledge:check
 pnpm run architecture:check
 ```
 
-The finder returns stable IDs, full paths, sections to consult, and authority.
-The check validates IDs, tracked coverage, paths, status/role vocabulary and SOT
-references. It does not declare old content current. Add/update a catalog entry
-when publishing a guide or durable design decision; export important session
-conclusions into a focused `docs/` guide with owner, contracts, failure behavior,
-verification and remaining work. Daily logs remain immutable historical context.
-Do not bulk promote their obsolete commands or temporary parameters into rules.
+查询返回稳定 ID、完整路径、建议章节及权威属性。检查验证 ID、已跟踪覆盖、路径、状态/
+职责词汇及真源引用，不会把旧内容声明为当前事实。发布指南或长期设计决策时更新目录；
+重要会话结论落到聚焦的 `docs/` 指南，说明职责、契约、失败行为、实际验证和未完成项。
+日报保留历史语境，不批量将过期命令或临时参数提升为项目规则。
 
-The [2026-10-09 documentation audit](review/documentation-audit-2026-10-09.md)
-records corrected routes and verification scope. Current guides must be repaired
-internally after source moves; an added routing banner alone is insufficient.
-Historical reports keep their original paths/counts, with a notice directing new
-work to the current contract. Architecture designs are intent, not blanket proof
-that their FrameGraph, export, subsystem or MCP roadmap has shipped.
+[2026-10-09 文档复核](review/documentation-audit-2026-10-09.md)记录修订入口和验证范围。
+源码迁移后必须修正当前指南正文，仅增加导航提示不够。历史报告保留原路径/计数，并指向
+当前契约。架构设计表达意图，不能据此认定 FrameGraph、导出、子系统或 MCP 路线图已交付。
 
-The CodeGraph cache is derived and checkout-local. It supplements source reads
-and this catalog; neither graph centrality nor document age determines truth.
+CodeGraph 是当前检出目录的派生缓存，补充源码阅读和目录检索；图中心性或文档年龄都不
+决定真实性。目录的英文 ID、分类值和协议字段保持机器契约，用户可读标题/说明使用中文。

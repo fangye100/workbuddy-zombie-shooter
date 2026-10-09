@@ -1,25 +1,36 @@
-# Browser verification entry
+# 浏览器验证入口
 
-This is the portable repository entry when the optional local `web-debug` Skill is absent. It does not install or reconstruct an archived Skill. Read applicable host/browser/GPU rules first, including the installed Chrome connection/recovery instructions before initializing browser control. Where the local Skill exists, follow its routing.
+本机未安装可选 `web-debug` Skill 时，使用本仓库入口，不安装或恢复归档 Skill。
+先读适用的主机/浏览器/GPU 规则，初始化控制前还须读 Chrome 连接/恢复说明。
+若已安装本机 Skill，则按其工具路由执行。
 
-## Interactive work
+## 交互验证
 
-Use the current supported browser tool and its returned documentation. Discover the actual browser/profile/tab; use a dedicated test tab and preserve other sessions' tabs. Confirm the intended checkout, scene and completed business state. If a connection fails, follow the installed connection/recovery workflow; do not bypass a failed connection with a custom CDP client, replace extensions or restart unrelated services. A login wall requires user action for that page; local validation can continue.
+使用当前受支持浏览器工具及其返回文档，发现实际 browser/profile/tab，以专用测试标签
+验证，保留其他会话标签。确认目标检出、场景和业务完成状态。连接失败按恢复流程，不能
+用自定义 CDP 绕过、替换扩展或重启无关服务；登录障碍需要用户操作，本地验证可继续。
 
-## Checked-in local acceptance
+## 仓库内本地验收路径
 
-The repository provides `tools/verify/editor-smoke.mjs` and its shared library for controlled editor acceptance. On this Windows/NVIDIA host the required mode is headed with real hardware:
+`tools/verify/editor-smoke.mjs` 及共享库用于受控验收。此 Windows/NVIDIA 主机必须
+有界面并使用真实硬件：
 
 ```powershell
 pnpm run editor:smoke -- --headed
 ```
 
-The default editor port is 5100. Confirm the existing server serves the intended checkout before running the probe. Preserve fixed port, host, strictPort and HTTPS/Tailscale settings. If the default probe Chrome profile or CDP endpoint is already owned by another session, do not kill it or delete its profile; use the supported interactive tool or stop that verification path and report the specific ownership conflict.
+默认端口 5100，探针前确认服务来自目标检出，保固定端口、host、strictPort、HTTPS/
+Tailscale。默认 Chrome profile/CDP 被他人占用时，不 kill 或删 profile；改用支持的
+交互工具，或停止这条验证路径并报告具体归属冲突。
 
-The probe can start a temporary server when necessary and manages its own test session. Do not start an unrecorded long-running replacement. For deliberately started persistent services, use detached execution and record working directory, log and exact stop method.
+探针必要时启动临时服务并管理自身测试会话，不启动未记录的长期替代服务。明确启动的
+长期服务须 detached，并记录工作目录、日志和准确停止方法。
 
-Verify `isSecureContext`, an actual hardware adapter and GPU/browser errors. Headless/SwiftShader runs cannot establish local visual quality. Do not add `--no-sandbox` or `--disable-dev-shm-usage` as a workaround on this host. Do not disable TLS validation globally or bypass browser interstitials through hidden APIs.
+验证 `isSecureContext`、真实硬件 adapter、GPU/浏览器错误。headless/SwiftShader
+不证明本机视觉品质，不加 `--no-sandbox`/`--disable-dev-shm-usage` 绕过此主机问题；
+不全局禁 TLS 或用隐藏 API 跳证书提示。
 
-Use the actual visible scene for acceptance and distinguish programmatic input-hook coverage from the human UI route. Edit → Apply → Save → Reload and Play → Stop/resource cleanup are separate checks. Store screenshots and measured state with their revision and scope; build success or a canvas appearing is not sufficient acceptance.
-
-See [the visual quality playbook](art/visual-quality-playbook.md) for scene matching and evidence discipline, and [P0 intake](32-P0-asset-intake-2026-10-05.md) for existing hardware validation boundaries.
+使用可见实际场景，区分代码 input hook 与真实 UI 路径。Edit→Apply→Save→Reload 和
+Play→Stop/资源清理分别检查；截图及状态记录版本/范围，构建或仅出现 canvas 不够。
+画面匹配/证据纪律见[品质指南](art/visual-quality-playbook.md)，历史硬件范围见
+[P0 接入](32-P0-asset-intake-2026-10-05.md)。

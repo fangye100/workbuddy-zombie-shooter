@@ -1,10 +1,8 @@
 # NPC / 角色控制系统（AI · 动画 · 寻路 · 战斗）
 
-> Historical design / baseline: implementation coverage and original dependency
-> diagrams below are not current delivery claims. For new work, use the
-> [current ownership contract](architecture/layers.md) and [shared knowledge](README.md).
-> Scene schema is currently v15; Zombie simulation/presentation is game-owned.
-> The current renderer uses direct passes; FrameGraph remains dormant.
+> 历史设计/基线说明：下文的实现范围及原依赖图不等于当前交付结果。
+> 新开发以[当前分层契约](architecture/layers.md)和[共享知识入口](README.md)为准。
+> 当前场景 schema 为 v15，僵尸模拟/表现归游戏包；当前渲染器直接执行 Pass，FrameGraph 尚未启用。
 
 > 本文是 L5 层的核心 gameplay 设计。它是 `04-子系统.md` 中 `animation / physics / script` 的**上层消费者**，
 > 本身也是一个 Plugin：`AetherCharacterPlugin`。

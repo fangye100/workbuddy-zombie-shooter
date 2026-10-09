@@ -1,86 +1,69 @@
-# Documentation audit against current source and CodeGraph
+# 当前代码与 CodeGraph 文档复核报告
 
-## Reviewed scope
+## 复核范围
 
-Date: 2026-10-09, Asia/Singapore. Source baseline: `e6c2278` on
-`codex/architecture-boundaries-20261009`, after integrated main `90d6427` and
-the game/framework separation. Unrelated dirty daily logs, untracked deliveries
-and the music/voice draft were preserved. No game, scene, asset or MCP behavior
-changed in this documentation task.
+日期：2026-10-09，时区 Asia/Singapore。代码基线为
+`codex/architecture-boundaries-20261009` 分支的 `e6c2278`，已包含主分支集成
+`90d6427` 和游戏/Framework 分离。其他会话未提交的日志、资产交付目录及音乐/语音草稿
+保持原样。本次文档任务没有改变游戏、场景、资产或 MCP 的运行行为。
 
-The review covered the shared catalog/classification, current Agent/README and
-development/animation/art/rigging/MCP guides, the structure map, tracked Markdown
-link targets, and historical documents containing obsolete owner paths or
-architecture instructions. It is not a line-by-line certification of every old
-design specification, external reference or asset description.
+复核覆盖共享目录及分类、当前 AGENTS/README、开发/动画/美术/绑定/MCP 指南、代码
+结构图谱、已跟踪 Markdown 的文件链接，以及包含旧职责路径或架构指令的历史文档。
+这不等于逐行认证所有旧设计、外部参考资料和资产描述。
 
-## Graph evidence and confidence
+## 图谱证据与可信边界
 
-The installed `code-graph-mcp 0.167.0` server was accessed through actual stdio
-MCP `initialize`, `tools/list`, `project_map` and file-qualified `module_overview`.
-Tool schemas were read before querying. Audited roots are `apps`, `assets`,
-`packages`, `tools`; root configs and document metadata were inspected separately.
-See [the query receipt](../evidence/documentation-audit-2026-10-09/codegraph.json).
+通过实际 stdio MCP 连接已安装的 `code-graph-mcp 0.167.0`，执行 `initialize`、
+`tools/list`、`project_map` 和指定文件的 `module_overview`；查询前读取工具参数 schema。
+核对的源码根目录为 `apps`、`assets`、`packages`、`tools`；根配置及文档元数据另外检查。
+详见[查询记录](../evidence/documentation-audit-2026-10-09/codegraph.json)。
 
-Incremental indexing returned 18 updated / 1 removed file and completed embedding,
-while also emitting a concurrent-lock warning. The following health result was
-healthy with 965 files, 6,504 nodes, 15,670 edges, four parser flags, 6,870 unresolved
-calls and 6,437/6,437 embedded nodes. Counts include documents/data/tests and are
-not production ownership or runtime-performance measures. No lock was removed,
-foreign process stopped or index copied from another checkout. The warning limits
-claims about exclusive refresh; subsequent queries and source reads were used.
+增量索引返回更新 18 个文件、移除 1 个文件，嵌入计算完成，同时报告并发索引锁警告。
+随后健康检查为 healthy：965 个文件、6,504 个节点、15,670 条边、4 个解析标记、
+6,870 个未解析调用、6,437/6,437 个已嵌入节点。统计包含文档、数据及测试，不能当成
+生产代码的职责数量或运行性能指标。没有删除锁、停止其他进程或复制其他检出目录的索引。
+并发警告限制了“独占刷新”的结论，因此继续用实际查询和源码核对。
 
-The full map returned 52 directory groups without reported budget omissions.
-Even depth-1 dependency lists mixed unrelated same-name receivers with real
-imports. The export-only game barrel returned dependencies alongside a “No files
-found” warning. These results were checked against actual barrels/imports, the
-scene migration chain, render/shader implementation and the source-edge gate;
-they were not treated as missing files or architectural violations.
+完整图谱返回 52 个目录分组，未报告预算遗漏。即使依赖深度为 1，返回的依赖列表仍会
+混入同名方法接收者的错误关系。只含导出的游戏入口返回依赖，同时出现 “No files found”
+警告。已对照真实入口、import、迁移链、渲染/Shader 实现及源码依赖门禁检查，未将这些
+结果直接判断为文件缺失或架构违规。
 
-## Repairs
+## 修订内容
 
-| Finding | Correction / source authority |
+| 问题 | 修订与真源 |
 |---|---|
-| README described FrameGraph as the active renderer and omitted current packages | Describe Editor Play/direct GPU passes, M0-only sample, framework/game/presentation owners and actual build/tool routes; `RendererCore`, dormant `feature.ts`/`framegraph/graph.ts` |
-| Current gameplay guide still used v14 and moved tests | Update v15, game-owned session/audio, accepted weapon action/IK boundaries and current scoped test paths; `document.ts`, game barrel and actual test files |
-| IK/transition guides described conflicting pre-merge migration histories as current | Preserve original version provenance; document v13→v14 audio mapping and v14→v15 integration from `migrate.ts`, including absence/preservation semantics |
-| Historical QA service was presented as this checkout's live service | Retain dated provenance; require live ownership rather than reuse of another worktree's PID/stop recipe |
-| Art guide had a broken combat-ink link and obsolete missing-model/weapon statements | Point to game presentation; distinguish original placeholders from delivered replacements, implemented procedural feedback from final model/hand/atlas integration |
-| Root rules addressed only WorkBuddy and asserted every sidecar field still disappeared | Address every development Agent; retain persistence requirements without asserting all fields' implementation status; require internal guide/command repair after owner/schema changes |
-| “Scene SOT” wording implied duplicating reusable roster/asset data into every scene | Clarify scene-instance/config authority versus project registration, canonical roster/stat JSON and reusable sidecars |
-| Old design/review findings could be mistaken for current instructions/defects | Add dated-context notices to seven design entries and ten delivery/review entries; original bodies, paths, measurements and findings retained |
-| Catalog classified browser validation as history and had generic routes | Correct current guide roles/topics/headings, attach relevant source contracts, preserve stable IDs and add seven live source entries plus this dated evidence report |
-| Structure map lacked the post-refactor execution/test path | Add current source map and routes while preserving the 2026-10-08 measurements in an explicitly historical section |
+| README 把 FrameGraph 描述为正在运行的渲染器，缺少当前包结构 | 明确 Editor Play、直接 GPU Pass、M0 示例用途、Framework/游戏/表现层职责及实际工具入口；以 `RendererCore` 和未接入运行路径的 `feature.ts`/`framegraph/graph.ts` 为准 |
+| 当前玩法指南仍引用 v14 和已迁移的测试 | 更新 v15、游戏侧会话/音频、已接受武器动作与 IK 边界及当前测试路径；以 `document.ts`、游戏入口和实际测试文件为准 |
+| IK/过渡指南把合并前冲突的迁移历史写成当前契约 | 保留原分支版本来源，按 `migrate.ts` 说明 v13→v14 音频映射、v14→v15 集成及字段缺省/保留语义 |
+| 历史 QA 服务被写成当前检出目录的服务 | 保留当时来源；执行进程操作前核对实际归属，不复用其他 worktree 的 PID 或停止命令 |
+| 美术指南存在失效链接和过期的缺模型/武器说明 | 链接指向游戏表现层；区分早期占位符与后续模型、程序化反馈与最终模型/手部/图集接入 |
+| 根规则只称呼 WorkBuddy，并断言所有 sidecar 字段仍会丢失 | 面向全部开发 Agent；保留持久化要求，逐项检查实际实现状态；职责/schema 变更后必须修订指南正文和命令 |
+| “场景真源”措辞容易被理解为把通用角色/资产数据复制进每个场景 | 区分场景实例/配置、项目登记、角色 roster/stat JSON 与可复用 sidecar 的数据权威 |
+| 旧设计/评审可能被当作当前指令或缺陷 | 为 7 份设计及 10 份交付/评审文档添加历史语境说明；原正文、路径、测量和结论保留 |
+| 目录把浏览器验证归为历史，并使用过于笼统的入口 | 修正当前指南职责、主题和章节，补充真源引用，保持稳定 ID，新增 7 项源码契约和本报告 |
+| 结构图谱缺少重构后的执行/测试路径 | 添加当前源码结构及入口，将 2026-10-08 测量保存在明确的历史章节 |
 
-The catalog now contains 127 entries. A document marked `current` is a source
-navigation/contract guide; historical acceptance paragraphs inside it remain
-dated evidence. This review does not promote design targets to delivered features.
+目录现有 127 项。`current` 表示当前源码导航或契约指南；指南内的历史验收段落仍只属于
+其记录日期的证据。本次复核没有把设计目标改写成已交付功能。
 
-## Verification and remaining limits
+## 实际验证与剩余边界
 
-Actual local checks:
+本次实际完成的本地检查：
 
-- `knowledge:test`: all five tests passed, including duplicate/missing/unsafe
-  paths, historical-authority rejection and role/status/topic discovery.
-- `knowledge:check`: 127 entries, no classification/path/source-reference errors;
-  tracked-document coverage passed.
-- `knowledge:find`: browser validation is discoverable as a current validation
-  guide; migration lookup returns the canonical migration source.
-- `architecture:check`: 257 production TS/JS files, zero forbidden edges.
-- Current guide command audit: 13 entry/guide documents, 54 script/test references;
-  package scripts and literal Vitest test paths all exist. This is path/registration
-  validation, not execution of every listed command.
-- Tracked Markdown local-file targets and new report links passed; `git diff
-  --check` passed. The complete scan scope includes tooling/asset Markdown as well
-  as catalogued project documents.
+- `knowledge:test`：5 项测试通过，覆盖重复/缺失/不安全路径、历史材料越权和分类查询。
+- `knowledge:check`：127 项无分类、路径或真源引用错误，已跟踪文档覆盖检查通过。
+- `knowledge:find`：能按当前验证职责检索浏览器指南，按 migration 检索迁移真源。
+- `architecture:check`：257 个生产 TS/JS 文件，禁止的依赖关系为 0。
+- 当前指南命令检查：13 份入口/指南、54 个脚本或测试引用；package 脚本和明确的 Vitest
+  文件均存在。这是路径/登记检查，没有执行全部列出的命令。
+- 已跟踪 Markdown 及新增报告的本地文件链接检查通过，`git diff --check` 通过。
+  扫描还覆盖工具和资产 Markdown，并非只扫描知识目录。
 
-Browser, GPU, listening, mobile, full gameplay and old performance measurements
-are not renewed by this documentation review. No runtime source was changed, so
-unrelated runtime builds and acceptance suites were not repeated.
+这次文档复核不重新认证浏览器、GPU、审听、手机、完整玩法或旧性能测量。运行时代码
+未改动，因此未重复无关的运行时构建和验收套件。
 
-Remaining engineering work stays in the current guides: legacy game-oriented
-scene-schema extension extraction and editor bootstrap consolidation; automatic
-weapon-marker hand IK and procedural reload; final atlas/resource quality;
-semantic editor MCP coverage and client setup; target-device and human listening
-acceptance. External URLs and Markdown heading anchors are outside the local-file
-link scan. Pure index counts do not prove semantic reuse or complete call resolution.
+后续工程事项仍记录在当前指南：游戏特有场景字段的扩展化、编辑器启动入口整理、武器
+标记驱动手部 IK 和程序化填装、最终图集/资产品质、编辑器 MCP 的语义覆盖与客户端配置、
+目标设备及人工审听验收。本地文件扫描不检查外部网址及 Markdown 标题锚点。
+索引计数不能证明语义复用或调用关系解析完整。

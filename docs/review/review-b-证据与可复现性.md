@@ -1,10 +1,8 @@
 # 评审报告 B · 证据与可复现性（只读复核）
 
-> Historical evidence: file paths, line numbers, findings and test counts below
-> belong to the recorded review/delivery, not today's source or new validation.
-> Zombie simulation/tests have moved from runtime to `packages/zombie-game`.
-> Use the [current ownership contract](../architecture/layers.md) and [shared knowledge](../README.md)
-> before reusing a command or treating an old finding as a current defect.
+> 历史证据说明：下文路径、行号、问题和测试数量属于当时的评审/交付，不代表当前源码或新验证。
+> 僵尸模拟及测试已从 runtime 迁到 `packages/zombie-game`。
+> 复用命令或将旧问题判断为当前缺陷前，先读[当前分层契约](../architecture/layers.md)和[共享知识入口](../README.md)。
 
 - 对象：`feature/headless-runtime`（17 笔，`9a550cc` → `ba5e093`），报告 `docs/19-最终开发报告（headless-runtime）.md`
 - 规格：`docs/17` §8（八条业务证明 + 验证范围纪律）、§9（报告七项）

@@ -1,81 +1,64 @@
-# Editor, framework and game ownership
+# Editor、Framework 与游戏代码分层契约
 
-## Required boundaries
+## 必须遵守的职责边界
 
-| Layer | Location and public entry | Responsibility |
+| 层 | 位置与公共入口 | 职责 |
 |---|---|---|
-| Framework | `packages/core`, `gfx`, `framegraph`, `scene`, `render`, `ai`, `gameplay`, `runtime`; `@aether/<package>` | Reusable data contracts, resources, rendering, math, navigation, weapon mechanics, collision and author commands |
-| Zombie game, headless | `packages/zombie-game/src/index.ts`; `@aether/zombie-game` | Concrete roster consumption, scene-to-campaign loading, rooms/waves, NPC attacks, run rewards, game Play composition and audio-event projection |
-| Zombie game, presentation | `packages/zombie-game/src/presentation`; named `@aether/zombie-game/presentation/<module>` entries | HUD, language, controls, overlays, run storage and Web Audio playback; reads game facts and calls game commands |
-| Game content | `packages/content`, `assets/scenes`, `assets/behaviors`, asset sidecars | Scene files own scene instances/configuration; roster/stat JSON, project manifest and reusable asset sidecars retain their separate authority; generated APIs are derivatives |
-| Editor | `apps/editor/src` | Authoring UX, binding, inspectors, history/save and editor-specific render/Play adapters |
-| Host and tools | sample entrypoints, editor Vite/devfs, `tools` | Composition, process/file/network adapters, MCP transport, offline generation and validation |
+| Framework | `packages/core`、`gfx`、`framegraph`、`scene`、`render`、`ai`、`gameplay`、`runtime`；`@aether/<package>` | 可复用数据契约、资源、渲染、数学、导航、武器机制、碰撞及编辑命令 |
+| 僵尸游戏无界面内核 | `packages/zombie-game/src/index.ts`；`@aether/zombie-game` | 角色数据消费、场景到关卡装载、房间/波次、NPC 攻击、奖励、游戏 Play 组合和音频事件投影 |
+| 僵尸游戏表现层 | `packages/zombie-game/src/presentation`；指定 `@aether/zombie-game/presentation/<module>` | HUD、语言、控制、叠加反馈、存档与 Web Audio；读取游戏事实、调用游戏命令 |
+| 游戏内容 | `packages/content`、`assets/scenes`、`assets/behaviors`、资产 sidecar | 场景文件持有场景实例/配置；角色 roster/stat JSON、项目清单和通用 sidecar 各有真源；生成 API 是派生产物 |
+| Editor | `apps/editor/src` | 编辑 UX、绑定、Inspector、历史/保存及编辑器专用渲染/Play 适配 |
+| 宿主与工具 | 示例入口、编辑器 Vite/devfs、`tools` | 组合、进程/文件/网络适配、MCP 传输、离线生成和验证 |
 
-Framework must not import game content, game logic, presentation or editor.
-Headless game may import framework and content; it must not import presentation
-or editor. Presentation may import headless game/framework but never editor.
-Editor/host assembles these services through explicit ports. Type-only references
-are architectural dependencies too. A game-specific feature must not move into
-framework solely because it is CPU-only or has an abstract class.
+Framework 禁止依赖游戏内容、游戏逻辑、表现层或编辑器。无界面游戏可依赖 Framework
+和内容，不得依赖表现层/编辑器。表现层可依赖游戏内核/Framework，不能依赖编辑器。
+编辑器/宿主通过明确的接口组合服务。仅类型引用同样属于架构依赖；不能因为功能是纯 CPU
+或使用抽象类，就把某个游戏的专有逻辑移入 Framework。
 
-Cross-package source dependencies use public `@aether` entries. Presentation has
-explicit named public subpaths in `tools/architecture/layers.json`; arbitrary deep
-imports are rejected. The headless entry does not re-export DOM modules. A second
-game should create its own game package and supply data/policies to framework;
-it must not require editing Zombie rewards, actor IDs or HUD to use the engine.
+跨包通过公共 `@aether` 入口引用。表现层公共子路径在 `tools/architecture/layers.json`
+中明确列出，任意深层引用会被拒绝。无界面入口不得重新导出 DOM 模块。
+第二款游戏应有独立游戏包，向 Framework 注入数据/策略，不应修改僵尸奖励、角色 ID 或
+HUD 才能使用引擎。
 
-## Data and failure ownership
+## 数据与失败行为归属
 
-- Scene/schema/project/sidecar authority stays in `packages/scene`; no alternate
-  scene cache or inline assets were introduced by this move. Stable NodeIds,
-  GUID-bearing AssetRefs, migration diagnostics and registered scenes still apply.
-- "Scene is the sole content carrier" prohibits hardcoded scene instances; it
-  does not duplicate roster definitions or reusable asset metadata into each scene.
-  `aether.project.json` owns scene registration/start selection, roster/stat JSON
-  owns character definitions, and same-name sidecars own reusable asset settings.
-- Generic author commands, behavior ports, segment/solid collision, ammunition,
-  equipment timing and weapon strategies remain `@aether/runtime`.
-- `RuntimeSession`, Zombie level loading, `RunProgress`, enemy attacks,
-  `AudioFramePlanner`, spawn A/B and the game's `PlaySession` moved to
-  `@aether/zombie-game`. All hosts consume the same implementation.
-- Input, viewport projection, storage and trusted audio gestures are host ports;
-  render/DOM facts never own damage or rewards. Stop still restores author state
-  and releases the complete Play ledger.
-- CLI `game:build` builds separate framework and game bundles. `runtime:build`
-  now builds framework only. Parity/simulation consumers use the game bundle;
-  old callers must change imports instead of retaining a reverse re-export.
+- 场景/schema/项目/sidecar 真源仍在 `packages/scene`；本次迁移未引入第二份场景缓存
+  或内联资产。稳定 NodeId、带 GUID 的 AssetRef、迁移诊断和场景登记规则继续有效。
+- “场景是唯一内容载体”禁止硬编码场景实例，不要求把角色定义或可复用资产元数据复制进
+  每个场景。`aether.project.json` 持有场景登记/启动选择，roster/stat JSON 持有角色
+  定义，同名 sidecar 持有可复用资产设置。
+- 通用编辑命令、行为端口、线段/实体碰撞、弹药、装备计时和武器策略保留在
+  `@aether/runtime`。
+- `RuntimeSession`、僵尸关卡装载、`RunProgress`、敌人攻击、`AudioFramePlanner`、
+  刷怪 A/B 和游戏 `PlaySession` 归 `@aether/zombie-game`；全部宿主使用同一实现。
+- 输入、视口投影、存储和可信音频交互由宿主提供；渲染/DOM 不计算伤害或奖励。
+  Stop 恢复编辑状态并释放完整 Play 资源账目。
+- `game:build` 生成分离的 Framework/游戏 bundle；`runtime:build` 只构建 Framework。
+  一致性检查/模拟使用游戏 bundle。旧消费者必须改引用，不能用反向导出兼容层规避分层。
 
-## Enforced gate and review obligations
+## 强制门禁与评审责任
 
-`pnpm run architecture:check` parses production TS/JS in the configured roots.
-It checks ownership, static imports/re-exports, type imports, literal dynamic
-imports/require, `import.meta.glob`, and `new URL(..., import.meta.url)` resources
-(including Workers). Framework/headless nonliteral module dispatch requires an
-explicit host port. Missing aliases, unknown package ownership, forbidden edges
-and cross-package relative imports fail. Server-only Vite/devfs composition is
-explicitly classified as host, so browser editor modules cannot import tooling.
-No grandfathered reverse-import allowlist is needed at this revision.
+`pnpm run architecture:check` 解析配置根目录下的生产 TS/JS，检查职责、静态 import/
+重新导出、类型引用、字面量动态 import/require、`import.meta.glob` 及
+`new URL(..., import.meta.url)` 资源引用（含 Worker）。Framework/无界面内核的
+非字面量模块派发必须通过宿主接口。缺失别名、未知包职责、禁止依赖及跨包相对引用均失败。
+仅服务端的 Vite/devfs 明确属于宿主，因此浏览器编辑器模块不能 import 工具代码。
+当前版本不需要保留反向依赖白名单。
 
-Node tests exercise bypass/failure paths. CI runs the architecture and knowledge
-gates. The manifest cannot prove semantic reuse: reviewers must reject new Zombie
-IDs, reward formulas, campaign state or host UI inside framework even if no
-import edge exposes the mistake. Python dependencies, text-generated code and
-message payload semantics need source review; this checker does not certify them.
+Node 测试覆盖绕过门禁及失败路径；CI 运行架构和知识门禁。清单不能证明语义复用：即使
+import 没暴露问题，也不能把僵尸 ID、奖励公式、关卡状态或宿主 UI 加进 Framework。
+Python 依赖、文本生成代码和消息载荷语义需要源码评审，不属于此检查器的认证范围。
 
-Tests follow their implementation owner: Zombie simulation/presentation under
-`packages/zombie-game/test`; reusable author/weapon/collision tests under runtime;
-editor adapter/Play integration tests remain under editor. Tools have separate
-Node/Python runners. Moving files is not acceptance: verify import resolution,
-same-input simulation parity and the reachable headed Play path.
+测试随实现职责归属：僵尸模拟/表现测试位于 `packages/zombie-game/test`；通用编辑/
+武器/碰撞测试位于 runtime；编辑器适配/Play 集成测试留在 editor。工具使用独立
+Node/Python 运行器。迁移文件不等于验收，仍需验证引用解析、相同输入的模拟一致性和
+可达的有界面 Play 路径。
 
-## Remaining consolidation
+## 后续整理
 
-The v15 shared scene contract retains legacy built-in game-oriented `RunRules`,
-talent/theme/weapon definitions and compatibility factories. Extracting those into
-a versioned extension system requires a dedicated schema/migration change; this
-refactor preserves authored data instead of claiming that migration is done.
-`apps/editor/src/main.ts` still assembles game ports alongside editor setup;
-splitting its bootstrap adapters is a later structural step, not permission to
-add gameplay formulas there. Binding/retarget authoring remains editor-owned;
-generic IK/pose blending remains render-owned. Follow source ownership rather
-than historical file locations in old reports.
+v15 共享场景契约保留旧内建、游戏特有的 `RunRules`、天赋/主题/武器定义和兼容工厂。
+抽成版本化扩展系统需要专门的 schema/迁移任务；本次重构保留已有数据，没有宣称完成
+该迁移。`apps/editor/src/main.ts` 仍同时组合游戏端口与编辑器启动，拆分启动适配器是
+后续结构工作，不能以此为由增加玩法公式。绑定/Retarget 编辑归 Editor，通用 IK/姿态
+混合归 render。以当前源码职责为准，不沿用历史报告的旧文件位置。
