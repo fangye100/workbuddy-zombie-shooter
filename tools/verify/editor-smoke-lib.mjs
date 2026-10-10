@@ -285,7 +285,7 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
   }
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
-  return { chrome, cdp, ws };
+  return { chrome, cdp, ws, targetId };
 }
 
 /**

@@ -2250,16 +2250,18 @@
       "path": "docs/animation/composite-player-motion.md",
       "title": "玩家持续步态与身体区域动作组合",
       "role": "framework",
-      "authority": "design",
-      "status": "historical",
+      "authority": "guide",
+      "status": "current",
       "topics": [
         "animation"
       ],
-      "read": "责任、区域遮罩、独立时钟、失败行为与验收边界",
+      "read": "区域契约、四向瞄准基准、真实武器手IK、v16迁移、只读debug、聚焦headed入口与验证边界",
       "sourceRefs": [
+        "scene-shared-motion",
         "scene-body-ik",
         "scene-migrations",
-        "project-rules"
+        "project-rules",
+        "architecture-policy"
       ]
     }
   ]
