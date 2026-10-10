@@ -4,6 +4,16 @@ import { migrateToLatest,validRunRules } from '@aether/scene';
 import { RuntimeSession,loadLevelRuntime } from '../src';
 const modules=import.meta.glob("../../../assets/scenes/act1/*.scene.json",{eager:true,import:'default'});
 function document(n:number):SceneDocument {return structuredClone(modules[`../../../assets/scenes/act1/floor-${n}.scene.json`] as SceneDocument);}
+it('第一层长期突扑战斗不进入玩家圆盘内部',()=>{
+  const desc=loadLevelRuntime(document(1)).desc!,s=new RuntimeSession({desc,seed:7});
+  s.table.health[s.playerEntityId]=10000;
+  for(let tick=0;tick<600;tick++) {
+    s.step();const p=s.player()!;
+    for(const e of s.view().filter(e=>e.kind==='npc'))
+      expect(Math.hypot(e.x-p.x,e.z-p.z)).toBeGreaterThanOrEqual(s.table.radius[e.id]!+s.table.radius[p.id]!-.025);
+  }
+  expect(s.navigationSnapshot().crowd.externalBlockedMoves).toBeGreaterThan(0);
+});
 it('the campaign multiplies fodder, retains unique elites/boss and bounds concurrent ordinary attackers',()=>{
   for(const [floor,total,firstWave] of [[1,72,24],[2,137,48],[3,53,16]]){
     const doc=document(floor!),desc=loadLevelRuntime(doc).desc!;
@@ -29,7 +39,7 @@ it('v11 migrates a persisted attack budget; invalid authored budgets are rejecte
   const rule=old.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
   delete (rule as unknown as Record<string,unknown>).attackTokenCount;
   delete (rule as unknown as Record<string,unknown>).npcTiming;
-  const migrated=migrateToLatest(old);expect(migrated.applied).toEqual(['authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik']);
+  const migrated=migrateToLatest(old);expect(migrated.applied).toEqual(['authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation']);
   const next=migrated.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
   expect(next.attackTokenCount).toBe(4);expect(validRunRules(next)).toBe(true);
   expect(next.npcTiming.decisionMaxSec).toBeGreaterThan(next.npcTiming.decisionMinSec);

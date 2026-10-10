@@ -1,8 +1,19 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-09",
+  "indexedAt": "2026-10-10",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
+    {
+      "id": "crowd-navigation-implementation",
+      "path": "docs/architecture/crowd-navigation.md",
+      "title": "高性能群体寻路与避让实现指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["navigation", "crowd", "avoidance", "architecture", "mcp"],
+      "read": "NavZone.crowd v16、分帧流场、预测避让、连续碰撞、游戏策略、MCP观察和CPU/GPU验收边界",
+      "sourceRefs": ["project-rules", "scene-schema", "architecture-policy"]
+    },
     {
       "id": "shadow-crowd-decal-assessment-20261010",
       "path": "docs/architecture/crowd-and-decals-20261010.md",

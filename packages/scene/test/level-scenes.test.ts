@@ -218,15 +218,13 @@ function tool(name: string): string {
 
 describe('关卡工具 · schema 版本必须与真源一致（评审 4171651527 / 4171651540）', () => {
   it('gen-level.mjs 的 SCHEMA_VERSION === document.ts 的 SCHEMA_VERSION', () => {
-    const m = /const SCHEMA_VERSION\s*=\s*(\d+)/.exec(tool('gen-level'));
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(SCHEMA_VERSION);
+    expect(tool('gen-level')).toContain('SCHEMA_VERSION, defaultNavigationSettings } = await loadSceneContract()');
+    expect(tool('gen-level')).toContain('schemaVersion: SCHEMA_VERSION');
+    for (const doc of Object.values(levelModules)) expect((doc as SceneDocument).schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('sim-level.mjs 的 SUPPORTED_SCHEMA === document.ts 的 SCHEMA_VERSION', () => {
-    const m = /const SUPPORTED_SCHEMA\s*=\s*(\d+)/.exec(tool('sim-level'));
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(SCHEMA_VERSION);
+    expect(tool('sim-level')).toContain('SCHEMA_VERSION: SUPPORTED_SCHEMA } = await loadSceneContract()');
   });
 
   it('gen-level 生成的 Camera 组件带 v5 的 yawMode（否则重跑即产生降级 diff）', () => {

@@ -1,0 +1,426 @@
+{
+  "date": "2026-10-10",
+  "baseCommit": "6b486f040da2e1496e851496d2e3706a379a8e31",
+  "branch": "codex/crowd-navigation-20261010",
+  "fixture": {
+    "scene": "assets/scenes/act1/floor-1.scene.json",
+    "extraNpc": 476,
+    "totalNpc": 500,
+    "spawnApi": "RuntimeSession.debugSpawn",
+    "temporaryCameraDistance": 55,
+    "authorCameraRestored": true,
+    "playerMovement": "RuntimeSession.setInput(0,-1) + MCP 30 steps; keyboard movement was not evidenced",
+    "lod": "actor:E-01, actor:E-02 and distant capsule fallback; not 500 full animated skins"
+  },
+  "persistence": {
+    "budget1024": {
+      "revision": "4e6e1be0",
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 1024
+      }
+    },
+    "budget2048": {
+      "revision": "2bde3a1b",
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      }
+    },
+    "authorBefore": {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "name": "第一层 · 火场公路",
+      "revision": "2bde3a1b",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    },
+    "authorAfter": {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "name": "第一层 · 火场公路",
+      "revision": "2bde3a1b",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    },
+    "fullDocumentEqual": true
+  },
+  "stress71": {
+    "adapter": {
+      "architecture": "lovelace",
+      "isFallbackAdapter": false,
+      "vendor": "nvidia"
+    },
+    "invalidStatic": 0,
+    "maxPhysicalPenetrationM": 0,
+    "navigation": {
+      "crowd": {
+        "agents": 501,
+        "blockedMoves": 0,
+        "candidateChecks": 6011,
+        "contactPairs": 740,
+        "externalBlockedMoves": 0,
+        "infeasibleVelocities": 181,
+        "maxPenetrationM": 0.014169743091940412,
+        "moving": 247,
+        "residualOverlapPairs": 191,
+        "stuckAgents": 3,
+        "unreachableAgents": 6,
+        "velocityConstraints": 2964,
+        "yieldingAgents": 11
+      },
+      "flow": {
+        "cellCount": 4224,
+        "pending": false,
+        "publishedGoal": 2118,
+        "rejectedGoals": 0,
+        "requestedX": 3,
+        "requestedZ": 0,
+        "version": 1,
+        "workLastStep": 0
+      },
+      "settings": {
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "flowCellBudget": 2048,
+        "maxNeighbors": 12,
+        "skinM": 0.02,
+        "stuckProgressRatio": 0.15,
+        "stuckWindowSec": 0.5,
+        "timeHorizonSec": 0.8
+      }
+    },
+    "npc": 500,
+    "physicalOverlaps": 0,
+    "player": {
+      "alive": true,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "characterId": "P-01",
+      "generation": 1,
+      "hitFlash": 0,
+      "hp": 84,
+      "id": 0,
+      "kind": "player",
+      "lodTier": 1,
+      "maxHp": 100,
+      "runId": 1,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "x": 3,
+      "yaw": 1.8325786590576172,
+      "z": 0
+    },
+    "secure": true,
+    "tick": 71
+  },
+  "stress60": {
+    "state": "paused",
+    "tick": 60,
+    "npcCount": 500,
+    "instances": 500,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02",
+      "capsule:r0.340:h1.750"
+    ],
+    "actorLibrarySize": 2,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 1,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 3,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "hp": 100,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 1
+    },
+    "navigation": {
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      },
+      "flow": {
+        "version": 1,
+        "pending": false,
+        "publishedGoal": 2118,
+        "requestedX": 3,
+        "requestedZ": 0,
+        "workLastStep": 0,
+        "cellCount": 4224,
+        "rejectedGoals": 0
+      },
+      "crowd": {
+        "agents": 501,
+        "moving": 247,
+        "candidateChecks": 6025,
+        "velocityConstraints": 2964,
+        "infeasibleVelocities": 168,
+        "contactPairs": 557,
+        "blockedMoves": 0,
+        "residualOverlapPairs": 144,
+        "maxPenetrationM": 0.012676173706768656,
+        "stuckAgents": 0,
+        "unreachableAgents": 6,
+        "yieldingAgents": 15,
+        "externalBlockedMoves": 0
+      }
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 0,
+      "pending": 4
+    },
+    "diagnostics": [],
+    "runtimeDiagnostics": []
+  },
+  "moving101": {
+    "state": "paused",
+    "tick": 101,
+    "npcCount": 500,
+    "instances": 500,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02",
+      "capsule:r0.340:h1.750"
+    ],
+    "actorLibrarySize": 2,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 1,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 3,
+      "z": -4.377329349517822,
+      "yaw": -1.5707963705062866,
+      "alive": true,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "hp": 68,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 1
+    },
+    "navigation": {
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      },
+      "flow": {
+        "version": 7,
+        "pending": true,
+        "publishedGoal": 1061,
+        "requestedX": 3,
+        "requestedZ": -4.377329349517822,
+        "workLastStep": 140,
+        "cellCount": 4224,
+        "rejectedGoals": 10
+      },
+      "crowd": {
+        "agents": 501,
+        "moving": 252,
+        "candidateChecks": 6003,
+        "velocityConstraints": 3024,
+        "infeasibleVelocities": 116,
+        "contactPairs": 461,
+        "blockedMoves": 0,
+        "residualOverlapPairs": 115,
+        "maxPenetrationM": 0.0022835283438454868,
+        "stuckAgents": 1,
+        "unreachableAgents": 8,
+        "yieldingAgents": 17,
+        "externalBlockedMoves": 2
+      }
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 0,
+      "pending": 4
+    },
+    "diagnostics": [],
+    "runtimeDiagnostics": []
+  },
+  "settled131": {
+    "state": "paused",
+    "tick": 131,
+    "npcCount": 500,
+    "instances": 500,
+    "meshIds": [
+      "actor:E-01",
+      "actor:E-02",
+      "capsule:r0.340:h1.750"
+    ],
+    "actorLibrarySize": 2,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 1,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 3,
+      "z": -4.377329349517822,
+      "yaw": -1.5707963705062866,
+      "alive": true,
+      "sourceNodeId": "nd_f1_start",
+      "targetId": -1,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "hp": 68,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 1
+    },
+    "navigation": {
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      },
+      "flow": {
+        "version": 8,
+        "pending": false,
+        "publishedGoal": 929,
+        "requestedX": 3,
+        "requestedZ": -4.377329349517822,
+        "workLastStep": 0,
+        "cellCount": 4224,
+        "rejectedGoals": 40
+      },
+      "crowd": {
+        "agents": 501,
+        "moving": 249,
+        "candidateChecks": 6025,
+        "velocityConstraints": 2988,
+        "infeasibleVelocities": 151,
+        "contactPairs": 590,
+        "blockedMoves": 0,
+        "residualOverlapPairs": 146,
+        "maxPenetrationM": 0.014584774128370337,
+        "stuckAgents": 0,
+        "unreachableAgents": 9,
+        "yieldingAgents": 12,
+        "externalBlockedMoves": 4
+      }
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 0,
+      "pending": 4
+    },
+    "diagnostics": [],
+    "runtimeDiagnostics": []
+  },
+  "cleanup": {
+    "state": "stopped",
+    "tick": 0,
+    "npcCount": 0,
+    "instances": 0,
+    "meshIds": [],
+    "actorLibrarySize": 2,
+    "player": null,
+    "navigation": null,
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    },
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "audio": {
+      "state": "closed",
+      "runId": -1,
+      "pending": 0,
+      "buffers": 0,
+      "decodedBytes": 0,
+      "voices": 0,
+      "loops": 0,
+      "peakVoices": 1,
+      "played": {
+        "SFX-ENV-HIGHWAY-BED": 1
+      },
+      "skipped": 1,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    }
+  },
+  "browserErrors": [],
+  "checks": {
+    "vitest": {
+      "files": 46,
+      "passed": 639
+    },
+    "node": {
+      "passed": 7
+    },
+    "typecheck": true,
+    "editorBuild": true,
+    "sceneCheck": {
+      "assetMetadata": 228,
+      "sceneFiles": 14,
+      "environmentLods": 38,
+      "modelLods": 27,
+      "audioFiles": 22,
+      "errors": 0
+    },
+    "architecture": {
+      "files": 273,
+      "errors": 0
+    },
+    "knowledge": {
+      "entries": 132,
+      "errors": 0
+    }
+  },
+  "limits": [
+    "有界面真实硬件 GPU，但未测完整 FPS/手机/战役通关",
+    "运行时注入和输入是临时 QA；没有持久化500 NPC配置",
+    "圆盘保护带残余接触与实际圆盘穿透分别报告",
+    "600 tick 突扑回归是 CPU 测试；正常90tick截图来自补动态截停前的阶段验收"
+  ]
+}

@@ -22,8 +22,8 @@ import { EnemyAttacks, type EnemyAttackWorld } from './enemy-attacks';
  */
 
 import { CharacterTable, rayCapsuleY, updateLod, type LodThresholds } from '@aether/gameplay';
-import { AttackTokenPool, CrowdSolver, FlowField, FlowFieldIntegrator } from '@aether/ai';
-import type { CrowdBuffers, CrowdParams } from '@aether/ai';
+import { AttackTokenPool } from '@aether/ai';
+import { ZombieCrowdNavigation, type ZombieNavigationPolicy } from './crowd-navigation';
 import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
@@ -305,7 +305,7 @@ export class RuntimeSession {
     return { player: this.playerEntityId,
       actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
       damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
-      move: (slot,x,z) => { const [cx,cz] = this.resolvePlayerCollision(x,z,t.radius[slot]!); t.posX[slot]=cx;t.posZ[slot]=cz;return [cx,0,cz]; },
+      move: (slot,x,z) => { const ox=t.posX[slot]!,oz=t.posZ[slot]!; const [cx,cz] = this.navigation.moveActor(t,slot,x,z); t.posX[slot]=cx;t.posZ[slot]=cz;t.velX[slot]=(cx-ox)/this.fixedStep;t.velZ[slot]=(cz-oz)/this.fixedStep;return [cx,0,cz]; },
       obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
     };
   }
@@ -367,11 +367,14 @@ export class RuntimeSession {
   readonly seed: number;
   readonly fixedStep: number;
 
-  private readonly field: FlowField;
-  private readonly integrator: FlowFieldIntegrator;
-  private readonly solver: CrowdSolver;
-  private readonly buffers: CrowdBuffers;
-  private readonly params: CrowdParams;
+  private readonly navigation: ZombieCrowdNavigation;
+  private readonly navigationPolicy: ZombieNavigationPolicy = {
+    movable: i => this.kindOf[i] === 1 && this.table.behavior[i] === BEHAVIOR_CHASE && !this.enemyAttacks.moving(i,this.table.generation[i]!),
+    speed: i => this.table.maxSpeed[i]! * this.table.speedScale[i]! * this.weaponCombat.slow(i,this.table.generation[i]!),
+    arrivalRange: i => { const a=this.defIdToStats.get(this.table.defId[i]!)?.attack; return a?.triggerRangeM ?? a?.rangeM ?? 0; },
+    height: i => this.defIdToStats.get(this.table.defId[i]!)?.capsuleHeight ?? 1.8,
+  };
+  navigationSnapshot() { return this.navigation.snapshot(); }
   /** 刷怪随机流的根种子。reset() 之后仍然用它派生，保证"同种子重跑" */
   private readonly initialSeed: number;
 
@@ -448,11 +451,10 @@ export class RuntimeSession {
   /** 玩家移动输入（已归一化，长度 ≤ 1）。宿主每帧写，runtime 每个固定步消费 */
   private inputX = 0;
   private inputZ = 0;
-  /** 上次重烘时的流场目标。挪动不到一个格子不重烘 */
+  /** 最近实际玩家位置；请求/发布的网格目标与进度由 navigation 持有。 */
   private goalX = 0;
   private goalZ = 0;
   /** 导航区（构造时已保证非 null，这里留一份免得每次判空） */
-  private navBounds = { minX: 0, minZ: 0, maxX: 0, maxZ: 0 };
   /** 按槽位记录来源作者节点 */
   private readonly sourceOf: (NodeId | null)[];
   private readonly kindOf: Uint8Array;
@@ -511,53 +513,9 @@ export class RuntimeSession {
       // loader 已经拦过一次；这里再挡一次是因为 Session 也可以被直接构造
       throw new Error('运行描述缺少 NavZone，无法建立导航场');
     }
-    const cs = nav.cellSize;
-    this.field = new FlowField({
-      width: Math.max(1, Math.ceil((nav.maxX - nav.minX) / cs)),
-      height: Math.max(1, Math.ceil((nav.maxZ - nav.minZ) / cs)),
-      cellSize: cs,
-      originX: nav.minX,
-      originZ: nav.minZ,
-    });
-    this.bakeObstacles();
-    this.field.bakeClearance(8);
-    this.field.applyClearanceToCost(2, 3);
-
-    this.integrator = new FlowFieldIntegrator(this.field);
-    this.navBounds = { minX: nav.minX, minZ: nav.minZ, maxX: nav.maxX, maxZ: nav.maxZ };
     this.goalX = opts.desc.playerStart.x;
     this.goalZ = opts.desc.playerStart.z;
-    this.integrator.setGoal(this.goalX, this.goalZ);
-    this.integrator.step(this.field.cellCount);
-
-    this.solver = new CrowdSolver(nav.minX, nav.minZ, nav.maxX, nav.maxZ, cs * 2, capacity);
-    this.buffers = {
-      count: 0,
-      posX: new Float32Array(capacity),
-      posZ: new Float32Array(capacity),
-      velX: new Float32Array(capacity),
-      velZ: new Float32Array(capacity),
-      radius: new Float32Array(capacity),
-      maxSpeed: new Float32Array(capacity),
-      speedScale: new Float32Array(capacity),
-      dodgeBias: new Int8Array(capacity),
-      outX: new Float32Array(capacity),
-      outZ: new Float32Array(capacity),
-      stuckTicks: new Uint16Array(capacity),
-      stuckRefX: new Float32Array(capacity),
-      stuckRefZ: new Float32Array(capacity),
-      stuck: new Uint8Array(capacity),
-    };
-    this.params = {
-      separationWeight: 1.2,
-      maxNeighbors: 8,
-      wallPush: 0.02,
-      jitter: 0.05,
-      acceleration: 8,
-      dt: this.fixedStep,
-      stuckWindowSeconds: 0.5,
-      stuckProgressRatio: 0.15,
-    };
+    this.navigation = new ZombieCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ);
 
     this.spawnPlayer();
     // 玩家出生所在房间应当立即触发（他就站在里面）
@@ -834,7 +792,7 @@ export class RuntimeSession {
     };
   }
 
-  /** 当前导航流场的目标（玩家位置）。玩家移动超过一个格子就会重烘 —— 测试据此核 */
+  /** 最近实际玩家位置；流场发布可能按预算滞后，见 navigationSnapshot().flow。 */
   get navGoal(): { x: number; z: number } {
     return { x: this.goalX, z: this.goalZ };
   }
@@ -962,8 +920,7 @@ export class RuntimeSession {
     this.fireHeld = false;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
-    this.integrator.setGoal(this.goalX, this.goalZ);
-    this.integrator.step(this.field.cellCount);
+    this.navigation.reset(this.goalX,this.goalZ);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();
@@ -1307,53 +1264,18 @@ export class RuntimeSession {
   /**
    * 按输入推进玩家一个固定步。
    *
-   * 三件事按序做：输入 → 位移 → 约束（障碍推出 + 导航区钳制）→ 导航目标更新。
-   * 没有输入时连流场都不用碰（不动玩家的历史行为保持不变）。
+   * 输入 → 静态与动态连续碰撞 → 实际速度及导航目标更新。
+   * 没有输入时清零实际速度；流场预算仍由后续导航步骤推进。
    */
   private movePlayer(): void {
     if (this.playerId < 0 || !this.table.isAlive(this.playerId)) return;
-    if (this.inputX === 0 && this.inputZ === 0) return;
-    const i = this.playerId;
-    const speed = this.table.maxSpeed[i]! * (1 + (this.progress?.strength('speed') ?? 0));
-    if (speed <= 0) return;
-
-    const nx = this.table.posX[i]! + this.inputX * speed * this.fixedStep;
-    const nz = this.table.posZ[i]! + this.inputZ * speed * this.fixedStep;
-    const [cx, cz] = this.resolvePlayerCollision(nx, nz, this.table.radius[i]!);
-    this.table.posX[i] = cx;
-    this.table.posZ[i] = cz;
-    this.table.yaw[i] = Math.atan2(this.inputZ, this.inputX);
-
-    // 导航目标更新：玩家挪动超过一个格子，流场必须跟着重烘 ——
-    // 不重烘的话 NPC 会朝"玩家原来站的地方"跑，画面与逻辑分家。
-    const cs = this.field.cellSize;
-    if (Math.abs(cx - this.goalX) >= cs || Math.abs(cz - this.goalZ) >= cs) {
-      this.goalX = cx;
-      this.goalZ = cz;
-      this.integrator.setGoal(cx, cz);
-      this.integrator.step(this.field.cellCount);
-    }
-  }
-
-  /** 障碍推出（AABB 最浅穿透轴）+ 导航区边界钳制 */
-  private resolvePlayerCollision(x: number, z: number, r: number): [number, number] {
-    let px = x;
-    let pz = z;
-    for (const o of this.desc.obstacles) {
-      if (!o.enabled) continue;
-      const dx = px - o.x;
-      const dz = pz - o.z;
-      const ex = o.halfX + r;
-      const ez = o.halfZ + r;
-      if (Math.abs(dx) >= ex || Math.abs(dz) >= ez) continue;
-      const pxn = ex - Math.abs(dx);
-      const pzn = ez - Math.abs(dz);
-      if (pxn < pzn) px = o.x + Math.sign(dx || 1) * ex;
-      else pz = o.z + Math.sign(dz || 1) * ez;
-    }
-    px = Math.min(this.navBounds.maxX - r, Math.max(this.navBounds.minX + r, px));
-    pz = Math.min(this.navBounds.maxZ - r, Math.max(this.navBounds.minZ + r, pz));
-    return [px, pz];
+    const i=this.playerId,t=this.table,x=t.posX[i]!,z=t.posZ[i]!;
+    t.velX[i]=0;t.velZ[i]=0;
+    if (this.inputX===0 && this.inputZ===0) return;
+    const speed=t.maxSpeed[i]!*(1+(this.progress?.strength('speed')??0));
+    const [cx,cz]=this.navigation.moveActor(t,i,x+this.inputX*speed*this.fixedStep,z+this.inputZ*speed*this.fixedStep);
+    t.posX[i]=cx;t.posZ[i]=cz;t.velX[i]=(cx-x)/this.fixedStep;t.velZ[i]=(cz-z)/this.fixedStep;
+    t.yaw[i]=Math.atan2(this.inputZ,this.inputX);this.goalX=cx;this.goalZ=cz;
   }
 
   // ------------------------------------------------------------ 内部：NPC 移动
@@ -1489,7 +1411,7 @@ export class RuntimeSession {
       },
       displace:(id,from,distance)=>{
         const a=actor(id);if(!a || distance<=0)return;const dx=a.x-from[0],dz=a.z-from[2],l=Math.hypot(dx,dz);if(l<1e-6)return;
-        const n=Math.ceil(distance/.1);for(let k=0;k<n;k++){const [x,z]=this.resolvePlayerCollision(t.posX[id]!+dx/l*distance/n,t.posZ[id]!+dz/l*distance/n,a.radius);t.posX[id]=x;t.posZ[id]=z;}
+        const [x,z]=this.navigation.moveActor(t,id,a.x+dx/l*distance,a.z+dz/l*distance);t.posX[id]=x;t.posZ[id]=z;
       }
     };
   }
@@ -1513,68 +1435,14 @@ export class RuntimeSession {
   }
 
   private moveNpcs(): void {
-    const b = this.buffers;
-    const t = this.table;
-    let n = 0;
-    for (let i = 0; i < t.capacity; i++) {
-      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
-      // 前摇蓄力站定（docs/23 §2.2 windup 语义）：不进求解器 = 位置冻结
-      if (t.behavior[i] !== BEHAVIOR_CHASE || this.enemyAttacks.moving(i,t.generation[i]!)) {t.velX[i]=0;t.velZ[i]=0;continue;}
-      b.posX[n] = t.posX[i]!;
-      b.posZ[n] = t.posZ[i]!;
-      b.velX[n] = t.velX[i]!;
-      b.velZ[n] = t.velZ[i]!;
-      b.radius[n] = t.radius[i]!;
-      b.maxSpeed[n] = t.maxSpeed[i]!;
-      b.speedScale[n] = t.speedScale[i]! * this.weaponCombat.slow(i,t.generation[i]!);
-      b.dodgeBias[n] = t.dodgeBias[i]!;
-      n++;
+    const t=this.table;
+    for(let i=0;i<t.capacity;i++) {
+      if (!t.isAlive(i) || this.kindOf[i]!==1)continue;
+      if(t.behavior[i]!==BEHAVIOR_CHASE && !this.enemyAttacks.moving(i,t.generation[i]!)){t.velX[i]=0;t.velZ[i]=0;}
     }
-    b.count = n;
-    if (n === 0) return;
-
-    this.solver.solve(b, this.field, this.params);
-
-    let k = 0;
-    for (let i = 0; i < t.capacity; i++) {
-      // 🔴 过滤条件必须与上方装填循环完全一致（含 WINDUP 跳过）——
-      // 两边不一致时 k 与装填序错位，速度/位置会写进错误的实体
-      if (!t.isAlive(i) || this.kindOf[i] !== 1) continue;
-      if (t.behavior[i] !== BEHAVIOR_CHASE || this.enemyAttacks.moving(i,t.generation[i]!)) continue;
-      const vx = b.outX[k]!;
-      const vz = b.outZ[k]!;
-      t.velX[i] = vx;
-      t.velZ[i] = vz;
-      t.posX[i] = t.posX[i]! + vx * this.fixedStep;
-      t.posZ[i] = t.posZ[i]! + vz * this.fixedStep;
-      if (Math.hypot(vx, vz) > 1e-4) t.yaw[i] = Math.atan2(vz, vx);
-      k++;
-    }
+    this.navigation.step(t,this.playerId,this.fixedStep,this.tickCount*this.fixedStep,this.navigationPolicy);
   }
 
-  // ------------------------------------------------------------ 内部：障碍烘焙
-
-  /**
-   * 把静态障碍画进导航场的阻挡位。
-   *
-   * 只画 `Collider && !isTrigger`（loader 已过滤）。没有这一步，
-   * "僵尸朝玩家靠近"看起来仍然正确 —— 因为它们会直接穿过掩体。
-   */
-  private bakeObstacles(): void {
-    const cs = this.field.cellSize;
-    for (const o of this.desc.obstacles) {
-      if (!o.enabled) continue;
-      const x0 = Math.floor((o.x - o.halfX - this.field.originX) / cs);
-      const x1 = Math.floor((o.x + o.halfX - this.field.originX) / cs);
-      const z0 = Math.floor((o.z - o.halfZ - this.field.originZ) / cs);
-      const z1 = Math.floor((o.z + o.halfZ - this.field.originZ) / cs);
-      for (let cz = z0; cz <= z1; cz++) {
-        for (let cx = x0; cx <= x1; cx++) {
-          if (this.field.inBounds(cx, cz)) this.field.setBlocked(cx, cz, true);
-        }
-      }
-    }
-  }
 }
 
 /** 便捷入口：装载 + 建会话。CLI 与浏览器都走这里，保证语义一致 */

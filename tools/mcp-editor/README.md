@@ -39,7 +39,7 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 | scene_set_environment | 完整验证、可撤销 environment 替换，保其他字段 |
 | scene_validate、scene_history、scene_save | 只读诊断、共享 undo/redo、冲突感知保存；validate→save→reopen→compare |
 | editor_play | 初始暂停；resume/pause/step（1–600）/stop 共 PlayController，Stop 恢复/释放 |
-| editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频事实 |
+| editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频/导航事实 |
 | editor_capture | 下一 GPU canvas PNG，不含 DOM HUD；无帧明确超时 |
 
 先依次调用 `editor_workflow` → `editor_instances` → `scene_list` → `scene_get`。
@@ -62,6 +62,13 @@ MCP 客户端 `tools/call` 的参数示例：
 字符串。场景 schema 校验是判断数据有效性的依据。
 
 ## 运行诊断
+
+`editor_runtime.runtime.navigation` 在 Stop 后为 null；Play 中是当前配置、流场版本/预算用量/
+待发布状态及群体候选/速度约束/不可行解/穿透/阻挡/解堵计数的副本。读取不推进流场或模拟。
+`externalBlockedMoves` 是本次运行玩家、突扑/冲锋和击退被动态圆盘截停的累计次数，其余 crowd
+计数属于最近一步。通过 `scene_get` 取完整 NavZone 节点，再用 `scene_edit_nodes` 替换其
+`crowd` 配置；validate→save→open→get 比较实际字段。没有专用导航设置面板或调参命令。
+配置及有界面验收见[高性能寻路避让指南](../../docs/architecture/crowd-navigation.md)。
 
 `editor_runtime.runtime.weapons` 在停止时为 null；Play 中包含装备 ID、复制的弹匣/储备/等级状态、
 当前行为、容量、换弹剩余时间、换装状态、升级成本、动作/阶段、局部持握/枪口/弹匣/弹膛标记、后坐/

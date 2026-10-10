@@ -13,6 +13,6 @@ describe('authored motion transition contract', () => {
   it('migrates v13 without overwriting existing binding choices', () => {
     const doc=createEmptySceneDocument('transition'); doc.schemaVersion=13;
     const before=structuredClone(doc.nodes); const migrated=migrateToLatest(doc);
-    expect(migrated.to).toBe(15); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik']); expect(migrated.doc.nodes).toEqual(before);
+    expect(migrated.to).toBe(16); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation']); expect(migrated.doc.nodes).toEqual(before);
   });
 });

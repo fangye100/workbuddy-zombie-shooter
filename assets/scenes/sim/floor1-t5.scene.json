@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 15,
+  "schemaVersion": 16,
   "id": "sc_sim_floor1_t5",
   "name": "第一层 · 火场 · t=5s 快照（派生产物）",
   "act": "Act1",
@@ -1405,7 +1405,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ],
       "prefab": null

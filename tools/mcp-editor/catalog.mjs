@@ -25,6 +25,6 @@ export const EDITOR_TOOLS = [
   edit('scene_save', 'Persist the author scene with the existing disk-conflict checks. Never bypass UI drafts, Play locks or author field authority.'),
   edit('editor_play', 'Start paused, resume, pause, single-step or stop using PlayController. stop restores the author scene and releases Play resources.',
     {action:{enum:['start','resume','pause','step','stop']},steps:{type:'integer',minimum:1,maximum:600}}, ['action']),
-  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, copied weapon ammo/action/grip/recoil facts and audio decode/voice/lifecycle diagnostics. Read-only; no firing or playback command.'),
+  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, weapon/audio diagnostics, and copied navigation flow-budget/avoidance/contact/stuck facts. Read-only; does not advance simulation.'),
   scoped('editor_capture', 'Capture the next actual GPU viewport frame as PNG. This is the 3D canvas, not the DOM HUD. Requires a live rendered editor; timeout is explicit.'),
 ];

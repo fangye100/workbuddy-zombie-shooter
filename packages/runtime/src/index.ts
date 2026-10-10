@@ -23,3 +23,4 @@ export * from './scene-authoring';
 export * from './weapon-system';
 export * from './weapon-combat';
 export * from './motion-direction';
+export * from './disc-collision';

@@ -25,7 +25,7 @@ import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -347,6 +347,34 @@ export interface RoomVolumeComponent extends ComponentBase {
   depth: number;
 }
 
+/** 通用导航配置；攻击距离、占位和解堵决策由各游戏策略负责。 */
+export interface NavigationSettings {
+  maxNeighbors: number;
+  timeHorizonSec: number;
+  skinM: number;
+  acceleration: number;
+  collisionIterations: number;
+  stuckWindowSec: number;
+  stuckProgressRatio: number;
+  flowCellBudget: number;
+}
+export function defaultNavigationSettings(): NavigationSettings {
+  return { maxNeighbors: 12, timeHorizonSec: .8, skinM: .02, acceleration: 8,
+    collisionIterations: 4, stuckWindowSec: .5, stuckProgressRatio: .15, flowCellBudget: 2048 };
+}
+export function validNavigationSettings(value: unknown): value is NavigationSettings {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const v = value as NavigationSettings;
+  return Number.isInteger(v.maxNeighbors) && v.maxNeighbors >= 1 && v.maxNeighbors <= 32
+    && Number.isFinite(v.timeHorizonSec) && v.timeHorizonSec >= .05 && v.timeHorizonSec <= 3
+    && Number.isFinite(v.skinM) && v.skinM >= 0 && v.skinM <= .2
+    && Number.isFinite(v.acceleration) && v.acceleration > 0 && v.acceleration <= 100
+    && Number.isInteger(v.collisionIterations) && v.collisionIterations >= 1 && v.collisionIterations <= 12
+    && Number.isFinite(v.stuckWindowSec) && v.stuckWindowSec >= .1 && v.stuckWindowSec <= 10
+    && Number.isFinite(v.stuckProgressRatio) && v.stuckProgressRatio >= 0 && v.stuckProgressRatio <= 1
+    && Number.isInteger(v.flowCellBudget) && v.flowCellBudget >= 64 && v.flowCellBudget <= 65536;
+}
+
 /** 导航区：packages/ai 流场寻路的网格作用域 */
 export interface NavZoneComponent extends ComponentBase {
   kind: typeof ComponentKind.NavZone;
@@ -355,6 +383,8 @@ export interface NavZoneComponent extends ComponentBase {
   cellSize: number;
   /** 离线烘焙产物（可选）；null = 运行时按碰撞体实时烘焙 */
   baked: AssetRef | null;
+  /** v16 场景必填；可选类型仅用于接受旧版迁移输入。 */
+  crowd?: NavigationSettings;
 }
 
 /** 行为参数的标量类型。与 ScriptComponent.params 的取值域一致 */
@@ -901,6 +931,20 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         seen.set(c.kind, ci);
       }
 
+      if (c.kind === ComponentKind.NavZone) {
+        const nav = c as NavZoneComponent;
+        if (!Number.isFinite(nav.cellSize) || nav.cellSize <= 0) err(`${at}/cellSize`, 'E_NAV_CELL', '导航格尺寸必须是有限正数');
+        const size = nav.bounds?.size;
+        if (!Array.isArray(size) || size.length !== 3 || !size.every(v => Number.isFinite(v) && v > 0)
+          || !Array.isArray(nav.bounds?.center) || nav.bounds.center.length !== 3 || !nav.bounds.center.every(Number.isFinite)) {
+          err(`${at}/bounds`, 'E_NAV_BOUNDS', '导航范围必须具有有限中心和正尺寸');
+        } else if (nav.cellSize > 0 && Math.ceil(size[0]! / nav.cellSize) * Math.ceil(size[2]! / nav.cellSize) > 262144) {
+          err(`${at}/cellSize`, 'E_NAV_CAPACITY', '导航网格超过 262144 格上限');
+        }
+        if ((d.schemaVersion ?? 0) >= 16 || nav.crowd !== undefined) {
+          if (!validNavigationSettings(nav.crowd)) err(`${at}/crowd`, 'E_NAV_CROWD', '导航避让配置缺失或越界，请迁移旧场景或修正配置');
+        }
+      }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
         if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');

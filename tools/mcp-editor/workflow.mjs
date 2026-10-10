@@ -28,6 +28,7 @@ export function editorWorkflow() {
       { id:'npc-and-input', guide:'docs/37-CombatInputAndPopulationQuality.md' },
       { id:'weapons-and-ik-ports', guide:'docs/39-Unified-weapons-and-animation-hooks.md' },
       { id:'audio', guide:'docs/42-GameplayAudioIntegration.md', resourceBrief:'docs/40-GameplayAudioAssetBrief.md' },
+      { id:'crowd-navigation', guide:'docs/architecture/crowd-navigation.md', schema:'packages/scene/src/document.ts', component:'NavZone.crowd', observation:'editor_runtime.runtime.navigation' },
     ],
     recovery: {
       REVISION_CONFLICT:'Read scene_get again and rebase only the intended changes.',
@@ -44,7 +45,7 @@ export function editorWorkflow() {
       'Opt-in broker and selected tab; client registration is a separate setup action.',
       'Generic component editing exists; semantic asset/component discovery and dedicated weapon/audio authoring commands are not implemented.',
       'No rig/IK authoring, animation resource generation, runtime equipment command or browser autoplay bypass in this server.',
-      'Read-only weapons/audio diagnostics expose current facts, not a second simulation or durable scene state.',
+      'Read-only weapons/audio/navigation diagnostics expose copied current facts, not a second simulation or durable scene state. Navigation observations do not advance flow work or avoidance.',
       'Existing live material roundtrip evidence is scoped; reconnect and all asynchronous human-edit races are not certified.',
     ],
   };

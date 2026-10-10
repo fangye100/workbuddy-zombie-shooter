@@ -4048,7 +4048,7 @@ async function boot(): Promise<void> {
     },
     runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
-      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot()}),
+      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;

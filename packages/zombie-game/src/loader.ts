@@ -24,7 +24,7 @@
  * position"，那只对了没有旋转和缩放的场景 —— 一旦有父级缩放，刷怪点就会飘。
  */
 
-import { SceneGraph, validRunRules, type RunRulesComponent } from '@aether/scene';
+import { SceneGraph, validRunRules, validNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
 import { lookupCharacterStats } from '@aether/content';
 import { solidCollider, type SolidColliderDesc } from "@aether/runtime";
 import type {
@@ -109,6 +109,8 @@ export interface NavDesc {
   maxX: number;
   maxZ: number;
   cellSize: number;
+  /** 旧构造 API 可省略；场景装载必须显式携带通过校验的 v16 配置。 */
+  crowd?: NavigationSettings;
 }
 
 /** 运行描述：装载产物，RuntimeSession 的唯一输入（除种子与固定步长外） */
@@ -421,6 +423,10 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
         const navMis = boundsNodeMismatchMessage(graph, n, c.bounds, 'NavZone');
         if (navMis !== null) warn('W_BOUNDS_NODE_MISMATCH', navMis, n.id);
         const b = aabbToXZ(c.bounds);
+        if (!validNavigationSettings(c.crowd)) {
+          err('E_NAV_CROWD', 'NavZone 避让配置缺失或非法，请先迁移场景', n.id);
+          continue;
+        }
         nav = {
           nodeId: n.id,
           minX: b.minX,
@@ -428,6 +434,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           maxX: b.maxX,
           maxZ: b.maxZ,
           cellSize: c.cellSize,
+          crowd: { ...c.crowd },
         };
       } else if (c.kind === 'Script') {
         // Script 只存 behavior id + params，**绝不存代码字符串**（ADR-017）。

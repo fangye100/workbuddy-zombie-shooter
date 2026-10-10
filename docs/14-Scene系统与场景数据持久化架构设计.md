@@ -2,7 +2,7 @@
 
 > 历史设计/基线说明：下文的实现范围及原依赖图不等于当前交付结果。
 > 新开发以[当前分层契约](architecture/layers.md)和[共享知识入口](README.md)为准。
-> 当前场景 schema 为 v15，僵尸模拟/表现归游戏包；当前渲染器直接执行 Pass，FrameGraph 尚未启用。
+> 当前场景 schema 为 v16（[NavZone.crowd 与迁移](architecture/crowd-navigation.md#2-配置迁移与编辑闭环)），僵尸模拟/表现归游戏包；当前渲染器直接执行 Pass，FrameGraph 尚未启用。
 
 > 角色：引擎架构师
 > 时间：2026-09-04 ｜ 基线：agents.md 规则 + docs/10 架构定案 + 当前代码盘点

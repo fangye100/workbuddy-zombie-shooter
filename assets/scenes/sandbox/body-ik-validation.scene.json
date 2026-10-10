@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 15,
+  "schemaVersion": 16,
   "id": "sc_body_ik_validation",
   "name": "HumanIK · 分部位动画混合",
   "act": null,
@@ -706,7 +706,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ],
       "prefab": null

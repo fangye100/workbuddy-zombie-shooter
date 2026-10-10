@@ -22,7 +22,7 @@ describe('scene audio contract',()=>{
     const doc=structuredClone(Object.values(scenes)[0] as SceneDocument);doc.schemaVersion=13;
     const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
     const original=structuredClone(rules.audio);
-    const result=migrateToLatest(doc);expect(result.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik']);
+    const result=migrateToLatest(doc);expect(result.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation']);
     expect((result.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent).audio).toEqual(original);
     delete rules.audio;const silent=migrateToLatest(doc);expect((silent.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent).audio).toBeUndefined();
     expect(validateSceneDocument(silent.doc).filter(d=>d.severity==='error')).toEqual([]);

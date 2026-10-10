@@ -26,6 +26,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadSceneContract } from '../scene/load-contract.mjs';
 
 const require = createRequire(import.meta.url);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -34,11 +35,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const { loadLevelRuntime, createSession } = require(join(ROOT, '.workbuddy/tmp/zombie-game/index.js'));
 
 const PROJECT_FILE = 'aether.project.json';
-// 🔴 必须与 packages/scene/src/document.ts 的 SCHEMA_VERSION 一致（作者楼层的版本）。
-// 曾停在 3：schema 抬到 v5 后本工具直接拒绝 floor-1 并 exit 1，
-// 已入库的 sim 快照从此**不可再生成**（派生产物不可复现 = 数据腐烂）。
-// 一致性由 packages/scene/test/level-scenes.test.ts 的断言守住。
-const SUPPORTED_SCHEMA = 15;
+const { SCHEMA_VERSION: SUPPORTED_SCHEMA } = await loadSceneContract();
 
 // ---------------------------------------------------------------- 参数
 

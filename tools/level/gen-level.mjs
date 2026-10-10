@@ -30,15 +30,12 @@ import { fileURLToPath } from 'node:url';
 import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 import { applyP0Art } from '../art/apply-p0-art.mjs';
 import { refineStreet } from '../art/refine-streets.mjs';
+import { loadSceneContract } from '../scene/load-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
 const PROJECT_FILE = 'aether.project.json';
-// 🔴 必须与 packages/scene/src/document.ts 的 SCHEMA_VERSION 一致。
-// 曾停在 4 而 schema 已抬到 v5：重跑生成器会把三张作者楼层**降级**回 v4，
-// 且 Camera 模板漏掉 v5 的 yawMode → `migrate-scenes --check` 当场失败。
-// 一致性由 packages/scene/test/level-scenes.test.ts 的「工具常量 = 真源」断言守住。
-const SCHEMA_VERSION = 15;
+const { SCHEMA_VERSION, defaultNavigationSettings } = await loadSceneContract();
 
 // ---------------------------------------------------------------- 设计表（源真源）
 
@@ -628,6 +625,7 @@ function buildFloor(floor) {
           bounds: { center: [(navMinX + navMaxX) / 2, 0, 0], size: [navW, 4, navD] },
           cellSize: 0.5,
           baked: null,
+          crowd: defaultNavigationSettings(),
         },
       ],
     }),
