@@ -12,3 +12,4 @@ export * from './quality';
 export * from './gizmo';
 export * from './renderer-core';
 export * from './albedo-texture';
+export * from './pose-layer';

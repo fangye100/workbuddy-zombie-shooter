@@ -19,12 +19,14 @@ import * as m4 from '@aether/core';
 import type { AnimClip, AnimTrack, NodeLocal, SkeletonData } from '@aether/scene';
 import { applyBodyIk, type BodyIkState } from './body-ik';
 import { poseTransitionWeight } from './pose-transition';
+import type { PoseLayerState } from './pose-layer';
 
 /** 一个物体的蒙皮动画播放状态 */
 export interface SkinState {
   /** Pre-IK local pose snapshot; transient, never serialized. */
   transition?: { from: NodeLocal[]; elapsed: number; duration: number };
   bodyIk?: BodyIkState;
+  poseLayer?: PoseLayerState;
   skeleton: SkeletonData;
   clips: AnimClip[];
   /** 当前片段下标；-1 = 停在 bind pose（不播） */
@@ -66,7 +68,7 @@ export function currentClip(s: SkinState): number {
 export function selectClip(s: SkinState, index: number, transitionSec = 0): void {
   if (index < -1 || index >= s.clips.length) return;
   if (!Number.isFinite(transitionSec) || transitionSec < 0) return;
-  const from = transitionSec > 0 ? sampleAnimationPose(s) : null;
+  const from = transitionSec > 0 ? sampleBaseAnimationPose(s) : null;
   if (from) s.transition = { from, elapsed: 0, duration: transitionSec };
   else delete s.transition;
   s.clip = index;
@@ -204,7 +206,7 @@ function sampleLocals(sk: SkeletonData, clip: AnimClip | null, time: number): No
 }
 
 /** Snapshot/evaluation excludes procedural IK, which is applied exactly once afterwards. */
-export function sampleAnimationPose(state: SkinState): NodeLocal[] {
+function sampleBaseAnimationPose(state: SkinState): NodeLocal[] {
   const locals = sampleLocals(state.skeleton, state.clip >= 0 ? state.clips[state.clip]! : null, state.time);
   const transition = state.transition;
   if (!transition) return locals;
@@ -214,6 +216,51 @@ export function sampleAnimationPose(state: SkinState): NodeLocal[] {
     b.r = slerp(a.r, b.r, weight, 0, 0);
     b.t = a.t.map((x, j) => x * (1 - weight) + b.t[j]! * weight) as [number, number, number];
     b.s = a.s.map((x, j) => x * (1 - weight) + b.s[j]! * weight) as [number, number, number];
+  }
+  return locals;
+}
+/** Independent region request. A missing clip exits smoothly to the moving base. */
+export function selectPoseLayer(state: SkinState, clip: number, replay = false): void {
+  const layer = state.poseLayer;
+  if (!layer || clip < -1 || clip >= state.clips.length || (clip === layer.clip && !replay)) return;
+  const from = layer.binding.transitionSec > 0 ? sampleAnimationPose(state) : null;
+  layer.clip = clip; layer.time = 0;
+  if (from && layer.nodes.length && !layer.diagnostics.length) layer.transition = { from, elapsed: 0, duration: layer.binding.transitionSec };
+  else delete layer.transition;
+}
+export function advancePoseLayerTransition(state: SkinState, dt: number): void {
+  const layer = state.poseLayer;
+  if (!layer?.transition || !Number.isFinite(dt) || dt <= 0) return;
+  layer.transition.elapsed += dt;
+  if (layer.transition.elapsed + 1e-8 >= layer.transition.duration) delete layer.transition;
+}
+/** Both playback layers are sampled before the one procedural IK pass. */
+export function sampleAnimationPose(state: SkinState): NodeLocal[] {
+  const locals = sampleBaseAnimationPose(state), layer = state.poseLayer;
+  if (!layer || layer.binding.weight <= 0 || layer.diagnostics.length || !layer.nodes.length) return locals;
+  const clip = layer.clip >= 0 ? state.clips[layer.clip] : null;
+  const mask = new Set(layer.nodes);
+  if (clip && layer.binding.weight > 0) {
+    // Missing channels retain base; no bind-pose overwrite of absent tracks.
+    for (const track of clip.tracks) {
+      if (!mask.has(track.node)) continue;
+      const { value, ok } = sampleTrack(track, layer.time); if (!ok) continue;
+      const local = locals[track.node]!, weight = layer.binding.weight;
+      if (track.path === 'rotation') local.r = slerp(local.r, value, weight, 0, 0);
+      else {
+        const field = track.path === 'translation' ? 't' : 's';
+        local[field] = local[field].map((x, j) => x * (1 - weight) + value[j]! * weight) as [number, number, number];
+      }
+    }
+  }
+  if (layer.transition) {
+    const weight = poseTransitionWeight(layer.transition.elapsed, layer.transition.duration);
+    for (const node of layer.nodes) {
+      const a = layer.transition.from[node]!, b = locals[node]!;
+      b.r = slerp(a.r, b.r, weight, 0, 0);
+      b.t = a.t.map((x, j) => x * (1 - weight) + b.t[j]! * weight) as [number, number, number];
+      b.s = a.s.map((x, j) => x * (1 - weight) + b.s[j]! * weight) as [number, number, number];
+    }
   }
   return locals;
 }
