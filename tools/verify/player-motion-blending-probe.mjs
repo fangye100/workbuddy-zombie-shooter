@@ -59,7 +59,7 @@ const reader=`(async()=>{
     layerDiagnostics:layer?[...layer.diagnostics]:[],motion:e.motions.summary(),ik:e.bodyIk.summary(),weapon:rt?.weapons.animation??null,
     magazine:rt?.weapons.state.magazine??null,legError,legs:legs.map(x=>({name:x.name,node:x.node,local:locals[x.node],matrix:Array.from(o.skinScratch.slice(x.index*16,x.index*16+16))})),
     upperPose:o.skeleton.jointNames.map((n,i)=>({name:n,index:i,node:o.skeleton.joints[i]})).filter(x=>/Spine|Arm|Hand|Head/i.test(x.name||'')).map(x=>({name:x.name,local:locals[x.node],matrix:Array.from(o.skinScratch.slice(x.index*16,x.index*16+16))})),
-    ikRuntime:s.bodyIk?{nodes:structuredClone(s.bodyIk.nodes),setupDiagnostics:[...s.bodyIk.setupDiagnostics],enabled:s.bodyIk.binding.enabled,targets:structuredClone(s.bodyIk.targets),controlWeights:{...s.bodyIk.controlWeights},bindingWeight:s.bodyIk.binding.weight}:null,
+    ikRuntime:s.bodyIk?{nodes:structuredClone(s.bodyIk.nodes),setupDiagnostics:[...s.bodyIk.setupDiagnostics],solveDiagnostics:[...s.bodyIk.diagnostics],enabled:s.bodyIk.binding.enabled,targets:structuredClone(s.bodyIk.targets),controlWeights:{...s.bodyIk.controlWeights},bindingWeight:s.bodyIk.binding.weight}:null,
     debug:e.animationDebug.snapshot(),authorDirty:e.viewportEdit.state().dirty,ledger:e.playCtl.ledger,
     authorSkin:{clip:s.clip,time:s.time,playing:s.playing,loop:s.loop,speed:s.speed,clips:s.clips.map(c=>c.name),hasLayer:!!s.poseLayer,hasIk:!!s.bodyIk}}
 })()`;
@@ -68,12 +68,32 @@ const statusReader=`(()=>{const e=window.__editor,rt=e.playCtl.session.runtime,p
 // Observation is installed before the real key event. Local RAF state is test evidence only;
 // it never changes gameplay, sampling clocks, author config or the debug source.
 function observeAction(action) {
-  return session.cdp.eval(`(async()=>{const started=performance.now(),samples=[];while(performance.now()-started<3000){await new Promise(resolve=>requestAnimationFrame(resolve));const status=${statusReader};samples.push(status);if(status.weapon?.action===${JSON.stringify(action)})return{ok:true,samples,row:await ${reader}};if(status.outcome!=='running'||status.choosing)return{ok:false,samples,row:await ${reader}};}return{ok:false,samples,row:await ${reader}}})()`).then(observation=>{report.actionObservations.push({action,...observation});return observation;},error=>{const observation={ok:false,error:String(error),samples:[],row:null};report.actionObservations.push({action,...observation});return observation;});
+  return session.cdp.eval(`(async()=>{
+    const started=performance.now(),baseline=${statusReader},samples=[];
+    while(performance.now()-started<3000){
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      const status=${statusReader};samples.push({...status,newerThanBaseline:status.tick>baseline.tick});
+      if(status.runId!==baseline.runId||status.outcome!=='running'||status.choosing)
+        return{ok:false,reason:'run-or-outcome-changed',baseline,samples,row:await ${reader}};
+      // A synchronous equip/reload command can change weapons before the next fixed-tick
+      // presentation update. Reject that interval rather than sampling the old upper layer.
+      if(status.tick>baseline.tick&&status.weapon?.action===${JSON.stringify(action)}){
+        const row=await ${reader};
+        if(row.tick===status.tick&&row.runId===status.runId&&row.weapon?.action===status.weapon.action&&
+          row.weapon.weaponId===status.weapon.weaponId&&row.weapon.startTick===status.weapon.startTick)
+          return{ok:true,baseline,samples,row};
+        samples[samples.length-1].rowMismatch={tick:row.tick,runId:row.runId,weapon:row.weapon};
+      }
+    }
+    return{ok:false,reason:'phase-or-consistent-tick-timeout',baseline,samples,row:await ${reader}};
+  })()`).then(observation=>{report.actionObservations.push({action,...observation});return observation;},error=>{
+    const observation={ok:false,error:String(error),samples:[],row:null};report.actionObservations.push({action,...observation});return observation;
+  });
 }
 async function finishAction(action,pending,name) {
   const observation=await pending;
   if(observation.row)report.rows.push({name,...observation.row});
-  check('actual keyboard observes '+action+' production phase',observation.ok&&observation.row?.weapon?.action===action,observation);
+  check('actual keyboard observes '+action+' production phase',observation.ok&&observation.row?.weapon?.action===action&&observation.row.tick>observation.baseline.tick,observation);
   return observation.row;
 }
 async function newRound(name,rectangle) {

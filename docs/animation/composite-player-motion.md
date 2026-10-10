@@ -43,17 +43,22 @@ reload 上身片段生效时，运行期手 IK multiplier 根据区域权重和 
 先读 `docs/browser-verification.md` 及其主机/Chrome/GPU 入口，由 Audit 确认固定 Chrome profile/CDP 的归属。聚焦入口只复用 `tools/verify/editor-smoke-lib.mjs` 的服务/Chrome/CDP 能力，不替代交互工具连接恢复。临时 --port 不修改固定端口、host、strictPort 或 Tailscale 配置；发现服务来自其他 checkout 即失败，不接管它。
 
 ```powershell
-node tools/verify/player-motion-blending-probe.mjs --headed --port 5198 --cdp 9444 --floor 2 --out .workbuddy/tmp/animation-layer-dev/headed-floor2-recheck 2>&1 | Tee-Object -FilePath .workbuddy/tmp/animation-layer-dev/headed-floor2-recheck.log
+node tools/verify/player-motion-blending-probe.mjs --headed --port 5198 --cdp 9444 --floor 2 --out .workbuddy/tmp/animation-layer-dev/headed-floor2-consistent-tick 2>&1 | Tee-Object -FilePath .workbuddy/tmp/animation-layer-dev/headed-floor2-consistent-tick.log
 ```
 
 `--floor 1/2/3` 选择实际楼层，`--keep-tab --keep-server` 仅供 Audit 继续查看该探针创建的 target/服务。默认关闭自身专用 target 和自身临时服务，保留共享固定 profile 浏览器与他人标签；自有 Chrome 子进程 unref 使 Node 可退出，不关闭共享 profile 浏览器。长驻保留时由发起者记录 server PID/cwd，并负责停止自己的服务。CDP 已被其他 profile 占用时停止这条路径并报告归属冲突，不 kill 或删 profile。
 
 每次必须指定未使用的 --out；发现既有 results.json 即拒绝覆盖，以保留原始失败。helper 不修改进程全局 TLS 校验，仅 localhost 原生 HTTPS 请求使用本地证书选项。
 
-入口经 CDP Input.dispatchKeyEvent / Input.dispatchMouseEvent 点击可见 Play、暂停、Stop、debug 控件，发送 WASD、J、R、数字2以及鼠标瞄准。生产输入处理器接收这些键鼠事件；脚本不使用 runtime.setInput/setFire。短 fire/reload/unequip/equip 阶段先执行；真实按键发送前注册只读 RAF 观测，抓取生产动作首帧，两个换枪阶段之间不串行等待截图。方向和 debug 检查通过可见 Stop/Play 开始独立新回合；不修改 runtime 生命、时间、输入或场景相机来绕过敌人。验收覆盖四向移动及瞄准/mesh 方向一致，横向移动同时 fire/reload/unequip/equip，观察目标切换、冻结画面不冻结 gameplay，暂停双时钟，Stop/重启及资源恢复。
+入口经 CDP Input.dispatchKeyEvent / Input.dispatchMouseEvent 点击可见 Play、暂停、Stop、debug 控件，发送 WASD、J、R、数字2以及鼠标瞄准。生产输入处理器接收这些键鼠事件；脚本不使用 runtime.setInput/setFire。短 fire/reload/unequip/equip 阶段先执行；真实按键发送前注册只读 RAF 观测，保存输入前 production tick，拒绝同 tick 的同步命令/旧表现窗口；仅在后续生产 tick、候选状态与完整 row 的 tick/runId/action/weaponId/startTick 一致时抓取动作帧，两个换枪阶段之间不串行等待截图。方向和 debug 检查通过可见 Stop/Play 开始独立新回合；不修改 runtime 生命、时间、输入或场景相机来绕过敌人。验收覆盖四向移动及瞄准/mesh 方向一致，横向移动同时 fire/reload/unequip/equip，观察目标切换、冻结画面不冻结 gameplay，暂停双时钟，Stop/重启及资源恢复。
 
 `results.json` 保存 exact HEAD/branch、服务绝对 checkout 与四个关键源文件 SHA256、真实 GPU adapter、输入阶段、基础/区域时钟与权重/诊断、生产 IK 目标/权重、CPU 腿/上身 locals 和 renderer 已生成的 skinScratch 关节矩阵、只读 debug、资源账目、每个观测帧的 weapon/events/outcome/choosing/HP、失败和收尾终态、截图前后状态及浏览器/GPU 异常；PNG 截图来自 headed 页面。CPU locals 是纯采样观察，skinScratch 是上传 GPU 的生产 CPU 矩阵，均不是 GPU readback；它们不能代替截图与独立可见操作验收。实际视觉效果和源/目标 rig 重定向质量由 Audit 判断，不根据 CPU/build 宣称通过。
 
 开发验证日志位于忽略目录 `.workbuddy/tmp/animation-layer-dev`。WU2 的 `wu2-tests.log` 保留修复前失败，后续 fixture/断言修复由最终聚焦集覆盖；`final-focused-tests-before-tool-schema.log` 的 488 项中 486 通过、两项关卡工具版本常量失败。仅将两个工具同步为16后，`final-level-scenes.log` 的31项全部通过，避免无新变更重跑其余通过项。scene:check 与 motion:check 的通过原始记录为 `wu2-scene.log` / `wu2-motion.log`；后者覆盖49 sources、8 targets、164 solves，不能认证视觉质量。最终 typecheck/editor:build、architecture:check、knowledge:check 保存各自 final 日志。构建存在既有 Vite CJS/chunk size 提示。
 
 独立 Audit 已在 e1a8a0257c7fd764542c2adcc1ae17d5223b96f5 使用 NVIDIA Lovelace headed floor2，served SHA 匹配，49 PASS；唯一失败为真实 Digit2 后未观测到 unequip。原始 audit-floor2.log / headed-floor2/results.json 保留：按键前 tick159、HP28、pistol reload phase .1667；未保存按键后状态，不能由此认定生产缺陷。当前修复只涉及观测/顺序/收尾和本地 TLS 范围，未改玩法；复验与 Final Reviewer 待完成。原截图存在 NPC 遮挡，无法单凭其认证上身/下身实际视觉姿态；短新回合截图保存真实时刻，仍须 Audit 检查玩家可见性，若遮挡持续就保留视觉未证实。CPU locals 断言不替代这个结论。
+
+
+后续 ebc796957a8961c0f20f3d1ec330b8ed08213c95 的 headed floor2 recheck 为27 PASS、1 FAIL：Digit2 已产生 unequip，但输入前后 tick23 相同，upper 仍为 reload、缺片诊断尚未由固定 tick 更新。原 `audit-floor2-recheck.log` / `headed-floor2-recheck/results.json` 保留。当前一致 tick 观察修复不改变生产行为，不删除 fallback、腿部或动作 phase 断言；CPU 检查覆盖同 tick 旧表现拒绝、后续一致 tick 成功和短动作 timeout 诊断，实际 headed 复验待 Audit。
+
+IK 的 setupDiagnostics=[] 只认证配置/骨链解析，不代表求解无警告。每行 `ik.nodes[].diagnostics` 已记录实际 IK_UNREACHABLE 和 residualM，`ikRuntime.solveDiagnostics` 同时明确保存该结果。例如上述 recheck tick17 ready 左右手残差 .09167/.05230m、tick22 fire .08678/.06540m，骨长保持且目标显式 clamp。当前 ready 目标右手 actor-local [0,.88,0]、左手 [0,.88,.12] 由现有 weaponMount/markers 投影；是否适合 H-01 的视觉握持仍需独立 Audit 判断，不能由骨链通过推导目标配置正确。角色在原截图尺寸小、阴影暗且 NPC 密集，实际移动可见性和上身姿态品质仍是独立视觉边界，不为截图新造 camera 或改生命/场景。
