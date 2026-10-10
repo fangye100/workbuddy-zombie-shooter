@@ -51,3 +51,15 @@ describe('selected animation debug collection', () => {
     expect(pose.nodes.find(n => n.id === 'transition')!.details.join(' ')).toContain('前一显示姿态快照');
   });
 });
+
+it('projects actual region facts and freezes their detached snapshots without advancing production',()=>{
+  const f=fixture(),s=sample();s.pipeline='cpu-scene';s.layer={status:'ready',requested:'pistol-reload',action:'reload',fallback:'pistol-reload → reload',
+    clip:{name:'reload',index:2,time:.4,duration:2,phase:.2,loop:false},roots:['Spine'],exclude:[],nodes:[1,3],bones:['Spine','RightArm'],weight:.65,
+    transition:{from:'shoot',to:'reload',elapsed:.1,duration:.2,weight:.5,source:'local-pose-snapshot'},diagnostics:[]};
+  const before=JSON.stringify(s),graph=poseGraph(s);expect(graph.nodes.find(n=>n.id==='layer')!.details.join(' ')).toContain('mask=Spine, RightArm');
+  expect(graph.edges).toContainEqual({from:'transition',to:'layer',active:true});expect(JSON.stringify(s)).toBe(before);
+  f.collector.setOpen(true);f.collector.update(0);f.emit(s);const view=f.collector.update(125)!;view.snapshot!.layer!.nodes.length=0;
+  f.collector.setFrozen(true);s.tick=3;s.layer.clip!.time=.8;f.emit(s);const frozen=f.collector.update(250)!;
+  expect(frozen.snapshot!.layer!.clip!.time).toBe(.4);expect(frozen.snapshot!.layer!.nodes).toEqual([1,3]);
+  f.collector.setFrozen(false);expect(f.collector.update(251)!.snapshot!.layer!.clip!.time).toBe(.8);
+});

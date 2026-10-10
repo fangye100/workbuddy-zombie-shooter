@@ -5,6 +5,7 @@ export interface PoseLayerState {
   nodes: number[];
   diagnostics: string[];
   clip: number;
+  fromClip?: number;
   time: number;
   loop: boolean;
   transition?: { from: NodeLocal[]; elapsed: number; duration: number };

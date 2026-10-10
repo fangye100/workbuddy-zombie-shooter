@@ -224,6 +224,7 @@ export function selectPoseLayer(state: SkinState, clip: number, replay = false):
   const layer = state.poseLayer;
   if (!layer || clip < -1 || clip >= state.clips.length || (clip === layer.clip && !replay)) return;
   const from = layer.binding.transitionSec > 0 ? sampleAnimationPose(state) : null;
+  layer.fromClip = layer.clip;
   layer.clip = clip; layer.time = 0;
   if (from && layer.nodes.length && !layer.diagnostics.length) layer.transition = { from, elapsed: 0, duration: layer.binding.transitionSec };
   else delete layer.transition;

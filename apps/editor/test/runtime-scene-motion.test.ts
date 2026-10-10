@@ -182,6 +182,11 @@ describe('player base plus weapon region assembly',()=>{
     f.motion.sync(rt(3,'reload',.2));const time=gait.time;
     f.motion.sync(rt(4,'reload',.2));expect(gait.time).toBeGreaterThan(time);expect(gait.poseLayer!.time).toBe(.4);
     const pose=sampleAnimationPose(gait);const layer=gait.poseLayer!;delete gait.poseLayer;expect(sampleAnimationPose(gait)[leg]).toEqual(pose[leg]);gait.poseLayer=layer;
+    const beforeDebug=JSON.stringify(gait);const snapshot=f.motion.debugSnapshot('player')!;
+    expect(snapshot.layer!.clip!.name).toBe('reload');expect(snapshot.clip!.name).toBe('run');expect(snapshot.layer!.nodes).not.toContain(leg);
+    snapshot.layer!.nodes.length=0;snapshot.layer!.roots[0]='corrupt';snapshot.layer!.clip!.time=99;
+    expect(f.motion.debugSnapshot('player')!.layer!.roots).toEqual(['Spine']);expect(JSON.stringify(gait)).toBe(beforeDebug);
+    f.motion.watchDebug('player',()=>{throw new Error('observer');});
     f.motion.sync(rt(4,'reload',.2));expect(gait.poseLayer!.time).toBe(.4);expect(sampleAnimationPose(gait)).toEqual(pose);
     f.motion.sync(rt(5,'unequip',.5));expect(gait.clips[gait.clip]!.name).toBe('run');expect(gait.clips[gait.poseLayer!.clip]!.name).toBe('ready');
     const before=gait.time;f.motion.sync(rt(6,'equip',.5));expect(gait.time).toBeGreaterThan(before);

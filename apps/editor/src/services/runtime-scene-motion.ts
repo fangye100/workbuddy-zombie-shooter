@@ -53,7 +53,13 @@ export class RuntimeSceneMotion {
         clip: null, transition: null, ik: noIk(), diagnostics: this.errors.filter(x => x.nodeId === nodeId).map(x => x.message) };
     }
     const skin = e.object.skinState, clip = skin?.clips[skin.clip];
-    const decision = e.choice && !e.manual ? sceneChoice(e.choice, true).decision! : {
+    const decision = e.composite && !e.manual ? {
+      requested: e.composite.base, actual: e.state, source: 'layered-player', fallback: null,
+      actionStamp: e.composite.stamp, rules: [
+        { id: 'base-locomotion', label: '持续基础步态', matched: true, selected: true, reason: `${e.composite.base}; 武器 phase 不控制基础时钟` },
+        { id: 'upper-weapon', label: '独立区域武器动作', matched: true, selected: true, reason: `${e.composite.requested} → ${e.composite.upper ?? 'base only'}; ${e.composite.fallback ?? '直接命中'}` },
+      ],
+    } : e.choice && !e.manual ? sceneChoice(e.choice, true).decision! : {
       requested: e.state, actual: e.state, source: e.manual ? 'manual' : e.manualCompleted ? 'manual-completed' : 'configured-default', fallback: null, actionStamp: '', rules: [],
     };
     if (e.manual) decision.rules.push({ id: 'manual', label: '已有控制面板手动覆盖', matched: true, selected: true,
@@ -69,6 +75,17 @@ export class RuntimeSceneMotion {
       transition: skin?.transition ? { from: e.fromState || 'initial pose', to: e.state,
         elapsed: skin.transition.elapsed, duration: skin.transition.duration,
         weight: poseTransitionWeight(skin.transition.elapsed, skin.transition.duration), source: 'local-pose-snapshot' } : null,
+      layer: skin?.poseLayer ? (() => {
+        const layer = skin.poseLayer!, upper = skin.clips[layer.clip];
+        return { status: layer.diagnostics.length ? 'invalid' as const : layer.binding.weight <= 0 ? 'disabled' as const : 'ready' as const,
+          requested: e.composite?.requested ?? 'manual/base', action: e.composite?.action ?? 'manual', fallback: e.composite?.fallback ?? null,
+          clip: upper ? { name: upper.name, index: layer.clip, time: layer.time, duration: upper.duration, phase: upper.duration > 0 ? layer.time / upper.duration : 0, loop: layer.loop } : null,
+          roots: [...layer.binding.roots], exclude: [...layer.binding.exclude], nodes: [...layer.nodes],
+          bones: layer.nodes.map(n => skin.skeleton.jointNames[skin.skeleton.joints.indexOf(n)] ?? `node:${n}`), weight: layer.binding.weight,
+          transition: layer.transition ? { from: skin.clips[layer.fromClip ?? -1]?.name ?? 'base', to: upper?.name ?? 'base', elapsed: layer.transition.elapsed,
+            duration: layer.transition.duration, weight: poseTransitionWeight(layer.transition.elapsed, layer.transition.duration), source: 'local-pose-snapshot' as const } : null,
+          diagnostics: [...layer.diagnostics, ...(e.composite?.diagnostics ?? [])] };
+      })() : null,
       ik: observeIk(skin?.bodyIk), diagnostics: e.result.reports.filter(r => r.state === e.state).flatMap(r => r.diagnostics.filter(d => d.severity !== 'info').map(d => `${d.code}: ${d.message}`)) };
   }
   private emitDebug(nodeId: string): void {
@@ -155,7 +172,7 @@ export class RuntimeSceneMotion {
         this.select(entry, entry.defaultState, false, true);
         entry.startTick = runtime.tick; entry.manual = false; entry.elapsed = 0; entry.lastTick = runtime.tick;
         delete entry.choice; delete entry.weaponActionStamp; delete entry.composite; delete entry.upperStamp; entry.upperLastTick = runtime.tick;
-        if (entry.object.skinState?.poseLayer) { const layer = entry.object.skinState.poseLayer; layer.clip = -1; layer.time = 0; delete layer.transition; }
+        if (entry.object.skinState?.poseLayer) { const layer = entry.object.skinState.poseLayer; layer.clip = -1; layer.time = 0; delete layer.transition; delete layer.fromClip; }
       }
     }
     if (player && this.lastPlayer && this.tick > this.lastPlayer.tick) {
@@ -176,7 +193,9 @@ export class RuntimeSceneMotion {
           weapon: runtime.weapons?.animation, runId: runtime.runId, ...(this.playerDirection ? { locomotionState: `walk_${this.playerDirection}` } : {}) };
         const choice = playerMotionChoice(input), index = choice.upper === null ? -1 : skin.clips.findIndex(c => c.name === choice.upper);
         entry.composite = choice;
+        const upperChanged = index !== skin.poseLayer.clip || (choice.stamp !== entry.upperStamp && !!choice.stamp);
         selectPoseLayer(skin, index, choice.stamp !== entry.upperStamp && !!choice.stamp);
+        if (upperChanged) this.emitDebug(entry.nodeId);
         entry.upperStamp = choice.stamp;
         this.select(entry, choice.base, false);
       } else if (entry.player && !entry.manual) {
@@ -217,6 +236,9 @@ export class RuntimeSceneMotion {
     return { pending: this.pending, errors: [...this.errors], stats: { ...this.library.stats }, nodes: [...this.entries.values()].map(e => ({
       nodeId: e.nodeId, name: e.name, key: e.result.key, state: e.state, time: e.object.skinState?.time,
       transition: e.object.skinState?.transition ? { elapsed: e.object.skinState.transition.elapsed, duration: e.object.skinState.transition.duration } : null,
+      layer: e.object.skinState?.poseLayer ? { clip: e.object.skinState.clips[e.object.skinState.poseLayer.clip]?.name ?? null,
+        time: e.object.skinState.poseLayer.time, weight: e.object.skinState.poseLayer.binding.weight,
+        nodes: [...e.object.skinState.poseLayer.nodes], diagnostics: [...e.object.skinState.poseLayer.diagnostics, ...(e.composite?.diagnostics ?? [])] } : null,
       clips: e.result.clips.map(c => c.name), joints: e.object.skeleton?.joints.length,
       reports: e.result.reports.map(r => ({ state: r.state, status: r.status, warnings: [...new Set(r.diagnostics.filter(d => d.severity !== 'info').map(d => d.code))], metrics: r.metrics })),
     })) };

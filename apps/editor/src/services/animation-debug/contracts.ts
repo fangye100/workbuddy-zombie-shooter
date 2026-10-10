@@ -17,6 +17,20 @@ export interface DebugIk {
     targetKind: string; target: number[] | null; valid: boolean; diagnostics: string[];
   }[]; diagnostics: string[];
 }
+export interface DebugPoseLayer {
+  status: 'ready' | 'disabled' | 'invalid';
+  requested: string;
+  action: string;
+  fallback: string | null;
+  clip: { name: string; index: number; time: number; duration: number; phase: number; loop: boolean } | null;
+  roots: string[];
+  exclude: string[];
+  nodes: number[];
+  bones: string[];
+  weight: number;
+  transition: DebugTransition | null;
+  diagnostics: string[];
+}
 export interface AnimationSnapshot {
   identity: AnimationIdentity; label: string; tick: number; revision: number;
   characterId?: string;
@@ -25,6 +39,7 @@ export interface AnimationSnapshot {
   decision: DebugDecision;
   clip: { name: string; index: number; time: number; duration: number; phase: number; loop: boolean | null } | null;
   transition: DebugTransition | null; ik: DebugIk; diagnostics: string[];
+  layer?: DebugPoseLayer | null;
 }
 export type AnimationSink = (snapshot: AnimationSnapshot | null) => void;
 export const noIk = (status: DebugIk['status'] = 'unconfigured'): DebugIk => ({ status, enabled: false, weight: 0, controls: [], diagnostics: [] });
