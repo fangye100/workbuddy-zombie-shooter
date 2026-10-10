@@ -13,19 +13,19 @@ describe('authored motion transition contract', () => {
   it('migrates v13 without overwriting existing binding choices', () => {
     const doc=createEmptySceneDocument('transition'); doc.schemaVersion=13;
     const before=structuredClone(doc.nodes); const migrated=migrateToLatest(doc);
-    expect(migrated.to).toBe(15); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik']); expect(migrated.doc.nodes).toEqual(before);
+    expect(migrated.to).toBe(16); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','optional-skeletal-pose-layers']); expect(migrated.doc.nodes).toEqual(before);
   });
 });
 
 describe('optional generic pose layer persistence', () => {
   const poseLayer={roots:['Spine'],exclude:['LeftHand'],weight:.6,transitionSec:.15};
-  it('roundtrips through sidecar and v15 scene migration without inventing a configuration for old scenes',()=>{
+  it('roundtrips through sidecar and v15 to v16 scene migration without inventing a configuration for old scenes',()=>{
     const meta=createDefaultAssetMeta('as_layer','gltf');meta.sharedMotion={...binding,poseLayer};
     const copy=JSON.parse(JSON.stringify(meta));expect(copy.sharedMotion.poseLayer).toEqual(poseLayer);
     expect(validateAssetMeta(copy).filter(d=>d.severity==='error')).toEqual([]);
     const doc=createEmptySceneDocument('layer');const mesh={kind:'MeshRenderer',sharedMotion:{...binding,poseLayer}};
-    const serialized={...doc,nodes:[{id:'node',components:[mesh]}]};expect(migrateToLatest(JSON.parse(JSON.stringify(serialized))).doc.nodes).toEqual(serialized.nodes);
-    expect(migrateToLatest(doc).doc).toEqual(doc);expect(validateSharedMotionBinding(binding)).toEqual([]);
+    const serialized={...doc,schemaVersion:15,nodes:[{id:'node',components:[mesh]}]};expect(migrateToLatest(JSON.parse(JSON.stringify(serialized))).doc.nodes).toEqual(serialized.nodes);
+    const legacy={...doc,schemaVersion:15};const migrated=migrateToLatest(legacy);expect(migrated.to).toBe(16);expect(migrated.applied).toEqual(['optional-skeletal-pose-layers']);expect(migrated.doc).toEqual({...legacy,schemaVersion:16});expect(validateSharedMotionBinding(binding)).toEqual([]);
   });
   it('rejects unsafe or incomplete masks, weights and durations',()=>{
     for(const invalid of [{...poseLayer,roots:[]},{...poseLayer,roots:['Spine','Spine']},{...poseLayer,exclude:null},{...poseLayer,weight:NaN},{...poseLayer,weight:1.1},{...poseLayer,transitionSec:-1}])

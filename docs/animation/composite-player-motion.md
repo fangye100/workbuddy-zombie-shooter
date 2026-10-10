@@ -6,7 +6,7 @@
 
 ## 责任与数据流
 
-`packages/scene/src/shared-motion.ts` 持有可复用的可选 `poseLayer` 配置；角色 sidecar 定义资产默认，MeshRenderer.sharedMotion 定义实例覆盖。配置只含骨骼区域、0–1 权重与过渡时间，不含僵尸或武器策略。无配置保持既有全身动画路径，新增可选字段不改变 v15 的必填字段或历史默认。
+`packages/scene/src/shared-motion.ts` 持有可复用的可选 `poseLayer` 配置；角色 sidecar 定义资产默认，MeshRenderer.sharedMotion 定义实例覆盖。配置只含通用 roots/exclude 后代区域、0–1 权重与过渡时间，不含僵尸或武器策略。无配置保持既有全身动画路径，场景版本升为 v16，v15→v16 正式迁移仅保留原数据并升级版本，不为旧场景自动添加或启用区域；资产 sidecar 仍使用其独立 schema。
 
 游戏表现策略消费固定 tick 的移动速度、方向和已接受的武器 action，输出基础 locomotion 与区域动作请求；活动武器 phase 只控制区域片段，不覆盖基础时钟。Editor 的 RuntimeSceneMotion 负责装配解析后的片段和固定 tick；RuntimeBodyIk 将输入目标和武器 poseIntent 投影到已有 HumanIK 控件。Editor 不计算武器动作时间或伤害。
 
