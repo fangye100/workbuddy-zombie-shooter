@@ -4,12 +4,13 @@ import { type Vec3 } from '@aether/core';
 import { SceneGraph, validateBodyIkBinding, type SceneDocument, type AssetMeta } from '@aether/scene';
 import { createBodyIkState, rotateVec3, type BodyIkState, type SkinState } from '@aether/render';
 import type { RuntimeSession } from '@aether/zombie-game';
+import { weaponHandGoals } from '@aether/zombie-game/presentation/player-motion';
 import type { SceneObject } from '../renderer';
 import { observeIk } from './animation-debug/ik-observation';
 import { noIk, type DebugIk } from './animation-debug/contracts';
 
 export type IkObject = Pick<SceneObject, 'pos' | 'quat' | 'scale' | 'skeleton' | 'skinState' | 'removed' | 'loadedAssetPath'>;
-interface Entry { nodeId: string; name: string; object: IkObject; state: BodyIkState; original: SkinState; clone: SkinState }
+interface Entry { handWeight?: number; lastTick?: number; runId?: number; player: boolean; nodeId: string; name: string; object: IkObject; state: BodyIkState; original: SkinState; clone: SkinState }
 export function worldToActor(object: Pick<IkObject, 'pos' | 'quat' | 'scale'>, point: Vec3): Vec3 {
   const q = object.quat;
   return rotateVec3([-q[0], -q[1], -q[2], q[3]], [(point[0] - object.pos[0]) / object.scale, (point[1] - object.pos[1]) / object.scale, (point[2] - object.pos[2]) / object.scale]);
@@ -61,7 +62,7 @@ export class RuntimeBodyIk {
           const original = object.skinState!;
           const state = createBodyIkState(object.skeleton!, binding), clone = { ...original, bodyIk: state };
           object.skinState = clone;
-          this.entries.set(node.id, { nodeId: node.id, name: node.name, object, state, original, clone });
+          this.entries.set(node.id, { player: node.id === doc.playerStart && mesh.playBinding === 'player', nodeId: node.id, name: node.name, object, state, original, clone });
         } catch (error) { if (generation === this.generation) this.errors.push({ nodeId: node.id, message: String(error) }); }
         finally { if (generation === this.generation) { this.pending--; this.loadingNodes.delete(node.id); this.changed(); } }
       })();
@@ -86,6 +87,7 @@ export class RuntimeBodyIk {
       const skin = e.object.skinState; if (!skin || e.object.removed) continue;
       // Shared motion loading can replace SkinState after IK loads; attach to the new sampler.
       skin.bodyIk = e.state;
+      e.state.controlWeights = {};
       for (const c of e.state.binding.controls) {
         let world: Vec3 | null = null;
         const target = c.target;
@@ -113,6 +115,27 @@ export class RuntimeBodyIk {
         }
         e.state.targets[c.id] = world && Number.isFinite(e.object.scale) && e.object.scale > 0 ? worldToActor(e.object, world) : null;
       }
+      const player = e.player ? runtime?.player() : null;
+      if (player && skin.poseLayer && runtime?.weapons && player.sourceNodeId === e.nodeId) {
+        const pose = runtime.weapons.poseIntent;
+        const mount = runtime.weaponMount;
+        const goals = weaponHandGoals(pose, mount.position, player.yaw);
+        const layer = skin.poseLayer, clip = layer && skin.clips[layer.clip];
+        const authoredReload = pose.action === 'reload' && !!clip && ['reload', runtime.weapons.animation.clip].includes(clip.name) && layer!.binding.weight > 0;
+        if (e.runId !== player.runId) { e.handWeight = 1; e.lastTick = runtime.tick; e.runId = player.runId; }
+        const desired = authoredReload ? 1 - layer!.binding.weight : 1;
+        const dt = Math.max(0, runtime.tick - (e.lastTick ?? runtime.tick)) * runtime.fixedStep;
+        const maxChange = layer!.binding.transitionSec > 0 ? dt / layer!.binding.transitionSec : 1;
+        const previous = e.handWeight ?? 1;
+        e.handWeight = previous + Math.sign(desired - previous) * Math.min(Math.abs(desired - previous), maxChange);
+        e.lastTick = runtime.tick;
+        for (const control of e.state.binding.controls) {
+          if (control.part !== 'leftHand' && control.part !== 'rightHand') continue;
+          // Preserve clip-authored reload hands; runtime multipliers never modify asset configuration.
+          e.state.controlWeights[control.id] = e.handWeight;
+          e.state.targets[control.id] = worldToActor(e.object, control.part === 'leftHand' ? goals.left : goals.right);
+        }
+      }
     }
   }
   setWeight(nodeId: string, controlId: string | null, weight: number): boolean {
@@ -123,7 +146,9 @@ export class RuntimeBodyIk {
     this.changed(); return true;
   }
   locomotion(nodeId: string): boolean {
-    const state = this.entries.get(nodeId)?.state;
+    const entry = this.entries.get(nodeId);
+    if (entry?.object.skinState?.poseLayer) return false; // Four-way base clips already consume the aim-facing heading.
+    const state = entry?.state;
     return !!state && state.binding.locomotionWhileAiming && bodyAimActive(state);
   }
   summary() {

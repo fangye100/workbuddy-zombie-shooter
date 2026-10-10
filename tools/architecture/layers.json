@@ -5,7 +5,7 @@
   "gamePackages": ["content", "zombie-game"],
   "presentationRoot": "packages/zombie-game/src/presentation/",
   "hostFiles": ["apps/editor/vite.config.ts", "apps/editor/devfs.ts"],
-  "publicGameSubpaths": ["game-language", "game-controls", "game-audio", "game-audio-assets", "game-hud", "run-hud", "run-profile", "run-transfer", "run-settlement", "combat-overlay", "combat-ink", "enemy-attack-ink", "weapon-ink", "npc-motion"],
+  "publicGameSubpaths": ["game-language", "game-controls", "game-audio", "game-audio-assets", "game-hud", "run-hud", "run-profile", "run-transfer", "run-settlement", "combat-overlay", "combat-ink", "enemy-attack-ink", "weapon-ink", "npc-motion", "player-motion"],
   "allowed": {
     "framework": ["framework"],
     "game-core": ["framework", "game-core", "game-data"],

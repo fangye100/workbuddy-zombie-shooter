@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSkinState, evalJointMatrices } from '@aether/render';
-import { createEmptySceneDocument, identityTransform, newBodyIkControl, type SceneNode, type AssetMeta } from '@aether/scene';
+import { createSkinState, evalJointMatrices, createPoseLayerState } from '@aether/render';
+import { createEmptySceneDocument, identityTransform, newBodyIkControl, legacyWeaponArsenal, type SceneNode, type AssetMeta } from '@aether/scene';
 import { RuntimeBodyIk, worldToActor } from '../src/services/runtime-body-ik';
 import { skeletonFromFitPositions } from '../src/services/binding/retarget-session';
 import { tposeWorldPositions } from '../src/services/binding/humanik-template';
+import { WeaponSystem } from '@aether/runtime';
 import type { RuntimeSession } from '@aether/zombie-game';
 
 function fixture() {
@@ -77,5 +78,27 @@ describe('Play-owned body IK assembly', () => {
     const f = fixture(); f.service.start(f.doc); expect(f.service.setWeight('actor', null, NaN)).toBe(false); expect(f.service.setWeight('actor', null, 2)).toBe(false);
     f.object.quat = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
     const p = worldToActor(f.object, [7, 0, 3]); expect(p[0]).toBeCloseTo(0); expect(p[2]).toBeCloseTo(1);
+  });
+});
+
+describe('player weapon pose consumed by HumanIK',()=>{
+  it('uses actual markers/recoil goals and fades hands around authored reload without changing persistent controls',()=>{
+    const f=fixture();f.doc.playerStart='actor';const mesh=f.doc.nodes.at(-1)!.components[0]!;if(mesh.kind!=='MeshRenderer')throw new Error('fixture');mesh.playBinding='player';
+    f.binding.controls.push(newBodyIkControl('leftHand'),newBodyIkControl('rightHand'));
+    for(let i=0;i<f.sk.joints.length;i++)for(const j of [0,5,10,15])f.sk.inverseBind[i*16+j]=1;
+    const before=structuredClone(f.binding);f.original.poseLayer=createPoseLayerState(f.sk,{roots:['Spine'],exclude:[],weight:1,transitionSec:.16});
+    f.original.clips=[{name:'reload',duration:1,tracks:[]}];f.original.poseLayer.clip=0;
+    const weapons=new WeaponSystem(legacyWeaponArsenal({magazineSize:5,reserveRounds:10,reloadSec:1}));
+    const rt=(tick:number)=>({tick,fixedStep:1/30,weapons,weaponMount:{position:[5,2,3]},player:()=>({runId:1,sourceNodeId:'actor',yaw:0})}) as unknown as RuntimeSession;
+    f.service.start(f.doc);f.service.sync(rt(0));
+    const ik=f.object.skinState.bodyIk!;expect(ik.targets.rightHand).toEqual([0,1,0]);expect(ik.targets.leftHand![0]).toBeGreaterThan(0);expect(f.service.locomotion('actor')).toBe(false);
+    const first=evalJointMatrices;const a=new Float32Array((f.sk.joints.length+1)*16);first(f.object.skinState,a);
+    expect(weapons.beginFire()).toBe(true);weapons.advance(.1,3);f.service.sync(rt(3));expect(ik.targets.rightHand![0]).toBeLessThan(0);
+    const b=new Float32Array(a.length);evalJointMatrices(f.object.skinState,b);expect(b).not.toEqual(a);
+    expect(weapons.reload()).toBe(true);f.service.sync(rt(4));const weight=ik.controlWeights!.rightHand!;expect(weight).toBeLessThan(1);expect(weight).toBeGreaterThan(0);
+    f.service.sync(rt(4));expect(ik.controlWeights!.rightHand).toBe(weight);
+    f.service.sync(rt(10));expect(ik.controlWeights!.rightHand).toBe(0);expect(f.service.debugSnapshot('actor').controls.find(c=>c.id==='rightHand')!.effectiveWeight).toBe(0);
+    expect(ik.binding).toEqual(before);expect(f.binding).toEqual(before);
+    f.service.stop();expect(f.object.skinState).toBe(f.original);expect(f.original.bodyIk).toBeUndefined();
   });
 });

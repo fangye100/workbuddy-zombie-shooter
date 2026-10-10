@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEmptySceneDocument, type SceneNode, type SharedMotionBinding } from '@aether/scene';
 import type { RuntimeSession } from '@aether/zombie-game';
-import { createBodyIkState, createSkinState } from '@aether/render';
+import { createBodyIkState, createSkinState, sampleAnimationPose } from '@aether/render';
 import { newBodyIkControl } from '@aether/scene';
 import { RuntimeSceneMotion } from '../src/services/runtime-scene-motion';
 import { SharedMotionRuntime, type ResolvedMotion } from '../src/services/shared-motion-runtime';
@@ -162,5 +162,31 @@ describe('Play-owned shared scene motion', () => {
     if (mesh.kind === 'MeshRenderer') mesh.sharedMotion = null;
     f.resolve.mockClear(); f.motion.start(f.doc);
     expect(f.resolve).not.toHaveBeenCalled(); expect(f.motion.summary().pending).toBe(0);
+  });
+});
+
+describe('player base plus weapon region assembly',()=>{
+  it('continues gait and freezes only upper weapon phase across fire/reload/missing equip and same ticks',async()=>{
+    const f=fixture(),mesh=f.doc.nodes.at(-1)!.components[0]!;if(mesh.kind!=='MeshRenderer')throw new Error('fixture');
+    mesh.sharedMotion={...binding,poseLayer:{roots:['Spine'],exclude:[],weight:1,transitionSec:.16}};
+    for(const name of ['shoot','reload','ready']) { f.result.states[name]={loop:name==='ready'};f.result.clips.push({name,duration:2,tracks:[]}); }
+    const leg=f.object.skeleton.joints[f.object.skeleton.jointNames.indexOf('LeftUpLeg')]!,spine=f.object.skeleton.joints[f.object.skeleton.jointNames.indexOf('Spine')]!;
+    const track=(node:number,x:number)=>({node,path:'rotation' as const,stride:4,interpolation:'LINEAR' as const,times:new Float32Array([0,1]),values:new Float32Array([0,0,0,1,Math.sin(x/2),0,0,Math.cos(x/2)])});
+    f.result.clips.find(c=>c.name==='run')!.tracks=[track(leg,.6),track(spine,.2)];
+    f.result.clips.find(c=>c.name==='reload')!.tracks=[track(leg,2),track(spine,1)];
+    const original=f.object.skinState;
+    f.motion.start(f.doc);await vi.waitFor(()=>expect(f.motion.summary().pending).toBe(0));f.motion.sync(f.rt(0,0));
+    const rt=(tick:number,action:'fire'|'reload'|'equip'|'unequip',phase:number)=>({...f.rt(tick,tick*.2),runId:1,weapons:{animation:{action,clip:`pistol-${action}`,fallback:'idle',phase,startTick:action==='fire'?tick:3,weaponId:'pistol'}}}) as unknown as RuntimeSession;
+    f.motion.sync(rt(1,'fire',.8));const gait=f.object.skinState;expect(gait.clips[gait.clip]!.name).toBe('run');
+    f.motion.sync(rt(2,'fire',.8));expect(gait.time).toBeCloseTo(1/30);expect(gait.poseLayer!.time).toBe(1.6);
+    f.motion.sync(rt(3,'reload',.2));const time=gait.time;
+    f.motion.sync(rt(4,'reload',.2));expect(gait.time).toBeGreaterThan(time);expect(gait.poseLayer!.time).toBe(.4);
+    const pose=sampleAnimationPose(gait);const layer=gait.poseLayer!;delete gait.poseLayer;expect(sampleAnimationPose(gait)[leg]).toEqual(pose[leg]);gait.poseLayer=layer;
+    f.motion.sync(rt(4,'reload',.2));expect(gait.poseLayer!.time).toBe(.4);expect(sampleAnimationPose(gait)).toEqual(pose);
+    f.motion.sync(rt(5,'unequip',.5));expect(gait.clips[gait.clip]!.name).toBe('run');expect(gait.clips[gait.poseLayer!.clip]!.name).toBe('ready');
+    const before=gait.time;f.motion.sync(rt(6,'equip',.5));expect(gait.time).toBeGreaterThan(before);
+    gait.poseLayer!.binding.weight=0;f.motion.sync(rt(7,'reload',.5));expect(gait.clips[gait.clip]!.name).toBe('run');
+    f.motion.sync(f.rt(0,0,2));expect(gait.clips[gait.poseLayer!.clip]!.name).toBe('ready');expect(gait.poseLayer!.time).toBe(0);expect(gait.poseLayer!.transition?.elapsed).toBe(0);
+    f.motion.stop();expect(f.object.skinState).toBe(original);expect(original.poseLayer).toBeUndefined();
   });
 });

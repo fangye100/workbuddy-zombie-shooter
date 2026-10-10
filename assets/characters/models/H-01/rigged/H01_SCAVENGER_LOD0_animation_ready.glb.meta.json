@@ -43,6 +43,113 @@
     },
     "profile": "player",
     "defaultState": "idle",
-    "speed": 1
+    "speed": 1,
+    "poseLayer": {
+      "roots": [
+        "Spine"
+      ],
+      "exclude": [],
+      "weight": 1,
+      "transitionSec": 0.16
+    }
+  },
+  "bodyIk": {
+    "enabled": true,
+    "weight": 1,
+    "locomotionWhileAiming": true,
+    "controls": [
+      {
+        "id": "upperBody",
+        "part": "upperBody",
+        "enabled": true,
+        "weight": 0.55,
+        "target": {
+          "kind": "mouse",
+          "height": 1.3
+        },
+        "pole": [
+          0,
+          0,
+          -1
+        ],
+        "forward": [
+          0,
+          0,
+          1
+        ],
+        "maxAngleDeg": 60
+      },
+      {
+        "id": "head",
+        "part": "head",
+        "enabled": true,
+        "weight": 0.25,
+        "target": {
+          "kind": "mouse",
+          "height": 1.5
+        },
+        "pole": [
+          0,
+          0,
+          -1
+        ],
+        "forward": [
+          0,
+          0,
+          1
+        ],
+        "maxAngleDeg": 50
+      },
+      {
+        "id": "leftHand",
+        "part": "leftHand",
+        "enabled": true,
+        "weight": 0.85,
+        "target": {
+          "kind": "position",
+          "position": [
+            0.18,
+            1.15,
+            0.25
+          ]
+        },
+        "pole": [
+          0,
+          0,
+          -1
+        ],
+        "forward": [
+          0,
+          0,
+          1
+        ],
+        "maxAngleDeg": 50
+      },
+      {
+        "id": "rightHand",
+        "part": "rightHand",
+        "enabled": true,
+        "weight": 0.85,
+        "target": {
+          "kind": "position",
+          "position": [
+            -0.18,
+            1.15,
+            0.25
+          ]
+        },
+        "pole": [
+          0,
+          0,
+          -1
+        ],
+        "forward": [
+          0,
+          0,
+          1
+        ],
+        "maxAngleDeg": 50
+      }
+    ]
   }
 }

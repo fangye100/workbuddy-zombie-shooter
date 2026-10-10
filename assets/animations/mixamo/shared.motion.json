@@ -413,6 +413,15 @@
       },
       "rootPolicy": "in-place",
       "loop": false
+    },
+    "game_aim_ready": {
+      "source": {
+        "path": "assets/animations/mixamo/ani_p_aim_idle.bvh",
+        "guid": "as_motion_ani_p_aim_idle"
+      },
+      "loop": true,
+      "rootPolicy": "in-place",
+      "poseAtS": 0.2
     }
   },
   "profiles": {
@@ -427,7 +436,8 @@
       "walk_b": "game_walk_b",
       "walk_l": "game_walk_l",
       "walk_r": "game_walk_r",
-      "reload": "game_reload"
+      "reload": "game_reload",
+      "ready": "game_aim_ready"
     },
     "npc": {
       "idle": "zombie_idle",

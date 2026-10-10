@@ -1,8 +1,9 @@
 /** Play-owned animation presentation for authored skinned scene nodes. */
 import { DEFAULT_MOTION_TRANSITION_SEC, type SceneDocument } from '@aether/scene';
 import type { RuntimeSession } from '@aether/zombie-game';
+import { playerMotionChoice, type PlayerMotionInput } from '@aether/zombie-game/presentation/player-motion';
 import { motionDirection } from '@aether/runtime';
-import { advancePoseTransition, createSkinState, selectClip, poseTransitionWeight } from '@aether/render';
+import { advancePoseTransition, createSkinState, selectClip, poseTransitionWeight, createPoseLayerState, selectPoseLayer, advancePoseLayerTransition } from '@aether/render';
 import type { SceneObject } from '../renderer';
 import { SharedMotionRuntime, type ResolvedMotion } from './shared-motion-runtime';
 import { bodyAimActive } from './runtime-body-ik';
@@ -18,6 +19,9 @@ interface Entry {
   manualCompleted?: boolean;
   elapsed: number; lastTick: number;
   weaponActionStamp?: string;
+  composite?: ReturnType<typeof playerMotionChoice>;
+  upperStamp?: string;
+  upperLastTick?: number;
   revision: number; fromState: string; choice?: SceneChoiceInput;
 }
 export class RuntimeSceneMotion {
@@ -87,6 +91,7 @@ export class RuntimeSceneMotion {
       }
       this.pending++;
       this.nodeStatus.set(node.id, 'pending');
+      const skeleton = object.skeleton;
       const authorAnimations = object.animations, authorSkin = object.skinState;
       const authorSkinValues = authorSkin ? { ...authorSkin } : null;
       void (async () => {
@@ -94,13 +99,15 @@ export class RuntimeSceneMotion {
           const meta = await this.library.assetMeta(path);
           const binding = mesh.sharedMotion ?? meta?.sharedMotion;
           if (!binding) { if (generation === this.generation) this.nodeStatus.set(node.id, 'unconfigured'); return; }
-          const result = await this.library.resolve(object.skeleton!, binding, meta);
+          const result = await this.library.resolve(skeleton, binding, meta);
           if (generation !== this.generation) return;
+          if (object.removed || object.loadedAssetPath !== path || object.skeleton !== skeleton) throw new Error('共享动作目标在加载中改变');
           this.restore.push(() => {
             if (authorSkin && authorSkinValues) Object.assign(authorSkin, authorSkinValues);
             object.animations = authorAnimations; object.skinState = authorSkin;
           });
           object.animations = result.clips; object.skinState = createSkinState(object.skeleton!, result.clips);
+          if (binding.poseLayer) object.skinState.poseLayer = createPoseLayerState(object.skeleton!, binding.poseLayer);
           const entry: Entry = { nodeId: node.id, name: node.name, object, player: node.id === doc.playerStart && mesh.playBinding === 'player',
             speed: binding.speed, defaultState: binding.defaultState, result, state: '', startTick: this.tick, manual: false, elapsed: 0, lastTick: this.tick, revision: 0, fromState: '' };
           this.entries.set(node.id, entry); this.select(entry, binding.defaultState, false); this.changed();
@@ -119,6 +126,8 @@ export class RuntimeSceneMotion {
   }
   setState(nodeId: string, state: string): boolean {
     const entry = this.entries.get(nodeId); if (!entry || !entry.result.states[state]) return false;
+    if (entry.object.skinState?.poseLayer) selectPoseLayer(entry.object.skinState, -1);
+    delete entry.composite;
     this.select(entry, state, true); this.emitDebug(nodeId); return true;
   }
   private select(entry: Entry, state: string, manual: boolean, immediate = false, replay = false): void {
@@ -145,7 +154,8 @@ export class RuntimeSceneMotion {
       for (const entry of this.entries.values()) {
         this.select(entry, entry.defaultState, false, true);
         entry.startTick = runtime.tick; entry.manual = false; entry.elapsed = 0; entry.lastTick = runtime.tick;
-        delete entry.choice; delete entry.weaponActionStamp;
+        delete entry.choice; delete entry.weaponActionStamp; delete entry.composite; delete entry.upperStamp; entry.upperLastTick = runtime.tick;
+        if (entry.object.skinState?.poseLayer) { const layer = entry.object.skinState.poseLayer; layer.clip = -1; layer.time = 0; delete layer.transition; }
       }
     }
     if (player && this.lastPlayer && this.tick > this.lastPlayer.tick) {
@@ -155,11 +165,21 @@ export class RuntimeSceneMotion {
     if (player) this.lastPlayer = { x: player.x, z: player.z, tick: this.tick };
     for (const entry of this.entries.values()) {
       const skin = entry.object.skinState; if (!skin) continue;
+      const upperDt = Math.max(0, this.tick - (entry.upperLastTick ?? this.tick)) * this.step;
+      entry.upperLastTick = this.tick;
       const clipConfig = entry.result.states[entry.state]!;
       if (entry.manual && !clipConfig.loop && (this.tick - entry.startTick) * this.step * entry.speed >= skin.clips[skin.clip]!.duration) {
         entry.manual = false; entry.manualCompleted = !entry.player;
       }
-      if (entry.player && !entry.manual) {
+      if (entry.player && !entry.manual && skin.poseLayer) {
+        const input: PlayerMotionInput = { states: entry.result.states, defaultState: entry.defaultState, speed: this.playerSpeed,
+          weapon: runtime.weapons?.animation, runId: runtime.runId, ...(this.playerDirection ? { locomotionState: `walk_${this.playerDirection}` } : {}) };
+        const choice = playerMotionChoice(input), index = choice.upper === null ? -1 : skin.clips.findIndex(c => c.name === choice.upper);
+        entry.composite = choice;
+        selectPoseLayer(skin, index, choice.stamp !== entry.upperStamp && !!choice.stamp);
+        entry.upperStamp = choice.stamp;
+        this.select(entry, choice.base, false);
+      } else if (entry.player && !entry.manual) {
         const action=runtime.weapons?.animation;
         const keepGait=!!skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk);
         const input: SceneChoiceInput = { states: entry.result.states, defaultState: entry.defaultState, speed: this.playerSpeed, keepGait,
@@ -176,11 +196,18 @@ export class RuntimeSceneMotion {
       const gait = entry.player && !entry.manual && config.nominalSpeedMps ? this.playerSpeed / (config.nominalSpeedMps * entry.object.scale) : 1;
       const dt = Math.max(0, this.tick - entry.lastTick) * this.step;
       advancePoseTransition(skin, dt);
+      advancePoseLayerTransition(skin, upperDt);
+      const layer = skin.poseLayer, upperClip = layer && skin.clips[layer.clip];
+      if (layer && upperClip && entry.composite) {
+        layer.loop = entry.result.states[upperClip.name]?.loop ?? false;
+        if (entry.composite.phase !== null) layer.time = entry.composite.phase * upperClip.duration;
+        else layer.time = layer.loop && upperClip.duration > 0 ? (layer.time + upperDt * entry.speed) % upperClip.duration : Math.min(layer.time + upperDt * entry.speed, upperClip.duration);
+      }
       entry.elapsed += dt * entry.speed * gait;
       entry.lastTick = this.tick;
       const time = entry.elapsed;
       const weapon=entry.player && !entry.manual?runtime.weapons?.animation:null;
-      const isWeaponClip=weapon && weapon.action!=='idle' && !(weapon.action==='fire' && skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk)) && [weapon.clip,weapon.action==='fire'?'shoot':weapon.action,weapon.fallback].includes(entry.state);
+      const isWeaponClip=!skin.poseLayer && weapon && weapon.action!=='idle' && !(weapon.action==='fire' && skin.bodyIk?.binding.locomotionWhileAiming && bodyAimActive(skin.bodyIk)) && [weapon.clip,weapon.action==='fire'?'shoot':weapon.action,weapon.fallback].includes(entry.state);
       skin.time = isWeaponClip?weapon.phase*clip.duration:config.loop && clip.duration > 0 ? time % clip.duration : Math.min(time, clip.duration);
       skin.loop = config.loop; skin.playing = false;
       this.emitDebug(entry.nodeId);

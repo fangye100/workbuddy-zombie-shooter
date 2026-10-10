@@ -4224,7 +4224,15 @@
             },
             "profile": "player",
             "defaultState": "idle",
-            "speed": 1
+            "speed": 1,
+            "poseLayer": {
+              "roots": [
+                "Spine"
+              ],
+              "exclude": [],
+              "weight": 1,
+              "transitionSec": 0.16
+            }
           }
         }
       ],

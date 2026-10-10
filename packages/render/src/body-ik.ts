@@ -15,6 +15,8 @@ export interface BodyIkState {
   nodes: Record<string, number[]>;
   /** Host-resolved targets in normalized actor-local metres. Missing target skips its control. */
   targets: Record<string, Vec3 | null>;
+  /** Runtime action multipliers; persisted binding remains unchanged. */
+  controlWeights?: Record<string, number>;
   setupDiagnostics: BodyIkDiagnostic[];
   diagnostics: BodyIkDiagnostic[];
 }
@@ -100,7 +102,9 @@ export function applyBodyIk(sk: SkeletonData, locals: NodeLocal[], state: BodyIk
   for (const part of Object.keys(chains) as BodyIkPart[]) {
     const c = binding.controls.find(c => c.part === part), nodes = c && state.nodes[c.id];
     if (!c || !nodes || !c.enabled || c.weight <= 0) continue;
-    const target = c.target.kind === 'position' ? c.target.position : state.targets[c.id];
+    const target = Object.hasOwn(state.targets, c.id) ? state.targets[c.id] : c.target.kind === 'position' ? c.target.position : null;
+    const actionWeight = Math.max(0, Math.min(1, state.controlWeights?.[c.id] ?? 1));
+    if (actionWeight <= 0) continue;
     if (!target || !target.every(Number.isFinite)) { state.diagnostics.push({ controlId: c.id, code: 'IK_TARGET', message: 'Target is unavailable; animation retained' }); continue; }
     const frame = fk(sk, locals);
     if (!frame) { state.diagnostics.push({ controlId: c.id, code: 'IK_SCALE', message: 'IK requires a valid hierarchy with positive uniform scales' }); continue; }
@@ -125,6 +129,6 @@ export function applyBodyIk(sk: SkeletonData, locals: NodeLocal[], state: BodyIk
       setSwing(sk, locals, next, b, swingBetweenDirections(sub(next.p[e]!, next.p[b]!), sub(solution.reachedTip, next.p[b]!)));
       if (solution.status !== 'exact') state.diagnostics.push({ controlId: c.id, code: 'IK_UNREACHABLE', message: 'Target clamped to limb reach; bone lengths retained', residualM: solution.residualM * normScale });
     }
-    nodes.forEach((node, i) => { locals[node]!.r = blend(before[i]!, locals[node]!.r, binding.weight * c.weight); });
+    nodes.forEach((node, i) => { locals[node]!.r = blend(before[i]!, locals[node]!.r, binding.weight * c.weight * actionWeight); });
   }
 }
