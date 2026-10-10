@@ -35,7 +35,7 @@ export function createAvoidanceBuffers(capacity: number): AvoidanceBuffers {
 }
 
 export interface CrowdMovementConstraint {
-  move(x:number,z:number,toX:number,toZ:number,radius:number,out:{x:number;z:number}): boolean;
+  move(x:number,z:number,toX:number,toZ:number,radius:number,out:{x:number;z:number},agentIndex?:number): boolean;
 }
 
 export interface AvoidanceStats {
@@ -146,7 +146,7 @@ export class PredictiveCrowdSolver {
       }
       let nextX=x+this.solutionX*dt,nextZ=z+this.solutionZ*dt;
       if(world) {
-        if(world.move(x,z,nextX,nextZ,b.radius[i]!,this.constrained)) {nextX=this.constrained.x;nextZ=this.constrained.z;}
+        if(world.move(x,z,nextX,nextZ,b.radius[i]!,this.constrained,i)) {nextX=this.constrained.x;nextZ=this.constrained.z;}
         else {nextX=x;nextZ=z;this.metrics.blockedMoves++;}
       }
       b.nextX[i]=nextX;b.nextZ[i]=nextZ;
@@ -260,7 +260,7 @@ export class PredictiveCrowdSolver {
         if(length>cap){dx*=cap/length;dz*=cap/length;}
         let x=b.nextX[i]!+dx,z=b.nextZ[i]!+dz;
         if(world) {
-          if(world.move(b.nextX[i]!,b.nextZ[i]!,x,z,b.radius[i]!,this.constrained)){x=this.constrained.x;z=this.constrained.z;}
+          if(world.move(b.nextX[i]!,b.nextZ[i]!,x,z,b.radius[i]!,this.constrained,i)){x=this.constrained.x;z=this.constrained.z;}
           else {x=b.nextX[i]!;z=b.nextZ[i]!;this.metrics.blockedMoves++;}
         }
         b.nextX[i]=x;b.nextZ[i]=z;

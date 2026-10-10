@@ -24,6 +24,7 @@ import { EnemyAttacks, type EnemyAttackWorld } from './enemy-attacks';
 import { CharacterTable, rayCapsuleY, updateLod, type LodThresholds } from '@aether/gameplay';
 import { AttackTokenPool } from '@aether/ai';
 import { ZombieCrowdNavigation, type ZombieNavigationPolicy } from './crowd-navigation';
+import { ZombieSurfaceCrowdNavigation } from './surface-crowd-navigation';
 import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
@@ -104,6 +105,8 @@ export interface EntityView {
   characterId: string;
   kind: EntityKind;
   x: number;
+  /** 脚底高度；实际 RuntimeSession 总是提供，兼容旧宿主视图。 */
+  y?:number;
   z: number;
   yaw: number;
   alive: boolean;
@@ -152,6 +155,7 @@ export interface CombatEvent {
   /** 击杀前的 NPC 只读快照，供表现尾部消费；不代表仍存活的模拟实体。 */
   readonly defeated?: EntityView;
   readonly x?: number;
+  readonly y?:number;
   readonly z?: number;
   readonly type: 'damage' | 'kill';
   readonly tick: number;
@@ -278,7 +282,7 @@ export class RuntimeSession {
   weapons: WeaponSystem;
   weaponCombat: WeaponCombat;
   get weaponMount():{position:[number,number,number];rotation:[number,number,number,number]} {
-    const p=this.playerEntityId,t=this.table,y=this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,yaw=t.yaw[p]!;
+    const p=this.playerEntityId,t=this.table,y=t.posY[p]!+this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,yaw=t.yaw[p]!;
     return {position:[t.posX[p]!,y,t.posZ[p]!],rotation:[0,-Math.sin(yaw/2),0,Math.cos(yaw/2)]};
   }
   private createWeapons():WeaponSystem {
@@ -303,14 +307,14 @@ export class RuntimeSession {
   private attackWorld(): EnemyAttackWorld {
     const t = this.table;
     return { player: this.playerEntityId,
-      actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
+      actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, y:t.posY[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
       damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
-      move: (slot,x,z) => { const ox=t.posX[slot]!,oz=t.posZ[slot]!; const [cx,cz] = this.navigation.moveActor(t,slot,x,z); t.posX[slot]=cx;t.posZ[slot]=cz;t.velX[slot]=(cx-ox)/this.fixedStep;t.velZ[slot]=(cz-oz)/this.fixedStep;return [cx,0,cz]; },
+      move: (slot,x,z) => { const ox=t.posX[slot]!,oz=t.posZ[slot]!; const [cx,cz] = this.navigation.moveActor(t,slot,x,z); t.posX[slot]=cx;t.posZ[slot]=cz;t.velX[slot]=(cx-ox)/this.fixedStep;t.velZ[slot]=(cz-oz)/this.fixedStep;return [cx,t.posY[slot]!,cz]; },
       obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
     };
   }
   lastShot: { tick: number; from: [number, number, number]; to: [number, number, number]; hit: boolean } | null = null;
-  danger: { x: number; z: number; radius: number; remaining: number; duration: number } | null = null;
+  danger: { x: number; y: number; z: number; radius: number; remaining: number; duration: number } | null = null;
   private nextBossAttack = 0;
   private bossStep(): void {
     const attack = this.desc.runRules?.bossAttack;
@@ -322,13 +326,13 @@ export class RuntimeSession {
     if (this.danger) {
       this.danger.remaining -= this.fixedStep;
       if (this.danger.remaining <= 0) {
-        this.enemyAttacks.impact('slam',boss,this.table.generation[boss]!,this.danger.x,this.danger.z,attack.radius,this.tick);
-        if (Math.hypot(this.table.posX[this.playerId]! - this.danger.x, this.table.posZ[this.playerId]! - this.danger.z) <= attack.radius)
+        this.enemyAttacks.impact('slam',boss,this.table.generation[boss]!,this.danger.x,this.danger.z,attack.radius,this.tick,this.danger.y);
+        if (Math.hypot(this.table.posX[this.playerId]! - this.danger.x, this.table.posY[this.playerId]! - this.danger.y, this.table.posZ[this.playerId]! - this.danger.z) <= attack.radius)
           this.applyDamage(this.playerId, attack.damage, boss);
         this.danger = null; this.nextBossAttack = now + attack.cooldownSec;
       }
-    } else if (now >= this.nextBossAttack) {
-      this.danger = { x: this.table.posX[this.playerId]!, z: this.table.posZ[this.playerId]!, radius: attack.radius, remaining: attack.windupSec, duration: attack.windupSec };
+    } else if (now >= this.nextBossAttack && Math.abs(this.table.posY[boss]!-this.table.posY[this.playerId]!) <= attack.radius) {
+      this.danger = { x: this.table.posX[this.playerId]!, y: this.table.posY[this.playerId]!, z: this.table.posZ[this.playerId]!, radius: attack.radius, remaining: attack.windupSec, duration: attack.windupSec };
     }
   }
   progress: RunProgress | null = null;
@@ -346,7 +350,7 @@ export class RuntimeSession {
     if (this.outcome === 'floor-clear') return true;
     const p = this.player();
     return !!p && this.desc.rooms.some(r => r.enabled && ['event', 'shop', 'rest'].includes(r.roomType)
-      && this.clearedRooms().includes(r.nodeId) && p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
+      && this.clearedRooms().includes(r.nodeId) && this.insideRoom(r,p));
   }
   buyHeal(): boolean {
     if (!this.atSupply) return false;
@@ -367,7 +371,7 @@ export class RuntimeSession {
   readonly seed: number;
   readonly fixedStep: number;
 
-  private readonly navigation: ZombieCrowdNavigation;
+  private readonly navigation: ZombieCrowdNavigation | ZombieSurfaceCrowdNavigation;
   private readonly navigationPolicy: ZombieNavigationPolicy = {
     movable: i => this.kindOf[i] === 1 && this.table.behavior[i] === BEHAVIOR_CHASE && !this.enemyAttacks.moving(i,this.table.generation[i]!),
     speed: i => this.table.maxSpeed[i]! * this.table.speedScale[i]! * this.weaponCombat.slow(i,this.table.generation[i]!),
@@ -400,12 +404,15 @@ export class RuntimeSession {
   private readonly interactedRooms = new Set<NodeId>();
 
   /** Read-only eligibility shared by the HUD and the interaction command. */
+  insideRoom(r: LevelRuntimeDesc['rooms'][number], p: Pick<EntityView,'x'|'y'|'z'>): boolean {
+    return p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ
+      && (!this.desc.nav?.surface || (p.y??0) >= (r.minY??-Infinity) && (p.y??0) <= (r.maxY??Infinity));
+  }
   interactionTarget(): NodeId | null {
     if (this.outcomeState !== 'running') return null;
     const player = this.player();
     if (!player || player.hp <= 0) return null;
-    const room = this.desc.rooms.find(r => r.enabled && r.clearRule === 'interact'
-      && player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ);
+    const room = this.desc.rooms.find(r => r.enabled && r.clearRule === 'interact' && this.insideRoom(r,player));
     if (!room || !this.triggered.has(room.nodeId) || this.interactedRooms.has(room.nodeId)
       || this.roomAliveEnemies(room.nodeId) > 0) return null;
     return room.nodeId;
@@ -515,7 +522,18 @@ export class RuntimeSession {
     }
     this.goalX = opts.desc.playerStart.x;
     this.goalZ = opts.desc.playerStart.z;
-    this.navigation = new ZombieCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ);
+    this.navigation = nav.surface ? new ZombieSurfaceCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ,opts.desc.playerStart.y??0)
+      : new ZombieCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ);
+    if(this.navigation instanceof ZombieSurfaceCrowdNavigation){
+      const nav3d=this.navigation;
+      this.checkNavigationSize(PLAYER_STATS);
+      nav3d.spawnPosition(this.goalX,opts.desc.playerStart.y??0,this.goalZ,PLAYER_STATS.capsuleRadius);
+      for(const spawn of opts.desc.spawns)if(spawn.enabled&&spawn.count>0){
+        const stats=lookupCharacterStats(spawn.characterId)!;
+        this.checkNavigationSize(stats);
+        nav3d.spawnPosition(spawn.x,spawn.y??0,spawn.z,stats.capsuleRadius);
+      }
+    }
 
     this.spawnPlayer();
     // 玩家出生所在房间应当立即触发（他就站在里面）
@@ -568,6 +586,7 @@ export class RuntimeSession {
       characterId: stats?.id ?? '?',
       kind: this.kindOf[i] === 0 ? 'player' : 'npc',
       x: this.table.posX[i]!,
+      y: this.table.posY[i]!,
       z: this.table.posZ[i]!,
       yaw: this.table.yaw[i]!,
       alive: true,
@@ -651,7 +670,7 @@ export class RuntimeSession {
       generation: this.tbl.generation[targetSlot]!,
       runId: this.runId,
       characterId,
-      x: this.tbl.posX[targetSlot]!, z: this.tbl.posZ[targetSlot]!,
+      x:this.tbl.posX[targetSlot]!,y:this.tbl.posY[targetSlot]!,z:this.tbl.posZ[targetSlot]!,
       amount,
       hpAfter,
       sourceSlot,
@@ -920,7 +939,7 @@ export class RuntimeSession {
     this.fireHeld = false;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
-    this.navigation.reset(this.goalX,this.goalZ);
+    this.navigation.reset(this.goalX,this.goalZ,this.desc.playerStart.y??0);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
     this.spawnPlayer();
@@ -937,6 +956,7 @@ export class RuntimeSession {
     this.kindOf[i] = 0;
     this.sourceOf[i] = this.desc.playerStart.nodeId;
     this.table.posX[i] = this.desc.playerStart.x;
+    this.table.posY[i] = this.desc.playerStart.y??0;
     this.table.posZ[i] = this.desc.playerStart.z;
     this.table.radius[i] = stats.capsuleRadius;
     // 玩家速度来自真源；是否移动只由**输入**决定，没有输入就是 0 位移
@@ -971,6 +991,7 @@ export class RuntimeSession {
       if (!room.enabled) continue;
       if (this.triggered.has(room.nodeId)) continue;
       if (px < room.minX || px > room.maxX || pz < room.minZ || pz > room.maxZ) continue;
+      if(this.desc.nav?.surface&&(this.table.posY[this.playerId]!<(room.minY??-Infinity)||this.table.posY[this.playerId]!>(room.maxY??Infinity)))continue;
 
       const pending = this.desc.spawns.filter(
         (s) => s.roomNodeId === room.nodeId && s.enabled && s.trigger === 'room-enter',
@@ -993,7 +1014,8 @@ export class RuntimeSession {
         continue;
       }
 
-      for (const s of wave1) spawned += this.spawnBatch(s);
+      try { spawned += this.spawnWave(wave1); }
+      catch(error){this.pushDiag('W_SPAWN_NAVIGATION',`房间 ${room.nodeId} 三维波次投放拒绝：${String(error)}`,room.nodeId);continue;}
       // 真的投了才发事件：无刷怪点的房间（如 clearRule=interact 的过场房）
       // 不该发出"wave 1 已投"——那是把"没有波"说成"投了一波"。
       if (first !== 0) {
@@ -1067,7 +1089,8 @@ export class RuntimeSession {
           );
           continue;
         }
-        for (const s of waveSpawns) spawned += this.spawnBatch(s);
+        try { spawned += this.spawnWave(waveSpawns); }
+        catch(error){st.nextWaveAtTick=this.tickCount+interWaveTicks;this.pushDiag('W_SPAWN_NAVIGATION',`房间 ${room.nodeId} 三维波次投放拒绝：${String(error)}`,room.nodeId);continue;}
         this.sessionEventBuf.push({
           type: 'wave-start',
           tick: this.tickCount,
@@ -1185,8 +1208,19 @@ export class RuntimeSession {
   }
 
   /** 把一个刚 alloc 出来的槽位初始化成"追玩家的 NPC"（spawnBatch 与 debugSpawn 共用） */
-  private initNpcSlot(i: number, stats: CharacterStatsEntry, x: number, z: number): void {
+  private checkNavigationSize(stats:CharacterStatsEntry):void {
+    if(!(this.navigation instanceof ZombieSurfaceCrowdNavigation))return;
+    const options=this.navigation.surface.options;
+    if(stats.capsuleHeight>options.agentHeight)throw new Error('角色高度超过导航净空配置');
+    if(stats.capsuleRadius>options.agentRadius)throw new Error('角色半径超过导航采样配置');
+  }
+  private npcPosition(stats:CharacterStatsEntry,x:number,y:number,z:number,originX:number,originZ:number):[number,number,number]{
+    return this.navigation instanceof ZombieSurfaceCrowdNavigation
+      ? this.navigation.spawnPosition(originX,y,originZ,stats.capsuleRadius,x,z) : [x,y,z];
+  }
+  private initNpcSlot(i: number, stats: CharacterStatsEntry, x: number, z: number,y=0): void {
     this.table.posX[i] = x;
+    this.table.posY[i] = y;
     this.table.posZ[i] = z;
     this.table.radius[i] = stats.capsuleRadius;
     this.table.maxSpeed[i] = stats.moveSpeed;
@@ -1213,41 +1247,60 @@ export class RuntimeSession {
    *
    * 返回实际生成数（容量不足时少于 count）。
    */
-  debugSpawn(characterId: string, x: number, z: number, count: number, spreadM = 0): number {
+  debugSpawn(characterId: string, x: number, z: number, count: number, spreadM = 0,y=0): number {
     const stats = lookupCharacterStats(characterId);
     if (stats === undefined) return 0;
-    let made = 0;
-    for (let k = 0; k < count; k++) {
-      const i = this.table.spawn(stats.defId);
-      if (i < 0) break; // 容量用尽
+    if(![x,y,z,spreadM].every(Number.isFinite)||spreadM<0||!Number.isSafeInteger(count)||count<0)throw new RangeError('调试刷怪坐标、数量或散布非法');
+    this.checkNavigationSize(stats);
+    const points:[number,number,number][]=[];
+    // 整批预检在分配前完成；超过单步安全距离也不留下半初始化槽位。
+    for(let k=0;k<Math.min(count,this.capacity);k++){
       // spreadM > 0 时按环形铺开（压测要的是分散的 200 只，不是叠在一个点上）
       const ang = spreadM > 0 ? (k / count) * Math.PI * 2 : 0;
       const r = spreadM > 0 ? Math.sqrt((k % 17) / 17) * spreadM : 0;
-      this.initNpcSlot(i, stats, x + Math.cos(ang) * r, z + Math.sin(ang) * r);
+      points.push(this.npcPosition(stats,x+Math.cos(ang)*r,y,z+Math.sin(ang)*r,x,z));
+    }
+    let made=0;
+    for(const [px,py,pz] of points){
+      const i=this.table.spawn(stats.defId);if(i<0)break;
+      this.initNpcSlot(i,stats,px,pz,py);
       this.sourceOf[i] = null;
       made++;
     }
     return made;
   }
 
-  /** 返回实际生成的数量（供 StepReport.spawned 汇总） */
-  private spawnBatch(s: { nodeId: NodeId; characterId: string; count: number; radius: number; x: number; z: number }): number {
+  private spawnWave(spawns:LevelRuntimeDesc['spawns']):number{
+    // 同波所有刷怪点完成预检后才分配；任一失败不会留下半波或幽灵槽位。
+    const batches=spawns.map(s=>({s,points:this.prepareNpcBatch(s)}));
+    let made=0;for(const {s,points} of batches)made+=this.spawnBatch(s,points);return made;
+  }
+  private prepareNpcBatch(s:LevelRuntimeDesc['spawns'][number]):[number,number,number][]{
     const stats = lookupCharacterStats(s.characterId);
-    if (stats === undefined) return 0; // loader 已报 error，这里不重复生成
+    if (stats === undefined) return []; // loader 已报 error，这里不重复生成
     // 🔴 每个刷怪点一条**独立**随机流（种子 = 会话种子 ⊗ 节点 id）。
     // 全场景共用一条流时，改 A 刷怪点的 count 会多消耗几个随机数，于是 B、C 的
     // 取点被整体平移 —— 作者以为自己在做"局部编辑"，实际上整关重排了一遍。
     // WU-5 的 A/B 探针正是靠"没改的地方必须逐位不变"来证明改动是局部的，
     // 共享流会让这条断言对 count 永远不成立。
     const rng = makeRng(mixSeed(this.initialSeed, s.nodeId));
-    let made = 0;
-    for (let k = 0; k < s.count; k++) {
-      const i = this.table.spawn(stats.defId);
-      if (i < 0) return made; // 容量保护（正常走不到：triggerRooms 已预检）
+    this.checkNavigationSize(stats);
+    const points:[number,number,number][]=[];
+    for (let k = 0; k < Math.min(s.count,this.capacity); k++) {
       // 圆内均匀取点：半径乘 sqrt(u)，否则会向圆心堆积
       const ang = rng() * Math.PI * 2;
       const r = Math.sqrt(rng()) * s.radius;
-      this.initNpcSlot(i, stats, s.x + Math.cos(ang) * r, s.z + Math.sin(ang) * r);
+      points.push(this.npcPosition(stats,s.x+Math.cos(ang)*r,s.y??0,s.z+Math.sin(ang)*r,s.x,s.z));
+    }
+    return points;
+  }
+  /** 返回实际生成的数量（供 StepReport.spawned 汇总）；位置已由整波预检。 */
+  private spawnBatch(s:LevelRuntimeDesc['spawns'][number],points:[number,number,number][]):number{
+    const stats=lookupCharacterStats(s.characterId);if(!stats)return 0;
+    let made=0;
+    for(const [px,py,pz] of points){
+      const i=this.table.spawn(stats.defId);if(i<0)break;
+      this.initNpcSlot(i,stats,px,pz,py);
       this.sourceOf[i] = s.nodeId;
       made++;
     }
@@ -1307,7 +1360,8 @@ export class RuntimeSession {
 
       const dx = t.posX[i]! - px;
       const dz = t.posZ[i]! - pz;
-      const dist = Math.hypot(dx, dz);
+      const dy=t.posY[i]!-t.posY[p]!;
+      const dist = Math.hypot(dx,dy,dz);
       const b = t.behavior[i]!;
 
       if (this.enemyAttacks.moving(i,t.generation[i]!)) continue;
@@ -1328,7 +1382,7 @@ export class RuntimeSession {
           t.windupRemain[i] = atk.windupSec*(1+(this.desc.runRules?.npcTiming.windupJitterFrac??0)*this.randomNpc(i));
           this.npcWindupDuration[i]=t.windupRemain[i]!;
           t.yaw[i] = Math.atan2(-dz,-dx);
-          this.enemyAttacks.lock(i,t.generation[i]!,px,pz);
+          this.enemyAttacks.lock(i,t.generation[i]!,px,pz,t.posY[p]!);
         }
       } else if (b === BEHAVIOR_WINDUP) {
         if (!atk) { t.behavior[i]=BEHAVIOR_CHASE;continue; }
@@ -1351,7 +1405,7 @@ export class RuntimeSession {
             const len = dist > 1e-6 ? dist : 1;
             const cosA = (facingX * -dx + facingZ * -dz) / len;
             const height = (this.defIdToStats.get(t.defId[p]!)?.capsuleHeight ?? 1.8) / 2;
-            const blocked = dist > 1e-6 && nearestSolidHit([t.posX[i]!, height, t.posZ[i]!], [-dx / dist, 0, -dz / dist], this.desc.shotColliders, dist) !== null;
+            const blocked = dist > 1e-6 && nearestSolidHit([t.posX[i]!,t.posY[i]!+height,t.posZ[i]!],[-dx/dist,-dy/dist,-dz/dist],this.desc.shotColliders,dist)!==null;
             if (cosA >= Math.cos(halfArc) && !blocked) {
               this.applyDamage(p, atk.damage, i);
             }
@@ -1390,14 +1444,14 @@ export class RuntimeSession {
   /** Adapter over the authoritative entity table and finite scene solids. */
   private weaponWorld(): WeaponWorld {
     const t=this.table,p=this.playerEntityId;
-    const actor=(id:number)=>t.isAlive(id) && this.kindOf[id]===1?{id,generation:t.generation[id]!,x:t.posX[id]!,z:t.posZ[id]!,radius:t.radius[id]!,hp:t.health[id]!}:null;
+    const actor=(id:number)=>t.isAlive(id) && this.kindOf[id]===1?{id,generation:t.generation[id]!,x:t.posX[id]!,y:t.posY[id]!,height:this.defIdToStats.get(t.defId[id]!)?.capsuleHeight??1.8,z:t.posZ[id]!,radius:t.radius[id]!,hp:t.health[id]!}:null;
     const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.desc.shotColliders,l)!==null;};
     return {actor,actors:()=>{const out=[];for(let i=0;i<t.capacity;i++){const a=actor(i);if(a)out.push(a);}return out;},blocked,
       trace:(from,direction,range,ignore,radius=0)=>{
         let distance=nearestSolidHit(from,direction,this.desc.shotColliders,range,radius)??range, target=null;
         for(let i=0;i<t.capacity;i++){const a=actor(i);if(!a || ignore.has(i))continue;
           const stats=this.defIdToStats.get(t.defId[i]!);if(!stats)continue;
-          const h=rayCapsuleY([from[0],from[1]+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
+          const h=rayCapsuleY([from[0],from[1]-a.y+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
           if(h!==null && h<distance){distance=h;target=a;}
         }
         return {actor:target,distance,point:[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance]};
@@ -1406,7 +1460,7 @@ export class RuntimeSession {
         const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p);
         t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));
         const blast=this.progress?.strength('blast')??0;
-        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.z-a.z)>blast || blocked([a.x,1,a.z],[b.x,1,b.z]))continue;this.applyDamage(i,damage/2,p);}
+        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)>blast || blocked([a.x,a.y+1,a.z],[b.x,b.y+1,b.z]))continue;this.applyDamage(i,damage/2,p);}
         return dealt;
       },
       displace:(id,from,distance)=>{
@@ -1423,7 +1477,7 @@ export class RuntimeSession {
     let dx=Math.cos(t.yaw[p]!),dz=Math.sin(t.yaw[p]!);
     const target=this.aimPoint ?? (Math.hypot(this.inputX,this.inputZ)>1e-6?[t.posX[p]!+this.inputX,t.posZ[p]!+this.inputZ]:null);
     if(target){const x=target[0]!-t.posX[p]!,z=target[1]!-t.posZ[p]!,l=Math.hypot(x,z);if(l>1e-6){dx=x/l;dz=z/l;}}
-    const y=this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,world=this.weaponWorld();
+    const y=t.posY[p]!+this.defIdToStats.get(t.defId[p]!)!.capsuleHeight/2,world=this.weaponWorld();
     if(this.aimAssist && !this.aimPoint){let nearest=w.rangeM;for(const a of world.actors()){const x=a.x-t.posX[p]!,z=a.z-t.posZ[p]!,l=Math.hypot(x,z);if(l>.001 && l<nearest && !world.blocked([t.posX[p]!,y,t.posZ[p]!],[a.x,y,a.z])){nearest=l;dx=x/l;dz=z/l;}}}
     t.yaw[p]=Math.atan2(dz,dx);
     const marker=w.presentation.markers.muzzle.position;

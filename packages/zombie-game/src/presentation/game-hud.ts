@@ -8,7 +8,7 @@ import './game-hud.css';
 export function gameHudModel(runtime: RuntimeSession) {
   const player = runtime.player();
   const rooms = runtime.desc.rooms.filter(r => r.enabled);
-  const current = player ? rooms.find(r => player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ) : undefined;
+  const current = player ? rooms.find(r => runtime.insideRoom(r,player)) : undefined;
   const cleared = runtime.clearedRooms();
   const canInteract = !!current && runtime.interactionTarget() === current.nodeId;
   const wave = [...runtime.sessionEvents].reverse().find(e => e.type === 'wave-start' && e.roomNodeId === current?.nodeId)?.wave;

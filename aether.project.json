@@ -87,6 +87,12 @@
       "id": "sc_ani_20261008_intake",
       "name": "ANI-20261008 · 动作候选检视（未验收）",
       "enabled": true
+    },
+    {
+      "id": "sc_navigation_3d_whitebox",
+      "path": "assets/scenes/sandbox/navigation-3d-whitebox.scene.json",
+      "name": "三维导航白盒 · 斜坡 / 楼梯 / 叠层",
+      "enabled": true
     }
   ],
   "startIndex": 1,

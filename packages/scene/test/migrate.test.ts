@@ -72,7 +72,7 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation']);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces']);
     expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
@@ -359,6 +359,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'authored-crowd-attack-budget',
       'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik',
       'predictive-crowd-navigation',
+      'authored-3d-navigation-surfaces',
     ]);
   });
 });
@@ -454,7 +455,7 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(16);
+    expect(SCHEMA_VERSION).toBe(17);
   });
 });
 
@@ -479,5 +480,21 @@ describe('v15 → v16 导航配置', () => {
     expect(validateSceneDocument(result.doc).some(d=>d.code==='E_NAV_CROWD')).toBe(true);
     delete nav.crowd;
     expect(validateSceneDocument(result.doc).some(d=>d.code==='E_NAV_CROWD')).toBe(true);
+  });
+});
+
+describe('v16 → v17 三维导航',()=>{
+  beforeEach(()=>{clearMigrations();registerSceneMigrations();});
+  afterEach(()=>{clearMigrations();registerSceneMigrations();});
+  it('旧平面场景只升级版本，不注入三维内容；新组件与支撑引用显式校验',()=>{
+    const input=docAt(16),copy=structuredClone(input);const result=migrateToLatest(input);
+    expect(result.doc.schemaVersion).toBe(17);expect(input).toEqual(copy);expect(JSON.stringify(result.doc)).not.toContain('NavSurface');
+    const doc=createEmptySceneDocument('三维测试');doc.nodes.push({id:'nd_surf',name:'坡面',parent:null,
+      transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},visible:true,pickable:true,prefab:null,
+      components:[{kind:'NavSurface',enabled:true,size:[8,4],supportCollider:'nd_missing'}]});
+    expect(validateSceneDocument(doc).some(d=>d.code==='E_NAV_SUPPORT_REF')).toBe(true);
+    const surface=doc.nodes.at(-1)!.components[0]!;if(surface.kind!=='NavSurface')throw Error('fixture');
+    delete surface.supportCollider;surface.size[0]=0;
+    expect(validateSceneDocument(doc).some(d=>d.code==='E_NAV_SURFACE_SIZE')).toBe(true);
   });
 });

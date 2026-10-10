@@ -37,15 +37,15 @@ export class CombatOverlay {
       const attack = NPC_STATS.find(s => s.defId === table.defId[slot])?.attack;
       if (!attack) continue;
       const x = table.posX[slot]!, z = table.posZ[slot]!, yaw = table.yaw[slot]!;
-      const center = point([x, 0.07, z]); if (center.behind) continue;
+      const y=table.posY[slot]!,center=point([x,y+.07,z]);if(center.behind)continue;
       const target = runtime.enemyAttacks.target(slot,table.generation[slot]!);
-      drawAttackCue(c,point,attack,x,z,yaw,table.windupRemain[slot]!,target);
+      drawAttackCue(c,point,attack,x,z,yaw,table.windupRemain[slot]!,target,y);
       if (!this.debugRanges) continue;
       const arc = (attack.arcDeg ?? 90) * Math.PI / 180;
       c.beginPath(); c.moveTo(center.x, center.y);
       for (let j = 0; j <= 16; j++) {
         const angle = yaw - arc / 2 + arc * j / 16;
-        const p = point([x + Math.cos(angle) * attack.rangeM, 0.07, z + Math.sin(angle) * attack.rangeM]); c.lineTo(p.x, p.y);
+        const p = point([x + Math.cos(angle) * attack.rangeM,y+.07,z+Math.sin(angle)*attack.rangeM]);c.lineTo(p.x,p.y);
       }
       c.closePath(); c.fillStyle = '#ef67452e'; c.strokeStyle = '#f49b56b0'; c.lineWidth = 1.5; c.fill(); c.stroke(); shown++;
     }
@@ -53,16 +53,16 @@ export class CombatOverlay {
     if (danger) {
       c.beginPath();
       for (let i = 0; i <= 40; i++) {
-        const angle = i / 40 * Math.PI * 2; const p = point([danger.x + Math.cos(angle) * danger.radius, 0.08, danger.z + Math.sin(angle) * danger.radius]);
+        const angle = i / 40 * Math.PI * 2; const p = point([danger.x + Math.cos(angle) * danger.radius, danger.y + 0.08, danger.z + Math.sin(angle) * danger.radius]);
         if (i === 0) c.moveTo(p.x, p.y); else c.lineTo(p.x, p.y);
       }
       c.fillStyle = '#e74c3d55'; c.strokeStyle = '#ffce5b'; c.lineWidth = 3; c.fill(); c.stroke();
-      const p = point([danger.x, 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(g(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`), p.x, p.y);
+      const p = point([danger.x, danger.y + 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(g(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`), p.x, p.y);
     }
     for (const effect of runtime.enemyAttacks.effects) drawEnemyAttack(c,point,effect,(runtime.tick-effect.startTick)*runtime.fixedStep);
     for (const e of visibleImpacts(runtime.combatEvents,runtime.runId,runtime.tick,runtime.fixedStep)) {
       const age = (runtime.tick - e.tick) * runtime.fixedStep;
-      const p = point([e.x!, 1.2, e.z!]); if (p.behind) continue;
+      const p = point([e.x!,(e.y??0)+1.2,e.z!]);if(p.behind)continue;
       drawImpactInk(c,p.x,p.y,age,e.amount,e.type === 'kill',e.slot === runtime.playerEntityId,e.slot + e.generation + e.tick);
     }
   }

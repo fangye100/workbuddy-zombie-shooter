@@ -42,6 +42,7 @@ export interface ViewCameraControl {
 /** 运行时玩家（相机跟随目标）的位置。null = 当前没有玩家实体 */
 export interface PlayCameraTarget {
   x: number;
+  y?:number;
   z: number;
   /** Render Y rotation (+Z forward), converted from the runtime planar heading. */
   yaw: number;
@@ -187,7 +188,7 @@ export class PlayCameraController {
     const cur = this.view.get();
     this.view.set({
       ...cur,
-      target: [target.x, cur.target[1], target.z],
+      target: [target.x,target.y??cur.target[1],target.z],
       yaw: this.yawMode === 'target' ? target.yaw + rad(this.yawOffsetDeg) : this.plan.yaw,
     });
   }

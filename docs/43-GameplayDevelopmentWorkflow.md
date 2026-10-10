@@ -4,7 +4,7 @@
 
 当前职责与发现方式见[共享文档入口](README.md)、[分层契约](architecture/layers.md)和
 [CodeGraph MCP 指南](knowledge/codegraph.md)。[分支集成](review/branch-integration-2026-10-09.md)
-时场景 schema 为 v15；2026-10-10 导航配置迁移后为 v16，当前值读取源码常量。僵尸模拟、进度和音频事件投影在 `packages/zombie-game/src`，
+时场景 schema 为 v15；2026-10-10 三维地表迁移后为 v17，当前值读取源码常量。僵尸模拟、进度和音频事件投影在 `packages/zombie-game/src`，
 HUD/输入/音频表现位于其 `presentation`。通用编辑命令、武器和碰撞在 `packages/runtime`。
 本指南的流程及源码/测试路径已对照 `e6c2278` 复核；验收测量保留原日期和版本，本次复核
 不重新认证运行、美术或设备表现。
@@ -16,12 +16,12 @@ HUD/输入/音频表现位于其 `presentation`。通用编辑命令、武器和
 
 | 领域 | 持久化真源 | 执行职责/技术约束 |
 |---|---|---|
-| 场景选择与内容 | `aether.project.json`、已登记 `assets/scenes/**`、`packages/scene/src/document.ts` | 编辑器读写场景文件；稳定 NodeId、完整组件和 AssetRef path/GUID 在重载后保留。当前 v16；读 `scene_get` 和源码常量，不假定旧报告版本 |
+| 场景选择与内容 | `aether.project.json`、已登记 `assets/scenes/**`、`packages/scene/src/document.ts` | 编辑器读写场景文件；稳定 NodeId、完整组件和 AssetRef path/GUID 在重载后保留。当前 v17；读 `scene_get` 和源码常量，不假定旧报告版本 |
 | 编辑、历史与保存 | `SpawnEditStore`、编辑命令、`author-scene-save.ts` | UI/MCP 共用编辑状态及历史；磁盘冲突显式报告；表单草稿与已应用编辑不同 |
 | 环境与材质覆盖 | 场景 environment、Mesh 组件、项目材质库 | 以可复现游戏相机构图调节；渲染对象只是投影，不持有持久化编辑真源 |
 | 美术与 LOD 派生 | `assets/art/sources/**`、运行时 GLB、sidecar、构建清单 | 保存源资产、归一化配方、哈希和 GUID；每级从原始源派生，保护 UV 和直线结构 |
 | NPC 攻击与时序 | 场景玩法组件、角色定义 | `packages/zombie-game/src/session.ts`/`enemy-attacks.ts` 决定距离许可、攻击名额、独立种子时序、伤害和效果；表现消费实际接受状态 |
-| 群体导航与避让 | `NavZone.bounds/cellSize/crowd`、场景 Collider | `packages/ai` 提供分帧流场及圆盘速度约束；`packages/runtime` 提供连续碰撞；`packages/zombie-game/src/crowd-navigation.ts` 适配追击、到达和解堵，位置仍由 CharacterTable 持有 |
+| 群体导航与避让 | `NavZone.bounds/cellSize/crowd/surface`、`NavSurface`、场景 Collider | `packages/ai` 提供分帧流场及圆盘速度约束；`packages/runtime` 提供连续碰撞；`packages/zombie-game/src/crowd-navigation.ts` 适配追击、到达和解堵，位置仍由 CharacterTable 持有 |
 | 武器定义 | 场景 `RunRules.arsenal`；`packages/scene/src/weapons.ts` | `WeaponSystem` 管装备、弹药、换弹、升级和接受事件；`WeaponCombat` 实现 hitscan、散射、穿透、投射物、近战和火焰 |
 | 武器动画/IK | 武器表现标记、动画选择及程序化参数 | 接受事件驱动片段/阶段；瞄准 torso/head IK 激活时，编辑器动作适配器在开火期间保留步态。持握/枪口/弹匣/弹膛标记及后坐/换弹意图是消费接口；自动手部定位和程序化填装未实现 |
 | 音频 | 场景 `RunRules.audio`、WAV AssetRef 和实测 `.meta.json` | `packages/zombie-game/src/audio-frame.ts` 投影接受事实，`presentation/game-audio.ts` 管解码、混音、声音及清理；不得改战斗、替换武器 hook 或消费玩法 RNG |
@@ -143,3 +143,5 @@ revision 过期则重读并基于最新状态重做；人的草稿需协调应�
 音频测试、类型检查、编辑器构建和 19 项本地文档链接检查。stdio 测试使用真实适配进程
 和受控 broker，不使用浏览器。当时未改资产/schema/渲染/玩法，因此没有新增 GPU、美术
 或审听验收；已有 Vite CJS 和 chunk-size 警告保留。
+
+三维地表、白盒验收和能力限制见 [三维导航指南](architecture/surface-navigation.md)。

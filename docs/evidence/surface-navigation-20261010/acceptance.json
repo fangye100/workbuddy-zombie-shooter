@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "editorBuild": "passed",
+    "typecheck": "passed",
+    "vitest": "34 files / 381 tests passed",
+    "architecture": "277 files, 0 errors",
+    "node": "7 tests passed",
+    "sceneCheck": "passed: 15 v17 scenes, 228 asset metadata, LOD/art/audio gates",
+    "knowledge": "134 entries, 0 errors"
+  },
+  "branch": "codex/crowd-navigation-20261010",
+  "base": "505bf52ba26b6eafccc18cf02b9c6754abe2e756",
+  "review": "独立复审：3文件21测试通过；玩家尺寸漏检、幽灵槽位及整波原子性复现已关闭，无未关闭P1/P2",
+  "date": "2026-10-10",
+  "browser": {
+    "gpu": "NVIDIA Lovelace, WebGPU non-fallback",
+    "stop": "document restored, registered=disposed=3, pending=instances=0",
+    "headMode": "headed",
+    "arrivedClimbers": 8,
+    "isolated": 4,
+    "scene": "sc_navigation_3d_whitebox",
+    "reverseInput": "runtime.setInput + MCP step, not native keyboard",
+    "midTick": 155,
+    "arrivalTick": 534,
+    "limitations": [
+      "static E-01 instances and capsule player, not full skinned animation stress",
+      "500 NPC CPU only, dense initial overlaps remain",
+      "no flying volume navigation or automatic GLB navmesh bake"
+    ]
+  }
+}

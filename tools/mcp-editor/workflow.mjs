@@ -29,6 +29,7 @@ export function editorWorkflow() {
       { id:'weapons-and-ik-ports', guide:'docs/39-Unified-weapons-and-animation-hooks.md' },
       { id:'audio', guide:'docs/42-GameplayAudioIntegration.md', resourceBrief:'docs/40-GameplayAudioAssetBrief.md' },
       { id:'crowd-navigation', guide:'docs/architecture/crowd-navigation.md', schema:'packages/scene/src/document.ts', component:'NavZone.crowd', observation:'editor_runtime.runtime.navigation' },
+      { id:'surface-navigation', guide:'docs/architecture/surface-navigation.md', schema:'packages/scene/src/document.ts', component:'NavZone.surface / NavSurface', observation:'editor_runtime.runtime.navigation.surface', sampleScene:'assets/scenes/sandbox/navigation-3d-whitebox.scene.json' },
     ],
     recovery: {
       REVISION_CONFLICT:'Read scene_get again and rebase only the intended changes.',

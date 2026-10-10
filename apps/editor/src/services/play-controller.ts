@@ -285,7 +285,7 @@ export class PlayController {
     }
     // O(1) 取玩家（旧实现是 view().find() —— 每帧全表扫 + 建整个数组）
     const p = rt.player();
-    this.playCamera.update(p === null ? null : { x: p.x, z: p.z, yaw: characterYaw(p.yaw) });
+    this.playCamera.update(p === null ? null : { x: p.x,y:p.y??0,z:p.z,yaw:characterYaw(p.yaw) });
   }
 
   private notify(): void {

@@ -24,7 +24,8 @@
  * position"，那只对了没有旋转和缩放的场景 —— 一旦有父级缩放，刷怪点就会飘。
  */
 
-import { SceneGraph, validRunRules, validNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
+import { SceneGraph, validRunRules, validNavigationSettings, validSurfaceNavigationSettings, type SurfaceNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
+import type { NavigationSurface } from '@aether/ai';
 import { lookupCharacterStats } from '@aether/content';
 import { solidCollider, type SolidColliderDesc } from "@aether/runtime";
 import type {
@@ -62,6 +63,8 @@ export interface RoomDesc {
   minZ: number;
   maxZ: number;
   enabled: boolean;
+  minY?:number;
+  maxY?:number;
 }
 
 /** 刷怪点。x/z 是世界坐标；roomNodeId 指向它归属的房间（用于进入触发） */
@@ -76,6 +79,7 @@ export interface SpawnDesc {
   /** 生成散布半径（米） */
   radius: number;
   x: number;
+  y?: number;
   z: number;
   enabled: boolean;
   /** 沿 parent 链最近的有 RoomVolume 的祖先；自由刷怪点为 null */
@@ -99,6 +103,8 @@ export interface ObstacleDesc {
   halfZ: number;
   radius: number;
   enabled: boolean;
+  minY?:number;
+  maxY?:number;
 }
 
 /** 导航作用域。null = 场景没声明 NavZone，装载会报 error */
@@ -111,6 +117,8 @@ export interface NavDesc {
   cellSize: number;
   /** 旧构造 API 可省略；场景装载必须显式携带通过校验的 v16 配置。 */
   crowd?: NavigationSettings;
+  surface?:SurfaceNavigationSettings;
+  surfaces?:NavigationSurface[];
 }
 
 /** 运行描述：装载产物，RuntimeSession 的唯一输入（除种子与固定步长外） */
@@ -120,7 +128,7 @@ export interface LevelRuntimeDesc {
   sceneName: string;
   /** 场景 schemaVersion + 本装载器的契约版本，用于复现比对 */
   schemaVersion: number;
-  playerStart: { nodeId: NodeId; x: number; z: number };
+  playerStart: { nodeId: NodeId; x: number; y?:number; z: number };
   rooms: RoomDesc[];
   spawns: SpawnDesc[];
   obstacles: ObstacleDesc[];
@@ -220,7 +228,7 @@ export function colliderWorldAabb(
   graph: SceneGraph,
   nodeId: NodeId,
   shape: ColliderComponent['shape'],
-): { x: number; z: number; halfX: number; halfZ: number; radius: number } {
+): { x: number; z: number; halfX: number; halfZ: number; radius: number;minY:number;maxY:number } {
   const m = graph.worldMatrix(nodeId);
   // 列主序：第 i 行的线性部分 = (m[i], m[i+4], m[i+8])，平移在 12/13/14
   const rowX = [m[0]!, m[4]!, m[8]!] as const;
@@ -249,7 +257,10 @@ export function colliderWorldAabb(
     halfX = r * Math.hypot(rowX[0], rowX[1], rowX[2]);
     halfZ = r * Math.hypot(rowZ[0], rowZ[1], rowZ[2]);
   }
-  return { x: tx, z: tz, halfX, halfZ, radius: Math.max(halfX, halfZ) };
+  const rowY=[m[1]!,m[5]!,m[9]!];
+  const halfY=shape.type==='box'?rowY.reduce((s,v,i)=>s+Math.abs(v)*shape.halfExtents[i]!,0)
+    :shape.radius*Math.hypot(...rowY)+(shape.type==='capsule'?Math.abs(m[5]!)*Math.max(0,shape.height/2-shape.radius):0);
+  return { x: tx, z: tz, halfX, halfZ, radius: Math.max(halfX, halfZ),minY:m[13]!-halfY,maxY:m[13]!+halfY };
 }
 
 /**
@@ -294,6 +305,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       playerStart = {
         nodeId: doc.playerStart,
         x: n.world.position[0],
+        y: n.world.position[1],
         z: n.world.position[2],
       };
     }
@@ -304,6 +316,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   const spawns: SpawnDesc[] = [];
   const obstacles: ObstacleDesc[] = [];
   const shotColliders: SolidColliderDesc[] = [];
+  const surfaces:NavigationSurface[]=[];
   const scripts: ScriptDesc[] = [];
   let nav: NavDesc | null = null;
 
@@ -326,6 +339,8 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           maxX: b.maxX,
           minZ: b.minZ,
           maxZ: b.maxZ,
+          minY:r.bounds.center[1]-r.bounds.size[1]/2,
+          maxY:r.bounds.center[1]+r.bounds.size[1]/2,
           enabled: r.enabled,
         });
       } else if (c.kind === 'SpawnPoint') {
@@ -387,6 +402,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           delaySec: s.delaySec,
           radius: s.radius,
           x: n.world.position[0],
+          y: n.world.position[1],
           z: n.world.position[2],
           enabled: s.enabled,
           roomNodeId: findOwningRoom(graph, n.id),
@@ -409,6 +425,14 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           enabled: col.enabled,
         };
         obstacles.push(o);
+      } else if (c.kind === 'NavSurface') {
+        if(!c.enabled)continue;
+        if(!Array.isArray(c.size)||c.size.length!==2||!c.size.every(v=>Number.isFinite(v)&&v>0)){
+          err('E_NAV_SURFACE','导航面尺寸非法',n.id);continue;
+        }
+        const m=graph.worldMatrix(n.id),hx=c.size[0]/2,hz=c.size[1]/2;
+        const point=(x:number,z:number)=>[m[0]!*x+m[8]!*z+m[12]!,m[1]!*x+m[9]!*z+m[13]!,m[2]!*x+m[10]!*z+m[14]!];
+        surfaces.push({id:n.id,...(c.supportCollider?{supportCollider:c.supportCollider}:{}),origin:point(-hx,-hz),u:point(hx,-hz),v:point(-hx,hz)});
       } else if (c.kind === 'NavZone') {
         if (!c.enabled) {
           // 禁用的 NavZone 不能"被接受但导航还正常"——那等于 enabled 字段在说谎。
@@ -435,6 +459,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           maxZ: b.maxZ,
           cellSize: c.cellSize,
           crowd: { ...c.crowd },
+          ...(c.surface?{surface:{...c.surface},surfaces}:{}),
         };
       } else if (c.kind === 'Script') {
         // Script 只存 behavior id + params，**绝不存代码字符串**（ADR-017）。
@@ -477,6 +502,13 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       '场景没有 NavZone。流场寻路需要作用域，没有它移动无法受障碍约束（不能退化成直线追击）。',
     );
   }
+  const surfaceNav=nav as NavDesc|null;
+  // 旧场景的 SpawnPoint Y 常为编辑标记高度；仅显式地表模式启用三维出生语义。
+  if(!surfaceNav?.surface){if(playerStart)(playerStart as LevelRuntimeDesc['playerStart']).y=0;for(const spawn of spawns)spawn.y=0;}
+  if(surfaceNav?.surface){
+    if(!validSurfaceNavigationSettings(surfaceNav.surface))err('E_NAV_SURFACE_SETTINGS','三维导航配置非法',surfaceNav.nodeId);
+    if(!surfaces.length)err('E_NAV_SURFACE_MISSING','三维导航必须声明启用的 NavSurface',surfaceNav.nodeId);
+  }else if(surfaces.length)err('E_NAV_SURFACE_MODE','NavSurface 需要 NavZone.surface 配置，不能静默按平面运行');
   if (rooms.length === 0) {
     warn('W_NO_ROOM', '场景没有 RoomVolume，room-enter 触发的刷怪点永远不会投放');
   }

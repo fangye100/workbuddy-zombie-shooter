@@ -861,3 +861,7 @@ fallback 与场景文件当前都是 **13 个物体、名字也一样**，光看
 补完校验器后一次报出全部 17 处。**规律：schema 有多少字段，校验器就得覆盖多少字段，
 否则没覆盖的那部分等于没有 schema。**（与 `docs/09 §8.1 ③` 同一条：门禁要验证"会拦住错误"，
 不能只报绿 —— 这次是同一个坑在 scene 包里又踩了一遍。）
+
+## v17 三维地表导航补充（2026-10-10）
+
+NavSurface 与 NavZone.surface 的当前契约、稳定支撑引用、v16→v17 迁移及白盒验收见 [三维导航指南](architecture/surface-navigation.md)。旧章节保留原版本设计口径，当前版本以 packages/scene/src/document.ts 为准。

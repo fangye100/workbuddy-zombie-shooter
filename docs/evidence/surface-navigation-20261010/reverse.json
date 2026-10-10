@@ -1,0 +1,81 @@
+{
+  "input": "runtime.setInput(-1,0)+MCP step 120",
+  "nav": {
+    "crowd": {
+      "agents": 13,
+      "blockedMoves": 0,
+      "candidateChecks": 79,
+      "contactPairs": 0,
+      "externalBlockedMoves": 30,
+      "infeasibleVelocities": 0,
+      "maxPenetrationM": 0,
+      "moving": 12,
+      "residualOverlapPairs": 0,
+      "stuckAgents": 0,
+      "unreachableAgents": 4,
+      "velocityConstraints": 62,
+      "yieldingAgents": 0
+    },
+    "flow": {
+      "cellCount": 1245,
+      "pending": false,
+      "publishedGoal": {
+        "surface": 0,
+        "x": -0.75,
+        "y": 0,
+        "z": -0.25
+      },
+      "rejectedGoals": 0,
+      "requestedX": -0.6059971451759338,
+      "requestedZ": 0,
+      "version": 24,
+      "workLastStep": 0
+    },
+    "settings": {
+      "acceleration": 8,
+      "collisionIterations": 4,
+      "flowCellBudget": 2048,
+      "maxNeighbors": 12,
+      "skinM": 0.02,
+      "stuckProgressRatio": 0.15,
+      "stuckWindowSec": 0.5,
+      "timeHorizonSec": 0.8
+    },
+    "surface": {
+      "cellCount": 1245,
+      "goal": {
+        "surface": 0,
+        "x": -0.75,
+        "y": 0,
+        "z": -0.25
+      },
+      "mode": "surface-3d",
+      "pending": false,
+      "rejectedSurfaces": [],
+      "surfaceCount": 21,
+      "version": 24,
+      "workLastStep": 0
+    }
+  },
+  "player": {
+    "alive": true,
+    "behavior": 0,
+    "behaviorPhase": 0,
+    "characterId": "P-01",
+    "generation": 1,
+    "hitFlash": 0,
+    "hp": 84,
+    "id": 0,
+    "kind": "player",
+    "lodTier": 1,
+    "maxHp": 100,
+    "runId": 2,
+    "sourceNodeId": "nd_nav3d_player",
+    "targetId": -1,
+    "x": -0.6059971451759338,
+    "y": 0,
+    "yaw": 3.1415927410125732,
+    "z": 0
+  },
+  "tick": 120
+}

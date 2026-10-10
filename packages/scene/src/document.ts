@@ -25,7 +25,7 @@ import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -163,6 +163,7 @@ export const ComponentKind = {
   SpawnPoint: 'SpawnPoint',
   RoomVolume: 'RoomVolume',
   NavZone: 'NavZone',
+  NavSurface: 'NavSurface',
   Script: 'Script',
   RunRules: 'RunRules',
 } as const;
@@ -385,6 +386,27 @@ export interface NavZoneComponent extends ComponentBase {
   baked: AssetRef | null;
   /** v16 场景必填；可选类型仅用于接受旧版迁移输入。 */
   crowd?: NavigationSettings;
+  /** 可选三维地表模式；省略时保留旧平面场景。 */
+  surface?: SurfaceNavigationSettings;
+}
+
+export interface SurfaceNavigationSettings {
+  maxSlopeDeg:number; maxStepM:number; agentRadius:number; agentHeight:number;
+}
+export function validSurfaceNavigationSettings(value:unknown):value is SurfaceNavigationSettings {
+  if(!value||typeof value!=='object')return false;
+  const v=value as SurfaceNavigationSettings;
+  return Object.keys(v).length===4&&Number.isFinite(v.maxSlopeDeg)&&v.maxSlopeDeg>0&&v.maxSlopeDeg<=60
+    &&Number.isFinite(v.maxStepM)&&v.maxStepM>=0&&v.maxStepM<=1
+    &&Number.isFinite(v.agentRadius)&&v.agentRadius>0&&v.agentRadius<=5
+    &&Number.isFinite(v.agentHeight)&&v.agentHeight>0&&v.agentHeight<=10;
+}
+/** 可编辑的导航语义矩形，沿节点 local XZ 平面；旋转生成坡道，平移生成楼梯踏面。 */
+export interface NavSurfaceComponent extends ComponentBase {
+  kind:typeof ComponentKind.NavSurface;
+  size:[number,number];
+  /** 该面所属的地板碰撞体；仍参与射线/顶棚判定，不能笼统删除。 */
+  supportCollider?:NodeId;
 }
 
 /** 行为参数的标量类型。与 ScriptComponent.params 的取值域一致 */
@@ -513,6 +535,7 @@ export type ComponentData =
   | SpawnPointComponent
   | RoomVolumeComponent
   | NavZoneComponent
+  | NavSurfaceComponent
   | ScriptComponent;
 
 /**
@@ -933,6 +956,7 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
 
       if (c.kind === ComponentKind.NavZone) {
         const nav = c as NavZoneComponent;
+        if(nav.surface!==undefined&&!validSurfaceNavigationSettings(nav.surface))err(`${at}/surface`,'E_NAV_SURFACE_SETTINGS','三维导航配置非法');
         if (!Number.isFinite(nav.cellSize) || nav.cellSize <= 0) err(`${at}/cellSize`, 'E_NAV_CELL', '导航格尺寸必须是有限正数');
         const size = nav.bounds?.size;
         if (!Array.isArray(size) || size.length !== 3 || !size.every(v => Number.isFinite(v) && v > 0)
@@ -944,6 +968,13 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if ((d.schemaVersion ?? 0) >= 16 || nav.crowd !== undefined) {
           if (!validNavigationSettings(nav.crowd)) err(`${at}/crowd`, 'E_NAV_CROWD', '导航避让配置缺失或越界，请迁移旧场景或修正配置');
         }
+      }
+      if(c.kind===ComponentKind.NavSurface){
+        const surface=c as NavSurfaceComponent;
+        if(!Array.isArray(surface.size)||surface.size.length!==2||!surface.size.every(v=>Number.isFinite(v)&&v>0&&v<=1000))
+          err(`${at}/size`,'E_NAV_SURFACE_SIZE','导航面尺寸必须是两个有限正数，且不超过 1000m');
+        if(surface.supportCollider!==undefined&&!d.nodes!.some(n=>n.id===surface.supportCollider&&n.components?.some(c=>c.kind==='Collider'&&!c.isTrigger)))
+          err(`${at}/supportCollider`,'E_NAV_SUPPORT_REF','支撑碰撞体必须引用具有非触发 Collider 的 NodeId');
       }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');

@@ -1,0 +1,8 @@
+{
+  "architecture": "lovelace",
+  "fallback": false,
+  "secure": true,
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Fnavigation-3d-whitebox.scene.json&agent=1&probe=surface-nav-20261010",
+  "vendor": "nvidia",
+  "errorLogs": []
+}

@@ -31,6 +31,14 @@ function setup(doc = structuredClone(scenes[0]!)) {
 }
 
 describe('scene-authored player presentation', () => {
+  it('首次同步发生在移动后也按作者起点计算三维高度，不抵消第一次爬升',()=>{
+    const {doc,node,visual,object}=setup();
+    const nav=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='NavZone')!;
+    nav.surface={maxSlopeDeg:40,maxStepM:.3,agentRadius:.35,agentHeight:2.2};
+    node.transform.position[1]=4;object.pos[1]=4.02;visual.prepare(doc);
+    visual.sync({id:0,generation:1,runId:10,characterId:'P-01',kind:'player',x:0,y:5,z:0,yaw:0,alive:true,sourceNodeId:node.id,targetId:-1,behavior:0,behaviorPhase:0,hp:100,maxHp:100,hitFlash:0,lodTier:0});
+    expect(object.pos[1]).toBeCloseTo(5.02);
+  });
   it('keeps lower-body facing movement while gameplay aims across it, and clears heading on rerun', () => {
     const { visual, ctl, object } = setup(); expect(ctl.start()).toBe(true);
     const p = ctl.session.runtime!.player()!;
@@ -72,7 +80,7 @@ describe('scene-authored player presentation', () => {
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
     expect(result.to).toBe(SCHEMA_VERSION);
-    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'unified-weapon-arsenal', 'scene-audio-cue-mapping', 'integrated-weapons-audio-body-ik']);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'unified-weapon-arsenal', 'scene-audio-cue-mapping', 'integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });

@@ -60,7 +60,7 @@ export class ZombieCrowdNavigation {
   }
 
   /** 初始烘焙属于 Play 建立期；运行期全部按场景预算推进。 */
-  reset(x: number,z: number): void {
+  reset(x: number,z: number,_y=0): void {
     this.solver.reset();this.yieldUntil.fill(0);this.generation.fill(0);
     this.rejectedGoals=0;this.unreachableAgents=0;this.yieldingAgents=0;this.externalBlockedMoves=0;this.goalCell=-1;
     this.integrator.invalidate();
@@ -101,7 +101,7 @@ export class ZombieCrowdNavigation {
       b.ids[n]=i;b.generation[n]=t.generation[i]!;
       b.x[n]=t.posX[i]!;b.z[n]=t.posZ[i]!;b.vx[n]=t.velX[i]!;b.vz[n]=t.velZ[i]!;
       b.radius[n]=t.radius[i]!;b.maxSpeed[n]=policy.speed(i);
-      b.layer[n]=0;b.minY[n]=0;b.maxY[n]=policy.height(i);
+      b.layer[n]=0;b.minY[n]=t.posY[i]!;b.maxY[n]=t.posY[i]!+policy.height(i);
       b.movable[n]=i!==player && policy.movable(i)?1:0;
       b.preferredX[n]=0;b.preferredZ[n]=0;
       if(this.generation[i]!==t.generation[i]){this.generation[i]=t.generation[i]!;this.yieldUntil[i]=0;}

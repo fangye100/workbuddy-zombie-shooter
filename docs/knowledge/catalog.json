@@ -4,6 +4,28 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "surface-navigation-review-20261010",
+      "path": "docs/evidence/surface-navigation-20261010/review.md",
+      "title": "三维地表导航独立复审记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": ["navigation", "crowd", "review", "verification"],
+      "read": "玩家尺寸漏检及整波出生原子性问题的独立复现、修复与终审边界",
+      "sourceRefs": ["project-rules", "scene-schema", "architecture-policy"]
+    },
+    {
+      "id": "surface-navigation-implementation",
+      "path": "docs/architecture/surface-navigation.md",
+      "title": "三维地表导航与白盒验收",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["navigation", "crowd", "avoidance", "architecture", "mcp"],
+      "read": "v17 NavSurface、坡道楼梯叠层、净空与跨层隔离、白盒真实GPU验收及性能边界",
+      "sourceRefs": ["project-rules", "scene-schema", "architecture-policy"]
+    },
+    {
       "id": "crowd-navigation-implementation",
       "path": "docs/architecture/crowd-navigation.md",
       "title": "高性能群体寻路与避让实现指南",

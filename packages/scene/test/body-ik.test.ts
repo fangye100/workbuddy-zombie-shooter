@@ -21,7 +21,7 @@ describe('persistent body IK contract', () => {
   });
   it('migrates v12 without adding controls and detects broken stable NodeId references', () => {
     const doc = createEmptySceneDocument('ik'); doc.schemaVersion = 12;
-    const migrated = migrateToLatest(doc); expect(migrated.to).toBe(16); expect(migrated.applied).toContain('integrated-weapons-audio-body-ik');
+    const migrated = migrateToLatest(doc); expect(migrated.to).toBe(17); expect(migrated.applied).toContain('integrated-weapons-audio-body-ik');
     expect(migrated.doc.nodes).toEqual(doc.nodes);
     const c = newBodyIkControl('head'); c.target = { kind: 'node', nodeId: 'missing', offset: [0, 0, 0] };
     migrated.doc.nodes.push({ id: 'actor', name: 'actor', visible: true, components: [{ kind: 'MeshRenderer', enabled: true, visible: true, source: { type: 'asset', ref: { path: 'assets/rig.glb', guid: 'as_rig' } }, bodyIk: { enabled: true, weight: 1, locomotionWhileAiming: false, controls: [c] } }] } as SceneNode);

@@ -29,14 +29,14 @@ export class AudioFramePlanner {
       // Continuous burn ticks without a new contact never produce flesh thwacks.
       if(!['damage','kill'].includes(e.type) || e.runId!==r.runId || e.amount<=0 || e.slot===r.playerEntityId || e.sourceSlot!==r.playerEntityId)continue;
       const contact=r.weaponCombat.effects.some(f=>f.tick===e.tick && f.hit && ['shot','pellet','pierce','slash','flame'].includes(f.kind));
-      if(contact)edge(`hit:${e.tick}:${e.slot}:${e.generation}`,e.tick,config.fleshHit,[e.x??player?.x??0,1,e.z??player?.z??0]);
+      if(contact)edge(`hit:${e.tick}:${e.slot}:${e.generation}`,e.tick,config.fleshHit,[e.x??player?.x??0,(e.y??player?.y??0)+1,e.z??player?.z??0]);
     }
     const windups=new Set<string>();
     for(let slot=0;slot<t.capacity;slot++)if(t.isAlive(slot) && slot!==r.playerEntityId && t.behavior[slot]===2){
       const key=`warn:${slot}:${t.generation[slot]}`;windups.add(key);
       if(!this.windups.has(key) && player && Math.hypot(t.posX[slot]!-player.x,t.posZ[slot]!-player.z)<=config.warningDistanceM){
         const id=NPC_STATS.find(s=>s.defId===t.defId[slot])?.id;
-        if(continuous && id && config.warnings[id])frame.shots.push({key:`${key}:${r.tick}`,binding:config.warnings[id]!,position:[t.posX[slot]!,1,t.posZ[slot]!]});
+        if(continuous && id && config.warnings[id])frame.shots.push({key:`${key}:${r.tick}`,binding:config.warnings[id]!,position:[t.posX[slot]!,t.posY[slot]!+1,t.posZ[slot]!]});
       }
     }
     this.windups=windups;
