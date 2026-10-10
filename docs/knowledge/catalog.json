@@ -4,6 +4,17 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "shadow-crowd-decal-assessment-20261010",
+      "path": "docs/architecture/crowd-and-decals-20261010.md",
+      "title": "接触阴影修复、群体避让与贴花选型复核",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": ["render", "shadow", "crowd", "navigation", "decal", "art", "architecture"],
+      "read": "阴影格式修复/GPU证据、CPU避让基准和未实施贴花/ORCA建议；容量与性能受版本设备限制",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema"]
+    },
+    {
       "id": "project-rules",
       "path": "AGENTS.md",
       "title": "项目协作规则",

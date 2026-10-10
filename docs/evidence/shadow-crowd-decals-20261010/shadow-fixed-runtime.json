@@ -1,0 +1,29 @@
+{
+  "batches": [
+    {
+      "count": 15,
+      "length": 300
+    },
+    {
+      "count": 9,
+      "length": 180
+    }
+  ],
+  "contacts": 55,
+  "dynamicContacts": 24,
+  "gpu": {
+    "architecture": "lovelace",
+    "description": "",
+    "device": "",
+    "isFallbackAdapter": false,
+    "vendor": "nvidia"
+  },
+  "maxDynamicRadius": 0.881010890007019,
+  "maxRadius": 6.007232666015625,
+  "opacity": 0.48,
+  "tick": 6,
+  "viewport": [
+    2560,
+    1271
+  ]
+}

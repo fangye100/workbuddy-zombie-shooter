@@ -1,4 +1,4 @@
-import type { CoreDynamicBatch } from '@aether/render';
+import { DYNAMIC_INSTANCE_FLOATS, type CoreDynamicBatch } from '@aether/render';
 
 interface ContactObject {
   visible:boolean; background:boolean; localMin:readonly number[]; localMax:readonly number[];
@@ -33,8 +33,8 @@ export class SceneContacts {
         for(let i=0;i<b.vertices.length;i+=15){minY=Math.min(minY,b.vertices[i+1]!);minX=Math.min(minX,b.vertices[i]!);maxX=Math.max(maxX,b.vertices[i]!);minZ=Math.min(minZ,b.vertices[i+2]!);maxZ=Math.max(maxZ,b.vertices[i+2]!);}
         bounds=[minY,(maxX-minX)*0.5,(maxZ-minZ)*0.5];this.bounds.set(b.vertices,bounds);
       }
-      for(let i=0;i<Math.min(b.count,b.instances.length/16);i++){
-        const a=i*16,v=b.instances;
+      for(let i=0;i<Math.min(b.count,Math.floor(b.instances.length/DYNAMIC_INSTANCE_FLOATS));i++){
+        const a=i*DYNAMIC_INSTANCE_FLOATS,v=b.instances;
         put(v[a]!,v[a+1]!+bounds[0]!*v[a+5]!,v[a+2]!,v[a+3]!,bounds[1]!*v[a+4]!,bounds[2]!*v[a+6]!);
       }
     }

@@ -31,6 +31,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 动作资源交接与候选检视 | [ANI 批次接入记录](animation/ani-20261008-intake.md)、[动作需求](38-GameplayActionAndVfxAssetBrief.md) | 离线 FBX 提取、共享 BVH 和检视场景；候选不等于正式玩法验收 |
 | 动作进入实际玩法 | [动作接入指南](animation/ani-gameplay-integration.md) | 内容裁剪配方、四向步态、NPC 相位/受击/死亡尾部、t1 完整状态与真实 GPU 验证边界 |
 | 场景美术、材质与建筑 LOD | [品质提升指南](art/visual-quality-playbook.md)、[街景报告](36-StreetQualityAndArchitecturalLOD.md) | 场景/资产文件、通用渲染器与美术验证工具 |
+| 接触阴影、群体避让与贴花选型 | [修复与选型复核](architecture/crowd-and-decals-20261010.md) | 阴影步长修复、现有 CPU 基准及未实施方案的职责/验收边界 |
 | 浏览器或 GPU 验收 | [浏览器入口](browser-verification.md)、项目浏览器/GPU 规则 | 有界面目标检出环境及运行证据，不能只用构建代替 |
 | Agent 通过 MCP 编辑 | [编辑器 MCP](../tools/mcp-editor/README.md) | `editor_workflow` → 明确选择实例 → 当前 schema/revision |
 | 历史决策和事故证据 | 目录中 `historical` 项 | `docs/review`、`docs/evidence`、`.workbuddy/memory`；复用前核对源码 |

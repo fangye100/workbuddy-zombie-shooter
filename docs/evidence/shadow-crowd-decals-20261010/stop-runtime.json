@@ -1,0 +1,61 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"runtime\":{\"state\":\"stopped\",\"tick\":0,\"player\":null,\"npcCount\":0,\"diagnostics\":[],\"runtimeDiagnostics\":[],\"ledger\":{\"registered\":4,\"disposed\":4,\"pending\":0},\"instances\":24,\"meshIds\":[\"actor:E-01\",\"actor:E-02\"],\"actorLibrarySize\":2,\"weapons\":null,\"audio\":{\"state\":\"closed\",\"runId\":-1,\"pending\":0,\"buffers\":0,\"decodedBytes\":0,\"voices\":0,\"loops\":0,\"peakVoices\":0,\"played\":{},\"skipped\":0,\"muted\":false,\"gain\":1,\"errors\":[]}},\"state\":{\"path\":\"assets/scenes/act1/floor-1.scene.json\",\"name\":\"第一层 · 火场公路\",\"revision\":\"90ed0617\",\"dirty\":false,\"hasDraft\":false,\"busy\":false,\"pendingAssets\":0,\"playing\":false}}"
+      }
+    ],
+    "isError": false,
+    "structuredContent": {
+      "ok": true,
+      "runtime": {
+        "state": "stopped",
+        "tick": 0,
+        "player": null,
+        "npcCount": 0,
+        "diagnostics": [],
+        "runtimeDiagnostics": [],
+        "ledger": {
+          "registered": 4,
+          "disposed": 4,
+          "pending": 0
+        },
+        "instances": 24,
+        "meshIds": [
+          "actor:E-01",
+          "actor:E-02"
+        ],
+        "actorLibrarySize": 2,
+        "weapons": null,
+        "audio": {
+          "state": "closed",
+          "runId": -1,
+          "pending": 0,
+          "buffers": 0,
+          "decodedBytes": 0,
+          "voices": 0,
+          "loops": 0,
+          "peakVoices": 0,
+          "played": {},
+          "skipped": 0,
+          "muted": false,
+          "gain": 1,
+          "errors": []
+        }
+      },
+      "state": {
+        "path": "assets/scenes/act1/floor-1.scene.json",
+        "name": "第一层 · 火场公路",
+        "revision": "90ed0617",
+        "dirty": false,
+        "hasDraft": false,
+        "busy": false,
+        "pendingAssets": 0,
+        "playing": false
+      }
+    }
+  }
+}
