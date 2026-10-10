@@ -86,3 +86,6 @@ pnpm run editor:build
 控制节点、查看短暂过渡与历史、验证图导航；用 Space 激活冻结按钮时确认运行 tick 继续。
 Stop/重跑并切换观察角色，确认历史不会跨身份。还需在实际可达运行路径检查 Proxy 及缺失/
 配置诊断。单元测试和构建不能替代可见/GPU 验收。
+
+
+2026-10-10 的实际三层玩家组合检查见 [持续步态与区域动作指南](animation/composite-player-motion.md#三层实机功能复验2026-10-10)：固定 `6e4e549ee07f7869c21c7c433bc6f3cd7513b5fa`，NVIDIA Lovelace secure headed 各73项通过，实际可见 debug 目标切换/freeze 不改生产、暂停双时钟、Stop/重启恢复。原日志/hash 及两次观察时序失败均保留。该功能证据仍有 IK_UNREACHABLE/IK_TARGET 诊断，CPU locals/skinScratch 不是 GPU readback；小角色和暗阴影不能认证肢体接触精度，未认证手机/人群性能，最终 Reviewer 待执行。
