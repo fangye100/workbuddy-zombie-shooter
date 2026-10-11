@@ -12,6 +12,9 @@ import decimate_uvkeep as dec
 spec = importlib.util.spec_from_file_location('environment_lods', ROOT/'assets/environment/_tools/build_environment_lods.py')
 helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
+transfer_spec = importlib.util.spec_from_file_location('weapon_surface_transfer', Path(__file__).with_name('weapon-surface-transfer.py'))
+surface = importlib.util.module_from_spec(transfer_spec)
+transfer_spec.loader.exec_module(surface)
 STAGE = ROOT/'.workbuddy/tmp/wpn-integration/lods'
 RECIPES = [
     dict(id='WPN-07-LAUNCHER', rotationDeg=[0,90,0], sourceLengthAxis=2, lengthM=.75, targets=[3000,1500,500],
@@ -95,6 +98,50 @@ def silhouette(v,f,ref_v,ref_f):
     return result
 def volume(v,f):
     return float(abs(np.sum(np.einsum('ij,ij->i',v[f[:,0]],np.cross(v[f[:,1]],v[f[:,2]])))/6))
+
+def surface_transfer_published(recipe):
+    """复用已发布独立几何，避免用相同 QEM 参数重复试验。原输出作为明确 provenance。"""
+    aid=recipe['id'];published=ROOT/f'assets/art/models/{aid}';dest=STAGE/aid;dest.mkdir(parents=True,exist_ok=True)
+    report=json.loads((published/'lod-report.json').read_text(encoding='utf-8'))
+    if report['recipe']!=recipe or report['sourceHash']!=sha(ROOT/report['source']):raise ValueError('过期 source/recipe')
+    source_v,source_f,source_uv,source_tex=dec.load_raw(ROOT/report['source'])
+    source_image=Image.open(BytesIO(source_tex)).convert('RGB')
+    r=rotation(recipe['rotationDeg']);scale=report['scaleXYZ'][0];origin=np.array(report['originRotatedSource'])
+    report['previousGeometryPipelineHash']=report.get('previousGeometryPipelineHash',report['pipelineHash'])
+    report['pipelineHash']=sha(__file__);report['helperHashes'][str(Path(surface.__file__).relative_to(ROOT))]=sha(surface.__file__)
+    report['surfaceTransferPolicy']='独立每档逐面 atlas，保留原源表面 BaseColor；不重做减面、不改几何；仅反向法线的面角改为几何面法线；不消除真实源碎片或重建本体；GPU 待复验'
+    with tempfile.TemporaryDirectory(prefix='weapon-surface-transfer-') as tmp:
+        source_obj=surface.textured_source(tmp,source_v,source_f,source_uv[source_f],source_image)
+        for level in report['levels']:
+            old_file=published/'game_ready'/level['file']
+            if sha(old_file)!=level['hash']:raise ValueError('旧 LOD hash 不符')
+            points,faces,uv,old_tex=dec.load_raw(old_file)
+            js,bd=dec.read_glb(old_file);attrs=js['meshes'][0]['primitives'][0]['attributes']
+            normals=dec.read_acc(js,bd,attrs['NORMAL']);unplaced=(points/scale+origin)@r
+            face_n=np.cross(points[faces[:,1]]-points[faces[:,0]],points[faces[:,2]]-points[faces[:,0]])
+            dots=np.einsum('ij,ij->i',face_n,normals[faces].sum(1))
+            evidence=dict(previousGlbHash=level['hash'],geometryPipelineHash=report['previousGeometryPipelineHash'],
+                oppositeNormalWindingFaces=int(np.sum(dots<0)),
+                before=surface.color_error(source_obj,unplaced,faces,uv[faces],Image.open(BytesIO(old_tex))))
+            wedges,encoded,settings=surface.transfer(source_obj,unplaced,faces,uv[faces],tmp,f'{aid}_lod{level["level"]}')
+            evidence.update(settings);evidence['after']=surface.color_error(source_obj,unplaced,faces,wedges,Image.open(BytesIO(encoded)))
+            texture_file=f'{aid}_lod{level["level"]}_basecolor.png';(dest/texture_file).write_bytes(encoded)
+            evidence['textureFile']=texture_file;evidence['textureHash']=sha(dest/texture_file)
+            points,faces,normals,repaired_normal_faces=surface.consistent_corner_normals(points,faces,normals)
+            repaired_face_n=np.cross(points[faces[:,1]]-points[faces[:,0]],points[faces[:,2]]-points[faces[:,0]])
+            remaining_bad=int(np.sum(np.einsum('ij,ij->i',repaired_face_n,normals[faces].sum(1))<0))
+            if remaining_bad:raise ValueError('法线修复后仍与绕序反向')
+            evidence['normalRepair']=dict(faces=repaired_normal_faces,method='仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变',oppositeNormalWindingFacesAfter=remaining_bad)
+            pairs=[[(int(vi),i*3+k) for k,vi in enumerate(tri)] for i,tri in enumerate(faces)]
+            file=dest/level['file'];dec.build_glb(str(file),points,pairs,wedges,encoded,'image/png',N=normals)
+            helper.tag_glb(file,dict(id=aid,level=f'LOD{level["level"]}',algorithm=level['algorithm']+'+source-surface-atlas',sourceHash=report['sourceHash'],targetFaces=recipe['targets'][level['level']]))
+            level['hash']=sha(file);level['surfaceTransfer']=evidence;level['visual']='pending'
+            print(aid,level['level'],'normal/winding',evidence['oppositeNormalWindingFaces'],'RGB MAE',round(evidence['before']['meanAbsoluteRgbError'],3),'->',round(evidence['after']['meanAbsoluteRgbError'],3),flush=True)
+    import shutil
+    shutil.copyfile(published/'game_ready'/f'{aid}_basecolor.png',dest/f'{aid}_basecolor.png')
+    if 'repairedReference' in report:shutil.copyfile(published/'game_ready'/report['repairedReference']['file'],dest/report['repairedReference']['file'])
+    write_json(dest/'lod-report.json',report)
+    return report
 
 def build(recipe):
     aid=recipe['id'];source=ROOT/f'assets/_delivery/WPN-20261011/{aid}/{aid}.glb'
@@ -182,18 +229,21 @@ def build(recipe):
     return report
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--only',nargs='+');p.add_argument('--publish',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--only',nargs='+');p.add_argument('--publish',action='store_true');p.add_argument('--surface-transfer-published',action='store_true');args=p.parse_args()
     entries=[e for e in RECIPES if not args.only or e['id'] in args.only]
     if args.only and set(args.only)!={e['id'] for e in entries}:p.error('未知 ID')
     if args.publish and not args.only:p.error('发布必须明确 --only ID')
     for e in entries:
-        if not args.publish:build(e);continue
+        if not args.publish:
+            (surface_transfer_published if args.surface_transfer_published else build)(e);continue
         src=STAGE/e['id'];report=json.loads((src/'lod-report.json').read_text(encoding='utf-8'))
         if report['recipe']!=e or report['pipelineHash']!=sha(__file__) or report['sourceHash']!=sha(ROOT/report['source']):raise ValueError('过期 source/recipe/pipeline')
         if any(l['errors'] or sha(src/l['file'])!=l['hash'] for l in report['levels']):raise ValueError('数值失败或 LOD hash 失配')
         target=ROOT/f'assets/art/models/{e["id"]}/game_ready';target.mkdir(parents=True,exist_ok=True)
         import shutil
         for l in report['levels']:shutil.copyfile(src/l['file'],target/l['file'])
+        for l in report['levels']:
+            if 'surfaceTransfer' in l:shutil.copyfile(src/l['surfaceTransfer']['textureFile'],target/l['surfaceTransfer']['textureFile'])
         if 'repairedReference' in report:shutil.copyfile(src/report['repairedReference']['file'],target/report['repairedReference']['file'])
         shutil.copyfile(src/f'{e["id"]}_basecolor.png',target/f'{e["id"]}_basecolor.png')
         write_json(target.parent/'lod-report.json',report)

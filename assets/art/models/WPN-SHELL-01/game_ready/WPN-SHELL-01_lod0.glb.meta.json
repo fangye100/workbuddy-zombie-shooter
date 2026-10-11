@@ -18,7 +18,7 @@
     "assetId": "WPN-SHELL-01",
     "triangles": 400,
     "level": 0,
-    "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
     "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
     "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
     "report": "assets/art/models/WPN-SHELL-01/lod-report.json",
@@ -31,8 +31,11 @@
     "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
     "variant": "game_ready",
     "file": "WPN-SHELL-01_lod0.glb",
-    "status": "visual-review-candidate"
+    "status": "visual-review-candidate",
+    "previousGlbHash": "8b241085476c8eda9033c97ad671a7b8fd74b7f2c6ec7dcbedc858b55426ce8e",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-SHELL-01_lod0_basecolor.png"
   },
-  "sourceHash": "sha256:8b241085476c8eda9033c97ad671a7b8fd74b7f2c6ec7dcbedc858b55426ce8e",
+  "sourceHash": "sha256:15130b48a5b763ef75bc81eb7407151d75b45a64e56d75089e80ff9d4c1c77f8",
   "updatedAt": "2026-10-11T15:03:12.555Z"
 }

@@ -18,7 +18,7 @@
     "assetId": "WPN-FUEL-01",
     "triangles": 391,
     "level": 1,
-    "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
     "source": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
     "sourceHash": "db4bb2b638b9f2f0c371fe16dc927e03fed76a415e1a38520199407c199c9e9f",
     "report": "assets/art/models/WPN-FUEL-01/lod-report.json",
@@ -31,8 +31,11 @@
     "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
     "variant": "game_ready",
     "file": "WPN-FUEL-01_lod1.glb",
-    "status": "visual-review-candidate"
+    "status": "visual-review-candidate",
+    "previousGlbHash": "7517e8bd0800606280c08dc992873abd0e78f21f8b6a8fc66053175442eb4279",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-FUEL-01_lod1_basecolor.png"
   },
-  "sourceHash": "sha256:7517e8bd0800606280c08dc992873abd0e78f21f8b6a8fc66053175442eb4279",
+  "sourceHash": "sha256:5ea21a5de4b3a51f42019b5b823862a3666bb58835dd1cb0d89d84092458cde6",
   "updatedAt": "2026-10-11T15:03:12.709Z"
 }

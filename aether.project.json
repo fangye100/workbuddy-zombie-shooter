@@ -105,6 +105,12 @@
       "path": "assets/scenes/sandbox/weapon-source-fixed-views.scene.json",
       "name": "WPN-20261011 · 原源固定三向（缺陷对照）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_surface_transfer_review",
+      "path": "assets/scenes/sandbox/weapon-surface-transfer-review.scene.json",
+      "name": "Mag01 / Shell · 源 / 转移前 / 转移后",
+      "enabled": true
     }
   ],
   "startIndex": 1,

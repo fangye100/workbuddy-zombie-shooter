@@ -2283,7 +2283,7 @@
       "authority": "guide",
       "status": "current",
       "topics": ["weapon", "art", "lod", "gpu"],
-      "read": "米制配方、source到finalimport空间、预算内候选、Shell局部修复、60mesh固定三向、质量诊断与待验收边界",
+        "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
       "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
     }
   ]

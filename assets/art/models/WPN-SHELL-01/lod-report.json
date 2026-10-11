@@ -20,10 +20,11 @@
     "axisEvidence": "红壳 -X、黄铜底座/底火 +X；转 Z-90° 后壳口 +Y、底火 -Y"
   },
   "recipeHash": "f6eb4747493cde9cae1fac4fb52e9e05f99ff0ed580f600d992d61c143b7c26d",
-  "pipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+  "pipelineHash": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
   "helperHashes": {
     "assets\\characters\\_tools\\decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
-    "assets\\environment\\_tools\\build_environment_lods.py": "a99c64d0f04b5dc0fc9c407a2ada5ad8d7744d1dfd34038141a8f818aa7aef91"
+    "assets\\environment\\_tools\\build_environment_lods.py": "a99c64d0f04b5dc0fc9c407a2ada5ad8d7744d1dfd34038141a8f818aa7aef91",
+    "tools\\art\\weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
   },
   "toolVersions": {
     "python": "3.13.3",
@@ -86,7 +87,7 @@
       "level": 0,
       "file": "WPN-SHELL-01_lod0.glb",
       "triangles": 400,
-      "hash": "8b241085476c8eda9033c97ad671a7b8fd74b7f2c6ec7dcbedc858b55426ce8e",
+      "hash": "15130b48a5b763ef75bc81eb7407151d75b45a64e56d75089e80ff9d4c1c77f8",
       "surfaceRatio": 0.9417111066658531,
       "boundsDrift": 0.004055450169497821,
       "dimensionsM": [
@@ -128,13 +129,70 @@
         6.722047826204954e-05,
         0.00016004250803295232,
         -0.00017503494079743748
-      ]
+      ],
+      "surfaceTransfer": {
+        "previousGlbHash": "8b241085476c8eda9033c97ad671a7b8fd74b7f2c6ec7dcbedc858b55426ce8e",
+        "geometryPipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+        "oppositeNormalWindingFaces": 3,
+        "before": {
+          "samples": 2000,
+          "meanAbsoluteRgbError": 9.229730814603766,
+          "p95AbsoluteRgbError": 47.33596444613972,
+          "fractionErrorAbove40": 0.063,
+          "surfaceDistance": {
+            "RMS": 0.0043435366824269295,
+            "diag_mesh_0": 1.326315999031067,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.02558225952088833,
+            "mean": 0.0030059737619012594,
+            "min": 2.681474313703802e-07,
+            "n_samples": 2000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "after": {
+          "samples": 2000,
+          "meanAbsoluteRgbError": 1.707954484992109,
+          "p95AbsoluteRgbError": 7.970452687483026,
+          "fractionErrorAbove40": 0.004,
+          "surfaceDistance": {
+            "RMS": 0.0043435366824269295,
+            "diag_mesh_0": 1.326315999031067,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.02558225952088833,
+            "mean": 0.0030059737619012594,
+            "min": 2.681474313703802e-07,
+            "n_samples": 2000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01_lod0_basecolor.png",
+        "textureHash": "568e27deb77674f3962df936a5ccdc8b14f51182e92a6dff1e25a04695101926",
+        "normalRepair": {
+          "faces": 3,
+          "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
+          "oppositeNormalWindingFacesAfter": 0
+        }
+      }
     },
     {
       "level": 1,
       "file": "WPN-SHELL-01_lod1.glb",
       "triangles": 200,
-      "hash": "2edd655ed411f224e8895750a527baa8adaba0cbad1c1cfde20b1f06cac211b8",
+      "hash": "5de82df42b1b940e3e43bae679a3ec1da2708b59e55d64453213b26245475d7b",
       "surfaceRatio": 0.9013944412028625,
       "boundsDrift": 0.018775368849377472,
       "dimensionsM": [
@@ -176,13 +234,70 @@
         -0.00024950436827171456,
         0.0008765770142862477,
         0.0002006088120974931
-      ]
+      ],
+      "surfaceTransfer": {
+        "previousGlbHash": "2edd655ed411f224e8895750a527baa8adaba0cbad1c1cfde20b1f06cac211b8",
+        "geometryPipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+        "oppositeNormalWindingFaces": 4,
+        "before": {
+          "samples": 1000,
+          "meanAbsoluteRgbError": 11.50742691026779,
+          "p95AbsoluteRgbError": 53.94491212820485,
+          "fractionErrorAbove40": 0.106,
+          "surfaceDistance": {
+            "RMS": 0.0070489016361534595,
+            "diag_mesh_0": 1.2927603721618652,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.027580397203564644,
+            "mean": 0.005435865838080645,
+            "min": 2.7785004022007342e-06,
+            "n_samples": 1000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "after": {
+          "samples": 1000,
+          "meanAbsoluteRgbError": 1.5670599106663117,
+          "p95AbsoluteRgbError": 8.065357754732844,
+          "fractionErrorAbove40": 0.003,
+          "surfaceDistance": {
+            "RMS": 0.0070489016361534595,
+            "diag_mesh_0": 1.2927603721618652,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.027580397203564644,
+            "mean": 0.005435865838080645,
+            "min": 2.7785004022007342e-06,
+            "n_samples": 1000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01_lod1_basecolor.png",
+        "textureHash": "85ddf3db3f251fdf083e76f3d465850f8b3c1a79dd8dd36ff666b6ffeb0506d9",
+        "normalRepair": {
+          "faces": 4,
+          "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
+          "oppositeNormalWindingFacesAfter": 0
+        }
+      }
     },
     {
       "level": 2,
       "file": "WPN-SHELL-01_lod2.glb",
       "triangles": 78,
-      "hash": "c89258d25289a10a43d66c7f30b6e79fe22d6211774dbc088e69bcbf7b716855",
+      "hash": "ea4e92d036289b539dd83a12440540ca1dcc53c4a4f94ebb5592540101121dc5",
       "surfaceRatio": 0.852254487964405,
       "boundsDrift": 0.07174313894173834,
       "dimensionsM": [
@@ -227,7 +342,64 @@
         -0.0010311194718363378,
         0.002476128906252748,
         0.0004181629783548031
-      ]
+      ],
+      "surfaceTransfer": {
+        "previousGlbHash": "c89258d25289a10a43d66c7f30b6e79fe22d6211774dbc088e69bcbf7b716855",
+        "geometryPipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+        "oppositeNormalWindingFaces": 5,
+        "before": {
+          "samples": 390,
+          "meanAbsoluteRgbError": 11.7470012865555,
+          "p95AbsoluteRgbError": 62.14795699549606,
+          "fractionErrorAbove40": 0.12051282051282051,
+          "surfaceDistance": {
+            "RMS": 0.012818822637200356,
+            "diag_mesh_0": 1.2387230396270752,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.04334886372089386,
+            "mean": 0.010309664532542229,
+            "min": 0.0001254271628567949,
+            "n_samples": 390
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "after": {
+          "samples": 390,
+          "meanAbsoluteRgbError": 0.7656420731629733,
+          "p95AbsoluteRgbError": 3.902885719118173,
+          "fractionErrorAbove40": 0.0,
+          "surfaceDistance": {
+            "RMS": 0.012818822637200356,
+            "diag_mesh_0": 1.2387230396270752,
+            "diag_mesh_1": 1.3424044008772729,
+            "max": 0.04334886372089386,
+            "mean": 0.010309664532542229,
+            "min": 0.0001254271628567949,
+            "n_samples": 390
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01_lod2_basecolor.png",
+        "textureHash": "23d98a4bcad06be9959db22e5fe512b443009fddc01bf27cf7288e4436e7cc4b",
+        "normalRepair": {
+          "faces": 5,
+          "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
+          "oppositeNormalWindingFacesAfter": 0
+        }
+      }
     }
   ],
   "visual": "pending",
@@ -307,5 +479,7 @@
       7.83003749002655e-05,
       -2.9317933167988253e-09
     ]
-  }
+  },
+  "previousGeometryPipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+  "surfaceTransferPolicy": "独立每档逐面 atlas，保留原源表面 BaseColor；不重做减面、不改几何；仅反向法线的面角改为几何面法线；不消除真实源碎片或重建本体；GPU 待复验"
 }

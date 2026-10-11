@@ -10,8 +10,13 @@ const bundle=path.join(scratch,'lod-review-scene.mjs');
 await build({entryPoints:[path.join(root,'packages/scene/src/index.ts')],bundle:true,platform:'node',format:'esm',outfile:bundle,tsconfig:path.join(root,'tsconfig.check.json')});
 const {createEmptySceneDocument,createDefaultAssetMeta,validateAssetMeta,validateSceneDocument,validateProject,parseGlb,VERTEX_FLOATS}=await import(pathToFileURL(bundle).href);
 const check=process.argv.includes('--check');
+const refresh=process.argv.includes('--refresh-candidates');
+if(check&&refresh)throw new Error('--check 禁止刷新 sidecar');
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8'));
-const write=(p,data)=>fs.writeFileSync(path.join(root,p),JSON.stringify(data,null,2)+'\n');
+const write=(p,data)=>{
+ if(data.meta&&fs.existsSync(path.join(root,p))){const previous=read(p);data.meta.createdAt=previous.meta.createdAt;data.meta.updatedAt=previous.meta.updatedAt;}
+ fs.writeFileSync(path.join(root,p),JSON.stringify(data,null,2)+'\n');
+};
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const ids=['WPN-07-LAUNCHER','WPN-MAG-01','WPN-MAG-02-SMG','WPN-SHELL-01','WPN-FUEL-01'];
 const scenePath='assets/scenes/sandbox/weapon-lod-review.scene.json';
@@ -24,11 +29,13 @@ function metaFor(file,data){
  const existing=fs.existsSync(path.join(root,side));
  if(check&&!existing)throw new Error(`缺少 ${side}`);
  const meta=existing?read(side):createDefaultAssetMeta('as_'+sha(Buffer.from(file)).slice(0,12),'gltf');
- if(existing&&meta.sourceHash!=='sha256:'+hash)throw new Error(`过期 ${side}，拒绝覆盖`);
+ const changed=existing&&meta.sourceHash!=='sha256:'+hash;
+ if(changed&&(!refresh||meta.userData?.status!=='visual-review-candidate'||meta.sourceHash!=='sha256:'+data.previousGlbHash))throw new Error(`过期 ${side}，拒绝未经 provenance 核对的覆盖`);
  if(!existing){meta.sourceHash='sha256:'+hash;meta.userData={...data,variant:'game_ready',file:path.basename(file),status:'visual-review-candidate'};}
+ if(changed){meta.sourceHash='sha256:'+hash;meta.userData={...meta.userData,...data};}
  valid(side,validateAssetMeta(meta));
  if(meta.importer.normalizeHeightM!==null||meta.importer.upAxisFlip)throw new Error('候选必须显式米制 Y-up');
- if(!check&&!existing)write(side,meta);
+ if(!check&&(!existing||changed))write(side,meta);
  const model=parseGlb(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),null,'y');
  if(model.triangles!==data.triangles)throw new Error(`${file} tris 失配`);
  const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString()),primitive=gltf.meshes[0].primitives[0];
@@ -57,7 +64,8 @@ reports.forEach((report,i)=>{
  const lods=report.levels.map(level=>{
   if(level.errors.length||level.triangles>report.recipe.targets[level.level])throw new Error(`${report.id} 硬门禁失败`);
   if(level.hash!==sha(fs.readFileSync(path.join(root,prefix+level.file))))throw new Error(`${report.id} LOD hash失配`);
-  return {...metaFor(prefix+level.file,{assetId:report.id,triangles:level.triangles,level:level.level,algorithm:level.algorithm,
+  return {...metaFor(prefix+level.file,{assetId:report.id,triangles:level.triangles,level:level.level,algorithm:level.algorithm+(level.surfaceTransfer?'+source-surface-atlas':''),
+   ...(level.surfaceTransfer?{previousGlbHash:level.surfaceTransfer.previousGlbHash,surfaceTransfer:level.surfaceTransfer.method,textureFile:level.surfaceTransfer.textureFile}:{}),
    source:report.source,sourceHash:report.sourceHash,report:`assets/art/models/${report.id}/lod-report.json`,
    calibrationSpace:'parseGlb(buffer,null,y) final import-space',canonicalToImportTranslation:level.parserRecenterMeters.map(n=>-n),
    socketsStatus:'未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证'}),center:level.parserRecenterMeters,raw:false};
@@ -108,16 +116,43 @@ reports.forEach((report,i)=>{
  });
 });
 rawDoc.dependencies=reports.map(r=>r.source);valid(rawPath,validateSceneDocument(rawDoc));
+const focusedPath='assets/scenes/sandbox/weapon-surface-transfer-review.scene.json';
+let focusedDoc=null;
+if(reports.every(r=>r.levels[0].surfaceTransfer)){
+ focusedDoc=structuredClone(rawDoc);focusedDoc.id='sc_weapon_surface_transfer_review';focusedDoc.name='Mag01 / Shell · 源 / 转移前 / 转移后';
+ focusedDoc.editorCamera={target:[0,1,0],distance:18,yaw:0,elevation:0};
+ focusedDoc.nodes=focusedDoc.nodes.filter(n=>!n.components.some(c=>c.kind==='MeshRenderer'));
+ focusedDoc.meta.notes='18 mesh 两行：Mag01 / Shell，每行 Raw / ddfb08f旧LOD0 / 源表面atlas新LOD0，三朝向；每组三槽侧+Z/端+X/插入+Y或底火-Y。同几何同尺度材质；重投影不认证真实源端面已修复。';
+ [1,3].forEach((i,row)=>{
+  const report=reports[i],level=report.levels[0],baseline=`assets/art/models/${report.id}/game_ready/${report.id}_pre_surface_transfer_lod0.glb`;
+  if(sha(fs.readFileSync(path.join(root,baseline)))!==(level.surfaceTransfer.comparisonBaselineGlbHash??level.surfaceTransfer.previousGlbHash))throw new Error('转移前基线 hash 失配');
+  const old=metaFor(baseline,{assetId:report.id,triangles:level.triangles,algorithm:level.algorithm,baselineHead:'ddfb08f0fea9a8e8ce574a78eb03bc496915db2e',
+   calibrationSpace:'parseGlb final import-space',purpose:'源表面转移前对照，不挂正式玩法'});
+  for(let group=0;group<3;group++)for(let view=0;view<3;view++){
+   const template=group===0?rawDoc.nodes.find(n=>n.id===`nd_wpn_raw_fixed_${i}_${view}`):doc.nodes.find(n=>n.id===`nd_wpn_lod_${i}_1_${view}`);
+   const node=structuredClone(template);node.id=`nd_wpn_surface_${row}_${group}_${view}`;
+   node.name=`${report.id} · ${['Raw规范化','ddfb转移前LOD0','源表面转移后LOD0'][group]} · ${['侧+Z','端+X',row===0?'插入+Y':'底火-Y'][view]}`;
+   const oldGrid=group===0?(view-1)*1.65:(3+view-5.5)*1.65;
+   node.transform.position[0]+=(group*3+view-4)*1.65-oldGrid;node.transform.position[1]+=(1-row)*2.2-(4-i)*1.8;
+   if(group===1)node.components[0].source={type:'asset',ref:{path:baseline,guid:old.guid}};
+   focusedDoc.nodes.push(node);
+  }
+ });
+ focusedDoc.dependencies=[...new Set(focusedDoc.nodes.flatMap(n=>n.components.filter(c=>c.kind==='MeshRenderer').map(c=>c.source.ref.path)))];
+ valid(focusedPath,validateSceneDocument(focusedDoc));
+}
 if(check){
  const saved=read(scenePath);valid(scenePath,validateSceneDocument(saved));
  if(JSON.stringify(saved.nodes)!==JSON.stringify(doc.nodes)||JSON.stringify(saved.dependencies)!==JSON.stringify(doc.dependencies))throw new Error('场景fixture漂移');
  const project=read('aether.project.json');valid('project',validateProject(project));if(!project.scenes.some(s=>s.id===doc.id&&s.path===scenePath&&s.enabled))throw new Error('未登记场景');
  const rawSaved=read(rawPath);valid(rawPath,validateSceneDocument(rawSaved));if(JSON.stringify(rawSaved.nodes)!==JSON.stringify(rawDoc.nodes))throw new Error('原源三向fixture漂移');
  if(!project.scenes.some(s=>s.id===rawDoc.id&&s.path===rawPath&&s.enabled))throw new Error('未登记原源三向场景');
+ if(focusedDoc){const saved=read(focusedPath);valid(focusedPath,validateSceneDocument(saved));if(JSON.stringify(saved.nodes)!==JSON.stringify(focusedDoc.nodes))throw new Error('转移前后fixture漂移');if(!project.scenes.some(s=>s.id===focusedDoc.id&&s.path===focusedPath&&s.enabled))throw new Error('未登记转移前后场景');}
 }else{
  write(scenePath,doc);write(rawPath,rawDoc);const project=read('aether.project.json');
  if(!project.scenes.some(s=>s.id===doc.id))project.scenes.push({id:doc.id,path:scenePath,name:doc.name,enabled:true});
  if(!project.scenes.some(s=>s.id===rawDoc.id))project.scenes.push({id:rawDoc.id,path:rawPath,name:rawDoc.name,enabled:true});
+ if(focusedDoc){write(focusedPath,focusedDoc);if(!project.scenes.some(s=>s.id===focusedDoc.id))project.scenes.push({id:focusedDoc.id,path:focusedPath,name:focusedDoc.name,enabled:true});}
  valid('project',validateProject(project));write('aether.project.json',project);
 }
 console.log(JSON.stringify({scenePath,meshes:60,status:'visual-review-candidate',reports:reports.map(r=>({id:r.id,levels:r.levels.map(l=>({tris:l.triangles,algorithm:l.algorithm,diagnostics:l.diagnostics,silhouetteIoU:l.silhouetteIoU}))}))},null,2));

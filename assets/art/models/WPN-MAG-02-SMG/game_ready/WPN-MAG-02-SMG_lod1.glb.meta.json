@@ -18,7 +18,7 @@
     "assetId": "WPN-MAG-02-SMG",
     "triangles": 187,
     "level": 1,
-    "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
     "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
     "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
     "report": "assets/art/models/WPN-MAG-02-SMG/lod-report.json",
@@ -31,8 +31,11 @@
     "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
     "variant": "game_ready",
     "file": "WPN-MAG-02-SMG_lod1.glb",
-    "status": "visual-review-candidate"
+    "status": "visual-review-candidate",
+    "previousGlbHash": "4e65728a03a838afa67547a2ec14373de6bb0f8f46399640670741189dcfadfa",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-MAG-02-SMG_lod1_basecolor.png"
   },
-  "sourceHash": "sha256:4e65728a03a838afa67547a2ec14373de6bb0f8f46399640670741189dcfadfa",
+  "sourceHash": "sha256:67dca71ea3b725d051904bb5a8659a9bdf8fa561ae67ea2a4bd62b1534c3f437",
   "updatedAt": "2026-10-11T15:03:12.518Z"
 }

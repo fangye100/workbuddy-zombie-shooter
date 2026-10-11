@@ -18,7 +18,7 @@
     "assetId": "WPN-07-LAUNCHER",
     "triangles": 3000,
     "level": 0,
-    "algorithm": "texture-QEM-wedge-UV",
+    "algorithm": "texture-QEM-wedge-UV+source-surface-atlas",
     "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
     "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
     "report": "assets/art/models/WPN-07-LAUNCHER/lod-report.json",
@@ -31,8 +31,11 @@
     "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
     "variant": "game_ready",
     "file": "WPN-07-LAUNCHER_lod0.glb",
-    "status": "visual-review-candidate"
+    "status": "visual-review-candidate",
+    "previousGlbHash": "9bc06be1cc2f1cf9e1826c579fdb29a844223089f76d6763171c4f0bda4f8cd6",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-07-LAUNCHER_lod0_basecolor.png"
   },
-  "sourceHash": "sha256:9bc06be1cc2f1cf9e1826c579fdb29a844223089f76d6763171c4f0bda4f8cd6",
+  "sourceHash": "sha256:0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
   "updatedAt": "2026-10-11T15:02:53.644Z"
 }
