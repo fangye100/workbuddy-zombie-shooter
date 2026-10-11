@@ -21,6 +21,14 @@ function fixture(part: BodyIkPart = 'leftHand') {
   return { sk, skin, binding, control, out, position };
 }
 describe('post-animation HumanIK blending', () => {
+  it.each([1-1e-8,1+1e-8])('角距离不把 FK quaternion 范数漂移当姿态误差：%s',norm=>{
+    const f=fixture();f.sk.locals[0]!.r=[0,0,0,norm];
+    f.skin.bodyIk!.orientations={[f.control.id]:eulerToQuat(.2,.3,.1)};
+    f.out();
+    expect(f.skin.bodyIk!.diagnostics.filter(d=>d.code==='IK_SOCKET_RESIDUAL')).toEqual([]);
+    f.skin.bodyIk!.binding.weight=.4;f.out();
+    expect(f.skin.bodyIk!.diagnostics.some(d=>d.code==='IK_SOCKET_RESIDUAL'&&d.residualRad!>.1&&d.residualM!>1e-4)).toBe(true);
+  });
   it.each([1,.35])('primary实际姿态驱动模型再驱动dependent；weight=%s',weight=>{
     const f=fixture('rightHand'),left=newBodyIkControl('leftHand');f.binding.controls.push(left);f.binding.weight=weight;
     f.skin.bodyIk=createBodyIkState(f.sk,f.binding);const state=f.skin.bodyIk;

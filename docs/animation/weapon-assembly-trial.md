@@ -1,12 +1,12 @@
 # 真实武器装配试验入口
 
-本阶段接入实际存在的 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。状态是待 headed Play 握姿复验；源码、离线测量、单元测试和构建均不替代 GPU 验收。WPN-02～06 本体尚待外部交付，SMG 弹匣、Shell、Fuel 不挂缺失本体，整个五件接入请求仍未完成。
+本阶段接入实际存在的 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 的正常 TLS、真实 GPU headed 输入与生命周期 18 项检查通过；握姿和弹匣细部仍待复验，不能据此批准模型质量。WPN-02～06 本体尚待外部交付，SMG 弹匣、Shell、Fuel 不挂缺失本体，整个五件接入请求仍未完成。
 
 ## 持久入口与测量
 
 独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化 H01 rig、SharedMotion Spine 层、双手 BodyIK、近景游戏 Camera、Light 与试验武器库；三层作者场景同样绑定 Pistol/Launcher。没有运行生成器覆盖三层。
 
-编辑态的 `nd_pistol_inspect_0/1/2` 是同尺度侧面、+Z 端面与顶面副本，选择节点后按 F 聚焦；它们在 Play 隐藏。Pistol 的 final parseGlb 长轴实际为 Z，CPU 顶点分布支持 +Z 枪口候选，但正端仍需该场景 GPU 确认。Launcher 已有 LOD0 +X 炮口观察；不用原交付的轴向声明代替实际渲染坐标。
+编辑态的 `nd_pistol_inspect_0/1/2` 是同尺度侧面、+Z 端面与顶面副本，选择节点后按 F 聚焦；它们在 Play 隐藏。Pistol 的 final parseGlb 长轴实际为 Z；93572b5 的真实 GPU 静态 +Z 端面观察确认上方圆形炮口与内环。Launcher 已有 LOD0 +X 炮口观察；端面观察不认证握姿或弹道。
 
 `assets/art/calibration/weapon-assembly-trial.json` 记录原资产 GUID、sha256、最终 import bounds、socket、H01 手掌 contact 候选和 CPU 结果。GLB 未改写。H01 contact 来自规整化腕到手尖的 0.163659m 量程，仍需可见掌心/手指贴合检验。Pistol 原本体握把为整网格，新增 Mag01 在槽内可能重叠；卸出附件不会自动删除原 mesh 的固有轮廓，不声称已经精确匹配。
 
@@ -26,7 +26,11 @@ Renderer 一次 base/Spine 采样、一次 IK 后输出最终骨矩阵；右手�
 
 已有 `__editor.bodyIk.summary()`、`__editor.motions.summary()` 与 Animation Debug 面板可交叉检查；Play 面板/EditorAgent runtime 提供 ledger、模拟 tick、cycle 和诊断。1/7 切 Pistol/Launcher，R 换弹，移动同时按住鼠标开火/换弹；必须通过真实键盘 keyDown/keyUp 和 mouse 事件保持并发输入，单次点击或快照不证明持续操作。检查腿部 locomotion 持续、Spine 动作和 IK、弹匣实际装卸、四向枪口、Pause 双时钟、Stop ledger0、重启身份和迟到取消。保存固定 HEAD/场景 hash/HTTPS secure context/NVIDIA GPU 与有效视角截图后，才能写实机结论。
 
-美术证据边界：之前只观察 Launcher LOD0 三面、Mag01 LOD0 两面及 Shell 原件/旧新 LOD0 底火。Mag01 黑斑减轻仍有暗纹；Shell 底火未确认修复；SMG/Fuel 和其余 LOD 未实际覆盖。可在同次审计追加 SMG/Fuel 原件与 LOD0 固定关键视图、五件 LOD1/2 一览，失败 Shell 不伪报通过。
+93572b5 实操原始记录在 `.workbuddy/tmp/wpn-integration/play-audit-93572b5/observations.json`：正常 TLS/NVIDIA Lovelace、真实 held 移动与开火、Spine shoot 和下半身 walk_f、7/1/R、Pause 双时钟、Stop 作者回滚/ledger0 与 restart 共 18 checks 通过。PNG 为背视，不能据此批准手枪、Launcher、Mag01 细部。独立 CUA 正/斜前观察见 `cua-front-observations.json`：Launcher 扣弹且左手位置不可达约 .008m；Pistol R 完成，但弹匣被手/躯干遮挡。该 CUA 批次没有本地 PNG，不将可见工具输出伪写为图片文件。
+
+脚本中 5 次 Pistol `IK_SOCKET_RESIDUAL` 的位置约 1e-8m，角度约 .00020–.00046rad；最终归一化矩阵方向误差约 1e-7rad。原 FK quaternion 的范数没有录入该批证据，不能断言全部误报。本轮角距离改为 `abs(dot)/(normA*normB)`，保持原 1e-4 门槛和真实位置/部分权重/不可达诊断。Launcher .008m 是另一个位置问题；该记录没有目标、肩位及朝向，不足以决定 holdPose 修正方向，本轮保留原数据，先收同帧链位置与装配请求。
+
+美术证据边界：此前 Launcher LOD0 三面、Mag01 LOD0 两面及 Shell 原件/旧新 LOD0 底火观察仍有效。新增 15 个有效静态焦点记录在 `.workbuddy/tmp/wpn-integration/static-audit-93572b5/observations.json`：SMG/Fuel 原件侧面、SMG LOD0 插入端、Fuel LOD0 侧面、五件 LOD1/2 侧面及 Pistol +Z 端面。Launcher LOD1/2 管身/握把可读；Mag01 LOD2 棱角与黑缝、SMG 暗缝仍在；Shell LOD2 橙楔侵入红壳及底边锯齿，底火仍未批准；Fuel 各档带面斜纹与管阀视觉分离仍为候选。没有全端面/全 PBR/本体精确 fit 批准，不启动全批 LOD 重设计。
 
 相关验证：`pnpm exec vitest run apps/editor/test/runtime-weapons.test.ts packages/zombie-game/test/presentation/weapon-model.test.ts packages/zombie-game/test/presentation/weapon-muzzle-calibration.test.ts packages/scene/test/level-scenes.test.ts`；`node --test tools/level/weapon-assembly-defaults.test.mjs`；`pnpm run scene:check`、`architecture:check`、`knowledge:check`、`typecheck`、`editor:build`。
 
@@ -46,4 +50,10 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 
 通过真实可见 Play/Pause/Stop 按钮、实际 Canvas 点击及 Input.dispatchKeyEvent(key/code/Windows VK)/dispatchMouseEvent 持续操作。W 与鼠标开火同时保持，移动键保持期间按7/1/R；射击后真实W→S切换，换弹中再W→S折返，避免小场景边界持续阻挡，采样角色位置、实际发射、武器 phase、下半身上传矩阵/clip/time、同帧模型与残差，再 Pause/Stop/重启。首屏与两次Stop读取作者renderer玩家pos/quat/scale/visible/nodeId及内存document序列化SHA256，逐项比较回滚；Stop后从持久playerStart定位玩家，不依赖已经为null的runtime.player。Chrome/CDP连接30秒上限，PID核对和Play CDP命令10秒上限，连接后的操作预算120秒；释放已按住的键/鼠标，关闭本次target/进程，不处理其他标签。
 
-换弹截图阈值直接读持久Pistol procedural phase，每张记录相应sample索引和时间，不把末尾完成画面当成Mag01离枪证明。证据 `observations.json` 与8张可见上下文截图、最多3张换弹离枪/中间/回位截图留在 out；失败的输入/模型/资源检查和未覆盖事实原样保存，退出1。`passed` 只代表该次输入与生命周期检查，CPU skinScratch不是GPU readback，手指贴合/细节质量仍由 Audit 看有效画面。迟到 decode 未被此实操人为制造，静态LOD补充也未覆盖，不能因测试或脚本退出0改写原未完成项。工具3项参数/归属/异常释放测试命令：`node --test tools/verify/weapon-assembly.test.mjs`。a76阶段的CUA仅证明场景可见/Resume，未证明W持续移动或7切换，不能据此判断产品bug。
+换弹截图阈值直接读持久Pistol procedural phase，每张记录相应sample索引和时间，不把末尾完成画面当成Mag01离枪证明。证据 `observations.json` 与8张可见上下文截图、最多3张换弹离枪/中间/回位截图留在 out；失败的输入/模型/资源检查和未覆盖事实原样保存，退出1。`passed` 只代表该次输入与生命周期检查，CPU skinScratch不是GPU readback，手指贴合/细节质量仍由 Audit 看有效画面。迟到 decode 未被此实操人为制造，静态LOD补充也未覆盖，不能因测试或脚本退出0改写原未完成项。工具5项参数/归属/异常释放测试命令：`node --test tools/verify/weapon-assembly.test.mjs`。a76阶段的CUA仅证明场景可见/Resume，未证明W持续移动或7切换，不能据此判断产品bug。
+
+可选 `--aim-ratio 'x,y'` 和 `--side-aim-ratio 'x,y'` 使用当前 canvas 内 .05–.95 的比例；由 Audit 根据可见地面选择，不能把比例名称当成正面/侧面认证。未传参数保持旧中心行为。指定点必须是无遮挡 canvas，并由既有 `renderer.pointerRay` 正向命中持久 plane 范围和游戏 .9m 瞄准平面；不命中或被 UI 遮挡即失败，不注入 aim/角色状态。真实 `Input.dispatchMouseEvent(mouseMoved)` 后短采样 Pistol、Launcher 两个请求方向并记录实际 pointer、player.yaw、pose、frameStamp；有主点时回到主点执行原移动/换弹流程。新增最多 6 张姿态上下文截图。
+
+每个样本额外只读当前 attachment request/result，以及从本帧 skinScratch × 规整化 inverse-bind 原点恢复的六个肩/肘/腕位置，可核对理想目标距肩和实际链长度。该恢复不重新采样或执行 IK，不改变模拟。指定主瞄准比例时，最多 3 张 out/mid/in 截图按本帧前臂/手的公开 worldToScreen 投影裁切近景，记录 clip；无可用投影即失败。裁切不改变相机、不消除遮挡，仍须 Audit 目检 Mag01 是否实际可见。本轮未更改试验/三 floor Camera 或 Launcher holdPose/markers/生成种子。
+
+本轮最小离线回归：BodyIK 16 项和工具 5 项通过，含 quaternion 范数漂移、真实部分权重/不可达残差、瞄准参数边界/无效射线及只读链位置恢复。工具测试有效命令仍为 `node --test tools/verify/weapon-assembly.test.mjs`。

@@ -14,7 +14,25 @@ export function probeOptions(argv){
  if(!Number.isInteger(cdpPort)||cdpPort<1024||cdpPort>65535||!Number.isInteger(holdMs)||holdMs<800||holdMs>5000)throw new Error('cdp/hold-ms 超出有界范围');
  const out=path.resolve(root,value('out','.workbuddy/tmp/wpn-integration/weapon-assembly-headed'));
  if(!out.startsWith(path.join(root,'.workbuddy','tmp')+path.sep))throw new Error('证据只能写本检出 .workbuddy/tmp 子目录');
- return {root,expectedHead,url:url.href,cdpPort,holdMs,out,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ const ratio=name=>{const raw=value(name,null);if(raw===null)return null;const a=raw.split(',').map(Number);if(a.length!==2||a.some(n=>!Number.isFinite(n)||n<.05||n>.95))throw new Error(name+' 必须是有界画布比例 x,y (.05–.95)');return a;};
+ return {root,expectedHead,url:url.href,cdpPort,holdMs,out,aimRatio:ratio('aim-ratio'),sideAimRatio:ratio('side-aim-ratio'),chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+}
+/** Read-only reconstruction: uploaded skin matrix × normalized inverse-bind origin. */
+export function posedJointPosition(skin,normalization,ib){
+ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a.reduce((s,n,i)=>s+n*b[i],0);
+ const a=Array.from(ib.slice(0,3)),b=Array.from(ib.slice(4,7)),c=Array.from(ib.slice(8,11)),v=Array.from(ib.slice(12,15),n=>-n),det=dot(a,cross(b,c));
+ if(!Number.isFinite(det)||Math.abs(det)<1e-12)return null;
+ const rest=[dot(v,cross(b,c))/det,dot(a,cross(v,c))/det,dot(a,cross(b,v))/det];
+ const point=(m,p)=>[0,1,2].map(i=>m[i]*p[0]+m[i+4]*p[1]+m[i+8]*p[2]+m[i+12]);
+ return point(skin,point(normalization,rest));
+}
+export function groundRayPoint(ray,height){
+ if(!ray||!ray.o?.every(Number.isFinite)||!ray.d?.every(Number.isFinite)||Math.abs(ray.d[1])<1e-6)return null;
+ const t=(height-ray.o[1])/ray.d[1];return t>0&&Number.isFinite(t)?[ray.o[0]+ray.d[0]*t,height,ray.o[2]+ray.d[2]*t]:null;
+}
+function actorPoint(p,o){
+ const [x,y,z,w]=o.quat,v=p.map(n=>n*o.scale),t=[2*(y*v[2]-z*v[1]),2*(z*v[0]-x*v[2]),2*(x*v[1]-y*v[0])];
+ return [v[0]+w*t[0]+y*t[2]-z*t[1]+o.pos[0],v[1]+w*t[1]+z*t[0]-x*t[2]+o.pos[1],v[2]+w*t[2]+x*t[1]-y*t[0]+o.pos[2]];
 }
 export function profileOwners(processes,profile){
  const normalized=path.resolve(profile).replaceAll('\\','/').toLowerCase();
@@ -28,16 +46,21 @@ export class ProbeInput {
  constructor(cdp,record=()=>{}){this.cdp=cdp;this.record=record;this.held=new Map();this.mouse=null;}
  async key(name,down){const spec=KEY[name];if(!spec)throw new Error('未知按键');if(down)this.held.set(name,spec);await this.cdp.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',...spec,nativeVirtualKeyCode:spec.windowsVirtualKeyCode});if(!down)this.held.delete(name);this.record({input:'key',name,down});}
  async tap(name){await this.key(name,true);await this.key(name,false);}
- async pointer(point,down){this.mouse=point;await this.cdp.send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',x:point.x,y:point.y,button:'left',buttons:down?1:0,clickCount:1});if(!down)this.mouse=null;this.record({input:'mouse',point,down});}
+ async move(point){this.position=point;await this.cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y,button:'none',buttons:this.mouse?1:0});if(this.mouse)this.mouse=point;this.record({input:'mouseMove',point});}
+ async pointer(point,down){this.position=point;this.mouse=point;await this.cdp.send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',x:point.x,y:point.y,button:'left',buttons:down?1:0,clickCount:1});if(!down)this.mouse=null;this.record({input:'mouse',point,down});}
  async release(){const errors=[];for(const name of [...this.held.keys()])try{await this.key(name,false);}catch(e){errors.push(String(e));}if(this.mouse)try{await this.pointer(this.mouse,false);}catch(e){errors.push(String(e));}return errors;}
 }
 const SNAPSHOT=`(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));const authorDocumentSha256=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
  return {authorDocumentSha256,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
- actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight}:null,legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
+ actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight}:null,attachmentRequest:s.bodyIk?.attachment??null,handChains:o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(Arm|ForeArm|Hand)$/.test(name)?[{name,position:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]),legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
  source:e?.renderer.getSceneSource()?.url??null,sceneId:e?.renderer.getDocument()?.id??null,frame:e?.renderer.state.frameCounter};})()`;
 async function visiblePoint(cdp,selector){
  const value=await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),s=getComputedStyle(e),x=r.x+r.width/2,y=r.y+r.height/2,t=document.elementFromPoint(x,y);return r.width>5&&r.height>5&&x>0&&y>0&&x<innerWidth&&y<innerHeight&&s.display!=='none'&&s.visibility!=='hidden'&&!e.disabled&&(t===e||e.contains(t))?{x,y}:null;})()`);
  if(!value)throw new Error('可见/可点击控件缺失或遮挡 '+selector);return value;
+}
+async function aimPoint(cdp,ratio){
+ const result=await cdp.eval(`(()=>{const e=document.querySelector('#gpu');if(!e)return null;const r=e.getBoundingClientRect(),x=r.x+r.width*${ratio[0]},y=r.y+r.height*${ratio[1]},hit=document.elementFromPoint(x,y);if(hit!==e||x<=0||y<=0||x>=innerWidth||y>=innerHeight)return null;const editor=window.__editor,doc=editor.renderer.getDocument(),node=doc.nodes.find(n=>n.components.some(c=>c.kind==='MeshRenderer'&&c.source.type==='builtin'&&c.source.shape==='plane'));if(!node||node.parent!==null||node.transform.rotation.some((n,i)=>Math.abs(n-(i===3?1:0))>1e-6))return null;const mesh=node.components.find(c=>c.kind==='MeshRenderer'),ray=editor.renderer.pointerRay(x,y),ground=(${groundRayPoint.toString()})(ray,node.transform.position[1]),gameAim=(${groundRayPoint.toString()})(ray,.9);if(!ground||!gameAim||Math.abs(ground[0]-node.transform.position[0])>mesh.source.params[0]*node.transform.scale[0]/2||Math.abs(ground[2]-node.transform.position[2])>mesh.source.params[1]*node.transform.scale[2]/2)return null;return {x,y,ratio:${JSON.stringify(ratio)},ray,ground,gameAim,groundNode:node.id};})()`);
+ if(!result)throw new Error('aim-ratio 被UI遮挡或未命中持久地面/游戏瞄准平面');return result;
 }
 async function run(options){
  const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
@@ -64,15 +87,26 @@ async function run(options){
   await cdp.send('Page.bringToFront');
   const gpu=await cdp.eval('(async()=>{const a=await navigator.gpu?.requestAdapter();const i=a?.info??(a?.requestAdapterInfo?await a.requestAdapterInfo():null);return {secure:isSecureContext,vendor:i?.vendor,architecture:i?.architecture,description:i?.description};})()');report.gpu=gpu;
   check('HTTPS secure真实硬件',gpu?.secure&&gpu?.vendor==='nvidia'&&gpu?.architecture==='lovelace',gpu);if(!report.checks.at(-1).ok)throw new Error('未确认本机真实GPU，停止实操');
-  const snap=async label=>{const sample={label,atMs:Date.now(),...await cdp.eval(SNAPSHOT)};report.samples.push(sample);return sample;};
-  const capture=async label=>{const {data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});const file=label+'.png';fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({label,file,sample:report.samples.length-1,atMs:Date.now()});};
+  const snap=async label=>{const sample={label,atMs:Date.now(),pointer:input.position??null,...await cdp.eval(SNAPSHOT)};report.samples.push(sample);return sample;};
+  const capture=async(label,detail=false)=>{
+   let clip;
+   if(detail){
+    clip=await cdp.eval(`(()=>{const e=window.__editor,o=e.renderer.state.objects.find(o=>o.nodeId===e.renderer.getDocument()?.playerStart&&!o.removed);if(!o?.skeleton)return null;const points=o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(ForeArm|Hand)$/.test(name)?[(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))]:[]).filter(Boolean).map(p=>e.renderer.worldToScreen((${actorPoint.toString()})(p,o))).filter(p=>!p.behind&&Number.isFinite(p.x)&&Number.isFinite(p.y));if(points.length<4)return null;const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.max(0,Math.min(...xs)-110),y=Math.max(0,Math.min(...ys)-110),right=Math.min(innerWidth,Math.max(...xs)+110),bottom=Math.min(innerHeight,Math.max(...ys)+110);return right-x>5&&bottom-y>5?{x,y,width:right-x,height:bottom-y,scale:1}:null;})()`);
+    if(!clip)throw new Error('换弹近景缺少本帧可投影手臂，不能生成有效局部截图');
+   }
+   const {data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,...(clip?{clip}:{})});const file=label+'.png',sample=report.samples.at(-1);fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({label,file,sample:report.samples.length-1,sampleFrame:sample?.frame??null,sampleModelFrameStamp:sample?.models?.frameStamp??null,samplePose:sample?.models?.pose??null,atMs:Date.now(),clip:clip??null});
+  };
   const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
   const sampleFor=async(label,ms,onSample)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(120);const sample=await snap(label);if(onSample)await onSample(sample);}};
   const editor=await snap('editor');const expectedSceneId=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')).id;check('真实场景身份',editor.sceneId===expectedSceneId,editor.sceneId);if(editor.sceneId!==expectedSceneId)throw new Error('加载场景ID不匹配');await capture('01-editor');await click('#btn-play');
   if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000}))throw new Error('UI Play 未进入运行');
   if(!await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150}))throw new Error('真实模型未形成有效本帧draw');
   const baseline=await snap('play-ready');await capture('02-pistol');
-  const canvas=await visiblePoint(cdp,'#gpu');await input.pointer(canvas,true);await input.pointer(canvas,false);
+  let canvas=await visiblePoint(cdp,'#gpu');
+  const aimAt=async(ratio,label)=>{const point=await aimPoint(cdp,ratio);await input.move(point);report.actions.push({aim:label,...point,atMs:Date.now()});await sampleFor(label,400);await capture(label);return point;};
+  if(options.aimRatio)canvas=await aimAt(options.aimRatio,'12-aim-primary');
+  if(options.sideAimRatio){canvas=await aimAt(options.sideAimRatio,'13-aim-secondary');if(options.aimRatio)canvas=await aimAt(options.aimRatio,'14-aim-return');}
+  await input.pointer(canvas,true);await input.pointer(canvas,false);
   await input.key('w',true);await input.pointer(canvas,true);await sampleFor('held-move-fire',options.holdMs);await capture('03-moving-fire');
   const moving=report.samples.filter(s=>s.label==='held-move-fire');check('真实held移动',moving.some(s=>Math.hypot(s.player.x-baseline.player.x,s.player.z-baseline.player.z)>.1),{before:baseline.player,after:moving.at(-1)?.player});
   const legsChanged=samples=>samples.length>1&&samples.some(s=>JSON.stringify(s.actor?.legMatrices)!==JSON.stringify(samples[0].actor?.legMatrices))&&samples.some(s=>/walk|run|jog|sprint|strafe/i.test(s.actor?.clip??''));
@@ -80,6 +114,12 @@ async function run(options){
   check('移动期间实际射击',moving.some(s=>s.lastShot?.tick>=baseline.tick),moving.at(-1)?.lastShot);
   await input.key('w',false);await input.key('s',true);
   await input.tap('seven');await sampleFor('held-switch-launcher',1000);const launcher=await snap('launcher');check('按7切实际Launcher',launcher.models?.visible&&launcher.models.weaponId==='launcher',launcher.models);await capture('04-launcher');
+  if(options.aimRatio){
+   await input.pointer(canvas,false);await input.key('s',false);
+   canvas=await aimAt(options.aimRatio,'15-launcher-aim-primary');
+   if(options.sideAimRatio){await aimAt(options.sideAimRatio,'16-launcher-aim-secondary');canvas=await aimAt(options.aimRatio,'17-launcher-aim-return');}
+   await input.key('s',true);
+  }
   await input.pointer(canvas,false);await input.tap('one');await sampleFor('held-switch-pistol',800);check('按1回Pistol',report.samples.at(-1)?.models?.weaponId==='pistol',report.samples.at(-1)?.models);
   await input.key('s',false);await input.key('w',true);
   const doc=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')),proc=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol').presentation.procedural;
@@ -87,10 +127,10 @@ async function run(options){
   await input.tap('r');await sampleFor('held-move-reload',2500,async sample=>{
    if(!directionChanged&&Date.now()-reloadStart>=1200){await input.key('w',false);await input.key('s',true);directionChanged=true;}
    const pose=sample.models?.pose,removed=pose?.action==='reload'&&pose.phase>=proc.magazineOutPhase&&pose.phase<proc.magazineInPhase;
-   if(removed&&!reloadShots.has('out')){reloadShots.add('out');await capture('09-magazine-out');}
-   else if(removed&&pose.phase>=(proc.magazineOutPhase+proc.magazineInPhase)/2&&!reloadShots.has('mid')){reloadShots.add('mid');await capture('10-magazine-mid');}
-   if(reloadShots.has('out')&&(pose?.action==='ready'||pose?.action==='reload'&&pose.phase>=proc.magazineInPhase)&&!reloadShots.has('in')){reloadShots.add('in');await capture('11-magazine-in');}
-  });check('换弹离枪与回位有效截图采样',reloadShots.has('out')&&reloadShots.has('in'),[...reloadShots]);const reload=report.samples.filter(s=>s.label==='held-move-reload');check('移动中换弹phase',reload.some(s=>s.models?.pose?.action==='reload')&&reload.some(s=>Math.hypot(s.player.x-reload[0].player.x,s.player.z-reload[0].player.z)>.1),{phases:reload.map(s=>s.models?.pose?.phase)});check('reload期间腿部locomotion继续',legsChanged(reload),reload.map(s=>({clip:s.actor?.clip,time:s.actor?.time})));await capture('05-after-reload');
+   if(removed&&!reloadShots.has('out')){reloadShots.add('out');await capture('09-magazine-out',!!options.aimRatio);}
+   else if(removed&&pose.phase>=(proc.magazineOutPhase+proc.magazineInPhase)/2&&!reloadShots.has('mid')){reloadShots.add('mid');await capture('10-magazine-mid',!!options.aimRatio);}
+   if(reloadShots.has('out')&&(pose?.action==='ready'||pose?.action==='reload'&&pose.phase>=proc.magazineInPhase)&&!reloadShots.has('in')){reloadShots.add('in');await capture('11-magazine-in',!!options.aimRatio);}
+  });check('换弹phase与截图采样（遮挡另验）',reloadShots.has('out')&&reloadShots.has('in')&&(!options.aimRatio||reloadShots.has('mid')),[...reloadShots]);const reload=report.samples.filter(s=>s.label==='held-move-reload');check('移动中换弹phase',reload.some(s=>s.models?.pose?.action==='reload')&&reload.some(s=>Math.hypot(s.player.x-reload[0].player.x,s.player.z-reload[0].player.z)>.1),{phases:reload.map(s=>s.models?.pose?.phase)});check('reload期间腿部locomotion继续',legsChanged(reload),reload.map(s=>({clip:s.actor?.clip,time:s.actor?.time})));await capture('05-after-reload');
   check('reload期间本帧模型/双手结果',reload.some(s=>s.models?.visible&&s.models.frameStamp===s.frame&&Number.isFinite(s.models.measurements?.leftTargetResidualM)),reload.at(-1)?.models);
   await input.release();await click('#btn-pause');const paused=await snap('pause-start');await sleep(600);const frozen=await snap('pause-end');check('Pause模拟与动作时钟冻结',paused.state==='paused'&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time&&frozen.actor?.layer?.time===paused.actor?.layer?.time,{paused,frozen});await capture('06-paused');
   await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');

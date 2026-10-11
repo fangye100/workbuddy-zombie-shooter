@@ -168,7 +168,10 @@ export function applyBodyIk(sk: SkeletonData, locals: NodeLocal[], state: BodyIk
         const goalQ=quatMul(conjugate(normalized.rotation),orientation);
         const localQ=quatMul(conjugate(parent<0?[0,0,0,1]:current.q[parent]!),goalQ);
         locals[end]!.r=blend(locals[end]!.r,localQ,binding.weight*c.weight*actionWeight);
-        const after=fk(sk,locals)!,dot=Math.abs(after.q[end]!.reduce((s,n,i)=>s+n*goalQ[i]!,0));
+        const after=fk(sk,locals)!,actualQ=after.q[end]!;
+        // Float32 animation keys can leave FK products slightly off unit length.
+        // Angular distance measures direction, independently of quaternion norm.
+        const dot=Math.abs(actualQ.reduce((s,n,i)=>s+n*goalQ[i]!,0))/(Math.hypot(...actualQ)*Math.hypot(...goalQ));
         const residualRad=2*Math.acos(Math.min(1,dot)),residualM=len(sub(after.p[end]!,goal))*normScale;
         if(residualM>1e-4||residualRad>1e-4)state.diagnostics.push({controlId:c.id,code:'IK_SOCKET_RESIDUAL',message:'Actual weighted contact differs from ideal target',residualM,residualRad});
       }
