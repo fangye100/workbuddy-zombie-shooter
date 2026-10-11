@@ -348,6 +348,15 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if(!listMigrations().some(m=>m.from===16&&m.to===17))registerMigration({
+    from:16,to:17,name:'explicit-model-socket-assemblies',run(doc){
+      const next=structuredClone(doc);
+      if(Array.isArray(next.nodes))for(const n of next.nodes)if(Array.isArray(n?.components))for(const c of n.components)
+        if(c?.kind==='RunRules'&&Array.isArray(c.arsenal?.definitions))for(const w of c.arsenal.definitions)
+          if(w?.presentation&&w.presentation.assembly===undefined)w.presentation.assembly=null;
+      return next;
+    },
+  });
   // Optional region layers never opt legacy content into player weapon policy.
   if (!listMigrations().some(m => m.from === 15 && m.to === 16)) registerMigration({
     from: 15, to: 16, name: 'optional-skeletal-pose-layers', run: doc => structuredClone(doc),

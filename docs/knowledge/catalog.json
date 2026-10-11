@@ -2285,6 +2285,27 @@
       "topics": ["weapon", "art", "lod", "gpu"],
         "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
       "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
+    },
+    {
+      "id": "model-attachments",
+      "path": "docs/animation/model-attachments.md",
+      "title": "模型与骨骼握点契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "weapons",
+        "framework"
+      ],
+      "read": "v17迁移、socket默认与覆盖、primary实际结果驱动dependent、同帧FK和逐GPU资源登记",
+      "sourceRefs": [
+        "scene-schema",
+        "scene-weapons",
+        "asset-metadata",
+        "scene-migrations",
+        "architecture-policy"
+      ]
     }
   ]
 }

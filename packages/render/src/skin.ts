@@ -314,6 +314,8 @@ const SCRATCH_RAW = m4.mat4();
 const SCRATCH_A = m4.mat4();
 const SCRATCH_TINV = m4.mat4();
 const SCRATCH_JM = m4.mat4();
+/** 同次 sample/IK 后的骨世界矩阵（actor final-import 空间，不是蒙皮矩阵）。 */
+export interface PoseFrameOutput { frameStamp:number; nodes:readonly number[]; matrices:Map<number,Float32Array<ArrayBuffer>>; stamp:number }
 
 /**
  * 求当前帧的全部关节矩阵，写入 out（列主序 mat4，长度 = (joints.length+1)*16）。
@@ -321,7 +323,7 @@ const SCRATCH_JM = m4.mat4();
  *
  * @param out 预分配 Float32Array，长度必须 ≥ (joints.length+1)*16
  */
-export function evalJointMatrices(state: SkinState, out: Float32Array): void {
+export function evalJointMatrices(state: SkinState, out: Float32Array, frame?:PoseFrameOutput): void {
   const sk = state.skeleton;
   const n = sk.joints.length;
   const locals = sampleAnimationPose(state);
@@ -329,20 +331,31 @@ export function evalJointMatrices(state: SkinState, out: Float32Array): void {
 
   // 逐节点世界矩阵（父子链累乘，与 gltf.ts 解析 inverseBind 同空间）
   while (SCRATCH_WORLD.length < sk.parent.length) SCRATCH_WORLD.push(m4.mat4());
-  for (let i = 0; i < sk.parent.length; i++) {
+  const resolved = new Uint8Array(sk.parent.length);
+  const resolveWorld = (i: number): void => {
+    if (resolved[i] === 2) return;
+    if (resolved[i] === 1) throw new Error('Skeleton parent cycle');
+    resolved[i] = 1;
+    const p = sk.parent[i]!;
+    if (p >= 0 && p < sk.parent.length) resolveWorld(p);
     const L = locals[i]!;
     trsToMat4(SCRATCH_LOCAL, L.t, L.r, L.s);
-    const p = sk.parent[i]!;
     const wi = SCRATCH_WORLD[i]!;
     if (p < 0 || SCRATCH_WORLD[p] === undefined) {
       wi.set(SCRATCH_LOCAL);
     } else {
       m4.multiply(wi, SCRATCH_WORLD[p]!, SCRATCH_LOCAL);
     }
-  }
+    resolved[i] = 2;
+  };
+  for (let i = 0; i < sk.parent.length; i++) resolveWorld(i);
 
   const T = sk.normalization;
   const useT = T !== null && !isIdentity(T);
+  if(frame){
+    frame.matrices.clear();frame.stamp=frame.frameStamp;
+    for(const node of frame.nodes){const world=SCRATCH_WORLD[node];if(!world||node<0||node>=sk.parent.length)continue;const normalized=m4.mat4();m4.multiply(normalized,T,world);frame.matrices.set(node,normalized);}
+  }
   if (useT) m4.invert(SCRATCH_TINV, T!);
 
   for (let k = 0; k < n; k++) {

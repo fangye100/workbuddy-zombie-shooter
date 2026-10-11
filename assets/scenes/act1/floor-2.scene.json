@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -419,7 +419,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -581,7 +582,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -743,7 +745,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -905,7 +908,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1067,7 +1071,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1229,7 +1234,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1391,7 +1397,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               }
             ]

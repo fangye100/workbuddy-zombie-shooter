@@ -17,7 +17,7 @@
 
 `MeshRenderer.bodyIk` 覆盖资产 `.meta.json` 的 bodyIk 默认值：undefined 继承，null 禁用。
 资产默认可用角色局部坐标、pointer 或最近敌人目标；稳定场景 NodeId 目标属于场景覆盖。
-不存采样姿态、代码或 GPU 资源。当前集成 schema 为 v15。HumanIK 原分支在 v13 引入字段，
+不存采样姿态、代码或 GPU 资源。当前集成 schema 为 v17；v15 为历史集成版本。HumanIK 原分支在 v13 引入字段，
 但合并后的 v12→v13 是武器库迁移；v14→v15 保留两种 v14 历史中的 IK、过渡、武器和音频，
 缺失控制仍不添加。准备数据以[迁移源码](../../packages/scene/src/migrate.ts)及
 [集成证据](../review/branch-integration-2026-10-09.md)为准，不沿用原分支版本含义。
@@ -48,7 +48,7 @@
 玩家 mesh 面向移动，玩法朝向仍决定瞄准/射击。禁用 IK 或权重 0 恢复全身 shoot 选择。
 [动作适配器](../../apps/editor/src/services/runtime-scene-motion.ts)消费实际接受的武器动作；
 开火并启用瞄准 IK 时保留步态片段/时钟，不用射击阶段覆盖步态。换弹/换装仍选择可用的
-配置片段及动作阶段。武器标记不会自动转换成手部目标。
+配置片段及动作阶段。旧武器 markers 不会自动转换成精确握点；v17 的显式 assembly 与骨 socket 由表现层转换成中性依赖 IK 请求，见[模型握点契约](model-attachments.md)。
 
 ## 编辑器流程
 

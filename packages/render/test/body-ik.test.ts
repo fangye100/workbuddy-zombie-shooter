@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mat4, invert, eulerToQuat } from '@aether/core';
-import { advancePoseTransition, createBodyIkState, createSkinState, evalJointMatrices, sampleAnimationPose, selectClip } from '@aether/render';
-import { newBodyIkControl, type BodyIkPart, type BodyIkBinding } from '@aether/scene';
+import { advancePoseTransition, createBodyIkState, createSkinState, evalJointMatrices, sampleAnimationPose, selectClip, attachedModelFrame, composeSocket, rigidFromMatrix, socketMatrix, type PoseFrameOutput } from '@aether/render';
+import { identitySocket,newBodyIkControl, type BodyIkPart, type BodyIkBinding } from '@aether/scene';
 import { skeletonFromFitPositions } from '../../../apps/editor/src/services/binding/retarget-session';
 import { tposeWorldPositions } from '../../../apps/editor/src/services/binding/humanik-template';
 
@@ -21,6 +21,45 @@ function fixture(part: BodyIkPart = 'leftHand') {
   return { sk, skin, binding, control, out, position };
 }
 describe('post-animation HumanIK blending', () => {
+  it.each([1,.35])('primary实际姿态驱动模型再驱动dependent；weight=%s',weight=>{
+    const f=fixture('rightHand'),left=newBodyIkControl('leftHand');f.binding.controls.push(left);f.binding.weight=weight;
+    f.skin.bodyIk=createBodyIkState(f.sk,f.binding);const state=f.skin.bodyIk;
+    state.attachment={target:{position:weight===1?[-.2,1.3,.35]:[10,1.3,.35],rotation:[...eulerToQuat(0,.7,0)]},
+      primary:{controlId:f.control.id,contact:{position:[0,.02,0],rotation:[0,0,0,1]},modelSocket:{position:[.03,0,0],rotation:[...eulerToQuat(.1,0,0)]}},
+      dependent:{controlId:left.id,contact:identitySocket(),modelSocket:{position:[.15,0,0],rotation:[0,0,0,1]}}};
+    const r=f.sk.joints[f.sk.jointNames.indexOf('RightHand')]!,l=f.sk.joints[f.sk.jointNames.indexOf('LeftHand')]!;
+    const frame:PoseFrameOutput={frameStamp:42,stamp:-1,nodes:[r,l],matrices:new Map()};
+    const matrices=new Float32Array((f.sk.joints.length+1)*16);evalJointMatrices(f.skin,matrices,frame);
+    expect(frame.stamp).toBe(42);const hand=rigidFromMatrix(frame.matrices.get(r)!)!;
+    const actual=attachedModelFrame(hand,state.attachment.primary.contact,state.attachment.primary.modelSocket);
+    state.attachment.result!.position.forEach((n,i)=>expect(n).toBeCloseTo(actual.position[i]!,6));
+    state.attachment.result!.rotation.forEach((n,i)=>expect(Math.abs(n)).toBeCloseTo(Math.abs(actual.rotation[i]!),5));
+    if(weight===1){
+      const dependent=composeSocket(actual,state.attachment.dependent!.modelSocket),tip=rigidFromMatrix(frame.matrices.get(l)!)!;
+      tip.position.forEach((n,i)=>expect(n).toBeCloseTo(dependent.position[i]!,5));
+      expect(state.diagnostics.filter(d=>d.code==='IK_SOCKET_RESIDUAL')).toEqual([]);
+    }else{
+      expect(Math.hypot(...actual.position.map((n,i)=>n-state.attachment!.target.position[i]!))).toBeGreaterThan(5);
+      expect(state.diagnostics.some(d=>d.code==='IK_SOCKET_RESIDUAL'&&d.residualM!>0&&d.residualRad!>0)).toBe(true);
+    }
+    expect(f.out()).toEqual(matrices);
+  });
+  it('同帧 FK 支持父节点在数组后方，更新后不复用前帧父矩阵',()=>{
+    const f=fixture();delete f.skin.bodyIk;
+    const a=f.sk.locals[0]!,b=f.sk.locals[1]!;
+    f.sk.locals=[{...a,t:[1,0,0]},{...b,t:[2,0,0]}];
+    f.sk.parent=[1,-1];f.sk.joints=[0,1];f.sk.normalization=socketMatrix({position:[0,0,0],rotation:[0,0,0,1]});
+    f.sk.inverseBind=new Float32Array(32);for(let i=0;i<32;i++)f.sk.inverseBind[i]=i%16%5===0?1:0;
+    const frame={frameStamp:1,nodes:[0],matrices:new Map<number,Float32Array<ArrayBuffer>>(),stamp:0};
+    evalJointMatrices(f.skin,new Float32Array(48),frame);expect(frame.matrices.get(0)![12]).toBe(3);
+    f.sk.locals[1]!.t=[4,0,0];frame.frameStamp=2;evalJointMatrices(f.skin,new Float32Array(48),frame);
+    expect(frame.matrices.get(0)![12]).toBe(5);expect(frame.stamp).toBe(2);
+  });
+  it('刚性变换拒绝负/非均匀/shear，并正确恢复规整化旋转',()=>{
+    const q=eulerToQuat(.2,.6,-.3),frame={position:[1,2,3] as [number,number,number],rotation:[...q] as [number,number,number,number]};
+    const m=socketMatrix(frame,.01);const parsed=rigidFromMatrix(m)!;parsed.rotation.forEach((n,i)=>expect(n).toBeCloseTo(q[i]!,5));
+    const mirrored=socketMatrix(frame,-1);expect(rigidFromMatrix(mirrored)).toBeNull();m[0]!*=2;expect(rigidFromMatrix(m)).toBeNull();
+  });
   it('applies IK after pose transition and never captures IK into the next animation snapshot', () => {
     const f = fixture(); f.skin.clips = [{ name:'A', duration:1, tracks:[] },{ name:'B', duration:1, tracks:[] }];
     f.skin.clip=0; const solved=f.out(); selectClip(f.skin,1,.2); advancePoseTransition(f.skin,.1);

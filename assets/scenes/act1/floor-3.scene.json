@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 16,
+  "schemaVersion": 17,
   "id": "sc_act1_floor3",
   "name": "第三层 · 暗巷撤离站",
   "act": "Act1",
@@ -432,7 +432,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -594,7 +595,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -756,7 +758,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -918,7 +921,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1080,7 +1084,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1242,7 +1247,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -1404,7 +1410,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               }
             ]
