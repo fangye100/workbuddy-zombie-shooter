@@ -1,6 +1,6 @@
 # 真实武器装配试验入口
 
-本阶段接入实际存在的 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 的正常 TLS、真实 GPU headed 输入与生命周期 18 项检查通过；握姿和弹匣细部仍待复验，不能据此批准模型质量。WPN-02～06 本体尚待外部交付，SMG 弹匣、Shell、Fuel 不挂缺失本体，整个五件接入请求仍未完成。
+本阶段接入实际存在的 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。WPN-02～06 本体尚待外部交付，SMG 弹匣、Shell、Fuel 不挂缺失本体，整个五件接入请求仍未完成。
 
 ## 持久入口与测量
 
@@ -57,3 +57,13 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 每个样本额外只读当前 attachment request/result，以及从本帧 skinScratch × 规整化 inverse-bind 原点恢复的六个肩/肘/腕位置，可核对理想目标距肩和实际链长度。该恢复不重新采样或执行 IK，不改变模拟。指定主瞄准比例时，最多 3 张 out/mid/in 截图按本帧前臂/手的公开 worldToScreen 投影裁切近景，记录 clip；无可用投影即失败。裁切不改变相机、不消除遮挡，仍须 Audit 目检 Mag01 是否实际可见。本轮未更改试验/三 floor Camera 或 Launcher holdPose/markers/生成种子。
 
 本轮最小离线回归：BodyIK 16 项和工具 5 项通过，含 quaternion 范数漂移、真实部分权重/不可达残差、瞄准参数边界/无效射线及只读链位置恢复。工具测试有效命令仍为 `node --test tools/verify/weapon-assembly.test.mjs`。
+
+## c19f3b2 阶段回执与待交付项
+
+实机目标为 `c19f3b29dac82255e49ac03aa39dc7ee931d65c4`。两批原始记录分别在 `.workbuddy/tmp/wpn-integration/play-audit-c19f3b2/observations.json` 与 `play-audit-c19f3b2-side-reload/observations.json`，均为正常 TLS、headed NVIDIA/Lovelace，18/18 checks、console/exception 0；场景 SHA256 均保持 `8E5CEB334C788FFD8A4535947BEAFBBEAC70552C007BD9BC053394D84179570B`。Pistol/Launcher 在正面及侧面实际可辨；移动射击、切枪、移动换弹、Pause/Stop 回滚/资源归零及 restart 的阶段验证完成。该结论不是全姿态或五件美术批准。
+
+两批样本均没有 `IK_SOCKET_RESIDUAL` / `IK_UNREACHABLE`；其他目标缺失和侧向 head `IK_AIM_LIMIT` 诊断仍保留。第一批 Launcher frame507/tick245、yaw=2.623345：右理想目标残差 2.071e-8m、左依赖目标残差 2.956e-7m，muzzle yaw 误差 4.616e-8rad；左上臂约 .2430m、前臂 .2619m、总长 .5048m，目标肩距 .4786m，约 94.8% 可达长度。此前 CUA 的约 8mm 位置残差未在这两方向复现，不能否定旧观察或扩大为全姿态通过；目前没有实际数据支持改 holdPose/marker，校准、Camera、模型与生成种子保持原值。
+
+两批 `09/10/11-magazine-*` 虽有原始 clip 与关联 sample/frame/phase，但 Mag01 仍被手、枪和身体遮挡，离槽/回槽几何未目检通过。侧批 out/mid/in 分别为 phase .2292/.4375/.7292、frame594/613/639，关联样本 yaw 均约 .683；该批其他时段朝向也有变化，文件名“side”不能证明全程侧向。下一步需取得真正可见的弹匣过程证据，不能以 phase 或附着等式替代。
+
+用户明确 WPN-02～06 本体次日才能完整提供；收到真实模型后才能标定对应附件精确 fit。Shell 底火/LOD2、Fuel 条纹与管阀视觉分离等候选缺陷仍未批准，其他静态边界见上文。整个原五件接入任务尚未完成；Final Reviewer 尚未创建，也没有全队列批准。本次收尾仅更新文档，不更改源码、测试、资产或校准数据，不重跑浏览器与场景门禁。
