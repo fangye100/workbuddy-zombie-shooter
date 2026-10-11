@@ -31,3 +31,19 @@ Renderer 一次 base/Spine 采样、一次 IK 后输出最终骨矩阵；右手�
 相关验证：`pnpm exec vitest run apps/editor/test/runtime-weapons.test.ts packages/zombie-game/test/presentation/weapon-model.test.ts packages/zombie-game/test/presentation/weapon-muzzle-calibration.test.ts packages/scene/test/level-scenes.test.ts`；`node --test tools/level/weapon-assembly-defaults.test.mjs`；`pnpm run scene:check`、`architecture:check`、`knowledge:check`、`typecheck`、`editor:build`。
 
 本阶段离线验证：90 项首次定向测试、旧HUD1项和模型占位/同tickVFX1项通过；scene:check 为246资产/19个v17场景、15项场景测试及既有质量/音频门禁通过，architecture为278文件，knowledge为137条，typecheck、editor:build与示例build通过。三层语义核对只允许Pistol/Launcher表现与玩家BodyIK变化，4件sidecar GUID/sourceHash保持。CodeGraph在本检出 apps/assets/packages/tools 有界刷新96+2文件；当前health为1050files/6889nodes/17320edges、5个解析恢复文件、7341未解析调用，healthy=true，但锁竞争警告和embedding6251/6851(91%)仍是限制，不将图谱完整性或测试数量当成可见验收。
+
+## 本任务 headed 输入探针
+
+`tools/verify/weapon-assembly.mjs` 是本任务受控入口，复用 editor-smoke-lib 的 Cdp/等待与可见 Chrome，显式 `ignoreCertificateErrors:false`；不使用 ensureServer、normalizeEditorState、localStorage 修改、Security bypass 或手写 DOM dispatchEvent。旧冒烟调用的 HTTPS 默认仍保留，不能拿旧默认声明正常 TLS 通过。本入口不启动/重启 dev server。
+
+运行前将参数里的 SHA 替换为 Main 提供的完整冻结 target，并在本检出根执行：
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --cdp 9348 --url 'https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json' --out .workbuddy/tmp/wpn-integration/weapon-assembly-headed
+```
+
+工具先核对 root/cwd/HEAD、证据范围、保留 profile 的实际 Chrome 命令行与 CDP 端口空闲；冲突或归属不可读立即退出，不删除 profile、改随机 profile 或 kill 他人浏览器。启动后再比较 SystemInfo browser PID 和本次 spawn PID，防止 Chrome 复用其他进程。正常 TLS 导航失败时退出；不忽略证书、不降级 HTTP。headed 窗口记录 secure context、NVIDIA/Lovelace、控制台与异常。
+
+通过真实可见 Play/Pause/Stop 按钮、实际 Canvas 点击及 Input.dispatchKeyEvent(key/code/Windows VK)/dispatchMouseEvent 持续操作。W 与鼠标开火同时保持，持有W时按7/1/R，采样角色位置、实际发射、武器 phase、下半身上传矩阵/clip/time、同帧模型与残差，再 Pause/Stop/重启。首屏与两次Stop读取作者renderer玩家pos/quat/scale/visible/nodeId及内存document序列化SHA256，逐项比较回滚；Stop后从持久playerStart定位玩家，不依赖已经为null的runtime.player。Chrome/CDP连接30秒上限，PID核对和Play CDP命令10秒上限，连接后的操作预算120秒；释放已按住的键/鼠标，关闭本次target/进程，不处理其他标签。
+
+证据 `observations.json` 与8张可见上下文截图留在 out；失败的输入/模型/资源检查和未覆盖事实原样保存，退出1。`passed` 只代表该次输入与生命周期检查，CPU skinScratch不是GPU readback，手指贴合/细节质量仍由 Audit 看有效画面。迟到 decode 未被此实操人为制造，静态LOD补充也未覆盖，不能因测试或脚本退出0改写原未完成项。工具3项参数/归属/异常释放测试命令：`node --test tools/verify/weapon-assembly.test.mjs`。a76阶段的CUA仅证明场景可见/Resume，未证明W持续移动或7切换，不能据此判断产品bug。

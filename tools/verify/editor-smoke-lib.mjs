@@ -219,11 +219,9 @@ export class Cdp {
 }
 
 /**
- * 启动 Chrome 并接好 CDP 会话（原 editor-smoke main() 里的接线原样上提）。
- * @returns {chrome, cdp, ws}；调用方负责 chrome.kill()
+ * 构造既有 Chrome 参数；严格TLS调用显式关闭证书忽略。
  */
-export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false }) {
-  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
@@ -244,11 +242,20 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
     flags.unshift('--headless=new');
     flags.push('--enable-unsafe-swiftshader', '--use-webgpu-adapter=swiftshader', '--enable-features=Vulkan');
   }
-  if (appUrl.startsWith('https://')) flags.push('--ignore-certificate-errors');
-  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  // 旧冒烟调用沿用原默认；严格 TLS 验证必须显式 false，不设置 Security bypass。
+  if (ignoreCertificateErrors) flags.push('--ignore-certificate-errors');
+  return flags;
+}
 
+export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, ignoreCertificateErrors=appUrl.startsWith('https://'), setupTimeoutMs=0 }) {
+  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+  const flags=editorSessionFlags({cdpPort,headed,appUrl,windowSize,ignoreCertificateErrors});
+  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  let setupWs,setupTimer;
+  try {
+  const connect=async()=>{
   const ver = await cdpTargets(cdpPort);
-  const ws = new WebSocket(ver.webSocketDebuggerUrl);
+  const ws = new WebSocket(ver.webSocketDebuggerUrl);setupWs=ws;
   await new Promise((res, rej) => {
     ws.addEventListener('open', res, { once: true });
     ws.addEventListener('error', rej, { once: true });
@@ -286,7 +293,11 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
   }
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
-  return { chrome, cdp, ws, targetId };
+  return { chrome, cdp, ws, targetId, flags };
+  };
+  return await (setupTimeoutMs>0?Promise.race([connect(),new Promise((_,reject)=>{setupTimer=setTimeout(()=>reject(new Error('Chrome/CDP setup timeout')),setupTimeoutMs);})]):connect());
+  } catch(error) { setupWs?.close();chrome.kill();throw error; }
+  finally { clearTimeout(setupTimer); }
 }
 
 /**
