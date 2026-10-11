@@ -26,5 +26,7 @@ export const EDITOR_TOOLS = [
   edit('editor_play', 'Start paused, resume, pause, single-step or stop using PlayController. stop restores the author scene and releases Play resources.',
     {action:{enum:['start','resume','pause','step','stop']},steps:{type:'integer',minimum:1,maximum:600}}, ['action']),
   scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, weapon/audio diagnostics, and copied navigation flow-budget/avoidance/contact/stuck facts. Read-only; does not advance simulation.'),
+  edit('editor_gate','Set a runtime navigation gate target by stable NodeId and current runId from editor_runtime.player. Does not alter author data or advance simulation. Motion, collision, occupancy waiting and route updates happen on fixed steps.',
+    {nodeId:{type:'string'},open:{type:'boolean'},runId:{type:'integer',minimum:1}},['nodeId','open','runId']),
   scoped('editor_capture', 'Capture the next actual GPU viewport frame as PNG. This is the 3D canvas, not the DOM HUD. Requires a live rendered editor; timeout is explicit.'),
 ];

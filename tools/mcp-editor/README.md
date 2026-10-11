@@ -39,6 +39,7 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 | scene_set_environment | 完整验证、可撤销 environment 替换，保其他字段 |
 | scene_validate、scene_history、scene_save | 只读诊断、共享 undo/redo、冲突感知保存；validate→save→reopen→compare |
 | editor_play | 初始暂停；resume/pause/step（1–600）/stop 共 PlayController，Stop 恢复/释放 |
+| editor_gate | Play 门目标开关，stable NodeId + expectedRevision + 当前 runId；运动在固定步推进，作者数据不变 |
 | editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频/导航事实 |
 | editor_capture | 下一 GPU canvas PNG，不含 DOM HUD；无帧明确超时 |
 
@@ -62,6 +63,10 @@ MCP 客户端 `tools/call` 的参数示例：
 字符串。场景 schema 校验是判断数据有效性的依据。
 
 ## 运行诊断
+
+`editor_runtime.runtime.gates` 提供门的实际进度、目标、占用等待、世界姿态与 AABB，Stop 后为
+空数组。通过 `editor_gate` 设置目标时必须携带当前 player.runId；重跑后旧代拒绝，终态
+拒绝。命令接受不代表已到位。动态障碍与底图局部更新见[动态导航指南](../../docs/architecture/dynamic-navigation.md)。
 
 `editor_runtime.runtime.navigation` 在 Stop 后为 null；Play 中是当前配置、流场版本/预算用量/
 待发布状态及群体候选/速度约束/不可行解/穿透/阻挡/解堵计数的副本。读取不推进流场或模拟。

@@ -25,7 +25,7 @@ import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -164,6 +164,7 @@ export const ComponentKind = {
   RoomVolume: 'RoomVolume',
   NavZone: 'NavZone',
   NavSurface: 'NavSurface',
+  NavigationGate: 'NavigationGate',
   Script: 'Script',
   RunRules: 'RunRules',
 } as const;
@@ -408,6 +409,13 @@ export interface NavSurfaceComponent extends ComponentBase {
   /** 该面所属的地板碰撞体；仍参与射线/顶棚判定，不能笼统删除。 */
   supportCollider?:NodeId;
 }
+/** 平移式运动学门：节点作者变换是关门姿态，偏移在节点局部空间；Play 状态不落盘。 */
+export interface NavigationGateComponent extends ComponentBase {
+  kind:typeof ComponentKind.NavigationGate;
+  openOffset:[number,number,number];
+  travelSec:number;
+  initialOpen:boolean;
+}
 
 /** 行为参数的标量类型。与 ScriptComponent.params 的取值域一致 */
 export type BehaviorScalar = number | string | boolean;
@@ -536,6 +544,7 @@ export type ComponentData =
   | RoomVolumeComponent
   | NavZoneComponent
   | NavSurfaceComponent
+  | NavigationGateComponent
   | ScriptComponent;
 
 /**
@@ -975,6 +984,16 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
           err(`${at}/size`,'E_NAV_SURFACE_SIZE','导航面尺寸必须是两个有限正数，且不超过 1000m');
         if(surface.supportCollider!==undefined&&!d.nodes!.some(n=>n.id===surface.supportCollider&&n.components?.some(c=>c.kind==='Collider'&&!c.isTrigger)))
           err(`${at}/supportCollider`,'E_NAV_SUPPORT_REF','支撑碰撞体必须引用具有非触发 Collider 的 NodeId');
+      }
+      if(c.kind===ComponentKind.NavigationGate){
+        if(!isVec3(c.openOffset)||Math.hypot(...c.openOffset)<.01||Math.hypot(...c.openOffset)>100
+          ||!Number.isFinite(c.travelSec)||c.travelSec<.05||c.travelSec>120||typeof c.initialOpen!=='boolean')
+          err(at,'E_NAV_GATE_SETTINGS','门必须声明有限局部偏移（0.01–100m）、运动时间（0.05–120s）和初始开关状态');
+        const solids=comps.filter(other=>other.kind==='Collider'&&other.enabled&&!other.isTrigger);
+        if(solids.length!==1||solids[0]?.kind!=='Collider'||solids[0].shape.type!=='box')err(at,'E_NAV_GATE_COLLIDER','运动门必须有且仅有一个启用的非触发 box Collider');
+        if(n.parent!==null||d.nodes!.some(other=>other.parent===n.id))err(at,'E_NAV_GATE_HIERARCHY','当前运动门必须是无子节点的根节点，避免子层级位置与碰撞失配');
+        if(c.enabled&&!d.nodes!.some(other=>other.components?.some(nav=>nav.kind==='NavZone'&&nav.enabled&&nav.surface)))err(at,'E_NAV_GATE_MODE','运动门需要显式三维地表导航');
+        if(d.nodes!.some(other=>other.components?.some(s=>s.kind==='NavSurface'&&s.supportCollider===n.id)))err(at,'E_NAV_GATE_SUPPORT','运动门不能同时作为静态导航面的支撑碰撞体');
       }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');

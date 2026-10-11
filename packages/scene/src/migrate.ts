@@ -349,6 +349,9 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if(!listMigrations().some(m=>m.from===17&&m.to===18))registerMigration({
+    from:17,to:18,name:'runtime-navigation-gates',run:doc=>structuredClone(doc),
+  });
   if(!listMigrations().some(m=>m.from===16&&m.to===17))registerMigration({
     from:16,to:17,name:'authored-3d-navigation-surfaces',run:doc=>structuredClone(doc),
   });

@@ -54,7 +54,7 @@ export class ZombieSurfaceCrowdNavigation {
       if(b.movable[n]){
         const distance=Math.hypot(px-b.x[n]!,py-this.y[n]!,pz-b.z[n]!);
         const arrival=Math.max(t.radius[player]!+b.radius[n]!+this.settings.skinM,policy.arrivalRange(i)*.88);
-        if(!this.surface.direction(b.x[n]!,this.y[n]!,b.z[n]!,this.direction))this.unreachable++;
+        if(!this.surface.direction(b.x[n]!,this.y[n]!,b.z[n]!,this.direction,b.radius[n]!))this.unreachable++;
         else if(distance>arrival+.025){
           let dx=this.direction.x,dz=this.direction.z;
           if(distance<Math.max(2,arrival*2)&&this.surface.move(b.x[n]!,this.y[n]!,b.z[n]!,px,pz,b.radius[n]!,this.point)

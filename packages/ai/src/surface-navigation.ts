@@ -1,4 +1,5 @@
 /** 三维地表导航：分层采样图共享目标场，连续投影保留真实高度。无游戏/编辑器依赖。 */
+import {intervalsPenetrate} from '@aether/core';
 export interface NavigationSurface {
   id: string;
   supportCollider?:string;
@@ -28,6 +29,11 @@ export class SurfaceNavigation {
   private pendingEdge=0;
   private pendingCell=-1;
   private version=0;
+  private dynamic:readonly SurfaceObstacle[]=[];
+  private blocked=new Uint8Array(0);
+  private blockedEdges=new Set<string>();
+  private obstacleVersion=0;
+  private overlayWork=0;
   workLastStep=0;
   readonly rejectedSurfaces:string[]=[];
   constructor(surfaces:readonly NavigationSurface[],readonly options:SurfaceNavigationOptions,private readonly obstacles:readonly SurfaceObstacle[]=[]) {
@@ -76,11 +82,58 @@ export class SurfaceNavigation {
     const n=this.cells.length;
     this.published=new Float64Array(n).fill(Infinity);this.staging=new Float64Array(n).fill(Infinity);
     this.next=new Int32Array(n).fill(-1);this.stagingNext=new Int32Array(n).fill(-1);
+    this.blocked=new Uint8Array(n);
+  }
+  /** 替换运行障碍快照。仅重测新旧 AABB 周围的格/边；底图和支撑面不会重建。 */
+  setDynamicObstacles(obstacles:readonly SurfaceObstacle[]):void {
+    const ids=new Set<string>();
+    for(const o of obstacles){
+      if(!o.id||ids.has(o.id)||![o.minX,o.maxX,o.minY,o.maxY,o.minZ,o.maxZ].every(Number.isFinite)
+        ||o.minX>=o.maxX||o.minY>=o.maxY||o.minZ>=o.maxZ)throw new RangeError('动态障碍必须具有唯一 ID 与有限正 AABB');
+      ids.add(o.id);
+    }
+    const old=new Map(this.dynamic.map(o=>[o.id!,o])),next=new Map(obstacles.map(o=>[o.id!,o]));
+    const dirty:SurfaceObstacle[]=[];
+    for(const id of new Set([...old.keys(),...next.keys()])){
+      const a=old.get(id),b=next.get(id);
+      if(a&&b&&a.minX===b.minX&&a.maxX===b.maxX&&a.minY===b.minY&&a.maxY===b.maxY&&a.minZ===b.minZ&&a.maxZ===b.maxZ)continue;
+      if(a)dirty.push(a);if(b)dirty.push(b);
+    }
+    this.overlayWork=0;if(!dirty.length)return;
+    this.dynamic=obstacles.map(o=>Object.freeze({...o}));this.obstacleVersion++;
+    const candidates=new Set<number>(),pad=this.options.agentRadius+this.options.cellSize*1.6;
+    for(const o of dirty)for(const i of this.near((o.minX+o.maxX)/2,(o.minZ+o.maxZ)/2,Math.max(o.maxX-o.minX,o.maxZ-o.minZ)/2+pad))candidates.add(i);
+    let changed=false;
+    for(const i of candidates){
+      const a=this.cells[i]!,blocked=this.clearDynamic(a.x,a.y,a.z,this.options.agentRadius)?0:1;this.overlayWork++;
+      if(this.blocked[i]!==blocked){this.blocked[i]=blocked;changed=true;}
+      for(const j of a.edges){
+        const b=this.cells[j]!,key=`${i}:${j}`,out={...a};
+        const closed=!this.move(a.x,a.y,a.z,b.x,b.z,this.options.agentRadius,out)||Math.hypot(out.x-b.x,out.y-b.y,out.z-b.z)>1e-4;this.overlayWork++;
+        if(closed!==this.blockedEdges.has(key)){changed=true;if(closed)this.blockedEdges.add(key);else this.blockedEdges.delete(key);}
+      }
+    }
+    if(changed){
+      // 旧场立即失效；不能在预算重算期间继续沿旧路线撞门。
+      this.published.fill(Infinity);this.next.fill(-1);this.current=-1;
+      this.active=-1;this.heap.length=0;this.pendingCell=-1;
+      if(this.requested>=0)this.begin();
+    }
+  }
+  private clearDynamic(x:number,y:number,z:number,radius:number):boolean {
+    return !this.dynamic.some(o=>intervalsPenetrate(o.minY,o.maxY,y+.04,y+this.options.agentHeight-.01)
+      &&intervalsPenetrate(o.minX,o.maxX,x-radius,x+radius)&&intervalsPenetrate(o.minZ,o.maxZ,z-radius,z+radius));
   }
   private key(x:number,z:number):string{return `${Math.floor(x/this.options.cellSize)},${Math.floor(z/this.options.cellSize)}`;}
   private *near(x:number,z:number,r:number):Generator<number>{
     const cs=this.options.cellSize;
-    for(let bz=Math.floor((z-r)/cs);bz<=Math.floor((z+r)/cs);bz++)for(let bx=Math.floor((x-r)/cs);bx<=Math.floor((x+r)/cs);bx++)
+    const minX=Math.floor((x-r)/cs),maxX=Math.floor((x+r)/cs),minZ=Math.floor((z-r)/cs),maxZ=Math.floor((z+r)/cs);
+    // 大障碍/远距离查询不遍历空白世界，也不让超出安全整数的 ++ 形成死循环。
+    if(![minX,maxX,minZ,maxZ].every(Number.isSafeInteger)||(maxX-minX+1)*(maxZ-minZ+1)>Math.max(64,this.buckets.size*4)){
+      for(const [key,ids] of this.buckets){const [bx,bz]=key.split(',').map(Number);if(bx!>=minX&&bx!<=maxX&&bz!>=minZ&&bz!<=maxZ)yield*ids;}
+      return;
+    }
+    for(let bz=minZ;bz<=maxZ;bz++)for(let bx=minX;bx<=maxX;bx++)
       for(const id of this.buckets.get(`${bx},${bz}`)??[])yield id;
   }
   private height(p:Patch,x:number,z:number):number|null {
@@ -90,7 +143,7 @@ export class SurfaceNavigation {
     return p.source.origin[1]!+a*p.uy+b*p.vy;
   }
   private clear(x:number,y:number,z:number,radius:number):boolean{
-    return !this.obstacles.some(o=>{
+    return this.clearDynamic(x,y,z,radius)&&!this.obstacles.some(o=>{
       if(!(o.maxY>y+.04 && o.minY<y+this.options.agentHeight-.01
         && x+radius>o.minX && x-radius<o.maxX && z+radius>o.minZ && z-radius<o.maxZ))return false;
       for(const p of this.patches)if(o.id&&p.source.supportCollider===o.id){
@@ -136,14 +189,24 @@ export class SurfaceNavigation {
     }
     Object.assign(out,p);return true;
   }
-  private cellAt(x:number,y:number,z:number):number{
+  private cellAt(x:number,y:number,z:number,radius=this.options.agentRadius):number{
     const point={x,y,z,surface:-1};if(!this.locate(x,y,z,point))return -1;
     let best=Infinity,id=-1;
     for(const i of this.near(x,z,this.options.cellSize*1.5)){
       const c=this.cells[i]!,dy=Math.abs(c.y-y);if(c.surface!==point.surface)continue;
       if(dy>this.options.maxStepM+this.options.cellSize*Math.tan(this.options.maxSlopeDeg*Math.PI/180))continue;
       const d=(x-c.x)**2+(z-c.z)**2+dy*dy;if(d<best){best=d;id=i;}
-    }return id;
+    }
+    // 门边缘的实际站位可能合法，但最近格的中心被保守膨胀阻挡。
+    // 在同一面内选择连续可达的开放邻格，不能跨门吸附到对侧。
+    if(id>=0&&this.blocked[id]){
+      const choices:number[]=[];
+      for(const i of this.near(x,z,this.options.cellSize*1.5))if(this.cells[i]!.surface===point.surface&&!this.blocked[i])choices.push(i);
+      choices.sort((a,b)=>{const p=this.cells[a]!,q=this.cells[b]!;return (p.x-x)**2+(p.y-y)**2+(p.z-z)**2-((q.x-x)**2+(q.y-y)**2+(q.z-z)**2);});
+      id=-1;
+      for(const i of choices){const c=this.cells[i]!,out={...point};if(this.move(x,y,z,c.x,c.z,radius,out)&&Math.hypot(out.x-c.x,out.y-c.y,out.z-c.z)<1e-4){id=i;break;}}
+    }
+    return id;
   }
   private push(id:number,cost:number):void{
     const item={id,cost};let k=this.heap.length;this.heap.push(item);
@@ -161,7 +224,7 @@ export class SurfaceNavigation {
   }
   private begin():void{
     this.active=this.requested;this.staging.fill(Infinity);this.stagingNext.fill(-1);this.heap.length=0;this.pendingCell=-1;
-    this.staging[this.active]=0;this.push(this.active,0);
+    if(!this.blocked[this.active]){this.staging[this.active]=0;this.push(this.active,0);}
   }
   get isPending():boolean{return this.active>=0;}
   step(budget:number):void{
@@ -179,15 +242,20 @@ export class SurfaceNavigation {
       const i=this.pendingCell,a=this.cells[i]!;
       if(this.pendingEdge===a.incoming.length){this.pendingCell=-1;continue;}
       const j=a.incoming[this.pendingEdge++]!,b=this.cells[j]!;this.workLastStep++;
+      if(this.blocked[i]||this.blocked[j]||this.blockedEdges.has(`${j}:${i}`))continue;
       const cost=this.staging[i]!+Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
       if(cost<this.staging[j]!){this.staging[j]=cost;this.stagingNext[j]=i;this.push(j,cost);}
     }
   }
-  direction(x:number,y:number,z:number,out:{x:number;z:number}):boolean{
-    const i=this.cellAt(x,y,z);if(i<0||!Number.isFinite(this.published[i]))return false;
-    const j=this.next[i]!,c=this.cells[j<0?i:j]!,dx=c.x-x,dz=c.z-z,l=Math.hypot(dx,dz);
+  direction(x:number,y:number,z:number,out:{x:number;z:number},radius=this.options.agentRadius):boolean{
+    const i=this.cellAt(x,y,z,radius);if(i<0||!Number.isFinite(this.published[i]))return false;
+    const j=this.next[i]!;let c=this.cells[j<0?i:j]!;
+    // 角色不一定在格中心。靠近活动门时先回到当前开放格，再沿可走边转角。
+    if(this.dynamic.length&&j>=0){const point={x,y,z,surface:-1};if(!this.move(x,y,z,c.x,c.z,radius,point)||Math.hypot(point.x-c.x,point.y-c.y,point.z-c.z)>1e-4)c=this.cells[i]!;}
+    const dx=c.x-x,dz=c.z-z,l=Math.hypot(dx,dz);
     out.x=l>1e-6?dx/l:0;out.z=l>1e-6?dz/l:0;return true;
   }
   snapshot(){return {mode:'surface-3d' as const,cellCount:this.cells.length,surfaceCount:this.patches.length,rejectedSurfaces:[...this.rejectedSurfaces],
+    obstacleVersion:this.obstacleVersion,dynamicObstacleCount:this.dynamic.length,overlayWork:this.overlayWork,blockedDynamicCells:this.blocked.reduce((a,b)=>a+b,0),blockedDynamicEdges:this.blockedEdges.size,
     version:this.version,pending:this.isPending,workLastStep:this.workLastStep,goal:this.current<0?null:{x:this.cells[this.current]!.x,y:this.cells[this.current]!.y,z:this.cells[this.current]!.z,surface:this.cells[this.current]!.surface}};}
 }

@@ -41,6 +41,7 @@ import { EditorAgent, connectEditorAgent } from './services/editor-agent';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
+import { GatePanel } from './services/gate-panel';
 import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
@@ -298,6 +299,8 @@ async function boot(): Promise<void> {
       hudDirty = true;
     },
   });
+
+  const gatePanel = new GatePanel(playCtl,id=>renderer.getDocument()?.nodes.find(n=>n.id===id)?.name??id);
 
   // ---- Play 控制按钮（装配层：只负责按钮 → 控制器，无玩法逻辑）----
   const btnPlay = document.querySelector<HTMLButtonElement>('#btn-play');
@@ -4002,6 +4005,7 @@ async function boot(): Promise<void> {
       disposed = true;
       actorPreloader.stop();
       animationDebugPanel.dispose();
+      gatePanel.dispose();
       renderer.destroy();
     });
   }
@@ -4046,7 +4050,8 @@ async function boot(): Promise<void> {
       else if(action === 'resume') { if(!playCtl.isPaused) throw new Error('Play is not paused'); playCtl.resume(); }
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
-    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
+    gate: (nodeId,open,runId) => {const rt=playCtl.session.runtime;if(!rt||rt.player()?.runId!==runId)throw new Error('运行代次已变更，请重新读取 editor_runtime');rt.setGateOpen(nodeId,open);},
+    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,gates:playCtl.session.runtime?.gateSnapshot()??[],
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
       weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
@@ -4171,6 +4176,7 @@ async function boot(): Promise<void> {
       bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
+    gatePanel.update();
     gameAudio.update(playCtl.session,camera.yaw);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;

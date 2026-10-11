@@ -35,6 +35,7 @@ import type { PlayerPresentation } from './player-presentation';
 import type { RuntimeSceneMotion } from './runtime-scene-motion';
 import type { RuntimeBodyIk } from './runtime-body-ik';
 import { characterYaw } from './character-facing';
+import { syncGatePresentation } from './gate-presentation';
 
 export interface PlayControllerOptions {
   bodyIk?: RuntimeBodyIk;
@@ -174,6 +175,7 @@ export class PlayController {
     }
 
     this.bridge.attach(this.session.runtime);
+    this.syncGates();
     this.sharedMotions?.start(doc);
     this.bodyIk?.start(doc);
     if (this.playerPresentation) this.bridge.setPlayerPresentation(playerNode);
@@ -209,6 +211,7 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
+    this.syncGates();
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime, true);
@@ -220,6 +223,7 @@ export class PlayController {
   /** 同种子重跑 */
   reset(): void {
     this.session.reset();
+    this.syncGates();
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime);
@@ -260,6 +264,7 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     if (n > 0) {
+      this.syncGates();
       this.sharedMotions?.sync(this.session.runtime);
       this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
       this.bridge.refresh();
@@ -290,5 +295,8 @@ export class PlayController {
 
   private notify(): void {
     this.onStateChange?.();
+  }
+  private syncGates():void {
+    syncGatePresentation(this.session.runtime,id=>{const i=this.renderer.findObjectIndexByNodeId(id);return i===null?null:this.renderer.state.objects[i]??null;});
   }
 }

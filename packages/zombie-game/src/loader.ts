@@ -24,10 +24,10 @@
  * position"，那只对了没有旋转和缩放的场景 —— 一旦有父级缩放，刷怪点就会飘。
  */
 
-import { SceneGraph, validRunRules, validNavigationSettings, validSurfaceNavigationSettings, type SurfaceNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
+import { SceneGraph, validateSceneDocument, validRunRules, validNavigationSettings, validSurfaceNavigationSettings, type SurfaceNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
 import type { NavigationSurface } from '@aether/ai';
 import { lookupCharacterStats } from '@aether/content';
-import { solidCollider, type SolidColliderDesc } from "@aether/runtime";
+import { solidCollider, type SolidColliderDesc, type NavigationGateDesc } from "@aether/runtime";
 import type {
   AabbData,
   ColliderComponent,
@@ -134,6 +134,7 @@ export interface LevelRuntimeDesc {
   obstacles: ObstacleDesc[];
   /** Actual finite 3D Collider solids, separate from the navigation XZ projection. */
   shotColliders: SolidColliderDesc[];
+  navigationGates?:NavigationGateDesc[];
   nav: NavDesc | null;
   /**
    * 失败条件（P5，docs/23 §2.6）。**真源是场景的 `loseCondition`** —— 运行时不得
@@ -279,6 +280,10 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   };
 
   let graph: SceneGraph;
+  if(doc.nodes.some(n=>n.components.some(c=>c.kind==='NavigationGate'))){
+    for(const d of validateSceneDocument(doc).filter(d=>d.severity==='error'&&(d.code.startsWith('E_NAV_GATE')||d.code==='E_COMPONENT_DUP')))err(d.code,d.message);
+    if(diags.length)return {desc:null,diagnostics:diags};
+  }
   try {
     graph = SceneGraph.fromDocument(doc);
   } catch (e) {
@@ -316,6 +321,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   const spawns: SpawnDesc[] = [];
   const obstacles: ObstacleDesc[] = [];
   const shotColliders: SolidColliderDesc[] = [];
+  const navigationGates:NavigationGateDesc[]=[];
   const surfaces:NavigationSurface[]=[];
   const scripts: ScriptDesc[] = [];
   let nav: NavDesc | null = null;
@@ -410,6 +416,13 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       } else if (c.kind === 'Collider') {
         const col = c as ColliderComponent;
         if (col.isTrigger) continue; // 触发器不挡路
+        const gate=n.components.find(other=>other.kind==='NavigationGate'&&other.enabled);
+        if(gate?.kind==='NavigationGate'&&col.enabled&&graph.isEffectivelyVisible(n.id)){
+          const m=graph.worldMatrix(n.id),a=colliderWorldAabb(graph,n.id,col.shape),v=gate.openOffset;
+          navigationGates.push({nodeId:n.id,world:new Float32Array(m),shape:structuredClone(col.shape),bounds:{minX:a.x-a.halfX,maxX:a.x+a.halfX,minZ:a.z-a.halfZ,maxZ:a.z+a.halfZ,minY:a.minY,maxY:a.maxY},
+            openOffset:[m[0]!*v[0]+m[4]!*v[1]+m[8]!*v[2],m[1]!*v[0]+m[5]!*v[1]+m[9]!*v[2],m[2]!*v[0]+m[6]!*v[1]+m[10]!*v[2]],travelSec:gate.travelSec,initialOpen:gate.initialOpen});
+          continue; // 活动门不能裁掉底图格；其射线几何由运行控制器生成。
+        }
         if (col.enabled && graph.isEffectivelyVisible(n.id)) {
           try { shotColliders.push(solidCollider(n.id, col.shape, graph.worldMatrix(n.id))); }
           catch (e) { err('E_SHOT_COLLIDER', String(e), n.id); }
@@ -559,6 +572,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       spawns,
       obstacles,
       shotColliders,
+      navigationGates,
       nav,
       loseCondition,
       scripts,

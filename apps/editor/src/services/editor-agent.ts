@@ -16,6 +16,7 @@ export interface EditorAgentPort {
   history(redo: boolean): Promise<EditResult>;
   save(): Promise<AuthorSaveResult>;
   play(action: string, steps: number): void;
+  gate?(nodeId:string,open:boolean,runId:number):void;
   runtime(): unknown;
   capture(): Promise<string>;
 }
@@ -50,6 +51,12 @@ export class EditorAgent {
         const steps=args.steps??1;
         if(!Number.isInteger(steps)||Number(steps)<1||Number(steps)>600)fail('INVALID_ARGUMENTS','steps must be an integer from 1 to 600');
         this.port.play(args.action,Number(steps)); return {ok:true,runtime:this.port.runtime(),state:this.state()};
+      }
+      if(name==='editor_gate'){
+        if(!this.port.playing())fail('PLAY_REQUIRED','门操作需要 Play');
+        if(typeof args.nodeId!=='string'||typeof args.open!=='boolean'||!Number.isInteger(args.runId))fail('INVALID_ARGUMENTS','需要稳定 nodeId、布尔 open 和当前 runId');
+        if(!this.port.gate)fail('UNSUPPORTED','宿主未提供门控制');
+        this.port.gate(args.nodeId,args.open,Number(args.runId));return {ok:true,runtime:this.port.runtime(),state:this.state()};
       }
       if(this.port.playing())fail('PLAY_LOCKED','Stop Play before changing author content.');
       if(name==='scene_open') {

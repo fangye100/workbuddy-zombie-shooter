@@ -15,6 +15,16 @@ function setup() {
   return {agent,port,store,edit};
 }
 describe('Game Editor agent commands',()=>{
+  it('门操作需要 Play、当前作者 revision 与运行代次，且不会写作者历史',async()=>{
+    const s=setup();s.port.gate=vi.fn((id,open,runId)=>{if(runId!==7)throw Error('运行代次已变更');});
+    expect((await s.edit('editor_gate',{nodeId:'gate',open:true,runId:7})).code).toBe('PLAY_REQUIRED');
+    s.port.playing=()=>true;
+    expect((await s.edit('editor_gate',{nodeId:'gate',open:true,runId:7,expectedRevision:'stale'})).code).toBe('REVISION_CONFLICT');
+    expect((await s.edit('editor_gate',{nodeId:'gate',open:true,runId:6})).ok).toBe(false);
+    expect((await s.edit('editor_gate',{nodeId:'gate',open:true,runId:7})).ok).toBe(true);
+    expect((await s.edit('editor_gate',{nodeId:'gate',open:'yes',runId:7})).code).toBe('INVALID_ARGUMENTS');
+    expect(s.store.undoDepth).toBe(0);expect(s.store.dirty).toBe(false);
+  });
   it('rejects stale revisions, human drafts and Play mutations without touching history',async()=>{
     const s=setup(),node=newAuthorNode('nd_agent','Agent');
     expect((await s.edit('scene_edit_nodes',{expectedRevision:'stale',operations:[{op:'add',nodeId:node.id,node}]})).code).toBe('REVISION_CONFLICT');

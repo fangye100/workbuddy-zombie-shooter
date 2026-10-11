@@ -3,7 +3,7 @@ export const EDITOR_INSTRUCTIONS = 'Read editor_workflow, then editor_instances 
 
 export function editorWorkflow() {
   return {
-    contractVersion: 2,
+    contractVersion: 3,
     knowledge: {
       entry:'docs/README.md', catalog:'docs/knowledge/catalog.json',
       architecture:'docs/architecture/layers.md', codeGraph:'docs/knowledge/codegraph.md',
@@ -24,6 +24,7 @@ export function editorWorkflow() {
       { id:'verify', tools:['editor_play','editor_runtime','editor_capture'], rule:'Start enters paused Play; step is deterministic simulation coverage. Audio requires a trusted Ready/Resume gesture. Stop restores author data. Canvas capture excludes DOM HUD and does not establish listening or phone acceptance.' },
     ],
     topics: [
+      {id:'dynamic-navigation',guide:'docs/architecture/dynamic-navigation.md',schema:'packages/scene/src/document.ts',component:'NavigationGate',control:'editor_gate',observation:'editor_runtime.runtime.gates / navigation.surface',sampleScene:'assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json'},
       { id:'visuals-and-lod', guide:'docs/36-StreetQualityAndArchitecturalLOD.md', reusable:'docs/art/visual-quality-playbook.md' },
       { id:'npc-and-input', guide:'docs/37-CombatInputAndPopulationQuality.md' },
       { id:'weapons-and-ik-ports', guide:'docs/39-Unified-weapons-and-animation-hooks.md' },

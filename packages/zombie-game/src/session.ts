@@ -32,6 +32,7 @@ import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from "@aether/runtime";
 import { NULL_BEHAVIOR_EXECUTOR } from "@aether/runtime";
 import { nearestSolidHit } from "@aether/runtime";
+import { NavigationGates, gateOverlapsActor, type SolidColliderDesc } from '@aether/runtime';
 import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
 import { WeaponSystem } from "@aether/runtime";
@@ -310,7 +311,7 @@ export class RuntimeSession {
       actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, y:t.posY[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
       damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
       move: (slot,x,z) => { const ox=t.posX[slot]!,oz=t.posZ[slot]!; const [cx,cz] = this.navigation.moveActor(t,slot,x,z); t.posX[slot]=cx;t.posZ[slot]=cz;t.velX[slot]=(cx-ox)/this.fixedStep;t.velZ[slot]=(cz-oz)/this.fixedStep;return [cx,t.posY[slot]!,cz]; },
-      obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
+      obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.liveSolids,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
     };
   }
   lastShot: { tick: number; from: [number, number, number]; to: [number, number, number]; hit: boolean } | null = null;
@@ -372,6 +373,26 @@ export class RuntimeSession {
   readonly fixedStep: number;
 
   private readonly navigation: ZombieCrowdNavigation | ZombieSurfaceCrowdNavigation;
+  private readonly navigationGates:NavigationGates;
+  private liveSolids:readonly SolidColliderDesc[]=[];
+  gateSnapshot(){return this.navigationGates.snapshot();}
+  setGateOpen(nodeId:NodeId,open:boolean):void {
+    if(this.outcomeState!=='running')throw new Error('终态不能操作门');
+    this.navigationGates.setOpen(nodeId,open);
+  }
+  private syncGates():void {
+    if(this.navigation instanceof ZombieSurfaceCrowdNavigation)this.navigation.surface.setDynamicObstacles(this.navigationGates.obstacles());
+    this.liveSolids=[...this.desc.shotColliders,...this.navigationGates.solids()];
+  }
+  private advanceGates():void {
+    const t=this.table;
+    if(this.navigationGates.step(this.fixedStep,b=>{
+      for(let i=0;i<t.capacity;i++)if(t.isAlive(i)){
+        const stats=this.defIdToStats.get(t.defId[i]!)!;
+        if(gateOverlapsActor(b,{x:t.posX[i]!,y:t.posY[i]!,z:t.posZ[i]!,radius:t.radius[i]!,height:Math.max(stats.capsuleHeight,this.desc.nav?.surface?.agentHeight??0)}))return true;
+      }return false;
+    }))this.syncGates();
+  }
   private readonly navigationPolicy: ZombieNavigationPolicy = {
     movable: i => this.kindOf[i] === 1 && this.table.behavior[i] === BEHAVIOR_CHASE && !this.enemyAttacks.moving(i,this.table.generation[i]!),
     speed: i => this.table.maxSpeed[i]! * this.table.speedScale[i]! * this.weaponCombat.slow(i,this.table.generation[i]!),
@@ -524,6 +545,8 @@ export class RuntimeSession {
     this.goalZ = opts.desc.playerStart.z;
     this.navigation = nav.surface ? new ZombieSurfaceCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ,opts.desc.playerStart.y??0)
       : new ZombieCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ);
+    if(opts.desc.navigationGates?.length&&!nav.surface)throw new Error('运动门需要显式三维地表导航');
+    this.navigationGates=new NavigationGates(opts.desc.navigationGates??[]);this.syncGates();
     if(this.navigation instanceof ZombieSurfaceCrowdNavigation){
       const nav3d=this.navigation;
       this.checkNavigationSize(PLAYER_STATS);
@@ -778,6 +801,7 @@ export class RuntimeSession {
       return { tick: this.tickCount, spawned: r.spawned + w.spawned, rejectedRooms: r.rejections.length, rejections: r.rejections };
     }
     this.decayHitFlash();
+    this.advanceGates();
     this.movePlayer();
     this.moveNpcs();
     // 战斗判定在移动之后：进入 windup / 前摇倒计时 / 打击 / 玩家射击
@@ -939,6 +963,7 @@ export class RuntimeSession {
     this.fireHeld = false;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
+    this.navigationGates.reset();this.syncGates();
     this.navigation.reset(this.goalX,this.goalZ,this.desc.playerStart.y??0);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
     // 不需要也不应该"重新播种一条共享流"，那正是改动会互相污染的根因。
@@ -1405,7 +1430,7 @@ export class RuntimeSession {
             const len = dist > 1e-6 ? dist : 1;
             const cosA = (facingX * -dx + facingZ * -dz) / len;
             const height = (this.defIdToStats.get(t.defId[p]!)?.capsuleHeight ?? 1.8) / 2;
-            const blocked = dist > 1e-6 && nearestSolidHit([t.posX[i]!,t.posY[i]!+height,t.posZ[i]!],[-dx/dist,-dy/dist,-dz/dist],this.desc.shotColliders,dist)!==null;
+            const blocked = dist > 1e-6 && nearestSolidHit([t.posX[i]!,t.posY[i]!+height,t.posZ[i]!],[-dx/dist,-dy/dist,-dz/dist],this.liveSolids,dist)!==null;
             if (cosA >= Math.cos(halfArc) && !blocked) {
               this.applyDamage(p, atk.damage, i);
             }
@@ -1445,10 +1470,10 @@ export class RuntimeSession {
   private weaponWorld(): WeaponWorld {
     const t=this.table,p=this.playerEntityId;
     const actor=(id:number)=>t.isAlive(id) && this.kindOf[id]===1?{id,generation:t.generation[id]!,x:t.posX[id]!,y:t.posY[id]!,height:this.defIdToStats.get(t.defId[id]!)?.capsuleHeight??1.8,z:t.posZ[id]!,radius:t.radius[id]!,hp:t.health[id]!}:null;
-    const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.desc.shotColliders,l)!==null;};
+    const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.liveSolids,l)!==null;};
     return {actor,actors:()=>{const out=[];for(let i=0;i<t.capacity;i++){const a=actor(i);if(a)out.push(a);}return out;},blocked,
       trace:(from,direction,range,ignore,radius=0)=>{
-        let distance=nearestSolidHit(from,direction,this.desc.shotColliders,range,radius)??range, target=null;
+        let distance=nearestSolidHit(from,direction,this.liveSolids,range,radius)??range, target=null;
         for(let i=0;i<t.capacity;i++){const a=actor(i);if(!a || ignore.has(i))continue;
           const stats=this.defIdToStats.get(t.defId[i]!);if(!stats)continue;
           const h=rayCapsuleY([from[0],from[1]-a.y+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
