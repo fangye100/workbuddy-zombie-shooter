@@ -68,3 +68,25 @@ WPN-02～06 本体位置仍待用户提供，SMG/霰弹枪/喷射器精确装配
 附件、握点和动画接入遵循 `packages/scene/src/weapons.ts`、`asset-meta.ts`、
 现有 WeaponSystem phase、RuntimeSceneMotion 分层采样及采样后的 Body IK，
 本阶段没有新增这些实现。
+
+## WU2 导入绕序诊断（数值验证，视觉复核待定）
+
+原源场景 GPU 目检发现多件模型密集黑条纹。源码核对定位到 `packages/scene/src/gltf.ts`：
+POSITION 已应用 node 变换，`fixWinding` 却仍用 mesh-local NORMAL 判断，误翻部分三角形；
+缺 NORMAL 时，又对已在世界空间生成的法线重复套 node 逆转置。修复统一顺序为
+mesh-local 法线 → node 逆转置 → 同空间绕序修正，未修改 source、贴图或描边 shader。
+
+五件都含约 90° X 节点旋转。下表使用原始 accessor、node matrix 和法线逐面计算，
+记录旧/新判断会翻转的面数；并非删除这些面，亦不证明源法线全部正确。
+
+| 源模型 | 旧空间判断翻面 | 同空间判断翻面 | 两种判断不一致 |
+|---|---:|---:|---:|
+| Launcher | 9563 | 11 | 9558 |
+| Fuel | 6089 | 122 | 6045 |
+| Mag01 | 4406 | 7 | 4403 |
+| SMG Mag | 9073 | 5 | 9072 |
+| Shell | 9391 | 3459 | 7896 |
+
+旋转、非均匀缩放、镜像和缺 NORMAL 回归以及已有 skin 测试共 37 项通过。
+Shell 仍有 3459 面的源法线/绕序不一致，底火几何疑点保留；不能仅凭导入修正认证合格。
+后续 Audit 须同时复看保留源模型和各派生 LOD，确认黑纹实际表现。
