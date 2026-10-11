@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_599a68e3eb2d",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-02-SMG",
+    "triangles": 400,
+    "level": 0,
+    "algorithm": "texture-QEM-wedge-UV",
+    "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+    "report": "assets/art/models/WPN-MAG-02-SMG/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      0.00009389169288948236,
+      0.00005112910746999929,
+      0.00004136070329660915
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-MAG-02-SMG_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:5d592fd8760006a371b1b3be823f710bd5f0d56cc32d6b651075cb497d0e93a8",
+  "updatedAt": "2026-10-11T15:03:12.512Z"
+}

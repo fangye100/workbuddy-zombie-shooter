@@ -93,6 +93,18 @@
       "path": "assets/scenes/sandbox/weapon-source-review.scene.json",
       "name": "WPN-20261011 · 五件源模型检视（未验收）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_lod_review",
+      "path": "assets/scenes/sandbox/weapon-lod-review.scene.json",
+      "name": "WPN-20261011 · Reference / LOD 三向对照（候选未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_source_fixed_views",
+      "path": "assets/scenes/sandbox/weapon-source-fixed-views.scene.json",
+      "name": "WPN-20261011 · 原源固定三向（缺陷对照）",
+      "enabled": true
     }
   ],
   "startIndex": 1,

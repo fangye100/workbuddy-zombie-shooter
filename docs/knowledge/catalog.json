@@ -2274,6 +2274,17 @@
       "topics": ["weapon", "art", "source", "gpu"],
       "read": "源检视场景与资产库入口、原始统计、轴向差异、底火和燃料管线审计项及未验收边界",
       "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
+    },
+    {
+      "id": "wpn-20261011-lod-candidates",
+      "path": "docs/art/wpn-20261011-lod-candidates.md",
+      "title": "WPN-20261011 归一化与 LOD 候选检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["weapon", "art", "lod", "gpu"],
+      "read": "米制配方、source到finalimport空间、预算内候选、Shell局部修复、60mesh固定三向、质量诊断与待验收边界",
+      "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
     }
   ]
 }

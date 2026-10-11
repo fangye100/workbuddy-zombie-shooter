@@ -20,8 +20,9 @@ GPU，记录 URL、检出目录、精确 HEAD、加载失败/浏览器错误及�
 资产库目录为 `assets/_delivery/WPN-20261011/<ID>/`。选择对应 GLB 后沿用现有
 Inspector/资源预览路径。场景装载显式消费 sidecar 的 `normalizeHeightM: null`
 和 `upAxisFlip: false`，应用 GLB 节点变换、居中贴底，保留尺寸与方向比例。
-当前资产库双击生成路径仍使用 `parseGlb` 的兼容自动轴推断；Launcher 的 Z 长轴
-可能被再旋转。源方向以本检视场景的显式轴路径为准，后续接入须统一入口。
+WU2 已统一资产库预览/双击生成与场景的 sidecar 轴向参数；Launcher 的 Z 长轴
+不会再因自动轴推断被额外旋转。归一化与固定三向入口见
+[LOD 候选指南](wpn-20261011-lod-candidates.md)。
 当前编辑器装载显示 BaseColor；不以此认证源 GLB 的 normal/metallic/roughness 效果。
 
 ## 结构实测（2026-10-11）
@@ -64,7 +65,7 @@ pnpm run knowledge:check
   不沿用交付文本中的未标定轴向声明。
 
 源目检解除前不减面、不发布 game_ready。WPN-01 现有三档已到位并保留；
-WPN-02～06 本体位置仍待用户提供，SMG/霰弹枪/喷射器精确装配和握点验收因此待定。
+用户已确认 WPN-02～06 本体明天交付，SMG/霰弹枪/喷射器精确装配和握点验收因此待定。
 附件、握点和动画接入遵循 `packages/scene/src/weapons.ts`、`asset-meta.ts`、
 现有 WeaponSystem phase、RuntimeSceneMotion 分层采样及采样后的 Body IK，
 本阶段没有新增这些实现。
@@ -79,7 +80,7 @@ mesh-local 法线 → node 逆转置 → 同空间绕序修正，未修改 sourc
 五件都含约 90° X 节点旋转。下表使用原始 accessor、node matrix 和法线逐面计算，
 记录旧/新判断会翻转的面数；并非删除这些面，亦不证明源法线全部正确。
 
-| 源模型 | 旧空间判断翻面 | 同空间判断翻面 | 两种判断不一致 |
+| 源模型 | 旧空间判断翻面 | 同空间判断翻面 | 旧导入结束后法线/绕序不一致 |
 |---|---:|---:|---:|
 | Launcher | 9563 | 11 | 9558 |
 | Fuel | 6089 | 122 | 6045 |

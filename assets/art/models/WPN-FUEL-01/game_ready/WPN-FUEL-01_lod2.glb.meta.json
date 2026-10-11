@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_a89d8adf6c8a",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-FUEL-01",
+    "triangles": 145,
+    "level": 2,
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+    "source": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+    "sourceHash": "db4bb2b638b9f2f0c371fe16dc927e03fed76a415e1a38520199407c199c9e9f",
+    "report": "assets/art/models/WPN-FUEL-01/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      -0.0049871815090305055,
+      0.00021966442674737607,
+      0.00010241049632213686
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-FUEL-01_lod2.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:eaabc939235ce50610f08fb75e33b1575af3bdc09e7f6d46b6fce1511857bec8",
+  "updatedAt": "2026-10-11T15:03:12.715Z"
+}

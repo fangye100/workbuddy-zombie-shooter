@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_f2f39beb7444",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-07-LAUNCHER",
+    "triangles": 3000,
+    "level": 0,
+    "algorithm": "texture-QEM-wedge-UV",
+    "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+    "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+    "report": "assets/art/models/WPN-07-LAUNCHER/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      -0.00012098325777046282,
+      -0.001209685305066094,
+      0.00003907881942652458
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-07-LAUNCHER_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:9bc06be1cc2f1cf9e1826c579fdb29a844223089f76d6763171c4f0bda4f8cd6",
+  "updatedAt": "2026-10-11T15:02:53.644Z"
+}

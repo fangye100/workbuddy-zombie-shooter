@@ -1,0 +1,237 @@
+{
+  "id": "WPN-MAG-02-SMG",
+  "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+  "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+  "sourceTriangles": 30000,
+  "recipe": {
+    "id": "WPN-MAG-02-SMG",
+    "rotationDeg": [
+      0,
+      0,
+      -90
+    ],
+    "sourceLengthAxis": 0,
+    "lengthM": 0.11,
+    "targets": [
+      400,
+      200,
+      80
+    ],
+    "axisEvidence": "长轴 X；-X 为较窄突出颈，+X 为宽底缘；候选插入端 -X 转为 +Y，缺 WPN-02 本体，精确 fit 待定"
+  },
+  "recipeHash": "6f97a8ff33dd526293123c653367edc1f0671ab251c6d5338ac3f3efb09f1d24",
+  "pipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
+  "helperHashes": {
+    "assets\\characters\\_tools\\decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "assets\\environment\\_tools\\build_environment_lods.py": "a99c64d0f04b5dc0fc9c407a2ada5ad8d7744d1dfd34038141a8f818aa7aef91"
+  },
+  "toolVersions": {
+    "python": "3.13.3",
+    "pymeshlab": "2025.7.post1",
+    "numpy": "2.5.4",
+    "pillow": "12.3.0"
+  },
+  "nodeTransformsApplied": true,
+  "sourceDimensions": [
+    1.1591830253601074,
+    0.2633490431563026,
+    0.27163701744373026
+  ],
+  "scaleXYZ": [
+    0.09489441925344604,
+    0.09489441925344604,
+    0.09489441925344604
+  ],
+  "rawNodeBakedCenterSource": [
+    -0.04106849431991577,
+    -1.1002915293707052e-08,
+    -0.002459481199942312
+  ],
+  "simplificationParameters": {
+    "texture": {
+      "qualitythr": 0.3,
+      "extratcoordw": 0.1,
+      "preserveboundary": false,
+      "optimalplacement": true,
+      "preservenormal": false,
+      "planarquadric": true
+    },
+    "geometry": {
+      "qualitythr": 0.3,
+      "preserveboundary": false,
+      "preservetopology": false,
+      "optimalplacement": true,
+      "planarquadric": true
+    }
+  },
+  "originRotatedSource": [
+    0.13167451057523602,
+    -0.5385230183601379,
+    -0.002459481199942312
+  ],
+  "dimensionsM": [
+    0.024990354511268038,
+    0.11,
+    0.025776837018060973
+  ],
+  "bodyBoundsSource": null,
+  "bodyDimensionsM": null,
+  "textureSize": [
+    1024,
+    1024
+  ],
+  "textureHash": "ea4037d8a190c3ceb86f7d87df07e522dc5d2ef7f8b854a18211f673709b953b",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-MAG-02-SMG_lod0.glb",
+      "triangles": 400,
+      "hash": "5d592fd8760006a371b1b3be823f710bd5f0d56cc32d6b651075cb497d0e93a8",
+      "surfaceRatio": 0.9351093200786452,
+      "boundsDrift": 0.006651842688446097,
+      "dimensionsM": [
+        0.025000984773846907,
+        0.11007627251995099,
+        0.025948300482910826
+      ],
+      "sourceTopology": {
+        "v": 14988,
+        "f": 30000,
+        "edges": 45000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 188,
+        "f": 400,
+        "edges": 600,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "errors": [],
+      "diagnostics": [],
+      "algorithm": "texture-QEM-wedge-UV",
+      "textureQemTrial": {
+        "triangles": 400,
+        "surfaceRatio": 0.9351093200786452,
+        "boundsDrift": 0.006651842688446097
+      },
+      "silhouetteIoU": [
+        0.9638226374021198,
+        0.9830995159570104,
+        0.9440681299481799
+      ],
+      "exteriorSignedVolumeRatio": 0.9328455000416706,
+      "visual": "pending",
+      "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 0,
+      "parserRecenterMeters": [
+        -9.389169288948236e-05,
+        -5.112910746999929e-05,
+        -4.136070329660915e-05
+      ]
+    },
+    {
+      "level": 1,
+      "file": "WPN-MAG-02-SMG_lod1.glb",
+      "triangles": 187,
+      "hash": "4e65728a03a838afa67547a2ec14373de6bb0f8f46399640670741189dcfadfa",
+      "surfaceRatio": 0.9337386247835003,
+      "boundsDrift": 0.019059395142326685,
+      "dimensionsM": [
+        0.024514053469890953,
+        0.10999901159888965,
+        0.025444032371787027
+      ],
+      "sourceTopology": {
+        "v": 14988,
+        "f": 30000,
+        "edges": 45000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 99,
+        "f": 187,
+        "edges": 291,
+        "boundary": 21,
+        "nonmanifold": 0
+      },
+      "errors": [],
+      "diagnostics": [],
+      "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+      "textureQemTrial": {
+        "triangles": 200,
+        "surfaceRatio": 0.9110531961303955,
+        "boundsDrift": 0.06881535896345237
+      },
+      "silhouetteIoU": [
+        0.9758434690639873,
+        0.975774006502716,
+        0.9396363336494454
+      ],
+      "exteriorSignedVolumeRatio": 0.969503215273374,
+      "visual": "pending",
+      "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 13,
+      "parserRecenterMeters": [
+        0.00022251645680817275,
+        1.567461577973402e-05,
+        -0.00015757546220724478
+      ]
+    },
+    {
+      "level": 2,
+      "file": "WPN-MAG-02-SMG_lod2.glb",
+      "triangles": 77,
+      "hash": "805b41740fa7e164862c959b9291b8e16af25c6a5930f487d0633dc0d39614da",
+      "surfaceRatio": 0.8748488159373357,
+      "boundsDrift": 0.09105520478173712,
+      "dimensionsM": [
+        0.02374793847850397,
+        0.10899752796497551,
+        0.02342972184475597
+      ],
+      "sourceTopology": {
+        "v": 14988,
+        "f": 30000,
+        "edges": 45000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 42,
+        "f": 77,
+        "edges": 117,
+        "boundary": 3,
+        "nonmanifold": 0
+      },
+      "errors": [],
+      "diagnostics": [
+        "面积比 0.8748 不在 [.9,1.1]；需要轮廓和关键结构对照",
+        "包围盒漂移 0.0911 > .05；需要 GPU 对比，尚未批准"
+      ],
+      "algorithm": "geometry-QEM-original-wedge-UV-candidate",
+      "textureQemTrial": {
+        "triangles": 80,
+        "surfaceRatio": 0.6390748301454473,
+        "boundsDrift": 0.14987317317670334
+      },
+      "silhouetteIoU": [
+        0.9476047038538168,
+        0.9624690426437582,
+        0.8239738643549023
+      ],
+      "exteriorSignedVolumeRatio": 0.940349801086877,
+      "visual": "pending",
+      "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 3,
+      "parserRecenterMeters": [
+        -0.00032245598964212533,
+        0.00019034638175310874,
+        -0.0002879925795875281
+      ]
+    }
+  ],
+  "visual": "pending",
+  "preciseFit": "pending",
+  "status": "visual-review-candidate",
+  "qualityPolicy": "面积 .9..1.1 / 包围盒漂移 <=.05 为诊断；远档细槽损失不单独判定轮廓；预算硬门禁；需 GPU 对比关键端面/握把/阀门及贴图"
+}

@@ -2289,7 +2289,7 @@ async function boot(): Promise<void> {
       const metadata = await assetServer.loadMeta(relPath);
       if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
       // Respect explicit metre-scale environment imports as well as character heights.
-      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath));
+      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
       // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
@@ -3613,7 +3613,9 @@ async function boot(): Promise<void> {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, await resolveAssetImportHeightM(path));
+          const metadata = await assetServer.loadMeta(path);
+          if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
+          model = parseGlb(buffer, await resolveAssetImportHeightM(path), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
           previewCache.set(path, model);
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);
