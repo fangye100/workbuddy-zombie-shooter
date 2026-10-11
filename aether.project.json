@@ -87,6 +87,12 @@
       "id": "sc_ani_20261008_intake",
       "name": "ANI-20261008 · 动作候选检视（未验收）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_source_review",
+      "path": "assets/scenes/sandbox/weapon-source-review.scene.json",
+      "name": "WPN-20261011 · 五件源模型检视（未验收）",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -2263,6 +2263,17 @@
         "project-rules",
         "architecture-policy"
       ]
+    },
+    {
+      "id": "wpn-20261011-source-review",
+      "path": "docs/art/wpn-20261011-source-review.md",
+      "title": "WPN-20261011 五件源模型检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["weapon", "art", "source", "gpu"],
+      "read": "源检视场景与资产库入口、原始统计、轴向差异、底火和燃料管线审计项及未验收边界",
+      "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
     }
   ]
 }
