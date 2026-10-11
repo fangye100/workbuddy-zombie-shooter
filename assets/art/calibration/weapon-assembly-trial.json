@@ -1,0 +1,648 @@
+{
+  "status": "assembly-trial-awaiting-headed-fit",
+  "space": "parseGlb final import-space metre; metadata importer used",
+  "sources": {
+    "pistol": {
+      "asset": {
+        "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+        "guid": "as_e4ugmrq3"
+      },
+      "sha256": "90e5b77f9139eeec98b949d864a915c4880a8a906ae8012a4137f1fdff906113",
+      "boundsMin": [
+        -0.023362521082162857,
+        0,
+        -0.14035393297672272
+      ],
+      "boundsMax": [
+        0.023362521082162857,
+        0.19512608647346497,
+        0.14035393297672272
+      ],
+      "modelSockets": {
+        "primaryGrip": {
+          "position": [
+            0,
+            0.057,
+            -0.09
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            0.007,
+            0.112,
+            -0.063
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0,
+            0.157,
+            0.14
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "magazine": {
+          "position": [
+            0,
+            0.105,
+            -0.102
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "chamber": {
+          "position": [
+            0.021,
+            0.164,
+            -0.015
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    },
+    "launcher": {
+      "asset": {
+        "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+        "guid": "as_f2f39beb7444"
+      },
+      "sha256": "0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
+      "boundsMin": [
+        -0.37564617395401,
+        0,
+        -0.10116872936487198
+      ],
+      "boundsMax": [
+        0.37564617395401,
+        0.40481892228126526,
+        0.10116872936487198
+      ],
+      "modelSockets": {
+        "primaryGrip": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            0.048,
+            0.213,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0.375,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "magazine": {
+          "position": [
+            -0.225,
+            0.105,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "chamber": {
+          "position": [
+            -0.184,
+            0.295,
+            0.036
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    },
+    "mag": {
+      "asset": {
+        "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+        "guid": "as_30abf3e8f08f"
+      },
+      "sha256": "bdb95a7b413e443e93994b40de57af11a0d0484b8a9972fe7c8898e5ea221c4d",
+      "boundsMin": [
+        -0.022186949849128723,
+        0,
+        -0.010323269292712212
+      ],
+      "boundsMax": [
+        0.022186949849128723,
+        0.10927759855985641,
+        0.010323269292712212
+      ],
+      "modelSockets": {
+        "insertion": {
+          "position": [
+            0,
+            0.108,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "primaryGrip": {
+          "position": [
+            0,
+            0.045,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "base": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    }
+  },
+  "character": {
+    "asset": {
+      "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+      "guid": "as_hpnf387i"
+    },
+    "sha256": "4cb127bddaefd616eb32454ba4be5b16278d6acc3719830e9a858091c8d09ee5",
+    "handTipDistanceM": 0.163659,
+    "boneSockets": {
+      "rightHand": {
+        "bone": "RightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "leftHand": {
+        "bone": "LeftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      }
+    },
+    "measurement": "H01 normalized bind wrist to hand tip; palm-centre offset candidate within hand extent; GPU contact not yet accepted"
+  },
+  "limitations": [
+    "WPN01 +Z front sign inferred from barrel/handle geometry, requires headed muzzle face confirmation.",
+    "H01 palm offsets and orientations are mesh/bone measurement candidates; fingers are not procedurally curled.",
+    "WPN01 single mesh includes closed grip/base silhouette; original integral geometry remains during Mag01 removal, cannot certify separate magazine slot.",
+    "Launcher projectile absent: no substitute mesh.",
+    "Shell primer art unresolved; WPN02-06 bodies pending external delivery.",
+    "Legacy simulation weaponMount is capsule centre; model muzzle visual is separate and difference is exposed, ballistics unchanged."
+  ],
+  "cpuBindProbe": {
+    "status": "numeric-only-not-GPU-fit",
+    "conditions": "H01 finalparse bind pose, no shared Spine clip; each yaw uses real RuntimeSession.reset/setFire/step and same-tick fireStep effect, zero recoil. ActorY=0; P-01 capsuleHeight=1.8 from packages/content/src/generated/stats.generated.ts.",
+    "firstLauncherLeftResidualM": 0.026099703328859573,
+    "correction": "Scene holdPose moved from [-.08,1.08,.39] to [-.03,1.08,.34], model scale and measured sockets retained.",
+    "samples": [
+      {
+        "weaponId": "pistol",
+        "yaw": 0,
+        "frameStamp": 1,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.677574611883866e-08,
+          "rightOrientationResidualRad": 7.300048299977715e-08,
+          "leftTargetResidualM": 8.08559347954183e-08,
+          "leftOrientationResidualRad": 1.032382731180714e-07,
+          "muzzleYawErrorRad": 5.6797776286864355e-08,
+          "modelMuzzleToSimulationMountM": 0.6607638993607448,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.4746704688489552e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.48,
+            1.347,
+            2.58
+          ],
+          "to": [
+            18.48,
+            1.347,
+            2.58
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": 1.5707963267948966,
+        "frameStamp": 2,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.702535153956274e-08,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.554643933796011e-08,
+          "leftOrientationResidualRad": 4.2146848510894035e-08,
+          "muzzleYawErrorRad": 3.445639773502762e-09,
+          "modelMuzzleToSimulationMountM": 0.6607640590247909,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 2.8734200007540375e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.08000002098146712,
+            1.347,
+            2.9799999965030883
+          ],
+          "to": [
+            -0.08000080778648716,
+            1.347,
+            20.97999999650307
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": 3.141592653589793,
+        "frameStamp": 3,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.887920556427822e-08,
+          "rightOrientationResidualRad": 5.960464477539063e-08,
+          "leftTargetResidualM": 8.102751812492496e-08,
+          "leftOrientationResidualRad": 5.960464477539063e-08,
+          "muzzleYawErrorRad": 1.032485208440903e-09,
+          "modelMuzzleToSimulationMountM": 0.6607638993607448,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.750514911380601e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.47999999300617574,
+            1.347,
+            2.419999958037066
+          ],
+          "to": [
+            -18.479999993006107,
+            1.347,
+            2.419998384427026
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": -1.5707963267948966,
+        "frameStamp": 4,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.653251845203347e-08,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.39220990770432e-08,
+          "leftOrientationResidualRad": 4.2146848510894035e-08,
+          "muzzleYawErrorRad": 1.0661590055249805e-08,
+          "modelMuzzleToSimulationMountM": 0.6607640572206783,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 2.7939297292105245e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.07999997901853272,
+            1.347,
+            2.0199999965030893
+          ],
+          "to": [
+            0.07999919221351268,
+            1.347,
+            -15.980000003496894
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 0,
+        "frameStamp": 5,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 2.383448065048111e-08,
+          "rightOrientationResidualRad": 4.2146848510894035e-08,
+          "leftTargetResidualM": 6.324079538872266e-08,
+          "leftOrientationResidualRad": 7.300048299977715e-08,
+          "muzzleYawErrorRad": 9.892677779921127e-09,
+          "modelMuzzleToSimulationMountM": 0.850720317833948,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 4.623107761306856e-08
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.715,
+            1.36,
+            2.53
+          ],
+          "to": [
+            16.715,
+            1.36,
+            2.53
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 1.5707963267948966,
+        "frameStamp": 6,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 3.332856296365376e-08,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.219840904494731e-08,
+          "leftOrientationResidualRad": 6.664001874625056e-08,
+          "muzzleYawErrorRad": 6.971975663461194e-09,
+          "modelMuzzleToSimulationMountM": 0.8507204190103701,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.5782510729014716e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.030000031253643818,
+            1.36,
+            3.2149999986886577
+          ],
+          "to": [
+            -0.03000073063588385,
+            1.36,
+            19.21499999868864
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 3.141592653589793,
+        "frameStamp": 7,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 1.1363794677027015e-07,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 1.8398516754092857e-07,
+          "leftOrientationResidualRad": 2.9802322387695312e-08,
+          "muzzleYawErrorRad": 1.832025375847479e-08,
+          "modelMuzzleToSimulationMountM": 0.8507202533753137,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.4353877702631703e-07
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.7149999973773139,
+            1.36,
+            2.4699999374927124
+          ],
+          "to": [
+            -16.714999997377255,
+            1.36,
+            2.469998538728232
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": -1.5707963267948966,
+        "frameStamp": 8,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 2.2491366701511635e-08,
+          "rightOrientationResidualRad": 6.664001874625056e-08,
+          "leftTargetResidualM": 6.660666811534173e-08,
+          "leftOrientationResidualRad": 7.300048299977715e-08,
+          "muzzleYawErrorRad": 5.052754303846996e-08,
+          "modelMuzzleToSimulationMountM": 0.8507202190878659,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 9.849474241074778e-08
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.029999968746356118,
+            1.36,
+            1.7849999986886589
+          ],
+          "to": [
+            0.029999269364116087,
+            1.36,
+            -14.215000001311324
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      }
+    ]
+  },
+  "simulationCalibration": {
+    "referenceActorY": 0.02,
+    "capsuleHalfM": 0.9,
+    "capsuleSource": "packages/content/src/generated/stats.generated.ts P-01 capsuleHeight=1.8",
+    "zeroRecoilActorMuzzle": {
+      "pistol": [
+        0.48,
+        1.347,
+        0.08
+      ],
+      "launcher": [
+        0.715,
+        1.36,
+        0.03
+      ]
+    },
+    "meaning": "yaw-local simulation muzzle from ideal hold/model socket, y includes authored actorY then subtracts capsuleHalf; model-local sockets remain separate; no presentation feedback into simulation"
+  }
+}

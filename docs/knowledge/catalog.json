@@ -2271,9 +2271,19 @@
       "role": "art",
       "authority": "guide",
       "status": "current",
-      "topics": ["weapon", "art", "source", "gpu"],
+      "topics": [
+        "weapon",
+        "art",
+        "source",
+        "gpu"
+      ],
       "read": "源检视场景与资产库入口、原始统计、轴向差异、底火和燃料管线审计项及未验收边界",
-      "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
     },
     {
       "id": "wpn-20261011-lod-candidates",
@@ -2282,9 +2292,19 @@
       "role": "art",
       "authority": "guide",
       "status": "current",
-      "topics": ["weapon", "art", "lod", "gpu"],
-        "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
-      "sourceRefs": ["project-rules", "scene-schema", "asset-metadata", "project-manifest"]
+      "topics": [
+        "weapon",
+        "art",
+        "lod",
+        "gpu"
+      ],
+      "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
     },
     {
       "id": "model-attachments",
@@ -2305,6 +2325,65 @@
         "asset-metadata",
         "scene-migrations",
         "architecture-policy"
+      ]
+    },
+    {
+      "id": "weapon-model-projection",
+      "path": "packages/zombie-game/src/presentation/weapon-model.ts",
+      "title": "武器真实模型表现投影",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation"
+      ],
+      "read": "已有phase/recoil到中性primary/dependent请求，不拥有玩法时钟",
+      "sourceRefs": [
+        "scene-weapons",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "editor-runtime-weapons",
+      "path": "apps/editor/src/services/runtime-weapons.ts",
+      "title": "Play真实武器加载适配",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "GUID/默认覆盖、同帧骨口、逐GPU登记和Stop迟到取消",
+      "sourceRefs": [
+        "weapon-model-projection",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "weapon-assembly-trial",
+      "path": "docs/animation/weapon-assembly-trial.md",
+      "title": "真实武器装配试验入口",
+      "role": "game",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "Pistol/Launcher/Mag01校准、近景场景、模拟枪口四向与未完成验收边界",
+      "sourceRefs": [
+        "editor-runtime-weapons",
+        "weapon-model-projection",
+        "scene-schema",
+        "project-manifest",
+        "scene-schema",
+        "asset-metadata"
       ]
     }
   ]

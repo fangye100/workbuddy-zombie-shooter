@@ -151,5 +151,39 @@
         "maxAngleDeg": 50
       }
     ]
+  },
+  "boneSockets": {
+    "rightHand": {
+      "bone": "RightHand",
+      "contact": {
+        "position": [
+          -0.065,
+          -0.012,
+          0.004
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    "leftHand": {
+      "bone": "LeftHand",
+      "contact": {
+        "position": [
+          0.065,
+          -0.012,
+          0.004
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    }
   }
 }

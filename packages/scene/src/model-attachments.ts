@@ -31,7 +31,15 @@ export function validModelAttachment(v:unknown):v is ModelAttachment {
   return typeof ref.path==='string'&&ref.path.startsWith('assets/')&&!ref.path.includes('\\')&&!ref.path.split('/').some(s=>!s||s==='.'||s==='..')
     &&typeof ref.guid==='string'&&!!ref.guid&&(v.sockets===undefined||validModelSockets(v.sockets));
 }
+/** 严格模型引用解析；缺 sidecar 的 legacy 伪 GUID 不用于正式装配。 */
+export function validateModelAssetIdentity(ref:AssetRef,meta:{guid:string;kind:string}|null|undefined,exists=true):string[] {
+  if(!exists)return [`E_MODEL_ASSET_MISSING: ${ref.path}`];
+  if(!meta)return [`E_MODEL_META_MISSING: ${ref.path}`];
+  if(meta.guid!==ref.guid)return [`E_MODEL_GUID: ${ref.path}`];
+  if(meta.kind!=='gltf')return [`E_MODEL_ASSET_KIND: ${ref.path}`];
+  return [];
+}
 /** 按 socket key 覆盖；null 显式禁用，undefined 继承，返回新对象不改资产默认。 */
 export function resolveSocketDefaults<T>(defaults:Record<string,T>|null|undefined,override:Record<string,T>|null|undefined):Record<string,T>|null {
-  return override===null?null:structuredClone({...defaults,...override});
+  return override===null||(override===undefined&&defaults===null)?null:structuredClone({...defaults,...override});
 }

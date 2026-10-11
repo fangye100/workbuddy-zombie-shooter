@@ -45,7 +45,10 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+          "guid": "as_e4ugmrq3"
+        },
         "placeholder": "pistol",
         "color": "#ffc531",
         "lengthM": 0.3,
@@ -80,9 +83,9 @@
           },
           "muzzle": {
             "position": [
-              0.3,
-              0,
-              0
+              0.48,
+              0.467,
+              0.08
             ],
             "rotation": [
               0,
@@ -161,6 +164,46 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.08,
+              1.19,
+              0.34
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "attachments": [
+            {
+              "id": "magazine",
+              "model": {
+                "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+                "guid": "as_30abf3e8f08f"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0.7071067811865476,
+                  0,
+                  0.7071067811865476
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "magazine"
         }
       }
     },
@@ -1017,7 +1060,10 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+          "guid": "as_f2f39beb7444"
+        },
         "placeholder": "launcher",
         "color": "#a7dc7c",
         "lengthM": 0.75,
@@ -1052,9 +1098,9 @@
           },
           "muzzle": {
             "position": [
-              0.75,
-              0,
-              0
+              0.715,
+              0.48,
+              0.03
             ],
             "rotation": [
               0,
@@ -1133,6 +1179,23 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.03,
+              1.08,
+              0.34
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          "attachments": [],
+          "reloadAttachmentId": null
         }
       }
     }

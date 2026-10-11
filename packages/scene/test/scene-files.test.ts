@@ -27,6 +27,7 @@ import { validateSceneDocument } from '../src/document';
 import type { AssetMeta } from '../src/asset-meta';
 import type { SceneDocument } from '../src/document';
 import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
+import { validateModelAssetIdentity } from '../src/model-attachments';
 
 /** eager + import:'default' → 直接拿解析后的 JSON 对象 */
 const projectModules = import.meta.glob('/aether.project.json', {
@@ -47,6 +48,17 @@ const sceneModules = import.meta.glob('/assets/**/*.scene.json', {
 /** eager:false 只拿键不加载内容 —— 用于孤儿检查（清单比内容便宜） */
 const allAssetPaths = Object.keys(import.meta.glob('/assets/**/*', { eager: false }));
 const motionModules = import.meta.glob('/assets/**/*.motion.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+it('正式武器模型与全部附件的 GUID/path 对应实际 GLB sidecar',()=>{
+  const failures:string[]=[];
+  for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components){
+    if(c.kind!=='RunRules'||!c.arsenal)continue;
+    for(const weapon of c.arsenal.definitions){
+      const refs=[...(weapon.presentation.model?[weapon.presentation.model]:[]),...(weapon.presentation.assembly?.attachments.map(a=>a.model)??[])];
+      for(const ref of refs)failures.push(...validateModelAssetIdentity(ref,metaModules[`/${ref.path}.meta.json`] as AssetMeta|undefined,allAssetPaths.includes(`/${ref.path}`)).map(e=>`${path}:${node.id}:${weapon.id}: ${e}`));
+    }
+  }
+  expect(failures).toEqual([]);
+});
 
 it('scene audio resolves actual WAV identities, cue IDs and loop metadata', () => {
   const errors:string[]=[];

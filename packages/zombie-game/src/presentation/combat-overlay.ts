@@ -4,6 +4,7 @@ import { drawImpactInk, visibleImpacts } from './combat-ink';
 import { gameText as g } from './game-language';
 import { drawEnemyAttack, drawAttackCue } from './enemy-attack-ink';
 import { drawHeldWeapon, drawWeaponEffect } from './weapon-ink';
+import type { WeaponModelView } from './weapon-model';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
@@ -11,14 +12,17 @@ export class CombatOverlay {
   debugRanges = false;
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
-  constructor(private readonly project: WorldProjection) {
+  private readonly effectOrigins=new Map<number,[number,number,number]>();
+  private runId=-1;
+  constructor(private readonly project: WorldProjection,private readonly model?:()=>WeaponModelView) {
     this.canvas.className = 'combat-feedback'; this.canvas.setAttribute('aria-hidden', 'true');
     this.ctx = this.canvas.getContext('2d')!;
     document.getElementById('center')!.append(this.canvas);
   }
   update(runtime: RuntimeSession | null): void {
     this.canvas.hidden = !runtime;
-    if (!runtime) return;
+    if (!runtime) {this.effectOrigins.clear();this.runId=-1;return;}
+    if(this.runId!==runtime.runId){this.effectOrigins.clear();this.runId=runtime.runId;}
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const width = Math.round(rect.width * dpr), height = Math.round(rect.height * dpr);
@@ -26,8 +30,15 @@ export class CombatOverlay {
     const c = this.ctx; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0, 0, rect.width, rect.height);
     if (runtime.outcome !== 'running') return;
     const point = (p: readonly [number, number, number]) => { const q = this.project(p); return { x: q.x - rect.left, y: q.y - rect.top, behind: q.behind }; };
-    drawHeldWeapon(c,point,runtime,this.debugRanges);
-    for(const effect of runtime.weaponCombat.effects)drawWeaponEffect(c,point,effect,(runtime.tick-effect.tick)*runtime.fixedStep);
+    const model=this.model?.();
+    if(!model?.visible)drawHeldWeapon(c,point,runtime,this.debugRanges);
+    const effects=runtime.weaponCombat.effects,live=new Set(effects.map(e=>e.id));
+    for(const id of this.effectOrigins.keys())if(!live.has(id))this.effectOrigins.delete(id);
+    for(const effect of effects){
+      if(effect.tick===runtime.tick-1&&model?.visible&&model.weaponId===effect.weaponId&&model.muzzle&&!this.effectOrigins.has(effect.id)&&['shot','pellet','pierce','flame','projectile'].includes(effect.kind))this.effectOrigins.set(effect.id,[...model.muzzle.position]);
+      const from=this.effectOrigins.get(effect.id);
+      drawWeaponEffect(c,point,from?{...effect,from}:effect,(runtime.tick-effect.tick)*runtime.fixedStep);
+    }
     for(const burn of runtime.weaponCombat.burning){const t=runtime.table;if(!t.isAlive(burn.id) || t.generation[burn.id]!==burn.generation)continue;const p=point([t.posX[burn.id]!,runtime.weaponMount.position[1],t.posZ[burn.id]!]);if(p.behind)continue;c.fillStyle='#ff7045';c.font='bold 14px system-ui';c.fillText('♨',p.x,p.y);}
     // Windup geometry uses the same authoritative ranges, arcs and facing as combat.
     const table = runtime.table;

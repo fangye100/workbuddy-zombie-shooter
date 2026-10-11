@@ -37,5 +37,72 @@
     "textureFile": "WPN-07-LAUNCHER_lod0_basecolor.png"
   },
   "sourceHash": "sha256:0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
-  "updatedAt": "2026-10-11T15:02:53.644Z"
+  "updatedAt": "2026-10-11T15:02:53.644Z",
+  "modelSockets": {
+    "primaryGrip": {
+      "position": [
+        -0.222,
+        0.074,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "supportGrip": {
+      "position": [
+        0.048,
+        0.213,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "muzzle": {
+      "position": [
+        0.375,
+        0.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "magazine": {
+      "position": [
+        -0.225,
+        0.105,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "chamber": {
+      "position": [
+        -0.184,
+        0.295,
+        0.036
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
 }

@@ -111,6 +111,12 @@
       "path": "assets/scenes/sandbox/weapon-surface-transfer-review.scene.json",
       "name": "Mag01 / Shell · 源 / 转移前 / 转移后",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+      "id": "sc_weapon_assembly_trial",
+      "enabled": true,
+      "name": "武器实装 · 手枪/Launcher近景试验"
     }
   ],
   "startIndex": 1,

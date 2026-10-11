@@ -89,3 +89,7 @@ Stop/重跑并切换观察角色，确认历史不会跨身份。还需在实际
 
 
 2026-10-10 的实际三层玩家组合检查见 [持续步态与区域动作指南](animation/composite-player-motion.md#三层实机功能复验2026-10-10)：固定 `6e4e549ee07f7869c21c7c433bc6f3cd7513b5fa`，NVIDIA Lovelace secure headed 各73项通过，实际可见 debug 目标切换/freeze 不改生产、暂停双时钟、Stop/重启恢复。原日志/hash 及两次观察时序失败均保留。该功能证据仍有 IK_UNREACHABLE/IK_TARGET 诊断，CPU locals/skinScratch 不是 GPU readback；小角色和暗阴影不能认证肢体接触精度，未认证手机/人群性能，最终 Reviewer 待执行。
+
+## 真实模型装配只读观察
+
+`window.__editor.weaponModels.snapshot()` 返回隔离副本，含本帧 visible draw、frameStamp、实际 muzzle、既有 pose、IK 诊断与目标位置/朝向残差。同 tick 发射点残差只与当前固定步的实际效果配对，历史 from 不与移动后枪口比较；附着等式自身接触恒等不能证明枪口方向。近景入口、字段意义和未验收边界见[武器装配试验](animation/weapon-assembly-trial.md)。此新增路径尚待真实移动/射击/换弹、Pause/Stop/重启审计，不能继承上节旧提交的验收。

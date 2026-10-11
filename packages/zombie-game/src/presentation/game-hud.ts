@@ -2,6 +2,7 @@ import { gameText as g, gameLanguage, setGameLanguage } from './game-language';
 import type { RuntimeSession } from '@aether/zombie-game';
 import { RunHud } from './run-hud';
 import { CombatOverlay, type WorldProjection } from './combat-overlay';
+import type { WeaponModelView } from './weapon-model';
 import './game-hud.css';
 
 /** Read-only projection of simulation state; interaction goes back through PlaySession. */
@@ -54,8 +55,8 @@ export class GameHud {
   private nextBusy = false;
   private campaignComplete = false;
   private currentRun = -1;
-  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean; audioControl?:HTMLElement }, project?: WorldProjection) {
-    this.feedback = project ? new CombatOverlay(project) : null;
+  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean; audioControl?:HTMLElement; weaponModels?:()=>WeaponModelView }, project?: WorldProjection) {
+    this.feedback = project ? new CombatOverlay(project,actions.weaponModels) : null;
     this.root.className = 'game-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '游戏状态');
     this.health.max = 100; this.health.setAttribute('aria-label', '生命值');
     this.objective.setAttribute('aria-live', 'polite');

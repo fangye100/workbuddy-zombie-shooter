@@ -9,6 +9,7 @@ import {
   RendererCore,
   createAlbedoTexture,
   type CoreObjectDraw,
+  type PostPoseDrawPort,
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
   type CoreCylinderOverlay,
@@ -651,6 +652,7 @@ export class LabRenderer {
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
   /** 引擎帧绘制核心（services 通过它读 gizmo/相机矩阵与高亮 buffer） */
   public readonly core: RendererCore;
+  public poseDrawPort: PostPoseDrawPort | null = null;
   private readonly skyTextures: SkyTextureLoader;
   get skyTextureDiagnostic(): string { return this.skyTextures.diagnostic; }
   onSkyTextureStatusChange: (() => void) | null = null;
@@ -2372,8 +2374,10 @@ export class LabRenderer {
       // 每帧重算，姿势随片段变化；未播或 bind pose 时 jointMatrix 退化为 I，顶点原样。
       if (o.skinState !== null && o.skinBuffer !== null) {
         skinAdvance(o.skinState, dt);
-        evalJointMatrices(o.skinState, o.skinScratch);
+        const frame = o.nodeId ? this.poseDrawPort?.frameFor(o.nodeId,this.state.frameCounter) : undefined;
+        evalJointMatrices(o.skinState, o.skinScratch,frame);
         this.device.queue.writeBuffer(o.skinBuffer, 0, o.skinScratch);
+        if(frame&&o.nodeId)this.poseDrawPort?.afterPose(o.nodeId,o.modelMatrix,frame);
       }
     }
 
@@ -2443,6 +2447,7 @@ export class LabRenderer {
       }),
     }));
 
+    objects.push(...(this.poseDrawPort?.drawObjects()??[]));
     // 高亮描边与 gizmo 的帧输入由 features 组装（编辑器侧语义，引擎零改动）
     const highlight = buildSelectionOutline(this);
     const gizmo = buildGizmo(this);

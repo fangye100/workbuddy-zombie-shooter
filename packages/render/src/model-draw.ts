@@ -5,6 +5,13 @@ import { createAlbedoTexture } from './albedo-texture';
 import { packMaterial } from './frame-uniforms';
 import type { MaterialState } from './materials';
 import type { CoreObjectDraw, RendererCore } from './renderer-core';
+import type { PoseFrameOutput } from './skin';
+/** 宿主在已有 pose 求值中提供骨输出，随后附加 draw；不触发额外采样。 */
+export interface PostPoseDrawPort {
+  frameFor(nodeId:string,frameStamp:number):PoseFrameOutput|undefined;
+  afterPose(nodeId:string,actorMatrix:Float32Array<ArrayBuffer>,frame:PoseFrameOutput):void;
+  drawObjects():readonly CoreObjectDraw[];
+}
 export type RegisterDrawResource=(label:string,dispose:()=>void)=>void;
 export interface ModelDraw {
   draw:CoreObjectDraw; setMatrix(matrix:Float32Array):void; dispose():void;

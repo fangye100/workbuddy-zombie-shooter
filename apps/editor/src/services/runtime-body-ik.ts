@@ -116,7 +116,7 @@ export class RuntimeBodyIk {
         e.state.targets[c.id] = world && Number.isFinite(e.object.scale) && e.object.scale > 0 ? worldToActor(e.object, world) : null;
       }
       const player = e.player ? runtime?.player() : null;
-      if (player && skin.poseLayer && runtime?.weapons && player.sourceNodeId === e.nodeId) {
+      if (player && skin.poseLayer && runtime?.weapons && player.sourceNodeId === e.nodeId && !e.state.attachment) {
         const pose = runtime.weapons.poseIntent;
         const mount = runtime.weaponMount;
         const goals = weaponHandGoals(pose, mount.position, player.yaw);

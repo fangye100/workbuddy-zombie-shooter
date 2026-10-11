@@ -37,5 +37,46 @@
     "textureFile": "WPN-MAG-01_lod0_basecolor.png"
   },
   "sourceHash": "sha256:bdb95a7b413e443e93994b40de57af11a0d0484b8a9972fe7c8898e5ea221c4d",
-  "updatedAt": "2026-10-11T15:03:12.472Z"
+  "updatedAt": "2026-10-11T15:03:12.472Z",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0,
+        0.108,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        0,
+        0.045,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
 }
