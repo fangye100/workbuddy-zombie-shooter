@@ -1998,7 +1998,7 @@
           "followTarget": null,
           "pitchDeg": 0,
           "distance": 1.8,
-          "yawOffsetDeg": 0
+          "yawOffsetDeg": -90
         }
       ],
       "prefab": null

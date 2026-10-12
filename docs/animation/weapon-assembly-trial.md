@@ -48,7 +48,7 @@ Fuel仅删除源note许可的冲突软管区，保留罐/阀；拓扑保护QEM�
 
 补充回归diagnostics测试1项通过，typecheck与editor:build通过（保留Vite大chunk提示）；scene:check为282资产/22个v17scene/15跨文件测试及既有LOD/P0/audio通过，architecture为284生产文件0错误，knowledge137条0错误。三floor语义比对只改变model/assembly/muzzle及dependency，Camera、玩法数值与其他组件相同；原交付目录已追踪文件无diff。CodeGraph在本检出roots=apps/assets/packages/tools一次incremental --no-embed：88files/211nodes/571edges、结构ready，runtime-weapons测试1文件解析恢复、旧锁竞态警告、6401/7029向量；未删锁/全量重建/等embedding。定向overview覆盖RuntimeWeapons.summary/afterPose与新fit工具prepared/build/main和真实Input入口；私有符号有导出筛选限制，不认证调用全面解析。原始codegraph-seven-fit.log及三份overview JSON均留ignored证据目录。
 
-独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化H01 rig、SharedMotion Spine层、双手BodyIK、Light与七件武器库；当前trial Camera为distance1.8m/pitch0°/yawOffset0°/camera节点Y1.18m（现有orbit-follow取该锚点高度），三floor Camera原样。ac8295c旧视角为2.1m/15°/-30°，不能用其遮挡画面批准当前视角。没有运行生成器覆盖三层。
+独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化H01 rig、SharedMotion Spine层、双手BodyIK、Light与七件武器库；当前trial Camera为distance1.8m/pitch0°/yawOffset−90°/camera节点Y1.18m（现有orbit-follow取该锚点高度），三floor Camera原样。ac8295c旧视角为2.1m/15°/-30°，不能用其遮挡画面批准当前视角。没有运行生成器覆盖三层。
 
 编辑态的 `nd_pistol_inspect_0/1/2` 是同尺度侧面、+Z 端面与顶面副本，选择节点后按 F 聚焦；它们在 Play 隐藏。Pistol 的 final parseGlb 长轴实际为 Z；93572b5 的真实 GPU 静态 +Z 端面观察确认上方圆形炮口与内环。Launcher 已有 LOD0 +X 炮口观察；端面观察不认证握姿或弹道。
 
@@ -238,3 +238,22 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 3项后处理安全回归、3项真实f5肩链/三档数据/四向muzzle-owner回归、10项Game投影和4项loader回归、1项fixture测试通过；后处理/calibration及两种review `--check`通过，scene:check为282资产/22个v17场景/15项跨文件测试，architecture与knowledge通过。日志使用`launcher-scale-*`前缀。当前仍是待独立normalTLS/headed候选。Audit沿上文focused3命令使用新冻结HEAD、独立out目录及`--launcher-recovery`：普通out/mid/in后追加5次正常shoot→R，分别entry真实phase[.14,.18]、late90、late95、firstIdle、upperReady；漏窗显式false，原始PNG仍保留跨窗frameRange，不声称exact-frame像素。
 
 加载身份通过工具磁盘asset hash记录、正常`cache:no-store`下载与既有`window.__editor`只读snapshot交叉核对。`renderer.getDocument()`中Launcher hold应为`[-.31,1.20,.245]`，`actor.attachmentRequest`的LOD0 primary为`[-.1998,.0666,-.018]`、support为`[-.072,.1917,-.063]`；前槽`[.1773,.252,0]`由sidecar默认继承，在非removed子件相对parent frame可核。新的请求变化和child worldCorners尺寸核实际数据消费，models.frameStamp/child frameStamp核同帧；runtime summary不直接输出GLB sourceHash，不能只凭HEAD证明加载版本。Fuel装配仍后续处理，Shell与round底火仍等用户补交修复实源，全队列未批准。
+
+
+## aab0edef 实机机制与侧视补证候选（2026-10-12）
+
+原始 `.workbuddy/tmp/wpn-integration/launcher-ergonomic-audit-aab/observations.json` 保存22项检查、566样本、26张原始PNG：normalTLS/headed NVIDIA，console error/exception均0，未出现`IK_UNREACHABLE/IK_SOCKET_RESIDUAL`。Launcher最大右手位置残差3.080191e-7m、左2.653646e-7m；排除`action=reload`的最大枪口yaw误差1.667371e-7rad。换弹的90°是当前Game转枪动作，不作为射击朝向失败。这些只证明本版本所采机制，不能扩为全姿态/手指或像素验收。
+
+out触发phase.20833/frame387，而crop落在403–410；mid触发.43056/frame419，crop433–440；in触发.65278/frame451，crop466–475。前腔粉色弹体形态有变化，但完整离槽间隙未清晰确认，仍未批准可见离槽/归位。PNG不锁帧，触发样本不能代替该PNG实际阶段。
+
+本轮仅将trial的Camera `yawOffsetDeg` 从0改为−90，保持distance1.8m/pitch0°/锚点Y1.18m；校准工具同步保留该持久值，三floor相机与全部武器数据不变。普通世界yaw180°输入时，角色朝−X、Launcher换弹炮管转到+Z；相机从−X观察人物前方及炮管侧面，使轴向抽取方向落在屏幕平面。该方位来自现有坐标/动作数据，是否实际露出前腔仍由新目标原始PNG判断。现有自由相机在Play被禁止；没有新增或注入运行时观察机位。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon launcher --launcher-recovery --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/launcher-side-slot-audit
+```
+
+沿用真实移动/射击→R、out/mid/in及entry/late/首idle/upperReady的有界周期和PNG frameRange；本轮未启动Chrome，不预写新视角通过。该入口只补Launcher可见性，未执行武器不计本轮通过。
+
+Fuel实际使用`WPN-06-FLAME-without-can`，源后罐区域已在源x>.19且y<.395处切除；当前dock来自真实切面x=.19/y=.265，外置Fuel替代原后置罐，没有重复挂回源罐。现有旧out frame2052的六关节重放差1.361e-7m，149个躯干顶点在罐内，真实装配仍待修复。新左侧高持/转枪规划的35真实肩链快筛可达，但ready frame1931反向闭合罐检测有376个相关body顶点在罐内，最大已测顶点深度51.985mm，不能因罐的极值点不在body parity内便宣称clear。唯一解析上移需要66.379mm，保留15mm肩链余量的上限仅12.662mm；候选拒绝，未改生产hold/dock/grips/尺寸或层。mid/in旧重放缺transition仍不作精准几何结论。原始有界记录为`fuel-interface-pose-candidate-aab.json`、`fuel-ready-contact-depth-aab.json`、`fuel-ready-upward-separation-aab.json`和`fuel-ready-upward-feasibility-aab.json`；CPU诊断不是新GPU验收。
+
+Shell与同源round底火等待用户补交修复实源；round×.90只归一化，未修cap。Fuel装配与真实附件可见性未完成，全队列尚未批准，未启动Final Reviewer。
