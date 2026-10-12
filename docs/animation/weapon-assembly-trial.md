@@ -1,6 +1,18 @@
 # 真实武器装配试验入口
 
-当前试验与三floor已配置七件真实模型和六件独立换弹附件，复用v17 assembly、单一Spine层/双手IK与Play ledger。93572b5及c19f3b2的正常TLS、真实GPU输入与生命周期证据仅对应当时Pistol/Launcher版本；新五本体、切分区域、附件离回槽、近景Camera和全动作握姿仍待本轮headed验收，整个接入请求未完成。2026-10-12 WPN-02～06本体已齐，下文“次日交付”保留为c19f3b2历史事实。
+## R4 当前收口范围（2026-10-12）
+
+用户现明确只需“有一个换枪的动作，然后把手的武器持握点匹配上”，接受近似匹配。当前验收为七件真实武器的切换与握点接手；不再继续Fuel换罐轨迹、严格身体穿插、专用换装动作或Shell/Fuel换弹视觉研究。旧Shell及同源round底火缺陷、Fuel装配研究失败保留为历史限制，未修好，也不再阻断本次范围。下文“动作选择待回复”“整体未完成”“等待修复源”及严格换弹验收要求均属于对应旧版本，已由R4覆盖，不能再用于恢复被取消的工作。
+
+现有切枪由`WeaponSystem`单一switch phase驱动Game表现的8cm收枪/抬枪及当帧实际GLB替换。当前共享motion没有七件`*-equip/unequip`专用clip，会上身回退`ready`；这是程序化切枪动作，非新增equip FBX。Game提供姿态/模型socket请求，Framework一次骨骼采样后执行主手IK→本帧武器变换→副手依赖IK，Editor在相同frameStamp读取手骨并绘制模型。真实primary/support握点与角色hand contact已持久化，腿部locomotion继续走原下层，不新增动画时钟或Framework专有武器规则。
+
+可复用历史证据为`03b081894b6e6126e388dfc044c8b0846f820451`的`.workbuddy/tmp/wpn-integration/seven-audit-03b0818/observations.json`：normalTLS/headed NVIDIA Lovelace，293样本，七件实际切换与draw、所采双手可达检查通过，最大右/左目标位置残差分别`2.750325e-7m`/`3.322742e-7m`。该原报告整体`passed=false`，另有Shotgun附件回位漏采和SMG短攻击采样失败，不能改写为当时全部检查通过；这些不否定已记录的七件切枪/接手机制，也不构成R4新增换弹验收。它是03b版本的实际运行证据，不是当前HEAD的新浏览器/GPU执行或所有姿态像素批准。
+
+当前运行源码`7f12562f61941a3884d1a53eafecb9e40403b7ed`修复了`presentation.animations.idle.clip`消费与缺失诊断；现fixture七件`*-idle`名称仍未在player motion profile注册，因此继续回退同一`ready`，本次修复没有改变fixture持枪姿态。新增合法idle别名才会选择不同上身clip，本轮不新增别名、资产姿态、瞬态upperBody override或进一步匹配。仅归档本范围与证据，不运行新浏览器，不将旧失败写成已修复或全部美术通过。
+
+## 历史试验范围与证据
+
+各历史版本试验与三floor已配置七件真实模型和六件独立换弹附件，复用v17 assembly、单一Spine层/双手IK与Play ledger。93572b5及c19f3b2的正常TLS、真实GPU输入与生命周期证据仅对应当时Pistol/Launcher版本；下文保留当时的待验要求与结果，不作为R4新增验收。2026-10-12 WPN-02～06本体已齐，下文“次日交付”保留为c19f3b2历史事实。
 
 ## WPN-20261012 本体原源检视
 

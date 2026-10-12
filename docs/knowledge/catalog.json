@@ -2376,7 +2376,7 @@
         "animation",
         "gpu"
       ],
-      "read": "七件真实模型/切分附件候选、final import socket与模拟marker校准、44槽源对照、真实Input聚焦采样、Launcher前孔/0.90及b489可见换弹、434四件机制33/33和三弹匣可辨/Shotgun遮挡边界、历史实机失败与跨帧像素、R3用户已选Fuel下放转开/恢复与中断取样/未发布几何失败、Shell修复源待输入、未完成验收",
+      "read": "R4仅程序化切枪与握点接手，复用03b七件真实切换/同帧双手证据及版本边界；当前idle别名缺失仍回退ready；Fuel严格匹配、Shell/Fuel换弹视觉要求已撤销，旧失败与源美术限制保留为历史而非当前阻断",
       "sourceRefs": [
         "editor-runtime-weapons",
         "weapon-model-projection",
