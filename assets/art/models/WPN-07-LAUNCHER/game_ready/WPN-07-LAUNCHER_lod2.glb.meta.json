@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_80afb2427766",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-07-LAUNCHER",
+    "triangles": 494,
+    "level": 2,
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
+    "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+    "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+    "report": "assets/art/models/WPN-07-LAUNCHER/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      -0.0007543712854385376,
+      0.0030834439676254988,
+      -0.0006709210574626923
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-07-LAUNCHER_lod2.glb",
+    "status": "visual-review-candidate",
+    "previousGlbHash": "c320ac803f3fc5265cb9b1cdfc4b93f7a7258d8c6a795284a56efe82265ee4ad",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-07-LAUNCHER_lod2_basecolor.png",
+    "ergonomicNormalization": {
+      "factor": 0.9,
+      "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "baseNormalization": {
+        "dimensionsM": [
+          0.75,
+          0.40611970326988556,
+          0.20300082054953691
+        ],
+        "scaleXYZ": [
+          0.678351721013392,
+          0.678351721013392,
+          0.678351721013392
+        ]
+      },
+      "processor": "tools/art/rescale-launcher-assembly.py",
+      "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+      "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+      "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+      "visual": "pending-headed"
+    }
+  },
+  "sourceHash": "sha256:80205273ca55ffb794b0529a857b13df96ba1ec28e2a5a059be1e7dd42eabead",
+  "updatedAt": "2026-10-11T15:03:12.441Z",
+  "modelSockets": {
+    "primaryGrip": {
+      "position": [
+        -0.2004454885005951,
+        0.07077216075584292,
+        -0.018706091523170473
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "supportGrip": {
+      "position": [
+        -0.0726454885005951,
+        0.19587216075584293,
+        -0.06370609152317049
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "muzzle": {
+      "position": [
+        0.33685451149940493,
+        0.256172160755843,
+        -0.0007060915231704712
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "magazine": {
+      "position": [
+        0.17665451149940492,
+        0.256172160755843,
+        -0.0007060915231704712
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "chamber": {
+      "position": [
+        0.17665451149940492,
+        0.256172160755843,
+        -0.0007060915231704712
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadPose": {
+      "position": [
+        0.165,
+        0.035,
+        -0.298
+      ],
+      "rotation": [
+        0,
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "reloadExtract": {
+      "position": [
+        0.1611,
+        -0.036,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadClearance": {
+      "position": [
+        0.13457441181107344,
+        0.126,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadReturnClearance": {
+      "position": [
+        0,
+        0.072,
+        0.036
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}

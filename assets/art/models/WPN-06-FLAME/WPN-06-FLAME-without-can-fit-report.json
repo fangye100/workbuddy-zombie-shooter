@@ -1,0 +1,329 @@
+{
+  "id": "WPN-06-FLAME-without-can",
+  "owner": "WPN-06-FLAME",
+  "source": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+  "sourceHash": "80513dc9eb45309465b3675e05b2ba5ce8546c0ea4aebc3eb0acd6a1189a36b3",
+  "recipe": {
+    "owner": "WPN-06-FLAME",
+    "source": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+    "planes": [
+      [
+        0,
+        0.19,
+        1
+      ],
+      [
+        1,
+        0.395,
+        -1
+      ]
+    ],
+    "rotation": [
+      0,
+      90,
+      0
+    ],
+    "scale": "body",
+    "targets": [
+      6000,
+      3000,
+      1000
+    ],
+    "reason": "去除后方固有can及冲突return-hose段：x>.19且y<.395；保留主体双握/喷嘴及其余hose，不按component切"
+  },
+  "pipelineHash": "ac6aa362d94ff8e5100c594af09bb8ea88460ab81e191817c1125952283898ef",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "tools/art/weapon-region-cut.py": "2d00fc03cff114c1fa517d4d7e3c69cfb63b447f27a1bc3141a63a4025cd3e1d",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "repair": {
+    "planesSource": [
+      [
+        0,
+        0.19,
+        1
+      ],
+      [
+        1,
+        0.395,
+        -1
+      ]
+    ],
+    "afterPartition": {
+      "v": 36544,
+      "f": 72499,
+      "edges": 109045,
+      "boundary": 593,
+      "nonmanifold": 0
+    },
+    "cleanupRemovedFaces": 0,
+    "capFaces": 589,
+    "generatedCapBounds": [
+      [
+        0.19,
+        0.092654,
+        -0.037145
+      ],
+      [
+        0.334338,
+        0.396489,
+        0.053831
+      ]
+    ],
+    "afterCap": {
+      "v": 36544,
+      "f": 73088,
+      "edges": 109632,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "removedRegionBounds": [
+      [
+        0.19,
+        0.09265408318492868,
+        -0.10623397870895082
+      ],
+      [
+        0.5094889998435974,
+        0.395,
+        0.10092504623451751
+      ]
+    ],
+    "capUv": "最近原源三角UV；局部内部封口，非新贴图"
+  },
+  "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
+  "scaleXYZ": [
+    0.7211872075064061,
+    0.7211872075064061,
+    0.7211872075064061
+  ],
+  "origin": [
+    -0.0026544662372166294,
+    -1.82472766599336e-09,
+    0.04515200853347778
+  ],
+  "sourceDimensions": [
+    1.1092820167541504,
+    0.5130270811798159,
+    0.20715902494346833
+  ],
+  "dimensionsM": [
+    0.1357887333653437,
+    0.369988509505389,
+    0.6736833273351666
+  ],
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "fit": "pending-headed-slot",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-06-FLAME-without-can_lod0.glb",
+      "hash": "39d9af0b52c2754f3f00e0d6bb55164ca91337e978e15e3748dec82dc640fea9",
+      "triangles": 6000,
+      "topology": {
+        "v": 3000,
+        "f": 6000,
+        "edges": 9000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.13562920709272877,
+        0.36989684930577316,
+        0.6736601837406275
+      ],
+      "surfaceRatio": 0.9973576587997978,
+      "boundsDrift": 0.0011748122886285906,
+      "silhouetteIoU": [
+        0.9918304013759324,
+        0.9945896371757906,
+        0.9917121693121693
+      ],
+      "parserRecenterMeters": [
+        -8.148165180872635e-05,
+        -7.487647364205744e-07,
+        0.06315099794476117
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 30000,
+          "meanAbsoluteRgbError": 4.024210686500935,
+          "p95AbsoluteRgbError": 18.338712933930758,
+          "fractionErrorAbove40": 0.009166666666666667,
+          "surfaceDistance": {
+            "RMS": 0.0004155370406806469,
+            "diag_mesh_0": 1.0813568830490112,
+            "diag_mesh_1": 1.082242426222055,
+            "max": 0.003039392875507474,
+            "mean": 0.0002820001100189984,
+            "min": 2.926695108484978e-09,
+            "n_samples": 30000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-06-FLAME-without-can_lod0_basecolor.png",
+        "textureHash": "a422bbcf9fc59d6f9f2b26696ad357c5740f3eebf845d23c3243596862effc46"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-06-FLAME-without-can_lod1.glb",
+      "hash": "f7048f256719aeb95602975d72e2527e383b46c0de1dc62c823695796ec3c263",
+      "triangles": 3000,
+      "topology": {
+        "v": 1500,
+        "f": 3000,
+        "edges": 4500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.13614650335024062,
+        0.3704946264598228,
+        0.6736718683545188
+      ],
+      "surfaceRatio": 0.9908158749846593,
+      "boundsDrift": 0.0026347545634315406,
+      "silhouetteIoU": [
+        0.9862707058647963,
+        0.9907598415596227,
+        0.9843662852603647
+      ],
+      "parserRecenterMeters": [
+        -2.1117575723955673e-05,
+        -0.0005364743609323521,
+        0.06315684025170676
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 15000,
+          "meanAbsoluteRgbError": 3.695832749507961,
+          "p95AbsoluteRgbError": 16.809433757062617,
+          "fractionErrorAbove40": 0.007733333333333333,
+          "surfaceDistance": {
+            "RMS": 0.0008485062862746418,
+            "diag_mesh_0": 1.080244779586792,
+            "diag_mesh_1": 1.082242426222055,
+            "max": 0.004421199671924114,
+            "mean": 0.0006122062914073467,
+            "min": 6.307351441137143e-08,
+            "n_samples": 15000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-06-FLAME-without-can_lod1_basecolor.png",
+        "textureHash": "3bb19cc1e59d0e6775afa68e84bc6b83b85cea311faf025899165e5c2f06e697"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-06-FLAME-without-can_lod2.glb",
+      "hash": "ac55a5cc6a4ca8c0cacf91639a6b24b22d61c7e548fff86fa05af0f876b3a9f3",
+      "triangles": 1000,
+      "topology": {
+        "v": 500,
+        "f": 1000,
+        "edges": 1500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.13345746694417154,
+        0.36990236225214385,
+        0.6712304693651598
+      ],
+      "surfaceRatio": 0.9652555510187606,
+      "boundsDrift": 0.017168334687236553,
+      "silhouetteIoU": [
+        0.9619993532591121,
+        0.9755316850931799,
+        0.9637954658171028
+      ],
+      "parserRecenterMeters": [
+        -0.0005327443370351584,
+        5.5789846746609614e-05,
+        0.06413527869347133
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 5000,
+          "meanAbsoluteRgbError": 3.2282882048290973,
+          "p95AbsoluteRgbError": 15.154774270548952,
+          "fractionErrorAbove40": 0.005,
+          "surfaceDistance": {
+            "RMS": 0.002282572677358985,
+            "diag_mesh_0": 1.0753766298294067,
+            "diag_mesh_1": 1.082242426222055,
+            "max": 0.010028266347944736,
+            "mean": 0.0017269584350287914,
+            "min": 8.945662557380274e-07,
+            "n_samples": 5000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-06-FLAME-without-can_lod2_basecolor.png",
+        "textureHash": "212753fb840c89c6c91a57b7d7b7c331dd8a051dd522eb08b0589e3a09051a93"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_5b06e4f3a356",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-06-FLAME",
+    "variant": "game_ready",
+    "level": 1,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+    "sourceHash": "80513dc9eb45309465b3675e05b2ba5ce8546c0ea4aebc3eb0acd6a1189a36b3",
+    "report": "assets/art/models/WPN-06-FLAME/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      -0.0006186855474878544,
+      -0.00020809240030689137,
+      -0.00009297469998403862
+    ],
+    "file": "WPN-06-FLAME_lod1.glb"
+  },
+  "sourceHash": "sha256:bda73417f419f587ed728c210e5e6956059a4b45916fb4be14c87188e22407a6",
+  "updatedAt": "2026-10-12T01:16:08.625Z"
+}

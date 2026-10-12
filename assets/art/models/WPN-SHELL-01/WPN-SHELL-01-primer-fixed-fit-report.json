@@ -1,0 +1,342 @@
+{
+  "id": "WPN-SHELL-01-primer-fixed",
+  "owner": "WPN-SHELL-01",
+  "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+  "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+  "recipe": {
+    "owner": "WPN-SHELL-01",
+    "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+    "planes": [
+      [
+        0,
+        0.174,
+        1
+      ]
+    ],
+    "rotation": [
+      0,
+      0,
+      -90
+    ],
+    "scale": [
+      0.066075,
+      0.066075,
+      0.066075
+    ],
+    "targets": [
+      400,
+      200,
+      80
+    ],
+    "reason": "只截原底火端X>.174（约源长2.1%）并封局部端孔，红壳/黄铜rim保留；橙色cap UV取原黄铜有效texel，不重造整个弹壳",
+    "shell": true
+  },
+  "pipelineHash": "ac6aa362d94ff8e5100c594af09bb8ea88460ab81e191817c1125952283898ef",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "tools/art/weapon-region-cut.py": "2d00fc03cff114c1fa517d4d7e3c69cfb63b447f27a1bc3141a63a4025cd3e1d",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "repair": {
+    "planesSource": [
+      [
+        0,
+        0.174,
+        1
+      ]
+    ],
+    "afterPartition": {
+      "v": 20999,
+      "f": 41163,
+      "edges": 62236,
+      "boundary": 1011,
+      "nonmanifold": 22
+    },
+    "cleanupRemovedFaces": 3018,
+    "capFaces": 882,
+    "generatedCapBounds": [
+      [
+        0.034654,
+        0.000121,
+        -0.303945
+      ],
+      [
+        0.174,
+        0.585227,
+        0.275792
+      ]
+    ],
+    "afterCap": {
+      "v": 19430,
+      "f": 39030,
+      "edges": 58545,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "removedRegionBounds": [
+      [
+        0.174,
+        0.00012051866085073416,
+        -0.30394499232099664
+      ],
+      [
+        0.19651900231838226,
+        0.5852268400520424,
+        0.27579155883168416
+      ]
+    ],
+    "capUv": "原黄铜有效texel"
+  },
+  "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
+  "scaleXYZ": [
+    0.066075,
+    0.066075,
+    0.066075
+  ],
+  "origin": [
+    0.019341209699999997,
+    -0.011497049999999998,
+    -0.000930137775000001
+  ],
+  "sourceDimensions": [
+    1.059383973479271,
+    0.5854320702387419,
+    0.580538080892134
+  ],
+  "dimensionsM": [
+    0.038682419399999994,
+    0.068510854875,
+    0.038359048349999994
+  ],
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "fit": "pending-headed-slot",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-SHELL-01-primer-fixed_lod0.glb",
+      "hash": "3155d683657a7437d26d2edc6454cbca868dc96d4bd7d07247b3988a811d04c1",
+      "triangles": 340,
+      "topology": {
+        "v": 172,
+        "f": 340,
+        "edges": 510,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 664,
+        "geometryTarget": 340,
+        "removedFaces": 0,
+        "addedCapFaces": 0,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.038210574344654,
+        0.06896578513385841,
+        0.03867564365002628
+      ],
+      "surfaceRatio": 0.9405036483833983,
+      "boundsDrift": 0.012197919950839409,
+      "silhouetteIoU": [
+        0.990206206449522,
+        0.9888026337180946,
+        0.9701063415056744
+      ],
+      "parserRecenterMeters": [
+        7.12466495762041e-05,
+        -1.1015779695909902e-05,
+        0.00023683767297307673
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 1700,
+          "meanAbsoluteRgbError": 1.7524404680547596,
+          "p95AbsoluteRgbError": 8.62648651383781,
+          "fractionErrorAbove40": 0.002352941176470588,
+          "surfaceDistance": {
+            "RMS": 0.0050733392126858234,
+            "diag_mesh_0": 1.3110402822494507,
+            "diag_mesh_1": 1.3247052594041437,
+            "max": 0.02350183017551899,
+            "mean": 0.003636198351159692,
+            "min": 4.105278605948115e-07,
+            "n_samples": 1700
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01-primer-fixed_lod0_basecolor.png",
+        "textureHash": "ec72d9e90833f3cc25ad74c2a919dd48e41aa363b94ff011557a794b6b55651e"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-SHELL-01-primer-fixed_lod1.glb",
+      "hash": "7d72a528bf5051a7e834f75cd05a0d1564c945769454ff08d28065adeed603b9",
+      "triangles": 170,
+      "topology": {
+        "v": 87,
+        "f": 170,
+        "edges": 255,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 664,
+        "geometryTarget": 170,
+        "removedFaces": 0,
+        "addedCapFaces": 0,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.037024295400719644,
+        0.06915142490919841,
+        0.04030057953037975
+      ],
+      "surfaceRatio": 0.9163265941716376,
+      "boundsDrift": 0.050614685814533766,
+      "silhouetteIoU": [
+        0.9778635389078068,
+        0.9757263811902296,
+        0.915470417070805
+      ],
+      "parserRecenterMeters": [
+        -0.00013185765978040997,
+        -1.1015779695909902e-05,
+        -0.0006437075226090848
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 850,
+          "meanAbsoluteRgbError": 1.196170559762342,
+          "p95AbsoluteRgbError": 4.617526791322105,
+          "fractionErrorAbove40": 0.0035294117647058825,
+          "surfaceDistance": {
+            "RMS": 0.008645030669867992,
+            "diag_mesh_0": 1.2925121784210205,
+            "diag_mesh_1": 1.3247052594041437,
+            "max": 0.02853737212717533,
+            "mean": 0.006823005620390177,
+            "min": 2.8086608381272526e-06,
+            "n_samples": 850
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01-primer-fixed_lod1_basecolor.png",
+        "textureHash": "9d2e48e4f39a8a9980c953201b1008aec723acfabe4e579c963112d5f492975b"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-SHELL-01-primer-fixed_lod2.glb",
+      "hash": "d6577ee905d87c02809a27b675e84ee7be633735ec21e1c08c84f1dc47dcb59d",
+      "triangles": 68,
+      "topology": {
+        "v": 36,
+        "f": 68,
+        "edges": 102,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 664,
+        "geometryTarget": 68,
+        "removedFaces": 0,
+        "addedCapFaces": 0,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.03744699401952069,
+        0.06966261725751272,
+        0.03942620954643588
+      ],
+      "surfaceRatio": 0.857723586343855,
+      "boundsDrift": 0.03193764505017771,
+      "silhouetteIoU": [
+        0.9579771222155328,
+        0.939360607100329,
+        0.8491921589025064
+      ],
+      "parserRecenterMeters": [
+        7.949164962011215e-05,
+        -0.0004928585575005948,
+        -0.0010808925145810201
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.010651588439941406,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 340,
+          "meanAbsoluteRgbError": 0.9201995644910224,
+          "p95AbsoluteRgbError": 3.280380977046047,
+          "fractionErrorAbove40": 0.0029411764705882353,
+          "surfaceDistance": {
+            "RMS": 0.017918670549988747,
+            "diag_mesh_0": 1.2699480056762695,
+            "diag_mesh_1": 1.3247052594041437,
+            "max": 0.06450314074754715,
+            "mean": 0.014266124926507473,
+            "min": 0.0002285937371198088,
+            "n_samples": 340
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-SHELL-01-primer-fixed_lod2_basecolor.png",
+        "textureHash": "dcb0939c733cd147969927301a943248956323985b240d1b5ac54323003118a4"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    }
+  ]
+}

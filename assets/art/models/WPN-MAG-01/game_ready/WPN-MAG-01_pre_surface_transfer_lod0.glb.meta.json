@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_2c69c9e0f32d",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-01",
+    "triangles": 400,
+    "algorithm": "texture-QEM-wedge-UV",
+    "baselineHead": "ddfb08f0fea9a8e8ce574a78eb03bc496915db2e",
+    "calibrationSpace": "parseGlb final import-space",
+    "purpose": "源表面转移前对照，不挂正式玩法",
+    "variant": "game_ready",
+    "file": "WPN-MAG-01_pre_surface_transfer_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:0d1537dda30aae619e3b2aff60e6ff9dca7e703ac4eeb48a0b1b4d1ddb55644b",
+  "updatedAt": "2026-10-11T16:02:14.330Z"
+}

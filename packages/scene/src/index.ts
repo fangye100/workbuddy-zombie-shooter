@@ -37,3 +37,4 @@ export * from './retarget-meta';
 export * from './shared-motion';
 export * from './weapons';
 export * from './audio';
+export * from './model-attachments';

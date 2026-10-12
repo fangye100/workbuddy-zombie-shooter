@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_f9a5d2b35e71",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-FUEL-01",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261011/delivery.json",
+    "sourceUnits": "未标定的生成模型单位",
+    "axisContract": "保留 GLB 节点变换后的 Y-up；尚未标定 +X 武器轴",
+    "inspectionScene": "assets/scenes/sandbox/weapon-source-review.scene.json",
+    "sourceTriangles": 30000
+  },
+  "sourceHash": "sha256:db4bb2b638b9f2f0c371fe16dc927e03fed76a415e1a38520199407c199c9e9f",
+  "updatedAt": "2026-10-11T13:48:52.490Z"
+}

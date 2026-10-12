@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_851dd8a0955d",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-03-SMG",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261012/delivery.json",
+    "sourceUnits": "未标定生成单位；displayScale不是米制",
+    "axisContract": "保留节点变换后的Y-up；长轴符号/握区/分件待目检",
+    "inspectionScene": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+    "sourceTriangles": 100000
+  },
+  "sourceHash": "sha256:b6f63673734b298d8ddfe8d09a06abab782c7ca2eafb8a650d5842bb7f00bcc9",
+  "updatedAt": "2026-10-12T00:33:12.492Z"
+}

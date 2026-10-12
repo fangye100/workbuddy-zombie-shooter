@@ -1,0 +1,80 @@
+{
+  "batch": "WPN-20261012",
+  "date": "2026-10-12",
+  "source": "docs/31-美漫画风资产需求与生成提示词.md §5（WPN-02..06 本体，此前从未生成）；docs/38 补充条款",
+  "author": "WorkBuddy Agent (墨)",
+  "tool": "Hunyuan 3D 图生3D（WorkBuddy 内置链路 buddy-multimodal-generation，image-to-3D，model 3.1，enable-pbr，face-count 100000）",
+  "pipeline": "ImageGen 美漫参考图（docs/31 共用 prompt + 各武器规格）→ 裁水印缩 1024 → 图生3D → 本地下载 GLB+预览",
+  "license": "AI 生成内容，项目内部使用；无文字/商标/水印（参考图底部水印已裁除）",
+  "status": "源资产到货，未接入运行时（不等于运行时验收完成）",
+  "items": [
+    {
+      "id": "WPN-02-SHOTGUN",
+      "priority": "P1",
+      "targetId": "WPN-02",
+      "brief": "泵动霰弹枪：长粗枪管+大号前护木，深色金属、褪色木托、橙红绑带",
+      "jobId": "1501010726684082176",
+      "files": ["WPN-02-SHOTGUN.glb", "WPN-02-SHOTGUN_preview.png", "front.png"],
+      "glbBytes": 36620204,
+      "targetDimsM": { "lengthZ": 0.98, "widthX": 0.09, "heightY": 0.22 },
+      "lodTarget": { "LOD0": 5000, "LOD1": 2500, "LOD2": 800 },
+      "note": "泵动护木需独立命名；泵动槽用贴图表达"
+    },
+    {
+      "id": "WPN-03-SMG",
+      "priority": "P1",
+      "targetId": "WPN-03",
+      "brief": "紧凑冲锋枪：短机匣、粗弹匣、简单折叠枪托，灰蓝金属+褪黄侧板",
+      "jobId": "1501010851183673344",
+      "files": ["WPN-03-SMG.glb", "WPN-03-SMG_preview.png", "front.png"],
+      "glbBytes": 41812756,
+      "targetDimsM": { "lengthZ": 0.58, "widthX": 0.085, "heightY": 0.25 },
+      "lodTarget": { "LOD0": 5000, "LOD1": 2500, "LOD2": 800 },
+      "note": "弹匣可分件；与 WPN-MAG-02-SMG 弹匣源件同批使用"
+    },
+    {
+      "id": "WPN-04-SNIPER",
+      "priority": "P2",
+      "targetId": "WPN-04",
+      "brief": "长管狙击步枪：细长枪管、单个大轮廓瞄准镜、骨架枪托，酒红布带",
+      "jobId": "1501012224277225472",
+      "files": ["WPN-04-SNIPER.glb", "WPN-04-SNIPER_preview.png", "front.png"],
+      "glbBytes": 30831336,
+      "targetDimsM": { "lengthZ": 1.18, "widthX": 0.10, "heightY": 0.24 },
+      "lodTarget": { "LOD0": 6000, "LOD1": 3000, "LOD2": 1000 },
+      "note": "镜片不透明；无双脚架"
+    },
+    {
+      "id": "WPN-05-CHAINSAW",
+      "priority": "P2",
+      "targetId": "WPN-05",
+      "brief": "重型电锯：锈红机壳、灰黄面板、深黑握把、短粗导板、漫画夸张锯齿",
+      "jobId": "1501011566899765248",
+      "files": ["WPN-05-CHAINSAW.glb", "WPN-05-CHAINSAW_preview.png", "front.png"],
+      "glbBytes": 41529544,
+      "targetDimsM": { "lengthZ": 0.86, "widthX": 0.27, "heightY": 0.32 },
+      "lodTarget": { "LOD0": 6000, "LOD1": 3000, "LOD2": 1000 },
+      "note": "锯链为连续环带；减面时注意别把锯齿轮廓砍碎"
+    },
+    {
+      "id": "WPN-06-FLAME",
+      "priority": "P2",
+      "targetId": "WPN-06",
+      "brief": "火焰喷射器：工业喷嘴、短厚主管、双握把、紧凑锈红燃料罐、软管",
+      "jobId": "1501011448058077184",
+      "files": ["WPN-06-FLAME.glb", "WPN-06-FLAME_preview.png", "front.png"],
+      "glbBytes": 44227848,
+      "targetDimsM": { "lengthZ": 0.80, "widthX": 0.22, "heightY": 0.30 },
+      "lodTarget": { "LOD0": 6000, "LOD1": 3000, "LOD2": 1000 },
+      "note": "与 WPN-FUEL-01 燃料罐源件同批使用；软管为有厚度简化曲管"
+    }
+  ],
+  "missing": [
+    "全部源 GLB 未做米制归一化（docs/31 约定 Y-up、枪口朝 +Z、主握把掌心为根原点）",
+    "全部 LOD 未生成（本地管线：焊点 + quadric_edge_collapse_with_texture preserveboundary=False，按表中三档面数）",
+    "BaseColor 未单独导出 1024²（贴图目前烘焙在 GLB 内）",
+    "grip_r / grip_l / muzzle / eject 挂点未标（docs/31：由接入时建立）",
+    "WPN-MAG-ALL 中狙击弹匣、发射器弹丸仍未生成（可由 WPN-03-SMG 弹匣 / WPN-SHELL-01 派生）"
+  ],
+  "quota": "2026-10-12 当日 3D 额度 5/5 用满；额度按 UTC 日重置（本地 08:00），429 报 daily submit limit exceeded"
+}

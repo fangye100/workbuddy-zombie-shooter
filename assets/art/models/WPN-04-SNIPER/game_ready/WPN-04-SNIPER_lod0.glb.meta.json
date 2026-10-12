@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_6a1a6e91ec15",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-04-SNIPER",
+    "variant": "game_ready",
+    "level": 0,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+    "sourceHash": "84750b54771f45872af7fb0698c3b80dfc78064c4a234b4f0c1a85f50e577e6b",
+    "report": "assets/art/models/WPN-04-SNIPER/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      0.00008283352950849004,
+      0.000261398267726467,
+      -0.000003287417283559524
+    ],
+    "file": "WPN-04-SNIPER_lod0.glb"
+  },
+  "sourceHash": "sha256:3d4f041fce97c0cff74be6678ccf04d8f6584c817fa1dedd24399413bc94f678",
+  "updatedAt": "2026-10-12T01:16:08.385Z",
+  "modelSockets": {
+    "primaryGrip": {
+      "position": [
+        0.0003404368510868097,
+        0.10551981614415631,
+        -0.21987557731296228
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "supportGrip": {
+      "position": [
+        0.00034043685108687925,
+        0.2057659302942307,
+        0.20115810211735027
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "muzzle": {
+      "position": [
+        0.00034043685108693493,
+        0.23583976453925304,
+        0.5069087502750773
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "magazine": {
+      "position": [
+        0.00034043685108683757,
+        0.1756920960492084,
+        0.005678179524705141
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "chamber": {
+      "position": [
+        0.035426576803612865,
+        0.23583976453925304,
+        -0.08955562891786555
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    }
+  }
+}

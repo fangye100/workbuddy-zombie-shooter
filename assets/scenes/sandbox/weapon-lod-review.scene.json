@@ -1,0 +1,4126 @@
+{
+  "schemaVersion": 16,
+  "id": "sc_weapon_lod_review",
+  "name": "WPN-20261011 · Reference / LOD 三向对照（候选未验收）",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#a4afbf",
+      "intensity": 0.45
+    },
+    "hemisphere": {
+      "sky": "#dbe5f1",
+      "skyIntensity": 0.4,
+      "ground": "#9298a2",
+      "groundIntensity": 0.2
+    },
+    "fog": {
+      "color": "#0e1013",
+      "density": 0,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#ffffff",
+      "intensity": 0.1,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null,
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.48,
+      "outlineWidth": 0.5,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0,
+      "halftoneSize": 5,
+      "vignette": 0
+    }
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      4,
+      0
+    ],
+    "distance": 22,
+    "yaw": 0,
+    "elevation": 0
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": null,
+  "loseCondition": "player-death",
+  "dependencies": [
+    "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+    "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+    "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod1.glb",
+    "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod2.glb",
+    "assets/_delivery/WPN-20261011/WPN-MAG-01/WPN-MAG-01.glb",
+    "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+    "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod1.glb",
+    "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod2.glb",
+    "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod0.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod1.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod2.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_repaired_reference.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod0.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod1.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod2.glb",
+    "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod0.glb",
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod1.glb",
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod2.glb"
+  ],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "mode": "fixed",
+          "fovDeg": 35,
+          "near": 0.001,
+          "far": 100,
+          "followTarget": null,
+          "pitchDeg": 0,
+          "distance": 22,
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_0_0",
+      "name": "WPN-07-LAUNCHER · Raw规范化参考 · 侧 +Z · 99846 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -9.075,
+          7.2,
+          -3.530257966233602e-17
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.1305862016889867,
+          1.1305862016889867,
+          1.1305862016889867
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+              "guid": "as_48a46d0e37dc"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_0_1",
+      "name": "WPN-07-LAUNCHER · Raw规范化参考 · 端 +X · 99846 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -7.425,
+          7.2,
+          -3.922508851370677e-18
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.1305862016889867,
+          1.1305862016889867,
+          1.1305862016889867
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+              "guid": "as_48a46d0e37dc"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_0_2",
+      "name": "WPN-07-LAUNCHER · Raw规范化参考 · 俯 +Y / 插入端 · 99846 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          7.2,
+          -5.706459094480698e-33
+        ],
+        "rotation": [
+          0.5,
+          0.5,
+          0.4999999999999999,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.1305862016889867,
+          1.1305862016889867,
+          1.1305862016889867
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+              "guid": "as_48a46d0e37dc"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_1_0",
+      "name": "WPN-07-LAUNCHER · LOD0 · 侧 +Z · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -4.124798365213253,
+          7.202016142200403,
+          -6.513049205144246e-05
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+              "guid": "as_f2f39beb7444"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_1_1",
+      "name": "WPN-07-LAUNCHER · LOD0 · 端 +X · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -2.474934869507948,
+          7.202016142200403,
+          0.00020163478674711997
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+              "guid": "as_f2f39beb7444"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_1_2",
+      "name": "WPN-07-LAUNCHER · LOD0 · 俯 +Y / 插入端 · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -0.8247983652132528,
+          7.200065130492051,
+          0.002016142200402639
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+              "guid": "as_f2f39beb7444"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_2_0",
+      "name": "WPN-07-LAUNCHER · LOD1 · 侧 +Z · 1500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          0.8245482188683969,
+          7.202016142200403,
+          -0.0036866231649010264
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod1.glb",
+              "guid": "as_566e65cbe12a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_2_1",
+      "name": "WPN-07-LAUNCHER · LOD1 · 端 +X · 1500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          2.4786866231649007,
+          7.202016142200403,
+          -0.00045178113160310044
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod1.glb",
+              "guid": "as_566e65cbe12a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_2_2",
+      "name": "WPN-07-LAUNCHER · LOD1 · 俯 +Y / 插入端 · 1500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          4.124548218868397,
+          7.203686623164901,
+          0.0020161422004026383
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod1.glb",
+              "guid": "as_566e65cbe12a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_3_0",
+      "name": "WPN-07-LAUNCHER · LOD2 · 侧 +Z · 494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          5.776396983861923,
+          7.194289918578471,
+          0.0012424464027086892
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod2.glb",
+              "guid": "as_80afb2427766"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_3_1",
+      "name": "WPN-07-LAUNCHER · LOD2 · 端 +X · 494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          7.423757553597291,
+          7.194289918578471,
+          0.0013969838619232178
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod2.glb",
+              "guid": "as_80afb2427766"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_0_3_2",
+      "name": "WPN-07-LAUNCHER · LOD2 · 俯 +Y / 插入端 · 494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          9.076396983861923,
+          7.198757553597291,
+          -0.0057100814215287
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.8518518518518516,
+          1.8518518518518516,
+          1.8518518518518516
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod2.glb",
+              "guid": "as_80afb2427766"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_0_0",
+      "name": "WPN-MAG-01 · Raw规范化参考 · 侧 +Z · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -9.075,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.1246041611416582,
+          1.1246041611416582,
+          1.1246041611416582
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-01/WPN-MAG-01.glb",
+              "guid": "as_00cf84f7edee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_0_1",
+      "name": "WPN-MAG-01 · Raw规范化参考 · 端 +X · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -7.425,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.1246041611416582,
+          1.1246041611416582,
+          1.1246041611416582
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-01/WPN-MAG-01.glb",
+              "guid": "as_00cf84f7edee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_0_2",
+      "name": "WPN-MAG-01 · Raw规范化参考 · 俯 +Y / 插入端 · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.1246041611416582,
+          1.1246041611416582,
+          1.1246041611416582
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-01/WPN-MAG-01.glb",
+              "guid": "as_00cf84f7edee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_1_0",
+      "name": "WPN-MAG-01 · LOD0 · 侧 +Z · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -4.12374971464614,
+          5.401382743121055,
+          -0.0018262527059016093
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+              "guid": "as_30abf3e8f08f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_1_1",
+      "name": "WPN-MAG-01 · LOD0 · 端 +X · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -2.4731737472940982,
+          5.401382743121055,
+          0.0012502853538600644
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+              "guid": "as_30abf3e8f08f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_1_2",
+      "name": "WPN-MAG-01 · LOD0 · 俯 +Y / 插入端 · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -0.8237497146461399,
+          5.401826252705902,
+          0.0013827431210550703
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+              "guid": "as_30abf3e8f08f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_2_0",
+      "name": "WPN-MAG-01 · LOD1 · 侧 +Z · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          0.8275763138002875,
+          5.395614628145221,
+          -0.003524037029358859
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod1.glb",
+              "guid": "as_99174b30029a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_2_1",
+      "name": "WPN-MAG-01 · LOD1 · 端 +X · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          2.4785240370293584,
+          5.395614628145221,
+          0.002576313800287591
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod1.glb",
+              "guid": "as_99174b30029a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_2_2",
+      "name": "WPN-MAG-01 · LOD1 · 俯 +Y / 插入端 · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          4.1275763138002874,
+          5.403524037029359,
+          -0.004385371854778762
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod1.glb",
+              "guid": "as_99174b30029a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_3_0",
+      "name": "WPN-MAG-01 · LOD2 · 侧 +Z · 80 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          5.77866088797003,
+          5.396707098406215,
+          -0.006597505721424398
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod2.glb",
+              "guid": "as_f3dafcb14806"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_3_1",
+      "name": "WPN-MAG-01 · LOD2 · 端 +X · 80 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          7.431597505721424,
+          5.396707098406215,
+          0.003660887970030844
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod2.glb",
+              "guid": "as_f3dafcb14806"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_1_3_2",
+      "name": "WPN-MAG-01 · LOD2 · 俯 +Y / 插入端 · 80 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          9.078660887970031,
+          5.406597505721424,
+          -0.0032929015937858547
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod2.glb",
+              "guid": "as_f3dafcb14806"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_0_0",
+      "name": "WPN-MAG-02-SMG · Raw规范化参考 · 侧 +Z · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -9.216990650632203,
+          4.225,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.7071067811865475,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.078345673334614,
+          1.078345673334614,
+          1.078345673334614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+              "guid": "as_29e392245c11"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_0_1",
+      "name": "WPN-MAG-02-SMG · Raw规范化参考 · 端 +X · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -7.425,
+          4.225,
+          -0.14199065063220473
+        ],
+        "rotation": [
+          0.4999999999999999,
+          -0.5,
+          -0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.078345673334614,
+          1.078345673334614,
+          1.078345673334614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+              "guid": "as_29e392245c11"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_0_2",
+      "name": "WPN-MAG-02-SMG · Raw规范化参考 · 俯 +Y / 插入端 · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -5.916990650632204,
+          3.6,
+          0.6249999999999999
+        ],
+        "rotation": [
+          0.5,
+          0.4999999999999999,
+          -0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.078345673334614,
+          1.078345673334614,
+          1.078345673334614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+              "guid": "as_29e392245c11"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_1_0",
+      "name": "WPN-MAG-02-SMG · LOD0 · 侧 +Z · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -4.126066951055562,
+          3.5994189874151137,
+          -0.0004700079920069222
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod0.glb",
+              "guid": "as_599a68e3eb2d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_1_1",
+      "name": "WPN-MAG-02-SMG · LOD0 · 端 +X · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -2.4745299920079926,
+          3.5994189874151137,
+          -0.0010669510555622996
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod0.glb",
+              "guid": "as_599a68e3eb2d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_1_2",
+      "name": "WPN-MAG-02-SMG · LOD0 · 俯 +Y / 插入端 · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -0.8260669510555623,
+          3.600470007992007,
+          -0.0005810125848863555
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod0.glb",
+              "guid": "as_599a68e3eb2d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_2_0",
+      "name": "WPN-MAG-02-SMG · LOD1 · 侧 +Z · 187 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          0.8275285961000928,
+          3.600178120633861,
+          -0.0017906302523550543
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod1.glb",
+              "guid": "as_4916d541e5c0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_2_1",
+      "name": "WPN-MAG-02-SMG · LOD1 · 端 +X · 187 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          2.4767906302523546,
+          3.600178120633861,
+          0.0025285961000928716
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod1.glb",
+              "guid": "as_4916d541e5c0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_2_2",
+      "name": "WPN-MAG-02-SMG · LOD1 · 俯 +Y / 插入端 · 187 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          4.127528596100093,
+          3.601790630252355,
+          0.0001781206338606137
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod1.glb",
+              "guid": "as_4916d541e5c0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_3_0",
+      "name": "WPN-MAG-02-SMG · LOD2 · 侧 +Z · 77 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          5.77133572739043,
+          3.602163027065376,
+          -0.0032726429498582737
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod2.glb",
+              "guid": "as_124f163dc27c"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_3_1",
+      "name": "WPN-MAG-02-SMG · LOD2 · 端 +X · 77 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          7.4282726429498585,
+          3.602163027065376,
+          -0.0036642726095696067
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod2.glb",
+              "guid": "as_124f163dc27c"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_2_3_2",
+      "name": "WPN-MAG-02-SMG · LOD2 · 俯 +Y / 插入端 · 77 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          9.07133572739043,
+          3.6032726429498583,
+          0.0021630270653762345
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          11.363636363636363,
+          11.363636363636363,
+          11.363636363636363
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG_lod2.glb",
+              "guid": "as_124f163dc27c"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_0_0",
+      "name": "WPN-SHELL-01 · 局部修复参考 · 侧 +Z · 38680 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -9.075000044932844,
+          1.8013982209803618,
+          -5.23534520856933e-08
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_repaired_reference.glb",
+              "guid": "as_ff6d3c53fdb9"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_0_1",
+      "name": "WPN-SHELL-01 · 局部修复参考 · 端 +X · 38680 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -7.424999947646548,
+          1.8013982209803618,
+          -4.493284532889568e-08
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_repaired_reference.glb",
+              "guid": "as_ff6d3c53fdb9"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_0_2",
+      "name": "WPN-SHELL-01 · 局部修复参考 · 底火 -Y · 38680 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -5.7750000449328445,
+          1.799999947646548,
+          -0.0013982209803618836
+        ],
+        "rotation": [
+          -0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_repaired_reference.glb",
+              "guid": "as_ff6d3c53fdb9"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_1_0",
+      "name": "WPN-SHELL-01 · LOD0 · 侧 +Z · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -4.123799634316749,
+          1.80285790192916,
+          -0.003125623942811383
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod0.glb",
+              "guid": "as_f284caa22683"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_1_1",
+      "name": "WPN-SHELL-01 · LOD0 · 端 +X · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -2.471874376057188,
+          1.80285790192916,
+          0.001200365683250884
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod0.glb",
+              "guid": "as_f284caa22683"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_1_2",
+      "name": "WPN-SHELL-01 · LOD0 · 底火 -Y · 400 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -0.8237996343167491,
+          1.7968743760571886,
+          -0.0028579019291598623
+        ],
+        "rotation": [
+          -0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod0.glb",
+              "guid": "as_f284caa22683"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_2_0",
+      "name": "WPN-SHELL-01 · LOD1 · 侧 +Z · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          0.8205445648522908,
+          1.8156531609693973,
+          0.003582300216026662
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod1.glb",
+              "guid": "as_e93b2f288972"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_2_1",
+      "name": "WPN-SHELL-01 · LOD1 · 端 +X · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          2.471417699783973,
+          1.8156531609693973,
+          -0.0044554351477091875
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod1.glb",
+              "guid": "as_e93b2f288972"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_2_2",
+      "name": "WPN-SHELL-01 · LOD1 · 底火 -Y · 200 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          4.120544564852291,
+          1.8035823002160267,
+          -0.015653160969397277
+        ],
+        "rotation": [
+          -0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod1.glb",
+              "guid": "as_e93b2f288972"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_3_0",
+      "name": "WPN-SHELL-01 · LOD2 · 侧 +Z · 78 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          5.7565871522886365,
+          1.8442165876116563,
+          0.007467196042050054
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod2.glb",
+              "guid": "as_3df385e57ed3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_3_1",
+      "name": "WPN-SHELL-01 · LOD2 · 端 +X · 78 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          7.41753280395795,
+          1.8442165876116563,
+          -0.018412847711363173
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod2.glb",
+              "guid": "as_3df385e57ed3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_3_3_2",
+      "name": "WPN-SHELL-01 · LOD2 · 底火 -Y · 78 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          9.056587152288635,
+          1.80746719604205,
+          -0.044216587611656206
+        ],
+        "rotation": [
+          -0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          17.857142857142854,
+          17.857142857142854,
+          17.857142857142854
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01_lod2.glb",
+              "guid": "as_3df385e57ed3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_0_0",
+      "name": "WPN-FUEL-01 · Raw规范化参考 · 侧 +Z · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -8.647090887672169,
+          0.625,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2340706385679088,
+          1.2340706385679088,
+          1.2340706385679088
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+              "guid": "as_f9a5d2b35e71"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_0_1",
+      "name": "WPN-FUEL-01 · Raw规范化参考 · 端 +X · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -7.425,
+          0.625,
+          0.42790911232783085
+        ],
+        "rotation": [
+          -0.4999999999999999,
+          -0.5,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.2340706385679088,
+          1.2340706385679088,
+          1.2340706385679088
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+              "guid": "as_f9a5d2b35e71"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_0_2",
+      "name": "WPN-FUEL-01 · Raw规范化参考 · 俯 +Y / 插入端 · 30000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -5.347090887672168,
+          1.2769944127544615e-16,
+          0.625
+        ],
+        "rotation": [
+          0.5,
+          -0.4999999999999999,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.2340706385679088,
+          1.2340706385679088,
+          1.2340706385679088
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+              "guid": "as_f9a5d2b35e71"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_1_0",
+      "name": "WPN-FUEL-01 · LOD0 · 侧 +Z · 796 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -4.124209869466829,
+          7.344920352880769e-05,
+          0.001163867585226808
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod0.glb",
+              "guid": "as_c5a0126f7491"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_1_1",
+      "name": "WPN-FUEL-01 · LOD0 · 端 +X · 796 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -2.4761638675852264,
+          7.344920352880769e-05,
+          0.0007901305331713799
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod0.glb",
+              "guid": "as_c5a0126f7491"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_1_2",
+      "name": "WPN-FUEL-01 · LOD0 · 俯 +Y / 插入端 · 796 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          -0.8242098694668286,
+          -0.001163867585226808,
+          7.344920352880803e-05
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod0.glb",
+              "guid": "as_c5a0126f7491"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_2_0",
+      "name": "WPN-FUEL-01 · LOD1 · 侧 +Z · 391 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          0.8309560751810622,
+          -0.00101064467018064,
+          0.003800837675328304
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod1.glb",
+              "guid": "as_926613430437"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_2_1",
+      "name": "WPN-FUEL-01 · LOD1 · 端 +X · 391 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          2.4711991623246714,
+          -0.00101064467018064,
+          0.005956075181062177
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod1.glb",
+              "guid": "as_926613430437"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_2_2",
+      "name": "WPN-FUEL-01 · LOD1 · 俯 +Y / 插入端 · 391 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          4.130956075181063,
+          -0.0038008376753283055,
+          -0.0010106446701806395
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod1.glb",
+              "guid": "as_926613430437"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_3_0",
+      "name": "WPN-FUEL-01 · LOD2 · 侧 +Z · 145 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          5.7979453101986405,
+          -0.00101064467018064,
+          -0.00047117607439256423
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod2.glb",
+              "guid": "as_a89d8adf6c8a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_3_1",
+      "name": "WPN-FUEL-01 · LOD2 · 端 +X · 145 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          7.425471176074392,
+          -0.00101064467018064,
+          0.022945310198640653
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod2.glb",
+              "guid": "as_a89d8adf6c8a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_lod_4_3_2",
+      "name": "WPN-FUEL-01 · LOD2 · 俯 +Y / 插入端 · 145 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器LOD候选检视",
+      "transform": {
+        "position": [
+          9.09794531019864,
+          0.00047117607439256407,
+          -0.00101064467018064
+        ],
+        "rotation": [
+          0.7071067811865475,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          4.6008572491481585,
+          4.6008572491481585,
+          4.6008572491481585
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01_lod2.glb",
+              "guid": "as_a89d8adf6c8a"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-11T15:04:59.016Z",
+    "updatedAt": "2026-10-11T15:04:59.016Z",
+    "notes": "每行一件，每组 Reference/LOD0/LOD1/LOD2；每组三槽侧+Z/端+X/俯+Y（Shell底火-Y）。相同展示比例，不按LOD extents再缩放。候选不等于玩法或美术通过。无额外地面网格。"
+  }
+}

@@ -1,0 +1,289 @@
+{
+  "id": "WPN-MAG-02-SNIPER-derived",
+  "owner": "WPN-MAG-02-SMG",
+  "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+  "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+  "recipe": {
+    "owner": "WPN-MAG-02-SMG",
+    "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "planes": [],
+    "rotation": [
+      0,
+      0,
+      -90
+    ],
+    "scale": [
+      0.068,
+      0.114,
+      0.2
+    ],
+    "targets": [
+      400,
+      200,
+      80
+    ],
+    "reason": "缺狙击弹匣；由已交付SMG弹匣局部米制缩放派生短弹匣，非WorkBuddy新生成，待槽口fit"
+  },
+  "pipelineHash": "ac6aa362d94ff8e5100c594af09bb8ea88460ab81e191817c1125952283898ef",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "tools/art/weapon-region-cut.py": "2d00fc03cff114c1fa517d4d7e3c69cfb63b447f27a1bc3141a63a4025cd3e1d",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "repair": {
+    "planesSource": [],
+    "afterPartition": {
+      "v": 14988,
+      "f": 30000,
+      "edges": 45000,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "cleanupRemovedFaces": 0,
+    "capFaces": 0,
+    "generatedCapBounds": null,
+    "afterCap": {
+      "v": 14988,
+      "f": 30000,
+      "edges": 45000,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "removedRegionBounds": null,
+    "capUv": "最近原源三角UV；局部内部封口，非新贴图"
+  },
+  "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
+  "scaleXYZ": [
+    0.068,
+    0.114,
+    0.2
+  ],
+  "origin": [
+    0.015010893000000003,
+    -0.036619564,
+    -0.0004919
+  ],
+  "sourceDimensions": [
+    1.1591830253601074,
+    0.2633490431563026,
+    0.27163701744373026
+  ],
+  "dimensionsM": [
+    0.030021786000000005,
+    0.078824444,
+    0.054327400000000005
+  ],
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "fit": "pending-headed-slot",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-MAG-02-SNIPER-derived_lod0.glb",
+      "hash": "cce02f31ec3680ba4b436d00b2255b6998ed186a9a36226e4ed219e9d5fddb27",
+      "triangles": 400,
+      "topology": {
+        "v": 188,
+        "f": 400,
+        "edges": 600,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.029577090875649192,
+        0.07869649081926311,
+        0.054237975821286796
+      ],
+      "surfaceRatio": 0.9855131660514224,
+      "boundsDrift": 0.01481241403662037,
+      "silhouetteIoU": [
+        0.9858059333946331,
+        0.9878084165933205,
+        0.9754592231808622
+      ],
+      "parserRecenterMeters": [
+        0.0001532445425746331,
+        4.237790421610099e-05,
+        8.867326019242061e-05
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 2000,
+          "meanAbsoluteRgbError": 1.5779558808402858,
+          "p95AbsoluteRgbError": 6.727270689324535,
+          "fractionErrorAbove40": 0.0035,
+          "surfaceDistance": {
+            "RMS": 0.0024990474339574575,
+            "diag_mesh_0": 1.2149556875228882,
+            "diag_mesh_1": 1.2193623674113452,
+            "max": 0.011733070015907288,
+            "mean": 0.0017739530885592103,
+            "min": 1.0649060868672677e-06,
+            "n_samples": 2000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-MAG-02-SNIPER-derived_lod0_basecolor.png",
+        "textureHash": "28aa79626cf4425f19c4e527fd56715f9962080f9d30b45e83ca2244fb994f82"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-MAG-02-SNIPER-derived_lod1.glb",
+      "hash": "eb792db79afdc66bcffda81978c23163cfd994a163e1496dadbb03cc12ea7291",
+      "triangles": 200,
+      "topology": {
+        "v": 88,
+        "f": 200,
+        "edges": 300,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.029464333850878807,
+        0.07870483426788404,
+        0.054203224862700405
+      ],
+      "surfaceRatio": 0.968422997569316,
+      "boundsDrift": 0.018568254037957588,
+      "silhouetteIoU": [
+        0.9700760375963671,
+        0.9763253274054028,
+        0.9608859888545117
+      ],
+      "parserRecenterMeters": [
+        0.00015743111004431088,
+        4.237790421610099e-05,
+        7.129778089922344e-05
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 1000,
+          "meanAbsoluteRgbError": 1.3878343739175338,
+          "p95AbsoluteRgbError": 5.449812674384895,
+          "fractionErrorAbove40": 0.003,
+          "surfaceDistance": {
+            "RMS": 0.0039036821108311415,
+            "diag_mesh_0": 1.2129244804382324,
+            "diag_mesh_1": 1.2193623674113452,
+            "max": 0.021276062354445457,
+            "mean": 0.0029341019690036774,
+            "min": 6.407573437172687e-06,
+            "n_samples": 1000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-MAG-02-SNIPER-derived_lod1_basecolor.png",
+        "textureHash": "c8aa0060a3de130e37a8b00f94dff6702e024d8dd4ee90dab7c2d38f8ac6368d"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-MAG-02-SNIPER-derived_lod2.glb",
+      "hash": "ad66c20d73c7a514d024e448a559c9339a9269be3d3d7211d12857a14ed8983a",
+      "triangles": 80,
+      "topology": {
+        "v": 28,
+        "f": 80,
+        "edges": 120,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.02602802468793023,
+        0.07985391795351195,
+        0.05900549337609538
+      ],
+      "surfaceRatio": 1.0227047374900329,
+      "boundsDrift": 0.13302877157507464,
+      "silhouetteIoU": [
+        0.8184823113023684,
+        0.9501502302260357,
+        0.8330214624554282
+      ],
+      "parserRecenterMeters": [
+        0.0018755856915185993,
+        -0.0014676212484223405,
+        0.0008666258805911445
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.1276092529296875,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 400,
+          "meanAbsoluteRgbError": 1.909046377700261,
+          "p95AbsoluteRgbError": 10.478864518081592,
+          "fractionErrorAbove40": 0.005,
+          "surfaceDistance": {
+            "RMS": 0.015993153676390648,
+            "diag_mesh_0": 1.1773865222930908,
+            "diag_mesh_1": 1.2193623674113452,
+            "max": 0.08815700560808182,
+            "mean": 0.008941770531237125,
+            "min": 1.0965908359139576e-06,
+            "n_samples": 400
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-MAG-02-SNIPER-derived_lod2_basecolor.png",
+        "textureHash": "2c05975e345dcc1dc845ce00f71910b47d9377b3dad65b117869866314b819e0"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    }
+  ]
+}

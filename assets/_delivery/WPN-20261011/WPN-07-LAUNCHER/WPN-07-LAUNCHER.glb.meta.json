@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_48a46d0e37dc",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-07-LAUNCHER",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261011/delivery.json",
+    "sourceUnits": "未标定的生成模型单位",
+    "axisContract": "保留 GLB 节点变换后的 Y-up；尚未标定 +X 武器轴",
+    "inspectionScene": "assets/scenes/sandbox/weapon-source-review.scene.json",
+    "sourceTriangles": 99846
+  },
+  "sourceHash": "sha256:5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+  "updatedAt": "2026-10-11T13:48:51.980Z"
+}

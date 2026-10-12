@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_8e9ab889b0af",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-06-FLAME",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261012/delivery.json",
+    "sourceUnits": "未标定生成单位；displayScale不是米制",
+    "axisContract": "保留节点变换后的Y-up；长轴符号/握区/分件待目检",
+    "inspectionScene": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+    "sourceTriangles": 102494
+  },
+  "sourceHash": "sha256:80513dc9eb45309465b3675e05b2ba5ce8546c0ea4aebc3eb0acd6a1189a36b3",
+  "updatedAt": "2026-10-12T00:33:13.921Z"
+}
