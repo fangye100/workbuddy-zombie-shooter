@@ -1,8 +1,18 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression} from './weapon-assembly.mjs';
+import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('作者sceneId先到时拒绝陈旧Hierarchy或GLB占位；只有真实投影就绪才可Play',()=>{
+ const doc={id:'trial',nodes:[{id:'player',name:'真实玩家',components:[{kind:'MeshRenderer',source:{type:'asset',ref:{path:'h01.glb'}}}]}]},object={nodeId:'player',name:'真实玩家',loadedAssetPath:'h01.glb'},button={disabled:false,getBoundingClientRect:()=>({x:10,y:10,width:50,height:30}),contains:()=>false};
+ let row='Character';const renderer={getDocument:()=>doc,getSceneSource:()=>({url:'trial.json'}),pendingAssetCount:0,state:{objects:[object],frameCounter:6}};
+ const context={window:{__editor:{renderer,playCtl:{state:'stopped',error:null}}},document:{querySelector:s=>s==='#btn-play'?button:{textContent:row},elementFromPoint:()=>button}};
+ const read=()=>runInNewContext(sceneReadinessExpression(doc,'trial.json'),context);
+ assert.equal(read().ok,false);row='真实玩家';object.loadedAssetPath=null;assert.equal(read().ok,false);
+ object.loadedAssetPath='h01.glb';assert.equal(read().ok,true);renderer.pendingAssetCount=1;assert.equal(read().ok,false);
+ renderer.pendingAssetCount=0;button.disabled=true;assert.equal(read().ok,false);
+});
 test('静态模式限制登记场景、唯一NodeId及编辑入口，拒绝混入Play选项',()=>{
  const args=['--expected-head',head,'--static-scene',STATIC_SCENES[1],'--nodes','nd_fit_smg_cut_0'];
  const options=probeOptions(args);assert.equal(new URL(options.url).searchParams.get('scene'),STATIC_SCENES[1]);assert.deepEqual(options.nodeIds,['nd_fit_smg_cut_0']);

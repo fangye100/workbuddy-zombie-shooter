@@ -38,6 +38,11 @@ export function groundRayPoint(ray,height){
  if(!ray||!ray.o?.every(Number.isFinite)||!ray.d?.every(Number.isFinite)||Math.abs(ray.d[1])<1e-6)return null;
  const t=(height-ray.o[1])/ray.d[1];return t>0&&Number.isFinite(t)?[ray.o[0]+ray.d[0]*t,height,ray.o[2]+ray.d[2]*t]:null;
 }
+/** 作者文档先到并不代表 GLB、Hierarchy 和启动按钮已同步。只读真实投影。 */
+export function sceneReadinessExpression(doc,scene){
+ const meshes=doc.nodes.flatMap(n=>{const c=n.components.find(c=>c.kind==='MeshRenderer'&&c.enabled!==false);return c&&n.visible!==false?[{id:n.id,name:n.name,asset:c.source.type==='asset'?c.source.ref.path:null,hierarchy:c.background!==true}]:[];});
+ return `(()=>{const e=window.__editor;if(!e?.playCtl)return {ok:false,reason:'editor missing'};const r=e.renderer,d=r.getDocument(),source=r.getSceneSource()?.url,expected=${JSON.stringify(meshes)},meshes=expected.map(n=>{const i=r.state.objects.findIndex(o=>o.nodeId===n.id&&!o.removed),o=r.state.objects[i],name=document.querySelector('#hierarchy .hier-row[data-index="'+i+'"]:not(.hier-sub) .hier-name')?.textContent;return {...n,index:i,actualName:o?.name,loadedAssetPath:o?.loadedAssetPath??null,hierarchyName:name??null,ok:i>=0&&o.name===n.name&&(!n.asset||o.loadedAssetPath===n.asset)&&(!n.hierarchy||name===n.name)};}),b=document.querySelector('#btn-play'),rect=b?.getBoundingClientRect(),hit=rect?document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2):null,button=!!rect&&rect.width>5&&rect.height>5&&!b.disabled&&(hit===b||b.contains(hit));return {ok:d?.id===${JSON.stringify(doc.id)}&&source===${JSON.stringify(scene)}&&r.pendingAssetCount===0&&meshes.every(n=>n.ok)&&button,sceneId:d?.id,source,pending:r.pendingAssetCount,meshes,button,state:e.playCtl.state,error:e.playCtl.error,frame:r.state.frameCounter};})()`;
+}
 function actorPoint(p,o){
  const [x,y,z,w]=o.quat,v=p.map(n=>n*o.scale),t=[2*(y*v[2]-z*v[1]),2*(z*v[0]-x*v[2]),2*(x*v[1]-y*v[0])];
  return [v[0]+w*t[0]+y*t[2]-z*t[1]+o.pos[0],v[1]+w*t[1]+z*t[0]-x*t[2]+o.pos[1],v[2]+w*t[2]+x*t[1]-y*t[0]+o.pos[2]];
@@ -93,7 +98,10 @@ async function run(options){
   session.cdp.send=(method,params)=>{const timeout=Math.min(10000,deadline-Date.now());if(timeout<=0)return Promise.reject(new Error('探针120s预算用尽'));let timer;return Promise.race([rawSend(method,params),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('CDP命令超时 '+method)),timeout);})]).finally(()=>clearTimeout(timer));};
   input=new ProbeInput(session.cdp,event=>report.actions.push({...event,atMs:Date.now()}));
   const cdp=session.cdp,nav=await cdp.send('Page.navigate',{url:options.url});if(nav.errorText)throw new Error('正常TLS导航失败 '+nav.errorText);
-  const ready=await waitFor(()=>cdp.eval('!!window.__editor?.playCtl && window.__editor.renderer.pendingAssetCount===0'),{timeout:30000,interval:200});if(!ready)throw new Error('编辑器/真实资产未就绪（可能TLS/加载/页面错误）');
+  const expectedDoc=JSON.parse(fs.readFileSync(path.join(options.root,report.scene),'utf8'));
+  const readiness=sceneReadinessExpression(expectedDoc,report.scene);
+  const ready=await waitFor(async()=>{report.authorReadiness=await cdp.eval(readiness);return report.authorReadiness?.ok===true;},{timeout:30000,interval:200});
+  if(!ready)throw new Error('作者场景/真实资产/Hierarchy/Play按钮未同步；见 authorReadiness');
   await cdp.send('Page.bringToFront');
   const gpu=await cdp.eval('(async()=>{const a=await navigator.gpu?.requestAdapter();const i=a?.info??(a?.requestAdapterInfo?await a.requestAdapterInfo():null);return {secure:isSecureContext,vendor:i?.vendor,architecture:i?.architecture,description:i?.description};})()');report.gpu=gpu;
   check('HTTPS secure真实硬件',gpu?.secure&&gpu?.vendor==='nvidia'&&gpu?.architecture==='lovelace',gpu);if(!report.checks.at(-1).ok)throw new Error('未确认本机真实GPU，停止实操');
@@ -115,7 +123,10 @@ async function run(options){
   let activeAimSpec=null;
   const sampleFor=async(label,ms,onSample)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(120);if(typeof activeAimSpec==='number'){canvas=await aimPoint(cdp,activeAimSpec);await input.move(canvas);}const sample=await snap(label);if(onSample)await onSample(sample);}};
   const editor=await snap('editor');const expectedSceneId=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')).id;check('真实场景身份',editor.sceneId===expectedSceneId,editor.sceneId);if(editor.sceneId!==expectedSceneId)throw new Error('加载场景ID不匹配');await capture('01-editor');await click('#btn-play');
-  if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000}))throw new Error('UI Play 未进入运行');
+  if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000})){
+   report.playStartFailure={readiness:await cdp.eval(readiness),sample:await snap('play-start-failed'),ui:await cdp.eval('document.body.innerText.slice(0,3500)')};
+   throw new Error('UI Play 未进入运行；见 playStartFailure');
+  }
   if(!await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150}))throw new Error('真实模型未形成有效本帧draw');
   const baseline=await snap('play-ready');await capture('02-pistol');
   let canvas=await visiblePoint(cdp,'#gpu');

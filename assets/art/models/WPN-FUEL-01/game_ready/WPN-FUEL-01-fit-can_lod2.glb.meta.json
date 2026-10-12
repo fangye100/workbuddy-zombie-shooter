@@ -24,8 +24,8 @@
     "file": "WPN-FUEL-01-fit-can_lod2.glb",
     "status": "visual-review-candidate"
   },
-  "sourceHash": "sha256:f0787969d1fc3d652c62de6e25952f000399fcb5a471d18393ea834877fc2dbd",
-  "updatedAt": "2026-10-12T01:45:24.780Z",
+  "sourceHash": "sha256:f627dbe77dd491bb8378d742acd2e729f2566b0265cef68f53e4afeb049f2cb0",
+  "updatedAt": "2026-10-12T04:42:31.180559+00:00",
   "modelSockets": {
     "insertion": {
       "position": [

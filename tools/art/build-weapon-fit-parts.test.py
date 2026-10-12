@@ -1,5 +1,5 @@
 """区域切割插值、局部封口与实际发布资产硬约束；可视槽口不由数值批准。"""
-import importlib.util,json,unittest
+import importlib.util,json,unittest,hashlib
 from pathlib import Path
 import numpy as np
 spec=importlib.util.spec_from_file_location('fit',Path(__file__).with_name('build-weapon-fit-parts.py'));p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
@@ -23,5 +23,10 @@ class FitPartsTests(unittest.TestCase):
     self.assertEqual(p.p.sha(file),row['hash']);self.assertEqual(len(f),row['triangles']);self.assertLessEqual(len(f),spec['targets'][row['level']])
     points,mapping=np.unique(np.round(v,7),axis=0,return_inverse=True);topo=p.dec._topo(points,mapping[f]);self.assertEqual(topo['nonmanifold'],0,aid);self.assertEqual(topo['boundary'],0,aid)
     self.assertTrue(np.isfinite(v).all() and np.isfinite(uv).all());self.assertLessEqual(max(row['textureSize']),1024)
+    if 'surfacePostprocess' in row:
+     post=row['surfacePostprocess'];self.assertEqual(post['toolHash'],p.p.sha(p.ROOT/post['tool']))
+     self.assertEqual(post['geometryCornerSha256'],hashlib.sha256(v[f].astype('<f4').tobytes()).hexdigest())
+     js,bd=p.dec.read_glb(file);normal=p.dec.read_acc(js,bd,js['meshes'][0]['primitives'][0]['attributes']['NORMAL'])
+     self.assertEqual(post['normalCornerSha256'],hashlib.sha256(normal[f].astype('<f4').tobytes()).hexdigest())
     self.assertEqual(report['status'],'visual-review-candidate')
 if __name__=='__main__':unittest.main()

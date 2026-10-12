@@ -156,3 +156,17 @@ WPN-02～06本体现已交付并有正式候选装配；不再把历史“次日
 本次15项GameControls/模型/loader owner测试、9项正常TLS工具参数/输入释放/端面测试通过，typecheck和editor:build通过（保留Vite大chunk提示）；scene:check为282资产、22个v17场景及15项跨文件测试和既有质量/音频门禁通过；architecture为286生产文件0错误，knowledge为137条0错误。新增headed检查将所有有效同帧aim/switch/attack/reload样本的真实手部不可达/socket residual计为失败，`IK_AIM_LIMIT`继续保留，避免生命周期检查通过掩盖手部失败。当前尚未运行改后GPU探针。
 
 CodeGraph在本检出、base `ac8295c`、roots=apps/assets/packages/tools进行一次`incremental-index --no-embed --json`：16files/130nodes/610edges，结构ready；RuntimeWeapons测试文件仍1项tree-sitter解析恢复，6677/7052节点有向量，旧index.lock竞争警告保留。不删除锁、重建或等待向量，图谱不认证全部调用解析；原始`codegraph-focused-fix-index.log/health.log`保存限制，先前MCP定位原始记录为`codegraph-focused-ac8295c.json`。
+
+## 0aee371 后续局部修复与未通过项（2026-10-12）
+
+`seven-focused-audit/observations.json` 的 normalTLS/NVIDIA 与 sceneId 通过，但只有2个stopped样本，实际Hierarchy仍为默认12物件；UI Play未进入运行，不能写成七件已验收。工具原先只等 `__editor + pendingAssetCount=0`，会早于作者场景、外部GLB和Hierarchy的完整同步。本轮等待由磁盘scene推导全部5个作者MeshRenderer：逐个核对稳定NodeId/name、实际loadedAssetPath、可见Hierarchy对应名称和无遮挡可用Play按钮；超时保存authorReadiness，真实点击后失败额外保存controller.error、sample与UI文字。没有setPlay或状态注入；仍须独立headed复验。
+
+直接目检 `prop-source-focused-audit` 的10张原始PNG确认：Fuel候选新增黄/暗斜三角线，Shell候选底火的大黑楔与侧底破面加重。面绕序与角法线同向不证明端面正确。Shell原局部close_holes在源X=.174填了外圈和两条近重合内圈；LOD端面边界投影自交，安全重三角化拒绝。最后有界X=.160/.150裁切（比旧端内收约.925/1.586mm）仍自交，LOD2闭合估算82/88也超过80，未发布任何Shell或同源Launcher-round新几何。旧候选保持未批准；需源底火内折叠/自交rim修订，用户范围决定尚待答复，不以翻面或放宽门禁伪通过。
+
+仅Fuel-fit-can三档更新独立1024 atlas：每格gutter颜色取同一目标三角的最近重心点再采原源表面，替代全局pull-push。几何/角法线逐角bitwise核对不变，仍680/336/122面，GUID/modelSockets不变；报告保留旧input hash/recipe和新增后处理hash。真实normalized UV*size−.5线性口径、1024→128的有界mip比较记录在fit-report：256px边缘均差由13.21/15.15/16.61降至5.41/6.05/5.16，128px由19.02/20.80/20.48降至9.48/10.35/8.01（RGB0..255）。LOD0原尺寸少量>40异常比例仍由.93%升至1.81%；该数值改善不替代GPU各向异性采样和三档像素批准。
+
+复现先用原 `build-weapon-fit-parts.py --only WPN-FUEL-01-fit-can` 得到原减面stage，再用独立venv执行 `tools/art/repair-weapon-prop-surface.py --only WPN-FUEL-01-fit-can`，检查stage后加`--publish`合并GLB/meta/report；不运行全批生成。原始失败、mip前后与后处理日志在 `.workbuddy/tmp/wpn-integration/` 的 `prop-surface-diagnosis.*`、`atlas-border-probe.log`、`prop-surface-repair-shell.log`、`prop-surface-repair-fuel.log`；Shell有界裁切结果为 `cap-bounded-cut.log`。本轮不改源交付、七件hold/marker/seed或camera；上一轮5120姿态回归可复用。六件真实附件离槽/回槽与七件GPU姿态仍pending，原40/30其余静态证据不重写为全美术批准。
+
+本轮9项工具、1项本面gutter、3项派生来源/预算/闭合回归通过；Fuel新增逐角geometry/normal hash检查，meta除sourceHash/updatedAt外与提交前一致。scene:check 282资产、22个v17场景、15项跨文件测试及既有门禁通过，knowledge137条0错误。日志为 `startup-repair-test.log`、`prop-surface-repair-test.log`、`fit-parts-repair-test.log`、`prop-startup-scene-check.log`、`prop-startup-knowledge-check.log`。没有产品TS改动，不重跑未受影响构建/姿态/GPU验证。
+
+CodeGraph MCP 0.167.0在本根/base `0aee371`实际查project_map与main/play-controller/renderer指定module，原始 `codegraph-ready-0aee371.json`。一次 `incremental-index --no-embed --json` 更新11files/71nodes/187edges，本轮0parse错误、结构ready；旧index.lock竞争警告保留。health为1135files/7099nodes/17689edges，5个既有damaged-parse文件、7865pending resolution；不删除锁、重建或等待向量。`prop-startup-index.log/health.log`不等于完整调用解析或视觉批准。
