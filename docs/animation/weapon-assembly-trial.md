@@ -284,3 +284,13 @@ Shell与同源round底火仍等待用户实际补交修复源（旧源SHA256 `92
 最后仅解析actor前下方共同平移`t*[0,-1,+1]/sqrt(2)`，没有枚举新距离。35个实际肩球留1mm可达余量的交集`t∈[0,28.625255]mm`，上界来自frame2044右肩。修正后的SAT不截断每对三角的退出距离，并排除Shoulder-only袖口：可靠entry frame2036的已筛入Head/Neck/Spine/Hips面组连续阻挡退出下界67.802966mm，加1mm几何间隙至少68.802966mm，超出可达上界。此值仅是可达扫掠AABB筛入面组、固定当前roll皮肤的分离下界，不是完整射线的最小值，更不是改变手臂皮肤后的全空间无解证明；早先裁剪结果29.625mm不能称真实最小分离。`fuel-forward-down-reach.json`、`fuel-forward-down-sat.json/log`记录区间与限制，未采用区间外目标做新姿态验收。
 
 三条路径均未改生产Fuel尺寸、hold、socket、动作或Framework。当前Fuel装配未验收；后续动作方向等待用户明确答复，暂停依赖该选择的开发。其余武器接口可见性可独立补证。Shell/derived round仍等修复源实际路径或commit，不程序封口、不撤销验收范围；全队列未完成。
+
+### 434eff1 四件附件实操与Shotgun反向视角边界
+
+`.workbuddy/tmp/wpn-integration/prop-mag-visibility-434eff1/observations.json`对应`434eff1239feb63d83fbf4ad137b2c9b76fea938`：原始计数**33/33**检查通过（Audit摘要31为计数笔误），314样本、727次操作、40张原始PNG，normalTLS/secure/headed NVIDIA Lovelace、exception为0。Pistol/Shotgun/SMG/Sniper四件真实移动射击、六个换弹周期及Pause/Stop/ledger归零/restart/secondStop通过。Main与Audit查看原始像素后确认SMG/Sniper out/mid分离、in回位，Pistol out/in可辨；Pistol mid触发phase .583/frame352，但crop363–371可能已入槽，不能强称中段清晰。完整slot仍局部遮挡，不扩为手指精确接触或底火美术通过。
+
+身份记录为Pistol子件`as_30abf3e8f08f`、Shotgun `as_738efc1ba301`、SMG `as_bc00f36d6062`、Sniper派生弹匣`as_a17fcc3a5a85`，实际parent `magazine`与child `insertion`装配；Sniper子件为本地有来源配方的派生产物，不是另一次生成交付。Shotgun此轮仍被躯干/枪体/手遮挡，机制及身份通过不能代替独立Shell离槽/归位像素。
+
+`.workbuddy/tmp/wpn-integration/shotgun-opposite-visibility-434eff1/observations.json`为正常−45°输入、三个短换弹周期，18/18检查通过，normalTLS/headed NVIDIA、异常0；仍为镜像背侧躯干遮挡。out触发frame309/phase .242，crop323–330；mid439/.485→450–458；in564/.667→575–580。灰红竖件三阶段形态相近，无法确认独立Shell及完整离槽/回位，不记像素通过；trigger不等于PNG同帧。
+
+既有b489 Launcher前腔普通离槽/归位可见证据保留，同源round cap仍未验收。Shotgun可见性、Fuel实际装配与动作选择、Shell/derived round修复源实际路径仍待输入或验证；全队列未完成，Final Reviewer未创建。本次只归档证据，源码、资产、工具、场景、索引及服务不变。
