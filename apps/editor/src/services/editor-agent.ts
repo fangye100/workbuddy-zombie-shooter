@@ -2,6 +2,7 @@ import { createEmptySceneDocument, validateSceneDocument, type EnvironmentData, 
 import { removeNodeTree, sceneFingerprint, validateAuthorNodes, type EditResult, type SpawnEditStore } from '@aether/runtime';
 import type { AuthorSaveResult } from './author-scene-save';
 import { readSceneChoices, checkScene } from './scene-workspace';
+import type {RuntimeDecal} from '@aether/render';
 
 export interface EditorAgentPort {
   store(): SpawnEditStore | null;
@@ -17,6 +18,7 @@ export interface EditorAgentPort {
   save(): Promise<AuthorSaveResult>;
   play(action: string, steps: number): void;
   gate?(nodeId:string,open:boolean,runId:number):void;
+  decal?(action:'emit'|'clear',runId:number,input?:RuntimeDecal):void;
   runtime(): unknown;
   capture(): Promise<string>;
 }
@@ -57,6 +59,13 @@ export class EditorAgent {
         if(typeof args.nodeId!=='string'||typeof args.open!=='boolean'||!Number.isInteger(args.runId))fail('INVALID_ARGUMENTS','需要稳定 nodeId、布尔 open 和当前 runId');
         if(!this.port.gate)fail('UNSUPPORTED','宿主未提供门控制');
         this.port.gate(args.nodeId,args.open,Number(args.runId));return {ok:true,runtime:this.port.runtime(),state:this.state()};
+      }
+      if(name==='editor_decal'){
+        if(!this.port.playing())fail('PLAY_REQUIRED','运行贴花需要 Play');
+        if((args.action!=='emit'&&args.action!=='clear')||!Number.isInteger(args.runId)||Number(args.runId)<1
+          ||(args.action==='emit'&&!record(args.decal)))fail('INVALID_ARGUMENTS','需要 emit/clear、当前 runId 及 emit 的 decal');
+        if(!this.port.decal)fail('UNSUPPORTED','宿主未提供贴花控制');
+        this.port.decal(args.action,Number(args.runId),args.decal as unknown as RuntimeDecal|undefined);return {ok:true,runtime:this.port.runtime(),state:this.state()};
       }
       if(this.port.playing())fail('PLAY_LOCKED','Stop Play before changing author content.');
       if(name==='scene_open') {

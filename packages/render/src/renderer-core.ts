@@ -23,6 +23,7 @@ import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
 import { ComicSkyPass } from './comic-sky';
 import { ContactShadowPass } from './contact-shadows';
+import {ProceduralDecalPass} from './procedural-decals';
 import { createAlbedoTexture } from './albedo-texture';
 import type { ComicSkyData } from '@aether/scene';
 
@@ -251,6 +252,7 @@ export interface CoreFrameUniforms {
 
 /** drawFrame 的完整输入：一份已完全解析的帧 */
 export interface RenderFrameInput {
+  decals?:Float32Array<ArrayBuffer>;
   sky?: ComicSkyData | null;
   contacts?: { data: Float32Array<ArrayBuffer>; color: readonly number[]; opacity: number } | null;
   p: RenderFrameParams;
@@ -306,6 +308,7 @@ interface CoreGizmoHandle {
 export class RendererCore {
   private readonly skyPass: ComicSkyPass;
   private readonly contactPass: ContactShadowPass;
+  private readonly decalPass:ProceduralDecalPass;
   readonly device: GPUDevice;
   private readonly canvas: HTMLCanvasElement;
   /**
@@ -503,6 +506,8 @@ export class RendererCore {
 
     // ---- uniform buffer ----
     this.frameBuf = this.uniform(FRAME_FLOATS * 4, 'frame');
+    this.decalPass=new ProceduralDecalPass(this.device,this.frameBuf,HDR_FORMAT,DEPTH_FORMAT);
+    this.checkModule(this.decalPass.module);
     this.lightsBuf = this.uniform(LIGHTS_FLOATS * 4, 'lights');
     this.toonBuf = this.uniform(TOON_FLOATS * 4, 'toon');
     this.postBuf = this.uniform(POST_FLOATS * 4, 'post');
@@ -756,6 +761,8 @@ export class RendererCore {
       }
     });
   }
+  clearDecalResources():void {this.decalPass.clear();}
+  decalSnapshot(){return this.decalPass.snapshot();}
 
   /**
    * 按 `meshId` 取（或首次上传）动态实例的代理网格。
@@ -1136,6 +1143,7 @@ export class RendererCore {
     if (input.contacts && p.debugMode === 0) {
       draws += this.contactPass.draw(pass, input.contacts.data, this.viewProj, input.contacts.color, input.contacts.opacity);
     }
+    if(p.debugMode===0)draws+=this.decalPass.draw(pass,input.decals??new Float32Array(0));
     if (input.sky && p.debugMode === 0) {
       this.skyPass.draw(pass, input.sky, this.invViewProj, eye, input.time);
       draws++;
@@ -1270,6 +1278,7 @@ export class RendererCore {
     this.destroyed = true;
     this.skyPass.destroy();
     this.contactPass.destroy();
+    this.decalPass.clear();
     this.hdrTex?.destroy();
     this.auxTex?.destroy();
     this.depthTex?.destroy();

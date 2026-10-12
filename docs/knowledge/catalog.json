@@ -1,8 +1,69 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-11",
+  "indexedAt": "2026-10-13",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
+    {
+      "id": "scene-decals",
+      "path": "packages/scene/src/decals.ts",
+      "title": "程序贴花数据契约",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "scene"
+      ],
+      "read": "局部表面痕迹、五种程序图案、稳定id与值域",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema"
+      ]
+    },
+    {
+      "id": "procedural-decals-implementation",
+      "path": "docs/render/procedural-decals.md",
+      "title": "程序性表面贴花指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "mcp",
+        "architecture"
+      ],
+      "read": "v19持久化、GPU实例批、通用运行池、Play资源、MCP闭环及限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "procedural-decals-acceptance-20261013",
+      "path": "docs/evidence/procedural-decals-20261013/acceptance.md",
+      "title": "程序贴花真实GPU验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "render",
+        "gpu",
+        "verification",
+        "mcp"
+      ],
+      "read": "白盒贴附与遮挡、种子保存重载、寿命、32/128/512合批、Stop及第一层实际呈现",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
     {
       "id": "dynamic-navigation-implementation",
       "path": "docs/architecture/dynamic-navigation.md",

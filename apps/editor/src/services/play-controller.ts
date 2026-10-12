@@ -36,8 +36,10 @@ import type { RuntimeSceneMotion } from './runtime-scene-motion';
 import type { RuntimeBodyIk } from './runtime-body-ik';
 import { characterYaw } from './character-facing';
 import { syncGatePresentation } from './gate-presentation';
+import type {RuntimeDecals} from './runtime-decals';
 
 export interface PlayControllerOptions {
+  decals?:RuntimeDecals;
   bodyIk?: RuntimeBodyIk;
   sharedMotions?: RuntimeSceneMotion;
   playerPresentation?: PlayerPresentation;
@@ -74,9 +76,11 @@ export class PlayController {
   private readonly playerPresentation: PlayerPresentation | null;
   private readonly sharedMotions: RuntimeSceneMotion | null;
   private readonly bodyIk: RuntimeBodyIk | null;
+  private readonly decals:RuntimeDecals|null;
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
+    this.decals=opts.decals??null;
     this.playerPresentation = opts.playerPresentation ?? null;
     this.sharedMotions = opts.sharedMotions ?? null;
     this.bodyIk = opts.bodyIk ?? null;
@@ -175,6 +179,8 @@ export class PlayController {
     }
 
     this.bridge.attach(this.session.runtime);
+    this.decals?.start(this.session.runtime);
+    if(this.decals)this.session.registerResource('procedural-decals',()=>this.decals?.stop());
     this.syncGates();
     this.sharedMotions?.start(doc);
     this.bodyIk?.start(doc);
@@ -211,6 +217,7 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
+    this.decals?.sync(this.session.runtime);
     this.syncGates();
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
@@ -223,6 +230,7 @@ export class PlayController {
   /** 同种子重跑 */
   reset(): void {
     this.session.reset();
+    this.decals?.start(this.session.runtime);
     this.syncGates();
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
@@ -264,6 +272,7 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     if (n > 0) {
+      this.decals?.sync(this.session.runtime);
       this.syncGates();
       this.sharedMotions?.sync(this.session.runtime);
       this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);

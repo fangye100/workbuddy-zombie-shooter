@@ -1,0 +1,9 @@
+{
+  "name": "第一层 · 火场公路",
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 24
+  },
+  "drawCalls": 103
+}

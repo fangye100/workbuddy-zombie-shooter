@@ -869,3 +869,7 @@ NavSurface 与 NavZone.surface 的当前契约、稳定支撑引用、v16→v17 
 ## v18 动态障碍与吊门补充（2026-10-11）
 
 NavigationGate 的根节点/碰撞体约束、局部平移偏移、初始状态及 v17→v18 迁移见[动态导航指南](architecture/dynamic-navigation.md)。作者场景存关闭姿态与参数；Play 持有副本，门姿态统一驱动运行阻挡、射线和外观，Stop 恢复作者数据。运行障碍层不重新烘焙地形、不更新静态支撑面。
+
+## v19 程序性表面贴花补充（2026-10-13）
+
+Decal 组件挂在既有静态 MeshRenderer 节点，marks 持有稳定 id、局部变换、确定性图案种子及颜色参数；不增加静态 mesh/变换槽。v18→v19 迁移保留旧内容，实例数量与错误配置显式诊断。运行痕迹不落盘，由有界池消费模拟时间，Stop 恢复作者数据并释放批缓冲。完整 owner、MCP 和验收限制见[程序贴花指南](render/procedural-decals.md)。

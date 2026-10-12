@@ -29,4 +29,6 @@ export const EDITOR_TOOLS = [
   edit('editor_gate','Set a runtime navigation gate target by stable NodeId and current runId from editor_runtime.player. Does not alter author data or advance simulation. Motion, collision, occupancy waiting and route updates happen on fixed steps.',
     {nodeId:{type:'string'},open:{type:'boolean'},runId:{type:'integer',minimum:1}},['nodeId','open','runId']),
   scoped('editor_capture', 'Capture the next actual GPU viewport frame as PNG. This is the 3D canvas, not the DOM HUD. Requires a live rendered editor; timeout is explicit.'),
+  edit('editor_decal','Emit or clear only transient procedural surface marks in the current Play run. Authored Decal components use scene_edit_nodes. decal contains receiver NodeId, complete DecalMark, ttlSec and fadeSec; local coordinates follow the static receiver. Simulation steps drive expiry; Stop releases buffers.',
+    {action:{enum:['emit','clear']},runId:{type:'integer',minimum:1},decal:object},['action','runId']),
 ];

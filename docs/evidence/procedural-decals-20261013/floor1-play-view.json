@@ -1,0 +1,8 @@
+{
+  "tick": 60,
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 24
+  }
+}

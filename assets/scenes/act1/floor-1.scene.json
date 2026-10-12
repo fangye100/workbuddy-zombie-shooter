@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -1855,6 +1855,588 @@
           "visible": true,
           "layer": 0,
           "importScale": 1
+        },
+        {
+          "kind": "Decal",
+          "enabled": true,
+          "marks": [
+            {
+              "id": "street-proc-0",
+              "pattern": "splatter",
+              "position": [
+                -29,
+                0.12,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                0.8
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 0,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-1",
+              "pattern": "crack",
+              "position": [
+                -26.6,
+                0.12,
+                2.5695608983664777
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 137,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-2",
+              "pattern": "crack",
+              "position": [
+                -24.2,
+                0.12,
+                -3.7860829345585025
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 274,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-3",
+              "pattern": "scorch",
+              "position": [
+                -21.8,
+                0.12,
+                3.0089891163336238
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 411,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-4",
+              "pattern": "crack",
+              "position": [
+                -19.4,
+                0.12,
+                -0.6474692536248196
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 548,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-5",
+              "pattern": "splatter",
+              "position": [
+                -17,
+                0.12,
+                -2.0549847596520388
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.4
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 685,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-6",
+              "pattern": "scorch",
+              "position": [
+                -14.600000000000001,
+                0.12,
+                3.6753573002722146
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 822,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-7",
+              "pattern": "crack",
+              "position": [
+                -12.2,
+                0.12,
+                -3.3604181451056614
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 959,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-8",
+              "pattern": "crack",
+              "position": [
+                -9.8,
+                0.12,
+                1.2760029886602033
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1096,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-9",
+              "pattern": "scorch",
+              "position": [
+                -7.400000000000002,
+                0.12,
+                1.4803097021093325
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 1233,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-10",
+              "pattern": "splatter",
+              "position": [
+                -5,
+                0.12,
+                -3.4571442508036583
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.1
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 1370,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-11",
+              "pattern": "crack",
+              "position": [
+                -2.6000000000000014,
+                0.12,
+                3.613570290614613
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1507,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-12",
+              "pattern": "scorch",
+              "position": [
+                -0.20000000000000284,
+                0.12,
+                -1.8672194639543989
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 1644,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-13",
+              "pattern": "crack",
+              "position": [
+                2.200000000000003,
+                0.12,
+                -0.8623423465532668
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1781,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-14",
+              "pattern": "crack",
+              "position": [
+                4.600000000000001,
+                0.12,
+                3.1378255212414796
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1918,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-15",
+              "pattern": "splatter",
+              "position": [
+                7,
+                0.12,
+                -3.761042008784208
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                0.8
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 2055,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-16",
+              "pattern": "crack",
+              "position": [
+                9.399999999999999,
+                0.12,
+                2.403828297770143
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2192,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-17",
+              "pattern": "crack",
+              "position": [
+                11.799999999999997,
+                0.12,
+                0.2191554157938991
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2329,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-18",
+              "pattern": "scorch",
+              "position": [
+                14.199999999999996,
+                0.12,
+                -2.7267397260537996
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 2466,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-19",
+              "pattern": "crack",
+              "position": [
+                16.6,
+                0.12,
+                3.798520425381139
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2603,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-20",
+              "pattern": "splatter",
+              "position": [
+                19,
+                0.12,
+                -2.8701361324829895
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.4
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 2740,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-21",
+              "pattern": "scorch",
+              "position": [
+                21.4,
+                0.12,
+                0.430440809965192
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 2877,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-22",
+              "pattern": "crack",
+              "position": [
+                23.799999999999997,
+                0.12,
+                2.2359092472658215
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 3014,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-23",
+              "pattern": "crack",
+              "position": [
+                26.199999999999996,
+                0.12,
+                -3.7249094678889128
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 3151,
+              "normalOffset": 0.008,
+              "priority": 0
+            }
+          ]
         }
       ],
       "prefab": null

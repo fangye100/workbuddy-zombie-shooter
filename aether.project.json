@@ -99,6 +99,12 @@
       "path": "assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json",
       "name": "动态障碍白盒 · 吊门 / 绕行 / 等待",
       "enabled": true
+    },
+    {
+      "id": "sc_procedural_decal_whitebox",
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -1,0 +1,11 @@
+{
+  "result": {
+    "type": "object",
+    "value": {
+      "architecture": "lovelace",
+      "fallback": false,
+      "secure": true,
+      "vendor": "nvidia"
+    }
+  }
+}

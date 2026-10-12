@@ -179,6 +179,8 @@ tick/generation 映射；Editor 只编辑场景与显示诊断，不能承接 NP
 
 ## 4. 当前贴花能力与选型
 
+本节保留 2026-10-10 评估时的实现状态。2026-10-13 首期程序性平面贴花、v19 场景契约、运行池和真实 GPU 结果见[贴花指南](../render/procedural-decals.md)；图集接入、复杂接收面 projector 与 DBuffer 仍未实现。
+
 实际渲染是 [RendererCore](../../packages/render/src/renderer-core.ts) 的自定义
 WebGPU/WGSL，不能把导入/Retarget 使用 Three.js 等同于采用 Three 的整套渲染器。
 `feature.ts` 的 `PASS_ORDER` 虽登记 `decal`，只是保留顺序；当前没有对应生产贴花 Pass

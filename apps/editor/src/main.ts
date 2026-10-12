@@ -42,6 +42,7 @@ import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
 import { GatePanel } from './services/gate-panel';
+import {RuntimeDecals} from './services/runtime-decals';
 import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
@@ -256,7 +257,9 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const gameAudio = new GameAudio();
+  const runtimeDecals=new RuntimeDecals(renderer);
   const playCtl = new PlayController(renderer, bridge, {
+    decals:runtimeDecals,
     bodyIk,
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
@@ -4051,9 +4054,10 @@ async function boot(): Promise<void> {
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
     gate: (nodeId,open,runId) => {const rt=playCtl.session.runtime;if(!rt||rt.player()?.runId!==runId)throw new Error('运行代次已变更，请重新读取 editor_runtime');rt.setGateOpen(nodeId,open);},
+    decal:(action,runId,input)=>{if(playCtl.session.runtime?.outcome!=='running')throw new Error('运行贴花需要正在进行的游戏');runtimeDecals.command(action,runId,input);},
     runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,gates:playCtl.session.runtime?.gateSnapshot()??[],
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
-      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null}),
+      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null,decals:runtimeDecals.snapshot()}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;

@@ -21,11 +21,12 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
+import { validateDecalMark, MAX_AUTHORED_DECALS, type DecalComponent } from './decals';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -165,6 +166,7 @@ export const ComponentKind = {
   NavZone: 'NavZone',
   NavSurface: 'NavSurface',
   NavigationGate: 'NavigationGate',
+  Decal: 'Decal',
   Script: 'Script',
   RunRules: 'RunRules',
 } as const;
@@ -545,6 +547,7 @@ export type ComponentData =
   | NavZoneComponent
   | NavSurfaceComponent
   | NavigationGateComponent
+  | DecalComponent
   | ScriptComponent;
 
 /**
@@ -995,6 +998,19 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if(c.enabled&&!d.nodes!.some(other=>other.components?.some(nav=>nav.kind==='NavZone'&&nav.enabled&&nav.surface)))err(at,'E_NAV_GATE_MODE','运动门需要显式三维地表导航');
         if(d.nodes!.some(other=>other.components?.some(s=>s.kind==='NavSurface'&&s.supportCollider===n.id)))err(at,'E_NAV_GATE_SUPPORT','运动门不能同时作为静态导航面的支撑碰撞体');
       }
+      if(c.kind===ComponentKind.Decal){
+        if(typeof c.enabled!=='boolean')err(at,'E_DECAL_ENABLED','贴花 enabled 必须是布尔值');
+        if(!Array.isArray(c.marks)||c.marks.length===0||c.marks.length>MAX_AUTHORED_DECALS)err(at,'E_DECAL_MARKS','贴花 marks 必须是非空有界数组');
+        else {
+          const ids=new Set<string>();
+          for(const [mi,mark]of c.marks.entries()){
+            for(const message of validateDecalMark(mark))err(`${at}/marks/${mi}`,'E_DECAL_MARK',message);
+            if(ids.has(mark?.id))err(`${at}/marks/${mi}`,'E_DECAL_ID','同一接收节点的贴花 id 不能重复');ids.add(mark?.id);
+          }
+        }
+        const receiver=comps.find(x=>x.kind==='MeshRenderer'&&x.enabled);
+        if(receiver?.kind!=='MeshRenderer'||receiver.playBinding||receiver.sharedMotion||receiver.bodyIk||n.id===d.playerStart)err(at,'E_DECAL_RECEIVER','贴花必须挂在启用的静态 MeshRenderer 接收节点，不能挂玩家/蒙皮代理');
+      }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
         if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');
@@ -1303,6 +1319,8 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
     });
   });
 
+  const decalCount=d.nodes.reduce((sum,n)=>sum+(Array.isArray(n?.components)?n.components:[]).reduce((count,c)=>count+(c?.kind==='Decal'&&Array.isArray(c.marks)?c.marks.length:0),0),0);
+  if(decalCount>MAX_AUTHORED_DECALS)err('/nodes','E_DECAL_CAPACITY',`作者贴花超过 ${MAX_AUTHORED_DECALS} 个实例`);
   return out;
 }
 
