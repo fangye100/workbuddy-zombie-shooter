@@ -294,3 +294,19 @@ Shell与同源round底火仍等待用户实际补交修复源（旧源SHA256 `92
 `.workbuddy/tmp/wpn-integration/shotgun-opposite-visibility-434eff1/observations.json`为正常−45°输入、三个短换弹周期，18/18检查通过，normalTLS/headed NVIDIA、异常0；仍为镜像背侧躯干遮挡。out触发frame309/phase .242，crop323–330；mid439/.485→450–458；in564/.667→575–580。灰红竖件三阶段形态相近，无法确认独立Shell及完整离槽/回位，不记像素通过；trigger不等于PNG同帧。
 
 既有b489 Launcher前腔普通离槽/归位可见证据保留，同源round cap仍未验收。Shotgun可见性、Fuel实际装配与动作选择、Shell/derived round修复源实际路径仍待输入或验证；全队列未完成，Final Reviewer未创建。本次只归档证据，源码、资产、工具、场景、索引及服务不变。
+
+### R3 Fuel下放转开：已选方案与取样入口（2026-10-12）
+
+用户已明确选择“放低并转开枪体，用左手换罐”，解除Fuel动作方案等待；上文各版本的失败和当时待输入状态保持历史含义。Shell及同源round底火仍等用户实际补交修复源，不程序封口、不重生成、不撤验收范围。模型分支`c212939`保持独立交付，本轮仅动画分支承担动作整合。
+
+当前只在ignored CPU诊断中验证全尺寸候选，未发布Game动作或资产修改。真实主握pivot插值、canonical−Z 60mm脱开及左右手目标共同跟随；35个实际肩链的首轮可达筛查无失败，但可靠新FK/skin否定了它：ready frame1931枪体包含Spine1/2加权表面296点、最大已测顶点深度40.706mm；out frame2052罐体包含Spine表面602点、最大61.515mm，不是手指或袖口接触。6链baseline最大重放误差约1.3743e−7m。mid/in/late90/firstIdle旧样本缺transition，重放差分别79.518/26.210/32.676/20.594mm，明确跳过，不补写全路径通过。
+
+将炮管转向actor−X、source+Y转向actor+Z的唯一完整刚体组合，可靠out的罐0交面/0极值parity进入，但枪体仍有Spine腹部221点、最大18.320mm；35肩链中phase .69697右腕超出5.897mm，因此也未采用。原始`fuel-r3-lower-turn-candidate.json`、`fuel-r3-lower-turn-geometry.json`、`fuel-r3-contact-parts.json`、`fuel-r3-side-interval*.json`和`fuel-r3-forward-shell-*.json`均位于`.workbuddy/tmp/wpn-integration/`。whole-skin parity未认证watertight，顶点深度不是连续三角最大穿入量，也不是GPU像素验收。正常ready持枪穿插与entry/return仍须共同修正，不能仅凭换罐端点可达交付。
+
+现有探针新增显式`--fuel-recovery`与`--fuel-interrupt`，需要包含`flame`的1–3件`--weapon`列表，静态模式拒绝；默认和Launcher入口不变。恢复复用真实shoot→R的独立有界周期，取entry(.14–.18)、late90/95、首次真实idle和upperReady，漏阶段明确失败。中断在真实罐removed样本后按1切到Pistol，再按6回Fuel；`WeaponSystem.equip`原本取消reload，探针验证同帧Pistol无Fuel GUID、回Fuel的罐已归槽，不引入新切换规则。仅使用真实CDP输入和只读快照，保留trigger frame与PNG实际frameRange，未运行浏览器，不称这些新阶段实测通过。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon flame --fuel-recovery --fuel-interrupt --collapse-ik-panel --aim-yaw -135 --out .workbuddy/tmp/wpn-integration/fuel-r3-action-audit
+```
+
+工具定向20/20测试通过，原始输出`fuel-r3-probe-tests.log`；只证明参数隔离、阶段判读与中断失败路径，Fuel新动作、正常持枪和可见换罐尚未批准。完整队列未完成，未创建Final Reviewer。

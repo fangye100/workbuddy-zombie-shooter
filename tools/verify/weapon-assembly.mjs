@@ -12,12 +12,14 @@ export function probeOptions(argv){
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
- if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--fuel-recovery','--fuel-interrupt','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
  const weaponIds=value('weapon','').split(',').filter(Boolean);
  if(argv.includes('--weapon')&&(!weaponIds.length||new Set(weaponIds).size!==weaponIds.length||weaponIds.some(id=>!WEAPONS.includes(id))))throw new Error('--weapon 必须为七件武器中的唯一ID列表');
  if(weaponIds.length&&argv.includes('--all-weapons'))throw new Error('--weapon 与 --all-weapons 不能混用');
  const launcherRecovery=argv.includes('--launcher-recovery');
  if(launcherRecovery&&(!weaponIds.includes('launcher')||weaponIds.length>3))throw new Error('--launcher-recovery 需要包含launcher的1–3件 --weapon 聚焦列表');
+ const fuelRecovery=argv.includes('--fuel-recovery'),fuelInterrupt=argv.includes('--fuel-interrupt');
+ if((fuelRecovery||fuelInterrupt)&&(!weaponIds.includes('flame')||weaponIds.length>3))throw new Error('Fuel观察选项需要包含flame的1–3件 --weapon 聚焦列表');
  const scene=staticScene??SCENE,url=new URL(value('url','https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene='+scene));
  if(!/^[a-f0-9]{40}$/.test(expectedHead))throw new Error('必须提供完整 --expected-head');
  if(url.protocol!=='https:'||url.hostname!=='fangye-win11-office.tail6b29a2.ts.net'||url.port!=='5198'||url.searchParams.get('scene')!==scene||url.searchParams.has('play')||url.searchParams.has('game'))throw new Error('入口必须为本次 MagicDNS:5198 的编辑态试验scene；不自动Play/隐藏编辑UI');
@@ -29,7 +31,7 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** 仅正常点击现有details summary；不写DOM样式、IK权重或游戏状态。 */
 export async function collapseIkPanel(cdp,click,record=()=>{}) {
@@ -176,9 +178,9 @@ export function reloadMoment(sample,id,p,stage,outSeen){
  return child.removed&&pose?.action==='reload'&&pose.phase>=(stage==='mid'?(p.magazineOutPhase+p.magazineInPhase)/2:p.magazineOutPhase);
 }
 /** 首idle是连续raw首次观察到的转换；截图仍保留自己的frameRange，不锁模拟。 */
-export function recoveryMoment(sample,stage,seenReload,previousAction){
+export function recoveryMoment(sample,stage,seenReload,previousAction,weaponId='launcher'){
  const pose=sample.models?.pose,layer=sample.actor?.layer;
- if(sample.state!=='playing'||!sample.models?.visible||sample.models.frameStamp!==sample.frame||sample.models.weaponId!=='launcher')return false;
+ if(sample.state!=='playing'||!sample.models?.visible||sample.models.frameStamp!==sample.frame||sample.models.weaponId!==weaponId)return false;
  if(stage==='entry')return pose?.action==='reload'&&pose.phase>=.14&&pose.phase<=.18;
  if(stage==='late90')return pose?.action==='reload'&&pose.phase>=.90&&pose.phase<.95;
  if(stage==='late95')return pose?.action==='reload'&&pose.phase>=.95&&pose.phase<1;
@@ -186,6 +188,13 @@ export function recoveryMoment(sample,stage,seenReload,previousAction){
  if(stage==='firstIdle')return previousAction==='reload';
  if(stage==='upperReady')return layer?.clip==='ready'&&layer.weight>0&&(!layer.transition||Number.isFinite(layer.transition.elapsed)&&Number.isFinite(layer.transition.duration)&&layer.transition.elapsed>=layer.transition.duration);
  return false;
+}
+/** WeaponSystem.equip取消reload；只检查真实输入后的同帧draw，不注入内核状态。 */
+export function fuelInterruptEvidence(samples,fuelGuid){
+ const equipped=samples.find(s=>s.state==='playing'&&s.models?.visible&&s.models.weaponId==='pistol'&&s.models.frameStamp===s.frame&&s.models.pose?.action==='idle');
+ const returned=samples.find(s=>s.state==='playing'&&s.models?.visible&&s.models.weaponId==='flame'&&s.models.frameStamp===s.frame&&s.models.pose?.action==='idle');
+ const child=returned?.models.attachmentDraws?.find(d=>d.id==='reloadPart');
+ return {ok:!!equipped&&!!returned&&!!fuelGuid&&equipped.models.attachmentDraws?.every(d=>d.guid!==fuelGuid)&&!!child&&child.guid===fuelGuid&&!child.removed&&child.frameStamp===returned.frame,equippedFrame:equipped?.frame??null,returnedFrame:returned?.frame??null,returnedChild:child??null};
 }
 async function run(options){
  const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
@@ -298,7 +307,7 @@ async function run(options){
     const p=def.presentation.procedural,id=def.presentation.assembly.reloadAttachmentId,shots=new Set(),cycles=[];
     // .55s shell换弹不串行等待三张PNG。三次真实shoot→R，每周期仅一个阶段，
     // 该阶段raw先入report，PNG异步进行；不锁定模拟，保留实际截图frameRange。
-    const recoveryStages=options.launcherRecovery&&def.id==='launcher'?['entry','late90','late95','firstIdle','upperReady']:[];
+    const recoveryStages=(options.launcherRecovery&&def.id==='launcher'||options.fuelRecovery&&def.id==='flame')?['entry','late90','late95','firstIdle','upperReady']:[];
     const stages=[...(def.ammo.reloadSec<.9?['out','mid','in']:['all']),...recoveryStages];
     for(let cycle=0;cycle<stages.length;cycle++){
      if(cycle>0){await input.pointer(canvas,true);await sleep(50);await input.pointer(canvas,false);await sampleFor(label+'-reload-preparation',Math.max(300,def.cooldownSec*1000));}
@@ -308,7 +317,7 @@ async function run(options){
       if(!reversed&&Date.now()-start>700){await movement(direction==='w'?'s':'w',true);reversed=true;}
       if(sample.models?.attachmentDraws?.some(d=>d.id===id&&d.removed))outSeen=true;
       if(sample.models?.pose?.action==='reload')seenReload=true;
-      for(const stage of stages[cycle]==='all'?['out','mid','in']:[stages[cycle]])if(!shots.has(stage)&&(recoveryStages.includes(stage)?recoveryMoment(sample,stage,seenReload,previousAction):reloadMoment(sample,id,p,stage,outSeen))){
+      for(const stage of stages[cycle]==='all'?['out','mid','in']:[stages[cycle]])if(!shots.has(stage)&&(recoveryStages.includes(stage)?recoveryMoment(sample,stage,seenReload,previousAction,def.id):reloadMoment(sample,id,p,stage,outSeen))){
        shots.add(stage);report.actions.push({captureStage:stage,weapon:def.id,cycle,sample:report.samples.length-1,frame:sample.frame,tick:sample.tick,previousAction,pose:sample.models.pose,upperLayer:sample.actor?.layer??null});
        // 每周期只启动一个截图，长周期三个截图仍顺序完成，防止重叠输入恢复。
        const job=capture(label+'-'+stage,aiming).catch(error=>{report.exceptions.push('阶段截图 '+def.id+'/'+stage+': '+String(error));}).finally(()=>captureJobs.delete(job));jobs.push(job);captureJobs.add(job);
@@ -322,6 +331,18 @@ async function run(options){
     }
     check(label+'实际附件out/in与归槽采样（可见性另验）',shots.has('out')&&shots.has('mid')&&shots.has('in')&&cycles.every(c=>c.ok),{shots:[...shots],cycles});
     if(recoveryStages.length)check(label+'entry及late→首idle→upper ready指定阶段采样（PNG帧范围另验）',recoveryStages.every(stage=>shots.has(stage)),{required:recoveryStages,missing:recoveryStages.filter(stage=>!shots.has(stage)),triggers:report.actions.filter(a=>a.weapon===def.id&&recoveryStages.includes(a.captureStage))});
+    if(options.fuelInterrupt&&def.id==='flame'){
+     await input.pointer(canvas,true);await sleep(80);await input.pointer(canvas,false);await sampleFor(label+'-interrupt-preparation',400);
+     await movement(direction,true);await input.tap('r');let attempted=false;
+     await sampleFor(label+'-interrupt-reload',Math.min(5000,def.ammo.reloadSec*1000+650),async sample=>{
+      if(!attempted&&sample.models?.weaponId==='flame'&&sample.models.pose?.action==='reload'&&sample.models.attachmentDraws?.some(d=>d.id===id&&d.removed&&d.frameStamp===sample.frame)){
+       attempted=true;report.actions.push({inputStage:'fuel-reload-switch',sample:report.samples.length-1,frame:sample.frame,tick:sample.tick,pose:sample.models.pose});await input.tap('one');
+      }
+     },25);await input.release();await capture(label+'-interrupted');
+     await input.tap('six');await sampleFor(label+'-interrupt-return',750,null,25);await capture(label+'-interrupt-return');
+     const evidence=fuelInterruptEvidence(report.samples.filter(s=>s.label===label+'-interrupt-reload'||s.label===label+'-interrupt-return'),def.presentation.assembly.attachments.find(a=>a.id===id)?.model.guid);
+     check(label+'真实换罐中切枪取消及归位无旧附件泄漏',attempted&&evidence.ok,{attempted,...evidence});
+    }
    }
    check('选定武器执行覆盖',report.selectedWeapons.every(id=>report.executedWeapons.includes(id)),{selected:report.selectedWeapons,executed:report.executedWeapons});
   }

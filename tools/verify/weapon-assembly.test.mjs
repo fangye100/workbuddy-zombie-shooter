@@ -1,9 +1,26 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment,collapseIkPanel} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment,collapseIkPanel,fuelInterruptEvidence} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('Fuel恢复/中断为显式聚焦选项，其他武器与静态模式不启用',()=>{
+ const args=['--expected-head',head];assert.equal(probeOptions(args).fuelRecovery,false);assert.equal(probeOptions(args).fuelInterrupt,false);
+ const o=probeOptions([...args,'--weapon','flame','--fuel-recovery','--fuel-interrupt']);assert.equal(o.fuelRecovery,true);assert.equal(o.fuelInterrupt,true);
+ assert.throws(()=>probeOptions([...args,'--weapon','launcher','--fuel-recovery']),/包含flame/);
+ assert.throws(()=>probeOptions([...args,'--static-scene',STATIC_SCENES[0],'--nodes','nd_raw_launcher_side','--fuel-interrupt']),/静态模式/);
+ const s={state:'playing',frame:5,models:{visible:true,frameStamp:5,weaponId:'flame',pose:{action:'reload',phase:.16}}};
+ assert.equal(recoveryMoment(s,'entry',true,'reload','flame'),true);assert.equal(recoveryMoment(s,'entry',true,'reload'),false);
+});
+test('真实中断必须切到其他本帧draw且Fuel罐消失，回枪罐归槽；旧removed或旧frame不能通过',()=>{
+ const sample=(weaponId,frame,draws)=>({state:'playing',frame,models:{visible:true,frameStamp:frame,weaponId,pose:{action:'idle'},attachmentDraws:draws}});
+ const child={id:'reloadPart',guid:'fuel',frameStamp:9,removed:false},pistol=sample('pistol',8,[]),flame=sample('flame',9,[child]);
+ assert.equal(fuelInterruptEvidence([pistol,flame],'fuel').ok,true);
+ assert.equal(fuelInterruptEvidence([sample('pistol',8,[child]),flame],'fuel').ok,false);
+ assert.equal(fuelInterruptEvidence([pistol,sample('flame',9,[{...child,removed:true}])],'fuel').ok,false);
+ assert.equal(fuelInterruptEvidence([pistol,sample('flame',9,[{...child,frameStamp:8}])],'fuel').ok,false);
+ assert.equal(fuelInterruptEvidence([pistol], 'fuel').ok,false);
+});
 test('HumanIK折叠只点击展开summary；已折叠不再点击，未响应明确失败',async()=>{
  let open=true,clicks=0;const records=[],cdp={async eval(){return {open,title:'HumanIK 混合 · 1 角色 · 加载 0'};}};
  const click=async selector=>{assert.equal(selector,'#runtime-body-ik-panel > details > summary');clicks++;open=false;};
