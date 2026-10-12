@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
@@ -24,6 +24,19 @@ test('聚焦武器选择保留真实七键映射，不将未选武器视为本�
  const args=['--expected-head',head,'--weapon','shotgun,flame,launcher'];const o=probeOptions(args);assert.deepEqual(o.weaponIds,['shotgun','flame','launcher']);assert.equal(o.allWeapons,true);
  for(const ids of ['shotgun,shotgun','missing',','])assert.throws(()=>probeOptions(['--expected-head',head,'--weapon',ids]));
  assert.throws(()=>probeOptions([...args,'--all-weapons']));assert.throws(()=>probeOptions([...args,'--static-scene',STATIC_SCENES[0],'--nodes','nd_a']));
+});
+test('回程采样不能将晚段漏采、历史idle或尚未结束的ready crossfade算作通过',()=>{
+ const sample=(action,phase,transition=null)=>({state:'playing',frame:20,models:{visible:true,frameStamp:20,weaponId:'launcher',pose:{action,phase}},actor:{layer:{clip:action==='reload'?'reload':'ready',weight:1,transition}}});
+ const late=sample('reload',.94444),later=sample('reload',.975),idle=sample('idle',0,{elapsed:.02,duration:.18}),ready=sample('idle',0);
+ assert.equal(recoveryMoment(late,'late90',true,'reload'),true);assert.equal(recoveryMoment(later,'late90',true,'reload'),false);
+ assert.equal(recoveryMoment(later,'late95',true,'reload'),true);assert.equal(recoveryMoment(idle,'late95',true,'reload'),false);
+ assert.equal(recoveryMoment(idle,'firstIdle',true,'reload'),true);assert.equal(recoveryMoment(idle,'firstIdle',true,'idle'),false);assert.equal(recoveryMoment(idle,'firstIdle',false,'reload'),false);
+ assert.equal(recoveryMoment(idle,'upperReady',true,'idle'),false);assert.equal(recoveryMoment(ready,'upperReady',true,'idle'),true);
+ ready.models.frameStamp=19;assert.equal(recoveryMoment(ready,'upperReady',true,'idle'),false);
+ const args=['--expected-head',head];assert.equal(probeOptions(args).launcherRecovery,false);
+ assert.equal(probeOptions([...args,'--weapon','shotgun,smg,launcher','--launcher-recovery']).launcherRecovery,true);
+ for(const ids of ['shotgun,smg','pistol,shotgun,smg,launcher'])assert.throws(()=>probeOptions([...args,'--weapon',ids,'--launcher-recovery']),/1–3件/);
+ assert.throws(()=>probeOptions([...args,'--launcher-recovery']),/1–3件/);
 });
 test('真实3370射线在CSS client空间通过；越界/遮挡/平面误差分别保留证据',()=>{
  const player={x:0,z:-5.600001811981201},canvas={width:2000,height:1600,getBoundingClientRect:()=>({left:50,top:70,right:1050,bottom:870,width:1000,height:800})};

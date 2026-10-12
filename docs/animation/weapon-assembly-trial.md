@@ -210,10 +210,12 @@ v17既有命名刚体frame复用为**Game动作参考**：`reloadPose`是相对�
 12点phase路径手IK无不可达/socket residual，最紧左余14.35mm、右余17.15mm。直线转枪有22/124/354/707规划交面；局部抬升和右肩侧绕使所测进出中间点交面归零。原始`launcher-static-side-geometry-03b0818.json`、`launcher-continuous-quick-03b0818.json`、`launcher-clearance-arc-geometry-03b0818.json`、`launcher-return-arc-geometry-03b0818.json`仍保留。省略transition的部分raw基线重放差57–142mm只供规划；可靠晚段原frame2455/tick1270/phase.944444/clip3.116667的链重放差2.018e-7m。强行phase=1但仍保留reload末帧有633肩衣交面，该状态不等于真实WeaponSystem完成后的idle/upper ready crossfade；**必须实际连续录制late>.9→首idle→ready过渡后的raw与PNG**，不能由端点或离线零交面宣称动作可用。
 
 ```powershell
-node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon shotgun,smg,launcher --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/front-loading-focused-audit
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon shotgun,smg,launcher --launcher-recovery --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/front-loading-focused-audit
 ```
 
 正常TLS入口继续`https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`；5198为本次试验服务，仓库固定5100未改。前孔静态检查可选fit节点`nd_fit_launcher_assembled_0,nd_fit_launcher_child_0,nd_fit_launcher_assembled_1,nd_fit_launcher_child_1`；原有未影响30/40静态证据保留。新动作、手部可达、整枪不穿插和真正round离回槽仍待独立正常Input/GPU复验，Fuel真实装配仍待后续修正。
+
+`--launcher-recovery`仅适用于含Launcher的1–3件`--weapon`聚焦列表，不能与`--all-weapons`混用。普通out/mid/in周期之后追加四次真实射击→R，每周期只采一个指定PNG：phase[.90,.95)、[.95,1)、连续raw首次观察到reload→idle、idle且实际upper `ready`层有权重并完成crossfade。25ms连续raw保留左右手残差/IK诊断和upper transition的elapsed/duration，漏指定阶段显式失败。首idle是首次**观察**的转换，截图另存trigger、capture sample与frameRange；PNG耗时可能跨阶段，标签不证明exact-frame像素。此工具新增路径仅完成定向回归，未由Worker启动浏览器，不声称上述新动作或四阶段已通过GPU复验。
 
 用户现已选择**补交修复后的WPN-SHELL-01源模型**，等待新版实际路径/commit；不再等待范围三选一，也不进行程序cap/旧源自交修复。旧Shell与同源Launcher round只用于装配候选，其底火视觉仍未批准；没有授权缩小整个验收范围。新版源未到且独立复验未完成前，全队列不能标APPROVED/COMPLETED。
 
