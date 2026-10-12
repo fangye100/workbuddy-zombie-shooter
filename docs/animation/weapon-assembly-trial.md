@@ -249,7 +249,7 @@ out触发phase.20833/frame387，而crop落在403–410；mid触发.43056/frame41
 本轮仅将trial的Camera `yawOffsetDeg` 从0改为−90，保持distance1.8m/pitch0°/锚点Y1.18m；校准工具同步保留该持久值，三floor相机与全部武器数据不变。普通世界yaw180°输入时，角色朝−X、Launcher换弹炮管转到+Z；相机从−X观察人物前方及炮管侧面，使轴向抽取方向落在屏幕平面。该方位来自现有坐标/动作数据，是否实际露出前腔仍由新目标原始PNG判断。现有自由相机在Play被禁止；没有新增或注入运行时观察机位。
 
 ```powershell
-node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon launcher --launcher-recovery --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/launcher-side-slot-audit
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon launcher --launcher-recovery --collapse-ik-panel --aim-yaw 135 --side-aim-yaw 90 --out .workbuddy/tmp/wpn-integration/launcher-side-slot-collapsed-audit
 ```
 
 沿用真实移动/射击→R、out/mid/in及entry/late/首idle/upperReady的有界周期和PNG frameRange；本轮未启动Chrome，不预写新视角通过。该入口只补Launcher可见性，未执行武器不计本轮通过。
@@ -257,3 +257,10 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 Fuel实际使用`WPN-06-FLAME-without-can`，源后罐区域已在源x>.19且y<.395处切除；当前dock来自真实切面x=.19/y=.265，外置Fuel替代原后置罐，没有重复挂回源罐。现有旧out frame2052的六关节重放差1.361e-7m，149个躯干顶点在罐内，真实装配仍待修复。新左侧高持/转枪规划的35真实肩链快筛可达，但ready frame1931反向闭合罐检测有376个相关body顶点在罐内，最大已测顶点深度51.985mm，不能因罐的极值点不在body parity内便宣称clear。唯一解析上移需要66.379mm，保留15mm肩链余量的上限仅12.662mm；候选拒绝，未改生产hold/dock/grips/尺寸或层。mid/in旧重放缺transition仍不作精准几何结论。原始有界记录为`fuel-interface-pose-candidate-aab.json`、`fuel-ready-contact-depth-aab.json`、`fuel-ready-upward-separation-aab.json`和`fuel-ready-upward-feasibility-aab.json`；CPU诊断不是新GPU验收。
 
 Shell与同源round底火等待用户补交修复实源；round×.90只归一化，未修cap。Fuel装配与真实附件可见性未完成，全队列尚未批准，未启动Final Reviewer。
+
+
+### 73637d5 侧视入口的UI遮挡边界
+
+`launcher-side-slot-audit/observations.json`和`launcher-side-slot-135-audit/observations.json`两次各仅4样本/2张PNG，均因`pointer-ui-occluded`停止，不是新的动作验收失败或地面投影通过。yaw180的点被SELECT遮挡；yaw135投影ratio约[.7911,.7662]被FIELDSET遮挡。原始02-pistol.png显示右下HumanIK调试details展开，不能换任意鼠标点或绕过guard将此记为通过。
+
+现有探针的显式`--collapse-ik-panel`在真实Play/model就绪后，正常点击`#runtime-body-ik-panel > details > summary`折叠面板，再执行原瞄准guard；默认不折叠，静态模式拒绝此选项。记录summary前后open/title和实际点击，已经折叠时不再次打开；未就绪、不可点击或点击后未折叠明确失败。没有改DOM样式/移除元素、IK slider或Game状态。既有Panel重渲染继承details.open，因此普通用户折叠会保留；正常135/90输入仍必须通过canvas hit-test和作者地面射线检查。新命令见上文，本轮未运行Chrome，像素和Fuel装配待验边界不变。

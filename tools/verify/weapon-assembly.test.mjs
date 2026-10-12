@@ -1,9 +1,20 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment,collapseIkPanel} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('HumanIK折叠只点击展开summary；已折叠不再点击，未响应明确失败',async()=>{
+ let open=true,clicks=0;const records=[],cdp={async eval(){return {open,title:'HumanIK 混合 · 1 角色 · 加载 0'};}};
+ const click=async selector=>{assert.equal(selector,'#runtime-body-ik-panel > details > summary');clicks++;open=false;};
+ assert.equal((await collapseIkPanel(cdp,click,event=>records.push(event))).clicked,true);assert.equal(clicks,1);assert.equal(records.at(-1).after.open,false);
+ assert.equal((await collapseIkPanel(cdp,click)).clicked,false);assert.equal(clicks,1);
+ open=true;await assert.rejects(collapseIkPanel(cdp,async()=>{}),/点击后未折叠/);
+});
+test('HumanIK折叠为显式Play开关，不悄改默认或静态模式',()=>{
+ const args=['--expected-head',head];assert.equal(probeOptions(args).collapseIkPanel,false);assert.equal(probeOptions([...args,'--collapse-ik-panel']).collapseIkPanel,true);
+ assert.throws(()=>probeOptions([...args,'--static-scene',STATIC_SCENES[0],'--nodes','nd_raw_launcher_side','--collapse-ik-panel']),/静态模式不能混入/);
+});
 test('03b SMG短fire漏采仍需本轮同武器shot配对、弹药和真实后坐；历史事件不能通过',()=>{
  const def={id:'smg',ammo:{reloadMode:'magazine'}},event={sequence:40,tick:640,weaponId:'smg',action:'fire',clip:'shoot'},before={weaponEvents:[{...event,sequence:39,tick:630}],weapons:{states:[{id:'smg',magazine:32}]}},sample={frame:1264,firing:true,weaponEvents:[event],lastShot:{tick:640},weapons:{states:[{id:'smg',magazine:31}]},models:{pose:{action:'idle',recoil:{pitchDeg:8,translation:[-.055,0,0]}}},actor:{layer:{clip:'idle'}}};
  assert.equal(attackEvidence(before,[sample],def).ok,true);assert.deepEqual(attackEvidence(before,[sample],def).fireFrames,[]);

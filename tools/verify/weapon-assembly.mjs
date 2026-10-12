@@ -12,7 +12,7 @@ export function probeOptions(argv){
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
- if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
  const weaponIds=value('weapon','').split(',').filter(Boolean);
  if(argv.includes('--weapon')&&(!weaponIds.length||new Set(weaponIds).size!==weaponIds.length||weaponIds.some(id=>!WEAPONS.includes(id))))throw new Error('--weapon 必须为七件武器中的唯一ID列表');
  if(weaponIds.length&&argv.includes('--all-weapons'))throw new Error('--weapon 与 --all-weapons 不能混用');
@@ -29,7 +29,20 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+}
+/** 仅正常点击现有details summary；不写DOM样式、IK权重或游戏状态。 */
+export async function collapseIkPanel(cdp,click,record=()=>{}) {
+ const selector='#runtime-body-ik-panel > details > summary';
+ const inspect=()=>cdp.eval(`(()=>{const h=document.querySelector('#runtime-body-ik-panel'),d=h?.querySelector(':scope > details'),s=d?.querySelector(':scope > summary');return h&&!h.hidden&&d&&s?{open:d.open,title:s.textContent}:null;})()`);
+ let before=null;const ready=await waitFor(async()=>{before=await inspect();return typeof before?.open==='boolean'&&before.title?.startsWith('HumanIK 混合');},{timeout:3000,interval:100});
+ if(!ready)throw new Error('HumanIK调试summary未就绪，不能折叠');
+ record({ui:'collapse-ik-panel',selector,before});
+ if(before.open)await click(selector);
+ let after=null;const closed=await waitFor(async()=>{after=await inspect();return after?.open===false&&after.title?.startsWith('HumanIK 混合');},{timeout:3000,interval:100});
+ record({ui:'collapse-ik-panel-result',clicked:before.open,after});
+ if(!closed)throw new Error('HumanIK调试面板点击后未折叠；保留瞄准guard');
+ return {before,after,clicked:before.open};
 }
 /** Read-only reconstruction: uploaded skin matrix × normalized inverse-bind origin. */
 export function posedJointPosition(skin,normalization,ib){
@@ -231,7 +244,7 @@ async function run(options){
    throw new Error('UI Play 未进入运行；见 playStartFailure');
   }
   if(!await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150}))throw new Error('真实模型未形成有效本帧draw');
-  const baseline=await snap('play-ready');await capture('02-pistol');
+  const baseline=await snap('play-ready');if(options.collapseIkPanel)report.ikPanel=await collapseIkPanel(cdp,click,event=>report.actions.push({...event,atMs:Date.now()}));await capture('02-pistol');
   let canvas=await visiblePoint(cdp,'#gpu');
   const primary=options.aimRatio??options.aimYaw,secondary=options.sideAimRatio??options.sideAimYaw,aiming=primary!==null;
   const aimAt=async(spec,label)=>{activeAimSpec=spec;const point=await guardedAim(spec);await input.move(point);report.actions.push({aim:label,...point,atMs:Date.now()});await sampleFor(label,400);await capture(label);return input.position;};
