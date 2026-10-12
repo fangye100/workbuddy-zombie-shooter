@@ -648,6 +648,7 @@
   .asset-head {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     padding: 6px 10px;
@@ -699,6 +700,12 @@
   .asset-head .asset-zoom { width: 110px; flex: 0 0 110px; }
   .asset-zoom-label { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
   .asset-collapse { flex: 0 0 auto; min-width: 0; padding: 3px 10px; }
+  .asset-head label { display: flex; align-items: center; gap: 3px; white-space: nowrap; font-size: 11px; }
+  .asset-head select { width: auto; max-width: 120px; }
+  .asset-detail { display: block; overflow-wrap: anywhere; font-size: 10px; color: var(--text-dim); max-width: 100%; }
+  .asset-row { flex-wrap: wrap; }
+  .asset-row .asset-detail { flex: 0 0 100%; }
+  .asset-item.sel .asset-detail, .asset-row.sel .asset-detail { color: var(--ink); }
   .asset-body { flex: 1 1 auto; display: flex; min-height: 0; }
   .asset-tree {
     width: var(--tree-w);

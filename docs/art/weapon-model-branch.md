@@ -34,3 +34,20 @@ Fuel贴图接缝已有有界修复，实际装配及动作选择仍pending；未
 旧Shell源SHA256仍为`92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063`。
 
 后续合回由Main编排，逐项合并project登记、catalog、最小导入改动及可选meta类型；不能覆盖动画分支的v17 schema、runtime或已有sidecar动作frame。
+
+统一发现入口：底部资产库选`assets`，勾选「包含子目录」，类型选「模型」，搜索`WPN`。
+项目根或任一`project.assetRoots`根勾选递归时列举全部资产根；根内子目录只递归该子目录。
+重叠根去重，类型与搜索作用于真实文件路径，不新增资产数据库或项目字段。目录读取失败显示「列举不完整」，不能把部分结果当作完整资产集。
+当前武器模型共68个GLB：10原源、54新增派生、WPN01既有三档及原源；完整/去重复变体、各档LOD与失败候选均保留可发现。
+条目显示完整路径及sidecar已有variant/status；未标注状态不意味着验收通过。
+单击显示Inspector属性、GUID与预览，双击、Inspector「载入场景」或拖到画布沿用同一真实路径。
+Inspector/预览/导入均读取该路径sidecar，`normalizeHeightM:null`保留米制，`upAxisFlip`选择现有解析轴适配；缺失或坏meta显式拒绝该模型解析。
+
+本次独立验收服务入口为`https://fangye-win11-office.tail6b29a2.ts.net:5199/?scene=assets/scenes/sandbox/weapon-source-review.scene.json`，仅本次隔离试验服务；仓库固定5100契约未改。
+先选择统一列表，再检查10原源、WPN01、去重复body、三档LOD及Shell/Fuel候选的属性/预览/载入；真实GPU与可见UI尚待Audit，离线清单与测试不能代替批准。
+只读快照`__editor.assets.getState()`新增paths/recursive/kind/errors；实际入口以main暴露的assets对象为准，操作应使用正常UI。
+
+```powershell
+pnpm exec vitest run apps/editor/test/asset-listing.test.ts apps/editor/test/asset-inspector.test.ts apps/editor/test/models.test.ts
+pnpm run editor:build
+```
