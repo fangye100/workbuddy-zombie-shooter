@@ -1,0 +1,394 @@
+{
+  "id": "WPN-05-CHAINSAW",
+  "source": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+  "sourceHash": "d8b738eae6ec62b049b9c60f39ff77da342333d19d240f559edecd768e3bc4c6",
+  "sourceTriangles": 100004,
+  "recipe": {
+    "id": "WPN-05-CHAINSAW",
+    "rotationDeg": [
+      0,
+      90,
+      0
+    ],
+    "sourceLengthAxis": 0,
+    "lengthM": 0.86,
+    "targetDimsM": {
+      "lengthZ": 0.86,
+      "widthX": 0.27,
+      "heightY": 0.32
+    },
+    "targets": [
+      6000,
+      3000,
+      1000
+    ],
+    "axisEvidence": "94c68a1 侧视薄齿导板在左；node-baked -X 前三段厚Z .030..050、中央壳体 .266..384，支持薄齿端 -X；端视未确认，normalized GPU pending",
+    "policy": "等比按原源长轴；宽/高保留实际比例，不硬凑规格；final parser XZcenter/Yfloor sockets"
+  },
+  "pipelineHash": "985c864e7d979135977bb106d1c5c180e3a3509f73e88d1679259ca92e43b7e8",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "toolVersions": {
+    "pymeshlab": "2025.7.post1",
+    "numpy": "2.5.4",
+    "pillow": "12.3.0"
+  },
+  "nodeTransformsApplied": true,
+  "sourceDimensions": [
+    1.1800639629364014,
+    0.45683703450578317,
+    0.38366405008204574
+  ],
+  "scaleXYZ": [
+    0.7287740554842695,
+    0.7287740554842695,
+    0.7287740554842695
+  ],
+  "originRotatedSource": [
+    -0.042136988340215634,
+    1.1005603116955426e-08,
+    0.026439011096954346
+  ],
+  "rawNodeBakedCenterSource": [
+    -0.026439011096954346,
+    1.1005603116955426e-08,
+    -0.042136988340215634
+  ],
+  "dimensionsM": [
+    0.2796044057218124,
+    0.33293097833218677,
+    0.86
+  ],
+  "dimensionDifferenceM": [
+    0.00960440572181237,
+    0.01293097833218676,
+    0.0
+  ],
+  "normalization": "source node world -> R -> (R*v-origin)*uniformScale -> parser final XZcentre/Yfloor; each LOD offset below",
+  "texturePolicy": "每档独立1024逐面 atlas；保留源 BaseColor 表面采样，非原 atlas UV；源4096未改",
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "preciseFit": "pending",
+  "parts": "integral source geometry retained; no duplicate external attachment fitted yet",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-05-CHAINSAW_lod0.glb",
+      "hash": "89cc873a75ff81154e48877c5e949d463c8ef80b7f70378ce4743bf6d9fc8a94",
+      "triangles": 6000,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 6000,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 30000,
+          "meanAbsoluteRgbError": 3.7952182496015654,
+          "p95AbsoluteRgbError": 18.046509413993533,
+          "fractionErrorAbove40": 0.009866666666666666,
+          "surfaceDistance": {
+            "RMS": 0.0008979681879281998,
+            "diag_mesh_0": 1.316238522529602,
+            "diag_mesh_1": 1.3222893541288765,
+            "max": 0.004747291095554829,
+            "mean": 0.0006322144763544202,
+            "min": 6.449857092860611e-09,
+            "n_samples": 30000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-05-CHAINSAW_lod0_basecolor.png",
+        "textureHash": "84dd9bec7aca6bcaee96462dcb0f3ac35f0299d133be40a5ecb18f147627144b",
+        "normalRepairFaces": 27
+      },
+      "sourceTopology": {
+        "v": 49976,
+        "f": 100004,
+        "edges": 150006,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 2974,
+        "f": 6000,
+        "edges": 9000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.9698605653129051,
+      "boundsDrift": 0.0008535223812842219,
+      "dimensionsM": [
+        0.279781109424594,
+        0.3326468142907574,
+        0.8603142086612702
+      ],
+      "silhouetteIoU": [
+        0.9813117669185788,
+        0.9902180167508471,
+        0.9894283043467565
+      ],
+      "exteriorSignedVolumeRatio": 0.9935054160900989,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        8.486312776398441e-05,
+        0.000144240636044246,
+        0.0002200341356115576
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-05-CHAINSAW_lod1.glb",
+      "hash": "1884e619eacf60d352a95f6c3938d829d1ba5867c4e89eff52668e896daa2be5",
+      "triangles": 3000,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 3000,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 15000,
+          "meanAbsoluteRgbError": 3.2184043088806393,
+          "p95AbsoluteRgbError": 14.608290850540062,
+          "fractionErrorAbove40": 0.006866666666666667,
+          "surfaceDistance": {
+            "RMS": 0.0015647762920707464,
+            "diag_mesh_0": 1.310474157333374,
+            "diag_mesh_1": 1.3222893541288765,
+            "max": 0.007897088304162025,
+            "mean": 0.0011382087832316756,
+            "min": 2.9549525493166584e-08,
+            "n_samples": 15000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-05-CHAINSAW_lod1_basecolor.png",
+        "textureHash": "d63de2ea60be15b106abc3ce10a70027fdefe09808d7b720489b3dfb894db6d8",
+        "normalRepairFaces": 26
+      },
+      "sourceTopology": {
+        "v": 49976,
+        "f": 100004,
+        "edges": 150006,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 1474,
+        "f": 3000,
+        "edges": 4500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.9450783049477826,
+      "boundsDrift": 0.0008795487205304209,
+      "dimensionsM": [
+        0.2793584800245051,
+        0.33266430106075406,
+        0.8606245515179552
+      ],
+      "silhouetteIoU": [
+        0.9690335540763692,
+        0.9857458803676667,
+        0.9812508444182418
+      ],
+      "exteriorSignedVolumeRatio": 0.9868772800027561,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        0.0001295794546553597,
+        0.000144240636044246,
+        0.0005823085160094887
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-05-CHAINSAW_lod2.glb",
+      "hash": "042d0cb338cf7bee661fad1392b816de22a1159e439d889917108d4fcbfd5a62",
+      "triangles": 1000,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 1000,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 5000,
+          "meanAbsoluteRgbError": 2.6631341320037474,
+          "p95AbsoluteRgbError": 12.396749410559641,
+          "fractionErrorAbove40": 0.0048,
+          "surfaceDistance": {
+            "RMS": 0.003296513808891177,
+            "diag_mesh_0": 1.2914321422576904,
+            "diag_mesh_1": 1.3222893541288765,
+            "max": 0.01619408279657364,
+            "mean": 0.002556948456913233,
+            "min": 7.529347954005061e-07,
+            "n_samples": 5000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-05-CHAINSAW_lod2_basecolor.png",
+        "textureHash": "9e6f1792116f50fd6aefc171e456802054d01cbd654da2ffcf09da676e2a1ff8",
+        "normalRepairFaces": 23
+      },
+      "sourceTopology": {
+        "v": 49976,
+        "f": 100004,
+        "edges": 150006,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 474,
+        "f": 1000,
+        "edges": 1500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.8829067256149333,
+      "boundsDrift": 0.016451669910327205,
+      "dimensionsM": [
+        0.27868497443686524,
+        0.32745370777374333,
+        0.8544271085073294
+      ],
+      "silhouetteIoU": [
+        0.9363263034514162,
+        0.9619012461971257,
+        0.9580129520821973
+      ],
+      "exteriorSignedVolumeRatio": 0.9578875751439262,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        -0.00030968097647672554,
+        0.004613973141105245,
+        -0.0010137386087543943
+      ],
+      "errors": [],
+      "diagnostics": [
+        "面积比0.8829；不可独立判断外轮廓"
+      ],
+      "visual": "pending"
+    }
+  ],
+  "unprotectedQemAttempt": [
+    {
+      "level": 0,
+      "triangles": 5993,
+      "topology": {
+        "v": 2977,
+        "f": 5993,
+        "edges": 8992,
+        "boundary": 14,
+        "nonmanifold": 8
+      },
+      "errors": [
+        "nonmanifold increased"
+      ]
+    },
+    {
+      "level": 1,
+      "triangles": 2996,
+      "topology": {
+        "v": 1478,
+        "f": 2996,
+        "edges": 4492,
+        "boundary": 5,
+        "nonmanifold": 7
+      },
+      "errors": [
+        "nonmanifold increased"
+      ]
+    },
+    {
+      "level": 2,
+      "triangles": 982,
+      "topology": {
+        "v": 486,
+        "f": 982,
+        "edges": 1467,
+        "boundary": 31,
+        "nonmanifold": 30
+      },
+      "errors": [
+        "nonmanifold increased"
+      ]
+    }
+  ]
+}

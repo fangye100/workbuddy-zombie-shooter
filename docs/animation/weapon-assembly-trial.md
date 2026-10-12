@@ -1,6 +1,6 @@
 # 真实武器装配试验入口
 
-当前运行时已接入 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。2026-10-12 的 WPN-02～06 五件本体源 GLB 已齐，新增固定方向检视入口；尚未生成这些本体的 game_ready 或完成附件精确 fit，整个接入请求仍未完成。此前“次日交付”的描述是下文 c19f3b2 历史状态，现已解除源缺失。
+当前运行时已接入 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。2026-10-12 的 WPN-02～06 五件本体源 GLB 已齐，已有固定方向检视入口及三档 game_ready 数值候选；尚未完成这些本体的视觉验收和附件精确 fit，整个接入请求仍未完成。此前“次日交付”的描述是下文 c19f3b2 历史状态，现已解除源缺失。
 
 ## WPN-20261012 本体原源检视
 
@@ -21,6 +21,14 @@
 后续按长度等比规整为Y-up/炮口+Z（符号待确认），实测其他外廓而不非均匀硬凑规格；保留旧Pistol+Z/Launcher+X兼容。主握位置以 `parseGlb(buffer,null,y)` 最终XZ居中/Y贴底空间保存socket并报告pivot偏移，不修改全局导入器。当前检视仅使用已有BaseColor路径，不认证完整PBR。
 
 工具：`node tools/art/prepare-weapon-body-review.mjs --check` 验证当前source/sidecar/report/节点/GUID/旋转/展示尺度；不带参数仅首次创建，已有场景拒绝覆盖。`node --test tools/art/prepare-weapon-body-review.test.mjs` 检查UV seam位置焊接及正负端面朝向，2项通过。源准备与 `--check` 均通过；scene:check 为246资产、20个v17场景及15项跨文件测试通过，既有LOD/P0/音频检查通过；knowledge:check 为137条、0错误，architecture:check 为280个生产文件、0错误。上述离线检查不替代源模型视觉验收。
+
+94c68a1 原源 headed CUA 取得11项有效视图：Shotgun +Z、SMG/Sniper/Flame -X 内孔与侧面可辨；SMG固有弹匣、Flame固有罐/软管可见但没有证明自然可拆。电锯端面未辨明薄齿端，侧面与 node-baked 截面厚度（-X前三段Z厚 .030–.050，中央壳体 .266–.384）支持 -X 齿端推断，仍待规范化实际持向复核。该批没有读取GPU adapter、没有本地PNG，不能认证vendor或虚构截图证据。
+
+本体LOD管线 `tools/art/build-weapon-body-lods.py` 复用既有node-baked加载、QEM和源表面转移；每档独立1024逐面atlas，均等比按源长轴归一到规格长度，实际宽高差见各 `assets/art/models/<ID>/lod-report.json`。Shotgun 5000/2500/800，SMG 5000/2500/800，Sniper 6000/3000/1000，Chainsaw 6000/3000/1000，Flame 6000/3000/1000；位置焊接后各档非流形为0。首次无拓扑保护QEM新增边的失败计数保留，正式候选显式 `preservetopology=True, selected=False`；Flame派生输入仅移除3个非流形邻面、补17面封局部孔（原源23边界/2非流形→派生0/0），源不改。MeshLab补孔会选择新增面，未显式 `selected=False` 时QEM曾未减面而导致atlas失败；管线现在在atlas前拒绝超预算。15档RGB五面内采样平均误差约1.7–4.1/255，不代表完整texel/美术通过；Chainsaw LOD2面积比 .883、细齿损失待GPU确认。
+
+检视入口：[本体Raw/LOD三向](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-body-lod-review.scene.json)。60mesh，每行一件，每组Raw/LOD0/LOD1/LOD2；各组三向为侧+X、枪口+Z（电锯齿端候选）、俯+Y。节点 `nd_body_lod_<行0..4>_<组0..3>_<向0..2>`，每件共用展示比例，不按每LOD包围盒另缩放；raw变换补偿与LOD parser recenter都来自报告。所有状态仍为 `visual-review-candidate`，本轮未挂三floor或重复附加固有弹匣/罐体。
+
+复验：`node tools/art/prepare-weapon-body-lod-review.mjs --check`；`.workbuddy/tmp/art-python/Scripts/python.exe tools/art/build-weapon-body-lods.test.py`（3项空间/实际输出预算/焊接拓扑检查通过）；`pnpm run scene:check`、`architecture:check`、`knowledge:check`。首次sidecar漏写 `userData.file` 导致15项元数据门禁失败，已仅补齐本次sidecar文件标签并保持GUID，未用全局scene:gen覆盖。
 
 CodeGraph在当前检出 roots=apps/assets/packages/tools 执行一次 `incremental-index --no-embed --json`：13files/99nodes/507edges、本次parse errors0、结构ready；输出index.lock被另一个进程持有的竞态警告，没有删除锁/全量重建。当时向量6563/6896；后续只读health显示1058files/6933nodes/17450edges、embedding100%、5既有解析恢复、7417未解析调用、Snapshot absent。没有为embedding重复刷新或等待，不能据这些计数认证无竞态或源码调用全部可解析。
 

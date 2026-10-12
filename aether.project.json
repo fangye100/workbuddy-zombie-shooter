@@ -123,6 +123,12 @@
       "path": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
       "name": "WPN-20261012 · 五件本体原源固定方向（未验收）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_body_lod_review",
+      "path": "assets/scenes/sandbox/weapon-body-lod-review.scene.json",
+      "name": "WPN-20261012 · 原源 / LOD0 / LOD1 / LOD2 三向（候选）",
+      "enabled": true
     }
   ],
   "startIndex": 1,

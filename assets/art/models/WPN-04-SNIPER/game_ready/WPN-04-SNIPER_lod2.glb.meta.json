@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_e86404a211f4",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-04-SNIPER",
+    "variant": "game_ready",
+    "level": 2,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+    "sourceHash": "84750b54771f45872af7fb0698c3b80dfc78064c4a234b4f0c1a85f50e577e6b",
+    "report": "assets/art/models/WPN-04-SNIPER/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      -0.0014081887038636665,
+      -0.0006307769270805588,
+      0.00028363997242430994
+    ],
+    "file": "WPN-04-SNIPER_lod2.glb"
+  },
+  "sourceHash": "sha256:4ff828fbc6804f428024c6473d52104173fbbf53080509418f5e886195fb892d",
+  "updatedAt": "2026-10-12T01:16:08.435Z"
+}

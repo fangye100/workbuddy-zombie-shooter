@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_2f3ef4e003fb",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-05-CHAINSAW",
+    "variant": "game_ready",
+    "level": 2,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+    "sourceHash": "d8b738eae6ec62b049b9c60f39ff77da342333d19d240f559edecd768e3bc4c6",
+    "report": "assets/art/models/WPN-05-CHAINSAW/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      0.00030968097647672554,
+      -0.004613973141105245,
+      0.0010137386087543943
+    ],
+    "file": "WPN-05-CHAINSAW_lod2.glb"
+  },
+  "sourceHash": "sha256:042d0cb338cf7bee661fad1392b816de22a1159e439d889917108d4fcbfd5a62",
+  "updatedAt": "2026-10-12T01:16:08.529Z"
+}
