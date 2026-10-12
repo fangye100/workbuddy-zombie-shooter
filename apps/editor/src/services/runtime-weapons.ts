@@ -1,6 +1,6 @@
 /** Play 武器 IO/资源与 renderer 适配；动作策略来自游戏表现，骨求值来自现有单次采样。 */
 import { mat4, multiply, type Quat } from '@aether/core';
-import { parseGlb, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
+import { parseGlb, VERTEX_FLOATS, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
   type ModelAttachment, type ModelSockets, type SceneDocument, type SocketTransform, type WeaponDefinition } from '@aether/scene';
 import { attachedModelFrame, composeSocket, inverseSocket, rigidFromMatrix, rotateVec3, socketMatrix,
   type ModelDraw, type PoseFrameOutput, type PostPoseDrawPort, type RegisterDrawResource } from '@aether/render';
@@ -9,7 +9,7 @@ import { weaponModelProjection, type WeaponModelView } from '@aether/zombie-game
 import { fileUrl } from '../asset-util';
 import type { IkObject } from './runtime-body-ik';
 
-interface Loaded { draw:ModelDraw; sockets:ModelSockets }
+interface Loaded { draw:ModelDraw; sockets:ModelSockets; corners:number[][] }
 interface Child extends Loaded { spec:ModelAttachment }
 interface Assembly extends Loaded { definition:WeaponDefinition; children:Child[] }
 export interface RuntimeWeaponsPorts {
@@ -35,14 +35,14 @@ export class RuntimeWeapons implements PostPoseDrawPort {
   private projection:WeaponModelView={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};
   private measurements:Record<string,number|null>={};
   /** 本帧实际提交的附件矩阵，只用于诊断，不驱动相位或下一帧求解。 */
-  private attachmentDraws:{id:string;guid:string|undefined;removed:boolean;frameStamp:number;worldMatrix:number[]}[]=[];
+  private attachmentDraws:{id:string;guid:string|undefined;removed:boolean;frameStamp:number;worldMatrix:number[];worldCorners:number[][]}[]=[];
   constructor(private readonly ports:RuntimeWeaponsPorts){}
   view():WeaponModelView {
     const pose=this.runtime?.weapons.poseIntent;
     const diagnostics=[...this.errors].filter(e=>!e.includes(': WEAPON_LEGACY ')||e.startsWith(`${pose?.weaponId}:`));
     return {...this.projection,visible:this.projection.visible&&pose?.weaponId===this.projection.weaponId,diagnostics};
   }
-  summary(){return {pending:this.pending,loaded:[...this.assemblies.keys()],generation:this.generation,simulationTick:this.runtime?.tick??null,pose:this.runtime?.weapons.poseIntent??null,...this.view(),visibleDrawCount:this.drawObjects().filter(d=>d.visible).length,warnings:[...this.errors],ikDiagnostics:this.active?.object.skinState?.bodyIk?.diagnostics??[],measurements:{...this.measurements},attachmentDraws:this.attachmentDraws.map(d=>({...d,worldMatrix:[...d.worldMatrix]}))};}
+  summary(){return {pending:this.pending,loaded:[...this.assemblies.keys()],generation:this.generation,simulationTick:this.runtime?.tick??null,pose:this.runtime?.weapons.poseIntent??null,...this.view(),visibleDrawCount:this.drawObjects().filter(d=>d.visible).length,warnings:[...this.errors],ikDiagnostics:this.active?.object.skinState?.bodyIk?.diagnostics??[],measurements:{...this.measurements},attachmentDraws:this.attachmentDraws.map(d=>({...d,worldMatrix:[...d.worldMatrix],worldCorners:d.worldCorners.map(p=>[...p])}))};}
   private error(message:string):void {this.errors.add(message);}
   private valid(generation:number):boolean {return generation===this.generation&&!!this.session&&this.session.state!=='stopped'&&!this.abort?.signal.aborted;}
   start(doc:SceneDocument,session:PlaySession):void {
@@ -99,7 +99,10 @@ export class RuntimeWeapons implements PostPoseDrawPort {
       if(!this.valid(generation))throw new Error('WEAPON_CANCELLED');
       const register:RegisterDrawResource=(label,dispose)=>{if(!this.valid(generation)){dispose();throw new Error('WEAPON_CANCELLED');}this.session!.registerResource(label,dispose);};
       const draw=this.ports.draw(model,bitmap,register,`weapon:${ref.guid}`);
-      return {draw,sockets:resolveSocketDefaults(meta.modelSockets,overrides)??{}};
+      const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+      for(let i=0;i<model.mesh.vertices.length;i+=VERTEX_FLOATS)for(let k=0;k<3;k++){min[k]=Math.min(min[k]!,model.mesh.vertices[i+k]!);max[k]=Math.max(max[k]!,model.mesh.vertices[i+k]!);}
+      const corners=Array.from({length:8},(_,i)=>[0,1,2].map(k=>(i&(1<<k)?max:min)[k]!));
+      return {draw,sockets:resolveSocketDefaults(meta.modelSockets,overrides)??{},corners};
     }finally{bitmap?.close();}
   }
   stop():void {
@@ -156,7 +159,8 @@ export class RuntimeWeapons implements PostPoseDrawPort {
         local=attachedModelFrame(support,request.dependent!.contact,child.sockets.primaryGrip);
       }else local=composeSocket(root,composeSocket(composeSocket(active.assembly.sockets[child.spec.parentSocket]!,child.spec.offset),inverseSocket(child.sockets[child.spec.childSocket]!)));
       const matrix=mat4();multiply(matrix,actorMatrix,socketMatrix(local));child.draw.setMatrix(matrix);child.draw.draw.visible=true;
-      this.attachmentDraws.push({id:child.spec.id,guid:child.spec.model.guid,removed:active.removed&&child.spec.id===active.assembly.definition.presentation.assembly!.reloadAttachmentId,frameStamp:frame.stamp,worldMatrix:Array.from(matrix)});
+      const worldCorners=child.corners.map(p=>[0,1,2].map(k=>matrix[k]!*p[0]!+matrix[k+4]!*p[1]!+matrix[k+8]!*p[2]!+matrix[k+12]!));
+      this.attachmentDraws.push({id:child.spec.id,guid:child.spec.model.guid,removed:active.removed&&child.spec.id===active.assembly.definition.presentation.assembly!.reloadAttachmentId,frameStamp:frame.stamp,worldMatrix:Array.from(matrix),worldCorners});
     }
     const muzzleMatrix=mat4();multiply(muzzleMatrix,world,socketMatrix(active.assembly.sockets.muzzle!));
     const muzzle=rigidFromMatrix(muzzleMatrix)!;

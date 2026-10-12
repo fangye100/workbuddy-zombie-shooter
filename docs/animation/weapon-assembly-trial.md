@@ -38,7 +38,7 @@ CodeGraph在当前检出 roots=apps/assets/packages/tools 执行一次 `incremen
 
 Fuel仅删除源note许可的冲突软管区，保留罐/阀；拓扑保护QEM实际970面floor，采用几何QEM留封孔余量。native fallback后无条件串联清理曾access violation；现在按真实非流形/边界条件处理，三边残孔显式封口，未安装依赖或用拆顶点掩盖拓扑。Shell只截源底火X>.174（约长2.1%）并取原黄铜有效texel封局部端；红壳/rim保留，仍需确认没有新橙楔/条纹。狙击mag来自SMGmag、Launcher弹丸来自Shell，交付缺口仍明确，均为本地派生而非WorkBuddy新生成；Launcher弹丸不宣称完整火箭造型。
 
-候选入口：[部件/槽口对照](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-fit-review.scene.json)，40mesh。`nd_fit_<weapon>_assembled_0/1`为侧/俯主体，`_child_0/1`为同坐标独立附件；SMG/Flame另有`_integral_0/1`切前、`_cut_0/1`切后无外挂件；`nd_fit_prop_0_<LOD0..2>`为Shell底火、`nd_fit_prop_1_<LOD0..2>`为Fuel罐阀侧面。选择可见Hierarchy准确名称后F。各组共用尺度，包含实际v17 parent/child socket变换，不借另一渲染器或额外静态地面超容量。
+候选入口：[部件/槽口对照](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-fit-review.scene.json)，当前44mesh。`nd_fit_<weapon>_assembled_0/1`为侧/俯主体，`_child_0/1`为同坐标独立附件；SMG/Flame另有`_integral_0/1`切前、`_cut_0/1`切后无外挂件；`nd_fit_prop_0_<LOD0..2>`为Shell底火-Y、`nd_fit_prop_1_<LOD0..2>`为Fuel罐阀侧面。新增`nd_fit_prop_0_source`、`nd_fit_prop_0_source_side`、`nd_fit_prop_0_derived_side`、`nd_fit_prop_1_source`提供原源/候选同角度同fit缩放对照，原源保留软管和底火区域。选择可见Hierarchy准确名称后F。各组共用尺度，包含实际v17 parent/child socket变换，不借另一渲染器或额外静态地面超容量。
 
 `node tools/art/calibrate-weapon-models.mjs --check`核对sidecar默认socket、scene覆盖、seed和三floor。新本体source测量点通过源node-baked旋转/等比scale/full-body pivot/各LOD实际parser recenter转到final import-space；旧Pistol+Z、Launcher+X主握与hold保持。Launcher仅scene assembly覆写后盖magazine位置并增加派生弹丸。七件模拟marker按各actorY和capsuleHalf=.90重新推导，未改伤害、弹量、攻击/换弹时钟。Shotgun/Sniper初始主掌actorZ=.12造成bind support越界55/78mm，root向身体回收.105m至Z=.015；SMG初始换弹越界34mm，上移root .05m仍6.6mm，最后上移.09m。原socket与骨长保留，CPU可达不认证实际持姿或遮挡。
 
@@ -48,7 +48,7 @@ Fuel仅删除源note许可的冲突软管区，保留罐/阀；拓扑保护QEM�
 
 补充回归diagnostics测试1项通过，typecheck与editor:build通过（保留Vite大chunk提示）；scene:check为282资产/22个v17scene/15跨文件测试及既有LOD/P0/audio通过，architecture为284生产文件0错误，knowledge137条0错误。三floor语义比对只改变model/assembly/muzzle及dependency，Camera、玩法数值与其他组件相同；原交付目录已追踪文件无diff。CodeGraph在本检出roots=apps/assets/packages/tools一次incremental --no-embed：88files/211nodes/571edges、结构ready，runtime-weapons测试1文件解析恢复、旧锁竞态警告、6401/7029向量；未删锁/全量重建/等embedding。定向overview覆盖RuntimeWeapons.summary/afterPose与新fit工具prepared/build/main和真实Input入口；私有符号有导出筛选限制，不认证调用全面解析。原始codegraph-seven-fit.log及三份overview JSON均留ignored证据目录。
 
-独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化H01 rig、SharedMotion Spine层、双手BodyIK、Light与七件武器库；仅trial Camera改distance2.1m/pitch15°/camera节点Y1.18m（现有orbit-follow取该锚点高度），三floor Camera原样。没有运行生成器覆盖三层。
+独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化H01 rig、SharedMotion Spine层、双手BodyIK、Light与七件武器库；当前trial Camera为distance1.8m/pitch0°/yawOffset0°/camera节点Y1.18m（现有orbit-follow取该锚点高度），三floor Camera原样。ac8295c旧视角为2.1m/15°/-30°，不能用其遮挡画面批准当前视角。没有运行生成器覆盖三层。
 
 编辑态的 `nd_pistol_inspect_0/1/2` 是同尺度侧面、+Z 端面与顶面副本，选择节点后按 F 聚焦；它们在 Play 隐藏。Pistol 的 final parseGlb 长轴实际为 Z；93572b5 的真实 GPU 静态 +Z 端面观察确认上方圆形炮口与内环。Launcher 已有 LOD0 +X 炮口观察；端面观察不认证握姿或弹道。
 
@@ -82,9 +82,9 @@ Renderer 一次 base/Spine 采样、一次 IK 后输出最终骨矩阵；右手�
 
 ## 本任务 headed 输入探针
 
-本轮可选 `--all-weapons`，默认仍为原Pistol/Launcher流程。七件模式按真实Digit1～7持续采样：1手枪hitscan＋Mag01、2霰弹pellets＋逐Shell换弹、3SMG hitscan＋独立弹匣、4狙击piercing＋SMG源短弹匣、5电锯melee（reloadMode:none，无假换弹附件/链条动画）、6喷射器flame＋Fuel罐、7发射器projectile＋Shell源弹丸。开火或攻击均是真实鼠标按住；W/S交替移动，R触发原WeaponSystem换弹，不setInput/注入phase。每件记录实际Spine/base、phase、子draw矩阵与frame、out/mid/in原始上下文/clip截图；脚本数值检查不批准遮挡画面。静态候选40槽与实际trial分别加载，不能以静态装配图代替离回槽实操。
+本轮可选 `--all-weapons`，默认仍为原Pistol/Launcher流程。七件模式按真实Digit1～7持续采样：1手枪hitscan＋Mag01、2霰弹pellets＋逐Shell换弹、3SMG hitscan＋独立弹匣、4狙击piercing＋SMG源短弹匣、5电锯melee（reloadMode:none，无假换弹附件/链条动画）、6喷射器flame＋Fuel罐、7发射器projectile＋Shell源弹丸。开火或攻击均是真实鼠标按住；W/S交替移动，R触发原WeaponSystem换弹，不setInput/注入phase。每件记录实际Spine/base、phase、子draw矩阵与frame、out/mid/in原始上下文/clip截图；脚本数值检查不批准遮挡画面。静态候选44槽与实际trial分别加载，不能以静态装配图代替离回槽实操。
 
-`weaponModels.snapshot().attachmentDraws`是本帧提交GPU的子draw `{id,guid,removed,frameStamp,worldMatrix}`副本；sync/frame失效与Stop清空，禁止反馈到时钟/下一帧IK。采样frame须同时匹配主draw和子矩阵，矩阵变化仅佐证，不替代可见几何。近Camera改变后旧c19取景证据不认证本轮视角。Audit按真正无遮挡地面选择主/侧aim-ratio，工具先核ground ray；不要把预设比例名字当朝向或槽口可见批准。
+`weaponModels.snapshot().attachmentDraws`是本帧提交GPU的子draw `{id,guid,removed,frameStamp,worldMatrix,worldCorners}`副本；worldCorners为final import包围盒八角经实际draw矩阵变换的结果，用于截图包含整件附件，不是GPU readback。sync/frame失效与Stop清空，禁止反馈到时钟/下一帧IK。采样frame须同时匹配主draw和子矩阵，矩阵变化仅佐证，不替代可见几何。近Camera改变后旧c19取景证据不认证本轮视角。Audit按真正无遮挡地面选择主/侧aim-ratio，或使用下面的世界方位投影；工具先核ground ray，不把请求角度名字当实际朝向或槽口可见批准。
 
 七件命令沿用下面root/SHA/URL，在末尾加 `--all-weapons --aim-ratio '按可见地面填写x,y' --side-aim-ratio '按可见地面填写x,y'`。120秒操作预算保持；模型/输入失败或截图遮挡如实记录，Worker不预运行浏览器或声明七件GPU已通过。
 
@@ -104,7 +104,7 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 
 可选 `--aim-ratio 'x,y'` 和 `--side-aim-ratio 'x,y'` 使用当前 canvas 内 .05–.95 的比例；由 Audit 根据可见地面选择，不能把比例名称当成正面/侧面认证。未传参数保持旧中心行为。指定点必须是无遮挡 canvas，并由既有 `renderer.pointerRay` 正向命中持久 plane 范围和游戏 .9m 瞄准平面；不命中或被 UI 遮挡即失败，不注入 aim/角色状态。真实 `Input.dispatchMouseEvent(mouseMoved)` 后短采样 Pistol、Launcher 两个请求方向并记录实际 pointer、player.yaw、pose、frameStamp；有主点时回到主点执行原移动/换弹流程。新增最多 6 张姿态上下文截图。
 
-每个样本额外只读当前 attachment request/result，以及从本帧 skinScratch × 规整化 inverse-bind 原点恢复的六个肩/肘/腕位置，可核对理想目标距肩和实际链长度。该恢复不重新采样或执行 IK，不改变模拟。指定主瞄准比例时，最多 3 张 out/mid/in 截图按本帧前臂/手的公开 worldToScreen 投影裁切近景，记录 clip；无可用投影即失败。裁切不改变相机、不消除遮挡，仍须 Audit 目检 Mag01 是否实际可见。本轮未更改试验/三 floor Camera 或 Launcher holdPose/markers/生成种子。
+每个样本额外只读当前 attachment request/result，以及从本帧 skinScratch × 规整化 inverse-bind 原点恢复的六个肩/肘/腕位置，可核对理想目标距肩和实际链长度。该恢复不重新采样或执行 IK，不改变模拟。指定主瞄准点时，out/mid/in各留原始全页上下文与近景PNG，裁切同时包含前臂/手及本帧child的八个包围角投影，记录clip、关联sample/phase与截图前后frame范围；不伪称截图锁定单一GPU帧。无可用同帧投影即失败。裁切不消除遮挡，仍须Audit目检附件是否实际可见。当前只有trial Camera改动；三floor Camera、Launcher holdPose/markers与生成种子保持原值。
 
 本轮最小离线回归：BodyIK 16 项和工具 5 项通过，含 quaternion 范数漂移、真实部分权重/不可达残差、瞄准参数边界/无效射线及只读链位置恢复。工具测试有效命令仍为 `node --test tools/verify/weapon-assembly.test.mjs`。
 
@@ -120,7 +120,7 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 
 ## 固定候选视图原始 PNG 入口（2026-10-12）
 
-`weapon-assembly.mjs --static-scene <路径> --nodes <逗号分隔稳定NodeId>`只允许登记的60网格本体LOD场景和40网格fit场景，每次1～12个唯一节点。默认不传时仍走原Play路径。静态模式复用正常TLS/headed硬件、保留profile归属检查及自身cleanup；不进入Play，不改相机/变换数据，不调用内部选择接口。实际mouseWheel定位可见Hierarchy名称行、点击，再真实KeyF聚焦；先等待资产与Hierarchy精确名称同步，拒绝陈旧fallback列表。Inspector精确名称及可见文字行、Save disabled、作者节点指纹、F后相机target与实际对象bounds中心逐图核对。
+`weapon-assembly.mjs --static-scene <路径> --nodes <逗号分隔稳定NodeId>`只允许登记的60网格本体LOD场景和当前44网格fit场景，每次1～12个唯一节点。默认不传时仍走原Play路径。静态模式复用正常TLS/headed硬件、保留profile归属检查及自身cleanup；不进入Play，不改相机/变换数据，不调用内部选择接口。实际mouseWheel定位可见Hierarchy名称行、点击，再真实KeyF聚焦；先等待资产与Hierarchy精确名称同步，拒绝陈旧fallback列表。Inspector精确名称及可见文字行、Save disabled、作者节点指纹、F后相机target与实际对象bounds中心逐图核对。
 
 ```powershell
 node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --static-scene assets/scenes/sandbox/weapon-fit-review.scene.json --nodes nd_fit_smg_integral_0,nd_fit_smg_cut_0,nd_fit_flame_integral_0,nd_fit_flame_cut_0,nd_fit_prop_0_0,nd_fit_prop_1_0 --out .workbuddy/tmp/wpn-integration/static-fit-audit
@@ -131,3 +131,28 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 输出每节点原始全页PNG及`observations.json`，保留冻结HEAD、工具/helper hash、scene hash、AssetRef/GUID/GLB及meta hash、实际UI身份、editorCamera/bounds、截图前后frame范围、GPU/错误/cleanup记录。PNG未修补；frame范围不伪称截图锁定单一GPU帧。模型仍须人工检查端面、UV、轮廓、遮挡和重复附件；静态退出0不批准美术或换弹离回槽。
 
 工具7项定向Node测试通过；未提交工具在资产target `b8f60c3`上的小样（工具hash独立记录）为fit两节点6/6与body单节点5/5、正常TLS NVIDIA/Lovelace、console/exception 0，作者数据/场景/HEAD保持，浏览器关闭后9348空闲。原始证据分别为`.workbuddy/tmp/wpn-integration/static-tool-selftest-fit-final/`与`static-tool-selftest-body-2/`；只证明采集入口可用。Shell底火像素仍粗碎、其他候选与七件实际换弹须正式Audit，不能从本次工具自测改写批准状态。5198继续原PID74824，本次未重启；仓库5100固定契约不变。
+
+## ac8295c复验后的聚焦修正（2026-10-12）
+
+原始`play-audit-ac8295c/observations.json`及`play-audit-ac8295c-full/`保留在ignored证据目录；攻击/换弹双手FK残差小于.31微米，但31个aim/switch样本有真实`IK_UNREACHABLE/IK_SOCKET_RESIDUAL`，最大Sniper切入91.388mm。全部40个fit/30个body固定PNG已采集，六件换弹附件仍被躯干/手臂遮挡，不能据phase/draw批准离槽归位。`play-audit-ac8295c-yaw/`的两个比例被地面guard拒绝，没有实际输入，不能写成测试姿态。
+
+`GameControls.update`原先在.9m平面取游戏aim，`targetWorld(height)`又以同一ray与1.3/1.5m相交。实测近景ray在.9m落玩家前方，在1.5m落背后，使上身与枪口目标矛盾。当前只将同帧游戏aim的XZ升到所需Y，失效仍null；不修改aimAssist、模拟yaw或输入状态。`weapon-model.ts`同时把phase驱动降枪18cm减为8cm：原降枪会让长枪support超出左臂可达范围，phase/时钟、骨长、socket与hold不变。
+
+`node tools/art/check-weapon-motion-fit.mjs`复用真实H01、SharedMotion/Spine、RuntimeSceneMotion/BodyIk/Weapons和单次采样/FK，有限四向、1/4m目标距离、移动/切枪/攻击/原换弹共5120帧。XZ修复而保留18cm时72个失败全为equip/unequip，最大29.208mm；8cm时0手部失败，右最大3.050e-7m、左4.345e-7m、切换左4.249e-7m。`IK_AIM_LIMIT`仍保留。原失败`seven-motion-fit-before.json`、后续`seven-motion-fit.json`及`motion-fit-before.log/motion-fit-check.log`保存原始结果；这不是全姿态、DOM输入或GPU批准，也不改写旧bind/Pistol失败证据。
+
+可选`--aim-yaw 180 --side-aim-yaw 135`以度指定世界请求方位，0朝+X、90朝+Z。工具只读当前玩家/Camera与`worldToScreen`，将玩家前.75m、Y=.9的点投到真实canvas，核UI无遮挡、射线正向命中持久地面及游戏平面、实际gameAim与请求点误差小于1e-4m，然后只发送真实`Input.dispatchMouseEvent`。移动中有界重投影并继续真实mouseMoved，未传时保持旧中心/ratio行为；同点yaw与ratio不能混用。记录实际pointer/ray/gameAim/player.yaw/phase，不能把请求角度当实际朝向批准。当前近景Camera和child范围clip仍待正常TLS/headed复验。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --all-weapons --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/seven-focused-audit
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --static-scene assets/scenes/sandbox/weapon-fit-review.scene.json --nodes nd_fit_prop_0_source,nd_fit_prop_0_0,nd_fit_prop_0_1,nd_fit_prop_0_2,nd_fit_prop_0_source_side,nd_fit_prop_0_derived_side,nd_fit_prop_1_source,nd_fit_prop_1_0,nd_fit_prop_1_1,nd_fit_prop_1_2 --out .workbuddy/tmp/wpn-integration/prop-source-focused-audit
+```
+
+Shell原底火+X经Z-90°变为-Y；ac8295c的fit节点却使用+Y端旋转并误标“底火+Y”。当前改为X-90°面向真正-Y，稳定ID不变；旧该节点图像不能直接证明修补底火端，其他有效视图事实保留。`primer-fixed`是历史文件名，只代表局部拓扑截断/封口，未证明艺术上消除了碎斑。原源与候选采用同一fit缩放/材料/角度，源仍保留被截区域；F会按各自完整bounds取景，不能因软管跨度不同假称像素尺度相同。
+
+Fuel原4096 atlas自身含密集深色横纹。有限最近源表面对照：Fuel三档面内RGB MAE .89–1.92/255，近边MAE2.75–3.22，近边新增黑点约0–.294%；Shell三档近边MAE2.34–3.17、新增黑点约.098–.980%。原始`prop-atlas-edge-diagnostics.json/log`只支持“大片暗纹多数源表面已有”，不证明完整texel/法线/LOD2棱角或GPU质量通过。本轮未重写源GLB或候选二进制；底火碎片、Fuel斜纹/阀口需看上述有效同角度PNG后裁决，源质量限制不扩大成整件重造。
+
+WPN-02～06本体现已交付并有正式候选装配；不再把历史“次日提供”当当前缺口。整个任务仍待七件实际可达切换、六件可见离槽归位与美术边界复验，Final Reviewer尚未批准。相关原始检查日志统一留`.workbuddy/tmp/wpn-integration/focused-*.log`；按本次改动运行定向测试、typecheck、scene/architecture/knowledge门禁，不重跑无关静态30图或规模性能测试。
+
+本次15项GameControls/模型/loader owner测试、9项正常TLS工具参数/输入释放/端面测试通过，typecheck和editor:build通过（保留Vite大chunk提示）；scene:check为282资产、22个v17场景及15项跨文件测试和既有质量/音频门禁通过；architecture为286生产文件0错误，knowledge为137条0错误。新增headed检查将所有有效同帧aim/switch/attack/reload样本的真实手部不可达/socket residual计为失败，`IK_AIM_LIMIT`继续保留，避免生命周期检查通过掩盖手部失败。当前尚未运行改后GPU探针。
+
+CodeGraph在本检出、base `ac8295c`、roots=apps/assets/packages/tools进行一次`incremental-index --no-embed --json`：16files/130nodes/610edges，结构ready；RuntimeWeapons测试文件仍1项tree-sitter解析恢复，6677/7052节点有向量，旧index.lock竞争警告保留。不删除锁、重建或等待向量，图谱不认证全部调用解析；原始`codegraph-focused-fix-index.log/health.log`保存限制，先前MCP定位原始记录为`codegraph-focused-ac8295c.json`。

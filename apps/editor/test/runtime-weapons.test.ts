@@ -49,6 +49,8 @@ describe('真实武器 loader、同帧绘制与 Stop 边界',()=>{
   expect(f.service.view()).toMatchObject({visible:true,frameStamp:5,weaponId:'pistol'});expect(f.draws.every(d=>d.draw.visible)).toBe(true);
   const child=f.service.summary().attachmentDraws[0]!;expect(child.frameStamp).toBe(5);expect(child.removed).toBe(false);expect(child.worldMatrix).toHaveLength(16);
   child.worldMatrix[12]=999;expect(f.service.summary().attachmentDraws[0]!.worldMatrix[12]).not.toBe(999);
+  expect(child.worldCorners).toHaveLength(8);expect(child.worldCorners.flat().every(Number.isFinite)).toBe(true);
+  child.worldCorners[0]![0]=999;expect(f.service.summary().attachmentDraws[0]!.worldCorners[0]![0]).not.toBe(999);
   f.object.visible=false;f.service.sync(f.session.runtime);expect(f.service.view().visible).toBe(false);expect(f.service.frameFor(f.doc.playerStart!,6)).toBeUndefined();
   expect(f.service.summary().attachmentDraws).toEqual([]);f.service.stop();f.session.stop();expect(f.session.ledger.pending).toBe(0);expect(f.service.summary().attachmentDraws).toEqual([]);expect(f.destroy).toHaveBeenCalledTimes(14);f.service.stop();expect(f.destroy).toHaveBeenCalledTimes(14);
  });

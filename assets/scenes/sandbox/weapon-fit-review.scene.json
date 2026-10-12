@@ -72,8 +72,10 @@
     "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb",
     "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod1.glb",
     "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod2.glb",
+    "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
     "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod1.glb",
-    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod2.glb"
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod2.glb",
+    "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb"
   ],
   "nodes": [
     {
@@ -2402,7 +2404,7 @@
     },
     {
       "id": "nd_fit_prop_0_0",
-      "name": "WPN-SHELL-01-primer-fixed · LOD0 · 底火+Y · 候选",
+      "name": "WPN-SHELL-01-primer-fixed · LOD0 · 底火-Y · 候选",
       "parent": null,
       "prefab": null,
       "visible": true,
@@ -2415,7 +2417,7 @@
           0
         ],
         "rotation": [
-          0.7071067811865476,
+          -0.7071067811865476,
           0,
           0,
           0.7071067811865476
@@ -2468,7 +2470,7 @@
     },
     {
       "id": "nd_fit_prop_0_1",
-      "name": "WPN-SHELL-01-primer-fixed · LOD1 · 底火+Y · 候选",
+      "name": "WPN-SHELL-01-primer-fixed · LOD1 · 底火-Y · 候选",
       "parent": null,
       "prefab": null,
       "visible": true,
@@ -2481,7 +2483,7 @@
           0
         ],
         "rotation": [
-          0.7071067811865476,
+          -0.7071067811865476,
           0,
           0,
           0.7071067811865476
@@ -2534,7 +2536,7 @@
     },
     {
       "id": "nd_fit_prop_0_2",
-      "name": "WPN-SHELL-01-primer-fixed · LOD2 · 底火+Y · 候选",
+      "name": "WPN-SHELL-01-primer-fixed · LOD2 · 底火-Y · 候选",
       "parent": null,
       "prefab": null,
       "visible": true,
@@ -2547,7 +2549,7 @@
           0
         ],
         "rotation": [
-          0.7071067811865476,
+          -0.7071067811865476,
           0,
           0,
           0.7071067811865476
@@ -2567,6 +2569,204 @@
             "ref": {
               "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod2.glb",
               "guid": "as_29ddb15b0435"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fit_prop_0_source",
+      "name": "WPN-SHELL-01 · 原源 · 底火源+X→-Y · 同fit缩放",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器fit候选",
+      "transform": {
+        "position": [
+          -5.332094514051796,
+          -1.9999999648190854,
+          -0.4021374593476117
+        ],
+        "rotation": [
+          -0.5000000000000001,
+          -0.5,
+          -0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          0.7928999999999999,
+          0.7928999999999999,
+          0.7928999999999999
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+              "guid": "as_59b9cc7f5388"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fit_prop_0_source_side",
+      "name": "WPN-SHELL-01 · 原源侧面 · 同fit缩放",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器fit候选",
+      "transform": {
+        "position": [
+          -5.332094514051796,
+          -4.997862540652389,
+          3.518091469317461e-8
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.7071067811865475,
+          0.7071067811865476
+        ],
+        "scale": [
+          0.7928999999999999,
+          0.7928999999999999,
+          0.7928999999999999
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+              "guid": "as_59b9cc7f5388"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fit_prop_0_derived_side",
+      "name": "WPN-SHELL-01-primer-fixed · LOD0侧面 · 候选",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器fit候选",
+      "transform": {
+        "position": [
+          -3.4,
+          -5.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          12,
+          12,
+          12
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+              "guid": "as_738efc1ba301"
             }
           },
           "materials": [
@@ -2795,11 +2995,77 @@
           "importScale": 1
         }
       ]
+    },
+    {
+      "id": "nd_fit_prop_1_source",
+      "name": "WPN-FUEL-01 · 原源 · 罐阀侧面(保留软管) · 同fit缩放",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器fit候选",
+      "transform": {
+        "position": [
+          -5.062555667263916,
+          -3.6999999999501756,
+          3.612017947240975e-8
+        ],
+        "rotation": [
+          0,
+          -1.1102230246251565e-16,
+          0,
+          1
+        ],
+        "scale": [
+          0.928,
+          1.204,
+          1.356
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+              "guid": "as_f9a5d2b35e71"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
     }
   ],
   "meta": {
     "createdAt": "2026-10-12T01:47:33.623Z",
-    "updatedAt": "2026-10-12T01:47:33.623Z",
+    "updatedAt": "2026-10-12T03:48:08.485Z",
     "notes": "选择Hierarchy名称后F；每组相同displayScale。完整本体/去固有件/装配为候选，真实离回槽与双手见weapon-assembly-trial。没有按UV组件假分件。"
   }
 }

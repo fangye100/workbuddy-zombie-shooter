@@ -93,10 +93,8 @@ export class GameControls {
   }
   /** Same visible pointer/stick used by gameplay, lifted to the authored aim height. */
   targetWorld(height: number): [number, number, number] | null {
-    if (this.mouse) {
-      const point = groundAim(this.ray(...this.mouse), height);
-      return point ? [point[0], height, point[1]] : null;
-    }
+    // Re-intersecting the ray at torso/head height can put XZ behind the player
+    // in a close camera. Reuse this update's actual gameplay aim, changing only Y.
     return this.aimWorld ? [this.aimWorld[0], height, this.aimWorld[1]] : null;
   }
 }

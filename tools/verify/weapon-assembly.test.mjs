@@ -29,6 +29,13 @@ test('瞄准比例必须有界，未指定保持旧默认；地面射线拒绝�
  assert.equal(groundRayPoint({o:[0,2,0],d:[0,1,0]},0),null);
  assert.deepEqual(groundRayPoint({o:[0,2,0],d:[1,-1,2]},0),[2,0,4]);
 });
+test('world yaw只选择真实pointer投影，角度/静态/冲突参数均拒绝',()=>{
+ const args=['--expected-head',head];assert.equal(probeOptions(args).aimYaw,null);
+ assert.equal(probeOptions([...args,'--aim-yaw','180','--side-aim-yaw','135']).sideAimYaw,135);
+ for(const yaw of ['181','-181','NaN'])assert.throws(()=>probeOptions([...args,'--aim-yaw',yaw]));
+ assert.throws(()=>probeOptions([...args,'--aim-yaw','180','--aim-ratio','.5,.7']),/同时/);
+ assert.throws(()=>probeOptions([...args,'--static-scene',STATIC_SCENES[1],'--nodes','nd_fit_smg_cut_0','--aim-yaw','180']),/静态模式/);
+});
 test('只读链位置恢复 inverse-bind 原点，支持旋转及归一化尺度',()=>{
  const skin=[1,0,0,0,0,1,0,0,0,0,1,0,.1,.2,.3,1];
  const norm=[.01,0,0,0,0,.01,0,0,0,0,.01,0,0,0,0,1];

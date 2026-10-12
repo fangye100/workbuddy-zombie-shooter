@@ -2011,9 +2011,9 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 15,
-          "distance": 2.1,
-          "yawOffsetDeg": -30
+          "pitchDeg": 0,
+          "distance": 1.8,
+          "yawOffsetDeg": 0
         }
       ],
       "prefab": null
