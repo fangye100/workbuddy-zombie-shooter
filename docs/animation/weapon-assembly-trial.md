@@ -274,3 +274,13 @@ Shell与同源round底火等待用户补交修复实源；round×.90只归一化
 Fuel仅解析一个连续配对比例参数，未发布新尺寸/hold/action frame：固定实际主握接触点actor-local `[.2219958487,1.5150559997,.12]`，枪体、罐体、物理socket及动作frame位置按`p(s)=pivot+s*(p(1)-pivot)`共同等比变化，旋转、H01接触偏移、骨长、phase时钟与玩法后坐不变。ready frame1931肩实体三角SAT的首个阻挡上限`s=.580214415`（名义.80m变为.46417m）；35个实际肩链留15mm余量的交集为`s∈[.614361253,1]`，下限来自frame2044/tick1054/reload phase .19697的右肩。两区间无交集，不能采用较小比例或零接触统计宣称修好。原始`fuel-primary-pivot-scale-sat.json`与`fuel-primary-pivot-scale-reach.json`保留；肩部基线六关节重放差1.3234e-7m，缩放后的arm skin尚未重放，这只是固定路径的规划冲突，不是全空间无解或新的GPU验收。Fuel生产配置保持pending，后续需有明确装配输入或动作依据再处理。
 
 Shell与同源round底火仍等待用户实际补交修复源（旧源SHA256 `92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063`），本轮没有cap/源几何修改或范围撤销。其余未完成接口可见性与Fuel实际装配继续保留；整个请求尚未完成，未创建Final Reviewer。
+
+### 0596d29 Fuel三条有界路径的未发布结果
+
+固定主握点的配对比例`s=.6153612527366447`仅为离线候选：名义完整源长`.80→.492289m`，去罐枪体实际长约`.67366→.41455m`，源比例、真实dock与父子socket共同缩放。新FK/skin的ready局部肩接触最大2.194mm，但可靠out frame2052有256个body顶点进入枪体、最大26.016mm；深点权重以Head/Neck为主，不能当袖口接触。`fuel-single-scale-geometry.json`、`fuel-single-scale-collision-part.json`与`fuel-single-scale-2052-gun-depth.json`保留该失败，未发布尺寸修改。
+
+唯一外侧倾转采用canonical炮管+Z轴的−90°roll，复合旋转xyzw `[.5,-.5,-.5,.5]`，真实主握pivot端点和插值只在ignored数学重放中保持；没有新增生产`reloadPivot`代码或meta。35个实际肩链可达，最小余量7.733mm，但新FK/skin的entry/out最大进入深度约10.999/9.602mm，包含Head/Neck/Spine加权实体点，候选仍拒绝。可靠ready/entry/out/late95/upperReady六段基线链重放最大差约1.3743e-7m；mid/in/late90/firstIdle旧样本缺transition，重放差分别79.518/26.210/32.676/20.594mm，不能补写为精确几何通过。原始`fuel-roll-pivot-candidate.json`、`fuel-roll-pivot-geometry.json`与`fuel-roll-pivot-collision-part.json`保留；whole-skin parity未认证watertight，CPU统计不代替像素。
+
+最后仅解析actor前下方共同平移`t*[0,-1,+1]/sqrt(2)`，没有枚举新距离。35个实际肩球留1mm可达余量的交集`t∈[0,28.625255]mm`，上界来自frame2044右肩。修正后的SAT不截断每对三角的退出距离，并排除Shoulder-only袖口：可靠entry frame2036的已筛入Head/Neck/Spine/Hips面组连续阻挡退出下界67.802966mm，加1mm几何间隙至少68.802966mm，超出可达上界。此值仅是可达扫掠AABB筛入面组、固定当前roll皮肤的分离下界，不是完整射线的最小值，更不是改变手臂皮肤后的全空间无解证明；早先裁剪结果29.625mm不能称真实最小分离。`fuel-forward-down-reach.json`、`fuel-forward-down-sat.json/log`记录区间与限制，未采用区间外目标做新姿态验收。
+
+三条路径均未改生产Fuel尺寸、hold、socket、动作或Framework。当前Fuel装配未验收；后续动作方向等待用户明确答复，暂停依赖该选择的开发。其余武器接口可见性可独立补证。Shell/derived round仍等修复源实际路径或commit，不程序封口、不撤销验收范围；全队列未完成。
