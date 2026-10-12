@@ -63,4 +63,13 @@ Shell修复实源与Fuel动作设计选择仍pending；原武器动画队列未�
 R2合回动画分支：以动画父提交`bd115a59c24bf7012d7ebabd51b7ff81e607ff90`合并模型分支`c212939d1aeb58a2308e7044aa9a354bdc05ac31`。
 上文v16仅描述独立模型分支基线；动画分支仍为v17，七个静态场景保留动画父提交的原始内容，动态trial登记、Game/IK/Play/H01与装配配置不替换。
 合并接入通用递归Asset Browser及Inspector导入参数消费；source/LOD/sidecar不重建，命名动作frame保留。
-合后UI重载复显仍需在动画服务5198正常操作复核；模型分支a9dd的有限观察不直接代替合后验收。Shell/Fuel待输入范围保持。
+合后UI重载复显已按下述有限范围在动画服务5198正常操作复核；模型分支a9dd的有限观察不直接代替其他合后验收。Shell/Fuel待输入范围保持。
+
+合后短Audit固定目标`dcaf58aa3cc8449a0c939644f213fbbe159aa9bb`：第一次正常选择assets→包含子目录→模型→WPN得到68个唯一GLB路径；Reload恢复默认控件后重新设置这三个控件，第二次仍为68。
+列表首项为20261011交付Launcher，末项为既有WPN01_source；Reload源检视场景恢复5个objects。
+源场景SHA256为`C7B8BDE525B42AEB49F89E8B6B632F5BAF308C6A89C3B2923DD2DE95434B1B80`，合后离线清单SHA256为`661872972CD96AA40B3059F02023581586A60C7F1ADB13F66F2DCF38AEEE5DEA`。
+代表Inspector/载入/Undo复用此前模型分支观察，四个相关UI源码文件经Main核对相同；本轮没有新增GPU adapter读取、可导出PNG或游戏验收，不扩为全部资产美术通过。
+
+模型owner入口为[5199独立模型检视](https://fangye-win11-office.tail6b29a2.ts.net:5199/?scene=assets/scenes/sandbox/weapon-source-review.scene.json)，动画整合入口为[5198合后检视](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-source-review.scene.json)；两个端口仅本次隔离服务，固定5100契约不变。
+模型分支保持`c212939d1aeb58a2308e7044aa9a354bdc05ac31`，动画分支保留单一Game/Spine/IK运行责任。此后的文档归档提交不改变dcaf目标运行源或资产。
+R2分支与统一发现交付已形成；完整原武器队列仍待Shell修复实源、Fuel动作选择及剩余实际验收，Final Reviewer尚未创建，整体未完成。

@@ -2398,7 +2398,7 @@
         "asset",
         "gpu"
       ],
-      "read": "源与LOD快照、assetRoots递归与68模型清单、Inspector米制与轴适配、有限UI导入/Undo观察及GPU/重载复显边界、v16静态场景、动画owner排除、候选未验收状态",
+      "read": "独立模型快照与合回动画v17责任、assetRoots递归68模型、Inspector导入/Undo有限观察、合后Reload再筛选68实操、5199/5198入口及GPU/候选未验收边界",
       "sourceRefs": [
         "scene-schema",
         "asset-metadata",
