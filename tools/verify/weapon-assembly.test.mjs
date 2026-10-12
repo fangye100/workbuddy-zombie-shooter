@@ -28,6 +28,11 @@ test('聚焦武器选择保留真实七键映射，不将未选武器视为本�
 test('回程采样不能将晚段漏采、历史idle或尚未结束的ready crossfade算作通过',()=>{
  const sample=(action,phase,transition=null)=>({state:'playing',frame:20,models:{visible:true,frameStamp:20,weaponId:'launcher',pose:{action,phase}},actor:{layer:{clip:action==='reload'?'reload':'ready',weight:1,transition}}});
  const late=sample('reload',.94444),later=sample('reload',.975),idle=sample('idle',0,{elapsed:.02,duration:.18}),ready=sample('idle',0);
+ const entry={...late,models:{...late.models,pose:{...late.models.pose,phase:1/6}}};
+ assert.equal(recoveryMoment(entry,'entry',true,'reload'),true);
+ assert.equal(recoveryMoment({...entry,models:{...entry.models,pose:{...entry.models.pose,phase:.139}}},'entry',true,'reload'),false);
+ assert.equal(recoveryMoment({...entry,models:{...entry.models,pose:{...entry.models.pose,phase:.181}}},'entry',true,'reload'),false);
+ assert.equal(recoveryMoment(idle,'entry',false,'idle'),false);
  assert.equal(recoveryMoment(late,'late90',true,'reload'),true);assert.equal(recoveryMoment(later,'late90',true,'reload'),false);
  assert.equal(recoveryMoment(later,'late95',true,'reload'),true);assert.equal(recoveryMoment(idle,'late95',true,'reload'),false);
  assert.equal(recoveryMoment(idle,'firstIdle',true,'reload'),true);assert.equal(recoveryMoment(idle,'firstIdle',true,'idle'),false);assert.equal(recoveryMoment(idle,'firstIdle',false,'reload'),false);

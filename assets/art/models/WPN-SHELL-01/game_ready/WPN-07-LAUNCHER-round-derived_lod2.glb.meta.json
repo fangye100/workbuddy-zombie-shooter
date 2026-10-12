@@ -22,15 +22,41 @@
     "calibrationSpace": "parseGlb final import-space metre",
     "variant": "game_ready",
     "file": "WPN-07-LAUNCHER-round-derived_lod2.glb",
-    "status": "visual-review-candidate"
+    "status": "visual-review-candidate",
+    "ergonomicNormalization": {
+      "factor": 0.9,
+      "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "baseNormalization": {
+        "dimensionsM": [
+          0.17626705,
+          0.04976172,
+          0.049345730000000004
+        ],
+        "scaleXYZ": [
+          0.17,
+          0.085,
+          0.085
+        ]
+      },
+      "processor": "tools/art/rescale-launcher-assembly.py",
+      "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+      "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+      "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+      "visual": "pending-headed"
+    },
+    "canonicalToImportTranslation": [
+      0.00019224360585212708,
+      -0.0008072059135884047,
+      0.001251431182026863
+    ]
   },
-  "sourceHash": "sha256:1e324833424a018ab183197b5d087a3daaf0c37035815e1c0706166e6376cb09",
+  "sourceHash": "sha256:385b5366f543cfa84e457dbc13b7801deab953b5c4076ab8c8054f29517cc217",
   "updatedAt": "2026-10-12T01:45:24.873Z",
   "modelSockets": {
     "insertion": {
       "position": [
-        0.08861516618728638,
-        0.024086223915219307,
+        0.07975365254878998,
+        0.02167760208249092,
         0
       ],
       "rotation": [
@@ -42,8 +68,8 @@
     },
     "primaryGrip": {
       "position": [
-        -0.054615166187286374,
-        0.024086223915219307,
+        -0.04915365254878997,
+        0.02167760208249092,
         0
       ],
       "rotation": [
@@ -55,8 +81,8 @@
     },
     "base": {
       "position": [
-        -0.08961516618728638,
-        0.024086223915219307,
+        -0.08065365254878998,
+        0.02167760208249092,
         0
       ],
       "rotation": [

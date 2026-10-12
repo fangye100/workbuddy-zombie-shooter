@@ -43,7 +43,7 @@ for(const aid of variants){
   if(aid.includes('without-'))continue;
   const h=item.boundsMax[1];let ss;
   if(aid==='WPN-FUEL-01-fit-can')ss={insertion:socket([0,h*.91,item.boundsMax[2]*.73]),primaryGrip:socket([0,h*.46,0]),base:socket([0,h*.4,item.boundsMin[2]])};
-  else if(aid==='WPN-07-LAUNCHER-round-derived')ss={insertion:socket([item.boundsMax[0]-.001,h*.5,0]),primaryGrip:socket([item.boundsMin[0]+.035,h*.5,0]),base:socket([item.boundsMin[0],h*.5,0])};
+  else if(aid==='WPN-07-LAUNCHER-round-derived'){const factor=report.ergonomicNormalization?.factor??1;ss={insertion:socket([item.boundsMax[0]-.001*factor,h*.5,0]),primaryGrip:socket([item.boundsMin[0]+.035*factor,h*.5,0]),base:socket([item.boundsMin[0],h*.5,0])};}
   else ss={insertion:socket([0,h-.001,0]),primaryGrip:socket([0,h*.42,0]),base:socket([0,0,0])};
   setSockets(item,ss);
  }
@@ -77,28 +77,32 @@ attach('smg','WPN-MAG-02-SMG-fit','magazine');attach('sniper','WPN-MAG-02-SNIPER
 // Launcher实际+X前孔装填；旧-.365落在实心后盖，不能作为装配槽。
 // 物理socket在各LOD真正parser空间；动作frame为Game约定的模型局部delta，不是H01绝对点。
 const launcher=prototype.definitions.find(w=>w.id==='launcher'),launcherReport=read('assets/art/models/WPN-07-LAUNCHER/lod-report.json');
-const launcherMeta=read(launcher.presentation.model.path+'.meta.json'),reference=launcherReport.levels[0].parserRecenterMeters;
-const actionFrames={reloadPose:socket([.135,-.024,-.382],plusY),reloadExtract:socket([.179,-.04,0]),reloadClearance:socket([0,.14,0]),reloadReturnClearance:socket([0,.14,.20])};
+const reference=launcherReport.levels[0].parserRecenterMeters,factor=launcherReport.ergonomicNormalization?.factor;
+if(factor!==.9)throw new Error('先执行Launcher/round一致0.90归一化后处理');
+// 这些已经是最终模型局部米；entry解析增量不能再乘factor。
+const actionFrames={reloadPose:socket([.165,.035,-.298],plusY),reloadExtract:socket([.1611,-.036,0]),reloadClearance:socket([.13457441181107344,.126,0]),reloadReturnClearance:socket([0,.072,.036])};
 for(const l of launcherReport.levels){
  const item=get(`assets/art/models/WPN-07-LAUNCHER/game_ready/${l.file}`,{assetId:'WPN-07-LAUNCHER'});
  const delta=reference.map((v,k)=>v-l.parserRecenterMeters[k]),point=p=>p.map((v,k)=>v+delta[k]);
- const physical={...launcherMeta.modelSockets,supportGrip:socket([-.08,.213,-.05]),magazine:socket([.197,.28,0]),chamber:socket([.197,.28,0])};
+ const physical=Object.fromEntries(Object.entries({primaryGrip:[-.222,.074,-.02],supportGrip:[-.08,.213,-.07],muzzle:[.375,.28,0],magazine:[.197,.28,0],chamber:[.197,.28,0]}).map(([key,p])=>[key,socket(p.map(n=>n*factor))]));
  setSockets(item,{...Object.fromEntries(Object.entries(physical).map(([key,s])=>[key,socket(point(s.position),s.rotation)])),...actionFrames});
 }
-launcher.presentation.assembly.holdPose=socket([-.31,1.15,.30]);delete launcher.presentation.assembly.sockets;
+launcher.presentation.lengthM=.675;launcher.presentation.assembly.holdPose=socket([-.31,1.20,.245]);delete launcher.presentation.assembly.sockets;
 const launcherChild=parsed.get('assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb');
 launcher.presentation.assembly.attachments=[{id:'reloadPart',model:launcherChild.asset,parentSocket:'magazine',childSocket:'base',offset:socket([0,0,0])}];launcher.presentation.assembly.reloadAttachmentId='reloadPart';
-calibration.launcherFrontLoading={status:'candidate-awaiting-actual-late-idle-headed',space:'physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw',
+const historicalLauncher=calibration.launcherFrontLoading?.historicalCandidateEvidence??calibration.launcherFrontLoading;
+calibration.launcherFrontLoading={status:'0.90-candidate-awaiting-actual-entry-late-idle-headed',space:'physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw',
  sourceHash:launcherReport.sourceHash,source:launcherReport.source,physicalLod0:read(launcher.presentation.model.path+'.meta.json').modelSockets,
  holdPose:launcher.presentation.assembly.holdPose,actionFrames,
- evidence:{frontCavityAxisX:[.1129507,.375],rearSolidCapX:-.3750396,roundLengthM:.1774375,roundRadiusM:.0248765,
- foregripCrossSection:{point:[-.08,.213,-.05],sideZ:[-.0707917,.0708473],bottomY:.20726995},
- idleBaselineGunTriangleHits:654,idleCandidateGunTriangleHits:0,idleLeftReachM:.48139205,leftChainM:.50484701,
- pathSamples:12,pathHandFailures:0,pathMinimumLeftMarginM:.0143503,pathMinimumRightMarginM:.0171491,
- lateRisk:'规划phase=1强留reload末帧有633肩衣交面；实际WeaponSystem完成后idle/upper ready crossfade尚待连续真实Input验证，不能称clear',
- rawReports:['launcher-static-side-geometry-03b0818.json','launcher-continuous-quick-03b0818.json','launcher-clearance-arc-geometry-03b0818.json','launcher-return-arc-geometry-03b0818.json'],
- historicalEndPng:'.workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png',historicalEndTarget:'965cf',historicalEndLimit:'历史CDP像素参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f CUA +X炮孔另有有效方向观察，未本地导出'},
- limits:['H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准','部分raw省略动画transition，57–142mm重放误差只供规划','round底火继承Shell缺陷；用户已选择补交修复源，实际新版路径/commit待提供，未改几何']};
+ ergonomicNormalization:launcherReport.ergonomicNormalization,
+ evidence:{rawTarget:'f5ac7bbd7c8c771e2a3273009cf32142371b819b',raw:'front-loading-focused-audit/observations.json',frontCavityAxisX:[.1129507*factor,.375*factor],rearSolidCapX:-.3750396*factor,roundLengthM:.1774375*factor,roundRadiusM:.0248765*factor,
+ physicalGripBeforeUniform:{primary:[-.222,.074,-.02],primarySectionSideZ:[-.022944953,.022878806],support:[-.08,.213,-.07],supportSectionSideZ:[-.070791675,.070847284],supportSideBottomY:.212891712},
+ rawShoulderSamples:423,handFailures:0,minimumRightMarginM:.01973628378332737,minimumLeftMarginM:.015582230223028737,
+ geometryFrames:[1101,2299,2376,2137,2413,2417,2427],gunAndRoundTriangleHits:0,reverseParityInsideSamples:0,maximumBaselineChainReplayErrorM:2.0768505227202066e-7,
+ entry:{frame:2299,phase:1/6,previousGunTriangleHits:152,blockedForwardDistanceM:.030034995159463423,gapM:.001,sinCoefficient:.2306158707424476,clearanceLocalXDeltaM:.13457441181107344,allowedLocalXDeltaM:[0,.20414512337934]},
+ rawReports:['launcher-actual-reach-f5.json','launcher-current-grip-section.json','launcher-current-shoulders-candidate.json','launcher-entry-clearance-interval.json','launcher-entry-separation.json','launcher-actual-geometry-f5.json']},
+ historicalCandidateEvidence:historicalLauncher,
+ limits:['423真实同帧肩球而非理想骨姿；纯reach规划不替代新Input','仅7个无transition几何代表态；其他crossfade与全路径未证明clear','H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准','round仅统一缩放，UV/法线/索引/纹理/cap不变；底火仍待用户新版Shell源']};
 for(const w of prototype.definitions){
  const a=w.presentation.assembly,ss={...read(w.presentation.model.path+'.meta.json').modelSockets,...a.sockets};
  // yaw=0 actorWorld RY+90；scene独立markers存模拟空间，绝非GLB local点。
@@ -108,12 +112,12 @@ for(const w of prototype.definitions){
 const scenes=['assets/scenes/sandbox/weapon-assembly-trial.scene.json',...['1','2','3'].map(n=>`assets/scenes/act1/floor-${n}.scene.json`)];
 for(const file of scenes){
  const doc=read(file),actor=doc.nodes.find(n=>n.id===doc.playerStart),rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');
- for(const w of rules.arsenal.definitions){const next=prototype.definitions.find(p=>p.id===w.id),m=calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id];w.presentation.model=structuredClone(next.presentation.model);w.presentation.assembly=structuredClone(next.presentation.assembly);w.presentation.markers.muzzle.position=[m[0],m[1]+actor.transform.position[1]-calibration.simulationCalibration.capsuleHalfM,m[2]];}
+ for(const w of rules.arsenal.definitions){const next=prototype.definitions.find(p=>p.id===w.id),m=calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id];w.presentation.model=structuredClone(next.presentation.model);w.presentation.assembly=structuredClone(next.presentation.assembly);if(w.id==='launcher')w.presentation.lengthM=next.presentation.lengthM;w.presentation.markers.muzzle.position=[m[0],m[1]+actor.transform.position[1]-calibration.simulationCalibration.capsuleHalfM,m[2]];}
  const deps=rules.arsenal.definitions.flatMap(w=>[w.presentation.model.path,...w.presentation.assembly.attachments.map(a=>a.model.path)]);doc.dependencies=[...new Set([...doc.dependencies,...deps])];
  if(file.includes('sandbox/')){const cameraNode=doc.nodes.find(n=>n.id===doc.entryCamera),camera=cameraNode.components.find(c=>c.kind==='Camera');camera.distance=1.8;camera.pitchDeg=0;camera.yawOffsetDeg=0;cameraNode.transform.position[1]=1.18;const note='五本体新LOD与去重复几何的附件fit候选；近Camera只试验场景，GPU七武器/实际离回槽待验。';if(!doc.meta.notes.includes(note))doc.meta.notes+=' '+note;}
  valid(file,api.validateSceneDocument(doc));if(check){const old=read(file);if(JSON.stringify(old.nodes)!==JSON.stringify(doc.nodes)||JSON.stringify(old.dependencies)!==JSON.stringify(doc.dependencies))throw new Error(file+': assembly/markers漂移');}else write(file,doc);
 }
 for(const w of prototype.definitions){const m=calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id];w.presentation.markers.muzzle.position=[m[0],m[1]+calibration.simulationCalibration.referenceActorY-calibration.simulationCalibration.capsuleHalfM,m[2]];if(!api.validWeaponDefinition(w))throw new Error(w.id+': 非法武器装配');}
-if(check){const saved=read('assets/art/calibration/weapon-assembly-trial.json');if(JSON.stringify(saved.bodyIntegration)!==JSON.stringify(calibration.bodyIntegration)||JSON.stringify(saved.simulationCalibration)!==JSON.stringify(calibration.simulationCalibration))throw new Error('calibration漂移');if(JSON.stringify(read('assets/weapons/prototype.weapons.json'))!==JSON.stringify(prototype))throw new Error('prototype漂移');}
+if(check){const saved=read('assets/art/calibration/weapon-assembly-trial.json');if(JSON.stringify(saved.bodyIntegration)!==JSON.stringify(calibration.bodyIntegration)||JSON.stringify(saved.simulationCalibration)!==JSON.stringify(calibration.simulationCalibration)||JSON.stringify(saved.launcherFrontLoading)!==JSON.stringify(calibration.launcherFrontLoading))throw new Error('calibration漂移');if(JSON.stringify(read('assets/weapons/prototype.weapons.json'))!==JSON.stringify(prototype))throw new Error('prototype漂移');}
 else{write('assets/art/calibration/weapon-assembly-trial.json',calibration);write('assets/weapons/prototype.weapons.json',prototype);}
 console.log(JSON.stringify({weapons:prototype.definitions.map(w=>({id:w.id,model:w.presentation.model,attachments:w.presentation.assembly.attachments.length,muzzle:calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id]})),scenes,status:'assembly-candidate-awaiting-headed-fit'},null,2));

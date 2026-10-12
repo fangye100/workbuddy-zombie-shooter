@@ -638,8 +638,8 @@
         0.07999999999999996
       ],
       "launcher": [
-        0.675,
-        1.43,
+        0.5825,
+        1.452,
         0.30999999999999994
       ],
       "shotgun": [
@@ -1353,16 +1353,16 @@
     }
   },
   "launcherFrontLoading": {
-    "status": "candidate-awaiting-actual-late-idle-headed",
+    "status": "0.90-candidate-awaiting-actual-entry-late-idle-headed",
     "space": "physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw",
     "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
     "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
     "physicalLod0": {
       "primaryGrip": {
         "position": [
-          -0.222,
-          0.074,
-          0
+          -0.1998,
+          0.06659999999999999,
+          -0.018000000000000002
         ],
         "rotation": [
           0,
@@ -1373,9 +1373,9 @@
       },
       "supportGrip": {
         "position": [
-          -0.08,
-          0.213,
-          -0.05
+          -0.07200000000000001,
+          0.1917,
+          -0.06300000000000001
         ],
         "rotation": [
           0,
@@ -1386,8 +1386,8 @@
       },
       "muzzle": {
         "position": [
-          0.375,
-          0.28,
+          0.3375,
+          0.25200000000000006,
           0
         ],
         "rotation": [
@@ -1399,8 +1399,8 @@
       },
       "magazine": {
         "position": [
-          0.197,
-          0.28,
+          0.1773,
+          0.25200000000000006,
           0
         ],
         "rotation": [
@@ -1412,8 +1412,8 @@
       },
       "chamber": {
         "position": [
-          0.197,
-          0.28,
+          0.1773,
+          0.25200000000000006,
           0
         ],
         "rotation": [
@@ -1425,9 +1425,9 @@
       },
       "reloadPose": {
         "position": [
-          0.135,
-          -0.024,
-          -0.382
+          0.165,
+          0.035,
+          -0.298
         ],
         "rotation": [
           0,
@@ -1438,8 +1438,8 @@
       },
       "reloadExtract": {
         "position": [
-          0.179,
-          -0.04,
+          0.1611,
+          -0.036,
           0
         ],
         "rotation": [
@@ -1451,8 +1451,8 @@
       },
       "reloadClearance": {
         "position": [
-          0,
-          0.14,
+          0.13457441181107344,
+          0.126,
           0
         ],
         "rotation": [
@@ -1465,8 +1465,8 @@
       "reloadReturnClearance": {
         "position": [
           0,
-          0.14,
-          0.2
+          0.072,
+          0.036
         ],
         "rotation": [
           0,
@@ -1479,8 +1479,8 @@
     "holdPose": {
       "position": [
         -0.31,
-        1.15,
-        0.3
+        1.2,
+        0.245
       ],
       "rotation": [
         0,
@@ -1492,9 +1492,9 @@
     "actionFrames": {
       "reloadPose": {
         "position": [
-          0.135,
-          -0.024,
-          -0.382
+          0.165,
+          0.035,
+          -0.298
         ],
         "rotation": [
           0,
@@ -1505,8 +1505,8 @@
       },
       "reloadExtract": {
         "position": [
-          0.179,
-          -0.04,
+          0.1611,
+          -0.036,
           0
         ],
         "rotation": [
@@ -1518,8 +1518,8 @@
       },
       "reloadClearance": {
         "position": [
-          0,
-          0.14,
+          0.13457441181107344,
+          0.126,
           0
         ],
         "rotation": [
@@ -1532,8 +1532,8 @@
       "reloadReturnClearance": {
         "position": [
           0,
-          0.14,
-          0.2
+          0.072,
+          0.036
         ],
         "rotation": [
           0,
@@ -1543,49 +1543,337 @@
         ]
       }
     },
+    "ergonomicNormalization": {
+      "factor": 0.9,
+      "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "baseNormalization": {
+        "dimensionsM": [
+          0.75,
+          0.40611970326988556,
+          0.20300082054953691
+        ],
+        "scaleXYZ": [
+          0.678351721013392,
+          0.678351721013392,
+          0.678351721013392
+        ]
+      },
+      "processor": "tools/art/rescale-launcher-assembly.py",
+      "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+      "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+      "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+      "visual": "pending-headed"
+    },
     "evidence": {
+      "rawTarget": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "raw": "front-loading-focused-audit/observations.json",
       "frontCavityAxisX": [
-        0.1129507,
-        0.375
+        0.10165563,
+        0.3375
       ],
-      "rearSolidCapX": -0.3750396,
-      "roundLengthM": 0.1774375,
-      "roundRadiusM": 0.0248765,
-      "foregripCrossSection": {
-        "point": [
+      "rearSolidCapX": -0.33753563999999997,
+      "roundLengthM": 0.15969375,
+      "roundRadiusM": 0.02238885,
+      "physicalGripBeforeUniform": {
+        "primary": [
+          -0.222,
+          0.074,
+          -0.02
+        ],
+        "primarySectionSideZ": [
+          -0.022944953,
+          0.022878806
+        ],
+        "support": [
           -0.08,
           0.213,
-          -0.05
+          -0.07
         ],
-        "sideZ": [
-          -0.0707917,
-          0.0708473
+        "supportSectionSideZ": [
+          -0.070791675,
+          0.070847284
         ],
-        "bottomY": 0.20726995
+        "supportSideBottomY": 0.212891712
       },
-      "idleBaselineGunTriangleHits": 654,
-      "idleCandidateGunTriangleHits": 0,
-      "idleLeftReachM": 0.48139205,
-      "leftChainM": 0.50484701,
-      "pathSamples": 12,
-      "pathHandFailures": 0,
-      "pathMinimumLeftMarginM": 0.0143503,
-      "pathMinimumRightMarginM": 0.0171491,
-      "lateRisk": "规划phase=1强留reload末帧有633肩衣交面；实际WeaponSystem完成后idle/upper ready crossfade尚待连续真实Input验证，不能称clear",
-      "rawReports": [
-        "launcher-static-side-geometry-03b0818.json",
-        "launcher-continuous-quick-03b0818.json",
-        "launcher-clearance-arc-geometry-03b0818.json",
-        "launcher-return-arc-geometry-03b0818.json"
+      "rawShoulderSamples": 423,
+      "handFailures": 0,
+      "minimumRightMarginM": 0.01973628378332737,
+      "minimumLeftMarginM": 0.015582230223028737,
+      "geometryFrames": [
+        1101,
+        2299,
+        2376,
+        2137,
+        2413,
+        2417,
+        2427
       ],
-      "historicalEndPng": ".workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png",
-      "historicalEndTarget": "965cf",
-      "historicalEndLimit": "历史CDP像素参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f CUA +X炮孔另有有效方向观察，未本地导出"
+      "gunAndRoundTriangleHits": 0,
+      "reverseParityInsideSamples": 0,
+      "maximumBaselineChainReplayErrorM": 2.0768505227202066e-7,
+      "entry": {
+        "frame": 2299,
+        "phase": 0.16666666666666666,
+        "previousGunTriangleHits": 152,
+        "blockedForwardDistanceM": 0.030034995159463423,
+        "gapM": 0.001,
+        "sinCoefficient": 0.2306158707424476,
+        "clearanceLocalXDeltaM": 0.13457441181107344,
+        "allowedLocalXDeltaM": [
+          0,
+          0.20414512337934
+        ]
+      },
+      "rawReports": [
+        "launcher-actual-reach-f5.json",
+        "launcher-current-grip-section.json",
+        "launcher-current-shoulders-candidate.json",
+        "launcher-entry-clearance-interval.json",
+        "launcher-entry-separation.json",
+        "launcher-actual-geometry-f5.json"
+      ]
+    },
+    "historicalCandidateEvidence": {
+      "status": "candidate-awaiting-actual-late-idle-headed",
+      "space": "physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw",
+      "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+      "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+      "physicalLod0": {
+        "primaryGrip": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0.375,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "magazine": {
+          "position": [
+            0.197,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "chamber": {
+          "position": [
+            0.197,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadPose": {
+          "position": [
+            0.135,
+            -0.024,
+            -0.382
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "reloadExtract": {
+          "position": [
+            0.179,
+            -0.04,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadClearance": {
+          "position": [
+            0,
+            0.14,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadReturnClearance": {
+          "position": [
+            0,
+            0.14,
+            0.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "holdPose": {
+        "position": [
+          -0.31,
+          1.15,
+          0.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "actionFrames": {
+        "reloadPose": {
+          "position": [
+            0.135,
+            -0.024,
+            -0.382
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "reloadExtract": {
+          "position": [
+            0.179,
+            -0.04,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadClearance": {
+          "position": [
+            0,
+            0.14,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadReturnClearance": {
+          "position": [
+            0,
+            0.14,
+            0.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "evidence": {
+        "frontCavityAxisX": [
+          0.1129507,
+          0.375
+        ],
+        "rearSolidCapX": -0.3750396,
+        "roundLengthM": 0.1774375,
+        "roundRadiusM": 0.0248765,
+        "foregripCrossSection": {
+          "point": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "sideZ": [
+            -0.0707917,
+            0.0708473
+          ],
+          "bottomY": 0.20726995
+        },
+        "idleBaselineGunTriangleHits": 654,
+        "idleCandidateGunTriangleHits": 0,
+        "idleLeftReachM": 0.48139205,
+        "leftChainM": 0.50484701,
+        "pathSamples": 12,
+        "pathHandFailures": 0,
+        "pathMinimumLeftMarginM": 0.0143503,
+        "pathMinimumRightMarginM": 0.0171491,
+        "lateRisk": "规划phase=1强留reload末帧有633肩衣交面；实际WeaponSystem完成后idle/upper ready crossfade尚待连续真实Input验证，不能称clear",
+        "rawReports": [
+          "launcher-static-side-geometry-03b0818.json",
+          "launcher-continuous-quick-03b0818.json",
+          "launcher-clearance-arc-geometry-03b0818.json",
+          "launcher-return-arc-geometry-03b0818.json"
+        ],
+        "historicalEndPng": ".workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png",
+        "historicalEndTarget": "965cf",
+        "historicalEndLimit": "历史CDP像素参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f CUA +X炮孔另有有效方向观察，未本地导出"
+      },
+      "limits": [
+        "H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准",
+        "部分raw省略动画transition，57–142mm重放误差只供规划",
+        "round底火继承Shell缺陷；用户已选择补交修复源，实际新版路径/commit待提供，未改几何"
+      ]
     },
     "limits": [
+      "423真实同帧肩球而非理想骨姿；纯reach规划不替代新Input",
+      "仅7个无transition几何代表态；其他crossfade与全路径未证明clear",
       "H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准",
-      "部分raw省略动画transition，57–142mm重放误差只供规划",
-      "round底火继承Shell缺陷；用户已选择补交修复源，实际新版路径/commit待提供，未改几何"
+      "round仅统一缩放，UV/法线/索引/纹理/cap不变；底火仍待用户新版Shell源"
     ]
   }
 }

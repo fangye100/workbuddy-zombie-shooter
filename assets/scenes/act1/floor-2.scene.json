@@ -1529,7 +1529,7 @@
                   },
                   "placeholder": "launcher",
                   "color": "#a7dc7c",
-                  "lengthM": 0.75,
+                  "lengthM": 0.675,
                   "markers": {
                     "primaryGrip": {
                       "position": [
@@ -1561,8 +1561,8 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.675,
-                        0.5499999999999999,
+                        0.5825,
+                        0.572,
                         0.30999999999999994
                       ],
                       "rotation": [
@@ -1647,8 +1647,8 @@
                     "holdPose": {
                       "position": [
                         -0.31,
-                        1.15,
-                        0.3
+                        1.2,
+                        0.245
                       ],
                       "rotation": [
                         0,

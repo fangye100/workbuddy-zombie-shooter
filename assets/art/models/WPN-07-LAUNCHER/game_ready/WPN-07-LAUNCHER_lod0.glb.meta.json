@@ -24,9 +24,9 @@
     "report": "assets/art/models/WPN-07-LAUNCHER/lod-report.json",
     "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
     "canonicalToImportTranslation": [
-      -0.00012098325777046282,
-      -0.001209685305066094,
-      0.00003907881942652458
+      -0.00010888278484344482,
+      -0.0010887167882174253,
+      0.00003517046570777893
     ],
     "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
     "variant": "game_ready",
@@ -34,16 +34,37 @@
     "status": "visual-review-candidate",
     "previousGlbHash": "9bc06be1cc2f1cf9e1826c579fdb29a844223089f76d6763171c4f0bda4f8cd6",
     "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
-    "textureFile": "WPN-07-LAUNCHER_lod0_basecolor.png"
+    "textureFile": "WPN-07-LAUNCHER_lod0_basecolor.png",
+    "ergonomicNormalization": {
+      "factor": 0.9,
+      "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "baseNormalization": {
+        "dimensionsM": [
+          0.75,
+          0.40611970326988556,
+          0.20300082054953691
+        ],
+        "scaleXYZ": [
+          0.678351721013392,
+          0.678351721013392,
+          0.678351721013392
+        ]
+      },
+      "processor": "tools/art/rescale-launcher-assembly.py",
+      "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+      "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+      "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+      "visual": "pending-headed"
+    }
   },
-  "sourceHash": "sha256:0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
+  "sourceHash": "sha256:46943ce5964deb4c53a302cea5fb589dfa616e682306afb8cc4cef99abdcf7e5",
   "updatedAt": "2026-10-11T15:02:53.644Z",
   "modelSockets": {
     "primaryGrip": {
       "position": [
-        -0.222,
-        0.074,
-        0
+        -0.1998,
+        0.06659999999999999,
+        -0.018000000000000002
       ],
       "rotation": [
         0,
@@ -54,9 +75,9 @@
     },
     "supportGrip": {
       "position": [
-        -0.08,
-        0.213,
-        -0.05
+        -0.07200000000000001,
+        0.1917,
+        -0.06300000000000001
       ],
       "rotation": [
         0,
@@ -67,8 +88,8 @@
     },
     "muzzle": {
       "position": [
-        0.375,
-        0.28,
+        0.3375,
+        0.25200000000000006,
         0
       ],
       "rotation": [
@@ -80,8 +101,8 @@
     },
     "magazine": {
       "position": [
-        0.197,
-        0.28,
+        0.1773,
+        0.25200000000000006,
         0
       ],
       "rotation": [
@@ -93,8 +114,8 @@
     },
     "chamber": {
       "position": [
-        0.197,
-        0.28,
+        0.1773,
+        0.25200000000000006,
         0
       ],
       "rotation": [
@@ -106,9 +127,9 @@
     },
     "reloadPose": {
       "position": [
-        0.135,
-        -0.024,
-        -0.382
+        0.165,
+        0.035,
+        -0.298
       ],
       "rotation": [
         0,
@@ -119,8 +140,8 @@
     },
     "reloadExtract": {
       "position": [
-        0.179,
-        -0.04,
+        0.1611,
+        -0.036,
         0
       ],
       "rotation": [
@@ -132,8 +153,8 @@
     },
     "reloadClearance": {
       "position": [
-        0,
-        0.14,
+        0.13457441181107344,
+        0.126,
         0
       ],
       "rotation": [
@@ -146,8 +167,8 @@
     "reloadReturnClearance": {
       "position": [
         0,
-        0.14,
-        0.2
+        0.072,
+        0.036
       ],
       "rotation": [
         0,

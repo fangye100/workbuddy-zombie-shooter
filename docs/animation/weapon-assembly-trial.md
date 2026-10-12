@@ -222,3 +222,19 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 本轮14项Game/loader owner测试、1项fixture测试、calibration/fixture `--check`、typecheck通过；scene:check为282资产、22个v17场景、15项跨文件测试及既有门禁通过，architecture286文件0错误、knowledge137条0错误。日志统一为`.workbuddy/tmp/wpn-integration/launcher-front-{owner-test,fixture-test,calibration-check,fixture-check,typecheck,scene-check,architecture-check,knowledge-check}.log`。没有浏览器/GPU执行，不把旧03b机械证据扩为新姿态批准。
 
 本检出/roots apps/assets/packages/tools一次CodeGraph `incremental-index --no-embed --json`更新15files/70nodes/306edges、当次0parse错误，结构ready；旧index.lock告警、5个既有parse文件与7891未解析调用保留，6822/7092向量完整。原始`launcher-front-index.log/health.log`记录限制；不删锁、不重建、不等待向量。
+
+## f5ac7bb 实机失败与0.90人体工学候选（2026-10-12）
+
+`front-loading-focused-audit/observations.json`的633样本/40张PNG保留实际失败：Launcher持枪左手9–15mm，晚段最大左117.899mm、右40.797mm；late95左66.917mm、upperReady左9.645mm，并有`IK_UNREACHABLE/IK_SOCKET_RESIDUAL`。四恢复阶段捕获齐全只是采样覆盖，前腔离回槽仍未清楚，不构成像素通过。Shotgun/SMG本次移动射击/换弹机制及双手可达可复用；接口仍局部遮挡。
+
+本轮直接用423个同帧actual肩链复算旧target，残差与实机measurement最大差3.20e-7m。当前marker组合没有重复yaw或坐标变换错误，问题是旧ready左肩Z与规划基线不同，以及回程rootX=-.337把支撑目标拉出真实肩球。保留轴向、前孔与模型比例，Launcher和同源round各三档统一0.90：名义本体长.750→.675m，实际round LOD0长约177.44→159.69mm，前腔深262.05→235.84mm。主握与支撑握点分别来自归一化前真实握把截面`[-.222,.074,-.020]`和`[-.080,.213,-.070]`，两側实表面位置记入calibration，再整体乘.90；不是空中socket。
+
+最终hold为actor-local `[-.31,1.20,.245]`；Game动作frame均是**最终模型局部米/xyzw**：reloadPose `[.165,.035,-.298]`/RY+90，extract `[.1611,-.036,0]`，entry clearance `[.13457441181107344,.126,0]`，return clearance `[0,.072,.036]`。入位原frame2299/phase.16667有152个颈肩交面，沿真实base.rotation的前轴（该帧actor+Z）解析SAT阻塞30.034995mm，加1mm间隙需localX增量.134574412m（sin系数.230615871）；423肩球减15mm余量的同方向参数交集为[0,.204145123]m。该解析增量已经是.90候选的局部米，不能再次缩放。
+
+423真实肩链快速筛0失败，最小右19.736mm/左15.582mm；7个已确定代表态的枪体/round交面及反向点parity均0，原六关节重放差最大2.08e-7m。只覆盖无transition的ready、entry、reload后半、late及upperReady代表态；whole-skin parity没有认证watertight，不宣称全路径clear或GPU握姿通过。原始计算为`launcher-actual-reach-f5.json`、`launcher-current-grip-section.json`、`launcher-current-shoulders-candidate.json`、`launcher-entry-clearance-interval.json`、`launcher-entry-separation.json`、`launcher-actual-geometry-f5.json`。
+
+后处理命令为`python tools/art/rescale-launcher-assembly.py`及`--check`，只修改现有6个派生GLB的POSITION/accessor bounds，UV/NORMAL/indices/embedded texture/cap BIN逐字节不变；重复运行不重复缩放，hash失配拒绝写入。原生成recipe及pipeline hash保留，报告`ergonomicNormalization`显式记录输入hash、后处理hash和有效scaleXYZ。重生成时先走原生成管线，再执行这一后处理、`node tools/art/calibrate-weapon-models.mjs`与两种review fixture生成；禁止为了复现此缩放重做旧Shell底火。稳定GUID不变，三LOD物理socket按各自final parser recenter换算，prototype/trial/三floor及静态模拟muzzle marker同步；三floor Camera与其他武器不变。
+
+3项后处理安全回归、3项真实f5肩链/三档数据/四向muzzle-owner回归、10项Game投影和4项loader回归、1项fixture测试通过；后处理/calibration及两种review `--check`通过，scene:check为282资产/22个v17场景/15项跨文件测试，architecture与knowledge通过。日志使用`launcher-scale-*`前缀。当前仍是待独立normalTLS/headed候选。Audit沿上文focused3命令使用新冻结HEAD、独立out目录及`--launcher-recovery`：普通out/mid/in后追加5次正常shoot→R，分别entry真实phase[.14,.18]、late90、late95、firstIdle、upperReady；漏窗显式false，原始PNG仍保留跨窗frameRange，不声称exact-frame像素。
+
+加载身份通过工具磁盘asset hash记录、正常`cache:no-store`下载与既有`window.__editor`只读snapshot交叉核对。`renderer.getDocument()`中Launcher hold应为`[-.31,1.20,.245]`，`actor.attachmentRequest`的LOD0 primary为`[-.1998,.0666,-.018]`、support为`[-.072,.1917,-.063]`；前槽`[.1773,.252,0]`由sidecar默认继承，在非removed子件相对parent frame可核。新的请求变化和child worldCorners尺寸核实际数据消费，models.frameStamp/child frameStamp核同帧；runtime summary不直接输出GLB sourceHash，不能只凭HEAD证明加载版本。Fuel装配仍后续处理，Shell与round底火仍等用户补交修复实源，全队列未批准。

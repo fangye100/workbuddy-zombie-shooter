@@ -90,14 +90,14 @@
   },
   "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
   "scaleXYZ": [
-    0.17,
-    0.085,
-    0.085
+    0.15300000000000002,
+    0.07650000000000001,
+    0.07650000000000001
   ],
   "origin": [
-    -0.05855352500000001,
+    -0.05269817250000001,
     0.0,
-    -0.0011965450000000002
+    -0.0010768905000000002
   ],
   "sourceDimensions": [
     1.059383973479271,
@@ -105,9 +105,9 @@
     0.580538080892134
   ],
   "dimensionsM": [
-    0.17626705,
-    0.04976172,
-    0.049345730000000004
+    0.15864034500000002,
+    0.044785548,
+    0.04441115700000001
   ],
   "status": "visual-review-candidate",
   "visual": "pending",
@@ -116,7 +116,7 @@
     {
       "level": 0,
       "file": "WPN-07-LAUNCHER-round-derived_lod0.glb",
-      "hash": "452b7baf795f1e096ccd7061f41fc33c0a174e07e2ac6007297bdd5731a714ac",
+      "hash": "3dc665571e2462adae479df779f3f56b7fe98efa535ece6f1b698ed471a0be5f",
       "triangles": 340,
       "topology": {
         "v": 172,
@@ -133,9 +133,9 @@
         "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
       },
       "dimensionsM": [
-        0.1774375099925226,
-        0.04915473052282392,
-        0.04975300356038191
+        0.15969375520944595,
+        0.04423925851006061,
+        0.044777704402804375
       ],
       "surfaceRatio": 0.9405036483833983,
       "boundsDrift": 0.012197919950839409,
@@ -145,9 +145,9 @@
         0.9701063415056744
       ],
       "parserRecenterMeters": [
-        -0.000556888224815151,
-        0.0003951476362645779,
-        0.00030467199701417376
+        -0.0005012042820453644,
+        0.00035563285928219557,
+        0.00027420464903116226
       ],
       "surfaceTransfer": {
         "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
@@ -186,12 +186,26 @@
         1024,
         1024
       ],
-      "visual": "pending"
+      "visual": "pending",
+      "ergonomicNormalization": {
+        "previousGlbHash": "452b7baf795f1e096ccd7061f41fc33c0a174e07e2ac6007297bdd5731a714ac",
+        "nonPositionBinHash": "5039ccd3302d3e39036936e271b86b283c25baf2fd6445e546570f92bd6739d4",
+        "dimensionsM": [
+          0.15969375520944595,
+          0.04423925851006061,
+          0.044777704402804375
+        ],
+        "parserRecenterMeters": [
+          -0.0005012042820453644,
+          0.00035563285928219557,
+          0.00027420464903116226
+        ]
+      }
     },
     {
       "level": 1,
       "file": "WPN-07-LAUNCHER-round-derived_lod1.glb",
-      "hash": "22ff5181ee436f33f48a21e1b292e85bc698219aae0efeef472c32dd57d4fc95",
+      "hash": "c50aad15c35207cfacb1b788a1b11192a120bd56f6f220b1e9017e4b2ab6bfb3",
       "triangles": 170,
       "topology": {
         "v": 87,
@@ -208,9 +222,9 @@
         "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
       },
       "dimensionsM": [
-        0.17791513029986733,
-        0.0476286811814025,
-        0.0518433486202388
+        0.16012360900640488,
+        0.04286581021733582,
+        0.046659015119075775
       ],
       "surfaceRatio": 0.9163265941716376,
       "boundsDrift": 0.050614685814533544,
@@ -220,9 +234,9 @@
         0.915470417070805
       ],
       "parserRecenterMeters": [
-        -0.0007956983784874957,
-        0.0008968954807125216,
-        -0.0008280762682069207
+        -0.000716131180524826,
+        0.0008072059135884047,
+        -0.0007452685385942459
       ],
       "surfaceTransfer": {
         "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
@@ -261,12 +275,26 @@
         1024,
         1024
       ],
-      "visual": "pending"
+      "visual": "pending",
+      "ergonomicNormalization": {
+        "previousGlbHash": "22ff5181ee436f33f48a21e1b292e85bc698219aae0efeef472c32dd57d4fc95",
+        "nonPositionBinHash": "e32195eaf2d9781c13ca0d9f3f26472f3ea944fca70583560b94c56890fd513b",
+        "dimensionsM": [
+          0.16012360900640488,
+          0.04286581021733582,
+          0.046659015119075775
+        ],
+        "parserRecenterMeters": [
+          -0.000716131180524826,
+          0.0008072059135884047,
+          -0.0007452685385942459
+        ]
+      }
     },
     {
       "level": 2,
       "file": "WPN-07-LAUNCHER-round-derived_lod2.glb",
-      "hash": "1e324833424a018ab183197b5d087a3daaf0c37035815e1c0706166e6376cb09",
+      "hash": "385b5366f543cfa84e457dbc13b7801deab953b5c4076ab8c8054f29517cc217",
       "triangles": 68,
       "topology": {
         "v": 36,
@@ -283,9 +311,9 @@
         "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
       },
       "dimensionsM": [
-        0.17923034330347581,
-        0.04817244784955367,
-        0.050718544251941736
+        0.16130731254816055,
+        0.04335520532913506,
+        0.04564668983221054
       ],
       "surfaceRatio": 0.857723586343855,
       "boundsDrift": 0.03193764505017771,
@@ -295,9 +323,9 @@
         0.8491921589025064
       ],
       "parserRecenterMeters": [
-        -0.00021360344666636333,
-        0.0008968954807125216,
-        -0.0013904784523554575
+        -0.00019224360585212708,
+        0.0008072059135884047,
+        -0.001251431182026863
       ],
       "surfaceTransfer": {
         "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
@@ -336,7 +364,42 @@
         1024,
         1024
       ],
-      "visual": "pending"
+      "visual": "pending",
+      "ergonomicNormalization": {
+        "previousGlbHash": "1e324833424a018ab183197b5d087a3daaf0c37035815e1c0706166e6376cb09",
+        "nonPositionBinHash": "d1de0e4ae0ce5610f95187cdcbcbd26b032923010a2504d80ec390a3260003ac",
+        "dimensionsM": [
+          0.16130731254816055,
+          0.04335520532913506,
+          0.04564668983221054
+        ],
+        "parserRecenterMeters": [
+          -0.00019224360585212708,
+          0.0008072059135884047,
+          -0.001251431182026863
+        ]
+      }
     }
-  ]
+  ],
+  "ergonomicNormalization": {
+    "factor": 0.9,
+    "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+    "baseNormalization": {
+      "dimensionsM": [
+        0.17626705,
+        0.04976172,
+        0.049345730000000004
+      ],
+      "scaleXYZ": [
+        0.17,
+        0.085,
+        0.085
+      ]
+    },
+    "processor": "tools/art/rescale-launcher-assembly.py",
+    "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+    "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+    "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+    "visual": "pending-headed"
+  }
 }

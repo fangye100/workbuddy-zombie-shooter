@@ -39,9 +39,9 @@
     1.1056211354186178
   ],
   "scaleXYZ": [
-    0.678351721013392,
-    0.678351721013392,
-    0.678351721013392
+    0.6105165489120529,
+    0.6105165489120529,
+    0.6105165489120529
   ],
   "rawNodeBakedCenterSource": [
     0.00010000169277191162,
@@ -71,9 +71,9 @@
     -0.00010000169277188387
   ],
   "dimensionsM": [
-    0.75,
-    0.40611970326988556,
-    0.20300082054953691
+    0.675,
+    0.365507732942897,
+    0.18270073849458324
   ],
   "bodyBoundsSource": null,
   "bodyDimensionsM": null,
@@ -87,13 +87,13 @@
       "level": 0,
       "file": "WPN-07-LAUNCHER_lod0.glb",
       "triangles": 3000,
-      "hash": "0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
+      "hash": "46943ce5964deb4c53a302cea5fb589dfa616e682306afb8cc4cef99abdcf7e5",
       "surfaceRatio": 0.9500581476278114,
       "boundsDrift": 0.0032677876413297335,
       "dimensionsM": [
-        0.751292300998611,
-        0.4048189071927834,
-        0.20233745697696534
+        0.6761631071567535,
+        0.36433701892383397,
+        0.1821037158370018
       ],
       "sourceTopology": {
         "v": 49921,
@@ -126,9 +126,9 @@
       "visual": "pending",
       "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 0,
       "parserRecenterMeters": [
-        0.00012098325777046282,
-        0.001209685305066094,
-        -3.907881942652458e-05
+        0.00010888278484344482,
+        0.0010887167882174253,
+        -3.517046570777893e-05
       ],
       "surfaceTransfer": {
         "previousGlbHash": "9bc06be1cc2f1cf9e1826c579fdb29a844223089f76d6763171c4f0bda4f8cd6",
@@ -186,19 +186,33 @@
           "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
           "oppositeNormalWindingFacesAfter": 0
         }
+      },
+      "ergonomicNormalization": {
+        "previousGlbHash": "0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
+        "nonPositionBinHash": "e873babe7c4473bf15d54ffa2a2ae02b6c8a3073532821daca43ce17ca4342bb",
+        "dimensionsM": [
+          0.6761631071567535,
+          0.36433701892383397,
+          0.1821037158370018
+        ],
+        "parserRecenterMeters": [
+          0.00010888278484344482,
+          0.0010887167882174253,
+          -3.517046570777893e-05
+        ]
       }
     },
     {
       "level": 1,
       "file": "WPN-07-LAUNCHER_lod1.glb",
       "triangles": 1500,
-      "hash": "26a632758218d0a1151569c5a3abe060c0922956064a101781cb6e1ad04395bb",
+      "hash": "ab4ba0ad2c8cf6b9007833726b17f2e3d9eb0f27bf0fa7cc8e1e0a0351457af8",
       "surfaceRatio": 0.9187052431756889,
       "boundsDrift": 0.02467553967805891,
       "dimensionsM": [
-        0.7507235362564246,
-        0.4048189071927834,
-        0.1979916657473883
+        0.6756511926651001,
+        0.36433701892383397,
+        0.17819250375032425
       ],
       "sourceTopology": {
         "v": 49921,
@@ -231,9 +245,9 @@
       "visual": "pending",
       "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 0,
       "parserRecenterMeters": [
-        -0.00027108524228983133,
-        0.001209685305066094,
-        -0.0022119744342150374
+        -0.00024396181106567383,
+        0.0010887167882174253,
+        -0.0019907765090465546
       ],
       "surfaceTransfer": {
         "previousGlbHash": "20cb5838144d0d69d647fb9cadf810dd2457aad3b07fa86d56b6cdf7b533a6bc",
@@ -291,19 +305,33 @@
           "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
           "oppositeNormalWindingFacesAfter": 0
         }
+      },
+      "ergonomicNormalization": {
+        "previousGlbHash": "26a632758218d0a1151569c5a3abe060c0922956064a101781cb6e1ad04395bb",
+        "nonPositionBinHash": "ce97f0d298ecd68b6ba4a88f8482f0f445587130bca546b95bf6807208efdc80",
+        "dimensionsM": [
+          0.6756511926651001,
+          0.36433701892383397,
+          0.17819250375032425
+        ],
+        "parserRecenterMeters": [
+          -0.00024396181106567383,
+          0.0010887167882174253,
+          -0.0019907765090465546
+        ]
       }
     },
     {
       "level": 2,
       "file": "WPN-07-LAUNCHER_lod2.glb",
       "triangles": 494,
-      "hash": "db4ee5f30be33b436fb5936833465a13e330ac02f4fba59387bbb8a39be62b9f",
+      "hash": "80205273ca55ffb794b0529a857b13df96ba1ec28e2a5a059be1e7dd42eabead",
       "surfaceRatio": 0.8837052812715624,
       "boundsDrift": 0.014566377758330251,
       "dimensionsM": [
-        0.7508577170859383,
-        0.4120353962828157,
-        0.20489979938830016
+        0.6757719218730927,
+        0.3708318832796067,
+        0.18440981954336166
       ],
       "sourceTopology": {
         "v": 49921,
@@ -338,9 +366,9 @@
       "visual": "pending",
       "postQemRemovedDegenerateDuplicateNonmanifoldFaces": 6,
       "parserRecenterMeters": [
-        0.0008381889068828641,
-        -0.003426048952095252,
-        0.000745467110354274
+        0.0007543712854385376,
+        -0.0030834439676254988,
+        0.0006709210574626923
       ],
       "surfaceTransfer": {
         "previousGlbHash": "c320ac803f3fc5265cb9b1cdfc4b93f7a7258d8c6a795284a56efe82265ee4ad",
@@ -398,6 +426,20 @@
           "method": "仅平均法线与绕序反向的面，独立角改为几何面法线；其他角不变",
           "oppositeNormalWindingFacesAfter": 0
         }
+      },
+      "ergonomicNormalization": {
+        "previousGlbHash": "db4ee5f30be33b436fb5936833465a13e330ac02f4fba59387bbb8a39be62b9f",
+        "nonPositionBinHash": "ca72d83b0f8d68c9bb1761ce9328d5e08c2a77d25ed76bce368404263e2d1b8d",
+        "dimensionsM": [
+          0.6757719218730927,
+          0.3708318832796067,
+          0.18440981954336166
+        ],
+        "parserRecenterMeters": [
+          0.0007543712854385376,
+          -0.0030834439676254988,
+          0.0006709210574626923
+        ]
       }
     }
   ],
@@ -406,5 +448,26 @@
   "status": "visual-review-candidate",
   "qualityPolicy": "面积 .9..1.1 / 包围盒漂移 <=.05 为诊断；远档细槽损失不单独判定轮廓；预算硬门禁；需 GPU 对比关键端面/握把/阀门及贴图",
   "previousGeometryPipelineHash": "bb8f9fbe0e3da7abf9fc9a9411e6b2dbff21d8d542718f7444fbb76c00340457",
-  "surfaceTransferPolicy": "独立每档逐面 atlas，保留原源表面 BaseColor；不重做减面、不改几何；仅反向法线的面角改为几何面法线；不消除真实源碎片或重建本体；GPU 待复验"
+  "surfaceTransferPolicy": "独立每档逐面 atlas，保留原源表面 BaseColor；不重做减面、不改几何；仅反向法线的面角改为几何面法线；不消除真实源碎片或重建本体；GPU 待复验",
+  "ergonomicNormalization": {
+    "factor": 0.9,
+    "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+    "baseNormalization": {
+      "dimensionsM": [
+        0.75,
+        0.40611970326988556,
+        0.20300082054953691
+      ],
+      "scaleXYZ": [
+        0.678351721013392,
+        0.678351721013392,
+        0.678351721013392
+      ]
+    },
+    "processor": "tools/art/rescale-launcher-assembly.py",
+    "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+    "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+    "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+    "visual": "pending-headed"
+  }
 }

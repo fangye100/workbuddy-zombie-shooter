@@ -166,6 +166,7 @@ export function reloadMoment(sample,id,p,stage,outSeen){
 export function recoveryMoment(sample,stage,seenReload,previousAction){
  const pose=sample.models?.pose,layer=sample.actor?.layer;
  if(sample.state!=='playing'||!sample.models?.visible||sample.models.frameStamp!==sample.frame||sample.models.weaponId!=='launcher')return false;
+ if(stage==='entry')return pose?.action==='reload'&&pose.phase>=.14&&pose.phase<=.18;
  if(stage==='late90')return pose?.action==='reload'&&pose.phase>=.90&&pose.phase<.95;
  if(stage==='late95')return pose?.action==='reload'&&pose.phase>=.95&&pose.phase<1;
  if(!seenReload||pose?.action!=='idle')return false;
@@ -284,7 +285,7 @@ async function run(options){
     const p=def.presentation.procedural,id=def.presentation.assembly.reloadAttachmentId,shots=new Set(),cycles=[];
     // .55s shell换弹不串行等待三张PNG。三次真实shoot→R，每周期仅一个阶段，
     // 该阶段raw先入report，PNG异步进行；不锁定模拟，保留实际截图frameRange。
-    const recoveryStages=options.launcherRecovery&&def.id==='launcher'?['late90','late95','firstIdle','upperReady']:[];
+    const recoveryStages=options.launcherRecovery&&def.id==='launcher'?['entry','late90','late95','firstIdle','upperReady']:[];
     const stages=[...(def.ammo.reloadSec<.9?['out','mid','in']:['all']),...recoveryStages];
     for(let cycle=0;cycle<stages.length;cycle++){
      if(cycle>0){await input.pointer(canvas,true);await sleep(50);await input.pointer(canvas,false);await sampleFor(label+'-reload-preparation',Math.max(300,def.cooldownSec*1000));}
@@ -307,7 +308,7 @@ async function run(options){
      check(label+'移动换弹下身持续周期'+cycle,legsChanged(samples)&&samples.some(s=>Math.hypot(s.player.x-mounted.player.x,s.player.z-mounted.player.z)>.1),samples.map(s=>({frame:s.frame,phase:s.models?.pose?.phase,clip:s.actor?.clip})));
     }
     check(label+'实际附件out/in与归槽采样（可见性另验）',shots.has('out')&&shots.has('mid')&&shots.has('in')&&cycles.every(c=>c.ok),{shots:[...shots],cycles});
-    if(recoveryStages.length)check(label+'late→首idle→upper ready指定阶段采样（PNG帧范围另验）',recoveryStages.every(stage=>shots.has(stage)),{required:recoveryStages,missing:recoveryStages.filter(stage=>!shots.has(stage)),triggers:report.actions.filter(a=>a.weapon===def.id&&recoveryStages.includes(a.captureStage))});
+    if(recoveryStages.length)check(label+'entry及late→首idle→upper ready指定阶段采样（PNG帧范围另验）',recoveryStages.every(stage=>shots.has(stage)),{required:recoveryStages,missing:recoveryStages.filter(stage=>!shots.has(stage)),triggers:report.actions.filter(a=>a.weapon===def.id&&recoveryStages.includes(a.captureStage))});
    }
    check('选定武器执行覆盖',report.selectedWeapons.every(id=>report.executedWeapons.includes(id)),{selected:report.selectedWeapons,executed:report.executedWeapons});
   }
