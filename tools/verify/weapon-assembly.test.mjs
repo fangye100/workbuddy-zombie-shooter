@@ -1,9 +1,39 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('真实3370射线在CSS client空间通过；越界/遮挡/平面误差分别保留证据',()=>{
+ const player={x:0,z:-5.600001811981201},canvas={width:2000,height:1600,getBoundingClientRect:()=>({left:50,top:70,right:1050,bottom:870,width:1000,height:800})};
+ const ray={o:[-.041666709157595176,1.1644444310304083,-3.9000018119829294],d:[-.3807105842999634,-.14213154549535018,-.9137056827978491]},ground={id:'ground',parent:null,transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},components:[{kind:'MeshRenderer',source:{type:'builtin',shape:'plane',params:[80,24]}}]};
+ let hit=canvas;const context={devicePixelRatio:2,innerWidth:1440,innerHeight:1000,structuredClone,document:{querySelector:()=>canvas,elementFromPoint:()=>hit},window:{__editor:{camera:{yaw:0},playCtl:{tick:139,session:{runtime:{player:()=>player}}},renderer:{state:{frameCounter:273},getDocument:()=>({nodes:[ground]}),worldToScreen:()=>({x:299.01163873947115,y:650.174050328452,behind:false}),pointerRay:()=>ray}}}};
+ const read=()=>runInNewContext(aimPointExpression(180),context),accepted=read();
+ assert.equal(accepted.ok,true);assert.ok(accepted.aimErrorM<1e-4);assert.equal(accepted.dpr,2);assert.equal(accepted.canvasRect.left,50);assert.equal(accepted.groundBounds.minZ,-12);
+ // Translate actor, camera and the original ray together: projection still agrees,
+ // but the authored physical ground no longer contains the intersection.
+ player.z-=1;ray.o[2]-=1;const outside=read();assert.equal(outside.ok,false);assert.deepEqual(Array.from(outside.reasons),['ground-outside-authored-bounds']);assert.ok(outside.ground[2]<-12);assert.equal(outside.tick,139);
+ hit={tagName:'DIV',id:'hud',className:'overlay'};const occluded=read();assert.ok(occluded.reasons.includes('pointer-ui-occluded'));assert.equal(occluded.actualElement.id,'hud');
+ ray.o[0]+=.002;assert.ok(read().reasons.includes('aim-projection-mismatch'));
+ ray.d[1]=0;const parallel=read();assert.ok(parallel.reasons.includes('ground-ray-no-forward-hit'));assert.ok(parallel.reasons.includes('aim-plane-no-forward-hit'));
+});
+test('地面实际余量通过真实W/S换向保持，旋转相机使用同一screenMovement约定',()=>{
+ const point={ground:[-3.1607232013486843,0,-11.385739691119685],groundBounds:{minX:-40,maxX:40,minZ:-12,maxZ:12},camera:{yaw:0}};
+ assert.equal(groundMovementDirection(point,'w'),'s');assert.equal(groundMovementDirection(point,'s'),'s');
+ point.camera.yaw=Math.PI/2;point.ground=[-39.5,0,0];assert.equal(groundMovementDirection(point,'w'),'s');
+ point.ground=[0,0,0];assert.equal(groundMovementDirection(point,'w'),'w');
+ point.groundBounds={minX:-.1,maxX:.1,minZ:-.1,maxZ:.1};assert.throws(()=>groundMovementDirection(point,'w'),/余量不足/);
+});
+test('截图期间真实释放移动键但保留鼠标；成功恢复输入，失败不恢复移动',async()=>{
+ const calls=[],input=new ProbeInput({async send(method,params){calls.push({method,params});}});
+ await input.key('w',true);await input.pointer({x:50,y:60},true);
+ const resume=name=>input.key(name,true);
+ await captureWithoutMovement(input,async()=>{assert.equal(input.held.size,0);assert.ok(input.mouse);},resume);
+ assert.equal(input.held.has('w'),true);assert.equal(calls.at(-2).params.type,'keyUp');assert.equal(calls.at(-1).params.type,'keyDown');
+ await assert.rejects(captureWithoutMovement(input,async()=>{throw new Error('capture timeout');},resume),/capture timeout/);
+ assert.equal(input.held.size,0);assert.equal(calls.at(-1).params.type,'keyUp');await input.release();
+ assert.ok(calls.every(c=>c.method.startsWith('Input.')));
+});
 test('作者sceneId先到时拒绝陈旧Hierarchy或GLB占位；只有真实投影就绪才可Play',()=>{
  const doc={id:'trial',nodes:[{id:'player',name:'真实玩家',components:[{kind:'MeshRenderer',source:{type:'asset',ref:{path:'h01.glb'}}}]}]},object={nodeId:'player',name:'真实玩家',loadedAssetPath:'h01.glb'},button={disabled:false,getBoundingClientRect:()=>({x:10,y:10,width:50,height:30}),contains:()=>false};
  let row='Character';const renderer={getDocument:()=>doc,getSceneSource:()=>({url:'trial.json'}),pendingAssetCount:0,state:{objects:[object],frameCounter:6}};

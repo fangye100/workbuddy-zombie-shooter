@@ -170,3 +170,15 @@ CodeGraph在本检出、base `ac8295c`、roots=apps/assets/packages/tools进行�
 本轮9项工具、1项本面gutter、3项派生来源/预算/闭合回归通过；Fuel新增逐角geometry/normal hash检查，meta除sourceHash/updatedAt外与提交前一致。scene:check 282资产、22个v17场景、15项跨文件测试及既有门禁通过，knowledge137条0错误。日志为 `startup-repair-test.log`、`prop-surface-repair-test.log`、`fit-parts-repair-test.log`、`prop-startup-scene-check.log`、`prop-startup-knowledge-check.log`。没有产品TS改动，不重跑未受影响构建/姿态/GPU验证。
 
 CodeGraph MCP 0.167.0在本根/base `0aee371`实际查project_map与main/play-controller/renderer指定module，原始 `codegraph-ready-0aee371.json`。一次 `incremental-index --no-embed --json` 更新11files/71nodes/187edges，本轮0parse错误、结构ready；旧index.lock竞争警告保留。health为1135files/7099nodes/17689edges，5个既有damaged-parse文件、7865pending resolution；不删除锁、重建或等待向量。`prop-startup-index.log/health.log`不等于完整调用解析或视觉批准。
+
+## 3370b80 探针时序修正（2026-10-12）
+
+原始 `seven-audit-3370b80/observations.json` 已证明真实UI Play启动、7个GLB加载/pending=0、移动射击和下身动画；180°/135°/返回三段均有样本。移动截图之后虽已发送7键，下一次re-aim被旧合并guard拒绝，没有Launcher或后续七件换弹样本，不能写成七件验证通过。
+
+源码核对 `PickingService.worldToScreen/pointerRay` 均使用canvas的CSS client矩形，DPR/backing pixels不进入指针坐标；游戏yaw=`atan2(ΔZ,ΔX)`，180°朝-X。最后有效请求与gameAim相差约5.7µm，地面交点Z=-11.38574，作者Ground80×24的Z边界为±12，只余.61426m。旧工具截图期间仍按住W；截图后越界有时序与机制依据，但旧失败返回null，没有失败点数据，根因仍待下一次原始guard上下文确认，不归咎于坐标或角度。
+
+本次仅工具/文档修改：guard逐次保留分项reason、实际element、CSS rect/DPR/backing pixels、requested/ray/两平面交点、作者地面范围、frame/tick；地面与1e-4m误差检查不放宽。原始PNG采集期间真实释放W/S，成功后恢复，模拟/动作时钟与鼠标射击继续，不暂停或注入状态。显式world-yaw模式持续采样时按当前地面交点与Camera yaw预留1.5m移动余量，通过真实W/S换向；双方均无余量仍失败。`movementPlan`保存请求/实际键向及对应guard帧。旧center/ratio模式不增加自动换向。
+
+12项工具定向Node回归通过，覆盖3370真实射线的CSS投影、平移后地面越界、遮挡/平行/投影偏差明细、旋转Camera移动约定、截图输入释放/成功恢复/失败不恢复。日志 `aim-guard-tool-test.log`；本根/base3370的MCP定位记录为 `codegraph-aim-3370b80.json`。未运行本次改后Chrome；沿用上文 `--all-weapons --aim-yaw 180 --side-aim-yaw 135` 命令，填新冻结HEAD和独立out目录再交Audit。产品源码、资产、scene/Camera/hold/marker不变；原5120姿态回归与未受影响静态证据保留。七件GPU姿态与六件可见离槽/回位仍待实操；Shell/round依赖用户范围决定继续暂停，原任务尚未批准。
+
+本轮 `knowledge:check` 137条0错误；一次 `incremental-index --no-embed --json` 更新3files/61nodes/189edges、当次0parse错误，结构ready，旧index.lock竞争告警保留。紧随health为1135files/7110nodes/17719edges、5个既有parse文件/7877未解析调用；向量已自行完成7076/7076，本轮没有等待或重建。原始 `aim-guard-index.log/health.log` 仅为定位限制记录，不能替代七件实机结果。
