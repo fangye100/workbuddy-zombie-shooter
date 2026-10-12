@@ -44,10 +44,18 @@ Fuel贴图接缝已有有界修复，实际装配及动作选择仍pending；未
 Inspector/预览/导入均读取该路径sidecar，`normalizeHeightM:null`保留米制，`upAxisFlip`选择现有解析轴适配；缺失或坏meta显式拒绝该模型解析。
 
 本次独立验收服务入口为`https://fangye-win11-office.tail6b29a2.ts.net:5199/?scene=assets/scenes/sandbox/weapon-source-review.scene.json`，仅本次隔离试验服务；仓库固定5100契约未改。
-先选择统一列表，再检查10原源、WPN01、去重复body、三档LOD及Shell/Fuel候选的属性/预览/载入；真实GPU与可见UI尚待Audit，离线清单与测试不能代替批准。
+先选择统一列表，再检查10原源、WPN01、去重复body、三档LOD及Shell/Fuel候选的属性/预览/载入；本轮有限UI观察见下文，离线清单与测试不能代替完整批准。
 只读快照`__editor.assets.getState()`新增paths/recursive/kind/errors；实际入口以main暴露的assets对象为准，操作应使用正常UI。
 
 ```powershell
 pnpm exec vitest run apps/editor/test/asset-listing.test.ts apps/editor/test/asset-inspector.test.ts apps/editor/test/models.test.ts
 pnpm run editor:build
 ```
+
+2026-10-12，模型目标`a9ddf03661db84ab2232d32351197ffd4892ed16`的独立Asset Browser观察：Audit通过正常UI勾选递归、选择模型并搜索WPN，实际显示68条完整路径。
+抽查Shotgun原源/LOD0、SMG without-mag和Shell候选，Inspector显示相应path/GUID/模型米制高度，候选状态可辨。
+Shotgun LOD0通过UI载入后Hierarchy由5件增至6件，Undo回到5件；随后Reload源检视场景，没有保存场景。
+
+本轮图像仅由Audit在CUA工具输出中查看，没有本地原始PNG供Main独立像素复核；未读取GPU adapter，不能称硬件GPU已确认或全部UI/GPU通过。
+Reload后控件恢复默认，尚未再次勾选/筛选复显68条。以上是统一发现、有限属性与导入/Undo观察，未扩大为全部模型、全部LOD或艺术验收。
+Shell修复实源与Fuel动作设计选择仍pending；原武器动画队列未完成，后续合回仍须保留动画v17及其运行逻辑。

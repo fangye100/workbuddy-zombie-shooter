@@ -2318,7 +2318,7 @@
         "asset",
         "gpu"
       ],
-      "read": "源与LOD快照、assetRoots递归与类型/完整路径筛选、68个武器模型清单、Inspector米制与轴适配、v16静态场景、动画owner排除、候选未验收状态",
+      "read": "源与LOD快照、assetRoots递归与68模型清单、Inspector米制与轴适配、有限UI导入/Undo观察及GPU/重载复显边界、v16静态场景、动画owner排除、候选未验收状态",
       "sourceRefs": [
         "scene-schema",
         "asset-metadata",
