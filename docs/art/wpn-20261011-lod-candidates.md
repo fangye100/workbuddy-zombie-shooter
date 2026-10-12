@@ -1,8 +1,9 @@
+> 独立模型分支当前状态与有效入口见[模型分支说明](weapon-model-branch.md)。下文保留原提交的处理事实，历史待输入语句不代表10/12仍缺本体。
+
 # WPN-20261011 归一化与 LOD 候选检视
 
 五件交付已生成独立三档预算内候选，状态为 `visual-review-candidate`，尚未批准玩法使用。
-原 GLB/front/preview/job/delivery 保留，WPN-01 不重生成。用户已确认 WPN-02～06 本体
-明天提供；SMG、霰弹枪、喷射器附件的精确装配及角色握点仍需对应本体。
+原 GLB/front/preview/job/delivery 保留，WPN-01 不重生成。该段记录10/11候选阶段；WPN-02～06实际本体已于10/12交付，独立模型快照见[模型分支说明](weapon-model-branch.md)。附件fit候选与底火/Fuel未验收边界仍保留。
 
 ## 持久化检视入口
 

@@ -25,11 +25,15 @@ import {
   listDir,
   fileUrl,
   parentPath,
+  readProjectFile,
+  type AssetKind,
   type AssetSelection,
   type FsEntry,
 } from './asset-util';
 import { makeSplitter, readCssVarPx, restoreCssVar } from './splitter';
 import { t } from './i18n';
+import { validateProject } from '@aether/scene';
+import { assetScopeRoots, scanAssetRoots, filterAssetEntries, assetStatus, AssetListingRequest, type AssetEntry } from './services/asset-listing';
 
 export interface AssetBrowserHooks {
   /** 选中变化（文件或文件夹；null = 无选中） */
@@ -74,12 +78,18 @@ export class AssetBrowser {
   private crumbEl!: HTMLElement;
   private upBtnEl!: HTMLButtonElement;
   private filterEl!: HTMLInputElement;
+  private recursiveEl!: HTMLInputElement;
+  private kindEl!: HTMLSelectElement;
   private zoomEl!: HTMLInputElement;
   private bodyEl!: HTMLElement;
 
   private currentDir = '';
   private filter = '';
-  private entries: FsEntry[] = [];
+  private entries: AssetEntry[] = [];
+  private readonly listingRequest = new AssetListingRequest();
+  private listingErrors: string[] = [];
+  private renderRevision = 0;
+  private navigationRevision = 0;
   private selectedPath: string | null = null;
   /** 正在行内重命名的输入框（同一时刻最多一个；null = 无编辑态） */
   private renameInput: HTMLInputElement | null = null;
@@ -107,7 +117,9 @@ export class AssetBrowser {
         <span class="asset-title">${t('资产库')}</span>
         <button class="asset-up" data-asset="up" title="${t('返回上一层')}">↑</button>
         <span class="asset-crumb" data-asset="crumb"></span>
-        <input class="asset-filter" data-asset="filter" type="search" placeholder="${t('筛选当前目录…')}">
+        <input class="asset-filter" data-asset="filter" type="search" placeholder="筛选名称或路径…">
+        <label title="当前资产目录及其子目录；项目根或资产根显示project.assetRoots合集"><input data-asset="recursive" type="checkbox">包含子目录</label>
+        <select data-asset="kind" aria-label="资产类型"><option value="all">全部类型</option><option value="model">模型</option><option value="image">图片</option><option value="json">JSON</option><option value="audio">音频</option><option value="doc">文档</option></select>
         <span class="asset-zoom-label">${t('列表')}</span>
         <input class="asset-zoom" data-asset="zoom" type="range" min="0" max="100" step="1" title="视图缩放：列表 ↔ 大图标">
         <span class="asset-zoom-label">${t('图标')}</span>
@@ -124,6 +136,8 @@ export class AssetBrowser {
     this.crumbEl = this.dock.querySelector('[data-asset="crumb"]')!;
     this.upBtnEl = this.dock.querySelector('[data-asset="up"]')!;
     this.filterEl = this.dock.querySelector('[data-asset="filter"]')!;
+    this.recursiveEl = this.dock.querySelector('[data-asset="recursive"]')!;
+    this.kindEl = this.dock.querySelector('[data-asset="kind"]')!;
     this.zoomEl = this.dock.querySelector('[data-asset="zoom"]')!;
     this.bodyEl = this.dock.querySelector('[data-asset="body"]')!;
 
@@ -162,6 +176,8 @@ export class AssetBrowser {
       this.filter = this.filterEl.value.trim().toLowerCase();
       this.renderContent();
     });
+    this.recursiveEl.addEventListener('change', () => { void this.loadContent(); });
+    this.kindEl.addEventListener('change', () => this.renderContent());
 
     // 返回上一层：目录到项目根后没有更上层，置灰而不是点了没反应
     this.upBtnEl.addEventListener('click', () => {
@@ -193,20 +209,27 @@ export class AssetBrowser {
   // ================= 启动 / 刷新 =================
 
   private async boot(): Promise<void> {
+    const revision = ++this.navigationRevision;
+    this.listingRequest.invalidate();
     await this.buildTree();
+    if (revision !== this.navigationRevision) return;
     // 持久化的目录可能已被删掉，逐段回退到存在的祖先
     let dir = this.currentDir;
     for (;;) {
       try {
-        this.entries = await listDir(dir);
+        const entries = await listDir(dir);
+        if (revision !== this.navigationRevision) return;
+        this.entries = entries.map(e => ({ ...e, path: joinPath(dir, e.name) }));
         break;
       } catch {
-        if (dir === '') return;
+        if (revision !== this.navigationRevision) return;
+        if (dir === '') { this.listingErrors = ['项目根无法列举']; this.renderContent(); return; }
         dir = dir.includes('/') ? dir.slice(0, dir.lastIndexOf('/')) : '';
       }
     }
     this.currentDir = dir;
     await this.expandTo(dir);
+    if (revision !== this.navigationRevision) return;
     this.renderCrumb();
     this.renderContent();
     this.markTreeSelection();
@@ -215,6 +238,27 @@ export class AssetBrowser {
   /** 重新拉取（文件系统被外部改动后调） */
   async refresh(): Promise<void> {
     await this.boot();
+    await this.loadContent();
+  }
+
+  private async loadContent(): Promise<void> {
+    const dir = this.currentDir, recursive = this.recursiveEl.checked;
+    this.contentEl.textContent = '正在列举资产…';
+    const result = await this.listingRequest.run(async current => {
+      try {
+        if (!recursive) return { entries: (await listDir(dir)).map(e => ({ ...e, path: joinPath(dir, e.name) })), errors: [] };
+        const project = await readProjectFile('aether.project.json');
+        if (!project.ok) throw new Error('项目读取失败: ' + project.error);
+        const errors = validateProject(project.json).filter(d => d.severity === 'error');
+        if (errors.length) throw new Error('项目无效: ' + errors.map(d => d.message).join('; '));
+        const roots = (project.json as { assetRoots: string[] }).assetRoots;
+        return await scanAssetRoots(assetScopeRoots(roots, dir), listDir, current);
+      } catch (e) { return { entries: [], errors: [String(e)] }; }
+    });
+    if (!result) return;
+    this.entries = result.entries;
+    this.listingErrors = result.errors;
+    this.renderContent();
   }
 
   // ================= 目录树 =================
@@ -267,6 +311,7 @@ export class AssetBrowser {
     if (!node.loaded) {
       try {
         const all = await listDir(node.path);
+        if (this.nodes.get(node.path) !== node) return;
         const dirs = all.filter((e) => e.kind === 'dir');
         for (const d of dirs) {
           const childPath = joinPath(node.path, d.name);
@@ -314,25 +359,24 @@ export class AssetBrowser {
   // ================= 内容区 =================
 
   async selectDir(path: string): Promise<void> {
+    const revision = ++this.navigationRevision;
+    this.listingRequest.invalidate();
     if (this.currentDir !== path) {
       this.currentDir = path;
       localStorage.setItem(LS_DIR, path);
-      try {
-        this.entries = await listDir(path);
-      } catch (err) {
-        this.contentEl.innerHTML = `<div class="asset-empty">${t('目录读取失败')}：${String(err)}</div>`;
-        return;
-      }
       this.renderCrumb();
-      this.renderContent();
       this.markTreeSelection();
     }
+    await this.loadContent();
+    if (this.currentDir !== path) return;
     // 程序化跳目录时把树链展开到目标（否则内容变了、树上却看不到自己在哪）
     await this.expandTo(path);
+    if (revision !== this.navigationRevision) return;
     this.markTreeSelection();
     // 选中目录本身也抛给 Inspector（显示「文件夹 · 包含 N 项」），并确保树节点展开可见
     const node = this.nodes.get(path);
     if (node !== undefined && !node.expanded) await this.expandNode(node);
+    if (revision !== this.navigationRevision) return;
     this.hooks.onSelect({
       path,
       entry: {
@@ -381,19 +425,24 @@ export class AssetBrowser {
   }
 
   private renderContent(): void {
+    const revision = ++this.renderRevision;
     const z = this.zoom;
     const isList = z === 0;
     this.contentEl.classList.toggle('list', isList);
     if (!isList) this.contentEl.style.setProperty('--asset-cell', `${Math.round(74 + z * 0.78)}px`);
 
-    const items = this.filter === ''
-      ? this.entries
-      : this.entries.filter((e) => e.name.toLowerCase().includes(this.filter));
+    const items = filterAssetEntries(this.entries, this.filter, this.kindEl.value as AssetKind | 'all');
 
     this.contentEl.innerHTML = '';
+    if (this.listingErrors.length) {
+      const warning = document.createElement('div'); warning.className = 'asset-empty';
+      warning.dataset.asset = 'listing-errors'; warning.textContent = '列举不完整：' + this.listingErrors.join('; ');
+      this.contentEl.appendChild(warning);
+    }
     if (items.length === 0) {
       const msg = this.entries.length === 0 ? t('空目录') : t('没有匹配筛选项');
-      this.contentEl.innerHTML = `<div class="asset-empty">${msg}</div>`;
+      const empty = document.createElement('div'); empty.className = 'asset-empty'; empty.textContent = msg;
+      this.contentEl.appendChild(empty);
       return;
     }
 
@@ -405,12 +454,36 @@ export class AssetBrowser {
     }
 
     for (const entry of items) {
-      this.contentEl.appendChild(isList ? this.makeRow(entry) : this.makeCell(entry));
+      const element = isList ? this.makeRow(entry) : this.makeCell(entry);
+      element.dataset.path = entry.path;
+      if (this.recursiveEl.checked && entry.kind === 'file') {
+        const location = document.createElement('small'); location.textContent = entry.path;
+        location.className = 'asset-detail';
+        element.appendChild(location);
+      }
+      this.contentEl.appendChild(element);
     }
     this.markContentSelection();
+    void this.showStatuses(items, revision);
   }
 
-  private makeCell(entry: FsEntry): HTMLElement {
+  private async showStatuses(entries: AssetEntry[], revision: number): Promise<void> {
+    const models = entries.filter(e => e.ext === '.glb');
+    for (let i = 0; i < models.length && revision === this.renderRevision; i += 8) {
+      await Promise.all(models.slice(i, i + 8).map(async entry => {
+        const load = await readProjectFile(entry.path + '.meta.json');
+        if (revision !== this.renderRevision) return;
+        const element = this.contentEl.querySelector<HTMLElement>(`[data-path="${CSS.escape(entry.path)}"]`);
+        if (!element) return;
+        const label = document.createElement('small'); label.dataset.asset = 'status';
+        label.textContent = load.ok ? assetStatus(load.json) ?? '未标注验收状态' : '元数据不可读: ' + load.error;
+        label.className = 'asset-detail';
+        element.appendChild(label);
+      }));
+    }
+  }
+
+  private makeCell(entry: AssetEntry): HTMLElement {
     const kind = kindOf(entry);
     const el = document.createElement('div');
     el.className = `asset-item akind-${kind}`;
@@ -419,7 +492,7 @@ export class AssetBrowser {
     ico.className = 'asset-ico';
     if (kind === 'image') {
       const img = document.createElement('img');
-      img.src = fileUrl(joinPath(this.currentDir, entry.name));
+      img.src = fileUrl(entry.path);
       img.loading = 'lazy';
       img.draggable = false;
       img.alt = entry.name;
@@ -437,7 +510,7 @@ export class AssetBrowser {
     return el;
   }
 
-  private makeRow(entry: FsEntry): HTMLElement {
+  private makeRow(entry: AssetEntry): HTMLElement {
     const kind = kindOf(entry);
     const el = document.createElement('div');
     el.className = `asset-row akind-${kind}`;
@@ -451,8 +524,8 @@ export class AssetBrowser {
   }
 
   /** 单元格与列表行共用的交互：选中 / 双击 / 拖出 */
-  private wireItem(el: HTMLElement, entry: FsEntry): void {
-    const path = joinPath(this.currentDir, entry.name);
+  private wireItem(el: HTMLElement, entry: AssetEntry): void {
+    const path = entry.path;
 
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -492,9 +565,8 @@ export class AssetBrowser {
   }
 
   private markContentSelection(): void {
-    const selName = this.selectedPath === null ? null : this.selectedPath.slice(this.selectedPath.lastIndexOf('/') + 1);
     for (const el of this.contentEl.querySelectorAll<HTMLElement>('[data-name]')) {
-      el.classList.toggle('sel', selName !== null && el.dataset.name === selName);
+      el.classList.toggle('sel', this.selectedPath !== null && el.dataset.path === this.selectedPath);
     }
   }
 
@@ -508,7 +580,7 @@ export class AssetBrowser {
   beginRename(path: string): boolean {
     if (this.renameInput !== null) return false;
     const name = path.slice(path.lastIndexOf('/') + 1);
-    const el = this.contentEl.querySelector<HTMLElement>(`[data-name="${CSS.escape(name)}"]`);
+    const el = this.contentEl.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`);
     if (el === null) return false;
     const label = el.querySelector<HTMLElement>('.asset-name') ?? el.querySelector<HTMLElement>('.asset-rname-t');
     if (label === null) return false;
@@ -559,13 +631,17 @@ export class AssetBrowser {
   // ================= 自动化钩子 =================
 
   /** 给无头验证 / 控制台用：当前可见状态快照 */
-  getState(): { dir: string; zoom: number; collapsed: boolean; count: number; names: string[]; upDisabled: boolean; renaming: boolean } {
+  getState(): { dir: string; zoom: number; collapsed: boolean; count: number; names: string[]; paths: string[]; recursive: boolean; kind: string; errors: string[]; upDisabled: boolean; renaming: boolean } {
     return {
       dir: this.currentDir,
       zoom: this.zoom,
       collapsed: this.dock.classList.contains('collapsed'),
       count: this.contentEl.querySelectorAll('[data-name]').length,
       names: [...this.contentEl.querySelectorAll<HTMLElement>('[data-name]')].map((e) => e.dataset.name ?? ''),
+      paths: [...this.contentEl.querySelectorAll<HTMLElement>('[data-name]')].map(e => e.dataset.path ?? ''),
+      recursive: this.recursiveEl.checked,
+      kind: this.kindEl.value,
+      errors: [...this.listingErrors],
       upDisabled: this.upBtnEl.disabled,
       renaming: this.renameInput !== null,
     };
