@@ -87,6 +87,54 @@
       "id": "sc_ani_20261008_intake",
       "name": "ANI-20261008 · 动作候选检视（未验收）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_source_review",
+      "path": "assets/scenes/sandbox/weapon-source-review.scene.json",
+      "name": "WPN-20261011 · 五件源模型检视（未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_lod_review",
+      "path": "assets/scenes/sandbox/weapon-lod-review.scene.json",
+      "name": "WPN-20261011 · Reference / LOD 三向对照（候选未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_source_fixed_views",
+      "path": "assets/scenes/sandbox/weapon-source-fixed-views.scene.json",
+      "name": "WPN-20261011 · 原源固定三向（缺陷对照）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_surface_transfer_review",
+      "path": "assets/scenes/sandbox/weapon-surface-transfer-review.scene.json",
+      "name": "Mag01 / Shell · 源 / 转移前 / 转移后",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+      "id": "sc_weapon_assembly_trial",
+      "enabled": true,
+      "name": "武器实装 · 手枪/Launcher近景试验"
+    },
+    {
+      "id": "sc_weapon_body_source_review",
+      "path": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+      "name": "WPN-20261012 · 五件本体原源固定方向（未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_body_lod_review",
+      "path": "assets/scenes/sandbox/weapon-body-lod-review.scene.json",
+      "name": "WPN-20261012 · 原源 / LOD0 / LOD1 / LOD2 三向（候选）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_fit_review",
+      "path": "assets/scenes/sandbox/weapon-fit-review.scene.json",
+      "name": "七武器 · 去重复部件 / 实际slot / Shell与Fuel候选",
+      "enabled": true
     }
   ],
   "startIndex": 1,

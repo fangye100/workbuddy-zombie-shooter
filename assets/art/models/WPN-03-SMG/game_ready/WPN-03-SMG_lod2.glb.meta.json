@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_8e37888ad6e3",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-03-SMG",
+    "variant": "game_ready",
+    "level": 2,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+    "sourceHash": "b6f63673734b298d8ddfe8d09a06abab782c7ca2eafb8a650d5842bb7f00bcc9",
+    "report": "assets/art/models/WPN-03-SMG/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      0.0000019406007271179776,
+      -0.00030980836804203084,
+      0.00025357168515272033
+    ],
+    "file": "WPN-03-SMG_lod2.glb"
+  },
+  "sourceHash": "sha256:13b02a0844aa7353a409b63e89c781384be3c830f312f7ffec6a60abaefd8816",
+  "updatedAt": "2026-10-12T01:16:08.339Z"
+}

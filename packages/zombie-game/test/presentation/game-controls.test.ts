@@ -1,5 +1,5 @@
 import { it,expect } from 'vitest';
-import { screenMovement,groundAim } from "../../src/presentation/game-controls";
+import { screenMovement,groundAim,GameControls } from "../../src/presentation/game-controls";
 import { gameText, setGameLanguage } from "../../src/presentation/game-language";
 it('screen-relative movement and elevated aim ray use the real camera conventions',()=>{
   expect(screenMovement(1,0,0)).toEqual([1,0]);
@@ -15,4 +15,15 @@ it('game translation switches without changing runtime content and covers built-
   expect(gameText('命中恢复实际伤害的 8% 生命。')).not.toMatch(/[\u4e00-\u9fff]/);
   expect(gameText('废料 12 · 尸髓 5 · 击杀 4')).toBe('Scrap 12 · Essence 5 · Kills 4');
   setGameLanguage('zh');expect(gameText('再来一局')).toBe('再来一局');
+});
+it('近景pointer的torso/head只升高同帧gameAim，不重新相交到玩家背后',()=>{
+  const ray={o:[.8197,1.6832,1.0515],d:[.33235,-.3945,-.85669]};
+  const aim=groundAim(ray,.9)!;
+  // Actual audit player Z=-.618: game aim is forward, head-plane ray is behind.
+  expect(aim[1]).toBeLessThan(-.618);expect(groundAim(ray,1.5)![1]).toBeGreaterThan(-.618);
+  const controls=Object.create(GameControls.prototype) as GameControls;
+  Object.assign(controls,{aimWorld:aim,mouse:[570,644],ray:()=>{throw new Error('不能另采ray');}});
+  expect(controls.targetWorld(1.3)).toEqual([aim[0],1.3,aim[1]]);
+  expect(controls.targetWorld(1.5)).toEqual([aim[0],1.5,aim[1]]);
+  Object.assign(controls,{aimWorld:null});expect(controls.targetWorld(1.3)).toBeNull();
 });

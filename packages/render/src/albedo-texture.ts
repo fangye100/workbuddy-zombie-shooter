@@ -1,9 +1,11 @@
 /** Texture-local mip chain. No global GPU resources; texture destruction releases all levels. */
-export function createAlbedoTexture(device: GPUDevice, bitmap: ImageBitmap): GPUTexture {
+export function createAlbedoTexture(device: GPUDevice, bitmap: ImageBitmap, allocated?:(texture:GPUTexture)=>void): GPUTexture {
   const mipLevelCount = 1 + Math.floor(Math.log2(Math.max(bitmap.width, bitmap.height)));
   const texture = device.createTexture({ label: 'mipmapped-albedo', size: [bitmap.width, bitmap.height],
     format: 'rgba8unorm', mipLevelCount,
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+  // Play 宿主在上传/生成 mip 前登记，后续失败仍由其幂等 disposer 释放。
+  if(allocated)allocated(texture);
   device.queue.copyExternalImageToTexture({ source: bitmap, flipY: false }, { texture }, [bitmap.width, bitmap.height]);
   if (mipLevelCount === 1) return texture;
   const module = device.createShaderModule({ code: `

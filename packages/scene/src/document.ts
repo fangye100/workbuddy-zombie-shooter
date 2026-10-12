@@ -21,11 +21,12 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
+import { validBoneSockets, type BoneSockets } from './model-attachments';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 17;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -181,6 +182,8 @@ export interface ComponentBase {
  * 模型内部层级保留在资产的 nodeTree 里，只用于材质匹配与层级面板展示（现有行为不变）。
  */
 export interface MeshRendererComponent extends ComponentBase {
+  /** 按 key 覆盖角色 sidecar 默认；null 显式禁用；引用骨名称，不保存下标。 */
+  boneSockets?: BoneSockets | null;
   /** Undefined inherits the asset assembly; null disables procedural controls. */
   bodyIk?: BodyIkBinding | null;
   /** Undefined inherits the asset default; null explicitly disables shared motions for this node. */
@@ -1074,6 +1077,10 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       if (c?.kind !== ComponentKind.MeshRenderer) return;
       const at = `/nodes/${i}/components/${ci}`;
       const m = c as Partial<MeshRendererComponent>;
+      if(m.boneSockets!==undefined&&m.boneSockets!==null){
+        if(!validBoneSockets(m.boneSockets))err(`${at}/boneSockets`,'E_BONE_SOCKETS','骨 socket 变换无效');
+        if(m.source?.type!=='asset')err(`${at}/boneSockets`,'E_BONE_SOCKETS_SOURCE','骨 socket 需要资产网格');
+      }
       if (m.bodyIk !== undefined && m.bodyIk !== null) {
         const errors = validateBodyIkBinding(m.bodyIk);
         for (const message of errors) err(`${at}/bodyIk`, 'E_BODY_IK', message);

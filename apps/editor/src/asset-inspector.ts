@@ -24,10 +24,21 @@ import {
 } from './asset-util';
 import { t } from './i18n';
 import { parseGlb } from '@aether/scene';
-import { resolveModelHeightM } from './models';
+import { assetServer, resolveAssetImportHeightM } from './models';
 
 const TEXT_PREVIEW_MAX_BYTES = 256 * 1024;
 const TEXT_PREVIEW_LINES = 30;
+
+/** 静态属性与预览/导入遵循同一 sidecar 参数，不维护另一份解析状态。 */
+export async function loadAssetInspectorModel(path: string) {
+  const response = await fetch(fileUrl(path));
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const buf = await response.arrayBuffer();
+  const metadata = await assetServer.loadMeta(path);
+  if (metadata.missing || metadata.errors.length) throw new Error('资产元数据缺失或无效: ' + metadata.errors.join('; '));
+  const meters = await resolveAssetImportHeightM(path);
+  return { model: parseGlb(buf, meters, metadata.meta.importer.upAxisFlip ? 'z' : 'y'), meters, guid: metadata.meta.guid };
+}
 
 export interface AssetInspectorHooks {
   /** 「载入场景」按钮（与浏览器双击 .glb 同一条路径） */
@@ -114,15 +125,8 @@ export class AssetInspector {
       stat.className = 'ai-dim';
       stat.textContent = t('解析模型中…');
       extra.appendChild(stat);
-      void fetch(fileUrl(path))
-        .then(async (resp) => {
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const buf = await resp.arrayBuffer();
-          // 归一化身高先问这个资产自己的 sidecar，没有才回落全局标尺（ADR-016）
-          const { meters, fromMeta } = await resolveModelHeightM(path);
-          return { model: parseGlb(buf, meters), fromMeta };
-        })
-        .then(({ model, fromMeta }) => {
+      void loadAssetInspectorModel(path)
+        .then(({ model, meters, guid }) => {
           if (!alive()) return;
           stat.remove();
           const subs = model.subMeshes
@@ -132,9 +136,10 @@ export class AssetInspector {
             'beforeend',
             `<div class="ai-row"><span>顶点</span><b>${model.vertices}</b></div>
              <div class="ai-row"><span>三角面</span><b>${model.triangles}</b></div>
-             <div class="ai-row"><span>身高</span><b>${model.heightMeters.toFixed(2)} m${
-               fromMeta ? '（.meta 指定）' : '（回落全局标尺，无 .meta）'
+             <div class="ai-row"><span>模型高度</span><b>${model.heightMeters.toFixed(3)} m${
+               meters === null ? '（保留米制，不做高度归一）' : '（.meta 指定）'
              }</b></div>
+             <div class="ai-row"><span>GUID</span><b>${guid}</b></div>
              <div class="ai-row"><span>贴图</span><b>${model.image !== null ? '内嵌 ✓' : '无（平色预览）'}</b></div>
              <div class="ai-row"><span>子网格</span><b>${model.subMeshes.length} 条</b></div>
              ${subs}`,

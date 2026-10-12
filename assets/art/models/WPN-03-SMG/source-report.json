@@ -1,0 +1,145 @@
+{
+  "id": "WPN-03-SMG",
+  "source": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+  "guid": "as_851dd8a0955d",
+  "sourceHash": "sha256:b6f63673734b298d8ddfe8d09a06abab782c7ca2eafb8a650d5842bb7f00bcc9",
+  "bytes": 41812756,
+  "triangles": 100000,
+  "renderVertices": 64606,
+  "meshes": 1,
+  "primitives": 1,
+  "skins": 0,
+  "nodeTransforms": [
+    {
+      "name": "node_0",
+      "rotation": [
+        0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "baseColorSize": [
+    4096,
+    4096
+  ],
+  "coordinateSpace": "parseGlb(buffer,null,y) final import-space; node transform + automatic XZ centre/Y bottom, source units",
+  "bounds": {
+    "low": [
+      -0.5781390070915222,
+      0,
+      -0.060608506202697754
+    ],
+    "high": [
+      0.5781390070915222,
+      0.4890480637550354,
+      0.060608506202697754
+    ],
+    "dimensions": [
+      1.1562780141830444,
+      0.4890480637550354,
+      0.12121701240539551
+    ]
+  },
+  "topology": {
+    "method": "position-grid-weld-statistics-only",
+    "toleranceSourceUnits": 0.000001,
+    "weldedVertices": 49994,
+    "components": 2,
+    "boundaryEdges": 0,
+    "nonManifoldEdges": 0,
+    "degenerateAfterWeld": 0,
+    "largestComponents": [
+      {
+        "triangles": 98310,
+        "low": [
+          -0.5781390070915222,
+          0,
+          -0.060608506202697754
+        ],
+        "high": [
+          0.5781390070915222,
+          0.4890480637550354,
+          0.060608506202697754
+        ]
+      },
+      {
+        "triangles": 1690,
+        "low": [
+          0.07407499849796295,
+          0.43932807445526123,
+          0.01890556327998638
+        ],
+        "high": [
+          0.1608320027589798,
+          0.4864710569381714,
+          0.02999456226825714
+        ]
+      }
+    ],
+    "semanticParts": "pending-visual-region-review; components are not named parts"
+  },
+  "longAxis": "X",
+  "muzzleSign": "pending-headed-end-view",
+  "gripAndParts": "pending-headed-region-review; no parts extracted",
+  "targetDimsM": {
+    "lengthZ": 0.58,
+    "widthX": 0.085,
+    "heightY": 0.25
+  },
+  "lodTarget": {
+    "LOD0": 5000,
+    "LOD1": 2500,
+    "LOD2": 800
+  },
+  "displayScale": 1.3837502576146987,
+  "views": [
+    {
+      "label": "侧+Z",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "label": "长轴端+X（符号待定）",
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "label": "俯+Y",
+      "rotation": [
+        0.7071067811865476,
+        0,
+        0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "label": "长轴端-X（符号待定）",
+      "rotation": [
+        0,
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    }
+  ]
+}

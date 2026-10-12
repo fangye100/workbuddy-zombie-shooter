@@ -9,7 +9,7 @@ extension. Its tuning is a prototype, not an addition to the approved GDD roster
 
 ## Ownership and persisted data
 
-Scene schema v13 stores the arsenal in the stable RunRules node:
+当前 Scene schema v17 stores the arsenal in the stable RunRules node:
 `arsenal.equipped`, `switchSec`, and `definitions[]`. Runtime reads this scene
 payload; it does not load a second global weapon catalog. The JSON file under
 `assets/weapons/prototype.weapons.json` is an explicit authoring/generator seed.
@@ -52,18 +52,9 @@ freeze simulation clocks. Neither Play nor its presentation changes author data.
 
 ## Grip and HumanIK / FBX blending port
 
-Each definition provides primaryGrip, supportGrip, muzzle, magazine and chamber
-markers. Coordinates are **metres, weapon-local Y up, +X along the barrel**.
-Rotations are unit quaternions in **xyzw** order. Primary/support grip effectors
-use `right-hand` / `left-hand` semantic names, not asset bone names.
+当前 v17 的真实模型使用 `presentation.assembly` 和 sidecar modelSockets/boneSockets。模型点在最终 parseGlb local 米制空间，骨 contact 在规整化 actor 空间；场景覆写优先于 sidecar 默认，null 禁用，undefined 继承。右手实际 IK 结果驱动武器，再驱动左手；一次 base/Spine sample、一次 IK、最终 FK，不从选中骨或上一帧读口。
 
-`runtime.weaponMount` provides the current mount position and quaternion.
-Transform local marker positions and rotations by that mount. The current
-placeholder mount is the player's capsule centre, not a measured wrist joint.
-The HumanIK adapter must replace the visual mount with the solved hand/socket
-transform and calibrate its weapon-local offset; it must not move the gameplay
-entity or let FBX root motion move it a second time. Quaternion composition is
-`mountRotation * markerRotation`. Aim is simulated separately from locomotion.
+旧 markers 保留确定性模拟发射点和显式 legacy 占位。`runtime.weaponMount` 仍是胶囊中心语义；muzzle marker 的位置是胶囊中心相对 yaw-local 偏移，不能把实际 model-local muzzle 直接塞入这里。模型 W/socket 为视觉/VFX 真源，模拟 fireStep 为弹道/伤害真源，零 recoil 站姿由持久数据校准两者。详见[正式握点契约](animation/model-attachments.md)和[近景试验入口](animation/weapon-assembly-trial.md)。
 
 ```ts
 runtime.weapons.setAnimationHooks({
@@ -98,10 +89,7 @@ weapon-specific state, generic shoot/reload/equip state, then the configured
 fallback. Missing reload/holding animations currently fall back to idle while
 procedural markers/recoil and ink feedback remain operational.
 
-This branch implements the producer port and existing motion adapters. Actual
-HumanIK solving, wrist attachment and FBX upper-body blending remain owned by
-the other branch. No IK configuration, skeleton calibration or rig sidecars
-were modified here.
+当前机制已在 packages/render 执行手部位置/方向与 dependent 求解，游戏表现消费已有 phase，Editor 只提供加载与 Play/GPU 适配。H01/Pistol/Launcher/Mag01 的校准为试验候选，真实掌心匹配与移动换弹尚待 headed 复验。
 
 Keep a single base clip selector when adding HumanIK: consume the action and
 phase already selected by RuntimeSceneMotion, and apply grip/recoil/reload pose
@@ -109,12 +97,7 @@ layers afterward. A hook observer must not start a competing animation clock.
 
 ## Failure and resource boundaries
 
-Model, animation and VFX AssetRefs allow explicit null placeholders. Non-null
-references require path and GUID. The current renderer uses procedural weapon
-silhouettes, recoil, reload indicator, projectile/flame/slash/blast ink and
-existing shared-motion states. It does not yet import arbitrary weapon model or
-animation files from those new reference slots. See the resource list in docs 38;
-replace placeholders only after asset/rig acceptance and adapter integration.
+Model、animation 与 VFX AssetRef 支持显式 null 兼容路径，非空引用必须具有一致 path/GUID。runtime-weapons 加载真实刚性模型/附件；只有有效同帧骨口、IK 与 visible draw 后才隐藏 held-weapon Canvas 占位，加载失败、缺骨/缺 socket 保留诊断与旧表现。原 VFX 继续存在；资源立即登记 PlaySession，Stop 失效异步 generation、关闭迟到 bitmap 并释放逐个 GPU 分配。未配置的模型/独立动画引用不推断为已接入。
 
 The projectile pool is bounded at 64. Saturation defers fire before ammo is
 consumed and emits W_WEAPON_CAPACITY. Projectile radius expands capsules and

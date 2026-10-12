@@ -1,5 +1,7 @@
 # 战斗动作与特效追加资产需求（WorkBuddy 执行稿）
 
+2026-10-12 真实模型接入试验见[武器装配试验入口](animation/weapon-assembly-trial.md)：仅现有 Pistol/Launcher/Mag01 可做实际装配，WPN02～06 本体待外部交付；Shell 底火和未覆盖 LOD 不标为美术已验收。
+
 相关音效需求：[游戏音效资产清单](40-GameplayAudioAssetBrief.md)。
 
 2026-10-09 接入进度：[ANI-20261008 核验与候选接入记录](animation/ani-20261008-intake.md)。

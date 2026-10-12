@@ -1,0 +1,132 @@
+{
+  "id": "WPN-02-SHOTGUN",
+  "source": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+  "guid": "as_86aa9ea4a2b8",
+  "sourceHash": "sha256:91a1e05953113d6a0e69897f32007ee7495d09c9691a59eb25855e123fbfcce7",
+  "bytes": 36620204,
+  "triangles": 100000,
+  "renderVertices": 60258,
+  "meshes": 1,
+  "primitives": 1,
+  "skins": 0,
+  "nodeTransforms": [
+    {
+      "name": "node_0",
+      "rotation": [
+        0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "baseColorSize": [
+    4096,
+    4096
+  ],
+  "coordinateSpace": "parseGlb(buffer,null,y) final import-space; node transform + automatic XZ centre/Y bottom, source units",
+  "bounds": {
+    "low": [
+      -0.04470700025558472,
+      0,
+      -0.5851300954818726
+    ],
+    "high": [
+      0.04470700025558472,
+      0.29932087659835815,
+      0.5851300954818726
+    ],
+    "dimensions": [
+      0.08941400051116943,
+      0.29932087659835815,
+      1.1702601909637451
+    ]
+  },
+  "topology": {
+    "method": "position-grid-weld-statistics-only",
+    "toleranceSourceUnits": 0.000001,
+    "weldedVertices": 49992,
+    "components": 1,
+    "boundaryEdges": 0,
+    "nonManifoldEdges": 0,
+    "degenerateAfterWeld": 0,
+    "largestComponents": [
+      {
+        "triangles": 100000,
+        "low": [
+          -0.04470700025558472,
+          0,
+          -0.5851300954818726
+        ],
+        "high": [
+          0.04470700025558472,
+          0.29932087659835815,
+          0.5851300954818726
+        ]
+      }
+    ],
+    "semanticParts": "pending-visual-region-review; components are not named parts"
+  },
+  "longAxis": "Z",
+  "muzzleSign": "pending-headed-end-view",
+  "gripAndParts": "pending-headed-region-review; no parts extracted",
+  "targetDimsM": {
+    "lengthZ": 0.98,
+    "widthX": 0.09,
+    "heightY": 0.22
+  },
+  "lodTarget": {
+    "LOD0": 5000,
+    "LOD1": 2500,
+    "LOD2": 800
+  },
+  "displayScale": 1.367217318297695,
+  "views": [
+    {
+      "label": "侧+X",
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "label": "长轴端+Z（符号待定）",
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "label": "俯+Y",
+      "rotation": [
+        0.7071067811865476,
+        0,
+        0,
+        0.7071067811865476
+      ]
+    },
+    {
+      "label": "长轴端-Z（符号待定）",
+      "rotation": [
+        0,
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

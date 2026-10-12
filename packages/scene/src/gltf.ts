@@ -895,8 +895,9 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, u
         for (let i = 0; i < ind.length; i++) ind[i] = i;
       }
 
-      const localNor = rawNor ?? faceNormals(p, ind);
-      fixWinding(p, localNor, ind);
+      // Normal 与 POSITION 必须在同一空间才能判断绕序。缺失 NORMAL 时也先从
+      // mesh-local POSITION 求法线，避免对已烘 node 变换的法线再次套逆转置。
+      const localNor = rawNor ?? faceNormals(raw, ind);
       // 法线：M 的 3x3 逆转置（非等比缩放也不会歪），再归一化
       const nm = normalMatrix(inst.m);
       const normal = new Float32Array(localNor.length);
@@ -916,6 +917,7 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, u
           normal[i + 2] = nz / len;
         }
       }
+      fixWinding(p, normal, ind);
 
       const count = p.length / 3;
       // 命名优先级：材质名 > mesh 名 > primitive_N。

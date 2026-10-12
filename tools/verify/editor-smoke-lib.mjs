@@ -86,12 +86,13 @@ export function makeArgParser(argv) {
 // HTTPS 是常态不是例外：本机 vite.config 检测到 Tailscale 证书会自动开 https，
 // 此时 curl/http 探测返回 000，得忽略自签证书。用原生 http/https 而非 fetch(undici)：
 // undici 在自签证书下 TLS 握手会挂。
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// 不改变进程全局 TLS 设置；仅 probe 的 localhost 原生请求允许本地证书。
 
 function aliveRaw(url, timeoutMs = 8000) {
   const lib = url.startsWith('https') ? https : http;
   return new Promise((resolve) => {
-    const req = lib.get(url, { rejectUnauthorized: false, timeout: timeoutMs }, (res) => {
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname);
+    const req = lib.get(url, { rejectUnauthorized: !local, timeout: timeoutMs }, (res) => {
       res.resume();
       resolve(res.statusCode !== undefined && res.statusCode < 500);
     });
@@ -218,11 +219,9 @@ export class Cdp {
 }
 
 /**
- * 启动 Chrome 并接好 CDP 会话（原 editor-smoke main() 里的接线原样上提）。
- * @returns {chrome, cdp, ws}；调用方负责 chrome.kill()
+ * 构造既有 Chrome 参数；严格TLS调用显式关闭证书忽略。
  */
-export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false }) {
-  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
@@ -243,11 +242,20 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
     flags.unshift('--headless=new');
     flags.push('--enable-unsafe-swiftshader', '--use-webgpu-adapter=swiftshader', '--enable-features=Vulkan');
   }
-  if (appUrl.startsWith('https://')) flags.push('--ignore-certificate-errors');
-  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  // 旧冒烟调用沿用原默认；严格 TLS 验证必须显式 false，不设置 Security bypass。
+  if (ignoreCertificateErrors) flags.push('--ignore-certificate-errors');
+  return flags;
+}
 
+export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, ignoreCertificateErrors=appUrl.startsWith('https://'), setupTimeoutMs=0 }) {
+  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+  const flags=editorSessionFlags({cdpPort,headed,appUrl,windowSize,ignoreCertificateErrors});
+  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  let setupWs,setupTimer;
+  try {
+  const connect=async()=>{
   const ver = await cdpTargets(cdpPort);
-  const ws = new WebSocket(ver.webSocketDebuggerUrl);
+  const ws = new WebSocket(ver.webSocketDebuggerUrl);setupWs=ws;
   await new Promise((res, rej) => {
     ws.addEventListener('open', res, { once: true });
     ws.addEventListener('error', rej, { once: true });
@@ -285,7 +293,11 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
   }
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
-  return { chrome, cdp, ws };
+  return { chrome, cdp, ws, targetId, flags };
+  };
+  return await (setupTimeoutMs>0?Promise.race([connect(),new Promise((_,reject)=>{setupTimer=setTimeout(()=>reject(new Error('Chrome/CDP setup timeout')),setupTimeoutMs);})]):connect());
+  } catch(error) { setupWs?.close();chrome.kill();throw error; }
+  finally { clearTimeout(setupTimer); }
 }
 
 /**

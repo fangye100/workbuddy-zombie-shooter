@@ -2255,6 +2255,166 @@
         "architecture-policy",
         "scene-shared-motion"
       ]
+    },
+    {
+      "id": "composite-player-motion",
+      "path": "docs/animation/composite-player-motion.md",
+      "title": "玩家持续步态与身体区域动作组合",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation"
+      ],
+      "read": "区域契约、四向瞄准基准、真实武器手IK、v16迁移、只读debug、聚焦headed入口与验证边界",
+      "sourceRefs": [
+        "scene-shared-motion",
+        "scene-body-ik",
+        "scene-migrations",
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "wpn-20261011-source-review",
+      "path": "docs/art/wpn-20261011-source-review.md",
+      "title": "WPN-20261011 五件源模型检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "art",
+        "source",
+        "gpu"
+      ],
+      "read": "源检视场景与资产库入口、原始统计、轴向差异、底火和燃料管线审计项及未验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
+    },
+    {
+      "id": "wpn-20261011-lod-candidates",
+      "path": "docs/art/wpn-20261011-lod-candidates.md",
+      "title": "WPN-20261011 归一化与 LOD 候选检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "art",
+        "lod",
+        "gpu"
+      ],
+      "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
+    },
+    {
+      "id": "model-attachments",
+      "path": "docs/animation/model-attachments.md",
+      "title": "模型与骨骼握点契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "weapons",
+        "framework"
+      ],
+      "read": "v17迁移、socket默认与覆盖、primary实际结果驱动dependent、同帧FK和逐GPU资源登记",
+      "sourceRefs": [
+        "scene-schema",
+        "scene-weapons",
+        "asset-metadata",
+        "scene-migrations",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "weapon-model-projection",
+      "path": "packages/zombie-game/src/presentation/weapon-model.ts",
+      "title": "武器真实模型表现投影",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation"
+      ],
+      "read": "已有phase/recoil到中性primary/dependent请求，不拥有玩法时钟",
+      "sourceRefs": [
+        "scene-weapons",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "editor-runtime-weapons",
+      "path": "apps/editor/src/services/runtime-weapons.ts",
+      "title": "Play真实武器加载适配",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "GUID/默认覆盖、同帧骨口、逐GPU登记和Stop迟到取消",
+      "sourceRefs": [
+        "weapon-model-projection",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "weapon-assembly-trial",
+      "path": "docs/animation/weapon-assembly-trial.md",
+      "title": "真实武器装配试验入口",
+      "role": "game",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "R4仅程序化切枪与握点接手，复用03b七件真实切换/同帧双手证据及版本边界；当前idle别名缺失仍回退ready；Fuel严格匹配、Shell/Fuel换弹视觉要求已撤销，旧失败与源美术限制保留为历史而非当前阻断",
+      "sourceRefs": [
+        "editor-runtime-weapons",
+        "weapon-model-projection",
+        "scene-schema",
+        "project-manifest",
+        "scene-schema",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "weapon-model-branch",
+      "path": "docs/art/weapon-model-branch.md",
+      "title": "武器模型独立分支与快照边界",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "asset",
+        "gpu"
+      ],
+      "read": "独立模型快照与合回动画v17责任、assetRoots递归68模型、Inspector导入/Undo有限观察、合后Reload再筛选68实操、5199/5198入口及GPU/候选未验收边界",
+      "sourceRefs": [
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
     }
   ]
 }

@@ -1,0 +1,329 @@
+{
+  "id": "WPN-03-SMG-without-mag",
+  "owner": "WPN-03-SMG",
+  "source": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+  "sourceHash": "b6f63673734b298d8ddfe8d09a06abab782c7ca2eafb8a650d5842bb7f00bcc9",
+  "recipe": {
+    "owner": "WPN-03-SMG",
+    "source": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+    "planes": [
+      [
+        0,
+        -0.09,
+        -1
+      ],
+      [
+        1,
+        0.3,
+        -1
+      ]
+    ],
+    "rotation": [
+      0,
+      90,
+      0
+    ],
+    "scale": "body",
+    "targets": [
+      5000,
+      2500,
+      800
+    ],
+    "reason": "去除可见外露stick-mag：node-baked x<-.09且y<.30；保留receiver/trigger/grip，边插值UV后局部cap"
+  },
+  "pipelineHash": "ac6aa362d94ff8e5100c594af09bb8ea88460ab81e191817c1125952283898ef",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "tools/art/weapon-region-cut.py": "2d00fc03cff114c1fa517d4d7e3c69cfb63b447f27a1bc3141a63a4025cd3e1d",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "repair": {
+    "planesSource": [
+      [
+        0,
+        -0.09,
+        -1
+      ],
+      [
+        1,
+        0.3,
+        -1
+      ]
+    ],
+    "afterPartition": {
+      "v": 42706,
+      "f": 84533,
+      "edges": 127247,
+      "boundary": 895,
+      "nonmanifold": 0
+    },
+    "cleanupRemovedFaces": 0,
+    "capFaces": 891,
+    "generatedCapBounds": [
+      [
+        -0.472825,
+        0.210061,
+        -0.046433
+      ],
+      [
+        -0.09,
+        0.300021,
+        0.045715
+      ]
+    ],
+    "afterCap": {
+      "v": 42706,
+      "f": 85424,
+      "edges": 128136,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "removedRegionBounds": [
+      [
+        -0.472825180630617,
+        3.417551994272549e-09,
+        -0.06102500612184417
+      ],
+      [
+        -0.09,
+        0.3,
+        0.0601920108325038
+      ]
+    ],
+    "capUv": "最近原源三角UV；局部内部封口，非新贴图"
+  },
+  "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
+  "scaleXYZ": [
+    0.5016094683853283,
+    0.5016094683853283,
+    0.5016094683853283
+  ],
+  "origin": [
+    -0.0004164976446701975,
+    3.417551994272549e-09,
+    -0.02656400203704834
+  ],
+  "sourceDimensions": [
+    1.1562780141830444,
+    0.4890480663859508,
+    0.12121701695434797
+  ],
+  "dimensionsM": [
+    0.05460470511895845,
+    0.21786604684167316,
+    0.5799999928856506
+  ],
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "fit": "pending-headed-slot",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-03-SMG-without-mag_lod0.glb",
+      "hash": "3b73ce32ceac11b0a7e79f1a084b122dfdb972ef2de69a12df11c18b8ac1387d",
+      "triangles": 5000,
+      "topology": {
+        "v": 2494,
+        "f": 5000,
+        "edges": 7500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.054416598688568144,
+        0.21765386268483192,
+        0.5801486516072165
+      ],
+      "surfaceRatio": 0.981203422763441,
+      "boundsDrift": 0.0034448758578681238,
+      "silhouetteIoU": [
+        0.9942885978393009,
+        0.9905247382754379,
+        0.9853092337009874
+      ],
+      "parserRecenterMeters": [
+        -1.1504599162865878e-05,
+        0.027388049588957138,
+        6.392302667512784e-05
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 25000,
+          "meanAbsoluteRgbError": 3.9216109259981637,
+          "p95AbsoluteRgbError": 19.008592439340838,
+          "fractionErrorAbove40": 0.00872,
+          "surfaceDistance": {
+            "RMS": 0.0005568295018747449,
+            "diag_mesh_0": 1.2390984296798706,
+            "diag_mesh_1": 1.2399496436230786,
+            "max": 0.0039244843646883965,
+            "mean": 0.0003646959376055747,
+            "min": 2.0792270127856227e-09,
+            "n_samples": 25000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-03-SMG-without-mag_lod0_basecolor.png",
+        "textureHash": "0a75deff76d852bc67cf047e584de3e3e44e4669cbda0ac2c797a7aa5e262d4e"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-03-SMG-without-mag_lod1.glb",
+      "hash": "f5bd72e1058a2904f7cdeb78ae1b516eb96c37384e85fae8df1025cb79a7d0a9",
+      "triangles": 2500,
+      "topology": {
+        "v": 1244,
+        "f": 2500,
+        "edges": 3750,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.05446585530028823,
+        0.2176507872773505,
+        0.580029100258378
+      ],
+      "surfaceRatio": 0.9671171633476051,
+      "boundsDrift": 0.00254281784633259,
+      "silhouetteIoU": [
+        0.9901177171124954,
+        0.9880101204896942,
+        0.9777341116406111
+      ],
+      "parserRecenterMeters": [
+        -0.00014514453219849864,
+        0.02739112499643856,
+        4.14735225587326e-06
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 12500,
+          "meanAbsoluteRgbError": 3.5105236192444393,
+          "p95AbsoluteRgbError": 16.658794540115814,
+          "fractionErrorAbove40": 0.00744,
+          "surfaceDistance": {
+            "RMS": 0.0009997731540352106,
+            "diag_mesh_0": 1.238512396812439,
+            "diag_mesh_1": 1.2399496436230786,
+            "max": 0.005613425746560097,
+            "mean": 0.0006875770632177591,
+            "min": 9.084678564974524e-10,
+            "n_samples": 12500
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-03-SMG-without-mag_lod1_basecolor.png",
+        "textureHash": "28b5161dce760fa666a0403afb51a2b040ecf87d4c870f334b1f31f617222b10"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-03-SMG-without-mag_lod2.glb",
+      "hash": "4daa5b2586ecc5745f6679c086d8f217b5b945bd684a0ef4e6752d734e396ff0",
+      "triangles": 800,
+      "topology": {
+        "v": 394,
+        "f": 800,
+        "edges": 1200,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": null,
+      "dimensionsM": [
+        0.05384699220256709,
+        0.21798098584225917,
+        0.5799594902087812
+      ],
+      "surfaceRatio": 0.9131453079844914,
+      "boundsDrift": 0.013876330157642114,
+      "silhouetteIoU": [
+        0.9608737479486164,
+        0.9705247062094334,
+        0.9505470484692997
+      ],
+      "parserRecenterMeters": [
+        -0.0002648765986797176,
+        0.027163019307465595,
+        0.00015586833177158588
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 4000,
+          "meanAbsoluteRgbError": 2.6354042339208426,
+          "p95AbsoluteRgbError": 12.961311411388396,
+          "fractionErrorAbove40": 0.005,
+          "surfaceDistance": {
+            "RMS": 0.002495370339602232,
+            "diag_mesh_0": 1.2347171306610107,
+            "diag_mesh_1": 1.2399496436230786,
+            "max": 0.012819221243262291,
+            "mean": 0.00186498265247792,
+            "min": 7.420057812623782e-08,
+            "n_samples": 4000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-03-SMG-without-mag_lod2_basecolor.png",
+        "textureHash": "f658212a707703be6da1872ba546f5538bf5801acea3de9a9e7496f448ee20e1"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending"
+    }
+  ]
+}

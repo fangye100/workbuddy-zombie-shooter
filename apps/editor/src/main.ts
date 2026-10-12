@@ -45,6 +45,8 @@ import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { RuntimeBodyIk } from './services/runtime-body-ik';
+import { RuntimeWeapons } from './services/runtime-weapons';
+import { createModelDraw } from '@aether/render';
 import { BodyIkPanel } from './services/body-ik-panel';
 import { AnimationDebugCollector } from './services/animation-debug/collector';
 import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
@@ -217,6 +219,11 @@ async function boot(): Promise<void> {
     const index = renderer.findObjectIndexByNodeId(nodeId);
     return index === null ? null : renderer.state.objects[index]?.pos ?? null;
   }, height => gameControls?.targetWorld(height) ?? null, () => { hudDirty = true; });
+  const weaponModels=new RuntimeWeapons({objectForNode:nodeId=>{
+    const index=renderer.findObjectIndexByNodeId(nodeId);return index===null?null:renderer.state.objects[index]??null;
+  },meta:path=>sharedMotionLibrary.assetMeta(path),draw:(model,bitmap,register,label)=>
+    createModelDraw(gpu.device,renderer.core,model,bitmap,{...panel.params.materials[0]!,albedo:'#ffffff'},register,label)});
+  renderer.poseDrawPort=weaponModels;
   /** Asset catalog for authoring and actor asset lookup; not a runtime preload list. */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
@@ -256,6 +263,7 @@ async function boot(): Promise<void> {
   let lastOutcomeShown: string = 'running';
   const gameAudio = new GameAudio();
   const playCtl = new PlayController(renderer, bridge, {
+    weapons:weaponModels,
     bodyIk,
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
@@ -573,6 +581,7 @@ async function boot(): Promise<void> {
   // 调试/自动化钩子：控制台与无头 CDP 验证直接读写相机/材质状态（都是引用，读到即实时值）
   (window as unknown as { __editor: unknown }).__editor = {
     audio: () => gameAudio.snapshot(),
+    weaponModels: { snapshot: () => structuredClone(weaponModels.summary()) },
     motions: {
       summary: () => sceneMotions.summary(),
       setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
@@ -2289,7 +2298,7 @@ async function boot(): Promise<void> {
       const metadata = await assetServer.loadMeta(relPath);
       if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
       // Respect explicit metre-scale environment imports as well as character heights.
-      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath));
+      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
       // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
@@ -3613,7 +3622,9 @@ async function boot(): Promise<void> {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, await resolveAssetImportHeightM(path));
+          const metadata = await assetServer.loadMeta(path);
+          if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
+          model = parseGlb(buffer, await resolveAssetImportHeightM(path), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
           previewCache.set(path, model);
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);
@@ -3860,6 +3871,7 @@ async function boot(): Promise<void> {
   const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
   gameControls = new GameControls(canvas,(x,y)=>renderer.pointerRay(x,y),()=>camera.yaw);
   const gameHud = new GameHud({
+    weaponModels:()=>weaponModels.view(),
     audioControl: gameAudio.control,
     pause: () => playCtl.togglePause(),
     toggleTouch: () => { gameControls!.clear();gameControls!.touch=!gameControls!.touch;return gameControls!.touch; },
@@ -3908,6 +3920,10 @@ async function boot(): Promise<void> {
       `<b>视图</b> ${name}`,
       `<b>GPU</b> ${gpu.info.vendor || '?'} ${gpu.info.architecture || ''}`,
     ];
+    if(playCtl.isPlaying){
+      const weapons=weaponModels.summary();
+      rows.push(`<b>武器模型</b> ${weapons.visible?'已装配':weapons.pending?'加载中':'兼容表现'}${weapons.diagnostics.length?` · ${escapeHtml(weapons.diagnostics[0]!)}`:''}`);
+    }
 
     // 自由相机是**模式**，必须让用户随时看见自己在模式里 —— 否则「鼠标拖了却选不中物体」
     // 会当成 bug 报上来，实际上是飞行模式把拖拽吃掉了。
@@ -4179,7 +4195,6 @@ async function boot(): Promise<void> {
       editorMenu.refresh();
     }
     renderer.setDynamicBatches(bridge.batches());
-    gameHud.updateFeedback(playCtl.session.runtime);
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
     if (playCtl.isPlaying) {
@@ -4204,6 +4219,7 @@ async function boot(): Promise<void> {
     drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
+    gameHud.updateFeedback(playCtl.session.runtime);
     animationDebugPanel.update(now);
     editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();

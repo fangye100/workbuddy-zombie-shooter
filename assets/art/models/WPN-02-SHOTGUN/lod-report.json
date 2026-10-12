@@ -1,0 +1,390 @@
+{
+  "id": "WPN-02-SHOTGUN",
+  "source": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+  "sourceHash": "91a1e05953113d6a0e69897f32007ee7495d09c9691a59eb25855e123fbfcce7",
+  "sourceTriangles": 100000,
+  "recipe": {
+    "id": "WPN-02-SHOTGUN",
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "sourceLengthAxis": 2,
+    "lengthM": 0.98,
+    "targetDimsM": {
+      "lengthZ": 0.98,
+      "widthX": 0.09,
+      "heightY": 0.22
+    },
+    "targets": [
+      5000,
+      2500,
+      800
+    ],
+    "axisEvidence": "94c68a1 headed +Z 内环/孔及侧面，muzzle +Z confirmed",
+    "policy": "等比按原源长轴；宽/高保留实际比例，不硬凑规格；final parser XZcenter/Yfloor sockets"
+  },
+  "pipelineHash": "985c864e7d979135977bb106d1c5c180e3a3509f73e88d1679259ca92e43b7e8",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "toolVersions": {
+    "pymeshlab": "2025.7.post1",
+    "numpy": "2.5.4",
+    "pillow": "12.3.0"
+  },
+  "nodeTransformsApplied": true,
+  "sourceDimensions": [
+    0.08941400051116943,
+    0.29932088774993754,
+    1.1702601223688402
+  ],
+  "scaleXYZ": [
+    0.8374206565428242,
+    0.8374206565428242,
+    0.8374206565428242
+  ],
+  "originRotatedSource": [
+    0.00020499899983406067,
+    8.035170419944771e-08,
+    -0.04894397338300266
+  ],
+  "rawNodeBakedCenterSource": [
+    0.00020499899983406067,
+    8.035170419944771e-08,
+    -0.04894397338300266
+  ],
+  "dimensionsM": [
+    0.07487713101218392,
+    0.25065749433653367,
+    0.98
+  ],
+  "dimensionDifferenceM": [
+    -0.015122868987816077,
+    0.03065749433653367,
+    0.0
+  ],
+  "normalization": "source node world -> R -> (R*v-origin)*uniformScale -> parser final XZcentre/Yfloor; each LOD offset below",
+  "texturePolicy": "每档独立1024逐面 atlas；保留源 BaseColor 表面采样，非原 atlas UV；源4096未改",
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "preciseFit": "pending",
+  "parts": "integral source geometry retained; no duplicate external attachment fitted yet",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-02-SHOTGUN_lod0.glb",
+      "hash": "97b9b9159836b63dd0f05013519fc168347c054774259593c3d165342f31fc90",
+      "triangles": 5000,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 5000,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 25000,
+          "meanAbsoluteRgbError": 2.623461870629314,
+          "p95AbsoluteRgbError": 11.649775919811882,
+          "fractionErrorAbove40": 0.00388,
+          "surfaceDistance": {
+            "RMS": 0.0004659271507989615,
+            "diag_mesh_0": 1.2102692127227783,
+            "diag_mesh_1": 1.2112376361959512,
+            "max": 0.002930533140897751,
+            "mean": 0.00031384435715153813,
+            "min": 2.6604780600791855e-09,
+            "n_samples": 25000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-02-SHOTGUN_lod0_basecolor.png",
+        "textureHash": "7183f80420fc85d8a399b5261bfc86c04a9cc0d55482f6f7173e418f367886ec",
+        "normalRepairFaces": 3
+      },
+      "sourceTopology": {
+        "v": 49992,
+        "f": 100000,
+        "edges": 150000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 2492,
+        "f": 5000,
+        "edges": 7500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.984190385342605,
+      "boundsDrift": 0.007019892694469121,
+      "dimensionsM": [
+        0.07435150158720868,
+        0.2496043915124445,
+        0.9797521517277183
+      ],
+      "silhouetteIoU": [
+        0.9872130416412375,
+        0.9906942217471346,
+        0.9916389011127177
+      ],
+      "exteriorSignedVolumeRatio": 0.9952804706255628,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        0.00031771975669921126,
+        0.000271608181920367,
+        -9.995403543608394e-05
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "visual": "pending"
+    },
+    {
+      "level": 1,
+      "file": "WPN-02-SHOTGUN_lod1.glb",
+      "hash": "19a12e5c713197a99e5a767f3c86a76e03c8ca5ca325b5311c4fc7986465bec8",
+      "triangles": 2500,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 2500,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 12500,
+          "meanAbsoluteRgbError": 2.3147246775405232,
+          "p95AbsoluteRgbError": 9.875860423444793,
+          "fractionErrorAbove40": 0.00248,
+          "surfaceDistance": {
+            "RMS": 0.0007975998451001942,
+            "diag_mesh_0": 1.2095167636871338,
+            "diag_mesh_1": 1.2112376361959512,
+            "max": 0.0038590338081121445,
+            "mean": 0.0005780324572697282,
+            "min": 3.4206731669428336e-08,
+            "n_samples": 12500
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-02-SHOTGUN_lod1_basecolor.png",
+        "textureHash": "b4a532f8254f9fa2da55d0a82e1d3a85c1913217915547964c8200b5554b31a2",
+        "normalRepairFaces": 10
+      },
+      "sourceTopology": {
+        "v": 49992,
+        "f": 100000,
+        "edges": 150000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 1242,
+        "f": 2500,
+        "edges": 3750,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.971736354864852,
+      "boundsDrift": 0.02951589084595907,
+      "dimensionsM": [
+        0.07266706578636972,
+        0.24943137469381046,
+        0.9797140373944258
+      ],
+      "silhouetteIoU": [
+        0.9793515518617646,
+        0.9858458986284326,
+        0.9854661801148067
+      ],
+      "exteriorSignedVolumeRatio": 0.9897892129684274,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        -1.111385356805314e-05,
+        0.000271608181920367,
+        -0.00014908666177312901
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "visual": "pending"
+    },
+    {
+      "level": 2,
+      "file": "WPN-02-SHOTGUN_lod2.glb",
+      "hash": "ec214c383b875f8522d31eb97c0571e65cccc58a753297b04da50350f666ace3",
+      "triangles": 800,
+      "algorithm": "geometry-QEM+source-surface-atlas",
+      "parameters": {
+        "targetfacenum": 800,
+        "qualitythr": 0.3,
+        "preserveboundary": false,
+        "preservetopology": true,
+        "optimalplacement": true,
+        "planarquadric": true,
+        "selected": false
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "surfaceTransfer": {
+        "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "borderPixels": 2,
+        "searchDistancePercent": 10,
+        "sourceUvVFlipForObj": true,
+        "outputUvVFlipForGltf": true,
+        "filterResult": null,
+        "geometryUnchanged": true,
+        "transparentFractionAfterPullPush": 0.0,
+        "visual": "pending",
+        "sampleError": {
+          "samples": 4000,
+          "meanAbsoluteRgbError": 1.9831342502862226,
+          "p95AbsoluteRgbError": 8.915492312951613,
+          "fractionErrorAbove40": 0.002,
+          "surfaceDistance": {
+            "RMS": 0.0019428877858445048,
+            "diag_mesh_0": 1.2062649726867676,
+            "diag_mesh_1": 1.2112376361959512,
+            "max": 0.00783226452767849,
+            "mean": 0.001491429517045617,
+            "min": 1.552326551745864e-07,
+            "n_samples": 4000
+          },
+          "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+        },
+        "textureFile": "WPN-02-SHOTGUN_lod2_basecolor.png",
+        "textureHash": "fa5478ea2f3abc6b8ad666d3b7dc20232db9754ae442c61131924bc78ed286b6",
+        "normalRepairFaces": 13
+      },
+      "sourceTopology": {
+        "v": 49992,
+        "f": 100000,
+        "edges": 150000,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "topology": {
+        "v": 392,
+        "f": 800,
+        "edges": 1200,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "surfaceRatio": 0.949219025242665,
+      "boundsDrift": 0.025553012204185266,
+      "dimensionsM": [
+        0.0729637947696152,
+        0.2461122081158344,
+        0.9786709906640574
+      ],
+      "silhouetteIoU": [
+        0.9487257708734219,
+        0.9693211719312322,
+        0.9632370469409118
+      ],
+      "exteriorSignedVolumeRatio": 0.9623244099032964,
+      "postQemRemovedFaces": 0,
+      "parserRecenterMeters": [
+        -0.000202221835717966,
+        -0.0005883679923165373,
+        0.00012696135347436965
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "visual": "pending"
+    }
+  ],
+  "unprotectedQemAttempt": [
+    {
+      "level": 0,
+      "triangles": 5000,
+      "topology": {
+        "v": 2492,
+        "f": 5000,
+        "edges": 7500,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "errors": []
+    },
+    {
+      "level": 1,
+      "triangles": 2499,
+      "topology": {
+        "v": 1242,
+        "f": 2499,
+        "edges": 3744,
+        "boundary": 1,
+        "nonmanifold": 6
+      },
+      "errors": [
+        "nonmanifold increased"
+      ]
+    },
+    {
+      "level": 2,
+      "triangles": 796,
+      "topology": {
+        "v": 397,
+        "f": 796,
+        "edges": 1194,
+        "boundary": 7,
+        "nonmanifold": 6
+      },
+      "errors": [
+        "nonmanifold increased"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1107 @@
+{
+  "sourceHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+  "source": "front-loading-focused-audit/observations.json",
+  "limits": "真实同帧post-IK肩链；保存旧失败，不能代表新GPU姿态或动画crossfade完整重放",
+  "samples": [
+    {
+      "frame": 1101,
+      "tick": 529,
+      "label": "seven-launcher-equip",
+      "phase": 0,
+      "pose": {
+        "weaponId": "launcher",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.675,
+              0.5299999999999999,
+              0.30999999999999994
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "yaw": 3.141592264175415,
+      "actorRotation": [
+        0,
+        -0.7071066435077604,
+        0,
+        0.7071069188653079
+      ],
+      "primary": {
+        "controlId": "rightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "dependent": {
+        "controlId": "leftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "chains": [
+        {
+          "name": "LeftArm",
+          "position": [
+            0.21943239691261215,
+            1.4120316000803115,
+            -0.037825532710091814
+          ]
+        },
+        {
+          "name": "LeftForeArm",
+          "position": [
+            -0.005164057555876678,
+            1.3945377499285039,
+            0.0532661222907469
+          ]
+        },
+        {
+          "name": "LeftHand",
+          "position": [
+            -0.24718691179663144,
+            1.3756864765030754,
+            0.15142558557152963
+          ]
+        },
+        {
+          "name": "RightArm",
+          "position": [
+            -0.16527808073493744,
+            1.4011607226733434,
+            -0.11039972018440558
+          ]
+        },
+        {
+          "name": "RightForeArm",
+          "position": [
+            -0.29933068968793913,
+            1.25229077989734,
+            -0.2479312963880803
+          ]
+        },
+        {
+          "name": "RightHand",
+          "position": [
+            -0.31399998133595014,
+            1.235999995084502,
+            0.012999954282254644
+          ]
+        }
+      ],
+      "oldMeasurements": {
+        "rightTargetResidualM": 6.129942219139598e-8,
+        "rightOrientationResidualRad": 2.9802322387695312e-8,
+        "leftTargetResidualM": 0.009535099851508341,
+        "leftOrientationResidualRad": 5.960464477539063e-8,
+        "muzzleYawErrorRad": 1.7630224391496085e-8,
+        "modelMuzzleToSimulationMountM": 0.912482923648394,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    },
+    {
+      "frame": 2299,
+      "tick": 1128,
+      "label": "seven-launcher-moving-reload-4",
+      "phase": 0.16666666666666607,
+      "pose": {
+        "weaponId": "launcher",
+        "action": "reload",
+        "phase": 0.16666666666666607,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.675,
+              0.5299999999999999,
+              0.30999999999999994
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0.16666666666666607
+        }
+      },
+      "yaw": 2.944197416305542,
+      "actorRotation": [
+        0,
+        -0.6339890303323272,
+        0,
+        0.773342039086377
+      ],
+      "primary": {
+        "controlId": "rightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "dependent": {
+        "controlId": "leftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "chains": [
+        {
+          "name": "LeftArm",
+          "position": [
+            0.1577720682230766,
+            1.4058614182975475,
+            0.1501602343778805
+          ]
+        },
+        {
+          "name": "LeftForeArm",
+          "position": [
+            -0.07765212836543317,
+            1.386418082180427,
+            0.09319838860562762
+          ]
+        },
+        {
+          "name": "LeftHand",
+          "position": [
+            -0.0940468624262395,
+            1.385063723957336,
+            0.35453168436898125
+          ]
+        },
+        {
+          "name": "RightArm",
+          "position": [
+            -0.1954236765594941,
+            1.3682360174826438,
+            -0.00890888513311594
+          ]
+        },
+        {
+          "name": "RightForeArm",
+          "position": [
+            -0.26334305725729124,
+            1.1893894161608467,
+            0.14091822998286146
+          ]
+        },
+        {
+          "name": "RightHand",
+          "position": [
+            -0.24182008887031115,
+            1.2460639955823627,
+            0.3956543285227027
+          ]
+        }
+      ],
+      "oldMeasurements": {
+        "rightTargetResidualM": 6.217475016572405e-8,
+        "rightOrientationResidualRad": 2.9802322387695312e-8,
+        "leftTargetResidualM": 1.8365807456858873e-7,
+        "leftOrientationResidualRad": 4.2146848510894035e-8,
+        "muzzleYawErrorRad": 1.4544410479430714,
+        "modelMuzzleToSimulationMountM": 0.8272787538135419,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    },
+    {
+      "frame": 2376,
+      "tick": 1167,
+      "label": "seven-launcher-moving-reload-4",
+      "phase": 0.7083333333333339,
+      "pose": {
+        "weaponId": "launcher",
+        "action": "reload",
+        "phase": 0.7083333333333339,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.675,
+              0.5299999999999999,
+              0.30999999999999994
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "magazine",
+          "phase": 0.7083333333333339
+        }
+      },
+      "yaw": -3.1415841579437256,
+      "actorRotation": [
+        0,
+        0.7071097848446405,
+        0,
+        -0.7071037775156955
+      ],
+      "primary": {
+        "controlId": "rightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "dependent": {
+        "controlId": "leftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            0.197,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "chains": [
+        {
+          "name": "LeftArm",
+          "position": [
+            0.16864201989228267,
+            1.420170630038537,
+            -0.018755992792581222
+          ]
+        },
+        {
+          "name": "LeftForeArm",
+          "position": [
+            0.32438470135866554,
+            1.4654206816557347,
+            0.16219691761067134
+          ]
+        },
+        {
+          "name": "LeftHand",
+          "position": [
+            0.20412431201474046,
+            1.430479724115822,
+            0.3921584071035856
+          ]
+        },
+        {
+          "name": "RightArm",
+          "position": [
+            -0.2133372242736753,
+            1.3789087117489833,
+            -0.08048684915300947
+          ]
+        },
+        {
+          "name": "RightForeArm",
+          "position": [
+            -0.2140777484449179,
+            1.3045779101196313,
+            0.15086070450953892
+          ]
+        },
+        {
+          "name": "RightHand",
+          "position": [
+            -0.21487574448728186,
+            1.2244797331672403,
+            0.40015842714585237
+          ]
+        }
+      ],
+      "oldMeasurements": {
+        "rightTargetResidualM": 0.04079736405064463,
+        "rightOrientationResidualRad": 0,
+        "leftTargetResidualM": 1.0485317421989788e-7,
+        "leftOrientationResidualRad": 0,
+        "muzzleYawErrorRad": 1.5707963044101334,
+        "modelMuzzleToSimulationMountM": 0.7910010211119062,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    },
+    {
+      "frame": 2137,
+      "tick": 1047,
+      "label": "seven-launcher-moving-reload-3",
+      "phase": 0.9305555555555561,
+      "pose": {
+        "weaponId": "launcher",
+        "action": "reload",
+        "phase": 0.9305555555555561,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.675,
+              0.5299999999999999,
+              0.30999999999999994
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "chamber",
+          "phase": 0.9305555555555561
+        }
+      },
+      "yaw": -3.1415841579437256,
+      "actorRotation": [
+        0,
+        0.7071097848446405,
+        0,
+        -0.7071037775156955
+      ],
+      "primary": {
+        "controlId": "rightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "dependent": {
+        "controlId": "leftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            0.04313925722704709,
+            0.24278458568307637,
+            -0.02777269725143554
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "chains": [
+        {
+          "name": "LeftArm",
+          "position": [
+            0.1912352786448408,
+            1.40540011165385,
+            0.0013654710400450298
+          ]
+        },
+        {
+          "name": "LeftForeArm",
+          "position": [
+            -0.010932165256719195,
+            1.4547981613509837,
+            0.12680655348492964
+          ]
+        },
+        {
+          "name": "LeftHand",
+          "position": [
+            -0.22878562681507092,
+            1.5080290689710891,
+            0.26198044048962776
+          ]
+        },
+        {
+          "name": "RightArm",
+          "position": [
+            -0.20373148467099544,
+            1.4090002329268614,
+            -0.05800889392880959
+          ]
+        },
+        {
+          "name": "RightForeArm",
+          "position": [
+            -0.4398212929049951,
+            1.3753239636260235,
+            -0.10464381269803164
+          ]
+        },
+        {
+          "name": "RightHand",
+          "position": [
+            -0.5247349658432783,
+            1.363211700253638,
+            0.14276005956769688
+          ]
+        }
+      ],
+      "oldMeasurements": {
+        "rightTargetResidualM": 4.392258198498516e-8,
+        "rightOrientationResidualRad": 4.2146848510894035e-8,
+        "leftTargetResidualM": 0.11789852211529782,
+        "leftOrientationResidualRad": 4.2146848510894035e-8,
+        "muzzleYawErrorRad": 0.6982913116373448,
+        "modelMuzzleToSimulationMountM": 0.9274038254090738,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    },
+    {
+      "frame": 2427,
+      "tick": 1192,
+      "label": "seven-launcher-moving-reload-4",
+      "phase": 0,
+      "pose": {
+        "weaponId": "launcher",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.30000000000000004,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.675,
+              0.5299999999999999,
+              0.30999999999999994
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.09,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.22499999999999998,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "yaw": -3.1415841579437256,
+      "actorRotation": [
+        0,
+        0.7071097848446405,
+        0,
+        -0.7071037775156955
+      ],
+      "primary": {
+        "controlId": "rightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "dependent": {
+        "controlId": "leftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "modelSocket": {
+          "position": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "chains": [
+        {
+          "name": "LeftArm",
+          "position": [
+            0.21962077912213201,
+            1.411808082672223,
+            -0.037696032736585505
+          ]
+        },
+        {
+          "name": "LeftForeArm",
+          "position": [
+            -0.005016823597261855,
+            1.3944235411615913,
+            0.053315063808943686
+          ]
+        },
+        {
+          "name": "LeftHand",
+          "position": [
+            -0.24708401822919374,
+            1.3756901740042073,
+            0.1513877412069845
+          ]
+        },
+        {
+          "name": "RightArm",
+          "position": [
+            -0.1650922945990574,
+            1.4011208150646093,
+            -0.11028381316041669
+          ]
+        },
+        {
+          "name": "RightForeArm",
+          "position": [
+            -0.29920821136699716,
+            1.2524022399462313,
+            -0.2479173970571189
+          ]
+        },
+        {
+          "name": "RightHand",
+          "position": [
+            -0.31399997924310113,
+            1.2360000018290014,
+            0.01299997715231016
+          ]
+        }
+      ],
+      "oldMeasurements": {
+        "rightTargetResidualM": 6.219081742126624e-8,
+        "rightOrientationResidualRad": 1.1151007970493858e-7,
+        "leftTargetResidualM": 0.009644701394561264,
+        "leftOrientationResidualRad": 1.0745380149674385e-7,
+        "muzzleYawErrorRad": 1.0912423231701497e-7,
+        "modelMuzzleToSimulationMountM": 0.9124826774052262,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    }
+  ]
+}

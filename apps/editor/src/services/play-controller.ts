@@ -34,9 +34,11 @@ import type { AuthorSnapshot, LabRenderer } from '../renderer';
 import type { PlayerPresentation } from './player-presentation';
 import type { RuntimeSceneMotion } from './runtime-scene-motion';
 import type { RuntimeBodyIk } from './runtime-body-ik';
+import type { RuntimeWeapons } from './runtime-weapons';
 import { characterYaw } from './character-facing';
 
 export interface PlayControllerOptions {
+  weapons?: RuntimeWeapons;
   bodyIk?: RuntimeBodyIk;
   sharedMotions?: RuntimeSceneMotion;
   playerPresentation?: PlayerPresentation;
@@ -73,12 +75,14 @@ export class PlayController {
   private readonly playerPresentation: PlayerPresentation | null;
   private readonly sharedMotions: RuntimeSceneMotion | null;
   private readonly bodyIk: RuntimeBodyIk | null;
+  private readonly optionsWeapons: RuntimeWeapons | null;
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
     this.playerPresentation = opts.playerPresentation ?? null;
     this.sharedMotions = opts.sharedMotions ?? null;
     this.bodyIk = opts.bodyIk ?? null;
+    this.optionsWeapons = opts.weapons ?? null;
     this.bridge = bridge;
     this.onStateChange = opts.onStateChange ?? null;
     // 没传 viewCamera 就是"不接管相机"，此时控制器存在但 attach 恒为 false
@@ -176,9 +180,12 @@ export class PlayController {
     this.bridge.attach(this.session.runtime);
     this.sharedMotions?.start(doc);
     this.bodyIk?.start(doc);
+    this.optionsWeapons?.start(doc,this.session);
     if (this.playerPresentation) this.bridge.setPlayerPresentation(playerNode);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.sharedMotions?.sync(this.session.runtime);
+    this.bodyIk?.sync(this.session.runtime);
+    this.optionsWeapons?.sync(this.session.runtime);
     // Play 期分配的句柄必须进 PlaySession 的账目（AGENTS.md §2.4），
     // 否则"Stop 后无残留"只能靠人眼观察 —— 项目正是这么踩过泄漏坑的。
     this.session.registerResource('bridge-batches', () => this.bridge.attach(null));
@@ -212,6 +219,7 @@ export class PlayController {
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime, true);
+    this.optionsWeapons?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
@@ -223,6 +231,7 @@ export class PlayController {
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime);
+    this.optionsWeapons?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
     this.notify();
@@ -235,6 +244,7 @@ export class PlayController {
    * 上一帧的动态实例，会闪一下"僵尸还在但关卡回到编辑态"的鬼影。
    */
   stop(): void {
+    this.optionsWeapons?.stop();
     this.bodyIk?.stop();
     this.sharedMotions?.stop();
     this.playerPresentation?.detach();
@@ -265,7 +275,7 @@ export class PlayController {
       this.bridge.refresh();
       this.syncPlayCamera();
     }
-    if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
+    if (this.session.state === 'playing') {this.bodyIk?.sync(this.session.runtime);this.optionsWeapons?.sync(this.session.runtime);}
     return n;
   }
 

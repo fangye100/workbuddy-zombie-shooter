@@ -1,0 +1,1471 @@
+{
+  "schemaVersion": 17,
+  "id": "sc_weapon_body_source_review",
+  "name": "WPN-20261012 · 五件本体原源固定方向（未验收）",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#a4afbf",
+      "intensity": 0.45
+    },
+    "hemisphere": {
+      "sky": "#dbe5f1",
+      "skyIntensity": 0.4,
+      "ground": "#9298a2",
+      "groundIntensity": 0.2
+    },
+    "fog": {
+      "color": "#0e1013",
+      "density": 0,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#ffffff",
+      "intensity": 0.1,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null,
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.48,
+      "outlineWidth": 0.5,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0,
+      "halftoneSize": 5,
+      "vignette": 0
+    }
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      6.8,
+      0
+    ],
+    "distance": 17,
+    "yaw": 0,
+    "elevation": 0
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": null,
+  "loseCondition": "player-death",
+  "dependencies": [
+    "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+    "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+    "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+    "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+    "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb"
+  ],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "mode": "fixed",
+          "fovDeg": 35,
+          "near": 0.01,
+          "far": 100,
+          "followTarget": null,
+          "pitchDeg": 0,
+          "distance": 17,
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_0_0",
+      "name": "WPN-02-SHOTGUN · 原源 · 侧+X",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -3.1500000000000004,
+          11.2,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.367217318297695,
+          1.367217318297695,
+          1.367217318297695
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_0_1",
+      "name": "WPN-02-SHOTGUN · 原源 · 长轴端+Z（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -1.05,
+          11.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.367217318297695,
+          1.367217318297695,
+          1.367217318297695
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_0_2",
+      "name": "WPN-02-SHOTGUN · 原源 · 俯+Y",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          1.05,
+          11.2,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.367217318297695,
+          1.367217318297695,
+          1.367217318297695
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_0_3",
+      "name": "WPN-02-SHOTGUN · 原源 · 长轴端-Z（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          3.1500000000000004,
+          11.2,
+          0
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "scale": [
+          1.367217318297695,
+          1.367217318297695,
+          1.367217318297695
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_1_0",
+      "name": "WPN-03-SMG · 原源 · 侧+Z",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -3.1500000000000004,
+          8.799999999999999,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.3837502576146987,
+          1.3837502576146987,
+          1.3837502576146987
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_1_1",
+      "name": "WPN-03-SMG · 原源 · 长轴端+X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -1.05,
+          8.799999999999999,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3837502576146987,
+          1.3837502576146987,
+          1.3837502576146987
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_1_2",
+      "name": "WPN-03-SMG · 原源 · 俯+Y",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          1.05,
+          8.799999999999999,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3837502576146987,
+          1.3837502576146987,
+          1.3837502576146987
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_1_3",
+      "name": "WPN-03-SMG · 原源 · 长轴端-X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          3.1500000000000004,
+          8.799999999999999,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3837502576146987,
+          1.3837502576146987,
+          1.3837502576146987
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_2_0",
+      "name": "WPN-04-SNIPER · 原源 · 侧+Z",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -3.1500000000000004,
+          6.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.3592692755788387,
+          1.3592692755788387,
+          1.3592692755788387
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_2_1",
+      "name": "WPN-04-SNIPER · 原源 · 长轴端+X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -1.05,
+          6.4,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3592692755788387,
+          1.3592692755788387,
+          1.3592692755788387
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_2_2",
+      "name": "WPN-04-SNIPER · 原源 · 俯+Y",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          1.05,
+          6.4,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3592692755788387,
+          1.3592692755788387,
+          1.3592692755788387
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_2_3",
+      "name": "WPN-04-SNIPER · 原源 · 长轴端-X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          3.1500000000000004,
+          6.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.3592692755788387,
+          1.3592692755788387,
+          1.3592692755788387
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_3_0",
+      "name": "WPN-05-CHAINSAW · 原源 · 侧+Z",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -3.1500000000000004,
+          4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.355858707877711,
+          1.355858707877711,
+          1.355858707877711
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_3_1",
+      "name": "WPN-05-CHAINSAW · 原源 · 长轴端+X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -1.05,
+          4,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.355858707877711,
+          1.355858707877711,
+          1.355858707877711
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_3_2",
+      "name": "WPN-05-CHAINSAW · 原源 · 俯+Y",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          1.05,
+          4,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.355858707877711,
+          1.355858707877711,
+          1.355858707877711
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_3_3",
+      "name": "WPN-05-CHAINSAW · 原源 · 长轴端-X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          3.1500000000000004,
+          4,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.355858707877711,
+          1.355858707877711,
+          1.355858707877711
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_4_0",
+      "name": "WPN-06-FLAME · 原源 · 侧+Z",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -3.1500000000000004,
+          1.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.4423744150128122,
+          1.4423744150128122,
+          1.4423744150128122
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_4_1",
+      "name": "WPN-06-FLAME · 原源 · 长轴端+X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          -1.05,
+          1.6,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4423744150128122,
+          1.4423744150128122,
+          1.4423744150128122
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_4_2",
+      "name": "WPN-06-FLAME · 原源 · 俯+Y",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          1.05,
+          1.6,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4423744150128122,
+          1.4423744150128122,
+          1.4423744150128122
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_wpn_body_4_3",
+      "name": "WPN-06-FLAME · 原源 · 长轴端-X（符号待定）",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "武器本体源检视",
+      "transform": {
+        "position": [
+          3.1500000000000004,
+          1.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4423744150128122,
+          1.4423744150128122,
+          1.4423744150128122
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-12T00:33:13.923Z",
+    "updatedAt": "2026-10-12T00:33:13.923Z",
+    "notes": "每行一件、三正交方向+负长轴端面；节点旋转将标注源面朝向编辑相机+Z。源GLB不改，展示缩放非米制，不认证炮口正号/握点/分件/PBR。选择准确Hierarchy名称后单独按F，无需gizmo猜视角。"
+  }
+}
