@@ -5,13 +5,17 @@ import {Cdp,launchEditorSession,waitFor,sleep} from './editor-smoke-lib.mjs';
 import {STATIC_SCENES,staticNodes,captureStatic} from './weapon-static.mjs';
 const REPO=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const SCENE='assets/scenes/sandbox/weapon-assembly-trial.scene.json';
+const WEAPONS=['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'];
 export function probeOptions(argv){
  const value=(name,fallback)=>{const i=argv.indexOf('--'+name);if(i<0)return fallback;if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('缺参数 '+name);return argv[i+1];};
  const root=path.resolve(value('root',REPO)),expectedHead=value('expected-head','');
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
- if(staticScene!==null&&['--all-weapons','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(staticScene!==null&&['--all-weapons','--weapon','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ const weaponIds=value('weapon','').split(',').filter(Boolean);
+ if(argv.includes('--weapon')&&(!weaponIds.length||new Set(weaponIds).size!==weaponIds.length||weaponIds.some(id=>!WEAPONS.includes(id))))throw new Error('--weapon 必须为七件武器中的唯一ID列表');
+ if(weaponIds.length&&argv.includes('--all-weapons'))throw new Error('--weapon 与 --all-weapons 不能混用');
  const scene=staticScene??SCENE,url=new URL(value('url','https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene='+scene));
  if(!/^[a-f0-9]{40}$/.test(expectedHead))throw new Error('必须提供完整 --expected-head');
  if(url.protocol!=='https:'||url.hostname!=='fangye-win11-office.tail6b29a2.ts.net'||url.port!=='5198'||url.searchParams.get('scene')!==scene||url.searchParams.has('play')||url.searchParams.has('game'))throw new Error('入口必须为本次 MagicDNS:5198 的编辑态试验scene；不自动Play/隐藏编辑UI');
@@ -23,7 +27,7 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,allWeapons:argv.includes('--all-weapons'),aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** Read-only reconstruction: uploaded skin matrix × normalized inverse-bind origin. */
 export function posedJointPosition(skin,normalization,ib){
@@ -65,7 +69,7 @@ export class ProbeInput {
 }
 KEY.f={key:'f',code:'KeyF',windowsVirtualKeyCode:70};
 const SNAPSHOT=`(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));const authorDocumentSha256=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
- return {authorDocumentSha256,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
+ return {authorDocumentSha256,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,weaponEvents:r?.weapons.events.map(e=>({...e}))??[],firing:r?.firing??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
  actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight}:null,attachmentRequest:s.bodyIk?.attachment??null,handChains:o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(Arm|ForeArm|Hand)$/.test(name)?[{name,position:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]),legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
  source:e?.renderer.getSceneSource()?.url??null,sceneId:e?.renderer.getDocument()?.id??null,frame:e?.renderer.state.frameCounter};})()`;
 async function visiblePoint(cdp,selector){
@@ -127,6 +131,35 @@ export async function captureWithoutMovement(input,capture,resume){
  for(const name of held)await resume(name);
  return result;
 }
+/** 短fire可能落在两个快照之间；事件须为本轮同武器新shot并与lastShot同tick。 */
+export function attackEvidence(before,samples,def){
+ const sequence=Math.max(0,...(before.weaponEvents??[]).map(e=>e.sequence)),id=def.id;
+ const paired=samples.flatMap(s=>(s.weaponEvents??[]).filter(e=>e.sequence>sequence&&e.weaponId===id&&e.action==='fire'&&e.tick===s.lastShot?.tick).map(e=>({sequence:e.sequence,tick:e.tick,frame:s.frame,clip:e.clip})));
+ const state=s=>s.weapons?.states.find(w=>w.id===id),ammoBefore=state(before)?.magazine,ammoAfter=state(samples.at(-1)??{})?.magazine;
+ const fireFrames=samples.filter(s=>s.models?.pose?.action==='fire').map(s=>s.frame),recoilFrames=samples.filter(s=>Math.abs(s.models?.pose?.recoil?.pitchDeg??0)>1e-6||s.models?.pose?.recoil?.translation?.some(n=>Math.abs(n)>1e-6)).map(s=>s.frame);
+ const upperFrames=samples.filter(s=>paired.some(e=>e.clip&&s.actor?.layer?.clip===e.clip)).map(s=>s.frame);
+ return {ok:paired.length>0&&(def.ammo.reloadMode==='none'||Number.isFinite(ammoBefore)&&ammoAfter<ammoBefore)&&(fireFrames.length>0||recoilFrames.length>0||upperFrames.length>0),paired,ammoBefore,ammoAfter,fireFrames,recoilFrames,upperFrames,firing:samples.map(s=>({frame:s.frame,held:s.firing}))};
+}
+export function childActorLocal(sample,id){
+ const d=sample?.models?.attachmentDraws?.find(d=>d.id===id),o=sample?.authorPlayer;
+ if(!d||!o||d.frameStamp!==sample.frame||d.worldMatrix?.length!==16||!d.worldMatrix.every(Number.isFinite))return null;
+ return actorPoint(d.worldMatrix.slice(12,15).map((n,k)=>n-o.pos[k]),{pos:[0,0,0],scale:1/o.scale,quat:o.quat.map((n,k)=>k===3?n:-n)});
+}
+/** shell补满后直接idle属于有效归槽，仍验证同帧真实draw与离槽/回位位置。 */
+export function reloadEvidence(before,samples,id){
+ const child=s=>s.models?.attachmentDraws?.find(d=>d.id===id),valid=s=>s?.models?.visible&&childActorLocal(s,id)!==null;
+ const out=samples.find(s=>valid(s)&&child(s).removed),inside=samples.findLast(s=>valid(s)&&out&&s.frame>out.frame&&!child(s).removed&&s.models?.pose?.action==='idle');
+ const outLocal=childActorLocal(out,id),inLocal=childActorLocal(inside,id),slotLocal=childActorLocal(before,id);
+ const distance=(a,b)=>a&&b?Math.hypot(...a.map((n,k)=>n-b[k])):null;
+ const delta=distance(outLocal,inLocal),slotResidual=distance(inLocal,slotLocal);
+ return {ok:delta!==null&&delta>.001&&slotResidual!==null&&slotResidual<.001,outFrame:out?.frame,inFrame:inside?.frame,outActorLocal:outLocal,inActorLocal:inLocal,slotActorLocal:slotLocal,translationDeltaM:delta,slotResidualM:slotResidual,inAction:inside?.models?.pose?.action};
+}
+export function reloadMoment(sample,id,p,stage,outSeen){
+ const child=sample.models?.attachmentDraws?.find(d=>d.id===id),pose=sample.models?.pose;
+ if(!child||child.frameStamp!==sample.frame||!sample.models?.visible)return false;
+ if(stage==='in')return outSeen&&!child.removed&&(pose?.action==='idle'||pose?.action==='reload'&&pose.phase>=p.magazineInPhase);
+ return child.removed&&pose?.action==='reload'&&pose.phase>=(stage==='mid'?(p.magazineOutPhase+p.magazineInPhase)/2:p.magazineOutPhase);
+}
 async function run(options){
  const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
  if(fs.realpathSync(options.root)!==fs.realpathSync(REPO)||fs.realpathSync(process.cwd())!==fs.realpathSync(options.root))throw new Error('root/cwd 与脚本所属检出不一致');
@@ -139,7 +172,7 @@ async function run(options){
  const owners=profileOwners(processes,profile);if(owners.length)throw new Error('保留profile正被Chrome持有，拒绝启动：PID '+owners.map(p=>p.ProcessId).join(','));
  await freePort(options.cdpPort);fs.mkdirSync(options.out,{recursive:true});
  const report={mode:options.staticScene?'static':'play',toolSha256:createHash('sha256').update(fs.readFileSync(fileURLToPath(import.meta.url))).digest('hex'),staticHelperSha256:createHash('sha256').update(fs.readFileSync(path.join(REPO,'tools/verify/weapon-static.mjs'))).digest('hex'),targetHead:options.expectedHead,root:options.root,url:options.url,scene:options.staticScene??SCENE,sceneSha256:createHash('sha256').update(fs.readFileSync(path.join(options.root,options.staticScene??SCENE))).digest('hex'),profile,cdpPort:options.cdpPort,normalTls:true,startedAt:new Date().toISOString(),samples:[],checks:[],actions:[],screenshots:[],limitations:['原始PNG须人工检查轮廓、遮挡和美术质量；检查通过不等于像素批准。','不强制人为制造迟到decode。'],consoleErrors:[],exceptions:[]};
- let session,input;const check=(name,ok,detail)=>report.checks.push({name,ok:!!ok,detail});
+ let session,input;const captureJobs=new Set();const check=(name,ok,detail)=>report.checks.push({name,ok:!!ok,detail});
  const save=()=>fs.writeFileSync(path.join(options.out,'observations.json'),JSON.stringify(report,null,2)+'\n');
  try{
   session=await launchEditorSession({chromePath:options.chromePath,cdpPort:options.cdpPort,headed:true,appUrl:options.url,ignoreCertificateErrors:false,setupTimeoutMs:30000,windowSize:'1440,1000'});
@@ -177,7 +210,7 @@ async function run(options){
    }
   },name=>movement(name,true));
   const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
-  const sampleFor=async(label,ms,onSample)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(120);if(typeof activeAimSpec==='number'){canvas=await guardedAim(activeAimSpec);const held=['w','s'].find(name=>input.held.has(name));if(held&&groundMovementDirection(canvas,held)!==held)await movement(held,true,canvas);await input.move(canvas);}const sample=await snap(label);if(onSample)await onSample(sample);}};
+  const sampleFor=async(label,ms,onSample,interval=120)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(interval);if(typeof activeAimSpec==='number'){canvas=await guardedAim(activeAimSpec);const held=['w','s'].find(name=>input.held.has(name));if(held&&groundMovementDirection(canvas,held)!==held)await movement(held,true,canvas);await input.move(canvas);}const sample=await snap(label);if(onSample)await onSample(sample);}};
   const editor=await snap('editor');const expectedSceneId=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')).id;check('真实场景身份',editor.sceneId===expectedSceneId,editor.sceneId);if(editor.sceneId!==expectedSceneId)throw new Error('加载场景ID不匹配');await capture('01-editor');await click('#btn-play');
   if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000})){
    report.playStartFailure={readiness:await cdp.eval(readiness),sample:await snap('play-start-failed'),ui:await cdp.eval('document.body.innerText.slice(0,3500)')};
@@ -190,10 +223,12 @@ async function run(options){
   const aimAt=async(spec,label)=>{activeAimSpec=spec;const point=await guardedAim(spec);await input.move(point);report.actions.push({aim:label,...point,atMs:Date.now()});await sampleFor(label,400);await capture(label);return input.position;};
   if(aiming)canvas=await aimAt(primary,'12-aim-primary');
   if(secondary!==null){canvas=await aimAt(secondary,'13-aim-secondary');if(aiming)canvas=await aimAt(primary,'14-aim-return');}
+  const doc=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8'));
+  const legsChanged=samples=>samples.length>1&&samples.some(s=>JSON.stringify(s.actor?.legMatrices)!==JSON.stringify(samples[0].actor?.legMatrices))&&samples.some(s=>/walk|run|jog|sprint|strafe/i.test(s.actor?.clip??''));
+  if(!options.weaponIds.length){
   await input.pointer(canvas,true);await input.pointer(canvas,false);
   await movement('w',true);await input.pointer(canvas,true);await sampleFor('held-move-fire',options.holdMs);await capture('03-moving-fire');
   const moving=report.samples.filter(s=>s.label==='held-move-fire');check('真实held移动',moving.some(s=>Math.hypot(s.player.x-baseline.player.x,s.player.z-baseline.player.z)>.1),{before:baseline.player,after:moving.at(-1)?.player});
-  const legsChanged=samples=>samples.length>1&&samples.some(s=>JSON.stringify(s.actor?.legMatrices)!==JSON.stringify(samples[0].actor?.legMatrices))&&samples.some(s=>/walk|run|jog|sprint|strafe/i.test(s.actor?.clip??''));
   check('移动期间locomotion和腿矩阵继续',legsChanged(moving),moving.map(s=>({clip:s.actor?.clip,time:s.actor?.time})));
   check('移动期间实际射击',moving.some(s=>s.lastShot?.tick>=baseline.tick),moving.at(-1)?.lastShot);
   await movement('w',false);await movement('s',true);
@@ -206,7 +241,7 @@ async function run(options){
   }
   await input.pointer(canvas,false);await input.tap('one');await sampleFor('held-switch-pistol',800);check('按1回Pistol',report.samples.at(-1)?.models?.weaponId==='pistol',report.samples.at(-1)?.models);
   await movement('s',false);await movement('w',true);
-  const doc=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')),proc=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol').presentation.procedural;
+  const proc=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol').presentation.procedural;
   const reloadShots=new Set(),reloadStart=Date.now();let directionChanged=false;
   await input.tap('r');await sampleFor('held-move-reload',2500,async sample=>{
    if(!directionChanged&&Date.now()-reloadStart>=1200){await movement('w',false);await movement('s',true);directionChanged=true;}
@@ -216,27 +251,48 @@ async function run(options){
    if(reloadShots.has('out')&&(pose?.action==='ready'||pose?.action==='reload'&&pose.phase>=proc.magazineInPhase)&&!reloadShots.has('in')){reloadShots.add('in');await capture('11-magazine-in',aiming);}
   });check('换弹phase与截图采样（遮挡另验）',reloadShots.has('out')&&reloadShots.has('in')&&(!aiming||reloadShots.has('mid')),[...reloadShots]);const reload=report.samples.filter(s=>s.label==='held-move-reload');check('移动中换弹phase',reload.some(s=>s.models?.pose?.action==='reload')&&reload.some(s=>Math.hypot(s.player.x-reload[0].player.x,s.player.z-reload[0].player.z)>.1),{phases:reload.map(s=>s.models?.pose?.phase)});check('reload期间腿部locomotion继续',legsChanged(reload),reload.map(s=>({clip:s.actor?.clip,time:s.actor?.time})));await capture('05-after-reload');
   check('reload期间本帧模型/双手结果',reload.some(s=>s.models?.visible&&s.models.frameStamp===s.frame&&Number.isFinite(s.models.measurements?.leftTargetResidualM)),reload.at(-1)?.models);
+  }
   if(options.allWeapons){
    await input.release();const definitions=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions,keys=['one','two','three','four','five','six','seven'];
    if(definitions.length!==7)throw new Error('七件模式要求真实7武器场景');
+   report.selectedWeapons=options.weaponIds.length?options.weaponIds:definitions.map(d=>d.id);report.executedWeapons=[];
+   if(options.weaponIds.length)report.limitations.push('仅检查selectedWeapons；未选武器不构成本次通过证据。');
    for(let i=0;i<definitions.length;i++){
+    if(!report.selectedWeapons.includes(definitions[i].id))continue;
     const def=definitions[i],label='seven-'+def.id;await input.tap(keys[i]);await sampleFor(label+'-equip',700);let ready=await snap(label+'-ready');
     check(label+'真实切换与draw',ready.models?.visible&&ready.models.weaponId===def.id&&ready.models.frameStamp===ready.frame,ready.models);
     if(aiming)canvas=await aimAt(i%2&&secondary!==null?secondary:primary,label+'-aim');
-    await input.pointer(canvas,true);const before=await snap(label+'-attack-before');const direction=i%2?'s':'w';await movement(direction,true);await sampleFor(label+'-moving-attack',650);await input.pointer(canvas,false);await movement(direction,false);await capture(label+'-attack');
-    const attacks=report.samples.filter(s=>s.label===label+'-moving-attack');check(label+'适用攻击与腿动画',attacks.some(s=>s.weapons?.equipped===def.id&&s.models?.pose?.action==='fire')&&legsChanged(attacks),{behavior:def.behavior,before:before.weapons,after:attacks.at(-1)?.weapons,poses:attacks.map(s=>s.models?.pose)});
+    const before=await snap(label+'-attack-before'),direction=i%2?'s':'w';await movement(direction,true);await input.pointer(canvas,true);await sampleFor(label+'-moving-attack',650,null,25);await input.pointer(canvas,false);await movement(direction,false);await capture(label+'-attack');
+    const attacks=report.samples.filter(s=>s.label===label+'-moving-attack'),attack=attackEvidence(before,attacks,def);
+    check(label+'同武器新攻击事件与表现',attack.ok,{behavior:def.behavior,...attack});
+    check(label+'攻击移动与下身持续',legsChanged(attacks)&&attacks.some(s=>Math.hypot(s.player.x-before.player.x,s.player.z-before.player.z)>.1),attacks.map(s=>({frame:s.frame,tick:s.tick,clip:s.actor?.clip,time:s.actor?.time})));
+    report.executedWeapons.push(def.id);
     if(def.ammo.reloadMode==='none'){check(label+'无换弹语义',def.presentation.assembly.reloadAttachmentId===null&&ready.models.attachmentDraws?.length===0,{reloadMode:def.ammo.reloadMode});continue;}
-    const shots=new Set(),p=def.presentation.procedural,start=Date.now();let reversed=false;await movement(direction,true);await input.tap('r');await sampleFor(label+'-moving-reload',Math.min(5000,def.ammo.reloadSec*1000+650),async sample=>{
-     if(!reversed&&Date.now()-start>700){await movement(direction,false);await movement(direction==='w'?'s':'w',true);reversed=true;}
-     const child=sample.models?.attachmentDraws?.find(d=>d.id===def.presentation.assembly.reloadAttachmentId),pose=sample.models?.pose;
-     if(child?.removed&&!shots.has('out')){shots.add('out');await capture(label+'-out',aiming);}
-     else if(child?.removed&&pose.phase>=(p.magazineOutPhase+p.magazineInPhase)/2&&!shots.has('mid')){shots.add('mid');await capture(label+'-mid',aiming);}
-     if(shots.has('out')&&child&&!child.removed&&!shots.has('in')){shots.add('in');await capture(label+'-in',aiming);}
-    });await input.release();const samples=report.samples.filter(s=>s.label===label+'-moving-reload'),out=samples.find(s=>s.models?.attachmentDraws?.some(d=>d.removed)),inside=samples.find(s=>s.models?.pose?.action==='reload'&&s.models?.attachmentDraws?.some(d=>!d.removed));
-    const localChild=sample=>{const d=sample?.models?.attachmentDraws?.find(d=>d.id===def.presentation.assembly.reloadAttachmentId),o=sample?.authorPlayer;if(!d||!o||d.frameStamp!==sample.frame)return null;return actorPoint(d.worldMatrix.slice(12,15).map((n,k)=>n-o.pos[k]),{pos:[0,0,0],scale:1/o.scale,quat:o.quat.map((n,k)=>k===3?n:-n)});},outLocal=localChild(out),inLocal=localChild(inside),delta=outLocal&&inLocal?Math.hypot(...outLocal.map((n,k)=>n-inLocal[k])):null;
-    check(label+'实际附件out/in采样（可见性另验）',shots.has('out')&&shots.has('in')&&delta!==null&&delta>.001,{shots:[...shots],outFrame:out?.frame,inFrame:inside?.frame,outActorLocal:outLocal,inActorLocal:inLocal,translationDeltaM:delta});
-    check(label+'移动换弹下身持续',legsChanged(samples)&&samples.some(s=>Math.hypot(s.player.x-samples[0].player.x,s.player.z-samples[0].player.z)>.1),samples.map(s=>({frame:s.frame,phase:s.models?.pose?.phase,clip:s.actor?.clip})));
+    const p=def.presentation.procedural,id=def.presentation.assembly.reloadAttachmentId,shots=new Set(),cycles=[];
+    // .55s shell换弹不串行等待三张PNG。三次真实shoot→R，每周期仅一个阶段，
+    // 该阶段raw先入report，PNG异步进行；不锁定模拟，保留实际截图frameRange。
+    const stages=def.ammo.reloadSec<.9?['out','mid','in']:['all'];
+    for(let cycle=0;cycle<stages.length;cycle++){
+     if(cycle>0){await input.pointer(canvas,true);await sleep(50);await input.pointer(canvas,false);await sampleFor(label+'-reload-preparation',Math.max(300,def.cooldownSec*1000));}
+     const mounted=await snap(label+'-reload-mounted-'+cycle),start=Date.now(),jobs=[];let outSeen=false,reversed=false;
+     await movement(direction,true);await input.tap('r');
+     await sampleFor(label+'-moving-reload-'+cycle,Math.min(5000,def.ammo.reloadSec*1000+650),async sample=>{
+      if(!reversed&&Date.now()-start>700){await movement(direction==='w'?'s':'w',true);reversed=true;}
+      if(sample.models?.attachmentDraws?.some(d=>d.id===id&&d.removed))outSeen=true;
+      for(const stage of stages[cycle]==='all'?['out','mid','in']:[stages[cycle]])if(!shots.has(stage)&&reloadMoment(sample,id,p,stage,outSeen)){
+       shots.add(stage);report.actions.push({captureStage:stage,weapon:def.id,cycle,sample:report.samples.length-1,frame:sample.frame,tick:sample.tick,pose:sample.models.pose});
+       // 每周期只启动一个截图，长周期三个截图仍顺序完成，防止重叠输入恢复。
+       const job=capture(label+'-'+stage,aiming).catch(error=>{report.exceptions.push('阶段截图 '+def.id+'/'+stage+': '+String(error));}).finally(()=>captureJobs.delete(job));jobs.push(job);captureJobs.add(job);
+       if(stages[cycle]==='all')await job;
+      }
+     },25);
+     await Promise.all(jobs);await input.release();await sampleFor(label+'-moving-reload-'+cycle,150,null,25);
+     const samples=report.samples.filter(s=>s.label===label+'-moving-reload-'+cycle),evidence=reloadEvidence(mounted,samples,id);cycles.push({cycle,stage:stages[cycle],...evidence});
+     check(label+'移动换弹下身持续周期'+cycle,legsChanged(samples)&&samples.some(s=>Math.hypot(s.player.x-mounted.player.x,s.player.z-mounted.player.z)>.1),samples.map(s=>({frame:s.frame,phase:s.models?.pose?.phase,clip:s.actor?.clip})));
+    }
+    check(label+'实际附件out/in与归槽采样（可见性另验）',shots.has('out')&&shots.has('mid')&&shots.has('in')&&cycles.every(c=>c.ok),{shots:[...shots],cycles});
    }
+   check('选定武器执行覆盖',report.selectedWeapons.every(id=>report.executedWeapons.includes(id)),{selected:report.selectedWeapons,executed:report.executedWeapons});
   }
   const handFrames=report.samples.filter(s=>s.state==='playing'&&s.models?.visible&&s.models.frameStamp===s.frame),handFailures=handFrames.filter(s=>s.models.ikDiagnostics?.some(d=>['IK_UNREACHABLE','IK_SOCKET_RESIDUAL','IK_ATTACHMENT'].includes(d.code))||!Number.isFinite(s.models.measurements?.rightTargetResidualM)||!Number.isFinite(s.models.measurements?.leftTargetResidualM)||s.models.measurements.rightTargetResidualM>1e-4||s.models.measurements.leftTargetResidualM>1e-4);
   check('aim/切换/攻击/换弹采样双手实际可达',handFrames.length>0&&handFailures.length===0,{samples:handFrames.length,failures:handFailures.map(s=>({label:s.label,frame:s.frame,tick:s.tick,pose:s.models.pose,measurements:s.models.measurements,diagnostics:s.models.ikDiagnostics}))});
@@ -247,9 +303,10 @@ async function run(options){
   }
  }catch(error){report.exceptions.push(String(error));}
  finally{
+  await Promise.all([...captureJobs]);
   if(input)report.cleanupInputErrors=await input.release();
   if(session){report.consoleErrors=session.cdp.consoleErrors;report.exceptions.push(...session.cdp.exceptions);try{const bcdp=new Cdp(session.ws,undefined);let cleanupTimer;try{await Promise.race([bcdp.send('Target.closeTarget',{targetId:session.targetId}),new Promise((_,reject)=>{cleanupTimer=setTimeout(()=>reject(new Error('owned target关闭超时')),3000);})]);}finally{clearTimeout(cleanupTimer);}}catch(e){report.cleanupTargetError=String(e);}session.ws.close();session.chrome.kill();}
-  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=(options.staticScene?options.nodeIds.length+4:18)&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
+  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=(options.staticScene?options.nodeIds.length+4:options.weaponIds.length?12:18)&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
  }
  console.log(JSON.stringify({passed:report.passed,evidence:options.out,checks:report.checks.map(c=>({name:c.name,ok:c.ok})),exceptions:report.exceptions}));return report.passed?0:1;
 }

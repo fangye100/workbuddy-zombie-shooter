@@ -182,3 +182,19 @@ CodeGraph MCP 0.167.0在本根/base `0aee371`实际查project_map与main/play-co
 12项工具定向Node回归通过，覆盖3370真实射线的CSS投影、平移后地面越界、遮挡/平行/投影偏差明细、旋转Camera移动约定、截图输入释放/成功恢复/失败不恢复。日志 `aim-guard-tool-test.log`；本根/base3370的MCP定位记录为 `codegraph-aim-3370b80.json`。未运行本次改后Chrome；沿用上文 `--all-weapons --aim-yaw 180 --side-aim-yaw 135` 命令，填新冻结HEAD和独立out目录再交Audit。产品源码、资产、scene/Camera/hold/marker不变；原5120姿态回归与未受影响静态证据保留。七件GPU姿态与六件可见离槽/回位仍待实操；Shell/round依赖用户范围决定继续暂停，原任务尚未批准。
 
 本轮 `knowledge:check` 137条0错误；一次 `incremental-index --no-embed --json` 更新3files/61nodes/189edges、当次0parse错误，结构ready，旧index.lock竞争告警保留。紧随health为1135files/7110nodes/17719edges、5个既有parse文件/7877未解析调用；向量已自行完成7076/7076，本轮没有等待或重建。原始 `aim-guard-index.log/health.log` 仅为定位限制记录，不能替代七件实机结果。
+
+## 03b0818 原始结果与聚焦采样修正（2026-10-12）
+
+`seven-audit-03b0818/observations.json` 保存293个样本、68张原始PNG与46项检查，其中Shotgun附件回位和SMG攻击两项为false，不能写成全项通过。七件真实切换、其他适用攻击/六件换弹phase、移动下身、Pause/Stop作者回滚/ledger归零/restart均有本次证据；同帧手部最大右2.7503e-7m、左3.3227e-7m，仅出现`IK_AIM_LIMIT`，不是GPU readback。Pistol/SMG/Sniper的附件离枪及重新接入区域可辨，完整slot与手指仍局部遮挡；Shotgun回槽、Fuel/Launcher过程未获像素批准。
+
+源码与raw确认Shotgun .55s补弹完成后直接idle：旧筛选只接受reload回位，排除了有效同帧mounted child。SMG .09s fire窗口短于旧.12s间隔，旧attack-before还在mouseDown后，不能用所有样本idle否定实际射击。当前before先取再真实射击，25ms有界采样；只读已有WeaponSystem事件及runtime.firing，分别检查同武器新fire sequence、lastShot同tick、弹药/后坐或实际上层动作，以及移动下身。保留实际捕获的fire帧，不把事件存在冒称每帧都有shoot。
+
+回槽接受完成后的idle，但必须有同帧visible child draw、相对作者actor的out/in实际位移，以及相对换弹前slot位置小于1mm的回位误差。短于.9s的换弹使用最多三次正常射击→R，每周期只指定out/mid/in之一；该阶段raw先记录，再启动原始PNG，连续raw采样继续。PNG不锁定模拟，记录trigger sample与实际capture sample/frameRange，跨越阶段时像素阶段仍未知，不把末尾idle图冒称离槽。其他换弹沿用单周期采集。所有输入仍是CDP真实按键/鼠标，不修改phase/ammo/pose。
+
+可用`--weapon shotgun,smg`只执行选定武器的攻击/换弹及公共生命周期，仍按场景原Digit映射切换；与`--all-weapons`互斥。报告显式列selectedWeapons/executedWeapons，未选武器不构成本次批准。默认原Play和静态入口保持。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --weapon shotgun,smg --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/short-phase-audit
+```
+
+`prop-torso-diagnosis-03b0818.json`的CPU重放中，Fuel out六段手链位置与raw最大误差1.361e-7m，149个Hips/Spine加权顶点位于实际closed can内部；Launcher out/in误差1.859e-7/3.089e-7m，分别2/1点在round内。正数证明这些姿态存在交叠；单向0顶点不证明clear。Shotgun重放误差26–80mm，省略过渡，不能给零交点结论。既有三组侧移及三组抬高耦合候选均没有同时证明可达和分离，未发布hold修改。限定reload到双Shoulder子树、关闭torso权重及组合的idle/out/in离线对照也未消除交叠，原layer不变；记录在`prop-torso-layer-03b0818.json`，不将mask对照当原姿态复现或像素批准。实际装配位置仍待修复，Shell/round底火源质量仍等待用户范围决定。

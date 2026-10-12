@@ -1,9 +1,30 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('03b SMG短fire漏采仍需本轮同武器shot配对、弹药和真实后坐；历史事件不能通过',()=>{
+ const def={id:'smg',ammo:{reloadMode:'magazine'}},event={sequence:40,tick:640,weaponId:'smg',action:'fire',clip:'shoot'},before={weaponEvents:[{...event,sequence:39,tick:630}],weapons:{states:[{id:'smg',magazine:32}]}},sample={frame:1264,firing:true,weaponEvents:[event],lastShot:{tick:640},weapons:{states:[{id:'smg',magazine:31}]},models:{pose:{action:'idle',recoil:{pitchDeg:8,translation:[-.055,0,0]}}},actor:{layer:{clip:'idle'}}};
+ assert.equal(attackEvidence(before,[sample],def).ok,true);assert.deepEqual(attackEvidence(before,[sample],def).fireFrames,[]);
+ assert.equal(attackEvidence({...before,weaponEvents:[event]},[sample],def).ok,false);
+ assert.equal(attackEvidence(before,[{...sample,lastShot:{tick:641}}],def).ok,false);
+ assert.equal(attackEvidence(before,[{...sample,weaponEvents:[{...event,weaponId:'pistol'}]}],def).ok,false);
+ assert.equal(attackEvidence(before,[{...sample,models:{pose:{action:'idle',recoil:{pitchDeg:0,translation:[0,0,0]}}}}],def).ok,false);
+});
+test('03b Shotgun归槽idle有效，但必须有同帧draw、离槽位移及实际slot回位',()=>{
+ const m=y=>[1,0,0,0,0,1,0,0,0,0,1,0,0,y,0,1],s=(frame,removed,y,action='reload',phase=.3)=>({frame,authorPlayer:{pos:[0,0,0],quat:[0,0,0,1],scale:1},models:{visible:true,pose:{action,phase},attachmentDraws:[{id:'shell',frameStamp:frame,removed,worldMatrix:m(y)}]}});
+ const before=s(1100,false,1.25,'idle'),out=s(1114,true,1.2),back=s(1139,false,1.25,'idle'),p={magazineOutPhase:.2,magazineInPhase:.65};
+ assert.equal(reloadEvidence(before,[out,back],'shell').ok,true);assert.equal(reloadEvidence(before,[out,back],'shell').inAction,'idle');
+ assert.equal(reloadMoment(back,'shell',p,'in',true),true);assert.equal(reloadMoment(back,'shell',p,'in',false),false);
+ assert.equal(reloadEvidence(before,[out,s(1139,false,1.23,'idle')],'shell').ok,false);
+ back.models.attachmentDraws[0].frameStamp=1138;assert.equal(reloadEvidence(before,[out,back],'shell').ok,false);
+});
+test('聚焦武器选择保留真实七键映射，不将未选武器视为本次通过',()=>{
+ const args=['--expected-head',head,'--weapon','shotgun,flame,launcher'];const o=probeOptions(args);assert.deepEqual(o.weaponIds,['shotgun','flame','launcher']);assert.equal(o.allWeapons,true);
+ for(const ids of ['shotgun,shotgun','missing',','])assert.throws(()=>probeOptions(['--expected-head',head,'--weapon',ids]));
+ assert.throws(()=>probeOptions([...args,'--all-weapons']));assert.throws(()=>probeOptions([...args,'--static-scene',STATIC_SCENES[0],'--nodes','nd_a']));
+});
 test('真实3370射线在CSS client空间通过；越界/遮挡/平面误差分别保留证据',()=>{
  const player={x:0,z:-5.600001811981201},canvas={width:2000,height:1600,getBoundingClientRect:()=>({left:50,top:70,right:1050,bottom:870,width:1000,height:800})};
  const ray={o:[-.041666709157595176,1.1644444310304083,-3.9000018119829294],d:[-.3807105842999634,-.14213154549535018,-.9137056827978491]},ground={id:'ground',parent:null,transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},components:[{kind:'MeshRenderer',source:{type:'builtin',shape:'plane',params:[80,24]}}]};
