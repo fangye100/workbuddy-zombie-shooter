@@ -26,4 +26,13 @@ describe('player region presentation policy',()=>{
     expect(weaponHandGoals({...pose,action:'equip',phase:0},[2,1,3],0)).toEqual(lowered);
     expect(pose).toEqual(before);
   });
+  it.each([0, 3])('consumes an authored idle upper alias while preserving locomotion at speed %s', speed=>{
+    const choice=playerMotionChoice({...input,speed,states:{...states,'fuel-ready':{}},weapon:{action:'idle',clip:'fuel-ready',fallback:'idle',phase:0,startTick:0,weaponId:'flame'}});
+    expect(choice).toMatchObject({base:speed?'walk_r':'idle',upper:'fuel-ready',requested:'fuel-ready',phase:null,stamp:'',fallback:null,diagnostics:[]});
+  });
+  it.each(['missing', 'idle', 'walk_r'])('diagnoses unavailable or locomotion-only idle %s and retains the ready fallback', clip=>{
+    const choice=playerMotionChoice({...input,weapon:{action:'idle',clip,fallback:'idle',phase:0,startTick:0,weaponId:'flame'}});
+    expect(choice).toMatchObject({base:'walk_r',upper:'ready',phase:null,stamp:''});
+    expect(choice.diagnostics[0]).toContain(`WEAPON_CLIP_MISSING: ${clip}`);
+  });
 });

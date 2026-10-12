@@ -15,11 +15,11 @@ export function playerMotionChoice(i: PlayerMotionInput) {
   const candidates = moving ? [i.locomotionState ?? '', ...(i.speed > 2.5 ? ['run'] : []), 'walk', i.defaultState] : ['idle', i.defaultState];
   const base = candidates.find(has) ?? i.defaultState;
   const w = i.weapon, active = !!w && w.action !== 'idle';
-  const requested = active ? w.clip : 'ready';
+  const requested = w?.clip || 'ready';
   const isLocomotion = (name: string): boolean => ['idle','walk','run','jump',i.defaultState].includes(name) || name.startsWith('walk_');
-  const actionCandidates = active ? [w.clip, w.action === 'fire' ? 'shoot' : w.action, w.fallback].filter(s => !isLocomotion(s)) : ['ready'];
+  const actionCandidates = active ? [w.clip, w.action === 'fire' ? 'shoot' : w.action, w.fallback].filter(s => !isLocomotion(s)) : [requested, 'ready'].filter(s => !isLocomotion(s));
   const actual = actionCandidates.find(has) ?? (has('ready') ? 'ready' : null);
-  const missing = active && !actionCandidates.some(has);
+  const missing = active ? !actionCandidates.some(has) : !!w && requested !== 'ready' && (!has(requested) || isLocomotion(requested));
   return { base, upper: actual, requested, action: w?.action ?? 'idle', phase: active ? w.phase : null,
     stamp: active ? `${i.runId}:${w.weaponId}:${w.action}:${w.startTick}` : '',
     fallback: actual !== requested ? `${requested} → ${actual ?? 'base only'}` : null,
