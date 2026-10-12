@@ -2376,7 +2376,7 @@
         "animation",
         "gpu"
       ],
-      "read": "七件真实模型/切分附件候选、final import socket与模拟marker校准、44槽源对照、真实Input聚焦采样、Launcher前孔及0.90均匀后处理/真实肩球与入位局部frame候选、f5实机失败、aab机制实证与−90度侧视/HumanIK普通折叠补证、Fuel装配失败边界与Shell修复源待交付、历史实证和未完成可见验收",
+      "read": "七件真实模型/切分附件候选、final import socket与模拟marker校准、44槽源对照、真实Input聚焦采样、Launcher前孔/0.90均匀后处理及b489前斜口可见换弹、历史实机失败与跨帧像素边界、Fuel固定主握配对缩放无交集及Shell修复源待交付、未完成验收",
       "sourceRefs": [
         "editor-runtime-weapons",
         "weapon-model-projection",

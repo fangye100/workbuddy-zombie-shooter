@@ -249,7 +249,7 @@ out触发phase.20833/frame387，而crop落在403–410；mid触发.43056/frame41
 本轮仅将trial的Camera `yawOffsetDeg` 从0改为−90，保持distance1.8m/pitch0°/锚点Y1.18m；校准工具同步保留该持久值，三floor相机与全部武器数据不变。普通世界yaw180°输入时，角色朝−X、Launcher换弹炮管转到+Z；相机从−X观察人物前方及炮管侧面，使轴向抽取方向落在屏幕平面。该方位来自现有坐标/动作数据，是否实际露出前腔仍由新目标原始PNG判断。现有自由相机在Play被禁止；没有新增或注入运行时观察机位。
 
 ```powershell
-node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon launcher --launcher-recovery --collapse-ik-panel --aim-yaw 135 --side-aim-yaw 90 --out .workbuddy/tmp/wpn-integration/launcher-side-slot-collapsed-audit
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon launcher --launcher-recovery --collapse-ik-panel --aim-yaw -135 --side-aim-yaw 90 --out .workbuddy/tmp/wpn-integration/launcher-front-oblique-audit
 ```
 
 沿用真实移动/射击→R、out/mid/in及entry/late/首idle/upperReady的有界周期和PNG frameRange；本轮未启动Chrome，不预写新视角通过。该入口只补Launcher可见性，未执行武器不计本轮通过。
@@ -264,3 +264,13 @@ Shell与同源round底火等待用户补交修复实源；round×.90只归一化
 `launcher-side-slot-audit/observations.json`和`launcher-side-slot-135-audit/observations.json`两次各仅4样本/2张PNG，均因`pointer-ui-occluded`停止，不是新的动作验收失败或地面投影通过。yaw180的点被SELECT遮挡；yaw135投影ratio约[.7911,.7662]被FIELDSET遮挡。原始02-pistol.png显示右下HumanIK调试details展开，不能换任意鼠标点或绕过guard将此记为通过。
 
 现有探针的显式`--collapse-ik-panel`在真实Play/model就绪后，正常点击`#runtime-body-ik-panel > details > summary`折叠面板，再执行原瞄准guard；默认不折叠，静态模式拒绝此选项。记录summary前后open/title和实际点击，已经折叠时不再次打开；未就绪、不可点击或点击后未折叠明确失败。没有改DOM样式/移除元素、IK slider或Game状态。既有Panel重渲染继承details.open，因此普通用户折叠会保留；正常135/90输入仍必须通过canvas hit-test和作者地面射线检查。新命令见上文，本轮未运行Chrome，像素和Fuel装配待验边界不变。
+
+### b4894c1 前斜口实测与Fuel配对缩放边界
+
+`.workbuddy/tmp/wpn-integration/launcher-front-oblique-225-audit/observations.json`对应`b4894c17f8bb809ee52173ed6c05060113afee01`：22项检查、613样本、1310次输入/记录操作、26张原始PNG，正常TLS/headed NVIDIA，console error/exception为0，未出现`IK_UNREACHABLE/IK_SOCKET_RESIDUAL`。实际输入为`--aim-yaw -135 --side-aim-yaw 90`；物理方向225°等于−135°，但CLI只接受−180～180，最初225°请求在启动浏览器前被拒绝，原始`cli-argument-rejection.json`保留。HumanIK面板通过普通summary点击由open=true变false，没有绕过地面或UI guard。
+
+本版本out/mid原始像素可辨粉色长弹体在前口外、左手握导，in主体进入前腔、仅橙色底端在口内，补足本姿态普通换弹离槽/归位的可见证据；不证明精确手指接触或底火美术合格。out/mid/in触发分别为tick/frame 166/356、182/385、198/415，phase .20833/.43056/.65278，crop实际frame范围369–377、397–404、428–435，不能写成同帧像素。实际子件GUID为`as_29ec6c7622e0`，物理parent `magazine=[.1773,.252,0]`、child `base=[-.07985,.02212,0]`；Game动作参考frame不代替这两个装配socket。aab旧方位与736 UI遮挡的证据边界仍保留，不能追溯改写为当时已通过。
+
+Fuel仅解析一个连续配对比例参数，未发布新尺寸/hold/action frame：固定实际主握接触点actor-local `[.2219958487,1.5150559997,.12]`，枪体、罐体、物理socket及动作frame位置按`p(s)=pivot+s*(p(1)-pivot)`共同等比变化，旋转、H01接触偏移、骨长、phase时钟与玩法后坐不变。ready frame1931肩实体三角SAT的首个阻挡上限`s=.580214415`（名义.80m变为.46417m）；35个实际肩链留15mm余量的交集为`s∈[.614361253,1]`，下限来自frame2044/tick1054/reload phase .19697的右肩。两区间无交集，不能采用较小比例或零接触统计宣称修好。原始`fuel-primary-pivot-scale-sat.json`与`fuel-primary-pivot-scale-reach.json`保留；肩部基线六关节重放差1.3234e-7m，缩放后的arm skin尚未重放，这只是固定路径的规划冲突，不是全空间无解或新的GPU验收。Fuel生产配置保持pending，后续需有明确装配输入或动作依据再处理。
+
+Shell与同源round底火仍等待用户实际补交修复源（旧源SHA256 `92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063`），本轮没有cap/源几何修改或范围撤销。其余未完成接口可见性与Fuel实际装配继续保留；整个请求尚未完成，未创建Final Reviewer。
