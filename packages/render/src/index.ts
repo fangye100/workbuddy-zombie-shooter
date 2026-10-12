@@ -14,3 +14,4 @@ export * from './renderer-core';
 export * from './albedo-texture';
 export * from './decal-instances';
 export * from './procedural-decals';
+export { DecalPreviewRenderer } from './decal-preview';

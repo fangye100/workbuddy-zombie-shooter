@@ -49,6 +49,8 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 目前没有专用武器/音频 setter 或资产搜索。后续写调用使用返回的新 revision；其他参与者修改场景后须重读。
 
 程序贴花 schema v19、五种图案及生命周期见[贴花指南](../../docs/render/procedural-decals.md)。
+可视化入口：渲染 → 程序贴花工作区；未应用的参数草稿阻止 MCP 作者写入/保存/Play，
+先在界面应用或放弃。Agent 继续使用完整节点编辑相同 Decal 数据，不需要操纵预览 DOM。
 `editor_runtime.runtime.decals` 观察运行 count/time/evicted/marks/runId 与最后 GPU 批；
 读诊断不推进寿命，刚 emit 后 GPU 统计可能滞后一帧。Stop 清运行池，保留作者 Decal。
 保留无关组件、引用和 GUID。

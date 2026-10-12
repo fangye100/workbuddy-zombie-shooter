@@ -57,3 +57,4 @@ docs/evidence/crowd-navigation-20261010/*.png filter=lfs diff=lfs merge=lfs -tex
 docs/evidence/surface-navigation-20261010/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/dynamic-navigation-20261011/*.jpg filter=lfs diff=lfs merge=lfs -text
 docs/evidence/procedural-decals-20261013/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/evidence/decal-workbench-20261013/*.jpg filter=lfs diff=lfs merge=lfs -text

@@ -4,6 +4,26 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "decal-workbench-acceptance-20261013",
+      "path": "docs/evidence/decal-workbench-20261013/acceptance.md",
+      "title": "程序贴花独立工作区验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "editor",
+        "render",
+        "validation"
+      ],
+      "read": "基线bccb365上的实际参数UI、应用撤销、保存重载和真实GPU证据",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
       "id": "scene-decals",
       "path": "packages/scene/src/decals.ts",
       "title": "程序贴花数据契约",
@@ -34,7 +54,7 @@
         "mcp",
         "architecture"
       ],
-      "read": "v19持久化、GPU实例批、通用运行池、Play资源、MCP闭环及限制",
+      "read": "独立可视化参数工作区、草稿与作者命令、v19持久化、GPU实例批和MCP闭环",
       "sourceRefs": [
         "project-rules",
         "scene-schema",

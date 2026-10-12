@@ -10,6 +10,7 @@
 | Framework / Scene | `packages/scene/src/decals.ts`、`document.ts`、`migrate.ts`：图案、局部变换、稳定 mark id、v18→v19 迁移及诊断 |
 | Framework / Render | `decal-instances.ts`：通用有界池和打包；`procedural-decals.ts`：WGSL 与 GPU 实例批；`renderer-core.ts`：帧编码和资源释放 |
 | Editor | `services/runtime-decals.ts`：稳定 NodeId 接收者、权威 tick、Play 生命周期；`renderer.ts`：提供接收物的实际可见世界矩阵；MCP 传输不拥有第二份场景 |
+| Editor / 可视化工作区 | `services/decal-workbench.ts`：独立参数 UI；`decal-draft.ts`：隔离草稿、稳定接收者和并发冲突检查；Framework 的 `decal-preview.ts` 复用场景贴花 SDF 管线 |
 | Game / Content | 第一层街道的 24 个作者痕迹来自场景；本期没有增加伤害规则或自动生成 NPC 血迹/弹孔的玩法策略 |
 
 `Decal` 组件挂在既有静态 `MeshRenderer` 接收节点。`marks[]` 每项持有稳定 `id`、
@@ -51,7 +52,21 @@ premultiplied alpha 混合，aux 写掩码为 0，透明矩形不参与 inverted
 
 作者痕迹用 `scene_get → scene_edit_nodes` 替换完整接收节点 → `scene_validate` →
 `scene_save → scene_open → scene_get`；保留原 MeshRenderer、导航/碰撞和无关 marks。
-没有新增专用 mark Inspector；当前通过 MCP 完整节点参数编辑。
+可视化编辑入口是 **渲染 → 程序贴花工作区…**。从选中静态物体进入，未选中时优先打开
+已有贴花的接收物。左侧独占 GPU 预览，右侧管理接收物和稳定 mark id 列表，支持新增、
+复制、删除和全部现有参数：五种图案、种子、颜色、不透明度、宽深、局部位置、朝向
+四元数、法线偏移、优先级以及组件启用。提供朝上/朝前/朝右预设与四元数归一化。
+
+参数只改工作区草稿，实时图案与场景共享 `ProceduralDecalPass`，不复制 SDF 公式。
+预览自动居中和适配尺寸；图案正视忽略朝向，局部俯视/前视/立体视角展示局部朝向。
+位置、接收节点变换及法线偏移的实际摆放效果在**应用后的场景**中查看；此预览不是
+完整场景克隆，棋盘背景也不代表游戏材质和后处理。预览辅助体不写入场景文件。
+
+**应用到场景**通过 `SpawnEditStore.editNodes` 完整校验并生成一条可撤销的作者命令；
+接收节点被其他编辑改变时拒绝应用，不覆盖新值。删除最后一个 mark 会移除组件。
+未应用的草稿阻止工作区关闭、场景保存、Play 启动和 MCP 场景写入；可以明确放弃。
+应用后使用现有场景保存/重载；MCP 仍通过完整节点编辑相同数据，无第二份持久化状态。
+工作区关闭及 HMR 时销毁实例/帧缓冲和预览 target，并解绑独占画布；Resize 先释放旧 target。
 
 运行痕迹用新工具 `editor_decal`，必须在 Play 并使用当前 runId/revision：
 
@@ -71,3 +86,5 @@ evicted/marks/runId 和最后绘制帧 GPU instances/drawCalls/bufferBytes；GPU
 门禁：相关 Scene/Render/Editor owner 测试、typecheck、editor:build、architecture:check、
 scene:check、knowledge:check、Node MCP/场景契约测试。实际 GPU 与持久化结果见
 `docs/evidence/procedural-decals-20261013/acceptance.md`；未验证手机或任意复杂接收面。
+独立工作区的实际 UI、保存重载及 GPU 证据见
+`docs/evidence/decal-workbench-20261013/acceptance.md`（基线 `bccb365`）。

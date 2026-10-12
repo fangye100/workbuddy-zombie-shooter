@@ -52,6 +52,7 @@ import { AnimationDebugCollector } from './services/animation-debug/collector';
 import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
 import { AnimationDebugPanel } from './services/animation-debug/panel';
 import { BindingPanel } from './services/binding/binding-panel';
+import { DecalWorkbench } from './services/decal-workbench';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -330,7 +331,7 @@ async function boot(): Promise<void> {
   let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
@@ -1333,6 +1334,13 @@ async function boot(): Promise<void> {
     },
   });
   renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
+  const decalWorkbench = new DecalWorkbench(gpu, {
+    document: () => spawnStore?.document ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    edit: editAuthorNodes,
+    save: saveSpawnEdits,
+    changed: () => { editorMenu.refresh(); if (spawnStore && !playCtl.isPlaying) renderer.setDocument(spawnStore.document); },
+  });
   function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
     if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
     const result = spawnStore.editNodes(label, mutate);
@@ -1380,7 +1388,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1391,6 +1399,7 @@ async function boot(): Promise<void> {
     redo: () => reportAuthorTransform(authorTransform.history(true)),
     inspect: switchInspectorTab,
     resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
+    decals: () => decalWorkbench.open(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!)),
   });
   panel.onChange = () => {
     hudDirty = true;
@@ -1515,6 +1524,7 @@ async function boot(): Promise<void> {
   function setSpawnScene(doc: SceneDocument | null): void {
     sceneAuthorPanel.resetDraft();
     atmospherePanel.resetDraft();
+    decalWorkbench.resetDraft();
     authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
@@ -1582,7 +1592,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1667,6 +1677,7 @@ async function boot(): Promise<void> {
     authorAssets.prune();
     sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
     atmospherePanel.render();
+    decalWorkbench.refresh();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
@@ -4006,6 +4017,7 @@ async function boot(): Promise<void> {
   if (import.meta.hot !== undefined) {
     import.meta.hot.dispose(() => {
       disposed = true;
+      decalWorkbench.destroy();
       actorPreloader.stop();
       animationDebugPanel.dispose();
       gatePanel.dispose();
@@ -4019,11 +4031,12 @@ async function boot(): Promise<void> {
   let elapsed = 0;
   let last = performance.now();
 
+  (window as unknown as { __editor: Record<string, unknown> }).__editor.decalWorkbench = { snapshot: () => decalWorkbench.snapshot() };
   const editorAgent: EditorAgent = new EditorAgent({
     store: () => spawnStore,
     path: () => renderer.getSceneSource()?.url ?? null,
     busy: () => authorProjectionBusy,
-    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     pendingAssets: () => renderer.pendingAssetCount,
     open: async path => {
@@ -4218,6 +4231,7 @@ async function boot(): Promise<void> {
     editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);
+    decalWorkbench.tick();
     requestAnimationFrame(frame);
   };
 
