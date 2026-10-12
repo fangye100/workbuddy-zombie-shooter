@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_738efc1ba301",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-SHELL-01-primer-fixed",
+    "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+    "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+    "report": "assets/art/models/WPN-SHELL-01/WPN-SHELL-01-primer-fixed-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-SHELL-01-primer-fixed_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:3155d683657a7437d26d2edc6454cbca868dc96d4bd7d07247b3988a811d04c1",
+  "updatedAt": "2026-10-12T01:45:24.817Z",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0,
+        0.06796578520536423,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        0,
+        0.028965629786252976,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}

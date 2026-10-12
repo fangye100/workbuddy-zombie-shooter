@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_27caa4bad821",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-03-SMG-without-mag",
+    "source": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+    "sourceHash": "b6f63673734b298d8ddfe8d09a06abab782c7ca2eafb8a650d5842bb7f00bcc9",
+    "report": "assets/art/models/WPN-03-SMG/WPN-03-SMG-without-mag-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-03-SMG-without-mag_lod1.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:f5bd72e1058a2904f7cdeb78ae1b516eb96c37384e85fae8df1025cb79a7d0a9",
+  "updatedAt": "2026-10-12T01:45:24.477Z",
+  "modelSockets": {
+    "primaryGrip": {
+      "position": [
+        0.0003540636943252508,
+        0.0453422462051576,
+        -0.046872528618504675
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "supportGrip": {
+      "position": [
+        0.0003540636943252856,
+        0.13813999785644332,
+        0.18888392152259964
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "muzzle": {
+      "position": [
+        0.0003540636943252577,
+        0.15318828190800315,
+        0.29823478563060113
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "magazine": {
+      "position": [
+        0.0003540636943252577,
+        0.12309171380488346,
+        0.10361031189709381
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "chamber": {
+      "position": [
+        0.017910395087811753,
+        0.15820437659185646,
+        0.07351374379397413
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    }
+  }
+}

@@ -2376,7 +2376,7 @@
         "animation",
         "gpu"
       ],
-        "read": "五件本体源/LOD同尺度固定视图、拓扑修复和分件边界，Pistol/Launcher/Mag01校准、正常TLS实证与未完成验收",
+      "read": "七件真实模型/切分附件候选、final import socket与模拟marker校准、40槽对照与七键正常TLS探针、历史实证和未完成可见验收",
       "sourceRefs": [
         "editor-runtime-weapons",
         "weapon-model-projection",

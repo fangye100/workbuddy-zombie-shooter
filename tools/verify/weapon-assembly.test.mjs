@@ -36,3 +36,8 @@ test('中途输入失败仍尝试释放持有按键与鼠标，不注入runtime'
  await input.pointer({x:50,y:60},true);await input.move({x:55,y:65});assert.equal(calls.at(-1).params.type,'mouseMoved');assert.equal(calls.at(-1).params.buttons,1);
  await input.release();assert.equal(calls.at(-1).params.x,55);assert.equal(calls.at(-1).params.y,65);
 });
+test('七件模式仍用真实Digit keyDown/up，未传选项保留原流程',async()=>{
+ assert.equal(probeOptions(['--expected-head',head]).allWeapons,false);assert.equal(probeOptions(['--expected-head',head,'--all-weapons']).allWeapons,true);
+ const calls=[],input=new ProbeInput({async send(method,params){calls.push({method,params});}});for(const key of ['two','three','four','five','six'])await input.tap(key);
+ assert.equal(calls.length,10);for(let i=0;i<5;i++){assert.equal(calls[i*2].params.code,'Digit'+(i+2));assert.equal(calls[i*2].params.windowsVirtualKeyCode,50+i);assert.equal(calls[i*2+1].params.type,'keyUp');}
+});

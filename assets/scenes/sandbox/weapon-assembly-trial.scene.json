@@ -43,7 +43,17 @@
     "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
     "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
     "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
-    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb"
+    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+    "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+    "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+    "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+    "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+    "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb"
   ],
   "nodes": [
     {
@@ -615,9 +625,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.48,
-                        0.447,
-                        0.08
+                        0.4800000000000001,
+                        0.44699999999999995,
+                        0.07999999999999996
                       ],
                       "rotation": [
                         0,
@@ -782,7 +792,10 @@
                   "magazineStep": 2
                 },
                 "presentation": {
-                  "model": null,
+                  "model": {
+                    "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+                    "guid": "as_cdf2dc294f5f"
+                  },
                   "placeholder": "shotgun",
                   "color": "#ef934b",
                   "lengthM": 0.98,
@@ -817,9 +830,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.98,
-                        0,
-                        0
+                        0.7125714069001725,
+                        0.4211807558061399,
+                        0.029999999999999888
                       ],
                       "rotation": [
                         0,
@@ -899,7 +912,46 @@
                     "impact": "ink-hit",
                     "resource": null
                   },
-                  "assembly": null
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.029510609846269128,
+                        1.107910163857817,
+                        0.21257823875506016
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+                          "guid": "as_738efc1ba301"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0.5000000000000001,
+                            0.5000000000000001,
+                            -0.5000000000000001,
+                            0.5000000000000001
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
                 }
               },
               {
@@ -945,7 +997,10 @@
                   "magazineStep": 2
                 },
                 "presentation": {
-                  "model": null,
+                  "model": {
+                    "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+                    "guid": "as_a96a571ba3ef"
+                  },
                   "placeholder": "smg",
                   "color": "#d5df8a",
                   "lengthM": 0.58,
@@ -980,9 +1035,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.58,
-                        0,
-                        0
+                        0.4651073142491059,
+                        0.5478460357028457,
+                        0.02999999999999997
                       ],
                       "rotation": [
                         0,
@@ -1062,7 +1117,46 @@
                     "impact": "ink-hit",
                     "resource": null
                   },
-                  "assembly": null
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030220423761289618,
+                        1.2946546783873611,
+                        0.16693230429292394
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+                          "guid": "as_bc00f36d6062"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
                 }
               },
               {
@@ -1108,7 +1202,10 @@
                   "magazineStep": 2
                 },
                 "presentation": {
-                  "model": null,
+                  "model": {
+                    "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+                    "guid": "as_6a1a6e91ec15"
+                  },
                   "placeholder": "sniper",
                   "color": "#92d2e9",
                   "lengthM": 1.18,
@@ -1143,9 +1240,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        1.18,
-                        0,
-                        0
+                        0.7417843275880397,
+                        0.48031994839509673,
+                        0.029999999999999666
                       ],
                       "rotation": [
                         0,
@@ -1225,7 +1322,46 @@
                     "impact": "ink-hit",
                     "resource": null
                   },
-                  "assembly": null
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030340436851086807,
+                        1.1444801838558436,
+                        0.23487557731296227
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+                          "guid": "as_a17fcc3a5a85"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
                 }
               },
               {
@@ -1271,7 +1407,10 @@
                   "magazineStep": 0
                 },
                 "presentation": {
-                  "model": null,
+                  "model": {
+                    "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+                    "guid": "as_c12ac01417cb"
+                  },
                   "placeholder": "chainsaw",
                   "color": "#f8a247",
                   "lengthM": 0.85,
@@ -1306,9 +1445,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.85,
-                        0,
-                        0
+                        0.8779250177036406,
+                        0.39008257305163496,
+                        0.029999999999999805
                       ],
                       "rotation": [
                         0,
@@ -1388,7 +1527,23 @@
                     "impact": "ink-hit",
                     "resource": null
                   },
-                  "assembly": null
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.027828648254036182,
+                        1.1444720106114232,
+                        0.45286094333396854
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [],
+                    "reloadAttachmentId": null
+                  }
                 }
               },
               {
@@ -1434,7 +1589,10 @@
                   "magazineStep": 2
                 },
                 "presentation": {
-                  "model": null,
+                  "model": {
+                    "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+                    "guid": "as_420ed26a291b"
+                  },
                   "placeholder": "flame",
                   "color": "#ff7045",
                   "lengthM": 0.8,
@@ -1469,9 +1627,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.8,
-                        0,
-                        0
+                        0.5815598128041001,
+                        0.49423744150128124,
+                        0.029999999999999832
                       ],
                       "rotation": [
                         0,
@@ -1551,7 +1709,46 @@
                     "impact": "ink-hit",
                     "resource": null
                   },
-                  "assembly": null
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.03199584874484702,
+                        1.094944000305416,
+                        0.24456153719258167
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+                          "guid": "as_837e48912f68"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
                 }
               },
               {
@@ -1635,9 +1832,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.715,
-                        0.46,
-                        0.03
+                        0.7150000000000001,
+                        0.4600000000000001,
+                        0.02999999999999997
                       ],
                       "rotation": [
                         0,
@@ -1731,8 +1928,46 @@
                         1
                       ]
                     },
-                    "attachments": [],
-                    "reloadAttachmentId": null
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb",
+                          "guid": "as_29ec6c7622e0"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0,
+                            0,
+                            1
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart",
+                    "sockets": {
+                      "magazine": {
+                        "position": [
+                          -0.365,
+                          0.28,
+                          0
+                        ],
+                        "rotation": [
+                          0,
+                          0,
+                          0,
+                          1
+                        ]
+                      }
+                    }
                   }
                 }
               }
@@ -1748,7 +1983,7 @@
       "transform": {
         "position": [
           0,
-          1.05,
+          1.18,
           2.5
         ],
         "rotation": [
@@ -1776,8 +2011,8 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 25,
-          "distance": 3.6,
+          "pitchDeg": 15,
+          "distance": 2.1,
           "yawOffsetDeg": -30
         }
       ],
@@ -1789,7 +2024,7 @@
       "parent": null,
       "transform": {
         "position": [
-          3.0,
+          3,
           0,
           2.5
         ],
@@ -1956,7 +2191,7 @@
     "createdAt": "2026-10-12T01:02:00+08:00",
     "updatedAt": "2026-10-12T01:02:00+08:00",
     "author": "scene:gen",
-    "notes": "Post-animation HumanIK controls: run + upper-body aim/hand IK; walk + head/foot IK; mouse/stick, node and nearest living enemy targets. Play sliders are transient; scene author settings persist."
+    "notes": "Post-animation HumanIK controls: run + upper-body aim/hand IK; walk + head/foot IK; mouse/stick, node and nearest living enemy targets. Play sliders are transient; scene author settings persist. 五本体新LOD与去重复几何的附件fit候选；近Camera只试验场景，GPU七武器/实际离回槽待验。"
   },
   "playerStart": "nd_motion_player",
   "loseCondition": "player-death"

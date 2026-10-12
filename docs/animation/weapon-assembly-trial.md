@@ -1,6 +1,6 @@
 # 真实武器装配试验入口
 
-当前运行时已接入 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。2026-10-12 的 WPN-02～06 五件本体源 GLB 已齐，已有固定方向检视入口及三档 game_ready 数值候选；尚未完成这些本体的视觉验收和附件精确 fit，整个接入请求仍未完成。此前“次日交付”的描述是下文 c19f3b2 历史状态，现已解除源缺失。
+当前试验与三floor已配置七件真实模型和六件独立换弹附件，复用v17 assembly、单一Spine层/双手IK与Play ledger。93572b5及c19f3b2的正常TLS、真实GPU输入与生命周期证据仅对应当时Pistol/Launcher版本；新五本体、切分区域、附件离回槽、近景Camera和全动作握姿仍待本轮headed验收，整个接入请求未完成。2026-10-12 WPN-02～06本体已齐，下文“次日交付”保留为c19f3b2历史事实。
 
 ## WPN-20261012 本体原源检视
 
@@ -26,7 +26,7 @@
 
 本体LOD管线 `tools/art/build-weapon-body-lods.py` 复用既有node-baked加载、QEM和源表面转移；每档独立1024逐面atlas，均等比按源长轴归一到规格长度，实际宽高差见各 `assets/art/models/<ID>/lod-report.json`。Shotgun 5000/2500/800，SMG 5000/2500/800，Sniper 6000/3000/1000，Chainsaw 6000/3000/1000，Flame 6000/3000/1000；位置焊接后各档非流形为0。首次无拓扑保护QEM新增边的失败计数保留，正式候选显式 `preservetopology=True, selected=False`；Flame派生输入仅移除3个非流形邻面、补17面封局部孔（原源23边界/2非流形→派生0/0），源不改。MeshLab补孔会选择新增面，未显式 `selected=False` 时QEM曾未减面而导致atlas失败；管线现在在atlas前拒绝超预算。15档RGB五面内采样平均误差约1.7–4.1/255，不代表完整texel/美术通过；Chainsaw LOD2面积比 .883、细齿损失待GPU确认。
 
-检视入口：[本体Raw/LOD三向](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-body-lod-review.scene.json)。60mesh，每行一件，每组Raw/LOD0/LOD1/LOD2；各组三向为侧+X、枪口+Z（电锯齿端候选）、俯+Y。节点 `nd_body_lod_<行0..4>_<组0..3>_<向0..2>`，每件共用展示比例，不按每LOD包围盒另缩放；raw变换补偿与LOD parser recenter都来自报告。所有状态仍为 `visual-review-candidate`，本轮未挂三floor或重复附加固有弹匣/罐体。
+检视入口：[本体Raw/LOD三向](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-body-lod-review.scene.json)。60mesh，每行一件，每组Raw/LOD0/LOD1/LOD2；各组三向为侧+X、枪口+Z（电锯齿端候选）、俯+Y。节点 `nd_body_lod_<行0..4>_<组0..3>_<向0..2>`，每件共用展示比例，不按每LOD包围盒另缩放；raw变换补偿与LOD parser recenter都来自报告。该LOD里程碑a792bf4尚未挂三floor；后续下面的切分/装配阶段已配置候选，仍非美术批准。
 
 复验：`node tools/art/prepare-weapon-body-lod-review.mjs --check`；`.workbuddy/tmp/art-python/Scripts/python.exe tools/art/build-weapon-body-lods.test.py`（3项空间/实际输出预算/焊接拓扑检查通过）；`pnpm run scene:check`、`architecture:check`、`knowledge:check`。首次sidecar漏写 `userData.file` 导致15项元数据门禁失败，已仅补齐本次sidecar文件标签并保持GUID，未用全局scene:gen覆盖。
 
@@ -34,7 +34,21 @@ CodeGraph在当前检出 roots=apps/assets/packages/tools 执行一次 `incremen
 
 ## 持久入口与测量
 
-独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化 H01 rig、SharedMotion Spine 层、双手 BodyIK、近景游戏 Camera、Light 与试验武器库；三层作者场景同样绑定 Pistol/Launcher。没有运行生成器覆盖三层。
+2026-10-12切分/装配候选：`tools/art/build-weapon-fit-parts.py`按node-baked空间区域切真实三角边并插值UV，封局部孔；SMG移出区为x<-.09且y<.30，Flame后can及冲突return-hose段为x>.19且y<.395。保留原源/完整本体候选，不按UV seam组件假分件；这些平面是否侵入receiver/握把、残留固有附件需GPU检查。七组各三档面数：SMG无mag 5000/2500/800、Flame无can 6000/3000/1000、SMGfitmag 400/200/80、狙击派生mag 400/200/80、Fuel罐680/336/122、Shell局部底火修复340/170/68、Launcher派生弹丸340/170/68；位置焊接边界/非流形均0，独立逐面源采样atlas均1024。各 `<variant>-fit-report.json`保存原source/hash、切平面/增删面/cap区域、XYZ缩放、各LOD几何/采样误差与parser偏移。props有明确非均匀fit缩放，法线由最终变换几何重算；本体继续等比。
+
+Fuel仅删除源note许可的冲突软管区，保留罐/阀；拓扑保护QEM实际970面floor，采用几何QEM留封孔余量。native fallback后无条件串联清理曾access violation；现在按真实非流形/边界条件处理，三边残孔显式封口，未安装依赖或用拆顶点掩盖拓扑。Shell只截源底火X>.174（约长2.1%）并取原黄铜有效texel封局部端；红壳/rim保留，仍需确认没有新橙楔/条纹。狙击mag来自SMGmag、Launcher弹丸来自Shell，交付缺口仍明确，均为本地派生而非WorkBuddy新生成；Launcher弹丸不宣称完整火箭造型。
+
+候选入口：[部件/槽口对照](https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-fit-review.scene.json)，40mesh。`nd_fit_<weapon>_assembled_0/1`为侧/俯主体，`_child_0/1`为同坐标独立附件；SMG/Flame另有`_integral_0/1`切前、`_cut_0/1`切后无外挂件；`nd_fit_prop_0_<LOD0..2>`为Shell底火、`nd_fit_prop_1_<LOD0..2>`为Fuel罐阀侧面。选择可见Hierarchy准确名称后F。各组共用尺度，包含实际v17 parent/child socket变换，不借另一渲染器或额外静态地面超容量。
+
+`node tools/art/calibrate-weapon-models.mjs --check`核对sidecar默认socket、scene覆盖、seed和三floor。新本体source测量点通过源node-baked旋转/等比scale/full-body pivot/各LOD实际parser recenter转到final import-space；旧Pistol+Z、Launcher+X主握与hold保持。Launcher仅scene assembly覆写后盖magazine位置并增加派生弹丸。七件模拟marker按各actorY和capsuleHalf=.90重新推导，未改伤害、弹量、攻击/换弹时钟。Shotgun/Sniper初始主掌actorZ=.12造成bind support越界55/78mm，root向身体回收.105m至Z=.015；SMG初始换弹越界34mm，上移root .05m仍6.6mm，最后上移.09m。原socket与骨长保留，CPU可达不认证实际持姿或遮挡。
+
+`node tools/art/check-weapon-fit.mjs`使用实际H01、RuntimeSession fire/reload与一次bind采样/IK，四向及相位共388样本。新五件手目标残差最大<2.8e-7m、非melee同tick fire origin误差<2.9e-7m；旧Pistol未采样Spine时20个换弹样本有最大55.2mm左手诊断，工具如实退出1，不能记为388帧全通过或据此盲改已有hold。原始`.workbuddy/tmp/wpn-integration/seven-fit-cpu.json`保留所有诊断，上身/头pointer未提供，IK_TARGET存在。新固定目标必须实际运动/Spine/换弹复验；旧target18/18不能免除本轮Pistol可见附件验收。
+
+离线相关检查：部件切割UV插值/面积守恒、封孔拒绝分叉及21件实际LOD预算/hash/位置焊接拓扑三项Python测试通过；99项owner回归和8项Node工具/生成默认测试通过。首次typecheck暴露旧测试将JSON直接强转WeaponArsenal的tuple不兼容，已改为正式validWeaponArsenal入口校验。该修复不改变业务schema。
+
+补充回归diagnostics测试1项通过，typecheck与editor:build通过（保留Vite大chunk提示）；scene:check为282资产/22个v17scene/15跨文件测试及既有LOD/P0/audio通过，architecture为284生产文件0错误，knowledge137条0错误。三floor语义比对只改变model/assembly/muzzle及dependency，Camera、玩法数值与其他组件相同；原交付目录已追踪文件无diff。CodeGraph在本检出roots=apps/assets/packages/tools一次incremental --no-embed：88files/211nodes/571edges、结构ready，runtime-weapons测试1文件解析恢复、旧锁竞态警告、6401/7029向量；未删锁/全量重建/等embedding。定向overview覆盖RuntimeWeapons.summary/afterPose与新fit工具prepared/build/main和真实Input入口；私有符号有导出筛选限制，不认证调用全面解析。原始codegraph-seven-fit.log及三份overview JSON均留ignored证据目录。
+
+独立场景 `assets/scenes/sandbox/weapon-assembly-trial.scene.json` 已登记在项目 scenes。本次独立试验服务的已验证证书域名入口为 `https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`。仓库固定5100服务契约未改；不将localhost视为本次TLS可达入口。场景持久化H01 rig、SharedMotion Spine层、双手BodyIK、Light与七件武器库；仅trial Camera改distance2.1m/pitch15°/camera节点Y1.18m（现有orbit-follow取该锚点高度），三floor Camera原样。没有运行生成器覆盖三层。
 
 编辑态的 `nd_pistol_inspect_0/1/2` 是同尺度侧面、+Z 端面与顶面副本，选择节点后按 F 聚焦；它们在 Play 隐藏。Pistol 的 final parseGlb 长轴实际为 Z；93572b5 的真实 GPU 静态 +Z 端面观察确认上方圆形炮口与内环。Launcher 已有 LOD0 +X 炮口观察；端面观察不认证握姿或弹道。
 
@@ -67,6 +81,12 @@ Renderer 一次 base/Spine 采样、一次 IK 后输出最终骨矩阵；右手�
 本阶段离线验证：90 项首次定向测试、旧HUD1项和模型占位/同tickVFX1项通过；scene:check 为246资产/19个v17场景、15项场景测试及既有质量/音频门禁通过，architecture为278文件，knowledge为137条，typecheck、editor:build与示例build通过。三层语义核对只允许Pistol/Launcher表现与玩家BodyIK变化，4件sidecar GUID/sourceHash保持。CodeGraph在本检出 apps/assets/packages/tools 有界刷新96+2文件；当前health为1050files/6889nodes/17320edges、5个解析恢复文件、7341未解析调用，healthy=true，但锁竞争警告和embedding6251/6851(91%)仍是限制，不将图谱完整性或测试数量当成可见验收。
 
 ## 本任务 headed 输入探针
+
+本轮可选 `--all-weapons`，默认仍为原Pistol/Launcher流程。七件模式按真实Digit1～7持续采样：1手枪hitscan＋Mag01、2霰弹pellets＋逐Shell换弹、3SMG hitscan＋独立弹匣、4狙击piercing＋SMG源短弹匣、5电锯melee（reloadMode:none，无假换弹附件/链条动画）、6喷射器flame＋Fuel罐、7发射器projectile＋Shell源弹丸。开火或攻击均是真实鼠标按住；W/S交替移动，R触发原WeaponSystem换弹，不setInput/注入phase。每件记录实际Spine/base、phase、子draw矩阵与frame、out/mid/in原始上下文/clip截图；脚本数值检查不批准遮挡画面。静态候选40槽与实际trial分别加载，不能以静态装配图代替离回槽实操。
+
+`weaponModels.snapshot().attachmentDraws`是本帧提交GPU的子draw `{id,guid,removed,frameStamp,worldMatrix}`副本；sync/frame失效与Stop清空，禁止反馈到时钟/下一帧IK。采样frame须同时匹配主draw和子矩阵，矩阵变化仅佐证，不替代可见几何。近Camera改变后旧c19取景证据不认证本轮视角。Audit按真正无遮挡地面选择主/侧aim-ratio，工具先核ground ray；不要把预设比例名字当朝向或槽口可见批准。
+
+七件命令沿用下面root/SHA/URL，在末尾加 `--all-weapons --aim-ratio '按可见地面填写x,y' --side-aim-ratio '按可见地面填写x,y'`。120秒操作预算保持；模型/输入失败或截图遮挡如实记录，Worker不预运行浏览器或声明七件GPU已通过。
 
 `tools/verify/weapon-assembly.mjs` 是本任务受控入口，复用 editor-smoke-lib 的 Cdp/等待与可见 Chrome，显式 `ignoreCertificateErrors:false`；不使用 ensureServer、normalizeEditorState、localStorage 修改、Security bypass 或手写 DOM dispatchEvent。旧冒烟调用的 HTTPS 默认仍保留，不能拿旧默认声明正常 TLS 通过。本入口不启动/重启 dev server。
 

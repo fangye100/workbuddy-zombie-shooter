@@ -295,14 +295,14 @@
         "frameStamp": 1,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 6.677574611883866e-08,
-          "rightOrientationResidualRad": 7.300048299977715e-08,
-          "leftTargetResidualM": 8.08559347954183e-08,
-          "leftOrientationResidualRad": 1.032382731180714e-07,
-          "muzzleYawErrorRad": 5.6797776286864355e-08,
+          "rightTargetResidualM": 6.677574611883866e-8,
+          "rightOrientationResidualRad": 7.300048299977715e-8,
+          "leftTargetResidualM": 8.08559347954183e-8,
+          "leftOrientationResidualRad": 1.032382731180714e-7,
+          "muzzleYawErrorRad": 5.6797776286864355e-8,
           "modelMuzzleToSimulationMountM": 0.6607638993607448,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 1.4746704688489552e-07
+          "sameTickShotOriginResidualM": 1.4746704688489552e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -337,14 +337,14 @@
         "frameStamp": 2,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 6.702535153956274e-08,
+          "rightTargetResidualM": 6.702535153956274e-8,
           "rightOrientationResidualRad": 0,
-          "leftTargetResidualM": 7.554643933796011e-08,
-          "leftOrientationResidualRad": 4.2146848510894035e-08,
-          "muzzleYawErrorRad": 3.445639773502762e-09,
+          "leftTargetResidualM": 7.554643933796011e-8,
+          "leftOrientationResidualRad": 4.2146848510894035e-8,
+          "muzzleYawErrorRad": 3.445639773502762e-9,
           "modelMuzzleToSimulationMountM": 0.6607640590247909,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 2.8734200007540375e-07
+          "sameTickShotOriginResidualM": 2.8734200007540375e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -379,14 +379,14 @@
         "frameStamp": 3,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 6.887920556427822e-08,
-          "rightOrientationResidualRad": 5.960464477539063e-08,
-          "leftTargetResidualM": 8.102751812492496e-08,
-          "leftOrientationResidualRad": 5.960464477539063e-08,
-          "muzzleYawErrorRad": 1.032485208440903e-09,
+          "rightTargetResidualM": 6.887920556427822e-8,
+          "rightOrientationResidualRad": 5.960464477539063e-8,
+          "leftTargetResidualM": 8.102751812492496e-8,
+          "leftOrientationResidualRad": 5.960464477539063e-8,
+          "muzzleYawErrorRad": 1.032485208440903e-9,
           "modelMuzzleToSimulationMountM": 0.6607638993607448,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 1.750514911380601e-07
+          "sameTickShotOriginResidualM": 1.750514911380601e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -421,14 +421,14 @@
         "frameStamp": 4,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 6.653251845203347e-08,
+          "rightTargetResidualM": 6.653251845203347e-8,
           "rightOrientationResidualRad": 0,
-          "leftTargetResidualM": 7.39220990770432e-08,
-          "leftOrientationResidualRad": 4.2146848510894035e-08,
-          "muzzleYawErrorRad": 1.0661590055249805e-08,
+          "leftTargetResidualM": 7.39220990770432e-8,
+          "leftOrientationResidualRad": 4.2146848510894035e-8,
+          "muzzleYawErrorRad": 1.0661590055249805e-8,
           "modelMuzzleToSimulationMountM": 0.6607640572206783,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 2.7939297292105245e-07
+          "sameTickShotOriginResidualM": 2.7939297292105245e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -463,14 +463,14 @@
         "frameStamp": 5,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 2.383448065048111e-08,
-          "rightOrientationResidualRad": 4.2146848510894035e-08,
-          "leftTargetResidualM": 6.324079538872266e-08,
-          "leftOrientationResidualRad": 7.300048299977715e-08,
-          "muzzleYawErrorRad": 9.892677779921127e-09,
+          "rightTargetResidualM": 2.383448065048111e-8,
+          "rightOrientationResidualRad": 4.2146848510894035e-8,
+          "leftTargetResidualM": 6.324079538872266e-8,
+          "leftOrientationResidualRad": 7.300048299977715e-8,
+          "muzzleYawErrorRad": 9.892677779921127e-9,
           "modelMuzzleToSimulationMountM": 0.850720317833948,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 4.623107761306856e-08
+          "sameTickShotOriginResidualM": 4.623107761306856e-8
         },
         "simulationShot": {
           "tick": 0,
@@ -505,14 +505,14 @@
         "frameStamp": 6,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 3.332856296365376e-08,
+          "rightTargetResidualM": 3.332856296365376e-8,
           "rightOrientationResidualRad": 0,
-          "leftTargetResidualM": 7.219840904494731e-08,
-          "leftOrientationResidualRad": 6.664001874625056e-08,
-          "muzzleYawErrorRad": 6.971975663461194e-09,
+          "leftTargetResidualM": 7.219840904494731e-8,
+          "leftOrientationResidualRad": 6.664001874625056e-8,
+          "muzzleYawErrorRad": 6.971975663461194e-9,
           "modelMuzzleToSimulationMountM": 0.8507204190103701,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 1.5782510729014716e-07
+          "sameTickShotOriginResidualM": 1.5782510729014716e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -547,14 +547,14 @@
         "frameStamp": 7,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 1.1363794677027015e-07,
+          "rightTargetResidualM": 1.1363794677027015e-7,
           "rightOrientationResidualRad": 0,
-          "leftTargetResidualM": 1.8398516754092857e-07,
-          "leftOrientationResidualRad": 2.9802322387695312e-08,
-          "muzzleYawErrorRad": 1.832025375847479e-08,
+          "leftTargetResidualM": 1.8398516754092857e-7,
+          "leftOrientationResidualRad": 2.9802322387695312e-8,
+          "muzzleYawErrorRad": 1.832025375847479e-8,
           "modelMuzzleToSimulationMountM": 0.8507202533753137,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 1.4353877702631703e-07
+          "sameTickShotOriginResidualM": 1.4353877702631703e-7
         },
         "simulationShot": {
           "tick": 0,
@@ -589,14 +589,14 @@
         "frameStamp": 8,
         "tick": 1,
         "measurements": {
-          "rightTargetResidualM": 2.2491366701511635e-08,
-          "rightOrientationResidualRad": 6.664001874625056e-08,
-          "leftTargetResidualM": 6.660666811534173e-08,
-          "leftOrientationResidualRad": 7.300048299977715e-08,
-          "muzzleYawErrorRad": 5.052754303846996e-08,
+          "rightTargetResidualM": 2.2491366701511635e-8,
+          "rightOrientationResidualRad": 6.664001874625056e-8,
+          "leftTargetResidualM": 6.660666811534173e-8,
+          "leftOrientationResidualRad": 7.300048299977715e-8,
+          "muzzleYawErrorRad": 5.052754303846996e-8,
           "modelMuzzleToSimulationMountM": 0.8507202190878659,
           "lastShotOriginTick": 0,
-          "sameTickShotOriginResidualM": 9.849474241074778e-08
+          "sameTickShotOriginResidualM": 9.849474241074778e-8
         },
         "simulationShot": {
           "tick": 0,
@@ -633,16 +633,723 @@
     "capsuleSource": "packages/content/src/generated/stats.generated.ts P-01 capsuleHeight=1.8",
     "zeroRecoilActorMuzzle": {
       "pistol": [
-        0.48,
+        0.4800000000000001,
         1.347,
-        0.08
+        0.07999999999999996
       ],
       "launcher": [
-        0.715,
+        0.7150000000000001,
         1.36,
-        0.03
+        0.02999999999999997
+      ],
+      "shotgun": [
+        0.7125714069001725,
+        1.32118075580614,
+        0.029999999999999888
+      ],
+      "smg": [
+        0.4651073142491059,
+        1.4478460357028458,
+        0.02999999999999997
+      ],
+      "sniper": [
+        0.7417843275880397,
+        1.3803199483950968,
+        0.029999999999999666
+      ],
+      "chainsaw": [
+        0.8779250177036406,
+        1.290082573051635,
+        0.029999999999999805
+      ],
+      "flame": [
+        0.5815598128041001,
+        1.3942374415012813,
+        0.029999999999999832
       ]
     },
     "meaning": "yaw-local simulation muzzle from ideal hold/model socket, y includes authored actorY then subtracts capsuleHalf; model-local sockets remain separate; no presentation feedback into simulation"
+  },
+  "bodyIntegration": {
+    "status": "calibrated-candidate-awaiting-headed",
+    "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准",
+    "definitions": {
+      "shotgun": {
+        "asset": {
+          "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+          "guid": "as_cdf2dc294f5f"
+        },
+        "sha256": "97b9b9159836b63dd0f05013519fc168347c054774259593c3d165342f31fc90",
+        "boundsMin": [
+          -0.037175752222537994,
+          0,
+          -0.4898760914802551
+        ],
+        "boundsMax": [
+          0.037175752222537994,
+          0.24960438907146454,
+          0.4898760914802551
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              -0.0004893901537308727,
+              0.14208983614218285,
+              -0.19757823875506017
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              -0.0004893901537308727,
+              0.18396086896932404,
+              0.1834481599719248
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              -0.0004893901537308727,
+              0.21327059194832293,
+              0.4999931681451123
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.02044612625983973,
+              0.14208983614218285,
+              -0.059403830425494214
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.022958388229468205,
+              0.20489638538289465,
+              -0.059403830425494214
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-02-SHOTGUN",
+          "primary": [
+            0,
+            0.17,
+            -0.285
+          ],
+          "support": [
+            0,
+            0.22,
+            0.17
+          ],
+          "muzzle": [
+            0,
+            0.255,
+            0.548
+          ],
+          "magazine": [
+            0.025,
+            0.17,
+            -0.12
+          ],
+          "chamber": [
+            0.028,
+            0.245,
+            -0.12
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.029510609846269128,
+            1.107910163857817,
+            0.21257823875506016
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.015
+        ],
+        "holdCalibration": {
+          "priorActorContactZ": 0.12,
+          "priorBindLeftResidualM": 0.05511691,
+          "change": "模型root向身体回收.105m；保留实际primary/support位置，GPU全动作/轮廓未验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "smg": {
+        "asset": {
+          "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+          "guid": "as_a96a571ba3ef"
+        },
+        "sha256": "3b73ce32ceac11b0a7e79f1a084b122dfdb972ef2de69a12df11c18b8ac1387d",
+        "boundsMin": [
+          -0.027208298444747925,
+          0,
+          -0.29007431864738464
+        ],
+        "boundsMax": [
+          0.027208298444747925,
+          0.21765385568141937,
+          0.29007431864738464
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.00022042376128961802,
+              0.045345321612639024,
+              -0.04693230429292393
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.00022042376128965285,
+              0.13814307326392475,
+              0.18882414584818039
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.00022042376128962498,
+              0.15319135731548458,
+              0.2981750099561819
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.00022042376128962498,
+              0.12309478921236489,
+              0.10355053622267456
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.01777675515477612,
+              0.1582074519993379,
+              0.07345396811955487
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-03-SMG",
+          "variant": "WPN-03-SMG-without-mag",
+          "primary": [
+            0.12,
+            0.145,
+            0
+          ],
+          "support": [
+            -0.35,
+            0.33,
+            0
+          ],
+          "muzzle": [
+            -0.568,
+            0.36,
+            0
+          ],
+          "magazine": [
+            -0.18,
+            0.3,
+            0
+          ],
+          "chamber": [
+            -0.12,
+            0.37,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.030220423761289618,
+            1.2946546783873611,
+            0.16693230429292394
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.34,
+          0.12
+        ],
+        "holdCalibration": {
+          "priorActorContactY": 1.25,
+          "priorBindReloadLeftResidualM": 0.03398582,
+          "intermediateActorContactY": 1.3,
+          "intermediateBindReloadLeftResidualM": 0.00657699,
+          "change": "新SMG模型root上移.09m，降低卸下弹匣目标肩距；保留原源socket，GPU仍待验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "sniper": {
+        "asset": {
+          "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+          "guid": "as_6a1a6e91ec15"
+        },
+        "sha256": "3d4f041fce97c0cff74be6678ccf04d8f6584c817fa1dedd24399413bc94f678",
+        "boundsMin": [
+          -0.055202752351760864,
+          0,
+          -0.5899192094802856
+        ],
+        "boundsMax": [
+          0.055202752351760864,
+          0.3851744830608368,
+          0.5899192094802856
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.0003404368510868097,
+              0.10551981614415631,
+              -0.21987557731296228
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.00034043685108687925,
+              0.2057659302942307,
+              0.20115810211735027
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.00034043685108693493,
+              0.23583976453925304,
+              0.5069087502750773
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.00034043685108683757,
+              0.1756920960492084,
+              0.005678179524705141
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.035426576803612865,
+              0.23583976453925304,
+              -0.08955562891786555
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-04-SNIPER",
+          "primary": [
+            0.12,
+            0.105,
+            0
+          ],
+          "support": [
+            -0.3,
+            0.205,
+            0
+          ],
+          "muzzle": [
+            -0.605,
+            0.235,
+            0
+          ],
+          "magazine": [
+            -0.105,
+            0.175,
+            0
+          ],
+          "chamber": [
+            -0.01,
+            0.235,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.030340436851086807,
+            1.1444801838558436,
+            0.23487557731296227
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.015
+        ],
+        "holdCalibration": {
+          "priorActorContactZ": 0.12,
+          "priorBindLeftResidualM": 0.07830725,
+          "change": "模型root向身体回收.105m；保留实际primary/support位置，GPU全动作/轮廓未验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "chainsaw": {
+        "asset": {
+          "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+          "guid": "as_c12ac01417cb"
+        },
+        "sha256": "89cc873a75ff81154e48877c5e949d463c8ef80b7f70378ce4743bf6d9fc8a94",
+        "boundsMin": [
+          -0.13989055156707764,
+          0,
+          -0.4301570951938629
+        ],
+        "boundsMax": [
+          0.13989055156707764,
+          0.33264681696891785,
+          0.4301570951938629
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              -0.002171351745963816,
+              0.10552798938857681,
+              -0.33286094333396854
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              -0.0021713517459637857,
+              0.2695021518725375,
+              -0.04499519141768202
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              -0.002171351745963735,
+              0.14561056244021167,
+              0.4250640743696719
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              -0.002171351745963816,
+              0.21848796798863862,
+              -0.15795517001774384
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              -0.002171351745963816,
+              0.21848796798863862,
+              -0.15795517001774384
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-05-CHAINSAW",
+          "primary": [
+            0.43,
+            0.145,
+            -0.045
+          ],
+          "support": [
+            0.035,
+            0.37,
+            -0.045
+          ],
+          "muzzle": [
+            -0.61,
+            0.2,
+            -0.045
+          ],
+          "magazine": [
+            0.19,
+            0.3,
+            -0.045
+          ],
+          "chamber": [
+            0.19,
+            0.3,
+            -0.045
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.027828648254036182,
+            1.1444720106114232,
+            0.45286094333396854
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.12
+        ],
+        "holdCalibration": null,
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "flame": {
+        "asset": {
+          "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+          "guid": "as_420ed26a291b"
+        },
+        "sha256": "39d9af0b52c2754f3f00e0d6bb55164ca91337e978e15e3748dec82dc640fea9",
+        "boundsMin": [
+          -0.06781460344791412,
+          0,
+          -0.3368300795555115
+        ],
+        "boundsMax": [
+          0.06781460344791412,
+          0.36989685893058777,
+          0.3368300795555115
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.0019958487448470197,
+              0.15505599969458397,
+              -0.12456153719258167
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.001995848744847045,
+              0.158661935732116,
+              0.07737088090921204
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.0019958487448471047,
+              0.2992934411958652,
+              0.3369982756115183
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.0019958487448469846,
+              0.19111536006990426,
+              -0.23273961831854262
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.027237401007571233,
+              0.29568750515833314,
+              -0.13177340926764575
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-06-FLAME",
+          "variant": "WPN-06-FLAME-without-can",
+          "primary": [
+            0.04,
+            0.215,
+            0
+          ],
+          "support": [
+            -0.24,
+            0.22,
+            0
+          ],
+          "muzzle": [
+            -0.6,
+            0.415,
+            0
+          ],
+          "magazine": [
+            0.19,
+            0.265,
+            0
+          ],
+          "chamber": [
+            0.05,
+            0.41,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.03199584874484702,
+            1.094944000305416,
+            0.24456153719258167
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.12
+        ],
+        "holdCalibration": null,
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      }
+    }
   }
 }

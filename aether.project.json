@@ -129,6 +129,12 @@
       "path": "assets/scenes/sandbox/weapon-body-lod-review.scene.json",
       "name": "WPN-20261012 · 原源 / LOD0 / LOD1 / LOD2 三向（候选）",
       "enabled": true
+    },
+    {
+      "id": "sc_weapon_fit_review",
+      "path": "assets/scenes/sandbox/weapon-fit-review.scene.json",
+      "name": "七武器 · 去重复部件 / 实际slot / Shell与Fuel候选",
+      "enabled": true
     }
   ],
   "startIndex": 1,

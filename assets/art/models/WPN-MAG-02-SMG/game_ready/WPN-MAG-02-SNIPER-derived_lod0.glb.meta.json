@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_a17fcc3a5a85",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-02-SNIPER-derived",
+    "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+    "report": "assets/art/models/WPN-MAG-02-SMG/WPN-MAG-02-SNIPER-derived-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-MAG-02-SNIPER-derived_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:cce02f31ec3680ba4b436d00b2255b6998ed186a9a36226e4ed219e9d5fddb27",
+  "updatedAt": "2026-10-12T01:45:24.720Z",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0,
+        0.07769648933410644,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        0,
+        0.033052525520324706,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}

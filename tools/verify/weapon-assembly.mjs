@@ -15,7 +15,7 @@ export function probeOptions(argv){
  const out=path.resolve(root,value('out','.workbuddy/tmp/wpn-integration/weapon-assembly-headed'));
  if(!out.startsWith(path.join(root,'.workbuddy','tmp')+path.sep))throw new Error('证据只能写本检出 .workbuddy/tmp 子目录');
  const ratio=name=>{const raw=value(name,null);if(raw===null)return null;const a=raw.split(',').map(Number);if(a.length!==2||a.some(n=>!Number.isFinite(n)||n<.05||n>.95))throw new Error(name+' 必须是有界画布比例 x,y (.05–.95)');return a;};
- return {root,expectedHead,url:url.href,cdpPort,holdMs,out,aimRatio:ratio('aim-ratio'),sideAimRatio:ratio('side-aim-ratio'),chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,cdpPort,holdMs,out,allWeapons:argv.includes('--all-weapons'),aimRatio:ratio('aim-ratio'),sideAimRatio:ratio('side-aim-ratio'),chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** Read-only reconstruction: uploaded skin matrix × normalized inverse-bind origin. */
 export function posedJointPosition(skin,normalization,ib){
@@ -41,7 +41,7 @@ export function profileOwners(processes,profile){
 async function freePort(port){
  await new Promise((resolve,reject)=>{const server=net.createServer();server.once('error',()=>reject(new Error('CDP端口被占用；不接管/终止已有浏览器')));server.listen(port,'127.0.0.1',()=>server.close(resolve));});
 }
-export const KEY={w:{key:'w',code:'KeyW',windowsVirtualKeyCode:87},s:{key:'s',code:'KeyS',windowsVirtualKeyCode:83},r:{key:'r',code:'KeyR',windowsVirtualKeyCode:82},one:{key:'1',code:'Digit1',windowsVirtualKeyCode:49},seven:{key:'7',code:'Digit7',windowsVirtualKeyCode:55}};
+export const KEY={w:{key:'w',code:'KeyW',windowsVirtualKeyCode:87},s:{key:'s',code:'KeyS',windowsVirtualKeyCode:83},r:{key:'r',code:'KeyR',windowsVirtualKeyCode:82},...Object.fromEntries(['one','two','three','four','five','six','seven'].map((name,i)=>[name,{key:String(i+1),code:'Digit'+(i+1),windowsVirtualKeyCode:49+i}]))};
 export class ProbeInput {
  constructor(cdp,record=()=>{}){this.cdp=cdp;this.record=record;this.held=new Map();this.mouse=null;}
  async key(name,down){const spec=KEY[name];if(!spec)throw new Error('未知按键');if(down)this.held.set(name,spec);await this.cdp.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',...spec,nativeVirtualKeyCode:spec.windowsVirtualKeyCode});if(!down)this.held.delete(name);this.record({input:'key',name,down});}
@@ -132,6 +132,28 @@ async function run(options){
    if(reloadShots.has('out')&&(pose?.action==='ready'||pose?.action==='reload'&&pose.phase>=proc.magazineInPhase)&&!reloadShots.has('in')){reloadShots.add('in');await capture('11-magazine-in',!!options.aimRatio);}
   });check('换弹phase与截图采样（遮挡另验）',reloadShots.has('out')&&reloadShots.has('in')&&(!options.aimRatio||reloadShots.has('mid')),[...reloadShots]);const reload=report.samples.filter(s=>s.label==='held-move-reload');check('移动中换弹phase',reload.some(s=>s.models?.pose?.action==='reload')&&reload.some(s=>Math.hypot(s.player.x-reload[0].player.x,s.player.z-reload[0].player.z)>.1),{phases:reload.map(s=>s.models?.pose?.phase)});check('reload期间腿部locomotion继续',legsChanged(reload),reload.map(s=>({clip:s.actor?.clip,time:s.actor?.time})));await capture('05-after-reload');
   check('reload期间本帧模型/双手结果',reload.some(s=>s.models?.visible&&s.models.frameStamp===s.frame&&Number.isFinite(s.models.measurements?.leftTargetResidualM)),reload.at(-1)?.models);
+  if(options.allWeapons){
+   await input.release();const definitions=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions,keys=['one','two','three','four','five','six','seven'];
+   if(definitions.length!==7)throw new Error('七件模式要求真实7武器场景');
+   for(let i=0;i<definitions.length;i++){
+    const def=definitions[i],label='seven-'+def.id;await input.tap(keys[i]);await sampleFor(label+'-equip',700);let ready=await snap(label+'-ready');
+    check(label+'真实切换与draw',ready.models?.visible&&ready.models.weaponId===def.id&&ready.models.frameStamp===ready.frame,ready.models);
+    if(options.aimRatio)canvas=await aimAt(i%2&&options.sideAimRatio?options.sideAimRatio:options.aimRatio,label+'-aim');
+    await input.pointer(canvas,true);const before=await snap(label+'-attack-before');const direction=i%2?'s':'w';await input.key(direction,true);await sampleFor(label+'-moving-attack',650);await input.pointer(canvas,false);await input.key(direction,false);await capture(label+'-attack');
+    const attacks=report.samples.filter(s=>s.label===label+'-moving-attack');check(label+'适用攻击与腿动画',attacks.some(s=>s.weapons?.equipped===def.id&&s.models?.pose?.action==='fire')&&legsChanged(attacks),{behavior:def.behavior,before:before.weapons,after:attacks.at(-1)?.weapons,poses:attacks.map(s=>s.models?.pose)});
+    if(def.ammo.reloadMode==='none'){check(label+'无换弹语义',def.presentation.assembly.reloadAttachmentId===null&&ready.models.attachmentDraws?.length===0,{reloadMode:def.ammo.reloadMode});continue;}
+    const shots=new Set(),p=def.presentation.procedural,start=Date.now();let reversed=false;await input.key(direction,true);await input.tap('r');await sampleFor(label+'-moving-reload',Math.min(5000,def.ammo.reloadSec*1000+650),async sample=>{
+     if(!reversed&&Date.now()-start>700){await input.key(direction,false);await input.key(direction==='w'?'s':'w',true);reversed=true;}
+     const child=sample.models?.attachmentDraws?.find(d=>d.id===def.presentation.assembly.reloadAttachmentId),pose=sample.models?.pose;
+     if(child?.removed&&!shots.has('out')){shots.add('out');await capture(label+'-out',!!options.aimRatio);}
+     else if(child?.removed&&pose.phase>=(p.magazineOutPhase+p.magazineInPhase)/2&&!shots.has('mid')){shots.add('mid');await capture(label+'-mid',!!options.aimRatio);}
+     if(shots.has('out')&&child&&!child.removed&&!shots.has('in')){shots.add('in');await capture(label+'-in',!!options.aimRatio);}
+    });await input.release();const samples=report.samples.filter(s=>s.label===label+'-moving-reload'),out=samples.find(s=>s.models?.attachmentDraws?.some(d=>d.removed)),inside=samples.find(s=>s.models?.pose?.action==='reload'&&s.models?.attachmentDraws?.some(d=>!d.removed));
+    const localChild=sample=>{const d=sample?.models?.attachmentDraws?.find(d=>d.id===def.presentation.assembly.reloadAttachmentId),o=sample?.authorPlayer;if(!d||!o||d.frameStamp!==sample.frame)return null;return actorPoint(d.worldMatrix.slice(12,15).map((n,k)=>n-o.pos[k]),{pos:[0,0,0],scale:1/o.scale,quat:o.quat.map((n,k)=>k===3?n:-n)});},outLocal=localChild(out),inLocal=localChild(inside),delta=outLocal&&inLocal?Math.hypot(...outLocal.map((n,k)=>n-inLocal[k])):null;
+    check(label+'实际附件out/in采样（可见性另验）',shots.has('out')&&shots.has('in')&&delta!==null&&delta>.001,{shots:[...shots],outFrame:out?.frame,inFrame:inside?.frame,outActorLocal:outLocal,inActorLocal:inLocal,translationDeltaM:delta});
+    check(label+'移动换弹下身持续',legsChanged(samples)&&samples.some(s=>Math.hypot(s.player.x-samples[0].player.x,s.player.z-samples[0].player.z)>.1),samples.map(s=>({frame:s.frame,phase:s.models?.pose?.phase,clip:s.actor?.clip})));
+   }
+  }
   await input.release();await click('#btn-pause');const paused=await snap('pause-start');await sleep(600);const frozen=await snap('pause-end');check('Pause模拟与动作时钟冻结',paused.state==='paused'&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time&&frozen.actor?.layer?.time===paused.actor?.layer?.time,{paused,frozen});await capture('06-paused');
   await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');
   await click('#btn-play');await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150});const restarted=await snap('restart');check('重启新身份与模型',restarted.cycle>baseline.cycle&&restarted.player?.runId!==baseline.player?.runId&&restarted.models?.visible,restarted);await capture('08-restart');

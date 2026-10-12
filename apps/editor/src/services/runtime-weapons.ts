@@ -34,13 +34,15 @@ export class RuntimeWeapons implements PostPoseDrawPort {
   private frame:PoseFrameOutput={frameStamp:0,stamp:-1,nodes:[],matrices:new Map()};
   private projection:WeaponModelView={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};
   private measurements:Record<string,number|null>={};
+  /** 本帧实际提交的附件矩阵，只用于诊断，不驱动相位或下一帧求解。 */
+  private attachmentDraws:{id:string;guid:string|undefined;removed:boolean;frameStamp:number;worldMatrix:number[]}[]=[];
   constructor(private readonly ports:RuntimeWeaponsPorts){}
   view():WeaponModelView {
     const pose=this.runtime?.weapons.poseIntent;
     const diagnostics=[...this.errors].filter(e=>!e.includes(': WEAPON_LEGACY ')||e.startsWith(`${pose?.weaponId}:`));
     return {...this.projection,visible:this.projection.visible&&pose?.weaponId===this.projection.weaponId,diagnostics};
   }
-  summary(){return {pending:this.pending,loaded:[...this.assemblies.keys()],generation:this.generation,simulationTick:this.runtime?.tick??null,pose:this.runtime?.weapons.poseIntent??null,...this.view(),visibleDrawCount:this.drawObjects().filter(d=>d.visible).length,warnings:[...this.errors],ikDiagnostics:this.active?.object.skinState?.bodyIk?.diagnostics??[],measurements:{...this.measurements}};}
+  summary(){return {pending:this.pending,loaded:[...this.assemblies.keys()],generation:this.generation,simulationTick:this.runtime?.tick??null,pose:this.runtime?.weapons.poseIntent??null,...this.view(),visibleDrawCount:this.drawObjects().filter(d=>d.visible).length,warnings:[...this.errors],ikDiagnostics:this.active?.object.skinState?.bodyIk?.diagnostics??[],measurements:{...this.measurements},attachmentDraws:this.attachmentDraws.map(d=>({...d,worldMatrix:[...d.worldMatrix]}))};}
   private error(message:string):void {this.errors.add(message);}
   private valid(generation:number):boolean {return generation===this.generation&&!!this.session&&this.session.state!=='stopped'&&!this.abort?.signal.aborted;}
   start(doc:SceneDocument,session:PlaySession):void {
@@ -105,10 +107,10 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(this.active?.object.skinState?.bodyIk)delete this.active.object.skinState.bodyIk.attachment;
     for(const a of this.assemblies.values()){a.draw.dispose();a.children.forEach(c=>c.draw.dispose());}
     this.assemblies.clear();this.active=null;this.bones=null;this.nodeId=null;this.session=null;this.runtime=null;this.pending=0;
-    this.projection={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};this.measurements={};this.frame.matrices.clear();
+    this.projection={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};this.measurements={};this.attachmentDraws=[];this.frame.matrices.clear();
   }
   sync(runtime:RuntimeSession|null):void {
-    this.projection={...this.projection,visible:false};this.measurements={};
+    this.projection={...this.projection,visible:false};this.measurements={};this.attachmentDraws=[];
     this.runtime=runtime;
     for(const a of this.assemblies.values()){a.draw.draw.visible=false;a.children.forEach(c=>c.draw.draw.visible=false);}
     const previous=this.active;this.active=null;
@@ -132,6 +134,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
   frameFor(nodeId:string,stamp:number):PoseFrameOutput|undefined {
     if(nodeId!==this.nodeId||!this.active)return;
     this.projection={...this.projection,visible:false};
+    this.attachmentDraws=[];
     this.active.assembly.draw.draw.visible=false;this.active.assembly.children.forEach(c=>c.draw.draw.visible=false);
     const ik=this.active.object.skinState?.bodyIk;
     if(!ik?.attachment||!ik.binding.enabled||ik.binding.weight<=0)return;
@@ -153,6 +156,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
         local=attachedModelFrame(support,request.dependent!.contact,child.sockets.primaryGrip);
       }else local=composeSocket(root,composeSocket(composeSocket(active.assembly.sockets[child.spec.parentSocket]!,child.spec.offset),inverseSocket(child.sockets[child.spec.childSocket]!)));
       const matrix=mat4();multiply(matrix,actorMatrix,socketMatrix(local));child.draw.setMatrix(matrix);child.draw.draw.visible=true;
+      this.attachmentDraws.push({id:child.spec.id,guid:child.spec.model.guid,removed:active.removed&&child.spec.id===active.assembly.definition.presentation.assembly!.reloadAttachmentId,frameStamp:frame.stamp,worldMatrix:Array.from(matrix)});
     }
     const muzzleMatrix=mat4();multiply(muzzleMatrix,world,socketMatrix(active.assembly.sockets.muzzle!));
     const muzzle=rigidFromMatrix(muzzleMatrix)!;

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_29ec6c7622e0",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-07-LAUNCHER-round-derived",
+    "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+    "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+    "report": "assets/art/models/WPN-SHELL-01/WPN-07-LAUNCHER-round-derived-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-07-LAUNCHER-round-derived_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:452b7baf795f1e096ccd7061f41fc33c0a174e07e2ac6007297bdd5731a714ac",
+  "updatedAt": "2026-10-12T01:45:24.863Z",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0.08771875703334808,
+        0.024577364325523376,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        -0.05371875703334808,
+        0.024577364325523376,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        -0.08871875703334808,
+        0.024577364325523376,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}
