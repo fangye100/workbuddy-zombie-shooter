@@ -2,16 +2,36 @@
 import { quatMul, type Quat } from '@aether/core';
 import type { WeaponSystem } from '@aether/runtime';
 import type { BoneSocket, ModelSockets, SocketTransform, WeaponDefinition } from '@aether/scene';
-import { inverseRotation, rotateVec3, type AttachmentIkRequest } from '@aether/render';
+import { validSocketTransform } from '@aether/scene';
+import { composeSocket, inverseRotation, rotateVec3, type AttachmentIkRequest } from '@aether/render';
 
 export interface WeaponModelProjection {
   request: AttachmentIkRequest;
   magazineRemoved: boolean;
 }
+const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+function blendRotation(a:Quat,b:Quat,t:number):SocketTransform['rotation'] {
+  let dot=a.reduce((n,v,i)=>n+v*b[i]!,0),sign=dot<0?-1:1;dot=Math.min(1,Math.abs(dot));
+  const angle=Math.acos(dot),s=Math.sin(angle),wa=s<1e-6?1-t:Math.sin((1-t)*angle)/s,wb=s<1e-6?t:Math.sin(t*angle)/s;
+  const q=a.map((v,i)=>v*wa+b[i]!*sign*wb),n=Math.hypot(...q);return [q[0]!/n,q[1]!/n,q[2]!/n,q[3]!/n];
+}
+/** Game约定的可选动作参考frame；不是物理握点/槽，也不保存actor坐标或时钟。 */
+export function weaponActionFrameDiagnostics(sockets:ModelSockets):string[] {
+  const keys=['reloadPose','reloadExtract','reloadClearance','reloadReturnClearance'];
+  if(!keys.some(k=>sockets[k]!==undefined))return [];
+  const errors=keys.filter(k=>(k==='reloadPose'||k==='reloadExtract'||sockets[k]!==undefined)&&!validSocketTransform(sockets[k]))
+    .map(k=>`WEAPON_ACTION_FRAME: ${k} 缺失或不是有效模型局部刚体frame`);
+  if(sockets.reloadExtract&&validSocketTransform(sockets.reloadExtract)&&sockets.reloadExtract.position[0]<=0)
+    errors.push('WEAPON_ACTION_FRAME: reloadExtract 必须先沿模型局部+X脱开');
+  for(const key of ['reloadClearance','reloadReturnClearance'])if(sockets[key]&&validSocketTransform(sockets[key])&&Math.abs(sockets[key].rotation[3])<1-1e-6)
+    errors.push(`WEAPON_ACTION_FRAME: ${key} 是平移waypoint，rotation必须为单位旋转`);
+  return errors;
+}
 export function weaponModelProjection(def:WeaponDefinition,pose:WeaponSystem['poseIntent'],yaw:number,actorRotation:Quat,
-  sockets:ModelSockets,right:{id:string;socket:BoneSocket},left:{id:string;socket:BoneSocket},reloadGrip?:SocketTransform):WeaponModelProjection|null {
+  sockets:ModelSockets,right:{id:string;socket:BoneSocket},left:{id:string;socket:BoneSocket},reloadGrip?:SocketTransform,diagnostic?:(message:string)=>void):WeaponModelProjection|null {
   const assembly=def.presentation.assembly;
   if(!assembly||!sockets.primaryGrip||!sockets.supportGrip||!sockets.muzzle)return null;
+  const invalid=weaponActionFrameDiagnostics(sockets);if(invalid.length){invalid.forEach(d=>diagnostic?.(d));return null;}
   const inverseActor=inverseRotation(actorRotation),aim:Quat=[0,-Math.sin(yaw/2),0,Math.cos(yaw/2)];
   const recoil:Quat=[0,0,Math.sin(pose.recoil.pitchDeg*Math.PI/360),Math.cos(pose.recoil.pitchDeg*Math.PI/360)];
   const worldRotation=quatMul(quatMul(aim,recoil),assembly.holdPose.rotation);
@@ -26,7 +46,27 @@ export function weaponModelProjection(def:WeaponDefinition,pose:WeaponSystem['po
   let dependent=sockets[pose.reload.leftHandTarget];
   if(!dependent)return null;
   dependent=structuredClone(magazineRemoved&&reloadGrip?reloadGrip:dependent);
-  if(magazineRemoved){
+  if(pose.action==='reload'&&sockets.reloadPose&&sockets.reloadExtract){
+    if(!reloadGrip){diagnostic?.('WEAPON_ACTION_FRAME: 动作frame需要真实reload附件primaryGrip');return null;}
+    const recovering=pose.phase>=p.chamberPhase;
+    const weight=recovering?smooth((1-pose.phase)/Math.max(1e-8,1-p.chamberPhase)):smooth(pose.phase/Math.max(1e-8,p.magazineOutPhase));
+    const base=structuredClone(target),reload=composeSocket(base,sockets.reloadPose);
+    const clearance=recovering?(sockets.reloadReturnClearance??sockets.reloadClearance):sockets.reloadClearance;
+    const arc=clearance?rotateVec3(base.rotation,clearance.position):[0,0,0];
+    target.position=base.position.map((v,k)=>v+(reload.position[k]!-v)*weight+arc[k]!*Math.sin(Math.PI*weight)) as [number,number,number];
+    target.rotation=blendRotation(base.rotation,reload.rotation,weight);
+    if(recovering){
+      dependent.position=dependent.position.map((v,k)=>v+(sockets.supportGrip!.position[k]!-v)*(1-weight)) as [number,number,number];
+      dependent.rotation=blendRotation(dependent.rotation,sockets.supportGrip.rotation,1-weight);
+    }
+    if(magazineRemoved){
+      const t=(pose.phase-p.magazineOutPhase)/Math.max(1e-8,p.magazineInPhase-p.magazineOutPhase),extract=sockets.reloadExtract;
+      const axial=t<.2?smooth(t/.2):t>.8?smooth((1-t)/.2):1;
+      const lateral=t>=.2&&t<=.8?Math.sin(Math.PI*(t-.2)/.6):0;
+      dependent.position=reloadGrip.position.map((v,k)=>v+extract.position[k]!*(k===0?axial:lateral)) as [number,number,number];
+      dependent.rotation=blendRotation(reloadGrip.rotation,composeSocket(reloadGrip,extract).rotation,lateral);
+    }
+  }else if(magazineRemoved){
     const phase=(pose.phase-p.magazineOutPhase)/Math.max(1e-8,p.magazineInPhase-p.magazineOutPhase);
     dependent.position[1]-=.12*Math.sin(Math.PI*phase);
   }

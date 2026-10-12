@@ -129,7 +129,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(!ik.binding.enabled||ik.binding.weight<=0||!right.enabled||right.weight<=0||!left.enabled||left.weight<=0){this.error('WEAPON_IK_DISABLED: 精确装配需有效双手控制，保留 legacy');return;}
     const reload=a.children.find(c=>c.spec.id===a.definition.presentation.assembly!.reloadAttachmentId);
     const reloadGrip=reload?.sockets.primaryGrip?composeSocket(composeSocket(composeSocket(a.sockets[reload.spec.parentSocket]!,reload.spec.offset),inverseSocket(reload.sockets[reload.spec.childSocket]!)),reload.sockets.primaryGrip):undefined;
-    const projection=weaponModelProjection(a.definition,pose,player.yaw,object.quat as Quat,a.sockets,{id:right.id,socket:bones.rightHand},{id:left.id,socket:bones.leftHand},reloadGrip);
+    const projection=weaponModelProjection(a.definition,pose,player.yaw,object.quat as Quat,a.sockets,{id:right.id,socket:bones.rightHand},{id:left.id,socket:bones.leftHand},reloadGrip,d=>this.error(`${a.definition.id}: ${d}`));
     if(!projection){this.error(`${a.definition.id}: WEAPON_SOCKET 缺少当前相位 socket`);return;}
     ik.attachment=projection.request;ik.controlWeights??={};ik.controlWeights[right.id]=1;ik.controlWeights[left.id]=1;
     this.active={assembly:a,object,right:rightNode,left:leftNode,removed:projection.magazineRemoved};

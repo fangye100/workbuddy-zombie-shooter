@@ -1574,9 +1574,9 @@
                     },
                     "muzzle": {
                       "position": [
-                        0.7150000000000001,
-                        0.4800000000000001,
-                        0.02999999999999997
+                        0.675,
+                        0.5499999999999999,
+                        0.30999999999999994
                       ],
                       "rotation": [
                         0,
@@ -1659,9 +1659,9 @@
                   "assembly": {
                     "holdPose": {
                       "position": [
-                        -0.03,
-                        1.08,
-                        0.34
+                        -0.31,
+                        1.15,
+                        0.3
                       ],
                       "rotation": [
                         0,
@@ -1678,7 +1678,7 @@
                           "guid": "as_29ec6c7622e0"
                         },
                         "parentSocket": "magazine",
-                        "childSocket": "insertion",
+                        "childSocket": "base",
                         "offset": {
                           "position": [
                             0,
@@ -1694,22 +1694,7 @@
                         }
                       }
                     ],
-                    "reloadAttachmentId": "reloadPart",
-                    "sockets": {
-                      "magazine": {
-                        "position": [
-                          -0.365,
-                          0.28,
-                          0
-                        ],
-                        "rotation": [
-                          0,
-                          0,
-                          0,
-                          1
-                        ]
-                      }
-                    }
+                    "reloadAttachmentId": "reloadPart"
                   }
                 }
               }

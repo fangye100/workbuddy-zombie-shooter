@@ -54,9 +54,9 @@
     },
     "supportGrip": {
       "position": [
-        0.048,
+        -0.08,
         0.213,
-        0
+        -0.05
       ],
       "rotation": [
         0,
@@ -80,8 +80,8 @@
     },
     "magazine": {
       "position": [
-        -0.225,
-        0.105,
+        0.197,
+        0.28,
         0
       ],
       "rotation": [
@@ -93,9 +93,61 @@
     },
     "chamber": {
       "position": [
-        -0.184,
-        0.295,
-        0.036
+        0.197,
+        0.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadPose": {
+      "position": [
+        0.135,
+        -0.024,
+        -0.382
+      ],
+      "rotation": [
+        0,
+        0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "reloadExtract": {
+      "position": [
+        0.179,
+        -0.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadClearance": {
+      "position": [
+        0,
+        0.14,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "reloadReturnClearance": {
+      "position": [
+        0,
+        0.14,
+        0.2
       ],
       "rotation": [
         0,

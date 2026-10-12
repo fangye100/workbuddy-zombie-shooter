@@ -74,12 +74,31 @@ const attach=(weapon,aid,parent,desiredRotation=I)=>{
  a.attachments=[{id:'reloadPart',model:child.asset,parentSocket:parent,childSocket:'insertion',offset:socket([0,0,0],offsetRotation)}];a.reloadAttachmentId='reloadPart';
 };
 attach('smg','WPN-MAG-02-SMG-fit','magazine');attach('sniper','WPN-MAG-02-SNIPER-derived','magazine');attach('shotgun','WPN-SHELL-01-primer-fixed','magazine',plusX);attach('flame','WPN-FUEL-01-fit-can','magazine');
-// 旧Launcher方向/握点/hold不变；仅新增明确来源的reload弹丸及后盖装填位置。
-const launcher=prototype.definitions.find(w=>w.id==='launcher');const launcherMeta=read(launcher.presentation.model.path+'.meta.json');
-const launcherSockets={...launcherMeta.modelSockets,magazine:socket([-.365,.28,0])};
-launcher.presentation.assembly.sockets={magazine:launcherSockets.magazine};
+// Launcher实际+X前孔装填；旧-.365落在实心后盖，不能作为装配槽。
+// 物理socket在各LOD真正parser空间；动作frame为Game约定的模型局部delta，不是H01绝对点。
+const launcher=prototype.definitions.find(w=>w.id==='launcher'),launcherReport=read('assets/art/models/WPN-07-LAUNCHER/lod-report.json');
+const launcherMeta=read(launcher.presentation.model.path+'.meta.json'),reference=launcherReport.levels[0].parserRecenterMeters;
+const actionFrames={reloadPose:socket([.135,-.024,-.382],plusY),reloadExtract:socket([.179,-.04,0]),reloadClearance:socket([0,.14,0]),reloadReturnClearance:socket([0,.14,.20])};
+for(const l of launcherReport.levels){
+ const item=get(`assets/art/models/WPN-07-LAUNCHER/game_ready/${l.file}`,{assetId:'WPN-07-LAUNCHER'});
+ const delta=reference.map((v,k)=>v-l.parserRecenterMeters[k]),point=p=>p.map((v,k)=>v+delta[k]);
+ const physical={...launcherMeta.modelSockets,supportGrip:socket([-.08,.213,-.05]),magazine:socket([.197,.28,0]),chamber:socket([.197,.28,0])};
+ setSockets(item,{...Object.fromEntries(Object.entries(physical).map(([key,s])=>[key,socket(point(s.position),s.rotation)])),...actionFrames});
+}
+launcher.presentation.assembly.holdPose=socket([-.31,1.15,.30]);delete launcher.presentation.assembly.sockets;
 const launcherChild=parsed.get('assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb');
-launcher.presentation.assembly.attachments=[{id:'reloadPart',model:launcherChild.asset,parentSocket:'magazine',childSocket:'insertion',offset:socket([0,0,0])}];launcher.presentation.assembly.reloadAttachmentId='reloadPart';
+launcher.presentation.assembly.attachments=[{id:'reloadPart',model:launcherChild.asset,parentSocket:'magazine',childSocket:'base',offset:socket([0,0,0])}];launcher.presentation.assembly.reloadAttachmentId='reloadPart';
+calibration.launcherFrontLoading={status:'candidate-awaiting-actual-late-idle-headed',space:'physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw',
+ sourceHash:launcherReport.sourceHash,source:launcherReport.source,physicalLod0:read(launcher.presentation.model.path+'.meta.json').modelSockets,
+ holdPose:launcher.presentation.assembly.holdPose,actionFrames,
+ evidence:{frontCavityAxisX:[.1129507,.375],rearSolidCapX:-.3750396,roundLengthM:.1774375,roundRadiusM:.0248765,
+ foregripCrossSection:{point:[-.08,.213,-.05],sideZ:[-.0707917,.0708473],bottomY:.20726995},
+ idleBaselineGunTriangleHits:654,idleCandidateGunTriangleHits:0,idleLeftReachM:.48139205,leftChainM:.50484701,
+ pathSamples:12,pathHandFailures:0,pathMinimumLeftMarginM:.0143503,pathMinimumRightMarginM:.0171491,
+ lateRisk:'规划phase=1强留reload末帧有633肩衣交面；实际WeaponSystem完成后idle/upper ready crossfade尚待连续真实Input验证，不能称clear',
+ rawReports:['launcher-static-side-geometry-03b0818.json','launcher-continuous-quick-03b0818.json','launcher-clearance-arc-geometry-03b0818.json','launcher-return-arc-geometry-03b0818.json'],
+ historicalEndPng:'.workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png',historicalEndTarget:'965cf',historicalEndLimit:'历史CDP像素参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f CUA +X炮孔另有有效方向观察，未本地导出'},
+ limits:['H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准','部分raw省略动画transition，57–142mm重放误差只供规划','round底火继承Shell缺陷；用户已选择补交修复源，实际新版路径/commit待提供，未改几何']};
 for(const w of prototype.definitions){
  const a=w.presentation.assembly,ss={...read(w.presentation.model.path+'.meta.json').modelSockets,...a.sockets};
  // yaw=0 actorWorld RY+90；scene独立markers存模拟空间，绝非GLB local点。

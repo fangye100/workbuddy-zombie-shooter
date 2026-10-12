@@ -198,3 +198,25 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 ```
 
 `prop-torso-diagnosis-03b0818.json`的CPU重放中，Fuel out六段手链位置与raw最大误差1.361e-7m，149个Hips/Spine加权顶点位于实际closed can内部；Launcher out/in误差1.859e-7/3.089e-7m，分别2/1点在round内。正数证明这些姿态存在交叠；单向0顶点不证明clear。Shotgun重放误差26–80mm，省略过渡，不能给零交点结论。既有三组侧移及三组抬高耦合候选均没有同时证明可达和分离，未发布hold修改。限定reload到双Shoulder子树、关闭torso权重及组合的idle/out/in离线对照也未消除交叠，原layer不变；记录在`prop-torso-layer-03b0818.json`，不将mask对照当原姿态复现或像素批准。实际装配位置仍待修复，Shell/round底火源质量仍等待用户范围决定。
+
+## Launcher前孔与肩侧持候选（2026-10-12）
+
+CPU原源实际炮管截面确认+X前孔约`.375`、腔底`.112951`，旧`magazine=-.365`落在实心后盖。当前物理槽改为模型LOD0 final import-space `[.197,.28,0]`，弹丸以真实`base`接入，长177.44mm、半径24.88mm；未改GLB/轴向/比例或弹丸底火。历史`.workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png`来自965cf的CDP采集，仅作参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f的有效CUA观察另确认+X炮孔，未本地导出。
+
+旧idle整枪有654个CPU torso三角交面，不能以前移弹丸掩盖。真实下侧握区截面X=-.08/Y=.213、两侧Z=-.070792/+ .070847、该侧下表面Y=.207270支持`supportGrip=[-.08,.213,-.05]`。候选root `[-.31,1.15,.30]`在实际右肩-X侧：ready姿态左/右肩分别`[.222141,1.384928,.100033]`/`[-.152766,1.405282,-.011403]`，没有左右镜像或全局forward错误证据。候选idle整枪与round交面均0，左reach481.392mm/链504.847mm；这不是手指/像素批准，whole-skin parity未认证闭合。三档物理socket按各LOD parser recenter差换算；场景删除旧后盖override，继承sidecar，三floor/prototype与静态模拟muzzle marker同步，其他武器不变。
+
+v17既有命名刚体frame复用为**Game动作参考**：`reloadPose`是相对当前hold的模型局部米制/xyzw变换；`reloadExtract`是已挂附件握点的局部退出delta，先+X轴向179mm脱开，再暂侧移40mm；`reloadClearance`/`reloadReturnClearance`是转枪的局部平移waypoint。它们不是物理grip或装配槽，不含H01绝对actor坐标、骨长、phase时钟。Game依据现有magOut/magIn/chamber phase派生姿态；Framework仅执行通用IK/附件frame，Editor透传错误。可选frame全缺失沿用旧行为；缺必需配对、非法frame、非正轴向退出或缺真实附件握点明确diagnostic，模型回退。无需新增schema或另一时钟。
+
+12点phase路径手IK无不可达/socket residual，最紧左余14.35mm、右余17.15mm。直线转枪有22/124/354/707规划交面；局部抬升和右肩侧绕使所测进出中间点交面归零。原始`launcher-static-side-geometry-03b0818.json`、`launcher-continuous-quick-03b0818.json`、`launcher-clearance-arc-geometry-03b0818.json`、`launcher-return-arc-geometry-03b0818.json`仍保留。省略transition的部分raw基线重放差57–142mm只供规划；可靠晚段原frame2455/tick1270/phase.944444/clip3.116667的链重放差2.018e-7m。强行phase=1但仍保留reload末帧有633肩衣交面，该状态不等于真实WeaponSystem完成后的idle/upper ready crossfade；**必须实际连续录制late>.9→首idle→ready过渡后的raw与PNG**，不能由端点或离线零交面宣称动作可用。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结40位SHA' --weapon shotgun,smg,launcher --aim-yaw 180 --side-aim-yaw 135 --out .workbuddy/tmp/wpn-integration/front-loading-focused-audit
+```
+
+正常TLS入口继续`https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json`；5198为本次试验服务，仓库固定5100未改。前孔静态检查可选fit节点`nd_fit_launcher_assembled_0,nd_fit_launcher_child_0,nd_fit_launcher_assembled_1,nd_fit_launcher_child_1`；原有未影响30/40静态证据保留。新动作、手部可达、整枪不穿插和真正round离回槽仍待独立正常Input/GPU复验，Fuel真实装配仍待后续修正。
+
+用户现已选择**补交修复后的WPN-SHELL-01源模型**，等待新版实际路径/commit；不再等待范围三选一，也不进行程序cap/旧源自交修复。旧Shell与同源Launcher round只用于装配候选，其底火视觉仍未批准；没有授权缩小整个验收范围。新版源未到且独立复验未完成前，全队列不能标APPROVED/COMPLETED。
+
+本轮14项Game/loader owner测试、1项fixture测试、calibration/fixture `--check`、typecheck通过；scene:check为282资产、22个v17场景、15项跨文件测试及既有门禁通过，architecture286文件0错误、knowledge137条0错误。日志统一为`.workbuddy/tmp/wpn-integration/launcher-front-{owner-test,fixture-test,calibration-check,fixture-check,typecheck,scene-check,architecture-check,knowledge-check}.log`。没有浏览器/GPU执行，不把旧03b机械证据扩为新姿态批准。
+
+本检出/roots apps/assets/packages/tools一次CodeGraph `incremental-index --no-embed --json`更新15files/70nodes/306edges、当次0parse错误，结构ready；旧index.lock告警、5个既有parse文件与7891未解析调用保留，6822/7092向量完整。原始`launcher-front-index.log/health.log`记录限制；不删锁、不重建、不等待向量。
