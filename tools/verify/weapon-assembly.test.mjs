@@ -1,7 +1,19 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
 import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition} from './weapon-assembly.mjs';
+import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('静态模式限制登记场景、唯一NodeId及编辑入口，拒绝混入Play选项',()=>{
+ const args=['--expected-head',head,'--static-scene',STATIC_SCENES[1],'--nodes','nd_fit_smg_cut_0'];
+ const options=probeOptions(args);assert.equal(new URL(options.url).searchParams.get('scene'),STATIC_SCENES[1]);assert.deepEqual(options.nodeIds,['nd_fit_smg_cut_0']);
+ for(const extra of [['--all-weapons'],['--url','https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json']])assert.throws(()=>probeOptions([...args,...extra]));
+ assert.throws(()=>probeOptions(['--expected-head',head,'--static-scene',STATIC_SCENES[0]]));
+ assert.throws(()=>probeOptions(['--expected-head',head,'--static-scene',STATIC_SCENES[0],'--nodes','nd_a,nd_a']));
+ assert.throws(()=>probeOptions(['--expected-head',head,'--static-scene','assets/scenes/arbitrary.scene.json','--nodes','nd_a']));
+ assert.throws(()=>staticNodes(process.cwd(),STATIC_SCENES[1],['nd_missing']),/不是候选资产/);
+ assert.throws(()=>staticNodes(process.cwd(),STATIC_SCENES[1],['nd_cam0000']),/不是候选资产/);
+ const actual=staticNodes(process.cwd(),STATIC_SCENES[1],options.nodeIds)[0];assert.equal(actual.id,'nd_fit_smg_cut_0');assert.match(actual.asset.sha256,/^[a-f0-9]{64}$/);
+});
 test('本任务严格TLS headed参数不绕证书；旧调用默认保持',()=>{
  const flags=editorSessionFlags({cdpPort:9348,headed:true,appUrl:'https://example.test',ignoreCertificateErrors:false});
  assert.ok(!flags.includes('--ignore-certificate-errors'));assert.ok(!flags.some(f=>f.includes('headless')||f.includes('swiftshader')));

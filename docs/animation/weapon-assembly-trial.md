@@ -117,3 +117,17 @@ node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-desig
 两批 `09/10/11-magazine-*` 虽有原始 clip 与关联 sample/frame/phase，但 Mag01 仍被手、枪和身体遮挡，离槽/回槽几何未目检通过。侧批 out/mid/in 分别为 phase .2292/.4375/.7292、frame594/613/639，关联样本 yaw 均约 .683；该批其他时段朝向也有变化，文件名“side”不能证明全程侧向。下一步需取得真正可见的弹匣过程证据，不能以 phase 或附着等式替代。
 
 用户明确 WPN-02～06 本体次日才能完整提供；收到真实模型后才能标定对应附件精确 fit。Shell 底火/LOD2、Fuel 条纹与管阀视觉分离等候选缺陷仍未批准，其他静态边界见上文。整个原五件接入任务尚未完成；Final Reviewer 尚未创建，也没有全队列批准。本次收尾仅更新文档，不更改源码、测试、资产或校准数据，不重跑浏览器与场景门禁。
+
+## 固定候选视图原始 PNG 入口（2026-10-12）
+
+`weapon-assembly.mjs --static-scene <路径> --nodes <逗号分隔稳定NodeId>`只允许登记的60网格本体LOD场景和40网格fit场景，每次1～12个唯一节点。默认不传时仍走原Play路径。静态模式复用正常TLS/headed硬件、保留profile归属检查及自身cleanup；不进入Play，不改相机/变换数据，不调用内部选择接口。实际mouseWheel定位可见Hierarchy名称行、点击，再真实KeyF聚焦；先等待资产与Hierarchy精确名称同步，拒绝陈旧fallback列表。Inspector精确名称及可见文字行、Save disabled、作者节点指纹、F后相机target与实际对象bounds中心逐图核对。
+
+```powershell
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head '填入冻结的40位SHA' --static-scene assets/scenes/sandbox/weapon-fit-review.scene.json --nodes nd_fit_smg_integral_0,nd_fit_smg_cut_0,nd_fit_flame_integral_0,nd_fit_flame_cut_0,nd_fit_prop_0_0,nd_fit_prop_1_0 --out .workbuddy/tmp/wpn-integration/static-fit-audit
+```
+
+本体LOD示例用`--static-scene assets/scenes/sandbox/weapon-body-lod-review.scene.json --nodes nd_body_lod_3_1_0,nd_body_lod_4_3_0`。本体ID结构为`nd_body_lod_<0～4:霰弹/SMG/狙击/电锯/喷射器>_<0原件/1LOD0/2LOD1/3LOD2>_<0侧/1端/2俯>`；fit可选`nd_fit_<武器>_assembled_0/1`、`child_0/1`，SMG/Flame另有`integral_0/1`与`cut_0/1`，Shell/Fuel为`nd_fit_prop_0/1_<0～2档>`。不存在/非资产NodeId或GUID失配在启动前拒绝；不使用隐藏OPTION坐标。
+
+输出每节点原始全页PNG及`observations.json`，保留冻结HEAD、工具/helper hash、scene hash、AssetRef/GUID/GLB及meta hash、实际UI身份、editorCamera/bounds、截图前后frame范围、GPU/错误/cleanup记录。PNG未修补；frame范围不伪称截图锁定单一GPU帧。模型仍须人工检查端面、UV、轮廓、遮挡和重复附件；静态退出0不批准美术或换弹离回槽。
+
+工具7项定向Node测试通过；未提交工具在资产target `b8f60c3`上的小样（工具hash独立记录）为fit两节点6/6与body单节点5/5、正常TLS NVIDIA/Lovelace、console/exception 0，作者数据/场景/HEAD保持，浏览器关闭后9348空闲。原始证据分别为`.workbuddy/tmp/wpn-integration/static-tool-selftest-fit-final/`与`static-tool-selftest-body-2/`；只证明采集入口可用。Shell底火像素仍粗碎、其他候选与七件实际换弹须正式Audit，不能从本次工具自测改写批准状态。5198继续原PID74824，本次未重启；仓库5100固定契约不变。

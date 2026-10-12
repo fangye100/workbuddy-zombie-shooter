@@ -2,20 +2,25 @@
 import fs from 'node:fs';import path from 'node:path';import net from 'node:net';
 import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';import {fileURLToPath} from 'node:url';
 import {Cdp,launchEditorSession,waitFor,sleep} from './editor-smoke-lib.mjs';
+import {STATIC_SCENES,staticNodes,captureStatic} from './weapon-static.mjs';
 const REPO=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const SCENE='assets/scenes/sandbox/weapon-assembly-trial.scene.json';
 export function probeOptions(argv){
  const value=(name,fallback)=>{const i=argv.indexOf('--'+name);if(i<0)return fallback;if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('缺参数 '+name);return argv[i+1];};
  const root=path.resolve(value('root',REPO)),expectedHead=value('expected-head','');
- const url=new URL(value('url','https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene='+SCENE));
+ const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
+ if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
+ if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
+ if(staticScene!==null&&['--all-weapons','--aim-ratio','--side-aim-ratio'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ const scene=staticScene??SCENE,url=new URL(value('url','https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene='+scene));
  if(!/^[a-f0-9]{40}$/.test(expectedHead))throw new Error('必须提供完整 --expected-head');
- if(url.protocol!=='https:'||url.hostname!=='fangye-win11-office.tail6b29a2.ts.net'||url.port!=='5198'||url.searchParams.get('scene')!==SCENE||url.searchParams.has('play')||url.searchParams.has('game'))throw new Error('入口必须为本次 MagicDNS:5198 的编辑态试验scene；不自动Play/隐藏编辑UI');
+ if(url.protocol!=='https:'||url.hostname!=='fangye-win11-office.tail6b29a2.ts.net'||url.port!=='5198'||url.searchParams.get('scene')!==scene||url.searchParams.has('play')||url.searchParams.has('game'))throw new Error('入口必须为本次 MagicDNS:5198 的编辑态试验scene；不自动Play/隐藏编辑UI');
  const cdpPort=Number(value('cdp','9348')),holdMs=Number(value('hold-ms','1800'));
  if(!Number.isInteger(cdpPort)||cdpPort<1024||cdpPort>65535||!Number.isInteger(holdMs)||holdMs<800||holdMs>5000)throw new Error('cdp/hold-ms 超出有界范围');
  const out=path.resolve(root,value('out','.workbuddy/tmp/wpn-integration/weapon-assembly-headed'));
  if(!out.startsWith(path.join(root,'.workbuddy','tmp')+path.sep))throw new Error('证据只能写本检出 .workbuddy/tmp 子目录');
  const ratio=name=>{const raw=value(name,null);if(raw===null)return null;const a=raw.split(',').map(Number);if(a.length!==2||a.some(n=>!Number.isFinite(n)||n<.05||n>.95))throw new Error(name+' 必须是有界画布比例 x,y (.05–.95)');return a;};
- return {root,expectedHead,url:url.href,cdpPort,holdMs,out,allWeapons:argv.includes('--all-weapons'),aimRatio:ratio('aim-ratio'),sideAimRatio:ratio('side-aim-ratio'),chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,allWeapons:argv.includes('--all-weapons'),aimRatio:ratio('aim-ratio'),sideAimRatio:ratio('side-aim-ratio'),chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** Read-only reconstruction: uploaded skin matrix × normalized inverse-bind origin. */
 export function posedJointPosition(skin,normalization,ib){
@@ -50,6 +55,7 @@ export class ProbeInput {
  async pointer(point,down){this.position=point;this.mouse=point;await this.cdp.send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',x:point.x,y:point.y,button:'left',buttons:down?1:0,clickCount:1});if(!down)this.mouse=null;this.record({input:'mouse',point,down});}
  async release(){const errors=[];for(const name of [...this.held.keys()])try{await this.key(name,false);}catch(e){errors.push(String(e));}if(this.mouse)try{await this.pointer(this.mouse,false);}catch(e){errors.push(String(e));}return errors;}
 }
+KEY.f={key:'f',code:'KeyF',windowsVirtualKeyCode:70};
 const SNAPSHOT=`(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));const authorDocumentSha256=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
  return {authorDocumentSha256,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
  actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight}:null,attachmentRequest:s.bodyIk?.attachment??null,handChains:o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(Arm|ForeArm|Hand)$/.test(name)?[{name,position:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]),legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
@@ -66,13 +72,14 @@ async function run(options){
  const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
  if(fs.realpathSync(options.root)!==fs.realpathSync(REPO)||fs.realpathSync(process.cwd())!==fs.realpathSync(options.root))throw new Error('root/cwd 与脚本所属检出不一致');
  if(head()!==options.expectedHead)throw new Error('HEAD不匹配，拒绝移动target验证');
+ if(options.staticScene)staticNodes(options.root,options.staticScene,options.nodeIds);
  if(process.platform!=='win32')throw new Error('此入口只适配当前Windows；不猜测其他主机归属');
  const profile=path.join(options.root,'.workbuddy/tmp/chrome-profile');
  const raw=execFileSync('powershell.exe',['-NoProfile','-Command',"Get-CimInstance Win32_Process -Filter \"name = 'chrome.exe'\" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"],{encoding:'utf8'}).trim();
  const processes=raw?([JSON.parse(raw)].flat()):[];if(processes.some(p=>!p.CommandLine))throw new Error('部分Chrome进程CommandLine不可读，无法确认profile归属；停止');
  const owners=profileOwners(processes,profile);if(owners.length)throw new Error('保留profile正被Chrome持有，拒绝启动：PID '+owners.map(p=>p.ProcessId).join(','));
  await freePort(options.cdpPort);fs.mkdirSync(options.out,{recursive:true});
- const report={targetHead:options.expectedHead,root:options.root,url:options.url,scene:SCENE,sceneSha256:createHash('sha256').update(fs.readFileSync(path.join(options.root,SCENE))).digest('hex'),profile,cdpPort:options.cdpPort,normalTls:true,startedAt:new Date().toISOString(),samples:[],checks:[],actions:[],screenshots:[],limitations:['CPU skinScratch 是本帧上传数据，不是GPU readback；可见握姿/腿步态仍须人工看截图。','此脚本不覆盖静态LOD视图；不强制人为制造迟到decode。'],consoleErrors:[],exceptions:[]};
+ const report={mode:options.staticScene?'static':'play',toolSha256:createHash('sha256').update(fs.readFileSync(fileURLToPath(import.meta.url))).digest('hex'),staticHelperSha256:createHash('sha256').update(fs.readFileSync(path.join(REPO,'tools/verify/weapon-static.mjs'))).digest('hex'),targetHead:options.expectedHead,root:options.root,url:options.url,scene:options.staticScene??SCENE,sceneSha256:createHash('sha256').update(fs.readFileSync(path.join(options.root,options.staticScene??SCENE))).digest('hex'),profile,cdpPort:options.cdpPort,normalTls:true,startedAt:new Date().toISOString(),samples:[],checks:[],actions:[],screenshots:[],limitations:['原始PNG须人工检查轮廓、遮挡和美术质量；检查通过不等于像素批准。','不强制人为制造迟到decode。'],consoleErrors:[],exceptions:[]};
  let session,input;const check=(name,ok,detail)=>report.checks.push({name,ok:!!ok,detail});
  const save=()=>fs.writeFileSync(path.join(options.out,'observations.json'),JSON.stringify(report,null,2)+'\n');
  try{
@@ -87,6 +94,7 @@ async function run(options){
   await cdp.send('Page.bringToFront');
   const gpu=await cdp.eval('(async()=>{const a=await navigator.gpu?.requestAdapter();const i=a?.info??(a?.requestAdapterInfo?await a.requestAdapterInfo():null);return {secure:isSecureContext,vendor:i?.vendor,architecture:i?.architecture,description:i?.description};})()');report.gpu=gpu;
   check('HTTPS secure真实硬件',gpu?.secure&&gpu?.vendor==='nvidia'&&gpu?.architecture==='lovelace',gpu);if(!report.checks.at(-1).ok)throw new Error('未确认本机真实GPU，停止实操');
+  if(options.staticScene){await captureStatic(cdp,input,options,report,check);}else{
   const snap=async label=>{const sample={label,atMs:Date.now(),pointer:input.position??null,...await cdp.eval(SNAPSHOT)};report.samples.push(sample);return sample;};
   const capture=async(label,detail=false)=>{
    let clip;
@@ -158,11 +166,12 @@ async function run(options){
   await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');
   await click('#btn-play');await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150});const restarted=await snap('restart');check('重启新身份与模型',restarted.cycle>baseline.cycle&&restarted.player?.runId!==baseline.player?.runId&&restarted.models?.visible,restarted);await capture('08-restart');
   await click('#btn-stop');await sleep(500);const final=await snap('final-stop');check('重启后作者再次回滚',JSON.stringify(final.authorPlayer)===JSON.stringify(editor.authorPlayer)&&final.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:final.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:final.authorDocumentSha256});check('重启Stop无残留',final.ledger===0&&final.models?.pending===0&&final.models?.loaded.length===0,final);
+  }
  }catch(error){report.exceptions.push(String(error));}
  finally{
   if(input)report.cleanupInputErrors=await input.release();
   if(session){report.consoleErrors=session.cdp.consoleErrors;report.exceptions.push(...session.cdp.exceptions);try{const bcdp=new Cdp(session.ws,undefined);let cleanupTimer;try{await Promise.race([bcdp.send('Target.closeTarget',{targetId:session.targetId}),new Promise((_,reject)=>{cleanupTimer=setTimeout(()=>reject(new Error('owned target关闭超时')),3000);})]);}finally{clearTimeout(cleanupTimer);}}catch(e){report.cleanupTargetError=String(e);}session.ws.close();session.chrome.kill();}
-  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=18&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
+  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=(options.staticScene?options.nodeIds.length+4:18)&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
  }
  console.log(JSON.stringify({passed:report.passed,evidence:options.out,checks:report.checks.map(c=>({name:c.name,ok:c.ok})),exceptions:report.exceptions}));return report.passed?0:1;
 }
