@@ -1,6 +1,28 @@
 # 真实武器装配试验入口
 
-本阶段接入实际存在的 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。WPN-02～06 本体尚待外部交付，SMG 弹匣、Shell、Fuel 不挂缺失本体，整个五件接入请求仍未完成。
+当前运行时已接入 WPN-01、WPN-07-LAUNCHER 与 WPN-MAG-01 LOD0。93572b5 及 c19f3b2 的正常 TLS、真实 GPU headed 输入与生命周期检查通过；弹匣离槽/回槽细部仍未目检通过，不能据此批准所有握姿或模型质量。2026-10-12 的 WPN-02～06 五件本体源 GLB 已齐，新增固定方向检视入口；尚未生成这些本体的 game_ready 或完成附件精确 fit，整个接入请求仍未完成。此前“次日交付”的描述是下文 c19f3b2 历史状态，现已解除源缺失。
+
+## WPN-20261012 本体原源检视
+
+交付真源为 `assets/_delivery/WPN-20261012/delivery.json` 与五件同名 GLB。检视场景 `assets/scenes/sandbox/weapon-body-source-review.scene.json`（`sc_weapon_body_source_review`）已登记，入口：`https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-body-source-review.scene.json`。这是原 5198 试验服务的新场景入口，不变更固定5100约定，也不把创建入口写成 GPU 验收。
+
+场景有20个静态模型：每行一件，依次侧面、正长轴端面、俯面、负长轴端面。Shotgun 行为 `侧+X / 端+Z / 俯+Y / 端-Z`；其余四行为 `侧+Z / 端+X / 俯+Y / 端-X`。节点稳定ID为 `nd_wpn_body_<行0..4>_<列0..3>`，行顺序为 Shotgun、SMG、Sniper、Chainsaw、Flame。选择准确 Hierarchy 名称后单独按 F；节点旋转已把标注原源方向朝向编辑相机+Z，无需操纵 gizmo。每件四副本使用同一展示尺度，非米制；炮口正号、握区和分件区域均待 headed 目检。
+
+| 原源 | 三角数 | 节点变换后长轴 | 位置焊接连通块（面数） | 后续LOD预算 |
+|---|---:|---|---|---|
+| WPN-02-SHOTGUN | 100000 | Z | 1（100000） | 5000 / 2500 / 800 |
+| WPN-03-SMG | 100000 | X | 2（98310、1690） | 5000 / 2500 / 800 |
+| WPN-04-SNIPER | 99984 | X | 2（97618、2366） | 6000 / 3000 / 1000 |
+| WPN-05-CHAINSAW | 100004 | X | 1（100004） | 6000 / 3000 / 1000 |
+| WPN-06-FLAME | 102494 | X | 2（102194、300） | 6000 / 3000 / 1000 |
+
+五件均为1 mesh/1 primitive、无skin，节点X旋转90°，BaseColor为4096²；源GLB/preview/delivery未修改。`assets/art/models/<完整ID>/source-report.json` 保存源hash、节点变换、实际 final parse bounds、目标规格、位置网格焊接统计与副本旋转；同名 raw sidecar 保存稳定GUID，导入显式 `normalizeHeightM:null/upAxisFlip:false`。位置焊接容差1e-6源单位，仅统计，不删面或认定语义部件；Flame测得23 boundary edges/2 nonmanifold edges，其他四件为0。没有命名/抽取护木、弹匣或罐体，不能将小连通块冒充这些部件。尤其SMG固有弹匣和Flame固有罐体/软管需与昨日附件对照，防止重复几何；Shotgun护木命名意图不等于现已独立分件或泵动实现。
+
+后续按长度等比规整为Y-up/炮口+Z（符号待确认），实测其他外廓而不非均匀硬凑规格；保留旧Pistol+Z/Launcher+X兼容。主握位置以 `parseGlb(buffer,null,y)` 最终XZ居中/Y贴底空间保存socket并报告pivot偏移，不修改全局导入器。当前检视仅使用已有BaseColor路径，不认证完整PBR。
+
+工具：`node tools/art/prepare-weapon-body-review.mjs --check` 验证当前source/sidecar/report/节点/GUID/旋转/展示尺度；不带参数仅首次创建，已有场景拒绝覆盖。`node --test tools/art/prepare-weapon-body-review.test.mjs` 检查UV seam位置焊接及正负端面朝向，2项通过。源准备与 `--check` 均通过；scene:check 为246资产、20个v17场景及15项跨文件测试通过，既有LOD/P0/音频检查通过；knowledge:check 为137条、0错误，architecture:check 为280个生产文件、0错误。上述离线检查不替代源模型视觉验收。
+
+CodeGraph在当前检出 roots=apps/assets/packages/tools 执行一次 `incremental-index --no-embed --json`：13files/99nodes/507edges、本次parse errors0、结构ready；输出index.lock被另一个进程持有的竞态警告，没有删除锁/全量重建。当时向量6563/6896；后续只读health显示1058files/6933nodes/17450edges、embedding100%、5既有解析恢复、7417未解析调用、Snapshot absent。没有为embedding重复刷新或等待，不能据这些计数认证无竞态或源码调用全部可解析。
 
 ## 持久入口与测量
 

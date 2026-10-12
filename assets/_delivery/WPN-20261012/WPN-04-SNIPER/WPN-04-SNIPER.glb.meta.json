@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_3e8b71adcb6e",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-04-SNIPER",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261012/delivery.json",
+    "sourceUnits": "未标定生成单位；displayScale不是米制",
+    "axisContract": "保留节点变换后的Y-up；长轴符号/握区/分件待目检",
+    "inspectionScene": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+    "sourceTriangles": 99984
+  },
+  "sourceHash": "sha256:84750b54771f45872af7fb0698c3b80dfc78064c4a234b4f0c1a85f50e577e6b",
+  "updatedAt": "2026-10-12T00:33:12.957Z"
+}

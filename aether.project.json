@@ -117,6 +117,12 @@
       "id": "sc_weapon_assembly_trial",
       "enabled": true,
       "name": "武器实装 · 手枪/Launcher近景试验"
+    },
+    {
+      "id": "sc_weapon_body_source_review",
+      "path": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+      "name": "WPN-20261012 · 五件本体原源固定方向（未验收）",
+      "enabled": true
     }
   ],
   "startIndex": 1,
