@@ -1335,6 +1335,8 @@ async function boot(): Promise<void> {
   });
   renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
   const decalWorkbench = new DecalWorkbench(gpu, {
+    backend:()=>renderer.core.decalSnapshot().backend,
+    setBackend:backend=>renderer.core.setDecalBackend(backend),
     document: () => spawnStore?.document ?? null,
     locked: () => playCtl.isPlaying || authorProjectionBusy,
     edit: editAuthorNodes,
@@ -4067,6 +4069,8 @@ async function boot(): Promise<void> {
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
     gate: (nodeId,open,runId) => {const rt=playCtl.session.runtime;if(!rt||rt.player()?.runId!==runId)throw new Error('运行代次已变更，请重新读取 editor_runtime');rt.setGateOpen(nodeId,open);},
+    decalGpu:()=>renderer.core.readDecalVisibleCount(),
+    decalBackend:backend=>renderer.core.setDecalBackend(backend),
     decal:(action,runId,input)=>{if(playCtl.session.runtime?.outcome!=='running')throw new Error('运行贴花需要正在进行的游戏');runtimeDecals.command(action,runId,input);},
     runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,gates:playCtl.session.runtime?.gateSnapshot()??[],
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,

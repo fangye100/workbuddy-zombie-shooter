@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-13",
+  "indexedAt": "2026-10-14",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
@@ -2612,6 +2612,109 @@
       "sourceRefs": [
         "scene-decals",
         "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-object-pool",
+      "path": "packages/render/src/decal-instances.ts",
+      "title": "通用贴花对象池、借用帧与透明打包",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "lifecycle"
+      ],
+      "read": "固定槽复用、复制隔离、规则标签、稳定排序与打包",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-draw-backends",
+      "path": "packages/render/src/procedural-decals.ts",
+      "title": "贴花直接实例化与GPU间接绘制端口",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "gpu",
+        "indirect"
+      ],
+      "read": "prepare/draw、资源增长、显式计数读回与释放",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-stable-compaction",
+      "path": "packages/render/src/decal-indirect.ts",
+      "title": "贴花GPU稳定视锥剔除与压缩",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "gpu",
+        "indirect",
+        "sorting"
+      ],
+      "read": "1024边界、uniform barrier、四角clip测试与间接参数",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-performance-guide",
+      "path": "docs/render/decal-performance.md",
+      "title": "程序贴花对象池与间接绘制指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "benchmark"
+      ],
+      "read": "A/B契约、owner、失败与计数语义、CPU/GPU测量协议及操作",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
+      ]
+    },
+    {
+      "id": "decal-ab-acceptance-20261014",
+      "path": "docs/evidence/decal-ab-20261014/acceptance.md",
+      "title": "贴花A/B真实GPU性能与生命周期验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "validation"
+      ],
+      "read": "原始测量、HDR一致性、Play验收、独立审查与默认选择依据",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
       ]
     }
   ]

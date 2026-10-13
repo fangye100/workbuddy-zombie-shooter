@@ -1,5 +1,5 @@
 import { DECAL_PATTERNS, DEFAULT_DECAL_STYLE, type DecalStyle, type DecalMark, type SceneDocument, type SceneNode, validateDecalMark } from '@aether/scene';
-import { DecalPreviewRenderer, packDecalMark, DECAL_INSTANCE_FLOATS } from '@aether/render';
+import { DecalPreviewRenderer, packDecalMark, DECAL_INSTANCE_FLOATS, type DecalBackend } from '@aether/render';
 import type { GpuContext } from '@aether/gfx';
 import type { EditResult } from '@aether/runtime';
 import * as m4 from '@aether/core';
@@ -9,6 +9,8 @@ import './decal-workbench.css';
 
 interface DecalWorkbenchPort {
   document(): SceneDocument | null;
+  backend():DecalBackend;
+  setBackend(backend:DecalBackend):void;
   locked(): boolean;
   edit(label: string, mutate: (nodes: SceneNode[]) => void, rebuild: boolean): EditResult;
   save(): Promise<void>;
@@ -28,12 +30,17 @@ export class DecalWorkbench {
   private readonly marks = document.createElement('select');
   private readonly fields = document.createElement('div');
   private preview: DecalPreviewRenderer | null = null;
+  private currentBackend:DecalBackend='direct';
+  private readonly backendSelect=document.createElement('select');
   private markId = ''; private view = 'pattern'; private renderedKey = ''; private needsDraw = true;
   get hasDraft(): boolean { return this.draft.dirty; }
   constructor(private readonly gpu: GpuContext, private readonly port: DecalWorkbenchPort) {
     this.dialog.className = 'decal-workbench'; this.dialog.setAttribute('aria-label', t('程序贴花工作区'));
     const header = document.createElement('header');
     const title = document.createElement('h2'); title.textContent = t('程序贴花工作区'); header.append(title);
+    this.backendSelect.add(new Option('A · 对象池 + 直接实例化','direct'));this.backendSelect.add(new Option('B · GPU 间接绘制','indirect'));
+    this.backendSelect.onchange=()=>{this.port.setBackend(this.backendSelect.value as DecalBackend);this.needsDraw=true;};
+    this.label(header,'绘制方案（临时）',this.backendSelect);
     this.button(header, '关闭工作区', () => this.close());
     const body = document.createElement('div'); body.className = 'dw-body';
     const viewport = document.createElement('section'); viewport.className = 'dw-viewport';
@@ -75,6 +82,7 @@ export class DecalWorkbench {
     if (!this.dialog.open) {
       this.dialog.show();
       this.preview = new DecalPreviewRenderer(this.gpu.device, this.canvas.getContext('webgpu')!, this.gpu.format);
+      this.currentBackend=this.port.backend();this.preview.setBackend(this.currentBackend);this.backendSelect.value=this.currentBackend;
     }
     if (!this.hasDraft) {
       const nodes = decalReceivers(doc);
@@ -169,6 +177,7 @@ export class DecalWorkbench {
   private label(host: HTMLElement, text: string, control: HTMLElement): void { const label = document.createElement('label'); label.append(document.createTextNode(t(text)), control); if ((control instanceof HTMLInputElement || control instanceof HTMLSelectElement) && !control.getAttribute('aria-label')) control.setAttribute('aria-label', t(text)); host.append(label); }
   tick(): void {
     if (!this.dialog.open || !this.preview) return;
+    const backend=this.port.backend();if(backend!==this.currentBackend){this.currentBackend=backend;this.preview.setBackend(backend);this.backendSelect.value=backend;this.needsDraw=true;}
     this.controls.disabled = this.port.locked() || !this.draft.component;
     const rect = this.canvas.getBoundingClientRect(); const width = Math.max(1, Math.round(rect.width * Math.min(2, devicePixelRatio))), height = Math.max(1, Math.round(rect.height * Math.min(2, devicePixelRatio)));
     if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; this.needsDraw = true; }

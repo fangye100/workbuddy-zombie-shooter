@@ -1,0 +1,7 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>程序贴花 A/B 硬件基准</title>
+<style>body{background:#161c27;color:#e4e9f1;font:15px system-ui;margin:24px;max-width:1400px}button{padding:10px;margin:8px}canvas{width:460px;height:460px}section{display:inline-block;margin-right:20px}pre{white-space:pre-wrap}table{border-collapse:collapse}td,th{padding:6px 12px;border:1px solid #475167}small{color:#b9c6d8}</style>
+<h1>程序贴花 A/B 硬件基准</h1><p>A：对象池 + 直接实例化。B：同一对象池与坐标上传 + GPU 视锥剔除/稳定压缩 + drawIndirect。</p>
+<p>512² RGBA16F，同一相机、80B 数据与 SDF。GPU 总耗时包含 B 的 Compute 与绘制；CPU 编码不等于游戏整帧耗时。仅开发诊断页面。</p>
+<button id="run">开始完整对比</button><button id="download" disabled>下载原始 JSON</button><p id="status" role="status">等待启动</p>
+<section><h2>A · 直接实例化</h2><canvas id="a" width="512" height="512"></canvas></section><section><h2>B · GPU 间接绘制</h2><canvas id="b" width="512" height="512"></canvas></section>
+<pre id="environment"></pre><div id="results"></div><pre id="raw" hidden></pre><script type="module" src="/src/diagnostics/decal-benchmark.ts"></script></html>

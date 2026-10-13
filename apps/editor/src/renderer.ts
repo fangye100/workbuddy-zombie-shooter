@@ -727,8 +727,8 @@ export class LabRenderer {
    */
   private document: SceneDocument | null = null;
   private readonly decalFrames=new DecalFrameBuilder();
-  private runtimeDecals:ReturnType<DecalPool['snapshot']>={time:0,count:0,capacity:512,evicted:0,marks:[]};
-  setRuntimeDecals(snapshot:ReturnType<DecalPool['snapshot']>):void {this.runtimeDecals=snapshot;}
+  private runtimeDecals:ReturnType<DecalPool['frame']>={count:0,marks:[]};
+  setRuntimeDecals(snapshot:ReturnType<DecalPool['frame']>):void {this.runtimeDecals=snapshot;}
   getDocument(): SceneDocument | null {
     return this.document;
   }

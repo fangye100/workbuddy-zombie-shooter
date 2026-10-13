@@ -1,5 +1,6 @@
 import {DECAL_INSTANCE_FLOATS,MAX_RUNTIME_DECALS} from './decal-instances';
 import {MAX_AUTHORED_DECALS} from '@aether/scene';
+import {DECAL_INDIRECT_WGSL} from './decal-indirect';
 
 export const PROCEDURAL_DECAL_WGSL=/* wgsl */`
 struct Frame {vp:mat4x4f};
@@ -84,28 +85,75 @@ fn border(sdf:f32,e:f32,aa:f32)->f32 {return select(0.,1.-smoothstep(0.,max(e,aa
   var o:F;o.color=vec4f(rgb*alpha,alpha);o.aux=vec4f(0);return o;
 }`;
 
-/** 同管线实例批：无纹理分配、无静态槽、透明不写深度、不向 aux 写矩形描边。 */
+export type DecalBackend='direct'|'indirect';
+/** 同一 SDF/透明混合；prepare 必须在 render pass 前，B 才可先编码 Compute。 */
 export class ProceduralDecalPass {
   readonly module:GPUShaderModule;
+  readonly computeModule:GPUShaderModule;
   private readonly pipeline:GPURenderPipeline;
+  private readonly compute:GPUComputePipeline;
   private buffer:GPUBuffer|null=null;private group:GPUBindGroup|null=null;private capacity=0;
-  private count=0;private draws=0;
+  private output:GPUBuffer|null=null;private args:GPUBuffer|null=null;private settings:GPUBuffer|null=null;private computeGroup:GPUBindGroup|null=null;
+  private readonly settingsData=new Uint32Array(4);
+  private readonly readbacks=new Set<GPUBuffer>();
+  private count=0;private draws=0;private visibleCount:number|null=null;private sequence=0;
+  private generation=0;
+  private backend:DecalBackend='direct';private uploaded=0;
   constructor(private readonly device:GPUDevice,private readonly frame:GPUBuffer,hdr:GPUTextureFormat,depth:GPUTextureFormat){
     this.module=device.createShaderModule({label:'procedural-decals',code:PROCEDURAL_DECAL_WGSL});
+    this.computeModule=device.createShaderModule({label:'decal-stable-compaction',code:DECAL_INDIRECT_WGSL});
+    this.compute=device.createComputePipeline({label:'decal-stable-compaction',layout:'auto',compute:{module:this.computeModule,entryPoint:'compact'}});
     this.pipeline=device.createRenderPipeline({label:'procedural-decals',layout:'auto',vertex:{module:this.module,entryPoint:'vs'},
       fragment:{module:this.module,entryPoint:'fs',targets:[{format:hdr,blend:{color:{srcFactor:'one',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}},{format:hdr,writeMask:0}]},
       primitive:{topology:'triangle-list',cullMode:'none'},depthStencil:{format:depth,depthWriteEnabled:false,depthCompare:'less-equal'}});
   }
-  draw(pass:GPURenderPassEncoder,data:Float32Array<ArrayBuffer>):number {
-    const count=data.length/DECAL_INSTANCE_FLOATS;this.draws=0;this.count=count;
-    if(!Number.isInteger(count)||count>MAX_AUTHORED_DECALS+MAX_RUNTIME_DECALS)throw new RangeError('GPU 贴花实例长度或容量非法');
-    if(!count)return 0;
-    if(data.byteLength>this.capacity){this.clear();this.capacity=2**Math.ceil(Math.log2(Math.max(4096,data.byteLength)));
-      this.buffer=this.device.createBuffer({label:'procedural-decal-instances',size:this.capacity,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});
-      this.group=this.device.createBindGroup({layout:this.pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.frame}},{binding:1,resource:{buffer:this.buffer}}]});
+  setBackend(backend:DecalBackend):void {if(backend!=='direct'&&backend!=='indirect')throw new RangeError('未知贴花绘制方案');if(backend!==this.backend){this.clear();this.backend=backend;}}
+  private allocate(bytes:number):void {
+    if(bytes<=this.capacity&&this.buffer)return;
+    this.clear();this.capacity=2**Math.ceil(Math.log2(Math.max(4096,bytes)));
+    this.buffer=this.device.createBuffer({label:'decal-input',size:this.capacity,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});
+    if(this.backend==='indirect'){
+      this.output=this.device.createBuffer({label:'decal-compacted',size:this.capacity,usage:GPUBufferUsage.STORAGE});
+      this.args=this.device.createBuffer({label:'decal-indirect-args',size:16,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.INDIRECT|GPUBufferUsage.COPY_SRC});
+      this.settings=this.device.createBuffer({label:'decal-compute-settings',size:16,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
+      this.computeGroup=this.device.createBindGroup({layout:this.compute.getBindGroupLayout(0),entries:[
+        {binding:0,resource:{buffer:this.frame}},{binding:1,resource:{buffer:this.buffer}},{binding:2,resource:{buffer:this.output}},{binding:3,resource:{buffer:this.args}},{binding:4,resource:{buffer:this.settings}}]});
     }
-    this.device.queue.writeBuffer(this.buffer!,0,data);pass.setPipeline(this.pipeline);pass.setBindGroup(0,this.group!);pass.draw(6,count);this.draws=1;this.count=count;return 1;
+    this.group=this.device.createBindGroup({layout:this.pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.frame}},{binding:1,resource:{buffer:this.output??this.buffer}}]});
   }
-  snapshot(){return {instances:this.count,drawCalls:this.draws,bufferBytes:this.capacity};}
-  clear():void {this.buffer?.destroy();this.buffer=null;this.group=null;this.capacity=0;this.count=0;this.draws=0;}
+  prepare(encoder:GPUCommandEncoder,data:Float32Array<ArrayBuffer>,timestampWrites?:GPUComputePassTimestampWrites):void {
+    const count=data.length/DECAL_INSTANCE_FLOATS;
+    if(!Number.isInteger(count)||count>MAX_AUTHORED_DECALS+MAX_RUNTIME_DECALS)throw new RangeError('GPU 贴花实例长度或容量非法');
+    if(count)this.allocate(data.byteLength);
+    this.sequence++;this.count=count;this.draws=0;this.visibleCount=count===0?0:null;this.uploaded=0;
+    if(!count)return;
+    this.device.queue.writeBuffer(this.buffer!,0,data);this.uploaded=data.byteLength;
+    if(this.backend==='indirect'){
+      this.settingsData[0]=count;this.settingsData[1]=2**Math.ceil(Math.log2(count));this.device.queue.writeBuffer(this.settings!,0,this.settingsData);this.uploaded+=16;
+      const pass=encoder.beginComputePass({label:'decal-cull-compact',...(timestampWrites?{timestampWrites}:{})});
+      pass.setPipeline(this.compute);pass.setBindGroup(0,this.computeGroup!);pass.dispatchWorkgroups(1);pass.end();
+    }
+  }
+  drawPrepared(pass:GPURenderPassEncoder):number {
+    if(!this.count)return 0;
+    pass.setPipeline(this.pipeline);pass.setBindGroup(0,this.group!);
+    if(this.backend==='indirect')pass.drawIndirect(this.args!,0);else pass.draw(6,this.count);
+    this.draws=1;return 1;
+  }
+  /** 显式诊断读回；不在每帧热路径等待 GPU。结果标明帧代次，切换/清空使旧读回失效。 */
+  async readVisibleCount():Promise<{sequence:number;inputInstances:number;drawnInstances:number;visibleInstances:number|null;countSource:'submitted'|'gpu-frustum'}|null> {
+    const sequence=this.sequence,generation=this.generation,inputInstances=this.count;
+    if(this.backend==='direct'||!inputInstances)return {sequence,inputInstances,drawnInstances:inputInstances,visibleInstances:inputInstances===0?0:null,countSource:'submitted'};
+    const read=this.device.createBuffer({label:'decal-count-readback',size:16,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ});this.readbacks.add(read);
+    try{
+      const encoder=this.device.createCommandEncoder();encoder.copyBufferToBuffer(this.args!,0,read,0,16);this.device.queue.submit([encoder.finish()]);
+      await read.mapAsync(GPUMapMode.READ);const visibleInstances=new Uint32Array(read.getMappedRange())[1]!;
+      if(generation!==this.generation)return null;if(sequence===this.sequence)this.visibleCount=visibleInstances;return {sequence,inputInstances,drawnInstances:visibleInstances,visibleInstances,countSource:'gpu-frustum'};
+    }catch(error){if(generation!==this.generation)return null;throw error;}finally{this.readbacks.delete(read);read.destroy();}
+  }
+  snapshot(){return {backend:this.backend,instances:this.count,inputInstances:this.count,submittedInstances:this.backend==='direct'?this.count:this.visibleCount,visibleInstances:this.visibleCount,sequence:this.sequence,drawCalls:this.draws,bufferBytes:this.capacity+(this.output?this.capacity+32:0),uploadedBytes:this.uploaded,computeDispatches:this.backend==='indirect'&&this.count?1:0};}
+  clear():void {
+    this.sequence++;this.generation++;this.buffer?.destroy();this.output?.destroy();this.args?.destroy();this.settings?.destroy();for(const read of this.readbacks)read.destroy();this.readbacks.clear();
+    this.buffer=null;this.output=null;this.args=null;this.settings=null;this.group=null;this.computeGroup=null;this.capacity=0;this.count=0;this.draws=0;this.visibleCount=0;this.uploaded=0;
+  }
 }

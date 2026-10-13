@@ -40,6 +40,8 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 | scene_validate、scene_history、scene_save | 只读诊断、共享 undo/redo、冲突感知保存；validate→save→reopen→compare |
 | editor_play | 初始暂停；resume/pause/step（1–600）/stop 共 PlayController，Stop 恢复/释放 |
 | editor_gate | Play 门目标开关，stable NodeId + expectedRevision + 当前 runId；运动在固定步推进，作者数据不变 |
+| editor_decal_gpu | 只读采样帧计数；A提交数、B保守视锥候选数，带sequence/countSource，清理期间null |
+| editor_decal_backend | direct/indirect 两套方案切换，当前 revision；不改作者场景、模拟时间或运行痕迹 |
 | editor_decal | Play 运行贴花 emit/clear；当前 runId 与 revision，完整局部痕迹/接收 NodeId/ttlSec/fadeSec；作者贴花用 scene_edit_nodes |
 | editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频/导航事实 |
 | editor_capture | 下一 GPU canvas PNG，不含 DOM HUD；无帧明确超时 |

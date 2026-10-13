@@ -31,3 +31,33 @@ describe('程序贴花实例与运行池',()=>{
     expect(Array.from(data.slice(36,40))).toEqual([expect.closeTo(.6),0,expect.closeTo(.8),1]);expect(data[7]).toBe(mark.seed);
   });
 });
+
+it('固定槽复用和标签计数在全局淘汰、到期、手动删除与清空后正确；借用帧与复制帧一致',()=>{
+  const pool=new DecalPool(2),input={receiver:'floor',mark:structuredClone(mark),ttlSec:2,fadeSec:1};
+  pool.emit(input,0,'one');const row=pool.frame().marks[0]!,position=row.mark.position;
+  pool.emit({...input,mark:{...mark,id:'second'}},0,'two');pool.emit({...input,mark:{...mark,id:'third'}},0,'one');
+  expect(pool.groupCount('one')).toBe(1);expect(pool.groupCount('two')).toBe(1);
+  expect(pool.frame().marks[1]).toBe(row);expect(pool.frame().marks[1]!.mark.position).toBe(position);expect(row.mark.id).toBe('third');
+  expect(pool.diagnostics()).toMatchObject({allocatedSlots:2,emitted:3,reusedSlots:1,active:2,free:0});
+  pool.advance(1.5);const builder=new DecalFrameBuilder(),world=mat4();
+  const copied=builder.build(null,()=>world,pool.snapshot(),[0,5,10]).slice();
+  expect(builder.build(null,()=>world,pool.frame(),[0,5,10])).toEqual(copied);expect(row.mark.opacity).toBe(1);
+  expect(pool.removeOldest('two')).toBe(true);expect(pool.groupCount('two')).toBe(0);expect(pool.removeOldest('two')).toBe(false);
+  const before=pool.snapshot();expect(()=>pool.emit({...input,ttlSec:0},0,'one')).toThrow();expect(pool.snapshot()).toEqual(before);
+  pool.advance(2);expect(pool.groupCount('one')).toBe(0);expect(pool.diagnostics().free).toBe(2);
+  pool.emit(input,0,'two');pool.clear();expect(pool.frame().count).toBe(0);expect(pool.groupCount('two')).toBe(0);
+  pool.emit(input,0,'two');expect(pool.remove('floor','m')).toBe(true);expect(pool.remove('floor','m')).toBe(false);expect(pool.groupCount('two')).toBe(0);
+});
+
+it('同优先级/距离的稳定身份排序保持旧组合key语义，NodeId前缀下划线不改变透明混合',()=>{
+ const p=new DecalPool(2);p.emit({receiver:'a',mark:{...mark,id:'a',seed:1},ttlSec:1,fadeSec:0});p.emit({receiver:'a_',mark:{...mark,id:'a',seed:2},ttlSec:1,fadeSec:0});
+ const keys=['a:a','a_:a'].sort((a,b)=>a.localeCompare(b));const data=new DecalFrameBuilder().build(null,()=>mat4(),p.frame(),[0,2,0]);
+ expect([data[7],data[27]]).toEqual(keys.map(k=>k==='a:a'?1:2));
+});
+
+it('槽位改用新ID后刷新透明排序key，不沿用可变mark引用中的旧key',()=>{
+ const p=new DecalPool(2),b=new DecalFrameBuilder(),world=mat4(),input={receiver:'r',mark,ttlSec:10,fadeSec:0};
+ p.emit({...input,mark:{...mark,id:'aaa',seed:1}});p.emit({...input,mark:{...mark,id:'middle',seed:2}});b.build(null,()=>world,p.frame(),[0,2,0]);
+ p.remove('r','aaa');p.emit({...input,mark:{...mark,id:'zzz',seed:3}});
+ const data=b.build(null,()=>world,p.frame(),[0,2,0]);expect([data[7],data[27]]).toEqual([2,3]);
+});

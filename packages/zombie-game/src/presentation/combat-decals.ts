@@ -22,9 +22,9 @@ export class CombatDecalPlanner {
         const identity=fact.event==='weapon-solid-impact'?fact.receiver:`${fact.slot}-${fact.generation}`,key=`${rule.id}:${identity}`;
         if((this.cooldowns.get(key)??-1)>born){this.counts.throttled++;continue;}
         const surface=project(fact,rule,this.config);if(!surface){this.counts.noSurface++;continue;}
-        const prefix=`combat_${rule.id}_`,matching=pool.snapshot().marks.filter(e=>e.mark.id.startsWith(prefix)&&/^\d+$/.test(e.mark.id.slice(prefix.length)));
-        if(matching.length>=rule.maxAlive){pool.remove(matching[0]!.receiver,matching[0]!.mark.id);this.counts.ruleEvicted++;}
-        pool.emit({receiver:surface.receiver,ttlSec:ttl,fadeSec:rule.fadeSec,mark:{position:surface.position,rotation:surface.rotation,size:surface.size,id:`${prefix}${fact.seq}`,pattern:rule.pattern,color:rule.color,opacity:rule.opacity,seed:(fact.seq*137+fact.tick*31)&65535,normalOffset:rule.normalOffset,priority:fact.event==='acid-land'?2:1,...(rule.style?{style:{...rule.style}}:{})}},elapsed);
+        const prefix=`combat_${rule.id}_`;
+        if(pool.groupCount(rule.id)>=rule.maxAlive){pool.removeOldest(rule.id);this.counts.ruleEvicted++;}
+        pool.emit({receiver:surface.receiver,ttlSec:ttl,fadeSec:rule.fadeSec,mark:{position:surface.position,rotation:surface.rotation,size:surface.size,id:`${prefix}${fact.seq}`,pattern:rule.pattern,color:rule.color,opacity:rule.opacity,seed:(fact.seq*137+fact.tick*31)&65535,normalOffset:rule.normalOffset,priority:fact.event==='acid-land'?2:1,...(rule.style?{style:{...rule.style}}:{})}},elapsed,rule.id);
         this.counts.emitted++;if(rule.cooldownSec>0)this.cooldowns.set(key,born+rule.cooldownSec);
       }
     }

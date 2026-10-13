@@ -1,7 +1,7 @@
 # 程序性表面贴花
 
 2026-10-13；首期基线 `384b381` / schema v19；独立视觉复审及类型扩充基线 `d18cfb7` / 当前 schema v21。
-分支 `codex/procedural-decals-20261013`。
+分支 `codex/procedural-decals-20261013`。2026-10-14 增加固定槽对象池及 A/B 绘制方案，schema 仍为 v21；详见[性能契约与复测](decal-performance.md)。
 首期是显式平面痕迹，不是跨墙角投影或完整材质 DBuffer。所有颜色经过现有 HDR 后处理。
 
 ## 归属与持久化
@@ -68,19 +68,30 @@ detail（0–1）控制不规则度/细节密度。具体图案不需要每个�
 先画静态物件与动态角色深度，再绘制贴花；深度测试 `less-equal`、不写深度、
 premultiplied alpha 混合，aux 写掩码为 0，透明矩形不参与 inverted-hull 描边。
 按 priority、距相机远到近、稳定身份排序；排序的是实例中心，不保证交叉透明平面的
-完美排序。优先级主要用于共面叠加。GPU 采用一个实例批、一张有界 storage buffer；
-视锥之外的片元由 GPU 裁剪，未新增 CPU 遮挡剔除。
+完美排序。优先级主要用于共面叠加。A（默认）使用一个实例批、一张有界 storage buffer，以直接
+`draw(6,count)` 绘制。B 使用同一 CPU 排序数据，Compute 四角视锥检测、稳定前缀和压缩，
+写入间接参数后 `drawIndirect`；作者和运行痕迹都走所选方案。两者仍是最多一个 draw
+命令，B 额外一个 Compute dispatch；全离屏但有输入时仍编码间接 draw，不把它报为零 draw。
+这里没有 CPU 遮挡剔除，也没有 GPU 深度遮挡剔除；B 的 visibleInstances 是视锥候选，
+不是实际通过深度测试/产生片元的数量。
 
-运行池容量 512，满时淘汰最早实例并增加 `evicted`；非法输入/重复 id 拒绝且不修改池。
+运行池在构造时分配固定对象/向量/style 槽位，容量最多512，满时复用最早实例并增加 `evicted`；非法输入/重复 id 拒绝且不修改池。
 寿命最长 120s，fadeSec 在 0–ttlSec。只消费宿主提供的 `tick * fixedStep`；暂停、读取
 诊断或页面停留不推进。Reset 清池并切换 runId，Stop 清空运行痕迹并释放批缓冲，
 作者组件不受影响。编辑态后续重建作者批缓冲属于编辑器资源，不是残留 Play 痕迹。
+
+渲染热路径使用只读借用 `DecalPool.frame()`，生命周期仅限当前同步消费；不为渲染调用
+深复制 `snapshot()`。MCP/外部诊断仍返回独立副本。Game 以不透明规则标签调用 groupCount/
+removeOldest，Framework 不解析 combat_ 或血/酸规则；到期、全局淘汰、删除和clear均维护组计数。
+FrameBuilder 复用排序记录、矩阵 scratch 与打包数组，保留原组合身份 key 的排序语义。
 
 这是一张平面，不读取接收面的材质/法线缓冲，也不裁切任意网格。必须显式给定局部
 表面位置和方向；摆到轮廓以外会悬空，作者痕迹不自动吸附；战斗痕迹由下述可见几何适配器吸附，不跨楼层或墙角。曲面、墙角、变形
 蒙皮、法线/粗糙度覆盖及跨面 projector 尚未实现。大量重叠仍可能导致 overdraw；
 一次 draw 不能证明手机性能。每个 GPU 实例为 20 floats / 80B（5×vec4），最后一组
 包含四项形态参数；CPU packer、WGSL 和工作区预览共享布局，最多1024作者+运行实例仍合批。
+A/B 都上传完整 80N 字节；B 另传16B计数参数，GPU同时保有输入、压缩输出和16B间接参数。
+B 并不减少本次 CPU 打包/上传字节；本机对比没有稳定收益，故 A 保持默认。
 
 ## Agent 编辑闭环
 
@@ -109,9 +120,17 @@ premultiplied alpha 混合，aux 写掩码为 0，透明矩形不参与 inverted
 ```
 
 `action:clear` 只清运行池；作者痕迹仍在。命令接收不等于已绘制，须推进模拟并读取
-`editor_runtime.runtime.decals`，再用 headed GPU 确认。诊断含 time/count/capacity/
-evicted/marks/runId 和最后绘制帧 GPU instances/drawCalls/bufferBytes；GPU 字段可能
-比刚发出的命令滞后一帧。
+`editor_runtime.runtime.decals`，再用 headed GPU 确认。诊断含 time/count/capacity/evicted/marks/runId、对象池累计分配/复用诊断及最后绘制帧的
+GPU backend/inputInstances/submittedInstances/visibleInstances/sequence/drawCalls/bufferBytes/
+uploadedBytes/computeDispatches。GPU 字段可能比刚发出的命令滞后一帧。A 只能确定提交数，
+visibleInstances 为 null；B 仅在显式采样与当前帧一致时缓存计数，否则为 null。
+
+工作区「绘制方案（临时）」或 `editor_decal_backend` 选择 direct/indirect，不改作者场景、
+不推进 tick、不更改游戏规则；MCP需 current instanceId/revision，并遵守草稿门禁；工作区UI
+允许在草稿中切换绘制方案，不修改草稿/作者数据。预览跟随主
+渲染器方案。`editor_decal_gpu` 只读异步采样返回 sequence/inputInstances/drawnInstances/
+visibleInstances/countSource，普通后续帧不丢弃带代次的已采样结果，清空/切换/增长会返回
+null；真实GPU错误保留。该采样不在每帧执行，不与性能计时混用。
 
 白盒 `assets/scenes/sandbox/procedural-decal-whitebox.scene.json`：49 节点、40 静态 mesh、
 18 作者痕迹；生成器 `node tools/level/gen-decal-whitebox.mjs` 同时维护第一层街道的

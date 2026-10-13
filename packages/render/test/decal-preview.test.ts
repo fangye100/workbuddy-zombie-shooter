@@ -13,7 +13,7 @@ describe('贴花独立预览资源', () => {
     const device = {
       createBuffer: () => { const b = { destroy: vi.fn() }; buffers.push(b); return b; },
       createTexture: () => { const t = { destroy: vi.fn(), createView: () => ({}) }; textures.push(t); return t; },
-      createShaderModule: () => ({}), createRenderPipeline: () => ({ getBindGroupLayout: () => ({}) }), createBindGroup: () => ({}),
+      createShaderModule: () => ({}), createComputePipeline: () => ({getBindGroupLayout:()=>({})}), createRenderPipeline: () => ({ getBindGroupLayout: () => ({}) }), createBindGroup: () => ({}),
       createCommandEncoder: () => ({ beginRenderPass: () => pass, finish: () => ({}) }), queue: { writeBuffer: vi.fn(), submit: vi.fn() },
     } as unknown as GPUDevice;
     const context = { configure: vi.fn(), unconfigure: vi.fn(), getCurrentTexture: () => ({ createView: () => ({}) }) };

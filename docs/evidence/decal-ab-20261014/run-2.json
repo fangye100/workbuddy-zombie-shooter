@@ -1,0 +1,1257 @@
+{
+  "info": {
+    "secureContext": true,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "device": "",
+      "description": "",
+      "isFallbackAdapter": false
+    },
+    "timestampQuery": true,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "width": 512,
+    "height": 512,
+    "date": "2026-10-13T16:40:45.783Z"
+  },
+  "protocol": {
+    "samplesPerCasePerBackend": 10,
+    "framesPerSample": 32,
+    "warmupFrames": 96,
+    "order": "paired AB/BA",
+    "gpu": "整批首pass开始到末render结束的timestamp差/32；B包含compute+render及pass间隙，减小65536ns量化误差；GPU上传在窗口外，字节成本另列",
+    "cpu": "整批prepare+render encoder elapsed/32；submit、GPU wait/readback excluded",
+    "snapshotBaseline": "同一新packer，复制snapshot vs借用frame；不是旧版本全部CPU成本",
+    "transparency": "RGBA16F逐通道按位一致",
+    "scope": "单贴花pass合成输入；不是整游戏FPS、移动端或500NPC验收"
+  },
+  "cpu": [
+    {
+      "count": 32,
+      "borrowedMs": {
+        "median": 0.06100000023841858,
+        "p95": 0.08299999952316284
+      },
+      "snapshotCopyMs": {
+        "median": 0.8670000004768371,
+        "p95": 0.9029999995231628
+      },
+      "pool": {
+        "allocatedSlots": 32,
+        "emitted": 33,
+        "reusedSlots": 1,
+        "active": 32,
+        "free": 0
+      },
+      "packedBytes": 2560
+    },
+    {
+      "count": 128,
+      "borrowedMs": {
+        "median": 0.275,
+        "p95": 0.32699999928474427
+      },
+      "snapshotCopyMs": {
+        "median": 3.5910000002384184,
+        "p95": 3.82
+      },
+      "pool": {
+        "allocatedSlots": 128,
+        "emitted": 129,
+        "reusedSlots": 1,
+        "active": 128,
+        "free": 0
+      },
+      "packedBytes": 10240
+    },
+    {
+      "count": 256,
+      "borrowedMs": {
+        "median": 0.5280000007152558,
+        "p95": 0.5989999997615815
+      },
+      "snapshotCopyMs": {
+        "median": 6.865999999046326,
+        "p95": 7.653000000715256
+      },
+      "pool": {
+        "allocatedSlots": 256,
+        "emitted": 257,
+        "reusedSlots": 1,
+        "active": 256,
+        "free": 0
+      },
+      "packedBytes": 20480
+    },
+    {
+      "count": 512,
+      "borrowedMs": {
+        "median": 1.0769999992847443,
+        "p95": 1.1680000007152558
+      },
+      "snapshotCopyMs": {
+        "median": 13.21100000023842,
+        "p95": 14.59600000023842
+      },
+      "pool": {
+        "allocatedSlots": 512,
+        "emitted": 513,
+        "reusedSlots": 1,
+        "active": 512,
+        "free": 0
+      },
+      "packedBytes": 40960
+    }
+  ],
+  "rows": [
+    {
+      "count": 32,
+      "offscreen": 0,
+      "overlap": false,
+      "expectedVisible": 32,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 42324
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.02187500149011612,
+          "p95": 0.05312500149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.03072,
+          "p95": 0.425984
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 32,
+          "visibleInstances": null,
+          "sequence": 418,
+          "drawCalls": 1,
+          "bufferBytes": 4096,
+          "uploadedBytes": 2560,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.03125,
+          "p95": 0.04062499850988388
+        },
+        "gpuTotalMs": {
+          "median": 0.036864,
+          "p95": 0.057344
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 32,
+          "visibleInstances": 32,
+          "sequence": 419,
+          "drawCalls": 1,
+          "bufferBytes": 8224,
+          "uploadedBytes": 2576,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 419,
+          "inputInstances": 32,
+          "drawnInstances": 32,
+          "visibleInstances": 32,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 32,
+      "offscreen": 16,
+      "overlap": false,
+      "expectedVisible": 16,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 20408
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.02187500149011612,
+          "p95": 0.04999999701976776
+        },
+        "gpuTotalMs": {
+          "median": 0.008192,
+          "p95": 0.036864
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 32,
+          "visibleInstances": null,
+          "sequence": 835,
+          "drawCalls": 1,
+          "bufferBytes": 4096,
+          "uploadedBytes": 2560,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.02812500298023224,
+          "p95": 0.03750000149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.028672,
+          "p95": 0.032768
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 16,
+          "visibleInstances": 16,
+          "sequence": 836,
+          "drawCalls": 1,
+          "bufferBytes": 8224,
+          "uploadedBytes": 2576,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 836,
+          "inputInstances": 32,
+          "drawnInstances": 16,
+          "visibleInstances": 16,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 32,
+      "offscreen": 28,
+      "overlap": false,
+      "expectedVisible": 4,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 5960
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.02499999850988388,
+          "p95": 0.04375000298023224
+        },
+        "gpuTotalMs": {
+          "median": 0.004096,
+          "p95": 0.006144
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 32,
+          "visibleInstances": null,
+          "sequence": 1252,
+          "drawCalls": 1,
+          "bufferBytes": 4096,
+          "uploadedBytes": 2560,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.03437500074505806,
+          "p95": 0.04374999925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.024576,
+          "p95": 0.034816
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 32,
+          "inputInstances": 32,
+          "submittedInstances": 4,
+          "visibleInstances": 4,
+          "sequence": 1253,
+          "drawCalls": 1,
+          "bufferBytes": 8224,
+          "uploadedBytes": 2576,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 1253,
+          "inputInstances": 32,
+          "drawnInstances": 4,
+          "visibleInstances": 4,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 128,
+      "offscreen": 0,
+      "overlap": false,
+      "expectedVisible": 128,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 165928
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.02812499925494194,
+          "p95": 0.05312500149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.069632,
+          "p95": 0.335872
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 128,
+          "visibleInstances": null,
+          "sequence": 1670,
+          "drawCalls": 1,
+          "bufferBytes": 16384,
+          "uploadedBytes": 10240,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.03437499701976776,
+          "p95": 0.0625
+        },
+        "gpuTotalMs": {
+          "median": 0.075776,
+          "p95": 0.438272
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 128,
+          "visibleInstances": 128,
+          "sequence": 1671,
+          "drawCalls": 1,
+          "bufferBytes": 32800,
+          "uploadedBytes": 10256,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 1671,
+          "inputInstances": 128,
+          "drawnInstances": 128,
+          "visibleInstances": 128,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 128,
+      "offscreen": 64,
+      "overlap": false,
+      "expectedVisible": 64,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 83208
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.04062499850988388,
+          "p95": 0.05312500149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.057344,
+          "p95": 0.423936
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 128,
+          "visibleInstances": null,
+          "sequence": 2087,
+          "drawCalls": 1,
+          "bufferBytes": 16384,
+          "uploadedBytes": 10240,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.04062499850988388,
+          "p95": 0.05312500149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.047104,
+          "p95": 0.07168
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 64,
+          "visibleInstances": 64,
+          "sequence": 2088,
+          "drawCalls": 1,
+          "bufferBytes": 32800,
+          "uploadedBytes": 10256,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 2088,
+          "inputInstances": 128,
+          "drawnInstances": 64,
+          "visibleInstances": 64,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 128,
+      "offscreen": 115,
+      "overlap": false,
+      "expectedVisible": 13,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 16552
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.03437499701976776,
+          "p95": 0.046875
+        },
+        "gpuTotalMs": {
+          "median": 0.03072,
+          "p95": 0.04096
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 128,
+          "visibleInstances": null,
+          "sequence": 2504,
+          "drawCalls": 1,
+          "bufferBytes": 16384,
+          "uploadedBytes": 10240,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.04062499850988388,
+          "p95": 0.09375
+        },
+        "gpuTotalMs": {
+          "median": 0.032768,
+          "p95": 0.063488
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 128,
+          "inputInstances": 128,
+          "submittedInstances": 13,
+          "visibleInstances": 13,
+          "sequence": 2505,
+          "drawCalls": 1,
+          "bufferBytes": 32800,
+          "uploadedBytes": 10256,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 2505,
+          "inputInstances": 128,
+          "drawnInstances": 13,
+          "visibleInstances": 13,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 256,
+      "offscreen": 0,
+      "overlap": false,
+      "expectedVisible": 256,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 287080
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.05312500149011612,
+          "p95": 0.06562500074505806
+        },
+        "gpuTotalMs": {
+          "median": 0.043008,
+          "p95": 0.176128
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": null,
+          "sequence": 2922,
+          "drawCalls": 1,
+          "bufferBytes": 32768,
+          "uploadedBytes": 20480,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.046875,
+          "p95": 0.05625000223517418
+        },
+        "gpuTotalMs": {
+          "median": 0.067584,
+          "p95": 0.077824
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": 256,
+          "sequence": 2923,
+          "drawCalls": 1,
+          "bufferBytes": 65568,
+          "uploadedBytes": 20496,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 2923,
+          "inputInstances": 256,
+          "drawnInstances": 256,
+          "visibleInstances": 256,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 256,
+      "offscreen": 128,
+      "overlap": false,
+      "expectedVisible": 128,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 166112
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.04062499850988388,
+          "p95": 0.06562500074505806
+        },
+        "gpuTotalMs": {
+          "median": 0.032768,
+          "p95": 0.21504
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": null,
+          "sequence": 3339,
+          "drawCalls": 1,
+          "bufferBytes": 32768,
+          "uploadedBytes": 20480,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.046875,
+          "p95": 0.05312500149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.059392,
+          "p95": 0.059392
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 128,
+          "visibleInstances": 128,
+          "sequence": 3340,
+          "drawCalls": 1,
+          "bufferBytes": 65568,
+          "uploadedBytes": 20496,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 3340,
+          "inputInstances": 256,
+          "drawnInstances": 128,
+          "visibleInstances": 128,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 256,
+      "offscreen": 230,
+      "overlap": false,
+      "expectedVisible": 26,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 34144
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.046875,
+          "p95": 0.09687499701976776
+        },
+        "gpuTotalMs": {
+          "median": 0.03072,
+          "p95": 0.5632
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": null,
+          "sequence": 3756,
+          "drawCalls": 1,
+          "bufferBytes": 32768,
+          "uploadedBytes": 20480,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.046875,
+          "p95": 0.05000000074505806
+        },
+        "gpuTotalMs": {
+          "median": 0.036864,
+          "p95": 0.065536
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 26,
+          "visibleInstances": 26,
+          "sequence": 3757,
+          "drawCalls": 1,
+          "bufferBytes": 65568,
+          "uploadedBytes": 20496,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 3757,
+          "inputInstances": 256,
+          "drawnInstances": 26,
+          "visibleInstances": 26,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 512,
+      "offscreen": 0,
+      "overlap": false,
+      "expectedVisible": 512,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 399840
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.05000000074505806,
+          "p95": 0.05937499925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.08192,
+          "p95": 0.200704
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 512,
+          "visibleInstances": null,
+          "sequence": 4174,
+          "drawCalls": 1,
+          "bufferBytes": 65536,
+          "uploadedBytes": 40960,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.05937499925494194,
+          "p95": 0.06874999776482582
+        },
+        "gpuTotalMs": {
+          "median": 0.110592,
+          "p95": 0.239616
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 512,
+          "visibleInstances": 512,
+          "sequence": 4175,
+          "drawCalls": 1,
+          "bufferBytes": 131104,
+          "uploadedBytes": 40976,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 4175,
+          "inputInstances": 512,
+          "drawnInstances": 512,
+          "visibleInstances": 512,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 512,
+      "offscreen": 256,
+      "overlap": false,
+      "expectedVisible": 256,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 286004
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.05937499925494194,
+          "p95": 0.07499999925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.045056,
+          "p95": 0.16384
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 512,
+          "visibleInstances": null,
+          "sequence": 4591,
+          "drawCalls": 1,
+          "bufferBytes": 65536,
+          "uploadedBytes": 40960,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.07499999925494194,
+          "p95": 0.10624999925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.069632,
+          "p95": 0.186368
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 256,
+          "visibleInstances": 256,
+          "sequence": 4592,
+          "drawCalls": 1,
+          "bufferBytes": 131104,
+          "uploadedBytes": 40976,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 4592,
+          "inputInstances": 512,
+          "drawnInstances": 256,
+          "visibleInstances": 256,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 512,
+      "offscreen": 460,
+      "overlap": false,
+      "expectedVisible": 52,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 67456
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.07187499850988388,
+          "p95": 0.09375
+        },
+        "gpuTotalMs": {
+          "median": 0.032768,
+          "p95": 0.446464
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 512,
+          "visibleInstances": null,
+          "sequence": 5008,
+          "drawCalls": 1,
+          "bufferBytes": 65536,
+          "uploadedBytes": 40960,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.06562500074505806,
+          "p95": 0.09687499701976776
+        },
+        "gpuTotalMs": {
+          "median": 0.043008,
+          "p95": 0.059392
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 512,
+          "inputInstances": 512,
+          "submittedInstances": 52,
+          "visibleInstances": 52,
+          "sequence": 5009,
+          "drawCalls": 1,
+          "bufferBytes": 131104,
+          "uploadedBytes": 40976,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 5009,
+          "inputInstances": 512,
+          "drawnInstances": 52,
+          "visibleInstances": 52,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 1024,
+      "offscreen": 0,
+      "overlap": false,
+      "expectedVisible": 1024,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 528020
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.10312500223517418,
+          "p95": 0.12812500074505806
+        },
+        "gpuTotalMs": {
+          "median": 0.137216,
+          "p95": 0.202752
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 1024,
+          "visibleInstances": null,
+          "sequence": 5426,
+          "drawCalls": 1,
+          "bufferBytes": 131072,
+          "uploadedBytes": 81920,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.09687500074505806,
+          "p95": 0.13125000149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.233472,
+          "p95": 0.299008
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 1024,
+          "visibleInstances": 1024,
+          "sequence": 5427,
+          "drawCalls": 1,
+          "bufferBytes": 262176,
+          "uploadedBytes": 81936,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 5427,
+          "inputInstances": 1024,
+          "drawnInstances": 1024,
+          "visibleInstances": 1024,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 1024,
+      "offscreen": 512,
+      "overlap": false,
+      "expectedVisible": 512,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 400104
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.09062499925494194,
+          "p95": 0.10624999925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.055296,
+          "p95": 0.067584
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 1024,
+          "visibleInstances": null,
+          "sequence": 5843,
+          "drawCalls": 1,
+          "bufferBytes": 131072,
+          "uploadedBytes": 81920,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.09687500074505806,
+          "p95": 0.12187499925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.075776,
+          "p95": 0.139264
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 512,
+          "visibleInstances": 512,
+          "sequence": 5844,
+          "drawCalls": 1,
+          "bufferBytes": 262176,
+          "uploadedBytes": 81936,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 5844,
+          "inputInstances": 1024,
+          "drawnInstances": 512,
+          "visibleInstances": 512,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 1024,
+      "offscreen": 921,
+      "overlap": false,
+      "expectedVisible": 103,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 134416
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.08437500149011612,
+          "p95": 0.16249999776482582
+        },
+        "gpuTotalMs": {
+          "median": 0.016384,
+          "p95": 0.02048
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 1024,
+          "visibleInstances": null,
+          "sequence": 6260,
+          "drawCalls": 1,
+          "bufferBytes": 131072,
+          "uploadedBytes": 81920,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.09062500298023224,
+          "p95": 0.13437499850988388
+        },
+        "gpuTotalMs": {
+          "median": 0.043008,
+          "p95": 0.045056
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 103,
+          "visibleInstances": 103,
+          "sequence": 6261,
+          "drawCalls": 1,
+          "bufferBytes": 262176,
+          "uploadedBytes": 81936,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 6261,
+          "inputInstances": 1024,
+          "drawnInstances": 103,
+          "visibleInstances": 103,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 256,
+      "offscreen": 0,
+      "overlap": true,
+      "expectedVisible": 256,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 1048568
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.046875,
+          "p95": 0.09062500298023224
+        },
+        "gpuTotalMs": {
+          "median": 0.657408,
+          "p95": 0.712704
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": null,
+          "sequence": 6677,
+          "drawCalls": 1,
+          "bufferBytes": 131072,
+          "uploadedBytes": 20480,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.04999999701976776,
+          "p95": 0.21562499925494194
+        },
+        "gpuTotalMs": {
+          "median": 0.679936,
+          "p95": 0.8704
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 256,
+          "inputInstances": 256,
+          "submittedInstances": 256,
+          "visibleInstances": 256,
+          "sequence": 6678,
+          "drawCalls": 1,
+          "bufferBytes": 262176,
+          "uploadedBytes": 20496,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 6678,
+          "inputInstances": 256,
+          "drawnInstances": 256,
+          "visibleInstances": 256,
+          "countSource": "gpu-frustum"
+        }
+      }
+    },
+    {
+      "count": 1024,
+      "offscreen": 1024,
+      "overlap": false,
+      "expectedVisible": 0,
+      "pixels": {
+        "changedChannels": 0,
+        "maxHalfDelta": 0,
+        "nonzeroChannels": 0
+      },
+      "direct": {
+        "cpuEncodingMs": {
+          "median": 0.09999999776482582,
+          "p95": 0.16562500223517418
+        },
+        "gpuTotalMs": {
+          "median": 0.002048,
+          "p95": 0.002048
+        },
+        "snapshot": {
+          "backend": "direct",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 1024,
+          "visibleInstances": null,
+          "sequence": 7094,
+          "drawCalls": 1,
+          "bufferBytes": 131072,
+          "uploadedBytes": 81920,
+          "computeDispatches": 0
+        }
+      },
+      "indirect": {
+        "cpuEncodingMs": {
+          "median": 0.11875000223517418,
+          "p95": 0.13125000149011612
+        },
+        "gpuTotalMs": {
+          "median": 0.012288,
+          "p95": 0.012288
+        },
+        "gpuComputeMsQuantized": {
+          "median": 0,
+          "p95": 0.065536
+        },
+        "snapshot": {
+          "backend": "indirect",
+          "instances": 1024,
+          "inputInstances": 1024,
+          "submittedInstances": 0,
+          "visibleInstances": 0,
+          "sequence": 7095,
+          "drawCalls": 1,
+          "bufferBytes": 262176,
+          "uploadedBytes": 81936,
+          "computeDispatches": 1
+        },
+        "readback": {
+          "sequence": 7095,
+          "inputInstances": 1024,
+          "drawnInstances": 0,
+          "visibleInstances": 0,
+          "countSource": "gpu-frustum"
+        }
+      }
+    }
+  ],
+  "cleared": {
+    "direct": {
+      "backend": "direct",
+      "instances": 0,
+      "inputInstances": 0,
+      "submittedInstances": 0,
+      "visibleInstances": 0,
+      "sequence": 7095,
+      "drawCalls": 0,
+      "bufferBytes": 0,
+      "uploadedBytes": 0,
+      "computeDispatches": 0
+    },
+    "indirect": {
+      "backend": "indirect",
+      "instances": 0,
+      "inputInstances": 0,
+      "submittedInstances": 0,
+      "visibleInstances": 0,
+      "sequence": 7099,
+      "drawCalls": 0,
+      "bufferBytes": 0,
+      "uploadedBytes": 0,
+      "computeDispatches": 0
+    }
+  },
+  "errors": []
+}

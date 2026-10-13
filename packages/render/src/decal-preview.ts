@@ -1,4 +1,4 @@
-import { ProceduralDecalPass } from './procedural-decals';
+import { ProceduralDecalPass, type DecalBackend } from './procedural-decals';
 
 const DISPLAY = /* wgsl */`
 @group(0) @binding(0) var image:texture_2d<f32>;
@@ -25,6 +25,7 @@ export class DecalPreviewRenderer {
     const module = device.createShaderModule({ code: DISPLAY, label: 'decal-preview-display' });
     this.pipeline = device.createRenderPipeline({ layout: 'auto', vertex: { module, entryPoint: 'vs' }, fragment: { module, entryPoint: 'fs', targets: [{ format }] } });
   }
+  setBackend(backend:DecalBackend):void {this.pass.setBackend(backend);}
   draw(data: Float32Array<ArrayBuffer>, matrix: Float32Array<ArrayBuffer>, width: number, height: number): void {
     if (width !== this.width || height !== this.height) {
       this.textures.forEach(t => t.destroy()); this.width = width; this.height = height;
@@ -33,8 +34,9 @@ export class DecalPreviewRenderer {
     }
     this.device.queue.writeBuffer(this.frame, 0, matrix);
     const encoder = this.device.createCommandEncoder();
+    this.pass.prepare(encoder,data);
     const pass = encoder.beginRenderPass({ colorAttachments: this.textures.slice(0, 2).map(t => ({ view: t.createView(), loadOp: 'clear' as const, storeOp: 'store' as const, clearValue: [0, 0, 0, 0] })), depthStencilAttachment: { view: this.textures[2]!.createView(), depthLoadOp: 'clear', depthStoreOp: 'store', depthClearValue: 1 } });
-    this.pass.draw(pass, data); pass.end();
+    this.pass.drawPrepared(pass); pass.end();
     const display = encoder.beginRenderPass({ colorAttachments: [{ view: this.context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store' }] });
     display.setPipeline(this.pipeline); display.setBindGroup(0, this.group!); display.draw(3); display.end();
     this.device.queue.submit([encoder.finish()]);

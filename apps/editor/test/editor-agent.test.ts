@@ -15,6 +15,20 @@ function setup() {
   return {agent,port,store,edit};
 }
 describe('Game Editor agent commands',()=>{
+  it('GPU采样只读，不需要revision、不推进Play；空读回和缺宿主明确报告',async()=>{
+    const s=setup();expect((await s.agent.call('editor_decal_gpu',{})).code).toBe('UNSUPPORTED');
+    s.port.decalGpu=vi.fn(async()=>null);s.port.draft=()=>true;s.port.playing=()=>true;
+    expect((await s.agent.call('editor_decal_gpu',{})).gpu).toBeNull();expect(s.port.play).not.toHaveBeenCalled();expect(s.store.dirty).toBe(false);
+  });
+  it('绘制方案可在Edit/Play切换，但受revision/draft门禁且不改场景历史',async()=>{
+    const s=setup();s.port.decalBackend=vi.fn();
+    expect((await s.edit('editor_decal_backend',{backend:'bad'})).code).toBe('INVALID_ARGUMENTS');
+    expect((await s.edit('editor_decal_backend',{backend:'indirect',expectedRevision:'old'})).code).toBe('REVISION_CONFLICT');
+    s.port.draft=()=>true;expect((await s.edit('editor_decal_backend',{backend:'indirect'})).code).toBe('UI_DRAFT');
+    s.port.draft=()=>false;expect((await s.edit('editor_decal_backend',{backend:'indirect'})).ok).toBe(true);
+    s.port.playing=()=>true;expect((await s.edit('editor_decal_backend',{backend:'direct'})).ok).toBe(true);
+    expect(s.port.decalBackend).toHaveBeenCalledTimes(2);expect(s.store.undoDepth).toBe(0);expect(s.store.dirty).toBe(false);
+  });
   it('运行贴花遵守 Play/revision/runId 门禁且不改作者历史',async()=>{
     const s=setup();s.port.decal=vi.fn((action,id)=>{if(id!==7)throw Error('过期运行代次');});
     expect((await s.edit('editor_decal',{action:'clear',runId:7})).code).toBe('PLAY_REQUIRED');s.port.playing=()=>true;
