@@ -110,6 +110,8 @@ export class PlayController {
   get isPaused(): boolean {
     return this.session.state === 'paused';
   }
+  get observing():boolean {return this.playCamera?.observation??false;}
+  setObservation(on:boolean):boolean {return this.isPlaying&&(this.playCamera?.setObservation(on)??false);}
 
   get tick(): number {
     return this.session.tick;

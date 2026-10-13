@@ -95,6 +95,8 @@ import {
   type RetargetWorkbenchState,
 } from './services/binding/retarget-workbench';
 import { FREE_CAM_SPEED_MPS, stepFreeCamera } from './services/free-camera';
+import { PlayObservationNavigation,orbitViewCamera,panViewCamera,zoomViewCamera } from './services/play-observation-navigation';
+import type { ViewCameraState } from './services/play-camera';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -262,6 +264,7 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const gameAudio = new GameAudio();
+  let observationNavigation:PlayObservationNavigation|null=null;
   const playCtl = new PlayController(renderer, bridge, {
     weapons:weaponModels,
     bodyIk,
@@ -304,6 +307,7 @@ async function boot(): Promise<void> {
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
       hudDirty = true;
+      observationNavigation?.sync();
     },
   });
 
@@ -823,12 +827,7 @@ async function boot(): Promise<void> {
   // 鼠标与触屏统一走 Pointer Events：单指=环绕，双指=捏合缩放+质心平移，
   // 右键/中键/Shift+左键=平移，滚轮=缩放，轻点（位移<阈值）=拾取。
   const CLICK_THRESHOLD = 6; // 像素：低于此位移视为「点击」而非「拖拽」
-  const ORBIT_RAD_PER_PX = 0.006; // 环绕灵敏度：每像素多少弧度
-  const PITCH_DEG_PER_PX = 0.25; // 俯仰灵敏度：每像素多少度
-  const PITCH_LIMIT_DEG = 89; // 俯仰上限（留 1° 避免 lookAt 的 up 与视线平行退化）
   const PAN_LIMIT_XZ = 120; // 平移边界：target 的 X/Z 活动范围（米）。关卡跨度 ~76m（一层一关），20 会把用户困在第一个房间
-  const PAN_MIN_Y = 0.05; // 平移边界：target 最低高度，避免钻到地面下
-  const PAN_MAX_Y = 8;
   const ZOOM_MIN = 1.2;
   const ZOOM_MAX = 120; // 全览一层的距离（关卡 editorCamera.distance=62，40 会一滚轮就被拽回来）
   const FOVY = (45 * Math.PI) / 180; // 与 renderer.render 的 perspective 保持一致
@@ -900,21 +899,12 @@ async function boot(): Promise<void> {
   // 平移手感是「内容跟着手指走」。相机基与 orbitEye/lookAt 同约定：
   // right = (cos yaw, 0, -sin yaw)，up = (-sin yaw·sin el, cos el, -cos yaw·sin el)
   function panBy(dx: number, dy: number): void {
-    const el = (panel.params.cameraElevation * Math.PI) / 180;
-    const se = Math.sin(el);
-    const ce = Math.cos(el);
-    const sy = Math.sin(camera.yaw);
-    const cy = Math.cos(camera.yaw);
-    const worldPerPx =
-      (2 * camera.distance * Math.tan(FOVY / 2)) / Math.max(1, canvas!.clientHeight);
-    camera.target[0] = clamp(camera.target[0] + (-cy * dx - sy * se * dy) * worldPerPx, -PAN_LIMIT_XZ, PAN_LIMIT_XZ);
-    camera.target[1] = clamp(camera.target[1] + ce * dy * worldPerPx, PAN_MIN_Y, PAN_MAX_Y);
-    camera.target[2] = clamp(camera.target[2] + (sy * dx - cy * se * dy) * worldPerPx, -PAN_LIMIT_XZ, PAN_LIMIT_XZ);
+    camera.target=panViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},dx,dy,canvas!.clientHeight).target;
     hudDirty = true;
   }
 
   function zoomBy(factor: number): void {
-    camera.distance = clamp(camera.distance * factor, ZOOM_MIN, ZOOM_MAX);
+    camera.distance = zoomViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},factor).distance;
   }
 
   // 把屏幕坐标转 NDC 并交给渲染器做射线拾取
@@ -1920,6 +1910,7 @@ async function boot(): Promise<void> {
    * 不能等下一帧：失焦后 rAF 可能直接被节流停掉，那时候"等 frame 再提交"等于不提交。
    */
   const clearPlayKeys = (): void => {
+    observationNavigation?.release();
     freeCamKeys.clear(); // 飞行键同理：切窗口回来发现相机还在自己飞，是最难自查的那类 bug
     // 🔴 停火必须**无条件**执行，不能跟着下面的早退一起跳过（评审 4166674734 /
     // 4171651555）：J 键故意不进 playKeys（它不是向量键），所以"只按住 J 时失焦"
@@ -2151,14 +2142,8 @@ async function boot(): Promise<void> {
       if (gesture === 'gizmo') {
         updateGizmoDrag(e.clientX, e.clientY);
       } else if (gesture === 'orbit') {
-        camera.yaw -= (e.clientX - lastX) * ORBIT_RAD_PER_PX;
-        // 自由俯仰：上下拖可越过地平线（负 = 仰视，eye 在 target 之下）。
-        // 仅在接近 ±90° 时 lookAt 的 up 与视线平行才退化，故留 1° 余量。
-        panel.params.cameraElevation = clamp(
-          panel.params.cameraElevation + (e.clientY - lastY) * PITCH_DEG_PER_PX,
-          -PITCH_LIMIT_DEG,
-          PITCH_LIMIT_DEG,
-        );
+        const next=orbitViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},e.clientX-lastX,e.clientY-lastY);
+        camera.yaw=next.yaw;panel.params.cameraElevation=next.elevationDeg;
         panel.syncValues();
         hudDirty = true;
       } else if (gesture === 'pan') {
@@ -3870,6 +3855,10 @@ async function boot(): Promise<void> {
   let lastWorkspaceUiTime = -1;
   const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
   gameControls = new GameControls(canvas,(x,y)=>renderer.pointerRay(x,y),()=>camera.yaw);
+  observationNavigation=new PlayObservationNavigation(canvas,document.querySelector<HTMLButtonElement>('#btn-observation-camera')!,document.querySelector<HTMLElement>('#observation-camera-hint')!,{
+    get:()=>({target:[...camera.target] as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation}),
+    set:(s:ViewCameraState)=>{camera.target=[...s.target];camera.distance=s.distance;camera.yaw=s.yaw;panel.params.cameraElevation=s.elevationDeg;},
+  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},changed:()=>{hudDirty=true;}});
   const gameHud = new GameHud({
     weaponModels:()=>weaponModels.view(),
     audioControl: gameAudio.control,
@@ -4085,7 +4074,7 @@ async function boot(): Promise<void> {
       updateHud(fps);
     }
 
-    if (panel.params.autoOrbit) {
+    if (panel.params.autoOrbit && !playCtl.isPlaying) {
       camera.yaw += dt * 0.25;
       hudDirty = true;
     }
@@ -4176,7 +4165,7 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying) {
       const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
       const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
-      gameControls?.update(playCtl.session.runtime,playCtl.isPaused,ix,iz);
+      gameControls?.update(playCtl.session.runtime,playCtl.isPaused||playCtl.observing,ix,iz);
     }
     if (!playCtl.isPlaying) gameControls?.update(null,false,0,0);
     // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
