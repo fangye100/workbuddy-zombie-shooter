@@ -217,8 +217,8 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
-    this.decals?.sync(this.session.runtime);
     this.syncGates();
+    this.decals?.sync(this.session.runtime);
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime, true);
@@ -272,8 +272,8 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     if (n > 0) {
-      this.decals?.sync(this.session.runtime);
       this.syncGates();
+      this.decals?.sync(this.session.runtime);
       this.sharedMotions?.sync(this.session.runtime);
       this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
       this.bridge.refresh();

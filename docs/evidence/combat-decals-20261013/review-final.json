@@ -1,0 +1,36 @@
+{
+  "authorOriginalRestored": true,
+  "errors": [
+    {
+      "level": "warn",
+      "message": "[actors] P-01 无「+动画」LOD 档，退回胶囊",
+      "timestamp": "2026-10-13T01:35:13.988Z",
+      "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/src/services/runtime-actors.ts?t=1791854178643"
+    },
+    {
+      "level": "warn",
+      "message": "[actors] P-01 无「+动画」LOD 档，退回胶囊",
+      "timestamp": "2026-10-13T01:38:58.279Z",
+      "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/src/services/runtime-actors.ts?t=1791854178643"
+    },
+    {
+      "level": "warn",
+      "message": "[actors] P-01 无「+动画」LOD 档，退回胶囊",
+      "timestamp": "2026-10-13T01:40:46.558Z",
+      "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/src/services/runtime-actors.ts?t=1791854178643"
+    },
+    {
+      "level": "warn",
+      "message": "[freecam] Play 期间相机归游戏相机，先停止 Play 再进自由相机",
+      "timestamp": "2026-10-13T01:46:56.161Z",
+      "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/src/main.ts"
+    },
+    {
+      "level": "warn",
+      "message": "[actors] P-01 无「+动画」LOD 档，退回胶囊",
+      "timestamp": "2026-10-13T01:50:11.630Z",
+      "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/src/services/runtime-actors.ts?t=1791854178643"
+    }
+  ],
+  "ownedTab": "1461636557"
+}

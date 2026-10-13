@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "id": "sc_navigation_3d_whitebox",
   "name": "三维导航白盒 · 斜坡 / 楼梯 / 叠层",
   "act": null,

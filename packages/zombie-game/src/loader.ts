@@ -124,6 +124,7 @@ export interface NavDesc {
 /** 运行描述：装载产物，RuntimeSession 的唯一输入（除种子与固定步长外） */
 export interface LevelRuntimeDesc {
   runRules?: RunRulesComponent | null;
+  decalEmitter?: import("@aether/scene").DecalEmitterComponent | null;
   sceneId: string;
   sceneName: string;
   /** 场景 schemaVersion + 本装载器的契约版本，用于复现比对 */
@@ -565,6 +566,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
     desc: {
       sceneId: doc.id,
       runRules: runRules ? structuredClone(runRules) : null,
+      decalEmitter: structuredClone(doc.nodes.flatMap(n=>n.components).find(c=>c.kind==="DecalEmitter"&&c.enabled) as import("@aether/scene").DecalEmitterComponent??null),
       sceneName: doc.name,
       schemaVersion: doc.schemaVersion,
       playerStart,

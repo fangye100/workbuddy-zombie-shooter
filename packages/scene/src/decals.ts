@@ -15,6 +15,30 @@ export interface DecalMark {
 }
 /** 同一静态接收物的有界实例集合；不增加 mesh/材质/变换槽。 */
 export interface DecalComponent {kind:'Decal';enabled:boolean;marks:DecalMark[]}
+/** 通用事件到表面痕迹的作者配置；event是宿主注册键，不含可执行代码。 */
+export interface DecalEventRule {
+  id:string;event:string;pattern:DecalMark['pattern'];color:ColorHex;size:[number,number];opacity:number;
+  ttlSec:number;fadeSec:number;maxAlive:number;cooldownSec:number;normalOffset:number;style?:DecalStyle;
+}
+export interface DecalEmitterComponent {
+  kind:'DecalEmitter';enabled:boolean;capacity:number;maxPerFrame:number;groundProbeM:number;surfaceSnapM:number;rules:DecalEventRule[];
+}
+export function validateDecalEmitter(value:unknown):string[] {
+  const c=value as DecalEmitterComponent;
+  if(!c||typeof c!=='object'||c.kind!=='DecalEmitter'||typeof c.enabled!=='boolean')return ['贴花事件配置非法'];
+  const errors:string[]=[],ids=new Set<string>();
+  if(!Number.isInteger(c.capacity)||c.capacity<1||c.capacity>512||!Number.isInteger(c.maxPerFrame)||c.maxPerFrame<1||c.maxPerFrame>128)errors.push('运行贴花capacity必须1–512，maxPerFrame必须1–128');
+  if(!Number.isFinite(c.groundProbeM)||c.groundProbeM<.05||c.groundProbeM>2||!Number.isFinite(c.surfaceSnapM)||c.surfaceSnapM<.01||c.surfaceSnapM>2)errors.push('贴花表面探测范围非法');
+  if(!Array.isArray(c.rules)||c.rules.length>16)return [...errors,'贴花事件规则必须为0–16项'];
+  for(const r of c.rules){
+    if(!r||typeof r!=='object'){errors.push('贴花事件规则非法');continue;}
+    if(typeof r.id!=='string'||!/^[a-zA-Z0-9_-]{1,32}$/.test(r.id)||ids.has(r.id))errors.push('贴花规则id必须唯一且为1–32字符ASCII');ids.add(r.id);
+    if(typeof r.event!=='string'||!/^[a-z][a-z0-9-]{1,63}$/.test(r.event))errors.push('贴花event必须为注册键');
+    errors.push(...validateDecalMark({id:r.id,pattern:r.pattern,position:[0,0,0],rotation:[0,0,0,1],size:r.size,color:r.color,opacity:r.opacity,seed:0,normalOffset:r.normalOffset,priority:0,...(r.style===undefined?{}:{style:r.style})}));
+    if(!Number.isFinite(r.ttlSec)||r.ttlSec<=0||r.ttlSec>120||!Number.isFinite(r.fadeSec)||r.fadeSec<0||r.fadeSec>r.ttlSec||!Number.isInteger(r.maxAlive)||r.maxAlive<1||r.maxAlive>c.capacity||!Number.isFinite(r.cooldownSec)||r.cooldownSec<0||r.cooldownSec>5)errors.push('贴花寿命/淡出/规则容量/冷却非法');
+  }
+  return errors;
+}
 export function validateDecalMark(value:unknown):string[] {
   if(!value||typeof value!=='object'||Array.isArray(value))return ['贴花必须是对象'];
   const m=value as DecalMark,errors:string[]=[];

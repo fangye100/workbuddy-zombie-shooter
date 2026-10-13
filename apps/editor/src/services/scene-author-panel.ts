@@ -158,6 +158,8 @@ export class SceneAuthorPanel {
       const parents = document.createElement('select'); parents.setAttribute('aria-label', 'node.parent'); parents.add(new Option(t('根节点'), ''));
       for (const n of doc.nodes) if (n.id !== draft.id) parents.add(new Option(n.name, n.id)); parents.value = draft.parent ?? '';
       parents.onchange = () => { draft.parent = parents.value || null; dirty(); }; parentLabel.append(parents); form.append(parentLabel);
+      const decalEmitter=draft.components.find(c=>c.kind==='DecalEmitter');
+      if(decalEmitter)fields(form,decalEmitter as unknown as Record<string,unknown>,Object.keys(decalEmitter),'DecalEmitter');
       const rules = draft.components.find(c => c.kind === 'RunRules') as RunRulesComponent | undefined;
       if (rules) {
         fields(form, rules as unknown as Record<string, unknown>, Object.keys(rules), 'RunRules');

@@ -1,0 +1,342 @@
+{
+  "ok": true,
+  "runtime": {
+    "state": "paused",
+    "tick": 100,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 1,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_nav3d_player",
+      "targetId": -1,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "hp": 86.80007934570312,
+      "maxHp": 100,
+      "hitFlash": 0.15000000596046448,
+      "lodTier": 0
+    },
+    "npcCount": 4,
+    "gates": [],
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 5,
+      "disposed": 0,
+      "pending": 5
+    },
+    "instances": 5,
+    "meshIds": [
+      "capsule:r0.350:h1.800",
+      "actor:E-01",
+      "capsule:r0.550:h1.700"
+    ],
+    "actorLibrarySize": 1,
+    "weapons": {
+      "equipped": "pistol",
+      "states": [
+        {
+          "id": "pistol",
+          "magazine": 18,
+          "reserve": 120,
+          "level": 1
+        },
+        {
+          "id": "shotgun",
+          "magazine": 6,
+          "reserve": 48,
+          "level": 1
+        },
+        {
+          "id": "smg",
+          "magazine": 32,
+          "reserve": 192,
+          "level": 1
+        },
+        {
+          "id": "sniper",
+          "magazine": 5,
+          "reserve": 30,
+          "level": 1
+        },
+        {
+          "id": "chainsaw",
+          "magazine": 0,
+          "reserve": 0,
+          "level": 1
+        },
+        {
+          "id": "flame",
+          "magazine": 60,
+          "reserve": 240,
+          "level": 1
+        },
+        {
+          "id": "launcher",
+          "magazine": 4,
+          "reserve": 24,
+          "level": 1
+        }
+      ],
+      "activeId": "pistol",
+      "behavior": "hitscan",
+      "capacity": 18,
+      "reloadRemaining": 0,
+      "switching": false,
+      "upgradeCost": 15,
+      "animation": {
+        "action": "idle",
+        "weaponId": "pistol",
+        "clip": "pistol-idle",
+        "fallback": "idle",
+        "phase": 0,
+        "startTick": 0
+      },
+      "poseIntent": {
+        "weaponId": "pistol",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.12,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.3,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.036,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.09,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "recentEvents": [],
+      "hookErrors": [],
+      "effectCount": 0
+    },
+    "audio": {
+      "state": "running",
+      "runId": 1,
+      "pending": 0,
+      "buffers": 22,
+      "decodedBytes": 13405440,
+      "voices": 0,
+      "loops": 0,
+      "peakVoices": 0,
+      "played": {},
+      "skipped": 1,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    },
+    "navigation": {
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      },
+      "surface": {
+        "mode": "surface-3d",
+        "cellCount": 1460,
+        "surfaceCount": 1,
+        "rejectedSurfaces": [],
+        "obstacleVersion": 0,
+        "dynamicObstacleCount": 0,
+        "overlayWork": 0,
+        "blockedDynamicCells": 0,
+        "blockedDynamicEdges": 0,
+        "version": 1,
+        "pending": false,
+        "workLastStep": 0,
+        "goal": {
+          "x": -0.25,
+          "y": 0,
+          "z": -0.25,
+          "surface": 0
+        }
+      },
+      "flow": {
+        "version": 1,
+        "pending": false,
+        "publishedGoal": {
+          "x": -0.25,
+          "y": 0,
+          "z": -0.25,
+          "surface": 0
+        },
+        "requestedX": 0,
+        "requestedZ": 0,
+        "workLastStep": 0,
+        "cellCount": 1460,
+        "rejectedGoals": 0
+      },
+      "crowd": {
+        "agents": 5,
+        "moving": 2,
+        "candidateChecks": 6,
+        "velocityConstraints": 4,
+        "infeasibleVelocities": 0,
+        "contactPairs": 0,
+        "blockedMoves": 0,
+        "residualOverlapPairs": 0,
+        "maxPenetrationM": 0,
+        "stuckAgents": 0,
+        "unreachableAgents": 0,
+        "yieldingAgents": 0,
+        "externalBlockedMoves": 0
+      }
+    },
+    "decals": {
+      "time": 3.3333333333333335,
+      "count": 1,
+      "capacity": 256,
+      "evicted": 0,
+      "marks": [
+        {
+          "receiver": "nd_nav3d_low",
+          "mark": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "size": [
+              4,
+              4
+            ],
+            "id": "combat_acid_1",
+            "pattern": "acid",
+            "color": "#91bc38",
+            "opacity": 0.84,
+            "seed": 2431,
+            "normalOffset": 0.008,
+            "priority": 2,
+            "style": {
+              "coverage": 1,
+              "edgeWidth": 0.02,
+              "irregularity": 0.65,
+              "detail": 0.6
+            }
+          },
+          "remainingSec": 6.133333333333333
+        }
+      ],
+      "runId": 1,
+      "combat": {
+        "emitted": 1,
+        "noSurface": 0,
+        "throttled": 0,
+        "expired": 0,
+        "budgetDropped": 0,
+        "ruleEvicted": 0,
+        "journalDropped": 0,
+        "unknownRules": 0,
+        "cursor": 1
+      },
+      "gpu": {
+        "instances": 1,
+        "drawCalls": 1,
+        "bufferBytes": 4096
+      }
+    }
+  },
+  "state": {
+    "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+    "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+    "revision": "1c7ffc8f",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  }
+}

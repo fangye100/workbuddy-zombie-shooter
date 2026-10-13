@@ -17,6 +17,7 @@ export * from './doc-diff';
 export * from './spawn-edit';
 export * from './asset-node-edit';
 export * from './solid-ray';
+export * from './mesh-ray';
 export * from './environment-edit';
 export * from './scene-authoring';
 

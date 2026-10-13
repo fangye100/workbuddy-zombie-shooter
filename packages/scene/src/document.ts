@@ -21,12 +21,12 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
-import { validateDecalMark, MAX_AUTHORED_DECALS, type DecalComponent } from './decals';
+import { validateDecalMark, validateDecalEmitter, MAX_AUTHORED_DECALS, type DecalComponent, type DecalEmitterComponent } from './decals';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -167,6 +167,7 @@ export const ComponentKind = {
   NavSurface: 'NavSurface',
   NavigationGate: 'NavigationGate',
   Decal: 'Decal',
+  DecalEmitter: 'DecalEmitter',
   Script: 'Script',
   RunRules: 'RunRules',
 } as const;
@@ -548,6 +549,7 @@ export type ComponentData =
   | NavSurfaceComponent
   | NavigationGateComponent
   | DecalComponent
+  | DecalEmitterComponent
   | ScriptComponent;
 
 /**
@@ -1010,6 +1012,10 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         }
         const receiver=comps.find(x=>x.kind==='MeshRenderer'&&x.enabled);
         if(receiver?.kind!=='MeshRenderer'||receiver.playBinding||receiver.sharedMotion||receiver.bodyIk||n.id===d.playerStart)err(at,'E_DECAL_RECEIVER','贴花必须挂在启用的静态 MeshRenderer 接收节点，不能挂玩家/蒙皮代理');
+      }
+      if(c.kind===ComponentKind.DecalEmitter){
+        for(const message of validateDecalEmitter(c))err(at,'E_DECAL_EMITTER',message);
+        if(c.enabled&&d.nodes!.some((other,ni)=>ni<i&&other?.components?.some(x=>x.kind==='DecalEmitter'&&x.enabled)))err(at,'E_DECAL_EMITTER_DUP','一个场景只能启用一个贴花事件配置');
       }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');

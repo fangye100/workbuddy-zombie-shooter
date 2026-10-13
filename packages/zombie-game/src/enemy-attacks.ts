@@ -13,6 +13,7 @@ interface Actor { x: number; y?:number; z: number; radius: number; generation: n
 export interface EnemyAttackWorld {
   actor(slot: number): Actor | null;
   player: number;
+  landed?(effect:Readonly<EnemyAttackEffect>,tick:number):void;
   damage(slot: number, amount: number, source: number): void;
   move(slot: number, x: number, z: number): AttackPoint;
   /** Actual segment collision with scene solids, including the lob's height. */
@@ -72,7 +73,7 @@ export class EnemyAttacks {
         } else if (!e.blocked) {
           const block = e.phase === 'flight' ? world.obstruction(e.position,e.to) : null;
           if (block) { e.blocked=true;e.position=block;e.duration=age+.3;continue; }
-          e.phase = 'pool'; e.position = [...e.to];
+          if(e.phase==='flight'){e.phase='pool';e.position=[...e.to];world.landed?.(e,tick);}
           if (Math.abs((player.y??0)-e.to[1])<.5 && Math.hypot(player.x-e.to[0],player.z-e.to[2]) <= e.radius + player.radius) {
             const source=world.actor(e.source);
             world.damage(world.player,e.damage*dt,source?.generation===e.generation?e.source:-1);

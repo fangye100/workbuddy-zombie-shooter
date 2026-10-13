@@ -1,0 +1,231 @@
+{
+  "events": [
+    {
+      "activeSec": 4,
+      "event": "acid-land",
+      "generation": 1,
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "radius": 2,
+      "runId": 1,
+      "seq": 1,
+      "slot": 4,
+      "tick": 74
+    },
+    {
+      "event": "npc-damage",
+      "generation": 1,
+      "point": [
+        1.6136053800582886,
+        0,
+        -0.8531359434127808
+      ],
+      "runId": 1,
+      "seq": 2,
+      "slot": 3,
+      "tick": 125
+    },
+    {
+      "activeSec": 4,
+      "event": "acid-land",
+      "generation": 1,
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "radius": 2,
+      "runId": 1,
+      "seq": 3,
+      "slot": 4,
+      "tick": 254
+    },
+    {
+      "direction": [
+        -0.265213529296146,
+        0,
+        -0.9641897032629428
+      ],
+      "event": "weapon-solid-impact",
+      "from": [
+        -0.0795640587888438,
+        0.9,
+        -0.28925691097888284
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "point": [
+        -1.5816159292016054,
+        0.9,
+        -5.75
+      ],
+      "receiver": "nd_combat_wall",
+      "runId": 1,
+      "seq": 4,
+      "tick": 267,
+      "weaponId": "pistol"
+    }
+  ],
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 4
+  },
+  "ledger": {
+    "disposed": 0,
+    "pending": 5,
+    "registered": 5
+  },
+  "marks": {
+    "capacity": 256,
+    "count": 4,
+    "evicted": 0,
+    "marks": [
+      {
+        "mark": {
+          "color": "#91bc38",
+          "id": "combat_acid_1",
+          "normalOffset": 0.008,
+          "opacity": 0.16800000000000015,
+          "pattern": "acid",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "priority": 2,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 2431,
+          "size": [
+            4,
+            4
+          ],
+          "style": {
+            "coverage": 1,
+            "detail": 0.6,
+            "edgeWidth": 0.02,
+            "irregularity": 0.65
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 0.4000000000000003
+      },
+      {
+        "mark": {
+          "color": "#982c3c",
+          "id": "combat_blood_2",
+          "normalOffset": 0.006,
+          "opacity": 0.86,
+          "pattern": "splatter",
+          "position": [
+            1.6136053800582886,
+            0,
+            -0.8531359434127808
+          ],
+          "priority": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 4149,
+          "size": [
+            0.85,
+            0.7
+          ],
+          "style": {
+            "coverage": 0.92,
+            "detail": 0.65,
+            "edgeWidth": 0.015,
+            "irregularity": 0.8
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 17.1
+      },
+      {
+        "mark": {
+          "color": "#91bc38",
+          "id": "combat_acid_3",
+          "normalOffset": 0.008,
+          "opacity": 0.84,
+          "pattern": "acid",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "priority": 2,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 8285,
+          "size": [
+            4,
+            4
+          ],
+          "style": {
+            "coverage": 1,
+            "detail": 0.6,
+            "edgeWidth": 0.02,
+            "irregularity": 0.65
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 6.4
+      },
+      {
+        "mark": {
+          "color": "#b3a186",
+          "id": "combat_bullet_4",
+          "normalOffset": 0.004,
+          "opacity": 0.95,
+          "pattern": "bullet-hole",
+          "position": [
+            -1.5816159292016054,
+            -0.6,
+            0.25
+          ],
+          "priority": 1,
+          "rotation": [
+            0.7071067811865475,
+            0,
+            0,
+            0.7071067811865475
+          ],
+          "seed": 8825,
+          "size": [
+            0.22,
+            0.22
+          ],
+          "style": {
+            "coverage": 0.9,
+            "detail": 0.7,
+            "edgeWidth": 0.02,
+            "irregularity": 0.7
+          }
+        },
+        "receiver": "nd_combat_wall",
+        "remainingSec": 34.83333333333333
+      }
+    ],
+    "time": 9.066666666666666
+  },
+  "state": "paused",
+  "tick": 272
+}

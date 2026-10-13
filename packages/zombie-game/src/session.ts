@@ -31,7 +31,8 @@ import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from "@aether/runtime";
 import { NULL_BEHAVIOR_EXECUTOR } from "@aether/runtime";
-import { nearestSolidHit } from "@aether/runtime";
+import {CombatDecalJournal} from "./combat-decals";
+import { nearestSolidHit, nearestSolidContact } from "@aether/runtime";
 import { NavigationGates, gateOverlapsActor, type SolidColliderDesc } from '@aether/runtime';
 import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
@@ -292,6 +293,7 @@ export class RuntimeSession {
   equipWeapon(id:string):boolean { return this.outcome==='running' && !this.progress?.choosing && this.weapons.equip(id); }
   upgradeWeapon():boolean {return this.outcome==='running' && !!this.progress && !this.progress.choosing && this.weapons.upgrade(cost=>{if(this.progress!.scrap<cost)return false;this.progress!.scrap-=cost;return true;});}
   readonly enemyAttacks = new EnemyAttacks();
+  readonly decalEvents = new CombatDecalJournal();
   private attackTokens: AttackTokenPool | null = null;
   private readonly npcDecisionAt: Float64Array;
   private readonly npcRecoveryUntil: Float64Array;
@@ -308,6 +310,7 @@ export class RuntimeSession {
   private attackWorld(): EnemyAttackWorld {
     const t = this.table;
     return { player: this.playerEntityId,
+      landed:(e,tick)=>this.decalEvents.append(this.runId,{event:"acid-land",tick,point:[...e.to],slot:e.source,generation:e.generation,radius:e.radius,activeSec:Math.max(0,e.duration-(tick-e.startTick)*this.fixedStep)}),
       actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, y:t.posY[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
       damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
       move: (slot,x,z) => { const ox=t.posX[slot]!,oz=t.posZ[slot]!; const [cx,cz] = this.navigation.moveActor(t,slot,x,z); t.posX[slot]=cx;t.posZ[slot]=cz;t.velX[slot]=(cx-ox)/this.fixedStep;t.velZ[slot]=(cz-oz)/this.fixedStep;return [cx,t.posY[slot]!,cz]; },
@@ -679,6 +682,8 @@ export class RuntimeSession {
     if (this.tbl.health[targetSlot]! <= 0) {
       return { died: false, hpAfter: 0 };
     }
+    if(!Number.isFinite(amount)||amount<=0)return {died:false,hpAfter:this.tbl.health[targetSlot]!};
+    if(this.kindOf[targetSlot]===1)this.decalEvents.append(this.runId,{event:"npc-damage",tick:this.tickCount,point:[this.tbl.posX[targetSlot]!,this.tbl.posY[targetSlot]!,this.tbl.posZ[targetSlot]!],slot:targetSlot,generation:this.tbl.generation[targetSlot]!});
     const hpAfter = Math.max(0, this.tbl.health[targetSlot]! - amount);
     this.tbl.health[targetSlot] = hpAfter;
     // 受击高亮 [PLACEHOLDER 0.15]（docs/23 §2.1；渲染层消费，先给默认时长）
@@ -946,6 +951,7 @@ export class RuntimeSession {
     this.diags.length = 0;
     this.diagSeen.clear();
     this.behaviorLogs.length = 0; // 跨代日志必须清：旧代日志混进来会让"重跑了没"说不清
+    this.decalEvents.clear();
     this.combatEventBuf.length = 0; // 战斗事件同理：跨代残留会让击杀统计重复计账
     this.sessionEventBuf.length = 0; // 波次/清房事件同理
     this.waveRooms.clear(); // 波次状态随世界重建
@@ -1473,14 +1479,16 @@ export class RuntimeSession {
     const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.liveSolids,l)!==null;};
     return {actor,actors:()=>{const out=[];for(let i=0;i<t.capacity;i++){const a=actor(i);if(a)out.push(a);}return out;},blocked,
       trace:(from,direction,range,ignore,radius=0)=>{
+        const surface=nearestSolidContact(from,direction,this.liveSolids,range,radius);
         let distance=nearestSolidHit(from,direction,this.liveSolids,range,radius)??range, target=null;
         for(let i=0;i<t.capacity;i++){const a=actor(i);if(!a || ignore.has(i))continue;
           const stats=this.defIdToStats.get(t.defId[i]!);if(!stats)continue;
           const h=rayCapsuleY([from[0],from[1]-a.y+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
           if(h!==null && h<distance){distance=h;target=a;}
         }
-        return {actor:target,distance,point:[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance]};
+        return {actor:target,distance,point:[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance],...(!target&&surface?{surface}:{})};
       },
+      solidImpact:(hit,from,direction,w,tick)=>{if(!['hitscan','pellets','piercing'].includes(w.behavior)&&(w.behavior!=='projectile'||w.effects.blastRadiusM>0))return;if(hit.surface)this.decalEvents.append(this.runId,{event:"weapon-solid-impact",tick,receiver:hit.surface.nodeId,point:[...hit.surface.point],normal:[...hit.surface.normal],from:[...from],direction:[...direction],weaponId:w.id});},
       damage:(id,damage)=>{
         const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p);
         t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));
@@ -1508,7 +1516,7 @@ export class RuntimeSession {
     const marker=w.presentation.markers.muzzle.position;
     const from:[number,number,number]=[t.posX[p]!+dx*marker[0]-dz*marker[2],y+marker[1],t.posZ[p]!+dz*marker[0]+dx*marker[2]];
     const origin:[number,number,number]=[t.posX[p]!,y,t.posZ[p]!];
-    if(world.blocked(origin,from)) {const hit=world.trace(origin,[dx,0,dz],Math.hypot(from[0]-origin[0],from[2]-origin[2]),new Set());this.weaponCombat.effect(w,'shot',origin,hit.point,this.tick,.12,0,false);this.lastShot={tick:this.tick,from:origin,to:hit.point,hit:false};return;}
+    if(world.blocked(origin,from)) {const hit=world.trace(origin,[dx,0,dz],Math.hypot(from[0]-origin[0],from[2]-origin[2]),new Set());if(hit.surface)world.solidImpact?.(hit,origin,[dx,0,dz],w,this.tick);this.weaponCombat.effect(w,'shot',origin,hit.point,this.tick,.12,0,false);this.lastShot={tick:this.tick,from:origin,to:hit.point,hit:false};return;}
     this.weaponCombat.fire(w,from,[dx,0,dz],w.damage*this.weapons.damageMultiplier*(1+(this.progress?.strength('damage')??0)),this.tick,world);
     const effect=this.weaponCombat.effects[this.weaponCombat.effects.length-1];if(effect)this.lastShot={tick:this.tick,from:effect.from,to:effect.to,hit:effect.hit};
   }

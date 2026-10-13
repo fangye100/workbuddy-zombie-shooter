@@ -105,6 +105,12 @@
       "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
       "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
       "enabled": true
+    },
+    {
+      "id": "sc_combat_decal_whitebox",
+      "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+      "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+      "enabled": true
     }
   ],
   "startIndex": 1,

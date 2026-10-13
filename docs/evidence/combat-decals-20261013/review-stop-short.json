@@ -1,0 +1,21 @@
+{
+  "gpu": {
+    "bufferBytes": 0,
+    "drawCalls": 0,
+    "instances": 0
+  },
+  "ledger": {
+    "disposed": 10,
+    "pending": 0,
+    "registered": 10
+  },
+  "marks": {
+    "capacity": 256,
+    "count": 0,
+    "evicted": 0,
+    "marks": [],
+    "time": 0
+  },
+  "state": "stopped",
+  "tick": 0
+}

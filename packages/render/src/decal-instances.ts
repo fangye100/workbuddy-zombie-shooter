@@ -11,19 +11,20 @@ export class DecalPool {
   private readonly entries=new Map<string,Entry>();
   private now=0;evicted=0;
   constructor(readonly capacity=MAX_RUNTIME_DECALS){if(!Number.isInteger(capacity)||capacity<1||capacity>MAX_RUNTIME_DECALS)throw new RangeError('贴花池容量非法');}
-  emit(input:RuntimeDecal):void {
+  emit(input:RuntimeDecal,elapsedSec=0):void {
     const errors=validateDecalMark(input.mark);
     if(typeof input.receiver!=='string'||!input.receiver||!Number.isFinite(input.ttlSec)||input.ttlSec<=0||input.ttlSec>120
-      ||!Number.isFinite(input.fadeSec)||input.fadeSec<0||input.fadeSec>input.ttlSec||errors.length)throw new Error(`运行贴花参数非法：${errors.join('；')}`);
+      ||!Number.isFinite(input.fadeSec)||input.fadeSec<0||input.fadeSec>input.ttlSec||!Number.isFinite(elapsedSec)||elapsedSec<0||elapsedSec>=input.ttlSec||errors.length)throw new Error(`运行贴花参数非法：${errors.join('；')}`);
     const key=`${input.receiver}:${input.mark.id}`;
     if(this.entries.has(key))throw new Error(`运行贴花 id 已存在：${key}`);
     if(this.entries.size===this.capacity){this.entries.delete(this.entries.keys().next().value!);this.evicted++;}
-    this.entries.set(key,{...structuredClone(input),born:this.now});
+    this.entries.set(key,{...structuredClone(input),born:this.now-elapsedSec});
   }
   advance(now:number):void {
     if(!Number.isFinite(now)||now<this.now)throw new RangeError('贴花模拟时间不得倒退');this.now=now;
     for(const [id,e]of this.entries)if(now>=e.born+e.ttlSec)this.entries.delete(id);
   }
+  remove(receiver:NodeId,id:string):boolean {return this.entries.delete(`${receiver}:${id}`);}
   snapshot(){return {time:this.now,count:this.entries.size,capacity:this.capacity,evicted:this.evicted,marks:Array.from(this.entries.values(),e=>{
     const left=e.born+e.ttlSec-this.now,mark=structuredClone(e.mark);mark.opacity*=e.fadeSec>0?Math.min(1,left/e.fadeSec):1;
     return {receiver:e.receiver,mark,remainingSec:left};

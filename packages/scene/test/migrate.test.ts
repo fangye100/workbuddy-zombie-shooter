@@ -72,7 +72,7 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles']);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter']);
     expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
@@ -361,7 +361,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'predictive-crowd-navigation',
       'authored-3d-navigation-surfaces',
       'runtime-navigation-gates',
-      'procedural-surface-decals','expanded-procedural-decal-styles',
+      'procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter',
     ]);
   });
 });
@@ -457,7 +457,7 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(20);
+    expect(SCHEMA_VERSION).toBe(21);
   });
 });
 
@@ -490,7 +490,7 @@ describe('v16 → v17 三维导航',()=>{
   afterEach(()=>{clearMigrations();registerSceneMigrations();});
   it('旧平面场景只升级版本，不注入三维内容；新组件与支撑引用显式校验',()=>{
     const input=docAt(16),copy=structuredClone(input);const result=migrateToLatest(input);
-    expect(result.doc.schemaVersion).toBe(20);expect(input).toEqual(copy);expect(JSON.stringify(result.doc)).not.toContain('NavSurface');
+    expect(result.doc.schemaVersion).toBe(21);expect(input).toEqual(copy);expect(JSON.stringify(result.doc)).not.toContain('NavSurface');
     const doc=createEmptySceneDocument('三维测试');doc.nodes.push({id:'nd_surf',name:'坡面',parent:null,
       transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},visible:true,pickable:true,prefab:null,
       components:[{kind:'NavSurface',enabled:true,size:[8,4],supportCollider:'nd_missing'}]});
@@ -506,7 +506,7 @@ describe('v17 → v18 动态导航门',()=>{
   afterEach(()=>{clearMigrations();registerSceneMigrations();});
   it('只升级版本，不编造门状态或改变作者节点',()=>{
     const input=docAt(17),copy=structuredClone(input),result=migrateToLatest(input);
-    expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles']);expect(result.doc.schemaVersion).toBe(20);expect(input).toEqual(copy);
+    expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter']);expect(result.doc.schemaVersion).toBe(21);expect(input).toEqual(copy);
     expect(result.doc.nodes).toEqual(input.nodes);expect(JSON.stringify(result.doc)).not.toContain('NavigationGate');
   });
 });

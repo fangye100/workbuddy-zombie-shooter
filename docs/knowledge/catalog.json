@@ -4,6 +4,50 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "combat-decals-visual-review-20261013",
+      "path": "docs/evidence/combat-decals-20261013/review.md",
+      "title": "战斗贴花独立视觉VFX验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "combat-decals-acceptance-20261013",
+      "path": "docs/evidence/combat-decals-20261013/acceptance.md",
+      "title": "真实战斗贴花事件接入与验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
       "id": "decal-vfx-final-review-20261013",
       "path": "docs/evidence/decal-vfx-20261013/refined-review.md",
       "title": "贴花独立视觉修复复验",
@@ -114,12 +158,14 @@
         "mcp",
         "architecture"
       ],
-      "read": "独立工作区、九图案/形态参数、v20迁移、GPU合批与MCP闭环",
+      "read": "独立工作区、九图案/形态参数、v21场景事件配置、战斗痕迹、寿命与数量、GPU/MCP闭环",
       "sourceRefs": [
         "project-rules",
         "scene-schema",
         "scene-decals",
-        "architecture-policy"
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
       ]
     },
     {
@@ -2528,6 +2574,44 @@
         "project-rules",
         "architecture-policy",
         "scene-shared-motion"
+      ]
+    },
+    {
+      "id": "combat-decal-facts",
+      "path": "packages/zombie-game/src/combat-decals.ts",
+      "title": "游戏战斗贴花事实契约",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "真实命中/伤害/酸液落地、稳定代次序号、有界日志",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "combat-decal-planner",
+      "path": "packages/zombie-game/src/presentation/combat-decals.ts",
+      "title": "游戏战斗贴花表现策略",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "事件规则映射、处理预算、寿命保护、数量淘汰与失败诊断",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
       ]
     }
   ]

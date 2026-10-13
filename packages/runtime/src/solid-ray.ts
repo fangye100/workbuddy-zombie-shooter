@@ -66,3 +66,19 @@ export function nearestSolidHit(origin: V3, direction: V3, solids: readonly Soli
   }
   return nearest === Infinity ? null : nearest;
 }
+
+export interface SolidContact {nodeId:NodeId;distance:number;point:[number,number,number];normal:[number,number,number]}
+/** 法线使用逆转置；inside 命中不伪造接收表面。扫掠命中仍须宿主投到可见几何。 */
+export function nearestSolidContact(origin:V3,direction:V3,solids:readonly SolidColliderDesc[],range:number,sweepRadius=0):SolidContact|null {
+  let selected:SolidColliderDesc|null=null,distance=Infinity;
+  for(const s of solids){const d=raySolid(origin,direction,s,sweepRadius);if(d!==null&&d<=range&&d<distance){selected=s;distance=d;}}
+  if(!selected||distance<=1e-7)return null;
+  const point:[number,number,number]=[origin[0]+direction[0]*distance,origin[1]+direction[1]*distance,origin[2]+direction[2]*distance],m=selected.worldToLocal;
+  const p=[m[0]!*point[0]+m[4]!*point[1]+m[8]!*point[2]+m[12]!,m[1]!*point[0]+m[5]!*point[1]+m[9]!*point[2]+m[13]!,m[2]!*point[0]+m[6]!*point[1]+m[10]!*point[2]+m[14]!];
+  let n=[0,0,0];const shape=selected.shape;
+  if(shape.type==='box'){const gaps=p.map((v,i)=>Math.abs(Math.abs(v)-shape.halfExtents[i]!));const axis=gaps.indexOf(Math.min(...gaps));n[axis]=Math.sign(p[axis]!)||1;}
+  else {const y=shape.type==='capsule'?Math.max(-Math.max(0,shape.height/2-shape.radius),Math.min(Math.max(0,shape.height/2-shape.radius),p[1]!)):0;n=[p[0]!,p[1]!-y,p[2]!];}
+  const normal:[number,number,number]=[m[0]!*n[0]!+m[1]!*n[1]!+m[2]!*n[2]!,m[4]!*n[0]!+m[5]!*n[1]!+m[6]!*n[2]!,m[8]!*n[0]!+m[9]!*n[1]!+m[10]!*n[2]!],l=Math.hypot(...normal);
+  if(l<1e-8)return null;for(let i=0;i<3;i++)normal[i]=normal[i]!/l;
+  return {nodeId:selected.nodeId,distance,point,normal};
+}
