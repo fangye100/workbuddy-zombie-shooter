@@ -11,7 +11,7 @@
       "authority": "source",
       "status": "current",
       "topics": ["editor", "camera", "animation"],
-      "read": "Play/Pause orbit/pan/zoom、观察与游戏输入边界、切枪和失焦释放；使用见HumanIK指南",
+      "read": "Play/Pause orbit/pan/zoom与输入边界；HumanIK指南记录0222268的七枪299有效GPU帧及真实导航证据",
       "sourceRefs": ["project-rules", "architecture-policy"]
     },
     {

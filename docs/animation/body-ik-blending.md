@@ -104,7 +104,41 @@ Mixamo 名字、不可达肢体、缺目标/骨骼、角度限制、场景/资�
 导航 owner 测试为 `apps/editor/test/play-observation-navigation.test.ts`、`play-camera.test.ts`、`play-controller.test.ts`。
 有界 GPU 命令为 `node tools/verify/weapon-assembly.mjs --expected-head <完整提交> --hold-switch-only --elbow-observation --collapse-ik-panel --aim-yaw 135`。
 它通过可见观察按钮和真实鼠标 orbit/pan/wheel 取得七件前/侧原生截图、Play/Pause 导航、游戏相机返回和 Stop 作者相机恢复证据；
-仍不执行开火/换弹。2026-10-14 当前实现的真实 GPU 与可见 navigation 验收待候选冻结后执行。
+仍不执行开火/换弹。2026-10-14 的实际结果见下节。
+
+### R6 实机观察与导航证据（2026-10-14）
+
+验收目标为 `0222268fb7c1428ada7ed200506e16622e495c17`，当前 Windows worktree 的正常 HTTPS/TLS、
+headed Chrome、安全上下文与 NVIDIA Lovelace。工具报告 `passed:true`，25 项检查全部通过；
+共 312 条快照，其中 299 条本帧有效模型样本同时纳入双手握点与肘 bend 门禁，二者 `failures:[]`。
+前述 56 个 CPU FK 姿态样本是独立证据，不与 299 个实机帧混计。
+
+真实 Digit1–7 切枪、七件正常持枪及一次 W 移动通过。可见观察按钮与真实鼠标 orbit/pan/wheel
+改变观察机位，未触发玩家移动或射击；Pause 中仍能拖动观察，模拟及动作时钟保持冻结。
+回游戏相机恢复当前游戏机位；Stop 精确恢复作者相机和作者文档，资源账目归零，重启后再次 Stop 无残留。
+原记录中 R 键输入为 0，firing 为真或 lastShot 非空的快照为 0，输入清理与异常列表为空。
+
+每件均取得原生前/侧 PNG。下表为数值快照帧 / PNG 捕获期间帧区间，截图并非冻结在单一数值帧：
+
+| 武器 | 前视快照 / PNG 帧区间 | 侧视快照 / PNG 帧区间 |
+|---|---|---|
+| pistol | 385 / 385–401 | 424 / 424–440 |
+| shotgun | 555 / 555–569 | 592 / 592–607 |
+| smg | 721 / 721–734 | 758 / 758–774 |
+| sniper | 887 / 887–901 | 923 / 924–942 |
+| chainsaw | 1056 / 1056–1070 | 1094 / 1094–1110 |
+| flame | 1224 / 1224–1239 | 1263 / 1263–1281 |
+| launcher | 1399 / 1399–1415 | 1438 / 1438–1455 |
+
+Audit 人工查看七件前/侧图未见明显上臂挤入胸廓，Flame 两侧肘外展可见。
+Launcher 枪体遮挡更多，不能据此批准所有表面的解剖像素质量。
+本次只认证上述正常持枪/切枪、少量既有瞄准与观察导航路径，不认证全部 aim、攻击/换弹、
+所有姿态穿插、身体碰撞或全部输入失败路径的实机行为；独立终审另行进行。
+
+原始报告为本地忽略路径 `.workbuddy/tmp/weapon-hip-slot/r6-headed-audit/observations.json`，
+同目录 `seven-<weapon>-observation-front.png` / `seven-<weapon>-observation-side.png` 对应上表。
+这些文件不随 Git 分发，文档保留版本、计数、帧区间与限制供本机复查。
+本轮自有 Chrome 82104 已退出、CDP 9348 无监听；原 5198 服务 PID53452 保留，这些是验收时的进程快照。
 
 有界面 Chrome 还需确认目标检出/场景、真实 GPU/安全上下文、可见 Apply/保存/重载/
 权重控制、正确角色的源片段变化及 Stop 精确恢复。构建或矩阵测试不能代替视觉验收。
