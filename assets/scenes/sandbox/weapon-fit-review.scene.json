@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 17,
+  "schemaVersion": 18,
   "id": "sc_weapon_fit_review",
   "name": "七武器 · 去重复部件 / 实际slot / Shell与Fuel候选",
   "act": null,

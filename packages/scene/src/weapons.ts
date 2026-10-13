@@ -1,5 +1,5 @@
 import type { AssetRef } from './document';
-import { validModelSockets, validModelAttachment, validSocketTransform, type ModelSockets, type ModelAttachment, type SocketTransform } from './model-attachments';
+import { validModelSockets, validModelAttachment, validSocketTransform, validBonePositionSlot, type BonePositionSlot, type ModelSockets, type ModelAttachment, type SocketTransform } from './model-attachments';
 
 export type WeaponBehavior = 'hitscan' | 'pellets' | 'piercing' | 'projectile' | 'melee' | 'flame';
 export type WeaponAction = 'idle' | 'fire' | 'reload' | 'equip' | 'unequip';
@@ -14,7 +14,7 @@ export interface WeaponDefinition {
   upgrades: { maxLevel: number; baseCost: number; costStep: number; damageStep: number; hasteStep: number; magazineStep: number };
   presentation: {
     /** undefined/null：旧 markers 路径；有值：真实模型 socket 唯一真源。 */
-    assembly?: { sockets?: ModelSockets; attachments: ModelAttachment[]; holdPose: SocketTransform; reloadAttachmentId: string | null } | null;
+    assembly?: { sockets?: ModelSockets; attachments: ModelAttachment[]; holdPose: SocketTransform; holdSlot?: BonePositionSlot; reloadAttachmentId: string | null } | null;
     model: AssetRef | null; placeholder: 'pistol' | 'shotgun' | 'smg' | 'sniper' | 'chainsaw' | 'flame' | 'launcher';
     color: string; lengthM: number;
     /** Metres, weapon-local Y-up/+X barrel axis; quaternion xyzw. Effectors are semantics, not rig bone names. */
@@ -48,7 +48,7 @@ export function validWeaponDefinition(value: unknown): value is WeaponDefinition
   if(!v || !resource(v.model) || !['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'].includes(v.placeholder) || !/^#[\da-f]{6}$/i.test(v.color) || !num(v.lengthM,.05,3))return false;
   if(v.assembly!==undefined&&v.assembly!==null){
     const a=v.assembly;
-    if(!validSocketTransform(a.holdPose)||(a.sockets!==undefined&&!validModelSockets(a.sockets))||!Array.isArray(a.attachments)||a.attachments.length>8
+    if(!validSocketTransform(a.holdPose)||(a.holdSlot!==undefined&&!validBonePositionSlot(a.holdSlot))||(a.sockets!==undefined&&!validModelSockets(a.sockets))||!Array.isArray(a.attachments)||a.attachments.length>8
       ||!a.attachments.every(validModelAttachment)||new Set(a.attachments.map(x=>x.id)).size!==a.attachments.length
       ||(a.reloadAttachmentId!==null&&!a.attachments.some(x=>x.id===a.reloadAttachmentId)))return false;
   }

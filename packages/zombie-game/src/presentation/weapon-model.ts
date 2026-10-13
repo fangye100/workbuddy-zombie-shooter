@@ -28,9 +28,10 @@ export function weaponActionFrameDiagnostics(sockets:ModelSockets):string[] {
   return errors;
 }
 export function weaponModelProjection(def:WeaponDefinition,pose:WeaponSystem['poseIntent'],yaw:number,actorRotation:Quat,
-  sockets:ModelSockets,right:{id:string;socket:BoneSocket},left:{id:string;socket:BoneSocket},reloadGrip?:SocketTransform,diagnostic?:(message:string)=>void):WeaponModelProjection|null {
+  sockets:ModelSockets,right:{id:string;socket:BoneSocket},left:{id:string;socket:BoneSocket},reloadGrip?:SocketTransform,diagnostic?:(message:string)=>void,holdAnchorNode?:number):WeaponModelProjection|null {
   const assembly=def.presentation.assembly;
   if(!assembly||!sockets.primaryGrip||!sockets.supportGrip||!sockets.muzzle)return null;
+  if(assembly.holdSlot&&holdAnchorNode===undefined){diagnostic?.('WEAPON_HOLD_SLOT: 位置基准骨未唯一解析，保留 legacy');return null;}
   const invalid=weaponActionFrameDiagnostics(sockets);if(invalid.length){invalid.forEach(d=>diagnostic?.(d));return null;}
   const inverseActor=inverseRotation(actorRotation),aim:Quat=[0,-Math.sin(yaw/2),0,Math.cos(yaw/2)];
   const recoil:Quat=[0,0,Math.sin(pose.recoil.pitchDeg*Math.PI/360),Math.cos(pose.recoil.pitchDeg*Math.PI/360)];
@@ -40,7 +41,7 @@ export function weaponModelProjection(def:WeaponDefinition,pose:WeaponSystem['po
   // support sockets beyond H01's left chain during ready/locomotion blending.
   // Keep a visible phase-driven drop within the measured two-hand reach.
   const lowering=pose.action==='unequip'?pose.phase*.08:pose.action==='equip'?(1-pose.phase)*.08:0;
-  const target:SocketTransform={position:assembly.holdPose.position.map((n,i)=>n+recoilPosition[i]!-(i===1?lowering:0)) as [number,number,number],rotation:[...quatMul(inverseActor,worldRotation)]};
+  const target:SocketTransform={position:(assembly.holdSlot?.position??assembly.holdPose.position).map((n,i)=>n+recoilPosition[i]!-(i===1?lowering:0)) as [number,number,number],rotation:[...quatMul(inverseActor,worldRotation)]};
   const p=def.presentation.procedural;
   const magazineRemoved=pose.action==='reload'&&pose.phase>=p.magazineOutPhase&&pose.phase<p.magazineInPhase&&assembly.reloadAttachmentId!==null;
   let dependent=sockets[pose.reload.leftHandTarget];
@@ -70,7 +71,7 @@ export function weaponModelProjection(def:WeaponDefinition,pose:WeaponSystem['po
     const phase=(pose.phase-p.magazineOutPhase)/Math.max(1e-8,p.magazineInPhase-p.magazineOutPhase);
     dependent.position[1]-=.12*Math.sin(Math.PI*phase);
   }
-  return {magazineRemoved,request:{target,primary:{controlId:right.id,contact:right.socket.contact,modelSocket:sockets.primaryGrip},
+  return {magazineRemoved,request:{target,...(assembly.holdSlot?{positionAnchor:{node:holdAnchorNode!}}:{}),primary:{controlId:right.id,contact:right.socket.contact,modelSocket:sockets.primaryGrip},
     dependent:{controlId:left.id,contact:left.socket.contact,modelSocket:dependent}}};
 }
 

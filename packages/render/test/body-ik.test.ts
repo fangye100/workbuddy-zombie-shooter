@@ -21,6 +21,24 @@ function fixture(part: BodyIkPart = 'leftHand') {
   return { sk, skin, binding, control, out, position };
 }
 describe('post-animation HumanIK blending', () => {
+  it('anchor取当前采样Hip并规整化；只平移，重复输入不累加且不改Hip/腿locals',()=>{
+    const f=fixture('rightHand'),left=newBodyIkControl('leftHand');f.binding.controls.push(left);f.skin.bodyIk=createBodyIkState(f.sk,f.binding);
+    const hip=f.sk.joints[f.sk.jointNames.indexOf('Hips')]!;
+    for(const local of f.sk.locals)local.t=local.t.map(n=>n*100) as [number,number,number];
+    f.sk.normalization=socketMatrix({position:[.05,.02,-.03],rotation:[0,0,0,1]},.01);
+    f.skin.clips=[{name:'hip-motion',duration:1,tracks:[{node:hip,path:'translation',stride:3,interpolation:'LINEAR',times:new Float32Array([0,1]),values:new Float32Array([0,90,0,10,100,20])}]}];f.skin.clip=0;f.skin.time=.5;
+    const request={target:{position:[-.2,.3,.2] as [number,number,number],rotation:[0,0,0,1] as [number,number,number,number]},positionAnchor:{node:hip},primary:{controlId:f.control.id,contact:identitySocket(),modelSocket:identitySocket()},dependent:{controlId:left.id,contact:identitySocket(),modelSocket:{...identitySocket(),position:[.15,0,0] as [number,number,number]}}};
+    f.skin.bodyIk.attachment=request;const input=structuredClone(request.target),sampled=sampleAnimationPose(f.skin),before=structuredClone(f.sk.locals);
+    const first=f.out(),resolved=f.skin.bodyIk.attachment.resolvedTarget!;
+    expect(resolved.position[0]).toBeCloseTo(-.1);expect(resolved.position[1]).toBeCloseTo(1.27);expect(resolved.position[2]).toBeCloseTo(.27);
+    expect(resolved.rotation).toEqual(input.rotation);expect(request.target).toEqual(input);expect(f.out()).toEqual(first);expect(request.target).toEqual(input);expect(f.sk.locals).toEqual(before);
+    expect(sampleAnimationPose(f.skin)).toEqual(sampled);
+    f.skin.time=1;f.out();expect(f.skin.bodyIk.attachment.resolvedTarget!.position[2]).toBeCloseTo(.37);
+  });
+  it('失效anchor显式诊断且不给装配结果，legacy目标行为保留',()=>{
+    const f=fixture('rightHand');f.skin.bodyIk!.attachment={target:identitySocket(),positionAnchor:{node:999},primary:{controlId:f.control.id,contact:identitySocket(),modelSocket:identitySocket()}};
+    f.out();expect(f.skin.bodyIk!.diagnostics.some(d=>d.code==='IK_ATTACHMENT_ANCHOR')).toBe(true);expect(f.skin.bodyIk!.attachment.resolvedTarget).toBeUndefined();expect(f.skin.bodyIk!.attachment.result).toBeUndefined();
+  });
   it.each([1-1e-8,1+1e-8])('角距离不把 FK quaternion 范数漂移当姿态误差：%s',norm=>{
     const f=fixture();f.sk.locals[0]!.r=[0,0,0,norm];
     f.skin.bodyIk!.orientations={[f.control.id]:eulerToQuat(.2,.3,.1)};

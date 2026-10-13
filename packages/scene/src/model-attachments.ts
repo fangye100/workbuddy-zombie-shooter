@@ -4,6 +4,12 @@ export interface SocketTransform { position: [number,number,number]; rotation: [
 export type ModelSockets = Record<string, SocketTransform>;
 /** 名称引用不保存 GLB 数组下标。contact.position 为规整化 actor 米制偏移，随骨方向旋转。 */
 export interface BoneSocket { bone: string; contact: SocketTransform }
+/** 骨位置基准 + 规整化 actor 轴米制偏移；只跟平移，不继承骨方向。 */
+export interface BonePositionSlot { bone: string; position: [number,number,number] }
+export function validBonePositionSlot(v:unknown):v is BonePositionSlot {
+  return record(v)&&typeof v.bone==='string'&&v.bone.trim().length>0&&v.bone.length<=256
+    &&Array.isArray(v.position)&&v.position.length===3&&v.position.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=100);
+}
 export type BoneSockets = Record<string, BoneSocket>;
 export interface ModelAttachment {
   id: string; model: AssetRef; parentSocket: string; childSocket: string;

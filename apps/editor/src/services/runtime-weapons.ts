@@ -128,8 +128,11 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(!right||!left||rightNode===undefined||leftNode===undefined||ik.nodes[right.id]?.at(-1)!==rightNode||ik.nodes[left.id]?.at(-1)!==leftNode){this.error('WEAPON_BONE: contact 骨引用与 IK 末端不一致/歧义');return;}
     if(!ik.binding.enabled||ik.binding.weight<=0||!right.enabled||right.weight<=0||!left.enabled||left.weight<=0){this.error('WEAPON_IK_DISABLED: 精确装配需有效双手控制，保留 legacy');return;}
     const reload=a.children.find(c=>c.spec.id===a.definition.presentation.assembly!.reloadAttachmentId);
+    const slot=a.definition.presentation.assembly!.holdSlot;
+    const holdNodes=slot?object.skeleton.jointNames.flatMap((n,i)=>n?.replace(/^mixamorig[:_]?/i,'')===slot.bone.replace(/^mixamorig[:_]?/i,'')?[object.skeleton!.joints[i]!]:[]):[];
+    if(slot&&holdNodes.length!==1){this.error(`${a.definition.id}: WEAPON_HOLD_SLOT 骨 ${slot.bone} 缺失/歧义，保留 legacy`);return;}
     const reloadGrip=reload?.sockets.primaryGrip?composeSocket(composeSocket(composeSocket(a.sockets[reload.spec.parentSocket]!,reload.spec.offset),inverseSocket(reload.sockets[reload.spec.childSocket]!)),reload.sockets.primaryGrip):undefined;
-    const projection=weaponModelProjection(a.definition,pose,player.yaw,object.quat as Quat,a.sockets,{id:right.id,socket:bones.rightHand},{id:left.id,socket:bones.leftHand},reloadGrip,d=>this.error(`${a.definition.id}: ${d}`));
+    const projection=weaponModelProjection(a.definition,pose,player.yaw,object.quat as Quat,a.sockets,{id:right.id,socket:bones.rightHand},{id:left.id,socket:bones.leftHand},reloadGrip,d=>this.error(`${a.definition.id}: ${d}`),holdNodes[0]);
     if(!projection){this.error(`${a.definition.id}: WEAPON_SOCKET 缺少当前相位 socket`);return;}
     ik.attachment=projection.request;ik.controlWeights??={};ik.controlWeights[right.id]=1;ik.controlWeights[left.id]=1;
     this.active={assembly:a,object,right:rightNode,left:leftNode,removed:projection.magazineRemoved};
@@ -148,7 +151,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(nodeId!==this.nodeId||!active||!request||frame!==this.frame||frame.stamp!==frame.frameStamp)return;
     const right=frame.matrices.get(active.right),left=frame.matrices.get(active.left);
     const hand=right&&rigidFromMatrix(right),support=left&&rigidFromMatrix(left);
-    if(!hand||!support||!rigidFromMatrix(actorMatrix)||!request.result){this.error('WEAPON_POSE: 本帧最终骨方向不可用');return;}
+    if(!hand||!support||!rigidFromMatrix(actorMatrix)||!request.result||!request.resolvedTarget){this.error('WEAPON_POSE: 本帧最终骨方向不可用');return;}
     const root=attachedModelFrame(hand,request.primary.contact,request.primary.modelSocket),world=mat4();multiply(world,actorMatrix,socketMatrix(root));
     const worldFrame=rigidFromMatrix(world);if(!worldFrame)return;
     active.assembly.draw.setMatrix(world);active.assembly.draw.draw.visible=true;
@@ -164,7 +167,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     }
     const muzzleMatrix=mat4();multiply(muzzleMatrix,world,socketMatrix(active.assembly.sockets.muzzle!));
     const muzzle=rigidFromMatrix(muzzleMatrix)!;
-    const ideal=composeSocket(composeSocket(request.target,request.primary.modelSocket),inverseSocket(request.primary.contact));
+    const ideal=composeSocket(composeSocket(request.resolvedTarget,request.primary.modelSocket),inverseSocket(request.primary.contact));
     const dependent=composeSocket(composeSocket(root,request.dependent!.modelSocket),inverseSocket(request.dependent!.contact));
     const distance=(a:SocketTransform,b:SocketTransform)=>Math.hypot(...a.position.map((n,i)=>n-b.position[i]!));
     const angle=(a:SocketTransform,b:SocketTransform)=>2*Math.acos(Math.min(1,Math.abs(a.rotation.reduce((sum,n,i)=>sum+n*b.rotation[i]!,0))));

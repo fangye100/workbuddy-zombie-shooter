@@ -18,11 +18,12 @@ function glb(image=false):ArrayBuffer {
  view.setUint32(20+json.length,binary.length,true);view.setUint32(24+json.length,0x004e4942,true);new Uint8Array(out,28+json.length).set(binary);return out;
 }
 async function settle(){for(let i=0;i<24;i++)await Promise.resolve();}
-function setup(options:{image?:boolean;decode?:()=>Promise<ImageBitmap>;badGuid?:boolean;failDraw?:boolean}={}){
+function setup(options:{image?:boolean;decode?:()=>Promise<ImageBitmap>;badGuid?:boolean;failDraw?:boolean;slot?:boolean}={}){
  const doc=structuredClone(Object.values(floors)[0]) as SceneDocument,node=doc.nodes.find(n=>n.id===doc.playerStart)!;
  const mesh=node.components.find(c=>c.kind==='MeshRenderer');if(mesh?.kind!=='MeshRenderer'||mesh.source.type!=='asset')throw new Error('fixture player');
  const arsenal=legacyWeaponArsenal({magazineSize:3,reserveRounds:8,reloadSec:1}),w=arsenal.definitions[0]!;
  w.presentation.model={path:'assets/test-weapon.glb',guid:'as_weapon'};w.presentation.assembly={holdPose:{position:[0,1.1,.2],rotation:[0,0,0,1]},attachments:[{id:'mag',model:{path:'assets/test-mag.glb',guid:'as_mag'},parentSocket:'magazine',childSocket:'insertion',offset:identitySocket()}],reloadAttachmentId:'mag'};
+ if(options.slot)w.presentation.assembly.holdSlot={bone:'Hips',position:[0,.2,.2]};
  const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');if(rules?.kind!=='RunRules')throw new Error('fixture rules');rules.arsenal=arsenal;
  const sk=skeletonFromFitPositions(tposeWorldPositions()),skin=createSkinState(sk,[]),right=newBodyIkControl('rightHand'),left=newBodyIkControl('leftHand');
  skin.bodyIk=createBodyIkState(sk,{enabled:true,weight:1,locomotionWhileAiming:true,controls:[right,left]});
@@ -41,6 +42,19 @@ function setup(options:{image?:boolean;decode?:()=>Promise<ImageBitmap>;badGuid?
  return {service,session,object,factory,destroy,draws,matrices,doc};
 }
 describe('真实武器 loader、同帧绘制与 Stop 边界',()=>{
+ it('slot转发唯一Hip节点，本次采样primary→model→support且探针使用resolvedTarget',async()=>{
+  const f=setup({slot:true});await settle();f.service.sync(f.session.runtime);const hip=f.object.skeleton!.joints[f.object.skeleton!.jointNames.indexOf('Hips')]!;
+  const request=f.object.skinState!.bodyIk!.attachment!;expect(request.positionAnchor).toEqual({node:hip});expect(request.target.position).toEqual([0,.2,.2]);
+  f.object.skeleton!.locals[hip]!.t[0]+=.05;
+  const frame=f.service.frameFor(f.doc.playerStart!,4)!;evalJointMatrices(f.object.skinState!,new Float32Array((f.object.skeleton!.joints.length+1)*16),frame);f.service.afterPose(f.doc.playerStart!,mat4(),frame);
+  expect(request.resolvedTarget!.position[0]).toBeCloseTo(.05);expect(f.service.view().visible).toBe(true);expect(f.service.summary().measurements.rightTargetResidualM).toBeLessThan(1e-4);expect(f.service.summary().measurements.leftTargetResidualM).toBeLessThan(1e-4);
+  expect(request.target.position).toEqual([0,.2,.2]);f.service.stop();f.session.stop();
+ });
+ it.each(['missing','ambiguous'])('slot骨%s明确降级，不复用上次装配',async mode=>{
+  const f=setup({slot:true});await settle();f.service.sync(f.session.runtime);const names=f.object.skeleton!.jointNames;
+  if(mode==='missing')names[names.indexOf('Hips')]='Other';else names[names.indexOf('Spine')]='mixamorig:Hips';
+  f.service.sync(f.session.runtime);expect(f.object.skinState!.bodyIk!.attachment).toBeUndefined();expect(f.service.frameFor(f.doc.playerStart!,4)).toBeUndefined();expect(f.service.summary().diagnostics.join()).toContain('WEAPON_HOLD_SLOT');f.service.stop();f.session.stop();
+ });
  it('模型promise已完成仍保留legacy；同帧有效骨/IK输出后才显示，Stop ledger归零',async()=>{
   const f=setup();await settle();expect(f.service.summary().pending).toBe(0);expect(f.service.view().visible).toBe(false);expect(f.factory).toHaveBeenCalledTimes(2);
   expect(f.session.ledger.pending).toBe(14);f.service.sync(f.session.runtime);

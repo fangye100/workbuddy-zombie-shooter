@@ -348,6 +348,10 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  // 新位置语义只由作者选择；旧场景不猜 Hip 相对偏移。
+  if(!listMigrations().some(m=>m.from===17&&m.to===18))registerMigration({
+    from:17,to:18,name:'optional-bone-relative-hold-slots',run:doc=>structuredClone(doc),
+  });
   if(!listMigrations().some(m=>m.from===16&&m.to===17))registerMigration({
     from:16,to:17,name:'explicit-model-socket-assemblies',run(doc){
       const next=structuredClone(doc);

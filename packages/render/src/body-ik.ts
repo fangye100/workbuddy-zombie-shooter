@@ -15,6 +15,10 @@ export interface AttachmentIkContact { controlId:string; contact:SocketTransform
 /** 瞬态 actor-local 请求：主端实际结果决定模型，再决定 dependent 目标。 */
 export interface AttachmentIkRequest {
   target:SocketTransform; primary:AttachmentIkContact; dependent?:AttachmentIkContact;
+  /** 瞬态骨节点索引，由宿主从稳定名称唯一解析。target.position 此时是 actor 轴偏移。 */
+  positionAnchor?: { node:number };
+  /** 本次 sampled locals 解析出的绝对 actor-local 目标；绝不写回输入 target。 */
+  resolvedTarget?:SocketTransform|undefined;
   result?:SocketTransform|undefined;
 }
 export interface BodyIkState {
@@ -101,12 +105,21 @@ export function applyBodyIk(sk: SkeletonData, locals: NodeLocal[], state: BodyIk
   state.diagnostics = [...state.setupDiagnostics];
   const binding = state.binding;
   const request=state.attachment;
-  if(request)delete request.result;
+  if(request){delete request.result;delete request.resolvedTarget;}
   const normalized=rigidFromMatrix(sk.normalization);
   const primary=request&&binding.controls.find(c=>c.id===request.primary.controlId&&c.part.endsWith('Hand'));
   const dependent=request?.dependent&&binding.controls.find(c=>c.id===request.dependent!.controlId&&c.part.endsWith('Hand'));
-  const validRequest=!!request&&!!primary&&(!request.dependent||!!dependent&&dependent.id!==primary.id)
+  let validRequest=!!request&&!!primary&&(!request.dependent||!!dependent&&dependent.id!==primary.id)
     &&[request.target,request.primary.contact,request.primary.modelSocket,...(request.dependent?[request.dependent.contact,request.dependent.modelSocket]:[])].every(validSocketTransform);
+  if(validRequest&&request){
+    const anchor=request.positionAnchor,frame=anchor&&fk(sk,locals);
+    if(anchor&&(!Number.isInteger(anchor.node)||!sk.joints.includes(anchor.node)||!frame?.p[anchor.node]||!normalized)){
+      validRequest=false;state.diagnostics.push({controlId:'',code:'IK_ATTACHMENT_ANCHOR',message:'Attachment position anchor unavailable in current sampled pose; animation retained'});
+    }else{
+      const origin=anchor?transformPoint(sk.normalization,frame!.p[anchor.node]!):[0,0,0];
+      request.resolvedTarget={position:request.target.position.map((v,i)=>v+origin[i]!) as [number,number,number],rotation:[...request.target.rotation]};
+    }
+  }
   if(request&&!validRequest)state.diagnostics.push({controlId:'',code:'IK_ATTACHMENT',message:'Invalid primary/dependent socket request; animation retained'});
   const actualRoot=():SocketTransform|undefined=>{
     const node=primary&&state.nodes[primary.id]?.at(-1),frame=node!==undefined&&fk(sk,locals);
@@ -130,7 +143,7 @@ export function applyBodyIk(sk: SkeletonData, locals: NodeLocal[], state: BodyIk
     const c = binding.controls.find(c => c.part === part), nodes = c && state.nodes[c.id];
     if (!c || !nodes || !c.enabled || c.weight <= 0) continue;
     let socketTarget:SocketTransform|undefined;
-    if(validRequest&&c.id===primary!.id)socketTarget=composeSocket(composeSocket(request!.target,request!.primary.modelSocket),inverseSocket(request!.primary.contact));
+    if(validRequest&&c.id===primary!.id)socketTarget=composeSocket(composeSocket(request!.resolvedTarget!,request!.primary.modelSocket),inverseSocket(request!.primary.contact));
     if(validRequest&&c.id===dependent?.id){request!.result=actualRoot();if(request!.result)socketTarget=composeSocket(composeSocket(request!.result,request!.dependent!.modelSocket),inverseSocket(request!.dependent!.contact));}
     const target = socketTarget?.position ?? (Object.hasOwn(state.targets, c.id) ? state.targets[c.id] : c.target.kind === 'position' ? c.target.position : null);
     const orientation=socketTarget?.rotation??state.orientations?.[c.id];

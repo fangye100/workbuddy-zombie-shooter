@@ -29,12 +29,24 @@ describe('正式模型与骨 socket 持久化',()=>{
   registerSceneMigrations();const doc=createEmptySceneDocument('old');doc.schemaVersion=16;
   const weapon=legacyWeaponArsenal({magazineSize:12,reserveRounds:40,reloadSec:1}).definitions[0]!;
   doc.nodes.push({id:'rules',name:'rules',parent:null,prefab:null,visible:true,pickable:false,category:'',transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},components:[{kind:'RunRules',enabled:true,arsenal:{equipped:weapon.id,switchSec:.2,definitions:[weapon]}}]} as unknown as SceneNode);
-  const result=migrateToLatest(doc);expect(result.to).toBe(17);expect(result.applied).toEqual(['explicit-model-socket-assemblies']);
+  const result=migrateToLatest(doc);expect(result.to).toBe(18);expect(result.applied).toEqual(['explicit-model-socket-assemblies','optional-bone-relative-hold-slots']);
   const rules=result.doc.nodes.at(-1)!.components[0] as unknown as {arsenal:{definitions:typeof weapon[]}};
   expect(rules.arsenal.definitions[0]!.presentation.assembly).toBeNull();expect(weapon.presentation.assembly).toBeUndefined();
   const copy=structuredClone(weapon);copy.presentation.assembly={holdPose:identitySocket(),attachments:[],reloadAttachmentId:'missing'};
   expect(validWeaponDefinition(copy)).toBe(false);
   const broken=createEmptySceneDocument('broken');broken.schemaVersion=16;broken.nodes.push({id:'actor',name:'actor',visible:true,components:[{kind:'MeshRenderer',enabled:true,boneSockets:{hand:{bone:2,contact:identitySocket()}}}]} as unknown as SceneNode);
   expect(validateSceneDocument(migrateToLatest(broken).doc).some(d=>d.code==='E_BONE_SOCKETS')).toBe(true);
+ });
+ it('v17保留旧绝对hold；新slot往返且非法bone/位置不静默修复',()=>{
+  registerSceneMigrations();const doc=createEmptySceneDocument('old-slot');doc.schemaVersion=17;
+  const result=migrateToLatest(doc);expect(result.to).toBe(18);expect(result.applied).toEqual(['optional-bone-relative-hold-slots']);expect(doc.schemaVersion).toBe(17);
+  const weapon=legacyWeaponArsenal({magazineSize:12,reserveRounds:40,reloadSec:1}).definitions[0]!;
+  weapon.presentation.assembly={holdPose:identitySocket(),attachments:[],reloadAttachmentId:null};
+  expect(validWeaponDefinition(weapon)).toBe(true);expect(weapon.presentation.assembly.holdSlot).toBeUndefined();
+  weapon.presentation.assembly.holdSlot={bone:'Hips',position:[.1,.25,.3]};
+  expect(validWeaponDefinition(JSON.parse(JSON.stringify(weapon)))).toBe(true);
+  for(const bad of [{bone:'',position:[0,0,0]},{bone:3,position:[0,0,0]},{bone:'Hips',position:[0,NaN,0]},{bone:'Hips',position:[0,0]},{bone:'Hips',position:[0,101,0]}]){
+   const copy=structuredClone(weapon);copy.presentation.assembly!.holdSlot=bad as never;expect(validWeaponDefinition(copy)).toBe(false);
+  }
  });
 });
