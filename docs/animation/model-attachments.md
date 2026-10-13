@@ -57,7 +57,7 @@ v17→v18 的 `optional-bone-relative-hold-slots` 只升级版本，不为旧场
 其他武器仍保留初版前移量。基于原始 154 个可见帧的双手肩球计算，修正候选最小余量约 9.9mm。
 精简观测夹具 `packages/zombie-game/test/fixtures/weapon-hold-shoulders.json` 记录原 HEAD、源报告、
 actor-local 肩位置及最不利双手目标，回归测试 `packages/zombie-game/test/presentation/weapon-hold-slots.test.ts`
-对当前作者 slot 检查余量。肩球计算只证明这些观测帧的位置可达，不代表已重新求值或通过 GPU；正常侧前视图待复验，
+对当前作者 slot 检查余量。肩球计算只证明这些观测帧的位置可达；后续真实 GPU 验证见下节，
 不能凭单元测试宣称胸前距离或全姿态质量通过。
 
 本轮定向验证另含 `apps/editor/test/runtime-weapons.test.ts`、`apps/editor/test/scene-authoring-loop.test.ts`、
@@ -65,6 +65,34 @@ actor-local 肩位置及最不利双手目标，回归测试 `packages/zombie-ga
 headed 工具使用 `node tools/verify/weapon-assembly.mjs --expected-head <完整提交> --hold-switch-only --collapse-ik-panel`，
 入口为正常 HTTPS MagicDNS:5198 的武器试验场景。该模式只做七件正常持枪、真实 Digit1..7 切换、一次移动及 Pause/Stop 恢复，
 不执行攻击/换弹；保存重开和单件 slot 改值需 Audit 另走正常可见编辑路径。
+
+## 2026-10-13 R5 实机与保存证据
+
+验收源码与内容为 `2305610d715febd2fa3ad2413f2f1290f0e8d07e`，同一 Windows 检出目录、
+正常 HTTPS/TLS、headed Chrome 与 NVIDIA Lovelace。使用上面的有界模式加 `--aim-yaw 135`，
+不修改场景 Camera；该视角提供侧前观察。七件真实 Digit1..7 切换、正常持枪、一次 W 移动、
+Pause、Stop、重启及再次 Stop 的工具检查全部通过。原报告共 194 条快照；正常持枪/切换双手门禁
+计入 184 条本帧有效模型样本，`failures: []`，作者文档/玩家恢复与资源账目归零通过。
+Audit 对原生侧前 Flame 图进行了目检，武器前移位置可见；此证据认证本次正常持枪路径，
+不扩大为七件所有姿态的穿插几何、换弹、NPC 或性能认证。
+
+随后经可见 `场景/光照 → 定位玩法规则` 将 Flame 的 slot Z 从 `0.3945957025749669` 改为
+`0.4445957025749669` 米，Apply、File 保存、Reload 后值保留，其他六件定义逐项保持。
+Flame 的五个旧 markers 仅按同一事务的 actor +Z→模拟 +X 平移约 `.05m`；单武器真实 GPU 探针通过。
+同一 `seven-flame-ready` 标签、idle/phase 0 的 actor-local 观察中，resolvedTarget.Z 为
+`.3676152533 → .4176152533`，实际模型 result.Z 为 `.3676152530 → .4176152530`；
+LeftHand.Z 为 `.3799861536 → .4299861340`，RightHand.Z 为 `.1780537177 → .2280537515`，
+均约前移 `.05m`，双手残差小于 `4e-7m`。两次 idle 采样时间不同，Y 约有 `.000165m` 差异，
+因此不将世界坐标或整个姿态向量宣称为精确刚性平移。
+
+可见 UI 恢复原 Z、Apply、保存、Reload 后所有 slot 回到原值。五标记唯一遗留的
+Flame primaryGrip.position[0] 浮点尾差约 `1e-17` 已精确恢复到该 HEAD；试验场景无净变更。
+本轮最终只提交证据文档，不增加动作或参数机制。
+
+本地原始证据位于 `.workbuddy/tmp/weapon-hip-slot/headed-correction-audit/observations.json` 和
+`.workbuddy/tmp/weapon-hip-slot/ui-slot-audit/` 的 `baseline-scene.json`、`temporary-after-save.json`、
+`final-restored-scene.json`、`temporary-slot-evidence/observations.json`。这些忽略路径是本次本机可复查证据，
+不会随 Git 分发；版本化契约保留上述提交、路径、计数和限制。独立终审另行执行，不将工具通过当作终审批准。
 
 定向测试：`pnpm exec vitest run packages/scene/test/model-attachments.test.ts packages/scene/test/migrate.test.ts packages/render/test/body-ik.test.ts packages/render/test/model-draw.test.ts`。涉及资产/场景还需 scene:check；跨层源码需 architecture:check；发布指南需 knowledge:check。
 
