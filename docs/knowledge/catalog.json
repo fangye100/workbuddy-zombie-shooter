@@ -1609,7 +1609,7 @@
         "retarget",
         "ik"
       ],
-      "read": "职责与持久化；控制部位与目标空间；能力边界；历史验证",
+      "read": "职责与持久化；控制部位与目标空间；编辑器流程；能力边界；R6 实机观察与导航证据；R6 观察提示与活动按钮复验；历史验证",
       "sourceRefs": [
         "scene-body-ik",
         "scene-migrations",
@@ -1619,8 +1619,8 @@
         "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
         "date": "2026-10-07"
       },
-      "reviewedAt": "2026-10-09",
-      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
+      "reviewedAt": "2026-10-14",
+      "reviewedSourceCommit": "1d2f95a3d6622a118918a26f0974922745b5d4fa"
     },
     {
       "id": "doc-db6a9bf0e0a7",

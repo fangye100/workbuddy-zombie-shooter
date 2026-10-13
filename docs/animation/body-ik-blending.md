@@ -140,6 +140,30 @@ Launcher 枪体遮挡更多，不能据此批准所有表面的解剖像素质�
 这些文件不随 Git 分发，文档保留版本、计数、帧区间与限制供本机复查。
 本轮自有 Chrome 82104 已退出、CDP 9348 无监听；原 5198 服务 PID53452 保留，这些是验收时的进程快照。
 
+### R6 观察提示与活动按钮复验（2026-10-14）
+
+原七枪数值与导航证据仍对应 `0222268fb7c1428ada7ed200506e16622e495c17` 的 25 项检查、
+312 条快照和 299 条有效帧。后续 UI 修复只复验选定的 Flame，不是新一轮七枪验收，计数不合并。
+
+首轮 UI 修复目标 `f73fcd2e31fa2868703915401ac567c6cb0481a6` 的工具 19 项检查均为真，
+但原生截图显示右上共享动作卡遮住操作提示后半段，全文可读性视觉验收失败。
+该轮确认非 hover 的活动按钮已有金色背景、深色文字；工具检查通过不能替代提示全文的目检。
+原始记录保留在 `.workbuddy/tmp/weapon-hip-slot/r6-ui-fix-audit/`。
+
+最终 UI 目标为 `1d2f95a3d6622a118918a26f0974922745b5d4fa`：提示移为 body 直接子节点的
+独立固定浮层，位于左下 `left:16px; bottom:112px`，保留 `hidden` 与 `pointer-events:none`，
+避开共享动作卡、雷达及已有底部提示。正常 HTTPS/TLS、headed Chrome、安全上下文与 NVIDIA Lovelace
+下，单 Flame 工具报告 `passed:true`，19 项检查全部通过；Audit 和 Main 分别查看原生图确认 Play/Pause
+中的全文“观察：左拖环绕 · 右/中键/Shift拖平移 · 滚轮缩放 · 1–7切枪 · Esc返回”清晰可读，
+非 hover 的“回游戏相机”按钮仍为金底深字。Stop 后提示隐藏。
+
+原始报告为 `.workbuddy/tmp/weapon-hip-slot/r6-hint-overlay-audit/observations.json`；同目录
+`seven-flame-observation-front.png` 捕获帧 390–405，`seven-flame-observation-side.png` 为 429–445，
+`navigation-paused.png` 为 513–528，`07-stop.png` 为 530–540。
+本轮只关闭上述提示可见性与按钮活动态可读性问题，复用原七枪与导航逻辑证据；不扩大姿态、动作或输入失败路径认证，
+也不把这次 UI 复验写成独立终审批准。自有 Chrome 37604 已退出、CDP 9348 无监听、5198 服务 PID53452 保留，
+仅为本轮验收结束时的进程快照。
+
 有界面 Chrome 还需确认目标检出/场景、真实 GPU/安全上下文、可见 Apply/保存/重载/
 权重控制、正确角色的源片段变化及 Stop 精确恢复。构建或矩阵测试不能代替视觉验收。
 
