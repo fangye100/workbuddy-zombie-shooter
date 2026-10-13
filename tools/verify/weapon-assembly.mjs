@@ -3,6 +3,7 @@ import fs from 'node:fs';import path from 'node:path';import net from 'node:net'
 import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';import {fileURLToPath} from 'node:url';
 import {Cdp,launchEditorSession,waitFor,sleep} from './editor-smoke-lib.mjs';
 import {STATIC_SCENES,staticNodes,captureStatic} from './weapon-static.mjs';
+import {elbowEvidence} from './weapon-elbows.mjs';
 const REPO=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const SCENE='assets/scenes/sandbox/weapon-assembly-trial.scene.json';
 const WEAPONS=['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'];
@@ -10,6 +11,8 @@ export function probeOptions(argv){
  const value=(name,fallback)=>{const i=argv.indexOf('--'+name);if(i<0)return fallback;if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('缺参数 '+name);return argv[i+1];};
  const root=path.resolve(value('root',REPO)),expectedHead=value('expected-head','');
  const holdSwitchOnly=argv.includes('--hold-switch-only');
+ const elbowObservation=argv.includes('--elbow-observation');
+ if(elbowObservation&&!holdSwitchOnly)throw new Error('elbow-observation需要hold-switch-only');
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
@@ -33,7 +36,7 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,holdSwitchOnly,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:holdSwitchOnly||argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,holdSwitchOnly,elbowObservation,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:holdSwitchOnly||argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** 仅正常点击现有details summary；不写DOM样式、IK权重或游戏状态。 */
 export async function collapseIkPanel(cdp,click,record=()=>{}) {
@@ -82,13 +85,13 @@ export class ProbeInput {
  constructor(cdp,record=()=>{}){this.cdp=cdp;this.record=record;this.held=new Map();this.mouse=null;}
  async key(name,down){const spec=KEY[name];if(!spec)throw new Error('未知按键');if(down)this.held.set(name,spec);await this.cdp.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',...spec,nativeVirtualKeyCode:spec.windowsVirtualKeyCode});if(!down)this.held.delete(name);this.record({input:'key',name,down});}
  async tap(name){await this.key(name,true);await this.key(name,false);}
- async move(point){this.position=point;await this.cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y,button:'none',buttons:this.mouse?1:0});if(this.mouse)this.mouse=point;this.record({input:'mouseMove',point});}
- async pointer(point,down){this.position=point;this.mouse=point;await this.cdp.send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',x:point.x,y:point.y,button:'left',buttons:down?1:0,clickCount:1});if(!down)this.mouse=null;this.record({input:'mouse',point,down});}
- async release(){const errors=[];for(const name of [...this.held.keys()])try{await this.key(name,false);}catch(e){errors.push(String(e));}if(this.mouse)try{await this.pointer(this.mouse,false);}catch(e){errors.push(String(e));}return errors;}
+ async move(point){this.position=point;await this.cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:point.x,y:point.y,button:'none',buttons:this.mouse?this.mouseButton==='right'?2:this.mouseButton==='middle'?4:1:0});if(this.mouse)this.mouse=point;this.record({input:'mouseMove',point});}
+ async pointer(point,down,button='left'){this.position=point;this.mouse=point;this.mouseButton=button;await this.cdp.send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',x:point.x,y:point.y,button,buttons:down?button==='right'?2:button==='middle'?4:1:0,clickCount:1});if(!down)this.mouse=null;this.record({input:'mouse',point,down,button});}
+ async release(){const errors=[];for(const name of [...this.held.keys()])try{await this.key(name,false);}catch(e){errors.push(String(e));}if(this.mouse)try{await this.pointer(this.mouse,false,this.mouseButton??'left');}catch(e){errors.push(String(e));}return errors;}
 }
 KEY.f={key:'f',code:'KeyF',windowsVirtualKeyCode:70};
 const SNAPSHOT=`(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));const authorDocumentSha256=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
- return {authorDocumentSha256,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,weaponEvents:r?.weapons.events.map(e=>({...e}))??[],firing:r?.firing??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
+ return {authorDocumentSha256,camera:{...structuredClone(e?.camera),elevationDeg:e?.params.cameraElevation},observing:c?.observing??false,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,weaponEvents:r?.weapons.events.map(e=>({...e}))??[],firing:r?.firing??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
  actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight,transition:s.poseLayer.transition?{elapsed:s.poseLayer.transition.elapsed,duration:s.poseLayer.transition.duration}:null}:null,attachmentRequest:s.bodyIk?.attachment??null,handChains:o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(Arm|ForeArm|Hand)$/.test(name)?[{name,position:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]),legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
  source:e?.renderer.getSceneSource()?.url??null,sceneId:e?.renderer.getDocument()?.id??null,frame:e?.renderer.state.frameCounter};})()`;
 async function visiblePoint(cdp,selector){
@@ -229,7 +232,7 @@ async function run(options){
   check('HTTPS secure真实硬件',gpu?.secure&&gpu?.vendor==='nvidia'&&gpu?.architecture==='lovelace',gpu);if(!report.checks.at(-1).ok)throw new Error('未确认本机真实GPU，停止实操');
   if(options.staticScene){await captureStatic(cdp,input,options,report,check);}else{
   const snap=async label=>{const sample={label,atMs:Date.now(),pointer:input.position??null,...await cdp.eval(SNAPSHOT)};report.samples.push(sample);return sample;};
-  let activeAimSpec=null;
+  let activeAimSpec=null,observationEntered=false,observationGameCamera=null;
   const guardedAim=spec=>aimPoint(cdp,spec,event=>report.actions.push({...event,atMs:Date.now()}));
   const movement=async(name,down,point=null)=>{
    for(const held of ['w','s'])if(input.held.has(held))await input.key(held,false);
@@ -248,6 +251,7 @@ async function run(options){
    }
   },name=>movement(name,true));
   const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
+  const dragView=async(dx,dy,button='left')=>{const p=await visiblePoint(cdp,'#gpu');await input.pointer(p,true,button);for(let i=1;i<=4;i++){await input.move({x:p.x+dx*i/4,y:p.y+dy*i/4});await sleep(25);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(100);};
   const sampleFor=async(label,ms,onSample,interval=120)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(interval);if(typeof activeAimSpec==='number'){canvas=await guardedAim(activeAimSpec);const held=['w','s'].find(name=>input.held.has(name));if(held&&groundMovementDirection(canvas,held)!==held)await movement(held,true,canvas);await input.move(canvas);}const sample=await snap(label);if(onSample)await onSample(sample);}};
   const editor=await snap('editor');const expectedSceneId=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')).id;check('真实场景身份',editor.sceneId===expectedSceneId,editor.sceneId);if(editor.sceneId!==expectedSceneId)throw new Error('加载场景ID不匹配');await capture('01-editor');await click('#btn-play');
   if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000})){
@@ -299,10 +303,20 @@ async function run(options){
     if(!report.selectedWeapons.includes(definitions[i].id))continue;
     const def=definitions[i],label='seven-'+def.id;await input.tap(keys[i]);await sampleFor(label+'-equip',700);let ready=await snap(label+'-ready');
     check(label+'真实切换与draw',ready.models?.visible&&ready.models.weaponId===def.id&&ready.models.frameStamp===ready.frame,ready.models);
-    if(aiming)canvas=await aimAt(i%2&&secondary!==null?secondary:primary,label+'-aim');
+    if(aiming&&!observationEntered)canvas=await aimAt(i%2&&secondary!==null?secondary:primary,label+'-aim');
     if(options.holdSwitchOnly){
      await sampleFor(label+'-normal-hold',500,null,25);await capture(label+'-normal-hold');report.executedWeapons.push(def.id);
      if(report.executedWeapons.length===1){const before=await snap(label+'-move-before');await movement('w',true);await sampleFor(label+'-normal-move',450,null,25);await movement('w',false);const moved=report.samples.filter(s=>s.label===label+'-normal-move');check('slot正常持枪移动与腿部继续',legsChanged(moved)&&moved.some(s=>Math.hypot(s.player.x-before.player.x,s.player.z-before.player.z)>.1),moved.map(s=>({frame:s.frame,tick:s.tick,player:s.player,clip:s.actor?.clip})));}
+     if(options.elbowObservation){
+      if(!observationEntered){
+       await sampleFor('navigation-settle',180,null,25);const before=await snap('navigation-game-before');observationGameCamera=before.camera;activeAimSpec=null;await click('#btn-observation-camera');await sleep(100);const entered=await snap('navigation-enter');observationEntered=true;check('可见观察按钮进入Play观察',entered.observing&&entered.state==='playing',entered);
+       await dragView(-75,15);const orbit=await snap('navigation-orbit');await dragView(18,12,'right');const pan=await snap('navigation-pan');const p=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:-80});await sleep(100);const zoom=await snap('navigation-zoom');
+       check('真实鼠标orbit/pan/wheel不触发游戏输入',orbit.camera.yaw!==entered.camera.yaw&&JSON.stringify(pan.camera.target)!==JSON.stringify(orbit.camera.target)&&zoom.camera.distance<pan.camera.distance&&[orbit,pan,zoom].every(s=>!s.firing&&s.lastShot?.tick===entered.lastShot?.tick&&Math.hypot(s.player.x-entered.player.x,s.player.z-entered.player.z)<1e-6),{entered,orbit,pan,zoom});
+       await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:80});await dragView(-18,-12,'right');
+      }
+      const view=await snap(label+'-observation-front-plan'),q=view.authorPlayer.quat,forward=[2*(q[0]*q[2]+q[3]*q[1]),2*(q[1]*q[2]-q[3]*q[0]),1-2*(q[0]*q[0]+q[1]*q[1])],front=Math.atan2(forward[0],forward[2]),delta=front-view.camera.yaw;
+      if(Math.abs(delta/.006)>240)throw new Error('观察front所需拖动超有界范围');await dragView(-delta/.006,0);await sampleFor(label+'-observation-front',120,null,25);await capture(label+'-observation-front');await dragView(100,0);await sampleFor(label+'-observation-side',120,null,25);await capture(label+'-observation-side');
+     }
      continue;
     }
     const before=await snap(label+'-attack-before'),direction=i%2?'s':'w';await movement(direction,true);await input.pointer(canvas,true);await sampleFor(label+'-moving-attack',650,null,25);await input.pointer(canvas,false);await movement(direction,false);await capture(label+'-attack');
@@ -355,8 +369,10 @@ async function run(options){
   }
   const handFrames=report.samples.filter(s=>s.state==='playing'&&s.models?.visible&&s.models.frameStamp===s.frame),handFailures=handFrames.filter(s=>s.models.ikDiagnostics?.some(d=>['IK_UNREACHABLE','IK_SOCKET_RESIDUAL','IK_ATTACHMENT'].includes(d.code))||!Number.isFinite(s.models.measurements?.rightTargetResidualM)||!Number.isFinite(s.models.measurements?.leftTargetResidualM)||s.models.measurements.rightTargetResidualM>1e-4||s.models.measurements.leftTargetResidualM>1e-4);
   check(options.holdSwitchOnly?'正常持枪/切换采样双手实际可达':'aim/切换/攻击/换弹采样双手实际可达',handFrames.length>0&&handFailures.length===0,{samples:handFrames.length,failures:handFailures.map(s=>({label:s.label,frame:s.frame,tick:s.tick,pose:s.models.pose,measurements:s.models.measurements,diagnostics:s.models.ikDiagnostics}))});
+  if(options.elbowObservation){const elbows=handFrames.map(s=>({label:s.label,frame:s.frame,weapon:s.models.weaponId,...elbowEvidence(s.actor?.handChains,s.bodyIk?.nodes.find(n=>n.nodeId===s.authorPlayer?.nodeId)?.binding)}));report.elbows=elbows;check('双手肘bend朝作者外侧pole',elbows.length>0&&elbows.every(e=>e.ok),{samples:elbows.length,failures:elbows.filter(e=>!e.ok)});}
   await input.release();await click('#btn-pause');const paused=await snap('pause-start');await sleep(600);const frozen=await snap('pause-end');check('Pause模拟与动作时钟冻结',paused.state==='paused'&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time&&frozen.actor?.layer?.time===paused.actor?.layer?.time,{paused,frozen});await capture('06-paused');
-  await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');
+  if(options.elbowObservation){await dragView(25,10);const viewed=await snap('navigation-paused');check('Pause仍可观察且时钟不动',viewed.observing&&viewed.camera.yaw!==paused.camera.yaw&&viewed.tick===paused.tick&&viewed.actor.time===paused.actor.time,viewed);await capture('navigation-paused');await click('#btn-observation-camera');const returned=await snap('navigation-return-game');check('回游戏相机恢复当前机位',!returned.observing&&JSON.stringify(returned.camera)===JSON.stringify(observationGameCamera),{expected:observationGameCamera,actual:returned.camera});}
+  await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});if(options.elbowObservation)check('Stop精确恢复作者相机',JSON.stringify(stopped.camera)===JSON.stringify(editor.camera)&&!stopped.observing,{before:editor.camera,after:stopped.camera});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');
   await click('#btn-play');await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150});const restarted=await snap('restart');check('重启新身份与模型',restarted.cycle>baseline.cycle&&restarted.player?.runId!==baseline.player?.runId&&restarted.models?.visible,restarted);await capture('08-restart');
   await click('#btn-stop');await sleep(500);const final=await snap('final-stop');check('重启后作者再次回滚',JSON.stringify(final.authorPlayer)===JSON.stringify(editor.authorPlayer)&&final.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:final.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:final.authorDocumentSha256});check('重启Stop无残留',final.ledger===0&&final.models?.pending===0&&final.models?.loaded.length===0,final);
   }

@@ -4,6 +4,10 @@ import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('肘/观察实操是显式hold/switch选项，右键拖拽也按原键释放',async()=>{
+ assert.throws(()=>probeOptions(['--expected-head',head,'--elbow-observation']),/hold-switch-only/);assert.equal(probeOptions(['--expected-head',head,'--hold-switch-only','--elbow-observation']).elbowObservation,true);
+ const calls=[],input=new ProbeInput({async send(method,params){calls.push({method,params});}});await input.pointer({x:10,y:20},true,'right');await input.move({x:30,y:40});assert.equal(calls.at(-1).params.buttons,2);await input.release();assert.equal(calls.at(-1).params.button,'right');assert.equal(calls.at(-1).params.type,'mouseReleased');
+});
 test('hold/switch-only仅执行正常持枪/切枪和单次移动，不混入旧换弹模式',()=>{
  const args=['--expected-head',head],options=probeOptions([...args,'--hold-switch-only']);assert.equal(options.holdSwitchOnly,true);assert.equal(options.allWeapons,true);assert.equal(probeOptions(args).holdSwitchOnly,false);
  assert.throws(()=>probeOptions([...args,'--hold-switch-only','--fuel-recovery']),/不能混入换弹/);

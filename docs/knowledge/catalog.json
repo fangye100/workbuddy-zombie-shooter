@@ -4,6 +4,17 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "play-observation-navigation",
+      "path": "apps/editor/src/services/play-observation-navigation.ts",
+      "title": "Play临时观察视角与输入隔离",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": ["editor", "camera", "animation"],
+      "read": "Play/Pause orbit/pan/zoom、观察与游戏输入边界、切枪和失焦释放；使用见HumanIK指南",
+      "sourceRefs": ["project-rules", "architecture-policy"]
+    },
+    {
       "id": "shadow-crowd-decal-assessment-20261010",
       "path": "docs/architecture/crowd-and-decals-20261010.md",
       "title": "接触阴影修复、群体避让与贴花选型复核",

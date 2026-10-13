@@ -44,6 +44,13 @@
 手脚 `pole` 是角色局部弯曲方向；瞄准 `forward` 是骨局部轴（默认 +Z），`maxAngleDeg`
 限制相对采样动作的修正。Position 经逆骨架归一化；宿主世界目标先逆角色位移/旋转/缩放。
 
+2026-10-14 的持枪候选使用左手 `[1,-.35,0]`、右手 `[-1,-.35,0]` 的镜像侧向、略向下 pole。
+新建手控制默认及 H01 当前 animation-ready sidecar、武器试验与三张楼层的作者覆盖同步；腿与其他角色不改。
+现有生成器对新玩家继承该 sidecar，对已有作者配置继续保留，避免重生成覆盖用户 pole。
+求解器已经将 actor-local 方向逆规整化并正交投影到肩→手轴垂面，本轮没有新增 IK 机制、骨长或权重端口。
+外展观测采用实际 ForeArm 肘位置相对肩→手轴的正交 bend 对作者 pole 的投影；
+近伸直链允许 bend 很小，不要求肘 X 跨越肩 X。正投影只证明弯曲方向，不能认证皮肤/身体无穿插。
+
 `locomotionWhileAiming` 在有有效加权 torso/head 目标时保留 idle/walk/run，开火也如此。
 玩家 mesh 面向移动，玩法朝向仍决定瞄准/射击。禁用 IK 或权重 0 恢复全身 shoot 选择。
 [动作适配器](../../apps/editor/src/services/runtime-scene-motion.ts)消费实际接受的武器动作；
@@ -61,6 +68,17 @@
    固定采样时间比较。
 5. Stop 恢复原 SkinState 引用及播放值，迟到异步结果不得重新挂 IK。共享动作加载可能
    替换采样器，适配器给新采样器挂同一临时控制，并在 Stop 清理。
+
+Play 或 Pause 的底部工具栏可点击 **观察视角**：左拖环绕，右/中键或 Shift 拖平移，滚轮缩放。
+若 HUD 的“游戏视图”隐藏了编辑器工具栏，先用既有 **编辑器视图** 入口返回，再点观察按钮。
+观察期间键盘 1–7 仍通过原装备命令切枪；移动、射击、瞄准、换弹输入不由导航触发。
+按钮 **回游戏相机** 或 Esc 退出观察，恢复最新游戏机位；下一次 Esc 仍按原流程退出 Play。
+Stop 精确恢复作者机位。观察时钟与 Play/Pause 原语义一致，没有新的动画或模拟时钟。
+
+`apps/editor/src/services/play-observation-navigation.ts` 负责临时观察 UI、捕获阶段输入及释放，
+并与编辑态共享 orbit/pan/zoom 数学；`play-camera.ts` 独立保留当前游戏相机和 Play 前的作者相机。
+游戏跟随机位在观察时继续计算，不覆盖观察视口；失焦、取消指针或切换模式释放输入。
+这与 HUD 的“游戏视图”显示开关及编辑态 WASD 自由飞行相机是不同入口，场景 Camera/editorCamera 均不写回。
 
 已登记 `assets/scenes/sandbox/body-ik-validation.scene.json` 展示 4 个角色，包含 Run+
 torso/hand 和 Walk+head/foot。远处 NPC 和较慢配置决策留出观察权重的时间。
@@ -80,6 +98,13 @@ instancing，未实现逐 NPC IK，本改动不新增 GPU 分配。不实现自�
 定向测试覆盖全/零/部分权重、总×部位等价、下半身保留、重复计算确定性、厘米单位、
 Mixamo 名字、不可达肢体、缺目标/骨骼、角度限制、场景/资产验证、迁移、异步加载/Stop、
 采样器替换、移动朝向/瞄准分离、开火步态和重启。
+
+本轮有界 CPU 工具 `node tools/verify/weapon-elbow-poses.mjs` 加载实际 H01、共享 idle/ready、Spine layer
+及当前 equip 的 ready 回退，覆盖七把×四阶段×yaw 0/135 共 56 个 FK 样本，检查双手握点及肘 bend 方向。
+导航 owner 测试为 `apps/editor/test/play-observation-navigation.test.ts`、`play-camera.test.ts`、`play-controller.test.ts`。
+有界 GPU 命令为 `node tools/verify/weapon-assembly.mjs --expected-head <完整提交> --hold-switch-only --elbow-observation --collapse-ik-panel --aim-yaw 135`。
+它通过可见观察按钮和真实鼠标 orbit/pan/wheel 取得七件前/侧原生截图、Play/Pause 导航、游戏相机返回和 Stop 作者相机恢复证据；
+仍不执行开火/换弹。2026-10-14 当前实现的真实 GPU 与可见 navigation 验收待候选冻结后执行。
 
 有界面 Chrome 还需确认目标检出/场景、真实 GPU/安全上下文、可见 Apply/保存/重载/
 权重控制、正确角色的源片段变化及 Stop 精确恢复。构建或矩阵测试不能代替视觉验收。
