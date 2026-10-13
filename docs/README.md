@@ -35,7 +35,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 高性能群体寻路与避让 | [导航实现指南](architecture/crowd-navigation.md) | v16 平面导航实现与历史测量 |
 | 三维地表寻路 | [三维导航指南](architecture/surface-navigation.md) | v17 NavSurface、斜坡/楼梯/叠层、MCP 持久化与真实 GPU 白盒验收 |
 | 动态障碍与吊门 | [动态导航指南](architecture/dynamic-navigation.md) | v18 固定三维底图、运行阻挡层、开关门/占用等待、实时弹道、MCP 与 GPU 验收 |
-| 程序性表面贴花 | [贴花指南](render/procedural-decals.md) | 独立可视化参数工作区、v19 持久化、GPU 实例批、运行池与 editor_decal |
+| 程序性表面贴花 | [贴花指南](render/procedural-decals.md) | 独立工作区、九类图案与形态参数、v20 持久化、GPU 实例批、运行池与 editor_decal |
 | 浏览器或 GPU 验收 | [浏览器入口](browser-verification.md)、项目浏览器/GPU 规则 | 有界面目标检出环境及运行证据，不能只用构建代替 |
 | Agent 通过 MCP 编辑 | [编辑器 MCP](../tools/mcp-editor/README.md) | `editor_workflow` → 明确选择实例 → 当前 schema/revision |
 | 历史决策和事故证据 | 目录中 `historical` 项 | `docs/review`、`docs/evidence`、`.workbuddy/memory`；复用前核对源码 |

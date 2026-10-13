@@ -1,0 +1,87 @@
+{
+  "schema": 20,
+  "before": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 31,
+    "normalOffset": 0.008,
+    "priority": 0
+  },
+  "savedReloaded": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 31,
+    "normalOffset": 0.008,
+    "priority": 0,
+    "style": {
+      "coverage": 0.65,
+      "edgeWidth": 0,
+      "irregularity": 0.9,
+      "detail": 0.8
+    }
+  },
+  "restored": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 31,
+    "normalOffset": 0.008,
+    "priority": 0
+  },
+  "diskExactlyRestored": true,
+  "revisions": [
+    "d8ca0d9e",
+    "09e79a02",
+    "d8ca0d9e"
+  ]
+}

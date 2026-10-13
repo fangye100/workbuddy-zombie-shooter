@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 19,
+  "schemaVersion": 20,
   "id": "sc_procedural_decal_whitebox",
   "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
   "act": null,
@@ -388,6 +388,30 @@
               "seed": 17,
               "normalOffset": 0.008,
               "priority": 0
+            },
+            {
+              "id": "ramp-acid",
+              "pattern": "acid",
+              "position": [
+                0,
+                0,
+                2.1
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4,
+                1.4
+              ],
+              "color": "#91bc38",
+              "opacity": 0.9,
+              "seed": 12,
+              "normalOffset": 0.008,
+              "priority": 0
             }
           ]
         }
@@ -514,6 +538,102 @@
               "color": "#ebb337",
               "opacity": 0.9,
               "seed": 4,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "acid",
+              "pattern": "acid",
+              "position": [
+                -2.5,
+                0,
+                1.5
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.5,
+                1.5
+              ],
+              "color": "#91bc38",
+              "opacity": 0.9,
+              "seed": 12,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "oil",
+              "pattern": "oil",
+              "position": [
+                -0.9,
+                0,
+                1.5
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.5,
+                1.5
+              ],
+              "color": "#25384e",
+              "opacity": 0.9,
+              "seed": 22,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "paper",
+              "pattern": "paper",
+              "position": [
+                0.9,
+                0,
+                1.5
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.5,
+                1.5
+              ],
+              "color": "#dfcfad",
+              "opacity": 0.9,
+              "seed": 32,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "rubble",
+              "pattern": "rubble",
+              "position": [
+                2.5,
+                0,
+                1.5
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.5,
+                1.5
+              ],
+              "color": "#a77862",
+              "opacity": 0.9,
+              "seed": 42,
               "normalOffset": 0.008,
               "priority": 0
             }
@@ -3459,6 +3579,30 @@
               "seed": 8,
               "normalOffset": 0.008,
               "priority": 0
+            },
+            {
+              "id": "wall-oil",
+              "pattern": "oil",
+              "position": [
+                0,
+                -0.8,
+                0.15
+              ],
+              "rotation": [
+                0.7071067811865476,
+                0,
+                0,
+                0.7071067811865476
+              ],
+              "size": [
+                1.1,
+                0.7
+              ],
+              "color": "#25384e",
+              "opacity": 0.9,
+              "seed": 22,
+              "normalOffset": 0.008,
+              "priority": 0
             }
           ]
         }
@@ -3533,6 +3677,6 @@
   "meta": {
     "createdAt": "2026-10-10T10:05:28.919Z",
     "updatedAt": "2026-10-10T10:05:28.919Z",
-    "notes": "五种确定性程序图案；下平台阴影遮挡测试、斜坡贴附、墙面弹孔、上平台叠层隔离。Play MCP 可发运行痕迹并检验寿命与 Stop。"
+    "notes": "九种确定性程序图案与四项形态参数；平地、坡面、墙面和遮挡。酸液为装饰痕迹，不代表活动伤害区。Play MCP 可发运行痕迹检验寿命与 Stop。"
   }
 }

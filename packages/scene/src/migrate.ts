@@ -349,6 +349,9 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if(!listMigrations().some(m=>m.from===19&&m.to===20))registerMigration({
+    from:19,to:20,name:'expanded-procedural-decal-styles',run:doc=>structuredClone(doc),
+  });
   if(!listMigrations().some(m=>m.from===18&&m.to===19))registerMigration({
     from:18,to:19,name:'procedural-surface-decals',run:doc=>structuredClone(doc),
   });

@@ -1,8 +1,9 @@
 import {composeQuat,multiply,hexToLinear,type Mat4} from '@aether/core';
-import {validateDecalMark,DECAL_PATTERNS,MAX_AUTHORED_DECALS,type DecalMark,type SceneDocument,type NodeId} from '@aether/scene';
+import {validateDecalMark,DECAL_PATTERNS,DEFAULT_DECAL_STYLE,MAX_AUTHORED_DECALS,type DecalMark,type SceneDocument,type NodeId} from '@aether/scene';
 
 export const MAX_RUNTIME_DECALS=512;
-export const DECAL_INSTANCE_FLOATS=16;
+/** 5×vec4 / 80B：中心、两轴、颜色及可序列化的四项形态参数。 */
+export const DECAL_INSTANCE_FLOATS=20;
 export interface RuntimeDecal {receiver:NodeId;mark:DecalMark;ttlSec:number;fadeSec:number}
 interface Entry extends RuntimeDecal {born:number}
 /** 通用运行痕迹池：宿主注入模拟时间，不读取墙钟、游戏或 DOM。 */
@@ -42,6 +43,8 @@ export function packDecalMark(out:Float32Array,offset:number,mark:DecalMark,rece
     ux*mark.size[0]/2,uy*mark.size[0]/2,uz*mark.size[0]/2,mark.seed,
     vx*mark.size[1]/2,vy*mark.size[1]/2,vz*mark.size[1]/2,0,
     color[0]!,color[1]!,color[2]!,mark.opacity],offset);
+  const style=mark.style??DEFAULT_DECAL_STYLE;
+  out.set([style.coverage,style.edgeWidth,style.irregularity,style.detail],offset+16);
 }
 export class DecalFrameBuilder {
   private readonly data=new Float32Array((MAX_AUTHORED_DECALS+MAX_RUNTIME_DECALS)*DECAL_INSTANCE_FLOATS);

@@ -4,7 +4,7 @@
 
 当前职责与发现方式见[共享文档入口](README.md)、[分层契约](architecture/layers.md)和
 [CodeGraph MCP 指南](knowledge/codegraph.md)。[分支集成](review/branch-integration-2026-10-09.md)
-时场景 schema 为 v15；2026-10-13 程序贴花迁移后为 v19，当前值读取源码常量。僵尸模拟、进度和音频事件投影在 `packages/zombie-game/src`，
+时场景 schema 为 v15；2026-10-13 程序贴花类型/形态迁移后为 v20，当前值读取源码常量。僵尸模拟、进度和音频事件投影在 `packages/zombie-game/src`，
 HUD/输入/音频表现位于其 `presentation`。通用编辑命令、武器和碰撞在 `packages/runtime`。
 本指南的流程及源码/测试路径已对照 `e6c2278` 复核；验收测量保留原日期和版本，本次复核
 不重新认证运行、美术或设备表现。
@@ -16,7 +16,7 @@ HUD/输入/音频表现位于其 `presentation`。通用编辑命令、武器和
 
 | 领域 | 持久化真源 | 执行职责/技术约束 |
 |---|---|---|
-| 场景选择与内容 | `aether.project.json`、已登记 `assets/scenes/**`、`packages/scene/src/document.ts` | 编辑器读写场景文件；稳定 NodeId、完整组件和 AssetRef path/GUID 在重载后保留。当前 v19；读 `scene_get` 和源码常量，不假定旧报告版本 |
+| 场景选择与内容 | `aether.project.json`、已登记 `assets/scenes/**`、`packages/scene/src/document.ts` | 编辑器读写场景文件；稳定 NodeId、完整组件和 AssetRef path/GUID 在重载后保留。当前 v20；读 `scene_get` 和源码常量，不假定旧报告版本 |
 | 编辑、历史与保存 | `SpawnEditStore`、编辑命令、`author-scene-save.ts` | UI/MCP 共用编辑状态及历史；磁盘冲突显式报告；表单草稿与已应用编辑不同 |
 | 环境与材质覆盖 | 场景 environment、Mesh 组件、项目材质库 | 以可复现游戏相机构图调节；渲染对象只是投影，不持有持久化编辑真源 |
 | 美术与 LOD 派生 | `assets/art/sources/**`、运行时 GLB、sidecar、构建清单 | 保存源资产、归一化配方、哈希和 GUID；每级从原始源派生，保护 UV 和直线结构 |

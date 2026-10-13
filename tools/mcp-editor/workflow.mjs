@@ -16,6 +16,7 @@ export function editorWorkflow() {
       project: 'aether.project.json', sceneSchema: 'packages/scene/src/document.ts',
       weapons: 'packages/scene/src/weapons.ts', audio: 'packages/scene/src/audio.ts',
       assetMetadata: 'packages/scene/src/asset-meta.ts',
+      decals: 'packages/scene/src/decals.ts',
     },
     stages: [
       { id:'discover', tools:['editor_workflow','editor_instances','scene_list','scene_get'], rule:'Workflow discovery needs no browser instance. Business calls target an exact live instance UUID.' },
@@ -24,7 +25,7 @@ export function editorWorkflow() {
       { id:'verify', tools:['editor_play','editor_runtime','editor_capture'], rule:'Start enters paused Play; step is deterministic simulation coverage. Audio requires a trusted Ready/Resume gesture. Stop restores author data. Canvas capture excludes DOM HUD and does not establish listening or phone acceptance.' },
     ],
     topics: [
-      {id:'procedural-decals',guide:'docs/render/procedural-decals.md',schema:'packages/scene/src/decals.ts',component:'Decal',control:'editor_decal',observation:'editor_runtime.runtime.decals',sampleScene:'assets/scenes/sandbox/procedural-decal-whitebox.scene.json'},
+      {id:'procedural-decals',guide:'docs/render/procedural-decals.md',schema:'packages/scene/src/decals.ts',component:'Decal',parameters:'DecalMark.style',workbench:'渲染 → 程序贴花工作区',control:'editor_decal',observation:'editor_runtime.runtime.decals',sampleScene:'assets/scenes/sandbox/procedural-decal-whitebox.scene.json'},
       {id:'dynamic-navigation',guide:'docs/architecture/dynamic-navigation.md',schema:'packages/scene/src/document.ts',component:'NavigationGate',control:'editor_gate',observation:'editor_runtime.runtime.gates / navigation.surface',sampleScene:'assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json'},
       { id:'visuals-and-lod', guide:'docs/36-StreetQualityAndArchitecturalLOD.md', reusable:'docs/art/visual-quality-playbook.md' },
       { id:'npc-and-input', guide:'docs/37-CombatInputAndPopulationQuality.md' },

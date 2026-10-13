@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DecalPreviewRenderer } from '../src/decal-preview';
+import { DECAL_INSTANCE_FLOATS } from '../src/decal-instances';
 
 describe('贴花独立预览资源', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -17,7 +18,7 @@ describe('贴花独立预览资源', () => {
     } as unknown as GPUDevice;
     const context = { configure: vi.fn(), unconfigure: vi.fn(), getCurrentTexture: () => ({ createView: () => ({}) }) };
     const preview = new DecalPreviewRenderer(device, context as unknown as GPUCanvasContext, 'bgra8unorm');
-    const data = new Float32Array(16), vp = new Float32Array(16);
+    const data = new Float32Array(DECAL_INSTANCE_FLOATS), vp = new Float32Array(16);
     preview.draw(data, vp, 512, 512); preview.draw(data, vp, 512, 512);
     expect(buffers).toHaveLength(2); expect(textures).toHaveLength(3); expect(preview.snapshot().instances).toBe(1);
     preview.draw(data, vp, 800, 600); expect(textures.slice(0, 3).every(t => t.destroy.mock.calls.length === 1)).toBe(true);

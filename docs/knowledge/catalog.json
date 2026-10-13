@@ -4,6 +4,66 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "decal-vfx-final-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/refined-review.md",
+      "title": "贴花独立视觉修复复验",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "九类静态需求、四项参数作用、白盒/Play读图及剩余P2限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-baseline-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/baseline-review.md",
+      "title": "贴花独立视觉基线评审",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "d18cfb7基线真实GPU目检、四项P1造型缺陷和最小类型缺口",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-acceptance-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/acceptance.md",
+      "title": "贴花独立视觉VFX复审与类型补齐",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "独立子代理基线与GPU复验、最小类型缺口和实际交付边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
       "id": "decal-workbench-acceptance-20261013",
       "path": "docs/evidence/decal-workbench-20261013/acceptance.md",
       "title": "程序贴花独立工作区验收",
@@ -35,7 +95,7 @@
         "render",
         "scene"
       ],
-      "read": "局部表面痕迹、五种程序图案、稳定id与值域",
+      "read": "九类表面痕迹、四项可序列化形态参数、稳定id与值域",
       "sourceRefs": [
         "project-rules",
         "scene-schema"
@@ -54,7 +114,7 @@
         "mcp",
         "architecture"
       ],
-      "read": "独立可视化参数工作区、草稿与作者命令、v19持久化、GPU实例批和MCP闭环",
+      "read": "独立工作区、九图案/形态参数、v20迁移、GPU合批与MCP闭环",
       "sourceRefs": [
         "project-rules",
         "scene-schema",

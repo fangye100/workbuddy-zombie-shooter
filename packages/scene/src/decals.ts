@@ -1,12 +1,17 @@
 import type {ColorHex,Vec3,Quat} from './document';
 
-export const DECAL_PATTERNS=['splatter','scorch','crack','hazard','bullet-hole'] as const;
+// 只能追加，GPU 的图案索引必须保持既有五类的顺序。
+export const DECAL_PATTERNS=['splatter','scorch','crack','hazard','bullet-hole','acid','oil','paper','rubble'] as const;
 export const MAX_AUTHORED_DECALS=512;
+export interface DecalStyle { coverage:number;edgeWidth:number;irregularity:number;detail:number }
+export const DEFAULT_DECAL_STYLE:Readonly<DecalStyle>=Object.freeze({coverage:1,edgeWidth:.025,irregularity:.5,detail:.5});
 export interface DecalMark {
   id:string; pattern:typeof DECAL_PATTERNS[number];
   /** 接收节点的局部空间；平面为局部 XZ，正法线为 +Y。 */
   position:Vec3;rotation:Quat;size:[number,number];
   color:ColorHex;opacity:number;seed:number;normalOffset:number;priority:number;
+  /** 可选形态参数；旧数据不注入字段，缺省使用 DEFAULT_DECAL_STYLE。 */
+  style?:DecalStyle;
 }
 /** 同一静态接收物的有界实例集合；不增加 mesh/材质/变换槽。 */
 export interface DecalComponent {kind:'Decal';enabled:boolean;marks:DecalMark[]}
@@ -23,5 +28,13 @@ export function validateDecalMark(value:unknown):string[] {
   if(!Number.isInteger(m.seed)||m.seed<0||m.seed>65535)errors.push('贴花 seed 必须在 0–65535');
   if(!Number.isFinite(m.normalOffset)||m.normalOffset<.001||m.normalOffset>.05)errors.push('贴花法线偏移必须在 0.001–0.05m');
   if(!Number.isInteger(m.priority)||Math.abs(m.priority)>100)errors.push('贴花绘制优先级必须在 -100–100');
+  if(m.style!==undefined){
+    const s=m.style;
+    if(!s||typeof s!=='object'||Array.isArray(s)||Object.keys(s).some(k=>!['coverage','edgeWidth','irregularity','detail'].includes(k))
+      ||!Number.isFinite(s.coverage)||s.coverage<.2||s.coverage>1
+      ||!Number.isFinite(s.edgeWidth)||s.edgeWidth<0||s.edgeWidth>.1
+      ||!Number.isFinite(s.irregularity)||s.irregularity<0||s.irregularity>1
+      ||!Number.isFinite(s.detail)||s.detail<0||s.detail>1)errors.push('贴花形态参数非法：coverage 0.2–1，edgeWidth 0–0.1，irregularity/detail 0–1');
+  }
   return errors;
 }

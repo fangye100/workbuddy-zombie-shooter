@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 19,
+  "schemaVersion": 20,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -2435,6 +2435,276 @@
               "seed": 3151,
               "normalOffset": 0.008,
               "priority": 0
+            },
+            {
+              "id": "street-surface-0",
+              "pattern": "oil",
+              "position": [
+                -24,
+                0.12,
+                -2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 13,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-1",
+              "pattern": "paper",
+              "position": [
+                -18.3,
+                0.12,
+                2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 54,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-2",
+              "pattern": "rubble",
+              "position": [
+                -12.600000000000001,
+                0.12,
+                -3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 95,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-3",
+              "pattern": "oil",
+              "position": [
+                -6.899999999999999,
+                0.12,
+                2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 136,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-4",
+              "pattern": "paper",
+              "position": [
+                -1.1999999999999993,
+                0.12,
+                -2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 177,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-5",
+              "pattern": "rubble",
+              "position": [
+                4.5,
+                0.12,
+                3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 218,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-6",
+              "pattern": "oil",
+              "position": [
+                10.200000000000003,
+                0.12,
+                -2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 259,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-7",
+              "pattern": "paper",
+              "position": [
+                15.899999999999999,
+                0.12,
+                2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 300,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-8",
+              "pattern": "rubble",
+              "position": [
+                21.6,
+                0.12,
+                -3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 341,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
             }
           ]
         }

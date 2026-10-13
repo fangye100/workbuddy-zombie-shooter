@@ -48,7 +48,7 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 修改材质、武器库或音频时，复制选定节点，只改相关组件，然后替换完整节点。
 目前没有专用武器/音频 setter 或资产搜索。后续写调用使用返回的新 revision；其他参与者修改场景后须重读。
 
-程序贴花 schema v19、五种图案及生命周期见[贴花指南](../../docs/render/procedural-decals.md)。
+程序贴花 schema v20、九种图案、`DecalMark.style` 四项形态参数及生命周期见[贴花指南](../../docs/render/procedural-decals.md)。
 可视化入口：渲染 → 程序贴花工作区；未应用的参数草稿阻止 MCP 作者写入/保存/Play，
 先在界面应用或放弃。Agent 继续使用完整节点编辑相同 Decal 数据，不需要操纵预览 DOM。
 `editor_runtime.runtime.decals` 观察运行 count/time/evicted/marks/runId 与最后 GPU 批；

@@ -1,4 +1,4 @@
-import { DECAL_PATTERNS, type DecalMark, type SceneDocument, type SceneNode, validateDecalMark } from '@aether/scene';
+import { DECAL_PATTERNS, DEFAULT_DECAL_STYLE, type DecalStyle, type DecalMark, type SceneDocument, type SceneNode, validateDecalMark } from '@aether/scene';
 import { DecalPreviewRenderer, packDecalMark, DECAL_INSTANCE_FLOATS } from '@aether/render';
 import type { GpuContext } from '@aether/gfx';
 import type { EditResult } from '@aether/runtime';
@@ -14,7 +14,8 @@ interface DecalWorkbenchPort {
   save(): Promise<void>;
   changed(): void;
 }
-const PATTERN_LABELS = ['飞溅血迹', '焦痕', '裂纹', '警戒斜纹', '弹孔'];
+const PATTERN_LABELS = ['飞溅血迹', '焦痕', '裂纹', '警戒斜纹', '弹孔', '酸液痕迹', '油污', '散纸', '碎石斑块'];
+const PATTERN_COLORS:Record<DecalMark['pattern'],string> = {splatter:'#932F32',scorch:'#353542',crack:'#29323D',hazard:'#E8BB31','bullet-hole':'#AEA18C',acid:'#91BC38',oil:'#25384E',paper:'#DFCFAD',rubble:'#A77862'};
 
 /** 独立编辑工作区；草稿只进预览，Apply 才写作者命令。 */
 export class DecalWorkbench {
@@ -133,6 +134,7 @@ export class DecalWorkbench {
     pattern.onchange = () => { mark.pattern = pattern.value as DecalMark['pattern']; this.changed(); }; this.label(this.fields, '图案', pattern);
     const color = document.createElement('input'); color.type = 'color'; color.value = mark.color;
     color.oninput = () => { mark.color = color.value; this.changed(); }; this.label(this.fields, '颜色', color);
+    this.button(this.fields, '使用图案推荐色与形态', () => { mark.color = PATTERN_COLORS[mark.pattern]; mark.style = { ...DEFAULT_DECAL_STYLE }; this.renderFields(); this.changed(); });
     const number = (label: string, value: number, min: number, max: number, step: number, update: (v: number) => void, range = false): void => {
       const row = document.createElement('div'); row.className = 'dw-number';
       const input = document.createElement('input'); input.type = 'number'; input.min = String(min); input.max = String(max); input.step = String(step); input.value = String(value);
@@ -144,6 +146,12 @@ export class DecalWorkbench {
     };
     number('不透明度', mark.opacity, 0, 1, .01, v => mark.opacity = v, true);
     number('随机种子', mark.seed, 0, 65535, 1, v => mark.seed = v);
+    const style = mark.style ?? DEFAULT_DECAL_STYLE;
+    const styleNumber = (label: string, key: keyof DecalStyle, min: number, max: number, step: number): void => number(label, style[key], min, max, step, v => { mark.style = { ...(mark.style ?? DEFAULT_DECAL_STYLE), [key]: v }; }, true);
+    styleNumber('图案覆盖率', 'coverage', .2, 1, .01);
+    if (mark.pattern !== 'hazard') styleNumber('墨边宽度', 'edgeWidth', 0, .1, .001);
+    styleNumber('不规则度', 'irregularity', 0, 1, .01);
+    styleNumber('细节密度', 'detail', 0, 1, .01);
     number('宽度（米）', mark.size[0], .01, 100, .01, v => mark.size[0] = v);
     number('深度（米）', mark.size[1], .01, 100, .01, v => mark.size[1] = v);
     ['X', 'Y', 'Z'].forEach((axis, i) => number(`局部位置 ${axis}`, mark.position[i]!, -100000, 100000, .01, v => mark.position[i] = v));

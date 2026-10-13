@@ -26,7 +26,7 @@ import { validateDecalMark, MAX_AUTHORED_DECALS, type DecalComponent } from './d
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 19;
+export const SCHEMA_VERSION = 20;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */

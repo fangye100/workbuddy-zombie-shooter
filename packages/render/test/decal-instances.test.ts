@@ -1,11 +1,11 @@
 import {describe,it,expect} from 'vitest';
-import {DecalPool,packDecalMark,DecalFrameBuilder} from '../src/decal-instances';
+import {DecalPool,packDecalMark,DecalFrameBuilder,DECAL_INSTANCE_FLOATS} from '../src/decal-instances';
 import {mat4,composeQuat} from '@aether/core';
-import {type DecalMark,createEmptySceneDocument} from '@aether/scene';
+import {type DecalMark,createEmptySceneDocument,DEFAULT_DECAL_STYLE,DECAL_PATTERNS} from '@aether/scene';
 const mark:DecalMark={id:'m',pattern:'splatter',position:[0,0,0],rotation:[0,0,0,1],size:[2,4],color:'#ff0000',opacity:1,seed:7,normalOffset:.01,priority:0};
 describe('程序贴花实例与运行池',()=>{
   it('斜面/墙面法线及非均匀缩放保持米制偏移，颜色在 HDR 线性空间；退化拒绝',()=>{
-    const out=new Float32Array(16),world=mat4();composeQuat(world,2,3,4,[Math.SQRT1_2,0,0,Math.SQRT1_2],2);
+    const out=new Float32Array(DECAL_INSTANCE_FLOATS),world=mat4();composeQuat(world,2,3,4,[Math.SQRT1_2,0,0,Math.SQRT1_2],2);
     world[0]!*=1.5;world[1]!*=1.5;world[2]!*=1.5;
     packDecalMark(out,0,mark,world);expect(out[0]).toBe(2);expect(out[1]).toBe(3);expect(out[2]).toBeCloseTo(4.01);expect(out[4]).toBe(3);expect(out[9]).toBeCloseTo(-4);expect(out[12]).toBe(1);
     composeQuat(world,0,0,0,[0,0,Math.sin(Math.PI/12),Math.cos(Math.PI/12)],1);packDecalMark(out,0,mark,world);expect(out[0]).toBeCloseTo(-.005);expect(out[1]).toBeCloseTo(Math.sqrt(3)*.005);
@@ -21,6 +21,13 @@ describe('程序贴花实例与运行池',()=>{
   it('作者和运行痕迹稳定透明排序，隐藏/缺失接收者不画，不占静态节点数',()=>{
     const doc=createEmptySceneDocument('decal'),p=new DecalPool();p.emit({receiver:'f',mark:{...mark,id:'rt',priority:2},ttlSec:3,fadeSec:1});
     doc.nodes.push({id:'f',name:'f',parent:null,transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},visible:true,pickable:true,prefab:null,components:[{kind:'Decal',enabled:true,marks:[{...mark,seed:9}]}]});
-    const b=new DecalFrameBuilder(),world=mat4();const data=b.build(doc,()=>world,p.snapshot(),[0,5,10]);expect(data).toHaveLength(32);expect(data[7]).toBe(9);expect(data[23]).toBe(7);expect(b.build(doc,()=>null,p.snapshot(),[0,5,10])).toHaveLength(0);
+    const b=new DecalFrameBuilder(),world=mat4();const data=b.build(doc,()=>world,p.snapshot(),[0,5,10]);expect(data).toHaveLength(DECAL_INSTANCE_FLOATS*2);expect(data[7]).toBe(9);expect(data[DECAL_INSTANCE_FLOATS+7]).toBe(7);expect(b.build(doc,()=>null,p.snapshot(),[0,5,10])).toHaveLength(0);
+  });
+  it('九类稳定索引与80字节打包，缺省形态及显式参数按相同布局传GPU',()=>{
+    const data=new Float32Array(DECAL_INSTANCE_FLOATS*2),world=mat4();
+    for(const [index,pattern] of DECAL_PATTERNS.entries()) {packDecalMark(data,0,{...mark,pattern},world);expect(data[3]).toBe(index);}
+    packDecalMark(data,0,mark,world);expect(Array.from(data.slice(16,20))).toEqual([DEFAULT_DECAL_STYLE.coverage,expect.closeTo(DEFAULT_DECAL_STYLE.edgeWidth),DEFAULT_DECAL_STYLE.irregularity,DEFAULT_DECAL_STYLE.detail]);
+    packDecalMark(data,DECAL_INSTANCE_FLOATS,{...mark,style:{coverage:.6,edgeWidth:0,irregularity:.8,detail:1}},world);
+    expect(Array.from(data.slice(36,40))).toEqual([expect.closeTo(.6),0,expect.closeTo(.8),1]);expect(data[7]).toBe(mark.seed);
   });
 });

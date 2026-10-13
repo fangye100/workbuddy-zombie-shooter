@@ -873,3 +873,10 @@ NavigationGate 的根节点/碰撞体约束、局部平移偏移、初始状态�
 ## v19 程序性表面贴花补充（2026-10-13）
 
 Decal 组件挂在既有静态 MeshRenderer 节点，marks 持有稳定 id、局部变换、确定性图案种子及颜色参数；不增加静态 mesh/变换槽。v18→v19 迁移保留旧内容，实例数量与错误配置显式诊断。运行痕迹不落盘，由有界池消费模拟时间，Stop 恢复作者数据并释放批缓冲。完整 owner、MCP 和验收限制见[程序贴花指南](render/procedural-decals.md)。
+
+## v20 程序贴花类型与形态补充（2026-10-13）
+
+独立视觉/VFX复审后，追加 acid/oil/paper/rubble，保持旧五类的顺序。可选 `DecalMark.style`
+完整声明 coverage、edgeWidth、irregularity、detail 四项参数；未提供时按公开缺省值读取。
+v19→v20 只深复制旧文档并升级版本，不注入字段、不编造伤害或战斗事件。显式形态参数
+必须校验值域及完整性，继续使用稳定 receiver NodeId+mark id、统一作者命令与保存闭环。

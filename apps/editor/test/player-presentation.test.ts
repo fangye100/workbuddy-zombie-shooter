@@ -80,7 +80,7 @@ describe('scene-authored player presentation', () => {
     delete mesh.playBinding; doc.schemaVersion = 7;
     const result = migrateToLatest(doc);
     expect(result.to).toBe(SCHEMA_VERSION);
-    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'unified-weapon-arsenal', 'scene-audio-cue-mapping', 'integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals']);
+    expect(result.applied).toEqual(['support-player-mesh-binding', 'support-authored-comic-atmosphere', 'support-authored-art-textures', 'shared-motion-node-overrides', 'authored-crowd-attack-budget', 'unified-weapon-arsenal', 'scene-audio-cue-mapping', 'integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles']);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(doc.schemaVersion).toBe(7);
   });
