@@ -2329,7 +2329,7 @@
         "weapons",
         "framework"
       ],
-      "read": "v18 Hip相对持握slot、作者保存及生成覆盖、socket默认与覆盖、primary实际结果驱动dependent和同帧FK",
+      "read": "v18 Hip相对持握slot、作者保存及生成覆盖、正常持枪肩球回归边界、socket默认与覆盖和同帧FK",
       "sourceRefs": [
         "scene-schema",
         "scene-weapons",

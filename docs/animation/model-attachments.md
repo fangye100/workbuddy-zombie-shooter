@@ -49,7 +49,16 @@ v16→v17 的 `explicit-model-socket-assemblies` 仅为旧武器补 `assembly:nu
 
 v17→v18 的 `optional-bone-relative-hold-slots` 只升级版本，不为旧场景创建 slot，也不重写持握值。
 2026-10-13 的 22 场景升级只改 schemaVersion；七件默认值之后在 prototype 和四个武器场景中独立配置。
-默认前移 8–12cm 是本轮可见验收候选，不能凭单元测试宣称胸前距离或全姿态质量通过。
+初版默认前移 8–12cm 是候选。实机正常持枪/切换采样在 `f5c3ea6` 发现六件左手不可达，
+霰弹枪/SMG/狙击枪/电锯/火焰/火箭筒最大残差分别约 59.6/17.7/78.8/82.7/28.8/29.9mm。
+2026-10-13 的一次数据修正相对该候选将 slot 分别平移 `[.14,.10,0]`、`[.10,0,0]`、
+`[.16,.04,-.04]`、`[.16,0,-.05]`、`[.10,.10,0]`、`[.09,.02,0]` 米；手枪保持。
+主要靠 +X 向左肩靠近和 Y 上抬。狙击枪和电锯的前向分量本身已超过链长，收回小量 Z 后仍保留 4/7cm 前移；
+其他武器仍保留初版前移量。基于原始 154 个可见帧的双手肩球计算，修正候选最小余量约 9.9mm。
+精简观测夹具 `packages/zombie-game/test/fixtures/weapon-hold-shoulders.json` 记录原 HEAD、源报告、
+actor-local 肩位置及最不利双手目标，回归测试 `packages/zombie-game/test/presentation/weapon-hold-slots.test.ts`
+对当前作者 slot 检查余量。肩球计算只证明这些观测帧的位置可达，不代表已重新求值或通过 GPU；正常侧前视图待复验，
+不能凭单元测试宣称胸前距离或全姿态质量通过。
 
 本轮定向验证另含 `apps/editor/test/runtime-weapons.test.ts`、`apps/editor/test/scene-authoring-loop.test.ts`、
 `packages/zombie-game/test/presentation/weapon-model.test.ts` 和 `node --test tools/level/weapon-assembly-defaults.test.mjs tools/verify/weapon-assembly.test.mjs`。

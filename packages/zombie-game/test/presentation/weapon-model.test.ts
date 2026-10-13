@@ -9,7 +9,7 @@ describe('真实模型表现仅消费已有武器相位',()=>{
   w.presentation.assembly={holdPose:{position:[0,1.2,.3],rotation:[0,Math.SQRT1_2,0,Math.SQRT1_2]},attachments:[],reloadAttachmentId:null};return a;};
  const socket=identitySocket(),hand={id:'rightHand',socket:{bone:'RightHand',contact:socket}},left={id:'leftHand',socket:{bone:'LeftHand',contact:socket}};
  const sockets={primaryGrip:socket,supportGrip:socket,magazine:socket,chamber:socket,muzzle:{...socket,rotation:[0,-Math.SQRT1_2,0,Math.SQRT1_2] as [number,number,number,number]}};
- it.each([0,Math.PI/2,Math.PI])('slot替代旧绝对位置并消费现switch/recoil；actor yaw=%s',yaw=>{
+ it.each([0,Math.PI/2,Math.PI,Math.PI*.75])('slot替代旧绝对位置并消费现switch/recoil；actor yaw=%s',yaw=>{
   const a=arsenal(),def=a.definitions[0]!;def.presentation.assembly!.holdSlot={bone:'Hips',position:[-.1,.3,.2]};const w=new WeaponSystem(a);
   const actor=quatMul([0,-Math.sin(yaw/2),0,Math.cos(yaw/2)],[0,Math.SQRT1_2,0,Math.SQRT1_2]);
   const pose={...w.poseIntent,action:'equip' as const,phase:.5,recoil:{translation:[-.02,0,0] as [number,number,number],pitchDeg:3}};
@@ -18,7 +18,7 @@ describe('真实模型表现仅消费已有武器相位',()=>{
   expect(weaponModelProjection(def,pose,yaw,actor,sockets,hand,left,undefined,undefined,7)).toEqual(p);expect(def).toEqual(before);
   const messages:string[]=[];expect(weaponModelProjection(def,pose,yaw,actor,sockets,hand,left,undefined,d=>messages.push(d))).toBeNull();expect(messages.join()).toContain('WEAPON_HOLD_SLOT');
  });
- it.each([0,Math.PI/2,Math.PI,-Math.PI/2])('actor朝向抵消后枪口随yaw=%s，无重复yaw',yaw=>{
+ it.each([0,Math.PI/2,Math.PI,-Math.PI/2,Math.PI*.75])('actor朝向抵消后枪口随yaw=%s，无重复yaw',yaw=>{
   const w=new WeaponSystem(arsenal()),qAim:[number,number,number,number]=[0,-Math.sin(yaw/2),0,Math.cos(yaw/2)],actor=quatMul(qAim,[0,Math.SQRT1_2,0,Math.SQRT1_2]);
   const result=weaponModelProjection(w.active,w.poseIntent,yaw,actor,sockets,hand,left)!;
   const modelWorld={position:[0,0,0] as [number,number,number],rotation:[...quatMul(actor,result.request.target.rotation)] as [number,number,number,number]};
