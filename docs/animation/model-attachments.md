@@ -85,13 +85,15 @@ LeftHand.Z 为 `.3799861536 → .4299861340`，RightHand.Z 为 `.1780537177 → 
 均约前移 `.05m`，双手残差小于 `4e-7m`。两次 idle 采样时间不同，Y 约有 `.000165m` 差异，
 因此不将世界坐标或整个姿态向量宣称为精确刚性平移。
 
-可见 UI 恢复原 Z、Apply、保存、Reload 后所有 slot 回到原值。五标记唯一遗留的
-Flame primaryGrip.position[0] 浮点尾差约 `1e-17` 已精确恢复到该 HEAD；试验场景无净变更。
+可见 UI 恢复原 Z、Apply、保存后，磁盘所有 slot 回到原值。初次临时 `+.05m` 的 Reload 已验证，
+最终恢复后的 Reload 未取得有效证据。五标记唯一遗留的 Flame primaryGrip.position[0]
+浮点尾差约 `1e-17` 由 owner 精确恢复到该 HEAD；试验场景磁盘内容与该 HEAD 完全一致。
 本轮最终只提交证据文档，不增加动作或参数机制。
 
 本地原始证据位于 `.workbuddy/tmp/weapon-hip-slot/headed-correction-audit/observations.json` 和
 `.workbuddy/tmp/weapon-hip-slot/ui-slot-audit/` 的 `baseline-scene.json`、`temporary-after-save.json`、
-`final-restored-scene.json`、`temporary-slot-evidence/observations.json`。这些忽略路径是本次本机可复查证据，
+`final-restored-scene.json`、`temporary-slot-evidence/observations.json` 和 `cua-original-records.jsonl`。
+后者保留本次 Audit 的原始 CUA 调用、响应及原生截图。这些忽略路径是本次本机可复查证据，
 不会随 Git 分发；版本化契约保留上述提交、路径、计数和限制。独立终审另行执行，不将工具通过当作终审批准。
 
 定向测试：`pnpm exec vitest run packages/scene/test/model-attachments.test.ts packages/scene/test/migrate.test.ts packages/render/test/body-ik.test.ts packages/render/test/model-draw.test.ts`。涉及资产/场景还需 scene:check；跨层源码需 architecture:check；发布指南需 knowledge:check。

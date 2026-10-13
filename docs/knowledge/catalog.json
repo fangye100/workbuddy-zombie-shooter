@@ -2329,7 +2329,7 @@
         "weapons",
         "framework"
       ],
-      "read": "v18 Hip相对持握slot、作者保存及生成覆盖、2305610正常持枪真实GPU与可见保存证据、socket覆盖和同帧FK",
+      "read": "v18 Hip相对持握slot、2305610正常持枪真实GPU、可见临时slot重载与最终磁盘恢复证据、socket覆盖和同帧FK",
       "sourceRefs": [
         "scene-schema",
         "scene-weapons",
