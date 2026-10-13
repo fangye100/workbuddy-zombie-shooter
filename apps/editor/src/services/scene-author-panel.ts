@@ -4,6 +4,7 @@ import { BODY_IK_PARTS, DEFAULT_MOTION_TRANSITION_SEC, newBodyIkControl } from '
 import { newAuthorNode, newRunRules, removeNodeTree, type EditResult } from '@aether/runtime';
 import { t } from '../i18n';
 import './scene-author.css';
+import { appendWeaponHoldSlotFields } from './weapon-hold-slot-fields';
 
 const labels: Record<string, string> = {
   audio: '游戏音效', cues: '音效资源', masterGain: '主音量', maxVoices: '最大同时发声数', maxImpactVoices: '最大命中声数', decodedBudgetMiB: '音频内存预算 MiB', distanceM: '声音衰减距离', warningDistanceM: '预警距离', variants: '声音变体', gain: '音量', rate: '播放速率', bus: '声音分组', ambience: '环境音', warnings: '敌人预警', fleshHit: '肉体命中', acidLaunch: '酸液发射', acidPool: '酸池循环',
@@ -76,6 +77,13 @@ export class SceneAuthorPanel {
         for (const key of keys) {
           const value = object[key], path = `${prefix}.${key}`;
           if (key === 'kind' || value === undefined || value === null) continue;
+          if(key==='holdSlot')continue; // 专用每武器 XYZ 表单，不重复编辑。
+          if(key==='position'&&prefix.endsWith('.assembly.holdPose')&&prefix.includes('RunRules.arsenal')){
+            const index=Number(prefix.split('.definitions.')[1]?.split('.')[0]),run=draft.components.find(c=>c.kind==='RunRules');
+            if(run?.kind==='RunRules'&&run.arsenal.definitions[index]?.presentation.assembly?.holdSlot){
+              const note=document.createElement('p');note.textContent='holdPose.position 为旧场景兼容值；使用上方 Hip 相对位置。';parent.append(note);continue;
+            }
+          }
           if(prefix==='RunRules.weapon' && ['magazineSize','reserveRounds','reloadSec'].includes(key))continue; // v12 compatibility fields; arsenal owns these in v13.
           if (typeof value === 'object') {
             const group = document.createElement('details'); group.open = !['transform','talents','definitions','audio','cues'].includes(key);
@@ -160,6 +168,7 @@ export class SceneAuthorPanel {
       parents.onchange = () => { draft.parent = parents.value || null; dirty(); }; parentLabel.append(parents); form.append(parentLabel);
       const rules = draft.components.find(c => c.kind === 'RunRules') as RunRulesComponent | undefined;
       if (rules) {
+        appendWeaponHoldSlotFields(form,rules.arsenal.definitions,dirty);
         fields(form, rules as unknown as Record<string, unknown>, Object.keys(rules), 'RunRules');
         button('添加强化选项', () => { rules.talents.push({ id: `talent-${rules.talents.length + 1}`, name: t('新强化'), description: '', effect: 'damage', value: 0.2, maxStacks: 5 }); redrawDraft(); }, form);
         button('删除最后强化选项', () => { rules.talents.pop(); redrawDraft(); }, form);

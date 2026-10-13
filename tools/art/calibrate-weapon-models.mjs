@@ -1,5 +1,6 @@
 /** 七武器真实模型装配数据：源测量点经配方转到实际parser空间，保留核心玩法和单一phase。 */
 import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {fileURLToPath,pathToFileURL} from 'node:url';import {build} from 'esbuild';
+import { holdSlotBasePosition } from '../level/weapon-hold-slots.mjs';
 const root=fileURLToPath(new URL('../../',import.meta.url)),check=process.argv.includes('--check');
 const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8')),write=(p,d)=>{const text=JSON.stringify(d,null,2)+'\n';if(!fs.existsSync(path.join(root,p))||fs.readFileSync(path.join(root,p),'utf8')!==text)fs.writeFileSync(path.join(root,p),text);};
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -63,7 +64,8 @@ for(const [weapon,data] of Object.entries(bodyDefs)){
  // holdPose是模型root；用理想主握接触点反推root，不能把root本身当手的位置。
  // H01 bind姿态四向原Z=.12时，长枪support越界55/78mm；回收root，不改实际握把socket或骨长。
  const desired=[-.03,weapon==='smg'?1.34:1.25,['shotgun','sniper'].includes(weapon)?.015:.12],hold=socket(desired.map((n,k)=>n-ss.primaryGrip.position[k]),plusY);
- w.presentation.model=main.asset;w.presentation.assembly={holdPose:hold,attachments:[],reloadAttachmentId:null};
+ const holdSlot=w.presentation.assembly?.holdSlot;
+ w.presentation.model=main.asset;w.presentation.assembly={holdPose:hold,...(holdSlot?{holdSlot:structuredClone(holdSlot)}:{}),attachments:[],reloadAttachmentId:null};
  calibration.bodyIntegration.definitions[weapon]={asset:main.asset,sha256:main.sha256,boundsMin:main.boundsMin,boundsMax:main.boundsMax,modelSockets:ss,sourceNodeBakedPoints:data,holdPose:hold,idealPrimaryContactActor:desired,holdCalibration:['shotgun','sniper'].includes(weapon)?{priorActorContactZ:.12,priorBindLeftResidualM:weapon==='shotgun'?.05511691:.07830725,change:'模型root向身体回收.105m；保留实际primary/support位置，GPU全动作/轮廓未验'}:weapon==='smg'?{priorActorContactY:1.25,priorBindReloadLeftResidualM:.03398582,intermediateActorContactY:1.30,intermediateBindReloadLeftResidualM:.00657699,change:'新SMG模型root上移.09m，降低卸下弹匣目标肩距；保留原源socket，GPU仍待验'}:null,evidence};
 }
 const attach=(weapon,aid,parent,desiredRotation=I)=>{
@@ -105,14 +107,15 @@ calibration.launcherFrontLoading={status:'0.90-candidate-awaiting-actual-entry-l
  limits:['423真实同帧肩球而非理想骨姿；纯reach规划不替代新Input','仅7个无transition几何代表态；其他crossfade与全路径未证明clear','H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准','round仅统一缩放，UV/法线/索引/纹理/cap不变；底火仍待用户新版Shell源']};
 for(const w of prototype.definitions){
  const a=w.presentation.assembly,ss={...read(w.presentation.model.path+'.meta.json').modelSockets,...a.sockets};
+ if(a.holdSlot){calibration.holdSlots??={};calibration.holdSlots[w.id]=structuredClone(a.holdSlot);}
  // yaw=0 actorWorld RY+90；scene独立markers存模拟空间，绝非GLB local点。
- const rootWorld=socket(api.rotateVec3(plusY,a.holdPose.position),a.holdPose.rotation),m=api.composeSocket(rootWorld,ss.muzzle).position;
+  const rootWorld=socket(api.rotateVec3(plusY,holdSlotBasePosition(a,calibration.holdSlotReference)),a.holdPose.rotation),m=api.composeSocket(rootWorld,ss.muzzle).position;
  calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id]=m;
 }
 const scenes=['assets/scenes/sandbox/weapon-assembly-trial.scene.json',...['1','2','3'].map(n=>`assets/scenes/act1/floor-${n}.scene.json`)];
 for(const file of scenes){
  const doc=read(file),actor=doc.nodes.find(n=>n.id===doc.playerStart),rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');
- for(const w of rules.arsenal.definitions){const next=prototype.definitions.find(p=>p.id===w.id),m=calibration.simulationCalibration.zeroRecoilActorMuzzle[w.id];w.presentation.model=structuredClone(next.presentation.model);w.presentation.assembly=structuredClone(next.presentation.assembly);if(w.id==='launcher')w.presentation.lengthM=next.presentation.lengthM;w.presentation.markers.muzzle.position=[m[0],m[1]+actor.transform.position[1]-calibration.simulationCalibration.capsuleHalfM,m[2]];}
+ for(const w of rules.arsenal.definitions){const next=prototype.definitions.find(p=>p.id===w.id),slot=w.presentation.assembly?.holdSlot;w.presentation.model=structuredClone(next.presentation.model);w.presentation.assembly=structuredClone(next.presentation.assembly);if(slot)w.presentation.assembly.holdSlot=structuredClone(slot);if(w.id==='launcher')w.presentation.lengthM=next.presentation.lengthM;const a=w.presentation.assembly,ss={...read(w.presentation.model.path+'.meta.json').modelSockets,...a.sockets};const m=api.composeSocket(socket(api.rotateVec3(plusY,holdSlotBasePosition(a,calibration.holdSlotReference)),a.holdPose.rotation),ss.muzzle).position;w.presentation.markers.muzzle.position=[m[0],m[1]+actor.transform.position[1]-calibration.simulationCalibration.capsuleHalfM,m[2]];}
  const deps=rules.arsenal.definitions.flatMap(w=>[w.presentation.model.path,...w.presentation.assembly.attachments.map(a=>a.model.path)]);doc.dependencies=[...new Set([...doc.dependencies,...deps])];
  if(file.includes('sandbox/')){const cameraNode=doc.nodes.find(n=>n.id===doc.entryCamera),camera=cameraNode.components.find(c=>c.kind==='Camera');camera.distance=1.8;camera.pitchDeg=0;camera.yawOffsetDeg=-90;cameraNode.transform.position[1]=1.18;const note='五本体新LOD与去重复几何的附件fit候选；近Camera只试验场景，GPU七武器/实际离回槽待验。';if(!doc.meta.notes.includes(note))doc.meta.notes+=' '+note;}
  valid(file,api.validateSceneDocument(doc));if(check){const old=read(file);if(JSON.stringify(old.nodes)!==JSON.stringify(doc.nodes)||JSON.stringify(old.dependencies)!==JSON.stringify(doc.dependencies))throw new Error(file+': assembly/markers漂移');}else write(file,doc);

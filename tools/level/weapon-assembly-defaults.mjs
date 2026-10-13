@@ -16,6 +16,9 @@ export function prepareWeaponAssemblyPlayer(doc,calibration,actorMeta,hasPreviou
  const {zeroRecoilActorMuzzle,capsuleHalfM}=calibration.simulationCalibration;
  for(const w of rules.arsenal.definitions){
   const muzzle=zeroRecoilActorMuzzle[w.id];if(!muzzle||!w.presentation.assembly)continue;
-  w.presentation.markers.muzzle.position=[muzzle[0],muzzle[1]+player.transform.position[1]-capsuleHalfM,muzzle[2]];
+  const slot=w.presentation.assembly.holdSlot,base=calibration.holdSlots?.[w.id];
+  if(slot&&(!base||slot.bone!==base.bone))throw new Error('holdSlot缺少匹配的作者校准基准');
+  const delta=slot?slot.position.map((v,i)=>v-base.position[i]):[0,0,0];
+  w.presentation.markers.muzzle.position=[muzzle[0]+delta[2],muzzle[1]+delta[1]+player.transform.position[1]-capsuleHalfM,muzzle[2]-delta[0]];
  }
 }

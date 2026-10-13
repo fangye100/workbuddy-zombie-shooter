@@ -31,6 +31,7 @@ import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 import { applyP0Art } from '../art/apply-p0-art.mjs';
 import { refineStreet } from '../art/refine-streets.mjs';
 import { prepareWeaponAssemblyPlayer } from './weapon-assembly-defaults.mjs';
+import { preserveSceneHoldSlots } from './weapon-hold-slots.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -761,6 +762,7 @@ function main() {
     const player=doc.nodes.find(n=>n.id===doc.playerStart);
     const previousMesh=previousPlayer?.components.find(c=>c.kind==='MeshRenderer');
     if(previousMesh){player.components=player.components.map(c=>c.kind==='MeshRenderer'?structuredClone(previousMesh):c);player.name=previousPlayer.name;}
+    preserveSceneHoldSlots(doc,previous);
     const calibration=JSON.parse(fs.readFileSync(path.join(ROOT,'assets/art/calibration/weapon-assembly-trial.json'),'utf8'));
     const actorMeta=JSON.parse(fs.readFileSync(path.join(ROOT,calibration.character.asset.path+'.meta.json'),'utf8'));
     prepareWeaponAssemblyPlayer(doc,calibration,actorMeta,!!previousMesh);

@@ -3,6 +3,7 @@ import { SpawnEditStore, cloneDocument, newAuthorNode, newRunRules, removeNodeTr
 import { loadLevelRuntime, RuntimeSession } from '@aether/zombie-game';
 import type { SceneDocument } from '@aether/scene';
 import { AuthorSceneSaver } from '../src/services/author-scene-save';
+import { setWeaponHoldSlotAxis } from '../src/services/weapon-hold-slot-fields';
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
 function fixture(): SceneDocument {
   const doc = cloneDocument((Object.values(modules)[0] as { default: SceneDocument }).default);
@@ -17,6 +18,16 @@ function setup() {
   return { store, saver, disk: () => disk };
 }
 describe('scene authoring loop', () => {
+  it('单武器Hip slot+Z同时平移对应marker，独立Undo/保存/重载，非法草稿原子拒绝',async()=>{
+    const s=setup(),before=cloneDocument(s.store.document),weapons=(d:SceneDocument)=>{const r=d.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');if(r?.kind!=='RunRules')throw new Error('fixture');return r.arsenal.definitions;};
+    const initial=weapons(before)[0]!,z=initial.presentation.assembly!.holdSlot!.position[2];
+    expect(s.store.editNodes('Hip slot',nodes=>{const r=nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');if(r?.kind==='RunRules')setWeaponHoldSlotAxis(r.arsenal.definitions[0]!,2,z+.1);}).ok).toBe(true);
+    const wanted=cloneDocument(s.store.document),edited=weapons(wanted)[0]!;expect(edited.presentation.assembly!.holdSlot!.position[2]).toBeCloseTo(z+.1);
+    expect(edited.presentation.markers.muzzle.position[0]).toBeCloseTo(initial.presentation.markers.muzzle.position[0]+.1);expect(edited.presentation.markers.primaryGrip.position[0]).toBeCloseTo(initial.presentation.markers.primaryGrip.position[0]+.1);
+    expect(weapons(wanted).slice(1)).toEqual(weapons(before).slice(1));s.store.undo();expect(s.store.document).toEqual(before);s.store.redo();expect(s.store.document).toEqual(wanted);
+    expect((await s.saver.save(s.store,'qa.scene.json')).status).toBe('saved');expect(new SpawnEditStore(s.disk()).document).toEqual(wanted);
+    expect(s.store.editNodes('invalid slot',nodes=>{const r=nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');if(r?.kind==='RunRules')setWeaponHoldSlotAxis(r.arsenal.definitions[0]!,2,NaN);}).ok).toBe(false);expect(s.store.document).toEqual(wanted);
+  });
   it('saves and reopens authored audio gain and stable resource identities', async () => {
     const s=setup();
     expect(s.store.editNodes('audio', nodes=>{const r=nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')!;if(r.kind==='RunRules')r.audio!.masterGain=.4;}).ok).toBe(true);

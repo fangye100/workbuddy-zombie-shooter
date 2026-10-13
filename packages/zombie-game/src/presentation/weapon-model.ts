@@ -1,5 +1,5 @@
 /** 武器表现投影：只消费 WeaponSystem 已有相位，不拥有时钟、弹药或玩法。 */
-import { quatMul, type Quat } from '@aether/core';
+import { quatMul, type Quat, type Vec3 } from '@aether/core';
 import type { WeaponSystem } from '@aether/runtime';
 import type { BoneSocket, ModelSockets, SocketTransform, WeaponDefinition } from '@aether/scene';
 import { validSocketTransform } from '@aether/scene';
@@ -10,6 +10,8 @@ export interface WeaponModelProjection {
   magazineRemoved: boolean;
 }
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+/** 玩家 mesh 的 +Z 前方对应模拟 yaw-local +X；作者平移不从 GPU 姿态反向计算。 */
+export function weaponMarkerTranslationForActorOffset(delta:Vec3):[number,number,number] { return [delta[2],delta[1],-delta[0]]; }
 function blendRotation(a:Quat,b:Quat,t:number):SocketTransform['rotation'] {
   let dot=a.reduce((n,v,i)=>n+v*b[i]!,0),sign=dot<0?-1:1;dot=Math.min(1,Math.abs(dot));
   const angle=Math.acos(dot),s=Math.sin(angle),wa=s<1e-6?1-t:Math.sin((1-t)*angle)/s,wb=s<1e-6?t:Math.sin(t*angle)/s;

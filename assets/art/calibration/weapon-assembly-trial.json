@@ -633,39 +633,39 @@
     "capsuleSource": "packages/content/src/generated/stats.generated.ts P-01 capsuleHeight=1.8",
     "zeroRecoilActorMuzzle": {
       "pistol": [
-        0.4800000000000001,
+        0.5800000000000001,
         1.347,
-        0.07999999999999996
+        0.0799999999999999
       ],
       "launcher": [
-        0.5825,
+        0.6625000000000001,
         1.452,
         0.30999999999999994
       ],
       "shotgun": [
-        0.7125714069001725,
+        0.7925714069001726,
         1.32118075580614,
-        0.029999999999999888
+        0.02999999999999986
       ],
       "smg": [
-        0.4651073142491059,
+        0.5651073142491059,
         1.4478460357028458,
         0.02999999999999997
       ],
       "sniper": [
-        0.7417843275880397,
+        0.8217843275880398,
         1.3803199483950968,
-        0.029999999999999666
+        0.029999999999999694
       ],
       "chainsaw": [
-        0.8779250177036406,
+        0.9979250177036406,
         1.290082573051635,
-        0.029999999999999805
+        0.02999999999999975
       ],
       "flame": [
-        0.5815598128041001,
+        0.6815598128041,
         1.3942374415012813,
-        0.029999999999999832
+        0.029999999999999805
       ]
     },
     "meaning": "yaw-local simulation muzzle from ideal hold/model socket, y includes authored actorY then subtracts capsuleHalf; model-local sockets remain separate; no presentation feedback into simulation"
@@ -1875,5 +1875,76 @@
       "H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准",
       "round仅统一缩放，UV/法线/索引/纹理/cap不变；底火仍待用户新版Shell源"
     ]
+  },
+  "holdSlotReference": {
+    "bone": "Hips",
+    "position": [
+      0.00010323525202693418,
+      0.9836245179176331,
+      -0.050034165382385254
+    ],
+    "asset": {
+      "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+      "guid": "as_hpnf387i"
+    },
+    "space": "H01 bind FK after importer normalization; actor-axis metre; +Z forward; runtime uses current sampled Hip"
+  },
+  "holdSlots": {
+    "pistol": {
+      "bone": "Hips",
+      "position": [
+        -0.08010323525202694,
+        0.2063754820823669,
+        0.4900341653823853
+      ]
+    },
+    "shotgun": {
+      "bone": "Hips",
+      "position": [
+        -0.029613845098296062,
+        0.12428564594018399,
+        0.3426124041374454
+      ]
+    },
+    "smg": {
+      "bone": "Hips",
+      "position": [
+        -0.030323659013316552,
+        0.3110301604697281,
+        0.31696646967530917
+      ]
+    },
+    "sniper": {
+      "bone": "Hips",
+      "position": [
+        -0.03044367210311374,
+        0.16085566593821055,
+        0.36490974269534754
+      ]
+    },
+    "chainsaw": {
+      "bone": "Hips",
+      "position": [
+        -0.027931883506063116,
+        0.16084749269379017,
+        0.6228951087163538
+      ]
+    },
+    "flame": {
+      "bone": "Hips",
+      "position": [
+        -0.03209908399687395,
+        0.111319482387783,
+        0.3945957025749669
+      ]
+    },
+    "launcher": {
+      "bone": "Hips",
+      "position": [
+        -0.31010323525202693,
+        0.2163754820823669,
+        0.37503416538238527
+      ]
+    }
   }
 }
