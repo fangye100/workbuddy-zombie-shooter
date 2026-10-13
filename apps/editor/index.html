@@ -1316,7 +1316,7 @@
 
   #gizmo-bar { position: relative; top: auto; left: auto; right: auto; flex: 0 0 auto; width: 100%; overflow-x: auto; z-index: 21; background: #151d19; }
   #gizmo-bar .gz-inner { flex: 0 0 auto; width: max-content; min-width: 100%; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 6px 12px; }
-  #observation-camera-hint { position: absolute; top: 12px; right: 12px; z-index: 25; max-width: calc(100% - 24px); padding: 6px 10px; background: #171a21; color: #eee; border-radius: 4px; pointer-events: none; }
+  #observation-camera-hint { position: fixed; left: 16px; bottom: 112px; z-index: 1100; max-width: min(480px, calc(100vw - 32px)); padding: 6px 10px; background: #171a21; color: #eee; border-radius: 4px; font: 12px/1.45 system-ui, sans-serif; pointer-events: none; }
   #observation-camera-hint[hidden] { display: none; }
   #hud[hidden] { display: none; }
   #hud { top: 100px; max-width: min(540px, 70vw); }
@@ -1348,6 +1348,7 @@
 </style>
 </head>
 <body data-page-node-id="3v5jFlBFoZOAl9ZXixHniU">
+<span id="observation-camera-hint" hidden>观察：左拖环绕 · 右/中键/Shift拖平移 · 滚轮缩放 · 1–7切枪 · Esc返回</span>
 <div id="topbar" data-page-node-id="DWAspFABjPYSzYXohJSEZM">
   <div class="tb-brand" data-page-node-id="HdwGLcaHineyrHk4rpdHcf">Web3D <em data-page-node-id="O0i8eCBITlCOAUYm6yHJfD">Editor</em></div>
   <div class="tb-menus" data-page-node-id="vbJDAHfCbrcoMGMvC78aMX">
@@ -1372,7 +1373,6 @@
 <div class="split-handle" id="split-left" title="拖拽调整左侧面板宽度" data-page-node-id="BwyYiG8ZrAcq7N1LF0XRms"></div>
 <div id="center" data-page-node-id="tnfONArFpWjeHhBxYM6zyz">
   <canvas id="gpu" data-page-node-id="ivFEi1oS94rS9xuDyqOhkd"></canvas>
-  <span id="observation-camera-hint" hidden>观察：左拖环绕 · 右/中键/Shift拖平移 · 滚轮缩放 · 1–7切枪 · Esc返回</span>
   <!-- 绑定面板（进绑定后盖住 3D 视图，内部 DOM 由 BindingPanel 全量构建） -->
   <div id="binding-dock" data-page-node-id="pDTPu4XOCe9JtvhJd81DtY"></div>
   <!-- 重定向工作台（MR-06：两入口汇入的统一会话 UI，内部 DOM 由 RetargetWorkbench 全量构建） -->
