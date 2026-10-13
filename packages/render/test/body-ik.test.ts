@@ -26,10 +26,12 @@ describe('post-animation HumanIK blending', () => {
     const hip=f.sk.joints[f.sk.jointNames.indexOf('Hips')]!;
     for(const local of f.sk.locals)local.t=local.t.map(n=>n*100) as [number,number,number];
     f.sk.normalization=socketMatrix({position:[.05,.02,-.03],rotation:[0,0,0,1]},.01);
-    f.skin.clips=[{name:'hip-motion',duration:1,tracks:[{node:hip,path:'translation',stride:3,interpolation:'LINEAR',times:new Float32Array([0,1]),values:new Float32Array([0,90,0,10,100,20])}]}];f.skin.clip=0;f.skin.time=.5;
+    f.skin.clips=[{name:'hip-motion',duration:1,tracks:[{node:hip,path:'translation',stride:3,interpolation:'LINEAR',times:new Float32Array([0,1]),values:new Float32Array([0,90,0,10,100,20])},{node:hip,path:'rotation',stride:4,interpolation:'LINEAR',times:new Float32Array([0,1]),values:new Float32Array([0,0,0,1,...eulerToQuat(0,.3,0)])}]}];f.skin.clip=0;f.skin.time=.5;
     const request={target:{position:[-.2,.3,.2] as [number,number,number],rotation:[0,0,0,1] as [number,number,number,number]},positionAnchor:{node:hip},primary:{controlId:f.control.id,contact:identitySocket(),modelSocket:identitySocket()},dependent:{controlId:left.id,contact:identitySocket(),modelSocket:{...identitySocket(),position:[.15,0,0] as [number,number,number]}}};
     f.skin.bodyIk.attachment=request;const input=structuredClone(request.target),sampled=sampleAnimationPose(f.skin),before=structuredClone(f.sk.locals);
+    f.skin.bodyIk.binding.enabled=false;const base=f.out();f.skin.bodyIk.binding.enabled=true;
     const first=f.out(),resolved=f.skin.bodyIk.attachment.resolvedTarget!;
+    for(const name of ['Hips','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot']){const i=f.sk.jointNames.indexOf(name);expect(first.slice(i*16,i*16+16)).toEqual(base.slice(i*16,i*16+16));}
     expect(resolved.position[0]).toBeCloseTo(-.1);expect(resolved.position[1]).toBeCloseTo(1.27);expect(resolved.position[2]).toBeCloseTo(.27);
     expect(resolved.rotation).toEqual(input.rotation);expect(request.target).toEqual(input);expect(f.out()).toEqual(first);expect(request.target).toEqual(input);expect(f.sk.locals).toEqual(before);
     expect(sampleAnimationPose(f.skin)).toEqual(sampled);

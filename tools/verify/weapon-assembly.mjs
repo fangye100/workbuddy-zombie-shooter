@@ -9,10 +9,12 @@ const WEAPONS=['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'];
 export function probeOptions(argv){
  const value=(name,fallback)=>{const i=argv.indexOf('--'+name);if(i<0)return fallback;if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('缺参数 '+name);return argv[i+1];};
  const root=path.resolve(value('root',REPO)),expectedHead=value('expected-head','');
+ const holdSwitchOnly=argv.includes('--hold-switch-only');
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
- if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--fuel-recovery','--fuel-interrupt','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--fuel-recovery','--fuel-interrupt','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw','--hold-switch-only'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(holdSwitchOnly&&['--launcher-recovery','--fuel-recovery','--fuel-interrupt'].some(a=>argv.includes(a)))throw new Error('hold/switch-only不能混入换弹观察');
  const weaponIds=value('weapon','').split(',').filter(Boolean);
  if(argv.includes('--weapon')&&(!weaponIds.length||new Set(weaponIds).size!==weaponIds.length||weaponIds.some(id=>!WEAPONS.includes(id))))throw new Error('--weapon 必须为七件武器中的唯一ID列表');
  if(weaponIds.length&&argv.includes('--all-weapons'))throw new Error('--weapon 与 --all-weapons 不能混用');
@@ -31,7 +33,7 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,holdSwitchOnly,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:holdSwitchOnly||argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
 }
 /** 仅正常点击现有details summary；不写DOM样式、IK权重或游戏状态。 */
 export async function collapseIkPanel(cdp,click,record=()=>{}) {
@@ -261,7 +263,7 @@ async function run(options){
   if(secondary!==null){canvas=await aimAt(secondary,'13-aim-secondary');if(aiming)canvas=await aimAt(primary,'14-aim-return');}
   const doc=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8'));
   const legsChanged=samples=>samples.length>1&&samples.some(s=>JSON.stringify(s.actor?.legMatrices)!==JSON.stringify(samples[0].actor?.legMatrices))&&samples.some(s=>/walk|run|jog|sprint|strafe/i.test(s.actor?.clip??''));
-  if(!options.weaponIds.length){
+  if(!options.weaponIds.length&&!options.holdSwitchOnly){
   await input.pointer(canvas,true);await input.pointer(canvas,false);
   await movement('w',true);await input.pointer(canvas,true);await sampleFor('held-move-fire',options.holdMs);await capture('03-moving-fire');
   const moving=report.samples.filter(s=>s.label==='held-move-fire');check('真实held移动',moving.some(s=>Math.hypot(s.player.x-baseline.player.x,s.player.z-baseline.player.z)>.1),{before:baseline.player,after:moving.at(-1)?.player});
@@ -298,6 +300,11 @@ async function run(options){
     const def=definitions[i],label='seven-'+def.id;await input.tap(keys[i]);await sampleFor(label+'-equip',700);let ready=await snap(label+'-ready');
     check(label+'真实切换与draw',ready.models?.visible&&ready.models.weaponId===def.id&&ready.models.frameStamp===ready.frame,ready.models);
     if(aiming)canvas=await aimAt(i%2&&secondary!==null?secondary:primary,label+'-aim');
+    if(options.holdSwitchOnly){
+     await sampleFor(label+'-normal-hold',500,null,25);await capture(label+'-normal-hold');report.executedWeapons.push(def.id);
+     if(report.executedWeapons.length===1){const before=await snap(label+'-move-before');await movement('w',true);await sampleFor(label+'-normal-move',450,null,25);await movement('w',false);const moved=report.samples.filter(s=>s.label===label+'-normal-move');check('slot正常持枪移动与腿部继续',legsChanged(moved)&&moved.some(s=>Math.hypot(s.player.x-before.player.x,s.player.z-before.player.z)>.1),moved.map(s=>({frame:s.frame,tick:s.tick,player:s.player,clip:s.actor?.clip})));}
+     continue;
+    }
     const before=await snap(label+'-attack-before'),direction=i%2?'s':'w';await movement(direction,true);await input.pointer(canvas,true);await sampleFor(label+'-moving-attack',650,null,25);await input.pointer(canvas,false);await movement(direction,false);await capture(label+'-attack');
     const attacks=report.samples.filter(s=>s.label===label+'-moving-attack'),attack=attackEvidence(before,attacks,def);
     check(label+'同武器新攻击事件与表现',attack.ok,{behavior:def.behavior,...attack});
@@ -347,7 +354,7 @@ async function run(options){
    check('选定武器执行覆盖',report.selectedWeapons.every(id=>report.executedWeapons.includes(id)),{selected:report.selectedWeapons,executed:report.executedWeapons});
   }
   const handFrames=report.samples.filter(s=>s.state==='playing'&&s.models?.visible&&s.models.frameStamp===s.frame),handFailures=handFrames.filter(s=>s.models.ikDiagnostics?.some(d=>['IK_UNREACHABLE','IK_SOCKET_RESIDUAL','IK_ATTACHMENT'].includes(d.code))||!Number.isFinite(s.models.measurements?.rightTargetResidualM)||!Number.isFinite(s.models.measurements?.leftTargetResidualM)||s.models.measurements.rightTargetResidualM>1e-4||s.models.measurements.leftTargetResidualM>1e-4);
-  check('aim/切换/攻击/换弹采样双手实际可达',handFrames.length>0&&handFailures.length===0,{samples:handFrames.length,failures:handFailures.map(s=>({label:s.label,frame:s.frame,tick:s.tick,pose:s.models.pose,measurements:s.models.measurements,diagnostics:s.models.ikDiagnostics}))});
+  check(options.holdSwitchOnly?'正常持枪/切换采样双手实际可达':'aim/切换/攻击/换弹采样双手实际可达',handFrames.length>0&&handFailures.length===0,{samples:handFrames.length,failures:handFailures.map(s=>({label:s.label,frame:s.frame,tick:s.tick,pose:s.models.pose,measurements:s.models.measurements,diagnostics:s.models.ikDiagnostics}))});
   await input.release();await click('#btn-pause');const paused=await snap('pause-start');await sleep(600);const frozen=await snap('pause-end');check('Pause模拟与动作时钟冻结',paused.state==='paused'&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time&&frozen.actor?.layer?.time===paused.actor?.layer?.time,{paused,frozen});await capture('06-paused');
   await click('#btn-stop');const stopped=await snap('stop');check('作者回滚',JSON.stringify(stopped.authorPlayer)===JSON.stringify(editor.authorPlayer)&&stopped.authorDocumentSha256===editor.authorDocumentSha256,{before:editor.authorPlayer,after:stopped.authorPlayer,beforeHash:editor.authorDocumentSha256,afterHash:stopped.authorDocumentSha256});check('Stop账目归零',stopped.state==='stopped'&&stopped.ledger===0&&stopped.models?.visibleDrawCount===0,stopped);await capture('07-stop');
   await click('#btn-play');await waitFor(()=>cdp.eval('window.__editor.weaponModels.snapshot().visible'),{timeout:20000,interval:150});const restarted=await snap('restart');check('重启新身份与模型',restarted.cycle>baseline.cycle&&restarted.player?.runId!==baseline.player?.runId&&restarted.models?.visible,restarted);await capture('08-restart');
@@ -358,7 +365,7 @@ async function run(options){
   await Promise.all([...captureJobs]);
   if(input)report.cleanupInputErrors=await input.release();
   if(session){report.consoleErrors=session.cdp.consoleErrors;report.exceptions.push(...session.cdp.exceptions);try{const bcdp=new Cdp(session.ws,undefined);let cleanupTimer;try{await Promise.race([bcdp.send('Target.closeTarget',{targetId:session.targetId}),new Promise((_,reject)=>{cleanupTimer=setTimeout(()=>reject(new Error('owned target关闭超时')),3000);})]);}finally{clearTimeout(cleanupTimer);}}catch(e){report.cleanupTargetError=String(e);}session.ws.close();session.chrome.kill();}
-  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=(options.staticScene?options.nodeIds.length+4:options.weaponIds.length?12:18)&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
+  check('target HEAD保持',head()===options.expectedHead,head());report.finishedAt=new Date().toISOString();report.passed=report.checks.length>=(options.staticScene?options.nodeIds.length+4:options.weaponIds.length||options.holdSwitchOnly?12:18)&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError;save();
  }
  console.log(JSON.stringify({passed:report.passed,evidence:options.out,checks:report.checks.map(c=>({name:c.name,ok:c.ok})),exceptions:report.exceptions}));return report.passed?0:1;
 }

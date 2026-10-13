@@ -17,7 +17,7 @@
 
 `MeshRenderer.bodyIk` 覆盖资产 `.meta.json` 的 bodyIk 默认值：undefined 继承，null 禁用。
 资产默认可用角色局部坐标、pointer 或最近敌人目标；稳定场景 NodeId 目标属于场景覆盖。
-不存采样姿态、代码或 GPU 资源。当前集成 schema 为 v17；v15 为历史集成版本。HumanIK 原分支在 v13 引入字段，
+不存采样姿态、代码或 GPU 资源。当前集成 schema 为 v18；v15 为历史集成版本。HumanIK 原分支在 v13 引入字段，
 但合并后的 v12→v13 是武器库迁移；v14→v15 保留两种 v14 历史中的 IK、过渡、武器和音频，
 缺失控制仍不添加。准备数据以[迁移源码](../../packages/scene/src/migrate.ts)及
 [集成证据](../review/branch-integration-2026-10-09.md)为准，不沿用原分支版本含义。

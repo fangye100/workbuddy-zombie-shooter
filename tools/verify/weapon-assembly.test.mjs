@@ -4,6 +4,11 @@ import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
+test('hold/switch-only仅执行正常持枪/切枪和单次移动，不混入旧换弹模式',()=>{
+ const args=['--expected-head',head],options=probeOptions([...args,'--hold-switch-only']);assert.equal(options.holdSwitchOnly,true);assert.equal(options.allWeapons,true);assert.equal(probeOptions(args).holdSwitchOnly,false);
+ assert.throws(()=>probeOptions([...args,'--hold-switch-only','--fuel-recovery']),/不能混入换弹/);
+ assert.throws(()=>probeOptions([...args,'--hold-switch-only','--static-scene',STATIC_SCENES[0],'--nodes','nd_raw_launcher_side']),/静态模式不能混入/);
+});
 test('Fuel恢复/中断为显式聚焦选项，其他武器与静态模式不启用',()=>{
  const args=['--expected-head',head];assert.equal(probeOptions(args).fuelRecovery,false);assert.equal(probeOptions(args).fuelInterrupt,false);
  const o=probeOptions([...args,'--weapon','flame','--fuel-recovery','--fuel-interrupt']);assert.equal(o.fuelRecovery,true);assert.equal(o.fuelInterrupt,true);

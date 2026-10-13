@@ -2329,7 +2329,7 @@
         "weapons",
         "framework"
       ],
-      "read": "v17迁移、socket默认与覆盖、primary实际结果驱动dependent、同帧FK和逐GPU资源登记",
+      "read": "v18 Hip相对持握slot、作者保存及生成覆盖、socket默认与覆盖、primary实际结果驱动dependent和同帧FK",
       "sourceRefs": [
         "scene-schema",
         "scene-weapons",
