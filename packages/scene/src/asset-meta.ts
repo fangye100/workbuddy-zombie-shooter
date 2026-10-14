@@ -63,7 +63,7 @@ import { validateRetargetAssetBlock, type RetargetAssetMeta } from './retarget-m
 import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-motion';
 import { validAudioAssetInfo, type AudioAssetInfo } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
-import { validBoneSockets, validModelSockets, type BoneSockets, type ModelSockets } from './model-attachments';
+import { validBoneSockets, validModelSockets, validActorHoldProfiles, type ActorHoldProfiles, type BoneSockets, type ModelSockets } from './model-attachments';
 
 export const META_FILE_SUFFIX = '.meta.json';
 export const META_SCHEMA_VERSION = 1;
@@ -323,6 +323,8 @@ export interface AssetMeta {
   /** 可复用资产默认；旧 sidecar 缺省继承为空，不提升 meta v1。 */
   boneSockets?: BoneSockets | null;
   modelSockets?: ModelSockets | null;
+  /** 角色资产的逐模型持握配置；跨场景复用，不保存动作/运行时状态。 */
+  holdProfiles?: ActorHoldProfiles;
   schemaVersion: number;
   /** 稳定资产 id，跨重命名/移动保持不变 */
   guid: AssetGuid;
@@ -433,6 +435,7 @@ export function validateAssetMeta(meta: unknown): MetaDiagnostic[] {
   }
   if(m.boneSockets!==undefined&&m.boneSockets!==null&&!validBoneSockets(m.boneSockets))err('/boneSockets','E_META_BONE_SOCKETS','骨 socket 名称或 contact 变换无效');
   if(m.modelSockets!==undefined&&m.modelSockets!==null&&!validModelSockets(m.modelSockets))err('/modelSockets','E_META_MODEL_SOCKETS','模型 socket 变换无效');
+  if(m.holdProfiles!==undefined&&!validActorHoldProfiles(m.holdProfiles))err('/holdProfiles','E_META_HOLD_PROFILES','角色持握 GUID、骨名、位置或单位四元数无效');
 
   // ---- 绑定 ----
   if (!Array.isArray(m.bindings)) {

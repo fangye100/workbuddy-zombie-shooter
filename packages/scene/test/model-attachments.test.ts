@@ -1,7 +1,20 @@
 import {describe,it,expect} from 'vitest';
 import {identitySocket,resolveSocketDefaults,validModelSockets,validBoneSockets,validWeaponDefinition,legacyWeaponArsenal,validateModelAssetIdentity,
-  createEmptySceneDocument,createDefaultAssetMeta,validateAssetMeta,migrateToLatest,validateSceneDocument,registerSceneMigrations,type SceneNode} from '@aether/scene';
+  actorHoldSlot,validActorHoldProfiles,createEmptySceneDocument,createDefaultAssetMeta,validateAssetMeta,migrateToLatest,validateSceneDocument,registerSceneMigrations,type SceneNode} from '@aether/scene';
 describe('正式模型与骨 socket 持久化',()=>{
+ it('逐角色、逐模型持握六维配置隔离；缺配置不改变legacy',()=>{
+  const a=createDefaultAssetMeta('actorA','gltf'),b=createDefaultAssetMeta('actorB','gltf');
+  const models=[{path:'assets/a.glb',guid:'modelA'},{path:'assets/b.glb',guid:'modelB'}];
+  for(const [i,meta] of [a,b].entries())meta.holdProfiles=Object.fromEntries(models.map((model,j)=>[model.guid,{model,slot:{bone:'Hips',position:[i,j,.2],rotation:[0,0,0,1]}}]));
+  expect(validateAssetMeta(JSON.parse(JSON.stringify(a))).filter(d=>d.severity==='error')).toEqual([]);
+  const slot=actorHoldSlot(a.holdProfiles,models[0]!)!;slot.position[0]=99;
+  expect(actorHoldSlot(a.holdProfiles,models[0]!)!.position).toEqual([0,0,.2]);
+  expect(actorHoldSlot(b.holdProfiles,models[1]!)!.position).toEqual([1,1,.2]);expect(actorHoldSlot(undefined,models[0]!)).toBeUndefined();
+  for(const mutate of [(p:any)=>p.model.guid='wrong',(p:any)=>p.slot.bone='',(p:any)=>p.slot.rotation=[0,0,0,2],(p:any)=>p.slot.position[0]=NaN]){
+   const copy=structuredClone(a.holdProfiles!);mutate(copy.modelA);expect(validActorHoldProfiles(copy)).toBe(false);expect(()=>actorHoldSlot(copy,models[0]!)).toThrow('E_ACTOR_HOLD_PROFILE');
+   expect(validateAssetMeta({...a,holdProfiles:copy}).some(d=>d.code==='E_META_HOLD_PROFILES')).toBe(true);
+  }
+ });
  it('正式引用拒绝缺资产/缺sidecar/错误GUID及错误kind',()=>{
   const ref={path:'assets/weapon.glb',guid:'as_real'},meta={guid:'as_real',kind:'gltf'};
   expect(validateModelAssetIdentity(ref,meta)).toEqual([]);

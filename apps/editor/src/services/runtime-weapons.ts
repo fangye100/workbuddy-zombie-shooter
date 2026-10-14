@@ -1,17 +1,17 @@
 /** Play 武器 IO/资源与 renderer 适配；动作策略来自游戏表现，骨求值来自现有单次采样。 */
 import { mat4, multiply, type Quat } from '@aether/core';
-import { parseGlb, VERTEX_FLOATS, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
+import { parseGlb, VERTEX_FLOATS, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, actorHoldSlot, validActorHoldProfiles, type ActorHoldProfiles, type ActorHoldSlot, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
   type ModelAttachment, type ModelSockets, type SceneDocument, type SocketTransform, type WeaponDefinition } from '@aether/scene';
 import { attachedModelFrame, composeSocket, inverseSocket, rigidFromMatrix, rotateVec3, socketMatrix,
   type ModelDraw, type PoseFrameOutput, type PostPoseDrawPort, type RegisterDrawResource } from '@aether/render';
 import type { PlaySession, RuntimeSession } from '@aether/zombie-game';
-import { weaponModelProjection, type WeaponModelView } from '@aether/zombie-game/presentation/weapon-model';
+import { weaponModelProjection, weaponMountForHoldSlot, type WeaponModelView } from '@aether/zombie-game/presentation/weapon-model';
 import { fileUrl } from '../asset-util';
 import type { IkObject } from './runtime-body-ik';
 
 interface Loaded { draw:ModelDraw; sockets:ModelSockets; corners:number[][] }
 interface Child extends Loaded { spec:ModelAttachment }
-interface Assembly extends Loaded { definition:WeaponDefinition; children:Child[] }
+interface Assembly extends Loaded { definition:WeaponDefinition; baseDefinition:WeaponDefinition; children:Child[] }
 export interface RuntimeWeaponsPorts {
   objectForNode(id:string):(IkObject&{visible?:boolean})|null;
   meta(path:string):Promise<AssetMeta|null>;
@@ -20,6 +20,11 @@ export interface RuntimeWeaponsPorts {
   decode?(image:Blob):Promise<ImageBitmap>;
 }
 interface Active { assembly:Assembly; object:IkObject; right:number; left:number; removed:boolean }
+export interface HoldContext {
+  actor:AssetRef; nodeId:string|null; profiles:ActorHoldProfiles|undefined;
+  weapons:{id:string;name:string;model:AssetRef;slot:ActorHoldSlot}[];
+  frame:{weaponId:string;world:SocketTransform;actorRotation:Quat;scale:number}|null;
+}
 export class RuntimeWeapons implements PostPoseDrawPort {
   private generation=0;
   private abort:AbortController|null=null;
@@ -31,12 +36,21 @@ export class RuntimeWeapons implements PostPoseDrawPort {
   private errors=new Set<string>();
   private pending=0;
   private runtime:RuntimeSession|null=null;
+  private actorRef:AssetRef|null=null;
+  private profiles:ActorHoldProfiles|undefined;
+  private configured=new Map<string,string>();
+  private holdFrame:{weaponId:string;world:SocketTransform;actorRotation:Quat;scale:number}|null=null;
   private frame:PoseFrameOutput={frameStamp:0,stamp:-1,nodes:[],matrices:new Map()};
   private projection:WeaponModelView={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};
   private measurements:Record<string,number|null>={};
   /** 本帧实际提交的附件矩阵，只用于诊断，不驱动相位或下一帧求解。 */
   private attachmentDraws:{id:string;guid:string|undefined;removed:boolean;frameStamp:number;worldMatrix:number[];worldCorners:number[][]}[]=[];
   constructor(private readonly ports:RuntimeWeaponsPorts){}
+  holdContext():HoldContext|null{return this.actorRef?{actor:structuredClone(this.actorRef),nodeId:this.nodeId,profiles:structuredClone(this.profiles),weapons:[...this.assemblies.values()].map(a=>({id:a.definition.id,name:a.definition.name,model:structuredClone(a.definition.presentation.model!),slot:actorHoldSlot(this.profiles,a.definition.presentation.model!)??{bone:a.baseDefinition.presentation.assembly?.holdSlot?.bone??'Hips',position:[...(a.baseDefinition.presentation.assembly?.holdSlot?.position??a.baseDefinition.presentation.assembly!.holdPose.position)],rotation:[...a.baseDefinition.presentation.assembly!.holdPose.rotation]}})),frame:this.holdFrame?structuredClone(this.holdFrame):null}:null;}
+  setHoldProfiles(actorGuid:string,profiles:ActorHoldProfiles):void {
+    if(!this.actorRef||this.actorRef.guid!==actorGuid||!validActorHoldProfiles(profiles))throw new Error('WEAPON_HOLD_PROFILE: 角色身份/持握配置不匹配');
+    this.profiles=structuredClone(profiles);this.configured.clear();this.sync(this.session?.runtime??null);
+  }
   view():WeaponModelView {
     const pose=this.runtime?.weapons.poseIntent;
     const diagnostics=[...this.errors].filter(e=>!e.includes(': WEAPON_LEGACY ')||e.startsWith(`${pose?.weaponId}:`));
@@ -51,6 +65,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     const node=doc.nodes.find(n=>n.id===doc.playerStart),mesh=node?.components.find(c=>c.kind==='MeshRenderer'&&c.playBinding==='player');
     if(mesh?.kind!=='MeshRenderer'||mesh.source.type!=='asset'){this.error('WEAPON_ACTOR: 玩家真实骨架未配置，保留 legacy');return;}
     this.nodeId=node!.id;
+    this.actorRef=structuredClone(mesh.source.ref);
     const definitions=session.runtime?.weapons.definitions??[];
     this.pending++;
     void (async()=>{
@@ -61,6 +76,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
         const invalid=validateAssetMeta(meta).filter(d=>d.severity==='error');if(invalid.length)throw new Error(invalid.map(d=>d.message).join('; '));
         this.bones=resolveSocketDefaults(meta.boneSockets,mesh.boneSockets);
         if(!this.bones?.rightHand||!this.bones.leftHand)throw new Error('WEAPON_BONE_SOCKET: 缺少 rightHand/leftHand contact，保留 legacy');
+        this.profiles=structuredClone(meta.holdProfiles);
       }catch(e){if(this.valid(generation))this.error(String(e));}
       finally{if(this.valid(generation))this.pending--;}
     })();
@@ -77,7 +93,7 @@ export class RuntimeWeapons implements PostPoseDrawPort {
           if(!this.valid(generation)){created.forEach(x=>x.draw.dispose());return;}
           for(const key of ['primaryGrip','supportGrip','muzzle','magazine','chamber'])if(!main.sockets[key])throw new Error(`${definition.id}: WEAPON_SOCKET ${key} 缺失`);
           for(const child of children)if(!main.sockets[child.spec.parentSocket]||!child.sockets[child.spec.childSocket])throw new Error(`${definition.id}: WEAPON_ATTACHMENT_SOCKET ${child.spec.id} 断链`);
-          this.assemblies.set(definition.id,{...main,definition,children});
+          this.assemblies.set(definition.id,{...main,definition,baseDefinition:structuredClone(definition),children});
         }catch(e){created.forEach(x=>x.draw.dispose());if(this.valid(generation))this.error(String(e));}
         finally{if(this.valid(generation))this.pending--;}
       })();
@@ -110,11 +126,20 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(this.active?.object.skinState?.bodyIk)delete this.active.object.skinState.bodyIk.attachment;
     for(const a of this.assemblies.values()){a.draw.dispose();a.children.forEach(c=>c.draw.dispose());}
     this.assemblies.clear();this.active=null;this.bones=null;this.nodeId=null;this.session=null;this.runtime=null;this.pending=0;
+    this.actorRef=null;this.profiles=undefined;this.configured.clear();this.holdFrame=null;
     this.projection={visible:false,weaponId:null,frameStamp:-1,muzzle:null,diagnostics:[]};this.measurements={};this.attachmentDraws=[];this.frame.matrices.clear();
   }
   sync(runtime:RuntimeSession|null):void {
     this.projection={...this.projection,visible:false};this.measurements={};this.attachmentDraws=[];
     this.runtime=runtime;
+    if(runtime)for(const a of this.assemblies.values()){
+      const slot=actorHoldSlot(this.profiles,a.baseDefinition.presentation.model!);
+      const key=JSON.stringify(slot??null);if(this.configured.get(a.definition.id)===key)continue;
+      const sk=this.nodeId?this.ports.objectForNode(this.nodeId)?.skeleton:null;
+      if(slot&&sk?.jointNames.filter(n=>n?.replace(/^mixamorig[:_]?/i,'')===slot.bone.replace(/^mixamorig[:_]?/i,'')).length!==1){this.error(`${a.definition.id}: WEAPON_HOLD_PROFILE 骨 ${slot.bone} 缺失/歧义`);continue;}
+      try {runtime.weapons.configureMount(a.definition.id,slot?weaponMountForHoldSlot(a.baseDefinition,slot):{assembly:a.baseDefinition.presentation.assembly!,markers:a.baseDefinition.presentation.markers});this.configured.set(a.definition.id,key);}
+      catch(error){this.error(String(error));}
+    }
     for(const a of this.assemblies.values()){a.draw.draw.visible=false;a.children.forEach(c=>c.draw.draw.visible=false);}
     const previous=this.active;this.active=null;
     if(previous?.object.skinState?.bodyIk)delete previous.object.skinState.bodyIk.attachment;
@@ -154,6 +179,9 @@ export class RuntimeWeapons implements PostPoseDrawPort {
     if(!hand||!support||!rigidFromMatrix(actorMatrix)||!request.result||!request.resolvedTarget){this.error('WEAPON_POSE: 本帧最终骨方向不可用');return;}
     const root=attachedModelFrame(hand,request.primary.contact,request.primary.modelSocket),world=mat4();multiply(world,actorMatrix,socketMatrix(root));
     const worldFrame=rigidFromMatrix(world);if(!worldFrame)return;
+    const actor=rigidFromMatrix(actorMatrix)!;
+    const desired=composeSocket(actor,{position:request.resolvedTarget.position.map(v=>v*active.object.scale) as SocketTransform['position'],rotation:request.resolvedTarget.rotation});
+    this.holdFrame={weaponId:active.assembly.definition.id,world:desired,actorRotation:actor.rotation,scale:active.object.scale};
     active.assembly.draw.setMatrix(world);active.assembly.draw.draw.visible=true;
     for(const child of active.assembly.children){
       let local:SocketTransform;

@@ -6,6 +6,22 @@ export type ModelSockets = Record<string, SocketTransform>;
 export interface BoneSocket { bone: string; contact: SocketTransform }
 /** 骨位置基准 + 规整化 actor 轴米制偏移；只跟平移，不继承骨方向。 */
 export interface BonePositionSlot { bone: string; position: [number,number,number] }
+/** Hip 平移基准、actor 轴米制位置及中性模型根旋转；不继承 Hip 方向。 */
+export interface ActorHoldSlot extends BonePositionSlot { rotation: SocketTransform['rotation'] }
+export interface ActorHoldProfile { model: AssetRef; slot: ActorHoldSlot }
+/** 按模型稳定 GUID 隔离；map 所在的角色 sidecar 是角色身份真源。 */
+export type ActorHoldProfiles = Record<string, ActorHoldProfile>;
+export function validActorHoldSlot(v:unknown):v is ActorHoldSlot { return validBonePositionSlot(v)&&validSocketTransform(v); }
+export function validActorHoldProfiles(v:unknown):v is ActorHoldProfiles {
+  return record(v)&&Object.keys(v).length<=64&&Object.entries(v).every(([guid,p])=>
+    !!guid&&record(p)&&record(p.model)&&p.model.guid===guid&&typeof p.model.path==='string'
+    &&p.model.path.startsWith('assets/')&&!p.model.path.includes('\\')&&!p.model.path.split('/').some(s=>!s||s==='.'||s==='..')&&validActorHoldSlot(p.slot));
+}
+export function actorHoldSlot(profiles:ActorHoldProfiles|undefined,model:AssetRef):ActorHoldSlot|undefined {
+  if(profiles!==undefined&&!validActorHoldProfiles(profiles))throw new Error('E_ACTOR_HOLD_PROFILE: 角色持握配置无效');
+  const profile=model.guid?profiles?.[model.guid]:undefined;
+  return profile?structuredClone(profile.slot):undefined;
+}
 export function validBonePositionSlot(v:unknown):v is BonePositionSlot {
   return record(v)&&typeof v.bone==='string'&&v.bone.trim().length>0&&v.bone.length<=256
     &&Array.isArray(v.position)&&v.position.length===3&&v.position.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=100);

@@ -3,8 +3,25 @@ import {quatMul} from '@aether/core';
 import {WeaponSystem} from '@aether/runtime';
 import {identitySocket,legacyWeaponArsenal} from '@aether/scene';
 import {composeSocket,rotateVec3} from '@aether/render';
-import {weaponActionFrameDiagnostics,weaponModelProjection} from '../../src/presentation/weapon-model';
+import {weaponActionFrameDiagnostics,weaponModelProjection,weaponMountForHoldSlot} from '../../src/presentation/weapon-model';
 describe('真实模型表现仅消费已有武器相位',()=>{
+ it('中性根位移/旋转同时转换markers；runtime应用不重置弹药、事件、相位',()=>{
+  const a=arsenal(),base=a.definitions[0]!;base.presentation.assembly!.holdSlot={bone:'Hips',position:[0,.2,.3]};
+  const slot={...base.presentation.assembly!.holdSlot,rotation:[...base.presentation.assembly!.holdPose.rotation] as [number,number,number,number]};
+  const identity=weaponMountForHoldSlot(base,slot);for(const key of Object.keys(identity.markers)){
+   const k=key as keyof typeof identity.markers;identity.markers[k].position.forEach((n,i)=>expect(n).toBeCloseTo(base.presentation.markers[k].position[i]!,12));
+  }
+  const moved=weaponMountForHoldSlot(base,{...slot,position:[.1,.25,.32]});
+  moved.markers.muzzle.position.forEach((v,i)=>expect(v-base.presentation.markers.muzzle.position[i]!).toBeCloseTo([.02,.05,-.1][i]!,10));
+  const quarter=weaponMountForHoldSlot(base,{...slot,rotation:[...quatMul([0,0,Math.SQRT1_2,Math.SQRT1_2],slot.rotation)]});
+  const relative=[-.3,.2,0] as [number,number,number]; // muzzle [0.3,0,0] minus slot pivot, in actor axes
+  const expected=rotateVec3([0,0,Math.SQRT1_2,Math.SQRT1_2],relative);
+  expect(quarter.markers.muzzle.position[0]).toBeCloseTo(expected[2]+slot.position[2]);
+  const system=new WeaponSystem(a);system.beginFire();system.advance(.05);const state=system.snapshot(),pose=system.poseIntent,events=structuredClone(system.events);
+  system.configureMount(base.id,moved);expect(system.snapshot()).toEqual(state);expect(system.events).toEqual(events);expect(system.poseIntent.phase).toBe(pose.phase);expect(system.poseIntent.action).toBe(pose.action);
+  expect(system.active.presentation.markers).toEqual(moved.markers);expect(()=>system.configureMount('missing',moved)).toThrow('WEAPON_MOUNT_ID');
+  expect(()=>system.configureMount(base.id,{...moved,markers:{...moved.markers,muzzle:{...moved.markers.muzzle,position:[NaN,0,0]}}})).toThrow('WEAPON_MOUNT_INVALID');expect(system.active.presentation.markers).toEqual(moved.markers);
+ });
  const arsenal=()=>{const a=legacyWeaponArsenal({magazineSize:3,reserveRounds:8,reloadSec:1});const w=a.definitions[0]!;
   w.presentation.assembly={holdPose:{position:[0,1.2,.3],rotation:[0,Math.SQRT1_2,0,Math.SQRT1_2]},attachments:[],reloadAttachmentId:null};return a;};
  const socket=identitySocket(),hand={id:'rightHand',socket:{bone:'RightHand',contact:socket}},left={id:'leftHand',socket:{bone:'LeftHand',contact:socket}};

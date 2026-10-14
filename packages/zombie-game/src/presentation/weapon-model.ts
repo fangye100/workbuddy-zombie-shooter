@@ -1,8 +1,8 @@
 /** 武器表现投影：只消费 WeaponSystem 已有相位，不拥有时钟、弹药或玩法。 */
 import { quatMul, type Quat, type Vec3 } from '@aether/core';
 import type { WeaponSystem } from '@aether/runtime';
-import type { BoneSocket, ModelSockets, SocketTransform, WeaponDefinition } from '@aether/scene';
-import { validSocketTransform } from '@aether/scene';
+import type { ActorHoldSlot, BoneSocket, ModelSockets, SocketTransform, WeaponDefinition } from '@aether/scene';
+import { validActorHoldSlot, validSocketTransform } from '@aether/scene';
 import { composeSocket, inverseRotation, rotateVec3, type AttachmentIkRequest } from '@aether/render';
 
 export interface WeaponModelProjection {
@@ -12,6 +12,24 @@ export interface WeaponModelProjection {
 const smooth=(x:number)=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 /** 玩家 mesh 的 +Z 前方对应模拟 yaw-local +X；作者平移不从 GPU 姿态反向计算。 */
 export function weaponMarkerTranslationForActorOffset(delta:Vec3):[number,number,number] { return [delta[2],delta[1],-delta[0]]; }
+/** 中性根刚体变化同时应用于装配和模拟 markers；不改变瞄准规则/动作时钟。 */
+export function weaponMountForHoldSlot(def:WeaponDefinition,slot:ActorHoldSlot):Pick<WeaponDefinition['presentation'],'assembly'|'markers'> {
+  const assembly=def.presentation.assembly;if(!assembly||!validActorHoldSlot(slot))throw new Error('WEAPON_HOLD_PROFILE: 无效中性持握配置');
+  const oldPosition=assembly.holdSlot?.position??assembly.holdPose.position;
+  const delta=quatMul(slot.rotation,inverseRotation(assembly.holdPose.rotation));
+  const toActor=(p:Vec3):Vec3=>[-p[2],p[1],p[0]];
+  const pivot=weaponMarkerTranslationForActorOffset(oldPosition);
+  const markers=structuredClone(def.presentation.markers);
+  // actor 与模拟 yaw-local 的固定基变换；绝不把武器模型自身+X当作actor右侧。
+  const basis:Quat=[0,Math.SQRT1_2,0,Math.SQRT1_2];
+  const markerRotation=quatMul(quatMul(basis,delta),inverseRotation(basis));
+  for(const marker of Object.values(markers)){
+    const relative=toActor(marker.position.map((v,i)=>v-pivot[i]!) as [number,number,number]),rotated=rotateVec3(delta,relative);
+    marker.position=weaponMarkerTranslationForActorOffset(rotated.map((v,i)=>v+slot.position[i]!) as [number,number,number]);
+    marker.rotation=[...quatMul(markerRotation,marker.rotation)];
+  }
+  return {assembly:{...structuredClone(assembly),holdSlot:{bone:slot.bone,position:[...slot.position]},holdPose:{...structuredClone(assembly.holdPose),rotation:[...slot.rotation]}},markers};
+}
 function blendRotation(a:Quat,b:Quat,t:number):SocketTransform['rotation'] {
   let dot=a.reduce((n,v,i)=>n+v*b[i]!,0),sign=dot<0?-1:1;dot=Math.min(1,Math.abs(dot));
   const angle=Math.acos(dot),s=Math.sin(angle),wa=s<1e-6?1-t:Math.sin((1-t)*angle)/s,wb=s<1e-6?t:Math.sin(t*angle)/s;

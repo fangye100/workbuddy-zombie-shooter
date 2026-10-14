@@ -185,5 +185,147 @@
         ]
       }
     }
+  },
+  "holdProfiles": {
+    "as_e4ugmrq3": {
+      "model": {
+        "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+        "guid": "as_e4ugmrq3"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.08010323525202694,
+          0.2363754820823669,
+          0.5000341653823853
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_cdf2dc294f5f": {
+      "model": {
+        "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+        "guid": "as_cdf2dc294f5f"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.05,
+          0.324285645940184,
+          0.34761240413744543
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_a96a571ba3ef": {
+      "model": {
+        "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+        "guid": "as_a96a571ba3ef"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.05,
+          0.41103016046972807,
+          0.3219664696753092
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_6a1a6e91ec15": {
+      "model": {
+        "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+        "guid": "as_6a1a6e91ec15"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.05,
+          0.30085566593821056,
+          0.32990974269534756
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_c12ac01417cb": {
+      "model": {
+        "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+        "guid": "as_c12ac01417cb"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.05,
+          0.26084749269379015,
+          0.5778951087163537
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_420ed26a291b": {
+      "model": {
+        "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+        "guid": "as_420ed26a291b"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.05,
+          0.311319482387783,
+          0.3995957025749669
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    "as_f2f39beb7444": {
+      "model": {
+        "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+        "guid": "as_f2f39beb7444"
+      },
+      "slot": {
+        "bone": "Hips",
+        "position": [
+          -0.22010323525202694,
+          0.2663754820823669,
+          0.3850341653823853
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    }
   }
 }

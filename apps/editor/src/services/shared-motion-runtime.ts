@@ -41,6 +41,8 @@ export class SharedMotionRuntime {
   }) {}
   /** Re-read authoritative resources for a new Play; content-keyed solved clips remain reusable. */
   beginLoad(): void { this.reads.clear(); }
+  /** 创作保存成功后仅失效该资产元数据，动作求解缓存仍按内容身份复用。 */
+  invalidateMeta(path:string):void { this.reads.delete(`${path}.meta.json`); }
   clear(): void { this.reads.clear(); this.results.clear(); }
   private text(path: string): Promise<string> {
     let p = this.reads.get(path);
