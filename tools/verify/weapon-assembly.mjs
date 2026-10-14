@@ -13,10 +13,11 @@ export function probeOptions(argv){
  const holdSwitchOnly=argv.includes('--hold-switch-only');
  const elbowObservation=argv.includes('--elbow-observation');
  if(elbowObservation&&!holdSwitchOnly)throw new Error('elbow-observation需要hold-switch-only');
+ const observationCloseup=argv.includes('--observation-closeup');if(observationCloseup&&!elbowObservation)throw new Error('observation-closeup需要elbow-observation');
  const staticScene=value('static-scene',null),nodeIds=value('nodes','').split(',').filter(Boolean);
  if(staticScene!==null&&(!STATIC_SCENES.includes(staticScene)||nodeIds.length<1||nodeIds.length>12||new Set(nodeIds).size!==nodeIds.length||nodeIds.some(id=>!/^nd_[a-zA-Z0-9_-]+$/.test(id))))throw new Error('static-scene 必须为登记候选场景及1–12个唯一稳定 --nodes');
  if(staticScene===null&&nodeIds.length)throw new Error('--nodes 只用于 static-scene');
- if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--fuel-recovery','--fuel-interrupt','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw','--hold-switch-only'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
+ if(staticScene!==null&&['--all-weapons','--weapon','--launcher-recovery','--fuel-recovery','--fuel-interrupt','--collapse-ik-panel','--aim-ratio','--side-aim-ratio','--aim-yaw','--side-aim-yaw','--hold-switch-only','--observation-closeup'].some(a=>argv.includes(a)))throw new Error('静态模式不能混入Play输入选项');
  if(holdSwitchOnly&&['--launcher-recovery','--fuel-recovery','--fuel-interrupt'].some(a=>argv.includes(a)))throw new Error('hold/switch-only不能混入换弹观察');
  const weaponIds=value('weapon','').split(',').filter(Boolean);
  if(argv.includes('--weapon')&&(!weaponIds.length||new Set(weaponIds).size!==weaponIds.length||weaponIds.some(id=>!WEAPONS.includes(id))))throw new Error('--weapon 必须为七件武器中的唯一ID列表');
@@ -36,7 +37,12 @@ export function probeOptions(argv){
  const yaw=name=>{const raw=value(name,null);if(raw===null)return null;const n=Number(raw);if(!Number.isFinite(n)||n<-180||n>180)throw new Error(name+' 必须为 -180..180 世界方位角(度)');return n;};
  const aimYaw=yaw('aim-yaw'),sideAimYaw=yaw('side-aim-yaw'),aimRatio=ratio('aim-ratio'),sideAimRatio=ratio('side-aim-ratio');
  if(aimYaw!==null&&aimRatio||sideAimYaw!==null&&sideAimRatio)throw new Error('同一瞄准点不能同时指定yaw和ratio');
- return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,holdSwitchOnly,elbowObservation,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:holdSwitchOnly||argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+ return {root,expectedHead,url:url.href,staticScene,nodeIds,cdpPort,holdMs,out,weaponIds,launcherRecovery,fuelRecovery,fuelInterrupt,holdSwitchOnly,elbowObservation,observationCloseup,collapseIkPanel:argv.includes('--collapse-ik-panel'),allWeapons:holdSwitchOnly||argv.includes('--all-weapons')||weaponIds.length>0,aimRatio,sideAimRatio,aimYaw,sideAimYaw,chromePath:value('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe')};
+}
+/** 只生成有界原生拖动/滚轮计划；机位仍由现有观察UI拥有。 */
+export function observationCloseupPlan(camera){
+ const plan={dy:(20-camera.elevationDeg)/.25,wheelDelta:Math.log(4.8/camera.distance)/.0012};
+ if(!Object.values(plan).every(Number.isFinite)||Math.abs(plan.dy)>250||Math.abs(plan.wheelDelta)>900)throw Error('观察近景计划超出有界输入');return plan;
 }
 /** 仅正常点击现有details summary；不写DOM样式、IK权重或游戏状态。 */
 export async function collapseIkPanel(cdp,click,record=()=>{}) {
@@ -253,7 +259,7 @@ async function run(options){
    }
   },name=>movement(name,true));
   const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
-  const dragView=async(dx,dy,button='left')=>{const p=await visiblePoint(cdp,'#gpu');await input.pointer(p,true,button);for(let i=1;i<=4;i++){await input.move({x:p.x+dx*i/4,y:p.y+dy*i/4});await sleep(25);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(100);};
+  const dragView=async(dx,dy,button='left')=>{await cdp.send('Page.bringToFront');const p=await visiblePoint(cdp,'#gpu');report.actions.push({nativeDrag:{dx,dy,button,point:p,focus:await cdp.eval('document.hasFocus()')}});await input.pointer(p,true,button);for(let i=1;i<=4;i++){await input.move({x:p.x+dx*i/4,y:p.y+dy*i/4});await sleep(25);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(100);};
   const sampleFor=async(label,ms,onSample,interval=120)=>{const until=Date.now()+ms;while(Date.now()<until){await sleep(interval);if(typeof activeAimSpec==='number'){canvas=await guardedAim(activeAimSpec);const held=['w','s'].find(name=>input.held.has(name));if(held&&groundMovementDirection(canvas,held)!==held)await movement(held,true,canvas);await input.move(canvas);}const sample=await snap(label);if(onSample)await onSample(sample);}};
   const editor=await snap('editor');const expectedSceneId=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')).id;check('真实场景身份',editor.sceneId===expectedSceneId,editor.sceneId);if(editor.sceneId!==expectedSceneId)throw new Error('加载场景ID不匹配');await capture('01-editor');await click('#btn-play');
   if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"'),{timeout:5000})){
@@ -312,9 +318,10 @@ async function run(options){
      if(options.elbowObservation){
       if(!observationEntered){
        await sampleFor('navigation-settle',180,null,25);const before=await snap('navigation-game-before');observationGameCamera=before.camera;activeAimSpec=null;await click('#btn-observation-camera');await sleep(100);const entered=await snap('navigation-enter');observationEntered=true;check('可见观察按钮进入Play观察',entered.observing&&entered.state==='playing',entered);
-       await dragView(-75,15);const orbit=await snap('navigation-orbit');await dragView(18,12,'right');const pan=await snap('navigation-pan');const p=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:-80});await sleep(100);const zoom=await snap('navigation-zoom');
-       check('真实鼠标orbit/pan/wheel不触发游戏输入',orbit.camera.yaw!==entered.camera.yaw&&JSON.stringify(pan.camera.target)!==JSON.stringify(orbit.camera.target)&&zoom.camera.distance<pan.camera.distance&&[orbit,pan,zoom].every(s=>!s.firing&&s.lastShot?.tick===entered.lastShot?.tick&&Math.hypot(s.player.x-entered.player.x,s.player.z-entered.player.z)<1e-6),{entered,orbit,pan,zoom});
-       await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:80});await dragView(-18,-12,'right');
+       const plan=options.observationCloseup?observationCloseupPlan(entered.camera):null;if(plan)report.actions.push({observationCloseupPlan:plan});
+       await dragView(-75,plan?.dy??15);const orbit=await snap('navigation-orbit');await dragView(18,12,'right');const pan=await snap('navigation-pan');const p=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:plan?.wheelDelta??-80});await sleep(100);const zoom=await snap('navigation-zoom');
+       check('真实鼠标orbit/pan/wheel不触发游戏输入',orbit.camera.yaw!==entered.camera.yaw&&JSON.stringify(pan.camera.target)!==JSON.stringify(orbit.camera.target)&&(plan?zoom.camera.distance!==pan.camera.distance:zoom.camera.distance<pan.camera.distance)&&(!plan||Math.abs(orbit.camera.elevationDeg-20)<.001&&Math.abs(zoom.camera.distance-4.8)<.001)&&[orbit,pan,zoom].every(s=>!s.firing&&s.lastShot?.tick===entered.lastShot?.tick&&Math.hypot(s.player.x-entered.player.x,s.player.z-entered.player.z)<1e-6),{entered,orbit,pan,zoom});
+       if(!plan)await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:p.x,y:p.y,deltaX:0,deltaY:80});await dragView(-18,-12,'right');
       }
       const view=await snap(label+'-observation-front-plan'),q=view.authorPlayer.quat,forward=[2*(q[0]*q[2]+q[3]*q[1]),2*(q[1]*q[2]-q[3]*q[0]),1-2*(q[0]*q[0]+q[1]*q[1])],front=Math.atan2(forward[0],forward[2]),delta=front-view.camera.yaw;
       if(Math.abs(delta/.006)>240)throw new Error('观察front所需拖动超有界范围');await dragView(-delta/.006,0);await sampleFor(label+'-observation-front',120,null,25);await capture(label+'-observation-front');await dragView(100,0);await sampleFor(label+'-observation-side',120,null,25);await capture(label+'-observation-side');

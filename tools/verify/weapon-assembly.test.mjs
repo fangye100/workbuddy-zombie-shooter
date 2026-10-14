@@ -1,12 +1,18 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';
 import {editorSessionFlags} from './editor-smoke-lib.mjs';
-import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment,collapseIkPanel,fuelInterruptEvidence} from './weapon-assembly.mjs';
+import {probeOptions,profileOwners,ProbeInput,groundRayPoint,posedJointPosition,sceneReadinessExpression,aimPointExpression,groundMovementDirection,captureWithoutMovement,attackEvidence,reloadEvidence,reloadMoment,recoveryMoment,collapseIkPanel,fuelInterruptEvidence,observationCloseupPlan} from './weapon-assembly.mjs';
 import {runInNewContext} from 'node:vm';
 import {STATIC_SCENES,staticNodes} from './weapon-static.mjs';
 const head='a'.repeat(40);
 test('肘/观察实操是显式hold/switch选项，右键拖拽也按原键释放',async()=>{
  assert.throws(()=>probeOptions(['--expected-head',head,'--elbow-observation']),/hold-switch-only/);assert.equal(probeOptions(['--expected-head',head,'--hold-switch-only','--elbow-observation']).elbowObservation,true);
  const calls=[],input=new ProbeInput({async send(method,params){calls.push({method,params});}});await input.pointer({x:10,y:20},true,'right');await input.move({x:30,y:40});assert.equal(calls.at(-1).params.buttons,2);await input.release();assert.equal(calls.at(-1).params.button,'right');assert.equal(calls.at(-1).params.type,'mouseReleased');
+});
+test('上身近景为显式观察选项，原生计划有界且不直接写相机',()=>{
+ const args=['--expected-head',head];assert.equal(probeOptions(args).observationCloseup,false);assert.throws(()=>probeOptions([...args,'--observation-closeup']),/elbow-observation/);
+ const options=probeOptions([...args,'--hold-switch-only','--elbow-observation','--observation-closeup']);assert.equal(options.observationCloseup,true);
+ const camera={elevationDeg:55,distance:8},before=structuredClone(camera),plan=observationCloseupPlan(camera);assert.equal(plan.dy,-140);assert.ok(Math.abs(8*Math.exp(plan.wheelDelta*.0012)-4.8)<1e-12);assert.deepEqual(camera,before);
+ assert.throws(()=>observationCloseupPlan({elevationDeg:Infinity,distance:8}));assert.throws(()=>observationCloseupPlan({elevationDeg:20,distance:120}));
 });
 test('hold/switch-only仅执行正常持枪/切枪和单次移动，不混入旧换弹模式',()=>{
  const args=['--expected-head',head],options=probeOptions([...args,'--hold-switch-only']);assert.equal(options.holdSwitchOnly,true);assert.equal(options.allWeapons,true);assert.equal(probeOptions(args).holdSwitchOnly,false);
