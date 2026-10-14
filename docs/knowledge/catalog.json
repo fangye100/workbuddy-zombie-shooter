@@ -11,7 +11,7 @@
       "authority": "source",
       "status": "current",
       "topics": ["editor", "camera", "animation"],
-      "read": "Play/Pause orbit/pan/zoom与输入边界；HumanIK指南记录0222268的七枪299有效GPU帧及真实导航证据",
+      "read": "Play/Pause orbit/pan/zoom与输入边界；自由按钮/V与Edit飞行统一入口、重复键保护；HumanIK指南保留0222268七枪证据，动作接入指南记录R8实际入口验收",
       "sourceRefs": ["project-rules", "architecture-policy"]
     },
     {
@@ -2260,12 +2260,13 @@
         "gpu",
         "npc"
       ],
-      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal；2026-10-14真实A/D与持握证据及接地限制；攻击/武器相位；t1状态保留；受击/死亡尾部",
+      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal及接地限制；2026-10-14无pointer桌面横移/GodView/自由观察入口实机验收与工具范围；攻击/武器相位；t1状态保留；受击/死亡尾部",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
         "scene-shared-motion",
-        "scene-body-ik"
+        "scene-body-ik",
+        "play-observation-navigation"
       ]
     },
     {

@@ -189,3 +189,62 @@ node --test tools/motion/derive-clips.test.mjs tools/verify/strafe-motion.test.m
 $taskTargetHead = git rev-parse HEAD
 node tools/verify/strafe-motion.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head $taskTargetHead --cdp 9348 --hold-ms 1800 --out .workbuddy/tmp/strafe-motion/recheck-current
 ```
+
+## 2026-10-14 R8：普通桌面横移与自由观察入口
+
+R7 的实机探针始终使用有效 pointer aim，未覆盖“进入 Play 后鼠标未移动，直接按 A/D”。
+该路径原来传入 null aim，游戏模拟按移动方向更新 yaw，因此角色转身后使用前向片段。
+本轮实现为 `e083904cca1ebf7cbf0f554cd5742ce4b2785dd0`，仅调整游戏输入表现、Editor
+视角入口和试验场景 Camera；动画内容、绑骨、IK、移动速度和武器计时均未改变。
+
+- [试验场景](../../assets/scenes/sandbox/weapon-assembly-trial.scene.json)沿用 `orbit-follow`、
+  world yaw 和原 entryCamera，以 pitch=55°、distance=8 米提供 GodView 俯视跟随。
+- [GameControls](../../packages/zombie-game/src/presentation/game-controls.ts)的桌面初始面向取
+  相机前方，移动不会覆盖请求方向；有效鼠标瞄准更新此方向。Pause、观察、blur 清输入但保留方向，
+  新 runtime/Stop 后的新 Play 才重置。无 pointer fallback 使用既有 `setAim` 显式点，射击沿稳定
+  面向，因而不进入最近敌人的自动瞄准支路；触屏无 aim 仍传 null，保留原移动朝向/辅助瞄准规则。
+- [视角入口适配器](../../apps/editor/src/services/view-navigation-control.ts)让同一自由按钮和 V
+  在 Edit 使用原自由飞行，在 Play/Pause 使用既有观察导航；两个按钮同步标签、title、active 与
+  aria-pressed。观察期间捕获 V 退出，repeat 不反复切换；Esc 返回游戏相机，观察输入不移动玩家，
+  Stop 仍恢复作者相机。未新增相机模式或直接修改运行时相机的测试 hook。
+
+真实验收目标为 `14138be2fffcf5470640eab67373c5c587f97216`，后两笔工具修正与实现的生产内容相同。
+[紧凑记录](evidence/controls-20261014/runtime-summary.json)保存原始报告 SHA-256、版本、范围、
+命令、采样口径和检查结果；完整原始报告与 stdout 保留在本检出的 `.workbuddy/tmp/r8-evidence/`。
+本轮为正常 TLS、headed Chrome、NVIDIA Lovelace，211 个样本、350 个真实键鼠/只读观察记录，
+30/30 检查通过，异常、console error 和清理错误为零。
+
+| 实际路径 | 有效样本 / 周期回绕 | 移动速度 | 面向/位移检查 |
+|---|---|---|---|
+| 初始无 pointer A / walk_l | 21 / 4 | 4.500000 米/秒 | yaw 与实际 actor 最大偏差 0.007500 rad；位移前向比例 0.007500 |
+| 初始无 pointer D / walk_r | 21 / 3 | 4.500000 米/秒 | 同项最大偏差与比例均约 0.007500 |
+| pointer 改向→Pause/观察→返回→无 pointer A / walk_r | 14 / 2 | 4.500000 米/秒 | 保留反向 heading；最大偏差 0.007504 rad |
+| 重启后有效 pointer A / D | 47 / 7；41 / 6 | 4.500001 米/秒 | 最大双手目标残差均小于 3.10e-7 米；本帧装配/frame stamp 一致 |
+
+实际自由按钮在 Pause 进入观察，native orbit/pan/wheel 将 yaw 从 −π/2 改为 −1.780796 rad、
+pitch 从 55°改为 50°、距离从 8 改为 9.019975 米，并改变 target；tick/clip time 保持。
+V 返回后朝向不跳回默认方向；Play 中 V 进入观察时 A 不移动玩家，Esc 退出；Edit V 开关保持原行为。
+随后通过真实 Stop→Play 重启隔离回归，出生点恢复为 (0, 2.5) 米；A/D、W/S、停步 idle 与最终 Stop
+均完成，两次 Stop 的 ledger/model pending/draw/动作节点归零且作者文档/相机恢复。
+[无 pointer A 的原始 GodView](evidence/controls-20261014/no-pointer-a-game.png)和
+[自由按钮进入后的原始观察截图](evidence/controls-20261014/actual-free-paused-navigation.png)保持原生像素，以 LFS 保存。
+
+工具默认仍执行 R7 严格侧前肖像机位验收；本轮显式 `--controls-only true` 使用作者 GodView
+全身截图，保留头、双膝、双足、画布边界和 HUD 遮挡检查，并将额外 R7 侧前 45°肖像机位列为一项
+**notApplicable**，没有把它改写为通过。首次完整探针累计横移撞到房间边界；真实重启修正后，
+旧肖像左拖未改变相机而未通过朝向条件，其失败报告同样保留。当前用户观察入口的短 orbit/pan/wheel
+实际变化检查仍是必过项。本轮没有承诺足底接触/world-lock 或脚滑解决，既有 `pistol-idle` 缺失回退诊断仍保留。
+
+原始 `check-commands.json` 和对应 `.log` 记录 owner 50 项、工具 29 项及 scene/typecheck/editor
+build/architecture/knowledge 通过；之后两次仅工具修正各有 8 项聚焦测试通过。额外表现回归为
+31/32：`apps/editor/test/player-presentation.test.ts:75` 的 v7 迁移列表缺少既有 v17/v18 项。
+该测试、`packages/scene/src/migrate.ts`、`document.ts` 的 Git blob 与基线
+`4bf33743314a57867a73322efdd3b6b7521b1a2d` 完全一致；此项是保留的既有测试缺口，未修复、未宣称通过。
+本次文档收尾只运行 knowledge/diff 检查，不重复生产门禁。
+
+复现 R8 专项（按浏览器入口加载主机规则，输出使用独立目录）：
+
+```powershell
+$taskTargetHead = git rev-parse HEAD
+node tools/verify/strafe-motion.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head $taskTargetHead --controls-only true --cdp 9348 --hold-ms 1800 --out .workbuddy/tmp/r8-evidence/recheck-current
+```
