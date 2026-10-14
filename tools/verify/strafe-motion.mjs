@@ -32,11 +32,59 @@ export function gaitEvidence(samples, expectedClip) {
     minAnkleWorldY:active.length?Math.min(...active.flatMap(s=>s.actor.feet.map(p=>p.world[1]))):null};
 }
 
+/** 保留确定的现有 clip 回退；持握仍必须由真实本帧双手/装配数据证明。 */
+export function holdingEvidence(sample, contract) {
+  const layer=sample.actor?.layer,models=sample.models,ik=sample.actor?.ik,binding=ik?.binding;
+  const expected=`WEAPON_CLIP_MISSING: ${contract.requested}; base ${sample.actor?.clip} retained; procedural pose available only with configured IK`;
+  const retained=(layer?.diagnostics??[]).filter(d=>d===expected&&contract.requested==='pistol-idle'&&contract.upper==='ready'&&!contract.dedicatedAvailable&&models?.pose?.action==='idle');
+  const unexpected=(layer?.diagnostics??[]).filter(d=>!retained.includes(d));
+  const controls=['leftHand','rightHand'].map(part=>binding?.controls.find(c=>c.part===part));
+  const socket=v=>v?.position?.length===3&&v.position.every(Number.isFinite)&&v.rotation?.length===4&&v.rotation.every(Number.isFinite);
+  const request=ik?.attachment,finiteHands=sample.actor?.hands?.length===2&&sample.actor.hands.every(h=>h.local?.every(Number.isFinite)&&h.world?.every(Number.isFinite));
+  const residuals=models?.measurements,within=(key,max)=>Number.isFinite(residuals?.[key])&&residuals[key]>=0&&residuals[key]<=max;
+  const reasons=[];
+  if(!layer||layer.clip!==contract.upper||!(layer.weight>0)||!layer.nodes.length||unexpected.length)reasons.push('upper-layer');
+  if(!binding?.enabled||!(binding.weight>0)||controls.some(c=>!c?.enabled||!(c.weight>0))||ik?.diagnostics?.length)reasons.push('body-ik');
+  if(!request?.dependent||![request.resolvedTarget,request.result,request.primary?.contact,request.primary?.modelSocket,request.dependent.contact,request.dependent.modelSocket].every(socket))reasons.push('socket-request');
+  if(!finiteHands)reasons.push('actual-hands');
+  if(!models?.visible||models.weaponId!=='pistol'||models.frameStamp!==sample.frame||!(models.visibleDrawCount>0)||models.diagnostics?.length||models.warnings?.length||models.ikDiagnostics?.length||models.attachmentDraws?.some(d=>d.frameStamp!==sample.frame))reasons.push('current-model-frame');
+  if(!within('rightTargetResidualM',.02)||!within('leftTargetResidualM',.02)||!within('rightOrientationResidualRad',.05)||!within('leftOrientationResidualRad',.05))reasons.push('grip-residual');
+  return {ok:!reasons.length,reasons,retainedDiagnostics:retained,unexpectedDiagnostics:unexpected,frame:sample.frame,modelFrame:models?.frameStamp,residuals,hands:sample.actor?.hands,attachment:request};
+}
+
+/** 从当前真实姿态计算一次侧前方全身观察输入，不直接写相机。 */
+export function observationPlan(sample) {
+  const view=sample.camera,forward=actorPoint([0,0,1],{quat:sample.authorPlayer.quat,scale:1,pos:[0,0,0]});
+  const desiredYaw=Math.atan2(forward[0],forward[2])+Math.PI/4;
+  const delta=Math.atan2(Math.sin(desiredYaw-view.yaw),Math.cos(desiredYaw-view.yaw));
+  const plan={desiredYaw,desiredElevationDeg:20,desiredDistance:6.2,dx:-delta/.006,dy:(20-view.elevationDeg)/.25,wheelDelta:Math.log(6.2/view.distance)/.0012};
+  if(!Object.values(plan).every(Number.isFinite)||Math.abs(plan.dx)>530||Math.abs(plan.dy)>200||Math.abs(plan.wheelDelta)>1400)throw Error('当前观察机位超出有界输入计划');
+  return plan;
+}
+
+export function framingEvidence(projection) {
+  const reasons=[],{bounds:b,canvas:c,points,uiRects}=projection;
+  if(!b||!c||!points?.length)return {ok:false,reasons:['projection-missing']};
+  if(points.some(p=>p.behind||!Number.isFinite(p.x)||!Number.isFinite(p.y)))reasons.push('invalid-projection');
+  if(!['Head','LeftLeg','RightLeg','LeftFoot','RightFoot'].every(name=>points.some(p=>p.name===name)))reasons.push('full-body-landmarks');
+  if(b.left<c.left+5||b.top<c.top+5||b.right>c.right-5||b.bottom>c.bottom-5)reasons.push('viewport-clipped');
+  if(b.bottom-b.top<180||b.bottom-b.top>500)reasons.push('body-size');
+  const occluders=uiRects.filter(r=>b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top);
+  if(occluders.length)reasons.push('ui-occluded');
+  if(!(projection.frontDot>.4&&projection.frontDot<.95))reasons.push('side-front-view');
+  return {ok:!reasons.length,reasons,bounds:b,occluders,frontDot:projection.frontDot};
+}
+
 export const STRAFE_SNAPSHOT = `(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState,clip=s?.clips[s.clip],motions=e?.motions.summary()??null;const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));
- const bones=o?.skeleton?o.skeleton.jointNames.flatMap((name,i)=>/^(Hips|LeftFoot|RightFoot|LeftHand|RightHand)$/.test(name)?[{name,local:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]):[];
+ const bones=o?.skeleton?o.skeleton.jointNames.map((name,i)=>({name,local:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))})):[];
  const points=bones.map(b=>({...b,world:b.local?(${actorPoint.toString()})(b.local,o):null}));
- return {state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:structuredClone(e?.camera),authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
- actor:s?{clip:clip?.name??null,time:s.time,duration:clip?.duration??null,phase:clip?.duration>0?s.time/clip.duration:null,normalization:Array.from(o.skeleton.normalization),feet:['LeftFoot','RightFoot'].map(name=>points.find(p=>p.name===name)),hips:points.find(p=>p.name==='Hips'),hands:points.filter(p=>/Hand$/.test(p.name)),layer:motions?.nodes.find(n=>n.nodeId===d.playerStart)?.layer??null}:null};})()`;
+ return {state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:{...structuredClone(e?.camera),elevationDeg:e?.params.cameraElevation},authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
+ actor:s?{clip:clip?.name??null,time:s.time,duration:clip?.duration??null,phase:clip?.duration>0?s.time/clip.duration:null,normalization:Array.from(o.skeleton.normalization),feet:['LeftFoot','RightFoot'].map(name=>points.find(p=>p.name===name)),hips:points.find(p=>p.name==='Hips'),hands:points.filter(p=>/Hand$/.test(p.name)),joints:points,ik:s.bodyIk?{binding:structuredClone(s.bodyIk.binding),diagnostics:structuredClone(s.bodyIk.diagnostics),attachment:structuredClone(s.bodyIk.attachment??null)}:null,layer:motions?.nodes.find(n=>n.nodeId===d.playerStart)?.layer??null}:null};})()`;
+
+export const FRAMING_EXPRESSION=`(async()=>{const s=await ${STRAFE_SNAPSHOT},e=window.__editor,canvas=document.querySelector('#gpu'),r=canvas.getBoundingClientRect(),points=(s.actor?.joints??[]).filter(p=>p.world).map(p=>({name:p.name,...e.renderer.worldToScreen(p.world)})),pad=26,bounds=points.length?{left:Math.min(...points.map(p=>p.x))-pad,right:Math.max(...points.map(p=>p.x))+pad,top:Math.min(...points.map(p=>p.y))-pad,bottom:Math.max(...points.map(p=>p.y))+pad}:null;
+ const selectors='.hud-life,.hud-wave,.hud-objective,.hud-radar,.hud-help,.run-hud,.game-toolbar,#hud,#runtime-body-ik-panel,#runtime-motion-panel,#observation-camera-hint',uiRects=[...document.querySelectorAll(selectors)].filter(el=>!el.hidden&&getComputedStyle(el).display!=='none').map(el=>{const v=el.getBoundingClientRect();return {className:el.className,id:el.id,left:v.left,right:v.right,top:v.top,bottom:v.bottom};}).filter(v=>v.right>v.left&&v.bottom>v.top);
+ const forward=(${actorPoint.toString()})([0,0,1],{quat:s.authorPlayer.quat,scale:1,pos:[0,0,0]}),frontDot=forward[0]*Math.sin(s.camera.yaw)+forward[2]*Math.cos(s.camera.yaw);
+ return {sample:s,canvas:{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height},viewport:[innerWidth,innerHeight],points,bounds,uiRects,frontDot};})()`;
 
 export async function runStrafeProbe(options) {
   const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
@@ -61,12 +109,16 @@ export async function runStrafeProbe(options) {
     input=new ProbeInput(cdp,action=>report.actions.push({...action,atMs:Date.now()}));
     const nav=await cdp.send('Page.navigate',{url:options.url});if(nav.errorText)throw Error('正常 TLS 导航失败 '+nav.errorText);
     const doc=JSON.parse(fs.readFileSync(path.join(options.root,SCENE),'utf8')),readiness=sceneReadinessExpression(doc,SCENE);
+    const mesh=doc.nodes.find(n=>n.id===doc.playerStart).components.find(c=>c.kind==='MeshRenderer'),lib=JSON.parse(fs.readFileSync(path.join(options.root,mesh.sharedMotion.library.path),'utf8')),profile=lib.profiles[mesh.sharedMotion.profile],pistol=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol');
+    report.fallbackContract={requested:pistol.presentation.animations.idle.clip,upper:'ready',dedicatedAvailable:!!profile[pistol.presentation.animations.idle.clip],readyAvailable:!!profile.ready,policy:'packages/zombie-game/src/presentation/player-motion.ts',note:'缺专用 idle 时保留 base，ready 上身层结合已配置的双手装配 IK；诊断仍原样报告。'};
+    if(report.fallbackContract.requested!=='pistol-idle'||!report.fallbackContract.readyAvailable)throw Error('当前手枪回退契约与定向验收不匹配');
     if(!await waitFor(async()=>{report.readiness=await cdp.eval(readiness);return report.readiness?.ok;},{timeout:30000,interval:200}))throw Error('作者场景、GLB 或 Play 控件未就绪');
     await cdp.send('Page.bringToFront');
     report.gpu=await cdp.eval('(async()=>{const a=await navigator.gpu?.requestAdapter(),i=a?.info??(a?.requestAdapterInfo?await a.requestAdapterInfo():null);return {secure:isSecureContext,vendor:i?.vendor,architecture:i?.architecture,description:i?.description};})()');
     check('HTTPS/真实 NVIDIA',report.gpu.secure&&report.gpu.vendor==='nvidia'&&report.gpu.architecture==='lovelace',report.gpu);if(!report.checks.at(-1).ok)throw Error('未确认真实 GPU');
     const snap=async label=>{const sample={label,atMs:Date.now(),...await cdp.eval(STRAFE_SNAPSHOT)};report.samples.push(sample);return sample;};
     const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
+    const drag=async(dx,dy,button='left')=>{if(Math.abs(dx)>530||Math.abs(dy)>250)throw Error('观察拖动超出有界范围');const p=await visiblePoint(cdp,'#gpu');await input.pointer(p,true,button);for(let k=1;k<=8;k++){await input.move({x:p.x+dx*k/8,y:p.y+dy*k/8});await sleep(20);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(120);};
     const capture=async label=>{const sample=await snap(label),before=await cdp.eval('window.__editor.renderer.state.frameCounter'),{data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),after=await cdp.eval('window.__editor.renderer.state.frameCounter'),file=label+'.png';fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({file,sample:report.samples.length-1,frameRange:[before,after],clip:sample.actor?.clip,phase:sample.actor?.phase,state:sample.state,observing:sample.observing});return sample;};
     const author=await snap('author');await capture('01-author');await click('#btn-play');
     if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"&&window.__editor.weaponModels.snapshot().visible&&window.__editor.motions.summary().pending===0'),{timeout:20000,interval:150}))throw Error('Play/动作/持握模型未就绪');
@@ -79,14 +131,20 @@ export async function runStrafeProbe(options) {
       await input.key(key,true);const start=report.samples.length,until=Date.now()+options.holdMs;
       while(Date.now()<until){await aim();await sleep(25);await snap(key+'-held');}
       const moving=report.samples.slice(start),evidence=gaitEvidence(moving,clip);check(key+'真实游戏横移/连续步态',evidence.ok&&evidence.wraps>=2,evidence);
-      check(key+'上身持枪保持',moving.some(s=>s.actor?.layer?.weight>0&&s.actor.layer.nodes.length>0&&!s.actor.layer.diagnostics.length)&&moving.every(s=>s.models?.visible&&s.models.weaponId==='pistol'),moving.map(s=>({frame:s.frame,clip:s.actor?.clip,layer:s.actor?.layer,weapon:s.models?.weaponId,draw:s.models?.frameStamp})));
+      const grips=moving.map(s=>holdingEvidence(s,report.fallbackContract));check(key+'本帧双手持握与保留回退',grips.length>0&&grips.every(g=>g.ok),grips);
       await capture(key+'-normal-game');
       if(!await waitFor(async()=>{await aim();const s=await snap(key+'-pre-pause');return s.actor?.clip===clip&&s.actor.phase>=peakRange[0]&&s.actor.phase<=peakRange[1];},{timeout:1500,interval:25}))throw Error('未采到自然宽步相位');
       await click('#btn-pause');await input.key(key,false);const paused=await snap(key+'-pause');await sleep(250);const frozen=await snap(key+'-frozen');
       check(key+'Pause冻结原步态',paused.state==='paused'&&paused.actor?.clip===clip&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time,{paused,frozen});
       await capture(key+'-paused-game');await click('#btn-observation-camera');
-      const point=await visiblePoint(cdp,'#gpu');await input.pointer(point,true);for(let k=1;k<=4;k++){await input.move({x:point.x+80*k/4,y:point.y+15*k/4});await sleep(25);}await input.pointer({x:point.x+80,y:point.y+15},false);
-      await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:point.x,y:point.y,deltaX:0,deltaY:240});await sleep(150);
+      const plan=observationPlan(paused);report.actions.push({observationPlan:key,...plan});await drag(plan.dx,plan.dy);
+      const point=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:point.x,y:point.y,deltaX:0,deltaY:plan.wheelDelta});await sleep(200);
+      const beforePan=await cdp.eval(FRAMING_EXPRESSION),bounds=beforePan.bounds,rect=beforePan.canvas;
+      if(!bounds)throw Error('全身投影不可得');
+      const pan={dx:rect.left+rect.width*.28-(bounds.left+bounds.right)/2,dy:rect.top+rect.height*.52-(bounds.top+bounds.bottom)/2};
+      report.actions.push({observationPan:key,...pan,before:beforePan});await drag(pan.dx,pan.dy,'right');
+      const projection=await cdp.eval(FRAMING_EXPRESSION),framing=framingEvidence(projection);report.actions.push({observationFraming:key,projection,evidence:framing});check(key+'侧前全身/双膝双足无遮挡',framing.ok,framing);
+      if(!framing.ok)throw Error('观察截图不满足全身可见：'+framing.reasons.join(','));
       const viewed=await capture(key+'-paused-observation');
       check(key+'冻结全身观察保留动作',viewed.observing&&viewed.tick===paused.tick&&viewed.actor?.time===paused.actor?.time&&viewed.actor?.clip===clip,viewed);
       await click('#btn-observation-camera');await click('#btn-pause');await aim();await sleep(200);const idle=await snap(key+'-released');check(key+'停步回idle',idle.state==='playing'&&!idle.observing&&idle.actor?.clip==='idle',idle.actor);

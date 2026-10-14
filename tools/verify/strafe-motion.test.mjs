@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
-import { strafeOptions, gaitEvidence, STRAFE_SNAPSHOT } from './strafe-motion.mjs';
+import { strafeOptions, gaitEvidence, holdingEvidence, observationPlan, framingEvidence, STRAFE_SNAPSHOT, FRAMING_EXPRESSION } from './strafe-motion.mjs';
 import { ProbeInput } from './weapon-assembly.mjs';
 
 test('定向探针强制固定检出/HTTPS候选入口和完整HEAD，拒绝额外流程参数',()=>{
@@ -34,7 +34,7 @@ test('完整浏览器快照只使用实际公开的 motions.summary，作者态/
  const doc={playerStart:'player'},controller={state:'stopped',tick:0,observing:false,ledger:{pending:0},session:{runtime:null}};
  const layer={clip:'ready',time:.25,weight:1,nodes:[3,4],diagnostics:[]};let reads=0;
  // 与 main.ts 暴露的 wrapper 一致：没有类实例额外的 debugSnapshot 接口。
- const editor={playCtl:controller,camera:{yaw:0},renderer:{getDocument:()=>doc,state:{objects:[object],frameCounter:7}},
+ const editor={playCtl:controller,camera:{yaw:0},params:{cameraElevation:0},renderer:{getDocument:()=>doc,worldToScreen:p=>({x:400+p[0]*100,y:500-p[1]*100,behind:false}),state:{objects:[object],frameCounter:7}},
    motions:{summary:()=>{reads++;return {pending:0,nodes:controller.state==='playing'?[{nodeId:'player',layer}]:[]};},setState:()=>{throw Error('禁止写入 motions');}},
    bodyIk:{summary:()=>({nodes:[]}),setWeight:()=>{throw Error('禁止写入 IK');}},weaponModels:{snapshot:()=>({visible:controller.state==='playing'})}};
  const context={window:{__editor:editor},crypto:webcrypto,TextEncoder,structuredClone};
@@ -44,4 +44,27 @@ test('完整浏览器快照只使用实际公开的 motions.summary，作者态/
  const play=await runInNewContext(STRAFE_SNAPSHOT,context);
  assert.equal(play.actor.clip,'walk_l');assert.equal(play.actor.phase,.25);assert.equal(play.actor.layer,layer);assert.equal(play.tick,12);assert.equal(play.fixedStep,1/30);
  assert.deepEqual(Array.from(play.actor.feet,p=>p.name),['LeftFoot','RightFoot']);assert.equal(play.actor.feet[0].world[0],2+skinScratch[28]);assert.equal(play.actor.hands.length,2);assert.equal(reads,2);
+ const dom={querySelector:()=>({getBoundingClientRect:()=>({left:0,right:1440,top:80,bottom:1000,width:1440,height:920})}),querySelectorAll:()=>[]};
+ const projection=await runInNewContext(FRAMING_EXPRESSION,{...context,document:dom,innerWidth:1440,innerHeight:1000,getComputedStyle:()=>({display:'block'})});
+ assert.equal(projection.points.length,5);assert.equal(projection.uiRects.length,0);assert.ok(projection.bounds.left<projection.bounds.right);assert.equal(reads,3);
+});
+test('已声明手枪ready回退仍需本帧真实双手装配；其它诊断、旧frame、坏残差不能通过',()=>{
+ const socket={position:[0,1,0],rotation:[0,0,0,1]},contract={requested:'pistol-idle',upper:'ready',dedicatedAvailable:false};
+ const s={frame:4,actor:{clip:'walk_l',layer:{clip:'ready',weight:1,nodes:[1],diagnostics:['WEAPON_CLIP_MISSING: pistol-idle; base walk_l retained; procedural pose available only with configured IK']},
+   hands:[{local:[0,1,0],world:[0,1,0]},{local:[.1,1,0],world:[.1,1,0]}],ik:{binding:{enabled:true,weight:1,controls:[{part:'leftHand',enabled:true,weight:1},{part:'rightHand',enabled:true,weight:1}]},diagnostics:[],attachment:{resolvedTarget:socket,result:socket,primary:{contact:socket,modelSocket:socket},dependent:{contact:socket,modelSocket:socket}}}},
+   models:{visible:true,weaponId:'pistol',frameStamp:4,visibleDrawCount:2,pose:{action:'idle'},diagnostics:[],warnings:[],ikDiagnostics:[],attachmentDraws:[{frameStamp:4}],measurements:{rightTargetResidualM:1e-7,leftTargetResidualM:1e-7,rightOrientationResidualRad:1e-7,leftOrientationResidualRad:1e-7}}};
+ assert.equal(holdingEvidence(s,contract).ok,true);assert.equal(holdingEvidence(s,contract).retainedDiagnostics.length,1);
+ for(const change of [v=>v.actor.layer.diagnostics.push('NEW_FAILURE'),v=>v.models.frameStamp=3,v=>v.models.attachmentDraws[0].frameStamp=3,v=>v.models.measurements.leftTargetResidualM=.1,v=>v.actor.ik.binding.controls[0].enabled=false,v=>v.actor.ik.attachment.result=null,v=>v.actor.hands[0].world=null]){const bad=structuredClone(s);change(bad);assert.equal(holdingEvidence(bad,contract).ok,false);}
+ assert.equal(holdingEvidence(s,{...contract,dedicatedAvailable:true}).ok,false);
+});
+test('全身观察计划从实际机位和actor朝向计算，输入有界；HUD遮腿或裁脚明确失败',()=>{
+ const plan=observationPlan({camera:{yaw:-Math.PI/2,distance:1.8,elevationDeg:0},authorPlayer:{quat:[0,Math.SQRT1_2,0,Math.SQRT1_2]}});
+ assert.equal(plan.desiredDistance,6.2);assert.ok(Math.abs(plan.dx)<530&&plan.wheelDelta>1000);assert.equal(plan.dy,80);
+ const points=['Head','LeftLeg','RightLeg','LeftFoot','RightFoot'].map((name,i)=>({name,x:400+i*10,y:380+i*50,behind:false}));
+ const projection={canvas:{left:0,right:1440,top:80,bottom:1000},points,bounds:{left:350,right:500,top:340,bottom:660},uiRects:[{left:540,right:885,top:640,bottom:900}],frontDot:Math.SQRT1_2};
+ assert.equal(framingEvidence(projection).ok,true);
+ assert.equal(framingEvidence({...projection,bounds:{...projection.bounds,right:560}}).ok,false);
+ assert.equal(framingEvidence({...projection,bounds:{...projection.bounds,bottom:1001}}).ok,false);
+ assert.equal(framingEvidence({...projection,frontDot:-1}).ok,false);
+ assert.equal(framingEvidence({...projection,points:points.filter(p=>p.name!=='RightFoot')}).ok,false);
 });
