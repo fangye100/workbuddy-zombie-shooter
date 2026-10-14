@@ -2,7 +2,7 @@
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';import {fileURLToPath} from 'node:url';
 import {Cdp,launchEditorSession,waitFor,sleep} from './editor-smoke-lib.mjs';
 import {probeOptions,profileOwners,freePort,ProbeInput,visiblePoint,collapseIkPanel,sceneReadinessExpression} from './weapon-assembly.mjs';
-const SCENE='assets/scenes/sandbox/weapon-assembly-trial.scene.json',CROSS='assets/scenes/sim/floor1-t5.scene.json';
+const SCENE='assets/scenes/sandbox/weapon-assembly-trial.scene.json',CROSS='assets/scenes/act1/floor-1.scene.json';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 export function slotProbeOptions(argv){
  const allowed=['--root','--expected-head','--url','--cdp','--out','--chrome','--save'];for(let i=0;i<argv.length;i+=2)if(!allowed.includes(argv[i])||!argv[i+1]||argv[i+1].startsWith('--'))throw Error('未知/缺少参数 '+argv[i]);
@@ -69,6 +69,7 @@ export async function runSlotProbe(options){
     if(!options.save){await click('#hold-slot-undo');await click('#hold-slot-undo');check('Audit不Save草稿恢复',!(await snap('audit-undo')).slot.dirty,true);continue;}
     changed[id]={guid:baseline.slot.weapons.find(w=>w.id===id).guid,slot:rotated.slot.slot};await click('#hold-slot-save');if(!await waitFor(()=>cdp.eval('!window.__editor.holdSlot.summary().busy && !window.__editor.holdSlot.summary().dirty'),{timeout:5000,interval:100}))throw Error('Save未成功');const m=disk(id+'-saved');check(id+' Save真实磁盘',JSON.stringify(m.holdProfiles[changed[id].guid].slot)===JSON.stringify(rotated.slot.slot),m.holdProfiles[changed[id].guid]);
     const other=Object.fromEntries(Object.entries(original).filter(([k])=>k!=='holdProfiles'));check(id+' 保留其它meta字段',JSON.stringify(Object.fromEntries(Object.entries(m).filter(([k])=>k!=='holdProfiles')))===JSON.stringify(other),true);
+    if(!await waitFor(()=>cdp.eval(`(()=>{const e=window.__editor,s=e.holdSlot.summary(),m=e.weaponModels.snapshot(),status=document.querySelector('#hold-slot-status');return !s.busy&&!s.dirty&&m.visible&&m.frameStamp===e.renderer.state.frameCounter&&status?.textContent.includes('已保存/载入');})()`),{timeout:2000,interval:80}))throw Error('Save后本帧模型/面板投影未就绪');await capture(id+'-saved-ready');
   }
   if(options.save){
     const saved=disk('saved-all');check('两武器持久配置互不覆盖',Object.values(changed).every(p=>JSON.stringify(saved.holdProfiles[p.guid].slot)===JSON.stringify(p.slot)),changed);
