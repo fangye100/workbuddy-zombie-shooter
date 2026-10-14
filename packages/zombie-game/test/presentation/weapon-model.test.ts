@@ -14,9 +14,9 @@ describe('真实模型表现仅消费已有武器相位',()=>{
   const moved=weaponMountForHoldSlot(base,{...slot,position:[.1,.25,.32]});
   moved.markers.muzzle.position.forEach((v,i)=>expect(v-base.presentation.markers.muzzle.position[i]!).toBeCloseTo([.02,.05,-.1][i]!,10));
   const quarter=weaponMountForHoldSlot(base,{...slot,rotation:[...quatMul([0,0,Math.SQRT1_2,Math.SQRT1_2],slot.rotation)]});
-  const relative=[-.3,.2,0] as [number,number,number]; // muzzle [0.3,0,0] minus slot pivot, in actor axes
-  const expected=rotateVec3([0,0,Math.SQRT1_2,Math.SQRT1_2],relative);
-  expect(quarter.markers.muzzle.position[0]).toBeCloseTo(expected[2]+slot.position[2]);
+  // yaw-local muzzle [.3,0,0] - old pivot [.3,.2,0] = actor [0,-.2,0]。
+  quarter.markers.muzzle.position.forEach((v,i)=>expect(v).toBeCloseTo([.3,.2,-.2][i]!,10));
+  const rotatedForward=rotateVec3(quarter.markers.muzzle.rotation,[1,0,0]);expect(Math.hypot(...rotatedForward)).toBeCloseTo(1);
   const system=new WeaponSystem(a);system.beginFire();system.advance(.05);const state=system.snapshot(),pose=system.poseIntent,events=structuredClone(system.events);
   system.configureMount(base.id,moved);expect(system.snapshot()).toEqual(state);expect(system.events).toEqual(events);expect(system.poseIntent.phase).toBe(pose.phase);expect(system.poseIntent.action).toBe(pose.action);
   expect(system.active.presentation.markers).toEqual(moved.markers);expect(()=>system.configureMount('missing',moved)).toThrow('WEAPON_MOUNT_ID');

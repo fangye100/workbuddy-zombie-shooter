@@ -42,6 +42,17 @@ function setup(options:{image?:boolean;decode?:()=>Promise<ImageBitmap>;badGuid?
  return {service,session,object,factory,destroy,draws,matrices,doc};
 }
 describe('真实武器 loader、同帧绘制与 Stop 边界',()=>{
+ it('角色profile替代legacy，双手同frame跟随；反复预览不累计markers变化，错误骨明确拒绝',async()=>{
+  const f=setup({slot:true});await settle();const context=f.service.holdContext()!,model=context.weapons[0]!.model,base=f.session.runtime!.weapons.active.presentation.markers.muzzle.position;
+  const profiles={[model.guid!]:{model,slot:{bone:'Hips',position:[.01,.2,.2] as [number,number,number],rotation:[0,0,0,1] as [number,number,number,number]}}};
+  f.service.setHoldProfiles(context.actor.guid!,profiles);const marker=[...f.session.runtime!.weapons.active.presentation.markers.muzzle.position];expect(marker[2]).toBeCloseTo(base[2]!-.01);
+  f.service.setHoldProfiles(context.actor.guid!,profiles);expect(f.session.runtime!.weapons.active.presentation.markers.muzzle.position).toEqual(marker);
+  const request=f.object.skinState!.bodyIk!.attachment!;expect(request.target.position).toEqual([.01,.2,.2]);const frame=f.service.frameFor(f.doc.playerStart!,5)!;
+  evalJointMatrices(f.object.skinState!,new Float32Array((f.object.skeleton!.joints.length+1)*16),frame);f.service.afterPose(f.doc.playerStart!,mat4(),frame);
+  expect(f.service.holdContext()!.frame!.world.position).toEqual(request.resolvedTarget!.position);expect(f.service.summary().measurements.rightTargetResidualM).toBeLessThan(1e-4);expect(f.service.summary().measurements.leftTargetResidualM).toBeLessThan(1e-4);
+  expect(()=>f.service.setHoldProfiles(context.actor.guid!,{[model.guid!]:{model,slot:{...profiles[model.guid!]!.slot,bone:'Missing'}}})).toThrow('缺失/歧义');
+  f.service.stop();f.session.stop();expect(f.service.holdContext()).toBeNull();expect(f.session.ledger.pending).toBe(0);
+ });
  it('slot转发唯一Hip节点，本次采样primary→model→support且探针使用resolvedTarget',async()=>{
   const f=setup({slot:true});await settle();f.service.sync(f.session.runtime);const hip=f.object.skeleton!.joints[f.object.skeleton!.jointNames.indexOf('Hips')]!;
   const request=f.object.skinState!.bodyIk!.attachment!;expect(request.positionAnchor).toEqual({node:hip});expect(request.target.position).toEqual([0,.2,.2]);

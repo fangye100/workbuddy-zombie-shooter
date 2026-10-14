@@ -16,6 +16,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PlayController } from '../src/services/play-controller';
 import type { AuthorSnapshot, LabRenderer } from '../src/renderer';
 import type { RuntimeBridge } from '../src/services/runtime-bridge';
+import type { RuntimeWeapons } from '../src/services/runtime-weapons';
 import {
   resolveEntryCamera,
   type ViewCameraControl,
@@ -298,6 +299,12 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
 });
 
 describe('PlayController —— 状态机透传', () => {
+  it('Pause仍同步同相位装配（迟到资产/草稿），不推进模拟与动作时钟；Stop不再调用',()=>{
+    const r=fakeRenderer(scene()),b=fakeBridge(),weapons={start:vi.fn(),stop:vi.fn(),sync:vi.fn()};
+    const ctl=new PlayController(r as unknown as LabRenderer,b as unknown as RuntimeBridge,{weapons:weapons as unknown as RuntimeWeapons});expect(ctl.start()).toBe(true);ctl.update(.1);ctl.pause();
+    const tick=ctl.tick,phase=ctl.session.runtime!.weapons.poseIntent.phase;weapons.sync.mockClear();ctl.update(.5);ctl.update(.5);
+    expect(weapons.sync).toHaveBeenCalledTimes(2);expect(ctl.tick).toBe(tick);expect(ctl.session.runtime!.weapons.poseIntent.phase).toBe(phase);ctl.stop();weapons.sync.mockClear();ctl.update(.1);expect(weapons.sync).not.toHaveBeenCalled();
+  });
   it('converts runtime heading for a target-follow camera and restores the authored camera', () => {
     const doc = scene();
     for (const node of doc.nodes) for (const c of node.components) if (c.kind === 'Camera') {

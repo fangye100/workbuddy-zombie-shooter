@@ -1,6 +1,6 @@
 /** Play 武器 IO/资源与 renderer 适配；动作策略来自游戏表现，骨求值来自现有单次采样。 */
 import { mat4, multiply, type Quat } from '@aether/core';
-import { parseGlb, VERTEX_FLOATS, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, actorHoldSlot, validActorHoldProfiles, type ActorHoldProfiles, type ActorHoldSlot, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
+import { parseGlb, VERTEX_FLOATS, resolveSocketDefaults, validateAssetMeta, validateModelAssetIdentity, validWeaponDefinition, actorHoldSlot, validActorHoldProfiles, type ActorHoldProfiles, type ActorHoldSlot, type AssetMeta, type AssetRef, type BoneSockets, type GltfResult,
   type ModelAttachment, type ModelSockets, type SceneDocument, type SocketTransform, type WeaponDefinition } from '@aether/scene';
 import { attachedModelFrame, composeSocket, inverseSocket, rigidFromMatrix, rotateVec3, socketMatrix,
   type ModelDraw, type PoseFrameOutput, type PostPoseDrawPort, type RegisterDrawResource } from '@aether/render';
@@ -21,8 +21,9 @@ export interface RuntimeWeaponsPorts {
 }
 interface Active { assembly:Assembly; object:IkObject; right:number; left:number; removed:boolean }
 export interface HoldContext {
-  actor:AssetRef; nodeId:string|null; profiles:ActorHoldProfiles|undefined;
+  actor:AssetRef; nodeId:string|null; generation:number; pending:number; activeWeaponId:string|null; profiles:ActorHoldProfiles|undefined;
   weapons:{id:string;name:string;model:AssetRef;slot:ActorHoldSlot}[];
+  diagnostics:string[];
   frame:{weaponId:string;world:SocketTransform;actorRotation:Quat;scale:number}|null;
 }
 export class RuntimeWeapons implements PostPoseDrawPort {
@@ -46,9 +47,26 @@ export class RuntimeWeapons implements PostPoseDrawPort {
   /** 本帧实际提交的附件矩阵，只用于诊断，不驱动相位或下一帧求解。 */
   private attachmentDraws:{id:string;guid:string|undefined;removed:boolean;frameStamp:number;worldMatrix:number[];worldCorners:number[][]}[]=[];
   constructor(private readonly ports:RuntimeWeaponsPorts){}
-  holdContext():HoldContext|null{return this.actorRef?{actor:structuredClone(this.actorRef),nodeId:this.nodeId,profiles:structuredClone(this.profiles),weapons:[...this.assemblies.values()].map(a=>({id:a.definition.id,name:a.definition.name,model:structuredClone(a.definition.presentation.model!),slot:actorHoldSlot(this.profiles,a.definition.presentation.model!)??{bone:a.baseDefinition.presentation.assembly?.holdSlot?.bone??'Hips',position:[...(a.baseDefinition.presentation.assembly?.holdSlot?.position??a.baseDefinition.presentation.assembly!.holdPose.position)],rotation:[...a.baseDefinition.presentation.assembly!.holdPose.rotation]}})),frame:this.holdFrame?structuredClone(this.holdFrame):null}:null;}
+  holdContext():HoldContext|null {
+    if(!this.actorRef)return null;
+    return {actor:structuredClone(this.actorRef),nodeId:this.nodeId,generation:this.generation,pending:this.pending,
+      activeWeaponId:this.session?.runtime?.weapons.poseIntent.weaponId??null,profiles:structuredClone(this.profiles),
+      diagnostics:[...this.errors,...(this.active?.object.skinState?.bodyIk?.diagnostics??[]).map(d=>`${d.controlId} ${d.code}: ${d.message}`)],
+      weapons:[...this.assemblies.values()].map(a=>({id:a.definition.id,name:a.definition.name,model:structuredClone(a.definition.presentation.model!),
+        slot:actorHoldSlot(this.profiles,a.definition.presentation.model!)??{
+          bone:a.baseDefinition.presentation.assembly?.holdSlot?.bone??'Hips',
+          position:[...(a.baseDefinition.presentation.assembly?.holdSlot?.position??a.baseDefinition.presentation.assembly!.holdPose.position)],
+          rotation:[...a.baseDefinition.presentation.assembly!.holdPose.rotation]}})),
+      frame:this.holdFrame&&this.active?.assembly.definition.id===this.holdFrame.weaponId?structuredClone(this.holdFrame):null};
+  }
   setHoldProfiles(actorGuid:string,profiles:ActorHoldProfiles):void {
     if(!this.actorRef||this.actorRef.guid!==actorGuid||!validActorHoldProfiles(profiles))throw new Error('WEAPON_HOLD_PROFILE: 角色身份/持握配置不匹配');
+    const sk=this.nodeId?this.ports.objectForNode(this.nodeId)?.skeleton:null;
+    for(const a of this.assemblies.values()){
+      const slot=actorHoldSlot(profiles,a.baseDefinition.presentation.model!);
+      if(slot&&sk?.jointNames.filter(n=>n?.replace(/^mixamorig[:_]?/i,'')===slot.bone.replace(/^mixamorig[:_]?/i,'')).length!==1)throw new Error(`WEAPON_HOLD_PROFILE: 骨 ${slot.bone} 缺失/歧义`);
+      if(slot&&!validWeaponDefinition({...a.baseDefinition,presentation:{...a.baseDefinition.presentation,...weaponMountForHoldSlot(a.baseDefinition,slot)}}))throw new Error('WEAPON_HOLD_PROFILE: 装配/markers超出有效范围');
+    }
     this.profiles=structuredClone(profiles);this.configured.clear();this.sync(this.session?.runtime??null);
   }
   view():WeaponModelView {

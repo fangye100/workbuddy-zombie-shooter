@@ -10,6 +10,13 @@ class Surface {
 }
 afterEach(()=>vi.unstubAllGlobals());
 describe('Play观察导航与输入边界',()=>{
+  it('窄claim手柄不转相机；未命中空白保留真实观察导航',()=>{
+    const win=new Surface(),doc=new Surface(),canvas=new Surface(),button=new Surface(),hint=new Surface();vi.stubGlobal('window',win);vi.stubGlobal('document',doc);vi.stubGlobal('HTMLElement',Surface);
+    let s:ViewCameraState={target:[0,1,0],distance:8,yaw:0,elevationDeg:55};const claim=vi.fn((e:PointerEvent)=>e.pointerId===7);
+    new PlayObservationNavigation(canvas as never,button as never,hint as never,{get:()=>s,set:v=>{s=v;}},{playing:()=>true,observing:()=>true,setObservation:()=>true,releaseGameInput:vi.fn(),equip:vi.fn(),changed:vi.fn(),claimPointer:claim});
+    canvas.emit('pointerdown',{pointerId:7,button:0,clientX:10,clientY:10});canvas.emit('pointermove',{pointerId:7,clientX:100,clientY:20});canvas.emit('pointerup',{pointerId:7});expect(s.yaw).toBe(0);expect(claim).toHaveBeenCalledTimes(3);
+    canvas.emit('pointerdown',{pointerId:8,button:0,clientX:10,clientY:10});canvas.emit('pointermove',{pointerId:8,clientX:100,clientY:20});expect(s.yaw).toBeCloseTo(-.54);
+  });
   it('正常Play/Pause都能导航；捕获输入不触发游戏，Digits和退出/失焦释放',()=>{
     const win=new Surface(),doc=new Surface(),canvas=new Surface(),button=new Surface(),hint=new Surface();vi.stubGlobal('window',win);vi.stubGlobal('document',doc);vi.stubGlobal('HTMLElement',Surface);
     let on=false,playing=true,s:ViewCameraState={target:[0,1.2,0],distance:2,yaw:0,elevationDeg:0};const release=vi.fn(),equip=vi.fn(),gamePointer=vi.fn(),gameKey=vi.fn();canvas.addEventListener('pointerdown',gamePointer);canvas.addEventListener('pointermove',gamePointer);win.addEventListener('keydown',gameKey);

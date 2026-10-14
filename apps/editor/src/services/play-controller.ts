@@ -277,7 +277,9 @@ export class PlayController {
       this.bridge.refresh();
       this.syncPlayCamera();
     }
-    if (this.session.state === 'playing') {this.bodyIk?.sync(this.session.runtime);this.optionsWeapons?.sync(this.session.runtime);}
+    if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
+    // 暂停只重建同一相位的装配请求；异步资产就绪与持握草稿预览不推进模拟/动画时钟。
+    if (this.session.state !== 'stopped') this.optionsWeapons?.sync(this.session.runtime);
     return n;
   }
 

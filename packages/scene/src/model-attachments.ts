@@ -14,12 +14,12 @@ export type ActorHoldProfiles = Record<string, ActorHoldProfile>;
 export function validActorHoldSlot(v:unknown):v is ActorHoldSlot { return validBonePositionSlot(v)&&validSocketTransform(v); }
 export function validActorHoldProfiles(v:unknown):v is ActorHoldProfiles {
   return record(v)&&Object.keys(v).length<=64&&Object.entries(v).every(([guid,p])=>
-    !!guid&&record(p)&&record(p.model)&&p.model.guid===guid&&typeof p.model.path==='string'
+    /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(guid)&&!['__proto__','constructor','prototype'].includes(guid)&&record(p)&&record(p.model)&&p.model.guid===guid&&typeof p.model.path==='string'
     &&p.model.path.startsWith('assets/')&&!p.model.path.includes('\\')&&!p.model.path.split('/').some(s=>!s||s==='.'||s==='..')&&validActorHoldSlot(p.slot));
 }
 export function actorHoldSlot(profiles:ActorHoldProfiles|undefined,model:AssetRef):ActorHoldSlot|undefined {
   if(profiles!==undefined&&!validActorHoldProfiles(profiles))throw new Error('E_ACTOR_HOLD_PROFILE: 角色持握配置无效');
-  const profile=model.guid?profiles?.[model.guid]:undefined;
+  const profile=model.guid&&profiles&&Object.hasOwn(profiles,model.guid)?profiles[model.guid]:undefined;
   return profile?structuredClone(profile.slot):undefined;
 }
 export function validBonePositionSlot(v:unknown):v is BonePositionSlot {

@@ -48,6 +48,9 @@ import { RuntimeBodyIk } from './services/runtime-body-ik';
 import { RuntimeWeapons } from './services/runtime-weapons';
 import { createModelDraw } from '@aether/render';
 import { BodyIkPanel } from './services/body-ik-panel';
+import { ActorHoldSlotSession } from './services/actor-hold-slot';
+import { ActorHoldSlotPanel } from './services/actor-hold-slot-panel';
+import { ActorHoldSlotViewport } from './services/actor-hold-slot-viewport';
 import { AnimationDebugCollector } from './services/animation-debug/collector';
 import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
 import { AnimationDebugPanel } from './services/animation-debug/panel';
@@ -1304,6 +1307,16 @@ async function boot(): Promise<void> {
   const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
   const ikHost = document.createElement('div'); ikHost.id = 'runtime-body-ik-panel'; motionHost.after(ikHost);
   const bodyIkPanel = new BodyIkPanel(ikHost, bodyIk);
+  const holdSlotSession=new ActorHoldSlotSession({context:()=>weaponModels.holdContext(),editable:()=>playCtl.isPaused&&playCtl.observing,
+    read:path=>readProjectFile(path,url=>fetch(url,{cache:'no-store'})),write:(path,patch,baseHash)=>writeProjectFile(path,{patch,baseHash}),
+    preview:(guid,profiles)=>weaponModels.setHoldProfiles(guid,profiles),invalidate:path=>sharedMotionLibrary.invalidateMeta(path)});
+  const holdSlotViewport=new ActorHoldSlotViewport(canvas,renderer,holdSlotSession,hitTestGizmo);
+  const holdSlotHost=document.createElement('div');document.getElementById('center')!.append(holdSlotHost);
+  const holdSlotPanel=new ActorHoldSlotPanel(holdSlotHost,holdSlotSession,{
+    calibrate:()=>{if(!playCtl.isPlaying&&!startPlay())return;if(!playCtl.isPaused)playCtl.pause();observationNavigation?.toggle(true);setGizmoModeUI('translate');},
+    mode:setGizmoModeUI,equip:id=>{if(playCtl.session.runtime?.weapons.equippedId===id)return;holdSlotViewport.release(true);playCtl.resume();playCtl.session.runtime?.equipWeapon(id);}});
+  (window as unknown as {__editor:Record<string,unknown>}).__editor.holdSlot={summary:()=>({...holdSlotSession.summary(),gizmo:renderer.getGizmoInfo()})};
+  window.addEventListener('blur',()=>holdSlotViewport.release(true));
   const animationDebugHost = document.createElement('div'); document.getElementById('center')!.append(animationDebugHost);
   const animationDebugPanel = new AnimationDebugPanel(animationDebugHost, new AnimationDebugCollector(new RuntimeAnimationDebugSource({
     runtime: () => playCtl.session.runtime,
@@ -1944,11 +1957,13 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying && k === 'r') { e.preventDefault(); playCtl.session.runtime?.reload(); return; }
     if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
       e.preventDefault();
+      if(holdSlotSession.editable&&holdSlotSession.shown){holdSlotSession.history(k==='y'||e.shiftKey);return;}
       reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
       return;
     }
     if ((e.ctrlKey || e.metaKey) && k === 's') {
       e.preventDefault();
+      if(holdSlotSession.ready&&holdSlotSession.shown){void holdSlotSession.save();return;}
       void saveSpawnEdits();
       return;
     }
@@ -3858,7 +3873,7 @@ async function boot(): Promise<void> {
   observationNavigation=new PlayObservationNavigation(canvas,document.querySelector<HTMLButtonElement>('#btn-observation-camera')!,document.querySelector<HTMLElement>('#observation-camera-hint')!,{
     get:()=>({target:[...camera.target] as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation}),
     set:(s:ViewCameraState)=>{camera.target=[...s.target];camera.distance=s.distance;camera.yaw=s.yaw;panel.params.cameraElevation=s.elevationDeg;},
-  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},changed:()=>{hudDirty=true;viewNavigationControl?.sync();}});
+  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},claimPointer:event=>holdSlotViewport.claim(event),changed:()=>{hudDirty=true;viewNavigationControl?.sync();}});
   viewNavigationControl=new ViewNavigationControl(document.querySelector<HTMLButtonElement>('#btn-freecam')!,{
     playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,freeCam:()=>freeCamOn,setFreeCam,
     setObservation:on=>observationNavigation!.toggle(on),
@@ -4000,6 +4015,7 @@ async function boot(): Promise<void> {
     hud.innerHTML = rows.join('<br>');
     runtimeMotionPanel.render(playCtl.isPlaying);
     bodyIkPanel.render(playCtl.isPlaying);
+    void holdSlotSession.hydrate();holdSlotViewport.sync();holdSlotPanel.render();
   };
 
   // ---- 主循环 ----

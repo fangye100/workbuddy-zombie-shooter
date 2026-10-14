@@ -694,6 +694,8 @@ export class LabRenderer {
    */
   /** 编辑器全部可变状态（services 通过 host.state 读写；render / GPU 装箱也在 LabRenderer 内读它） */
   public readonly state = new EditorState();
+  /** 外部创作target的派生世界frame；不占场景槽位、不持有资产内容。 */
+  public helperGizmo: {position:[number,number,number];rotation:[number,number,number,number]}|null=null;
 
   /** 选中 / 悬停状态机（委托 SelectionService） */
   private readonly selection = new SelectionService(this);

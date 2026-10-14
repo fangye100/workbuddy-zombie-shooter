@@ -14,6 +14,8 @@ export function zoomViewCamera(s:ViewCameraState,factor:number):ViewCameraState 
 export interface ObservationPorts {
   playing():boolean; observing():boolean; setObservation(on:boolean):boolean;
   releaseGameInput():void; equip(index:number):void; changed():void;
+  /** Pause创作handle窄声明；空白仍归观察导航。 */
+  claimPointer?(event:PointerEvent):boolean;
 }
 /** 捕获阶段独占导航事件，阻止既有游戏/编辑输入接收它们。Digits仍走原equip端口。 */
 export class PlayObservationNavigation {
@@ -21,9 +23,9 @@ export class PlayObservationNavigation {
   constructor(private canvas:HTMLCanvasElement,private button:HTMLButtonElement,private hint:HTMLElement,view:ViewCameraControl,private ports:ObservationPorts){
     button.onclick=()=>this.toggle(!ports.observing());
     const consume=(e:Event)=>{e.preventDefault();e.stopImmediatePropagation();};
-    canvas.addEventListener('pointerdown',e=>{if(!ports.observing())return;consume(e);if(this.drag)return;this.drag={id:e.pointerId,x:e.clientX,y:e.clientY,pan:e.button!==0||e.shiftKey};canvas.setPointerCapture(e.pointerId);},true);
-    canvas.addEventListener('pointermove',e=>{if(!ports.observing())return;consume(e);const d=this.drag;if(!d||d.id!==e.pointerId)return;const s=view.get(),dx=e.clientX-d.x,dy=e.clientY-d.y;view.set(d.pan?panViewCamera(s,dx,dy,canvas.clientHeight):orbitViewCamera(s,dx,dy));d.x=e.clientX;d.y=e.clientY;ports.changed();},true);
-    for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)canvas.addEventListener(name,e=>{if(!ports.observing())return;consume(e);if(this.drag?.id===e.pointerId)this.release();},true);
+    canvas.addEventListener('pointerdown',e=>{if(!ports.observing())return;consume(e);if(ports.claimPointer?.(e)||this.drag)return;this.drag={id:e.pointerId,x:e.clientX,y:e.clientY,pan:e.button!==0||e.shiftKey};canvas.setPointerCapture(e.pointerId);},true);
+    canvas.addEventListener('pointermove',e=>{if(!ports.observing())return;consume(e);if(ports.claimPointer?.(e))return;const d=this.drag;if(!d||d.id!==e.pointerId)return;const s=view.get(),dx=e.clientX-d.x,dy=e.clientY-d.y;view.set(d.pan?panViewCamera(s,dx,dy,canvas.clientHeight):orbitViewCamera(s,dx,dy));d.x=e.clientX;d.y=e.clientY;ports.changed();},true);
+    for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)canvas.addEventListener(name,e=>{if(!ports.observing())return;consume(e);if(ports.claimPointer?.(e))return;if(this.drag?.id===e.pointerId)this.release();},true);
     canvas.addEventListener('wheel',e=>{if(!ports.observing())return;consume(e);view.set(zoomViewCamera(view.get(),Math.exp(e.deltaY*.0012)));ports.changed();},{capture:true,passive:false});
     for(const name of ['dblclick','contextmenu'] as const)canvas.addEventListener(name,e=>{if(ports.observing())consume(e);},true);
     window.addEventListener('keydown',e=>{if(!ports.observing()||e.ctrlKey||e.metaKey||e.altKey||e.target instanceof HTMLElement&&(e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)))return;
