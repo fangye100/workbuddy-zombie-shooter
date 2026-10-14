@@ -1,0 +1,351 @@
+{
+  "date": "2026-10-15",
+  "sut": "ebb7bde5abfabc665a3f591a48869c904b0cdbec",
+  "runs": [
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-final/observations.json",
+      "sha256": "707ed8dfcf2ca303466e68ae7e5f66c289fb65ad5f4e86318e9d0ede04145ded",
+      "targetHead": "ebb7bde5abfabc665a3f591a48869c904b0cdbec",
+      "toolSha256": "bb41b36ae1874b21fd8ff43cc82ee7816dc0d2a531021968547d7422f73270d8",
+      "scope": "R10 native Save/Reload",
+      "startedAt": "2026-10-14T17:08:46.671Z",
+      "finishedAt": "2026-10-14T17:09:19.056Z",
+      "gpu": {
+        "secure": true,
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "description": ""
+      },
+      "checks": [
+        {
+          "name": "normal TLS headed NVIDIA",
+          "ok": true
+        },
+        {
+          "name": "pistol Pause profile基准",
+          "ok": true
+        },
+        {
+          "name": "pistol 原点正常点击选中",
+          "ok": true
+        },
+        {
+          "name": "pistol 原生移动/冻结tick",
+          "ok": true
+        },
+        {
+          "name": "pistol Undo回原值",
+          "ok": true
+        },
+        {
+          "name": "pistol Redo恢复移动",
+          "ok": true
+        },
+        {
+          "name": "pistol 原生旋转/两手同frame",
+          "ok": true
+        },
+        {
+          "name": "pistol Save真实磁盘",
+          "ok": true
+        },
+        {
+          "name": "pistol 保留其它meta字段",
+          "ok": true
+        },
+        {
+          "name": "shotgun Pause profile基准",
+          "ok": true
+        },
+        {
+          "name": "shotgun 原点正常点击选中",
+          "ok": true
+        },
+        {
+          "name": "shotgun UI三毫米校准/冻结tick",
+          "ok": true
+        },
+        {
+          "name": "shotgun Undo回原值",
+          "ok": true
+        },
+        {
+          "name": "shotgun Redo恢复移动",
+          "ok": true
+        },
+        {
+          "name": "shotgun 小校准两手同frame",
+          "ok": true
+        },
+        {
+          "name": "shotgun Save真实磁盘",
+          "ok": true
+        },
+        {
+          "name": "shotgun 保留其它meta字段",
+          "ok": true
+        },
+        {
+          "name": "两武器持久配置互不覆盖",
+          "ok": true
+        },
+        {
+          "name": "整页Reload读取两profile",
+          "ok": true
+        },
+        {
+          "name": "Stop作者回滚/ledger零",
+          "ok": true
+        },
+        {
+          "name": "Stop后重启读保存profile",
+          "ok": true
+        },
+        {
+          "name": "另一场景复用同角色profile",
+          "ok": true
+        },
+        {
+          "name": "UI还原完整候选原字节",
+          "ok": true
+        },
+        {
+          "name": "最终Stop账目零",
+          "ok": true
+        }
+      ],
+      "samples": 25,
+      "actions": 265,
+      "exceptions": 0,
+      "consoleErrors": 0,
+      "cleanupInputErrors": 0,
+      "fixtureBeforeSha256": "d6933e85716980e79b207e3f1061789099be237ddfe7abdc30816a47580acce0",
+      "fixtureAfterSha256": "d6933e85716980e79b207e3f1061789099be237ddfe7abdc30816a47580acce0",
+      "sourceHeadAfter": "ebb7bde5abfabc665a3f591a48869c904b0cdbec",
+      "browserPid": 67516,
+      "passed": true
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/audit-native-readonly/observations.json",
+      "sha256": "3c6893574cc8c4877a4992cdf1df00a5b649adef0b4e8b788a8039a1a3313f48",
+      "targetHead": "ebb7bde5abfabc665a3f591a48869c904b0cdbec",
+      "toolSha256": "bb41b36ae1874b21fd8ff43cc82ee7816dc0d2a531021968547d7422f73270d8",
+      "scope": "R10 independent native edit/Undo, no Save",
+      "startedAt": "2026-10-14T17:16:27.234Z",
+      "finishedAt": "2026-10-14T17:16:36.611Z",
+      "gpu": {
+        "secure": true,
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "description": ""
+      },
+      "checks": [
+        {
+          "name": "normal TLS headed NVIDIA",
+          "ok": true
+        },
+        {
+          "name": "pistol Pause profile基准",
+          "ok": true
+        },
+        {
+          "name": "pistol 原点正常点击选中",
+          "ok": true
+        },
+        {
+          "name": "pistol 原生移动/冻结tick",
+          "ok": true
+        },
+        {
+          "name": "pistol Undo回原值",
+          "ok": true
+        },
+        {
+          "name": "pistol Redo恢复移动",
+          "ok": true
+        },
+        {
+          "name": "pistol 原生旋转/两手同frame",
+          "ok": true
+        },
+        {
+          "name": "Audit不Save草稿恢复",
+          "ok": true
+        },
+        {
+          "name": "最终Stop账目零",
+          "ok": true
+        }
+      ],
+      "samples": 11,
+      "actions": 76,
+      "exceptions": 0,
+      "consoleErrors": 0,
+      "cleanupInputErrors": 0,
+      "fixtureBeforeSha256": "d6933e85716980e79b207e3f1061789099be237ddfe7abdc30816a47580acce0",
+      "fixtureAfterSha256": "d6933e85716980e79b207e3f1061789099be237ddfe7abdc30816a47580acce0",
+      "sourceHeadAfter": "ebb7bde5abfabc665a3f591a48869c904b0cdbec",
+      "browserPid": 60792,
+      "passed": true
+    }
+  ],
+  "savedFrameSamples": [
+    {
+      "label": "pistol-saved-ready",
+      "frame": 251,
+      "frameStamp": 251,
+      "slotDiagnostics": [
+        "head IK_AIM_LIMIT: Aim angle clamped to authored limit"
+      ],
+      "modelDiagnostics": [],
+      "modelWarnings": [],
+      "measurements": {
+        "rightTargetResidualM": 1.044023643768162E-07,
+        "rightOrientationResidualRad": 7.300048299977715E-08,
+        "leftTargetResidualM": 3.093949154022358E-08,
+        "leftOrientationResidualRad": 1.632340423778195E-07,
+        "muzzleYawErrorRad": 7.701403423623992E-08,
+        "modelMuzzleToSimulationMountM": 0.781275877809502,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    },
+    {
+      "label": "shotgun-saved-ready",
+      "frame": 382,
+      "frameStamp": 382,
+      "slotDiagnostics": [
+        "head IK_TARGET: Target is unavailable; animation retained"
+      ],
+      "modelDiagnostics": [],
+      "modelWarnings": [],
+      "measurements": {
+        "rightTargetResidualM": 1.6738889190368317E-07,
+        "rightOrientationResidualRad": 4.2146848510894035E-08,
+        "leftTargetResidualM": 5.8035310492724706E-08,
+        "leftOrientationResidualRad": 4.2146848510894035E-08,
+        "muzzleYawErrorRad": 1.212768932924104E-08,
+        "modelMuzzleToSimulationMountM": 1.0305851289397139,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      }
+    }
+  ],
+  "publishedScreenshot": {
+    "source": ".workbuddy/tmp/r10-evidence/headed-save-final/pistol-saved-ready.png",
+    "sample": 9,
+    "sha256": "db70eaa063a6e77eec25abe83871a88f32df671d1ef24f18a49c3cdccf7c2990"
+  },
+  "validationLogs": [
+    {
+      "path": ".workbuddy/tmp/r10-evidence/wu12-tests.log",
+      "sha256": "2f7271e867e81bfedc50e255c446c39cc63fe2bd439f454b990867c4bfc84089"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/wu12-scene-check.log",
+      "sha256": "b4ce4d0226b93d7c364f9f0a6bb3ce914822d24eb287a34734fcc0b08134d496"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gui-final-owner.log",
+      "sha256": "61de6f1df7473e76e0b9509fa5a7e01a15d1bdcab1661a38b0183e3761665d0b"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gui-pause-final.log",
+      "sha256": "bfa830b1d71bf834de2714c8bcb5c357d4dc9fe55dcff54c2fdcdb9d1968a8b3"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gesture-policy-owner.log",
+      "sha256": "7b4962bc9643f11cd83269e8e92c2a027e19e580dd86fa392758d37ae9edd32f"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gesture-policy-type.log",
+      "sha256": "091365264aefafa3055cf90aadaab30a374071dfe2f5198c4ccda1e745fa6294"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gesture-policy-build.log",
+      "sha256": "c60ca94986a90fd04dc4ac88c81d7f07053dbf5255660d9589c54d3bea2b5d2d"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/gesture-policy-arch.log",
+      "sha256": "7b85093e2efd4c1e230633f7283b41fd348f6de19c4323ab27e16bdc0402dbad"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/cross-ready-tools.log",
+      "sha256": "7e7ebb6e2c1983df58a0937a92d7ea41f8d3516422056e0bcaad116476fe39cd"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/knowledge-final.log",
+      "sha256": "9fc2229f6abd684b732901000cfc738a93f592e9528bdadb8e60bf9aa8c5b986"
+    },
+    {
+      "path": ".workbuddy/tmp/r10-evidence/codegraph-incremental.log",
+      "sha256": "f18ac3d36b6198491a95961c51d461c4790fdde348f050b096ac150485039a93"
+    }
+  ],
+  "limits": [
+    "Audit仅草稿操作，未Save",
+    "单Play玩家校准；第二角色GUID隔离由owner测试覆盖",
+    "霰弹枪截图旧leftHand HUD与raw本帧实际结果不同，保留原始文件",
+    "模拟枪口保留yaw-local近似，不认证GPU精确弹道",
+    "历史失败raw保留，不改写为通过",
+    "独立最终Review尚待执行"
+  ],
+  "preservedFailedRuns": [
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save/observations.json",
+      "sha256": "b1a1a238c9151f0239810602bb94d16fbfcda156c766cb9d655dae8100d3b1b3",
+      "targetHead": "0d4fd595e589f16119fe4772e4cc2f0afbda395f",
+      "passed": false,
+      "passedChecks": 1,
+      "totalChecks": 1
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-retry1/observations.json",
+      "sha256": "ce81a43c7717891bd2e12bd016c351b47fb0c26d36e12bb919786ab3fbd85bfd",
+      "targetHead": "382a23d90262087791a6e4b4b56469fd4e6f2315",
+      "passed": false,
+      "passedChecks": 1,
+      "totalChecks": 1
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-retry2/observations.json",
+      "sha256": "e1115bfa3a3654b08481ffdae47dd3655fa0be191a42797188ed43e5357fbc2b",
+      "targetHead": "d462cb7a1f4678227638fa69b50e13398dc23bfc",
+      "passed": false,
+      "passedChecks": 3,
+      "totalChecks": 4
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-retry3/observations.json",
+      "sha256": "31f04721198e55dde3da658297a96663e3257c9171ce8e8dc3f67bfd55f9db1d",
+      "targetHead": "31eef7f5d38a9130f36fcf518dd371e3ef122db0",
+      "passed": false,
+      "passedChecks": 3,
+      "totalChecks": 4
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-policy/observations.json",
+      "sha256": "5141bfa6026ba40333217867fb474e3c2090da55f93291ff10cf10b839b1894e",
+      "targetHead": "ad54e324459556b0bac8f230b5d522d3a4bb90e2",
+      "passed": false,
+      "passedChecks": 6,
+      "totalChecks": 7
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-native-button/observations.json",
+      "sha256": "f27c2fc451b59056e6a1bdecd58f795247bddfa3a052df3ab8e29ffa04198ba9",
+      "targetHead": "6120177719ffc0512b77c37dbdde675d1bd4a1ad",
+      "passed": false,
+      "passedChecks": 18,
+      "totalChecks": 18
+    },
+    {
+      "raw": ".workbuddy/tmp/r10-evidence/headed-save-reload/observations.json",
+      "sha256": "d99b1d1e9c9b390caabf08c984918e0118df3c8572c4a83ab2947e70ffbcb15b",
+      "targetHead": "e556324fef169fdf24392a575ebf88d97fecf07e",
+      "passed": false,
+      "passedChecks": 21,
+      "totalChecks": 21
+    }
+  ]
+}

@@ -55,4 +55,5 @@ docs/animation/evidence/ani-20261010/*.png filter=lfs diff=lfs merge=lfs -text
 docs/animation/evidence/strafe-20261014/*.png filter=lfs diff=lfs merge=lfs -text
 docs/animation/evidence/controls-20261014/*.png filter=lfs diff=lfs merge=lfs -text
 docs/animation/evidence/weapon-hold-20261014/*.png filter=lfs diff=lfs merge=lfs -text
+docs/animation/evidence/hold-slot-20261015/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/shadow-crowd-decals-20261010/*.png filter=lfs diff=lfs merge=lfs -text

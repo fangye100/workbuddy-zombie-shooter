@@ -2342,7 +2342,7 @@
         "weapons",
         "framework"
       ],
-      "read": "v18 Hip相对持握slot、2305610正常持枪真实GPU、可见临时slot重载与最终磁盘恢复证据、socket覆盖和同帧FK",
+      "read": "角色holdProfiles六维槽位、Pause观察原生编辑/Undo/Save CAS与跨场景重载；2026-10-15 Worker24项真实Save与独立Audit9项草稿验收；保留v18兼容slot、2305610历史证据、socket覆盖和同帧FK",
       "sourceRefs": [
         "scene-schema",
         "scene-weapons",
