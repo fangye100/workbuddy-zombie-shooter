@@ -275,7 +275,7 @@
       },
       "rootPolicy": "in-place",
       "loop": true,
-      "nominalSpeedMps": 2.5428107151373855
+      "nominalSpeedMps": 2.1069832729370295
     },
     "game_walk_r": {
       "source": {
@@ -284,7 +284,7 @@
       },
       "rootPolicy": "in-place",
       "loop": true,
-      "nominalSpeedMps": 2.7799848814993395
+      "nominalSpeedMps": 2.3650147334258995
     },
     "game_pistol_fire": {
       "source": {

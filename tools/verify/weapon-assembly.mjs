@@ -69,7 +69,7 @@ export function sceneReadinessExpression(doc,scene){
  const meshes=doc.nodes.flatMap(n=>{const c=n.components.find(c=>c.kind==='MeshRenderer'&&c.enabled!==false);return c&&n.visible!==false?[{id:n.id,name:n.name,asset:c.source.type==='asset'?c.source.ref.path:null,hierarchy:c.background!==true}]:[];});
  return `(()=>{const e=window.__editor;if(!e?.playCtl)return {ok:false,reason:'editor missing'};const r=e.renderer,d=r.getDocument(),source=r.getSceneSource()?.url,expected=${JSON.stringify(meshes)},meshes=expected.map(n=>{const i=r.state.objects.findIndex(o=>o.nodeId===n.id&&!o.removed),o=r.state.objects[i],name=document.querySelector('#hierarchy .hier-row[data-index="'+i+'"]:not(.hier-sub) .hier-name')?.textContent;return {...n,index:i,actualName:o?.name,loadedAssetPath:o?.loadedAssetPath??null,hierarchyName:name??null,ok:i>=0&&o.name===n.name&&(!n.asset||o.loadedAssetPath===n.asset)&&(!n.hierarchy||name===n.name)};}),b=document.querySelector('#btn-play'),rect=b?.getBoundingClientRect(),hit=rect?document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2):null,button=!!rect&&rect.width>5&&rect.height>5&&!b.disabled&&(hit===b||b.contains(hit));return {ok:d?.id===${JSON.stringify(doc.id)}&&source===${JSON.stringify(scene)}&&r.pendingAssetCount===0&&meshes.every(n=>n.ok)&&button,sceneId:d?.id,source,pending:r.pendingAssetCount,meshes,button,state:e.playCtl.state,error:e.playCtl.error,frame:r.state.frameCounter};})()`;
 }
-function actorPoint(p,o){
+export function actorPoint(p,o){
  const [x,y,z,w]=o.quat,v=p.map(n=>n*o.scale),t=[2*(y*v[2]-z*v[1]),2*(z*v[0]-x*v[2]),2*(x*v[1]-y*v[0])];
  return [v[0]+w*t[0]+y*t[2]-z*t[1]+o.pos[0],v[1]+w*t[1]+z*t[0]-x*t[2]+o.pos[1],v[2]+w*t[2]+x*t[1]-y*t[0]+o.pos[2]];
 }
@@ -77,10 +77,10 @@ export function profileOwners(processes,profile){
  const normalized=path.resolve(profile).replaceAll('\\','/').toLowerCase();
  return processes.filter(p=>{const command=p.CommandLine??'';const m=/--user-data-dir(?:=|\s+)(?:"([^"]+)"|([^\s]+))/i.exec(command);return m&&path.resolve(m[1]??m[2]).replaceAll('\\','/').toLowerCase()===normalized;});
 }
-async function freePort(port){
+export async function freePort(port){
  await new Promise((resolve,reject)=>{const server=net.createServer();server.once('error',()=>reject(new Error('CDP端口被占用；不接管/终止已有浏览器')));server.listen(port,'127.0.0.1',()=>server.close(resolve));});
 }
-export const KEY={w:{key:'w',code:'KeyW',windowsVirtualKeyCode:87},s:{key:'s',code:'KeyS',windowsVirtualKeyCode:83},r:{key:'r',code:'KeyR',windowsVirtualKeyCode:82},...Object.fromEntries(['one','two','three','four','five','six','seven'].map((name,i)=>[name,{key:String(i+1),code:'Digit'+(i+1),windowsVirtualKeyCode:49+i}]))};
+export const KEY={w:{key:'w',code:'KeyW',windowsVirtualKeyCode:87},s:{key:'s',code:'KeyS',windowsVirtualKeyCode:83},a:{key:'a',code:'KeyA',windowsVirtualKeyCode:65},d:{key:'d',code:'KeyD',windowsVirtualKeyCode:68},r:{key:'r',code:'KeyR',windowsVirtualKeyCode:82},...Object.fromEntries(['one','two','three','four','five','six','seven'].map((name,i)=>[name,{key:String(i+1),code:'Digit'+(i+1),windowsVirtualKeyCode:49+i}]))};
 export class ProbeInput {
  constructor(cdp,record=()=>{}){this.cdp=cdp;this.record=record;this.held=new Map();this.mouse=null;}
  async key(name,down){const spec=KEY[name];if(!spec)throw new Error('未知按键');if(down)this.held.set(name,spec);await this.cdp.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',...spec,nativeVirtualKeyCode:spec.windowsVirtualKeyCode});if(!down)this.held.delete(name);this.record({input:'key',name,down});}
@@ -94,7 +94,7 @@ const SNAPSHOT=`(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.run
  return {authorDocumentSha256,camera:{...structuredClone(e?.camera),elevationDeg:e?.params.cameraElevation},observing:c?.observing??false,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,url:location.href,secure:isSecureContext,focus:document.activeElement?.tagName,state:c?.state,tick:c?.tick,cycle:c?.session.cycleCount,ledger:c?.ledger?.pending,player:p??null,weapons:r?.weapons.snapshot()??null,weaponEvents:r?.weapons.events.map(e=>({...e}))??[],firing:r?.firing??null,lastShot:r?.lastShot??null,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,
  actor:s?{clip:s.clips[s.clip]?.name??null,time:s.time,playing:s.playing,layer:s.poseLayer?{clip:s.clips[s.poseLayer.clip]?.name??null,time:s.poseLayer.time,weight:s.poseLayer.binding.weight,transition:s.poseLayer.transition?{elapsed:s.poseLayer.transition.elapsed,duration:s.poseLayer.transition.duration}:null}:null,attachmentRequest:s.bodyIk?.attachment??null,handChains:o.skeleton.jointNames.flatMap((name,i)=>/(Left|Right)(Arm|ForeArm|Hand)$/.test(name)?[{name,position:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]),legMatrices:o.skeleton.jointNames.flatMap((name,i)=>/Leg|Foot/.test(name)?[{name,matrix:Array.from(o.skinScratch.slice(i*16,(i+1)*16))}]:[]).slice(0,8)}:null,
  source:e?.renderer.getSceneSource()?.url??null,sceneId:e?.renderer.getDocument()?.id??null,frame:e?.renderer.state.frameCounter};})()`;
-async function visiblePoint(cdp,selector){
+export async function visiblePoint(cdp,selector){
  const value=await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),s=getComputedStyle(e),x=r.x+r.width/2,y=r.y+r.height/2,t=document.elementFromPoint(x,y);return r.width>5&&r.height>5&&x>0&&y>0&&x<innerWidth&&y<innerHeight&&s.display!=='none'&&s.visibility!=='hidden'&&!e.disabled&&(t===e||e.contains(t))?{x,y}:null;})()`);
  if(!value)throw new Error('可见/可点击控件缺失或遮挡 '+selector);return value;
 }
@@ -133,7 +133,7 @@ function inspectAimPoint(spec,intersect){
  if(ground&&(ground[0]<groundBounds.minX||ground[0]>groundBounds.maxX||ground[2]<groundBounds.minZ||ground[2]>groundBounds.maxZ))result.reasons.push('ground-outside-authored-bounds');
  result.ok=result.reasons.length===0;return result;
 }
-async function aimPoint(cdp,spec,record=()=>{}){
+export async function aimPoint(cdp,spec,record=()=>{}){
  const result=await cdp.eval(aimPointExpression(spec));record({input:'aimGuard',...result});
  if(!result?.ok)throw new Error('瞄准guard拒绝：'+(result?.reasons?.join(',')??'missing-result'));
  return result;

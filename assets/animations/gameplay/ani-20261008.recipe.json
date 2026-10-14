@@ -29,14 +29,32 @@
       "source": "ani_p_strafe_l",
       "startFrame": 0,
       "endFrame": 17,
-      "seamFrames": 3
+      "seamFrames": 3,
+      "conditioning": {
+        "sampling": { "unitScale": 1, "upAxis": "y" },
+        "rotationChannels": [
+          { "bone": "LeftUpLeg", "channel": "Zrotation", "scale": 0.7 },
+          { "bone": "RightUpLeg", "channel": "Zrotation", "scale": 0.7 }
+        ],
+        "preserveFootHeight": { "bones": ["LeftFoot", "RightFoot"], "maxCorrectionM": 0.1 },
+        "nominalSpeed": { "bones": ["LeftFoot", "RightFoot"], "heightToleranceM": 0.03, "minSpeedMps": 0.05 }
+      }
     },
     {
       "id": "game_walk_r",
       "source": "ani_p_strafe_r",
       "startFrame": 0,
       "endFrame": 18,
-      "seamFrames": 3
+      "seamFrames": 3,
+      "conditioning": {
+        "sampling": { "unitScale": 1, "upAxis": "y" },
+        "rotationChannels": [
+          { "bone": "LeftUpLeg", "channel": "Zrotation", "scale": 0.7 },
+          { "bone": "RightUpLeg", "channel": "Zrotation", "scale": 0.7 }
+        ],
+        "preserveFootHeight": { "bones": ["LeftFoot", "RightFoot"], "maxCorrectionM": 0.1 },
+        "nominalSpeed": { "bones": ["LeftFoot", "RightFoot"], "heightToleranceM": 0.03, "minSpeedMps": 0.05 }
+      }
     },
     {
       "id": "game_pistol_fire",

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { Euler, Quaternion } from 'three';
+import { conditionFrames, measureDerivedNominal } from './clip-conditioning.mjs';
 
 export const hash = text => `sha256:${createHash('sha256').update(text).digest('hex')}`;
 export function deriveBvh(text, recipe) {
@@ -16,7 +17,7 @@ export function deriveBvh(text, recipe) {
   if (frames.length !== Number(match[1]) || frames.some(f => f.length !== channels.length || !f.every(Number.isFinite))) throw Error('Invalid BVH frame rows');
   const { startFrame, endFrame, seamFrames = 0 } = recipe;
   if (![startFrame, endFrame, seamFrames].every(Number.isInteger) || startFrame < 0 || endFrame >= frames.length || endFrame <= startFrame || seamFrames < 0 || seamFrames >= (endFrame - startFrame) / 2) throw Error('Invalid crop/seam range');
-  const rows = frames.slice(startFrame, endFrame + 1).map(f => [...f]);
+  let rows = frames.slice(startFrame, endFrame + 1).map(f => [...f]);
   // XZ root drift is removed offline as well as at runtime; y bob is retained.
   for (let c = 0; c < channels.length; c++) if (channels[c] === 'Xposition' || channels[c] === 'Zposition') for (const row of rows) row[c] = rows[0][c];
   if (seamFrames) for (let k = 0; k < seamFrames; k++) {
@@ -30,34 +31,41 @@ export function deriveBvh(text, recipe) {
       row.splice(c, 3, ...[e.x, e.y, e.z].map(v => v * 180 / Math.PI)); c += 3;
     }
   }
+  if (recipe.conditioning !== undefined) rows = conditionFrames(header, dt, rows, recipe.conditioning).rows;
   return `${header}MOTION\nFrames: ${rows.length}\nFrame Time: ${dt}\n${rows.map(f => f.map(v => v.toFixed(6)).join(' ')).join('\n')}\n`;
 }
 
-export function publish(root, recipePath) {
-  const recipe = JSON.parse(readFileSync(resolve(root, recipePath), 'utf8'));
+export function publish(root, recipePath, { clipIds } = {}) {
+  const recipeText = readFileSync(resolve(root, recipePath), 'utf8'), recipe = JSON.parse(recipeText);
   if (recipe.schemaVersion !== 1 || !Array.isArray(recipe.clips) || !recipe.clips.length) throw Error('Invalid recipe');
+  if (clipIds !== undefined && (!Array.isArray(clipIds) || !clipIds.length || new Set(clipIds).size !== clipIds.length || clipIds.some(id => !recipe.clips.some(item => item.id === id)))) throw Error('Unknown/duplicate selected clip');
   const pending = [], seen = new Set(), report = [];
   const libPath = resolve(root, 'assets/animations/mixamo/shared.motion.json');
   const lib = JSON.parse(readFileSync(libPath, 'utf8'));
   for (const item of recipe.clips) {
     if (!/^game_[a-z0-9_]+$/.test(item.id) || seen.has(item.id) || !/^ani_[a-z0-9_]+$/.test(item.source)) throw Error('Invalid/duplicate derived identity');
     seen.add(item.id);
+    if (clipIds && !clipIds.includes(item.id)) continue;
     const sourcePath = `assets/animations/mixamo/${item.source}.bvh`, source = readFileSync(resolve(root, sourcePath), 'utf8');
     const sourceMeta = JSON.parse(readFileSync(resolve(root, `${sourcePath}.meta.json`), 'utf8'));
     if (sourceMeta.sourceHash !== hash(source)) throw Error(`${item.source}: stale source hash`);
     const output = deriveBvh(source, item), path = `assets/animations/gameplay/${item.id}.bvh`;
     const old = existsSync(resolve(root, `${path}.meta.json`)) ? JSON.parse(readFileSync(resolve(root, `${path}.meta.json`), 'utf8')) : {};
+    const measured = item.conditioning ? measureDerivedNominal(output, item.conditioning) : null;
     const meta = { ...sourceMeta, ...old, guid: old.guid ?? `as_motion_${item.id}`, sourceHash: hash(output),
       userData: { ...sourceMeta.userData, ...old.userData, acceptance: 'gameplay-derived', derivedFrom: { path: sourcePath, guid: sourceMeta.guid },
-        derivedSourceHash: hash(source), recipe: recipePath, startFrame: item.startFrame, endFrame: item.endFrame, seamFrames: item.seamFrames ?? 0, timingBasis: 'authored-after-headed-preview' } };
+        derivedSourceHash: hash(source), recipe: recipePath, startFrame: item.startFrame, endFrame: item.endFrame, seamFrames: item.seamFrames ?? 0, timingBasis: 'authored-after-headed-preview',
+        ...(item.conditioning ? { derivedRecipeHash: hash(recipeText), conditioning: item.conditioning, ...(measured ? { nominalSpeedMeasure: measured } : {}) } : {}) } };
+    if (!item.conditioning) for (const key of ['derivedRecipeHash', 'conditioning', 'nominalSpeedMeasure']) delete meta.userData[key];
     pending.push([path, output], [`${path}.meta.json`, `${JSON.stringify(meta, null, 2)}\n`]);
     lib.clips[item.id] = { source: { path, guid: meta.guid }, rootPolicy: 'in-place', loop: !!item.seamFrames,
-      ...(lib.clips[item.source]?.nominalSpeedMps ? { nominalSpeedMps: lib.clips[item.source].nominalSpeedMps } : {}) };
+      ...(measured ? { nominalSpeedMps: measured.nominalSpeedMps } : lib.clips[item.source]?.nominalSpeedMps ? { nominalSpeedMps: lib.clips[item.source].nominalSpeedMps } : {}) };
     report.push({ id: item.id, source: item.source, frames: item.endFrame - item.startFrame + 1, sourceHash: hash(source), outputHash: hash(output) });
   }
   for (const [name, states] of Object.entries(recipe.profiles)) {
     if (Object.values(states).some(id => !lib.clips[id])) throw Error(`${name}: unknown clip`);
-    lib.profiles[name] = states;
+    // 定向重发不重新套用其它 profile（它们可能有独立内容维护）。
+    if (!clipIds) lib.profiles[name] = states;
   }
   const text = `${JSON.stringify(lib, null, 2)}\n`, metaPath = `${libPath}.meta.json`;
   const meta = JSON.parse(readFileSync(metaPath, 'utf8')); meta.sourceHash = hash(text);
@@ -69,6 +77,6 @@ export function publish(root, recipePath) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2).filter(a => a !== '--');
-  if (args.length !== 1) throw Error('Usage: derive-clips.mjs <recipe.json>');
-  console.log(JSON.stringify(publish(resolve(import.meta.dirname, '../..'), args[0]), null, 2));
+  if (args.length !== 1 && (args.length !== 3 || args[1] !== '--clips')) throw Error('Usage: derive-clips.mjs <recipe.json> [--clips <id,id>]');
+  console.log(JSON.stringify(publish(resolve(import.meta.dirname, '../..'), args[0], args.length === 3 ? { clipIds: args[2].split(',') } : {}), null, 2));
 }

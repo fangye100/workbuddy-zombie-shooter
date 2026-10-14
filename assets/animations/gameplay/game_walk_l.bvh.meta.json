@@ -31,7 +31,46 @@
     "startFrame": 0,
     "endFrame": 17,
     "seamFrames": 3,
-    "timingBasis": "authored-after-headed-preview"
+    "timingBasis": "authored-after-headed-preview",
+    "derivedRecipeHash": "sha256:6329301dd654b4bfaffc4552e93688cab28b4b96ac1b72f2b99b2cbe0b156a4d",
+    "conditioning": {
+      "sampling": {
+        "unitScale": 1,
+        "upAxis": "y"
+      },
+      "rotationChannels": [
+        {
+          "bone": "LeftUpLeg",
+          "channel": "Zrotation",
+          "scale": 0.7
+        },
+        {
+          "bone": "RightUpLeg",
+          "channel": "Zrotation",
+          "scale": 0.7
+        }
+      ],
+      "preserveFootHeight": {
+        "bones": [
+          "LeftFoot",
+          "RightFoot"
+        ],
+        "maxCorrectionM": 0.1
+      },
+      "nominalSpeed": {
+        "bones": [
+          "LeftFoot",
+          "RightFoot"
+        ],
+        "heightToleranceM": 0.03,
+        "minSpeedMps": 0.05
+      }
+    },
+    "nominalSpeedMeasure": {
+      "nominalSpeedMps": 2.1069832729370295,
+      "samples": 15,
+      "basis": "derived-low-foot-speed-median-v1"
+    }
   },
-  "sourceHash": "sha256:94c3ab2d4da6a1bdafb4ab415e535013946bf23158cb600cb6189bb3cd988dbc"
+  "sourceHash": "sha256:88b983c174f9964fb4a6a3504718fb28c351cd4cc7d5b06a34e8303c04ddfefe"
 }
