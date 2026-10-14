@@ -96,6 +96,7 @@ import {
 } from './services/binding/retarget-workbench';
 import { FREE_CAM_SPEED_MPS, stepFreeCamera } from './services/free-camera';
 import { PlayObservationNavigation,orbitViewCamera,panViewCamera,zoomViewCamera } from './services/play-observation-navigation';
+import { ViewNavigationControl } from './services/view-navigation-control';
 import type { ViewCameraState } from './services/play-camera';
 
 /**
@@ -265,6 +266,7 @@ async function boot(): Promise<void> {
   let lastOutcomeShown: string = 'running';
   const gameAudio = new GameAudio();
   let observationNavigation:PlayObservationNavigation|null=null;
+  let viewNavigationControl:ViewNavigationControl|null=null;
   const playCtl = new PlayController(renderer, bridge, {
     weapons:weaponModels,
     bodyIk,
@@ -308,6 +310,7 @@ async function boot(): Promise<void> {
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
       hudDirty = true;
       observationNavigation?.sync();
+      viewNavigationControl?.sync();
     },
   });
 
@@ -877,6 +880,7 @@ async function boot(): Promise<void> {
       applySceneCamera(ec);
     }
     document.querySelector<HTMLButtonElement>('#btn-freecam')?.classList.toggle('active', on);
+    viewNavigationControl?.sync();
     if (canvas !== null) canvas.style.cursor = on ? 'crosshair' : '';
     hudDirty = true;
     panel.syncValues();
@@ -1949,12 +1953,16 @@ async function boot(): Promise<void> {
       return;
     }
 
-    // ---- 自由相机优先接管 ----
+    // 同一个 V 入口：Edit 飞行，Play/Pause 观察；重复键不反复切换。
+    if(k==='v'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+      e.preventDefault();if(!e.repeat)viewNavigationControl?.toggle();return;
+    }
+    // ---- 编辑态自由飞行优先接管 ----
     // 必须在 PLAY_KEYS 与 gizmo 的 W/E/R 之前：飞行时 W 是"往前飞"而不是"切移动工具"，
     // 箭头键是"飞"而不是"走"。Play 期间 freeCamOn 恒为 false（setFreeCam 会拒绝），
     // 所以这里的拦截不会抢走玩家操作。
     if (freeCamOn) {
-      if (k === 'v' || k === 'escape') {
+      if (k === 'escape') {
         e.preventDefault();
         setFreeCam(false);
         return;
@@ -1965,10 +1973,6 @@ async function boot(): Promise<void> {
         return;
       }
       // 其余键（F 聚焦 / Delete 删除…）照常放行
-    } else if (k === 'v') {
-      e.preventDefault();
-      setFreeCam(true);
-      return;
     }
 
     if (PLAY_KEYS.has(k)) {
@@ -3834,10 +3838,6 @@ async function boot(): Promise<void> {
       });
     }
 
-    // 自由相机开关（gizmo-bar 上的「✈ 自由相机」按钮 / V 键）
-    document.querySelector<HTMLButtonElement>('#btn-freecam')?.addEventListener('click', () => {
-      setFreeCam(!freeCamOn);
-    });
   }
 
   // ---- 尺寸 ----
@@ -3858,7 +3858,11 @@ async function boot(): Promise<void> {
   observationNavigation=new PlayObservationNavigation(canvas,document.querySelector<HTMLButtonElement>('#btn-observation-camera')!,document.querySelector<HTMLElement>('#observation-camera-hint')!,{
     get:()=>({target:[...camera.target] as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation}),
     set:(s:ViewCameraState)=>{camera.target=[...s.target];camera.distance=s.distance;camera.yaw=s.yaw;panel.params.cameraElevation=s.elevationDeg;},
-  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},changed:()=>{hudDirty=true;}});
+  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},changed:()=>{hudDirty=true;viewNavigationControl?.sync();}});
+  viewNavigationControl=new ViewNavigationControl(document.querySelector<HTMLButtonElement>('#btn-freecam')!,{
+    playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,freeCam:()=>freeCamOn,setFreeCam,
+    setObservation:on=>observationNavigation!.toggle(on),
+  });
   const gameHud = new GameHud({
     weaponModels:()=>weaponModels.view(),
     audioControl: gameAudio.control,

@@ -2019,7 +2019,7 @@
     },
     {
       "id": "nd_weapon_game_camera",
-      "name": "武器近景游戏相机",
+      "name": "武器装配俯视跟随相机",
       "parent": null,
       "transform": {
         "position": [
@@ -2052,8 +2052,8 @@
           "far": 200,
           "mode": "orbit-follow",
           "followTarget": null,
-          "pitchDeg": 0,
-          "distance": 1.8,
+          "pitchDeg": 55,
+          "distance": 8,
           "yawOffsetDeg": -90
         }
       ],

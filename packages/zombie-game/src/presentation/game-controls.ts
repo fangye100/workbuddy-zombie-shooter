@@ -20,6 +20,8 @@ export class GameControls {
   private aim: [number,number] = [0,0];
   private mouse: [number,number] | null = null;
   private aimWorld: [number, number] | null = null;
+  /** 桌面请求面向独立于模拟移动 yaw；没有 pointer 时按此方向瞄准/射击。 */
+  private desktopFacing: [number, number] | null = null;
   private pointerFire=false;
   private keyboardFire=false;
   private runtime: RuntimeSession | null = null;
@@ -75,7 +77,8 @@ export class GameControls {
   }
   update(runtime:RuntimeSession|null, paused:boolean, keyboardX:number,keyboardZ:number):void {
     const enabled=!!runtime && !paused && runtime.outcome==='running' && !runtime.progress?.choosing;
-    if(runtime!==this.runtime || !enabled && this.enabled)this.clear();
+    if(runtime!==this.runtime){this.clear();this.desktopFacing=null;}
+    else if(!enabled && this.enabled)this.clear();
     this.runtime=runtime;this.enabled=enabled;
     this.root.hidden=!runtime || !this.touch;
     this.moveStick.textContent=g('移动');this.aimStick.textContent=g('射击');this.reload.textContent=g('换弹');this.interact.textContent=g('交互');
@@ -86,9 +89,25 @@ export class GameControls {
     const input=screenMovement(keyboardX+this.move[0],keyboardZ+this.move[1],this.yaw());runtime.setInput(...input);
     const p=runtime.player();if(!p)return;
     this.aimWorld = null;
-    if(this.mouse){const point=groundAim(this.ray(...this.mouse),.9);if(point){runtime.setAim(...point);this.aimWorld=point;}}
-    else if(Math.hypot(...this.aim)>.1){const [x,z]=screenMovement(...this.aim,this.yaw());this.aimWorld=[p.x+x*20,p.z+z*20];runtime.setAim(...this.aimWorld);}
-    else runtime.setAim(null,null);
+    if(this.mouse){
+      const point=groundAim(this.ray(...this.mouse),.9);
+      if(point){
+        const dx=point[0]-p.x,dz=point[1]-p.z,length=Math.hypot(dx,dz);
+        if(Number.isFinite(length)&&length>1e-6){
+          this.aimWorld=point;
+          if(!this.touch)this.desktopFacing=[dx/length,dz/length];
+        }
+      }
+    } else if(Math.hypot(...this.aim)>.1){
+      const [x,z]=screenMovement(...this.aim,this.yaw());this.aimWorld=[p.x+x*20,p.z+z*20];
+    }
+    if(!this.aimWorld&&!this.touch){
+      // 初始相机前方；此后保留最后有效的请求方向，不能读取已被移动覆盖的 player.yaw。
+      this.desktopFacing??=screenMovement(0,-1,this.yaw());
+      this.aimWorld=[p.x+this.desktopFacing[0]*20,p.z+this.desktopFacing[1]*20];
+    }
+    // 桌面 fallback 是显式 aim，按稳定方向射击；touch 无 aim 仍交原移动/aimAssist 规则。
+    if(this.aimWorld)runtime.setAim(...this.aimWorld);else runtime.setAim(null,null);
     runtime.setFire(this.pointerFire || this.keyboardFire);
   }
   /** Same visible pointer/stick used by gameplay, lifted to the authored aim height. */

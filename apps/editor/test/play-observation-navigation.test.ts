@@ -1,5 +1,6 @@
 import {describe,it,expect,vi,afterEach} from 'vitest';
-import {PlayObservationNavigation,panViewCamera,orbitViewCamera,zoomViewCamera} from '../src/services/play-observation-navigation';
+import {PlayObservationNavigation,panViewCamera,orbitViewCamera,zoomViewCamera,PLAY_OBSERVATION_TITLE} from '../src/services/play-observation-navigation';
+import {ViewNavigationControl} from '../src/services/view-navigation-control';
 import type {ViewCameraState} from '../src/services/play-camera';
 class Surface {
   listeners:{name:string;fn:(e:any)=>void;capture:boolean}[]=[];captures=new Set<number>();clientHeight=800;hidden=false;disabled=false;textContent='';tagName='CANVAS';isContentEditable=false;onclick:(()=>void)|null=null;style={cursor:''};attributes=new Map();classList={toggle:vi.fn()};
@@ -18,8 +19,21 @@ describe('Play观察导航与输入边界',()=>{
     win.emit('keydown',{key:'w'});expect(gameKey).not.toHaveBeenCalled();win.emit('keydown',{key:'7'});expect(equip).toHaveBeenCalledWith(6);
     win.emit('blur');expect(canvas.captures.size).toBe(0);expect(release).toHaveBeenCalled();
     const old=structuredClone(s);canvas.emit('pointerdown',{pointerId:2,clientX:100,clientY:100,button:2});canvas.emit('pointermove',{pointerId:2,clientX:110,clientY:130});expect(s.target).not.toEqual(old.target);canvas.emit('pointercancel',{pointerId:2});expect(canvas.captures.size).toBe(0);
-    canvas.emit('wheel',{deltaY:-100});expect(s.distance).toBeLessThan(old.distance);win.emit('keydown',{key:'Escape'});expect(on).toBe(false);expect(button.textContent).toBe('观察视角');
+    canvas.emit('wheel',{deltaY:-100});expect(s.distance).toBeLessThan(old.distance);
+    win.emit('keydown',{key:'v',repeat:true});expect(on).toBe(true);win.emit('keydown',{key:'v'});expect(on).toBe(false);expect(button.textContent).toBe('观察视角');
+    nav.toggle(true);win.emit('keydown',{key:'Escape'});expect(on).toBe(false);
     playing=false;nav.sync();expect(button.disabled).toBe(true);
+  });
+  it('可见自由视角按钮在Edit走飞行，在Play/Pause走同一观察端口并同步退出/Stop状态',()=>{
+    const button=new Surface();let playing=false,free=false,observing=false;
+    const setFreeCam=vi.fn(v=>{free=v;}),setObservation=vi.fn(v=>{observing=v;});
+    const control=new ViewNavigationControl(button as never,{playing:()=>playing,observing:()=>observing,freeCam:()=>free,setFreeCam,setObservation});
+    button.onclick!();expect(free).toBe(true);expect(setObservation).not.toHaveBeenCalled();expect(button.attributes.get('aria-pressed')).toBe('true');
+    control.toggle();expect(free).toBe(false);playing=true;control.sync();expect(button.textContent).toBe('观察视角 V');expect((button as any).title).toBe(PLAY_OBSERVATION_TITLE);
+    button.onclick!();expect(observing).toBe(true);expect(button.textContent).toBe('回游戏相机 V');expect(setFreeCam).toHaveBeenCalledTimes(2);
+    observing=false;control.sync();expect(button.attributes.get('aria-pressed')).toBe('false');
+    // Pause 仍属于 playing 会话；不触发编辑态飞行。
+    control.toggle();expect(observing).toBe(true);playing=false;observing=false;control.sync();expect(button.textContent).toBe('自由相机 V');expect(button.attributes.get('aria-pressed')).toBe('false');
   });
   it('共用编辑态数学保留视高/朝向、距离与俯仰边界且不写原状态',()=>{
     const s:ViewCameraState={target:[0,1,0],distance:5,yaw:0,elevationDeg:0},old=structuredClone(s);

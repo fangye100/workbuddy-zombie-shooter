@@ -1,6 +1,7 @@
 /** Editor 临时 Play 观察输入；相机生命周期仍归 PlayCameraController。 */
 import type { ViewCameraControl,ViewCameraState } from './play-camera';
 const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
+export const PLAY_OBSERVATION_TITLE='Play/Pause 观察：左拖环绕、右/中键平移、滚轮缩放；V 切换、Esc 返回游戏相机';
 export function orbitViewCamera(s:ViewCameraState,dx:number,dy:number):ViewCameraState {
   return {...s,target:[...s.target],yaw:s.yaw-dx*.006,elevationDeg:clamp(s.elevationDeg+dy*.25,-89,89)};
 }
@@ -26,7 +27,7 @@ export class PlayObservationNavigation {
     canvas.addEventListener('wheel',e=>{if(!ports.observing())return;consume(e);view.set(zoomViewCamera(view.get(),Math.exp(e.deltaY*.0012)));ports.changed();},{capture:true,passive:false});
     for(const name of ['dblclick','contextmenu'] as const)canvas.addEventListener(name,e=>{if(ports.observing())consume(e);},true);
     window.addEventListener('keydown',e=>{if(!ports.observing()||e.ctrlKey||e.metaKey||e.altKey||e.target instanceof HTMLElement&&(e.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)))return;
-      if(e.key==='Escape'){consume(e);this.toggle(false);return;}
+      if(e.key==='Escape'||e.key.toLowerCase()==='v'){consume(e);if(!e.repeat)this.toggle(false);return;}
       if(/^[1-7]$/.test(e.key)){consume(e);if(!e.repeat)ports.equip(Number(e.key)-1);return;}
       if(['w','a','s','d','q','e','r','j','v','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)||['w','a','s','d','q','e','r','j','v'].includes(e.key.toLowerCase()))consume(e);
     },true);
@@ -36,5 +37,5 @@ export class PlayObservationNavigation {
   }
   toggle(on:boolean):void {this.release();this.ports.releaseGameInput();if(this.ports.setObservation(on)){this.sync();this.ports.changed();}}
   release():void {const d=this.drag;this.drag=null;if(d&&this.canvas.hasPointerCapture(d.id))this.canvas.releasePointerCapture(d.id);}
-  sync():void {if(!this.ports.playing())this.release();const on=this.ports.observing();this.button.disabled=!this.ports.playing();this.button.textContent=on?'回游戏相机':'观察视角';this.button.classList.toggle('active',on);this.button.setAttribute('aria-pressed',String(on));this.hint.hidden=!on;this.canvas.style.cursor=on?'grab':'';}
+  sync():void {if(!this.ports.playing())this.release();const on=this.ports.observing();this.button.disabled=!this.ports.playing();this.button.textContent=on?'回游戏相机':'观察视角';this.button.title=PLAY_OBSERVATION_TITLE;this.button.classList.toggle('active',on);this.button.setAttribute('aria-pressed',String(on));this.hint.hidden=!on;this.canvas.style.cursor=on?'grab':'';}
 }

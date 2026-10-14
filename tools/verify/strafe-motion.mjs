@@ -32,6 +32,20 @@ export function gaitEvidence(samples, expectedClip) {
     minAnkleWorldY:active.length?Math.min(...active.flatMap(s=>s.actor.feet.map(p=>p.world[1]))):null};
 }
 
+/** 读取真实 runtime yaw/角色世界旋转与位移，不用强制 fixedAim 冒充无鼠标路径。 */
+export function desktopStrafeEvidence(samples,expectedClip,expectedYaw) {
+  const gait=gaitEvidence(samples,expectedClip),active=samples.filter(s=>s.state==='playing'&&!s.observing&&s.actor?.clip===expectedClip&&s.player);
+  const angle=v=>Math.abs(Math.atan2(Math.sin(v),Math.cos(v)));
+  let maxYawDeltaRad=0,maxActorYawDeltaRad=0,maxForwardFraction=0;
+  for(let i=0;i<active.length;i++){
+    const s=active[i],forward=actorPoint([0,0,1],{quat:s.authorPlayer.quat,scale:1,pos:[0,0,0]});
+    maxYawDeltaRad=Math.max(maxYawDeltaRad,angle(s.player.yaw-expectedYaw));
+    maxActorYawDeltaRad=Math.max(maxActorYawDeltaRad,angle(Math.atan2(forward[2],forward[0])-expectedYaw));
+    if(i){const a=active[i-1].player,dx=s.player.x-a.x,dz=s.player.z-a.z,length=Math.hypot(dx,dz);if(length>1e-6)maxForwardFraction=Math.max(maxForwardFraction,Math.abs((dx*Math.cos(s.player.yaw)+dz*Math.sin(s.player.yaw))/length));}
+  }
+  return {...gait,maxYawDeltaRad,maxActorYawDeltaRad,maxForwardFraction,ok:gait.ok&&maxYawDeltaRad<.03&&maxActorYawDeltaRad<.03&&maxForwardFraction<.03};
+}
+
 /** 保留确定的现有 clip 回退；持握仍必须由真实本帧双手/装配数据证明。 */
 export function holdingEvidence(sample, contract) {
   const layer=sample.actor?.layer,models=sample.models,ik=sample.actor?.ik,binding=ik?.binding;
@@ -78,7 +92,8 @@ export function framingEvidence(projection) {
 export const STRAFE_SNAPSHOT = `(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState,clip=s?.clips[s.clip],motions=e?.motions.summary()??null;const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));
  const bones=o?.skeleton?o.skeleton.jointNames.map((name,i)=>({name,local:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))})):[];
  const points=bones.map(b=>({...b,world:b.local?(${actorPoint.toString()})(b.local,o):null}));
- return {state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:{...structuredClone(e?.camera),elevationDeg:e?.params.cameraElevation},authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
+ const navigation=typeof document==='undefined'?null:Object.fromEntries(['btn-freecam','btn-observation-camera'].map(id=>{const b=document.getElementById(id);return [id,b?{text:b.textContent,title:b.title,active:b.classList.contains('active'),pressed:b.getAttribute('aria-pressed')}:null];}));
+ return {navigation,freeCam:e?.freeCam?.()??null,state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:{...structuredClone(e?.camera),elevationDeg:e?.params.cameraElevation},authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
  actor:s?{clip:clip?.name??null,time:s.time,duration:clip?.duration??null,phase:clip?.duration>0?s.time/clip.duration:null,normalization:Array.from(o.skeleton.normalization),feet:['LeftFoot','RightFoot'].map(name=>points.find(p=>p.name===name)),hips:points.find(p=>p.name==='Hips'),hands:points.filter(p=>/Hand$/.test(p.name)),joints:points,ik:s.bodyIk?{binding:structuredClone(s.bodyIk.binding),diagnostics:structuredClone(s.bodyIk.diagnostics),attachment:structuredClone(s.bodyIk.attachment??null)}:null,layer:motions?.nodes.find(n=>n.nodeId===d.playerStart)?.layer??null}:null};})()`;
 
 export const FRAMING_EXPRESSION=`(async()=>{const s=await ${STRAFE_SNAPSHOT},e=window.__editor,canvas=document.querySelector('#gpu'),r=canvas.getBoundingClientRect(),points=(s.actor?.joints??[]).filter(p=>p.world).map(p=>({name:p.name,...e.renderer.worldToScreen(p.world)})),pad=26,bounds=points.length?{left:Math.min(...points.map(p=>p.x))-pad,right:Math.max(...points.map(p=>p.x))+pad,top:Math.min(...points.map(p=>p.y))-pad,bottom:Math.max(...points.map(p=>p.y))+pad}:null;
@@ -120,12 +135,35 @@ export async function runStrafeProbe(options) {
     const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
     const drag=async(dx,dy,button='left')=>{if(Math.abs(dx)>530||Math.abs(dy)>250)throw Error('观察拖动超出有界范围');const p=await visiblePoint(cdp,'#gpu');await input.pointer(p,true,button);for(let k=1;k<=8;k++){await input.move({x:p.x+dx*k/8,y:p.y+dy*k/8});await sleep(20);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(120);};
     const capture=async label=>{const sample=await snap(label),before=await cdp.eval('window.__editor.renderer.state.frameCounter'),{data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),after=await cdp.eval('window.__editor.renderer.state.frameCounter'),file=label+'.png';fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({file,sample:report.samples.length-1,frameRange:[before,after],clip:sample.actor?.clip,phase:sample.actor?.phase,state:sample.state,observing:sample.observing});return sample;};
-    const author=await snap('author');await capture('01-author');await click('#btn-play');
+    const author=await snap('author');await capture('01-author');await input.tap('v');const editFree=await snap('edit-free-v');await input.tap('v');const editOrbit=await snap('edit-orbit-v');check('Edit V保留自由飞行开关',editFree.freeCam?.on&&!editOrbit.freeCam?.on&&!editOrbit.observing,{editFree,editOrbit});await click('#btn-play');
     if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"&&window.__editor.weaponModels.snapshot().visible&&window.__editor.motions.summary().pending===0'),{timeout:20000,interval:150}))throw Error('Play/动作/持握模型未就绪');
-    report.ikPanel=await collapseIkPanel(cdp,click,action=>report.actions.push({...action,atMs:Date.now()}));
     const baseline=await snap('play-ready');check('正常游戏视图与持枪',!baseline.observing&&baseline.models.visible&&baseline.models.weaponId==='pistol',baseline.models);
     const cameraYaw=baseline.camera.yaw,aimYaw=Math.atan2(-Math.cos(cameraYaw),-Math.sin(cameraYaw))*180/Math.PI;
     const aim=async()=>{const point=await aimPoint(cdp,aimYaw,action=>report.actions.push({...action,atMs:Date.now()}));await input.move(point);};
+    check('作者GodView俯视跟随机位',Math.abs(baseline.camera.distance-8)<.001&&Math.abs(baseline.camera.elevationDeg-55)<.001,baseline.camera);
+    // 此阶段没有 mouseMove/画布 pointer 输入；只点工具栏 Play 后直接按 A/D。
+    const defaultYaw=aimYaw*Math.PI/180;
+    for(const [key,clip] of [['a','walk_l'],['d','walk_r']]){
+      const start=report.samples.length;await input.key(key,true);const until=Date.now()+Math.min(options.holdMs,1000);
+      while(Date.now()<until){await sleep(45);await snap('no-pointer-'+key);}
+      const moving=report.samples.slice(start),evidence=desktopStrafeEvidence(moving,clip,defaultYaw);
+      check(key+'初始无pointer侧移/面向',evidence.ok&&!report.actions.slice(0).some(a=>a.input==='mouseMove'),evidence);
+      await capture('no-pointer-'+key+'-game');await input.key(key,false);await sleep(150);
+    }
+    report.ikPanel=await collapseIkPanel(cdp,click,action=>report.actions.push({...action,atMs:Date.now()}));
+    // 实际 pointer 改成反向面向，再清输入/Pause/观察/返回，不能回跳相机默认 heading。
+    const otherYaw=aimYaw+180,otherPoint=await aimPoint(cdp,otherYaw,action=>report.actions.push({...action,atMs:Date.now()}));await input.move(otherPoint);await sleep(200);
+    const pointed=await snap('pointer-changed-facing');check('真实pointer更新非默认面向',Math.abs(Math.atan2(Math.sin(pointed.player.yaw-otherYaw*Math.PI/180),Math.cos(pointed.player.yaw-otherYaw*Math.PI/180)))<.03,pointed.player);
+    await click('#btn-pause');const viewBefore=await snap('view-before-free');await click('#btn-freecam');const viewOn=await snap('actual-free-button');
+    check('用户自由按钮在Pause进入同一观察导航',viewOn.observing&&viewOn.navigation['btn-freecam'].pressed==='true'&&viewOn.navigation['btn-observation-camera'].pressed==='true'&&!viewOn.freeCam.on,viewOn.navigation);
+    await drag(35,-20);const center=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:center.x,y:center.y,deltaX:0,deltaY:100});await drag(20,10,'right');const navigated=await snap('actual-free-navigated');
+    check('用户观察orbit/pan/wheel实际改变机位且Pause冻结',navigated.observing&&navigated.tick===viewBefore.tick&&navigated.actor.time===viewBefore.actor.time&&navigated.camera.yaw!==viewBefore.camera.yaw&&navigated.camera.distance!==viewBefore.camera.distance&&JSON.stringify(navigated.camera.target)!==JSON.stringify(viewBefore.camera.target),{viewBefore,navigated});
+    await input.tap('v');const viewReturned=await snap('actual-free-v-return');check('观察态V退出且两个按钮一致',!viewReturned.observing&&viewReturned.navigation['btn-freecam'].pressed==='false'&&viewReturned.navigation['btn-observation-camera'].pressed==='false',viewReturned.navigation);
+    await click('#btn-pause');await sleep(150);await input.key('a',true);const keptStart=report.samples.length,keptUntil=Date.now()+700;
+    while(Date.now()<keptUntil){await sleep(45);await snap('preserved-heading-a');}await input.key('a',false);
+    check('Pause观察返回后无pointer保留非默认面向',desktopStrafeEvidence(report.samples.slice(keptStart),'walk_r',otherYaw*Math.PI/180).ok,desktopStrafeEvidence(report.samples.slice(keptStart),'walk_r',otherYaw*Math.PI/180));
+    await input.tap('v');const playObserve=await snap('playing-v-observe');await input.key('a',true);await sleep(180);await input.key('a',false);const observeInput=await snap('observing-key-suppressed');await input.tap('escape');const playReturned=await snap('playing-escape-return');
+    check('Play V观察拦截游戏移动并Esc返回',playObserve.observing&&observeInput.observing&&Math.hypot(observeInput.player.x-playObserve.player.x,observeInput.player.z-playObserve.player.z)<1e-5&&!playReturned.observing&&!playReturned.freeCam.on,{playObserve,observeInput,playReturned});
     await aim();
     for(const [key,clip,peakRange] of [['a','walk_l',[.35,.46]],['d','walk_r',[.55,.66]]]) {
       await input.key(key,true);const start=report.samples.length,until=Date.now()+options.holdMs;
@@ -136,7 +174,7 @@ export async function runStrafeProbe(options) {
       if(!await waitFor(async()=>{await aim();const s=await snap(key+'-pre-pause');return s.actor?.clip===clip&&s.actor.phase>=peakRange[0]&&s.actor.phase<=peakRange[1];},{timeout:1500,interval:25}))throw Error('未采到自然宽步相位');
       await click('#btn-pause');await input.key(key,false);const paused=await snap(key+'-pause');await sleep(250);const frozen=await snap(key+'-frozen');
       check(key+'Pause冻结原步态',paused.state==='paused'&&paused.actor?.clip===clip&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time,{paused,frozen});
-      await capture(key+'-paused-game');await click('#btn-observation-camera');
+      await capture(key+'-paused-game');await click('#btn-freecam');
       const plan=observationPlan(paused);report.actions.push({observationPlan:key,...plan});await drag(plan.dx,plan.dy);
       const point=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:point.x,y:point.y,deltaX:0,deltaY:plan.wheelDelta});await sleep(200);
       const beforePan=await cdp.eval(FRAMING_EXPRESSION),bounds=beforePan.bounds,rect=beforePan.canvas;
@@ -147,7 +185,7 @@ export async function runStrafeProbe(options) {
       if(!framing.ok)throw Error('观察截图不满足全身可见：'+framing.reasons.join(','));
       const viewed=await capture(key+'-paused-observation');
       check(key+'冻结全身观察保留动作',viewed.observing&&viewed.tick===paused.tick&&viewed.actor?.time===paused.actor?.time&&viewed.actor?.clip===clip,viewed);
-      await click('#btn-observation-camera');await click('#btn-pause');await aim();await sleep(200);const idle=await snap(key+'-released');check(key+'停步回idle',idle.state==='playing'&&!idle.observing&&idle.actor?.clip==='idle',idle.actor);
+      await input.tap('v');await click('#btn-pause');await aim();await sleep(200);const idle=await snap(key+'-released');check(key+'停步回idle',idle.state==='playing'&&!idle.observing&&idle.actor?.clip==='idle',idle.actor);
     }
     for(const [key,clip] of [['w','walk_f'],['s','walk_b']]) {
       await aim();await input.key(key,true);const start=report.samples.length,until=Date.now()+600;

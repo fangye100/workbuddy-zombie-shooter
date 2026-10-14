@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
-import { strafeOptions, gaitEvidence, holdingEvidence, observationPlan, framingEvidence, STRAFE_SNAPSHOT, FRAMING_EXPRESSION } from './strafe-motion.mjs';
+import { strafeOptions, gaitEvidence, desktopStrafeEvidence, holdingEvidence, observationPlan, framingEvidence, STRAFE_SNAPSHOT, FRAMING_EXPRESSION } from './strafe-motion.mjs';
 import { ProbeInput } from './weapon-assembly.mjs';
 
 test('定向探针强制固定检出/HTTPS候选入口和完整HEAD，拒绝额外流程参数',()=>{
@@ -18,11 +18,17 @@ test('Observation、暂停、无位移或没有相位循环不得通过真实横
  for(const change of [s=>({...s,observing:true}),s=>({...s,state:'paused'}),s=>({...s,player:{x:0,z:0}}),s=>({...s,actor:{...s.actor,phase:.2}})])assert.equal(gaitEvidence(samples.map(change),'walk_l').ok,false);
  assert.equal(gaitEvidence(samples,'walk_r').ok,false);
 });
-test('A/D使用真实Input并且release精确释放持有键',async()=>{
+test('A/D/V/Esc使用真实Input并且release精确释放持有键',async()=>{
  const calls=[],input=new ProbeInput({send:async(method,params)=>{calls.push({method,params});}});
  await input.key('a',true);await input.key('d',true);await input.release();
  assert.deepEqual(calls.map(c=>[c.method,c.params.type,c.params.code]),[['Input.dispatchKeyEvent','keyDown','KeyA'],['Input.dispatchKeyEvent','keyDown','KeyD'],['Input.dispatchKeyEvent','keyUp','KeyA'],['Input.dispatchKeyEvent','keyUp','KeyD']]);
  assert.equal(input.held.size,0);
+ await input.tap('v');await input.tap('escape');assert.deepEqual(calls.slice(4).map(c=>[c.params.type,c.params.code]),[['keyDown','KeyV'],['keyUp','KeyV'],['keyDown','Escape'],['keyUp','Escape']]);
+});
+test('无pointer横移证据必须同时证明实际actor面向、runtime yaw和正交位移',()=>{
+ const samples=Array.from({length:8},(_,i)=>({state:'playing',observing:false,tick:i,fixedStep:1/30,player:{x:0,z:i*.15,yaw:0},authorPlayer:{quat:[0,Math.SQRT1_2,0,Math.SQRT1_2]},actor:{clip:'walk_r',phase:[.2,.4,.7,.95,.15,.35,.6,.9][i],feet:[{local:[-.3,0,0],world:[-.3,.2,0]},{local:[.3,0,0],world:[.3,.2,0]}]}}));
+ assert.equal(desktopStrafeEvidence(samples,'walk_r',0).ok,true);
+ for(const mutate of [s=>s.player.yaw=Math.PI/2,s=>s.authorPlayer.quat=[0,0,0,1],s=>{s.player.x=s.player.z;s.player.z=0;},s=>s.observing=true]){const bad=structuredClone(samples);bad.forEach(mutate);assert.equal(desktopStrafeEvidence(bad,'walk_r',0).ok,false);}
 });
 test('完整浏览器快照只使用实际公开的 motions.summary，作者态/Play态均可读取',async()=>{
  const identity=()=>Float32Array.from([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
@@ -44,7 +50,7 @@ test('完整浏览器快照只使用实际公开的 motions.summary，作者态/
  const play=await runInNewContext(STRAFE_SNAPSHOT,context);
  assert.equal(play.actor.clip,'walk_l');assert.equal(play.actor.phase,.25);assert.equal(play.actor.layer,layer);assert.equal(play.tick,12);assert.equal(play.fixedStep,1/30);
  assert.deepEqual(Array.from(play.actor.feet,p=>p.name),['LeftFoot','RightFoot']);assert.equal(play.actor.feet[0].world[0],2+skinScratch[28]);assert.equal(play.actor.hands.length,2);assert.equal(reads,2);
- const dom={querySelector:()=>({getBoundingClientRect:()=>({left:0,right:1440,top:80,bottom:1000,width:1440,height:920})}),querySelectorAll:()=>[]};
+ const dom={getElementById:()=>null,querySelector:()=>({getBoundingClientRect:()=>({left:0,right:1440,top:80,bottom:1000,width:1440,height:920})}),querySelectorAll:()=>[]};
  const projection=await runInNewContext(FRAMING_EXPRESSION,{...context,document:dom,innerWidth:1440,innerHeight:1000,getComputedStyle:()=>({display:'block'})});
  assert.equal(projection.points.length,5);assert.equal(projection.uiRects.length,0);assert.ok(projection.bounds.left<projection.bounds.right);assert.equal(reads,3);
 });
