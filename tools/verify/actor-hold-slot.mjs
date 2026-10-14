@@ -68,7 +68,13 @@ export async function runSlotProbe(options){
     check('UI还原完整候选原字节',hash(fs.readFileSync(fixture))===hash(before),{before:hash(before),after:hash(fs.readFileSync(fixture))});await click('#hold-slot-reload');await capture('restored-reloaded');
   }
   await click('#btn-stop');const final=await snap('final-stop');check('最终Stop账目零',final.state==='stopped'&&final.ledger===0&&final.models.pending===0,final.ledger);
- }catch(e){report.exceptions.push(String(e));}
+ }catch(e){
+  report.exceptions.push(String(e));
+  if(session)try{
+    report.failure=await session.cdp.eval(`(()=>{const e=window.__editor,h=document.querySelector('#actor-hold-slot-panel'),detail=h?.querySelector(':scope > details');return {focus:document.hasFocus(),active:document.activeElement?.outerHTML,detailsOpen:detail?.open,state:e?.playCtl.state,slot:e?.holdSlot?.summary(),models:e?.weaponModels.snapshot(),controls:['#actor-hold-slot-panel > details > summary','#hold-slot-calibrate','#hold-slot-save'].map(selector=>{const el=document.querySelector(selector);if(!el)return {selector,missing:true};const r=el.getBoundingClientRect(),s=getComputedStyle(el),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {selector,disabled:el.disabled,rect:{x:r.x,y:r.y,width:r.width,height:r.height},style:{display:s.display,visibility:s.visibility,pointerEvents:s.pointerEvents},hit:hit?.outerHTML?.slice(0,500)};})};})()`);
+    const {data}=await session.cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(options.out,'failure-native.png'),Buffer.from(data,'base64'));report.screenshots.push({file:'failure-native.png',failure:true});
+  }catch(error){report.failureCaptureError=String(error);}
+ }
  finally{
   if(input)report.cleanupInputErrors=await input.release();if(session){report.consoleErrors=session.cdp.consoleErrors;report.exceptions.push(...session.cdp.exceptions);let closeTimer;try{await Promise.race([new Cdp(session.ws,undefined).send('Target.closeTarget',{targetId:session.targetId}),new Promise((_,reject)=>{closeTimer=setTimeout(()=>reject(Error('owned target关闭超时')),3000);})]);}catch(e){report.cleanupTargetError=String(e);}finally{clearTimeout(closeTimer);}session.ws.close();session.chrome.kill();}
   report.fixtureAfterSha256=hash(fs.readFileSync(fixture));report.sourceHeadAfter=head();report.finishedAt=new Date().toISOString();report.passed=report.checks.length>5&&report.checks.every(c=>c.ok)&&!report.exceptions.length&&!report.consoleErrors?.length&&!report.cleanupInputErrors?.length&&!report.cleanupTargetError&&report.fixtureAfterSha256===report.fixtureBeforeSha256&&head()===options.expectedHead;fs.writeFileSync(path.join(options.out,'observations.json'),JSON.stringify(report,null,2)+'\n');
