@@ -16,6 +16,13 @@ export function strafeOptions(argv) {
   return probeOptions(argv.includes('--out') ? argv : [...argv,'--out','.workbuddy/tmp/strafe-motion/r7-headed']);
 }
 
+/** 两组验收只通过真实 UI Stop→Play 分隔，避免累计横移消耗同一房间余量。 */
+export async function restartTrial(click,stopSnapshot,playSnapshot,waitReady) {
+  await click('#btn-stop');const stopped=await stopSnapshot();
+  await click('#btn-play');if(!await waitReady())throw Error('重启 Play/动作/持握模型未就绪');
+  return {stopped,restarted:await playSnapshot()};
+}
+
 /** 只把真实游戏视图的移动样本计入步态，Observation/Pause 不能冒充横移。 */
 export function gaitEvidence(samples, expectedClip) {
   const active = samples.filter(s => s.state==='playing' && !s.observing && s.actor?.clip===expectedClip && s.player && s.actor.feet?.length===2 && s.actor.feet.every(p=>p?.local?.every(Number.isFinite)&&p?.world?.every(Number.isFinite)));
@@ -158,12 +165,17 @@ export async function runStrafeProbe(options) {
     check('用户自由按钮在Pause进入同一观察导航',viewOn.observing&&viewOn.navigation['btn-freecam'].pressed==='true'&&viewOn.navigation['btn-observation-camera'].pressed==='true'&&!viewOn.freeCam.on,viewOn.navigation);
     await drag(35,-20);const center=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:center.x,y:center.y,deltaX:0,deltaY:100});await drag(20,10,'right');const navigated=await snap('actual-free-navigated');
     check('用户观察orbit/pan/wheel实际改变机位且Pause冻结',navigated.observing&&navigated.tick===viewBefore.tick&&navigated.actor.time===viewBefore.actor.time&&navigated.camera.yaw!==viewBefore.camera.yaw&&navigated.camera.distance!==viewBefore.camera.distance&&JSON.stringify(navigated.camera.target)!==JSON.stringify(viewBefore.camera.target),{viewBefore,navigated});
+    await capture('actual-free-paused-navigation');
     await input.tap('v');const viewReturned=await snap('actual-free-v-return');check('观察态V退出且两个按钮一致',!viewReturned.observing&&viewReturned.navigation['btn-freecam'].pressed==='false'&&viewReturned.navigation['btn-observation-camera'].pressed==='false',viewReturned.navigation);
     await click('#btn-pause');await sleep(150);await input.key('a',true);const keptStart=report.samples.length,keptUntil=Date.now()+700;
     while(Date.now()<keptUntil){await sleep(45);await snap('preserved-heading-a');}await input.key('a',false);
     check('Pause观察返回后无pointer保留非默认面向',desktopStrafeEvidence(report.samples.slice(keptStart),'walk_r',otherYaw*Math.PI/180).ok,desktopStrafeEvidence(report.samples.slice(keptStart),'walk_r',otherYaw*Math.PI/180));
     await input.tap('v');const playObserve=await snap('playing-v-observe');await input.key('a',true);await sleep(180);await input.key('a',false);const observeInput=await snap('observing-key-suppressed');await input.tap('escape');const playReturned=await snap('playing-escape-return');
     check('Play V观察拦截游戏移动并Esc返回',playObserve.observing&&observeInput.observing&&Math.hypot(observeInput.player.x-playObserve.player.x,observeInput.player.z-playObserve.player.z)<1e-5&&!playReturned.observing&&!playReturned.freeCam.on,{playObserve,observeInput,playReturned});
+    // 用户新路径与旧步态回归各自从作者出生点开始，不改玩家位置或房间边界。
+    const {stopped:r8Stopped,restarted}=await restartTrial(click,async()=>{await sleep(250);return capture('r8-path-stop');},()=>snap('regression-restarted'),()=>waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"&&window.__editor.weaponModels.snapshot().visible&&window.__editor.motions.summary().pending===0'),{timeout:20000,interval:150}));
+    check('R8路径Stop回滚/资源释放',r8Stopped.state==='stopped'&&!r8Stopped.observing&&r8Stopped.authorDocumentSha256===author.authorDocumentSha256&&JSON.stringify(r8Stopped.authorPlayer)===JSON.stringify(author.authorPlayer)&&JSON.stringify(r8Stopped.camera)===JSON.stringify(author.camera)&&r8Stopped.ledger===0&&r8Stopped.models?.pending===0&&r8Stopped.models?.visibleDrawCount===0&&r8Stopped.models?.loaded.length===0&&r8Stopped.motions?.nodes.length===0,r8Stopped);
+    check('真实Play重启原场景出生点',restarted.state==='playing'&&!restarted.observing&&restarted.player.runId!==playReturned.player.runId&&Math.hypot(restarted.player.x-author.authorPlayer.pos[0],restarted.player.z-author.authorPlayer.pos[2])<1e-5&&restarted.authorDocumentSha256===author.authorDocumentSha256,restarted);
     await aim();
     for(const [key,clip,peakRange] of [['a','walk_l',[.35,.46]],['d','walk_r',[.55,.66]]]) {
       await input.key(key,true);const start=report.samples.length,until=Date.now()+options.holdMs;

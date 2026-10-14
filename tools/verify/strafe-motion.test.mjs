@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { webcrypto } from 'node:crypto';
-import { strafeOptions, gaitEvidence, desktopStrafeEvidence, holdingEvidence, observationPlan, framingEvidence, STRAFE_SNAPSHOT, FRAMING_EXPRESSION } from './strafe-motion.mjs';
+import { strafeOptions, restartTrial, gaitEvidence, desktopStrafeEvidence, holdingEvidence, observationPlan, framingEvidence, STRAFE_SNAPSHOT, FRAMING_EXPRESSION } from './strafe-motion.mjs';
 import { ProbeInput } from './weapon-assembly.mjs';
 
 test('定向探针强制固定检出/HTTPS候选入口和完整HEAD，拒绝额外流程参数',()=>{
@@ -11,6 +11,11 @@ test('定向探针强制固定检出/HTTPS候选入口和完整HEAD，拒绝额�
  assert.throws(()=>strafeOptions(['--expected-head','short']));
  assert.throws(()=>strafeOptions(['--expected-head',head,'--url','http://localhost:5100']));
  assert.throws(()=>strafeOptions(['--expected-head',head,'--all-weapons','true']));
+});
+test('新增路径消耗场地后只点击真实Stop→Play隔离回归，保留停止证据并拒绝未就绪',async()=>{
+ const actions=[],click=async selector=>{actions.push(selector);},stop=async()=>{actions.push('stop-snapshot');return {state:'stopped',ledger:0};},play=async()=>{actions.push('play-snapshot');return {state:'playing',player:{x:0,z:2.5}};},ready=async()=>{actions.push('wait-ready');return true;};
+ const result=await restartTrial(click,stop,play,ready);assert.deepEqual(actions,['#btn-stop','stop-snapshot','#btn-play','wait-ready','play-snapshot']);assert.equal(result.stopped.ledger,0);assert.equal(result.restarted.player.z,2.5);
+ actions.length=0;await assert.rejects(restartTrial(click,stop,play,async()=>false),/未就绪/);assert.deepEqual(actions,['#btn-stop','stop-snapshot','#btn-play']);
 });
 test('Observation、暂停、无位移或没有相位循环不得通过真实横移证据',()=>{
  const samples=Array.from({length:8},(_,i)=>({state:'playing',observing:false,tick:i,fixedStep:1/30,player:{x:i*.15,z:0},actor:{clip:'walk_l',phase:[.2,.4,.7,.95,.15,.35,.6,.9][i],feet:[{local:[-.3,0,0],world:[-.3,.2,0]},{local:[.3,0,0],world:[.3,.2,0]}]}}));
