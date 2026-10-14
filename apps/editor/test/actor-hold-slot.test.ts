@@ -5,6 +5,8 @@ import {quatMul,quatAxisAngle} from '@aether/core';
 import {rotateVec3} from '@aether/render';
 import {ActorHoldSlotSession,slotFromWorld} from '../src/services/actor-hold-slot';
 import {GizmoTargetDrag} from '../src/services/gizmo-target-drag';
+import {buildGizmo} from '../src/features/gizmo.feature';
+import type {LabRenderer} from '../src/renderer';
 import type {HoldContext} from '../src/services/runtime-weapons';
 const slot=(x=0):ActorHoldSlot=>({bone:'Hips',position:[x,.2,.3],rotation:[0,0,0,1]});
 function fixture(){
@@ -43,6 +45,10 @@ describe('角色持握资产草稿与保存边界',()=>{
  });
 });
 describe('非场景gizmo坐标与拖拽',()=>{
+ it('每次绘制消费pose后最新外部target，不依赖HUD/selected scene object；停止target可释放',()=>{
+  let pose=identitySocket();const source=vi.fn(()=>structuredClone(pose));const host={helperGizmo:null,helperGizmoSource:source,state:{selectedIndex:null,gizmoSpace:'local',gizmoMode:'translate',gizmoActiveAxis:null}} as unknown as LabRenderer;
+  expect(buildGizmo(host)!.origin).toEqual([0,0,0]);pose={position:[.02,1,.3],rotation:[0,0,0,1]};expect(buildGizmo(host)!.origin).toEqual(pose.position);expect(source).toHaveBeenCalledTimes(2);host.helperGizmoSource=()=>null;expect(buildGizmo(host)).toBeNull();
+ });
  it('世界变化反求角色局部米制/中性旋转，任意actor yaw和scale往返',()=>{
   const actor=quatAxisAngle([0,1,0],1.2),before={position:[3,2,4] as [number,number,number],rotation:[...quatMul(actor,slot().rotation)] as [number,number,number,number]},delta=rotateVec3(actor,[.02,0,.04]);
   const after={position:before.position.map((v,i)=>v+delta[i]!*2) as [number,number,number],rotation:[...quatMul(before.rotation,quatAxisAngle([0,0,1],.1))] as [number,number,number,number]};

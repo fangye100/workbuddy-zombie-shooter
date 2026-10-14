@@ -11,6 +11,7 @@ import type { CoreGizmo } from '@aether/render';
 
 export function buildGizmo(host: LabRenderer): CoreGizmo | null {
   const s = host.state;
+  if(host.helperGizmoSource)host.helperGizmo=host.helperGizmoSource();
   if(host.helperGizmo)return {origin:[...host.helperGizmo.position],quat:s.gizmoSpace==='local'?host.helperGizmo.rotation:[0,0,0,1],mode:s.gizmoMode==='scale'?'translate':s.gizmoMode,activeAxis:s.gizmoActiveAxis};
   const selIdx = s.selectedIndex;
   if (selIdx === null) return null;

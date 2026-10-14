@@ -1311,6 +1311,7 @@ async function boot(): Promise<void> {
     read:path=>readProjectFile(path,url=>fetch(url,{cache:'no-store'})),write:(path,patch,baseHash)=>writeProjectFile(path,{patch,baseHash}),
     preview:(guid,profiles)=>weaponModels.setHoldProfiles(guid,profiles),invalidate:path=>sharedMotionLibrary.invalidateMeta(path)});
   const holdSlotViewport=new ActorHoldSlotViewport(canvas,renderer,holdSlotSession,hitTestGizmo);
+  renderer.helperGizmoSource=()=>{holdSlotViewport.sync();return renderer.helperGizmo;};
   const holdSlotHost=document.createElement('div');document.getElementById('center')!.append(holdSlotHost);
   const holdSlotPanel=new ActorHoldSlotPanel(holdSlotHost,holdSlotSession,{
     calibrate:()=>{if(!playCtl.isPlaying&&!startPlay())return;if(!playCtl.isPaused)playCtl.pause();observationNavigation?.toggle(true);setGizmoModeUI('translate');},
@@ -4015,7 +4016,7 @@ async function boot(): Promise<void> {
     hud.innerHTML = rows.join('<br>');
     runtimeMotionPanel.render(playCtl.isPlaying);
     bodyIkPanel.render(playCtl.isPlaying);
-    void holdSlotSession.hydrate();holdSlotViewport.sync();holdSlotPanel.render();
+    void holdSlotSession.hydrate();holdSlotPanel.render();
   };
 
   // ---- 主循环 ----

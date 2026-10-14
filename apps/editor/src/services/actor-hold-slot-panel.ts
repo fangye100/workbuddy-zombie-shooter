@@ -8,7 +8,7 @@ export class ActorHoldSlotPanel {
   private positions:HTMLInputElement[]=[];private angles:HTMLInputElement[]=[];private quats:HTMLInputElement[]=[];
   private commands:HTMLButtonElement[]=[];private key='';private quatDraft=false;private selected='';
   constructor(host:HTMLElement,private session:ActorHoldSlotSession,ports:{calibrate():void;mode(mode:'translate'|'rotate'):void;equip(id:string):void}){
-    host.id='actor-hold-slot-panel';host.style.cssText='position:absolute;top:48px;left:12px;z-index:15;width:292px;max-height:calc(100% - 110px);overflow:auto;background:#151b23ef;color:#eee;border:1px solid #617083;border-radius:5px;padding:8px;font-size:12px';
+    host.id='actor-hold-slot-panel';host.style.cssText='position:absolute;top:48px;left:12px;z-index:35;width:292px;max-height:calc(100% - 110px);overflow:auto;background:#151b23ef;color:#eee;border:1px solid #617083;border-radius:5px;padding:8px;font-size:12px';
     const summary=document.createElement('summary');summary.textContent='角色武器持握槽';this.details.append(summary);host.append(this.details);
     this.info.style.cssText='overflow-wrap:anywhere;margin:8px 0';this.info.id='hold-slot-asset';this.details.append(this.info);
     const button=(id:string,label:string,run:()=>void,editable=false)=>{const b=document.createElement('button');b.id=id;b.textContent=label;b.onclick=run;b.dataset.editable=String(editable);b.style.margin='3px';this.details.append(b);this.commands.push(b);return b;};

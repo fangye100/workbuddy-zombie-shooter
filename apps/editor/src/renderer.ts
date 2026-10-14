@@ -696,6 +696,8 @@ export class LabRenderer {
   public readonly state = new EditorState();
   /** 外部创作target的派生世界frame；不占场景槽位、不持有资产内容。 */
   public helperGizmo: {position:[number,number,number];rotation:[number,number,number,number]}|null=null;
+  /** 每帧pose求值之后读取外部target，避免HUD节流影响手柄；不拥有创作数据。 */
+  public helperGizmoSource:(()=>LabRenderer['helperGizmo'])|null=null;
 
   /** 选中 / 悬停状态机（委托 SelectionService） */
   private readonly selection = new SelectionService(this);
