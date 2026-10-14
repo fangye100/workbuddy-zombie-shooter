@@ -1,0 +1,760 @@
+{
+  "description": "R9真实右侧持握的紧凑原始数据索引；完整CPU/GPU原始记录保留本地，不替代几何或像素证据。",
+  "base": "a9467fb864d8923e60ddca6ec375a8a75409064f",
+  "validatedSut": "0833275cf1f544debb2dc01a9a12219974d48926",
+  "sourceMatch": {
+    "cpuTool": true,
+    "cpuScene": true,
+    "gpuTool": true,
+    "gpuScene": true
+  },
+  "content": {
+    "slots": [
+      {
+        "id": "pistol",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.08010323525202694,
+            0.2363754820823669,
+            0.5000341653823853
+          ]
+        }
+      },
+      {
+        "id": "shotgun",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.05,
+            0.324285645940184,
+            0.34761240413744543
+          ]
+        }
+      },
+      {
+        "id": "smg",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.05,
+            0.41103016046972807,
+            0.3219664696753092
+          ]
+        }
+      },
+      {
+        "id": "sniper",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.05,
+            0.30085566593821056,
+            0.32990974269534756
+          ]
+        }
+      },
+      {
+        "id": "chainsaw",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.05,
+            0.26084749269379015,
+            0.5778951087163537
+          ]
+        }
+      },
+      {
+        "id": "flame",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.05,
+            0.311319482387783,
+            0.3995957025749669
+          ]
+        }
+      },
+      {
+        "id": "launcher",
+        "slot": {
+          "bone": "Hips",
+          "position": [
+            -0.22010323525202694,
+            0.2663754820823669,
+            0.3850341653823853
+          ]
+        }
+      }
+    ],
+    "gameSceneUpperBody": {
+      "target": {
+        "kind": "position",
+        "position": [
+          0,
+          0.95,
+          0.45
+        ]
+      },
+      "weight": 0.55,
+      "maxAngleDeg": 60,
+      "scope": "trial/floor1/floor2/floor3 only; H01 meta defaults/head/rig/poles/sockets untouched"
+    },
+    "files": [
+      {
+        "file": "assets/weapons/prototype.weapons.json",
+        "differences": 114,
+        "sha256": "877b8aa5564a5c81134595cfe942130be8e838be0092d676132c9399fdf10132"
+      },
+      {
+        "file": "assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+        "differences": 117,
+        "sha256": "a6d76b244d14f1e0a8ac38562a6e0632518b3bf100a88ccf39b8c9c52535e792"
+      },
+      {
+        "file": "assets/scenes/act1/floor-1.scene.json",
+        "differences": 117,
+        "sha256": "11941eb485e0aff219a3829b8ce62ea9d2e839a54d9a8eceee19b75aac1876f7"
+      },
+      {
+        "file": "assets/scenes/act1/floor-2.scene.json",
+        "differences": 117,
+        "sha256": "b7860e4613baab0e850452544f6b9dae406b06f80548be6dad8fe4885289f867"
+      },
+      {
+        "file": "assets/scenes/act1/floor-3.scene.json",
+        "differences": 117,
+        "sha256": "c48c48e800b950da7f8877f6757fa8d103af0a1a2f514a312bfd9a739f355eb0"
+      }
+    ]
+  },
+  "cpu": {
+    "raw": {
+      "path": ".workbuddy/tmp/r9-evidence/cpu-poses-candidate.json",
+      "sizeBytes": 603636,
+      "sha256": "98d8a7edebd523e23d6f20b5dfcb47de9dac9e75d650a525f06f63214ff09210"
+    },
+    "toolSha256": "82c57bc353adccd4f9280d7899d579fc661cac1d8ea5352b4f93db3727ba408c",
+    "sceneSha256": "a6d76b244d14f1e0a8ac38562a6e0632518b3bf100a88ccf39b8c9c52535e792",
+    "scope": "56 real H01 idle/equip0/unequip1 full .08m drop/walk_f .35s x yaw0/135; actual contact geometry, right-side grip/muzzle, live upper/head targets; not GPU/skin collision acceptance",
+    "baselineHead": "a9467fb864d8923e60ddca6ec375a8a75409064f",
+    "poses": 56,
+    "baselinePoses": 56,
+    "passed": true,
+    "rootsUnchanged": true,
+    "allCurrentGripAndMuzzleRight": true,
+    "maxContactM": 1.755317666519775e-7,
+    "maxContactRad": 1.264405455326821e-7,
+    "minLeftMarginM": 0.003926514885843391,
+    "spineAxisPitchRangeDeg": [
+      10.457777627016792,
+      15.602432011776145
+    ]
+  },
+  "gpu": {
+    "raw": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/observations.json",
+      "sizeBytes": 10546613,
+      "sha256": "307fcbb9cf365a41ec7cbca5d344185e46421ec25e9eace8d413d9cbc1c71f23"
+    },
+    "commandRaw": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/command.txt",
+      "sizeBytes": 438,
+      "sha256": "c383612c1ec8ecf21bfabe4e4b5f12d3ef5129ce702fa6c07c4739347837b37d"
+    },
+    "command": "node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head 0833275cf1f544debb2dc01a9a12219974d48926 --url https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json --cdp 9348 --hold-switch-only --all-weapons --elbow-observation --observation-closeup --collapse-ik-panel --aim-yaw 135 --out .workbuddy/tmp/r9-evidence/headed",
+    "probeStdout": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/probe.stdout.txt",
+      "sizeBytes": 1571,
+      "sha256": "7511408ea52be2742b5ac3c516919a4e235e9da3e1263629778ece62e17ecae8"
+    },
+    "probeStderr": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/probe.stderr.txt",
+      "sizeBytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "exit": "0",
+    "startedAt": "2026-10-14T15:04:04.238Z",
+    "finishedAt": "2026-10-14T15:04:41.193Z",
+    "root": "C:\\Users\\fangy\\WorkBuddy\\game-design-zombie-worktree-01",
+    "url": "https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+    "normalTls": true,
+    "adapter": {
+      "secure": true,
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    },
+    "headed": true,
+    "passed": true,
+    "counts": {
+      "snapshots": 286,
+      "actions": 233,
+      "checks": 25,
+      "validModelFrames": 275,
+      "exceptions": 0,
+      "consoleErrors": 0,
+      "cleanupInputErrors": 0
+    },
+    "selectedWeapons": [
+      "pistol",
+      "shotgun",
+      "smg",
+      "sniper",
+      "chainsaw",
+      "flame",
+      "launcher"
+    ],
+    "executedWeapons": [
+      "pistol",
+      "shotgun",
+      "smg",
+      "sniper",
+      "chainsaw",
+      "flame",
+      "launcher"
+    ],
+    "checks": [
+      {
+        "name": "HTTPS secure真实硬件",
+        "ok": true
+      },
+      {
+        "name": "真实场景身份",
+        "ok": true
+      },
+      {
+        "name": "seven-pistol真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "slot正常持枪移动与腿部继续",
+        "ok": true
+      },
+      {
+        "name": "可见观察按钮进入Play观察",
+        "ok": true
+      },
+      {
+        "name": "真实鼠标orbit/pan/wheel不触发游戏输入",
+        "ok": true
+      },
+      {
+        "name": "seven-shotgun真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "seven-smg真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "seven-sniper真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "seven-chainsaw真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "seven-flame真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "seven-launcher真实切换与draw",
+        "ok": true
+      },
+      {
+        "name": "选定武器执行覆盖",
+        "ok": true
+      },
+      {
+        "name": "正常持枪/切换采样双手实际可达",
+        "ok": true
+      },
+      {
+        "name": "双手肘bend朝作者外侧pole",
+        "ok": true
+      },
+      {
+        "name": "Pause模拟与动作时钟冻结",
+        "ok": true
+      },
+      {
+        "name": "Pause仍可观察且时钟不动",
+        "ok": true
+      },
+      {
+        "name": "回游戏相机恢复当前机位",
+        "ok": true
+      },
+      {
+        "name": "作者回滚",
+        "ok": true
+      },
+      {
+        "name": "Stop精确恢复作者相机",
+        "ok": true
+      },
+      {
+        "name": "Stop账目归零",
+        "ok": true
+      },
+      {
+        "name": "重启新身份与模型",
+        "ok": true
+      },
+      {
+        "name": "重启后作者再次回滚",
+        "ok": true
+      },
+      {
+        "name": "重启Stop无残留",
+        "ok": true
+      },
+      {
+        "name": "target HEAD保持",
+        "ok": true
+      }
+    ],
+    "diagnostics": {
+      "headOccurrences": {
+        "IK_AIM_LIMIT": 38,
+        "IK_TARGET": 243
+      },
+      "weaponClipFallbacks": [
+        "WEAPON_CLIP_MISSING: pistol-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: pistol-idle; base walk_b retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: pistol-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: shotgun-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: shotgun-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: shotgun-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: smg-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: smg-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: smg-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: sniper-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: sniper-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: sniper-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: chainsaw-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: chainsaw-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: chainsaw-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: flame-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: flame-idle; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: flame-unequip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: launcher-equip; base idle retained; procedural pose available only with configured IK",
+        "WEAPON_CLIP_MISSING: launcher-idle; base idle retained; procedural pose available only with configured IK"
+      ],
+      "motionReports": [
+        {
+          "state": "idle",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "walk",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "run",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "jump",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "shoot",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "attack",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "walk_f",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "walk_b",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "walk_l",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "walk_r",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "reload",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        },
+        {
+          "state": "ready",
+          "status": "partial",
+          "warnings": [
+            "MRR_DERIVED_MARKERS",
+            "MRC_HS_DERIVED",
+            "MRC_CONTACT_UNCALIBRATED",
+            "MRC_NO_WORLD_LOCK",
+            "MRC_CAPABILITY_GAP"
+          ]
+        }
+      ]
+    }
+  },
+  "weapons": [
+    {
+      "id": "pistol",
+      "validGpuFrames": 58,
+      "maxRightGpuResidualM": 3.10758054433193e-7,
+      "maxLeftGpuResidualM": 3.0763963335067557e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.05664606814964834,
+      "cpuMinMuzzleRightOfChestM": 0.05946668263393878,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-pistol-observation-side.png",
+          "sizeBytes": 597351,
+          "sha256": "d4f36e5bdf944f02d075837768c2d229f34d63792d5a6cb4b2937a3c6e7c94a0"
+        },
+        "sampleFrame": 315,
+        "frameRange": [
+          315,
+          328
+        ]
+      }
+    },
+    {
+      "id": "shotgun",
+      "validGpuFrames": 33,
+      "maxRightGpuResidualM": 1.659549481088874e-7,
+      "maxLeftGpuResidualM": 2.0446150689475182e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.01094839264570252,
+      "cpuMinMuzzleRightOfChestM": 0.029852837535643148,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-shotgun-observation-side.png",
+          "sizeBytes": 600976,
+          "sha256": "d7f52d1c9bdea598e40f059cb3a145106b899e22d78c39db7bf72e37c64cdf8d"
+        },
+        "sampleFrame": 431,
+        "frameRange": [
+          431,
+          446
+        ]
+      }
+    },
+    {
+      "id": "smg",
+      "validGpuFrames": 39,
+      "maxRightGpuResidualM": 2.0129299196258028e-7,
+      "maxLeftGpuResidualM": 2.3272811994920026e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.018380610396601604,
+      "cpuMinMuzzleRightOfChestM": 0.02914302362062271,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-smg-observation-side.png",
+          "sizeBytes": 597701,
+          "sha256": "bf514baaa8e86e126e65988df69a18c3da8461b43d754f445f42666dee3c707f"
+        },
+        "sampleFrame": 560,
+        "frameRange": [
+          560,
+          573
+        ]
+      }
+    },
+    {
+      "id": "sniper",
+      "validGpuFrames": 32,
+      "maxRightGpuResidualM": 3.4252187782449584e-7,
+      "maxLeftGpuResidualM": 1.6919910664517027e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.011681346402461379,
+      "cpuMinMuzzleRightOfChestM": 0.029023010530825337,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-sniper-observation-side.png",
+          "sizeBytes": 604225,
+          "sha256": "db928f17f425850f8a6ae272097b954e2429de3f1b2c0b603267f9ee9bbf8872"
+        },
+        "sampleFrame": 679,
+        "frameRange": [
+          679,
+          691
+        ]
+      }
+    },
+    {
+      "id": "chainsaw",
+      "validGpuFrames": 39,
+      "maxRightGpuResidualM": 2.1669869302722655e-7,
+      "maxLeftGpuResidualM": 2.4175747224064783e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.003926514885843391,
+      "cpuMinMuzzleRightOfChestM": 0.03153479912787596,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-chainsaw-observation-side.png",
+          "sizeBytes": 608917,
+          "sha256": "d5f3cb17d1db776be53743dc708db6713d390bc3c1b9b7042e478e3875b3cacb"
+        },
+        "sampleFrame": 802,
+        "frameRange": [
+          803,
+          814
+        ]
+      }
+    },
+    {
+      "id": "flame",
+      "validGpuFrames": 36,
+      "maxRightGpuResidualM": 2.2627671307826582e-7,
+      "maxLeftGpuResidualM": 2.1142041846211127e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.0625945300644703,
+      "cpuMinMuzzleRightOfChestM": 0.02736759863706542,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-flame-observation-side.png",
+          "sizeBytes": 603818,
+          "sha256": "89415cbbadaecb0aab5807ce46f8aead4f6ba5c2f4c621324774dc83f9596e1d"
+        },
+        "sampleFrame": 916,
+        "frameRange": [
+          916,
+          929
+        ]
+      }
+    },
+    {
+      "id": "launcher",
+      "validGpuFrames": 38,
+      "maxRightGpuResidualM": 3.21950230153237e-7,
+      "maxLeftGpuResidualM": 2.6162346338343154e-7,
+      "cpuPoses": 8,
+      "cpuMinLeftReachMarginM": 0.08934987306724163,
+      "cpuMinMuzzleRightOfChestM": 0.19946668263393658,
+      "sideScreenshot": {
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/headed/seven-launcher-observation-side.png",
+          "sizeBytes": 602954,
+          "sha256": "9a91a5a2de541f1efefedbea17e1849fb6f97bb774db1ee8910d543deecf6de2"
+        },
+        "sampleFrame": 1047,
+        "frameRange": [
+          1047,
+          1064
+        ]
+      }
+    }
+  ],
+  "images": [
+    {
+      "file": "seven-shotgun-observation-side.png",
+      "raw": {
+        "path": ".workbuddy/tmp/r9-evidence/headed/seven-shotgun-observation-side.png",
+        "sizeBytes": 600976,
+        "sha256": "d7f52d1c9bdea598e40f059cb3a145106b899e22d78c39db7bf72e37c64cdf8d"
+      },
+      "versionedSha256": "d7f52d1c9bdea598e40f059cb3a145106b899e22d78c39db7bf72e37c64cdf8d",
+      "capture": {
+        "sampleFrame": 431,
+        "sampleModelFrameStamp": 431,
+        "frameRange": [
+          431,
+          446
+        ],
+        "pose": {
+          "weaponId": "shotgun",
+          "action": "idle",
+          "phase": 0
+        }
+      }
+    },
+    {
+      "file": "seven-flame-observation-side.png",
+      "raw": {
+        "path": ".workbuddy/tmp/r9-evidence/headed/seven-flame-observation-side.png",
+        "sizeBytes": 603818,
+        "sha256": "89415cbbadaecb0aab5807ce46f8aead4f6ba5c2f4c621324774dc83f9596e1d"
+      },
+      "versionedSha256": "89415cbbadaecb0aab5807ce46f8aead4f6ba5c2f4c621324774dc83f9596e1d",
+      "capture": {
+        "sampleFrame": 916,
+        "sampleModelFrameStamp": 916,
+        "frameRange": [
+          916,
+          929
+        ],
+        "pose": {
+          "weaponId": "flame",
+          "action": "idle",
+          "phase": 0
+        }
+      }
+    }
+  ],
+  "visualScope": {
+    "reviewers": "Main inspected all seven native right-front side PNGs; Worker inspected the two versioned representatives.",
+    "finding": "正常持枪画面中右肘、前臂与胸口可辨，未见明显穿胸或过度弯腰；不是精确mesh/眼射线/全部姿态认证。",
+    "rightSideOrbitRad": 0.6,
+    "elevationDeg": 20,
+    "distanceM": 4.8
+  },
+  "validationLogs": {
+    "manifest": {
+      "path": ".workbuddy/tmp/r9-evidence/candidate-checks.json",
+      "sizeBytes": 2187,
+      "sha256": "a40f6f29e254a4f74cf18564327e092ea5358a5c35278a26292a0aa581592ebf"
+    },
+    "commands": [
+      {
+        "command": "node tools/verify/weapon-elbow-poses.mjs --baseline-head a9467fb864d8923e60ddca6ec375a8a75409064f",
+        "stdout": ".workbuddy/tmp/r9-evidence/cpu-poses-candidate.json",
+        "stderr": ".workbuddy/tmp/r9-evidence/cpu-poses-candidate.stderr.log",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/cpu-poses-candidate.json",
+          "sizeBytes": 603636,
+          "sha256": "98d8a7edebd523e23d6f20b5dfcb47de9dac9e75d650a525f06f63214ff09210"
+        },
+        "stderrRaw": {
+          "path": ".workbuddy/tmp/r9-evidence/cpu-poses-candidate.stderr.log",
+          "sizeBytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      {
+        "command": "pnpm exec vitest run packages/zombie-game/test/presentation/weapon-hold-slots.test.ts packages/zombie-game/test/presentation/weapon-model.test.ts apps/editor/test/runtime-weapons.test.ts",
+        "stdout": ".workbuddy/tmp/r9-evidence/slot-owner-tests.log",
+        "tests": 28,
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/slot-owner-tests.log",
+          "sizeBytes": 651,
+          "sha256": "b69d4c995a5e55cc34a820c7d61f07b70576b4a223e67d3d87a8e356d21149ee"
+        }
+      },
+      {
+        "command": "node --test tools/verify/weapon-elbows.test.mjs tools/verify/weapon-assembly.test.mjs",
+        "stdout": ".workbuddy/tmp/r9-evidence/tool-tests.log",
+        "tests": 25,
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/tool-tests.log",
+          "sizeBytes": 6095,
+          "sha256": "847a88bb62b42c7f144a6e38a7287ef41ef6be9489d6e3580a76e7de743623d2"
+        }
+      },
+      {
+        "command": "pnpm run scene:check",
+        "stdout": ".workbuddy/tmp/r9-evidence/scene-check.log",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r9-evidence/scene-check.log",
+          "sizeBytes": 3887,
+          "sha256": "0dbaa36fc8442e8cf6e24a45d19c15dd93d55842c2ba91b8f402a4bb20946c9e"
+        }
+      }
+    ]
+  },
+  "firstArgumentFailure": {
+    "stage": "URL guard before browser launch; initial scene URL lacked scenes/",
+    "originalStderrPreserved": false,
+    "commandCopy": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/probe.initial-args-guard.command.txt",
+      "sizeBytes": 431,
+      "sha256": "e358438bfc14aec65eb82dca7eac30ca9ea00cb160775f48d2ea0b51472cacc5",
+      "provenance": "transcript-recovered copy"
+    },
+    "stderrCopy": {
+      "path": ".workbuddy/tmp/r9-evidence/headed/probe.initial-args-guard.stderr.transcript.txt",
+      "sizeBytes": 1375,
+      "sha256": "7e407f082d1f45c9827c56a42fbb4e5c32f61ff489464d4a5849accae3edcc8f",
+      "provenance": "transcript-recovered copy; original stderr overwritten by retry, not original stdout/stderr evidence"
+    }
+  },
+  "limitations": [
+    "仅正常持枪/切换/一次W与观察导航/回滚；未验证开火、换弹、换罐或全部aim。",
+    "head IK_AIM_LIMIT与观察pointer unavailable IK_TARGET保留；动作缺片段回退及partial/无接地world-lock未消除。",
+    "历史肩球fixture保留；新姿态可达由当前真实FK直接contact验证。"
+  ]
+}

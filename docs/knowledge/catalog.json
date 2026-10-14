@@ -2260,7 +2260,7 @@
         "gpu",
         "npc"
       ],
-      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal及接地限制；2026-10-14无pointer桌面横移/GodView/自由观察入口实机验收与工具范围；攻击/武器相位；t1状态保留；受击/死亡尾部",
+      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal及接地限制；2026-10-14无pointer横移/观察入口；R9七武器角色右侧持握、场景上身目标及真实CPU/GPU边界；攻击/武器相位；t1状态保留；受击/死亡尾部",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",

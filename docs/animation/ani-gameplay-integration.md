@@ -248,3 +248,64 @@ build/architecture/knowledge 通过；之后两次仅工具修正各有 8 项聚
 $taskTargetHead = git rev-parse HEAD
 node tools/verify/strafe-motion.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head $taskTargetHead --controls-only true --cdp 9348 --hold-ms 1800 --out .workbuddy/tmp/r8-evidence/recheck-current
 ```
+
+## 2026-10-14 R9：武器靠角色右侧、上方与前方持握
+
+基线为 `a9467fb864d8923e60ddca6ec375a8a75409064f`，内容及实机目标为
+`0833275cf1f544debb2dc01a9a12219974d48926`。
+[紧凑证据](evidence/weapon-hold-20261014/runtime-summary.json)记录实际 source/tool/raw 报告哈希、
+CPU 基线对照、七件实机帧数及保留诊断；完整报告和 stdout 在本检出的 `.workbuddy/tmp/r9-evidence/`。
+
+H-01 的实际 rest 与运行时肩/手坐标确认角色右为 actor-local **−X**，+Y 向上、+Z 向前。
+原 shotgun/smg/sniper/chainsaw/flame 的 Hip slot 为 +X，右手目标跨向胸口左侧；pistol/launcher
+已经在 −X。本轮沿用 `setWeaponHoldSlotAxis`，原子更新 slot 与模拟/legacy markers；marker 平移
+按现有 `[deltaZ, deltaY, -deltaX]` 转换，保留 trial 相对 prototype 的 muzzle Y 特异值 −0.02 米。
+
+| 内容组 | Hip slot 改动，角色局部米 |
+|---|---|
+| shotgun、smg、sniper、chainsaw、flame | X 设为 −0.05；原 Y +0.10、原 Z +0.005 |
+| pistol、launcher | X 保留；原 Y +0.03、原 Z +0.01 |
+
+只更新 [prototype](../../assets/weapons/prototype.weapons.json)、trial 与 floor-1/2/3 的 arsenal。
+四个游戏场景的 H-01 `Mesh.bodyIk.upperBody.target` 复用已有 position `[0,0.95,0.45]`，
+让现有 Spine/Spine1/Spine2 提供有限前倾空间；weight=0.55、limit=60°保持。
+资产 meta 默认值、头部 target/weight/limit、手部 poles、rig、骨长、模型 socket、武器 rotation、
+动画、武器动作与场景相机不变。单独大幅右移会超出左手链，因此没有用骨长 clamp 代替正确持握。
+
+[CPU 工具](../../tools/verify/weapon-elbow-poses.mjs)以当前源码内存 bundle、实际 H-01/idle/ready/walk_f
+计算 56 个关键姿态：七件 × idle、equip phase=0、unequip phase=1、walk_f 0.35 秒 × yaw 0/135°。
+两种切枪端点含完整 0.08 米下沉；上身和头部均提供有效实际 target，动作层按对应 phase 采样。
+另有 56 个匹配基线帧作对照，Hips 位置差为零。当前 56 帧均无 hand unreachable/socket residual
+诊断，外向肘检查通过；实际 contact 残差最大 1.76e−7 米、1.27e−7 rad，最小左链余量为
+chainsaw 3.93 mm。七件握点/模型 muzzle 均在胸参考右侧，muzzle 最小右偏 2.74 cm。
+Spine→Spine2 轴前倾为静止 10.46°、该步行样本 15.60°；这些是有界姿态数据，不是所有姿态碰撞保证。
+历史肩球 fixture 保留，固定旧肩位置不能认证新上身配置的可达性，当前可达检查由真实 FK 接替。
+
+正常 TLS、headed Chrome、NVIDIA Lovelace 实机报告为 286 个样本、233 个真实输入/观察记录，
+25/25 检查通过。275 个本帧有效模型样本覆盖七件真实 Digit1–7 切枪、正常持枪及一次 W 移动，
+最大右/左目标残差分别为 3.43e−7 / 3.08e−7 米，双手肘 bend 朝作者外侧 pole。
+原生观察 orbit/pan/wheel、Pause 时钟冻结、返回游戏相机、Stop 作者回滚与资源释放、重启后再次
+Stop 均完成，异常、console error 和输入清理错误为空。本轮没有开火、换弹或换罐验证。
+
+显式 `--observation-closeup` 通过原生输入取 20°/4.8 米观察机位；前视之后向角色 −X 侧
+环绕约 34.4°，第二张是角色右前侧。七件右前侧原图保留在本地报告目录；Main 目检七张，
+Worker 另核对以下两张代表图，右肘、完整前臂与胸口可辨，未见这些正常持枪姿态明显穿胸或过度弯腰。
+[Shotgun 右前侧](evidence/weapon-hold-20261014/seven-shotgun-observation-side.png)与
+[Flame 右前侧](evidence/weapon-hold-20261014/seven-flame-observation-side.png)是未编辑原生 PNG，以 LFS 保存。
+这不是精确 mesh 碰撞或右眼射线认证，也不扩成全部 aim/动作/姿态验收。
+
+头部 `IK_AIM_LIMIT` 的 38 条采样诊断保留；观察期间 pointer 不可用时头部 `IK_TARGET` 为
+243 条，保留动画。既有 `WEAPON_CLIP_MISSING` 的 idle/equip/unequip 回退及 motion reports 的
+partial、派生标记、未标定接触、无 world-lock 能力缺口仍在，均未声称消除。
+首次命令因 scene URL 少了 `scenes/` 被参数门禁在启动浏览器前拒绝；原 stderr 被重试覆盖，
+`probe.initial-args-guard.*` 是明确标注的 transcript-recovered 副本，**不是原始 stderr 文件**。
+
+owner 28 项、工具 25 项及完整 `scene:check` 通过，原始命令/exit code 路径见紧凑记录。
+本次仅文档与两张截图收尾，运行 knowledge/diff 检查，不重复生产门禁。复现需按浏览器入口
+加载主机规则，使用独立输出目录：
+
+```powershell
+node tools/verify/weapon-elbow-poses.mjs --baseline-head a9467fb864d8923e60ddca6ec375a8a75409064f
+$taskTargetHead = git rev-parse HEAD
+node tools/verify/weapon-assembly.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head $taskTargetHead --url "https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json" --cdp 9348 --hold-switch-only --all-weapons --elbow-observation --observation-closeup --collapse-ik-panel --aim-yaw 135 --out .workbuddy/tmp/r9-evidence/recheck-current
+```
