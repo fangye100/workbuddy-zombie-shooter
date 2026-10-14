@@ -32,11 +32,11 @@ export function gaitEvidence(samples, expectedClip) {
     minAnkleWorldY:active.length?Math.min(...active.flatMap(s=>s.actor.feet.map(p=>p.world[1]))):null};
 }
 
-const SNAPSHOT = `(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState,clip=s?.clips[s.clip];const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));
+export const STRAFE_SNAPSHOT = `(async()=>{const e=window.__editor,c=e?.playCtl,r=c?.session.runtime,p=r?.player(),d=e?.renderer.getDocument(),o=e?.renderer.state.objects.find(o=>o.nodeId===d?.playerStart&&!o.removed),s=o?.skinState,clip=s?.clips[s.clip],motions=e?.motions.summary()??null;const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(d??null)));
  const bones=o?.skeleton?o.skeleton.jointNames.flatMap((name,i)=>/^(Hips|LeftFoot|RightFoot|LeftHand|RightHand)$/.test(name)?[{name,local:(${posedJointPosition.toString()})(o.skinScratch.slice(i*16,(i+1)*16),o.skeleton.normalization,o.skeleton.inverseBind.slice(i*16,(i+1)*16))}]:[]):[];
  const points=bones.map(b=>({...b,world:b.local?(${actorPoint.toString()})(b.local,o):null}));
- return {state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:structuredClone(e?.camera),authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions:e?.motions.summary()??null,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
- actor:s?{clip:clip?.name??null,time:s.time,duration:clip?.duration??null,phase:clip?.duration>0?s.time/clip.duration:null,normalization:Array.from(o.skeleton.normalization),feet:['LeftFoot','RightFoot'].map(name=>points.find(p=>p.name===name)),hips:points.find(p=>p.name==='Hips'),hands:points.filter(p=>/Hand$/.test(p.name)),debug:e.motions.debugSnapshot(d.playerStart)}:null};})()`;
+ return {state:c?.state,tick:c?.tick,fixedStep:r?.fixedStep,frame:e?.renderer.state.frameCounter,observing:c?.observing,camera:structuredClone(e?.camera),authorDocumentSha256:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),dirty:e?.renderer.state.sceneDirty??null,player:p??null,ledger:c?.ledger?.pending,models:e?.weaponModels.snapshot()??null,motions,bodyIk:e?.bodyIk.summary()??null,authorPlayer:o?{nodeId:o.nodeId,pos:[...o.pos],quat:[...o.quat],scale:o.scale,visible:o.visible}:null,
+ actor:s?{clip:clip?.name??null,time:s.time,duration:clip?.duration??null,phase:clip?.duration>0?s.time/clip.duration:null,normalization:Array.from(o.skeleton.normalization),feet:['LeftFoot','RightFoot'].map(name=>points.find(p=>p.name===name)),hips:points.find(p=>p.name==='Hips'),hands:points.filter(p=>/Hand$/.test(p.name)),layer:motions?.nodes.find(n=>n.nodeId===d.playerStart)?.layer??null}:null};})()`;
 
 export async function runStrafeProbe(options) {
   const head=()=>execFileSync('git',['rev-parse','HEAD'],{cwd:options.root,encoding:'utf8'}).trim();
@@ -65,7 +65,7 @@ export async function runStrafeProbe(options) {
     await cdp.send('Page.bringToFront');
     report.gpu=await cdp.eval('(async()=>{const a=await navigator.gpu?.requestAdapter(),i=a?.info??(a?.requestAdapterInfo?await a.requestAdapterInfo():null);return {secure:isSecureContext,vendor:i?.vendor,architecture:i?.architecture,description:i?.description};})()');
     check('HTTPS/真实 NVIDIA',report.gpu.secure&&report.gpu.vendor==='nvidia'&&report.gpu.architecture==='lovelace',report.gpu);if(!report.checks.at(-1).ok)throw Error('未确认真实 GPU');
-    const snap=async label=>{const sample={label,atMs:Date.now(),...await cdp.eval(SNAPSHOT)};report.samples.push(sample);return sample;};
+    const snap=async label=>{const sample={label,atMs:Date.now(),...await cdp.eval(STRAFE_SNAPSHOT)};report.samples.push(sample);return sample;};
     const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
     const capture=async label=>{const sample=await snap(label),before=await cdp.eval('window.__editor.renderer.state.frameCounter'),{data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),after=await cdp.eval('window.__editor.renderer.state.frameCounter'),file=label+'.png';fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({file,sample:report.samples.length-1,frameRange:[before,after],clip:sample.actor?.clip,phase:sample.actor?.phase,state:sample.state,observing:sample.observing});return sample;};
     const author=await snap('author');await capture('01-author');await click('#btn-play');
@@ -79,7 +79,7 @@ export async function runStrafeProbe(options) {
       await input.key(key,true);const start=report.samples.length,until=Date.now()+options.holdMs;
       while(Date.now()<until){await aim();await sleep(25);await snap(key+'-held');}
       const moving=report.samples.slice(start),evidence=gaitEvidence(moving,clip);check(key+'真实游戏横移/连续步态',evidence.ok&&evidence.wraps>=2,evidence);
-      check(key+'上身持枪保持',moving.some(s=>s.actor?.debug?.layer?.status==='ready')&&moving.every(s=>s.models?.visible&&s.models.weaponId==='pistol'),moving.map(s=>({frame:s.frame,clip:s.actor?.clip,layer:s.actor?.debug?.layer,weapon:s.models?.weaponId,draw:s.models?.frameStamp})));
+      check(key+'上身持枪保持',moving.some(s=>s.actor?.layer?.weight>0&&s.actor.layer.nodes.length>0&&!s.actor.layer.diagnostics.length)&&moving.every(s=>s.models?.visible&&s.models.weaponId==='pistol'),moving.map(s=>({frame:s.frame,clip:s.actor?.clip,layer:s.actor?.layer,weapon:s.models?.weaponId,draw:s.models?.frameStamp})));
       await capture(key+'-normal-game');
       if(!await waitFor(async()=>{await aim();const s=await snap(key+'-pre-pause');return s.actor?.clip===clip&&s.actor.phase>=peakRange[0]&&s.actor.phase<=peakRange[1];},{timeout:1500,interval:25}))throw Error('未采到自然宽步相位');
       await click('#btn-pause');await input.key(key,false);const paused=await snap(key+'-pause');await sleep(250);const frozen=await snap(key+'-frozen');
