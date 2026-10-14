@@ -2260,11 +2260,12 @@
         "gpu",
         "npc"
       ],
-      "read": "裁剪配方与 owner；攻击/武器相位；t1 状态保留；受击/死亡尾部；真实 GPU 证据及限制",
+      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal；2026-10-14真实A/D与持握证据及接地限制；攻击/武器相位；t1状态保留；受击/死亡尾部",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
-        "scene-shared-motion"
+        "scene-shared-motion",
+        "scene-body-ik"
       ]
     },
     {

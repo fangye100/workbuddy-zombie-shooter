@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 1,
+  "task": "左右横移步幅与节奏定向修正",
+  "base": "38ca87e4667f6c9b71560762ecdbb2518fc0119c",
+  "contentCommit": "bcd380575117aa4ef863f75b71e2e67cc31259c6",
+  "runtimeTarget": "02d5ead4f728f9b70ec4fab115d088b525071c9d",
+  "cpu": {
+    "scope": "实际BVH解析/FK、H01 SharedMotionRuntime retarget/bake及evalJointMatrices；同采样相位；不含浏览器前后测速",
+    "units": "米、秒",
+    "sourceUnitScale": 1,
+    "sourceUpAxis": "y",
+    "target": {
+      "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+      "importHeightM": 1.8,
+      "normalization": [
+        1.0000001192092896,
+        0,
+        0,
+        0,
+        0,
+        1.0000001192092896,
+        0,
+        0,
+        0,
+        0,
+        1.0000001192092896,
+        0,
+        0.00010323525202693418,
+        0.02155783772468567,
+        -0.02855946309864521,
+        1
+      ],
+      "pelvisHeightRawM": 0.9032353373149127,
+      "chains": [
+        {
+          "id": "LeftLeg",
+          "joints": [
+            "LeftUpLeg",
+            "LeftLeg",
+            "LeftFoot"
+          ],
+          "lengthM": 0.7453210873234559
+        },
+        {
+          "id": "RightLeg",
+          "joints": [
+            "RightUpLeg",
+            "RightLeg",
+            "RightFoot"
+          ],
+          "lengthM": 0.7453210873234559
+        },
+        {
+          "id": "LeftArm",
+          "joints": [
+            "LeftShoulder",
+            "LeftArm",
+            "LeftForeArm",
+            "LeftHand"
+          ],
+          "lengthM": 0.6474234492710773
+        },
+        {
+          "id": "RightArm",
+          "joints": [
+            "RightShoulder",
+            "RightArm",
+            "RightForeArm",
+            "RightHand"
+          ],
+          "lengthM": 0.6474234492710773
+        }
+      ],
+      "calibration": null,
+      "objectScale": [
+        1,
+        1,
+        1
+      ],
+      "bindingSpeed": 1
+    },
+    "comparison": [
+      {
+        "id": "game_walk_l",
+        "frames": 18,
+        "sourceRawFrames": 18,
+        "durationS": 0.5666666626930237,
+        "sourceRawEndpointGapM": 3.844406468874903e-7,
+        "sourceRawPeakM": 1.1318658871084573,
+        "before": {
+          "targetFootSpanPeakM": 0.934841513633728,
+          "targetNominalMps": 2.2838232032152828,
+          "targetLowFootMedianMps": 1.9239268336137767,
+          "cycleAt1MpsS": 1.2941664727468956
+        },
+        "after": {
+          "targetFootSpanPeakM": 0.8149435520172119,
+          "targetNominalMps": 1.8852745907183244,
+          "targetLowFootMedianMps": 1.8259130086287092,
+          "cycleAt1MpsS": 1.068322260582309
+        },
+        "beforeNormalized": {
+          "sourceMaxSepOverLegLength": 1.1805124407869656,
+          "targetMaxSepOverLegLength": 1.2542800922875865,
+          "sourceLegMean": 0.9587919999999996,
+          "targetLegMean": 0.7453211761726533
+        },
+        "solveStatus": "partial",
+        "solveWarnings": [
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "id": "game_walk_r",
+        "frames": 19,
+        "sourceRawFrames": 19,
+        "durationS": 0.6000000238418579,
+        "sourceRawEndpointGapM": 4.372357200539086e-7,
+        "sourceRawPeakM": 1.1462504839664207,
+        "before": {
+          "targetFootSpanPeakM": 0.9471824169158936,
+          "targetNominalMps": 2.437828657641563,
+          "targetLowFootMedianMps": 2.1302551688583526,
+          "cycleAt1MpsS": 1.4626972527073023
+        },
+        "after": {
+          "targetFootSpanPeakM": 0.8143033683300018,
+          "targetNominalMps": 2.073874001006451,
+          "targetLowFootMedianMps": 1.9326023853720284,
+          "cycleAt1MpsS": 1.2443244500488797
+        },
+        "beforeNormalized": {
+          "sourceMaxSepOverLegLength": 1.1955152698083584,
+          "targetMaxSepOverLegLength": 1.2708379249061874,
+          "sourceLegMean": 0.9587919999999996,
+          "targetLegMean": 0.7453211761726533
+        },
+        "solveStatus": "partial",
+        "solveWarnings": [
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "id": "game_walk_f",
+        "frames": 25,
+        "sourceRawFrames": 25,
+        "durationS": 0.800000011920929,
+        "sourceRawEndpointGapM": 2.426722493275486e-7,
+        "sourceRawPeakM": 0.2151805906726055,
+        "before": {
+          "targetFootSpanPeakM": 0.22047122567892075,
+          "targetNominalMps": 2.362843762888243,
+          "targetLowFootMedianMps": 2.106944001591101,
+          "cycleAt1MpsS": 1.890275038477887
+        },
+        "after": {
+          "targetFootSpanPeakM": 0.22047122567892075,
+          "targetNominalMps": 2.362843762888243,
+          "targetLowFootMedianMps": 2.106944001591101,
+          "cycleAt1MpsS": 1.890275038477887
+        },
+        "beforeNormalized": {
+          "sourceMaxSepOverLegLength": 0.22442884741962144,
+          "targetMaxSepOverLegLength": 0.295807006062912,
+          "sourceLegMean": 0.9587919999999998,
+          "targetLegMean": 0.7453211761726533
+        },
+        "solveStatus": "partial",
+        "solveWarnings": [
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      },
+      {
+        "id": "game_walk_b",
+        "frames": 32,
+        "sourceRawFrames": 32,
+        "durationS": 1.0333333015441895,
+        "sourceRawEndpointGapM": 9.663747961262183e-7,
+        "sourceRawPeakM": 0.37262852881134984,
+        "before": {
+          "targetFootSpanPeakM": 0.35079677402973175,
+          "targetNominalMps": 1.4117254419319913,
+          "targetLowFootMedianMps": 1.2062365864515068,
+          "cycleAt1MpsS": 1.4587829117855144
+        },
+        "after": {
+          "targetFootSpanPeakM": 0.35079677402973175,
+          "targetNominalMps": 1.4117254419319913,
+          "targetLowFootMedianMps": 1.2062365864515068,
+          "cycleAt1MpsS": 1.4587829117855144
+        },
+        "beforeNormalized": {
+          "sourceMaxSepOverLegLength": 0.38864375028158527,
+          "targetMaxSepOverLegLength": 0.47066524505734675,
+          "sourceLegMean": 0.9587919999999998,
+          "targetLegMean": 0.7453211761726533
+        },
+        "solveStatus": "partial",
+        "solveWarnings": [
+          "MRC_HS_DERIVED",
+          "MRC_CONTACT_UNCALIBRATED",
+          "MRC_NO_WORLD_LOCK",
+          "MRC_CAPABILITY_GAP"
+        ]
+      }
+    ],
+    "rawBeforeReport": ".workbuddy/tmp/strafe-motion/r7-diagnosis.json",
+    "rawBeforeSha256": "sha256:4b8ba2609a9897321fa3bddb14627cf9724b58e41089247cb987443a16274784",
+    "rawAfterReport": ".workbuddy/tmp/strafe-motion/r7-after.json",
+    "rawAfterSha256": "sha256:feb152f40302cfa4e9864f6c5152c762ce7ff8ba89ea7a8cd7da02a387edc802"
+  },
+  "runtime": {
+    "sourceReport": ".workbuddy/tmp/strafe-motion/r7-headed-retry2/observations.json",
+    "sourceReportSha256": "sha256:6c005a7a66d07922665ce32b7621b1c2a8e29e475977588c3b7ae871f0cdc391",
+    "toolSha256": "25f9a3e02eaad405d12c82191d737c36613c3a4830b5615de47b1f82651286b8",
+    "sceneSha256": "21e1931145bd262ca3b2a980a316373eaffc977548394ae536b2de60f3a5a1d4",
+    "startedAt": "2026-10-14T07:09:31.004Z",
+    "finishedAt": "2026-10-14T07:09:44.616Z",
+    "normalTls": true,
+    "gpu": {
+      "secure": true,
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    },
+    "browser": {
+      "pid": 45028,
+      "browserPid": 45028,
+      "targetId": "53FCE782E2A8CC83B871298A4357EBEE",
+      "flags": [
+        "--enable-unsafe-webgpu",
+        "--remote-debugging-port=9348",
+        "--user-data-dir=C:\\Users\\fangy\\WorkBuddy\\game-design-zombie-worktree-01\\.workbuddy\\tmp\\chrome-profile",
+        "--window-size=1440,1000",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+        "--disable-features=CalculateNativeWinOcclusion"
+      ]
+    },
+    "gait": {
+      "a": {
+        "ok": true,
+        "samples": 51,
+        "wraps": 7,
+        "distanceM": 7.9500017166137695,
+        "simulatedS": 1.7666666666666682,
+        "meanSpeedMps": 4.500000971668167,
+        "cyclesPerS": 3.9622641509433927,
+        "maxFootSpanX": 0.8069972307167536,
+        "minAnkleWorldY": 0.16921672591776812,
+        "holdingSamples": 52,
+        "gripResidualMaxM": {
+          "rightTargetResidualM": 2.7795154570155606e-7,
+          "leftTargetResidualM": 3.0474545085329854e-7
+        },
+        "retainedDiagnostics": [
+          "WEAPON_CLIP_MISSING: pistol-idle; base idle retained; procedural pose available only with configured IK",
+          "WEAPON_CLIP_MISSING: pistol-idle; base walk_l retained; procedural pose available only with configured IK"
+        ],
+        "unexpectedDiagnostics": [],
+        "framing": {
+          "ok": true,
+          "reasons": [],
+          "bounds": {
+            "left": 313.7293751766931,
+            "right": 468.4992621376998,
+            "top": 356.23129940455794,
+            "bottom": 665.4187078946153
+          },
+          "occluders": [],
+          "frontDot": 0.7071066674757382
+        }
+      },
+      "d": {
+        "ok": true,
+        "samples": 46,
+        "wraps": 6,
+        "distanceM": 7.950001955032349,
+        "simulatedS": 1.7666666666666677,
+        "meanSpeedMps": 4.500001106622081,
+        "cyclesPerS": 3.3962264150943375,
+        "maxFootSpanX": 0.8115511676025473,
+        "minAnkleWorldY": 0.17018571741940036,
+        "holdingSamples": 46,
+        "gripResidualMaxM": {
+          "rightTargetResidualM": 2.243929732695731e-7,
+          "leftTargetResidualM": 3.056148355276363e-7
+        },
+        "retainedDiagnostics": [
+          "WEAPON_CLIP_MISSING: pistol-idle; base walk_r retained; procedural pose available only with configured IK"
+        ],
+        "unexpectedDiagnostics": [],
+        "framing": {
+          "ok": true,
+          "reasons": [],
+          "bounds": {
+            "left": 313.0992561601814,
+            "right": 466.4224087406509,
+            "top": 355.6937178827846,
+            "bottom": 665.1596102164034
+          },
+          "occluders": [],
+          "frontDot": 0.7071068667460421
+        }
+      }
+    },
+    "pause": [
+      {
+        "check": "aPause冻结原步态",
+        "pausedTick": 94,
+        "frozenTick": 94,
+        "pausedClip": "walk_l",
+        "pausedTime": 0.3006341218432933,
+        "frozenTime": 0.3006341218432933
+      },
+      {
+        "check": "dPause冻结原步态",
+        "pausedTick": 164,
+        "frozenTick": 164,
+        "pausedClip": "walk_r",
+        "pausedTime": 0.3566901302097829,
+        "frozenTime": 0.3566901302097829
+      }
+    ],
+    "stop": {
+      "state": "stopped",
+      "ledger": 0,
+      "pendingModels": 0,
+      "loadedModels": [],
+      "visibleDrawCount": 0,
+      "motionNodes": 0,
+      "authorDocumentRestored": true,
+      "authorPlayerRestored": true,
+      "authorCameraRestored": true
+    },
+    "checks": [
+      {
+        "name": "HTTPS/真实 NVIDIA",
+        "ok": true
+      },
+      {
+        "name": "正常游戏视图与持枪",
+        "ok": true
+      },
+      {
+        "name": "a真实游戏横移/连续步态",
+        "ok": true
+      },
+      {
+        "name": "a本帧双手持握与保留回退",
+        "ok": true
+      },
+      {
+        "name": "aPause冻结原步态",
+        "ok": true
+      },
+      {
+        "name": "a侧前全身/双膝双足无遮挡",
+        "ok": true
+      },
+      {
+        "name": "a冻结全身观察保留动作",
+        "ok": true
+      },
+      {
+        "name": "a停步回idle",
+        "ok": true
+      },
+      {
+        "name": "d真实游戏横移/连续步态",
+        "ok": true
+      },
+      {
+        "name": "d本帧双手持握与保留回退",
+        "ok": true
+      },
+      {
+        "name": "dPause冻结原步态",
+        "ok": true
+      },
+      {
+        "name": "d侧前全身/双膝双足无遮挡",
+        "ok": true
+      },
+      {
+        "name": "d冻结全身观察保留动作",
+        "ok": true
+      },
+      {
+        "name": "d停步回idle",
+        "ok": true
+      },
+      {
+        "name": "w前后步态基本回归",
+        "ok": true
+      },
+      {
+        "name": "s前后步态基本回归",
+        "ok": true
+      },
+      {
+        "name": "释放输入回idle",
+        "ok": true
+      },
+      {
+        "name": "Stop作者文档/相机回滚",
+        "ok": true
+      },
+      {
+        "name": "Stop资源账目归零",
+        "ok": true
+      },
+      {
+        "name": "目标HEAD保持",
+        "ok": true
+      }
+    ],
+    "exceptions": [],
+    "consoleErrors": [],
+    "cleanupInputErrors": [],
+    "cleanupTargetError": null,
+    "fallbackContract": {
+      "requested": "pistol-idle",
+      "upper": "ready",
+      "dedicatedAvailable": false,
+      "readyAvailable": true,
+      "policy": "packages/zombie-game/src/presentation/player-motion.ts",
+      "note": "缺专用 idle 时保留 base，ready 上身层结合已配置的双手装配 IK；诊断仍原样报告。"
+    },
+    "screenshots": [
+      {
+        "file": "a-paused-observation.png",
+        "sample": 70,
+        "frameRange": [
+          312,
+          326
+        ],
+        "clip": "walk_l",
+        "phase": 0.5305308069731176,
+        "state": "paused",
+        "observing": true,
+        "sha256": "sha256:7d980c7ccee1c1ccf35302938d1d04598d52587e3f98072293e9fcbe1cd709bb",
+        "bytes": 476575,
+        "tick": 94,
+        "camera": {
+          "yaw": -4.124369813123022,
+          "distance": 6.199999817145406,
+          "target": [
+            -0.9356849270883718,
+            1.0072338485925807,
+            -10.416836440584193
+          ],
+          "elevationDeg": 20
+        }
+      },
+      {
+        "file": "d-paused-observation.png",
+        "sample": 124,
+        "frameRange": [
+          558,
+          572
+        ],
+        "clip": "walk_r",
+        "phase": 0.5944835267269852,
+        "state": "paused",
+        "observing": true,
+        "sha256": "sha256:e5977c8c940421d49a26b6a083ccb06b02dc41eb307541f1b6fb8bef7243c5ed",
+        "bytes": 470034,
+        "tick": 164,
+        "camera": {
+          "yaw": -3.729598817029272,
+          "distance": 6.199999817145406,
+          "target": [
+            -1.4537053707612986,
+            0.9686290930650724,
+            -0.36160564467342793
+          ],
+          "elevationDeg": 20
+        }
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "target": "bcd380575117aa4ef863f75b71e2e67cc31259c6",
+      "report": ".workbuddy/tmp/strafe-motion/r7-headed/observations.json",
+      "sha256": "sha256:b04c280e2cc31984b54d4638294f11c55c9e3ff588f4a83574a1b1277c835800",
+      "result": "Play前错误调用未公开的motions.debugSnapshot；无动作样本/PNG"
+    },
+    {
+      "target": "9159d97f0ec10c0cefbc6fd1d5d5fcc01eb234ff",
+      "report": ".workbuddy/tmp/strafe-motion/r7-headed-retry1/observations.json",
+      "sha256": "sha256:11ab3b81931c5fa9de91cb28093ded030b2138849f6f71f6a65d73aa4a192311",
+      "result": "A/D运行数据已形成；上身断言未识别既有pistol-idle回退，观察近景双脚被HUD遮挡，未用作视觉批准"
+    }
+  ],
+  "limitations": [
+    "左右源/H01未提供足标定，运行期calibration为null；in-place来源仍partial/no-world-lock。",
+    "离线保持原最低踝关节高度不是接地IK、足底标定或地形锁脚；没有承诺解决脚滑。",
+    "pistol-idle专用片段仍缺失；准确回退诊断保留，持握由本帧装配/双手残差另证。",
+    "观察PNG冻结真实正常输入产生的步态，相位与tick保持；运行位移证据来自正常游戏视图。"
+  ]
+}
