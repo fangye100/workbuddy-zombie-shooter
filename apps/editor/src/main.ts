@@ -4197,6 +4197,7 @@ async function boot(): Promise<void> {
       bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
+    holdSlotViewport.updateEditingState();
     gameAudio.update(playCtl.session,camera.yaw);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;

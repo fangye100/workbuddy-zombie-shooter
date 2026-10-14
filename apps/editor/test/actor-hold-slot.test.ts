@@ -5,6 +5,7 @@ import {quatMul,quatAxisAngle} from '@aether/core';
 import {rotateVec3} from '@aether/render';
 import {ActorHoldSlotSession,slotFromWorld} from '../src/services/actor-hold-slot';
 import {GizmoTargetDrag} from '../src/services/gizmo-target-drag';
+import {ActorHoldSlotViewport} from '../src/services/actor-hold-slot-viewport';
 import {buildGizmo} from '../src/features/gizmo.feature';
 import type {LabRenderer} from '../src/renderer';
 import type {HoldContext} from '../src/services/runtime-weapons';
@@ -45,6 +46,18 @@ describe('角色持握资产草稿与保存边界',()=>{
  });
 });
 describe('非场景gizmo坐标与拖拽',()=>{
+ it('已捕获drag遇暂空pose不取消/回滚；明确Stop或pointercancel才恢复本次草稿',async()=>{
+  const f=fixture();await f.session.hydrate();f.session.shown=true;f.session.selectedInView=true;
+  const frame={weaponId:'a',world:identitySocket(),actorRotation:[0,0,0,1] as [number,number,number,number],scale:1};f.context!.frame=frame;
+  const captured=new Set<number>(),canvas={setPointerCapture:(id:number)=>captured.add(id),hasPointerCapture:(id:number)=>captured.has(id),releasePointerCapture:(id:number)=>captured.delete(id)};
+  const renderer={helperGizmo:null,getEye:()=>[0,0,10],getGizmoInfo:()=>({origin:[0,0,0],axes:[[1,0,0],[0,1,0],[0,0,1]],mode:'translate'}),pointerRay:(x:number,y:number)=>({o:[x,y,10],d:[0,0,-1]}),worldToScreen:()=>({x:0,y:0,behind:false}),setGizmoActiveAxis:vi.fn()} as unknown as LabRenderer;
+  const viewport=new ActorHoldSlotViewport(canvas as unknown as HTMLCanvasElement,renderer,f.session,()=>({axis:0}));const event=(type:string,x=.2)=>({type,pointerId:1,button:0,clientX:x,clientY:0}) as PointerEvent;
+  expect(viewport.claim(event('pointerdown'))).toBe(true);viewport.claim(event('pointermove',.3));expect(f.session.slot!.position[0]).toBeCloseTo(.1);
+  f.context!.frame=null;viewport.sync();viewport.updateEditingState();expect(renderer.helperGizmo).toBeNull();expect(captured.has(1)).toBe(true);expect(f.session.dirty).toBe(true);expect(f.session.summary().canUndo).toBe(false);
+  viewport.claim(event('pointermove',.4));expect(f.session.slot!.position[0]).toBeCloseTo(.2);f.context!.frame=frame;viewport.sync();viewport.claim(event('pointerup',.4));expect(captured.size).toBe(0);expect(f.session.summary().canUndo).toBe(true);f.session.history();expect(f.session.slot).toEqual(slot());
+  viewport.claim(event('pointerdown'));viewport.claim(event('pointermove',.3));viewport.claim(event('pointercancel',.3));expect(f.session.slot).toEqual(slot());expect(captured.size).toBe(0);
+  viewport.claim(event('pointerdown'));viewport.claim(event('pointermove',.3));f.context=null;viewport.updateEditingState();expect(captured.size).toBe(0);f.context={actor:{guid:'actorA',path:'assets/actorA.glb'},nodeId:'player',generation:1,pending:0,activeWeaponId:'a',profiles:f.disk.holdProfiles,diagnostics:[],weapons:[{id:'a',name:'A',model:{guid:'modelA',path:'assets/a.glb'},slot:slot()}],frame};expect(f.session.slot).toEqual(slot());
+ });
  it('每次绘制消费pose后最新外部target，不依赖HUD/selected scene object；停止target可释放',()=>{
   let pose=identitySocket();const source=vi.fn(()=>structuredClone(pose));const host={helperGizmo:null,helperGizmoSource:source,state:{selectedIndex:null,gizmoSpace:'local',gizmoMode:'translate',gizmoActiveAxis:null}} as unknown as LabRenderer;
   expect(buildGizmo(host)!.origin).toEqual([0,0,0]);pose={position:[.02,1,.3],rotation:[0,0,0,1]};expect(buildGizmo(host)!.origin).toEqual(pose.position);expect(source).toHaveBeenCalledTimes(2);host.helperGizmoSource=()=>null;expect(buildGizmo(host)).toBeNull();

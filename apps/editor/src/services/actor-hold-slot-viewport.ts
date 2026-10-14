@@ -6,18 +6,22 @@ import { GizmoTargetDrag } from './gizmo-target-drag';
 import type { HoldContext } from './runtime-weapons';
 export class ActorHoldSlotViewport {
   private pointer:number|null=null;
-  private baseline:{slot:ActorHoldSlot;world:SocketTransform;frame:NonNullable<HoldContext['frame']>}|null=null;
+  private baseline:{identity:string;slot:ActorHoldSlot;world:SocketTransform;frame:NonNullable<HoldContext['frame']>}|null=null;
   private drag:GizmoTargetDrag;
   constructor(private canvas:HTMLCanvasElement,private renderer:LabRenderer,private session:ActorHoldSlotSession,private hit:(x:number,y:number)=>{axis:number}|null){
     this.drag=new GizmoTargetDrag({ray:(x,y)=>renderer.pointerRay(x,y),eye:()=>renderer.getEye(),info:()=>renderer.getGizmoInfo(),read:()=>session.frame?.world??null,
-      begin:()=>{const frame=session.frame,slot=session.slot;if(frame&&slot){this.baseline={slot,world:structuredClone(frame.world),frame};session.beginDrag();}},
+      begin:()=>{const frame=session.frame,slot=session.slot;if(frame&&slot){this.baseline={identity:session.identity,slot,world:structuredClone(frame.world),frame};session.beginDrag();}},
       write:world=>{if(this.baseline)session.edit(slotFromWorld(this.baseline.slot,this.baseline.world,world,this.baseline.frame),false);},
       end:cancel=>{session.endDrag(cancel);this.baseline=null;renderer.setGizmoActiveAxis(null);}});
   }
   sync():void {
     const frame=this.session.frame;
-    if(!frame||!this.session.shown){if(this.drag.active)this.release(true);this.renderer.helperGizmo=null;return;}
-    this.renderer.helperGizmo=structuredClone(frame.world);
+    // 派生绘制不能取消输入/回滚草稿。合法Pause下短暂无pose只隐藏手柄，保留捕获基准。
+    this.renderer.helperGizmo=frame&&this.session.shown?structuredClone(frame.world):null;
+  }
+  /** 输入生命周期由显式编辑状态决定，与pose/model绘制可用性分离。 */
+  updateEditingState():void {
+    if(this.drag.active&&(!this.session.editable||!this.session.shown||this.baseline?.identity!==this.session.identity))this.release(true);
   }
   claim(e:PointerEvent):boolean {
     if(this.pointer!==null&&e.pointerId===this.pointer){

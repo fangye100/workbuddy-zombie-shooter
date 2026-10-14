@@ -30,6 +30,7 @@ export class ActorHoldSlotSession {
   get dirty():boolean{return JSON.stringify(this.profiles)!==JSON.stringify(this.accepted);}
   get ready():boolean{return !!this.meta&&this.ports.context()?.actor.guid===this.loadedGuid;}
   get editable():boolean{return this.ready&&this.ports.editable()&&!this.busy;}
+  get identity():string{return this.ready?`${this.loadedGuid}/${this.selected}`:'';}
   get slot():ActorHoldSlot|null {
     const w=this.ports.context()?.weapons.find(w=>w.id===this.selected);if(!w||!this.ready)return null;
     return structuredClone(this.profiles[w.model.guid!]?.slot??w.slot);
