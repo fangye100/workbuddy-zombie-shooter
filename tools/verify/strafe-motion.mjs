@@ -11,9 +11,10 @@ import { probeOptions, profileOwners, freePort, ProbeInput, visiblePoint, collap
 const REPO = path.resolve(import.meta.dirname, '../..');
 const SCENE = 'assets/scenes/sandbox/weapon-assembly-trial.scene.json';
 export function strafeOptions(argv) {
-  const allowed = ['--root','--expected-head','--url','--cdp','--hold-ms','--out','--chrome'];
+  const allowed = ['--root','--expected-head','--url','--cdp','--hold-ms','--out','--chrome','--controls-only'];
   for (let i=0;i<argv.length;i+=2) if (!allowed.includes(argv[i]) || !argv[i+1] || argv[i+1].startsWith('--')) throw Error('未知或缺少探针参数 '+argv[i]);
-  return probeOptions(argv.includes('--out') ? argv : [...argv,'--out','.workbuddy/tmp/strafe-motion/r7-headed']);
+  const i=argv.indexOf('--controls-only'),value=i<0?'false':argv[i+1];if(!['true','false'].includes(value))throw Error('controls-only 必须为 true/false');
+  return {...probeOptions(argv.includes('--out') ? argv : [...argv,'--out','.workbuddy/tmp/strafe-motion/r7-headed']),controlsOnly:value==='true'};
 }
 
 /** 两组验收只通过真实 UI Stop→Play 分隔，避免累计横移消耗同一房间余量。 */
@@ -83,7 +84,7 @@ export function observationPlan(sample) {
   return plan;
 }
 
-export function framingEvidence(projection) {
+export function framingEvidence(projection,{requireSideFront=true}={}) {
   const reasons=[],{bounds:b,canvas:c,points,uiRects}=projection;
   if(!b||!c||!points?.length)return {ok:false,reasons:['projection-missing']};
   if(points.some(p=>p.behind||!Number.isFinite(p.x)||!Number.isFinite(p.y)))reasons.push('invalid-projection');
@@ -92,7 +93,7 @@ export function framingEvidence(projection) {
   if(b.bottom-b.top<180||b.bottom-b.top>500)reasons.push('body-size');
   const occluders=uiRects.filter(r=>b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top);
   if(occluders.length)reasons.push('ui-occluded');
-  if(!(projection.frontDot>.4&&projection.frontDot<.95))reasons.push('side-front-view');
+  if(requireSideFront&&!(projection.frontDot>.4&&projection.frontDot<.95))reasons.push('side-front-view');
   return {ok:!reasons.length,reasons,bounds:b,occluders,frontDot:projection.frontDot};
 }
 
@@ -117,7 +118,7 @@ export async function runStrafeProbe(options) {
   const processes=raw?[JSON.parse(raw)].flat():[];
   if(processes.some(p=>!p.CommandLine)||profileOwners(processes,profile).length)throw Error('保留 profile 归属不可证明或已被持有；不接管现有 Chrome');
   await freePort(options.cdpPort);fs.mkdirSync(options.out,{recursive:true});
-  const report={targetHead:options.expectedHead,root:options.root,url:options.url,scene:SCENE,normalTls:true,profile,toolSha256:createHash('sha256').update(fs.readFileSync(fileURLToPath(import.meta.url))).digest('hex'),sceneSha256:createHash('sha256').update(fs.readFileSync(path.join(options.root,SCENE))).digest('hex'),startedAt:new Date().toISOString(),checks:[],actions:[],samples:[],screenshots:[],exceptions:[],limitations:['足点是踝关节，不是足底接触标记。最低踝高保持不等于接地 IK 或世界锁脚。','PNG 需检查全身轮廓、脚部遮挡与持握；自动检查不替代视觉批准。']};
+  const report={acceptanceScope:options.controlsOnly?'R8 controls/GameView':'R7 strict portrait + R8 controls',notApplicable:options.controlsOnly?[{name:'R7侧前45°肖像机位',reason:'R8专项使用作者GodView全身截图；原R7严格默认条件保留，未声明本轮验证该肖像机位。'}]:[],targetHead:options.expectedHead,root:options.root,url:options.url,scene:SCENE,normalTls:true,profile,toolSha256:createHash('sha256').update(fs.readFileSync(fileURLToPath(import.meta.url))).digest('hex'),sceneSha256:createHash('sha256').update(fs.readFileSync(path.join(options.root,SCENE))).digest('hex'),startedAt:new Date().toISOString(),checks:[],actions:[],samples:[],screenshots:[],exceptions:[],limitations:['足点是踝关节，不是足底接触标记。最低踝高保持不等于接地 IK 或世界锁脚。','PNG 需检查全身轮廓、脚部遮挡与持握；自动检查不替代视觉批准。']};
   const check=(name,ok,detail)=>{report.checks.push({name,ok:!!ok,detail});};
   let session,input;
   try {
@@ -140,7 +141,7 @@ export async function runStrafeProbe(options) {
     check('HTTPS/真实 NVIDIA',report.gpu.secure&&report.gpu.vendor==='nvidia'&&report.gpu.architecture==='lovelace',report.gpu);if(!report.checks.at(-1).ok)throw Error('未确认真实 GPU');
     const snap=async label=>{const sample={label,atMs:Date.now(),...await cdp.eval(STRAFE_SNAPSHOT)};report.samples.push(sample);return sample;};
     const click=async selector=>{const point=await visiblePoint(cdp,selector);await input.pointer(point,true);await input.pointer(point,false);report.actions.push({click:selector,atMs:Date.now()});};
-    const drag=async(dx,dy,button='left')=>{if(Math.abs(dx)>530||Math.abs(dy)>250)throw Error('观察拖动超出有界范围');const p=await visiblePoint(cdp,'#gpu');await input.pointer(p,true,button);for(let k=1;k<=8;k++){await input.move({x:p.x+dx*k/8,y:p.y+dy*k/8});await sleep(20);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(120);};
+    const drag=async(dx,dy,button='left')=>{if(Math.abs(dx)>530||Math.abs(dy)>250)throw Error('观察拖动超出有界范围');await cdp.send('Page.bringToFront');const p=await visiblePoint(cdp,'#gpu'),readDrag=()=>cdp.eval(`(()=>{const e=window.__editor,c=document.querySelector('#gpu'),hit=document.elementFromPoint(${p.x},${p.y});return {focus:document.hasFocus(),mousePointerCapture1:c.hasPointerCapture(1),active:document.activeElement?.tagName,hit:hit?.id,observing:e.playCtl.observing,camera:{...structuredClone(e.camera),elevationDeg:e.params.cameraElevation}};})()`),before=await readDrag();await input.pointer(p,true,button);const pressed=await readDrag();for(let k=1;k<=8;k++){await input.move({x:p.x+dx*k/8,y:p.y+dy*k/8});await sleep(20);}await input.pointer({x:p.x+dx,y:p.y+dy},false,button);await sleep(120);report.actions.push({nativeDrag:{button,dx,dy,before,pressed,after:await readDrag()}});};
     const capture=async label=>{const sample=await snap(label),before=await cdp.eval('window.__editor.renderer.state.frameCounter'),{data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),after=await cdp.eval('window.__editor.renderer.state.frameCounter'),file=label+'.png';fs.writeFileSync(path.join(options.out,file),Buffer.from(data,'base64'));report.screenshots.push({file,sample:report.samples.length-1,frameRange:[before,after],clip:sample.actor?.clip,phase:sample.actor?.phase,state:sample.state,observing:sample.observing});return sample;};
     const author=await snap('author');await capture('01-author');await input.tap('v');const editFree=await snap('edit-free-v');await input.tap('v');const editOrbit=await snap('edit-orbit-v');check('Edit V保留自由飞行开关',editFree.freeCam?.on&&!editOrbit.freeCam?.on&&!editOrbit.observing,{editFree,editOrbit});await click('#btn-play');
     if(!await waitFor(()=>cdp.eval('window.__editor.playCtl.state==="playing"&&window.__editor.weaponModels.snapshot().visible&&window.__editor.motions.summary().pending===0'),{timeout:20000,interval:150}))throw Error('Play/动作/持握模型未就绪');
@@ -186,7 +187,11 @@ export async function runStrafeProbe(options) {
       if(!await waitFor(async()=>{await aim();const s=await snap(key+'-pre-pause');return s.actor?.clip===clip&&s.actor.phase>=peakRange[0]&&s.actor.phase<=peakRange[1];},{timeout:1500,interval:25}))throw Error('未采到自然宽步相位');
       await click('#btn-pause');await input.key(key,false);const paused=await snap(key+'-pause');await sleep(250);const frozen=await snap(key+'-frozen');
       check(key+'Pause冻结原步态',paused.state==='paused'&&paused.actor?.clip===clip&&frozen.tick===paused.tick&&frozen.actor?.time===paused.actor?.time,{paused,frozen});
-      await capture(key+'-paused-game');await click('#btn-freecam');
+      await capture(key+'-paused-game');
+      if(options.controlsOnly){
+        const projection=await cdp.eval(FRAMING_EXPRESSION),framing=framingEvidence(projection,{requireSideFront:false});report.actions.push({godViewFraming:key,projection,evidence:framing});check(key+'GodView全身/双膝双足无遮挡',framing.ok,framing);if(!framing.ok)throw Error('GodView全身截图不满足条件：'+framing.reasons.join(','));
+      }else{
+      await click('#btn-freecam');
       const plan=observationPlan(paused);report.actions.push({observationPlan:key,...plan});await drag(plan.dx,plan.dy);
       const point=await visiblePoint(cdp,'#gpu');await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:point.x,y:point.y,deltaX:0,deltaY:plan.wheelDelta});await sleep(200);
       const beforePan=await cdp.eval(FRAMING_EXPRESSION),bounds=beforePan.bounds,rect=beforePan.canvas;
@@ -197,7 +202,9 @@ export async function runStrafeProbe(options) {
       if(!framing.ok)throw Error('观察截图不满足全身可见：'+framing.reasons.join(','));
       const viewed=await capture(key+'-paused-observation');
       check(key+'冻结全身观察保留动作',viewed.observing&&viewed.tick===paused.tick&&viewed.actor?.time===paused.actor?.time&&viewed.actor?.clip===clip,viewed);
-      await input.tap('v');await click('#btn-pause');await aim();await sleep(200);const idle=await snap(key+'-released');check(key+'停步回idle',idle.state==='playing'&&!idle.observing&&idle.actor?.clip==='idle',idle.actor);
+      await input.tap('v');
+      }
+      await click('#btn-pause');await aim();await sleep(200);const idle=await snap(key+'-released');check(key+'停步回idle',idle.state==='playing'&&!idle.observing&&idle.actor?.clip==='idle',idle.actor);
     }
     for(const [key,clip] of [['w','walk_f'],['s','walk_b']]) {
       await aim();await input.key(key,true);const start=report.samples.length,until=Date.now()+600;

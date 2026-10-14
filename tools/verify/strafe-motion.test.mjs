@@ -8,6 +8,8 @@ import { ProbeInput } from './weapon-assembly.mjs';
 test('定向探针强制固定检出/HTTPS候选入口和完整HEAD，拒绝额外流程参数',()=>{
  const head='a'.repeat(40),options=strafeOptions(['--expected-head',head]);
  assert.ok(options.out.includes('strafe-motion'));assert.equal(options.expectedHead,head);
+ assert.equal(options.controlsOnly,false);assert.equal(strafeOptions(['--expected-head',head,'--controls-only','true']).controlsOnly,true);
+ assert.throws(()=>strafeOptions(['--expected-head',head,'--controls-only','yes']));
  assert.throws(()=>strafeOptions(['--expected-head','short']));
  assert.throws(()=>strafeOptions(['--expected-head',head,'--url','http://localhost:5100']));
  assert.throws(()=>strafeOptions(['--expected-head',head,'--all-weapons','true']));
@@ -77,5 +79,9 @@ test('全身观察计划从实际机位和actor朝向计算，输入有界；HUD
  assert.equal(framingEvidence({...projection,bounds:{...projection.bounds,right:560}}).ok,false);
  assert.equal(framingEvidence({...projection,bounds:{...projection.bounds,bottom:1001}}).ok,false);
  assert.equal(framingEvidence({...projection,frontDot:-1}).ok,false);
+ // R8只免除额外肖像朝向；双足、裁切和HUD遮挡条件保持有效。
+ assert.equal(framingEvidence({...projection,frontDot:-1},{requireSideFront:false}).ok,true);
+ assert.equal(framingEvidence({...projection,frontDot:-1,bounds:{...projection.bounds,right:560}},{requireSideFront:false}).ok,false);
+ assert.equal(framingEvidence({...projection,frontDot:-1,points:points.filter(p=>p.name!=='RightFoot')},{requireSideFront:false}).ok,false);
  assert.equal(framingEvidence({...projection,points:points.filter(p=>p.name!=='RightFoot')}).ok,false);
 });
