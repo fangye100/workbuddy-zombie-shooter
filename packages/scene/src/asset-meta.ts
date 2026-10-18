@@ -311,7 +311,7 @@ export interface AnimationClipMeta {
 // ---------------------------------------------------------------- 主结构
 
 // bvh：BVH 动捕源资产（MR-01 起）。源动画导入有正式类型，不冒充 glTF、不藏 userData
-export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh' | 'motion-library' | 'audio';
+export type AssetKind = 'gltf' | 'texture' | 'prefab' | 'scene' | 'material-library' | 'behavior' | 'bvh' | 'motion-library' | 'audio' | 'vfx';
 
 /**
  * 资产 sidecar 元数据。文件名 = `<源资产文件名>.meta.json`，与源资产同目录。
@@ -416,7 +416,7 @@ export function validateAssetMeta(meta: unknown): MetaDiagnostic[] {
   if (typeof m.guid !== 'string' || m.guid.length === 0) err('/guid', 'E_META_GUID', 'guid 必须是非空字符串');
   else if (!GUID_RE.test(m.guid)) warn('/guid', 'W_META_GUID_FORM', `guid 格式异常：${m.guid}（建议 as_xxxxxxxx）`);
 
-  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh', 'motion-library', 'audio'];
+  const kinds: AssetKind[] = ['gltf', 'texture', 'prefab', 'scene', 'material-library', 'behavior', 'bvh', 'motion-library', 'audio', 'vfx'];
   if(m.kind==='audio' && !validAudioAssetInfo(m.audio))err('/audio','E_AUDIO_META','音频采样与循环区间无效');
   if (typeof m.kind !== 'string' || !kinds.includes(m.kind as AssetKind)) {
     err('/kind', 'E_META_KIND', `kind 必须是 ${kinds.join(' / ')} 之一`);

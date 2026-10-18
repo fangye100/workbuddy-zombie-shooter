@@ -122,7 +122,7 @@ function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (e.name.endsWith('.glb') || e.name.endsWith('.wav') && relative(ASSETS,p).split(sep)[0]==='audio') out.push(p);
+    else if (e.name.endsWith('.glb') || e.name.endsWith('.wav') && relative(ASSETS,p).split(sep)[0]==='audio' || relative(ASSETS,p).split(sep)[0]==='vfx' && /\.(vfx\.json|svg|png|webp)$/.test(e.name)) out.push(p);
   }
   return out;
 }
@@ -148,7 +148,7 @@ function buildMeta(relPath, hash, roster) {
   return {
     schemaVersion: 1,
     guid: newGuid(),
-    kind: audio?'audio':'gltf',
+    kind: audio?'audio':relPath.endsWith('.vfx.json')?'vfx':relPath.startsWith('assets/vfx/')?'texture':'gltf',
     ...(audio?{audio}:{}),
     importer: {
       // 角色资产按名册身高归一化；非角色（synthetic）不归一化
@@ -223,7 +223,7 @@ function main() {
   const all = walk(ASSETS);
   const targets = all
     .map((abs) => ({ abs, rel: relative(ROOT, abs).split(sep).join('/') }))
-    .filter(({ rel }) => rel.startsWith('assets/audio/') && rel.endsWith('.wav') || isTarget(rel))
+    .filter(({ rel }) => rel.startsWith('assets/vfx/') || rel.startsWith('assets/audio/') && rel.endsWith('.wav') || isTarget(rel))
     .sort((a, b) => a.rel.localeCompare(b.rel));
 
   if (targets.length === 0) {

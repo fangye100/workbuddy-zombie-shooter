@@ -1,7 +1,8 @@
 import type { WeaponDefinition, WeaponBehavior } from '@aether/scene';
 export type WeaponPoint=[number,number,number];
 export interface WeaponActor { id:number;generation:number;x:number;z:number;radius:number;hp:number }
-export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number }
+export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
+export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
 export interface WeaponWorld {
   actors():WeaponActor[]; actor(id:number):WeaponActor|null;
   trace(from:WeaponPoint,direction:WeaponPoint,range:number,ignore:ReadonlySet<number>,radius?:number):WeaponHit;
@@ -25,7 +26,7 @@ class RayWeapon implements WeaponImplementation {
       const d:WeaponPoint=[c.direction[0]*Math.cos(angle)-c.direction[2]*Math.sin(angle),0,c.direction[0]*Math.sin(angle)+c.direction[2]*Math.cos(angle)];
       const ignore=new Set<number>();let end:WeaponPoint=[c.from[0]+d[0]*w.rangeM,c.from[1],c.from[2]+d[2]*w.rangeM],hit=false;
       for(let p=0;p<(this.pierce?w.penetration:1);p++){
-        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;if(!result.actor)break;
+        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);if(!result.actor)break;
         hit=true;ignore.add(result.actor.id);c.combat.impact(c.weapon,result.actor,c.damage,c.tick,c.world,c.from);
       }
       c.combat.effect(w,this.pellets?'pellet':this.pierce?'pierce':'shot',c.from,end,c.tick,.12,0,hit);
@@ -58,12 +59,22 @@ export class WeaponCombat {
   private sequence=0;
   private now=0;
   private rng:number;
+  private vfxSequence=0;
+  private vfxEvents:WeaponVfxEvent[]=[];
+  vfxDropped=0;
   constructor(seed:number){this.rng=(seed>>>0)||1;}
   private random():number {let x=this.rng;x^=x<<13;x^=x>>>17;x^=x<<5;this.rng=x>>>0;return this.rng/4294967296;}
   canFire(w:WeaponDefinition):boolean {return w.behavior!=='projectile' || this.projectiles.length<64;}
   fire(w:WeaponDefinition,from:WeaponPoint,direction:WeaponPoint,damage:number,tick:number,world:WeaponWorld):void {
+    this.recordVfx(w,'fire',from,{actor:null,point:from,distance:0,kind:'miss'},tick);
     WEAPON_IMPLEMENTATIONS[w.behavior].fire({weapon:w,from,direction,damage,tick,world,combat:this,random:()=>this.random()});
   }
+  private recordVfx(w:WeaponDefinition,kind:WeaponVfxEvent['kind'],from:WeaponPoint,hit:WeaponHit,tick:number):void {
+    if(this.vfxEvents.length>=2048){this.vfxEvents.shift();this.vfxDropped++;}
+    this.vfxEvents.push(Object.freeze({sequence:++this.vfxSequence,tick,weaponId:w.id,kind,from:Object.freeze([...from]),to:Object.freeze([...hit.point]),contact:hit.kind??(hit.actor?'entity':'miss'),actor:hit.actor?Object.freeze({...hit.actor}):null,nodeId:hit.nodeId??null,normal:hit.normal?Object.freeze([...hit.normal]):null}));
+  }
+  recordTrace(w:WeaponDefinition,from:WeaponPoint,hit:WeaponHit,tick:number):void {this.recordVfx(w,'trace',from,hit,tick);}
+  drainVfxEvents():readonly WeaponVfxEvent[] {const events=this.vfxEvents;this.vfxEvents=[];return events;}
   effect(w:WeaponDefinition,kind:WeaponEffect['kind'],from:WeaponPoint,to:WeaponPoint,tick:number,duration:number,radius:number,hit:boolean):WeaponEffect {
     const e:WeaponEffect={id:++this.sequence,tick,weaponId:w.id,kind,from:[...from],to:[...to],position:[...from],duration,radius,spreadDeg:w.spreadDeg,color:w.presentation.color,hit};
     this.effects.push(e);return e;
@@ -120,5 +131,5 @@ export class WeaponCombat {
   }
   get burning():ReadonlyArray<{id:number;generation:number;until:number}> {return [...this.statuses.values()].filter(s=>s.until>this.now && s.damage>0);}
   get pendingProjectiles():number{return this.projectiles.length;}
-  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();}
+  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();this.vfxEvents=[];this.vfxDropped=0;}
 }

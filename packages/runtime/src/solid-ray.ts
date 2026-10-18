@@ -66,3 +66,25 @@ export function nearestSolidHit(origin: V3, direction: V3, solids: readonly Soli
   }
   return nearest === Infinity ? null : nearest;
 }
+
+export interface SolidContact { nodeId: NodeId; distance: number; point: [number, number, number]; normal: [number, number, number] }
+/** Surface normal uses inverse transpose, including nonuniform/parent scale. */
+export function nearestSolidContact(origin: V3, direction: V3, solids: readonly SolidColliderDesc[], range: number, sweepRadius=0): SolidContact | null {
+  let result: SolidContact | null = null;
+  for (const solid of solids) {
+    const distance = raySolid(origin, direction, solid, sweepRadius);
+    if (distance === null || distance > range || result && distance >= result.distance) continue;
+    const point = origin.map((v,i) => v + direction[i]! * distance) as [number,number,number], m = solid.worldToLocal;
+    const local = [m[0]!*point[0]+m[4]!*point[1]+m[8]!*point[2]+m[12]!, m[1]!*point[0]+m[5]!*point[1]+m[9]!*point[2]+m[13]!, m[2]!*point[0]+m[6]!*point[1]+m[10]!*point[2]+m[14]!];
+    const s = solid.shape; let n = [...local];
+    if (s.type === 'box') {
+      const axis = [0,1,2].reduce((a,b) => Math.abs(Math.abs(local[b]!)-s.halfExtents[b]!) < Math.abs(Math.abs(local[a]!)-s.halfExtents[a]!) ? b : a);
+      n = [0,0,0]; n[axis] = Math.sign(local[axis]!) || 1;
+    } else if (s.type === 'capsule') { const h = Math.max(0,s.height/2-s.radius); n[1] = local[1]!-Math.max(-h,Math.min(h,local[1]!)); }
+    const normal: [number,number,number] = [m[0]!*n[0]!+m[1]!*n[1]!+m[2]!*n[2]!,m[4]!*n[0]!+m[5]!*n[1]!+m[6]!*n[2]!,m[8]!*n[0]!+m[9]!*n[1]!+m[10]!*n[2]!];
+    const length = Math.hypot(...normal);
+    for(let i=0;i<3;i++) normal[i] = length > 1e-9 ? normal[i]!/length : -direction[i]!;
+    result = { nodeId:solid.nodeId, distance, point, normal };
+  }
+  return result;
+}

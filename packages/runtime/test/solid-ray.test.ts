@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SceneGraph, createEmptySceneDocument, identityTransform } from '@aether/scene';
 import type { ColliderComponent, SceneDocument, SceneNode } from '@aether/scene';
 import { PLAYER_STATS } from '@aether/content';
-import { solidCollider, raySolid } from '../src/solid-ray';
+import { solidCollider, raySolid, nearestSolidContact } from '../src/solid-ray';
 import { loadLevelRuntime } from "@aether/zombie-game";
 import { RuntimeSession } from "@aether/zombie-game";
 const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json', { eager: true });
@@ -14,6 +14,13 @@ function geometry(shape: ColliderComponent['shape'], position: [number, number, 
   return solidCollider(n.id, shape, SceneGraph.fromDocument(doc).worldMatrix(n.id));
 }
 describe('finite solid ray geometry in world distance', () => {
+  it('contact preserves finite surface point, receiver and transformed unit normal',()=>{
+    const s=geometry({type:'sphere',radius:1},[5,0,0],[2,1,1]);
+    const c=nearestSolidContact([0,.5,0],[1,0,0],[s],10)!;
+    expect(c.nodeId).toBe('nd_solid');expect(c.point[0]).toBeCloseTo(5-Math.sqrt(3),5);
+    expect(Math.hypot(...c.normal)).toBeCloseTo(1,5);expect(c.normal[0]).toBeLessThan(0);expect(c.normal[1]).toBeGreaterThan(0);
+    expect(nearestSolidContact([0,3,0],[1,0,0],[s],10)).toBeNull();
+  });
   it('swept projectile radius hits a grazing box while an ordinary bullet ray remains unobstructed',()=>{
     const s=geometry(box,[3,0,0]);
     expect(raySolid([0,.8,1.1],[1,0,0],s)).toBeNull();

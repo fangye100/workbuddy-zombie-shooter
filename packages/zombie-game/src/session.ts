@@ -30,7 +30,7 @@ import type { NodeId } from '@aether/scene';
 import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from "@aether/runtime";
 import { NULL_BEHAVIOR_EXECUTOR } from "@aether/runtime";
-import { nearestSolidHit } from "@aether/runtime";
+import { nearestSolidHit, nearestSolidContact } from "@aether/runtime";
 import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
 import { WeaponSystem } from "@aether/runtime";
@@ -1472,13 +1472,15 @@ export class RuntimeSession {
     const blocked:WeaponWorld['blocked']=(from,to)=>{const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);return l>1e-6 && nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.desc.shotColliders,l)!==null;};
     return {actor,actors:()=>{const out=[];for(let i=0;i<t.capacity;i++){const a=actor(i);if(a)out.push(a);}return out;},blocked,
       trace:(from,direction,range,ignore,radius=0)=>{
-        let distance=nearestSolidHit(from,direction,this.desc.shotColliders,range,radius)??range, target=null;
+        const solid=nearestSolidContact(from,direction,this.desc.shotColliders,range,radius);
+        let distance=solid?.distance??range, target=null;
         for(let i=0;i<t.capacity;i++){const a=actor(i);if(!a || ignore.has(i))continue;
           const stats=this.defIdToStats.get(t.defId[i]!);if(!stats)continue;
           const h=rayCapsuleY([from[0],from[1]+radius,from[2]],direction,a.x,a.z,a.radius+radius,stats.capsuleHeight+radius*2);
           if(h!==null && h<distance){distance=h;target=a;}
         }
-        return {actor:target,distance,point:[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance]};
+        const point: [number,number,number]=[from[0]+direction[0]*distance,from[1]+direction[1]*distance,from[2]+direction[2]*distance];
+        return {actor:target,distance,point,kind:target?'entity':solid?'scene':'miss',nodeId:target?undefined:solid?.nodeId,normal:target?[-direction[0],-direction[1],-direction[2]]:solid?.normal};
       },
       damage:(id,damage)=>{
         const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p);

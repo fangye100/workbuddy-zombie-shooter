@@ -27,6 +27,7 @@ import { validateSceneDocument } from '../src/document';
 import type { AssetMeta } from '../src/asset-meta';
 import type { SceneDocument } from '../src/document';
 import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
+import { validateVfxAsset, type VfxAsset } from '../src/vfx';
 
 /** eager + import:'default' → 直接拿解析后的 JSON 对象 */
 const projectModules = import.meta.glob('/aether.project.json', {
@@ -47,6 +48,28 @@ const sceneModules = import.meta.glob('/assets/**/*.scene.json', {
 /** eager:false 只拿键不加载内容 —— 用于孤儿检查（清单比内容便宜） */
 const allAssetPaths = Object.keys(import.meta.glob('/assets/**/*', { eager: false }));
 const motionModules = import.meta.glob('/assets/**/*.motion.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+const vfxModules = import.meta.glob('/assets/**/*.vfx.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+
+it('VFX definitions, texture identities and weapon bindings resolve accepted resources', () => {
+  const failures:string[]=[];
+  const check=(owner:string,ref:{path:string;guid?:string},kind:string)=>{
+    const meta=metaModules[`/${ref.path}.meta.json`] as AssetMeta|undefined;
+    if(!allAssetPaths.includes(`/${ref.path}`) || meta?.guid!==ref.guid || meta?.kind!==kind)failures.push(`${owner}: identity ${ref.path}`);
+  };
+  for(const [path,data] of Object.entries(vfxModules)) {
+    const errors=validateVfxAsset(data);failures.push(...errors.map(e=>`${path}: ${e}`));if(errors.length)continue;
+    const a=data as VfxAsset;check(path,{path:path.slice(1),guid:a.id},'vfx');
+    for(const e of Object.values(a.effects))check(path,e.texture,'texture');
+  }
+  for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components) {
+    if(c.kind!=='RunRules' || !c.arsenal)continue;
+    for(const w of c.arsenal.definitions){const v=w.presentation.vfx;if(!v.resource)continue;check(path,v.resource,'vfx');
+      const a=vfxModules[`/${v.resource.path}`] as VfxAsset|undefined;
+      if(!a || a.status!=='accepted' || !(['muzzle','trail','impact'] as const).every(k=>a.effects[v[k]]?.kind===k))failures.push(`${path}: invalid VFX binding ${w.id}`);
+    }
+  }
+  expect(failures).toEqual([]);
+});
 
 it('scene audio resolves actual WAV identities, cue IDs and loop metadata', () => {
   const errors:string[]=[];
