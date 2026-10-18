@@ -1,3 +1,4 @@
+import { maxAssetDockHeight } from './services/dock-layout';
 import { GameControls } from "@aether/zombie-game/presentation/game-controls";
 import { GameAudio } from "@aether/zombie-game/presentation/game-audio";
 import { weaponDiagnostics } from './services/weapon-diagnostics';
@@ -3361,7 +3362,7 @@ async function boot(): Promise<void> {
    */
   function clampDockHeight(): void {
     const cur = readCssVarPx('--dock-h', 260);
-    const max = Math.max(320, window.innerHeight - 160);
+    const max = maxAssetDockHeight(document.getElementById('mainrow')!.clientHeight);
     if (cur <= max) return;
     document.documentElement.style.setProperty('--dock-h', `${max}px`);
     try {

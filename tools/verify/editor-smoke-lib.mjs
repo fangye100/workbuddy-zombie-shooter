@@ -146,6 +146,7 @@ export async function ensureServer(port, viteConfig) {
       if (url !== null) return { server, url };
     }
   }
+  server.kill();
   throw new Error('dev server 45s 未就绪');
 }
 
@@ -304,18 +305,48 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
  * 编辑器状态归一（两套件共用）：清掉 chrome-profile 持久化 UI 残留（dock 挤压
  * 画布、收起态）、锁定 zh（标签断言按中文源文案写），reload 后等到 __editor 就绪。
  */
+export async function waitForEditorReady(cdp, {timeout=60000,interval=200,afterTimeOrigin=null,expectedScene=null}={}) {
+  let last,timer,stopped=false;
+  try {
+  const ready=await Promise.race([waitFor(async()=>{
+    if(stopped)return true;
+    last=await cdp.eval(`(()=>{
+      const e=window.__editor,c=document.getElementById('gpu'),f=document.getElementById('fatal');
+      const fatal=f&&getComputedStyle(f).display!=='none'?f.innerText:null;
+      const source=e?.renderer.getSceneSource();
+      let frames=0;try{frames=e?.fps?.()??0;}catch{/* 早期hook存在，主循环闭包尚未初始化 */}
+      return {timeOrigin:performance.timeOrigin,url:location.href,fatal,source,
+        pending:e?.renderer.pendingAssetCount,frames,
+        assets:typeof e?.assets?.getState==='function',preview:typeof e?.preview?.getState==='function',
+        width:c?.clientWidth??0,height:c?.clientHeight??0};
+    })()`);
+    if(afterTimeOrigin!==null&&last.timeOrigin===afterTimeOrigin)return false;
+    if(expectedScene!==null&&!last.source?.url.endsWith(expectedScene)&&!last.fatal)return false;
+    return last.fatal||last.source&&last.pending===0&&last.frames>0&&last.assets&&last.preview&&last.width>0&&last.height>0;
+  },{timeout,interval,label:'完整编辑器与场景首帧'}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`编辑器未就绪（超时 ${timeout}ms）：${JSON.stringify(last)}`)),timeout);})]);
+  if(!ready||last?.fatal)throw new Error(`编辑器未就绪：${JSON.stringify(last)}`);
+  return last;
+  } finally {stopped=true;clearTimeout(timer);}
+}
+
+export function isHardwareGpu(hardware) {
+  return hardware?.secure===true&&hardware.info!==null&&hardware.info!==undefined&&hardware.fallback===false&&!/swiftshader|llvmpipe|software/i.test(JSON.stringify(hardware.info));
+}
+
+export async function reloadEditor(cdp) {
+  const previous=await cdp.eval('({time:performance.timeOrigin,scene:window.__editor?.renderer.getSceneSource()?.url??null})');
+  await cdp.send('Page.reload');
+  return waitForEditorReady(cdp,{afterTimeOrigin:previous.time,expectedScene:previous.scene});
+}
+
 export async function normalizeEditorState(cdp) {
   await cdp.eval(`(() => {
     localStorage.removeItem('zh.ui.dockH');
     localStorage.removeItem('zh.ui.assets.collapsed');
     localStorage.setItem('zh.ui.lang', 'zh');
-    location.reload();
     return true;
   })()`);
-  return waitFor(
-    () => cdp.eval('(() => (window.__editor && document.getElementById("gpu")) ? document.getElementById("gpu").clientHeight : 0)()').then((h) => typeof h === 'number' && h > 100),
-    { timeout: 20000, interval: 300, label: '编辑器就绪（__editor + 画布立起）' },
-  );
+  return reloadEditor(cdp);
 }
 
 // ---------------------------------------------------------------- 真源推导（B2 / H / J2 共用）
@@ -332,7 +363,11 @@ export function readStartSceneExpectation() {
   if (start === undefined || typeof start.path !== 'string') {
     throw new Error(`aether.project.json 的 scenes[${index}] 不可用（startIndex=${String(rawIndex)}）`);
   }
-  const doc = JSON.parse(fs.readFileSync(path.resolve(start.path), 'utf8'));
+  return readSceneExpectation(start.path);
+}
+
+export function readSceneExpectation(scenePath) {
+  const doc = JSON.parse(fs.readFileSync(path.resolve(scenePath), 'utf8'));
   const byId = new Map(doc.nodes.map((n) => [n.id, n]));
   const visibleChain = (n) => {
     let cur = n;
@@ -354,7 +389,8 @@ export function readStartSceneExpectation() {
   );
   const background = nodes.filter((n) => compOf(n).background === true).map((n) => n.name);
   return {
-    path: start.path,
+    path: scenePath,
+    nodes:nodes.map(n=>({id:n.id,name:n.name,category:n.category??'道具',pickable:n.pickable??false,background:compOf(n).background===true})),
     objects: nodes.length,
     hierarchy: nodes.length - background.length,
     names: nodes.map((n) => n.name),
@@ -364,4 +400,16 @@ export function readStartSceneExpectation() {
     // 功能体期望：场景文档里的 SpawnPoint 组件数（层级 ✦ 行数按它断言）
     spawnPoints: doc.nodes.filter((n) => n.components.some((c) => c.kind === 'SpawnPoint')).length,
   };
+}
+
+/** 选已交接且带元数据的H-01家族，不能把无sidecar源模当作可加载运行资产。 */
+export function readLodSmokeFixture() {
+  const manifest=JSON.parse(fs.readFileSync('assets/_data/asset-manifest.json','utf8'));
+  const family=manifest.characters.find(c=>c.id==='H-01')?.lods;
+  if(!Array.isArray(family))throw new Error('LOD冒烟夹具缺少H-01家族');
+  const ready=family.map((lod,index)=>({...lod,index,path:`assets/${lod.file}`}))
+    .filter(lod=>fs.existsSync(lod.path)&&fs.existsSync(lod.path+'.meta.json')&&Number.isFinite(lod.tris));
+  const sorted=ready.toSorted((a,b)=>a.tris-b.tris),low=sorted[0],high=sorted.at(-1);
+  if(!low||!high||high.tris<=low.tris*2)throw new Error('LOD冒烟需要有元数据且面数明显不同的两档');
+  return {low,high};
 }

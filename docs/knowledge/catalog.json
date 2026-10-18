@@ -1750,7 +1750,7 @@
         "headed",
         "acceptance"
       ],
-      "read": "交互验证；仓库内本地验收路径",
+      "read": "受控headed路径；场景夹具/稳定NodeId、完整启动代次、实际GPU判据、失败清理、两套件回归与范围限制",
       "sourceRefs": [
         "project-rules"
       ],
@@ -1758,8 +1758,7 @@
         "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
         "date": "2026-10-05"
       },
-      "reviewedAt": "2026-10-09",
-      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
+      "reviewedAt": "2026-10-18"
     },
     {
       "id": "doc-2d52032d1065",
@@ -2973,6 +2972,28 @@
       "read": "1843项测试、基线差分、实际MCP/GPU路径、独立审核及CPU成本限制",
       "sourceRefs": [
         "core-object-pool",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "editor-smoke-acceptance-20261018",
+      "path": "docs/evidence/editor-smoke-20261018/acceptance.md",
+      "title": "编辑器冒烟夹具、启动判据与完整浏览器验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "headed",
+        "acceptance",
+        "scene"
+      ],
+      "read": "旧夹具修复、布局与漏译缺陷；核心/绑定实际断言、独立审核、执行环境与验证边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
         "architecture-policy"
       ]
     }

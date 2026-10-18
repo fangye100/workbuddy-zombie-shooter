@@ -159,6 +159,12 @@
       "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
       "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
       "enabled": true
+    },
+    {
+      "id": "sc_editor_smoke",
+      "path": "assets/scenes/sandbox/editor-smoke.scene.json",
+      "name": "编辑器冒烟白盒 · 层级与资产交互",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -1,3 +1,4 @@
+import { maxAssetDockHeight } from './services/dock-layout';
 /**
  * 资产库浏览器（Unity Project 窗口 / Unreal Content Browser 同语义）。
  *
@@ -117,7 +118,7 @@ export class AssetBrowser {
         <span class="asset-title">${t('资产库')}</span>
         <button class="asset-up" data-asset="up" title="${t('返回上一层')}">↑</button>
         <span class="asset-crumb" data-asset="crumb"></span>
-        <input class="asset-filter" data-asset="filter" type="search" placeholder="筛选名称或路径…">
+        <input class="asset-filter" data-asset="filter" type="search" placeholder="${t('筛选名称或路径…')}">
         <label title="当前资产目录及其子目录；项目根或资产根显示project.assetRoots合集"><input data-asset="recursive" type="checkbox">包含子目录</label>
         <select data-asset="kind" aria-label="资产类型"><option value="all">全部类型</option><option value="model">模型</option><option value="image">图片</option><option value="json">JSON</option><option value="audio">音频</option><option value="doc">文档</option></select>
         <span class="asset-zoom-label">${t('列表')}</span>
@@ -147,8 +148,8 @@ export class AssetBrowser {
       cssVar: '--dock-h',
       valueFromPointer: (e) => window.innerHeight - e.clientY,
       min: 140,
-      // 每次拖动现算：窗口缩放后静态值会过期；给画布至少留 160px
-      max: () => Math.max(320, window.innerHeight - 160),
+      // 使用与启动/缩窗相同的主行预算；预算小于min时优先保留视口。
+      max: () => maxAssetDockHeight(document.getElementById('mainrow')!.clientHeight),
       persistKey: LS_DOCK_H,
     });
     const split = this.dock.querySelector<HTMLElement>('[data-asset="split"]')!;

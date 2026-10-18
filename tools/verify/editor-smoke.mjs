@@ -1,10 +1,10 @@
 /**
- * Game Editor 无头 WebGPU 冒烟验证（可复跑）。
+ * Game Editor WebGPU 冒烟验证（可复跑）。
  *
  * 为什么需要它：
  *   docs/11 §13.6 记录过一次「0b.8 headless WebGPU 冒烟 30/30 PASS」，但那份脚本
  *   跑在临时目录、从未入库，截图 `editor-0b8-smoke.png` 也不在仓库里 —— 结论不可复现。
- *   本文件把那条验证固化成 `npm run editor:smoke`，任何人一条命令就能复跑出同样的判据。
+ *   本文件把那条验证固化成 `pnpm run editor:smoke -- --headed`，任何人一条命令就能复跑出同样的判据。
  *
  * 与 cdp-verify.mjs 的分工（别再互相覆盖）：
  *   - cdp-verify.mjs  —— 视觉验证：导入真实 GLB → 截图 → 像素统计（UV / 贴图是否错乱）
@@ -13,7 +13,7 @@
  *   因为断言的是「代码路径不抛错」，不是「像素好不好看」。
  *
  * 用法：
- *   node tools/verify/editor-smoke.mjs                      # 自起 dev server + 默认胶囊场景
+ *   node tools/verify/editor-smoke.mjs                      # 自起 dev server + 项目起始场景与独立交互夹具
  *   node tools/verify/editor-smoke.mjs --glb <file.glb>     # 额外跑蒙皮/动画一组断言
  *   node tools/verify/editor-smoke.mjs --port 5181 --cdp 9334
  *
@@ -31,6 +31,11 @@ import {
   launchEditorSession,
   normalizeEditorState,
   readStartSceneExpectation,
+  readSceneExpectation,
+  readLodSmokeFixture,
+  waitForEditorReady,
+  reloadEditor,
+  isHardwareGpu,
 } from './editor-smoke-lib.mjs';
 
 // ---------------------------------------------------------------- 参数
@@ -49,6 +54,7 @@ const CHROME =
   arg('chrome', '') ||
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
+const SMOKE_SCENE='assets/scenes/sandbox/editor-smoke.scene.json';
 let APP_URL = ''; // 由 ensureServer() 探测后确定（http 还是 https）
 
 const { results, check, skip, summary } = createRecorder();
@@ -56,26 +62,26 @@ const { results, check, skip, summary } = createRecorder();
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const { server, url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
-  APP_URL = url;
+  APP_URL = arg('url',url.startsWith('https:')?url.replace('localhost','fangye-win11-office.tail6b29a2.ts.net'):url);
   const HEADED = has('headed');
 
-  const { chrome, cdp } = await launchEditorSession({
+  let chrome,cdp,ws;
+  let hardware=null,probeRoot=null,executionError=null;
+  try {
+  ({chrome,cdp,ws}=await launchEditorSession({
     chromePath: CHROME,
     cdpPort: CDP_PORT,
     headed: HEADED,
     appUrl: APP_URL,
     grantClipboard: true,
-  });
+    windowSize: arg('window-size','1600,1000'),
+    ignoreCertificateErrors: false,
+    setupTimeoutMs: 20000,
+  }));
   await cdp.send('Page.navigate', { url: APP_URL });
-  // 就绪等待（原固定 6s）：__editor 挂上且画布立起即继续
-  await waitFor(
-    () => cdp.eval('(() => (window.__editor && document.getElementById("gpu")) ? document.getElementById("gpu").clientHeight : 0)()').then((h) => typeof h === 'number' && h > 100),
-    { timeout: 20000, interval: 300, label: '首帧就绪' },
-  );
-  // 编辑器状态归一（共享库）：清持久化 UI 残留 + 锁 zh + reload 等就绪
+  await waitForEditorReady(cdp,{expectedScene:readStartSceneExpectation().path});
   await normalizeEditorState(cdp);
 
-  try {
     // ---- A. 启动 ----
     console.log('\nA. 启动与 WebGPU 上下文');
     // showFatal() 是把 #fatal 的 style.display 改成 'flex' 来显形的，
@@ -111,20 +117,21 @@ async function main() {
     // → 重载 → 必须被启动钳制收敛，画布高度立得住。
     const staleDock = await cdp.eval(`(async () => {
       localStorage.setItem('zh.ui.dockH', '5000');
-      location.reload();
       return true;
     })()`);
-    await sleep(6000);
+    await reloadEditor(cdp);
     const clamped = await cdp.eval(
-      `(() => { const c = document.getElementById('gpu'); const v = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(), 10) || 0; return { w: c.width, h: c.height, dockH: v, vh: window.innerHeight }; })()`,
+      `(() => { const c = document.getElementById('gpu'); const v = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--dock-h').trim(), 10) || 0; return { w: c.width, h: c.height, cssH:c.clientHeight,dockH: v, available:document.getElementById('mainrow').clientHeight }; })()`,
     );
-    check('陈旧超大 dockH 被启动钳制（dock 高 ≤ 窗口-160）', clamped.dockH > 0 && clamped.dockH <= clamped.vh - 160 + 2, `dockH=${clamped.dockH} vh=${clamped.vh}`);
-    check('钳制后画布高度立得住（>100px，中心列未被挤死）', clamped.h > 100, JSON.stringify(clamped));
+    check('陈旧超大 dockH 按主行预算钳制，给视口保留200px',clamped.dockH>0&&clamped.dockH<=clamped.available-200,JSON.stringify(clamped));
+    check('钳制后画布至少200px（中心列未被挤死）', clamped.cssH >= 200, JSON.stringify(clamped));
 
     // 收尾还原：清掉注入的残留（按窗口高度钳出的 545px 对后续绑定段太高），回默认档
-    await cdp.eval(`(() => { localStorage.removeItem('zh.ui.dockH'); location.reload(); return true; })()`);
-    await sleep(6000);
+    await cdp.eval(`(() => { localStorage.removeItem('zh.ui.dockH'); return true; })()`);
+    await reloadEditor(cdp);
 
+    hardware=await cdp.eval(`(()=>{const info=window.__editor.renderer.core.device.adapterInfo;return {secure:isSecureContext,fallback:info?.isFallbackAdapter,info:info?{vendor:info.vendor,architecture:info.architecture,description:info.description}:null};})()`);
+    check('secure context 与实际编辑器硬件GPU',HEADED?isHardwareGpu(hardware):hardware.secure===true,JSON.stringify(hardware));
     const gpuName = await cdp.eval(`(document.getElementById('hud')||{}).innerText||''`);
     check('HUD 拿到 GPU adapter 名', /GPU/.test(gpuName) && !/GPU\s*\?/.test(gpuName), (gpuName.match(/GPU.*/) || [''])[0].slice(0, 80));
 
@@ -152,7 +159,7 @@ async function main() {
     // 与名字。必须查 getSceneSource()，它为 null 就说明读的根本不是文件；
     // 而"应该有几个、叫什么"由起始场景文件本身推导（见 readStartSceneExpectation）。
     console.log('\nB2. 场景来自文件（ADR-010：场景是唯一数据载体；期望值由真源推导）');
-    const expect = readStartSceneExpectation();
+    let expect = readStartSceneExpectation();
     const src = await cdp.eval(`(()=>window.__editor.renderer.getSceneSource())()`);
     check('场景来源非 null（不是硬编码 fallback）', src !== null, JSON.stringify(src));
     check(
@@ -172,12 +179,12 @@ async function main() {
     );
 
     const sceneObjs = await cdp.eval(
-      `(()=>window.__editor.renderer.getObjectList().map(o=>({n:o.name,c:o.category,p:o.pickable})))()`,
+      `(()=>{const r=__editor.renderer;return r.getObjectList().map(o=>({id:r.getObjectNodeId(o.index),n:o.name,c:o.category,p:o.pickable}));})()`,
     );
-    const byName = Object.fromEntries(sceneObjs.map((o) => [o.n, o]));
+    const expectedNodes=new Map(expect.nodes.map(n=>[n.id,n]));
     // 层级列表按定义排除 background（天空/虚空底）——逐个比对时同样要排除，
     // 否则会拿"文档里有、列表里本就不该有"的名字去比（这正是上一版断言的错法）
-    const wantListed = expect.names.filter((n) => !expect.background.includes(n)).slice().sort();
+    const wantListed = expect.nodes.filter(n=>!n.background).map(n=>n.name).sort();
     const gotListed = sceneObjs.map((o) => o.n).slice().sort();
     check(
       `层级列表物体名与起始场景逐个一致（${wantListed.length} 个）`,
@@ -189,24 +196,24 @@ async function main() {
     check(
       `层级列表 = 可渲染 − background（${expect.hierarchy}）`,
       sceneObjs.length === expect.hierarchy &&
-        expect.background.every((n) => byName[n] === undefined),
+        expect.nodes.filter(n=>n.background).every(n=>!sceneObjs.some(o=>o.id===n.id)),
       `list=${sceneObjs.length} 期望=${expect.hierarchy} background=${expect.background.join(',')}`,
     );
-    const catBad = sceneObjs.filter((o) => expect.category[o.n] !== undefined && expect.category[o.n] !== o.c);
+    const catBad = sceneObjs.filter(o=>!expectedNodes.has(o.id)||expectedNodes.get(o.id).category!==o.c);
     check(
-      'category 来自场景文件（逐名比对）',
+      'category 来自场景文件（按 NodeId 比对）',
       catBad.length === 0,
       catBad.length === 0
         ? `${sceneObjs.length} 个全对`
-        : catBad.map((o) => `${o.n}:${o.c}≠${expect.category[o.n]}`).join(' · ').slice(0, 200),
+        : catBad.map((o) => `${o.id}:${o.c}≠${expectedNodes.get(o.id)?.category}`).join(' · ').slice(0, 200),
     );
-    const pickBad = sceneObjs.filter((o) => expect.pickable[o.n] !== undefined && expect.pickable[o.n] !== o.p);
+    const pickBad = sceneObjs.filter(o=>!expectedNodes.has(o.id)||expectedNodes.get(o.id).pickable!==o.p);
     check(
-      'pickable 来自场景文件（逐名比对）',
+      'pickable 来自场景文件（按 NodeId 比对）',
       pickBad.length === 0,
       pickBad.length === 0
         ? `${sceneObjs.length} 个全对`
-        : pickBad.map((o) => `${o.n}:${o.p}≠${expect.pickable[o.n]}`).join(' · ').slice(0, 200),
+        : pickBad.map((o) => `${o.id}:${o.p}≠${expectedNodes.get(o.id)?.pickable}`).join(' · ').slice(0, 200),
     );
 
     // ---- B3. 行为注册表（glob 宿主分裂防线）----
@@ -230,6 +237,14 @@ async function main() {
       beh?.schemaIssues === 0,
       `schemaIssues=${beh?.schemaIssues}`,
     );
+
+    // 正式起始场景已单独核实。交互回归改用登记夹具，避免正式美术影响测试前提。
+    const fixtureUrl=new URL(APP_URL);fixtureUrl.searchParams.set('scene',SMOKE_SCENE);
+    const previousDocument=await cdp.eval('performance.timeOrigin');
+    await cdp.send('Page.navigate',{url:fixtureUrl.href});
+    await waitForEditorReady(cdp,{afterTimeOrigin:previousDocument,expectedScene:SMOKE_SCENE});
+    expect=readSceneExpectation(SMOKE_SCENE);
+    check('独立冒烟夹具已从文件载入',await cdp.eval(`__editor.renderer.getSceneSource().url.endsWith(${JSON.stringify(SMOKE_SCENE)})`));
 
     // ---- C. SelectionService ----
     console.log('\nC. SelectionService（选中/悬停状态机）');
@@ -314,7 +329,7 @@ async function main() {
     );
     check('gizmo mode/space 切换 + getGizmoInfo 可读', gizmo > 0, `keys=${gizmo}`);
     const xform = await cdp.eval(
-      `(()=>{const r=window.__editor.renderer;r.setObjectPos(0,1,0.5);r.setObjectRotDeg(0,1,45);r.setObjectScale(0,1.2);const s=r.getObjectState(0);return s?{p:s.pos,r:s.rot,sc:s.scale}:null})()`,
+      `(()=>{const r=window.__editor.renderer,b=r.getObjectState(0),old={p:[...b.pos],r:[...b.rot],sc:b.scale};r.setObjectPos(0,1,0.5);r.setObjectRotDeg(0,1,45);r.setObjectScale(0,1.2);const s=r.getObjectState(0),result=s?{p:[...s.pos],r:[...s.rot],sc:s.scale}:null;for(let i=0;i<3;i++){r.setObjectPos(0,i,old.p[i]);r.setObjectRotDeg(0,i,old.r[i]*180/Math.PI);}r.setObjectScale(0,old.sc);return result})()`,
     );
     check('位置/旋转/缩放写入后状态可读回', xform !== null, JSON.stringify(xform));
     const axis = await cdp.eval(
@@ -354,7 +369,7 @@ async function main() {
         if (w === null || l === null) continue;
         if (Math.hypot(w[0] - l[0], w[1] - l[1], w[2] - l[2]) > 1e-6) { idx = item.index; nodeId = id; break; }
       }
-      if (idx < 0) return { found: false, reason: '起始场景里没有"局部≠世界"的网格节点' };
+      if (idx < 0) return { found: false, reason: '冒烟夹具里没有"局部≠世界"的网格节点' };
       r.selectObject(idx, null);
       await frames(2);
       const posBefore = [...r.getObjectState(idx).pos];
@@ -454,7 +469,7 @@ async function main() {
         const renderable = (ve.childIds(id) ?? []).filter((k) => r.findObjectIndexByNodeId(k) !== null);
         if (renderable.length > 0) { idx = o.index; nodeId = id; kids = renderable; break; }
       }
-      if (idx < 0) return { found: false, reason: '起始场景里没有"带可渲染子节点"的节点' };
+      if (idx < 0) return { found: false, reason: '冒烟夹具里没有"带可渲染子节点"的节点' };
       r.selectObject(idx, null);
       await frames(2);
       const parentBefore = [...r.getObjectState(idx).pos];
@@ -533,7 +548,7 @@ async function main() {
       let idx = -1, nodeId = null;
       for (const o of r.getObjectList()) {
         const id = r.getObjectNodeId(o.index);
-        if (id !== null) { idx = o.index; nodeId = id; break; }
+        if (id === 'nd_smoke_parent') { idx = o.index; nodeId = id; break; }
       }
       if (idx < 0) return { found: false };
       r.setGizmoMode('rotate');
@@ -705,10 +720,10 @@ async function main() {
         // 收尾：删掉生成的物体，对象数回落，不污染后续段（K/L 绑定段沿用基线）
         const cleaned = await cdp.eval(`(() => {
           const r = window.__editor.renderer;
-          r.removeObject(r.state.objects.length - 1);
+          window.__editor.viewportEdit.undo();
           return r.getObjectList().length;
         })()`);
-        check('清理生成物体后对象数回落', cleaned === layout.objects, `${cleaned} vs 基线 ${layout.objects}`);
+        check('撤销导入后对象数回落且作者状态干净', cleaned === layout.objects && await cdp.eval('__editor.viewportEdit.state().dirty===false'), `${cleaned} vs 基线 ${layout.objects}`);
       }
     }
 
@@ -807,24 +822,17 @@ async function main() {
         `lodCount=${pv.before.lodCount}`,
       );
 
-      if (pv.before.lodCount >= 2) {
-        const lod = await cdp.eval(`(async () => {
-          const sel = document.querySelector('#asset-preview-host .ap-lod');
-          const tris0 = window.__editor.preview.getState().tris;
-          const orig = sel.selectedIndex; // 切走前记住原档（骨骼开关等后续断言依赖它是有骨架的档）
-          sel.value = '0'; // LOD0（原生高模）
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise((r) => setTimeout(r, 5000)); // 高模 44MB：fetch+parse 给足
-          const st1 = window.__editor.preview.getState();
-          // 切回原档，不把后续段的预览留在大模型上
-          sel.selectedIndex = orig >= 0 ? orig : sel.options.length - 1;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise((r) => setTimeout(r, 3000));
-          return { tris0, tris1: st1.tris, back: window.__editor.preview.getState().tris };
-        })()`);
-        check('LOD0 切换后面数显著变化（高模 vs 低模）', lod.tris1 > lod.tris0 * 2, `${lod.tris0} → ${lod.tris1}`);
-        check('切回低档面数回落', lod.back <= lod.tris0 * 2, `back=${lod.back}`);
-      }
+      const lodFixture=readLodSmokeFixture();
+      await cdp.eval(`__editor.previewShow(${JSON.stringify(lodFixture.low.path)})`);
+      if(!await waitFor(()=>cdp.eval('__editor.preview.getState().tris').then(n=>n===lodFixture.low.tris),{timeout:20000,label:'LOD低档装载'}))throw new Error('LOD低档夹具未就绪');
+      await cdp.eval(`(()=>{const s=document.querySelector('#asset-preview-host .ap-lod');s.value=${JSON.stringify(String(lodFixture.high.index))};s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+      const highReady=await waitFor(()=>cdp.eval('__editor.preview.getState().tris').then(n=>n===lodFixture.high.tris?n:false),{timeout:20000,label:'LOD高档装载'});
+      check('LOD切换实际载入清单对应高档面数',highReady===lodFixture.high.tris,`${lodFixture.low.tris} → ${highReady}`);
+      await cdp.eval(`(()=>{const s=document.querySelector('#asset-preview-host .ap-lod');s.value=${JSON.stringify(String(lodFixture.low.index))};s.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+      const lowReady=await waitFor(()=>cdp.eval('__editor.preview.getState().tris').then(n=>n===lodFixture.low.tris?n:false),{timeout:20000,label:'LOD返回低档'});
+      check('切回低档面数回落',lowReady===lodFixture.low.tris,`back=${lowReady}`);
+      await cdp.eval(`__editor.previewShow(${JSON.stringify(PREVIEW_GLB)})`);
+      if(!await waitFor(()=>cdp.eval('__editor.preview.getState().isAnim'),{timeout:15000,label:'恢复动画预览'}))throw new Error('动画预览未恢复');
 
       // 3D 视图尺寸空格调档 + 骨骼按钮进风格行（rigged 资产）
       const sp = await cdp.eval(`(async () => {
@@ -909,11 +917,11 @@ async function main() {
       check('点击上一层回到父目录', nav.s2.dir === 'assets' && nav.s2.upDisabled === false, nav.s2.dir);
       check('项目根上置灰', nav.s3.dir === '' && nav.s3.upDisabled === true);
 
-      // 探针文件 + 右键菜单结构。每轮先清空探针目录：上一轮改名留下的
-      // probe2.json 会让「probe.json → probe2.json」撞目标占用 409，假失败。
-      const PROBE_DIR = '.workbuddy/tmp/ui-refine';
+      // 每轮独占可改名夹具；.workbuddy 是受保护协调目录，不能用作改名测试。
+      fs.mkdirSync(path.resolve('.smoke'),{recursive:true});
+      probeRoot=fs.mkdtempSync(path.resolve('.smoke/editor-ui-'));
+      const PROBE_DIR=path.relative(process.cwd(),probeRoot).split(path.sep).join('/');
       const PROBE = `${PROBE_DIR}/probe.json`;
-      fs.rmSync(path.resolve(PROBE_DIR), { recursive: true, force: true });
       const menuRes = await cdp.eval(`(async () => {
         const w = await fetch('/__fs/write', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: ${JSON.stringify(PROBE)}, content: '{"probe":1}' }) });
@@ -980,15 +988,17 @@ async function main() {
         const v0 = input.value; // 预填旧名要在赋新值前读走
         input.value = 'probe2.json';
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-        await new Promise((r) => setTimeout(r, 900));
+        const deadline=performance.now()+20000;
+        while(performance.now()<deadline&&!A.getState().names.includes('probe2.json'))await new Promise(r=>setTimeout(r,100));
         const after = A.getState();
         const check = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(`${PROBE_DIR}/probe2.json`)}));
         const old = await fetch('/__fs/file?path=' + encodeURIComponent(${JSON.stringify(PROBE)}));
-        return { started, st: { renaming: st.renaming, v: v0 }, after, disk: { neu: check.status, old: old.status }, err: null };
+        return { started, st: { renaming: st.renaming, v: v0 }, after, disk: { neu: check.status, old: old.status }, hud:document.getElementById('model-info')?.textContent,err: null };
       })()`);
       check('beginRename 进入编辑态（输入框出现且预填旧名）', renameRes.started === true && renameRes.st.renaming === true && renameRes.st.v === 'probe.json');
       check('Enter 提交后编辑态退出 + 列表刷新出新名', renameRes.after.renaming === false && renameRes.after.names.includes('probe2.json'), JSON.stringify(renameRes.after.names));
-      check('改名真实落盘（新路径 200 / 旧路径 404）', renameRes.disk.neu === 200 && renameRes.disk.old === 404, JSON.stringify(renameRes.disk));
+      check('改名真实落盘（新路径 200 / 旧路径 404）', renameRes.disk.neu === 200 && renameRes.disk.old === 404, JSON.stringify({disk:renameRes.disk,hud:renameRes.hud}));
+      if(renameRes.disk?.neu!==200||renameRes.disk?.old!==404)throw new Error(`UI改名未完成：${JSON.stringify(renameRes)}`);
 
       // Esc 取消：编辑态退出、名字不动
       const escRes = await cdp.eval(`(async () => {
@@ -1003,7 +1013,7 @@ async function main() {
       })()`);
       check('Esc 取消编辑态且不落盘', escRes.renaming === false && !escRes.names.includes('should-not-exist.json') && escRes.ghost === 404);
 
-      // 复位浏览目录，探针文件留在 .workbuddy/tmp（gitignored，不污染工作区）
+      // 复位浏览目录；本轮独占探针目录由 finally 清理。
       await cdp.eval(`(async () => { await window.__editor.assets.selectDir('assets'); })()`);
     }
 
@@ -1018,6 +1028,7 @@ async function main() {
     // 用户路径（持久化 + 整页刷新 + 词典生效），再点回 zh 收尾。
     console.log('\nN. 多语言切换（zh ↔ en）');
     {
+      const languageOrigin=await cdp.eval('performance.timeOrigin');
       const clicked = await cdp.eval(`(() => {
         const btn = document.querySelector('[data-lang-toggle]');
         if (btn === null) return false;
@@ -1025,7 +1036,7 @@ async function main() {
         return true;
       })()`);
       check('语言切换按钮 [data-lang-toggle] 存在且可点', clicked === true);
-      await sleep(6000);
+      await waitForEditorReady(cdp,{afterTimeOrigin:languageOrigin});
       const enState = await cdp.eval(`(() => {
         const title = document.querySelector('#asset-dock .asset-title');
         const up = document.querySelector('#asset-dock .asset-up');
@@ -1041,18 +1052,27 @@ async function main() {
       check('en 模式资产库标题 = Asset Library', enState.title === 'Asset Library', JSON.stringify(enState.title));
       check('en 模式「上一层」tooltip = Up One Level', enState.upTitle === 'Up One Level', JSON.stringify(enState.upTitle));
       check('en 模式筛选占位符已翻译', typeof enState.filterPh === 'string' && /filter/i.test(enState.filterPh), JSON.stringify(enState.filterPh));
-      // 收尾切回 zh：直接写 localStorage 即可（省一次整页 reload，docs/21 §2.5）——
-      // 切换按钮的双向路径已由上面的 en 断言覆盖，下一轮 boot 归一也会锁 zh
-      const backZh = await cdp.eval(`(() => { localStorage.setItem('zh.ui.lang', 'zh'); return localStorage.getItem('zh.ui.lang'); })()`);
-      check('收尾切回 zh（localStorage，免 reload）', backZh === 'zh', backZh);
+      const enOrigin=await cdp.eval('performance.timeOrigin');
+      await cdp.eval(`document.querySelector('[data-lang-toggle]').click()`);
+      await waitForEditorReady(cdp,{afterTimeOrigin:enOrigin,expectedScene:SMOKE_SCENE});
+      const backZh=await cdp.eval(`({lang:localStorage.getItem('zh.ui.lang'),title:document.querySelector('#asset-dock .asset-title')?.textContent.trim()})`);
+      check('实际按钮切回zh并刷新中文资产库',backZh.lang==='zh'&&backZh.title==='资产库',JSON.stringify(backZh));
     }
 
     // ---- 汇总 ----
     return summary(cdp.consoleErrors, cdp.exceptions);
-    return ok ? 0 : 1;
+  } catch(error) {
+    executionError=error;
+    check('完整冒烟执行到末尾',false,error.message);
+    if(cdp){let timer;try{const shot=await Promise.race([cdp.send('Page.captureScreenshot',{format:'png'}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('失败截图超时')),3000);})]);fs.writeFileSync(path.join(OUT_DIR,'editor-smoke-failure.png'),Buffer.from(shot.data,'base64'));}catch{}finally{clearTimeout(timer);}}
+    throw error;
   } finally {
+    try {fs.writeFileSync(path.join(OUT_DIR,'editor-smoke-results.json'),JSON.stringify({hardware,results,consoleErrors:cdp?.consoleErrors??[],exceptions:cdp?.exceptions??[]},null,2)+'\n');}
+    catch(error){console.error('冒烟报告写入失败：',error.message);if(!executionError)throw error;}
+    finally {
+    ws?.close();
     try {
-      chrome.kill();
+      chrome?.kill();
     } catch {
       /* 已退出 */
     }
@@ -1062,6 +1082,12 @@ async function main() {
       } catch {
         /* 已退出 */
       }
+    }
+    if(probeRoot){
+      const allowed=path.resolve('.smoke')+path.sep;
+      if(!probeRoot.startsWith(allowed))throw new Error('探针清理路径越界');
+      fs.rmSync(probeRoot,{recursive:true,force:true});
+    }
     }
   }
 }

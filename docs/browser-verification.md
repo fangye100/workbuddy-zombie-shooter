@@ -34,3 +34,42 @@ Tailscale。默认 Chrome profile/CDP 被他人占用时，不 kill 或删 profi
 Play→Stop/资源清理分别检查；截图及状态记录版本/范围，构建或仅出现 canvas 不够。
 画面匹配/证据纪律见[品质指南](art/visual-quality-playbook.md)，历史硬件范围见
 [P0 接入](32-P0-asset-intake-2026-10-05.md)。
+
+
+## 核心冒烟的场景与启动契约（2026-10-18）
+
+`editor:smoke` 先读取 `aether.project.json` 的真实起始场景，按稳定 NodeId 核对
+可见物件、背景、分类、拾取属性及层级，再切换到已登记的
+`assets/scenes/sandbox/editor-smoke.scene.json` 完成可重复交互。该夹具有非零位移的
+父子 MeshRenderer、一个 SpawnPoint 和足够静态槽位，不能要求美术关卡碰巧具备测试拓扑。
+项目 startIndex 不随测试改变；fixture 仍经过正常场景装载，不在引擎里硬编码造物件。
+
+启动不能只等 `window.__editor` 或 canvas：这个 hook 在异步资产装载及服务挂接前已存在。
+共享 `waitForEditorReady` 等待正确场景来源、pendingAssetCount=0、帧循环已出帧、
+资产库/预览服务及有效画布；reload 还要求 performance.timeOrigin 改变，避免读到上一页。
+该等待有外层 deadline，CDP eval 失联也必须失败；失败截图最多3秒。自建 Chrome/Vite
+在 finally 清理，报告写入失败也不跳过进程清理，复用的服务不由探针终止。
+
+headed 的硬件判据读取**实际编辑器 GPUDevice.adapterInfo**，必须有设备信息且
+isFallbackAdapter=false，并排除 SwiftShader/llvmpipe/software；未知信息不算真实GPU。
+HTTPS 默认使用本机证书匹配的 `fangye-win11-office.tail6b29a2.ts.net`，可通过 `--url`
+指定可验证证书的目标地址；核心与绑定套件均不添加证书忽略 flag。
+
+资产改名使用每轮独占的 `.smoke/editor-ui-*` 目录，在 finally 校验边界并清理。
+`.workbuddy` 是协调/恢复目录，禁止拿它作可改名夹具。LOD 测试选择发布清单中有真实
+GLB 及 sidecar、面数明显不同的 H-01 两档，仍验证切换后实际面数；不接管未交接高模。
+导入模型后经编辑命令撤销恢复干净作者状态，不能仅删除 renderer 物体后继续测试保存/改名。
+
+共用启动帮助器改动后，串行运行两个 headed 套件（同一固定 profile 不可并发使用）：
+
+```powershell
+node --test tools/verify/editor-smoke-lib.test.mjs
+pnpm exec vitest run apps/editor/test/dock-layout.test.ts
+pnpm run editor:smoke -- --headed --out .workbuddy/tmp/editor-core
+pnpm run editor:smoke:binding -- --headed --out .workbuddy/tmp/editor-binding
+```
+
+每个输出目录包含结果 JSON、错误列表及截图。断言失败、console error、未捕获异常均使
+退出码非零；SKIP 必须单独报告，不能写成验证成功。`editor:smoke:all` 还组合 combat 与
+动态蒙皮探针；上述两套件通过不等于该聚合命令所有探针通过，也不等于美术匹配验收。
+本次实际结果见[2026-10-18验收记录](evidence/editor-smoke-20261018/acceptance.md)。

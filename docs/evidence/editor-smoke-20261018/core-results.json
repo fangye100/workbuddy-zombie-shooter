@@ -1,0 +1,630 @@
+{
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "results": [
+    {
+      "name": "#fatal 错误卡片未出现",
+      "ok": true,
+      "detail": "display:none"
+    },
+    {
+      "name": "window.__editor 调试钩子已挂载",
+      "ok": true,
+      "detail": "typeof=object"
+    },
+    {
+      "name": "canvas 尺寸有效（高度立得住，>200px）",
+      "ok": true,
+      "detail": "{\"w\":942,\"h\":560}"
+    },
+    {
+      "name": "陈旧超大 dockH 按主行预算钳制，给视口保留200px",
+      "ok": true,
+      "detail": "{\"w\":942,\"h\":200,\"cssH\":200,\"dockH\":620,\"available\":820}"
+    },
+    {
+      "name": "钳制后画布至少200px（中心列未被挤死）",
+      "ok": true,
+      "detail": "{\"w\":942,\"h\":200,\"cssH\":200,\"dockH\":620,\"available\":820}"
+    },
+    {
+      "name": "secure context 与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "HUD 拿到 GPU adapter 名",
+      "ok": true,
+      "detail": "GPU nvidia lovelace选中 无（轻点选中 · Alt+点击穿透嵌套 · 双击/F 聚焦 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩"
+    },
+    {
+      "name": "drawCalls > 0（管线真的在画）",
+      "ok": true,
+      "detail": "draws=103"
+    },
+    {
+      "name": "triangles > 0",
+      "ok": true,
+      "detail": "tris=761455"
+    },
+    {
+      "name": "FPS 有读数（SwiftShader 下 10 左右属正常）",
+      "ok": true,
+      "detail": "fps=57"
+    },
+    {
+      "name": "持续出帧（前后两次 drawCalls 均为正）",
+      "ok": true,
+      "detail": "103 → 103"
+    },
+    {
+      "name": "场景来源非 null（不是硬编码 fallback）",
+      "ok": true,
+      "detail": "{\"url\":\"/assets/scenes/act1/floor-1.scene.json\",\"objects\":57,\"at\":\"2026-10-18T11:06:42.287Z\"}"
+    },
+    {
+      "name": "场景来源指向 .scene.json",
+      "ok": true,
+      "detail": "/assets/scenes/act1/floor-1.scene.json"
+    },
+    {
+      "name": "场景来源 = 项目文件的起始场景（assets/scenes/act1/floor-1.scene.json）",
+      "ok": true,
+      "detail": "/assets/scenes/act1/floor-1.scene.json"
+    },
+    {
+      "name": "物体数 = 起始场景的可渲染节点数（57）",
+      "ok": true,
+      "detail": "objects=57 期望=57"
+    },
+    {
+      "name": "层级列表物体名与起始场景逐个一致（57 个）",
+      "ok": true,
+      "detail": "多=无 少=无"
+    },
+    {
+      "name": "层级列表 = 可渲染 − background（57）",
+      "ok": true,
+      "detail": "list=57 期望=57 background="
+    },
+    {
+      "name": "category 来自场景文件（按 NodeId 比对）",
+      "ok": true,
+      "detail": "57 个全对"
+    },
+    {
+      "name": "pickable 来自场景文件（按 NodeId 比对）",
+      "ok": true,
+      "detail": "57 个全对"
+    },
+    {
+      "name": "行为注册表非空（glob 在浏览器端命中了 assets/behaviors）",
+      "ok": true,
+      "detail": "{\"size\":1,\"ids\":[\"debug-on-trigger-log\"],\"schemaIssues\":0}"
+    },
+    {
+      "name": "注册表含 debug-on-trigger-log（真源清单：assets/behaviors/*.ts）",
+      "ok": true,
+      "detail": "[\"debug-on-trigger-log\"]"
+    },
+    {
+      "name": "行为 schema 自洽（注册期零 schema 诊断）",
+      "ok": true,
+      "detail": "schemaIssues=0"
+    },
+    {
+      "name": "独立冒烟夹具已从文件载入",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "场景对象列表非空",
+      "ok": true,
+      "detail": "objects=5"
+    },
+    {
+      "name": "selectObject → getSelected 往返一致",
+      "ok": true,
+      "detail": "{\"sel\":0,\"name\":\"冒烟父节点\"}"
+    },
+    {
+      "name": "selectedName 返回字符串",
+      "ok": true,
+      "detail": "冒烟父节点"
+    },
+    {
+      "name": "setHovered → getHovered 往返一致",
+      "ok": true,
+      "detail": "hovered=0"
+    },
+    {
+      "name": "取消选中后 getSelected 为 null",
+      "ok": true,
+      "detail": "selected=null"
+    },
+    {
+      "name": "getSubMeshCount 返回正整数",
+      "ok": true,
+      "detail": "sub=1"
+    },
+    {
+      "name": "子网格显隐切换不抛错",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "recountTriangles 后三角形数仍为正",
+      "ok": true,
+      "detail": "tris=4272"
+    },
+    {
+      "name": "getObjectBounds 返回有限半径",
+      "ok": true,
+      "detail": "{\"r\":0.8660254037844386,\"c\":3}"
+    },
+    {
+      "name": "材质库可读",
+      "ok": true,
+      "detail": "materials=7"
+    },
+    {
+      "name": "getSlotMaterial 返回槽位对象",
+      "ok": true,
+      "detail": "keys=10"
+    },
+    {
+      "name": "createSlotInstance + ensureOverride 不抛错",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "discardOverride 后槽位仍可读",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "exportInstances / exportSlots 可导出",
+      "ok": true,
+      "detail": "{\"inst\":1,\"slots\":true}"
+    },
+    {
+      "name": "getEye 返回 3 分量",
+      "ok": true,
+      "detail": "len=3"
+    },
+    {
+      "name": "pointerRay 返回原点+方向",
+      "ok": true,
+      "detail": "{\"o\":3,\"d\":3}"
+    },
+    {
+      "name": "worldToScreen 返回有限像素坐标",
+      "ok": true,
+      "detail": "{\"x\":807,\"y\":365,\"behind\":false}"
+    },
+    {
+      "name": "pickAt 屏幕中心返回索引或 null（不抛错）",
+      "ok": true,
+      "detail": "hit=3"
+    },
+    {
+      "name": "gizmo mode/space 切换 + getGizmoInfo 可读",
+      "ok": true,
+      "detail": "keys=6"
+    },
+    {
+      "name": "位置/旋转/缩放写入后状态可读回",
+      "ok": true,
+      "detail": "{\"p\":[-1,0.5,0],\"r\":[0,0.7853981633974483,0],\"sc\":1.2}"
+    },
+    {
+      "name": "setGizmoActiveAxis 设置/清空不抛错",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "getObjectQuat 返回 4 分量四元数",
+      "ok": true,
+      "detail": "len=4"
+    },
+    {
+      "name": "★ 找到视口里的 gizmo 手柄（可点中）",
+      "ok": true,
+      "detail": "{\"x\":510,\"y\":198}"
+    },
+    {
+      "name": "★ 拖拽真的移动了物体（视口有反应）",
+      "ok": true,
+      "detail": "moved=0.0156m 方向=[60,0]"
+    },
+    {
+      "name": "★ 文档被写入且与视口一致（从文档重算的世界位置 == 视口位置）",
+      "ok": true,
+      "detail": "一致性=0.00e+0 文档 [0.6000000000000001,1,0] → [0.6000000000000001,1.0155977943323276,0]"
+    },
+    {
+      "name": "★ 写入的是**局部**变换（不是把世界值当局部值写进去）",
+      "ok": true,
+      "detail": "局部 [1.6,0.4155977943323276,0] vs 世界 [0.6000000000000001,1.0155977943323276,0]"
+    },
+    {
+      "name": "★ 一次拖拽 = 一条撤销编辑；撤销后文档与视口都回到起点",
+      "ok": true,
+      "detail": "undo 0 →(拖拽后) 1 →(撤销后) 0；视口回退 0.00e+0 文档回退 0.00e+0"
+    },
+    {
+      "name": "拖拽后 dirty 亮起（面板显示未保存）",
+      "ok": true,
+      "detail": "dirty=true"
+    },
+    {
+      "name": "★ 找到\"带可渲染子节点\"的节点可拖（G2b 前提）",
+      "ok": true,
+      "detail": "\"nd_smoke_parent\""
+    },
+    {
+      "name": "★ 父节点真的被拖动了（G2b 前提）",
+      "ok": true,
+      "detail": "moved=0.0253m"
+    },
+    {
+      "name": "★ 拖父节点时子物体跟着走，且视口与文档一致",
+      "ok": true,
+      "detail": "节点 nd_smoke_parent：子 [\"0.0253\"]（位移量）"
+    },
+    {
+      "name": "★ 撤销后子物体也回到起点（子树一起回写）",
+      "ok": true,
+      "detail": "children=1"
+    },
+    {
+      "name": "★ 转到旋转手柄（G2c 前提）",
+      "ok": true,
+      "detail": "\"nd_smoke_parent\""
+    },
+    {
+      "name": "★★ 旋转拖拽写回文档（旋转真的变了，不是被丢弃）",
+      "ok": true,
+      "detail": "文档旋转前后 |dot|=0.986291（1 = 没变）；视口 vs 文档 |dot|=1.000000（1 = 一致）"
+    },
+    {
+      "name": "★ 撤销旋转后文档与视口一起回到原姿态",
+      "ok": true,
+      "detail": "undo 0→1；视口回退 |dot|=1.000000 文档回退 |dot|=1.000000"
+    },
+    {
+      "name": "左栏不再有「模型预览」分组（面板已收掉）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "动画分组不在左栏（已并入检视页）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "动画分组在检视页且默认隐藏（场景无带骨物体）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "顶栏状态行 #model-info 存在（原模型预览信息行迁移）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "左栏分组只剩场景层级",
+      "ok": true,
+      "detail": "hierarchy"
+    },
+    {
+      "name": "资产库 dock 左缘贴屏幕（x=0）",
+      "ok": true,
+      "detail": "dockLeft=0"
+    },
+    {
+      "name": "资产库 dock 右缘接到 Inspector 前",
+      "ok": true,
+      "detail": "dockRight=1278 inspLeft=1284"
+    },
+    {
+      "name": "场景层级下边缘 = 资产库上边缘",
+      "ok": true,
+      "detail": "leftBottom=645 dockTop=645"
+    },
+    {
+      "name": "顶级「刷怪点」tab 与独立 pane 已移除",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "层级功能体（✦）行数 = 起始场景 SpawnPoint 组件数（1）",
+      "ok": true,
+      "detail": "rows=1"
+    },
+    {
+      "name": "刷怪点分组存在于检视页且未选中时隐藏（选中驱动）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "点选 ✦ 功能体行后刷怪点分组出现",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "选中态回读到该功能体（selectedNodeId 一致）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "✦ 行高亮 .sel",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "取消选中后分组收起",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "生成后对象数 +1（addObject 新增，不再替换角色槽）",
+      "ok": true,
+      "detail": "5 → 6"
+    },
+    {
+      "name": "选中带骨物体后动画分组出现",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hasAnimation 为真且能列出 clip",
+      "ok": true,
+      "detail": "{\"has\":true,\"clips\":6}"
+    },
+    {
+      "name": "播放/暂停状态机正确",
+      "ok": true,
+      "detail": "{\"a\":true,\"b\":false,\"t\":0.2}"
+    },
+    {
+      "name": "seekAnimation 后时间被写入",
+      "ok": true,
+      "detail": "t=0.2"
+    },
+    {
+      "name": "撤销导入后对象数回落且作者状态干净",
+      "ok": true,
+      "detail": "5 vs 基线 5"
+    },
+    {
+      "name": "资产预览宿主 #asset-preview-host 存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "主视图骨骼 X-ray 按钮 .gz-xray 存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "window.__editor.preview 调试钩子已挂载",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "载入 rigged GLB 后预览有对象",
+      "ok": true,
+      "detail": "{\"hasObject\":true,\"isAnim\":true,\"playing\":true,\"time\":1.3999333015441824,\"duration\":1.9666666984558105,\"clip\":0,\"skeletonVisible\":false,\"textured\":true,\"style\":\"textured\",\"tris\":3000,\"lodCount\":4,\"sizeTier\":0,\"viewH\":200}"
+    },
+    {
+      "name": "预览物体带骨骼动画（isAnim）",
+      "ok": true,
+      "detail": "isAnim=true"
+    },
+    {
+      "name": "预览自动播放（playing）",
+      "ok": true,
+      "detail": "playing=true"
+    },
+    {
+      "name": "预览画布有有效尺寸",
+      "ok": true,
+      "detail": "{\"w\":300,\"h\":200,\"disp\":\"block\"}"
+    },
+    {
+      "name": "Timeline 片段下拉有选项",
+      "ok": true,
+      "detail": "clips=6"
+    },
+    {
+      "name": "Timeline 时间轴文本格式正确",
+      "ok": true,
+      "detail": "1.40 / 1.97 s"
+    },
+    {
+      "name": "动画时间在推进（考虑循环 wrap，Timeline 实时更新）",
+      "ok": true,
+      "detail": "1.400 → 0.633（前进 1.200 / 时长 1.967）"
+    },
+    {
+      "name": "骨骼 X-ray 按钮激活",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "预览骨骼 X-ray 叠加开启",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "预览贴图生效（textured=true，根因：flags 位每帧被 packMaterial 重置）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "白模切换生效（textured=false）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "切回贴图生效",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "LOD 家族下拉就位（≥2 档，manifest lods[]）",
+      "ok": true,
+      "detail": "lodCount=4"
+    },
+    {
+      "name": "LOD切换实际载入清单对应高档面数",
+      "ok": true,
+      "detail": "10500 → 79980"
+    },
+    {
+      "name": "切回低档面数回落",
+      "ok": true,
+      "detail": "back=10500"
+    },
+    {
+      "name": "cycleSize(+1) 视图变高",
+      "ok": true,
+      "detail": "200 → 340px"
+    },
+    {
+      "name": "cycleSize(-1) 回落",
+      "ok": true,
+      "detail": "340 → 200px"
+    },
+    {
+      "name": "悬停空格 = 下一档（capture 拦截生效）",
+      "ok": true,
+      "detail": "tier 0 → 1"
+    },
+    {
+      "name": "Shift+空格 = 上一档",
+      "ok": true,
+      "detail": "tier 1 → 0"
+    },
+    {
+      "name": "3D 视图下方标准开关：贴图 / 骨骼",
+      "ok": true,
+      "detail": "[\"贴图\",\"骨骼\"]"
+    },
+    {
+      "name": "rigged 资产骨骼开关可用",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "纯网格资产骨骼开关禁用 + 复位 + 明示原因",
+      "ok": true,
+      "detail": "{\"disabled\":true,\"checked\":false,\"title\":\"该资产无骨骼（纯网格）\"}"
+    },
+    {
+      "name": "返回上一层按钮 .asset-up 存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "子目录里上一层可用",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "点击上一层回到父目录",
+      "ok": true,
+      "detail": "assets"
+    },
+    {
+      "name": "项目根上置灰",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "右键后菜单打开且条目被选中",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "菜单恰好一条分隔线",
+      "ok": true,
+      "detail": "seps=1"
+    },
+    {
+      "name": "分隔线后依次是四个通用文件动作（zh 源文案）",
+      "ok": true,
+      "detail": "[\"进入绑定 · 纯网格（仅 .glb）\",\"进入绑定 · 已有骨骼（仅 .glb）\",\"载入场景（仅 .glb）\",\"复制相对路径\",\"复制绝对路径\",\"重命名…\",\"在资源管理器中显示\"]"
+    },
+    {
+      "name": "复制相对路径 HUD 回显确切相对路径",
+      "ok": true,
+      "detail": "已复制相对路径：.smoke/editor-ui-gHwoxa/probe.json"
+    },
+    {
+      "name": "剪贴板内容 = 相对路径",
+      "ok": true,
+      "detail": "\".smoke/editor-ui-gHwoxa/probe.json\""
+    },
+    {
+      "name": "beginRename 进入编辑态（输入框出现且预填旧名）",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Enter 提交后编辑态退出 + 列表刷新出新名",
+      "ok": true,
+      "detail": "[\"probe2.json\"]"
+    },
+    {
+      "name": "改名真实落盘（新路径 200 / 旧路径 404）",
+      "ok": true,
+      "detail": "{\"disk\":{\"neu\":200,\"old\":404},\"hud\":\"已重命名 → .smoke/editor-ui-gHwoxa/probe2.json\"}"
+    },
+    {
+      "name": "Esc 取消编辑态且不落盘",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "语言切换按钮 [data-lang-toggle] 存在且可点",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "点击后持久化 lang=en",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "en 模式资产库标题 = Asset Library",
+      "ok": true,
+      "detail": "\"Asset Library\""
+    },
+    {
+      "name": "en 模式「上一层」tooltip = Up One Level",
+      "ok": true,
+      "detail": "\"Up One Level\""
+    },
+    {
+      "name": "en 模式筛选占位符已翻译",
+      "ok": true,
+      "detail": "\"Filter by name or path…\""
+    },
+    {
+      "name": "实际按钮切回zh并刷新中文资产库",
+      "ok": true,
+      "detail": "{\"lang\":\"zh\",\"title\":\"资产库\"}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}
