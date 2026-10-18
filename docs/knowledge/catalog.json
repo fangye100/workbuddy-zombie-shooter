@@ -4,6 +4,18 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-m1-20261019",
+      "path": "docs/architecture/vfx-m1-20261019.md",
+      "title": "M1 手枪 VFX：资源、运行与编辑",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["vfx", "render", "editor", "weapons", "gpu", "persistence"],
+      "read": "资源与事件契约；编辑/预览/保存路径；真实 GPU 开发证据、成本与剩余边界",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "reviewedAt": "2026-10-19"
+    },
+    {
       "id": "vfx-system-proposal-20261019",
       "path": "docs/architecture/vfx-system-proposal-20261019.md",
       "title": "VFX 系统开发 Proposal",

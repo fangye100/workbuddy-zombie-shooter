@@ -25,6 +25,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 场景编辑与持久化 | [开发流程](43-GameplayDevelopmentWorkflow.md)、[场景设计](14-Scene系统与场景数据持久化架构设计.md) | `packages/scene/src/document.ts`、`project.ts`、`asset-meta.ts`；`@aether/runtime` 编辑状态 |
 | 玩法、NPC、奖励和音频事件 | [玩法设计](13-玩法与关卡设计GDD.md)、[开发流程](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`、`assets/scenes`、`packages/content` |
 | 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
+| 手枪 VFX 资源、GPU 与编辑 | [M1 实现与验证](architecture/vfx-m1-20261019.md) | `scene/vfx` 契约、`runtime/vfx` 池、游戏表现 planner、独立 VfxPass 与编辑器资源/绑定保存 |
 | HUD、语言、触摸/鼠标和游戏音频 | [输入报告](37-CombatInputAndPopulationQuality.md)、[音频指南](42-GameplayAudioIntegration.md) | `packages/zombie-game/src/presentation`；宿主提供视口、输入和 Play 端口 |
 | 绑定、Retarget 与 IK | [绑定流程](rigging/character-rigging-workflow.md)、[身体 IK](animation/body-ik-blending.md)、[动作过渡](animation/pose-transitions.md) | `packages/render`、`packages/scene` 契约与编辑器绑定适配器 |
 | 动画只读观察与排障 | [动画可视化调试](45-AnimationVisualDebugging.md) | `apps/editor/src/services/animation-debug`；观察现有选择器、姿态与 IK，不拥有或修改玩法状态 |
