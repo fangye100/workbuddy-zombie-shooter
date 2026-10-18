@@ -16,12 +16,17 @@ if(occupied)throw new Error(`CDP ${port} 已占用，不接管或终止已有进
 const {check,results}=createRecorder(),evidence={commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),checks:results};
 const {server,url}=await ensureServer(5100,'apps/editor/vite.config.ts');if(server)throw new Error('请先用记录的 detached 方式启动固定5100服务');
 const {chrome,cdp,ws}=await launchEditorSession({chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),cdpPort:port,headed:true,appUrl:url,windowSize:'1500,1000'});
+// Only this test tab sees the fixture registration. Disk project and product rules stay unchanged.
+const projectedProject=JSON.parse(fs.readFileSync('aether.project.json','utf8'));
+projectedProject.scenes.find(s=>s.id==='sc_vfx_m1').path=fixture;
+ws.addEventListener('message',event=>{const m=JSON.parse(event.data);if(m.method==='Fetch.requestPaused' && m.sessionId===cdp.sessionId)void cdp.send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(projectedProject)).toString('base64')});});
+await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*__fs/file?path=aether.project.json*',requestStage:'Request'}]});
 const capture=async name=>{const r=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,`${name}.png`),Buffer.from(r.data,'base64'));};
 const click=async selector=>{const p=await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw new Error('missing control');e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...p});await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...p});};
 const button=async label=>{const selector=await cdp.eval(`(()=>{const b=[...document.querySelectorAll('#vfx-panel button')].find(b=>b.textContent===${JSON.stringify(label)});if(!b)throw new Error('control ${label}');b.dataset.probe='selected';return '#vfx-panel button[data-probe="selected"]';})()`);await click(selector);await cdp.eval(`document.querySelector(${JSON.stringify(selector)}).removeAttribute('data-probe')`);};
 const input=async(label,value)=>cdp.eval(`(()=>{const e=document.querySelector('#vfx-panel [aria-label=${JSON.stringify(label)}]');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
 try{
- await cdp.send('Page.navigate',{url:`${url}?scene=assets/scenes/sandbox/vfx-m1.scene.json&vfxFixture=${encodeURIComponent(fixture)}`});
+ await cdp.send('Page.navigate',{url:`${url}?scene=${encodeURIComponent(fixture)}`});
  check('场景副本和产品面板就绪',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1'`),{timeout:30000}));
  evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
  check('secure context + 硬件adapter',evidence.gpu.secure && evidence.gpu.info && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)),JSON.stringify(evidence.gpu));

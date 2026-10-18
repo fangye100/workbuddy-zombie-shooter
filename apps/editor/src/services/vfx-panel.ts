@@ -28,9 +28,8 @@ export class VfxPanel {
   private sequence=0;
   private sceneKey='';
   private formDirty=false;
-  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown;openCopy():Promise<void>}){
+  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown}){
     this.root.id='vfx-panel';this.root.open=true;const title=document.createElement('summary');title.textContent='手枪 VFX · 资源与绑定';this.root.append(title);
-    this.button('创建并打开场景验收副本',()=>this.port.openCopy());
     const field=(label:string,input:HTMLElement)=>{const row=document.createElement('label');row.textContent=label;row.append(input);this.form.append(row);input.setAttribute('aria-label',label);};
     field('VFX 资源',this.resource);field('资源文件路径',this.path);
     this.path.placeholder='assets/vfx/*.vfx.json';
@@ -55,17 +54,17 @@ export class VfxPanel {
   private async open(path:string){
     if(this.document?.dirty || this.formDirty)throw new Error('资源有未保存修改，请先保存或重载');
     let asset:VfxAsset;
-    if(/^\.workbuddy\/tmp\/vfx-m1\/[a-zA-Z0-9_/-]+\.vfx\.json$/.test(path)){
-      const r=await readProjectFile(path),meta=await readProjectFile(`${path}.meta.json`);if(!r.ok || !meta.ok)throw new Error('验收副本读取失败');
+    if(!path.startsWith('assets/') && /^[a-zA-Z0-9_./-]+\.vfx\.json$/.test(path) && !path.startsWith('/') && path.split('/').every(s=>s && s!=='.' && s!=='..')){
+      const r=await readProjectFile(path),meta=await readProjectFile(`${path}.meta.json`);if(!r.ok || !meta.ok)throw new Error('资源读取失败');
       const errors=validateVfxAsset(r.json);if(errors.length)throw new Error(errors.join('；'));asset=r.json as VfxAsset;
-      if((meta.json as {guid?:string;kind?:string}).guid!==asset.id || (meta.json as {kind?:string}).kind!=='vfx')throw new Error('验收副本 sidecar 不匹配');
+      if((meta.json as {guid?:string;kind?:string}).guid!==asset.id || (meta.json as {kind?:string}).kind!=='vfx')throw new Error('资源 sidecar 不匹配');
     }else{const meta=await readProjectFile(`${path}.meta.json`);if(!meta.ok)throw new Error('找不到 VFX sidecar');asset=await readVfxAsset({path,guid:(meta.json as {guid:string}).guid});}
     this.stop();this.document=new VfxDocument(path,asset);this.path.value=path;this.kind.replaceChildren();for(const [key,e] of Object.entries(asset.effects))this.kind.add(new Option(`${e.kind} · ${key}`,key));this.fields();this.status.textContent='已加载 VFX 资源；参数保存与场景绑定分别管理';
   }
   private fields(){const e=this.document?.value.effects[this.kind.value];if(!e)return;this.width.value=String(e.size[0]);this.height.value=String(e.size[1]);this.duration.value=String(e.duration);this.color.value=e.color;this.formDirty=false;}
   private apply(){if(!this.document)throw new Error('请先打开资源');const next=structuredClone(this.document.value),e=next.effects[this.kind.value]!;e.size=[Number(this.width.value),Number(this.height.value)];e.duration=Number(this.duration.value);e.color=this.color.value;this.document.apply(next);this.formDirty=false;this.status.textContent='已应用资源参数（资产尚未保存）';this.stop();}
   private bind(){
-    if(!this.document || !this.document.path.startsWith('assets/'))throw new Error('请选择 assets/ 下的正式资源绑定；验收副本仅编辑预览');
+    if(!this.document || !this.document.path.startsWith('assets/'))throw new Error('请选择 assets/ 下的正式资源绑定');
     const asset=this.document.value,keys=Object.fromEntries((['muzzle','trail','impact'] as const).map(k=>[k,Object.keys(asset.effects).find(key=>asset.effects[key]!.kind===k)]));
     if(asset.status!=='accepted' || !keys.muzzle || !keys.trail || !keys.impact)throw new Error('绑定需要已验收的 muzzle/trail/impact 三件套');
     const result=this.port.edit('绑定手枪 VFX',nodes=>{for(const n of nodes)for(const c of n.components)if(c.kind==='RunRules'){const w=c.arsenal.definitions.find(w=>w.id===this.weapon.value);if(w)w.presentation.vfx={muzzle:keys.muzzle!,trail:keys.trail!,impact:keys.impact!,resource:{path:this.document!.path,guid:asset.id}};}},false);
