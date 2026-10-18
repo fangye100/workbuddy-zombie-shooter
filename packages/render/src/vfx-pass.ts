@@ -14,10 +14,11 @@ struct Out { @builtin(position) pos:vec4f, @location(0) uv:vec2f, @location(1) c
  o.pos=frame.vp*vec4f(i.center.xyz+i.right.xyz*p.x+i.up.xyz*p.y,1);
  o.uv=vec2f(mix(i.uv.x,i.uv.y,p.x+.5),mix(i.uv.w,i.uv.z,p.y+.5));o.color=i.color;return o;
 }
-@fragment fn fs(i:Out)->@location(0) vec4f {
+struct Fragment { @location(0) color:vec4f, @location(1) aux:vec4f };
+@fragment fn fs(i:Out)->Fragment {
  let t=textureSample(image,samp,i.uv);let a=t.a*i.color.a;
  if(a<.003){discard;}
- return vec4f(t.rgb*i.color.rgb*a,a);
+ var o:Fragment;o.color=vec4f(t.rgb*i.color.rgb*a,a);o.aux=vec4f(0,0,0,a);return o;
 }`;
 type V3=readonly number[];
 const sub=(a:V3,b:V3)=>[a[0]!-b[0]!,a[1]!-b[1]!,a[2]!-b[2]!];
@@ -26,7 +27,7 @@ const unit=(v:V3)=>{const l=Math.hypot(...v);return l>1e-8?v.map(x=>x/l):[1,0,0]
 const scale=(v:V3,n:number)=>v.map(x=>x*n);
 const linear=(n:number)=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4;
 
-/** Fixed-capacity instancing; independent depth-tested pass leaves the outline MRT untouched. */
+/** Fixed-capacity instancing. Covered pixels attenuate existing outline mask by (1-alpha). */
 export class VfxPass {
   private readonly uniform:GPUBuffer;
   private readonly buffer:GPUBuffer;
@@ -44,7 +45,7 @@ export class VfxPass {
     const module=device.createShaderModule({label:'vfx',code:SHADER});
     const layout=device.createBindGroupLayout({entries:[{binding:0,visibility:GPUShaderStage.VERTEX,buffer:{type:'uniform'}},{binding:1,visibility:GPUShaderStage.VERTEX,buffer:{type:'read-only-storage'}},{binding:2,visibility:GPUShaderStage.FRAGMENT,texture:{}},{binding:3,visibility:GPUShaderStage.FRAGMENT,sampler:{}}]});
     const pipelineLayout=device.createPipelineLayout({bindGroupLayouts:[layout]});
-    const pipeline=(additive:boolean)=>device.createRenderPipeline({label:`vfx-${additive?'additive':'alpha'}`,layout:pipelineLayout,vertex:{module,entryPoint:'vs'},fragment:{module,entryPoint:'fs',targets:[{format:'rgba16float',blend:{color:{srcFactor:'one',dstFactor:additive?'one':'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}}]},primitive:{topology:'triangle-list'},depthStencil:{format:'depth24plus',depthCompare:'less-equal',depthWriteEnabled:false}});
+    const pipeline=(additive:boolean)=>device.createRenderPipeline({label:`vfx-${additive?'additive':'alpha'}`,layout:pipelineLayout,vertex:{module,entryPoint:'vs'},fragment:{module,entryPoint:'fs',targets:[{format:'rgba16float',blend:{color:{srcFactor:'one',dstFactor:additive?'one':'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}},{format:'rgba16float',writeMask:GPUColorWrite.ALPHA,blend:{color:{srcFactor:'zero',dstFactor:'one'},alpha:{srcFactor:'zero',dstFactor:'one-minus-src-alpha'}}}]},primitive:{topology:'triangle-list'},depthStencil:{format:'depth24plus',depthCompare:'less-equal',depthWriteEnabled:false}});
     this.alpha=pipeline(false);this.additive=pipeline(true);
   }
   addTexture(key:string,bitmap:ImageBitmap):void {
@@ -56,7 +57,7 @@ export class VfxPass {
     const group=this.device.createBindGroup({layout:this.alpha.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniform}},{binding:1,resource:{buffer:this.buffer}},{binding:2,resource:texture.createView()},{binding:3,resource:this.sampler}]});
     this.textures.set(key,{texture,group,width:bitmap.width,height:bitmap.height});this.stats.textures=this.textures.size;
   }
-  draw(encoder:GPUCommandEncoder,color:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
+  draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;
     if(this.disposed)return 0;
     // Far-to-near alpha. Preserve that order; batch only consecutive compatible items.
@@ -79,7 +80,7 @@ export class VfxPass {
       data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);
     }
     this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);this.device.queue.writeBuffer(this.buffer,0,data);
-    const pass=encoder.beginRenderPass({label:'vfx',colorAttachments:[{view:color,loadOp:'load',storeOp:'store'}],depthStencilAttachment:{view:depth,depthLoadOp:'load',depthStoreOp:'store'}});
+    const pass=encoder.beginRenderPass({label:'vfx',colorAttachments:[{view:color,loadOp:'load',storeOp:'store'},{view:aux,loadOp:'load',storeOp:'store'}],depthStencilAttachment:{view:depth,depthLoadOp:'load',depthStoreOp:'store'}});
     let i=0;
     while(i<items.length){const first=items[i]!,key=first.effect.texture.guid,blend=first.effect.blend;let end=i+1;while(end<items.length && items[end]!.effect.texture.guid===key && items[end]!.effect.blend===blend)end++;
       pass.setPipeline(blend==='additive'?this.additive:this.alpha);pass.setBindGroup(0,this.textures.get(key)!.group);pass.draw(6,end-i,0,i);this.stats.draws++;i=end;

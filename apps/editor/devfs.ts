@@ -37,6 +37,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 // （verify:fs 的执行环境）按 Node ESM 规则要求显式扩展名 —— 漏掉就是 ERR_MODULE_NOT_FOUND。
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
 import { withProjectWriteLock } from '../../tools/fs/project-write.mjs';
+import { writeVfxWithMeta } from '../../tools/fs/write-vfx.mjs';
+import { validateVfxAsset } from '../../packages/scene/src/vfx.ts';
 import { renameProject } from '../../tools/fs/rename-project.mjs';
 import { SCHEMA_VERSION, validateSceneDocument } from '../../packages/scene/src/document.ts';
 import { validateProject } from '../../packages/scene/src/project.ts';
@@ -304,6 +306,12 @@ async function performWrite(
   }
 
   // 护栏③：原子写 = 写 temp 再 rename（同卷内 rename 原子，崩溃不留半截文件）。
+  if(abs.endsWith('.vfx.json')){
+    const errors=validateVfxAsset(JSON.parse(out));
+    if(body.baseHash===undefined || errors.length){sendJson(res,400,{error:errors.join('；') || 'VFX 保存必须提供加载时的 baseHash'});return;}
+    await writeVfxWithMeta(abs,out);
+    sendJson(res,200,{ok:true,path:rel,bytes:Buffer.byteLength(out),hash:sceneFingerprint(JSON.parse(out))});return;
+  }
   // 临时名必须**独占创建**：加随机数 + 计数器 + `wx`（不存在才创建），
   // 否则两个请求同毫秒同文件名会互相覆盖（复审 P1：大小写并发场景实测碰撞）。
   const tmp = await uniqueTempPath(abs);

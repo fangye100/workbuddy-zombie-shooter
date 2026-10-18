@@ -87,6 +87,12 @@
       "id": "sc_ani_20261008_intake",
       "name": "ANI-20261008 · 动作候选检视（未验收）",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m1.scene.json",
+      "id": "sc_vfx_m1",
+      "name": "M1 手枪 VFX · 遮挡与生命周期",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -38,5 +38,5 @@ export class PlayVfx {
     this.generation++;this.pass?.destroy();if(this.pass)this.lastReleased={...this.pass.stats};
     if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.planner.clear();this.diagnostics.length=0;CombatOverlay.gpuWeaponReady=()=>false;
   }
-  snapshot(){return {ready:[...this.planner.ready.keys()],pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
+  snapshot(){return {ready:[...this.planner.ready.keys()],pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},events:this.planner.recentEvents.map(e=>({...e})),gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
 }

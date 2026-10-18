@@ -1146,7 +1146,7 @@ export class RendererCore {
     pass.end();
 
     // ---- Pass 3：后处理 ----
-    if (p.debugMode === 0 && this.vfx) draws += this.vfx.draw(encoder, this.hdrTex.createView(), this.depthTex.createView(), this.viewProj, eye, this.view);
+    if (p.debugMode === 0 && this.vfx) draws += this.vfx.draw(encoder, this.hdrTex.createView(), this.auxTex.createView(), this.depthTex.createView(), this.viewProj, eye, this.view);
     const swapView = this.ctx.getCurrentTexture().createView();
     const postPass = encoder.beginRenderPass({
       label: 'post',

@@ -58,6 +58,7 @@ export async function renameProject(root, abs, target, insensitive, maxSceneVers
         if (entry.isDirectory()) await walk(p);
         else if (entry.name.endsWith('.scene.json') || entry.name.endsWith('.prefab.json')) await add(p, 'scene');
         else if (entry.name.endsWith('.meta.json')) await add(p, 'meta');
+        else if (entry.name.endsWith('.vfx.json')) await add(p, 'vfx');
       }
     };
     for (const rel of project?.assetRoots ?? ['assets']) await walk(resolveRef(rel));

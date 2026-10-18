@@ -17,6 +17,7 @@ import { AuthorTransformController, graphOfDoc } from './services/author-transfo
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
+import { VfxPanel } from './services/vfx-panel';
 import { RuntimeMotionPanel } from './services/runtime-motion-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
 import { applySceneLightParams } from './services/scene-light';
@@ -1315,6 +1316,9 @@ async function boot(): Promise<void> {
     edit: editAuthorNodes,
   });
   const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
+  const vfxHost=document.createElement('div');atmosphereHost.before(vfxHost);
+  const vfxPanel=new VfxPanel(vfxHost,renderer.core,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,playStats:()=>playCtl.vfx.snapshot()});
+  (window as unknown as {__editor:Record<string,unknown>}).__editor.vfx={snapshot:()=>({editor:vfxPanel.snapshot(),play:playCtl.vfx.snapshot()})};
   const atmospherePanel = new AtmospherePanel(atmosphereHost, {
     environment: () => spawnStore?.document.environment ?? null,
     diagnostic: () => renderer.skyTextureDiagnostic,
@@ -1374,7 +1378,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -4002,6 +4006,7 @@ async function boot(): Promise<void> {
       disposed = true;
       actorPreloader.stop();
       animationDebugPanel.dispose();
+      vfxPanel.stop();
       renderer.destroy();
     });
   }
@@ -4058,6 +4063,7 @@ async function boot(): Promise<void> {
     const dt = Math.min(0.1, wallDt);
     last = now;
     elapsed += dt;
+    vfxPanel.frame(dt);
     frames++;
     hudTimer += wallDt;
 
