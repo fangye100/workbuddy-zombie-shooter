@@ -133,10 +133,10 @@
         "guid": "as_vfx_comic_spark"
       },
       "frames": 3,
-      "duration": 0.25,
+      "duration": 0.45,
       "size": [
-        0.16,
-        0.16
+        0.45,
+        0.45
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -183,7 +183,7 @@
       "emission": {
         "rate": 120,
         "maxParticles": 64,
-        "speed": 3,
+        "speed": 4,
         "spreadDeg": 90
       }
     },

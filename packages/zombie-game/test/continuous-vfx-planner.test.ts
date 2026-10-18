@@ -23,3 +23,10 @@ it('moving/turning flame snapshots are invariant to every-tick versus catchup co
  const normalize=(f:ReturnType<typeof fixture>)=>f.w.pool.active.filter(p=>p.key.includes(':flame:')).map(p=>({position:p.position.map(v=>+v.toFixed(6)),velocity:p.velocity?.map(v=>+v.toFixed(6)),age:+p.age.toFixed(6),seed:p.seed})).sort((x,y)=>x.seed-y.seed || x.age-y.age);
  expect(normalize(a).length).toBeGreaterThan(10);expect(normalize(a)).toEqual(normalize(b));
 });
+
+it('burn snapshots never attach an old generation to a recycled actor slot',()=>{
+ const f=fixture(),view=f.r.view().find(a=>a.kind==='npc')!,actor={id:view.id,generation:view.generation,x:view.x,z:view.z,radius:.4,hp:view.hp},weapon=f.r.weapons.definitions.find(w=>w.id==='flame')!;
+ const world={actors:()=>[actor],actor:()=>actor,trace:()=>({actor:null,point:[0,0,0] as [number,number,number],distance:0}),blocked:()=>false,damage:()=>0,displace:()=>{}};
+ f.r.weaponCombat.impact(weapon,actor,0,0,world,[0,1,0]);f.r.weaponVfxFrames.capture(f.r);const before=f.r.weaponVfxFrames.drain()[0]!;expect(before.burning[0]!.generation).toBe(view.generation);expect(Object.isFrozen(before.burning[0]!.position)).toBe(true);
+ f.r.table.generation[view.id]=f.r.table.generation[view.id]!+1;f.r.table.posX[view.id]=99;f.r.weaponVfxFrames.capture(f.r);expect(f.r.weaponVfxFrames.drain()[0]!.burning).toEqual([]);expect(before.burning[0]!.position[0]).not.toBe(99);
+});
