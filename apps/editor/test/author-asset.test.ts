@@ -9,7 +9,7 @@ const MODULES = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 function setup() {
   const doc = cloneDocument((Object.values(MODULES)[0] as { default: SceneDocument }).default);
   // Retain scene semantics/NodeIds but leave render slots for insertion regressions.
-  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer');
+  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer' && c.kind !== 'Decal');
   const store = new SpawnEditStore(doc);
   const node = assetSceneNode('asset-test', 'LOD2', 'assets/environment/models/P-01/tex2/P-01_lod2.glb', 'guid-test', [2, 0, 3]);
   return { store, node };

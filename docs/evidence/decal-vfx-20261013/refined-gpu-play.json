@@ -1,0 +1,9 @@
+{
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 33
+  },
+  "scene": "sc_act1_floor1",
+  "tick": 74
+}

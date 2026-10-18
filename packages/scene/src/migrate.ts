@@ -24,6 +24,7 @@
 import {
   ComponentKind,
   SCHEMA_VERSION,
+  defaultNavigationSettings,
   validateSceneDocument,
   type SceneDiagnostic,
   type SceneDocument,
@@ -348,22 +349,42 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
-  // 新位置语义只由作者选择；旧场景不猜 Hip 相对偏移。
-  if(!listMigrations().some(m=>m.from===17&&m.to===18))registerMigration({
-    from:17,to:18,name:'optional-bone-relative-hold-slots',run:doc=>structuredClone(doc),
-  });
-  if(!listMigrations().some(m=>m.from===16&&m.to===17))registerMigration({
-    from:16,to:17,name:'explicit-model-socket-assemblies',run(doc){
+  // v16–v18 曾在导航与姿态/持握两条已发布分支重号。保留v15→21导航真源链，
+  // 由v22幂等补齐两侧缺项，不按版本号猜场景属于哪条分支，不覆盖作者值。
+  if(!listMigrations().some(m=>m.from===21&&m.to===22))registerMigration({
+    from:21,to:22,name:'integrated-navigation-pose-sockets',run(doc){
       const next=structuredClone(doc);
-      if(Array.isArray(next.nodes))for(const n of next.nodes)if(Array.isArray(n?.components))for(const c of n.components)
+      if(Array.isArray(next.nodes))for(const n of next.nodes)if(Array.isArray(n?.components))for(const c of n.components){
+        if(c?.kind==='NavZone'&&c.crowd===undefined)c.crowd=defaultNavigationSettings();
         if(c?.kind==='RunRules'&&Array.isArray(c.arsenal?.definitions))for(const w of c.arsenal.definitions)
           if(w?.presentation&&w.presentation.assembly===undefined)w.presentation.assembly=null;
+      }
       return next;
     },
   });
-  // Optional region layers never opt legacy content into player weapon policy.
+  if(!listMigrations().some(m=>m.from===20&&m.to===21))registerMigration({
+    from:20,to:21,name:'authored-combat-decal-emitter',run:doc=>structuredClone(doc),
+  });
+  if(!listMigrations().some(m=>m.from===19&&m.to===20))registerMigration({
+    from:19,to:20,name:'expanded-procedural-decal-styles',run:doc=>structuredClone(doc),
+  });
+  if(!listMigrations().some(m=>m.from===18&&m.to===19))registerMigration({
+    from:18,to:19,name:'procedural-surface-decals',run:doc=>structuredClone(doc),
+  });
+  if(!listMigrations().some(m=>m.from===17&&m.to===18))registerMigration({
+    from:17,to:18,name:'runtime-navigation-gates',run:doc=>structuredClone(doc),
+  });
+  if(!listMigrations().some(m=>m.from===16&&m.to===17))registerMigration({
+    from:16,to:17,name:'authored-3d-navigation-surfaces',run:doc=>structuredClone(doc),
+  });
   if (!listMigrations().some(m => m.from === 15 && m.to === 16)) registerMigration({
-    from: 15, to: 16, name: 'optional-skeletal-pose-layers', run: doc => structuredClone(doc),
+    from: 15, to: 16, name: 'predictive-crowd-navigation', run(doc) {
+      const next = structuredClone(doc);
+      if (Array.isArray(next.nodes)) for (const n of next.nodes) if (Array.isArray(n?.components))
+        for (const c of n.components) if (c?.kind === 'NavZone' && c.crowd === undefined)
+          c.crowd = defaultNavigationSettings();
+      return next;
+    },
   });
   // Both published v14 branches are accepted. IK v14 lacked an arsenal; keep all
   // authored IK/transition/audio fields and explicitly upgrade only legacy ammo.

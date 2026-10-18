@@ -2,7 +2,7 @@
 
 > 历史设计/基线说明：下文的实现范围及原依赖图不等于当前交付结果。
 > 新开发以[当前分层契约](architecture/layers.md)和[共享知识入口](README.md)为准。
-> 当前场景 schema 为 v15，僵尸模拟/表现归游戏包；当前渲染器直接执行 Pass，FrameGraph 尚未启用。
+> 当前场景 schema 为 v16（[NavZone.crowd 与迁移](architecture/crowd-navigation.md#2-配置迁移与编辑闭环)），僵尸模拟/表现归游戏包；当前渲染器直接执行 Pass，FrameGraph 尚未启用。
 
 > 角色：引擎架构师
 > 时间：2026-09-04 ｜ 基线：agents.md 规则 + docs/10 架构定案 + 当前代码盘点
@@ -861,3 +861,22 @@ fallback 与场景文件当前都是 **13 个物体、名字也一样**，光看
 补完校验器后一次报出全部 17 处。**规律：schema 有多少字段，校验器就得覆盖多少字段，
 否则没覆盖的那部分等于没有 schema。**（与 `docs/09 §8.1 ③` 同一条：门禁要验证"会拦住错误"，
 不能只报绿 —— 这次是同一个坑在 scene 包里又踩了一遍。）
+
+## v17 三维地表导航补充（2026-10-10）
+
+NavSurface 与 NavZone.surface 的当前契约、稳定支撑引用、v16→v17 迁移及白盒验收见 [三维导航指南](architecture/surface-navigation.md)。旧章节保留原版本设计口径，当前版本以 packages/scene/src/document.ts 为准。
+
+## v18 动态障碍与吊门补充（2026-10-11）
+
+NavigationGate 的根节点/碰撞体约束、局部平移偏移、初始状态及 v17→v18 迁移见[动态导航指南](architecture/dynamic-navigation.md)。作者场景存关闭姿态与参数；Play 持有副本，门姿态统一驱动运行阻挡、射线和外观，Stop 恢复作者数据。运行障碍层不重新烘焙地形、不更新静态支撑面。
+
+## v19 程序性表面贴花补充（2026-10-13）
+
+Decal 组件挂在既有静态 MeshRenderer 节点，marks 持有稳定 id、局部变换、确定性图案种子及颜色参数；不增加静态 mesh/变换槽。v18→v19 迁移保留旧内容，实例数量与错误配置显式诊断。运行痕迹不落盘，由有界池消费模拟时间，Stop 恢复作者数据并释放批缓冲。完整 owner、MCP 和验收限制见[程序贴花指南](render/procedural-decals.md)。
+
+## v20 程序贴花类型与形态补充（2026-10-13）
+
+独立视觉/VFX复审后，追加 acid/oil/paper/rubble，保持旧五类的顺序。可选 `DecalMark.style`
+完整声明 coverage、edgeWidth、irregularity、detail 四项参数；未提供时按公开缺省值读取。
+v19→v20 只深复制旧文档并升级版本，不注入字段、不编造伤害或战斗事件。显式形态参数
+必须校验值域及完整性，继续使用稳定 receiver NodeId+mark id、统一作者命令与保存闭环。

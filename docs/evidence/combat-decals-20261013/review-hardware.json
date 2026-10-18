@@ -1,0 +1,6 @@
+{
+  "architecture": "lovelace",
+  "fallback": false,
+  "secure": true,
+  "vendor": "nvidia"
+}

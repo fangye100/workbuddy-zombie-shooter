@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "id": "sc_weapon_assembly_trial",
   "name": "武器实装 · 手枪/Launcher近景试验",
   "act": null,
@@ -431,7 +431,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ],
       "prefab": null

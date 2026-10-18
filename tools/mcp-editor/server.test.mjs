@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { editorAgentPlugin } from './broker.mjs';
+import { EDITOR_TOOLS } from './catalog.mjs';
 
 test('actual stdio adapter discovers workflow through a loopback broker without a browser', { timeout:10000 }, async t => {
   let middleware;
@@ -28,9 +29,13 @@ test('actual stdio adapter discovers workflow through a loopback broker without 
   });
   const init=await call('initialize',{protocolVersion:'2025-06-18'});
   assert.equal(init.result.serverInfo.version,'0.2.0'); assert.match(init.result.instructions,/editor_workflow/);
-  const listed=await call('tools/list'); assert.equal(listed.result.tools.length,14);
+  const listed=await call('tools/list'); assert.deepEqual(listed.result.tools.map(t=>t.name).sort(),EDITOR_TOOLS.map(t=>t.name).sort());
+  assert.ok(listed.result.tools.some(t=>t.name==='editor_decal_backend'));
+  assert.ok(listed.result.tools.some(t=>t.name==='editor_decal_gpu'));
+  assert.ok(listed.result.tools.some(t=>t.name==='editor_decal'));
+  assert.ok(listed.result.tools.some(t=>t.name==='editor_gate'));
   const workflow=await call('tools/call',{name:'editor_workflow',arguments:{}});
-  assert.equal(workflow.result.isError,false); assert.equal(workflow.result.structuredContent.workflow.contractVersion,2);
+  assert.equal(workflow.result.isError,false); assert.equal(workflow.result.structuredContent.workflow.contractVersion,4);
   assert.equal((await call('tools/call',{name:'editor_instances',arguments:{}})).result.structuredContent.instances.length,0);
   const invalid=await call('tools/call',{name:'editor_workflow',arguments:{instanceId:'unexpected'}});
   assert.equal(invalid.result.isError,true); assert.equal(invalid.result.structuredContent.code,'INVALID_ARGUMENTS');

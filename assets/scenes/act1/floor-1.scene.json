@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "id": "sc_act1_floor1",
   "name": "第一层 · 火场公路",
   "act": "Act1",
@@ -2014,6 +2014,82 @@
               "gain": 1
             }
           }
+        },
+        {
+          "kind": "DecalEmitter",
+          "enabled": true,
+          "capacity": 256,
+          "maxPerFrame": 32,
+          "groundProbeM": 0.6,
+          "surfaceSnapM": 0.45,
+          "rules": [
+            {
+              "id": "bullet",
+              "event": "weapon-solid-impact",
+              "pattern": "bullet-hole",
+              "color": "#b3a186",
+              "size": [
+                0.22,
+                0.22
+              ],
+              "opacity": 0.95,
+              "ttlSec": 35,
+              "fadeSec": 5,
+              "maxAlive": 128,
+              "cooldownSec": 0,
+              "normalOffset": 0.004,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.02,
+                "irregularity": 0.7,
+                "detail": 0.7
+              }
+            },
+            {
+              "id": "blood",
+              "event": "npc-damage",
+              "pattern": "splatter",
+              "color": "#982c3c",
+              "size": [
+                0.85,
+                0.7
+              ],
+              "opacity": 0.86,
+              "ttlSec": 22,
+              "fadeSec": 5,
+              "maxAlive": 96,
+              "cooldownSec": 0.18,
+              "normalOffset": 0.006,
+              "style": {
+                "coverage": 0.92,
+                "edgeWidth": 0.015,
+                "irregularity": 0.8,
+                "detail": 0.65
+              }
+            },
+            {
+              "id": "acid",
+              "event": "acid-land",
+              "pattern": "acid",
+              "color": "#91bc38",
+              "size": [
+                2.4,
+                2.4
+              ],
+              "opacity": 0.84,
+              "ttlSec": 7,
+              "fadeSec": 2,
+              "maxAlive": 32,
+              "cooldownSec": 0,
+              "normalOffset": 0.008,
+              "style": {
+                "coverage": 1,
+                "edgeWidth": 0.02,
+                "irregularity": 0.65,
+                "detail": 0.6
+              }
+            }
+          ]
         }
       ],
       "prefab": null
@@ -2202,6 +2278,858 @@
           "visible": true,
           "layer": 0,
           "importScale": 1
+        },
+        {
+          "kind": "Decal",
+          "enabled": true,
+          "marks": [
+            {
+              "id": "street-proc-0",
+              "pattern": "splatter",
+              "position": [
+                -29,
+                0.12,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                0.8
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 0,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-1",
+              "pattern": "crack",
+              "position": [
+                -26.6,
+                0.12,
+                2.5695608983664777
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 137,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-2",
+              "pattern": "crack",
+              "position": [
+                -24.2,
+                0.12,
+                -3.7860829345585025
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 274,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-3",
+              "pattern": "scorch",
+              "position": [
+                -21.8,
+                0.12,
+                3.0089891163336238
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 411,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-4",
+              "pattern": "crack",
+              "position": [
+                -19.4,
+                0.12,
+                -0.6474692536248196
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 548,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-5",
+              "pattern": "splatter",
+              "position": [
+                -17,
+                0.12,
+                -2.0549847596520388
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.4
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 685,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-6",
+              "pattern": "scorch",
+              "position": [
+                -14.600000000000001,
+                0.12,
+                3.6753573002722146
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 822,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-7",
+              "pattern": "crack",
+              "position": [
+                -12.2,
+                0.12,
+                -3.3604181451056614
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 959,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-8",
+              "pattern": "crack",
+              "position": [
+                -9.8,
+                0.12,
+                1.2760029886602033
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1096,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-9",
+              "pattern": "scorch",
+              "position": [
+                -7.400000000000002,
+                0.12,
+                1.4803097021093325
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 1233,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-10",
+              "pattern": "splatter",
+              "position": [
+                -5,
+                0.12,
+                -3.4571442508036583
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.1
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 1370,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-11",
+              "pattern": "crack",
+              "position": [
+                -2.6000000000000014,
+                0.12,
+                3.613570290614613
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1507,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-12",
+              "pattern": "scorch",
+              "position": [
+                -0.20000000000000284,
+                0.12,
+                -1.8672194639543989
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 1644,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-13",
+              "pattern": "crack",
+              "position": [
+                2.200000000000003,
+                0.12,
+                -0.8623423465532668
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1781,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-14",
+              "pattern": "crack",
+              "position": [
+                4.600000000000001,
+                0.12,
+                3.1378255212414796
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 1918,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-15",
+              "pattern": "splatter",
+              "position": [
+                7,
+                0.12,
+                -3.761042008784208
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                0.8
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 2055,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-16",
+              "pattern": "crack",
+              "position": [
+                9.399999999999999,
+                0.12,
+                2.403828297770143
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2192,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-17",
+              "pattern": "crack",
+              "position": [
+                11.799999999999997,
+                0.12,
+                0.2191554157938991
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2329,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-18",
+              "pattern": "scorch",
+              "position": [
+                14.199999999999996,
+                0.12,
+                -2.7267397260537996
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 2466,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-19",
+              "pattern": "crack",
+              "position": [
+                16.6,
+                0.12,
+                3.798520425381139
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 2603,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-20",
+              "pattern": "splatter",
+              "position": [
+                19,
+                0.12,
+                -2.8701361324829895
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.1,
+                1.4
+              ],
+              "color": "#702432",
+              "opacity": 0.9,
+              "seed": 2740,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-21",
+              "pattern": "scorch",
+              "position": [
+                21.4,
+                0.12,
+                0.430440809965192
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.4000000000000001,
+                0.8
+              ],
+              "color": "#2e2b34",
+              "opacity": 0.9,
+              "seed": 2877,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-22",
+              "pattern": "crack",
+              "position": [
+                23.799999999999997,
+                0.12,
+                2.2359092472658215
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.7000000000000002,
+                1.1
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 3014,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-proc-23",
+              "pattern": "crack",
+              "position": [
+                26.199999999999996,
+                0.12,
+                -3.7249094678889128
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                2,
+                1.4
+              ],
+              "color": "#222633",
+              "opacity": 0.9,
+              "seed": 3151,
+              "normalOffset": 0.008,
+              "priority": 0
+            },
+            {
+              "id": "street-surface-0",
+              "pattern": "oil",
+              "position": [
+                -24,
+                0.12,
+                -2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 13,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-1",
+              "pattern": "paper",
+              "position": [
+                -18.3,
+                0.12,
+                2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 54,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-2",
+              "pattern": "rubble",
+              "position": [
+                -12.600000000000001,
+                0.12,
+                -3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 95,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-3",
+              "pattern": "oil",
+              "position": [
+                -6.899999999999999,
+                0.12,
+                2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 136,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-4",
+              "pattern": "paper",
+              "position": [
+                -1.1999999999999993,
+                0.12,
+                -2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 177,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-5",
+              "pattern": "rubble",
+              "position": [
+                4.5,
+                0.12,
+                3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 218,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-6",
+              "pattern": "oil",
+              "position": [
+                10.200000000000003,
+                0.12,
+                -2.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#25384e",
+              "opacity": 0.68,
+              "seed": 259,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-7",
+              "pattern": "paper",
+              "position": [
+                15.899999999999999,
+                0.12,
+                2.95
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#c5b897",
+              "opacity": 0.68,
+              "seed": 300,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            },
+            {
+              "id": "street-surface-8",
+              "pattern": "rubble",
+              "position": [
+                21.6,
+                0.12,
+                -3.2
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "size": [
+                1.3,
+                1.2
+              ],
+              "color": "#926b58",
+              "opacity": 0.68,
+              "seed": 341,
+              "normalOffset": 0.008,
+              "priority": 0,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.015,
+                "irregularity": 0.65,
+                "detail": 0.5
+              }
+            }
+          ]
         }
       ],
       "prefab": null
@@ -4174,7 +5102,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ],
       "prefab": null
@@ -5622,6 +6560,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -5690,6 +6642,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -5758,6 +6724,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -5826,6 +6806,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -5894,6 +6888,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -5962,6 +6970,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -6030,6 +7052,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",
@@ -6098,6 +7134,20 @@
               }
             }
           ]
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              5.987966060638428,
+              6.225250244140625,
+              3.6249804496765137
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
         }
       ],
       "name": "破损砖墙 · 街区前景边界",

@@ -7,6 +7,8 @@ import {
   type GizmoMode,
   type GizmoSpace,
   RendererCore,
+  DecalFrameBuilder,
+  type DecalPool,
   createAlbedoTexture,
   type CoreObjectDraw,
   type PostPoseDrawPort,
@@ -730,6 +732,9 @@ export class LabRenderer {
    * `RuntimeBridge`（拿它做玩法装载）与将来的保存链路。渲染不读它。
    */
   private document: SceneDocument | null = null;
+  private readonly decalFrames=new DecalFrameBuilder();
+  private runtimeDecals:ReturnType<DecalPool['frame']>={count:0,marks:[]};
+  setRuntimeDecals(snapshot:ReturnType<DecalPool['frame']>):void {this.runtimeDecals=snapshot;}
   getDocument(): SceneDocument | null {
     return this.document;
   }
@@ -2470,6 +2475,10 @@ export class LabRenderer {
     }
 
     const input: RenderFrameInput = {
+      decals:this.decalFrames.build(this.document,id=>{
+        const index=this.findObjectIndexByNodeId(id),o=index===null?null:this.state.objects[index];
+        return o&&!o.removed&&o.visible?o.modelMatrix:null;
+      },this.runtimeDecals,m4.orbitEye(camera.target,camera.distance,camera.yaw,p.cameraElevation)),
       sky: this.document?.environment.sky ?? null,
       contacts: this.document?.environment.comic ? {
         data: this.sceneContacts.build(this.state.objects, this.dynamicBatches),

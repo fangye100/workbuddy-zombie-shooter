@@ -1,0 +1,28 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":false,\"code\":\"UI_DRAFT\",\"message\":\"Apply or discard the active human form draft before changing its scene.\",\"state\":{\"path\":\"assets/scenes/sandbox/procedural-decal-whitebox.scene.json\",\"name\":\"程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡\",\"revision\":\"429b9ae7\",\"dirty\":false,\"hasDraft\":true,\"busy\":false,\"pendingAssets\":0,\"playing\":false}}"
+      }
+    ],
+    "isError": true,
+    "structuredContent": {
+      "ok": false,
+      "code": "UI_DRAFT",
+      "message": "Apply or discard the active human form draft before changing its scene.",
+      "state": {
+        "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+        "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+        "revision": "429b9ae7",
+        "dirty": false,
+        "hasDraft": true,
+        "busy": false,
+        "pendingAssets": 0,
+        "playing": false
+      }
+    }
+  }
+}

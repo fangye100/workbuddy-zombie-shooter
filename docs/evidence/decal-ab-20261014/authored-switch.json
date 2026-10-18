@@ -1,0 +1,223 @@
+{
+  "4": {
+    "ok": true,
+    "runtime": {
+      "state": "stopped",
+      "tick": 0,
+      "player": null,
+      "npcCount": 0,
+      "gates": [],
+      "diagnostics": [],
+      "runtimeDiagnostics": [],
+      "ledger": {
+        "registered": 5,
+        "disposed": 5,
+        "pending": 0
+      },
+      "instances": 0,
+      "meshIds": [],
+      "actorLibrarySize": 2,
+      "weapons": null,
+      "audio": {
+        "state": "closed",
+        "runId": -1,
+        "pending": 0,
+        "buffers": 0,
+        "decodedBytes": 0,
+        "voices": 0,
+        "loops": 0,
+        "peakVoices": 3,
+        "played": {
+          "SFX-ENV-HIGHWAY-BED": 1,
+          "SFX-WPN-PISTOL-SHOT": 1,
+          "SFX-HIT-FLESH": 1,
+          "SFX-E03-ACID-LAUNCH": 1,
+          "SFX-E03-ACID-POOL": 1
+        },
+        "skipped": 0,
+        "muted": false,
+        "gain": 1,
+        "errors": []
+      },
+      "navigation": null,
+      "decals": {
+        "time": 0,
+        "count": 0,
+        "capacity": 256,
+        "evicted": 0,
+        "marks": [],
+        "runId": null,
+        "combat": {
+          "emitted": 0,
+          "noSurface": 0,
+          "throttled": 0,
+          "expired": 0,
+          "budgetDropped": 0,
+          "ruleEvicted": 0,
+          "journalDropped": 0,
+          "unknownRules": 0,
+          "cursor": 0
+        },
+        "pool": {
+          "allocatedSlots": 256,
+          "emitted": 3,
+          "reusedSlots": 0,
+          "active": 0,
+          "free": 256
+        },
+        "gpu": {
+          "backend": "direct",
+          "instances": 18,
+          "inputInstances": 18,
+          "submittedInstances": 18,
+          "visibleInstances": null,
+          "sequence": 592,
+          "drawCalls": 1,
+          "bufferBytes": 4096,
+          "uploadedBytes": 1440,
+          "computeDispatches": 0
+        }
+      }
+    },
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d4c7c8bb",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "7": {
+    "ok": true,
+    "gpu": {
+      "sequence": 595,
+      "inputInstances": 18,
+      "drawnInstances": 18,
+      "visibleInstances": 18,
+      "countSource": "gpu-frustum"
+    },
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d4c7c8bb",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "8": {
+    "ok": true,
+    "runtime": {
+      "state": "stopped",
+      "tick": 0,
+      "player": null,
+      "npcCount": 0,
+      "gates": [],
+      "diagnostics": [],
+      "runtimeDiagnostics": [],
+      "ledger": {
+        "registered": 5,
+        "disposed": 5,
+        "pending": 0
+      },
+      "instances": 0,
+      "meshIds": [],
+      "actorLibrarySize": 2,
+      "weapons": null,
+      "audio": {
+        "state": "closed",
+        "runId": -1,
+        "pending": 0,
+        "buffers": 0,
+        "decodedBytes": 0,
+        "voices": 0,
+        "loops": 0,
+        "peakVoices": 3,
+        "played": {
+          "SFX-ENV-HIGHWAY-BED": 1,
+          "SFX-WPN-PISTOL-SHOT": 1,
+          "SFX-HIT-FLESH": 1,
+          "SFX-E03-ACID-LAUNCH": 1,
+          "SFX-E03-ACID-POOL": 1
+        },
+        "skipped": 0,
+        "muted": false,
+        "gain": 1,
+        "errors": []
+      },
+      "navigation": null,
+      "decals": {
+        "time": 0,
+        "count": 0,
+        "capacity": 256,
+        "evicted": 0,
+        "marks": [],
+        "runId": null,
+        "combat": {
+          "emitted": 0,
+          "noSurface": 0,
+          "throttled": 0,
+          "expired": 0,
+          "budgetDropped": 0,
+          "ruleEvicted": 0,
+          "journalDropped": 0,
+          "unknownRules": 0,
+          "cursor": 0
+        },
+        "pool": {
+          "allocatedSlots": 256,
+          "emitted": 3,
+          "reusedSlots": 0,
+          "active": 0,
+          "free": 256
+        },
+        "gpu": {
+          "backend": "indirect",
+          "instances": 18,
+          "inputInstances": 18,
+          "submittedInstances": 18,
+          "visibleInstances": 18,
+          "sequence": 595,
+          "drawCalls": 1,
+          "bufferBytes": 8224,
+          "uploadedBytes": 1456,
+          "computeDispatches": 1
+        }
+      }
+    },
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d4c7c8bb",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "10": {
+    "ok": true,
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d4c7c8bb",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    }
+  },
+  "pixelComparison": {
+    "width": 1331,
+    "height": 769,
+    "rgbDifferenceBounds": null,
+    "pngByteIdentical": true
+  }
+}

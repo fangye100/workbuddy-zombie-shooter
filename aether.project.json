@@ -135,6 +135,30 @@
       "path": "assets/scenes/sandbox/weapon-fit-review.scene.json",
       "name": "七武器 · 去重复部件 / 实际slot / Shell与Fuel候选",
       "enabled": true
+    },
+    {
+      "id": "sc_navigation_3d_whitebox",
+      "path": "assets/scenes/sandbox/navigation-3d-whitebox.scene.json",
+      "name": "三维导航白盒 · 斜坡 / 楼梯 / 叠层",
+      "enabled": true
+    },
+    {
+      "id": "sc_dynamic_navigation_whitebox",
+      "path": "assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json",
+      "name": "动态障碍白盒 · 吊门 / 绕行 / 等待",
+      "enabled": true
+    },
+    {
+      "id": "sc_procedural_decal_whitebox",
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "enabled": true
+    },
+    {
+      "id": "sc_combat_decal_whitebox",
+      "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+      "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+      "enabled": true
     }
   ],
   "startIndex": 1,

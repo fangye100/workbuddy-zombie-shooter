@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-09",
+  "indexedAt": "2026-10-18",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
@@ -10,9 +10,16 @@
       "role": "editor",
       "authority": "source",
       "status": "current",
-      "topics": ["editor", "camera", "animation"],
+      "topics": [
+        "editor",
+        "camera",
+        "animation"
+      ],
       "read": "Play/Pause orbit/pan/zoom与输入边界；自由按钮/V与Edit飞行统一入口、重复键保护；HumanIK指南保留0222268七枪证据，动作接入指南记录R8实际入口验收",
-      "sourceRefs": ["project-rules", "architecture-policy"]
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy"
+      ]
     },
     {
       "id": "shadow-crowd-decal-assessment-20261010",
@@ -21,9 +28,21 @@
       "role": "framework",
       "authority": "evidence",
       "status": "historical",
-      "topics": ["render", "shadow", "crowd", "navigation", "decal", "art", "architecture"],
+      "topics": [
+        "render",
+        "shadow",
+        "crowd",
+        "navigation",
+        "decal",
+        "art",
+        "architecture"
+      ],
       "read": "阴影格式修复/GPU证据、CPU避让基准和未实施贴花/ORCA建议；容量与性能受版本设备限制",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema"]
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema"
+      ]
     },
     {
       "id": "project-rules",
@@ -2427,6 +2446,475 @@
         "scene-schema",
         "asset-metadata",
         "project-manifest"
+      ]
+    },
+    {
+      "id": "combat-decals-visual-review-20261013",
+      "path": "docs/evidence/combat-decals-20261013/review.md",
+      "title": "战斗贴花独立视觉VFX验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "combat-decals-acceptance-20261013",
+      "path": "docs/evidence/combat-decals-20261013/acceptance.md",
+      "title": "真实战斗贴花事件接入与验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "decal-vfx-final-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/refined-review.md",
+      "title": "贴花独立视觉修复复验",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "九类静态需求、四项参数作用、白盒/Play读图及剩余P2限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-baseline-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/baseline-review.md",
+      "title": "贴花独立视觉基线评审",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "d18cfb7基线真实GPU目检、四项P1造型缺陷和最小类型缺口",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-acceptance-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/acceptance.md",
+      "title": "贴花独立视觉VFX复审与类型补齐",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "独立子代理基线与GPU复验、最小类型缺口和实际交付边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-workbench-acceptance-20261013",
+      "path": "docs/evidence/decal-workbench-20261013/acceptance.md",
+      "title": "程序贴花独立工作区验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "editor",
+        "render",
+        "validation"
+      ],
+      "read": "基线bccb365上的实际参数UI、应用撤销、保存重载和真实GPU证据",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "scene-decals",
+      "path": "packages/scene/src/decals.ts",
+      "title": "程序贴花数据契约",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "scene"
+      ],
+      "read": "九类表面痕迹、四项可序列化形态参数、稳定id与值域",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema"
+      ]
+    },
+    {
+      "id": "procedural-decals-implementation",
+      "path": "docs/render/procedural-decals.md",
+      "title": "程序性表面贴花指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "mcp",
+        "architecture"
+      ],
+      "read": "独立工作区、九图案/形态参数、v21场景事件配置、战斗痕迹、寿命与数量、GPU/MCP闭环",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "procedural-decals-acceptance-20261013",
+      "path": "docs/evidence/procedural-decals-20261013/acceptance.md",
+      "title": "程序贴花真实GPU验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "render",
+        "gpu",
+        "verification",
+        "mcp"
+      ],
+      "read": "白盒贴附与遮挡、种子保存重载、寿命、32/128/512合批、Stop及第一层实际呈现",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-implementation",
+      "path": "docs/architecture/dynamic-navigation.md",
+      "title": "动态障碍与吊门寻路",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "mcp",
+        "architecture"
+      ],
+      "read": "v18 固定地表图动态阻挡、占用等待、实时弹道、编辑控制、GPU白盒及性能边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-review-20261011",
+      "path": "docs/evidence/dynamic-navigation-20261011/review.md",
+      "title": "动态障碍独立复审记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "review",
+        "verification"
+      ],
+      "read": "Float32贴门锁死复现及修复、随机可达性对比与独立复审边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-acceptance-20261011",
+      "path": "docs/evidence/dynamic-navigation-20261011/acceptance.md",
+      "title": "动态吊门白盒验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "gpu",
+        "verification",
+        "mcp"
+      ],
+      "read": "绕行、等待、半开净空、上坡到达、作者重载、Stop清理及CPU测量",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "surface-navigation-review-20261010",
+      "path": "docs/evidence/surface-navigation-20261010/review.md",
+      "title": "三维地表导航独立复审记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "crowd",
+        "review",
+        "verification"
+      ],
+      "read": "玩家尺寸漏检及整波出生原子性问题的独立复现、修复与终审边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "surface-navigation-implementation",
+      "path": "docs/architecture/surface-navigation.md",
+      "title": "三维地表导航与白盒验收",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "avoidance",
+        "architecture",
+        "mcp"
+      ],
+      "read": "v17 NavSurface、坡道楼梯叠层、净空与跨层隔离、白盒真实GPU验收及性能边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "crowd-navigation-implementation",
+      "path": "docs/architecture/crowd-navigation.md",
+      "title": "高性能群体寻路与避让实现指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "avoidance",
+        "architecture",
+        "mcp"
+      ],
+      "read": "NavZone.crowd v16、分帧流场、预测避让、连续碰撞、游戏策略、MCP观察和CPU/GPU验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "combat-decal-facts",
+      "path": "packages/zombie-game/src/combat-decals.ts",
+      "title": "游戏战斗贴花事实契约",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "真实命中/伤害/酸液落地、稳定代次序号、有界日志",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "combat-decal-planner",
+      "path": "packages/zombie-game/src/presentation/combat-decals.ts",
+      "title": "游戏战斗贴花表现策略",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "事件规则映射、处理预算、寿命保护、数量淘汰与失败诊断",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-object-pool",
+      "path": "packages/render/src/decal-instances.ts",
+      "title": "通用贴花对象池、借用帧与透明打包",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "lifecycle"
+      ],
+      "read": "固定槽复用、复制隔离、规则标签、稳定排序与打包",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-draw-backends",
+      "path": "packages/render/src/procedural-decals.ts",
+      "title": "贴花直接实例化与GPU间接绘制端口",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "gpu",
+        "indirect"
+      ],
+      "read": "prepare/draw、资源增长、显式计数读回与释放",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-stable-compaction",
+      "path": "packages/render/src/decal-indirect.ts",
+      "title": "贴花GPU稳定视锥剔除与压缩",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "gpu",
+        "indirect",
+        "sorting"
+      ],
+      "read": "1024边界、uniform barrier、四角clip测试与间接参数",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-performance-guide",
+      "path": "docs/render/decal-performance.md",
+      "title": "程序贴花对象池与间接绘制指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "benchmark"
+      ],
+      "read": "A/B契约、owner、失败与计数语义、CPU/GPU测量协议及操作",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
+      ]
+    },
+    {
+      "id": "decal-ab-acceptance-20261014",
+      "path": "docs/evidence/decal-ab-20261014/acceptance.md",
+      "title": "贴花A/B真实GPU性能与生命周期验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "validation"
+      ],
+      "read": "原始测量、HDR一致性、Play验收、独立审查与默认选择依据",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
+      ]
+    },
+    {
+      "id": "main-integration-20261018",
+      "path": "docs/architecture/main-integration-20261018.md",
+      "title": "开发主线整合与v22历史兼容记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "architecture",
+        "scene",
+        "navigation",
+        "animation",
+        "decal"
+      ],
+      "read": "两条schema历史统一、保留数据、实际测试与历史验收限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema"
       ]
     }
   ]

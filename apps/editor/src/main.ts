@@ -41,6 +41,8 @@ import { EditorAgent, connectEditorAgent } from './services/editor-agent';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
+import { GatePanel } from './services/gate-panel';
+import {RuntimeDecals} from './services/runtime-decals';
 import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
@@ -55,6 +57,7 @@ import { AnimationDebugCollector } from './services/animation-debug/collector';
 import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
 import { AnimationDebugPanel } from './services/animation-debug/panel';
 import { BindingPanel } from './services/binding/binding-panel';
+import { DecalWorkbench } from './services/decal-workbench';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -270,8 +273,10 @@ async function boot(): Promise<void> {
   const gameAudio = new GameAudio();
   let observationNavigation:PlayObservationNavigation|null=null;
   let viewNavigationControl:ViewNavigationControl|null=null;
+  const runtimeDecals=new RuntimeDecals(renderer);
   const playCtl = new PlayController(renderer, bridge, {
     weapons:weaponModels,
+    decals:runtimeDecals,
     bodyIk,
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
@@ -317,6 +322,8 @@ async function boot(): Promise<void> {
     },
   });
 
+  const gatePanel = new GatePanel(playCtl,id=>renderer.getDocument()?.nodes.find(n=>n.id===id)?.name??id);
+
   // ---- Play 控制按钮（装配层：只负责按钮 → 控制器，无玩法逻辑）----
   const btnPlay = document.querySelector<HTMLButtonElement>('#btn-play');
   const btnPause = document.querySelector<HTMLButtonElement>('#btn-pause');
@@ -342,7 +349,7 @@ async function boot(): Promise<void> {
   let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
@@ -1344,6 +1351,15 @@ async function boot(): Promise<void> {
     },
   });
   renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
+  const decalWorkbench = new DecalWorkbench(gpu, {
+    backend:()=>renderer.core.decalSnapshot().backend,
+    setBackend:backend=>renderer.core.setDecalBackend(backend),
+    document: () => spawnStore?.document ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    edit: editAuthorNodes,
+    save: saveSpawnEdits,
+    changed: () => { editorMenu.refresh(); if (spawnStore && !playCtl.isPlaying) renderer.setDocument(spawnStore.document); },
+  });
   function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
     if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
     const result = spawnStore.editNodes(label, mutate);
@@ -1391,7 +1407,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1402,6 +1418,7 @@ async function boot(): Promise<void> {
     redo: () => reportAuthorTransform(authorTransform.history(true)),
     inspect: switchInspectorTab,
     resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
+    decals: () => decalWorkbench.open(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!)),
   });
   panel.onChange = () => {
     hudDirty = true;
@@ -1526,6 +1543,7 @@ async function boot(): Promise<void> {
   function setSpawnScene(doc: SceneDocument | null): void {
     sceneAuthorPanel.resetDraft();
     atmospherePanel.resetDraft();
+    decalWorkbench.resetDraft();
     authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
@@ -1593,7 +1611,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1678,6 +1696,7 @@ async function boot(): Promise<void> {
     authorAssets.prune();
     sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
     atmospherePanel.render();
+    decalWorkbench.refresh();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
@@ -4026,8 +4045,10 @@ async function boot(): Promise<void> {
   if (import.meta.hot !== undefined) {
     import.meta.hot.dispose(() => {
       disposed = true;
+      decalWorkbench.destroy();
       actorPreloader.stop();
       animationDebugPanel.dispose();
+      gatePanel.dispose();
       renderer.destroy();
     });
   }
@@ -4038,11 +4059,12 @@ async function boot(): Promise<void> {
   let elapsed = 0;
   let last = performance.now();
 
+  (window as unknown as { __editor: Record<string, unknown> }).__editor.decalWorkbench = { snapshot: () => decalWorkbench.snapshot() };
   const editorAgent: EditorAgent = new EditorAgent({
     store: () => spawnStore,
     path: () => renderer.getSceneSource()?.url ?? null,
     busy: () => authorProjectionBusy,
-    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     pendingAssets: () => renderer.pendingAssetCount,
     open: async path => {
@@ -4072,9 +4094,13 @@ async function boot(): Promise<void> {
       else if(action === 'resume') { if(!playCtl.isPaused) throw new Error('Play is not paused'); playCtl.resume(); }
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
-    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
+    gate: (nodeId,open,runId) => {const rt=playCtl.session.runtime;if(!rt||rt.player()?.runId!==runId)throw new Error('运行代次已变更，请重新读取 editor_runtime');rt.setGateOpen(nodeId,open);},
+    decalGpu:()=>renderer.core.readDecalVisibleCount(),
+    decalBackend:backend=>renderer.core.setDecalBackend(backend),
+    decal:(action,runId,input)=>{if(playCtl.session.runtime?.outcome!=='running')throw new Error('运行贴花需要正在进行的游戏');runtimeDecals.command(action,runId,input);},
+    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,gates:playCtl.session.runtime?.gateSnapshot()??[],
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
-      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot()}),
+      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null,decals:runtimeDecals.snapshot()}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;
@@ -4198,6 +4224,7 @@ async function boot(): Promise<void> {
     }
     playCtl.update(dt);
     holdSlotViewport.updateEditingState();
+    gatePanel.update();
     gameAudio.update(playCtl.session,camera.yaw);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;
@@ -4235,6 +4262,7 @@ async function boot(): Promise<void> {
     editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);
+    decalWorkbench.tick();
     requestAnimationFrame(frame);
   };
 

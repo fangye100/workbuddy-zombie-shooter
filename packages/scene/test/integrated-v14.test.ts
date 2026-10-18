@@ -10,19 +10,21 @@ describe('integration of independently published v14 scene contracts',()=>{
     const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
     delete (rules as unknown as Record<string,unknown>).arsenal;
     delete rules.audio;
-    const mesh=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='MeshRenderer');
+    const actorNode=doc.nodes.find(n=>n.id===doc.playerStart&&n.components.some(c=>c.kind==='MeshRenderer'))
+      ??doc.nodes.find(n=>!n.components.some(c=>c.kind==='Decal')&&n.components.some(c=>c.kind==='MeshRenderer'))!;
+    const mesh=actorNode.components.find(c=>c.kind==='MeshRenderer');
     if(mesh?.kind!=='MeshRenderer')throw new Error('Missing test actor');
     mesh.bodyIk={enabled:true,weight:.7,locomotionWhileAiming:true,controls:[newBodyIkControl('head')]};
     if(mesh.sharedMotion)mesh.sharedMotion.transitionSec=.6;
     const before=structuredClone(doc),result=migrateToLatest(doc);
-    expect(result.applied).toEqual(['integrated-weapons-audio-body-ik','optional-skeletal-pose-layers','explicit-model-socket-assemblies']);expect(result.to).toBe(17);
+    expect(result.applied).toEqual(['integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets']);expect(result.to).toBe(22);
     expect(doc).toEqual(before);
     const migratedRules=result.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
     expect(migratedRules.arsenal.definitions).toHaveLength(1);
     expect(migratedRules.arsenal.definitions[0]!.ammo.magazineSize).toBe(rules.weapon.magazineSize);
     expect(migratedRules.audio).toBeUndefined();
     expect(result.doc.nodes.flatMap(n=>n.components).find(c=>c===mesh)).toBeUndefined();
-    const migratedMesh=result.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='MeshRenderer');
+    const migratedMesh=result.doc.nodes.find(n=>n.id===actorNode.id)!.components.find(c=>c.kind==='MeshRenderer');
     expect(migratedMesh).toEqual(mesh);
     expect(validateSceneDocument(result.doc).filter(d=>d.severity==='error')).toEqual([]);
   });

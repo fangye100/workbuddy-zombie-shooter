@@ -14,13 +14,14 @@ test('新生成玩家使用真实 rig、既有动作及双手控制，种子模�
  for(const a of seed.definitions){const b=rules.arsenal.definitions.find(w=>w.id===a.id);assert.deepEqual(a.presentation.model,b.presentation.model);assert.deepEqual(a.presentation.assembly,b.presentation.assembly);}
 });
 test('已有配置不被覆盖；生成高度变更只校准独立模拟marker',()=>{
- const doc=fixture(),player=doc.nodes.find(n=>n.id===doc.playerStart),mesh=player.components.find(c=>c.kind==='MeshRenderer');mesh.bodyIk=null;const before=structuredClone(mesh);player.transform.position[1]=.12;
+ const doc=fixture(),player=doc.nodes.find(n=>n.id===doc.playerStart),mesh=player.components.find(c=>c.kind==='MeshRenderer');mesh.bodyIk=null;const before=structuredClone(mesh);prepareWeaponAssemblyPlayer(doc,calibration,meta,true);const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules'),oldMuzzle=rules.arsenal.definitions.find(w=>w.id==='pistol').presentation.markers.muzzle.position[1],oldY=player.transform.position[1];player.transform.position[1]=.12;
  prepareWeaponAssemblyPlayer(doc,calibration,meta,true);assert.deepEqual(mesh,before);
- const pistol=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol');assert.ok(Math.abs(pistol.presentation.markers.muzzle.position[1]-.567)<1e-12);
+ const pistol=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions.find(w=>w.id==='pistol');assert.ok(Math.abs(pistol.presentation.markers.muzzle.position[1]-(oldMuzzle+.12-oldY))<1e-12);
  assert.deepEqual(meta,read(calibration.character.asset.path+'.meta.json'));
 });
 test('生成继承各武器作者slot，模拟marker按对应slot而非prototype重算；数据不别名',()=>{
  const previous=fixture(),doc=fixture(),rules=d=>d.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');
+ prepareWeaponAssemblyPlayer(doc,calibration,meta,true);
  const pistol=rules(previous).arsenal.definitions.find(w=>w.id==='pistol'),initial=structuredClone(pistol),unchanged=structuredClone(rules(doc).arsenal.definitions.slice(1));
  pistol.presentation.assembly.holdSlot.position[2]+=.07;pistol.presentation.markers.primaryGrip.position[0]+=.07;
  preserveSceneHoldSlots(doc,previous);prepareWeaponAssemblyPlayer(doc,calibration,meta,true);

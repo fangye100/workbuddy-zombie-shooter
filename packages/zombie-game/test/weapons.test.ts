@@ -33,7 +33,7 @@ describe('scene-owned weapon contract',()=>{
     const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
     const keep=structuredClone(rules.arsenal);expect(migrateToLatest(doc).doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')).toMatchObject({arsenal:keep});
     delete (rules as unknown as Record<string,unknown>).arsenal;
-    const migrated=migrateToLatest(doc);expect(migrated.applied).toEqual(['unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik']);
+    const migrated=migrateToLatest(doc);expect(migrated.applied).toEqual(['unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets']);
     const next=migrated.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')! as RunRulesComponent;
     expect(next.arsenal.definitions).toHaveLength(1);expect(next.arsenal.definitions[0]!.ammo.magazineSize).toBe(rules.weapon.magazineSize);
     expect(validateSceneDocument(migrated.doc).filter(d=>d.severity==='error')).toEqual([]);
@@ -65,10 +65,10 @@ describe('single equipment/ammo/timing owner',()=>{
     const other=new WeaponSystem(arsenal());expect(other.restore(good)).toBe(true);expect(other.snapshot()).toEqual(good);
   });
   it('fires animation hooks only for successful actions, emits reload stages, isolates observers and outputs grip/recoil',()=>{
-    const w=new WeaponSystem(arsenal()),events:string[]=[];
+    const w=new WeaponSystem(arsenal()),events:string[]=[],originalMuzzle=w.active.presentation.markers.muzzle.position[0];
     w.setAnimationHooks({onFire:p=>{events.push(p.event.action);p.markers.muzzle.position[0]=99;throw new Error('observer');},onReloadStage:p=>events.push(p.stage!)});
     w.beginFire();w.beginFire();w.advance(.1);
-    expect(events).toEqual(['fire']);expect(w.poseIntent.recoil.translation[0]).toBeLessThan(0);expect(w.active.presentation.markers.muzzle.position[0]).toBe(.3);
+    expect(events).toEqual(['fire']);expect(w.poseIntent.recoil.translation[0]).toBeLessThan(0);expect(w.active.presentation.markers.muzzle.position[0]).toBe(originalMuzzle);
     expect(w.hookErrors).toHaveLength(1);expect(w.state.magazine).toBe(17);
     w.state.magazine=0;w.reload();w.advance(1.6);expect(events.slice(1)).toEqual(['magazine-out','magazine-in','chamber']);
     expect(w.poseIntent.markers.primaryGrip.effector).toBe('right-hand');expect(w.poseIntent.markers.supportGrip.effector).toBe('left-hand');

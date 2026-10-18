@@ -1,0 +1,75 @@
+{
+  "camera": {
+    "yawOffsetDeg": 0,
+    "distance": 16
+  },
+  "rules": [
+    {
+      "id": "bullet",
+      "event": "weapon-solid-impact",
+      "pattern": "bullet-hole",
+      "color": "#b3a186",
+      "size": [
+        0.22,
+        0.22
+      ],
+      "opacity": 0.95,
+      "ttlSec": 3,
+      "fadeSec": 1,
+      "maxAlive": 1,
+      "cooldownSec": 0,
+      "normalOffset": 0.004,
+      "style": {
+        "coverage": 0.9,
+        "edgeWidth": 0.02,
+        "irregularity": 0.7,
+        "detail": 0.7
+      }
+    },
+    {
+      "id": "blood",
+      "event": "npc-damage",
+      "pattern": "splatter",
+      "color": "#982c3c",
+      "size": [
+        0.85,
+        0.7
+      ],
+      "opacity": 0.86,
+      "ttlSec": 3,
+      "fadeSec": 1,
+      "maxAlive": 96,
+      "cooldownSec": 0.18,
+      "normalOffset": 0.006,
+      "style": {
+        "coverage": 0.92,
+        "edgeWidth": 0.015,
+        "irregularity": 0.8,
+        "detail": 0.65
+      }
+    },
+    {
+      "id": "acid",
+      "event": "acid-land",
+      "pattern": "acid",
+      "color": "#91bc38",
+      "size": [
+        2.4,
+        2.4
+      ],
+      "opacity": 0.84,
+      "ttlSec": 7,
+      "fadeSec": 2,
+      "maxAlive": 32,
+      "cooldownSec": 0,
+      "normalOffset": 0.008,
+      "style": {
+        "coverage": 1,
+        "edgeWidth": 0.02,
+        "irregularity": 0.65,
+        "detail": 0.6
+      }
+    }
+  ],
+  "noDiskSave": true
+}

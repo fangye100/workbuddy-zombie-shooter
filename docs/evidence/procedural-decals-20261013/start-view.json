@@ -1,0 +1,3547 @@
+{
+  "author": {
+    "act": null,
+    "dependencies": [],
+    "editorCamera": {
+      "distance": 30,
+      "elevation": 0.72,
+      "target": [
+        4,
+        1.8,
+        1
+      ],
+      "yaw": 0.5
+    },
+    "entryCamera": "nd_nav3d_camera",
+    "environment": {
+      "ambient": {
+        "color": "#2a2f3a",
+        "intensity": 0.35
+      },
+      "exposure": 1,
+      "fog": {
+        "color": "#0e1013",
+        "density": 0.012,
+        "heightFalloff": 0.08
+      },
+      "hemisphere": {
+        "ground": "#3a2f28",
+        "groundIntensity": 0.18,
+        "sky": "#8fb4d9",
+        "skyIntensity": 0.45
+      },
+      "postOverride": null,
+      "rim": {
+        "color": "#ffffff",
+        "intensity": 0.5,
+        "power": 2.5,
+        "topBias": 0.35
+      }
+    },
+    "id": "sc_procedural_decal_whitebox",
+    "loseCondition": "player-death",
+    "meta": {
+      "createdAt": "2026-10-10T10:05:28.919Z",
+      "notes": "五种确定性程序图案；下平台阴影遮挡测试、斜坡贴附、墙面弹孔、上平台叠层隔离。Play MCP 可发运行痕迹并检验寿命与 Stop。",
+      "updatedAt": "2026-10-10T10:05:28.919Z"
+    },
+    "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+    "nodes": [
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#e4e7eb",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                6,
+                12
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              6,
+              12
+            ]
+          },
+          {
+            "enabled": true,
+            "kind": "Decal",
+            "marks": [
+              {
+                "color": "#a12f38",
+                "id": "blood",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "splatter",
+                "position": [
+                  -1.4,
+                  0,
+                  -2.1
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 31,
+                "size": [
+                  1.6,
+                  1.6
+                ]
+              },
+              {
+                "color": "#353542",
+                "id": "soot",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "scorch",
+                "position": [
+                  1.3,
+                  0,
+                  -2.1
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 71,
+                "size": [
+                  1.6,
+                  1.6
+                ]
+              },
+              {
+                "color": "#182430",
+                "id": "split",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "crack",
+                "position": [
+                  -1.4,
+                  0,
+                  -1.5
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 9,
+                "size": [
+                  1.9,
+                  1.7
+                ]
+              },
+              {
+                "color": "#e8bb31",
+                "id": "warning",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "hazard",
+                "position": [
+                  1.3,
+                  0,
+                  -1.5
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 10,
+                "size": [
+                  1.8,
+                  1.4
+                ]
+              },
+              {
+                "color": "#6aa82b",
+                "id": "occlusion",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "splatter",
+                "position": [
+                  0,
+                  0,
+                  1.3
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 21,
+                "size": [
+                  2.8,
+                  2.8
+                ]
+              },
+              {
+                "color": "#afa38f",
+                "id": "hole",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "bullet-hole",
+                "position": [
+                  1.3,
+                  0,
+                  2.2
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 8,
+                "size": [
+                  1.5,
+                  1.5
+                ]
+              }
+            ]
+          }
+        ],
+        "id": "nd_nav3d_low",
+        "name": "下平台 · Y=0",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            -3,
+            0,
+            2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#7ac9e5",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                8.94427190999916,
+                8
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              8.94427190999916,
+              8
+            ]
+          },
+          {
+            "enabled": true,
+            "kind": "Decal",
+            "marks": [
+              {
+                "color": "#8e2839",
+                "id": "ramp-splat",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "splatter",
+                "position": [
+                  -2,
+                  0,
+                  0
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 4,
+                "size": [
+                  2.8,
+                  2.2
+                ]
+              },
+              {
+                "color": "#203045",
+                "id": "ramp-crack",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "crack",
+                "position": [
+                  1.6,
+                  0,
+                  0
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 17,
+                "size": [
+                  2.8,
+                  2.2
+                ]
+              }
+            ]
+          }
+        ],
+        "id": "nd_nav3d_ramp",
+        "name": "蓝色斜坡 · 26.565° · Y=0→4",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            4,
+            2,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0.2297529205473612,
+            0.9732489894677302
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#dce1e8",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                8,
+                12
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              8,
+              12
+            ],
+            "supportCollider": "nd_nav3d_high_slab"
+          },
+          {
+            "enabled": true,
+            "kind": "Decal",
+            "marks": [
+              {
+                "color": "#3b3541",
+                "id": "upper-soot",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "scorch",
+                "position": [
+                  -1.6,
+                  0,
+                  -1
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 39,
+                "size": [
+                  2.8,
+                  2.4
+                ]
+              },
+              {
+                "color": "#ebb337",
+                "id": "upper-warning",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "hazard",
+                "position": [
+                  1.7,
+                  0,
+                  -1
+                ],
+                "priority": 0,
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "seed": 4,
+                "size": [
+                  2.2,
+                  1.7
+                ]
+              }
+            ]
+          }
+        ],
+        "id": "nd_nav3d_high",
+        "name": "上平台 · Y=4",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            12,
+            4,
+            2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6a6a1",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                8,
+                8
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              8,
+              8
+            ]
+          }
+        ],
+        "id": "nd_nav3d_under",
+        "name": "叠层隔离区 · Y=0",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            12,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#db9baa",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                6,
+                8
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              6,
+              8
+            ]
+          }
+        ],
+        "id": "nd_nav3d_island",
+        "name": "不可达孤岛 · Y=8",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            23,
+            8,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_0",
+        "name": "楼梯 1 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            0.25,
+            0,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_0",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            0.25,
+            -0.16,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_1",
+        "name": "楼梯 2 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            0.75,
+            0.25,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_1",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            0.75,
+            0.09,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_2",
+        "name": "楼梯 3 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            1.25,
+            0.5,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_2",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            1.25,
+            0.33999999999999997,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_3",
+        "name": "楼梯 4 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            1.75,
+            0.75,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_3",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            1.75,
+            0.59,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_4",
+        "name": "楼梯 5 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            2.25,
+            1,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_4",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            2.25,
+            0.84,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_5",
+        "name": "楼梯 6 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            2.75,
+            1.25,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_5",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            2.75,
+            1.09,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_6",
+        "name": "楼梯 7 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            3.25,
+            1.5,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_6",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            3.25,
+            1.34,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_7",
+        "name": "楼梯 8 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            3.75,
+            1.75,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_7",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            3.75,
+            1.59,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_8",
+        "name": "楼梯 9 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            4.25,
+            2,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_8",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            4.25,
+            1.84,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_9",
+        "name": "楼梯 10 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            4.75,
+            2.25,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_9",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            4.75,
+            2.09,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_10",
+        "name": "楼梯 11 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            5.25,
+            2.5,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_10",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            5.25,
+            2.34,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_11",
+        "name": "楼梯 12 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            5.75,
+            2.75,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_11",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            5.75,
+            2.59,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_12",
+        "name": "楼梯 13 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            6.25,
+            3,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_12",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            6.25,
+            2.84,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_13",
+        "name": "楼梯 14 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            6.75,
+            3.25,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_13",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            6.75,
+            3.09,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#f0d792",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_14",
+        "name": "楼梯 15 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            7.25,
+            3.5,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_14",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            7.25,
+            3.34,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#d6c794",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                4
+              ],
+              "shape": "plane",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "NavSurface",
+            "size": [
+              0.5,
+              4
+            ]
+          }
+        ],
+        "id": "nd_nav3d_step_15",
+        "name": "楼梯 16 · 每级 0.25m",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            7.75,
+            3.75,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#b8a877",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                0.5,
+                0.28,
+                4
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_nav3d_step_mesh_15",
+        "name": "楼梯实体侧面",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            7.75,
+            3.59,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#bcc4d0",
+                    "halftoneScale": 0,
+                    "metallic": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                8,
+                0.3,
+                12
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "isTrigger": false,
+            "kind": "Collider",
+            "layer": 0,
+            "shape": {
+              "halfExtents": [
+                4,
+                0.15,
+                6
+              ],
+              "type": "box"
+            }
+          }
+        ],
+        "id": "nd_nav3d_high_slab",
+        "name": "上平台实体与子弹遮挡",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            12,
+            3.83,
+            2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [],
+        "id": "nd_nav3d_player",
+        "name": "玩家起点 · Y=4",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            13,
+            4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "castShadow": false,
+            "color": "#fff7e8",
+            "enabled": true,
+            "intensity": 1.5,
+            "kind": "Light",
+            "priority": 100,
+            "range": 0,
+            "spotAngle": 0,
+            "type": "directional"
+          }
+        ],
+        "id": "nd_nav3d_key",
+        "name": "主光",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "distance": 32,
+            "enabled": true,
+            "far": 200,
+            "followTarget": null,
+            "fovDeg": 50,
+            "kind": "Camera",
+            "mode": "fixed",
+            "near": 0.1,
+            "pitchDeg": 40,
+            "yawMode": "world",
+            "yawOffsetDeg": 48
+          }
+        ],
+        "id": "nd_nav3d_camera",
+        "name": "固定全景验收机位",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            6,
+            2,
+            1
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "baked": null,
+            "bounds": {
+              "center": [
+                10,
+                3,
+                2
+              ],
+              "size": [
+                36,
+                16,
+                16
+              ]
+            },
+            "cellSize": 0.5,
+            "crowd": {
+              "acceleration": 8,
+              "collisionIterations": 4,
+              "flowCellBudget": 2048,
+              "maxNeighbors": 12,
+              "skinM": 0.02,
+              "stuckProgressRatio": 0.15,
+              "stuckWindowSec": 0.5,
+              "timeHorizonSec": 0.8
+            },
+            "enabled": true,
+            "kind": "NavZone",
+            "surface": {
+              "agentHeight": 2.2,
+              "agentRadius": 0.35,
+              "maxSlopeDeg": 40,
+              "maxStepM": 0.3
+            }
+          }
+        ],
+        "id": "nd_nav3d_nav",
+        "name": "三维导航作用域",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            10,
+            3,
+            2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "bounds": {
+              "center": [
+                10,
+                3,
+                2
+              ],
+              "size": [
+                36,
+                16,
+                16
+              ]
+            },
+            "clearRule": "interact",
+            "clearTarget": null,
+            "depth": 1,
+            "enabled": true,
+            "kind": "RoomVolume",
+            "roomType": "combat",
+            "theme": "none"
+          }
+        ],
+        "id": "nd_nav3d_room",
+        "name": "白盒运行房间",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            10,
+            3,
+            2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "characterId": "E-01",
+            "count": 0,
+            "delaySec": 0,
+            "enabled": true,
+            "kind": "SpawnPoint",
+            "prefab": null,
+            "radius": 0.7,
+            "trigger": "room-enter",
+            "wave": 1
+          }
+        ],
+        "id": "nd_nav3d_spawn_ramp",
+        "name": "坡道追击组",
+        "parent": "nd_nav3d_room",
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            -14,
+            -3,
+            -3
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "characterId": "E-01",
+            "count": 0,
+            "delaySec": 0,
+            "enabled": true,
+            "kind": "SpawnPoint",
+            "prefab": null,
+            "radius": 0.7,
+            "trigger": "room-enter",
+            "wave": 1
+          }
+        ],
+        "id": "nd_nav3d_spawn_stairs",
+        "name": "楼梯追击组",
+        "parent": "nd_nav3d_room",
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            -13,
+            -3,
+            4
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "characterId": "E-01",
+            "count": 0,
+            "delaySec": 0,
+            "enabled": true,
+            "kind": "SpawnPoint",
+            "prefab": null,
+            "radius": 0.6,
+            "trigger": "room-enter",
+            "wave": 1
+          }
+        ],
+        "id": "nd_nav3d_spawn_under",
+        "name": "叠层隔离组",
+        "parent": "nd_nav3d_room",
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            2,
+            -3,
+            -2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "characterId": "E-01",
+            "count": 0,
+            "delaySec": 0,
+            "enabled": true,
+            "kind": "SpawnPoint",
+            "prefab": null,
+            "radius": 0.6,
+            "trigger": "room-enter",
+            "wave": 1
+          }
+        ],
+        "id": "nd_nav3d_spawn_island",
+        "name": "不可达孤岛组",
+        "parent": "nd_nav3d_room",
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            13,
+            5,
+            -2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#c1b39c",
+                    "halftoneScale": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                5.6,
+                3.6,
+                0.3
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          },
+          {
+            "enabled": true,
+            "kind": "Decal",
+            "marks": [
+              {
+                "color": "#6b5944",
+                "id": "wall-hole",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "bullet-hole",
+                "position": [
+                  -1,
+                  0,
+                  0.15
+                ],
+                "priority": 0,
+                "rotation": [
+                  0.7071067811865476,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "seed": 56,
+                "size": [
+                  1.8,
+                  1.8
+                ]
+              },
+              {
+                "color": "#30241b",
+                "id": "wall-crack",
+                "normalOffset": 0.008,
+                "opacity": 0.9,
+                "pattern": "crack",
+                "position": [
+                  1,
+                  0.1,
+                  0.15
+                ],
+                "priority": 0,
+                "rotation": [
+                  0.7071067811865476,
+                  0,
+                  0,
+                  0.7071067811865476
+                ],
+                "seed": 8,
+                "size": [
+                  1.9,
+                  2.5
+                ]
+              }
+            ]
+          }
+        ],
+        "id": "nd_decal_wall",
+        "name": "墙面 · 正面弹孔 / 裂纹",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            -3,
+            1.8,
+            -0.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      },
+      {
+        "components": [
+          {
+            "enabled": true,
+            "importScale": 1,
+            "kind": "MeshRenderer",
+            "layer": 0,
+            "materials": [
+              {
+                "match": {
+                  "by": "index",
+                  "value": 0
+                },
+                "material": {
+                  "base": {
+                    "id": "s1",
+                    "type": "shared"
+                  },
+                  "patch": {
+                    "albedo": "#658496",
+                    "halftoneScale": 0,
+                    "outlineScale": 0.2,
+                    "roughness": 0.9
+                  },
+                  "type": "override"
+                }
+              }
+            ],
+            "source": {
+              "params": [
+                1.1,
+                1.6,
+                1.1
+              ],
+              "shape": "box",
+              "type": "builtin"
+            },
+            "visible": true
+          }
+        ],
+        "id": "nd_decal_occluder",
+        "name": "遮挡柱 · 贴花不得透过",
+        "parent": null,
+        "pickable": true,
+        "prefab": null,
+        "transform": {
+          "position": [
+            -3,
+            0.8,
+            3.3
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "visible": true
+      }
+    ],
+    "playerStart": "nd_nav3d_player",
+    "schemaVersion": 19
+  },
+  "drawCalls": 83,
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 13
+  },
+  "tick": 0
+}

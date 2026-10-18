@@ -38,3 +38,4 @@ export * from './shared-motion';
 export * from './weapons';
 export * from './model-attachments';
 export * from './audio';
+export * from './decals';

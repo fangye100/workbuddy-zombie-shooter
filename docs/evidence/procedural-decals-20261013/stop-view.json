@@ -1,0 +1,9 @@
+{
+  "tick": 0,
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 12
+  },
+  "authorUnchanged": true
+}

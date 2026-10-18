@@ -97,7 +97,10 @@ describe('ordinary bullets compare actual NPC and solid distance', () => {
     for (let tick = 0; tick < 50; tick++) {
       a.session.step(); b.session.step();
       expect(a.session.view().map(({ runId: _run, ...entity }) => entity)).toEqual(b.session.view().map(({ runId: _run, ...entity }) => entity));
-      expect(a.session.combatEvents.map(({ runId: _run, ...event }) => event)).toEqual(b.session.combatEvents.map(({ runId: _run, ...event }) => event));
+      const facts=(session:RuntimeSession)=>session.combatEvents.map(({runId:_run,defeated,...event})=>{
+        if(!defeated)return event;const {runId:_defeatedRun,...view}=defeated;return {...event,defeated:view};
+      });
+      expect(facts(a.session)).toEqual(facts(b.session));
     }
     expect(a.session.combatEvents.some((e) => e.type === 'damage')).toBe(true);
   });

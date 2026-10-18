@@ -22,11 +22,12 @@ import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 import { validBoneSockets, type BoneSockets } from './model-attachments';
+import { validateDecalMark, validateDecalEmitter, MAX_AUTHORED_DECALS, type DecalComponent, type DecalEmitterComponent } from './decals';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 22;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -164,6 +165,10 @@ export const ComponentKind = {
   SpawnPoint: 'SpawnPoint',
   RoomVolume: 'RoomVolume',
   NavZone: 'NavZone',
+  NavSurface: 'NavSurface',
+  NavigationGate: 'NavigationGate',
+  Decal: 'Decal',
+  DecalEmitter: 'DecalEmitter',
   Script: 'Script',
   RunRules: 'RunRules',
 } as const;
@@ -350,6 +355,34 @@ export interface RoomVolumeComponent extends ComponentBase {
   depth: number;
 }
 
+/** 通用导航配置；攻击距离、占位和解堵决策由各游戏策略负责。 */
+export interface NavigationSettings {
+  maxNeighbors: number;
+  timeHorizonSec: number;
+  skinM: number;
+  acceleration: number;
+  collisionIterations: number;
+  stuckWindowSec: number;
+  stuckProgressRatio: number;
+  flowCellBudget: number;
+}
+export function defaultNavigationSettings(): NavigationSettings {
+  return { maxNeighbors: 12, timeHorizonSec: .8, skinM: .02, acceleration: 8,
+    collisionIterations: 4, stuckWindowSec: .5, stuckProgressRatio: .15, flowCellBudget: 2048 };
+}
+export function validNavigationSettings(value: unknown): value is NavigationSettings {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const v = value as NavigationSettings;
+  return Number.isInteger(v.maxNeighbors) && v.maxNeighbors >= 1 && v.maxNeighbors <= 32
+    && Number.isFinite(v.timeHorizonSec) && v.timeHorizonSec >= .05 && v.timeHorizonSec <= 3
+    && Number.isFinite(v.skinM) && v.skinM >= 0 && v.skinM <= .2
+    && Number.isFinite(v.acceleration) && v.acceleration > 0 && v.acceleration <= 100
+    && Number.isInteger(v.collisionIterations) && v.collisionIterations >= 1 && v.collisionIterations <= 12
+    && Number.isFinite(v.stuckWindowSec) && v.stuckWindowSec >= .1 && v.stuckWindowSec <= 10
+    && Number.isFinite(v.stuckProgressRatio) && v.stuckProgressRatio >= 0 && v.stuckProgressRatio <= 1
+    && Number.isInteger(v.flowCellBudget) && v.flowCellBudget >= 64 && v.flowCellBudget <= 65536;
+}
+
 /** 导航区：packages/ai 流场寻路的网格作用域 */
 export interface NavZoneComponent extends ComponentBase {
   kind: typeof ComponentKind.NavZone;
@@ -358,6 +391,36 @@ export interface NavZoneComponent extends ComponentBase {
   cellSize: number;
   /** 离线烘焙产物（可选）；null = 运行时按碰撞体实时烘焙 */
   baked: AssetRef | null;
+  /** v16 场景必填；可选类型仅用于接受旧版迁移输入。 */
+  crowd?: NavigationSettings;
+  /** 可选三维地表模式；省略时保留旧平面场景。 */
+  surface?: SurfaceNavigationSettings;
+}
+
+export interface SurfaceNavigationSettings {
+  maxSlopeDeg:number; maxStepM:number; agentRadius:number; agentHeight:number;
+}
+export function validSurfaceNavigationSettings(value:unknown):value is SurfaceNavigationSettings {
+  if(!value||typeof value!=='object')return false;
+  const v=value as SurfaceNavigationSettings;
+  return Object.keys(v).length===4&&Number.isFinite(v.maxSlopeDeg)&&v.maxSlopeDeg>0&&v.maxSlopeDeg<=60
+    &&Number.isFinite(v.maxStepM)&&v.maxStepM>=0&&v.maxStepM<=1
+    &&Number.isFinite(v.agentRadius)&&v.agentRadius>0&&v.agentRadius<=5
+    &&Number.isFinite(v.agentHeight)&&v.agentHeight>0&&v.agentHeight<=10;
+}
+/** 可编辑的导航语义矩形，沿节点 local XZ 平面；旋转生成坡道，平移生成楼梯踏面。 */
+export interface NavSurfaceComponent extends ComponentBase {
+  kind:typeof ComponentKind.NavSurface;
+  size:[number,number];
+  /** 该面所属的地板碰撞体；仍参与射线/顶棚判定，不能笼统删除。 */
+  supportCollider?:NodeId;
+}
+/** 平移式运动学门：节点作者变换是关门姿态，偏移在节点局部空间；Play 状态不落盘。 */
+export interface NavigationGateComponent extends ComponentBase {
+  kind:typeof ComponentKind.NavigationGate;
+  openOffset:[number,number,number];
+  travelSec:number;
+  initialOpen:boolean;
 }
 
 /** 行为参数的标量类型。与 ScriptComponent.params 的取值域一致 */
@@ -486,6 +549,10 @@ export type ComponentData =
   | SpawnPointComponent
   | RoomVolumeComponent
   | NavZoneComponent
+  | NavSurfaceComponent
+  | NavigationGateComponent
+  | DecalComponent
+  | DecalEmitterComponent
   | ScriptComponent;
 
 /**
@@ -904,6 +971,55 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         seen.set(c.kind, ci);
       }
 
+      if (c.kind === ComponentKind.NavZone) {
+        const nav = c as NavZoneComponent;
+        if(nav.surface!==undefined&&!validSurfaceNavigationSettings(nav.surface))err(`${at}/surface`,'E_NAV_SURFACE_SETTINGS','三维导航配置非法');
+        if (!Number.isFinite(nav.cellSize) || nav.cellSize <= 0) err(`${at}/cellSize`, 'E_NAV_CELL', '导航格尺寸必须是有限正数');
+        const size = nav.bounds?.size;
+        if (!Array.isArray(size) || size.length !== 3 || !size.every(v => Number.isFinite(v) && v > 0)
+          || !Array.isArray(nav.bounds?.center) || nav.bounds.center.length !== 3 || !nav.bounds.center.every(Number.isFinite)) {
+          err(`${at}/bounds`, 'E_NAV_BOUNDS', '导航范围必须具有有限中心和正尺寸');
+        } else if (nav.cellSize > 0 && Math.ceil(size[0]! / nav.cellSize) * Math.ceil(size[2]! / nav.cellSize) > 262144) {
+          err(`${at}/cellSize`, 'E_NAV_CAPACITY', '导航网格超过 262144 格上限');
+        }
+        if ((d.schemaVersion ?? 0) >= 16 || nav.crowd !== undefined) {
+          if (!validNavigationSettings(nav.crowd)) err(`${at}/crowd`, 'E_NAV_CROWD', '导航避让配置缺失或越界，请迁移旧场景或修正配置');
+        }
+      }
+      if(c.kind===ComponentKind.NavSurface){
+        const surface=c as NavSurfaceComponent;
+        if(!Array.isArray(surface.size)||surface.size.length!==2||!surface.size.every(v=>Number.isFinite(v)&&v>0&&v<=1000))
+          err(`${at}/size`,'E_NAV_SURFACE_SIZE','导航面尺寸必须是两个有限正数，且不超过 1000m');
+        if(surface.supportCollider!==undefined&&!d.nodes!.some(n=>n.id===surface.supportCollider&&n.components?.some(c=>c.kind==='Collider'&&!c.isTrigger)))
+          err(`${at}/supportCollider`,'E_NAV_SUPPORT_REF','支撑碰撞体必须引用具有非触发 Collider 的 NodeId');
+      }
+      if(c.kind===ComponentKind.NavigationGate){
+        if(!isVec3(c.openOffset)||Math.hypot(...c.openOffset)<.01||Math.hypot(...c.openOffset)>100
+          ||!Number.isFinite(c.travelSec)||c.travelSec<.05||c.travelSec>120||typeof c.initialOpen!=='boolean')
+          err(at,'E_NAV_GATE_SETTINGS','门必须声明有限局部偏移（0.01–100m）、运动时间（0.05–120s）和初始开关状态');
+        const solids=comps.filter(other=>other.kind==='Collider'&&other.enabled&&!other.isTrigger);
+        if(solids.length!==1||solids[0]?.kind!=='Collider'||solids[0].shape.type!=='box')err(at,'E_NAV_GATE_COLLIDER','运动门必须有且仅有一个启用的非触发 box Collider');
+        if(n.parent!==null||d.nodes!.some(other=>other.parent===n.id))err(at,'E_NAV_GATE_HIERARCHY','当前运动门必须是无子节点的根节点，避免子层级位置与碰撞失配');
+        if(c.enabled&&!d.nodes!.some(other=>other.components?.some(nav=>nav.kind==='NavZone'&&nav.enabled&&nav.surface)))err(at,'E_NAV_GATE_MODE','运动门需要显式三维地表导航');
+        if(d.nodes!.some(other=>other.components?.some(s=>s.kind==='NavSurface'&&s.supportCollider===n.id)))err(at,'E_NAV_GATE_SUPPORT','运动门不能同时作为静态导航面的支撑碰撞体');
+      }
+      if(c.kind===ComponentKind.Decal){
+        if(typeof c.enabled!=='boolean')err(at,'E_DECAL_ENABLED','贴花 enabled 必须是布尔值');
+        if(!Array.isArray(c.marks)||c.marks.length===0||c.marks.length>MAX_AUTHORED_DECALS)err(at,'E_DECAL_MARKS','贴花 marks 必须是非空有界数组');
+        else {
+          const ids=new Set<string>();
+          for(const [mi,mark]of c.marks.entries()){
+            for(const message of validateDecalMark(mark))err(`${at}/marks/${mi}`,'E_DECAL_MARK',message);
+            if(ids.has(mark?.id))err(`${at}/marks/${mi}`,'E_DECAL_ID','同一接收节点的贴花 id 不能重复');ids.add(mark?.id);
+          }
+        }
+        const receiver=comps.find(x=>x.kind==='MeshRenderer'&&x.enabled);
+        if(receiver?.kind!=='MeshRenderer'||receiver.playBinding||receiver.sharedMotion||receiver.bodyIk||n.id===d.playerStart)err(at,'E_DECAL_RECEIVER','贴花必须挂在启用的静态 MeshRenderer 接收节点，不能挂玩家/蒙皮代理');
+      }
+      if(c.kind===ComponentKind.DecalEmitter){
+        for(const message of validateDecalEmitter(c))err(at,'E_DECAL_EMITTER',message);
+        if(c.enabled&&d.nodes!.some((other,ni)=>ni<i&&other?.components?.some(x=>x.kind==='DecalEmitter'&&x.enabled)))err(at,'E_DECAL_EMITTER_DUP','一个场景只能启用一个贴花事件配置');
+      }
       if (c.kind === ComponentKind.RunRules) {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
         if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');
@@ -1216,6 +1332,8 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
     });
   });
 
+  const decalCount=d.nodes.reduce((sum,n)=>sum+(Array.isArray(n?.components)?n.components:[]).reduce((count,c)=>count+(c?.kind==='Decal'&&Array.isArray(c.marks)?c.marks.length:0),0),0);
+  if(decalCount>MAX_AUTHORED_DECALS)err('/nodes','E_DECAL_CAPACITY',`作者贴花超过 ${MAX_AUTHORED_DECALS} 个实例`);
   return out;
 }
 

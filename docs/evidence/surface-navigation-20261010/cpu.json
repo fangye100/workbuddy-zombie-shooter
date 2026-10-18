@@ -1,0 +1,155 @@
+{
+  "date": "2026-10-10",
+  "node": "v22.23.2",
+  "cpu": "Intel(R) Core(TM) i9-14900HX",
+  "warmup": 30,
+  "measured": 300,
+  "sourceHashes": {
+    "packages/ai/src/surface-navigation.ts": "cb16398cf160877eb0c17c48e39fa770e44ec2568722df8b28398ff62a60e1ee",
+    "packages/ai/src/crowd-avoidance.ts": "8f99cfaad222ad745210a631bf86266425a0b1e977802f8c490bb8268b0f0329",
+    "packages/zombie-game/src/surface-crowd-navigation.ts": "32ccf7dfca944205749538f3dd1249d29795faa21e2c0df88a327d064759a22c",
+    "packages/zombie-game/src/session.ts": "05c9b599b43f726f7b4d913886212958c6bbf1e1fbb9d8ddeafb6979d86f145f",
+    "assets/scenes/sandbox/navigation-3d-whitebox.scene.json": "6e579801fbee9af89def8cb3c45f9296a023896b735f90cd29ab207a93c04c09",
+    "tools/verify/surface-navigation-benchmark.mjs": "5b0a978e18a10127e03d4696999e90a4624234ed5dfef8e2ff3b98a7fd2942d5"
+  },
+  "limitations": [
+    "仅 Node CPU，包含游戏模拟；不含 GPU、动画、浏览器，不能换算 FPS",
+    "密集初始重叠和有限接触迭代会残留穿透；不认证全体通过或零碰撞",
+    "初始化含同步建图和首目标烘焙；运行预算仅限制图搜索工作项，不限制毫秒",
+    "单机单次，包含 GC 和系统调度异常值"
+  ],
+  "results": [
+    {
+      "count": 100,
+      "initializeMs": 82.45580000000001,
+      "p50Ms": 1.2122999999999138,
+      "p95Ms": 1.802699999999959,
+      "maxMs": 2.373100000000022,
+      "maxWork": 0,
+      "maxOverlap": 1327,
+      "final": {
+        "settings": {
+          "maxNeighbors": 12,
+          "timeHorizonSec": 0.8,
+          "skinM": 0.02,
+          "acceleration": 8,
+          "collisionIterations": 4,
+          "stuckWindowSec": 0.5,
+          "stuckProgressRatio": 0.15,
+          "flowCellBudget": 2048
+        },
+        "surface": {
+          "mode": "surface-3d",
+          "cellCount": 1245,
+          "surfaceCount": 21,
+          "rejectedSurfaces": [],
+          "version": 1,
+          "pending": false,
+          "workLastStep": 0,
+          "goal": {
+            "x": 12.75,
+            "y": 4,
+            "z": -0.25,
+            "surface": 2
+          }
+        },
+        "flow": {
+          "version": 1,
+          "pending": false,
+          "publishedGoal": {
+            "x": 12.75,
+            "y": 4,
+            "z": -0.25,
+            "surface": 2
+          },
+          "requestedX": 13,
+          "requestedZ": 0,
+          "workLastStep": 0,
+          "cellCount": 1245,
+          "rejectedGoals": 0
+        },
+        "crowd": {
+          "agents": 101,
+          "moving": 100,
+          "candidateChecks": 2319,
+          "velocityConstraints": 1200,
+          "infeasibleVelocities": 44,
+          "contactPairs": 169,
+          "blockedMoves": 0,
+          "residualOverlapPairs": 49,
+          "maxPenetrationM": 0.0005489993577818542,
+          "stuckAgents": 0,
+          "unreachableAgents": 0,
+          "yieldingAgents": 0,
+          "externalBlockedMoves": 0
+        }
+      }
+    },
+    {
+      "count": 500,
+      "initializeMs": 57.93790000000001,
+      "p50Ms": 7.625500000000102,
+      "p95Ms": 15.09310000000005,
+      "maxMs": 16.32490000000007,
+      "maxWork": 0,
+      "maxOverlap": 32672,
+      "final": {
+        "settings": {
+          "maxNeighbors": 12,
+          "timeHorizonSec": 0.8,
+          "skinM": 0.02,
+          "acceleration": 8,
+          "collisionIterations": 4,
+          "stuckWindowSec": 0.5,
+          "stuckProgressRatio": 0.15,
+          "flowCellBudget": 2048
+        },
+        "surface": {
+          "mode": "surface-3d",
+          "cellCount": 1245,
+          "surfaceCount": 21,
+          "rejectedSurfaces": [],
+          "version": 1,
+          "pending": false,
+          "workLastStep": 0,
+          "goal": {
+            "x": 12.75,
+            "y": 4,
+            "z": -0.25,
+            "surface": 2
+          }
+        },
+        "flow": {
+          "version": 1,
+          "pending": false,
+          "publishedGoal": {
+            "x": 12.75,
+            "y": 4,
+            "z": -0.25,
+            "surface": 2
+          },
+          "requestedX": 13,
+          "requestedZ": 0,
+          "workLastStep": 0,
+          "cellCount": 1245,
+          "rejectedGoals": 0
+        },
+        "crowd": {
+          "agents": 501,
+          "moving": 488,
+          "candidateChecks": 12448,
+          "velocityConstraints": 5856,
+          "infeasibleVelocities": 339,
+          "contactPairs": 1748,
+          "blockedMoves": 0,
+          "residualOverlapPairs": 451,
+          "maxPenetrationM": 0.2340216979592158,
+          "stuckAgents": 0,
+          "unreachableAgents": 0,
+          "yieldingAgents": 0,
+          "externalBlockedMoves": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "base": "d18cfb7941163dc4ceb968186dd963bf488b4744",
+  "files": [
+    {
+      "path": "packages/scene/src/document.ts",
+      "sha256": "ee97f9969238b74554e462f5b49bd12f5030882ff0a987ed659cae9ae9ebc443"
+    },
+    {
+      "path": "packages/scene/src/decals.ts",
+      "sha256": "ecb2b720720ef3ec18c21a11631b0048ab7df6062b0d7b13eefae1097dcf61e8"
+    },
+    {
+      "path": "packages/scene/src/migrate.ts",
+      "sha256": "64e7b05c4ce4b26fbbc4e25767bb4a2f8fc0ea1650de4f9a784ddd2b85b7fa7e"
+    },
+    {
+      "path": "packages/render/src/decal-instances.ts",
+      "sha256": "3db706900bf9e0a0555abee3b8fe18878d2a0c4567cfaac6cc11d8e032e077ca"
+    },
+    {
+      "path": "packages/render/src/procedural-decals.ts",
+      "sha256": "71c128db453097730db98d09b4dcea0581b1b0901e4e1086e0250aea9f98c364"
+    },
+    {
+      "path": "apps/editor/src/services/decal-workbench.ts",
+      "sha256": "74aa0c200f3d09b4879cc00ded087242dd9c44d8d6ad9e9166bd5dfe7ed5ca86"
+    },
+    {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "sha256": "ebe1e576b2ca0cf894d80508352a906569d6a018677f39ef62ca3841db701f0a"
+    },
+    {
+      "path": "assets/scenes/act1/floor-1.scene.json",
+      "sha256": "d0cf69cdfb85ea022f211cbea9794ecc1f9059826cf949626ec7975c5df6a9ba"
+    }
+  ]
+}

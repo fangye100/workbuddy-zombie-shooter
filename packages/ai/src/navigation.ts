@@ -118,6 +118,9 @@ export class FlowField {
   version = 0;
 
   constructor(desc: FlowFieldDesc) {
+    if (!Number.isInteger(desc.width) || !Number.isInteger(desc.height) || desc.width<1 || desc.height<1
+      || desc.width*desc.height>262144 || !Number.isFinite(desc.cellSize) || desc.cellSize<=0
+      || !Number.isFinite(desc.originX) || !Number.isFinite(desc.originZ)) throw new RangeError('Invalid flow field dimensions');
     this.width = desc.width;
     this.height = desc.height;
     this.cellSize = desc.cellSize;
@@ -278,8 +281,8 @@ export class FlowField {
 }
 
 /**
- * 流场积分器。**可跨帧恢复**：`step()` 每次只处理有限个格子，
- * 主线程不会被 16k 格的 Dijkstra 卡住；整套场跑完后一次性构建流向。
+ * 流场积分器。队列弹出（含过期项）和流向生成共用每次 step 的工作预算。
+ * 暂存完整结果后原子发布；初始化填充和发布数组复制仍为 O(格数)。
  */
 export class FlowFieldIntegrator {
   private readonly dist: Uint32Array;
@@ -287,55 +290,80 @@ export class FlowFieldIntegrator {
   private running = false;
   private stale = true;
   private goal = -1;
+  private activeGoal = -1;
+  private cursor = -1;
+  private readonly stagedX: Float32Array;
+  private readonly stagedZ: Float32Array;
+  private lastPublishedGoal = -1;
+  workLastStep = 0;
 
   constructor(private readonly field: FlowField) {
     this.dist = new Uint32Array(field.cellCount);
+    this.stagedX = new Float32Array(field.cellCount);
+    this.stagedZ = new Float32Array(field.cellCount);
+    this.stale = false;
   }
 
   setGoal(x: number, z: number): boolean {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
     const idx = this.field.cellIndexAtWorld(x, z);
     if (idx < 0 || this.field.isBlocked(idx)) return false;
     if (idx !== this.goal) {
       this.goal = idx;
       this.stale = true;
-      this.running = false;
+      // 合并最新目标，保留当前计算；避免持续移动导致永远无法发布。
     }
     return true;
   }
 
   /** 地形或障碍变动后调用 */
   invalidate(): void {
-    this.stale = true;
+    this.stale = this.goal >= 0;
     this.running = false;
   }
 
   get isRunning(): boolean {
     return this.running;
   }
+  get isPending(): boolean { return this.running || this.stale; }
+  get publishedGoal(): number { return this.lastPublishedGoal; }
 
   /**
    * 推进积分。返回 true 表示本帧完成了整场重算（此时 field.version 已递增）。
-   * cellBudget 建议 2048 —— 约 0.4ms/帧，4 帧内收敛 128×128 全图。
+   * cellBudget 是工作项数量，不是毫秒承诺；速度依地图、设备和队列重复项而变。
    */
   step(cellBudget: number): boolean {
+    if (!Number.isInteger(cellBudget) || cellBudget < 1) throw new RangeError('Invalid flow budget');
+    this.workLastStep = 0;
     if (this.stale && !this.running) {
       this.reset();
     }
     if (!this.running) return false;
 
-    let processed = 0;
-    while (this.queue.length > 0 && processed < cellBudget) {
+    while (this.queue.length > 0 && this.workLastStep < cellBudget) {
       const cell = this.queue.pop();
+      this.workLastStep++;
       if (cell < 0) break;
       const d = this.queue.distance;
       // 惰性删除：该格已有更优距离，本次出队作废
       if (this.dist[cell]! !== d) continue;
       this.relax(cell, d);
-      processed++;
     }
 
     if (this.queue.length === 0) {
-      this.finish();
+      if (this.cursor < 0) this.cursor = 0;
+      while (this.cursor < this.field.cellCount && this.workLastStep < cellBudget) {
+        this.buildCell(this.cursor++);
+        this.workLastStep++;
+      }
+      if (this.cursor < this.field.cellCount) return false;
+      this.field.integration.set(this.dist);
+      this.field.flowX.set(this.stagedX);
+      this.field.flowZ.set(this.stagedZ);
+      this.field.version++;
+      this.lastPublishedGoal = this.activeGoal;
+      this.running = false;
+      this.stale = this.goal !== this.activeGoal;
       return true;
     }
     return false;
@@ -344,8 +372,10 @@ export class FlowFieldIntegrator {
   private reset(): void {
     this.dist.fill(UNREACHABLE);
     this.queue.clear();
-    this.dist[this.goal] = 0;
-    this.queue.push(0, this.goal);
+    this.activeGoal = this.goal;
+    this.dist[this.activeGoal] = 0;
+    this.queue.push(0, this.activeGoal);
+    this.cursor = -1;
     this.stale = false;
     this.running = true;
   }
@@ -385,55 +415,22 @@ export class FlowFieldIntegrator {
     }
   }
 
-  private finish(): void {
-    const f = this.field;
-    f.integration.set(this.dist);
-
-    for (let cz = 0; cz < f.height; cz++) {
-      for (let cx = 0; cx < f.width; cx++) {
-        const i = f.index(cx, cz);
-        if (f.isBlocked(i) || f.integration[i] === UNREACHABLE) {
-          f.flowX[i] = 0;
-          f.flowZ[i] = 0;
-          continue;
-        }
-
-        let best = f.integration[i]!;
-        let bx = 0;
-        let bz = 0;
-        for (let dz = -1; dz <= 1; dz++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            if (dx === 0 && dz === 0) continue;
-            const nx = cx + dx;
-            const nz = cz + dz;
-            if (!f.inBounds(nx, nz)) continue;
-            const n = f.index(nx, nz);
-            if (f.isBlocked(n)) continue;
-            if (diagonalBlocked(f, cx, cz, dx, dz)) continue;
-            const v = f.integration[n]!;
-            if (v < best) {
-              best = v;
-              bx = dx;
-              bz = dz;
-            }
-          }
-        }
-
-        if (bx === 0 && bz === 0) {
-          // 只有目标格本身允许没有更低的邻居；其余情况要么是孤立格，
-          // 要么四周全是墙 —— 一律给零向量，由 steering 退化为墙避射线
-          f.flowX[i] = 0;
-          f.flowZ[i] = 0;
-        } else {
-          const len = Math.hypot(bx, bz);
-          f.flowX[i] = bx / len;
-          f.flowZ[i] = bz / len;
-        }
+  private buildCell(i: number): void {
+    const f = this.field, cx = i % f.width, cz = (i - cx) / f.width;
+    let best = this.dist[i]!, bx = 0, bz = 0;
+    if (!f.isBlocked(i) && best !== UNREACHABLE) {
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dz === 0) continue;
+        const nx = cx + dx, nz = cz + dz;
+        if (!f.inBounds(nx, nz)) continue;
+        const n = f.index(nx, nz);
+        if (f.isBlocked(n) || diagonalBlocked(f, cx, cz, dx, dz)) continue;
+        if (this.dist[n]! < best) { best = this.dist[n]!; bx = dx; bz = dz; }
       }
     }
-
-    f.version++;
-    this.running = false;
+    const length = Math.hypot(bx, bz);
+    this.stagedX[i] = length ? bx / length : 0;
+    this.stagedZ[i] = length ? bz / length : 0;
   }
 }
 
@@ -447,6 +444,7 @@ function diagonalBlocked(f: FlowField, cx: number, cz: number, dx: number, dz: n
  * 用 counting sort 一次建成，查询期零分配。
  */
 export class SpatialHash {
+  nearestCandidateChecks = 0;
   private readonly cols: number;
   private readonly rows: number;
   private readonly cellSize: number;
@@ -457,6 +455,9 @@ export class SpatialHash {
   private readonly items: Int32Array;
 
   constructor(minX: number, minZ: number, maxX: number, maxZ: number, cellSize: number, capacity: number) {
+    if (![minX,minZ,maxX,maxZ,cellSize].every(Number.isFinite) || maxX<=minX || maxZ<=minZ || cellSize<=0
+      || !Number.isInteger(capacity) || capacity<1 || Math.ceil((maxX-minX)/cellSize)*Math.ceil((maxZ-minZ)/cellSize)>262144)
+      throw new RangeError('Invalid spatial hash dimensions');
     this.minX = minX;
     this.minZ = minZ;
     this.cellSize = cellSize;
@@ -478,6 +479,7 @@ export class SpatialHash {
   }
 
   build(posX: Float32Array, posZ: Float32Array, count: number): void {
+    if (!Number.isInteger(count) || count<0 || count>this.items.length || count>posX.length || count>posZ.length) throw new RangeError('SpatialHash capacity exceeded');
     const cells = this.cols * this.rows;
     this.start.fill(0);
     this.cursor.fill(0);
@@ -494,6 +496,44 @@ export class SpatialHash {
       this.items[this.start[c]! + this.cursor[c]!] = i;
       this.cursor[c] = this.cursor[c]! + 1;
     }
+  }
+
+  /** 从近桶向外扩展；已找到 k 个后按桶的距离下界剪枝，仍返回真正最近邻。 */
+  queryNearest(x:number,z:number,range:number,max:number,out:Int32Array,distances:Float64Array,
+    posX:Float32Array,posZ:Float32Array,ids:Int32Array,include:(index:number)=>boolean): number {
+    if(max<1 || max>out.length || max>distances.length)throw new RangeError('Invalid nearest capacity');
+    this.nearestCandidateChecks=0;
+    const cs=this.cellSize,cx=Math.max(0,Math.min(this.cols-1,Math.floor((x-this.minX)/cs))),
+      cz=Math.max(0,Math.min(this.rows-1,Math.floor((z-this.minZ)/cs))),rangeSq=range*range;
+    let n=0;
+    for(let ring=0;ring<=Math.ceil(range/cs)+1;ring++) {
+      for(let row=Math.max(0,cz-ring);row<=Math.min(this.rows-1,cz+ring);row++) {
+        for(let col=Math.max(0,cx-ring);col<=Math.min(this.cols-1,cx+ring);col++) {
+          if(ring>0 && Math.abs(row-cz)!==ring && Math.abs(col-cx)!==ring)continue;
+          const left=this.minX+col*cs,top=this.minZ+row*cs;
+          const dx=Math.max(left-x,0,x-left-cs),dz=Math.max(top-z,0,z-top-cs);
+          const threshold=n===max?Math.min(rangeSq,distances[n-1]!):rangeSq;
+          if(dx*dx+dz*dz>threshold)continue;
+          const cell=row*this.cols+col;
+          for(let k=this.start[cell]!;k<this.start[cell+1]!;k++) {
+            const j=this.items[k]!;this.nearestCandidateChecks++;
+            if(!include(j))continue;
+            const d=(posX[j]!-x)**2+(posZ[j]!-z)**2;
+            if(d>rangeSq || n===max && d>distances[n-1]!)continue;
+            let at=n;
+            while(at>0 && (d<distances[at-1]! || d===distances[at-1] && ids[j]!<ids[out[at-1]!]!))at--;
+            if(at>=max)continue;
+            for(let q=Math.min(n,max-1);q>at;q--){out[q]=out[q-1]!;distances[q]=distances[q-1]!;}
+            out[at]=j;distances[at]=d;n=Math.min(max,n+1);
+          }
+        }
+      }
+      const covered=Math.min(x-(this.minX+(cx-ring)*cs),this.minX+(cx+ring+1)*cs-x,
+        z-(this.minZ+(cz-ring)*cs),this.minZ+(cz+ring+1)*cs-z);
+      if(covered>=0 && (covered*covered>rangeSq || n===max && covered*covered>distances[n-1]!))break;
+      if(cx-ring<=0 && cz-ring<=0 && cx+ring>=this.cols-1 && cz+ring>=this.rows-1)break;
+    }
+    return n;
   }
 
   /** 查询 3×3 邻域内的候选索引，写入 out，返回数量 */
@@ -514,6 +554,21 @@ export class SpatialHash {
           if (n >= out.length) return n;
           out[n++] = this.items[k]!;
         }
+      }
+    }
+    return n;
+  }
+
+  /** 有明确半径的完整候选集合；out 容量由调用方持有，不截断碰撞约束。 */
+  queryRange(x: number,z: number,radius: number,out: Int32Array): number {
+    const x0=Math.max(0,Math.floor((x-radius-this.minX)/this.cellSize)),x1=Math.min(this.cols-1,Math.floor((x+radius-this.minX)/this.cellSize));
+    const z0=Math.max(0,Math.floor((z-radius-this.minZ)/this.cellSize)),z1=Math.min(this.rows-1,Math.floor((z+radius-this.minZ)/this.cellSize));
+    let n=0;
+    for (let cz=z0;cz<=z1;cz++) for (let cx=x0;cx<=x1;cx++) {
+      const cell=cz*this.cols+cx;
+      for (let k=this.start[cell]!;k<this.start[cell+1]!;k++) {
+        if (n===out.length) throw new RangeError('SpatialHash query output is too small');
+        out[n++]=this.items[k]!;
       }
     }
     return n;
@@ -562,8 +617,7 @@ export interface CrowdParams {
 }
 
 /**
- * 群体避让。**刻意不做完整 ORCA** —— 500 实体下求解太贵，
- * 而且尸潮里"像流体一样挤过来"比"完美互不重叠"更有压迫感。
+ * 历史分离力基线，保留用于兼容和 A/B。生产的新预测避让见 crowd-avoidance.ts。
  */
 export class CrowdSolver {
   private readonly hash: SpatialHash;

@@ -1,0 +1,284 @@
+{
+  "date": "2026-10-18",
+  "scope": "main integration; actual headed hardware; scene state and Play lifecycle",
+  "hardware": {
+    "secure": true,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "device": "",
+      "description": ""
+    },
+    "canvas": {
+      "w": 942,
+      "h": 560
+    },
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:16:06.345Z"
+    }
+  },
+  "before": {
+    "state": "stopped",
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:16:06.345Z"
+    },
+    "objects": 57
+  },
+  "play": {
+    "state": "paused",
+    "tick": 183,
+    "npcs": 24,
+    "weapons": {
+      "pending": 0,
+      "loaded": [
+        "chainsaw",
+        "launcher",
+        "pistol",
+        "shotgun",
+        "flame",
+        "sniper",
+        "smg"
+      ],
+      "generation": 1,
+      "simulationTick": 183,
+      "pose": {
+        "weaponId": "pistol",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0.11000000000000004,
+              0.03,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.23000000000000004,
+              0.03,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.5900000000000001,
+              0.497,
+              0.0799999999999999
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.14600000000000002,
+              -0.06999999999999998,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.2,
+              0.07,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "visible": true,
+      "weaponId": "pistol",
+      "frameStamp": 1266,
+      "muzzle": {
+        "position": [
+          3.237790584564209,
+          1.3968040943145752,
+          -0.5709640979766846
+        ],
+        "rotation": [
+          -6.083956135384955e-9,
+          0.6087614363704102,
+          -1.6941520202082453e-8,
+          0.7933533346424118
+        ]
+      },
+      "diagnostics": [],
+      "visibleDrawCount": 2,
+      "warnings": [],
+      "ikDiagnostics": [
+        {
+          "controlId": "head",
+          "code": "IK_AIM_LIMIT",
+          "message": "Aim angle clamped to authored limit"
+        }
+      ],
+      "measurements": {
+        "rightTargetResidualM": 1.9121359997088434e-7,
+        "rightOrientationResidualRad": 4.2146848510894035e-8,
+        "leftTargetResidualM": 6.915811973302743e-8,
+        "leftOrientationResidualRad": 4.2146848510894035e-8,
+        "muzzleYawErrorRad": 4.173690038022926e-8,
+        "modelMuzzleToSimulationMountM": 0.7933212914156802,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      },
+      "attachmentDraws": [
+        {
+          "id": "magazine",
+          "guid": "as_30abf3e8f08f",
+          "removed": false,
+          "frameStamp": 1266,
+          "worldMatrix": [
+            -0.9659258127212524,
+            1.0973233877109578e-8,
+            -0.25881901383399963,
+            0,
+            1.947386607525914e-8,
+            1,
+            -3.028014106121191e-8,
+            0,
+            0.25881901383399963,
+            -3.428857908716054e-8,
+            -0.9659258127212524,
+            0,
+            3.175156354904175,
+            1.2368041276931763,
+            -0.3372100293636322,
+            1
+          ],
+          "worldCorners": [
+            [
+              3.1939154440911177,
+              1.2368041278036839,
+              -0.3214961126021929
+            ],
+            [
+              3.151053548961467,
+              1.236804128290609,
+              -0.3329809215620647
+            ],
+            [
+              3.193915446219175,
+              1.3460817263635403,
+              -0.32149611591113403
+            ],
+            [
+              3.1510535510895243,
+              1.3460817268504655,
+              -0.33298092487100583
+            ],
+            [
+              3.1992591608468826,
+              1.2368041270957435,
+              -0.3414391371651997
+            ],
+            [
+              3.156397265717232,
+              1.2368041275826687,
+              -0.3529239461250715
+            ],
+            [
+              3.19925916297494,
+              1.3460817256556,
+              -0.3414391404741408
+            ],
+            [
+              3.156397267845289,
+              1.346081726142525,
+              -0.3529239494340126
+            ]
+          ]
+        }
+      ]
+    },
+    "ledger": {
+      "registered": 96,
+      "disposed": 0,
+      "pending": 96
+    },
+    "diagnostics": []
+  },
+  "shot": {
+    "tick": 183,
+    "from": [
+      3.5383274755799436,
+      1.397,
+      -0.2543688837804762
+    ],
+    "to": [
+      18.63211195517124,
+      1.397,
+      -10.061390352281956
+    ],
+    "hit": false
+  },
+  "reset": {
+    "tick": 0,
+    "state": "paused"
+  },
+  "stop": {
+    "state": "stopped",
+    "ledger": {
+      "registered": 96,
+      "disposed": 96,
+      "pending": 0
+    },
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:16:06.345Z"
+    },
+    "objects": 57
+  },
+  "errors": [],
+  "exceptions": [],
+  "pass": true
+}

@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-11",
+  "checks": [
+    {
+      "id": "typecheck",
+      "command": "pnpm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "id": "knowledge",
+      "command": "pnpm run knowledge:check",
+      "exitCode": 0,
+      "detail": "精确暂存后复核：137 entries，120 trackedDocuments，errors=[]"
+    },
+    {
+      "id": "mcp-and-scene-contract",
+      "command": "node --test tools/scene/load-contract.test.mjs tools/mcp-editor/*.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "id": "owner-tests",
+      "command": "pnpm exec vitest run packages/ai/test packages/zombie-game/test packages/runtime/test/navigation-gates.test.ts packages/runtime/test/solid-ray.test.ts packages/scene/test/migrate.test.ts packages/scene/test/navigation-gates.test.ts packages/scene/test/body-ik.test.ts packages/scene/test/integrated-v14.test.ts packages/scene/test/motion-transition.test.ts apps/editor/test/editor-agent.test.ts apps/editor/test/gate-presentation.test.ts apps/editor/test/player-presentation.test.ts apps/editor/test/runtime-bridge.test.ts apps/editor/test/play-camera.test.ts --reporter=json --outputFile=.workbuddy/tmp/dynamic-navigation/vitest-final.json",
+      "exitCode": 0
+    },
+    {
+      "id": "editor-build",
+      "command": "pnpm run editor:build",
+      "exitCode": 0,
+      "detail": "250 modules；既有 chunk size 警告"
+    },
+    {
+      "id": "architecture",
+      "command": "pnpm run architecture:check",
+      "exitCode": 0,
+      "detail": "283 files，errors=[]"
+    },
+    {
+      "id": "scene",
+      "command": "pnpm run scene:check",
+      "exitCode": 0,
+      "detail": "228 metadata，16 v18 scenes，14 scene tests，38 environment LOD assets，22 audio files，0 failures"
+    }
+  ],
+  "ownerTests": {
+    "files": 40,
+    "tests": 401,
+    "failed": 0
+  },
+  "nodeTests": 7,
+  "codeGraph": {
+    "version": "0.167.0",
+    "updatedFiles": 28,
+    "newNodes": 178,
+    "newEdges": 361,
+    "changedFileParseErrors": 0,
+    "vectors": "最终4155/6815，未认证完整语义检索",
+    "finalIncrementalRefresh": {"updatedFiles": 4, "removedFiles": 1, "newNodes": 5, "newEdges": 6, "changedFileParseErrors": 0},
+    "query": "project_map / module_overview；整体 map 有35文件未重新检查，目标模块及关键动态派发读取源码核对"
+  },
+  "independentReview": {
+    "files": 6,
+    "tests": 19,
+    "openP1P2": 0
+  }
+}

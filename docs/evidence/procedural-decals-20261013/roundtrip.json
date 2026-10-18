@@ -1,0 +1,78 @@
+{
+  "before": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 31,
+    "normalOffset": 0.008,
+    "priority": 0
+  },
+  "savedAndReopened": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 32,
+    "normalOffset": 0.008,
+    "priority": 0
+  },
+  "restoredAndReopened": {
+    "id": "blood",
+    "pattern": "splatter",
+    "position": [
+      -1.4,
+      0,
+      -2.1
+    ],
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "size": [
+      1.6,
+      1.6
+    ],
+    "color": "#a12f38",
+    "opacity": 0.9,
+    "seed": 31,
+    "normalOffset": 0.008,
+    "priority": 0
+  },
+  "beforeHash": "4375a5771e54d4d09c9510f5d8fdf1771d54a5d33ce98c45fb2c6391ff379a86",
+  "afterRestoreHash": "4375a5771e54d4d09c9510f5d8fdf1771d54a5d33ce98c45fb2c6391ff379a86",
+  "afterStopHash": "4375a5771e54d4d09c9510f5d8fdf1771d54a5d33ce98c45fb2c6391ff379a86",
+  "fullDocumentEqual": true
+}

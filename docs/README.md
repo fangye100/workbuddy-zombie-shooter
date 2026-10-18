@@ -22,6 +22,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 |---|---|---|
 | 职责、依赖分析与重构 | [分层契约](architecture/layers.md)、[CodeGraph MCP](knowledge/codegraph.md) | `tools/architecture/layers.json` 与当前检出源码 |
 | 当前实现与原架构设计的区别 | [当前结构图谱](44-CodeGraph代码结构图谱.md#current-source-review-2026-10-09) | 已核实的源码职责、直接 GPU 路径及未启用/规划功能；旧测量保留历史属性 |
+| 主线整合与 schema v22 | [整合记录](architecture/main-integration-20261018.md) | 动画/导航历史版本号冲突桥接、数据保留、回归与历史夹具限制 |
 | 场景编辑与持久化 | [开发流程](43-GameplayDevelopmentWorkflow.md)、[场景设计](14-Scene系统与场景数据持久化架构设计.md) | `packages/scene/src/document.ts`、`project.ts`、`asset-meta.ts`；`@aether/runtime` 编辑状态 |
 | 玩法、NPC、奖励和音频事件 | [玩法设计](13-玩法与关卡设计GDD.md)、[开发流程](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`、`assets/scenes`、`packages/content` |
 | 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
@@ -32,6 +33,11 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 动作进入实际玩法 | [动作接入指南](animation/ani-gameplay-integration.md) | 内容裁剪配方、四向步态、NPC 相位/受击/死亡尾部、t1 完整状态与真实 GPU 验证边界 |
 | 场景美术、材质与建筑 LOD | [品质提升指南](art/visual-quality-playbook.md)、[街景报告](36-StreetQualityAndArchitecturalLOD.md) | 场景/资产文件、通用渲染器与美术验证工具 |
 | 接触阴影、群体避让与贴花选型 | [修复与选型复核](architecture/crowd-and-decals-20261010.md) | 阴影步长修复、现有 CPU 基准及未实施方案的职责/验收边界 |
+| 高性能群体寻路与避让 | [导航实现指南](architecture/crowd-navigation.md) | v16 平面导航实现与历史测量 |
+| 三维地表寻路 | [三维导航指南](architecture/surface-navigation.md) | v17 NavSurface、斜坡/楼梯/叠层、MCP 持久化与真实 GPU 白盒验收 |
+| 动态障碍与吊门 | [动态导航指南](architecture/dynamic-navigation.md) | v18 固定三维底图、运行阻挡层、开关门/占用等待、实时弹道、MCP 与 GPU 验收 |
+| 程序性表面贴花 | [贴花指南](render/procedural-decals.md) | 独立工作区、九类图案与形态参数、v21 场景事件配置、战斗弹孔/血迹/酸液、寿命预算、GPU实例批与独立工作区 |
+| 贴花对象池与间接绘制 | [性能契约与复测](render/decal-performance.md) | CPU固定槽复用、A/B切换、稳定GPU压缩、真实硬件测量与限制 |
 | 浏览器或 GPU 验收 | [浏览器入口](browser-verification.md)、项目浏览器/GPU 规则 | 有界面目标检出环境及运行证据，不能只用构建代替 |
 | Agent 通过 MCP 编辑 | [编辑器 MCP](../tools/mcp-editor/README.md) | `editor_workflow` → 明确选择实例 → 当前 schema/revision |
 | 历史决策和事故证据 | 目录中 `historical` 项 | `docs/review`、`docs/evidence`、`.workbuddy/memory`；复用前核对源码 |

@@ -1,0 +1,253 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"runtime\":{\"state\":\"paused\",\"tick\":534,\"player\":{\"id\":0,\"generation\":1,\"runId\":1,\"characterId\":\"P-01\",\"kind\":\"player\",\"x\":13,\"y\":4,\"z\":0,\"yaw\":0,\"alive\":true,\"sourceNodeId\":\"nd_nav3d_player\",\"targetId\":-1,\"behavior\":0,\"behaviorPhase\":0,\"hp\":0,\"maxHp\":100,\"hitFlash\":0.15000000596046448,\"lodTier\":0},\"npcCount\":12,\"diagnostics\":[],\"runtimeDiagnostics\":[],\"ledger\":{\"registered\":3,\"disposed\":0,\"pending\":3},\"instances\":13,\"meshIds\":[\"capsule:r0.350:h1.800\",\"actor:E-01\"],\"actorLibrarySize\":1,\"weapons\":{\"equipped\":\"pistol\",\"states\":[{\"id\":\"pistol\",\"magazine\":10000,\"reserve\":10000000,\"level\":1}],\"activeId\":\"pistol\",\"behavior\":\"hitscan\",\"capacity\":10000,\"reloadRemaining\":0,\"switching\":false,\"upgradeCost\":15,\"animation\":{\"action\":\"idle\",\"weaponId\":\"pistol\",\"clip\":\"pistol-idle\",\"fallback\":\"idle\",\"phase\":0,\"startTick\":0},\"poseIntent\":{\"weaponId\":\"pistol\",\"action\":\"idle\",\"phase\":0,\"markers\":{\"primaryGrip\":{\"position\":[0,0,0],\"rotation\":[0,0,0,1],\"effector\":\"right-hand\"},\"supportGrip\":{\"position\":[0.12,0,0],\"rotation\":[0,0,0,1],\"effector\":\"left-hand\"},\"muzzle\":{\"position\":[0.3,0,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"},\"magazine\":{\"position\":[0.036,-0.1,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"},\"chamber\":{\"position\":[0.09,0.04,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"}},\"recoil\":{\"translation\":[0,0,0],\"pitchDeg\":0},\"reload\":{\"leftHandTarget\":\"supportGrip\",\"phase\":0}},\"recentEvents\":[],\"hookErrors\":[],\"effectCount\":0},\"audio\":{\"state\":\"closed\",\"runId\":-1,\"pending\":0,\"buffers\":0,\"decodedBytes\":0,\"voices\":0,\"loops\":0,\"peakVoices\":0,\"played\":{},\"skipped\":0,\"muted\":false,\"gain\":1,\"errors\":[]},\"navigation\":{\"settings\":{\"maxNeighbors\":12,\"timeHorizonSec\":0.8,\"skinM\":0.02,\"acceleration\":8,\"collisionIterations\":4,\"stuckWindowSec\":0.5,\"stuckProgressRatio\":0.15,\"flowCellBudget\":2048},\"surface\":{\"mode\":\"surface-3d\",\"cellCount\":1245,\"surfaceCount\":21,\"rejectedSurfaces\":[],\"version\":1,\"pending\":false,\"workLastStep\":0,\"goal\":{\"x\":12.75,\"y\":4,\"z\":-0.25,\"surface\":2}},\"flow\":{\"version\":1,\"pending\":false,\"publishedGoal\":{\"x\":12.75,\"y\":4,\"z\":-0.25,\"surface\":2},\"requestedX\":13,\"requestedZ\":0,\"workLastStep\":0,\"cellCount\":1245,\"rejectedGoals\":0},\"crowd\":{\"agents\":13,\"moving\":9,\"candidateChecks\":81,\"velocityConstraints\":44,\"infeasibleVelocities\":1,\"contactPairs\":1,\"blockedMoves\":0,\"residualOverlapPairs\":0,\"maxPenetrationM\":0,\"stuckAgents\":1,\"unreachableAgents\":4,\"yieldingAgents\":0,\"externalBlockedMoves\":0}}},\"state\":{\"path\":\"assets/scenes/sandbox/navigation-3d-whitebox.scene.json\",\"name\":\"三维导航白盒 · 斜坡 / 楼梯 / 叠层\",\"revision\":\"8b80ed36\",\"dirty\":false,\"hasDraft\":false,\"busy\":false,\"pendingAssets\":0,\"playing\":true}}"
+      }
+    ],
+    "isError": false,
+    "structuredContent": {
+      "ok": true,
+      "runtime": {
+        "state": "paused",
+        "tick": 534,
+        "player": {
+          "id": 0,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 13,
+          "y": 4,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_nav3d_player",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 0,
+          "maxHp": 100,
+          "hitFlash": 0.15000000596046448,
+          "lodTier": 0
+        },
+        "npcCount": 12,
+        "diagnostics": [],
+        "runtimeDiagnostics": [],
+        "ledger": {
+          "registered": 3,
+          "disposed": 0,
+          "pending": 3
+        },
+        "instances": 13,
+        "meshIds": [
+          "capsule:r0.350:h1.800",
+          "actor:E-01"
+        ],
+        "actorLibrarySize": 1,
+        "weapons": {
+          "equipped": "pistol",
+          "states": [
+            {
+              "id": "pistol",
+              "magazine": 10000,
+              "reserve": 10000000,
+              "level": 1
+            }
+          ],
+          "activeId": "pistol",
+          "behavior": "hitscan",
+          "capacity": 10000,
+          "reloadRemaining": 0,
+          "switching": false,
+          "upgradeCost": 15,
+          "animation": {
+            "action": "idle",
+            "weaponId": "pistol",
+            "clip": "pistol-idle",
+            "fallback": "idle",
+            "phase": 0,
+            "startTick": 0
+          },
+          "poseIntent": {
+            "weaponId": "pistol",
+            "action": "idle",
+            "phase": 0,
+            "markers": {
+              "primaryGrip": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "right-hand"
+              },
+              "supportGrip": {
+                "position": [
+                  0.12,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "left-hand"
+              },
+              "muzzle": {
+                "position": [
+                  0.3,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              },
+              "magazine": {
+                "position": [
+                  0.036,
+                  -0.1,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              },
+              "chamber": {
+                "position": [
+                  0.09,
+                  0.04,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              }
+            },
+            "recoil": {
+              "translation": [
+                0,
+                0,
+                0
+              ],
+              "pitchDeg": 0
+            },
+            "reload": {
+              "leftHandTarget": "supportGrip",
+              "phase": 0
+            }
+          },
+          "recentEvents": [],
+          "hookErrors": [],
+          "effectCount": 0
+        },
+        "audio": {
+          "state": "closed",
+          "runId": -1,
+          "pending": 0,
+          "buffers": 0,
+          "decodedBytes": 0,
+          "voices": 0,
+          "loops": 0,
+          "peakVoices": 0,
+          "played": {},
+          "skipped": 0,
+          "muted": false,
+          "gain": 1,
+          "errors": []
+        },
+        "navigation": {
+          "settings": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          },
+          "surface": {
+            "mode": "surface-3d",
+            "cellCount": 1245,
+            "surfaceCount": 21,
+            "rejectedSurfaces": [],
+            "version": 1,
+            "pending": false,
+            "workLastStep": 0,
+            "goal": {
+              "x": 12.75,
+              "y": 4,
+              "z": -0.25,
+              "surface": 2
+            }
+          },
+          "flow": {
+            "version": 1,
+            "pending": false,
+            "publishedGoal": {
+              "x": 12.75,
+              "y": 4,
+              "z": -0.25,
+              "surface": 2
+            },
+            "requestedX": 13,
+            "requestedZ": 0,
+            "workLastStep": 0,
+            "cellCount": 1245,
+            "rejectedGoals": 0
+          },
+          "crowd": {
+            "agents": 13,
+            "moving": 9,
+            "candidateChecks": 81,
+            "velocityConstraints": 44,
+            "infeasibleVelocities": 1,
+            "contactPairs": 1,
+            "blockedMoves": 0,
+            "residualOverlapPairs": 0,
+            "maxPenetrationM": 0,
+            "stuckAgents": 1,
+            "unreachableAgents": 4,
+            "yieldingAgents": 0,
+            "externalBlockedMoves": 0
+          }
+        }
+      },
+      "state": {
+        "path": "assets/scenes/sandbox/navigation-3d-whitebox.scene.json",
+        "name": "三维导航白盒 · 斜坡 / 楼梯 / 叠层",
+        "revision": "8b80ed36",
+        "dirty": false,
+        "hasDraft": false,
+        "busy": false,
+        "pendingAssets": 0,
+        "playing": true
+      }
+    }
+  }
+}

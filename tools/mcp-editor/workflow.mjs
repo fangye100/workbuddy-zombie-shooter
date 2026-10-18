@@ -3,7 +3,7 @@ export const EDITOR_INSTRUCTIONS = 'Read editor_workflow, then editor_instances 
 
 export function editorWorkflow() {
   return {
-    contractVersion: 2,
+    contractVersion: 4,
     knowledge: {
       entry:'docs/README.md', catalog:'docs/knowledge/catalog.json',
       architecture:'docs/architecture/layers.md', codeGraph:'docs/knowledge/codegraph.md',
@@ -16,6 +16,7 @@ export function editorWorkflow() {
       project: 'aether.project.json', sceneSchema: 'packages/scene/src/document.ts',
       weapons: 'packages/scene/src/weapons.ts', audio: 'packages/scene/src/audio.ts',
       assetMetadata: 'packages/scene/src/asset-meta.ts',
+      decals: 'packages/scene/src/decals.ts',
     },
     stages: [
       { id:'discover', tools:['editor_workflow','editor_instances','scene_list','scene_get'], rule:'Workflow discovery needs no browser instance. Business calls target an exact live instance UUID.' },
@@ -24,10 +25,14 @@ export function editorWorkflow() {
       { id:'verify', tools:['editor_play','editor_runtime','editor_capture'], rule:'Start enters paused Play; step is deterministic simulation coverage. Audio requires a trusted Ready/Resume gesture. Stop restores author data. Canvas capture excludes DOM HUD and does not establish listening or phone acceptance.' },
     ],
     topics: [
+      {id:'procedural-decals',guide:'docs/render/procedural-decals.md',schema:'packages/scene/src/decals.ts',component:'Decal',parameters:'DecalMark.style',workbench:'渲染 → 程序贴花工作区',control:'editor_decal',backendControl:'editor_decal_backend',gpuObservation:'editor_decal_gpu',performanceGuide:'docs/render/decal-performance.md',benchmark:'decal-benchmark.html',observation:'editor_runtime.runtime.decals',sampleScene:'assets/scenes/sandbox/procedural-decal-whitebox.scene.json'},
+      {id:'dynamic-navigation',guide:'docs/architecture/dynamic-navigation.md',schema:'packages/scene/src/document.ts',component:'NavigationGate',control:'editor_gate',observation:'editor_runtime.runtime.gates / navigation.surface',sampleScene:'assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json'},
       { id:'visuals-and-lod', guide:'docs/36-StreetQualityAndArchitecturalLOD.md', reusable:'docs/art/visual-quality-playbook.md' },
       { id:'npc-and-input', guide:'docs/37-CombatInputAndPopulationQuality.md' },
       { id:'weapons-and-ik-ports', guide:'docs/39-Unified-weapons-and-animation-hooks.md' },
       { id:'audio', guide:'docs/42-GameplayAudioIntegration.md', resourceBrief:'docs/40-GameplayAudioAssetBrief.md' },
+      { id:'crowd-navigation', guide:'docs/architecture/crowd-navigation.md', schema:'packages/scene/src/document.ts', component:'NavZone.crowd', observation:'editor_runtime.runtime.navigation' },
+      { id:'surface-navigation', guide:'docs/architecture/surface-navigation.md', schema:'packages/scene/src/document.ts', component:'NavZone.surface / NavSurface', observation:'editor_runtime.runtime.navigation.surface', sampleScene:'assets/scenes/sandbox/navigation-3d-whitebox.scene.json' },
     ],
     recovery: {
       REVISION_CONFLICT:'Read scene_get again and rebase only the intended changes.',
@@ -44,7 +49,7 @@ export function editorWorkflow() {
       'Opt-in broker and selected tab; client registration is a separate setup action.',
       'Generic component editing exists; semantic asset/component discovery and dedicated weapon/audio authoring commands are not implemented.',
       'No rig/IK authoring, animation resource generation, runtime equipment command or browser autoplay bypass in this server.',
-      'Read-only weapons/audio diagnostics expose current facts, not a second simulation or durable scene state.',
+      'Read-only weapons/audio/navigation diagnostics expose copied current facts, not a second simulation or durable scene state. Navigation observations do not advance flow work or avoidance.',
       'Existing live material roundtrip evidence is scoped; reconnect and all asynchronous human-edit races are not certified.',
     ],
   };

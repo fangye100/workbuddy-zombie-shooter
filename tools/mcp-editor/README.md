@@ -39,12 +39,22 @@ node tools/mcp-editor/server.mjs --url https://fangye-win11-office.tail6b29a2.ts
 | scene_set_environment | 完整验证、可撤销 environment 替换，保其他字段 |
 | scene_validate、scene_history、scene_save | 只读诊断、共享 undo/redo、冲突感知保存；validate→save→reopen→compare |
 | editor_play | 初始暂停；resume/pause/step（1–600）/stop 共 PlayController，Stop 恢复/释放 |
-| editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频事实 |
+| editor_gate | Play 门目标开关，stable NodeId + expectedRevision + 当前 runId；运动在固定步推进，作者数据不变 |
+| editor_decal_gpu | 只读采样帧计数；A提交数、B保守视锥候选数，带sequence/countSource，清理期间null |
+| editor_decal_backend | direct/indirect 两套方案切换，当前 revision；不改作者场景、模拟时间或运行痕迹 |
+| editor_decal | Play 运行贴花 emit/clear；当前 runId 与 revision，完整局部痕迹/接收 NodeId/ttlSec/fadeSec；作者贴花用 scene_edit_nodes |
+| editor_runtime | 真实 tick/player/NPC/诊断/账目及复制的武器/音频/导航事实 |
 | editor_capture | 下一 GPU canvas PNG，不含 DOM HUD；无帧明确超时 |
 
 先依次调用 `editor_workflow` → `editor_instances` → `scene_list` → `scene_get`。
 修改材质、武器库或音频时，复制选定节点，只改相关组件，然后替换完整节点。
 目前没有专用武器/音频 setter 或资产搜索。后续写调用使用返回的新 revision；其他参与者修改场景后须重读。
+
+程序贴花 schema v20、九种图案、`DecalMark.style` 四项形态参数及生命周期见[贴花指南](../../docs/render/procedural-decals.md)。
+可视化入口：渲染 → 程序贴花工作区；未应用的参数草稿阻止 MCP 作者写入/保存/Play，
+先在界面应用或放弃。Agent 继续使用完整节点编辑相同 Decal 数据，不需要操纵预览 DOM。
+`editor_runtime.runtime.decals` 观察运行 count/time/evicted/marks/runId 与最后 GPU 批；
+读诊断不推进寿命，刚 emit 后 GPU 统计可能滞后一帧。Stop 清运行池，保留作者 Decal。
 保留无关组件、引用和 GUID。
 
 MCP 客户端 `tools/call` 的参数示例：
@@ -62,6 +72,17 @@ MCP 客户端 `tools/call` 的参数示例：
 字符串。场景 schema 校验是判断数据有效性的依据。
 
 ## 运行诊断
+
+`editor_runtime.runtime.gates` 提供门的实际进度、目标、占用等待、世界姿态与 AABB，Stop 后为
+空数组。通过 `editor_gate` 设置目标时必须携带当前 player.runId；重跑后旧代拒绝，终态
+拒绝。命令接受不代表已到位。动态障碍与底图局部更新见[动态导航指南](../../docs/architecture/dynamic-navigation.md)。
+
+`editor_runtime.runtime.navigation` 在 Stop 后为 null；Play 中是当前配置、流场版本/预算用量/
+待发布状态及群体候选/速度约束/不可行解/穿透/阻挡/解堵计数的副本。读取不推进流场或模拟。
+`externalBlockedMoves` 是本次运行玩家、突扑/冲锋和击退被动态圆盘截停的累计次数，其余 crowd
+计数属于最近一步。通过 `scene_get` 取完整 NavZone 节点，再用 `scene_edit_nodes` 替换其
+`crowd` 配置；validate→save→open→get 比较实际字段。没有专用导航设置面板或调参命令。
+配置及有界面验收见[高性能寻路避让指南](../../docs/architecture/crowd-navigation.md)。
 
 `editor_runtime.runtime.weapons` 在停止时为 null；Play 中包含装备 ID、复制的弹匣/储备/等级状态、
 当前行为、容量、换弹剩余时间、换装状态、升级成本、动作/阶段、局部持握/枪口/弹匣/弹膛标记、后坐/

@@ -4,6 +4,9 @@
 分支 `codex/architecture-boundaries-20261009`；本报告随阴影修复提交。
 **阴影修复已实现并验证；避让与贴花是选型建议，尚未实现新系统。**
 
+后续状态：本报告保留选型时的历史结论；群体导航的新实现、测试和设备边界见
+[高性能寻路避让指南](crowd-navigation.md)。贴花选型仍未因该导航任务而实施。
+
 ## 1. 复核范围与证据可信度
 
 先使用本检出目录的 CodeGraph MCP 0.167.0 查询 `project_map`，再查询
@@ -175,6 +178,8 @@ tick/generation 映射；Editor 只编辑场景与显示诊断，不能承接 NP
 最后在 headed 真实 GPU 上测完整游戏 CPU/GPU 帧时与 Stop，手机单独验证。
 
 ## 4. 当前贴花能力与选型
+
+本节保留 2026-10-10 评估时的实现状态。2026-10-13 首期程序性平面贴花、v19 场景契约、运行池和真实 GPU 结果见[贴花指南](../render/procedural-decals.md)；图集接入、复杂接收面 projector 与 DBuffer 仍未实现。
 
 实际渲染是 [RendererCore](../../packages/render/src/renderer-core.ts) 的自定义
 WebGPU/WGSL，不能把导入/Retarget 使用 Three.js 等同于采用 Three 的整套渲染器。

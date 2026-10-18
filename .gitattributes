@@ -57,3 +57,15 @@ docs/animation/evidence/controls-20261014/*.png filter=lfs diff=lfs merge=lfs -t
 docs/animation/evidence/weapon-hold-20261014/*.png filter=lfs diff=lfs merge=lfs -text
 docs/animation/evidence/hold-slot-20261015/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/shadow-crowd-decals-20261010/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/crowd-navigation-20261010/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/surface-navigation-20261010/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/dynamic-navigation-20261011/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/evidence/procedural-decals-20261013/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/evidence/decal-workbench-20261013/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/evidence/decal-vfx-20261013/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/evidence/decal-vfx-20261013/*.png filter=lfs diff=lfs merge=lfs -text
+docs/evidence/combat-decals-20261013/*.png filter=lfs diff=lfs merge=lfs -text
+
+docs/evidence/decal-ab-20261014/*.png filter=lfs diff=lfs merge=lfs -text
+
+docs/evidence/main-integration-20261018/*.png filter=lfs diff=lfs merge=lfs -text

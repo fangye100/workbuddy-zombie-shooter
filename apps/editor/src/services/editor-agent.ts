@@ -2,6 +2,7 @@ import { createEmptySceneDocument, validateSceneDocument, type EnvironmentData, 
 import { removeNodeTree, sceneFingerprint, validateAuthorNodes, type EditResult, type SpawnEditStore } from '@aether/runtime';
 import type { AuthorSaveResult } from './author-scene-save';
 import { readSceneChoices, checkScene } from './scene-workspace';
+import type {RuntimeDecal,DecalBackend} from '@aether/render';
 
 export interface EditorAgentPort {
   store(): SpawnEditStore | null;
@@ -16,6 +17,10 @@ export interface EditorAgentPort {
   history(redo: boolean): Promise<EditResult>;
   save(): Promise<AuthorSaveResult>;
   play(action: string, steps: number): void;
+  gate?(nodeId:string,open:boolean,runId:number):void;
+  decal?(action:'emit'|'clear',runId:number,input?:RuntimeDecal):void;
+  decalBackend?(backend:DecalBackend):void;
+  decalGpu?():Promise<unknown>;
   runtime(): unknown;
   capture(): Promise<string>;
 }
@@ -36,6 +41,7 @@ export class EditorAgent {
       if(name==='scene_list')return {ok:true,scenes:await readSceneChoices(),state:this.state()};
       const store=this.port.store(); if(!store)fail('NOT_READY','No author scene is loaded.');
       if(name==='scene_get')return {ok:true,document:structuredClone(store.document),state:this.state()};
+      if(name==='editor_decal_gpu'){if(!this.port.decalGpu)fail('UNSUPPORTED','宿主未提供GPU计数读回');return {ok:true,gpu:await this.port.decalGpu(),state:this.state()};}
       if(name==='editor_runtime')return {ok:true,runtime:this.port.runtime(),state:this.state()};
       if(name==='scene_validate') {
         const diagnostics=validateSceneDocument(store.document), author=validateAuthorNodes(store.document);
@@ -50,6 +56,24 @@ export class EditorAgent {
         const steps=args.steps??1;
         if(!Number.isInteger(steps)||Number(steps)<1||Number(steps)>600)fail('INVALID_ARGUMENTS','steps must be an integer from 1 to 600');
         this.port.play(args.action,Number(steps)); return {ok:true,runtime:this.port.runtime(),state:this.state()};
+      }
+      if(name==='editor_gate'){
+        if(!this.port.playing())fail('PLAY_REQUIRED','门操作需要 Play');
+        if(typeof args.nodeId!=='string'||typeof args.open!=='boolean'||!Number.isInteger(args.runId))fail('INVALID_ARGUMENTS','需要稳定 nodeId、布尔 open 和当前 runId');
+        if(!this.port.gate)fail('UNSUPPORTED','宿主未提供门控制');
+        this.port.gate(args.nodeId,args.open,Number(args.runId));return {ok:true,runtime:this.port.runtime(),state:this.state()};
+      }
+      if(name==='editor_decal'){
+        if(!this.port.playing())fail('PLAY_REQUIRED','运行贴花需要 Play');
+        if((args.action!=='emit'&&args.action!=='clear')||!Number.isInteger(args.runId)||Number(args.runId)<1
+          ||(args.action==='emit'&&!record(args.decal)))fail('INVALID_ARGUMENTS','需要 emit/clear、当前 runId 及 emit 的 decal');
+        if(!this.port.decal)fail('UNSUPPORTED','宿主未提供贴花控制');
+        this.port.decal(args.action,Number(args.runId),args.decal as unknown as RuntimeDecal|undefined);return {ok:true,runtime:this.port.runtime(),state:this.state()};
+      }
+      if(name==='editor_decal_backend'){
+        if(args.backend!=='direct'&&args.backend!=='indirect')fail('INVALID_ARGUMENTS','backend 必须 direct 或 indirect');
+        if(!this.port.decalBackend)fail('UNSUPPORTED','宿主未提供贴花绘制方案');
+        this.port.decalBackend(args.backend);return {ok:true,runtime:this.port.runtime(),state:this.state()};
       }
       if(this.port.playing())fail('PLAY_LOCKED','Stop Play before changing author content.');
       if(name==='scene_open') {

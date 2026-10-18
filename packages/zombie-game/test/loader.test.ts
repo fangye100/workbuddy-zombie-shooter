@@ -59,8 +59,12 @@ describe('loadLevelRuntime —— 真实关卡 floor-1', () => {
   });
 
   it('触发器不作为障碍（门框不该变成墙）', () => {
-    const d = loadLevelRuntime(floor1()).desc!;
-    expect(d.obstacles.every((o) => o.nodeId.startsWith('nd_f1r'))).toBe(true);
+    const doc = clone(floor1());
+    const node = doc.nodes.find(n => n.components.some(c => c.kind === 'Collider' && c.enabled && !c.isTrigger))!;
+    const collider = node.components.find(c => c.kind === 'Collider')! as ColliderComponent;
+    expect(loadLevelRuntime(doc).desc!.obstacles.some(o => o.nodeId === node.id)).toBe(true);
+    collider.isTrigger = true;
+    expect(loadLevelRuntime(doc).desc!.obstacles.some(o => o.nodeId === node.id)).toBe(false);
   });
 });
 

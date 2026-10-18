@@ -72,8 +72,8 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','optional-skeletal-pose-layers','explicit-model-socket-assemblies','optional-bone-relative-hold-slots']);
-    expect(result.doc.schemaVersion).toBe(18);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets']);
+    expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
   });
@@ -357,8 +357,11 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'support-authored-art-textures',
       'shared-motion-node-overrides',
       'authored-crowd-attack-budget',
-      'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','optional-skeletal-pose-layers','explicit-model-socket-assemblies','optional-bone-relative-hold-slots',
-    ]);
+      'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik',
+      'predictive-crowd-navigation',
+      'authored-3d-navigation-surfaces',
+      'runtime-navigation-gates',
+      'procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets']);
   });
 });
 
@@ -453,6 +456,56 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(18);
+    expect(SCHEMA_VERSION).toBe(22);
+  });
+});
+
+describe('v15 → v16 导航配置', () => {
+  beforeEach(() => { clearMigrations(); registerSceneMigrations(); });
+  afterEach(() => { clearMigrations(); registerSceneMigrations(); });
+  it('显式补配置、保留作者配置、原输入不被修改', () => {
+    const input=docAt(15);
+    input.nodes=[{id:'nd_navtest',name:'导航',parent:null,transform:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},visible:true,pickable:false,prefab:null,
+      components:[{kind:'NavZone',enabled:true,bounds:{center:[0,0,0],size:[20,4,20]},cellSize:.5,baked:null}]}];
+    const result=migrateToLatest(input);
+    const nav=result.doc.nodes[0]!.components[0]!;
+    expect(nav.kind).toBe('NavZone');
+    if(nav.kind!=='NavZone')throw new Error('fixture');
+    expect(nav.crowd?.maxNeighbors).toBe(12);
+    expect(JSON.stringify(input)).not.toContain('flowCellBudget');
+    nav.crowd!.maxNeighbors=24;
+    const custom={...result.doc,schemaVersion:15};
+    const migrated=migrateToLatest(custom);
+    expect(JSON.stringify(migrated.doc)).toContain('"maxNeighbors":24');
+    nav.crowd!.flowCellBudget=0;
+    expect(validateSceneDocument(result.doc).some(d=>d.code==='E_NAV_CROWD')).toBe(true);
+    delete nav.crowd;
+    expect(validateSceneDocument(result.doc).some(d=>d.code==='E_NAV_CROWD')).toBe(true);
+  });
+});
+
+describe('v16 → v17 三维导航',()=>{
+  beforeEach(()=>{clearMigrations();registerSceneMigrations();});
+  afterEach(()=>{clearMigrations();registerSceneMigrations();});
+  it('旧平面场景只升级版本，不注入三维内容；新组件与支撑引用显式校验',()=>{
+    const input=docAt(16),copy=structuredClone(input);const result=migrateToLatest(input);
+    expect(result.doc.schemaVersion).toBe(22);expect(input).toEqual(copy);expect(JSON.stringify(result.doc)).not.toContain('NavSurface');
+    const doc=createEmptySceneDocument('三维测试');doc.nodes.push({id:'nd_surf',name:'坡面',parent:null,
+      transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},visible:true,pickable:true,prefab:null,
+      components:[{kind:'NavSurface',enabled:true,size:[8,4],supportCollider:'nd_missing'}]});
+    expect(validateSceneDocument(doc).some(d=>d.code==='E_NAV_SUPPORT_REF')).toBe(true);
+    const surface=doc.nodes.at(-1)!.components[0]!;if(surface.kind!=='NavSurface')throw Error('fixture');
+    delete surface.supportCollider;surface.size[0]=0;
+    expect(validateSceneDocument(doc).some(d=>d.code==='E_NAV_SURFACE_SIZE')).toBe(true);
+  });
+});
+
+describe('v17 → v18 动态导航门',()=>{
+  beforeEach(()=>{clearMigrations();registerSceneMigrations();});
+  afterEach(()=>{clearMigrations();registerSceneMigrations();});
+  it('只升级版本，不编造门状态或改变作者节点',()=>{
+    const input=docAt(17),copy=structuredClone(input),result=migrateToLatest(input);
+    expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets']);expect(result.doc.schemaVersion).toBe(22);expect(input).toEqual(copy);
+    expect(result.doc.nodes).toEqual(input.nodes);expect(JSON.stringify(result.doc)).not.toContain('NavigationGate');
   });
 });

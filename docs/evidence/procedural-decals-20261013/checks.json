@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-13",
+  "vitest": {"files": 20, "tests": 202, "failed": 0, "scope": "Render 全部测试与受影响 Scene/Editor/Game owner 测试"},
+  "nodeTests": {"tests": 7, "failed": 0, "command": "node --test tools/mcp-editor/*.test.mjs tools/scene/load-contract.test.mjs"},
+  "typecheck": {"exitCode": 0},
+  "editorBuild": {"exitCode": 0, "modules": 254, "warning": "既有 chunk 大小警告"},
+  "architecture": {"exitCode": 0, "files": 288, "errors": []},
+  "sceneCheck": {"exitCode": 0, "metadata": 228, "scenes": 17, "schemaVersion": 19, "sceneTests": 14, "environmentLodAssets": 38, "audioFiles": 22, "failures": 0},
+  "knowledgeCheck": {"exitCode": 0, "entries": 140, "errors": []},
+  "gpu": {"vendor": "nvidia", "architecture": "lovelace", "fallback": false, "runtimeDecals": [32,128,512], "decalDrawCalls": [1,1,1], "playPendingAfterStop": 0, "browserErrors": 0},
+  "codeGraph": {"version": "0.167.0", "updatedFiles": 71, "createdNodes": 633, "createdEdges": 3510, "changedParseErrorFiles": 1, "warnings": ["apps/editor/src/main.ts tree-sitter 恢复解析，符号可能不完整", "packages/zombie-game/src/presentation/game-audio.ts 解析警告"], "vectors": "3624/6896，未认证完整语义检索", "queries": "project_map、RendererCore/feature/document/runtime-decals/procedural-decals/decal-instances/decals 的 module_overview；动态MCP及释放两端由源码和实际路径核对"}
+}

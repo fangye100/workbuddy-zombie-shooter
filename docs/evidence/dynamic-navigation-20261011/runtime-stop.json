@@ -1,0 +1,63 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"runtime\":{\"state\":\"stopped\",\"tick\":0,\"player\":null,\"npcCount\":0,\"gates\":[],\"diagnostics\":[],\"runtimeDiagnostics\":[],\"ledger\":{\"registered\":6,\"disposed\":6,\"pending\":0},\"instances\":13,\"meshIds\":[\"capsule:r0.350:h1.800\",\"actor:E-01\"],\"actorLibrarySize\":1,\"weapons\":null,\"audio\":{\"state\":\"closed\",\"runId\":-1,\"pending\":0,\"buffers\":0,\"decodedBytes\":0,\"voices\":0,\"loops\":0,\"peakVoices\":0,\"played\":{},\"skipped\":0,\"muted\":false,\"gain\":1,\"errors\":[]},\"navigation\":null},\"state\":{\"path\":\"assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json\",\"name\":\"动态障碍白盒 · 吊门 / 绕行 / 等待\",\"revision\":\"888ee79e\",\"dirty\":false,\"hasDraft\":false,\"busy\":false,\"pendingAssets\":0,\"playing\":false}}"
+      }
+    ],
+    "isError": false,
+    "structuredContent": {
+      "ok": true,
+      "runtime": {
+        "state": "stopped",
+        "tick": 0,
+        "player": null,
+        "npcCount": 0,
+        "gates": [],
+        "diagnostics": [],
+        "runtimeDiagnostics": [],
+        "ledger": {
+          "registered": 6,
+          "disposed": 6,
+          "pending": 0
+        },
+        "instances": 13,
+        "meshIds": [
+          "capsule:r0.350:h1.800",
+          "actor:E-01"
+        ],
+        "actorLibrarySize": 1,
+        "weapons": null,
+        "audio": {
+          "state": "closed",
+          "runId": -1,
+          "pending": 0,
+          "buffers": 0,
+          "decodedBytes": 0,
+          "voices": 0,
+          "loops": 0,
+          "peakVoices": 0,
+          "played": {},
+          "skipped": 0,
+          "muted": false,
+          "gain": 1,
+          "errors": []
+        },
+        "navigation": null
+      },
+      "state": {
+        "path": "assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json",
+        "name": "动态障碍白盒 · 吊门 / 绕行 / 等待",
+        "revision": "888ee79e",
+        "dirty": false,
+        "hasDraft": false,
+        "busy": false,
+        "pendingAssets": 0,
+        "playing": false
+      }
+    }
+  }
+}

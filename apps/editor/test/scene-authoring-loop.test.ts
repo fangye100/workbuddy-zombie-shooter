@@ -8,7 +8,7 @@ const modules = import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json
 function fixture(): SceneDocument {
   const doc = cloneDocument((Object.values(modules)[0] as { default: SceneDocument }).default);
   // Scene composition can fill all 64 slots; authoring tests need explicit headroom.
-  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer');
+  for (const node of doc.nodes) node.components = node.components.filter(c => c.kind !== 'MeshRenderer' && c.kind !== 'Decal');
   return doc;
 }
 function setup() {

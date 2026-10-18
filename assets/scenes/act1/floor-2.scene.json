@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "id": "sc_act1_floor2",
   "name": "第二层 · 尸潮仓储区",
   "act": "Act1",
@@ -2007,6 +2007,82 @@
               "gain": 1
             }
           }
+        },
+        {
+          "kind": "DecalEmitter",
+          "enabled": true,
+          "capacity": 256,
+          "maxPerFrame": 32,
+          "groundProbeM": 0.6,
+          "surfaceSnapM": 0.45,
+          "rules": [
+            {
+              "id": "bullet",
+              "event": "weapon-solid-impact",
+              "pattern": "bullet-hole",
+              "color": "#b3a186",
+              "size": [
+                0.22,
+                0.22
+              ],
+              "opacity": 0.95,
+              "ttlSec": 35,
+              "fadeSec": 5,
+              "maxAlive": 128,
+              "cooldownSec": 0,
+              "normalOffset": 0.004,
+              "style": {
+                "coverage": 0.9,
+                "edgeWidth": 0.02,
+                "irregularity": 0.7,
+                "detail": 0.7
+              }
+            },
+            {
+              "id": "blood",
+              "event": "npc-damage",
+              "pattern": "splatter",
+              "color": "#982c3c",
+              "size": [
+                0.85,
+                0.7
+              ],
+              "opacity": 0.86,
+              "ttlSec": 22,
+              "fadeSec": 5,
+              "maxAlive": 96,
+              "cooldownSec": 0.18,
+              "normalOffset": 0.006,
+              "style": {
+                "coverage": 0.92,
+                "edgeWidth": 0.015,
+                "irregularity": 0.8,
+                "detail": 0.65
+              }
+            },
+            {
+              "id": "acid",
+              "event": "acid-land",
+              "pattern": "acid",
+              "color": "#91bc38",
+              "size": [
+                2.4,
+                2.4
+              ],
+              "opacity": 0.84,
+              "ttlSec": 7,
+              "fadeSec": 2,
+              "maxAlive": 32,
+              "cooldownSec": 0,
+              "normalOffset": 0.008,
+              "style": {
+                "coverage": 1,
+                "edgeWidth": 0.02,
+                "irregularity": 0.65,
+                "detail": 0.6
+              }
+            }
+          ]
         }
       ],
       "prefab": null
@@ -4495,7 +4571,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ],
       "prefab": null
