@@ -4,6 +4,19 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-system-proposal-20261019",
+      "path": "docs/architecture/vfx-system-proposal-20261019.md",
+      "title": "VFX 系统开发 Proposal",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": ["vfx", "render", "particle", "decal", "architecture", "editor"],
+      "read": "主 chat proposal 原文归档；当前快照、职责与数据契约、M1-M4 交付及验收建议，未实施",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "reviewedAt": "2026-10-19",
+      "reviewedSourceCommit": "6b486f040da2e1496e851496d2e3706a379a8e31"
+    },
+    {
       "id": "shadow-crowd-decal-assessment-20261010",
       "path": "docs/architecture/crowd-and-decals-20261010.md",
       "title": "接触阴影修复、群体避让与贴花选型复核",
