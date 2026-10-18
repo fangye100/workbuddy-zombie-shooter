@@ -38,7 +38,7 @@ try{
  await viewport();
  evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
  check('secure context + 硬件adapter',evidence.gpu.secure && evidence.gpu.info && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)),JSON.stringify(evidence.gpu));
- await click('.insp-tab[data-tab="scene"]');await button('打开 VFX 资源');
+ await click('.insp-tab[data-tab="scene"]');await input('资源文件路径','assets/vfx/comic-pistol.vfx.json');await button('打开 VFX 资源');
  check('正式资源由UI加载',await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.asset?.id==='as_vfx_comic_pistol'`)));
  await button('循环 GPU 预览');check('预览真实GPU分配与draw',await waitFor(()=>cdp.eval(`(window.__editor.vfx.snapshot().editor.preview?.draws??0)>0`)));
  await capture('01-preview');await button('停止 VFX 预览');

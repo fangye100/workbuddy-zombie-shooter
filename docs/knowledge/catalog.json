@@ -4,6 +4,18 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-m2-20261019",
+      "path": "docs/architecture/vfx-m2-20261019.md",
+      "title": "M2 敌人与地面 VFX：实现、编辑与验证",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["vfx", "render", "editor", "enemy", "gpu", "persistence"],
+      "read": "通用绑定与旧资源兼容；真实攻击阶段、平面效果、保存重载、失败保底与开发证据",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "reviewedAt": "2026-10-19"
+    },
+    {
       "id": "vfx-m1-20261019",
       "path": "docs/architecture/vfx-m1-20261019.md",
       "title": "M1 手枪 VFX：资源、运行与编辑",

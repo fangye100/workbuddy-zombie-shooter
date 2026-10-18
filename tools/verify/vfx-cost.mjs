@@ -1,4 +1,4 @@
-/** Bounded paused-frame comparison for the M1 probe. No product profiler or persistent resources. */
+/** Bounded paused-frame comparison for the VFX probes. No product profiler or persistent resources. */
 export async function measureVfxCost(cdp){
  return cdp.eval(`(async()=>{
  const core=window.__editor.renderer.core,device=core.device,pass=core.vfx,original=core.drawFrame,create=device.createCommandEncoder;
@@ -28,7 +28,7 @@ export async function measureVfxCost(cdp){
   const summarize=a=>({mean:a.reduce((s,x)=>s+x,0)/a.length,p95:[...a].sort((a,b)=>a-b)[Math.floor(a.length*.95)]});
   return {samples:cpu.length,cpuSubmissionMs:summarize(cpu),gpuSceneThroughPostMs:timestamp?summarize(gpu):null,drawCalls:summarize(draws)};
  };
- try{return {timestampEnabled:timestamp,method:'paused scene, same 3 live effects; 4 warmup + 20 samples per mode; CPU core.drawFrame wall-time; GPU scene-begin to post-end timestamp',off:await measure(false),on:await measure(true),vfxUploadBytes:pass?.stats.uploadedBytes??0};}
+ try{return {timestampEnabled:timestamp,method:'paused scene, same live effect instances; 4 warmup + 20 samples per mode; CPU core.drawFrame wall-time; GPU scene-begin to post-end timestamp',off:await measure(false),on:await measure(true),vfxUploadBytes:pass?.stats.uploadedBytes??0};}
  finally{core.drawFrame=original;device.createCommandEncoder=create;core.vfx=pass;}
  })()`);
 }
