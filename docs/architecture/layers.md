@@ -28,6 +28,9 @@ HUD 才能使用引擎。
 - “场景是唯一内容载体”禁止硬编码场景实例，不要求把角色定义或可复用资产元数据复制进
   每个场景。`aether.project.json` 持有场景登记/启动选择，roster/stat JSON 持有角色
   定义，同名 sidecar 持有可复用资产设置。
+- 通用资源借还与容量/异常契约归 `@aether/core` 的 `ObjectPool<T>`；各 Framework 模块
+  适配自己的资源与复位，游戏保留策略；不把 ECS 代次、GPU 缓冲工作集或攻击配额强套为对象池。
+  见[对象池契约](object-pool.md)。
 - 通用编辑命令、行为端口、线段/实体碰撞、弹药、装备计时和武器策略保留在
   `@aether/runtime`。
 - `RuntimeSession`、僵尸关卡装载、`RunProgress`、敌人攻击、`AudioFramePlanner`、

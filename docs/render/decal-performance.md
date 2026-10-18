@@ -1,7 +1,11 @@
 # 程序贴花对象池与间接绘制
 
 2026-10-14；基线 `ef239dac`，分支 `codex/procedural-decals-20261013`。默认使用 A，B 可显式切换。
-本次保留 scene schema v21、现有九类 SDF、Game 规则与场景唯一真源。
+该次保留 scene schema v21、现有九类 SDF、Game 规则与场景唯一真源。
+
+2026-10-18：当前场景 schema v22，CPU Entry 借还已改用 `@aether/core` 通用对象池；
+FIFO、组预算和GPU A/B不变。见[通用池契约](../architecture/object-pool.md)。下列2026-10-14
+测量保留历史版本属性，不能当作新通用池的CPU耗时。
 
 ## 方案与 owner
 
@@ -23,8 +27,7 @@ Framework owner 是 `packages/render/src/decal-instances.ts`、`procedural-decal
 
 ## 对象池契约
 
-构造时预分配 capacity 个 Entry、position/rotation/size/style，空闲槽栈与插入顺序 Map
-管理复用。满池淘汰最早实例；同id/非法输入在修改前拒绝。expiry/remove/removeOldest/clear
+构造时预分配 capacity 个 Entry、position/rotation/size/style，通用 ObjectPool 管闲置身份，插入顺序 Map 管活跃实例。满池淘汰最早实例；同id/非法输入在修改前拒绝。expiry/remove/removeOldest/clear
 同步维护 groupCount。组标签不解释游戏语义，避免每次命中通过整个池的深复制/正则扫描统计。
 
 `frame()` 是同步、只读借用，后续池操作会使旧视图失效；禁止跨异步持有或作为外部诊断返回。

@@ -1,4 +1,4 @@
-import {composeQuat,multiply,srgbToLinear,type Mat4} from '@aether/core';
+import {ObjectPool,composeQuat,multiply,srgbToLinear,type Mat4} from '@aether/core';
 import {validateDecalMark,DECAL_PATTERNS,DEFAULT_DECAL_STYLE,MAX_AUTHORED_DECALS,type DecalMark,type SceneDocument,type NodeId} from '@aether/scene';
 
 export const MAX_RUNTIME_DECALS=512;
@@ -7,25 +7,22 @@ export interface RuntimeDecal {receiver:NodeId;mark:DecalMark;ttlSec:number;fade
 export interface DecalFrameRow {readonly receiver:NodeId;readonly mark:DecalMark;readonly remainingSec:number;readonly opacityScale?:number}
 /** 只供同步渲染借用，下一次 advance/emit/clear 后失效；MCP 使用复制隔离的 snapshot。 */
 export interface DecalFrameView {readonly count:number;readonly marks:readonly DecalFrameRow[]}
-interface Entry extends RuntimeDecal {born:number;key:string;group:string|null;remainingSec:number;opacityScale:number;hasStyle:boolean}
+interface Entry extends RuntimeDecal {born:number;key:string;group:string|null;remainingSec:number;opacityScale:number;hasStyle:boolean;everAcquired:boolean}
 /** 固定槽位对象池。group 是宿主的不透明标签，不解释任何游戏规则。 */
 export class DecalPool {
-  private readonly slots:Entry[];
-  private readonly free:number[]=[];
-  private readonly entries=new Map<string,number>();
+  private readonly pool:ObjectPool<Entry>;
+  private readonly entries=new Map<string,Entry>();
   private readonly groups=new Map<string,number>();
   private readonly rows:Entry[]=[];
   private readonly view:DecalFrameView={count:0,marks:this.rows};
   private now=0;evicted=0;private emitted=0;private reused=0;
-  private readonly used:Uint8Array;
   constructor(readonly capacity=MAX_RUNTIME_DECALS){
     if(!Number.isInteger(capacity)||capacity<1||capacity>MAX_RUNTIME_DECALS)throw new RangeError('贴花池容量非法');
-    this.used=new Uint8Array(capacity);
-    this.slots=Array.from({length:capacity},(_,i)=>{
-      this.free.push(capacity-1-i);
-      return {receiver:'',key:'',group:null,born:0,ttlSec:0,fadeSec:0,remainingSec:0,opacityScale:1,hasStyle:false,
-        mark:{id:'',pattern:'splatter',position:[0,0,0],rotation:[0,0,0,1],size:[1,1],color:'#000000',opacity:1,seed:0,normalOffset:.001,priority:0,style:{...DEFAULT_DECAL_STYLE}}};
-    });
+    this.pool=new ObjectPool<Entry>({capacity,maxRetained:capacity,create:()=>({
+      receiver:'',key:'',group:null,born:0,ttlSec:0,fadeSec:0,remainingSec:0,opacityScale:1,hasStyle:false,everAcquired:false,
+      mark:{id:'',pattern:'splatter',position:[0,0,0],rotation:[0,0,0,1],size:[1,1],color:'#000000',opacity:1,seed:0,normalOffset:.001,priority:0,style:{...DEFAULT_DECAL_STYLE}},
+    })});
+    this.pool.prewarm(capacity);
   }
   get time():number{return this.now;}
   emit(input:RuntimeDecal,elapsedSec=0,group:string|null=null):void {
@@ -36,8 +33,8 @@ export class DecalPool {
     const key=`${input.receiver}:${input.mark.id}`;
     if(this.entries.has(key))throw new Error(`运行贴花 id 已存在：${key}`);
     if(this.entries.size===this.capacity){this.release(this.entries.values().next().value!);this.evicted++;}
-    const index=this.free.pop()!,e=this.slots[index]!,m=e.mark,src=input.mark;
-    if(this.used[index])this.reused++;this.used[index]=1;this.emitted++;
+    const e=this.pool.acquire(),m=e.mark,src=input.mark;
+    if(e.everAcquired)this.reused++;e.everAcquired=true;this.emitted++;
     e.receiver=input.receiver;e.key=key;e.group=group;e.ttlSec=input.ttlSec;e.fadeSec=input.fadeSec;e.born=this.now-elapsedSec;
     m.id=src.id;m.pattern=src.pattern;m.color=src.color;m.opacity=src.opacity;m.seed=src.seed;m.normalOffset=src.normalOffset;m.priority=src.priority;
     for(let j=0;j<3;j++)m.position[j]=src.position[j]!;
@@ -45,24 +42,24 @@ export class DecalPool {
     m.size[0]=src.size[0];m.size[1]=src.size[1];e.hasStyle=src.style!==undefined;
     const style=src.style??DEFAULT_DECAL_STYLE,target=m.style!;
     target.coverage=style.coverage;target.edgeWidth=style.edgeWidth;target.irregularity=style.irregularity;target.detail=style.detail;
-    this.entries.set(key,index);if(group!==null)this.groups.set(group,(this.groups.get(group)??0)+1);
+    this.entries.set(key,e);if(group!==null)this.groups.set(group,(this.groups.get(group)??0)+1);
   }
-  private release(index:number):void {
-    const e=this.slots[index]!;this.entries.delete(e.key);
+  private release(e:Entry):void {
+    this.entries.delete(e.key);
     if(e.group!==null){const count=this.groups.get(e.group)!-1;if(count)this.groups.set(e.group,count);else this.groups.delete(e.group);}
-    this.free.push(index);e.group=null;
+    e.group=null;this.pool.release(e);
   }
   advance(now:number):void {
     if(!Number.isFinite(now)||now<this.now)throw new RangeError('贴花模拟时间不得倒退');this.now=now;
-    for(const index of this.entries.values()){const e=this.slots[index]!;if(now>=e.born+e.ttlSec)this.release(index);}
+    for(const e of this.entries.values())if(now>=e.born+e.ttlSec)this.release(e);
   }
   groupCount(group:string):number{return this.groups.get(group)??0;}
-  removeOldest(group:string):boolean {for(const index of this.entries.values())if(this.slots[index]!.group===group){this.release(index);return true;}return false;}
-  remove(receiver:NodeId,id:string):boolean {const index=this.entries.get(`${receiver}:${id}`);if(index===undefined)return false;this.release(index);return true;}
+  removeOldest(group:string):boolean {for(const e of this.entries.values())if(e.group===group){this.release(e);return true;}return false;}
+  remove(receiver:NodeId,id:string):boolean {const e=this.entries.get(`${receiver}:${id}`);if(e===undefined)return false;this.release(e);return true;}
   frame():DecalFrameView {
     this.rows.length=0;
-    for(const index of this.entries.values()){
-      const e=this.slots[index]!;e.remainingSec=e.born+e.ttlSec-this.now;e.opacityScale=e.fadeSec>0?Math.min(1,e.remainingSec/e.fadeSec):1;this.rows.push(e);
+    for(const e of this.entries.values()){
+      e.remainingSec=e.born+e.ttlSec-this.now;e.opacityScale=e.fadeSec>0?Math.min(1,e.remainingSec/e.fadeSec):1;this.rows.push(e);
     }
     (this.view as {count:number}).count=this.rows.length;return this.view;
   }
@@ -70,8 +67,8 @@ export class DecalPool {
     const entry=e as Entry,mark=structuredClone(e.mark);if(!entry.hasStyle)delete mark.style;mark.opacity*=entry.opacityScale;
     return {receiver:e.receiver,mark,remainingSec:e.remainingSec};
   })};}
-  diagnostics(){return {allocatedSlots:this.capacity,emitted:this.emitted,reusedSlots:this.reused,active:this.entries.size,free:this.free.length};}
-  clear():void {this.entries.clear();this.groups.clear();this.rows.length=0;(this.view as {count:number}).count=0;this.free.length=0;for(let i=this.capacity-1;i>=0;i--)this.free.push(i);this.now=0;this.evicted=0;}
+  diagnostics(){return {allocatedSlots:this.capacity,emitted:this.emitted,reusedSlots:this.reused,active:this.entries.size,free:this.pool.getStats().inactive};}
+  clear():void {for(const e of this.entries.values())this.release(e);this.groups.clear();this.rows.length=0;(this.view as {count:number}).count=0;this.now=0;this.evicted=0;}
 }
 export type DecalReceiver=(id:NodeId)=>Mat4|null;
 export class DecalPackScratch {readonly local=new Float32Array(16);readonly world=new Float32Array(16);}

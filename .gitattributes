@@ -69,3 +69,5 @@ docs/evidence/combat-decals-20261013/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/decal-ab-20261014/*.png filter=lfs diff=lfs merge=lfs -text
 
 docs/evidence/main-integration-20261018/*.png filter=lfs diff=lfs merge=lfs -text
+
+docs/evidence/object-pool-20261018/*.png filter=lfs diff=lfs merge=lfs -text

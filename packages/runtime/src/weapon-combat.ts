@@ -1,3 +1,4 @@
+import { ObjectPool } from '@aether/core';
 import type { WeaponDefinition, WeaponBehavior } from '@aether/scene';
 import type { SolidContact } from './solid-ray';
 export type WeaponPoint=[number,number,number];
@@ -12,7 +13,7 @@ export interface WeaponWorld {
   solidImpact?(hit:WeaponHit,from:WeaponPoint,direction:WeaponPoint,weapon:WeaponDefinition,tick:number):void;
 }
 export interface WeaponEffect { id:number;tick:number;weaponId:string;kind:'shot'|'pellet'|'pierce'|'projectile'|'explosion'|'slash'|'flame'|'burn';from:WeaponPoint;to:WeaponPoint;position:WeaponPoint;duration:number;radius:number;spreadDeg:number;color:string;hit:boolean }
-interface Projectile {effect:WeaponEffect;definition:WeaponDefinition;damage:number;direction:WeaponPoint;age:number;travel:number;velocityY:number}
+interface Projectile {effect:WeaponEffect|null;definition:WeaponDefinition|null;damage:number;direction:WeaponPoint;age:number;travel:number;velocityY:number}
 interface Status {id:number;generation:number;until:number;damage:number;slow:number;slowUntil:number;position:WeaponPoint}
 interface FireContext {weapon:WeaponDefinition;from:WeaponPoint;direction:WeaponPoint;damage:number;tick:number;random():number;world:WeaponWorld;combat:WeaponCombat}
 export interface WeaponImplementation { fire(context:FireContext):void }
@@ -57,6 +58,11 @@ export const WEAPON_IMPLEMENTATIONS:Readonly<Record<WeaponBehavior,WeaponImpleme
 export class WeaponCombat {
   readonly effects:WeaponEffect[]=[];
   private projectiles:Projectile[]=[];
+  private readonly projectilePool=new ObjectPool<Projectile>({capacity:64,maxRetained:64,
+    create:()=>({effect:null,definition:null,damage:0,direction:[0,0,0],age:0,travel:0,velocityY:0}),
+    onRelease:p=>{p.effect=null;p.definition=null;p.direction.fill(0);p.damage=0;p.age=0;p.travel=0;p.velocityY=0;},
+  });
+  projectilePoolStats(){return this.projectilePool.getStats();}
   private statuses=new Map<number,Status>();
   private sequence=0;
   private now=0;
@@ -91,28 +97,34 @@ export class WeaponCombat {
   }
   launch(c:FireContext):void {
     if(this.projectiles.length>=64)throw new Error('Projectile pool capacity exceeded');
+    // 先完成可能失败的外部数据复制，失败时不占用租约或发布半发射特效。
+    const definition=structuredClone(c.weapon);
     const end:WeaponPoint=[c.from[0]+c.direction[0]*c.weapon.rangeM,c.from[1],c.from[2]+c.direction[2]*c.weapon.rangeM];
     const effect=this.effect(c.weapon,'projectile',c.from,end,c.tick,c.weapon.projectile.lifetimeSec,c.weapon.projectile.radiusM,false);
-    this.projectiles.push({effect,definition:structuredClone(c.weapon),damage:c.damage,direction:[...c.direction],age:0,travel:0,velocityY:c.weapon.projectile.launchSpeedY+c.direction[1]*c.weapon.projectile.speedMps});
+    const p=this.projectilePool.acquire();
+    p.effect=effect;p.definition=definition;p.damage=c.damage;
+    p.direction[0]=c.direction[0];p.direction[1]=c.direction[1];p.direction[2]=c.direction[2];
+    p.age=0;p.travel=0;p.velocityY=c.weapon.projectile.launchSpeedY+c.direction[1]*c.weapon.projectile.speedMps;
+    this.projectiles.push(p);
   }
   slow(id:number,generation:number):number {const s=this.statuses.get(id);return s?.generation===generation && s.slowUntil>this.now?1-s.slow:1;}
   step(tick:number,dt:number,world:WeaponWorld):void {
     this.now+=dt;
     for(let i=this.effects.length-1;i>=0;i--){const e=this.effects[i]!;if(e.kind!=='projectile' && (tick-e.tick)*dt>=e.duration)this.effects.splice(i,1);}
     for(let i=this.projectiles.length-1;i>=0;i--){
-      const p=this.projectiles[i]!,w=p.definition,from=p.effect.position,step=Math.min(w.projectile.speedMps*dt,Math.max(0,w.rangeM-p.travel));p.age+=dt;p.travel+=step;p.velocityY-=w.projectile.gravity*dt;
+      const p=this.projectiles[i]!,w=p.definition!,from=p.effect!.position,step=Math.min(w.projectile.speedMps*dt,Math.max(0,w.rangeM-p.travel));p.age+=dt;p.travel+=step;p.velocityY-=w.projectile.gravity*dt;
       const next:WeaponPoint=[from[0]+p.direction[0]*step,from[1]+p.velocityY*dt,from[2]+p.direction[2]*step];
       const length=Math.hypot(next[0]-from[0],next[1]-from[1],next[2]-from[2]);const direction:WeaponPoint=length>0?[(next[0]-from[0])/length,(next[1]-from[1])/length,(next[2]-from[2])/length]:[1,0,0];
-      const hit=world.trace(from,direction,length,new Set(),w.projectile.radiusM);p.effect.position=hit.point;
+      const hit=world.trace(from,direction,length,new Set(),w.projectile.radiusM);p.effect!.position=hit.point;
       const impact=!!hit.actor || hit.distance<length-1e-6 || next[1]<=.05 || p.travel>=w.rangeM || p.age>=w.projectile.lifetimeSec;
       if(impact){
         const groundT=next[1]<=.05 && from[1]>.05?(from[1]-.05)/(from[1]-next[1])*length:Infinity;
-        p.effect.position=groundT<hit.distance?[from[0]+direction[0]*groundT,.05,from[2]+direction[2]*groundT]:hit.point;
-        if(!hit.actor && hit.distance<length-1e-6)p.effect.position=[p.effect.position[0]-direction[0]*.01,p.effect.position[1]-direction[1]*.01,p.effect.position[2]-direction[2]*.01];
-        if(w.effects.blastRadiusM>0)this.explode(w,p.effect.position,p.damage,tick,world);
+        p.effect!.position=groundT<hit.distance?[from[0]+direction[0]*groundT,.05,from[2]+direction[2]*groundT]:hit.point;
+        if(!hit.actor && hit.distance<length-1e-6)p.effect!.position=[p.effect!.position[0]-direction[0]*.01,p.effect!.position[1]-direction[1]*.01,p.effect!.position[2]-direction[2]*.01];
+        if(w.effects.blastRadiusM>0)this.explode(w,p.effect!.position,p.damage,tick,world);
         else if(hit.actor)this.impact(w,hit.actor,p.damage,tick,world,from);
         else if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
-        this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect),1);
+        this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect!),1);this.projectilePool.release(p);
       }
     }
     for(const [id,s] of this.statuses){
@@ -124,5 +136,5 @@ export class WeaponCombat {
   }
   get burning():ReadonlyArray<{id:number;generation:number;until:number}> {return [...this.statuses.values()].filter(s=>s.until>this.now && s.damage>0);}
   get pendingProjectiles():number{return this.projectiles.length;}
-  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();}
+  clear():void {this.effects.length=0;for(const p of this.projectiles)this.projectilePool.release(p);this.projectiles.length=0;this.statuses.clear();}
 }

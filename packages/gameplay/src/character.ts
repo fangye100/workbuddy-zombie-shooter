@@ -1,3 +1,4 @@
+import { ObjectPool, PoolOwnershipError } from '@aether/core';
 /**
  * 角色层：CharacterDef（数据驱动原型） + CharacterTable（SoA） + 池化与分帧装配 + 表现 LOD。
  *
@@ -132,11 +133,14 @@ export class CharacterTable {
   /** 攻击 CD 到点时刻（秒，按会话时钟 = tick×fixedStep；docs/23 §2.1 复用裁决） */
   readonly cooldownUntil: Float32Array;
 
+  private readonly allocated: Uint8Array;
   private readonly freeList: Int32Array;
   private freeTop: number;
   private live = 0;
+  private retirements = 0;
 
   constructor(readonly capacity: number) {
+    this.allocated = new Uint8Array(capacity);
     this.generation = new Uint32Array(capacity);
     this.alive = new Uint8Array(capacity);
     this.defId = new Uint16Array(capacity);
@@ -185,6 +189,10 @@ export class CharacterTable {
     return this.alive[i] === 1;
   }
 
+  isAllocated(i: number): boolean { return Number.isInteger(i) && this.allocated[i] === 1; }
+  /** 分配权失效时递增；借还休眠不变，池无需每次借出都扫描全部句柄。 */
+  get retirementVersion(): number { return this.retirements; }
+
   /**
    * 槽位从 freelist 分配，**不做 swap-remove** —— 索引必须稳定，
    * 因为黑板、攻击名额、仇恨目标都在按索引引用实体。
@@ -205,6 +213,7 @@ export class CharacterTable {
   private alloc(defId: number): number {
     if (this.freeTop === 0) return -1;
     const i = this.freeList[--this.freeTop]!;
+    this.allocated[i] = 1;
     this.defId[i] = defId;
     this.generation[i] = this.generation[i]! + 1;
     // 战斗列归零（血量由 spawn 路径按 stats.hp 写真值；置 1 的旧占位会掩盖漏初始化）
@@ -229,6 +238,7 @@ export class CharacterTable {
 
   /** 池化复用：休眠 → 活跃 */
   activate(i: number): boolean {
+    if (!this.isAllocated(i)) throw new RangeError('CharacterTable slot is not allocated');
     if (this.alive[i] === 1) return false;
     this.alive[i] = 1;
     this.live++;
@@ -244,10 +254,12 @@ export class CharacterTable {
 
   /** 彻底销毁，槽位回到 freelist */
   destroy(i: number): void {
-    if (this.alive[i] === 0) return;
+    if (!this.isAllocated(i)) return;
+    if (this.alive[i] === 1) this.live--;
     this.reset(i);
+    this.allocated[i] = 0;
     this.freeList[this.freeTop++] = i;
-    this.live--;
+    this.retirements++;
   }
 
   private reset(i: number): void {
@@ -308,53 +320,62 @@ function hash01(i: number): number {
 // 池化
 // ---------------------------------------------------------------------------
 
+/** 按原型分桶；通用池拥有槽位借用，CharacterTable 保持 SoA/稳定 index。 */
 export class CharacterPool {
-  private readonly free = new Map<number, number[]>();
+  private readonly buckets = new Map<number, ObjectPool<number>>();
+  private readonly owners = new Map<number, {pool:ObjectPool<number>;generation:number;defId:number}>();
+  private readonly cachedDefs = new Set<number>();
+  private disposed = false;
+  private tableRetirement: number;
+  constructor(private readonly table: CharacterTable) {this.tableRetirement=table.retirementVersion;}
 
-  constructor(private readonly table: CharacterTable) {}
-
+  private retireInvalid(): void {
+    if(this.tableRetirement===this.table.retirementVersion)return;
+    for(const [index,owner] of this.owners)if(!this.table.isAllocated(index)||this.table.generation[index]!==owner.generation||this.table.defId[index]!==owner.defId)
+      owner.pool.invalidate(index);
+    this.tableRetirement=this.table.retirementVersion;
+  }
+  private bucket(defId: number): ObjectPool<number> {
+    if (this.disposed) throw new Error('CharacterPool disposed');
+    if (!Number.isInteger(defId) || defId < 0 || defId > 65535) throw new RangeError('CharacterPool defId invalid');
+    // 在进入任何底层池的生命周期前退休失效代次，避免factory中递归操作同一池。
+    this.retireInvalid();
+    let pool = this.buckets.get(defId);
+    if (!pool) {
+      const generations=new Map<number,number>();
+      const ownsSlot = (index: number) => this.table.isAllocated(index) && this.table.defId[index] === defId && this.table.generation[index] === generations.get(index);
+      pool = new ObjectPool<number>({capacity:this.table.capacity,maxRetained:this.table.capacity,
+        create: () => {
+          const index=this.table.spawnDormant(defId);if(index<0)return null;
+          this.owners.set(index,{pool:pool!,generation:this.table.generation[index]!,defId});generations.set(index,this.table.generation[index]!);return index;
+        },
+        onAcquire: index => { if(!ownsSlot(index)||!this.table.activate(index))throw new PoolOwnershipError('CharacterPool table ownership changed'); },
+        onRelease: index => {if(!ownsSlot(index))throw new PoolOwnershipError('CharacterPool table ownership changed');this.table.deactivate(index);this.cachedDefs.add(defId);},
+        onDestroy: index => {if(ownsSlot(index))this.table.destroy(index);if(this.owners.get(index)?.pool===pool)this.owners.delete(index);generations.delete(index);},
+      });
+      this.buckets.set(defId,pool);
+    }
+    return pool;
+  }
+  /** 旧接口为新增预热数量，而通用池接口为目标闲置数量。 */
   prewarm(defId: number, count: number): number {
-    let made = 0;
-    for (let n = 0; n < count; n++) {
-      const i = this.table.spawnDormant(defId);
-      if (i < 0) break;
-      this.push(defId, i);
-      made++;
-    }
-    return made;
+    if(!Number.isSafeInteger(count)||count<0)throw new RangeError('CharacterPool prewarm count invalid');
+    const pool=this.bucket(defId),before=pool.getStats().inactive;
+    const made=pool.prewarm(Math.min(this.table.capacity,before+count))-before;
+    if(made>0)this.cachedDefs.add(defId);return made;
   }
-
-  acquire(defId: number): number {
-    const bucket = this.free.get(defId);
-    if (bucket !== undefined && bucket.length > 0) {
-      const i = bucket.pop()!;
-      this.table.activate(i);
-      return i;
-    }
-    return this.table.spawn(defId);
-  }
-
-  /** 归还到池：槽位休眠但保留，下次 acquire 零成本复用 */
+  acquire(defId: number): number {return this.bucket(defId).tryAcquire()??-1;}
   release(index: number): void {
-    const defId = this.table.defId[index]!;
-    this.table.deactivate(index);
-    this.push(defId, index);
+    const owner=this.owners.get(index);
+    if(!owner)throw new PoolOwnershipError('CharacterPool foreign slot');
+    owner.pool.release(index);
   }
-
-  private push(defId: number, index: number): void {
-    let bucket = this.free.get(defId);
-    if (bucket === undefined) {
-      bucket = [];
-      this.free.set(defId, bucket);
-    }
-    bucket.push(index);
+  stats(): {readonly defs: number;readonly pooled: number} {
+    let pooled=0;for(const pool of this.buckets.values())pooled+=pool.getStats().inactive;
+    return {defs:this.cachedDefs.size,pooled};
   }
-
-  stats(): { readonly defs: number; readonly pooled: number } {
-    let pooled = 0;
-    for (const bucket of this.free.values()) pooled += bucket.length;
-    return { defs: this.free.size, pooled };
-  }
+  clear(): void {for(const pool of this.buckets.values())pool.clear();}
+  dispose(): void {this.disposed=true;for(const pool of this.buckets.values())pool.dispose();}
 }
 
 // ---------------------------------------------------------------------------
@@ -375,6 +396,9 @@ interface AssemblyRequest {
  */
 export class AssemblyQueue {
   private readonly pending: AssemblyRequest[] = [];
+  private readonly requests = new ObjectPool<AssemblyRequest>({
+    create: () => ({defId:0,x:0,z:0,priority:0,seq:0}), maxRetained:256,
+  });
   private seq = 0;
 
   constructor(
@@ -384,14 +408,14 @@ export class AssemblyQueue {
 
   request(defId: number, x: number, z: number, cameraX: number, cameraZ: number, typeWeight: number): void {
     const d = Math.hypot(x - cameraX, z - cameraZ);
-    this.pending.push({
-      defId,
-      x,
-      z,
-      priority: (typeWeight * 100) / (1 + d),
-      seq: this.seq++,
-    });
+    const req=this.requests.acquire();
+    req.defId=defId;req.x=x;req.z=z;req.priority=(typeWeight*100)/(1+d);req.seq=this.seq++;
+    this.pending.push(req);
   }
+
+  poolStats() {return this.requests.getStats();}
+
+  clear(): void {for(const req of this.pending)this.requests.release(req);this.pending.length=0;}
 
   get pendingCount(): number {
     return this.pending.length;
@@ -405,14 +429,19 @@ export class AssemblyQueue {
     let done = 0;
     while (done < budget && this.pending.length > 0) {
       const req = this.pending.pop()!;
-      const index = this.pool.acquire(req.defId);
-      if (index < 0) {
-        // 池与表都满了：退回队列，等有实体回收再装
-        this.pending.push(req);
-        break;
+      let requeued=false;
+      try {
+        const index = this.pool.acquire(req.defId);
+        if (index < 0) {
+          // 池与表都满了：退回队列，等有实体回收再装
+          this.pending.push(req);requeued=true;
+          break;
+        }
+        this.onAssembled(index, req.defId);
+        done++;
+      } finally {
+        if(!requeued)this.requests.release(req);
       }
-      this.onAssembled(index, req.defId);
-      done++;
     }
     return done;
   }

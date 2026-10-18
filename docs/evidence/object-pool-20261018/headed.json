@@ -1,0 +1,478 @@
+{
+  "date": "2026-10-18",
+  "scope": "core pool adapters; headed hardware, UI lifecycle and real Game Editor MCP decal A/B",
+  "hardware": {
+    "secure": true,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "device": "",
+      "description": ""
+    },
+    "canvas": {
+      "w": 942,
+      "h": 560
+    },
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:32:46.405Z"
+    }
+  },
+  "before": {
+    "state": "stopped",
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:32:46.405Z"
+    },
+    "objects": 57
+  },
+  "play": {
+    "state": "paused",
+    "tick": 178,
+    "npcs": 24,
+    "weapons": {
+      "pending": 0,
+      "loaded": [
+        "chainsaw",
+        "pistol",
+        "flame",
+        "smg",
+        "sniper",
+        "launcher",
+        "shotgun"
+      ],
+      "generation": 1,
+      "simulationTick": 178,
+      "pose": {
+        "weaponId": "pistol",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0.11000000000000004,
+              0.03,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.23000000000000004,
+              0.03,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.5900000000000001,
+              0.497,
+              0.0799999999999999
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.14600000000000002,
+              -0.06999999999999998,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.2,
+              0.07,
+              -1.3877787807814457e-17
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1.0000000000000002
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "visible": true,
+      "weaponId": "pistol",
+      "frameStamp": 977,
+      "muzzle": {
+        "position": [
+          3.237790584564209,
+          1.3966439962387085,
+          -0.5709640979766846
+        ],
+        "rotation": [
+          -1.8033362916423683e-8,
+          0.6087614056349344,
+          3.964791636219591e-9,
+          0.7933533582265713
+        ]
+      },
+      "diagnostics": [],
+      "visibleDrawCount": 2,
+      "warnings": [],
+      "ikDiagnostics": [
+        {
+          "controlId": "head",
+          "code": "IK_AIM_LIMIT",
+          "message": "Aim angle clamped to authored limit"
+        }
+      ],
+      "measurements": {
+        "rightTargetResidualM": 1.1342208569984576e-7,
+        "rightOrientationResidualRad": 2.9802322387695312e-8,
+        "leftTargetResidualM": 7.477963766657159e-8,
+        "leftOrientationResidualRad": 1.032382731180714e-7,
+        "muzzleYawErrorRad": 3.574553852914164e-8,
+        "modelMuzzleToSimulationMountM": 0.7932210425131646,
+        "lastShotOriginTick": null,
+        "sameTickShotOriginResidualM": null
+      },
+      "attachmentDraws": [
+        {
+          "id": "magazine",
+          "guid": "as_30abf3e8f08f",
+          "removed": false,
+          "frameStamp": 977,
+          "worldMatrix": [
+            -0.9659258127212524,
+            -3.344088383983035e-8,
+            -0.2588191032409668,
+            0,
+            -2.8246990524394278e-8,
+            1,
+            -2.378643237932465e-8,
+            0,
+            0.2588191032409668,
+            -1.566506746542018e-8,
+            -0.9659258127212524,
+            0,
+            3.175156354904175,
+            1.2366440296173096,
+            -0.3372100293636322,
+            1
+          ],
+          "worldCorners": [
+            [
+              3.1939154431681454,
+              1.2366440305209756,
+              -0.321496110618525
+            ],
+            [
+              3.1510535480384947,
+              1.236644029037073,
+              -0.3329809235457326
+            ],
+            [
+              3.193915440081382,
+              1.345921629080832,
+              -0.3214961132178492
+            ],
+            [
+              3.1510535449517314,
+              1.3459216275969295,
+              -0.3329809261450568
+            ],
+            [
+              3.199259161769855,
+              1.236644030197546,
+              -0.3414391351815318
+            ],
+            [
+              3.1563972666402043,
+              1.2366440287136435,
+              -0.3529239481087394
+            ],
+            [
+              3.1992591586830916,
+              1.3459216287574025,
+              -0.341439137780856
+            ],
+            [
+              3.156397263553441,
+              1.3459216272735,
+              -0.3529239507080636
+            ]
+          ]
+        }
+      ]
+    },
+    "ledger": {
+      "registered": 96,
+      "disposed": 0,
+      "pending": 96
+    },
+    "diagnostics": []
+  },
+  "direct": {
+    "time": 5.933333333333334,
+    "count": 1,
+    "capacity": 256,
+    "evicted": 0,
+    "marks": [
+      {
+        "receiver": "nd_f1r0",
+        "mark": {
+          "id": "pool-regression",
+          "pattern": "scorch",
+          "position": [
+            0,
+            0.01,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "size": [
+            2,
+            2
+          ],
+          "color": "#cc3322",
+          "opacity": 0.9,
+          "seed": 13,
+          "normalOffset": 0.002,
+          "priority": 0
+        },
+        "remainingSec": 2
+      }
+    ],
+    "runId": 1,
+    "combat": {
+      "emitted": 0,
+      "noSurface": 0,
+      "throttled": 0,
+      "expired": 0,
+      "budgetDropped": 0,
+      "ruleEvicted": 0,
+      "journalDropped": 0,
+      "unknownRules": 0,
+      "cursor": 0
+    },
+    "pool": {
+      "allocatedSlots": 256,
+      "emitted": 1,
+      "reusedSlots": 0,
+      "active": 1,
+      "free": 255
+    },
+    "gpu": {
+      "backend": "direct",
+      "instances": 33,
+      "inputInstances": 33,
+      "submittedInstances": 33,
+      "visibleInstances": null,
+      "sequence": 1024,
+      "drawCalls": 1,
+      "bufferBytes": 4096,
+      "uploadedBytes": 2640,
+      "computeDispatches": 0
+    }
+  },
+  "indirect": {
+    "time": 5.933333333333334,
+    "count": 1,
+    "capacity": 256,
+    "evicted": 0,
+    "marks": [
+      {
+        "receiver": "nd_f1r0",
+        "mark": {
+          "id": "pool-regression",
+          "pattern": "scorch",
+          "position": [
+            0,
+            0.01,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "size": [
+            2,
+            2
+          ],
+          "color": "#cc3322",
+          "opacity": 0.9,
+          "seed": 13,
+          "normalOffset": 0.002,
+          "priority": 0
+        },
+        "remainingSec": 2
+      }
+    ],
+    "runId": 1,
+    "combat": {
+      "emitted": 0,
+      "noSurface": 0,
+      "throttled": 0,
+      "expired": 0,
+      "budgetDropped": 0,
+      "ruleEvicted": 0,
+      "journalDropped": 0,
+      "unknownRules": 0,
+      "cursor": 0
+    },
+    "pool": {
+      "allocatedSlots": 256,
+      "emitted": 1,
+      "reusedSlots": 0,
+      "active": 1,
+      "free": 255
+    },
+    "gpu": {
+      "backend": "indirect",
+      "instances": 33,
+      "inputInstances": 33,
+      "submittedInstances": null,
+      "visibleInstances": null,
+      "sequence": 1152,
+      "drawCalls": 1,
+      "bufferBytes": 8224,
+      "uploadedBytes": 2656,
+      "computeDispatches": 1
+    }
+  },
+  "indirectReadback": {
+    "sequence": 1151,
+    "inputInstances": 33,
+    "drawnInstances": 14,
+    "visibleInstances": 14,
+    "countSource": "gpu-frustum"
+  },
+  "shot": {
+    "tick": 178,
+    "from": [
+      3.548305857997285,
+      1.397,
+      -0.23207905137228846
+    ],
+    "to": [
+      4.555694294962766,
+      1.397,
+      -0.829345324591428
+    ],
+    "hit": true
+  },
+  "reset": {
+    "tick": 0,
+    "state": "paused"
+  },
+  "projectileShots": {
+    "first": {
+      "active": 1,
+      "inactive": 0,
+      "total": 1,
+      "capacity": 64,
+      "maxRetained": 64,
+      "disposed": false,
+      "created": 1,
+      "destroyed": 0,
+      "acquired": 1,
+      "reused": 0,
+      "highWater": 1
+    },
+    "second": {
+      "active": 1,
+      "inactive": 0,
+      "total": 1,
+      "capacity": 64,
+      "maxRetained": 64,
+      "disposed": false,
+      "created": 1,
+      "destroyed": 0,
+      "acquired": 2,
+      "reused": 1,
+      "highWater": 1
+    }
+  },
+  "projectilePool": {
+    "active": 1,
+    "inactive": 0,
+    "total": 1,
+    "capacity": 64,
+    "maxRetained": 64,
+    "disposed": false,
+    "created": 1,
+    "destroyed": 0,
+    "acquired": 2,
+    "reused": 1,
+    "highWater": 1
+  },
+  "stop": {
+    "state": "stopped",
+    "ledger": {
+      "registered": 96,
+      "disposed": 96,
+      "pending": 0
+    },
+    "decals": {
+      "backend": "indirect",
+      "instances": 33,
+      "inputInstances": 33,
+      "submittedInstances": null,
+      "visibleInstances": null,
+      "sequence": 1311,
+      "drawCalls": 1,
+      "bufferBytes": 8224,
+      "uploadedBytes": 2656,
+      "computeDispatches": 1
+    },
+    "source": {
+      "url": "/assets/scenes/act1/floor-1.scene.json",
+      "objects": 57,
+      "at": "2026-10-18T03:32:46.405Z"
+    },
+    "objects": 57
+  },
+  "errors": [],
+  "exceptions": [],
+  "pass": true
+}

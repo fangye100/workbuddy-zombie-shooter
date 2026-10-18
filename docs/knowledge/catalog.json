@@ -2916,6 +2916,65 @@
         "project-rules",
         "scene-schema"
       ]
+    },
+    {
+      "id": "core-object-pool",
+      "path": "packages/core/src/object-pool.ts",
+      "title": "引擎通用同步对象池",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "pool",
+        "core",
+        "lifecycle",
+        "architecture"
+      ],
+      "read": "IObjectPool、容量、预热、异常、归还与退休真源",
+      "sourceRefs": [
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "object-pool-guide",
+      "path": "docs/architecture/object-pool.md",
+      "title": "通用对象池与模块适配契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "pool",
+        "core",
+        "lifecycle",
+        "render",
+        "weapon",
+        "architecture"
+      ],
+      "read": "API失败行为、各模块owner、复用与代次边界、回归命令及实际限制",
+      "sourceRefs": [
+        "core-object-pool",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "object-pool-acceptance-20261018",
+      "path": "docs/evidence/object-pool-20261018/acceptance.md",
+      "title": "通用对象池实际回归与GPU验收记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "pool",
+        "core",
+        "render",
+        "weapon",
+        "verification"
+      ],
+      "read": "1843项测试、基线差分、实际MCP/GPU路径、独立审核及CPU成本限制",
+      "sourceRefs": [
+        "core-object-pool",
+        "architecture-policy"
+      ]
     }
   ]
 }
