@@ -77,6 +77,24 @@
           "spotAngle": 0,
           "castShadow": false,
           "priority": 100
+        },
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              2,
+              0,
+              0
+            ],
+            "size": [
+              22,
+              4,
+              16
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
         }
       ]
     },

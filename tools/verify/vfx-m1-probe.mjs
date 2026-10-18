@@ -28,6 +28,7 @@ const input=async(label,value)=>cdp.eval(`(()=>{const e=document.querySelector('
 try{
  await cdp.send('Page.navigate',{url:`${url}?scene=${encodeURIComponent(fixture)}`});
  check('场景副本和产品面板就绪',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1'`),{timeout:30000}));
+ await cdp.eval(`(()=>{localStorage.setItem('zh.ui.dockH','230');document.documentElement.style.setProperty('--dock-h','230px');document.getElementById('asset-dock')?.classList.add('collapsed');window.dispatchEvent(new Event('resize'));})()`);
  evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
  check('secure context + 硬件adapter',evidence.gpu.secure && evidence.gpu.info && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)),JSON.stringify(evidence.gpu));
  await click('.insp-tab[data-tab="scene"]');await button('打开 VFX 资源');

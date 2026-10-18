@@ -18,6 +18,12 @@ export async function readVfxTexture(ref:AssetRef):Promise<ImageBitmap> {
   if(!meta.ok || m.guid!==ref.guid || m.kind!=='texture' || m.userData?.status==='quarantined')throw new Error(`VFX 贴图身份/状态非法：${ref.path}`);
   const res=await fetch(fileUrl(ref.path));if(!res.ok)throw new Error(`VFX 贴图 HTTP ${res.status}`);
   const blob=await res.blob();
-  // SVG needs explicit raster dimensions; embedded intrinsic width/height are authored in the source.
+  if(ref.path.endsWith('.svg')){
+    const url=URL.createObjectURL(blob),image=new Image();
+    try{image.src=url;await image.decode();
+      if(!image.naturalWidth || !image.naturalHeight || image.naturalWidth>4096 || image.naturalHeight>4096)throw new Error('VFX SVG 尺寸超限');
+      const canvas=new OffscreenCanvas(image.naturalWidth,image.naturalHeight),context=canvas.getContext('2d');if(!context)throw new Error('无法栅格化 VFX SVG');context.drawImage(image,0,0);return canvas.transferToImageBitmap();
+    }finally{URL.revokeObjectURL(url);}
+  }
   return createImageBitmap(blob,{premultiplyAlpha:'none',colorSpaceConversion:'none'});
 }
