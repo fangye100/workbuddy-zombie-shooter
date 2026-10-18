@@ -501,20 +501,6 @@
           "layer": 0,
           "importScale": 1,
           "editorOnly": false
-        },
-        {
-          "kind": "Collider",
-          "enabled": true,
-          "isTrigger": false,
-          "layer": 0,
-          "shape": {
-            "type": "box",
-            "halfExtents": [
-              11,
-              0.15,
-              8
-            ]
-          }
         }
       ],
       "prefab": null,
