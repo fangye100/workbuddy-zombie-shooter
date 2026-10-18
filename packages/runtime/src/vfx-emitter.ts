@@ -4,13 +4,14 @@ import {VfxPool,type VfxPoint,type VfxRequest} from './vfx';
 interface State {key:string;epoch:number;serial:number;fraction:number;tick:number;playing:boolean;position:VfxPoint}
 export interface VfxAnchor {position:VfxPoint;direction?:VfxPoint;normal?:VfxPoint}
 export class VfxEmitters {
+ private epoch=0;
  private readonly states=new Map<string,State>();
  readonly stats={emitted:0,dropped:0,handleOverflow:0,tickOverflow:0,started:0,stopped:0,restarted:0};
  constructor(readonly pool:VfxPool,readonly capacity=32){}
  update(key:string,effect:VfxEffectDefinition,anchor:VfxAnchor,tick:number,step:number,seed:number,priority=1,nowTick=tick):boolean {
   if(!Number.isInteger(tick) || !Number.isFinite(step) || step<=0)throw new Error('VFX emitter clock');
   let s=this.states.get(key);if(!s){if(this.states.size>=this.capacity){const idle=[...this.states.values()].find(x=>!x.playing);if(idle)this.states.delete(idle.key);else{this.stats.handleOverflow++;return false;}}s={key,epoch:0,serial:0,fraction:0,tick:tick-1,playing:false,position:anchor.position};this.states.set(key,s);}
-  if(!s.playing){if(s.epoch)this.stats.restarted++;s.epoch++;s.serial=0;s.fraction=0;s.tick=tick-1;s.position=anchor.position;s.playing=true;this.stats.started++;}
+  if(!s.playing){if(s.epoch)this.stats.restarted++;s.epoch=++this.epoch;s.serial=0;s.fraction=0;s.tick=tick-1;s.position=anchor.position;s.playing=true;this.stats.started++;}
   if(tick<s.tick)throw new Error('VFX emitter tick reversed');
   const emission=effect.emission??{rate:30,maxParticles:32,speed:0,spreadDeg:0},begin=s.tick+1,span=tick-s.tick;
   let success=true;

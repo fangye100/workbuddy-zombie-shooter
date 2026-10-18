@@ -13,6 +13,7 @@ export class WeaponVfxPlanner {
   readonly pool=new VfxPool(256);
   private run=-1;
   private tick=0;
+  frameEvents:readonly WeaponVfxEvent[]=[];
   readonly recentEvents:WeaponVfxEvent[]=[];
   /** Only fully resolved weapon resources enter this map; missing keys keep Canvas fallback. */
   readonly ready=new Map<string,VfxAsset>();
@@ -21,7 +22,8 @@ export class WeaponVfxPlanner {
     if(this.run!==runtime.runId){this.pool.clear();this.recentEvents.length=0;this.fallbackWeapons.clear();this.fallbackUntil.clear();this.run=runtime.runId;this.tick=runtime.tick;}
     this.pool.advance(Math.max(0,runtime.tick-this.tick)*runtime.fixedStep);this.tick=runtime.tick;
     for(const [id,until] of this.fallbackUntil)if(runtime.tick>=until){this.fallbackUntil.delete(id);this.fallbackWeapons.delete(id);}
-    for(const event of runtime.weaponCombat.drainVfxEvents()){
+    this.frameEvents=runtime.weaponCombat.drainVfxEvents();
+    for(const event of this.frameEvents){
       this.recentEvents.push(event);if(this.recentEvents.length>32)this.recentEvents.shift();
       const weapon=runtime.weapons.definitions.find(w=>w.id===event.weaponId),asset=this.ready.get(event.weaponId);if(!weapon || !asset)continue;
       const play=(kind:'muzzle'|'trail'|'impact')=>{
@@ -42,5 +44,5 @@ export class WeaponVfxPlanner {
     for(const p of this.pool.active)if(p.effect.kind==='muzzle')p.position=weaponMarkerWorld(runtime,'muzzle');
   }
   usable(w:WeaponDefinition):boolean{return this.ready.has(w.id);}
-  clear():void{this.pool.clear();this.ready.clear();this.recentEvents.length=0;this.fallbackWeapons.clear();this.fallbackUntil.clear();this.run=-1;}
+  clear():void{this.pool.clear();this.ready.clear();this.recentEvents.length=0;this.frameEvents=[];this.fallbackWeapons.clear();this.fallbackUntil.clear();this.run=-1;}
 }

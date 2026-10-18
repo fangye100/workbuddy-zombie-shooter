@@ -10,6 +10,7 @@ export const ENEMY_VFX_SLOTS=[
 export class EnemyVfxPlanner {
  readonly bindings=new Map<string,VfxEffectDefinition>();
  readonly rendered=new Set<number>();
+ frameEvents:readonly EnemyAttackEvent[]=[];
  readonly recentEvents:EnemyAttackEvent[]=[];
  readonly stats={fallback:0,eventDrops:0};
  private run=-1;private handles=new Set<string>();
@@ -25,7 +26,8 @@ export class EnemyVfxPlanner {
   if(this.run!==runtime.runId){for(const key of this.handles)this.pool.stop(key);this.handles.clear();this.recentEvents.length=0;this.run=runtime.runId;}
   this.rendered.clear();this.stats.fallback=0;this.stats.eventDrops=runtime.enemyAttacks.droppedEvents;
   const tick=Math.max(0,runtime.tick-1),step=runtime.fixedStep;
-  for(const event of runtime.enemyAttacks.drainEvents()){
+  this.frameEvents=runtime.enemyAttacks.drainEvents();
+  for(const event of this.frameEvents){
    this.recentEvents.push(event);if(this.recentEvents.length>32)this.recentEvents.shift();const e=event.effect;
    const tag=event.type==='impact'?e.kind==='acid'?e.blocked?'enemy.acid.blocked':'enemy.acid.land':e.kind==='explode'?'enemy.explode':e.kind==='pounce'?'enemy.pounce.impact':null:event.type==='end' && e.surface && (e.kind==='pounce' || e.kind==='explode' || e.kind==='acid' && e.phase==='pool')?'enemy.mark':null;
    if(!tag)continue;const request=this.request(e,tag,this.key(e,tag));if(!request)continue;
@@ -48,5 +50,5 @@ export class EnemyVfxPlanner {
   }
   for(const key of this.handles)if(!next.has(key))this.pool.stop(key);this.handles=next;
  }
- clear():void{for(const key of this.handles)this.pool.stop(key);this.handles.clear();this.bindings.clear();this.rendered.clear();this.recentEvents.length=0;this.run=-1;this.stats.fallback=this.stats.eventDrops=0;}
+ clear():void{for(const key of this.handles)this.pool.stop(key);this.handles.clear();this.bindings.clear();this.rendered.clear();this.recentEvents.length=0;this.frameEvents=[];this.run=-1;this.stats.fallback=this.stats.eventDrops=0;}
 }

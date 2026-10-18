@@ -38,7 +38,7 @@ export function validVfxCurve(value:unknown,kind:'size'|'color'|'alpha'):boolean
 export interface VfxEmitterComponent {kind:'VfxEmitter';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;seed:number;playing:boolean;direction:[number,number,number]}
 export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
  if(!value || typeof value!=='object')return false;const c=value as VfxEmitterComponent;
- return c.kind==='VfxEmitter' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Number.isInteger(c.seed) && c.seed>=0 && c.seed<=4294967295 && Array.isArray(c.direction) && c.direction.length===3 && c.direction.every(n=>Number.isFinite(n)) && Math.hypot(...c.direction)>.0001;
+ return c.kind==='VfxEmitter' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && typeof c.effectKey==='string' && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Number.isInteger(c.seed) && c.seed>=0 && c.seed<=4294967295 && Array.isArray(c.direction) && c.direction.length===3 && c.direction.every(n=>Number.isFinite(n)) && Math.hypot(...c.direction)>.0001;
 }
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];

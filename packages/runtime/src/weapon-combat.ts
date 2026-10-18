@@ -54,6 +54,9 @@ export const WEAPON_IMPLEMENTATIONS:Readonly<Record<WeaponBehavior,WeaponImpleme
 
 export class WeaponCombat {
   readonly effects:WeaponEffect[]=[];
+  private presentationEvents:Readonly<WeaponEffect>[]=[];
+  presentationDropped=0;
+  drainPresentationEvents():readonly Readonly<WeaponEffect>[] {const events=this.presentationEvents;this.presentationEvents=[];return events;}
   private projectiles:Projectile[]=[];
   private statuses=new Map<number,Status>();
   private sequence=0;
@@ -80,7 +83,7 @@ export class WeaponCombat {
   drainVfxEvents():readonly WeaponVfxEvent[] {const events=this.vfxEvents;this.vfxEvents=[];return events;}
   effect(w:WeaponDefinition,kind:WeaponEffect['kind'],from:WeaponPoint,to:WeaponPoint,tick:number,duration:number,radius:number,hit:boolean):WeaponEffect {
     const e:WeaponEffect={id:++this.sequence,tick,weaponId:w.id,kind,from:[...from],to:[...to],position:[...from],duration,radius,spreadDeg:w.spreadDeg,color:w.presentation.color,hit};
-    this.effects.push(e);return e;
+    this.effects.push(e);const snapshot=structuredClone(e);Object.freeze(snapshot.from);Object.freeze(snapshot.to);Object.freeze(snapshot.position);if(this.presentationEvents.length>=2048){this.presentationEvents.shift();this.presentationDropped++;}this.presentationEvents.push(Object.freeze(snapshot));return e;
   }
   impact(w:WeaponDefinition,actor:WeaponActor,damage:number,tick:number,world:WeaponWorld,origin:WeaponPoint):void {
     world.damage(actor.id,damage);
@@ -134,5 +137,5 @@ export class WeaponCombat {
   }
   get burning():ReadonlyArray<{id:number;generation:number;until:number}> {return [...this.statuses.values()].filter(s=>s.until>this.now && s.damage>0);}
   get pendingProjectiles():number{return this.projectiles.length;}
-  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();this.vfxEvents=[];this.vfxDropped=0;}
+  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();this.vfxEvents=[];this.vfxDropped=0;this.presentationEvents=[];this.presentationDropped=0;}
 }

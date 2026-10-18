@@ -11,7 +11,7 @@ export interface EnemyAttackEffect {
   hit: boolean; blocked: boolean; finished: boolean; flightSeconds: number;
   surface:{nodeId:string|null;normal:AttackPoint}|null;
 }
-export interface EnemyAttackEvent {readonly sequence:number;readonly runId:number;readonly tick:number;readonly type:'spawn'|'phase'|'impact'|'end';readonly effect:Readonly<EnemyAttackEffect>}
+export interface EnemyAttackEvent {readonly sequence:number;readonly runId:number;readonly tick:number;readonly type:'spawn'|'phase'|'impact'|'end'|'move';readonly effect:Readonly<EnemyAttackEffect>}
 interface Actor { x: number; z: number; radius: number; generation: number; hp: number }
 export interface EnemyAttackWorld {
   actor(slot: number): Actor | null;
@@ -103,6 +103,7 @@ export class EnemyAttacks {
         const destination = obstruction ?? next;
         e.position = world.move(e.source,destination[0],destination[2]);
         if (obstruction) e.blocked = true;
+        if(e.kind==='charge')this.emit('move',e,tick);
         if (!e.hit && !e.blocked && (e.kind === 'charge' || t === 1) && Math.hypot(player.x-e.position[0],player.z-e.position[2]) <= e.radius+player.radius) {
           world.damage(world.player,e.damage,e.source); e.hit = true;
         }

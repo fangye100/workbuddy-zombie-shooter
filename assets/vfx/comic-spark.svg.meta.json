@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_spark",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-spark.svg",
+    "status": "accepted",
+    "author": "项目原创M3漫画矢量纹理与发射资源"
+  },
+  "sourceHash": "sha256:a978dfeed42ba17c234149ea896d29bc47f436e8f7af2f23cda26b19d7e99fe4",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

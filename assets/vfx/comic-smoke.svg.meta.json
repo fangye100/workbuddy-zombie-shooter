@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_smoke",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-smoke.svg",
+    "status": "accepted",
+    "author": "项目原创M3漫画矢量纹理与发射资源"
+  },
+  "sourceHash": "sha256:0485ca6a3e5c98de42f63b28c3b05647410cc2f20a4a3288df8b1ff1acb5f3fb",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

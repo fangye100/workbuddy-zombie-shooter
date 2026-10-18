@@ -1,0 +1,307 @@
+{
+  "version": 3,
+  "id": "as_vfx_comic_motion",
+  "name": "漫画持续与动作特效",
+  "status": "accepted",
+  "effects": {
+    "flame": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-flame.svg",
+        "guid": "as_vfx_comic_flame"
+      },
+      "frames": 3,
+      "duration": 0.5,
+      "size": [
+        0.5,
+        0.65
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.35
+        },
+        {
+          "t": 0.5,
+          "value": 1.2
+        },
+        {
+          "t": 1,
+          "value": 0.8
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 60,
+        "maxParticles": 64,
+        "speed": 9,
+        "spreadDeg": 40
+      }
+    },
+    "smoke": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-smoke.svg",
+        "guid": "as_vfx_comic_smoke"
+      },
+      "frames": 3,
+      "duration": 1.1,
+      "size": [
+        0.6,
+        0.6
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.35
+        },
+        {
+          "t": 0.5,
+          "value": 1.2
+        },
+        {
+          "t": 1,
+          "value": 0.8
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 12,
+        "maxParticles": 64,
+        "speed": 0.9,
+        "spreadDeg": 0
+      }
+    },
+    "sparks": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-spark.svg",
+        "guid": "as_vfx_comic_spark"
+      },
+      "frames": 3,
+      "duration": 0.25,
+      "size": [
+        0.16,
+        0.16
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.35
+        },
+        {
+          "t": 0.5,
+          "value": 1.2
+        },
+        {
+          "t": 1,
+          "value": 0.8
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 120,
+        "maxParticles": 64,
+        "speed": 3,
+        "spreadDeg": 90
+      }
+    },
+    "charge-dust": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-dust.svg",
+        "guid": "as_vfx_comic_dust"
+      },
+      "frames": 3,
+      "duration": 0.4,
+      "size": [
+        0.65,
+        0.5
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.35
+        },
+        {
+          "t": 0.5,
+          "value": 1.2
+        },
+        {
+          "t": 1,
+          "value": 0.8
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 60,
+        "maxParticles": 64,
+        "speed": 0.2,
+        "spreadDeg": 0
+      }
+    },
+    "melee-arc": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-arc.svg",
+        "guid": "as_vfx_comic_arc"
+      },
+      "frames": 3,
+      "duration": 0.2,
+      "size": [
+        1,
+        1
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "surface",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.35
+        },
+        {
+          "t": 0.5,
+          "value": 1.2
+        },
+        {
+          "t": 1,
+          "value": 0.8
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ]
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import {sampleVfxVisual} from './vfx-visual';
 import type { VfxInstance } from '@aether/runtime';
 
 const SHADER = /* wgsl */ `
@@ -25,7 +26,6 @@ const sub=(a:V3,b:V3)=>[a[0]!-b[0]!,a[1]!-b[1]!,a[2]!-b[2]!];
 const cross=(a:V3,b:V3)=>[a[1]!*b[2]!-a[2]!*b[1]!,a[2]!*b[0]!-a[0]!*b[2]!,a[0]!*b[1]!-a[1]!*b[0]!];
 const unit=(v:V3)=>{const l=Math.hypot(...v);return l>1e-8?v.map(x=>x/l):[1,0,0];};
 const scale=(v:V3,n:number)=>v.map(x=>x*n);
-const linear=(n:number)=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4;
 
 /** Fixed-capacity instancing. Covered pixels attenuate existing outline mask by (1-alpha). */
 export class VfxPass {
@@ -63,23 +63,23 @@ export class VfxPass {
     if(this.disposed)return 0;
     // Far-to-near alpha. Preserve that order; batch only consecutive compatible items.
     const depthOf=(p:V3)=>view[2]!*p[0]!+view[6]!*p[1]!+view[10]!*p[2]!+view[14]!;
-    const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(a.position)-depthOf(b.position));
+    const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(a.position.map((v,i)=>v+(a.velocity?.[i]??0)*a.age))-depthOf(b.position.map((v,i)=>v+(b.velocity?.[i]??0)*b.age)));
     if(!items.length)return 0;
     const data=new Float32Array(items.length*20);
     for(let i=0;i<items.length;i++){
-      const p=items[i]!,e=p.effect,o=i*20;let position:V3=p.position;
+      const p=items[i]!,e=p.effect,o=i*20,visual=sampleVfxVisual(p);let position:V3=visual.position;
       const facing=unit(sub(eye,position));let right=unit(cross([0,1,0],facing)),up=unit(cross(facing,right));
       if(e.kind==='trail' && p.end){position=p.position.map((n,k)=>(n+p.end![k]!)/2);right=sub(p.end,p.position);up=scale(unit(cross(right,sub(eye,position))),e.size[1]);}
       else {
-        if(p.normal && e.orientation!=='camera'){const n=unit(p.normal);right=unit(cross(Math.abs(n[1]!)>.95?[1,0,0]:[0,1,0],n));up=unit(cross(n,right));position=position.map((v,k)=>v+n[k]!*.008);}
+        if(p.normal && e.orientation!=='camera'){const n=unit(p.normal);right=p.direction?unit(p.direction.map((v,k)=>v-n[k]!*p.direction!.reduce((s,x,j)=>s+x*n[j]!,0))):unit(cross(Math.abs(n[1]!)>.95?[1,0,0]:[0,1,0],n));up=unit(cross(n,right));position=position.map((v,k)=>v+n[k]!*.008);}
         else {const angle=(p.seed%6283)/1000,c=Math.cos(angle),s=Math.sin(angle),r=right;right=r.map((v,k)=>v*c+up[k]!*s);up=up.map((v,k)=>v*c-r[k]!*s);}
-        right=scale(right,e.size[0]);up=scale(up,e.size[1]);
+        right=scale(right,e.size[0]*visual.size);up=scale(up,e.size[1]*visual.size);
       }
-      const rgb=[1,3,5].map(k=>linear(parseInt(e.color.slice(k,k+2),16)/255));
+      const rgb=visual.color;
       const progress=e.loop?(p.age%e.duration)/e.duration:p.age/e.duration;
       const tex=this.textures.get(e.texture.guid)!,frame=Math.min(e.frames-1,Math.floor(progress*e.frames));
       const alpha=p.lifetime===undefined?Math.max(0,1-p.age/e.duration):Math.min(1,Math.max(0,(p.lifetime-p.age)/.15));
-      data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,alpha],o+12);
+      data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,alpha*visual.alpha],o+12);
       data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);
     }
     this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);this.device.queue.writeBuffer(this.buffer,0,data);

@@ -14,3 +14,7 @@ it('per-emitter/handle/shared budgets remain bounded and recover after stop/expi
  expect(e.update('y',effect,anchor,11,1/30,0)).toBe(false);expect(e.stats.handleOverflow).toBe(1);e.stop('x');p.advance(2);expect(e.update('y',effect,anchor,12,1/30,0)).toBe(true);expect(p.active).toHaveLength(1);
  expect(sampleVfxCurve([{t:0,value:0},{t:.5,value:2},{t:1,value:0}],.25)).toBe(1);
 });
+
+it('eviction then recreation of the same handle cannot collide with tail particles or bounded dedup history',()=>{
+ const p=new VfxPool(20),e=new VfxEmitters(p,1),a={position:[0,0,0] as const};e.update('x',effect,a,0,1/30,7);const first=p.active[0]!.key;e.stop('x');e.update('y',effect,a,1,1/30,7);e.stop('y');expect(e.update('x',effect,a,2,1/30,7)).toBe(true);expect(p.active).toHaveLength(3);expect(p.active[2]!.key).not.toBe(first);
+});
