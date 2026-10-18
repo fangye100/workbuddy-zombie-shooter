@@ -64,7 +64,7 @@ export class EnemyAttacks {
     if (kind === 'pounce' || kind === 'charge') e.duration += .25;
     this.emit('spawn',e,tick);
     if (kind === 'explode') {
-      e.finishTick=tick;e.surface={nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);
+      e.finishTick=tick;e.surface=world.surface?.([e.position[0],.2,e.position[2]],[e.position[0],-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);
       if (Math.hypot(player.x-actor.x, player.z-actor.z) <= radius + player.radius) world.damage(world.player, stats.damage, slot);
       world.damage(slot, actor.hp, slot); e.hit = true;
     }
@@ -107,7 +107,7 @@ export class EnemyAttacks {
           world.damage(world.player,e.damage,e.source); e.hit = true;
         }
         e.finished = t === 1 || e.blocked;
-        if(e.finished){e.finishTick=tick;e.surface=obstruction?world.surface?.([next[0],.7,next[2]],[e.position[0],.7,e.position[2]])??null:world.surface?.([e.position[0],.2,e.position[2]],[e.position[0],-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);}
+        if(e.finished){e.finishTick=tick;e.surface=world.surface?.([e.position[0],.2,e.position[2]],[e.position[0],-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);}
       }
     }
   }

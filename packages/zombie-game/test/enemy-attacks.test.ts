@@ -71,3 +71,11 @@ describe('authored enemy attack mechanics',()=>{
     f.attacks.lock(1,2,6,0);f.attacks.clear();expect(f.attacks.target(1,2)).toBeUndefined();
   });
 });
+
+it('blocked pounce uses actual moved landing and scene ground receiver; dead explosion retains scene surface',()=>{
+ const actor={x:0,z:0,radius:.4,generation:1,hp:70},player={x:6,z:0,radius:.35,generation:1,hp:100},attacks=new EnemyAttacks();
+ const world:EnemyAttackWorld={player:0,actor:id=>id===0?player:actor,damage:()=>{},move:()=>[.7,0,0],obstruction:()=>[1,.7,0],surface:(from,to)=>{expect(from[1]).toBe(.2);expect(to[1]).toBe(-.2);return {nodeId:'nd_ground',normal:[0,1,0]};}};
+ attacks.strike(1,actor,NPC_STATS.find(s=>s.id==='E-02')!.attack!,0,player,world);attacks.step(1,1/30,world);
+ const impact=attacks.drainEvents().find(e=>e.type==='impact')!;expect(impact.effect.position).toEqual([.7,0,0]);expect(impact.effect.surface?.nodeId).toBe('nd_ground');expect(impact.effect.blocked).toBe(true);
+ attacks.strike(1,actor,NPC_STATS.find(s=>s.id==='E-05')!.attack!,2,player,world);expect(attacks.drainEvents().find(e=>e.type==='impact')!.effect.surface?.nodeId).toBe('nd_ground');
+});
