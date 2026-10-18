@@ -1509,7 +1509,7 @@ export class RuntimeSession {
     const marker=w.presentation.markers.muzzle.position;
     const from:[number,number,number]=[t.posX[p]!+dx*marker[0]-dz*marker[2],y+marker[1],t.posZ[p]!+dz*marker[0]+dx*marker[2]];
     const origin:[number,number,number]=[t.posX[p]!,y,t.posZ[p]!];
-    if(world.blocked(origin,from)) {const hit=world.trace(origin,[dx,0,dz],Math.hypot(from[0]-origin[0],from[2]-origin[2]),new Set());this.weaponCombat.effect(w,'shot',origin,hit.point,this.tick,.12,0,false);this.lastShot={tick:this.tick,from:origin,to:hit.point,hit:false};return;}
+    if(world.blocked(origin,from)) {const length=Math.hypot(from[0]-origin[0],from[1]-origin[1],from[2]-origin[2]);const direction:WeaponPoint=[(from[0]-origin[0])/length,(from[1]-origin[1])/length,(from[2]-origin[2])/length];const hit=world.trace(origin,direction,length,new Set());this.weaponCombat.blockedFire(w,origin,hit,this.tick);this.lastShot={tick:this.tick,from:origin,to:hit.point,hit:false};return;}
     this.weaponCombat.fire(w,from,[dx,0,dz],w.damage*this.weapons.damageMultiplier*(1+(this.progress?.strength('damage')??0)),this.tick,world);
     const effect=this.weaponCombat.effects[this.weaponCombat.effects.length-1];if(effect)this.lastShot={tick:this.tick,from:effect.from,to:effect.to,hit:effect.hit};
   }

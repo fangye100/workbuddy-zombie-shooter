@@ -74,6 +74,9 @@ export class WeaponCombat {
     this.vfxEvents.push(Object.freeze({sequence:++this.vfxSequence,tick,weaponId:w.id,kind,from:Object.freeze([...from]),to:Object.freeze([...hit.point]),contact:hit.kind??(hit.actor?'entity':'miss'),actor:hit.actor?Object.freeze({...hit.actor}):null,nodeId:hit.nodeId??null,normal:hit.normal?Object.freeze([...hit.normal]):null}));
   }
   recordTrace(w:WeaponDefinition,from:WeaponPoint,hit:WeaponHit,tick:number):void {this.recordVfx(w,'trace',from,hit,tick);}
+  blockedFire(w:WeaponDefinition,from:WeaponPoint,hit:WeaponHit,tick:number):void {
+    this.recordVfx(w,'fire',from,{actor:null,point:from,distance:0,kind:'miss'},tick);this.recordTrace(w,from,hit,tick);this.effect(w,'shot',from,hit.point,tick,.12,0,false);
+  }
   drainVfxEvents():readonly WeaponVfxEvent[] {const events=this.vfxEvents;this.vfxEvents=[];return events;}
   effect(w:WeaponDefinition,kind:WeaponEffect['kind'],from:WeaponPoint,to:WeaponPoint,tick:number,duration:number,radius:number,hit:boolean):WeaponEffect {
     const e:WeaponEffect={id:++this.sequence,tick,weaponId:w.id,kind,from:[...from],to:[...to],position:[...from],duration,radius,spreadDeg:w.spreadDeg,color:w.presentation.color,hit};

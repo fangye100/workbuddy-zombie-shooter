@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
 import {execFileSync} from 'node:child_process';
+import {measureVfxCost} from './vfx-cost.mjs';
 import {makeArgParser,ensureServer,launchEditorSession,waitFor,createRecorder} from './editor-smoke-lib.mjs';
 const {arg,has}=makeArgParser(process.argv),out=path.resolve(arg('out','.workbuddy/tmp/vfx-m1/development'));
 const fixture='.workbuddy/tmp/vfx-m1/probe.scene.json',assetCopy='.workbuddy/tmp/vfx-m1/probe.vfx.json';
@@ -52,6 +53,7 @@ try{
  evidence.paused=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),tick:window.__editor.playCtl.tick,ledger:window.__editor.playCtl.ledger})`);await capture('03-play-paused');
  await new Promise(r=>setTimeout(r,200));const paused=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),tick:window.__editor.playCtl.tick})`);check('暂停保持TTL与tick',paused.tick===evidence.paused.tick && paused.vfx.play.pool.active===evidence.paused.vfx.play.pool.active);
  check('墙接触带实际接收者/法线',evidence.paused.vfx.play.events.some(e=>e.contact==='scene' && e.nodeId==='nd_vfx_wall' && e.normal));
+ evidence.cost=await measureVfxCost(cdp);
  await click('#btn-step');check('单步只前进一个tick',await cdp.eval(`window.__editor.playCtl.tick===${paused.tick+1}`));await click('#btn-stop');
  evidence.stopped=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),ledger:window.__editor.playCtl.ledger})`);check('Stop真实销毁buffer/texture与账目清空',evidence.stopped.ledger.pending===0 && evidence.stopped.vfx.play.lastReleased?.destroyedBuffers===2 && evidence.stopped.vfx.play.lastReleased?.destroyedTextures===3 && evidence.stopped.vfx.play.gpu===null);
  await capture('04-stopped');

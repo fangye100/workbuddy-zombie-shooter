@@ -17,7 +17,7 @@ export class WeaponVfxPlanner {
   /** Only fully resolved weapon resources enter this map; missing keys keep Canvas fallback. */
   readonly ready=new Map<string,VfxAsset>();
   update(runtime:RuntimeSession):void {
-    if(this.run!==runtime.runId){this.pool.clear();this.run=runtime.runId;this.tick=runtime.tick;}
+    if(this.run!==runtime.runId){this.pool.clear();this.recentEvents.length=0;this.run=runtime.runId;this.tick=runtime.tick;}
     this.pool.advance(Math.max(0,runtime.tick-this.tick)*runtime.fixedStep);this.tick=runtime.tick;
     for(const event of runtime.weaponCombat.drainVfxEvents()){
       this.recentEvents.push(event);if(this.recentEvents.length>32)this.recentEvents.shift();
