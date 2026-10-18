@@ -2,8 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
+import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {measureVfxCost} from './vfx-cost.mjs';
+import {verifyVfxOcclusion} from './vfx-occlusion.mjs';
 import {makeArgParser,ensureServer,launchEditorSession,waitFor,createRecorder} from './editor-smoke-lib.mjs';
 const {arg,has}=makeArgParser(process.argv),out=path.resolve(arg('out','.workbuddy/tmp/vfx-m1/development'));
 const fixture='.workbuddy/tmp/vfx-m1/probe.scene.json',assetCopy='.workbuddy/tmp/vfx-m1/probe.vfx.json';
@@ -15,8 +17,11 @@ const port=Number(arg('cdp','9333'));
 const occupied=await new Promise(resolve=>{const s=net.connect(port,'127.0.0.1');s.once('connect',()=>{s.destroy();resolve(true);});s.once('error',()=>resolve(false));});
 if(occupied)throw new Error(`CDP ${port} 已占用，不接管或终止已有进程`);
 const {check,results}=createRecorder(),evidence={commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),checks:results};
+evidence.verificationSources=Object.fromEntries(['tools/verify/vfx-m1-probe.mjs','tools/verify/vfx-occlusion.mjs','tools/verify/vfx-cost.mjs'].map(p=>[p,createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));
 const {server,url}=await ensureServer(5100,'apps/editor/vite.config.ts');if(server)throw new Error('请先用记录的 detached 方式启动固定5100服务');
 const {chrome,cdp,ws}=await launchEditorSession({chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),cdpPort:port,headed:true,appUrl:url,windowSize:'1500,1000'});
+// The shared CDP client has no per-call deadline; bound this standalone probe's commands.
+const send=cdp.send.bind(cdp);cdp.send=(method,params={})=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(`CDP ${method} exceeded 10s`)),10000);send(method,params).then(r=>{clearTimeout(timer);resolve(r);},e=>{clearTimeout(timer);reject(e);});});
 // Only this test tab sees the fixture registration. Disk project and product rules stay unchanged.
 const projectedProject=JSON.parse(fs.readFileSync('aether.project.json','utf8'));
 projectedProject.scenes.find(s=>s.id==='sc_vfx_m1').path=fixture;
@@ -26,10 +31,11 @@ const capture=async name=>{const r=await cdp.send('Page.captureScreenshot',{form
 const click=async selector=>{const p=await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw new Error('missing control');e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...p});await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...p});};
 const button=async label=>{const selector=await cdp.eval(`(()=>{const b=[...document.querySelectorAll('#vfx-panel button')].find(b=>b.textContent===${JSON.stringify(label)});if(!b)throw new Error('control ${label}');b.dataset.probe='selected';return '#vfx-panel button[data-probe="selected"]';})()`);await click(selector);await cdp.eval(`document.querySelector(${JSON.stringify(selector)}).removeAttribute('data-probe')`);};
 const input=async(label,value)=>cdp.eval(`(()=>{const e=document.querySelector('#vfx-panel [aria-label=${JSON.stringify(label)}]');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+const viewport=()=>cdp.eval(`(()=>{localStorage.setItem('zh.ui.dockH','230');document.documentElement.style.setProperty('--dock-h','230px');document.getElementById('asset-dock')?.classList.add('collapsed');window.dispatchEvent(new Event('resize'));})()`);
 try{
  await cdp.send('Page.navigate',{url:`${url}?scene=${encodeURIComponent(fixture)}`});
  check('场景副本和产品面板就绪',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1'`),{timeout:30000}));
- await cdp.eval(`(()=>{localStorage.setItem('zh.ui.dockH','230');document.documentElement.style.setProperty('--dock-h','230px');document.getElementById('asset-dock')?.classList.add('collapsed');window.dispatchEvent(new Event('resize'));})()`);
+ await viewport();
  evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
  check('secure context + 硬件adapter',evidence.gpu.secure && evidence.gpu.info && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)),JSON.stringify(evidence.gpu));
  await click('.insp-tab[data-tab="scene"]');await button('打开 VFX 资源');
@@ -39,8 +45,14 @@ try{
  await button('清除 VFX 绑定');check('绑定Apply改变场景',await cdp.eval(`window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource===null`));
  await button('撤销场景绑定');await waitFor(()=>cdp.eval(`!!window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource`));
  await button('重做场景绑定');await waitFor(()=>cdp.eval(`window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource===null`));
+ await button('保存场景绑定');
+ check('清除绑定实际写入副本',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(fixture,'utf8')).nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource===null)));
  await button('应用 VFX 绑定');await button('保存场景绑定');
  check('场景副本磁盘保存',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(fixture,'utf8')).nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource?.guid==='as_vfx_comic_pistol')));
+ await cdp.send('Page.reload');
+ check('完整页面重载后场景绑定仍在',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1' && window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource?.guid==='as_vfx_comic_pistol'`),{timeout:30000}));
+ evidence.reloadedBinding=await cdp.eval(`window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx`);
+ await viewport();await click('.insp-tab[data-tab="scene"]');
  await input('资源文件路径',assetCopy);await button('打开 VFX 资源');await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.path===${JSON.stringify(assetCopy)}`));
  await input('宽度 m','.72');await button('应用资源参数');check('资源参数Apply',await cdp.eval(`window.__editor.vfx.snapshot().editor.asset.effects['comic-muzzle'].size[0]===.72`));
  await button('撤销资源参数');check('资源Undo',await cdp.eval(`window.__editor.vfx.snapshot().editor.asset.effects['comic-muzzle'].size[0]===.55`));await button('重做资源参数');await button('保存 VFX 资产');
@@ -53,10 +65,31 @@ try{
  evidence.paused=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),tick:window.__editor.playCtl.tick,ledger:window.__editor.playCtl.ledger})`);await capture('03-play-paused');
  await new Promise(r=>setTimeout(r,200));const paused=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),tick:window.__editor.playCtl.tick})`);check('暂停保持TTL与tick',paused.tick===evidence.paused.tick && paused.vfx.play.pool.active===evidence.paused.vfx.play.pool.active);
  check('墙接触带实际接收者/法线',evidence.paused.vfx.play.events.some(e=>e.contact==='scene' && e.nodeId==='nd_vfx_wall' && e.normal));
+ evidence.occlusion=await verifyVfxOcclusion(cdp,out);
+ check('GPU同一纹理在遮挡墙前可见/后被挡',evidence.occlusion.passed,JSON.stringify(evidence.occlusion));
  evidence.cost=await measureVfxCost(cdp);
  await click('#btn-step');check('单步只前进一个tick',await cdp.eval(`window.__editor.playCtl.tick===${paused.tick+1}`));await click('#btn-stop');
  evidence.stopped=await cdp.eval(`({vfx:window.__editor.vfx.snapshot(),ledger:window.__editor.playCtl.ledger})`);check('Stop真实销毁buffer/texture与账目清空',evidence.stopped.ledger.pending===0 && evidence.stopped.vfx.play.lastReleased?.destroyedBuffers===2 && evidence.stopped.vfx.play.lastReleased?.destroyedTextures===3 && evidence.stopped.vfx.play.gpu===null);
  await capture('04-stopped');
+ // A fresh authored run, unchanged NPC and actual pointer/keyboard input. No damage/teleport hooks.
+ await click('#btn-play');
+ if(!await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().play.ready.length>0 && window.__editor.playCtl.session.runtime?.view().some(e=>e.kind==='npc' && e.alive)`),{timeout:10000}))throw new Error('NPC 实射前没有就绪的真实运行实体');
+ evidence.npcAim=await cdp.eval(`(()=>{const r=window.__editor.playCtl.session.runtime,p=r.player(),n=r.view().find(e=>e.kind==='npc' && e.alive),h=r.weaponMount.position[1];
+  const candidates=[.8,1,1.3,1.8,.5,.3].map(k=>{const world=[p.x+(n.x-p.x)*k,h,p.z+(n.z-p.z)*k],screen=window.__editor.renderer.worldToScreen(world),element=document.elementFromPoint(screen.x,screen.y);return {world,screen,element:element?.id??element?.tagName??null};});
+  return {runId:r.runId,player:p,npc:n,magazine:r.weapons.state.magazine,candidates,selected:candidates.find(c=>!c.screen.behind && c.element==='gpu')??null};})()`);
+ if(!evidence.npcAim.selected)throw new Error('真实NPC的同方向瞄准投影被UI遮挡，没有可见canvas输入位置');
+ const npcPoint=evidence.npcAim.selected.screen;
+ await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:npcPoint.x,y:npcPoint.y});
+ await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'j',code:'KeyJ',windowsVirtualKeyCode:74});
+ const hit=await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().play.events.find(e=>e.kind==='trace' && e.contact==='entity' && e.actor?.id===${evidence.npcAim.npc.id} && e.actor?.generation===${evidence.npcAim.npc.generation})??null`),{timeout:2500,interval:10});
+ await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'j',code:'KeyJ',windowsVirtualKeyCode:74});
+ await click('#btn-pause');
+ evidence.npcHit={event:hit,state:await cdp.eval(`({runId:window.__editor.playCtl.session.runtime?.runId,tick:window.__editor.playCtl.tick,player:window.__editor.playCtl.session.runtime?.player(),npc:window.__editor.playCtl.session.runtime?.view().filter(e=>e.kind==='npc'),magazine:window.__editor.playCtl.session.runtime?.weapons.state.magazine,vfx:window.__editor.vfx.snapshot()})`)};
+ check('真实输入命中NPC并保留实体身份代次',!!hit && hit.actor.id===evidence.npcAim.npc.id && hit.actor.generation===evidence.npcAim.npc.generation && evidence.npcHit.state.magazine<evidence.npcAim.magazine,JSON.stringify(hit));
+ check('NPC实际接触点区别于实体中心',!!hit && Math.hypot(hit.to[0]-hit.actor.x,hit.to[2]-hit.actor.z)>.05 && Math.hypot(hit.to[0]-hit.from[0],hit.to[2]-hit.from[2])>0);
+ await capture('05-npc-contact');await click('#btn-stop');
+ evidence.npcStopped=await cdp.eval(`({state:window.__editor.playCtl.state,ledger:window.__editor.playCtl.ledger,vfx:window.__editor.vfx.snapshot()})`);
+ check('NPC短射击后立即Stop释放资源',evidence.npcStopped.state==='stopped' && evidence.npcStopped.ledger.pending===0 && evidence.npcStopped.vfx.play.gpu===null && evidence.npcStopped.vfx.play.lastReleased?.destroyedBuffers===2 && evidence.npcStopped.vfx.play.lastReleased?.destroyedTextures===3);
  evidence.consoleErrors=cdp.consoleErrors;evidence.exceptions=cdp.exceptions;check('无浏览器/GPU错误',!cdp.consoleErrors.length && !cdp.exceptions.length,JSON.stringify([...cdp.consoleErrors,...cdp.exceptions]));
 }catch(error){evidence.failure=String(error);check('探针执行',false,String(error));await capture('failure').catch(()=>{});}
 finally{fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(evidence,null,2));ws.close();chrome.kill();}
