@@ -1,6 +1,7 @@
 import type { WeaponEffect } from '@aether/runtime';
 import type { RuntimeSession } from '@aether/zombie-game';
 import type { WorldProjection } from './combat-overlay';
+import { weaponMarkerWorld } from './vfx-planner';
 
 /** Procedural ink placeholders use simulation positions, never invent damage or animation clocks. */
 export function drawWeaponEffect(c:CanvasRenderingContext2D,project:WorldProjection,e:WeaponEffect,age:number):void {
@@ -42,7 +43,7 @@ export function drawHeldWeapon(c:CanvasRenderingContext2D,project:WorldProjectio
   const y=runtime.weaponMount.position[1],dx=Math.cos(player.yaw),dz=Math.sin(player.yaw);
   const world=(v:readonly number[]):[number,number,number]=>[player.x+dx*v[0]!-dz*v[2]!,y+v[1]!,player.z+dz*v[0]!+dx*v[2]!];
   const local=(v:readonly number[]):[number,number,number]=>[v[0]!+pose.recoil.translation[0],v[1]!+Math.sin(pose.recoil.pitchDeg*Math.PI/180)*v[0]!,v[2]!];
-  const base=project(world(local(pose.markers.primaryGrip.position))),muzzle=project(world(local(pose.markers.muzzle.position)));
+  const base=project(weaponMarkerWorld(runtime,'primaryGrip')),muzzle=project(weaponMarkerWorld(runtime,'muzzle'));
   if(base.behind || muzzle.behind)return;
   c.save();c.lineCap='square';c.strokeStyle='#14110f';c.lineWidth=def.behavior==='melee'?11:8;c.beginPath();c.moveTo(base.x,base.y);c.lineTo(muzzle.x,muzzle.y);c.stroke();
   c.strokeStyle=def.presentation.color;c.lineWidth=def.behavior==='melee'?6:4;c.stroke();

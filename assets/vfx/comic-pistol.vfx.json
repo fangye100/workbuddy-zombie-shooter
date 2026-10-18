@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "id": "as_vfx_comic_pistol",
+  "name": "漫画手枪 · 闪光 / 弹道 / 命中",
+  "status": "accepted",
+  "effects": {
+    "comic-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.12,
+      "size": [
+        0.55,
+        0.55
+      ],
+      "color": "#ffffff",
+      "blend": "alpha"
+    },
+    "comic-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.1,
+      "size": [
+        1,
+        0.045
+      ],
+      "color": "#ffffff",
+      "blend": "alpha"
+    },
+    "comic-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.2,
+      "size": [
+        0.48,
+        0.48
+      ],
+      "color": "#ffffff",
+      "blend": "alpha"
+    }
+  }
+}

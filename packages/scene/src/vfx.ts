@@ -5,7 +5,7 @@ export const VFX_VERSION = 1;
 export type VfxKind = 'muzzle' | 'trail' | 'impact';
 export interface VfxEffectDefinition {
   kind: VfxKind;
-  texture: AssetRef;
+  texture: AssetRef & { guid: string };
   frames: number;
   duration: number;
   size: [number, number];
@@ -19,7 +19,7 @@ export interface VfxAsset {
   status: 'accepted' | 'quarantined';
   effects: Record<string, VfxEffectDefinition>;
 }
-export function validVfxRef(value: unknown): value is AssetRef {
+export function validVfxRef(value: unknown): value is AssetRef & {guid:string} {
   if (!value || typeof value !== 'object') return false;
   const r = value as AssetRef;
   return typeof r.guid === 'string' && !!r.guid && typeof r.path === 'string'

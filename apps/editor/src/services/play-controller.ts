@@ -35,6 +35,7 @@ import type { PlayerPresentation } from './player-presentation';
 import type { RuntimeSceneMotion } from './runtime-scene-motion';
 import type { RuntimeBodyIk } from './runtime-body-ik';
 import { characterYaw } from './character-facing';
+import { PlayVfx } from './play-vfx';
 
 export interface PlayControllerOptions {
   bodyIk?: RuntimeBodyIk;
@@ -61,6 +62,7 @@ export interface PlayControllerOptions {
 }
 
 export class PlayController {
+  readonly vfx:PlayVfx;
   readonly session: PlaySession;
   private readonly bridge: RuntimeBridge;
   private readonly renderer: LabRenderer;
@@ -76,6 +78,7 @@ export class PlayController {
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
+    this.vfx=new PlayVfx(renderer.core);
     this.playerPresentation = opts.playerPresentation ?? null;
     this.sharedMotions = opts.sharedMotions ?? null;
     this.bodyIk = opts.bodyIk ?? null;
@@ -186,6 +189,7 @@ export class PlayController {
     // 而 GPU 上仍留着 Play 期分配的实例 buffer 与代理网格缓存（由 renderer-core 持有）。
     // 见 PR #3 review / AGENTS.md §2.4「Play 期每次 GPU 分配都必须登记并在 Stop 释放」。
     this.session.registerResource('dynamic-instances', () => this.renderer.core.releaseDynamicResources());
+    this.vfx.start(this.session);
     this.lastError = null;
     this.notify();
     return true;
@@ -214,6 +218,7 @@ export class PlayController {
     this.bodyIk?.sync(this.session.runtime, true);
     this.syncPlayCamera();
     this.bridge.refresh();
+    this.vfx.update(this.session);
     this.notify();
   }
 
@@ -225,6 +230,7 @@ export class PlayController {
     this.bodyIk?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
+    this.vfx.stop();this.vfx.start(this.session);this.vfx.update(this.session);
     this.notify();
   }
 
@@ -266,6 +272,7 @@ export class PlayController {
       this.syncPlayCamera();
     }
     if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
+    this.vfx.update(this.session);
     return n;
   }
 

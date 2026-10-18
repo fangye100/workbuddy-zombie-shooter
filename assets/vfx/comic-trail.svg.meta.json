@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_trail",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-trail.svg",
+    "status": "accepted",
+    "author": "项目原创矢量纹理，透明背景，三帧形变"
+  },
+  "sourceHash": "sha256:6498a190e9473210e53b544e22a4c256438f1c0e7cfc0871eca2f28be77d5180",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

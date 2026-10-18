@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_pistol",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-pistol.vfx.json",
+    "status": "accepted",
+    "author": "项目原创"
+  },
+  "sourceHash": "sha256:15dd8131e6719a6a5ea572c31cbf1ed00e64dc116d28592aca681d6df4e3cc85",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

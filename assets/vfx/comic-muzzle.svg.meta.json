@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_muzzle",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-muzzle.svg",
+    "status": "accepted",
+    "author": "项目原创矢量纹理，透明背景，三帧形变"
+  },
+  "sourceHash": "sha256:366ab8b1fd8dd1f788bfb268897371a61972ebd05008d1978c1260de9501d809",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

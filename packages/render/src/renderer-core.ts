@@ -23,6 +23,7 @@ import { GIZMO_WGSL } from './shaders/gizmo.wgsl';
 import { buildGizmoHandles, type GizmoMode } from './gizmo';
 import { ComicSkyPass } from './comic-sky';
 import { ContactShadowPass } from './contact-shadows';
+import type { VfxPass } from './vfx-pass';
 import { createAlbedoTexture } from './albedo-texture';
 import type { ComicSkyData } from '@aether/scene';
 
@@ -304,6 +305,7 @@ interface CoreGizmoHandle {
 }
 
 export class RendererCore {
+  vfx: VfxPass | null = null;
   private readonly skyPass: ComicSkyPass;
   private readonly contactPass: ContactShadowPass;
   readonly device: GPUDevice;
@@ -1144,6 +1146,7 @@ export class RendererCore {
     pass.end();
 
     // ---- Pass 3：后处理 ----
+    if (p.debugMode === 0 && this.vfx) draws += this.vfx.draw(encoder, this.hdrTex.createView(), this.depthTex.createView(), this.viewProj, eye, this.view);
     const swapView = this.ctx.getCurrentTexture().createView();
     const postPass = encoder.beginRenderPass({
       label: 'post',
@@ -1268,6 +1271,7 @@ export class RendererCore {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.vfx?.destroy();this.vfx=null;
     this.skyPass.destroy();
     this.contactPass.destroy();
     this.hdrTex?.destroy();

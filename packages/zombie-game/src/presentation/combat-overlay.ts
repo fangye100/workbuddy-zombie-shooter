@@ -8,6 +8,8 @@ export type WorldProjection = (p: readonly [number, number, number]) => { x: num
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
 export class CombatOverlay {
+  /** Host confirms GPU resources are ready for this exact weapon before suppressing fallback. */
+  static gpuWeaponReady:(weaponId:string)=>boolean=()=>false;
   debugRanges = false;
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
@@ -27,7 +29,7 @@ export class CombatOverlay {
     if (runtime.outcome !== 'running') return;
     const point = (p: readonly [number, number, number]) => { const q = this.project(p); return { x: q.x - rect.left, y: q.y - rect.top, behind: q.behind }; };
     drawHeldWeapon(c,point,runtime,this.debugRanges);
-    for(const effect of runtime.weaponCombat.effects)drawWeaponEffect(c,point,effect,(runtime.tick-effect.tick)*runtime.fixedStep);
+    for(const effect of runtime.weaponCombat.effects)if(!CombatOverlay.gpuWeaponReady(effect.weaponId))drawWeaponEffect(c,point,effect,(runtime.tick-effect.tick)*runtime.fixedStep);
     for(const burn of runtime.weaponCombat.burning){const t=runtime.table;if(!t.isAlive(burn.id) || t.generation[burn.id]!==burn.generation)continue;const p=point([t.posX[burn.id]!,runtime.weaponMount.position[1],t.posZ[burn.id]!]);if(p.behind)continue;c.fillStyle='#ff7045';c.font='bold 14px system-ui';c.fillText('♨',p.x,p.y);}
     // Windup geometry uses the same authoritative ranges, arcs and facing as combat.
     const table = runtime.table;
