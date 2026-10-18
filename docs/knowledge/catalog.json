@@ -1750,7 +1750,7 @@
         "headed",
         "acceptance"
       ],
-      "read": "受控headed路径；场景夹具/稳定NodeId、完整启动代次、实际GPU判据、失败清理、两套件回归与范围限制",
+      "read": "严格headed路径、完整启动代次与真实GPU；四套件串行聚合、战斗/蒙皮oracle、503降级恢复和Stop基线",
       "sourceRefs": [
         "project-rules"
       ],
@@ -2991,6 +2991,28 @@
         "scene"
       ],
       "read": "旧夹具修复、布局与漏译缺陷；核心/绑定实际断言、独立审核、执行环境与验证边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "game-probes-acceptance-20261018",
+      "path": "docs/evidence/game-probes-20261018/acceptance.md",
+      "title": "战斗与动态蒙皮完整聚合浏览器验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "combat",
+        "animation",
+        "acceptance"
+      ],
+      "read": "四套件实际聚合、真实输入击杀/波次边界、实例矩阵与故障恢复、独立审核和执行范围",
       "sourceRefs": [
         "project-rules",
         "scene-schema",

@@ -1,0 +1,724 @@
+{
+  "schemaVersion": 22,
+  "id": "sc_game_probes",
+  "name": "战斗与动态蒙皮白盒 · 双波次及代理降级",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0.012,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      1,
+      0
+    ],
+    "distance": 20,
+    "yaw": 0.2,
+    "elevation": 0.75
+  },
+  "entryCamera": "nd_cam0000",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          12,
+          12
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": "nd_probe_player",
+          "pitchDeg": 55,
+          "yawMode": "world",
+          "distance": 18,
+          "yawOffsetDeg": 0
+        }
+      ]
+    },
+    {
+      "id": "nd_ground0000",
+      "name": "地面 Ground",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          3,
+          1,
+          3
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "plane",
+            "params": [
+              80,
+              24
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": -1
+              },
+              "material": {
+                "type": "shared",
+                "id": "mat1"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null,
+      "category": "环境"
+    },
+    {
+      "id": "nd_probe_room",
+      "name": "白盒战斗房",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              40,
+              8,
+              40
+            ]
+          },
+          "clearRule": "kill-all",
+          "clearTarget": null,
+          "depth": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_nav",
+      "name": "白盒导航",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              40,
+              8,
+              40
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_player",
+      "name": "白盒玩家 · 复用H-01绑定",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1,
+            "poseLayer": {
+              "roots": [
+                "Spine"
+              ],
+              "exclude": [],
+              "weight": 1,
+              "transitionSec": 0.16
+            }
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "upperBody",
+                "part": "upperBody",
+                "enabled": true,
+                "weight": 0.55,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0,
+                    0.95,
+                    0.45
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  -1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 60
+              },
+              {
+                "id": "head",
+                "part": "head",
+                "enabled": true,
+                "weight": 0.25,
+                "target": {
+                  "kind": "mouse",
+                  "height": 1.5
+                },
+                "pole": [
+                  0,
+                  0,
+                  -1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              },
+              {
+                "id": "leftHand",
+                "part": "leftHand",
+                "enabled": true,
+                "weight": 1,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0.18,
+                    1.15,
+                    0.25
+                  ]
+                },
+                "pole": [
+                  1,
+                  -0.35,
+                  0
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              },
+              {
+                "id": "rightHand",
+                "part": "rightHand",
+                "enabled": true,
+                "weight": 1,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    -0.18,
+                    1.15,
+                    0.25
+                  ]
+                },
+                "pole": [
+                  -1,
+                  -0.35,
+                  0
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_probe_spawn0",
+      "name": "白盒E-01波1",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          -6,
+          0,
+          -7
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 2,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.8,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_spawn1",
+      "name": "白盒E-02波1",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          6,
+          0,
+          -7
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 2,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.8,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_spawn2",
+      "name": "白盒B-02波1",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          9,
+          0,
+          8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "B-02",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.8,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_spawn3",
+      "name": "白盒E-01波2",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          -6,
+          0,
+          -7
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 3,
+          "wave": 2,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.8,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_spawn4",
+      "name": "白盒E-02波2",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          6,
+          0,
+          -7
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 1,
+          "wave": 2,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.8,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_probe_target",
+      "name": "白盒近距开火目标",
+      "parent": "nd_probe_room",
+      "transform": {
+        "position": [
+          3,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "验收夹具",
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0,
+          "prefab": null
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-18T00:00:00Z",
+    "updatedAt": "2026-10-18T00:00:00Z",
+    "author": "Codex",
+    "notes": "仅用于战斗/蒙皮验收：无奖励选择及街景遮挡的受控双波次；H-01作者玩家、E-01/E-02与B-02；探针仅对白盒B-02注入受控503验证代理降级及重开恢复。正式第一层另行核对。"
+  },
+  "playerStart": "nd_probe_player",
+  "loseCondition": "player-death"
+}

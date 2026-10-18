@@ -1,0 +1,400 @@
+
+> aether@0.1.0 editor:smoke:all C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie
+> node tools/verify/editor-smoke-all.mjs "--" "--headed" "--out" ".workbuddy/tmp/aggregate-repair/all-2"
+
+
+=== 完整浏览器验收：editor-smoke ===
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/
+
+A. 启动与 WebGPU 上下文
+  [PASS] #fatal 错误卡片未出现 — display:none
+  [PASS] window.__editor 调试钩子已挂载 — typeof=object
+  [PASS] canvas 尺寸有效（高度立得住，>200px） — {"w":942,"h":560}
+  [PASS] 陈旧超大 dockH 按主行预算钳制，给视口保留200px — {"w":942,"h":200,"cssH":200,"dockH":620,"available":820}
+  [PASS] 钳制后画布至少200px（中心列未被挤死） — {"w":942,"h":200,"cssH":200,"dockH":620,"available":820}
+  [PASS] secure context 与实际编辑器硬件GPU — {"secure":true,"fallback":false,"info":{"vendor":"nvidia","architecture":"lovelace","description":""}}
+  [PASS] HUD 拿到 GPU adapter 名 — GPU nvidia lovelace选中 无（轻点选中 · Alt+点击穿透嵌套 · 双击/F 聚焦 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩
+
+B. 帧循环与绘制统计
+  [PASS] drawCalls > 0（管线真的在画） — draws=103
+  [PASS] triangles > 0 — tris=761455
+  [PASS] FPS 有读数（SwiftShader 下 10 左右属正常） — fps=57
+  [PASS] 持续出帧（前后两次 drawCalls 均为正） — 103 → 103
+
+B2. 场景来自文件（ADR-010：场景是唯一数据载体；期望值由真源推导）
+  [PASS] 场景来源非 null（不是硬编码 fallback） — {"url":"/assets/scenes/act1/floor-1.scene.json","objects":57,"at":"2026-10-18T14:38:19.630Z"}
+  [PASS] 场景来源指向 .scene.json — /assets/scenes/act1/floor-1.scene.json
+  [PASS] 场景来源 = 项目文件的起始场景（assets/scenes/act1/floor-1.scene.json） — /assets/scenes/act1/floor-1.scene.json
+  [PASS] 物体数 = 起始场景的可渲染节点数（57） — objects=57 期望=57
+  [PASS] 层级列表物体名与起始场景逐个一致（57 个） — 多=无 少=无
+  [PASS] 层级列表 = 可渲染 − background（57） — list=57 期望=57 background=
+  [PASS] category 来自场景文件（按 NodeId 比对） — 57 个全对
+  [PASS] pickable 来自场景文件（按 NodeId 比对） — 57 个全对
+
+B3. 行为注册表（glob 宿主分裂防线）
+  [PASS] 行为注册表非空（glob 在浏览器端命中了 assets/behaviors） — {"size":1,"ids":["debug-on-trigger-log"],"schemaIssues":0}
+  [PASS] 注册表含 debug-on-trigger-log（真源清单：assets/behaviors/*.ts） — ["debug-on-trigger-log"]
+  [PASS] 行为 schema 自洽（注册期零 schema 诊断） — schemaIssues=0
+  [PASS] 独立冒烟夹具已从文件载入
+
+C. SelectionService（选中/悬停状态机）
+  [PASS] 场景对象列表非空 — objects=5
+  [PASS] selectObject → getSelected 往返一致 — {"sel":0,"name":"冒烟父节点"}
+  [PASS] selectedName 返回字符串 — 冒烟父节点
+  [PASS] setHovered → getHovered 往返一致 — hovered=0
+  [PASS] 取消选中后 getSelected 为 null — selected=null
+
+D. HierarchyService（层级/显隐/统计）
+  [PASS] getSubMeshCount 返回正整数 — sub=1
+  [PASS] 子网格显隐切换不抛错
+  [PASS] recountTriangles 后三角形数仍为正 — tris=4272
+  [PASS] getObjectBounds 返回有限半径 — {"r":0.8660254037844386,"c":3}
+
+E. MaterialPanelService（材质三层语义）
+  [PASS] 材质库可读 — materials=7
+  [PASS] getSlotMaterial 返回槽位对象 — keys=10
+  [PASS] createSlotInstance + ensureOverride 不抛错
+  [PASS] discardOverride 后槽位仍可读
+  [PASS] exportInstances / exportSlots 可导出 — {"inst":1,"slots":true}
+
+F. PickingService（屏幕↔世界）
+  [PASS] getEye 返回 3 分量 — len=3
+  [PASS] pointerRay 返回原点+方向 — {"o":3,"d":3}
+  [PASS] worldToScreen 返回有限像素坐标 — {"x":807,"y":365,"behind":false}
+  [PASS] pickAt 屏幕中心返回索引或 null（不抛错） — hit=3
+
+G. GizmoService（变换/检视）
+  [PASS] gizmo mode/space 切换 + getGizmoInfo 可读 — keys=6
+  [PASS] 位置/旋转/缩放写入后状态可读回 — {"p":[-1,0.5,0],"r":[0,0.7853981633974483,0],"sc":1.2}
+  [PASS] setGizmoActiveAxis 设置/清空不抛错
+  [PASS] getObjectQuat 返回 4 分量四元数 — len=4
+
+G2. 视口拖拽写回场景文档（不再有"两份真源"）
+  [PASS] ★ 找到视口里的 gizmo 手柄（可点中） — {"x":510,"y":198}
+  [PASS] ★ 拖拽真的移动了物体（视口有反应） — moved=0.0156m 方向=[60,0]
+  [PASS] ★ 文档被写入且与视口一致（从文档重算的世界位置 == 视口位置） — 一致性=0.00e+0 文档 [0.6000000000000001,1,0] → [0.6000000000000001,1.0155977943323276,0]
+  [PASS] ★ 写入的是**局部**变换（不是把世界值当局部值写进去） — 局部 [1.6,0.4155977943323276,0] vs 世界 [0.6000000000000001,1.0155977943323276,0]
+  [PASS] ★ 一次拖拽 = 一条撤销编辑；撤销后文档与视口都回到起点 — undo 0 →(拖拽后) 1 →(撤销后) 0；视口回退 0.00e+0 文档回退 0.00e+0
+  [PASS] 拖拽后 dirty 亮起（面板显示未保存） — dirty=true
+
+G2b. 拖父节点时子树跟随（视口物体是扁平的）
+  [PASS] ★ 找到"带可渲染子节点"的节点可拖（G2b 前提） — "nd_smoke_parent"
+  [PASS] ★ 父节点真的被拖动了（G2b 前提） — moved=0.0253m
+  [PASS] ★ 拖父节点时子物体跟着走，且视口与文档一致 — 节点 nd_smoke_parent：子 ["0.0253"]（位移量）
+  [PASS] ★ 撤销后子物体也回到起点（子树一起回写） — children=1
+
+G2c. 旋转拖拽写回场景文档
+  [PASS] ★ 转到旋转手柄（G2c 前提） — "nd_smoke_parent"
+  [PASS] ★★ 旋转拖拽写回文档（旋转真的变了，不是被丢弃） — 文档旋转前后 |dot|=0.986291（1 = 没变）；视口 vs 文档 |dot|=1.000000（1 = 一致）
+  [PASS] ★ 撤销旋转后文档与视口一起回到原姿态 — undo 0→1；视口回退 |dot|=1.000000 文档回退 |dot|=1.000000
+
+H. 动画面板（检视页条件分组 / 资产库生成路径）
+  [PASS] 左栏不再有「模型预览」分组（面板已收掉）
+  [PASS] 动画分组不在左栏（已并入检视页）
+  [PASS] 动画分组在检视页且默认隐藏（场景无带骨物体）
+  [PASS] 顶栏状态行 #model-info 存在（原模型预览信息行迁移）
+  [PASS] 左栏分组只剩场景层级 — hierarchy
+  [PASS] 资产库 dock 左缘贴屏幕（x=0） — dockLeft=0
+  [PASS] 资产库 dock 右缘接到 Inspector 前 — dockRight=1278 inspLeft=1284
+  [PASS] 场景层级下边缘 = 资产库上边缘 — leftBottom=645 dockTop=645
+  [PASS] 顶级「刷怪点」tab 与独立 pane 已移除
+  [PASS] 层级功能体（✦）行数 = 起始场景 SpawnPoint 组件数（1） — rows=1
+  [PASS] 刷怪点分组存在于检视页且未选中时隐藏（选中驱动）
+  [PASS] 点选 ✦ 功能体行后刷怪点分组出现
+  [PASS] 选中态回读到该功能体（selectedNodeId 一致）
+  [PASS] ✦ 行高亮 .sel
+  [PASS] 取消选中后分组收起
+  [PASS] 生成后对象数 +1（addObject 新增，不再替换角色槽） — 5 → 6
+  [PASS] 选中带骨物体后动画分组出现
+  [PASS] hasAnimation 为真且能列出 clip — {"has":true,"clips":6}
+  [PASS] 播放/暂停状态机正确 — {"a":true,"b":false,"t":0.2}
+  [PASS] seekAnimation 后时间被写入 — t=0.2
+  [PASS] 撤销导入后对象数回落且作者状态干净 — 5 vs 基线 5
+
+J. AssetPreview（资产预览 / 动画时间轴 / 骨骼 X-ray）
+  [PASS] 资产预览宿主 #asset-preview-host 存在
+  [PASS] 主视图骨骼 X-ray 按钮 .gz-xray 存在
+  [PASS] window.__editor.preview 调试钩子已挂载
+  [PASS] 载入 rigged GLB 后预览有对象 — {"hasObject":true,"isAnim":true,"playing":true,"time":1.4582333015441864,"duration":1.9666666984558105,"clip":0,"skeletonVisible":false,"textured":true,"style":"textured","tris":3000,"lodCount":4,"sizeTier":0,"viewH":200}
+  [PASS] 预览物体带骨骼动画（isAnim） — isAnim=true
+  [PASS] 预览自动播放（playing） — playing=true
+  [PASS] 预览画布有有效尺寸 — {"w":300,"h":200,"disp":"block"}
+  [PASS] Timeline 片段下拉有选项 — clips=6
+  [PASS] Timeline 时间轴文本格式正确 — 1.46 / 1.97 s
+  [PASS] 动画时间在推进（考虑循环 wrap，Timeline 实时更新） — 1.458 → 0.520（前进 1.028 / 时长 1.967）
+  [PASS] 骨骼 X-ray 按钮激活
+  [PASS] 预览骨骼 X-ray 叠加开启
+  [PASS] 预览贴图生效（textured=true，根因：flags 位每帧被 packMaterial 重置）
+  [PASS] 白模切换生效（textured=false）
+  [PASS] 切回贴图生效
+  [PASS] LOD 家族下拉就位（≥2 档，manifest lods[]） — lodCount=4
+  [PASS] LOD切换实际载入清单对应高档面数 — 10500 → 79980
+  [PASS] 切回低档面数回落 — back=10500
+  [PASS] cycleSize(+1) 视图变高 — 200 → 340px
+  [PASS] cycleSize(-1) 回落 — 340 → 200px
+  [PASS] 悬停空格 = 下一档（capture 拦截生效） — tier 0 → 1
+  [PASS] Shift+空格 = 上一档 — tier 1 → 0
+  [PASS] 3D 视图下方标准开关：贴图 / 骨骼 — ["贴图","骨骼"]
+  [PASS] rigged 资产骨骼开关可用
+  [PASS] 纯网格资产骨骼开关禁用 + 复位 + 明示原因 — {"disabled":true,"checked":false,"title":"该资产无骨骼（纯网格）"}
+预览截图：C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie\.workbuddy\tmp\aggregate-repair\all-2\editor-smoke\editor-preview-smoke.png
+
+J2. AssetBrowser UI（上一层按钮 / 右键菜单四件套 / 行内重命名）
+  [PASS] 返回上一层按钮 .asset-up 存在
+  [PASS] 子目录里上一层可用
+  [PASS] 点击上一层回到父目录 — assets
+  [PASS] 项目根上置灰
+  [PASS] 右键后菜单打开且条目被选中
+  [PASS] 菜单恰好一条分隔线 — seps=1
+  [PASS] 分隔线后依次是四个通用文件动作（zh 源文案） — ["进入绑定 · 纯网格（仅 .glb）","进入绑定 · 已有骨骼（仅 .glb）","载入场景（仅 .glb）","复制相对路径","复制绝对路径","重命名…","在资源管理器中显示"]
+  [PASS] 复制相对路径 HUD 回显确切相对路径 — 已复制相对路径：.smoke/editor-ui-Vk9Xay/probe.json
+  [SKIP] 剪贴板内容核对 — 当前环境读不到有效剪贴板内容（读到 ""）；产品行为已由 HUD 断言验证
+  [PASS] beginRename 进入编辑态（输入框出现且预填旧名）
+  [PASS] Enter 提交后编辑态退出 + 列表刷新出新名 — ["probe2.json"]
+  [PASS] 改名真实落盘（新路径 200 / 旧路径 404） — {"disk":{"neu":200,"old":404},"hud":"已重命名 → .smoke/editor-ui-Vk9Xay/probe2.json"}
+  [PASS] Esc 取消编辑态且不落盘
+
+截图：C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie\.workbuddy\tmp\aggregate-repair\all-2\editor-smoke\editor-smoke.png
+
+N. 多语言切换（zh ↔ en）
+  [PASS] 语言切换按钮 [data-lang-toggle] 存在且可点
+  [PASS] 点击后持久化 lang=en
+  [PASS] en 模式资产库标题 = Asset Library — "Asset Library"
+  [PASS] en 模式「上一层」tooltip = Up One Level — "Up One Level"
+  [PASS] en 模式筛选占位符已翻译 — "Filter by name or path…"
+  [PASS] 实际按钮切回zh并刷新中文资产库 — {"lang":"zh","title":"资产库"}
+
+============================================================
+断言：122 PASS / 0 FAIL / 1 SKIP（共 123）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS
+
+=== 完整浏览器验收：editor-binding-smoke ===
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/
+
+K. 绑定面板 Binding（骨长采纳 / 姿态偏移不入骨架）
+  [PASS] 绑定面板宿主 #binding-dock 存在
+  [PASS] 右键菜单宿主 #ctx-menu 存在
+  [PASS] window.__editor.binding 调试钩子已挂载
+  [PASS] 绑定面板已打开（#binding-dock.open）
+  [PASS] 模型已载入绑定面板 — model=E01_Shambler_900_rigged_animated
+  [PASS] 27 个 HumanIK joint 全部就位（22 骨干 + 5 tip） — joints=27
+  [PASS] 正/侧两个视图 canvas 有有效尺寸 — front={"w":330,"h":317} side={"w":330,"h":317}
+  [PASS] 面板按钮齐全（镜像×2 / 重置 / 应用 / 关闭） — btns=21
+  [PASS] 顶边拖拽把手 .bd-grip 存在（面板可下压露出 3D 视图）
+  [PASS] 头部按语义分 5 组（编辑/镜像/姿态/产出/保存） — groups=["编辑","镜像","姿态","产出","保存"]
+  [PASS] 每个分组都有文字标签 — labelled=5/5
+  [PASS] 破坏性操作降级为 danger 次要样式（重置 / Detach） — danger=["reset","detach"]
+  [PASS] 「在 3D 视图显示包裹器」已提到头部（不再埋在 Skin 子面板） — head=true sub=false
+  [PASS] 半径三段都有数字输入框（滑块 + 数字框双向同步） — nums=3
+  [PASS] 操作说明默认收起（不再 10 行常驻） — hidden=true
+  [PASS] 载入后产出状态徽标常驻显示「● 未导出」 — badge={"hidden":false,"text":"● 未导出","cls":"bd-badge bd-badge-warn"}
+  [PASS] 头部「?」可展开操作说明 — hidden=false
+  [PASS] 头部「?」可再次收起 — hidden=true
+  [PASS] 默认摆放是 T-pose（左臂水平：LeftHand 与 LeftArm 同高） — LeftArm.y=1.5499999999999998 LeftHand.y=1.5499999999999998
+  [PASS] A-pose 下骨长仍是刚体不变量（采纳的只是长度） — 0.260000000 → 0.260000000
+  [PASS] 姿态偏移被如实记录（前臂 / 手各约 45°） — ForeArm=45.00° Hand=45.00°
+  [PASS] 没被摆动的骨不带姿态偏移（LeftArm ≈ 0°） — LeftArm=0.000000°
+  [PASS] ★ 重建的 T-pose 里左臂重新水平（ΔR 没被写进骨架） — Arm.y=1.550000 ForeArm.y=1.550000 Hand.y=1.550000
+  [PASS] ★ T-pose 世界矩阵旋转部分 = 单位阵（ΔR 不进骨架） — maxRotErr=0.00e+0
+  [PASS] 镜像 L→R：右侧 = 左侧 x 取反，y/z 原样（tip 也一起镜像） — L=[0.77,1.42,0.05] R=[-0.77,1.42,0.05] LTip=[0.87,1.42,0.05] RTip=[-0.87,1.42,0.05]
+  [PASS] 镜像 L→R：Skin Wrapper 半径一并镜像（RightHand 半径 == LeftHand） — L={"top":0.04,"medium":0.04,"bottom":0.04} R={"top":0.04,"medium":0.04,"bottom":0.04}
+  [PASS] 导出 GLB 非空 — bytes=3135880
+  [PASS] 导出含 27 根骨 — bones=27
+  [PASS] 无零权重顶点（兜底生效） — zero=0
+  [PASS] ★ 5 个 tip 节点都在骨架里 — {"hasTips":true,"headLen":0.14,"handLen":0.1,"toeLen":0.1,"handTipIsLeafBeyondHand":true}
+  [PASS] ★ tip 让末端骨段拿到长度（Head→HeadTip / Hand→HandTip / ToeBase→ToeTip 均 > 0） — head=0.14 hand=0.1 toe=0.1
+  [PASS] ★ tip 权重恒为 0（不参与 skin 计算） — tipWeightSum=0 tipRefVerts=0
+  [PASS] 反解是刚体变换，身高不跳变 — height 2.050 → 1.954 m
+  [PASS] 统计如实报出「离轴骨」= 被摆动的那两根（tip 已随手走，不该再报） — offAxis=["LeftForeArm","RightForeArm"]
+  [PASS] ★ 导出后摆放姿势原地不动（绑完骨架姿势即定，绝不跳回 T-pose） — Hand.y=1.420000 Tip.y=1.420000（应保持摆放值 1.42）
+  [PASS] 面板统计区仍是当前模型（导出流程没把它清空） — E01_Shambler_900_rigged_animated · 4209 顶点 / 3000 面
+
+L. 动画应用（BVH 重定向）
+  [PASS] window.__editor.anim 调试钩子已挂载 — object
+  [PASS] ★ A-pose 源的重定向：最大对齐角 = 45°（rest 偏移被识别出来） — maxAlign=45.0000°
+  [PASS] 22 根骨全映射、无缺骨、无未匹配 — mapped=22 missing=[]
+  [PASS] 片段信息：5 帧 / 22 骨 / 带根位移 — {"name":"smoke_apose","frames":5,"bones":22,"hasRoot":true}
+  [PASS] 面板 .bd-anim 诊断区写出片段名与对齐角 — smoke_apose | 帧 | 5 @ 30.0fps · 0.13s | 骨 | 22 已映射 | 对齐 | 最大 45.00° | 缩放 | 0.0115 · 源 Y-up | 管线 | 部分完成 | · 覆盖 space-mapping/contact-uncalibrated/rotation-baseli
+  [PASS] ★ 带动画导出：23 条轨道（22 rotation + 1 根位移） — channels=23 clips=["smoke_apose"]
+  [PASS] ★ 重定向后的动画挂到场景里已绑定的模型上 — obj#57 report=ok info="E04_Bulwark_1600_rigged 已应用 smoke_apose · 23 条轨道 · 片段 #0 · clip=smoke_apose frames=5 fps=30.00 dur=0.13s mapped=22/22 sc"
+  [PASS] ★ 23 条轨道落到目标骨架上且自动开始播放 — {"clips":1,"clip":0,"playing":true,"tracks":23}
+
+L2. Skin Wrapper 圆柱体（主 3D 视口）
+  [PASS] 重定向工作台已退出（不遮挡后续像素采样） — closed
+  [PASS] 已暂停叠加层取数源的动画播放（后续采样需要静止场景）
+  [PASS] 可切到「蒙皮包裹 skin」编辑模式
+  [PASS] 3D 视口包裹器开关可打开 — set→true
+  [PASS] ★ 圆柱体几何已产出并送进管线（顶点数 > 0） — {"on":true,"verts":45360,"cyls":22,"tries":0}
+  [PASS] ★ 顶点数是 stride 9 的整数倍（pos+nrm+col 交错，stride 36B） — verts=45360
+  [PASS] ★ 包裹器几何已静止（连续采样逐位相等，排除 settle 窗口污染） — {"settled":true,"tries":3,"sum":11821.736571200192}
+  [PASS] 包裹器半径表非空（每 joint 一个 wrapper） — cyls=22
+
+L2d. tip（尖端）骨约束
+  [PASS] ★ 半径表里没有 tip（不产生 skin wrapper） — total=22 tipKeys=[]
+  [PASS] ★ 22 骨干各有 wrapper（tip 只是让它们拿到长度，不是替换） — total=22
+
+L2e. 改半径 → 几何真的变
+  诊断预采样: pre=[11821.74, 11821.74, 11821.74] playing=false
+  [PASS] ★ 改半径真的写进半径表（setRadius 返回 true） — ok=true orig={"top":0.091,"medium":0.091,"bottom":0.091}
+  诊断：对照组（写入同值）Δsum=0.0000 · 真改半径 Δsum=9.1800 · 主视口 sum 11821.74 → 11830.92 · verts 5040 → 5040 · bboxMin [-2.661130666732788,-0.04546824470162392,-0.4755282700061798] → [-3.120130777359009,-0.04546824470162392,-0.4755282700061798] · bboxMax [-0.3281049430370331,1.5164756774902344,0.4755282700061798] → [-0.3281049430370331,1.6164755821228027,0.4755282700061798] · first [-1.4474999904632568,0,0] → [-1.4474999904632568,0,0]
+  [PASS] ★ 主 3D 视口：改半径后圆柱体几何变了（且远大于刷新副作用） — Δsum=9.1800 vs 对照组 0.0000
+  [PASS] ★ 面板正视：改半径后圆柱体几何变了 — Δsum=76.0272（24841.93 → 24917.95）
+  [PASS] ★ 面板侧视：改半径后圆柱体几何变了 — Δsum=76.0272（24841.93 → 24917.95）
+  [PASS] ★ 改回原值后几何回到基线（不是单向漂移） — Δsum=0.00e+0
+
+L2g. 视图里拖圆柱体 = 改半径
+  [PASS] ★ 视图里能点中圆柱体子段（点选判定没坏） — {"bone":"LeftLeg","seg":"bottom"}
+  [PASS] ★ 在视图里拖圆柱体 = 改半径（拖动真的有反应） — LeftLeg.bottom 0.158 → 0.600 · 拖动方向 {"dx":60,"dy":0} · off undefined → undefined · 起点垂距 23.7px
+  [PASS] ★ 只改点中的那一段，另两段不动 — {"top":0.1575,"medium":0.1575,"bottom":0.6}
+
+L2h. 侧边栏滑块 与「自动半径不覆盖手动值」
+  [PASS] ★ 点中圆柱体后侧边栏滑块就位（可编辑） — {"hit":{"bone":"Neck","seg":"medium"},"noSlider":false}
+  [PASS] ★ 拖侧边栏滑块 → 半径表真的改了（真实 DOM input 事件路径） — r-top 0.07 → 0.3 · radii.top 0.06999999999999998 → 0.3
+  [PASS] ★ 拖侧边栏滑块 → 面板 3D 视图几何跟着变（不是只改了数字） — ΔfrontSum=23.2346
+  [PASS] ★ 滑块位置不被回弹覆盖（改完 value 仍是新值，没被自动刷新写回旧值） — domAfter=0.3 span=0.450
+  [PASS] ★ 拖 joint 改骨长后，手动半径不被自动算法覆盖（r 仍是 0.3） — radii={"top":0.3,"medium":0.06999999999999998,"bottom":0.06999999999999998}
+  [PASS] ★ skin → skeleton → skin 往返后手动半径仍在 — radii={"top":0.3,"medium":0.06999999999999998,"bottom":0.06999999999999998}
+  [PASS] ★ 关节模式也吃半径表（不在该模式用 null 回退成自动半径） — ΔfrontSum(skeleton 模式)=14.5250
+  [PASS] ★ 关节模式与蒙皮模式的几何一致（同一个半径表，不再两套真源） — skn=24993.686 sk=24993.686
+  [PASS] ★ 自动适配只重算非手动骨：手动骨（⑤ 置的 top）一点没动 — headTop 0.45 → 0.45
+  [PASS] ★ 自动适配把非手动骨重算成公式值 clamp(骨长×0.35, 0.04, 0.22) — LeftArm={"top":0.05749242404917499,"medium":0.05749242404917499,"bottom":0.05749242404917499} 预期=0.0575 · oRadiiImmediate=0.05749242404917499 · oRadiiPersist=0.05749242404917499
+  [PASS] ★ 自动适配结果在若干帧后仍保持（无帧回调覆盖半径） — oRadiiImmediate=0.05749242404917499 · oRadiiPersist=0.05749242404917499
+
+L2i. 中键平移（pan）与点选一致性
+  [PASS] ★ 中键拖拽 = 平移视图（Head 骨轴两端点竖直移动 +60px，水平不动） — a [165,52.26633589549968] → [165,112.26633589549968]
+  [PASS] ★ 松开中键后视图不再跟随鼠标（N13：panning 标志已复位） — afterUp [165,112.26633589549968] vs panned [165,112.26633589549968]
+  [PASS] ★ pan 后的新位置能点中 Head（点选与绘制同吃实时 originY，N1） — pick={"bone":"Head","seg":"medium"}
+  [PASS] ★ redraw 后视图回到 fit 基线（pan 不污染后续断言段） — restored [165,52.26633589549968] vs before [165,52.26633589549968]
+
+L2j. T/A 预览失效重建 与 导出选项复位
+  [PASS] ★ T 预览下切平滑开关，预览网格几何指纹跟着变（预览不停在旧权重） — meshSum 35123.4304 → 35131.7618（开关原值=true）
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] ★ 取消勾选平滑后重开资产，开关复位为默认勾选（不串上一模型的值） — loaded=true checked=true
+
+L2k. 旧评审遗留收口（诊断条/平滑参数/热力图/姿势预览/Undo）
+  [PASS] ★ 诊断条常驻且与导出同源（影响骨数 / 零权重 / 未包裹顶点数） — 影响骨数 18 · 零权重 0 · 满4影响 4209 · 未包裹 3646 · 撤销 0
+  [PASS] ★ 平滑迭代数默认 4 且真实进权重链（改成 1 后 T 预览几何指纹跟着变） — 默认=4 meshSum 34986.3397 → 34986.3397
+  [PASS] ★ 热力图：选中 LeftUpLeg 大腿区画暖色（R≫B），取消选中回暖色消失 — 选中时 rgb(223,130,65) → 取消后 rgb(83,107,142)
+  [PASS] ★ 姿势预览：拖测试骨架网格蒙皮变形，但编辑骨架坐标纹丝不动 — meshSum 34986.3397 → 34952.5222，编辑骨架 [0.43000000000000005,1.5499999999999998,0] → [0.43000000000000005,1.5499999999999998,0]
+  [PASS] ★ Undo/Redo：Ctrl+Z 撤销半径修改，redo 重做回来（栈深同步） — 原值 0.091 → 改 0.2 → Ctrl+Z 后 0.091 → redo 后 0.2（栈 {"undo":3,"redo":0}→{"undo":3,"redo":0}）
+  [PASS] ★ 设置变更进历史：平滑开关撤销/重做时状态与控件同步还原（全量快照） — 栈深 4→5，勾选 true → 改 false → undo 后 true → redo 后 false
+  [PASS] ★ 合并窗口手势封口：流内并一步，change 封口后 800ms 内也新起一步 — undo 深度 6 →（流内连改两次）7 →（封口后再改）8
+  [PASS] ★ 姿势档镜像：编辑骨架零污染 + 不进历史，但预览网格跟着测试姿势变 — 编辑骨架不变=true，栈深 8→8，meshSum 34958.5537 → 34934.3322
+
+L2f. 主 3D 视口像素：改半径前后画面必须不同
+  [PASS] ★ 主 3D 视口：撑大所有包裹器后画面亮度变了（半径真的画出来了） — avg 64.843 → 63.305
+
+L2b. 绑定面板正/侧视（3D 正交视图）
+  [PASS] ★ 正/侧视 3D 层已建立（非 null = WebGPU 可用） — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 正视 3D 层已上传网格缓冲 — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 侧视 3D 层已上传网格缓冲 — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 正视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240） — frontCylVerts=5280（22 骨）
+  [PASS] ★ 侧视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240） — sideCylVerts=5280（22 骨）
+  [PASS] 正/侧视两个 3D 视图画出的圆柱体一致（同一批骨段） — front=5280 side=5280
+
+L3. 导入文件骨架（rigged GLB 桥）
+  [PASS] L3 导入模式打开绑定面板（27 骨 GLB）
+  [PASS] L3 诊断已挂载（importDiag 非空）
+  [PASS] L3 27 骨全部从文件骨架映射（imported=27） — imported=27
+  [PASS] L3 无缺骨保持模板位 / 无未识别骨名 / 无重复 — kept=[] unknown=[] dup=[]
+  [PASS] L3 导入摆位已进会话（Hips 为有限三元组） — [0.0024577900767326355,1.0820103883743286,0.17303752899169922]
+  [PASS] L3 autoFit 已按导入骨长真跑（LeftForeArm 半径=clamp(骨长×0.35)） — 骨长=0.4367 期望R=0.1528 实际R=0.15284809029227256
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] L3 导入模式打开绑定面板（22 骨 GLB）
+  [PASS] L3 旧 22 骨 rig：imported=22 — imported=22
+  [PASS] L3 旧 22 骨 rig：保持模板位的恰是 5 根 tip 骨 — kept=["HeadTip","LeftHandTip","RightHandTip","LeftToeTip","RightToeTip"]
+  [PASS] L3 旧 22 骨 rig：无未识别骨名 — unknown=[]
+  [PASS] L3 摆位随文件走（两次导入的 LeftForeArm 差 > 0.05m） — A=[0.6547708473125738,1.6620730981954428,0.17303752899169922] B=[0.4530067819356919,1.5499999999999998,-0.09343208372592926] Δ=0.353
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] L3 纯网格走导入模式：不产生导入诊断（importDiag=null）
+  [PASS] L3 纯网格走导入模式：旧会话不被顶掉（面板开、模型名不变） — before=E01_Shambler_900_rigged after=E01_Shambler_900_rigged open=true
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，关闭并放弃这些修改？
+
+============================================================
+断言：111 PASS / 0 FAIL / 0 SKIP（共 111）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS
+
+=== 完整浏览器验收：combat-probe ===
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-1.scene.json
+  [PASS] secure context与实际编辑器硬件GPU — {"secure":true,"fallback":false,"info":{"vendor":"nvidia","architecture":"lovelace","description":""}}
+  [PASS] 正式场景首波编成与场景/房间对应 — {"room":"nd_f1r0","actual":{"npc":24,"counts":{"E-01":15,"E-02":9},"tick":0,"outcome":"running","events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_f1r0","wave":1}],"player":{"id":0,"generation":1,"runId":1,"characterId":"P-01","kind":"player","x":3,"y":0,"z":0,"yaw":0,"alive":true,"sourceNodeId":"nd_f1_start","targetId":-1,"behavior":0,"behaviorPhase":0,"hp":100,"maxHp":100,"hitFlash":0,"lodTier":1}},"expected":{"wave":1,"counts":{"E-01":15,"E-02":9},"total":24}}
+  [PASS] Stop恢复作者文档与静态物件 — {"stopped":true,"ledger":{"registered":5,"disposed":5,"pending":0},"ids":[],"runtime":true,"objects":57,"afterObjects":57,"sameDocument":true,"sameState":true}
+  [PASS] Stop释放全部Play资源与动态GPU批次 — {"registered":5,"disposed":5,"pending":0}
+  [PASS] 白盒首波编成与场景/房间对应 — {"room":"nd_probe_room","actual":{"npc":6,"counts":{"E-01":3,"E-02":2,"B-02":1},"tick":0,"outcome":"running","events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_probe_room","wave":1}],"player":{"id":0,"generation":1,"runId":1,"characterId":"P-01","kind":"player","x":0,"y":0,"z":0,"yaw":0,"alive":true,"sourceNodeId":"nd_probe_player","targetId":-1,"behavior":0,"behaviorPhase":0,"hp":100,"maxHp":100,"hitFlash":0,"lodTier":1}},"expected":{"wave":1,"counts":{"E-01":3,"E-02":2,"B-02":1},"total":6}}
+  [PASS] 真实指针瞄准点位于游戏画布 — {"x":924.1267104884739,"y":344.785768686421,"behind":false,"error":0.0000715910038261475,"canvas":true}
+  [PASS] 投影与实际瞄准射线往返一致 — {"x":924.1267104884739,"y":344.785768686421,"behind":false,"error":0.0000715910038261475,"canvas":true}
+  [PASS] J键造成指定NPC击杀、玩家来源与模拟减员 — {"hit":{"defeated":{"id":6,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":1.8399981260299683,"y":0,"z":0,"yaw":3.1415927410125732,"alive":true,"sourceNodeId":"nd_probe_target","targetId":0,"behavior":1,"behaviorPhase":0,"hp":0,"maxHp":60,"hitFlash":0.15000000596046448,"lodTier":0},"type":"kill","tick":59,"slot":6,"generation":1,"runId":1,"characterId":"E-01","x":1.8399981260299683,"y":0,"z":0,"amount":12,"hpAfter":0,"sourceSlot":0,"sourceGeneration":1},"npc":5,"ammo":9994,"lastShot":{"tick":59,"from":[0.2999999997806131,0.9,-0.000011473105117576813],"to":[1.4999981272930945,0.9,-0.000057365454010624225],"hit":true},"tick":60,"outcome":"running"}
+  [PASS] 开火实际消耗弹药并生成命中弹道 — {"setup":{"target":{"id":6,"generation":1,"runId":1},"player":0,"npc":6,"events":0,"ammo":10000,"tick":0},"kill":{"hit":{"defeated":{"id":6,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":1.8399981260299683,"y":0,"z":0,"yaw":3.1415927410125732,"alive":true,"sourceNodeId":"nd_probe_target","targetId":0,"behavior":1,"behaviorPhase":0,"hp":0,"maxHp":60,"hitFlash":0.15000000596046448,"lodTier":0},"type":"kill","tick":59,"slot":6,"generation":1,"runId":1,"characterId":"E-01","x":1.8399981260299683,"y":0,"z":0,"amount":12,"hpAfter":0,"sourceSlot":0,"sourceGeneration":1},"npc":5,"ammo":9994,"lastShot":{"tick":59,"from":[0.2999999997806131,0.9,-0.000011473105117576813],"to":[1.4999981272930945,0.9,-0.000057365454010624225],"hit":true},"tick":60,"outcome":"running"}}
+  [PASS] 通过公开伤害入口清场后模拟存活确实为0 — {"npc":0,"tick":60}
+  [PASS] 波次间隔边界前不提前投放 — {"scheduledAt":60,"delay":60,"before":{"tick":120,"npc":0,"events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_probe_room","wave":1}]},"after":{"tick":121,"npc":4,"counts":{"E-02":1,"E-01":3},"events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_probe_room","wave":1},{"type":"wave-start","tick":120,"roomNodeId":"nd_probe_room","wave":2}]}}
+  [PASS] 边界到达投放同房下一波，数量与角色组成精确对应场景 — {"scheduledAt":60,"delay":60,"before":{"tick":120,"npc":0,"events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_probe_room","wave":1}]},"after":{"tick":121,"npc":4,"counts":{"E-02":1,"E-01":3},"events":[{"type":"wave-start","tick":0,"roomNodeId":"nd_probe_room","wave":1},{"type":"wave-start","tick":120,"roomNodeId":"nd_probe_room","wave":2}]}}
+  [PASS] 玩家死亡产生唯一game-over且30次手动推进不再增tick — {"tick":121,"after":121,"outcome":"game-over","stillPlaying":true,"gameOver":[{"type":"game-over","tick":121,"roomNodeId":null}]}
+  [PASS] 正常帧同样冻结，失败后保持Play供玩家查看 — {"tick":121,"playing":true,"outcome":"game-over"}
+  [PASS] Stop恢复作者文档与静态物件 — {"stopped":true,"ledger":{"registered":4,"disposed":4,"pending":0},"ids":[],"runtime":true,"objects":2,"afterObjects":2,"sameDocument":true,"sameState":true}
+  [PASS] Stop释放全部Play资源与动态GPU批次 — {"registered":4,"disposed":4,"pending":0}
+  [PASS] 无console error — []
+  [PASS] 无未捕获异常 — []
+
+============================================================
+断言：18 PASS / 0 FAIL / 0 SKIP（共 18）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS
+
+=== 完整浏览器验收：dynamic-skin-probe ===
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-1.scene.json
+  [PASS] secure context与实际编辑器硬件GPU — {"secure":true,"fallback":false,"info":{"vendor":"nvidia","architecture":"lovelace","description":""}}
+  [PASS] 正式场景仅按场景需求装配有骨架角色 — {"assembled":["E-01","E-02"],"expected":{"actors":["E-01","E-02"],"missing":[]}}
+  [PASS] 正式场景作者玩家由真实模型呈现且不重复生成代理 — {"playerNode":"nd_f1_start","playerStart":"nd_f1_start"}
+  [PASS] 正式场景活跃批次数量匹配在场实体/LOD/玩家抑制规则 — {"actualActors":{"E-01":15,"E-02":9},"wanted":{"E-01":15,"E-02":9},"proxyCount":0,"expectedProxy":0}
+  [PASS] 正式场景多角色调色板按矩阵单位首尾相接、rest完整落在末pose — [{"id":"E-01","base":0,"rest":324,"poses":325,"joints":28,"matrices":9100,"vertices":4209,"skinJoints":16836,"weights":16836,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]},{"id":"E-02","base":9100,"rest":329,"poses":330,"joints":28,"matrices":9240,"vertices":5350,"skinJoints":21400,"weights":21400,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]}]
+  [PASS] 正式场景实际蒙皮顶点/关节权重完整 — [{"id":"E-01","vertices":4209,"joints":16836,"weights":16836},{"id":"E-02","vertices":5350,"joints":21400,"weights":21400}]
+  [PASS] 正式场景逐活跃实例核对flags/base/jointStride及精确pose边界 — {"instances":24,"invalid":[]}
+  [PASS] 正式场景实际GPU已上传palette并提交对应动态绘制 — {"uploads":2,"draws":90,"gpu":["actor:E-01","actor:E-02"]}
+  [PASS] Stop恢复作者文档与静态物件 — {"stopped":true,"ledger":{"registered":96,"disposed":96,"pending":0},"ids":[],"runtime":true,"objects":57,"afterObjects":57,"sameDocument":true,"sameState":true}
+  [PASS] Stop释放全部Play资源与动态GPU批次 — {"registered":96,"disposed":96,"pending":0}
+  [PASS] 白盒仅按场景需求装配有骨架角色 — {"assembled":["E-01","E-02"],"expected":{"actors":["E-01","E-02"],"missing":["B-02"]}}
+  [PASS] 白盒作者玩家由真实模型呈现且不重复生成代理 — {"playerNode":"nd_probe_player","playerStart":"nd_probe_player"}
+  [PASS] 白盒活跃批次数量匹配在场实体/LOD/玩家抑制规则 — {"actualActors":{"E-01":3,"E-02":2},"wanted":{"E-01":3,"E-02":2},"proxyCount":1,"expectedProxy":1}
+  [PASS] 白盒多角色调色板按矩阵单位首尾相接、rest完整落在末pose — [{"id":"E-01","base":0,"rest":324,"poses":325,"joints":28,"matrices":9100,"vertices":4209,"skinJoints":16836,"weights":16836,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]},{"id":"E-02","base":9100,"rest":329,"poses":330,"joints":28,"matrices":9240,"vertices":5350,"skinJoints":21400,"weights":21400,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]}]
+  [PASS] 白盒实际蒙皮顶点/关节权重完整 — [{"id":"E-01","vertices":4209,"joints":16836,"weights":16836},{"id":"E-02","vertices":5350,"joints":21400,"weights":21400}]
+  [PASS] 白盒逐活跃实例核对flags/base/jointStride及精确pose边界 — {"instances":6,"invalid":[]}
+  [PASS] 白盒实际GPU已上传palette并提交对应动态绘制 — {"uploads":2,"draws":10,"gpu":["actor:E-01","actor:E-02","capsule:r1.200:h2.400"]}
+  [PASS] 注入503产生明确诊断并走实际胶囊flags0路径 — {"faults":[{"path":"assets/characters/models/B-02/rigged/B02_THE BROODMOTHER_6000_animation_ready.glb","status":503}],"diagnostics":["B-02: Error: HTTP 503"]}
+  [PASS] 同一身份在可控17tick中保持运行并产生实际位移 — {"a":{"identity":{"id":1,"generation":1,"runId":1},"entity":{"id":1,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":-4.990475177764893,"y":0,"z":-6.838200092315674,"yaw":0.7853981852531433,"alive":true,"sourceNodeId":"nd_probe_spawn0","targetId":0,"behavior":1,"behaviorPhase":0,"hp":60,"maxHp":60,"hitFlash":0,"lodTier":0},"debug":{"identity":{"kind":"entity","id":1,"runId":1,"generation":1},"label":"E-01 #1","characterId":"E-01","tick":20,"revision":0,"pipeline":"gpu-palette","status":"ready","decision":{"requested":"walk","actual":"walk","source":"behavior","fallback":null,"actionStamp":"","rules":[{"id":"anchor","label":"静止角色行为归一化","matched":false,"selected":false,"reason":"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"},{"id":"weapon","label":"武器 clip → action 别名","matched":false,"selected":false,"reason":"NPC / 无活动武器动作"},{"id":"behavior","label":"行为映射","matched":true,"selected":true,"reason":"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"}]},"clip":{"name":"walk","index":1,"time":1.2678984333481793,"duration":4.0333333015441895,"phase":0.3143549859523773,"loop":null},"transition":null,"ik":{"status":"unsupported","enabled":false,"weight":0,"controls":[],"diagnostics":[]},"diagnostics":["GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"]},"row":{"pose":118,"phase":0.3143549859523773,"base":0,"stride":28},"tick":20,"outcome":"running"},"b":{"identity":{"id":1,"generation":1,"runId":1},"entity":{"id":1,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":-4.429507732391357,"y":0,"z":-6.277232646942139,"yaw":0.7853981852531433,"alive":true,"sourceNodeId":"nd_probe_spawn0","targetId":0,"behavior":1,"behaviorPhase":0,"hp":60,"maxHp":60,"hitFlash":0,"lodTier":0},"debug":{"identity":{"kind":"entity","id":1,"runId":1,"generation":1},"label":"E-01 #1","characterId":"E-01","tick":37,"revision":0,"pipeline":"gpu-palette","status":"ready","decision":{"requested":"walk","actual":"walk","source":"behavior","fallback":null,"actionStamp":"","rules":[{"id":"anchor","label":"静止角色行为归一化","matched":false,"selected":false,"reason":"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"},{"id":"weapon","label":"武器 clip → action 别名","matched":false,"selected":false,"reason":"NPC / 无活动武器动作"},{"id":"behavior","label":"行为映射","matched":true,"selected":true,"reason":"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"}]},"clip":{"name":"walk","index":1,"time":3.7191460435516888,"duration":4.0333333015441895,"phase":0.9221023321151733,"loop":null},"transition":null,"ik":{"status":"unsupported","enabled":false,"weight":0,"controls":[],"diagnostics":[]},"diagnostics":["GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"]},"row":{"pose":157,"phase":0.9221023321151733,"base":0,"stride":28},"tick":37,"outcome":"running"},"moved":0.7933277692970419}
+  [PASS] 同一循环片的实际实例pose及phase随移动推进 — {"a":{"identity":{"id":1,"generation":1,"runId":1},"entity":{"id":1,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":-4.990475177764893,"y":0,"z":-6.838200092315674,"yaw":0.7853981852531433,"alive":true,"sourceNodeId":"nd_probe_spawn0","targetId":0,"behavior":1,"behaviorPhase":0,"hp":60,"maxHp":60,"hitFlash":0,"lodTier":0},"debug":{"identity":{"kind":"entity","id":1,"runId":1,"generation":1},"label":"E-01 #1","characterId":"E-01","tick":20,"revision":0,"pipeline":"gpu-palette","status":"ready","decision":{"requested":"walk","actual":"walk","source":"behavior","fallback":null,"actionStamp":"","rules":[{"id":"anchor","label":"静止角色行为归一化","matched":false,"selected":false,"reason":"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"},{"id":"weapon","label":"武器 clip → action 别名","matched":false,"selected":false,"reason":"NPC / 无活动武器动作"},{"id":"behavior","label":"行为映射","matched":true,"selected":true,"reason":"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"}]},"clip":{"name":"walk","index":1,"time":1.2678984333481793,"duration":4.0333333015441895,"phase":0.3143549859523773,"loop":null},"transition":null,"ik":{"status":"unsupported","enabled":false,"weight":0,"controls":[],"diagnostics":[]},"diagnostics":["GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"]},"row":{"pose":118,"phase":0.3143549859523773,"base":0,"stride":28},"tick":20,"outcome":"running"},"b":{"identity":{"id":1,"generation":1,"runId":1},"entity":{"id":1,"generation":1,"runId":1,"characterId":"E-01","kind":"npc","x":-4.429507732391357,"y":0,"z":-6.277232646942139,"yaw":0.7853981852531433,"alive":true,"sourceNodeId":"nd_probe_spawn0","targetId":0,"behavior":1,"behaviorPhase":0,"hp":60,"maxHp":60,"hitFlash":0,"lodTier":0},"debug":{"identity":{"kind":"entity","id":1,"runId":1,"generation":1},"label":"E-01 #1","characterId":"E-01","tick":37,"revision":0,"pipeline":"gpu-palette","status":"ready","decision":{"requested":"walk","actual":"walk","source":"behavior","fallback":null,"actionStamp":"","rules":[{"id":"anchor","label":"静止角色行为归一化","matched":false,"selected":false,"reason":"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"},{"id":"weapon","label":"武器 clip → action 别名","matched":false,"selected":false,"reason":"NPC / 无活动武器动作"},{"id":"behavior","label":"行为映射","matched":true,"selected":true,"reason":"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"}]},"clip":{"name":"walk","index":1,"time":3.7191460435516888,"duration":4.0333333015441895,"phase":0.9221023321151733,"loop":null},"transition":null,"ik":{"status":"unsupported","enabled":false,"weight":0,"controls":[],"diagnostics":[]},"diagnostics":["GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"]},"row":{"pose":157,"phase":0.9221023321151733,"base":0,"stride":28},"tick":37,"outcome":"running"}}
+  [PASS] Stop恢复作者文档与静态物件 — {"stopped":true,"ledger":{"registered":4,"disposed":4,"pending":0},"ids":[],"runtime":true,"objects":2,"afterObjects":2,"sameDocument":true,"sameState":true}
+  [PASS] Stop释放全部Play资源与动态GPU批次 — {"registered":4,"disposed":4,"pending":0}
+  [PASS] 再次Play仅按场景需求装配有骨架角色 — {"assembled":["E-01","E-02","B-02"],"expected":{"actors":["B-02","E-01","E-02"],"missing":[]}}
+  [PASS] 再次Play作者玩家由真实模型呈现且不重复生成代理 — {"playerNode":"nd_probe_player","playerStart":"nd_probe_player"}
+  [PASS] 再次Play活跃批次数量匹配在场实体/LOD/玩家抑制规则 — {"actualActors":{"E-01":3,"E-02":2,"B-02":1},"wanted":{"E-01":3,"E-02":2,"B-02":1},"proxyCount":0,"expectedProxy":0}
+  [PASS] 再次Play多角色调色板按矩阵单位首尾相接、rest完整落在末pose — [{"id":"E-01","base":0,"rest":324,"poses":325,"joints":28,"matrices":9100,"vertices":4209,"skinJoints":16836,"weights":16836,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]},{"id":"E-02","base":9100,"rest":329,"poses":330,"joints":28,"matrices":9240,"vertices":5350,"skinJoints":21400,"weights":21400,"clips":["idle","walk","attack","death","scream","hit","hit_b","recover"]},{"id":"B-02","base":18340,"rest":356,"poses":357,"joints":28,"matrices":9996,"vertices":21049,"skinJoints":84196,"weights":84196,"clips":["idle","walk","attack","death","scream","hit","hit_b"]}]
+  [PASS] 再次Play实际蒙皮顶点/关节权重完整 — [{"id":"E-01","vertices":4209,"joints":16836,"weights":16836},{"id":"E-02","vertices":5350,"joints":21400,"weights":21400},{"id":"B-02","vertices":21049,"joints":84196,"weights":84196}]
+  [PASS] 再次Play逐活跃实例核对flags/base/jointStride及精确pose边界 — {"instances":6,"invalid":[]}
+  [PASS] 再次Play实际GPU已上传palette并提交对应动态绘制 — {"uploads":5,"draws":10,"gpu":["actor:E-01","actor:E-02","actor:B-02"]}
+  [PASS] 撤销故障后下一轮Play清除失败并恢复B-02真模型 — {"actors":["E-01","E-02","B-02"],"diagnostics":[]}
+  [PASS] Stop→Play创建新runId且palette确实重传 — {"first":{"runId":1,"tick":0},"again":{"runId":2,"tick":0},"beforeUploads":2,"afterUploads":5}
+  [PASS] Stop恢复作者文档与静态物件 — {"stopped":true,"ledger":{"registered":8,"disposed":8,"pending":0},"ids":[],"runtime":true,"objects":2,"afterObjects":2,"sameDocument":true,"sameState":true}
+  [PASS] Stop释放全部Play资源与动态GPU批次 — {"registered":8,"disposed":8,"pending":0}
+  [PASS] 无console error — []
+  [PASS] 无未捕获异常 — []
+
+============================================================
+断言：35 PASS / 0 FAIL / 0 SKIP（共 35）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS
+
+聚合验收：PASS，完成4/4套件

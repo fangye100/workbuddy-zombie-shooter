@@ -1,274 +1,116 @@
-/**
- * 动态通道 GPU 蒙皮验收探针（docs/20 M2 + M3）。
- *
- * 断言的不是「像素好不好看」（那是人工 / cdp-verify 的事），而是**装配链贯通**：
- *   1. Play 后 ActorLibrary 装配全部「+动画」档角色（manifest LOD3 → parseGlb →
- *      烘焙调色板；期望清单从 asset-manifest.json 派生，禁手抄）
- *   2. 渲染批次 meshIds 含 actor:*（真模型）**且**仍含 capsule:*（玩家 P-01
- *      不在 manifest，永远胶囊）
- *   3. 实例 flags bit0 = 1（蒙皮路径）与 0（胶囊路径）同帧共存
- *   4. M3 装配数学：任一 paletteBase > 0 的角色，base/restPose 与该角色 palette
- *      pose 数构成的不变量成立（rest = poses-1 局部末帧 bind；base 按注册序
- *      以 pose 单位累加 —— PR #18 抓过的 P1，探针从公开字段独立复算）
- *   5. M3 动画在走：两个相隔 >500ms 的时刻读同一 actor 实例的 inst[11]
- *      （poseIndex，相对 paletteBase），值必须变化（tick 推相位）
- *   6. M3 批次构成：actor 批 = 实体在场的有档角色；B-02 无档不装配
- *      （floor-1 无 B-02 刷怪点，降级在库级验证）
- *   7. Play → Stop → Play 循环：Stop 释放 GPU palette，再 Play 必须重传
- *      （2026-10-02 M2 实现期修掉的坑：preload 幂等返回 false 导致 palette 不重传，
- *       蒙皮实例查已销毁 buffer → 顶点全零塌缩）
- *   8. 全程 console 无 error / 无未捕获异常（WGSL 编译错误在这里暴露）
- *
- * 用法（本机一律 headed + 真实 GPU）：
- *   node tools/verify/dynamic-skin-probe.mjs --headed
- * 退出码：0 = 全部通过；1 = 有断言失败或 console error。
- */
+/** 动态GPU蒙皮完整探针：按场景装配、真实实例flags/矩阵边界、同身份动作与Play循环。 */
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  sleep,
-  waitFor,
-  createRecorder,
-  makeArgParser,
-  ensureServer,
-  launchEditorSession,
-  normalizeEditorState,
-} from './editor-smoke-lib.mjs';
+import {waitFor,createRecorder,makeArgParser,readStartSceneExpectation} from './editor-smoke-lib.mjs';
+import {runGameProbe,navigateProbeScene,playPaused,stopProbe} from './game-probe-lib.mjs';
+import {GAME_PROBE_SCENE,readProbeScene,actorDemand,sameCounts,validSkinRow,shouldFailAssetRequest} from './game-probe-oracles.mjs';
+const {arg,has}=makeArgParser(process.argv);
+const OUT_DIR=path.resolve(arg('out','.workbuddy/tmp'));
+const {results,check,summary}=createRecorder();
+const manifest=JSON.parse(fs.readFileSync('assets/_data/asset-manifest.json','utf8'));
 
-const { arg, has } = makeArgParser(process.argv);
-const PORT = Number(arg('port', 5100));
-const CDP_PORT = Number(arg('cdp', 9341));
-const OUT_DIR = path.resolve(arg('out', '.workbuddy/tmp'));
-const CHROME = arg('chrome', '') || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-
-const { results, check, summary } = createRecorder();
-
-/**
- * 期望装配清单（探针侧 oracle，与 findAnimatedCharacterIds 同语义的独立重算）：
- * manifest 里带「+动画」档的角色，按清单顺序。禁手抄 —— 手抄清单 = 第二真源。
- */
-function expectedAnimatedIds() {
-  const manifest = JSON.parse(fs.readFileSync(path.resolve('assets/_data/asset-manifest.json'), 'utf8'));
-  return manifest.characters
-    .filter(
-      (c) =>
-        Array.isArray(c.lods) &&
-        c.lods.some((l) => typeof l.label === 'string' && l.label.includes('+动画')),
-    )
-    .map((c) => c.id);
+async function waitActors(cdp,expected){
+  const ready=await waitFor(()=>cdp.eval(`JSON.stringify([...window.__editor.actorLib.assembledIds].sort())===${JSON.stringify(JSON.stringify(expected))}`),{timeout:30000,interval:100,label:'场景需求角色装配完成'});
+  if(!ready)throw new Error('场景需求角色未装配完成：'+JSON.stringify(await cdp.eval('window.__editor.actorLib.diagnostics')));
+  await cdp.eval('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
 }
 
-async function main() {
-  const expected = expectedAnimatedIds();
-  fs.mkdirSync(OUT_DIR, { recursive: true });
-  const { server, url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
-  const { chrome, cdp } = await launchEditorSession({
-    chromePath: CHROME,
-    cdpPort: CDP_PORT,
-    headed: has('headed'),
-    appUrl: url,
-    windowSize: '1500,950',
-  });
-  try {
-    // launch 建的 target 停在 about:blank（localStorage 被禁），先导航到编辑器
-    await cdp.send('Page.navigate', { url });
-    await normalizeEditorState(cdp);
+async function inspect(cdp,expected,label){
+  await waitActors(cdp,expected.actors);
+  const state=await cdp.eval(`(()=>{const e=window.__editor,b=e.bridge,lib=e.actorLib,s=e.playCtl.session.runtime;
+    const actors=lib.assembledIds.map(id=>{const a=lib.get(id);return {id,base:a.paletteBase,rest:a.restPose,poses:a.palette.data.length/16/a.palette.jointCount,
+      joints:a.palette.jointCount,matrices:a.palette.data.length/16,vertices:a.vertices.length/15,skinJoints:a.joints.length,weights:a.weights.length,clips:a.clips.map(c=>c.name)};});
+    const active=(b.batches()??[]).map(batch=>{const rows=[];for(let i=0;i<batch.count;i++){const o=i*b.instanceStride;rows.push({x:batch.instances[o],z:batch.instances[o+2],base:batch.instances[o+7],pose:batch.instances[o+11],frames:batch.instances[o+12],phase:batch.instances[o+13],flags:batch.instances[o+14],stride:batch.instances[o+15]});}return {mesh:batch.meshId,count:batch.count,skin:!!batch.skin,rows};});
+    const wantedActors={},visible=b.entities.filter(n=>!(n.kind==='player'&&n.sourceNodeId===b.presentedPlayerNodeId));let proxy=0;
+    for(const n of visible){if(n.lodTier>=2||lib.get(n.characterId)===null)proxy++;else wantedActors[n.characterId]=(wantedActors[n.characterId]??0)+1;}
+    return {actors,active,wantedActors,proxy,visible:visible.length,entities:b.entities,playerNode:b.presentedPlayerNodeId,playerStart:e.renderer.getDocument().playerStart,
+      uploads:e.renderer.core.paletteUploadCount,gpuIds:e.renderer.debugDynamicMeshIds(),draws:e.renderer.stats.drawCalls,diagnostics:lib.diagnostics,tick:s.tick,outcome:s.outcome};})()`);
+  check(label+'仅按场景需求装配有骨架角色',JSON.stringify(state.actors.map(a=>a.id).sort())===JSON.stringify(expected.actors),JSON.stringify({assembled:state.actors.map(a=>a.id),expected}));
+  check(label+'作者玩家由真实模型呈现且不重复生成代理',state.playerNode!==null&&state.playerNode===state.playerStart&&state.entities.filter(n=>n.kind==='player'&&n.sourceNodeId===state.playerNode).length===1,JSON.stringify({playerNode:state.playerNode,playerStart:state.playerStart}));
+  const actualActors=Object.fromEntries(state.active.filter(b=>b.mesh.startsWith('actor:')).map(b=>[b.mesh.slice(6),b.count]));
+  const proxyCount=state.active.filter(b=>b.mesh.startsWith('capsule:')).reduce((sum,b)=>sum+b.count,0);
+  check(label+'活跃批次数量匹配在场实体/LOD/玩家抑制规则',sameCounts(actualActors,state.wantedActors)&&proxyCount===state.proxy&&state.active.reduce((sum,b)=>sum+b.count,0)===state.visible,JSON.stringify({actualActors,wanted:state.wantedActors,proxyCount,expectedProxy:state.proxy}));
+  const sorted=[...state.actors].sort((a,b)=>a.base-b.base);let matrices=0,chain=sorted.length>=2;
+  for(const actor of sorted){chain&&=Number.isInteger(actor.poses)&&actor.poses>0&&actor.base===matrices&&actor.rest===actor.poses-1&&actor.base+(actor.rest+1)*actor.joints===actor.base+actor.matrices;matrices+=actor.matrices;}
+  check(label+'多角色调色板按矩阵单位首尾相接、rest完整落在末pose',chain,JSON.stringify(sorted));
+  check(label+'实际蒙皮顶点/关节权重完整',sorted.every(a=>a.vertices>0&&a.skinJoints===a.vertices*4&&a.weights===a.vertices*4&&a.clips.length>0),JSON.stringify(sorted.map(a=>({id:a.id,vertices:a.vertices,joints:a.skinJoints,weights:a.weights}))));
+  const invalid=[];
+  for(const batch of state.active){const actor=batch.mesh.startsWith('actor:')?sorted.find(a=>a.id===batch.mesh.slice(6)):null;
+    if(batch.skin!==!!actor||batch.rows.length!==batch.count)invalid.push({mesh:batch.mesh,skin:batch.skin});
+    for(const row of batch.rows)if(!validSkinRow(row,actor,matrices))invalid.push({mesh:batch.mesh,row});}
+  check(label+'逐活跃实例核对flags/base/jointStride及精确pose边界',state.active.length>0&&invalid.length===0,JSON.stringify({instances:state.active.reduce((sum,b)=>sum+b.count,0),invalid}));
+  check(label+'实际GPU已上传palette并提交对应动态绘制',state.uploads>0&&state.draws>0&&state.active.every(b=>state.gpuIds.includes(b.mesh)),JSON.stringify({uploads:state.uploads,draws:state.draws,gpu:state.gpuIds}));
+  return state;
+}
 
-    // ---- ① Play：等真角色装配（manifest fetch + GLB 解析 + 烘焙，秒级）----
-    // reload 后场景仍在 boot 时点击会返回「场景尚未加载」（产品行为：warn + HUD），
-    // 探针按真实用户节奏轮询重试，直到 Play 真正激活（stop 按钮解禁）
-    await waitFor(
-      () =>
-        cdp
-          .eval(
-            `(() => { const stop = document.querySelector('#btn-stop');
-               if (stop && stop.disabled) { document.querySelector('#btn-play').click(); return false; }
-               return true; })()`,
-          )
-          .then((r) => r === true),
-      { timeout: 20000, interval: 500, label: 'Play 激活（场景 boot 后点击生效）' },
-    );
-    await waitFor(
-      () =>
-        cdp.eval('(() => window.__editor?.actorLib?.size ?? -1)()').then((n) => n === expected.length),
-      { timeout: 30000, interval: 400, label: `全部「+动画」档角色装配完成（actorLib.size === ${expected.length}）` },
-    );
+async function animationSample(cdp,identity){
+  return cdp.eval(`(()=>{const e=window.__editor,b=e.bridge,s=e.playCtl.session.runtime,id=${JSON.stringify(identity)};
+    const entity=b.entities.find(n=>n.runId===id.runId&&n.id===id.id&&n.generation===id.generation);if(!entity)throw new Error('动画观察身份已失效');
+    b.watchDebug({kind:'entity',...id},()=>{});const debug=b.debugSnapshot();
+    const batch=(b.batches()??[]).find(batch=>batch.meshId==='actor:'+entity.characterId),rows=[];
+    for(let row=0;row<(batch?.count??0);row++){const o=row*b.instanceStride;if(Math.hypot(batch.instances[o]-entity.x,batch.instances[o+2]-entity.z)<.0001)rows.push({pose:batch.instances[o+11],phase:batch.instances[o+13],base:batch.instances[o+7],stride:batch.instances[o+15]});}
+    if(rows.length!==1)throw new Error('动画身份到实例位置不唯一，不能以批次下标冒充身份');
+    return {identity:id,entity,debug,row:rows[0],tick:s.tick,outcome:s.outcome};})()`);
+}
 
-    // HUD / 渲染刷新间隔（0.4s 量级）之后读批次状态
-    await sleep(900);
-    const st = await cdp.eval(`(() => {
-      const r = window.__editor.renderer;
-      const ids = r.debugDynamicMeshIds();
-      return { ids, actors: window.__editor.actorLib.size,
-               playing: document.querySelector('#btn-pause') && !document.querySelector('#btn-pause').disabled };
-    })()`);
-    check(
-      `全部「+动画」档角色已装配（actorLib.size = ${expected.length}，清单从 manifest 派生）`,
-      st.actors === expected.length,
-      JSON.stringify(st.actors),
-    );
-    check('动态批次含真模型网格 actor:E-01', st.ids.includes('actor:E-01'), st.ids.join(','));
-    check('未装配角色仍走胶囊（玩家 P-01 不在 manifest，恒胶囊）', st.ids.some((i) => i.startsWith('capsule:')), st.ids.join(','));
+async function main(){
+  const scene=arg('scene',readStartSceneExpectation().path);
+  return runGameProbe({name:'dynamic-skin',outDir:OUT_DIR,port:Number(arg('port',5100)),cdpPort:Number(arg('cdp',9341)),
+    chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),headed:has('headed'),windowSize:arg('window-size','1600,1000'),url:arg('url',null),scene,results,check,summary},async({cdp,details,url})=>{
+    await playPaused(cdp);
+    details.production=await inspect(cdp,actorDemand(readProbeScene(scene),manifest),'正式场景');
+    details.productionStop=await stopProbe(cdp,check);
+    await navigateProbeScene(cdp,url,GAME_PROBE_SCENE);
+    // B-02已有rig-only，不能声称源资产缺档。仅在白盒精确注入503，验真降级与Stop后恢复。
+    const demand=actorDemand(readProbeScene(GAME_PROBE_SCENE),manifest);
+    const b02=manifest.characters.find(c=>c.id==='B-02'),rig=b02.lods.find(l=>l.label.includes('+骨骼'));
+    if(!rig)throw new Error('故障注入夹具缺少B-02 rig-only资产');
+    const failedPath='assets/'+rig.file;details.injectedFailures=[];
+    const paused=event=>{
+      const message=JSON.parse(event.data);
+      if(message.sessionId!==cdp.sessionId||message.method!=='Fetch.requestPaused')return;
+      const requested=new URL(message.params.request.url).searchParams.get('path');
+      const matches=shouldFailAssetRequest(message.params.request,failedPath);
+      if(matches)details.injectedFailures.push({path:requested,status:503});
+      void cdp.send(matches?'Fetch.fulfillRequest':'Fetch.continueRequest',matches?{requestId:message.params.requestId,responseCode:503,body:Buffer.from('probe unavailable').toString('base64')}:{requestId:message.params.requestId}).catch(error=>check('故障注入响应完成',false,error.message));
+    };
+    cdp.ws.addEventListener('message',paused);
+    let first,beforeUploads;
+    try {
+    await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*B02*animation_ready.glb*',requestStage:'Request'}]});
+    first=await playPaused(cdp);const expected={actors:demand.actors.filter(id=>id!=='B-02'),missing:['B-02']};
+    const diagnosed=await waitFor(()=>cdp.eval(`window.__editor.actorLib.diagnostics.some(d=>d.startsWith('B-02:')&&d.includes('503'))`),{timeout:10000,interval:100,label:'503故障必须成为显式装配诊断'});
+    if(!diagnosed)throw new Error('503故障没有产生预期诊断');
+    details.whitebox=await inspect(cdp,expected,'白盒');
+    check('注入503产生明确诊断并走实际胶囊flags0路径',details.injectedFailures.length===1&&details.whitebox.proxy===1&&details.whitebox.active.some(b=>b.mesh.startsWith('capsule:')&&b.rows.every(r=>r.flags===0))&&details.whitebox.diagnostics.some(d=>d.startsWith('B-02:')&&d.includes('503')),JSON.stringify({faults:details.injectedFailures,diagnostics:details.whitebox.diagnostics}));
 
-    // ---- M3 ③ 批次构成：actor 批 = 实体在场的有档角色；B-02 无档不装配 ----
-    const compose = await cdp.eval(`(() => {
-      const lib = window.__editor.actorLib;
-      const ids = window.__editor.renderer.debugDynamicMeshIds();
-      const actorIds = ids.filter((i) => i.startsWith('actor:')).map((i) => i.slice(6));
-      // 实体视图派生（不手抄场景）：在场角色按「装配库有没有」分成真模型/胶囊两组
-      const present = new Set(window.__editor.bridge.entities.map((e) => e.characterId));
-      const liveActor = [...present].filter((id) => lib.get(id) !== null).sort();
-      const liveCapsule = [...present].filter((id) => lib.get(id) === null).sort();
-      return { actorIds: [...new Set(actorIds)].sort(), liveActor, liveCapsule,
-               b02: lib.get('B-02'), present: [...present].sort() };
-    })()`);
-    check(
-      'actor 批次 = 实体在场的有档角色（批次按 characterId 分槽）',
-      JSON.stringify(compose.actorIds) === JSON.stringify(compose.liveActor) && compose.actorIds.length >= 2,
-      `batches=${JSON.stringify(compose.actorIds)} live=${JSON.stringify(compose.liveActor)}`,
-    );
-    check('B-02 无「+动画」档不装配（缺档退胶囊是库级设计行为）', compose.b02 === null, JSON.stringify(compose.b02));
-    check('在场无档角色走胶囊（floor-1 = 玩家 P-01）', compose.liveCapsule.length >= 1, JSON.stringify(compose.liveCapsule));
+    // 只观察同一运行代次/槽代次中确实移动的循环片，静止/攻击末帧不被误判成停动画。
+    await cdp.eval(`(()=>{const c=window.__editor.playCtl;for(let i=0;i<20;i++)document.querySelector('#btn-step').click();return c.tick;})()`);
+    const identity=await cdp.eval(`(()=>{const e=window.__editor.bridge.entities.find(n=>n.kind==='npc'&&n.characterId==='E-01'&&n.behavior===1);if(!e)throw new Error('无追逐循环动画样本');return {id:e.id,generation:e.generation,runId:e.runId};})()`);
+    const a=await animationSample(cdp,identity);
+    await cdp.eval(`(()=>{const c=window.__editor.playCtl;for(let i=0;i<17;i++)document.querySelector('#btn-step').click();return c.tick;})()`);
+    const b=await animationSample(cdp,identity);
+    const moved=Math.hypot(b.entity.x-a.entity.x,b.entity.z-a.entity.z);
+    check('同一身份在可控17tick中保持运行并产生实际位移',a.outcome==='running'&&b.outcome==='running'&&b.tick-a.tick===17&&moved>.01&&JSON.stringify(a.debug?.identity)===JSON.stringify(b.debug?.identity),JSON.stringify({a,b,moved}));
+    check('同一循环片的实际实例pose及phase随移动推进',a.debug?.clip?.name===b.debug?.clip?.name&&['walk','run'].includes(a.debug?.clip?.name)&&a.row.pose!==b.row.pose&&a.row.phase!==b.row.phase&&a.debug?.pipeline==='gpu-palette'&&b.debug?.pipeline==='gpu-palette',JSON.stringify({a,b}));
+    details.animation={a,b,moved};
+    await cdp.eval('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(OUT_DIR,'dynamic-skin.png'),Buffer.from(shot.data,'base64'));
 
-    // ---- ② 实例 flags 双路径（蒙皮位与胶囊位同帧共存）----
-    const flags = await cdp.eval(`(() => {
-      const lib = window.__editor.actorLib;
-      const e01 = lib.get('E-01');
-      return e01 ? { paletteBase: e01.paletteBase, restPose: e01.restPose,
-                     joints: e01.joints.length, weights: e01.weights.length,
-                     verts: e01.vertices.length / 15, feetOffset: e01.feetOffset } : null;
-    })()`);
-    check('装配数据完整（skin 顶点 + paletteBase + restPose）',
-      flags !== null && flags.joints > 0 && flags.weights > 0 && flags.paletteBase >= 0 && flags.restPose >= 0,
-      JSON.stringify(flags));
-
-    // ---- M3 ① 装配数学（双角色，从 ActorMesh 公开字段独立复算）----
-    // 任一 paletteBase > 0 的角色：base 按注册序以 pose 单位累加、restPose 是
-    // 角色 palette 局部末帧（= pose 数 - 1）、base + rest 指向该角色块最后一 pose。
-    // 探针不复用页面里的 assemblePalettes —— 独立重算才有防线价值。
-    const math = await cdp.eval(`(() => {
-      const lib = window.__editor.actorLib;
-      const ids = lib.assembledIds;
-      return ids.map((id) => {
-        const a = lib.get(id);
-        const poses = a.palette.data.length / 16 / a.palette.jointCount;
-        return { id, base: a.paletteBase, rest: a.restPose, poses, joints: a.palette.jointCount };
-      });
-    })()`);
-    const withBase = math.filter((m) => m.base > 0);
-    check('双角色在场（paletteBase > 0 的角色存在）', withBase.length >= 1, JSON.stringify(math));
-    if (withBase.length >= 1) {
-      const sorted = [...math].sort((a, b) => a.base - b.base);
-      let acc = 0;
-      let okChain = true;
-      let okRest = true;
-      let okRange = true;
-      for (const m of sorted) {
-        if (m.base !== acc) okChain = false;
-        if (m.rest !== m.poses - 1) okRest = false;
-        if (m.base + m.rest * m.joints !== acc + (m.poses - 1) * m.joints) okRange = false;
-        acc += m.poses * m.joints;
-      }
-      const totalPoses = acc;
-      check('paletteBase 按注册序以 matrix 单位累加（bases 首尾相接）', okChain, JSON.stringify(sorted));
-      check('restPose = 角色 palette 局部末帧（poses - 1，PR #18 P1 防线）', okRest, JSON.stringify(sorted));
-      check('base + rest*stride = 该角色块末 pose（矩阵下标不越界）', okRange && sorted.every((m) => m.base + m.rest * m.joints < totalPoses), JSON.stringify(sorted));
+    beforeUploads=await cdp.eval('window.__editor.renderer.core.paletteUploadCount');
+    details.stop=await stopProbe(cdp,check);
+    // 有共享动作时beginPlay会重建目标骨架；不要求旧CPU缓存永远复用，只要求再装配与重传正确。
+    } finally {
+      try{await cdp.send('Fetch.disable');}catch(error){check('故障注入关闭完成',false,error.message);}
+      finally{cdp.ws.removeEventListener('message',paused);}
     }
-
-    // ---- M3 ② 动画在走：隔 >500ms 两次读同一 actor 实例的 inst[11]（poseIndex）----
-    // inst 布局：[7] paletteBase / [11] poseIndex（局部）/ [12] frameCount /
-    // [13] phase01 / [14] flags。tick 推相位 → poseIndex 必随时间变化。
-    const samplePoses = () =>
-      cdp.eval(`(() => {
-        const batches = window.__editor.bridge.batches();
-        if (batches === null) return null;
-        const out = {};
-        for (const b of batches) {
-          if (!b.meshId.startsWith('actor:')) continue;
-          for (let i = 0; i < b.count; i++) {
-            const stride = window.__editor.bridge.instanceStride;
-            out[b.meshId + '#' + i] = { pose: b.instances[i * stride + 11], base: b.instances[i * stride + 7] };
-          }
-        }
-        return out;
-      })()`);
-    const poseA = await samplePoses();
-    await sleep(900); // >500ms：30 tick/s 下 walk 片相位推进 ~0.45 周期，帧号必变
-    const poseB = await samplePoses();
-    const keysA = Object.keys(poseA ?? {});
-    const changed = keysA.filter((k) => poseB[k] !== undefined && poseB[k].pose !== poseA[k].pose);
-    check(
-      '动画在走（同一 actor 实例隔 900ms 的 poseIndex 全部变化）',
-      keysA.length > 0 && changed.length === keysA.length,
-      `${changed.length}/${keysA.length} 变化`,
-    );
-    const idxSafe = keysA.every((k) => poseA[k].pose >= 0 && poseA[k].pose < 1e9 && Number.isFinite(poseA[k].pose));
-    check('poseIndex 数值健康（有限非负，非 u32 巨数）', idxSafe, JSON.stringify(Object.values(poseA ?? {}).slice(0, 3)));
-
-    // ---- ③ 截图留档（人工复核「真模型非胶囊」； headed + 反遮挡 flags 已加）----
-    await sleep(1200);
-    const shot = await cdp.send('Page.captureScreenshot', { format: 'png' });
-    const shotPath = path.join(OUT_DIR, 'dynamic-skin-m2.png');
-    fs.writeFileSync(shotPath, Buffer.from(shot.data, 'base64'));
-    check('截图留档（M2 视觉复核）', true, shotPath);
-
-    // ---- ④ Play → Stop → Play 循环（palette 重传回归）----
-    // 记录 Stop 前的 palette 上传计数：再 Play 后它必须**增长**——只看批次重建
-    // 不够（attach() 会同步重建 actor 批次，此时 bind group 可能还指着哑 palette，
-    // PR #18 review 抓的假阳性窗口）
-    const uploadsBeforeStop = await cdp.eval('window.__editor.renderer.core.paletteUploadCount');
-    await cdp.eval(`(() => { document.querySelector('#btn-stop').click(); return true; })()`);
-    await sleep(700);
-    const afterStop = await cdp.eval(`(() => ({
-      ids: window.__editor.renderer.debugDynamicMeshIds(),
-      actors: window.__editor.actorLib.size,
-    }))()`);
-    check('Stop 后动态批次清空（渲染侧无残留）', afterStop.ids.length === 0, JSON.stringify(afterStop.ids));
-    check(
-      `Stop 只释放 GPU 侧，CPU 装配缓存保留（下次 Play 免重载）`,
-      afterStop.actors === expected.length,
-      JSON.stringify(afterStop.actors),
-    );
-
-    await waitFor(
-      () =>
-        cdp
-          .eval(
-            `(() => { const stop = document.querySelector('#btn-stop');
-               if (stop && stop.disabled) { document.querySelector('#btn-play').click(); return false; }
-               return true; })()`,
-          )
-          .then((r) => r === true),
-      { timeout: 20000, interval: 500, label: '再 Play 激活' },
-    );
-    const again = await waitFor(
-      () =>
-        cdp
-          .eval(
-            `(() => { const i = window.__editor.renderer.debugDynamicMeshIds();
-               const up = window.__editor.renderer.core.paletteUploadCount;
-               return i.includes("actor:E-01") && up > ${Number(uploadsBeforeStop) || 0} ? i : null; })()`,
-          )
-          .then((r) => r !== null),
-      { timeout: 20000, interval: 400, label: '再 Play 后 actor 批次重建 且 palette 确已重传' },
-    ).catch(() => false);
-    check('再 Play：palette 重传 + 真模型批次恢复（循环回归）', again === true, `uploads: ${uploadsBeforeStop} → 后续增长`);
-
-    // ---- ⑤ console 卫生（WGSL 编译错误 / GPU validation error 在这里暴露）----
-    await sleep(600);
-    check('无 console error', cdp.consoleErrors.length === 0, cdp.consoleErrors.slice(0, 3).join(' | ').slice(0, 400));
-    check('无未捕获异常', cdp.exceptions.length === 0, cdp.exceptions.slice(0, 3).join(' | ').slice(0, 400));
-  } finally {
-    await chrome.kill();
-    // 探针自起的 vite 必须带走（复用既有 server 时 server 为 null，不杀别人的）
-    if (server !== null) server.kill();
-  }
-
-  const code = summary(cdp.consoleErrors, cdp.exceptions);
-  process.exit(code);
+    const again=await playPaused(cdp);
+    details.replay=await inspect(cdp,demand,'再次Play');
+    check('撤销故障后下一轮Play清除失败并恢复B-02真模型',details.replay.active.some(batch=>batch.mesh==='actor:B-02')&&!details.replay.diagnostics.some(d=>d.startsWith('B-02:')),JSON.stringify({actors:details.replay.actors.map(a=>a.id),diagnostics:details.replay.diagnostics}));
+    check('Stop→Play创建新runId且palette确实重传',again.runId!==first.runId&&details.replay.uploads>beforeUploads,JSON.stringify({first,again,beforeUploads,afterUploads:details.replay.uploads}));
+    details.finalStop=await stopProbe(cdp,check);
+    check('无console error',cdp.consoleErrors.length===0,JSON.stringify(cdp.consoleErrors));
+    check('无未捕获异常',cdp.exceptions.length===0,JSON.stringify(cdp.exceptions));
+  });
 }
-
-main().catch((err) => {
-  console.error('探针异常终止：', err.message);
-  process.exit(1);
-});
+main().then(code=>process.exit(code)).catch(error=>{console.error('动态蒙皮探针异常终止：',error.message);process.exit(1);});

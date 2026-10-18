@@ -165,6 +165,12 @@
       "path": "assets/scenes/sandbox/editor-smoke.scene.json",
       "name": "编辑器冒烟白盒 · 层级与资产交互",
       "enabled": true
+    },
+    {
+      "id": "sc_game_probes",
+      "path": "assets/scenes/sandbox/game-probes.scene.json",
+      "name": "战斗与动态蒙皮白盒 · 双波次及代理降级",
+      "enabled": true
     }
   ],
   "startIndex": 1,

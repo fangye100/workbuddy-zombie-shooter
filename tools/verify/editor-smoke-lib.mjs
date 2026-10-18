@@ -166,11 +166,12 @@ export async function cdpTargets(cdpPort) {
 }
 
 export class Cdp {
-  constructor(ws, sessionId) {
+  constructor(ws, sessionId, {timeoutMs=30000}={}) {
     this.ws = ws;
     this.sessionId = sessionId;
     this.id = 0;
     this.pending = new Map();
+    this.timeoutMs = timeoutMs;
     this.consoleErrors = [];
     this.exceptions = [];
     ws.addEventListener('message', (ev) => {
@@ -179,6 +180,7 @@ export class Cdp {
         const p = this.pending.get(msg.id);
         if (p !== undefined) {
           this.pending.delete(msg.id);
+          clearTimeout(p.timer);
           msg.error ? p.reject(new Error(JSON.stringify(msg.error))) : p.resolve(msg.result);
         }
         return;
@@ -196,13 +198,21 @@ export class Cdp {
         if (!this.exceptions.includes(text)) this.exceptions.push(text);
       }
     });
+    const disconnect=()=>{
+      for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('CDP连接关闭'));}
+      this.pending.clear();
+    };
+    ws.addEventListener('close',disconnect);
+    ws.addEventListener('error',disconnect);
   }
 
   send(method, params = {}) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.ws.send(JSON.stringify({ id, method, params, sessionId: this.sessionId }));
+      const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP ${method} 超时（${this.timeoutMs}ms）`));},this.timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
+      try {this.ws.send(JSON.stringify({ id, method, params, sessionId: this.sessionId }));}
+      catch(error){clearTimeout(timer);this.pending.delete(id);reject(error);}
     });
   }
 

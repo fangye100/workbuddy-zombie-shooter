@@ -73,3 +73,46 @@ pnpm run editor:smoke:binding -- --headed --out .workbuddy/tmp/editor-binding
 退出码非零；SKIP 必须单独报告，不能写成验证成功。`editor:smoke:all` 还组合 combat 与
 动态蒙皮探针；上述两套件通过不等于该聚合命令所有探针通过，也不等于美术匹配验收。
 本次实际结果见[2026-10-18验收记录](evidence/editor-smoke-20261018/acceptance.md)。
+
+
+## 战斗、动态蒙皮与四套件聚合（2026-10-18）
+
+本机一次执行全部浏览器门禁：
+
+```powershell
+pnpm run editor:smoke:all -- --headed --out .workbuddy/tmp/editor-all
+```
+
+`tools/verify/editor-smoke-all.mjs` 串行启动核心、绑定、战斗、动态蒙皮四个进程，
+逐套转发参数，各有独立输出子目录，最后生成 `aggregate-results.json`。
+Windows 未传 `--headed` 会明确失败；任一套件失败即非零退出，后续列入 `notRun`，
+不能把未执行当作成功。也可单独运行：
+
+```powershell
+node tools/verify/combat-probe.mjs --headed --out .workbuddy/tmp/combat
+node tools/verify/dynamic-skin-probe.mjs --headed --out .workbuddy/tmp/skin
+node --test tools/verify/editor-smoke-lib.test.mjs tools/verify/game-probe-oracles.test.mjs
+```
+
+这两条探针先检查真实起始场景，再装载项目已登记的
+`assets/scenes/sandbox/game-probes.scene.json`。战斗编成按场景稳定父引用、房间、启用状态、
+room-enter 与实际波号推导。白盒用真实鼠标瞄准与 J 键完成指定身份 NPC 击杀，核对玩家
+来源、弹药、弹道和模拟减员；仅后续清场使用公开 applyDamage，波次间隔用手动固定步
+加速验证。白盒不携带奖励选择/街景遮挡，不能借它证明正式关卡平衡性。
+
+动态蒙皮以“场景需求∩有骨架档”装配，不能要求加载全 manifest。Play 后立即暂停，
+避免装配耗时使玩家先死亡；正式玩家的作者模型由独立呈现管线负责，不能恒要求玩家胶囊。
+活跃批次按在场实体、LOD 和玩家抑制规则核对，逐行校验 flags、base、jointStride 与
+完整 pose 矩阵边界。移动动画观察匹配 runId/id/generation，并核对实际位移、clip、
+phase 与实例 pose；不要求静止/攻击末帧也随墙钟变化。
+
+B-02 当前已有 rig-only 模型，探针不能再声称它本来缺档。故障测试仅在自建白盒 target
+拦截 B-02 精确 GET GLB 请求并响应503；meta/BVH/其他角色请求继续，实际路径/响应单独记录。
+产品必须给出明确装配诊断并显示 flags0 代理。finally 撤销拦截后重新 Play，验证 B-02
+恢复真模型/flags1、诊断清除、新 runId 及 GPU palette 再上传；没有修改源资产或 sidecar。
+预期503/降级警告是显式故障证据，不等于正常场景装载失败被静默放过。
+
+Stop 与 Play **前**的作者文档/快照/物件数比对，等待正常渲染帧更新动态列表后检查批次
+为空及资源 ledger 全释放。共享 CDP 每条命令默认30秒超时，断连及发送失败同样释放
+pending；超时/失败不能留下成功结果。实际四套件结果见
+[完整聚合验收记录](evidence/game-probes-20261018/acceptance.md)。

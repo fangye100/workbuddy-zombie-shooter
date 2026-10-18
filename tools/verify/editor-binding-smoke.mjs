@@ -58,7 +58,7 @@ async function main() {
     headed: HEADED,
     appUrl: APP_URL,
     ignoreCertificateErrors:false,
-    windowSize:'1600,1000',
+    windowSize:arg('window-size','1600,1000'),
     setupTimeoutMs:20000,
   }));
   // 只确认本套件改过的内存绑定夹具，保留产品的未保存保护与所有未知对话框失败。

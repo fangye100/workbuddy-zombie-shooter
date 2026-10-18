@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {waitForEditorReady,reloadEditor,readSceneExpectation,readLodSmokeFixture,isHardwareGpu} from './editor-smoke-lib.mjs';
+import {waitForEditorReady,reloadEditor,readSceneExpectation,readLodSmokeFixture,isHardwareGpu,Cdp} from './editor-smoke-lib.mjs';
 
 const state=()=>({timeOrigin:2,url:'https://test/?scene=fixture',fatal:null,source:{url:'/fixture.scene.json'},pending:0,frames:60,assets:true,preview:true,width:600,height:300});
 test('就绪须经过新文档、正确场景、资产完成、服务绑定及出帧，早期hook不足以通过',async()=>{
@@ -35,4 +35,14 @@ test('硬件验收拒绝缺失、未知、fallback和软件设备，只认实际
   const real={secure:true,fallback:false,info:{vendor:'nvidia',architecture:'lovelace',description:''}};
   assert.equal(isHardwareGpu(real),true);
   for(const bad of [null,{...real,info:null},{...real,fallback:undefined},{...real,fallback:true},{...real,secure:false},{...real,info:{description:'SwiftShader'}}])assert.equal(isHardwareGpu(bad),false);
+});
+
+test('CDP命令超时、断连及发送异常都释放pending并拒绝，而不是悬挂整个聚合',async()=>{
+  const listeners=new Map(),ws={addEventListener:(name,fn)=>listeners.set(name,fn),send:()=>{}};
+  const cdp=new Cdp(ws,'probe',{timeoutMs:10});
+  await assert.rejects(cdp.send('Runtime.evaluate'),/超时/);assert.equal(cdp.pending.size,0);
+  const pending=cdp.send('Page.captureScreenshot');listeners.get('close')();
+  await assert.rejects(pending,/连接关闭/);assert.equal(cdp.pending.size,0);
+  ws.send=()=>{throw new Error('broken send');};
+  await assert.rejects(cdp.send('Page.reload'),/broken send/);assert.equal(cdp.pending.size,0);
 });
