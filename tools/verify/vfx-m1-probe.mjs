@@ -21,9 +21,9 @@ const click=async selector=>{const p=await cdp.eval(`(()=>{const e=document.quer
 const button=async label=>{const selector=await cdp.eval(`(()=>{const b=[...document.querySelectorAll('#vfx-panel button')].find(b=>b.textContent===${JSON.stringify(label)});if(!b)throw new Error('control ${label}');b.dataset.probe='selected';return '#vfx-panel button[data-probe="selected"]';})()`);await click(selector);await cdp.eval(`document.querySelector(${JSON.stringify(selector)}).removeAttribute('data-probe')`);};
 const input=async(label,value)=>cdp.eval(`(()=>{const e=document.querySelector('#vfx-panel [aria-label=${JSON.stringify(label)}]');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
 try{
- await cdp.send('Page.navigate',{url:`${url}?scene=${encodeURIComponent(fixture)}`});
+ await cdp.send('Page.navigate',{url:`${url}?scene=assets/scenes/sandbox/vfx-m1.scene.json&vfxFixture=${encodeURIComponent(fixture)}`});
  check('场景副本和产品面板就绪',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1'`),{timeout:30000}));
- evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
+ evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()`);
  check('secure context + 硬件adapter',evidence.gpu.secure && evidence.gpu.info && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)),JSON.stringify(evidence.gpu));
  await click('.insp-tab[data-tab="scene"]');await button('打开 VFX 资源');
  check('正式资源由UI加载',await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.asset?.id==='as_vfx_comic_pistol'`)));

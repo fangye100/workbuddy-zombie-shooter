@@ -28,8 +28,9 @@ export class VfxPanel {
   private sequence=0;
   private sceneKey='';
   private formDirty=false;
-  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown}){
+  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown;openCopy():Promise<void>}){
     this.root.id='vfx-panel';this.root.open=true;const title=document.createElement('summary');title.textContent='手枪 VFX · 资源与绑定';this.root.append(title);
+    this.button('创建并打开场景验收副本',()=>this.port.openCopy());
     const field=(label:string,input:HTMLElement)=>{const row=document.createElement('label');row.textContent=label;row.append(input);this.form.append(row);input.setAttribute('aria-label',label);};
     field('VFX 资源',this.resource);field('资源文件路径',this.path);
     this.path.placeholder='assets/vfx/*.vfx.json';
