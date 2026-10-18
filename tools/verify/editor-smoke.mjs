@@ -21,6 +21,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import {clickFocusedElement, readClipboardOutcome} from './clipboard-probe.mjs';
 // 共享库（2026-09-23 拆分，docs/21）：断言记账 / waitFor 轮询 / dev server / CDP 会话 / 真源推导
 import {
   sleep,
@@ -891,7 +892,7 @@ async function main() {
     }
 
     // ---- J2. AssetBrowser UI（返回上一层 / 右键菜单 / 行内重命名）----
-    // 探针文件放 .workbuddy/tmp/（gitignored）：改名动作真实落盘，但不弄脏工作区。
+    // 探针文件放每轮独占的 .smoke/ 目录：改名动作真实落盘，finally 清理。
     console.log('\nJ2. AssetBrowser UI（上一层按钮 / 右键菜单四件套 / 行内重命名）');
     {
       const upDom = await cdp.eval(`(() => {
@@ -922,21 +923,20 @@ async function main() {
       probeRoot=fs.mkdtempSync(path.resolve('.smoke/editor-ui-'));
       const PROBE_DIR=path.relative(process.cwd(),probeRoot).split(path.sep).join('/');
       const PROBE = `${PROBE_DIR}/probe.json`;
-      const menuRes = await cdp.eval(`(async () => {
+      await cdp.eval(`(async () => {
         const w = await fetch('/__fs/write', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: ${JSON.stringify(PROBE)}, content: '{"probe":1}' }) });
         if (!(w.ok && (await w.json()).ok === true)) throw new Error('探针文件写入失败');
-        const A = window.__editor.assets;
-        await A.selectDir(${JSON.stringify(PROBE_DIR)});
-        const el = document.querySelector('.asset-content [data-name="probe.json"]');
-        if (el === null) throw new Error('探针条目未渲染');
-        el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 300, clientY: 300 }));
-        await new Promise((r) => setTimeout(r, 100));
+        await window.__editor.assets.selectDir(${JSON.stringify(PROBE_DIR)});
+      })()`);
+      const assetElement = `document.querySelector('.asset-content [data-name="probe.json"]')`;
+      await clickFocusedElement(cdp, assetElement, 'right');
+      const menuRes = await cdp.eval(`(() => {
         const menu = document.getElementById('ctx-menu');
-        const items = [...menu.querySelectorAll('.ctx-item')].map((b) => b.textContent);
-        const seps = menu.querySelectorAll('.ctx-sep').length;
-        const open = menu.classList.contains('open');
-        return { open, items, seps, sel: A.getState().names.includes('probe.json') };
+        return {open:menu.classList.contains('open'),
+          items:[...menu.querySelectorAll('.ctx-item')].map(b=>b.textContent),
+          seps:menu.querySelectorAll('.ctx-sep').length,
+          sel:window.__editor.assets.getState().names.includes('probe.json')};
       })()`);
       check('右键后菜单打开且条目被选中', menuRes.open === true && menuRes.sel === true);
       check('菜单恰好一条分隔线', menuRes.seps === 1, `seps=${menuRes.seps}`);
@@ -946,37 +946,21 @@ async function main() {
         && menuRes.items[5] === '重命名…'
         && menuRes.items[6] === '在资源管理器中显示', JSON.stringify(menuRes.items));
 
-      // 复制相对路径：菜单动作端到端（HUD 反馈 + 剪贴板尽力核对——无头环境剪贴板
-      // 权限不一定给，剪贴板对不上不算 FAIL，但 HUD 必须有明确反馈）。
-      // 剪贴板权限挂起时 writeText 会停一会儿才落判，等 1.2s 而不是 400ms。
-      const copyRes = await cdp.eval(`(async () => {
-        const menu = document.getElementById('ctx-menu');
-        const btn = [...menu.querySelectorAll('.ctx-item')].find((b) => b.textContent.includes('复制相对路径'));
-        btn.click();
-        await new Promise((r) => setTimeout(r, 1200));
-        let clip = null;
-        try { clip = await navigator.clipboard.readText(); } catch { clip = null; }
-        return { hud: (document.getElementById('model-info') || {}).textContent || '', clip };
-      })()`);
-      // 产品的行为断言收紧：HUD 必须回显**确切的相对路径**（以前接受"复制失败"，
-      // 等于产品啥都没验证）。真正端到端的行为以 HUD 为准 —— 它由应用在 writeText
-      // 成功路径上用同一个字符串生成。
-      check(
-        '复制相对路径 HUD 回显确切相对路径',
-        /已复制相对路径/.test(copyRes.hud) && copyRes.hud.includes(PROBE),
-        copyRes.hud,
-      );
-      if (copyRes.clip === null || copyRes.clip === '') {
-        // 读不到（无授权）或读到空串（本沙箱 headed Chrome 实测稳定返回 ''，write 端
-        // 成功与否读端无法区分）→ 环境不可核对，降级 skip。读到**非空**但内容不对
-        // 才算真失败（那说明复制写坏了别的字符串）。
-        skip(
-          '剪贴板内容核对',
-          `当前环境读不到有效剪贴板内容（读到 ${JSON.stringify(copyRes.clip)}）；产品行为已由 HUD 断言验证`,
-        );
-      } else {
-        check('剪贴板内容 = 相对路径', copyRes.clip === PROBE, JSON.stringify(copyRes.clip));
-      }
+      // 权限与焦点是浏览器复制的真实前提。不能以脚本 btn.click() / HUD 代替
+      // 用户输入和原生读回；空、拒绝、超时或内容不匹配均为失败，没有 SKIP 分支。
+      const copyMenuItem = label => `[...document.querySelectorAll('#ctx-menu .ctx-item')].find(b=>b.textContent===${JSON.stringify(label)})`;
+      await clickFocusedElement(cdp, copyMenuItem('复制相对路径'));
+      const relativeCopy = await readClipboardOutcome(cdp, {expected:PROBE,hudText:`已复制相对路径：${PROBE}`});
+      check('复制相对路径 HUD 回显确切相对路径', relativeCopy.hudMatches, relativeCopy.hud);
+      check('原生剪贴板内容 = 相对路径（不得跳过）', relativeCopy.matches && relativeCopy.focused, JSON.stringify(relativeCopy));
+
+      // 绝对路径由本机文件系统独立推导，不复用菜单实现的 /__fs/info 返回值作为期望。
+      await clickFocusedElement(cdp, assetElement, 'right');
+      await clickFocusedElement(cdp, copyMenuItem('复制绝对路径'));
+      const absolutePath = path.resolve(PROBE);
+      const absoluteCopy = await readClipboardOutcome(cdp, {expected:absolutePath,hudText:`已复制绝对路径：${absolutePath}`});
+      check('复制绝对路径 HUD 回显确切绝对路径', absoluteCopy.hudMatches, absoluteCopy.hud);
+      check('原生剪贴板内容 = 绝对路径（覆盖上次内容）', absoluteCopy.matches && absoluteCopy.focused, JSON.stringify(absoluteCopy));
 
       // 行内重命名：Enter 提交 → 服务端落盘 → 浏览器刷新
       const renameRes = await cdp.eval(`(async () => {

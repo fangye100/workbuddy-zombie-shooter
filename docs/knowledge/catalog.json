@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-18",
+  "indexedAt": "2026-10-19",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
@@ -3016,6 +3016,26 @@
       "sourceRefs": [
         "project-rules",
         "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "clipboard-acceptance-20261019",
+      "path": "docs/evidence/clipboard-20261019/acceptance.md",
+      "title": "剪贴板原生读回修复与四套件零跳过验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "clipboard",
+        "acceptance"
+      ],
+      "read": "真实菜单输入、焦点与权限失败、相对/绝对路径原生读回，四套件289项零失败零跳过及独立审核",
+      "sourceRefs": [
+        "project-rules",
         "architecture-policy"
       ]
     }

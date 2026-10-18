@@ -1,0 +1,53 @@
+{
+  "baseCommit": "22becc569009d71f9283f956d2d89f5b6b8377d9",
+  "files": [
+    {
+      "path": "aether.project.json",
+      "sha256": "4513b0164602493c539d5bb2ef5fa8580a1aae095ef30a63f0aa825cee2e9684"
+    },
+    {
+      "path": "package.json",
+      "sha256": "d8f7ebb008eb53cca150cc9e34b02251541f1dc4b0691444c055a2d37176a15e"
+    },
+    {
+      "path": "apps/editor/src/asset-util.ts",
+      "sha256": "8c97c95b93350df401e3107ab3b4f1fea47fdb041bd5a0efa1de161e9dfacde1"
+    },
+    {
+      "path": "apps/editor/src/main.ts",
+      "sha256": "da4dfabbd05433f3baae0ffde28609f0b139daff899a466c069683385bfd8e85"
+    },
+    {
+      "path": "tools/verify/editor-smoke-all.mjs",
+      "sha256": "9a0838a1d8ad4f2c70f9834060f67738026c8da40c7d04bac791e94f778b5af3"
+    },
+    {
+      "path": "tools/verify/editor-smoke.mjs",
+      "sha256": "a5aa74db0413b0e40b6202294fc6e40f3d36300ab240e92a6706dd7a37a70a6a"
+    },
+    {
+      "path": "tools/verify/editor-smoke-lib.mjs",
+      "sha256": "df7b137846aadad04fbcab88b94763745debf079889682ce1c7ed0b17fcaa81f"
+    },
+    {
+      "path": "tools/verify/clipboard-probe.mjs",
+      "sha256": "bc27bbfec013ac425c870575ec383623607812f833caeda66b6bd572fe097449"
+    },
+    {
+      "path": "tools/verify/clipboard-probe.test.mjs",
+      "sha256": "ce164e432d3acd11ce5be4c8b9878cb1b464a3893ce35f619a9c3521cf7bfeb4"
+    },
+    {
+      "path": "tools/verify/editor-binding-smoke.mjs",
+      "sha256": "4650f9e46337c5d1c2bc81af323c2f38e93b74d6e687c17f7f55f2e8ad94b75b"
+    },
+    {
+      "path": "tools/verify/combat-probe.mjs",
+      "sha256": "eff5a06fc877c40ea8a31331fa34b5d5b16f944e6e615bf0fed23f63cacbba3a"
+    },
+    {
+      "path": "tools/verify/dynamic-skin-probe.mjs",
+      "sha256": "e223dcf2453177349026b41f4983cc21acf327637ed45f36b2594f550ec52b31"
+    }
+  ]
+}

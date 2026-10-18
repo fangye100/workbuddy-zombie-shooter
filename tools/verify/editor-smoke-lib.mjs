@@ -290,17 +290,12 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
   });
   const cdp = new Cdp(ws, sessionId);
   if (grantClipboard) {
-    // 剪贴板预授权（浏览器级命令，不带页面 sessionId）：无授权时页面一拿到焦点，
-    // navigator.clipboard.writeText 会挂起等权限弹窗
-    try {
-      const bcdp = new Cdp(ws, undefined);
-      await bcdp.send('Browser.grantPermissions', {
-        permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
-        origin: new URL(appUrl).origin,
-      });
-    } catch (e) {
-      console.log(`（剪贴板预授权跳过：${String(e)}）`);
-    }
+    // 复制验收必须具备明确的读写授权；授权失败直接使本套件失败，不能静默跳过。
+    const bcdp = new Cdp(ws, undefined);
+    await bcdp.send('Browser.grantPermissions', {
+      permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
+      origin: new URL(appUrl).origin,
+    });
   }
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');

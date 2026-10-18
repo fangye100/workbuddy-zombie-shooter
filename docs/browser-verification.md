@@ -116,3 +116,29 @@ Stop 与 Play **前**的作者文档/快照/物件数比对，等待正常渲染
 为空及资源 ledger 全释放。共享 CDP 每条命令默认30秒超时，断连及发送失败同样释放
 pending；超时/失败不能留下成功结果。实际四套件结果见
 [完整聚合验收记录](evidence/game-probes-20261018/acceptance.md)。
+
+
+## 剪贴板原生读回验收（2026-10-19）
+
+资产菜单的复制实现归 `apps/editor/src/asset-util.ts` / `main.ts`；本次修复的是
+`tools/verify` 的浏览器输入与验收判据。`clipboard-probe.mjs` 先通过
+`Page.bringToFront` 聚焦，核对真实焦点、目标可见/可用且未被遮挡，再发送 CDP 鼠标输入：
+右键资产打开菜单、左键执行复制。不能用 DOM `btn.click()` 冒充这条用户路径。
+
+核心套件分别验证相对路径和绝对路径：每轮独占夹具保证路径不沿用旧剪贴板值，绝对路径
+由 Node `path.resolve` 独立推导，不拿产品 `/__fs/info` 的返回当预期。两次复制均须 HUD
+精确匹配，并经未替换的 `navigator.clipboard.readText()` 精确读回；只记录匹配、长度、
+焦点和错误，不输出无关剪贴板文本。没有预写期望路径、剪贴板 mock 或焦点模拟。
+
+读空、读到旧值、权限拒绝、失焦或超时都使验收失败，**不再降级 SKIP**。原生读回和
+CDP 等待均有上限；请求预授权失败也直接终止本套件，不能静默继续。测试使用独占
+profile 的当前系统剪贴板，需保留真实可见 Chrome；无权限环境应明确失败并排查。
+
+```powershell
+node --test tools/verify/clipboard-probe.test.mjs tools/verify/editor-smoke-lib.test.mjs tools/verify/game-probe-oracles.test.mjs
+pnpm run editor:smoke:all -- --headed --out .workbuddy/tmp/editor-all
+```
+
+本轮四套件 **289 PASS / 0 FAIL / 0 SKIP**，见
+[剪贴板修复与完整验收](evidence/clipboard-20261019/acceptance.md)。此前报告中的空值
+与跳过保留为当时事实，不能继续据此认定本机剪贴板不可验证。

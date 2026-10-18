@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: 右键/左键均经过浏览器真实输入，拒绝无焦点、隐藏、禁用及遮挡目标
+ok 1 - 右键/左键均经过浏览器真实输入，拒绝无焦点、隐藏、禁用及遮挡目标
+  ---
+  duration_ms: 3.9873
+  type: 'test'
+  ...
+# Subtest: 读回须等本次 HUD 与剪贴板都匹配，不能只接受其中一项
+ok 2 - 读回须等本次 HUD 与剪贴板都匹配，不能只接受其中一项
+  ---
+  duration_ms: 4.705
+  type: 'test'
+  ...
+# Subtest: 空串、旧值或 HUD 失败均不能通过；超时有界且不打印无关剪贴板内容
+ok 3 - 空串、旧值或 HUD 失败均不能通过；超时有界且不打印无关剪贴板内容
+  ---
+  duration_ms: 46.2861
+  type: 'test'
+  ...
+# Subtest: 读权限拒绝或失去焦点保留失败原因，不能转为 SKIP/成功
+ok 4 - 读权限拒绝或失去焦点保留失败原因，不能转为 SKIP/成功
+  ---
+  duration_ms: 0.32
+  type: 'test'
+  ...
+# Subtest: 原生 readText 挂起和 CDP 异常均使验收失败
+ok 5 - 原生 readText 挂起和 CDP 异常均使验收失败
+  ---
+  duration_ms: 14.7178
+  type: 'test'
+  ...
+# Subtest: 就绪须经过新文档、正确场景、资产完成、服务绑定及出帧，早期hook不足以通过
+ok 6 - 就绪须经过新文档、正确场景、资产完成、服务绑定及出帧，早期hook不足以通过
+  ---
+  duration_ms: 9.8638
+  type: 'test'
+  ...
+# Subtest: 超时抛错并保留最后pending/fps/source诊断；fatal不等待超时也不报成功
+ok 7 - 超时抛错并保留最后pending/fps/source诊断；fatal不等待超时也不报成功
+  ---
+  duration_ms: 1.4132
+  type: 'test'
+  ...
+# Subtest: reload记录旧代次和场景，明确Page.reload后仍须等新代次
+ok 8 - reload记录旧代次和场景，明确Page.reload后仍须等新代次
+  ---
+  duration_ms: 1.1955
+  type: 'test'
+  ...
+# Subtest: 正式场景重名物件仍由NodeId保留独立pickable；白盒满足父子结构与容量前提
+ok 9 - 正式场景重名物件仍由NodeId保留独立pickable；白盒满足父子结构与容量前提
+  ---
+  duration_ms: 3.4731
+  type: 'test'
+  ...
+# Subtest: LOD夹具由发布清单/sidecar选档，不能固定index0并继续加载未交接源模
+ok 10 - LOD夹具由发布清单/sidecar选档，不能固定index0并继续加载未交接源模
+  ---
+  duration_ms: 1.8916
+  type: 'test'
+  ...
+# Subtest: CDP eval卡死也必须有界超时
+ok 11 - CDP eval卡死也必须有界超时
+  ---
+  duration_ms: 21.8449
+  type: 'test'
+  ...
+# Subtest: 硬件验收拒绝缺失、未知、fallback和软件设备，只认实际device信息
+ok 12 - 硬件验收拒绝缺失、未知、fallback和软件设备，只认实际device信息
+  ---
+  duration_ms: 0.4205
+  type: 'test'
+  ...
+# Subtest: CDP命令超时、断连及发送异常都释放pending并拒绝，而不是悬挂整个聚合
+ok 13 - CDP命令超时、断连及发送异常都释放pending并拒绝，而不是悬挂整个聚合
+  ---
+  duration_ms: 11.0288
+  type: 'test'
+  ...
+# Subtest: 房间/稀疏波次按稳定父引用归组，排除禁用、其他房间和非room-enter
+ok 14 - 房间/稀疏波次按稳定父引用归组，排除禁用、其他房间和非room-enter
+  ---
+  duration_ms: 14.7
+  type: 'test'
+  ...
+# Subtest: 装配oracle覆盖未来波次的rig-only和动画档，缺档代理不可伪装已装配
+ok 15 - 装配oracle覆盖未来波次的rig-only和动画档，缺档代理不可伪装已装配
+  ---
+  duration_ms: 1.7937
+  type: 'test'
+  ...
+# Subtest: 实例flags与矩阵完整stride边界，拒绝局部pose越界、错误base/stride及NaN
+ok 16 - 实例flags与矩阵完整stride边界，拒绝局部pose越界、错误base/stride及NaN
+  ---
+  duration_ms: 0.4194
+  type: 'test'
+  ...
+# Subtest: 聚合入口将headed/url/window参数逐套传递，并隔离输出目录
+ok 17 - 聚合入口将headed/url/window参数逐套传递，并隔离输出目录
+  ---
+  duration_ms: 0.9424
+  type: 'test'
+  ...
+# Subtest: 聚合入口保留失败退出码，后续未执行套件不得记为通过
+ok 18 - 聚合入口保留失败退出码，后续未执行套件不得记为通过
+  ---
+  duration_ms: 1.1065
+  type: 'test'
+  ...
+# Subtest: 故障注入只拦截精确GET资产，meta/BVH/其他接口及非GET不受影响
+ok 19 - 故障注入只拦截精确GET资产，meta/BVH/其他接口及非GET不受影响
+  ---
+  duration_ms: 0.4589
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.4051
