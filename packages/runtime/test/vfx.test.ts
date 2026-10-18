@@ -4,6 +4,9 @@ import { WeaponCombat, type WeaponWorld } from '../src/weapon-combat';
 import { legacyWeaponArsenal } from '@aether/scene';
 
 const effect={kind:'impact' as const,texture:{path:'assets/vfx/a.svg',guid:'a'},frames:3,duration:.1,size:[1,1] as [number,number],color:'#ffffff',blend:'alpha' as const};
+it('stable handles separate simulation lifetime from animation cycle and stop immediately',()=>{
+ const p=new VfxPool(1),r={key:'run:attack:phase',effect,position:[0,0,0] as const,seed:1,priority:10,lifetime:1};expect(p.upsert(r,.2)).toBe(true);p.advance(.1);expect(p.active).toHaveLength(1);expect(p.upsert({...r,position:[2,0,0]},.4)).toBe(true);expect(p.active).toHaveLength(1);expect(p.stats.spawned).toBe(1);expect(p.active[0]!.position).toEqual([2,0,0]);p.stop(r.key);expect(p.active).toHaveLength(0);
+});
 it('bounded pool deduplicates, drops low priority and only advances on simulation dt',()=>{
   const p=new VfxPool(1),request={key:'1:1',effect,position:[0,0,0] as const,seed:1,priority:1};
   expect(p.spawn(request)).toBe(true);expect(p.spawn(request)).toBe(false);p.advance(0);expect(p.active).toHaveLength(1);

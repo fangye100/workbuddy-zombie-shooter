@@ -21,11 +21,12 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
+import {validVfxBindings,type VfxBindingsComponent} from './vfx';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -165,6 +166,7 @@ export const ComponentKind = {
   NavZone: 'NavZone',
   Script: 'Script',
   RunRules: 'RunRules',
+  VfxBindings: 'VfxBindings',
 } as const;
 export type ComponentKind = (typeof ComponentKind)[keyof typeof ComponentKind];
 
@@ -475,6 +477,7 @@ export function validRunRules(value: unknown): value is RunRulesComponent {
 }
 
 export type ComponentData =
+  | VfxBindingsComponent
   | RunRulesComponent
   | MeshRendererComponent
   | LightComponent
@@ -905,6 +908,10 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
         if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');
         if (c.enabled && d.nodes!.some((other, ni) => ni < i && other?.components?.some(x => x.kind === 'RunRules' && x.enabled))) err(at, 'E_RUN_RULES_DUP', '一个场景只能启用一份 RunRules');
+      }
+      if(c.kind===ComponentKind.VfxBindings){
+        if(!validVfxBindings(c))err(at,'E_VFX_BINDINGS','VFX 绑定必须包含合法 tag、资源 GUID/path 和 effectKey');
+        if(c.enabled && d.nodes!.some((other,ni)=>ni<i && other?.components?.some(x=>x.kind==='VfxBindings' && x.enabled)))err(at,'E_VFX_BINDINGS_DUP','场景只能启用一份 VfxBindings');
       }
       if (c.kind === ComponentKind.Light) {
         const l = c as LightComponent;

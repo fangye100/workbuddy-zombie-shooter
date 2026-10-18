@@ -306,7 +306,8 @@ export class RuntimeSession {
       actor: slot => t.isAlive(slot) ? { x:t.posX[slot]!, z:t.posZ[slot]!, radius:t.radius[slot]!, generation:t.generation[slot]!, hp:t.health[slot]! } : null,
       damage: (slot,amount,source) => { this.applyDamage(slot,amount,source); },
       move: (slot,x,z) => { const [cx,cz] = this.resolvePlayerCollision(x,z,t.radius[slot]!); t.posX[slot]=cx;t.posZ[slot]=cz;return [cx,0,cz]; },
-      obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; }
+      obstruction: (from,to) => { const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2], l=Math.hypot(dx,dy,dz); if(l<1e-6)return null; const h=nearestSolidHit(from,[dx/l,dy/l,dz/l],this.desc.shotColliders,l); return h===null?null:[from[0]+dx/l*h,from[1]+dy/l*h,from[2]+dz/l*h]; },
+      surface:(from,to)=>{const delta=to.map((v,i)=>v-from[i]!) as [number,number,number],l=Math.hypot(...delta);if(l<1e-6)return null;const hit=nearestSolidContact(from,delta.map(v=>v/l) as [number,number,number],this.desc.shotColliders,l);return hit?{nodeId:hit.nodeId,normal:hit.normal}:null;}
     };
   }
   lastShot: { tick: number; from: [number, number, number]; to: [number, number, number]; hit: boolean } | null = null;
@@ -495,6 +496,7 @@ export class RuntimeSession {
     this.capacity = capacity;
     this.npcDecisionAt=new Float64Array(capacity);this.npcRecoveryUntil=new Float64Array(capacity);this.npcRecoveryStartedAt=new Float64Array(capacity);this.npcRng=new Uint32Array(capacity);this.npcWindupDuration=new Float64Array(capacity);
     this.runId = NEXT_RUN_ID++;
+    this.enemyAttacks.beginRun(this.runId);
     this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
 
     this.tbl = new CharacterTable(this.capacity);
@@ -956,6 +958,7 @@ export class RuntimeSession {
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
+    this.enemyAttacks.beginRun(this.runId);
     // 输入与导航目标也要回到初始态 —— 否则 reset 后玩家还按着上一轮的摇杆
     this.inputX = 0;
     this.inputZ = 0;

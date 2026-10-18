@@ -13,6 +13,14 @@ function fixture() {
   return {attacks,actor,player,hits,world,killShooter:()=>{shooter=false;}};
 }
 describe('authored enemy attack mechanics',()=>{
+  it('immutable phase/end facts survive catchup ticks and shooter slot reuse',()=>{
+    const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!;f.attacks.beginRun(9);f.attacks.lock(1,1,6,0);f.attacks.strike(1,f.actor,a,0,f.player,f.world);
+    f.actor.generation=2;for(let i=0;i<150;i++)f.attacks.step(i,1/30,f.world);
+    const events=f.attacks.drainEvents();expect(events.map(e=>e.type)).toEqual(['spawn','phase','impact','end']);expect(events.every(e=>e.runId===9 && e.effect.generation===1)).toBe(true);expect(new Set(events.map(e=>e.effect.id)).size).toBe(1);expect(events[1]!.effect.phase).toBe('pool');expect(events[1]!.effect.position).toEqual([6,0,0]);expect(Object.isFrozen(events[1]!.effect.position)).toBe(true);expect(f.attacks.drainEvents()).toEqual([]);
+  });
+  it('blocked acid emits impact but never a pool phase',()=>{
+    const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!;f.world.obstruction=()=>[1,.7,0];f.attacks.strike(1,f.actor,a,0,f.player,f.world);for(let i=0;i<40;i++)f.attacks.step(i,1/30,f.world);const events=f.attacks.drainEvents();expect(events.some(e=>e.type==='impact' && e.effect.blocked)).toBe(true);expect(events.some(e=>e.type==='phase')).toBe(false);
+  });
   it('acid flies to the locked target and applies 6 DPS only after landing for four seconds',()=>{
     const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!;
     f.attacks.lock(1,1,6,0);f.attacks.strike(1,f.actor,a,0,f.player,f.world);

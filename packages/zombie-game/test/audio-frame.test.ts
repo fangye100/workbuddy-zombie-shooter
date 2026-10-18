@@ -46,7 +46,7 @@ describe('audio presentation consumes gameplay facts',()=>{
   });
   it('keeps acid pools audible after shooter slot reuse, removes expired pools and ignores blocked shots',()=>{
     const {session:s,config,planner:p}=fixture();
-    const effect:EnemyAttackEffect={kind:'acid',phase:'flight',source:1,generation:1,from:[4,1,0],to:[3,0,0],position:[4,1,0],startTick:0,duration:4,radius:1,damage:2,hit:false,blocked:false,finished:false,flightSeconds:1};
+    const effect:EnemyAttackEffect={id:1,runId:s.runId,phaseTick:0,finishTick:null,surface:null,kind:'acid',phase:'flight',source:1,generation:1,from:[4,1,0],to:[3,0,0],position:[4,1,0],startTick:0,duration:4,radius:1,damage:2,hit:false,blocked:false,finished:false,flightSeconds:1};
     s.enemyAttacks.effects.push(effect);
     expect(p.update(s,config,false).shots.filter(q=>q.binding.cue==='SFX-E03-ACID-LAUNCH')).toHaveLength(1);
     expect(p.update(s,config,false).shots).toHaveLength(0);

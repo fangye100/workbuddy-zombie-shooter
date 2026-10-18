@@ -348,6 +348,7 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if(!listMigrations().some(m=>m.from===15 && m.to===16))registerMigration({from:15,to:16,name:'support-generic-vfx-bindings',run:doc=>structuredClone(doc)});
   // Both published v14 branches are accepted. IK v14 lacked an arsenal; keep all
   // authored IK/transition/audio fields and explicitly upgrade only legacy ammo.
   if (!listMigrations().some(m => m.from === 14 && m.to === 15)) registerMigration({
