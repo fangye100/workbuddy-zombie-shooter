@@ -1,12 +1,12 @@
 /** Bounded verification-only surface quads, depth/order/aux reads. Restores drawFrame and destroys read buffers. */
 import fs from 'node:fs';
 import path from 'node:path';
-export async function verifyM2Pixels(cdp,out){
+export async function verifyM2Pixels(cdp,out,options={}){
  const setup=await cdp.eval(`(()=>{
  const core=window.__editor.renderer.core,pass=core.vfx,original=core.drawFrame,wall=window.__editor.renderer.getDocument().nodes.find(n=>n.id==='nd_vfx_wall'),center=[...wall.transform.position],eye=[...core.eyeVec];
  const length=Math.hypot(...center.map((v,i)=>v-eye[i])),direction=center.map((v,i)=>(v-eye[i])/length),front=center.map((v,i)=>v-direction[i]*1.2),behind=center.map((v,i)=>v+direction[i]*1.2);
- const source=pass.instances.find(p=>p.key.endsWith('enemy.acid.pool'));if(!source)throw new Error('plane pixel test needs real loaded acid pool');
- const instance={...structuredClone(source),key:'verification-plane',seed:0,age:0,lifetime:1,effect:{...structuredClone(source.effect),duration:1,size:[.8,.8],orientation:'surface',loop:false}};
+ const source=pass.instances.find(p=>${JSON.stringify(options.sourceIncludes??'enemy.acid.pool')}?p.key.includes(${JSON.stringify(options.sourceIncludes??'enemy.acid.pool')}):false);if(!source)throw new Error('plane pixel test needs real loaded acid pool');
+ const instance={...structuredClone(source),key:'verification-plane',normal:[0,1,0],seed:0,age:0,lifetime:1,effect:{...structuredClone(source.effect),duration:1,size:[.8,.8],orientation:'surface',loop:false}};
  const originalDraw=pass.draw;const state={mode:'off',original,originalDraw,pass,front,behind};pass.draw=function(encoder,color,aux,...rest){if(state.mode.startsWith('aux-')){const seed=encoder.beginRenderPass({label:'verification-aux-seed',colorAttachments:[{view:aux,loadOp:'clear',clearValue:[0,0,0,1],storeOp:'store'}]});seed.end();}return originalDraw.call(this,encoder,color,aux,...rest);};window.__vfxM2Pixels=state;
  core.drawFrame=function(input){const previous=this.vfx,items=pass.instances;this.vfx=pass;let list=[];
  if(state.mode==='front' || state.mode==='behind' || state.mode==='camera' || state.mode==='aux-front')list=[{...instance,position:state.mode==='behind'?behind:front,effect:{...instance.effect,orientation:state.mode==='camera'?'camera':'surface'}}];
@@ -34,11 +34,11 @@ export async function verifyM2Pixels(cdp,out){
  }finally{await cdp.eval(`(()=>{const s=window.__vfxM2Pixels;if(s){window.__editor.renderer.core.drawFrame=s.original;s.pass.draw=s.originalDraw;window.__editor.renderer.core.vfx=s.pass;delete window.__vfxM2Pixels;}})()`);}
 }
 /** Compare the current real simulation-created impact against disabling only its existing GPU pass. */
-export async function verifyImpactVisibility(cdp,out,position){
+export async function verifyImpactVisibility(cdp,out,position,prefix='pounce-impact',options={}){
  const clip=await cdp.eval(`(()=>{const q=window.__editor.renderer.worldToScreen(${JSON.stringify(position)});return {x:Math.round(q.x)-100,y:Math.round(q.y)-70,width:200,height:140,scale:1};})()`),shots={};
- await cdp.eval(`(()=>{const c=window.__editor.renderer.core;window.__impactVisibility={original:c.drawFrame,pass:c.vfx,off:false};const s=window.__impactVisibility;c.drawFrame=function(input){const p=this.vfx;if(s.off)this.vfx=null;try{return s.original.call(this,input);}finally{this.vfx=p;}};})()`);
- try{for(const mode of ['on','off']){await cdp.eval(`(async()=>{window.__impactVisibility.off=${mode==='off'};await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));await window.__editor.renderer.core.device.queue.onSubmittedWorkDone();})()`);const shot=await cdp.send('Page.captureScreenshot',{format:'png',clip});shots[mode]=shot.data;fs.writeFileSync(path.join(out,`pounce-impact-${mode}.png`),Buffer.from(shot.data,'base64'));}
+ await cdp.eval(`(()=>{const c=window.__editor.renderer.core;window.__impactVisibility={original:c.drawFrame,pass:c.vfx,off:false,filter:${JSON.stringify(options.filterIncludes??null)}};const s=window.__impactVisibility;c.drawFrame=function(input){const p=this.vfx,items=s.pass.instances;if(s.filter)s.pass.instances=items.filter(p=>p.key.includes(s.filter));if(s.off)this.vfx=null;try{return s.original.call(this,input);}finally{this.vfx=p;s.pass.instances=items;}};})()`);
+ try{for(const mode of ['on','off']){await cdp.eval(`(async()=>{window.__impactVisibility.off=${mode==='off'};await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));await window.__editor.renderer.core.device.queue.onSubmittedWorkDone();})()`);const shot=await cdp.send('Page.captureScreenshot',{format:'png',clip});shots[mode]=shot.data;fs.writeFileSync(path.join(out,`${prefix}-${mode}.png`),Buffer.from(shot.data,'base64'));}
  const metrics=await cdp.eval(`(async()=>{const data=[];for(const encoded of ${JSON.stringify([shots.on,shots.off])}){const bitmap=await createImageBitmap(new Blob([Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))],{type:'image/png'})),canvas=new OffscreenCanvas(bitmap.width,bitmap.height),c=canvas.getContext('2d');c.drawImage(bitmap,0,0);data.push(c.getImageData(0,0,bitmap.width,bitmap.height).data);bitmap.close();}let changedPixels=0;for(let i=0;i<data[0].length;i+=4)if(Math.max(...[0,1,2].map(k=>Math.abs(data[0][i+k]-data[1][i+k])))>8)changedPixels++;return {changedPixels};})()`);
- return {clip,metrics,passed:metrics.changedPixels>=15,threshold:{rgbDelta:8,minChangedPixels:15},method:'paused real pounce impact, unchanged simulation and camera; existing GPU pass on/off screenshot ROI'};
+ return {clip,metrics,passed:metrics.changedPixels>=15,threshold:{rgbDelta:8,minChangedPixels:15},method:'paused real VFX instances, unchanged simulation and camera; existing GPU pass on/off screenshot ROI'};
  }finally{await cdp.eval(`(()=>{const s=window.__impactVisibility;window.__editor.renderer.core.drawFrame=s.original;window.__editor.renderer.core.vfx=s.pass;delete window.__impactVisibility;})()`);}
 }

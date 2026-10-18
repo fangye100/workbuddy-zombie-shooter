@@ -49,7 +49,7 @@ try{
  check('清除绑定实际写入副本',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(fixture,'utf8')).nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource===null)));
  await button('应用 VFX 绑定');await button('保存场景绑定');
  check('场景副本磁盘保存',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(fixture,'utf8')).nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource?.guid==='as_vfx_comic_pistol')));
- await cdp.send('Page.reload');
+ await cdp.eval(`window.__vfxReloadSentinel=true`);await cdp.send('Page.reload');await waitFor(()=>cdp.eval(`window.__vfxReloadSentinel!==true && !!window.__editor?.vfx`),{timeout:30000});
  check('完整页面重载后场景绑定仍在',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m1' && window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx.resource?.guid==='as_vfx_comic_pistol'`),{timeout:30000}));
  evidence.reloadedBinding=await cdp.eval(`window.__editor.renderer.getDocument().nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions[0].presentation.vfx`);
  await viewport();await click('.insp-tab[data-tab="scene"]');

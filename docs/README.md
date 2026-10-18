@@ -27,6 +27,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
 | 手枪 VFX 资源、GPU 与编辑 | [M1 实现与验证](architecture/vfx-m1-20261019.md) | `scene/vfx` 契约、`runtime/vfx` 池、游戏表现 planner、独立 VfxPass 与编辑器资源/绑定保存 |
 | 敌人与地面 VFX | [M2 实现与验证](architecture/vfx-m2-20261019.md) | 通用标签绑定、v16/v2 兼容、真实敌人事实与平面 GPU、持久化及失败保底 |
+| 持续与动作 VFX、M4 决策 | [M3 实现与验证](architecture/vfx-m3-20261019.md) | 固定tick/seed发射器、曲线作者流程、真实火焰/烟尘/火花/冲锋/近战与预算测量 |
 | HUD、语言、触摸/鼠标和游戏音频 | [输入报告](37-CombatInputAndPopulationQuality.md)、[音频指南](42-GameplayAudioIntegration.md) | `packages/zombie-game/src/presentation`；宿主提供视口、输入和 Play 端口 |
 | 绑定、Retarget 与 IK | [绑定流程](rigging/character-rigging-workflow.md)、[身体 IK](animation/body-ik-blending.md)、[动作过渡](animation/pose-transitions.md) | `packages/render`、`packages/scene` 契约与编辑器绑定适配器 |
 | 动画只读观察与排障 | [动画可视化调试](45-AnimationVisualDebugging.md) | `apps/editor/src/services/animation-debug`；观察现有选择器、姿态与 IK，不拥有或修改玩法状态 |

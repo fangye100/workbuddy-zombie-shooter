@@ -4,6 +4,18 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-m3-20261019",
+      "path": "docs/architecture/vfx-m3-20261019.md",
+      "title": "M3 持续与动作 VFX：作者流程、验证及 M4 决策",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["vfx", "render", "editor", "emitter", "gpu", "persistence"],
+      "read": "固定tick种子与曲线；真实持续/动作表现、作者保存预览、预算实测及M4逐项暂缓条件",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "reviewedAt": "2026-10-19"
+    },
+    {
       "id": "vfx-m2-20261019",
       "path": "docs/architecture/vfx-m2-20261019.md",
       "title": "M2 敌人与地面 VFX：实现、编辑与验证",

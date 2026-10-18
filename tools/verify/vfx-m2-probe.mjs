@@ -49,7 +49,7 @@ try{
  if(!await waitFor(()=>cdp.eval(`!!document.querySelector('#vfx-binding-panel [aria-label="效果 key"] option[value="acid-flight"]')`)))throw new Error('binding resource unavailable');
  await input('效果 key','acid-flight','vfx-binding-panel');await button('应用标签绑定','vfx-binding-panel');await button('保存标签场景','vfx-binding-panel');
  check('重新绑定→Save真实写盘',await waitFor(()=>Promise.resolve(bindings()['enemy.acid.flight']?.effectKey==='acid-flight')));
- await cdp.send('Page.reload');check('整页Reload保留绑定',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.nodes.flatMap(n=>n.components).find(c=>c.kind==='VfxBindings')?.bindings['enemy.acid.flight']?.resource.guid==='as_vfx_comic_enemies'`),{timeout:30000}));
+ await cdp.eval(`window.__vfxReloadSentinel=true`);await cdp.send('Page.reload');await waitFor(()=>cdp.eval(`window.__vfxReloadSentinel!==true && !!window.__editor?.vfx`),{timeout:30000});check('整页Reload保留绑定',await waitFor(()=>cdp.eval(`!!window.__editor?.vfx && window.__editor.renderer.getDocument()?.nodes.flatMap(n=>n.components).find(c=>c.kind==='VfxBindings')?.bindings['enemy.acid.flight']?.resource.guid==='as_vfx_comic_enemies'`),{timeout:30000}));
  await viewport();await click('.insp-tab[data-tab="scene"]');await input('资源文件路径',assetCopy);await button('打开 VFX 资源');
  if(!await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.path===${JSON.stringify(assetCopy)}`)))throw new Error('asset copy unavailable');
  await input('编辑效果','acid-pool');await input('宽度 m','1.2');await input('VFX 颜色','#90ee55');await input('持续时间 s','.7');await input('VFX 朝向','surface');await input('循环帧动画',true);await button('应用资源参数');
@@ -79,6 +79,7 @@ try{
  evidence.budget=await cdp.eval(`(async()=>{const host=window.__editor.playCtl.vfx,pool=host.planner.pool,effect=host.enemy.bindings.get('enemy.mark');for(let i=0;i<pool.capacity;i++)pool.spawn({key:'verification-budget:'+i,effect,position:[1000,0,1000],normal:[0,1,0],seed:0,priority:30,lifetime:100});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return host.snapshot();})()`);
  check('满池实际不可绘制时保留危险fallback',evidence.budget.enemy.stats.fallback>0 && !evidence.budget.enemy.rendered.includes(fact.id) && evidence.budget.pool.dropped>0);await capture('04-budget-fallback');
  await cdp.eval(`(()=>{const p=window.__editor.playCtl.vfx.planner.pool;for(let i=0;i<p.capacity;i++)p.stop('verification-budget:'+i);})()`);
+ check('预算释放后危险GPU表现恢复',await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().play.enemy.rendered.includes(${fact.id}) && window.__editor.vfx.snapshot().play.gpu.draws>0`)));
  await click('#btn-pause');
  const ended=await waitFor(async()=>{const s=await snapshot();return s.vfx.enemy.events.some(e=>e.type==='end' && e.effect.id===fact.id) && !s.vfx.enemy.instances.some(i=>i.key.includes(':'+fact.id+':enemy.acid.pool'))?s:null;},{timeout:6000,interval:20});evidence.ended=ended;check('真实end即移除danger实例',!!ended);await capture('05-acid-end');
  const marksGone=await waitFor(async()=>{const s=await snapshot();return s.tick>ended.tick+30 && !s.vfx.enemy.instances.some(i=>i.key.includes(':'+fact.id+':enemy.mark'))?s:null;},{timeout:3000,interval:20});check('装饰痕迹TTL独立结束',!!marksGone);await stop('acidStopped');

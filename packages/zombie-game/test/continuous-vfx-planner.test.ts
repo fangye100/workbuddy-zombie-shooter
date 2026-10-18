@@ -30,3 +30,9 @@ it('burn snapshots never attach an old generation to a recycled actor slot',()=>
  f.r.weaponCombat.impact(weapon,actor,0,0,world,[0,1,0]);f.r.weaponVfxFrames.capture(f.r);const before=f.r.weaponVfxFrames.drain()[0]!;expect(before.burning[0]!.generation).toBe(view.generation);expect(Object.isFrozen(before.burning[0]!.position)).toBe(true);
  f.r.table.generation[view.id]=f.r.table.generation[view.id]!+1;f.r.table.posX[view.id]=99;f.r.weaponVfxFrames.capture(f.r);expect(f.r.weaponVfxFrames.drain()[0]!.burning).toEqual([]);expect(before.burning[0]!.position[0]).not.toBe(99);
 });
+
+it('shared pool saturation preserves weapon fallback and recovers when decorative pressure is removed',()=>{
+ const f=fixture();f.update();f.r.equipWeapon('flame');f.r.setFire(true);f.r.setAim(5,0);for(let i=0;i<24;i++)f.r.step();const effect=f.p.bindings.get('combat.spark')!;
+ for(let i=0;i<f.w.pool.capacity;i++)f.w.pool.spawn({key:'pressure:'+i,effect,position:[1000,0,1000],seed:0,priority:30,lifetime:100});f.update();expect(f.p.renderedWeapons.has('flame')).toBe(false);expect(f.p.stats.fallback).toBeGreaterThan(0);
+ for(let i=0;i<f.w.pool.capacity;i++)f.w.pool.stop('pressure:'+i);f.r.step();f.update();expect(f.p.renderedWeapons.has('flame')).toBe(true);
+});
