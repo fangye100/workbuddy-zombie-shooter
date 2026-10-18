@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_enemies",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-enemies.vfx.json",
+    "status": "accepted",
+    "author": "项目原创"
+  },
+  "sourceHash": "sha256:70e13f570ca006e93073de14ca57b58b350b0bdff43fdbcfae216268b7163568",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

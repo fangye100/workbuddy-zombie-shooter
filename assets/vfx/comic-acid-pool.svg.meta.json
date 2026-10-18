@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_acid_pool",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-acid-pool.svg",
+    "status": "accepted",
+    "author": "项目原创漫画矢量纹理"
+  },
+  "sourceHash": "sha256:0471a686db46792cdb74a51cf14a8bf655d7107515ff76b9cb50e7a59b97ad01",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

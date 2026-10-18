@@ -189,7 +189,7 @@ export class PlayController {
     // 而 GPU 上仍留着 Play 期分配的实例 buffer 与代理网格缓存（由 renderer-core 持有）。
     // 见 PR #3 review / AGENTS.md §2.4「Play 期每次 GPU 分配都必须登记并在 Stop 释放」。
     this.session.registerResource('dynamic-instances', () => this.renderer.core.releaseDynamicResources());
-    this.vfx.start(this.session);
+    this.vfx.start(this.session,doc);
     this.lastError = null;
     this.notify();
     return true;
@@ -230,7 +230,7 @@ export class PlayController {
     this.bodyIk?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
-    this.vfx.stop();this.vfx.start(this.session);this.vfx.update(this.session);
+    this.vfx.stop();this.vfx.start(this.session,this.renderer.getDocument()??undefined);this.vfx.update(this.session);
     this.notify();
   }
 

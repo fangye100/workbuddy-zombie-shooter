@@ -2,7 +2,7 @@ import type { RuntimeSession } from '@aether/zombie-game';
 import { NPC_STATS } from '@aether/content';
 import { drawImpactInk, visibleImpacts } from './combat-ink';
 import { gameText as g } from './game-language';
-import { drawEnemyAttack, drawAttackCue } from './enemy-attack-ink';
+import { drawEnemyAttack, drawAttackCue,drawEnemyDanger } from './enemy-attack-ink';
 import { drawHeldWeapon, drawWeaponEffect } from './weapon-ink';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
@@ -10,6 +10,7 @@ export type WorldProjection = (p: readonly [number, number, number]) => { x: num
 export class CombatOverlay {
   /** Host confirms GPU resources are ready for this exact weapon before suppressing fallback. */
   static gpuWeaponReady:(weaponId:string)=>boolean=()=>false;
+  static gpuEnemyReady:(attackId:number)=>boolean=()=>false;
   debugRanges = false;
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
@@ -61,7 +62,7 @@ export class CombatOverlay {
       c.fillStyle = '#e74c3d55'; c.strokeStyle = '#ffce5b'; c.lineWidth = 3; c.fill(); c.stroke();
       const p = point([danger.x, 0.2, danger.z]); c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff6e2'; c.fillText(g(`撤离！${Math.max(0, danger.remaining).toFixed(1)}s`), p.x, p.y);
     }
-    for (const effect of runtime.enemyAttacks.effects) drawEnemyAttack(c,point,effect,(runtime.tick-effect.startTick)*runtime.fixedStep);
+    for (const effect of runtime.enemyAttacks.effects) {if(!CombatOverlay.gpuEnemyReady(effect.id))drawEnemyAttack(c,point,effect,(runtime.tick-effect.startTick)*runtime.fixedStep);drawEnemyDanger(c,point,effect);}
     for (const e of visibleImpacts(runtime.combatEvents,runtime.runId,runtime.tick,runtime.fixedStep)) {
       const age = (runtime.tick - e.tick) * runtime.fixedStep;
       const p = point([e.x!, 1.2, e.z!]); if (p.behind) continue;

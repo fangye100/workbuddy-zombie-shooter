@@ -57,12 +57,13 @@ export class VfxPass {
     const group=this.device.createBindGroup({layout:this.alpha.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniform}},{binding:1,resource:{buffer:this.buffer}},{binding:2,resource:texture.createView()},{binding:3,resource:this.sampler}]});
     this.textures.set(key,{texture,group,width:bitmap.width,height:bitmap.height});this.stats.textures=this.textures.size;
   }
+  drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
   draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;
     if(this.disposed)return 0;
     // Far-to-near alpha. Preserve that order; batch only consecutive compatible items.
     const depthOf=(p:V3)=>view[2]!*p[0]!+view[6]!*p[1]!+view[10]!*p[2]!+view[14]!;
-    const items=this.instances.filter(p=>this.textures.has(p.effect.texture.guid)).slice(0,this.capacity).sort((a,b)=>depthOf(a.position)-depthOf(b.position));
+    const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(a.position)-depthOf(b.position));
     if(!items.length)return 0;
     const data=new Float32Array(items.length*20);
     for(let i=0;i<items.length;i++){
@@ -75,8 +76,10 @@ export class VfxPass {
         right=scale(right,e.size[0]);up=scale(up,e.size[1]);
       }
       const rgb=[1,3,5].map(k=>linear(parseInt(e.color.slice(k,k+2),16)/255));
-      const tex=this.textures.get(e.texture.guid)!,frame=Math.min(e.frames-1,Math.floor(p.age/e.duration*e.frames));
-      data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,Math.max(0,1-p.age/e.duration)],o+12);
+      const progress=e.loop?(p.age%e.duration)/e.duration:p.age/e.duration;
+      const tex=this.textures.get(e.texture.guid)!,frame=Math.min(e.frames-1,Math.floor(progress*e.frames));
+      const alpha=p.lifetime===undefined?Math.max(0,1-p.age/e.duration):Math.min(1,Math.max(0,(p.lifetime-p.age)/.15));
+      data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,alpha],o+12);
       data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);
     }
     this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);this.device.queue.writeBuffer(this.buffer,0,data);

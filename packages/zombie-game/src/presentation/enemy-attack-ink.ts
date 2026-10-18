@@ -45,3 +45,8 @@ export function drawEnemyAttack(c:CanvasRenderingContext2D,p:Project,e:EnemyAtta
   }
   c.restore();
 }
+
+/** Hazard readability is independent from decorative GPU capacity and texture availability. */
+export function drawEnemyDanger(c:CanvasRenderingContext2D,p:Project,e:EnemyAttackEffect):void {
+ if(e.kind==='acid' && e.phase==='pool' && !e.blocked){c.save();ring(c,p,e.position[0],e.position[2],e.radius,'#00000000','#d9ff83');c.restore();}
+}

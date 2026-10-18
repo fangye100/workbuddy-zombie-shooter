@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_acid",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-acid.svg",
+    "status": "accepted",
+    "author": "项目原创漫画矢量纹理"
+  },
+  "sourceHash": "sha256:cbe63492f4c7775263eed5d05071d8f38fedd26a3571f836ef007bc9b37ba7fb",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

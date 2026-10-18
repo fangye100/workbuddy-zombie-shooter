@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_ground_mark",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-ground-mark.svg",
+    "status": "accepted",
+    "author": "项目原创漫画矢量纹理"
+  },
+  "sourceHash": "sha256:699128a974f780dcb826962ef2e11f85378dc0fdd615b2bc320f58dace64b4aa",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}
