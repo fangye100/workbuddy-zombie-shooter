@@ -1,7 +1,7 @@
 import type { AssetRef, SceneDocument } from './document';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 2;
+export const VFX_VERSION = 3;
 export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite';
 export interface VfxEffectDefinition {
   kind: VfxKind;
@@ -13,6 +13,10 @@ export interface VfxEffectDefinition {
   blend: 'alpha' | 'additive';
   orientation?: 'camera' | 'surface';
   loop?: boolean;
+  emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number};
+  sizeCurve?: Array<{t:number;value:number}>;
+  colorCurve?: Array<{t:number;color:string}>;
+  alphaCurve?: Array<{t:number;value:number}>;
 }
 export interface VfxAsset {
   version: number;
@@ -27,10 +31,19 @@ export function validVfxRef(value: unknown): value is AssetRef & {guid:string} {
   return typeof r.guid === 'string' && !!r.guid && typeof r.path === 'string'
     && r.path.startsWith('assets/') && !/[\\?#]/.test(r.path) && r.path.split('/').every(s => !!s && s !== '.' && s !== '..');
 }
+export function validVfxCurve(value:unknown,kind:'size'|'color'|'alpha'):boolean {
+  if(value===undefined)return true;if(!Array.isArray(value) || value.length<2 || value.length>8)return false;
+  return value.every((p,i)=>p && typeof p.t==='number' && Number.isFinite(p.t) && p.t>=0 && p.t<=1 && (i===0?p.t===0:p.t>value[i-1].t) && (i!==value.length-1 || p.t===1) && (kind==='color'?typeof p.color==='string' && /^#[\da-f]{6}$/i.test(p.color):typeof p.value==='number' && Number.isFinite(p.value) && p.value>=0 && p.value<=(kind==='alpha'?1:8)));
+}
+export interface VfxEmitterComponent {kind:'VfxEmitter';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;seed:number;playing:boolean;direction:[number,number,number]}
+export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
+ if(!value || typeof value!=='object')return false;const c=value as VfxEmitterComponent;
+ return c.kind==='VfxEmitter' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Number.isInteger(c.seed) && c.seed>=0 && c.seed<=4294967295 && Array.isArray(c.direction) && c.direction.length===3 && c.direction.every(n=>Number.isFinite(n)) && Math.hypot(...c.direction)>.0001;
+}
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   const a = value as VfxAsset, errors: string[] = [];
-  if (a.version !== 1 && a.version !== VFX_VERSION) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
@@ -41,7 +54,9 @@ export function validateVfxAsset(value: unknown): string[] {
       || !Number.isInteger(e.frames) || e.frames < 1 || e.frames > 16 || !finite(e.duration, .01, 5)
       || !Array.isArray(e.size) || e.size.length !== 2 || !e.size.every(n => finite(n, .001, 20))
       || typeof e.color !== 'string' || !/^#[\da-f]{6}$/i.test(e.color) || !['alpha', 'additive'].includes(e.blend)
-      || e.orientation!==undefined && !['camera','surface'].includes(e.orientation) || e.loop!==undefined && typeof e.loop!=='boolean') errors.push(`VFX 效果 ${key} 参数非法`);
+      || e.orientation!==undefined && !['camera','surface'].includes(e.orientation) || e.loop!==undefined && typeof e.loop!=='boolean'
+      || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180))
+      || !validVfxCurve(e.sizeCurve,'size') || !validVfxCurve(e.colorCurve,'color') || !validVfxCurve(e.alphaCurve,'alpha')) errors.push(`VFX 效果 ${key} 参数非法`);
   }
   return errors;
 }

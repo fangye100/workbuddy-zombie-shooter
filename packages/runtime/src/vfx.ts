@@ -6,6 +6,8 @@ export interface VfxRequest {
   position: VfxPoint;
   end?: VfxPoint;
   normal?: VfxPoint;
+  velocity?: VfxPoint;
+  direction?: VfxPoint;
   seed: number;
   priority: number;
   /** Optional simulation lifetime, independent of the asset animation cycle. */
