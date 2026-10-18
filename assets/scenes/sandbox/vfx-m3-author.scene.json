@@ -1197,7 +1197,9 @@
             0
           ]
         }
-      ]
+      ],
+      "pickable": true,
+      "prefab": null
     },
     {
       "id": "nd_m3_emitter_1",
@@ -1240,7 +1242,9 @@
             0
           ]
         }
-      ]
+      ],
+      "pickable": true,
+      "prefab": null
     },
     {
       "id": "nd_m3_emitter_2",
@@ -1250,9 +1254,9 @@
       "category": "环境",
       "transform": {
         "position": [
-          0.0,
+          0,
           0.8,
-          0
+          -2
         ],
         "rotation": [
           0,
@@ -1283,7 +1287,9 @@
             0
           ]
         }
-      ]
+      ],
+      "pickable": true,
+      "prefab": null
     },
     {
       "id": "nd_m3_emitter_3",
@@ -1326,7 +1332,9 @@
             0
           ]
         }
-      ]
+      ],
+      "pickable": true,
+      "prefab": null
     },
     {
       "id": "nd_m3_emitter_4",
@@ -1369,7 +1377,9 @@
             0
           ]
         }
-      ]
+      ],
+      "pickable": true,
+      "prefab": null
     }
   ],
   "meta": {

@@ -1,5 +1,6 @@
 import {VfxEmitters,type VfxInstance,type WeaponEffect} from '@aether/runtime';
 import type {VfxEffectDefinition} from '@aether/scene';
+import type {WeaponVfxFrame} from '../weapon-vfx-frames';
 import type {RuntimeSession} from '../session';
 import type {EnemyAttackEvent} from '../enemy-attacks';
 import {type WeaponVfxPlanner} from './vfx-planner';
@@ -7,11 +8,11 @@ export const CONTINUOUS_VFX_SLOTS=[['weapon.flame','火焰喷射'],['actor.smoke
 /** Game facts → generic emitters. No damage, collision, timing or trajectory simulation here. */
 export class ContinuousVfxPlanner {
  readonly bindings=new Map<string,VfxEffectDefinition>();readonly emitters:VfxEmitters;
- readonly renderedWeapons=new Set<string>();readonly renderedEnemies=new Set<number>();readonly recent:Readonly<WeaponEffect>[]=[];
+ readonly renderedWeapons=new Set<string>();readonly renderedEnemies=new Set<number>();readonly recent:Readonly<WeaponEffect>[]=[];readonly recentFrames:WeaponVfxFrame[]=[];
  readonly stats={fallback:0,eventDrops:0};private run=-1;private burnHandles=new Set<string>();
  constructor(private readonly weapons:WeaponVfxPlanner){this.emitters=new VfxEmitters(weapons.pool);}
  update(runtime:RuntimeSession,enemyEvents:readonly EnemyAttackEvent[],canDraw:(p:VfxInstance)=>boolean):void {
-  if(this.run!==runtime.runId){this.emitters.clear();this.burnHandles.clear();this.recent.length=0;this.run=runtime.runId;}
+  if(this.run!==runtime.runId){this.emitters.clear();this.burnHandles.clear();this.recent.length=0;this.recentFrames.length=0;this.run=runtime.runId;}
   const tick=Math.max(0,runtime.tick-1),dt=runtime.fixedStep,keep=new Set<string>();this.renderedWeapons.clear();this.renderedEnemies.clear();this.stats.fallback=0;this.stats.eventDrops=runtime.weaponCombat.presentationDropped+runtime.weaponVfxFrames.dropped;
   const draw=(key:string)=>this.weapons.pool.active.some(p=>(p.key===key || p.key.startsWith('emit:'+key+':')) && canDraw(p));
   const emit=(key:string,tag:string,position:readonly [number,number,number],direction:readonly [number,number,number],at:number,seed:number,priority=1)=>{const effect=this.bindings.get(tag);keep.add(key);if(!effect)return false;this.emitters.update(key,effect,{position,direction},at,dt,seed,priority,tick);return draw(key);};
@@ -26,6 +27,7 @@ export class ContinuousVfxPlanner {
    }
   }
   for(const frame of runtime.weaponVfxFrames.drain()){
+   this.recentFrames.push(frame);if(this.recentFrames.length>64)this.recentFrames.shift();
    for(const h of this.emitters.activeHandles)if(h.key.includes(':flame:') && (!frame.emitting || !h.key.endsWith(':'+frame.weaponId))){this.emitters.stop(h.key);keep.delete(h.key);}
    const key=`${runtime.runId}:flame:${frame.weaponId}`,seed=[...frame.weaponId].reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),7)>>>0;
    if(frame.emitting){if(emit(key,'weapon.flame',frame.muzzle,frame.direction,frame.tick,seed,3))this.renderedWeapons.add(frame.weaponId);else this.stats.fallback++;}
@@ -48,5 +50,5 @@ export class ContinuousVfxPlanner {
   for(const e of runtime.enemyAttacks.effects)if(e.kind==='charge' && !e.finished){const key=`${runtime.runId}:charge:${e.id}`;keep.add(key);if(draw(key))this.renderedEnemies.add(e.id);}
   this.emitters.stopExcept(keep);
  }
- clear():void{this.emitters.clear();this.bindings.clear();this.renderedWeapons.clear();this.renderedEnemies.clear();this.recent.length=0;this.burnHandles.clear();this.run=-1;}
+ clear():void{this.emitters.clear();this.bindings.clear();this.renderedWeapons.clear();this.renderedEnemies.clear();this.recent.length=0;this.recentFrames.length=0;this.burnHandles.clear();this.run=-1;}
 }
