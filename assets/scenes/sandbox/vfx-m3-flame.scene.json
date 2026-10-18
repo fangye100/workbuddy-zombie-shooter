@@ -1,0 +1,1154 @@
+{
+  "schemaVersion": 17,
+  "id": "sc_vfx_m3_flame",
+  "name": "M3 VFX · flame",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0.012,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      2,
+      1,
+      0
+    ],
+    "distance": 15,
+    "yaw": 0.6,
+    "elevation": 0.7
+  },
+  "entryCamera": "nd_vfx_camera",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        },
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              2,
+              0,
+              0
+            ],
+            "size": [
+              22,
+              4,
+              16
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ]
+    },
+    {
+      "id": "nd_vfx_rules",
+      "name": "VFX 玩法规则",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "RunRules",
+          "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 0.08,
+            "decisionMaxSec": 0.35,
+            "recoveryMinSec": 0.2,
+            "recoveryMaxSec": 0.55,
+            "windupJitterFrac": 0.15,
+            "cooldownJitterFrac": 0.35
+          },
+          "campaign": "act1",
+          "scrapPerKill": 3,
+          "firstChoiceKills": 99,
+          "choiceEveryKills": 8,
+          "eventScrap": 25,
+          "healCost": 18,
+          "healAmount": 35,
+          "talentCost": 30,
+          "floorEssence": 5,
+          "aimAssist": false,
+          "weapon": {
+            "magazineSize": 18,
+            "reserveRounds": 120,
+            "reloadSec": 1.6,
+            "ammoPerKill": 8,
+            "ammoCost": 12,
+            "ammoSupply": 60
+          },
+          "bossAttack": null,
+          "talents": [
+            {
+              "id": "heavy",
+              "name": "重型弹头",
+              "description": "每层伤害 +35%；叠满三层形成高伤流派。",
+              "effect": "damage",
+              "value": 0.35,
+              "maxStacks": 3
+            },
+            {
+              "id": "rapid",
+              "name": "快速供弹",
+              "description": "每层射速 +30%，持续压制尸潮。",
+              "effect": "haste",
+              "value": 0.3,
+              "maxStacks": 3
+            },
+            {
+              "id": "leech",
+              "name": "尸髓回流",
+              "description": "命中恢复实际伤害的 8% 生命。",
+              "effect": "leech",
+              "value": 0.08,
+              "maxStacks": 3
+            },
+            {
+              "id": "shock",
+              "name": "震荡弹池",
+              "description": "解锁新的范围流派选项：每层 2 米半额冲击波。",
+              "effect": "blast",
+              "value": 2,
+              "maxStacks": 3,
+              "unlockCost": 15
+            },
+            {
+              "id": "blast",
+              "name": "破片弹药",
+              "description": "命中造成半额范围伤害；每层扩大 1.2 米。",
+              "effect": "blast",
+              "value": 1.2,
+              "maxStacks": 3
+            },
+            {
+              "id": "dash",
+              "name": "轻装步伐",
+              "description": "每层移动速度 +15%，更容易拉开距离。",
+              "effect": "speed",
+              "value": 0.15,
+              "maxStacks": 3
+            }
+          ],
+          "arsenal": {
+            "equipped": "flame",
+            "switchSec": 0.4,
+            "definitions": [
+              {
+                "id": "pistol",
+                "name": "手枪",
+                "nameEn": "Pistol",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "hitscan",
+                "damage": 12,
+                "cooldownSec": 0.35,
+                "rangeM": 18,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 18,
+                  "reserveRounds": 120,
+                  "reloadSec": 1.6,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": null,
+                  "placeholder": "pistol",
+                  "color": "#ffc531",
+                  "lengthM": 0.3,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.12,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.3,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.036,
+                        -0.1,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.09,
+                        0.04,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "pistol-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "pistol-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "pistol-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "pistol-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "pistol-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "comic-muzzle",
+                    "trail": "comic-trail",
+                    "impact": "comic-impact"
+                  }
+                }
+              },
+              {
+                "id": "chainsaw",
+                "name": "电锯",
+                "nameEn": "Chainsaw",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "melee",
+                "damage": 9,
+                "cooldownSec": 0.12,
+                "rangeM": 2.3,
+                "spreadDeg": 115,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0.25,
+                  "slowSec": 0.4,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 0,
+                  "reserveRounds": 0,
+                  "reloadSec": 0,
+                  "perShot": 0,
+                  "reloadMode": "none"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 0
+                },
+                "presentation": {
+                  "model": null,
+                  "placeholder": "chainsaw",
+                  "color": "#f8a247",
+                  "lengthM": 0.85,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.34,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.85,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.102,
+                        -0.1,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.255,
+                        0.04,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "chainsaw-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "chainsaw-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "chainsaw-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "chainsaw-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "chainsaw-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  }
+                }
+              },
+              {
+                "id": "flame",
+                "name": "火焰喷射器",
+                "nameEn": "Flamethrower",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "flame",
+                "damage": 3,
+                "cooldownSec": 0.1,
+                "rangeM": 6,
+                "spreadDeg": 40,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 6,
+                  "burnSec": 2,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 60,
+                  "reserveRounds": 240,
+                  "reloadSec": 2.2,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": null,
+                  "placeholder": "flame",
+                  "color": "#ff7045",
+                  "lengthM": 0.8,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.32000000000000006,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.8,
+                        0,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.096,
+                        -0.1,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.24,
+                        0.04,
+                        0
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.02,
+                    "recoilPitchDeg": 3,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "flame-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "flame-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "flame-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "flame-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "flame-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  }
+                }
+              }
+            ]
+          },
+          "audio": null
+        },
+        {
+          "kind": "VfxBindings",
+          "enabled": true,
+          "bindings": {
+            "weapon.flame": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "flame"
+            },
+            "actor.smoke": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "smoke"
+            },
+            "combat.spark": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "sparks"
+            },
+            "enemy.charge.trail": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "charge-dust"
+            },
+            "combat.melee": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "melee-arc"
+            }
+          }
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_ground",
+      "name": "浅灰测试地面",
+      "parent": null,
+      "transform": {
+        "position": [
+          2,
+          -0.17,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              22,
+              0.3,
+              16
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#7f8b99",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.6,
+                  "halftoneScale": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": false
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_camera",
+      "name": "VFX 游戏相机",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 45,
+          "distance": 13,
+          "yawOffsetDeg": -25,
+          "yawMode": "world"
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_player",
+      "name": "玩家起点",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_wall",
+      "name": "命中接收墙 · 向右射击",
+      "parent": null,
+      "transform": {
+        "position": [
+          4,
+          1,
+          4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              0.3,
+              2,
+              3
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#596677",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.6,
+                  "halftoneScale": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": false
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "layer": 0,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.15,
+              1,
+              1.5
+            ]
+          }
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_occluder",
+      "name": "前景遮挡立柱",
+      "parent": null,
+      "transform": {
+        "position": [
+          1,
+          1,
+          3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              1,
+              2,
+              1
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#394457",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.6,
+                  "halftoneScale": 0,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": false
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "layer": 0,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.5,
+              1,
+              0.5
+            ]
+          }
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_room",
+      "name": "M3观察区 · E交互结束",
+      "parent": null,
+      "transform": {
+        "position": [
+          2,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "event",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              2,
+              0,
+              0
+            ],
+            "size": [
+              22,
+              4,
+              16
+            ]
+          },
+          "clearRule": "interact",
+          "clearTarget": null,
+          "depth": 1
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    },
+    {
+      "id": "nd_vfx_spawn",
+      "name": "实体命中目标",
+      "parent": "nd_vfx_room",
+      "transform": {
+        "position": [
+          1,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-03",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 0.01,
+          "prefab": null
+        }
+      ],
+      "prefab": null,
+      "userData": {}
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-09-04T07:04:02.154Z",
+    "updatedAt": "2026-09-04T07:04:02.154Z",
+    "author": "scene:gen",
+    "notes": "搬运自 renderer.ts 构造函数的硬编码几何（13 个物体）"
+  },
+  "playerStart": "nd_vfx_player",
+  "loseCondition": "player-death"
+}

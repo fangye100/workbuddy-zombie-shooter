@@ -117,6 +117,30 @@
       "id": "sc_vfx_m2_acid_blocked",
       "name": "M2 VFX · acid-blocked",
       "enabled": true
+    },
+    {
+      "id": "sc_vfx_m3_flame",
+      "name": "M3 VFX · flame",
+      "path": "assets/scenes/sandbox/vfx-m3-flame.scene.json",
+      "order": 19
+    },
+    {
+      "id": "sc_vfx_m3_charge",
+      "name": "M3 VFX · charge",
+      "path": "assets/scenes/sandbox/vfx-m3-charge.scene.json",
+      "order": 20
+    },
+    {
+      "id": "sc_vfx_m3_melee",
+      "name": "M3 VFX · melee",
+      "path": "assets/scenes/sandbox/vfx-m3-melee.scene.json",
+      "order": 21
+    },
+    {
+      "id": "sc_vfx_m3_author",
+      "name": "M3 VFX · author",
+      "path": "assets/scenes/sandbox/vfx-m3-author.scene.json",
+      "order": 22
     }
   ],
   "startIndex": 1,

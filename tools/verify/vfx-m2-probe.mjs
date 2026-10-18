@@ -54,7 +54,7 @@ try{
  if(!await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.path===${JSON.stringify(assetCopy)}`)))throw new Error('asset copy unavailable');
  await input('编辑效果','acid-pool');await input('宽度 m','1.2');await input('VFX 颜色','#90ee55');await input('持续时间 s','.7');await input('VFX 朝向','surface');await input('循环帧动画',true);await button('应用资源参数');
  await button('撤销资源参数');check('资产Undo恢复周期',await cdp.eval(`window.__editor.vfx.snapshot().editor.asset.effects['acid-pool'].duration===.6`));await button('重做资源参数');await button('保存 VFX 资产');
- check('v2独立资产真实写盘',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(assetCopy,'utf8')).effects['acid-pool'].duration===.7)));
+ check('v2资源迁移后独立资产真实写盘',await waitFor(()=>Promise.resolve(JSON.parse(fs.readFileSync(assetCopy,'utf8')).effects['acid-pool'].duration===.7)));
  await button('重载 VFX 资产');check('资产Reload朝向循环尺寸保留',await waitFor(()=>cdp.eval(`(()=>{const e=window.__editor.vfx.snapshot().editor.asset.effects['acid-pool'];return e.duration===.7 && e.size[0]===1.2 && e.orientation==='surface' && e.loop;})()`)));
  await waitFor(()=>cdp.eval(`document.querySelector('#vfx-panel [role="status"]').textContent==='VFX 已从磁盘重载'`));
  const savedAsset=JSON.parse(fs.readFileSync(assetCopy,'utf8'));
@@ -62,7 +62,7 @@ try{
  evidence.casDraft=await cdp.eval(`({snapshot:window.__editor.vfx.snapshot().editor,status:document.querySelector('#vfx-panel [role="status"]').textContent})`);
  check('CAS冲突可见且保留草稿',await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.dirty && document.querySelector('#vfx-panel [role="status"]').textContent.includes('外部修改')`)));
  await button('重载 VFX 资产');check('CAS后显式Reload读取外部版本',await waitFor(()=>cdp.eval(`!window.__editor.vfx.snapshot().editor.dirty && window.__editor.vfx.snapshot().editor.asset.name==='外部版本'`)));
- fs.writeFileSync(assetCopy,JSON.stringify({...external,version:99}));await button('重载 VFX 资产');check('未来资源版本可见诊断且保留当前资源',await waitFor(()=>cdp.eval(`document.querySelector('#vfx-panel [role="status"]').textContent.includes('不支持 VFX 版本 99') && window.__editor.vfx.snapshot().editor.asset.version===2`)));fs.writeFileSync(assetCopy,JSON.stringify(external,null,2)+'\n');await button('重载 VFX 资产');
+ fs.writeFileSync(assetCopy,JSON.stringify({...external,version:99}));await button('重载 VFX 资产');check('未来资源版本可见诊断且保留当前资源',await waitFor(()=>cdp.eval(`document.querySelector('#vfx-panel [role="status"]').textContent.includes('不支持 VFX 版本 99') && window.__editor.vfx.snapshot().editor.asset.version===3`)));fs.writeFileSync(assetCopy,JSON.stringify(external,null,2)+'\n');await button('重载 VFX 资产');
  await button('循环 GPU 预览');check('平面资源预览有真实GPU draw',await waitFor(()=>cdp.eval(`(window.__editor.vfx.snapshot().editor.preview?.draws??0)>0`)));await capture('01-plane-preview');await button('停止 VFX 预览');
  await start();
  const flight=await waitFor(async()=>{const s=await snapshot();return s.effects?.some(e=>e.kind==='acid' && e.phase==='flight') && s.vfx.enemy.instances.some(i=>i.key.endsWith('enemy.acid.flight')) && s.vfx.gpu?.draws>0?s:null;},{timeout:10000,interval:10});

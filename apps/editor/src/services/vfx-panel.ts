@@ -1,5 +1,5 @@
 import { SceneGraph,validateVfxAsset,type SceneDocument,type SceneNode,type VfxAsset } from '@aether/scene';
-import { VfxPool,solidCollider,nearestSolidContact,type EditResult } from '@aether/runtime';
+import { VfxPool,VfxEmitters,solidCollider,nearestSolidContact,type EditResult } from '@aether/runtime';
 import { VfxPass,type RendererCore } from '@aether/render';
 import { listDir,readProjectFile } from '../asset-util';
 import { readVfxAsset,readVfxTexture } from './vfx-assets';
@@ -20,14 +20,19 @@ export class VfxPanel {
   private readonly color=document.createElement('input');
   private readonly orientation=document.createElement('select');private readonly loop=document.createElement('input');
   private readonly scope=document.createElement('select');
+  private readonly rate=document.createElement('input');private readonly speed=document.createElement('input');private readonly spread=document.createElement('input');private readonly maxParticles=document.createElement('input');
+  private readonly sizeCurve=document.createElement('textarea');private readonly colorCurve=document.createElement('textarea');private readonly alphaCurve=document.createElement('textarea');
+  private readonly seed=document.createElement('input');private readonly startPaused=document.createElement('input');
+
+  private previewTick=0;private previewAccumulator=0;private previewPaused=false;
   private readonly form=document.createElement('fieldset');
   private document:VfxDocument|null=null;
   private generation=0;
   private pass:VfxPass|null=null;
-  private readonly pool=new VfxPool();
-  private clock=0;
+  private readonly pool=new VfxPool();private readonly emitters=new VfxEmitters(this.pool);
+
   private tick=0;
-  private sequence=0;
+
   private sceneKey='';
   private formDirty=false;
   constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown}){
@@ -45,6 +50,10 @@ export class VfxPanel {
     this.color.type='color';field('VFX 颜色',this.color);this.color.oninput=()=>{this.formDirty=true;};
     this.orientation.add(new Option('面向相机','camera'));this.orientation.add(new Option('对齐接收平面','surface'));field('VFX 朝向',this.orientation);this.orientation.onchange=()=>{this.formDirty=true;};this.loop.type='checkbox';field('循环帧动画',this.loop);this.loop.onchange=()=>{this.formDirty=true;};
     const hint=document.createElement('p');hint.textContent='持续时间：动画周期或装饰尾部。危险半径/结束始终跟随模拟，不由本表改变。';this.form.append(hint);
+    for(const [name,input] of [['发射率 /s',this.rate],['粒子速度 m/s',this.speed],['发射散角 °',this.spread],['单发射器粒子上限',this.maxParticles]] as const){input.type='number';input.step='.1';field(name,input);input.oninput=()=>{this.formDirty=true;};}
+    for(const [name,input] of [['尺寸曲线 JSON',this.sizeCurve],['颜色曲线 JSON',this.colorCurve],['透明度曲线 JSON',this.alphaCurve]] as const){input.rows=2;field(name,input);input.oninput=()=>{this.formDirty=true;};}
+    this.seed.type='number';this.seed.value='7';this.seed.min='0';this.seed.max='4294967295';field('预览 seed',this.seed);this.startPaused.type='checkbox';field('预览启动暂停',this.startPaused);
+    this.button('预览暂停/继续',()=>{this.previewPaused=!this.previewPaused;});this.button('预览单步',()=>{if(this.pass && this.document){this.previewPaused=true;this.advancePreview();}});this.button('固定种子重播',()=>this.preview());
     this.button('应用资源参数',()=>this.apply());this.button('撤销资源参数',()=>{this.document?.undo();this.fields();});this.button('重做资源参数',()=>{this.document?.redo();this.fields();});
     this.button('保存 VFX 资产',async()=>{if(this.formDirty)throw new Error('请先应用资源参数');if(!this.document)throw new Error('请先打开资源');this.status.textContent=await this.document.save();});
     this.button('重载 VFX 资产',async()=>{if(!this.document)throw new Error('请先打开资源');await this.document.reload();this.fields();this.status.textContent='VFX 已从磁盘重载';});
@@ -66,8 +75,8 @@ export class VfxPanel {
     }else{const meta=await readProjectFile(`${path}.meta.json`);if(!meta.ok)throw new Error('找不到 VFX sidecar');asset=await readVfxAsset({path,guid:(meta.json as {guid:string}).guid});}
     this.stop();this.document=new VfxDocument(path,asset);this.path.value=path;this.kind.replaceChildren();for(const [key,e] of Object.entries(asset.effects))this.kind.add(new Option(`${e.kind} · ${key}`,key));this.fields();this.status.textContent=`已加载 VFX 源版本 ${asset.version} → 编辑版本 ${this.document.value.version}；仅保存时升级磁盘。参数保存与场景绑定分别管理`;
   }
-  private fields(){const e=this.document?.value.effects[this.kind.value];if(!e)return;this.width.value=String(e.size[0]);this.height.value=String(e.size[1]);this.duration.value=String(e.duration);this.color.value=e.color;this.orientation.value=e.orientation??'camera';this.loop.checked=e.loop??false;this.formDirty=false;}
-  private apply(){if(!this.document)throw new Error('请先打开资源');const next=structuredClone(this.document.value),e=next.effects[this.kind.value]!;e.size=[Number(this.width.value),Number(this.height.value)];e.duration=Number(this.duration.value);e.color=this.color.value;e.orientation=this.orientation.value as 'camera'|'surface';e.loop=this.loop.checked;this.document.apply(next);this.formDirty=false;this.status.textContent='已应用资源参数（资产尚未保存）';this.stop();}
+  private fields(){const e=this.document?.value.effects[this.kind.value];if(!e)return;this.width.value=String(e.size[0]);this.height.value=String(e.size[1]);this.duration.value=String(e.duration);this.color.value=e.color;this.orientation.value=e.orientation??'camera';this.loop.checked=e.loop??false;this.rate.value=String(e.emission?.rate??0);this.speed.value=String(e.emission?.speed??0);this.spread.value=String(e.emission?.spreadDeg??0);this.maxParticles.value=String(e.emission?.maxParticles??32);this.sizeCurve.value=e.sizeCurve?JSON.stringify(e.sizeCurve):'';this.colorCurve.value=e.colorCurve?JSON.stringify(e.colorCurve):'';this.alphaCurve.value=e.alphaCurve?JSON.stringify(e.alphaCurve):'';this.formDirty=false;}
+  private apply(){if(!this.document)throw new Error('请先打开资源');const next=structuredClone(this.document.value),e=next.effects[this.kind.value]!;e.size=[Number(this.width.value),Number(this.height.value)];e.duration=Number(this.duration.value);e.color=this.color.value;e.orientation=this.orientation.value as 'camera'|'surface';e.loop=this.loop.checked;if(Number(this.rate.value)>0)e.emission={rate:Number(this.rate.value),speed:Number(this.speed.value),spreadDeg:Number(this.spread.value),maxParticles:Number(this.maxParticles.value)};else delete e.emission;for(const [key,input] of [['sizeCurve',this.sizeCurve],['colorCurve',this.colorCurve],['alphaCurve',this.alphaCurve]] as const){if(input.value.trim())e[key]=JSON.parse(input.value);else delete e[key];}this.document.apply(next);this.formDirty=false;this.status.textContent='已应用资源参数（资产尚未保存）';this.stop();}
   private bind(){
     if(!this.document || !this.document.path.startsWith('assets/'))throw new Error('请选择 assets/ 下的正式资源绑定');
     const asset=this.document.value,keys=Object.fromEntries((['muzzle','trail','impact'] as const).map(k=>[k,Object.keys(asset.effects).find(key=>asset.effects[key]!.kind===k)]));
@@ -80,26 +89,28 @@ export class VfxPanel {
     const asset=structuredClone(this.document.value),pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
     try{for(const texture of new Map(Object.values(asset.effects).map(e=>[e.texture.guid,e.texture])).values()){
       const bitmap=await readVfxTexture(texture);try{if(generation!==this.generation)return;pass.addTexture(texture.guid,bitmap);}finally{bitmap.close();}}
-      if(generation!==this.generation)return;this.clock=.7;this.status.textContent='GPU 循环预览中（场景深度遮挡；只读场景）';
+      if(generation!==this.generation)return;this.previewTick=0;this.previewAccumulator=0;this.previewPaused=this.startPaused.checked;this.status.textContent='GPU 循环预览中（场景深度遮挡；只读场景）';
     }catch(e){this.stop();throw e;}
   }
-  stop(){this.generation++;this.pass?.destroy();if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.pool.clear();}
+  stop(){this.generation++;this.pass?.destroy();if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.pool.clear();this.emitters.clear();}
   frame(dt:number){
     const doc=this.port.document(),locked=this.port.locked();this.form.disabled=locked;
     if(locked && this.pass)this.stop();
     const weapons=doc?.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');
     const key=JSON.stringify([doc?.id,weapons?.kind==='RunRules'?weapons.arsenal.definitions.map(w=>[w.id,w.presentation.vfx]):[]]);
     if(key!==this.sceneKey){this.sceneKey=key;this.weapon.replaceChildren();if(weapons?.kind==='RunRules')for(const w of weapons.arsenal.definitions)this.weapon.add(new Option(w.name,w.id));}
-    if(this.pass && this.document){
-      this.pool.advance(dt);this.clock+=dt;
-      if(this.clock>=.65 && doc){this.clock=0;const node=doc.playerStart??doc.nodes[0]?.id;if(node){const graph=SceneGraph.fromDocument(doc),base=graph.getNode(node)?.world.position??[0,0,0];const from:[number,number,number]=[base[0]+.5,base[1]+1,base[2]],end:[number,number,number]=[from[0]+3,from[1],from[2]];
-        const solids=doc.nodes.flatMap(n=>n.components.flatMap(c=>c.kind==='Collider' && c.enabled && !c.isTrigger?[solidCollider(n.id,c.shape,graph.worldMatrix(n.id))]:[]));
-        const surface=nearestSolidContact([base[0],base[1]+1,base[2]],[0,-1,0],solids,4);
-        for(const [key,effect] of Object.entries(this.document.value.effects)){if(this.scope.value==='selection' && key!==this.kind.value)continue;if(effect.orientation==='surface' && !surface){this.status.textContent='平面预览需要玩家起点下方的真实 Collider 接收面';continue;}this.pool.spawn({key:`preview:${++this.sequence}:${key}`,effect,position:effect.orientation==='surface'?surface!.point:effect.kind==='impact'?end:from,...(effect.orientation==='surface'?{normal:surface!.normal}:{}),...(effect.kind==='trail'?{end}:{}),seed:1,priority:1});}}}
-      this.pass.instances=this.pool.active;
-    }
+    if(this.pass && this.document && !this.previewPaused){this.previewAccumulator+=dt;while(this.previewAccumulator>=1/30){this.previewAccumulator-=1/30;this.advancePreview();}}
     this.tick+=dt;if(this.tick>.2){this.tick=0;this.stats.textContent=JSON.stringify({assetDirty:this.document?.dirty??false,preview:this.pass?.stats??null,play:this.port.playStats()},null,1);}
   }
+  private advancePreview(){
+    const doc=this.port.document();if(!doc || !this.document || !this.pass)return;this.pool.advance(1/30);const tick=this.previewTick++,graph=SceneGraph.fromDocument(doc),node=doc.playerStart??doc.nodes[0]?.id;if(!node)return;const base=graph.getNode(node)?.world.position??[0,0,0],from:[number,number,number]=[base[0]+.5,base[1]+1,base[2]],end:[number,number,number]=[from[0]+3,from[1],from[2]];
+    const solids=doc.nodes.flatMap(n=>n.components.flatMap(c=>c.kind==='Collider' && c.enabled && !c.isTrigger?[solidCollider(n.id,c.shape,graph.worldMatrix(n.id))]:[])),surface=nearestSolidContact([base[0],base[1]+1,base[2]],[0,-1,0],solids,4),seed=Number(this.seed.value);
+    if(!Number.isInteger(seed) || seed<0 || seed>4294967295){this.status.textContent='预览seed必须为uint32';return;}
+    for(const [key,effect] of Object.entries(this.document.value.effects)){if(this.scope.value==='selection' && key!==this.kind.value)continue;if(effect.orientation==='surface' && !surface){this.status.textContent='平面预览需要玩家起点下方的真实 Collider 接收面';continue;}const position=effect.orientation==='surface'?surface!.point:effect.kind==='impact'?end:from;
+      if(effect.emission)this.emitters.update(`preview:${key}`,effect,{position,direction:[1,0,0],...(effect.orientation==='surface'?{normal:surface!.normal}:{})},tick,1/30,seed);
+      else if(tick%20===0)this.pool.spawn({key:`preview:${tick}:${key}`,effect,position,...(effect.orientation==='surface'?{normal:surface!.normal}:{}),...(effect.kind==='trail'?{end}:{}),seed,priority:1});
+    }this.pass.instances=this.pool.active;
+  }
   get hasDraft(){return this.formDirty || !!this.document?.dirty;}
-  snapshot(){return {path:this.document?.path??null,sourceVersion:this.document?.sourceVersion??null,asset:this.document?.value??null,dirty:this.hasDraft,preview:this.pass?.stats??null};}
+  snapshot(){return {previewClock:{tick:this.previewTick,seed:Number(this.seed.value),paused:this.previewPaused},particles:this.pool.active.map(p=>({...p})),path:this.document?.path??null,sourceVersion:this.document?.sourceVersion??null,asset:this.document?.value??null,dirty:this.hasDraft,preview:this.pass?.stats??null};}
 }

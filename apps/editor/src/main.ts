@@ -18,6 +18,7 @@ import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
 import { VfxPanel } from './services/vfx-panel';
+import {VfxEmitterPanel} from './services/vfx-emitter-panel';
 import {VfxBindingPanel} from './services/vfx-binding-panel';
 import { RuntimeMotionPanel } from './services/runtime-motion-panel';
 import { materialSnapshot, applyMaterialChanges, lightSnapshot, applyLightChanges } from './services/author-projection';
@@ -1322,6 +1323,8 @@ async function boot(): Promise<void> {
   (window as unknown as {__editor:Record<string,unknown>}).__editor.vfx={snapshot:()=>({editor:vfxPanel.snapshot(),play:playCtl.vfx.snapshot()})};
   const vfxBindingHost=document.createElement('div');vfxHost.before(vfxBindingHost);
   const vfxBindingPanel=new VfxBindingPanel(vfxBindingHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
+  const vfxEmitterHost=document.createElement('div');vfxBindingHost.before(vfxEmitterHost);
+  const vfxEmitterPanel=new VfxEmitterPanel(vfxEmitterHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
   const atmospherePanel = new AtmospherePanel(atmosphereHost, {
     environment: () => spawnStore?.document.environment ?? null,
     diagnostic: () => renderer.skyTextureDiagnostic,
@@ -4068,6 +4071,7 @@ async function boot(): Promise<void> {
     elapsed += dt;
     vfxPanel.frame(dt);
     vfxBindingPanel.frame();
+    vfxEmitterPanel.frame();
     frames++;
     hudTimer += wallDt;
 
