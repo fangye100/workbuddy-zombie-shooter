@@ -12,6 +12,7 @@ export class VfxDocument {
   busy=false;
   constructor(readonly path:string,asset:VfxAsset){this.baseline=structuredClone(asset);this.value=migrateVfxAsset(asset);this.clean=structuredClone(this.value);}
   get dirty():boolean{return sceneFingerprint(this.value)!==sceneFingerprint(this.clean);}
+  get sourceVersion():number{return this.baseline.version;}
   apply(next:VfxAsset):void {const errors=validateVfxAsset(next);if(errors.length)throw new Error(errors.join('；'));if(next.id!==this.baseline.id)throw new Error('不能改变已加载资源 GUID');this.undoStack.push(structuredClone(this.value));this.redoStack=[];this.value=migrateVfxAsset(next);}
   undo():void {const previous=this.undoStack.pop();if(previous){this.redoStack.push(this.value);this.value=previous;}}
   redo():void {const next=this.redoStack.pop();if(next){this.undoStack.push(this.value);this.value=next;}}

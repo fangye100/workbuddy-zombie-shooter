@@ -93,6 +93,30 @@
       "id": "sc_vfx_m1",
       "name": "M1 手枪 VFX · 遮挡与生命周期",
       "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m2-acid.scene.json",
+      "id": "sc_vfx_m2_acid",
+      "name": "M2 VFX · acid",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m2-pounce.scene.json",
+      "id": "sc_vfx_m2_pounce",
+      "name": "M2 VFX · pounce",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m2-explode.scene.json",
+      "id": "sc_vfx_m2_explode",
+      "name": "M2 VFX · explode",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m2-acid-blocked.scene.json",
+      "id": "sc_vfx_m2_acid_blocked",
+      "name": "M2 VFX · acid-blocked",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -71,7 +71,7 @@ export class VfxPass {
       const facing=unit(sub(eye,position));let right=unit(cross([0,1,0],facing)),up=unit(cross(facing,right));
       if(e.kind==='trail' && p.end){position=p.position.map((n,k)=>(n+p.end![k]!)/2);right=sub(p.end,p.position);up=scale(unit(cross(right,sub(eye,position))),e.size[1]);}
       else {
-        if(p.normal){const n=unit(p.normal);right=unit(cross(Math.abs(n[1]!)>.95?[1,0,0]:[0,1,0],n));up=unit(cross(n,right));position=position.map((v,k)=>v+n[k]!*.008);}
+        if(p.normal && e.orientation!=='camera'){const n=unit(p.normal);right=unit(cross(Math.abs(n[1]!)>.95?[1,0,0]:[0,1,0],n));up=unit(cross(n,right));position=position.map((v,k)=>v+n[k]!*.008);}
         else {const angle=(p.seed%6283)/1000,c=Math.cos(angle),s=Math.sin(angle),r=right;right=r.map((v,k)=>v*c+up[k]!*s);up=up.map((v,k)=>v*c-r[k]!*s);}
         right=scale(right,e.size[0]);up=scale(up,e.size[1]);
       }

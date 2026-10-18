@@ -4,6 +4,7 @@ import type { PlaySession } from '@aether/zombie-game';
 import { WeaponVfxPlanner } from '@aether/zombie-game/presentation/vfx-planner';
 import {EnemyVfxPlanner} from '@aether/zombie-game/presentation/enemy-vfx-planner';
 import type {SceneDocument,VfxBinding} from '@aether/scene';
+import {resolveVfxBindings} from '@aether/scene';
 import { CombatOverlay } from '@aether/zombie-game/presentation/combat-overlay';
 import { readVfxAsset, readVfxTexture } from './vfx-assets';
 
@@ -18,12 +19,12 @@ export class PlayVfx {
   constructor(private readonly core:RendererCore){}
   start(session:PlaySession,doc?:SceneDocument):void {
     this.stop();const generation=++this.generation;
-    const component=doc?.nodes.flatMap(n=>n.components).find(c=>c.kind==='VfxBindings' && c.enabled);
-    const bindings=component?.kind==='VfxBindings'?component.bindings:{};
+    const resolved=doc?resolveVfxBindings(doc):{bindings:{},diagnostics:[]};
+    const bindings=resolved.bindings;this.diagnostics.push(...resolved.diagnostics);
     if(!session.runtime || !session.runtime.weapons.definitions.some(w=>w.presentation.vfx.resource) && !Object.keys(bindings).length)return;
     const pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
     session.registerResource('vfx-gpu-buffers-and-textures',()=>{if(this.pass===pass)this.stop();else pass.destroy();});
-    CombatOverlay.gpuWeaponReady=id=>this.planner.ready.has(id);
+    CombatOverlay.gpuWeaponReady=id=>this.planner.ready.has(id) && !this.planner.fallbackWeapons.has(id);
     CombatOverlay.gpuEnemyReady=id=>this.enemy.rendered.has(id);
     for(const [tag,binding] of Object.entries(bindings))void this.loadEnemy(tag,binding,pass,generation);
     for(const weapon of session.runtime.weapons.definitions){
@@ -32,6 +33,7 @@ export class PlayVfx {
       void (async()=>{
         try {
           const asset=await readVfxAsset(ref);
+          if(asset.version===1 && generation===this.generation)this.diagnostics.push(`兼容读取 VFX v1（磁盘未升级）：${ref.path}`);
           for(const kind of ['muzzle','trail','impact'] as const)if(asset.effects[weapon.presentation.vfx[kind]]?.kind!==kind)throw new Error(`VFX 缺少 ${weapon.id}/${kind}`);
           const unique=new Map(Object.values(asset.effects).map(e=>[e.texture.guid,e.texture]));
           for(const [key,texture] of unique){const bitmap=await readVfxTexture(texture);try{if(generation!==this.generation)return;pass.addTexture(key,bitmap);}finally{bitmap.close();}}
@@ -41,7 +43,7 @@ export class PlayVfx {
     }
   }
   private async loadEnemy(tag:string,binding:VfxBinding,pass:VfxPass,generation:number){try{const asset=await readVfxAsset(binding.resource),effect=asset.effects[binding.effectKey];if(!effect)throw new Error(`VFX tag ${tag} 缺少 ${binding.effectKey}`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}if(generation===this.generation)this.enemy.bindings.set(tag,effect);}catch(error){if(generation===this.generation)this.diagnostics.push(String(error));}}
-  update(session:PlaySession):void {if(!session.runtime || !this.pass)return;this.planner.update(session.runtime);this.enemy.update(session.runtime,p=>this.pass!.drawable(p));this.pass.instances=this.planner.pool.active;}
+  update(session:PlaySession):void {if(!session.runtime || !this.pass)return;this.planner.update(session.runtime,p=>this.pass!.drawable(p));this.enemy.update(session.runtime,p=>this.pass!.drawable(p));this.pass.instances=this.planner.pool.active;}
   stop():void {
     this.generation++;this.pass?.destroy();if(this.pass)this.lastReleased={...this.pass.stats};
     if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.enemy.clear();this.planner.clear();this.diagnostics.length=0;CombatOverlay.gpuWeaponReady=()=>false;CombatOverlay.gpuEnemyReady=()=>false;
