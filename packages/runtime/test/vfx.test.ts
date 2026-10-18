@@ -11,7 +11,7 @@ it('bounded pool deduplicates, drops low priority and only advances on simulatio
   p.advance(.1);expect(p.active).toHaveLength(0);p.clear();expect(p.spawn(request)).toBe(true);
 });
 it('one fire per scatter shot, contacts copied before lethal mutation, events survive multi tick consumption',()=>{
-  const w=legacyWeaponArsenal(12).definitions[0]!;w.behavior='pellets';w.pellets=3;
+  const w=legacyWeaponArsenal({magazineSize:12,reserveRounds:48,reloadSec:1}).definitions[0]!;w.behavior='pellets';w.pellets=3;
   const actor={id:3,generation:2,x:10,z:0,radius:.4,hp:1};
   const world:WeaponWorld={actors:()=>[actor],actor:()=>null,trace:()=>({actor,point:[9.6,1,0],distance:9.6,kind:'entity'}),blocked:()=>false,damage:()=>{actor.x=99;actor.hp=0;return 1;},displace:()=>{}};
   const c=new WeaponCombat(1);c.fire(w,[0,1,0],[1,0,0],1,1,world);c.step(2,.2,world);
