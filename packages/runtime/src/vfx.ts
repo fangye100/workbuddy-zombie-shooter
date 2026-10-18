@@ -36,7 +36,7 @@ export class VfxPool {
   advance(dt: number): void {
     if (!Number.isFinite(dt) || dt < 0) throw new Error('VFX dt');
     for (const p of this.instances) p.age += dt;
-    this.instances = this.instances.filter(p => { if (p.age < (p.lifetime??p.effect.duration)) return true; this.stats.expired++; return false; });
+    this.instances = this.instances.filter(p => { if (p.age+1e-9 < (p.lifetime??p.effect.duration)) return true; this.stats.expired++; return false; });
   }
   upsert(request:VfxRequest,age:number):boolean {
     const instance=this.instances.find(p=>p.key===request.key);

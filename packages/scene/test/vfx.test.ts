@@ -23,3 +23,7 @@ it('v3 curves/emission and scene emitter reject malformed ranges, duplicate curv
  a.effects.flash!.sizeCurve=[{t:0,value:1},{t:0,value:2}];expect(validateVfxAsset(a).length).toBeGreaterThan(0);
  const c={kind:'VfxEmitter',enabled:true,playing:true,resource:{path:'assets/vfx/a.vfx.json',guid:'a'},effectKey:'flash',seed:7,direction:[0,1,0]};expect(validVfxEmitter(c)).toBe(true);expect(validVfxEmitter({...c,direction:[0,0,0]})).toBe(false);expect(validVfxEmitter({...c,seed:-1})).toBe(false);
 });
+
+it('emitter missing/null/non-string effect keys are scene data errors',()=>{
+ const c={kind:'VfxEmitter',enabled:true,playing:true,resource:{path:'assets/vfx/a.vfx.json',guid:'a'},seed:7,direction:[0,1,0]};for(const effectKey of [undefined,null,7,{},''])expect(validVfxEmitter({...c,effectKey})).toBe(false);
+});

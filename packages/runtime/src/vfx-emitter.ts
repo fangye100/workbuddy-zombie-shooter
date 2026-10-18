@@ -19,7 +19,7 @@ export class VfxEmitters {
    if(t===Math.max(begin,tick-239) && begin<t)this.stats.tickOverflow+=t-begin;
    s.fraction+=emission.rate*step;const count=Math.floor(s.fraction+1e-9);s.fraction-=count;
    for(let n=0;n<count;n++){
-    const serial=++s.serial,age=Math.max(0,nowTick-t)*step;if(age>=effect.duration)continue;
+    const serial=++s.serial,age=Math.max(0,nowTick-t)*step;if(age+1e-9>=effect.duration)continue;
     let bits=(seed^Math.imul(serial,0x9e3779b1))>>>0;const random=()=>{bits^=bits<<13;bits^=bits>>>17;bits^=bits<<5;return (bits>>>0)/4294967296;};
     const d=anchor.direction??[0,1,0],length=Math.hypot(...d)||1,angle=(random()-.5)*emission.spreadDeg*Math.PI/180,c=Math.cos(angle),sn=Math.sin(angle),velocity:[number,number,number]=[(d[0]*c-d[2]*sn)/length*emission.speed,d[1]/length*emission.speed,(d[0]*sn+d[2]*c)/length*emission.speed];
     const fraction=span>0?(t-(begin-1))/span:1,position=anchor.position.map((v,i)=>s!.position[i]!+(v-s!.position[i]!)*fraction) as [number,number,number];

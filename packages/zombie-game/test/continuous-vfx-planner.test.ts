@@ -16,3 +16,10 @@ it('charge consumes every actual move sample and melee swing does not invent a h
  r.enemyAttacks.strike(1,actor,NPC_STATS.find(n=>n.id==='E-04')!.attack!,0,player,world);for(let i=0;i<9;i++)r.enemyAttacks.step(i,1/30,world);const events=r.enemyAttacks.drainEvents();expect(events.filter(e=>e.type==='move')).toHaveLength(9);Object.defineProperty(r,'tick',{value:9});f.p.update(r,events,()=>true);expect(f.w.pool.active.filter(p=>p.key.includes(':charge:')).length).toBeGreaterThan(9);expect(new Set(f.w.pool.active.map(p=>p.position[0])).size).toBeGreaterThan(3);
  r.enemyAttacks.strike(1,actor,{...NPC_STATS.find(n=>n.id==='E-01')!.attack!,kind:'melee',damage:1,rangeM:1,cdSec:1,windupSec:.1},9,player,world);const swing=r.enemyAttacks.drainEvents()[0]!;expect(swing.effect.hit).toBe(false);
 });
+
+it('moving/turning flame snapshots are invariant to every-tick versus catchup consumption',()=>{
+ const a=fixture(),b=fixture();for(const f of [a,b]){f.r.equipWeapon('flame');f.r.setFire(true);}
+ for(let t=0;t<35;t++){for(const f of [a,b]){f.r.setInput(t<20?.3:0,t<20?0:.3);f.r.setAim(t<24?6:-4,t<24?1:6);f.r.step();}a.update();if(t%7===6)b.update();}
+ const normalize=(f:ReturnType<typeof fixture>)=>f.w.pool.active.filter(p=>p.key.includes(':flame:')).map(p=>({position:p.position.map(v=>+v.toFixed(6)),velocity:p.velocity?.map(v=>+v.toFixed(6)),age:+p.age.toFixed(6),seed:p.seed})).sort((x,y)=>x.seed-y.seed || x.age-y.age);
+ expect(normalize(a).length).toBeGreaterThan(10);expect(normalize(a)).toEqual(normalize(b));
+});
