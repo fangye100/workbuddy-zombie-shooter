@@ -1,7 +1,7 @@
 import type { AssetRef, SceneDocument } from './document';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 3;
+export const VFX_VERSION = 4;
 export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite';
 export interface VfxEffectDefinition {
   kind: VfxKind;
@@ -13,7 +13,8 @@ export interface VfxEffectDefinition {
   blend: 'alpha' | 'additive';
   orientation?: 'camera' | 'surface';
   loop?: boolean;
-  emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number};
+  backend?: 'cpu' | 'gpu';
+  emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number;acceleration?:[number,number,number]};
   sizeCurve?: Array<{t:number;value:number}>;
   colorCurve?: Array<{t:number;color:string}>;
   alphaCurve?: Array<{t:number;value:number}>;
@@ -43,7 +44,7 @@ export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
@@ -55,7 +56,8 @@ export function validateVfxAsset(value: unknown): string[] {
       || !Array.isArray(e.size) || e.size.length !== 2 || !e.size.every(n => finite(n, .001, 20))
       || typeof e.color !== 'string' || !/^#[\da-f]{6}$/i.test(e.color) || !['alpha', 'additive'].includes(e.blend)
       || e.orientation!==undefined && !['camera','surface'].includes(e.orientation) || e.loop!==undefined && typeof e.loop!=='boolean'
-      || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180))
+      || e.backend!==undefined && (a.version<4 || !['cpu','gpu'].includes(e.backend))
+      || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,e.backend==='gpu'?2400:120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,e.backend==='gpu'?1024:128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180) || e.emission.acceleration!==undefined && (a.version<4 || !Array.isArray(e.emission.acceleration) || e.emission.acceleration.length!==3 || !e.emission.acceleration.every(n=>finite(n,-30,30))))
       || !validVfxCurve(e.sizeCurve,'size') || !validVfxCurve(e.colorCurve,'color') || !validVfxCurve(e.alphaCurve,'alpha')) errors.push(`VFX 效果 ${key} 参数非法`);
   }
   return errors;
@@ -65,8 +67,17 @@ export function validateVfxAsset(value: unknown): string[] {
 export function migrateVfxAsset(value:unknown):VfxAsset {
   const errors=validateVfxAsset(value);if(errors.length)throw new Error(errors.join('；'));
   const next=structuredClone(value) as VfxAsset;next.version=VFX_VERSION;
-  for(const e of Object.values(next.effects)){e.orientation??=e.kind==='impact'?'surface':'camera';e.loop??=false;}
+  for(const e of Object.values(next.effects)){e.orientation??=e.kind==='impact'?'surface':'camera';e.loop??=false;e.backend??='cpu';}
   return next;
+}
+
+/** Explicit compatibility, never submit unsorted alpha to the additive compute path. */
+export function gpuVfxReason(e:VfxEffectDefinition):string|null {
+ if(e.kind!=='sprite' || e.blend!=='additive' || e.orientation==='surface' || !e.emission)return 'GPU模拟仅支持 camera/additive sprite 发射器，使用有界 CPU 兼容';
+ return null;
+}
+export function cpuVfxCompatibility(e:VfxEffectDefinition):VfxEffectDefinition {
+ const value=structuredClone(e);value.backend='cpu';if(value.emission){value.emission.rate=Math.min(120,value.emission.rate);value.emission.maxParticles=Math.min(128,value.emission.maxParticles);}return value;
 }
 
 export interface VfxBinding { resource:AssetRef & {guid:string}; effectKey:string; label?:string }

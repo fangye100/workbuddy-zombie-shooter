@@ -25,3 +25,4 @@ export * from './weapon-combat';
 export * from './motion-direction';
 export * from './vfx';
 export * from './vfx-emitter';
+export * from './vfx-simulation';

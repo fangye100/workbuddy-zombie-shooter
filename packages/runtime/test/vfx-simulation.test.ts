@@ -1,0 +1,7 @@
+import {expect,it} from 'vitest';
+import {VfxSimulationReference,vfxBirthCount} from '../src/vfx-simulation';
+import type {VfxEffectDefinition} from '@aether/scene';
+const effect:VfxEffectDefinition={kind:'sprite',texture:{guid:'a',path:'assets/a.svg'},backend:'gpu',frames:1,duration:.4,size:[1,1],color:'#ffffff',blend:'additive',emission:{rate:600,maxParticles:64,speed:2,spreadDeg:60,acceleration:[0,-3,0]}};
+const input={effect,anchor:{position:[1,2,3] as const,direction:[1,1,0] as const},seed:7,step:1/30};
+it('fixed seed state, serials and counters are identical under tick batching and pause',()=>{const a=new VfxSimulationReference(input),b=new VfxSimulationReference(input);for(let t=0;t<60;t++)a.advance(t);b.advance(19);b.advance(59);expect(a.state).toEqual(b.state);expect(a.stats).toEqual(b.stats);const s=a.state.slice();a.advance(59);expect(a.state).toEqual(s);expect(a.stats.alive).toBe(64);expect(a.stats.spawned).toBe(vfxBirthCount(59,1/30,600));expect(a.stats.dropped).toBeGreaterThan(0);});
+it('expiration reclaims slots and seed restart resets, clock reversal/overflow rejects',()=>{const x={...input,effect:{...effect,duration:.05,emission:{...effect.emission!,rate:30,maxParticles:64}}},a=new VfxSimulationReference(x);a.advance(10);expect(a.stats.expired).toBeGreaterThan(0);expect(a.stats.alive).toBeLessThan(4);expect(()=>a.advance(9)).toThrow();expect(()=>a.advance(300)).toThrow();const restart=new VfxSimulationReference(x);restart.advance(10);expect(restart.state).toEqual(a.state);});
