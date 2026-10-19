@@ -54,8 +54,12 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
       }
     }
   } else if (kind === 'vfx') {
-    // Refuse until resource+digest updates are supported by the rename transaction.
-    unsupported(json, 'VFX（请通过资源编辑流程更新引用）');
+    if(json.version===8 && json.graph && [1,2].includes(json.graph.version) && Array.isArray(json.graph.nodes)){
+      for(const node of json.graph.nodes){
+        if(node?.type==='texture')ref(node.params?.ref);
+        else unsupported(node,`VFX图节点 ${node?.id}`);
+      }
+    }else unsupported(json, 'VFX（请通过资源编辑流程更新引用；未来图版本拒绝改写）');
   } else if (kind === 'meta') {
     for (const binding of json.bindings ?? []) for (const primitive of binding.prims ?? []) material(primitive.material);
     ref(json.retarget?.recipe?.source); ref(json.retarget?.recipe?.target);

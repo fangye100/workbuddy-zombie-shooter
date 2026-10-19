@@ -24,6 +24,7 @@ export * from './weapon-system';
 export * from './weapon-combat';
 export * from './motion-direction';
 export * from './vfx';
+export * from './vfx-graph';
 export * from './vfx-emitter';
 export * from './vfx-simulation';
 export * from './vfx-ribbon';

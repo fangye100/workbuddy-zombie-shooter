@@ -2,6 +2,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { withProjectWriteLock, atomicWriteText } from './project-write.mjs';
 import { pathRewriter, rewriteResourcePaths } from './resource-paths.mjs';
 
@@ -71,6 +72,15 @@ export async function renameProject(root, abs, target, insensitive, maxSceneVers
         const destination = hasMeta && identity(relative) === identity(`${oldPath}.meta.json`) ? `${newPath}.meta.json` : rewrite(relative);
         if (rewriteResourcePaths(doc.json, doc.kind, rewrite, maxSceneVersion)) updates.push({ before: p, after: resolveRef(destination), ...doc, out: `${JSON.stringify(doc.json, null, 2)}\n` });
       } catch (e) { throw new Error(`${posix(path.relative(root, p))}: ${e.message}`); }
+    }
+    // Graph texture refs are typed slots. Their source digest must join the same journal/rollback.
+    for(const u of updates.filter(u=>u.kind==='vfx' && u.json.graph)){
+      const metaPath=`${u.before}.meta.json`,doc=docs.get(metaPath);
+      if(!doc || doc.json.kind!=='vfx' || doc.json.guid!==u.json.id)throw new Error(`VFX图sidecar身份不匹配：${posix(path.relative(root,u.before))}`);
+      doc.json.sourceHash=`sha256:${createHash('sha256').update(u.out).digest('hex')}`;
+      const out=`${JSON.stringify(doc.json,null,2)}\n`,existing=updates.find(v=>v.before===metaPath);
+      if(existing)existing.out=out;
+      else updates.push({before:metaPath,after:`${u.after}.meta.json`,...doc,out});
     }
     // A durable journal precedes every mutation. Interrupted transactions block future writers
     // via the retained project lock; these byte copies are sufficient for explicit recovery.

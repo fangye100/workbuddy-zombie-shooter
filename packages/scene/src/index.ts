@@ -38,3 +38,4 @@ export * from './shared-motion';
 export * from './weapons';
 export * from './audio';
 export * from './vfx';
+export * from './vfx-graph';

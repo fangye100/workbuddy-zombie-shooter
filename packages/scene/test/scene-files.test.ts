@@ -28,6 +28,8 @@ import type { AssetMeta } from '../src/asset-meta';
 import type { SceneDocument } from '../src/document';
 import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
 import { validateVfxAsset,VFX_VERSION, type VfxAsset } from '../src/vfx';
+import {vfxGraphTextureRefs,type VfxGraphAsset} from '../src/vfx-graph';
+import {compileVfxGraph} from '@aether/runtime';
 
 /** eager + import:'default' → 直接拿解析后的 JSON 对象 */
 const projectModules = import.meta.glob('/aether.project.json', {
@@ -51,22 +53,22 @@ const motionModules = import.meta.glob('/assets/**/*.motion.json', { eager: true
 const vfxModules = import.meta.glob('/assets/**/*.vfx.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 
 it('VFX definitions, texture identities and weapon bindings resolve accepted resources', () => {
-  const failures:string[]=[];
+  const failures:string[]=[],resolved:Record<string,VfxAsset>={};
   const check=(owner:string,ref:{path:string;guid?:string},kind:string)=>{
     const meta=metaModules[`/${ref.path}.meta.json`] as AssetMeta|undefined;
     if(!allAssetPaths.includes(`/${ref.path}`) || meta?.guid!==ref.guid || meta?.kind!==kind)failures.push(`${owner}: identity ${ref.path}`);
   };
   for(const [path,data] of Object.entries(vfxModules)) {
     const errors=validateVfxAsset(data);failures.push(...errors.map(e=>`${path}: ${e}`));if(errors.length)continue;
-    const a=data as VfxAsset;if(a.version<VFX_VERSION)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v${VFX_VERSION}`);check(path,{path:path.slice(1),guid:a.id},'vfx');
+    let a=data as VfxAsset;if(Object.hasOwn(data as object,'graph')){const result=compileVfxGraph(data);failures.push(...result.diagnostics.map(e=>`${path}: ${e}`));for(const ref of vfxGraphTextureRefs(data as VfxGraphAsset))check(path,ref,'texture');if(!result.asset)continue;a=result.asset;}resolved[path]=a;if(a.version<VFX_VERSION)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v${VFX_VERSION}`);check(path,{path:path.slice(1),guid:a.id},'vfx');
     for(const e of Object.values(a.effects))check(path,e.texture,'texture');
   }
   for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components) {
-    if(c.kind==='VfxEmitter' || c.kind==='VfxDecal'){check(path,c.resource,'vfx');const a=vfxModules[`/${c.resource.path}`] as VfxAsset|undefined;if(!a || a.status!=='accepted' || !a.effects[c.effectKey] || c.kind==='VfxDecal' && a.effects[c.effectKey]?.kind!=='decal' || c.kind==='VfxEmitter' && a.effects[c.effectKey]?.kind==='decal')failures.push(`${path}: invalid VFX emitter ${node.id}`);}
-    if(c.kind==='VfxBindings')for(const [tag,b] of Object.entries(c.bindings)){check(path,b.resource,'vfx');const a=vfxModules[`/${b.resource.path}`] as VfxAsset|undefined;if(!a || a.status!=='accepted' || !a.effects[b.effectKey])failures.push(`${path}: invalid VFX tag ${tag}`);}
+    if(c.kind==='VfxEmitter' || c.kind==='VfxDecal'){check(path,c.resource,'vfx');const a=resolved[`/${c.resource.path}`];if(!a || a.status!=='accepted' || !a.effects[c.effectKey] || c.kind==='VfxDecal' && a.effects[c.effectKey]?.kind!=='decal' || c.kind==='VfxEmitter' && a.effects[c.effectKey]?.kind==='decal')failures.push(`${path}: invalid VFX emitter ${node.id}`);}
+    if(c.kind==='VfxBindings')for(const [tag,b] of Object.entries(c.bindings)){check(path,b.resource,'vfx');const a=resolved[`/${b.resource.path}`];if(!a || a.status!=='accepted' || !a.effects[b.effectKey])failures.push(`${path}: invalid VFX tag ${tag}`);}
     if(c.kind!=='RunRules' || !c.arsenal)continue;
     for(const w of c.arsenal.definitions){const v=w.presentation.vfx;if(!v.resource)continue;check(path,v.resource,'vfx');
-      const a=vfxModules[`/${v.resource.path}`] as VfxAsset|undefined;
+      const a=resolved[`/${v.resource.path}`];
       if(!a || a.status!=='accepted' || !(['muzzle','trail','impact'] as const).every(k=>a.effects[v[k]]?.kind===k))failures.push(`${path}: invalid VFX binding ${w.id}`);
     }
   }

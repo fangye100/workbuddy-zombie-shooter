@@ -1,7 +1,8 @@
 import type { AssetRef, SceneDocument } from './document';
+import {validateVfxGraphAsset} from './vfx-graph';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 7;
+export const VFX_VERSION = 8;
 export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon' | 'decal';
 export interface VfxDecalDefinition {depth:number;maxAngle:number;normalOffset:number}
 export interface VfxDecalComponent {kind:'VfxDecal';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;playing:boolean;receivers:string[];layerMask:number;priority:number}
@@ -60,8 +61,9 @@ export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
 }
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
+  if(Object.hasOwn(value,'graph'))return validateVfxGraphAsset(value);
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,3,4,5,6,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,4,5,6,7,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
@@ -88,6 +90,7 @@ export function validateVfxAsset(value: unknown): string[] {
 
 /** Explicit asset migration; callers retain the raw disk object for CAS. */
 export function migrateVfxAsset(value:unknown):VfxAsset {
+  if(value && typeof value==='object' && Object.hasOwn(value,'graph'))throw new Error('VFX图必须通过图编译器读取；禁止把派生effects作为编辑真源');
   const errors=validateVfxAsset(value);if(errors.length)throw new Error(errors.join('；'));
   const next=structuredClone(value) as VfxAsset;next.version=VFX_VERSION;
   for(const e of Object.values(next.effects)){e.orientation??=e.kind==='impact'?'surface':'camera';e.loop??=false;e.backend??='cpu';}

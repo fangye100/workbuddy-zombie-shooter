@@ -1,13 +1,19 @@
 import { validateVfxAsset, validVfxRef, type AssetMeta, type AssetRef, type VfxAsset } from '@aether/scene';
 import { fileUrl, readProjectFile } from '../asset-util';
+import {compileVfxGraph} from '@aether/runtime';
 
-export async function readVfxAsset(ref:AssetRef):Promise<VfxAsset> {
+export async function readVfxAsset(ref:AssetRef,{allowGraph=true}:{allowGraph?:boolean}={}):Promise<VfxAsset> {
   if(!validVfxRef(ref) || !ref.path.endsWith('.vfx.json'))throw new Error('VFX 引用需要 .vfx.json 和 GUID');
   const [source,sidecar]=await Promise.all([readProjectFile(ref.path),readProjectFile(`${ref.path}.meta.json`)]);
   if(!source.ok || !sidecar.ok)throw new Error(`VFX 读取失败：${ref.path}`);
   const errors=validateVfxAsset(source.json),meta=sidecar.json as AssetMeta;
   if(errors.length)throw new Error(errors.join('；'));
-  const asset=source.json as VfxAsset;
+  const raw=source.json as VfxAsset;
+  let asset=raw;
+  if(Object.hasOwn(raw,'graph')){
+    if(!allowGraph)throw new Error('此资源的图是唯一真源，请使用“VFX · 可视节点图”编辑；禁止保存派生effects');
+    const result=compileVfxGraph(raw);if(!result.asset)throw new Error(result.diagnostics.join('；'));asset=result.asset;
+  }
   if(asset.id!==ref.guid || meta.guid!==ref.guid || meta.kind!=='vfx')throw new Error(`VFX GUID 不匹配：${ref.path}`);
   if(asset.status!=='accepted' || meta.userData?.status==='quarantined')throw new Error(`VFX 资源被隔离：${ref.path}`);
   return asset;
