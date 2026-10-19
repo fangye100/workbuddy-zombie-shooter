@@ -1,0 +1,240 @@
+{
+  "version": 8,
+  "id": "as_vfx_comic_graph",
+  "name": "漫画节点图 · 烟尘",
+  "status": "accepted",
+  "graph": {
+    "version": 2,
+    "nodes": [
+      {
+        "id": "texture_smoke",
+        "type": "texture",
+        "position": [
+          20,
+          20
+        ],
+        "params": {
+          "ref": {
+            "path": "assets/vfx/comic-smoke.svg",
+            "guid": "as_vfx_comic_smoke"
+          },
+          "frames": 3
+        }
+      },
+      {
+        "id": "size_smoke",
+        "type": "size",
+        "position": [
+          20,
+          180
+        ],
+        "params": {
+          "value": [
+            0.7,
+            0.7
+          ]
+        }
+      },
+      {
+        "id": "tint",
+        "type": "color",
+        "position": [
+          20,
+          340
+        ],
+        "params": {
+          "value": "#90d7df"
+        }
+      },
+      {
+        "id": "lifetime",
+        "type": "number",
+        "position": [
+          20,
+          500
+        ],
+        "params": {
+          "value": 0.8
+        }
+      },
+      {
+        "id": "rate_slow",
+        "type": "number",
+        "position": [
+          270,
+          250
+        ],
+        "params": {
+          "value": 30
+        }
+      },
+      {
+        "id": "speed_up",
+        "type": "number",
+        "position": [
+          270,
+          410
+        ],
+        "params": {
+          "value": 1.3
+        }
+      },
+      {
+        "id": "rate_fast",
+        "type": "number",
+        "position": [
+          270,
+          570
+        ],
+        "params": {
+          "value": 90
+        }
+      },
+      {
+        "id": "appearance",
+        "type": "appearance",
+        "position": [
+          270,
+          20
+        ],
+        "params": {}
+      },
+      {
+        "id": "emission",
+        "type": "emission",
+        "position": [
+          520,
+          250
+        ],
+        "params": {
+          "maxParticles": 96,
+          "spreadDeg": 25
+        }
+      },
+      {
+        "id": "sprite",
+        "type": "sprite",
+        "position": [
+          770,
+          80
+        ],
+        "params": {
+          "backend": "cpu",
+          "blend": "alpha"
+        }
+      },
+      {
+        "id": "output",
+        "type": "output",
+        "position": [
+          1000,
+          80
+        ],
+        "params": {
+          "key": "graph-smoke"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_1",
+        "from": {
+          "node": "texture_smoke",
+          "port": "value"
+        },
+        "to": {
+          "node": "appearance",
+          "port": "texture"
+        }
+      },
+      {
+        "id": "edge_2",
+        "from": {
+          "node": "size_smoke",
+          "port": "value"
+        },
+        "to": {
+          "node": "appearance",
+          "port": "size"
+        }
+      },
+      {
+        "id": "edge_3",
+        "from": {
+          "node": "tint",
+          "port": "value"
+        },
+        "to": {
+          "node": "appearance",
+          "port": "color"
+        }
+      },
+      {
+        "id": "edge_4",
+        "from": {
+          "node": "lifetime",
+          "port": "value"
+        },
+        "to": {
+          "node": "appearance",
+          "port": "duration"
+        }
+      },
+      {
+        "id": "edge_5",
+        "from": {
+          "node": "rate_slow",
+          "port": "value"
+        },
+        "to": {
+          "node": "emission",
+          "port": "rate"
+        }
+      },
+      {
+        "id": "edge_6",
+        "from": {
+          "node": "speed_up",
+          "port": "value"
+        },
+        "to": {
+          "node": "emission",
+          "port": "speed"
+        }
+      },
+      {
+        "id": "edge_7",
+        "from": {
+          "node": "appearance",
+          "port": "value"
+        },
+        "to": {
+          "node": "sprite",
+          "port": "appearance"
+        }
+      },
+      {
+        "id": "edge_8",
+        "from": {
+          "node": "emission",
+          "port": "value"
+        },
+        "to": {
+          "node": "sprite",
+          "port": "emission"
+        }
+      },
+      {
+        "id": "edge_9",
+        "from": {
+          "node": "sprite",
+          "port": "value"
+        },
+        "to": {
+          "node": "output",
+          "port": "effect"
+        }
+      }
+    ]
+  }
+}

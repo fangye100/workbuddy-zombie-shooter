@@ -19,6 +19,7 @@ import { AuthorTransformController, graphOfDoc } from './services/author-transfo
 import { AuthorAssetController, assetSceneNode } from './services/author-asset';
 import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
+import {VfxGraphPanel} from './services/vfx-graph-panel';
 import { VfxPanel } from './services/vfx-panel';
 import {VfxEmitterPanel} from './services/vfx-emitter-panel';
 import {VfxBindingPanel} from './services/vfx-binding-panel';
@@ -1322,7 +1323,8 @@ async function boot(): Promise<void> {
   const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
   const vfxHost=document.createElement('div');atmosphereHost.before(vfxHost);
   const vfxPanel=new VfxPanel(vfxHost,renderer.core,{receivers:doc=>decalReceivers(renderer,doc),document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,playStats:()=>playCtl.vfx.snapshot()});
-  (window as unknown as {__editor:Record<string,unknown>}).__editor.vfx={snapshot:()=>({editor:vfxPanel.snapshot(),play:playCtl.vfx.snapshot()})};
+  const vfxGraphPanel=new VfxGraphPanel(vfxHost,renderer.core,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy});
+  (window as unknown as {__editor:Record<string,unknown>}).__editor.vfx={snapshot:()=>({editor:vfxPanel.snapshot(),graph:vfxGraphPanel.snapshot(),play:playCtl.vfx.snapshot()})};
   const vfxBindingHost=document.createElement('div');vfxHost.before(vfxBindingHost);
   const vfxBindingPanel=new VfxBindingPanel(vfxBindingHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
   const vfxEmitterHost=document.createElement('div');vfxBindingHost.before(vfxEmitterHost);
@@ -1387,7 +1389,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft || vfxGraphPanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -4015,7 +4017,7 @@ async function boot(): Promise<void> {
       disposed = true;
       actorPreloader.stop();
       animationDebugPanel.dispose();
-      vfxPanel.stop();
+      vfxPanel.stop();vfxGraphPanel.stop();
       renderer.destroy();
     });
   }
@@ -4072,7 +4074,7 @@ async function boot(): Promise<void> {
     const dt = Math.min(0.1, wallDt);
     last = now;
     elapsed += dt;
-    vfxPanel.frame(dt);
+    vfxPanel.frame(dt);vfxGraphPanel.frame(dt);
     vfxBindingPanel.frame();
     vfxEmitterPanel.frame();vfxDecalPanel.frame();
     frames++;

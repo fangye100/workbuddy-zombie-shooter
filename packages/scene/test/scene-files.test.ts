@@ -28,7 +28,7 @@ import type { AssetMeta } from '../src/asset-meta';
 import type { SceneDocument } from '../src/document';
 import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
 import { validateVfxAsset,VFX_VERSION, type VfxAsset } from '../src/vfx';
-import {vfxGraphTextureRefs,type VfxGraphAsset} from '../src/vfx-graph';
+import {VFX_GRAPH_VERSION,vfxGraphTextureRefs,type VfxGraphAsset} from '../src/vfx-graph';
 import {compileVfxGraph} from '@aether/runtime';
 
 /** eager + import:'default' → 直接拿解析后的 JSON 对象 */
@@ -60,7 +60,7 @@ it('VFX definitions, texture identities and weapon bindings resolve accepted res
   };
   for(const [path,data] of Object.entries(vfxModules)) {
     const errors=validateVfxAsset(data);failures.push(...errors.map(e=>`${path}: ${e}`));if(errors.length)continue;
-    let a=data as VfxAsset;if(Object.hasOwn(data as object,'graph')){const result=compileVfxGraph(data);failures.push(...result.diagnostics.map(e=>`${path}: ${e}`));for(const ref of vfxGraphTextureRefs(data as VfxGraphAsset))check(path,ref,'texture');if(!result.asset)continue;a=result.asset;}resolved[path]=a;if(a.version<VFX_VERSION)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v${VFX_VERSION}`);check(path,{path:path.slice(1),guid:a.id},'vfx');
+    let a=data as VfxAsset;if(Object.hasOwn(data as object,'graph')){const source=data as VfxGraphAsset;if(source.graph.version<VFX_GRAPH_VERSION)console.info(`[VFX图兼容] ${path}：图v${source.graph.version}读取，编辑保存才升级v${VFX_GRAPH_VERSION}`);const result=compileVfxGraph(data);failures.push(...result.diagnostics.map(e=>`${path}: ${e}`));for(const ref of vfxGraphTextureRefs(data as VfxGraphAsset))check(path,ref,'texture');if(!result.asset)continue;a=result.asset;}resolved[path]=a;if(a.version<VFX_VERSION)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v${VFX_VERSION}`);check(path,{path:path.slice(1),guid:a.id},'vfx');
     for(const e of Object.values(a.effects))check(path,e.texture,'texture');
   }
   for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components) {

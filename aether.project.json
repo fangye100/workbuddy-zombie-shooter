@@ -165,6 +165,12 @@
       "id": "sc_vfx_m4_decal",
       "name": "M4.4 VFX · 跨面投影贴花",
       "enabled": true
+    },
+    {
+      "id": "sc_vfx_m4_graph",
+      "path": "assets/scenes/sandbox/vfx-m4-graph.scene.json",
+      "enabled": true,
+      "name": "M4.5 VFX · 可视节点图"
     }
   ],
   "startIndex": 1,

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_graph",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-graph.vfx.json",
+    "status": "accepted",
+    "author": "M4.5原创声明式图，复用已验收原创漫画烟尘纹理"
+  },
+  "sourceHash": "sha256:60abbe2d95d654a7ce3f33f087d5f81b3b055cd26ec23b85e358febd571c5069",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}
