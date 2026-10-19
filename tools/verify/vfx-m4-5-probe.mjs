@@ -1,0 +1,92 @@
+/** M4.5 controlled headed product paths. All writes stay in dedicated tmp copies. */
+import fs from 'node:fs';
+import path from 'node:path';
+import net from 'node:net';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {makeArgParser,ensureServer,launchEditorSession,waitFor,createRecorder} from './editor-smoke-lib.mjs';
+import {verifyImpactVisibility} from './vfx-m2-pixels.mjs';
+import {measureVfxCost} from './vfx-cost.mjs';
+const {arg,has}=makeArgParser(process.argv),out=path.resolve(arg('out','.workbuddy/tmp/vfx-m4-5/development'));
+const fixture='.workbuddy/tmp/vfx-m4-5/graph.scene.json',assetCopy='.workbuddy/tmp/vfx-m4-5/probe.vfx.json';
+fs.mkdirSync(out,{recursive:true});fs.mkdirSync(path.dirname(fixture),{recursive:true});
+fs.copyFileSync('assets/scenes/sandbox/vfx-m4-graph.scene.json',fixture);
+for(const suffix of ['', '.meta.json'])fs.copyFileSync('assets/vfx/comic-graph.vfx.json'+suffix,assetCopy+suffix);
+const emptyFixture='.workbuddy/tmp/vfx-m4-5/empty.scene.json',empty=JSON.parse(fs.readFileSync(fixture));empty.id='sc_vfx_m4_graph_empty';empty.name='M4.5 无图作者';
+for(const n of empty.nodes)n.components=n.components.filter(c=>!['VfxEmitter','VfxBindings','VfxDecal'].includes(c.kind));fs.writeFileSync(emptyFixture,JSON.stringify(empty,null,2)+'\n');
+if(has('prepare-only')){console.log(JSON.stringify({fixture,assetCopy}));process.exit(0);}
+if(!has('headed'))throw new Error('必须显式 --headed');
+const port=Number(arg('cdp','9333'));if(await new Promise(r=>{const s=net.connect(port,'127.0.0.1');s.once('connect',()=>{s.destroy();r(true);});s.once('error',()=>r(false));}))throw new Error('固定CDP/profile正在使用');
+const {check,results}=createRecorder(),evidence={commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),coverage:'M4.5 development UI/preview/play paths; remaining bounded-failure/pressure/pixel scope added before final freeze',checks:results};
+evidence.verificationSources=Object.fromEntries(['tools/verify/vfx-m4-5-probe.mjs','tools/verify/vfx-m2-pixels.mjs','tools/verify/vfx-cost.mjs','tools/verify/editor-smoke-lib.mjs','packages/scene/src/vfx-graph.ts','packages/scene/src/vfx.ts','packages/runtime/src/vfx-graph.ts','packages/runtime/src/vfx-emitter.ts','packages/runtime/src/vfx.ts','apps/editor/src/services/vfx-graph-document.ts','apps/editor/src/services/vfx-graph-canvas.ts','apps/editor/src/services/vfx-graph-panel.ts','apps/editor/src/services/vfx-graph-preview.ts','apps/editor/src/services/vfx-assets.ts','apps/editor/src/services/authored-vfx.ts','packages/render/src/vfx-pass.ts','packages/render/src/vfx-simulation.ts','packages/render/src/vfx-simulation-shader.ts','assets/vfx/comic-graph.vfx.json','assets/scenes/sandbox/vfx-m4-graph.scene.json'].map(p=>[p,createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));
+const {server,url}=await ensureServer(5100,'apps/editor/vite.config.ts');if(server)throw new Error('固定5100须预先detached准备');
+const {chrome,cdp,ws}=await launchEditorSession({chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),cdpPort:port,headed:true,appUrl:url,windowSize:'1500,1000'});
+const send=cdp.send.bind(cdp);cdp.send=(method,params={})=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('CDP超时 '+method)),15000);send(method,params).then(r=>{clearTimeout(timer);resolve(r);},e=>{clearTimeout(timer);reject(e);});});
+const project=JSON.parse(fs.readFileSync('aether.project.json'));project.scenes.find(s=>s.id==='sc_vfx_m4_graph').path=fixture;project.scenes.push({id:empty.id,path:emptyFixture,name:empty.name,enabled:true});
+const events=[];ws.addEventListener('message',event=>{const m=JSON.parse(event.data);if(m.sessionId!==cdp.sessionId)return;if(m.method==='Fetch.requestPaused')void cdp.send('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(project)).toString('base64')});if(['Page.lifecycleEvent','Runtime.executionContextsCleared','Network.loadingFailed','Inspector.targetCrashed'].includes(m.method)){events.push({at:Date.now(),method:m.method,params:m.params});if(events.length>100)events.shift();}});
+await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*__fs/file?path=aether.project.json*',requestStage:'Request'}]});await cdp.send('Network.enable');await cdp.send('Page.setLifecycleEventsEnabled',{enabled:true});
+const graphRoot='(document.querySelector("#vfx-graph-dialog[open]")??document.getElementById("vfx-graph-panel"))';
+const click=async selector=>{
+ if(!await waitFor(()=>cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});return !!e && !e.matches(':disabled');})()`)))throw new Error('控件不可用 '+selector);
+ for(let n=0;n<3;n++){
+  await cdp.eval(`(async()=>{document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'center'});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));})()`);
+  const q=await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,h=document.elementFromPoint(x,y);return {x,y,hit:!!h && (h===e || e.contains(h)),actual:h?.tagName};})()`);
+  if(!q.hit){evidence.clickFailure={selector,...q};continue;}
+  for(const type of ['mousePressed','mouseReleased'])await cdp.send('Input.dispatchMouseEvent',{type,x:q.x,y:q.y,button:'left',clickCount:1});return;
+ }throw new Error('真实鼠标命中失败 '+JSON.stringify(evidence.clickFailure));
+};
+const button=async(label,root=graphRoot)=>{
+ await cdp.eval(`(()=>{const b=[...${root}.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(label)});if(!b)throw new Error('未找到按钮 '+${JSON.stringify(label)});b.dataset.graphProbe='selected';})()`);
+ await click('[data-graph-probe="selected"]');await cdp.eval(`document.querySelector('[data-graph-probe="selected"]')?.removeAttribute('data-graph-probe')`);
+};
+const input=async(label,value,root=graphRoot)=>cdp.eval(`(()=>{const e=${root}.querySelector('[aria-label='+${JSON.stringify(JSON.stringify(label))}+']');if(!e)throw new Error('未找到输入 '+${JSON.stringify(label)});if(e.type==='checkbox')e.checked=${JSON.stringify(value)};else e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+const snap=()=>cdp.eval('window.__editor.vfx.snapshot()'),graph=async()=>(await snap()).graph;
+const status=()=>cdp.eval(`${graphRoot}.querySelector('[role=status]').textContent`);
+const capture=async name=>{const r=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,name+'.png'),Buffer.from(r.data,'base64'));};
+const viewport=async()=>{await cdp.eval(`(()=>{localStorage.setItem('zh.ui.dockH','230');document.documentElement.style.setProperty('--dock-h','230px');document.getElementById('asset-dock')?.classList.add('collapsed');window.dispatchEvent(new Event('resize'));})()`);await click('.insp-tab[data-tab="scene"]');};
+const reload=async()=>{await cdp.eval('window.__graphReloadMarker=true');await cdp.send('Page.reload');if(!await waitFor(()=>cdp.eval(`window.__graphReloadMarker!==true && !!window.__editor?.vfx && window.__editor.renderer.getDocument()?.id==='sc_vfx_m4_graph'`),{timeout:30000}))throw new Error('整页reload未就绪');await viewport();};
+const open=async()=>{await input('图资源文件路径',assetCopy);await button('打开节点图');if(!await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().graph.path===${JSON.stringify(assetCopy)}`)))throw new Error('打开节点图失败 '+await status());};
+const steps=async n=>{for(let i=0;i<n;i++)await button('图预览单步');await cdp.eval('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');};
+const preview=async()=>{await input('图预览启动暂停',true);await button('预览编译图');if(!await waitFor(()=>cdp.eval('window.__editor.vfx.snapshot().graph.preview.ready')))throw new Error('图Preview失败 '+await status());};
+const normalParticles=p=>p.map(({position,velocity,age,seed,effect})=>({position,velocity,age,seed,effect}));
+const stopPreview=async name=>{await button('停止图预览');const p=(await graph()).preview;evidence[name]=p.lastReleased;check(name+'：真实预览GPU销毁',!p.gpu && p.lastReleased.buffers===0 && p.lastReleased.textures===0 && p.lastReleased.destroyedBuffers>=2);};
+const start=async()=>{await click('#btn-play');if(!await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().play.authored.ready.includes('nd_m4_graph_emitter') && window.__editor.vfx.snapshot().play.authored.stats.emitted>0`),{timeout:20000}))throw new Error('实际图作者Play未发射');};
+const stop=async name=>{await click('#btn-stop');const s=(await snap()).play,ledger=await cdp.eval('window.__editor.playCtl.ledger');evidence[name]={released:s.lastReleased,ledger};check(name+'：真实Play销毁/账目归零',!s.gpu && s.lastReleased.buffers===0 && s.lastReleased.textures===0 && s.lastReleased.destroyedBuffers>=2 && ledger.pending===0);};
+try{
+ await cdp.send('Page.navigate',{url:url+'?scene='+encodeURIComponent(fixture)});if(!await waitFor(()=>cdp.eval(`window.__editor?.renderer.getDocument()?.id==='sc_vfx_m4_graph' && !!window.__editor.vfx`),{timeout:30000}))throw new Error('图场景未加载');await viewport();
+ evidence.gpu=await cdp.eval(`(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:'high-performance'});return {secure:isSecureContext,fallback:a.info.isFallbackAdapter??a.isFallbackAdapter??null,vendor:a.info.vendor,architecture:a.info.architecture};})()`);check('真实NVIDIA nonfallback secure',evidence.gpu.secure && evidence.gpu.fallback===false && evidence.gpu.vendor==='nvidia');
+ await open();check('磁盘图唯一真源/实际编译输出',!(await graph()).source.effects && (await graph()).compilation.asset.effects['graph-smoke'].emission.rate===30);
+ await preview();await steps(12);evidence.original=(await graph()).preview;check('原图真实Preview固定tick发射',evidence.original.tick===12 && evidence.original.particles.length===12 && evidence.original.gpu.active>0);
+ evidence.originalPixels=await verifyImpactVisibility(cdp,out,[0,1.2,-2],'graph-original');check('原图GPU局部实际可见',evidence.originalPixels.passed);await capture('01-original-preview');await stopPreview('originalPreviewStopped');
+ await button('展开图画布');await input('创建节点类型','number');const oldNodes=(await graph()).source.graph.nodes.map(n=>n.id);await button('创建图节点');const created=(await graph()).source.graph.nodes.find(n=>!oldNodes.includes(n.id));evidence.createdNode=created.id;
+ await input('节点数值','90');await button('应用节点参数');check('真实UI创建/编辑数值节点',created.type==='number' && (await graph()).source.graph.nodes.find(n=>n.id===created.id).params.value===90);
+ await click(`[data-node-id="${created.id}"] [data-port="out:value"]`);await click('[data-node-id="emission"] [data-port="in:rate"]');
+ evidence.duplicate=(await graph());check('typed端口连接保留重复输入错误草稿',!evidence.duplicate.compilation.asset && evidence.duplicate.compilation.diagnostics.some(s=>s.includes('重复')) && evidence.duplicate.source.graph.edges.length===10);
+ const beforeSave=fs.readFileSync(assetCopy,'utf8');await button('保存节点图');check('坏图Save显式拒绝且不写盘',(await status()).includes('保留草稿') && fs.readFileSync(assetCopy,'utf8')===beforeSave);
+ await input('图选中连线','edge_5');await button('删除图连线');check('删除旧连接修复为新发射率90',(await graph()).compilation.asset.effects['graph-smoke'].emission.rate===90);
+ await button('撤销图编辑');check('Undo恢复原错误草稿',!(await graph()).compilation.asset);await button('重做图编辑');check('Redo恢复正确连线',(await graph()).compilation.asset.effects['graph-smoke'].emission.rate===90);
+ await input('图选中节点','tint');await input('节点颜色','#ff8844');await button('应用节点参数');
+ await input('图选中节点',created.id);await button('删除图节点');check('删除节点同步删边并保留缺输入诊断',!(await graph()).compilation.asset && !(await graph()).source.graph.nodes.some(n=>n.id===created.id));await button('撤销图编辑');
+ check('节点Undo保留稳定ID/连接',(await graph()).source.graph.nodes.some(n=>n.id===created.id) && (await graph()).compilation.asset.effects['graph-smoke'].emission.rate===90);
+ await capture('02-visual-nodes-links');check('图画布真实可见节点与连线',await cdp.eval(`document.querySelectorAll('#vfx-graph-dialog[open] [data-node-id]').length===12 && document.querySelectorAll('#vfx-graph-dialog[open] [data-edge-id]').length===9`));
+ await button('保存节点图');const saved=JSON.parse(fs.readFileSync(assetCopy,'utf8')),meta=JSON.parse(fs.readFileSync(assetCopy+'.meta.json','utf8'));evidence.saved=saved;
+ check('实际图写盘/无派生effects/sidecar同步',saved.graph.nodes.some(n=>n.id===created.id) && !('effects' in saved) && meta.sourceHash==='sha256:'+createHash('sha256').update(fs.readFileSync(assetCopy)).digest('hex') && !(await graph()).dirty);
+ await button('关闭图画布');await reload();await open();check('整页Reload保留节点ID/端口/参数',(await graph()).source.graph.nodes.some(n=>n.id===created.id) && (await graph()).compilation.asset.effects['graph-smoke'].color==='#ff8844' && (await graph()).compilation.asset.effects['graph-smoke'].emission.rate===90);
+ await preview();await steps(12);evidence.edited=(await graph()).preview;check('参数和连线实际改变GPU播放实例',evidence.edited.particles.length===36 && evidence.edited.particles.every(p=>p.effect.color==='#ff8844'));
+ evidence.editedPixels=await verifyImpactVisibility(cdp,out,[0,1.2,-2],'graph-edited');check('编辑图GPU局部实际可见',evidence.editedPixels.passed);await capture('03-edited-preview');
+ const a=fs.readFileSync(path.join(out,'graph-original-on.png')).toString('base64'),b=fs.readFileSync(path.join(out,'graph-edited-on.png')).toString('base64');
+ evidence.visualChange=await cdp.eval(`(async()=>{const images=[];for(const base64 of ${JSON.stringify([a,b])}){const bitmap=await createImageBitmap(new Blob([Uint8Array.from(atob(base64),c=>c.charCodeAt(0))],{type:'image/png'})),c=new OffscreenCanvas(bitmap.width,bitmap.height),x=c.getContext('2d');x.drawImage(bitmap,0,0);images.push(x.getImageData(0,0,bitmap.width,bitmap.height).data);bitmap.close();}let changed=0;for(let i=0;i<images[0].length;i+=4)if(Math.max(...[0,1,2].map(k=>Math.abs(images[0][i+k]-images[1][i+k])))>8)changed++;return {changed,rgbDelta:8};})()`);check('实际UI重接/调色造成局部像素变化',evidence.visualChange.changed>=15);
+ const beforeReplay=normalParticles(evidence.edited.particles);await button('重播编译图');await waitFor(()=>cdp.eval('window.__editor.vfx.snapshot().graph.preview.ready'));await steps(12);check('同seed固定tick重播可复现',JSON.stringify(normalParticles((await graph()).preview.particles))===JSON.stringify(beforeReplay));
+ const tick=(await graph()).preview.tick;await new Promise(r=>setTimeout(r,150));check('图Preview暂停不随wall time推进',(await graph()).preview.tick===tick);await steps(1);check('图Preview单步一个fixed tick',(await graph()).preview.tick===tick+1);await stopPreview('editedPreviewStopped');
+ await input('图选中节点','lifetime');await input('节点数值','1');await button('应用节点参数');const baseline=fs.readFileSync(assetCopy,'utf8'),external=JSON.parse(baseline);external.name+=' external';fs.writeFileSync(assetCopy,JSON.stringify(external));await button('保存节点图');check('真实图CAS冲突保留草稿',(await status()).includes('保留图草稿') && (await graph()).dirty && (await graph()).source.graph.nodes.find(n=>n.id==='lifetime').params.value===1);
+ await button('重载节点图');fs.writeFileSync(assetCopy,baseline);await button('重载节点图');check('CAS重载恢复磁盘源与可编译输出',!(await graph()).dirty && !!(await graph()).compilation.asset);
+ const source=JSON.parse(fs.readFileSync(assetCopy,'utf8'));source.graph.version=1;for(const n of source.graph.nodes)delete n.position;fs.writeFileSync(assetCopy,JSON.stringify(source));await button('重载节点图');check('v1图显式迁移/磁盘保持旧版',(await graph()).sourceVersion===1 && (await graph()).source.graph.version===2 && JSON.parse(fs.readFileSync(assetCopy)).graph.version===1);await button('保存节点图');check('迁移后Save以原raw CAS实际升级',JSON.parse(fs.readFileSync(assetCopy)).graph.version===2 && !(await graph()).dirty);
+ await start();await click('#btn-pause');evidence.play=(await snap()).play;const particles=evidence.play.continuous.instances.filter(p=>p.key.includes('nd_m4_graph_emitter'));check('实际作者Play读取磁盘正式图编译产物',particles.length>0 && particles.every(p=>p.effect.emission.rate===30 && p.effect.texture.guid==='as_vfx_comic_smoke'));
+ await capture('04-real-graph-author-play');evidence.cost=await measureVfxCost(cdp,{onProgress:p=>fs.writeFileSync(path.join(out,'cost-progress.json'),JSON.stringify(p,null,2))});await stop('stopped1');for(let i=2;i<=5;i++){await start();await stop('stopped'+i);}
+ evidence.consoleErrors=cdp.consoleErrors;evidence.exceptions=cdp.exceptions;check('无浏览器/GPU未捕获错误',!cdp.consoleErrors.length && !cdp.exceptions.length,JSON.stringify([...cdp.consoleErrors,...cdp.exceptions]));
+}catch(error){evidence.failure=String(error);evidence.consoleErrors=cdp.consoleErrors;evidence.exceptions=cdp.exceptions;evidence.failureState=await cdp.eval(`({url:location.href,visibility:document.visibilityState,focus:document.hasFocus(),doc:window.__editor?.renderer.getDocument()?.id,status:document.querySelector('#vfx-graph-panel [role=status],#vfx-graph-dialog[open] [role=status]')?.textContent,graph:window.__editor?.vfx.snapshot().graph})`).catch(e=>({unavailable:String(e)}));check('探针执行',false,String(error));await capture('failure').catch(()=>{});
+}finally{
+ evidence.events=events;await cdp.eval(`(()=>{window.__vfxCostSampler?.cancel('probe finally');document.querySelector('#vfx-graph-dialog[open]')?.close();const panel=document.getElementById('vfx-graph-panel');[...panel?.querySelectorAll('button')??[]].find(b=>b.textContent==='停止图预览')?.click();if(window.__editor?.playCtl.isPlaying)document.querySelector('#btn-stop')?.click();})()`).catch(()=>{});
+ fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(evidence,null,2));ws.close();chrome.kill();
+}
+process.exitCode=results.some(r=>!r.ok)?1:0;
