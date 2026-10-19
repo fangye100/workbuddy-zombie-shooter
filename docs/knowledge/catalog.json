@@ -6,7 +6,7 @@
     {
       "id": "vfx-m4-20261019",
       "path": "docs/architecture/vfx-m4-20261019.md",
-      "title": "M4 五阶段实施、GPU 模拟与连续 Ribbon 契约",
+      "title": "M4 五阶段实施、GPU 模拟、Ribbon 与软粒子契约",
       "role": "framework",
       "authority": "guide",
       "status": "current",
@@ -17,7 +17,7 @@
         "editor",
         "persistence"
       ],
-      "read": "五阶段范围；GPU模拟与连续Ribbon网格、真实运动/作者路径、预算兼容、保存及独立验收边界",
+      "read": "五阶段范围；GPU模拟、连续Ribbon与真实深度软粒子、作者保存/预算兼容及分阶段独立验收边界",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
