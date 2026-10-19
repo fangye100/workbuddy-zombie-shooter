@@ -25,7 +25,7 @@ export class VfxPanel {
   private readonly sizeCurve=document.createElement('textarea');private readonly colorCurve=document.createElement('textarea');private readonly alphaCurve=document.createElement('textarea');
   private readonly seed=document.createElement('input');private readonly startPaused=document.createElement('input');
 
-  private previewTick=0;private previewAccumulator=0;private previewPaused=false;
+  private previewReady=false;private previewTick=0;private previewAccumulator=0;private previewPaused=false;
   private readonly form=document.createElement('fieldset');
   private document:VfxDocument|null=null;
   private generation=0;
@@ -55,7 +55,7 @@ export class VfxPanel {
     for(const [name,input] of [['发射率 /s',this.rate],['粒子速度 m/s',this.speed],['发射散角 °',this.spread],['单发射器粒子上限',this.maxParticles]] as const){input.type='number';input.step='.1';field(name,input);input.oninput=()=>{this.formDirty=true;};}
     for(const [name,input] of [['尺寸曲线 JSON',this.sizeCurve],['颜色曲线 JSON',this.colorCurve],['透明度曲线 JSON',this.alphaCurve]] as const){input.rows=2;field(name,input);input.oninput=()=>{this.formDirty=true;};}
     this.seed.type='number';this.seed.value='7';this.seed.min='0';this.seed.max='4294967295';field('预览 seed',this.seed);this.startPaused.type='checkbox';field('预览启动暂停',this.startPaused);
-    this.button('预览暂停/继续',()=>{this.previewPaused=!this.previewPaused;});this.button('预览单步',()=>{if(this.pass && this.document){this.previewPaused=true;this.advancePreview();}});this.button('固定种子重播',()=>this.preview());
+    this.button('预览暂停/继续',()=>{this.previewPaused=!this.previewPaused;});this.button('预览单步',()=>{if(this.pass && this.document && this.previewReady){this.previewPaused=true;this.advancePreview();}});this.button('固定种子重播',()=>this.preview());
     this.button('应用资源参数',()=>this.apply());this.button('撤销资源参数',()=>{this.document?.undo();this.fields();});this.button('重做资源参数',()=>{this.document?.redo();this.fields();});
     this.button('保存 VFX 资产',async()=>{if(this.formDirty)throw new Error('请先应用资源参数');if(!this.document)throw new Error('请先打开资源');this.status.textContent=await this.document.save();});
     this.button('重载 VFX 资产',async()=>{if(!this.document)throw new Error('请先打开资源');await this.document.reload();this.fields();this.status.textContent='VFX 已从磁盘重载';});
@@ -91,29 +91,29 @@ export class VfxPanel {
     const asset=structuredClone(this.document.value),pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
     try{for(const texture of new Map(Object.values(asset.effects).map(e=>[e.texture.guid,e.texture])).values()){
       const bitmap=await readVfxTexture(texture);try{if(generation!==this.generation)return;pass.addTexture(texture.guid,bitmap);}finally{bitmap.close();}}
-      if(generation!==this.generation)return;this.previewTick=0;this.previewAccumulator=0;this.previewPaused=this.startPaused.checked;this.status.textContent='GPU 循环预览中（场景深度遮挡；只读场景）';
+      if(generation!==this.generation)return;this.previewTick=0;this.previewAccumulator=0;this.previewPaused=this.startPaused.checked;this.previewReady=true;this.status.textContent='GPU 循环预览中（场景深度遮挡；只读场景）';
     }catch(e){this.stop();throw e;}
   }
-  stop(){this.generation++;this.pass?.destroy();if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.pool.clear();this.emitters.clear();}
+  stop(){this.previewReady=false;this.generation++;this.pass?.destroy();if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.pool.clear();this.emitters.clear();}
   frame(dt:number){
     const doc=this.port.document(),locked=this.port.locked();this.form.disabled=locked;
     if(locked && this.pass)this.stop();
     const weapons=doc?.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules');
     const key=JSON.stringify([doc?.id,weapons?.kind==='RunRules'?weapons.arsenal.definitions.map(w=>[w.id,w.presentation.vfx]):[]]);
     if(key!==this.sceneKey){this.sceneKey=key;this.weapon.replaceChildren();if(weapons?.kind==='RunRules')for(const w of weapons.arsenal.definitions)this.weapon.add(new Option(w.name,w.id));}
-    if(this.pass && this.document && !this.previewPaused){this.previewAccumulator+=dt;while(this.previewAccumulator>=1/30){this.previewAccumulator-=1/30;this.advancePreview();}}
+    if(this.pass && this.document && this.previewReady && !this.previewPaused){this.previewAccumulator+=dt;while(this.previewAccumulator>=1/30){this.previewAccumulator-=1/30;this.advancePreview();}}
     this.tick+=dt;if(this.tick>.2){this.tick=0;this.stats.textContent=JSON.stringify({assetDirty:this.document?.dirty??false,preview:this.pass?.stats??null,compute:this.pass?.gpu?.snapshot()??null,play:this.port.playStats()},null,1);}
   }
   private advancePreview(){
     const doc=this.port.document();if(!doc || !this.document || !this.pass)return;this.pool.advance(1/30);const tick=this.previewTick++,graph=SceneGraph.fromDocument(doc),node=doc.playerStart??doc.nodes[0]?.id;if(!node)return;const base=graph.getNode(node)?.world.position??[0,0,0],from:[number,number,number]=[base[0]+.5,base[1]+1,base[2]],end:[number,number,number]=[from[0]+3,from[1],from[2]];
     const solids=doc.nodes.flatMap(n=>n.components.flatMap(c=>c.kind==='Collider' && c.enabled && !c.isTrigger?[solidCollider(n.id,c.shape,graph.worldMatrix(n.id))]:[])),surface=nearestSolidContact([base[0],base[1]+1,base[2]],[0,-1,0],solids,4),seed=Number(this.seed.value);
     if(!Number.isInteger(seed) || seed<0 || seed>4294967295){this.status.textContent='预览seed必须为uint32';return;}
-    for(const [key,source] of Object.entries(this.document.value.effects)){let effect=source;if(this.scope.value==='selection' && key!==this.kind.value)continue;if(effect.orientation==='surface' && !surface){this.status.textContent='平面预览需要玩家起点下方的真实 Collider 接收面';continue;}const position=effect.orientation==='surface'?surface!.point:effect.kind==='impact'?end:from;
+    this.pass.instances=this.pool.active;for(const [key,source] of Object.entries(this.document.value.effects)){let effect=source;if(this.scope.value==='selection' && key!==this.kind.value)continue;if(effect.orientation==='surface' && !surface){this.status.textContent='平面预览需要玩家起点下方的真实 Collider 接收面';continue;}const position=effect.orientation==='surface'?surface!.point:effect.kind==='impact'?end:from;
       if(effect.backend==='gpu'){const reason=this.pass.updateGpuEmitter(`preview:${key}`,effect,{position,direction:[1,0,0]},tick,1/30,seed);if(!reason)continue;this.status.textContent=reason+'（CPU限120/s、128粒子，保留加速度）';effect=cpuVfxCompatibility(effect);}
       if(effect.emission)this.emitters.update(`preview:${key}`,effect,{position,direction:[1,0,0],...(effect.orientation==='surface'?{normal:surface!.normal}:{})},tick,1/30,seed);
       else if(tick%20===0)this.pool.spawn({key:`preview:${tick}:${key}`,effect,position,...(effect.orientation==='surface'?{normal:surface!.normal}:{}),...(effect.kind==='trail'?{end}:{}),seed,priority:1});
     }this.pass.instances=this.pool.active;
   }
   get hasDraft(){return this.formDirty || !!this.document?.dirty;}
-  snapshot(){return {previewClock:{tick:this.previewTick,seed:Number(this.seed.value),paused:this.previewPaused},particles:this.pool.active.map(p=>({...p})),path:this.document?.path??null,sourceVersion:this.document?.sourceVersion??null,asset:this.document?.value??null,dirty:this.hasDraft,preview:this.pass?.stats??null,compute:this.pass?.gpu?.snapshot()??null};}
+  snapshot(){return {previewClock:{ready:this.previewReady,tick:this.previewTick,seed:Number(this.seed.value),paused:this.previewPaused},particles:this.pool.active.map(p=>({...p})),path:this.document?.path??null,sourceVersion:this.document?.sourceVersion??null,asset:this.document?.value??null,dirty:this.hasDraft,preview:this.pass?.stats??null,compute:this.pass?.gpu?.snapshot()??null};}
 }

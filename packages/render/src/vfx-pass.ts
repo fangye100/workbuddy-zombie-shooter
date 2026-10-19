@@ -41,6 +41,7 @@ export class VfxPass {
   private readonly textures=new Map<string,{texture:GPUTexture;group:GPUBindGroup;width:number;height:number}>();
   private disposed=false;
   gpu:VfxGpuSimulation|null=null;
+  gpuCompatibilityReason:string|null=null;
   /** Capability seam also permits explicitly labelled validation restrictions. */
   gpuSupport=()=>VfxGpuSimulation.capability(this.device);
   instances:readonly VfxInstance[]=[];
@@ -66,11 +67,11 @@ export class VfxPass {
   }
   drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
   updateGpuEmitter(key:string,effect:VfxEffectDefinition,anchor:VfxAnchor,tick:number,step:number,seed:number,playing=true):string|null {
-    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect);if(reason){this.gpu?.release(key);return reason;}
+    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect)??(this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p))?'同屏 CPU alpha 需要统一排序，GPU发射器使用有界 CPU 兼容':null);this.gpuCompatibilityReason=reason;if(reason){this.gpu?.release(key);this.stats.buffers=2+(this.gpu?.stats.buffers??0);return reason;}
     if(!this.textures.has(effect.texture.guid))return 'GPU模拟纹理未就绪';this.gpu??=new VfxGpuSimulation(this.device,key=>this.textures.get(key),this.sampler);
-    const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);this.stats.buffers=2+this.gpu.stats.buffers;return result;
+    const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);if(result)this.gpu.release(key);this.stats.buffers=2+this.gpu.stats.buffers;return result;
   }
-  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
+  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){if(this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p))){this.gpuCompatibilityReason='同屏 CPU alpha 需要统一排序，GPU发射器使用有界 CPU 兼容';if(this.gpu)for(const key of this.gpu.snapshot().keys)this.gpu.release(key);this.stats.buffers=2+(this.gpu?.stats.buffers??0);this.gpu?.encode(encoder,color,aux,depth,vp,eye);return;}this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
   draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;
     if(this.disposed)return 0;
