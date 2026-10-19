@@ -1,6 +1,6 @@
 # Act1 实战 VFX 与直接试玩
 
-日期：2026-10-19。基线 `db170c558391b0563f1c42bde815d47689bf803b`。
+日期：2026-10-19。初次接入基线 `db170c558391b0563f1c42bde815d47689bf803b`；R2 漫画强化基线 `528ae3a1de1362f22ffe71879dca0f63e2b2bc84`。
 本次把已有正式 VFX 接到原 Act1 三层，不新增验收专用游戏场景。
 启动场景仍由 `aether.project.json` 的 `startIndex=1` 指向第一层。
 
@@ -24,8 +24,8 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 
 ## 已接入的表现及边界
 
-- 四把射线枪共用正式枪口闪光、弹道与命中；真实接触点另有火花。只有对应 GPU 表现已就绪时才替换旧 Canvas 枪效。
-- 火焰喷射器使用真实枪口/方向发射，真实燃烧 actor 按身份代次附着烟。实战组合保持 M3 原尺寸、发射率与生命周期，仅增加 0.25m 的 soft 深度柔化，避免直接套用 M4 大尺寸测试资源。
+- 四把射线枪共用三张正式纹理，R2 分别绑定 pistol/shotgun/smg/sniper 的独立效果 key。手枪利落爆闪，霰弹大星芒和多线爆散，SMG 较短连贯，狙击宽线及更重命中；真实接触点另有火花。只有对应 GPU 表现已就绪时才替换旧 Canvas 枪效。
+- 火焰喷射器使用真实枪口/方向发射，真实燃烧 actor 按身份代次附着烟。R2 用纵长火舌、橙黄白亮芯、较窄装饰散角和重叠粒子形成连续喷流，烟以黑描边/亮暗块面形成体积，soft 交界为 0.2m。没有改变枪口、射程、伤害锥或命中事实。
 - E-02 扑击、E-03 飞行/落地/酸池/被挡、E-05 自爆和结束痕迹复用正式敌人资源。危险轮廓和前摇提示保留，缺资源/预算不足继续走原保底。
 - E-04 的真实冲锋同时有尘尾与 M4 连续 Ribbon，读取逐 tick 移动事实，不增加高度偏移。电锯和敌人近战复用真实挥击弧线。
 - GPU 命中已有同 run/tick/slot/generation 的可画实例时，去掉重复 Canvas 星花；伤害与击杀文字保留。缺图、旧代次、无匹配命中均继续保底。
@@ -37,7 +37,7 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 资产使用稳定 GUID，并进入场景 dependencies；各枪/标签共享 **14/16** 张纹理，没有为每把枪复制纹理。
 共享装饰池仍为 256，Ribbon 共享点预算沿原系统；满池时可能减少装饰，不改变模拟或危险范围。
 
-## 实际验证与限制
+## R1 初次接入的历史验证与限制
 
 开发原始记录在 `.workbuddy/tmp/vfx-gameplay-integration/`。
 `development-09/result.json` 的 **31 项通过**：真实 headed、HTTPS、NVIDIA Lovelace 非 fallback；
@@ -64,3 +64,41 @@ node --test tools/level/gameplay-vfx.test.mjs
 
 探针使用本任务专属 Chrome profile/CDP，保留用户原窗口与 5100 服务，不写回正式场景。
 旧 development-01–07 的过早 Play/输入、成长模态与未成熟粒子采样失败保留；不覆盖成通过记录。
+
+## R2 漫画与激烈感强化
+
+本轮直接重绘 14 张现有 SVG 矢量图集：深墨线、饱和橙黄、白芯、尖锐星芒、断裂碎片、分明的火舌/烟团与速度楔形，包含三帧形变及消散。保持纹理 GUID、图集尺寸和帧数。
+`comic-pistol.vfx.json` 新增四组效果，保留原 `comic-muzzle/trail/impact` key 供原示例兼容；实际三层与关卡生成器改用分枪 key，仍只加载同三张枪械纹理。
+
+| 内容 | R1 → R2 的纯表现变化 |
+|---|---|
+| 手枪 / 霰弹 / SMG / 狙击 | 原共用 0.045m 弹迹，改为 0.13 / 0.09 / 0.095 / 0.21m；闪光、命中尺寸及 0.075–0.34s 短促节奏各自区分 |
+| 火焰 | 0.5×0.65m → 0.85×1.4m 火舌，初生不再缩成小球；仍 60/s，单发射器上限 64→48，寿命 0.5→0.46s，不延长末端射程 |
+| 燃烧烟 / 火花 | 烟加大黑描边体积、12→8/s、64→16 上限；火花加尖锐亮芯，120→90/s、64→32 上限，依靠形状而非堆数量 |
+| 冲锋 | 尾带 0.35→0.85m，橙白锯齿+深边；尘从 60→30/s、0.4→0.28s、上限64→24，并降低透明度/高度，留在脚下而不盖住长尾 |
+| 近战 / 酸液 / 扑击 / 自爆 | 图集统一粗墨线和分层爆发，装饰形变/短尾更明确；既有真实半径、攻击阶段、危险轮廓及结束事实仍由模拟持有 |
+
+资源与池预算仍为 **14/16 纹理、256 装饰实例**，没有修改 Framework、模拟、相机、地形或光照，也没有加入全屏闪烁/强制相机抖动。
+`scene-preservation.json` 对比 R2 基线三层：剔除仅武器 `presentation.vfx` 后，其余完整 JSON 结构 hash 相同。
+
+R2 证据根目录为 `.workbuddy/tmp/vfx-cartoon-intensity/`。`before-02` 31/31、`current-02` 32/32，均真实 headed / HTTPS / NVIDIA Lovelace 非 fallback，无 console/GPU 错误；原生六武器、强化后恢复、三层 Play/Stop、真实燃烧和自然盾卫冲锋通过。
+`current-02` 的额外一项为自然冲锋暂停后，原生 Step 按钮逐 tick 推进 20 tick 的三个全景帧，不是注入轨迹。
+原始结果记录实际 checkout commit 与源码/资产 SHA-256；开发轮可能含未提交的候选字节，不能仅把当时 HEAD 当成全部资产快照。
+
+前后样张为 `before-02/floor1-{pistol,shotgun,smg,sniper,flame,chainsaw}.png` 与 `current-02/` 同名全景；冲锋看 `floor3-charge.png`、新版本另有 `floor3-charge-1.png`/`-2.png`。
+旧版来自测试 tab 对精确基线 `528ae3a` 的三层/VFX/sidecar 原字节投影，`projectedSources` 列出各文件 SHA-256，不回退工作区，也不拦截用户 tab。
+`first-comparison.json` 记录八组正常游戏相机的 viewProj/eye/viewport 完全相同；自然战斗 tick/目标可不同，不能当作同输入性能基准。
+已目检全景与局部，判断依据为粗线条、色块/连续性和分枪轮廓；GPU on/off ROI 只证明效果可见，不证明审美更好。
+
+R2 的 56 项相关 owner 测试、2 项绑定工具测试及完整 scene:check 通过；冲锋 owner 测试现核每个真实 move 历史位置均被消费，不再依赖旧尘率制造的粒子数量。typecheck、editor:build、architecture:check 通过，构建保留原 chunk 警告。
+旧迁移断言及知识目录三诊断继续按前文单列，未修无关基线。酸液/自爆重绘和绑定已有资源检查，但仍未自然打到对应后续波次，不把它们称为本轮已自然实战触发。
+`before/` 首轮基线投影失败，是验证工具在纹理请求内同步调用 git 造成装配迟延/玩家死亡；改为 Play 前预载后 `before-02` 完整通过，旧失败记录保留。
+
+复跑当前版本及独立基线投影：
+
+```powershell
+node tools/verify/vfx-gameplay-probe.mjs --headed --style-sequence --profile .workbuddy/tmp/vfx-cartoon-intensity/chrome-profile --out .workbuddy/tmp/vfx-cartoon-intensity/recheck
+node tools/verify/vfx-gameplay-probe.mjs --headed --profile .workbuddy/tmp/vfx-cartoon-intensity/chrome-profile --compare-base 528ae3a1de1362f22ffe71879dca0f63e2b2bc84 --out .workbuddy/tmp/vfx-cartoon-intensity/baseline-recheck
+```
+
+最终候选由提交/push 后的精确 HEAD 再跑上述当前版本路径，命令/exit 与结果放同根 `final-command.log`、`development-final/`；队列独立验收/终审另行判定。
