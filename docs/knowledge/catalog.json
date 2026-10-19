@@ -47,7 +47,7 @@
       "authority": "design",
       "status": "historical",
       "topics": ["vfx", "render", "particle", "decal", "architecture", "editor"],
-      "read": "主 chat proposal 原文归档；当前快照、职责与数据契约、M1-M4 交付及验收建议，未实施",
+      "read": "原 proposal 快照与职责/数据契约；2026-10-19 追加 M4.1-M4.5 全量实施顺序、交付与验收要求；实际状态见分期指南",
       "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
       "reviewedAt": "2026-10-19",
       "reviewedSourceCommit": "6b486f040da2e1496e851496d2e3706a379a8e31"
