@@ -1,3 +1,4 @@
+import {vfxAuthorAnchor} from './vfx-author-anchor';
 import {SceneGraph,cpuVfxCompatibility,VFX_VERSION,type SceneDocument,type VfxMotion,type VfxEffectDefinition} from '@aether/scene';
 import {VfxEmitters,RibbonHistory,sampleVfxMotionWorld,type VfxPool} from '@aether/runtime';
 import {readVfxAsset,readVfxTexture} from './vfx-assets';
@@ -12,8 +13,8 @@ export class AuthoredVfx {
  start(doc:SceneDocument,pass:VfxPass):void{this.clear();this.pass=pass;const generation=this.generation,graph=SceneGraph.fromDocument(doc);
   for(const node of doc.nodes)for(const c of node.components)if(c.kind==='VfxEmitter' && c.enabled && c.playing && graph.isEffectivelyVisible(node.id))void(async()=>{try{
    const asset=await readVfxAsset(c.resource),effect=asset.effects[c.effectKey];if(!effect)throw new Error(`VFX发射器 ${node.id} 缺少 ${c.effectKey}`);if(asset.version<VFX_VERSION && generation===this.generation)this.diagnostics.push(`${node.id}: 兼容读取VFX v${asset.version}，磁盘未升级（${c.resource.path}）`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}
-   if(generation!==this.generation)return;const m=graph.worldMatrix(node.id),d=c.direction,direction:[number,number,number]=[m[0]!*d[0]+m[4]!*d[1]+m[8]!*d[2],m[1]!*d[0]+m[5]!*d[1]+m[9]!*d[2],m[2]!*d[0]+m[6]!*d[1]+m[10]!*d[2]];
-   this.jobs.push({key:node.id,effect,position:[...graph.getNode(node.id)!.world.position],direction,normal:[m[4]!,m[5]!,m[6]!],seed:c.seed,matrix:new Float32Array(m),...(c.motion?{motion:structuredClone(c.motion)}:{}),originTick:null,lastTick:-1,cycle:0,finished:false});
+   if(generation!==this.generation)return;const anchor=vfxAuthorAnchor(graph,node.id,c);
+   this.jobs.push({key:node.id,effect,...anchor,seed:c.seed,...(c.motion?{motion:structuredClone(c.motion)}:{}),originTick:null,lastTick:-1,cycle:0,finished:false});
   }catch(e){if(generation===this.generation)this.diagnostics.push(String(e));}})();
  }
  update(tick:number,step:number,runId:number){if(this.run!==runId){if(this.run!==-1)for(const j of this.jobs)this.pass?.gpu?.release(`author:${this.run}:${j.key}`);this.emitters.clear();for(const j of this.jobs){j.originTick=null;j.lastTick=-1;j.cycle=0;j.finished=false;}this.run=runId;}for(const j of this.jobs){const key=`author:${runId}:${j.key}`,anchor={position:j.position,direction:j.direction,normal:j.normal};let effect=j.effect;

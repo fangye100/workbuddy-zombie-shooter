@@ -1,3 +1,4 @@
+import {buildSync} from 'esbuild';
 /** M2 headed GPU / actual form handlers / isolated disk copies. Never writes tracked acceptance data. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +18,7 @@ if(!has('headed'))throw new Error('本机 VFX 验收必须显式 --headed');
 const port=Number(arg('cdp','9333'));
 const occupied=await new Promise(resolve=>{const s=net.connect(port,'127.0.0.1');s.once('connect',()=>{s.destroy();resolve(true);});s.once('error',()=>resolve(false));});
 if(occupied)throw new Error(`CDP ${port} 已占用，不接管或终止已有进程`);
+const vfxContract=buildSync({entryPoints:['packages/scene/src/vfx.ts'],bundle:true,platform:'node',format:'esm',write:false});const {VFX_VERSION:currentVfxVersion}=await import('data:text/javascript;base64,'+Buffer.from(vfxContract.outputFiles[0].contents).toString('base64'));
 const {check,results}=createRecorder(),evidence={commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),checks:results};
 evidence.verificationSources=Object.fromEntries(['tools/verify/vfx-m2-probe.mjs','tools/verify/vfx-m2-pixels.mjs','tools/verify/vfx-cost.mjs'].map(p=>[p,createHash('sha256').update(fs.readFileSync(p)).digest('hex')]));
 const {server,url}=await ensureServer(5100,'apps/editor/vite.config.ts');if(server)throw new Error('请先用记录的 detached 方式启动固定5100服务');
@@ -62,7 +64,7 @@ try{
  evidence.casDraft=await cdp.eval(`({snapshot:window.__editor.vfx.snapshot().editor,status:document.querySelector('#vfx-panel [role="status"]').textContent})`);
  check('CAS冲突可见且保留草稿',await waitFor(()=>cdp.eval(`window.__editor.vfx.snapshot().editor.dirty && document.querySelector('#vfx-panel [role="status"]').textContent.includes('外部修改')`)));
  await button('重载 VFX 资产');check('CAS后显式Reload读取外部版本',await waitFor(()=>cdp.eval(`!window.__editor.vfx.snapshot().editor.dirty && window.__editor.vfx.snapshot().editor.asset.name==='外部版本'`)));
- fs.writeFileSync(assetCopy,JSON.stringify({...external,version:99}));await button('重载 VFX 资产');check('未来资源版本可见诊断且保留当前资源',await waitFor(()=>cdp.eval(`document.querySelector('#vfx-panel [role="status"]').textContent.includes('不支持 VFX 版本 99') && window.__editor.vfx.snapshot().editor.asset.version===5`)));fs.writeFileSync(assetCopy,JSON.stringify(external,null,2)+'\n');await button('重载 VFX 资产');
+ fs.writeFileSync(assetCopy,JSON.stringify({...external,version:99}));await button('重载 VFX 资产');check('未来资源版本可见诊断且保留当前资源',await waitFor(()=>cdp.eval(`document.querySelector('#vfx-panel [role="status"]').textContent.includes('不支持 VFX 版本 99') && window.__editor.vfx.snapshot().editor.asset.version===${currentVfxVersion}`)));fs.writeFileSync(assetCopy,JSON.stringify(external,null,2)+'\n');await button('重载 VFX 资产');
  await button('循环 GPU 预览');check('平面资源预览有真实GPU draw',await waitFor(()=>cdp.eval(`(window.__editor.vfx.snapshot().editor.preview?.draws??0)>0`)));await capture('01-plane-preview');await button('停止 VFX 预览');
  await start();
  const flight=await waitFor(async()=>{const s=await snapshot();return s.effects?.some(e=>e.kind==='acid' && e.phase==='flight') && s.vfx.enemy.instances.some(i=>i.key.endsWith('enemy.acid.flight')) && s.vfx.gpu?.draws>0?s:null;},{timeout:10000,interval:10});
