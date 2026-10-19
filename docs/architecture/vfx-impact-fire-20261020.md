@@ -16,7 +16,7 @@
 
 `packages/scene/src/vfx.ts` 的独立效果资源版本 **9** 新增可选 `flow:{strength,speed}`，只支持 sprite；strength ∈[0,0.6]、speed ∈[0.1,8]，非法/旧版本携带新字段显式诊断。v1–8 经原 migrateVfxAsset 升至9，不凭空添加 flow，不改磁盘直到保存。场景版本仍23，没有新增场景语义。
 
-原 VFX 面板增加“流动卷曲强度”“流动速度”，0关闭；Apply→Undo/Redo→Save/CAS→Reload 沿原 VfxDocument。typed DAG 源图仍为资产8/图2，在 sprite.params 增加可选 flow 白名单，旧图不变；原图节点属性面板、撤重/CAS和 runtime compileVfxGraph 保留并编译该字段至派生 v9 effects，派生 effects 仍禁止存回源图。原 compute/Ribbon/decal/soft 参数与交互不替换。
+原 VFX 面板增加“流动卷曲强度”“流动速度”，只有明确有限数值0才关闭；负数、空/空白、NaN/Infinity及越界输入显式诊断并保留原配置/未应用草稿；启用时速度同样校验；Apply→Undo/Redo→Save/CAS→Reload 沿原 VfxDocument。typed DAG 源图仍为资产8/图2，在 sprite.params 增加可选 flow 白名单，旧图不变；原图节点属性面板、撤重/CAS和 runtime compileVfxGraph 保留并编译该字段至派生 v9 effects，派生 effects 仍禁止存回源图。原 compute/Ribbon/decal/soft 参数与交互不替换。
 
 正式 comic-gameplay-soft.vfx.json 升9，原GUID/三帧图集与绑定保留。火焰60/s、上限48；烟8/s、上限16。火舌改为细长连续形状、薄墨线/亮芯，沿真实速度投影排布，卷动位移与帧内 UV 扭曲随模拟时间，带上升加速度与消散。装饰行程约4.75m加半图高度0.95m，不以装饰延伸真实6m伤害射程。soft 0.2m、原深度遮挡/透明排序保留。flow 发射目前显式 CPU 模拟兼容，GPU负责材质/绘制；不静默送入尚不支持flow的compute模拟。
 
@@ -61,3 +61,14 @@ VfxPass 实例仍 **96B/24 floats**：20/21 保持 softDistance/bias，22/23 使
 当轮15/16纹理、共享装饰池256；flame Stop实际销毁15纹理/3缓冲、ledger归零并回滚场景；重开新run无旧burn、资源ready后再次Stop销毁15纹理/2缓冲。首次需要soft深度资源与空闲重开实际分配量不同，按分配账目核销，不硬要求两次缓冲数相同。0console/GPUerror、场景hash不变。50路径服务源字节核对49匹配，唯一不同为共享工作区原有dirty的 `docs/knowledge/catalog.json`，游戏源匹配。
 
 最终证据是指定硬件与正常镜头下的实操/目检，不认证任意设备、极端高负载帧率或所有遮挡条件；ROI不替代全景判断。酸液清波的合并后历史问题不属于本轮补验。当前文档收尾不改生产/tests/资产/工具，最终base `5fe4d6fe` → 文档target尚待独立Final Reviewer完整终审。
+
+
+## FR-FLOW-01 作者输入修复
+
+Final Reviewer 在文档目标 `8b7de304` 阻断了作者Apply的静默删除：旧实现将非正数（含负数/清空）解释为关闭，且图入口过早清除parameterDraft。该问题只影响作者编辑，不把先前25项实战补验当成作者输入验证。
+
+两个原Panel现在共用editor局部 `vfx-flow-input.ts`，在源Document/历史与预览修改前解析非空、有限十进制数值：strength在0..0.6；仅明确0返回关闭，正数开启时speed必须0.1..8。非法输入抛出明确诊断；原flow、源dirty、未应用草稿、undo/redo及预览保持，Save仍受未应用草稿阻挡。min/max/required仅作控件提示，按钮handler内部校验仍有效。原Save守卫仅局部抽成方法，继续使用原VfxDocument/VfxGraphDocument及CAS，没有替代作者实现。
+
+`apps/editor/test/vfx-flow-author.test.ts` 直接调用两个原Panel的Apply/run/Save方法和真实Document；仅隔离DOM值容器、GPU预览副作用及写盘端口。覆盖负数、空/空白、NaN/Infinity、越界、启用速度错误、clean/已有dirty、失败后旧配置/草稿/预览/撤重/Save守卫不变，以及合法正数/边界、明确0和旧资源无flow的Apply→Undo/Redo→CAS保存。它是作者逻辑验证，不冒充原生浏览器/GPU验收。
+
+本次定向24项测试、typecheck、editor:build、architecture:check均exit0，构建保留原chunk大小警告。原始日志在 `.workbuddy/tmp/vfx-impact-fire-20261020/fr-flow-01/`；首轮测试夹具误把迁移后对象当CAS原盘baseline的失败保留，修正夹具后真实原盘CAS通过。未改绘制、游戏、Shader、场景、资产或工具，没有重复完整GPU；原实战证据保留对应版本，修复target仍需原Final Reviewer复审。

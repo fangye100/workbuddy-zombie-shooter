@@ -208,3 +208,6 @@ R4-F01：首次独立 Audit 的 `audit-fb0bbed/result.json` 已记录真实alive
 继续游戏后按S后撤、离开贴身敌人，观察该身份自然熄灭；最终样本tick110同NPC仍alive、outcome仍running，burn消失、对应动态实例19归0。它是状态到时清除，不是死亡/Stop造成消失。纹理15/16、装饰池256；flame Stop实际释放15纹理/3缓冲，重开新run无旧burn且ready后再Stop释放15/2，账目归零、场景回滚、0console/GPUerror。50路径服务核对仅共享dirty目录文档不同，游戏源匹配。
 
 这些证据限定本机headed NVIDIA Lovelace和已观察的正常镜头；未认证任意设备、高负载帧率或所有遮挡条件。详见[当前契约的分版本表](../architecture/vfx-impact-fire-20261020.md#独立实操记录与验收边界)。生产代码停在34bbe477，本次仅补文档，最终完整变更待Final Reviewer。
+
+
+FR-FLOW-01 作者操作：资源面板与图sprite节点的“流动强度”只有明确有限数值0才关闭；负数、清空/空白、NaN/Infinity或越界会报错并保留原配置与未应用草稿，Save仍被拦住。正数启用时速度必须0.1..8。原两个Panel的Apply/Save及Document撤重/CAS定向24项测试通过；未改实战绘制或玩法、未重跑完整GPU。细节见[当前契约](../architecture/vfx-impact-fire-20261020.md#fr-flow-01-作者输入修复)，待Final Reviewer对新target复审。
