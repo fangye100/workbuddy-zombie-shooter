@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { applyEnvironmentArtPass } from './environment-art-pass.mjs';
 import { applyP0Art } from '../art/apply-p0-art.mjs';
 import { refineStreet } from '../art/refine-streets.mjs';
+import { applyGameplayVfx } from './gameplay-vfx.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SCENE_DIR = 'assets/scenes/act1';
@@ -767,6 +768,7 @@ function main() {
       const order=new Map(previous.nodes.map((n,i)=>[n.id,i]));doc.nodes.sort((a,b)=>(order.get(a.id)??999)-(order.get(b.id)??999));
       const dependencyOrder=new Map(previous.dependencies.map((p,i)=>[p,i]));doc.dependencies.sort((a,b)=>(dependencyOrder.get(a)??999)-(dependencyOrder.get(b)??999));
     }
+    applyGameplayVfx(doc);
     writeJson(relPath, doc);
     register.push({ path: relPath, id: doc.id, enabled: true });
 

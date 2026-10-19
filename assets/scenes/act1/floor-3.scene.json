@@ -112,7 +112,10 @@
     "assets/art/models/streets/game_ready/floor-3-curbs.glb",
     "assets/art/models/streets/game_ready/floor-3-paint.glb",
     "assets/art/models/streets/game_ready/floor-3-walks.glb",
-    "assets/art/textures/SKY-01/SKY-01.png"
+    "assets/art/textures/SKY-01/SKY-01.png",
+    "assets/vfx/comic-pistol.vfx.json",
+    "assets/vfx/comic-enemies.vfx.json",
+    "assets/vfx/comic-motion.vfx.json"
   ],
   "nodes": [
     {
@@ -428,10 +431,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "comic-muzzle",
+                    "trail": "comic-trail",
+                    "impact": "comic-impact"
                   }
                 }
               },
@@ -590,10 +596,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "comic-muzzle",
+                    "trail": "comic-trail",
+                    "impact": "comic-impact"
                   }
                 }
               },
@@ -752,10 +761,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "comic-muzzle",
+                    "trail": "comic-trail",
+                    "impact": "comic-impact"
                   }
                 }
               },
@@ -914,10 +926,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "comic-muzzle",
+                    "trail": "comic-trail",
+                    "impact": "comic-impact"
                   }
                 }
               },
@@ -1671,6 +1686,96 @@
               "cue": "SFX-E03-ACID-POOL",
               "rate": 1,
               "gain": 1
+            }
+          }
+        },
+        {
+          "kind": "VfxBindings",
+          "enabled": true,
+          "bindings": {
+            "enemy.acid.flight": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "acid-flight"
+            },
+            "enemy.acid.land": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "acid-land"
+            },
+            "enemy.acid.pool": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "acid-pool"
+            },
+            "enemy.acid.blocked": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "acid-blocked"
+            },
+            "enemy.explode": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "explode"
+            },
+            "enemy.pounce.impact": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "pounce-impact"
+            },
+            "enemy.mark": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "ground-mark"
+            },
+            "weapon.flame": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "flame"
+            },
+            "actor.smoke": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "smoke"
+            },
+            "combat.spark": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "sparks"
+            },
+            "enemy.charge.trail": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "charge-dust"
+            },
+            "combat.melee": {
+              "resource": {
+                "path": "assets/vfx/comic-motion.vfx.json",
+                "guid": "as_vfx_comic_motion"
+              },
+              "effectKey": "melee-arc"
             }
           }
         }
