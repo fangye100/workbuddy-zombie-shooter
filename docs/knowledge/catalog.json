@@ -17,7 +17,7 @@
         "editor",
         "persistence"
       ],
-      "read": "五阶段范围；GPU模拟、Ribbon、软粒子与跨面投影裁切、作者保存/预算兼容及分阶段独立验收边界",
+      "read": "五阶段范围；GPU模拟、Ribbon、软粒子、跨面投影裁切、typed DAG可视节点、作者保存/预算兼容及分阶段独立验收边界",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
