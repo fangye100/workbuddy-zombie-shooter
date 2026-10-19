@@ -1,3 +1,5 @@
+import {decalReceivers} from './services/vfx-decal-receivers';
+import {VfxDecalPanel} from './services/vfx-decal-panel';
 import { GameControls } from "@aether/zombie-game/presentation/game-controls";
 import { GameAudio } from "@aether/zombie-game/presentation/game-audio";
 import { weaponDiagnostics } from './services/weapon-diagnostics';
@@ -1319,12 +1321,13 @@ async function boot(): Promise<void> {
   });
   const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
   const vfxHost=document.createElement('div');atmosphereHost.before(vfxHost);
-  const vfxPanel=new VfxPanel(vfxHost,renderer.core,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,playStats:()=>playCtl.vfx.snapshot()});
+  const vfxPanel=new VfxPanel(vfxHost,renderer.core,{receivers:doc=>decalReceivers(renderer,doc),document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,playStats:()=>playCtl.vfx.snapshot()});
   (window as unknown as {__editor:Record<string,unknown>}).__editor.vfx={snapshot:()=>({editor:vfxPanel.snapshot(),play:playCtl.vfx.snapshot()})};
   const vfxBindingHost=document.createElement('div');vfxHost.before(vfxBindingHost);
   const vfxBindingPanel=new VfxBindingPanel(vfxBindingHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
   const vfxEmitterHost=document.createElement('div');vfxBindingHost.before(vfxEmitterHost);
   const vfxEmitterPanel=new VfxEmitterPanel(vfxEmitterHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
+  const vfxDecalPanel=new VfxDecalPanel(vfxEmitterHost,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits});
   const atmospherePanel = new AtmospherePanel(atmosphereHost, {
     environment: () => spawnStore?.document.environment ?? null,
     diagnostic: () => renderer.skyTextureDiagnostic,
@@ -4071,7 +4074,7 @@ async function boot(): Promise<void> {
     elapsed += dt;
     vfxPanel.frame(dt);
     vfxBindingPanel.frame();
-    vfxEmitterPanel.frame();
+    vfxEmitterPanel.frame();vfxDecalPanel.frame();
     frames++;
     hudTimer += wallDt;
 
