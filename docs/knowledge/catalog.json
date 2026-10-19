@@ -11,7 +11,7 @@
       "authority": "guide",
       "status": "current",
       "topics": ["vfx", "gameplay", "campaign", "gpu"],
-      "read": "三层试玩与换枪；R2漫画强化；R3第二层酸液清波/第三层爆尸原路进入、真实阶段回收与坏纹理保底；预算及未覆盖边界",
+      "read": "三层试玩与换枪；R2漫画强化；R3酸液/爆尸原生路线与阶段回收、坏纹理保底；R3-V01沙灰残留与正常镜头证据；预算及边界",
       "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "scene-weapons", "asset-metadata"]
     },
     {

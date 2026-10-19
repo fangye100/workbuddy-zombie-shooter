@@ -68,8 +68,9 @@ async function lifecycle(record,attack){
   await step(8);record.pool=await snap();await capture('acid-pool');record.poolVisible=await verifyImpactVisibility(cdp,out,record.poolEffect.position,'acid-pool',{filterIncludes:key+'enemy.acid.pool'});
   if(badPool){check('坏纹理显式诊断且危险池保底继续',evidence.failureInjection.requests>0 && !record.pool.vfx.enemy.ready.includes('enemy.acid.pool') && record.pool.vfx.diagnostics.some(d=>!d.includes('兼容读取')) && !record.pool.vfx.enemy.rendered.includes(id) && record.pool.vfx.enemy.stats.fallback>0 && !record.poolVisible.passed);}
   else{check('道路酸池真实GPU局部可见',record.poolVisible.passed);const pool=record.pool.vfx.enemy.instances.find(p=>p.key===key+'enemy.acid.pool');check('池危险尺寸及真实结束时间',pool?.size[0]===record.poolEffect.radius*2 && pool?.size[1]===record.poolEffect.radius*2 && Math.abs(pool.lifetime-4)<.02);}
-  // 先用真实输入撤离落点，再冻结并单步到同一池结束，避免后来的新池冒充目标池。
-  await resume();const p=record.pool.player,target=[p.x-5,p.z-4];const until=Date.now()+1000;while(Date.now()<until){s=await snap();await choose(record,s);await hold(movement(s.player,target));await sleep(40);}await pause();
+  // 池持续期间沿原道路继续避险，让新投射落在别处；接近同一池end才暂停。
+  await resume();const p=record.pool.player,target=[p.x,6],endTick=attack.startTick+Math.ceil(attack.duration*30),until=Date.now()+8000;record.escapePath=[];
+  while(Date.now()<until){s=await snap();if(s.outcome!=='running')throw Error('避险途中玩家死亡');if(s.tick>=endTick-12)break;await choose(record,s);await hold(movement(s.player,target));record.escapePath.push({tick:s.tick,player:s.player});await sleep(40);}await pause();
  }
  for(let n=0;n<330;n++){
   s=await snap();if(s.outcome!=='running')throw Error('生命周期途中玩家死亡');
@@ -83,6 +84,9 @@ async function lifecycle(record,attack){
  record.timing={startTick:attack.startTick,phaseTick:record.poolEffect?.phaseTick??attack.phaseTick,endTick:record.endEvent.tick,expectedEndTick:attack.startTick+Math.ceil(attack.duration*30),fixedStep:1/30};
  check(record.kind+' 完整事件已消费且结束tick准确',record.ended.pendingAttackEvents===0 && record.ended.vfx.enemy.stats.eventDrops===0 && record.endEvent.tick===record.timing.expectedEndTick);
  await capture(record.kind+'-mark');record.markVisible=await verifyImpactVisibility(cdp,out,record.endEvent.effect.position,record.kind+'-mark',{filterIncludes:key+'enemy.mark'});check(record.kind+' 地面痕迹GPU可见',record.markVisible.passed);
+ // 保留原end首帧；追加同一目标在正常敌群/后续攻击中的收尾，不能隐藏其他VFX来验收全景。
+ record.markSequence=[record.ended];
+ for(const frame of [1,2]){await step(8);record.markSequence.push(await snap());await capture(`${record.kind}-mark-${frame}`);}
  await step(60);record.recycled=await snap();check(record.kind+' 装饰痕迹回收',!record.recycled.vfx.enemy.instances.some(p=>p.key.startsWith(key)));
 }
 try{
