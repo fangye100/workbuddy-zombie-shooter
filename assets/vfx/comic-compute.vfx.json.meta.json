@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_compute",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-compute.vfx.json",
+    "status": "accepted",
+    "author": "项目原创M4.1漫画GPU火花纹理与模拟资源"
+  },
+  "sourceHash": "sha256:cca9f5952a1156db53e610519195e03d23d1253351b74fa7556f961ea3c752d9",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_compute_spark",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-compute-spark.svg",
+    "status": "accepted",
+    "author": "项目原创M4.1漫画GPU火花纹理与模拟资源"
+  },
+  "sourceHash": "sha256:fdd5bb08d54eb5d2b459596cc8b34b50d5a13f5504b25af17540e2ea5ff7a44f",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

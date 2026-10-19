@@ -24,7 +24,7 @@ export class VfxEmitters {
     const d=anchor.direction??[0,1,0],length=Math.hypot(...d)||1,angle=(random()-.5)*emission.spreadDeg*Math.PI/180,c=Math.cos(angle),sn=Math.sin(angle),velocity:[number,number,number]=[(d[0]*c-d[2]*sn)/length*emission.speed,d[1]/length*emission.speed,(d[0]*sn+d[2]*c)/length*emission.speed];
     const fraction=span>0?(t-(begin-1))/span:1,position=anchor.position.map((v,i)=>s!.position[i]!+(v-s!.position[i]!)*fraction) as [number,number,number];
     const particleKey=`emit:${key}:${s.epoch}:${serial}`,owned=this.pool.active.filter(p=>p.key.startsWith(`emit:${key}:`)).length;
-    const request:VfxRequest={key:particleKey,effect,position,velocity,...(anchor.direction?{direction:anchor.direction}:{}),...(anchor.normal?{normal:anchor.normal}:{}),seed:Math.floor(random()*6283),priority};
+    const request:VfxRequest={key:particleKey,effect,position,velocity,simulationStep:step,...(anchor.direction?{direction:anchor.direction}:{}),...(anchor.normal?{normal:anchor.normal}:{}),seed:Math.floor(random()*6283),priority};
     if(owned>=emission.maxParticles || !this.pool.spawn(request)){this.stats.dropped++;success=false;continue;}
     this.pool.active.find(p=>p.key===particleKey)!.age=age;this.stats.emitted++;
    }

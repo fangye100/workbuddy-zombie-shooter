@@ -1,5 +1,9 @@
 import {sampleVfxVisual} from './vfx-visual';
 import type { VfxInstance } from '@aether/runtime';
+import type {VfxAnchor} from '@aether/runtime';
+import type {VfxEffectDefinition} from '@aether/scene';
+import {gpuVfxReason} from '@aether/scene';
+import {VfxGpuSimulation} from './vfx-simulation';
 
 const SHADER = /* wgsl */ `
 struct Frame { vp:mat4x4f };
@@ -36,6 +40,9 @@ export class VfxPass {
   private readonly additive:GPURenderPipeline;
   private readonly textures=new Map<string,{texture:GPUTexture;group:GPUBindGroup;width:number;height:number}>();
   private disposed=false;
+  gpu:VfxGpuSimulation|null=null;
+  /** Capability seam also permits explicitly labelled validation restrictions. */
+  gpuSupport=()=>VfxGpuSimulation.capability(this.device);
   instances:readonly VfxInstance[]=[];
   readonly stats={active:0,draws:0,uploadedBytes:0,buffers:2,textures:0,destroyedBuffers:0,destroyedTextures:0};
   constructor(private readonly device:GPUDevice,readonly capacity=256) {
@@ -58,13 +65,19 @@ export class VfxPass {
     this.textures.set(key,{texture,group,width:bitmap.width,height:bitmap.height});this.stats.textures=this.textures.size;
   }
   drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
+  updateGpuEmitter(key:string,effect:VfxEffectDefinition,anchor:VfxAnchor,tick:number,step:number,seed:number,playing=true):string|null {
+    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect);if(reason){this.gpu?.release(key);return reason;}
+    if(!this.textures.has(effect.texture.guid))return 'GPU模拟纹理未就绪';this.gpu??=new VfxGpuSimulation(this.device,key=>this.textures.get(key),this.sampler);
+    const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);this.stats.buffers=2+this.gpu.stats.buffers;return result;
+  }
+  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
   draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;
     if(this.disposed)return 0;
     // Far-to-near alpha. Preserve that order; batch only consecutive compatible items.
     const depthOf=(p:V3)=>view[2]!*p[0]!+view[6]!*p[1]!+view[10]!*p[2]!+view[14]!;
-    const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(a.position.map((v,i)=>v+(a.velocity?.[i]??0)*a.age))-depthOf(b.position.map((v,i)=>v+(b.velocity?.[i]??0)*b.age)));
-    if(!items.length)return 0;
+    const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(sampleVfxVisual(a).position)-depthOf(sampleVfxVisual(b).position));
+    if(!items.length){this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;}
     const data=new Float32Array(items.length*20);
     for(let i=0;i<items.length;i++){
       const p=items[i]!,e=p.effect,o=i*20,visual=sampleVfxVisual(p);let position:V3=visual.position;
@@ -88,7 +101,7 @@ export class VfxPass {
     while(i<items.length){const first=items[i]!,key=first.effect.texture.guid,blend=first.effect.blend;let end=i+1;while(end<items.length && items[end]!.effect.texture.guid===key && items[end]!.effect.blend===blend)end++;
       pass.setPipeline(blend==='additive'?this.additive:this.alpha);pass.setBindGroup(0,this.textures.get(key)!.group);pass.draw(6,end-i,0,i);this.stats.draws++;i=end;
     }
-    pass.end();this.stats.active=items.length;this.stats.uploadedBytes=data.byteLength+64;return this.stats.draws;
+    pass.end();this.stats.active=items.length;this.stats.uploadedBytes=data.byteLength+64;this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;
   }
-  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=0;}
+  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;this.gpu?.destroy();this.stats.destroyedBuffers+=this.gpu?.stats.destroyedBuffers??0;for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=0;}
 }

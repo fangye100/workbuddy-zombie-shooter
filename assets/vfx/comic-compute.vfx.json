@@ -1,0 +1,75 @@
+{
+  "version": 4,
+  "id": "as_vfx_comic_compute",
+  "name": "漫画 GPU 火花模拟",
+  "status": "accepted",
+  "effects": {
+    "gpu-sparks": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-compute-spark.svg",
+        "guid": "as_vfx_comic_compute_spark"
+      },
+      "frames": 3,
+      "duration": 1.5,
+      "size": [
+        0.16,
+        0.16
+      ],
+      "color": "#ffffff",
+      "blend": "additive",
+      "orientation": "camera",
+      "backend": "gpu",
+      "loop": false,
+      "emission": {
+        "rate": 600,
+        "maxParticles": 1024,
+        "speed": 3,
+        "spreadDeg": 80,
+        "acceleration": [
+          0,
+          -3,
+          0
+        ]
+      },
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.3
+        },
+        {
+          "t": 0.15,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0.1
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.7,
+          "value": 0.7
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#33b9ff"
+        }
+      ]
+    }
+  }
+}

@@ -58,7 +58,7 @@ it('VFX definitions, texture identities and weapon bindings resolve accepted res
   };
   for(const [path,data] of Object.entries(vfxModules)) {
     const errors=validateVfxAsset(data);failures.push(...errors.map(e=>`${path}: ${e}`));if(errors.length)continue;
-    const a=data as VfxAsset;if(a.version<3)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v3`);check(path,{path:path.slice(1),guid:a.id},'vfx');
+    const a=data as VfxAsset;if(a.version<4)console.info(`[VFX 兼容] ${path}：支持 v${a.version} 读取，编辑保存才升级 v4`);check(path,{path:path.slice(1),guid:a.id},'vfx');
     for(const e of Object.values(a.effects))check(path,e.texture,'texture');
   }
   for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components) {

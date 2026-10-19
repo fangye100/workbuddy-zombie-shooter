@@ -6,7 +6,7 @@ import { WeaponVfxPlanner } from '@aether/zombie-game/presentation/vfx-planner';
 import {ContinuousVfxPlanner} from '@aether/zombie-game/presentation/continuous-vfx-planner';
 import {EnemyVfxPlanner} from '@aether/zombie-game/presentation/enemy-vfx-planner';
 import type {SceneDocument,VfxBinding} from '@aether/scene';
-import {resolveVfxBindings} from '@aether/scene';
+import {resolveVfxBindings,cpuVfxCompatibility,VFX_VERSION} from '@aether/scene';
 import { CombatOverlay } from '@aether/zombie-game/presentation/combat-overlay';
 import { readVfxAsset, readVfxTexture } from './vfx-assets';
 
@@ -37,7 +37,8 @@ export class PlayVfx {
       void (async()=>{
         try {
           const asset=await readVfxAsset(ref);
-          if(asset.version<3 && generation===this.generation)this.diagnostics.push(`兼容读取 VFX v${asset.version}（磁盘未升级）：${ref.path}`);
+          if(asset.version<VFX_VERSION && generation===this.generation)this.diagnostics.push(`兼容读取 VFX v${asset.version}（磁盘未升级）：${ref.path}`);
+          for(const [key,e] of Object.entries(asset.effects))if(e.backend==='gpu'){asset.effects[key]=cpuVfxCompatibility(e);this.diagnostics.push(`${ref.path}/${key}: 游戏瞬态请求使用有界 CPU 兼容；compute 作者节点/预览可用`);}
           for(const kind of ['muzzle','trail','impact'] as const)if(asset.effects[weapon.presentation.vfx[kind]]?.kind!==kind)throw new Error(`VFX 缺少 ${weapon.id}/${kind}`);
           const unique=new Map(Object.values(asset.effects).map(e=>[e.texture.guid,e.texture]));
           for(const [key,texture] of unique){const bitmap=await readVfxTexture(texture);try{if(generation!==this.generation)return;pass.addTexture(key,bitmap);}finally{bitmap.close();}}
@@ -46,7 +47,7 @@ export class PlayVfx {
       })();
     }
   }
-  private async loadEnemy(tag:string,binding:VfxBinding,pass:VfxPass,generation:number){try{const asset=await readVfxAsset(binding.resource),effect=asset.effects[binding.effectKey];if(!effect)throw new Error(`VFX tag ${tag} 缺少 ${binding.effectKey}`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}if(generation===this.generation){this.enemy.bindings.set(tag,effect);this.continuous.bindings.set(tag,effect);}}catch(error){if(generation===this.generation)this.diagnostics.push(String(error));}}
+  private async loadEnemy(tag:string,binding:VfxBinding,pass:VfxPass,generation:number){try{const asset=await readVfxAsset(binding.resource),source=asset.effects[binding.effectKey],effect=source?.backend==='gpu'?cpuVfxCompatibility(source):source;if(source?.backend==='gpu' && generation===this.generation)this.diagnostics.push(`${tag}: 游戏事实使用有界CPU兼容（120/s、128粒子），compute限作者节点/预览`);if(!effect)throw new Error(`VFX tag ${tag} 缺少 ${binding.effectKey}`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}if(generation===this.generation){this.enemy.bindings.set(tag,effect);this.continuous.bindings.set(tag,effect);}}catch(error){if(generation===this.generation)this.diagnostics.push(String(error));}}
   update(session:PlaySession):void {if(!session.runtime || !this.pass)return;this.planner.update(session.runtime,p=>this.pass!.drawable(p));this.enemy.update(session.runtime,p=>this.pass!.drawable(p));this.continuous.update(session.runtime,this.enemy.frameEvents,p=>this.pass!.drawable(p));this.authored.update(Math.max(0,session.runtime.tick-1),session.runtime.fixedStep,session.runtime.runId);this.pass.instances=this.planner.pool.active;}
   stop():void {
     this.generation++;this.pass?.destroy();if(this.pass)this.lastReleased={...this.pass.stats};

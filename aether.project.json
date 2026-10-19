@@ -141,6 +141,12 @@
       "name": "M3 VFX · author",
       "path": "assets/scenes/sandbox/vfx-m3-author.scene.json",
       "order": 22
+    },
+    {
+      "id": "sc_vfx_m4_compute",
+      "path": "assets/scenes/sandbox/vfx-m4-compute.scene.json",
+      "enabled": true,
+      "name": "M4.1 VFX · GPU compute"
     }
   ],
   "startIndex": 1,
