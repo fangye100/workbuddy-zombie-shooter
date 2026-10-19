@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 3,
   "id": "as_vfx_comic_pistol",
-  "name": "漫画手枪 · 闪光 / 弹道 / 命中",
+  "name": "漫画枪械 · 墨线爆闪与速度弹迹",
   "status": "accepted",
   "effects": {
     "comic-muzzle": {
@@ -13,13 +13,278 @@
       "frames": 3,
       "duration": 0.12,
       "size": [
-        0.55,
-        0.55
+        0.98,
+        0.98
       ],
       "color": "#ffffff",
-      "blend": "alpha"
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
     },
     "comic-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.14,
+      "size": [
+        1,
+        0.13
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "comic-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.27,
+      "size": [
+        0.92,
+        0.92
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "pistol-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.12,
+      "size": [
+        0.98,
+        0.98
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "pistol-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.14,
+      "size": [
+        1,
+        0.13
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "pistol-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.27,
+      "size": [
+        0.92,
+        0.92
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "shotgun-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.15,
+      "size": [
+        1.5,
+        1.2
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "shotgun-trail": {
       "kind": "trail",
       "texture": {
         "path": "assets/vfx/comic-trail.svg",
@@ -29,25 +294,305 @@
       "duration": 0.1,
       "size": [
         1,
-        0.045
+        0.09
       ],
       "color": "#ffffff",
-      "blend": "alpha"
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
     },
-    "comic-impact": {
+    "shotgun-impact": {
       "kind": "impact",
       "texture": {
         "path": "assets/vfx/comic-impact.svg",
         "guid": "as_vfx_comic_impact"
       },
       "frames": 3,
-      "duration": 0.2,
+      "duration": 0.22,
       "size": [
-        0.48,
-        0.48
+        0.75,
+        0.75
       ],
       "color": "#ffffff",
-      "blend": "alpha"
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "smg-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.08,
+      "size": [
+        0.78,
+        0.78
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "smg-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.085,
+      "size": [
+        1,
+        0.095
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "smg-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.18,
+      "size": [
+        0.67,
+        0.67
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "sniper-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.16,
+      "size": [
+        1.35,
+        1.12
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "sniper-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.22,
+      "size": [
+        1,
+        0.21
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "sniper-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.34,
+      "size": [
+        1.32,
+        1.32
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
     }
   }
 }

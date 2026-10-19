@@ -11,10 +11,10 @@
         "guid": "as_vfx_comic_flame"
       },
       "frames": 3,
-      "duration": 0.5,
+      "duration": 0.46,
       "size": [
-        0.5,
-        0.65
+        0.85,
+        1.4
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -23,15 +23,19 @@
       "sizeCurve": [
         {
           "t": 0,
-          "value": 0.35
+          "value": 0.65
         },
         {
-          "t": 0.5,
-          "value": 1.2
+          "t": 0.2,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 0.95
         },
         {
           "t": 1,
-          "value": 0.8
+          "value": 0.25
         }
       ],
       "alphaCurve": [
@@ -41,32 +45,22 @@
         },
         {
           "t": 0.65,
-          "value": 0.8
+          "value": 1
         },
         {
           "t": 1,
           "value": 0
         }
       ],
-      "colorCurve": [
-        {
-          "t": 0,
-          "color": "#ffffff"
-        },
-        {
-          "t": 1,
-          "color": "#a8a4b5"
-        }
-      ],
       "emission": {
         "rate": 60,
-        "maxParticles": 64,
+        "maxParticles": 48,
         "speed": 9,
-        "spreadDeg": 40
+        "spreadDeg": 18
       },
       "backend": "cpu",
       "softParticle": {
-        "fadeDistance": 0.25,
+        "fadeDistance": 0.2,
         "bias": 0.005
       }
     },
@@ -79,8 +73,8 @@
       "frames": 3,
       "duration": 1.1,
       "size": [
-        0.6,
-        0.6
+        0.9,
+        0.95
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -97,42 +91,32 @@
         },
         {
           "t": 1,
-          "value": 0.8
+          "value": 1.45
         }
       ],
       "alphaCurve": [
         {
           "t": 0,
-          "value": 1
+          "value": 0.85
         },
         {
-          "t": 0.65,
-          "value": 0.8
+          "t": 0.6,
+          "value": 0.75
         },
         {
           "t": 1,
           "value": 0
         }
       ],
-      "colorCurve": [
-        {
-          "t": 0,
-          "color": "#ffffff"
-        },
-        {
-          "t": 1,
-          "color": "#a8a4b5"
-        }
-      ],
       "emission": {
-        "rate": 12,
-        "maxParticles": 64,
-        "speed": 0.9,
-        "spreadDeg": 0
+        "rate": 8,
+        "maxParticles": 16,
+        "speed": 1.1,
+        "spreadDeg": 12
       },
       "backend": "cpu",
       "softParticle": {
-        "fadeDistance": 0.25,
+        "fadeDistance": 0.2,
         "bias": 0.005
       }
     }

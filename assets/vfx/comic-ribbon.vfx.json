@@ -11,9 +11,9 @@
         "guid": "as_vfx_comic_ribbon_texture"
       },
       "frames": 1,
-      "duration": 1.8,
+      "duration": 1.15,
       "size": [
-        0.35,
+        0.72,
         1
       ],
       "color": "#ffffff",
@@ -25,7 +25,7 @@
         "maxPoints": 128,
         "minDistance": 0.025,
         "breakDistance": 2,
-        "uvMetersPerTile": 0.65
+        "uvMetersPerTile": 0.9
       },
       "sizeCurve": [
         {
@@ -33,12 +33,12 @@
           "value": 1
         },
         {
-          "t": 0.75,
+          "t": 0.6,
           "value": 0.8
         },
         {
           "t": 1,
-          "value": 0
+          "value": 0.12
         }
       ],
       "alphaCurve": [
@@ -47,8 +47,8 @@
           "value": 1
         },
         {
-          "t": 0.8,
-          "value": 0.8
+          "t": 0.65,
+          "value": 0.9
         },
         {
           "t": 1,
