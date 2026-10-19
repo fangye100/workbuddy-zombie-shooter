@@ -19,3 +19,10 @@ it('graph budgets and malformed JSON-shaped data fail without throwing or repair
  for(const change of [(a:any)=>a.graph.nodes.push(...Array.from({length:65},(_,i)=>({...a.graph.nodes[0],id:'n'+i}))),(a:any)=>a.graph.edges=Array(129).fill(a.graph.edges[0]),(a:any)=>a.graph.nodes[0].params.ref.guid='',(a:any)=>a.graph.nodes[1].params.value=[0,1],(a:any)=>a.graph.nodes[3].params.value=Infinity]){const a=graphFixture();change(a);expect(validateVfxGraphAsset(a).length).toBeGreaterThan(0);}
  const a=graphFixture(),ref=vfxGraphTextureRefs(a)[0];expect(ref).toEqual({path:'assets/vfx/smoke.svg',guid:'as_texture'});expect(a.graph.nodes[0]!.id).toBe('texture');
 });
+it('JSON inherited-property port names are unknown edges even in a complete otherwise valid DAG',()=>{
+ for(const port of ['constructor','toString','__proto__']){
+  const source=graphFixture();source.graph.edges.push({id:'inherited',from:{node:'texture',port},to:{node:'out',port}});
+  const json=JSON.parse(JSON.stringify(source));expect(validateVfxGraphAsset(json).some(e=>e.includes('inherited') && e.includes('未知节点/端口'))).toBe(true);
+  expect(json.graph.edges.at(-1).from.port).toBe(port);
+ }
+});

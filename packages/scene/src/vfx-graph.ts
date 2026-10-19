@@ -61,7 +61,8 @@ export function validateVfxGraph(value:unknown):string[] {
   if(!record(e) || !id(e.id) || !record(e.from) || !record(e.to) || typeof e.from.node!=='string' || typeof e.to.node!=='string' || typeof e.from.port!=='string' || typeof e.to.port!=='string'){errors.push('VFX图连线ID/端点非法');continue;}
   if(!exact(e,['id','from','to']) || !exact(e.from,['node','port']) || !exact(e.to,['node','port']))errors.push(`连线 ${e.id}: 非白名单字段`);
   if(edgeIds.has(e.id))errors.push(`连线ID重复 ${e.id}`);edgeIds.add(e.id);
-  const from=nodes.get(e.from.node),to=nodes.get(e.to.node),a=from && Object.hasOwn(VFX_GRAPH_NODES,from.type)?VFX_GRAPH_NODES[from.type].outputs[e.from.port]:undefined,b=to && Object.hasOwn(VFX_GRAPH_NODES,to.type)?VFX_GRAPH_NODES[to.type].inputs[e.to.port]:undefined;
+  const from=nodes.get(e.from.node),to=nodes.get(e.to.node),outputs=from && Object.hasOwn(VFX_GRAPH_NODES,from.type)?VFX_GRAPH_NODES[from.type].outputs:null,ports=to && Object.hasOwn(VFX_GRAPH_NODES,to.type)?VFX_GRAPH_NODES[to.type].inputs:null;
+  const a=outputs && Object.hasOwn(outputs,e.from.port)?outputs[e.from.port]:undefined,b=ports && Object.hasOwn(ports,e.to.port)?ports[e.to.port]:undefined;
   if(!a || !b){errors.push(`连线 ${e.id}: 未知节点/端口`);continue;}
   if(a!==b)errors.push(`连线 ${e.id}: 类型不匹配 ${a}→${b}`);
   const input=e.to.node+':'+e.to.port;if(inputs.has(input))errors.push(`节点 ${input}: 输入重复连接`);inputs.add(input);
