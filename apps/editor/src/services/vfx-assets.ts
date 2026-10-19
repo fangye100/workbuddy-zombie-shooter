@@ -2,21 +2,26 @@ import { VFX_GRAPH_VERSION,validateVfxAsset, validVfxRef, type AssetMeta, type A
 import { fileUrl, readProjectFile } from '../asset-util';
 import {compileVfxGraph} from '@aether/runtime';
 
-export async function readVfxAsset(ref:AssetRef,{allowGraph=true,onDiagnostic=(message:string)=>console.info(message)}:{allowGraph?:boolean;onDiagnostic?:(message:string)=>void}={}):Promise<VfxAsset> {
+/** Source admission is shared by disk playback and unsaved graph previews. No draft/hash comparison. */
+export async function readVfxAssetSource(ref:AssetRef):Promise<unknown> {
   if(!validVfxRef(ref) || !ref.path.endsWith('.vfx.json'))throw new Error('VFX 引用需要 .vfx.json 和 GUID');
   const [source,sidecar]=await Promise.all([readProjectFile(ref.path),readProjectFile(`${ref.path}.meta.json`)]);
   if(!source.ok || !sidecar.ok)throw new Error(`VFX 读取失败：${ref.path}`);
-  const errors=validateVfxAsset(source.json),meta=sidecar.json as AssetMeta;
+  const asset=source.json as Partial<VfxAsset>|null,meta=sidecar.json as AssetMeta|null;
+  if(asset?.id!==ref.guid || meta?.guid!==ref.guid || meta?.kind!=='vfx')throw new Error(`VFX GUID 不匹配：${ref.path}`);
+  if(asset.status!=='accepted' || meta.userData?.status==='quarantined')throw new Error(`VFX 资源被隔离：${ref.path}`);
+  return source.json;
+}
+export async function readVfxAsset(ref:AssetRef,{allowGraph=true,onDiagnostic=(message:string)=>console.info(message)}:{allowGraph?:boolean;onDiagnostic?:(message:string)=>void}={}):Promise<VfxAsset> {
+  const source=await readVfxAssetSource(ref),errors=validateVfxAsset(source);
   if(errors.length)throw new Error(errors.join('；'));
-  const raw=source.json as VfxAsset;
+  const raw=source as VfxAsset;
   let asset=raw;
   if(Object.hasOwn(raw,'graph')){
     if(!allowGraph)throw new Error('此资源的图是唯一真源，请使用“VFX · 可视节点图”编辑；禁止保存派生effects');
     const result=compileVfxGraph(raw);if(!result.asset)throw new Error(result.diagnostics.join('；'));asset=result.asset;
     const graph=(raw as unknown as VfxGraphAsset).graph;if(graph.version<VFX_GRAPH_VERSION)onDiagnostic(`VFX图兼容读取 v${graph.version}→${VFX_GRAPH_VERSION}，磁盘仅在保存时升级：${ref.path}`);
   }
-  if(asset.id!==ref.guid || meta.guid!==ref.guid || meta.kind!=='vfx')throw new Error(`VFX GUID 不匹配：${ref.path}`);
-  if(asset.status!=='accepted' || meta.userData?.status==='quarantined')throw new Error(`VFX 资源被隔离：${ref.path}`);
   return asset;
 }
 export async function readVfxTexture(ref:AssetRef):Promise<ImageBitmap> {

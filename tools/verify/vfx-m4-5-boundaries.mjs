@@ -14,6 +14,20 @@ async function parameter(c,node,label,value){await c.input('图选中节点',nod
 
 export async function verifyGraphFailures(c){
  const {cdp,out,evidence,check,button,input,graph,status,preview,steps,stopPreview,capture,network,assetCopy}=c;
+ const metaPath=assetCopy+'.meta.json',metaText=fs.readFileSync(metaPath,'utf8');
+ await parameter(c,'lifetime','节点数值','1');const draft=JSON.stringify((await graph()).source);
+ await cdp.eval(`(()=>{const d=window.__editor.renderer.core.device,s={device:d,buffer:d.createBuffer,texture:d.createTexture,buffers:0,textures:0};window.__graphAdmissionAlloc=s;d.createBuffer=function(...args){s.buffers++;return s.buffer.apply(this,args)};d.createTexture=function(...args){s.textures++;return s.texture.apply(this,args)};})()`);
+ try{
+  const meta=JSON.parse(metaText);meta.userData={...meta.userData,status:'quarantined'};fs.writeFileSync(metaPath,JSON.stringify(meta));await button('预览编译图');if(!await waitFor(async()=>(await status()).includes('被隔离')))throw new Error('源图sidecar隔离未拒绝');
+  evidence.sourceAdmission={rejected:await graph(),allocations:await cdp.eval('({buffers:window.__graphAdmissionAlloc.buffers,textures:window.__graphAdmissionAlloc.textures})')};
+  check('F-M45-01：已打开图sidecar隔离后Preview拒绝且零GPU分配',!evidence.sourceAdmission.rejected.preview.ready && !evidence.sourceAdmission.rejected.preview.gpu && evidence.sourceAdmission.allocations.buffers===0 && evidence.sourceAdmission.allocations.textures===0);
+  check('F-M45-01：隔离拒绝保留未保存图草稿',evidence.sourceAdmission.rejected.dirty && JSON.stringify(evidence.sourceAdmission.rejected.source)===draft);await capture('05-source-sidecar-quarantined');
+  fs.writeFileSync(metaPath,metaText);await preview();await steps(1);evidence.sourceAdmission.recovered=await graph();check('F-M45-01：sidecar恢复后不重开图即可真实GPU播放',evidence.sourceAdmission.recovered.preview.gpu.active>0);await stopPreview('admissionRecoveryStopped');await button('撤销图编辑');
+  network.holdSourceMeta=true;await button('预览编译图');if(!await waitFor(()=>Promise.resolve(network.pending.length>0)))throw new Error('未捕获源图metadata读取');await button('停止图预览');
+  const before=await cdp.eval('({buffers:window.__graphAdmissionAlloc.buffers,textures:window.__graphAdmissionAlloc.textures})'),released=await network.release();if(!await waitFor(()=>Promise.resolve(released.every(r=>r.networkId && network.finished.has(r.networkId)))))throw new Error('源图metadata响应未完成');await cdp.eval('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+  evidence.sourceAdmission.late={before,after:await cdp.eval('({buffers:window.__graphAdmissionAlloc.buffers,textures:window.__graphAdmissionAlloc.textures})'),preview:(await graph()).preview};
+  check('F-M45-01：源metadata迟到在Stop后不分配/复活GPU',JSON.stringify(before)===JSON.stringify(evidence.sourceAdmission.late.after) && !evidence.sourceAdmission.late.preview.gpu && !evidence.sourceAdmission.late.preview.ready);
+ }finally{fs.writeFileSync(metaPath,metaText);await network.release();await cdp.eval(`(()=>{const s=window.__graphAdmissionAlloc;s.device.createBuffer=s.buffer;s.device.createTexture=s.texture;delete window.__graphAdmissionAlloc;})()`);}
  await parameter(c,'texture_smoke','节点纹理GUID','as_missing_texture');await button('预览编译图');
  if(!await waitFor(async()=>(await status()).includes('贴图身份')))throw new Error('坏纹理诊断未出现 '+await status());
  evidence.badTexture=(await graph());check('坏纹理真实Preview诊断与分配释放',!evidence.badTexture.preview.ready && !evidence.badTexture.preview.gpu && evidence.badTexture.preview.lastReleased.destroyedBuffers===2);

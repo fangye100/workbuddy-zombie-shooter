@@ -1,7 +1,7 @@
-import {SceneGraph,cpuVfxCompatibility,type SceneDocument,type VfxAsset,type VfxEffectDefinition} from '@aether/scene';
+import {SceneGraph,cpuVfxCompatibility,type AssetRef,type SceneDocument,type VfxAsset,type VfxEffectDefinition} from '@aether/scene';
 import {VfxEmitters,VfxPool} from '@aether/runtime';
 import {VfxPass,type RendererCore} from '@aether/render';
-import {readVfxTexture} from './vfx-assets';
+import {readVfxAssetSource,readVfxTexture} from './vfx-assets';
 import {vfxAuthorAnchor} from './vfx-author-anchor';
 
 /** Preview owns its actual GPU allocations; Play uses the existing AuthoredVfx adapter. */
@@ -11,18 +11,22 @@ export class VfxGraphPreview {
  private effect:VfxEffectDefinition|null=null;private anchor:ReturnType<typeof vfxAuthorAnchor>|null=null;
  private seed=7;tick=0;paused=true;ready=false;diagnostic='';lastReleased:unknown=null;
  constructor(private readonly core:RendererCore){}
- async start(asset:VfxAsset,doc:SceneDocument,nodeId:string,key:string,paused:boolean){
+ async start(asset:VfxAsset,source:AssetRef,doc:SceneDocument,nodeId:string,key:string,paused:boolean){
   this.stop();this.diagnostic='';if(this.core.vfx)throw new Error('其他播放占用VFX Pass，请先停止');
   if(asset.status!=='accepted')throw new Error('隔离图资源不能预览');
+  if(asset.id!==source.guid)throw new Error('图预览源身份不匹配');
   const node=doc.nodes.find(n=>n.id===nodeId),component=node?.components.find(c=>c.kind==='VfxEmitter' && c.resource.guid===asset.id && c.effectKey===key);
   if(!node || component?.kind!=='VfxEmitter')throw new Error('请选择匹配图GUID/输出key的真实作者节点');
   const effect=asset.effects[key];if(!effect || effect.kind!=='sprite')throw new Error('图预览仅支持编译sprite输出');
-  const generation=++this.generation,pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
-  this.effect=structuredClone(effect);this.anchor=vfxAuthorAnchor(SceneGraph.fromDocument(doc),node.id,component);this.seed=component.seed;this.paused=paused;
+  const generation=++this.generation;
   try{
+   await readVfxAssetSource(source);if(generation!==this.generation)return;
+   if(this.core.vfx)throw new Error('其他播放占用VFX Pass，请先停止');
+   const pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
+   this.effect=structuredClone(effect);this.anchor=vfxAuthorAnchor(SceneGraph.fromDocument(doc),node.id,component);this.seed=component.seed;this.paused=paused;
    const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation || this.core.vfx!==pass)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}
    if(generation!==this.generation || this.core.vfx!==pass)return;this.ready=true;
-  }catch(error){if(generation===this.generation){this.diagnostic=String(error);this.stop();}throw error;}
+  }catch(error){if(generation!==this.generation)return;this.diagnostic=String(error);this.stop();throw error;}
  }
  update(dt:number,locked:boolean){if(this.pass && (locked || this.core.vfx!==this.pass)){this.stop();return;}if(!this.ready || this.paused)return;this.accumulator+=Math.min(dt,.25);while(this.accumulator>=1/30){this.accumulator-=1/30;this.advance();}}
  step(){if(this.ready){this.paused=true;this.advance();}}

@@ -24,12 +24,12 @@ const {server,url}=await ensureServer(5100,'apps/editor/vite.config.ts');if(serv
 const {chrome,cdp,ws}=await launchEditorSession({chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),cdpPort:port,headed:true,appUrl:url,windowSize:'1500,1000'});
 const send=cdp.send.bind(cdp);cdp.send=(method,params={})=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('CDP超时 '+method)),15000);send(method,params).then(r=>{clearTimeout(timer);resolve(r);},e=>{clearTimeout(timer);reject(e);});});
 const project=JSON.parse(fs.readFileSync('aether.project.json'));project.scenes.find(s=>s.id==='sc_vfx_m4_graph').path=fixture;project.scenes.push({id:empty.id,path:emptyFixture,name:empty.name,enabled:true});
-const network={holdTexture:false,graphProjection:false,pending:[],finished:new Set(),async release(){this.holdTexture=false;const requests=this.pending.splice(0);for(const r of requests)await cdp.send('Fetch.continueRequest',{requestId:r.requestId});return requests;}};
+const network={holdTexture:false,holdSourceMeta:false,graphProjection:false,pending:[],finished:new Set(),async release(){this.holdTexture=this.holdSourceMeta=false;const requests=this.pending.splice(0);for(const r of requests)await cdp.send('Fetch.continueRequest',{requestId:r.requestId});return requests;}};
 const events=[];ws.addEventListener('message',event=>{
  const m=JSON.parse(event.data);if(m.sessionId!==cdp.sessionId)return;
  if(m.method==='Fetch.requestPaused'){
   const p=m.params,requestPath=new URL(p.request.url).searchParams.get('path')??new URL(p.request.url).pathname;
-  if(network.holdTexture && requestPath.endsWith('/comic-smoke.svg'))network.pending.push({requestId:p.requestId,networkId:p.networkId,url:p.request.url});
+  if((network.holdTexture && requestPath.endsWith('/comic-smoke.svg')) || (network.holdSourceMeta && requestPath===assetCopy+'.meta.json'))network.pending.push({requestId:p.requestId,networkId:p.networkId,url:p.request.url});
   else {
    let body;
    if(requestPath==='aether.project.json')body=Buffer.from(JSON.stringify(project));
@@ -40,7 +40,7 @@ const events=[];ws.addEventListener('message',event=>{
  if(m.method==='Network.loadingFinished')network.finished.add(m.params.requestId);
  if(['Page.lifecycleEvent','Runtime.executionContextsCleared','Network.loadingFailed','Inspector.targetCrashed'].includes(m.method)){events.push({at:Date.now(),method:m.method,params:m.params});if(events.length>100)events.shift();}
 });
-await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*__fs/file?path=aether.project.json*',requestStage:'Request'},{urlPattern:'*comic-smoke.svg*',requestStage:'Request'},{urlPattern:'*comic-graph.vfx.json*',requestStage:'Request'}]});await cdp.send('Network.enable');await cdp.send('Page.setLifecycleEventsEnabled',{enabled:true});
+await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*__fs/file?path=aether.project.json*',requestStage:'Request'},{urlPattern:'*comic-smoke.svg*',requestStage:'Request'},{urlPattern:'*comic-graph.vfx.json*',requestStage:'Request'},{urlPattern:'*probe.vfx.json.meta.json*',requestStage:'Request'}]});await cdp.send('Network.enable');await cdp.send('Page.setLifecycleEventsEnabled',{enabled:true});
 const graphRoot='(document.querySelector("#vfx-graph-dialog[open]")??document.getElementById("vfx-graph-panel"))';
 const click=async selector=>{
  await cdp.send('Page.bringToFront');if(!await waitFor(()=>cdp.eval("document.visibilityState==='visible'"),{timeout:3000}))throw new Error('真实点击前测试页不可见 '+selector);
