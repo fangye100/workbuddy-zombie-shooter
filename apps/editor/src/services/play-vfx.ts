@@ -1,3 +1,5 @@
+import {RibbonHistory} from '@aether/runtime';
+import {RibbonVfxPlanner,RIBBON_VFX_SLOTS} from '@aether/zombie-game/presentation/ribbon-vfx-planner';
 import {AuthoredVfx} from './authored-vfx';
 import { VfxPass } from '@aether/render';
 import type { RendererCore } from '@aether/render';
@@ -15,7 +17,8 @@ export class PlayVfx {
   readonly planner=new WeaponVfxPlanner();
   readonly enemy=new EnemyVfxPlanner(this.planner.pool);
   readonly continuous=new ContinuousVfxPlanner(this.planner);
-  readonly authored=new AuthoredVfx(this.planner.pool);
+  readonly ribbonHistory=new RibbonHistory();readonly ribbon=new RibbonVfxPlanner(this.ribbonHistory);
+  readonly authored=new AuthoredVfx(this.planner.pool,this.ribbonHistory);
   readonly diagnostics:string[]=[];
   private generation=0;
   private pass:VfxPass|null=null;
@@ -29,7 +32,7 @@ export class PlayVfx {
     const pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;if(doc)this.authored.start(doc,pass);
     session.registerResource('vfx-gpu-buffers-and-textures',()=>{if(this.pass===pass)this.stop();else pass.destroy();});
     CombatOverlay.gpuWeaponReady=id=>this.continuous.renderedWeapons.has(id) || this.planner.ready.has(id) && !this.planner.fallbackWeapons.has(id);
-    CombatOverlay.gpuEnemyReady=id=>this.enemy.rendered.has(id) || this.continuous.renderedEnemies.has(id);
+    CombatOverlay.gpuEnemyReady=id=>this.enemy.rendered.has(id) || this.continuous.renderedEnemies.has(id) || this.ribbon.renderedEnemies.has(id);
     for(const [tag,binding] of Object.entries(bindings))void this.loadEnemy(tag,binding,pass,generation);
     for(const weapon of session.runtime.weapons.definitions){
       const ref=weapon.presentation.vfx.resource;if(!ref)continue;
@@ -47,11 +50,11 @@ export class PlayVfx {
       })();
     }
   }
-  private async loadEnemy(tag:string,binding:VfxBinding,pass:VfxPass,generation:number){try{const asset=await readVfxAsset(binding.resource),source=asset.effects[binding.effectKey],effect=source?.backend==='gpu'?cpuVfxCompatibility(source):source;if(source?.backend==='gpu' && generation===this.generation)this.diagnostics.push(`${tag}: 游戏事实使用有界CPU兼容（120/s、128粒子），compute限作者节点/预览`);if(!effect)throw new Error(`VFX tag ${tag} 缺少 ${binding.effectKey}`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}if(generation===this.generation){this.enemy.bindings.set(tag,effect);this.continuous.bindings.set(tag,effect);}}catch(error){if(generation===this.generation)this.diagnostics.push(String(error));}}
-  update(session:PlaySession):void {if(!session.runtime || !this.pass)return;this.planner.update(session.runtime,p=>this.pass!.drawable(p));this.enemy.update(session.runtime,p=>this.pass!.drawable(p));this.continuous.update(session.runtime,this.enemy.frameEvents,p=>this.pass!.drawable(p));this.pass.instances=this.planner.pool.active;this.authored.update(Math.max(0,session.runtime.tick-1),session.runtime.fixedStep,session.runtime.runId);this.pass.instances=this.planner.pool.active;}
+  private async loadEnemy(tag:string,binding:VfxBinding,pass:VfxPass,generation:number){try{const asset=await readVfxAsset(binding.resource),source=asset.effects[binding.effectKey],effect=source?.backend==='gpu'?cpuVfxCompatibility(source):source;if(source?.backend==='gpu' && generation===this.generation)this.diagnostics.push(`${tag}: 游戏事实使用有界CPU兼容（120/s、128粒子），compute限作者节点/预览`);if(!effect)throw new Error(`VFX tag ${tag} 缺少 ${binding.effectKey}`);const bitmap=await readVfxTexture(effect.texture);try{if(generation!==this.generation)return;pass.addTexture(effect.texture.guid,bitmap);}finally{bitmap.close();}if(generation===this.generation){if(effect.kind==='ribbon'){if(RIBBON_VFX_SLOTS.some(([key])=>key===tag))this.ribbon.bindings.set(tag,effect);else this.diagnostics.push(tag+': Ribbon不支持此游戏绑定标签，保留原表现');}else if(RIBBON_VFX_SLOTS.some(([key])=>key===tag))this.diagnostics.push(tag+': 需要Ribbon效果');else{this.enemy.bindings.set(tag,effect);this.continuous.bindings.set(tag,effect);}}}catch(error){if(generation===this.generation)this.diagnostics.push(String(error));}}
+  update(session:PlaySession):void {if(!session.runtime || !this.pass)return;this.planner.update(session.runtime,p=>this.pass!.drawable(p));this.enemy.update(session.runtime,p=>this.pass!.drawable(p));this.continuous.update(session.runtime,this.enemy.frameEvents,p=>this.pass!.drawable(p));this.ribbon.update(session.runtime,this.enemy.frameEvents,t=>this.pass!.ribbonDrawable(t));this.pass.ribbons=this.ribbonHistory.active;this.pass.instances=this.planner.pool.active;this.authored.update(Math.max(0,session.runtime.tick-1),session.runtime.fixedStep,session.runtime.runId);this.pass.instances=this.planner.pool.active;this.pass.ribbons=this.ribbonHistory.active;}
   stop():void {
     this.generation++;this.pass?.destroy();if(this.pass)this.lastReleased={...this.pass.stats};
-    if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.authored.clear();this.continuous.clear();this.enemy.clear();this.planner.clear();this.diagnostics.length=0;CombatOverlay.gpuWeaponReady=()=>false;CombatOverlay.gpuEnemyReady=()=>false;
+    if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.authored.clear();this.ribbon.clear();this.continuous.clear();this.enemy.clear();this.planner.clear();this.diagnostics.length=0;CombatOverlay.gpuWeaponReady=()=>false;CombatOverlay.gpuEnemyReady=()=>false;
   }
-  snapshot(){return {authored:this.authored.snapshot(),continuous:{ready:[...this.continuous.bindings.keys()],handles:this.continuous.emitters.activeHandles,stats:{...this.continuous.emitters.stats,...this.continuous.stats},events:[...this.continuous.recent],sourceFrames:[...this.continuous.recentFrames],instances:this.planner.pool.active.filter(p=>p.key.startsWith('emit:') || p.key.includes(':slash:') || p.key.includes(':enemy-melee:')).map(p=>({...p}))},ready:[...this.planner.ready.keys()],enemy:{ready:[...this.enemy.bindings.keys()],rendered:[...this.enemy.rendered],stats:{...this.enemy.stats},events:this.enemy.recentEvents.map(e=>({...e})),instances:this.planner.pool.active.filter(p=>p.key.startsWith('enemy:')).map(p=>({key:p.key,position:p.position,size:p.effect.size,age:p.age,lifetime:p.lifetime,normal:p.normal}))},pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},events:this.planner.recentEvents.map(e=>({...e})),gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
+  snapshot(){return {authored:this.authored.snapshot(),ribbon:{...this.ribbon.snapshot(),gpu:this.pass?.ribbon?{...this.pass.ribbon.stats}:null},continuous:{ready:[...this.continuous.bindings.keys()],handles:this.continuous.emitters.activeHandles,stats:{...this.continuous.emitters.stats,...this.continuous.stats},events:[...this.continuous.recent],sourceFrames:[...this.continuous.recentFrames],instances:this.planner.pool.active.filter(p=>p.key.startsWith('emit:') || p.key.includes(':slash:') || p.key.includes(':enemy-melee:')).map(p=>({...p}))},ready:[...this.planner.ready.keys()],enemy:{ready:[...this.enemy.bindings.keys()],rendered:[...this.enemy.rendered],stats:{...this.enemy.stats},events:this.enemy.recentEvents.map(e=>({...e})),instances:this.planner.pool.active.filter(p=>p.key.startsWith('enemy:')).map(p=>({key:p.key,position:p.position,size:p.effect.size,age:p.age,lifetime:p.lifetime,normal:p.normal}))},pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},events:this.planner.recentEvents.map(e=>({...e})),gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
 }

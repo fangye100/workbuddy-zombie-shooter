@@ -4,6 +4,8 @@ import type {VfxAnchor} from '@aether/runtime';
 import type {VfxEffectDefinition} from '@aether/scene';
 import {gpuVfxReason} from '@aether/scene';
 import {VfxGpuSimulation} from './vfx-simulation';
+import {VfxRibbonRenderer} from './vfx-ribbon';
+import type {RibbonTrail} from '@aether/runtime';
 
 const SHADER = /* wgsl */ `
 struct Frame { vp:mat4x4f };
@@ -41,11 +43,13 @@ export class VfxPass {
   private readonly textures=new Map<string,{texture:GPUTexture;group:GPUBindGroup;width:number;height:number}>();
   private disposed=false;
   gpu:VfxGpuSimulation|null=null;
+  ribbon:VfxRibbonRenderer|null=null;
+  ribbons:readonly RibbonTrail[]=[];
   gpuCompatibilityReason:string|null=null;
   /** Capability seam also permits explicitly labelled validation restrictions. */
   gpuSupport=()=>VfxGpuSimulation.capability(this.device);
   instances:readonly VfxInstance[]=[];
-  readonly stats={active:0,draws:0,uploadedBytes:0,buffers:2,textures:0,destroyedBuffers:0,destroyedTextures:0};
+  readonly stats={active:0,draws:0,uploadedBytes:0,ribbonPoints:0,ribbonSegments:0,ribbonDraws:0,buffers:2,textures:0,destroyedBuffers:0,destroyedTextures:0};
   constructor(private readonly device:GPUDevice,readonly capacity=256) {
     this.uniform=device.createBuffer({label:'vfx-frame',size:64,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
     this.buffer=device.createBuffer({label:'vfx-instances',size:capacity*80,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});
@@ -65,20 +69,25 @@ export class VfxPass {
     const group=this.device.createBindGroup({layout:this.alpha.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniform}},{binding:1,resource:{buffer:this.buffer}},{binding:2,resource:texture.createView()},{binding:3,resource:this.sampler}]});
     this.textures.set(key,{texture,group,width:bitmap.width,height:bitmap.height});this.stats.textures=this.textures.size;
   }
-  drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
+  drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && p.effect.kind!=='ribbon' && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
+  ribbonDrawable(t:RibbonTrail):boolean{return !this.disposed && this.textures.has(t.effect.texture.guid) && t.points.some((p,i)=>i>0 && !p.breakBefore);}
+  private alphaPresent(){return this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p)) || this.ribbons.some(t=>t.effect.blend==='alpha' && this.textures.has(t.effect.texture.guid) && t.points.some((p,i)=>i>0 && !p.breakBefore));}
+  private bufferCount(){return 2+(this.gpu?.stats.buffers??0)+(this.ribbon?.stats.buffers??0);}
   updateGpuEmitter(key:string,effect:VfxEffectDefinition,anchor:VfxAnchor,tick:number,step:number,seed:number,playing=true):string|null {
-    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect)??(this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p))?'同屏 CPU alpha 需要统一排序，GPU发射器使用有界 CPU 兼容':null);this.gpuCompatibilityReason=reason;if(reason){this.gpu?.release(key);this.stats.buffers=2+(this.gpu?.stats.buffers??0);return reason;}
+    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect)??(this.alphaPresent()?'同屏 CPU alpha（含Ribbon）需要统一排序，GPU发射器使用有界 CPU 兼容':null);this.gpuCompatibilityReason=reason;if(reason){this.gpu?.release(key);this.stats.buffers=this.bufferCount();return reason;}
     if(!this.textures.has(effect.texture.guid))return 'GPU模拟纹理未就绪';this.gpu??=new VfxGpuSimulation(this.device,key=>this.textures.get(key),this.sampler);
-    const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);if(result)this.gpu.release(key);this.stats.buffers=2+this.gpu.stats.buffers;return result;
+    const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);if(result)this.gpu.release(key);this.stats.buffers=this.bufferCount();return result;
   }
-  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){if(this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p))){this.gpuCompatibilityReason='同屏 CPU alpha 需要统一排序，GPU发射器使用有界 CPU 兼容';if(this.gpu)for(const key of this.gpu.snapshot().keys)this.gpu.release(key);this.stats.buffers=2+(this.gpu?.stats.buffers??0);this.gpu?.encode(encoder,color,aux,depth,vp,eye);return;}this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
+  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){if(this.alphaPresent()){this.gpuCompatibilityReason='同屏 CPU alpha（含Ribbon）需要统一排序，GPU发射器使用有界 CPU 兼容';if(this.gpu)for(const key of this.gpu.snapshot().keys)this.gpu.release(key);this.stats.buffers=this.bufferCount();this.gpu?.encode(encoder,color,aux,depth,vp,eye);return;}this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
   draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;
     if(this.disposed)return 0;
     // Far-to-near alpha. Preserve that order; batch only consecutive compatible items.
     const depthOf=(p:V3)=>view[2]!*p[0]!+view[6]!*p[1]!+view[10]!*p[2]!+view[14]!;
     const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(sampleVfxVisual(a).position)-depthOf(sampleVfxVisual(b).position));
-    if(!items.length){this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;}
+    if(this.ribbons.length)this.ribbon??=new VfxRibbonRenderer(this.device,this.uniform,key=>this.textures.get(key));
+    const segments=this.ribbon?.prepare(this.ribbons,eye,view)??[];this.stats.ribbonPoints=this.ribbon?.stats.points??0;this.stats.ribbonSegments=segments.length;this.stats.ribbonDraws=0;this.stats.buffers=this.bufferCount();
+    if(!items.length && !segments.length){this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;}
     const data=new Float32Array(items.length*20);
     for(let i=0;i<items.length;i++){
       const p=items[i]!,e=p.effect,o=i*20,visual=sampleVfxVisual(p);let position:V3=visual.position;
@@ -98,11 +107,13 @@ export class VfxPass {
     }
     this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);this.device.queue.writeBuffer(this.buffer,0,data);
     const pass=encoder.beginRenderPass({label:'vfx',colorAttachments:[{view:color,loadOp:'load',storeOp:'store'},{view:aux,loadOp:'load',storeOp:'store'}],depthStencilAttachment:{view:depth,depthLoadOp:'load',depthStoreOp:'store'}});
-    let i=0;
-    while(i<items.length){const first=items[i]!,key=first.effect.texture.guid,blend=first.effect.blend;let end=i+1;while(end<items.length && items[end]!.effect.texture.guid===key && items[end]!.effect.blend===blend)end++;
-      pass.setPipeline(blend==='additive'?this.additive:this.alpha);pass.setBindGroup(0,this.textures.get(key)!.group);pass.draw(6,end-i,0,i);this.stats.draws++;i=end;
+    const order=[...items.map((p,i)=>({kind:'sprite' as const,depth:depthOf(sampleVfxVisual(p).position),i,key:p.effect.texture.guid,blend:p.effect.blend})),...segments.map(s=>({kind:'ribbon' as const,depth:s.depth,segment:s,key:s.texture,blend:s.blend}))].sort((a,b)=>a.depth-b.depth);
+    for(let i=0;i<order.length;){const first=order[i]!;let end=i+1;
+      if(first.kind==='sprite'){while(end<order.length){const n=order[end]!,prev=order[end-1]!;if(n.kind!=='sprite' || prev.kind!=='sprite' || n.key!==first.key || n.blend!==first.blend || n.i!==prev.i+1)break;end++;}pass.setPipeline(first.blend==='additive'?this.additive:this.alpha);pass.setBindGroup(0,this.textures.get(first.key)!.group);pass.draw(6,end-i,0,first.i);}
+      else{let count=first.segment.indexCount;while(end<order.length){const n=order[end]!;if(n.kind!=='ribbon' || n.key!==first.key || n.blend!==first.blend || n.segment.firstIndex!==first.segment.firstIndex+count)break;count+=n.segment.indexCount;end++;}this.ribbon!.draw(pass,first.segment,count);}
+      this.stats.draws++;i=end;
     }
-    pass.end();this.stats.active=items.length;this.stats.uploadedBytes=data.byteLength+64;this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;
+    pass.end();this.stats.ribbonDraws=this.ribbon?.stats.draws??0;this.stats.active=items.length;this.stats.uploadedBytes=data.byteLength+64+(this.ribbon?.stats.uploadedBytes??0);this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;
   }
-  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;this.gpu?.destroy();this.stats.destroyedBuffers+=this.gpu?.stats.destroyedBuffers??0;for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=0;}
+  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;this.gpu?.destroy();this.ribbon?.destroy();this.stats.destroyedBuffers+=(this.gpu?.stats.destroyedBuffers??0)+(this.ribbon?.stats.destroyedBuffers??0);for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.ribbons=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=this.stats.ribbonPoints=this.stats.ribbonSegments=this.stats.ribbonDraws=0;}
 }

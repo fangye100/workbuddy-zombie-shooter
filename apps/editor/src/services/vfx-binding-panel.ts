@@ -1,3 +1,4 @@
+import {RIBBON_VFX_SLOTS} from '@aether/zombie-game/presentation/ribbon-vfx-planner';
 import type {SceneDocument,SceneNode,VfxAsset,VfxBindingsComponent} from '@aether/scene';
 import {resolveVfxBindings} from '@aether/scene';
 import type {EditResult} from '@aether/runtime';
@@ -15,7 +16,7 @@ export class VfxBindingPanel {
   this.root.id='vfx-binding-panel';this.root.open=true;const summary=document.createElement('summary');summary.textContent='场景 VFX · 通用标签绑定';this.root.append(summary);
   const hint=document.createElement('p');hint.textContent='半径与危险结束跟随模拟。资源时长只控制动画周期或装饰尾部；绑定不改变伤害。';this.form.append(hint);
   const field=(text:string,input:HTMLElement)=>{const label=document.createElement('label');label.textContent=text;input.setAttribute('aria-label',text);label.append(input);this.form.append(label);};
-  const list=document.createElement('datalist');list.id='vfx-binding-tags';for(const [tag,label] of [...ENEMY_VFX_SLOTS,...CONTINUOUS_VFX_SLOTS]){const o=document.createElement('option');o.value=tag;o.label=label;list.append(o);}this.root.append(list);this.tag.setAttribute('list',list.id);this.tag.value=ENEMY_VFX_SLOTS[0][0];
+  const list=document.createElement('datalist');list.id='vfx-binding-tags';for(const [tag,label] of [...ENEMY_VFX_SLOTS,...CONTINUOUS_VFX_SLOTS,...RIBBON_VFX_SLOTS]){const o=document.createElement('option');o.value=tag;o.label=label;list.append(o);}this.root.append(list);this.tag.setAttribute('list',list.id);this.tag.value=ENEMY_VFX_SLOTS[0][0];
   field('VFX 标签',this.tag);field('绑定资源',this.resource);field('效果 key',this.effect);
   const button=(text:string,action:()=>unknown)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.onclick=()=>void this.run(action);this.form.append(b);};
   button('读取绑定资源',()=>this.load());this.resource.onchange=()=>void this.run(()=>this.load());

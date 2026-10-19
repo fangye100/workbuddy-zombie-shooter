@@ -27,6 +27,7 @@ export class RibbonHistory {
   t.points.push({position:[...position] as [number,number,number],tick,age:Math.max(0,nowTick-tick)*step,distance:t.distance,breakBefore:t.gap || !last});t.gap=false;this.stats.appended++;return true;
  }
  stop(key:string){const t=this.trails.get(key);if(t?.playing){t.playing=false;this.stats.stopped++;}}
+ disconnect(key:string){const t=this.trails.get(key);if(t){t.gap=true;this.stats.breaks++;}}
  stopExcept(keys:ReadonlySet<string>){for(const key of this.trails.keys())if(!keys.has(key))this.stop(key);}
  clear(){this.trails.clear();this.tick=-1;for(const key of Object.keys(this.stats) as (keyof typeof this.stats)[])this.stats[key]=0;}
  snapshot(){return {points:this.pointCount,handles:this.trails.size,stats:{...this.stats},trails:this.active.map(t=>({key:t.key,epoch:t.epoch,playing:t.playing,points:t.points.map(p=>({...p,position:[...p.position]}))}))};}
@@ -37,3 +38,4 @@ export function sampleVfxMotion(motion:VfxMotion,seconds:number):{position:[numb
  for(let i=0;i<lengths.length;i++){const length=lengths[i]!;if(remaining<=length && length>1e-8){const a=motion.points[i]!,b=motion.points[i+1]!;return {position:a.map((v,k)=>v+(b[k]!-v)*remaining/length) as [number,number,number],cycle,finished:!motion.loop && seconds>=motion.seconds};}remaining-=length;}
  return {position:[...motion.points.at(-1)!],cycle,finished:!motion.loop && seconds>=motion.seconds};
 }
+export function sampleVfxMotionWorld(motion:VfxMotion,seconds:number,m:ArrayLike<number>){const sample=sampleVfxMotion(motion,seconds),p=sample.position;return {...sample,position:[m[0]!*p[0]+m[4]!*p[1]+m[8]!*p[2]+m[12]!,m[1]!*p[0]+m[5]!*p[1]+m[9]!*p[2]+m[13]!,m[2]!*p[0]+m[6]!*p[1]+m[10]!*p[2]+m[14]!] as [number,number,number]};}
