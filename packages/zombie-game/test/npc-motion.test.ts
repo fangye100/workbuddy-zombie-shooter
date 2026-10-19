@@ -3,6 +3,14 @@ import { NpcMotionPresentation } from '../src/presentation/npc-motion';
 import type { EntityView, CombatEvent } from '../src/session';
 const npc: EntityView = { id: 1, generation: 1, runId: 2, characterId: 'E-01', kind: 'npc', x: 3, z: 4, yaw: .5, alive: true, sourceNodeId: null, targetId: 0, behavior: 1, hp: 50, maxHp: 50, hitFlash: 0, lodTier: 0 };
 const event = (type: 'damage'|'kill', tick = 1): CombatEvent => ({ type, tick, runId: 2, generation: 1, slot: 1, characterId: 'E-01', amount: 20, hpAfter: type==='kill'?0:30, sourceSlot: 0, sourceGeneration: 1, x: 3, z: 4 });
+it('burn ticks preserve hit/death animation but do not refresh strong mesh flashes; direct hits on burning actors remain strong',()=>{
+ const p=new NpcMotionPresentation(),events:CombatEvent[]=[event('damage',1)];p.frames([npc],events,1,1/30,2);expect(p.impact(npc,1,1/30)).toBe(1);
+ for(let tick=2;tick<=8;tick++){events.push({...event('damage',tick),damageKind:'burn'});p.frames([npc],events,tick,1/30,2);}
+ expect(p.impact(npc,8,1/30)).toBe(0);expect(p.cue(npc,8,1/30)?.phase).toBe(0);
+ events.push(event('damage',9));p.frames([npc],events,9,1/30,2);expect(p.impact(npc,9,1/30)).toBe(1);p.frames([npc],events,9,1/30,2);expect(p.impact(npc,9,1/30)).toBe(1);
+ events.push({...event('kill',20),damageKind:'burn',defeated:npc});const dead=p.frames([],events,20,1/30,2)[0]!;expect(p.cue(dead,20,1/30)?.state).toBe('death');expect(p.impact(dead,20,1/30)).toBe(0);
+ p.frames([{...npc,generation:2}],events,21,1/30,2);expect(p.impact({...npc,generation:2},21,1/30)).toBe(0);p.clear();expect(p.impact(npc,9,1/30)).toBe(0);
+});
 it('受击只影响表现，攻击优先；死亡不复活实体，暂停不重播，代次与 Stop 隔离', () => {
  const p = new NpcMotionPresentation(); p.frames([npc], [], 0, 1/30, 2);
  p.frames([npc], [event('damage')], 1, 1/30, 2);

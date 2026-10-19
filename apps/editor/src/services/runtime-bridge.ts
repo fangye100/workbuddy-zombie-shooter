@@ -447,7 +447,8 @@ export class RuntimeBridge {
         // 与 selectedEntity 的判定保持一致，见 PR #3 review。
         const k = sel !== null && sel.runId === e.runId
           && sel.id === e.id && sel.generation === e.generation ? 1.9 : 1;
-        const flash = Math.min(1, Math.max(0, e.hitFlash / 0.15));
+        const pulse=this.npcMotion.impact(e,tick,fixedStep);
+        const flash = e.kind==='npc' && pulse===0 ? 0 : Math.min(1, Math.max(0, e.hitFlash / 0.15));
         inst[o + 8] = base[0] * k * (1 - flash) + flash;
         inst[o + 9] = base[1] * k * (1 - flash) + flash * 0.82;
         inst[o + 10] = base[2] * k * (1 - flash) + flash * 0.55;
@@ -457,7 +458,7 @@ export class RuntimeBridge {
         let poseIdx = 0;
         let frameCount = 0;
         let phase01 = 0;
-        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = Math.max(flash,this.npcMotion.impact(e,tick,fixedStep));
+        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = e.kind==='npc'?pulse:flash;
         inst[o + 19] = e.alive && burning.has(`${e.id}:${e.generation}`) ? tick*fixedStep+1 : 0;
         if (actor !== null) {
           // Anchored actors can acquire a chase target while their authored speed

@@ -5,7 +5,7 @@ export type WeaponPoint=[number,number,number];
 export interface WeaponActor { id:number;generation:number;x:number;y?:number;height?:number;z:number;radius:number;hp:number }
 export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; surface?:SolidContact; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
 export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'|'impact'|'projectile'|'projectile-end'; readonly effectId?:number; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
-export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number}
+export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number;readonly damageKind?:'burn'}
 export interface WeaponWorld {
   actors():WeaponActor[]; actor(id:number):WeaponActor|null;
   trace(from:WeaponPoint,direction:WeaponPoint,range:number,ignore:ReadonlySet<number>,radius?:number):WeaponHit;
@@ -155,7 +155,7 @@ export class WeaponCombat {
     for(const [id,s] of this.statuses){
       const a=world.actor(id);if(!a || a.generation!==s.generation || a.hp<=0){this.statuses.delete(id);continue;}
       const burnDt=Math.max(0,Math.min(dt,s.until-(this.now-dt)));
-      if(burnDt>0 && s.damage>0)world.damage(id,s.damage*burnDt,{weaponId:s.weaponId});
+      if(burnDt>0 && s.damage>0)world.damage(id,s.damage*burnDt,{weaponId:s.weaponId,damageKind:'burn'});
       if(Math.max(s.until,s.slowUntil)<=this.now)this.statuses.delete(id);
     }
   }

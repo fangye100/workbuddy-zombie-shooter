@@ -1,6 +1,6 @@
 import type { RuntimeSession, CombatEvent } from '@aether/zombie-game';
 import { NPC_STATS } from '@aether/content';
-import { drawImpactInk, visibleImpacts } from './combat-ink';
+import { drawImpactInk, visibleImpacts, damageBurstVisible } from './combat-ink';
 import { gameText as g } from './game-language';
 import { drawEnemyAttack, drawAttackCue,drawEnemyDanger } from './enemy-attack-ink';
 import { drawHeldWeapon, drawWeaponEffect } from './weapon-ink';
@@ -80,7 +80,7 @@ export class CombatOverlay {
     for (const e of visibleImpacts(runtime.combatEvents,runtime.runId,runtime.tick,runtime.fixedStep)) {
       const age = (runtime.tick - e.tick) * runtime.fixedStep;
       const p = point([e.x!, (e.y??0)+1.2, e.z!]); if (p.behind) continue;
-      drawImpactInk(c,p.x,p.y,age,e.amount,e.type === 'kill',e.slot === runtime.playerEntityId,e.slot + e.generation + e.tick,!CombatOverlay.gpuImpactReady(e));
+      drawImpactInk(c,p.x,p.y,age,e.amount,e.type === 'kill',e.slot === runtime.playerEntityId,e.slot + e.generation + e.tick,damageBurstVisible(e,CombatOverlay.gpuImpactReady(e)));
     }
   }
 }

@@ -5,6 +5,8 @@ const INK = '#14110f';
 const PAPER = '#fff6e2';
 const GOLD = '#ffc531';
 export const IMPACT_SECONDS = 0.7;
+/** Burn numbers remain visible even when its surface feedback has no particle resource. */
+export const damageBurstVisible=(event:CombatEvent,gpuReady:boolean)=>event.damageKind!=='burn' && !gpuReady;
 
 /** Keep event positions after despawn; never resolve recycled entity slots to draw a hit. */
 export function visibleImpacts(events: readonly CombatEvent[], runId: number, tick: number, step: number) {

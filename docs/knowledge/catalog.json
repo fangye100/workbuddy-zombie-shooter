@@ -16,7 +16,7 @@
         "campaign",
         "gpu"
       ],
-      "read": "三层原生试玩；R4七武器/NPC受击/流动燃烧与独立验收边界；R1–R3历史证据、酸液/爆尸路线和预算限制",
+      "read": "三层原生试玩；R4七武器/NPC受击/流动燃烧与独立验收边界、F01持续burn与强命中分离；R1–R3历史证据、酸液/爆尸路线和预算限制",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",

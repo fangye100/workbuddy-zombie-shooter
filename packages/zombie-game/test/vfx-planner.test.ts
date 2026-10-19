@@ -4,6 +4,14 @@ import { WeaponVfxPlanner,weaponMarkerWorld } from '../src/presentation/vfx-plan
 import type { SceneDocument,VfxAsset } from '@aether/scene';
 const modules=import.meta.glob('../../../assets/scenes/act1/floor-1.scene.json',{eager:true,import:'default'});
 const assets=import.meta.glob('../../../assets/vfx/comic-pistol.vfx.json',{eager:true,import:'default'});
+it('burn damage keeps authoritative damage/numbers without repeated bursts, while direct and unmarked hits retain drawable fallback',()=>{
+ const r=new RuntimeSession({desc:loadLevelRuntime(structuredClone(Object.values(modules)[0]) as SceneDocument).desc!,seed:1}),p=new WeaponVfxPlanner(),target=r.view().find(e=>e.kind==='npc')!;
+ p.damageEffect=(Object.values(assets)[0] as VfxAsset).effects['npc-hit']!;
+ for(let i=0;i<6;i++)r.applyDamage(target.id,.2,r.playerEntityId,{weaponId:'flame',damageKind:'burn'});p.update(r);
+ expect(r.combatEvents).toHaveLength(6);expect(r.combatEvents.every(e=>e.damageKind==='burn' && e.amount===.2)).toBe(true);expect(p.pool.active).toHaveLength(0);expect(p.damageStats.spawned).toBe(0);expect(p.impactReady(r.combatEvents[0]!,()=>true)).toBe(false);
+ r.applyDamage(target.id,1,r.playerEntityId,{weaponId:'pistol'});p.update(r);const direct=r.combatEvents.at(-1)!;expect(p.impactReady(direct,()=>true)).toBe(true);expect(p.impactReady(direct,()=>false)).toBe(false);
+ p.clear();p.damageEffect=(Object.values(assets)[0] as VfxAsset).effects['npc-hit']!;p.update(r,()=>false);expect(p.damageStats.fallback).toBeGreaterThan(0);expect(p.impactReady(direct,()=>true)).toBe(false);
+});
 it('consumes all catchup ticks once, freezes paused TTL, restarts identity and shares visible marker coordinates',()=>{
   const doc=structuredClone(Object.values(modules)[0]) as SceneDocument;
   const session=new RuntimeSession({desc:loadLevelRuntime(doc).desc!,seed:1});

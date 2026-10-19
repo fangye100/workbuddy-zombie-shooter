@@ -7,8 +7,9 @@ export class NpcMotionPresentation {
   private cursor = 0;
   private previous = new Map<string, EntityView>();
   private hits = new Map<string, { tick: number; variant: string }>();
+  private impacts = new Map<string, {tick:number}>();
   private deaths = new Map<string, { tick: number; entity: EntityView }>();
-  clear(): void { this.run = -1; this.cursor = 0; this.previous.clear(); this.hits.clear(); this.deaths.clear(); }
+  clear(): void { this.run = -1; this.cursor = 0; this.previous.clear(); this.hits.clear(); this.impacts.clear(); this.deaths.clear(); }
   frames(live: readonly EntityView[], events: readonly CombatEvent[], tick: number, step: number, run: number): EntityView[] {
     if (run !== this.run || events.length < this.cursor) { this.clear(); this.run = run; }
     const current = new Map(live.filter(e => e.kind === 'npc').map(e => [identity(e), e]));
@@ -19,6 +20,7 @@ export class NpcMotionPresentation {
       const entity = ev.defeated ?? current.get(key) ?? this.previous.get(key);
       // A player damage event or an unobserved target cannot create a corpse.
       if (!entity || entity.kind !== 'npc' || entity.runId !== ev.runId || entity.id !== ev.slot || entity.generation !== ev.generation) continue;
+      if(ev.damageKind!=='burn')this.impacts.set(key,{tick:ev.tick});
       if (ev.type === 'damage') this.hits.set(key, { tick: ev.tick, variant: (ev.slot + ev.tick) % 2 ? 'hit_b' : 'hit' });
       else {
         this.hits.delete(key);
@@ -28,6 +30,7 @@ export class NpcMotionPresentation {
     }
     for (const [key, hit] of this.hits) if (!current.has(key) || (tick - hit.tick) * step >= .3) this.hits.delete(key);
     for (const [key, dead] of this.deaths) if ((tick - dead.tick) * step >= 3.3) this.deaths.delete(key);
+    for (const [key, hit] of this.impacts) if ((!current.has(key) && !this.deaths.has(key)) || (tick-hit.tick)*step>=.18) this.impacts.delete(key);
     this.previous = current;
     return [...live, ...[...this.deaths.values()].map(d => d.entity)];
   }
@@ -43,7 +46,7 @@ export class NpcMotionPresentation {
   }
   /** Mesh flash includes the first corpse frame without interrupting its death clip. */
   impact(entity:EntityView,tick:number,step:number):number {
-    const key=identity(entity),hit=this.hits.get(key)??this.deaths.get(key);
+    const key=identity(entity),hit=this.impacts.get(key);
     return hit?Math.max(0,1-(tick-hit.tick)*step/.18):0;
   }
 }

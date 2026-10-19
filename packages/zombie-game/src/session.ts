@@ -158,6 +158,8 @@ export interface SpawnRejection {
 export interface CombatEvent {
   readonly weaponId?:string;
   readonly weaponEvent?:number;
+  /** Read-only presentation source; unmarked events retain normal impact feedback. */
+  readonly damageKind?:'burn';
   /** 击杀前的 NPC 只读快照，供表现尾部消费；不代表仍存活的模拟实体。 */
   readonly defeated?: EntityView;
   readonly x?: number;
@@ -701,7 +703,7 @@ export class RuntimeSession {
     this.combatEventBuf.push({
       ...(died && this.kindOf[targetSlot] === 1 ? { defeated: this.viewAt(targetSlot) } : {}),
       type: died ? 'kill' : 'damage',
-      ...(weapon?{weaponId:weapon.weaponId,...(weapon.vfxSequence===undefined?{}:{weaponEvent:weapon.vfxSequence})}:{}),
+      ...(weapon?{weaponId:weapon.weaponId,...(weapon.vfxSequence===undefined?{}:{weaponEvent:weapon.vfxSequence}),...(weapon.damageKind?{damageKind:weapon.damageKind}:{})}:{}),
       tick: this.tickCount,
       slot: targetSlot,
       generation: this.tbl.generation[targetSlot]!,
@@ -1506,7 +1508,7 @@ export class RuntimeSession {
         const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p,facts);
         t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));
         const blast=this.progress?.strength('blast')??0;
-        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)>blast || blocked([a.x,a.y+1,a.z],[b.x,b.y+1,b.z]))continue;this.applyDamage(i,damage/2,p,facts?{weaponId:facts.weaponId}:undefined);}
+        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)>blast || blocked([a.x,a.y+1,a.z],[b.x,b.y+1,b.z]))continue;this.applyDamage(i,damage/2,p,facts?{weaponId:facts.weaponId,...(facts.damageKind?{damageKind:facts.damageKind}:{})}:undefined);}
         return dealt;
       },
       displace:(id,from,distance)=>{

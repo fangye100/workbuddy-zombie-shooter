@@ -97,9 +97,11 @@ describe('concrete ballistics and damage effects',()=>{
   });
   it('flame applies finite DoT, respects walls and does not transfer statuses to reused slots',()=>{
     const f=fixture([3,5]),c=new WeaponCombat(7);f.wall(4);
+    const damage=f.world.damage,facts:Parameters<WeaponWorld['damage']>[2][]=[];f.world.damage=(id,n,source)=>{facts.push(source);return damage(id,n,source);};
     c.fire(definition('flame'),[0,1,0],[1,0,0],3,0,f.world);
     for(let t=1;t<=60;t++)c.step(t,1/30,f.world);
     expect(f.actors[0]!.hp).toBeCloseTo(485,5);expect(f.actors[1]!.hp).toBe(500);expect(c.burning).toHaveLength(0);
+    expect(facts[0]).toMatchObject({weaponId:'flame',vfxSequence:expect.any(Number)});expect(facts[0]!.damageKind).toBeUndefined();expect(facts.slice(1).every(s=>s?.damageKind==='burn' && s.vfxSequence===undefined)).toBe(true);
     c.fire(definition('flame'),[0,1,0],[1,0,0],3,61,f.world);f.actors[0]!.generation=2;const hp=f.actors[0]!.hp;
     c.step(62,1/30,f.world);expect(f.actors[0]!.hp).toBe(hp);
   });

@@ -52,12 +52,12 @@ export class WeaponVfxPlanner {
     // Flash is attached to the same currently drawn marker while its TTL is alive.
     for(const p of this.pool.active)if(p.effect.kind==='muzzle')p.position=weaponMarkerWorld(runtime,'muzzle');
     // All damage sources use the existing authoritative buffer. Per-weapon contacts above
-    // retain their authored impact; burn/environment/secondary damage get the shared burst.
+    // retain their authored impact; burn ticks use the existing surface/smoke, not bursts.
     if(runtime.combatEvents.length<this.combatCursor)this.combatCursor=0;
     for(const [id,h] of this.damageHandles)if(!this.pool.active.some(p=>p.key===h.key))this.damageHandles.delete(id);
     for(;this.combatCursor<runtime.combatEvents.length;this.combatCursor++){
       const event=runtime.combatEvents[this.combatCursor]!;
-      if(event.runId!==this.run || event.slot===runtime.playerEntityId || this.impactReady(event,canDraw))continue;
+      if(event.runId!==this.run || event.slot===runtime.playerEntityId || event.damageKind==='burn' || this.impactReady(event,canDraw))continue;
       const effect=this.damageEffect,age=Math.max(0,runtime.tick-event.tick)*runtime.fixedStep;
       if(!effect || age>=effect.duration || event.x===undefined || event.z===undefined)continue;
       const identity=`${event.runId}:${event.slot}:${event.generation}`,previous=this.damageHandles.get(identity);
