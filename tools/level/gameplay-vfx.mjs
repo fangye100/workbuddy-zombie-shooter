@@ -3,6 +3,8 @@ const ref = (name, guid) => ({ path: `assets/vfx/${name}.vfx.json`, guid: `as_vf
 const pistol = ref('comic-pistol', 'comic_pistol');
 const enemies = ref('comic-enemies', 'comic_enemies');
 const motion = ref('comic-motion', 'comic_motion');
+const soft = ref('comic-gameplay-soft', 'comic_gameplay_soft');
+const ribbon = ref('comic-ribbon', 'comic_ribbon');
 const binding = (resource, effectKey) => ({ resource: structuredClone(resource), effectKey });
 
 export function applyGameplayVfx(doc) {
@@ -22,9 +24,12 @@ export function applyGameplayVfx(doc) {
   for (const [tag, key] of Object.entries({
     'weapon.flame': 'flame', 'actor.smoke': 'smoke', 'combat.spark': 'sparks', 'enemy.charge.trail': 'charge-dust', 'combat.melee': 'melee-arc',
   })) bindings[tag] = binding(motion, key);
+  bindings['weapon.flame'] = binding(soft, 'flame');
+  bindings['actor.smoke'] = binding(soft, 'smoke');
+  bindings['enemy.charge.ribbon'] = binding(ribbon, 'motion-ribbon');
   let component = rulesNode.components.find(c => c.kind === 'VfxBindings');
   if (!component) { component = { kind: 'VfxBindings', enabled: true, bindings: {} }; rulesNode.components.push(component); }
   Object.assign(component.bindings, bindings);
-  doc.dependencies = [...new Set([...doc.dependencies, pistol.path, enemies.path, motion.path])];
+  doc.dependencies = [...new Set([...doc.dependencies, pistol.path, enemies.path, motion.path, soft.path, ribbon.path])];
   return doc;
 }

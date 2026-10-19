@@ -115,7 +115,9 @@
     "assets/art/textures/SKY-01/SKY-01.png",
     "assets/vfx/comic-pistol.vfx.json",
     "assets/vfx/comic-enemies.vfx.json",
-    "assets/vfx/comic-motion.vfx.json"
+    "assets/vfx/comic-motion.vfx.json",
+    "assets/vfx/comic-gameplay-soft.vfx.json",
+    "assets/vfx/comic-ribbon.vfx.json"
   ],
   "nodes": [
     {
@@ -1744,15 +1746,15 @@
             },
             "weapon.flame": {
               "resource": {
-                "path": "assets/vfx/comic-motion.vfx.json",
-                "guid": "as_vfx_comic_motion"
+                "path": "assets/vfx/comic-gameplay-soft.vfx.json",
+                "guid": "as_vfx_comic_gameplay_soft"
               },
               "effectKey": "flame"
             },
             "actor.smoke": {
               "resource": {
-                "path": "assets/vfx/comic-motion.vfx.json",
-                "guid": "as_vfx_comic_motion"
+                "path": "assets/vfx/comic-gameplay-soft.vfx.json",
+                "guid": "as_vfx_comic_gameplay_soft"
               },
               "effectKey": "smoke"
             },
@@ -1776,6 +1778,13 @@
                 "guid": "as_vfx_comic_motion"
               },
               "effectKey": "melee-arc"
+            },
+            "enemy.charge.ribbon": {
+              "resource": {
+                "path": "assets/vfx/comic-ribbon.vfx.json",
+                "guid": "as_vfx_comic_ribbon"
+              },
+              "effectKey": "motion-ribbon"
             }
           }
         }
