@@ -15,7 +15,7 @@ describe('integration of independently published v14 scene contracts',()=>{
     mesh.bodyIk={enabled:true,weight:.7,locomotionWhileAiming:true,controls:[newBodyIkControl('head')]};
     if(mesh.sharedMotion)mesh.sharedMotion.transitionSec=.6;
     const before=structuredClone(doc),result=migrateToLatest(doc);
-    expect(result.applied).toEqual(['integrated-weapons-audio-body-ik','support-generic-vfx-bindings','support-authored-vfx-emitters','support-authored-vfx-motion']);expect(result.to).toBe(SCHEMA_VERSION);
+    expect(result.applied).toEqual(['integrated-weapons-audio-body-ik','support-generic-vfx-bindings','support-authored-vfx-emitters','support-authored-vfx-motion','support-projected-vfx-decals']);expect(result.to).toBe(SCHEMA_VERSION);
     expect(doc).toEqual(before);
     const migratedRules=result.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules') as RunRulesComponent;
     expect(migratedRules.arsenal.definitions).toHaveLength(1);
