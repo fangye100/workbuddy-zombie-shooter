@@ -9,6 +9,7 @@ export class RibbonHistory {
  readonly stats={appended:0,degenerate:0,skipped:0,breaks:0,clipped:0,expired:0,pointOverflow:0,handleOverflow:0,started:0,stopped:0,restarted:0};
  constructor(readonly handleCapacity=RIBBON_HANDLES,readonly pointCapacity=RIBBON_POINTS){}
  get active():readonly RibbonTrail[]{return [...this.trails.values()].filter(t=>t.points.length>1);}
+ get keys():readonly string[]{return [...this.trails.keys()];}
  get pointCount(){return [...this.trails.values()].reduce((n,t)=>n+t.points.length,0);}
  advance(tick:number,step:number){if(!Number.isInteger(tick) || tick<this.tick || !Number.isFinite(step) || step<=0)throw new Error('Ribbon clock');this.tick=tick;
   for(const t of this.trails.values()){for(const p of t.points)p.age=Math.max(0,tick-p.tick)*step;const before=t.points.length;t.points=t.points.filter(p=>p.age+1e-9<t.effect.duration);this.stats.expired+=before-t.points.length;if(t.points[0])t.points[0].breakBefore=true;}
@@ -20,14 +21,14 @@ export class RibbonHistory {
   if(!t.playing){if(t.epoch)this.stats.restarted++;this.stats.started++;t.epoch=++this.epoch;t.effect=structuredClone(effect);t.points=[];t.distance=0;t.gap=true;t.lastTick=-1;t.playing=true;}
   t.lastTick=tick;if((nowTick-tick)*step+1e-9>=effect.duration)return true;const config=effect.ribbon,last=t.points.at(-1),distance=last?Math.hypot(...position.map((v,i)=>v-last.position[i]!)):0;
   if(last && distance<config.minDistance){if(distance<1e-8)this.stats.degenerate++;else this.stats.skipped++;return true;}
-  if(last && distance>config.breakDistance){t.gap=true;this.stats.breaks++;}
+  if(last && distance>config.breakDistance && !t.gap){t.gap=true;this.stats.breaks++;}
   if(t.points.length>=config.maxPoints){t.points.shift();this.stats.clipped++;}
   if(this.pointCount>=this.pointCapacity){t.gap=true;this.stats.pointOverflow++;return false;}
   if(t.gap)t.distance=0;else t.distance+=distance;
   t.points.push({position:[...position] as [number,number,number],tick,age:Math.max(0,nowTick-tick)*step,distance:t.distance,breakBefore:t.gap || !last});t.gap=false;this.stats.appended++;return true;
  }
  stop(key:string){const t=this.trails.get(key);if(t?.playing){t.playing=false;this.stats.stopped++;}}
- disconnect(key:string){const t=this.trails.get(key);if(t){t.gap=true;this.stats.breaks++;}}
+ disconnect(key:string){const t=this.trails.get(key);if(t && !t.gap){t.gap=true;this.stats.breaks++;}}
  stopExcept(keys:ReadonlySet<string>){for(const key of this.trails.keys())if(!keys.has(key))this.stop(key);}
  clear(){this.trails.clear();this.tick=-1;for(const key of Object.keys(this.stats) as (keyof typeof this.stats)[])this.stats[key]=0;}
  snapshot(){return {points:this.pointCount,handles:this.trails.size,stats:{...this.stats},trails:this.active.map(t=>({key:t.key,epoch:t.epoch,playing:t.playing,points:t.points.map(p=>({...p,position:[...p.position]}))}))};}
