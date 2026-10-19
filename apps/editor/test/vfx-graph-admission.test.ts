@@ -29,3 +29,9 @@ it('Stop during source metadata await cannot allocate or replace a newer preview
  await preview.start(asset,ref,doc(),'author','smoke',true);const current=core.vfx;resume({ok:true,json:structuredClone(meta),status:200,error:null});await old;
  expect(allocations.created).toBe(1);expect(core.vfx).toBe(current);expect(preview.ready).toBe(true);preview.stop();expect(allocations.destroyed).toBe(1);
 });
+it('project-file preview working copies share admission without relaxing persisted asset references or legacy playback',async()=>{
+ const core={vfx:null,device:{}},preview=new VfxGraphPreview(core as any),asset=new VfxGraphDocument(ref.path,source).compilation.asset!,working={...ref,path:'.workbuddy/tmp/test/graph.vfx.json'};
+ await preview.start(asset,working,doc(),'author','smoke',true);expect(preview.ready).toBe(true);preview.stop();await expect(readVfxAsset(working)).rejects.toThrow('引用');
+ source={version:1,id:ref.guid,name:'legacy',status:'accepted',effects:{smoke:{kind:'impact',texture:{path:'assets/vfx/smoke.svg',guid:'as_texture'},frames:1,duration:.2,size:[.4,.4],color:'#ffffff',blend:'alpha'}}} as any;
+ expect((await readVfxAsset(ref)).effects.smoke!.kind).toBe('impact');meta.userData.status='quarantined';await expect(readVfxAsset(ref)).rejects.toThrow('隔离');
+});

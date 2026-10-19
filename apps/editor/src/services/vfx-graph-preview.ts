@@ -20,7 +20,7 @@ export class VfxGraphPreview {
   const effect=asset.effects[key];if(!effect || effect.kind!=='sprite')throw new Error('图预览仅支持编译sprite输出');
   const generation=++this.generation;
   try{
-   await readVfxAssetSource(source);if(generation!==this.generation)return;
+   await readVfxAssetSource(source.path,source.guid);if(generation!==this.generation)return;
    if(this.core.vfx)throw new Error('其他播放占用VFX Pass，请先停止');
    const pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;
    this.effect=structuredClone(effect);this.anchor=vfxAuthorAnchor(SceneGraph.fromDocument(doc),node.id,component);this.seed=component.seed;this.paused=paused;

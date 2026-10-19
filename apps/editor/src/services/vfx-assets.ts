@@ -3,17 +3,19 @@ import { fileUrl, readProjectFile } from '../asset-util';
 import {compileVfxGraph} from '@aether/runtime';
 
 /** Source admission is shared by disk playback and unsaved graph previews. No draft/hash comparison. */
-export async function readVfxAssetSource(ref:AssetRef):Promise<unknown> {
-  if(!validVfxRef(ref) || !ref.path.endsWith('.vfx.json'))throw new Error('VFX 引用需要 .vfx.json 和 GUID');
-  const [source,sidecar]=await Promise.all([readProjectFile(ref.path),readProjectFile(`${ref.path}.meta.json`)]);
-  if(!source.ok || !sidecar.ok)throw new Error(`VFX 读取失败：${ref.path}`);
+export async function readVfxAssetSource(path:string,guid:string):Promise<unknown> {
+  // Editor working-copy paths use the existing project-file reader boundary; stored refs remain assets/**.
+  if(typeof path!=='string' || !path.endsWith('.vfx.json') || typeof guid!=='string' || !guid)throw new Error('VFX 源文件需要 .vfx.json 和 GUID');
+  const [source,sidecar]=await Promise.all([readProjectFile(path),readProjectFile(`${path}.meta.json`)]);
+  if(!source.ok || !sidecar.ok)throw new Error(`VFX 读取失败：${path}`);
   const asset=source.json as Partial<VfxAsset>|null,meta=sidecar.json as AssetMeta|null;
-  if(asset?.id!==ref.guid || meta?.guid!==ref.guid || meta?.kind!=='vfx')throw new Error(`VFX GUID 不匹配：${ref.path}`);
-  if(asset.status!=='accepted' || meta.userData?.status==='quarantined')throw new Error(`VFX 资源被隔离：${ref.path}`);
+  if(asset?.id!==guid || meta?.guid!==guid || meta?.kind!=='vfx')throw new Error(`VFX GUID 不匹配：${path}`);
+  if(asset.status!=='accepted' || meta.userData?.status==='quarantined')throw new Error(`VFX 资源被隔离：${path}`);
   return source.json;
 }
 export async function readVfxAsset(ref:AssetRef,{allowGraph=true,onDiagnostic=(message:string)=>console.info(message)}:{allowGraph?:boolean;onDiagnostic?:(message:string)=>void}={}):Promise<VfxAsset> {
-  const source=await readVfxAssetSource(ref),errors=validateVfxAsset(source);
+  if(!validVfxRef(ref) || !ref.path.endsWith('.vfx.json'))throw new Error('VFX 引用需要 .vfx.json 和 GUID');
+  const source=await readVfxAssetSource(ref.path,ref.guid),errors=validateVfxAsset(source);
   if(errors.length)throw new Error(errors.join('；'));
   const raw=source as VfxAsset;
   let asset=raw;
