@@ -43,6 +43,7 @@ const events=[];ws.addEventListener('message',event=>{
 await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*__fs/file?path=aether.project.json*',requestStage:'Request'},{urlPattern:'*comic-smoke.svg*',requestStage:'Request'},{urlPattern:'*comic-graph.vfx.json*',requestStage:'Request'}]});await cdp.send('Network.enable');await cdp.send('Page.setLifecycleEventsEnabled',{enabled:true});
 const graphRoot='(document.querySelector("#vfx-graph-dialog[open]")??document.getElementById("vfx-graph-panel"))';
 const click=async selector=>{
+ await cdp.send('Page.bringToFront');if(!await waitFor(()=>cdp.eval("document.visibilityState==='visible'"),{timeout:3000}))throw new Error('真实点击前测试页不可见 '+selector);
  if(!await waitFor(()=>cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});return !!e && !e.matches(':disabled');})()`)))throw new Error('控件不可用 '+selector);
  for(let n=0;n<3;n++){
   await cdp.eval(`(async()=>{document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'center'});await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));})()`);
