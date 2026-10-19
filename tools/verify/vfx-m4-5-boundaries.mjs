@@ -9,7 +9,7 @@ async function reloadGraph(c,fragment){
  await c.cdp.eval(`${graphRoot}.querySelector('[role=status]').textContent='probe awaiting graph reload'`);
  await c.button('重载节点图');if(!await waitFor(async()=>(await c.status()).includes(fragment)))throw new Error('图重载状态未完成 '+fragment+': '+await c.status());
 }
-async function saveGraph(c,predicate){await c.button('保存节点图');if(!await waitFor(async()=>predicate(JSON.parse(fs.readFileSync(c.assetCopy,'utf8'))) && !(await c.graph()).dirty))throw new Error('图保存未完成 '+await c.status());}
+async function saveGraph(c,predicate){await c.button('保存节点图');if(!await waitFor(async()=>!(await c.graph()).dirty) || !predicate(JSON.parse(fs.readFileSync(c.assetCopy,'utf8'))))throw new Error('图保存未完成 '+await c.status());}
 async function parameter(c,node,label,value){await c.input('图选中节点',node);await c.input(label,value);await c.button('应用节点参数');}
 
 export async function verifyGraphFailures(c){
@@ -28,7 +28,8 @@ export async function verifyGraphFailures(c){
  check('图GPU alpha显式CPU兼容仍实际绘制',evidence.alphaCompatibility.diagnostic.includes('CPU') && evidence.alphaCompatibility.particles.length>0 && !evidence.alphaCompatibility.compute?.handles && evidence.alphaCompatibility.gpu.draws>0);await stopPreview('alphaCompatibilityStopped');
  await parameter(c,'sprite','节点混合方式','additive');await preview();await steps(12);
  if(!await waitFor(async()=>(await graph()).preview.compute?.draws>0))throw new Error('图实际compute未绘制');evidence.computePreview=(await graph()).preview;
- check('图白名单编译到真正compute播放',evidence.computePreview.compute.handles===1 && evidence.computePreview.compute.dispatches>0 && evidence.computePreview.compute.draws>0);
+ evidence.computeReadback=await cdp.eval("window.__editor.renderer.core.vfx.gpu.readback('graph-preview')");
+ check('图白名单编译到真正compute播放',evidence.computePreview.compute.handles===1 && evidence.computePreview.compute.submittedTick===11 && evidence.computePreview.compute.draws>0 && evidence.computeReadback.counters[0]>0);
  evidence.computeVisible=await verifyImpactVisibility(cdp,out,[0,1.2,-2],'graph-compute');check('图compute正式纹理GPU可见',evidence.computeVisible.passed);await capture('06-graph-compute-preview');
  const pixels=path.join(out,'graph-controlled-pixels');fs.mkdirSync(pixels,{recursive:true});evidence.controlledComputePixels=await verifyComputePixels(cdp,pixels);check('编译图纹理受控遮挡/aux GPU证据',evidence.controlledComputePixels.passed);
  evidence.controlledMixed=await verifyMixedCpu(cdp,pixels);check('图GPU与CPU alpha混合显式兼容/顺序',evidence.controlledMixed.reversed===0 && evidence.controlledMixed.colorsSwapped>=15 && evidence.controlledMixed.gpuDraws===0);
