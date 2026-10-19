@@ -1,8 +1,10 @@
 import type { AssetRef, SceneDocument } from './document';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 4;
-export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite';
+export const VFX_VERSION = 5;
+export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon';
+export interface VfxRibbonDefinition {maxPoints:number;minDistance:number;breakDistance:number;uvMetersPerTile:number}
+export interface VfxMotion {points:[number,number,number][];seconds:number;loop:boolean}
 export interface VfxEffectDefinition {
   kind: VfxKind;
   texture: AssetRef & { guid: string };
@@ -14,6 +16,7 @@ export interface VfxEffectDefinition {
   orientation?: 'camera' | 'surface';
   loop?: boolean;
   backend?: 'cpu' | 'gpu';
+  ribbon?:VfxRibbonDefinition;
   emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number;acceleration?:[number,number,number]};
   sizeCurve?: Array<{t:number;value:number}>;
   colorCurve?: Array<{t:number;color:string}>;
@@ -36,27 +39,33 @@ export function validVfxCurve(value:unknown,kind:'size'|'color'|'alpha'):boolean
   if(value===undefined)return true;if(!Array.isArray(value) || value.length<2 || value.length>8)return false;
   return value.every((p,i)=>p && typeof p.t==='number' && Number.isFinite(p.t) && p.t>=0 && p.t<=1 && (i===0?p.t===0:p.t>value[i-1].t) && (i!==value.length-1 || p.t===1) && (kind==='color'?typeof p.color==='string' && /^#[\da-f]{6}$/i.test(p.color):typeof p.value==='number' && Number.isFinite(p.value) && p.value>=0 && p.value<=(kind==='alpha'?1:8)));
 }
-export interface VfxEmitterComponent {kind:'VfxEmitter';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;seed:number;playing:boolean;direction:[number,number,number]}
+export interface VfxEmitterComponent {kind:'VfxEmitter';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;seed:number;playing:boolean;direction:[number,number,number];motion?:VfxMotion}
+export function validVfxMotion(value:unknown):value is VfxMotion {
+ if(!value || typeof value!=='object')return false;const m=value as VfxMotion;
+ return Array.isArray(m.points) && m.points.length>=2 && m.points.length<=32 && m.points.every(p=>Array.isArray(p) && p.length===3 && p.every(v=>typeof v==='number' && Number.isFinite(v) && Math.abs(v)<=100)) && m.points.some(p=>Math.hypot(...p.map((v,i)=>v-m.points[0]![i]!))>1e-8) && typeof m.seconds==='number' && Number.isFinite(m.seconds) && m.seconds>=.1 && m.seconds<=120 && typeof m.loop==='boolean';
+}
 export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
  if(!value || typeof value!=='object')return false;const c=value as VfxEmitterComponent;
- return c.kind==='VfxEmitter' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && typeof c.effectKey==='string' && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Number.isInteger(c.seed) && c.seed>=0 && c.seed<=4294967295 && Array.isArray(c.direction) && c.direction.length===3 && c.direction.every(n=>Number.isFinite(n)) && Math.hypot(...c.direction)>.0001;
+ return c.kind==='VfxEmitter' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && typeof c.effectKey==='string' && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Number.isInteger(c.seed) && c.seed>=0 && c.seed<=4294967295 && Array.isArray(c.direction) && c.direction.length===3 && c.direction.every(n=>Number.isFinite(n)) && Math.hypot(...c.direction)>.0001 && (c.motion===undefined || validVfxMotion(c.motion));
 }
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,3,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,4,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
   const finite = (n: unknown, min: number, max: number) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
   for (const [key, e] of Object.entries(a.effects)) {
-    if (!/^[a-z][a-z0-9-]{0,63}$/.test(key) || !e || !(a.version===1?['muzzle','trail','impact']:['muzzle','trail','impact','sprite']).includes(e.kind)
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(key) || !e || !(a.version===1?['muzzle','trail','impact']:a.version<5?['muzzle','trail','impact','sprite']:['muzzle','trail','impact','sprite','ribbon']).includes(e.kind)
       || !validVfxRef(e.texture) || !/\.(svg|png|webp)$/.test(e.texture.path)
       || !Number.isInteger(e.frames) || e.frames < 1 || e.frames > 16 || !finite(e.duration, .01, 5)
       || !Array.isArray(e.size) || e.size.length !== 2 || !e.size.every(n => finite(n, .001, 20))
       || typeof e.color !== 'string' || !/^#[\da-f]{6}$/i.test(e.color) || !['alpha', 'additive'].includes(e.blend)
       || e.orientation!==undefined && !['camera','surface'].includes(e.orientation) || e.loop!==undefined && typeof e.loop!=='boolean'
       || e.backend!==undefined && (a.version<4 || !['cpu','gpu'].includes(e.backend))
+      || e.kind==='ribbon' && (e.backend==='gpu' || e.orientation==='surface' || !e.ribbon || !Number.isInteger(e.ribbon.maxPoints) || !finite(e.ribbon.maxPoints,2,128) || !finite(e.ribbon.minDistance,.001,2) || !finite(e.ribbon.breakDistance,.01,20) || e.ribbon.breakDistance<=e.ribbon.minDistance || !finite(e.ribbon.uvMetersPerTile,.01,20) || e.frames!==1 || e.size[1]!==1 || e.emission!==undefined)
+      || e.ribbon!==undefined && (a.version<5 || e.kind!=='ribbon')
       || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,e.backend==='gpu'?2400:120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,e.backend==='gpu'?1024:128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180) || e.emission.acceleration!==undefined && (a.version<4 || !Array.isArray(e.emission.acceleration) || e.emission.acceleration.length!==3 || !e.emission.acceleration.every(n=>finite(n,-30,30))))
       || !validVfxCurve(e.sizeCurve,'size') || !validVfxCurve(e.colorCurve,'color') || !validVfxCurve(e.alphaCurve,'alpha')) errors.push(`VFX 效果 ${key} 参数非法`);
   }

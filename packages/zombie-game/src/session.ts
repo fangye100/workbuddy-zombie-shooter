@@ -1,4 +1,5 @@
 import {WeaponVfxFrames} from './weapon-vfx-frames';
+import {MotionVfxFrames} from './motion-vfx-frames';
 import { EnemyAttacks, type EnemyAttackWorld } from './enemy-attacks';
 /**
  * RuntimeSession —— 可控运行会话（WU-1c + WU-2）。
@@ -289,6 +290,7 @@ export class RuntimeSession {
   upgradeWeapon():boolean {return this.outcome==='running' && !!this.progress && !this.progress.choosing && this.weapons.upgrade(cost=>{if(this.progress!.scrap<cost)return false;this.progress!.scrap-=cost;return true;});}
   readonly enemyAttacks = new EnemyAttacks();
   readonly weaponVfxFrames=new WeaponVfxFrames();
+  readonly motionVfxFrames=new MotionVfxFrames();
   private attackTokens: AttackTokenPool | null = null;
   private readonly npcDecisionAt: Float64Array;
   private readonly npcRecoveryUntil: Float64Array;
@@ -498,7 +500,7 @@ export class RuntimeSession {
     this.capacity = capacity;
     this.npcDecisionAt=new Float64Array(capacity);this.npcRecoveryUntil=new Float64Array(capacity);this.npcRecoveryStartedAt=new Float64Array(capacity);this.npcRng=new Uint32Array(capacity);this.npcWindupDuration=new Float64Array(capacity);
     this.runId = NEXT_RUN_ID++;
-    this.enemyAttacks.beginRun(this.runId);this.weaponVfxFrames.clear();
+    this.enemyAttacks.beginRun(this.runId);this.weaponVfxFrames.clear();this.motionVfxFrames.clear();
     this.executor = opts.executor ?? NULL_BEHAVIOR_EXECUTOR;
 
     this.tbl = new CharacterTable(this.capacity);
@@ -816,6 +818,7 @@ export class RuntimeSession {
     this.weaponCombat.step(this.tickCount,this.fixedStep,this.weaponWorld());
     this.fireStep();
     this.weaponVfxFrames.capture(this);
+    this.motionVfxFrames.capture(this);
     this.bossStep();
     this.tickCount += 1;
     // 脚本在移动之后执行：行为看到的是**本步最终位置**，
@@ -961,7 +964,7 @@ export class RuntimeSession {
     // 换运行代次：重跑之后，旧的实体引用必须明确失效，不能被新世界里
     // 同槽位的实体冒名顶替（复审 #6）。runId 只用于引用有效期，不影响确定性。
     this.runId = NEXT_RUN_ID++;
-    this.enemyAttacks.beginRun(this.runId);this.weaponVfxFrames.clear();
+    this.enemyAttacks.beginRun(this.runId);this.weaponVfxFrames.clear();this.motionVfxFrames.clear();
     // 输入与导航目标也要回到初始态 —— 否则 reset 后玩家还按着上一轮的摇杆
     this.inputX = 0;
     this.inputZ = 0;

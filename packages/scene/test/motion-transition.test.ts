@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEmptySceneDocument, migrateToLatest, validateSharedMotionBinding, createDefaultAssetMeta, validateAssetMeta } from '@aether/scene';
+import { SCHEMA_VERSION, createEmptySceneDocument, migrateToLatest, validateSharedMotionBinding, createDefaultAssetMeta, validateAssetMeta } from '@aether/scene';
 const binding = { library: { path:'assets/motion.json',guid:'as_motion' },profile:'npc',defaultState:'idle',speed:1 };
 describe('authored motion transition contract', () => {
   it('accepts defaults/zero duration and rejects invalid durations in bindings and asset metadata', () => {
@@ -13,6 +13,6 @@ describe('authored motion transition contract', () => {
   it('migrates v13 without overwriting existing binding choices', () => {
     const doc=createEmptySceneDocument('transition'); doc.schemaVersion=13;
     const before=structuredClone(doc.nodes); const migrated=migrateToLatest(doc);
-    expect(migrated.to).toBe(16); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings']); expect(migrated.doc.nodes).toEqual(before);
+    expect(migrated.to).toBe(SCHEMA_VERSION); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings','support-authored-vfx-emitters','support-authored-vfx-motion']); expect(migrated.doc.nodes).toEqual(before);
   });
 });

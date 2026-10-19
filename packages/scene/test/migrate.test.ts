@@ -72,8 +72,8 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings', 'support-authored-vfx-emitters']);
-    expect(result.doc.schemaVersion).toBe(17);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings', 'support-authored-vfx-emitters','support-authored-vfx-motion']);
+    expect(result.doc.schemaVersion).toBe(18);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
   });
@@ -357,7 +357,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'support-authored-art-textures',
       'shared-motion-node-overrides',
       'authored-crowd-attack-budget',
-      'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings', 'support-authored-vfx-emitters',
+      'unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings', 'support-authored-vfx-emitters','support-authored-vfx-motion',
     ]);
   });
 });
@@ -453,10 +453,12 @@ describe('migrateV4ToV5 —— Camera.yawMode（上帝视角相机不跟玩家�
 
   it('v4 → v5 已注册进默认迁移链', () => {
     expect(listMigrations().some((m) => m.from === 4 && m.to === 5)).toBe(true);
-    expect(SCHEMA_VERSION).toBe(17);
+    expect(SCHEMA_VERSION).toBe(18);
   });
 });
 
 it('v16→v17 retains original content and does not invent emitters',()=>{
- registerSceneMigrations();const source=createEmptySceneDocument('迁移');source.schemaVersion=16;const before=structuredClone(source);const result=migrateToLatest(source);expect(result.doc.schemaVersion).toBe(17);expect({...result.doc,schemaVersion:16}).toEqual(before);
+ registerSceneMigrations();const source=createEmptySceneDocument('迁移');source.schemaVersion=16;const before=structuredClone(source);const result=migrateToLatest(source);expect(result.doc.schemaVersion).toBe(18);expect({...result.doc,schemaVersion:16}).toEqual(before);
 });
+
+it('v17→v18 preserves authored data without inventing motion',()=>{registerSceneMigrations();const old=createEmptySceneDocument('motion migration');old.schemaVersion=17;const next=migrateToLatest(old);expect(next.doc.schemaVersion).toBe(18);expect({...next.doc,schemaVersion:17}).toEqual(old);});
