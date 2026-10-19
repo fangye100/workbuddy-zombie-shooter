@@ -25,6 +25,8 @@ export class WeaponVfxPlanner {
     this.pool.advance(Math.max(0,runtime.tick-this.tick)*runtime.fixedStep);this.tick=runtime.tick;
     for(const [id,until] of this.fallbackUntil)if(runtime.tick>=until){this.fallbackUntil.delete(id);this.fallbackWeapons.delete(id);}
     this.frameEvents=runtime.weaponCombat.drainVfxEvents();
+    const traceContacts=new Map<string,WeaponVfxEvent>();
+    const contactKey=(e:WeaponVfxEvent)=>`${e.tick}:${e.weaponId}:${e.actor?.id}:${e.actor?.generation}`;
     for(const event of this.frameEvents){
       this.recentEvents.push(event);if(this.recentEvents.length>32)this.recentEvents.shift();
       const weapon=runtime.weapons.definitions.find(w=>w.id===event.weaponId),asset=this.ready.get(event.weaponId);if(!weapon || !asset)continue;
@@ -41,9 +43,9 @@ export class WeaponVfxPlanner {
         }
       };
       if(event.kind==='fire'){if(weapon.behavior!=='melee')play('muzzle');}
-      else if(event.kind==='trace'){play('trail');if(event.contact!=='miss')play('impact');}
+      else if(event.kind==='trace'){play('trail');if(event.contact!=='miss')play('impact');if(event.actor)traceContacts.set(contactKey(event),event);}
       else if(event.kind==='impact'){
-        const trace=this.frameEvents.findLast(e=>e.kind==='trace' && e.sequence<event.sequence && e.weaponId===event.weaponId && e.tick===event.tick && e.actor?.id===event.actor?.id && e.actor?.generation===event.actor?.generation);
+        const trace=traceContacts.get(contactKey(event));
         this.impactAliases.set(event.sequence,{sequence:trace?.sequence??event.sequence,event});if(this.impactAliases.size>4096)this.impactAliases.delete(this.impactAliases.keys().next().value!);if(!trace)play('impact');
       }
     }
