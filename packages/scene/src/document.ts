@@ -915,7 +915,7 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       }
       if(c.kind===ComponentKind.VfxDecal){
         if(!validVfxDecal(c))err(at,'E_VFX_DECAL','贴花资源/接收NodeId列表/layerMask/优先级或播放参数非法');
-        else for(const id of c.receivers)if(!byId.has(id) || !d.nodes![byId.get(id)!]?.components?.some(x=>x.kind==='MeshRenderer'))err(at+'/receivers','E_VFX_RECEIVER',`贴花接收节点不存在或不是MeshRenderer：${id}`);
+        else for(const id of c.receivers)if(!byId.has(id) || !Array.isArray(d.nodes![byId.get(id)!]?.components) || !d.nodes![byId.get(id)!]!.components.some(x=>x.kind==='MeshRenderer'))err(at+'/receivers','E_VFX_RECEIVER',`贴花接收节点不存在或不是MeshRenderer：${id}`);
       }
       if(c.kind===ComponentKind.VfxEmitter && !validVfxEmitter(c))err(at,'E_VFX_EMITTER','VFX发射器的引用、seed、direction、motion轨迹或播放参数非法');
       if(c.kind===ComponentKind.VfxBindings){
