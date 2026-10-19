@@ -1,6 +1,6 @@
 # Act1 实战 VFX 与直接试玩
 
-日期：2026-10-19。初次接入基线 `db170c558391b0563f1c42bde815d47689bf803b`；R2 漫画强化基线 `528ae3a1de1362f22ffe71879dca0f63e2b2bc84`。
+日期：2026-10-19。初次接入基线 `db170c558391b0563f1c42bde815d47689bf803b`；R2 漫画强化基线 `528ae3a1de1362f22ffe71879dca0f63e2b2bc84`；R3 酸液/爆尸实战补验基线 `20ab81b5b02a307742634c8a6961e90f7d53c468`。
 本次把已有正式 VFX 接到原 Act1 三层，不新增验收专用游戏场景。
 启动场景仍由 `aether.project.json` 的 `startIndex=1` 指向第一层。
 
@@ -13,7 +13,7 @@
 |---|---|---|
 | 第一层 · 火场公路 | [直接打开](https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-1.scene.json) | 首战 E-01、E-02；扑击落点、近战弧线；后续事件房与第二战斗房 |
 | 第二层 · 尸潮仓储区 | [直接打开](https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-2.scene.json) | 首战 E-01/E-02，第二波 E-03 酸液、落地酸池；事件房后精英房 E-04 冲锋 |
-| 第三层 · 暗巷撤离站 | [直接打开](https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-3.scene.json) | 首房 E-04 冲锋及 E-02，第二波 E-03；后续 Boss 房 B-01、E-05 自爆与 E-03 |
+| 第三层 · 暗巷撤离站 | [直接打开](https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-3.scene.json) | 首房 E-04 冲锋及 E-02；沿道路可直接进入 Boss 房，首波 B-01、E-05 自爆，清完后有 E-03。首房击败 E-04 即清房，会跳过其原数据中的第二波 E-03 |
 
 WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹，E 交互，空格暂停。
 三层均以手枪开始，现有武器选择器和数字键 **1–7** 可直接换装：
@@ -21,6 +21,21 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 当前武器没有额外解锁/拾取要求；成长 `unlocked` 用于天赋资格。
 换装需等待原换装动画结束，选择强化弹出时战斗会冻结，点击一项强化后继续。
 不修改伤害、弹药、波次、奖励、天赋、地形、导航、相机、灯光或角色绑定。
+
+### 直接测试酸液：第二层首房第二波
+
+1. 打开上表第二层，Play 后按 **7** 换榴弹发射器，鼠标朝向追来的密集敌人，按住 J 或左键开火。用 WASD 在最初的大块道路内绕行；不要站桩等扑跃者贴身。可沿路面上侧向右、右侧向下、下侧向左循环，避免卡在路边掩体。
+2. 出现“选择强化 · 战斗已暂停”时点选再继续。开发实际路线优先选 **尸髓回流**，没有时选 **重型弹头**，其余照常选择；每次选完重新按住 J。R 可正常换弹。没有修改弹药、奖励或强化资格。
+3. 首波共 **48** 只 E-01/E-02。清完后停火，约 **2 秒** 后本房出现 **24** 只 E-03；不必走到下一个房间。开发样本正常完成了 48 次击杀与 7 次强化选择。
+4. 呕吐者发出绿色酸团，约 **0.8 秒** 后在原瞄准落点形成粗黑边亮绿色池。离开亮边危险圆圈再观察：池半径 **2m**，持续 **4 秒**，到时消失并留短暂黑色痕迹。后续新投射会生成别的池，不能把新池误认成旧池未消失。
+
+### 直接测试爆尸：第三层沿公路进入 Boss 房
+
+1. 打开上表第三层，Play 后沿公路向画面右侧前进，保持在道路中间，经过斑马线继续走。可用 D 为主，W/S 小幅修正，避开盾卫的黄色冲锋线和扑跃落点；本次已实测 **不开枪、不清首房** 也能沿现有道路进入 Boss 房，未添加跳房入口。
+2. 右前方会出现巨大 Boss 和一群 **绿色胖爆尸**。接近群体边缘的一只，看到它周围的 **橙红色大圈/前摇刻度** 后立即向左后方跑开。触发距离约 **2.5m**；前摇基准 **1.5 秒**，有原规则抖动，爆炸伤害半径 **3.5m**。
+3. 让它自己爆炸，观察黄白星芒、橙色碎片、黑色粗轮廓与随后地面短痕；不要先开枪打死它。爆发约 **0.35 秒** 后回收，痕迹随后消失。周围敌人和 Boss 仍会攻击，可用空格暂停，左上“单步”逐 tick 看清过程。
+
+这两条都是正式现有关卡的原生玩法路径。原关卡没有专用选房菜单；第二层需正常清首波，第三层房间由进入范围触发，不要求前房先清。首房 `elite-dead` 会因 E-04 死亡直接结束，故第三层首房不是稳定的第二波酸液入口。
 
 ## 已接入的表现及边界
 
@@ -47,7 +62,7 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 所有 Stop 检查账目归零及真实纹理/缓冲销毁；场景 hash 验收前后相同。
 这些像素比较关闭的是已有 Pass，属于受控测量；攻击/冲锋来源是原游戏输入/状态机。
 
-本轮没有自然打到第二波酸液及 Boss 房爆尸，不把绑定检查写成已实战触发。
+R1 当时没有自然打到第二波酸液及 Boss 房爆尸，不把该历史绑定检查写成已实战触发；R3 后续实际补验见下文。
 遮挡/透明混合/失败路径的通用能力继续复用 [M1](../architecture/vfx-m1-20261019.md)、[M2](../architecture/vfx-m2-20261019.md)、[M3](../architecture/vfx-m3-20261019.md)、[M4](../architecture/vfx-m4-20261019.md) 对应精确版本的既有独立验收；本次没有新增关卡遮挡几何或重新认证所有设备/繁忙波次帧率。
 生产最小检查为 scene:check、typecheck、editor:build、architecture:check 与相关 owner 测试。
 CPU 控制器/角色测试使用无 GPU 替身隔离 VFX 装配，其通过不作为 GPU 证明。
@@ -91,7 +106,7 @@ R2 证据根目录为 `.workbuddy/tmp/vfx-cartoon-intensity/`。`before-02` 31/3
 已目检全景与局部，判断依据为粗线条、色块/连续性和分枪轮廓；GPU on/off ROI 只证明效果可见，不证明审美更好。
 
 R2 的 56 项相关 owner 测试、2 项绑定工具测试及完整 scene:check 通过；冲锋 owner 测试现核每个真实 move 历史位置均被消费，不再依赖旧尘率制造的粒子数量。typecheck、editor:build、architecture:check 通过，构建保留原 chunk 警告。
-旧迁移断言及知识目录三诊断继续按前文单列，未修无关基线。酸液/自爆重绘和绑定已有资源检查，但仍未自然打到对应后续波次，不把它们称为本轮已自然实战触发。
+旧迁移断言及知识目录三诊断继续按前文单列，未修无关基线。R2 当时酸液/自爆重绘和绑定已有资源检查，但仍未自然打到对应后续波次，不把它们称为 R2 已自然实战触发；R3 后续补验见下文。
 `before/` 首轮基线投影失败，是验证工具在纹理请求内同步调用 git 造成装配迟延/玩家死亡；改为 Play 前预载后 `before-02` 完整通过，旧失败记录保留。
 
 复跑当前版本及独立基线投影：
@@ -106,3 +121,34 @@ node tools/verify/vfx-gameplay-probe.mjs --headed --profile .workbuddy/tmp/vfx-c
 开发收尾：精确 `c10f536506c14daaa88c3dea24c3599af081ccf6` 的 `development-final` 与 `baseline-final` 均 **32/32、EXIT0**；后者另有 `baseline-command.log`，投影文件的基线与当前 hash 分列 `projectedSources` / `comparisonCurrentSources`。
 `comparison.json` 核八组武器全景及三段冲锋帧的 viewProj/eye/viewport 相同；自然 tick 的差异原样保留。
 此后仅修正本指南的节奏下界、sprite 高度表述并补录证据，不改资产、场景、生产/测试/工具源码；对应最终文档提交仍需独立 Audit 对最终 SHA 复跑及 Reviewer 批准，不预用旧目标的通过结论。
+
+## R3 酸液与爆尸的现有关卡实战补验
+
+本轮只有 focused 验证工具及本指南/目录变更，生产源码、VFX 资产和三层场景与 `20ab81b` 相同；不新增场景、传送、刷怪或伤害入口。工具只读 runtime 快照指导原生键鼠，清波、换装、强化选择、前进和后撤均走原控件。暂停/单步使用原工具栏；GPU on/off 只作暂停后局部受控测量，不制造模拟事件。
+
+证据在 `.workbuddy/tmp/vfx-acid-explosion/`。工具提交 `db1d2a6c78bf3c60cffe5ba033638a8060e82677` 的 `development-final/result.json` 为 **29/29、EXIT0**，原始命令与输出在 `final-command.log`；真实 headed / 有效 MagicDNS HTTPS / NVIDIA Lovelace 非 fallback，无浏览器/GPU 错误。原资源预算仍为 14/16 纹理、256 装饰池，未扩容。
+
+| 实际事件 | 同一身份的实测阶段（30 tick/s） | 证据 |
+|---|---|---|
+| 第二层首房 wave2，`nd_f2r0_sp2` E-03 | run1 / attack15 / actor11 / generation2；tick419 发射，443 成池，563 到时结束。真实半径2m、直径4m、池4秒 | `acid-start.png`、`acid-pool.png`、`acid-mark.png`；飞行/池/痕迹 on/off ROI 改变333/9470/376像素 |
+| 第三层 Boss 房 wave1，`nd_f3r1_sp1` E-05 | run1 / attack12 / actor27 / generation1；死前 HP90、原生接近前摇；tick315 自爆，326 到时结束。真实半径3.5m、持续0.35秒 | `explosion-windup.png`、`explosion-burst.png`、`explosion-mark.png`；爆发/痕迹 ROI 改变17510/145像素 |
+
+已目检正常镜头与局部：酸池落在实际道路，危险边界可读；爆花在绿色爆尸群中可见，原橙红前摇圈、其他敌人的黄色冲锋线保持。每次跟踪同一个 run/attack/source/generation，保留死前 actor、源节点、房间、原 SpawnPoint/wave、完整事件、位置、surface、阶段与预计结束 tick；不是拿后续新池证明旧池结束。`surface.nodeId=null` 是当前道路地面查询的实际返回，保留向上法线，不伪称绑定到某个道路 mesh。
+
+原生暂停冻结 tick，单步到目标 end 时确认事件队列完整消费、无事件丢弃、池/爆发实例消失且同帧产生痕迹；再单步60 tick确认该痕迹回收。两层均 Stop 后实际销毁14纹理和缓冲，Play账目归零；重新 Play 加载就绪再 Stop 通过。正式场景/生产源码资产的逐文件 SHA-256 验收前后相同。
+
+坏资源回归单列：同一工具提交的 `fallback-final/result.json` 为 **16/16、EXIT0**，命令输出在 `fallback-command.log`。`--bad-pool` 仅拦截本测试 tab 的 `comic-acid-pool.svg`，返回无效SVG，场景与真实攻击路线不变。原生清波后仍有真实酸池/伤害阶段，资源诊断明确，GPU未把不可画实例标记成功，原绿色危险池保底继续可见；13张已加载纹理释放、重开及同攻击结束/痕迹回收均核对。它是故障注入，不能与正常14纹理美术样张混称。
+
+R3 相关现有 enemy planner **3项**回归通过，覆盖阶段/真实直径/结束、预算及不可画纹理保底、blocked不成池和不可变自爆位置；不是用这些模拟单测代替上述实战。`node --check` 通过。仅工具/文档变化，无新增生产依赖/资产/schema，因此不重复 R2 的全build/scene门禁；architecture 与知识目录按本次影响检查，工作区三条既有知识诊断仍单列。
+
+本次没有自然命中障碍物的 blocked 酸液样本；保留现有相关单测能力证据，不声称已补齐该自然路径。也未重新认证全部设备或24只E03持续轰炸的帧率。旧 `explosion-01/02`、`acid-01/02`、`fallback-01` 的工具时序/错误等待或站桩死亡记录保留；不覆盖为通过。最终文档提交后的生产与工具字节不变由 hash 比较确认，队列独立 Audit/Reviewer 仍以最终 SHA 判定。
+
+复跑正常两路线与独立坏纹理回归（必须先有本checkout的5100服务；探针不会自动启动服务）：
+
+```powershell
+node tools/verify/vfx-acid-explosion-probe.mjs --headed --out .workbuddy/tmp/vfx-acid-explosion/recheck
+node tools/verify/vfx-acid-explosion-probe.mjs --headed --only acid --bad-pool --out .workbuddy/tmp/vfx-acid-explosion/fallback-recheck
+pnpm exec vitest run packages/zombie-game/test/enemy-vfx-planner.test.ts
+```
+
+工具默认使用独立 `.workbuddy/tmp/vfx-acid-explosion/chrome-profile` 和 CDP9343；端口占用即退出。仅关闭本次创建的Chrome，不碰用户标签或固定profile，不重启/停止既有5100，不写回场景。

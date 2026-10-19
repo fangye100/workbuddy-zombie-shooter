@@ -11,7 +11,7 @@
       "authority": "guide",
       "status": "current",
       "topics": ["vfx", "gameplay", "campaign", "gpu"],
-      "read": "三层试玩与换枪；R2粗墨线漫画/分枪节奏/连续火舌与冲锋层次；同机位原始对比及预算；未自然触发边界",
+      "read": "三层试玩与换枪；R2漫画强化；R3第二层酸液清波/第三层爆尸原路进入、真实阶段回收与坏纹理保底；预算及未覆盖边界",
       "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "scene-weapons", "asset-metadata"]
     },
     {
