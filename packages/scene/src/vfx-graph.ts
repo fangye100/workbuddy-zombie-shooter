@@ -24,6 +24,7 @@ export const VFX_GRAPH_NODES:Record<VfxGraphNodeType,VfxNodeDefinition>={
 const record=(v:unknown):v is Record<string,unknown>=>!!v && typeof v==='object' && !Array.isArray(v);
 const finite=(v:unknown,min:number,max:number)=>typeof v==='number' && Number.isFinite(v) && v>=min && v<=max;
 const id=(v:unknown)=>typeof v==='string' && /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(v);
+const knownType=(v:unknown):v is VfxGraphNodeType=>typeof v==='string' && Object.hasOwn(VFX_GRAPH_NODES,v);
 const exact=(v:Record<string,unknown>,keys:string[])=>Object.keys(v).length===keys.length && keys.every(k=>Object.hasOwn(v,k));
 function validParams(type:VfxGraphNodeType,p:Record<string,unknown>):boolean {
  switch(type){
@@ -50,7 +51,7 @@ export function validateVfxGraph(value:unknown):string[] {
   if(!record(n) || !id(n.id)){errors.push('VFX图节点ID非法');continue;}
   if(Object.keys(n).some(k=>!['id','type','position','params'].includes(k)))errors.push(`节点 ${n.id}: 非白名单字段`);
   if(nodes.has(n.id))errors.push(`VFX图节点ID重复 ${n.id}`);nodes.set(n.id,n);
-  if(!Object.hasOwn(VFX_GRAPH_NODES,n.type)){errors.push(`节点 ${n.id}: 未知类型 ${n.type}`);continue;}
+  if(!knownType(n.type)){errors.push(`节点 ${n.id}: 未知类型（必须为白名单字符串）`);continue;}
   if(!(g.version===1 && n.position===undefined) && (!Array.isArray(n.position) || n.position.length!==2 || !n.position.every(n=>finite(n,-10000,10000))))errors.push(`节点 ${n.id}: 画布位置非法`);
   if(!record(n.params) || !validParams(n.type,n.params))errors.push(`节点 ${n.id}: 参数非法或包含非白名单字段`);
   if(n.type==='output'){outputs++;const key=n.params?.key as string;if(keys.has(key))errors.push(`输出key重复 ${key}`);keys.add(key);}
@@ -61,14 +62,14 @@ export function validateVfxGraph(value:unknown):string[] {
   if(!record(e) || !id(e.id) || !record(e.from) || !record(e.to) || typeof e.from.node!=='string' || typeof e.to.node!=='string' || typeof e.from.port!=='string' || typeof e.to.port!=='string'){errors.push('VFX图连线ID/端点非法');continue;}
   if(!exact(e,['id','from','to']) || !exact(e.from,['node','port']) || !exact(e.to,['node','port']))errors.push(`连线 ${e.id}: 非白名单字段`);
   if(edgeIds.has(e.id))errors.push(`连线ID重复 ${e.id}`);edgeIds.add(e.id);
-  const from=nodes.get(e.from.node),to=nodes.get(e.to.node),outputs=from && Object.hasOwn(VFX_GRAPH_NODES,from.type)?VFX_GRAPH_NODES[from.type].outputs:null,ports=to && Object.hasOwn(VFX_GRAPH_NODES,to.type)?VFX_GRAPH_NODES[to.type].inputs:null;
+  const from=nodes.get(e.from.node),to=nodes.get(e.to.node),outputs=from && knownType(from.type)?VFX_GRAPH_NODES[from.type].outputs:null,ports=to && knownType(to.type)?VFX_GRAPH_NODES[to.type].inputs:null;
   const a=outputs && Object.hasOwn(outputs,e.from.port)?outputs[e.from.port]:undefined,b=ports && Object.hasOwn(ports,e.to.port)?ports[e.to.port]:undefined;
   if(!a || !b){errors.push(`连线 ${e.id}: 未知节点/端口`);continue;}
   if(a!==b)errors.push(`连线 ${e.id}: 类型不匹配 ${a}→${b}`);
   const input=e.to.node+':'+e.to.port;if(inputs.has(input))errors.push(`节点 ${input}: 输入重复连接`);inputs.add(input);
   adj.set(e.from.node,[...(adj.get(e.from.node)??[]),e.to.node]);indegree.set(e.to.node,indegree.get(e.to.node)!+1);
  }
- for(const n of nodes.values())if(Object.hasOwn(VFX_GRAPH_NODES,n.type))for(const port of Object.keys(VFX_GRAPH_NODES[n.type].inputs))if(!inputs.has(n.id+':'+port))errors.push(`节点 ${n.id}/${port}: 缺少输入`);
+ for(const n of nodes.values())if(knownType(n.type))for(const port of Object.keys(VFX_GRAPH_NODES[n.type].inputs))if(!inputs.has(n.id+':'+port))errors.push(`节点 ${n.id}/${port}: 缺少输入`);
  const queue=[...indegree].filter(([,n])=>n===0).map(([k])=>k);let visited=0;
  while(queue.length){const key=queue.shift()!;visited++;for(const next of adj.get(key)??[]){const n=indegree.get(next)!-1;indegree.set(next,n);if(!n)queue.push(next);}}
  if(visited<nodes.size)errors.push('VFX图存在循环，必须为DAG');

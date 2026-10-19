@@ -37,6 +37,7 @@ export async function verifyGraphFailures(c){
  const good=fs.readFileSync(assetCopy,'utf8'),original=JSON.parse(good),badCases=[
   ['future-asset','资产版本',a=>a.version=99],['future-graph','图版本',a=>a.graph.version=99],
   ['unknown-node','未知类型',a=>a.graph.nodes[0].type='arbitrary-script'],
+  ['nonstring-node','未知类型',a=>a.graph.nodes[0].type={toString:1}],
   ['unknown-port','未知节点/端口',a=>a.graph.edges.push({id:'bad_inherited',from:{node:'texture_smoke',port:'constructor'},to:{node:'output',port:'constructor'}})],
   ['port-type','类型不匹配',a=>a.graph.edges[0].from.node='tint'],
   ['missing-input','缺少输入',a=>a.graph.edges.shift()],['duplicate-input','输入重复',a=>a.graph.edges.push({...a.graph.edges[0],id:'bad_duplicate'})],

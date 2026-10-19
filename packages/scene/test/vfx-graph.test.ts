@@ -26,3 +26,9 @@ it('JSON inherited-property port names are unknown edges even in a complete othe
   expect(json.graph.edges.at(-1).from.port).toBe(port);
  }
 });
+it('JSON non-string node types cannot coerce into whitelist keys or throw during validation',()=>{
+ for(const type of [null,1,['number'],{toString:1},{}]){
+  const source=JSON.parse(JSON.stringify(graphFixture()));source.graph.nodes[0].type=type;
+  expect(()=>validateVfxGraphAsset(source)).not.toThrow();expect(validateVfxGraphAsset(source).some(s=>s.includes('未知类型'))).toBe(true);
+ }
+});
