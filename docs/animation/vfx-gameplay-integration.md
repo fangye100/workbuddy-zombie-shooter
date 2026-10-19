@@ -50,7 +50,7 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 - E-02 扑击、E-03 飞行/落地/酸池/被挡、E-05 自爆和结束痕迹复用正式敌人资源。危险轮廓和前摇提示保留，缺资源/预算不足继续走原保底。
 - E-04 的真实冲锋同时有尘尾与 M4 连续 Ribbon，读取逐 tick 移动事实，不增加高度偏移。电锯和敌人近战复用真实挥击弧线。
 - NPC 所有真实伤害来源复用既有 combatEvents；按 run/tick/slot/generation、武器及来源事件序号匹配命中。非燃烧伤害使用共用冲击星花，持续burn保留数字并由表面/烟反馈，短暂蒙皮受击脉冲不打断原 hit/death 动画。已有实际可画 GPU 实例才去掉重复 Canvas 星花；伤害/击杀文字及失败保底保留。
-- 榴弹发射器的 GPU 头部、短轨迹、爆发已接线；资源失败继续 Canvas。默认 sandbox 保持原编辑用途。七武器的正常镜头、真实 NPC 受击/燃烧完整独立实操尚待 R4 验收，接线通过不等于视觉验收通过。
+- 榴弹发射器的 GPU 头部、短轨迹、爆发已接线；资源失败继续 Canvas。默认 sandbox 保持原编辑用途。七武器及真实 NPC 受击/燃烧按下文分版本独立实操记录覆盖，接线检查与视觉证据分列；最终完整变更仍待独立终审。
 - 当前关卡没有合适的既有 graph/compute 作者节点或静态跨面涂印语义，本次不添加这类摆件。三项能力的作者入口与支持边界仍见 [M4 指南](../architecture/vfx-m4-20261019.md)，不把系统能力等同于已在实战触发。
 
 绑定真源为三份 `assets/scenes/act1/floor-*.scene.json`：七把武器的 `presentation.vfx` 和 RunRules 所在节点的 `VfxBindings`。
@@ -172,13 +172,13 @@ pnpm exec vitest run packages/zombie-game/test/enemy-vfx-planner.test.ts
 工具默认使用独立 `.workbuddy/tmp/vfx-acid-explosion/chrome-profile` 和 CDP9343；端口占用即退出。仅关闭本次创建的Chrome，不碰用户标签或固定profile，不重启/停止既有5100，不写回场景。
 
 
-## R4 七武器、NPC 受击与流动燃烧（开发候选）
+## R4 七武器、NPC 受击与流动燃烧（独立实操记录，待终审）
 
 当前数据流、v9 可选 flow、图编译/保存、GPU 实例字节与失败行为见[当前契约](../architecture/vfx-impact-fire-20261020.md)。场景仍 v23，仅三层的表现绑定变化；伤害、射速、命中、AI、弹药、波次与地形不变。
 
 直接试玩建议：第一层从手枪开始，运行中用底部下拉框依次切换七种武器；电锯须近身，火焰须进入其真实 6m 射程并持续命中 NPC。观察枪口/弹迹、命中爆花与角色表面短脉冲；火焰命中后松开攻击，观察燃烧烟与身体流动发光/炭化在真实状态结束后消失。原生强化选择会冻结战斗，选择后重新按住 J。不要把只看见喷流当作已看到燃烧表面。
 
-开发检查：55 项首批 owner、typecheck、scene:check、architecture:check、editor:build 已执行通过（构建保留原 chunk 警告）。随后26文件 **123/123** VFX/M4回归与最终typecheck、LF规范化后scene:check均exit0；原始日志在 `.workbuddy/tmp/vfx-impact-fire-20261020/`。实现提交 `254ffc0` 已推送。第一次 headed `wu3-headed-01` 因 WGSL 保留词失败，保留原图；更名后 `wu3-headed-02` 为 **8/8、EXIT0**：实际 flame、真实 NVIDIA 非 fallback、喷流 GPU 可见、15纹理加载与 Stop 销毁、0浏览器/GPU错误、场景 hash 未变。这是有界编译/喷流检查，使用 `--compile-only`，未把真实燃烧表面或完整七武器记为通过。后续 LF 规范化与 sidecar 同步单独记录字节，完整精确提交由独立 Audit 再验。
+开发检查：55 项首批 owner、typecheck、scene:check、architecture:check、editor:build 已执行通过（构建保留原 chunk 警告）。随后26文件 **123/123** VFX/M4回归与最终typecheck、LF规范化后scene:check均exit0；原始日志在 `.workbuddy/tmp/vfx-impact-fire-20261020/`。实现提交 `254ffc0` 已推送。第一次 headed `wu3-headed-01` 因 WGSL 保留词失败，保留原图；更名后 `wu3-headed-02` 为 **8/8、EXIT0**：实际 flame、真实 NVIDIA 非 fallback、喷流 GPU 可见、15纹理加载与 Stop 销毁、0浏览器/GPU错误、场景 hash 未变。这是有界编译/喷流检查，使用 `--compile-only`，未把真实燃烧表面或完整七武器记为通过。后续 LF 规范化与 sidecar 同步单独记录字节；独立实操的具体版本与后续F01补验见下文，不把这8项作为最终完整结论。
 
 基线 `baseline/` 最初七轮实际均为 pistol，不能作七武器覆盖；`baseline/selector-retry` 只确认 flame/launcher ID，没有稳定 hit/burn 记录。历史 R1–R3 的对应版本结果保留，不替代本轮。合并后旧酸液清波问题继续按前文单列，本轮没有接管或修改其玩法。
 
@@ -189,7 +189,22 @@ node tools/verify/vfx-gameplay-probe.mjs --headed --only flame --compile-only --
 node tools/verify/vfx-gameplay-probe.mjs --headed --profile .workbuddy/tmp/vfx-impact-fire-20261020/chrome-profile --out .workbuddy/tmp/vfx-impact-fire-20261020/recheck
 ```
 
-目前仍需独立七武器、真实NPC受击/燃烧表面、遮挡/alpha/HDR、暂停/单步/熄灭与重复Play/Stop验收；本文不预授通过。flow 是有界程序卷动与材质流动，未实现物理 CFD。共享纹理仍15/16、装饰池256，未提高粒子容量；高负载满池会按既有优先级裁减装饰，危险提示与模拟继续。
+独立实操已分版本记录七武器、真实NPC受击/燃烧表面和受影响生命周期，见下节；最终完整base→文档提交仍待独立终审，不将分轮覆盖称为一次全武器同测。flow 是有界程序卷动与材质流动，未实现物理 CFD。共享纹理仍15/16、装饰池256，未提高粒子容量；高负载满池会按既有优先级裁减装饰，危险提示与模拟继续。
 
 
-R4-F01：首次独立 Audit 的 `audit-fb0bbed/result.json` 已记录真实alive E-01燃烧身份、扣血与GPU19时钟，但普通镜头被持续DOT强闪/星花遮住，尚不满足表面可辨。修正将原burn扣血追加只读来源标记，保留数字/旧hit/death动画，持续burn不重复强白脉冲或装饰星花；直接命中燃烧中NPC仍明显，非burn坏粒子保底保留。原失败图片不覆盖；新精确target待独立pistol/真实burn表面、暂停单步与释放补验，不重写为已通过。
+R4-F01：首次独立 Audit 的 `audit-fb0bbed/result.json` 已记录真实alive E-01燃烧身份、扣血与GPU19时钟，但普通镜头被持续DOT强闪/星花遮住，尚不满足表面可辨。修正将原burn扣血追加只读来源标记，保留数字/旧hit/death动画，持续burn不重复强白脉冲或装饰星花；直接命中燃烧中NPC仍明显，非burn坏粒子保底保留。原失败图片不覆盖；精确 `34bbe477a3c349cf0b4455a08062e06115508063` 已完成下列pistol/真实burn表面、暂停单步与释放独立补验。
+
+
+### R4 独立实操覆盖与直接观察
+
+原始证据均在 `.workbuddy/tmp/vfx-impact-fire-20261020/`：
+
+- `audit-fb0bbed/`（生产 `fb0bbedebca8096dbf75ba7f91a75c8e635fad66`）：六种武器 shotgun/smg/sniper/chainsaw/flame/launcher 的实际ID、真实伤害/接收者及释放有记录；该轮pistol未触发，capacity/alive派生断言错误及burn遮挡缺口保留，result为FAILURE，不能写全过。
+- `audit-34bbe47/`（生产 `34bbe477…`）：shotgun直接命中回归与burn表面帧；该轮pistol焦点、单步/熄灭/重开时序错误仍为FAILURE，后续修正的是验收路径，未改游戏来制造通过。
+- `audit-34bbe47-retry2/`（精确 `34bbe477a3c349cf0b4455a08062e06115508063`）：**25/25，audit-command.log EXIT_CODE=0**。仅pistol/flame定向补验；七武器覆盖由上述不同版本及未改武器规则/资产/投射物的范围组合，未声称全部在最后一轮同测。
+
+第一层直接测试手枪时，选择后可按Tab离开武器表单再攻击；最终实操鼠标按住220ms与J按住300ms，弹药18→16，同一E-01 id4/gen1收到两次12点玩家来源伤害。火焰短喷命中后松开J，空格/左上暂停，再用单步观察：同一活体burn在tick49→61的12个原生单步中保留超过0.2秒的表面流动证据。`audit-34bbe47-retry2/flame-burn-flow.png` 的身体火丝/炭化可辨，保留的伤害数字会遮住部分身体，不保证每帧完整露出。
+
+继续游戏后按S后撤、离开贴身敌人，观察该身份自然熄灭；最终样本tick110同NPC仍alive、outcome仍running，burn消失、对应动态实例19归0。它是状态到时清除，不是死亡/Stop造成消失。纹理15/16、装饰池256；flame Stop实际释放15纹理/3缓冲，重开新run无旧burn且ready后再Stop释放15/2，账目归零、场景回滚、0console/GPUerror。50路径服务核对仅共享dirty目录文档不同，游戏源匹配。
+
+这些证据限定本机headed NVIDIA Lovelace和已观察的正常镜头；未认证任意设备、高负载帧率或所有遮挡条件。详见[当前契约的分版本表](../architecture/vfx-impact-fire-20261020.md#独立实操记录与验收边界)。生产代码停在34bbe477，本次仅补文档，最终完整变更待Final Reviewer。
