@@ -16,12 +16,34 @@
         "campaign",
         "gpu"
       ],
-      "read": "三层试玩与换枪；R2漫画强化；R3酸液/爆尸原生路线与阶段回收、坏纹理保底；R3-V01沙灰残留与正常镜头证据；预算及边界",
+      "read": "三层原生试玩；R4七武器/NPC受击/流动燃烧与独立验收边界；R1–R3历史证据、酸液/爆尸路线和预算限制",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
         "scene-schema",
         "scene-weapons",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "vfx-impact-fire-20261020",
+      "path": "docs/architecture/vfx-impact-fire-20261020.md",
+      "title": "七武器、NPC受击与流动燃烧当前契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "vfx",
+        "weapons",
+        "gpu",
+        "editor",
+        "persistence"
+      ],
+      "read": "v9可选flow与原图/作者保存、七武器真实事实/命中身份、动态蒙皮受击与燃烧、预算/回退及待独立验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
         "asset-metadata"
       ]
     },

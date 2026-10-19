@@ -1,6 +1,6 @@
 # Act1 实战 VFX 与直接试玩
 
-日期：2026-10-19。初次接入基线 `db170c558391b0563f1c42bde815d47689bf803b`；R2 漫画强化基线 `528ae3a1de1362f22ffe71879dca0f63e2b2bc84`；R3 酸液/爆尸实战补验基线 `20ab81b5b02a307742634c8a6961e90f7d53c468`。
+日期：2026-10-20。R4 武器/受击/流动火焰基线 `5fe4d6fef23ab3e291ad748595047cb3c2ee33f8`。初次接入基线 `db170c558391b0563f1c42bde815d47689bf803b`；R2 漫画强化基线 `528ae3a1de1362f22ffe71879dca0f63e2b2bc84`；R3 酸液/爆尸实战补验基线 `20ab81b5b02a307742634c8a6961e90f7d53c468`。
 本次把已有正式 VFX 接到原 Act1 三层，不新增验收专用游戏场景。
 
 2026-10-20 合入主线 `708e8bd6` 后，场景统一 v23，新增导航、真实武器装配和程序贴花。
@@ -25,7 +25,7 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 三层均以手枪开始，现有武器选择器和数字键 **1–7** 可直接换装：
 1 手枪、2 霰弹枪、3 冲锋枪、4 狙击枪、5 电锯、6 火焰喷射器、7 榴弹发射器。
 当前武器没有额外解锁/拾取要求；成长 `unlocked` 用于天赋资格。
-换装需等待原换装动画结束，选择强化弹出时战斗会冻结，点击一项强化后继续。
+运行时使用底部武器下拉框或数字键切换；暂停时选择器禁用。换装需等待原换装动画结束，选择强化弹出时战斗会冻结，点击一项强化后继续。
 不修改伤害、弹药、波次、奖励、天赋、地形、导航、相机、灯光或角色绑定。
 
 ### 直接测试酸液：第二层首房第二波
@@ -45,17 +45,17 @@ WASD/方向键移动，鼠标瞄准，鼠标左键或 J 持续攻击；R 换弹�
 
 ## 已接入的表现及边界
 
-- 四把射线枪共用三张正式纹理，R2 分别绑定 pistol/shotgun/smg/sniper 的独立效果 key。手枪利落爆闪，霰弹大星芒和多线爆散，SMG 较短连贯，狙击宽线及更重命中；真实接触点另有火花。只有对应 GPU 表现已就绪时才替换旧 Canvas 枪效。
-- 火焰喷射器使用真实枪口/方向发射，真实燃烧 actor 按身份代次附着烟。R2 用纵长火舌、橙黄白亮芯、较窄装饰散角和重叠粒子形成连续喷流，烟以黑描边/亮暗块面形成体积，soft 交界为 0.2m。没有改变枪口、射程、伤害锥或命中事实。
+- 七武器共用既有 GPU VFX 管线：四把射线枪有更宽的分枪弹迹、枪口/命中；电锯使用真实挥击弧线，火焰使用真实连续喷射，榴弹使用逐 tick 真实投射物头部/轨迹与爆发。只有该次实际可画实例就绪才抑制相应旧 Canvas 枪效。
+- R4 火焰改为细长火舌、薄墨线、黄白亮芯，沿真实射流方向排布；模拟时间驱动位置卷动、上升与图集帧内扭曲，soft 交界仍为 0.2m。真实燃烧 NPC 按 run/slot/generation 附着烟，并在蒙皮表面显示流动炭化斑块与灼热发光丝；不是全身红色 tint。暂停冻结、单步推进，状态结束/死亡/重开清除，不改变真实枪口、射程、伤害锥或命中。
 - E-02 扑击、E-03 飞行/落地/酸池/被挡、E-05 自爆和结束痕迹复用正式敌人资源。危险轮廓和前摇提示保留，缺资源/预算不足继续走原保底。
 - E-04 的真实冲锋同时有尘尾与 M4 连续 Ribbon，读取逐 tick 移动事实，不增加高度偏移。电锯和敌人近战复用真实挥击弧线。
-- GPU 命中已有同 run/tick/slot/generation 的可画实例时，去掉重复 Canvas 星花；伤害与击杀文字保留。缺图、旧代次、无匹配命中均继续保底。
-- 榴弹发射器仍走现有 Canvas 弹丸/爆炸，未宣称其已 GPU 迁移。默认 sandbox 无玩家起点/RunRules，继续用于编辑；未改造成新玩法。
+- NPC 所有真实伤害来源复用既有 combatEvents；按 run/tick/slot/generation、武器及来源事件序号匹配命中。非武器/持续伤害使用共用冲击星花，短暂蒙皮受击脉冲不打断原 hit/death 动画。已有实际可画 GPU 实例才去掉重复 Canvas 星花；伤害/击杀文字及失败保底保留。
+- 榴弹发射器的 GPU 头部、短轨迹、爆发已接线；资源失败继续 Canvas。默认 sandbox 保持原编辑用途。七武器的正常镜头、真实 NPC 受击/燃烧完整独立实操尚待 R4 验收，接线通过不等于视觉验收通过。
 - 当前关卡没有合适的既有 graph/compute 作者节点或静态跨面涂印语义，本次不添加这类摆件。三项能力的作者入口与支持边界仍见 [M4 指南](../architecture/vfx-m4-20261019.md)，不把系统能力等同于已在实战触发。
 
-绑定真源为三份 `assets/scenes/act1/floor-*.scene.json`：四把武器的 `presentation.vfx` 和 RunRules 所在节点的 `VfxBindings`。
+绑定真源为三份 `assets/scenes/act1/floor-*.scene.json`：七把武器的 `presentation.vfx` 和 RunRules 所在节点的 `VfxBindings`。
 `tools/level/gameplay-vfx.mjs` 由 `gen-level.mjs` 调用，显式重建正式关卡也会保留这些绑定；本次没有运行整关重生成。
-资产使用稳定 GUID，并进入场景 dependencies；各枪/标签共享 **14/16** 张纹理，没有为每把枪复制纹理。
+资产使用稳定 GUID，并进入场景 dependencies；各枪/标签共享 **15/16** 张纹理（新增一张榴弹头部，其他复用），没有为每把枪复制纹理。
 共享装饰池仍为 256，Ribbon 共享点预算沿原系统；满池时可能减少装饰，不改变模拟或危险范围。
 
 ## R1 初次接入的历史验证与限制
@@ -170,3 +170,23 @@ pnpm exec vitest run packages/zombie-game/test/enemy-vfx-planner.test.ts
 ```
 
 工具默认使用独立 `.workbuddy/tmp/vfx-acid-explosion/chrome-profile` 和 CDP9343；端口占用即退出。仅关闭本次创建的Chrome，不碰用户标签或固定profile，不重启/停止既有5100，不写回场景。
+
+
+## R4 七武器、NPC 受击与流动燃烧（开发候选）
+
+当前数据流、v9 可选 flow、图编译/保存、GPU 实例字节与失败行为见[当前契约](../architecture/vfx-impact-fire-20261020.md)。场景仍 v23，仅三层的表现绑定变化；伤害、射速、命中、AI、弹药、波次与地形不变。
+
+直接试玩建议：第一层从手枪开始，运行中用底部下拉框依次切换七种武器；电锯须近身，火焰须进入其真实 6m 射程并持续命中 NPC。观察枪口/弹迹、命中爆花与角色表面短脉冲；火焰命中后松开攻击，观察燃烧烟与身体流动发光/炭化在真实状态结束后消失。原生强化选择会冻结战斗，选择后重新按住 J。不要把只看见喷流当作已看到燃烧表面。
+
+开发检查：55 项首批 owner、typecheck、scene:check、architecture:check、editor:build 已执行通过（构建保留原 chunk 警告）。随后26文件 **123/123** VFX/M4回归与最终typecheck、LF规范化后scene:check均exit0；原始日志在 `.workbuddy/tmp/vfx-impact-fire-20261020/`。实现提交 `254ffc0` 已推送。第一次 headed `wu3-headed-01` 因 WGSL 保留词失败，保留原图；更名后 `wu3-headed-02` 为 **8/8、EXIT0**：实际 flame、真实 NVIDIA 非 fallback、喷流 GPU 可见、15纹理加载与 Stop 销毁、0浏览器/GPU错误、场景 hash 未变。这是有界编译/喷流检查，使用 `--compile-only`，未把真实燃烧表面或完整七武器记为通过。后续 LF 规范化与 sidecar 同步单独记录字节，完整精确提交由独立 Audit 再验。
+
+基线 `baseline/` 最初七轮实际均为 pistol，不能作七武器覆盖；`baseline/selector-retry` 只确认 flame/launcher ID，没有稳定 hit/burn 记录。历史 R1–R3 的对应版本结果保留，不替代本轮。合并后旧酸液清波问题继续按前文单列，本轮没有接管或修改其玩法。
+
+```powershell
+# 有界编译/喷流检查；不等同于完整真实burn验收
+node tools/verify/vfx-gameplay-probe.mjs --headed --only flame --compile-only --profile .workbuddy/tmp/vfx-impact-fire-20261020/chrome-profile --out .workbuddy/tmp/vfx-impact-fire-20261020/compile-recheck
+# 原三层/七武器路径，武器选择须同帧核DOM value与runtime ID
+node tools/verify/vfx-gameplay-probe.mjs --headed --profile .workbuddy/tmp/vfx-impact-fire-20261020/chrome-profile --out .workbuddy/tmp/vfx-impact-fire-20261020/recheck
+```
+
+目前仍需独立七武器、真实NPC受击/燃烧表面、遮挡/alpha/HDR、暂停/单步/熄灭与重复Play/Stop验收；本文不预授通过。flow 是有界程序卷动与材质流动，未实现物理 CFD。共享纹理仍15/16、装饰池256，未提高粒子容量；高负载满池会按既有优先级裁减装饰，危险提示与模拟继续。
