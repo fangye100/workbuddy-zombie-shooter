@@ -1,8 +1,14 @@
 import type { AssetRef, SceneDocument } from './document';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 6;
-export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon';
+export const VFX_VERSION = 7;
+export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon' | 'decal';
+export interface VfxDecalDefinition {depth:number;maxAngle:number;normalOffset:number}
+export interface VfxDecalComponent {kind:'VfxDecal';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;playing:boolean;receivers:string[];layerMask:number;priority:number}
+export function validVfxDecal(value:unknown):value is VfxDecalComponent {
+ if(!value || typeof value!=='object')return false;const c=value as VfxDecalComponent;
+ return c.kind==='VfxDecal' && typeof c.enabled==='boolean' && typeof c.playing==='boolean' && validVfxRef(c.resource) && c.resource.path.endsWith('.vfx.json') && typeof c.effectKey==='string' && /^[a-z][a-z0-9-]{0,63}$/.test(c.effectKey) && Array.isArray(c.receivers) && c.receivers.length>=1 && c.receivers.length<=16 && c.receivers.every(id=>typeof id==='string' && !!id) && new Set(c.receivers).size===c.receivers.length && Number.isInteger(c.layerMask) && c.layerMask>=1 && c.layerMask<=4294967295 && Number.isInteger(c.priority) && c.priority>=0 && c.priority<=3;
+}
 export interface VfxRibbonDefinition {maxPoints:number;minDistance:number;breakDistance:number;uvMetersPerTile:number}
 export interface VfxMotion {points:[number,number,number][];seconds:number;loop:boolean}
 /** Eye-space metres. Omitted means the original hard intersection, never an implicit default fade. */
@@ -20,6 +26,7 @@ export interface VfxEffectDefinition {
   backend?: 'cpu' | 'gpu';
   ribbon?:VfxRibbonDefinition;
   softParticle?:VfxSoftParticleDefinition;
+  decal?:VfxDecalDefinition;
   emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number;acceleration?:[number,number,number]};
   sizeCurve?: Array<{t:number;value:number}>;
   colorCurve?: Array<{t:number;color:string}>;
@@ -54,13 +61,13 @@ export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,3,4,5,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,4,5,6,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
   const finite = (n: unknown, min: number, max: number) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
   for (const [key, e] of Object.entries(a.effects)) {
-    if (!/^[a-z][a-z0-9-]{0,63}$/.test(key) || !e || !(a.version===1?['muzzle','trail','impact']:a.version<5?['muzzle','trail','impact','sprite']:['muzzle','trail','impact','sprite','ribbon']).includes(e.kind)
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(key) || !e || !(a.version===1?['muzzle','trail','impact']:a.version<5?['muzzle','trail','impact','sprite']:a.version<7?['muzzle','trail','impact','sprite','ribbon']:['muzzle','trail','impact','sprite','ribbon','decal']).includes(e.kind)
       || !validVfxRef(e.texture) || !/\.(svg|png|webp)$/.test(e.texture.path)
       || !Number.isInteger(e.frames) || e.frames < 1 || e.frames > 16 || !finite(e.duration, .01, 5)
       || !Array.isArray(e.size) || e.size.length !== 2 || !e.size.every(n => finite(n, .001, 20))
@@ -68,6 +75,8 @@ export function validateVfxAsset(value: unknown): string[] {
       || e.orientation!==undefined && !['camera','surface'].includes(e.orientation) || e.loop!==undefined && typeof e.loop!=='boolean'
       || e.backend!==undefined && (a.version<4 || !['cpu','gpu'].includes(e.backend))
       || e.kind==='ribbon' && (e.backend==='gpu' || e.orientation==='surface' || !e.ribbon || !Number.isInteger(e.ribbon.maxPoints) || !finite(e.ribbon.maxPoints,2,128) || !finite(e.ribbon.minDistance,.001,2) || !finite(e.ribbon.breakDistance,.01,20) || e.ribbon.breakDistance<=e.ribbon.minDistance || !finite(e.ribbon.uvMetersPerTile,.01,20) || e.frames!==1 || e.size[1]!==1 || e.emission!==undefined)
+      || e.kind==='decal' && (a.version<7 || e.backend==='gpu' || e.orientation!=='surface' || e.frames!==1 || e.emission!==undefined || e.softParticle!==undefined || !e.decal || !finite(e.decal.depth,.01,20) || !finite(e.decal.maxAngle,1,89.9) || !finite(e.decal.normalOffset,.0001,.03))
+      || e.decal!==undefined && (a.version<7 || e.kind!=='decal')
       || e.ribbon!==undefined && (a.version<5 || e.kind!=='ribbon')
       || e.softParticle!==undefined && (a.version<6 || !e.softParticle || !finite(e.softParticle.fadeDistance,.01,5) || !finite(e.softParticle.bias,0,1))
       || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,e.backend==='gpu'?2400:120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,e.backend==='gpu'?1024:128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180) || e.emission.acceleration!==undefined && (a.version<4 || !Array.isArray(e.emission.acceleration) || e.emission.acceleration.length!==3 || !e.emission.acceleration.every(n=>finite(n,-30,30))))

@@ -348,6 +348,7 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  if(!listMigrations().some(m=>m.from===18 && m.to===19))registerMigration({from:18,to:19,name:'support-projected-vfx-decals',run:doc=>structuredClone(doc)});
   if(!listMigrations().some(m=>m.from===16 && m.to===17))registerMigration({from:16,to:17,name:'support-authored-vfx-emitters',run:doc=>structuredClone(doc)});
   if(!listMigrations().some(m=>m.from===17 && m.to===18))registerMigration({from:17,to:18,name:'support-authored-vfx-motion',run:doc=>structuredClone(doc)});
   if(!listMigrations().some(m=>m.from===15 && m.to===16))registerMigration({from:15,to:16,name:'support-generic-vfx-bindings',run:doc=>structuredClone(doc)});

@@ -27,3 +27,4 @@ export * from './vfx';
 export * from './vfx-emitter';
 export * from './vfx-simulation';
 export * from './vfx-ribbon';
+export * from './vfx-decal';

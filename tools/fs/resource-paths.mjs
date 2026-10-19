@@ -45,7 +45,7 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
             break;
           case 'SpawnPoint': ref(c.prefab); break;
           case 'NavZone': ref(c.baked); break;
-          case 'VfxEmitter': ref(c.resource);break;
+          case 'VfxEmitter': case 'VfxDecal': ref(c.resource);break;
           case 'VfxBindings': for(const b of Object.values(c.bindings??{}))ref(b.resource);break;
           case 'Script': unsupported(c.params, `nodes[${node.id}].Script.params`); break;
           case 'Light': case 'Camera': case 'Collider': case 'RoomVolume': break;

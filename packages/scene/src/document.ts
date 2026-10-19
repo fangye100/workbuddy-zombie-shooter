@@ -21,12 +21,12 @@ import { validateSharedMotionBinding, type SharedMotionBinding } from './shared-
 import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
-import {validVfxBindings,validVfxEmitter,type VfxEmitterComponent,type VfxBindingsComponent} from './vfx';
+import {validVfxBindings,validVfxEmitter,validVfxDecal,type VfxDecalComponent,type VfxEmitterComponent,type VfxBindingsComponent} from './vfx';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -168,6 +168,7 @@ export const ComponentKind = {
   RunRules: 'RunRules',
   VfxBindings: 'VfxBindings',
   VfxEmitter: 'VfxEmitter',
+  VfxDecal: 'VfxDecal',
 } as const;
 export type ComponentKind = (typeof ComponentKind)[keyof typeof ComponentKind];
 
@@ -479,6 +480,7 @@ export function validRunRules(value: unknown): value is RunRulesComponent {
 
 export type ComponentData =
   | VfxBindingsComponent
+  | VfxDecalComponent
   | VfxEmitterComponent
   | RunRulesComponent
   | MeshRendererComponent
@@ -910,6 +912,10 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         if (!validRunRules(c)) err(at, 'E_RUN_RULES', 'RunRules 的经济数值或天赋定义不合法');
         if (c.bossAttack && !d.nodes!.find(n => n.id === c.bossAttack!.source)?.components.some(x => x.kind === 'SpawnPoint')) err(at, 'E_BOSS_SOURCE', 'Boss 技能必须引用一个有效刷怪点 NodeId');
         if (c.enabled && d.nodes!.some((other, ni) => ni < i && other?.components?.some(x => x.kind === 'RunRules' && x.enabled))) err(at, 'E_RUN_RULES_DUP', '一个场景只能启用一份 RunRules');
+      }
+      if(c.kind===ComponentKind.VfxDecal){
+        if(!validVfxDecal(c))err(at,'E_VFX_DECAL','贴花资源/接收NodeId列表/layerMask/优先级或播放参数非法');
+        else for(const id of c.receivers)if(!byId.has(id) || !d.nodes![byId.get(id)!]?.components?.some(x=>x.kind==='MeshRenderer'))err(at+'/receivers','E_VFX_RECEIVER',`贴花接收节点不存在或不是MeshRenderer：${id}`);
       }
       if(c.kind===ComponentKind.VfxEmitter && !validVfxEmitter(c))err(at,'E_VFX_EMITTER','VFX发射器的引用、seed、direction、motion轨迹或播放参数非法');
       if(c.kind===ComponentKind.VfxBindings){
