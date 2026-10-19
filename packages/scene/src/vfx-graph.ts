@@ -43,7 +43,7 @@ export function validateVfxGraph(value:unknown):string[] {
  if(!record(value))return ['VFX图必须是对象'];
  const errors:string[]=[],g=value as unknown as VfxGraph;
  if(Object.keys(value).some(k=>!['version','nodes','edges'].includes(k)))errors.push('VFX图包含非白名单字段');
- if(g.version!==1 && g.version!==VFX_GRAPH_VERSION)errors.push(`不支持VFX图版本 ${g.version}`);
+ if(g.version!==1 && g.version!==VFX_GRAPH_VERSION)errors.push(`不支持VFX图版本 ${typeof g.version==='number'?g.version:'（必须为数字）'}`);
  if(!Array.isArray(g.nodes) || !g.nodes.length || g.nodes.length>VFX_GRAPH_BUDGET.nodes)return [...errors,'VFX图节点预算1–64'];
  if(!Array.isArray(g.edges) || g.edges.length>VFX_GRAPH_BUDGET.edges)return [...errors,'VFX图连线预算0–128'];
  const nodes=new Map<string,VfxGraphNode>(),keys=new Set<string>();let outputs=0;
@@ -78,7 +78,7 @@ export function validateVfxGraph(value:unknown):string[] {
 export function validateVfxGraphAsset(value:unknown):string[] {
  if(!record(value))return ['VFX图资产必须是对象'];const errors=validateVfxGraph(value.graph);
  if(Object.keys(value).some(k=>!['version','id','name','status','graph'].includes(k)))errors.push('VFX图资产包含非白名单字段');
- if(value.version!==8)errors.unshift(`不支持VFX图资产版本 ${value.version}`);
+ if(value.version!==8)errors.unshift(`不支持VFX图资产版本 ${typeof value.version==='number'?value.version:'（必须为数字）'}`);
  if(typeof value.id!=='string' || !value.id || typeof value.name!=='string' || !value.name.trim())errors.push('VFX图资产缺少id/name');
  if(!['accepted','quarantined'].includes(value.status as string))errors.push('VFX图验收状态非法');
  if(Object.hasOwn(value,'effects'))errors.push('VFX图是唯一真源，禁止同时保存派生effects');

@@ -32,3 +32,10 @@ it('JSON non-string node types cannot coerce into whitelist keys or throw during
   expect(()=>validateVfxGraphAsset(source)).not.toThrow();expect(validateVfxGraphAsset(source).some(s=>s.includes('未知类型'))).toBe(true);
  }
 });
+it('JSON malformed graph/asset versions produce safe diagnostics while numeric future versions remain identifiable',()=>{
+ for(const field of ['asset','graph']){
+  const source=JSON.parse(JSON.stringify(graphFixture()));const target=field==='asset'?source:source.graph;
+  target.version={toString:1};expect(()=>validateVfxGraphAsset(source)).not.toThrow();expect(validateVfxGraphAsset(source).join()).toContain('必须为数字');
+  target.version=99;expect(validateVfxGraphAsset(source).join()).toContain('99');
+ }
+});

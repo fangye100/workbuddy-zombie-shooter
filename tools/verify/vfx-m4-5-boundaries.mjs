@@ -36,6 +36,7 @@ export async function verifyGraphFailures(c){
  await stopPreview('computePreviewStopped');await reloadGraph(c,'已从磁盘重载');
  const good=fs.readFileSync(assetCopy,'utf8'),original=JSON.parse(good),badCases=[
   ['future-asset','资产版本',a=>a.version=99],['future-graph','图版本',a=>a.graph.version=99],
+  ['malformed-asset-version','资产版本',a=>a.version={toString:1}],['malformed-graph-version','图版本',a=>a.graph.version={toString:1}],
   ['unknown-node','未知类型',a=>a.graph.nodes[0].type='arbitrary-script'],
   ['nonstring-node','未知类型',a=>a.graph.nodes[0].type={toString:1}],
   ['unknown-port','未知节点/端口',a=>a.graph.edges.push({id:'bad_inherited',from:{node:'texture_smoke',port:'constructor'},to:{node:'output',port:'constructor'}})],
