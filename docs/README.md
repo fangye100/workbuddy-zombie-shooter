@@ -26,6 +26,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 玩法、NPC、奖励和音频事件 | [玩法设计](13-玩法与关卡设计GDD.md)、[开发流程](43-GameplayDevelopmentWorkflow.md) | `packages/zombie-game/src`、`assets/scenes`、`packages/content` |
 | 通用武器、射线碰撞与计时 | [武器报告](39-Unified-weapons-and-animation-hooks.md)、[分层契约](architecture/layers.md) | `packages/runtime/src/weapon-system.ts`、`weapon-combat.ts`、`solid-ray.ts` |
 | 手枪 VFX 资源、GPU 与编辑 | [M1 实现与验证](architecture/vfx-m1-20261019.md) | `scene/vfx` 契约、`runtime/vfx` 池、游戏表现 planner、独立 VfxPass 与编辑器资源/绑定保存 |
+| 实际 Act1 三层 VFX 试玩 | [实战接入与操作](animation/vfx-gameplay-integration.md) | 原关卡枪效/敌人/燃烧/冲锋绑定、1–7 换枪、真实输入验证与未实战触发边界 |
 | 敌人与地面 VFX | [M2 实现与验证](architecture/vfx-m2-20261019.md) | 通用标签绑定、v16/v2 兼容、真实敌人事实与平面 GPU、持久化及失败保底 |
 | 持续与动作 VFX、M4 决策 | [M3 实现与验证](architecture/vfx-m3-20261019.md) | 固定tick/seed发射器、曲线作者流程、真实火焰/烟尘/火花/冲锋/近战与预算测量 |
 | M4 进阶 VFX 与分阶段验收 | [M4 实施与验证](architecture/vfx-m4-20261019.md) | 五阶段已实现并通过分阶段独立验收及完整复审；compute、Ribbon、soft、跨面投影、typed DAG的批准目标、作者保存/预算和支持限制 |

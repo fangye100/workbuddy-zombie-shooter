@@ -6,6 +6,11 @@ import { RuntimeBridge } from '../src/services/runtime-bridge';
 import { snapshotObjects, restoreObjects } from '../src/services/author-snapshot';
 import type { LabRenderer } from '../src/renderer';
 
+// 角色/快照套件的renderer没有GPU设备；正式关卡VFX另有真实headed验收。
+vi.mock('../src/services/play-vfx', () => ({ PlayVfx: class {
+  start() {} stop() {} update() {}
+} }));
+
 const files = import.meta.glob('../../../assets/scenes/act1/floor-*.scene.json', { eager: true });
 const scenes = Object.values(files).map(m => (m as { default: SceneDocument }).default);
 function setup(doc = structuredClone(scenes[0]!)) {

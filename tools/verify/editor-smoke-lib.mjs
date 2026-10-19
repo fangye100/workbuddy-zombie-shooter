@@ -221,13 +221,13 @@ export class Cdp {
  * 启动 Chrome 并接好 CDP 会话（原 editor-smoke main() 里的接线原样上提）。
  * @returns {chrome, cdp, ws}；调用方负责 chrome.kill()
  */
-export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false }) {
+export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, userDataDir = '.workbuddy/tmp/chrome-profile' }) {
   console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
     `--remote-debugging-port=${cdpPort}`,
-    `--user-data-dir=${path.resolve('.workbuddy/tmp/chrome-profile')}`,
+    `--user-data-dir=${path.resolve(userDataDir)}`,
     `--window-size=${windowSize}`,
     '--no-first-run',
     '--no-default-browser-check',

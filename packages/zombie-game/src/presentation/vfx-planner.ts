@@ -1,6 +1,6 @@
 import { VfxPool, type VfxPoint,type WeaponVfxEvent,type VfxInstance } from '@aether/runtime';
 import type { VfxAsset, WeaponDefinition } from '@aether/scene';
-import type { RuntimeSession } from '../session';
+import type { RuntimeSession, CombatEvent } from '../session';
 
 export {weaponMarkerWorld} from '../weapon-marker';
 import {weaponMarkerWorld} from '../weapon-marker';
@@ -39,5 +39,9 @@ export class WeaponVfxPlanner {
     for(const p of this.pool.active)if(p.effect.kind==='muzzle')p.position=weaponMarkerWorld(runtime,'muzzle');
   }
   usable(w:WeaponDefinition):boolean{return this.ready.has(w.id);}
+  /** Suppress only a burst with a matching live GPU hit; damage labels remain HUD feedback. */
+  impactReady(event:CombatEvent,canDraw:(p:VfxInstance)=>boolean):boolean {
+    return event.runId===this.run && this.recentEvents.some(e=>e.kind==='trace' && e.contact==='entity' && e.tick===event.tick && e.actor?.id===event.slot && e.actor.generation===event.generation && this.pool.active.some(p=>p.key===`${this.run}:${e.sequence}:impact` && canDraw(p)));
+  }
   clear():void{this.pool.clear();this.ready.clear();this.recentEvents.length=0;this.frameEvents=[];this.fallbackWeapons.clear();this.fallbackUntil.clear();this.run=-1;}
 }

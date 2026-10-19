@@ -18,3 +18,20 @@ it('consumes all catchup ticks once, freezes paused TTL, restarts identity and s
   session.setFire(false);for(let i=0;i<8;i++)session.step();p.update(session);expect(p.pool.active).toHaveLength(0);
   session.reset();p.update(session);expect(p.pool.stats.spawned).toBe(0);
 });
+
+it('仅同局同tick同身份的GPU命中接管Canvas爆花，缺图或槽复用保留保底',()=>{
+  const hitScenes=import.meta.glob('../../../assets/scenes/sandbox/vfx-m2-pounce.scene.json',{eager:true,import:'default'});
+  const session=new RuntimeSession({desc:loadLevelRuntime(structuredClone(Object.values(hitScenes)[0]) as SceneDocument).desc!,seed:1});
+  session.step();const target=session.view().find(e=>e.id!==session.playerEntityId)!;
+  const w=session.weapons.active,asset=Object.values(assets)[0] as VfxAsset;
+  w.presentation.vfx={resource:{path:'assets/vfx/comic-pistol.vfx.json',guid:asset.id},muzzle:'comic-muzzle',trail:'comic-trail',impact:'comic-impact'};
+  const planner=new WeaponVfxPlanner();planner.ready.set(w.id,asset);
+  session.setAim(target.x,target.z);session.setFire(true);
+  for(let i=0;i<10 && !session.combatEvents.some(e=>e.slot===target.id);i++){session.step();planner.update(session);}
+  const hit=session.combatEvents.find(e=>e.slot===target.id)!;expect(hit).toBeDefined();
+  expect(planner.impactReady(hit,()=>true)).toBe(true);
+  expect(planner.impactReady(hit,()=>false)).toBe(false);
+  expect(planner.impactReady({...hit,generation:hit.generation+1},()=>true)).toBe(false);
+  expect(planner.impactReady({...hit,runId:hit.runId+1},()=>true)).toBe(false);
+  planner.clear();expect(planner.impactReady(hit,()=>true)).toBe(false);
+});

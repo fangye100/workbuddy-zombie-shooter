@@ -24,6 +24,12 @@ import {
 } from '../src/services/play-camera';
 import type { SceneDocument } from '@aether/scene';
 
+// 本套件使用无GPU的renderer替身，验证控制器快照/相机；真实VFX由专属GPU验收覆盖。
+// 正式Act1配置现在含VFX，不能再依赖“关卡恰好没有特效”来避开GPU装配。
+vi.mock('../src/services/play-vfx', () => ({ PlayVfx: class {
+  start() {} stop() {} update() {}
+} }));
+
 /**
  * 记录型主视图相机替身。
  *

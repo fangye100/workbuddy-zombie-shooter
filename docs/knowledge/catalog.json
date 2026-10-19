@@ -4,6 +4,17 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-gameplay-integration",
+      "path": "docs/animation/vfx-gameplay-integration.md",
+      "title": "Act1 实战 VFX 与直接试玩",
+      "role": "game",
+      "authority": "guide",
+      "status": "current",
+      "topics": ["vfx", "gameplay", "campaign", "gpu"],
+      "read": "三层试玩入口与换枪；正式资源绑定；真实输入及生命周期验证；未自然触发与未接入能力边界",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "scene-weapons", "asset-metadata"]
+    },
+    {
       "id": "vfx-m4-20261019",
       "path": "docs/architecture/vfx-m4-20261019.md",
       "title": "M4 五阶段实施与验证契约",

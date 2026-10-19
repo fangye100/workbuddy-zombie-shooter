@@ -55,13 +55,13 @@ export function drawShotInk(c: CanvasRenderingContext2D, a: {x:number;y:number},
   c.restore();
 }
 
-export function drawImpactInk(c: CanvasRenderingContext2D, x: number, y: number, age: number, amount: number, killed: boolean, player: boolean, seed: number): void {
+export function drawImpactInk(c: CanvasRenderingContext2D, x: number, y: number, age: number, amount: number, killed: boolean, player: boolean, seed: number, showBurst = true): void {
   if (age < 0 || age >= IMPACT_SECONDS) return;
   c.save();
   const t = age / IMPACT_SECONDS;
   c.globalAlpha = Math.min(1, (1 - t) * 3);
   const accent = player ? '#ef6745' : GOLD;
-  if (age < 0.24) {
+  if (showBurst && age < 0.24) {
     const impact = age / 0.24;
     c.save(); c.globalAlpha *= 1 - impact;
     burst(c,x,y,(killed ? 32 : 23) * (0.7 + impact * 0.5),seed * 0.7,accent);
