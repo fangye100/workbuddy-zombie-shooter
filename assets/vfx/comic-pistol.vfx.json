@@ -964,6 +964,50 @@
       "blend": "alpha",
       "orientation": "camera",
       "loop": true
+    },
+    "npc-hit": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.24,
+      "size": [
+        1.8,
+        1.8
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
     }
   }
 }

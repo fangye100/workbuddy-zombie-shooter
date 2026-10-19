@@ -39,7 +39,7 @@ import { NavigationGates, gateOverlapsActor, type SolidColliderDesc } from '@aet
 import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
 import { WeaponSystem } from "@aether/runtime";
-import { WeaponCombat, type WeaponWorld } from "@aether/runtime";
+import { WeaponCombat, type WeaponWorld,type WeaponDamageFacts } from "@aether/runtime";
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -156,6 +156,8 @@ export interface SpawnRejection {
  * 统计据此派生，不需要每步扫表。
  */
 export interface CombatEvent {
+  readonly weaponId?:string;
+  readonly weaponEvent?:number;
   /** 击杀前的 NPC 只读快照，供表现尾部消费；不代表仍存活的模拟实体。 */
   readonly defeated?: EntityView;
   readonly x?: number;
@@ -676,7 +678,7 @@ export class RuntimeSession {
    * 减血 → ≤0 时 kill：NPC 槽位销毁回 freelist（generation+1 防旧引用冒名，
    * view() 自动消失）；玩家不销毁（保留"死状"槽位，胜负判定是 C5 的消费方）。
    */
-  applyDamage(targetSlot: number, amount: number, sourceSlot = -1): DamageResult {
+  applyDamage(targetSlot: number, amount: number, sourceSlot = -1, weapon?:WeaponDamageFacts): DamageResult {
     if (!this.tbl.isAlive(targetSlot)) {
       return { died: false, hpAfter: 0 };
     }
@@ -699,6 +701,7 @@ export class RuntimeSession {
     this.combatEventBuf.push({
       ...(died && this.kindOf[targetSlot] === 1 ? { defeated: this.viewAt(targetSlot) } : {}),
       type: died ? 'kill' : 'damage',
+      ...(weapon?{weaponId:weapon.weaponId,...(weapon.vfxSequence===undefined?{}:{weaponEvent:weapon.vfxSequence})}:{}),
       tick: this.tickCount,
       slot: targetSlot,
       generation: this.tbl.generation[targetSlot]!,
@@ -1499,11 +1502,11 @@ export class RuntimeSession {
         return {actor:target,distance,point,kind:target?'entity':surface?'scene':'miss',nodeId:target?undefined:surface?.nodeId,...(!target&&surface?{surface}:{}),normal:target?[-direction[0],-direction[1],-direction[2]]:surface?.normal};
       },
       solidImpact:(hit,from,direction,w,tick)=>{if(!['hitscan','pellets','piercing'].includes(w.behavior)&&(w.behavior!=='projectile'||w.effects.blastRadiusM>0))return;if(hit.surface)this.decalEvents.append(this.runId,{event:"weapon-solid-impact",tick,receiver:hit.surface.nodeId,point:[...hit.surface.point],normal:[...hit.surface.normal],from:[...from],direction:[...direction],weaponId:w.id});},
-      damage:(id,damage)=>{
-        const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p);
+      damage:(id,damage,facts)=>{
+        const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p,facts);
         t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));
         const blast=this.progress?.strength('blast')??0;
-        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)>blast || blocked([a.x,a.y+1,a.z],[b.x,b.y+1,b.z]))continue;this.applyDamage(i,damage/2,p);}
+        if(blast>0)for(let i=0;i<t.capacity;i++){const b=actor(i);if(!b || i===id || Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z)>blast || blocked([a.x,a.y+1,a.z],[b.x,b.y+1,b.z]))continue;this.applyDamage(i,damage/2,p,facts?{weaponId:facts.weaponId}:undefined);}
         return dealt;
       },
       displace:(id,from,distance)=>{

@@ -10,6 +10,7 @@ it('受击只影响表现，攻击优先；死亡不复活实体，暂停不重�
  expect(p.cue({...npc,behavior:2},1,1/30)).toBeNull();
  expect(p.cue({...npc,motionCue:{state:'slam',phase:.4}},1,1/30)).toEqual({state:'slam',phase:.4});
  const dead=p.frames([], [event('damage'),event('kill',2)],2,1/30,2)[0]!;
+ expect(p.impact(dead,2,1/30)).toBe(1);expect(p.impact(dead,8,1/30)).toBe(0);
  expect(dead.alive).toBe(false); expect(npc.alive).toBe(true);
  expect(p.cue(dead,2,1/30)).toEqual({state:'death',phase:0});
  expect(p.frames([], [event('damage'),event('kill',2)],32,1/30,2)).toHaveLength(1);

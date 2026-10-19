@@ -1,4 +1,5 @@
 import { COMMON_WGSL } from './common.wgsl';
+import {SURFACE_EFFECTS_WGSL} from './surface-effects.wgsl';
 
 /**
  * 动态实例着色：一次 drawIndexed 画 N 个**运行时实体**（僵尸 / 子弹 / 拾取物），
@@ -28,6 +29,7 @@ import { COMMON_WGSL } from './common.wgsl';
  */
 export const DYNAMIC_WGSL = /* wgsl */ `
 ${COMMON_WGSL}
+${SURFACE_EFFECTS_WGSL}
 
 // Per-instance anim.w carries the palette joint stride (including the identity joint).
 
@@ -70,7 +72,7 @@ struct DInst {
   scale : vec4f,    // scaleX, scaleY, scaleZ, paletteBase (matrix offset)
   color : vec4f,    // albedoR, albedoG, albedoB, poseIndex(相对 paletteBase)
   anim : vec4f,     // clipFrameCount, phase01, flags(bit0=蒙皮), jointCount
-  blend : vec4f,    // target weight, snapshot matrix base, reserved, reserved
+  blend : vec4f,    // target weight, snapshot matrix base, impact pulse, transient surface clock
 };
 
 @group(0) @binding(0) var<uniform> frame : Frame;
@@ -89,6 +91,8 @@ struct VSOut {
   @location(1) normal : vec3f,
   @location(2) albedo : vec3f,
   @location(3) uv : vec2f,
+  @location(4) local : vec3f,
+  @location(5) effects : vec2f,
 };
 
 struct FragOut {
@@ -174,6 +178,7 @@ fn vs_main(
   out.normal = normalize(vec3f(n.x * c + n.z * s, n.y, -n.x * s + n.z * c));
   out.albedo = i.color.rgb;
   out.uv = uv;
+  out.local=position;out.effects=i.blend.zw;
   out.clip = frame.viewProj * vec4f(worldPos, 1.0);
   return out;
 }
@@ -209,6 +214,7 @@ fn vs_outline(
   out.normal = n;
   out.albedo = i.color.rgb;
   out.uv = vec2f(0);
+  out.local=position;out.effects=i.blend.zw;
   out.clip = frame.viewProj * vec4f(expanded, 1.0);
   return out;
 }
@@ -264,6 +270,7 @@ fn fs_main(in : VSOut) -> FragOut {
   }
 
   var color = keyTerm + fillTerm + ambTerm + pointTerm + rimTermColor;
+  color=impactSurface(color,N,V,in.local,in.effects.x);
   color = applyFog(color, in.worldPos);
 
   // Share the comic halftone pass with the street, at half strength for silhouette

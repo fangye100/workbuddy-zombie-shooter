@@ -456,7 +456,7 @@ export class RuntimeBridge {
         let poseIdx = 0;
         let frameCount = 0;
         let phase01 = 0;
-        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = 0; inst[o + 19] = 0;
+        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = Math.max(flash,this.npcMotion.impact(e,tick,fixedStep)); inst[o + 19] = 0;
         if (actor !== null) {
           // Anchored actors can acquire a chase target while their authored speed
           // remains zero. Their idle motion uses time, not a frozen walking gait.

@@ -2155,6 +2155,13 @@
                 "guid": "as_vfx_comic_enemies"
               },
               "effectKey": "weapon-explosion"
+            },
+            "combat.damage": {
+              "resource": {
+                "path": "assets/vfx/comic-pistol.vfx.json",
+                "guid": "as_vfx_comic_pistol"
+              },
+              "effectKey": "npc-hit"
             }
           }
         },

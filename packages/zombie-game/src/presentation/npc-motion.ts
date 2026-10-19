@@ -41,4 +41,9 @@ export class NpcMotionPresentation {
     const hit = this.hits.get(key);
     return hit ? { state: hit.variant, phase: Math.min(.999, Math.max(0, (tick - hit.tick) * step / .3)) } : null;
   }
+  /** Mesh flash includes the first corpse frame without interrupting its death clip. */
+  impact(entity:EntityView,tick:number,step:number):number {
+    const key=identity(entity),hit=this.hits.get(key)??this.deaths.get(key);
+    return hit?Math.max(0,1-(tick-hit.tick)*step/.18):0;
+  }
 }

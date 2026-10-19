@@ -30,6 +30,7 @@ export function applyGameplayVfx(doc) {
   bindings['enemy.charge.ribbon'] = binding(ribbon, 'motion-ribbon');
   bindings['weapon.projectile'] = binding(pistol, 'launcher-head');
   bindings['weapon.explosion'] = binding(enemies, 'weapon-explosion');
+  bindings['combat.damage'] = binding(pistol, 'npc-hit');
   let component = rulesNode.components.find(c => c.kind === 'VfxBindings');
   if (!component) { component = { kind: 'VfxBindings', enabled: true, bindings: {} }; rulesNode.components.push(component); }
   Object.assign(component.bindings, bindings);
