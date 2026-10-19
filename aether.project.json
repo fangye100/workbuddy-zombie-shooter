@@ -153,6 +153,12 @@
       "path": "assets/scenes/sandbox/vfx-m4-ribbon.scene.json",
       "enabled": true,
       "name": "M4.2 VFX · 连续 Ribbon"
+    },
+    {
+      "id": "sc_vfx_m4_soft",
+      "path": "assets/scenes/sandbox/vfx-m4-soft.scene.json",
+      "enabled": true,
+      "name": "M4.3 VFX · 柔和深度交界"
     }
   ],
   "startIndex": 1,

@@ -1,0 +1,132 @@
+{
+  "version": 6,
+  "id": "as_vfx_comic_soft",
+  "name": "漫画柔和深度交界火焰与烟尘",
+  "status": "accepted",
+  "effects": {
+    "soft-flame": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-flame.svg",
+        "guid": "as_vfx_comic_flame"
+      },
+      "frames": 3,
+      "duration": 2,
+      "size": [
+        2.2,
+        2.2
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 1.2
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 0.6
+        },
+        {
+          "t": 0.7,
+          "value": 0.55
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 8,
+        "maxParticles": 32,
+        "speed": 0.25,
+        "spreadDeg": 8
+      },
+      "backend": "cpu",
+      "softParticle": {
+        "fadeDistance": 0.65,
+        "bias": 0.01
+      }
+    },
+    "soft-smoke": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-smoke.svg",
+        "guid": "as_vfx_comic_smoke"
+      },
+      "frames": 3,
+      "duration": 2,
+      "size": [
+        2.2,
+        2.2
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": false,
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.8
+        },
+        {
+          "t": 1,
+          "value": 1.2
+        }
+      ],
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 0.6
+        },
+        {
+          "t": 0.7,
+          "value": 0.55
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "colorCurve": [
+        {
+          "t": 0,
+          "color": "#ffffff"
+        },
+        {
+          "t": 1,
+          "color": "#a8a4b5"
+        }
+      ],
+      "emission": {
+        "rate": 6,
+        "maxParticles": 32,
+        "speed": 0.25,
+        "spreadDeg": 8
+      },
+      "backend": "cpu",
+      "softParticle": {
+        "fadeDistance": 0.65,
+        "bias": 0.01
+      }
+    }
+  }
+}

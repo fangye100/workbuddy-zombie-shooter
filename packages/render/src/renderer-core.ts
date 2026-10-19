@@ -1,3 +1,4 @@
+import {SceneDepth} from './scene-depth';
 /**
  * RendererCore —— Game Editor 的引擎帧绘制核心（packages/render）。
  *
@@ -400,7 +401,8 @@ export class RendererCore {
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
   private auxTex: GPUTexture | null = null;
-  private depthTex: GPUTexture | null = null;
+  readonly sceneDepth:SceneDepth;
+  private get depthTex(){return this.sceneDepth.texture;}
   private postBindGroup: GPUBindGroup | null = null;
 
   // 画布尺寸由 core 持有；编辑器通过 core.width / core.height 读取（resize 时更新）
@@ -429,6 +431,7 @@ export class RendererCore {
   constructor(gpu: GpuContext, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.device = gpu.device;
+    this.sceneDepth=new SceneDepth(this.device);
     this.skyPass = new ComicSkyPass(this.device, HDR_FORMAT, DEPTH_FORMAT);
     this.contactPass = new ContactShadowPass(this.device, HDR_FORMAT, DEPTH_FORMAT);
     this.format = gpu.format;
@@ -956,7 +959,7 @@ export class RendererCore {
 
     this.hdrTex?.destroy();
     this.auxTex?.destroy();
-    this.depthTex?.destroy();
+    this.sceneDepth.resize(this.width,this.height);
 
     const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
     this.hdrTex = this.device.createTexture({
@@ -970,12 +973,6 @@ export class RendererCore {
       size: [this.width, this.height],
       format: HDR_FORMAT,
       usage,
-    });
-    this.depthTex = this.device.createTexture({
-      label: 'depth',
-      size: [this.width, this.height],
-      format: DEPTH_FORMAT,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     this.postBindGroup = this.device.createBindGroup({
@@ -1070,7 +1067,7 @@ export class RendererCore {
         },
       ],
       depthStencilAttachment: {
-        view: this.depthTex.createView(),
+        view: this.sceneDepth.view!,
         depthClearValue: 1,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
@@ -1146,7 +1143,7 @@ export class RendererCore {
     pass.end();
 
     // ---- Pass 3：后处理 ----
-    if (p.debugMode === 0 && this.vfx) draws += this.vfx.draw(encoder, this.hdrTex.createView(), this.auxTex.createView(), this.depthTex.createView(), this.viewProj, eye, this.view);
+    if (p.debugMode === 0 && this.vfx) draws += this.vfx.draw(encoder, this.hdrTex.createView(), this.auxTex.createView(), this.sceneDepth.view!, this.viewProj, eye, this.view, this.proj);
     const swapView = this.ctx.getCurrentTexture().createView();
     const postPass = encoder.beginRenderPass({
       label: 'post',
@@ -1276,7 +1273,7 @@ export class RendererCore {
     this.contactPass.destroy();
     this.hdrTex?.destroy();
     this.auxTex?.destroy();
-    this.depthTex?.destroy();
+    this.sceneDepth.destroy();
     this.frameBuf.destroy();
     this.lightsBuf.destroy();
     this.toonBuf.destroy();

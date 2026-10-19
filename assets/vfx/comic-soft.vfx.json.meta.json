@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_soft",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-soft.vfx.json",
+    "status": "accepted",
+    "author": "项目原创M4.3软粒子资源，复用已验收原创M3火焰/烟尘纹理"
+  },
+  "sourceHash": "sha256:4f074d8e4dddba9b169a460f435cb494a14df9465e53c0d2709580d3484bc718",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}
