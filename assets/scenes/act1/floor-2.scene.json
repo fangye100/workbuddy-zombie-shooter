@@ -424,9 +424,9 @@
                       "path": "assets/vfx/comic-pistol.vfx.json",
                       "guid": "as_vfx_comic_pistol"
                     },
-                    "muzzle": "comic-muzzle",
-                    "trail": "comic-trail",
-                    "impact": "comic-impact"
+                    "muzzle": "pistol-muzzle",
+                    "trail": "pistol-trail",
+                    "impact": "pistol-impact"
                   }
                 }
               },
@@ -589,9 +589,9 @@
                       "path": "assets/vfx/comic-pistol.vfx.json",
                       "guid": "as_vfx_comic_pistol"
                     },
-                    "muzzle": "comic-muzzle",
-                    "trail": "comic-trail",
-                    "impact": "comic-impact"
+                    "muzzle": "shotgun-muzzle",
+                    "trail": "shotgun-trail",
+                    "impact": "shotgun-impact"
                   }
                 }
               },
@@ -754,9 +754,9 @@
                       "path": "assets/vfx/comic-pistol.vfx.json",
                       "guid": "as_vfx_comic_pistol"
                     },
-                    "muzzle": "comic-muzzle",
-                    "trail": "comic-trail",
-                    "impact": "comic-impact"
+                    "muzzle": "smg-muzzle",
+                    "trail": "smg-trail",
+                    "impact": "smg-impact"
                   }
                 }
               },
@@ -919,9 +919,9 @@
                       "path": "assets/vfx/comic-pistol.vfx.json",
                       "guid": "as_vfx_comic_pistol"
                     },
-                    "muzzle": "comic-muzzle",
-                    "trail": "comic-trail",
-                    "impact": "comic-impact"
+                    "muzzle": "sniper-muzzle",
+                    "trail": "sniper-trail",
+                    "impact": "sniper-impact"
                   }
                 }
               },

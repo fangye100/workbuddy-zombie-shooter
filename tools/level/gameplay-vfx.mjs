@@ -13,7 +13,8 @@ export function applyGameplayVfx(doc) {
   const rules = rulesNode.components.find(c => c.kind === 'RunRules');
   for (const weapon of rules.arsenal.definitions) {
     if (['hitscan', 'pellets', 'piercing'].includes(weapon.behavior)) {
-      weapon.presentation.vfx = { resource: structuredClone(pistol), muzzle: 'comic-muzzle', trail: 'comic-trail', impact: 'comic-impact' };
+      const style = ['pistol', 'shotgun', 'smg', 'sniper'].includes(weapon.id) ? weapon.id : 'pistol';
+      weapon.presentation.vfx = { resource: structuredClone(pistol), muzzle: `${style}-muzzle`, trail: `${style}-trail`, impact: `${style}-impact` };
     }
   }
   const bindings = {};
