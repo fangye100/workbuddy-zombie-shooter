@@ -28,7 +28,7 @@ ID 不依赖文档编号：项目有两份 `39-*` 和两份 `40-*` 文档。引�
 | 手枪 VFX 资源、GPU 与编辑 | [M1 实现与验证](architecture/vfx-m1-20261019.md) | `scene/vfx` 契约、`runtime/vfx` 池、游戏表现 planner、独立 VfxPass 与编辑器资源/绑定保存 |
 | 敌人与地面 VFX | [M2 实现与验证](architecture/vfx-m2-20261019.md) | 通用标签绑定、v16/v2 兼容、真实敌人事实与平面 GPU、持久化及失败保底 |
 | 持续与动作 VFX、M4 决策 | [M3 实现与验证](architecture/vfx-m3-20261019.md) | 固定tick/seed发射器、曲线作者流程、真实火焰/烟尘/火花/冲锋/近战与预算测量 |
-| M4 五阶段与 GPU 模拟 | [M4 实施与验证](architecture/vfx-m4-20261019.md) | compute/CPU参考与后端契约、作者保存、预算失败及分阶段独立验收；后续 Ribbon/软粒子/跨面贴花/节点编辑 |
+| M4 五阶段、GPU 模拟与 Ribbon | [M4 实施与验证](architecture/vfx-m4-20261019.md) | compute/CPU参考、连续共享Ribbon网格与真实运动、作者保存/预算/分阶段验收；后续软粒子/跨面贴花/节点编辑 |
 | HUD、语言、触摸/鼠标和游戏音频 | [输入报告](37-CombatInputAndPopulationQuality.md)、[音频指南](42-GameplayAudioIntegration.md) | `packages/zombie-game/src/presentation`；宿主提供视口、输入和 Play 端口 |
 | 绑定、Retarget 与 IK | [绑定流程](rigging/character-rigging-workflow.md)、[身体 IK](animation/body-ik-blending.md)、[动作过渡](animation/pose-transitions.md) | `packages/render`、`packages/scene` 契约与编辑器绑定适配器 |
 | 动画只读观察与排障 | [动画可视化调试](45-AnimationVisualDebugging.md) | `apps/editor/src/services/animation-debug`；观察现有选择器、姿态与 IK，不拥有或修改玩法状态 |
