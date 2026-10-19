@@ -13,7 +13,11 @@ it('flame immutable facts survive multi ticks, release stops emission, same hand
 });
 it('charge consumes every actual move sample and melee swing does not invent a hit',()=>{
  const f=fixture(),r=f.r,actor={x:5,z:0,generation:1,radius:.4,hp:70},player={x:0,z:0,generation:1,radius:.35,hp:100},world={player:0,actor:(id:number)=>id===0?player:actor,damage:()=>{},move:(_id:number,x:number,z:number)=>[x,0,z] as [number,number,number],obstruction:()=>null};
- r.enemyAttacks.strike(1,actor,NPC_STATS.find(n=>n.id==='E-04')!.attack!,0,player,world);for(let i=0;i<9;i++)r.enemyAttacks.step(i,1/30,world);const events=r.enemyAttacks.drainEvents();expect(events.filter(e=>e.type==='move')).toHaveLength(9);Object.defineProperty(r,'tick',{value:9});f.p.update(r,events,()=>true);expect(f.w.pool.active.filter(p=>p.key.includes(':charge:')).length).toBeGreaterThan(9);expect(new Set(f.w.pool.active.map(p=>p.position[0])).size).toBeGreaterThan(3);
+ r.enemyAttacks.strike(1,actor,NPC_STATS.find(n=>n.id==='E-04')!.attack!,0,player,world);for(let i=0;i<9;i++)r.enemyAttacks.step(i,1/30,world);const events=r.enemyAttacks.drainEvents(),moves=events.filter(e=>e.type==='move');expect(moves).toHaveLength(9);Object.defineProperty(r,'tick',{value:9});f.p.update(r,events,()=>true);
+ // 作者尘率现为30/s，每tick一粒；验证每个真实move位置都被消费，不固定旧的60/s密度。
+ const dust=f.w.pool.active.filter(p=>p.key.includes(':charge:'));
+ for(const move of moves)expect(dust.some(p=>p.position.every((v,i)=>Math.abs(v-move.effect.position[i]!)<1e-6))).toBe(true);
+ expect(new Set(dust.map(p=>p.position[0])).size).toBeGreaterThan(3);
  r.enemyAttacks.strike(1,actor,{...NPC_STATS.find(n=>n.id==='E-01')!.attack!,kind:'melee',damage:1,rangeM:1,cdSec:1,windupSec:.1},9,player,world);const swing=r.enemyAttacks.drainEvents()[0]!;expect(swing.effect.hit).toBe(false);
 });
 

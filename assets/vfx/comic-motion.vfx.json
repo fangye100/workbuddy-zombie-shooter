@@ -168,10 +168,10 @@
         "guid": "as_vfx_comic_dust"
       },
       "frames": 3,
-      "duration": 0.45,
+      "duration": 0.28,
       "size": [
-        1.05,
-        0.75
+        0.92,
+        0.55
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -194,11 +194,11 @@
       "alphaCurve": [
         {
           "t": 0,
-          "value": 1
+          "value": 0.65
         },
         {
           "t": 0.55,
-          "value": 0.9
+          "value": 0.45
         },
         {
           "t": 1,
@@ -206,8 +206,8 @@
         }
       ],
       "emission": {
-        "rate": 45,
-        "maxParticles": 32,
+        "rate": 30,
+        "maxParticles": 24,
         "speed": 0.2,
         "spreadDeg": 10
       }
