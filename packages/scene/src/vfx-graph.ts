@@ -33,7 +33,7 @@ function validParams(type:VfxGraphNodeType,p:Record<string,unknown>):boolean {
   case 'color':return exact(p,['value']) && typeof p.value==='string' && /^#[a-f\d]{6}$/i.test(p.value);
   case 'texture':{const r=p.ref as AssetRef;return exact(p,['ref','frames']) && record(r) && exact(r,['path','guid']) && typeof r.guid==='string' && !!r.guid && typeof r.path==='string' && /^assets\//.test(r.path) && !/[\\?#]/.test(r.path) && r.path.split('/').every(s=>s && s!=='.' && s!=='..') && /\.(svg|png|webp)$/.test(r.path) && Number.isInteger(p.frames) && finite(p.frames,1,16);}
   case 'emission':return exact(p,['maxParticles','spreadDeg']) && Number.isInteger(p.maxParticles) && finite(p.maxParticles,1,1024) && finite(p.spreadDeg,0,180);
-  case 'sprite':return exact(p,['backend','blend']) && ['cpu','gpu'].includes(p.backend as string) && ['alpha','additive'].includes(p.blend as string);
+  case 'sprite':return exact(p,p.flow===undefined?['backend','blend']:['backend','blend','flow']) && (p.flow===undefined || record(p.flow) && exact(p.flow,['strength','speed']) && finite(p.flow.strength,0,.6) && finite(p.flow.speed,.1,8)) && ['cpu','gpu'].includes(p.backend as string) && ['alpha','additive'].includes(p.blend as string);
   case 'output':return exact(p,['key']) && typeof p.key==='string' && /^[a-z][a-z0-9-]{0,63}$/.test(p.key);
   default:return exact(p,[]);
  }

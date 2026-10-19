@@ -1,4 +1,5 @@
 import {SOFT_DEPTH_WGSL} from './vfx-soft-depth';
+import {SURFACE_EFFECTS_WGSL} from './shaders/surface-effects.wgsl';
 export function vfxSpriteShader(soft:boolean){return /* wgsl */ `
 struct Frame { vp:mat4x4f };
 struct Instance { center:vec4f, right:vec4f, up:vec4f, color:vec4f, uv:vec4f, soft:vec4f };
@@ -6,17 +7,20 @@ struct Instance { center:vec4f, right:vec4f, up:vec4f, color:vec4f, uv:vec4f, so
 @group(0) @binding(1) var<storage,read> instances:array<Instance>;
 @group(0) @binding(2) var image:texture_2d<f32>;
 @group(0) @binding(3) var samp:sampler;
-struct Out { @builtin(position) pos:vec4f, @location(0) uv:vec2f, @location(1) color:vec4f, @location(2) soft:vec2f };
+struct Out { @builtin(position) pos:vec4f, @location(0) uv:vec2f, @location(1) color:vec4f, @location(2) soft:vec2f, @location(3) bounds:vec4f, @location(4) flow:vec2f, @location(5) local:vec2f };
 @vertex fn vs(@builtin(vertex_index) vi:u32,@builtin(instance_index) ii:u32)->Out {
  let corners=array<vec2f,6>(vec2f(-.5,-.5),vec2f(.5,-.5),vec2f(.5,.5),vec2f(-.5,-.5),vec2f(.5,.5),vec2f(-.5,.5));
  let p=corners[vi];let i=instances[ii];var o:Out;
  o.pos=frame.vp*vec4f(i.center.xyz+i.right.xyz*p.x+i.up.xyz*p.y,1);
- o.uv=vec2f(mix(i.uv.x,i.uv.y,p.x+.5),mix(i.uv.w,i.uv.z,p.y+.5));o.color=i.color;o.soft=i.soft.xy;return o;
+ o.uv=vec2f(mix(i.uv.x,i.uv.y,p.x+.5),mix(i.uv.w,i.uv.z,p.y+.5));o.color=i.color;o.soft=i.soft.xy;o.bounds=i.uv;o.flow=i.soft.zw;o.local=p+0.5;return o;
 }
+${SURFACE_EFFECTS_WGSL}
 ${soft?SOFT_DEPTH_WGSL:''}
 struct Fragment { @location(0) color:vec4f, @location(1) aux:vec4f };
 @fragment fn fs(i:Out)->Fragment {
- let t=textureSample(image,samp,i.uv);let a=t.a*i.color.a${soft?'*intersectionFade(i.pos,i.soft)':''};
+ let warp=flowField(i.local,i.flow.y)*i.flow.x*0.15*sin(i.local.y*3.14159265);
+ let uv=clamp(i.uv+warp*vec2f(i.bounds.y-i.bounds.x,i.bounds.w-i.bounds.z),vec2f(i.bounds.x,i.bounds.z),vec2f(i.bounds.y,i.bounds.w));
+ let t=textureSample(image,samp,uv);let a=t.a*i.color.a${soft?'*intersectionFade(i.pos,i.soft)':''};
  if(a<.003){discard;}
  var o:Fragment;o.color=vec4f(t.rgb*i.color.rgb*a,a);o.aux=vec4f(0,0,0,a);return o;
 }`;}

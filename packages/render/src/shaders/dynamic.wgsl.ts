@@ -270,6 +270,7 @@ fn fs_main(in : VSOut) -> FragOut {
   }
 
   var color = keyTerm + fillTerm + ambTerm + pointTerm + rimTermColor;
+  color=burnSurface(color,N,V,in.local,in.effects.y);
   color=impactSurface(color,N,V,in.local,in.effects.x);
   color = applyFog(color, in.worldPos);
 

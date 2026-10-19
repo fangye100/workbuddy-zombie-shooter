@@ -1,6 +1,13 @@
 import { expect, it } from 'vitest';
 import { VFX_VERSION,validateVfxAsset,migrateVfxAsset,resolveVfxBindings,validVfxEmitter,validVfxMotion,gpuVfxReason,cpuVfxCompatibility } from '../src/vfx';
 const asset={version:1,id:'as_vfx',name:'测试',status:'accepted',effects:{flash:{kind:'muzzle',texture:{path:'assets/vfx/flash.svg',guid:'as_flash'},frames:3,duration:.1,size:[.3,.3],color:'#ffcc33',blend:'alpha'}}};
+it('v9 flow is optional on v8 migration, sprite-only, bounded and explicitly CPU-compatible',()=>{
+ const old={...structuredClone(asset),version:8};expect(migrateVfxAsset(old).effects.flash!.flow).toBeUndefined();expect(old.version).toBe(8);
+ const a=migrateVfxAsset(old),e=a.effects.flash!;e.kind='sprite';e.flow={strength:.35,speed:2};expect(validateVfxAsset(a)).toEqual([]);expect(migrateVfxAsset(a).effects.flash!.flow).toEqual(e.flow);
+ expect(validateVfxAsset({...a,version:8}).length).toBeGreaterThan(0);expect(gpuVfxReason(e)).toContain('flow');expect(cpuVfxCompatibility(e).flow).toEqual(e.flow);
+ for(const flow of [null,{}, {strength:.7,speed:1},{strength:.3,speed:0},{strength:NaN,speed:1}])expect(validateVfxAsset({...a,effects:{flash:{...e,flow}}}).length).toBeGreaterThan(0);
+ expect(validateVfxAsset({...a,effects:{flash:{...e,kind:'impact'}}}).length).toBeGreaterThan(0);
+});
 it('rejects future versions, missing identity, frame overflow and nonfinite parameters',()=>{
   expect(validateVfxAsset(asset)).toEqual([]);
   for(const mutate of [(a:any)=>a.version=99,(a:any)=>a.effects.flash.texture.guid='',(a:any)=>a.effects.flash.frames=17,(a:any)=>a.effects.flash.size[0]=NaN]){const a=structuredClone(asset);mutate(a);expect(validateVfxAsset(a).length).toBeGreaterThan(0);}

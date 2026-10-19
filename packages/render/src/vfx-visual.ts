@@ -6,5 +6,8 @@ const rgb=(hex:string)=>[1,3,5].map(k=>linear(parseInt(hex.slice(k,k+2),16)/255)
 export function sampleVfxVisual(p:VfxInstance){
  const e=p.effect,t=Math.min(1,Math.max(0,p.age/(p.lifetime??e.duration)));let color=rgb(e.color);
  if(e.colorCurve){for(let i=1;i<e.colorCurve.length;i++){const a=e.colorCurve[i-1]!,b=e.colorCurve[i]!;if(t<=b.t){const f=(t-a.t)/(b.t-a.t),c=rgb(a.color),d=rgb(b.color);color=c.map((v,k)=>(v+(d[k]!-v)*f)*color[k]!);break;}}}
- return {position:p.position.map((v,i)=>v+(p.velocity?.[i]??0)*p.age+(e.emission?.acceleration?.[i]??0)*.5*p.age*(p.age+(p.simulationStep??0))),size:sampleVfxCurve(e.sizeCurve,t),color,alpha:sampleVfxCurve(e.alphaCurve,t)};
+ const position=p.position.map((v,i)=>v+(p.velocity?.[i]??0)*p.age+(e.emission?.acceleration?.[i]??0)*.5*p.age*(p.age+(p.simulationStep??0)));
+ if(e.flow){const v=p.velocity??[0,1,0],length=Math.hypot(v[0],v[2])||1,phase=p.age*e.flow.speed*6+p.seed*.013,curl=Math.sin(phase)*e.flow.strength*p.age;
+   position[0]!+=-v[2]/length*curl;position[2]!+=v[0]/length*curl;position[1]!+=Math.sin(phase*.71)*e.flow.strength*p.age*.3;}
+ return {position,size:sampleVfxCurve(e.sizeCurve,t),color,alpha:sampleVfxCurve(e.alphaCurve,t)};
 }

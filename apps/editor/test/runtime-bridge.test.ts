@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { RuntimeBridge, type ActorSource, clipIndexForBehavior, animPhase } from '../src/services/runtime-bridge';
 import type { ActorMesh, ActorClipMeta } from '../src/services/runtime-actors';
 import { DYNAMIC_INSTANCE_FLOATS, poseIndexAt, type BakedPalette } from '@aether/render';
@@ -37,6 +37,13 @@ function started(doc: SceneDocument = floor1()): { bridge: RuntimeBridge; play: 
 }
 
 describe('RuntimeBridge —— 挂接与摘下', () => {
+  it('burn surface clock follows exact alive identity, pauses, clears on expiry/reuse and Stop without overwriting pose blend',()=>{
+    const {bridge:b,play}=animatedBridge(),runtime=play.runtime!,npc=b.entities.find(e=>e.characterId==='E-01')!;
+    let statuses=[{id:npc.id,generation:npc.generation,until:99}];const spy=vi.spyOn(runtime.weaponCombat,'burning','get').mockImplementation(()=>statuses);
+    const packed=()=>{b.refresh();const e=b.entities.find(e=>e.id===npc.id && e.generation===npc.generation)!,same=b.entities.filter(x=>x.characterId===e.characterId),batch=b.batches()!.find(x=>x.meshId==='actor:E-01')!;return Array.from(batch.instances.slice(same.findIndex(x=>x.id===e.id && x.generation===e.generation)*DYNAMIC_INSTANCE_FLOATS,(same.findIndex(x=>x.id===e.id && x.generation===e.generation)+1)*DYNAMIC_INSTANCE_FLOATS));};
+    const first=packed();expect(first[19]).toBeGreaterThan(0);expect(packed()[19]).toBe(first[19]);expect(first.slice(16,18)).toEqual([1,0]);play.pause();play.stepOnce();expect(packed()[19]).toBeGreaterThan(first[19]!);
+    statuses=[{id:npc.id,generation:npc.generation+1,until:99}];expect(packed()[19]).toBe(0);statuses=[];expect(packed()[19]).toBe(0);spy.mockRestore();b.attach(null);expect(b.batches()).toBeNull();
+  });
   it('debug observation is independent of selection, preserves exact packed results and rejects rerun identity', () => {
     const { bridge: b, play } = started(); const e = b.entities.find(x => x.kind === 'npc')!;
     const before = b.batches()!.map(batch => Array.from(batch.instances));

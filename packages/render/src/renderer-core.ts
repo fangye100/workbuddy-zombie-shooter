@@ -193,7 +193,7 @@ export interface CoreCylinderOverlay {
  *   [4..7]   scaleX, scaleY, scaleZ, paletteBase(global matrix offset)
  *   [8..11]  albedoR, albedoG, albedoB, poseIndex(local pose index)
  *   [12..15] clipFrameCount, phase01, flags(bit0=蒙皮), jointStride
- *   [16..19] transitionWeight, snapshotMatrixBase, reserved, reserved
+ *   [16..19] transitionWeight, snapshotMatrixBase, impactPulse, burnClock (0=off; 1+simulationSeconds=on)
  *
  * 与 `dynamic.wgsl.ts` 的 `struct DInst`（5 × vec4f）一一对应；改一边必须改另一边
  * （三处同步的第三处在 runtime-bridge 的打包循环）。

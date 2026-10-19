@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 9,
   "id": "as_vfx_comic_gameplay_soft",
   "name": "实战火焰与燃烧烟 · 柔和交界",
   "status": "accepted",
@@ -11,10 +11,10 @@
         "guid": "as_vfx_comic_flame"
       },
       "frames": 3,
-      "duration": 0.46,
+      "duration": 0.5,
       "size": [
-        0.85,
-        1.4
+        0.65,
+        1.9
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -23,7 +23,7 @@
       "sizeCurve": [
         {
           "t": 0,
-          "value": 0.65
+          "value": 1
         },
         {
           "t": 0.2,
@@ -55,13 +55,22 @@
       "emission": {
         "rate": 60,
         "maxParticles": 48,
-        "speed": 9,
-        "spreadDeg": 18
+        "speed": 9.5,
+        "spreadDeg": 8,
+        "acceleration": [
+          0,
+          2.5,
+          0
+        ]
       },
       "backend": "cpu",
       "softParticle": {
         "fadeDistance": 0.2,
         "bias": 0.005
+      },
+      "flow": {
+        "strength": 0.35,
+        "speed": 2.3
       }
     },
     "smoke": {
@@ -118,6 +127,10 @@
       "softParticle": {
         "fadeDistance": 0.2,
         "bias": 0.005
+      },
+      "flow": {
+        "strength": 0.12,
+        "speed": 1.2
       }
     }
   }

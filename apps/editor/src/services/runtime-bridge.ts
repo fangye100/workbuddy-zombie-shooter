@@ -414,6 +414,7 @@ export class RuntimeBridge {
       slot.entities.push(e);
     }
 
+    const burning=new Set((this.session.weaponCombat?.burning??[]).map(s=>`${s.id}:${s.generation}`));
     for (const slot of this.slots.values()) {
       const n = slot.entities.length;
       if (slot.instances.length < n * F) slot.instances = new Float32Array(n * F);
@@ -456,7 +457,8 @@ export class RuntimeBridge {
         let poseIdx = 0;
         let frameCount = 0;
         let phase01 = 0;
-        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = Math.max(flash,this.npcMotion.impact(e,tick,fixedStep)); inst[o + 19] = 0;
+        inst[o + 16] = 1; inst[o + 17] = 0; inst[o + 18] = Math.max(flash,this.npcMotion.impact(e,tick,fixedStep));
+        inst[o + 19] = e.alive && burning.has(`${e.id}:${e.generation}`) ? tick*fixedStep+1 : 0;
         if (actor !== null) {
           // Anchored actors can acquire a chase target while their authored speed
           // remains zero. Their idle motion uses time, not a frozen walking gait.

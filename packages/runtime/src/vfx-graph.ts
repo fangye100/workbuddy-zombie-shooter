@@ -14,7 +14,7 @@ export function compileVfxGraph(source:unknown):{asset:VfxAsset|null;diagnostics
    case 'multiply':{const a=read(id,'a') as number,b=read(id,'b') as number;v=a*b;if(!Number.isFinite(v) || Math.abs(v as number)>2400)throw new Error(`节点 ${id}: 乘积超出数值预算±2400`);break;}
    case 'appearance':v={...read(id,'texture') as object,size:read(id,'size'),color:read(id,'color'),duration:read(id,'duration')};break;
    case 'emission':v={rate:read(id,'rate'),speed:read(id,'speed'),maxParticles:p.maxParticles,spreadDeg:p.spreadDeg};break;
-   case 'sprite':v={...read(id,'appearance') as object,kind:'sprite',orientation:'camera',loop:true,backend:p.backend,blend:p.blend,emission:read(id,'emission')};break;
+   case 'sprite':v={...read(id,'appearance') as object,kind:'sprite',orientation:'camera',loop:true,backend:p.backend,blend:p.blend,...(p.flow===undefined?{}:{flow:structuredClone(p.flow)}),emission:read(id,'emission')};break;
    case 'output':v=read(id,'effect');break;
   }
   visiting.delete(id);values.set(id,v);return v;

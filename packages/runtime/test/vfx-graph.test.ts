@@ -3,6 +3,11 @@ import {compileVfxGraph} from '../src/vfx-graph';
 import {VfxEmitters} from '../src/vfx-emitter';
 import {VfxPool} from '../src/vfx';
 import {graphFixture} from '../../scene/test/vfx-graph-fixture';
+it('graph source preserves optional flow through migration/compile without changing legacy outputs',()=>{
+ const source=graphFixture(),node=source.graph.nodes.find(n=>n.type==='sprite')!;expect(compileVfxGraph(source).asset!.effects.smoke!.flow).toBeUndefined();
+ node.params.flow={strength:.3,speed:2};const before=structuredClone(source),result=compileVfxGraph(source);expect(result.diagnostics).toEqual([]);expect(result.asset!.effects.smoke!.flow).toEqual(node.params.flow);expect(source).toEqual(before);
+ node.params.flow={strength:2,speed:1};expect(compileVfxGraph(source).asset).toBeNull();
+});
 
 it('typed DAG produces existing playable emitter data; parameter/link changes change actual emitted particles',()=>{
  const source=graphFixture(),before=structuredClone(source),compiled=compileVfxGraph(source);expect(compiled.diagnostics).toEqual([]);expect(source).toEqual(before);expect(compiled.asset).not.toHaveProperty('graph');

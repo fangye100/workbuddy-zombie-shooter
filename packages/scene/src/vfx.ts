@@ -2,7 +2,7 @@ import type { AssetRef, SceneDocument } from './document';
 import {validateVfxGraphAsset} from './vfx-graph';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 8;
+export const VFX_VERSION = 9;
 export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon' | 'decal';
 export interface VfxDecalDefinition {depth:number;maxAngle:number;normalOffset:number}
 export interface VfxDecalComponent {kind:'VfxDecal';enabled:boolean;resource:AssetRef & {guid:string};effectKey:string;playing:boolean;receivers:string[];layerMask:number;priority:number}
@@ -27,6 +27,8 @@ export interface VfxEffectDefinition {
   backend?: 'cpu' | 'gpu';
   ribbon?:VfxRibbonDefinition;
   softParticle?:VfxSoftParticleDefinition;
+  /** Bounded simulation-time curl and within-frame UV advection; CPU simulation + GPU raster. */
+  flow?:{strength:number;speed:number};
   decal?:VfxDecalDefinition;
   emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number;acceleration?:[number,number,number]};
   sizeCurve?: Array<{t:number;value:number}>;
@@ -63,7 +65,7 @@ export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   if(Object.hasOwn(value,'graph'))return validateVfxGraphAsset(value);
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,3,4,5,6,7,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,4,5,6,7,8,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
@@ -81,6 +83,7 @@ export function validateVfxAsset(value: unknown): string[] {
       || e.decal!==undefined && (a.version<7 || e.kind!=='decal')
       || e.ribbon!==undefined && (a.version<5 || e.kind!=='ribbon')
       || e.softParticle!==undefined && (a.version<6 || !e.softParticle || !finite(e.softParticle.fadeDistance,.01,5) || !finite(e.softParticle.bias,0,1))
+      || e.flow!==undefined && (a.version<9 || e.kind!=='sprite' || !e.flow || !finite(e.flow.strength,0,.6) || !finite(e.flow.speed,.1,8))
       || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,e.backend==='gpu'?2400:120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,e.backend==='gpu'?1024:128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180) || e.emission.acceleration!==undefined && (a.version<4 || !Array.isArray(e.emission.acceleration) || e.emission.acceleration.length!==3 || !e.emission.acceleration.every(n=>finite(n,-30,30))))
       || !validVfxCurve(e.sizeCurve,'size') || !validVfxCurve(e.colorCurve,'color') || !validVfxCurve(e.alphaCurve,'alpha')) errors.push(`VFX 效果 ${key} 参数非法`);
     if(e?.kind==='ribbon' && e.softParticle!==undefined)errors.push(`VFX 效果 ${key}: Ribbon 暂不支持 softParticle，不能忽略交界衰减参数`);
@@ -99,6 +102,7 @@ export function migrateVfxAsset(value:unknown):VfxAsset {
 
 /** Explicit compatibility, never submit unsorted alpha to the additive compute path. */
 export function gpuVfxReason(e:VfxEffectDefinition):string|null {
+ if(e.flow)return 'GPU模拟暂不支持 flow 卷动，使用有界 CPU 模拟与 GPU 流动材质';
  if(e.softParticle)return 'GPU模拟暂不采样场景深度，softParticle 使用有界 CPU 兼容';
  if(e.kind!=='sprite' || e.blend!=='additive' || e.orientation==='surface' || !e.emission)return 'GPU模拟仅支持 camera/additive sprite 发射器，使用有界 CPU 兼容';
  return null;

@@ -84,6 +84,7 @@ export class VfxPass {
       if(e.kind==='trail' && p.end){position=p.position.map((n,k)=>(n+p.end![k]!)/2);right=sub(p.end,p.position);up=scale(unit(cross(right,sub(eye,position))),e.size[1]);}
       else {
         if(p.normal && e.orientation!=='camera'){const n=unit(p.normal);right=p.direction?unit(p.direction.map((v,k)=>v-n[k]!*p.direction!.reduce((s,x,j)=>s+x*n[j]!,0))):unit(cross(Math.abs(n[1]!)>.95?[1,0,0]:[0,1,0],n));up=unit(cross(n,right));position=position.map((v,k)=>v+n[k]!*.008);}
+        else if(e.flow){const velocity=(p.velocity??[0,1,0]).map((v,k)=>v+(e.emission?.acceleration?.[k]??0)*p.age),dot=velocity.reduce((s,v,k)=>s+v*facing[k]!,0),projected=velocity.map((v,k)=>v-dot*facing[k]!);if(Math.hypot(...projected)>.0001){up=unit(projected);right=unit(cross(up,facing));}}
         else {const angle=(p.seed%6283)/1000,c=Math.cos(angle),s=Math.sin(angle),r=right;right=r.map((v,k)=>v*c+up[k]!*s);up=up.map((v,k)=>v*c-r[k]!*s);}
         right=scale(right,e.size[0]*visual.size);up=scale(up,e.size[1]*visual.size);
       }
@@ -92,7 +93,7 @@ export class VfxPass {
       const tex=this.textures.get(e.texture.guid)!,frame=Math.min(e.frames-1,Math.floor(progress*e.frames));
       const alpha=p.lifetime===undefined?Math.max(0,1-p.age/e.duration):Math.min(1,Math.max(0,(p.lifetime-p.age)/.15));
       data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,alpha*visual.alpha],o+12);
-      data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);data.set([e.softParticle?.fadeDistance??0,e.softParticle?.bias??0,0,0],o+20);
+      data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);data.set([e.softParticle?.fadeDistance??0,e.softParticle?.bias??0,e.flow?.strength??0,e.flow?p.age*e.flow.speed+p.seed*.013:0],o+20);
     }
     this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);if(data.length)this.device.queue.writeBuffer(this.buffer,0,data);
     const pass=encoder.beginRenderPass({label:'vfx',colorAttachments:[{view:color,loadOp:'load',storeOp:'store'},{view:aux,loadOp:'load',storeOp:'store'}],depthStencilAttachment:{view:depth,depthReadOnly:true}});
