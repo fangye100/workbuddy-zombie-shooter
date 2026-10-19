@@ -1,10 +1,12 @@
 import type { AssetRef, SceneDocument } from './document';
 
 /** Independent asset version; scene weapon bindings already carry AssetRef. */
-export const VFX_VERSION = 5;
+export const VFX_VERSION = 6;
 export type VfxKind = 'muzzle' | 'trail' | 'impact' | 'sprite' | 'ribbon';
 export interface VfxRibbonDefinition {maxPoints:number;minDistance:number;breakDistance:number;uvMetersPerTile:number}
 export interface VfxMotion {points:[number,number,number][];seconds:number;loop:boolean}
+/** Eye-space metres. Omitted means the original hard intersection, never an implicit default fade. */
+export interface VfxSoftParticleDefinition {fadeDistance:number;bias:number}
 export interface VfxEffectDefinition {
   kind: VfxKind;
   texture: AssetRef & { guid: string };
@@ -17,6 +19,7 @@ export interface VfxEffectDefinition {
   loop?: boolean;
   backend?: 'cpu' | 'gpu';
   ribbon?:VfxRibbonDefinition;
+  softParticle?:VfxSoftParticleDefinition;
   emission?: {rate:number;maxParticles:number;speed:number;spreadDeg:number;acceleration?:[number,number,number]};
   sizeCurve?: Array<{t:number;value:number}>;
   colorCurve?: Array<{t:number;color:string}>;
@@ -51,7 +54,7 @@ export function validVfxEmitter(value:unknown):value is VfxEmitterComponent {
 export function validateVfxAsset(value: unknown): string[] {
   if (!value || typeof value !== 'object') return ['VFX 资源必须是对象'];
   const a = value as VfxAsset, errors: string[] = [];
-  if (![1,2,3,4,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
+  if (![1,2,3,4,5,VFX_VERSION].includes(a.version)) errors.push(`不支持 VFX 版本 ${a.version}`);
   if (typeof a.id !== 'string' || !a.id || typeof a.name !== 'string' || !a.name.trim()) errors.push('VFX 缺少 id/name');
   if (!['accepted', 'quarantined'].includes(a.status)) errors.push('VFX 验收状态非法');
   if (!a.effects || typeof a.effects !== 'object' || Array.isArray(a.effects) || !Object.keys(a.effects).length || Object.keys(a.effects).length > 32) return [...errors, 'VFX effects 数量必须为 1–32'];
@@ -66,8 +69,10 @@ export function validateVfxAsset(value: unknown): string[] {
       || e.backend!==undefined && (a.version<4 || !['cpu','gpu'].includes(e.backend))
       || e.kind==='ribbon' && (e.backend==='gpu' || e.orientation==='surface' || !e.ribbon || !Number.isInteger(e.ribbon.maxPoints) || !finite(e.ribbon.maxPoints,2,128) || !finite(e.ribbon.minDistance,.001,2) || !finite(e.ribbon.breakDistance,.01,20) || e.ribbon.breakDistance<=e.ribbon.minDistance || !finite(e.ribbon.uvMetersPerTile,.01,20) || e.frames!==1 || e.size[1]!==1 || e.emission!==undefined)
       || e.ribbon!==undefined && (a.version<5 || e.kind!=='ribbon')
+      || e.softParticle!==undefined && (a.version<6 || !e.softParticle || !finite(e.softParticle.fadeDistance,.01,5) || !finite(e.softParticle.bias,0,1))
       || e.emission!==undefined && (!e.emission || !finite(e.emission.rate,.1,e.backend==='gpu'?2400:120) || !Number.isInteger(e.emission.maxParticles) || !finite(e.emission.maxParticles,1,e.backend==='gpu'?1024:128) || !finite(e.emission.speed,0,30) || !finite(e.emission.spreadDeg,0,180) || e.emission.acceleration!==undefined && (a.version<4 || !Array.isArray(e.emission.acceleration) || e.emission.acceleration.length!==3 || !e.emission.acceleration.every(n=>finite(n,-30,30))))
       || !validVfxCurve(e.sizeCurve,'size') || !validVfxCurve(e.colorCurve,'color') || !validVfxCurve(e.alphaCurve,'alpha')) errors.push(`VFX 效果 ${key} 参数非法`);
+    if(e?.kind==='ribbon' && e.softParticle!==undefined)errors.push(`VFX 效果 ${key}: Ribbon 暂不支持 softParticle，不能忽略交界衰减参数`);
   }
   return errors;
 }
@@ -82,6 +87,7 @@ export function migrateVfxAsset(value:unknown):VfxAsset {
 
 /** Explicit compatibility, never submit unsorted alpha to the additive compute path. */
 export function gpuVfxReason(e:VfxEffectDefinition):string|null {
+ if(e.softParticle)return 'GPU模拟暂不采样场景深度，softParticle 使用有界 CPU 兼容';
  if(e.kind!=='sprite' || e.blend!=='additive' || e.orientation==='surface' || !e.emission)return 'GPU模拟仅支持 camera/additive sprite 发射器，使用有界 CPU 兼容';
  return null;
 }

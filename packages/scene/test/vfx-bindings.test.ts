@@ -8,5 +8,5 @@ it('v15→16 preserves old content without inventing bindings and validates opaq
  const c=r.doc.nodes[0]!.components.find(c=>c.kind==='VfxBindings')!;c.bindings['opaque.phase']!.resource.guid='';expect(validateSceneDocument(r.doc).some(d=>d.code==='E_VFX_BINDINGS')).toBe(true);
 });
 it('migrates v1 to generic v2 without modifying raw disk input and rejects future versions',()=>{
- const raw={version:1,id:'a',name:'old',status:'accepted',effects:{flash:{kind:'muzzle',texture:{path:'assets/vfx/a.svg',guid:'a'},frames:1,duration:.1,size:[1,1],color:'#ffffff',blend:'alpha'}}};const next=migrateVfxAsset(raw);expect(raw.version).toBe(1);expect(next.version).toBe(5);expect(next.effects.flash!.orientation).toBe('camera');expect(validateVfxAsset({...next,version:6}).length).toBeGreaterThan(0);
+ const raw={version:1,id:'a',name:'old',status:'accepted',effects:{flash:{kind:'muzzle',texture:{path:'assets/vfx/a.svg',guid:'a'},frames:1,duration:.1,size:[1,1],color:'#ffffff',blend:'alpha'}}};const next=migrateVfxAsset(raw);expect(raw.version).toBe(1);expect(next.version).toBe(6);expect(next.effects.flash!.orientation).toBe('camera');expect(validateVfxAsset({...next,version:7}).length).toBeGreaterThan(0);
 });
