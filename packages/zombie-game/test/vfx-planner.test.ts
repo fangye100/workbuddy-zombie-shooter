@@ -39,6 +39,7 @@ it('仅同局同tick同身份的GPU命中接管Canvas爆花，缺图或槽复用
   const hit=session.combatEvents.find(e=>e.slot===target.id)!;expect(hit).toBeDefined();
   expect(hit.weaponId).toBe(w.id);expect(hit.weaponEvent).toBeTypeOf('number');
   expect(planner.impactReady(hit,()=>true)).toBe(true);
+  const {weaponEvent:_primary,...withoutPrimary}=hit;expect(planner.impactReady({...withoutPrimary,damageKind:'burn'},()=>true)).toBe(false);
   expect(planner.impactReady(hit,()=>false)).toBe(false);
   expect(planner.impactReady({...hit,generation:hit.generation+1},()=>true)).toBe(false);
   expect(planner.impactReady({...hit,runId:hit.runId+1},()=>true)).toBe(false);

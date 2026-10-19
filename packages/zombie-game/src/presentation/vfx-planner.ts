@@ -70,6 +70,7 @@ export class WeaponVfxPlanner {
   usable(w:WeaponDefinition):boolean{return this.ready.has(w.id);}
   /** Suppress only a burst with a matching live GPU hit; damage labels remain HUD feedback. */
   impactReady(event:CombatEvent,canDraw:(p:VfxInstance)=>boolean):boolean {
+    if(event.damageKind==='burn')return false;
     const key=this.combatKeys.get(event);if(event.runId===this.run && key && this.pool.active.some(p=>p.key===key && canDraw(p)))return true;
     if(event.weaponEvent!==undefined){const a=this.impactAliases.get(event.weaponEvent);return event.runId===this.run && !!a && a.event.tick===event.tick && a.event.weaponId===event.weaponId && a.event.actor?.id===event.slot && a.event.actor?.generation===event.generation && this.pool.active.some(p=>p.key===`${this.run}:${a.sequence}:impact` && canDraw(p));}
     return event.runId===this.run && this.recentEvents.some(e=>(e.kind==='trace' || e.kind==='impact') && e.contact==='entity' && e.tick===event.tick && e.actor?.id===event.slot && e.actor.generation===event.generation && this.pool.active.some(p=>p.key===`${this.run}:${e.sequence}:impact` && canDraw(p)));
