@@ -4,6 +4,29 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "vfx-m4-20261019",
+      "path": "docs/architecture/vfx-m4-20261019.md",
+      "title": "M4 五阶段实施与 GPU 模拟契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "vfx",
+        "gpu",
+        "compute",
+        "editor",
+        "persistence"
+      ],
+      "read": "五阶段范围；GPU模拟数据与owner、预算兼容、作者保存与独立验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ],
+      "reviewedAt": "2026-10-19"
+    },
+    {
       "id": "vfx-m3-20261019",
       "path": "docs/architecture/vfx-m3-20261019.md",
       "title": "M3 持续与动作 VFX：作者流程、验证及 M4 决策",
