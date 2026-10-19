@@ -1,0 +1,12 @@
+{
+  "packages/core/src/object-pool.ts": "a44b8bcb2c5d35a15941a5e55b97b2715b7af72a0f7e72faf0ca91ce39314b92",
+  "packages/core/src/index.ts": "bd4f606069343fa7be49fea4a3cbf8eedb58bf1c83e2b34f04966d61d7b1168d",
+  "packages/gameplay/src/character.ts": "9045b0b716c5d97153d43eaadee7307d06a060d740be6e4b117235f06fd8eb40",
+  "packages/render/src/decal-instances.ts": "3c77902c711ae35d3d6dd9ecc3af56ea4301535f4ecf4ff1c4b27aa203e37760",
+  "packages/runtime/src/weapon-combat.ts": "e18361205f327a389fde9e2d85884b5847eaeb64ab22c0cf373d6839724e1f90",
+  "packages/core/test/object-pool.test.ts": "f9063fd1b908b937da2b18f046855d46e373ed09810005a29aa74d0c101c4d60",
+  "packages/gameplay/test/character-pool.test.ts": "5f3bcd7e381ea434af970f617eb4018e5f44cddc9c4fe70362efe3a877999e9b",
+  "packages/runtime/test/projectile-pool.test.ts": "aad0bbf6537c5ea127b59c64cc37a786fb30debc131b26029c02459e938b2e0e",
+  "tools/verify/object-pool-regression.mjs": "1a2110ffc64eae6557d972ee7acbfe028403a968785069afb6395ef4a5fa97b9",
+  "tsconfig.check.json": "c9940ceda29018c371ad4ef09377317d49d3ea45cbf1133b8ad3355dcc3ef35a"
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "indexedAt": "2026-10-09",
+  "indexedAt": "2026-10-19",
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
@@ -10,9 +10,20 @@
       "role": "game",
       "authority": "guide",
       "status": "current",
-      "topics": ["vfx", "gameplay", "campaign", "gpu"],
+      "topics": [
+        "vfx",
+        "gameplay",
+        "campaign",
+        "gpu"
+      ],
       "read": "三层试玩与换枪；R2漫画强化；R3酸液/爆尸原生路线与阶段回收、坏纹理保底；R3-V01沙灰残留与正常镜头证据；预算及边界",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "scene-weapons", "asset-metadata"]
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "scene-weapons",
+        "asset-metadata"
+      ]
     },
     {
       "id": "vfx-m4-20261019",
@@ -44,9 +55,21 @@
       "role": "framework",
       "authority": "guide",
       "status": "current",
-      "topics": ["vfx", "render", "editor", "emitter", "gpu", "persistence"],
+      "topics": [
+        "vfx",
+        "render",
+        "editor",
+        "emitter",
+        "gpu",
+        "persistence"
+      ],
       "read": "固定tick种子与曲线；真实持续/动作表现、作者保存预览、预算实测及M4逐项暂缓条件",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ],
       "reviewedAt": "2026-10-19"
     },
     {
@@ -56,9 +79,21 @@
       "role": "framework",
       "authority": "guide",
       "status": "current",
-      "topics": ["vfx", "render", "editor", "enemy", "gpu", "persistence"],
+      "topics": [
+        "vfx",
+        "render",
+        "editor",
+        "enemy",
+        "gpu",
+        "persistence"
+      ],
       "read": "通用绑定与旧资源兼容；真实攻击阶段、平面效果、保存重载、失败保底与开发证据",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ],
       "reviewedAt": "2026-10-19"
     },
     {
@@ -68,9 +103,21 @@
       "role": "framework",
       "authority": "guide",
       "status": "current",
-      "topics": ["vfx", "render", "editor", "weapons", "gpu", "persistence"],
+      "topics": [
+        "vfx",
+        "render",
+        "editor",
+        "weapons",
+        "gpu",
+        "persistence"
+      ],
       "read": "资源与事件契约；编辑/预览/保存路径；真实 GPU 开发证据、成本与剩余边界",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ],
       "reviewedAt": "2026-10-19"
     },
     {
@@ -80,9 +127,21 @@
       "role": "framework",
       "authority": "design",
       "status": "historical",
-      "topics": ["vfx", "render", "particle", "decal", "architecture", "editor"],
+      "topics": [
+        "vfx",
+        "render",
+        "particle",
+        "decal",
+        "architecture",
+        "editor"
+      ],
       "read": "原 proposal 快照与职责/数据契约；2026-10-19 追加 M4.1-M4.5 全量实施顺序、交付与验收要求；实际状态见分期指南",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"],
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ],
       "reviewedAt": "2026-10-19",
       "reviewedSourceCommit": "6b486f040da2e1496e851496d2e3706a379a8e31"
     },
@@ -93,9 +152,21 @@
       "role": "framework",
       "authority": "evidence",
       "status": "historical",
-      "topics": ["render", "shadow", "crowd", "navigation", "decal", "art", "architecture"],
+      "topics": [
+        "render",
+        "shadow",
+        "crowd",
+        "navigation",
+        "decal",
+        "art",
+        "architecture"
+      ],
       "read": "阴影格式修复/GPU证据、CPU避让基准和未实施贴花/ORCA建议；容量与性能受版本设备限制",
-      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema"]
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy",
+        "scene-schema"
+      ]
     },
     {
       "id": "project-rules",
@@ -1681,7 +1752,7 @@
         "retarget",
         "ik"
       ],
-      "read": "职责与持久化；控制部位与目标空间；能力边界；历史验证",
+      "read": "职责与持久化；控制部位与目标空间；编辑器流程；能力边界；R6 实机观察与导航证据；R6 观察提示与活动按钮复验；历史验证",
       "sourceRefs": [
         "scene-body-ik",
         "scene-migrations",
@@ -1691,8 +1762,8 @@
         "commit": "a24f7b94e12754531cbb43af31b133edaf004056",
         "date": "2026-10-07"
       },
-      "reviewedAt": "2026-10-09",
-      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
+      "reviewedAt": "2026-10-14",
+      "reviewedSourceCommit": "1d2f95a3d6622a118918a26f0974922745b5d4fa"
     },
     {
       "id": "doc-db6a9bf0e0a7",
@@ -1803,7 +1874,7 @@
         "headed",
         "acceptance"
       ],
-      "read": "交互验证；仓库内本地验收路径",
+      "read": "严格headed路径、完整启动代次与真实GPU；四套件串行聚合、战斗/蒙皮oracle、503降级恢复和Stop基线",
       "sourceRefs": [
         "project-rules"
       ],
@@ -1811,8 +1882,7 @@
         "commit": "91fd0c9919fe9c2c5b8f12cd2c96481863ea6514",
         "date": "2026-10-05"
       },
-      "reviewedAt": "2026-10-09",
-      "reviewedSourceCommit": "e6c227837b29afcf6f23fc260a23c49a6a3e7fcd"
+      "reviewedAt": "2026-10-18"
     },
     {
       "id": "doc-2d52032d1065",
@@ -2332,12 +2402,812 @@
         "gpu",
         "npc"
       ],
-      "read": "裁剪配方与 owner；攻击/武器相位；t1 状态保留；受击/死亡尾部；真实 GPU 证据及限制",
+      "read": "裁剪配方与 owner；左右横移离线缩幅/nominal及接地限制；2026-10-14无pointer横移/观察入口；R9七武器角色右侧持握、场景上身目标及真实CPU/GPU边界；攻击/武器相位；t1状态保留；受击/死亡尾部",
       "sourceRefs": [
         "project-rules",
         "architecture-policy",
-        "scene-shared-motion"
+        "scene-shared-motion",
+        "scene-body-ik",
+        "play-observation-navigation"
       ]
+    },
+    {
+      "id": "play-observation-navigation",
+      "path": "apps/editor/src/services/play-observation-navigation.ts",
+      "title": "Play临时观察视角与输入隔离",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "editor",
+        "camera",
+        "animation"
+      ],
+      "read": "Play/Pause orbit/pan/zoom与输入边界；自由按钮/V与Edit飞行统一入口、重复键保护；HumanIK指南保留0222268七枪证据，动作接入指南记录R8实际入口验收",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "composite-player-motion",
+      "path": "docs/animation/composite-player-motion.md",
+      "title": "玩家持续步态与身体区域动作组合",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation"
+      ],
+      "read": "区域契约、四向瞄准基准、真实武器手IK、v16迁移、只读debug、聚焦headed入口与验证边界",
+      "sourceRefs": [
+        "scene-shared-motion",
+        "scene-body-ik",
+        "scene-migrations",
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "wpn-20261011-source-review",
+      "path": "docs/art/wpn-20261011-source-review.md",
+      "title": "WPN-20261011 五件源模型检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "art",
+        "source",
+        "gpu"
+      ],
+      "read": "源检视场景与资产库入口、原始统计、轴向差异、底火和燃料管线审计项及未验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
+    },
+    {
+      "id": "wpn-20261011-lod-candidates",
+      "path": "docs/art/wpn-20261011-lod-candidates.md",
+      "title": "WPN-20261011 归一化与 LOD 候选检视",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "art",
+        "lod",
+        "gpu"
+      ],
+      "read": "米制配方、finalimport空间、独立源表面atlas/误差、Shell局部缺陷、60mesh三向与18mesh前后对照、质量诊断与待验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
+    },
+    {
+      "id": "model-attachments",
+      "path": "docs/animation/model-attachments.md",
+      "title": "模型与骨骼握点契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "animation",
+        "weapons",
+        "framework"
+      ],
+      "read": "角色holdProfiles六维槽位、Pause观察原生编辑/Undo/Save CAS与跨场景重载；2026-10-15 Worker24项真实Save与独立Audit9项草稿验收；保留v18兼容slot、2305610历史证据、socket覆盖和同帧FK",
+      "sourceRefs": [
+        "scene-schema",
+        "scene-weapons",
+        "asset-metadata",
+        "scene-migrations",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "weapon-model-projection",
+      "path": "packages/zombie-game/src/presentation/weapon-model.ts",
+      "title": "武器真实模型表现投影",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation"
+      ],
+      "read": "已有phase/recoil到中性primary/dependent请求，不拥有玩法时钟",
+      "sourceRefs": [
+        "scene-weapons",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "editor-runtime-weapons",
+      "path": "apps/editor/src/services/runtime-weapons.ts",
+      "title": "Play真实武器加载适配",
+      "role": "editor",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "GUID/默认覆盖、同帧骨口、逐GPU登记和Stop迟到取消",
+      "sourceRefs": [
+        "weapon-model-projection",
+        "architecture-policy",
+        "scene-schema",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "weapon-assembly-trial",
+      "path": "docs/animation/weapon-assembly-trial.md",
+      "title": "真实武器装配试验入口",
+      "role": "game",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "animation",
+        "gpu"
+      ],
+      "read": "R4仅程序化切枪与握点接手，复用03b七件真实切换/同帧双手证据及版本边界；当前idle别名缺失仍回退ready；Fuel严格匹配、Shell/Fuel换弹视觉要求已撤销，旧失败与源美术限制保留为历史而非当前阻断",
+      "sourceRefs": [
+        "editor-runtime-weapons",
+        "weapon-model-projection",
+        "scene-schema",
+        "project-manifest",
+        "scene-schema",
+        "asset-metadata"
+      ]
+    },
+    {
+      "id": "weapon-model-branch",
+      "path": "docs/art/weapon-model-branch.md",
+      "title": "武器模型独立分支与快照边界",
+      "role": "art",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "weapon",
+        "asset",
+        "gpu"
+      ],
+      "read": "独立模型快照与合回动画v17责任、assetRoots递归68模型、Inspector导入/Undo有限观察、合后Reload再筛选68实操、5199/5198入口及GPU/候选未验收边界",
+      "sourceRefs": [
+        "scene-schema",
+        "asset-metadata",
+        "project-manifest"
+      ]
+    },
+    {
+      "id": "combat-decals-visual-review-20261013",
+      "path": "docs/evidence/combat-decals-20261013/review.md",
+      "title": "战斗贴花独立视觉VFX验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "combat-decals-acceptance-20261013",
+      "path": "docs/evidence/combat-decals-20261013/acceptance.md",
+      "title": "真实战斗贴花事件接入与验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "combat",
+        "validation"
+      ],
+      "read": "实际事件、寿命和限流、真实GPU、独立视觉结论与限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "decal-vfx-final-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/refined-review.md",
+      "title": "贴花独立视觉修复复验",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "九类静态需求、四项参数作用、白盒/Play读图及剩余P2限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-baseline-review-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/baseline-review.md",
+      "title": "贴花独立视觉基线评审",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "d18cfb7基线真实GPU目检、四项P1造型缺陷和最小类型缺口",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-vfx-acceptance-20261013",
+      "path": "docs/evidence/decal-vfx-20261013/acceptance.md",
+      "title": "贴花独立视觉VFX复审与类型补齐",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "vfx",
+        "render",
+        "validation"
+      ],
+      "read": "独立子代理基线与GPU复验、最小类型缺口和实际交付边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-workbench-acceptance-20261013",
+      "path": "docs/evidence/decal-workbench-20261013/acceptance.md",
+      "title": "程序贴花独立工作区验收",
+      "role": "editor",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "editor",
+        "render",
+        "validation"
+      ],
+      "read": "基线bccb365上的实际参数UI、应用撤销、保存重载和真实GPU证据",
+      "sourceRefs": [
+        "project-rules",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "scene-decals",
+      "path": "packages/scene/src/decals.ts",
+      "title": "程序贴花数据契约",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "scene"
+      ],
+      "read": "九类表面痕迹、四项可序列化形态参数、稳定id与值域",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema"
+      ]
+    },
+    {
+      "id": "procedural-decals-implementation",
+      "path": "docs/render/procedural-decals.md",
+      "title": "程序性表面贴花指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "render",
+        "mcp",
+        "architecture"
+      ],
+      "read": "独立工作区、九图案/形态参数、v21场景事件配置、战斗痕迹、寿命与数量、GPU/MCP闭环",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy",
+        "combat-decal-facts",
+        "combat-decal-planner"
+      ]
+    },
+    {
+      "id": "procedural-decals-acceptance-20261013",
+      "path": "docs/evidence/procedural-decals-20261013/acceptance.md",
+      "title": "程序贴花真实GPU验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "render",
+        "gpu",
+        "verification",
+        "mcp"
+      ],
+      "read": "白盒贴附与遮挡、种子保存重载、寿命、32/128/512合批、Stop及第一层实际呈现",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-implementation",
+      "path": "docs/architecture/dynamic-navigation.md",
+      "title": "动态障碍与吊门寻路",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "mcp",
+        "architecture"
+      ],
+      "read": "v18 固定地表图动态阻挡、占用等待、实时弹道、编辑控制、GPU白盒及性能边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-review-20261011",
+      "path": "docs/evidence/dynamic-navigation-20261011/review.md",
+      "title": "动态障碍独立复审记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "review",
+        "verification"
+      ],
+      "read": "Float32贴门锁死复现及修复、随机可达性对比与独立复审边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "dynamic-navigation-acceptance-20261011",
+      "path": "docs/evidence/dynamic-navigation-20261011/acceptance.md",
+      "title": "动态吊门白盒验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "gpu",
+        "verification",
+        "mcp"
+      ],
+      "read": "绕行、等待、半开净空、上坡到达、作者重载、Stop清理及CPU测量",
+      "sourceRefs": [
+        "scene-schema",
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "surface-navigation-review-20261010",
+      "path": "docs/evidence/surface-navigation-20261010/review.md",
+      "title": "三维地表导航独立复审记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "navigation",
+        "crowd",
+        "review",
+        "verification"
+      ],
+      "read": "玩家尺寸漏检及整波出生原子性问题的独立复现、修复与终审边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "surface-navigation-implementation",
+      "path": "docs/architecture/surface-navigation.md",
+      "title": "三维地表导航与白盒验收",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "avoidance",
+        "architecture",
+        "mcp"
+      ],
+      "read": "v17 NavSurface、坡道楼梯叠层、净空与跨层隔离、白盒真实GPU验收及性能边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "crowd-navigation-implementation",
+      "path": "docs/architecture/crowd-navigation.md",
+      "title": "高性能群体寻路与避让实现指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "navigation",
+        "crowd",
+        "avoidance",
+        "architecture",
+        "mcp"
+      ],
+      "read": "NavZone.crowd v16、分帧流场、预测避让、连续碰撞、游戏策略、MCP观察和CPU/GPU验收边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "combat-decal-facts",
+      "path": "packages/zombie-game/src/combat-decals.ts",
+      "title": "游戏战斗贴花事实契约",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "真实命中/伤害/酸液落地、稳定代次序号、有界日志",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "combat-decal-planner",
+      "path": "packages/zombie-game/src/presentation/combat-decals.ts",
+      "title": "游戏战斗贴花表现策略",
+      "role": "game",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "combat",
+        "vfx",
+        "lifecycle"
+      ],
+      "read": "事件规则映射、处理预算、寿命保护、数量淘汰与失败诊断",
+      "sourceRefs": [
+        "scene-decals",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "decal-object-pool",
+      "path": "packages/render/src/decal-instances.ts",
+      "title": "通用贴花对象池、借用帧与透明打包",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "lifecycle"
+      ],
+      "read": "固定槽复用、复制隔离、规则标签、稳定排序与打包",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-draw-backends",
+      "path": "packages/render/src/procedural-decals.ts",
+      "title": "贴花直接实例化与GPU间接绘制端口",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "gpu",
+        "indirect"
+      ],
+      "read": "prepare/draw、资源增长、显式计数读回与释放",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-stable-compaction",
+      "path": "packages/render/src/decal-indirect.ts",
+      "title": "贴花GPU稳定视锥剔除与压缩",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "decal",
+        "gpu",
+        "indirect",
+        "sorting"
+      ],
+      "read": "1024边界、uniform barrier、四角clip测试与间接参数",
+      "sourceRefs": [
+        "architecture-policy",
+        "scene-decals"
+      ]
+    },
+    {
+      "id": "decal-performance-guide",
+      "path": "docs/render/decal-performance.md",
+      "title": "程序贴花对象池与间接绘制指南",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "benchmark"
+      ],
+      "read": "A/B契约、owner、失败与计数语义、CPU/GPU测量协议及操作",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
+      ]
+    },
+    {
+      "id": "decal-ab-acceptance-20261014",
+      "path": "docs/evidence/decal-ab-20261014/acceptance.md",
+      "title": "贴花A/B真实GPU性能与生命周期验收",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "decal",
+        "performance",
+        "pool",
+        "gpu",
+        "indirect",
+        "validation"
+      ],
+      "read": "原始测量、HDR一致性、Play验收、独立审查与默认选择依据",
+      "sourceRefs": [
+        "project-rules",
+        "decal-object-pool",
+        "decal-draw-backends",
+        "decal-stable-compaction"
+      ]
+    },
+    {
+      "id": "main-integration-20261018",
+      "path": "docs/architecture/main-integration-20261018.md",
+      "title": "开发主线整合与v22历史兼容记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "architecture",
+        "scene",
+        "navigation",
+        "animation",
+        "decal"
+      ],
+      "read": "两条schema历史统一、保留数据、实际测试与历史验收限制",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema"
+      ]
+    },
+    {
+      "id": "core-object-pool",
+      "path": "packages/core/src/object-pool.ts",
+      "title": "引擎通用同步对象池",
+      "role": "framework",
+      "authority": "source",
+      "status": "current",
+      "topics": [
+        "pool",
+        "core",
+        "lifecycle",
+        "architecture"
+      ],
+      "read": "IObjectPool、容量、预热、异常、归还与退休真源",
+      "sourceRefs": [
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "object-pool-guide",
+      "path": "docs/architecture/object-pool.md",
+      "title": "通用对象池与模块适配契约",
+      "role": "framework",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "pool",
+        "core",
+        "lifecycle",
+        "render",
+        "weapon",
+        "architecture"
+      ],
+      "read": "API失败行为、各模块owner、复用与代次边界、回归命令及实际限制",
+      "sourceRefs": [
+        "core-object-pool",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "object-pool-acceptance-20261018",
+      "path": "docs/evidence/object-pool-20261018/acceptance.md",
+      "title": "通用对象池实际回归与GPU验收记录",
+      "role": "framework",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "pool",
+        "core",
+        "render",
+        "weapon",
+        "verification"
+      ],
+      "read": "1843项测试、基线差分、实际MCP/GPU路径、独立审核及CPU成本限制",
+      "sourceRefs": [
+        "core-object-pool",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "editor-smoke-acceptance-20261018",
+      "path": "docs/evidence/editor-smoke-20261018/acceptance.md",
+      "title": "编辑器冒烟夹具、启动判据与完整浏览器验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "headed",
+        "acceptance",
+        "scene"
+      ],
+      "read": "旧夹具修复、布局与漏译缺陷；核心/绑定实际断言、独立审核、执行环境与验证边界",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "game-probes-acceptance-20261018",
+      "path": "docs/evidence/game-probes-20261018/acceptance.md",
+      "title": "战斗与动态蒙皮完整聚合浏览器验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "combat",
+        "animation",
+        "acceptance"
+      ],
+      "read": "四套件实际聚合、真实输入击杀/波次边界、实例矩阵与故障恢复、独立审核和执行范围",
+      "sourceRefs": [
+        "project-rules",
+        "scene-schema",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "clipboard-acceptance-20261019",
+      "path": "docs/evidence/clipboard-20261019/acceptance.md",
+      "title": "剪贴板原生读回修复与四套件零跳过验收",
+      "role": "validation",
+      "authority": "evidence",
+      "status": "historical",
+      "topics": [
+        "editor",
+        "browser",
+        "gpu",
+        "clipboard",
+        "acceptance"
+      ],
+      "read": "真实菜单输入、焦点与权限失败、相对/绝对路径原生读回，四套件289项零失败零跳过及独立审核",
+      "sourceRefs": [
+        "project-rules",
+        "architecture-policy"
+      ]
+    },
+    {
+      "id": "workbuddy-history-2026-10-11",
+      "path": ".workbuddy/memory/2026-10-11.md",
+      "title": "2026-10-11 工作记录",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "保留主分支既有历史记录；不代表当前验收",
+      "sourceRefs": []
+    },
+    {
+      "id": "workbuddy-history-2026-10-12",
+      "path": ".workbuddy/memory/2026-10-12.md",
+      "title": "2026-10-12 工作记录",
+      "role": "history",
+      "authority": "history",
+      "status": "historical",
+      "topics": [
+        "workbuddy",
+        "history"
+      ],
+      "read": "保留主分支既有历史记录；不代表当前验收",
+      "sourceRefs": []
     }
   ]
 }

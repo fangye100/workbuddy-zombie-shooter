@@ -20,6 +20,52 @@ import {
  */
 const TARGET_HEIGHT_M = 2.05;
 
+describe('node-transformed winding and normals', () => {
+  function triangleGlb(normals: boolean, mirror: boolean): ArrayBuffer {
+    const position = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+    const normal = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+    const bytes = new Uint8Array(position.byteLength + (normals ? normal.byteLength : 0));
+    bytes.set(new Uint8Array(position.buffer));
+    if (normals) bytes.set(new Uint8Array(normal.buffer), position.byteLength);
+    const json = {
+      asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0, rotation: [Math.sqrt(.75), 0, 0, .5], scale: [mirror ? -2 : 2, 3, .5] }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0, ...(normals ? { NORMAL: 1 } : {}) } }] }],
+      accessors: [{ bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' },
+        ...(normals ? [{ bufferView: 1, componentType: 5126, count: 3, type: 'VEC3' }] : [])],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: position.byteLength },
+        ...(normals ? [{ buffer: 0, byteOffset: position.byteLength, byteLength: normal.byteLength }] : [])],
+      buffers: [{ byteLength: bytes.byteLength }],
+    };
+    const encoded = new TextEncoder().encode(JSON.stringify(json)), jsonSize = Math.ceil(encoded.length / 4) * 4;
+    const out = new Uint8Array(28 + jsonSize + bytes.length), header = new DataView(out.buffer);
+    header.setUint32(0, 0x46546c67, true); header.setUint32(4, 2, true); header.setUint32(8, out.length, true);
+    header.setUint32(12, jsonSize, true); header.setUint32(16, 0x4e4f534a, true);
+    out.fill(32, 20, 20 + jsonSize); out.set(encoded, 20);
+    header.setUint32(20 + jsonSize, bytes.length, true); header.setUint32(24 + jsonSize, 0x004e4942, true);
+    out.set(bytes, 28 + jsonSize); return out.buffer;
+  }
+  it.each([true, false])('preserves rotated winding with NORMAL=%s and nonuniform scale', normals => {
+    const mesh = parseGlb(triangleGlb(normals, false), null, 'y').mesh;
+    expect([...mesh.indices]).toEqual([0, 1, 2]);
+    for (let i = 0; i < mesh.vertices.length; i += 15) {
+      expect(mesh.vertices[i + 3]).toBeCloseTo(0, 6);
+      expect(mesh.vertices[i + 4]).toBeCloseTo(-Math.sqrt(.75), 6);
+      expect(mesh.vertices[i + 5]).toBeCloseTo(-.5, 6);
+    }
+  });
+  it.each([true, false])('corrects mirrored winding in the same normal space with NORMAL=%s', normals => {
+    const mesh = parseGlb(triangleGlb(normals, true), null, 'y').mesh;
+    expect([...mesh.indices]).toEqual([0, 2, 1]);
+    const vertex = (i: number) => [mesh.vertices[i * 15]!, mesh.vertices[i * 15 + 1]!, mesh.vertices[i * 15 + 2]!];
+    const [a, b, c] = [...mesh.indices].map(vertex) as [number[], number[], number[]];
+    const u = b.map((n, i) => n - a[i]!), v = c.map((n, i) => n - a[i]!);
+    const face = [u[1]! * v[2]! - u[2]! * v[1]!, u[2]! * v[0]! - u[0]! * v[2]!, u[0]! * v[1]! - u[1]! * v[0]!];
+    const dot = face.reduce((sum, n, i) => sum + n * mesh.vertices[i + 3]!, 0);
+    expect(dot / Math.hypot(...face)).toBeCloseTo(1, 6);
+  });
+});
+
 describe('authored environment coordinates', () => {
   it('keeps a deep Y-up environment grounded at authored metre scale', async () => {
     const { makeGlb } = await import('./testGlb');

@@ -328,7 +328,7 @@ export class RuntimeBridge {
       const stats = lookupCharacterStats(e.characterId);
       const r = stats?.capsuleRadius ?? 0.35;
       const h = stats?.capsuleHeight ?? 1.8;
-      const t = rayCapsuleY(origin, dir, e.x, e.z, r, h);
+      const t = rayCapsuleY([origin[0],origin[1]-(e.y??0),origin[2]],dir,e.x,e.z,r,h);
       if (t !== null && t < bestT) {
         bestT = t;
         best = e;
@@ -430,7 +430,7 @@ export class RuntimeBridge {
         // 真模型网格贴脚底（feetOffset 把 mesh 最低点抬到 y=0）；胶囊中心在
         // 原点 → 抬到脚底之上半高。实体 (x, z) 才是它站的位置
         inst[o] = e.x;
-        inst[o + 1] = actor !== null ? actor.feetOffset : height / 2;
+        inst[o + 1] = (e.y??0)+(actor !== null ? actor.feetOffset : height / 2);
         inst[o + 2] = e.z;
         inst[o + 3] = characterYaw(e.yaw);
         // 网格已按真尺寸生成（胶囊按体型、真模型按资产），缩放恒为 1

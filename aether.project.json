@@ -171,6 +171,90 @@
       "path": "assets/scenes/sandbox/vfx-m4-graph.scene.json",
       "enabled": true,
       "name": "M4.5 VFX · 可视节点图"
+    },
+    {
+      "id": "sc_weapon_source_review",
+      "path": "assets/scenes/sandbox/weapon-source-review.scene.json",
+      "name": "WPN-20261011 · 五件源模型检视（未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_lod_review",
+      "path": "assets/scenes/sandbox/weapon-lod-review.scene.json",
+      "name": "WPN-20261011 · Reference / LOD 三向对照（候选未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_source_fixed_views",
+      "path": "assets/scenes/sandbox/weapon-source-fixed-views.scene.json",
+      "name": "WPN-20261011 · 原源固定三向（缺陷对照）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_surface_transfer_review",
+      "path": "assets/scenes/sandbox/weapon-surface-transfer-review.scene.json",
+      "name": "Mag01 / Shell · 源 / 转移前 / 转移后",
+      "enabled": true
+    },
+    {
+      "path": "assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+      "id": "sc_weapon_assembly_trial",
+      "enabled": true,
+      "name": "武器实装 · 手枪/Launcher近景试验"
+    },
+    {
+      "id": "sc_weapon_body_source_review",
+      "path": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+      "name": "WPN-20261012 · 五件本体原源固定方向（未验收）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_body_lod_review",
+      "path": "assets/scenes/sandbox/weapon-body-lod-review.scene.json",
+      "name": "WPN-20261012 · 原源 / LOD0 / LOD1 / LOD2 三向（候选）",
+      "enabled": true
+    },
+    {
+      "id": "sc_weapon_fit_review",
+      "path": "assets/scenes/sandbox/weapon-fit-review.scene.json",
+      "name": "七武器 · 去重复部件 / 实际slot / Shell与Fuel候选",
+      "enabled": true
+    },
+    {
+      "id": "sc_navigation_3d_whitebox",
+      "path": "assets/scenes/sandbox/navigation-3d-whitebox.scene.json",
+      "name": "三维导航白盒 · 斜坡 / 楼梯 / 叠层",
+      "enabled": true
+    },
+    {
+      "id": "sc_dynamic_navigation_whitebox",
+      "path": "assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json",
+      "name": "动态障碍白盒 · 吊门 / 绕行 / 等待",
+      "enabled": true
+    },
+    {
+      "id": "sc_procedural_decal_whitebox",
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "enabled": true
+    },
+    {
+      "id": "sc_combat_decal_whitebox",
+      "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+      "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+      "enabled": true
+    },
+    {
+      "id": "sc_editor_smoke",
+      "path": "assets/scenes/sandbox/editor-smoke.scene.json",
+      "name": "编辑器冒烟白盒 · 层级与资产交互",
+      "enabled": true
+    },
+    {
+      "id": "sc_game_probes",
+      "path": "assets/scenes/sandbox/game-probes.scene.json",
+      "name": "战斗与动态蒙皮白盒 · 双波次及代理降级",
+      "enabled": true
     }
   ],
   "startIndex": 1,

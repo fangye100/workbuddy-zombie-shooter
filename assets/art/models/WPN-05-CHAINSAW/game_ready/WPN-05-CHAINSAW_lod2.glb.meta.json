@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_2f3ef4e003fb",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-05-CHAINSAW",
+    "variant": "game_ready",
+    "level": 2,
+    "status": "visual-review-candidate",
+    "source": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+    "sourceHash": "d8b738eae6ec62b049b9c60f39ff77da342333d19d240f559edecd768e3bc4c6",
+    "report": "assets/art/models/WPN-05-CHAINSAW/lod-report.json",
+    "canonical": "Y-up / +Z forward",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "canonicalToImportTranslation": [
+      0.00030968097647672554,
+      -0.004613973141105245,
+      0.0010137386087543943
+    ],
+    "file": "WPN-05-CHAINSAW_lod2.glb"
+  },
+  "sourceHash": "sha256:042d0cb338cf7bee661fad1392b816de22a1159e439d889917108d4fcbfd5a62",
+  "updatedAt": "2026-10-12T01:16:08.529Z",
+  "modelSockets": {
+    "primaryGrip": {
+      "position": [
+        -0.0017768076417231061,
+        0.10105825688351582,
+        -0.33162717058960256
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "supportGrip": {
+      "position": [
+        -0.0017768076417230758,
+        0.2650324193674765,
+        -0.043761418673316066
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "muzzle": {
+      "position": [
+        -0.001776807641723025,
+        0.14114082993515067,
+        0.42629784711403784
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "magazine": {
+      "position": [
+        -0.0017768076417231061,
+        0.21401823548357762,
+        -0.1567213972733779
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    },
+    "chamber": {
+      "position": [
+        -0.0017768076417231061,
+        0.21401823548357762,
+        -0.1567213972733779
+      ],
+      "rotation": [
+        0,
+        -0.7071067811865476,
+        0,
+        0.7071067811865476
+      ]
+    }
+  }
+}

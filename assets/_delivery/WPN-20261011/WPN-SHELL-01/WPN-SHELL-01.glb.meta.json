@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_59b9cc7f5388",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-SHELL-01",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261011/delivery.json",
+    "sourceUnits": "未标定的生成模型单位",
+    "axisContract": "保留 GLB 节点变换后的 Y-up；尚未标定 +X 武器轴",
+    "inspectionScene": "assets/scenes/sandbox/weapon-source-review.scene.json",
+    "sourceTriangles": 41638
+  },
+  "sourceHash": "sha256:92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+  "updatedAt": "2026-10-11T13:48:52.384Z"
+}

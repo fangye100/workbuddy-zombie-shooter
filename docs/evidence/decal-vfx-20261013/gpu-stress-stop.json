@@ -1,0 +1,100 @@
+{
+  "stress": {
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d8ca0d9e",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": true
+    },
+    "tick": 0,
+    "pool": {
+      "count": 512,
+      "time": 0,
+      "runId": 1,
+      "capacity": 512
+    },
+    "gpu": {
+      "instances": 530,
+      "drawCalls": 1,
+      "bufferBytes": 65536
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 0,
+      "pending": 4
+    }
+  },
+  "stopImmediate": {
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d8ca0d9e",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    },
+    "tick": 0,
+    "pool": {
+      "count": 0,
+      "time": 0,
+      "runId": null,
+      "capacity": 512
+    },
+    "gpu": {
+      "instances": 0,
+      "drawCalls": 0,
+      "bufferBytes": 0
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    }
+  },
+  "editNextFrame": {
+    "state": {
+      "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+      "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+      "revision": "d8ca0d9e",
+      "dirty": false,
+      "hasDraft": false,
+      "busy": false,
+      "pendingAssets": 0,
+      "playing": false
+    },
+    "tick": 0,
+    "pool": {
+      "count": 0,
+      "time": 0,
+      "runId": null,
+      "capacity": 512
+    },
+    "gpu": {
+      "instances": 18,
+      "drawCalls": 1,
+      "bufferBytes": 4096
+    },
+    "ledger": {
+      "registered": 4,
+      "disposed": 4,
+      "pending": 0
+    }
+  },
+  "patternCounts": {
+    "splatter": 57,
+    "scorch": 57,
+    "crack": 57,
+    "hazard": 57,
+    "bullet-hole": 57,
+    "acid": 57,
+    "oil": 57,
+    "paper": 57,
+    "rubble": 56
+  }
+}

@@ -1,7 +1,9 @@
+import { ObjectPool } from '@aether/core';
 import type { WeaponDefinition, WeaponBehavior } from '@aether/scene';
+import type { SolidContact } from './solid-ray';
 export type WeaponPoint=[number,number,number];
-export interface WeaponActor { id:number;generation:number;x:number;z:number;radius:number;hp:number }
-export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
+export interface WeaponActor { id:number;generation:number;x:number;y?:number;height?:number;z:number;radius:number;hp:number }
+export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; surface?:SolidContact; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
 export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
 export interface WeaponWorld {
   actors():WeaponActor[]; actor(id:number):WeaponActor|null;
@@ -9,9 +11,10 @@ export interface WeaponWorld {
   blocked(from:WeaponPoint,to:WeaponPoint):boolean;
   damage(id:number,damage:number):number;
   displace(id:number,from:WeaponPoint,distance:number):void;
+  solidImpact?(hit:WeaponHit,from:WeaponPoint,direction:WeaponPoint,weapon:WeaponDefinition,tick:number):void;
 }
 export interface WeaponEffect { id:number;tick:number;weaponId:string;kind:'shot'|'pellet'|'pierce'|'projectile'|'explosion'|'slash'|'flame'|'burn';from:WeaponPoint;to:WeaponPoint;position:WeaponPoint;duration:number;radius:number;spreadDeg:number;color:string;hit:boolean }
-interface Projectile {effect:WeaponEffect;definition:WeaponDefinition;damage:number;direction:WeaponPoint;age:number;travel:number;velocityY:number}
+interface Projectile {effect:WeaponEffect|null;definition:WeaponDefinition|null;damage:number;direction:WeaponPoint;age:number;travel:number;velocityY:number}
 interface Status {id:number;generation:number;until:number;damage:number;slow:number;slowUntil:number;position:WeaponPoint}
 interface FireContext {weapon:WeaponDefinition;from:WeaponPoint;direction:WeaponPoint;damage:number;tick:number;random():number;world:WeaponWorld;combat:WeaponCombat}
 export interface WeaponImplementation { fire(context:FireContext):void }
@@ -26,7 +29,7 @@ class RayWeapon implements WeaponImplementation {
       const d:WeaponPoint=[c.direction[0]*Math.cos(angle)-c.direction[2]*Math.sin(angle),0,c.direction[0]*Math.sin(angle)+c.direction[2]*Math.cos(angle)];
       const ignore=new Set<number>();let end:WeaponPoint=[c.from[0]+d[0]*w.rangeM,c.from[1],c.from[2]+d[2]*w.rangeM],hit=false;
       for(let p=0;p<(this.pierce?w.penetration:1);p++){
-        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);if(!result.actor)break;
+        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);if(!result.actor){if(result.surface)c.world.solidImpact?.(result,c.from,d,w,c.tick);break;}
         hit=true;ignore.add(result.actor.id);c.combat.impact(c.weapon,result.actor,c.damage,c.tick,c.world,c.from);
       }
       c.combat.effect(w,this.pellets?'pellet':this.pierce?'pierce':'shot',c.from,end,c.tick,.12,0,hit);
@@ -39,6 +42,7 @@ class AreaWeapon implements WeaponImplementation {
     const w=c.weapon,half=w.spreadDeg*Math.PI/360,end:WeaponPoint=[c.from[0]+c.direction[0]*w.rangeM,c.from[1],c.from[2]+c.direction[2]*w.rangeM];let hit=false;
     for(const actor of c.world.actors()){
       const dx=actor.x-c.from[0],dz=actor.z-c.from[2],distance=Math.hypot(dx,dz),point:WeaponPoint=[actor.x,c.from[1],actor.z];
+      if(actor.y!==undefined&&(c.from[1]<actor.y||c.from[1]>actor.y+(actor.height??1.8)))continue;
       if(distance>w.rangeM+actor.radius || distance>0 && (dx*c.direction[0]+dz*c.direction[2])/distance<Math.cos(half) || c.world.blocked(c.from,point))continue;
       hit=true;c.combat.impact(w,actor,c.damage,c.tick,c.world,c.from);
     }
@@ -58,6 +62,11 @@ export class WeaponCombat {
   presentationDropped=0;
   drainPresentationEvents():readonly Readonly<WeaponEffect>[] {const events=this.presentationEvents;this.presentationEvents=[];return events;}
   private projectiles:Projectile[]=[];
+  private readonly projectilePool=new ObjectPool<Projectile>({capacity:64,maxRetained:64,
+    create:()=>({effect:null,definition:null,damage:0,direction:[0,0,0],age:0,travel:0,velocityY:0}),
+    onRelease:p=>{p.effect=null;p.definition=null;p.direction.fill(0);p.damage=0;p.age=0;p.travel=0;p.velocityY=0;},
+  });
+  projectilePoolStats(){return this.projectilePool.getStats();}
   private statuses=new Map<number,Status>();
   private sequence=0;
   private now=0;
@@ -93,39 +102,46 @@ export class WeaponCombat {
     if(e.knockbackM>0)world.displace(actor.id,origin,e.knockbackM);
     if(e.burnSec>0 || e.slowSec>0){
       const previous=this.statuses.get(actor.id);
-      const s=previous?.generation===actor.generation?previous:{id:actor.id,generation:actor.generation,until:0,damage:0,slow:0,slowUntil:0,position:[actor.x,1,actor.z] as WeaponPoint};
+      const s=previous?.generation===actor.generation?previous:{id:actor.id,generation:actor.generation,until:0,damage:0,slow:0,slowUntil:0,position:[actor.x,(actor.y??0)+1,actor.z] as WeaponPoint};
       s.until=Math.max(s.until,this.now+e.burnSec);s.damage=Math.max(s.damage,e.burnDps);s.slow=Math.max(s.slow,e.slowFrac);s.slowUntil=Math.max(s.slowUntil,this.now+e.slowSec);this.statuses.set(actor.id,s);
     }
   }
   private explode(w:WeaponDefinition,point:WeaponPoint,damage:number,tick:number,world:WeaponWorld,ignore=new Set<number>()):void {
     this.effect(w,'explosion',point,point,tick,.4,w.effects.blastRadiusM,true);
-    for(const a of world.actors())if(!ignore.has(a.id) && Math.hypot(a.x-point[0],a.z-point[2])<=w.effects.blastRadiusM+a.radius && !world.blocked(point,[a.x,point[1],a.z])){
+    for(const a of world.actors())if(!ignore.has(a.id) && Math.hypot(a.x-point[0],a.y===undefined?0:Math.max(a.y-point[1],point[1]-a.y-(a.height??1.8),0),a.z-point[2])<=w.effects.blastRadiusM+a.radius && !world.blocked(point,[a.x,Math.max(a.y??point[1],Math.min(point[1],(a.y??point[1])+(a.height??1.8))),a.z])){
       world.damage(a.id,damage);if(world.actor(a.id))world.displace(a.id,point,w.effects.knockbackM);
     }
   }
   launch(c:FireContext):void {
     if(this.projectiles.length>=64)throw new Error('Projectile pool capacity exceeded');
+    // 先完成可能失败的外部数据复制，失败时不占用租约或发布半发射特效。
+    const definition=structuredClone(c.weapon);
     const end:WeaponPoint=[c.from[0]+c.direction[0]*c.weapon.rangeM,c.from[1],c.from[2]+c.direction[2]*c.weapon.rangeM];
     const effect=this.effect(c.weapon,'projectile',c.from,end,c.tick,c.weapon.projectile.lifetimeSec,c.weapon.projectile.radiusM,false);
-    this.projectiles.push({effect,definition:structuredClone(c.weapon),damage:c.damage,direction:[...c.direction],age:0,travel:0,velocityY:c.weapon.projectile.launchSpeedY+c.direction[1]*c.weapon.projectile.speedMps});
+    const p=this.projectilePool.acquire();
+    p.effect=effect;p.definition=definition;p.damage=c.damage;
+    p.direction[0]=c.direction[0];p.direction[1]=c.direction[1];p.direction[2]=c.direction[2];
+    p.age=0;p.travel=0;p.velocityY=c.weapon.projectile.launchSpeedY+c.direction[1]*c.weapon.projectile.speedMps;
+    this.projectiles.push(p);
   }
   slow(id:number,generation:number):number {const s=this.statuses.get(id);return s?.generation===generation && s.slowUntil>this.now?1-s.slow:1;}
   step(tick:number,dt:number,world:WeaponWorld):void {
     this.now+=dt;
     for(let i=this.effects.length-1;i>=0;i--){const e=this.effects[i]!;if(e.kind!=='projectile' && (tick-e.tick)*dt>=e.duration)this.effects.splice(i,1);}
     for(let i=this.projectiles.length-1;i>=0;i--){
-      const p=this.projectiles[i]!,w=p.definition,from=p.effect.position,step=Math.min(w.projectile.speedMps*dt,Math.max(0,w.rangeM-p.travel));p.age+=dt;p.travel+=step;p.velocityY-=w.projectile.gravity*dt;
+      const p=this.projectiles[i]!,w=p.definition!,from=p.effect!.position,step=Math.min(w.projectile.speedMps*dt,Math.max(0,w.rangeM-p.travel));p.age+=dt;p.travel+=step;p.velocityY-=w.projectile.gravity*dt;
       const next:WeaponPoint=[from[0]+p.direction[0]*step,from[1]+p.velocityY*dt,from[2]+p.direction[2]*step];
       const length=Math.hypot(next[0]-from[0],next[1]-from[1],next[2]-from[2]);const direction:WeaponPoint=length>0?[(next[0]-from[0])/length,(next[1]-from[1])/length,(next[2]-from[2])/length]:[1,0,0];
-      const hit=world.trace(from,direction,length,new Set(),w.projectile.radiusM);p.effect.position=hit.point;
+      const hit=world.trace(from,direction,length,new Set(),w.projectile.radiusM);p.effect!.position=hit.point;
       const impact=!!hit.actor || hit.distance<length-1e-6 || next[1]<=.05 || p.travel>=w.rangeM || p.age>=w.projectile.lifetimeSec;
       if(impact){
         const groundT=next[1]<=.05 && from[1]>.05?(from[1]-.05)/(from[1]-next[1])*length:Infinity;
-        p.effect.position=groundT<hit.distance?[from[0]+direction[0]*groundT,.05,from[2]+direction[2]*groundT]:hit.point;
-        if(!hit.actor && hit.distance<length-1e-6)p.effect.position=[p.effect.position[0]-direction[0]*.01,p.effect.position[1]-direction[1]*.01,p.effect.position[2]-direction[2]*.01];
-        if(w.effects.blastRadiusM>0)this.explode(w,p.effect.position,p.damage,tick,world);
+        p.effect!.position=groundT<hit.distance?[from[0]+direction[0]*groundT,.05,from[2]+direction[2]*groundT]:hit.point;
+        if(!hit.actor && hit.distance<length-1e-6)p.effect!.position=[p.effect!.position[0]-direction[0]*.01,p.effect!.position[1]-direction[1]*.01,p.effect!.position[2]-direction[2]*.01];
+        if(w.effects.blastRadiusM>0)this.explode(w,p.effect!.position,p.damage,tick,world);
         else if(hit.actor)this.impact(w,hit.actor,p.damage,tick,world,from);
-        this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect),1);
+        else if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
+        this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect!),1);this.projectilePool.release(p);
       }
     }
     for(const [id,s] of this.statuses){
@@ -137,5 +153,5 @@ export class WeaponCombat {
   }
   get burning():ReadonlyArray<{id:number;generation:number;until:number}> {return [...this.statuses.values()].filter(s=>s.until>this.now && s.damage>0);}
   get pendingProjectiles():number{return this.projectiles.length;}
-  clear():void {this.effects.length=0;this.projectiles.length=0;this.statuses.clear();this.vfxEvents=[];this.vfxDropped=0;this.presentationEvents=[];this.presentationDropped=0;}
+  clear():void {this.effects.length=0;for(const p of this.projectiles)this.projectilePool.release(p);this.projectiles.length=0;this.statuses.clear();this.vfxEvents=[];this.vfxDropped=0;this.presentationEvents=[];this.presentationDropped=0;}
 }

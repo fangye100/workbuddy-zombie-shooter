@@ -7,8 +7,11 @@ import {
   type GizmoMode,
   type GizmoSpace,
   RendererCore,
+  DecalFrameBuilder,
+  type DecalPool,
   createAlbedoTexture,
   type CoreObjectDraw,
+  type PostPoseDrawPort,
   type CoreSubMeshDraw,
   type CoreSkeletonOverlay,
   type CoreCylinderOverlay,
@@ -651,6 +654,7 @@ export class LabRenderer {
   /** 引擎帧绘制核心：拥有全部 GPU 资源（管线 / buffer / 纹理 / gizmo）并执行 4-pass 编码 */
   /** 引擎帧绘制核心（services 通过它读 gizmo/相机矩阵与高亮 buffer） */
   public readonly core: RendererCore;
+  public poseDrawPort: PostPoseDrawPort | null = null;
   private readonly skyTextures: SkyTextureLoader;
   get skyTextureDiagnostic(): string { return this.skyTextures.diagnostic; }
   onSkyTextureStatusChange: (() => void) | null = null;
@@ -692,6 +696,10 @@ export class LabRenderer {
    */
   /** 编辑器全部可变状态（services 通过 host.state 读写；render / GPU 装箱也在 LabRenderer 内读它） */
   public readonly state = new EditorState();
+  /** 外部创作target的派生世界frame；不占场景槽位、不持有资产内容。 */
+  public helperGizmo: {position:[number,number,number];rotation:[number,number,number,number]}|null=null;
+  /** 每帧pose求值之后读取外部target，避免HUD节流影响手柄；不拥有创作数据。 */
+  public helperGizmoSource:(()=>LabRenderer['helperGizmo'])|null=null;
 
   /** 选中 / 悬停状态机（委托 SelectionService） */
   private readonly selection = new SelectionService(this);
@@ -724,6 +732,9 @@ export class LabRenderer {
    * `RuntimeBridge`（拿它做玩法装载）与将来的保存链路。渲染不读它。
    */
   private document: SceneDocument | null = null;
+  private readonly decalFrames=new DecalFrameBuilder();
+  private runtimeDecals:ReturnType<DecalPool['frame']>={count:0,marks:[]};
+  setRuntimeDecals(snapshot:ReturnType<DecalPool['frame']>):void {this.runtimeDecals=snapshot;}
   getDocument(): SceneDocument | null {
     return this.document;
   }
@@ -2372,8 +2383,10 @@ export class LabRenderer {
       // 每帧重算，姿势随片段变化；未播或 bind pose 时 jointMatrix 退化为 I，顶点原样。
       if (o.skinState !== null && o.skinBuffer !== null) {
         skinAdvance(o.skinState, dt);
-        evalJointMatrices(o.skinState, o.skinScratch);
+        const frame = o.nodeId ? this.poseDrawPort?.frameFor(o.nodeId,this.state.frameCounter) : undefined;
+        evalJointMatrices(o.skinState, o.skinScratch,frame);
         this.device.queue.writeBuffer(o.skinBuffer, 0, o.skinScratch);
+        if(frame&&o.nodeId)this.poseDrawPort?.afterPose(o.nodeId,o.modelMatrix,frame);
       }
     }
 
@@ -2443,6 +2456,7 @@ export class LabRenderer {
       }),
     }));
 
+    objects.push(...(this.poseDrawPort?.drawObjects()??[]));
     // 高亮描边与 gizmo 的帧输入由 features 组装（编辑器侧语义，引擎零改动）
     const highlight = buildSelectionOutline(this);
     const gizmo = buildGizmo(this);
@@ -2461,6 +2475,10 @@ export class LabRenderer {
     }
 
     const input: RenderFrameInput = {
+      decals:this.decalFrames.build(this.document,id=>{
+        const index=this.findObjectIndexByNodeId(id),o=index===null?null:this.state.objects[index];
+        return o&&!o.removed&&o.visible?o.modelMatrix:null;
+      },this.runtimeDecals,m4.orbitEye(camera.target,camera.distance,camera.yaw,p.cameraElevation)),
       sky: this.document?.environment.sky ?? null,
       contacts: this.document?.environment.comic ? {
         data: this.sceneContacts.build(this.state.objects, this.dynamicBatches),

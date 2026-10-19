@@ -1,0 +1,287 @@
+{
+  "ok": true,
+  "runtime": {
+    "state": "paused",
+    "tick": 0,
+    "player": {
+      "id": 0,
+      "generation": 1,
+      "runId": 1,
+      "characterId": "P-01",
+      "kind": "player",
+      "x": 13,
+      "y": 4,
+      "z": 0,
+      "yaw": 0,
+      "alive": true,
+      "sourceNodeId": "nd_nav3d_player",
+      "targetId": -1,
+      "behavior": 0,
+      "behaviorPhase": 0,
+      "hp": 100,
+      "maxHp": 100,
+      "hitFlash": 0,
+      "lodTier": 0
+    },
+    "npcCount": 0,
+    "gates": [],
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 4,
+      "disposed": 0,
+      "pending": 4
+    },
+    "instances": 1,
+    "meshIds": [
+      "capsule:r0.350:h1.800"
+    ],
+    "actorLibrarySize": 0,
+    "weapons": {
+      "equipped": "pistol",
+      "states": [
+        {
+          "id": "pistol",
+          "magazine": 10000,
+          "reserve": 10000000,
+          "level": 1
+        }
+      ],
+      "activeId": "pistol",
+      "behavior": "hitscan",
+      "capacity": 10000,
+      "reloadRemaining": 0,
+      "switching": false,
+      "upgradeCost": 15,
+      "animation": {
+        "action": "idle",
+        "weaponId": "pistol",
+        "clip": "pistol-idle",
+        "fallback": "idle",
+        "phase": 0,
+        "startTick": 0
+      },
+      "poseIntent": {
+        "weaponId": "pistol",
+        "action": "idle",
+        "phase": 0,
+        "markers": {
+          "primaryGrip": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "right-hand"
+          },
+          "supportGrip": {
+            "position": [
+              0.12,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "left-hand"
+          },
+          "muzzle": {
+            "position": [
+              0.3,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "magazine": {
+            "position": [
+              0.036,
+              -0.1,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          },
+          "chamber": {
+            "position": [
+              0.09,
+              0.04,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "effector": "none"
+          }
+        },
+        "recoil": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "pitchDeg": 0
+        },
+        "reload": {
+          "leftHandTarget": "supportGrip",
+          "phase": 0
+        }
+      },
+      "recentEvents": [],
+      "hookErrors": [],
+      "effectCount": 0
+    },
+    "audio": {
+      "state": "closed",
+      "runId": -1,
+      "pending": 0,
+      "buffers": 0,
+      "decodedBytes": 0,
+      "voices": 0,
+      "loops": 0,
+      "peakVoices": 0,
+      "played": {},
+      "skipped": 0,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    },
+    "navigation": {
+      "settings": {
+        "maxNeighbors": 12,
+        "timeHorizonSec": 0.8,
+        "skinM": 0.02,
+        "acceleration": 8,
+        "collisionIterations": 4,
+        "stuckWindowSec": 0.5,
+        "stuckProgressRatio": 0.15,
+        "flowCellBudget": 2048
+      },
+      "surface": {
+        "mode": "surface-3d",
+        "cellCount": 1245,
+        "surfaceCount": 21,
+        "rejectedSurfaces": [],
+        "obstacleVersion": 0,
+        "dynamicObstacleCount": 0,
+        "overlayWork": 0,
+        "blockedDynamicCells": 0,
+        "blockedDynamicEdges": 0,
+        "version": 1,
+        "pending": false,
+        "workLastStep": 1888,
+        "goal": {
+          "x": 12.75,
+          "y": 4,
+          "z": -0.25,
+          "surface": 2
+        }
+      },
+      "flow": {
+        "version": 1,
+        "pending": false,
+        "publishedGoal": {
+          "x": 12.75,
+          "y": 4,
+          "z": -0.25,
+          "surface": 2
+        },
+        "requestedX": 13,
+        "requestedZ": 0,
+        "workLastStep": 1888,
+        "cellCount": 1245,
+        "rejectedGoals": 0
+      },
+      "crowd": {
+        "agents": 0,
+        "moving": 0,
+        "candidateChecks": 0,
+        "velocityConstraints": 0,
+        "infeasibleVelocities": 0,
+        "contactPairs": 0,
+        "blockedMoves": 0,
+        "residualOverlapPairs": 0,
+        "maxPenetrationM": 0,
+        "stuckAgents": 0,
+        "unreachableAgents": 0,
+        "yieldingAgents": 0,
+        "externalBlockedMoves": 0
+      }
+    },
+    "decals": {
+      "time": 0,
+      "count": 1,
+      "capacity": 512,
+      "evicted": 0,
+      "marks": [
+        {
+          "receiver": "nd_nav3d_low",
+          "mark": {
+            "id": "runtime_1",
+            "pattern": "splatter",
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "size": [
+              2,
+              2
+            ],
+            "color": "#349b7a",
+            "opacity": 0.9,
+            "seed": 31,
+            "normalOffset": 0.008,
+            "priority": 2
+          },
+          "remainingSec": 2
+        }
+      ],
+      "runId": 1,
+      "gpu": {
+        "instances": 13,
+        "drawCalls": 1,
+        "bufferBytes": 4096
+      }
+    }
+  },
+  "state": {
+    "path": "assets/scenes/sandbox/procedural-decal-whitebox.scene.json",
+    "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
+    "revision": "429b9ae7",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": true
+  }
+}

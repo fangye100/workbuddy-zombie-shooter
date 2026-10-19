@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_e93b2f288972",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-SHELL-01",
+    "triangles": 200,
+    "level": 1,
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
+    "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+    "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+    "report": "assets/art/models/WPN-SHELL-01/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      0.00024950436827171456,
+      -0.0008765770142862477,
+      -0.0002006088120974931
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-SHELL-01_lod1.glb",
+    "status": "visual-review-candidate",
+    "previousGlbHash": "2edd655ed411f224e8895750a527baa8adaba0cbad1c1cfde20b1f06cac211b8",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-SHELL-01_lod1_basecolor.png"
+  },
+  "sourceHash": "sha256:5de82df42b1b940e3e43bae679a3ec1da2708b59e55d64453213b26245475d7b",
+  "updatedAt": "2026-10-11T15:03:12.562Z"
+}

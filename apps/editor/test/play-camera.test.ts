@@ -138,6 +138,13 @@ describe('PlayCameraController · 保存与还原', () => {
   }
 
   const gameDoc = doc([node('cam1', [cam({ pitchDeg: 50, distance: 18 })])], 'cam1');
+  it('临时观察不被game-follow覆盖；退出回最新game机位，detach还原author',()=>{
+    const h=harness(),author=structuredClone(h.cur),pc=new PlayCameraController(h.view);pc.attach(gameDoc,posOf({cam1:[1,1.2,2]}));
+    expect(pc.setObservation(true)).toBe(true);h.view.set({target:[4,3,6],distance:2,yaw:.8,elevationDeg:5});const observed=structuredClone(h.cur);
+    pc.update({x:9,z:10,yaw:2});expect(h.cur).toEqual(observed);expect(pc.observation).toBe(true);
+    pc.setObservation(false);expect(h.cur.target).toEqual([9,1.2,10]);expect(h.cur.distance).toBe(18);expect(h.cur.yaw).toBe(0);
+    pc.setObservation(true);h.view.set(observed);pc.detach();expect(h.cur).toEqual(author);expect(pc.observation).toBe(false);expect(pc.setObservation(true)).toBe(false);
+  });
 
   it('attach 切到游戏相机，detach 精确还原编辑相机', () => {
     const h = harness();

@@ -1,0 +1,89 @@
+{
+  "batch": "WPN-20261011",
+  "date": "2026-10-11",
+  "source": "docs/38-GameplayActionAndVfxAssetBrief.md（武器与附加资源 / Unified weapon resource addendum）",
+  "author": "WorkBuddy Agent (墨)",
+  "tool": "Hunyuan 3D 图生3D（WorkBuddy 内置链路 buddy-multimodal-generation，image-to-3D，model 3.1，enable-pbr）",
+  "pipeline": "ImageGen 美漫参考图（裁水印）→ 图生3D → 本地下载 GLB+预览",
+  "license": "AI 生成内容，项目内部使用；无文字/商标/水印（参考图底部水印已裁除）",
+  "status": "源资产到货，未接入运行时（不等于运行时验收完成）",
+  "items": [
+    {
+      "id": "WPN-07-LAUNCHER",
+      "priority": "P1",
+      "type": "weapon-source",
+      "character": null,
+      "brief": "美漫工业风榴弹发射器：暗板岩色炮管、暖黄危险条纹、单一可读大炮管+握把，无文字/标志",
+      "jobId": "1500833294303772672",
+      "files": ["WPN-07-LAUNCHER.glb", "WPN-07-LAUNCHER_preview.png", "front.png"],
+      "glbBytes": 44299296,
+      "targetDimsM": { "length": 0.75, "width": 0.18, "height": 0.3 },
+      "lodTarget": { "LOD0": 3000, "LOD1": 1500, "LOD2": 500 },
+      "note": "源模型 100k 面 + PBR 贴图，尺寸/朝向未标定（非米制、+X 炮管轴待归一化）；LOD 由本地管线生成"
+    },
+    {
+      "id": "WPN-MAG-01",
+      "priority": "P1",
+      "type": "prop-source",
+      "character": null,
+      "brief": "重型手枪独立弹匣：漫画深蓝灰金属、黄铜底盖，无文字",
+      "jobId": "1500833292248563712",
+      "files": ["WPN-MAG-01.glb", "WPN-MAG-01_preview.png", "front.png"],
+      "glbBytes": 23763212,
+      "targetDimsM": { "x": 0.04, "z": 0.025, "y": 0.11 },
+      "lodTarget": { "LOD0": 400, "LOD1": 200, "LOD2": 80 },
+      "note": "源模型 30k 面，尺寸/朝向未标定；LOD 由本地管线生成"
+    },
+    {
+      "id": "WPN-MAG-02-SMG",
+      "priority": "P1",
+      "type": "prop-source",
+      "character": null,
+      "brief": "SMG 盒式弹匣（WPN-MAG-ALL 的 SMG 变体）：深蓝灰金属、黄铜底盖，无文字",
+      "jobId": "1500834834594652160",
+      "files": ["WPN-MAG-02-SMG.glb", "WPN-MAG-02-SMG_preview.png", "front.png"],
+      "glbBytes": 27397136,
+      "targetDimsM": { "x": 0.04, "z": 0.025, "y": 0.11 },
+      "lodTarget": { "LOD0": 400, "LOD1": 200, "LOD2": 80 },
+      "note": "尺寸/朝向未标定"
+    },
+    {
+      "id": "WPN-SHELL-01",
+      "priority": "P1",
+      "type": "prop-source",
+      "character": null,
+      "brief": "霰弹枪弹壳：暗红壳体+黄铜底座，无文字",
+      "jobId": "1500834126067810304",
+      "files": ["WPN-SHELL-01.glb", "WPN-SHELL-01_preview.png", "front.png"],
+      "glbBytes": 28467928,
+      "targetDimsM": { "diameter": 0.025, "length": 0.07 },
+      "lodTarget": { "LOD0": 400, "LOD1": 200, "LOD2": 80 },
+      "note": "预览显示底缘（底火区）贴图/几何略有瑕疵，接入前需目检或裁剪隐藏面"
+    },
+    {
+      "id": "WPN-FUEL-01",
+      "priority": "P1",
+      "type": "prop-source",
+      "character": null,
+      "brief": "火焰燃料罐：灰绿金属圆柱、暖黄危险环带、顶部阀口+软管，无文字",
+      "jobId": "1500834125036077056",
+      "files": ["WPN-FUEL-01.glb", "WPN-FUEL-01_preview.png", "front.png"],
+      "glbBytes": 31242176,
+      "targetDimsM": { "diameter": 0.12, "length": 0.25 },
+      "lodTarget": { "LOD0": 800, "LOD1": 400, "LOD2": 150 },
+      "note": "顶部软管为模型一部分；若与持握标定冲突可在接入期删除"
+    }
+  ],
+  "missing": [
+    "WPN-MAG-ALL 中的狙击枪弹匣与榴弹发射器弹丸未生成（当日 3D 生成额度 5 次已用满；建议狙击弹匣由 WPN-MAG-02-SMG 缩放变体，弹丸由 WPN-SHELL-01 变体派生）",
+    "WPN-SOCKETS-ALL（P0，右手握柄/左手托握/muzzle/弹匣 pivot 的四元数标定）未做——需按已确认角色 rig 校准，属接入方工作",
+    "全部源 GLB 未做米制归一化（Y-up、+X barrel、真实尺寸），接入前须标定",
+    "全部 LOD 未生成（本地管线负责：焊点 + quadric_edge_collapse_with_texture preserveboundary=False）",
+    "各武器 BaseColor 1024² 未单独导出（当前贴图烘焙在 GLB 内）"
+  ],
+  "next": [
+    "目检五件 GLB（编辑器 Asset 导入 + 三视角）",
+    "本地减面/烘焙出 LOD0-2",
+    "WPN-07 接入前按 docs/31 验收；跑 scene:check"
+  ]
+}

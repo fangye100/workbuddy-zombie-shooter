@@ -1,0 +1,1863 @@
+{
+  "scene": "assets/scenes/act1/floor-1.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-1.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "production": {
+      "actors": [
+        {
+          "id": "E-01",
+          "base": 0,
+          "rest": 324,
+          "poses": 325,
+          "joints": 28,
+          "matrices": 9100,
+          "vertices": 4209,
+          "skinJoints": 16836,
+          "weights": 16836,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        },
+        {
+          "id": "E-02",
+          "base": 9100,
+          "rest": 329,
+          "poses": 330,
+          "joints": 28,
+          "matrices": 9240,
+          "vertices": 5350,
+          "skinJoints": 21400,
+          "weights": 21400,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        }
+      ],
+      "active": [
+        {
+          "mesh": "actor:E-01",
+          "count": 15,
+          "skin": true,
+          "rows": [
+            {
+              "x": 13.584248542785645,
+              "z": 3.779872417449951,
+              "base": 0,
+              "pose": 60,
+              "frames": 98,
+              "phase": 0.6180340051651001,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.804709434509277,
+              "z": 3.7543509006500244,
+              "base": 0,
+              "pose": 23,
+              "frames": 98,
+              "phase": 0.2360679805278778,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 13.701336860656738,
+              "z": 4.583975791931152,
+              "base": 0,
+              "pose": 83,
+              "frames": 98,
+              "phase": 0.8541019558906555,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 10.095544815063477,
+              "z": 0.5150049924850464,
+              "base": 0,
+              "pose": 46,
+              "frames": 98,
+              "phase": 0.4721359610557556,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.84726333618164,
+              "z": 0.09010356664657593,
+              "base": 0,
+              "pose": 8,
+              "frames": 98,
+              "phase": 0.09016994386911392,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 13.875188827514648,
+              "z": 1.5287508964538574,
+              "base": 0,
+              "pose": 69,
+              "frames": 98,
+              "phase": 0.708203911781311,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 12.59416389465332,
+              "z": 3.118446111679077,
+              "base": 0,
+              "pose": 31,
+              "frames": 98,
+              "phase": 0.32623791694641113,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 15.585444450378418,
+              "z": 1.167206048965454,
+              "base": 0,
+              "pose": 92,
+              "frames": 98,
+              "phase": 0.9442719221115112,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.666276931762695,
+              "z": -1.135230302810669,
+              "base": 0,
+              "pose": 55,
+              "frames": 98,
+              "phase": 0.5623059272766113,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 12.145586967468262,
+              "z": 1.709695816040039,
+              "base": 0,
+              "pose": 17,
+              "frames": 98,
+              "phase": 0.18033988773822784,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 10.685794830322266,
+              "z": 2.187309741973877,
+              "base": 0,
+              "pose": 78,
+              "frames": 98,
+              "phase": 0.7983738780021667,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.865541458129883,
+              "z": 4.0285844802856445,
+              "base": 0,
+              "pose": 40,
+              "frames": 98,
+              "phase": 0.41640785336494446,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 15.878318786621094,
+              "z": 0.03958919644355774,
+              "base": 0,
+              "pose": 3,
+              "frames": 98,
+              "phase": 0.03444185480475426,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.901761054992676,
+              "z": 1.9941531419754028,
+              "base": 0,
+              "pose": 63,
+              "frames": 98,
+              "phase": 0.6524758338928223,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.29779052734375,
+              "z": 4.508816242218018,
+              "base": 0,
+              "pose": 26,
+              "frames": 98,
+              "phase": 0.27050983905792236,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        },
+        {
+          "mesh": "actor:E-02",
+          "count": 9,
+          "skin": true,
+          "rows": [
+            {
+              "x": 13.16201400756836,
+              "z": -6.316080093383789,
+              "base": 9100,
+              "pose": 87,
+              "frames": 98,
+              "phase": 0.8885438442230225,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.288776397705078,
+              "z": -1.5655711889266968,
+              "base": 9100,
+              "pose": 49,
+              "frames": 98,
+              "phase": 0.5065777897834778,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 10.99836254119873,
+              "z": -0.7262123823165894,
+              "base": 9100,
+              "pose": 12,
+              "frames": 98,
+              "phase": 0.12461179494857788,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 11.136682510375977,
+              "z": -1.9031935930252075,
+              "base": 9100,
+              "pose": 72,
+              "frames": 98,
+              "phase": 0.742645800113678,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 9.410172462463379,
+              "z": -3.1434638500213623,
+              "base": 9100,
+              "pose": 35,
+              "frames": 98,
+              "phase": 0.3606797754764557,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 13.593338012695312,
+              "z": -5.679035663604736,
+              "base": 9100,
+              "pose": 95,
+              "frames": 98,
+              "phase": 0.9787137508392334,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 14.059295654296875,
+              "z": -3.334657669067383,
+              "base": 9100,
+              "pose": 58,
+              "frames": 98,
+              "phase": 0.5967477560043335,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 13.709592819213867,
+              "z": -4.420517921447754,
+              "base": 9100,
+              "pose": 21,
+              "frames": 98,
+              "phase": 0.2147817462682724,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 12.782068252563477,
+              "z": -6.209056377410889,
+              "base": 9100,
+              "pose": 81,
+              "frames": 98,
+              "phase": 0.8328157067298889,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        }
+      ],
+      "wantedActors": {
+        "E-01": 15,
+        "E-02": 9
+      },
+      "proxy": 0,
+      "visible": 24,
+      "entities": [
+        {
+          "id": 0,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 3,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1_start",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 13.584248542785645,
+          "y": 0,
+          "z": 3.779872417449951,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 2,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.804709434509277,
+          "y": 0,
+          "z": 3.7543509006500244,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 3,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 13.701336860656738,
+          "y": 0,
+          "z": 4.583975791931152,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 4,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 10.095544815063477,
+          "y": 0,
+          "z": 0.5150049924850464,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 5,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.84726333618164,
+          "y": 0,
+          "z": 0.09010356664657593,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 6,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 13.875188827514648,
+          "y": 0,
+          "z": 1.5287508964538574,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 7,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 12.59416389465332,
+          "y": 0,
+          "z": 3.118446111679077,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 8,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 15.585444450378418,
+          "y": 0,
+          "z": 1.167206048965454,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 9,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.666276931762695,
+          "y": 0,
+          "z": -1.135230302810669,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 10,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 12.145586967468262,
+          "y": 0,
+          "z": 1.709695816040039,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 11,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 10.685794830322266,
+          "y": 0,
+          "z": 2.187309741973877,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 12,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.865541458129883,
+          "y": 0,
+          "z": 4.0285844802856445,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 13,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 15.878318786621094,
+          "y": 0,
+          "z": 0.03958919644355774,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 14,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.901761054992676,
+          "y": 0,
+          "z": 1.9941531419754028,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 15,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 14.29779052734375,
+          "y": 0,
+          "z": 4.508816242218018,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp0",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 16,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 13.16201400756836,
+          "y": 0,
+          "z": -6.316080093383789,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 17,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 14.288776397705078,
+          "y": 0,
+          "z": -1.5655711889266968,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 18,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 10.99836254119873,
+          "y": 0,
+          "z": -0.7262123823165894,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 19,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 11.136682510375977,
+          "y": 0,
+          "z": -1.9031935930252075,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 20,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 9.410172462463379,
+          "y": 0,
+          "z": -3.1434638500213623,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 21,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 13.593338012695312,
+          "y": 0,
+          "z": -5.679035663604736,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 22,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 14.059295654296875,
+          "y": 0,
+          "z": -3.334657669067383,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 23,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 13.709592819213867,
+          "y": 0,
+          "z": -4.420517921447754,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        },
+        {
+          "id": 24,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 12.782068252563477,
+          "y": 0,
+          "z": -6.209056377410889,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1r0_sp2",
+          "targetId": 0,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 1
+        }
+      ],
+      "playerNode": "nd_f1_start",
+      "playerStart": "nd_f1_start",
+      "uploads": 2,
+      "gpuIds": [
+        "actor:E-01",
+        "actor:E-02"
+      ],
+      "draws": 90,
+      "diagnostics": [],
+      "tick": 0,
+      "outcome": "running"
+    },
+    "productionStop": {
+      "stopped": true,
+      "ledger": {
+        "registered": 96,
+        "disposed": 96,
+        "pending": 0
+      },
+      "ids": [],
+      "runtime": true,
+      "objects": 57,
+      "afterObjects": 57,
+      "sameDocument": true,
+      "sameState": true
+    },
+    "injectedFailures": [
+      {
+        "path": "assets/characters/models/B-02/rigged/B02_THE BROODMOTHER_6000_animation_ready.glb",
+        "status": 503
+      }
+    ],
+    "whitebox": {
+      "actors": [
+        {
+          "id": "E-01",
+          "base": 0,
+          "rest": 324,
+          "poses": 325,
+          "joints": 28,
+          "matrices": 9100,
+          "vertices": 4209,
+          "skinJoints": 16836,
+          "weights": 16836,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        },
+        {
+          "id": "E-02",
+          "base": 9100,
+          "rest": 329,
+          "poses": 330,
+          "joints": 28,
+          "matrices": 9240,
+          "vertices": 5350,
+          "skinJoints": 21400,
+          "weights": 21400,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        }
+      ],
+      "active": [
+        {
+          "mesh": "actor:E-01",
+          "count": 3,
+          "skin": true,
+          "rows": [
+            {
+              "x": -5.650455951690674,
+              "z": -7.112148284912109,
+              "base": 0,
+              "pose": 138,
+              "frames": 65,
+              "phase": 0.6180340051651001,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": -5.90654993057251,
+              "z": -6.7098588943481445,
+              "base": 0,
+              "pose": 113,
+              "frames": 65,
+              "phase": 0.2360679805278778,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 3,
+              "z": 0,
+              "base": 0,
+              "pose": 144,
+              "frames": 65,
+              "phase": 0.708203911781311,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        },
+        {
+          "mesh": "actor:E-02",
+          "count": 2,
+          "skin": true,
+          "rows": [
+            {
+              "x": 5.9680047035217285,
+              "z": -7.798072338104248,
+              "base": 9100,
+              "pose": 153,
+              "frames": 65,
+              "phase": 0.8541019558906555,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 5.726523399353027,
+              "z": -7.590223789215088,
+              "base": 9100,
+              "pose": 128,
+              "frames": 65,
+              "phase": 0.4721359610557556,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        },
+        {
+          "mesh": "capsule:r1.200:h2.400",
+          "count": 1,
+          "skin": false,
+          "rows": [
+            {
+              "x": 8.310791015625,
+              "z": 7.838387489318848,
+              "base": 0,
+              "pose": 0,
+              "frames": 0,
+              "phase": 0,
+              "flags": 0,
+              "stride": 0
+            }
+          ]
+        }
+      ],
+      "wantedActors": {
+        "E-01": 3,
+        "E-02": 2
+      },
+      "proxy": 1,
+      "visible": 6,
+      "entities": [
+        {
+          "id": 0,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_player",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -5.650455951690674,
+          "y": 0,
+          "z": -7.112148284912109,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 2,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -5.90654993057251,
+          "y": 0,
+          "z": -6.7098588943481445,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 3,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 5.9680047035217285,
+          "y": 0,
+          "z": -7.798072338104248,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn1",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 4,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 5.726523399353027,
+          "y": 0,
+          "z": -7.590223789215088,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn1",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 5,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "B-02",
+          "kind": "npc",
+          "x": 8.310791015625,
+          "y": 0,
+          "z": 7.838387489318848,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn2",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 6000,
+          "maxHp": 6000,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 6,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 3,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_target",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        }
+      ],
+      "playerNode": "nd_probe_player",
+      "playerStart": "nd_probe_player",
+      "uploads": 2,
+      "gpuIds": [
+        "actor:E-01",
+        "actor:E-02",
+        "capsule:r1.200:h2.400"
+      ],
+      "draws": 10,
+      "diagnostics": [
+        "B-02: Error: HTTP 503"
+      ],
+      "tick": 0,
+      "outcome": "running"
+    },
+    "animation": {
+      "a": {
+        "identity": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1
+        },
+        "entity": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -4.990475177764893,
+          "y": 0,
+          "z": -6.838200092315674,
+          "yaw": 0.7853981852531433,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        "debug": {
+          "identity": {
+            "kind": "entity",
+            "id": 1,
+            "runId": 1,
+            "generation": 1
+          },
+          "label": "E-01 #1",
+          "characterId": "E-01",
+          "tick": 20,
+          "revision": 0,
+          "pipeline": "gpu-palette",
+          "status": "ready",
+          "decision": {
+            "requested": "walk",
+            "actual": "walk",
+            "source": "behavior",
+            "fallback": null,
+            "actionStamp": "",
+            "rules": [
+              {
+                "id": "anchor",
+                "label": "静止角色行为归一化",
+                "matched": false,
+                "selected": false,
+                "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"
+              },
+              {
+                "id": "weapon",
+                "label": "武器 clip → action 别名",
+                "matched": false,
+                "selected": false,
+                "reason": "NPC / 无活动武器动作"
+              },
+              {
+                "id": "behavior",
+                "label": "行为映射",
+                "matched": true,
+                "selected": true,
+                "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+              }
+            ]
+          },
+          "clip": {
+            "name": "walk",
+            "index": 1,
+            "time": 1.2678984333481793,
+            "duration": 4.0333333015441895,
+            "phase": 0.3143549859523773,
+            "loop": null
+          },
+          "transition": null,
+          "ik": {
+            "status": "unsupported",
+            "enabled": false,
+            "weight": 0,
+            "controls": [],
+            "diagnostics": []
+          },
+          "diagnostics": [
+            "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+          ]
+        },
+        "row": {
+          "pose": 118,
+          "phase": 0.3143549859523773,
+          "base": 0,
+          "stride": 28
+        },
+        "tick": 20,
+        "outcome": "running"
+      },
+      "b": {
+        "identity": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1
+        },
+        "entity": {
+          "id": 1,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -4.429507732391357,
+          "y": 0,
+          "z": -6.277232646942139,
+          "yaw": 0.7853981852531433,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        "debug": {
+          "identity": {
+            "kind": "entity",
+            "id": 1,
+            "runId": 1,
+            "generation": 1
+          },
+          "label": "E-01 #1",
+          "characterId": "E-01",
+          "tick": 37,
+          "revision": 0,
+          "pipeline": "gpu-palette",
+          "status": "ready",
+          "decision": {
+            "requested": "walk",
+            "actual": "walk",
+            "source": "behavior",
+            "fallback": null,
+            "actionStamp": "",
+            "rules": [
+              {
+                "id": "anchor",
+                "label": "静止角色行为归一化",
+                "matched": false,
+                "selected": false,
+                "reason": "原始 behavior=1; 实际 behavior=1; moveSpeed=1.4"
+              },
+              {
+                "id": "weapon",
+                "label": "武器 clip → action 别名",
+                "matched": false,
+                "selected": false,
+                "reason": "NPC / 无活动武器动作"
+              },
+              {
+                "id": "behavior",
+                "label": "行为映射",
+                "matched": true,
+                "selected": true,
+                "reason": "behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose"
+              }
+            ]
+          },
+          "clip": {
+            "name": "walk",
+            "index": 1,
+            "time": 3.7191460435516888,
+            "duration": 4.0333333015441895,
+            "phase": 0.9221023321151733,
+            "loop": null
+          },
+          "transition": null,
+          "ik": {
+            "status": "unsupported",
+            "enabled": false,
+            "weight": 0,
+            "controls": [],
+            "diagnostics": []
+          },
+          "diagnostics": [
+            "GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU"
+          ]
+        },
+        "row": {
+          "pose": 157,
+          "phase": 0.9221023321151733,
+          "base": 0,
+          "stride": 28
+        },
+        "tick": 37,
+        "outcome": "running"
+      },
+      "moved": 0.7933277692970419
+    },
+    "stop": {
+      "stopped": true,
+      "ledger": {
+        "registered": 4,
+        "disposed": 4,
+        "pending": 0
+      },
+      "ids": [],
+      "runtime": true,
+      "objects": 2,
+      "afterObjects": 2,
+      "sameDocument": true,
+      "sameState": true
+    },
+    "replay": {
+      "actors": [
+        {
+          "id": "E-01",
+          "base": 0,
+          "rest": 324,
+          "poses": 325,
+          "joints": 28,
+          "matrices": 9100,
+          "vertices": 4209,
+          "skinJoints": 16836,
+          "weights": 16836,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        },
+        {
+          "id": "E-02",
+          "base": 9100,
+          "rest": 329,
+          "poses": 330,
+          "joints": 28,
+          "matrices": 9240,
+          "vertices": 5350,
+          "skinJoints": 21400,
+          "weights": 21400,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b",
+            "recover"
+          ]
+        },
+        {
+          "id": "B-02",
+          "base": 18340,
+          "rest": 356,
+          "poses": 357,
+          "joints": 28,
+          "matrices": 9996,
+          "vertices": 21049,
+          "skinJoints": 84196,
+          "weights": 84196,
+          "clips": [
+            "idle",
+            "walk",
+            "attack",
+            "death",
+            "scream",
+            "hit",
+            "hit_b"
+          ]
+        }
+      ],
+      "active": [
+        {
+          "mesh": "actor:E-01",
+          "count": 3,
+          "skin": true,
+          "rows": [
+            {
+              "x": -5.650455951690674,
+              "z": -7.112148284912109,
+              "base": 0,
+              "pose": 138,
+              "frames": 65,
+              "phase": 0.6180340051651001,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": -5.90654993057251,
+              "z": -6.7098588943481445,
+              "base": 0,
+              "pose": 113,
+              "frames": 65,
+              "phase": 0.2360679805278778,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 3,
+              "z": 0,
+              "base": 0,
+              "pose": 144,
+              "frames": 65,
+              "phase": 0.708203911781311,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        },
+        {
+          "mesh": "actor:E-02",
+          "count": 2,
+          "skin": true,
+          "rows": [
+            {
+              "x": 5.9680047035217285,
+              "z": -7.798072338104248,
+              "base": 9100,
+              "pose": 153,
+              "frames": 65,
+              "phase": 0.8541019558906555,
+              "flags": 1,
+              "stride": 28
+            },
+            {
+              "x": 5.726523399353027,
+              "z": -7.590223789215088,
+              "base": 9100,
+              "pose": 128,
+              "frames": 65,
+              "phase": 0.4721359610557556,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        },
+        {
+          "mesh": "actor:B-02",
+          "count": 1,
+          "skin": true,
+          "rows": [
+            {
+              "x": 8.310791015625,
+              "z": 7.838387489318848,
+              "base": 18340,
+              "pose": 8,
+              "frames": 98,
+              "phase": 0.09016994386911392,
+              "flags": 1,
+              "stride": 28
+            }
+          ]
+        }
+      ],
+      "wantedActors": {
+        "E-01": 3,
+        "E-02": 2,
+        "B-02": 1
+      },
+      "proxy": 0,
+      "visible": 6,
+      "entities": [
+        {
+          "id": 0,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_player",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 1,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -5.650455951690674,
+          "y": 0,
+          "z": -7.112148284912109,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 2,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": -5.90654993057251,
+          "y": 0,
+          "z": -6.7098588943481445,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn0",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 3,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 5.9680047035217285,
+          "y": 0,
+          "z": -7.798072338104248,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn1",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 4,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "E-02",
+          "kind": "npc",
+          "x": 5.726523399353027,
+          "y": 0,
+          "z": -7.590223789215088,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn1",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 45,
+          "maxHp": 45,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 5,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "B-02",
+          "kind": "npc",
+          "x": 8.310791015625,
+          "y": 0,
+          "z": 7.838387489318848,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_spawn2",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 6000,
+          "maxHp": 6000,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        {
+          "id": 6,
+          "generation": 1,
+          "runId": 2,
+          "characterId": "E-01",
+          "kind": "npc",
+          "x": 3,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_target",
+          "targetId": 0,
+          "behavior": 1,
+          "behaviorPhase": 0,
+          "hp": 60,
+          "maxHp": 60,
+          "hitFlash": 0,
+          "lodTier": 0
+        }
+      ],
+      "playerNode": "nd_probe_player",
+      "playerStart": "nd_probe_player",
+      "uploads": 5,
+      "gpuIds": [
+        "actor:E-01",
+        "actor:E-02",
+        "actor:B-02"
+      ],
+      "draws": 10,
+      "diagnostics": [],
+      "tick": 0,
+      "outcome": "running"
+    },
+    "finalStop": {
+      "stopped": true,
+      "ledger": {
+        "registered": 8,
+        "disposed": 8,
+        "pending": 0
+      },
+      "ids": [],
+      "runtime": true,
+      "objects": 2,
+      "afterObjects": 2,
+      "sameDocument": true,
+      "sameState": true
+    }
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "正式场景仅按场景需求装配有骨架角色",
+      "ok": true,
+      "detail": "{\"assembled\":[\"E-01\",\"E-02\"],\"expected\":{\"actors\":[\"E-01\",\"E-02\"],\"missing\":[]}}"
+    },
+    {
+      "name": "正式场景作者玩家由真实模型呈现且不重复生成代理",
+      "ok": true,
+      "detail": "{\"playerNode\":\"nd_f1_start\",\"playerStart\":\"nd_f1_start\"}"
+    },
+    {
+      "name": "正式场景活跃批次数量匹配在场实体/LOD/玩家抑制规则",
+      "ok": true,
+      "detail": "{\"actualActors\":{\"E-01\":15,\"E-02\":9},\"wanted\":{\"E-01\":15,\"E-02\":9},\"proxyCount\":0,\"expectedProxy\":0}"
+    },
+    {
+      "name": "正式场景多角色调色板按矩阵单位首尾相接、rest完整落在末pose",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"base\":0,\"rest\":324,\"poses\":325,\"joints\":28,\"matrices\":9100,\"vertices\":4209,\"skinJoints\":16836,\"weights\":16836,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]},{\"id\":\"E-02\",\"base\":9100,\"rest\":329,\"poses\":330,\"joints\":28,\"matrices\":9240,\"vertices\":5350,\"skinJoints\":21400,\"weights\":21400,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]}]"
+    },
+    {
+      "name": "正式场景实际蒙皮顶点/关节权重完整",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"vertices\":4209,\"joints\":16836,\"weights\":16836},{\"id\":\"E-02\",\"vertices\":5350,\"joints\":21400,\"weights\":21400}]"
+    },
+    {
+      "name": "正式场景逐活跃实例核对flags/base/jointStride及精确pose边界",
+      "ok": true,
+      "detail": "{\"instances\":24,\"invalid\":[]}"
+    },
+    {
+      "name": "正式场景实际GPU已上传palette并提交对应动态绘制",
+      "ok": true,
+      "detail": "{\"uploads\":2,\"draws\":90,\"gpu\":[\"actor:E-01\",\"actor:E-02\"]}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":96,\"disposed\":96,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":57,\"afterObjects\":57,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":96,\"disposed\":96,\"pending\":0}"
+    },
+    {
+      "name": "白盒仅按场景需求装配有骨架角色",
+      "ok": true,
+      "detail": "{\"assembled\":[\"E-01\",\"E-02\"],\"expected\":{\"actors\":[\"E-01\",\"E-02\"],\"missing\":[\"B-02\"]}}"
+    },
+    {
+      "name": "白盒作者玩家由真实模型呈现且不重复生成代理",
+      "ok": true,
+      "detail": "{\"playerNode\":\"nd_probe_player\",\"playerStart\":\"nd_probe_player\"}"
+    },
+    {
+      "name": "白盒活跃批次数量匹配在场实体/LOD/玩家抑制规则",
+      "ok": true,
+      "detail": "{\"actualActors\":{\"E-01\":3,\"E-02\":2},\"wanted\":{\"E-01\":3,\"E-02\":2},\"proxyCount\":1,\"expectedProxy\":1}"
+    },
+    {
+      "name": "白盒多角色调色板按矩阵单位首尾相接、rest完整落在末pose",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"base\":0,\"rest\":324,\"poses\":325,\"joints\":28,\"matrices\":9100,\"vertices\":4209,\"skinJoints\":16836,\"weights\":16836,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]},{\"id\":\"E-02\",\"base\":9100,\"rest\":329,\"poses\":330,\"joints\":28,\"matrices\":9240,\"vertices\":5350,\"skinJoints\":21400,\"weights\":21400,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]}]"
+    },
+    {
+      "name": "白盒实际蒙皮顶点/关节权重完整",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"vertices\":4209,\"joints\":16836,\"weights\":16836},{\"id\":\"E-02\",\"vertices\":5350,\"joints\":21400,\"weights\":21400}]"
+    },
+    {
+      "name": "白盒逐活跃实例核对flags/base/jointStride及精确pose边界",
+      "ok": true,
+      "detail": "{\"instances\":6,\"invalid\":[]}"
+    },
+    {
+      "name": "白盒实际GPU已上传palette并提交对应动态绘制",
+      "ok": true,
+      "detail": "{\"uploads\":2,\"draws\":10,\"gpu\":[\"actor:E-01\",\"actor:E-02\",\"capsule:r1.200:h2.400\"]}"
+    },
+    {
+      "name": "注入503产生明确诊断并走实际胶囊flags0路径",
+      "ok": true,
+      "detail": "{\"faults\":[{\"path\":\"assets/characters/models/B-02/rigged/B02_THE BROODMOTHER_6000_animation_ready.glb\",\"status\":503}],\"diagnostics\":[\"B-02: Error: HTTP 503\"]}"
+    },
+    {
+      "name": "同一身份在可控17tick中保持运行并产生实际位移",
+      "ok": true,
+      "detail": "{\"a\":{\"identity\":{\"id\":1,\"generation\":1,\"runId\":1},\"entity\":{\"id\":1,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":-4.990475177764893,\"y\":0,\"z\":-6.838200092315674,\"yaw\":0.7853981852531433,\"alive\":true,\"sourceNodeId\":\"nd_probe_spawn0\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":60,\"maxHp\":60,\"hitFlash\":0,\"lodTier\":0},\"debug\":{\"identity\":{\"kind\":\"entity\",\"id\":1,\"runId\":1,\"generation\":1},\"label\":\"E-01 #1\",\"characterId\":\"E-01\",\"tick\":20,\"revision\":0,\"pipeline\":\"gpu-palette\",\"status\":\"ready\",\"decision\":{\"requested\":\"walk\",\"actual\":\"walk\",\"source\":\"behavior\",\"fallback\":null,\"actionStamp\":\"\",\"rules\":[{\"id\":\"anchor\",\"label\":\"静止角色行为归一化\",\"matched\":false,\"selected\":false,\"reason\":\"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4\"},{\"id\":\"weapon\",\"label\":\"武器 clip → action 别名\",\"matched\":false,\"selected\":false,\"reason\":\"NPC / 无活动武器动作\"},{\"id\":\"behavior\",\"label\":\"行为映射\",\"matched\":true,\"selected\":true,\"reason\":\"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose\"}]},\"clip\":{\"name\":\"walk\",\"index\":1,\"time\":1.2678984333481793,\"duration\":4.0333333015441895,\"phase\":0.3143549859523773,\"loop\":null},\"transition\":null,\"ik\":{\"status\":\"unsupported\",\"enabled\":false,\"weight\":0,\"controls\":[],\"diagnostics\":[]},\"diagnostics\":[\"GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU\"]},\"row\":{\"pose\":118,\"phase\":0.3143549859523773,\"base\":0,\"stride\":28},\"tick\":20,\"outcome\":\"running\"},\"b\":{\"identity\":{\"id\":1,\"generation\":1,\"runId\":1},\"entity\":{\"id\":1,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":-4.429507732391357,\"y\":0,\"z\":-6.277232646942139,\"yaw\":0.7853981852531433,\"alive\":true,\"sourceNodeId\":\"nd_probe_spawn0\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":60,\"maxHp\":60,\"hitFlash\":0,\"lodTier\":0},\"debug\":{\"identity\":{\"kind\":\"entity\",\"id\":1,\"runId\":1,\"generation\":1},\"label\":\"E-01 #1\",\"characterId\":\"E-01\",\"tick\":37,\"revision\":0,\"pipeline\":\"gpu-palette\",\"status\":\"ready\",\"decision\":{\"requested\":\"walk\",\"actual\":\"walk\",\"source\":\"behavior\",\"fallback\":null,\"actionStamp\":\"\",\"rules\":[{\"id\":\"anchor\",\"label\":\"静止角色行为归一化\",\"matched\":false,\"selected\":false,\"reason\":\"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4\"},{\"id\":\"weapon\",\"label\":\"武器 clip → action 别名\",\"matched\":false,\"selected\":false,\"reason\":\"NPC / 无活动武器动作\"},{\"id\":\"behavior\",\"label\":\"行为映射\",\"matched\":true,\"selected\":true,\"reason\":\"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose\"}]},\"clip\":{\"name\":\"walk\",\"index\":1,\"time\":3.7191460435516888,\"duration\":4.0333333015441895,\"phase\":0.9221023321151733,\"loop\":null},\"transition\":null,\"ik\":{\"status\":\"unsupported\",\"enabled\":false,\"weight\":0,\"controls\":[],\"diagnostics\":[]},\"diagnostics\":[\"GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU\"]},\"row\":{\"pose\":157,\"phase\":0.9221023321151733,\"base\":0,\"stride\":28},\"tick\":37,\"outcome\":\"running\"},\"moved\":0.7933277692970419}"
+    },
+    {
+      "name": "同一循环片的实际实例pose及phase随移动推进",
+      "ok": true,
+      "detail": "{\"a\":{\"identity\":{\"id\":1,\"generation\":1,\"runId\":1},\"entity\":{\"id\":1,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":-4.990475177764893,\"y\":0,\"z\":-6.838200092315674,\"yaw\":0.7853981852531433,\"alive\":true,\"sourceNodeId\":\"nd_probe_spawn0\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":60,\"maxHp\":60,\"hitFlash\":0,\"lodTier\":0},\"debug\":{\"identity\":{\"kind\":\"entity\",\"id\":1,\"runId\":1,\"generation\":1},\"label\":\"E-01 #1\",\"characterId\":\"E-01\",\"tick\":20,\"revision\":0,\"pipeline\":\"gpu-palette\",\"status\":\"ready\",\"decision\":{\"requested\":\"walk\",\"actual\":\"walk\",\"source\":\"behavior\",\"fallback\":null,\"actionStamp\":\"\",\"rules\":[{\"id\":\"anchor\",\"label\":\"静止角色行为归一化\",\"matched\":false,\"selected\":false,\"reason\":\"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4\"},{\"id\":\"weapon\",\"label\":\"武器 clip → action 别名\",\"matched\":false,\"selected\":false,\"reason\":\"NPC / 无活动武器动作\"},{\"id\":\"behavior\",\"label\":\"行为映射\",\"matched\":true,\"selected\":true,\"reason\":\"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose\"}]},\"clip\":{\"name\":\"walk\",\"index\":1,\"time\":1.2678984333481793,\"duration\":4.0333333015441895,\"phase\":0.3143549859523773,\"loop\":null},\"transition\":null,\"ik\":{\"status\":\"unsupported\",\"enabled\":false,\"weight\":0,\"controls\":[],\"diagnostics\":[]},\"diagnostics\":[\"GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU\"]},\"row\":{\"pose\":118,\"phase\":0.3143549859523773,\"base\":0,\"stride\":28},\"tick\":20,\"outcome\":\"running\"},\"b\":{\"identity\":{\"id\":1,\"generation\":1,\"runId\":1},\"entity\":{\"id\":1,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":-4.429507732391357,\"y\":0,\"z\":-6.277232646942139,\"yaw\":0.7853981852531433,\"alive\":true,\"sourceNodeId\":\"nd_probe_spawn0\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":60,\"maxHp\":60,\"hitFlash\":0,\"lodTier\":0},\"debug\":{\"identity\":{\"kind\":\"entity\",\"id\":1,\"runId\":1,\"generation\":1},\"label\":\"E-01 #1\",\"characterId\":\"E-01\",\"tick\":37,\"revision\":0,\"pipeline\":\"gpu-palette\",\"status\":\"ready\",\"decision\":{\"requested\":\"walk\",\"actual\":\"walk\",\"source\":\"behavior\",\"fallback\":null,\"actionStamp\":\"\",\"rules\":[{\"id\":\"anchor\",\"label\":\"静止角色行为归一化\",\"matched\":false,\"selected\":false,\"reason\":\"原始 behavior=1; 实际 behavior=1; moveSpeed=1.4\"},{\"id\":\"weapon\",\"label\":\"武器 clip → action 别名\",\"matched\":false,\"selected\":false,\"reason\":\"NPC / 无活动武器动作\"},{\"id\":\"behavior\",\"label\":\"行为映射\",\"matched\":true,\"selected\":true,\"reason\":\"behavior=1; requested=walk; 缺片回 clip 0，空库回 bind pose\"}]},\"clip\":{\"name\":\"walk\",\"index\":1,\"time\":3.7191460435516888,\"duration\":4.0333333015441895,\"phase\":0.9221023321151733,\"loop\":null},\"transition\":null,\"ik\":{\"status\":\"unsupported\",\"enabled\":false,\"weight\":0,\"controls\":[],\"diagnostics\":[]},\"diagnostics\":[\"GPU 实例管线不执行身体 IK；调色板为加载时烘焙，未读取 GPU\"]},\"row\":{\"pose\":157,\"phase\":0.9221023321151733,\"base\":0,\"stride\":28},\"tick\":37,\"outcome\":\"running\"}}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":4,\"disposed\":4,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":2,\"afterObjects\":2,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":4,\"disposed\":4,\"pending\":0}"
+    },
+    {
+      "name": "再次Play仅按场景需求装配有骨架角色",
+      "ok": true,
+      "detail": "{\"assembled\":[\"E-01\",\"E-02\",\"B-02\"],\"expected\":{\"actors\":[\"B-02\",\"E-01\",\"E-02\"],\"missing\":[]}}"
+    },
+    {
+      "name": "再次Play作者玩家由真实模型呈现且不重复生成代理",
+      "ok": true,
+      "detail": "{\"playerNode\":\"nd_probe_player\",\"playerStart\":\"nd_probe_player\"}"
+    },
+    {
+      "name": "再次Play活跃批次数量匹配在场实体/LOD/玩家抑制规则",
+      "ok": true,
+      "detail": "{\"actualActors\":{\"E-01\":3,\"E-02\":2,\"B-02\":1},\"wanted\":{\"E-01\":3,\"E-02\":2,\"B-02\":1},\"proxyCount\":0,\"expectedProxy\":0}"
+    },
+    {
+      "name": "再次Play多角色调色板按矩阵单位首尾相接、rest完整落在末pose",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"base\":0,\"rest\":324,\"poses\":325,\"joints\":28,\"matrices\":9100,\"vertices\":4209,\"skinJoints\":16836,\"weights\":16836,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]},{\"id\":\"E-02\",\"base\":9100,\"rest\":329,\"poses\":330,\"joints\":28,\"matrices\":9240,\"vertices\":5350,\"skinJoints\":21400,\"weights\":21400,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\",\"recover\"]},{\"id\":\"B-02\",\"base\":18340,\"rest\":356,\"poses\":357,\"joints\":28,\"matrices\":9996,\"vertices\":21049,\"skinJoints\":84196,\"weights\":84196,\"clips\":[\"idle\",\"walk\",\"attack\",\"death\",\"scream\",\"hit\",\"hit_b\"]}]"
+    },
+    {
+      "name": "再次Play实际蒙皮顶点/关节权重完整",
+      "ok": true,
+      "detail": "[{\"id\":\"E-01\",\"vertices\":4209,\"joints\":16836,\"weights\":16836},{\"id\":\"E-02\",\"vertices\":5350,\"joints\":21400,\"weights\":21400},{\"id\":\"B-02\",\"vertices\":21049,\"joints\":84196,\"weights\":84196}]"
+    },
+    {
+      "name": "再次Play逐活跃实例核对flags/base/jointStride及精确pose边界",
+      "ok": true,
+      "detail": "{\"instances\":6,\"invalid\":[]}"
+    },
+    {
+      "name": "再次Play实际GPU已上传palette并提交对应动态绘制",
+      "ok": true,
+      "detail": "{\"uploads\":5,\"draws\":10,\"gpu\":[\"actor:E-01\",\"actor:E-02\",\"actor:B-02\"]}"
+    },
+    {
+      "name": "撤销故障后下一轮Play清除失败并恢复B-02真模型",
+      "ok": true,
+      "detail": "{\"actors\":[\"E-01\",\"E-02\",\"B-02\"],\"diagnostics\":[]}"
+    },
+    {
+      "name": "Stop→Play创建新runId且palette确实重传",
+      "ok": true,
+      "detail": "{\"first\":{\"runId\":1,\"tick\":0},\"again\":{\"runId\":2,\"tick\":0},\"beforeUploads\":2,\"afterUploads\":5}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":8,\"disposed\":8,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":2,\"afterObjects\":2,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":8,\"disposed\":8,\"pending\":0}"
+    },
+    {
+      "name": "无console error",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "无未捕获异常",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

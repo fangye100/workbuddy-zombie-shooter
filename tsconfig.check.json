@@ -36,6 +36,7 @@
     "packages/ai/src/**/*.ts",
     "packages/ai/test/**/*.ts",
     "packages/gameplay/src/**/*.ts",
+    "packages/gameplay/test/**/*.ts",
     "packages/content/src/**/*.ts",
     "packages/content/test/**/*.ts",
     "packages/runtime/src/**/*.ts",

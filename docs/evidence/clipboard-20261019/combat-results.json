@@ -1,0 +1,649 @@
+{
+  "scene": "assets/scenes/act1/floor-1.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fact1%2Ffloor-1.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "正式场景": {
+      "scene": "assets/scenes/act1/floor-1.scene.json",
+      "room": "nd_f1r0",
+      "actual": {
+        "npc": 24,
+        "counts": {
+          "E-01": 15,
+          "E-02": 9
+        },
+        "tick": 0,
+        "outcome": "running",
+        "events": [
+          {
+            "type": "wave-start",
+            "tick": 0,
+            "roomNodeId": "nd_f1r0",
+            "wave": 1
+          }
+        ],
+        "player": {
+          "id": 0,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 3,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_f1_start",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 1
+        }
+      },
+      "waves": [
+        {
+          "wave": 1,
+          "counts": {
+            "E-01": 15,
+            "E-02": 9
+          },
+          "total": 24
+        },
+        {
+          "wave": 2,
+          "counts": {
+            "E-01": 12
+          },
+          "total": 12
+        }
+      ]
+    },
+    "productionStop": {
+      "stopped": true,
+      "ledger": {
+        "registered": 5,
+        "disposed": 5,
+        "pending": 0
+      },
+      "ids": [],
+      "runtime": true,
+      "objects": 57,
+      "afterObjects": 57,
+      "sameDocument": true,
+      "sameState": true
+    },
+    "白盒": {
+      "scene": "assets/scenes/sandbox/game-probes.scene.json",
+      "room": "nd_probe_room",
+      "actual": {
+        "npc": 6,
+        "counts": {
+          "E-01": 3,
+          "E-02": 2,
+          "B-02": 1
+        },
+        "tick": 0,
+        "outcome": "running",
+        "events": [
+          {
+            "type": "wave-start",
+            "tick": 0,
+            "roomNodeId": "nd_probe_room",
+            "wave": 1
+          }
+        ],
+        "player": {
+          "id": 0,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "yaw": 0,
+          "alive": true,
+          "sourceNodeId": "nd_probe_player",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 1
+        }
+      },
+      "waves": [
+        {
+          "wave": 1,
+          "counts": {
+            "E-01": 3,
+            "E-02": 2,
+            "B-02": 1
+          },
+          "total": 6
+        },
+        {
+          "wave": 2,
+          "counts": {
+            "E-01": 3,
+            "E-02": 1
+          },
+          "total": 4
+        }
+      ]
+    },
+    "keyboard": {
+      "setup": {
+        "target": {
+          "id": 6,
+          "generation": 1,
+          "runId": 1
+        },
+        "player": 0,
+        "npc": 6,
+        "events": 0,
+        "ammo": 10000,
+        "tick": 0
+      },
+      "aim": {
+        "x": 924.4747867106498,
+        "y": 344.785768686421,
+        "behind": false,
+        "error": 0.0000715963835445066,
+        "canvas": true
+      },
+      "kill": {
+        "hit": {
+          "defeated": {
+            "id": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "kind": "npc",
+            "x": 1.8399981260299683,
+            "y": 0,
+            "z": 0,
+            "yaw": 3.1415927410125732,
+            "alive": true,
+            "sourceNodeId": "nd_probe_target",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 0,
+            "maxHp": 60,
+            "hitFlash": 0.15000000596046448,
+            "lodTier": 0
+          },
+          "type": "kill",
+          "tick": 58,
+          "slot": 6,
+          "generation": 1,
+          "runId": 1,
+          "characterId": "E-01",
+          "x": 1.8399981260299683,
+          "y": 0,
+          "z": 0,
+          "amount": 12,
+          "hpAfter": 0,
+          "sourceSlot": 0,
+          "sourceGeneration": 1
+        },
+        "npc": 5,
+        "ammo": 9994,
+        "lastShot": {
+          "tick": 58,
+          "from": [
+            0.2999999997806131,
+            0.9,
+            -0.000011473105117576813
+          ],
+          "to": [
+            1.4999981272930945,
+            0.9,
+            -0.000057365454010624225
+          ],
+          "hit": true
+        },
+        "tick": 60,
+        "outcome": "running"
+      },
+      "diagnostic": {
+        "state": "paused",
+        "tick": 60,
+        "firing": false,
+        "ammo": 9994,
+        "outcome": "running",
+        "events": [
+          {
+            "type": "damage",
+            "tick": 14,
+            "slot": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "x": 2.3999993801116943,
+            "y": 0,
+            "z": 0,
+            "amount": 12,
+            "hpAfter": 48,
+            "sourceSlot": 0,
+            "sourceGeneration": 1
+          },
+          {
+            "type": "damage",
+            "tick": 25,
+            "slot": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "x": 2.166666269302368,
+            "y": 0,
+            "z": 0,
+            "amount": 12,
+            "hpAfter": 36,
+            "sourceSlot": 0,
+            "sourceGeneration": 1
+          },
+          {
+            "type": "damage",
+            "tick": 36,
+            "slot": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "x": 2.166666269302368,
+            "y": 0,
+            "z": 0,
+            "amount": 12,
+            "hpAfter": 24,
+            "sourceSlot": 0,
+            "sourceGeneration": 1
+          },
+          {
+            "type": "damage",
+            "tick": 43,
+            "slot": 0,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "P-01",
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "amount": 8,
+            "hpAfter": 92,
+            "sourceSlot": 6,
+            "sourceGeneration": 1
+          },
+          {
+            "type": "damage",
+            "tick": 47,
+            "slot": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "x": 2.0777766704559326,
+            "y": 0,
+            "z": 0,
+            "amount": 12,
+            "hpAfter": 12,
+            "sourceSlot": 0,
+            "sourceGeneration": 1
+          },
+          {
+            "defeated": {
+              "id": 6,
+              "generation": 1,
+              "runId": 1,
+              "characterId": "E-01",
+              "kind": "npc",
+              "x": 1.8399981260299683,
+              "y": 0,
+              "z": 0,
+              "yaw": 3.1415927410125732,
+              "alive": true,
+              "sourceNodeId": "nd_probe_target",
+              "targetId": 0,
+              "behavior": 1,
+              "behaviorPhase": 0,
+              "hp": 0,
+              "maxHp": 60,
+              "hitFlash": 0.15000000596046448,
+              "lodTier": 0
+            },
+            "type": "kill",
+            "tick": 58,
+            "slot": 6,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "x": 1.8399981260299683,
+            "y": 0,
+            "z": 0,
+            "amount": 12,
+            "hpAfter": 0,
+            "sourceSlot": 0,
+            "sourceGeneration": 1
+          }
+        ],
+        "lastShot": {
+          "tick": 58,
+          "from": [
+            0.2999999997806131,
+            0.9,
+            -0.000011473105117576813
+          ],
+          "to": [
+            1.4999981272930945,
+            0.9,
+            -0.000057365454010624225
+          ],
+          "hit": true
+        },
+        "view": [
+          {
+            "id": 0,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "P-01",
+            "kind": "player",
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "yaw": -0.000038243684684857726,
+            "alive": true,
+            "sourceNodeId": "nd_probe_player",
+            "targetId": -1,
+            "behavior": 0,
+            "behaviorPhase": 0,
+            "hp": 92,
+            "maxHp": 100,
+            "hitFlash": 0,
+            "lodTier": 0
+          },
+          {
+            "id": 1,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "kind": "npc",
+            "x": -3.6705493927001953,
+            "y": 0,
+            "z": -5.518276691436768,
+            "yaw": 0.785394549369812,
+            "alive": true,
+            "sourceNodeId": "nd_probe_spawn0",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 60,
+            "maxHp": 60,
+            "hitFlash": 0,
+            "lodTier": 0
+          },
+          {
+            "id": 2,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-01",
+            "kind": "npc",
+            "x": -4.180166244506836,
+            "y": 0,
+            "z": -4.650202751159668,
+            "yaw": 0.7853981852531433,
+            "alive": true,
+            "sourceNodeId": "nd_probe_spawn0",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 60,
+            "maxHp": 60,
+            "hitFlash": 0,
+            "lodTier": 0
+          },
+          {
+            "id": 3,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-02",
+            "kind": "npc",
+            "x": 4.189815998077393,
+            "y": 0,
+            "z": -4.8166069984436035,
+            "yaw": 2.2867133617401123,
+            "alive": true,
+            "sourceNodeId": "nd_probe_spawn1",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 45,
+            "maxHp": 45,
+            "hitFlash": 0,
+            "lodTier": 0
+          },
+          {
+            "id": 4,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "E-02",
+            "kind": "npc",
+            "x": 1.6444923877716064,
+            "y": 0,
+            "z": -2.214329719543457,
+            "yaw": 2.209582805633545,
+            "alive": true,
+            "sourceNodeId": "nd_probe_spawn1",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 45,
+            "maxHp": 45,
+            "hitFlash": 0,
+            "lodTier": 0
+          },
+          {
+            "id": 5,
+            "generation": 1,
+            "runId": 1,
+            "characterId": "B-02",
+            "kind": "npc",
+            "x": 8.310791015625,
+            "y": 0,
+            "z": 7.838387489318848,
+            "yaw": 0,
+            "alive": true,
+            "sourceNodeId": "nd_probe_spawn2",
+            "targetId": 0,
+            "behavior": 1,
+            "behaviorPhase": 0,
+            "hp": 6000,
+            "maxHp": 6000,
+            "hitFlash": 0,
+            "lodTier": 0
+          }
+        ]
+      }
+    },
+    "waveBoundary": {
+      "cleared": {
+        "npc": 0,
+        "tick": 60
+      },
+      "scheduledAt": 60,
+      "delay": 60,
+      "before": {
+        "tick": 120,
+        "npc": 0,
+        "events": [
+          {
+            "type": "wave-start",
+            "tick": 0,
+            "roomNodeId": "nd_probe_room",
+            "wave": 1
+          }
+        ]
+      },
+      "after": {
+        "tick": 121,
+        "npc": 4,
+        "counts": {
+          "E-02": 1,
+          "E-01": 3
+        },
+        "events": [
+          {
+            "type": "wave-start",
+            "tick": 0,
+            "roomNodeId": "nd_probe_room",
+            "wave": 1
+          },
+          {
+            "type": "wave-start",
+            "tick": 120,
+            "roomNodeId": "nd_probe_room",
+            "wave": 2
+          }
+        ]
+      }
+    },
+    "death": {
+      "frozen": {
+        "tick": 121,
+        "after": 121,
+        "outcome": "game-over",
+        "stillPlaying": true,
+        "gameOver": [
+          {
+            "type": "game-over",
+            "tick": 121,
+            "roomNodeId": null
+          }
+        ]
+      },
+      "afterFrames": {
+        "tick": 121,
+        "playing": true,
+        "outcome": "game-over"
+      }
+    },
+    "stop": {
+      "stopped": true,
+      "ledger": {
+        "registered": 4,
+        "disposed": 4,
+        "pending": 0
+      },
+      "ids": [],
+      "runtime": true,
+      "objects": 2,
+      "afterObjects": 2,
+      "sameDocument": true,
+      "sameState": true
+    }
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "正式场景首波编成与场景/房间对应",
+      "ok": true,
+      "detail": "{\"room\":\"nd_f1r0\",\"actual\":{\"npc\":24,\"counts\":{\"E-01\":15,\"E-02\":9},\"tick\":0,\"outcome\":\"running\",\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_f1r0\",\"wave\":1}],\"player\":{\"id\":0,\"generation\":1,\"runId\":1,\"characterId\":\"P-01\",\"kind\":\"player\",\"x\":3,\"y\":0,\"z\":0,\"yaw\":0,\"alive\":true,\"sourceNodeId\":\"nd_f1_start\",\"targetId\":-1,\"behavior\":0,\"behaviorPhase\":0,\"hp\":100,\"maxHp\":100,\"hitFlash\":0,\"lodTier\":1}},\"expected\":{\"wave\":1,\"counts\":{\"E-01\":15,\"E-02\":9},\"total\":24}}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":5,\"disposed\":5,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":57,\"afterObjects\":57,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":5,\"disposed\":5,\"pending\":0}"
+    },
+    {
+      "name": "白盒首波编成与场景/房间对应",
+      "ok": true,
+      "detail": "{\"room\":\"nd_probe_room\",\"actual\":{\"npc\":6,\"counts\":{\"E-01\":3,\"E-02\":2,\"B-02\":1},\"tick\":0,\"outcome\":\"running\",\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_probe_room\",\"wave\":1}],\"player\":{\"id\":0,\"generation\":1,\"runId\":1,\"characterId\":\"P-01\",\"kind\":\"player\",\"x\":0,\"y\":0,\"z\":0,\"yaw\":0,\"alive\":true,\"sourceNodeId\":\"nd_probe_player\",\"targetId\":-1,\"behavior\":0,\"behaviorPhase\":0,\"hp\":100,\"maxHp\":100,\"hitFlash\":0,\"lodTier\":1}},\"expected\":{\"wave\":1,\"counts\":{\"E-01\":3,\"E-02\":2,\"B-02\":1},\"total\":6}}"
+    },
+    {
+      "name": "真实指针瞄准点位于游戏画布",
+      "ok": true,
+      "detail": "{\"x\":924.4747867106498,\"y\":344.785768686421,\"behind\":false,\"error\":0.0000715963835445066,\"canvas\":true}"
+    },
+    {
+      "name": "投影与实际瞄准射线往返一致",
+      "ok": true,
+      "detail": "{\"x\":924.4747867106498,\"y\":344.785768686421,\"behind\":false,\"error\":0.0000715963835445066,\"canvas\":true}"
+    },
+    {
+      "name": "J键造成指定NPC击杀、玩家来源与模拟减员",
+      "ok": true,
+      "detail": "{\"hit\":{\"defeated\":{\"id\":6,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":1.8399981260299683,\"y\":0,\"z\":0,\"yaw\":3.1415927410125732,\"alive\":true,\"sourceNodeId\":\"nd_probe_target\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":0,\"maxHp\":60,\"hitFlash\":0.15000000596046448,\"lodTier\":0},\"type\":\"kill\",\"tick\":58,\"slot\":6,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"x\":1.8399981260299683,\"y\":0,\"z\":0,\"amount\":12,\"hpAfter\":0,\"sourceSlot\":0,\"sourceGeneration\":1},\"npc\":5,\"ammo\":9994,\"lastShot\":{\"tick\":58,\"from\":[0.2999999997806131,0.9,-0.000011473105117576813],\"to\":[1.4999981272930945,0.9,-0.000057365454010624225],\"hit\":true},\"tick\":60,\"outcome\":\"running\"}"
+    },
+    {
+      "name": "开火实际消耗弹药并生成命中弹道",
+      "ok": true,
+      "detail": "{\"setup\":{\"target\":{\"id\":6,\"generation\":1,\"runId\":1},\"player\":0,\"npc\":6,\"events\":0,\"ammo\":10000,\"tick\":0},\"kill\":{\"hit\":{\"defeated\":{\"id\":6,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"kind\":\"npc\",\"x\":1.8399981260299683,\"y\":0,\"z\":0,\"yaw\":3.1415927410125732,\"alive\":true,\"sourceNodeId\":\"nd_probe_target\",\"targetId\":0,\"behavior\":1,\"behaviorPhase\":0,\"hp\":0,\"maxHp\":60,\"hitFlash\":0.15000000596046448,\"lodTier\":0},\"type\":\"kill\",\"tick\":58,\"slot\":6,\"generation\":1,\"runId\":1,\"characterId\":\"E-01\",\"x\":1.8399981260299683,\"y\":0,\"z\":0,\"amount\":12,\"hpAfter\":0,\"sourceSlot\":0,\"sourceGeneration\":1},\"npc\":5,\"ammo\":9994,\"lastShot\":{\"tick\":58,\"from\":[0.2999999997806131,0.9,-0.000011473105117576813],\"to\":[1.4999981272930945,0.9,-0.000057365454010624225],\"hit\":true},\"tick\":60,\"outcome\":\"running\"}}"
+    },
+    {
+      "name": "通过公开伤害入口清场后模拟存活确实为0",
+      "ok": true,
+      "detail": "{\"npc\":0,\"tick\":60}"
+    },
+    {
+      "name": "波次间隔边界前不提前投放",
+      "ok": true,
+      "detail": "{\"scheduledAt\":60,\"delay\":60,\"before\":{\"tick\":120,\"npc\":0,\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_probe_room\",\"wave\":1}]},\"after\":{\"tick\":121,\"npc\":4,\"counts\":{\"E-02\":1,\"E-01\":3},\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_probe_room\",\"wave\":1},{\"type\":\"wave-start\",\"tick\":120,\"roomNodeId\":\"nd_probe_room\",\"wave\":2}]}}"
+    },
+    {
+      "name": "边界到达投放同房下一波，数量与角色组成精确对应场景",
+      "ok": true,
+      "detail": "{\"scheduledAt\":60,\"delay\":60,\"before\":{\"tick\":120,\"npc\":0,\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_probe_room\",\"wave\":1}]},\"after\":{\"tick\":121,\"npc\":4,\"counts\":{\"E-02\":1,\"E-01\":3},\"events\":[{\"type\":\"wave-start\",\"tick\":0,\"roomNodeId\":\"nd_probe_room\",\"wave\":1},{\"type\":\"wave-start\",\"tick\":120,\"roomNodeId\":\"nd_probe_room\",\"wave\":2}]}}"
+    },
+    {
+      "name": "玩家死亡产生唯一game-over且30次手动推进不再增tick",
+      "ok": true,
+      "detail": "{\"tick\":121,\"after\":121,\"outcome\":\"game-over\",\"stillPlaying\":true,\"gameOver\":[{\"type\":\"game-over\",\"tick\":121,\"roomNodeId\":null}]}"
+    },
+    {
+      "name": "正常帧同样冻结，失败后保持Play供玩家查看",
+      "ok": true,
+      "detail": "{\"tick\":121,\"playing\":true,\"outcome\":\"game-over\"}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":4,\"disposed\":4,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":2,\"afterObjects\":2,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":4,\"disposed\":4,\"pending\":0}"
+    },
+    {
+      "name": "无console error",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "name": "无未捕获异常",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

@@ -86,12 +86,13 @@ export function makeArgParser(argv) {
 // HTTPS 是常态不是例外：本机 vite.config 检测到 Tailscale 证书会自动开 https，
 // 此时 curl/http 探测返回 000，得忽略自签证书。用原生 http/https 而非 fetch(undici)：
 // undici 在自签证书下 TLS 握手会挂。
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+// 不改变进程全局 TLS 设置；仅 probe 的 localhost 原生请求允许本地证书。
 
 function aliveRaw(url, timeoutMs = 8000) {
   const lib = url.startsWith('https') ? https : http;
   return new Promise((resolve) => {
-    const req = lib.get(url, { rejectUnauthorized: false, timeout: timeoutMs }, (res) => {
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname);
+    const req = lib.get(url, { rejectUnauthorized: !local, timeout: timeoutMs }, (res) => {
       res.resume();
       resolve(res.statusCode !== undefined && res.statusCode < 500);
     });
@@ -145,6 +146,7 @@ export async function ensureServer(port, viteConfig) {
       if (url !== null) return { server, url };
     }
   }
+  server.kill();
   throw new Error('dev server 45s 未就绪');
 }
 
@@ -164,11 +166,12 @@ export async function cdpTargets(cdpPort) {
 }
 
 export class Cdp {
-  constructor(ws, sessionId) {
+  constructor(ws, sessionId, {timeoutMs=30000}={}) {
     this.ws = ws;
     this.sessionId = sessionId;
     this.id = 0;
     this.pending = new Map();
+    this.timeoutMs = timeoutMs;
     this.consoleErrors = [];
     this.exceptions = [];
     ws.addEventListener('message', (ev) => {
@@ -177,6 +180,7 @@ export class Cdp {
         const p = this.pending.get(msg.id);
         if (p !== undefined) {
           this.pending.delete(msg.id);
+          clearTimeout(p.timer);
           msg.error ? p.reject(new Error(JSON.stringify(msg.error))) : p.resolve(msg.result);
         }
         return;
@@ -194,13 +198,21 @@ export class Cdp {
         if (!this.exceptions.includes(text)) this.exceptions.push(text);
       }
     });
+    const disconnect=()=>{
+      for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(new Error('CDP连接关闭'));}
+      this.pending.clear();
+    };
+    ws.addEventListener('close',disconnect);
+    ws.addEventListener('error',disconnect);
   }
 
   send(method, params = {}) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.ws.send(JSON.stringify({ id, method, params, sessionId: this.sessionId }));
+      const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP ${method} 超时（${this.timeoutMs}ms）`));},this.timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
+      try {this.ws.send(JSON.stringify({ id, method, params, sessionId: this.sessionId }));}
+      catch(error){clearTimeout(timer);this.pending.delete(id);reject(error);}
     });
   }
 
@@ -218,11 +230,9 @@ export class Cdp {
 }
 
 /**
- * 启动 Chrome 并接好 CDP 会话（原 editor-smoke main() 里的接线原样上提）。
- * @returns {chrome, cdp, ws}；调用方负责 chrome.kill()
+ * 构造既有 Chrome 参数；严格TLS调用显式关闭证书忽略。
  */
-export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, userDataDir = '.workbuddy/tmp/chrome-profile' }) {
-  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',userDataDir='.workbuddy/tmp/chrome-profile',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
@@ -243,11 +253,20 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
     flags.unshift('--headless=new');
     flags.push('--enable-unsafe-swiftshader', '--use-webgpu-adapter=swiftshader', '--enable-features=Vulkan');
   }
-  if (appUrl.startsWith('https://')) flags.push('--ignore-certificate-errors');
-  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  // 旧冒烟调用沿用原默认；严格 TLS 验证必须显式 false，不设置 Security bypass。
+  if (ignoreCertificateErrors) flags.push('--ignore-certificate-errors');
+  return flags;
+}
 
+export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, userDataDir='.workbuddy/tmp/chrome-profile', ignoreCertificateErrors=appUrl.startsWith('https://'), setupTimeoutMs=0 }) {
+  console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
+  const flags=editorSessionFlags({cdpPort,headed,appUrl,windowSize,userDataDir,ignoreCertificateErrors});
+  const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
+  let setupWs,setupTimer;
+  try {
+  const connect=async()=>{
   const ver = await cdpTargets(cdpPort);
-  const ws = new WebSocket(ver.webSocketDebuggerUrl);
+  const ws = new WebSocket(ver.webSocketDebuggerUrl);setupWs=ws;
   await new Promise((res, rej) => {
     ws.addEventListener('open', res, { once: true });
     ws.addEventListener('error', rej, { once: true });
@@ -271,39 +290,68 @@ export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl,
   });
   const cdp = new Cdp(ws, sessionId);
   if (grantClipboard) {
-    // 剪贴板预授权（浏览器级命令，不带页面 sessionId）：无授权时页面一拿到焦点，
-    // navigator.clipboard.writeText 会挂起等权限弹窗
-    try {
-      const bcdp = new Cdp(ws, undefined);
-      await bcdp.send('Browser.grantPermissions', {
-        permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
-        origin: new URL(appUrl).origin,
-      });
-    } catch (e) {
-      console.log(`（剪贴板预授权跳过：${String(e)}）`);
-    }
+    // 复制验收必须具备明确的读写授权；授权失败直接使本套件失败，不能静默跳过。
+    const bcdp = new Cdp(ws, undefined);
+    await bcdp.send('Browser.grantPermissions', {
+      permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
+      origin: new URL(appUrl).origin,
+    });
   }
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
-  return { chrome, cdp, ws };
+  return { chrome, cdp, ws, targetId, flags };
+  };
+  return await (setupTimeoutMs>0?Promise.race([connect(),new Promise((_,reject)=>{setupTimer=setTimeout(()=>reject(new Error('Chrome/CDP setup timeout')),setupTimeoutMs);})]):connect());
+  } catch(error) { setupWs?.close();chrome.kill();throw error; }
+  finally { clearTimeout(setupTimer); }
 }
 
 /**
  * 编辑器状态归一（两套件共用）：清掉 chrome-profile 持久化 UI 残留（dock 挤压
  * 画布、收起态）、锁定 zh（标签断言按中文源文案写），reload 后等到 __editor 就绪。
  */
+export async function waitForEditorReady(cdp, {timeout=60000,interval=200,afterTimeOrigin=null,expectedScene=null}={}) {
+  let last,timer,stopped=false;
+  try {
+  const ready=await Promise.race([waitFor(async()=>{
+    if(stopped)return true;
+    last=await cdp.eval(`(()=>{
+      const e=window.__editor,c=document.getElementById('gpu'),f=document.getElementById('fatal');
+      const fatal=f&&getComputedStyle(f).display!=='none'?f.innerText:null;
+      const source=e?.renderer.getSceneSource();
+      let frames=0;try{frames=e?.fps?.()??0;}catch{/* 早期hook存在，主循环闭包尚未初始化 */}
+      return {timeOrigin:performance.timeOrigin,url:location.href,fatal,source,
+        pending:e?.renderer.pendingAssetCount,frames,
+        assets:typeof e?.assets?.getState==='function',preview:typeof e?.preview?.getState==='function',
+        width:c?.clientWidth??0,height:c?.clientHeight??0};
+    })()`);
+    if(afterTimeOrigin!==null&&last.timeOrigin===afterTimeOrigin)return false;
+    if(expectedScene!==null&&!last.source?.url.endsWith(expectedScene)&&!last.fatal)return false;
+    return last.fatal||last.source&&last.pending===0&&last.frames>0&&last.assets&&last.preview&&last.width>0&&last.height>0;
+  },{timeout,interval,label:'完整编辑器与场景首帧'}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`编辑器未就绪（超时 ${timeout}ms）：${JSON.stringify(last)}`)),timeout);})]);
+  if(!ready||last?.fatal)throw new Error(`编辑器未就绪：${JSON.stringify(last)}`);
+  return last;
+  } finally {stopped=true;clearTimeout(timer);}
+}
+
+export function isHardwareGpu(hardware) {
+  return hardware?.secure===true&&hardware.info!==null&&hardware.info!==undefined&&hardware.fallback===false&&!/swiftshader|llvmpipe|software/i.test(JSON.stringify(hardware.info));
+}
+
+export async function reloadEditor(cdp) {
+  const previous=await cdp.eval('({time:performance.timeOrigin,scene:window.__editor?.renderer.getSceneSource()?.url??null})');
+  await cdp.send('Page.reload');
+  return waitForEditorReady(cdp,{afterTimeOrigin:previous.time,expectedScene:previous.scene});
+}
+
 export async function normalizeEditorState(cdp) {
   await cdp.eval(`(() => {
     localStorage.removeItem('zh.ui.dockH');
     localStorage.removeItem('zh.ui.assets.collapsed');
     localStorage.setItem('zh.ui.lang', 'zh');
-    location.reload();
     return true;
   })()`);
-  return waitFor(
-    () => cdp.eval('(() => (window.__editor && document.getElementById("gpu")) ? document.getElementById("gpu").clientHeight : 0)()').then((h) => typeof h === 'number' && h > 100),
-    { timeout: 20000, interval: 300, label: '编辑器就绪（__editor + 画布立起）' },
-  );
+  return reloadEditor(cdp);
 }
 
 // ---------------------------------------------------------------- 真源推导（B2 / H / J2 共用）
@@ -320,7 +368,11 @@ export function readStartSceneExpectation() {
   if (start === undefined || typeof start.path !== 'string') {
     throw new Error(`aether.project.json 的 scenes[${index}] 不可用（startIndex=${String(rawIndex)}）`);
   }
-  const doc = JSON.parse(fs.readFileSync(path.resolve(start.path), 'utf8'));
+  return readSceneExpectation(start.path);
+}
+
+export function readSceneExpectation(scenePath) {
+  const doc = JSON.parse(fs.readFileSync(path.resolve(scenePath), 'utf8'));
   const byId = new Map(doc.nodes.map((n) => [n.id, n]));
   const visibleChain = (n) => {
     let cur = n;
@@ -342,7 +394,8 @@ export function readStartSceneExpectation() {
   );
   const background = nodes.filter((n) => compOf(n).background === true).map((n) => n.name);
   return {
-    path: start.path,
+    path: scenePath,
+    nodes:nodes.map(n=>({id:n.id,name:n.name,category:n.category??'道具',pickable:n.pickable??false,background:compOf(n).background===true})),
     objects: nodes.length,
     hierarchy: nodes.length - background.length,
     names: nodes.map((n) => n.name),
@@ -352,4 +405,16 @@ export function readStartSceneExpectation() {
     // 功能体期望：场景文档里的 SpawnPoint 组件数（层级 ✦ 行数按它断言）
     spawnPoints: doc.nodes.filter((n) => n.components.some((c) => c.kind === 'SpawnPoint')).length,
   };
+}
+
+/** 选已交接且带元数据的H-01家族，不能把无sidecar源模当作可加载运行资产。 */
+export function readLodSmokeFixture() {
+  const manifest=JSON.parse(fs.readFileSync('assets/_data/asset-manifest.json','utf8'));
+  const family=manifest.characters.find(c=>c.id==='H-01')?.lods;
+  if(!Array.isArray(family))throw new Error('LOD冒烟夹具缺少H-01家族');
+  const ready=family.map((lod,index)=>({...lod,index,path:`assets/${lod.file}`}))
+    .filter(lod=>fs.existsSync(lod.path)&&fs.existsSync(lod.path+'.meta.json')&&Number.isFinite(lod.tris));
+  const sorted=ready.toSorted((a,b)=>a.tris-b.tris),low=sorted[0],high=sorted.at(-1);
+  if(!low||!high||high.tris<=low.tris*2)throw new Error('LOD冒烟需要有元数据且面数明显不同的两档');
+  return {low,high};
 }

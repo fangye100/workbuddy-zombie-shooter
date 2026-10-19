@@ -36,6 +36,8 @@ export * from './instantiate';
 export * from './retarget-meta';
 export * from './shared-motion';
 export * from './weapons';
+export * from './model-attachments';
 export * from './audio';
 export * from './vfx';
 export * from './vfx-graph';
+export * from './decals';

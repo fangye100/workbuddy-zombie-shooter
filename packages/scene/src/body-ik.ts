@@ -32,7 +32,7 @@ export function newBodyIkControl(part: BodyIkPart): BodyIkControl {
   return { id: part, part, enabled: true, weight: 1,
     target: part === 'upperBody' || part === 'head' ? { kind: 'mouse', height: 1.5 } :
       { kind: 'position', position: [left ? .3 : -.3, hand ? 1.3 : .1, hand ? .4 : .1] },
-    pole: [0, 0, hand ? -1 : 1], forward: [0, 0, 1], maxAngleDeg: 75 };
+    pole: hand ? [left ? 1 : -1, -.35, 0] : [0, 0, 1], forward: [0, 0, 1], maxAngleDeg: 75 };
 }
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);

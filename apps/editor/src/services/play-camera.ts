@@ -42,6 +42,7 @@ export interface ViewCameraControl {
 /** 运行时玩家（相机跟随目标）的位置。null = 当前没有玩家实体 */
 export interface PlayCameraTarget {
   x: number;
+  y?:number;
   z: number;
   /** Render Y rotation (+Z forward), converted from the runtime planar heading. */
   yaw: number;
@@ -131,6 +132,8 @@ export class PlayCameraController {
   private readonly view: ViewCameraControl;
   private saved: ViewCameraState | null = null;
   private plan: ViewCameraState | null = null;
+  private game: ViewCameraState | null = null;
+  private observing = false;
   private mode: CameraComponent['mode'] | null = null;
   private anchorId: NodeId | null = null;
   /** 相对目标朝向的偏航偏移（度） */
@@ -160,6 +163,7 @@ export class PlayCameraController {
 
     this.saved = this.view.get(); // 先存，再改 —— 顺序反了就还原不回去
     this.plan = plan;
+    this.game = structuredClone(plan);this.observing=false;
     this.mode = entry.cam.mode;
     this.anchorId = entry.cam.followTarget ?? entry.nodeId;
     this.yawOffsetDeg = entry.cam.yawOffsetDeg;
@@ -184,13 +188,22 @@ export class PlayCameraController {
     if (this.saved === null || this.plan === null) return;
     if (this.mode !== 'orbit-follow') return;
     if (target === null) return;
-    const cur = this.view.get();
-    this.view.set({
+    const cur = this.observing ? this.game! : this.view.get();
+    this.game = {
       ...cur,
-      target: [target.x, cur.target[1], target.z],
+      target: [target.x,target.y??cur.target[1],target.z],
       yaw: this.yawMode === 'target' ? target.yaw + rad(this.yawOffsetDeg) : this.plan.yaw,
-    });
+    };
+    if(!this.observing)this.view.set(this.game);
   }
+
+  /** 编辑器临时观察视角：游戏相机继续更新，退出回到当前游戏机位。 */
+  setObservation(on:boolean):boolean {
+    if(!this.active||!this.game)return false;
+    if(on&&!this.observing)this.game=structuredClone(this.view.get());
+    this.observing=on;if(!on)this.view.set(structuredClone(this.game));return true;
+  }
+  get observation():boolean {return this.active&&this.observing;}
 
   /** 还原编辑相机。幂等：重复调用无副作用 */
   detach(): void {
@@ -198,6 +211,7 @@ export class PlayCameraController {
     this.view.set(this.saved);
     this.saved = null;
     this.plan = null;
+    this.game=null;this.observing=false;
     this.mode = null;
     this.anchorId = null;
   }

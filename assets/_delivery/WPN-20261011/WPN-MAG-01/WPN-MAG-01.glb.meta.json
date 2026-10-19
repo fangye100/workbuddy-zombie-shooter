@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_00cf84f7edee",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-01",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261011/delivery.json",
+    "sourceUnits": "未标定的生成模型单位",
+    "axisContract": "保留 GLB 节点变换后的 Y-up；尚未标定 +X 武器轴",
+    "inspectionScene": "assets/scenes/sandbox/weapon-source-review.scene.json",
+    "sourceTriangles": 30000
+  },
+  "sourceHash": "sha256:eeb32ff776a3c2b60cf6feb441217bae5cf3cd1ebcbc775656f49b6df732a420",
+  "updatedAt": "2026-10-11T13:48:52.110Z"
+}

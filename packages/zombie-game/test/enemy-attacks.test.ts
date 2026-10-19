@@ -21,6 +21,13 @@ describe('authored enemy attack mechanics',()=>{
   it('blocked acid emits impact but never a pool phase',()=>{
     const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!;f.world.obstruction=()=>[1,.7,0];f.attacks.strike(1,f.actor,a,0,f.player,f.world);for(let i=0;i<40;i++)f.attacks.step(i,1/30,f.world);const events=f.attacks.drainEvents();expect(events.some(e=>e.type==='impact' && e.effect.blocked)).toBe(true);expect(events.some(e=>e.type==='phase')).toBe(false);
   });
+  it('酸液真实落地只通知一次；被遮挡不通知，发射者死亡后仍保留落地点',()=>{
+    const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!,landings:number[]=[];
+    f.world.landed=(_e,tick)=>landings.push(tick);f.attacks.lock(1,1,6,0);f.attacks.strike(1,f.actor,a,0,f.player,f.world);f.killShooter();
+    for(let i=0;i<145;i++)f.attacks.step(i,1/30,f.world);expect(landings).toEqual([24]);
+    const blocked=fixture();blocked.world.landed=()=>landings.push(-1);blocked.world.obstruction=()=>[1,1,0];blocked.attacks.strike(1,blocked.actor,a,0,blocked.player,blocked.world);
+    for(let i=0;i<145;i++)blocked.attacks.step(i,1/30,blocked.world);expect(landings).toEqual([24]);
+  });
   it('acid flies to the locked target and applies 6 DPS only after landing for four seconds',()=>{
     const f=fixture(),a=NPC_STATS.find(s=>s.id==='E-03')!.attack!;
     f.attacks.lock(1,1,6,0);f.attacks.strike(1,f.actor,a,0,f.player,f.world);

@@ -13,6 +13,22 @@ describe('authored motion transition contract', () => {
   it('migrates v13 without overwriting existing binding choices', () => {
     const doc=createEmptySceneDocument('transition'); doc.schemaVersion=13;
     const before=structuredClone(doc.nodes); const migrated=migrateToLatest(doc);
-    expect(migrated.to).toBe(SCHEMA_VERSION); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','support-generic-vfx-bindings','support-authored-vfx-emitters','support-authored-vfx-motion','support-projected-vfx-decals']); expect(migrated.doc.nodes).toEqual(before);
+    expect(migrated.to).toBe(SCHEMA_VERSION); expect(migrated.applied).toEqual(['scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']); expect(migrated.doc.nodes).toEqual(before);
+  });
+});
+
+describe('optional generic pose layer persistence', () => {
+  const poseLayer={roots:['Spine'],exclude:['LeftHand'],weight:.6,transitionSec:.15};
+  it('roundtrips through sidecar and v15 to current scene migration without inventing a configuration for old scenes',()=>{
+    const meta=createDefaultAssetMeta('as_layer','gltf');meta.sharedMotion={...binding,poseLayer};
+    const copy=JSON.parse(JSON.stringify(meta));expect(copy.sharedMotion.poseLayer).toEqual(poseLayer);
+    expect(validateAssetMeta(copy).filter(d=>d.severity==='error')).toEqual([]);
+    const doc=createEmptySceneDocument('layer');const mesh={kind:'MeshRenderer',sharedMotion:{...binding,poseLayer}};
+    const serialized={...doc,schemaVersion:15,nodes:[{id:'node',components:[mesh]}]};expect(migrateToLatest(JSON.parse(JSON.stringify(serialized))).doc.nodes).toEqual(serialized.nodes);
+    const legacy={...doc,schemaVersion:15};const migrated=migrateToLatest(legacy);expect(migrated.to).toBe(SCHEMA_VERSION);expect(migrated.applied).toEqual(['predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);expect(migrated.doc).toEqual({...legacy,schemaVersion:SCHEMA_VERSION});expect(validateSharedMotionBinding(binding)).toEqual([]);
+  });
+  it('rejects unsafe or incomplete masks, weights and durations',()=>{
+    for(const invalid of [{...poseLayer,roots:[]},{...poseLayer,roots:['Spine','Spine']},{...poseLayer,exclude:null},{...poseLayer,weight:NaN},{...poseLayer,weight:1.1},{...poseLayer,transitionSec:-1}])
+      expect(validateSharedMotionBinding({...binding,poseLayer:invalid}).length).toBeGreaterThan(0);
   });
 });

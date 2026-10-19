@@ -1,0 +1,6399 @@
+{
+  "schemaVersion": 18,
+  "id": "sc_act1_floor1",
+  "name": "第一层 · 火场公路",
+  "act": "Act1",
+  "environment": {
+    "ambient": {
+      "color": "#737b9c",
+      "intensity": 0.28
+    },
+    "hemisphere": {
+      "sky": "#9ebcdb",
+      "skyIntensity": 0.36,
+      "ground": "#5e536e",
+      "groundIntensity": 0.18
+    },
+    "fog": {
+      "color": "#81949c",
+      "density": 0.008,
+      "heightFalloff": 0.1
+    },
+    "rim": {
+      "color": "#9bdbe0",
+      "intensity": 0.3,
+      "power": 3,
+      "topBias": 0.45
+    },
+    "exposure": 0.9,
+    "postOverride": null,
+    "sky": {
+      "zenith": "#364662",
+      "horizon": "#dbb695",
+      "ground": "#425566",
+      "cloud": "#d6cbbb",
+      "cloudCoverage": 0.54,
+      "cloudScale": 1.7,
+      "cloudSpeed": 0.002,
+      "sunColor": "#ffe3a0",
+      "sunDirection": [
+        0.7094064799162227,
+        0.49999999999999994,
+        -0.49673176489215387
+      ],
+      "sunSize": 0.065,
+      "texture": {
+        "path": "assets/art/textures/SKY-01/SKY-01.png",
+        "guid": "as_16127080dcc6"
+      },
+      "textureMix": 0.68,
+      "textureYaw": 40
+    },
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.48,
+      "outlineWidth": 1.6,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0.1,
+      "halftoneSize": 5,
+      "vignette": 0.04
+    }
+  },
+  "editorCamera": {
+    "target": [
+      16,
+      0,
+      0
+    ],
+    "distance": 38,
+    "yaw": 0.65,
+    "elevation": 0.9
+  },
+  "entryCamera": "nd_f1_cam",
+  "playerStart": "nd_f1_start",
+  "loseCondition": "player-death",
+  "dependencies": [
+    "assets/art/models/streets/game_ready/floor-1-road.glb",
+    "assets/art/models/road/game_ready/crosswalk.glb",
+    "assets/art/models/streets/game_ready/floor-1-yard.glb",
+    "assets/environment/models/road/synthetic/asphalt-20x16.glb",
+    "assets/environment/models/S-02/tex2/S-02_baked.glb",
+    "assets/environment/models/P-12/tex2/P-12_lod2.glb",
+    "assets/environment/models/P-11/tex2/P-11_baked.glb",
+    "assets/environment/models/P-02/tex2/P-02_lod2.glb",
+    "assets/environment/models/P-04/tex2/P-04_lod2.glb",
+    "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+    "assets/environment/models/road/synthetic/asphalt-14x14.glb",
+    "assets/environment/models/S-01/tex2/S-01_baked.glb",
+    "assets/environment/models/P-14/tex2/P-14_baked.glb",
+    "assets/environment/models/P-15/tex2/P-15_lod2.glb",
+    "assets/environment/models/P-16/tex2/P-16_lod2.glb",
+    "assets/environment/models/P-06/tex2/P-06_lod2.glb",
+    "assets/environment/models/P-03/tex2/P-03_lod2.glb",
+    "assets/environment/models/P-05/tex2/P-05_lod2.glb",
+    "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+    "assets/animations/mixamo/shared.motion.json",
+    "assets/environment/models/P-01/tex2/P-01_lod2.glb",
+    "assets/environment/models/P-13/tex2/P-13_lod2.glb",
+    "assets/environment/models/P-14/tex2/P-14_lod2.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+    "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+    "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+    "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+    "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+    "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+    "assets/art/models/ENV-MID-04/game_ready/ENV-MID-04_lod1.glb",
+    "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+    "assets/art/models/ENV-MID-06/game_ready/ENV-MID-06_lod1.glb",
+    "assets/art/models/streets/game_ready/floor-1-curbs.glb",
+    "assets/art/models/streets/game_ready/floor-1-paint.glb",
+    "assets/art/models/streets/game_ready/floor-1-walks.glb",
+    "assets/art/textures/SKY-01/SKY-01.png",
+    "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+    "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+    "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+    "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+    "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+    "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+    "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+    "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+    "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+    "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+    "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb"
+  ],
+  "nodes": [
+    {
+      "id": "nd_f1_beacon",
+      "name": "街区暖光",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          4.5,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "point",
+          "color": "#ffc06b",
+          "intensity": 2.4,
+          "range": 11,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_run",
+      "name": "局内成长与补给规则",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "游戏规则",
+      "components": [
+        {
+          "kind": "RunRules",
+          "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 0.08,
+            "decisionMaxSec": 0.35,
+            "recoveryMinSec": 0.2,
+            "recoveryMaxSec": 0.55,
+            "windupJitterFrac": 0.15,
+            "cooldownJitterFrac": 0.35
+          },
+          "campaign": "act1",
+          "scrapPerKill": 3,
+          "firstChoiceKills": 1,
+          "choiceEveryKills": 8,
+          "eventScrap": 25,
+          "healCost": 18,
+          "healAmount": 35,
+          "talentCost": 30,
+          "floorEssence": 5,
+          "aimAssist": true,
+          "weapon": {
+            "magazineSize": 18,
+            "reserveRounds": 120,
+            "reloadSec": 1.6,
+            "ammoPerKill": 8,
+            "ammoCost": 12,
+            "ammoSupply": 60
+          },
+          "bossAttack": null,
+          "talents": [
+            {
+              "id": "heavy",
+              "name": "重型弹头",
+              "description": "每层伤害 +35%；叠满三层形成高伤流派。",
+              "effect": "damage",
+              "value": 0.35,
+              "maxStacks": 3
+            },
+            {
+              "id": "rapid",
+              "name": "快速供弹",
+              "description": "每层射速 +30%，持续压制尸潮。",
+              "effect": "haste",
+              "value": 0.3,
+              "maxStacks": 3
+            },
+            {
+              "id": "leech",
+              "name": "尸髓回流",
+              "description": "命中恢复实际伤害的 8% 生命。",
+              "effect": "leech",
+              "value": 0.08,
+              "maxStacks": 3
+            },
+            {
+              "id": "shock",
+              "name": "震荡弹池",
+              "description": "解锁新的范围流派选项：每层 2 米半额冲击波。",
+              "effect": "blast",
+              "value": 2,
+              "maxStacks": 3,
+              "unlockCost": 15
+            },
+            {
+              "id": "blast",
+              "name": "破片弹药",
+              "description": "命中造成半额范围伤害；每层扩大 1.2 米。",
+              "effect": "blast",
+              "value": 1.2,
+              "maxStacks": 3
+            },
+            {
+              "id": "dash",
+              "name": "轻装步伐",
+              "description": "每层移动速度 +15%，更容易拉开距离。",
+              "effect": "speed",
+              "value": 0.15,
+              "maxStacks": 3
+            }
+          ],
+          "arsenal": {
+            "equipped": "pistol",
+            "switchSec": 0.4,
+            "definitions": [
+              {
+                "id": "pistol",
+                "name": "手枪",
+                "nameEn": "Pistol",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "hitscan",
+                "damage": 12,
+                "cooldownSec": 0.35,
+                "rangeM": 18,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 18,
+                  "reserveRounds": 120,
+                  "reloadSec": 1.6,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+                    "guid": "as_e4ugmrq3"
+                  },
+                  "placeholder": "pistol",
+                  "color": "#ffc531",
+                  "lengthM": 0.3,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.11000000000000003,
+                        0.03,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.23000000000000004,
+                        0.03,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.5900000000000001,
+                        0.497,
+                        0.0799999999999999
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.14600000000000002,
+                        -0.07,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.2,
+                        0.07,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "pistol-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "pistol-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "pistol-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "pistol-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "pistol-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.08,
+                        1.19,
+                        0.34
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "magazine",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+                          "guid": "as_30abf3e8f08f"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "magazine",
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.08010323525202694,
+                        0.2363754820823669,
+                        0.5000341653823853
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "id": "shotgun",
+                "name": "霰弹枪",
+                "nameEn": "Shotgun",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "pellets",
+                "damage": 8,
+                "cooldownSec": 0.85,
+                "rangeM": 9,
+                "spreadDeg": 32,
+                "pellets": 7,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0.8
+                },
+                "ammo": {
+                  "magazineSize": 6,
+                  "reserveRounds": 48,
+                  "reloadSec": 0.55,
+                  "perShot": 1,
+                  "reloadMode": "shell"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+                    "guid": "as_cdf2dc294f5f"
+                  },
+                  "placeholder": "shotgun",
+                  "color": "#ef934b",
+                  "lengthM": 0.98,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.08500000000000002,
+                        0.2,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.47700000000000004,
+                        0.2,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.7975714069001726,
+                        0.64118075580614,
+                        0.050386154901703784
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.2026,
+                        0.1,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.379,
+                        0.24000000000000002,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "shotgun-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "shotgun-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "shotgun-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "shotgun-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "shotgun-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.029510609846269128,
+                        1.107910163857817,
+                        0.21257823875506016
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.324285645940184,
+                        0.34761240413744543
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+                          "guid": "as_738efc1ba301"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0.5000000000000001,
+                            0.5000000000000001,
+                            -0.5000000000000001,
+                            0.5000000000000001
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "smg",
+                "name": "冲锋枪",
+                "nameEn": "SMG",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "hitscan",
+                "damage": 6,
+                "cooldownSec": 0.09,
+                "rangeM": 16,
+                "spreadDeg": 5,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 32,
+                  "reserveRounds": 192,
+                  "reloadSec": 1.8,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+                    "guid": "as_a96a571ba3ef"
+                  },
+                  "placeholder": "smg",
+                  "color": "#d5df8a",
+                  "lengthM": 0.58,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.10500000000000002,
+                        0.09999999999999998,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.337,
+                        0.09999999999999998,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.5701073142491059,
+                        0.6678460357028457,
+                        0.0496763409866834
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.17460000000000003,
+                        -2.7755575615628914e-17,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.279,
+                        0.13999999999999999,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "smg-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "smg-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "smg-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "smg-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "smg-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030220423761289618,
+                        1.2946546783873611,
+                        0.16693230429292394
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.41103016046972807,
+                        0.3219664696753092
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+                          "guid": "as_bc00f36d6062"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "sniper",
+                "name": "狙击枪",
+                "nameEn": "Sniper",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "piercing",
+                "damage": 70,
+                "cooldownSec": 1.1,
+                "rangeM": 38,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 3,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 5,
+                  "reserveRounds": 30,
+                  "reloadSec": 2.1,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+                    "guid": "as_6a1a6e91ec15"
+                  },
+                  "placeholder": "sniper",
+                  "color": "#92d2e9",
+                  "lengthM": 1.18,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.04500000000000002,
+                        0.14,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.517,
+                        0.14,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.7867843275880398,
+                        0.6403199483950968,
+                        0.04955632789688591
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.1866,
+                        0.04,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.399,
+                        0.18,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "sniper-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "sniper-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "sniper-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "sniper-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "sniper-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030340436851086807,
+                        1.1444801838558436,
+                        0.23487557731296227
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.30085566593821056,
+                        0.32990974269534756
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+                          "guid": "as_a17fcc3a5a85"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "chainsaw",
+                "name": "电锯",
+                "nameEn": "Chainsaw",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "melee",
+                "damage": 9,
+                "cooldownSec": 0.12,
+                "rangeM": 2.3,
+                "spreadDeg": 115,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0.25,
+                  "slowSec": 0.4,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 0,
+                  "reserveRounds": 0,
+                  "reloadSec": 0,
+                  "perShot": 0,
+                  "reloadMode": "none"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 0
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+                    "guid": "as_c12ac01417cb"
+                  },
+                  "placeholder": "chainsaw",
+                  "color": "#f8a247",
+                  "lengthM": 0.85,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.07500000000000001,
+                        0.09999999999999998,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.41500000000000004,
+                        0.09999999999999998,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.9529250177036406,
+                        0.510082573051635,
+                        0.05206811649393661
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.177,
+                        -2.7755575615628914e-17,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.33,
+                        0.13999999999999999,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "chainsaw-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "chainsaw-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "chainsaw-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "chainsaw-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "chainsaw-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.027828648254036182,
+                        1.1444720106114232,
+                        0.45286094333396854
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.26084749269379015,
+                        0.5778951087163537
+                      ]
+                    },
+                    "attachments": [],
+                    "reloadAttachmentId": null
+                  }
+                }
+              },
+              {
+                "id": "flame",
+                "name": "火焰喷射器",
+                "nameEn": "Flamethrower",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "flame",
+                "damage": 3,
+                "cooldownSec": 0.1,
+                "rangeM": 6,
+                "spreadDeg": 40,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 6,
+                  "burnSec": 2,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 60,
+                  "reserveRounds": 240,
+                  "reloadSec": 2.2,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+                    "guid": "as_420ed26a291b"
+                  },
+                  "placeholder": "flame",
+                  "color": "#ff7045",
+                  "lengthM": 0.8,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.10500000000000002,
+                        0.2,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.4250000000000001,
+                        0.2,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.6865598128041001,
+                        0.7142374415012813,
+                        0.047900916003125835
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.201,
+                        0.1,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.34500000000000003,
+                        0.24000000000000002,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.02,
+                    "recoilPitchDeg": 3,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "flame-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "flame-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "flame-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "flame-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "flame-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.03199584874484702,
+                        1.094944000305416,
+                        0.24456153719258167
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.311319482387783,
+                        0.3995957025749669
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+                          "guid": "as_837e48912f68"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "launcher",
+                "name": "榴弹发射器",
+                "nameEn": "Grenade prototype",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "projectile",
+                "damage": 42,
+                "cooldownSec": 1.1,
+                "rangeM": 16,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 5,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 3
+                },
+                "effects": {
+                  "blastRadiusM": 3,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0.8
+                },
+                "ammo": {
+                  "magazineSize": 4,
+                  "reserveRounds": 24,
+                  "reloadSec": 2.4,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+                    "guid": "as_f2f39beb7444"
+                  },
+                  "placeholder": "launcher",
+                  "color": "#a7dc7c",
+                  "lengthM": 0.675,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.09000000000000002,
+                        0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.39000000000000007,
+                        0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.6725000000000001,
+                        0.622,
+                        0.21999999999999997
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.18000000000000002,
+                        -0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.315,
+                        0.09,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "launcher-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "launcher-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "launcher-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "launcher-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "launcher-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "muzzle": "ink-flash",
+                    "trail": "ink-tracer",
+                    "impact": "ink-hit",
+                    "resource": null
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.31,
+                        1.2,
+                        0.245
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb",
+                          "guid": "as_29ec6c7622e0"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "base",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0,
+                            0,
+                            1
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart",
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.22010323525202694,
+                        0.2663754820823669,
+                        0.3850341653823853
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "audio": {
+            "enabled": true,
+            "masterGain": 0.65,
+            "maxVoices": 24,
+            "maxImpactVoices": 4,
+            "decodedBudgetMiB": 24,
+            "distanceM": 28,
+            "warningDistanceM": 18,
+            "cues": [
+              {
+                "id": "SFX-WPN-PISTOL-SHOT",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v01.wav",
+                    "guid": "as_1708bbad45af52c797d6f0a8"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v02.wav",
+                    "guid": "as_d1e18ed99aa651619e81661c"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v03.wav",
+                    "guid": "as_7322cd1698b95b23b1b100f3"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.7,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-WPN-SMG-SHOT",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v01.wav",
+                    "guid": "as_b2cc40a39371508591967cca"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v02.wav",
+                    "guid": "as_bca63d52d1e25957be078251"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v03.wav",
+                    "guid": "as_bbcb9f1d77e35ef29b63af48"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v04.wav",
+                    "guid": "as_7b8a4e9953eb548fa6067d7d"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.7,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-HIT-FLESH",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v01.wav",
+                    "guid": "as_bdf9e61fedd45210b1c218ba"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v02.wav",
+                    "guid": "as_d4ae79059b285188a8fd2a82"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v03.wav",
+                    "guid": "as_8bd7f943fefb599ba62d44f3"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v04.wav",
+                    "guid": "as_a4632b2d13f25a558198c3be"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.27,
+                "priority": 4,
+                "cooldownSec": 0.1,
+                "bus": "impact"
+              },
+              {
+                "id": "SFX-WPN-FLAME-LOOP",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v01.wav",
+                    "guid": "as_71f8b4add9455486b076694c"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v02.wav",
+                    "guid": "as_acd015093ccf573ab6cfa98b"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.3,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-E03-ACID-POOL",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v01.wav",
+                    "guid": "as_0e06b98abf60551291ccbbbc"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v02.wav",
+                    "guid": "as_173fa76401d551aab33111e8"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.3,
+                "priority": 3,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-E03-ACID-LAUNCH",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v01.wav",
+                    "guid": "as_63b63e001c58581a90a66539"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v02.wav",
+                    "guid": "as_16fec97c0e1d5d698117ec64"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v03.wav",
+                    "guid": "as_e6078c3ba7b65e888a5224f5"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.3,
+                "priority": 3,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-E02-POUNCE-WARN",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v01.wav",
+                    "guid": "as_4980700b78225240a405af06"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v02.wav",
+                    "guid": "as_beee82dc33065833bf3a09e8"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v03.wav",
+                    "guid": "as_0d6beee715985530b1e68e22"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.3,
+                "priority": 8,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-ENV-HIGHWAY-BED",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-ENV-HIGHWAY-BED/SFX-ENV-HIGHWAY-BED__v01.wav",
+                    "guid": "as_348fff9d005a5641bdb47e38"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.18,
+                "priority": 0,
+                "cooldownSec": 0,
+                "bus": "ambience"
+              }
+            ],
+            "ambience": {
+              "cue": "SFX-ENV-HIGHWAY-BED",
+              "rate": 1,
+              "gain": 1
+            },
+            "weapons": {
+              "pistol": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 1,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "smg": {
+                "fire": {
+                  "cue": "SFX-WPN-SMG-SHOT",
+                  "rate": 1,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "shotgun": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.7,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "sniper": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.8,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "launcher": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.6,
+                  "gain": 0.7
+                },
+                "loop": null
+              },
+              "chainsaw": {
+                "fire": null,
+                "loop": {
+                  "cue": "SFX-WPN-FLAME-LOOP",
+                  "rate": 0.6,
+                  "gain": 0.7
+                }
+              },
+              "flame": {
+                "fire": null,
+                "loop": {
+                  "cue": "SFX-WPN-FLAME-LOOP",
+                  "rate": 1,
+                  "gain": 1
+                }
+              }
+            },
+            "warnings": {
+              "E-02": {
+                "cue": "SFX-E02-POUNCE-WARN",
+                "rate": 1,
+                "gain": 1
+              }
+            },
+            "fleshHit": {
+              "cue": "SFX-HIT-FLESH",
+              "rate": 1,
+              "gain": 1
+            },
+            "acidLaunch": {
+              "cue": "SFX-E03-ACID-LAUNCH",
+              "rate": 1,
+              "gain": 1
+            },
+            "acidPool": {
+              "cue": "SFX-E03-ACID-POOL",
+              "rate": 1,
+              "gain": 1
+            }
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_key",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          -0.28678821817552297,
+          0,
+          -0.40957602214449607,
+          0.8660254037844386
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "灯光",
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#ffe6c2",
+          "intensity": 1.1,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_cam",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "相机",
+      "components": [
+        {
+          "kind": "Camera",
+          "yawMode": "world",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 52,
+          "distance": 24,
+          "yawOffsetDeg": -15
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_demo_script",
+      "name": "演示脚本 · 触发记录",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "Script",
+          "enabled": true,
+          "behavior": "debug-on-trigger-log",
+          "params": {
+            "message": "火场心跳",
+            "maxTick": 3,
+            "enabled": true,
+            "tag": "info"
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_street",
+      "name": "连续街道",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.12,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-1-road.glb",
+              "guid": "as_aecc40b8ee87"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_crosswalk_0",
+      "name": "街口斑马线",
+      "parent": null,
+      "transform": {
+        "position": [
+          23,
+          0.015,
+          -5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/road/game_ready/crosswalk.glb",
+              "guid": "as_8761e2c880ff"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#beb9a3",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_void",
+      "name": "街区地基",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.14,
+          -30
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-1-yard.glb",
+              "guid": "as_42f7fb46e1bb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#c3c9ca",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0",
+      "name": "房间 1 · 战斗",
+      "parent": null,
+      "transform": {
+        "position": [
+          10,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              10,
+              0,
+              0
+            ],
+            "size": [
+              20,
+              4,
+              16
+            ]
+          },
+          "clearRule": "kill-all",
+          "clearTarget": null,
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-20x16.glb",
+              "guid": "as_5u6dq11d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_building_-1",
+      "name": "破窗便利店 · 事故街口",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          -13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/tex2/S-02_baked.glb",
+              "guid": "as_z2g08wol"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_building_1",
+      "name": "废弃货车 · 路肩",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          1,
+          0.1,
+          10.3
+        ],
+        "rotation": [
+          0,
+          0.04997916927067833,
+          0,
+          0.9987502603949663
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-12/tex2/P-12_lod2.glb",
+              "guid": "as_vmkgd52p"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv0",
+      "name": "P-11 · 翻覆轿车",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -4.2,
+          0.1,
+          -4.8
+        ],
+        "rotation": [
+          0,
+          0.08489768280241602,
+          0,
+          0.9963896745022904
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-11/tex2/P-11_baked.glb",
+              "guid": "as_zxgcp6u1"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.5249999999999999
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              2.2,
+              0.75,
+              0.95
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv1",
+      "name": "P-02 · 水泥路障",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          7,
+          0.1,
+          5.5
+        ],
+        "rotation": [
+          0,
+          -0.059964006479444595,
+          0,
+          0.9982005399352042
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-02/tex2/P-02_lod2.glb",
+              "guid": "as_mzlkssk2"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.25,
+              0.45,
+              0.3
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_cv2",
+      "name": "P-04 · 托盘货箱",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          -4.8,
+          0.1,
+          4.9
+        ],
+        "rotation": [
+          0,
+          0.03998933418663416,
+          0,
+          0.9992001066609779
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-04/tex2/P-04_lod2.glb",
+              "guid": "as_o0j546pp"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.385
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.6,
+              0.55,
+              0.5
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp0",
+      "name": "刷怪点 1 · E-01 ×15",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          3.125251066438608,
+          0.8,
+          1.770718796566831
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 15,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp1",
+      "name": "刷怪点 2 · E-01 ×12",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          0.8041655550154886,
+          0.8,
+          1.3561330080418184
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 12,
+          "wave": 2,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_sp2",
+      "name": "刷怪点 3 · E-02 ×9",
+      "parent": "nd_f1r0",
+      "transform": {
+        "position": [
+          2.118583378545903,
+          0.8,
+          -3.1268518046086493
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 9,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1c0",
+      "name": "走廊 1",
+      "parent": null,
+      "transform": {
+        "position": [
+          23,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+              "guid": "as_ddds4fuj"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1",
+      "name": "房间 2 · 事件",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "event",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              33,
+              0,
+              0
+            ],
+            "size": [
+              14,
+              4,
+              14
+            ]
+          },
+          "clearRule": "interact",
+          "clearTarget": null,
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-14x14.glb",
+              "guid": "as_5xbuqmer"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_building_-1",
+      "name": "便利店 · 补给地标",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          -8,
+          0.1,
+          -13
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-02/tex2/S-02_baked.glb",
+              "guid": "as_z2g08wol"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_building_1",
+      "name": "加油站雨棚 · 避难区",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          7,
+          0.1,
+          -14
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "建筑",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/S-01/tex2/S-01_baked.glb",
+              "guid": "as_8olnfpvu"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.3,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r1_supply",
+      "name": "补给泵 · 按 E 领取并购买补给",
+      "parent": "nd_f1r1",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex2/P-14_baked.glb",
+              "guid": "as_rhe434dp"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.63
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1c1",
+      "name": "走廊 2",
+      "parent": null,
+      "transform": {
+        "position": [
+          43,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-6x4.glb",
+              "guid": "as_ddds4fuj"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2",
+      "name": "房间 3 · 战斗",
+      "parent": null,
+      "transform": {
+        "position": [
+          56,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "房间",
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "fire",
+          "bounds": {
+            "center": [
+              56,
+              0,
+              0
+            ],
+            "size": [
+              20,
+              4,
+              16
+            ]
+          },
+          "clearRule": "kill-all",
+          "clearTarget": null,
+          "depth": 1
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/road/synthetic/asphalt-20x16.glb",
+              "guid": "as_5u6dq11d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_building_-1",
+      "name": "出口广告牌",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          3,
+          0.1,
+          -11
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-15/tex2/P-15_lod2.glb",
+              "guid": "as_aplv623k"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_building_1",
+      "name": "收费岗亭 · 封锁口",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          8,
+          0.1,
+          7.3
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-16/tex2/P-16_lod2.glb",
+              "guid": "as_q31yzc2g"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.65
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.8,
+              1.2,
+              0.8
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv0",
+      "name": "P-06 · 沙袋掩体",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -5.2,
+          0.1,
+          -4.8
+        ],
+        "rotation": [
+          0,
+          0.07492970727274234,
+          0,
+          0.9971888181122075
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-06/tex2/P-06_lod2.glb",
+              "guid": "as_ar8ffh51"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1,
+              0.45,
+              0.35
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv1",
+      "name": "P-03 · 铁皮垃圾桶",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          6.5,
+          0.1,
+          4.8
+        ],
+        "rotation": [
+          0,
+          -0.059964006479444595,
+          0,
+          0.9982005399352042
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-03/tex2/P-03_lod2.glb",
+              "guid": "as_b9xjvbmv"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.45499999999999996
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.9,
+              0.65,
+              0.55
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_cv2",
+      "name": "P-05 · 轮胎堆",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          -5.3,
+          0.1,
+          4.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "道具",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-05/tex2/P-05_lod2.glb",
+              "guid": "as_xrmuxo4f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.27999999999999997
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.45,
+              0.4,
+              0.45
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp0",
+      "name": "刷怪点 1 · E-01 ×12",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          3.125251066438608,
+          0.8,
+          1.770718796566831
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 12,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp1",
+      "name": "刷怪点 2 · E-02 ×12",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          0.8041655550154886,
+          0.8,
+          1.3561330080418184
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 12,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r2_sp2",
+      "name": "刷怪点 3 · E-01 ×12",
+      "parent": "nd_f1r2",
+      "transform": {
+        "position": [
+          2.118583378545903,
+          0.8,
+          -3.1268518046086493
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "敌人",
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-01",
+          "count": 12,
+          "wave": 2,
+          "trigger": "room-enter",
+          "delaySec": 0,
+          "radius": 3.5,
+          "prefab": null
+        },
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "cylinder",
+            "params": [
+              0.6,
+              1.6,
+              8
+            ]
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "shared",
+                "id": "s4"
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "editorOnly": true
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_nav",
+      "name": "导航区",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              33,
+              0,
+              0
+            ],
+            "size": [
+              66,
+              4,
+              16
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1_start",
+      "name": "玩家 · 清道夫（T-pose）",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.02,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "角色",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+              "guid": "as_hpnf387i"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.85,
+                  "metallic": 0,
+                  "outlineScale": 0.55,
+                  "halftoneScale": 0.1,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 5,
+          "importScale": 1,
+          "playBinding": "player",
+          "editorOnly": false,
+          "sharedMotion": {
+            "library": {
+              "path": "assets/animations/mixamo/shared.motion.json",
+              "guid": "as_mixamo_shared_motion"
+            },
+            "profile": "player",
+            "defaultState": "idle",
+            "speed": 1,
+            "poseLayer": {
+              "roots": [
+                "Spine"
+              ],
+              "exclude": [],
+              "weight": 1,
+              "transitionSec": 0.16
+            }
+          },
+          "bodyIk": {
+            "enabled": true,
+            "weight": 1,
+            "locomotionWhileAiming": true,
+            "controls": [
+              {
+                "id": "upperBody",
+                "part": "upperBody",
+                "enabled": true,
+                "weight": 0.55,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0,
+                    0.95,
+                    0.45
+                  ]
+                },
+                "pole": [
+                  0,
+                  0,
+                  -1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 60
+              },
+              {
+                "id": "head",
+                "part": "head",
+                "enabled": true,
+                "weight": 0.25,
+                "target": {
+                  "kind": "mouse",
+                  "height": 1.5
+                },
+                "pole": [
+                  0,
+                  0,
+                  -1
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              },
+              {
+                "id": "leftHand",
+                "part": "leftHand",
+                "enabled": true,
+                "weight": 1,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    0.18,
+                    1.15,
+                    0.25
+                  ]
+                },
+                "pole": [
+                  1,
+                  -0.35,
+                  0
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              },
+              {
+                "id": "rightHand",
+                "part": "rightHand",
+                "enabled": true,
+                "weight": 1,
+                "target": {
+                  "kind": "position",
+                  "position": [
+                    -0.18,
+                    1.15,
+                    0.25
+                  ]
+                },
+                "pole": [
+                  -1,
+                  -0.35,
+                  0
+                ],
+                "forward": [
+                  0,
+                  0,
+                  1
+                ],
+                "maxAngleDeg": 50
+              }
+            ]
+          }
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_barrel",
+      "name": "P-01 · 油桶",
+      "parent": "nd_f1r0",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          -0.8,
+          0.1,
+          -6.5
+        ],
+        "rotation": [
+          0,
+          0.14943813247359922,
+          0,
+          0.9887710779360422
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_lod2.glb",
+              "guid": "as_cax4jr7q"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r0_guardrail",
+      "name": "P-13 · 公路护栏",
+      "parent": "nd_f1r0",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          -6,
+          0.1,
+          -8.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-13/tex2/P-13_lod2.glb",
+              "guid": "as_tw5hzfi3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.27999999999999997
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r1_pump",
+      "name": "P-14 · 加油机",
+      "parent": "nd_f1r1",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          8,
+          0.1,
+          -8.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-14/tex2/P-14_lod2.glb",
+              "guid": "as_zvtnugdm"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.63
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r1_crates",
+      "name": "P-04 · 托盘货箱",
+      "parent": "nd_f1r1",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          -4.9,
+          0.1,
+          -6.1
+        ],
+        "rotation": [
+          0,
+          -0.09983341664682815,
+          0,
+          0.9950041652780257
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-04/tex2/P-04_lod2.glb",
+              "guid": "as_o0j546pp"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.385
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.6,
+              0.55,
+              0.5
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r2_barrel",
+      "name": "P-01 · 油桶",
+      "parent": "nd_f1r2",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          7.8,
+          0.1,
+          -5.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_lod2.glb",
+              "guid": "as_cax4jr7q"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r2_guardrail",
+      "name": "P-13 · 公路护栏",
+      "parent": "nd_f1r2",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          5.5,
+          0.1,
+          -8.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-13/tex2/P-13_lod2.glb",
+              "guid": "as_tw5hzfi3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.27999999999999997
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1r2_checkpoint",
+      "name": "P-02 · 水泥路障",
+      "parent": "nd_f1r2",
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "transform": {
+        "position": [
+          9,
+          0.1,
+          -4.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-02/tex2/P-02_lod2.glb",
+              "guid": "as_mzlkssk2"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.94,
+                  "metallic": 0,
+                  "outlineScale": 0.45,
+                  "halftoneScale": 0.12,
+                  "specMix": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1,
+          "aoMin": 0,
+          "aoMax": 0.315
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              1.25,
+              0.45,
+              0.3
+            ]
+          },
+          "isTrigger": false,
+          "layer": 0
+        }
+      ],
+      "category": "道具"
+    },
+    {
+      "id": "nd_f1_backdrop",
+      "name": "ENV-FAR-01 · 街区",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          0,
+          0,
+          -63
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.85,
+          0.85,
+          0.85
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod1.glb",
+              "guid": "as_l792u0n7"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#c5d5e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_far_repeat",
+      "prefab": null,
+      "name": "ENV-FAR-01 · 街区",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          76,
+          0,
+          -65
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.85,
+          0.85,
+          0.85
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-01/game_ready/ENV-FAR-01_lod2.glb",
+              "guid": "as_xo8fin9z"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#c5d5e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid01",
+      "prefab": null,
+      "name": "ENV-MID-01 · 街区",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -7,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid02",
+      "prefab": null,
+      "name": "ENV-MID-02 · 街区",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          14,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-02/game_ready/ENV-MID-02_lod1.glb",
+              "guid": "as_pl5xllzm"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_mid03",
+      "prefab": null,
+      "name": "ENV-MID-03 · 街区",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          58,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+              "guid": "as_ajnc9xf8"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_art_far02",
+      "prefab": null,
+      "name": "ENV-FAR-02 · 街区",
+      "parent": null,
+      "visible": true,
+      "pickable": true,
+      "category": "远景",
+      "transform": {
+        "position": [
+          35,
+          0,
+          -100
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.6,
+          0.6,
+          0.6
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-FAR-02/game_ready/ENV-FAR-02_lod1.glb",
+              "guid": "as_fja39hbm"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#b8c9dc",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nd_f1_street_building_0",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-03/game_ready/ENV-MID-03_lod1.glb",
+              "guid": "as_ajnc9xf8"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-03 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -25,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_building_3",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-04/game_ready/ENV-MID-04_lod1.glb",
+              "guid": "as_tiramaqo"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-04 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          36,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_building_5",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-04/game_ready/ENV-MID-04_lod1.glb",
+              "guid": "as_tiramaqo"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-04 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          80,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_building_6",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-01/game_ready/ENV-MID-01_lod1.glb",
+              "guid": "as_rbmicl5d"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "ENV-MID-01 · 街区",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          103,
+          0,
+          -19.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_0",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -21,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_1",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -4,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_2",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          13,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_3",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          30,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_4",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          47,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_5",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          64,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_6",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          81,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_wall_7",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-05/game_ready/ENV-MID-05_lod2.glb",
+              "guid": "as_f5xk4c5i"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d7d4cd",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "破损砖墙 · 街区前景边界",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          98,
+          0,
+          13.5
+        ],
+        "rotation": [
+          0,
+          1,
+          0,
+          6.123233995736766e-17
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          0.62
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_street_overpass",
+      "parent": null,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "visible": true,
+          "layer": 3,
+          "importScale": 1,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/ENV-MID-06/game_ready/ENV-MID-06_lod1.glb",
+              "guid": "as_zbkq4emj"
+            }
+          },
+          "aoMin": 0,
+          "aoMax": 0.55,
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#d5e2e2",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.12,
+                  "halftoneScale": 0.04
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "name": "高架桥 · 城市入口",
+      "visible": true,
+      "pickable": true,
+      "category": "街景",
+      "transform": {
+        "position": [
+          -30,
+          0,
+          -3
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          0.8
+        ]
+      }
+    },
+    {
+      "id": "nd_f1_curb_-1",
+      "name": "连续路缘 · 合批",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.2800000011920929,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-1-curbs.glb",
+              "guid": "as_3d02787d87df"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_edge_n",
+      "name": "道路涂装 · 合批",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          0.008999999612569809,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-1-paint.glb",
+              "guid": "as_ca95652f2fb1"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    },
+    {
+      "id": "nd_f1r0_walk_-1",
+      "name": "连续铺装人行道",
+      "parent": null,
+      "transform": {
+        "position": [
+          33,
+          -0.06499999761581421,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "category": "环境",
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/streets/game_ready/floor-1-walks.glb",
+              "guid": "as_049af3531dee"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.96,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ],
+      "prefab": null
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-02T06:29:38.540Z",
+    "updatedAt": "2026-10-07T06:41:27.706Z",
+    "author": "gen-level.mjs",
+    "notes": "GDD §4.1 层 1 · 主题 火场"
+  }
+}

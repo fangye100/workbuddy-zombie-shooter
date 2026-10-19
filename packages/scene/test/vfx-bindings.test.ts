@@ -1,9 +1,10 @@
+import {SCHEMA_VERSION} from '../src/document';
 import {it,expect} from 'vitest';
 import {createEmptySceneDocument,validateSceneDocument} from '../src/document';
 import {migrateToLatest,registerSceneMigrations} from '../src/migrate';
 import {VFX_VERSION,migrateVfxAsset,validateVfxAsset} from '../src/vfx';
 it('v15→16 preserves old content without inventing bindings and validates opaque refs',()=>{
- registerSceneMigrations();const d=createEmptySceneDocument('old');d.schemaVersion=15;const old=structuredClone(d.nodes);const r=migrateToLatest(d);expect(r.doc.schemaVersion).toBe(19);expect(r.doc.nodes).toEqual(old);expect(r.applied).toEqual(['support-generic-vfx-bindings','support-authored-vfx-emitters','support-authored-vfx-motion','support-projected-vfx-decals']);
+ registerSceneMigrations();const d=createEmptySceneDocument('old');d.schemaVersion=15;const old=structuredClone(d.nodes);const r=migrateToLatest(d);expect(r.doc.schemaVersion).toBe(SCHEMA_VERSION);expect(r.doc.nodes).toEqual(old);expect(r.applied).toEqual(['predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);
  r.doc.nodes[0]!.components.push({kind:'VfxBindings',enabled:true,bindings:{'opaque.phase':{resource:{path:'assets/vfx/a.vfx.json',guid:'a'},effectKey:'sprite'}}});expect(validateSceneDocument(r.doc).filter(d=>d.severity==='error')).toEqual([]);
  const c=r.doc.nodes[0]!.components.find(c=>c.kind==='VfxBindings')!;c.bindings['opaque.phase']!.resource.guid='';expect(validateSceneDocument(r.doc).some(d=>d.code==='E_VFX_BINDINGS')).toBe(true);
 });

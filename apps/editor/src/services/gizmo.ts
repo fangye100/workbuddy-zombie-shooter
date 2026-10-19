@@ -98,13 +98,13 @@ export class GizmoService {
       }
     | null {
     const s = this.host.state;
-    if (s.selectedIndex === null) return null;
+    if (s.selectedIndex === null&&!this.host.helperGizmo) return null;
     return {
       model: this.host.core.gizmoModel,
       k: this.host.core.gizmoK,
       origin: this.host.core.gizmoOrigin,
       axes: this.host.core.gizmoAxes,
-      mode: s.gizmoMode,
+      mode: this.host.helperGizmo&&s.gizmoMode==='scale'?'translate':s.gizmoMode,
       space: s.gizmoSpace,
     };
   }

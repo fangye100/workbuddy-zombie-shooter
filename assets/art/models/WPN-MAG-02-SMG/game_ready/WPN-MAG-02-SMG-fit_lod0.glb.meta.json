@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_bc00f36d6062",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-02-SMG-fit",
+    "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+    "report": "assets/art/models/WPN-MAG-02-SMG/WPN-MAG-02-SMG-fit-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-MAG-02-SMG-fit_lod0.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:3c5cee14c0a6e688dbf8a394f97c8b9513865634b8d317fda575d53dc315d880",
+  "updatedAt": "2026-10-12T01:45:24.673Z",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0,
+        0.14481996202468872,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        0,
+        0.06124438405036926,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}

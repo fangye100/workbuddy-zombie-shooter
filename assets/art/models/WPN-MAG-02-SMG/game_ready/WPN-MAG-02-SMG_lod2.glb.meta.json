@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_124f163dc27c",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-MAG-02-SMG",
+    "triangles": 77,
+    "level": 2,
+    "algorithm": "geometry-QEM-original-wedge-UV-candidate+source-surface-atlas",
+    "source": "assets/_delivery/WPN-20261011/WPN-MAG-02-SMG/WPN-MAG-02-SMG.glb",
+    "sourceHash": "0d3c8c1804527680e7348ed6491459991e23a4df75d541697ce75d1acb35fb0f",
+    "report": "assets/art/models/WPN-MAG-02-SMG/lod-report.json",
+    "calibrationSpace": "parseGlb(buffer,null,y) final import-space",
+    "canonicalToImportTranslation": [
+      0.00032245598964212533,
+      -0.00019034638175310874,
+      0.0002879925795875281
+    ],
+    "socketsStatus": "未标定；场景 override 优先于未来 sidecar 默认；当前无对应角色真实握点认证",
+    "variant": "game_ready",
+    "file": "WPN-MAG-02-SMG_lod2.glb",
+    "status": "visual-review-candidate",
+    "previousGlbHash": "805b41740fa7e164862c959b9291b8e16af25c6a5930f487d0633dc0d39614da",
+    "surfaceTransfer": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+    "textureFile": "WPN-MAG-02-SMG_lod2_basecolor.png"
+  },
+  "sourceHash": "sha256:bb25cfc7b42157f5e0f3c1131a4e40d6793024d25d0e7396166e9acab0674bbe",
+  "updatedAt": "2026-10-11T15:03:12.524Z"
+}

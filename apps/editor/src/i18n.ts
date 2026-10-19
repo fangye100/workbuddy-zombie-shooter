@@ -245,6 +245,7 @@ const DICT: Record<string, string> = {
   资产库: 'Asset Library',
   项目根: 'Project Root',
   返回上一层: 'Up One Level',
+  '筛选名称或路径…': 'Filter by name or path…',
   '筛选当前目录…': 'Filter current folder…',
   列表: 'List',
   图标: 'Icons',

@@ -1,0 +1,21 @@
+{
+  "packages/scene/src/decals.ts": "6e4f292e5952c2ea23571684dcdc7c440d2a4103a0e809f1ffa25b19769e316b",
+  "packages/runtime/src/solid-ray.ts": "3a5920f47a5ed4b673baa0fbe44952d30ce79f0fbe00be0f838f73394638112d",
+  "packages/runtime/src/mesh-ray.ts": "f57b5820cdf28c0d6d37e0ebd72b62d2d1615853004903344d0f94f226de1611",
+  "packages/runtime/src/weapon-combat.ts": "6b1c0f7260b7ca9bfa1e3179fac2d0d2874722d8be6d560556e1b6d72e666278",
+  "packages/zombie-game/src/combat-decals.ts": "e907ad2c7233d71c2ade6b1569812e5aa747062b9c9edafd7a47e19eaecbe87a",
+  "packages/zombie-game/src/enemy-attacks.ts": "8760f344d5aac6e6f789ddb0813c35dbcaf6b443ef3d30abec851aa8026f88bb",
+  "packages/zombie-game/src/session.ts": "eb22e49922f2527022603fb37bd350407a4b7a90b8c42ff48f3cc7b058213487",
+  "packages/zombie-game/src/presentation/combat-decals.ts": "82decb91280e736252a61654a14082e14d893abf5c3f0c142202b0d6f12d2282",
+  "apps/editor/src/services/runtime-decals.ts": "410a0fbaed816aeecaf41b6174d43ea00e4f540cff886aecac521248bbeb783e",
+  "apps/editor/src/services/decal-surfaces.ts": "5ba17b552debacc2223f9bd98b7b2562224ee7f8bfb56334d5efe7a280926d9c",
+  "assets/scenes/sandbox/combat-decal-whitebox.scene.json": "b7417b20470149d7c09e8b425f2134612f8f5c63a7bd07dda11af2423efcb832",
+  "assets/scenes/act1/floor-1.scene.json": "15445a7e1f9d26451a4b7b234152519e0e00ea47f3d8971053adf3def286a408",
+  "packages/scene/src/document.ts": "a7adddb35694343e9c5753b65ff86683b8e870ddc35c6c0f8114c9af3295bfc0",
+  "packages/scene/src/migrate.ts": "e5b439fb79fc9f1d0cf205206b522c4821c6106b4324213be09d19416d33e38a",
+  "packages/zombie-game/src/loader.ts": "59ff030fcc960d4eec1a093ae8f19b7aa3c9865f37b1afb960008feb1563bdda",
+  "packages/render/src/decal-instances.ts": "55833094f7850ca72d6e8b192e956784f3ea9e9d86b06451af59ef20c13d11e4",
+  "apps/editor/src/services/play-controller.ts": "5e1e4afdca4a095c2c0eb9800ca60e447ad29ff9c18546839998585fe85ee8f0",
+  "tools/level/gen-combat-decals.mjs": "a608b298b080d0989e44b89036e33f29bd558faf64a3dd2fedb81d63947ec538",
+  "aether.project.json": "b35c5a835f3480dacbad61fcbcbee23c1b9d71f20c0ee95ec0029f44148c6a55"
+}

@@ -2,13 +2,14 @@ import { gameText as g, gameLanguage, setGameLanguage } from './game-language';
 import type { RuntimeSession } from '@aether/zombie-game';
 import { RunHud } from './run-hud';
 import { CombatOverlay, type WorldProjection } from './combat-overlay';
+import type { WeaponModelView } from './weapon-model';
 import './game-hud.css';
 
 /** Read-only projection of simulation state; interaction goes back through PlaySession. */
 export function gameHudModel(runtime: RuntimeSession) {
   const player = runtime.player();
   const rooms = runtime.desc.rooms.filter(r => r.enabled);
-  const current = player ? rooms.find(r => player.x >= r.minX && player.x <= r.maxX && player.z >= r.minZ && player.z <= r.maxZ) : undefined;
+  const current = player ? rooms.find(r => runtime.insideRoom(r,player)) : undefined;
   const cleared = runtime.clearedRooms();
   const canInteract = !!current && runtime.interactionTarget() === current.nodeId;
   const wave = [...runtime.sessionEvents].reverse().find(e => e.type === 'wave-start' && e.roomNodeId === current?.nodeId)?.wave;
@@ -54,8 +55,8 @@ export class GameHud {
   private nextBusy = false;
   private campaignComplete = false;
   private currentRun = -1;
-  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean; audioControl?:HTMLElement }, project?: WorldProjection) {
-    this.feedback = project ? new CombatOverlay(project) : null;
+  constructor(actions: { interact(): void; retry(): void | Promise<void>; next(): Promise<'navigating' | 'complete' | 'blocked'>; stop(): void; resume(): void; pause(): void; toggleTouch(): boolean; audioControl?:HTMLElement; weaponModels?:()=>WeaponModelView }, project?: WorldProjection) {
+    this.feedback = project ? new CombatOverlay(project,actions.weaponModels) : null;
     this.root.className = 'game-hud'; this.root.hidden = true; this.root.setAttribute('aria-label', '游戏状态');
     this.health.max = 100; this.health.setAttribute('aria-label', '生命值');
     this.objective.setAttribute('aria-live', 'polite');

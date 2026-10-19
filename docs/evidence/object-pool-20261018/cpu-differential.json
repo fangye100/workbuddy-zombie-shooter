@@ -1,0 +1,44 @@
+{
+  "base": "ec1c8422573c1e2f19d99919f4b7e80685ff1a2b",
+  "head": "ec1c8422573c1e2f19d99919f4b7e80685ff1a2b",
+  "workingTree": true,
+  "scope": "CPU deterministic behavior; same data and seed; not a GPU benchmark",
+  "checks": [
+    {
+      "name": "decals",
+      "frames": 250,
+      "identical": true,
+      "sha256": "908568c0b96478dec704d476a8877764c697bd9a3aa85ca1d94b898ceb08e3e8"
+    },
+    {
+      "name": "characters",
+      "frames": 40,
+      "identical": true,
+      "sha256": "9461f9919c416fe6df8a7f1bc29275ee1633ee6c5d0dd6ae530a7541bef26a1f"
+    },
+    {
+      "name": "weapons",
+      "frames": 300,
+      "identical": true,
+      "sha256": "cee1d86e09141a89634dcc2397b4a9e2fcdae87083691a03cf23f80919ccb35b"
+    }
+  ],
+  "decalCpu20kMs": {
+    "base": [
+      6.718600000000038,
+      5.551300000000083,
+      4.940600000000131,
+      7.5120999999999185,
+      7.6064000000001215,
+      7.344499999999925
+    ],
+    "current": [
+      8.707300000000146,
+      7.086000000000013,
+      7.185400000000072,
+      7.513000000000147,
+      10.531499999999824,
+      9.60089999999991
+    ]
+  }
+}

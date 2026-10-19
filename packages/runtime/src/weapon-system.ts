@@ -1,4 +1,4 @@
-import type { WeaponAction, WeaponArsenal, WeaponDefinition } from '@aether/scene';
+import { validWeaponDefinition, type WeaponAction, type WeaponArsenal, type WeaponDefinition } from '@aether/scene';
 
 export interface WeaponState { id: string; magazine: number; reserve: number; level: number }
 export interface WeaponCarry { equipped: string; states: WeaponState[] }
@@ -33,6 +33,13 @@ export class WeaponSystem {
     for(const w of this.definitions)this.states.set(w.id,{id:w.id,magazine:w.ammo.magazineSize,reserve:w.ammo.reserveRounds,level:1});
   }
   get active(): WeaponDefinition { return this.definitions.find(w=>w.id===this.equippedId)!; }
+  /** 配置装配/markers，不改变武器状态、动作或计时；禁止修改其余玩法/表现字段。 */
+  configureMount(id:string,mount:Pick<WeaponDefinition['presentation'],'assembly'|'markers'>):void {
+    const definition=this.definitions.find(w=>w.id===id);if(!definition)throw new Error(`WEAPON_MOUNT_ID: ${id}`);
+    const candidate={...definition,presentation:{...definition.presentation,...structuredClone(mount)}};
+    if(!validWeaponDefinition(candidate))throw new Error(`WEAPON_MOUNT_INVALID: ${id}`);
+    definition.presentation=candidate.presentation;
+  }
   get state(): WeaponState { return this.states.get(this.equippedId)!; }
   get switching(): boolean { return this.pendingId!==null; }
   get capacity(): number { return this.active.ammo.magazineSize+(this.state.level-1)*this.active.upgrades.magazineStep; }

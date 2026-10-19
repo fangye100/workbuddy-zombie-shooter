@@ -1,0 +1,604 @@
+{
+  "id": "WPN-FUEL-01-fit-can",
+  "owner": "WPN-FUEL-01",
+  "source": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+  "sourceHash": "db4bb2b638b9f2f0c371fe16dc927e03fed76a415e1a38520199407c199c9e9f",
+  "recipe": {
+    "owner": "WPN-FUEL-01",
+    "source": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+    "planes": [
+      [
+        1,
+        0.53,
+        1
+      ]
+    ],
+    "rotation": [
+      0,
+      90,
+      0
+    ],
+    "scale": [
+      0.232,
+      0.301,
+      0.339
+    ],
+    "targets": [
+      800,
+      400,
+      150
+    ],
+    "reason": "交付note允许移除冲突软管；切Y>.53长软管，保留罐体+下部阀座；按Flame原can约.216长/.148径调整XYZ，保持原源；非均匀法线由变换后几何重新计算"
+  },
+  "pipelineHash": "ac6aa362d94ff8e5100c594af09bb8ea88460ab81e191817c1125952283898ef",
+  "helperHashes": {
+    "tools/art/build-weapon-lods.py": "869763b39d6e2b9dc5d250d156e19c15263c6a3a45a077a21828e0150ac676bf",
+    "tools/art/weapon-region-cut.py": "2d00fc03cff114c1fa517d4d7e3c69cfb63b447f27a1bc3141a63a4025cd3e1d",
+    "assets/characters/_tools/decimate_uvkeep.py": "c3ace99c440ef79c5e4fa6b5231a54e09bcfcad72dab438e68e201287084ca1b",
+    "tools/art/weapon-surface-transfer.py": "da7cb7bb710338a55c668926e2ad66e3ec8cc91576cbc449be6dea0440469682"
+  },
+  "repair": {
+    "planesSource": [
+      [
+        1,
+        0.53,
+        1
+      ]
+    ],
+    "afterPartition": {
+      "v": 13815,
+      "f": 27744,
+      "edges": 41742,
+      "boundary": 252,
+      "nonmanifold": 0
+    },
+    "cleanupRemovedFaces": 0,
+    "capFaces": 246,
+    "generatedCapBounds": [
+      [
+        -0.427478,
+        0.53,
+        -0.027006
+      ],
+      [
+        0.29639,
+        0.53,
+        0.026256
+      ]
+    ],
+    "afterCap": {
+      "v": 13815,
+      "f": 27990,
+      "edges": 41985,
+      "boundary": 0,
+      "nonmanifold": 0
+    },
+    "removedRegionBounds": [
+      [
+        -0.4274776562999864,
+        0.53,
+        -0.027069932805235085
+      ],
+      [
+        0.5292919874191284,
+        0.6934920886699601,
+        0.026415075565640697
+      ]
+    ],
+    "capUv": "最近原源三角UV；局部内部封口，非新贴图"
+  },
+  "normalization": "node-baked -> spatial edge-interpolated cut -> local cap -> explicit scaleXYZ / rotation -> parser XZcenter/Yfloor",
+  "scaleXYZ": [
+    0.232,
+    0.301,
+    0.339
+  ],
+  "origin": [
+    -0.00016441500000000803,
+    0.0,
+    0.0040626679999999915
+  ],
+  "sourceDimensions": [
+    1.0129079818725586,
+    0.6934920886285776,
+    0.4432740517292425
+  ],
+  "dimensionsM": [
+    0.15026988600000002,
+    0.15953,
+    0.216272488
+  ],
+  "status": "visual-review-candidate",
+  "visual": "pending",
+  "fit": "pending-headed-slot",
+  "levels": [
+    {
+      "level": 0,
+      "file": "WPN-FUEL-01-fit-can_lod0.glb",
+      "hash": "0fe2ce619d40ef506875a5c80c29934fee058be128300c8504fa258fd6a8c326",
+      "triangles": 680,
+      "topology": {
+        "v": 342,
+        "f": 680,
+        "edges": 1020,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 970,
+        "geometryTarget": 680,
+        "removedFaces": 0,
+        "addedCapFaces": 0,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.15068387037948752,
+        0.15944148649013998,
+        0.2151787409048027
+      ],
+      "surfaceRatio": 0.9516703604861643,
+      "boundsDrift": 0.005057264126897665,
+      "silhouetteIoU": [
+        0.9786598646953546,
+        0.9887319020549331,
+        0.9839823148586768
+      ],
+      "parserRecenterMeters": [
+        0.0003197242060332811,
+        6.535573058020068e-05,
+        0.0005330641247881934
+      ],
+      "surfaceTransfer": {
+        "method": "independent square cells; source-surface colour at nearest point on the SAME target triangle including gutter",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "cellPixels": 37,
+        "gutterPixels": 6,
+        "pullPush": false,
+        "texelSamples": 930920,
+        "mipEdgeComparison": {
+          "policy": "same source surface and identical geometry; bilinear normalized-UV texel centres, box mip0..3 (1024..128); neither anisotropic GPU/pixels nor art approval",
+          "before": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 1.170997729648035,
+              "edgeMeanRgb": 2.7586009898561823,
+              "edgeFractionAbove40": 0.009313725490196078
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 2.0774039218344162,
+              "edgeMeanRgb": 5.259039892176553,
+              "edgeFractionAbove40": 0.012254901960784314
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 3.547758196953191,
+              "edgeMeanRgb": 13.207131426342906,
+              "edgeFractionAbove40": 0.07303921568627451
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 6.190700008844033,
+              "edgeMeanRgb": 19.020997672257533,
+              "edgeFractionAbove40": 0.15196078431372548
+            }
+          ],
+          "after": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 1.118055555555584,
+              "edgeMeanRgb": 1.7916919025735718,
+              "edgeFractionAbove40": 0.018137254901960786
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 2.0488698257080387,
+              "edgeMeanRgb": 3.839396103196516,
+              "edgeFractionAbove40": 0.026470588235294117
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 3.3246595860566273,
+              "edgeMeanRgb": 5.412515369434256,
+              "edgeFractionAbove40": 0.033823529411764704
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 6.411471098856191,
+              "edgeMeanRgb": 9.48033903727214,
+              "edgeFractionAbove40": 0.051470588235294115
+            }
+          ]
+        },
+        "textureFile": "WPN-FUEL-01-fit-can_lod0_basecolor.png",
+        "textureHash": "717c688b39d4da63d9094544349fa5582e94f2a6b765d161685711b61882528e"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending",
+      "surfacePostprocess": {
+        "input": {
+          "glbHash": "e4f2333372b2c1a96db9f6226227c153dbd992152cda561aa7ce3995092ef1c0",
+          "surfaceTransfer": {
+            "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+            "resolution": [
+              1024,
+              1024
+            ],
+            "borderPixels": 2,
+            "searchDistancePercent": 10,
+            "sourceUvVFlipForObj": true,
+            "outputUvVFlipForGltf": true,
+            "filterResult": null,
+            "geometryUnchanged": true,
+            "transparentFractionAfterPullPush": 0.0,
+            "visual": "pending",
+            "sampleError": {
+              "samples": 3400,
+              "meanAbsoluteRgbError": 1.8480299258900696,
+              "p95AbsoluteRgbError": 8.139305862779926,
+              "fractionErrorAbove40": 0.005588235294117647,
+              "surfaceDistance": {
+                "RMS": 0.002310540759935975,
+                "diag_mesh_0": 1.1525743007659912,
+                "diag_mesh_1": 1.1603471285598117,
+                "max": 0.017627108842134476,
+                "mean": 0.0015441481955349445,
+                "min": 3.3358841733388545e-07,
+                "n_samples": 3400
+              },
+              "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+            },
+            "textureFile": "WPN-FUEL-01-fit-can_lod0_basecolor.png",
+            "textureHash": "5e7265107d672e65893e7102a277fe1dbd5deecbcf5e68cbca33b983bb63f806"
+          }
+        },
+        "geometryCornerSha256": "f1b7284a04da13b86e9d011b3557edb31357ac316ea4f231cfaddcc297ee88ee",
+        "normalCornerSha256": "4d26095fe9cb48c29f3681ceac7f6fae9102f8ecb7e587103d2917740557f369",
+        "tool": "tools/art/repair-weapon-prop-surface.py",
+        "toolHash": "b38df756c1588a0a8b7ee9fcf79d5fb60c0e1a8e6d034a780baaa07955ff9232"
+      }
+    },
+    {
+      "level": 1,
+      "file": "WPN-FUEL-01-fit-can_lod1.glb",
+      "hash": "979049dcd7e200bd8a78ba7cb4de152e82ca8ab1d97f424d403e6d157d7649df",
+      "triangles": 336,
+      "topology": {
+        "v": 171,
+        "f": 336,
+        "edges": 504,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 970,
+        "geometryTarget": 340,
+        "removedFaces": 6,
+        "addedCapFaces": 2,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.14960651885120735,
+        0.1583080824174251,
+        0.21516146570774314
+      ],
+      "surfaceRatio": 0.9230602902209184,
+      "boundsDrift": 0.007659484627185464,
+      "silhouetteIoU": [
+        0.9663134148260847,
+        0.9863708166489108,
+        0.9688335492842018
+      ],
+      "parserRecenterMeters": [
+        0.000858399970173368,
+        0.0006986498660326578,
+        0.0005244265262584133
+      ],
+      "surfaceTransfer": {
+        "method": "independent square cells; source-surface colour at nearest point on the SAME target triangle including gutter",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "cellPixels": 53,
+        "gutterPixels": 6,
+        "pullPush": false,
+        "texelSamples": 943824,
+        "mipEdgeComparison": {
+          "policy": "same source surface and identical geometry; bilinear normalized-UV texel centres, box mip0..3 (1024..128); neither anisotropic GPU/pixels nor art approval",
+          "before": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 1.4894011471785054,
+              "edgeMeanRgb": 2.2879682793508933,
+              "edgeFractionAbove40": 0.006944444444444444
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 2.6436113260742395,
+              "edgeMeanRgb": 8.489388587680288,
+              "edgeFractionAbove40": 0.022817460317460316
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 4.219656568501215,
+              "edgeMeanRgb": 15.151802444525243,
+              "edgeFractionAbove40": 0.08531746031746032
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 6.84258484408388,
+              "edgeMeanRgb": 20.800931195947815,
+              "edgeFractionAbove40": 0.1736111111111111
+            }
+          ],
+          "after": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 1.3992779982362993,
+              "edgeMeanRgb": 1.7817969199735082,
+              "edgeFractionAbove40": 0.01488095238095238
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 2.317184744268107,
+              "edgeMeanRgb": 4.015854728479653,
+              "edgeFractionAbove40": 0.016865079365079364
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 3.5392554012345543,
+              "edgeMeanRgb": 6.053681483106816,
+              "edgeFractionAbove40": 0.037698412698412696
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 5.449192915013217,
+              "edgeMeanRgb": 10.348229357114471,
+              "edgeFractionAbove40": 0.06547619047619048
+            }
+          ]
+        },
+        "textureFile": "WPN-FUEL-01-fit-can_lod1_basecolor.png",
+        "textureHash": "d3cc4322f349814ca7e797a8edaf271abd20803849cb0dcce41d05f440868487"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending",
+      "surfacePostprocess": {
+        "input": {
+          "glbHash": "57356fb772bbfa7bbf0bd05102704caf5367807399e3a4e0651ec4f96e95dd4d",
+          "surfaceTransfer": {
+            "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+            "resolution": [
+              1024,
+              1024
+            ],
+            "borderPixels": 2,
+            "searchDistancePercent": 10,
+            "sourceUvVFlipForObj": true,
+            "outputUvVFlipForGltf": true,
+            "filterResult": null,
+            "geometryUnchanged": true,
+            "transparentFractionAfterPullPush": 0.0,
+            "visual": "pending",
+            "sampleError": {
+              "samples": 1680,
+              "meanAbsoluteRgbError": 1.822933892062234,
+              "p95AbsoluteRgbError": 9.112756113864563,
+              "fractionErrorAbove40": 0.005357142857142857,
+              "surfaceDistance": {
+                "RMS": 0.004148851148784161,
+                "diag_mesh_0": 1.1466025114059448,
+                "diag_mesh_1": 1.1603471285598117,
+                "max": 0.02131052315235138,
+                "mean": 0.0029491311870515347,
+                "min": 1.6056227423177916e-06,
+                "n_samples": 1680
+              },
+              "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+            },
+            "textureFile": "WPN-FUEL-01-fit-can_lod1_basecolor.png",
+            "textureHash": "f831bc0944ea32eed5c6b1a9c74d529f3480eeb2d08a4374b418badd7fd16b57"
+          }
+        },
+        "geometryCornerSha256": "b83127e92ba8fb95de93d0de49f60e69582a91067732e3f1d5d7f33317b000ef",
+        "normalCornerSha256": "93d859743154bbce804127db4f182e8f118ce6552636ec6cadb121cdbca87b62",
+        "tool": "tools/art/repair-weapon-prop-surface.py",
+        "toolHash": "b38df756c1588a0a8b7ee9fcf79d5fb60c0e1a8e6d034a780baaa07955ff9232"
+      }
+    },
+    {
+      "level": 2,
+      "file": "WPN-FUEL-01-fit-can_lod2.glb",
+      "hash": "f627dbe77dd491bb8378d742acd2e729f2566b0265cef68f53e4afeb049f2cb0",
+      "triangles": 122,
+      "topology": {
+        "v": 63,
+        "f": 122,
+        "edges": 183,
+        "boundary": 0,
+        "nonmanifold": 0
+      },
+      "qemRepair": {
+        "topologyProtectedFloor": 970,
+        "geometryTarget": 127,
+        "removedFaces": 4,
+        "addedCapFaces": 0,
+        "policy": "props高genus微孔可丢失；保外部轮廓，局部封QEM新孔，仍需GPU验证阀/底火"
+      },
+      "dimensionsM": [
+        0.14654883036192973,
+        0.13142980928902734,
+        0.21529582430730143
+      ],
+      "surfaceRatio": 0.8797692688742403,
+      "boundsDrift": 0.17614361380914356,
+      "silhouetteIoU": [
+        0.9373887830510603,
+        0.9625402774286432,
+        0.9119957496869189
+      ],
+      "parserRecenterMeters": [
+        8.895827311219962e-05,
+        0.0004479384052750252,
+        0.0006359782047722154
+      ],
+      "surfaceTransfer": {
+        "method": "independent square cells; source-surface colour at nearest point on the SAME target triangle including gutter",
+        "resolution": [
+          1024,
+          1024
+        ],
+        "cellPixels": 85,
+        "gutterPixels": 6,
+        "pullPush": false,
+        "texelSamples": 881450,
+        "mipEdgeComparison": {
+          "policy": "same source surface and identical geometry; bilinear normalized-UV texel centres, box mip0..3 (1024..128); neither anisotropic GPU/pixels nor art approval",
+          "before": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 1.1152958516008662,
+              "edgeMeanRgb": 2.2605297393207966,
+              "edgeFractionAbove40": 0.00546448087431694
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 2.109931679995983,
+              "edgeMeanRgb": 8.475052247826046,
+              "edgeFractionAbove40": 0.01366120218579235
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 3.218316691503044,
+              "edgeMeanRgb": 16.61065858782781,
+              "edgeFractionAbove40": 0.10382513661202186
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 5.018123033648797,
+              "edgeMeanRgb": 20.47709124707338,
+              "edgeFractionAbove40": 0.2103825136612022
+            }
+          ],
+          "after": [
+            {
+              "level": 0,
+              "size": 1024,
+              "centerMeanRgb": 0.7661657559199339,
+              "edgeMeanRgb": 1.6762136919763042,
+              "edgeFractionAbove40": 0.00819672131147541
+            },
+            {
+              "level": 1,
+              "size": 512,
+              "centerMeanRgb": 1.8586065573770534,
+              "edgeMeanRgb": 3.563307552292803,
+              "edgeFractionAbove40": 0.00819672131147541
+            },
+            {
+              "level": 2,
+              "size": 256,
+              "centerMeanRgb": 3.154807984213711,
+              "edgeMeanRgb": 5.158332625158816,
+              "edgeFractionAbove40": 0.00819672131147541
+            },
+            {
+              "level": 3,
+              "size": 128,
+              "centerMeanRgb": 4.582944368548867,
+              "edgeMeanRgb": 8.006638226639037,
+              "edgeFractionAbove40": 0.02185792349726776
+            }
+          ]
+        },
+        "textureFile": "WPN-FUEL-01-fit-can_lod2_basecolor.png",
+        "textureHash": "863cef8a9f23dec8cd05c649a70095e338d3466b2b7cdff68df5154a94ac694b"
+      },
+      "textureSize": [
+        1024,
+        1024
+      ],
+      "visual": "pending",
+      "surfacePostprocess": {
+        "input": {
+          "glbHash": "f0787969d1fc3d652c62de6e25952f000399fcb5a471d18393ea834877fc2dbd",
+          "surfaceTransfer": {
+            "method": "MeshLab Texture Color closest-source-surface to independent per-face atlas",
+            "resolution": [
+              1024,
+              1024
+            ],
+            "borderPixels": 2,
+            "searchDistancePercent": 10,
+            "sourceUvVFlipForObj": true,
+            "outputUvVFlipForGltf": true,
+            "filterResult": null,
+            "geometryUnchanged": true,
+            "transparentFractionAfterPullPush": 0.0,
+            "visual": "pending",
+            "sampleError": {
+              "samples": 610,
+              "meanAbsoluteRgbError": 1.435444466057728,
+              "p95AbsoluteRgbError": 5.12609703362537,
+              "fractionErrorAbove40": 0.003278688524590164,
+              "surfaceDistance": {
+                "RMS": 0.006797262467443943,
+                "diag_mesh_0": 1.101094365119934,
+                "diag_mesh_1": 1.1603471285598117,
+                "max": 0.028213167563080788,
+                "mean": 0.0051142931915819645,
+                "min": 1.3851553376298398e-05,
+                "n_samples": 610
+              },
+              "policy": "五个面内样本，RGB 0..255，与原生最近源表面采样比较；不替代完整 texel 或 GPU 审计"
+            },
+            "textureFile": "WPN-FUEL-01-fit-can_lod2_basecolor.png",
+            "textureHash": "4a5d7de1d17362b99421be10fc1acaf1b6029f40dfe6d167631f1ba673875ba3"
+          }
+        },
+        "geometryCornerSha256": "386714c50401edf0524b81759e93b7f31b66e5eb99b8ef992ff895d050e65e80",
+        "normalCornerSha256": "266b980951a9cea26574a9079a16856ea9ff9790fc085ed36c180e60a0a54c15",
+        "tool": "tools/art/repair-weapon-prop-surface.py",
+        "toolHash": "b38df756c1588a0a8b7ee9fcf79d5fb60c0e1a8e6d034a780baaa07955ff9232"
+      }
+    }
+  ],
+  "surfacePostprocess": {
+    "tool": "tools/art/repair-weapon-prop-surface.py",
+    "toolHash": "b38df756c1588a0a8b7ee9fcf79d5fb60c0e1a8e6d034a780baaa07955ff9232",
+    "status": "visual-review-candidate",
+    "sourceUnchanged": true,
+    "positionsUnchanged": true,
+    "scope": "independently padded source-transfer atlas; geometry unchanged; GPU pending"
+  }
+}

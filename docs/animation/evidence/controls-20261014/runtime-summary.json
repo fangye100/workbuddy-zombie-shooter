@@ -1,0 +1,536 @@
+{
+  "description": "R8 用户桌面横移与观察入口的紧凑原始数据摘要；不是完整原始报告替代物。",
+  "sourceCommits": {
+    "base": "4bf33743314a57867a73322efdd3b6b7521b1a2d",
+    "implementation": "e083904cca1ebf7cbf0f554cd5742ce4b2785dd0",
+    "toolRestart": "a4b61c86e7f433e3f4cafd3423d6038c0f3a96e4",
+    "validated": "14138be2fffcf5470640eab67373c5c587f97216"
+  },
+  "runtimeReport": {
+    "path": ".workbuddy/tmp/r8-evidence/headed-retry2/observations.json",
+    "sizeBytes": 10199300,
+    "sha256": "4b96a140c420626069f22ff0bc7fc4423860a3a3469d314b1e7cd45b4578d8f4"
+  },
+  "command": "node tools/verify/strafe-motion.mjs --root C:/Users/fangy/WorkBuddy/game-design-zombie-worktree-01 --expected-head 14138be2fffcf5470640eab67373c5c587f97216 --controls-only true --cdp 9348 --hold-ms 1800 --out .workbuddy/tmp/r8-evidence/headed-retry2",
+  "acceptanceScope": "R8 controls/GameView",
+  "notApplicable": [
+    {
+      "name": "R7侧前45°肖像机位",
+      "reason": "R8专项使用作者GodView全身截图；原R7严格默认条件保留，未声明本轮验证该肖像机位。"
+    }
+  ],
+  "startedAt": "2026-10-14T08:32:27.034Z",
+  "finishedAt": "2026-10-14T08:32:43.747Z",
+  "environment": {
+    "root": "C:\\Users\\fangy\\WorkBuddy\\game-design-zombie-worktree-01",
+    "url": "https://fangye-win11-office.tail6b29a2.ts.net:5198/?scene=assets/scenes/sandbox/weapon-assembly-trial.scene.json",
+    "gpu": {
+      "secure": true,
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    },
+    "normalTls": true,
+    "headed": true
+  },
+  "counts": {
+    "checks": 30,
+    "passedChecks": 30,
+    "samples": 211,
+    "actions": 350,
+    "exceptions": 0,
+    "consoleErrors": 0,
+    "cleanupInputErrors": 0
+  },
+  "passed": true,
+  "checks": [
+    {
+      "name": "HTTPS/真实 NVIDIA",
+      "ok": true
+    },
+    {
+      "name": "Edit V保留自由飞行开关",
+      "ok": true
+    },
+    {
+      "name": "正常游戏视图与持枪",
+      "ok": true
+    },
+    {
+      "name": "作者GodView俯视跟随机位",
+      "ok": true
+    },
+    {
+      "name": "a初始无pointer侧移/面向",
+      "ok": true,
+      "samples": 21,
+      "wraps": 4,
+      "distanceM": 4.349999666213989,
+      "simulatedS": 0.9666666666666666,
+      "meanSpeedMps": 4.499999654704127,
+      "maxYawDeltaRad": 0.007499864324927392,
+      "maxActorYawDeltaRad": 0.007499864324927497,
+      "maxForwardFraction": 0.007499794016440919,
+      "maxFootSpanX": 0.7889698393065474
+    },
+    {
+      "name": "d初始无pointer侧移/面向",
+      "ok": true,
+      "samples": 21,
+      "wraps": 3,
+      "distanceM": 4.5000001192092896,
+      "simulatedS": 0.9999999999999999,
+      "meanSpeedMps": 4.50000011920929,
+      "maxYawDeltaRad": 0.0074998643249272684,
+      "maxActorYawDeltaRad": 0.007499864324927152,
+      "maxForwardFraction": 0.007499794016440797,
+      "maxFootSpanX": 0.8115512964142617
+    },
+    {
+      "name": "真实pointer更新非默认面向",
+      "ok": true
+    },
+    {
+      "name": "用户自由按钮在Pause进入同一观察导航",
+      "ok": true
+    },
+    {
+      "name": "用户观察orbit/pan/wheel实际改变机位且Pause冻结",
+      "ok": true
+    },
+    {
+      "name": "观察态V退出且两个按钮一致",
+      "ok": true
+    },
+    {
+      "name": "Pause观察返回后无pointer保留非默认面向",
+      "ok": true,
+      "samples": 14,
+      "wraps": 2,
+      "distanceM": 3.0000000596046448,
+      "simulatedS": 0.6666666666666666,
+      "meanSpeedMps": 4.500000089406967,
+      "maxYawDeltaRad": 0.00750366051728335,
+      "maxActorYawDeltaRad": 0.00750366051728335,
+      "maxForwardFraction": 0.007503590101979344,
+      "maxFootSpanX": 0.8056270064394471
+    },
+    {
+      "name": "Play V观察拦截游戏移动并Esc返回",
+      "ok": true
+    },
+    {
+      "name": "R8路径Stop回滚/资源释放",
+      "ok": true
+    },
+    {
+      "name": "真实Play重启原场景出生点",
+      "ok": true
+    },
+    {
+      "name": "a真实游戏横移/连续步态",
+      "ok": true,
+      "samples": 47,
+      "wraps": 7,
+      "distanceM": 8.100001811981201,
+      "simulatedS": 1.8000000000000012,
+      "meanSpeedMps": 4.50000100665622,
+      "maxFootSpanX": 0.8069972307167536
+    },
+    {
+      "name": "a本帧双手持握与保留回退",
+      "ok": true
+    },
+    {
+      "name": "aPause冻结原步态",
+      "ok": true
+    },
+    {
+      "name": "aGodView全身/双膝双足无遮挡",
+      "ok": true
+    },
+    {
+      "name": "a停步回idle",
+      "ok": true
+    },
+    {
+      "name": "d真实游戏横移/连续步态",
+      "ok": true,
+      "samples": 41,
+      "wraps": 6,
+      "distanceM": 8.100002408027649,
+      "simulatedS": 1.8000000000000014,
+      "meanSpeedMps": 4.500001337793135,
+      "maxFootSpanX": 0.8086488404554701
+    },
+    {
+      "name": "d本帧双手持握与保留回退",
+      "ok": true
+    },
+    {
+      "name": "dPause冻结原步态",
+      "ok": true
+    },
+    {
+      "name": "dGodView全身/双膝双足无遮挡",
+      "ok": true
+    },
+    {
+      "name": "d停步回idle",
+      "ok": true
+    },
+    {
+      "name": "w前后步态基本回归",
+      "ok": true
+    },
+    {
+      "name": "s前后步态基本回归",
+      "ok": true
+    },
+    {
+      "name": "释放输入回idle",
+      "ok": true
+    },
+    {
+      "name": "Stop作者文档/相机回滚",
+      "ok": true
+    },
+    {
+      "name": "Stop资源账目归零",
+      "ok": true
+    },
+    {
+      "name": "目标HEAD保持",
+      "ok": true
+    }
+  ],
+  "grips": [
+    {
+      "name": "a本帧双手持握与保留回退",
+      "samples": 47,
+      "maxRightResidualM": 2.8119928763101033e-7,
+      "maxLeftResidualM": 3.091085439936138e-7,
+      "retainedDiagnostics": [
+        "WEAPON_CLIP_MISSING: pistol-idle; base walk_l retained; procedural pose available only with configured IK"
+      ]
+    },
+    {
+      "name": "d本帧双手持握与保留回退",
+      "samples": 41,
+      "maxRightResidualM": 2.0907809760893423e-7,
+      "maxLeftResidualM": 3.071004537896632e-7,
+      "retainedDiagnostics": [
+        "WEAPON_CLIP_MISSING: pistol-idle; base walk_r retained; procedural pose available only with configured IK"
+      ]
+    }
+  ],
+  "observation": {
+    "before": {
+      "yaw": -1.5707963267948966,
+      "distance": 8,
+      "target": [
+        1.8369717678028544e-17,
+        1.18,
+        2.8000001907348633
+      ],
+      "elevationDeg": 55
+    },
+    "after": {
+      "yaw": -1.7807963267948974,
+      "distance": 9.019974812635006,
+      "target": [
+        0.10626606360631032,
+        1.238575132479543,
+        2.6363026601832793
+      ],
+      "elevationDeg": 50
+    },
+    "navigation": {
+      "btn-freecam": {
+        "text": "回游戏相机 V",
+        "title": "Play/Pause 观察：左拖环绕、右/中键平移、滚轮缩放；V 切换、Esc 返回游戏相机",
+        "active": true,
+        "pressed": "true"
+      },
+      "btn-observation-camera": {
+        "text": "回游戏相机",
+        "title": "Play/Pause 观察：左拖环绕、右/中键平移、滚轮缩放；V 切换、Esc 返回游戏相机",
+        "active": true,
+        "pressed": "true"
+      }
+    },
+    "pauseTick": 109,
+    "afterTick": 109,
+    "pauseClipTime": 0.36666666666666664,
+    "afterClipTime": 0.36666666666666664
+  },
+  "stops": [
+    {
+      "label": "r8-path-stop",
+      "state": "stopped",
+      "ledger": 0,
+      "models": {
+        "pending": 0,
+        "visibleDrawCount": 0,
+        "loaded": []
+      },
+      "motionNodes": 0,
+      "authorDocumentSha256": "d0898dc923a22ff9fb7eab19d008b4502a6b1fc39e5024aac91cd6216c27409a",
+      "camera": {
+        "yaw": 0,
+        "distance": 4.3,
+        "target": [
+          0,
+          1.15,
+          2.5
+        ],
+        "elevationDeg": 0
+      }
+    },
+    {
+      "label": "final-stop",
+      "state": "stopped",
+      "ledger": 0,
+      "models": {
+        "pending": 0,
+        "visibleDrawCount": 0,
+        "loaded": []
+      },
+      "motionNodes": 0,
+      "authorDocumentSha256": "d0898dc923a22ff9fb7eab19d008b4502a6b1fc39e5024aac91cd6216c27409a",
+      "camera": {
+        "yaw": 0,
+        "distance": 4.3,
+        "target": [
+          0,
+          1.15,
+          2.5
+        ],
+        "elevationDeg": 0
+      }
+    }
+  ],
+  "restart": {
+    "player": {
+      "x": 0,
+      "z": 2.5,
+      "runId": 2
+    },
+    "authorDocumentSha256": "d0898dc923a22ff9fb7eab19d008b4502a6b1fc39e5024aac91cd6216c27409a"
+  },
+  "images": [
+    {
+      "file": "no-pointer-a-game.png",
+      "path": ".workbuddy/tmp/r8-evidence/headed-retry2/no-pointer-a-game.png",
+      "sizeBytes": 297986,
+      "sha256": "64a67b3eb0f8b09189584037b8b9005fdd51288d6ed23020aa575ae42b44c1a7",
+      "versionedSha256": "64a67b3eb0f8b09189584037b8b9005fdd51288d6ed23020aa575ae42b44c1a7",
+      "screenshot": {
+        "file": "no-pointer-a-game.png",
+        "sample": 26,
+        "frameRange": [
+          130,
+          142
+        ],
+        "clip": "walk_l",
+        "phase": 0.21221192108138948,
+        "state": "playing",
+        "observing": false
+      }
+    },
+    {
+      "file": "actual-free-paused-navigation.png",
+      "path": ".workbuddy/tmp/r8-evidence/headed-retry2/actual-free-paused-navigation.png",
+      "sizeBytes": 417389,
+      "sha256": "177e8800e9fc159e7fc6cefd396ed5ce1cc5095981d7b14196d4efbf93b2f0c0",
+      "versionedSha256": "177e8800e9fc159e7fc6cefd396ed5ce1cc5095981d7b14196d4efbf93b2f0c0",
+      "screenshot": {
+        "file": "actual-free-paused-navigation.png",
+        "sample": 53,
+        "frameRange": [
+          305,
+          319
+        ],
+        "clip": "idle",
+        "phase": 0.09166666666666666,
+        "state": "paused",
+        "observing": true
+      }
+    }
+  ],
+  "failureReports": [
+    {
+      "path": ".workbuddy/tmp/r8-evidence/headed/observations.json",
+      "sizeBytes": 7674114,
+      "sha256": "8cc30a51f166f59492a15d0d65ec795cafabf4faa859f300f4eef73a6a22056a",
+      "targetHead": "e083904cca1ebf7cbf0f554cd5742ce4b2785dd0",
+      "passed": false,
+      "failedChecks": [],
+      "exceptions": [
+        "Error: 未采到自然宽步相位"
+      ]
+    },
+    {
+      "path": ".workbuddy/tmp/r8-evidence/headed-retry1/observations.json",
+      "sizeBytes": 5907007,
+      "sha256": "f8f485aac4956f0a1f3f69973c708723ee910528453b36d6289cc418a4fe0c65",
+      "targetHead": "a4b61c86e7f433e3f4cafd3423d6038c0f3a96e4",
+      "passed": false,
+      "failedChecks": [
+        "a侧前全身/双膝双足无遮挡"
+      ],
+      "exceptions": [
+        "Error: 观察截图不满足全身可见：side-front-view"
+      ]
+    }
+  ],
+  "validationLogs": {
+    "manifest": {
+      "path": ".workbuddy/tmp/r8-evidence/check-commands.json",
+      "sizeBytes": 2446,
+      "sha256": "043f98b019622afc7bee267e8634915dc0c64db7ab060957be532a5e39de4b97"
+    },
+    "checks": [
+      {
+        "file": "owner-tests-initial.log",
+        "command": "pnpm exec vitest run packages/zombie-game/test/presentation/game-controls.test.ts apps/editor/test/play-observation-navigation.test.ts apps/editor/test/free-camera.test.ts apps/editor/test/play-camera.test.ts",
+        "exitCode": 1,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/owner-tests-initial.log",
+          "sizeBytes": 1718,
+          "sha256": "19c1579c7f7b5928b0a155d0d5ce8133cdf05ca2c75e4e6e1841b3a0bdfb289b"
+        }
+      },
+      {
+        "file": "owner-tests.log",
+        "command": "pnpm exec vitest run packages/zombie-game/test/presentation/game-controls.test.ts apps/editor/test/play-observation-navigation.test.ts apps/editor/test/free-camera.test.ts apps/editor/test/play-camera.test.ts",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/owner-tests.log",
+          "sizeBytes": 695,
+          "sha256": "e341b932caf60daa99397b00233a7c40f0a674cf3e026468350e9783f28954a7"
+        }
+      },
+      {
+        "file": "probe-tests.log",
+        "command": "node --test tools/verify/strafe-motion.test.mjs tools/verify/weapon-assembly.test.mjs",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/probe-tests.log",
+          "sizeBytes": 7182,
+          "sha256": "28bd0489abcfb50d0af1103c372812a5aa9583c1e536b703352e2c365d73432f"
+        }
+      },
+      {
+        "file": "scene-check.log",
+        "command": "pnpm run scene:check",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/scene-check.log",
+          "sizeBytes": 3887,
+          "sha256": "befe97e13da08cada5d30335f941e4c1665479d8d6ff790aee45367a2f2a0da5"
+        }
+      },
+      {
+        "file": "typecheck.log",
+        "command": "pnpm run typecheck",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/typecheck.log",
+          "sizeBytes": 143,
+          "sha256": "23cb665f19955b5d37ad99d189bff150297a0ccd1ced0682431aad7c3c326b8d"
+        }
+      },
+      {
+        "file": "editor-build.log",
+        "command": "pnpm run editor:build",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/editor-build.log",
+          "sizeBytes": 2847,
+          "sha256": "9127c7a2fde6c4b75484b2839b5851db1dd1da1257e8f67ba6588a08a642a01a"
+        }
+      },
+      {
+        "file": "architecture-check.log",
+        "command": "pnpm run architecture:check",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/architecture-check.log",
+          "sizeBytes": 330,
+          "sha256": "fa8208bf96338ba13153da66ed4ef17d74ed6785e3a7cca274e8a3ea5ff0f807"
+        }
+      },
+      {
+        "file": "knowledge-check.log",
+        "command": "pnpm run knowledge:check",
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/knowledge-check.log",
+          "sizeBytes": 217,
+          "sha256": "bd5612d6c8dd5d9ab50b093e98a05ebfa58972e9210d02f805498da1fcb50c15"
+        }
+      },
+      {
+        "file": "presentation-regression-tests.log",
+        "command": "pnpm exec vitest run apps/editor/test/player-presentation.test.ts apps/editor/test/runtime-scene-motion.test.ts packages/zombie-game/test/presentation/player-motion.test.ts",
+        "exitCode": 1,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/presentation-regression-tests.log",
+          "sizeBytes": 1801,
+          "sha256": "575f291d06e79102d0e05f9bfb1e77e1dbb8a6d62f53028b93be7b1775e81ce1"
+        }
+      }
+    ],
+    "focusedTools": [
+      {
+        "file": "probe-restart-tests.log",
+        "command": "node --test tools/verify/strafe-motion.test.mjs",
+        "tests": 8,
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/probe-restart-tests.log",
+          "sizeBytes": 2181,
+          "sha256": "09e86222b70f510d483065b119b0ceaa895e746ea998e470011e7d69effe2418"
+        }
+      },
+      {
+        "file": "probe-controls-tests.log",
+        "command": "node --test tools/verify/strafe-motion.test.mjs",
+        "tests": 8,
+        "exitCode": 0,
+        "raw": {
+          "path": ".workbuddy/tmp/r8-evidence/probe-controls-tests.log",
+          "sizeBytes": 2180,
+          "sha256": "733372fcf5d955d0ea5b94ec497ad446f50a861d9b91851173dc9575378d2a44"
+        }
+      }
+    ],
+    "existingMigrationFailure": {
+      "test": "apps/editor/test/player-presentation.test.ts:75",
+      "hashes": [
+        {
+          "file": "apps/editor/test/player-presentation.test.ts",
+          "baseBlob": "b24b26a87c890981228c5106656550ada051e5d1",
+          "currentBlob": "b24b26a87c890981228c5106656550ada051e5d1"
+        },
+        {
+          "file": "packages/scene/src/migrate.ts",
+          "baseBlob": "07e457b1575fe3633afe44319ab85599a450d347",
+          "currentBlob": "07e457b1575fe3633afe44319ab85599a450d347"
+        },
+        {
+          "file": "packages/scene/src/document.ts",
+          "baseBlob": "019c047f5abc3489b92b182480fc82ccf8221a9e",
+          "currentBlob": "019c047f5abc3489b92b182480fc82ccf8221a9e"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "R7 侧前45°portrait此次notApplicable；严格默认未削弱。",
+    "踝关节高度不是足底接触标记，无world-lock或脚滑解决承诺。",
+    "桌面fallback使用explicit aim，沿稳定方向射击；touch无aim保留null及原辅助瞄准。",
+    "pistol-idle缺失的ready/base回退诊断保留，持握按本帧目标残差验收。"
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 19,
+  "schemaVersion": 23,
   "id": "sc_vfx_m3_flame",
   "name": "M3 VFX · flame",
   "act": null,
@@ -94,7 +94,17 @@
             ]
           },
           "cellSize": 0.5,
-          "baked": null
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ]
     },
@@ -371,7 +381,8 @@
                     "muzzle": "comic-muzzle",
                     "trail": "comic-trail",
                     "impact": "comic-impact"
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -533,7 +544,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               },
               {
@@ -695,7 +707,8 @@
                     "trail": "ink-tracer",
                     "impact": "ink-hit",
                     "resource": null
-                  }
+                  },
+                  "assembly": null
                 }
               }
             ]

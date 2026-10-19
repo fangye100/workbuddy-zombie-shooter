@@ -1,0 +1,171 @@
+
+> aether@0.1.0 editor:smoke C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie
+> node tools/verify/editor-smoke.mjs "--" "--headed" "--out" ".workbuddy/tmp/smoke-repair/run-5"
+
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/
+
+A. 启动与 WebGPU 上下文
+  [PASS] #fatal 错误卡片未出现 — display:none
+  [PASS] window.__editor 调试钩子已挂载 — typeof=object
+  [PASS] canvas 尺寸有效（高度立得住，>200px） — {"w":942,"h":560}
+  [PASS] 陈旧超大 dockH 按主行预算钳制，给视口保留200px — {"w":942,"h":200,"cssH":200,"dockH":620,"available":820}
+  [PASS] 钳制后画布至少200px（中心列未被挤死） — {"w":942,"h":200,"cssH":200,"dockH":620,"available":820}
+  [PASS] secure context 与实际编辑器硬件GPU — {"secure":true,"fallback":false,"info":{"vendor":"nvidia","architecture":"lovelace","description":""}}
+  [PASS] HUD 拿到 GPU adapter 名 — GPU nvidia lovelace选中 无（轻点选中 · Alt+点击穿透嵌套 · 双击/F 聚焦 · 拖拽/单指环绕 · 右键/双指平移 · 滚轮/捏合缩
+
+B. 帧循环与绘制统计
+  [PASS] drawCalls > 0（管线真的在画） — draws=103
+  [PASS] triangles > 0 — tris=761455
+  [PASS] FPS 有读数（SwiftShader 下 10 左右属正常） — fps=57
+  [PASS] 持续出帧（前后两次 drawCalls 均为正） — 103 → 103
+
+B2. 场景来自文件（ADR-010：场景是唯一数据载体；期望值由真源推导）
+  [PASS] 场景来源非 null（不是硬编码 fallback） — {"url":"/assets/scenes/act1/floor-1.scene.json","objects":57,"at":"2026-10-18T11:06:42.287Z"}
+  [PASS] 场景来源指向 .scene.json — /assets/scenes/act1/floor-1.scene.json
+  [PASS] 场景来源 = 项目文件的起始场景（assets/scenes/act1/floor-1.scene.json） — /assets/scenes/act1/floor-1.scene.json
+  [PASS] 物体数 = 起始场景的可渲染节点数（57） — objects=57 期望=57
+  [PASS] 层级列表物体名与起始场景逐个一致（57 个） — 多=无 少=无
+  [PASS] 层级列表 = 可渲染 − background（57） — list=57 期望=57 background=
+  [PASS] category 来自场景文件（按 NodeId 比对） — 57 个全对
+  [PASS] pickable 来自场景文件（按 NodeId 比对） — 57 个全对
+
+B3. 行为注册表（glob 宿主分裂防线）
+  [PASS] 行为注册表非空（glob 在浏览器端命中了 assets/behaviors） — {"size":1,"ids":["debug-on-trigger-log"],"schemaIssues":0}
+  [PASS] 注册表含 debug-on-trigger-log（真源清单：assets/behaviors/*.ts） — ["debug-on-trigger-log"]
+  [PASS] 行为 schema 自洽（注册期零 schema 诊断） — schemaIssues=0
+  [PASS] 独立冒烟夹具已从文件载入
+
+C. SelectionService（选中/悬停状态机）
+  [PASS] 场景对象列表非空 — objects=5
+  [PASS] selectObject → getSelected 往返一致 — {"sel":0,"name":"冒烟父节点"}
+  [PASS] selectedName 返回字符串 — 冒烟父节点
+  [PASS] setHovered → getHovered 往返一致 — hovered=0
+  [PASS] 取消选中后 getSelected 为 null — selected=null
+
+D. HierarchyService（层级/显隐/统计）
+  [PASS] getSubMeshCount 返回正整数 — sub=1
+  [PASS] 子网格显隐切换不抛错
+  [PASS] recountTriangles 后三角形数仍为正 — tris=4272
+  [PASS] getObjectBounds 返回有限半径 — {"r":0.8660254037844386,"c":3}
+
+E. MaterialPanelService（材质三层语义）
+  [PASS] 材质库可读 — materials=7
+  [PASS] getSlotMaterial 返回槽位对象 — keys=10
+  [PASS] createSlotInstance + ensureOverride 不抛错
+  [PASS] discardOverride 后槽位仍可读
+  [PASS] exportInstances / exportSlots 可导出 — {"inst":1,"slots":true}
+
+F. PickingService（屏幕↔世界）
+  [PASS] getEye 返回 3 分量 — len=3
+  [PASS] pointerRay 返回原点+方向 — {"o":3,"d":3}
+  [PASS] worldToScreen 返回有限像素坐标 — {"x":807,"y":365,"behind":false}
+  [PASS] pickAt 屏幕中心返回索引或 null（不抛错） — hit=3
+
+G. GizmoService（变换/检视）
+  [PASS] gizmo mode/space 切换 + getGizmoInfo 可读 — keys=6
+  [PASS] 位置/旋转/缩放写入后状态可读回 — {"p":[-1,0.5,0],"r":[0,0.7853981633974483,0],"sc":1.2}
+  [PASS] setGizmoActiveAxis 设置/清空不抛错
+  [PASS] getObjectQuat 返回 4 分量四元数 — len=4
+
+G2. 视口拖拽写回场景文档（不再有"两份真源"）
+  [PASS] ★ 找到视口里的 gizmo 手柄（可点中） — {"x":510,"y":198}
+  [PASS] ★ 拖拽真的移动了物体（视口有反应） — moved=0.0156m 方向=[60,0]
+  [PASS] ★ 文档被写入且与视口一致（从文档重算的世界位置 == 视口位置） — 一致性=0.00e+0 文档 [0.6000000000000001,1,0] → [0.6000000000000001,1.0155977943323276,0]
+  [PASS] ★ 写入的是**局部**变换（不是把世界值当局部值写进去） — 局部 [1.6,0.4155977943323276,0] vs 世界 [0.6000000000000001,1.0155977943323276,0]
+  [PASS] ★ 一次拖拽 = 一条撤销编辑；撤销后文档与视口都回到起点 — undo 0 →(拖拽后) 1 →(撤销后) 0；视口回退 0.00e+0 文档回退 0.00e+0
+  [PASS] 拖拽后 dirty 亮起（面板显示未保存） — dirty=true
+
+G2b. 拖父节点时子树跟随（视口物体是扁平的）
+  [PASS] ★ 找到"带可渲染子节点"的节点可拖（G2b 前提） — "nd_smoke_parent"
+  [PASS] ★ 父节点真的被拖动了（G2b 前提） — moved=0.0253m
+  [PASS] ★ 拖父节点时子物体跟着走，且视口与文档一致 — 节点 nd_smoke_parent：子 ["0.0253"]（位移量）
+  [PASS] ★ 撤销后子物体也回到起点（子树一起回写） — children=1
+
+G2c. 旋转拖拽写回场景文档
+  [PASS] ★ 转到旋转手柄（G2c 前提） — "nd_smoke_parent"
+  [PASS] ★★ 旋转拖拽写回文档（旋转真的变了，不是被丢弃） — 文档旋转前后 |dot|=0.986291（1 = 没变）；视口 vs 文档 |dot|=1.000000（1 = 一致）
+  [PASS] ★ 撤销旋转后文档与视口一起回到原姿态 — undo 0→1；视口回退 |dot|=1.000000 文档回退 |dot|=1.000000
+
+H. 动画面板（检视页条件分组 / 资产库生成路径）
+  [PASS] 左栏不再有「模型预览」分组（面板已收掉）
+  [PASS] 动画分组不在左栏（已并入检视页）
+  [PASS] 动画分组在检视页且默认隐藏（场景无带骨物体）
+  [PASS] 顶栏状态行 #model-info 存在（原模型预览信息行迁移）
+  [PASS] 左栏分组只剩场景层级 — hierarchy
+  [PASS] 资产库 dock 左缘贴屏幕（x=0） — dockLeft=0
+  [PASS] 资产库 dock 右缘接到 Inspector 前 — dockRight=1278 inspLeft=1284
+  [PASS] 场景层级下边缘 = 资产库上边缘 — leftBottom=645 dockTop=645
+  [PASS] 顶级「刷怪点」tab 与独立 pane 已移除
+  [PASS] 层级功能体（✦）行数 = 起始场景 SpawnPoint 组件数（1） — rows=1
+  [PASS] 刷怪点分组存在于检视页且未选中时隐藏（选中驱动）
+  [PASS] 点选 ✦ 功能体行后刷怪点分组出现
+  [PASS] 选中态回读到该功能体（selectedNodeId 一致）
+  [PASS] ✦ 行高亮 .sel
+  [PASS] 取消选中后分组收起
+  [PASS] 生成后对象数 +1（addObject 新增，不再替换角色槽） — 5 → 6
+  [PASS] 选中带骨物体后动画分组出现
+  [PASS] hasAnimation 为真且能列出 clip — {"has":true,"clips":6}
+  [PASS] 播放/暂停状态机正确 — {"a":true,"b":false,"t":0.2}
+  [PASS] seekAnimation 后时间被写入 — t=0.2
+  [PASS] 撤销导入后对象数回落且作者状态干净 — 5 vs 基线 5
+
+J. AssetPreview（资产预览 / 动画时间轴 / 骨骼 X-ray）
+  [PASS] 资产预览宿主 #asset-preview-host 存在
+  [PASS] 主视图骨骼 X-ray 按钮 .gz-xray 存在
+  [PASS] window.__editor.preview 调试钩子已挂载
+  [PASS] 载入 rigged GLB 后预览有对象 — {"hasObject":true,"isAnim":true,"playing":true,"time":1.3999333015441824,"duration":1.9666666984558105,"clip":0,"skeletonVisible":false,"textured":true,"style":"textured","tris":3000,"lodCount":4,"sizeTier":0,"viewH":200}
+  [PASS] 预览物体带骨骼动画（isAnim） — isAnim=true
+  [PASS] 预览自动播放（playing） — playing=true
+  [PASS] 预览画布有有效尺寸 — {"w":300,"h":200,"disp":"block"}
+  [PASS] Timeline 片段下拉有选项 — clips=6
+  [PASS] Timeline 时间轴文本格式正确 — 1.40 / 1.97 s
+  [PASS] 动画时间在推进（考虑循环 wrap，Timeline 实时更新） — 1.400 → 0.633（前进 1.200 / 时长 1.967）
+  [PASS] 骨骼 X-ray 按钮激活
+  [PASS] 预览骨骼 X-ray 叠加开启
+  [PASS] 预览贴图生效（textured=true，根因：flags 位每帧被 packMaterial 重置）
+  [PASS] 白模切换生效（textured=false）
+  [PASS] 切回贴图生效
+  [PASS] LOD 家族下拉就位（≥2 档，manifest lods[]） — lodCount=4
+  [PASS] LOD切换实际载入清单对应高档面数 — 10500 → 79980
+  [PASS] 切回低档面数回落 — back=10500
+  [PASS] cycleSize(+1) 视图变高 — 200 → 340px
+  [PASS] cycleSize(-1) 回落 — 340 → 200px
+  [PASS] 悬停空格 = 下一档（capture 拦截生效） — tier 0 → 1
+  [PASS] Shift+空格 = 上一档 — tier 1 → 0
+  [PASS] 3D 视图下方标准开关：贴图 / 骨骼 — ["贴图","骨骼"]
+  [PASS] rigged 资产骨骼开关可用
+  [PASS] 纯网格资产骨骼开关禁用 + 复位 + 明示原因 — {"disabled":true,"checked":false,"title":"该资产无骨骼（纯网格）"}
+预览截图：C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie\.workbuddy\tmp\smoke-repair\run-5\editor-preview-smoke.png
+
+J2. AssetBrowser UI（上一层按钮 / 右键菜单四件套 / 行内重命名）
+  [PASS] 返回上一层按钮 .asset-up 存在
+  [PASS] 子目录里上一层可用
+  [PASS] 点击上一层回到父目录 — assets
+  [PASS] 项目根上置灰
+  [PASS] 右键后菜单打开且条目被选中
+  [PASS] 菜单恰好一条分隔线 — seps=1
+  [PASS] 分隔线后依次是四个通用文件动作（zh 源文案） — ["进入绑定 · 纯网格（仅 .glb）","进入绑定 · 已有骨骼（仅 .glb）","载入场景（仅 .glb）","复制相对路径","复制绝对路径","重命名…","在资源管理器中显示"]
+  [PASS] 复制相对路径 HUD 回显确切相对路径 — 已复制相对路径：.smoke/editor-ui-gHwoxa/probe.json
+  [PASS] 剪贴板内容 = 相对路径 — ".smoke/editor-ui-gHwoxa/probe.json"
+  [PASS] beginRename 进入编辑态（输入框出现且预填旧名）
+  [PASS] Enter 提交后编辑态退出 + 列表刷新出新名 — ["probe2.json"]
+  [PASS] 改名真实落盘（新路径 200 / 旧路径 404） — {"disk":{"neu":200,"old":404},"hud":"已重命名 → .smoke/editor-ui-gHwoxa/probe2.json"}
+  [PASS] Esc 取消编辑态且不落盘
+
+截图：C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie\.workbuddy\tmp\smoke-repair\run-5\editor-smoke.png
+
+N. 多语言切换（zh ↔ en）
+  [PASS] 语言切换按钮 [data-lang-toggle] 存在且可点
+  [PASS] 点击后持久化 lang=en
+  [PASS] en 模式资产库标题 = Asset Library — "Asset Library"
+  [PASS] en 模式「上一层」tooltip = Up One Level — "Up One Level"
+  [PASS] en 模式筛选占位符已翻译 — "Filter by name or path…"
+  [PASS] 实际按钮切回zh并刷新中文资产库 — {"lang":"zh","title":"资产库"}
+
+============================================================
+断言：123 PASS / 0 FAIL / 0 SKIP（共 123）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS

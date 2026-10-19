@@ -23,11 +23,26 @@ HUD 才能使用引擎。
 
 ## 数据与失败行为归属
 
+2026-10-20 主线 `708e8bd6` 与 VFX `0276e36f` 合并后，场景统一为 **v23**。
+`packages/scene/src/migrate.ts` 保留主线 v15→v22 的连续迁移，并补 v22→v23；
+已经发布的 VFX v16–v19 的可选组件、资源 GUID 和作者配置原样保留，不按重号猜测来源。
+旧 VFX 场景经过同一迁移补导航/装配的缺省值，真实 v19 资源快照由
+`packages/scene/test/integrated-v23.test.ts` 验证。关卡生成器读取现有共享契约加载器，
+不另设版本真源。平面导航过滤完全处于脚底以下的地面障碍，但仍保留其射线碰撞数据；
+三维导航、动态门、武器装配和 VFX 的既有 owner 不变。
+
+投影纹理 VFX 的接收面类型名为 `VfxDecalReceiver`，程序图案贴花继续使用
+`DecalReceiver`；两个既有功能均保留，避免公共出口同名冲突。敌人事件投影与
+战斗贴花通知消费同一真实攻击阶段；武器的 VFX 队列和投射物对象池均在 Stop 清空。
+
 - 场景/schema/项目/sidecar 真源仍在 `packages/scene`；本次迁移未引入第二份场景缓存
   或内联资产。稳定 NodeId、带 GUID 的 AssetRef、迁移诊断和场景登记规则继续有效。
 - “场景是唯一内容载体”禁止硬编码场景实例，不要求把角色定义或可复用资产元数据复制进
   每个场景。`aether.project.json` 持有场景登记/启动选择，roster/stat JSON 持有角色
   定义，同名 sidecar 持有可复用资产设置。
+- 通用资源借还与容量/异常契约归 `@aether/core` 的 `ObjectPool<T>`；各 Framework 模块
+  适配自己的资源与复位，游戏保留策略；不把 ECS 代次、GPU 缓冲工作集或攻击配额强套为对象池。
+  见[对象池契约](object-pool.md)。
 - 通用编辑命令、行为端口、线段/实体碰撞、弹药、装备计时和武器策略保留在
   `@aether/runtime`。
 - `RuntimeSession`、僵尸关卡装载、`RunProgress`、敌人攻击、`AudioFramePlanner`、

@@ -29,7 +29,9 @@ export function axisPlaneNormal(viewDir: V3, axisDir: V3): V3 {
 
 /** 旋转拖拽的平面内正交基（u、w 都 ⊥ 轴；u 由视线决定，拖拽期间稳定） */
 export function rotatePlaneBasis(axisDir: V3, viewDir: V3): { u: V3; w: V3 } {
-  const u = m4.v3norm(m4.v3cross(axisDir, viewDir));
+  const cross=m4.v3cross(axisDir,viewDir);
+  // 正对旋转环时视线平行环法线，仍须提供稳定的平面基，不能得到零向量。
+  const u = m4.v3norm(Math.hypot(...cross)<1e-7?m4.v3cross(axisDir,Math.abs(axisDir[1])<.9?[0,1,0]:[1,0,0]):cross);
   const w = m4.v3cross(axisDir, u);
   return { u, w };
 }

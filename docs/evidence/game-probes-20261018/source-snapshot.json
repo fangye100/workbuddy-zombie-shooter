@@ -1,0 +1,49 @@
+{
+  "baseCommit": "0231dda1516fb99bef2f867d3bc6241ba2339480",
+  "files": [
+    {
+      "path": "aether.project.json",
+      "sha256": "4513b0164602493c539d5bb2ef5fa8580a1aae095ef30a63f0aa825cee2e9684"
+    },
+    {
+      "path": "package.json",
+      "sha256": "d8f7ebb008eb53cca150cc9e34b02251541f1dc4b0691444c055a2d37176a15e"
+    },
+    {
+      "path": "assets/scenes/sandbox/game-probes.scene.json",
+      "sha256": "271470d8c5089407a7050a24ab6108c0078e7c1aed4068f279b11f2ab12c4202"
+    },
+    {
+      "path": "tools/verify/editor-smoke-all.mjs",
+      "sha256": "9a0838a1d8ad4f2c70f9834060f67738026c8da40c7d04bac791e94f778b5af3"
+    },
+    {
+      "path": "tools/verify/editor-smoke.mjs",
+      "sha256": "e635576623410cbc2bcc58ed1b4d517136827980378f9a85b66231b67407a676"
+    },
+    {
+      "path": "tools/verify/editor-binding-smoke.mjs",
+      "sha256": "4650f9e46337c5d1c2bc81af323c2f38e93b74d6e687c17f7f55f2e8ad94b75b"
+    },
+    {
+      "path": "tools/verify/combat-probe.mjs",
+      "sha256": "eff5a06fc877c40ea8a31331fa34b5d5b16f944e6e615bf0fed23f63cacbba3a"
+    },
+    {
+      "path": "tools/verify/dynamic-skin-probe.mjs",
+      "sha256": "e223dcf2453177349026b41f4983cc21acf327637ed45f36b2594f550ec52b31"
+    },
+    {
+      "path": "tools/verify/editor-smoke-lib.mjs",
+      "sha256": "a891f27478e11652bf79dcb6764df904a46a3f068cee8a83473314a97df165e9"
+    },
+    {
+      "path": "tools/verify/game-probe-lib.mjs",
+      "sha256": "49691fc45feaac657e8540b3c83896e1dea6d121eecb6dfa88c8e0510d97cf72"
+    },
+    {
+      "path": "tools/verify/game-probe-oracles.mjs",
+      "sha256": "a79b7aa39667a04ff4f4a27fd7b602b09d3e52ec9e969a8ce8e81e17e9abbfc8"
+    }
+  ]
+}

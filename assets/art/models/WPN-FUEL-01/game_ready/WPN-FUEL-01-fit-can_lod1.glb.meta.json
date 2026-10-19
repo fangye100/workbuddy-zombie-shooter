@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_6bdc2bc66ee0",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-FUEL-01-fit-can",
+    "source": "assets/_delivery/WPN-20261011/WPN-FUEL-01/WPN-FUEL-01.glb",
+    "sourceHash": "db4bb2b638b9f2f0c371fe16dc927e03fed76a415e1a38520199407c199c9e9f",
+    "report": "assets/art/models/WPN-FUEL-01/WPN-FUEL-01-fit-can-fit-report.json",
+    "calibrationSpace": "parseGlb final import-space metre",
+    "variant": "game_ready",
+    "file": "WPN-FUEL-01-fit-can_lod1.glb",
+    "status": "visual-review-candidate"
+  },
+  "sourceHash": "sha256:979049dcd7e200bd8a78ba7cb4de152e82ca8ab1d97f424d403e6d157d7649df",
+  "updatedAt": "2026-10-12T04:42:31.166884+00:00",
+  "modelSockets": {
+    "insertion": {
+      "position": [
+        0,
+        0.14406034722924232,
+        0.07853393748402596
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "primaryGrip": {
+      "position": [
+        0,
+        0.0728217139840126,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "base": {
+      "position": [
+        0,
+        0.06332322955131531,
+        -0.10758073627948761
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  }
+}

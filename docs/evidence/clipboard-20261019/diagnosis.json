@@ -1,0 +1,39 @@
+{
+  "旧脚本失焦": {
+    "writes": [
+      {
+        "expected": true,
+        "length": 34,
+        "focus": false,
+        "activation": false,
+        "settled": "rejected",
+        "error": "NotAllowedError: Failed to execute 'writeText' on 'Clipboard': Document is not focused."
+      }
+    ],
+    "commands": [
+      {
+        "cmd": "copy",
+        "focus": false,
+        "activation": false,
+        "active": "TEXTAREA",
+        "selection": 34,
+        "result": false
+      }
+    ],
+    "events": []
+  },
+  "前置聚焦与真实点击": {
+    "writes": [
+      {
+        "expected": true,
+        "length": 34,
+        "focus": true,
+        "activation": true,
+        "settled": "resolved"
+      }
+    ],
+    "commands": [],
+    "events": []
+  },
+  "说明": "只记录委托原生API的定向诊断，不将带观察器的试跑当最终验收；正式all-1未替换任何剪贴板API。"
+}

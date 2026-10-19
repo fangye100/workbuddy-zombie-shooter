@@ -1,7 +1,7 @@
 import {RibbonHistory} from '@aether/runtime';
 import {RibbonVfxPlanner,RIBBON_VFX_SLOTS} from '@aether/zombie-game/presentation/ribbon-vfx-planner';
 import {AuthoredDecals} from './authored-decals';
-import type {DecalReceiver} from '@aether/render';
+import type {VfxDecalReceiver} from '@aether/render';
 import {AuthoredVfx} from './authored-vfx';
 import { VfxPass } from '@aether/render';
 import type { RendererCore } from '@aether/render';
@@ -25,7 +25,7 @@ export class PlayVfx {
   private generation=0;
   private pass:VfxPass|null=null;
   lastReleased:unknown=null;
-  constructor(private readonly core:RendererCore,receivers:(doc:SceneDocument)=>readonly DecalReceiver[]=()=>[]){this.decals=new AuthoredDecals(receivers);}
+  constructor(private readonly core:RendererCore,receivers:(doc:SceneDocument)=>readonly VfxDecalReceiver[]=()=>[]){this.decals=new AuthoredDecals(receivers);}
   start(session:PlaySession,doc?:SceneDocument):void {
     this.stop();const generation=++this.generation;
     const resolved=doc?resolveVfxBindings(doc):{bindings:{},diagnostics:[]};

@@ -1,0 +1,1950 @@
+{
+  "status": "assembly-trial-awaiting-headed-fit",
+  "space": "parseGlb final import-space metre; metadata importer used",
+  "sources": {
+    "pistol": {
+      "asset": {
+        "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+        "guid": "as_e4ugmrq3"
+      },
+      "sha256": "90e5b77f9139eeec98b949d864a915c4880a8a906ae8012a4137f1fdff906113",
+      "boundsMin": [
+        -0.023362521082162857,
+        0,
+        -0.14035393297672272
+      ],
+      "boundsMax": [
+        0.023362521082162857,
+        0.19512608647346497,
+        0.14035393297672272
+      ],
+      "modelSockets": {
+        "primaryGrip": {
+          "position": [
+            0,
+            0.057,
+            -0.09
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            0.007,
+            0.112,
+            -0.063
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0,
+            0.157,
+            0.14
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "magazine": {
+          "position": [
+            0,
+            0.105,
+            -0.102
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "chamber": {
+          "position": [
+            0.021,
+            0.164,
+            -0.015
+          ],
+          "rotation": [
+            0,
+            -0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    },
+    "launcher": {
+      "asset": {
+        "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+        "guid": "as_f2f39beb7444"
+      },
+      "sha256": "0659ccf01b8a58a45c132a623e6cf7c250d3296e2aefa0267a6ddeaed10dc9b3",
+      "boundsMin": [
+        -0.37564617395401,
+        0,
+        -0.10116872936487198
+      ],
+      "boundsMax": [
+        0.37564617395401,
+        0.40481892228126526,
+        0.10116872936487198
+      ],
+      "modelSockets": {
+        "primaryGrip": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            0.048,
+            0.213,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0.375,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "magazine": {
+          "position": [
+            -0.225,
+            0.105,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "chamber": {
+          "position": [
+            -0.184,
+            0.295,
+            0.036
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    },
+    "mag": {
+      "asset": {
+        "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+        "guid": "as_30abf3e8f08f"
+      },
+      "sha256": "bdb95a7b413e443e93994b40de57af11a0d0484b8a9972fe7c8898e5ea221c4d",
+      "boundsMin": [
+        -0.022186949849128723,
+        0,
+        -0.010323269292712212
+      ],
+      "boundsMax": [
+        0.022186949849128723,
+        0.10927759855985641,
+        0.010323269292712212
+      ],
+      "modelSockets": {
+        "insertion": {
+          "position": [
+            0,
+            0.108,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "primaryGrip": {
+          "position": [
+            0,
+            0.045,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "base": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "measurement": "candidate on parsed point-surface: grip region / barrel extreme / insertion top; no remesh"
+    }
+  },
+  "character": {
+    "asset": {
+      "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+      "guid": "as_hpnf387i"
+    },
+    "sha256": "4cb127bddaefd616eb32454ba4be5b16278d6acc3719830e9a858091c8d09ee5",
+    "handTipDistanceM": 0.163659,
+    "boneSockets": {
+      "rightHand": {
+        "bone": "RightHand",
+        "contact": {
+          "position": [
+            -0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "leftHand": {
+        "bone": "LeftHand",
+        "contact": {
+          "position": [
+            0.065,
+            -0.012,
+            0.004
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      }
+    },
+    "measurement": "H01 normalized bind wrist to hand tip; palm-centre offset candidate within hand extent; GPU contact not yet accepted"
+  },
+  "limitations": [
+    "WPN01 +Z front sign inferred from barrel/handle geometry, requires headed muzzle face confirmation.",
+    "H01 palm offsets and orientations are mesh/bone measurement candidates; fingers are not procedurally curled.",
+    "WPN01 single mesh includes closed grip/base silhouette; original integral geometry remains during Mag01 removal, cannot certify separate magazine slot.",
+    "Launcher projectile absent: no substitute mesh.",
+    "Shell primer art unresolved; WPN02-06 bodies pending external delivery.",
+    "Legacy simulation weaponMount is capsule centre; model muzzle visual is separate and difference is exposed, ballistics unchanged."
+  ],
+  "cpuBindProbe": {
+    "status": "numeric-only-not-GPU-fit",
+    "conditions": "H01 finalparse bind pose, no shared Spine clip; each yaw uses real RuntimeSession.reset/setFire/step and same-tick fireStep effect, zero recoil. ActorY=0; P-01 capsuleHeight=1.8 from packages/content/src/generated/stats.generated.ts.",
+    "firstLauncherLeftResidualM": 0.026099703328859573,
+    "correction": "Scene holdPose moved from [-.08,1.08,.39] to [-.03,1.08,.34], model scale and measured sockets retained.",
+    "samples": [
+      {
+        "weaponId": "pistol",
+        "yaw": 0,
+        "frameStamp": 1,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.677574611883866e-8,
+          "rightOrientationResidualRad": 7.300048299977715e-8,
+          "leftTargetResidualM": 8.08559347954183e-8,
+          "leftOrientationResidualRad": 1.032382731180714e-7,
+          "muzzleYawErrorRad": 5.6797776286864355e-8,
+          "modelMuzzleToSimulationMountM": 0.6607638993607448,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.4746704688489552e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.48,
+            1.347,
+            2.58
+          ],
+          "to": [
+            18.48,
+            1.347,
+            2.58
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": 1.5707963267948966,
+        "frameStamp": 2,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.702535153956274e-8,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.554643933796011e-8,
+          "leftOrientationResidualRad": 4.2146848510894035e-8,
+          "muzzleYawErrorRad": 3.445639773502762e-9,
+          "modelMuzzleToSimulationMountM": 0.6607640590247909,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 2.8734200007540375e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.08000002098146712,
+            1.347,
+            2.9799999965030883
+          ],
+          "to": [
+            -0.08000080778648716,
+            1.347,
+            20.97999999650307
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": 3.141592653589793,
+        "frameStamp": 3,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.887920556427822e-8,
+          "rightOrientationResidualRad": 5.960464477539063e-8,
+          "leftTargetResidualM": 8.102751812492496e-8,
+          "leftOrientationResidualRad": 5.960464477539063e-8,
+          "muzzleYawErrorRad": 1.032485208440903e-9,
+          "modelMuzzleToSimulationMountM": 0.6607638993607448,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.750514911380601e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.47999999300617574,
+            1.347,
+            2.419999958037066
+          ],
+          "to": [
+            -18.479999993006107,
+            1.347,
+            2.419998384427026
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "pistol",
+        "yaw": -1.5707963267948966,
+        "frameStamp": 4,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 6.653251845203347e-8,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.39220990770432e-8,
+          "leftOrientationResidualRad": 4.2146848510894035e-8,
+          "muzzleYawErrorRad": 1.0661590055249805e-8,
+          "modelMuzzleToSimulationMountM": 0.6607640572206783,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 2.7939297292105245e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.07999997901853272,
+            1.347,
+            2.0199999965030893
+          ],
+          "to": [
+            0.07999919221351268,
+            1.347,
+            -15.980000003496894
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 0,
+        "frameStamp": 5,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 2.383448065048111e-8,
+          "rightOrientationResidualRad": 4.2146848510894035e-8,
+          "leftTargetResidualM": 6.324079538872266e-8,
+          "leftOrientationResidualRad": 7.300048299977715e-8,
+          "muzzleYawErrorRad": 9.892677779921127e-9,
+          "modelMuzzleToSimulationMountM": 0.850720317833948,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 4.623107761306856e-8
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.715,
+            1.36,
+            2.53
+          ],
+          "to": [
+            16.715,
+            1.36,
+            2.53
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 1.5707963267948966,
+        "frameStamp": 6,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 3.332856296365376e-8,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 7.219840904494731e-8,
+          "leftOrientationResidualRad": 6.664001874625056e-8,
+          "muzzleYawErrorRad": 6.971975663461194e-9,
+          "modelMuzzleToSimulationMountM": 0.8507204190103701,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.5782510729014716e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.030000031253643818,
+            1.36,
+            3.2149999986886577
+          ],
+          "to": [
+            -0.03000073063588385,
+            1.36,
+            19.21499999868864
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": 3.141592653589793,
+        "frameStamp": 7,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 1.1363794677027015e-7,
+          "rightOrientationResidualRad": 0,
+          "leftTargetResidualM": 1.8398516754092857e-7,
+          "leftOrientationResidualRad": 2.9802322387695312e-8,
+          "muzzleYawErrorRad": 1.832025375847479e-8,
+          "modelMuzzleToSimulationMountM": 0.8507202533753137,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 1.4353877702631703e-7
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            -0.7149999973773139,
+            1.36,
+            2.4699999374927124
+          ],
+          "to": [
+            -16.714999997377255,
+            1.36,
+            2.469998538728232
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      },
+      {
+        "weaponId": "launcher",
+        "yaw": -1.5707963267948966,
+        "frameStamp": 8,
+        "tick": 1,
+        "measurements": {
+          "rightTargetResidualM": 2.2491366701511635e-8,
+          "rightOrientationResidualRad": 6.664001874625056e-8,
+          "leftTargetResidualM": 6.660666811534173e-8,
+          "leftOrientationResidualRad": 7.300048299977715e-8,
+          "muzzleYawErrorRad": 5.052754303846996e-8,
+          "modelMuzzleToSimulationMountM": 0.8507202190878659,
+          "lastShotOriginTick": 0,
+          "sameTickShotOriginResidualM": 9.849474241074778e-8
+        },
+        "simulationShot": {
+          "tick": 0,
+          "from": [
+            0.029999968746356118,
+            1.36,
+            1.7849999986886589
+          ],
+          "to": [
+            0.029999269364116087,
+            1.36,
+            -14.215000001311324
+          ],
+          "hit": false
+        },
+        "diagnostics": [
+          {
+            "controlId": "upperBody",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          },
+          {
+            "controlId": "head",
+            "code": "IK_TARGET",
+            "message": "Target is unavailable; animation retained"
+          }
+        ]
+      }
+    ]
+  },
+  "simulationCalibration": {
+    "referenceActorY": 0.02,
+    "capsuleHalfM": 0.9,
+    "capsuleSource": "packages/content/src/generated/stats.generated.ts P-01 capsuleHeight=1.8",
+    "zeroRecoilActorMuzzle": {
+      "pistol": [
+        0.5800000000000001,
+        1.347,
+        0.0799999999999999
+      ],
+      "launcher": [
+        0.6625000000000001,
+        1.472,
+        0.21999999999999997
+      ],
+      "shotgun": [
+        0.7925714069001726,
+        1.42118075580614,
+        -0.11000000000000015
+      ],
+      "smg": [
+        0.5651073142491059,
+        1.4478460357028458,
+        -0.07000000000000006
+      ],
+      "sniper": [
+        0.7817843275880398,
+        1.4203199483950968,
+        -0.13000000000000034
+      ],
+      "chainsaw": [
+        0.9479250177036406,
+        1.290082573051635,
+        -0.13000000000000028
+      ],
+      "flame": [
+        0.6815598128041,
+        1.4942374415012813,
+        -0.07000000000000023
+      ]
+    },
+    "meaning": "yaw-local simulation muzzle from ideal hold/model socket, y includes authored actorY then subtracts capsuleHalf; model-local sockets remain separate; no presentation feedback into simulation"
+  },
+  "bodyIntegration": {
+    "status": "calibrated-candidate-awaiting-headed",
+    "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准",
+    "definitions": {
+      "shotgun": {
+        "asset": {
+          "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+          "guid": "as_cdf2dc294f5f"
+        },
+        "sha256": "97b9b9159836b63dd0f05013519fc168347c054774259593c3d165342f31fc90",
+        "boundsMin": [
+          -0.037175752222537994,
+          0,
+          -0.4898760914802551
+        ],
+        "boundsMax": [
+          0.037175752222537994,
+          0.24960438907146454,
+          0.4898760914802551
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              -0.0004893901537308727,
+              0.14208983614218285,
+              -0.19757823875506017
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              -0.0004893901537308727,
+              0.18396086896932404,
+              0.1834481599719248
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              -0.0004893901537308727,
+              0.21327059194832293,
+              0.4999931681451123
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.02044612625983973,
+              0.14208983614218285,
+              -0.059403830425494214
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.022958388229468205,
+              0.20489638538289465,
+              -0.059403830425494214
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-02-SHOTGUN",
+          "primary": [
+            0,
+            0.17,
+            -0.285
+          ],
+          "support": [
+            0,
+            0.22,
+            0.17
+          ],
+          "muzzle": [
+            0,
+            0.255,
+            0.548
+          ],
+          "magazine": [
+            0.025,
+            0.17,
+            -0.12
+          ],
+          "chamber": [
+            0.028,
+            0.245,
+            -0.12
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.029510609846269128,
+            1.107910163857817,
+            0.21257823875506016
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.015
+        ],
+        "holdCalibration": {
+          "priorActorContactZ": 0.12,
+          "priorBindLeftResidualM": 0.05511691,
+          "change": "模型root向身体回收.105m；保留实际primary/support位置，GPU全动作/轮廓未验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "smg": {
+        "asset": {
+          "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+          "guid": "as_a96a571ba3ef"
+        },
+        "sha256": "3b73ce32ceac11b0a7e79f1a084b122dfdb972ef2de69a12df11c18b8ac1387d",
+        "boundsMin": [
+          -0.027208298444747925,
+          0,
+          -0.29007431864738464
+        ],
+        "boundsMax": [
+          0.027208298444747925,
+          0.21765385568141937,
+          0.29007431864738464
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.00022042376128961802,
+              0.045345321612639024,
+              -0.04693230429292393
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.00022042376128965285,
+              0.13814307326392475,
+              0.18882414584818039
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.00022042376128962498,
+              0.15319135731548458,
+              0.2981750099561819
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.00022042376128962498,
+              0.12309478921236489,
+              0.10355053622267456
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.01777675515477612,
+              0.1582074519993379,
+              0.07345396811955487
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-03-SMG",
+          "variant": "WPN-03-SMG-without-mag",
+          "primary": [
+            0.12,
+            0.145,
+            0
+          ],
+          "support": [
+            -0.35,
+            0.33,
+            0
+          ],
+          "muzzle": [
+            -0.568,
+            0.36,
+            0
+          ],
+          "magazine": [
+            -0.18,
+            0.3,
+            0
+          ],
+          "chamber": [
+            -0.12,
+            0.37,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.030220423761289618,
+            1.2946546783873611,
+            0.16693230429292394
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.34,
+          0.12
+        ],
+        "holdCalibration": {
+          "priorActorContactY": 1.25,
+          "priorBindReloadLeftResidualM": 0.03398582,
+          "intermediateActorContactY": 1.3,
+          "intermediateBindReloadLeftResidualM": 0.00657699,
+          "change": "新SMG模型root上移.09m，降低卸下弹匣目标肩距；保留原源socket，GPU仍待验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "sniper": {
+        "asset": {
+          "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+          "guid": "as_6a1a6e91ec15"
+        },
+        "sha256": "3d4f041fce97c0cff74be6678ccf04d8f6584c817fa1dedd24399413bc94f678",
+        "boundsMin": [
+          -0.055202752351760864,
+          0,
+          -0.5899192094802856
+        ],
+        "boundsMax": [
+          0.055202752351760864,
+          0.3851744830608368,
+          0.5899192094802856
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.0003404368510868097,
+              0.10551981614415631,
+              -0.21987557731296228
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.00034043685108687925,
+              0.2057659302942307,
+              0.20115810211735027
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.00034043685108693493,
+              0.23583976453925304,
+              0.5069087502750773
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.00034043685108683757,
+              0.1756920960492084,
+              0.005678179524705141
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.035426576803612865,
+              0.23583976453925304,
+              -0.08955562891786555
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-04-SNIPER",
+          "primary": [
+            0.12,
+            0.105,
+            0
+          ],
+          "support": [
+            -0.3,
+            0.205,
+            0
+          ],
+          "muzzle": [
+            -0.605,
+            0.235,
+            0
+          ],
+          "magazine": [
+            -0.105,
+            0.175,
+            0
+          ],
+          "chamber": [
+            -0.01,
+            0.235,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.030340436851086807,
+            1.1444801838558436,
+            0.23487557731296227
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.015
+        ],
+        "holdCalibration": {
+          "priorActorContactZ": 0.12,
+          "priorBindLeftResidualM": 0.07830725,
+          "change": "模型root向身体回收.105m；保留实际primary/support位置，GPU全动作/轮廓未验"
+        },
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "chainsaw": {
+        "asset": {
+          "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+          "guid": "as_c12ac01417cb"
+        },
+        "sha256": "89cc873a75ff81154e48877c5e949d463c8ef80b7f70378ce4743bf6d9fc8a94",
+        "boundsMin": [
+          -0.13989055156707764,
+          0,
+          -0.4301570951938629
+        ],
+        "boundsMax": [
+          0.13989055156707764,
+          0.33264681696891785,
+          0.4301570951938629
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              -0.002171351745963816,
+              0.10552798938857681,
+              -0.33286094333396854
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              -0.0021713517459637857,
+              0.2695021518725375,
+              -0.04499519141768202
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              -0.002171351745963735,
+              0.14561056244021167,
+              0.4250640743696719
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              -0.002171351745963816,
+              0.21848796798863862,
+              -0.15795517001774384
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              -0.002171351745963816,
+              0.21848796798863862,
+              -0.15795517001774384
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-05-CHAINSAW",
+          "primary": [
+            0.43,
+            0.145,
+            -0.045
+          ],
+          "support": [
+            0.035,
+            0.37,
+            -0.045
+          ],
+          "muzzle": [
+            -0.61,
+            0.2,
+            -0.045
+          ],
+          "magazine": [
+            0.19,
+            0.3,
+            -0.045
+          ],
+          "chamber": [
+            0.19,
+            0.3,
+            -0.045
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.027828648254036182,
+            1.1444720106114232,
+            0.45286094333396854
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.12
+        ],
+        "holdCalibration": null,
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      },
+      "flame": {
+        "asset": {
+          "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+          "guid": "as_420ed26a291b"
+        },
+        "sha256": "39d9af0b52c2754f3f00e0d6bb55164ca91337e978e15e3748dec82dc640fea9",
+        "boundsMin": [
+          -0.06781460344791412,
+          0,
+          -0.3368300795555115
+        ],
+        "boundsMax": [
+          0.06781460344791412,
+          0.36989685893058777,
+          0.3368300795555115
+        ],
+        "modelSockets": {
+          "primaryGrip": {
+            "position": [
+              0.0019958487448470197,
+              0.15505599969458397,
+              -0.12456153719258167
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "supportGrip": {
+            "position": [
+              0.001995848744847045,
+              0.158661935732116,
+              0.07737088090921204
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "muzzle": {
+            "position": [
+              0.0019958487448471047,
+              0.2992934411958652,
+              0.3369982756115183
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "magazine": {
+            "position": [
+              0.0019958487448469846,
+              0.19111536006990426,
+              -0.23273961831854262
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "chamber": {
+            "position": [
+              0.027237401007571233,
+              0.29568750515833314,
+              -0.13177340926764575
+            ],
+            "rotation": [
+              0,
+              -0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          }
+        },
+        "sourceNodeBakedPoints": {
+          "id": "WPN-06-FLAME",
+          "variant": "WPN-06-FLAME-without-can",
+          "primary": [
+            0.04,
+            0.215,
+            0
+          ],
+          "support": [
+            -0.24,
+            0.22,
+            0
+          ],
+          "muzzle": [
+            -0.6,
+            0.415,
+            0
+          ],
+          "magazine": [
+            0.19,
+            0.265,
+            0
+          ],
+          "chamber": [
+            0.05,
+            0.41,
+            0.035
+          ]
+        },
+        "holdPose": {
+          "position": [
+            -0.03199584874484702,
+            1.094944000305416,
+            0.24456153719258167
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "idealPrimaryContactActor": [
+          -0.03,
+          1.25,
+          0.12
+        ],
+        "holdCalibration": null,
+        "evidence": "94c68a1 原源headed11视图；source point-surface区段测量；本轮final parse数值候选，GPU手掌/槽口未批准"
+      }
+    }
+  },
+  "launcherFrontLoading": {
+    "status": "0.90-candidate-awaiting-actual-entry-late-idle-headed",
+    "space": "physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw",
+    "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+    "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+    "physicalLod0": {
+      "primaryGrip": {
+        "position": [
+          -0.1998,
+          0.06659999999999999,
+          -0.018000000000000002
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "supportGrip": {
+        "position": [
+          -0.07200000000000001,
+          0.1917,
+          -0.06300000000000001
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "muzzle": {
+        "position": [
+          0.3375,
+          0.25200000000000006,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "magazine": {
+        "position": [
+          0.1773,
+          0.25200000000000006,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "chamber": {
+        "position": [
+          0.1773,
+          0.25200000000000006,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "reloadPose": {
+        "position": [
+          0.165,
+          0.035,
+          -0.298
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      },
+      "reloadExtract": {
+        "position": [
+          0.1611,
+          -0.036,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "reloadClearance": {
+        "position": [
+          0.13457441181107344,
+          0.126,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "reloadReturnClearance": {
+        "position": [
+          0,
+          0.072,
+          0.036
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "holdPose": {
+      "position": [
+        -0.31,
+        1.2,
+        0.245
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "actionFrames": {
+      "reloadPose": {
+        "position": [
+          0.165,
+          0.035,
+          -0.298
+        ],
+        "rotation": [
+          0,
+          0.7071067811865476,
+          0,
+          0.7071067811865476
+        ]
+      },
+      "reloadExtract": {
+        "position": [
+          0.1611,
+          -0.036,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "reloadClearance": {
+        "position": [
+          0.13457441181107344,
+          0.126,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "reloadReturnClearance": {
+        "position": [
+          0,
+          0.072,
+          0.036
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    "ergonomicNormalization": {
+      "factor": 0.9,
+      "baseHead": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "baseNormalization": {
+        "dimensionsM": [
+          0.75,
+          0.40611970326988556,
+          0.20300082054953691
+        ],
+        "scaleXYZ": [
+          0.678351721013392,
+          0.678351721013392,
+          0.678351721013392
+        ]
+      },
+      "processor": "tools/art/rescale-launcher-assembly.py",
+      "processorHash": "ab3373429561f5ad7d32c0c0dcb5386d7008524b80a677bb062a0b5c3ded5f46",
+      "reason": "真实肩链423帧与颈肩局部界驱动的一档等比修正；本体/round/槽/三LOD统一；不证明全空间最优或GPU通过",
+      "policy": "只改POSITION和accessor bounds；保持UV/NORMAL/indices/embedded texture/cap逐字节，旧底火仍待用户新版源",
+      "visual": "pending-headed"
+    },
+    "evidence": {
+      "rawTarget": "f5ac7bbd7c8c771e2a3273009cf32142371b819b",
+      "raw": "front-loading-focused-audit/observations.json",
+      "frontCavityAxisX": [
+        0.10165563,
+        0.3375
+      ],
+      "rearSolidCapX": -0.33753563999999997,
+      "roundLengthM": 0.15969375,
+      "roundRadiusM": 0.02238885,
+      "physicalGripBeforeUniform": {
+        "primary": [
+          -0.222,
+          0.074,
+          -0.02
+        ],
+        "primarySectionSideZ": [
+          -0.022944953,
+          0.022878806
+        ],
+        "support": [
+          -0.08,
+          0.213,
+          -0.07
+        ],
+        "supportSectionSideZ": [
+          -0.070791675,
+          0.070847284
+        ],
+        "supportSideBottomY": 0.212891712
+      },
+      "rawShoulderSamples": 423,
+      "handFailures": 0,
+      "minimumRightMarginM": 0.01973628378332737,
+      "minimumLeftMarginM": 0.015582230223028737,
+      "geometryFrames": [
+        1101,
+        2299,
+        2376,
+        2137,
+        2413,
+        2417,
+        2427
+      ],
+      "gunAndRoundTriangleHits": 0,
+      "reverseParityInsideSamples": 0,
+      "maximumBaselineChainReplayErrorM": 2.0768505227202066e-7,
+      "entry": {
+        "frame": 2299,
+        "phase": 0.16666666666666666,
+        "previousGunTriangleHits": 152,
+        "blockedForwardDistanceM": 0.030034995159463423,
+        "gapM": 0.001,
+        "sinCoefficient": 0.2306158707424476,
+        "clearanceLocalXDeltaM": 0.13457441181107344,
+        "allowedLocalXDeltaM": [
+          0,
+          0.20414512337934
+        ]
+      },
+      "rawReports": [
+        "launcher-actual-reach-f5.json",
+        "launcher-current-grip-section.json",
+        "launcher-current-shoulders-candidate.json",
+        "launcher-entry-clearance-interval.json",
+        "launcher-entry-separation.json",
+        "launcher-actual-geometry-f5.json"
+      ]
+    },
+    "historicalCandidateEvidence": {
+      "status": "candidate-awaiting-actual-late-idle-headed",
+      "space": "physical sockets: LOD final import-space metres; action frames: model-local delta metres/xyzw",
+      "sourceHash": "5031329c33b9e1d7be87ddc6e3c2bc9d4aaf194a68d5bc93d17621b33cb441d2",
+      "source": "assets/_delivery/WPN-20261011/WPN-07-LAUNCHER/WPN-07-LAUNCHER.glb",
+      "physicalLod0": {
+        "primaryGrip": {
+          "position": [
+            -0.222,
+            0.074,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "supportGrip": {
+          "position": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "muzzle": {
+          "position": [
+            0.375,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "magazine": {
+          "position": [
+            0.197,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "chamber": {
+          "position": [
+            0.197,
+            0.28,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadPose": {
+          "position": [
+            0.135,
+            -0.024,
+            -0.382
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "reloadExtract": {
+          "position": [
+            0.179,
+            -0.04,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadClearance": {
+          "position": [
+            0,
+            0.14,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadReturnClearance": {
+          "position": [
+            0,
+            0.14,
+            0.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "holdPose": {
+        "position": [
+          -0.31,
+          1.15,
+          0.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "actionFrames": {
+        "reloadPose": {
+          "position": [
+            0.135,
+            -0.024,
+            -0.382
+          ],
+          "rotation": [
+            0,
+            0.7071067811865476,
+            0,
+            0.7071067811865476
+          ]
+        },
+        "reloadExtract": {
+          "position": [
+            0.179,
+            -0.04,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadClearance": {
+          "position": [
+            0,
+            0.14,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "reloadReturnClearance": {
+          "position": [
+            0,
+            0.14,
+            0.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "evidence": {
+        "frontCavityAxisX": [
+          0.1129507,
+          0.375
+        ],
+        "rearSolidCapX": -0.3750396,
+        "roundLengthM": 0.1774375,
+        "roundRadiusM": 0.0248765,
+        "foregripCrossSection": {
+          "point": [
+            -0.08,
+            0.213,
+            -0.05
+          ],
+          "sideZ": [
+            -0.0707917,
+            0.0708473
+          ],
+          "bottomY": 0.20726995
+        },
+        "idleBaselineGunTriangleHits": 654,
+        "idleCandidateGunTriangleHits": 0,
+        "idleLeftReachM": 0.48139205,
+        "leftChainM": 0.50484701,
+        "pathSamples": 12,
+        "pathHandFailures": 0,
+        "pathMinimumLeftMarginM": 0.0143503,
+        "pathMinimumRightMarginM": 0.0171491,
+        "lateRisk": "规划phase=1强留reload末帧有633肩衣交面；实际WeaponSystem完成后idle/upper ready crossfade尚待连续真实Input验证，不能称clear",
+        "rawReports": [
+          "launcher-static-side-geometry-03b0818.json",
+          "launcher-continuous-quick-03b0818.json",
+          "launcher-clearance-arc-geometry-03b0818.json",
+          "launcher-return-arc-geometry-03b0818.json"
+        ],
+        "historicalEndPng": ".workbuddy/tmp/wpn-integration/1-WPN-07-LAUNCHER-end.png",
+        "historicalEndTarget": "965cf",
+        "historicalEndLimit": "历史CDP像素参考，TLS bypass状态未记录，不作为normalTLS批准；ddfb08f CUA +X炮孔另有有效方向观察，未本地导出"
+      },
+      "limits": [
+        "H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准",
+        "部分raw省略动画transition，57–142mm重放误差只供规划",
+        "round底火继承Shell缺陷；用户已选择补交修复源，实际新版路径/commit待提供，未改几何"
+      ]
+    },
+    "limits": [
+      "423真实同帧肩球而非理想骨姿；纯reach规划不替代新Input",
+      "仅7个无transition几何代表态；其他crossfade与全路径未证明clear",
+      "H01 whole-skin parity未认证闭合；零交面/反向点不是GPU像素批准",
+      "round仅统一缩放，UV/法线/索引/纹理/cap不变；底火仍待用户新版Shell源"
+    ]
+  },
+  "holdSlotReference": {
+    "bone": "Hips",
+    "position": [
+      0.00010323525202693418,
+      0.9836245179176331,
+      -0.050034165382385254
+    ],
+    "asset": {
+      "path": "assets/characters/models/H-01/rigged/H01_SCAVENGER_LOD0_animation_ready.glb",
+      "guid": "as_hpnf387i"
+    },
+    "space": "H01 bind FK after importer normalization; actor-axis metre; +Z forward; runtime uses current sampled Hip"
+  },
+  "holdSlots": {
+    "pistol": {
+      "bone": "Hips",
+      "position": [
+        -0.08010323525202694,
+        0.2063754820823669,
+        0.4900341653823853
+      ]
+    },
+    "shotgun": {
+      "bone": "Hips",
+      "position": [
+        0.11038615490170395,
+        0.224285645940184,
+        0.3426124041374454
+      ]
+    },
+    "smg": {
+      "bone": "Hips",
+      "position": [
+        0.06967634098668346,
+        0.3110301604697281,
+        0.31696646967530917
+      ]
+    },
+    "sniper": {
+      "bone": "Hips",
+      "position": [
+        0.12955632789688626,
+        0.20085566593821055,
+        0.32490974269534756
+      ]
+    },
+    "chainsaw": {
+      "bone": "Hips",
+      "position": [
+        0.13206811649393688,
+        0.16084749269379017,
+        0.5728951087163537
+      ]
+    },
+    "flame": {
+      "bone": "Hips",
+      "position": [
+        0.06790091600312606,
+        0.211319482387783,
+        0.3945957025749669
+      ]
+    },
+    "launcher": {
+      "bone": "Hips",
+      "position": [
+        -0.22010323525202694,
+        0.2363754820823669,
+        0.37503416538238527
+      ]
+    }
+  }
+}

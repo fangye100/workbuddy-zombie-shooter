@@ -25,6 +25,7 @@ import { buildGizmoHandles, type GizmoMode } from './gizmo';
 import { ComicSkyPass } from './comic-sky';
 import { ContactShadowPass } from './contact-shadows';
 import type { VfxPass } from './vfx-pass';
+import {ProceduralDecalPass} from './procedural-decals';
 import { createAlbedoTexture } from './albedo-texture';
 import type { ComicSkyData } from '@aether/scene';
 
@@ -253,6 +254,7 @@ export interface CoreFrameUniforms {
 
 /** drawFrame 的完整输入：一份已完全解析的帧 */
 export interface RenderFrameInput {
+  decals?:Float32Array<ArrayBuffer>;
   sky?: ComicSkyData | null;
   contacts?: { data: Float32Array<ArrayBuffer>; color: readonly number[]; opacity: number } | null;
   p: RenderFrameParams;
@@ -309,6 +311,7 @@ export class RendererCore {
   vfx: VfxPass | null = null;
   private readonly skyPass: ComicSkyPass;
   private readonly contactPass: ContactShadowPass;
+  private readonly decalPass:ProceduralDecalPass;
   readonly device: GPUDevice;
   private readonly canvas: HTMLCanvasElement;
   /**
@@ -508,6 +511,9 @@ export class RendererCore {
 
     // ---- uniform buffer ----
     this.frameBuf = this.uniform(FRAME_FLOATS * 4, 'frame');
+    this.decalPass=new ProceduralDecalPass(this.device,this.frameBuf,HDR_FORMAT,DEPTH_FORMAT);
+    this.checkModule(this.decalPass.module);
+    this.checkModule(this.decalPass.computeModule);
     this.lightsBuf = this.uniform(LIGHTS_FLOATS * 4, 'lights');
     this.toonBuf = this.uniform(TOON_FLOATS * 4, 'toon');
     this.postBuf = this.uniform(POST_FLOATS * 4, 'post');
@@ -761,6 +767,10 @@ export class RendererCore {
       }
     });
   }
+  clearDecalResources():void {this.decalPass.clear();}
+  decalSnapshot(){return this.decalPass.snapshot();}
+  setDecalBackend(backend:import('./procedural-decals').DecalBackend):void {this.decalPass.setBackend(backend);}
+  readDecalVisibleCount(){return this.decalPass.readVisibleCount();}
 
   /**
    * 按 `meshId` 取（或首次上传）动态实例的代理网格。
@@ -1050,6 +1060,7 @@ export class RendererCore {
 
     // ---- Pass 1 + 2：场景 MRT + inverted hull 描边 ----
     const encoder = device.createCommandEncoder({ label: 'frame' });
+    this.decalPass.prepare(encoder,p.debugMode===0?(input.decals??EMPTY_DECALS):EMPTY_DECALS);
     const pass = encoder.beginRenderPass({
       label: 'scene',
       colorAttachments: [
@@ -1135,6 +1146,7 @@ export class RendererCore {
     if (input.contacts && p.debugMode === 0) {
       draws += this.contactPass.draw(pass, input.contacts.data, this.viewProj, input.contacts.color, input.contacts.opacity);
     }
+    if(p.debugMode===0)draws+=this.decalPass.drawPrepared(pass);
     if (input.sky && p.debugMode === 0) {
       this.skyPass.draw(pass, input.sky, this.invViewProj, eye, input.time);
       draws++;
@@ -1271,6 +1283,7 @@ export class RendererCore {
     this.vfx?.destroy();this.vfx=null;
     this.skyPass.destroy();
     this.contactPass.destroy();
+    this.decalPass.clear();
     this.hdrTex?.destroy();
     this.auxTex?.destroy();
     this.sceneDepth.destroy();
@@ -1306,3 +1319,5 @@ export class RendererCore {
 // 布局常量不再从这里导出 —— 真源是 ./frame-uniforms，由包入口 index.ts 统一对外。
 // 留在这里会与 `export * from './frame-uniforms'` 撞名（ESM 的星号导出歧义）。
 export { HDR_FORMAT, DEPTH_FORMAT, GIZMO_SCREEN_PX };
+
+const EMPTY_DECALS=new Float32Array(0);

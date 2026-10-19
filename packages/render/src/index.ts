@@ -5,6 +5,8 @@ export * from './binding';
 export * from './shaders';
 export * from './skin';
 export * from './body-ik';
+export * from './attachment-transform';
+export * from './model-draw';
 export * from './two-bone-ik';
 export * from './pose-transition';
 export * from './pose-palette';
@@ -18,3 +20,7 @@ export * from './vfx-soft-depth';
 
 export * from './vfx-decal-mesh';
 export * from './vfx-decal';
+export * from './pose-layer';
+export * from './decal-instances';
+export * from './procedural-decals';
+export { DecalPreviewRenderer } from './decal-preview';

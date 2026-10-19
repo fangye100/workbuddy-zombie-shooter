@@ -45,16 +45,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+          "guid": "as_e4ugmrq3"
+        },
         "placeholder": "pistol",
         "color": "#ffc531",
         "lengthM": 0.3,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.11000000000000003,
+              0.03,
+              -1.3877787807814457e-17
             ],
             "rotation": [
               0,
@@ -66,9 +69,9 @@
           },
           "supportGrip": {
             "position": [
-              0.12,
-              0,
-              0
+              0.23000000000000004,
+              0.03,
+              -1.3877787807814457e-17
             ],
             "rotation": [
               0,
@@ -80,9 +83,9 @@
           },
           "muzzle": {
             "position": [
-              0.3,
-              0,
-              0
+              0.5900000000000001,
+              0.497,
+              0.0799999999999999
             ],
             "rotation": [
               0,
@@ -94,9 +97,9 @@
           },
           "magazine": {
             "position": [
-              0.036,
-              -0.1,
-              0
+              0.14600000000000002,
+              -0.07,
+              -1.3877787807814457e-17
             ],
             "rotation": [
               0,
@@ -108,9 +111,9 @@
           },
           "chamber": {
             "position": [
-              0.09,
-              0.04,
-              0
+              0.2,
+              0.07,
+              -1.3877787807814457e-17
             ],
             "rotation": [
               0,
@@ -161,6 +164,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.08,
+              1.19,
+              0.34
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "attachments": [
+            {
+              "id": "magazine",
+              "model": {
+                "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+                "guid": "as_30abf3e8f08f"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0.7071067811865476,
+                  0,
+                  0.7071067811865476
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "magazine",
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.08010323525202694,
+              0.2363754820823669,
+              0.5000341653823853
+            ]
+          }
         }
       }
     },
@@ -207,16 +258,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+          "guid": "as_cdf2dc294f5f"
+        },
         "placeholder": "shotgun",
         "color": "#ef934b",
         "lengthM": 0.98,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.08500000000000002,
+              0.2,
+              0.020386154901703923
             ],
             "rotation": [
               0,
@@ -228,9 +282,9 @@
           },
           "supportGrip": {
             "position": [
-              0.392,
-              0,
-              0
+              0.47700000000000004,
+              0.2,
+              0.020386154901703923
             ],
             "rotation": [
               0,
@@ -242,9 +296,9 @@
           },
           "muzzle": {
             "position": [
-              0.98,
-              0,
-              0
+              0.7975714069001726,
+              0.64118075580614,
+              0.050386154901703784
             ],
             "rotation": [
               0,
@@ -256,9 +310,9 @@
           },
           "magazine": {
             "position": [
-              0.1176,
-              -0.1,
-              0
+              0.2026,
+              0.1,
+              0.020386154901703923
             ],
             "rotation": [
               0,
@@ -270,9 +324,9 @@
           },
           "chamber": {
             "position": [
-              0.294,
-              0.04,
-              0
+              0.379,
+              0.24000000000000002,
+              0.020386154901703923
             ],
             "rotation": [
               0,
@@ -323,6 +377,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.029510609846269128,
+              1.107910163857817,
+              0.21257823875506016
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.05,
+              0.324285645940184,
+              0.34761240413744543
+            ]
+          },
+          "attachments": [
+            {
+              "id": "reloadPart",
+              "model": {
+                "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+                "guid": "as_738efc1ba301"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0.5000000000000001,
+                  0.5000000000000001,
+                  -0.5000000000000001,
+                  0.5000000000000001
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "reloadPart"
         }
       }
     },
@@ -369,16 +471,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+          "guid": "as_a96a571ba3ef"
+        },
         "placeholder": "smg",
         "color": "#d5df8a",
         "lengthM": 0.58,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.10500000000000002,
+              0.09999999999999998,
+              0.019676340986683444
             ],
             "rotation": [
               0,
@@ -390,9 +495,9 @@
           },
           "supportGrip": {
             "position": [
-              0.23199999999999998,
-              0,
-              0
+              0.337,
+              0.09999999999999998,
+              0.019676340986683444
             ],
             "rotation": [
               0,
@@ -404,9 +509,9 @@
           },
           "muzzle": {
             "position": [
-              0.58,
-              0,
-              0
+              0.5701073142491059,
+              0.6678460357028457,
+              0.0496763409866834
             ],
             "rotation": [
               0,
@@ -418,9 +523,9 @@
           },
           "magazine": {
             "position": [
-              0.0696,
-              -0.1,
-              0
+              0.17460000000000003,
+              -2.7755575615628914e-17,
+              0.019676340986683444
             ],
             "rotation": [
               0,
@@ -432,9 +537,9 @@
           },
           "chamber": {
             "position": [
-              0.174,
-              0.04,
-              0
+              0.279,
+              0.13999999999999999,
+              0.019676340986683444
             ],
             "rotation": [
               0,
@@ -485,6 +590,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.030220423761289618,
+              1.2946546783873611,
+              0.16693230429292394
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.05,
+              0.41103016046972807,
+              0.3219664696753092
+            ]
+          },
+          "attachments": [
+            {
+              "id": "reloadPart",
+              "model": {
+                "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+                "guid": "as_bc00f36d6062"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0.7071067811865476,
+                  0,
+                  0.7071067811865476
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "reloadPart"
         }
       }
     },
@@ -531,16 +684,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+          "guid": "as_6a1a6e91ec15"
+        },
         "placeholder": "sniper",
         "color": "#92d2e9",
         "lengthM": 1.18,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.04500000000000002,
+              0.14,
+              0.019556327896886216
             ],
             "rotation": [
               0,
@@ -552,9 +708,9 @@
           },
           "supportGrip": {
             "position": [
-              0.472,
-              0,
-              0
+              0.517,
+              0.14,
+              0.019556327896886216
             ],
             "rotation": [
               0,
@@ -566,9 +722,9 @@
           },
           "muzzle": {
             "position": [
-              1.18,
-              0,
-              0
+              0.7867843275880398,
+              0.6403199483950968,
+              0.04955632789688591
             ],
             "rotation": [
               0,
@@ -580,9 +736,9 @@
           },
           "magazine": {
             "position": [
-              0.14159999999999998,
-              -0.1,
-              0
+              0.1866,
+              0.04,
+              0.019556327896886216
             ],
             "rotation": [
               0,
@@ -594,9 +750,9 @@
           },
           "chamber": {
             "position": [
-              0.354,
-              0.04,
-              0
+              0.399,
+              0.18,
+              0.019556327896886216
             ],
             "rotation": [
               0,
@@ -647,6 +803,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.030340436851086807,
+              1.1444801838558436,
+              0.23487557731296227
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.05,
+              0.30085566593821056,
+              0.32990974269534756
+            ]
+          },
+          "attachments": [
+            {
+              "id": "reloadPart",
+              "model": {
+                "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+                "guid": "as_a17fcc3a5a85"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0.7071067811865476,
+                  0,
+                  0.7071067811865476
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "reloadPart"
         }
       }
     },
@@ -693,16 +897,19 @@
         "magazineStep": 0
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+          "guid": "as_c12ac01417cb"
+        },
         "placeholder": "chainsaw",
         "color": "#f8a247",
         "lengthM": 0.85,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.07500000000000001,
+              0.09999999999999998,
+              0.022068116493936862
             ],
             "rotation": [
               0,
@@ -714,9 +921,9 @@
           },
           "supportGrip": {
             "position": [
-              0.34,
-              0,
-              0
+              0.41500000000000004,
+              0.09999999999999998,
+              0.022068116493936862
             ],
             "rotation": [
               0,
@@ -728,9 +935,9 @@
           },
           "muzzle": {
             "position": [
-              0.85,
-              0,
-              0
+              0.9529250177036406,
+              0.510082573051635,
+              0.05206811649393661
             ],
             "rotation": [
               0,
@@ -742,9 +949,9 @@
           },
           "magazine": {
             "position": [
-              0.102,
-              -0.1,
-              0
+              0.177,
+              -2.7755575615628914e-17,
+              0.022068116493936862
             ],
             "rotation": [
               0,
@@ -756,9 +963,9 @@
           },
           "chamber": {
             "position": [
-              0.255,
-              0.04,
-              0
+              0.33,
+              0.13999999999999999,
+              0.022068116493936862
             ],
             "rotation": [
               0,
@@ -809,6 +1016,31 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.027828648254036182,
+              1.1444720106114232,
+              0.45286094333396854
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.05,
+              0.26084749269379015,
+              0.5778951087163537
+            ]
+          },
+          "attachments": [],
+          "reloadAttachmentId": null
         }
       }
     },
@@ -855,16 +1087,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+          "guid": "as_420ed26a291b"
+        },
         "placeholder": "flame",
         "color": "#ff7045",
         "lengthM": 0.8,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.10500000000000002,
+              0.2,
+              0.017900916003126044
             ],
             "rotation": [
               0,
@@ -876,9 +1111,9 @@
           },
           "supportGrip": {
             "position": [
-              0.32000000000000006,
-              0,
-              0
+              0.4250000000000001,
+              0.2,
+              0.017900916003126044
             ],
             "rotation": [
               0,
@@ -890,9 +1125,9 @@
           },
           "muzzle": {
             "position": [
-              0.8,
-              0,
-              0
+              0.6865598128041001,
+              0.7142374415012813,
+              0.047900916003125835
             ],
             "rotation": [
               0,
@@ -904,9 +1139,9 @@
           },
           "magazine": {
             "position": [
-              0.096,
-              -0.1,
-              0
+              0.201,
+              0.1,
+              0.017900916003126044
             ],
             "rotation": [
               0,
@@ -918,9 +1153,9 @@
           },
           "chamber": {
             "position": [
-              0.24,
-              0.04,
-              0
+              0.34500000000000003,
+              0.24000000000000002,
+              0.017900916003126044
             ],
             "rotation": [
               0,
@@ -971,6 +1206,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.03199584874484702,
+              1.094944000305416,
+              0.24456153719258167
+            ],
+            "rotation": [
+              0,
+              0.7071067811865476,
+              0,
+              0.7071067811865476
+            ]
+          },
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.05,
+              0.311319482387783,
+              0.3995957025749669
+            ]
+          },
+          "attachments": [
+            {
+              "id": "reloadPart",
+              "model": {
+                "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+                "guid": "as_837e48912f68"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "insertion",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0.7071067811865476,
+                  0,
+                  0.7071067811865476
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "reloadPart"
         }
       }
     },
@@ -1017,16 +1300,19 @@
         "magazineStep": 2
       },
       "presentation": {
-        "model": null,
+        "model": {
+          "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+          "guid": "as_f2f39beb7444"
+        },
         "placeholder": "launcher",
         "color": "#a7dc7c",
-        "lengthM": 0.75,
+        "lengthM": 0.675,
         "markers": {
           "primaryGrip": {
             "position": [
-              0,
-              0,
-              0
+              0.09000000000000002,
+              0.05,
+              -0.09000000000000001
             ],
             "rotation": [
               0,
@@ -1038,9 +1324,9 @@
           },
           "supportGrip": {
             "position": [
-              0.30000000000000004,
-              0,
-              0
+              0.39000000000000007,
+              0.05,
+              -0.09000000000000001
             ],
             "rotation": [
               0,
@@ -1052,9 +1338,9 @@
           },
           "muzzle": {
             "position": [
-              0.75,
-              0,
-              0
+              0.6725000000000001,
+              0.622,
+              0.21999999999999997
             ],
             "rotation": [
               0,
@@ -1066,9 +1352,9 @@
           },
           "magazine": {
             "position": [
-              0.09,
-              -0.1,
-              0
+              0.18000000000000002,
+              -0.05,
+              -0.09000000000000001
             ],
             "rotation": [
               0,
@@ -1080,9 +1366,9 @@
           },
           "chamber": {
             "position": [
-              0.22499999999999998,
-              0.04,
-              0
+              0.315,
+              0.09,
+              -0.09000000000000001
             ],
             "rotation": [
               0,
@@ -1133,6 +1419,54 @@
           "trail": "ink-tracer",
           "impact": "ink-hit",
           "resource": null
+        },
+        "assembly": {
+          "holdPose": {
+            "position": [
+              -0.31,
+              1.2,
+              0.245
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          "attachments": [
+            {
+              "id": "reloadPart",
+              "model": {
+                "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb",
+                "guid": "as_29ec6c7622e0"
+              },
+              "parentSocket": "magazine",
+              "childSocket": "base",
+              "offset": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ]
+              }
+            }
+          ],
+          "reloadAttachmentId": "reloadPart",
+          "holdSlot": {
+            "bone": "Hips",
+            "position": [
+              -0.22010323525202694,
+              0.2663754820823669,
+              0.3850341653823853
+            ]
+          }
         }
       }
     }

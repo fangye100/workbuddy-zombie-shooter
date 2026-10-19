@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_ff6d3c53fdb9",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-SHELL-01",
+    "triangles": 38680,
+    "algorithm": "local-source-repair",
+    "source": "assets/_delivery/WPN-20261011/WPN-SHELL-01/WPN-SHELL-01.glb",
+    "sourceHash": "92826b57858f4e99fe552d607972f7315a9183c020a49651e3320ae95a70b063",
+    "calibrationSpace": "parseGlb final import-space",
+    "status": "visual-review-candidate",
+    "variant": "game_ready",
+    "file": "WPN-SHELL-01_repaired_reference.glb"
+  },
+  "sourceHash": "sha256:3140fa395470a42781a94e700b9025f9e3e4613604fedeb49176aa7248cea3ec",
+  "updatedAt": "2026-10-11T15:03:12.571Z"
+}

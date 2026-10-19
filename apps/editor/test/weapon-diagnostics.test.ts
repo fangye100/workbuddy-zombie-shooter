@@ -1,13 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { WeaponSystem, WeaponCombat } from '@aether/runtime';
-import type { WeaponArsenal } from '@aether/scene';
+import { validWeaponArsenal } from '@aether/scene';
 import arsenal from '../../../assets/weapons/prototype.weapons.json';
 import { weaponDiagnostics } from '../src/services/weapon-diagnostics';
 
 describe('MCP weapon inspection', () => {
   it('reports stopped state and copies accepted facts without firing hooks or advancing actions', () => {
     expect(weaponDiagnostics(null)).toBeNull();
-    const weapons = new WeaponSystem(arsenal as WeaponArsenal), weaponCombat = new WeaponCombat(7);
+    const data:unknown=arsenal;if(!validWeaponArsenal(data))throw new Error('非法武器库fixture');
+    const weapons = new WeaponSystem(data), weaponCombat = new WeaponCombat(7);
     let hooks = 0; weapons.setAnimationHooks({ onFire: () => hooks++ });
     weapons.beginFire();
     const before = weapons.snapshot(), events = structuredClone(weapons.events), animation = weapons.animation;

@@ -1,0 +1,152 @@
+
+> aether@0.1.0 editor:smoke:binding C:\Users\fangy\Documents\Projects\visual-quality-20261007\game-design-zombie
+> node tools/verify/editor-binding-smoke.mjs "--" "--headed" "--out" ".workbuddy/tmp/smoke-repair/binding-2"
+
+dev server 未起，启动 vite --config apps/editor/vite.config.ts
+启动 headed Chrome（WebGPU）→ https://fangye-win11-office.tail6b29a2.ts.net:5100/
+
+K. 绑定面板 Binding（骨长采纳 / 姿态偏移不入骨架）
+  [PASS] 绑定面板宿主 #binding-dock 存在
+  [PASS] 右键菜单宿主 #ctx-menu 存在
+  [PASS] window.__editor.binding 调试钩子已挂载
+  [PASS] 绑定面板已打开（#binding-dock.open）
+  [PASS] 模型已载入绑定面板 — model=E01_Shambler_900_rigged_animated
+  [PASS] 27 个 HumanIK joint 全部就位（22 骨干 + 5 tip） — joints=27
+  [PASS] 正/侧两个视图 canvas 有有效尺寸 — front={"w":330,"h":317} side={"w":330,"h":317}
+  [PASS] 面板按钮齐全（镜像×2 / 重置 / 应用 / 关闭） — btns=21
+  [PASS] 顶边拖拽把手 .bd-grip 存在（面板可下压露出 3D 视图）
+  [PASS] 头部按语义分 5 组（编辑/镜像/姿态/产出/保存） — groups=["编辑","镜像","姿态","产出","保存"]
+  [PASS] 每个分组都有文字标签 — labelled=5/5
+  [PASS] 破坏性操作降级为 danger 次要样式（重置 / Detach） — danger=["reset","detach"]
+  [PASS] 「在 3D 视图显示包裹器」已提到头部（不再埋在 Skin 子面板） — head=true sub=false
+  [PASS] 半径三段都有数字输入框（滑块 + 数字框双向同步） — nums=3
+  [PASS] 操作说明默认收起（不再 10 行常驻） — hidden=true
+  [PASS] 载入后产出状态徽标常驻显示「● 未导出」 — badge={"hidden":false,"text":"● 未导出","cls":"bd-badge bd-badge-warn"}
+  [PASS] 头部「?」可展开操作说明 — hidden=false
+  [PASS] 头部「?」可再次收起 — hidden=true
+  [PASS] 默认摆放是 T-pose（左臂水平：LeftHand 与 LeftArm 同高） — LeftArm.y=1.5499999999999998 LeftHand.y=1.5499999999999998
+  [PASS] A-pose 下骨长仍是刚体不变量（采纳的只是长度） — 0.260000000 → 0.260000000
+  [PASS] 姿态偏移被如实记录（前臂 / 手各约 45°） — ForeArm=45.00° Hand=45.00°
+  [PASS] 没被摆动的骨不带姿态偏移（LeftArm ≈ 0°） — LeftArm=0.000000°
+  [PASS] ★ 重建的 T-pose 里左臂重新水平（ΔR 没被写进骨架） — Arm.y=1.550000 ForeArm.y=1.550000 Hand.y=1.550000
+  [PASS] ★ T-pose 世界矩阵旋转部分 = 单位阵（ΔR 不进骨架） — maxRotErr=0.00e+0
+  [PASS] 镜像 L→R：右侧 = 左侧 x 取反，y/z 原样（tip 也一起镜像） — L=[0.77,1.42,0.05] R=[-0.77,1.42,0.05] LTip=[0.87,1.42,0.05] RTip=[-0.87,1.42,0.05]
+  [PASS] 镜像 L→R：Skin Wrapper 半径一并镜像（RightHand 半径 == LeftHand） — L={"top":0.04,"medium":0.04,"bottom":0.04} R={"top":0.04,"medium":0.04,"bottom":0.04}
+  [PASS] 导出 GLB 非空 — bytes=3135880
+  [PASS] 导出含 27 根骨 — bones=27
+  [PASS] 无零权重顶点（兜底生效） — zero=0
+  [PASS] ★ 5 个 tip 节点都在骨架里 — {"hasTips":true,"headLen":0.14,"handLen":0.1,"toeLen":0.1,"handTipIsLeafBeyondHand":true}
+  [PASS] ★ tip 让末端骨段拿到长度（Head→HeadTip / Hand→HandTip / ToeBase→ToeTip 均 > 0） — head=0.14 hand=0.1 toe=0.1
+  [PASS] ★ tip 权重恒为 0（不参与 skin 计算） — tipWeightSum=0 tipRefVerts=0
+  [PASS] 反解是刚体变换，身高不跳变 — height 2.050 → 1.954 m
+  [PASS] 统计如实报出「离轴骨」= 被摆动的那两根（tip 已随手走，不该再报） — offAxis=["LeftForeArm","RightForeArm"]
+  [PASS] ★ 导出后摆放姿势原地不动（绑完骨架姿势即定，绝不跳回 T-pose） — Hand.y=1.420000 Tip.y=1.420000（应保持摆放值 1.42）
+  [PASS] 面板统计区仍是当前模型（导出流程没把它清空） — E01_Shambler_900_rigged_animated · 4209 顶点 / 3000 面
+
+L. 动画应用（BVH 重定向）
+  [PASS] window.__editor.anim 调试钩子已挂载 — object
+  [PASS] ★ A-pose 源的重定向：最大对齐角 = 45°（rest 偏移被识别出来） — maxAlign=45.0000°
+  [PASS] 22 根骨全映射、无缺骨、无未匹配 — mapped=22 missing=[]
+  [PASS] 片段信息：5 帧 / 22 骨 / 带根位移 — {"name":"smoke_apose","frames":5,"bones":22,"hasRoot":true}
+  [PASS] 面板 .bd-anim 诊断区写出片段名与对齐角 — smoke_apose | 帧 | 5 @ 30.0fps · 0.13s | 骨 | 22 已映射 | 对齐 | 最大 45.00° | 缩放 | 0.0115 · 源 Y-up | 管线 | 部分完成 | · 覆盖 space-mapping/contact-uncalibrated/rotation-baseli
+  [PASS] ★ 带动画导出：23 条轨道（22 rotation + 1 根位移） — channels=23 clips=["smoke_apose"]
+  [PASS] ★ 重定向后的动画挂到场景里已绑定的模型上 — obj#57 report=ok info="E04_Bulwark_1600_rigged 已应用 smoke_apose · 23 条轨道 · 片段 #0 · clip=smoke_apose frames=5 fps=30.00 dur=0.13s mapped=22/22 sc"
+  [PASS] ★ 23 条轨道落到目标骨架上且自动开始播放 — {"clips":1,"clip":0,"playing":true,"tracks":23}
+
+L2. Skin Wrapper 圆柱体（主 3D 视口）
+  [PASS] 重定向工作台已退出（不遮挡后续像素采样） — closed
+  [PASS] 已暂停叠加层取数源的动画播放（后续采样需要静止场景）
+  [PASS] 可切到「蒙皮包裹 skin」编辑模式
+  [PASS] 3D 视口包裹器开关可打开 — set→true
+  [PASS] ★ 圆柱体几何已产出并送进管线（顶点数 > 0） — {"on":true,"verts":45360,"cyls":22,"tries":0}
+  [PASS] ★ 顶点数是 stride 9 的整数倍（pos+nrm+col 交错，stride 36B） — verts=45360
+  [PASS] ★ 包裹器几何已静止（连续采样逐位相等，排除 settle 窗口污染） — {"settled":true,"tries":2,"sum":11821.736571200192}
+  [PASS] 包裹器半径表非空（每 joint 一个 wrapper） — cyls=22
+
+L2d. tip（尖端）骨约束
+  [PASS] ★ 半径表里没有 tip（不产生 skin wrapper） — total=22 tipKeys=[]
+  [PASS] ★ 22 骨干各有 wrapper（tip 只是让它们拿到长度，不是替换） — total=22
+
+L2e. 改半径 → 几何真的变
+  诊断预采样: pre=[11821.74, 11821.74, 11821.74] playing=false
+  [PASS] ★ 改半径真的写进半径表（setRadius 返回 true） — ok=true orig={"top":0.091,"medium":0.091,"bottom":0.091}
+  诊断：对照组（写入同值）Δsum=0.0000 · 真改半径 Δsum=9.1800 · 主视口 sum 11821.74 → 11830.92 · verts 5040 → 5040 · bboxMin [-2.661130666732788,-0.04546824470162392,-0.4755282700061798] → [-3.120130777359009,-0.04546824470162392,-0.4755282700061798] · bboxMax [-0.3281049430370331,1.5164756774902344,0.4755282700061798] → [-0.3281049430370331,1.6164755821228027,0.4755282700061798] · first [-1.4474999904632568,0,0] → [-1.4474999904632568,0,0]
+  [PASS] ★ 主 3D 视口：改半径后圆柱体几何变了（且远大于刷新副作用） — Δsum=9.1800 vs 对照组 0.0000
+  [PASS] ★ 面板正视：改半径后圆柱体几何变了 — Δsum=76.0272（24841.93 → 24917.95）
+  [PASS] ★ 面板侧视：改半径后圆柱体几何变了 — Δsum=76.0272（24841.93 → 24917.95）
+  [PASS] ★ 改回原值后几何回到基线（不是单向漂移） — Δsum=0.00e+0
+
+L2g. 视图里拖圆柱体 = 改半径
+  [PASS] ★ 视图里能点中圆柱体子段（点选判定没坏） — {"bone":"LeftLeg","seg":"bottom"}
+  [PASS] ★ 在视图里拖圆柱体 = 改半径（拖动真的有反应） — LeftLeg.bottom 0.158 → 0.600 · 拖动方向 {"dx":60,"dy":0} · off undefined → undefined · 起点垂距 23.7px
+  [PASS] ★ 只改点中的那一段，另两段不动 — {"top":0.1575,"medium":0.1575,"bottom":0.6}
+
+L2h. 侧边栏滑块 与「自动半径不覆盖手动值」
+  [PASS] ★ 点中圆柱体后侧边栏滑块就位（可编辑） — {"hit":{"bone":"Neck","seg":"medium"},"noSlider":false}
+  [PASS] ★ 拖侧边栏滑块 → 半径表真的改了（真实 DOM input 事件路径） — r-top 0.07 → 0.3 · radii.top 0.06999999999999998 → 0.3
+  [PASS] ★ 拖侧边栏滑块 → 面板 3D 视图几何跟着变（不是只改了数字） — ΔfrontSum=23.2346
+  [PASS] ★ 滑块位置不被回弹覆盖（改完 value 仍是新值，没被自动刷新写回旧值） — domAfter=0.3 span=0.450
+  [PASS] ★ 拖 joint 改骨长后，手动半径不被自动算法覆盖（r 仍是 0.3） — radii={"top":0.3,"medium":0.06999999999999998,"bottom":0.06999999999999998}
+  [PASS] ★ skin → skeleton → skin 往返后手动半径仍在 — radii={"top":0.3,"medium":0.06999999999999998,"bottom":0.06999999999999998}
+  [PASS] ★ 关节模式也吃半径表（不在该模式用 null 回退成自动半径） — ΔfrontSum(skeleton 模式)=14.5250
+  [PASS] ★ 关节模式与蒙皮模式的几何一致（同一个半径表，不再两套真源） — skn=24993.686 sk=24993.686
+  [PASS] ★ 自动适配只重算非手动骨：手动骨（⑤ 置的 top）一点没动 — headTop 0.45 → 0.45
+  [PASS] ★ 自动适配把非手动骨重算成公式值 clamp(骨长×0.35, 0.04, 0.22) — LeftArm={"top":0.05749242404917499,"medium":0.05749242404917499,"bottom":0.05749242404917499} 预期=0.0575 · oRadiiImmediate=0.05749242404917499 · oRadiiPersist=0.05749242404917499
+  [PASS] ★ 自动适配结果在若干帧后仍保持（无帧回调覆盖半径） — oRadiiImmediate=0.05749242404917499 · oRadiiPersist=0.05749242404917499
+
+L2i. 中键平移（pan）与点选一致性
+  [PASS] ★ 中键拖拽 = 平移视图（Head 骨轴两端点竖直移动 +60px，水平不动） — a [165,52.26633589549968] → [165,112.26633589549968]
+  [PASS] ★ 松开中键后视图不再跟随鼠标（N13：panning 标志已复位） — afterUp [165,112.26633589549968] vs panned [165,112.26633589549968]
+  [PASS] ★ pan 后的新位置能点中 Head（点选与绘制同吃实时 originY，N1） — pick={"bone":"Head","seg":"medium"}
+  [PASS] ★ redraw 后视图回到 fit 基线（pan 不污染后续断言段） — restored [165,52.26633589549968] vs before [165,52.26633589549968]
+
+L2j. T/A 预览失效重建 与 导出选项复位
+  [PASS] ★ T 预览下切平滑开关，预览网格几何指纹跟着变（预览不停在旧权重） — meshSum 35123.4304 → 35131.7618（开关原值=true）
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] ★ 取消勾选平滑后重开资产，开关复位为默认勾选（不串上一模型的值） — loaded=true checked=true
+
+L2k. 旧评审遗留收口（诊断条/平滑参数/热力图/姿势预览/Undo）
+  [PASS] ★ 诊断条常驻且与导出同源（影响骨数 / 零权重 / 未包裹顶点数） — 影响骨数 18 · 零权重 0 · 满4影响 4209 · 未包裹 3646 · 撤销 0
+  [PASS] ★ 平滑迭代数默认 4 且真实进权重链（改成 1 后 T 预览几何指纹跟着变） — 默认=4 meshSum 34986.3397 → 34986.3397
+  [PASS] ★ 热力图：选中 LeftUpLeg 大腿区画暖色（R≫B），取消选中回暖色消失 — 选中时 rgb(223,130,65) → 取消后 rgb(83,107,142)
+  [PASS] ★ 姿势预览：拖测试骨架网格蒙皮变形，但编辑骨架坐标纹丝不动 — meshSum 34986.3397 → 34952.5222，编辑骨架 [0.43000000000000005,1.5499999999999998,0] → [0.43000000000000005,1.5499999999999998,0]
+  [PASS] ★ Undo/Redo：Ctrl+Z 撤销半径修改，redo 重做回来（栈深同步） — 原值 0.091 → 改 0.2 → Ctrl+Z 后 0.091 → redo 后 0.2（栈 {"undo":3,"redo":0}→{"undo":3,"redo":0}）
+  [PASS] ★ 设置变更进历史：平滑开关撤销/重做时状态与控件同步还原（全量快照） — 栈深 4→5，勾选 true → 改 false → undo 后 true → redo 后 false
+  [PASS] ★ 合并窗口手势封口：流内并一步，change 封口后 800ms 内也新起一步 — undo 深度 6 →（流内连改两次）7 →（封口后再改）8
+  [PASS] ★ 姿势档镜像：编辑骨架零污染 + 不进历史，但预览网格跟着测试姿势变 — 编辑骨架不变=true，栈深 8→8，meshSum 34958.5537 → 34934.3322
+
+L2f. 主 3D 视口像素：改半径前后画面必须不同
+  [PASS] ★ 主 3D 视口：撑大所有包裹器后画面亮度变了（半径真的画出来了） — avg 64.843 → 63.305
+
+L2b. 绑定面板正/侧视（3D 正交视图）
+  [PASS] ★ 正/侧视 3D 层已建立（非 null = WebGPU 可用） — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 正视 3D 层已上传网格缓冲 — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 侧视 3D 层已上传网格缓冲 — {"frontMesh":true,"sideMesh":true,"frontCylVerts":5280,"sideCylVerts":5280,"frontCylSum":24775.362887495197,"sideCylSum":24775.362887495197}
+  [PASS] ★ 正视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240） — frontCylVerts=5280（22 骨）
+  [PASS] ★ 侧视 3D 层已画出包裹器圆柱体（顶点数 = 骨数 × 240） — sideCylVerts=5280（22 骨）
+  [PASS] 正/侧视两个 3D 视图画出的圆柱体一致（同一批骨段） — front=5280 side=5280
+
+L3. 导入文件骨架（rigged GLB 桥）
+  [PASS] L3 导入模式打开绑定面板（27 骨 GLB）
+  [PASS] L3 诊断已挂载（importDiag 非空）
+  [PASS] L3 27 骨全部从文件骨架映射（imported=27） — imported=27
+  [PASS] L3 无缺骨保持模板位 / 无未识别骨名 / 无重复 — kept=[] unknown=[] dup=[]
+  [PASS] L3 导入摆位已进会话（Hips 为有限三元组） — [0.0024577900767326355,1.0820103883743286,0.17303752899169922]
+  [PASS] L3 autoFit 已按导入骨长真跑（LeftForeArm 半径=clamp(骨长×0.35)） — 骨长=0.4367 期望R=0.1528 实际R=0.15284809029227256
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] L3 导入模式打开绑定面板（22 骨 GLB）
+  [PASS] L3 旧 22 骨 rig：imported=22 — imported=22
+  [PASS] L3 旧 22 骨 rig：保持模板位的恰是 5 根 tip 骨 — kept=["HeadTip","LeftHandTip","RightHandTip","LeftToeTip","RightToeTip"]
+  [PASS] L3 旧 22 骨 rig：无未识别骨名 — unknown=[]
+  [PASS] L3 摆位随文件走（两次导入的 LeftForeArm 差 > 0.05m） — A=[0.6547708473125738,1.6620730981954428,0.17303752899169922] B=[0.4530067819356919,1.5499999999999998,-0.09343208372592926] Δ=0.353
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，切换/重载并放弃这些修改？
+  [PASS] L3 纯网格走导入模式：不产生导入诊断（importDiag=null）
+  [PASS] L3 纯网格走导入模式：旧会话不被顶掉（面板开、模型名不变） — before=E01_Shambler_900_rigged after=E01_Shambler_900_rigged open=true
+  [PASS] 绑定夹具切换/关闭确认框文案符合预期 — 当前绑定有未保存修改，关闭并放弃这些修改？
+
+============================================================
+断言：111 PASS / 0 FAIL / 0 SKIP（共 111）
+CONSOLE ERRORS: 0
+EXCEPTIONS: 0
+============================================================
+RESULT: PASS

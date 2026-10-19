@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "runtime": {
+    "state": "stopped",
+    "tick": 0,
+    "player": null,
+    "npcCount": 0,
+    "gates": [],
+    "diagnostics": [],
+    "runtimeDiagnostics": [],
+    "ledger": {
+      "registered": 5,
+      "disposed": 5,
+      "pending": 0
+    },
+    "instances": 5,
+    "meshIds": [
+      "capsule:r0.350:h1.800",
+      "actor:E-01",
+      "capsule:r0.550:h1.700"
+    ],
+    "actorLibrarySize": 1,
+    "weapons": null,
+    "audio": {
+      "state": "closed",
+      "runId": -1,
+      "pending": 0,
+      "buffers": 0,
+      "decodedBytes": 0,
+      "voices": 0,
+      "loops": 0,
+      "peakVoices": 0,
+      "played": {},
+      "skipped": 1,
+      "muted": false,
+      "gain": 1,
+      "errors": []
+    },
+    "navigation": null,
+    "decals": {
+      "time": 0,
+      "count": 0,
+      "capacity": 256,
+      "evicted": 0,
+      "marks": [],
+      "runId": null,
+      "combat": {
+        "emitted": 0,
+        "noSurface": 0,
+        "throttled": 0,
+        "expired": 0,
+        "budgetDropped": 0,
+        "ruleEvicted": 0,
+        "journalDropped": 0,
+        "unknownRules": 0,
+        "cursor": 0
+      },
+      "gpu": {
+        "instances": 0,
+        "drawCalls": 0,
+        "bufferBytes": 0
+      }
+    }
+  },
+  "state": {
+    "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+    "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+    "revision": "1c7ffc8f",
+    "dirty": false,
+    "hasDraft": false,
+    "busy": false,
+    "pendingAssets": 0,
+    "playing": false
+  }
+}

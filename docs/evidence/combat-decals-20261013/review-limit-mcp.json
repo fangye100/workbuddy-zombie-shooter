@@ -1,0 +1,417 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"ok\":true,\"runtime\":{\"state\":\"paused\",\"tick\":64,\"player\":{\"id\":0,\"generation\":1,\"runId\":3,\"characterId\":\"P-01\",\"kind\":\"player\",\"x\":0,\"y\":0,\"z\":0,\"yaw\":-1.861375093460083,\"alive\":true,\"sourceNodeId\":\"nd_nav3d_player\",\"targetId\":-1,\"behavior\":0,\"behaviorPhase\":0,\"hp\":100,\"maxHp\":100,\"hitFlash\":0,\"lodTier\":0},\"npcCount\":4,\"gates\":[],\"diagnostics\":[],\"runtimeDiagnostics\":[],\"ledger\":{\"registered\":10,\"disposed\":5,\"pending\":5},\"instances\":5,\"meshIds\":[\"capsule:r0.350:h1.800\",\"actor:E-01\",\"actor:E-03\"],\"actorLibrarySize\":2,\"weapons\":{\"equipped\":\"pistol\",\"states\":[{\"id\":\"pistol\",\"magazine\":15,\"reserve\":120,\"level\":1},{\"id\":\"shotgun\",\"magazine\":6,\"reserve\":48,\"level\":1},{\"id\":\"smg\",\"magazine\":32,\"reserve\":192,\"level\":1},{\"id\":\"sniper\",\"magazine\":5,\"reserve\":30,\"level\":1},{\"id\":\"chainsaw\",\"magazine\":0,\"reserve\":0,\"level\":1},{\"id\":\"flame\",\"magazine\":60,\"reserve\":240,\"level\":1},{\"id\":\"launcher\",\"magazine\":4,\"reserve\":24,\"level\":1}],\"activeId\":\"pistol\",\"behavior\":\"hitscan\",\"capacity\":18,\"reloadRemaining\":0,\"switching\":false,\"upgradeCost\":15,\"animation\":{\"action\":\"idle\",\"weaponId\":\"pistol\",\"clip\":\"pistol-idle\",\"fallback\":\"idle\",\"phase\":0,\"startTick\":53},\"poseIntent\":{\"weaponId\":\"pistol\",\"action\":\"idle\",\"phase\":0,\"markers\":{\"primaryGrip\":{\"position\":[0,0,0],\"rotation\":[0,0,0,1],\"effector\":\"right-hand\"},\"supportGrip\":{\"position\":[0.12,0,0],\"rotation\":[0,0,0,1],\"effector\":\"left-hand\"},\"muzzle\":{\"position\":[0.3,0,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"},\"magazine\":{\"position\":[0.036,-0.1,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"},\"chamber\":{\"position\":[0.09,0.04,0],\"rotation\":[0,0,0,1],\"effector\":\"none\"}},\"recoil\":{\"translation\":[0,0,0],\"pitchDeg\":0},\"reload\":{\"leftHandTarget\":\"supportGrip\",\"phase\":0}},\"recentEvents\":[{\"sequence\":1,\"tick\":16,\"weaponId\":\"pistol\",\"action\":\"fire\",\"clip\":\"pistol-fire\"},{\"sequence\":2,\"tick\":41,\"weaponId\":\"pistol\",\"action\":\"fire\",\"clip\":\"pistol-fire\"},{\"sequence\":3,\"tick\":53,\"weaponId\":\"pistol\",\"action\":\"fire\",\"clip\":\"pistol-fire\"}],\"hookErrors\":[],\"effectCount\":0},\"audio\":{\"state\":\"running\",\"runId\":3,\"pending\":0,\"buffers\":22,\"decodedBytes\":13405440,\"voices\":0,\"loops\":0,\"peakVoices\":4,\"played\":{\"SFX-ENV-HIGHWAY-BED\":11,\"SFX-E03-ACID-LAUNCH\":3,\"SFX-E03-ACID-POOL\":4,\"SFX-WPN-PISTOL-SHOT\":7,\"SFX-HIT-FLESH\":3},\"skipped\":10,\"muted\":false,\"gain\":1,\"errors\":[]},\"navigation\":{\"settings\":{\"maxNeighbors\":12,\"timeHorizonSec\":0.8,\"skinM\":0.02,\"acceleration\":8,\"collisionIterations\":4,\"stuckWindowSec\":0.5,\"stuckProgressRatio\":0.15,\"flowCellBudget\":2048},\"surface\":{\"mode\":\"surface-3d\",\"cellCount\":1460,\"surfaceCount\":1,\"rejectedSurfaces\":[],\"obstacleVersion\":0,\"dynamicObstacleCount\":0,\"overlayWork\":0,\"blockedDynamicCells\":0,\"blockedDynamicEdges\":0,\"version\":1,\"pending\":false,\"workLastStep\":0,\"goal\":{\"x\":-0.25,\"y\":0,\"z\":-0.25,\"surface\":0}},\"flow\":{\"version\":1,\"pending\":false,\"publishedGoal\":{\"x\":-0.25,\"y\":0,\"z\":-0.25,\"surface\":0},\"requestedX\":0,\"requestedZ\":0,\"workLastStep\":0,\"cellCount\":1460,\"rejectedGoals\":0},\"crowd\":{\"agents\":5,\"moving\":3,\"candidateChecks\":12,\"velocityConstraints\":9,\"infeasibleVelocities\":0,\"contactPairs\":0,\"blockedMoves\":0,\"residualOverlapPairs\":0,\"maxPenetrationM\":0,\"stuckAgents\":0,\"unreachableAgents\":0,\"yieldingAgents\":0,\"externalBlockedMoves\":0}},\"decals\":{\"time\":2.1333333333333333,\"count\":2,\"capacity\":256,\"evicted\":0,\"marks\":[{\"receiver\":\"nd_nav3d_low\",\"mark\":{\"position\":[3.6420042514801025,-1.3877787807814457e-17,-2.101278066635132],\"rotation\":[0,0,0,1],\"size\":[0.85,0.7],\"id\":\"combat_blood_1\",\"pattern\":\"splatter\",\"color\":\"#982c3c\",\"opacity\":0.86,\"seed\":633,\"normalOffset\":0.006,\"priority\":1,\"style\":{\"coverage\":0.92,\"edgeWidth\":0.015,\"irregularity\":0.8,\"detail\":0.65}},\"remainingSec\":1.4},{\"receiver\":\"nd_combat_wall\",\"mark\":{\"position\":[-1.71949840843536,-0.6,0.25],\"rotation\":[0.7071067811865475,0,0,0.7071067811865475],\"size\":[0.22,0.22],\"id\":\"combat_bullet_3\",\"pattern\":\"bullet-hole\",\"color\":\"#b3a186\",\"opacity\":0.95,\"seed\":2054,\"normalOffset\":0.004,\"priority\":1,\"style\":{\"coverage\":0.9,\"edgeWidth\":0.02,\"irregularity\":0.7,\"detail\":0.7}},\"remainingSec\":2.6333333333333333}],\"runId\":3,\"combat\":{\"emitted\":3,\"noSurface\":0,\"throttled\":0,\"expired\":0,\"budgetDropped\":0,\"ruleEvicted\":1,\"journalDropped\":0,\"unknownRules\":0,\"cursor\":3},\"gpu\":{\"instances\":2,\"drawCalls\":1,\"bufferBytes\":4096}}},\"state\":{\"path\":\"assets/scenes/sandbox/combat-decal-whitebox.scene.json\",\"name\":\"战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池\",\"revision\":\"8645667a\",\"dirty\":true,\"hasDraft\":false,\"busy\":false,\"pendingAssets\":0,\"playing\":true}}"
+      }
+    ],
+    "isError": false,
+    "structuredContent": {
+      "ok": true,
+      "runtime": {
+        "state": "paused",
+        "tick": 64,
+        "player": {
+          "id": 0,
+          "generation": 1,
+          "runId": 3,
+          "characterId": "P-01",
+          "kind": "player",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "yaw": -1.861375093460083,
+          "alive": true,
+          "sourceNodeId": "nd_nav3d_player",
+          "targetId": -1,
+          "behavior": 0,
+          "behaviorPhase": 0,
+          "hp": 100,
+          "maxHp": 100,
+          "hitFlash": 0,
+          "lodTier": 0
+        },
+        "npcCount": 4,
+        "gates": [],
+        "diagnostics": [],
+        "runtimeDiagnostics": [],
+        "ledger": {
+          "registered": 10,
+          "disposed": 5,
+          "pending": 5
+        },
+        "instances": 5,
+        "meshIds": [
+          "capsule:r0.350:h1.800",
+          "actor:E-01",
+          "actor:E-03"
+        ],
+        "actorLibrarySize": 2,
+        "weapons": {
+          "equipped": "pistol",
+          "states": [
+            {
+              "id": "pistol",
+              "magazine": 15,
+              "reserve": 120,
+              "level": 1
+            },
+            {
+              "id": "shotgun",
+              "magazine": 6,
+              "reserve": 48,
+              "level": 1
+            },
+            {
+              "id": "smg",
+              "magazine": 32,
+              "reserve": 192,
+              "level": 1
+            },
+            {
+              "id": "sniper",
+              "magazine": 5,
+              "reserve": 30,
+              "level": 1
+            },
+            {
+              "id": "chainsaw",
+              "magazine": 0,
+              "reserve": 0,
+              "level": 1
+            },
+            {
+              "id": "flame",
+              "magazine": 60,
+              "reserve": 240,
+              "level": 1
+            },
+            {
+              "id": "launcher",
+              "magazine": 4,
+              "reserve": 24,
+              "level": 1
+            }
+          ],
+          "activeId": "pistol",
+          "behavior": "hitscan",
+          "capacity": 18,
+          "reloadRemaining": 0,
+          "switching": false,
+          "upgradeCost": 15,
+          "animation": {
+            "action": "idle",
+            "weaponId": "pistol",
+            "clip": "pistol-idle",
+            "fallback": "idle",
+            "phase": 0,
+            "startTick": 53
+          },
+          "poseIntent": {
+            "weaponId": "pistol",
+            "action": "idle",
+            "phase": 0,
+            "markers": {
+              "primaryGrip": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "right-hand"
+              },
+              "supportGrip": {
+                "position": [
+                  0.12,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "left-hand"
+              },
+              "muzzle": {
+                "position": [
+                  0.3,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              },
+              "magazine": {
+                "position": [
+                  0.036,
+                  -0.1,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              },
+              "chamber": {
+                "position": [
+                  0.09,
+                  0.04,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "effector": "none"
+              }
+            },
+            "recoil": {
+              "translation": [
+                0,
+                0,
+                0
+              ],
+              "pitchDeg": 0
+            },
+            "reload": {
+              "leftHandTarget": "supportGrip",
+              "phase": 0
+            }
+          },
+          "recentEvents": [
+            {
+              "sequence": 1,
+              "tick": 16,
+              "weaponId": "pistol",
+              "action": "fire",
+              "clip": "pistol-fire"
+            },
+            {
+              "sequence": 2,
+              "tick": 41,
+              "weaponId": "pistol",
+              "action": "fire",
+              "clip": "pistol-fire"
+            },
+            {
+              "sequence": 3,
+              "tick": 53,
+              "weaponId": "pistol",
+              "action": "fire",
+              "clip": "pistol-fire"
+            }
+          ],
+          "hookErrors": [],
+          "effectCount": 0
+        },
+        "audio": {
+          "state": "running",
+          "runId": 3,
+          "pending": 0,
+          "buffers": 22,
+          "decodedBytes": 13405440,
+          "voices": 0,
+          "loops": 0,
+          "peakVoices": 4,
+          "played": {
+            "SFX-ENV-HIGHWAY-BED": 11,
+            "SFX-E03-ACID-LAUNCH": 3,
+            "SFX-E03-ACID-POOL": 4,
+            "SFX-WPN-PISTOL-SHOT": 7,
+            "SFX-HIT-FLESH": 3
+          },
+          "skipped": 10,
+          "muted": false,
+          "gain": 1,
+          "errors": []
+        },
+        "navigation": {
+          "settings": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          },
+          "surface": {
+            "mode": "surface-3d",
+            "cellCount": 1460,
+            "surfaceCount": 1,
+            "rejectedSurfaces": [],
+            "obstacleVersion": 0,
+            "dynamicObstacleCount": 0,
+            "overlayWork": 0,
+            "blockedDynamicCells": 0,
+            "blockedDynamicEdges": 0,
+            "version": 1,
+            "pending": false,
+            "workLastStep": 0,
+            "goal": {
+              "x": -0.25,
+              "y": 0,
+              "z": -0.25,
+              "surface": 0
+            }
+          },
+          "flow": {
+            "version": 1,
+            "pending": false,
+            "publishedGoal": {
+              "x": -0.25,
+              "y": 0,
+              "z": -0.25,
+              "surface": 0
+            },
+            "requestedX": 0,
+            "requestedZ": 0,
+            "workLastStep": 0,
+            "cellCount": 1460,
+            "rejectedGoals": 0
+          },
+          "crowd": {
+            "agents": 5,
+            "moving": 3,
+            "candidateChecks": 12,
+            "velocityConstraints": 9,
+            "infeasibleVelocities": 0,
+            "contactPairs": 0,
+            "blockedMoves": 0,
+            "residualOverlapPairs": 0,
+            "maxPenetrationM": 0,
+            "stuckAgents": 0,
+            "unreachableAgents": 0,
+            "yieldingAgents": 0,
+            "externalBlockedMoves": 0
+          }
+        },
+        "decals": {
+          "time": 2.1333333333333333,
+          "count": 2,
+          "capacity": 256,
+          "evicted": 0,
+          "marks": [
+            {
+              "receiver": "nd_nav3d_low",
+              "mark": {
+                "position": [
+                  3.6420042514801025,
+                  -1.3877787807814457e-17,
+                  -2.101278066635132
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "size": [
+                  0.85,
+                  0.7
+                ],
+                "id": "combat_blood_1",
+                "pattern": "splatter",
+                "color": "#982c3c",
+                "opacity": 0.86,
+                "seed": 633,
+                "normalOffset": 0.006,
+                "priority": 1,
+                "style": {
+                  "coverage": 0.92,
+                  "edgeWidth": 0.015,
+                  "irregularity": 0.8,
+                  "detail": 0.65
+                }
+              },
+              "remainingSec": 1.4
+            },
+            {
+              "receiver": "nd_combat_wall",
+              "mark": {
+                "position": [
+                  -1.71949840843536,
+                  -0.6,
+                  0.25
+                ],
+                "rotation": [
+                  0.7071067811865475,
+                  0,
+                  0,
+                  0.7071067811865475
+                ],
+                "size": [
+                  0.22,
+                  0.22
+                ],
+                "id": "combat_bullet_3",
+                "pattern": "bullet-hole",
+                "color": "#b3a186",
+                "opacity": 0.95,
+                "seed": 2054,
+                "normalOffset": 0.004,
+                "priority": 1,
+                "style": {
+                  "coverage": 0.9,
+                  "edgeWidth": 0.02,
+                  "irregularity": 0.7,
+                  "detail": 0.7
+                }
+              },
+              "remainingSec": 2.6333333333333333
+            }
+          ],
+          "runId": 3,
+          "combat": {
+            "emitted": 3,
+            "noSurface": 0,
+            "throttled": 0,
+            "expired": 0,
+            "budgetDropped": 0,
+            "ruleEvicted": 1,
+            "journalDropped": 0,
+            "unknownRules": 0,
+            "cursor": 3
+          },
+          "gpu": {
+            "instances": 2,
+            "drawCalls": 1,
+            "bufferBytes": 4096
+          }
+        }
+      },
+      "state": {
+        "path": "assets/scenes/sandbox/combat-decal-whitebox.scene.json",
+        "name": "战斗贴花白盒 · 弹孔 / 受击血迹 / 酸池",
+        "revision": "8645667a",
+        "dirty": true,
+        "hasDraft": false,
+        "busy": false,
+        "pendingAssets": 0,
+        "playing": true
+      }
+    }
+  }
+}

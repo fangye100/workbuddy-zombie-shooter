@@ -25,6 +25,12 @@ export const EDITOR_TOOLS = [
   edit('scene_save', 'Persist the author scene with the existing disk-conflict checks. Never bypass UI drafts, Play locks or author field authority.'),
   edit('editor_play', 'Start paused, resume, pause, single-step or stop using PlayController. stop restores the author scene and releases Play resources.',
     {action:{enum:['start','resume','pause','step','stop']},steps:{type:'integer',minimum:1,maximum:600}}, ['action']),
-  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, copied weapon ammo/action/grip/recoil facts and audio decode/voice/lifecycle diagnostics. Read-only; no firing or playback command.'),
+  scoped('editor_runtime', 'Inspect actual runtime tick, player, NPC count, Play resource ledger, weapon/audio diagnostics, and copied navigation flow-budget/avoidance/contact/stuck facts. Read-only; does not advance simulation.'),
+  edit('editor_gate','Set a runtime navigation gate target by stable NodeId and current runId from editor_runtime.player. Does not alter author data or advance simulation. Motion, collision, occupancy waiting and route updates happen on fixed steps.',
+    {nodeId:{type:'string'},open:{type:'boolean'},runId:{type:'integer',minimum:1}},['nodeId','open','runId']),
   scoped('editor_capture', 'Capture the next actual GPU viewport frame as PNG. This is the 3D canvas, not the DOM HUD. Requires a live rendered editor; timeout is explicit.'),
+  scoped('editor_decal_gpu','异步读回被采样帧的GPU视锥保守剔除后实例计数；不推进模拟。返回sequence/inputInstances/drawnInstances/visibleInstances/countSource；A只知道submitted，visibleInstances为null，B为GPU视锥候选计数（非像素遮挡可见），资源切换期间为null。'),
+  edit('editor_decal_backend','选择通用贴花绘制方案：direct=CPU对象池+直接实例化；indirect=相同对象池与CPU坐标上传+GPU稳定剔除压缩+drawIndirect。临时渲染设置，不改场景/游戏时间；支持Play中切换。下一帧观察editor_runtime.runtime.decals.gpu。',{backend:{enum:['direct','indirect']}},['backend']),
+  edit('editor_decal','Emit or clear only transient procedural surface marks in the current Play run. Authored Decal components use scene_edit_nodes. decal contains receiver NodeId, complete DecalMark, ttlSec and fadeSec; local coordinates follow the static receiver. Simulation steps drive expiry; Stop releases buffers.',
+    {action:{enum:['emit','clear']},runId:{type:'integer',minimum:1},decal:object},['action','runId']),
 ];

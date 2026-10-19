@@ -1,7 +1,7 @@
 import {mat4,invert} from '@aether/core';
 import type {VfxDecalInstance} from '@aether/runtime';
 import {sampleVfxVisual} from './vfx-visual';
-export interface DecalReceiver {nodeId:string;layer:number;matrix:Float32Array;vertices:Float32Array;indices:Uint32Array;stride:number;ranges?:readonly {start:number;count:number}[];unsupported?:string}
+export interface VfxDecalReceiver {nodeId:string;layer:number;matrix:Float32Array;vertices:Float32Array;indices:Uint32Array;stride:number;ranges?:readonly {start:number;count:number}[];unsupported?:string}
 export interface DecalTriangle {firstIndex:number;indexCount:number;depth:number;texture:string;blend:'alpha'|'additive';key:string;receiver:string;sourceTriangle:number;normal:number[]}
 export const DECAL_BUDGET={trianglesPerDecal:2048,verticesPerDecal:8192,totalVertices:32768,totalIndices:98304};
 type P=number[];
@@ -14,12 +14,12 @@ const validMatrix=(m:Float32Array)=>m.length===16 && [...m].every(Number.isFinit
 /** Sutherland–Hodgman clipping in projector-local space; the input is a real receiver triangle. */
 function clip(poly:P[],axis:number,sign:number,bound:number){const out:P[]=[];for(let i=0;i<poly.length;i++){const a=poly[i]!,b=poly[(i+1)%poly.length]!,da=bound-sign*a[axis]!,db=bound-sign*b[axis]!;if(da>=-1e-9)out.push(a);if((da>=0)!==(db>=0)){const t=da/(da-db);out.push(a.map((v,k)=>v+(b[k]!-v)*t));}}return out;}
 /** Atomic per-projector budgets: never publish a partially clipped old/current decal. */
-export function buildDecalMesh(instances:readonly VfxDecalInstance[],receivers:readonly DecalReceiver[],view:Float32Array,budget=DECAL_BUDGET){
+export function buildDecalMesh(instances:readonly VfxDecalInstance[],receivers:readonly VfxDecalReceiver[],view:Float32Array,budget=DECAL_BUDGET){
  const vertices:number[]=[],indices:number[]=[],triangles:DecalTriangle[]=[],diagnostics:string[]=[];let rejected=0,filtered=0,degenerate=0,candidates=0;
  for(const p of [...instances].sort((a,b)=>b.priority-a.priority || a.epoch-b.epoch)){
   const e=p.effect,d=e.decal;if(e.kind!=='decal' || !d){diagnostics.push(p.key+': 非投影贴花请求');rejected++;continue;}if(!validMatrix(p.matrix)){diagnostics.push(p.key+': 投影矩阵不可逆/非法');rejected++;continue;}
   const inverse=invert(mat4(),new Float32Array(p.matrix)),v:number[]=[],ix:number[]=[],ts:DecalTriangle[]=[];let failure='',count=0;
-  const selected:DecalReceiver[]=[];for(const id of p.receivers){const r=receivers.find(r=>r.nodeId===id);if(!r){failure='接收节点未就绪/不可见：'+id;break;}if(r.unsupported){failure=id+': '+r.unsupported;break;}if(!validMatrix(r.matrix)){failure=id+': 接收矩阵不可逆/非法';break;}if(!Number.isInteger(r.layer) || r.layer<0 || r.layer>31){failure=id+': 接收层非法';break;}if(!((p.layerMask>>>r.layer)&1)){filtered++;continue;}if(!Number.isInteger(r.stride) || r.stride<3 || r.vertices.length%r.stride || r.indices.length%3){failure=id+': 接收网格布局非法';break;}const ranges=r.ranges??[{start:0,count:r.indices.length}];if(ranges.some(s=>s.start<0 || s.count<0 || s.start%3 || s.count%3 || s.start+s.count>r.indices.length)){failure=id+': 接收子网格范围非法';break;}count+=ranges.reduce((n,s)=>n+s.count/3,0);if(count>budget.trianglesPerDecal){failure='接收三角形预算超限';break;}selected.push(r);}
+  const selected:VfxDecalReceiver[]=[];for(const id of p.receivers){const r=receivers.find(r=>r.nodeId===id);if(!r){failure='接收节点未就绪/不可见：'+id;break;}if(r.unsupported){failure=id+': '+r.unsupported;break;}if(!validMatrix(r.matrix)){failure=id+': 接收矩阵不可逆/非法';break;}if(!Number.isInteger(r.layer) || r.layer<0 || r.layer>31){failure=id+': 接收层非法';break;}if(!((p.layerMask>>>r.layer)&1)){filtered++;continue;}if(!Number.isInteger(r.stride) || r.stride<3 || r.vertices.length%r.stride || r.indices.length%3){failure=id+': 接收网格布局非法';break;}const ranges=r.ranges??[{start:0,count:r.indices.length}];if(ranges.some(s=>s.start<0 || s.count<0 || s.start%3 || s.count%3 || s.start+s.count>r.indices.length)){failure=id+': 接收子网格范围非法';break;}count+=ranges.reduce((n,s)=>n+s.count/3,0);if(count>budget.trianglesPerDecal){failure='接收三角形预算超限';break;}selected.push(r);}
   if(failure){diagnostics.push(p.key+': '+failure);rejected++;continue;}candidates+=count;
   const sample=sampleVfxVisual({key:p.key,effect:e,position:[0,0,0],seed:0,priority:p.priority,age:e.loop?p.age%e.duration:p.age}),half=[e.size[0]*sample.size/2,e.size[1]*sample.size/2,d.depth/2],axisNormal=[inverse[2]!,inverse[6]!,inverse[10]!],nl=Math.hypot(...axisNormal);const outward=axisNormal.map(n=>n/nl),minDot=Math.cos(d.maxAngle*Math.PI/180),alpha=sample.alpha*(e.loop?1:Math.max(0,1-p.age/e.duration));
   if(sample.size<1e-8 || alpha<=0)continue;

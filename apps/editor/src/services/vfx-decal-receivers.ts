@@ -1,10 +1,10 @@
 import {composeQuat,mat4} from '@aether/core';
 import {SceneGraph,type SceneDocument} from '@aether/scene';
-import type {DecalReceiver} from '@aether/render';
+import type {VfxDecalReceiver} from '@aether/render';
 import type {LabRenderer} from '../renderer';
 /** Exposes existing rendered CPU geometry, never rebuilds or owns scene content. */
-export function decalReceivers(renderer:LabRenderer,doc:SceneDocument):DecalReceiver[]{
- const graph=SceneGraph.fromDocument(doc),out:DecalReceiver[]=[];
+export function decalReceivers(renderer:LabRenderer,doc:SceneDocument):VfxDecalReceiver[]{
+ const graph=SceneGraph.fromDocument(doc),out:VfxDecalReceiver[]=[];
  for(const n of doc.nodes){const c=n.components.find(c=>c.kind==='MeshRenderer');if(c?.kind!=='MeshRenderer')continue;const o=renderer.state.objects.find(o=>o.nodeId===n.id && !o.removed),world=graph.getNode(n.id)!.world;let unsupported='';
   if(!o || !o.visible || !c.enabled || !c.visible || !graph.isEffectivelyVisible(n.id))unsupported='接收几何未就绪/不可见';
   else if(c.source.type==='asset' && o.loadedAssetPath!==c.source.ref.path)unsupported='GLB接收资产尚未真实解码，禁止占位几何';

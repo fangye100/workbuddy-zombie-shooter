@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_a983c8183173",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "retarget": null,
+  "userData": {
+    "assetId": "WPN-05-CHAINSAW",
+    "variant": "raw-source-review",
+    "status": "source-review-pending",
+    "sourceDelivery": "assets/_delivery/WPN-20261012/delivery.json",
+    "sourceUnits": "未标定生成单位；displayScale不是米制",
+    "axisContract": "保留节点变换后的Y-up；长轴符号/握区/分件待目检",
+    "inspectionScene": "assets/scenes/sandbox/weapon-body-source-review.scene.json",
+    "sourceTriangles": 100004
+  },
+  "sourceHash": "sha256:d8b738eae6ec62b049b9c60f39ff77da342333d19d240f559edecd768e3bc4c6",
+  "updatedAt": "2026-10-12T00:33:13.421Z"
+}

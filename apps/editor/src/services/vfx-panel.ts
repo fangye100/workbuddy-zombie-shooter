@@ -1,7 +1,7 @@
 import {vfxAuthorAnchor} from './vfx-author-anchor';
 import { SceneGraph,validateVfxAsset,cpuVfxCompatibility,type SceneDocument,type SceneNode,type VfxAsset } from '@aether/scene';
 import { VfxDecalPool,VfxPool,VfxEmitters,RibbonHistory,sampleVfxMotionWorld,solidCollider,nearestSolidContact,type EditResult } from '@aether/runtime';
-import { VfxPass,type DecalReceiver,type RendererCore } from '@aether/render';
+import { VfxPass,type VfxDecalReceiver,type RendererCore } from '@aether/render';
 import { listDir,readProjectFile } from '../asset-util';
 import { readVfxAsset,readVfxTexture } from './vfx-assets';
 import { VfxDocument } from './vfx-document';
@@ -41,7 +41,7 @@ export class VfxPanel {
 
   private sceneKey='';
   private formDirty=false;
-  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;receivers?(doc:SceneDocument):readonly DecalReceiver[];locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown}){
+  constructor(host:HTMLElement,private readonly core:RendererCore,private readonly port:{document():SceneDocument|null;receivers?(doc:SceneDocument):readonly VfxDecalReceiver[];locked():boolean;edit(label:string,mutate:(nodes:SceneNode[])=>void,rebuild:boolean):EditResult;undo():void;redo():void;save():Promise<void>;playStats():unknown}){
     this.root.id='vfx-panel';this.root.open=true;const title=document.createElement('summary');title.textContent='VFX · 资源与预览';this.root.append(title);
     const field=(label:string,input:HTMLElement)=>{const row=document.createElement('label');row.textContent=label;row.append(input);this.form.append(row);input.setAttribute('aria-label',label);};
     field('VFX 资源',this.resource);field('资源文件路径',this.path);

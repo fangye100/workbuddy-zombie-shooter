@@ -3,7 +3,26 @@ import type { AssetRef } from './document';
 
 export const MOTION_LIBRARY_VERSION = 1;
 export const DEFAULT_MOTION_TRANSITION_SEC = .2;
+/** Generic, opt-in skeletal region. Roots and excluded subtrees use unique joint names. */
+export interface PoseLayerBinding {
+  roots: string[];
+  exclude: string[];
+  weight: number;
+  transitionSec: number;
+}
+export function validatePoseLayerBinding(v: unknown): string[] {
+  if (!record(v)) return ['Pose layer must be an object'];
+  const names = (a: unknown, required: boolean): boolean => Array.isArray(a) && (!required || a.length > 0) && a.length <= 64 &&
+    a.every(n => typeof n === 'string' && n.trim().length > 0) && new Set(a).size === a.length;
+  const errors: string[] = [];
+  if (!names(v.roots, true) || !names(v.exclude, false)) errors.push('Pose layer requires unique roots and excluded subtree names');
+  if (typeof v.weight !== 'number' || !Number.isFinite(v.weight) || v.weight < 0 || v.weight > 1) errors.push('Pose layer weight must be in [0,1]');
+  if (typeof v.transitionSec !== 'number' || !Number.isFinite(v.transitionSec) || v.transitionSec < 0 || v.transitionSec > 5) errors.push('Pose layer transitionSec must be in [0,5]');
+  return errors;
+}
 export interface SharedMotionBinding {
+  /** Absent preserves the legacy full-body selector; configured zero weight retains base playback. */
+  poseLayer?: PoseLayerBinding;
   /** Pose transition duration in simulation seconds. Zero selects immediately. */
   transitionSec?: number;
   library: AssetRef;
@@ -43,6 +62,7 @@ export function validateSharedMotionBinding(v: unknown): string[] {
   if (typeof v.defaultState !== 'string' || !v.defaultState) errors.push('Default motion state is required');
   if (typeof v.speed !== 'number' || !Number.isFinite(v.speed) || v.speed <= 0) errors.push('Motion speed must be positive');
   if (v.transitionSec !== undefined && (typeof v.transitionSec !== 'number' || !Number.isFinite(v.transitionSec) || v.transitionSec < 0 || v.transitionSec > 5)) errors.push('Motion transitionSec must be in [0,5] seconds');
+  if (v.poseLayer !== undefined) errors.push(...validatePoseLayerBinding(v.poseLayer));
   return errors;
 }
 export function validateSharedMotionLibrary(v: unknown): string[] {

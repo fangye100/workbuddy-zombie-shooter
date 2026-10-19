@@ -12,10 +12,11 @@ export interface EnemyAttackEffect {
   surface:{nodeId:string|null;normal:AttackPoint}|null;
 }
 export interface EnemyAttackEvent {readonly sequence:number;readonly runId:number;readonly tick:number;readonly type:'spawn'|'phase'|'impact'|'end'|'move';readonly effect:Readonly<EnemyAttackEffect>}
-interface Actor { x: number; z: number; radius: number; generation: number; hp: number }
+interface Actor { x: number; y?:number; z: number; radius: number; generation: number; hp: number }
 export interface EnemyAttackWorld {
   actor(slot: number): Actor | null;
   player: number;
+  landed?(effect:Readonly<EnemyAttackEffect>,tick:number):void;
   damage(slot: number, amount: number, source: number): void;
   move(slot: number, x: number, z: number): AttackPoint;
   /** Actual segment collision with scene solids, including the lob's height. */
@@ -35,26 +36,26 @@ export class EnemyAttacks {
     this.events.push(Object.freeze({sequence:++this.nextEvent,runId:this.runId,tick,type,effect:Object.freeze(copy)}));
   }
   drainEvents():readonly EnemyAttackEvent[]{const result=this.events;this.events=[];return result;}
-  lock(slot: number, generation: number, x: number, z: number): void {
-    this.targets.set(slot, { generation, point: [x, 0, z] });
+  lock(slot: number, generation: number, x: number, z: number,y=0): void {
+    this.targets.set(slot, { generation, point: [x,y,z] });
   }
   target(slot: number, generation: number): AttackPoint | undefined {
     const t = this.targets.get(slot); return t?.generation === generation ? t.point : undefined;
   }
   moving(slot: number, generation?: number): boolean { return this.effects.some(e => e.source === slot && (generation === undefined || e.generation === generation) && !e.finished && (e.kind === 'pounce' || e.kind === 'charge')); }
   clear(): void { this.effects.length = 0; this.targets.clear();this.events=[];this.droppedEvents=0; }
-  impact(kind: 'slam', source: number, generation: number, x: number, z: number, radius: number, tick: number): void {
-    const point: AttackPoint=[x,0,z];
+  impact(kind: 'slam', source: number, generation: number, x: number, z: number, radius: number, tick: number,y=0): void {
+    const point: AttackPoint=[x,y,z];
     const e:EnemyAttackEffect={id:++this.nextAttack,runId:this.runId,phaseTick:tick,finishTick:tick,surface:{nodeId:null,normal:[0,1,0]},kind,phase:'strike',source,generation,from:point,to:point,position:point,startTick:tick,duration:.45,radius,damage:0,hit:true,blocked:false,finished:true,flightSeconds:0};this.effects.push(e);this.emit('spawn',e,tick);this.emit('impact',e,tick);
   }
   strike(slot: number, actor: Actor, stats: AttackStats, tick: number, player: Actor, world: EnemyAttackWorld): boolean {
     const kind = stats.kind ?? 'melee';
-    const target = this.target(slot, actor.generation) ?? [player.x, 0, player.z];
+    const target = this.target(slot, actor.generation) ?? [player.x,player.y??0,player.z];
     this.targets.delete(slot);
-    const from: AttackPoint = [actor.x, kind === 'acid' ? 1.3 : 0, actor.z];
+    const from: AttackPoint = [actor.x,(actor.y??0)+(kind==='acid'?1.3:0),actor.z];
     let to: AttackPoint = [...target];
     const length = Math.hypot(to[0] - from[0], to[2] - from[2]);
-    if (length > stats.rangeM) to = [from[0] + (to[0]-from[0]) / length * stats.rangeM, 0, from[2] + (to[2]-from[2]) / length * stats.rangeM];
+    if (length > stats.rangeM) to = [from[0] + (to[0]-from[0]) / length * stats.rangeM, to[1], from[2] + (to[2]-from[2]) / length * stats.rangeM];
     const radius = kind === 'acid' ? stats.poolRadiusM! : kind === 'explode' ? stats.rangeM : stats.impactRadiusM ?? stats.rangeM;
     const duration = kind === 'acid' ? stats.flightSec! : kind === 'pounce' || kind === 'charge' ? Math.max(.01, Math.min(length, stats.rangeM) / stats.speedMps!) : .35;
     const e: EnemyAttackEffect = {id:++this.nextAttack,runId:this.runId,phaseTick:tick,finishTick:null,surface:null, kind, phase: kind === 'acid' ? 'flight' : 'strike', source: slot, generation: actor.generation, from, to, position: [...from], startTick: tick, duration, radius, damage: stats.damage, hit: false, blocked: false, finished: false, flightSeconds: duration };
@@ -64,8 +65,8 @@ export class EnemyAttacks {
     if (kind === 'pounce' || kind === 'charge') e.duration += .25;
     this.emit('spawn',e,tick);
     if (kind === 'explode') {
-      e.finishTick=tick;e.surface=world.surface?.([e.position[0],.2,e.position[2]],[e.position[0],-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);
-      if (Math.hypot(player.x-actor.x, player.z-actor.z) <= radius + player.radius) world.damage(world.player, stats.damage, slot);
+      e.finishTick=tick;e.surface=world.surface?.([e.position[0],e.position[1]+.2,e.position[2]],[e.position[0],e.position[1]-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);
+      if (Math.hypot(player.x-actor.x,(player.y??0)-(actor.y??0),player.z-actor.z) <= radius + player.radius) world.damage(world.player, stats.damage, slot);
       world.damage(slot, actor.hp, slot); e.hit = true;
     }
     return kind !== 'melee';
@@ -80,15 +81,15 @@ export class EnemyAttacks {
         const flightSec = e.flightSeconds;
         if (age < flightSec && !e.blocked) {
           const t = Math.max(0, age / flightSec);
-          const next: AttackPoint = [e.from[0]+(e.to[0]-e.from[0])*t, e.from[1]*(1-t)+4*t*(1-t)*2.2, e.from[2]+(e.to[2]-e.from[2])*t];
+          const next: AttackPoint = [e.from[0]+(e.to[0]-e.from[0])*t, e.from[1]*(1-t)+e.to[1]*t+4*t*(1-t)*2.2, e.from[2]+(e.to[2]-e.from[2])*t];
           const block = world.obstruction(e.position, next);
           const previous=e.position;e.position = block ?? next; if (block) { e.blocked = true;e.duration=age+.3;e.surface=world.surface?.(previous,next)??null;e.finishTick=tick;this.emit('impact',e,tick); }
         } else if (!e.blocked) {
           const block = e.phase === 'flight' ? world.obstruction(e.position,e.to) : null;
           if (block) { e.blocked=true;e.surface=world.surface?.(e.position,e.to)??null;e.position=block;e.duration=age+.3;e.finishTick=tick;this.emit('impact',e,tick);continue; }
-          if(e.phase==='flight'){e.phaseTick=tick;e.surface=world.surface?.([e.to[0],e.to[1]+.2,e.to[2]],[e.to[0],e.to[1]-.2,e.to[2]])??{nodeId:null,normal:[0,1,0]};e.phase='pool';e.position=[...e.to];this.emit('phase',e,tick);this.emit('impact',e,tick);}
+          if(e.phase==='flight'){e.phaseTick=tick;e.surface=world.surface?.([e.to[0],e.to[1]+.2,e.to[2]],[e.to[0],e.to[1]-.2,e.to[2]])??{nodeId:null,normal:[0,1,0]};e.phase='pool';e.position=[...e.to];this.emit('phase',e,tick);this.emit('impact',e,tick);world.landed?.(e,tick);}
           e.position = [...e.to];
-          if (Math.hypot(player.x-e.to[0],player.z-e.to[2]) <= e.radius + player.radius) {
+          if (Math.abs((player.y??0)-e.to[1])<.5 && Math.hypot(player.x-e.to[0],player.z-e.to[2]) <= e.radius + player.radius) {
             const source=world.actor(e.source);
             world.damage(world.player,e.damage*dt,source?.generation===e.generation?e.source:-1);
           }
@@ -98,17 +99,17 @@ export class EnemyAttacks {
         const actor = world.actor(e.source);
         if (!actor || actor.generation !== e.generation) { this.emit('end',e,tick);this.effects.splice(i,1); continue; }
         const t = Math.min(1, Math.max(0, age / e.flightSeconds));
-        const next: AttackPoint = [e.from[0]+(e.to[0]-e.from[0])*t,0,e.from[2]+(e.to[2]-e.from[2])*t];
-        const obstruction = world.obstruction([e.position[0],.7,e.position[2]],[next[0],.7,next[2]]);
+        const next: AttackPoint = [e.from[0]+(e.to[0]-e.from[0])*t,(actor.y??0),e.from[2]+(e.to[2]-e.from[2])*t];
+        const obstruction = world.obstruction([e.position[0],e.position[1]+.7,e.position[2]],[next[0],next[1]+.7,next[2]]);
         const destination = obstruction ?? next;
         e.position = world.move(e.source,destination[0],destination[2]);
         if (obstruction) e.blocked = true;
         if(e.kind==='charge')this.emit('move',e,tick);
-        if (!e.hit && !e.blocked && (e.kind === 'charge' || t === 1) && Math.hypot(player.x-e.position[0],player.z-e.position[2]) <= e.radius+player.radius) {
+        if (!e.hit && !e.blocked && (e.kind === 'charge' || t === 1) && Math.hypot(player.x-e.position[0],(player.y??0)-e.position[1],player.z-e.position[2]) <= e.radius+player.radius) {
           world.damage(world.player,e.damage,e.source); e.hit = true;
         }
         e.finished = t === 1 || e.blocked;
-        if(e.finished){e.finishTick=tick;e.surface=world.surface?.([e.position[0],.2,e.position[2]],[e.position[0],-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);}
+        if(e.finished){e.finishTick=tick;e.surface=world.surface?.([e.position[0],e.position[1]+.2,e.position[2]],[e.position[0],e.position[1]-.2,e.position[2]])??{nodeId:null,normal:[0,1,0]};this.emit('impact',e,tick);}
       }
     }
   }

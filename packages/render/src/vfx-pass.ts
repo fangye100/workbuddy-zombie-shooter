@@ -7,7 +7,7 @@ import type {VfxEffectDefinition} from '@aether/scene';
 import {gpuVfxReason} from '@aether/scene';
 import {VfxGpuSimulation} from './vfx-simulation';
 import {VfxDecalRenderer} from './vfx-decal';
-import type {DecalReceiver} from './vfx-decal-mesh';
+import type {VfxDecalReceiver} from './vfx-decal-mesh';
 import type {VfxDecalInstance} from '@aether/runtime';
 import {VfxRibbonRenderer} from './vfx-ribbon';
 import type {RibbonTrail} from '@aether/runtime';
@@ -31,7 +31,7 @@ export class VfxPass {
   gpu:VfxGpuSimulation|null=null;
   ribbon:VfxRibbonRenderer|null=null;
   ribbons:readonly RibbonTrail[]=[];
-  decal:VfxDecalRenderer|null=null;decals:readonly VfxDecalInstance[]=[];receivers:readonly DecalReceiver[]=[];
+  decal:VfxDecalRenderer|null=null;decals:readonly VfxDecalInstance[]=[];receivers:readonly VfxDecalReceiver[]=[];
   gpuCompatibilityReason:string|null=null;
   /** Capability seam also permits explicitly labelled validation restrictions. */
   gpuSupport=()=>VfxGpuSimulation.capability(this.device);

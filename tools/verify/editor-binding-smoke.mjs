@@ -25,6 +25,7 @@ import {
   ensureServer,
   launchEditorSession,
   normalizeEditorState,
+  waitForEditorReady,
 } from './editor-smoke-lib.mjs';
 
 // ---------------------------------------------------------------- 参数
@@ -46,23 +47,37 @@ const { results, check, skip, summary } = createRecorder();
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const { server, url } = await ensureServer(PORT, 'apps/editor/vite.config.ts');
-  APP_URL = url;
+  APP_URL = arg('url',url.startsWith('https:')?url.replace('localhost','fangye-win11-office.tail6b29a2.ts.net'):url);
   const HEADED = has('headed');
 
-  const { chrome, cdp } = await launchEditorSession({
+  let chrome,cdp,ws,executionError=null;
+  try {
+  ({chrome,cdp,ws}=await launchEditorSession({
     chromePath: CHROME,
     cdpPort: CDP_PORT,
     headed: HEADED,
     appUrl: APP_URL,
+    ignoreCertificateErrors:false,
+    windowSize:arg('window-size','1600,1000'),
+    setupTimeoutMs:20000,
+  }));
+  // 只确认本套件改过的内存绑定夹具，保留产品的未保存保护与所有未知对话框失败。
+  const discardMessages=new Set([
+    '当前绑定有未保存修改，切换/重载并放弃这些修改？',
+    '当前绑定有未保存修改，切换并放弃这些修改？',
+    '当前绑定有未保存修改，关闭并放弃这些修改？',
+  ]);
+  ws.addEventListener('message',event=>{
+    const message=JSON.parse(event.data);
+    if(message.sessionId!==cdp.sessionId||message.method!=='Page.javascriptDialogOpening')return;
+    const expected=message.params.type==='confirm'&&discardMessages.has(message.params.message);
+    check('绑定夹具切换/关闭确认框文案符合预期',expected,message.params.message);
+    void cdp.send('Page.handleJavaScriptDialog',{accept:expected}).catch(error=>check('确认框响应完成',false,error.message));
   });
   await cdp.send('Page.navigate', { url: APP_URL });
-  await waitFor(
-    () => cdp.eval('(() => (window.__editor && document.getElementById("gpu")) ? document.getElementById("gpu").clientHeight : 0)()').then((h) => typeof h === 'number' && h > 100),
-    { timeout: 20000, interval: 300, label: '首帧就绪' },
-  );
+  await waitForEditorReady(cdp);
   await normalizeEditorState(cdp);
 
-  try {
     // （绑定段从此处开始——内容与原 editor-smoke.mjs 完全一致，未改断言）
     // L 段「应用动画到场景物体」用的已绑定 rigged GLB（原核心文件顶部参数，随段迁移）
     const RIGGED_GLB = arg(
@@ -1542,9 +1557,13 @@ async function main() {
     fs.writeFileSync(path.join(OUT_DIR, 'editor-binding-smoke.png'), Buffer.from(shot.data, 'base64'));
 
     return summary(cdp.consoleErrors, cdp.exceptions);
-  } finally {
+  } catch(error){executionError=error;throw error;} finally {
+    try {fs.writeFileSync(path.join(OUT_DIR,'editor-binding-smoke-results.json'),JSON.stringify({results,consoleErrors:cdp?.consoleErrors??[],exceptions:cdp?.exceptions??[]},null,2)+'\n');}
+    catch(error){console.error('绑定报告写入失败：',error.message);if(!executionError)throw error;}
+    finally {
+    ws?.close();
     try {
-      chrome.kill();
+      chrome?.kill();
     } catch {
       /* 已退出 */
     }
@@ -1554,6 +1573,7 @@ async function main() {
       } catch {
         /* 已退出 */
       }
+    }
     }
   }
 }

@@ -1,0 +1,4126 @@
+{
+  "schemaVersion": 23,
+  "id": "sc_weapon_body_lod_review",
+  "name": "WPN-20261012 · 原源 / LOD0 / LOD1 / LOD2 三向（候选）",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#a4afbf",
+      "intensity": 0.45
+    },
+    "hemisphere": {
+      "sky": "#dbe5f1",
+      "skyIntensity": 0.4,
+      "ground": "#9298a2",
+      "groundIntensity": 0.2
+    },
+    "fog": {
+      "color": "#0e1013",
+      "density": 0,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#ffffff",
+      "intensity": 0.1,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null,
+    "comic": {
+      "tonemapMode": 2,
+      "contactShadowOpacity": 0.48,
+      "outlineWidth": 0.5,
+      "inkColor": "#14110f",
+      "shadowMult": 0.72,
+      "shadowMix": 0.2,
+      "shadowTint": "#30283e",
+      "litSat": 1.08,
+      "halftoneStrength": 0,
+      "halftoneSize": 5,
+      "vignette": 0
+    }
+  },
+  "editorCamera": {
+    "target": [
+      0,
+      4,
+      0
+    ],
+    "distance": 22,
+    "yaw": 0,
+    "elevation": 0
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": null,
+  "loseCondition": "player-death",
+  "dependencies": [
+    "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+    "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+    "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod1.glb",
+    "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod2.glb",
+    "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+    "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod0.glb",
+    "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod1.glb",
+    "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod2.glb",
+    "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+    "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+    "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod1.glb",
+    "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod2.glb",
+    "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+    "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+    "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod1.glb",
+    "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod2.glb",
+    "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+    "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod0.glb",
+    "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod1.glb",
+    "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod2.glb"
+  ],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "mode": "fixed",
+          "fovDeg": 35,
+          "near": 0.001,
+          "far": 100,
+          "followTarget": null,
+          "pitchDeg": 0,
+          "distance": 22,
+          "yawOffsetDeg": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_0_0",
+      "name": "WPN-02-SHOTGUN · Raw规范化参考 · 侧+X · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -9.075,
+          7.2,
+          0
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0681385925291125,
+          1.0681385925291125,
+          1.0681385925291125
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_0_1",
+      "name": "WPN-02-SHOTGUN · Raw规范化参考 · 枪口+Z / 锯齿端候选 · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -7.425,
+          7.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0681385925291125,
+          1.0681385925291125,
+          1.0681385925291125
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_0_2",
+      "name": "WPN-02-SHOTGUN · Raw规范化参考 · 俯+Y · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          7.2,
+          0
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0681385925291125,
+          1.0681385925291125,
+          1.0681385925291125
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-02-SHOTGUN/WPN-02-SHOTGUN.glb",
+              "guid": "as_86aa9ea4a2b8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_1_0",
+      "name": "WPN-02-SHOTGUN · LOD0 · 侧+X · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -4.124872507607862,
+          7.200346439007552,
+          0.0004052547917081776
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+              "guid": "as_cdf2dc294f5f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_1_1",
+      "name": "WPN-02-SHOTGUN · LOD0 · 枪口+Z / 锯齿端候选 · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -2.4745947452082913,
+          7.200346439007552,
+          -0.00012749239213786216
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+              "guid": "as_cdf2dc294f5f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_1_2",
+      "name": "WPN-02-SHOTGUN · LOD0 · 俯+Y · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -0.8245947452082918,
+          7.200127492392138,
+          0.00034643900755148866
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+              "guid": "as_cdf2dc294f5f"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_2_0",
+      "name": "WPN-02-SHOTGUN · LOD1 · 侧+X · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          0.8251901615583841,
+          7.200346439007552,
+          -0.000014175833632720875
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod1.glb",
+              "guid": "as_0c27ba7e5054"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_2_1",
+      "name": "WPN-02-SHOTGUN · LOD1 · 枪口+Z / 锯齿端候选 · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          2.474985824166367,
+          7.200346439007552,
+          -0.00019016155838409314
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod1.glb",
+              "guid": "as_0c27ba7e5054"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_2_2",
+      "name": "WPN-02-SHOTGUN · LOD1 · 俯+Y · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          4.124985824166368,
+          7.2001901615583845,
+          0.0003464390075514886
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod1.glb",
+              "guid": "as_0c27ba7e5054"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_3_0",
+      "name": "WPN-02-SHOTGUN · LOD2 · 侧+X · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          5.774838059498119,
+          7.199249530622045,
+          -0.00025793601494638517
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod2.glb",
+              "guid": "as_d061df3214b0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_3_1",
+      "name": "WPN-02-SHOTGUN · LOD2 · 枪口+Z / 锯齿端候选 · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          7.424742063985054,
+          7.199249530622045,
+          0.00016194050188057354
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod2.glb",
+              "guid": "as_d061df3214b0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_0_3_2",
+      "name": "WPN-02-SHOTGUN · LOD2 · 俯+Y · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          9.074742063985052,
+          7.19983805949812,
+          -0.0007504693779547671
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.2755102040816326,
+          1.2755102040816326,
+          1.2755102040816326
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod2.glb",
+              "guid": "as_d061df3214b0"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_0_0",
+      "name": "WPN-03-SMG · Raw规范化参考 · 侧+X · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -9.075,
+          5.4,
+          1.500265035483233e-17
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0810548887614835,
+          1.0810548887614835,
+          1.0810548887614835
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_0_1",
+      "name": "WPN-03-SMG · Raw规范化参考 · 枪口+Z / 锯齿端候选 · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -7.425,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0810548887614835,
+          1.0810548887614835,
+          1.0810548887614835
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_0_2",
+      "name": "WPN-03-SMG · Raw规范化参考 · 俯+Y · 100000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0.5000000000000001,
+          0.5,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.0810548887614835,
+          1.0810548887614835,
+          1.0810548887614835
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-03-SMG/WPN-03-SMG.glb",
+              "guid": "as_851dd8a0955d"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_1_0",
+      "name": "WPN-03-SMG · LOD0 · 侧+X · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -4.1251377651436965,
+          5.399954204594203,
+          0.0000687357965449078
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod0.glb",
+              "guid": "as_8f3c9ecf4d13"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_1_1",
+      "name": "WPN-03-SMG · LOD0 · 枪口+Z / 锯齿端候选 · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -2.474931264203455,
+          5.399954204594203,
+          0.0001377651436963962
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod0.glb",
+              "guid": "as_8f3c9ecf4d13"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_1_2",
+      "name": "WPN-03-SMG · LOD0 · 俯+Y · 5000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -0.8249312642034551,
+          5.399862234856304,
+          -0.00004579540579728158
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod0.glb",
+              "guid": "as_8f3c9ecf4d13"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_2_0",
+      "name": "WPN-03-SMG · LOD1 · 侧+X · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          0.8250294571210777,
+          5.399960162471067,
+          -0.00005965311969766415
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod1.glb",
+              "guid": "as_fc7d620b735b"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_2_1",
+      "name": "WPN-03-SMG · LOD1 · 枪口+Z / 锯齿端候选 · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          2.474940346880302,
+          5.399960162471067,
+          -0.000029457121077689517
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod1.glb",
+              "guid": "as_fc7d620b735b"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_2_2",
+      "name": "WPN-03-SMG · LOD1 · 俯+Y · 2500 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          4.124940346880303,
+          5.400029457121078,
+          -0.0000398375289331846
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod1.glb",
+              "guid": "as_fc7d620b735b"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_3_0",
+      "name": "WPN-03-SMG · LOD2 · 侧+X · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          5.775546490700759,
+          5.400667690448366,
+          -0.0000041823291532716205
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod2.glb",
+              "guid": "as_8e37888ad6e3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_3_1",
+      "name": "WPN-03-SMG · LOD2 · 枪口+Z / 锯齿端候选 · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          7.424995817670847,
+          5.400667690448366,
+          -0.0005464907007601731
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod2.glb",
+              "guid": "as_8e37888ad6e3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_1_3_2",
+      "name": "WPN-03-SMG · LOD2 · 俯+Y · 800 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          9.074995817670846,
+          5.40054649070076,
+          0.0006676904483664459
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          2.1551724137931036,
+          2.1551724137931036,
+          2.1551724137931036
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG_lod2.glb",
+              "guid": "as_8e37888ad6e3"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_0_0",
+      "name": "WPN-04-SNIPER · Raw规范化参考 · 侧+X · 99984 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -9.075,
+          3.6,
+          -1.105292082149904e-17
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0619291753185849,
+          1.0619291753185849,
+          1.0619291753185849
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_0_1",
+      "name": "WPN-04-SNIPER · Raw规范化参考 · 枪口+Z / 锯齿端候选 · 99984 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -7.425,
+          3.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0619291753185849,
+          1.0619291753185849,
+          1.0619291753185849
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_0_2",
+      "name": "WPN-04-SNIPER · Raw规范化参考 · 俯+Y · 99984 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          3.6,
+          0
+        ],
+        "rotation": [
+          0.5000000000000001,
+          0.5,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.0619291753185849,
+          1.0619291753185849,
+          1.0619291753185849
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-04-SNIPER/WPN-04-SNIPER.glb",
+              "guid": "as_3e8b71adcb6e"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_1_0",
+      "name": "WPN-04-SNIPER · LOD0 · 侧+X · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -4.125003482433563,
+          3.5997230950553747,
+          -0.00008774738295390895
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+              "guid": "as_6a1a6e91ec15"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_1_1",
+      "name": "WPN-04-SNIPER · LOD0 · 枪口+Z / 锯齿端候选 · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -2.4750877473829536,
+          3.5997230950553747,
+          0.000003482433563092716
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+              "guid": "as_6a1a6e91ec15"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_1_2",
+      "name": "WPN-04-SNIPER · LOD0 · 俯+Y · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -0.8250877473829539,
+          3.599996517566437,
+          -0.00027690494462549476
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+              "guid": "as_6a1a6e91ec15"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_2_0",
+      "name": "WPN-04-SNIPER · LOD1 · 侧+X · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          0.825171175723207,
+          3.5996658692261434,
+          -0.00019495307702398267
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod1.glb",
+              "guid": "as_5b9e09c866e8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_2_1",
+      "name": "WPN-04-SNIPER · LOD1 · 枪口+Z / 锯齿端候选 · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          2.4748050469229756,
+          3.5996658692261434,
+          -0.00017117572320701768
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod1.glb",
+              "guid": "as_5b9e09c866e8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_2_2",
+      "name": "WPN-04-SNIPER · LOD1 · 俯+Y · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          4.124805046922976,
+          3.600171175723207,
+          -0.0003341307738565479
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod1.glb",
+              "guid": "as_5b9e09c866e8"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_3_0",
+      "name": "WPN-04-SNIPER · LOD2 · 侧+X · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          5.7753004660724825,
+          3.600668195897331,
+          0.001491725321889477
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod2.glb",
+              "guid": "as_e86404a211f4"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_3_1",
+      "name": "WPN-04-SNIPER · LOD2 · 枪口+Z / 锯齿端候选 · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          7.426491725321889,
+          3.600668195897331,
+          -0.0003004660724833792
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod2.glb",
+              "guid": "as_e86404a211f4"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_2_3_2",
+      "name": "WPN-04-SNIPER · LOD2 · 俯+Y · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          9.076491725321889,
+          3.6003004660724836,
+          0.0006681958973311007
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0593220338983051,
+          1.0593220338983051,
+          1.0593220338983051
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod2.glb",
+              "guid": "as_e86404a211f4"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_0_0",
+      "name": "WPN-05-CHAINSAW · Raw规范化参考 · 侧+X · 100004 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -9.075,
+          1.8,
+          -1.119726711853044e-33
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.0592646155294614,
+          1.0592646155294614,
+          1.0592646155294614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_0_1",
+      "name": "WPN-05-CHAINSAW · Raw规范化参考 · 枪口+Z / 锯齿端候选 · 100004 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -7.425,
+          1.8,
+          -7.350124783322014e-18
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.0592646155294614,
+          1.0592646155294614,
+          1.0592646155294614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_0_2",
+      "name": "WPN-05-CHAINSAW · Raw规范化参考 · 俯+Y · 100004 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0.5000000000000001,
+          0.5,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.0592646155294614,
+          1.0592646155294614,
+          1.0592646155294614
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-05-CHAINSAW/WPN-05-CHAINSAW.glb",
+              "guid": "as_a983c8183173"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_1_0",
+      "name": "WPN-05-CHAINSAW · LOD0 · 侧+X · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -4.125319817057575,
+          1.8002096520872737,
+          0.00012334756942439598
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+              "guid": "as_c12ac01417cb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_1_1",
+      "name": "WPN-05-CHAINSAW · LOD0 · 枪口+Z / 锯齿端候选 · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -2.4748766524305754,
+          1.8002096520872737,
+          0.0003198170575749384
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+              "guid": "as_c12ac01417cb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_1_2",
+      "name": "WPN-05-CHAINSAW · LOD0 · 俯+Y · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -0.8248766524305755,
+          1.7996801829424252,
+          0.0002096520872736134
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+              "guid": "as_c12ac01417cb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_2_0",
+      "name": "WPN-05-CHAINSAW · LOD1 · 侧+X · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          0.8241536213430094,
+          1.8002096520872737,
+          0.00018834223060372064
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod1.glb",
+              "guid": "as_5371d52b4503"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_2_1",
+      "name": "WPN-05-CHAINSAW · LOD1 · 枪口+Z / 锯齿端候选 · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          2.4751883422306036,
+          1.8002096520872737,
+          0.0008463786569905359
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod1.glb",
+              "guid": "as_5371d52b4503"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_2_2",
+      "name": "WPN-05-CHAINSAW · LOD1 · 俯+Y · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          4.1251883422306035,
+          1.7991536213430095,
+          0.00020965208727361325
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod1.glb",
+              "guid": "as_5371d52b4503"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_3_0",
+      "name": "WPN-05-CHAINSAW · LOD2 · 侧+X · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          5.776473457280166,
+          1.806706356309746,
+          -0.00045011769836733395
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod2.glb",
+              "guid": "as_2f3ef4e003fb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_3_1",
+      "name": "WPN-05-CHAINSAW · LOD2 · 枪口+Z / 锯齿端候选 · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          7.4245498823016325,
+          1.806706356309746,
+          -0.0014734572801662707
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod2.glb",
+              "guid": "as_2f3ef4e003fb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_3_3_2",
+      "name": "WPN-05-CHAINSAW · LOD2 · 俯+Y · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          9.074549882301632,
+          1.8014734572801663,
+          0.006706356309745996
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.4534883720930232,
+          1.4534883720930232,
+          1.4534883720930232
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod2.glb",
+              "guid": "as_2f3ef4e003fb"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_0_0",
+      "name": "WPN-06-FLAME · Raw规范化参考 · 侧+X · 102494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -9.075,
+          0,
+          -3.909563685735999e-17
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.1268550117287595,
+          1.1268550117287595,
+          1.1268550117287595
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_0_1",
+      "name": "WPN-06-FLAME · Raw规范化参考 · 枪口+Z / 锯齿端候选 · 102494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -7.425,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.1268550117287595,
+          1.1268550117287595,
+          1.1268550117287595
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_0_2",
+      "name": "WPN-06-FLAME · Raw规范化参考 · 俯+Y · 102494 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -5.7749999999999995,
+          0,
+          0
+        ],
+        "rotation": [
+          0.5000000000000001,
+          0.5,
+          0.5,
+          0.5000000000000001
+        ],
+        "scale": [
+          1.1268550117287595,
+          1.1268550117287595,
+          1.1268550117287595
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/_delivery/WPN-20261012/WPN-06-FLAME/WPN-06-FLAME.glb",
+              "guid": "as_8e9ab889b0af"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_1_0",
+      "name": "WPN-06-FLAME · LOD0 · 侧+X · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -4.125046434907038,
+          0.0003251443754795178,
+          -0.00025012638775124196
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod0.glb",
+              "guid": "as_7b30511989e6"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_1_1",
+      "name": "WPN-06-FLAME · LOD0 · 枪口+Z / 锯齿端候选 · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -2.475250126387751,
+          0.0003251443754795178,
+          0.00004643490703784385
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod0.glb",
+              "guid": "as_7b30511989e6"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_1_2",
+      "name": "WPN-06-FLAME · LOD0 · 俯+Y · 6000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          -0.8252501263877512,
+          -0.00004643490703784385,
+          0.0003251443754795178
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod0.glb",
+              "guid": "as_7b30511989e6"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_2_0",
+      "name": "WPN-06-FLAME · LOD1 · 侧+X · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          0.8248547270312749,
+          0.0003251443754795178,
+          0.0009666961679497725
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod1.glb",
+              "guid": "as_5b06e4f3a356"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_2_1",
+      "name": "WPN-06-FLAME · LOD1 · 枪口+Z / 锯齿端候选 · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          2.4759666961679496,
+          0.0003251443754795178,
+          0.00014527296872506035
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod1.glb",
+              "guid": "as_5b06e4f3a356"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_2_2",
+      "name": "WPN-06-FLAME · LOD1 · 俯+Y · 3000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          4.12596669616795,
+          -0.00014527296872506035,
+          0.0003251443754795178
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod1.glb",
+              "guid": "as_5b06e4f3a356"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_3_0",
+      "name": "WPN-06-FLAME · LOD2 · 侧+X · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          5.776113532928862,
+          0.003018571765175824,
+          0.0011641961700726382
+        ],
+        "rotation": [
+          0,
+          -0.7071067811865475,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod2.glb",
+              "guid": "as_1a75e9cd1240"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_3_1",
+      "name": "WPN-06-FLAME · LOD2 · 枪口+Z / 锯齿端候选 · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          7.426164196170072,
+          0.003018571765175824,
+          -0.001113532928863131
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod2.glb",
+              "guid": "as_1a75e9cd1240"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_body_lod_4_3_2",
+      "name": "WPN-06-FLAME · LOD2 · 俯+Y · 1000 tris",
+      "parent": null,
+      "prefab": null,
+      "visible": true,
+      "pickable": true,
+      "category": "本体LOD候选",
+      "transform": {
+        "position": [
+          9.076164196170073,
+          0.0011135329288631305,
+          0.0030185717651758245
+        ],
+        "rotation": [
+          0.7071067811865476,
+          0,
+          0,
+          0.7071067811865476
+        ],
+        "scale": [
+          1.5625,
+          1.5625,
+          1.5625
+        ]
+      },
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME_lod2.glb",
+              "guid": "as_1a75e9cd1240"
+            }
+          },
+          "materials": [
+            {
+              "match": {
+                "by": "index",
+                "value": 0
+              },
+              "material": {
+                "type": "override",
+                "base": {
+                  "type": "shared",
+                  "id": "s1"
+                },
+                "patch": {
+                  "albedo": "#ffffff",
+                  "roughness": 0.8,
+                  "metallic": 0,
+                  "specMix": 0,
+                  "outlineScale": 0.1,
+                  "halftoneScale": 0
+                }
+              }
+            }
+          ],
+          "visible": true,
+          "layer": 4,
+          "importScale": 1
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-12T01:16:08.129Z",
+    "updatedAt": "2026-10-12T01:17:14.197Z",
+    "notes": "五行×四组×三朝向=60mesh；每件raw+三档共用displayScale，不按LOD bounds重新缩放。原源仅scene旋转/尺度/中心补偿，未改GLB。选择准确Hierarchy名称后F；炮口、齿端、握区、表面仍需GPU检视。"
+  }
+}

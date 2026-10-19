@@ -1,5 +1,6 @@
 import {decalReceivers} from './services/vfx-decal-receivers';
 import {VfxDecalPanel} from './services/vfx-decal-panel';
+import { maxAssetDockHeight } from './services/dock-layout';
 import { GameControls } from "@aether/zombie-game/presentation/game-controls";
 import { GameAudio } from "@aether/zombie-game/presentation/game-audio";
 import { weaponDiagnostics } from './services/weapon-diagnostics';
@@ -47,15 +48,23 @@ import { EditorAgent, connectEditorAgent } from './services/editor-agent';
 import { RuntimeBridge } from './services/runtime-bridge';
 import { ActorLibrary } from './services/runtime-actors';
 import { PlayController } from './services/play-controller';
+import { GatePanel } from './services/gate-panel';
+import {RuntimeDecals} from './services/runtime-decals';
 import { PlayerPresentation } from './services/player-presentation';
 import { SharedMotionRuntime } from './services/shared-motion-runtime';
 import { RuntimeSceneMotion } from './services/runtime-scene-motion';
 import { RuntimeBodyIk } from './services/runtime-body-ik';
+import { RuntimeWeapons } from './services/runtime-weapons';
+import { createModelDraw } from '@aether/render';
 import { BodyIkPanel } from './services/body-ik-panel';
+import { ActorHoldSlotSession } from './services/actor-hold-slot';
+import { ActorHoldSlotPanel } from './services/actor-hold-slot-panel';
+import { ActorHoldSlotViewport } from './services/actor-hold-slot-viewport';
 import { AnimationDebugCollector } from './services/animation-debug/collector';
 import { RuntimeAnimationDebugSource } from './services/animation-debug/runtime-source';
 import { AnimationDebugPanel } from './services/animation-debug/panel';
 import { BindingPanel } from './services/binding/binding-panel';
+import { DecalWorkbench } from './services/decal-workbench';
 import { BindingPersistence } from './services/binding/binding-persistence';
 import { CharacterBindingBar, characterBindingChoices } from './services/binding/character-binding-bar';
 import { refreshAuthorResources, renamedResourcePath } from './services/resource-rename';
@@ -99,6 +108,9 @@ import {
   type RetargetWorkbenchState,
 } from './services/binding/retarget-workbench';
 import { FREE_CAM_SPEED_MPS, stepFreeCamera } from './services/free-camera';
+import { PlayObservationNavigation,orbitViewCamera,panViewCamera,zoomViewCamera } from './services/play-observation-navigation';
+import { ViewNavigationControl } from './services/view-navigation-control';
+import type { ViewCameraState } from './services/play-camera';
 
 /**
  * Game Editor 入口（原 Shader Lab）。
@@ -223,6 +235,11 @@ async function boot(): Promise<void> {
     const index = renderer.findObjectIndexByNodeId(nodeId);
     return index === null ? null : renderer.state.objects[index]?.pos ?? null;
   }, height => gameControls?.targetWorld(height) ?? null, () => { hudDirty = true; });
+  const weaponModels=new RuntimeWeapons({objectForNode:nodeId=>{
+    const index=renderer.findObjectIndexByNodeId(nodeId);return index===null?null:renderer.state.objects[index]??null;
+  },meta:path=>sharedMotionLibrary.assetMeta(path),draw:(model,bitmap,register,label)=>
+    createModelDraw(gpu.device,renderer.core,model,bitmap,{...panel.params.materials[0]!,albedo:'#ffffff'},register,label)});
+  renderer.poseDrawPort=weaponModels;
   /** Asset catalog for authoring and actor asset lookup; not a runtime preload list. */
   let assetManifest: unknown = null;
   const manifestReady = (async () => {
@@ -261,7 +278,12 @@ async function boot(): Promise<void> {
   /** 上次已提示过的会话终态（'running' 之外只提示一次；Stop 复位） */
   let lastOutcomeShown: string = 'running';
   const gameAudio = new GameAudio();
+  let observationNavigation:PlayObservationNavigation|null=null;
+  let viewNavigationControl:ViewNavigationControl|null=null;
+  const runtimeDecals=new RuntimeDecals(renderer);
   const playCtl = new PlayController(renderer, bridge, {
+    weapons:weaponModels,
+    decals:runtimeDecals,
     bodyIk,
     sharedMotions: sceneMotions,
     playerPresentation: new PlayerPresentation(nodeId => {
@@ -302,8 +324,12 @@ async function boot(): Promise<void> {
       syncPlayButtons();
       refreshSpawnPanel(); // 面板里的实体区与「重跑」可用性都随播放状态变
       hudDirty = true;
+      observationNavigation?.sync();
+      viewNavigationControl?.sync();
     },
   });
+
+  const gatePanel = new GatePanel(playCtl,id=>renderer.getDocument()?.nodes.find(n=>n.id===id)?.name??id);
 
   // ---- Play 控制按钮（装配层：只负责按钮 → 控制器，无玩法逻辑）----
   const btnPlay = document.querySelector<HTMLButtonElement>('#btn-play');
@@ -330,7 +356,7 @@ async function boot(): Promise<void> {
   let playAuthorParams: LabParams | null = null;
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
@@ -579,6 +605,7 @@ async function boot(): Promise<void> {
   // 调试/自动化钩子：控制台与无头 CDP 验证直接读写相机/材质状态（都是引用，读到即实时值）
   (window as unknown as { __editor: unknown }).__editor = {
     audio: () => gameAudio.snapshot(),
+    weaponModels: { snapshot: () => structuredClone(weaponModels.summary()) },
     motions: {
       summary: () => sceneMotions.summary(),
       setState: (nodeId: string, state: string) => sceneMotions.setState(nodeId, state),
@@ -820,12 +847,7 @@ async function boot(): Promise<void> {
   // 鼠标与触屏统一走 Pointer Events：单指=环绕，双指=捏合缩放+质心平移，
   // 右键/中键/Shift+左键=平移，滚轮=缩放，轻点（位移<阈值）=拾取。
   const CLICK_THRESHOLD = 6; // 像素：低于此位移视为「点击」而非「拖拽」
-  const ORBIT_RAD_PER_PX = 0.006; // 环绕灵敏度：每像素多少弧度
-  const PITCH_DEG_PER_PX = 0.25; // 俯仰灵敏度：每像素多少度
-  const PITCH_LIMIT_DEG = 89; // 俯仰上限（留 1° 避免 lookAt 的 up 与视线平行退化）
   const PAN_LIMIT_XZ = 120; // 平移边界：target 的 X/Z 活动范围（米）。关卡跨度 ~76m（一层一关），20 会把用户困在第一个房间
-  const PAN_MIN_Y = 0.05; // 平移边界：target 最低高度，避免钻到地面下
-  const PAN_MAX_Y = 8;
   const ZOOM_MIN = 1.2;
   const ZOOM_MAX = 120; // 全览一层的距离（关卡 editorCamera.distance=62，40 会一滚轮就被拽回来）
   const FOVY = (45 * Math.PI) / 180; // 与 renderer.render 的 perspective 保持一致
@@ -875,6 +897,7 @@ async function boot(): Promise<void> {
       applySceneCamera(ec);
     }
     document.querySelector<HTMLButtonElement>('#btn-freecam')?.classList.toggle('active', on);
+    viewNavigationControl?.sync();
     if (canvas !== null) canvas.style.cursor = on ? 'crosshair' : '';
     hudDirty = true;
     panel.syncValues();
@@ -897,21 +920,12 @@ async function boot(): Promise<void> {
   // 平移手感是「内容跟着手指走」。相机基与 orbitEye/lookAt 同约定：
   // right = (cos yaw, 0, -sin yaw)，up = (-sin yaw·sin el, cos el, -cos yaw·sin el)
   function panBy(dx: number, dy: number): void {
-    const el = (panel.params.cameraElevation * Math.PI) / 180;
-    const se = Math.sin(el);
-    const ce = Math.cos(el);
-    const sy = Math.sin(camera.yaw);
-    const cy = Math.cos(camera.yaw);
-    const worldPerPx =
-      (2 * camera.distance * Math.tan(FOVY / 2)) / Math.max(1, canvas!.clientHeight);
-    camera.target[0] = clamp(camera.target[0] + (-cy * dx - sy * se * dy) * worldPerPx, -PAN_LIMIT_XZ, PAN_LIMIT_XZ);
-    camera.target[1] = clamp(camera.target[1] + ce * dy * worldPerPx, PAN_MIN_Y, PAN_MAX_Y);
-    camera.target[2] = clamp(camera.target[2] + (sy * dx - cy * se * dy) * worldPerPx, -PAN_LIMIT_XZ, PAN_LIMIT_XZ);
+    camera.target=panViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},dx,dy,canvas!.clientHeight).target;
     hudDirty = true;
   }
 
   function zoomBy(factor: number): void {
-    camera.distance = clamp(camera.distance * factor, ZOOM_MIN, ZOOM_MAX);
+    camera.distance = zoomViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},factor).distance;
   }
 
   // 把屏幕坐标转 NDC 并交给渲染器做射线拾取
@@ -1307,6 +1321,17 @@ async function boot(): Promise<void> {
   const runtimeMotionPanel = new RuntimeMotionPanel(motionHost, sceneMotions, () => actorLib.diagnostics);
   const ikHost = document.createElement('div'); ikHost.id = 'runtime-body-ik-panel'; motionHost.after(ikHost);
   const bodyIkPanel = new BodyIkPanel(ikHost, bodyIk);
+  const holdSlotSession=new ActorHoldSlotSession({context:()=>weaponModels.holdContext(),editable:()=>playCtl.isPaused&&playCtl.observing,
+    read:path=>readProjectFile(path,url=>fetch(url,{cache:'no-store'})),write:(path,patch,baseHash)=>writeProjectFile(path,{patch,baseHash}),
+    preview:(guid,profiles)=>weaponModels.setHoldProfiles(guid,profiles),invalidate:path=>sharedMotionLibrary.invalidateMeta(path)});
+  const holdSlotViewport=new ActorHoldSlotViewport(canvas,renderer,holdSlotSession,hitTestGizmo);
+  renderer.helperGizmoSource=()=>{holdSlotViewport.sync();return renderer.helperGizmo;};
+  const holdSlotHost=document.createElement('div');document.getElementById('center')!.append(holdSlotHost);
+  const holdSlotPanel=new ActorHoldSlotPanel(holdSlotHost,holdSlotSession,{
+    calibrate:()=>{if(!playCtl.isPlaying&&!startPlay())return;if(!playCtl.isPaused)playCtl.pause();observationNavigation?.toggle(true);setGizmoModeUI('translate');},
+    mode:setGizmoModeUI,equip:id=>{if(playCtl.session.runtime?.weapons.equippedId===id)return;holdSlotViewport.release(true);playCtl.resume();playCtl.session.runtime?.equipWeapon(id);}});
+  (window as unknown as {__editor:Record<string,unknown>}).__editor.holdSlot={summary:()=>({...holdSlotSession.summary(),gizmo:renderer.getGizmoInfo()})};
+  window.addEventListener('blur',()=>holdSlotViewport.release(true));
   const animationDebugHost = document.createElement('div'); document.getElementById('center')!.append(animationDebugHost);
   const animationDebugPanel = new AnimationDebugPanel(animationDebugHost, new AnimationDebugCollector(new RuntimeAnimationDebugSource({
     runtime: () => playCtl.session.runtime,
@@ -1342,6 +1367,15 @@ async function boot(): Promise<void> {
     },
   });
   renderer.onSkyTextureStatusChange = () => atmospherePanel.render();
+  const decalWorkbench = new DecalWorkbench(gpu, {
+    backend:()=>renderer.core.decalSnapshot().backend,
+    setBackend:backend=>renderer.core.setDecalBackend(backend),
+    document: () => spawnStore?.document ?? null,
+    locked: () => playCtl.isPlaying || authorProjectionBusy,
+    edit: editAuthorNodes,
+    save: saveSpawnEdits,
+    changed: () => { editorMenu.refresh(); if (spawnStore && !playCtl.isPlaying) renderer.setDocument(spawnStore.document); },
+  });
   function editAuthorNodes(label: string, mutate: (nodes: import('@aether/scene').SceneNode[]) => void, rebuild: boolean): import('@aether/runtime').EditResult {
     if (!spawnStore || playCtl.isPlaying || authorProjectionBusy) return { ok: false, edit: null, error: '当前不能编辑场景，请等待装载完成并停止 Play' };
     const result = spawnStore.editNodes(label, mutate);
@@ -1389,7 +1423,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft || vfxGraphPanel.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft || vfxGraphPanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1400,6 +1434,7 @@ async function boot(): Promise<void> {
     redo: () => reportAuthorTransform(authorTransform.history(true)),
     inspect: switchInspectorTab,
     resolution: native => { nativeResolution = native; resize(); editorMenu.message(native ? '已切换原生分辨率' : '已切换平衡分辨率'); },
+    decals: () => decalWorkbench.open(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!)),
   });
   panel.onChange = () => {
     hudDirty = true;
@@ -1524,6 +1559,7 @@ async function boot(): Promise<void> {
   function setSpawnScene(doc: SceneDocument | null): void {
     sceneAuthorPanel.resetDraft();
     atmospherePanel.resetDraft();
+    decalWorkbench.resetDraft();
     authorAssets.clear();
     if (doc === null) {
       spawnStore = null;
@@ -1591,7 +1627,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -1676,6 +1712,7 @@ async function boot(): Promise<void> {
     authorAssets.prune();
     sceneAuthorPanel.render(renderer.getSelected() === null ? null : renderer.getObjectNodeId(renderer.getSelected()!));
     atmospherePanel.render();
+    decalWorkbench.refresh();
     // 借用这个统一刷新点：选中变化 / 播放状态变化 / 场景装载都会走到这里，
     // 脚本面板跟着刷，不必在每个选中回调里各挂一次（容易漏）。
     refreshScriptPanel();
@@ -1926,6 +1963,7 @@ async function boot(): Promise<void> {
    * 不能等下一帧：失焦后 rAF 可能直接被节流停掉，那时候"等 frame 再提交"等于不提交。
    */
   const clearPlayKeys = (): void => {
+    observationNavigation?.release();
     freeCamKeys.clear(); // 飞行键同理：切窗口回来发现相机还在自己飞，是最难自查的那类 bug
     // 🔴 停火必须**无条件**执行，不能跟着下面的早退一起跳过（评审 4166674734 /
     // 4171651555）：J 键故意不进 playKeys（它不是向量键），所以"只按住 J 时失焦"
@@ -1955,21 +1993,27 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying && k === 'r') { e.preventDefault(); playCtl.session.runtime?.reload(); return; }
     if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y')) {
       e.preventDefault();
+      if(holdSlotSession.editable&&holdSlotSession.shown){holdSlotSession.history(k==='y'||e.shiftKey);return;}
       reportAuthorTransform(authorTransform.history(k === 'y' || e.shiftKey));
       return;
     }
     if ((e.ctrlKey || e.metaKey) && k === 's') {
       e.preventDefault();
+      if(holdSlotSession.ready&&holdSlotSession.shown){void holdSlotSession.save();return;}
       void saveSpawnEdits();
       return;
     }
 
-    // ---- 自由相机优先接管 ----
+    // 同一个 V 入口：Edit 飞行，Play/Pause 观察；重复键不反复切换。
+    if(k==='v'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+      e.preventDefault();if(!e.repeat)viewNavigationControl?.toggle();return;
+    }
+    // ---- 编辑态自由飞行优先接管 ----
     // 必须在 PLAY_KEYS 与 gizmo 的 W/E/R 之前：飞行时 W 是"往前飞"而不是"切移动工具"，
     // 箭头键是"飞"而不是"走"。Play 期间 freeCamOn 恒为 false（setFreeCam 会拒绝），
     // 所以这里的拦截不会抢走玩家操作。
     if (freeCamOn) {
-      if (k === 'v' || k === 'escape') {
+      if (k === 'escape') {
         e.preventDefault();
         setFreeCam(false);
         return;
@@ -1980,10 +2024,6 @@ async function boot(): Promise<void> {
         return;
       }
       // 其余键（F 聚焦 / Delete 删除…）照常放行
-    } else if (k === 'v') {
-      e.preventDefault();
-      setFreeCam(true);
-      return;
     }
 
     if (PLAY_KEYS.has(k)) {
@@ -2157,14 +2197,8 @@ async function boot(): Promise<void> {
       if (gesture === 'gizmo') {
         updateGizmoDrag(e.clientX, e.clientY);
       } else if (gesture === 'orbit') {
-        camera.yaw -= (e.clientX - lastX) * ORBIT_RAD_PER_PX;
-        // 自由俯仰：上下拖可越过地平线（负 = 仰视，eye 在 target 之下）。
-        // 仅在接近 ±90° 时 lookAt 的 up 与视线平行才退化，故留 1° 余量。
-        panel.params.cameraElevation = clamp(
-          panel.params.cameraElevation + (e.clientY - lastY) * PITCH_DEG_PER_PX,
-          -PITCH_LIMIT_DEG,
-          PITCH_LIMIT_DEG,
-        );
+        const next=orbitViewCamera({target:camera.target as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation},e.clientX-lastX,e.clientY-lastY);
+        camera.yaw=next.yaw;panel.params.cameraElevation=next.elevationDeg;
         panel.syncValues();
         hudDirty = true;
       } else if (gesture === 'pan') {
@@ -2304,7 +2338,7 @@ async function boot(): Promise<void> {
       const metadata = await assetServer.loadMeta(relPath);
       if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
       // Respect explicit metre-scale environment imports as well as character heights.
-      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath));
+      const model = parseGlb(buffer, await resolveAssetImportHeightM(relPath), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
       const bmp = model.image === null ? null : await decodeTexture(model.image, relPath);
       // 🔴 异步情况（复审 #3）：导入在 Play **之前**发起、在 Play **中**完成。
       // fetch + 解码期间用户可能按了 Play —— 此时同样不能往对象集合里塞东西。
@@ -3343,7 +3377,7 @@ async function boot(): Promise<void> {
    */
   function clampDockHeight(): void {
     const cur = readCssVarPx('--dock-h', 260);
-    const max = Math.max(320, window.innerHeight - 160);
+    const max = maxAssetDockHeight(document.getElementById('mainrow')!.clientHeight);
     if (cur <= max) return;
     document.documentElement.style.setProperty('--dock-h', `${max}px`);
     try {
@@ -3628,7 +3662,9 @@ async function boot(): Promise<void> {
           const resp = await fetch(`/__fs/file?path=${encodeURIComponent(path)}`);
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const buffer = await resp.arrayBuffer();
-          model = parseGlb(buffer, await resolveAssetImportHeightM(path));
+          const metadata = await assetServer.loadMeta(path);
+          if (metadata.missing || metadata.errors.length > 0) throw new Error('资产元数据缺失或无效，请先运行 scene:gen / scene:check');
+          model = parseGlb(buffer, await resolveAssetImportHeightM(path), metadata.meta.importer.upAxisFlip ? 'z' : 'y');
           previewCache.set(path, model);
         }
         const bmp = model.image === null ? null : await decodeTexture(model.image, path);
@@ -3853,10 +3889,6 @@ async function boot(): Promise<void> {
       });
     }
 
-    // 自由相机开关（gizmo-bar 上的「✈ 自由相机」按钮 / V 键）
-    document.querySelector<HTMLButtonElement>('#btn-freecam')?.addEventListener('click', () => {
-      setFreeCam(!freeCamOn);
-    });
   }
 
   // ---- 尺寸 ----
@@ -3874,7 +3906,16 @@ async function boot(): Promise<void> {
   let lastWorkspaceUiTime = -1;
   const runSettlement = new RunSettlement(runProfile, () => runTransfer.runId);
   gameControls = new GameControls(canvas,(x,y)=>renderer.pointerRay(x,y),()=>camera.yaw);
+  observationNavigation=new PlayObservationNavigation(canvas,document.querySelector<HTMLButtonElement>('#btn-observation-camera')!,document.querySelector<HTMLElement>('#observation-camera-hint')!,{
+    get:()=>({target:[...camera.target] as [number,number,number],distance:camera.distance,yaw:camera.yaw,elevationDeg:panel.params.cameraElevation}),
+    set:(s:ViewCameraState)=>{camera.target=[...s.target];camera.distance=s.distance;camera.yaw=s.yaw;panel.params.cameraElevation=s.elevationDeg;},
+  },{playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,setObservation:on=>playCtl.setObservation(on),releaseGameInput:()=>clearPlayKeys(),equip:index=>{const r=playCtl.session.runtime,w=r?.weapons.definitions[index];if(w)r!.equipWeapon(w.id);},claimPointer:event=>holdSlotViewport.claim(event),changed:()=>{hudDirty=true;viewNavigationControl?.sync();}});
+  viewNavigationControl=new ViewNavigationControl(document.querySelector<HTMLButtonElement>('#btn-freecam')!,{
+    playing:()=>playCtl.isPlaying,observing:()=>playCtl.observing,freeCam:()=>freeCamOn,setFreeCam,
+    setObservation:on=>observationNavigation!.toggle(on),
+  });
   const gameHud = new GameHud({
+    weaponModels:()=>weaponModels.view(),
     audioControl: gameAudio.control,
     pause: () => playCtl.togglePause(),
     toggleTouch: () => { gameControls!.clear();gameControls!.touch=!gameControls!.touch;return gameControls!.touch; },
@@ -3923,6 +3964,10 @@ async function boot(): Promise<void> {
       `<b>视图</b> ${name}`,
       `<b>GPU</b> ${gpu.info.vendor || '?'} ${gpu.info.architecture || ''}`,
     ];
+    if(playCtl.isPlaying){
+      const weapons=weaponModels.summary();
+      rows.push(`<b>武器模型</b> ${weapons.visible?'已装配':weapons.pending?'加载中':'兼容表现'}${weapons.diagnostics.length?` · ${escapeHtml(weapons.diagnostics[0]!)}`:''}`);
+    }
 
     // 自由相机是**模式**，必须让用户随时看见自己在模式里 —— 否则「鼠标拖了却选不中物体」
     // 会当成 bug 报上来，实际上是飞行模式把拖拽吃掉了。
@@ -4006,6 +4051,7 @@ async function boot(): Promise<void> {
     hud.innerHTML = rows.join('<br>');
     runtimeMotionPanel.render(playCtl.isPlaying);
     bodyIkPanel.render(playCtl.isPlaying);
+    void holdSlotSession.hydrate();holdSlotPanel.render();
   };
 
   // ---- 主循环 ----
@@ -4015,9 +4061,11 @@ async function boot(): Promise<void> {
   if (import.meta.hot !== undefined) {
     import.meta.hot.dispose(() => {
       disposed = true;
+      decalWorkbench.destroy();
       actorPreloader.stop();
       animationDebugPanel.dispose();
       vfxPanel.stop();vfxGraphPanel.stop();
+      gatePanel.dispose();
       renderer.destroy();
     });
   }
@@ -4028,11 +4076,12 @@ async function boot(): Promise<void> {
   let elapsed = 0;
   let last = performance.now();
 
+  (window as unknown as { __editor: Record<string, unknown> }).__editor.decalWorkbench = { snapshot: () => decalWorkbench.snapshot() };
   const editorAgent: EditorAgent = new EditorAgent({
     store: () => spawnStore,
     path: () => renderer.getSceneSource()?.url ?? null,
     busy: () => authorProjectionBusy,
-    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft,
+    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
     playing: () => playCtl.isPlaying,
     pendingAssets: () => renderer.pendingAssetCount,
     open: async path => {
@@ -4062,9 +4111,13 @@ async function boot(): Promise<void> {
       else if(action === 'resume') { if(!playCtl.isPaused) throw new Error('Play is not paused'); playCtl.resume(); }
       else if(action === 'step') { if(!playCtl.isPaused) throw new Error('Step requires paused Play'); for(let i=0;i<steps;i++)playCtl.step(); }
     },
-    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,
+    gate: (nodeId,open,runId) => {const rt=playCtl.session.runtime;if(!rt||rt.player()?.runId!==runId)throw new Error('运行代次已变更，请重新读取 editor_runtime');rt.setGateOpen(nodeId,open);},
+    decalGpu:()=>renderer.core.readDecalVisibleCount(),
+    decalBackend:backend=>renderer.core.setDecalBackend(backend),
+    decal:(action,runId,input)=>{if(playCtl.session.runtime?.outcome!=='running')throw new Error('运行贴花需要正在进行的游戏');runtimeDecals.command(action,runId,input);},
+    runtime: () => ({state:playCtl.state,tick:playCtl.tick,player:playCtl.session.runtime?.player()??null,npcCount:playCtl.session.runtime?.countNpc()??0,gates:playCtl.session.runtime?.gateSnapshot()??[],
       diagnostics:playCtl.diagnostics,runtimeDiagnostics:playCtl.runtimeDiagnostics,ledger:playCtl.ledger,instances:renderer.debugDynamicInstanceCount(),meshIds:renderer.debugDynamicMeshIds(),actorLibrarySize:actorLib.size,
-      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot()}),
+      weapons:weaponDiagnostics(playCtl.session.runtime),audio:gameAudio.snapshot(),navigation:playCtl.session.runtime?.navigationSnapshot()??null,decals:runtimeDecals.snapshot()}),
     capture: () => editorAgentConnection?.capture() ?? Promise.reject(new Error('Editor MCP prototype is not enabled for this tab')),
   });
   const editorAgentConnection: ReturnType<typeof connectEditorAgent> | null = new URLSearchParams(location.search).get('agent') === '1' ? connectEditorAgent(editorAgent) : null;
@@ -4088,7 +4141,7 @@ async function boot(): Promise<void> {
       updateHud(fps);
     }
 
-    if (panel.params.autoOrbit) {
+    if (panel.params.autoOrbit && !playCtl.isPlaying) {
       camera.yaw += dt * 0.25;
       hudDirty = true;
     }
@@ -4179,7 +4232,7 @@ async function boot(): Promise<void> {
     if (playCtl.isPlaying) {
       const ix = (playKeys.has('arrowright') ? 1 : 0) - (playKeys.has('arrowleft') ? 1 : 0);
       const iz = (playKeys.has('arrowdown') ? 1 : 0) - (playKeys.has('arrowup') ? 1 : 0);
-      gameControls?.update(playCtl.session.runtime,playCtl.isPaused,ix,iz);
+      gameControls?.update(playCtl.session.runtime,playCtl.isPaused||playCtl.observing,ix,iz);
     }
     if (!playCtl.isPlaying) gameControls?.update(null,false,0,0);
     // P4 M4 降级：LOD 按**编辑器相机**眼位刷新（runtime 不持有相机）。
@@ -4190,6 +4243,8 @@ async function boot(): Promise<void> {
       bridge.refreshLod(eye[0], eye[2]);
     }
     playCtl.update(dt);
+    holdSlotViewport.updateEditingState();
+    gatePanel.update();
     gameAudio.update(playCtl.session,camera.yaw);
     if (elapsed - lastWorkspaceUiTime >= 0.1) {
       lastWorkspaceUiTime = elapsed;
@@ -4198,7 +4253,6 @@ async function boot(): Promise<void> {
       editorMenu.refresh();
     }
     renderer.setDynamicBatches(bridge.batches());
-    gameHud.updateFeedback(playCtl.session.runtime);
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
     if (playCtl.isPlaying) {
@@ -4223,10 +4277,12 @@ async function boot(): Promise<void> {
     drainRuntimeDiagnostics();
 
     renderer.render(panel.params, camera, elapsed, dpr());
+    gameHud.updateFeedback(playCtl.session.runtime);
     animationDebugPanel.update(now);
     editorAgentConnection?.afterFrame(canvas!);
     panel.tickAnimation();
     assetPreview?.tick(dt, elapsed, panel.params);
+    decalWorkbench.tick();
     requestAnimationFrame(frame);
   };
 

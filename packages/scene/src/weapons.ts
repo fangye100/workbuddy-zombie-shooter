@@ -1,4 +1,5 @@
 import type { AssetRef } from './document';
+import { validModelSockets, validModelAttachment, validSocketTransform, validBonePositionSlot, type BonePositionSlot, type ModelSockets, type ModelAttachment, type SocketTransform } from './model-attachments';
 
 export type WeaponBehavior = 'hitscan' | 'pellets' | 'piercing' | 'projectile' | 'melee' | 'flame';
 export type WeaponAction = 'idle' | 'fire' | 'reload' | 'equip' | 'unequip';
@@ -12,6 +13,8 @@ export interface WeaponDefinition {
   ammo: { magazineSize: number; reserveRounds: number; reloadSec: number; perShot: number; reloadMode: 'magazine' | 'shell' | 'none' };
   upgrades: { maxLevel: number; baseCost: number; costStep: number; damageStep: number; hasteStep: number; magazineStep: number };
   presentation: {
+    /** undefined/null：旧 markers 路径；有值：真实模型 socket 唯一真源。 */
+    assembly?: { sockets?: ModelSockets; attachments: ModelAttachment[]; holdPose: SocketTransform; holdSlot?: BonePositionSlot; reloadAttachmentId: string | null } | null;
     model: AssetRef | null; placeholder: 'pistol' | 'shotgun' | 'smg' | 'sniper' | 'chainsaw' | 'flame' | 'launcher';
     color: string; lengthM: number;
     /** Metres, weapon-local Y-up/+X barrel axis; quaternion xyzw. Effectors are semantics, not rig bone names. */
@@ -43,6 +46,12 @@ export function validWeaponDefinition(value: unknown): value is WeaponDefinition
   if(a.reloadMode==='none' ? a.perShot!==0 : a.magazineSize<1 || a.perShot<1 || a.perShot>a.magazineSize || a.reloadSec<=0)return false;
   if(!u || !integer(u.maxLevel,1,20) || !integer(u.baseCost,1,100000) || !integer(u.costStep,0,100000) || !num(u.damageStep,0,5) || !num(u.hasteStep,0,2) || !integer(u.magazineStep,0,100))return false;
   if(!v || !resource(v.model) || !['pistol','shotgun','smg','sniper','chainsaw','flame','launcher'].includes(v.placeholder) || !/^#[\da-f]{6}$/i.test(v.color) || !num(v.lengthM,.05,3))return false;
+  if(v.assembly!==undefined&&v.assembly!==null){
+    const a=v.assembly;
+    if(!validSocketTransform(a.holdPose)||(a.holdSlot!==undefined&&!validBonePositionSlot(a.holdSlot))||(a.sockets!==undefined&&!validModelSockets(a.sockets))||!Array.isArray(a.attachments)||a.attachments.length>8
+      ||!a.attachments.every(validModelAttachment)||new Set(a.attachments.map(x=>x.id)).size!==a.attachments.length
+      ||(a.reloadAttachmentId!==null&&!a.attachments.some(x=>x.id===a.reloadAttachmentId)))return false;
+  }
   if(!v.markers || !(['primaryGrip','supportGrip','muzzle','magazine','chamber'] as const).every(k=>{const m=v.markers[k];return !!m && Array.isArray(m.position) && m.position.length===3 && m.position.every(n=>num(n,-3,3)) && Array.isArray(m.rotation) && m.rotation.length===4 && m.rotation.every(Number.isFinite) && Math.abs(Math.hypot(...m.rotation)-1)<.001 && ['right-hand','left-hand','none'].includes(m.effector);} ))return false;
   const proc=v.procedural;
   if(!proc || !num(proc.recoilM,0,.5) || !num(proc.recoilPitchDeg,0,60) || !num(proc.recoilSec,.02,3) || ![proc.magazineOutPhase,proc.magazineInPhase,proc.chamberPhase].every(n=>num(n,0,1)) || proc.magazineOutPhase>proc.magazineInPhase || proc.magazineInPhase>proc.chamberPhase)return false;

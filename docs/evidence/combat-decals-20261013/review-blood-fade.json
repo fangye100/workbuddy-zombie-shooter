@@ -1,0 +1,182 @@
+{
+  "events": [
+    {
+      "event": "npc-damage",
+      "generation": 1,
+      "point": [
+        3.981235027313232,
+        0,
+        -2.736602306365967
+      ],
+      "runId": 2,
+      "seq": 1,
+      "slot": 3,
+      "tick": 0
+    },
+    {
+      "direction": [
+        -0.2865067767933098,
+        0,
+        -0.9580782154143306
+      ],
+      "event": "weapon-solid-impact",
+      "from": [
+        -0.08595203303799294,
+        0.9,
+        -0.2874234646242992
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "point": [
+        -1.71949840843536,
+        0.9,
+        -5.75
+      ],
+      "receiver": "nd_combat_wall",
+      "runId": 2,
+      "seq": 2,
+      "tick": 26,
+      "weaponId": "pistol"
+    },
+    {
+      "activeSec": 4,
+      "event": "acid-land",
+      "generation": 1,
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "radius": 2,
+      "runId": 2,
+      "seq": 3,
+      "slot": 4,
+      "tick": 74
+    }
+  ],
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 3
+  },
+  "ledger": {
+    "disposed": 5,
+    "pending": 5,
+    "registered": 10
+  },
+  "marks": {
+    "capacity": 256,
+    "count": 3,
+    "evicted": 0,
+    "marks": [
+      {
+        "mark": {
+          "color": "#982c3c",
+          "id": "combat_blood_1",
+          "normalOffset": 0.006,
+          "opacity": 0.43,
+          "pattern": "splatter",
+          "position": [
+            3.981235027313232,
+            0,
+            -2.736602306365967
+          ],
+          "priority": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 137,
+          "size": [
+            0.85,
+            0.7
+          ],
+          "style": {
+            "coverage": 0.92,
+            "detail": 0.65,
+            "edgeWidth": 0.015,
+            "irregularity": 0.8
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 0.5
+      },
+      {
+        "mark": {
+          "color": "#b3a186",
+          "id": "combat_bullet_2",
+          "normalOffset": 0.004,
+          "opacity": 0.95,
+          "pattern": "bullet-hole",
+          "position": [
+            -1.71949840843536,
+            -0.6,
+            0.25
+          ],
+          "priority": 1,
+          "rotation": [
+            0.7071067811865475,
+            0,
+            0,
+            0.7071067811865475
+          ],
+          "seed": 1080,
+          "size": [
+            0.22,
+            0.22
+          ],
+          "style": {
+            "coverage": 0.9,
+            "detail": 0.7,
+            "edgeWidth": 0.02,
+            "irregularity": 0.7
+          }
+        },
+        "receiver": "nd_combat_wall",
+        "remainingSec": 1.3666666666666667
+      },
+      {
+        "mark": {
+          "color": "#91bc38",
+          "id": "combat_acid_3",
+          "normalOffset": 0.008,
+          "opacity": 0.84,
+          "pattern": "acid",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "priority": 2,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 2705,
+          "size": [
+            4,
+            4
+          ],
+          "style": {
+            "coverage": 1,
+            "detail": 0.6,
+            "edgeWidth": 0.02,
+            "irregularity": 0.65
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 6.966666666666667
+      }
+    ],
+    "time": 2.5
+  },
+  "state": "paused",
+  "tick": 75
+}

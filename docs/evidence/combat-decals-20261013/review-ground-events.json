@@ -1,0 +1,120 @@
+{
+  "events": [
+    {
+      "activeSec": 4,
+      "event": "acid-land",
+      "generation": 1,
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "radius": 2,
+      "runId": 1,
+      "seq": 1,
+      "slot": 4,
+      "tick": 74
+    },
+    {
+      "event": "npc-damage",
+      "generation": 1,
+      "point": [
+        1.6136053800582886,
+        0,
+        -0.8531359434127808
+      ],
+      "runId": 1,
+      "seq": 2,
+      "slot": 3,
+      "tick": 125
+    }
+  ],
+  "gpu": {
+    "bufferBytes": 4096,
+    "drawCalls": 1,
+    "instances": 2
+  },
+  "ledger": {
+    "disposed": 0,
+    "pending": 5,
+    "registered": 5
+  },
+  "marks": {
+    "capacity": 256,
+    "count": 2,
+    "evicted": 0,
+    "marks": [
+      {
+        "mark": {
+          "color": "#91bc38",
+          "id": "combat_acid_1",
+          "normalOffset": 0.008,
+          "opacity": 0.84,
+          "pattern": "acid",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "priority": 2,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 2431,
+          "size": [
+            4,
+            4
+          ],
+          "style": {
+            "coverage": 1,
+            "detail": 0.6,
+            "edgeWidth": 0.02,
+            "irregularity": 0.65
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 5
+      },
+      {
+        "mark": {
+          "color": "#982c3c",
+          "id": "combat_blood_2",
+          "normalOffset": 0.006,
+          "opacity": 0.86,
+          "pattern": "splatter",
+          "position": [
+            1.6136053800582886,
+            0,
+            -0.8531359434127808
+          ],
+          "priority": 1,
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "seed": 4149,
+          "size": [
+            0.85,
+            0.7
+          ],
+          "style": {
+            "coverage": 0.92,
+            "detail": 0.65,
+            "edgeWidth": 0.015,
+            "irregularity": 0.8
+          }
+        },
+        "receiver": "nd_nav3d_low",
+        "remainingSec": 21.700000000000003
+      }
+    ],
+    "time": 4.466666666666667
+  },
+  "state": "paused",
+  "tick": 134
+}
