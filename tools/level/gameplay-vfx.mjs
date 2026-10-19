@@ -12,8 +12,8 @@ export function applyGameplayVfx(doc) {
   if (!rulesNode) return doc; // 编辑用 sandbox 不隐式创建游戏规则。
   const rules = rulesNode.components.find(c => c.kind === 'RunRules');
   for (const weapon of rules.arsenal.definitions) {
-    if (['hitscan', 'pellets', 'piercing'].includes(weapon.behavior)) {
-      const style = ['pistol', 'shotgun', 'smg', 'sniper'].includes(weapon.id) ? weapon.id : 'pistol';
+    {
+      const style = ['pistol', 'shotgun', 'smg', 'sniper', 'chainsaw', 'flame', 'launcher'].includes(weapon.id) ? weapon.id : 'pistol';
       weapon.presentation.vfx = { resource: structuredClone(pistol), muzzle: `${style}-muzzle`, trail: `${style}-trail`, impact: `${style}-impact` };
     }
   }
@@ -28,6 +28,8 @@ export function applyGameplayVfx(doc) {
   bindings['weapon.flame'] = binding(soft, 'flame');
   bindings['actor.smoke'] = binding(soft, 'smoke');
   bindings['enemy.charge.ribbon'] = binding(ribbon, 'motion-ribbon');
+  bindings['weapon.projectile'] = binding(pistol, 'launcher-head');
+  bindings['weapon.explosion'] = binding(enemies, 'weapon-explosion');
   let component = rulesNode.components.find(c => c.kind === 'VfxBindings');
   if (!component) { component = { kind: 'VfxBindings', enabled: true, bindings: {} }; rulesNode.components.push(component); }
   Object.assign(component.bindings, bindings);

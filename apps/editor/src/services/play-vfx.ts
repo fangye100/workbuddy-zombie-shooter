@@ -33,13 +33,19 @@ export class PlayVfx {
     if(!session.runtime || !session.runtime.weapons.definitions.some(w=>w.presentation.vfx.resource) && !Object.keys(bindings).length && !doc?.nodes.some(n=>n.components.some(c=>(c.kind==='VfxEmitter' || c.kind==='VfxDecal') && c.enabled)))return;
     const pass=new VfxPass(this.core.device);this.pass=pass;this.core.vfx=pass;if(doc){this.authored.start(doc,pass);this.decals.start(doc,pass);}
     session.registerResource('vfx-gpu-buffers-and-textures',()=>{if(this.pass===pass)this.stop();else pass.destroy();});
-    CombatOverlay.gpuWeaponReady=id=>this.continuous.renderedWeapons.has(id) || this.planner.ready.has(id) && !this.planner.fallbackWeapons.has(id);
+    CombatOverlay.gpuWeaponReady=(id,effect)=>{
+      const run=session.runtime?.runId,draw=(key:string)=>this.planner.pool.active.some(p=>p.key===key && pass.drawable(p));
+      if(effect?.kind==='projectile')return draw(`${run}:projectile:${effect.id}`);
+      if(effect?.kind==='explosion')return draw(`${run}:weapon-explosion:${effect.id}`);
+      if(effect?.kind==='slash')return draw(`${run}:slash:${effect.id}`);
+      if(effect?.kind==='flame')return this.continuous.renderedWeapons.has(id);
+      return this.planner.ready.has(id) && !this.planner.fallbackWeapons.has(id) && this.planner.recentEvents.some(e=>e.weaponId===id && (!effect || e.tick===effect.tick) && ['muzzle','trail','impact'].some(kind=>draw(`${run}:${e.sequence}:${kind}`)));
+    };
     CombatOverlay.gpuEnemyReady=id=>this.enemy.rendered.has(id) || this.continuous.renderedEnemies.has(id) || this.ribbon.renderedEnemies.has(id);
     CombatOverlay.gpuImpactReady=event=>this.planner.impactReady(event,p=>pass.drawable(p));
     for(const [tag,binding] of Object.entries(bindings))void this.loadEnemy(tag,binding,pass,generation);
     for(const weapon of session.runtime.weapons.definitions){
       const ref=weapon.presentation.vfx.resource;if(!ref)continue;
-      if(weapon.behavior!=='hitscan' && weapon.behavior!=='pellets' && weapon.behavior!=='piercing')continue;
       void (async()=>{
         try {
           const asset=await readVfxAsset(ref);
@@ -59,5 +65,5 @@ export class PlayVfx {
     this.generation++;this.pass?.destroy();if(this.pass)this.lastReleased={...this.pass.stats};
     if(this.core.vfx===this.pass)this.core.vfx=null;this.pass=null;this.authored.clear();this.decals.clear();this.ribbon.clear();this.continuous.clear();this.enemy.clear();this.planner.clear();this.diagnostics.length=0;CombatOverlay.gpuWeaponReady=()=>false;CombatOverlay.gpuEnemyReady=()=>false;CombatOverlay.gpuImpactReady=()=>false;
   }
-  snapshot(){return {decals:this.decals.snapshot(),authored:this.authored.snapshot(),ribbon:{...this.ribbon.snapshot(),gpu:this.pass?.ribbon?{...this.pass.ribbon.stats}:null},continuous:{ready:[...this.continuous.bindings.keys()],handles:this.continuous.emitters.activeHandles,stats:{...this.continuous.emitters.stats,...this.continuous.stats},events:[...this.continuous.recent],sourceFrames:[...this.continuous.recentFrames],instances:this.planner.pool.active.filter(p=>p.key.startsWith('emit:') || p.key.includes(':slash:') || p.key.includes(':enemy-melee:')).map(p=>({...p}))},ready:[...this.planner.ready.keys()],enemy:{ready:[...this.enemy.bindings.keys()],rendered:[...this.enemy.rendered],stats:{...this.enemy.stats},events:this.enemy.recentEvents.map(e=>({...e})),instances:this.planner.pool.active.filter(p=>p.key.startsWith('enemy:')).map(p=>({key:p.key,position:p.position,size:p.effect.size,age:p.age,lifetime:p.lifetime,normal:p.normal}))},pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},events:this.planner.recentEvents.map(e=>({...e})),gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
+  snapshot(){return {decals:this.decals.snapshot(),authored:this.authored.snapshot(),ribbon:{...this.ribbon.snapshot(),gpu:this.pass?.ribbon?{...this.pass.ribbon.stats}:null},continuous:{ready:[...this.continuous.bindings.keys()],handles:this.continuous.emitters.activeHandles,stats:{...this.continuous.emitters.stats,...this.continuous.stats},events:[...this.continuous.recent],sourceFrames:[...this.continuous.recentFrames],instances:this.planner.pool.active.filter(p=>p.key.startsWith('emit:') || p.key.includes(':slash:') || p.key.includes(':enemy-melee:') || p.key.includes(':projectile:') || p.key.includes(':weapon-explosion:')).map(p=>({...p}))},ready:[...this.planner.ready.keys()],enemy:{ready:[...this.enemy.bindings.keys()],rendered:[...this.enemy.rendered],stats:{...this.enemy.stats},events:this.enemy.recentEvents.map(e=>({...e})),instances:this.planner.pool.active.filter(p=>p.key.startsWith('enemy:')).map(p=>({key:p.key,position:p.position,size:p.effect.size,age:p.age,lifetime:p.lifetime,normal:p.normal}))},pool:{...this.planner.pool.stats,active:this.planner.pool.active.length,kinds:this.planner.pool.active.map(p=>p.effect.kind)},events:this.planner.recentEvents.map(e=>({...e})),gpu:this.pass?{...this.pass.stats}:null,lastReleased:this.lastReleased,diagnostics:[...this.diagnostics]};}
 }

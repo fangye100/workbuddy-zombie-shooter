@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_grenade",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-grenade.svg",
+    "status": "accepted",
+    "author": "项目原创漫画矢量纹理"
+  },
+  "sourceHash": "sha256:81eb48ec79ffab62b3f7d8f5f5bb316bfb8847791a39e6da26843bad570c590e",
+  "updatedAt": "2026-10-19T16:48:42.668Z"
+}

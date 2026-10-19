@@ -4,7 +4,7 @@ import type {WeaponVfxFrame} from '../weapon-vfx-frames';
 import type {RuntimeSession} from '../session';
 import type {EnemyAttackEvent} from '../enemy-attacks';
 import {type WeaponVfxPlanner} from './vfx-planner';
-export const CONTINUOUS_VFX_SLOTS=[['weapon.flame','火焰喷射'],['actor.smoke','燃烧烟尘'],['combat.spark','接触火花'],['enemy.charge.trail','冲锋拖尾'],['combat.melee','近战弧线']] as const;
+export const CONTINUOUS_VFX_SLOTS=[['weapon.flame','火焰喷射'],['actor.smoke','燃烧烟尘'],['combat.spark','接触火花'],['enemy.charge.trail','冲锋拖尾'],['combat.melee','近战弧线'],['weapon.projectile','真实弹丸'],['weapon.explosion','武器爆炸']] as const;
 /** Game facts → generic emitters. No damage, collision, timing or trajectory simulation here. */
 export class ContinuousVfxPlanner {
  readonly bindings=new Map<string,VfxEffectDefinition>();readonly emitters:VfxEmitters;
@@ -25,6 +25,19 @@ export class ContinuousVfxPlanner {
    if(e.kind==='slash'){
     if(arc(`${runtime.runId}:slash:${e.id}`,e.from,e.to,e.radius,e.tick,e.id))this.renderedWeapons.add(e.weaponId);else this.stats.fallback++;
    }
+   if(e.kind==='explosion'){
+    const effect=this.bindings.get('weapon.explosion'),age=Math.max(0,tick-e.tick)*dt;
+    if(effect && age<effect.duration){const key=`${runtime.runId}:weapon-explosion:${e.id}`;this.weapons.pool.spawn({key,effect:{...effect,size:[e.radius*2,e.radius*2]},position:e.position,normal:[0,1,0],seed:e.id,priority:5});const p=this.weapons.pool.active.find(p=>p.key===key);if(p)p.age=age;}
+   }
+  }
+  for(const event of this.weapons.frameEvents){
+   if(event.kind!=='projectile' && event.kind!=='projectile-end')continue;
+   const key=`${runtime.runId}:projectile:${event.effectId}`,trailKey=key+':trail',effect=this.bindings.get('weapon.projectile');
+   if(event.kind==='projectile-end'){this.weapons.pool.stop(key);continue;}
+   const age=Math.max(0,tick-event.tick)*dt;if(age>.15)continue;
+   if(effect)this.weapons.pool.upsert({key,effect,position:event.to as [number,number,number],seed:event.effectId!,priority:4,lifetime:.15},age);
+   const w=runtime.weapons.definitions.find(w=>w.id===event.weaponId),trail=w?this.weapons.ready.get(w.id)?.effects[w.presentation.vfx.trail]:null;
+   if(trail && Math.hypot(...event.to.map((v,i)=>v-event.from[i]!))>1e-6)this.weapons.pool.upsert({key:trailKey,effect:trail,position:event.from as [number,number,number],end:event.to as [number,number,number],seed:event.sequence,priority:3},age);
   }
   for(const frame of runtime.weaponVfxFrames.drain()){
    this.recentFrames.push(frame);if(this.recentFrames.length>64)this.recentFrames.shift();
@@ -46,6 +59,10 @@ export class ContinuousVfxPlanner {
   }
   // Existing slash remains drawable until its real presentation TTL; no repeated spawn on paused frames.
   for(const p of this.weapons.pool.active)if(p.key.startsWith(`${runtime.runId}:slash:`) && canDraw(p)){const e=this.recent.find(e=>p.key.endsWith(':'+e.id));if(e)this.renderedWeapons.add(e.weaponId);}
+  for(const e of runtime.weaponCombat.effects){
+   const key=e.kind==='projectile'?`${runtime.runId}:projectile:${e.id}`:e.kind==='explosion'?`${runtime.runId}:weapon-explosion:${e.id}`:null;
+   if(key && draw(key))this.renderedWeapons.add(e.weaponId);
+  }
   for(const e of runtime.enemyAttacks.effects)if(e.kind==='melee' && draw(`${runtime.runId}:enemy-melee:${e.id}`))this.renderedEnemies.add(e.id);
   for(const e of runtime.enemyAttacks.effects)if(e.kind==='charge' && !e.finished){const key=`${runtime.runId}:charge:${e.id}`;keep.add(key);if(draw(key))this.renderedEnemies.add(e.id);}
   this.emitters.stopExcept(keep);

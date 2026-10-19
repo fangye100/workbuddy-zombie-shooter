@@ -6,6 +6,7 @@ import {WeaponVfxPlanner} from '../src/presentation/vfx-planner';
 import {EnemyVfxPlanner} from '../src/presentation/enemy-vfx-planner';
 import {ContinuousVfxPlanner,CONTINUOUS_VFX_SLOTS} from '../src/presentation/continuous-vfx-planner';
 const docs=import.meta.glob('../../../assets/scenes/sandbox/vfx-m2-pounce.scene.json',{eager:true,import:'default'}),assets=import.meta.glob('../../../assets/vfx/comic-motion.vfx.json',{eager:true,import:'default'}),weapons=import.meta.glob('../../../assets/weapons/prototype.weapons.json',{eager:true,import:'default'});
+const gunAssets=import.meta.glob('../../../assets/vfx/comic-pistol.vfx.json',{eager:true,import:'default'}),enemyAssets=import.meta.glob('../../../assets/vfx/comic-enemies.vfx.json',{eager:true,import:'default'});
 function fixture(){const doc=structuredClone(Object.values(docs)[0]) as SceneDocument,arsenal=(Object.values(weapons)[0] as any).arsenal??Object.values(weapons)[0];const rules=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules')!;if(rules.kind==='RunRules')rules.arsenal=structuredClone(arsenal) as any;const r=new RuntimeSession({desc:loadLevelRuntime(doc).desc!,seed:1}),w=new WeaponVfxPlanner(),enemy=new EnemyVfxPlanner(w.pool),p=new ContinuousVfxPlanner(w),asset=Object.values(assets)[0] as VfxAsset;['flame','smoke','sparks','charge-dust','melee-arc'].forEach((key,i)=>p.bindings.set(CONTINUOUS_VFX_SLOTS[i]![0],asset.effects[key]!));return {r,w,enemy,p,update(){w.update(r);enemy.update(r,()=>true);p.update(r,enemy.frameEvents,()=>true);}};}
 it('flame immutable facts survive multi ticks, release stops emission, same handle restarts, reset removes old run',()=>{
  const f=fixture();expect(f.r.equipWeapon('flame')).toBe(true);f.r.setAim(5,0);f.r.setFire(true);for(let i=0;i<24;i++)f.r.step();f.update();expect(f.p.recent.filter(e=>e.kind==='flame').length).toBeGreaterThan(1);expect(Object.isFrozen(f.p.recent[0]!.from)).toBe(true);expect(f.p.renderedWeapons.has('flame')).toBe(true);const h=f.p.emitters.activeHandles.find(h=>h.key.includes(':flame:'))!;expect(h).toBeTruthy();
@@ -39,4 +40,14 @@ it('shared pool saturation preserves weapon fallback and recovers when decorativ
  const f=fixture();f.update();f.r.equipWeapon('flame');f.r.setFire(true);f.r.setAim(5,0);for(let i=0;i<24;i++)f.r.step();const effect=f.p.bindings.get('combat.spark')!;
  for(let i=0;i<f.w.pool.capacity;i++)f.w.pool.spawn({key:'pressure:'+i,effect,position:[1000,0,1000],seed:0,priority:30,lifetime:100});f.update();expect(f.p.renderedWeapons.has('flame')).toBe(false);expect(f.p.stats.fallback).toBeGreaterThan(0);
  for(let i=0;i<f.w.pool.capacity;i++)f.w.pool.stop('pressure:'+i);f.r.step();f.update();expect(f.p.renderedWeapons.has('flame')).toBe(true);
+});
+
+it('projectile head follows real catchup positions, terminal explosion survives head removal and missing texture keeps fallback',()=>{
+ const f=fixture(),asset=Object.values(gunAssets)[0] as VfxAsset,weapon=f.r.weapons.definitions.find(w=>w.id==='launcher')!;
+ weapon.presentation.vfx={resource:{path:'assets/vfx/comic-pistol.vfx.json',guid:asset.id},muzzle:'launcher-muzzle',trail:'launcher-trail',impact:'launcher-impact'};
+ f.w.ready.set(weapon.id,asset);f.p.bindings.set('weapon.projectile',asset.effects['launcher-head']!);f.p.bindings.set('weapon.explosion',(Object.values(enemyAssets)[0] as VfxAsset).effects['weapon-explosion']!);
+ f.r.equipWeapon('launcher');f.r.setAim(5,0);f.r.setFire(true);let moving=false,exploded=false;
+ for(let i=0;i<100;i++){f.r.step();if(i%2===0)continue;f.update();const projectile=f.r.weaponCombat.effects.find(e=>e.kind==='projectile');if(projectile){f.r.setFire(false);const p=f.w.pool.active.find(p=>p.key===`${f.r.runId}:projectile:${projectile.id}`);expect(p?.position).toEqual(projectile.position);moving=true;}
+  if(f.w.pool.active.some(p=>p.key.includes(':weapon-explosion:'))){expect(f.w.pool.active.some(p=>/:projectile:\d+$/.test(p.key))).toBe(false);expect(f.p.renderedWeapons.has('launcher')).toBe(true);exploded=true;break;}}
+ expect(moving).toBe(true);expect(exploded).toBe(true);f.p.update(f.r,[],()=>false);expect(f.p.renderedWeapons.has('launcher')).toBe(false);f.r.reset();f.update();expect(f.w.pool.active.length).toBe(0);
 });

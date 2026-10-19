@@ -22,6 +22,8 @@ test('正式关卡重绑幂等，保留模拟规则与布局，引用均为已�
     const guns = doc.nodes.flatMap(n => n.components).find(c => c.kind === 'RunRules').arsenal.definitions.filter(w => ['hitscan', 'pellets', 'piercing'].includes(w.behavior));
     assert.equal(new Set(guns.map(w => w.presentation.vfx.resource.guid)).size, 1);
     assert.equal(new Set(guns.map(w => w.presentation.vfx.muzzle)).size, 4);
+    const all=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='RunRules').arsenal.definitions;
+    assert.equal(all.length,7);assert.ok(all.every(w=>w.presentation.vfx.resource?.guid));
     for (const gun of guns) {
       const asset = JSON.parse(fs.readFileSync(gun.presentation.vfx.resource.path, 'utf8'));
       for (const kind of ['muzzle', 'trail', 'impact']) assert.equal(asset.effects[gun.presentation.vfx[kind]]?.kind, kind);

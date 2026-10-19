@@ -33,7 +33,9 @@ export class WeaponVfxPlanner {
           const instance=this.pool.active.find(p=>p.key===key);if(instance)instance.age=age;
         }
       };
-      if(event.kind==='fire')play('muzzle');else {play('trail');if(event.contact!=='miss')play('impact');}
+      if(event.kind==='fire'){if(weapon.behavior!=='melee')play('muzzle');}
+      else if(event.kind==='trace'){play('trail');if(event.contact!=='miss')play('impact');}
+      else if(event.kind==='impact' && !this.frameEvents.some(e=>e.kind==='trace' && e.weaponId===event.weaponId && e.tick===event.tick && e.actor?.id===event.actor?.id && e.actor?.generation===event.actor?.generation))play('impact');
     }
     // Flash is attached to the same currently drawn marker while its TTL is alive.
     for(const p of this.pool.active)if(p.effect.kind==='muzzle')p.position=weaponMarkerWorld(runtime,'muzzle');
@@ -41,7 +43,7 @@ export class WeaponVfxPlanner {
   usable(w:WeaponDefinition):boolean{return this.ready.has(w.id);}
   /** Suppress only a burst with a matching live GPU hit; damage labels remain HUD feedback. */
   impactReady(event:CombatEvent,canDraw:(p:VfxInstance)=>boolean):boolean {
-    return event.runId===this.run && this.recentEvents.some(e=>e.kind==='trace' && e.contact==='entity' && e.tick===event.tick && e.actor?.id===event.slot && e.actor.generation===event.generation && this.pool.active.some(p=>p.key===`${this.run}:${e.sequence}:impact` && canDraw(p)));
+    return event.runId===this.run && this.recentEvents.some(e=>(e.kind==='trace' || e.kind==='impact') && e.contact==='entity' && e.tick===event.tick && e.actor?.id===event.slot && e.actor.generation===event.generation && this.pool.active.some(p=>p.key===`${this.run}:${e.sequence}:impact` && canDraw(p)));
   }
   clear():void{this.pool.clear();this.ready.clear();this.recentEvents.length=0;this.frameEvents=[];this.fallbackWeapons.clear();this.fallbackUntil.clear();this.run=-1;}
 }

@@ -5,12 +5,13 @@ import { gameText as g } from './game-language';
 import { drawEnemyAttack, drawAttackCue,drawEnemyDanger } from './enemy-attack-ink';
 import { drawHeldWeapon, drawWeaponEffect } from './weapon-ink';
 import type { WeaponModelView } from './weapon-model';
+import type {WeaponEffect} from '@aether/runtime';
 export type WorldProjection = (p: readonly [number, number, number]) => { x: number; y: number; behind: boolean };
 
 /** Screen-space feedback projected from simulation facts; never creates gameplay objects. */
 export class CombatOverlay {
   /** Host confirms GPU resources are ready for this exact weapon before suppressing fallback. */
-  static gpuWeaponReady:(weaponId:string)=>boolean=()=>false;
+  static gpuWeaponReady:(weaponId:string,effect?:Readonly<WeaponEffect>)=>boolean=()=>false;
   static gpuEnemyReady:(attackId:number)=>boolean=()=>false;
   static gpuImpactReady:(event:CombatEvent)=>boolean=()=>false;
   debugRanges = false;
@@ -39,7 +40,7 @@ export class CombatOverlay {
     const effects=runtime.weaponCombat.effects,live=new Set(effects.map(e=>e.id));
     for(const id of this.effectOrigins.keys())if(!live.has(id))this.effectOrigins.delete(id);
     for(const effect of effects){
-      if(CombatOverlay.gpuWeaponReady(effect.weaponId))continue;
+      if(CombatOverlay.gpuWeaponReady(effect.weaponId,effect))continue;
       if(effect.tick===runtime.tick-1&&model?.visible&&model.weaponId===effect.weaponId&&model.muzzle&&!this.effectOrigins.has(effect.id)&&['shot','pellet','pierce','flame','projectile'].includes(effect.kind))this.effectOrigins.set(effect.id,[...model.muzzle.position]);
       const from=this.effectOrigins.get(effect.id);
       drawWeaponEffect(c,point,from?{...effect,from}:effect,(runtime.tick-effect.tick)*runtime.fixedStep);

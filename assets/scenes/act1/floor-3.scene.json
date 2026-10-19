@@ -1313,10 +1313,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "chainsaw-muzzle",
+                    "trail": "chainsaw-trail",
+                    "impact": "chainsaw-impact"
                   },
                   "assembly": {
                     "holdPose": {
@@ -1503,10 +1506,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "flame-muzzle",
+                    "trail": "flame-trail",
+                    "impact": "flame-impact"
                   },
                   "assembly": {
                     "holdPose": {
@@ -1716,10 +1722,13 @@
                     }
                   },
                   "vfx": {
-                    "muzzle": "ink-flash",
-                    "trail": "ink-tracer",
-                    "impact": "ink-hit",
-                    "resource": null
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "launcher-muzzle",
+                    "trail": "launcher-trail",
+                    "impact": "launcher-impact"
                   },
                   "assembly": {
                     "holdPose": {
@@ -2132,6 +2141,20 @@
                 "guid": "as_vfx_comic_ribbon"
               },
               "effectKey": "motion-ribbon"
+            },
+            "weapon.projectile": {
+              "resource": {
+                "path": "assets/vfx/comic-pistol.vfx.json",
+                "guid": "as_vfx_comic_pistol"
+              },
+              "effectKey": "launcher-head"
+            },
+            "weapon.explosion": {
+              "resource": {
+                "path": "assets/vfx/comic-enemies.vfx.json",
+                "guid": "as_vfx_comic_enemies"
+              },
+              "effectKey": "weapon-explosion"
             }
           }
         },

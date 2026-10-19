@@ -4,7 +4,7 @@ import type { SolidContact } from './solid-ray';
 export type WeaponPoint=[number,number,number];
 export interface WeaponActor { id:number;generation:number;x:number;y?:number;height?:number;z:number;radius:number;hp:number }
 export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; surface?:SolidContact; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
-export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
+export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'|'impact'|'projectile'|'projectile-end'; readonly effectId?:number; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
 export interface WeaponWorld {
   actors():WeaponActor[]; actor(id:number):WeaponActor|null;
   trace(from:WeaponPoint,direction:WeaponPoint,range:number,ignore:ReadonlySet<number>,radius?:number):WeaponHit;
@@ -30,7 +30,7 @@ class RayWeapon implements WeaponImplementation {
       const ignore=new Set<number>();let end:WeaponPoint=[c.from[0]+d[0]*w.rangeM,c.from[1],c.from[2]+d[2]*w.rangeM],hit=false;
       for(let p=0;p<(this.pierce?w.penetration:1);p++){
         const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);if(!result.actor){if(result.surface)c.world.solidImpact?.(result,c.from,d,w,c.tick);break;}
-        hit=true;ignore.add(result.actor.id);c.combat.impact(c.weapon,result.actor,c.damage,c.tick,c.world,c.from);
+        hit=true;ignore.add(result.actor.id);c.combat.impact(c.weapon,result.actor,c.damage,c.tick,c.world,c.from,result.point);
       }
       c.combat.effect(w,this.pellets?'pellet':this.pierce?'pierce':'shot',c.from,end,c.tick,.12,0,hit);
     }
@@ -81,9 +81,9 @@ export class WeaponCombat {
     this.recordVfx(w,'fire',from,{actor:null,point:from,distance:0,kind:'miss'},tick);
     WEAPON_IMPLEMENTATIONS[w.behavior].fire({weapon:w,from,direction,damage,tick,world,combat:this,random:()=>this.random()});
   }
-  private recordVfx(w:WeaponDefinition,kind:WeaponVfxEvent['kind'],from:WeaponPoint,hit:WeaponHit,tick:number):void {
+  private recordVfx(w:WeaponDefinition,kind:WeaponVfxEvent['kind'],from:WeaponPoint,hit:WeaponHit,tick:number,effectId?:number):void {
     if(this.vfxEvents.length>=2048){this.vfxEvents.shift();this.vfxDropped++;}
-    this.vfxEvents.push(Object.freeze({sequence:++this.vfxSequence,tick,weaponId:w.id,kind,from:Object.freeze([...from]),to:Object.freeze([...hit.point]),contact:hit.kind??(hit.actor?'entity':'miss'),actor:hit.actor?Object.freeze({...hit.actor}):null,nodeId:hit.nodeId??null,normal:hit.normal?Object.freeze([...hit.normal]):null}));
+    this.vfxEvents.push(Object.freeze({sequence:++this.vfxSequence,tick,weaponId:w.id,kind,...(effectId===undefined?{}:{effectId}),from:Object.freeze([...from]),to:Object.freeze([...hit.point]),contact:hit.kind??(hit.actor?'entity':'miss'),actor:hit.actor?Object.freeze({...hit.actor}):null,nodeId:hit.nodeId??null,normal:hit.normal?Object.freeze([...hit.normal]):null}));
   }
   recordTrace(w:WeaponDefinition,from:WeaponPoint,hit:WeaponHit,tick:number):void {this.recordVfx(w,'trace',from,hit,tick);}
   blockedFire(w:WeaponDefinition,from:WeaponPoint,hit:WeaponHit,tick:number):void {
@@ -94,7 +94,8 @@ export class WeaponCombat {
     const e:WeaponEffect={id:++this.sequence,tick,weaponId:w.id,kind,from:[...from],to:[...to],position:[...from],duration,radius,spreadDeg:w.spreadDeg,color:w.presentation.color,hit};
     this.effects.push(e);const snapshot=structuredClone(e);Object.freeze(snapshot.from);Object.freeze(snapshot.to);Object.freeze(snapshot.position);if(this.presentationEvents.length>=2048){this.presentationEvents.shift();this.presentationDropped++;}this.presentationEvents.push(Object.freeze(snapshot));return e;
   }
-  impact(w:WeaponDefinition,actor:WeaponActor,damage:number,tick:number,world:WeaponWorld,origin:WeaponPoint):void {
+  impact(w:WeaponDefinition,actor:WeaponActor,damage:number,tick:number,world:WeaponWorld,origin:WeaponPoint,contact:WeaponPoint=[actor.x,(actor.y??0)+(actor.height??1.8)*.55,actor.z]):void {
+    this.recordVfx(w,'impact',origin,{actor,point:contact,distance:0,kind:'entity'},tick);
     world.damage(actor.id,damage);
     if(w.effects.blastRadiusM>0 && w.behavior!=='projectile')this.explode(w,[actor.x,origin[1],actor.z],damage/2,tick,world,new Set([actor.id]));
     const live=world.actor(actor.id);if(!live || live.generation!==actor.generation || live.hp<=0)return;
@@ -109,6 +110,7 @@ export class WeaponCombat {
   private explode(w:WeaponDefinition,point:WeaponPoint,damage:number,tick:number,world:WeaponWorld,ignore=new Set<number>()):void {
     this.effect(w,'explosion',point,point,tick,.4,w.effects.blastRadiusM,true);
     for(const a of world.actors())if(!ignore.has(a.id) && Math.hypot(a.x-point[0],a.y===undefined?0:Math.max(a.y-point[1],point[1]-a.y-(a.height??1.8),0),a.z-point[2])<=w.effects.blastRadiusM+a.radius && !world.blocked(point,[a.x,Math.max(a.y??point[1],Math.min(point[1],(a.y??point[1])+(a.height??1.8))),a.z])){
+      this.recordVfx(w,'impact',point,{actor:a,point:[a.x,(a.y??0)+(a.height??1.8)*.55,a.z],distance:0,kind:'entity'},tick);
       world.damage(a.id,damage);if(world.actor(a.id))world.displace(a.id,point,w.effects.knockbackM);
     }
   }
@@ -123,6 +125,7 @@ export class WeaponCombat {
     p.direction[0]=c.direction[0];p.direction[1]=c.direction[1];p.direction[2]=c.direction[2];
     p.age=0;p.travel=0;p.velocityY=c.weapon.projectile.launchSpeedY+c.direction[1]*c.weapon.projectile.speedMps;
     this.projectiles.push(p);
+    this.recordVfx(c.weapon,'projectile',c.from,{actor:null,point:c.from,distance:0,kind:'miss'},c.tick,effect.id);
   }
   slow(id:number,generation:number):number {const s=this.statuses.get(id);return s?.generation===generation && s.slowUntil>this.now?1-s.slow:1;}
   step(tick:number,dt:number,world:WeaponWorld):void {
@@ -138,11 +141,13 @@ export class WeaponCombat {
         const groundT=next[1]<=.05 && from[1]>.05?(from[1]-.05)/(from[1]-next[1])*length:Infinity;
         p.effect!.position=groundT<hit.distance?[from[0]+direction[0]*groundT,.05,from[2]+direction[2]*groundT]:hit.point;
         if(!hit.actor && hit.distance<length-1e-6)p.effect!.position=[p.effect!.position[0]-direction[0]*.01,p.effect!.position[1]-direction[1]*.01,p.effect!.position[2]-direction[2]*.01];
+        this.recordVfx(w,'projectile',from,{...hit,point:[...p.effect!.position]},tick,p.effect!.id);
+        this.recordVfx(w,'projectile-end',from,{...hit,point:[...p.effect!.position]},tick,p.effect!.id);
         if(w.effects.blastRadiusM>0)this.explode(w,p.effect!.position,p.damage,tick,world);
         else if(hit.actor)this.impact(w,hit.actor,p.damage,tick,world,from);
         else if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
         this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect!),1);this.projectilePool.release(p);
-      }
+      }else this.recordVfx(w,'projectile',from,hit,tick,p.effect!.id);
     }
     for(const [id,s] of this.statuses){
       const a=world.actor(id);if(!a || a.generation!==s.generation || a.hp<=0){this.statuses.delete(id);continue;}

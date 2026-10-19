@@ -109,6 +109,12 @@ describe('concrete ballistics and damage effects',()=>{
     c.fire(launcher,[0,1,0],[1,0,0],42,0,f.world);expect(f.actors[0]!.hp).toBe(500);expect(c.pendingProjectiles).toBe(1);
     for(let t=1;t<=30;t++)c.step(t,1/30,f.world);
     expect(f.actors[0]!.hp).toBe(458);expect(f.actors[1]!.hp).toBe(500);expect(c.pendingProjectiles).toBe(0);
+    const facts=c.drainVfxEvents(),moves=facts.filter(e=>e.kind==='projectile'),end=facts.find(e=>e.kind==='projectile-end')!;
+    expect(moves.length).toBeGreaterThan(1);expect(new Set(moves.map(e=>e.to[0])).size).toBeGreaterThan(1);
+    expect(end.effectId).toBe(moves[0]!.effectId);expect(end.to).toEqual(moves.at(-1)!.to);
+    const contact=facts.find(e=>e.kind==='impact')!;expect(contact.actor).toMatchObject({id:0,generation:1,hp:500});
+    expect(Object.isFrozen(contact.actor)).toBe(true);expect(Object.isFrozen(moves[0]!.to)).toBe(true);
+    expect(c.drainVfxEvents()).toEqual([]);
   });
   it('bounds the projectile pool explicitly and preserves seeded scatter determinism',()=>{
     const f=fixture([]),c=new WeaponCombat(7),w=definition('launcher');

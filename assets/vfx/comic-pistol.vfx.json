@@ -173,10 +173,10 @@
         "guid": "as_vfx_comic_trail"
       },
       "frames": 1,
-      "duration": 0.14,
+      "duration": 0.2,
       "size": [
         1,
-        0.13
+        0.24
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -205,8 +205,8 @@
       "frames": 3,
       "duration": 0.27,
       "size": [
-        0.92,
-        0.92
+        1.104,
+        1.104
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -291,10 +291,10 @@
         "guid": "as_vfx_comic_trail"
       },
       "frames": 1,
-      "duration": 0.1,
+      "duration": 0.2,
       "size": [
         1,
-        0.09
+        0.19
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -323,8 +323,8 @@
       "frames": 3,
       "duration": 0.22,
       "size": [
-        0.75,
-        0.75
+        0.8999999999999999,
+        0.8999999999999999
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -409,10 +409,10 @@
         "guid": "as_vfx_comic_trail"
       },
       "frames": 1,
-      "duration": 0.085,
+      "duration": 0.15,
       "size": [
         1,
-        0.095
+        0.17
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -441,8 +441,8 @@
       "frames": 3,
       "duration": 0.18,
       "size": [
-        0.67,
-        0.67
+        0.804,
+        0.804
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -527,10 +527,10 @@
         "guid": "as_vfx_comic_trail"
       },
       "frames": 1,
-      "duration": 0.22,
+      "duration": 0.27,
       "size": [
         1,
-        0.21
+        0.38
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -559,8 +559,8 @@
       "frames": 3,
       "duration": 0.34,
       "size": [
-        1.32,
-        1.32
+        1.584,
+        1.584
       ],
       "color": "#ffffff",
       "blend": "alpha",
@@ -593,6 +593,377 @@
           "value": 0.5
         }
       ]
+    },
+    "chainsaw-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.09,
+      "size": [
+        0.7,
+        0.7
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "chainsaw-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.18,
+      "size": [
+        1,
+        0.3
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "chainsaw-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.25,
+      "size": [
+        1.5,
+        1.5
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "flame-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.09,
+      "size": [
+        0.7,
+        0.7
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "flame-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.18,
+      "size": [
+        1,
+        0.3
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "flame-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.25,
+      "size": [
+        1.5,
+        1.5
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "launcher-muzzle": {
+      "kind": "muzzle",
+      "texture": {
+        "path": "assets/vfx/comic-muzzle.svg",
+        "guid": "as_vfx_comic_muzzle"
+      },
+      "frames": 3,
+      "duration": 0.09,
+      "size": [
+        0.7,
+        0.7
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 1.05
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "launcher-trail": {
+      "kind": "trail",
+      "texture": {
+        "path": "assets/vfx/comic-trail.svg",
+        "guid": "as_vfx_comic_trail"
+      },
+      "frames": 1,
+      "duration": 0.18,
+      "size": [
+        1,
+        0.3
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ]
+    },
+    "launcher-impact": {
+      "kind": "impact",
+      "texture": {
+        "path": "assets/vfx/comic-impact.svg",
+        "guid": "as_vfx_comic_impact"
+      },
+      "frames": 3,
+      "duration": 0.25,
+      "size": [
+        1.5,
+        1.5
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "alphaCurve": [
+        {
+          "t": 0,
+          "value": 1
+        },
+        {
+          "t": 0.65,
+          "value": 1
+        },
+        {
+          "t": 1,
+          "value": 0
+        }
+      ],
+      "sizeCurve": [
+        {
+          "t": 0,
+          "value": 0.75
+        },
+        {
+          "t": 0.25,
+          "value": 1.15
+        },
+        {
+          "t": 1,
+          "value": 0.5
+        }
+      ]
+    },
+    "launcher-head": {
+      "kind": "sprite",
+      "texture": {
+        "path": "assets/vfx/comic-grenade.svg",
+        "guid": "as_vfx_comic_grenade"
+      },
+      "frames": 1,
+      "duration": 0.2,
+      "size": [
+        0.62,
+        0.62
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "camera",
+      "loop": true
     }
   }
 }
