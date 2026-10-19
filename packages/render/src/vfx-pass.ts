@@ -6,6 +6,9 @@ import type {VfxAnchor} from '@aether/runtime';
 import type {VfxEffectDefinition} from '@aether/scene';
 import {gpuVfxReason} from '@aether/scene';
 import {VfxGpuSimulation} from './vfx-simulation';
+import {VfxDecalRenderer} from './vfx-decal';
+import type {DecalReceiver} from './vfx-decal-mesh';
+import type {VfxDecalInstance} from '@aether/runtime';
 import {VfxRibbonRenderer} from './vfx-ribbon';
 import type {RibbonTrail} from '@aether/runtime';
 
@@ -28,11 +31,12 @@ export class VfxPass {
   gpu:VfxGpuSimulation|null=null;
   ribbon:VfxRibbonRenderer|null=null;
   ribbons:readonly RibbonTrail[]=[];
+  decal:VfxDecalRenderer|null=null;decals:readonly VfxDecalInstance[]=[];receivers:readonly DecalReceiver[]=[];
   gpuCompatibilityReason:string|null=null;
   /** Capability seam also permits explicitly labelled validation restrictions. */
   gpuSupport=()=>VfxGpuSimulation.capability(this.device);
   instances:readonly VfxInstance[]=[];
-  readonly stats={active:0,draws:0,uploadedBytes:0,ribbonPoints:0,ribbonSegments:0,ribbonDraws:0,buffers:2,textures:0,destroyedBuffers:0,destroyedTextures:0,softInstances:0,softDepthRebinds:0};
+  readonly stats={active:0,draws:0,uploadedBytes:0,ribbonPoints:0,ribbonSegments:0,ribbonDraws:0,buffers:2,textures:0,destroyedBuffers:0,destroyedTextures:0,softInstances:0,softDepthRebinds:0,decalInstances:0,decalTriangles:0,decalDraws:0};
   constructor(private readonly device:GPUDevice,readonly capacity=256) {
     this.uniform=device.createBuffer({label:'vfx-frame',size:64,usage:GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST});
     this.buffer=device.createBuffer({label:'vfx-instances',size:capacity*96,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});
@@ -51,16 +55,16 @@ export class VfxPass {
     const group=this.device.createBindGroup({layout:this.alpha.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:this.uniform}},{binding:1,resource:{buffer:this.buffer}},{binding:2,resource:texture.createView()},{binding:3,resource:this.sampler}]});
     this.textures.set(key,{texture,group,width:bitmap.width,height:bitmap.height});this.stats.textures=this.textures.size;
   }
-  drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && p.effect.kind!=='ribbon' && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
+  drawable(p:VfxInstance):boolean{const texture=this.textures.get(p.effect.texture.guid);return !this.disposed && p.effect.kind!=='ribbon' && p.effect.kind!=='decal' && !!texture && texture.width%p.effect.frames===0 && (p.effect.orientation!=='surface' || !!p.normal);}
   ribbonDrawable(t:RibbonTrail):boolean{return !this.disposed && this.textures.has(t.effect.texture.guid) && t.points.some((p,i)=>i>0 && !p.breakBefore);}
-  private alphaPresent(){return this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p)) || this.ribbons.some(t=>t.effect.blend==='alpha' && this.textures.has(t.effect.texture.guid) && t.points.some((p,i)=>i>0 && !p.breakBefore));}
-  private bufferCount(){return 2+(this.gpu?.stats.buffers??0)+(this.ribbon?.stats.buffers??0)+(this.soft?.stats.buffers??0);}
+  private alphaPresent(){return this.decals.some(p=>p.effect.blend==='alpha' && this.textures.has(p.effect.texture.guid)) || this.instances.some(p=>p.effect.blend==='alpha' && this.drawable(p)) || this.ribbons.some(t=>t.effect.blend==='alpha' && this.textures.has(t.effect.texture.guid) && t.points.some((p,i)=>i>0 && !p.breakBefore));}
+  private bufferCount(){return 2+(this.gpu?.stats.buffers??0)+(this.ribbon?.stats.buffers??0)+(this.soft?.stats.buffers??0)+(this.decal?.stats.buffers??0);}
   updateGpuEmitter(key:string,effect:VfxEffectDefinition,anchor:VfxAnchor,tick:number,step:number,seed:number,playing=true):string|null {
-    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect)??(this.alphaPresent()?'同屏 CPU alpha（含Ribbon）需要统一排序，GPU发射器使用有界 CPU 兼容':null);this.gpuCompatibilityReason=reason;if(reason){this.gpu?.release(key);this.stats.buffers=this.bufferCount();return reason;}
+    if(this.disposed)return 'VFX会话已停止';const reason=this.gpuSupport()??gpuVfxReason(effect)??(this.alphaPresent()?'同屏 CPU alpha（含Ribbon/投影贴花）需要统一排序，GPU发射器使用有界 CPU 兼容':null);this.gpuCompatibilityReason=reason;if(reason){this.gpu?.release(key);this.stats.buffers=this.bufferCount();return reason;}
     if(!this.textures.has(effect.texture.guid))return 'GPU模拟纹理未就绪';this.gpu??=new VfxGpuSimulation(this.device,key=>this.textures.get(key),this.sampler);
     const result=this.gpu.update(key,effect,anchor,tick,step,seed,playing);if(result)this.gpu.release(key);this.stats.buffers=this.bufferCount();return result;
   }
-  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){if(this.alphaPresent()){this.gpuCompatibilityReason='同屏 CPU alpha（含Ribbon）需要统一排序，GPU发射器使用有界 CPU 兼容';if(this.gpu)for(const key of this.gpu.snapshot().keys)this.gpu.release(key);this.stats.buffers=this.bufferCount();this.gpu?.encode(encoder,color,aux,depth,vp,eye);return;}this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
+  private drawGpu(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3){if(this.alphaPresent()){this.gpuCompatibilityReason='同屏 CPU alpha（含Ribbon/投影贴花）需要统一排序，GPU发射器使用有界 CPU 兼容';if(this.gpu)for(const key of this.gpu.snapshot().keys)this.gpu.release(key);this.stats.buffers=this.bufferCount();this.gpu?.encode(encoder,color,aux,depth,vp,eye);return;}this.gpu?.encode(encoder,color,aux,depth,vp,eye);if(this.gpu){this.stats.draws+=this.gpu.stats.draws;this.stats.uploadedBytes+=this.gpu.stats.uploadedBytes;}}
   draw(encoder:GPUCommandEncoder,color:GPUTextureView,aux:GPUTextureView,depth:GPUTextureView,vp:Float32Array,eye:V3,view:Float32Array,projection:Float32Array):number {
     this.stats.active=0;this.stats.draws=0;this.stats.uploadedBytes=0;this.stats.softInstances=0;
     if(this.disposed)return 0;
@@ -69,7 +73,9 @@ export class VfxPass {
     const items=this.instances.filter(p=>this.drawable(p)).slice(0,this.capacity).sort((a,b)=>depthOf(sampleVfxVisual(a).position)-depthOf(sampleVfxVisual(b).position));
     if(this.ribbons.length)this.ribbon??=new VfxRibbonRenderer(this.device,this.uniform,key=>this.textures.get(key));
     const segments=this.ribbon?.prepare(this.ribbons,eye,view)??[];this.stats.ribbonPoints=this.ribbon?.stats.points??0;this.stats.ribbonSegments=segments.length;this.stats.ribbonDraws=0;this.stats.buffers=this.bufferCount();
-    if(!items.length && !segments.length){this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;}
+    if(this.decals.length)this.decal??=new VfxDecalRenderer(this.device,this.uniform,key=>this.textures.get(key));
+    const projected=this.decal?.prepare(this.decals,this.receivers,view)??[];this.stats.decalInstances=this.decal?.stats.instances??0;this.stats.decalTriangles=projected.length;this.stats.decalDraws=0;this.stats.buffers=this.bufferCount();
+    if(!items.length && !segments.length && !projected.length){this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;}
     const hasSoft=items.some(p=>!!p.effect.softParticle);let softGroup:GPUBindGroup|null=null;if(hasSoft){this.ensureSoft();softGroup=this.soft!.update(depth,projection);}this.stats.softInstances=items.filter(p=>!!p.effect.softParticle).length;this.stats.softDepthRebinds=this.soft?.stats.viewChanges??0;this.stats.buffers=this.bufferCount();
     const data=new Float32Array(items.length*24);
     for(let i=0;i<items.length;i++){
@@ -88,15 +94,16 @@ export class VfxPass {
       data.set([...position,0],o);data.set([...right,0],o+4);data.set([...up,0],o+8);data.set([...rgb,alpha*visual.alpha],o+12);
       data.set([frame/e.frames+.5/tex.width,(frame+1)/e.frames-.5/tex.width,.5/tex.height,1-.5/tex.height],o+16);data.set([e.softParticle?.fadeDistance??0,e.softParticle?.bias??0,0,0],o+20);
     }
-    this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);this.device.queue.writeBuffer(this.buffer,0,data);
+    this.device.queue.writeBuffer(this.uniform,0,vp as Float32Array<ArrayBuffer>);if(data.length)this.device.queue.writeBuffer(this.buffer,0,data);
     const pass=encoder.beginRenderPass({label:'vfx',colorAttachments:[{view:color,loadOp:'load',storeOp:'store'},{view:aux,loadOp:'load',storeOp:'store'}],depthStencilAttachment:{view:depth,depthReadOnly:true}});
-    const order=[...items.map((p,i)=>({kind:'sprite' as const,depth:depthOf(sampleVfxVisual(p).position),i,key:p.effect.texture.guid,blend:p.effect.blend,soft:!!p.effect.softParticle})),...segments.map(s=>({kind:'ribbon' as const,depth:s.depth,segment:s,key:s.texture,blend:s.blend}))].sort((a,b)=>a.depth-b.depth);
+    const order=[...items.map((p,i)=>({kind:'sprite' as const,depth:depthOf(sampleVfxVisual(p).position),i,key:p.effect.texture.guid,blend:p.effect.blend,soft:!!p.effect.softParticle})),...segments.map(s=>({kind:'ribbon' as const,depth:s.depth,segment:s,key:s.texture,blend:s.blend})),...projected.map(t=>({kind:'decal' as const,depth:t.depth,triangle:t,key:t.texture,blend:t.blend}))].sort((a,b)=>a.depth-b.depth);
     for(let i=0;i<order.length;){const first=order[i]!;let end=i+1;
       if(first.kind==='sprite'){while(end<order.length){const n=order[end]!,prev=order[end-1]!;if(n.kind!=='sprite' || prev.kind!=='sprite' || n.key!==first.key || n.blend!==first.blend || n.i!==prev.i+1 || n.soft!==first.soft)break;end++;}pass.setPipeline(first.soft?(first.blend==='additive'?this.softAdditive!:this.softAlpha!):(first.blend==='additive'?this.additive:this.alpha));if(first.soft)pass.setBindGroup(1,softGroup!);pass.setBindGroup(0,this.textures.get(first.key)!.group);pass.draw(6,end-i,0,first.i);}
-      else{let count=first.segment.indexCount;while(end<order.length){const n=order[end]!;if(n.kind!=='ribbon' || n.key!==first.key || n.blend!==first.blend || n.segment.firstIndex!==first.segment.firstIndex+count)break;count+=n.segment.indexCount;end++;}this.ribbon!.draw(pass,first.segment,count);}
+      else if(first.kind==='ribbon'){let count=first.segment.indexCount;while(end<order.length){const n=order[end]!;if(n.kind!=='ribbon' || n.key!==first.key || n.blend!==first.blend || n.segment.firstIndex!==first.segment.firstIndex+count)break;count+=n.segment.indexCount;end++;}this.ribbon!.draw(pass,first.segment,count);}
+      else{let count=first.triangle.indexCount;while(end<order.length){const n=order[end]!;if(n.kind!=='decal' || n.key!==first.key || n.blend!==first.blend || n.triangle.firstIndex!==first.triangle.firstIndex+count)break;count+=n.triangle.indexCount;end++;}this.decal!.draw(pass,first.triangle,count);}
       this.stats.draws++;i=end;
     }
-    pass.end();this.stats.ribbonDraws=this.ribbon?.stats.draws??0;this.stats.active=items.length;this.stats.uploadedBytes=data.byteLength+64+(this.ribbon?.stats.uploadedBytes??0)+(hasSoft?16:0);this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;
+    pass.end();this.stats.ribbonDraws=this.ribbon?.stats.draws??0;this.stats.decalDraws=this.decal?.stats.draws??0;this.stats.active=items.length+this.stats.decalInstances;this.stats.uploadedBytes=data.byteLength+64+(this.ribbon?.stats.uploadedBytes??0)+(hasSoft?16:0)+(this.decal?.stats.uploadedBytes??0);this.drawGpu(encoder,color,aux,depth,vp,eye);return this.stats.draws;
   }
-  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;this.gpu?.destroy();this.ribbon?.destroy();this.soft?.destroy();this.stats.destroyedBuffers+=(this.gpu?.stats.destroyedBuffers??0)+(this.ribbon?.stats.destroyedBuffers??0)+(this.soft?.stats.destroyedBuffers??0);for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.ribbons=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=this.stats.ribbonPoints=this.stats.ribbonSegments=this.stats.ribbonDraws=this.stats.softInstances=0;}
+  destroy():void {if(this.disposed)return;this.disposed=true;this.uniform.destroy();this.buffer.destroy();this.stats.destroyedBuffers+=2;this.gpu?.destroy();this.ribbon?.destroy();this.soft?.destroy();this.decal?.destroy();this.stats.destroyedBuffers+=(this.gpu?.stats.destroyedBuffers??0)+(this.ribbon?.stats.destroyedBuffers??0)+(this.soft?.stats.destroyedBuffers??0)+(this.decal?.stats.destroyedBuffers??0);for(const {texture} of this.textures.values()){texture.destroy();this.stats.destroyedTextures++;}this.textures.clear();this.instances=[];this.ribbons=[];this.decals=[];this.receivers=[];this.stats.active=this.stats.draws=this.stats.buffers=this.stats.textures=this.stats.ribbonPoints=this.stats.ribbonSegments=this.stats.ribbonDraws=this.stats.softInstances=this.stats.decalInstances=this.stats.decalTriangles=this.stats.decalDraws=0;}
 }

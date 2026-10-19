@@ -159,6 +159,12 @@
       "path": "assets/scenes/sandbox/vfx-m4-soft.scene.json",
       "enabled": true,
       "name": "M4.3 VFX · 柔和深度交界"
+    },
+    {
+      "path": "assets/scenes/sandbox/vfx-m4-decal.scene.json",
+      "id": "sc_vfx_m4_decal",
+      "name": "M4.4 VFX · 跨面投影贴花",
+      "enabled": true
     }
   ],
   "startIndex": 1,

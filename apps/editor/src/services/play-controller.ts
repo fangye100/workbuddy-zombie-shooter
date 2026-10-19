@@ -1,3 +1,4 @@
+import {decalReceivers} from './vfx-decal-receivers';
 /**
  * PlayController —— 编辑器侧的**装配层**（WU-4）。
  *
@@ -78,7 +79,7 @@ export class PlayController {
 
   constructor(renderer: LabRenderer, bridge: RuntimeBridge, opts: PlayControllerOptions = {}) {
     this.renderer = renderer;
-    this.vfx=new PlayVfx(renderer.core);
+    this.vfx=new PlayVfx(renderer.core,doc=>decalReceivers(renderer,doc));
     this.playerPresentation = opts.playerPresentation ?? null;
     this.sharedMotions = opts.sharedMotions ?? null;
     this.bodyIk = opts.bodyIk ?? null;

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_projection",
+  "kind": "texture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-projection.svg",
+    "status": "accepted",
+    "author": "项目原创M4.4透明漫画投影涂印纹理与跨面贴花资源"
+  },
+  "sourceHash": "sha256:42c2af5ef9f3625cece69a758275f0fab4538b98b3c1a8a6887c1c1e4610765c",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}

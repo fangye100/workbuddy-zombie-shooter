@@ -62,7 +62,7 @@ it('VFX definitions, texture identities and weapon bindings resolve accepted res
     for(const e of Object.values(a.effects))check(path,e.texture,'texture');
   }
   for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components) {
-    if(c.kind==='VfxEmitter' || c.kind==='VfxDecal'){check(path,c.resource,'vfx');const a=vfxModules[`/${c.resource.path}`] as VfxAsset|undefined;if(!a || a.status!=='accepted' || !a.effects[c.effectKey] || c.kind==='VfxDecal' && a.effects[c.effectKey]?.kind!=='decal')failures.push(`${path}: invalid VFX emitter ${node.id}`);}
+    if(c.kind==='VfxEmitter' || c.kind==='VfxDecal'){check(path,c.resource,'vfx');const a=vfxModules[`/${c.resource.path}`] as VfxAsset|undefined;if(!a || a.status!=='accepted' || !a.effects[c.effectKey] || c.kind==='VfxDecal' && a.effects[c.effectKey]?.kind!=='decal' || c.kind==='VfxEmitter' && a.effects[c.effectKey]?.kind==='decal')failures.push(`${path}: invalid VFX emitter ${node.id}`);}
     if(c.kind==='VfxBindings')for(const [tag,b] of Object.entries(c.bindings)){check(path,b.resource,'vfx');const a=vfxModules[`/${b.resource.path}`] as VfxAsset|undefined;if(!a || a.status!=='accepted' || !a.effects[b.effectKey])failures.push(`${path}: invalid VFX tag ${tag}`);}
     if(c.kind!=='RunRules' || !c.arsenal)continue;
     for(const w of c.arsenal.definitions){const v=w.presentation.vfx;if(!v.resource)continue;check(path,v.resource,'vfx');

@@ -1,0 +1,54 @@
+{
+  "version": 7,
+  "id": "as_vfx_comic_decal",
+  "name": "漫画跨面投影涂印",
+  "status": "accepted",
+  "effects": {
+    "corner-mark": {
+      "kind": "decal",
+      "texture": {
+        "path": "assets/vfx/comic-projection.svg",
+        "guid": "as_vfx_comic_projection"
+      },
+      "frames": 1,
+      "duration": 4,
+      "size": [
+        3,
+        2.4
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "surface",
+      "loop": true,
+      "backend": "cpu",
+      "decal": {
+        "depth": 2,
+        "maxAngle": 85,
+        "normalOffset": 0.002
+      }
+    },
+    "step-mark": {
+      "kind": "decal",
+      "texture": {
+        "path": "assets/vfx/comic-projection.svg",
+        "guid": "as_vfx_comic_projection"
+      },
+      "frames": 1,
+      "duration": 4,
+      "size": [
+        2.5,
+        2.5
+      ],
+      "color": "#ffffff",
+      "blend": "alpha",
+      "orientation": "surface",
+      "loop": true,
+      "backend": "cpu",
+      "decal": {
+        "depth": 2,
+        "maxAngle": 85,
+        "normalOffset": 0.002
+      }
+    }
+  }
+}

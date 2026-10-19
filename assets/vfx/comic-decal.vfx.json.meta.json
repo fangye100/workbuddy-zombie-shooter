@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_vfx_comic_decal",
+  "kind": "vfx",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "vfx",
+    "file": "comic-decal.vfx.json",
+    "status": "accepted",
+    "author": "项目原创M4.4透明漫画投影涂印纹理与跨面贴花资源"
+  },
+  "sourceHash": "sha256:29ab44d43bb8aea209beb65550f1179623e9c46790363b99fceb6a194d44bbfb",
+  "updatedAt": "2026-10-19T00:00:00.000Z"
+}
