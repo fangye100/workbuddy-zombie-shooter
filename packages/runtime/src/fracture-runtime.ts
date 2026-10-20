@@ -185,12 +185,13 @@ function supportHeightAt(
   let resting: number | null = null;
   for (const su of surfaces) {
     if (Math.abs(x - su.x) > su.halfX || Math.abs(z - su.z) > su.halfZ) continue;
-    // 本步竖向穿越或触底该面（含穿越与精确落停；容差覆盖高速步过冲）
+    // 本步竖向穿越或触底该面（含穿越与精确落停；容差覆盖高速步过冲）。
+    // 多面穿越时选最高面（运动路径上最先接触的面），不穿到更低面。
     if (prevY >= su.topY - 0.001 && currY <= su.topY + 0.001) {
-      if (crossed === null || su.topY < crossed) crossed = su.topY;
+      if (crossed === null || su.topY > crossed) crossed = su.topY;
     // 已贴伏在面上（resting 保持）
     } else if (prevY >= su.topY && prevY - su.topY <= 0.01) {
-      if (resting === null || su.topY < resting) resting = su.topY;
+      if (resting === null || su.topY > resting) resting = su.topY;
     }
   }
   return crossed ?? resting;
@@ -201,11 +202,14 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
   // 支撑被删除/移开时唤醒已休眠块（R2）：resting 仅在支撑仍存在时保持，
   // 支撑消失后重新进入积分并下落。
   if (s.resting) {
-    // 用纯 XZ 范围查询（不走穿越窗口），判断块当前所在面是否仍存在。
+    // 用纯 XZ 范围查询（不走穿越窗口），找与块当前底部匹配的支撑面。
+    // 多块支撑共存时，找与 position.y - supportRadius 最接近的面（而非最低面），
+    // 避免块在高平台上休眠时被不相关的低地面误唤醒。
     let top: number | null = null;
+    const bottomY = s.position[1] - s.supportRadius;
     for (const su of surfaces) {
       if (Math.abs(s.position[0] - su.x) <= su.halfX && Math.abs(s.position[2] - su.z) <= su.halfZ) {
-        if (top === null || su.topY < top) top = su.topY;
+        if (top === null || Math.abs(su.topY - bottomY) < Math.abs(top - bottomY)) top = su.topY;
       }
     }
     if (top === null || Math.abs(s.position[1] - (top + s.supportRadius)) > 0.01) s.resting = false;

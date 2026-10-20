@@ -31,7 +31,7 @@ WU-04 交付通用碎片播放器（runtime）：真实/简化两层播放、准
   地面接触反弹 + 摩擦衰减 + 休眠）。简化块仍是 mesh 运动状态（ActiveChunk.sim
   持有三维变换与速度），不是伪装成 mesh 的 sprite；实际绘制留 WU-05。
 - 简化积分不建物理 body、不占真实刚体容量；环境接触查询场景静态
-  镜像的最高支撑面（见 R2），无场景支撑时继续下落，禁用大规模块间求解。
+  镜像的竖向扫掠支撑面（见 R2：只选本步下落能接触的面，不选头顶天花板），无场景支撑时继续下落，禁用大规模块间求解。
 
 ## 身份、去重与代次
 
@@ -106,8 +106,8 @@ createFractureRuntime 不再接受调用方手工填的 chunks 作为唯一准�
 prepareFractureActivation（fracture-activation.ts）负责：读取并复用 scene 的
 validateFractureAsset/validateAssetMeta 校验 profile/sidecar；核验事件 GUID=profile.id=
 sidecar.guid 且 kind=fracture；quarantined 在分配 body/租约前拒绝（恢复 accepted 后下一次
-播放重新准入，不缓存隔离状态绕开复查）；按唯一变换链（资产 bind/pivot→assemblyScale→
-事件世界变换，只执行一次）生成 chunk 世界位置；由来向/接触/seed（mulberry32 确定性）
+播放重新准入，不缓存隔离状态绕开复查）；按唯一变换链（资产 bind TRS/pivot→事件世界变换，
+assemblyScale 已含在事件世界变换、不二次乘，只执行一次）生成 chunk 世界位置；由来向/接触/seed（mulberry32 确定性）
 驱动初始线/角速度；离线 convex 代理经注入 resolveConvexPoints 端口真实读入。IO 经
 注入端口（readText/readBinary），runtime 不碰 fs/DOM，Preview/Play 共用。
 
@@ -156,7 +156,7 @@ chunk.shape 是未缩放的资产局部代理；激活时 scaledShape 按 scale 
 - Play 生命周期组合已由 bindFractureToPlay（fracture-play-composition.ts，R3）交付：
   Play 启动装配/场景变化镜像 sync/Stop 账目释放/重开新 session；伤害事实
   转 FractureActivation 的业务接线属 WU-06/07。
-- 简化层环境接触已按场景静态镜像逐块求最高支撑面（R2）；更精细的
+- 简化层环境接触已按场景静态镜像逐块竖向扫掠求支撑面（R2：穿越窗口选最高可接触面，休眠匹配当前面）；更精细的
   多点接触/休眠唤醒策略属后续改进。
 - NPC 当前可见姿态烘焙（WU-07）与离线凸代理读入（WU-04 接口已支持 convex 形状）
   属后续接线。

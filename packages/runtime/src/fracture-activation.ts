@@ -185,6 +185,11 @@ export async function prepareFractureActivation(
   const rng = makeRng(event.seed);
   const chunks: FractureChunkInput[] = [];
   for (const c of profile.chunks) {
+    // R6：bind.scale 三轴也必须均匀（schema 允许非均匀，但物理代理标量尺度无法表示；明确拒绝）。
+    const bs = c.bind.scale;
+    if (!isUniformScale(bs)) {
+      return { ok: false, failure: { stage: 'transform', detail: '碎块 ' + c.chunkId + ' bind.scale 非均匀（' + bs.join(',') + '），不支持近似，请改用均匀尺度' } };
+    }
     // R6 唯一变换链（矩阵乘序：事件世界 ∘ bind 局部；assemblyScale 已含在事件世界变换，不二次乘）：
     // 质心世界位置 = eventT + eventR * (bindS * (bindT + pivot)) * eventS
     const bindScaledLocal: FractureVec3 = [

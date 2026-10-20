@@ -11,6 +11,10 @@ import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
 // 仓库门禁规约：测试用 import.meta.glob 读正式资产（禁 node:fs）。
 const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+// 额外加载源模型 sidecar（R1 引用核验需要）
+const srcMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+// NPC 源模型 sidecar（E-04 在 characters 目录）
+const charMetaGlob = import.meta.glob('../../../assets/characters/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
@@ -23,6 +27,12 @@ function makeIO(
   const store = new Map<string, string>();
   for (const [k, v] of Object.entries(textGlob)) {
     // k 形如 ../../../assets/fracture/...；规范化为 assets/ 前缀
+    store.set(k.replace(/^.*?(?=assets\/)/, ''), v);
+  }
+  for (const [k, v] of Object.entries(srcMetaGlob)) {
+    store.set(k.replace(/^.*?(?=assets\/)/, ''), v);
+  }
+  for (const [k, v] of Object.entries(charMetaGlob)) {
     store.set(k.replace(/^.*?(?=assets\/)/, ''), v);
   }
   for (const [k, v] of Object.entries(overrides)) store.set(k, v);
@@ -160,9 +170,9 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
   });
 
   it('R1：引用资产 sidecar 缺失/外改/guid 不符在分配前拒绝', async () => {
-    // 源模型 sidecar 缺失
+    // 源模型 sidecar 缺失（P-01 源模型在 environment 目录）
     const io1 = makeIO();
-    io1.set('assets/fracture/p01-barrel/p01-barrel.glb.meta.json', undefined as unknown as string);
+    io1.set('assets/environment/models/P-01/tex2/P-01_baked.glb.meta.json', undefined as unknown as string);
     const r1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io1 });
     expect(r1.ok).toBe(false);
     if (!r1.ok) expect(r1.failure.stage).toBe('ref-read');
