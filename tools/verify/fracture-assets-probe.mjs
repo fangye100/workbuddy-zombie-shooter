@@ -42,12 +42,11 @@ try {
   const chunkRefs = doc2.nodes.flatMap(n => n.components).filter(c => c.kind === 'MeshRenderer' && c.source?.type === 'asset' && c.source.ref.path.includes('/fracture/')).map(c => c.source.ref.path);
   evidence.chunkRefs = chunkRefs;
   check('12+4 个分块引用各自独立单块 GLB', new Set(chunkRefs).size === 16, 'unique=' + new Set(chunkRefs).size);
-  await aim([0, 0.55, 0], 1.6, 0.18, 0.7);
+  await aim([0, 0.55, 0], 2.2, 0.25, 0.5);
   await capture('01-barrel-original-closeup');
-  await cdp.eval('window.__editor.renderer.getDocument()');
-  await aim([2.6, 0.8, -0.6], 2.6, 0.35, -1.35);
+  await aim([3.0, 0.9, -0.6], 4.5, 0.35, -0.9);
   await capture('02-barrel-chunks-separated');
-  await aim([-0.9, 1.0, -0.6], 2.4, 0.2, 1.25);
+  await aim([-0.5, 1.1, -0.6], 3.0, 0.2, 0.35);
   await capture('03-npc-chunks-closeup');
   // 非 bind 姿态证据由离线数值验收承担（run@0.4s maxDelta=0、刚体保形 2e-9）。
   // Play 模式截图需要 WU-06/07 的完整运行时接线（RunRules/波次/玩家控制），不属 WU-02 资产范围。

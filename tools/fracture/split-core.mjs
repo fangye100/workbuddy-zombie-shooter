@@ -98,27 +98,31 @@ function capOpenEdges(local, open) {
       for (let k = 0; k < 3; k++) centroidP[k] += p[k] / rev.length;
       centroidUV[0] += t[0] / rev.length; centroidUV[1] += t[1] / rev.length;
     }
-    // Cap centres inherit the skin binding of the loop corner nearest the centre,
-    // so they move with their neighbourhood under any pose (incl. root translation).
-    let anchor = rev[0];
-    for (const i of rev) if (Math.hypot(...sub(local.p(i), centroidP)) < Math.hypot(...sub(local.p(anchor), centroidP))) anchor = i;
-    // Rigid binding to the anchor's dominant joint: blended LBS at cross-section
-    // centres stretches badly between counter-rotating bones (candy-wrapper).
-    const aw = local.weights.length ? local.w(anchor) : null;
-    const aj = local.weights.length ? local.j(anchor) : null;
-    const dominant = aw ? aw.reduce((best, w, k) => w > (aw[best] ?? 0) ? k : best, 0) : 0;
-    const joints = aj ? [aj[dominant], aj[dominant], aj[dominant], aj[dominant]] : null;
-    const weights = aj ? [1, 0, 0, 0] : null;
-    const center = local.add(centroidP, [0, 1, 0], centroidUV, local.weights.length ? joints : null, local.weights.length ? weights : null);
-    // Per-triangle cap copies with flat geometric normals: shared copies cannot
-    // serve non-planar fans (aggregated normals go anti-parallel to some triangles).
+    // Cap boundary copies inherit the FULL mixed skin binding of their corresponding
+    // outer-surface corner; the centre blends all loop corner bindings (plan §5.3).
+    const centreJ = local.weights.length ? new Array(4).fill(0) : null;
+    const centreW = local.weights.length ? new Array(4).fill(0) : null;
+    if (local.weights.length) {
+      const byJoint = new Map();
+      for (const i of rev) {
+        const js = local.j(i), ws = local.w(i);
+        for (let k = 0; k < 4; k++) if (ws[k] > 0) byJoint.set(js[k], (byJoint.get(js[k]) ?? 0) + ws[k] / rev.length);
+      }
+      const top = [...byJoint.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const sum = top.reduce((acc, [, w]) => acc + w, 0) || 1;
+      top.forEach(([j, w], k) => { centreJ[k] = j; centreW[k] = w / sum; });
+      for (let k = top.length; k < 4; k++) centreJ[k] = top[0][0];
+    }
+    const center = local.add(centroidP, [0, 1, 0], centroidUV, centreJ, centreW);
+    // Per-triangle cap copies with flat geometric normals and the ORIGINAL corner
+    // skin binding (boundary continuity under animation, plan §5.3).
     for (let i = 0; i < rev.length; i++) {
       const next = rev[(i + 1) % rev.length];
       const pa = local.p(rev[i]), pb = local.p(next), pc = centroidP;
       const gn = triangleNormal(pa, pb, pc);
-      const v0 = local.add(pa, gn, local.t(rev[i]), joints, weights);
-      const v1 = local.add(pb, gn, local.t(next), joints, weights);
-      const v2 = local.add(pc, gn, centroidUV, joints, weights);
+      const v0 = local.add(pa, gn, local.t(rev[i]), local.j(rev[i]), local.w(rev[i]));
+      const v1 = local.add(pb, gn, local.t(next), local.j(next), local.w(next));
+      const v2 = local.add(pc, gn, centroidUV, centreJ, centreW);
       triangles.push([v0, v1, v2]);
     }
   };
@@ -138,11 +142,8 @@ function capOpenEdges(local, open) {
     const centroid = [0, 0, 0];
     for (const k of stillOpen) { const p = local.p(indexOfKey(local, k.split('>')[0])); for (let q = 0; q < 3; q++) centroid[q] += p[q] / stillOpen.length; }
     const anchor = indexOfKey(local, stillOpen[0].split('>')[0]);
-    const rw = local.w(anchor) ?? [0, 0, 0, 0];
-    const rj = local.j(anchor) ?? [0, 0, 0, 0];
-    const rdom = rw.reduce((best, w, k) => w > rw[best] ? k : best, 0);
-    const joints = [rj[rdom], rj[rdom], rj[rdom], rj[rdom]];
-    const weights = [1, 0, 0, 0]; // rigid dominant joint, same rule as fan centres
+    const joints = [...(local.j(anchor) ?? [0, 0, 0, 0])];
+    const weights = [...(local.w(anchor) ?? [0, 0, 0, 0])]; // full mixed binding
     const center = local.add(centroid, [0, 1, 0], [0, 0], local.weights.length ? joints : null, local.weights.length ? weights : null);
     for (const k of stillOpen) {
       const pa = local.p(indexOfKey(local, k.split('>')[1]));

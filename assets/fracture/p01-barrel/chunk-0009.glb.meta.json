@@ -17,11 +17,11 @@
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
     "fractureBuild": {
       "chunk": "chunk-0009",
-      "builtAt": "2026-10-20T04:44:48.205Z"
+      "builtAt": "2026-10-20T05:10:09.464Z"
     },
     "variant": "p01-barrel",
     "file": "chunk-0009.glb"
   },
   "sourceHash": "sha256:b84443333b9f361b0ddf492f0556b460fd7e08a4a586d837dd15a756aea2bb94",
-  "updatedAt": "2026-10-20T04:44:48.211Z"
+  "updatedAt": "2026-10-20T05:10:09.470Z"
 }
