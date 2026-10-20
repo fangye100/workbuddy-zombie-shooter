@@ -1,7 +1,7 @@
 # 碎片运行与预算（WU-04）
 
 日期：2026-10-20。基线：codex/vfx-system-20261019（WU-03 批准 SHA 1e17e909 起；
-本指南描述 WU-04 实现 SHA f540850）。
+本指南描述 WU-04 实现 SHA 6fbe874（含 R1–R6 审核修复）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
@@ -16,6 +16,8 @@ WU-04 交付通用碎片播放器（runtime）：真实/简化两层播放、准
 | packages/runtime/src/fracture-runtime.ts | 碎片播放器 createFractureRuntime：两层、准入、去重、预算、TTL、统计、租约 | 不做 GPU 渲染（WU-05）、伤害/死亡（WU-06/07）、作者 UI（WU-08） |
 | packages/runtime/src/fracture-rapier.ts | 真实刚体后端（WU-03） | 本单元复用，不改其契约 |
 | packages/core/src/object-pool.ts | 通用借还/异常契约池 | 本单元复用，不另造重复通用池 |
+| packages/runtime/src/fracture-activation.ts | 生产准入与激活准备：读验 profile/sidecar GUID/kind/status、唯一变换链、seed/来向驱动初始运动、离线 convex 端口 | IO 经注入端口；不碰 fs/DOM/僵尸策略 |
+| packages/runtime/src/fracture-play-composition.ts | 宿主窄组合：Play 启动装配、初始+场景变化场景镜像、Stop 账目释放、重开新 session、时钟一致校验 | 复用既有 PlaySession 固定步长与 registerResource，不复制第二套时钟 |
 
 碎片是装饰：不占用武器 ProjectilePool 配额（独立 ObjectPool 实例互不影响）、
 不淘汰承担玩法职责的对象来满足视觉预算。NPC 可见姿态烘焙属 WU-07，GPU 刚体
@@ -81,8 +83,8 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]（112 framework 文件）。
-- pnpm exec vitest run packages/runtime：20 文件 171 测试全过，其中新增
-  fracture-runtime.test.ts 26 测试：
+- pnpm exec vitest run packages/runtime：22 文件 190 测试全过，其中新增
+  fracture-runtime.test.ts 32 测试：
   - 两层播放与真实物理组合：large 建真实 body 且速度进求解器、small 简化积分、
     固定输入同 seed 可复现（容差 1e-6）、正常容量 large 全走真实路径。
   - 去重与身份：同 run/target 去重、不同身份分别碎裂、句柄含 session+激活代次。
@@ -97,6 +99,56 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
     E-04 NPC 3 大 7 小分层激活、quarantined profile 激活前拒绝。
 - 实际加载 Rapier WASM（非 mock）；测试用 import.meta.glob 读正式 .fracture.json
   （仓库规约禁 node:fs）。
+
+## 生产准入与激活准备（R1）
+
+createFractureRuntime 不再接受调用方手工填的 chunks 作为唯一准入。生产共用准备
+prepareFractureActivation（fracture-activation.ts）负责：读取并复用 scene 的
+validateFractureAsset/validateAssetMeta 校验 profile/sidecar；核验事件 GUID=profile.id=
+sidecar.guid 且 kind=fracture；quarantined 在分配 body/租约前拒绝（恢复 accepted 后下一次
+播放重新准入，不缓存隔离状态绕开复查）；按唯一变换链（资产 bind/pivot→assemblyScale→
+事件世界变换，只执行一次）生成 chunk 世界位置；由来向/接触/seed（mulberry32 确定性）
+驱动初始线/角速度；离线 convex 代理经注入 resolveConvexPoints 端口真实读入。IO 经
+注入端口（readText/readBinary），runtime 不碰 fs/DOM，Preview/Play 共用。
+
+## 简化层场景接触（R2）
+
+小块的有界环境接触复用真实场景 collider 镜像：后端 staticSupportSurfaces() 返回所有
+静态镜像的顶部支撑面（世界 Y + XZ 范围），简化层每 tick 查询当前 XZ 位置下的最高
+支撑面，质心停在 支撑面顶 + 块支撑半径（不把质心塞进地板）。无场景 collider（或
+块移出有限平台边界）时继续下落，不生成无限地面。摩擦/恢复用 chunk 输入策略，
+非固定常数。场景 collider 变化经 syncScene 更新镜像后支撑面随之更新。
+
+## 唯一固定步长（R3）
+
+碎片年龄/简化层与真实后端共享同一物理时钟：createFractureRuntime 校验 runtime
+fixedStepSec 与后端 worldTimestep() 一致（容差 1e-6），不一致抛错，不让年龄与真实
+物理时间脱离。宿主窄组合 bindFractureToPlay（fracture-play-composition.ts）在 Play
+启动时装配：创建物理 session + 用宿主 fixedStep 初始化后端 + 首次场景镜像 sync +
+登记 registerResource 进既有 PlaySession 账目。Stop 先 runtime.dispose（还租约/退役
+碎片）再 session.dispose（销毁 World）；重开 = dispose 旧 binding/session 后 create
+新 session 再 start（已 disposed 的 session 不再 start）。场景 collider 变化后调
+syncScene 再次正式差分 sync，保留其他 owner 镜像。
+
+## 分配原子性与失败计数（R4）
+
+激活每个块：物理资源（addBody）先分配，成功后先入 built（携带清理所需 handle/layer），
+再借租约（leasePool.acquire）。任何阶段（addBody/acquire/注册）失败，catch 回收 built
+内全部（含当前块）的 body/租约，不突破预算、不留孤儿 World body；failedActivations
+显式计数，后续事件与 Stop 仍可正常运行。
+
+## 队列输入隔离（R5）
+
+play() 入队即取不可被外部改写的深拷贝快照（复制嵌套数组与 convex TypedArray），
+activate 用快照身份/变换，不再读外部可变对象。提交后改写调用方 chunks/event/TRS/
+凸点缓存均不改变已提交请求、去重身份（seen 用入队时 eventKey）与激活结果。
+
+## 代理尺度（R6）
+
+chunk.shape 是未缩放的资产局部代理；激活时 scaledShape 按 scale 折进世界尺寸（唯一
+一次，不重复乘）：box halfExtents、sphere radius、capsule radius/height、convex 点集
+整体缩放（复制 TypedArray）。supportRadiusOf 推导支撑半径供简化层接触与 WU-05 显示
+尺度共用。capsule 资产 halfHeight → 后端 height（全高）语义在 fracture-activation 核对。
 
 ## 边界与遗留
 
