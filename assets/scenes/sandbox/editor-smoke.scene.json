@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 24,
+  "schemaVersion": 25,
   "id": "sc_editor_smoke",
   "name": "编辑器冒烟白盒 · 层级与资产交互",
   "act": null,

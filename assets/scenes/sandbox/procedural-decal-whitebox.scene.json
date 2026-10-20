@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 24,
+  "schemaVersion": 25,
   "id": "sc_procedural_decal_whitebox",
   "name": "程序贴花白盒 · 平地 / 坡道 / 墙面 / 遮挡",
   "act": null,

@@ -43,7 +43,7 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
             if (c.source?.type === 'asset') ref(c.source.ref);
             for (const binding of c.materials ?? []) material(binding.material);
             break;
-          case 'SpawnPoint': ref(c.prefab); break;
+          case 'SpawnPoint': ref(c.prefab); ref(c.deathFracture?.profile); break;
           case 'NavZone': ref(c.baked); break;
           case 'VfxEmitter': case 'VfxDecal': ref(c.resource);break;
           case 'VfxBindings': for(const b of Object.values(c.bindings??{}))ref(b.resource);break;

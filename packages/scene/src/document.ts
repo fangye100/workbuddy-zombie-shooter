@@ -22,14 +22,14 @@ import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 import {validVfxBindings,validVfxEmitter,validVfxDecal,type VfxDecalComponent,type VfxEmitterComponent,type VfxBindingsComponent} from './vfx';
-import {validDestructible,type DestructibleComponent} from './fracture';
+import {validDestructible,validFractureProfileRef,type DestructibleComponent} from './fracture';
 import { validBoneSockets, type BoneSockets } from './model-attachments';
 import { validateDecalMark, validateDecalEmitter, MAX_AUTHORED_DECALS, type DecalComponent, type DecalEmitterComponent } from './decals';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 24;
+export const SCHEMA_VERSION = 25;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -345,6 +345,15 @@ export interface SpawnPointComponent extends ComponentBase {
   radius: number;
   /** 显式指定 prefab；null = 按 characterId 查默认角色 prefab */
   prefab: AssetRef | null;
+  /**
+   * NPC 致死碎裂（WU-01 冻结的数据契约；运行接线属 WU-07）：
+   * undefined = 未配置，保持原死亡表现（既有场景的默认语义）；
+   * null = 显式禁用（作者明确关闭；prefab 覆盖可用它禁用继承配置）；
+   * 对象 = 启用：该刷怪点生成的 NPC 致死时使用此 profile，
+   * 必须解析为 kind='npc' 且 status='accepted' 的 .fracture.json（跨文件门禁校验）。
+   * 可复用选择即资产引用本身（跨场景共享同一 profile）；场景特有覆盖落在本组件。
+   */
+  deathFracture?: { profile: AssetRef & { guid: string } } | null;
 }
 
 /** 房间语义体（对应 GDD §4.2 房间池 / §4.3 楼层主题） */
@@ -1070,6 +1079,9 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
         // 作者看到的只是"怪怎么少了一批"。宁可校验期报错，也不让它在运行时消失。
         if (typeof s.wave === 'number' && s.wave > 0 && !Number.isInteger(s.wave)) {
           err(`${at}/wave`, 'E_SPAWN_WAVE', `wave=${s.wave} 不是整数：正值波号必须是整数（≤0 才按旧数据归 1）`);
+        }
+        if (s.deathFracture !== undefined && s.deathFracture !== null && !validFractureProfileRef(s.deathFracture.profile)) {
+          err(`${at}/deathFracture/profile`, 'E_SPAWN_DEATH_FRACTURE', 'NPC 致死碎裂引用必须是带 GUID 的 .fracture.json 资产');
         }
       }
       if (c.kind === ComponentKind.RoomVolume) {

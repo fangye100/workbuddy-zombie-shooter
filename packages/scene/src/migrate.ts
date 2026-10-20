@@ -349,6 +349,8 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  // v25：SpawnPoint 可选 NPC 致死碎裂引用（opt-in）。未配置/显式禁用均保持原死亡表现。
+  if(!listMigrations().some(m=>m.from===24&&m.to===25))registerMigration({from:24,to:25,name:'npc-death-fracture-reference',run:doc=>structuredClone(doc)});
   // v24：可破坏物体组件（opt-in）。旧场景没有该组件，作者数据原样保留。
   if(!listMigrations().some(m=>m.from===23&&m.to===24))registerMigration({from:23,to:24,name:'destructible-fracture-components',run:doc=>structuredClone(doc)});
   // 兼容已发布的 VFX v16–v19 与主线 v16–v22：可选 VFX 数据原样保留，统一升级。

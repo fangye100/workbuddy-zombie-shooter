@@ -86,6 +86,12 @@ it('fracture profiles validate and all typed refs resolve real sidecar identitie
     const a=resolved[`/${c.profile.path}`];
     if(!a || a.status!=='accepted' || a.kind!=='object')failures.push(`${path}: invalid destructible profile ${node.id}`);
   }
+  for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components){
+    if(c.kind!=='SpawnPoint' || c.deathFracture===undefined || c.deathFracture===null)continue;
+    check(`${path}:${node.id}`,c.deathFracture.profile,'fracture');
+    const a=resolved[`/${c.deathFracture.profile.path}`];
+    if(!a || a.status!=='accepted' || a.kind!=='npc')failures.push(`${path}: invalid NPC death fracture profile ${node.id}`);
+  }
   expect(failures).toEqual([]);
 });
 

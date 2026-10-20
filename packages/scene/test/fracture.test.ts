@@ -4,7 +4,7 @@ import {
   validateFractureAsset, migrateFractureAsset, fractureAssetRefs,
   validDestructible, type FractureAsset, type DestructibleComponent,
 } from '../src/fracture';
-import { createEmptySceneDocument, validateSceneDocument, identityTransform, type SceneNode, type SceneDocument } from '../src/document';
+import { createEmptySceneDocument, validateSceneDocument, identityTransform, type SceneNode, type SceneDocument, type SpawnPointComponent } from '../src/document';
 import { migrateToLatest } from '../src/migrate';
 
 const meshRef = { path: 'assets/fracture/crate/crate-chunks.glb', guid: 'as_chunks1' };
@@ -150,12 +150,46 @@ describe('Destructible 场景组件与 v24 迁移', () => {
     expect(validateSceneDocument(noMesh).some(d => d.code === 'E_DESTRUCTIBLE_MESH')).toBe(true);
   });
 
-  it('v23→v24 只补可破坏组件支持，不改作者数据且幂等', () => {
+  it('v23→当前 只补可破坏组件与 NPC 致死引用支持，不改作者数据且幂等', () => {
     const current = createEmptySceneDocument('migrate');
     const input = { ...structuredClone(current), schemaVersion: 23 };
     const result = migrateToLatest(input);
-    expect(result.applied).toEqual(['destructible-fracture-components']);
+    expect(result.applied).toEqual(['destructible-fracture-components','npc-death-fracture-reference']);
     expect(result.doc).toEqual(current);
     expect(migrateToLatest(result.doc).applied).toEqual([]);
+  });
+
+  it('FR-WU01-05 v24→v25 仅引入 NPC 致死碎裂引用，未配置/显式禁用均合法', () => {
+    const current = createEmptySceneDocument('migrate');
+    const input = { ...structuredClone(current), schemaVersion: 24 };
+    const result = migrateToLatest(input);
+    expect(result.applied).toEqual(['npc-death-fracture-reference']);
+    expect(result.doc).toEqual(current);
+  });
+});
+
+describe('SpawnPoint NPC 致死碎裂引用（FR-WU01-05）', () => {
+  const base: SpawnPointComponent = {
+    kind: 'SpawnPoint', enabled: true, characterId: 'E-01', count: 1, wave: 1,
+    trigger: 'room-enter', delaySec: 0, radius: 1, prefab: null,
+  };
+
+  function sceneWith(spawn: SpawnPointComponent): SceneDocument {
+    const doc = createEmptySceneDocument('spawn');
+    doc.nodes.push({ id: 'nd_spawn01', name: 'Spawn', parent: null, transform: identityTransform(), visible: true, pickable: true, prefab: null, components: [spawn] });
+    return doc;
+  }
+
+  it('undefined=未配置保持原死亡，null=显式禁用，两者都通过校验', () => {
+    expect(validateSceneDocument(sceneWith({ ...base })).filter(d => d.severity === 'error')).toEqual([]);
+    expect(validateSceneDocument(sceneWith({ ...base, deathFracture: null })).filter(d => d.severity === 'error')).toEqual([]);
+  });
+
+  it('启用引用必须是带 GUID 的 .fracture.json；坏路径/缺 GUID 显式诊断', () => {
+    expect(validateSceneDocument(sceneWith({ ...base, deathFracture: { profile: { path: 'assets/fracture/e04/death.fracture.json', guid: 'as_fract1' } } })).filter(d => d.severity === 'error')).toEqual([]);
+    const badPath = sceneWith({ ...base, deathFracture: { profile: { path: 'assets/fracture/e04/death.json', guid: 'as_fract1' } } });
+    expect(validateSceneDocument(badPath).some(d => d.code === 'E_SPAWN_DEATH_FRACTURE')).toBe(true);
+    const noGuid = sceneWith({ ...base, deathFracture: { profile: { path: 'assets/fracture/e04/death.fracture.json' } } } as unknown as SpawnPointComponent);
+    expect(validateSceneDocument(noGuid).some(d => d.code === 'E_SPAWN_DEATH_FRACTURE')).toBe(true);
   });
 });

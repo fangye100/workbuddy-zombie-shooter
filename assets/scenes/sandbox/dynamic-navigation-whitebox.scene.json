@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 24,
+  "schemaVersion": 25,
   "id": "sc_dynamic_navigation_whitebox",
   "name": "动态障碍白盒 · 吊门 / 绕行 / 等待",
   "act": null,

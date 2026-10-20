@@ -91,6 +91,10 @@ export interface FractureAsset {
 
 const CHUNK_ID_RE = /^[a-z][a-z0-9-]{0,63}$/;
 const ACTOR_ID_RE = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+/** 破碎 profile 的类型化引用：路径必须是 assets/ 下带 GUID 的 .fracture.json。 */
+export function validFractureProfileRef(value: unknown): value is AssetRef & { guid: string } {
+  return validAssetGuidRef(value) && value.path.endsWith('.fracture.json');
+}
 const finite = (n: unknown, min: number, max: number): n is number =>
   typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
 const vec3 = (v: unknown, min: number, max: number): boolean =>
@@ -215,7 +219,7 @@ export function validDestructible(value: unknown): value is DestructibleComponen
   if (!value || typeof value !== 'object') return false;
   const c = value as DestructibleComponent;
   return c.kind === 'Destructible' && typeof c.enabled === 'boolean'
-    && validAssetGuidRef(c.profile) && c.profile.path.endsWith('.fracture.json')
+    && validFractureProfileRef(c.profile)
     && finite(c.maxDurability, 1, 1000000)
     && !!c.trigger && typeof c.trigger === 'object'
     && [c.trigger.direct, c.trigger.explosion, c.trigger.burn].every(v => typeof v === 'boolean')
