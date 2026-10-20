@@ -3241,6 +3241,28 @@
       ],
       "read": "保留主分支既有历史记录；不代表当前验收",
       "sourceRefs": []
+    },
+    {
+      "id": "fracture-asset-pipeline",
+      "path": "docs/architecture/fracture-asset-pipeline-20261020.md",
+      "title": "碎裂资产离线制作链（WU-02）",
+      "role": "editor",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "architecture",
+        "fracture",
+        "assets",
+        "offline-tools"
+      ],
+      "read": "正式碎裂资产（P-01 油桶/E-04 盾卫）离线制作与数值验收链、可重建步骤、失败行为与边界",
+      "sourceRefs": [
+        "asset-metadata",
+        "scene-schema"
+      ],
+      "reviewedAt": "2026-10-20",
+      "reviewedSourceCommit": "PENDING_WU02_REVIEW"
     }
+
   ]
 }
