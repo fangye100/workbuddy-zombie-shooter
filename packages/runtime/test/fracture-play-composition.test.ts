@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { SceneGraph } from '@aether/scene';
-import { bindFractureToPlay, bindFractureToPlaySession, type FracturePlayHost } from '../src/fracture-play-composition';
+import { attachFixedTick, bindFractureToPlay, bindFractureToPlaySession, type FracturePlayHost } from '../src/fracture-play-composition';
 import { PlaySession } from '@aether/zombie-game';
 
 const STEP = 1 / 60;
@@ -220,4 +220,38 @@ describe('WU-04 未就绪/重复释放合同（F1）', () => {
     expect(binding.session.disposed).toBe(true);
     expect(() => binding.dispose()).not.toThrow();
   }, 30000);
+});
+
+describe('WU-04 失败诊断与 tick 错误可见性（W04-09）', () => {
+  it('首次镜像失败：failure 给 stage/detail，session 原子释放', async () => {
+    const host = makeHost();
+    const brokenScene = {
+      toNodes() { throw new Error('scene graph broken'); },
+      isEffectivelyVisible() { return true; },
+      worldMatrix() { return new Float32Array(16); },
+    } as unknown as SceneGraph;
+    const binding = bindFractureToPlay(host, { initialScene: brokenScene });
+    await expect(binding.ready).resolves.toBe(false);
+    expect(binding.failure).not.toBeNull();
+    expect(binding.failure!.stage).toBe('initial-sync');
+    expect(binding.failure!.detail).toContain('broken');
+    expect(binding.session.disposed).toBe(true);
+    expect(binding.backend()).toBeNull();
+  }, 30000);
+
+  it('tick 抛错不再完全静默：记录 lastTickError 且不打断帧', async () => {
+    // 直接对 attachFixedTick 注入一个会抛错的 runtime（其余字段按契约最小实现）
+    const fake = {
+      backend: () => ({}),
+      runtime: { tick: () => { throw new Error('boom-tick'); } },
+    } as unknown as Parameters<typeof attachFixedTick>[0];
+    const attached = attachFixedTick(fake);
+    expect(() => attached.onFixedTick(1 / 60)).not.toThrow();
+    expect(attached.lastTickError).toContain('boom-tick');
+    // 未就绪（backend=null）时静默跳过，不算失败
+    const notReady = { backend: () => null, runtime: { tick: () => { throw new Error('x'); } } } as unknown as Parameters<typeof attachFixedTick>[0];
+    const att2 = attachFixedTick(notReady);
+    att2.onFixedTick(1 / 60);
+    expect(att2.lastTickError).toBeNull();
+  });
 });

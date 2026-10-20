@@ -421,6 +421,7 @@ export async function prepareFractureActivation(
       mass: c.proxy.mass,
       friction: c.proxy.friction,
       restitution: c.proxy.restitution,
+      pivot: [c.pivot[0], c.pivot[1], c.pivot[2]],
       collisionGroup: c.proxy.collisionGroup,
       linearVelocity: lv,
       angularVelocity: av,

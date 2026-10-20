@@ -82,9 +82,19 @@ export function ensureRapier(): Promise<RapierModule> {
       const mod = (await import('@dimforge/rapier3d-compat')) as unknown as RapierModule;
       await mod.init();
       return mod;
-    })();
+    })().catch((e: unknown) => {
+      // 初始化失败不能把 rejected promise 永久缓存：否则后续每次调用都拿到同一个失败，
+      // 宿主既无法重试也无法区分"这次失败"和"上次失败"。清空缓存后原样抛出。
+      rapierModulePromise = null;
+      throw e;
+    });
   }
   return rapierModulePromise;
+}
+
+/** 立即清空模块缓存（测试/故障注入用；生产不调用）。 */
+export function resetRapierModuleCache(): void {
+  rapierModulePromise = null;
 }
 
 /** 碰撞分组（16 位 membership << 16 | 16 位 filter）。碎片首期装饰：与环境/大块互动，不撞玩家/NPC。 */

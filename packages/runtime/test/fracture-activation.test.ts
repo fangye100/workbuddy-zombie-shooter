@@ -464,6 +464,8 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const r = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io, resolveConvexPoints: resolver });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
+    // 显示 mesh 的 pivot 必须随激活一起交给运行时（WU-05 首帧放置用）
+    expect(r.activation.chunks[0]!.pivot).toEqual([0.162673, 0.114231, 0.168472]);
     const sh = r.activation.chunks[0]!.shape;
     expect(sh.type).toBe('convex');
     if (sh.type === 'convex') {

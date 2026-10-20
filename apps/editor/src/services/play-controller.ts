@@ -182,6 +182,12 @@ export class PlayController {
       this.lastError = r.errors.length > 0 ? r.errors.join('；') : '场景装载失败';
       return false;
     }
+    // 未 Stop 就再次 Play（换场景）时，PlaySession 已经释放了旧登记资源
+    // （含旧 fracture binding）。控制器必须同步清引用并允许重新登记，
+    // 否则新 binding 不登记、Stop 时无人释放，账目 pending=0 是假账。
+    this.fractureBinding = null;
+    this.fractureRegistered = false;
+    this.fractureVerified.clear();
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
     for (const node of doc.nodes) {
@@ -329,6 +335,7 @@ export class PlayController {
     this.session.stepOnce();
     // 只在暂停态实际推进时驱动碎片（非暂停下 stepOnce 为空操作，不重复 tick）。
     if (this.session.state === 'paused' && this.session.outcome === 'running') {
+      this.syncGateMirrors();
       this.fractureBinding?.onFixedTick(this.session.fixedStep);
     }
     this.syncGates();
@@ -401,6 +408,9 @@ export class PlayController {
       // 终态（game-over / floor-clear）时 PlaySession 仍可能返回步数，但世界已冻结：
       // 碎片必须跟随冻结，不能继续模拟（装饰物不该在结算画面里继续动）。
       if (this.session.outcome === 'running') {
+        // 门等运行期 collider 的权威姿态先落到碎片镜像，再驱动本帧碎片 tick；
+        // 反序会让每个碎片 tick 都用上一帧的门位置（catch-up 时连续用旧位置）。
+        this.syncGateMirrors();
         for (let i = 0; i < n; i++) this.fractureBinding?.onFixedTick(this.session.fixedStep);
       }
       this.syncGates();
@@ -442,6 +452,11 @@ export class PlayController {
   private syncGates():void {
     const rt=this.session.runtime;
     syncGatePresentation(rt,id=>{const i=this.renderer.findObjectIndexByNodeId(id);return i===null?null:this.renderer.state.objects[i]??null;});
+    this.syncGateMirrors();
+  }
+  /** 只把门的权威运行姿态同步进碎片静态镜像（不碰渲染表现）。 */
+  private syncGateMirrors():void {
+    const rt=this.session.runtime;
     // 门的权威运行姿态同时要进碎片静态镜像：只同步渲染对象会让碎片后端
     // 继续留在作者文档的初始位置，出现「门已升起、碎片仍被旧位置挡住」。
     this.fractureBinding?.syncRuntimePoses(rt?.gateSnapshot()??[]);

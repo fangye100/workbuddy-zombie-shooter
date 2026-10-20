@@ -42,6 +42,11 @@ export interface FractureChunkInput {
   readonly linearVelocity: FractureVec3;
   readonly angularVelocity: FractureVec3;
   readonly ccd?: boolean;
+  /**
+   * 显示网格的局部 pivot（资产原始坐标；mesh 顶点以它为原点时需要平移 -pivot）。
+   * 碰撞代理已按该 pivot 表达为 body 局部系，渲染层据此放置 mesh。
+   */
+  readonly pivot?: FractureVec3;
   /** 碰撞分组（资产 profile 声明；environment=落在地面并与其他块互撞，debris=只与静态环境互撞）。 */
   readonly collisionGroup?: 'environment' | 'debris';
   /** 块级线速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
@@ -86,6 +91,12 @@ export interface ActiveChunk {
   readonly mesh: { readonly path: string; readonly guid: string };
   /** 激活时世界 TRS（WU-05 首帧放置；显示尺度 = scale，非 supportRadius）。 */
   readonly worldPosition: FractureVec3;
+  /**
+   * 显示网格局部 pivot（资产原始坐标）。渲染层：mesh 顶点在原始坐标下，
+   * 需先平移到 -pivot 再乘 worldScale/旋转，才能与 body 的原点对齐。
+   * 为空表示 mesh 已是以 body 原点为中心的坐标（例如程序化块）。
+   */
+  readonly pivot: FractureVec3 | null;
   readonly worldRotation: FractureQuat;
   readonly worldScale: number;
   readonly eventKey: string;
@@ -418,6 +429,7 @@ export function createFractureRuntime(
         shape: shape(c.shape), mass: c.mass, friction: c.friction, restitution: c.restitution,
         linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
         ...(c.ccd === true ? { ccd: true } : {}),
+        ...(c.pivot !== undefined ? { pivot: v3(c.pivot) } : {}),
         ...(c.collisionGroup !== undefined ? { collisionGroup: c.collisionGroup } : {}),
         ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
         ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
@@ -554,6 +566,7 @@ export function createFractureRuntime(
           handle, layer, mesh: chunkMesh, eventKey, activationGen: gen, priority: a.priority,
           worldPosition: [c.position[0], c.position[1], c.position[2]],
           worldRotation: [c.rotation[0], c.rotation[1], c.rotation[2], c.rotation[3]],
+          pivot: c.pivot === undefined ? null : [c.pivot[0], c.pivot[1], c.pivot[2]],
           worldScale: c.scale,
           ageSec: 0, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
           sim, fade: 0, expired: false, supportRadius, lease: null,

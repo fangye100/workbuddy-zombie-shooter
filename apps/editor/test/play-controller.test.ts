@@ -283,6 +283,70 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(binding!.backend()).toBeNull();
   }, 30000);
 
+  it('未 Stop 直接再次 start（换场景）：新绑定重新登记，Stop 释放新 runtime', async () => {
+    const { ctl } = make();
+    expect(ctl.start()).toBe(true);
+    const first = ctl.fracture!;
+    await expect(first.ready).resolves.toBe(true);
+    const firstRuntime = first.runtime;
+    expect(firstRuntime.play(smallActivation('nd_a')).accepted).toBe(true);
+    ctl.update(1 / 30);
+
+    // 支持的生命周期：换场景直接再 start（PlaySession 会释放旧登记资源）
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture;
+    expect(second === null).toBe(false);
+    expect(second === first).toBe(false);
+    expect(firstRuntime.disposed).toBe(true); // 旧代随旧会话释放
+    await expect(second!.ready).resolves.toBe(true);
+
+    // 新代可正常激活并推进
+    expect(second!.runtime.play(smallActivation('nd_b')).accepted).toBe(true);
+    ctl.update(1 / 30);
+    expect(second!.runtime.stats.simplifiedActive).toBe(1);
+
+    // Stop 必须释放**新**绑定（旧实现这里不登记 → 新 runtime 泄漏）
+    const secondRuntime = second!.runtime;
+    const secondBackend = second!.backend()!;
+    ctl.stop();
+    expect(secondRuntime.disposed).toBe(true);
+    expect(secondRuntime.stats.poolActive).toBe(0);
+    expect(secondBackend.ledger.destroyed).toBe(true);
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('门镜像在碎片 tick 之前同步（帧内不滞后）', async () => {
+    const SANDBOX2 = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
+    const key = Object.keys(SANDBOX2)[0]!;
+    const doc = JSON.parse(JSON.stringify((SANDBOX2[key] as { default: unknown }).default)) as SceneDocument;
+    for (const n of doc.nodes) {
+      for (const c of n.components as unknown as { kind: string; count?: number; clearRule?: string }[]) {
+        if (c.kind === 'SpawnPoint') c.count = 0;
+        if (c.kind === 'RoomVolume') c.clearRule = 'interact';
+      }
+    }
+    const { ctl } = make(doc);
+    expect(ctl.start()).toBe(true);
+    const binding = ctl.fracture!;
+    await expect(binding.ready).resolves.toBe(true);
+    const rt = ctl.session.runtime!;
+    rt.setGateOpen('nd_gate_ramp', true);
+
+    // 在每次碎片 tick 的入口采样：镜像 y 必须已经等于该时刻的门权威 y
+    const samples: { gate: number; mirror: number }[] = [];
+    const originalTick = binding.runtime.tick.bind(binding.runtime);
+    binding.runtime.tick = (dt: number) => {
+      const gate = rt.gateSnapshot().find((g) => g.nodeId === 'nd_gate_ramp')!;
+      const mirror = binding.backend()!.staticPose('scene-mirror:nd_gate_ramp')!;
+      samples.push({ gate: gate.position[1], mirror: mirror.y });
+      originalTick(dt);
+    };
+    for (let i = 0; i < 20; i++) ctl.update(1 / 60);
+    expect(samples.length).toBeGreaterThan(0);
+    for (const s of samples) expect(s.mirror).toBeCloseTo(s.gate, 4);
+    ctl.stop();
+  }, 30000);
+
   it('终态（game-over）后碎片跟随世界冻结，不再推进', async () => {
     const { ctl } = make();
     expect(ctl.start()).toBe(true);

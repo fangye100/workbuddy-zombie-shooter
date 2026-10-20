@@ -35,6 +35,8 @@ export interface FracturePlayBinding {
    * 未就绪时取消进行中的初始化；重复调用安全。
    */
   dispose(): void;
+  /** 装配/推进失败原因（诊断；null = 无失败）。宿主可据此提示或重试，不再静默。 */
+  readonly failure: { readonly stage: string; readonly detail: string } | null;
   /** 场景 collider 状态变化后再次正式 sync（差分移除失效镜像，保留其他 owner）。 */
   syncScene(graph: SceneGraph): void;
   /** 运行期 collider 权威姿态变化后重定位对应镜像（导航门等），不重建整张场景图。 */
@@ -68,16 +70,26 @@ export function bindFractureToPlay(
   let backend: RapierFractureBackend | null = null;
   let runtime: FractureRuntime | null = null;
 
+  let failure: { stage: string; detail: string } | null = null;
   const startPromise = session.start({ fixedStepSec: host.fixedStepSec });
   const ready: Promise<boolean> = startPromise.then((r: unknown) => {
     const res = r as { status: string; backend: RapierFractureBackend | null };
-    if (res.status !== 'started' || res.backend === null) return false; // cancelled/rejected：不建 runtime
+    if (res.status === 'rejected') {
+      // 重复/并发启动是宿主用法问题，必须能看见，而不是"没准备好"。
+      failure = { stage: 'session-rejected', detail: '物理 session 重复启动被拒绝（已有活动/初始化中的后端）' };
+      return false;
+    }
+    if (res.status !== 'started' || res.backend === null) { // cancelled：Stop/换代，正常
+      failure = { stage: 'session-cancelled', detail: '物理 session 已取消（Stop/换代）' };
+      return false;
+    }
     backend = res.backend;
     // 时钟一致性由 createFractureRuntime 强制（不一致抛错，不静默分离）。
     try {
       runtime = createFractureRuntime(backend, { ...opts, fixedStepSec: host.fixedStepSec });
-    } catch {
+    } catch (e) {
       // 失败原子清理：立即销毁已创建 session（不留活动 World 到未来 Stop）。
+      failure = { stage: 'runtime-create', detail: String(e) };
       session.dispose();
       backend = null;
       return false;
@@ -85,14 +97,22 @@ export function bindFractureToPlay(
     // 首次场景镜像（同一 collider 真源）。
     try {
       syncStaticMirrorsFromScene(opts.initialScene, backend);
-    } catch {
+    } catch (e) {
       // 首次 sync 失败同样原子清理半装配资源。
+      failure = { stage: 'initial-sync', detail: String(e) };
       session.dispose();
       backend = null;
       runtime = null;
       return false;
     }
     return true;
+  }).catch((e: unknown) => {
+    // WASM 加载/初始化失败：清理 session，记录诊断，返回 false（不产生未处理 rejection）。
+    failure = { stage: 'backend-init', detail: String(e) };
+    session.dispose();
+    backend = null;
+    runtime = null;
+    return false;
   });
 
   /**
@@ -117,6 +137,7 @@ export function bindFractureToPlay(
       return runtime;
     },
     backend: () => backend,
+    get failure() { return failure; },
     dispose,
     syncScene(graph: SceneGraph): void {
       if (backend !== null) syncStaticMirrorsFromScene(graph, backend);
@@ -155,12 +176,23 @@ export function bindFractureToPlaySession(
  */
 export function attachFixedTick(
   binding: FracturePlayBinding,
-): FracturePlayBinding & { onFixedTick(dtSec: number): void } {
-  return Object.assign(binding, {
+): FracturePlayBinding & { onFixedTick(dtSec: number): void; lastTickError: string | null } {
+  let lastTickError: string | null = null;
+  const attached = Object.assign(binding, {
     onFixedTick(dtSec: number): void {
-      if (binding.backend() !== null) {
-        try { binding.runtime.tick(dtSec); } catch { /* 未就绪/已释放：静默跳过 */ }
+      // 未就绪（WASM 加载中）或已释放：跳过本步，不阻断 Play 帧。
+      if (binding.backend() === null) return;
+      try {
+        binding.runtime.tick(dtSec);
+      } catch (e) {
+        // 不再完全静默：记录首次失败原因供宿主诊断，同时保持帧不中断。
+        if (lastTickError === null) lastTickError = String(e);
       }
     },
   });
+  // Object.assign 会"求值"对象字面量里的 getter；用 defineProperty 才能真正暴露诊断。
+  Object.defineProperty(attached, 'lastTickError', {
+    get: () => lastTickError, enumerable: true, configurable: true,
+  });
+  return attached as FracturePlayBinding & { onFixedTick(dtSec: number): void; lastTickError: string | null };
 }
