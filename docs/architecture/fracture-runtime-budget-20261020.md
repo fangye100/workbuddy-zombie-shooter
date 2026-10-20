@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-8bf782cf06a5018befa53ad2c2f12afc9e376c23（本文件单独一笔提交，只改文档）。
+29cdbdecb4004101e5b6ac4e225445eaa6b84063（本文件单独一笔提交，只改文档）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
@@ -84,12 +84,12 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 211 测试全过，其中
-  fracture-runtime.test.ts 39 测试、fracture-activation.test.ts 16 测试、
+- pnpm exec vitest run packages/runtime：22 文件 213 测试全过，其中
+  fracture-runtime.test.ts 39 测试、fracture-activation.test.ts 18 测试、
   fracture-play-composition.test.ts 10 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 233 测试全过（play-controller 22）。宿主接线（R3）的 owner 证据在
-  apps/editor/test/play-controller.test.ts（22 测试），其中「真实 PlayController.update
+  23 文件 236 测试全过（play-controller 23）。宿主接线（R3）的 owner 证据在
+  apps/editor/test/play-controller.test.ts（23 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
   20 轮登记/释放各 60 次。
@@ -143,6 +143,23 @@ parseGlb(buffer, null, 'auto', { normalize: false }) 取未规整化坐标，再
 若改用默认的居中/贴地结果，碰撞体会整体偏离 body（chunk-0009 偏差约 0.79 m）。
 测试同时覆盖 chunk-0001（pivot 接近原点）与 chunk-0009（pivot 远离原点），
 并有手写已知偏移 GLB 的逐点闭式对照。
+
+## 旋转与来向的输入合同（W04-03/04）
+
+- 旋转：事件 rotation 与每块 bind.rotation 都必须是有限单位四元数。零/非单位
+  四元数会在 Rapier 里静默产生退化姿态（不报错、物理失效），因此准入层明确拒绝并给
+  transform 诊断，runtime 的 validate 再兜一层；两者都在 body/租约分配前生效。
+- 来向：事件带 impulse 时以其方向为主；没有 impulse 时由 normal 决定初始方向
+  （normal 缺失才回退世界向上）。反转 normal 会得到相反的水平初速度，不再出现
+  「两个来向不同的合法事件产生完全相同初速度」。
+
+## 启动时的初始门姿态（F3 续）
+
+initialOpen:true 的门在运行时已处于开启姿态，而作者文档仍是关闭位置。控制器在
+binding ready 后立即调用 syncGateMirrors()（不等首个 fragment tick），因此启动后
+静态可观察状态、直接使用 binding 的宿主、以及首个 tick 的接触都基于当前权威姿态。
+回归用沙盒里的 nd_gate_stairs（initialOpen:true）断言 ready 后镜像 y 已等于门姿态，
+且高于作者文档的关闭位置。
 
 ## 运行期门姿态与终态（F3 续）
 
