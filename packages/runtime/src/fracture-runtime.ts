@@ -22,10 +22,12 @@ export interface FractureChunkInput {
   readonly chunkId: string;
   /** 资产分类：large 走真实刚体，small 走简化积分。 */
   readonly cls: 'large' | 'small';
+  /** 碎块 GLB 稳定引用（WU-05 动态渲染用，不再回读资产/事件）。 */
+  readonly mesh: { readonly path: string; readonly guid: string };
   /** 激活时的世界变换（资产 bind 已组合进目标世界变换，只执行一次）。 */
   readonly position: FractureVec3;
   readonly rotation: FractureQuat;
-  /** 碰撞/显示尺度（世界均匀尺度）。 */
+  /** 显示/碰撞世界尺度（bind.scale 已按三轴组合进 shape 与本值；非均匀组合在准入拒绝）。 */
   readonly scale: number;
   /** 碰撞代理（未缩放的资产局部，中心在质心）；激活时按 scale 折进世界尺寸。 */
   readonly shape:
@@ -74,6 +76,12 @@ export interface FracturePlayResult {
 export interface ActiveChunk {
   readonly handle: FractureBodyHandle;
   readonly layer: 'rigid' | 'simplified';
+  /** 碎块 GLB 稳定引用（WU-05 动态渲染直接使用，不维护第二份初始化状态）。 */
+  readonly mesh: { readonly path: string; readonly guid: string };
+  /** 激活时世界 TRS（WU-05 首帧放置；显示尺度 = scale，非 supportRadius）。 */
+  readonly worldPosition: FractureVec3;
+  readonly worldRotation: FractureQuat;
+  readonly worldScale: number;
   readonly eventKey: string;
   readonly activationGen: number;
   readonly priority: number;
@@ -162,20 +170,48 @@ const DEFAULTS = {
 /** 支撑面（来自真实场景 collider 镜像；无镜像则小块继续下落，不生成无限地面）。 */
 interface SupportSurface { x: number; z: number; topY: number; halfX: number; halfZ: number }
 
-/** 查询当前 XZ 位置下的最高支撑面顶 Y；无支撑返回 null。 */
-function supportHeightAt(surfaces: readonly SupportSurface[], x: number, z: number): number | null {
-  let best: number | null = null;
+/**
+ * 查询本次竖向运动能接触的支撑面顶 Y（R2）：
+ * - 只考虑本步下落会穿越的面（prevY >= topY >= currY），不选头顶天花板；
+ * - 无穿越面时，已贴伏的块（底部距面 ≤ 1cm）贴住该面；
+ * - 多块中保守选顶面较低者（不向上跳到更高面）；
+ * - 无支撑返回 null（继续下落，不生成无限地面）。
+ */
+function supportHeightAt(
+  surfaces: readonly SupportSurface[],
+  x: number, prevY: number, currY: number, z: number,
+): number | null {
+  let crossed: number | null = null;
+  let resting: number | null = null;
   for (const su of surfaces) {
-    if (Math.abs(x - su.x) <= su.halfX && Math.abs(z - su.z) <= su.halfZ) {
-      if (best === null || su.topY > best) best = su.topY;
+    if (Math.abs(x - su.x) > su.halfX || Math.abs(z - su.z) > su.halfZ) continue;
+    // 本步竖向穿越或触底该面（含穿越与精确落停；容差覆盖高速步过冲）
+    if (prevY >= su.topY - 0.001 && currY <= su.topY + 0.001) {
+      if (crossed === null || su.topY < crossed) crossed = su.topY;
+    // 已贴伏在面上（resting 保持）
+    } else if (prevY >= su.topY && prevY - su.topY <= 0.01) {
+      if (resting === null || su.topY < resting) resting = su.topY;
     }
   }
-  return best;
+  return crossed ?? resting;
 }
 
 /** 有界简化三维积分：位置/速度/四元数/角速度 + 场景支撑面接触 + 休眠。仍是 mesh 运动状态。 */
 function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly SupportSurface[]): void {
-  if (s.resting) return;
+  // 支撑被删除/移开时唤醒已休眠块（R2）：resting 仅在支撑仍存在时保持，
+  // 支撑消失后重新进入积分并下落。
+  if (s.resting) {
+    // 用纯 XZ 范围查询（不走穿越窗口），判断块当前所在面是否仍存在。
+    let top: number | null = null;
+    for (const su of surfaces) {
+      if (Math.abs(s.position[0] - su.x) <= su.halfX && Math.abs(s.position[2] - su.z) <= su.halfZ) {
+        if (top === null || su.topY < top) top = su.topY;
+      }
+    }
+    if (top === null || Math.abs(s.position[1] - (top + s.supportRadius)) > 0.01) s.resting = false;
+    else return;
+  }
+  const prevY = s.position[1];
   // 重力
   s.linearVelocity[1] -= 9.81 * dt;
   // 位置积分
@@ -192,11 +228,13 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
   let nx = qx + hx, ny = qy + hy, nz = qz + hz, nw = qw + hw;
   const len = Math.hypot(nx, ny, nz, nw) || 1;
   s.rotation = [nx / len, ny / len, nz / len, nw / len];
-  // 有界环境接触：复用真实场景 collider 镜像的支撑面；质心停在 支撑面顶 + 块支撑半径，
-  // 不把质心塞进地板。无支撑面（场景无 collider/已移出边界）则继续下落。
-  const top = supportHeightAt(surfaces, s.position[0], s.position[2]);
+  // 有界环境接触（R2）：用竖向扫掠选择本步能接触的支撑面（不选头顶天花板）；
+  // 质心停在 支撑面顶 + 块支撑半径，不把质心塞进地板。
+  // 无支撑面（场景无 collider/已移出边界）则继续下落。
+  const top = supportHeightAt(surfaces, s.position[0], prevY, s.position[1], s.position[2]);
   if (top === null) return;
   const floor = top + s.supportRadius;
+  // 质心降至支撑面+半径以下（含本步穿越）且正在下落时接触。
   if (s.position[1] <= floor && s.linearVelocity[1] <= 0) {
     s.position[1] = floor;
     if (s.linearVelocity[1] < 0) s.linearVelocity[1] = -s.linearVelocity[1] * s.restitution;
@@ -291,7 +329,7 @@ export function createFractureRuntime(
     return {
       event: frozenFractureEvent(a.event), // 冻结：提交后改写不影响激活身份/handle key
       chunks: a.chunks.map((c) => ({
-        chunkId: c.chunkId, cls: c.cls,
+        chunkId: c.chunkId, cls: c.cls, mesh: { path: c.mesh.path, guid: c.mesh.guid },
         position: v3(c.position), rotation: q(c.rotation), scale: c.scale,
         shape: shape(c.shape), mass: c.mass, friction: c.friction, restitution: c.restitution,
         linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
@@ -309,6 +347,7 @@ export function createFractureRuntime(
     const ids = new Set<string>();
     for (const c of a.chunks) {
       if (!c.chunkId) return '存在空 chunkId';
+      if (!c.mesh || typeof c.mesh.path !== 'string' || !c.mesh.path || typeof c.mesh.guid !== 'string' || !c.mesh.guid) return c.chunkId + ' 缺少稳定 mesh 引用';
       if (ids.has(c.chunkId)) return `重复 chunkId：${c.chunkId}`;
       ids.add(c.chunkId);
       if (!Number.isFinite(c.scale) || c.scale <= 0) return `${c.chunkId} 尺度非法：${c.scale}`;
@@ -400,10 +439,12 @@ export function createFractureRuntime(
         const supportRadius = supportRadiusOf(c);
         // R4：每个中间资源从分配开始即有清理 owner——先建资源并入 built，再借租约。
         // 任何阶段（addBody/acquire/注册）失败，catch 回收 built 内全部（含当前块）。
+        const chunkMesh = { path: c.mesh.path, guid: c.mesh.guid };
         let sim: SimplifiedState | null = null;
         if (layer === 'rigid') {
           backend.addBody(handle, {
             position: c.position, rotation: c.rotation,
+            mesh: chunkMesh,
             linearVelocity: c.linearVelocity, angularVelocity: c.angularVelocity,
             shape: worldShape, mass: c.mass, friction: c.friction, restitution: c.restitution,
             ...(c.ccd === true ? { ccd: true } : {}),
@@ -419,7 +460,10 @@ export function createFractureRuntime(
         }
         // 资源已就位；先入 built（携带清理所需的 handle/layer），再借租约。
         const chunk: ActiveChunk = {
-          handle, layer, eventKey, activationGen: gen, priority: a.priority,
+          handle, layer, mesh: chunkMesh, eventKey, activationGen: gen, priority: a.priority,
+          worldPosition: [c.position[0], c.position[1], c.position[2]],
+          worldRotation: [c.rotation[0], c.rotation[1], c.rotation[2], c.rotation[3]],
+          worldScale: c.scale,
           ageSec: 0, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
           sim, fade: 0, expired: false, supportRadius, lease: null,
         };

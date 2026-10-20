@@ -37,6 +37,7 @@ function ev(nodeId: string, seed = 42): FractureEvent {
 function chunk(chunkId: string, cls: 'large' | 'small', x = 0): FractureChunkInput {
   return {
     chunkId, cls,
+    mesh: { path: 'assets/test/chunk.glb', guid: 'as_test_' + chunkId },
     position: [x, 2, 0], rotation: [0, 0, 0, 1], scale: 1,
     shape: { type: 'box', halfExtents: [0.15, 0.15, 0.15] },
     mass: 1.5, friction: 0.6, restitution: 0.35,
@@ -370,6 +371,7 @@ describe('WU-04 正式 profile 激活组合（WU-02 资产：P-01 物体 / E-04 
           : { type: 'capsule' as const, radius: s.radius!, height: s.height! };
       return {
         chunkId: c.chunkId, cls: c.class,
+        mesh: { path: (c as unknown as { mesh: { path: string; guid: string } }).mesh.path, guid: (c as unknown as { mesh: { path: string; guid: string } }).mesh.guid },
         position: [c.pivot[0]!, c.pivot[1]! + 0.5, c.pivot[2]!], // 抬离地面，给真实下落空间
         rotation: [0, 0, 0, 1], scale: 1,
         shape, mass: c.proxy.mass, friction: c.proxy.friction, restitution: c.proxy.restitution,
@@ -449,7 +451,7 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
     backend.upsertStatic('ground', { position: [0, 0.5, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [2, 0.5, 2] } });
     const rt = createFractureRuntime(backend);
     // 小球块 radius=0.25（scale=1），从上方下落
-    const ball: FractureChunkInput = { ...chunk('c1', 'small'), position: [0.5, 3, 0.5], shape: { type: 'sphere', radius: 0.25 }, friction: 0.8, restitution: 0.1, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    const ball: FractureChunkInput = { ...chunk('c1', 'small'), position: [0.5, 3, 0.5], shape: { type: 'sphere', radius: 0.25 }, friction: 0.8, restitution: 0, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
     rt.play(act('n1', [ball]));
     for (let i = 0; i < 120; i++) rt.stepOnce();
     const sim = rt.active[0]!.sim!;
@@ -525,6 +527,42 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
     const s = backend.snapshot(rt.active[0]!.handle)!;
     expect(s.position[1]).toBeGreaterThan(1.2); // 0.5 地面顶 + 1.0 世界半径
     expect(s.position[1]).toBeLessThan(1.8);
+    rt.dispose();
+  });
+
+  it('R2：简化块不从屋内传送到天花板（支撑面按竖向扫掠选择）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    // 地板顶 y=0.5，天花板顶 y=10.5（同 XZ 范围）
+    backend.upsertStatic('floor', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });
+    backend.upsertStatic('ceiling', { position: [0, 10, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });
+    const rt = createFractureRuntime(backend);
+    // 小球中心 y=2（地板上方、天花板下方）
+    const c: FractureChunkInput = { ...chunk('c1', 'small'), position: [0, 2, 0], shape: { type: 'sphere', radius: 0.25 }, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    rt.play(act('n1', [c]));
+    rt.stepOnce();
+    const y = rt.active[0]!.sim!.position[1];
+    // 不应被传送到天花板（y=10.75）；应在地板上方正常下落
+    expect(y).toBeLessThan(2);
+    expect(y).toBeGreaterThan(0.5);
+    rt.dispose();
+  });
+
+  it('R2：支撑删除后休眠块重新下落', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    backend.upsertStatic('floor', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });
+    const rt = createFractureRuntime(backend);
+    // 小球从上方下落，落到地板并休眠
+    const c: FractureChunkInput = { ...chunk('c1', 'small'), position: [0, 1.5, 0], shape: { type: 'sphere', radius: 0.25 }, restitution: 0, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    rt.play(act('n1', [c]));
+    for (let i = 0; i < 120; i++) rt.stepOnce(); // 充分下落直到休眠
+    expect(rt.active[0]!.sim!.resting).toBe(true);
+    const yBefore = rt.active[0]!.sim!.position[1];
+    expect(yBefore).toBeCloseTo(0.75, 2);
+    // 删除地板支撑
+    backend.removeStatic('floor');
+    for (let i = 0; i < 60; i++) rt.stepOnce();
+    // 支撑消失后应重新下落
+    expect(rt.active[0]!.sim!.position[1]).toBeLessThan(yBefore - 0.1);
     rt.dispose();
   });
 });

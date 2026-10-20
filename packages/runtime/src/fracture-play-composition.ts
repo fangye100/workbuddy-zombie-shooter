@@ -69,11 +69,21 @@ export function bindFractureToPlay(
     try {
       runtime = createFractureRuntime(backend, { ...opts, fixedStepSec: host.fixedStepSec });
     } catch {
-      backend = null; // 时钟不一致等：不建 runtime，不留下半装配状态
+      // 失败原子清理：立即销毁已创建 session（不留活动 World 到未来 Stop）。
+      session.dispose();
+      backend = null;
       return false;
     }
     // 首次场景镜像（同一 collider 真源）。
-    syncStaticMirrorsFromScene(opts.initialScene, backend);
+    try {
+      syncStaticMirrorsFromScene(opts.initialScene, backend);
+    } catch {
+      // 首次 sync 失败同样原子清理半装配资源。
+      session.dispose();
+      backend = null;
+      runtime = null;
+      return false;
+    }
     return true;
   });
 
@@ -98,4 +108,26 @@ export function bindFractureToPlay(
   });
 
   return binding;
+}
+
+/**
+ * 真实 PlaySession 宿主适配（R3）：把碎片运行时挂进 zombie-game PlaySession 的
+ * registerResource / fixedStep 链路，非模拟替身。宿主在游戏固定步（PlaySession.advance
+ * 的 session.step() 之后）调用返回值的 onFixedTick 推进碎片物理。
+ */
+export function bindFractureToPlaySession(
+  playSession: { registerResource(label: string, dispose: () => void): void; readonly fixedStep: number },
+  opts: FracturePlayBindingOptions,
+): FracturePlayBinding & { onFixedTick(dtSec: number): void } {
+  let binding: FracturePlayBinding | null = null;
+  const host: FracturePlayHost = {
+    fixedStepSec: playSession.fixedStep,
+    registerResource: (label, dispose) => playSession.registerResource(label, dispose),
+  };
+  binding = bindFractureToPlay(host, opts);
+  return Object.assign(binding, {
+    onFixedTick(dtSec: number): void {
+      if (binding !== null) binding.runtime.tick(dtSec);
+    },
+  });
 }

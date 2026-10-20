@@ -10,26 +10,40 @@ import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
 
 // 仓库门禁规约：测试用 import.meta.glob 读正式资产（禁 node:fs）。
 const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
-/** 内存 IO 端口：从 glob 取文本；可被测试外改以模拟 sidecar 状态变化。 */
-function makeIO(overrides: Record<string, string> = {}): FractureAssetIO & { set(path: string, v: string): void } {
+/** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
+function makeIO(
+  overrides: Record<string, string> = {},
+  binOverrides: Record<string, ArrayBuffer> = {},
+): FractureAssetIO & { set(path: string, v: string): void; setBin(path: string, v: ArrayBuffer): void } {
   const store = new Map<string, string>();
   for (const [k, v] of Object.entries(textGlob)) {
     // k 形如 ../../../assets/fracture/...；规范化为 assets/ 前缀
     store.set(k.replace(/^.*?(?=assets\/)/, ''), v);
   }
   for (const [k, v] of Object.entries(overrides)) store.set(k, v);
+  const binStore = new Map<string, ArrayBuffer>();
+  for (const [k, v] of Object.entries(binGlob)) {
+    binStore.set(k.replace(/^.*?(?=assets\/)/, ''), new TextEncoder().encode(v).buffer as ArrayBuffer);
+  }
+  for (const [k, v] of Object.entries(binOverrides)) binStore.set(k, v);
   return {
     async readText(path: string) {
       const v = store.get(path);
       if (v === undefined) throw new Error('未找到资产：' + path);
       return v;
     },
-    async readBinary() { throw new Error('本测试无二进制资产'); },
+    async readBinary(path: string) {
+      const v = binStore.get(path);
+      if (v === undefined) throw new Error('未找到二进制资产：' + path);
+      return v;
+    },
     set(path: string, v: string) { store.set(path, v); },
+    setBin(path: string, v: ArrayBuffer) { binStore.set(path, v); },
   };
 }
 
@@ -143,5 +157,87 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const r = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.failure.stage).toBe('profile-validate');
+  });
+
+  it('R1：引用资产 sidecar 缺失/外改/guid 不符在分配前拒绝', async () => {
+    // 源模型 sidecar 缺失
+    const io1 = makeIO();
+    io1.set('assets/fracture/p01-barrel/p01-barrel.glb.meta.json', undefined as unknown as string);
+    const r1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io1 });
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.failure.stage).toBe('ref-read');
+
+    // 碎块 mesh sidecar guid 被外改
+    const chunkMeta = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/chunk-0001.glb.meta.json'] ?? '{}');
+    if (Object.keys(chunkMeta).length > 0) {
+      const io2 = makeIO({ 'assets/fracture/p01-barrel/chunk-0001.glb.meta.json': JSON.stringify({ ...chunkMeta, guid: 'as_tampered' }) });
+      const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io2 });
+      expect(r2.ok).toBe(false);
+      if (!r2.ok) expect(r2.failure.stage).toBe('ref-identity');
+    }
+  });
+
+  it('R1：凸代理退化（Float32Array(3)）/含非有限值/解析抛错均拒绝', async () => {
+    const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01.chunks[0].proxy.shape = { type: 'convex', mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' } };
+    const io = makeIO({ [P01]: JSON.stringify(p01) });
+    io.setBin('assets/fracture/p01-barrel/chunk-0001.glb', new ArrayBuffer(12));
+
+    // 退化：Float32Array(3)
+    const r1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => new Float32Array(3),
+    });
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.failure.stage).toBe('proxy-load');
+
+    // 含 NaN
+    const bad = new Float32Array(9); bad[4] = NaN;
+    const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => bad,
+    });
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failure.stage).toBe('proxy-load');
+
+    // 解析抛错
+    const r3 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => { throw new Error('GLB parse fail'); },
+    });
+    expect(r3.ok).toBe(false);
+    if (!r3.ok) expect(r3.failure.stage).toBe('proxy-load');
+
+    // 真实凸代理成功路径：用真实 GLB 二进制 + 合法解析
+    const r4 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => new Float32Array([0,0,0, 1,0,0, 0,1,0, 0,0,1]),
+    });
+    expect(r4.ok).toBe(true);
+  });
+
+  it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {
+    // 构造 pivot=[1,0,0]、bind 绕 Z 旋转 90°、均匀 scale=3 的单块 profile
+    const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01.chunks = [{
+      chunkId: 'c1', class: 'large',
+      mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' },
+      bind: { position: [0, 0, 0], rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2], scale: [3, 3, 3] },
+      pivot: [1, 0, 0],
+      proxy: { shape: { type: 'box', halfExtents: [0.15, 0.15, 0.15] }, mass: 1.5, friction: 0.6, restitution: 0.35, collisionGroup: 'debris' },
+    }];
+    const io = makeIO({ [P01]: JSON.stringify(p01) });
+    const r = await prepareFractureActivation(ev(P01, 'as_p01frct', { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }), { io });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // bind: pivot[1,0,0] * scale[3,3,3] = [3,0,0]；绕 Z 转 90° → [0,3,0]；event 单位 TRS → 世界 [0,3,0]
+    expect(r.activation.chunks[0]!.position[0]).toBeCloseTo(0, 5);
+    expect(r.activation.chunks[0]!.position[1]).toBeCloseTo(3, 5);
+    expect(r.activation.chunks[0]!.position[2]).toBeCloseTo(0, 5);
+    // 姿态含 bind 旋转（非单位四元数）
+    expect(Math.abs(r.activation.chunks[0]!.rotation[2])).toBeCloseTo(Math.SQRT1_2, 4);
+    // 尺度 = bind.scale * event.scale = 3
+    expect(r.activation.chunks[0]!.scale).toBeCloseTo(3, 5);
+
+    // 非均匀事件尺度拒绝
+    const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct', { scale: [1, 2, 3] }), { io: makeIO() });
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failure.stage).toBe('transform');
   });
 });

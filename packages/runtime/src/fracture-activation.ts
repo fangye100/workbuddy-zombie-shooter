@@ -16,7 +16,7 @@ import {
   validateAssetMeta,
   type AssetMeta,
 } from '@aether/scene';
-import type { FractureEvent, FractureVec3 } from './fracture';
+import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 
 /** 资产读取端口（宿主注入；编辑器/Preview/Play 各自实现 fs/devfs/内存）。 */
@@ -30,7 +30,7 @@ export interface FractureAssetIO {
 /** 准入/准备失败诊断（不静默；调用方可保留作者草稿/原表现保底）。 */
 export interface FractureAdmissionFailure {
   readonly stage: 'profile-read' | 'profile-validate' | 'sidecar-read' | 'sidecar-validate'
-    | 'identity' | 'quarantined' | 'proxy-load';
+    | 'identity' | 'quarantined' | 'ref-read' | 'ref-identity' | 'proxy-load' | 'transform';
   readonly detail: string;
 }
 
@@ -49,8 +49,19 @@ function makeRng(seed: number): () => number {
   };
 }
 
+/** 四元数乘法（R6：世界旋转 = 事件旋转 ∘ bind 旋转）。 */
+function quatMul(a: FractureQuat, b: FractureQuat): FractureQuat {
+  const [ax, ay, az, aw] = a, [bx, by, bz, bw] = b;
+  return [
+    aw * bx + ax * bw + ay * bz - az * by,
+    aw * by - ax * bz + ay * bw + az * bx,
+    aw * bz + ax * by - ay * bx + az * bw,
+    aw * bw - ax * bx - ay * by - az * bz,
+  ];
+}
+
 /** 四元数 ⊗ 向量旋转。 */
-function rotateByQuat(v: FractureVec3, q: readonly [number, number, number, number]): FractureVec3 {
+function rotateByQuat(v: FractureVec3, q: FractureQuat): FractureVec3 {
   const [x, y, z] = v;
   const [qx, qy, qz, qw] = q;
   const uvx = qy * z - qz * y, uvy = qz * x - qx * z, uvz = qx * y - qy * x;
@@ -72,6 +83,39 @@ export interface PrepareOptions {
   readonly io: FractureAssetIO;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
   readonly resolveConvexPoints?: ConvexPointsResolver;
+}
+
+const SCALE_EPS = 1e-4;
+/** 事件世界尺度是否近似均匀（非均匀组合在 R6 明确拒绝，不平均近似）。 */
+function isUniformScale(s: FractureVec3): boolean {
+  return Math.abs(s[0] - s[1]) <= SCALE_EPS && Math.abs(s[1] - s[2]) <= SCALE_EPS;
+}
+
+/** 读一个被引用资产的 sidecar 并核验其 guid/kind（R1：证明引用指向正确资产）。 */
+async function checkRefMeta(
+  io: FractureAssetIO,
+  refPath: string,
+  expectedGuid: string,
+  expectedKind: AssetMeta['kind'],
+  label: string,
+): Promise<FractureAdmissionFailure | null> {
+  let meta: AssetMeta;
+  try {
+    meta = JSON.parse(await io.readText(refPath + '.meta.json')) as AssetMeta;
+  } catch (e) {
+    return { stage: 'ref-read', detail: label + ' sidecar 读取失败（' + refPath + '）：' + String(e) };
+  }
+  const errs = validateAssetMeta(meta);
+  if (errs.some((d) => d.severity === 'error')) {
+    return { stage: 'ref-identity', detail: label + ' sidecar 非法（' + refPath + '）：' + errs.map((d) => d.message).join('；') };
+  }
+  if (meta.kind !== expectedKind) {
+    return { stage: 'ref-identity', detail: label + ' kind=' + meta.kind + '，应为 ' + expectedKind + '（' + refPath + '）' };
+  }
+  if (meta.guid !== expectedGuid) {
+    return { stage: 'ref-identity', detail: label + ' guid 不一致：profile 引用=' + expectedGuid + ' sidecar=' + meta.guid + '（' + refPath + '）' };
+  }
+  return null;
 }
 
 /**
@@ -120,23 +164,43 @@ export async function prepareFractureActivation(
     return { ok: false, failure: { stage: 'quarantined', detail: 'profile 状态 ' + profile.status + '，未验收' } };
   }
 
-  // 6) 唯一变换链：资产 bind/pivot（assemblyScale 已含资产局部→米）→ 事件世界变换。
+  // 6) R1：核验全部引用资产的 sidecar 身份（source.model + 每个 chunk.mesh + 每个 convex.mesh），
+  //    证明引用指向正确资产而非仅格式合法。
+  const srcFail = await checkRefMeta(opts.io, profile.source.model.path, profile.source.model.guid, 'gltf', '源模型');
+  if (srcFail) return { ok: false, failure: srcFail };
+  for (const c of profile.chunks) {
+    const mf = await checkRefMeta(opts.io, c.mesh.path, c.mesh.guid, 'gltf', '碎块 ' + c.chunkId);
+    if (mf) return { ok: false, failure: mf };
+    if (c.proxy.shape.type === 'convex') {
+      const cf = await checkRefMeta(opts.io, c.proxy.shape.mesh.path, c.proxy.shape.mesh.guid, 'gltf', '碎块 ' + c.chunkId + ' 凸代理');
+      if (cf) return { ok: false, failure: cf };
+    }
+  }
+
+  // 7) R6：事件世界尺度必须均匀（非均匀组合不平均近似，明确拒绝）。
+  const ws = event.scale;
+  if (!isUniformScale(ws)) {
+    return { ok: false, failure: { stage: 'transform', detail: '事件世界尺度非均匀（' + ws.join(',') + '），不支持近似，请改用均匀尺度' } };
+  }
   const rng = makeRng(event.seed);
   const chunks: FractureChunkInput[] = [];
   for (const c of profile.chunks) {
-    const bindLocal: FractureVec3 = [
-      (c.bind.position[0] + c.pivot[0]) * profile.assemblyScale,
-      (c.bind.position[1] + c.pivot[1]) * profile.assemblyScale,
-      (c.bind.position[2] + c.pivot[2]) * profile.assemblyScale,
+    // R6 唯一变换链（矩阵乘序：事件世界 ∘ bind 局部；assemblyScale 已含在事件世界变换，不二次乘）：
+    // 质心世界位置 = eventT + eventR * (bindS * (bindT + pivot)) * eventS
+    const bindScaledLocal: FractureVec3 = [
+      c.bind.scale[0] * (c.bind.position[0] + c.pivot[0]),
+      c.bind.scale[1] * (c.bind.position[1] + c.pivot[1]),
+      c.bind.scale[2] * (c.bind.position[2] + c.pivot[2]),
     ];
-    const rotated = rotateByQuat(bindLocal, event.rotation);
-    const ws = event.scale;
+    const bindRotated = rotateByQuat(bindScaledLocal, c.bind.rotation);
+    const worldOffset = rotateByQuat(bindRotated, event.rotation);
     const worldPos: FractureVec3 = [
-      event.position[0] + rotated[0] * ws[0],
-      event.position[1] + rotated[1] * ws[1],
-      event.position[2] + rotated[2] * ws[2],
+      event.position[0] + worldOffset[0] * ws[0],
+      event.position[1] + worldOffset[1] * ws[1],
+      event.position[2] + worldOffset[2] * ws[2],
     ];
-    const uniformScale = profile.assemblyScale * ((ws[0] + ws[1] + ws[2]) / 3);
+    const worldRot = quatMul(event.rotation, c.bind.rotation);
+    const worldScale = ((c.bind.scale[0] + c.bind.scale[1] + c.bind.scale[2]) / 3) * ((ws[0] + ws[1] + ws[2]) / 3);
 
     let shape: FractureChunkInput['shape'];
     if (c.proxy.shape.type === 'convex') {
@@ -149,7 +213,21 @@ export async function prepareFractureActivation(
       } catch (e) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理读取失败：' + String(e) } };
       }
-      shape = { type: 'convex', points: opts.resolveConvexPoints(buf) };
+      let pts: Float32Array;
+      try {
+        pts = opts.resolveConvexPoints(buf);
+      } catch (e) {
+        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理解析失败：' + String(e) } };
+      }
+      if (!(pts instanceof Float32Array) || pts.length < 9 || pts.length % 3 !== 0) {
+        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理点数非法（需 ≥3 点且为 3 的倍数），实际 ' + pts.length } };
+      }
+      let degenerate = false;
+      for (let i = 0; i < pts.length; i++) { if (!Number.isFinite(pts[i])) { degenerate = true; break; } }
+      if (degenerate) {
+        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理含非有限值' } };
+      }
+      shape = { type: 'convex', points: pts };
     } else if (c.proxy.shape.type === 'box') {
       shape = { type: 'box', halfExtents: [c.proxy.shape.halfExtents[0], c.proxy.shape.halfExtents[1], c.proxy.shape.halfExtents[2]] };
     } else if (c.proxy.shape.type === 'sphere') {
@@ -178,16 +256,19 @@ export async function prepareFractureActivation(
     chunks.push({
       chunkId: c.chunkId,
       cls: c.class,
+      mesh: { path: c.mesh.path, guid: c.mesh.guid },
       position: worldPos,
-      rotation: [event.rotation[0], event.rotation[1], event.rotation[2], event.rotation[3]],
-      scale: uniformScale,
+      rotation: worldRot,
+      scale: worldScale,
       shape,
       mass: c.proxy.mass,
       friction: c.proxy.friction,
       restitution: c.proxy.restitution,
       linearVelocity: lv,
       angularVelocity: av,
-      ...(c.proxy.maxLinearSpeed !== undefined || c.proxy.maxAngularSpeed !== undefined ? { ccd: true } : {}),
+      // CCD 仅对确有穿透风险的快速块开启（资产声明速度上限才开，不无差别打开）。
+      ...(((c.proxy.maxLinearSpeed !== undefined && c.proxy.maxLinearSpeed > 10)
+        || (c.proxy.maxAngularSpeed !== undefined && c.proxy.maxAngularSpeed > 20)) ? { ccd: true } : {}),
     });
   }
 

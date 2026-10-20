@@ -4,7 +4,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { SceneGraph } from '@aether/scene';
-import { bindFractureToPlay, type FracturePlayHost } from '../src/fracture-play-composition';
+import { bindFractureToPlay, bindFractureToPlaySession, type FracturePlayHost } from '../src/fracture-play-composition';
+import { PlaySession } from '../../zombie-game/src/play-session';
 
 const STEP = 1 / 60;
 
@@ -106,5 +107,70 @@ describe('WU-04 宿主窄组合（R3）', () => {
       expect(() => createFractureRuntime(r.backend!, { fixedStepSec: 1 / 30 })).toThrow(/不一致/);
     }
     s.dispose();
+  });
+
+  it('R3：真实 PlaySession 驱动碎片 tick（非模拟替身）', async () => {
+    // 最小合法场景文档（一个地面 collider），PlaySession 可装载
+    const doc = {
+      schemaVersion: 1,
+      playerStart: 'nd_player',
+      nodes: [
+        { id: 'nd_ground', name: 'ground', parent: null, transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }, visible: true, pickable: false, components: [
+          { kind: 'Collider', enabled: true, isTrigger: true, layer: 1, shape: { type: 'box', halfExtents: [10, 0.5, 10] } },
+        ] },
+        { id: 'nd_player', name: 'player', parent: null, transform: { position: [0, 0.1, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }, visible: true, pickable: false, components: [] },
+        { id: 'nd_nav', name: 'nav', parent: null, transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }, visible: true, pickable: false, components: [
+          { kind: 'NavZone', enabled: true, bounds: { center: [0, 0, 0], size: [20, 4, 20] }, cellSize: 1, baked: null, crowd: { maxNeighbors: 12, timeHorizonSec: 0.8, skinM: 0.02, acceleration: 8, collisionIterations: 4, stuckWindowSec: 0.5, stuckProgressRatio: 0.15, flowCellBudget: 2048 } },
+        ] },
+      ],
+    } as unknown as import('@aether/scene').SceneDocument;
+    const graph = SceneGraph.fromDocument(doc);
+    graph.updateWorldTransforms();
+
+    const play = new PlaySession({ fixedStep: STEP });
+    const result = play.play(doc);
+    if (!result.ok) console.error('[dbg]', result.errors);
+    expect(result.ok).toBe(true);
+
+    const binding = bindFractureToPlaySession(play, { initialScene: graph });
+    expect(await binding.ready).toBe(true);
+
+    // 提交一个碎片事件
+    const { frozenFractureEvent } = await import('../src/fracture');
+    const activation = {
+      event: frozenFractureEvent({
+        sequence: 1, tick: 0, seed: 42,
+        profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+        target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_ground' },
+        position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+        contact: [0, 2, 0], normal: [0, 1, 0], impulse: [0, 1, 0],
+        source: { weaponId: 'w_pistol', hitSequence: 1 },
+      }),
+      chunks: [{
+        chunkId: 'c1', cls: 'large' as const,
+        mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' },
+        position: [0, 2, 0] as const, rotation: [0, 0, 0, 1] as const, scale: 1,
+        shape: { type: 'box' as const, halfExtents: [0.15, 0.15, 0.15] as const },
+        mass: 1.5, friction: 0.6, restitution: 0.35,
+        linearVelocity: [0, 1, 0] as const, angularVelocity: [0, 0, 0] as const,
+      }],
+      priority: 2, lifetimeSec: 4, fadeSec: 0.8,
+    };
+    binding.runtime.play(activation);
+
+    // 真实 PlaySession advance 驱动碎片 tick
+    const steps = play.advance(STEP);
+    expect(steps).toBe(1);
+    binding.onFixedTick(STEP);
+    expect(binding.runtime.stats.ticks).toBe(1);
+
+    // Pause + stepOnce
+    play.pause();
+    play.stepOnce();
+    binding.onFixedTick(STEP);
+    expect(binding.runtime.stats.ticks).toBe(2);
+
+    play.stop();
+    expect(binding.backend()).toBeNull();
   });
 });

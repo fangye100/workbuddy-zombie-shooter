@@ -104,6 +104,8 @@ export interface RapierBodySpec {
   /** 动态刚体初始世界变换（资产局部变换已组合进该世界变换，只执行一次）。 */
   position: FractureVec3;
   rotation: FractureQuat;
+  /** 碎块 GLB 稳定引用（mesh.path + guid；渲染层 WU-05 使用，不再回读资产）。 */
+  mesh?: { readonly path: string; readonly guid: string };
   /** 初始线/角速度。 */
   linearVelocity?: FractureVec3;
   angularVelocity?: FractureVec3;
@@ -385,12 +387,29 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
    * 来自真实场景 collider 镜像（含 scene-mirror 组合与其他 owner 登记的地面），
    * 不另造无限地面；无镜像时返回空（小块继续下落）。只读，不修改求解器。
    */
+  /**
+   * 简化碎片的有界环境接触：返回所有静态镜像的顶部支撑面（世界 Y + XZ 范围，R2）。
+   * 旋转 box 用世界 AABB 近似（取世界矩阵各列模长折算半尺寸），不假定旋转为 0；
+   * 有界简化层的保守近似，不做逐点多点接触。来自真实场景 collider 镜像（含
+   * scene-mirror 组合与其他 owner 登记的地面），不另造无限地面；无镜像时返回空。
+   */
   staticSupportSurfaces(): readonly { x: number; z: number; topY: number; halfX: number; halfZ: number }[] {
     const out: { x: number; z: number; topY: number; halfX: number; halfZ: number }[] = [];
     for (const m of this.statics.values()) {
       if (!m.boxHalf) continue;
       const t = m.body.translation();
-      out.push({ x: t.x, z: t.z, topY: t.y + m.boxHalf.halfY, halfX: m.boxHalf.halfX, halfZ: m.boxHalf.halfZ });
+      const rot = m.body.rotation();
+      // 四元数旋转半尺寸向量（仅取绝对值分量求 AABB）：worldHalf_i = |R| @ localHalf
+      const [qx, qy, qz, qw] = [rot.x, rot.y, rot.z, rot.w];
+      const hx = m.boxHalf.halfX, hy = m.boxHalf.halfY, hz = m.boxHalf.halfZ;
+      // R 的元素（行主序）：
+      const r00 = 1 - 2 * (qy * qy + qz * qz), r01 = 2 * (qx * qy - qz * qw), r02 = 2 * (qx * qz + qy * qw);
+      const r10 = 2 * (qx * qy + qz * qw), r11 = 1 - 2 * (qx * qx + qz * qz), r12 = 2 * (qy * qz - qx * qw);
+      const r20 = 2 * (qx * qz - qy * qw), r21 = 2 * (qy * qz + qx * qw), r22 = 1 - 2 * (qx * qx + qy * qy);
+      const worldHalfX = Math.abs(r00) * hx + Math.abs(r01) * hy + Math.abs(r02) * hz;
+      const worldHalfY = Math.abs(r10) * hx + Math.abs(r11) * hy + Math.abs(r12) * hz;
+      const worldHalfZ = Math.abs(r20) * hx + Math.abs(r21) * hy + Math.abs(r22) * hz;
+      out.push({ x: t.x, z: t.z, topY: t.y + worldHalfY, halfX: worldHalfX, halfZ: worldHalfZ });
     }
     return out;
   }
