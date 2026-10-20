@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-c05f28ceb0e196b8b0426763f1bfe1cc1e04ef43（实现与测试；本文件是其后的
+9e8cc04c071d572a702b810779cbb3cf16a00afd（实现与测试；本文件是其后的
 一笔仅文档提交，验收以 supervisor 绑定的 final 为准）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
@@ -85,12 +85,12 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 213 测试全过，其中
-  fracture-runtime.test.ts 39 测试、fracture-activation.test.ts 18 测试、
+- pnpm exec vitest run packages/runtime：22 文件 216 测试全过，其中
+  fracture-runtime.test.ts 41 测试、fracture-activation.test.ts 19 测试、
   fracture-play-composition.test.ts 10 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 236 测试全过（play-controller 23）。宿主接线（R3）的 owner 证据在
-  apps/editor/test/play-controller.test.ts（23 测试），其中「真实 PlayController.update
+  23 文件 241 测试全过（play-controller 25）。宿主接线（R3）的 owner 证据在
+  apps/editor/test/play-controller.test.ts（25 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
   20 轮登记/释放各 60 次。
@@ -153,6 +153,29 @@ parseGlb(buffer, null, 'auto', { normalize: false }) 取未规整化坐标，再
 - 来向：事件带 impulse 时以其方向为主；没有 impulse 时由 normal 决定初始方向
   （normal 缺失才回退世界向上）。反转 normal 会得到相反的水平初速度，不再出现
   「两个来向不同的合法事件产生完全相同初速度」。
+
+## 迟到 IO 与 reset 门同步（W04-08/09）
+
+- 迟到读取：spawnFracture 的资产读取是异步的。await 之后重新核对
+  this.fractureBinding === binding 且 binding.backend() 非空；不一致返回
+  reason=session-closed 的结构化拒绝（可重试），不再对已释放 binding 取 runtime
+  而抛未预期异常。
+- reset：rebuildFractureBinding() 与 start() 一样在新 binding ready 后调用
+  syncGateMirrors()，因此重置后 initialOpen 门在首个 tick 前就是权威姿态。
+- 边界：syncScene(graph) 供宿主在场景文档变化时重建镜像；运行期门姿态走
+  syncRuntimePoses。运行期 collider 的增删/禁用（非门）属 WU-06/08 的场景变更路径，
+  本单元不接线，已在「边界与遗留」注明。
+
+## 简化层的速度上限与接触窗口（W04-04/07）
+
+- 速度上限：SimplifiedState 保存块级 maxLinearSpeed/maxAngularSpeed，积分起点
+  夹紧线/角速度——此前只有 rigid 后端消费，小块会以 400 m/s 飞。
+- 接触窗口：穿越判定用底面（质心 − 支撑半径）对支撑面顶扫掠，落地时质心停在
+  top + radius。此前用质心对顶面判定，质心尚未到顶面就不接触，会先穿透约一个
+  支撑半径再被抬回（实测从 0.76 掉到 0.512 才吸附到 0.75）。
+- 胶囊语义：profile capsule.halfHeight 是含端帽的总半高；准备层换算全高
+  2*halfHeight，后端再算圆柱段半高 height/2 - radius，世界顶点高度 = halfHeight。
+  owner 用例逐级断言 {radius:0.25,height:1}。
 
 ## 启动时的初始门姿态（F3 续）
 
