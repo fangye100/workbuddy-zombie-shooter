@@ -3262,7 +3262,28 @@
       ],
       "reviewedAt": "2026-10-20",
       "reviewedSourceCommit": "PENDING_WU02_REVIEW"
-    }
+    },
+    {
+      "id": "fracture-physics-backend",
+      "path": "docs/architecture/fracture-physics-backend-20261020.md",
+      "title": "碎裂真实物理后端（WU-03）",
+      "role": "editor",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "architecture",
+        "fracture",
+        "physics",
+        "runtime"
+      ],
+      "read": "Rapier 适配、场景 collider 真源静态镜像、固定步长与碰撞分组、会话生命周期与资源账目、真实验收与负例",
+      "sourceRefs": [
+        "asset-metadata",
+        "scene-schema"
+      ],
+      "reviewedAt": "2026-10-20",
+      "reviewedSourceCommit": "ae2ac95ecab3c8237628f71e3888b3533cd13c50"
+    },
 
   ]
 }
