@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-dffd0efb8704af64f8dd5fea88db545b7afe4025（本文件单独一笔提交，只改文档）。
+0cc6ef86c13ce8ead588f873c295f7f08b4e6b2f（本文件单独一笔提交，只改文档）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
@@ -84,11 +84,11 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 201 测试全过，其中
-  fracture-runtime.test.ts 37 测试、fracture-activation.test.ts 13 测试、
-  fracture-play-composition.test.ts 6 测试。
+- pnpm exec vitest run packages/runtime：22 文件 204 测试全过，其中
+  fracture-runtime.test.ts 37 测试、fracture-activation.test.ts 14 测试、
+  fracture-play-composition.test.ts 8 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 218 测试全过。宿主接线（R3）的 owner 证据在
+  23 文件 222 测试全过。宿主接线（R3）的 owner 证据在
   apps/editor/test/play-controller.test.ts（17 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
@@ -142,6 +142,43 @@ assemblyScale 已含在事件世界变换、不二次乘，只执行一次）生
 质心停在「支撑面顶 + 块支撑半径」，不塞进地板。无场景 collider（或块移出有限
 平台/斜坡边界）时继续下落，不生成无限地面。摩擦/恢复用 chunk 输入策略，非固定
 常数。场景 collider 变化经 syncScene 更新镜像后支撑面随之更新。
+
+## Stop/Reset 释放合同（F1）
+
+绑定对象提供唯一、幂等的 dispose()：先 runtime.dispose()（退役活动块、归还全部
+租约、清空事件队列、标记 disposed、销毁物理 World），再 session.dispose()（未就绪时
+取消进行中的初始化）。PlayController 的 Stop/Reset 与 PlaySession 账目回调走同一
+条链，因此被丢引用的旧 runtime 同样处于 disposed=true、poolActive=0、
+queuedEvents=0，旧代 play() 返回 session-closed。
+
+只销毁 session/World 而不关闭 runtime，会把活动租约、排队请求和「仍接受 play」的旧代
+留在内存里；页面引用清空与 ledger 归零都不能单独证明释放完成。owner 回归用真实
+ctl.stop()/ctl.reset() 先激活 1 大 1 小并再排一个事件，随后读旧引用断言上述四项
+与迟到拒绝，并核对新代可用。
+
+## 凸代理坐标合同（F2）
+
+createGlbConvexResolver() 复用 scene 的 parseGlb(buffer, null, 'auto')，取
+MeshData.vertices 的 POSITION 分量：顶点缓冲是 15 浮点交错
+（position3 + normal3 + smoothNormal3 + uv2 + color4），按整块当 XYZ 会让点数膨胀 15 倍、
+把法线/UV/颜色当坐标，碰撞体被撑到 ±1m。
+
+坐标空间与 profile 的 pivot/bind 同一套：targetHeight=null 保持资产原始尺寸，
+但仍做 node 变换烘焙、Z-up→Y-up（auto）、XZ 居中与底面贴 y=0。真实
+chunk-0001.glb 解析 5286 顶点，代理点 5286 个，包围盒
+[-0.150041,0,-0.150002]..[0.150041,0.299990,0.150002]；用 Rapier 凸包 + 竖直线投射
+核实际接触高度约 0.30m（旧缺陷为 ~1.0m）。另有手写合法 GLB（顶点 x 在 [10,14]、
+y 在 [2,6]、z 在 [20,24]）按解析布局给出闭式期望 [-2,2]x[0,4]x[-2,2]，逐点比对防止
+居中/换轴写错后被包围盒掩盖。
+
+## 运行期 collider 姿态同步（F3）
+
+作者文档只是初始状态：导航门在玩法中升降后，其权威姿态来自
+PlaySession.gateSnapshot()。PlayController.syncGates() 在更新渲染对象的同时调用
+binding.syncRuntimePoses(poses)，后者经 syncStaticMirrorPoses 把
+scene-mirror:<nodeId> 重定位到当前姿态（只换姿态、复用登记时的形状与碰撞组，
+不新建第二套碰撞源，也不动其他 owner 的镜像）。真实沙盒场景回归：开门后跑 100 次
+ctl.update(1/60)，门姿态 [4,3,0]→[4,7,0]，碎片镜像同步到 [4,7,0]。
 
 ## 唯一固定步长（R3）
 
