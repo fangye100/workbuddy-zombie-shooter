@@ -50,6 +50,9 @@
     "lab:build": "npm run editor:build",
     "lod:audit": "python assets/environment/_tools/audit_lod_quality.py"
   },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "0.21.0"
+  },
   "devDependencies": {
     "@webgpu/types": "^0.1.49",
     "esbuild": "^0.28.2",
