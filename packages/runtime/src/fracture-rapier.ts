@@ -153,6 +153,8 @@ interface StaticMirror {
   collider: RapierCollider;
   /** box 镜像的世界半尺寸（供简化层支撑面查询；非 box 为 null）。 */
   boxHalf: { halfX: number; halfY: number; halfZ: number } | null;
+  /** 球/胶囊镜像的支撑参数（供简化层竖向求交；box 为 null）。 */
+  round: { kind: 'sphere' | 'capsule'; radius: number; halfHeight: number } | null;
   /** box 镜像的世界旋转四元数（供 OBB 支撑面查询；非 box 为 identity）。 */
   rotation: { x: number; y: number; z: number; w: number };
 }
@@ -369,12 +371,20 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       this.world.removeRigidBody(body);
       throw e;
     }
-    // box 镜像记录支撑面半尺寸（旋转首期为 0/恒等，非均匀缩放已在 scene-mirror 折进 halfExtents）。
+    // box 镜像记录支撑面：局部半尺寸 + 中心 + 当前旋转四元数（旋转非恒等时由调用方
+    // 做局部系求交；非均匀缩放已在 scene-mirror 折进 halfExtents）。
     const boxHalf = spec.shape.type === 'box'
       ? { halfX: spec.shape.halfExtents[0], halfY: spec.shape.halfExtents[1], halfZ: spec.shape.halfExtents[2] }
       : null;
+    // 球/胶囊也要能当支撑面，否则平台旁的圆/胶囊 collider 会静默穿过简化层。
+    // capsule 的 height 是全高，圆柱段半高 = height/2 - radius（至少 0）。
+    const round = spec.shape.type === 'sphere'
+      ? { kind: 'sphere' as const, radius: spec.shape.radius, halfHeight: 0 }
+      : spec.shape.type === 'capsule'
+        ? { kind: 'capsule' as const, radius: spec.shape.radius, halfHeight: Math.max(0, spec.shape.height / 2 - spec.shape.radius) }
+        : null;
     const rot = { x: spec.rotation[0], y: spec.rotation[1], z: spec.rotation[2], w: spec.rotation[3] };
-    this.statics.set(nodeId, { nodeId, body, collider, boxHalf, rotation: rot });
+    this.statics.set(nodeId, { nodeId, body, collider, boxHalf, round, rotation: rot });
   }
 
   /** 移除静态镜像（删除/开门不能遗留幽灵 collider）。 */
@@ -392,39 +402,49 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
   }
 
   /**
-   * 简化碎片的有界环境接触：返回所有静态镜像的顶部支撑面（世界 Y + XZ 范围）。
-   * 来自真实场景 collider 镜像（含 scene-mirror 组合与其他 owner 登记的地面），
-   * 不另造无限地面；无镜像时返回空（小块继续下落）。只读，不修改求解器。
-   */
-  /**
-   * 简化碎片的有界环境接触：返回所有静态镜像的顶部支撑面（世界 Y + XZ 范围，R2）。
-   * 旋转 box 用世界 AABB 近似（取世界矩阵各列模长折算半尺寸），不假定旋转为 0；
-   * 有界简化层的保守近似，不做逐点多点接触。来自真实场景 collider 镜像（含
-   * scene-mirror 组合与其他 owner 登记的地面），不另造无限地面；无镜像时返回空。
-   */
-  /**
-   * 简化碎片的有界环境接触（R2）：返回静态镜像的 OBB 描述，供调用方做逐点支撑查询。
-   * 不做世界 AABB 近似（旋转盒的 AABB 顶部会在斜坡上制造虚假平台）；
-   * 调用方用逆旋转把查询点变换到局部系，再求局部支撑面，得到真实 OBB 接触。
+   * 简化碎片的有界环境接触（R2）：返回静态镜像的 OBB 描述，供调用方做竖向线求交。
+   * 不做世界 AABB 近似（旋转盒的 AABB 顶部会在斜坡上制造虚假平台）。调用方把
+   * 查询竖线逆旋转到局部系、用 slab 法求交点，再把完整交点旋转回世界取世界 Y，
+   * 得到真实 OBB 接触高度。来自真实场景 collider 镜像（含 scene-mirror 组合与其他
+   * owner 登记的地面），不另造无限地面；无镜像时返回空（小块继续下落）。只读。
    */
   staticSupportSurfaces(): readonly {
+    /** 形状：box 用局部系 slab 求交；sphere/capsule 用竖向圆截面求交。 */
+    kind: 'box' | 'sphere' | 'capsule';
     x: number; z: number; topY: number; halfX: number; halfZ: number;
     /** OBB 中心（世界）与逆旋转四元数（共调用方做局部系支撑查询）。 */
     centerY: number; qx: number; qy: number; qz: number; qw: number;
     localHalfX: number; localHalfY: number; localHalfZ: number;
+    /** 球/胶囊：截面半径（capsule 的圆柱段另加 halfHeight）。box 为 0。 */
+    roundRadius: number;
+    roundHalfHeight: number;
   }[] {
     const out: ReturnType<RapierFractureBackend['staticSupportSurfaces']>[number][] = [];
     for (const m of this.statics.values()) {
-      if (!m.boxHalf) continue;
       const t = m.body.translation();
       const rot = m.rotation;
-      out.push({
-        x: t.x, z: t.z, topY: t.y + m.boxHalf.halfY, // AABB 顶（广相用，实际支撑用局部系查询）
-        halfX: m.boxHalf.halfX, halfZ: m.boxHalf.halfZ, // AABB 半尺寸（广相用）
+      const base = {
+        x: t.x, z: t.z, topY: t.y,
+        halfX: 0, halfZ: 0,
         centerY: t.y,
         qx: rot.x, qy: rot.y, qz: rot.z, qw: rot.w,
-        localHalfX: m.boxHalf.halfX, localHalfY: m.boxHalf.halfY, localHalfZ: m.boxHalf.halfZ,
-      });
+        localHalfX: 0, localHalfY: 0, localHalfZ: 0,
+        roundRadius: 0, roundHalfHeight: 0,
+      };
+      if (m.boxHalf !== null) {
+        out.push({
+          ...base, kind: 'box',
+          topY: t.y + m.boxHalf.halfY, // AABB 顶（广相用，实际支撑用局部系查询）
+          halfX: m.boxHalf.halfX, halfZ: m.boxHalf.halfZ,
+          localHalfX: m.boxHalf.halfX, localHalfY: m.boxHalf.halfY, localHalfZ: m.boxHalf.halfZ,
+        });
+      } else if (m.round !== null) {
+        out.push({
+          ...base, kind: m.round.kind,
+          topY: t.y + m.round.halfHeight + m.round.radius,
+          roundRadius: m.round.radius, roundHalfHeight: m.round.halfHeight,
+        });
+      }
     }
     return out;
   }

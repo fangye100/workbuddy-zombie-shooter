@@ -262,12 +262,48 @@ describe('WU-04 固定步长 / Pause / Step / 有界追赶', () => {
     rt.dispose();
   });
 
-  it('渲染频率不反推物理时钟：同 dt 拆成多帧 tick 与少帧 tick 的总步数一致', () => {
-    const { rt } = makeRuntime();
-    rt.play(act('n1', [chunk('c1', 'large')]));
-    for (let i = 0; i < 4; i++) rt.tick(STEP); // 4 帧 × 1 步
-    const t1 = rt.stats.ticks;
-    expect(t1).toBe(4);
+  it('渲染频率不反推物理时钟：两种不同拆帧得到相同总步数', () => {
+    // 拆法 A：4 帧 × 1 步
+    const a = makeRuntime();
+    a.rt.play(act('n1', [chunk('c1', 'large')]));
+    for (let i = 0; i < 4; i++) a.rt.tick(STEP);
+    const ticksA = a.rt.stats.ticks;
+    expect(ticksA).toBe(4);
+    a.rt.dispose();
+
+    // 拆法 B：2 帧 × 2 步（同一段真实时间）
+    const b = makeRuntime();
+    b.rt.play(act('n1', [chunk('c1', 'large')]));
+    for (let i = 0; i < 2; i++) b.rt.tick(2 * STEP);
+    const ticksB = b.rt.stats.ticks;
+    expect(ticksB).toBe(4);
+    b.rt.dispose();
+
+    // 两种拆法总步数一致：帧率只影响调用次数，不反推物理时钟
+    expect(ticksB).toBe(ticksA);
+  });
+
+  it('R6：profile 声明的块级线/角速度上限在实际推进中被消费', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    // 初始速度远超上限（线 400 m/s、角 400 rad/s），块级上限 = 1 / 2
+    const wild: FractureChunkInput = {
+      ...chunk('c1', 'large'),
+      position: [0, 5, 0],
+      shape: { type: 'sphere', radius: 0.25 },
+      linearVelocity: [400, 0, 0], angularVelocity: [0, 400, 0],
+      maxLinearSpeed: 1, maxAngularSpeed: 2,
+    };
+    expect(rt.play(act('n1', [wild])).accepted).toBe(true);
+    rt.stepOnce();
+    const s = backend.snapshot(rt.active[0]!.handle)!;
+    const lin = Math.hypot(s.linearVelocity[0], s.linearVelocity[1], s.linearVelocity[2]);
+    const ang = Math.hypot(s.angularVelocity[0], s.angularVelocity[1], s.angularVelocity[2]);
+    // 上限生效：速度被压到 1 / 2 附近（含一步重力分量），绝不允许 400 原样穿透
+    expect(lin).toBeLessThan(1.5);
+    expect(lin).toBeGreaterThan(0.5);
+    expect(ang).toBeLessThanOrEqual(2.0001);
+    expect(ang).toBeGreaterThan(1.5);
     rt.dispose();
   });
 });
@@ -547,6 +583,38 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
     rt.dispose();
   });
 
+  it('R2：球/胶囊静态镜像也能支撑（不再静默穿过），足印外仍下落', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    // 球：中心 (0,1,0)、半径 0.5 → 顶点 y=1.5；胶囊：中心 (4,1,0)、半径 0.25、全高 1.0 → 顶点 y=1.75
+    backend.upsertStatic('ball', { position: [0, 1, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.5 } });
+    backend.upsertStatic('pill', { position: [4, 1, 0], rotation: [0, 0, 0, 1], shape: { type: 'capsule', radius: 0.25, height: 1.0 } });
+    const su = backend.staticSupportSurfaces();
+    expect(su.length).toBe(2);
+    expect(su.map((x) => x.kind).sort()).toEqual(['capsule', 'sphere']);
+
+    const rt = createFractureRuntime(backend);
+    const mk = (id: string, x: number, z = 0): FractureChunkInput => ({
+      ...chunk(id, 'small'), position: [x, 4, z],
+      mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'g_' + id },
+      shape: { type: 'sphere', radius: 0.25 }, restitution: 0,
+      linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+    });
+    // s1 落在球顶、s2 落在胶囊顶、s3 在球足印外（x=1 > r=0.5）
+    rt.play(act('n1', [mk('s1', 0), mk('s2', 4), mk('s3', 1)]));
+    for (let i = 0; i < 240; i++) rt.stepOnce();
+    const by = (id: string) => rt.active.find((a) => a.sim && a.mesh.guid === 'g_' + id)?.sim;
+    // 球顶 1.5 + 半径 0.25 = 1.75（竖向共线时就是顶点）
+    expect(by('s1')!.position[1]).toBeGreaterThan(1.70);
+    expect(by('s1')!.position[1]).toBeLessThan(1.80);
+    // 胶囊顶 1.0 + 0.5 + 0.25 = 1.75
+    expect(by('s2')!.position[1]).toBeGreaterThan(1.70);
+    expect(by('s2')!.position[1]).toBeLessThan(1.80);
+    // 足印外：不被虚假支撑
+    expect(by('s3')!.position[1]).toBeLessThan(1.0);
+    rt.dispose();
+    backend.destroy();
+  });
+
   it('R2：支撑删除后休眠块重新下落', () => {
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
     backend.upsertStatic('floor', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });
@@ -585,7 +653,7 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
     //   顶面平面方程 y=(0.25+sin30°·x)/cos30°：x=1 → 面 0.8660 → 质心(+半径0.25)=1.1160
     //   x=3 → 面 2.0207 → 质心=2.2707。
     // 偏差实现（漏 ddx/ddz，等价旧 bug 的 cos²θ 近似）会给出 0.8995/1.7655，落入斜坡内部。
-    // x=11：斜坡世界边缘之外（边缘最高列 x ≈ 7.28），应持续下落。
+    // x=11：斜坡世界边缘之外（角点 |x| = 10cos30° + 0.25sin30° ≈ 8.785），应持续下落。
     rt.play(act('n1', [mk('c1', 1), mk('c2', 3), mk('c3', 11)]));
     for (let i = 0; i < 240; i++) rt.stepOnce();
     const by = (id: string) => rt.active.find((a) => a.sim && a.mesh.guid === 'g_' + id)?.sim;

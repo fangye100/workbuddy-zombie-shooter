@@ -24,6 +24,7 @@ import {
   type WorldPosOf,
 } from '../src/services/play-camera';
 import type { SceneDocument } from '@aether/scene';
+import { frozenFractureEvent } from '@aether/runtime';
 
 // 本套件使用无GPU的renderer替身，验证控制器快照/相机；真实VFX由专属GPU验收覆盖。
 // 正式Act1配置现在含VFX，不能再依赖“关卡恰好没有特效”来避开GPU装配。
@@ -189,13 +190,114 @@ describe('PlayController —— Stop 恢复作者状态（docs/17 §8-7 前半�
   });
 });
 
+describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () => {
+  /** 一份最小激活：small 块走简化层，不需要资产 IO，只验证宿主是否在驱动物理。 */
+  function smallActivation(nodeId: string) {
+    return {
+      event: frozenFractureEvent({
+        sequence: 1, tick: 0, seed: 7,
+        profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+        target: { kind: 'scene-object', runId: 'run-1', nodeId },
+        position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+        contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+        source: { weaponId: 'w_pistol', hitSequence: 1 },
+      }),
+      chunks: [{
+        chunkId: 'c1', cls: 'small' as const,
+        mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' },
+        position: [0, 3, 0] as [number, number, number],
+        rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+        shape: { type: 'sphere' as const, radius: 0.25 },
+        mass: 1.5, friction: 0.6, restitution: 0,
+        linearVelocity: [0, 0, 0] as [number, number, number],
+        angularVelocity: [0, 0, 0] as [number, number, number],
+      }],
+      priority: 2, lifetimeSec: 4, fadeSec: 0.8,
+    };
+  }
+
+  it('真实 PlayController.update 推进碎片物理（删除宿主驱动会失败）', async () => {
+    const { ctl } = make();
+    expect(ctl.start()).toBe(true);
+    const binding = ctl.fracture;
+    expect(binding).not.toBeNull();
+    // 等 Rapier WASM 与首次场景镜像就绪（异步，非测试手动泵）
+    await expect(binding!.ready).resolves.toBe(true);
+    expect(binding!.backend()).not.toBeNull();
+    expect(binding!.backend()!.ledger.destroyed).toBe(false);
+
+    // 激活先入队（准入在分配前完成），首个固定 tick 才真正 spawn
+    expect(binding!.runtime.play(smallActivation('nd_frag')).accepted).toBe(true);
+    expect(binding!.runtime.stats.queuedEvents).toBe(1);
+    const tick0 = binding!.runtime.stats.ticks;
+    expect(tick0).toBe(0);
+
+    // 唯一驱动路径：控制器 update（宿主按 PlaySession 固定步分发）
+    const n = ctl.update(1 / 30);
+    expect(n).toBeGreaterThan(0);
+    const tick1 = binding!.runtime.stats.ticks;
+    expect(tick1).toBe(tick0 + n);
+    expect(binding!.runtime.active.length).toBe(1);
+    const y0 = binding!.runtime.active[0]!.sim!.position[1];
+
+    ctl.update(1 / 30);
+    const y1 = binding!.runtime.active[0]!.sim!.position[1];
+    expect(y1).not.toBe(y0); // 物理真的被推进了
+    const tick2 = binding!.runtime.stats.ticks;
+    expect(tick2).toBeGreaterThan(tick1);
+
+    // Pause 后 update 不再推进（宿主停调）
+    ctl.pause();
+    ctl.update(1 / 30);
+    expect(binding!.runtime.stats.ticks).toBe(tick2);
+
+    // Step 单步只推进一个固定步
+    ctl.step();
+    expect(binding!.runtime.stats.ticks).toBe(tick2 + 1);
+
+    // Stop：碎片资源随会话账目释放，引用清空
+    ctl.stop();
+    expect(ctl.fracture).toBeNull();
+    expect(ctl.ledger.pending).toBe(0);
+    expect(binding!.backend()!.ledger.destroyed).toBe(true);
+  }, 30000);
+
+  it('reset 换绑碎片代数：旧代释放、新代接管且不新增账目项', async () => {
+    const { ctl } = make();
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+    const first = ctl.fracture!;
+    const pendingAfterStart = ctl.ledger.pending;
+    expect(first.runtime.play(smallActivation('nd_frag')).accepted).toBe(true);
+    ctl.update(1 / 30); // 入队 → 首个固定 tick 激活
+    expect(first.runtime.stats.simplifiedActive).toBe(1);
+
+    ctl.reset();
+    const second = ctl.fracture;
+    expect(second === null).toBe(false);
+    // 换绑必须是新对象（旧会话已 dispose，不能继续复用）
+    expect(second === first).toBe(false);
+    // 旧代后端已销毁，新代等待就绪且没有旧碎片残留
+    expect(first.backend()!.ledger.destroyed).toBe(true);
+    await expect(second!.ready).resolves.toBe(true);
+    expect(second!.runtime.stats.simplifiedActive).toBe(0);
+    // 账目项数不随重跑增长（仍是单一项）
+    expect(ctl.ledger.pending).toBe(pendingAfterStart);
+
+    ctl.stop();
+    expect(ctl.fracture).toBeNull();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+});
+
 describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGENTS.md §2.4）', () => {
   it('Play 期登记的资源在 Stop 时全部释放；20 次启停 pending 恒为 0', () => {
     const { ctl, b, r } = make();
     for (let i = 0; i < 20; i++) {
       expect(ctl.start()).toBe(true);
-      // 每轮登记两项：Bridge 批次（CPU 侧）+ 渲染核心动态实例资源（GPU 侧）
-      expect(ctl.ledger.pending).toBe(2);
+      // 每轮登记三项：Bridge 批次（CPU 侧）+ 渲染核心动态实例资源（GPU 侧）
+      // + 碎片运行时（WU-04 R3，单一账目项；Stop 释放 runtime.session）。
+      expect(ctl.ledger.pending).toBe(3);
       expect(b.attached).toBe(1);
       ctl.stop();
       // 🔴 判据不是"看着没泄漏"，是账目：登记数 == 释放数，且无未释放项
@@ -203,8 +305,9 @@ describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGEN
       expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);
       expect(b.attached).toBe(0);
     }
-    expect(ctl.ledger.registered).toBe(40);
-    expect(ctl.ledger.disposed).toBe(40);
+    // 20 轮 × 3 项（Bridge 批次 + 动态实例 + 碎片运行时）
+    expect(ctl.ledger.registered).toBe(60);
+    expect(ctl.ledger.disposed).toBe(60);
     // 渲染侧的释放入口必须真的被调用过（登记了却不调 = 假账目）
     expect(r.core.releaseDynamicResources).toHaveBeenCalledTimes(20);
   });
@@ -283,8 +386,8 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
     const vc = fakeViewCamera();
     const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
     ctl.start();
-    // 原两项（Bridge 批次 + 动态实例）+ 相机 = 3
-    expect(ctl.ledger.pending).toBe(3);
+    // 原三项（Bridge 批次 + 动态实例 + 碎片运行时）+ 相机 = 4
+    expect(ctl.ledger.pending).toBe(4);
     ctl.stop();
     expect(ctl.ledger.pending).toBe(0);
     expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);

@@ -26,7 +26,7 @@ import {decalReceivers} from './vfx-decal-receivers';
 import { PlaySession, type PlayState } from '@aether/zombie-game';
 import type { BehaviorExecutor } from '@aether/runtime';
 import { SceneGraph } from '@aether/scene';
-import { bindFractureToPlaySession, type FracturePlayBinding } from '@aether/runtime';
+import { attachFixedTick, bindFractureToPlay, type FracturePlayBinding } from '@aether/runtime';
 import {
   PlayCameraController,
   type ViewCameraControl,
@@ -77,6 +77,8 @@ export class PlayController {
   private readonly onStateChange: (() => void) | null;
   /** 碎片运行时绑定（R3：真实 Play 驱动；null = 未启用或已释放）。 */
   private fractureBinding: (FracturePlayBinding & { onFixedTick(dtSec: number): void }) | null = null;
+  /** 碎片账目项是否已登记（每轮 Play 只登记一次，reset 复用同一项）。 */
+  private fractureRegistered = false;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -218,11 +220,10 @@ export class PlayController {
     {
       const graph = SceneGraph.fromDocument(doc);
       graph.updateWorldTransforms();
-      this.fractureBinding = bindFractureToPlaySession(this.session, { initialScene: graph });
-      this.session.registerResource('fracture-runtime', () => {
-        this.fractureBinding?.session.dispose();
-        this.fractureBinding = null;
-      });
+      // 单一账目项：只在首次装配时向 PlaySession 登记一次，回调释放"当前"绑定。
+      // 这样 reset 换绑（旧代释放、新代接管）后 Stop 仍释放新绑定，
+      // 也不会像之前那样每轮额外登记一项，把 pending 从 2/3 顶到 4/5。
+      this.fractureBinding = this.createFractureBinding(graph);
     }
 
     this.lastError = null;
@@ -245,6 +246,45 @@ export class PlayController {
     else if (this.session.state === 'paused') this.resume();
   }
 
+  /** 碎片绑定只读视图（调试/验收观察；Stop 后为 null）。 */
+  get fracture(): (FracturePlayBinding & { onFixedTick(dtSec: number): void }) | null {
+    return this.fractureBinding;
+  }
+
+  /** 释放当前碎片绑定（不发会话账目；Stop 由登记的回调统一处理）。 */
+  private disposeFracture(): void {
+    const b = this.fractureBinding;
+    this.fractureBinding = null;
+    if (b !== null) b.session.dispose();
+  }
+
+  /**
+   * 装配/换绑碎片运行时。会话账目只登记一次：回调永远释放当时的 fractureBinding，
+   * 因此 reset 后的新绑定同样会被 Stop 释放，且账目项数不随重跑增长。
+   */
+  private createFractureBinding(graph: SceneGraph): FracturePlayBinding & { onFixedTick(dtSec: number): void } {
+    if (!this.fractureRegistered) {
+      this.fractureRegistered = true;
+      this.session.registerResource('fracture-runtime', () => {
+        this.disposeFracture();
+      });
+    }
+    return attachFixedTick(bindFractureToPlay(
+      { fixedStepSec: this.session.fixedStep, registerResource: () => { /* 由上面的单一项统一登记 */ } },
+      { initialScene: graph },
+    ));
+  }
+
+  /** reset 换绑：先释放旧代，再按当前作者场景重建（不新增账目项）。 */
+  private rebuildFractureBinding(): void {
+    this.disposeFracture();
+    const doc = this.renderer.getDocument();
+    if (doc === null) return;
+    const graph = SceneGraph.fromDocument(doc);
+    graph.updateWorldTransforms();
+    this.fractureBinding = this.createFractureBinding(graph);
+  }
+
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
@@ -264,6 +304,9 @@ export class PlayController {
 
   /** 同种子重跑 */
   reset(): void {
+    // 碎片绑定按 Play 代数隔离：重跑先释放旧代（session 仍活着，Stop 账目不会替你收），
+    // 再按当前场景重建，避免旧代碎片跨重跑残留。
+    this.rebuildFractureBinding();
     this.session.reset();
     this.decals?.start(this.session.runtime);
     this.syncGates();
@@ -302,6 +345,8 @@ export class PlayController {
     // 会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
     this.playCamera?.detach();
     this.session.stop();
+    this.fractureBinding = null;
+    this.fractureRegistered = false;
     this.bridge.attach(null);
     this.notify();
   }

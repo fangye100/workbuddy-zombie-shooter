@@ -119,17 +119,24 @@ export function bindFractureToPlaySession(
   playSession: { registerResource(label: string, dispose: () => void): void; readonly fixedStep: number },
   opts: FracturePlayBindingOptions,
 ): FracturePlayBinding & { onFixedTick(dtSec: number): void } {
-  let binding: FracturePlayBinding | null = null;
   const host: FracturePlayHost = {
     fixedStepSec: playSession.fixedStep,
     registerResource: (label, dispose) => playSession.registerResource(label, dispose),
   };
-  binding = bindFractureToPlay(host, opts);
+  return attachFixedTick(bindFractureToPlay(host, opts));
+}
+
+/**
+ * 给绑定接上固定步分发（R3 唯一实现，宿主适配器与编辑器控制器共用）。
+ * 后端未就绪（Rapier WASM 加载中）或已释放时不抛异常，静默跳过本步：
+ * 碎片是装饰，宁可延迟几帧也不阻断整个 Play 帧。
+ */
+export function attachFixedTick(
+  binding: FracturePlayBinding,
+): FracturePlayBinding & { onFixedTick(dtSec: number): void } {
   return Object.assign(binding, {
     onFixedTick(dtSec: number): void {
-      // R3：后端未就绪（Rapier WASM 加载中）时不抛异常，静默跳过本步。
-      // 碎片是装饰：宁可延迟几帧也不阻断整个 Play 帧。
-      if (binding !== null && binding.backend() !== null) {
+      if (binding.backend() !== null) {
         try { binding.runtime.tick(dtSec); } catch { /* 未就绪/已释放：静默跳过 */ }
       }
     },

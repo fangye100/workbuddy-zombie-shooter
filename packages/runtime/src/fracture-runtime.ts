@@ -173,9 +173,14 @@ const DEFAULTS = {
 
 /** 支撑面（来自真实场景 collider 镜像；无镜像则小块继续下落，不生成无限地面）。 */
 interface SupportSurface {
+  /** box 走局部系 slab 求交；sphere/capsule 走竖向圆截面求交。 */
+  kind?: 'box' | 'sphere' | 'capsule';
   x: number; z: number; topY: number; halfX: number; halfZ: number;
   centerY: number; qx: number; qy: number; qz: number; qw: number;
   localHalfX: number; localHalfY: number; localHalfZ: number;
+  /** 球/胶囊截面半径与圆柱段半高（box 为 0/undefined）。 */
+  roundRadius?: number;
+  roundHalfHeight?: number;
 }
 
 /** 四元数共轭（逆旋转）。 */
@@ -202,6 +207,15 @@ function quatRotate(qx: number, qy: number, qz: number, qw: number, vx: number, 
  * 产生虚假支撑，高度也无系统性偏差。
  */
 function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | null {
+  // 球/胶囊：竖线在圆截面内的支撑高度 = 中心 Y + 圆柱段半高 + sqrt(r² - d²)。
+  // 球/胶囊在简化层按竖直姿态处理（旋转不改变其竖向轮廓），足印外返回 null。
+  if (su.kind === 'sphere' || su.kind === 'capsule') {
+    const r = su.roundRadius ?? 0;
+    const dx = qx - su.x, dz = qz - su.z;
+    const d2 = dx * dx + dz * dz;
+    if (r <= 0 || d2 > r * r) return null;
+    return su.centerY + (su.roundHalfHeight ?? 0) + Math.sqrt(r * r - d2);
+  }
   // 逆旋转：把竖线（过查询点、方向世界 +Y）变到 OBB 局部系
   const [iqx, iqy, iqz, iqw] = quatConj(su.qx, su.qy, su.qz, su.qw);
   const dx = qx - su.x, dz = qz - su.z;

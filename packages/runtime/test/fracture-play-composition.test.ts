@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { SceneGraph } from '@aether/scene';
 import { bindFractureToPlay, bindFractureToPlaySession, type FracturePlayHost } from '../src/fracture-play-composition';
-import { PlaySession } from '../../zombie-game/src/play-session';
+import { PlaySession } from '@aether/zombie-game';
 
 const STEP = 1 / 60;
 

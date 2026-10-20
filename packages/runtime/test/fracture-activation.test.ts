@@ -5,12 +5,15 @@
  * 打开后外改 sidecar、seed 确定性、不同来向差异、convex 端口契约。
  */
 import { describe, it, expect } from 'vitest';
-import { prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
+import { createGlbConvexResolver, prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
 import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
 
 // 仓库门禁规约：测试用 import.meta.glob 读正式资产（禁 node:fs）。
 const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
-const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+// 二进制通道：?raw 会把 GLB 按 UTF-8 解码（BIN chunk 被替换字符污染，实测 2480172 字节
+// 只剩 2349234 码位），不能用来证明「真实 GLB 被解析」。?bytes 由 vitest.config.ts 的
+// 加载器在配置层读原始字节，测试侧只拿到 Uint8Array（仍不 import node:fs）。
+const binLoaders = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
 // 额外加载源模型 sidecar（R1 引用核验需要）
 const srcMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 // NPC 源模型 sidecar（E-04 在 characters 目录）
@@ -37,10 +40,11 @@ function makeIO(
   }
   for (const [k, v] of Object.entries(overrides)) store.set(k, v);
   const binStore = new Map<string, ArrayBuffer>();
-  for (const [k, v] of Object.entries(binGlob)) {
-    binStore.set(k.replace(/^.*?(?=assets\/)/, ''), new TextEncoder().encode(v).buffer as ArrayBuffer);
-  }
   for (const [k, v] of Object.entries(binOverrides)) binStore.set(k, v);
+  const binLoaderByPath = new Map<string, () => Promise<Uint8Array>>();
+  for (const [k, loader] of Object.entries(binLoaders)) {
+    binLoaderByPath.set(k.replace(/^.*?(?=assets\/)/, ''), loader);
+  }
   return {
     async readText(path: string) {
       const v = store.get(path);
@@ -48,13 +52,50 @@ function makeIO(
       return v;
     },
     async readBinary(path: string) {
-      const v = binStore.get(path);
-      if (v === undefined) throw new Error('未找到二进制资产：' + path);
-      return v;
+      const over = binStore.get(path);
+      if (over !== undefined) return over;
+      const loader = binLoaderByPath.get(path);
+      if (loader === undefined) throw new Error('未找到二进制资产：' + path);
+      const bytes = await loader();
+      // 复制到独立 ArrayBuffer，避免与模块缓存共享（与真实 IO 语义一致）
+      return bytes.slice().buffer;
     },
     set(path: string, v: string) { store.set(path, v); },
     setBin(path: string, v: ArrayBuffer) { binStore.set(path, v); },
   };
+}
+
+/** 与准入判定同口径的非退化检查：存在「离基面距离 > 1e-6」的第四点。 */
+function hasNonCoplanar(pts: Float32Array): boolean {
+  const n = pts.length / 3;
+  let maxDist = 0, i0 = 0, i1 = 1;
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+    const dx = pts[a*3]!-pts[b*3]!, dy = pts[a*3+1]!-pts[b*3+1]!, dz = pts[a*3+2]!-pts[b*3+2]!;
+    const d = dx*dx + dy*dy + dz*dz;
+    if (d > maxDist) { maxDist = d; i0 = a; i1 = b; }
+  }
+  const ax = pts[i0*3]!, ay = pts[i0*3+1]!, az = pts[i0*3+2]!;
+  const abx = pts[i1*3]!-ax, aby = pts[i1*3+1]!-ay, abz = pts[i1*3+2]!-az;
+  let maxArea = 0, i2 = -1;
+  for (let a = 0; a < n; a++) {
+    if (a === i0 || a === i1) continue;
+    const acx = pts[a*3]!-ax, acy = pts[a*3+1]!-ay, acz = pts[a*3+2]!-az;
+    const nx = aby*acz - abz*acy, ny = abz*acx - abx*acz, nz = abx*acy - aby*acx;
+    const area = nx*nx + ny*ny + nz*nz;
+    if (area > maxArea) { maxArea = area; i2 = a; }
+  }
+  if (maxArea < 1e-12 || i2 < 0) return false;
+  const cx = pts[i2*3]!, cy = pts[i2*3+1]!, cz = pts[i2*3+2]!;
+  const nx = aby*(cz-az) - abz*(cy-ay), ny = abz*(cx-ax) - abx*(cz-az), nz = abx*(cy-ay) - aby*(cx-ax);
+  const nLen = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+  let maxVol = 0;
+  for (let a = 0; a < n; a++) {
+    if (a === i0 || a === i1 || a === i2) continue;
+    const dx = pts[a*3]!-ax, dy = pts[a*3+1]!-ay, dz = pts[a*3+2]!-az;
+    const v = Math.abs(nx*dx + ny*dy + nz*dz) / nLen;
+    if (v > maxVol) maxVol = v;
+  }
+  return maxVol > 1e-6;
 }
 
 let seq = 0;
@@ -215,8 +256,8 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(r3.ok).toBe(false);
     if (!r3.ok) expect(r3.failure.stage).toBe('proxy-load');
 
-    // 真实凸代理成功路径：用真实 GLB 二进制 + 合法解析
-    // 四面体（非共面四点，有正体积）
+    // 端口契约：合法点集（此处是替身常量，仅证明端口被调用，不代表 GLB 解析；
+    // 真实 GLB 正路径见下一条「R1：真实 chunk GLB 经生产 resolver」用例）。
     const r4 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
       io, resolveConvexPoints: () => new Float32Array([0,0,0, 1,0,0, 0,1,0, 0,0,1]),
     });
@@ -242,6 +283,48 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     });
     expect(r7.ok).toBe(false);
     if (!r7.ok) expect(r7.failure.stage).toBe('proxy-load');
+  });
+
+  it('R1：真实 chunk GLB 经生产 resolver 解析出非退化凸点集并完成准入', async () => {
+    // 这条用例证明的是「真实 GLB 二进制 → scene 的真解析器 → 合法凸点集 → 准入通过」，
+    // 不是端口替身：resolver 用生产实现 createGlbConvexResolver()，输入是仓库里
+    // 真正的 chunk-0001.glb 字节（?bytes 通道，文件头 glTF）。
+    const vecGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const key = Object.keys(vecGlob).find((k) => /chunk-0001\.glb$/.test(k))!;
+    const bytes = await vecGlob[key]!();
+    // 输入自证：GLB 魔数 + 版本 2 + 声明长度 == 实际字节数
+    const magic = String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!);
+    expect(magic).toBe('glTF');
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    expect(view.getUint32(4, true)).toBe(2);
+    expect(view.getUint32(8, true)).toBe(bytes.byteLength);
+    expect(bytes.byteLength).toBeGreaterThan(1_000_000);
+
+    // 生产 resolver：同一份字节交给真解析器
+    const resolver = createGlbConvexResolver();
+    const pts = resolver(bytes.slice().buffer);
+    expect(pts).toBeInstanceOf(Float32Array);
+    expect(pts.length).toBeGreaterThanOrEqual(9);
+    expect(pts.length % 3).toBe(0);
+    // 真解析会给出上百个顶点（不是四面体替身），且全部有限
+    expect(pts.length / 3).toBeGreaterThan(100);
+    for (let i = 0; i < pts.length; i++) expect(Number.isFinite(pts[i]!)).toBe(true);
+    // 非退化：存在非共面四点（与准入判定同口径）
+    expect(hasNonCoplanar(pts)).toBe(true);
+
+    // 走完整准入：profile 第一块改为 convex 代理，直接引用同一 chunk GLB
+    const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01.chunks[0].proxy.shape = { type: 'convex', mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' } };
+    const io = makeIO({ [P01]: JSON.stringify(p01) });
+    const r = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io, resolveConvexPoints: resolver });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const sh = r.activation.chunks[0]!.shape;
+    expect(sh.type).toBe('convex');
+    if (sh.type === 'convex') expect(sh.points.length).toBe(pts.length);
+
+    // 负例：同一 resolver 对损坏 GLB 必须抛错（证明它真的在解析，不是忽略输入）
+    expect(() => resolver(new ArrayBuffer(12))).toThrow();
   });
 
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {
