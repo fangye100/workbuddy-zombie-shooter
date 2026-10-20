@@ -100,6 +100,8 @@ struct VSOut {
   @location(3) uv : vec2f,
   @location(4) local : vec3f,
   @location(5) effects : vec2f,
+  /** 实例透明度（刚体模式取自基向量 m0.w；旧角色恒为 1）。 */
+  @location(6) alpha : f32,
 };
 
 struct FragOut {
@@ -204,6 +206,7 @@ fn vs_main(
   out.albedo = i.color.rgb;
   out.uv = uv;
   out.local=position;out.effects=i.blend.zw;
+  out.alpha = select(1.0, rigid[ii].m0.w, isRigid(i));
   out.clip = frame.viewProj * vec4f(worldPos, 1.0);
   return out;
 }
@@ -243,6 +246,7 @@ fn vs_outline(
   out.uv = vec2f(0);
   out.local=position;out.effects=i.blend.zw;
   out.clip = frame.viewProj * vec4f(expanded, 1.0);
+  out.alpha = select(1.0, rigid[ii].m0.w, isRigid(i));
   return out;
 }
 
@@ -304,7 +308,7 @@ fn fs_main(in : VSOut) -> FragOut {
   // Share the comic halftone pass with the street, at half strength for silhouette
   // readability. The global post toggle still owns enablement; debug views stay clean.
   out.aux = vec4f(select(0.0, 0.5, toon.flags.x < 0.5), 0.0, 0.0, 0.0);
-  out.hdr = vec4f(max(vec3f(0.0), color), 1.0);
+  out.hdr = vec4f(max(vec3f(0.0), color), in.alpha);
   return out;
 }
 

@@ -494,6 +494,14 @@ export class RendererCore {
       ],
     });
 
+    // 碎片刚体模式用 alpha 淡出；其他动态实体 alpha=1，视觉与原不透明输出一致。
+    const alphaBlendTarget = (t: GPUColorTargetState): GPUColorTargetState => ({
+      format: t.format,
+      blend: {
+        color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+      },
+    });
     const targets: GPUColorTargetState[] = [{ format: HDR_FORMAT }, { format: HDR_FORMAT }];
 
     this.mainPipeline = this.device.createRenderPipeline({
@@ -749,15 +757,16 @@ export class RendererCore {
       label: 'dynamic',
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout, this.dynamicMaterialLayout] }),
       vertex: { ...dyVertex, entryPoint: 'vs_main' },
-      fragment: { module: dyModule, entryPoint: 'fs_main', targets },
+      fragment: { module: dyModule, entryPoint: 'fs_main', targets: targets.map(alphaBlendTarget) },
       primitive: { topology: 'triangle-list', cullMode: 'none', frontFace: 'ccw' },
+      // 逐实例淡出需要 alpha 混合；alpha=1 的实例输出与原来一致。
       depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: true, depthCompare: 'less' },
     });
     this.dynamicOutlinePipeline = this.device.createRenderPipeline({
       label: 'dynamic-outline',
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.dynamicLayout, this.dynamicMaterialLayout] }),
       vertex: { ...dyVertex, entryPoint: 'vs_outline' },
-      fragment: { module: dyModule, entryPoint: 'fs_outline', targets },
+      fragment: { module: dyModule, entryPoint: 'fs_outline', targets: targets.map(alphaBlendTarget) },
       // inverted hull：只画背面，让外扩的壳只在轮廓外圈露出一条边
       primitive: { topology: 'triangle-list', cullMode: 'front', frontFace: 'ccw' },
       depthStencil: { format: DEPTH_FORMAT, depthWriteEnabled: false, depthCompare: 'less' },

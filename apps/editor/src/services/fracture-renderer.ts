@@ -131,6 +131,9 @@ export class PlayFractureRenderer {
 
       const rigid = new Float32Array(RIGID_INSTANCE_FLOATS);
       basisFromQuat(q, chunk.worldScale, rigid, 0);
+      // 逐实例淡出：运行时在寿命末尾给出 fade(0..1)，写到基向量 m0.w（shader 读它做 alpha）。
+      const alpha = Math.max(0, Math.min(1, 1 - chunk.fade));
+      rigid[3] = alpha;
 
       // 逐子网格分组：同一 (meshId, 索引区间, 材质) 的实例合并进同一批，
       // 重复几何不会按实例数放大 draw。
