@@ -27,7 +27,10 @@ export interface FractureChunkInput {
   /** 激活时的世界变换（资产 bind 已组合进目标世界变换，只执行一次）。 */
   readonly position: FractureVec3;
   readonly rotation: FractureQuat;
-  /** 显示/碰撞世界尺度（bind.scale 已按三轴组合进 shape 与本值；非均匀组合在准入拒绝）。 */
+  /**
+   * 显示/碰撞世界尺度（bind.scale × 事件均匀尺度，二元标量）。shape 仍是未缩放的
+   * 资产局部代理；运行时由 scaledShape 按本值折进世界尺寸（唯一一次）。
+   */
   readonly scale: number;
   /** 碰撞代理（未缩放的资产局部，中心在质心）；激活时按 scale 折进世界尺寸。 */
   readonly shape:

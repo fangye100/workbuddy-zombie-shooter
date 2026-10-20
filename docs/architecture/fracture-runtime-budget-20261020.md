@@ -141,7 +141,9 @@ runtime.play。WU-06/07 的伤害/死亡策略从这里喂事件；不存在「�
 profile 的 pivot 是资产原始坐标里的局部点（实测 chunk-0009 原始 POSITION
 y=0.6005..0.9005，pivot.y=0.789352）。因此解析器用
 parseGlb(buffer, null, 'auto', { normalize: false }) 取未规整化坐标，再由准备函数
-减去 pivot，得到「以 pivot 为原点」的代理局部系；body 平移 = pivot + 事件世界变换。
+减去 pivot，得到「以 pivot 为原点」的代理局部系。body 平移的完整公式是
+eventT + eventR·(bindT + bindR·(bindS·pivot))·eventS（bind 为单位变换时才退化为
+pivot + 事件世界变换，P-01/chunk-0009 属于这种特例）。
 若改用默认的居中/贴地结果，碰撞体会整体偏离 body（chunk-0009 偏差约 0.79 m）。
 测试同时覆盖 chunk-0001（pivot 接近原点）与 chunk-0009（pivot 远离原点），
 并有手写已知偏移 GLB 的逐点闭式对照。

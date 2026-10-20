@@ -341,7 +341,9 @@ export async function prepareFractureActivation(
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理解析失败：' + String(e) } };
       }
       // 代理局部系以 profile.pivot 为原点：resolver 给的是资产原始坐标，
-      // 减去 pivot 后与 body 的平移（= pivot + 事件世界变换）自洽。
+      // 减去 pivot 后与 body 的世界平移自洽。body 平移的完整公式见下方变换链：
+      // eventT + eventR·(bindT + bindR·(bindS·pivot))·eventS
+      // （bind 为单位变换时才退化成 pivot + 事件世界变换）。
       if (pts instanceof Float32Array && pts.length % 3 === 0 && pts.length >= 3) {
         const px = c.pivot[0], py = c.pivot[1], pz = c.pivot[2];
         for (let i = 0; i < pts.length; i += 3) {
