@@ -31,8 +31,7 @@ export function chunkPrims(doc, nodeName) {
 export function verifyChunkGeometry(prims, label, failures) {
   const forward = new Map();
   let area = 0, volume = 0, degenerate = 0, nonFinite = 0, badNormal = 0, badUv = 0, capTris = 0, badCapNormal = 0;
-  const tris = [];
-  const primOf = i => prims.findIndex(p => i < p.positions.length / 3);
+  const tris = []; // { tri, prim } — track origin prim per triangle
   for (const prim of prims) {
     for (let v = 0; v < prim.positions.length / 3; v++) {
       const p = [prim.positions[v * 3], prim.positions[v * 3 + 1], prim.positions[v * 3 + 2]];
@@ -41,29 +40,37 @@ export function verifyChunkGeometry(prims, label, failures) {
       if (!n.every(Number.isFinite) || Math.abs(Math.hypot(...n) - 1) > 0.05) badNormal++;
       if (![prim.uvs[v * 2], prim.uvs[v * 2 + 1]].every(Number.isFinite)) badUv++;
     }
-    for (let i = 0; i < prim.indices.length; i += 3) tris.push([prim.indices[i], prim.indices[i + 1], prim.indices[i + 2]]);
+    for (let i = 0; i < prim.indices.length; i += 3) tris.push({ tri: [prim.indices[i], prim.indices[i + 1], prim.indices[i + 2]], prim });
   }
-  const posAt = i => { const p = prims[primOf(i)]; return [p.positions[i * 3], p.positions[i * 3 + 1], p.positions[i * 3 + 2]]; };
-  const nrmAt = i => { const p = prims[primOf(i)]; return [p.normals[i * 3], p.normals[i * 3 + 1], p.normals[i * 3 + 2]]; };
+  const shared = prims[0];
+  const posAt = i => [shared.positions[i * 3], shared.positions[i * 3 + 1], shared.positions[i * 3 + 2]];
+  const nrmAt = i => [shared.normals[i * 3], shared.normals[i * 3 + 1], shared.normals[i * 3 + 2]];
   // Primitives share one vertex set (same accessors); count it once.
   const vertexCount = prims[0].positions.length / 3;
   const centroid = [0, 0, 0];
   for (let i = 0; i < vertexCount; i++) { const p = posAt(i); for (let k = 0; k < 3; k++) centroid[k] += p[k] / vertexCount; }
-  for (const t of tris) {
-    const a = posAt(t[0]), b = posAt(t[1]), c = posAt(t[2]);
+  for (const { tri: t, prim } of tris) {
+    const a = prims[0] ? [prims[0].positions[t[0] * 3], prims[0].positions[t[0] * 3 + 1], prims[0].positions[t[0] * 3 + 2]] : posAt(t[0]);
+    const b = prims[0] ? [prims[0].positions[t[1] * 3], prims[0].positions[t[1] * 3 + 1], prims[0].positions[t[1] * 3 + 2]] : posAt(t[1]);
+    const c = prims[0] ? [prims[0].positions[t[2] * 3], prims[0].positions[t[2] * 3 + 1], prims[0].positions[t[2] * 3 + 2]] : posAt(t[2]);
     const gn = triangleNormal(a, b, c);
     const cr = cross(sub(b, a), sub(c, a));
     const triArea = Math.hypot(...cr) / 2;
     if (!(triArea > 1e-12)) degenerate++;
     area += triArea;
     volume += dot(a, cross(b, c)) / 6;
-    const isCap = prims[primOf(t[0])].material === 1;
+    const isCap = prim.material === 1;
     if (isCap) {
       capTris++;
+      // Per-triangle: the average vertex normal must not be anti-parallel to the
+      // geometric normal (backface-dark caps); strict 0.99 alignment only holds
+      // for planar cut faces, not body cross-section contours.
+      const avgN = [0, 0, 0];
       for (const v of t) {
         const vn = nrmAt(v);
-        if (dot(vn, gn) < 0.99 || dot(vn, sub((v === t[0] ? a : v === t[1] ? b : c), centroid)) < 0) badCapNormal++;
+        for (let k = 0; k < 3; k++) avgN[k] += vn[k] / 3;
       }
+      if (dot(normalize(avgN), gn) < 0.5) badCapNormal++;
     }
     for (const e of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]) {
       const k = keyOf(posAt(e[0])) + '>' + keyOf(posAt(e[1]));

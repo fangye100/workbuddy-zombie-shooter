@@ -39,7 +39,7 @@
     "elevation": 0.32
   },
   "entryCamera": "nd_cam0000",
-  "playerStart": null,
+  "playerStart": "nd_fr_player",
   "loseCondition": "player-death",
   "dependencies": [],
   "nodes": [
@@ -179,6 +179,97 @@
             ]
           },
           "physicsMaterial": null
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_room",
+      "name": "Room",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "none",
+          "clearTarget": null
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_nav",
+      "name": "NavZone",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              8,
+              4,
+              8
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          }
         }
       ]
     },
@@ -962,6 +1053,51 @@
       ]
     },
     {
+      "id": "nd_fr_player",
+      "name": "玩家出生点",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          2.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              0.4,
+              1.7,
+              0.4
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
       "id": "nd_fr_spawn",
       "name": "E-04 刷怪（致死碎裂）",
       "parent": null,
@@ -993,8 +1129,8 @@
           "characterId": "E-04",
           "count": 1,
           "wave": 1,
-          "trigger": "manual",
-          "delaySec": 0,
+          "trigger": "room-enter",
+          "delaySec": 0.5,
           "radius": 0.4,
           "prefab": null,
           "deathFracture": {
@@ -1047,7 +1183,7 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-20T04:23:13.347Z",
-    "updatedAt": "2026-10-20T04:23:13.348Z"
+    "createdAt": "2026-10-20T04:51:14.204Z",
+    "updatedAt": "2026-10-20T04:51:14.205Z"
   }
 }

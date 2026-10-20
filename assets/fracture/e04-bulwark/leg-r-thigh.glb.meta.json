@@ -17,11 +17,11 @@
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
     "fractureBuild": {
       "chunk": "leg-r-thigh",
-      "builtAt": "2026-10-20T04:22:22.677Z"
+      "builtAt": "2026-10-20T04:44:48.814Z"
     },
     "variant": "e04-bulwark",
     "file": "leg-r-thigh.glb"
   },
-  "sourceHash": "sha256:9f286133e5aa5093535c43686226ae4ac64e07317aaf2d85d18f1e632ef3fdbf",
-  "updatedAt": "2026-10-20T04:22:22.681Z"
+  "sourceHash": "sha256:e0c8dc7ca3f1b93edff25deff81d8020a205318374ac83dab2ce1c11b70ac8e8",
+  "updatedAt": "2026-10-20T04:44:48.820Z"
 }

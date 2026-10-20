@@ -17,11 +17,11 @@
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
     "fractureBuild": {
       "chunk": "leg-r-shin",
-      "builtAt": "2026-10-20T04:22:22.684Z"
+      "builtAt": "2026-10-20T04:44:48.825Z"
     },
     "variant": "e04-bulwark",
     "file": "leg-r-shin.glb"
   },
-  "sourceHash": "sha256:e21c4b1c1c836d682f0cf58903e5f7e0ae23817bed7e722d4e82b44ce0fbb0b4",
-  "updatedAt": "2026-10-20T04:22:22.687Z"
+  "sourceHash": "sha256:e280b4ba3366aec9ee43a50a725702cae1e08b7b9b989851deb54fc815a77a80",
+  "updatedAt": "2026-10-20T04:44:48.830Z"
 }

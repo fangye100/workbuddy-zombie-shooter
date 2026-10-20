@@ -110,8 +110,17 @@ function capOpenEdges(local, open) {
     const joints = aj ? [aj[dominant], aj[dominant], aj[dominant], aj[dominant]] : null;
     const weights = aj ? [1, 0, 0, 0] : null;
     const center = local.add(centroidP, [0, 1, 0], centroidUV, local.weights.length ? joints : null, local.weights.length ? weights : null);
-    const corners = rev.map(v => capVertex(v, loopId, joints, weights));
-    for (let i = 0; i < corners.length; i++) triangles.push([corners[i], corners[(i + 1) % corners.length], center]);
+    // Per-triangle cap copies with flat geometric normals: shared copies cannot
+    // serve non-planar fans (aggregated normals go anti-parallel to some triangles).
+    for (let i = 0; i < rev.length; i++) {
+      const next = rev[(i + 1) % rev.length];
+      const pa = local.p(rev[i]), pb = local.p(next), pc = centroidP;
+      const gn = triangleNormal(pa, pb, pc);
+      const v0 = local.add(pa, gn, local.t(rev[i]), joints, weights);
+      const v1 = local.add(pb, gn, local.t(next), joints, weights);
+      const v2 = local.add(pc, gn, centroidUV, joints, weights);
+      triangles.push([v0, v1, v2]);
+    }
   };
   let loopId = 0;
   for (const loop of chainLoops(local, open)) fanFromLoop(loop, loopId++);
@@ -135,13 +144,14 @@ function capOpenEdges(local, open) {
     const joints = [rj[rdom], rj[rdom], rj[rdom], rj[rdom]];
     const weights = [1, 0, 0, 0]; // rigid dominant joint, same rule as fan centres
     const center = local.add(centroid, [0, 1, 0], [0, 0], local.weights.length ? joints : null, local.weights.length ? weights : null);
-    for (const k of stillOpen) triangles.push([capVertex(indexOfKey(local, k.split('>')[1]), 'residual', joints, weights), capVertex(indexOfKey(local, k.split('>')[0]), 'residual', joints, weights), center]);
-  }
-  // Assign flat geometric normals to all cap vertices (per-triangle face normal).
-  for (const t of triangles) {
-    const n = triangleNormal(local.p(t[0]), local.p(t[1]), local.p(t[2]));
-    for (const v of t) if (capIndex.has(positionKey(local, v))) {
-      local.normals[v * 3] = n[0]; local.normals[v * 3 + 1] = n[1]; local.normals[v * 3 + 2] = n[2];
+    for (const k of stillOpen) {
+      const pa = local.p(indexOfKey(local, k.split('>')[1]));
+      const pb = local.p(indexOfKey(local, k.split('>')[0]));
+      const gn = triangleNormal(pa, pb, centroid);
+      const v0 = local.add(pa, gn, [0, 0], joints, weights);
+      const v1 = local.add(pb, gn, [0, 0], joints, weights);
+      const v2 = local.add(centroid, gn, [0, 0], joints, weights);
+      triangles.push([v0, v1, v2]);
     }
   }
   return { triangles, capVertices: capIndex.size };

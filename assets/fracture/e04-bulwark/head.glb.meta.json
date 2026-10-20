@@ -17,11 +17,11 @@
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
     "fractureBuild": {
       "chunk": "head",
-      "builtAt": "2026-10-20T04:22:22.609Z"
+      "builtAt": "2026-10-20T04:44:48.732Z"
     },
     "variant": "e04-bulwark",
     "file": "head.glb"
   },
-  "sourceHash": "sha256:3ef833fd35fa95e3a11cfd983b167004c5fd96e98cc2ebf55e3d68a7c838cb19",
-  "updatedAt": "2026-10-20T04:22:22.614Z"
+  "sourceHash": "sha256:a868b5c956b0c449dd30be2515ba1d5ba135a96a70c1fe38dd7f91ccddacaf03",
+  "updatedAt": "2026-10-20T04:44:48.738Z"
 }

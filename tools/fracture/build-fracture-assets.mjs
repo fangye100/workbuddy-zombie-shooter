@@ -169,9 +169,9 @@ export async function buildBarrel(sourcePath, outDir) {
       }
       const outer = [], caps = [];
       const capCopy = new Map();
-      const capVertex = v => {
+      const capVertex = (v, planeTag) => {
         const p = local.p(v);
-        const k = p.map(x => Math.round(x * 1e6)).join(',');
+        const k = p.map(x => Math.round(x * 1e6)).join(',') + '@' + planeTag;
         if (capCopy.has(k)) return capCopy.get(k);
         const index = local.add(p, [0, 1, 0], [p[0], p[2]]);
         capCopy.set(k, index);
@@ -185,7 +185,8 @@ export async function buildBarrel(sourcePath, outDir) {
         const isCap = common.length >= 1 && Math.abs(dot(triangleNormal(...ps), common[0].normal)) > 0.99;
         if (!isCap) { outer.push(tri); continue; }
         const n = dot(triangleNormal(...ps), common[0].normal) >= 0 ? common[0].normal : common[0].normal.map(v => -v);
-        const copies = tri.map(capVertex);
+        const planeTag = planes.indexOf(common[0]);
+        const copies = tri.map(v => capVertex(v, planeTag));
         for (const c of copies) { local.normals[c * 3] = n[0]; local.normals[c * 3 + 1] = n[1]; local.normals[c * 3 + 2] = n[2]; }
         caps.push(copies);
       }

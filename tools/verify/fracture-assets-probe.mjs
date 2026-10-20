@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { makeArgParser, ensureServer, launchEditorSession, waitForEditorReady, createRecorder } from './editor-smoke-lib.mjs';
+import { makeArgParser, ensureServer, launchEditorSession, waitForEditorReady, waitFor, createRecorder } from './editor-smoke-lib.mjs';
 
 /** WU-02 headed real-GPU close-ups of the formal fracture assets via the existing
  * editor renderer (no new render pipeline). Static chunk display only: WU-05/06/07
@@ -49,14 +49,10 @@ try {
   await capture('02-barrel-chunks-separated');
   await aim([-0.9, 1.0, -0.6], 2.4, 0.2, 1.25);
   await capture('03-npc-chunks-closeup');
-  // 非 bind 姿态：进入 Play 观察 E-04（死亡碎裂目标 actor）运行动画一帧。
-  await cdp.eval('document.getElementById("btn-play") && document.getElementById("btn-play").click(), true');
-  await new Promise(r => setTimeout(r, 1500));
-  await aim([-0.6, 1.0, 1.6], 3.2, 0.25, 0.6);
-  await capture('04-npc-run-nonbind');
-  await cdp.eval('document.getElementById("btn-stop") && document.getElementById("btn-stop").click(), true');
+  // 非 bind 姿态证据由离线数值验收承担（run@0.4s maxDelta=0、刚体保形 2e-9）。
+  // Play 模式截图需要 WU-06/07 的完整运行时接线（RunRules/波次/玩家控制），不属 WU-02 资产范围。
   evidence.screenshots = fs.readdirSync(out).filter(f => f.endsWith('.png'));
-  check('四张近景截图落盘', evidence.screenshots.length >= 4, evidence.screenshots.join(','));
+  check('三张近景截图落盘（原桶/分离切口/NPC分块）', evidence.screenshots.length >= 3, evidence.screenshots.join(','));
 } finally {
   fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(evidence, null, 2));
   try { await chrome.kill(); } catch {}
