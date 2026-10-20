@@ -235,6 +235,12 @@ export interface CoreDynamicBatch {
   /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
   count: number;
   /**
+   * 子网格绘制区间（可选）：同一个 meshId 的几何可被多个批次复用，只画各自的
+   * indexStart..+indexCount（切口/外表面不同材质）。缺省画全部索引。
+   */
+  indexStart?: number;
+  indexCount?: number;
+  /**
    * 刚体模式实例基向量（可选）：每实例 12 个 float（3×vec4，xyz = 基向量）。
    * 提供时调用方需在实例行 anim.z 置 bit1；缺省/长度不足则该实例按旧 yaw 分支绘制。
    * 与 20-float 行并存，不改动 palette/transition/impactPulse/burnClock 语义。
@@ -835,6 +841,22 @@ export class RendererCore {
     return mesh;
   }
 
+  /** 共享白色材质（无 albedo 的批次用；颜色由实例 color 提供）。懒创建。 */
+  private solidDynamicMaterialCache: GPUBindGroup | null = null;
+  private solidDynamicTexture: GPUTexture | null = null;
+  private solidDynamicMaterial(): GPUBindGroup {
+    if (this.solidDynamicMaterialCache !== null) return this.solidDynamicMaterialCache;
+    const tex = this.device.createTexture({ label: 'dyn-solid', size: [1, 1], format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+    this.device.queue.writeTexture({ texture: tex }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, [1, 1]);
+    this.solidDynamicTexture = tex;
+    this.solidDynamicMaterialCache = this.device.createBindGroup({
+      label: 'dyn-solid-material', layout: this.dynamicMaterialLayout,
+      entries: [{ binding: 0, resource: tex.createView() }, { binding: 1, resource: this.sampler }],
+    });
+    return this.solidDynamicMaterialCache;
+  }
+
   /** 丢弃全部已缓存的动态代理网格（换关卡 / 代理体参数变了时调用） */
   clearDynamicMeshes(): void {
     for (const m of this.dynamicMeshes.values()) {
@@ -858,6 +880,9 @@ export class RendererCore {
    */
   setDynamicPalette(data: Float32Array<ArrayBuffer> | null): void {
     for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
+    this.solidDynamicTexture?.destroy();
+    this.solidDynamicTexture = null;
+    this.solidDynamicMaterialCache = null;
     this.dynamicInstSlots = [];
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
@@ -899,16 +924,21 @@ export class RendererCore {
         slot.poseData = b.poseTransitions.data; slot.poseRevision = b.poseTransitions.revision;
       }
       pass.setBindGroup(0, slot.bg);
-      pass.setBindGroup(1, mesh.material);
+      // 无 albedo 的批次（如切口纯色材质）用共享白色材质，颜色由实例 color 携带，
+      // 这样同一份几何/材质可被多个子网格批次复用，不复制纹理。
+      pass.setBindGroup(1, b.albedo ? mesh.material : this.solidDynamicMaterial());
       pass.setVertexBuffer(0, mesh.vbuf);
       pass.setVertexBuffer(1, mesh.skinVb);
       pass.setIndexBuffer(mesh.ibuf, 'uint32');
       pass.setPipeline(this.dynamicPipeline);
-      pass.drawIndexed(mesh.indexCount, n);
+      const first = Math.max(0, b.indexStart ?? 0);
+      const count = Math.min(b.indexCount ?? mesh.indexCount, mesh.indexCount - first);
+      if (count <= 0) continue;
+      pass.drawIndexed(count, n, first);
       draws++;
       if (wantOutline && b.outline) {
         pass.setPipeline(this.dynamicOutlinePipeline);
-        pass.drawIndexed(mesh.indexCount, n);
+        pass.drawIndexed(count, n, first);
         draws++;
       }
     }

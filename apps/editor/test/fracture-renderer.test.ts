@@ -107,6 +107,57 @@ describe('WU-05 碎片动态批次装配', () => {
     renderer.dispose();
   }, 30000);
 
+  it('正式 chunk GLB 的材质路由：外表面带贴图、切口纯色', async () => {
+    const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const key = Object.keys(binGlob).find((k) => /p01-barrel\/chunk-0001\.glb$/.test(k))!;
+    const bytes = await binGlob[key]!();
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要文本'); },
+      async readBinary(): Promise<ArrayBuffer> { return bytes.slice().buffer; },
+    };
+    const renderer = new PlayFractureRenderer(io);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'large',
+        mesh: { path: 'chunk-0001.glb', guid: 'g1' },
+        position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere', radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0.162673, 0.114231, 0.168472],
+        linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);              // 触发异步加载
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    // 两个子网格：外表面（贴图，albedo 非空）+ 切口（纯色，albedo 为空且带深色 tint）
+    expect(renderer.dynamicBatches.length).toBe(2);
+    // node 测试环境没有 createImageBitmap，albedo 一定是 null；用 tint 区分两类子网格
+    const solid = renderer.dynamicBatches.find((b) => Math.abs(b.instances[8]! - 1) > 0.01)!;
+    const textured = renderer.dynamicBatches.find((b) => Math.abs(b.instances[8]! - 1) <= 0.01)!;
+    expect(textured).toBeDefined();
+    expect(solid).toBeDefined();
+    // 两个子网格的索引区间互不重叠且合计等于整网格
+    expect(textured.indexStart).toBe(0);
+    expect(solid.indexStart).toBe(textured.indexCount);
+    // 切口纯色 tint 来自材质 baseColorFactor（0.09,0.062,0.055）
+    expect(solid.instances[8]).toBeCloseTo(0.09, 3);
+    expect(solid.instances[9]).toBeCloseTo(0.062, 3);
+    expect(solid.instances[10]).toBeCloseTo(0.055, 3);
+    // 外表面 tint 为白（颜色由贴图提供）
+    expect(textured.instances[8]).toBeCloseTo(1, 5);
+    // 两者共用同一 geometry key（core 只上传一次顶点/索引）
+    expect(textured.meshId).toBe(solid.meshId);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
   it('small 块读简化 sim；缺失网格不会抛错', () => {
     const renderer = new PlayFractureRenderer(makeIO({}));
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });

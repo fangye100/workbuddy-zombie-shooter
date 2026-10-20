@@ -14,11 +14,20 @@ import { RIGID_INSTANCE_FLOATS, DYNAMIC_INSTANCE_FLOATS } from '@aether/render';
 import { parseGlb } from '@aether/scene';
 import type { FractureAssetIO, FractureRuntime, RapierFractureBackend } from '@aether/runtime';
 
+interface SubPart {
+  indexStart: number;
+  indexCount: number;
+  /** 纯色材质（切口）的颜色；有贴图时为 null。 */
+  tint: [number, number, number] | null;
+  textured: boolean;
+}
+
 interface MeshEntry {
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
   albedo: ImageBitmap | null;
   pivot: [number, number, number];
+  parts: SubPart[];
 }
 
 /** 刚体实例的 3×3 基向量（列主序，含旋转与世界尺度）。 */
@@ -98,29 +107,36 @@ export class PlayFractureRenderer {
         continue;
       }
 
-      const inst = new Float32Array(DYNAMIC_INSTANCE_FLOATS);
-      inst[0] = px; inst[1] = py; inst[2] = pz; inst[3] = 0;
-      inst[4] = 1; inst[5] = 1; inst[6] = 1; inst[7] = 0;   // 基向量已含尺度，行内 scale 保持 1
-      inst[8] = 1; inst[9] = 1; inst[10] = 1; inst[11] = 0; // 反照率白（材质贴图提供颜色）
-      inst[12] = 0; inst[13] = 0; inst[14] = 2; inst[15] = 0; // flags bit1 = 刚体模式
-      inst[16] = 1; inst[17] = 0; inst[18] = 0; inst[19] = 0;
-
       const rigid = new Float32Array(RIGID_INSTANCE_FLOATS);
       basisFromQuat(q, chunk.worldScale, rigid, 0);
 
-      this.batches.push({
-        meshId: 'fracture:' + chunk.mesh.path,
-        vertices: entry.vertices,
-        indices: entry.indices,
-        skin: null,
-        albedo: entry.albedo,
-        instances: inst,
-        count: 1,
-        outline: true,
-        rigid,
-      });
-      this.stats.instances++;
-      this.stats.triangles += entry.indices.length / 3;
+      // 逐子网格出批次：外表面（贴图）与切口（纯色材质）各自一批；
+      // meshId 相同 → core 只上传一次几何，材质按 albedo 有无选择（不复制纹理）。
+      for (const part of entry.parts) {
+        const inst = new Float32Array(DYNAMIC_INSTANCE_FLOATS);
+        inst[0] = px; inst[1] = py; inst[2] = pz; inst[3] = 0;
+        inst[4] = 1; inst[5] = 1; inst[6] = 1; inst[7] = 0;   // 基向量已含尺度，行内 scale 保持 1
+        const tint = part.tint ?? [1, 1, 1];
+        inst[8] = tint[0]; inst[9] = tint[1]; inst[10] = tint[2]; inst[11] = 0;
+        inst[12] = 0; inst[13] = 0; inst[14] = 2; inst[15] = 0; // flags bit1 = 刚体模式
+        inst[16] = 1; inst[17] = 0; inst[18] = 0; inst[19] = 0;
+
+        this.batches.push({
+          meshId: 'fracture:' + chunk.mesh.path,
+          vertices: entry.vertices,
+          indices: entry.indices,
+          skin: null,
+          albedo: part.textured ? entry.albedo : null,
+          instances: inst,
+          count: 1,
+          outline: true,
+          indexStart: part.indexStart,
+          indexCount: part.indexCount,
+          rigid,
+        });
+        this.stats.instances++;
+        this.stats.triangles += part.indexCount / 3;
+      }
     }
   }
 
@@ -160,7 +176,18 @@ export class PlayFractureRenderer {
         if (parsed.image !== null && typeof createImageBitmap === 'function') {
           albedo = await createImageBitmap(parsed.image).catch(() => null);
         }
-        const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, pivot: pivotKey };
+        const parts: SubPart[] = parsed.subMeshes.map((sm) => {
+          const f = sm.baseColorFactor;
+          return {
+            indexStart: sm.indexStart,
+            indexCount: sm.indexCount,
+            textured: sm.hasBaseColorTexture,
+            tint: sm.hasBaseColorTexture
+              ? null
+              : [f === null ? 1 : f[0], f === null ? 1 : f[1], f === null ? 1 : f[2]],
+          };
+        });
+        const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, pivot: pivotKey, parts };
         this.meshes.set(path, entry);
         this.stats.meshes++;
       } catch {

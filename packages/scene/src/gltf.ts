@@ -52,6 +52,10 @@ export interface SubMeshRange {
   primitiveKey: string;
   /** 该 primitive 在同一 mesh 节点内的序号（key 失效时的兜底匹配键） */
   primitiveIndex: number;
+  /** 材质 baseColorFactor（线性 RGBA）；无材质为 null。切口等纯色材质靠它取颜色。 */
+  baseColorFactor: [number, number, number, number] | null;
+  /** 该 primitive 的材质是否带 baseColorTexture（外表面贴图）。 */
+  hasBaseColorTexture: boolean;
 }
 
 /**
@@ -202,7 +206,7 @@ interface GltfJson {
   }[];
   materials?: {
     name?: string;
-    pbrMetallicRoughness?: { baseColorTexture?: { index?: number } };
+    pbrMetallicRoughness?: { baseColorTexture?: { index?: number }; baseColorFactor?: number[] };
   }[];
   textures?: { source?: number }[];
   images?: { bufferView?: number; mimeType?: string; uri?: string; name?: string }[];
@@ -844,6 +848,8 @@ export function parseGlb(
     nodeName: string;
     primitiveKey: string;
     primitiveIndex: number;
+    baseColorFactor: [number, number, number, number] | null;
+    hasBaseColorTexture: boolean;
     /** 蒙皮关节索引（4/顶点，0..nJoints-1）；无 skin 的 primitive 为 null */
     joints: Uint16Array | null;
     /** 蒙皮权重（4/顶点，已归一化）；无 skin 为 null */
@@ -951,6 +957,13 @@ export function parseGlb(
       // 没材质名才退到 #<序号> —— 此时顺序就是唯一信号
       const primitiveKey =
         matName !== undefined && matName.trim() !== '' ? matName.trim() : `#${pi}`;
+      const mat = prim.material === undefined ? undefined : json.materials?.[prim.material];
+      const bcf = mat?.pbrMetallicRoughness?.baseColorFactor;
+      const baseColorFactor: [number, number, number, number] | null =
+        Array.isArray(bcf) && bcf.length >= 3
+          ? [bcf[0] ?? 1, bcf[1] ?? 1, bcf[2] ?? 1, bcf[3] ?? 1]
+          : null;
+      const hasBaseColorTexture = mat?.pbrMetallicRoughness?.baseColorTexture !== undefined;
       chunks.push({
         name: primName,
         pos: p,
@@ -963,6 +976,8 @@ export function parseGlb(
         nodeName: inst.nodeName,
         primitiveKey,
         primitiveIndex: pi,
+        baseColorFactor,
+        hasBaseColorTexture,
         joints,
         weights,
       });
@@ -1013,6 +1028,8 @@ export function parseGlb(
       nodeName: c.nodeName,
       primitiveKey: c.primitiveKey,
       primitiveIndex: c.primitiveIndex,
+      baseColorFactor: c.baseColorFactor,
+      hasBaseColorTexture: c.hasBaseColorTexture,
     });
     posArr.set(c.pos, vOff * 3);
     norArr.set(c.nor, vOff * 3);
