@@ -53,7 +53,7 @@ play() 在分配任何物理资源/租约之前校验：碎块集合非空、chu
   maxEventQueue）。默认值 32/256/256 是计划 §6.3 的待测初值，**不是已测性能或
   永久上限**；理由：覆盖单场约 8–16 块 × 并发 2–3 处破坏的常见密度，待实测调整。
 - 容量满时按优先级淘汰：低优先级 + 更老的活动块优先回收（retire 释放真实 body +
-  归还租约），新进者优先级不占优则跳过该块；淘汰计入 stats.evicted。
+  归还租约），新进者优先级不占优则跳过该块并计入 stats.skipped（显式计数，不静默丢块）；淘汰计入 stats.evicted。
 - TTL：ageSec 超 lifetimeSec 进入淡出，fade 从 0 递增至 1；fadeSec=0 立即退役。
   退役/淡出完毕释放真实 body 并归还租约，计入 stats.expired。
 - 事件队列满拒绝新事件（queue-full）并计入 rejectedAdmission。
@@ -73,16 +73,16 @@ play() 在分配任何物理资源/租约之前校验：碎块集合非空、chu
 ## 可观察统计（CPU 链路）
 
 stats 记录：rigidActive/simplifiedActive、queuedEvents、deduplicated、
-rejectedAdmission、evicted、expired、poolActive/poolHighWater、physicsMs/
+rejectedAdmission、evicted、expired、skipped（满额跳块）、poolActive/poolHighWater、physicsMs/
 integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-05/09 绘制
 链路，本单元未测，不伪造零值或性能通过。
 
 ## 验证（实际命令与证据，SHA f540850）
 
 - pnpm run typecheck：0 错误。
-- pnpm run architecture:check：errors=[]（111 framework 文件）。
-- pnpm exec vitest run packages/runtime：20 文件 170 测试全过，其中新增
-  fracture-runtime.test.ts 25 测试：
+- pnpm run architecture:check：errors=[]（112 framework 文件）。
+- pnpm exec vitest run packages/runtime：20 文件 171 测试全过，其中新增
+  fracture-runtime.test.ts 26 测试：
   - 两层播放与真实物理组合：large 建真实 body 且速度进求解器、small 简化积分、
     固定输入同 seed 可复现（容差 1e-6）、正常容量 large 全走真实路径。
   - 去重与身份：同 run/target 去重、不同身份分别碎裂、句柄含 session+激活代次。

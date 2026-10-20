@@ -66,7 +66,7 @@ export interface FractureRejection {
 export interface FracturePlayResult {
   readonly accepted: boolean;
   readonly rejection: FractureRejection | null;
-  /** 激活代次（同 target 重开时区分新旧句柄）。 */
+  /** 入队序号（queueSeq，随 play 单调递增；非激活代次，激活代次在激活时赋予）。 */
   readonly activationGen: number;
 }
 
@@ -107,6 +107,8 @@ export interface FractureRuntimeStats {
   rejectedAdmission: number;
   evicted: number;
   expired: number;
+  /** 满额且新进者优先级不占优被跳过的碎块数（显式计数，不静默丢块）。 */
+  skipped: number;
   /** ObjectPool 租约账目。 */
   poolActive: number;
   poolHighWater: number;
@@ -135,6 +137,7 @@ export interface FractureRuntimeOptions {
 interface PendingEvent {
   readonly activation: FractureActivation;
   readonly eventKey: string;
+  readonly queueSeq: number;
 }
 
 interface Lease {
@@ -228,10 +231,11 @@ export function createFractureRuntime(
   let accumulator = 0;
   const sessionSeq = ++fractureSessionSeq;
   let activationCounter = 0;
+  let queueCounter = 0;
   const seen = new Set<string>();               // 去重：run/target 一次性
   const queue: PendingEvent[] = [];
   const activeChunks: ActiveChunk[] = [];
-  let deduplicated = 0, rejectedAdmission = 0, evicted = 0, expiredCount = 0;
+  let deduplicated = 0, rejectedAdmission = 0, evicted = 0, expiredCount = 0, skipped = 0;
   let physicsMs = 0, integrateMs = 0, updateMs = 0, ticks = 0;
 
   // 租约池：复用 Core ObjectPool 通用借还/异常契约，不另造重复通用池。
@@ -303,7 +307,7 @@ export function createFractureRuntime(
     try {
       for (const c of a.chunks) {
         const layer = c.cls === 'large' ? 'rigid' : 'simplified';
-        if (!evictFor(layer, a.priority)) continue; // 容量不足且新进者不占优：跳过该块（诊断计入统计）
+        if (!evictFor(layer, a.priority)) { skipped++; continue; } // 容量不足且不占优：显式计数跳过，不静默丢块
         const handle: FractureBodyHandle = {
           key: `${eventKey}#g${genKey}:${c.chunkId}`, // 含 session+激活代次，避免 key 重用误操作新 body
           chunkId: c.chunkId,
@@ -351,7 +355,8 @@ export function createFractureRuntime(
     backend.step(ticks);
     physicsMs += now() - t0;
     const t1 = now();
-    for (const c of activeChunks) {
+    // 遍历期间 retire 会 splice activeChunks：用拷贝遍历，避免同 tick 多块到期时跳块。
+    for (const c of [...activeChunks]) {
       c.ageSec += fixedStep;
       if (c.layer === 'simplified' && c.sim) integrateSimplified(c.sim, fixedStep);
       // 生命周期：到期进入淡出；淡出完毕退役。
@@ -375,7 +380,7 @@ export function createFractureRuntime(
         rigidActive: activeChunks.filter((c) => c.layer === 'rigid').length,
         simplifiedActive: activeChunks.filter((c) => c.layer === 'simplified').length,
         queuedEvents: queue.length,
-        deduplicated, rejectedAdmission, evicted, expired: expiredCount,
+        deduplicated, rejectedAdmission, evicted, expired: expiredCount, skipped,
         poolActive: ps.active, poolHighWater: ps.highWater,
         physicsMs, integrateMs, updateMs, ticks,
       };
@@ -391,8 +396,9 @@ export function createFractureRuntime(
       if (invalid) { rejectedAdmission++; return { accepted: false, rejection: { reason: 'invalid-activation', detail: invalid, eventKey }, activationGen: 0 }; }
       if (queue.length >= maxQueue) { rejectedAdmission++; return { accepted: false, rejection: { reason: 'queue-full', detail: `事件队列满（${maxQueue}）`, eventKey }, activationGen: 0 }; }
       seen.add(eventKey);
-      queue.push({ activation, eventKey });
-      return { accepted: true, rejection: null, activationGen: activationCounter + 1 };
+      const queueSeq = ++queueCounter;
+      queue.push({ activation, eventKey, queueSeq });
+      return { accepted: true, rejection: null, activationGen: queueSeq };
     },
     tick(frameDtSec: number): void {
       if (disposed) return;

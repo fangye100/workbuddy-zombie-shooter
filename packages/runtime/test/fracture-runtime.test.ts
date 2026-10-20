@@ -178,7 +178,7 @@ describe('WU-04 预算/优先级/TTL', () => {
     rt.dispose();
   });
 
-  it('低优先级新进者在满额且不占优时被跳过，不淘汰现有', () => {
+  it('低优先级新进者在满额且不占优时被跳过，显式计数不静默丢块', () => {
     const { rt } = makeRuntime({ maxRigidBodies: 1 });
     rt.play(act('n1', [chunk('c1', 'large')], { priority: 5 }));
     rt.stepOnce();
@@ -187,6 +187,7 @@ describe('WU-04 预算/优先级/TTL', () => {
     expect(rt.stats.rigidActive).toBe(1); // 仍是高优先级那一个
     expect(rt.active[0]!.priority).toBe(5);
     expect(rt.stats.evicted).toBe(0);
+    expect(rt.stats.skipped).toBe(1); // 跳块显式计数
     rt.dispose();
   });
 
@@ -198,6 +199,19 @@ describe('WU-04 预算/优先级/TTL', () => {
     for (let i = 0; i < 5; i++) rt.stepOnce();
     expect(rt.stats.rigidActive).toBe(0);
     expect(rt.stats.expired).toBe(1);
+    expect(backend.ledger.dynamicBodies).toBe(0);
+    rt.dispose();
+  });
+
+  it('同 tick 多块到期全部按时退役（遍历拷贝不跳块、不延迟）', () => {
+    const { backend, rt } = makeRuntime();
+    // 4 块同 lifetime 同 tick 到期
+    rt.play(act('n1', [chunk('c1', 'large'), chunk('c2', 'large', 1), chunk('c3', 'large', 2), chunk('c4', 'large', 3)], { lifetimeSec: 2 * STEP, fadeSec: 0 }));
+    rt.stepOnce();
+    expect(rt.stats.rigidActive).toBe(4);
+    rt.stepOnce(); // 第 2 tick：age=2*STEP 到期，4 块同 tick 退役
+    expect(rt.stats.rigidActive).toBe(0);
+    expect(rt.stats.expired).toBe(4);
     expect(backend.ledger.dynamicBodies).toBe(0);
     rt.dispose();
   });
