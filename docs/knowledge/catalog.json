@@ -4,6 +4,17 @@
   "scope": "Published repository documents, source contracts and tracked WorkBuddy history. Historical status is not current acceptance.",
   "entries": [
     {
+      "id": "fracture-system-development-plan-20261020",
+      "path": "docs/architecture/fracture-system-development-plan-20261020.md",
+      "title": "离线预破碎与实时三维碎片系统开发计划",
+      "role": "framework",
+      "authority": "design",
+      "status": "historical",
+      "topics": ["fracture", "destruction", "physics", "vfx", "assets", "review"],
+      "read": "2026-10-20 冻结待执行计划：预破碎资产、真实刚体与简化层、原动态渲染/伤害/导航复用、九个串行 WU 和逐单元 exact-target review；等用户开始后派发，不代表实现验收",
+      "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"]
+    },
+    {
       "id": "vfx-gameplay-integration",
       "path": "docs/animation/vfx-gameplay-integration.md",
       "title": "Act1 实战 VFX 与直接试玩",
