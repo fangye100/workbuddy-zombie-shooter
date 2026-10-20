@@ -1,7 +1,8 @@
 # 碎片运行与预算（WU-04）
 
-日期：2026-10-20。基线：codex/vfx-system-20261019（WU-03 批准 SHA 1e17e909 起；
-本指南描述 WU-04 实现 SHA 6fbe874（含 R1–R6 审核修复）。
+日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
+WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
+dffd0efb8704af64f8dd5fea88db545b7afe4025（本文件单独一笔提交，只改文档）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
@@ -79,12 +80,13 @@ rejectedAdmission、evicted、expired、skipped（满额跳块）、poolActive/p
 integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-05/09 绘制
 链路，本单元未测，不伪造零值或性能通过。
 
-## 验证（实际命令与证据，SHA 2481aa4 含 R1–R6 修复）
+## 验证（实际命令与证据；数值以 final SHA 复跑为准）
 
 - pnpm run typecheck：0 错误。
-- pnpm run architecture:check：errors=[]（114 framework 文件）。
-- pnpm exec vitest run packages/runtime：22 文件 190 测试全过，其中新增
-  fracture-runtime.test.ts 32 测试：
+- pnpm run architecture:check：errors=[]。
+- pnpm exec vitest run packages/runtime：22 文件 197 测试全过，其中
+  fracture-runtime.test.ts 35 测试、fracture-activation.test.ts 13 测试、
+  fracture-play-composition.test.ts 5 测试：
   - 两层播放与真实物理组合：large 建真实 body 且速度进求解器、small 简化积分、
     固定输入同 seed 可复现（容差 1e-6）、正常容量 large 全走真实路径。
   - 去重与身份：同 run/target 去重、不同身份分别碎裂、句柄含 session+激活代次。
@@ -113,11 +115,22 @@ assemblyScale 已含在事件世界变换、不二次乘，只执行一次）生
 
 ## 简化层场景接触（R2）
 
-小块的有界环境接触复用真实场景 collider 镜像：后端 staticSupportSurfaces() 返回所有
-静态镜像的顶部支撑面（世界 Y + XZ 范围），简化层每 tick 查询当前 XZ 位置下的最高
-支撑面，质心停在 支撑面顶 + 块支撑半径（不把质心塞进地板）。无场景 collider（或
-块移出有限平台边界）时继续下落，不生成无限地面。摩擦/恢复用 chunk 输入策略，
-非固定常数。场景 collider 变化经 syncScene 更新镜像后支撑面随之更新。
+小块的有界环境接触复用真实场景 collider 镜像。后端 staticSupportSurfaces() 返回每个
+静态 box 的 OBB 描述（中心、局部半尺寸、世界旋转四元数），不做世界 AABB 近似
+（旋转盒的 AABB 顶面会在斜坡上制造虚假平台）。
+
+查询是「竖向直线与 OBB 求交」：把过查询点 (x,z)、方向世界 +Y 的竖线逆旋转到 OBB
+局部系，得到参数化射线 o+t·d（倾斜时 d 一般非轴对齐）；用 slab 法求三个轴上的
+进入/离开区间 [tN,tF]，取 tF（须 tF > 0 且 tF ≥ max(tN,0)）；再把完整局部交点
+(ox+tF·ddx, oy+tF·ddy, oz+tF·ddz) 旋转回世界系，取世界 Y 分量加中心 Y 作为支撑面顶。
+漏掉 ddx/ddz 会把高度低估成 tF·cos²θ（30° 时 x=1 少 0.22 m、x=3 少 0.51 m）。
+局部系求交同时给出足印判定：竖线不与盒相交即无支撑，足印外不会产生虚假平台。
+
+支撑面选择按本步竖向穿越窗口（prevY ≥ topY ≥ currY）取最高面，不选头顶天花板；
+已贴伏（底部距面 ≤ 1 cm）的块保持贴面；无穿越且未贴伏返回 null，块继续下落。
+质心停在「支撑面顶 + 块支撑半径」，不塞进地板。无场景 collider（或块移出有限
+平台/斜坡边界）时继续下落，不生成无限地面。摩擦/恢复用 chunk 输入策略，非固定
+常数。场景 collider 变化经 syncScene 更新镜像后支撑面随之更新。
 
 ## 唯一固定步长（R3）
 
