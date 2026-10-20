@@ -59,6 +59,8 @@
   整帧 drawCall 从 118 增至 142（+24），三角形增加约 4.4 万。
 - 材质：浏览器侧逐批读取 `{tex:true,tint:[1,1,1]}` 与
   `{tex:false,tint:[0.09,0.062,0.055]}`，与 GLB 的 outer/inner 材质一致。
+- 资源量：12 个碎片网格共上传 5,741,472 字节（顶点 + 索引 + 全零 skin slot），
+  由 fractureRenderStats.uploadBytes 记录；GPU 缓存按 meshId 只上传一次。
 - 截图：`.workbuddy/tmp/wu05-gpu/fracture-air.png`（空中翻滚）、
   `fracture-play.png`（落地）。
 - Stop：`batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0`，
@@ -69,5 +71,9 @@
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
   Preview owner（WU-08）不在本单元。
 - 淡出只按 TTL 移除实例，尚未做逐实例 alpha 淡出（需要在动态 shader 增加透明度通道）。
+- 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次（探针记录 charBatches=2、本帧未上传
+  调色板），因此「原角色 palette/transition/hit/burn」的 headed 对照仍待含蒙皮
+  NPC 的场景验证；shader 的 bit0 分支未被刚体模式改动，pose-palette /
+  pose-transition / skin 的 owner 测试通过。
 - 逐网格 GPU 缓存在 Stop 统一释放；按 TTL 逐网格回收属后续优化。
 - GPU 压力/跨模式成本认证属 WU-09，本指南不宣称性能上限。
