@@ -512,14 +512,16 @@ export function createFractureRuntime(
   function retire(c: ActiveChunk, why: 'expire' | 'evict' | 'dispose'): void {
     if (c.expired) return;
     c.expired = true;
-    if (c.layer === 'rigid') backend.release(c.handle);
-    if (why === 'expire') expiredCount++;
-    // 归还租约（chunk 持有 lease 引用，避免线性查找/漏还）。
+    // 契约顺序：**先归还本 session 的租约，再释放后端 body**。
+    // 反过来的话，在 backend.release 执行期间池里仍占着这一格，观察者会看到
+    // 「body 已释放但 poolActive 未降」的中途状态；也确实违反"先退役/归还，再销毁"。
     if (c.lease !== null) {
       const l = c.lease;
       c.lease = null;
       if (leases.delete(l) && leasePool.isActive(l)) leasePool.release(l);
     }
+    if (c.layer === 'rigid') backend.release(c.handle);
+    if (why === 'expire') expiredCount++;
     const i = activeChunks.indexOf(c);
     if (i >= 0) activeChunks.splice(i, 1);
   }

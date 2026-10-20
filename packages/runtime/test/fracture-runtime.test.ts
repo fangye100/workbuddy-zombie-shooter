@@ -339,6 +339,34 @@ describe('WU-04 固定步长 / Pause / Step / 有界追赶', () => {
 });
 
 describe('WU-04 生命周期与异常清理', () => {
+  it('R4：退役顺序是「先归还租约、再释放后端 body」', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    // 单块：dispose 时 backend.release 里读到的 poolActive 必须是 0
+    const seen: number[] = [];
+    const origRelease = backend.release.bind(backend);
+    backend.release = (h) => { seen.push(rt.stats.poolActive); origRelease(h); };
+    expect(rt.play(act('n1', [chunk('c1', 'large')])).accepted).toBe(true);
+    rt.stepOnce();
+    expect(rt.stats.poolActive).toBe(1);
+    rt.dispose();
+    expect(seen.length).toBe(1);
+    expect(seen[0]).toBe(0); // 租约已先归还
+    expect(rt.stats.poolActive).toBe(0);
+
+    // 两块：每次 release 观察到的 poolActive 单调下降（先还再放）
+    const backend2 = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt2 = createFractureRuntime(backend2);
+    const seen2: number[] = [];
+    const orig2 = backend2.release.bind(backend2);
+    backend2.release = (h) => { seen2.push(rt2.stats.poolActive); orig2(h); };
+    expect(rt2.play(act('n2', [chunk('a', 'large'), chunk('b', 'large')])).accepted).toBe(true);
+    rt2.stepOnce();
+    expect(rt2.stats.poolActive).toBe(2);
+    rt2.dispose();
+    expect(seen2).toEqual([1, 0]);
+  });
+
   it('R4：租约 acquire 失败时已建 body 被回收（真实注入 acquire，不是 addBody）', () => {
     const { backend, rt } = makeRuntime();
     // 只让第一次 acquire 抛错：这正是修复前「先建 body、后借租约」会留下孤儿的路径。
