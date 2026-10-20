@@ -1,0 +1,501 @@
+{
+  "version": 1,
+  "id": "as_e04frct",
+  "name": "盾卫 E-04 致死碎裂",
+  "status": "accepted",
+  "kind": "npc",
+  "source": {
+    "model": {
+      "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+      "guid": "as_68c5qqtl"
+    },
+    "origin": "正式 rigged NPC（E-04 盾卫，Git LFS，HumanIK 蒙皮，6 个动画含 death）"
+  },
+  "assemblyScale": 1,
+  "chunks": [
+    {
+      "chunkId": "head",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:head"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.008033,
+        1.803008,
+        0.003049
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.3613,
+            0.2564,
+            0.2708
+          ]
+        },
+        "mass": 24.137,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "torso",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:torso"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.009827,
+        1.230405,
+        0.032082
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.4008,
+            0.4058,
+            0.2867
+          ]
+        },
+        "mass": 4.942,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "arm-l-upper",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:arm-l-upper"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.271521,
+        1.507472,
+        -0.002428
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.2545,
+            0.4022,
+            0.2603
+          ]
+        },
+        "mass": 2.819,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "arm-l-forearm",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:arm-l-forearm"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.533899,
+        1.39465,
+        -0.037229
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1877,
+            0.4605,
+            0.2339
+          ]
+        },
+        "mass": 19.383,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "arm-r-upper",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:arm-r-upper"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.284575,
+        1.528781,
+        -0.028267
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.2118,
+            0.3423,
+            0.2416
+          ]
+        },
+        "mass": 3.931,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "arm-r-forearm",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:arm-r-forearm"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.543417,
+        1.310631,
+        -0.03481
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1766,
+            0.4058,
+            0.1998
+          ]
+        },
+        "mass": 12.405,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "leg-l-thigh",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:leg-l-thigh"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.331127,
+        0.83413,
+        0.055579
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.3757,
+            0.4207,
+            0.2677
+          ]
+        },
+        "mass": 6.292,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "leg-l-shin",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:leg-l-shin"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.234491,
+        0.195152,
+        -0.018607
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1717,
+            0.2642,
+            0.2715
+          ]
+        },
+        "mass": 0.979,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "leg-r-thigh",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:leg-r-thigh"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.323924,
+        0.813652,
+        0.054682
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.3538,
+            0.4,
+            0.2397
+          ]
+        },
+        "mass": 3.987,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    },
+    {
+      "chunkId": "leg-r-shin",
+      "class": "small",
+      "mesh": {
+        "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+        "guid": "as_906d03c9",
+        "sub": "node:leg-r-shin"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.277338,
+        0.184709,
+        -0.016915
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1734,
+            0.2819,
+            0.2715
+          ]
+        },
+        "mass": 1.124,
+        "friction": 0.7,
+        "restitution": 0.2,
+        "collisionGroup": "debris"
+      }
+    }
+  ],
+  "npc": {
+    "actorId": "E-04",
+    "mode": "skinned",
+    "boneMap": {
+      "head": "Head",
+      "torso": "Spine1",
+      "arm-l-upper": "LeftArm",
+      "arm-l-forearm": "LeftForeArm",
+      "arm-r-upper": "RightArm",
+      "arm-r-forearm": "RightForeArm",
+      "leg-l-thigh": "LeftUpLeg",
+      "leg-l-shin": "LeftLeg",
+      "leg-r-thigh": "RightUpLeg",
+      "leg-r-shin": "RightLeg"
+    },
+    "normalizeHeightM": 2.05,
+    "footOffsetM": 0
+  },
+  "playback": {
+    "priority": 2,
+    "lifetimeSec": 5,
+    "fadeSec": 1,
+    "companionVfx": null
+  }
+}

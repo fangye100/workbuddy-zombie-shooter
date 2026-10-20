@@ -33,6 +33,10 @@ assets/environment/models/**/*.zip filter=lfs diff=lfs merge=lfs -text
 assets/environment/models/**/*.png filter=lfs diff=lfs merge=lfs -text
 assets/environment/images/**/*.png filter=lfs diff=lfs merge=lfs -text
 
+# 碎裂资产链（WU-02 离线制作产物：分块 GLB 与贴图）
+assets/fracture/**/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/fracture/**/*.png filter=lfs diff=lfs merge=lfs -text
+
 docs/evidence/scene-art-pass-2026-10-04/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/player-appearance-2026-10-05/*.png filter=lfs diff=lfs merge=lfs -text
 docs/evidence/comic-matching-2026-10-05/*.png filter=lfs diff=lfs merge=lfs -text

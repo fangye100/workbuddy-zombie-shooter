@@ -1,0 +1,576 @@
+{
+  "version": 1,
+  "id": "as_p01frct",
+  "name": "油桶 P-01 碎裂",
+  "status": "accepted",
+  "kind": "object",
+  "source": {
+    "model": {
+      "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+      "guid": "as_74w6e6hg"
+    },
+    "origin": "P0 正式环境资产（TokenHub 混元 3D 产物，Git LFS，LOD1 tex2 烘焙版）"
+  },
+  "assemblyScale": 1,
+  "chunks": [
+    {
+      "chunkId": "chunk-0001",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0001"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.166995,
+        0.110188,
+        0.17194
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.15,
+            0.15,
+            0.15
+          ]
+        },
+        "mass": 1.499,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0002",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0002"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.169676,
+        0.107408,
+        0.17254
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.15,
+            0.1501,
+            0.15
+          ]
+        },
+        "mass": 1.498,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0003",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0003"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.175166,
+        0.104616,
+        -0.166802
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.15,
+            0.15,
+            0.1499
+          ]
+        },
+        "mass": 1.496,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0004",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0004"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.174288,
+        0.104169,
+        -0.167676
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1499,
+            0.15,
+            0.15
+          ]
+        },
+        "mass": 1.498,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0005",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0005"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.176878,
+        0.440382,
+        0.182714
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.149,
+            0.1501,
+            0.1493
+          ]
+        },
+        "mass": 1.551,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0006",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0006"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.177175,
+        0.444808,
+        0.187759
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1489,
+            0.1501,
+            0.1492
+          ]
+        },
+        "mass": 1.55,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0007",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0007"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.177408,
+        0.441728,
+        -0.182147
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1489,
+            0.1501,
+            0.149
+          ]
+        },
+        "mass": 1.548,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0008",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0008"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.18415,
+        0.446028,
+        -0.176195
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.149,
+            0.1501,
+            0.149
+          ]
+        },
+        "mass": 1.55,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0009",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0009"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.165953,
+        0.790311,
+        0.163988
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.149,
+            0.15,
+            0.1493
+          ]
+        },
+        "mass": 1.451,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0010",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0010"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.165931,
+        0.793669,
+        0.159712
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1489,
+            0.1501,
+            0.1493
+          ]
+        },
+        "mass": 1.455,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0011",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0011"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        -0.171045,
+        0.795665,
+        -0.155188
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1488,
+            0.1501,
+            0.149
+          ]
+        },
+        "mass": 1.453,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    },
+    {
+      "chunkId": "chunk-0012",
+      "class": "large",
+      "mesh": {
+        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+        "guid": "as_ff626da2",
+        "sub": "node:chunk-0012"
+      },
+      "bind": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "pivot": [
+        0.166823,
+        0.790394,
+        -0.170422
+      ],
+      "proxy": {
+        "shape": {
+          "type": "box",
+          "halfExtents": [
+            0.1491,
+            0.15,
+            0.149
+          ]
+        },
+        "mass": 1.45,
+        "friction": 0.6,
+        "restitution": 0.35,
+        "collisionGroup": "environment"
+      }
+    }
+  ],
+  "npc": null,
+  "playback": {
+    "priority": 2,
+    "lifetimeSec": 4,
+    "fadeSec": 0.8,
+    "companionVfx": null
+  }
+}

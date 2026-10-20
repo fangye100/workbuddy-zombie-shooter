@@ -255,6 +255,12 @@
       "path": "assets/scenes/sandbox/game-probes.scene.json",
       "name": "战斗与动态蒙皮白盒 · 双波次及代理降级",
       "enabled": true
+    },
+    {
+      "id": "sc_fracture_wu02",
+      "path": "assets/scenes/sandbox/fracture-wu02.scene.json",
+      "name": "碎裂 WU-02 · 正式资产与分块近景",
+      "enabled": true
     }
   ],
   "startIndex": 1,

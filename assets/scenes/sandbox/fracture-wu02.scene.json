@@ -1,0 +1,1053 @@
+{
+  "schemaVersion": 25,
+  "id": "sc_fracture_wu02",
+  "name": "碎裂 WU-02 · 正式资产与分块近景",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0.012,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      0.6,
+      0.7,
+      0
+    ],
+    "distance": 4.6,
+    "yaw": 0.5,
+    "elevation": 0.32
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": null,
+  "loseCondition": "player-death",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          1.4,
+          3.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 10,
+          "distance": 3.2,
+          "yawOffset": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_ground",
+      "name": "Ground",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              8,
+              0.2,
+              8
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              4,
+              0.1,
+              4
+            ]
+          },
+          "physicsMaterial": null
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_barrel",
+      "name": "P-01 油桶（可破坏）",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0.45,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+              "guid": "as_74w6e6hg"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "physicsMaterial": null
+        },
+        {
+          "kind": "Destructible",
+          "enabled": true,
+          "profile": {
+            "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+            "guid": "as_p01frct"
+          },
+          "maxDurability": 120,
+          "trigger": {
+            "direct": true,
+            "explosion": true,
+            "burn": false
+          },
+          "onBroken": {
+            "collider": "remove",
+            "navigation": "clear-blocking"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk01",
+      "name": "油桶分块 chunk-0001",
+      "parent": null,
+      "transform": {
+        "position": [
+          1.4,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0001"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk02",
+      "name": "油桶分块 chunk-0002",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.02,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0002"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk03",
+      "name": "油桶分块 chunk-0003",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.6399999999999997,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0003"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk04",
+      "name": "油桶分块 chunk-0004",
+      "parent": null,
+      "transform": {
+        "position": [
+          3.26,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0004"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk05",
+      "name": "油桶分块 chunk-0005",
+      "parent": null,
+      "transform": {
+        "position": [
+          3.88,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0005"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk06",
+      "name": "油桶分块 chunk-0006",
+      "parent": null,
+      "transform": {
+        "position": [
+          4.5,
+          0.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0006"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk07",
+      "name": "油桶分块 chunk-0007",
+      "parent": null,
+      "transform": {
+        "position": [
+          1.4,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0007"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk08",
+      "name": "油桶分块 chunk-0008",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.02,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0008"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk09",
+      "name": "油桶分块 chunk-0009",
+      "parent": null,
+      "transform": {
+        "position": [
+          2.6399999999999997,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0009"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk10",
+      "name": "油桶分块 chunk-0010",
+      "parent": null,
+      "transform": {
+        "position": [
+          3.26,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0010"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk11",
+      "name": "油桶分块 chunk-0011",
+      "parent": null,
+      "transform": {
+        "position": [
+          3.88,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0011"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_chunk12",
+      "name": "油桶分块 chunk-0012",
+      "parent": null,
+      "transform": {
+        "position": [
+          4.5,
+          1.45,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
+              "guid": "as_ff626da2",
+              "sub": "node:chunk-0012"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_npc01",
+      "name": "盾卫分块 head",
+      "parent": null,
+      "transform": {
+        "position": [
+          -1.6,
+          1,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+              "guid": "as_906d03c9",
+              "sub": "node:head"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_npc02",
+      "name": "盾卫分块 torso",
+      "parent": null,
+      "transform": {
+        "position": [
+          -0.9000000000000001,
+          1,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+              "guid": "as_906d03c9",
+              "sub": "node:torso"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_npc03",
+      "name": "盾卫分块 arm-l-upper",
+      "parent": null,
+      "transform": {
+        "position": [
+          -0.20000000000000018,
+          1,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+              "guid": "as_906d03c9",
+              "sub": "node:arm-l-upper"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_npc04",
+      "name": "盾卫分块 leg-l-thigh",
+      "parent": null,
+      "transform": {
+        "position": [
+          0.49999999999999956,
+          1,
+          -0.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
+              "guid": "as_906d03c9",
+              "sub": "node:leg-l-thigh"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_spawn",
+      "name": "E-04 刷怪（致死碎裂）",
+      "parent": null,
+      "transform": {
+        "position": [
+          -0.6,
+          0,
+          1.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-04",
+          "count": 1,
+          "wave": 1,
+          "trigger": "manual",
+          "delaySec": 0,
+          "radius": 0.4,
+          "prefab": null,
+          "deathFracture": {
+            "profile": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark.fracture.json",
+              "guid": "as_e04frct"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_spawn_plain",
+      "name": "E-02 刷怪（未配置对照）",
+      "parent": null,
+      "transform": {
+        "position": [
+          0.6,
+          0,
+          1.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-02",
+          "count": 1,
+          "wave": 1,
+          "trigger": "manual",
+          "delaySec": 0,
+          "radius": 0.4,
+          "prefab": null
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-20T02:55:15.704Z",
+    "updatedAt": "2026-10-20T02:55:15.704Z"
+  }
+}

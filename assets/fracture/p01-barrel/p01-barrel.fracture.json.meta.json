@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_p01frct",
+  "kind": "fracture",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "variant": "p01-barrel",
+    "file": "p01-barrel.fracture.json"
+  },
+  "sourceHash": "sha256:ab938e6a684eec71b6f466771724477e3af589881d38cea9eec27f6a8a846db6",
+  "updatedAt": "2026-10-20T02:55:25.533Z"
+}
