@@ -84,12 +84,12 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 209 测试全过，其中
+- pnpm exec vitest run packages/runtime：22 文件 211 测试全过，其中
   fracture-runtime.test.ts 39 测试、fracture-activation.test.ts 16 测试、
-  fracture-play-composition.test.ts 8 测试。
+  fracture-play-composition.test.ts 10 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 229 测试全过（play-controller 19）。宿主接线（R3）的 owner 证据在
-  apps/editor/test/play-controller.test.ts（17 测试），其中「真实 PlayController.update
+  23 文件 233 测试全过（play-controller 22）。宿主接线（R3）的 owner 证据在
+  apps/editor/test/play-controller.test.ts（22 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
   20 轮登记/释放各 60 次。
@@ -193,18 +193,21 @@ ctl.stop()/ctl.reset() 先激活 1 大 1 小并再排一个事件，随后读旧
 
 ## 凸代理坐标合同（F2）
 
-createGlbConvexResolver() 复用 scene 的 parseGlb(buffer, null, 'auto')，取
-MeshData.vertices 的 POSITION 分量：顶点缓冲是 15 浮点交错
-（position3 + normal3 + smoothNormal3 + uv2 + color4），按整块当 XYZ 会让点数膨胀 15 倍、
-把法线/UV/颜色当坐标，碰撞体被撑到 ±1m。
+createGlbConvexResolver() 复用 scene 的 parseGlb，取 MeshData.vertices 的 POSITION
+分量：顶点缓冲是 15 浮点交错（position3 + normal3 + smoothNormal3 + uv2 + color4），
+按整块当 XYZ 会让点数膨胀 15 倍、把法线/UV/颜色当坐标，碰撞体被撑到 ±1m。
 
-坐标空间与 profile 的 pivot/bind 同一套：targetHeight=null 保持资产原始尺寸，
-但仍做 node 变换烘焙、Z-up→Y-up（auto）、XZ 居中与底面贴 y=0。真实
-chunk-0001.glb 解析 5286 顶点，代理点 5286 个，包围盒
-[-0.150041,0,-0.150002]..[0.150041,0.299990,0.150002]；用 Rapier 凸包 + 竖直线投射
-核实际接触高度约 0.30m（旧缺陷为 ~1.0m）。另有手写合法 GLB（顶点 x 在 [10,14]、
-y 在 [2,6]、z 在 [20,24]）按解析布局给出闭式期望 [-2,2]x[0,4]x[-2,2]，逐点比对防止
-居中/换轴写错后被包围盒掩盖。
+坐标空间与 profile 的 pivot/bind 同一套：解析时传 normalize:false，只保留 node 世界
+变换烘焙，**不做 XZ 居中、不贴地、不缩放**（parseGlb 默认行为不变，角色/道具导入
+仍走原规整化）。准备阶段再把每个点减去 profile.pivot，得到以 pivot 为原点的代理
+局部系。真实 chunk-0001 原始包围盒 [-4.5e-5,0.000285,-3.2e-5]..[0.300037,0.300274,0.299973]，
+代理 bbox = 原始 − pivot(0.162673,0.114231,0.168472)；chunk-0009（原始 y
+0.6005..0.9005、pivot.y=0.789352）单独覆盖「pivot 远离原点」的情形，避免只测近似
+中心的块掩盖错位。另有手写已知偏移 GLB 的逐点闭式对照。Rapier 凸包 + 竖直线投射
+核实际接触高度约 0.30m（旧缺陷为 ~1.0m）。
+
+显示侧：FractureChunkInput/ActiveChunk 增加 pivot 字段，渲染层按
+mesh 原始坐标先平移 -pivot 再套 worldScale/rotation（WU-05 直接可用，不重读 profile）。
 
 ## 运行期 collider 姿态同步（F3）
 
@@ -254,5 +257,5 @@ chunk.shape 是未缩放的资产局部代理；激活时 scaledShape 按 scale 
   转 FractureActivation 的业务接线属 WU-06/07。
 - 简化层环境接触已按场景静态镜像逐块竖向扫掠求支撑面（R2：穿越窗口选最高可接触面，休眠匹配当前面）；更精细的
   多点接触/休眠唤醒策略属后续改进。
-- NPC 当前可见姿态烘焙（WU-07）与离线凸代理读入（WU-04 接口已支持 convex 形状）
-  属后续接线。
+- 离线凸代理读入已在本单元接通（createGlbConvexResolver + 准入二进制核验）；
+  NPC 当前可见姿态烘焙属 WU-07。
