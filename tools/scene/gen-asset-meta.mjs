@@ -25,14 +25,13 @@
  * 归属：S0c。schema 真源 `packages/scene/src/asset-meta.ts`。
  */
 
-import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync, mkdirSync } from 'node:fs';
+import { join, dirname, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const ASSETS = join(ROOT, 'assets');
-const ROSTER_GEN = join(ROOT, 'packages', 'content', 'src', 'generated', 'roster.generated.ts');
 
 const META_SUFFIX = '.meta.json';
 /** 期望的名册角色数。正则提取的结果必须等于它，否则说明生成物格式变了 */
@@ -47,8 +46,8 @@ const EXPECTED_ROSTER_COUNT = 9;
  * （`"1.25 m（四足）/ 1.60 m（直立）"`），解析规则（取第一个数值）已经在
  * content 生成层实现过一次。再实现一遍就是 ADR-002 明令禁止的"手写重复定义"。
  */
-function loadRoster() {
-  const src = readFileSync(ROSTER_GEN, 'utf8');
+function loadRoster(root) {
+  const src = readFileSync(join(root, 'packages', 'content', 'src', 'generated', 'roster.generated.ts'), 'utf8');
   const out = new Map();
   // 每条记录以 `  {` 开头（生成物格式固定），块内各自匹配 id / name / heightMeters
   const blocks = src.split(/\n {2}\{\n/).slice(1);
@@ -118,14 +117,14 @@ function characterIdOf(relPath) {
   return m?.[1] ?? null;
 }
 
-function walk(dir, out = []) {
+function walk(dir, out = [], base = dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
-    if (e.isDirectory()) walk(p, out);
+    if (e.isDirectory()) walk(p, out, base);
     else if (e.name.endsWith('.glb')
-      || e.name.endsWith('.wav') && relative(ASSETS,p).split(sep)[0]==='audio'
-      || relative(ASSETS,p).split(sep)[0]==='vfx' && /\.(vfx\.json|svg|png|webp)$/.test(e.name)
-      || relative(ASSETS,p).split(sep)[0]==='fracture' && e.name.endsWith('.fracture.json')) out.push(p);
+      || e.name.endsWith('.wav') && relative(base,p).split(sep)[0]==='audio'
+      || relative(base,p).split(sep)[0]==='vfx' && /\.(vfx\.json|svg|png|webp)$/.test(e.name)
+      || relative(base,p).split(sep)[0]==='fracture' && e.name.endsWith('.fracture.json')) out.push(p);
   }
   return out;
 }
@@ -141,7 +140,7 @@ function newGuid() {
   return `as_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function buildMeta(relPath, hash, roster) {
+function buildMeta(relPath, hash, roster, fractureId) {
   const charId = characterIdOf(relPath);
   const entry = charId === null ? null : roster.get(charId) ?? null;
   const parts = relPath.split(/[\\/]/);
@@ -150,7 +149,7 @@ function buildMeta(relPath, hash, roster) {
   const audio=relPath.endsWith('.wav')?wavInfo(join(ROOT,relPath)):null;
   return {
     schemaVersion: 1,
-    guid: newGuid(),
+    guid: fractureId ?? newGuid(),
     kind: audio?'audio':relPath.endsWith('.vfx.json')?'vfx':relPath.endsWith('.fracture.json')?'fracture':relPath.startsWith('assets/vfx/')?'texture':'gltf',
     ...(audio?{audio}:{}),
     importer: {
@@ -219,37 +218,74 @@ function mergeInto(existing, fresh) {
 
 // ---------------------------------------------------------------- 主流程
 
-function main() {
-  const checkOnly = process.argv.includes('--check');
-  const roster = loadRoster();
+/** fracture sidecar 的 guid 必须来自通过校验的资产 id；身份不匹配显式报错，绝不静默重写。 */
+const contractBundles = new Map();
+async function sceneContract() {
+  if (contractBundles.has(ROOT)) return contractBundles.get(ROOT);
+  const bundle = join(ROOT, '.workbuddy', 'tmp', 'scene-contract-bundle.mjs');
+  mkdirSync(dirname(bundle), { recursive: true });
+  const esbuild = await import('esbuild');
+  await esbuild.build({
+    entryPoints: [join(ROOT, 'packages', 'scene', 'src', 'index.ts')],
+    bundle: true, platform: 'node', format: 'esm', outfile: bundle,
+    tsconfig: join(ROOT, 'tsconfig.check.json'), logLevel: 'error',
+  });
+  const loaded = await import(pathToFileURL(bundle).href);
+  contractBundles.set(ROOT, loaded);
+  return loaded;
+}
 
-  const all = walk(ASSETS);
+async function fractureAssetId(abs, rel) {
+  let doc;
+  try { doc = JSON.parse(readFileSync(abs, 'utf8')); }
+  catch (e) { throw new Error(`${rel}: fracture 资产不是合法 JSON：${e.message}`); }
+  const { validateFractureAsset } = await sceneContract();
+  const errors = validateFractureAsset(doc);
+  if (errors.length) throw new Error(`${rel}: fracture 资产校验失败：${errors.join('；')}`);
+  return doc.id;
+}
+
+export async function generateAssetMetas(root, { checkOnly = false } = {}) {
+  const roster = loadRoster(root);
+  const assets = join(root, 'assets');
+
+  const all = walk(assets);
   const targets = all
-    .map((abs) => ({ abs, rel: relative(ROOT, abs).split(sep).join('/') }))
+    .map((abs) => ({ abs, rel: relative(root, abs).split(sep).join('/') }))
     .filter(({ rel }) => rel.startsWith('assets/vfx/') || rel.startsWith('assets/audio/') && rel.endsWith('.wav') || rel.startsWith('assets/fracture/') || isTarget(rel))
     .sort((a, b) => a.rel.localeCompare(b.rel));
 
   if (targets.length === 0) {
     console.error('没有找到任何目标资产，检查 assets/ 目录与筛选规则');
-    process.exit(1);
+    return { targets: 0, created: 0, updated: 0, unchanged: 0, drift: [], failures: [] };
   }
 
   let created = 0;
   let updated = 0;
   let unchanged = 0;
   const drift = [];
+  const failures = [];
 
   for (const { abs, rel } of targets) {
     const metaPath = `${abs}${META_SUFFIX}`;
-    const hash = sha256Of(abs);
     const existed = existsSync(metaPath);
+    let fractureId;
+    if (rel.endsWith('.fracture.json')) {
+      try { fractureId = await fractureAssetId(abs, rel); }
+      catch (e) { failures.push(e.message); continue; }
+    }
+    const hash = sha256Of(abs);
     let next;
 
     if (!existed) {
-      next = buildMeta(rel, hash, roster);
+      next = buildMeta(rel, hash, roster, fractureId);
     } else {
       const existing = JSON.parse(readFileSync(metaPath, 'utf8'));
-      const fresh = buildMeta(rel, hash, roster);
+      const fresh = buildMeta(rel, hash, roster, fractureId);
+      if (fractureId !== undefined && existing.guid !== fractureId) {
+        failures.push(`${rel}: fracture sidecar 身份不匹配（sidecar ${existing.guid} ≠ 资产 ${fractureId}），拒绝静默重写身份`);
+        continue;
+      }
       next = mergeInto(existing, fresh);
       // hash 必须跟随源文件：重导 GLB 后旧 hash 会让派生产物失效检测失灵
       next.sourceHash = `sha256:${hash}`;
@@ -286,7 +322,7 @@ function main() {
       process.exit(1);
     }
     console.log(`[scene:check] ${targets.length} 个资产的元数据全部同步`);
-    return;
+    return { targets: targets.length, created, updated, unchanged, drift, failures };
   }
 
   console.log(
@@ -295,6 +331,21 @@ function main() {
   );
   const withHeight = targets.filter(({ rel }) => characterIdOf(rel) !== null).length;
   console.log(`[scene:gen] 其中 ${withHeight} 个角色资产的归一化身高取自 roster.generated.ts`);
+  return { targets: targets.length, created, updated, unchanged, drift, failures };
 }
 
-main();
+function main() {
+  const checkOnly = process.argv.includes('--check');
+  generateAssetMetas(ROOT, { checkOnly })
+    .then((report) => {
+      if (report.targets === 0) process.exit(1);
+      if (report.failures.length > 0) {
+        console.error('[scene:gen] fracture 资产身份校验失败：');
+        for (const f of report.failures) console.error(`  - ${f}`);
+        process.exit(1);
+      }
+    })
+    .catch((e) => { console.error(e.message); process.exit(1); });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
