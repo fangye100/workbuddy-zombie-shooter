@@ -3288,7 +3288,7 @@
       "id": "fracture-runtime-budget",
       "path": "docs/architecture/fracture-runtime-budget-20261020.md",
       "title": "碎片运行与预算（WU-04）",
-      "role": "runtime",
+      "role": "validation",
       "authority": "guide",
       "status": "current",
       "topics": [
@@ -3300,7 +3300,7 @@
       ],
       "read": "真实/简化两层播放、准入校验、事件去重、句柄代次、优先级/TTL/淡出预算、异常原子清理、ObjectPool 租约账目、可观察统计、固定步长生命周期",
       "sourceRefs": [
-        "fracture-physics-backend",
+        "architecture-policy",
         "scene-schema"
       ],
       "reviewedAt": "2026-10-20",
