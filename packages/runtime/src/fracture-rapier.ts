@@ -145,6 +145,8 @@ interface StaticMirror {
   nodeId: string;
   body: RapierBody;
   collider: RapierCollider;
+  /** box 镜像的世界半尺寸（供简化层支撑面查询；非 box 为 null）。 */
+  boxHalf: { halfX: number; halfY: number; halfZ: number } | null;
 }
 
 const DEFAULT_MAX_LINEAR = 60;
@@ -357,7 +359,11 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       this.world.removeRigidBody(body);
       throw e;
     }
-    this.statics.set(nodeId, { nodeId, body, collider });
+    // box 镜像记录支撑面半尺寸（旋转首期为 0/恒等，非均匀缩放已在 scene-mirror 折进 halfExtents）。
+    const boxHalf = spec.shape.type === 'box'
+      ? { halfX: spec.shape.halfExtents[0], halfY: spec.shape.halfExtents[1], halfZ: spec.shape.halfExtents[2] }
+      : null;
+    this.statics.set(nodeId, { nodeId, body, collider, boxHalf });
   }
 
   /** 移除静态镜像（删除/开门不能遗留幽灵 collider）。 */
@@ -374,7 +380,25 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     return [...this.statics.keys()];
   }
 
+  /**
+   * 简化碎片的有界环境接触：返回所有静态镜像的顶部支撑面（世界 Y + XZ 范围）。
+   * 来自真实场景 collider 镜像（含 scene-mirror 组合与其他 owner 登记的地面），
+   * 不另造无限地面；无镜像时返回空（小块继续下落）。只读，不修改求解器。
+   */
+  staticSupportSurfaces(): readonly { x: number; z: number; topY: number; halfX: number; halfZ: number }[] {
+    const out: { x: number; z: number; topY: number; halfX: number; halfZ: number }[] = [];
+    for (const m of this.statics.values()) {
+      if (!m.boxHalf) continue;
+      const t = m.body.translation();
+      out.push({ x: t.x, z: t.z, topY: t.y + m.boxHalf.halfY, halfX: m.boxHalf.halfX, halfZ: m.boxHalf.halfZ });
+    }
+    return out;
+  }
+
   /** 活动资源账目（区分 world/body/collider，不以单一 JS 计数归零自证）。 */
+  /** 后端的固定步长（供宿主/runtime 校验时钟一致，唯一物理时钟）。 */
+  worldTimestep(): number { return this.world.timestep; }
+
   get ledger(): { dynamicBodies: number; staticColliders: number; ticks: number; destroyed: boolean } {
     return { dynamicBodies: this.bodies.size, staticColliders: this.statics.size, ticks: this.tickCount, destroyed: this.destroyed };
   }

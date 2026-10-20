@@ -27,7 +27,7 @@ export interface FractureChunkInput {
   readonly rotation: FractureQuat;
   /** 碰撞/显示尺度（世界均匀尺度）。 */
   readonly scale: number;
-  /** 碰撞代理（局部，中心在质心）。 */
+  /** 碰撞代理（未缩放的资产局部，中心在质心）；激活时按 scale 折进世界尺寸。 */
   readonly shape:
     | { readonly type: 'box'; readonly halfExtents: FractureVec3 }
     | { readonly type: 'sphere'; readonly radius: number }
@@ -86,6 +86,10 @@ export interface ActiveChunk {
   /** 是否正在淡出（0=未开始，越接近 1 越透明）。 */
   fade: number;
   expired: boolean;
+  /** 块代理支撑半径（世界尺度；简化层接触 + WU-05 显示尺度共用）。 */
+  readonly supportRadius: number;
+  /** 内部租约（dispose/retire 归还）。 */
+  lease: Lease | null;
 }
 
 export interface SimplifiedState {
@@ -93,8 +97,11 @@ export interface SimplifiedState {
   rotation: [number, number, number, number];
   linearVelocity: [number, number, number];
   angularVelocity: [number, number, number];
-  /** 简化环境接触的地面高度（由静态镜像近似）。 */
-  groundY: number;
+  /** 块代理的支撑半径（世界尺度，从 shape*scale 推出；接触时质心停在支撑面+radius）。 */
+  supportRadius: number;
+  /** 简化摩擦/恢复（来自输入策略，非固定常数）。 */
+  friction: number;
+  restitution: number;
   resting: boolean;
 }
 
@@ -109,6 +116,8 @@ export interface FractureRuntimeStats {
   expired: number;
   /** 满额且新进者优先级不占优被跳过的碎块数（显式计数，不静默丢块）。 */
   skipped: number;
+  /** 激活中途失败（已原子清理）的事件数。 */
+  failedActivations: number;
   /** ObjectPool 租约账目。 */
   poolActive: number;
   poolHighWater: number;
@@ -130,8 +139,6 @@ export interface FractureRuntimeOptions {
   fixedStepSec?: number;
   /** 单帧最多补几个固定 tick（默认 5，宁可慢放不瞬移）。 */
   maxCatchUpTicks?: number;
-  /** 简化积分的环境接触地面高度（无静态镜像时的兜底）。 */
-  defaultGroundY?: number;
 }
 
 interface PendingEvent {
@@ -150,11 +157,24 @@ const DEFAULTS = {
   maxEventQueue: 256,
   fixedStepSec: 1 / 60,
   maxCatchUpTicks: 5,
-  defaultGroundY: 0,
 } as const;
 
-/** 有界简化三维积分：位置/速度/四元数/角速度 + 地面接触 + 休眠。仍是 mesh 运动状态。 */
-function integrateSimplified(s: SimplifiedState, dt: number): void {
+/** 支撑面（来自真实场景 collider 镜像；无镜像则小块继续下落，不生成无限地面）。 */
+interface SupportSurface { x: number; z: number; topY: number; halfX: number; halfZ: number }
+
+/** 查询当前 XZ 位置下的最高支撑面顶 Y；无支撑返回 null。 */
+function supportHeightAt(surfaces: readonly SupportSurface[], x: number, z: number): number | null {
+  let best: number | null = null;
+  for (const su of surfaces) {
+    if (Math.abs(x - su.x) <= su.halfX && Math.abs(z - su.z) <= su.halfZ) {
+      if (best === null || su.topY > best) best = su.topY;
+    }
+  }
+  return best;
+}
+
+/** 有界简化三维积分：位置/速度/四元数/角速度 + 场景支撑面接触 + 休眠。仍是 mesh 运动状态。 */
+function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly SupportSurface[]): void {
   if (s.resting) return;
   // 重力
   s.linearVelocity[1] -= 9.81 * dt;
@@ -172,15 +192,20 @@ function integrateSimplified(s: SimplifiedState, dt: number): void {
   let nx = qx + hx, ny = qy + hy, nz = qz + hz, nw = qw + hw;
   const len = Math.hypot(nx, ny, nz, nw) || 1;
   s.rotation = [nx / len, ny / len, nz / len, nw / len];
-  // 简化环境接触：地面反弹 + 摩擦衰减 + 休眠
-  if (s.position[1] <= s.groundY) {
-    s.position[1] = s.groundY;
-    if (s.linearVelocity[1] < 0) s.linearVelocity[1] = -s.linearVelocity[1] * 0.3;
-    s.linearVelocity[0] *= 0.7;
-    s.linearVelocity[2] *= 0.7;
-    s.angularVelocity[0] *= 0.6;
-    s.angularVelocity[1] *= 0.6;
-    s.angularVelocity[2] *= 0.6;
+  // 有界环境接触：复用真实场景 collider 镜像的支撑面；质心停在 支撑面顶 + 块支撑半径，
+  // 不把质心塞进地板。无支撑面（场景无 collider/已移出边界）则继续下落。
+  const top = supportHeightAt(surfaces, s.position[0], s.position[2]);
+  if (top === null) return;
+  const floor = top + s.supportRadius;
+  if (s.position[1] <= floor && s.linearVelocity[1] <= 0) {
+    s.position[1] = floor;
+    if (s.linearVelocity[1] < 0) s.linearVelocity[1] = -s.linearVelocity[1] * s.restitution;
+    const fri = Math.max(0, 1 - s.friction);
+    s.linearVelocity[0] *= fri;
+    s.linearVelocity[2] *= fri;
+    s.angularVelocity[0] *= fri;
+    s.angularVelocity[1] *= fri;
+    s.angularVelocity[2] *= fri;
     const speed = Math.hypot(s.linearVelocity[0], s.linearVelocity[1], s.linearVelocity[2]);
     const spin = Math.hypot(s.angularVelocity[0], s.angularVelocity[1], s.angularVelocity[2]);
     if (speed < 0.15 && spin < 0.5) {
@@ -217,7 +242,6 @@ export function createFractureRuntime(
   const maxQueue = opts.maxEventQueue ?? DEFAULTS.maxEventQueue;
   const fixedStep = opts.fixedStepSec ?? DEFAULTS.fixedStepSec;
   const maxCatchUp = opts.maxCatchUpTicks ?? DEFAULTS.maxCatchUpTicks;
-  const defaultGroundY = opts.defaultGroundY ?? DEFAULTS.defaultGroundY;
   for (const [k, v, min] of [
     ['maxRigidBodies', maxRigid, 1], ['maxSimplifiedChunks', maxSimplified, 1],
     ['maxEventQueue', maxQueue, 1], ['maxCatchUpTicks', maxCatchUp, 1],
@@ -225,7 +249,12 @@ export function createFractureRuntime(
     if (!Number.isInteger(v) || (v as number) < min) throw new Error(`${k} 必须为 ≥${min} 的整数`);
   }
   if (!Number.isFinite(fixedStep) || fixedStep <= 0) throw new Error('fixedStepSec 必须为有限正数');
-  if (!Number.isFinite(defaultGroundY)) throw new Error('defaultGroundY 必须为有限数');
+  // 唯一固定步长合同：runtime 年龄/简化层与真实后端共享同一物理时钟，
+  // 拒绝与后端 timestep 不一致的步长（不再让年龄与真实物理时间脱离）。
+  const backendStep = backend.worldTimestep();
+  if (backendStep !== undefined && Math.abs(backendStep - fixedStep) > 1e-9) {
+    throw new Error(`fixedStepSec(${fixedStep}) 与后端 timestep(${backendStep}) 不一致：碎片年龄与真实物理时间必须共享同一时钟`);
+  }
 
   let disposed = false;
   let accumulator = 0;
@@ -235,7 +264,7 @@ export function createFractureRuntime(
   const seen = new Set<string>();               // 去重：run/target 一次性
   const queue: PendingEvent[] = [];
   const activeChunks: ActiveChunk[] = [];
-  let deduplicated = 0, rejectedAdmission = 0, evicted = 0, expiredCount = 0, skipped = 0;
+  let deduplicated = 0, rejectedAdmission = 0, evicted = 0, expiredCount = 0, skipped = 0, failedActivations = 0;
   let physicsMs = 0, integrateMs = 0, updateMs = 0, ticks = 0;
 
   // 租约池：复用 Core ObjectPool 通用借还/异常契约，不另造重复通用池。
@@ -248,6 +277,30 @@ export function createFractureRuntime(
   const leases = new Set<Lease>();
 
   function now(): number { return performance.now(); }
+
+  /** 深拷贝一个激活输入，使入队后不受外部改写（R5 队列所有权边界）。 */
+  function snapshotActivation(a: FractureActivation): FractureActivation {
+    const v3 = (v: FractureVec3): FractureVec3 => [v[0], v[1], v[2]];
+    const q = (v: FractureQuat): FractureQuat => [v[0], v[1], v[2], v[3]];
+    const shape = (sh: FractureChunkInput['shape']): FractureChunkInput['shape'] => {
+      if (sh.type === 'box') return { type: 'box', halfExtents: v3(sh.halfExtents) };
+      if (sh.type === 'sphere') return { type: 'sphere', radius: sh.radius };
+      if (sh.type === 'capsule') return { type: 'capsule', radius: sh.radius, height: sh.height };
+      return { type: 'convex', points: new Float32Array(sh.points) }; // 复制 TypedArray
+    };
+    return {
+      // event 已是 frozenFractureEvent 冻结快照；此处结构化复制以隔离嵌套身份。
+      event: a.event,
+      chunks: a.chunks.map((c) => ({
+        chunkId: c.chunkId, cls: c.cls,
+        position: v3(c.position), rotation: q(c.rotation), scale: c.scale,
+        shape: shape(c.shape), mass: c.mass, friction: c.friction, restitution: c.restitution,
+        linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
+        ...(c.ccd === true ? { ccd: true } : {}),
+      })),
+      priority: a.priority, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
+    };
+  }
 
   function validate(a: FractureActivation): string | null {
     if (!a.chunks || a.chunks.length === 0) return '碎块集合为空';
@@ -288,15 +341,45 @@ export function createFractureRuntime(
     c.expired = true;
     if (c.layer === 'rigid') backend.release(c.handle);
     if (why === 'expire') expiredCount++;
-    // 归还租约
-    for (const l of leases) {
-      if (l.chunk === c) { leases.delete(l); leasePool.release(l); break; }
+    // 归还租约（chunk 持有 lease 引用，避免线性查找/漏还）。
+    if (c.lease !== null) {
+      const l = c.lease;
+      c.lease = null;
+      if (leases.delete(l) && leasePool.isActive(l)) leasePool.release(l);
     }
     const i = activeChunks.indexOf(c);
     if (i >= 0) activeChunks.splice(i, 1);
   }
 
-  /** 激活一个事件的全部碎块；任一失败原子清理本事件已建对象。 */
+  /** 取 chunk 的世界缩放代理（scale 折进 shape，唯一一次，不重复乘）。 */
+  function scaledShape(c: FractureChunkInput): FractureChunkInput['shape'] {
+    const k = c.scale;
+    const sh = c.shape;
+    if (sh.type === 'box') return { type: 'box', halfExtents: [sh.halfExtents[0] * k, sh.halfExtents[1] * k, sh.halfExtents[2] * k] };
+    if (sh.type === 'sphere') return { type: 'sphere', radius: sh.radius * k };
+    if (sh.type === 'capsule') return { type: 'capsule', radius: sh.radius * k, height: sh.height * k };
+    // convex：点集整体缩放（复制，不改外部 TypedArray）
+    const pts = new Float32Array(sh.points.length);
+    for (let n = 0; n < sh.points.length; n++) pts[n] = sh.points[n]! * k;
+    return { type: 'convex', points: pts };
+  }
+
+  /** chunk 代理的支撑半径（世界尺度，用于简化层支撑面接触与显示尺度携带）。 */
+  function supportRadiusOf(c: FractureChunkInput): number {
+    const sh = c.shape;
+    if (sh.type === 'sphere') return sh.radius * c.scale;
+    if (sh.type === 'box') return sh.halfExtents[1] * c.scale; // 竖直半高
+    if (sh.type === 'capsule') return (sh.height / 2) * c.scale;
+    // convex：用点集到原点最大距离近似支撑半径
+    let r = 0;
+    for (let n = 0; n + 2 < sh.points.length; n += 3) {
+      const d = Math.hypot(sh.points[n]!, sh.points[n + 1]!, sh.points[n + 2]!) * c.scale;
+      if (d > r) r = d;
+    }
+    return r;
+  }
+
+  /** 激活一个事件的全部碎块；任一阶段失败原子回收当前块及本事件已建资源。 */
   function activate(a: FractureActivation): void {
     activationCounter++;
     const gen = activationCounter;
@@ -313,13 +396,17 @@ export function createFractureRuntime(
           chunkId: c.chunkId,
           layer,
         };
-        // 物理资源先分配成功，才消耗租约——分配失败的块不产生孤儿租约。
+        // R6：scale 折进代理（唯一一次）；支撑半径供简化层与 WU-05 显示尺度。
+        const worldShape = scaledShape(c);
+        const supportRadius = supportRadiusOf(c);
+        // R4：每个中间资源从分配开始即有清理 owner——先建资源并入 built，再借租约。
+        // 任何阶段（addBody/acquire/注册）失败，catch 回收 built 内全部（含当前块）。
         let sim: SimplifiedState | null = null;
         if (layer === 'rigid') {
           backend.addBody(handle, {
             position: c.position, rotation: c.rotation,
             linearVelocity: c.linearVelocity, angularVelocity: c.angularVelocity,
-            shape: c.shape, mass: c.mass, friction: c.friction, restitution: c.restitution,
+            shape: worldShape, mass: c.mass, friction: c.friction, restitution: c.restitution,
             ...(c.ccd === true ? { ccd: true } : {}),
           });
         } else {
@@ -328,24 +415,26 @@ export function createFractureRuntime(
             rotation: [...c.rotation] as [number, number, number, number],
             linearVelocity: [...c.linearVelocity] as [number, number, number],
             angularVelocity: [...c.angularVelocity] as [number, number, number],
-            groundY: defaultGroundY, resting: false,
+            supportRadius, friction: c.friction, restitution: c.restitution, resting: false,
           };
         }
+        // 资源已就位；先入 built（携带清理所需的 handle/layer），再借租约。
         const chunk: ActiveChunk = {
           handle, layer, eventKey, activationGen: gen, priority: a.priority,
           ageSec: 0, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
-          sim, fade: 0, expired: false,
+          sim, fade: 0, expired: false, supportRadius, lease: null,
         };
-        // 资源已就位才借租约；acquire 失败由外层原子清理回收已建资源。
-        const lease = leasePool.acquire();
+        built.push(chunk); // 先登记清理 owner：acquire 失败也会回收当前块 body
+        const lease = leasePool.acquire(); // 抛错 → catch retire 当前块（释放 body）
         lease.chunk = chunk;
         leases.add(lease);
+        chunk.lease = lease;
         activeChunks.push(chunk);
-        built.push(chunk);
       }
     } catch (e) {
-      // 原子清理：本事件已建对象全部回收（含已分配的真实 body 与租约）。
+      // 原子清理：built 内全部（含当前块）回收 body/租约；不外溢。
       for (const c of built) retire(c, 'dispose');
+      failedActivations++; // 显式诊断/计数，不裸异常穿透宿主而无观察
       throw e;
     }
   }
@@ -354,11 +443,14 @@ export function createFractureRuntime(
     const t0 = now();
     backend.step(ticks);
     physicsMs += now() - t0;
+    // 简化层环境接触复用真实场景 collider 镜像的支撑面（场景变化经 sync 后反映）；
+    // 无镜像时返回空，小块继续下落，不生成无限地面。
+    const supportSurfaces = backend.staticSupportSurfaces();
     const t1 = now();
     // 遍历期间 retire 会 splice activeChunks：用拷贝遍历，避免同 tick 多块到期时跳块。
     for (const c of [...activeChunks]) {
       c.ageSec += fixedStep;
-      if (c.layer === 'simplified' && c.sim) integrateSimplified(c.sim, fixedStep);
+      if (c.layer === 'simplified' && c.sim) integrateSimplified(c.sim, fixedStep, supportSurfaces);
       // 生命周期：到期进入淡出；淡出完毕退役。
       const remain = c.lifetimeSec - c.ageSec;
       if (remain <= 0) {
@@ -380,7 +472,7 @@ export function createFractureRuntime(
         rigidActive: activeChunks.filter((c) => c.layer === 'rigid').length,
         simplifiedActive: activeChunks.filter((c) => c.layer === 'simplified').length,
         queuedEvents: queue.length,
-        deduplicated, rejectedAdmission, evicted, expired: expiredCount, skipped,
+        deduplicated, rejectedAdmission, evicted, expired: expiredCount, skipped, failedActivations,
         poolActive: ps.active, poolHighWater: ps.highWater,
         physicsMs, integrateMs, updateMs, ticks,
       };
@@ -397,7 +489,10 @@ export function createFractureRuntime(
       if (queue.length >= maxQueue) { rejectedAdmission++; return { accepted: false, rejection: { reason: 'queue-full', detail: `事件队列满（${maxQueue}）`, eventKey }, activationGen: 0 }; }
       seen.add(eventKey);
       const queueSeq = ++queueCounter;
-      queue.push({ activation, eventKey, queueSeq });
+      // R5：队列所有权边界——入队即取不可被外部改写的深拷贝快照（复制嵌套数组与
+      // convex TypedArray）。activate 用快照身份/变换，不再读外部可变对象；
+      // 提交后改写调用方 chunks/event/TRS/凸点缓存均不改变已提交请求与去重。
+      queue.push({ activation: snapshotActivation(activation), eventKey, queueSeq });
       return { accepted: true, rejection: null, activationGen: queueSeq };
     },
     tick(frameDtSec: number): void {

@@ -31,6 +31,7 @@ export * from './fracture-static-mirror';
 export * from './fracture-physics-session';
 export * from './fracture-scene-mirror';
 export * from './fracture-runtime';
+export * from './fracture-activation';
 export * from './vfx-graph';
 export * from './vfx-emitter';
 export * from './vfx-simulation';

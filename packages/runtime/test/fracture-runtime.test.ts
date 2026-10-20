@@ -18,7 +18,7 @@ function makeRuntime(opts = {}) {
   const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
   // 一块地面镜像，让真实刚体有接触对象。
   backend.upsertStatic('ground', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [20, 0.5, 20] } });
-  const rt = createFractureRuntime(backend, { defaultGroundY: 0.5, ...opts });
+  const rt = createFractureRuntime(backend, { ...opts });
   return { backend, rt };
 }
 
@@ -423,6 +423,108 @@ describe('WU-04 正式 profile 激活组合（WU-02 资产：P-01 物体 / E-04 
     expect(() => activationFromProfile(q, 'b-1')).toThrow();
     rt.stepOnce();
     expect(backend.ledger.dynamicBodies).toBe(0);
+    rt.dispose();
+  });
+});
+
+
+describe('WU-04 审核修复 R2/R4/R5/R6', () => {
+  it('R2：无场景 collider 时小块继续下落（不生成无限地面）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    // 不 upsert 任何静态镜像：场景无地面
+    const rt = createFractureRuntime(backend);
+    rt.play(act('n1', [chunk('c1', 'small')]));
+    rt.stepOnce();
+    const y0 = rt.active[0]!.sim!.position[1];
+    for (let i = 0; i < 30; i++) rt.stepOnce();
+    const y1 = rt.active[0]!.sim!.position[1];
+    expect(y1).toBeLessThan(y0); // 持续下落，未停在虚构地面
+    expect(rt.active[0]!.sim!.resting).toBe(false);
+    rt.dispose();
+  });
+
+  it('R2：小块停在真实场景镜像支撑面顶 + 支撑半径（不塞进地板），场景变化后镜像更新', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    // 有限平台：中心 (0,0.5,0)，半尺寸 (2,0.5,2)，顶面 y=1.0
+    backend.upsertStatic('ground', { position: [0, 0.5, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [2, 0.5, 2] } });
+    const rt = createFractureRuntime(backend);
+    // 小球块 radius=0.25（scale=1），从上方下落
+    const ball: FractureChunkInput = { ...chunk('c1', 'small'), position: [0.5, 3, 0.5], shape: { type: 'sphere', radius: 0.25 }, friction: 0.8, restitution: 0.1, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    rt.play(act('n1', [ball]));
+    for (let i = 0; i < 120; i++) rt.stepOnce();
+    const sim = rt.active[0]!.sim!;
+    // 支撑面顶 1.0 + 支撑半径 0.25 = 质心停在 1.25（不塞进地板）
+    expect(sim.position[1]).toBeGreaterThan(1.2);
+    expect(sim.position[1]).toBeLessThan(1.3);
+    expect(sim.resting).toBe(true);
+    rt.dispose();
+    // 场景变化：移除镜像后小块不再受支撑
+    backend.removeStatic('ground');
+    expect(backend.staticSupportSurfaces().length).toBe(0);
+    backend.destroy();
+  });
+
+  it('R2：有限平台边界外小块下落（边界不穿帮）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    backend.upsertStatic('ground', { position: [0, 0.5, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [1, 0.5, 1] } });
+    const rt = createFractureRuntime(backend);
+    // 块在平台水平范围外（x=5 > halfX=1）
+    const ball: FractureChunkInput = { ...chunk('c1', 'small'), position: [5, 3, 0], shape: { type: 'sphere', radius: 0.25 }, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    rt.play(act('n1', [ball]));
+    for (let i = 0; i < 60; i++) rt.stepOnce();
+    expect(rt.active[0]!.sim!.position[1]).toBeLessThan(1); // 落出平台，未被支撑
+    rt.dispose();
+  });
+
+  it('R4：租约 acquire 失败时当前块 body 被回收（不突破预算/不泄漏 World body）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend, { maxRigidBodies: 4 });
+    // 用一个只允许 1 份的并发场景间接令 acquire 失败：塞满 4 个真实 body 后，
+    // 池 capacity = maxRigid(4)+maxSimplified(256) 足够，故改为直接验证原子性：
+    // 第二块 addBody 失败（退化凸点）时第一块 body 被回收。
+    const deg: FractureChunkInput = { ...chunk('c2', 'large', 1), shape: { type: 'convex', points: new Float32Array(3) } };
+    rt.play(act('n1', [chunk('c1', 'large'), deg]));
+    expect(() => rt.stepOnce()).toThrow();
+    expect(rt.stats.failedActivations).toBe(1);
+    expect(rt.stats.rigidActive).toBe(0);
+    expect(backend.ledger.dynamicBodies).toBe(0); // 无孤儿 body
+    expect(rt.stats.poolActive).toBe(0);
+    rt.dispose();
+    expect(backend.ledger.destroyed).toBe(true);
+  });
+
+  it('R5：play 入队后改写调用方 chunks/event 不改变已提交请求与去重', () => {
+    const { backend, rt } = makeRuntime();
+    const chunks = [chunk('c1', 'large')];
+    const e = ev('n1');
+    // 用可变 event 复制品（非 frozenFractureEvent），证明快照隔离不依赖 TS readonly
+    const mutableEvent = JSON.parse(JSON.stringify(e)) as FractureEvent;
+    const r = rt.play({ event: mutableEvent, chunks, priority: 2, lifetimeSec: 4, fadeSec: 0.8 });
+    expect(r.accepted).toBe(true);
+    // 提交后改写原 chunks 位置与事件目标身份
+    (chunks[0] as unknown as { position: number[] }).position[0] = 500;
+    (mutableEvent.target as { nodeId: string }).nodeId = 'hacked';
+    rt.stepOnce();
+    const s = backend.snapshot(rt.active[0]!.handle)!;
+    expect(s.position[0]).toBeLessThan(100); // 未采用被改写的 500
+    // 去重身份仍是原 target（seen 用原 eventKey），同原 target 再去重
+    const again = rt.play(act('n1', [chunk('c1', 'large')]));
+    expect(again.accepted).toBe(false);
+    expect(rt.stats.deduplicated).toBe(1);
+    rt.dispose();
+  });
+
+  it('R6：chunk.scale 折进物理代理（非单位尺度真实生效）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    backend.upsertStatic('ground', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [20, 0.5, 20] } });
+    const rt = createFractureRuntime(backend);
+    // radius=0.25、scale=4 → 世界半径 1.0；地面顶 y=0.5，静止应在 y≈1.5
+    const big: FractureChunkInput = { ...chunk('c1', 'large'), position: [0, 5, 0], scale: 4, shape: { type: 'sphere', radius: 0.25 }, linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0] };
+    rt.play(act('n1', [big]));
+    for (let i = 0; i < 180; i++) rt.stepOnce();
+    const s = backend.snapshot(rt.active[0]!.handle)!;
+    expect(s.position[1]).toBeGreaterThan(1.2); // 0.5 地面顶 + 1.0 世界半径
+    expect(s.position[1]).toBeLessThan(1.8);
     rt.dispose();
   });
 });
