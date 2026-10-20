@@ -569,7 +569,7 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
   it('R2：30° 倾斜盒——足印内按竖向线求交的真实高度支撑，足印外不虚假支撑', () => {
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
     // 盒中心 (0,0,0)，局部半尺寸 (10, 0.25, 10)，绕 Z 轴转 30°（y 轴不变）。
-    // 世界表面：y = x*tan30°，支撑列在 cos30°·x 处与盒面竖向相交。
+    // 顶面世界平面方程：y = (halfY + sin30°·x)/cos30°（= x·tan30° + 0.25/cos30°）。
     const theta = Math.PI / 6;
     const q: [number, number, number, number] = [0, 0, Math.sin(theta / 2), Math.cos(theta / 2)];
     backend.upsertStatic('ramp', { position: [0, 0, 0], rotation: q, shape: { type: 'box', halfExtents: [10, 0.25, 10] } });
@@ -581,18 +581,18 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
       shape: { type: 'sphere', radius: 0.25 }, restitution: 0,
       linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
     });
-    // 竖向线与 OBB 求交的真实支撑高度（精确数值解，非 identity 近似的 cos·x）：
-    //   x=1 → 交点世界 Y=0.6495 → 质心(+半径0.25)=0.8995
-    //   x=3 → 交点世界 Y=1.5155 → 质心=1.7655
-    // identity 近似（0.25+0.25=0.5）会把两块都塞进斜坡内部（误差 0.40~1.27m）。
+    // 竖向线与 OBB 求交的几何真值（完整交点旋转回世界，交点必落回查询竖线 x=qx）：
+    //   顶面平面方程 y=(0.25+sin30°·x)/cos30°：x=1 → 面 0.8660 → 质心(+半径0.25)=1.1160
+    //   x=3 → 面 2.0207 → 质心=2.2707。
+    // 偏差实现（漏 ddx/ddz，等价旧 bug 的 cos²θ 近似）会给出 0.8995/1.7655，落入斜坡内部。
     // x=11：斜坡世界边缘之外（边缘最高列 x ≈ 7.28），应持续下落。
     rt.play(act('n1', [mk('c1', 1), mk('c2', 3), mk('c3', 11)]));
     for (let i = 0; i < 240; i++) rt.stepOnce();
     const by = (id: string) => rt.active.find((a) => a.sim && a.mesh.guid === 'g_' + id)?.sim;
-    expect(by('c1')!.position[1]).toBeGreaterThan(0.85);
-    expect(by('c1')!.position[1]).toBeLessThan(0.95);
-    expect(by('c2')!.position[1]).toBeGreaterThan(1.72);
-    expect(by('c2')!.position[1]).toBeLessThan(1.82);
+    expect(by('c1')!.position[1]).toBeGreaterThan(1.07);
+    expect(by('c1')!.position[1]).toBeLessThan(1.16);
+    expect(by('c2')!.position[1]).toBeGreaterThan(2.22);
+    expect(by('c2')!.position[1]).toBeLessThan(2.32);
     // 块 c3 在斜坡足印外：不被虚假支撑，持续下落到远低于斜坡任何表面
     expect(by('c3')!.position[1]).toBeLessThan(0.5);
     rt.dispose();

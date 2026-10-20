@@ -225,9 +225,10 @@ function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | nu
   if (tExit <= 0) return null;
   const tHit = Math.max(tN, 0);
   if (tHit > tExit) return null;
-  // 局部交点 (ox, oy+tExit*ddy, oz) 旋转回世界系；世界 Y 分量才是支撑高度
-  // （局部 Y ≠ 世界 Y，旋转会把局部 X/Z 也折进世界 Y，斜坡上必须完整旋转）。
-  const [, wy] = quatRotate(su.qx, su.qy, su.qz, su.qw, ox, oy + tExit * ddy, oz);
+  // 完整局部交点 (ox+tExit*ddx, oy+tExit*ddy, oz+tExit*ddz) 旋转回世界系取世界 Y。
+  // 三个分量都必须含 tExit*d（倾斜时 ddx≠0，只旋转 (ox, oy+tExit*ddy, oz)
+  // 会把世界 Y 低估为 tExit*cos²θ——真实交点旋转回世界后必落在查询竖线 x=qx 上）。
+  const [, wy] = quatRotate(su.qx, su.qy, su.qz, su.qw, ox + tExit * ddx, oy + tExit * ddy, oz + tExit * ddz);
   return su.centerY + wy;
 }
 
