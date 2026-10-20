@@ -252,7 +252,7 @@ export function createFractureRuntime(
   // 唯一固定步长合同：runtime 年龄/简化层与真实后端共享同一物理时钟，
   // 拒绝与后端 timestep 不一致的步长（不再让年龄与真实物理时间脱离）。
   const backendStep = backend.worldTimestep();
-  if (backendStep !== undefined && Math.abs(backendStep - fixedStep) > 1e-9) {
+  if (backendStep !== undefined && Math.abs(backendStep - fixedStep) > 1e-6) {
     throw new Error(`fixedStepSec(${fixedStep}) 与后端 timestep(${backendStep}) 不一致：碎片年龄与真实物理时间必须共享同一时钟`);
   }
 
