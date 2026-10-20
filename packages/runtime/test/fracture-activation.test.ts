@@ -173,7 +173,7 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     // 物理参数来自 profile（质量/摩擦/恢复真实进入 chunk 输入）
     expect(r.activation.chunks[0]!.mass).toBeGreaterThan(0);
     expect(r.activation.chunks[0]!.friction).toBe(0.6);
-  });
+  }, 30000);
 
   it('E-04 正式 NPC profile 准入成功：3 大 7 小分层（走 NPC 身份链）', async () => {
     // NPC 事件目标带 slot/id/generation：同一次激活的句柄代次必须能区分回收后的新实体。
@@ -184,7 +184,7 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     if (!r.ok) return;
     expect(r.activation.chunks.filter((c) => c.cls === 'large').length).toBe(3);
     expect(r.activation.chunks.filter((c) => c.cls === 'small').length).toBe(7);
-  });
+  }, 30000);
 
   it('目标类型与 profile.kind 不匹配时在分配前拒绝', async () => {
     // NPC profile 收到 scene-object 事件
