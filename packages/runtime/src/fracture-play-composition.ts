@@ -10,7 +10,7 @@
  * 碰 fs/DOM/编辑器。伤害→激活的策略接线属 WU-06/07，本模块不提前实现。
  */
 
-import { syncStaticMirrorsFromScene } from './fracture-scene-mirror';
+import { syncStaticMirrorsFromScene, syncStaticMirrorPoses } from './fracture-scene-mirror';
 import { createFracturePhysicsSession, type FracturePhysicsSession } from './fracture-physics-session';
 import { createFractureRuntime, type FractureRuntime, type FractureRuntimeOptions } from './fracture-runtime';
 import type { RapierFractureBackend } from './fracture-rapier';
@@ -29,8 +29,16 @@ export interface FracturePlayBinding {
   readonly session: FracturePhysicsSession & { start(opts: { fixedStepSec: number }): Promise<unknown> };
   /** 碎片运行时（宿主按固定 tick 驱动；渲染层读 active）。 */
   readonly runtime: FractureRuntime;
+  /**
+   * 完整、幂等的释放合同（Stop/Reset 唯一入口）：
+   * 先退役活动块/归还租约/清队列并关闭 runtime，再销毁物理 World。
+   * 未就绪时取消进行中的初始化；重复调用安全。
+   */
+  dispose(): void;
   /** 场景 collider 状态变化后再次正式 sync（差分移除失效镜像，保留其他 owner）。 */
   syncScene(graph: SceneGraph): void;
+  /** 运行期 collider 权威姿态变化后重定位对应镜像（导航门等），不重建整张场景图。 */
+  syncRuntimePoses(poses: readonly { nodeId: string; position: readonly [number, number, number] }[]): void;
   /** 物理后端（启动完成前为 null）。 */
   backend(): RapierFractureBackend | null;
   /** 后端就绪（含首次场景镜像 sync 完成）；cancelled/rejected 时 resolve false。 */
@@ -87,6 +95,20 @@ export function bindFractureToPlay(
     return true;
   });
 
+  /**
+   * 唯一释放链（幂等）：runtime 先退役活动块/归还租约/清队列并关闭，
+   * 再销毁物理 World。宿主 Stop/Reset 与账目回调都走这里，避免只销毁 World
+   * 而把活动租约、排队请求和 disposed 状态留在旧代里。
+   */
+  const dispose = (): void => {
+    if (runtime !== null) {
+      runtime.dispose(); // 退役活动块 + 归还租约 + 清队列 + 标记 disposed + 销毁 backend
+      runtime = null;
+    }
+    session.dispose(); // 未就绪/已取消时取消初始化；已销毁时幂等
+    backend = null;
+  };
+
   const binding: FracturePlayBinding = {
     session,
     ready,
@@ -95,17 +117,17 @@ export function bindFractureToPlay(
       return runtime;
     },
     backend: () => backend,
+    dispose,
     syncScene(graph: SceneGraph): void {
       if (backend !== null) syncStaticMirrorsFromScene(graph, backend);
     },
+    syncRuntimePoses(poses): void {
+      if (backend !== null) syncStaticMirrorPoses(poses, backend);
+    },
   };
 
-  // Stop 释放：登记进既有 PlaySession 账目（AGENTS.md §2.4）；先碎片 runtime 再物理 World。
-  host.registerResource('fracture-runtime', () => {
-    if (runtime !== null) { runtime.dispose(); runtime = null; }
-    session.dispose(); // dispose 后端 World（runtime.dispose 已 destroy backend；幂等）
-    backend = null;
-  });
+  // Stop 释放：登记进既有 PlaySession 账目（AGENTS.md §2.4）；与控制器共用同一条释放链。
+  host.registerResource('fracture-runtime', dispose);
 
   return binding;
 }

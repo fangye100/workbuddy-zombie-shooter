@@ -16,7 +16,7 @@ import {
   validateAssetMeta,
   type AssetMeta,
 } from '@aether/scene';
-import { parseGlb } from '@aether/scene';
+import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 
@@ -86,11 +86,34 @@ export interface PrepareOptions {
   readonly resolveConvexPoints?: ConvexPointsResolver;
 }
 
-/** 正式 GLB 凸代理解析器（R1 生产实现）：用 scene 的 parseGlb 提取顶点。 */
+/**
+ * 正式 GLB 凸代理解析器（R1 生产实现）：用 scene 的 parseGlb 提取**位置**。
+ *
+ * 坐标合同：parseGlb(buffer, null, 'auto') 保持资产原始尺寸，但仍做
+ * 「node 世界变换烘焙 + Z-up→Y-up（auto）+ XZ 居中 + 底面贴 y=0」。
+ * 碎裂 profile 的 pivot/bind 与碎块渲染网格同属这个规整化空间（pivot 的
+ * 量级落在规范后的 ±halfExtent 内），因此代理点必须取同一空间的顶点。
+ *
+ * 布局合同：MeshData.vertices 是交错顶点缓冲（VERTEX_FLOATS=15：
+ * position3 + normal3 + smoothNormal3 + uv2 + color4）。按整块返回会把
+ * 法线/UV/颜色当成坐标，碰撞体被撑到 [-1,1]。这里逐顶点只取前 3 个分量。
+ */
 export function createGlbConvexResolver(): ConvexPointsResolver {
   return (buffer: ArrayBuffer): Float32Array => {
-    const result = parseGlb(buffer, null, 'auto');
-    return result.mesh.vertices;
+    const verts = parseGlb(buffer, null, 'auto').mesh.vertices;
+    const stride = VERTEX_FLOATS;
+    if (verts.length % stride !== 0) {
+      throw new Error('GLB 顶点缓冲长度 ' + verts.length + ' 不是顶点步长 ' + stride + ' 的整数倍');
+    }
+    const count = verts.length / stride;
+    const out = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const o = i * stride;
+      out[i * 3] = verts[o]!;
+      out[i * 3 + 1] = verts[o + 1]!;
+      out[i * 3 + 2] = verts[o + 2]!;
+    }
+    return out;
   };
 }
 

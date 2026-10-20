@@ -251,11 +251,15 @@ export class PlayController {
     return this.fractureBinding;
   }
 
-  /** 释放当前碎片绑定（不发会话账目；Stop 由登记的回调统一处理）。 */
+  /**
+   * 释放当前碎片绑定（不发会话账目；Stop 由登记的回调统一处理）。
+   * 走 binding 的完整释放链：退役活动块/归还租约/清队列/标记 disposed，再销毁 World。
+   * 只销毁 session 会把活动租约与排队请求留在旧代里（曾经的真实缺陷）。
+   */
   private disposeFracture(): void {
     const b = this.fractureBinding;
     this.fractureBinding = null;
-    if (b !== null) b.session.dispose();
+    if (b !== null) b.dispose();
   }
 
   /**
@@ -394,6 +398,10 @@ export class PlayController {
     this.onStateChange?.();
   }
   private syncGates():void {
-    syncGatePresentation(this.session.runtime,id=>{const i=this.renderer.findObjectIndexByNodeId(id);return i===null?null:this.renderer.state.objects[i]??null;});
+    const rt=this.session.runtime;
+    syncGatePresentation(rt,id=>{const i=this.renderer.findObjectIndexByNodeId(id);return i===null?null:this.renderer.state.objects[i]??null;});
+    // 门的权威运行姿态同时要进碎片静态镜像：只同步渲染对象会让碎片后端
+    // 继续留在作者文档的初始位置，出现「门已升起、碎片仍被旧位置挡住」。
+    this.fractureBinding?.syncRuntimePoses(rt?.gateSnapshot()??[]);
   }
 }

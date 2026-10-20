@@ -74,6 +74,8 @@ function fakeRenderer(doc: SceneDocument | null) {
   let objects = doc === null ? [] : doc.nodes.map((n) => ({ name: n.name, visible: true }));
   let selectedIndex: number | null = 0;
   return {
+    // 门姿态同步会读 renderer.state.objects[i]（与真实渲染器同形）
+    get state() { return { objects }; },
     getDocument: () => doc,
     findObjectIndexByNodeId: (id: string) => { const i = doc?.nodes.findIndex(n => n.id === id) ?? -1; return i < 0 ? null : i; },
     setObjectVisible: vi.fn((index: number, visible: boolean) => { objects[index]!.visible = visible; }),
@@ -255,11 +257,29 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     ctl.step();
     expect(binding!.runtime.stats.ticks).toBe(tick2 + 1);
 
-    // Stop：碎片资源随会话账目释放，引用清空
+    // Stop：完整释放链（不是只销毁 World 就完事）
+    const backendBefore = binding!.backend()!;
+    const oldRuntime = binding!.runtime; // 被丢引用对象的观测手柄
+    // 再排一个未消费的事件：Stop 必须清队列，而不是把它留在旧代里
+    expect(oldRuntime.play(smallActivation('nd_queued')).accepted).toBe(true);
+    expect(oldRuntime.stats.queuedEvents).toBe(1);
+
     ctl.stop();
     expect(ctl.fracture).toBeNull();
     expect(ctl.ledger.pending).toBe(0);
-    expect(binding!.backend()!.ledger.destroyed).toBe(true);
+    // 被丢引用的旧 runtime 必须一并关闭：活动块清空、租约归还、队列清空
+    expect(oldRuntime.disposed).toBe(true);
+    const st = oldRuntime.stats;
+    expect(st.rigidActive).toBe(0);
+    expect(st.simplifiedActive).toBe(0);
+    expect(st.poolActive).toBe(0);
+    expect(st.queuedEvents).toBe(0);
+    // 旧代的迟到请求必须被拒（不能"引用还在就继续接受"）
+    expect(oldRuntime.play(smallActivation('nd_late')).accepted).toBe(false);
+    // 物理 World 真销毁
+    expect(backendBefore.ledger.destroyed).toBe(true);
+    expect(backendBefore.ledger.dynamicBodies).toBe(0);
+    expect(binding!.backend()).toBeNull();
   }, 30000);
 
   it('reset 换绑碎片代数：旧代释放、新代接管且不新增账目项', async () => {
@@ -272,13 +292,24 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     ctl.update(1 / 30); // 入队 → 首个固定 tick 激活
     expect(first.runtime.stats.simplifiedActive).toBe(1);
 
+    const firstBackend = first.backend()!;
+    const firstRuntime = first.runtime;
+    // 排队中再放一个事件：Reset 必须把它连同上一个活动块一起清掉
+    expect(firstRuntime.play(smallActivation('nd_queued')).accepted).toBe(true);
+
     ctl.reset();
     const second = ctl.fracture;
     expect(second === null).toBe(false);
     // 换绑必须是新对象（旧会话已 dispose，不能继续复用）
     expect(second === first).toBe(false);
-    // 旧代后端已销毁，新代等待就绪且没有旧碎片残留
-    expect(first.backend()!.ledger.destroyed).toBe(true);
+    // 旧代完整释放：disposed、活动块、租约、队列都归零，后端真销毁
+    expect(firstRuntime.disposed).toBe(true);
+    expect(firstRuntime.stats.rigidActive).toBe(0);
+    expect(firstRuntime.stats.simplifiedActive).toBe(0);
+    expect(firstRuntime.stats.poolActive).toBe(0);
+    expect(firstRuntime.stats.queuedEvents).toBe(0);
+    expect(firstRuntime.play(smallActivation('nd_late')).accepted).toBe(false);
+    expect(firstBackend.ledger.destroyed).toBe(true);
     await expect(second!.ready).resolves.toBe(true);
     expect(second!.runtime.stats.simplifiedActive).toBe(0);
     // 账目项数不随重跑增长（仍是单一项）
@@ -286,6 +317,55 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
 
     ctl.stop();
     expect(ctl.fracture).toBeNull();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+});
+
+describe('PlayController —— 运行期门姿态同步到碎片镜像（WU-04 F3 回归）', () => {
+  // 真实沙盒场景：含 nd_gate_ramp 导航门；关掉刷怪与自动清房，只留门这一条变量。
+  const SANDBOX = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
+  const sandbox = (): SceneDocument => {
+    const key = Object.keys(SANDBOX)[0]!;
+    const doc = JSON.parse(JSON.stringify((SANDBOX[key] as { default: unknown }).default)) as SceneDocument;
+    for (const n of doc.nodes) {
+      for (const c of n.components as unknown as { kind: string; count?: number; clearRule?: string }[]) {
+        if (c.kind === 'SpawnPoint') c.count = 0;
+        if (c.kind === 'RoomVolume') c.clearRule = 'interact';
+      }
+    }
+    return doc;
+  };
+
+  it('门在玩法中升起后，碎片静态镜像跟随运行姿态（不是作者文档的初始位置）', async () => {
+    const { ctl } = make(sandbox());
+    expect(ctl.start()).toBe(true);
+    const binding = ctl.fracture!;
+    await expect(binding.ready).resolves.toBe(true);
+    const backend = binding.backend()!;
+    const rt = ctl.session.runtime!;
+
+    const key = 'scene-mirror:nd_gate_ramp';
+    const before = backend.staticPose(key);
+    expect(before).not.toBeNull();
+    const gateBefore = rt.gateSnapshot().find((g) => g.nodeId === 'nd_gate_ramp')!;
+    expect(gateBefore.state).toBe('closed');
+    // 作者文档的初始位置就是镜像初始位置
+    expect(before!.y).toBeCloseTo(gateBefore.position[1], 5);
+
+    // 只走真实控制器：开门 + 逐帧 update，不手动泵碎片也不手动 sync
+    rt.setGateOpen('nd_gate_ramp', true);
+    for (let i = 0; i < 100; i++) ctl.update(1 / 60);
+
+    const gateAfter = rt.gateSnapshot().find((g) => g.nodeId === 'nd_gate_ramp')!;
+    expect(gateAfter.state).toBe('open');
+    expect(gateAfter.position[1]).toBeGreaterThan(gateBefore.position[1]);
+    const after = backend.staticPose(key)!;
+    // 镜像必须等于门的权威运行姿态（旧实现停在作者文档的 y=3）
+    expect(after.y).toBeCloseTo(gateAfter.position[1], 4);
+    expect(after.x).toBeCloseTo(gateAfter.position[0], 4);
+    expect(after.z).toBeCloseTo(gateAfter.position[2], 4);
+
+    ctl.stop();
     expect(ctl.ledger.pending).toBe(0);
   }, 30000);
 });

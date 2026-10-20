@@ -4,8 +4,12 @@
  * 验证：正式 P-01/E-04 准入与分层、错误 GUID/kind、quarantined→accepted 恢复、
  * 打开后外改 sidecar、seed 确定性、不同来向差异、convex 端口契约。
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { createGlbConvexResolver, prepareFractureActivation, type FractureAssetIO } from '../src/fracture-activation';
+import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
+import { ensureRapier, type RapierModule } from '../src/fracture-rapier';
+
+let rapier: RapierModule;
 import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
 
 // 仓库门禁规约：测试用 import.meta.glob 读正式资产（禁 node:fs）。
@@ -18,6 +22,8 @@ const binLoaders = import.meta.glob('../../../assets/fracture/*/*.glb', { query:
 const srcMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 // NPC 源模型 sidecar（E-04 在 characters 目录）
 const charMetaGlob = import.meta.glob('../../../assets/characters/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+
+beforeAll(async () => { rapier = await ensureRapier(); }, 30000);
 
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
@@ -63,6 +69,46 @@ function makeIO(
     set(path: string, v: string) { store.set(path, v); },
     setBin(path: string, v: ArrayBuffer) { binStore.set(path, v); },
   };
+}
+
+/** 点集包围盒（仅位置分量）。 */
+function bounds(pts: Float32Array): { min: [number, number, number]; max: [number, number, number] } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pts.length; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      if (pts[i + k]! < min[k]!) min[k] = pts[i + k]!;
+      if (pts[i + k]! > max[k]!) max[k] = pts[i + k]!;
+    }
+  }
+  return { min, max };
+}
+
+/** 手写合法 GLB：单 mesh 单 primitive，只有 POSITION（无 node 变换）。 */
+function makePointCloudGlb(positions: Float32Array): ArrayBuffer {
+  const json = {
+    asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }],
+    nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    accessors: [{ bufferView: 0, componentType: 5126, count: positions.length / 3, type: 'VEC3' }],
+    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: positions.byteLength }],
+    buffers: [{ byteLength: positions.byteLength }],
+  };
+  const encoded = new TextEncoder().encode(JSON.stringify(json));
+  const jsonSize = Math.ceil(encoded.length / 4) * 4;
+  const out = new Uint8Array(28 + jsonSize + positions.byteLength);
+  const header = new DataView(out.buffer);
+  header.setUint32(0, 0x46546c67, true);
+  header.setUint32(4, 2, true);
+  header.setUint32(8, out.length, true);
+  header.setUint32(12, jsonSize, true);
+  header.setUint32(16, 0x4e4f534a, true);
+  out.fill(32, 20, 20 + jsonSize);
+  out.set(encoded, 20);
+  header.setUint32(20 + jsonSize, positions.byteLength, true);
+  header.setUint32(24 + jsonSize, 0x004e4942, true);
+  out.set(new Uint8Array(positions.buffer, positions.byteOffset, positions.byteLength), 28 + jsonSize);
+  return out.buffer;
 }
 
 /** 与准入判定同口径的非退化检查：存在「离基面距离 > 1e-6」的第四点。 */
@@ -304,13 +350,58 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const resolver = createGlbConvexResolver();
     const pts = resolver(bytes.slice().buffer);
     expect(pts).toBeInstanceOf(Float32Array);
-    expect(pts.length).toBeGreaterThanOrEqual(9);
     expect(pts.length % 3).toBe(0);
-    // 真解析会给出上百个顶点（不是四面体替身），且全部有限
-    expect(pts.length / 3).toBeGreaterThan(100);
+    // 顶点缓冲是 15 浮点交错（pos3+normal3+smooth3+uv2+color4）：点数 = 顶点数，
+    // 不是 15 倍。旧实现把整块当 XYZ，点数会膨胀 15 倍且 bounds 撑到 [-1,1]。
+    const parsed = parseGlb(bytes.slice().buffer, null, 'auto').mesh;
+    const vertexCount = parsed.vertices.length / VERTEX_FLOATS;
+    expect(vertexCount).toBe(5286);
+    expect(pts.length / 3).toBe(vertexCount);
     for (let i = 0; i < pts.length; i++) expect(Number.isFinite(pts[i]!)).toBe(true);
+    // 坐标 = 解析后 position 分量（同一规整化空间，pivot 也在这个空间里）
+    const b = bounds(pts);
+    expect(b.min[0]).toBeCloseTo(-0.150041, 5);
+    expect(b.max[0]).toBeCloseTo(0.150041, 5);
+    expect(b.min[1]).toBeCloseTo(0, 5);
+    expect(b.max[1]).toBeCloseTo(0.299990, 5);
+    expect(b.min[2]).toBeCloseTo(-0.150002, 5);
+    expect(b.max[2]).toBeCloseTo(0.150002, 5);
+    // 旧缺陷的包围盒形状（被法线/UV/颜色撑到 ±1）必须排除
+    expect(Math.max(b.max[0], b.max[2])).toBeLessThan(0.5);
     // 非退化：存在非共面四点（与准入判定同口径）
     expect(hasNonCoplanar(pts)).toBe(true);
+
+    // 实际 Rapier 形状/接触：从上方竖直投射，命中真实碎块顶面（≈0.30m），
+    // 而不是旧缺陷把碰撞体撑成 1m 高后的 ~1.0m。
+    // RapierModule 只声明后端用到的窄面；测试这里补上射线查询所需的 API 视图。
+    const R = rapier as unknown as {
+      World: new (g: { x: number; y: number; z: number }) => {
+        createRigidBody(d: unknown): unknown;
+        createCollider(d: unknown, b: unknown): unknown;
+        step(): void;
+        castRay(ray: unknown, maxToi: number, solid: boolean): { timeOfImpact: number } | null;
+        free(): void;
+      };
+      Ray: new (origin: { x: number; y: number; z: number }, dir: { x: number; y: number; z: number }) => unknown;
+      RigidBodyDesc: { fixed(): unknown };
+      ColliderDesc: { convexHull(p: Float32Array): unknown | null };
+    };
+    const world = new R.World({ x: 0, y: -9.81, z: 0 });
+    const body = world.createRigidBody(R.RigidBodyDesc.fixed());
+    const hull = R.ColliderDesc.convexHull(pts);
+    expect(hull).not.toBeNull();
+    world.createCollider(hull!, body);
+    world.step(); // 建立查询管线（castRay 依赖其广相结构）
+    // 质心必在凸包内部，保证竖线与凸多面体相交（碎块是弧形薄壁，正中心可能是空的）
+    let cx = 0, cz = 0;
+    for (let i = 0; i < pts.length; i += 3) { cx += pts[i]!; cz += pts[i + 2]!; }
+    cx /= pts.length / 3; cz /= pts.length / 3;
+    const hit = world.castRay(new R.Ray({ x: cx, y: 5, z: cz }, { x: 0, y: -1, z: 0 }), 10, true);
+    expect(hit).not.toBeNull();
+    const topY = 5 - hit!.timeOfImpact;
+    expect(topY).toBeGreaterThan(0.1);
+    expect(topY).toBeLessThan(0.45);
+    world.free();
 
     // 走完整准入：profile 第一块改为 convex 代理，直接引用同一 chunk GLB
     const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
@@ -325,6 +416,39 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
 
     // 负例：同一 resolver 对损坏 GLB 必须抛错（证明它真的在解析，不是忽略输入）
     expect(() => resolver(new ArrayBuffer(12))).toThrow();
+  });
+
+  it('R1：带已知非零偏移的合法 GLB 按解析布局取 POSITION（独立参照）', () => {
+    // 独立参照：手写一份合法 GLB，顶点在 x∈[10,14]、y∈[2,6]、z∈[20,24]。
+    // parseGlb(buffer, null, 'auto') 的规整化合同 = node 变换烘焙 + 居中 XZ + 底面贴 0
+    // （不缩放），因此期望坐标可闭式算出：x'∈[-2,2]、y'∈[0,4]、z'∈[-2,2]。
+    // 若把交错缓冲当 XYZ，点数会是 5×15 且 bounds 会被法线撑到 ±1 附近。
+    const positions = new Float32Array([
+      10, 2, 20,
+      14, 2, 20,
+      10, 6, 24,
+      10, 2, 24,
+      14, 6, 24,
+    ]);
+    const glb = makePointCloudGlb(positions);
+    const pts = createGlbConvexResolver()(glb);
+    expect(pts.length / 3).toBe(5);
+    const b = bounds(pts);
+    expect(b.min[0]).toBeCloseTo(-2, 6);
+    expect(b.max[0]).toBeCloseTo(2, 6);
+    expect(b.min[1]).toBeCloseTo(0, 6);
+    expect(b.max[1]).toBeCloseTo(4, 6);
+    expect(b.min[2]).toBeCloseTo(-2, 6);
+    expect(b.max[2]).toBeCloseTo(2, 6);
+    // 逐点比对（不是只看包围盒，防居中/换轴写错后 bbox 偶然相同）
+    const got = [...pts].map((v) => Math.round(v * 1e6) / 1e6);
+    expect(got).toEqual([
+      -2, 0, -2,
+      2, 0, -2,
+      -2, 4, 2,
+      -2, 0, 2,
+      2, 4, 2,
+    ]);
   });
 
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {

@@ -194,3 +194,30 @@ describe('WU-04 装配失败原子清理（F7 负例）', () => {
     expect(() => binding.runtime).toThrow();
   }, 30000);
 });
+
+describe('WU-04 未就绪/重复释放合同（F1）', () => {
+  it('后端未就绪时 dispose：ready=false、无活动 World、重复调用安全', async () => {
+    const host = makeHost();
+    const binding = bindFractureToPlay(host, { initialScene: makeScene() });
+    // 立刻释放（WASM 仍在加载/或刚好未完成）
+    binding.dispose();
+    await expect(binding.ready).resolves.toBe(false);
+    expect(binding.backend()).toBeNull();
+    expect(binding.session.disposed).toBe(true);
+    expect(() => binding.dispose()).not.toThrow();
+    expect(() => binding.runtime).toThrow();
+  }, 30000);
+
+  it('就绪后 dispose 幂等：重复释放不抛错、第二次无副作用', async () => {
+    const host = makeHost();
+    const binding = bindFractureToPlay(host, { initialScene: makeScene() });
+    await expect(binding.ready).resolves.toBe(true);
+    const backend = binding.backend()!;
+    expect(backend.ledger.destroyed).toBe(false);
+    binding.dispose();
+    expect(backend.ledger.destroyed).toBe(true);
+    expect(backend.ledger.dynamicBodies).toBe(0);
+    expect(binding.session.disposed).toBe(true);
+    expect(() => binding.dispose()).not.toThrow();
+  }, 30000);
+});

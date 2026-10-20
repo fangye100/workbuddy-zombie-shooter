@@ -65,3 +65,19 @@ export function syncStaticMirrorsFromScene(graph: SceneGraph, backend: RapierFra
   }
   return { mirrored, removed, rejected };
 }
+
+/**
+ * 运行期 collider 权威姿态同步（R2/F3）：导航门这类在玩法中移动的 collider，
+ * 其权威姿态来自运行时会话而非作者文档。这里只重定位既有镜像，保留形状与
+ * 其他 owner 的登记项；未镜像的 node 跳过（不隐式造碰撞源）。
+ */
+export function syncStaticMirrorPoses(
+  poses: readonly { nodeId: string; position: readonly [number, number, number] }[],
+  backend: RapierFractureBackend,
+): number {
+  let moved = 0;
+  for (const p of poses) {
+    if (backend.reposeStatic(MIRROR_PREFIX + p.nodeId, [p.position[0], p.position[1], p.position[2]])) moved++;
+  }
+  return moved;
+}

@@ -151,6 +151,8 @@ interface StaticMirror {
   nodeId: string;
   body: RapierBody;
   collider: RapierCollider;
+  /** 登记时的形状与碰撞组（运行期重定位只换姿态，不重造形状）。 */
+  spec: { shape: RapierBodySpec['shape']; groups?: number };
   /** box 镜像的世界半尺寸（供简化层支撑面查询；非 box 为 null）。 */
   boxHalf: { halfX: number; halfY: number; halfZ: number } | null;
   /** 球/胶囊镜像的支撑参数（供简化层竖向求交；box 为 null）。 */
@@ -384,7 +386,10 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
         ? { kind: 'capsule' as const, radius: spec.shape.radius, halfHeight: Math.max(0, spec.shape.height / 2 - spec.shape.radius) }
         : null;
     const rot = { x: spec.rotation[0], y: spec.rotation[1], z: spec.rotation[2], w: spec.rotation[3] };
-    this.statics.set(nodeId, { nodeId, body, collider, boxHalf, round, rotation: rot });
+    this.statics.set(nodeId, {
+      nodeId, body, collider, boxHalf, round, rotation: rot,
+      spec: { shape: spec.shape, ...(spec.groups !== undefined ? { groups: spec.groups } : {}) },
+    });
   }
 
   /** 移除静态镜像（删除/开门不能遗留幽灵 collider）。 */
@@ -394,6 +399,32 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     if (!m) return;
     this.statics.delete(nodeId);
     this.world.removeRigidBody(m.body);
+  }
+
+  /**
+   * 运行期重定位已登记的静态镜像（导航门开合等）：只换姿态，复用登记时的形状与
+   * 碰撞组，不新建第二份碰撞源。未登记的 key 返回 false（不隐式创建）。
+   */
+  reposeStatic(nodeId: string, position: FractureVec3, rotation?: FractureQuat): boolean {
+    this.assertAlive();
+    const m = this.statics.get(nodeId);
+    if (m === undefined) return false;
+    const rot = rotation ?? [m.rotation.x, m.rotation.y, m.rotation.z, m.rotation.w];
+    this.upsertStatic(nodeId, {
+      position,
+      rotation: rot,
+      shape: m.spec.shape,
+      ...(m.spec.groups !== undefined ? { groups: m.spec.groups } : {}),
+    });
+    return true;
+  }
+
+  /** 已登记静态镜像的世界位置（只读；未登记返回 null，供宿主/验收核对姿态同步）。 */
+  staticPose(nodeId: string): { x: number; y: number; z: number } | null {
+    const m = this.statics.get(nodeId);
+    if (m === undefined) return null;
+    const t = m.body.translation();
+    return { x: t.x, y: t.y, z: t.z };
   }
 
   /** 当前登记的静态镜像 key（供组合层差分；只读视图）。 */
