@@ -31,6 +31,7 @@ import {
   type FractureAssetIO, type FractureEvent, type FracturePlayBinding, type FracturePlayResult,
 } from '@aether/runtime';
 import { createEditorFractureIO } from './fracture-io';
+import { PlayFractureRenderer } from './fracture-renderer';
 import {
   PlayCameraController,
   type ViewCameraControl,
@@ -87,6 +88,8 @@ export class PlayController {
   private fractureRegistered = false;
   /** 碎片资产 IO（默认走编辑器 /__fs/file；测试可注入）。 */
   private readonly fractureIO: FractureAssetIO;
+  /** 碎片动态渲染装配（WU-05）：ActiveChunk → 原 CoreDynamicBatch。 */
+  private fractureRenderer: PlayFractureRenderer | null = null;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -238,6 +241,14 @@ export class PlayController {
       // 这样 reset 换绑（旧代释放、新代接管）后 Stop 仍释放新绑定，
       // 也不会像之前那样每轮额外登记一项，把 pending 从 2/3 顶到 4/5。
       this.fractureBinding = this.createFractureBinding(graph);
+      // WU-05：碎片动态渲染装配。资源所有权仍在 renderer-core（Play 新分配由
+      // PlaySession 账目在 Stop 时 releaseDynamicResources 统一 destroy）。
+      this.fractureRenderer?.dispose();
+      this.fractureRenderer = new PlayFractureRenderer(this.fractureIO);
+      this.session.registerResource('fracture-renderer', () => {
+        this.fractureRenderer?.dispose();
+        this.fractureRenderer = null;
+      });
       // 初始即开启的导航门（initialOpen:true）在运行时已处于开启姿态，而作者文档
       // 仍是关闭位置。binding ready 后、接受首个碎片 tick 前把当前门姿态灌进镜像，
       // 否则启动瞬间的静态可观察状态是错的（要等第一帧才纠正）。
@@ -264,6 +275,27 @@ export class PlayController {
   togglePause(): void {
     if (this.session.state === 'playing') this.pause();
     else if (this.session.state === 'paused') this.resume();
+  }
+
+  /** 碎片动态批次（WU-05；main 每帧与角色批次合并后交给 renderer）。 */
+  get fractureBatches() {
+    return this.fractureRenderer?.dynamicBatches ?? [];
+  }
+
+  /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
+  get fractureRenderStats() {
+    return this.fractureRenderer?.stats ?? { meshes: 0, instances: 0, triangles: 0 };
+  }
+
+  /** 把当前运行时状态同步成动态批次（large 读后端快照，small 读简化 sim）。 */
+  private syncFractureBatches(): void {
+    const binding = this.fractureBinding;
+    // 后端未就绪（WASM 加载中）时没有可画的碎片；不要碰 runtime getter（它会抛）。
+    if (binding === null || binding.backend() === null) {
+      this.fractureRenderer?.sync(null, null);
+      return;
+    }
+    this.fractureRenderer?.sync(binding.runtime, binding.backend());
   }
 
   /** 碎片绑定只读视图（调试/验收观察；Stop 后为 null）。 */
@@ -371,6 +403,7 @@ export class PlayController {
     this.sharedMotions?.sync(this.session.runtime);
     this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
     this.bodyIk?.sync(this.session.runtime, true);
+    this.syncFractureBatches();
     this.optionsWeapons?.sync(this.session.runtime);
     this.syncPlayCamera();
     this.bridge.refresh();
@@ -423,6 +456,7 @@ export class PlayController {
     this.session.stop();
     this.fractureBinding = null;
     this.fractureRegistered = false;
+    this.fractureRenderer = null;
     this.bridge.attach(null);
     this.notify();
   }
@@ -446,6 +480,7 @@ export class PlayController {
       this.playerPresentation?.sync(this.session.runtime?.player() ?? null, this.bodyIk?.locomotion(this.session.runtime?.player()?.sourceNodeId ?? '') ?? false);
       this.bridge.refresh();
       this.syncPlayCamera();
+      this.syncFractureBatches();
     }
     if (this.session.state === 'playing') this.bodyIk?.sync(this.session.runtime);
     this.vfx.update(this.session);

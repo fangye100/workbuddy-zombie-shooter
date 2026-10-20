@@ -743,9 +743,9 @@ describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGEN
     const { ctl, b, r } = make();
     for (let i = 0; i < 20; i++) {
       expect(ctl.start()).toBe(true);
-      // 每轮登记三项：Bridge 批次（CPU 侧）+ 渲染核心动态实例资源（GPU 侧）
-      // + 碎片运行时（WU-04 R3，单一账目项；Stop 释放 runtime.session）。
-      expect(ctl.ledger.pending).toBe(3);
+      // 每轮登记四项：Bridge 批次（CPU 侧）+ 渲染核心动态实例资源（GPU 侧）
+      // + 碎片运行时（WU-04 R3）+ 碎片渲染装配（WU-05）。
+      expect(ctl.ledger.pending).toBe(4);
       expect(b.attached).toBe(1);
       ctl.stop();
       // 🔴 判据不是"看着没泄漏"，是账目：登记数 == 释放数，且无未释放项
@@ -753,9 +753,9 @@ describe('PlayController —— 资源账目平衡（docs/17 §8-7 后半 + AGEN
       expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);
       expect(b.attached).toBe(0);
     }
-    // 20 轮 × 3 项（Bridge 批次 + 动态实例 + 碎片运行时）
-    expect(ctl.ledger.registered).toBe(60);
-    expect(ctl.ledger.disposed).toBe(60);
+    // 20 轮 × 4 项（Bridge 批次 + 动态实例 + 碎片运行时 + 碎片渲染装配）
+    expect(ctl.ledger.registered).toBe(80);
+    expect(ctl.ledger.disposed).toBe(80);
     // 渲染侧的释放入口必须真的被调用过（登记了却不调 = 假账目）
     expect(r.core.releaseDynamicResources).toHaveBeenCalledTimes(20);
   });
@@ -834,8 +834,8 @@ describe('PlayController —— Play 相机（ADR-018 P6）', () => {
     const vc = fakeViewCamera();
     const { ctl } = make(scene(), { viewCamera: vc.view, worldPosOf: posOf(camPos) });
     ctl.start();
-    // 原三项（Bridge 批次 + 动态实例 + 碎片运行时）+ 相机 = 4
-    expect(ctl.ledger.pending).toBe(4);
+    // 原四项（Bridge 批次 + 动态实例 + 碎片运行时 + 碎片渲染装配）+ 相机 = 5
+    expect(ctl.ledger.pending).toBe(5);
     ctl.stop();
     expect(ctl.ledger.pending).toBe(0);
     expect(ctl.ledger.registered).toBe(ctl.ledger.disposed);

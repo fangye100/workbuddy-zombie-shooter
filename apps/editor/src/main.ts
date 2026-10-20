@@ -4252,7 +4252,8 @@ async function boot(): Promise<void> {
       runSettlement.update(playCtl.session.runtime);
       editorMenu.refresh();
     }
-    renderer.setDynamicBatches(bridge.batches());
+    // 角色批次（原动态路径）+ 碎片批次（WU-05 刚体模式）；两边各自打包，这里只合并。
+    renderer.setDynamicBatches([...(bridge.batches() ?? []), ...playCtl.fractureBatches]);
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
     if (playCtl.isPlaying) {
