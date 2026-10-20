@@ -11,7 +11,7 @@
       "authority": "design",
       "status": "historical",
       "topics": ["fracture", "destruction", "physics", "vfx", "assets", "review"],
-      "read": "2026-10-20 冻结待执行计划：预破碎资产、真实刚体与简化层、原动态渲染/伤害/导航复用、九个串行 WU 和逐单元 exact-target review；等用户开始后派发，不代表实现验收",
+      "read": "2026-10-20 开发计划：预破碎资产、真实刚体与简化层、原动态渲染/伤害/导航复用、九个串行 WU；用户已开始、仅派发 WU-01，后续逐单元 exact-target review，不代表实现验收",
       "sourceRefs": ["project-rules", "architecture-policy", "scene-schema", "asset-metadata"]
     },
     {
