@@ -174,3 +174,23 @@ describe('WU-04 宿主窄组合（R3）', () => {
     expect(binding.backend()).toBeNull();
   });
 });
+
+describe('WU-04 装配失败原子清理（F7 负例）', () => {
+  it('首次场景镜像抛错：ready=false、session 已 dispose、无活动 World', async () => {
+    const host = makeHost();
+    // 故意让首次 sync 失败：toNodes() 抛错（模拟损坏的 SceneGraph / 宿主注入异常）
+    const brokenScene = {
+      toNodes() { throw new Error('scene graph broken'); },
+      isEffectivelyVisible() { return true; },
+      worldMatrix() { return new Float32Array(16); },
+    } as unknown as SceneGraph;
+
+    const binding = bindFractureToPlay(host, { initialScene: brokenScene });
+    await expect(binding.ready).resolves.toBe(false);
+    // 半装配资源必须当场清理，不能留到未来 Stop
+    expect(binding.backend()).toBeNull();
+    expect(binding.session.disposed).toBe(true);
+    // 未就绪时访问 runtime 明确抛错（不返回半个运行时）
+    expect(() => binding.runtime).toThrow();
+  }, 30000);
+});
