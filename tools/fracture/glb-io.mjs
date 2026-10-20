@@ -2,7 +2,7 @@
  * Reader supports the accessor layouts actually produced by this repo's asset chain
  * (FLOAT/USHORT/UINT/UBYTE, non-sparse). Writer generalizes the deterministic
  * container packing already used by tools/level/authored-glb.mjs (multi-mesh,
- * multi-material, optional skin attributes and reused image buffer). */
+ * multi-material, skin with inverse bind matrices, reused image buffer). */
 import { readFileSync } from 'node:fs';
 
 const COMPONENT = { 5120: 1, 5121: 1, 5122: 2, 5123: 2, 5125: 4, 5126: 4 };
@@ -54,28 +54,14 @@ export function nodeTransform(node) {
   };
 }
 
-/** Exact-welds vertices by quantized position (UV/normal seams keep their first
- * attributes). The fracture CSG kernel requires identical positions to merge. */
-export function weldByPosition(mesh, scale = 1e5) {
-  const keyOf = v => Math.round(mesh.positions[v * 3] * scale) + ',' + Math.round(mesh.positions[v * 3 + 1] * scale) + ',' + Math.round(mesh.positions[v * 3 + 2] * scale);
-  const map = new Map();
-  const positions = [], normals = [], uvs = [], joints = [], weights = [];
-  const remap = new Array(mesh.positions.length / 3);
-  for (let v = 0; v < mesh.positions.length / 3; v++) {
-    const key = keyOf(v);
-    if (map.has(key)) { remap[v] = map.get(key); continue; }
-    const index = positions.length / 3;
-    map.set(key, index);
-    remap[v] = index;
-    for (let k = 0; k < 3; k++) { positions.push(mesh.positions[v * 3 + k]); normals.push(mesh.normals[v * 3 + k]); }
-    for (let k = 0; k < 2; k++) uvs.push(mesh.uvs[v * 2 + k]);
-    if (mesh.joints) for (let k = 0; k < 4; k++) joints.push(mesh.joints[v * 4 + k]);
-    if (mesh.weights) for (let k = 0; k < 4; k++) weights.push(mesh.weights[v * 4 + k]);
-  }
+/** Reads a skin contract: joint node indices, names and inverse bind matrices. */
+export function readSkin(doc) {
+  const skin = doc.json.skins?.[0];
+  if (!skin) return null;
   return {
-    positions: new Float32Array(positions), normals: new Float32Array(normals), uvs: new Float32Array(uvs),
-    joints: mesh.joints ? new Uint16Array(joints) : null, weights: mesh.weights ? new Float32Array(weights) : null,
-    indices: new Uint32Array(Array.from(mesh.indices, i => remap[i])),
+    joints: [...skin.joints],
+    jointNames: skin.joints.map(j => doc.json.nodes[j].name),
+    inverseBindMatrices: skin.inverseBindMatrices !== undefined ? Array.from(readAccessor(doc, skin.inverseBindMatrices)) : null,
   };
 }
 
@@ -114,6 +100,7 @@ export class GlbBuilder {
   vec2Float(values) { return this.#accessor(this.view(Buffer.from(new Float32Array(values).buffer)), 5126, values.length / 2, 'VEC2'); }
   vec4Float(values) { return this.#accessor(this.view(Buffer.from(new Float32Array(values).buffer)), 5126, values.length / 4, 'VEC4'); }
   vec4UShort(values) { return this.#accessor(this.view(Buffer.from(new Uint16Array(values).buffer)), 5123, values.length / 4, 'VEC4'); }
+  mat4Float(values) { return this.#accessor(this.view(Buffer.from(new Float32Array(values).buffer)), 5126, values.length / 16, 'MAT4'); }
   scalarUint(values) { return this.#accessor(this.view(Buffer.from(new Uint32Array(values).buffer)), 5125, values.length, 'SCALAR'); }
   rawBytes(bytes) { return this.view(bytes); }
 

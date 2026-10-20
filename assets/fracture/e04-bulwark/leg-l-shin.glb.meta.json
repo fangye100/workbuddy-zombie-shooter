@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "guid": "as_906d03c9",
+  "guid": "as_f984411e",
   "kind": "gltf",
   "importer": {
     "normalizeHeightM": null,
@@ -15,9 +15,13 @@
   "animations": null,
   "userData": {
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "leg-l-shin",
+      "builtAt": "2026-10-20T04:22:22.669Z"
+    },
     "variant": "e04-bulwark",
-    "file": "e04-bulwark-chunks.glb"
+    "file": "leg-l-shin.glb"
   },
-  "sourceHash": "sha256:0f97d0997ce1c8c5bf9f94e9db94dd5c28afdb1d4a01437e9086159698507077",
-  "updatedAt": "2026-10-20T02:53:56.772Z"
+  "sourceHash": "sha256:d974d6082a87586aa8094eea8e14cca6f91dbbb861a6dcc8b0cb78218e45494f",
+  "updatedAt": "2026-10-20T04:22:22.674Z"
 }

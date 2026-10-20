@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_e3172daf",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "leg-r-thigh",
+      "builtAt": "2026-10-20T04:22:22.677Z"
+    },
+    "variant": "e04-bulwark",
+    "file": "leg-r-thigh.glb"
+  },
+  "sourceHash": "sha256:9f286133e5aa5093535c43686226ae4ac64e07317aaf2d85d18f1e632ef3fdbf",
+  "updatedAt": "2026-10-20T04:22:22.681Z"
+}

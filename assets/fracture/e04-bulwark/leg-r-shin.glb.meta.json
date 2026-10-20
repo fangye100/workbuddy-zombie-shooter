@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_6946502e",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "leg-r-shin",
+      "builtAt": "2026-10-20T04:22:22.684Z"
+    },
+    "variant": "e04-bulwark",
+    "file": "leg-r-shin.glb"
+  },
+  "sourceHash": "sha256:e21c4b1c1c836d682f0cf58903e5f7e0ae23817bed7e722d4e82b44ce0fbb0b4",
+  "updatedAt": "2026-10-20T04:22:22.687Z"
+}

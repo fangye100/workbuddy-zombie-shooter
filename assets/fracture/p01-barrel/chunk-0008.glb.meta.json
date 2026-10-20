@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_17ebae9f",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "chunk-0008",
+      "builtAt": "2026-10-20T04:22:22.131Z"
+    },
+    "variant": "p01-barrel",
+    "file": "chunk-0008.glb"
+  },
+  "sourceHash": "sha256:1c9069388d18c6b901b333d19e0efb894aa3a7698150946f46395abd5be23753",
+  "updatedAt": "2026-10-20T04:22:22.136Z"
+}

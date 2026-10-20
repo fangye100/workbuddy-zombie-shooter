@@ -289,8 +289,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0001.glb",
+              "guid": "as_29a7ad90",
               "sub": "node:chunk-0001"
             }
           },
@@ -333,8 +333,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0002.glb",
+              "guid": "as_6b0d0d0b",
               "sub": "node:chunk-0002"
             }
           },
@@ -377,8 +377,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0003.glb",
+              "guid": "as_c7c145bd",
               "sub": "node:chunk-0003"
             }
           },
@@ -421,8 +421,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0004.glb",
+              "guid": "as_9eceb5ed",
               "sub": "node:chunk-0004"
             }
           },
@@ -465,8 +465,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0005.glb",
+              "guid": "as_a1f5696e",
               "sub": "node:chunk-0005"
             }
           },
@@ -509,8 +509,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0006.glb",
+              "guid": "as_0770e995",
               "sub": "node:chunk-0006"
             }
           },
@@ -553,8 +553,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0007.glb",
+              "guid": "as_20f36639",
               "sub": "node:chunk-0007"
             }
           },
@@ -597,8 +597,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0008.glb",
+              "guid": "as_17ebae9f",
               "sub": "node:chunk-0008"
             }
           },
@@ -641,8 +641,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0009.glb",
+              "guid": "as_3dea87d9",
               "sub": "node:chunk-0009"
             }
           },
@@ -685,8 +685,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0010.glb",
+              "guid": "as_6e0741b6",
               "sub": "node:chunk-0010"
             }
           },
@@ -729,8 +729,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0011.glb",
+              "guid": "as_7136f5a2",
               "sub": "node:chunk-0011"
             }
           },
@@ -773,8 +773,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-              "guid": "as_ff626da2",
+              "path": "assets/fracture/p01-barrel/chunk-0012.glb",
+              "guid": "as_459c7a0b",
               "sub": "node:chunk-0012"
             }
           },
@@ -817,8 +817,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
-              "guid": "as_906d03c9",
+              "path": "assets/fracture/e04-bulwark/head.glb",
+              "guid": "as_388d3f15",
               "sub": "node:head"
             }
           },
@@ -861,8 +861,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
-              "guid": "as_906d03c9",
+              "path": "assets/fracture/e04-bulwark/torso.glb",
+              "guid": "as_4a546985",
               "sub": "node:torso"
             }
           },
@@ -905,8 +905,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
-              "guid": "as_906d03c9",
+              "path": "assets/fracture/e04-bulwark/arm-l-upper.glb",
+              "guid": "as_971317fc",
               "sub": "node:arm-l-upper"
             }
           },
@@ -949,8 +949,8 @@
           "source": {
             "type": "asset",
             "ref": {
-              "path": "assets/fracture/e04-bulwark/e04-bulwark-chunks.glb",
-              "guid": "as_906d03c9",
+              "path": "assets/fracture/e04-bulwark/leg-l-thigh.glb",
+              "guid": "as_e7bcd129",
               "sub": "node:leg-l-thigh"
             }
           },
@@ -1047,7 +1047,7 @@
     }
   ],
   "meta": {
-    "createdAt": "2026-10-20T02:55:15.704Z",
-    "updatedAt": "2026-10-20T02:55:15.704Z"
+    "createdAt": "2026-10-20T04:23:13.347Z",
+    "updatedAt": "2026-10-20T04:23:13.348Z"
   }
 }

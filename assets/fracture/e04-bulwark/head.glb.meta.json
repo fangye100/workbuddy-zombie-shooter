@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_388d3f15",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "head",
+      "builtAt": "2026-10-20T04:22:22.609Z"
+    },
+    "variant": "e04-bulwark",
+    "file": "head.glb"
+  },
+  "sourceHash": "sha256:3ef833fd35fa95e3a11cfd983b167004c5fd96e98cc2ebf55e3d68a7c838cb19",
+  "updatedAt": "2026-10-20T04:22:22.614Z"
+}

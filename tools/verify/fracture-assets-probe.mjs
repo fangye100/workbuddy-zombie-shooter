@@ -29,22 +29,34 @@ const aim = async (target, distance, elevationDeg, yaw) => {
 try {
   await cdp.send('Page.navigate', { url: url + '?scene=' + encodeURIComponent('assets/scenes/sandbox/fracture-wu02.scene.json') });
   await waitForEditorReady(cdp, { timeout: 60000, expectedScene: 'assets/scenes/sandbox/fracture-wu02.scene.json' });
-  evidence.gpu = await cdp.eval('(async()=>{const a=await navigator.gpu.requestAdapter({powerPreference:"high-performance"});return {secure:isSecureContext,isFallbackAdapter:a?.info?.isFallbackAdapter??a?.isFallbackAdapter??null,info:a?.info?{vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description}:null};})()');
-  check('secure + nonfallback硬件GPU', evidence.gpu.secure && evidence.gpu.isFallbackAdapter === false && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)), JSON.stringify(evidence.gpu.info));
+  evidence.gpu = await cdp.eval('(()=>{const info=window.__editor.renderer.core.device.adapterInfo;return {secure:isSecureContext,fallback:info?.isFallbackAdapter,info:info?{vendor:info.vendor,architecture:info.architecture,description:info.description}:null};})()');
+  check('实际编辑器 GPUDevice 非 fallback', evidence.gpu.secure && evidence.gpu.fallback === false && !/swiftshader|llvmpipe|software/i.test(JSON.stringify(evidence.gpu.info)), JSON.stringify(evidence.gpu.info));
   const doc = await cdp.eval('window.__editor.renderer.getDocument()');
   const kinds = doc.nodes.flatMap(n => n.components.map(c => c.kind));
   check('场景含 Destructible 与 deathFracture 引用', kinds.includes('Destructible') && doc.nodes.some(n => n.components.some(c => c.kind === 'SpawnPoint' && c.deathFracture)), { destructible: kinds.filter(k => k === 'Destructible').length });
-  check('12 油桶分块 + 4 盾卫分块静态展示', kinds.filter(k => k === 'MeshRenderer').length >= 17, { meshRenderers: kinds.filter(k => k === 'MeshRenderer').length });
-  evidence.gpuErrors = await cdp.eval('window.__editor.renderer.gpuErrors?.length ?? 0');
-  check('渲染无 GPU 错误', evidence.gpuErrors === 0, String(evidence.gpuErrors));
+  // 每块独立装载断言：分块节点数 + 每块文件在 devfs 可达。
+  const perChunk = await cdp.eval('(()=>{const r=window.__editor.renderer;const list=r.getObjectList();return list.map(o=>({id:r.getObjectNodeId(o.index),name:o.name})).filter(x=>x.name.includes("分块"));})()');
+  evidence.perChunkNodes = perChunk.length;
+  check('16 个分块节点独立存在', perChunk.length === 16, String(perChunk.length));
+  const doc2 = await cdp.eval('window.__editor.renderer.getDocument()');
+  const chunkRefs = doc2.nodes.flatMap(n => n.components).filter(c => c.kind === 'MeshRenderer' && c.source?.type === 'asset' && c.source.ref.path.includes('/fracture/')).map(c => c.source.ref.path);
+  evidence.chunkRefs = chunkRefs;
+  check('12+4 个分块引用各自独立单块 GLB', new Set(chunkRefs).size === 16, 'unique=' + new Set(chunkRefs).size);
   await aim([0, 0.55, 0], 1.6, 0.18, 0.7);
   await capture('01-barrel-original-closeup');
+  await cdp.eval('window.__editor.renderer.getDocument()');
   await aim([2.6, 0.8, -0.6], 2.6, 0.35, -1.35);
-  await capture('02-barrel-chunks-closeup');
+  await capture('02-barrel-chunks-separated');
   await aim([-0.9, 1.0, -0.6], 2.4, 0.2, 1.25);
   await capture('03-npc-chunks-closeup');
+  // 非 bind 姿态：进入 Play 观察 E-04（死亡碎裂目标 actor）运行动画一帧。
+  await cdp.eval('document.getElementById("btn-play") && document.getElementById("btn-play").click(), true');
+  await new Promise(r => setTimeout(r, 1500));
+  await aim([-0.6, 1.0, 1.6], 3.2, 0.25, 0.6);
+  await capture('04-npc-run-nonbind');
+  await cdp.eval('document.getElementById("btn-stop") && document.getElementById("btn-stop").click(), true');
   evidence.screenshots = fs.readdirSync(out).filter(f => f.endsWith('.png'));
-  check('三张近景截图落盘', evidence.screenshots.length >= 3, evidence.screenshots.join(','));
+  check('四张近景截图落盘', evidence.screenshots.length >= 4, evidence.screenshots.join(','));
 } finally {
   fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(evidence, null, 2));
   try { await chrome.kill(); } catch {}

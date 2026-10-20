@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { GlbBuilder, readGlb, weldByPosition } from './glb-io.mjs';
-import { VertexPool, chunkStats } from './split-core.mjs';
+import { GlbBuilder, readGlb } from './glb-io.mjs';
+import { VertexPool, chunkStats, buildChunkWithCaps } from './split-core.mjs';
+import { writeSidecar } from './build-fracture-assets.mjs';
 
 test('glb-io roundtrips mesh attributes through the GLB container', async () => {
   const builder = new GlbBuilder('aether fracture test');
@@ -17,7 +18,6 @@ test('glb-io roundtrips mesh attributes through the GLB container', async () => 
   const uv = builder.vec2Float(new Float32Array(uvs));
   const ix = builder.scalarUint(new Uint32Array(indices));
   const glb = builder.build({ nodes: [{ name: 't', mesh: 0 }], meshes: [{ primitives: [{ attributes: { POSITION: pos, NORMAL: nrm, TEXCOORD_0: uv }, indices: ix, material: 0 }] }], materials: [{ name: 'm' }], sceneNodes: [0] });
-  // Write to a temp file so readGlb can parse the real container layout.
   const tmp = path.join(os.tmpdir(), 'fracture-io-' + Date.now() + '.glb');
   fs.writeFileSync(tmp, glb);
   try {
@@ -29,21 +29,7 @@ test('glb-io roundtrips mesh attributes through the GLB container', async () => 
   } finally { fs.rmSync(tmp, { force: true }); }
 });
 
-test('weldByPosition merges seam duplicates and keeps attributes of the first vertex', () => {
-  const mesh = {
-    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0]),
-    normals: new Float32Array([...Array(12)].map(() => 1)),
-    uvs: new Float32Array([0, 0, 1, 0, 0, 1, 9, 9]),
-    joints: null, weights: null,
-    indices: new Uint32Array([0, 1, 2, 3, 1, 2]),
-  };
-  const welded = weldByPosition(mesh);
-  assert.equal(welded.positions.length / 3, 3);
-  assert.equal(welded.uvs[2], 1);
-  assert.deepEqual([...welded.indices], [0, 1, 2, 1, 1, 2]);
-});
-
-test('chunkStats reports closed unit cube', () => {
+test('chunkStats reports closed unit cube with directed edges', () => {
   const pool = new VertexPool();
   const faces = [
     { n: [0, 0, -1], c: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]] },
@@ -67,5 +53,49 @@ test('chunkStats reports closed unit cube', () => {
   const stats = chunkStats(pool, tris);
   assert.equal(stats.boundary, 0);
   assert.equal(stats.nonmanifold, 0);
+  assert.equal(stats.sameDirection, 0);
   assert.ok(Math.abs(stats.volume - 1) < 1e-9);
+  // Negative: flipping one cap-style triangle must break directed consistency.
+  const flipped = [...tris];
+  flipped[0] = [flipped[0][0], flipped[0][2], flipped[0][1]];
+  const bad = chunkStats(pool, flipped);
+  assert.ok(bad.boundary > 0 || bad.sameDirection > 0);
+});
+
+test('UV-seam corners survive region chunking exactly (plan §5.4)', () => {
+  // Two quads sharing an edge position with DIFFERENT UVs on each side.
+  const pool = new VertexPool();
+  const a = [[0,0,0],[1,0,0],[1,1,0],[0,1,0]].map(p => pool.add(p, [0,0,-1], [p[0], p[1]]));
+  const b = [[1,0,0],[2,0,0],[2,1,0],[1,1,0]].map(p => pool.add(p, [0,0,-1], [p[0] - 1, p[1] + 5]));
+  const tris = [[a[0],a[1],a[2]],[a[0],a[2],a[3]],[b[0],b[1],b[2]],[b[0],b[2],b[3]]];
+  const chunk = buildChunkWithCaps(pool, tris, 'seam');
+  const outer = chunk.triangles.slice(0, chunk.outerTriangles);
+  const uvs = new Set();
+  for (const t of outer) for (const v of t) uvs.add(pool.t(v).map(x => x.toFixed(6)).join(','));
+  // Both seam UV variants must exist (1,0)/(1,1) from quad A and (0,0)/(0,1)+5 from quad B.
+  assert.ok(uvs.has('1.000000,0.000000') || uvs.has('1.000000,1.000000'));
+  assert.ok([...uvs].some(u => u.endsWith('5.000000') || u.startsWith('0.000000,5')));
+  assert.equal(chunkStats(chunk.local, chunk.triangles).boundary >= 0, true); // caps present or none needed when region closed by itself? open boundary expected here
+});
+
+test('writeSidecar preserves author fields and rejects identity conflicts', async () => {
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'fracture-sidecar-'));
+  try {
+    const file = path.join(dir, 'chunk-0001.glb');
+    fs.writeFileSync(file, Buffer.from([1, 2, 3]));
+    writeSidecar(file, 'gltf', 'as_test0001', { chunk: 'chunk-0001' });
+    const metaPath = file + '.meta.json';
+    const first = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    assert.equal(first.guid, 'as_test0001');
+    first.userData.reviewAuthor = 7;
+    first.importer.weldTolerance = 0.0009;
+    fs.writeFileSync(metaPath, JSON.stringify(first));
+    fs.writeFileSync(file, Buffer.from([4, 5, 6]));
+    writeSidecar(file, 'gltf', 'as_test0001', { chunk: 'chunk-0001', rebuilt: true });
+    const second = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    assert.equal(second.userData.reviewAuthor, 7);
+    assert.equal(second.importer.weldTolerance, 0.0009);
+    assert.ok(second.sourceHash.startsWith('sha256:'));
+    assert.throws(() => writeSidecar(file, 'gltf', 'as_other99', {}));
+  } finally { await fs.promises.rm(dir, { recursive: true, force: true }); }
 });

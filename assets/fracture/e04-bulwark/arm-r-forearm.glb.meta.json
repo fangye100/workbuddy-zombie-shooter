@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "guid": "as_81d593f4",
+  "kind": "gltf",
+  "importer": {
+    "normalizeHeightM": null,
+    "weldTolerance": 0.0001,
+    "upAxisFlip": false,
+    "aoBakeFloor": null,
+    "splitSubMeshes": true,
+    "maxSubMeshes": 8
+  },
+  "bindings": [],
+  "rig": null,
+  "animations": null,
+  "userData": {
+    "builtBy": "tools/fracture/build-fracture-assets.mjs",
+    "fractureBuild": {
+      "chunk": "arm-r-forearm",
+      "builtAt": "2026-10-20T04:22:22.654Z"
+    },
+    "variant": "e04-bulwark",
+    "file": "arm-r-forearm.glb"
+  },
+  "sourceHash": "sha256:4ac840ed1a81a5b65328c47257b8046cd156b2e1f6bf39c19ec4b0c47bf2cece",
+  "updatedAt": "2026-10-20T04:22:22.657Z"
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "guid": "as_ff626da2",
+  "guid": "as_4a546985",
   "kind": "gltf",
   "importer": {
     "normalizeHeightM": null,
@@ -15,9 +15,13 @@
   "animations": null,
   "userData": {
     "builtBy": "tools/fracture/build-fracture-assets.mjs",
-    "variant": "p01-barrel",
-    "file": "p01-barrel-chunks.glb"
+    "fractureBuild": {
+      "chunk": "torso",
+      "builtAt": "2026-10-20T04:22:22.620Z"
+    },
+    "variant": "e04-bulwark",
+    "file": "torso.glb"
   },
-  "sourceHash": "sha256:9438ceba92edc4e526ec96456f41b6655a5adde27f1c2418f49dccb44c06215d",
-  "updatedAt": "2026-10-20T02:47:34.243Z"
+  "sourceHash": "sha256:24dae8fea6428b91f443c0d0742bfd67f1e121ef88d4874cb7df1121a9b200cd",
+  "updatedAt": "2026-10-20T04:22:22.625Z"
 }

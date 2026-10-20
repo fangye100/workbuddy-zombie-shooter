@@ -17,8 +17,8 @@
       "chunkId": "chunk-0001",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "guid": "as_29a7ad90",
         "sub": "node:chunk-0001"
       },
       "bind": {
@@ -40,9 +40,9 @@
         ]
       },
       "pivot": [
-        0.166995,
-        0.110188,
-        0.17194
+        0.162849,
+        0.114013,
+        0.168657
       ],
       "proxy": {
         "shape": {
@@ -63,8 +63,8 @@
       "chunkId": "chunk-0002",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0002.glb",
+        "guid": "as_6b0d0d0b",
         "sub": "node:chunk-0002"
       },
       "bind": {
@@ -86,9 +86,9 @@
         ]
       },
       "pivot": [
-        -0.169676,
-        0.107408,
-        0.17254
+        -0.165215,
+        0.110813,
+        0.172997
       ],
       "proxy": {
         "shape": {
@@ -109,8 +109,8 @@
       "chunkId": "chunk-0003",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0003.glb",
+        "guid": "as_c7c145bd",
         "sub": "node:chunk-0003"
       },
       "bind": {
@@ -132,9 +132,9 @@
         ]
       },
       "pivot": [
-        -0.175166,
-        0.104616,
-        -0.166802
+        -0.174653,
+        0.105867,
+        -0.162197
       ],
       "proxy": {
         "shape": {
@@ -155,8 +155,8 @@
       "chunkId": "chunk-0004",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0004.glb",
+        "guid": "as_9eceb5ed",
         "sub": "node:chunk-0004"
       },
       "bind": {
@@ -178,9 +178,9 @@
         ]
       },
       "pivot": [
-        0.174288,
-        0.104169,
-        -0.167676
+        0.174481,
+        0.106347,
+        -0.163451
       ],
       "proxy": {
         "shape": {
@@ -201,8 +201,8 @@
       "chunkId": "chunk-0005",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0005.glb",
+        "guid": "as_a1f5696e",
         "sub": "node:chunk-0005"
       },
       "bind": {
@@ -224,9 +224,9 @@
         ]
       },
       "pivot": [
-        0.176878,
-        0.440382,
-        0.182714
+        0.177412,
+        0.436818,
+        0.179249
       ],
       "proxy": {
         "shape": {
@@ -247,8 +247,8 @@
       "chunkId": "chunk-0006",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0006.glb",
+        "guid": "as_0770e995",
         "sub": "node:chunk-0006"
       },
       "bind": {
@@ -270,9 +270,9 @@
         ]
       },
       "pivot": [
-        -0.177175,
-        0.444808,
-        0.187759
+        -0.174686,
+        0.448043,
+        0.190497
       ],
       "proxy": {
         "shape": {
@@ -293,8 +293,8 @@
       "chunkId": "chunk-0007",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0007.glb",
+        "guid": "as_20f36639",
         "sub": "node:chunk-0007"
       },
       "bind": {
@@ -316,9 +316,9 @@
         ]
       },
       "pivot": [
-        -0.177408,
-        0.441728,
-        -0.182147
+        -0.173394,
+        0.441811,
+        -0.182834
       ],
       "proxy": {
         "shape": {
@@ -339,8 +339,8 @@
       "chunkId": "chunk-0008",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0008.glb",
+        "guid": "as_17ebae9f",
         "sub": "node:chunk-0008"
       },
       "bind": {
@@ -362,9 +362,9 @@
         ]
       },
       "pivot": [
-        0.18415,
-        0.446028,
-        -0.176195
+        0.186449,
+        0.444287,
+        -0.170503
       ],
       "proxy": {
         "shape": {
@@ -385,8 +385,8 @@
       "chunkId": "chunk-0009",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0009.glb",
+        "guid": "as_3dea87d9",
         "sub": "node:chunk-0009"
       },
       "bind": {
@@ -408,9 +408,9 @@
         ]
       },
       "pivot": [
-        0.165953,
-        0.790311,
-        0.163988
+        0.163048,
+        0.789549,
+        0.158537
       ],
       "proxy": {
         "shape": {
@@ -431,8 +431,8 @@
       "chunkId": "chunk-0010",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0010.glb",
+        "guid": "as_6e0741b6",
         "sub": "node:chunk-0010"
       },
       "bind": {
@@ -454,9 +454,9 @@
         ]
       },
       "pivot": [
-        -0.165931,
-        0.793669,
-        0.159712
+        -0.161236,
+        0.788451,
+        0.157114
       ],
       "proxy": {
         "shape": {
@@ -477,8 +477,8 @@
       "chunkId": "chunk-0011",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0011.glb",
+        "guid": "as_7136f5a2",
         "sub": "node:chunk-0011"
       },
       "bind": {
@@ -500,9 +500,9 @@
         ]
       },
       "pivot": [
-        -0.171045,
-        0.795665,
-        -0.155188
+        -0.168919,
+        0.793921,
+        -0.149208
       ],
       "proxy": {
         "shape": {
@@ -523,8 +523,8 @@
       "chunkId": "chunk-0012",
       "class": "large",
       "mesh": {
-        "path": "assets/fracture/p01-barrel/p01-barrel-chunks.glb",
-        "guid": "as_ff626da2",
+        "path": "assets/fracture/p01-barrel/chunk-0012.glb",
+        "guid": "as_459c7a0b",
         "sub": "node:chunk-0012"
       },
       "bind": {
@@ -546,9 +546,9 @@
         ]
       },
       "pivot": [
-        0.166823,
-        0.790394,
-        -0.170422
+        0.16501,
+        0.788824,
+        -0.168597
       ],
       "proxy": {
         "shape": {
