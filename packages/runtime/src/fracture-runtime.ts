@@ -14,7 +14,7 @@
 import { ObjectPool } from '@aether/core';
 import type { RapierFractureBackend } from './fracture-rapier';
 import type { FractureEvent, FractureBodyHandle, FractureVec3, FractureQuat } from './fracture';
-import { fractureEventKey } from './fracture';
+import { fractureEventKey, frozenFractureEvent } from './fracture';
 
 /** 碎片 profile 中单个碎块的播放输入（由宿主从 .fracture.json + 世界变换组合）。 */
 export interface FractureChunkInput {
@@ -289,8 +289,7 @@ export function createFractureRuntime(
       return { type: 'convex', points: new Float32Array(sh.points) }; // 复制 TypedArray
     };
     return {
-      // event 已是 frozenFractureEvent 冻结快照；此处结构化复制以隔离嵌套身份。
-      event: a.event,
+      event: frozenFractureEvent(a.event), // 冻结：提交后改写不影响激活身份/handle key
       chunks: a.chunks.map((c) => ({
         chunkId: c.chunkId, cls: c.cls,
         position: v3(c.position), rotation: q(c.rotation), scale: c.scale,
