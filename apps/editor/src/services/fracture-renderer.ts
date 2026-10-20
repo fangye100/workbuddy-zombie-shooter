@@ -58,7 +58,7 @@ export class PlayFractureRenderer {
   private batches: CoreDynamicBatch[] = [];
   private disposed = false;
   /** 已加载网格数 / 最近一次同步的实例数与三角形数（供验收观察）。 */
-  readonly stats = { meshes: 0, instances: 0, triangles: 0 };
+  readonly stats = { meshes: 0, instances: 0, triangles: 0, uploadBytes: 0 };
 
   constructor(io: FractureAssetIO) {
     this.io = io;
@@ -151,6 +151,7 @@ export class PlayFractureRenderer {
     this.stats.meshes = 0;
     this.stats.instances = 0;
     this.stats.triangles = 0;
+    this.stats.uploadBytes = 0;
   }
 
   private loadMesh(path: string, pivot: readonly [number, number, number] | null): void {
@@ -190,6 +191,8 @@ export class PlayFractureRenderer {
         const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, pivot: pivotKey, parts };
         this.meshes.set(path, entry);
         this.stats.meshes++;
+        // 本次播放新增到 GPU 的几何字节（顶点 + 索引 + 全零 skin slot 24B/顶点）
+        this.stats.uploadBytes += verts.byteLength + parsed.mesh.indices.byteLength + Math.floor(verts.length / 15) * 24;
       } catch {
         this.meshes.set(path, null);
       } finally {

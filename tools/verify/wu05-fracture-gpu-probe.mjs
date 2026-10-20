@@ -100,11 +100,12 @@ for (let i = 0; i < 60; i++) { await sleep(200); if (await evalJs('window.__edit
 const spawnRes = await evalJs(`(async()=>{
   const c=window.__editor.playCtl;
   const pl=c.session.runtime?.player();
-  const spawnPos=pl?[pl.x,pl.y+2.2,pl.z]:[0,3,0];
+  // 近景取证：放在相机与玩家之间（碎片 ~0.3m，远看只有几个像素）
+  const spawnPos=pl?[pl.x,pl.y+2.0,pl.z]:[0,3,0];
   const ev={sequence:1,tick:0,seed:11,
     profile:{path:'assets/fracture/p01-barrel/p01-barrel.fracture.json',guid:'as_p01frct'},
     target:{kind:'scene-object',runId:'wu05-probe',nodeId:'wu05-barrel'},
-    position:spawnPos,rotation:[0,0,0,1],scale:[1,1,1],
+    position:spawnPos,rotation:[0,0,0,1],scale:[3,3,3],
     contact:spawnPos,normal:[0,1,0],impulse:[2,3,1],
     source:{weaponId:'w_pistol',hitSequence:1}};
   const r=await c.spawnFracture(ev);
@@ -119,11 +120,19 @@ fs.writeFileSync(path.join(OUT, 'fracture-air.png'), Buffer.from(shotAir.data, '
 console.log('SHOT_AIR', path.join(OUT, 'fracture-air.png'));
 await sleep(3000);
 
+// 原角色动态批次仍在（palette/skin 分支没有被刚体模式影响）
+const charInfo = await evalJs(
+  "(()=>{const bs=window.__editor.playCtl.fractureBatches;" +
+  "const rb=window.__editor.renderer;" +
+  "return {paletteUploaded:!!rb.core.dynamicPaletteBuf, charBatches:(window.__editor.bridge?.batches?.()??[]).length};})()");
+console.log('CHARACTERS', JSON.stringify(charInfo));
 const stats = await evalJs(`(()=>{
   const c=window.__editor.playCtl,r=window.__editor.renderer;
   return {frag:c.fractureRenderStats, batches:c.fractureBatches.length,
     draws:r.stats.drawCalls, tris:r.stats.triangles,
     dynSlots:r.core.dynamicInstSlots?.length??null,
+    mats:c.fractureBatches.map(b=>({tex:!!b.albedo,tint:[b.instances[8],b.instances[9],b.instances[10]]})),
+    solidMat:!!r.core.solidDynamicMaterialCache,
     dynMeshes:r.core.dynamicMeshes?.size??null, pending:r.core.ledger??null};
 })()`);
 console.log('STATS', JSON.stringify(stats));
