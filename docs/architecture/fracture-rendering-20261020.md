@@ -53,6 +53,15 @@
 - 迟到：loadMesh 捕获装配代次，await 之后若已 dispose 或换代会关闭迟到的
   ImageBitmap，不写缓存/统计、不产生批次；dispose 也会关闭已缓存的位图。
 
+
+- 贴图共享：同一张 baseColor 图（按字节 SHA-256 内容身份）只建一份 GPUTexture/材质，
+  12 个 P-01 碎块共用 1 份 4096 贴图；fractureRenderStats.textures 记录唯一纹理数，
+  uploadBytes 计入几何 + 全零 skin slot + 唯一纹理字节（实测 8,097,006）。
+- Reset/换绑：PlayController.rebuildFractureBinding 调 beginGeneration()，让换绑前
+  挂起的读取按代次失效（Stop 与 Reset 两条路径都不回填缓存）。
+- 纹理失败：新增/解析 baseColor 图失败会进入统一失败处理（fractureRenderError +
+  重试），不再静默退化为白色材质。
+
 ## 验证（headed 真实 GPU，2026-10-21）
 
 `node tools/verify/wu05-fracture-gpu-probe.mjs`（现有 5100 HTTPS 服务，未重启）：

@@ -339,6 +339,8 @@ export class PlayController {
   /** reset 换绑：先释放旧代，再按当前作者场景重建（不新增账目项）。 */
   private rebuildFractureBinding(): void {
     this.disposeFracture();
+    // Reset/换绑：让重置之前挂起的网格读取失效，不能写回新代的渲染缓存。
+    this.fractureRenderer?.beginGeneration();
     const doc = this.renderer.getDocument();
     if (doc === null) return;
     const graph = SceneGraph.fromDocument(doc);

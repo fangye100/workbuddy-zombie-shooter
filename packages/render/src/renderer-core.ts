@@ -235,6 +235,11 @@ export interface CoreDynamicBatch {
   /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
   count: number;
   /**
+   * 共享纹理键（可选）：不同 meshId 但同一张图（例如同一 profile 的所有碎块外表面）
+   * 只创建一份 GPUTexture/材质，按内容身份复用，避免每块各复制一份大图。
+   */
+  textureKey?: string;
+  /**
    * 子网格绘制区间（可选）：同一个 meshId 的几何可被多个批次复用，只画各自的
    * indexStart..+indexCount（切口/外表面不同材质）。缺省画全部索引。
    */
@@ -410,10 +415,7 @@ export class RendererCore {
   /** 诊断：setDynamicPalette 实际上传次数（探针断言「重传已发生」的可观测信号） */
   paletteUploadCount = 0;
   /** meshId → 已上传的代理网格 GPU buffer（core 持有，调用方无需管理生命周期） */
-  private readonly dynamicMeshes = new Map<
-    string,
-    { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number; texture: GPUTexture; material: GPUBindGroup }
-  >();
+  private readonly dynamicMeshes = new Map<string, { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number }>();
 
   // ---- 渲染目标 ----
   private hdrTex: GPUTexture | null = null;
@@ -800,7 +802,7 @@ export class RendererCore {
    */
   private dynamicMesh(
     b: CoreDynamicBatch,
-  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number; texture: GPUTexture; material: GPUBindGroup } | null {
+  ): { vbuf: GPUBuffer; ibuf: GPUBuffer; skinVb: GPUBuffer; indexCount: number } | null {
     const hit = this.dynamicMeshes.get(b.meshId);
     if (hit !== undefined) return hit;
     if (b.vertices.length === 0 || b.indices.length === 0) return null;
@@ -827,18 +829,25 @@ export class RendererCore {
       0,
       b.skin === null ? new Uint8Array(vcount * 24) : packSkin(b.skin.joints, b.skin.weights, vcount),
     );
-    const bitmap = b.albedo;
-    const texture = bitmap ? createAlbedoTexture(this.device, bitmap) : this.device.createTexture({ label: `dyn-${b.meshId}-albedo`,
-      size: [1, 1], format: 'rgba8unorm',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    if (!bitmap) this.device.queue.writeTexture({texture}, new Uint8Array([255,255,255,255]), {bytesPerRow:4}, [1,1]);
-    const material = this.device.createBindGroup({ layout: this.dynamicMaterialLayout, entries: [
-      {binding:0, resource: texture.createView()}, {binding:1, resource:this.sampler},
-    ] });
-    const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length, texture, material };
+    // 几何与材质分离：材质按 textureKey（或 meshId）共享，避免同图重复建 GPUTexture。
+    const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length };
     this.dynamicMeshes.set(b.meshId, mesh);
     return mesh;
+  }
+
+  /** 动态材质缓存：textureKey（内容身份）或 meshId → 纹理 + bind group。 */
+  private readonly dynamicMaterials = new Map<string, { texture: GPUTexture; material: GPUBindGroup }>();
+  private materialFor(b: CoreDynamicBatch): GPUBindGroup {
+    if (b.albedo === null || b.albedo === undefined) return this.solidDynamicMaterial();
+    const key = b.textureKey ?? ('mesh:' + b.meshId);
+    const hit = this.dynamicMaterials.get(key);
+    if (hit !== undefined) return hit.material;
+    const texture = createAlbedoTexture(this.device, b.albedo);
+    const material = this.device.createBindGroup({ layout: this.dynamicMaterialLayout, entries: [
+      { binding: 0, resource: texture.createView() }, { binding: 1, resource: this.sampler },
+    ] });
+    this.dynamicMaterials.set(key, { texture, material });
+    return material;
   }
 
   /** 共享白色材质（无 albedo 的批次用；颜色由实例 color 提供）。懒创建。 */
@@ -863,7 +872,6 @@ export class RendererCore {
       m.vbuf.destroy();
       m.ibuf.destroy();
       m.skinVb.destroy();
-      m.texture.destroy();
     }
     this.dynamicMeshes.clear();
   }
@@ -926,7 +934,7 @@ export class RendererCore {
       pass.setBindGroup(0, slot.bg);
       // 无 albedo 的批次（如切口纯色材质）用共享白色材质，颜色由实例 color 携带，
       // 这样同一份几何/材质可被多个子网格批次复用，不复制纹理。
-      pass.setBindGroup(1, b.albedo ? mesh.material : this.solidDynamicMaterial());
+      pass.setBindGroup(1, this.materialFor(b));
       pass.setVertexBuffer(0, mesh.vbuf);
       pass.setVertexBuffer(1, mesh.skinVb);
       pass.setIndexBuffer(mesh.ibuf, 'uint32');
@@ -1003,6 +1011,8 @@ export class RendererCore {
     this.solidDynamicTexture?.destroy();
     this.solidDynamicTexture = null;
     this.solidDynamicMaterialCache = null;
+    for (const m of this.dynamicMaterials.values()) m.texture.destroy();
+    this.dynamicMaterials.clear();
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
     this.clearDynamicMeshes();
@@ -1364,8 +1374,11 @@ export class RendererCore {
     this.skeletonColorBuf.destroy();
     this.cylinderVb?.destroy();
     this.cylinderTintBuf.destroy();
-    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); }
+    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
     this.dynamicInstSlots = [];
+    this.solidDynamicTexture?.destroy();
+    this.solidDynamicTexture = null;
+    this.solidDynamicMaterialCache = null;
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
     this.dummyPaletteBuf.destroy();

@@ -26,6 +26,9 @@ interface MeshEntry {
   vertices: Float32Array<ArrayBuffer>;
   indices: Uint32Array<ArrayBuffer>;
   albedo: ImageBitmap | null;
+  /** 贴图内容身份（同图共享 GPUTexture）；无贴图为 null。 */
+  textureKey: string | null;
+  textureBytes: number;
   pivot: [number, number, number];
   parts: SubPart[];
 }
@@ -63,11 +66,17 @@ export class PlayFractureRenderer {
   private lastError: string | null = null;
   /** 失败重试时间戳（避免每帧重复读同一个坏文件）。 */
   private readonly retryAt = new Map<string, number>();
+  /** 已计入上传字节的贴图内容身份（同图只算一次）。 */
+  private readonly sharedTextures = new Set<string>();
   /** 已加载网格数 / 最近一次同步的实例数与三角形数（供验收观察）。 */
-  readonly stats = { meshes: 0, instances: 0, triangles: 0, uploadBytes: 0 };
+  readonly stats = { meshes: 0, instances: 0, triangles: 0, uploadBytes: 0, textures: 0 };
 
-  constructor(io: FractureAssetIO) {
+  /** 失败后的重试间隔（毫秒）；测试可注入较小值验证"可重试"。 */
+  private readonly retryDelayMs: number;
+
+  constructor(io: FractureAssetIO, opts: { retryDelayMs?: number } = {}) {
     this.io = io;
+    this.retryDelayMs = opts.retryDelayMs ?? 2000;
   }
 
   /** 最近一次网格准备失败的原因（null = 无失败）。 */
@@ -92,7 +101,7 @@ export class PlayFractureRenderer {
     if (runtime === null) return;
     const active = runtime.active;
     if (active.length === 0) return;
-    const groups = new Map<string, { batch: CoreDynamicBatch; instRows: Float32Array[]; rigidRows: Float32Array[] }>();
+    const groups = new Map<string, { batch: CoreDynamicBatch; instRows: Float32Array[]; rigidRows: Float32Array[]; textureBytes: number }>();
 
     for (const chunk of active) {
       if (chunk.expired) continue;
@@ -134,6 +143,7 @@ export class PlayFractureRenderer {
         inst[12] = 0; inst[13] = 0; inst[14] = 2; inst[15] = 0; // flags bit1 = 刚体模式
         inst[16] = 1; inst[17] = 0; inst[18] = 0; inst[19] = 0;
 
+        const texKey = part.textured ? entry.textureKey : null;
         const key = chunk.mesh.path + '|' + part.indexStart + '|' + part.indexCount + '|' + (part.textured ? 't' : 's');
         const hit = groups.get(key);
         if (hit === undefined) {
@@ -150,9 +160,11 @@ export class PlayFractureRenderer {
               indexStart: part.indexStart,
               indexCount: part.indexCount,
               rigid,
+              ...(texKey !== null ? { textureKey: texKey } : {}),
             },
             instRows: [inst],
             rigidRows: [rigid],
+            textureBytes: part.textured ? entry.textureBytes : 0,
           });
         } else {
           hit.instRows.push(inst);
@@ -160,6 +172,16 @@ export class PlayFractureRenderer {
         }
         this.stats.instances++;
         this.stats.triangles += part.indexCount / 3;
+      }
+    }
+    // 唯一纹理计数：同一内容身份只算一次上传（core 按 textureKey 共享 GPUTexture）。
+    for (const g of groups.values()) {
+      const tk = g.batch.textureKey;
+      if (tk === undefined) continue;
+      if (!this.sharedTextures.has(tk)) {
+        this.sharedTextures.add(tk);
+        this.stats.textures++;
+        this.stats.uploadBytes += g.textureBytes;
       }
     }
     // 合并各组实例行（每行 20 float）与刚体基向量（每行 12 float）
@@ -176,6 +198,27 @@ export class PlayFractureRenderer {
     }
   }
 
+  /**
+   * 换绑（Reset/换场景）时开始新装配代次：让之前挂起的读取失效，
+   * 并清空 CPU 缓存/统计（GPU 资源仍由 renderer-core 在 Stop 统一释放）。
+   */
+  beginGeneration(): void {
+    if (this.disposed) return;
+    this.generation++;
+    for (const e of this.meshes.values()) e?.albedo?.close();
+    this.meshes.clear();
+    this.pending.clear();
+    this.retryAt.clear();
+    this.sharedTextures.clear();
+    this.batches = [];
+    this.lastError = null;
+    this.stats.meshes = 0;
+    this.stats.instances = 0;
+    this.stats.triangles = 0;
+    this.stats.uploadBytes = 0;
+    this.stats.textures = 0;
+  }
+
   /** 释放本组件的 CPU 缓存与 ImageBitmap（GPU buffer 由 renderer-core 统一释放）。 */
   dispose(): void {
     if (this.disposed) return;
@@ -185,6 +228,7 @@ export class PlayFractureRenderer {
     this.meshes.clear();
     this.pending.clear();
     this.retryAt.clear();
+    this.sharedTextures.clear();
     this.lastError = null;
     this.batches = [];
     this.stats.meshes = 0;
@@ -214,8 +258,15 @@ export class PlayFractureRenderer {
           verts[o + 1] = raw[o + 1]! - pivotKey[1];
           verts[o + 2] = raw[o + 2]! - pivotKey[2];
         }
+        let textureKey: string | null = null;
+        let textureBytes = 0;
         if (parsed.image !== null && typeof createImageBitmap === 'function') {
-          albedo = await createImageBitmap(parsed.image).catch(() => null);
+          const imgBuf = await parsed.image.arrayBuffer();
+          textureBytes = imgBuf.byteLength;
+          const digest = await crypto.subtle.digest('SHA-256', imgBuf);
+          textureKey = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+          // 解码失败必须走统一失败路径（诊断 + 可重试），不能静默退化成白材质。
+          albedo = await createImageBitmap(parsed.image);
         }
         const parts: SubPart[] = parsed.subMeshes.map((sm) => {
           const f = sm.baseColorFactor;
@@ -233,7 +284,7 @@ export class PlayFractureRenderer {
           albedo?.close();
           return;
         }
-        const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, pivot: pivotKey, parts };
+        const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, textureKey, textureBytes, pivot: pivotKey, parts };
         this.meshes.set(path, entry);
         this.lastError = null;
         this.retryAt.delete(path);
@@ -246,7 +297,7 @@ export class PlayFractureRenderer {
         // 失败要可诊断且可重试：记录原因并从缓存移除，下一次 sync 会重新尝试。
         this.lastError = path + '：' + (e instanceof Error ? e.message : String(e));
         this.meshes.delete(path);
-        this.retryAt.set(path, Date.now() + 2000);
+        this.retryAt.set(path, Date.now() + this.retryDelayMs);
       } finally {
         this.pending.delete(path);
       }

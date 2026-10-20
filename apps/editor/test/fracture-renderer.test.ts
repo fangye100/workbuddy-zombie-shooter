@@ -241,7 +241,8 @@ describe('WU-05 碎片动态批次装配', () => {
         return glb.slice(0);
       },
     };
-    const renderer = new PlayFractureRenderer(io as never);
+    // 5ms 重试间隔，验证"失败后能重试成功"而不是只看到错误
+    const renderer = new PlayFractureRenderer(io as never, { retryDelayMs: 5 });
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
     const rt = createFractureRuntime(backend);
     expect(rt.play({
@@ -263,6 +264,48 @@ describe('WU-05 碎片动态批次装配', () => {
     expect(renderer.error).toContain('bad.glb');
     expect(renderer.error).toContain('EIO');
     expect(renderer.dynamicBatches.length).toBe(0);
+    // 恢复资产后应能重试成功（不是永久负缓存）
+    fail = false;
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    expect(renderer.error).toBeNull();
+    expect(renderer.dynamicBatches.length).toBeGreaterThan(0);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('Reset 换绑后迟到的读取被丢弃（beginGeneration 隔离旧代）', async () => {
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    let release: (() => void) | null = null;
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> { await new Promise<void>((r) => { release = r; }); return glb.slice(0); },
+    };
+    const renderer = new PlayFractureRenderer(io as never);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'small',
+        mesh: { path: 'reset-late.glb', guid: 'g1' },
+        position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere', radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0],
+        linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    await new Promise((r) => setTimeout(r, 20));
+    renderer.beginGeneration();     // Reset 换绑
+    release!();
+    await new Promise((r) => setTimeout(r, 40));
+    expect((renderer as unknown as { meshes: Map<string, unknown> }).meshes.size).toBe(0);
+    expect(renderer.stats.meshes).toBe(0);
     rt.dispose();
     renderer.dispose();
   }, 30000);
