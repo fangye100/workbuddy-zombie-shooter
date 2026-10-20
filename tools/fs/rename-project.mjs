@@ -60,6 +60,7 @@ export async function renameProject(root, abs, target, insensitive, maxSceneVers
         else if (entry.name.endsWith('.scene.json') || entry.name.endsWith('.prefab.json')) await add(p, 'scene');
         else if (entry.name.endsWith('.meta.json')) await add(p, 'meta');
         else if (entry.name.endsWith('.vfx.json')) await add(p, 'vfx');
+        else if (entry.name.endsWith('.fracture.json')) await add(p, 'fracture');
       }
     };
     for (const rel of project?.assetRoots ?? ['assets']) await walk(resolveRef(rel));
@@ -74,9 +75,10 @@ export async function renameProject(root, abs, target, insensitive, maxSceneVers
       } catch (e) { throw new Error(`${posix(path.relative(root, p))}: ${e.message}`); }
     }
     // Graph texture refs are typed slots. Their source digest must join the same journal/rollback.
-    for(const u of updates.filter(u=>u.kind==='vfx' && u.json.graph)){
+    for(const u of updates.filter(u=>(u.kind==='vfx' && u.json.graph) || u.kind==='fracture')){
       const metaPath=`${u.before}.meta.json`,doc=docs.get(metaPath);
-      if(!doc || doc.json.kind!=='vfx' || doc.json.guid!==u.json.id)throw new Error(`VFX图sidecar身份不匹配：${posix(path.relative(root,u.before))}`);
+      const expectedKind=u.kind==='fracture'?'fracture':'vfx';
+      if(!doc || doc.json.kind!==expectedKind || doc.json.guid!==u.json.id)throw new Error(`资产sidecar身份不匹配：${posix(path.relative(root,u.before))}`);
       doc.json.sourceHash=`sha256:${createHash('sha256').update(u.out).digest('hex')}`;
       const out=`${JSON.stringify(doc.json,null,2)}\n`,existing=updates.find(v=>v.before===metaPath);
       if(existing)existing.out=out;

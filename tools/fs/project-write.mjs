@@ -1,7 +1,7 @@
 /** Shared devfs/offline-MCP coordination. Direct filesystem writers must opt into this protocol. */
 import { promises as fs, realpathSync } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { hostname } from 'node:os';
 
 /** One project lock also covers rename transactions involving several files. */
@@ -45,6 +45,21 @@ export async function atomicWriteText(abs, text) {
   } finally {
     await fs.unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error; });
   }
+}
+
+/**
+ * Typed asset write shared by VFX/fracture editors. Caller holds the shared project
+ * lock. Preserve all sidecar fields except the source digest; mismatched identity
+ * (kind or guid) refuses the write before touching disk.
+ */
+export async function writeTypedAssetWithMeta(abs, text, kind) {
+  const source = JSON.parse(text), metaPath = `${abs}.meta.json`;
+  const before = await fs.readFile(abs, 'utf8'), meta = JSON.parse(await fs.readFile(metaPath, 'utf8'));
+  if (meta.kind !== kind || meta.guid !== source.id) throw new Error(`资产 sidecar GUID/kind 不匹配（${kind}）`);
+  const updated = { ...meta, sourceHash: `sha256:${createHash('sha256').update(text).digest('hex')}` };
+  await atomicWriteText(abs, text);
+  try { await atomicWriteText(metaPath, JSON.stringify(updated, null, 2) + '\n'); }
+  catch (error) { await atomicWriteText(abs, before); throw error; }
 }
 
 /** Lock acquisition precedes read/compare/merge/replace. No caller may refresh its old version here. */

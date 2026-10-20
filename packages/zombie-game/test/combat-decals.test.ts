@@ -13,7 +13,7 @@ const addBlood=(j:CombatDecalJournal,tick:number,slot=1)=>j.append(1,{event:'npc
 describe('真实战斗贴花事实与场景配置',()=>{
   it('v20迁移只升版本；非法容量、淡出、重复配置拒绝；装载复制配置',()=>{
     const old=scene();old.schemaVersion=20;old.nodes.forEach(n=>n.components=n.components.filter(c=>c.kind!=='DecalEmitter'));const before=structuredClone(old),m=migrateToLatest(old);
-    expect(m.applied).toEqual(['authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);expect(m.doc.nodes).toEqual(before.nodes);expect(old).toEqual(before);
+    expect(m.applied).toEqual(['authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);expect(m.doc.nodes).toEqual(before.nodes);expect(old).toEqual(before);
     const doc=scene(),c=doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='DecalEmitter') as DecalEmitterComponent;c.rules[0]!.fadeSec=200;c.capacity=0;expect(validateSceneDocument(doc).some(d=>d.code==='E_DECAL_EMITTER')).toBe(true);
     const good=scene(),loader=loadLevelRuntime(good);expect(loader.desc?.decalEmitter).toEqual(config());good.nodes[0]!.components.push(config());expect(validateSceneDocument(good).some(d=>d.code==='E_DECAL_EMITTER_DUP')).toBe(true);
   });

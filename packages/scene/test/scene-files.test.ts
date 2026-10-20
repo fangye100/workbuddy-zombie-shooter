@@ -28,6 +28,7 @@ import type { AssetMeta } from '../src/asset-meta';
 import type { SceneDocument } from '../src/document';
 import { validateSharedMotionLibrary, type SharedMotionLibrary, type SharedMotionBinding } from '../src/shared-motion';
 import { validateVfxAsset,VFX_VERSION, type VfxAsset } from '../src/vfx';
+import { validateFractureAsset, fractureAssetRefs, type FractureAsset } from '../src/fracture';
 import {VFX_GRAPH_VERSION,vfxGraphTextureRefs,type VfxGraphAsset} from '../src/vfx-graph';
 import {compileVfxGraph} from '@aether/runtime';
 import { validateModelAssetIdentity } from '../src/model-attachments';
@@ -64,6 +65,29 @@ it('正式武器模型与全部附件的 GUID/path 对应实际 GLB sidecar',()=
 });
 
 const vfxModules = import.meta.glob('/assets/**/*.vfx.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+
+const fractureModules = import.meta.glob('/assets/**/*.fracture.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+
+it('fracture profiles validate and all typed refs resolve real sidecar identities', () => {
+  const failures:string[]=[],resolved:Record<string,FractureAsset>={};
+  const check=(owner:string,ref:{path:string;guid?:string},kind:string)=>{
+    const meta=metaModules[`/${ref.path}.meta.json`] as AssetMeta|undefined;
+    if(!allAssetPaths.includes(`/${ref.path}`) || meta?.guid!==ref.guid || meta?.kind!==kind)failures.push(`${owner}: identity ${ref.path}`);
+  };
+  for(const [path,data] of Object.entries(fractureModules)){
+    const errors=validateFractureAsset(data);failures.push(...errors.map(e=>`${path}: ${e}`));if(errors.length)continue;
+    const a=data as FractureAsset;resolved[path]=a;
+    check(path,{path:path.slice(1),guid:a.id},'fracture');
+    for(const ref of fractureAssetRefs(a))check(path,ref,ref.path.endsWith('.vfx.json')?'vfx':'gltf');
+  }
+  for(const [path,data] of Object.entries(sceneModules))for(const node of (data as SceneDocument).nodes)for(const c of node.components){
+    if(c.kind!=='Destructible')continue;
+    check(`${path}:${node.id}`,c.profile,'fracture');
+    const a=resolved[`/${c.profile.path}`];
+    if(!a || a.status!=='accepted' || a.kind!=='object')failures.push(`${path}: invalid destructible profile ${node.id}`);
+  }
+  expect(failures).toEqual([]);
+});
 
 it('VFX definitions, texture identities and weapon bindings resolve accepted resources', () => {
   const failures:string[]=[],resolved:Record<string,VfxAsset>={};

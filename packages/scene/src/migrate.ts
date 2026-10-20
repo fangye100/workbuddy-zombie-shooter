@@ -349,6 +349,8 @@ export const migrateV7ToV8: MigrationStep = {
 };
 
 export function registerSceneMigrations(): void {
+  // v24：可破坏物体组件（opt-in）。旧场景没有该组件，作者数据原样保留。
+  if(!listMigrations().some(m=>m.from===23&&m.to===24))registerMigration({from:23,to:24,name:'destructible-fracture-components',run:doc=>structuredClone(doc)});
   // 兼容已发布的 VFX v16–v19 与主线 v16–v22：可选 VFX 数据原样保留，统一升级。
   if(!listMigrations().some(m=>m.from===22&&m.to===23))registerMigration({from:22,to:23,name:'integrated-navigation-and-vfx',run:doc=>structuredClone(doc)});
   // v16–v18 曾在导航与姿态/持握两条已发布分支重号。保留v15→21导航真源链，

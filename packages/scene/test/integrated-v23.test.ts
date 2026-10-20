@@ -14,7 +14,7 @@ describe('主线与已发布 VFX v19 统一迁移',()=>{
     if(w.presentation&&w.presentation.assembly===undefined)w.presentation.assembly=null;
   }
   expect(result.doc).toEqual(expected);expect(legacyVfx).toEqual(before);
-  expect(result.applied.at(-1)).toBe('integrated-navigation-and-vfx');
+  expect(result.applied).toContain('integrated-navigation-and-vfx');
   expect(result.diagnostics.filter(d=>d.severity==='error')).toEqual([]);
   expect(migrateToLatest(result.doc).applied).toEqual([]);
  });
@@ -22,7 +22,7 @@ describe('主线与已发布 VFX v19 统一迁移',()=>{
   const current=migrateToLatest(legacyVfx).doc;
   const old={...structuredClone(current),schemaVersion:22};
   const result=migrateToLatest(old);
-  expect(result.applied).toEqual(['integrated-navigation-and-vfx']);
+  expect(result.applied).toEqual(['integrated-navigation-and-vfx','destructible-fracture-components']);
   expect(result.doc).toEqual({...old,schemaVersion:SCHEMA_VERSION});
   const binding=result.doc.nodes.flatMap(n=>n.components).find(c=>c.kind==='VfxBindings');
   expect(binding).toBeDefined();

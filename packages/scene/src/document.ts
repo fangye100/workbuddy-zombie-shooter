@@ -22,13 +22,14 @@ import { validWeaponArsenal, type WeaponArsenal } from './weapons';
 import { validGameplayAudio, type GameplayAudioConfig } from './audio';
 import { validateBodyIkBinding, type BodyIkBinding } from './body-ik';
 import {validVfxBindings,validVfxEmitter,validVfxDecal,type VfxDecalComponent,type VfxEmitterComponent,type VfxBindingsComponent} from './vfx';
+import {validDestructible,type DestructibleComponent} from './fracture';
 import { validBoneSockets, type BoneSockets } from './model-attachments';
 import { validateDecalMark, validateDecalEmitter, MAX_AUTHORED_DECALS, type DecalComponent, type DecalEmitterComponent } from './decals';
 
 // ---------------------------------------------------------------- 基础标量
 
 /** 场景文件格式版本。每次结构性变更 +1，并必须在 MIGRATIONS 里补一条升级函数 */
-export const SCHEMA_VERSION = 23;
+export const SCHEMA_VERSION = 24;
 
 export const SCENE_FILE_EXT = '.scene.json';
 /** 预制体：可复用的节点子树（僵尸 / 房间 / 门 / 掉落物） */
@@ -175,6 +176,7 @@ export const ComponentKind = {
   VfxBindings: 'VfxBindings',
   VfxEmitter: 'VfxEmitter',
   VfxDecal: 'VfxDecal',
+  Destructible: 'Destructible',
 } as const;
 export type ComponentKind = (typeof ComponentKind)[keyof typeof ComponentKind];
 
@@ -545,6 +547,7 @@ export function validRunRules(value: unknown): value is RunRulesComponent {
 }
 
 export type ComponentData =
+  | DestructibleComponent
   | VfxBindingsComponent
   | VfxDecalComponent
   | VfxEmitterComponent
@@ -1040,6 +1043,10 @@ export function validateSceneDocument(doc: unknown): SceneDiagnostic[] {
       if(c.kind===ComponentKind.VfxBindings){
         if(!validVfxBindings(c))err(at,'E_VFX_BINDINGS','VFX 绑定必须包含合法 tag、资源 GUID/path 和 effectKey');
         if(c.enabled && d.nodes!.some((other,ni)=>ni<i && other?.components?.some(x=>x.kind==='VfxBindings' && x.enabled)))err(at,'E_VFX_BINDINGS_DUP','场景只能启用一份 VfxBindings');
+      }
+      if(c.kind===ComponentKind.Destructible){
+        if(!validDestructible(c))err(at,'E_DESTRUCTIBLE','可破坏组件的 profile 引用、耐久或触发/碰撞/导航策略非法');
+        else if(!comps.some(x=>x.kind==='MeshRenderer' && x.enabled) || n.id===d.playerStart)err(at,'E_DESTRUCTIBLE_MESH','可破坏组件必须挂在启用 MeshRenderer 的非玩家物体节点');
       }
       if (c.kind === ComponentKind.Light) {
         const l = c as LightComponent;

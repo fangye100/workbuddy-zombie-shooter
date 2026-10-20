@@ -72,7 +72,7 @@ describe('v10 shared motion migration', () => {
   it('upgrades without inventing asset bindings or changing authored data', () => {
     const doc = createEmptySceneDocument('migration-test'); doc.schemaVersion = 10;
     const result = migrateToLatest(doc);
-    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);
+    expect(result.applied).toEqual(['shared-motion-node-overrides','authored-crowd-attack-budget','unified-weapon-arsenal','scene-audio-cue-mapping','integrated-weapons-audio-body-ik','predictive-crowd-navigation','authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);
     expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);
     expect(result.doc.nodes).toEqual(doc.nodes);
     expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([]);
@@ -361,7 +361,7 @@ describe('migrateV2ToV3 —— 玩家起点（WU-1a）', () => {
       'predictive-crowd-navigation',
       'authored-3d-navigation-surfaces',
       'runtime-navigation-gates',
-      'procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);
+      'procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);
   });
 });
 
@@ -505,7 +505,7 @@ describe('v17 → v18 动态导航门',()=>{
   afterEach(()=>{clearMigrations();registerSceneMigrations();});
   it('只升级版本，不编造门状态或改变作者节点',()=>{
     const input=docAt(17),copy=structuredClone(input),result=migrateToLatest(input);
-    expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);expect(input).toEqual(copy);
+    expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);expect(result.doc.schemaVersion).toBe(SCHEMA_VERSION);expect(input).toEqual(copy);
     expect(result.doc.nodes).toEqual(input.nodes);expect(JSON.stringify(result.doc)).not.toContain('NavigationGate');
   });
 });

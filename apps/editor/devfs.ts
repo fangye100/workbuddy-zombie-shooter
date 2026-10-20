@@ -38,7 +38,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sceneFingerprint } from '../../packages/runtime/src/doc-diff.ts';
 import { withProjectWriteLock } from '../../tools/fs/project-write.mjs';
 import { writeVfxWithMeta } from '../../tools/fs/write-vfx.mjs';
+import { writeFractureWithMeta } from '../../tools/fs/write-fracture.mjs';
 import { validateVfxAsset } from '../../packages/scene/src/vfx.ts';
+import { validateFractureAsset } from '../../packages/scene/src/fracture.ts';
 import { renameProject } from '../../tools/fs/rename-project.mjs';
 import { SCHEMA_VERSION, validateSceneDocument } from '../../packages/scene/src/document.ts';
 import { validateProject } from '../../packages/scene/src/project.ts';
@@ -310,6 +312,12 @@ async function performWrite(
     const errors=validateVfxAsset(JSON.parse(out));
     if(body.baseHash===undefined || errors.length){sendJson(res,400,{error:errors.join('；') || 'VFX 保存必须提供加载时的 baseHash'});return;}
     await writeVfxWithMeta(abs,out);
+    sendJson(res,200,{ok:true,path:rel,bytes:Buffer.byteLength(out),hash:sceneFingerprint(JSON.parse(out))});return;
+  }
+  if(abs.endsWith('.fracture.json')){
+    const errors=validateFractureAsset(JSON.parse(out));
+    if(body.baseHash===undefined || errors.length){sendJson(res,400,{error:errors.join('；') || 'Fracture 保存必须提供加载时的 baseHash'});return;}
+    await writeFractureWithMeta(abs,out);
     sendJson(res,200,{ok:true,path:rel,bytes:Buffer.byteLength(out),hash:sceneFingerprint(JSON.parse(out))});return;
   }
   // 临时名必须**独占创建**：加随机数 + 计数器 + `wx`（不存在才创建），

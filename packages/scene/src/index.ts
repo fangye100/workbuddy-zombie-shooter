@@ -40,4 +40,5 @@ export * from './model-attachments';
 export * from './audio';
 export * from './vfx';
 export * from './vfx-graph';
+export * from './fracture';
 export * from './decals';

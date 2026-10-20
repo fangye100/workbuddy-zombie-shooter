@@ -42,7 +42,7 @@ describe('正式模型与骨 socket 持久化',()=>{
   registerSceneMigrations();const doc=createEmptySceneDocument('old');doc.schemaVersion=16;
   const weapon=legacyWeaponArsenal({magazineSize:12,reserveRounds:40,reloadSec:1}).definitions[0]!;
   doc.nodes.push({id:'rules',name:'rules',parent:null,prefab:null,visible:true,pickable:false,category:'',transform:{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]},components:[{kind:'RunRules',enabled:true,arsenal:{equipped:weapon.id,switchSec:.2,definitions:[weapon]}}]} as unknown as SceneNode);
-  const result=migrateToLatest(doc);expect(result.to).toBe(23);expect(result.applied).toEqual(['authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);
+  const result=migrateToLatest(doc);expect(result.to).toBe(24);expect(result.applied).toEqual(['authored-3d-navigation-surfaces','runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);
   const rules=result.doc.nodes.at(-1)!.components[0] as unknown as {arsenal:{definitions:typeof weapon[]}};
   expect(rules.arsenal.definitions[0]!.presentation.assembly).toBeNull();expect(weapon.presentation.assembly).toBeUndefined();
   const copy=structuredClone(weapon);copy.presentation.assembly={holdPose:identitySocket(),attachments:[],reloadAttachmentId:'missing'};
@@ -52,7 +52,7 @@ describe('正式模型与骨 socket 持久化',()=>{
  });
  it('v17保留旧绝对hold；新slot往返且非法bone/位置不静默修复',()=>{
   registerSceneMigrations();const doc=createEmptySceneDocument('old-slot');doc.schemaVersion=17;
-  const result=migrateToLatest(doc);expect(result.to).toBe(23);expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx']);expect(doc.schemaVersion).toBe(17);
+  const result=migrateToLatest(doc);expect(result.to).toBe(24);expect(result.applied).toEqual(['runtime-navigation-gates','procedural-surface-decals','expanded-procedural-decal-styles','authored-combat-decal-emitter','integrated-navigation-pose-sockets','integrated-navigation-and-vfx','destructible-fracture-components']);expect(doc.schemaVersion).toBe(17);
   const weapon=legacyWeaponArsenal({magazineSize:12,reserveRounds:40,reloadSec:1}).definitions[0]!;
   weapon.presentation.assembly={holdPose:identitySocket(),attachments:[],reloadAttachmentId:null};
   expect(validWeaponDefinition(weapon)).toBe(true);expect(weapon.presentation.assembly.holdSlot).toBeUndefined();

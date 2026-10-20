@@ -47,6 +47,7 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
           case 'NavZone': ref(c.baked); break;
           case 'VfxEmitter': case 'VfxDecal': ref(c.resource);break;
           case 'VfxBindings': for(const b of Object.values(c.bindings??{}))ref(b.resource);break;
+          case 'Destructible': ref(c.profile); break;
           case 'Script': unsupported(c.params, `nodes[${node.id}].Script.params`); break;
           case 'Light': case 'Camera': case 'Collider': case 'RoomVolume': break;
           default: unsupported(c, `nodes[${node.id}].${c.kind}`);
@@ -60,6 +61,16 @@ export function rewriteResourcePaths(json, kind, rewrite, maxSceneVersion) {
         else unsupported(node,`VFX图节点 ${node?.id}`);
       }
     }else unsupported(json, 'VFX（请通过资源编辑流程更新引用；未来图版本拒绝改写）');
+  } else if (kind === 'fracture') {
+    if (json.version !== 1 || !Array.isArray(json.chunks)) throw new Error('Fracture 结构或版本不受支持');
+    ref(json.source?.model);
+    for (const chunk of json.chunks) {
+      ref(chunk?.mesh);
+      if (chunk?.proxy?.shape?.type === 'convex') ref(chunk.proxy.shape.mesh);
+      else unsupported(chunk?.proxy?.shape, 'fracture.proxy.shape');
+    }
+    ref(json.playback?.companionVfx?.resource);
+    unsupported(json.npc, 'fracture.npc');
   } else if (kind === 'meta') {
     for (const binding of json.bindings ?? []) for (const primitive of binding.prims ?? []) material(primitive.material);
     ref(json.retarget?.recipe?.source); ref(json.retarget?.recipe?.target);
