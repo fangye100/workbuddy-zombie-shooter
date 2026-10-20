@@ -282,6 +282,11 @@ export class PlayController {
     return this.fractureRenderer?.dynamicBatches ?? [];
   }
 
+  /** 最近一次碎片网格准备失败的原因（null = 无失败；供 HUD/诊断读取）。 */
+  get fractureRenderError(): string | null {
+    return this.fractureRenderer?.error ?? null;
+  }
+
   /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
   get fractureRenderStats() {
     return this.fractureRenderer?.stats ?? { meshes: 0, instances: 0, triangles: 0 };

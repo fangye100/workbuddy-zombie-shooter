@@ -193,6 +193,111 @@ describe('WU-05 碎片动态批次装配', () => {
     renderer.dispose();
   }, 30000);
 
+  it('Stop 之后才完成的网格读取被丢弃（不复活缓存、不泄漏 ImageBitmap）', async () => {
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    let release: (() => void) | null = null;
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> {
+        await new Promise<void>((r) => { release = r; });
+        return glb.slice(0);
+      },
+    };
+    const renderer = new PlayFractureRenderer(io as never);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'small',
+        mesh: { path: 'late.glb', guid: 'g1' },
+        position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere', radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0],
+        linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);           // 触发读取并挂起
+    await new Promise((r) => setTimeout(r, 20));
+    renderer.dispose();                    // Stop
+    release!();                            // 迟到的读取完成
+    await new Promise((r) => setTimeout(r, 40));
+    // 迟到结果不得回填：无缓存、无统计、无批次
+    expect((renderer as unknown as { meshes: Map<string, unknown> }).meshes.size).toBe(0);
+    expect(renderer.stats.meshes).toBe(0);
+    expect(renderer.dynamicBatches.length).toBe(0);
+    rt.dispose();
+  }, 30000);
+
+  it('网格读取失败可诊断且不是永久负缓存', async () => {
+    let fail = true;
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    const io = {
+      async readText(): Promise<string> { throw new Error('不需要'); },
+      async readBinary(): Promise<ArrayBuffer> {
+        if (fail) throw new Error('EIO 坏资产');
+        return glb.slice(0);
+      },
+    };
+    const renderer = new PlayFractureRenderer(io as never);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'small',
+        mesh: { path: 'bad.glb', guid: 'g1' },
+        position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere', radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0],
+        linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+      }],
+      priority: 1, lifetimeSec: 10, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 50 && renderer.error === null; i++) await new Promise((r) => setTimeout(r, 10));
+    // 失败有诊断（路径 + 原因），且不画
+    expect(renderer.error).toContain('bad.glb');
+    expect(renderer.error).toContain('EIO');
+    expect(renderer.dynamicBatches.length).toBe(0);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
+  it('同几何不同实例合并进一个批次（不按实例数放大 draw）', async () => {
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    const io = makeIO({ 'shared.glb': glb });
+    const renderer = new PlayFractureRenderer(io);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    const mk = (id: string, x: number) => ({
+      chunkId: id, cls: 'large' as const,
+      mesh: { path: 'shared.glb', guid: 'g1' },
+      position: [x, 2, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+      shape: { type: 'sphere' as const, radius: 0.25 },
+      mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0] as [number, number, number],
+      linearVelocity: [0, 0, 0] as [number, number, number],
+      angularVelocity: [0, 0, 0] as [number, number, number],
+    });
+    expect(rt.play({ event: ev, chunks: [mk('a', 0), mk('b', 1), mk('c', 2)], priority: 1, lifetimeSec: 10, fadeSec: 0 }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 60 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    // 3 个同几何实例 → 1 个批次（count=3），不是 3 个批次
+    expect(renderer.dynamicBatches.length).toBe(1);
+    expect(renderer.dynamicBatches[0]!.count).toBe(3);
+    expect(renderer.dynamicBatches[0]!.instances.length).toBe(3 * 20);
+    expect(renderer.dynamicBatches[0]!.rigid!.length).toBe(3 * 12);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
   it('small 块读简化 sim；缺失网格不会抛错', () => {
     const renderer = new PlayFractureRenderer(makeIO({}));
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });

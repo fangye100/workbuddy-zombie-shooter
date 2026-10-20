@@ -101,7 +101,10 @@ const spawnRes = await evalJs(`(async()=>{
   const c=window.__editor.playCtl;
   const pl=c.session.runtime?.player();
   // 近景取证：放在相机与玩家之间（碎片 ~0.3m，远看只有几个像素）
-  const spawnPos=pl?[pl.x,pl.y+2.0,pl.z]:[0,3,0];
+  const eye=window.__editor.renderer.getEye?.();
+  // 近景：放在相机与玩家之间靠相机一侧，0.3m 的碎块才看得清切面/贴图
+  const spawnPos=pl?(eye?[eye[0]+(pl.x-eye[0])*0.2, eye[1]+(pl.y-eye[1])*0.2+0.1, eye[2]+(pl.z-eye[2])*0.2]
+    :[pl.x,pl.y+2.0,pl.z]):[0,3,0];
   const ev={sequence:1,tick:0,seed:11,
     profile:{path:'assets/fracture/p01-barrel/p01-barrel.fracture.json',guid:'as_p01frct'},
     target:{kind:'scene-object',runId:'wu05-probe',nodeId:'wu05-barrel'},
@@ -119,6 +122,14 @@ const shotAir = await send('Page.captureScreenshot', { format: 'png' });
 fs.writeFileSync(path.join(OUT, 'fracture-air.png'), Buffer.from(shotAir.data, 'base64'));
 console.log('SHOT_AIR', path.join(OUT, 'fracture-air.png'));
 await sleep(3000);
+// Pause/Step 语义：暂停后碎片 tick 不变，单步 +1（与游戏时钟一致）
+const pauseStep = await evalJs(
+  "(()=>{const c=window.__editor.playCtl;const t0=c.fracture.runtime.stats.ticks;" +
+  "c.pause();const tPause0=c.fracture.runtime.stats.ticks;" +
+  "c.update(1/30);const tPause=c.fracture.runtime.stats.ticks;" +
+  "c.step();const tStep=c.fracture.runtime.stats.ticks;c.resume();" +
+  "return {t0,tPause0,tPause,tStep,frozen:tPause===tPause0,stepped:tStep===tPause+1};})()");
+console.log('PAUSE_STEP', JSON.stringify(pauseStep));
 
 // 原角色动态批次仍在（palette/skin 分支没有被刚体模式影响）
 const charInfo = await evalJs(

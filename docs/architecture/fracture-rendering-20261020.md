@@ -38,15 +38,20 @@
 
 ## 生命周期与资源归属
 
-- Play 期新增的 GPU 资源（动态实例 buffer、刚体基向量 buffer、网格/皮肤 buffer、
-  贴图）全部由 `renderer-core` 持有，并在 `releaseDynamicResources()` 中销毁；
-  `PlayController` 把一个 `fracture-renderer` 账目项登记进 PlaySession，Stop 时先
-  dispose 渲染装配（关闭 ImageBitmap、清 CPU 缓存），再随 `dynamic-instances` 账目
-  释放 GPU 资源。Editor 既有的共享资产不受影响。
+- Play 期新增的 GPU 资源（动态实例 buffer、姿态快照 buffer、刚体基向量 buffer、
+  网格/皮肤 buffer、贴图、共享白色材质纹理）全部由 renderer-core 持有；
+  releaseDynamicResources() 与 destroy() 两条路径都会 destroy 实例/姿态/刚体
+  buffer 与白色纹理，并 clearDynamicMeshes() 释放网格/贴图。Editor 既有的共享
+  资产不受影响。
+- 账目顺序：dynamic-instances 先登记、fracture-renderer 后登记，Stop 时按登记
+  顺序释放——先销毁 GPU 资源，再 dispose 渲染装配（关闭 ImageBitmap、清 CPU 缓存、
+  递增代次）。
 - TTL/淘汰：`sync` 每帧按 `runtime.active` 重建批次，到期的块自然从批次里消失；
   已加载的网格 GPU 缓存保留到 Stop（本单元不做逐网格引用计数，属后续优化）。
-- 失败：网格读取/解析失败 → 该块不画且不重试轰炸（缓存 null）；Stop 期间的迟到
-  加载不会产生新批次（`disposed` 检查 + 单次 dispose）。
+- 失败：网格读取/解析失败 → 该块不画，原因记录在 fractureRenderError
+  （路径 + 具体错误），2 秒后允许重试（不做永久负缓存）；成功加载会清空该诊断。
+- 迟到：loadMesh 捕获装配代次，await 之后若已 dispose 或换代会关闭迟到的
+  ImageBitmap，不写缓存/统计、不产生批次；dispose 也会关闭已缓存的位图。
 
 ## 验证（headed 真实 GPU，2026-10-21）
 
@@ -63,8 +68,11 @@
   由 fractureRenderStats.uploadBytes 记录；GPU 缓存按 meshId 只上传一次。
 - 截图：`.workbuddy/tmp/wu05-gpu/fracture-air.png`（空中翻滚）、
   `fracture-play.png`（落地）。
-- Stop：`batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0`，
-  动态 GPU 资源确实销毁，无实例残影。
+- Pause/Step：暂停后碎片 tick 不变（153→153），单步 +1（153→154），与游戏时钟一致。
+- 近景：探针把碎片放在相机与玩家之间 20% 处、事件 scale=3，可清楚看到外表面
+  贴图（油桶锈红木条）与深色切口平面，三轴旋转与描边正常。
+- Stop：batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0，
+  实例/姿态/刚体 buffer 与白色材质纹理都在销毁列表里，无实例残影。
 
 ## 边界与遗留
 

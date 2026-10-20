@@ -949,7 +949,8 @@ export class RendererCore {
   private dynamicInstSlot(i: number, count: number, poseBytes: number) {
     const need = Math.max(count * DYNAMIC_INSTANCE_FLOATS * 4, 4096);
     let slot = this.dynamicInstSlots[i];
-    if (slot === undefined || slot.cap < need || slot.poseBuf.size < poseBytes) {
+    const needRigid = Math.max(count * RIGID_INSTANCE_FLOATS * 4, 64);
+    if (slot === undefined || slot.cap < need || slot.poseBuf.size < poseBytes || slot.rigidCap < needRigid) {
       slot?.buf.destroy();
       slot?.poseBuf.destroy();
       slot?.rigidBuf.destroy();
@@ -997,8 +998,11 @@ export class RendererCore {
    */
   releaseDynamicResources(): void {
     this.contactPass.clear();
-    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); }
+    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
     this.dynamicInstSlots = [];
+    this.solidDynamicTexture?.destroy();
+    this.solidDynamicTexture = null;
+    this.solidDynamicMaterialCache = null;
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
     this.clearDynamicMeshes();

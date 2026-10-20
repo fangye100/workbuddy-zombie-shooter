@@ -57,11 +57,22 @@ export class PlayFractureRenderer {
   private readonly pending = new Set<string>();
   private batches: CoreDynamicBatch[] = [];
   private disposed = false;
+  /** 装配代次：dispose 后递增，迟到异步完成按代次丢弃（不复活旧装配）。 */
+  private generation = 0;
+  /** 最近一次网格准备失败的原因（供宿主诊断；成功后清空）。 */
+  private lastError: string | null = null;
+  /** 失败重试时间戳（避免每帧重复读同一个坏文件）。 */
+  private readonly retryAt = new Map<string, number>();
   /** 已加载网格数 / 最近一次同步的实例数与三角形数（供验收观察）。 */
   readonly stats = { meshes: 0, instances: 0, triangles: 0, uploadBytes: 0 };
 
   constructor(io: FractureAssetIO) {
     this.io = io;
+  }
+
+  /** 最近一次网格准备失败的原因（null = 无失败）。 */
+  get error(): string | null {
+    return this.lastError;
   }
 
   /** 当前帧要交给 renderer 的批次（没有活动碎片时为空数组）。 */
@@ -81,12 +92,14 @@ export class PlayFractureRenderer {
     if (runtime === null) return;
     const active = runtime.active;
     if (active.length === 0) return;
+    const groups = new Map<string, { batch: CoreDynamicBatch; instRows: Float32Array[]; rigidRows: Float32Array[] }>();
 
     for (const chunk of active) {
       if (chunk.expired) continue;
       if (!this.meshes.has(chunk.mesh.path) && !this.pending.has(chunk.mesh.path)) {
-        // 首次出现：异步加载；本帧先不画（失败保持不画，下一次仍不画）
-        this.loadMesh(chunk.mesh.path, chunk.pivot);
+        // 首次出现（或上次失败）：异步加载；失败后 2s 内不重复轰炸，之后可重试。
+        const waitUntil = this.retryAt.get(chunk.mesh.path) ?? 0;
+        if (Date.now() >= waitUntil) this.loadMesh(chunk.mesh.path, chunk.pivot);
         continue;
       }
       const entry = this.meshes.get(chunk.mesh.path) ?? null;
@@ -110,8 +123,8 @@ export class PlayFractureRenderer {
       const rigid = new Float32Array(RIGID_INSTANCE_FLOATS);
       basisFromQuat(q, chunk.worldScale, rigid, 0);
 
-      // 逐子网格出批次：外表面（贴图）与切口（纯色材质）各自一批；
-      // meshId 相同 → core 只上传一次几何，材质按 albedo 有无选择（不复制纹理）。
+      // 逐子网格分组：同一 (meshId, 索引区间, 材质) 的实例合并进同一批，
+      // 重复几何不会按实例数放大 draw。
       for (const part of entry.parts) {
         const inst = new Float32Array(DYNAMIC_INSTANCE_FLOATS);
         inst[0] = px; inst[1] = py; inst[2] = pz; inst[3] = 0;
@@ -121,22 +134,45 @@ export class PlayFractureRenderer {
         inst[12] = 0; inst[13] = 0; inst[14] = 2; inst[15] = 0; // flags bit1 = 刚体模式
         inst[16] = 1; inst[17] = 0; inst[18] = 0; inst[19] = 0;
 
-        this.batches.push({
-          meshId: 'fracture:' + chunk.mesh.path,
-          vertices: entry.vertices,
-          indices: entry.indices,
-          skin: null,
-          albedo: part.textured ? entry.albedo : null,
-          instances: inst,
-          count: 1,
-          outline: true,
-          indexStart: part.indexStart,
-          indexCount: part.indexCount,
-          rigid,
-        });
+        const key = chunk.mesh.path + '|' + part.indexStart + '|' + part.indexCount + '|' + (part.textured ? 't' : 's');
+        const hit = groups.get(key);
+        if (hit === undefined) {
+          groups.set(key, {
+            batch: {
+              meshId: 'fracture:' + chunk.mesh.path,
+              vertices: entry.vertices,
+              indices: entry.indices,
+              skin: null,
+              albedo: part.textured ? entry.albedo : null,
+              instances: inst,
+              count: 1,
+              outline: true,
+              indexStart: part.indexStart,
+              indexCount: part.indexCount,
+              rigid,
+            },
+            instRows: [inst],
+            rigidRows: [rigid],
+          });
+        } else {
+          hit.instRows.push(inst);
+          hit.rigidRows.push(rigid);
+        }
         this.stats.instances++;
         this.stats.triangles += part.indexCount / 3;
       }
+    }
+    // 合并各组实例行（每行 20 float）与刚体基向量（每行 12 float）
+    for (const g of groups.values()) {
+      const n = g.instRows.length;
+      if (n === 1) { this.batches.push(g.batch); continue; }
+      const inst = new Float32Array(n * DYNAMIC_INSTANCE_FLOATS);
+      const rigid = new Float32Array(n * RIGID_INSTANCE_FLOATS);
+      for (let i = 0; i < n; i++) {
+        inst.set(g.instRows[i]!, i * DYNAMIC_INSTANCE_FLOATS);
+        rigid.set(g.rigidRows[i]!, i * RIGID_INSTANCE_FLOATS);
+      }
+      this.batches.push({ ...g.batch, instances: inst, rigid, count: n });
     }
   }
 
@@ -144,9 +180,12 @@ export class PlayFractureRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.generation++;
     for (const e of this.meshes.values()) e?.albedo?.close();
     this.meshes.clear();
     this.pending.clear();
+    this.retryAt.clear();
+    this.lastError = null;
     this.batches = [];
     this.stats.meshes = 0;
     this.stats.instances = 0;
@@ -156,8 +195,10 @@ export class PlayFractureRenderer {
 
   private loadMesh(path: string, pivot: readonly [number, number, number] | null): void {
     const pivotKey: [number, number, number] = pivot === null ? [0, 0, 0] : [pivot[0], pivot[1], pivot[2]];
+    const gen = this.generation;
     this.pending.add(path);
     void (async (): Promise<void> => {
+      let albedo: ImageBitmap | null = null;
       try {
         const bytes = await this.io.readBinary(path);
         const parsed = parseGlb(bytes, null, 'auto', { normalize: false });
@@ -173,7 +214,6 @@ export class PlayFractureRenderer {
           verts[o + 1] = raw[o + 1]! - pivotKey[1];
           verts[o + 2] = raw[o + 2]! - pivotKey[2];
         }
-        let albedo: ImageBitmap | null = null;
         if (parsed.image !== null && typeof createImageBitmap === 'function') {
           albedo = await createImageBitmap(parsed.image).catch(() => null);
         }
@@ -188,13 +228,25 @@ export class PlayFractureRenderer {
               : [f === null ? 1 : f[0], f === null ? 1 : f[1], f === null ? 1 : f[2]],
           };
         });
+        // Stop/换代之后才完成的读取：丢弃结果、关闭 bitmap，不写回缓存/统计。
+        if (this.disposed || gen !== this.generation) {
+          albedo?.close();
+          return;
+        }
         const entry: MeshEntry = { vertices: verts, indices: parsed.mesh.indices, albedo, pivot: pivotKey, parts };
         this.meshes.set(path, entry);
+        this.lastError = null;
+        this.retryAt.delete(path);
         this.stats.meshes++;
         // 本次播放新增到 GPU 的几何字节（顶点 + 索引 + 全零 skin slot 24B/顶点）
         this.stats.uploadBytes += verts.byteLength + parsed.mesh.indices.byteLength + Math.floor(verts.length / 15) * 24;
-      } catch {
-        this.meshes.set(path, null);
+      } catch (e) {
+        albedo?.close();
+        if (this.disposed || gen !== this.generation) return;
+        // 失败要可诊断且可重试：记录原因并从缓存移除，下一次 sync 会重新尝试。
+        this.lastError = path + '：' + (e instanceof Error ? e.message : String(e));
+        this.meshes.delete(path);
+        this.retryAt.set(path, Date.now() + 2000);
       } finally {
         this.pending.delete(path);
       }
