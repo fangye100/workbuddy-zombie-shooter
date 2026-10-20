@@ -52,7 +52,6 @@ test('negative: perturbed residual cap joint binding must break boundary continu
   assert.ok(target >= 0, 'found cap boundary copy');
 
   // Build a corrupted doc with one cap vertex's joint changed: swap joint[0]↔joint[1].
-  const origJoints = capPrim.joints;
   const corrupted = { json: JSON.parse(JSON.stringify(doc.json)), bin: Buffer.from(doc.bin) };
   // Override the JOINTS_0 accessor read via a wrapper: we'll write modified bytes into a COPY of the bin.
   const capP = corrupted.json.meshes[0].primitives[1];

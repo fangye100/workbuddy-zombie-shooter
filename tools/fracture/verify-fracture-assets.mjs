@@ -264,8 +264,8 @@ export function verifyActorSkin(sourceDoc, chunkDocs, failures, notes, animName 
   }
   if (!(maxShared < 1e-4)) failures.push('shared skinned vertices (bind+anim) must match source', { maxShared });
   if (!(capChecked > 0 && capChecked >= caps * 0.9)) failures.push('cap neighborhood coverage', { capChecked, caps });
-  // Mixed-binding LBS at curved cross-sections has inherent candy-wrapper stretch;
-  // 50mm is the engineering tolerance for death-fracture visual continuity.
+  // Same-position cap↔outer copies share exact bindings and skin identically
+  // under LBS; the 0.1mm tolerance covers float-precision residue only.
   if (!(maxCap < 1e-4)) failures.push('cap boundary continuity (bind+anim gap)', { maxCap, capChecked });
   notes.push(animName + '@' + t + 's: shared=' + shared + ' maxDelta=' + maxShared.toExponential(2) + '; caps=' + caps + ' checked=' + capChecked + ' boundaryGap=' + maxCap.toExponential(2) + 'm (0.1mm tol)');
   return { shared, caps, capChecked, maxShared, maxCap, capTris, maxEdgeDrift };

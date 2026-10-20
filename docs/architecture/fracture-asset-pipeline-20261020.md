@@ -9,7 +9,7 @@ fracture-system-development-plan-20261020.md。
 | 模块 | 职责 | 边界 |
 |---|---|---|
 | tools/fracture/glb-io.mjs | GLB 容器读写、accessor 解码、蒙皮契约读取（含 IBM） | 只支持本仓资产链产出的非 sparse accessor；按位置焊接已删除（§11.5） |
-| tools/fracture/split-core.mjs | 几何核心：骨骼分区组装、有向边拓扑、封口（刚体主骨扇形/残边收口/切面独立副本与平面法线）、拓扑与体积统计 | 纯函数无 IO；拓扑按量化位置键统计，渲染顶点保留 UV/法线/蒙皮接缝；手写平面切割路径已被 CSG 取代并移除（§11.5 去重） |
+| tools/fracture/split-core.mjs | 几何核心：骨骼分区组装、有向边拓扑、封口（混合绑定扇形/残边收口/切面独立副本与平面法线）、拓扑与体积统计 | 纯函数无 IO；拓扑按量化位置键统计，渲染顶点保留 UV/法线/蒙皮接缝；手写平面切割路径已被 CSG 取代并移除（§11.5 去重） |
 | tools/fracture/build-fracture-assets.mjs | 正式资产构建：油桶 CSG 切块（UV/法线作为顶点属性随布尔运算插值、接缝经 merge 向量保留）、盾卫骨骼分区+蒙皮保持，逐块输出独立 GLB 与 .fracture.json 及合并保留式 sidecar | 不做物理/渲染/玩法（WU-03/05/06/07） |
 | tools/fracture/verify-fracture-assets.mjs | 数值验收：闭合/非退化/有限值/法线/UV、装配守恒（体积或外表面精确分割）、代理/质量、蒙皮保持与非 bind 姿态采样 | 输出报告 JSON，失败 exit 1 |
 | tools/verify/fracture-assets-probe.mjs | headed 真实 GPU 近景证据（既有编辑器渲染器，静态展示） | 不冒充刚体/击碎验收 |

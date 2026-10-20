@@ -98,8 +98,9 @@ function capOpenEdges(local, open) {
       for (let k = 0; k < 3; k++) centroidP[k] += p[k] / rev.length;
       centroidUV[0] += t[0] / rev.length; centroidUV[1] += t[1] / rev.length;
     }
-    // Cap boundary copies inherit the FULL mixed skin binding of their corresponding
-    // outer-surface corner; the centre blends all loop corner bindings (plan §5.3).
+    // Cap boundary copies inherit the FULL mixed skin binding of their
+    // corresponding outer-surface corner; the centre blends all loop corner
+    // bindings so the cut face follows the neighbourhood under any pose.
     const centreJ = local.weights.length ? new Array(4).fill(0) : null;
     const centreW = local.weights.length ? new Array(4).fill(0) : null;
     if (local.weights.length) {
