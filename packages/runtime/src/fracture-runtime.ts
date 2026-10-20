@@ -339,13 +339,13 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
   const prevY = s.position[1];
   // 重力
   s.linearVelocity[1] -= 9.81 * dt;
+  // 块级速度上限必须在**位置积分之前**夹紧：否则首个固定 tick 会先按 400m/s
+  // 移动 6.7m 再被夹紧，profile 的限速形同虚设（与 rigid 后端 clampBodySpeeds 同语义）。
+  clampSimplifiedSpeed(s);
   // 位置积分
   s.position[0] += s.linearVelocity[0] * dt;
   s.position[1] += s.linearVelocity[1] * dt;
   s.position[2] += s.linearVelocity[2] * dt;
-  // 块级速度上限：简化层此前只在 rigid 后端生效，导致声明 1m/s 的小块仍以 400m/s 飞。
-  // 在积分起点夹紧，保证与后端同一份 profile 配置产生同样的有界运动。
-  clampSimplifiedSpeed(s);
   // 四元数积分：q' = q + 0.5*dt*ω⊗q（归一化）
   const [qx, qy, qz, qw] = s.rotation;
   const [wx, wy, wz] = s.angularVelocity;

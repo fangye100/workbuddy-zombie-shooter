@@ -675,8 +675,12 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
       maxLinearSpeed: 1, maxAngularSpeed: 2,
     };
     expect(rt.play(act('n1', [wild])).accepted).toBe(true);
+    const x0 = wild.position[0];
     rt.stepOnce();
     const sim = rt.active[0]!.sim!;
+    // 关键：**首个**固定步的位移就必须受限（否则先飞 6.7m 再夹紧，限速形同虚设）。
+    const dx = Math.abs(sim.position[0] - x0);
+    expect(dx).toBeLessThanOrEqual(1 * STEP + 1e-6);
     const lin = Math.hypot(sim.linearVelocity[0], sim.linearVelocity[1], sim.linearVelocity[2]);
     const ang = Math.hypot(sim.angularVelocity[0], sim.angularVelocity[1], sim.angularVelocity[2]);
     expect(lin).toBeLessThan(1.5);
