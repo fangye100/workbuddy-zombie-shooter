@@ -777,7 +777,22 @@ export function collectMeshInstances(json: GltfJson): { mesh: number; m: Float32
   return collectSceneGraph(json).instances.map(({ mesh, m }) => ({ mesh, m }));
 }
 
-export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, upAxis: 'auto' | 'y' | 'z' = 'auto'): GltfResult {
+export interface ParseGlbOptions {
+  /**
+   * 是否做「居中/贴地/身高/自动转轴」规整化（默认 true，保持既有导入行为）。
+   * false 时保留 node 世界变换烘焙后的**原始资产坐标**，供需要与资产自身
+   * 局部坐标（例如碎裂 profile 的 pivot）对齐的调用方使用。
+   */
+  normalize?: boolean;
+}
+
+export function parseGlb(
+  buf: ArrayBuffer,
+  targetHeight: number | null = 2.05,
+  upAxis: 'auto' | 'y' | 'z' = 'auto',
+  opts: ParseGlbOptions = {},
+): GltfResult {
+  const normalize = opts.normalize !== false;
   if (buf.byteLength < 20) throw new Error('文件太小，不是合法的 glb');
   const head = new DataView(buf);
   if (head.getUint32(0, true) !== 0x46546c67) throw new Error('不是 glTF 二进制（缺 glTF magic）');
@@ -1054,7 +1069,7 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, u
       maxZ = Math.max(maxZ, posArr[i + 2]!);
     }
     // Explicit caller axis wins; otherwise honor asset provenance before the legacy heuristic.
-    zUp = upAxis === 'z' || (upAxis === 'auto' && json.asset?.extras?.coordinateSystem !== 'Y-up' && (maxZ - minZ) > (maxY - minY) * 1.5);
+    zUp = normalize && (upAxis === 'z' || (upAxis === 'auto' && json.asset?.extras?.coordinateSystem !== 'Y-up' && (maxZ - minZ) > (maxY - minY) * 1.5));
     if (zUp) {
       // (x, y, z) → (x, -z, y)，det=+1 纯旋转，绕序与法线方向都保持不变
       // 混元产物脚底在 z-max（+Z 朝下），必须带这个 180° X 翻转才正立；
@@ -1085,13 +1100,15 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, u
     minZ = Math.min(minZ, posArr[i + 2]!);
     maxZ = Math.max(maxZ, posArr[i + 2]!);
   }
-  const cx = (minX + maxX) / 2;
-  const cz = (minZ + maxZ) / 2;
   const height = Math.max(1e-5, maxY - minY);
+  // normalize=false：保留原始坐标（不平移、不缩放），heightMeters 仍报原始高度。
+  const cx = normalize ? (minX + maxX) / 2 : 0;
+  const cz = normalize ? (minZ + maxZ) / 2 : 0;
+  const minYOffset = normalize ? minY : 0;
   // targetHeight = null：保持资产原始尺寸（环境道具按 props.json 契约 1unit=1m
   // 授权，**不该**被角色标尺归一 —— 否则轿车会被拉成 6m 长。仍做居中与
   // Z-up→Y-up 旋转，只跳过缩放。
-  const s = targetHeight === null ? 1 : targetHeight / height;
+  const s = (targetHeight === null || !normalize) ? 1 : targetHeight / height;
 
   // 规整化矩阵 T：v' = s·(R·v − center) = Tc(−s·center) · S(s) · R（v 齐次）。
   // R 为 Z-up→Y-up 旋转（或 I），与上方顶点旋转一致；蒙皮求值端会用它共轭关节矩阵。
@@ -1119,7 +1136,7 @@ export function parseGlb(buf: ArrayBuffer, targetHeight: number | null = 2.05, u
   for (let i = 0; i < base; i++) {
     const o = i * VF;
     verts[o] = (posArr[i * 3]! - cx) * s;
-    verts[o + 1] = (posArr[i * 3 + 1]! - minY) * s;
+    verts[o + 1] = (posArr[i * 3 + 1]! - minYOffset) * s;
     verts[o + 2] = (posArr[i * 3 + 2]! - cz) * s;
     verts[o + 3] = norArr[i * 3]!;
     verts[o + 4] = norArr[i * 3 + 1]!;

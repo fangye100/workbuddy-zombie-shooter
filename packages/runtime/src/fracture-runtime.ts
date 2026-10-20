@@ -42,6 +42,8 @@ export interface FractureChunkInput {
   readonly linearVelocity: FractureVec3;
   readonly angularVelocity: FractureVec3;
   readonly ccd?: boolean;
+  /** 碰撞分组（资产 profile 声明；environment=落在地面并与其他块互撞，debris=只与静态环境互撞）。 */
+  readonly collisionGroup?: 'environment' | 'debris';
   /** 块级线速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
   readonly maxLinearSpeed?: number;
   /** 块级角速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
@@ -416,6 +418,7 @@ export function createFractureRuntime(
         shape: shape(c.shape), mass: c.mass, friction: c.friction, restitution: c.restitution,
         linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
         ...(c.ccd === true ? { ccd: true } : {}),
+        ...(c.collisionGroup !== undefined ? { collisionGroup: c.collisionGroup } : {}),
         ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
         ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
       })),
@@ -532,6 +535,7 @@ export function createFractureRuntime(
             linearVelocity: c.linearVelocity, angularVelocity: c.angularVelocity,
             shape: worldShape, mass: c.mass, friction: c.friction, restitution: c.restitution,
             ...(c.ccd === true ? { ccd: true } : {}),
+            ...(c.collisionGroup !== undefined ? { collisionGroup: c.collisionGroup } : {}),
             // R6：块级速度限制（资产 profile 声明；不覆盖后端默认值）
             ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
             ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),

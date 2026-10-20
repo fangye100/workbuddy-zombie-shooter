@@ -31,7 +31,8 @@ export interface FractureAssetIO {
 /** 准入/准备失败诊断（不静默；调用方可保留作者草稿/原表现保底）。 */
 export interface FractureAdmissionFailure {
   readonly stage: 'profile-read' | 'profile-validate' | 'sidecar-read' | 'sidecar-validate'
-    | 'identity' | 'quarantined' | 'ref-read' | 'ref-identity' | 'proxy-load' | 'transform';
+    | 'identity' | 'target-kind' | 'quarantined' | 'ref-read' | 'ref-identity' | 'ref-binary'
+    | 'proxy-load' | 'transform';
   readonly detail: string;
 }
 
@@ -84,15 +85,21 @@ export interface PrepareOptions {
   readonly io: FractureAssetIO;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
   readonly resolveConvexPoints?: ConvexPointsResolver;
+  /**
+   * 已核验过的二进制引用路径缓存（可选，按会话复用）。
+   * 同一 profile 的 GLB 在会话内不变，重复激活无需每次重读数 MB 数据。
+   */
+  readonly verifiedRefs?: Set<string>;
 }
 
 /**
- * 正式 GLB 凸代理解析器（R1 生产实现）：用 scene 的 parseGlb 提取**位置**。
+ * 正式 GLB 凸代理解析器（R1 生产实现）：用 scene 的 parseGlb 提取**原始位置**。
  *
- * 坐标合同：parseGlb(buffer, null, 'auto') 保持资产原始尺寸，但仍做
- * 「node 世界变换烘焙 + Z-up→Y-up（auto）+ XZ 居中 + 底面贴 y=0」。
- * 碎裂 profile 的 pivot/bind 与碎块渲染网格同属这个规整化空间（pivot 的
- * 量级落在规范后的 ±halfExtent 内），因此代理点必须取同一空间的顶点。
+ * 坐标合同：碎裂 profile 的 pivot 是碎块在**资产原始坐标**里的局部点
+ * （实测 chunk-0009 原始 POSITION y 落在 0.6005..0.9005，profile pivot.y=0.7894）。
+ * 因此代理点必须取未规整化的坐标，再由调用方减去 pivot，得到「以 pivot 为原点」
+ * 的代理局部系；若取 parseGlb 默认的居中/贴地结果，碰撞体会整体偏离 body。
+ * 所以这里传 normalize:false（仍保留 node 世界变换烘焙）。
  *
  * 布局合同：MeshData.vertices 是交错顶点缓冲（VERTEX_FLOATS=15：
  * position3 + normal3 + smoothNormal3 + uv2 + color4）。按整块返回会把
@@ -100,7 +107,7 @@ export interface PrepareOptions {
  */
 export function createGlbConvexResolver(): ConvexPointsResolver {
   return (buffer: ArrayBuffer): Float32Array => {
-    const verts = parseGlb(buffer, null, 'auto').mesh.vertices;
+    const verts = parseGlb(buffer, null, 'auto', { normalize: false }).mesh.vertices;
     const stride = VERTEX_FLOATS;
     if (verts.length % stride !== 0) {
       throw new Error('GLB 顶点缓冲长度 ' + verts.length + ' 不是顶点步长 ' + stride + ' 的整数倍');
@@ -115,6 +122,37 @@ export function createGlbConvexResolver(): ConvexPointsResolver {
     }
     return out;
   };
+}
+
+/**
+ * 核验引用资产二进制：能读到、不是 LFS 指针、是合法 GLB（magic + 声明长度）。
+ * 已核验路径记入 verifiedRefs 缓存（按会话复用，避免每次激活重读数 MB）。
+ */
+async function checkRefBinary(
+  io: FractureAssetIO,
+  path: string,
+  verified: Set<string> | undefined,
+): Promise<FractureAdmissionFailure | null> {
+  if (verified?.has(path)) return null;
+  let buf: ArrayBuffer;
+  try {
+    buf = await io.readBinary(path);
+  } catch (e) {
+    return { stage: 'ref-binary', detail: '引用资产读取失败（' + path + '）：' + String(e) };
+  }
+  if (buf.byteLength < 20) {
+    return { stage: 'ref-binary', detail: '引用资产不是合法 GLB（' + path + ' 仅 ' + buf.byteLength + ' 字节，疑似 LFS 指针/空文件）' };
+  }
+  const head = new DataView(buf);
+  if (head.getUint32(0, true) !== 0x46546c67) {
+    return { stage: 'ref-binary', detail: '引用资产缺 glTF magic（' + path + '）' };
+  }
+  const declared = head.getUint32(8, true);
+  if (declared !== buf.byteLength) {
+    return { stage: 'ref-binary', detail: 'GLB 声明长度 ' + declared + ' 与实际 ' + buf.byteLength + ' 不一致（' + path + '）' };
+  }
+  verified?.add(path);
+  return null;
 }
 
 const SCALE_EPS = 1e-4;
@@ -191,6 +229,18 @@ export async function prepareFractureActivation(
   if (event.profile.guid !== profile.id || profile.id !== meta.guid) {
     return { ok: false, failure: { stage: 'identity', detail: 'GUID 不一致：event=' + event.profile.guid + ' profile=' + profile.id + ' sidecar=' + meta.guid } };
   }
+  // 4b) 目标类型必须与 profile.kind 对齐：object 资产不能被 NPC 事件激活，反之亦然。
+  const wantNpc = profile.kind === 'npc';
+  const isNpcTarget = event.target.kind === 'npc';
+  if (wantNpc !== isNpcTarget) {
+    return {
+      ok: false,
+      failure: {
+        stage: 'target-kind',
+        detail: 'profile kind=' + profile.kind + ' 与事件目标 kind=' + event.target.kind + ' 不匹配',
+      },
+    };
+  }
   // 5) 隔离：quarantined 在分配前拒绝（恢复 accepted 后下一次播放可重新准入）。
   if (profile.status !== 'accepted') {
     return { ok: false, failure: { stage: 'quarantined', detail: 'profile 状态 ' + profile.status + '，未验收' } };
@@ -207,6 +257,13 @@ export async function prepareFractureActivation(
       const cf = await checkRefMeta(opts.io, c.proxy.shape.mesh.path, c.proxy.shape.mesh.guid, 'gltf', '碎块 ' + c.chunkId + ' 凸代理');
       if (cf) return { ok: false, failure: cf };
     }
+  }
+  // 6b) 引用资产的**二进制可用性**：sidecar 合法不代表文件读得到/是 GLB。
+  //     逐个核验 conic（source + 每块 mesh），坏文件在分配前拒绝而不是播到一半崩。
+  const refs = [profile.source.model.path, ...profile.chunks.map((c) => c.mesh.path)];
+  for (const path of refs) {
+    const bf = await checkRefBinary(opts.io, path, opts.verifiedRefs);
+    if (bf) return { ok: false, failure: bf };
   }
 
   // 7) R6：事件世界尺度必须均匀（非均匀组合不平均近似，明确拒绝）。
@@ -262,6 +319,16 @@ export async function prepareFractureActivation(
         pts = opts.resolveConvexPoints(buf);
       } catch (e) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理解析失败：' + String(e) } };
+      }
+      // 代理局部系以 profile.pivot 为原点：resolver 给的是资产原始坐标，
+      // 减去 pivot 后与 body 的平移（= pivot + 事件世界变换）自洽。
+      if (pts instanceof Float32Array && pts.length % 3 === 0 && pts.length >= 3) {
+        const px = c.pivot[0], py = c.pivot[1], pz = c.pivot[2];
+        for (let i = 0; i < pts.length; i += 3) {
+          pts[i] = pts[i]! - px;
+          pts[i + 1] = pts[i + 1]! - py;
+          pts[i + 2] = pts[i + 2]! - pz;
+        }
       }
       if (!(pts instanceof Float32Array) || pts.length < 9 || pts.length % 3 !== 0) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理点数非法（需 ≥3 点且为 3 的倍数），实际 ' + pts.length } };
@@ -354,6 +421,7 @@ export async function prepareFractureActivation(
       mass: c.proxy.mass,
       friction: c.proxy.friction,
       restitution: c.proxy.restitution,
+      collisionGroup: c.proxy.collisionGroup,
       linearVelocity: lv,
       angularVelocity: av,
       // CCD 仅对确有穿透风险的快速块开启（资产声明速度上限才开，不无差别打开）。

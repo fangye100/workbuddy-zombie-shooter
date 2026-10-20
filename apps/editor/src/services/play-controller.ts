@@ -26,7 +26,11 @@ import {decalReceivers} from './vfx-decal-receivers';
 import { PlaySession, type PlayState } from '@aether/zombie-game';
 import type { BehaviorExecutor } from '@aether/runtime';
 import { SceneGraph } from '@aether/scene';
-import { attachFixedTick, bindFractureToPlay, type FracturePlayBinding } from '@aether/runtime';
+import {
+  attachFixedTick, bindFractureToPlay, createGlbConvexResolver, prepareFractureActivation,
+  type FractureAssetIO, type FractureEvent, type FracturePlayBinding, type FracturePlayResult,
+} from '@aether/runtime';
+import { createEditorFractureIO } from './fracture-io';
 import {
   PlayCameraController,
   type ViewCameraControl,
@@ -44,6 +48,8 @@ import { syncGatePresentation } from './gate-presentation';
 import type {RuntimeDecals} from './runtime-decals';
 
 export interface PlayControllerOptions {
+  /** 碎片资产 IO（默认走编辑器 /__fs/file；测试注入内存实现）。 */
+  readonly fractureIO?: FractureAssetIO;
   weapons?: RuntimeWeapons;
   decals?:RuntimeDecals;
   bodyIk?: RuntimeBodyIk;
@@ -79,6 +85,10 @@ export class PlayController {
   private fractureBinding: (FracturePlayBinding & { onFixedTick(dtSec: number): void }) | null = null;
   /** 碎片账目项是否已登记（每轮 Play 只登记一次，reset 复用同一项）。 */
   private fractureRegistered = false;
+  /** 碎片资产 IO（默认走编辑器 /__fs/file；测试可注入）。 */
+  private readonly fractureIO: FractureAssetIO;
+  /** 已核验的 GLB 路径缓存（按本控制器生命周期复用，避免每次激活重读数 MB）。 */
+  private readonly fractureVerified = new Set<string>();
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -106,6 +116,7 @@ export class PlayController {
         ? null
         : new PlayCameraController(opts.viewCamera);
     this.worldPosOf = opts.worldPosOf ?? null;
+    this.fractureIO = opts.fractureIO ?? createEditorFractureIO();
     this.session = new PlaySession({
       seed: opts.seed ?? 1,
       capacity: opts.capacity ?? 512,
@@ -289,11 +300,37 @@ export class PlayController {
     this.fractureBinding = this.createFractureBinding(graph);
   }
 
+  /**
+   * 生产激活入口：按碎裂事件读取 profile/资产、走正式准入，再交给碎片运行时播放。
+   * WU-06/07 的伤害/死亡策略从这里喂事件；Preview 走同一 prepare 函数。
+   */
+  async spawnFracture(event: FractureEvent): Promise<FracturePlayResult | { accepted: false; rejection: { reason: string; detail: string; eventKey: string }; activationGen: number }> {
+    const binding = this.fractureBinding;
+    if (binding === null || binding.backend() === null) {
+      return { accepted: false, rejection: { reason: 'not-ready', detail: '碎片运行时未就绪', eventKey: '' }, activationGen: 0 };
+    }
+    const prepared = await prepareFractureActivation(event, {
+      io: this.fractureIO,
+      resolveConvexPoints: createGlbConvexResolver(),
+      verifiedRefs: this.fractureVerified,
+    });
+    if (!prepared.ok) {
+      return {
+        accepted: false,
+        rejection: { reason: prepared.failure.stage, detail: prepared.failure.detail, eventKey: '' },
+        activationGen: 0,
+      };
+    }
+    return binding.runtime.play(prepared.activation);
+  }
+
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
     // 只在暂停态实际推进时驱动碎片（非暂停下 stepOnce 为空操作，不重复 tick）。
-    if (this.session.state === 'paused') this.fractureBinding?.onFixedTick(this.session.fixedStep);
+    if (this.session.state === 'paused' && this.session.outcome === 'running') {
+      this.fractureBinding?.onFixedTick(this.session.fixedStep);
+    }
     this.syncGates();
     this.decals?.sync(this.session.runtime);
     this.sharedMotions?.sync(this.session.runtime);
@@ -351,6 +388,7 @@ export class PlayController {
     this.session.stop();
     this.fractureBinding = null;
     this.fractureRegistered = false;
+    this.fractureVerified.clear();
     this.bridge.attach(null);
     this.notify();
   }
@@ -360,7 +398,11 @@ export class PlayController {
     const n = this.session.advance(dt);
     if (n > 0) {
       // R3：真实固定步驱动碎片物理（渲染频率不反推物理时钟）。
-      for (let i = 0; i < n; i++) this.fractureBinding?.onFixedTick(this.session.fixedStep);
+      // 终态（game-over / floor-clear）时 PlaySession 仍可能返回步数，但世界已冻结：
+      // 碎片必须跟随冻结，不能继续模拟（装饰物不该在结算画面里继续动）。
+      if (this.session.outcome === 'running') {
+        for (let i = 0; i < n; i++) this.fractureBinding?.onFixedTick(this.session.fixedStep);
+      }
       this.syncGates();
       this.decals?.sync(this.session.runtime);
       this.sharedMotions?.sync(this.session.runtime);

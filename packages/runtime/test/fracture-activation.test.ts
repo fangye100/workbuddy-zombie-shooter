@@ -18,6 +18,9 @@ const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: 
 // 只剩 2349234 码位），不能用来证明「真实 GLB 被解析」。?bytes 由 vitest.config.ts 的
 // 加载器在配置层读原始字节，测试侧只拿到 Uint8Array（仍不 import node:fs）。
 const binLoaders = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+// 源模型/角色模型的二进制通道（准入要核验引用资产真的可读且是 GLB）
+const modelLoaders = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+const charLoaders = import.meta.glob('../../../assets/characters/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
 // 额外加载源模型 sidecar（R1 引用核验需要）
 const srcMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
 // NPC 源模型 sidecar（E-04 在 characters 目录）
@@ -48,7 +51,7 @@ function makeIO(
   const binStore = new Map<string, ArrayBuffer>();
   for (const [k, v] of Object.entries(binOverrides)) binStore.set(k, v);
   const binLoaderByPath = new Map<string, () => Promise<Uint8Array>>();
-  for (const [k, loader] of Object.entries(binLoaders)) {
+  for (const [k, loader] of Object.entries({ ...binLoaders, ...modelLoaders, ...charLoaders })) {
     binLoaderByPath.set(k.replace(/^.*?(?=assets\/)/, ''), loader);
   }
   return {
@@ -172,12 +175,62 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(r.activation.chunks[0]!.friction).toBe(0.6);
   });
 
-  it('E-04 正式 NPC profile 准入成功：3 大 7 小分层', async () => {
-    const r = await prepareFractureActivation(ev(E04, 'as_e04frct'), { io: makeIO() });
+  it('E-04 正式 NPC profile 准入成功：3 大 7 小分层（走 NPC 身份链）', async () => {
+    // NPC 事件目标带 slot/id/generation：同一次激活的句柄代次必须能区分回收后的新实体。
+    const r = await prepareFractureActivation(ev(E04, 'as_e04frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 3, id: 42, generation: 2 },
+    }), { io: makeIO() });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.activation.chunks.filter((c) => c.cls === 'large').length).toBe(3);
     expect(r.activation.chunks.filter((c) => c.cls === 'small').length).toBe(7);
+  });
+
+  it('目标类型与 profile.kind 不匹配时在分配前拒绝', async () => {
+    // NPC profile 收到 scene-object 事件
+    const r1 = await prepareFractureActivation(ev(E04, 'as_e04frct'), { io: makeIO() });
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.failure.stage).toBe('target-kind');
+    // 场景物件 profile 收到 NPC 事件
+    const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct', {
+      target: { kind: 'npc', runId: 'run-1', slot: 1, id: 7, generation: 1 },
+    }), { io: makeIO() });
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failure.stage).toBe('target-kind');
+  });
+
+  it('引用资产二进制不可读/不是 GLB 时在分配前拒绝', async () => {
+    const io = makeIO();
+    const original = io.readBinary.bind(io);
+    // 令源模型读取失败（只坏这一个路径）
+    io.readBinary = async (path: string) => {
+      if (path.includes('P-01_baked.glb')) throw new Error('EIO 读取失败');
+      return original(path);
+    };
+    const r = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.failure.stage).toBe('ref-binary');
+
+    // 坏文件（LFS 指针/空文件）
+    const io2 = makeIO();
+    const orig2 = io2.readBinary.bind(io2);
+    io2.readBinary = async (path: string) => (path.includes('chunk-0001.glb') ? new ArrayBuffer(12) : orig2(path));
+    const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io2 });
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failure.stage).toBe('ref-binary');
+
+    // 已核验缓存：同一路径第二次不再读（证明缓存真的生效，不是每次重读）
+    const verified = new Set<string>();
+    let reads = 0;
+    const io3 = makeIO();
+    const orig3 = io3.readBinary.bind(io3);
+    io3.readBinary = async (path: string) => { reads++; return orig3(path); };
+    const ok1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io3, verifiedRefs: verified });
+    expect(ok1.ok).toBe(true);
+    const readsAfterFirst = reads;
+    const ok2 = await prepareFractureActivation(ev(P01, 'as_p01frct', { sequence: 999 }), { io: io3, verifiedRefs: verified });
+    expect(ok2.ok).toBe(true);
+    expect(reads).toBe(readsAfterFirst); // 第二次零额外读取
   });
 
   it('错误 GUID（事件/profile/sidecar 不一致）在分配前拒绝', async () => {
@@ -278,7 +331,6 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
     p01.chunks[0].proxy.shape = { type: 'convex', mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' } };
     const io = makeIO({ [P01]: JSON.stringify(p01) });
-    io.setBin('assets/fracture/p01-barrel/chunk-0001.glb', new ArrayBuffer(12));
 
     // 退化：Float32Array(3)
     const r1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
@@ -353,21 +405,23 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(pts.length % 3).toBe(0);
     // 顶点缓冲是 15 浮点交错（pos3+normal3+smooth3+uv2+color4）：点数 = 顶点数，
     // 不是 15 倍。旧实现把整块当 XYZ，点数会膨胀 15 倍且 bounds 撑到 [-1,1]。
-    const parsed = parseGlb(bytes.slice().buffer, null, 'auto').mesh;
+    const parsed = parseGlb(bytes.slice().buffer, null, 'auto', { normalize: false }).mesh;
     const vertexCount = parsed.vertices.length / VERTEX_FLOATS;
     expect(vertexCount).toBe(5286);
     expect(pts.length / 3).toBe(vertexCount);
     for (let i = 0; i < pts.length; i++) expect(Number.isFinite(pts[i]!)).toBe(true);
-    // 坐标 = 解析后 position 分量（同一规整化空间，pivot 也在这个空间里）
+    // 坐标 = 资产原始 POSITION（不居中、不贴地）。独立参照：直接读 glTF accessor
+    // 的 min/max（不是 parseGlb 输出）——chunk-0001 原始包围盒
+    // [-4.5e-5, 0.000285, -3.2e-5] .. [0.300037, 0.300274, 0.299973]。
     const b = bounds(pts);
-    expect(b.min[0]).toBeCloseTo(-0.150041, 5);
-    expect(b.max[0]).toBeCloseTo(0.150041, 5);
-    expect(b.min[1]).toBeCloseTo(0, 5);
-    expect(b.max[1]).toBeCloseTo(0.299990, 5);
-    expect(b.min[2]).toBeCloseTo(-0.150002, 5);
-    expect(b.max[2]).toBeCloseTo(0.150002, 5);
+    expect(b.min[0]).toBeCloseTo(-4.5e-5, 4);
+    expect(b.max[0]).toBeCloseTo(0.300037, 4);
+    expect(b.min[1]).toBeCloseTo(0.000285, 4);
+    expect(b.max[1]).toBeCloseTo(0.300274, 4);
+    expect(b.min[2]).toBeCloseTo(-3.2e-5, 4);
+    expect(b.max[2]).toBeCloseTo(0.299973, 4);
     // 旧缺陷的包围盒形状（被法线/UV/颜色撑到 ±1）必须排除
-    expect(Math.max(b.max[0], b.max[2])).toBeLessThan(0.5);
+    expect(Math.max(b.max[0], b.max[1], b.max[2])).toBeLessThan(0.5);
     // 非退化：存在非共面四点（与准入判定同口径）
     expect(hasNonCoplanar(pts)).toBe(true);
 
@@ -399,8 +453,8 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const hit = world.castRay(new R.Ray({ x: cx, y: 5, z: cz }, { x: 0, y: -1, z: 0 }), 10, true);
     expect(hit).not.toBeNull();
     const topY = 5 - hit!.timeOfImpact;
-    expect(topY).toBeGreaterThan(0.1);
-    expect(topY).toBeLessThan(0.45);
+    expect(topY).toBeGreaterThan(0.05);
+    expect(topY).toBeLessThan(0.35);
     world.free();
 
     // 走完整准入：profile 第一块改为 convex 代理，直接引用同一 chunk GLB
@@ -412,7 +466,45 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     if (!r.ok) return;
     const sh = r.activation.chunks[0]!.shape;
     expect(sh.type).toBe('convex');
-    if (sh.type === 'convex') expect(sh.points.length).toBe(pts.length);
+    if (sh.type === 'convex') {
+      expect(sh.points.length).toBe(pts.length);
+      // 代理局部系以 pivot 为原点：chunk-0001 raw − pivot(0.162673,0.114231,0.168472)
+      const pb = bounds(sh.points);
+      expect(pb.min[0]).toBeCloseTo(-0.162673, 4);
+      expect(pb.max[0]).toBeCloseTo(0.137364, 4);
+      expect(pb.min[1]).toBeCloseTo(-0.113946, 4);
+      expect(pb.max[1]).toBeCloseTo(0.186043, 4);
+      expect(pb.min[2]).toBeCloseTo(-0.168472, 4);
+      expect(pb.max[2]).toBeCloseTo(0.131501, 4);
+    }
+
+    // 回归监督反例：chunk-0009 的 pivot 远离原始包围盒原点
+    // （raw y 0.6005..0.9005，pivot.y=0.789352）。代理必须以 pivot 为原点，
+    // 否则 body 在 pivot 上而碰撞体仍以原始原点为基准，整体错位约 0.79m。
+    const p09 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    const c9 = p09.chunks.find((c: { chunkId: string }) => c.chunkId === 'chunk-0009');
+    c9.proxy.shape = { type: 'convex', mesh: { path: 'assets/fracture/p01-barrel/chunk-0009.glb', guid: c9.mesh.guid } };
+    // 只留这一块，便于定位（必须在序列化进 IO 之前裁剪）
+    p09.chunks = [c9];
+    const io9 = makeIO({ [P01]: JSON.stringify(p09) });
+    const r9 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io9, resolveConvexPoints: resolver });
+    expect(r9.ok).toBe(true);
+    if (!r9.ok) return;
+    const sh9 = r9.activation.chunks[0]!.shape;
+    expect(sh9.type).toBe('convex');
+    if (sh9.type === 'convex') {
+      const pb = bounds(sh9.points);
+      // raw(0009) = [-0.000045,0.600549,-0.000032]..[0.297902,0.900504,0.298546]
+      expect(pb.min[0]).toBeCloseTo(-0.162939, 4);
+      expect(pb.max[0]).toBeCloseTo(0.135008, 4);
+      expect(pb.min[1]).toBeCloseTo(-0.188803, 4);
+      expect(pb.max[1]).toBeCloseTo(0.111152, 4);
+      expect(pb.min[2]).toBeCloseTo(-0.158422, 4);
+      expect(pb.max[2]).toBeCloseTo(0.140156, 4);
+      // 关键：代理不再以原始原点（y≈0.6→0.0 附近）为基准
+      expect(pb.max[1]).toBeLessThan(0.2);
+      expect(pb.min[1]).toBeGreaterThan(-0.3);
+    }
 
     // 负例：同一 resolver 对损坏 GLB 必须抛错（证明它真的在解析，不是忽略输入）
     expect(() => resolver(new ArrayBuffer(12))).toThrow();
@@ -433,22 +525,18 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const glb = makePointCloudGlb(positions);
     const pts = createGlbConvexResolver()(glb);
     expect(pts.length / 3).toBe(5);
-    const b = bounds(pts);
-    expect(b.min[0]).toBeCloseTo(-2, 6);
-    expect(b.max[0]).toBeCloseTo(2, 6);
-    expect(b.min[1]).toBeCloseTo(0, 6);
-    expect(b.max[1]).toBeCloseTo(4, 6);
-    expect(b.min[2]).toBeCloseTo(-2, 6);
-    expect(b.max[2]).toBeCloseTo(2, 6);
-    // 逐点比对（不是只看包围盒，防居中/换轴写错后 bbox 偶然相同）
+    // 代理局部系 = 资产原始坐标（pivot 由 prepare 负责减去，resolver 不居中）
     const got = [...pts].map((v) => Math.round(v * 1e6) / 1e6);
     expect(got).toEqual([
-      -2, 0, -2,
-      2, 0, -2,
-      -2, 4, 2,
-      -2, 0, 2,
-      2, 4, 2,
+      10, 2, 20,
+      14, 2, 20,
+      10, 6, 24,
+      10, 2, 24,
+      14, 6, 24,
     ]);
+    const b = bounds(pts);
+    expect(b.min).toEqual([10, 2, 20]);
+    expect(b.max).toEqual([14, 6, 24]);
   });
 
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {

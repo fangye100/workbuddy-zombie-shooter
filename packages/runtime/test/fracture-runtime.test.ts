@@ -4,7 +4,7 @@
  * 满池/优先级/TTL/淡出、Pause/Step/有界多 tick、Stop 重开/迟到、各分配阶段异常
  * 清理、真实物理组合、武器投射物配额不被占用。
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { ensureRapier, RapierFractureBackend, type RapierModule } from '../src/fracture-rapier';
 import { createFractureRuntime, type FractureActivation, type FractureChunkInput } from '../src/fracture-runtime';
 import { frozenFractureEvent, type FractureEvent } from '../src/fracture';
@@ -283,6 +283,36 @@ describe('WU-04 固定步长 / Pause / Step / 有界追赶', () => {
     expect(ticksB).toBe(ticksA);
   });
 
+  it('W04-04：profile 的 collisionGroup 真实进入碰撞组（environment 与 debris 不同）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    const mk = (id: string, g: 'environment' | 'debris'): FractureChunkInput => ({
+      ...chunk(id, 'large'), collisionGroup: g,
+      linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+    });
+    expect(rt.play(act('n1', [mk('e', 'environment'), mk('d', 'debris')])).accepted).toBe(true);
+    rt.stepOnce();
+    const env = rt.active.find((a) => a.mesh.guid.endsWith('e'))!;
+    const deb = rt.active.find((a) => a.mesh.guid.endsWith('d'))!;
+    const ge = backend.bodyGroups(env.handle)!;
+    const gd = backend.bodyGroups(deb.handle)!;
+    // 两者必须不同（配置真的被消费），且都不与 player/npc 互撞
+    expect(ge).not.toBe(gd);
+    const membership = (g: number) => (g >>> 16) & 0xffff;
+    const filter = (g: number) => g & 0xffff;
+    expect(membership(ge)).toBe(0x0002); // chunk
+    expect(membership(gd)).toBe(0x0010); // debris
+    for (const g of [ge, gd]) {
+      expect(filter(g) & 0x0004).toBe(0); // player 排除
+      expect(filter(g) & 0x0008).toBe(0); // npc 排除
+      expect(filter(g) & 0x0001).toBe(0x0001); // 与环境碰撞
+    }
+    // debris 只与环境碰撞；environment 还与其他 chunk 互撞
+    expect(filter(gd) & 0x0002).toBe(0);
+    expect(filter(ge) & 0x0002).toBe(0x0002);
+    rt.dispose();
+  });
+
   it('R6：profile 声明的块级线/角速度上限在实际推进中被消费', () => {
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
     const rt = createFractureRuntime(backend);
@@ -309,6 +339,26 @@ describe('WU-04 固定步长 / Pause / Step / 有界追赶', () => {
 });
 
 describe('WU-04 生命周期与异常清理', () => {
+  it('R4：租约 acquire 失败时已建 body 被回收（真实注入 acquire，不是 addBody）', () => {
+    const { backend, rt } = makeRuntime();
+    // 只让第一次 acquire 抛错：这正是修复前「先建 body、后借租约」会留下孤儿的路径。
+    const spy = vi.spyOn(ObjectPool.prototype, 'acquire').mockImplementationOnce(() => {
+      throw new Error('pool exhausted');
+    });
+    expect(rt.play(act('n1', [chunk('c1', 'large')])).accepted).toBe(true);
+    expect(() => rt.stepOnce()).toThrow();
+    spy.mockRestore();
+    expect(rt.stats.failedActivations).toBe(1);
+    expect(backend.ledger.dynamicBodies).toBe(0); // 无孤儿 body
+    expect(rt.stats.poolActive).toBe(0);
+    // 失败后同一 runtime 仍能正常激活
+    expect(rt.play(act('n2', [chunk('c2', 'large')])).accepted).toBe(true);
+    rt.stepOnce();
+    expect(backend.ledger.dynamicBodies).toBe(1);
+    rt.dispose();
+    expect(backend.ledger.dynamicBodies).toBe(0);
+  });
+
   it('Stop 经 dispose 释放全部活动租约与 World，账目归零，重复 dispose 安全', () => {
     const { backend, rt } = makeRuntime();
     rt.play(act('n1', [chunk('c1', 'large'), chunk('c2', 'small', 1)]));

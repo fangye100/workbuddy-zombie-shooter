@@ -287,6 +287,24 @@ describe('静态镜像变换适配', () => {
     expect(r.diagnostic).toMatch(/非均匀/);
   });
 
+  it('capsule 非竖直旋转明确拒绝（简化层只支持竖直胶囊）', () => {
+    // 绕 X 轴 90°：胶囊轴向 +Y → +Z（水平），竖向轮廓与竖直胶囊不同
+    const m = new Float32Array(16);
+    m[0] = 1; m[15] = 1;
+    m[5] = 0; m[6] = 1;   // col1 = (0,0,1)
+    m[9] = -1; m[10] = 0; // col2 = (0,-1,0)
+    const r = sceneColliderToStaticMirror('c2', { type: 'capsule', radius: 0.25, height: 1 }, false, m);
+    expect(r.ok).toBe(false);
+    expect(r.diagnostic).toMatch(/非竖直/);
+
+    // 恒等旋转（竖直）仍接受
+    const id = new Float32Array(16);
+    id[0] = 1; id[5] = 1; id[10] = 1; id[15] = 1;
+    const ok = sceneColliderToStaticMirror('c3', { type: 'capsule', radius: 0.25, height: 1 }, false, id);
+    expect(ok.ok).toBe(true);
+    expect(ok.spec!.shape).toEqual({ type: 'capsule', radius: 0.25, height: 1 });
+  });
+
   it('shear 变换所有形状拒绝', () => {
     const m = new Float32Array(16);
     m[0] = 1; m[4] = 0.5; m[5] = 1; m[10] = 1; m[15] = 1; // x 列含 y 分量 → shear

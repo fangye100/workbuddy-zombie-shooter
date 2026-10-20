@@ -106,6 +106,16 @@ export function sceneColliderToStaticMirror(
     if (u === null) {
       return { ok: false, diagnostic: `collider ${nodeId} capsule 非均匀缩放（${sx},${sy},${sz}），拒绝近似为均匀` };
     }
+    // 简化层按「竖直胶囊」求支撑（圆截面 + 圆柱段半高）。倾斜胶囊的竖向轮廓
+    // 与之不同：镜像进来会让碎块悬空/穿透，所以明确拒绝并给诊断，不静默近似。
+    const [cqx, cqy, cqz, cqw] = rotation;
+    const ax = 2 * (cqx * cqy - cqw * cqz);
+    const ay = 1 - 2 * (cqx * cqx + cqz * cqz);
+    const az = 2 * (cqy * cqz + cqw * cqx);
+    const axis = Math.hypot(ax, ay, az) || 1;
+    if (Math.abs(ay) / axis < 0.996) {
+      return { ok: false, diagnostic: 'collider ' + nodeId + ' capsule 非竖直（轴向 ' + ax.toFixed(3) + ',' + ay.toFixed(3) + ',' + az.toFixed(3) + '），简化层只支持竖直胶囊' };
+    }
     return {
       ok: true,
       spec: { nodeId, position, rotation, shape: { type: 'capsule', radius: shape.radius * u, height: shape.height * u }, isTrigger },

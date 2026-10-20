@@ -24,7 +24,7 @@ import {
   type WorldPosOf,
 } from '../src/services/play-camera';
 import type { SceneDocument } from '@aether/scene';
-import { frozenFractureEvent } from '@aether/runtime';
+import { frozenFractureEvent, type FractureAssetIO } from '@aether/runtime';
 
 // 本套件使用无GPU的renderer替身，验证控制器快照/相机；真实VFX由专属GPU验收覆盖。
 // 正式Act1配置现在含VFX，不能再依赖“关卡恰好没有特效”来避开GPU装配。
@@ -135,7 +135,7 @@ const scene = (): SceneDocument => {
 
 function make(
   doc: SceneDocument | null = scene(),
-  opts: { viewCamera?: ViewCameraControl; worldPosOf?: WorldPosOf } = {},
+  opts: { viewCamera?: ViewCameraControl; worldPosOf?: WorldPosOf; fractureIO?: FractureAssetIO } = {},
 ) {
   const r = fakeRenderer(doc);
   const b = fakeBridge();
@@ -143,6 +143,7 @@ function make(
     seed: 3,
     ...(opts.viewCamera !== undefined ? { viewCamera: opts.viewCamera } : {}),
     ...(opts.worldPosOf !== undefined ? { worldPosOf: opts.worldPosOf } : {}),
+    ...(opts.fractureIO !== undefined ? { fractureIO: opts.fractureIO } : {}),
   });
   return { ctl, r, b };
 }
@@ -282,6 +283,33 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(binding!.backend()).toBeNull();
   }, 30000);
 
+  it('终态（game-over）后碎片跟随世界冻结，不再推进', async () => {
+    const { ctl } = make();
+    expect(ctl.start()).toBe(true);
+    const binding = ctl.fracture!;
+    await expect(binding.ready).resolves.toBe(true);
+    expect(binding.runtime.play(smallActivation('nd_frag')).accepted).toBe(true);
+    ctl.update(1 / 30);
+    const frozenAt = binding.runtime.stats.ticks;
+    expect(frozenAt).toBeGreaterThan(0);
+
+    // 游戏进入终态：PlaySession 仍可能返回步数，但世界已冻结
+    const spy = vi.spyOn(ctl.session, 'outcome', 'get').mockReturnValue('game-over');
+    const n = ctl.update(1 / 30);
+    expect(n).toBeGreaterThan(0); // 会话确实"推进"了
+    expect(binding.runtime.stats.ticks).toBe(frozenAt); // 碎片不跟着动
+    // 暂停单步同样不推进碎片（仍在终态下）
+    ctl.pause();
+    const before = binding.runtime.stats.ticks;
+    ctl.step();
+    expect(binding.runtime.stats.ticks).toBe(before);
+    spy.mockRestore();
+    // 恢复 running 后单步重新生效（证明守卫只针对终态，不是把 step 永久关掉）
+    ctl.step();
+    expect(binding.runtime.stats.ticks).toBe(before + 1);
+    ctl.stop();
+  }, 30000);
+
   it('reset 换绑碎片代数：旧代释放、新代接管且不新增账目项', async () => {
     const { ctl } = make();
     expect(ctl.start()).toBe(true);
@@ -319,6 +347,74 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(ctl.fracture).toBeNull();
     expect(ctl.ledger.pending).toBe(0);
   }, 30000);
+});
+
+describe('PlayController —— 生产激活入口（WU-04 W04-01/09 回归）', () => {
+  // 真实 profile/sidecar/GLB 经 import.meta.glob 提供字节（禁 node:fs）。
+  const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  // 源模型的 sidecar（准入要核验引用身份）
+  const modelMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const charMetaGlob = import.meta.glob('../../../assets/characters/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const modelGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const rel = (k: string) => k.replace(/^.*?(?=assets\/)/, '');
+
+  function makeIO() {
+    const text = new Map<string, string>();
+    for (const [k, v] of Object.entries({ ...textGlob, ...modelMetaGlob, ...charMetaGlob })) text.set(rel(k), v);
+    const bins = new Map<string, () => Promise<Uint8Array>>();
+    for (const [k, v] of Object.entries({ ...binGlob, ...modelGlob })) bins.set(rel(k), v);
+    return {
+      async readText(path: string) {
+        const v = text.get(path);
+        if (v === undefined) throw new Error('未找到：' + path);
+        return v;
+      },
+      async readBinary(path: string) {
+        const loader = bins.get(path);
+        if (loader === undefined) throw new Error('未找到二进制：' + path);
+        const bytes = await loader();
+        return bytes.slice().buffer;
+      },
+    };
+  }
+
+  it('spawnFracture 走 prepareFractureActivation 真资产准入并进入运行时', async () => {
+    const { ctl } = make(scene(), { fractureIO: makeIO() });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const event = frozenFractureEvent({
+      sequence: 1, tick: 0, seed: 11,
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_barrel' },
+      position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+      source: { weaponId: 'w_pistol', hitSequence: 1 },
+    });
+    const res = await ctl.spawnFracture(event);
+    expect(res.accepted).toBe(true);
+    // 准入产生的是正式 P-01 profile 的 12 块
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(1);
+    ctl.update(1 / 30);
+    expect(ctl.fracture!.runtime.active.length).toBe(12);
+    expect(ctl.fracture!.runtime.stats.rigidActive).toBe(12);
+
+    // 坏输入（GUID 不符）在分配前拒绝，且不进入运行时
+    const bad = frozenFractureEvent({
+      ...event,
+      sequence: 2,
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_wrong' },
+      target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_barrel2' },
+    });
+    const res2 = await ctl.spawnFracture(bad);
+    expect(res2.accepted).toBe(false);
+    expect(res2.rejection?.reason).toBe('identity');
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 60000);
 });
 
 describe('PlayController —— 运行期门姿态同步到碎片镜像（WU-04 F3 回归）', () => {

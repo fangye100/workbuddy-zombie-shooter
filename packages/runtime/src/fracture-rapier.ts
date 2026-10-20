@@ -35,7 +35,7 @@ interface RapierBody {
   setAngvel(v: RapierVector, wakeUp: boolean): void;
   readonly handle: number;
 }
-interface RapierCollider { readonly handle: number }
+interface RapierCollider { readonly handle: number; collisionGroups(): number }
 interface RapierRigidBodyDesc {
   setTranslation(x: number, y: number, z: number): this;
   setRotation(q: RapierRotation): this;
@@ -93,12 +93,22 @@ export const FRACTURE_GROUP = {
   chunk: 0x0002,
   player: 0x0004,
   npc: 0x0008,
+  debris: 0x0010,
 } as const;
 export function collisionGroups(membership: number, filter: number): number {
   return ((membership & 0xffff) << 16) | (filter & 0xffff);
 }
-/** 碎片：属于 chunk，与环境 + 其它 chunk 碰撞，明确排除 player/npc。 */
+/**
+ * 碎片碰撞组（profile 的 collisionGroup 实际消费点）：
+ * - environment：属于 chunk，与环境 + 其它 chunk 碰撞；
+ * - debris：属于 debris，只与环境碰撞（碎屑之间互不阻挡，避免块间求解开销）。
+ * 两者都明确排除 player/npc，装饰碎片不会影响玩法实体。
+ */
 export const CHUNK_GROUPS = collisionGroups(FRACTURE_GROUP.chunk, FRACTURE_GROUP.environment | FRACTURE_GROUP.chunk);
+export const DEBRIS_GROUPS = collisionGroups(FRACTURE_GROUP.debris, FRACTURE_GROUP.environment);
+export function groupsForCollisionGroup(g: 'environment' | 'debris' | undefined): number {
+  return g === 'debris' ? DEBRIS_GROUPS : CHUNK_GROUPS;
+}
 
 export interface RapierBodySpec {
   /** 动态刚体初始世界变换（资产局部变换已组合进该世界变换，只执行一次）。 */
@@ -124,6 +134,8 @@ export interface RapierBodySpec {
   restitution: number;
   /** 碰撞分组；默认碎片装饰组（排除 player/npc）。 */
   groups?: number;
+  /** 资产 profile 的碰撞分组（未指定 groups 时生效）。 */
+  collisionGroup?: 'environment' | 'debris';
   /** 仅对确有穿透风险的快速小刚体开启 CCD。 */
   ccd?: boolean;
 }
@@ -283,7 +295,7 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       if (!desc) throw new Error('凸代理无法构成有效凸包（退化点集）');
     }
     desc.setFriction(spec.friction).setRestitution(spec.restitution).setMass(spec.mass);
-    desc.setCollisionGroups(spec.groups ?? CHUNK_GROUPS);
+    desc.setCollisionGroups(spec.groups ?? groupsForCollisionGroup(spec.collisionGroup));
     return desc;
   }
 
@@ -417,6 +429,13 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       ...(m.spec.groups !== undefined ? { groups: m.spec.groups } : {}),
     });
     return true;
+  }
+
+  /** 活动 body 的碰撞分组（只读；供宿主/验收核对 profile 的 collisionGroup 真的生效）。 */
+  bodyGroups(handle: FractureBodyHandle): number | null {
+    const t = this.bodies.get(handle.key);
+    if (!t) return null;
+    return t.collider.collisionGroups();
   }
 
   /** 已登记静态镜像的世界位置（只读；未登记返回 null，供宿主/验收核对姿态同步）。 */
