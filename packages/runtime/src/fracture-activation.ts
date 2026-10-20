@@ -16,6 +16,7 @@ import {
   validateAssetMeta,
   type AssetMeta,
 } from '@aether/scene';
+import { parseGlb } from '@aether/scene';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 
@@ -83,6 +84,14 @@ export interface PrepareOptions {
   readonly io: FractureAssetIO;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
   readonly resolveConvexPoints?: ConvexPointsResolver;
+}
+
+/** 正式 GLB 凸代理解析器（R1 生产实现）：用 scene 的 parseGlb 提取顶点。 */
+export function createGlbConvexResolver(): ConvexPointsResolver {
+  return (buffer: ArrayBuffer): Float32Array => {
+    const result = parseGlb(buffer, null, 'auto');
+    return result.mesh.vertices;
+  };
 }
 
 const SCALE_EPS = 1e-4;
@@ -190,22 +199,29 @@ export async function prepareFractureActivation(
     if (!isUniformScale(bs)) {
       return { ok: false, failure: { stage: 'transform', detail: '碎块 ' + c.chunkId + ' bind.scale 非均匀（' + bs.join(',') + '），不支持近似，请改用均匀尺度' } };
     }
-    // R6 唯一变换链（矩阵乘序：事件世界 ∘ bind 局部；assemblyScale 已含在事件世界变换，不二次乘）：
-    // 质心世界位置 = eventT + eventR * (bindS * (bindT + pivot)) * eventS
-    const bindScaledLocal: FractureVec3 = [
-      c.bind.scale[0] * (c.bind.position[0] + c.pivot[0]),
-      c.bind.scale[1] * (c.bind.position[1] + c.pivot[1]),
-      c.bind.scale[2] * (c.bind.position[2] + c.pivot[2]),
+    // R6 唯一变换链（标准 bind TRS 公式，assemblyScale 已含在事件世界变换，不二次乘）：
+    // bind 局部：质心 = bindT + bindR * (bindS * pivot)
+    // 世界：质心 = eventT + eventR * (bindT + bindR * (bindS * pivot)) * eventS
+    const pivotScaled: FractureVec3 = [
+      c.bind.scale[0] * c.pivot[0],
+      c.bind.scale[1] * c.pivot[1],
+      c.bind.scale[2] * c.pivot[2],
     ];
-    const bindRotated = rotateByQuat(bindScaledLocal, c.bind.rotation);
-    const worldOffset = rotateByQuat(bindRotated, event.rotation);
+    const bindLocal = rotateByQuat(pivotScaled, c.bind.rotation);
+    const bindPos: FractureVec3 = [
+      c.bind.position[0] + bindLocal[0],
+      c.bind.position[1] + bindLocal[1],
+      c.bind.position[2] + bindLocal[2],
+    ];
+    const worldOffset = rotateByQuat(bindPos, event.rotation);
     const worldPos: FractureVec3 = [
       event.position[0] + worldOffset[0] * ws[0],
       event.position[1] + worldOffset[1] * ws[1],
       event.position[2] + worldOffset[2] * ws[2],
     ];
     const worldRot = quatMul(event.rotation, c.bind.rotation);
-    const worldScale = ((c.bind.scale[0] + c.bind.scale[1] + c.bind.scale[2]) / 3) * ((ws[0] + ws[1] + ws[2]) / 3);
+    // bind.scale 已在上文拒绝非均匀；此处直接用 bind.scale[0]（均匀值）× 事件均匀尺度。
+    const worldScale = c.bind.scale[0] * ws[0];
 
     let shape: FractureChunkInput['shape'];
     if (c.proxy.shape.type === 'convex') {
@@ -231,6 +247,52 @@ export async function prepareFractureActivation(
       for (let i = 0; i < pts.length; i++) { if (!Number.isFinite(pts[i])) { degenerate = true; break; } }
       if (degenerate) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理含非有限值' } };
+      }
+      // 非退化三维凸包校验：检查是否存在非共面四点（体积 > 1e-8）。
+      // 取前四点（或所有点中最远三点+第四点）计算有向体积。
+      {
+        const nPts = pts.length / 3;
+        // 找最远两点作为基线
+        let maxDist = 0, i0 = 0, i1 = 1;
+        for (let a = 0; a < nPts; a++) for (let b = a + 1; b < nPts; b++) {
+          const dx = pts[a*3]!-pts[b*3]!, dy = pts[a*3+1]!-pts[b*3+1]!, dz = pts[a*3+2]!-pts[b*3+2]!;
+          const d = dx*dx+dy*dy+dz*dz;
+          if (d > maxDist) { maxDist = d; i0 = a; i1 = b; }
+        }
+        if (maxDist < 1e-12) {
+          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点重合（零体积）' } };
+        }
+        // 找离基线最远的点
+        const ax = pts[i0*3]!, ay = pts[i0*3+1]!, az = pts[i0*3+2]!;
+        const bx = pts[i1*3]!, by = pts[i1*3+1]!, bz = pts[i1*3+2]!;
+        const abx = bx-ax, aby = by-ay, abz = bz-az;
+        let maxArea = 0, i2 = -1;
+        for (let a = 0; a < nPts; a++) {
+          if (a === i0 || a === i1) continue;
+          const cx = pts[a*3]!, cy = pts[a*3+1]!, cz = pts[a*3+2]!;
+          const acx = cx-ax, acy = cy-ay, acz = cz-az;
+          // 叉积 |AB × AC| = 2 * 三角形面积
+          const nx = aby*acz - abz*acy, ny = abz*acx - abx*acz, nz = abx*acy - aby*acx;
+          const area = nx*nx + ny*ny + nz*nz;
+          if (area > maxArea) { maxArea = area; i2 = a; }
+        }
+        if (maxArea < 1e-12 || i2 < 0) {
+          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点共线（零面积）' } };
+        }
+        // 找离平面最远的点（非共面校验）
+        const cx2 = pts[i2*3]!, cy2 = pts[i2*3+1]!, cz2 = pts[i2*3+2]!;
+        const nx = aby*(cz2-az) - abz*(cy2-ay), ny2 = abz*(cx2-ax) - abx*(cz2-az), nz2 = abx*(cy2-ay) - aby*(cx2-ax);
+        const nLen = Math.sqrt(nx*nx + ny2*ny2 + nz2*nz2);
+        let maxVol = 0;
+        for (let a = 0; a < nPts; a++) {
+          if (a === i0 || a === i1 || a === i2) continue;
+          const dx2 = pts[a*3]!-ax, dy2 = pts[a*3+1]!-ay, dz2 = pts[a*3+2]!-az;
+          const vol = Math.abs(nx*dx2 + ny2*dy2 + nz2*dz2) / (nLen || 1);
+          if (vol > maxVol) maxVol = vol;
+        }
+        if (maxVol < 1e-6) {
+          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点共面（零体积）' } };
+        }
       }
       shape = { type: 'convex', points: pts };
     } else if (c.proxy.shape.type === 'box') {
@@ -274,6 +336,9 @@ export async function prepareFractureActivation(
       // CCD 仅对确有穿透风险的快速块开启（资产声明速度上限才开，不无差别打开）。
       ...(((c.proxy.maxLinearSpeed !== undefined && c.proxy.maxLinearSpeed > 10)
         || (c.proxy.maxAngularSpeed !== undefined && c.proxy.maxAngularSpeed > 20)) ? { ccd: true } : {}),
+      // R6：块级速度限制进入 chunk 输入（供 runtime 传给后端 per-body 限幅）。
+      ...(c.proxy.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.proxy.maxLinearSpeed } : {}),
+      ...(c.proxy.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.proxy.maxAngularSpeed } : {}),
     });
   }
 

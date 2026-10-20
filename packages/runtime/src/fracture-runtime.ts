@@ -42,6 +42,10 @@ export interface FractureChunkInput {
   readonly linearVelocity: FractureVec3;
   readonly angularVelocity: FractureVec3;
   readonly ccd?: boolean;
+  /** 块级线速度上限（资产 profile 声明；0=用后端默认值）。 */
+  readonly maxLinearSpeed?: number;
+  /** 块级角速度上限（资产 profile 声明；0=用后端默认值）。 */
+  readonly maxAngularSpeed?: number;
 }
 
 /** 一次激活的全部输入（事件 + profile 解析后的碎块集合 + 播放策略）。 */
@@ -168,7 +172,43 @@ const DEFAULTS = {
 } as const;
 
 /** 支撑面（来自真实场景 collider 镜像；无镜像则小块继续下落，不生成无限地面）。 */
-interface SupportSurface { x: number; z: number; topY: number; halfX: number; halfZ: number }
+interface SupportSurface {
+  x: number; z: number; topY: number; halfX: number; halfZ: number;
+  centerY: number; qx: number; qy: number; qz: number; qw: number;
+  localHalfX: number; localHalfY: number; localHalfZ: number;
+}
+
+/** 四元数共轭（逆旋转）。 */
+function quatConj(qx: number, qy: number, qz: number, qw: number): [number, number, number, number] {
+  return [-qx, -qy, -qz, qw];
+}
+
+/** 四元数旋转向量。 */
+function quatRotate(qx: number, qy: number, qz: number, qw: number, vx: number, vy: number, vz: number): [number, number, number] {
+  const uvx = qy * vz - qz * vy, uvy = qz * vx - qx * vz, uvz = qx * vy - qy * vx;
+  const uuvx = qy * uvz - qz * uvy, uuvy = qz * uvx - qx * uvz, uuvz = qx * uvy - qy * uvx;
+  return [
+    vx + 2 * (qw * uvx + uuvx),
+    vy + 2 * (qw * uvy + uuvy),
+    vz + 2 * (qw * uvz + uuvz),
+  ];
+}
+
+/**
+ * 求 OBB 在查询点 (qx,qz) 处的真实支撑面顶 Y（R2 旋转平台修复）。
+ * 把查询点逆旋转到 OBB 局部系，若 |x|<=halfX && |z|<=halfZ 则返回
+ * 旋转后的局部顶面世界 Y；否则返回 null。
+ */
+function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | null {
+  // 逆旋转：把查询点从世界系变到 OBB 局部系
+  const [iqx, iqy, iqz, iqw] = quatConj(su.qx, su.qy, su.qz, su.qw);
+  const dx = qx - su.x, dz = qz - su.z;
+  const [lx, , lz] = quatRotate(iqx, iqy, iqz, iqw, dx, 0, dz);
+  if (Math.abs(lx) > su.localHalfX || Math.abs(lz) > su.localHalfZ) return null;
+  // 局部顶面 (lx, localHalfY, lz) 经旋转回世界系
+  const [, wy] = quatRotate(su.qx, su.qy, su.qz, su.qw, lx, su.localHalfY, lz);
+  return su.centerY + wy;
+}
 
 /**
  * 查询本次竖向运动能接触的支撑面顶 Y（R2）：
@@ -184,14 +224,16 @@ function supportHeightAt(
   let crossed: number | null = null;
   let resting: number | null = null;
   for (const su of surfaces) {
-    if (Math.abs(x - su.x) > su.halfX || Math.abs(z - su.z) > su.halfZ) continue;
+    // R2：用 OBB 局部系查询真实支撑面（不近似为世界 AABB 顶面）
+    const topY = obbSupportTopY(su, x, z);
+    if (topY === null) continue;
     // 本步竖向穿越或触底该面（含穿越与精确落停；容差覆盖高速步过冲）。
     // 多面穿越时选最高面（运动路径上最先接触的面），不穿到更低面。
-    if (prevY >= su.topY - 0.001 && currY <= su.topY + 0.001) {
-      if (crossed === null || su.topY > crossed) crossed = su.topY;
+    if (prevY >= topY - 0.001 && currY <= topY + 0.001) {
+      if (crossed === null || topY > crossed) crossed = topY;
     // 已贴伏在面上（resting 保持）
-    } else if (prevY >= su.topY && prevY - su.topY <= 0.01) {
-      if (resting === null || su.topY > resting) resting = su.topY;
+    } else if (prevY >= topY && prevY - topY <= 0.01) {
+      if (resting === null || topY > resting) resting = topY;
     }
   }
   return crossed ?? resting;
@@ -208,9 +250,9 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
     let top: number | null = null;
     const bottomY = s.position[1] - s.supportRadius;
     for (const su of surfaces) {
-      if (Math.abs(s.position[0] - su.x) <= su.halfX && Math.abs(s.position[2] - su.z) <= su.halfZ) {
-        if (top === null || Math.abs(su.topY - bottomY) < Math.abs(top - bottomY)) top = su.topY;
-      }
+      const topY = obbSupportTopY(su, s.position[0], s.position[2]);
+      if (topY === null) continue;
+      if (top === null || Math.abs(topY - bottomY) < Math.abs(top - bottomY)) top = topY;
     }
     if (top === null || Math.abs(s.position[1] - (top + s.supportRadius)) > 0.01) s.resting = false;
     else return;
@@ -338,6 +380,8 @@ export function createFractureRuntime(
         shape: shape(c.shape), mass: c.mass, friction: c.friction, restitution: c.restitution,
         linearVelocity: v3(c.linearVelocity), angularVelocity: v3(c.angularVelocity),
         ...(c.ccd === true ? { ccd: true } : {}),
+        ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
+        ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
       })),
       priority: a.priority, lifetimeSec: a.lifetimeSec, fadeSec: a.fadeSec,
     };
@@ -452,6 +496,9 @@ export function createFractureRuntime(
             linearVelocity: c.linearVelocity, angularVelocity: c.angularVelocity,
             shape: worldShape, mass: c.mass, friction: c.friction, restitution: c.restitution,
             ...(c.ccd === true ? { ccd: true } : {}),
+            // R6：块级速度限制（资产 profile 声明；不覆盖后端默认值）
+            ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
+            ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
           });
         } else {
           sim = {

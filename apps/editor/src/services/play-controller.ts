@@ -25,6 +25,8 @@ import {decalReceivers} from './vfx-decal-receivers';
 
 import { PlaySession, type PlayState } from '@aether/zombie-game';
 import type { BehaviorExecutor } from '@aether/runtime';
+import { SceneGraph } from '@aether/scene';
+import { bindFractureToPlaySession, type FracturePlayBinding } from '@aether/runtime';
 import {
   PlayCameraController,
   type ViewCameraControl,
@@ -73,6 +75,8 @@ export class PlayController {
   private readonly bridge: RuntimeBridge;
   private readonly renderer: LabRenderer;
   private readonly onStateChange: (() => void) | null;
+  /** 碎片运行时绑定（R3：真实 Play 驱动；null = 未启用或已释放）。 */
+  private fractureBinding: (FracturePlayBinding & { onFixedTick(dtSec: number): void }) | null = null;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -208,6 +212,19 @@ export class PlayController {
     // 见 PR #3 review / AGENTS.md §2.4「Play 期每次 GPU 分配都必须登记并在 Stop 释放」。
     this.session.registerResource('dynamic-instances', () => this.renderer.core.releaseDynamicResources());
     this.vfx.start(this.session,doc);
+
+    // R3：碎片运行时接入真实 Play（装配→固定 tick 驱动→Stop 释放）。
+    // 场景 collider 镜像从 doc 重建 SceneGraph（与 loader 同一真源）。
+    {
+      const graph = SceneGraph.fromDocument(doc);
+      graph.updateWorldTransforms();
+      this.fractureBinding = bindFractureToPlaySession(this.session, { initialScene: graph });
+      this.session.registerResource('fracture-runtime', () => {
+        this.fractureBinding?.session.dispose();
+        this.fractureBinding = null;
+      });
+    }
+
     this.lastError = null;
     this.notify();
     return true;
@@ -231,6 +248,7 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
+    this.fractureBinding?.onFixedTick(this.session.fixedStep);
     this.syncGates();
     this.decals?.sync(this.session.runtime);
     this.sharedMotions?.sync(this.session.runtime);
@@ -291,6 +309,8 @@ export class PlayController {
   update(dt: number): number {
     const n = this.session.advance(dt);
     if (n > 0) {
+      // R3：真实固定步驱动碎片物理（渲染频率不反推物理时钟）。
+      for (let i = 0; i < n; i++) this.fractureBinding?.onFixedTick(this.session.fixedStep);
       this.syncGates();
       this.decals?.sync(this.session.runtime);
       this.sharedMotions?.sync(this.session.runtime);

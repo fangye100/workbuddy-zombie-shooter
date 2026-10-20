@@ -109,6 +109,10 @@ export interface RapierBodySpec {
   /** 初始线/角速度。 */
   linearVelocity?: FractureVec3;
   angularVelocity?: FractureVec3;
+  /** 块级线速度上限（覆盖后端默认值；资产 profile 声明）。 */
+  maxLinearSpeed?: number;
+  /** 块级角速度上限（覆盖后端默认值；资产 profile 声明）。 */
+  maxAngularSpeed?: number;
   /** 碰撞代理（局部，中心在质心）。box/sphere 受世界均匀缩放；凸代理点已含尺度。 */
   shape:
     | { type: 'box'; halfExtents: FractureVec3 }
@@ -149,6 +153,8 @@ interface StaticMirror {
   collider: RapierCollider;
   /** box 镜像的世界半尺寸（供简化层支撑面查询；非 box 为 null）。 */
   boxHalf: { halfX: number; halfY: number; halfZ: number } | null;
+  /** box 镜像的世界旋转四元数（供 OBB 支撑面查询；非 box 为 identity）。 */
+  rotation: { x: number; y: number; z: number; w: number };
 }
 
 const DEFAULT_MAX_LINEAR = 60;
@@ -233,8 +239,10 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       .setTranslation(spec.position[0], spec.position[1], spec.position[2])
       .setRotation({ x: spec.rotation[0], y: spec.rotation[1], z: spec.rotation[2], w: spec.rotation[3] });
     // 初始速度在创建前即夹进边界（含非有限分量归零）。
-    const lv = this.clampSpeed(spec.linearVelocity ?? [0, 0, 0], this.maxLinearSpeed);
-    const av = this.clampSpeed(spec.angularVelocity ?? [0, 0, 0], this.maxAngularSpeed);
+    const effMaxLin = spec.maxLinearSpeed !== undefined ? Math.min(spec.maxLinearSpeed, this.maxLinearSpeed) : this.maxLinearSpeed;
+    const effMaxAng = spec.maxAngularSpeed !== undefined ? Math.min(spec.maxAngularSpeed, this.maxAngularSpeed) : this.maxAngularSpeed;
+    const lv = this.clampSpeed(spec.linearVelocity ?? [0, 0, 0], effMaxLin);
+    const av = this.clampSpeed(spec.angularVelocity ?? [0, 0, 0], effMaxAng);
     rb.setLinvel(lv[0], lv[1], lv[2]).setAngvel({ x: av[0], y: av[1], z: av[2] });
     if (spec.ccd === true) rb.setCcdEnabled(true);
     const body = this.world.createRigidBody(rb);
@@ -247,11 +255,11 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       throw e;
     }
     // 初始速度在求解前夹进边界，防止首个 tick 已超限位移。
-    this.clampBodySpeeds(body, this.maxLinearSpeed, this.maxAngularSpeed);
+    this.clampBodySpeeds(body, effMaxLin, effMaxAng);
     this.bodies.set(handle.key, {
       key: handle.key, chunkId: handle.chunkId, layer: handle.layer,
       body, collider,
-      maxLinearSpeed: this.maxLinearSpeed, maxAngularSpeed: this.maxAngularSpeed,
+      maxLinearSpeed: effMaxLin, maxAngularSpeed: effMaxAng,
     });
   }
 
@@ -365,7 +373,8 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     const boxHalf = spec.shape.type === 'box'
       ? { halfX: spec.shape.halfExtents[0], halfY: spec.shape.halfExtents[1], halfZ: spec.shape.halfExtents[2] }
       : null;
-    this.statics.set(nodeId, { nodeId, body, collider, boxHalf });
+    const rot = { x: spec.rotation[0], y: spec.rotation[1], z: spec.rotation[2], w: spec.rotation[3] };
+    this.statics.set(nodeId, { nodeId, body, collider, boxHalf, rotation: rot });
   }
 
   /** 移除静态镜像（删除/开门不能遗留幽灵 collider）。 */
@@ -393,23 +402,29 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
    * 有界简化层的保守近似，不做逐点多点接触。来自真实场景 collider 镜像（含
    * scene-mirror 组合与其他 owner 登记的地面），不另造无限地面；无镜像时返回空。
    */
-  staticSupportSurfaces(): readonly { x: number; z: number; topY: number; halfX: number; halfZ: number }[] {
-    const out: { x: number; z: number; topY: number; halfX: number; halfZ: number }[] = [];
+  /**
+   * 简化碎片的有界环境接触（R2）：返回静态镜像的 OBB 描述，供调用方做逐点支撑查询。
+   * 不做世界 AABB 近似（旋转盒的 AABB 顶部会在斜坡上制造虚假平台）；
+   * 调用方用逆旋转把查询点变换到局部系，再求局部支撑面，得到真实 OBB 接触。
+   */
+  staticSupportSurfaces(): readonly {
+    x: number; z: number; topY: number; halfX: number; halfZ: number;
+    /** OBB 中心（世界）与逆旋转四元数（共调用方做局部系支撑查询）。 */
+    centerY: number; qx: number; qy: number; qz: number; qw: number;
+    localHalfX: number; localHalfY: number; localHalfZ: number;
+  }[] {
+    const out: ReturnType<RapierFractureBackend['staticSupportSurfaces']>[number][] = [];
     for (const m of this.statics.values()) {
       if (!m.boxHalf) continue;
       const t = m.body.translation();
-      const rot = m.body.rotation();
-      // 四元数旋转半尺寸向量（仅取绝对值分量求 AABB）：worldHalf_i = |R| @ localHalf
-      const [qx, qy, qz, qw] = [rot.x, rot.y, rot.z, rot.w];
-      const hx = m.boxHalf.halfX, hy = m.boxHalf.halfY, hz = m.boxHalf.halfZ;
-      // R 的元素（行主序）：
-      const r00 = 1 - 2 * (qy * qy + qz * qz), r01 = 2 * (qx * qy - qz * qw), r02 = 2 * (qx * qz + qy * qw);
-      const r10 = 2 * (qx * qy + qz * qw), r11 = 1 - 2 * (qx * qx + qz * qz), r12 = 2 * (qy * qz - qx * qw);
-      const r20 = 2 * (qx * qz - qy * qw), r21 = 2 * (qy * qz + qx * qw), r22 = 1 - 2 * (qx * qx + qy * qy);
-      const worldHalfX = Math.abs(r00) * hx + Math.abs(r01) * hy + Math.abs(r02) * hz;
-      const worldHalfY = Math.abs(r10) * hx + Math.abs(r11) * hy + Math.abs(r12) * hz;
-      const worldHalfZ = Math.abs(r20) * hx + Math.abs(r21) * hy + Math.abs(r22) * hz;
-      out.push({ x: t.x, z: t.z, topY: t.y + worldHalfY, halfX: worldHalfX, halfZ: worldHalfZ });
+      const rot = m.rotation;
+      out.push({
+        x: t.x, z: t.z, topY: t.y + m.boxHalf.halfY, // AABB 顶（广相用，实际支撑用局部系查询）
+        halfX: m.boxHalf.halfX, halfZ: m.boxHalf.halfZ, // AABB 半尺寸（广相用）
+        centerY: t.y,
+        qx: rot.x, qy: rot.y, qz: rot.z, qw: rot.w,
+        localHalfX: m.boxHalf.halfX, localHalfY: m.boxHalf.halfY, localHalfZ: m.boxHalf.halfZ,
+      });
     }
     return out;
   }

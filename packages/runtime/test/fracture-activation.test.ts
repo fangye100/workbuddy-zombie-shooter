@@ -216,10 +216,32 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     if (!r3.ok) expect(r3.failure.stage).toBe('proxy-load');
 
     // 真实凸代理成功路径：用真实 GLB 二进制 + 合法解析
+    // 四面体（非共面四点，有正体积）
     const r4 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
       io, resolveConvexPoints: () => new Float32Array([0,0,0, 1,0,0, 0,1,0, 0,0,1]),
     });
     expect(r4.ok).toBe(true);
+
+    // 零体积：四点完全重合
+    const r5 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => new Float32Array([0,0,0, 0,0,0, 0,0,0, 0,0,0]),
+    });
+    expect(r5.ok).toBe(false);
+    if (!r5.ok) expect(r5.failure.stage).toBe('proxy-load');
+
+    // 共线：三点共线
+    const r6 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => new Float32Array([0,0,0, 1,0,0, 2,0,0, 3,0,0]),
+    });
+    expect(r6.ok).toBe(false);
+    if (!r6.ok) expect(r6.failure.stage).toBe('proxy-load');
+
+    // 共面：四点在 XY 平面
+    const r7 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io, resolveConvexPoints: () => new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0]),
+    });
+    expect(r7.ok).toBe(false);
+    if (!r7.ok) expect(r7.failure.stage).toBe('proxy-load');
   });
 
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {
