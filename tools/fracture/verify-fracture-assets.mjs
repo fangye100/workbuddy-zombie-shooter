@@ -266,8 +266,8 @@ export function verifyActorSkin(sourceDoc, chunkDocs, failures, notes, animName 
   if (!(capChecked > 0 && capChecked >= caps * 0.9)) failures.push('cap neighborhood coverage', { capChecked, caps });
   // Mixed-binding LBS at curved cross-sections has inherent candy-wrapper stretch;
   // 50mm is the engineering tolerance for death-fracture visual continuity.
-  if (!(maxCap < 0.05)) failures.push('cap boundary continuity (bind+anim gap)', { maxCap, capChecked });
-  notes.push(animName + '@' + t + 's: shared=' + shared + ' maxDelta=' + maxShared.toExponential(2) + '; caps=' + caps + ' checked=' + capChecked + ' boundaryGap=' + maxCap.toFixed(5) + 'm (50mm tol)');
+  if (!(maxCap < 1e-4)) failures.push('cap boundary continuity (bind+anim gap)', { maxCap, capChecked });
+  notes.push(animName + '@' + t + 's: shared=' + shared + ' maxDelta=' + maxShared.toExponential(2) + '; caps=' + caps + ' checked=' + capChecked + ' boundaryGap=' + maxCap.toExponential(2) + 'm (0.1mm tol)');
   return { shared, caps, capChecked, maxShared, maxCap, capTris, maxEdgeDrift };
 }
 

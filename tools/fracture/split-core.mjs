@@ -141,17 +141,31 @@ function capOpenEdges(local, open) {
   if (stillOpen.length) {
     const centroid = [0, 0, 0];
     for (const k of stillOpen) { const p = local.p(indexOfKey(local, k.split('>')[0])); for (let q = 0; q < 3; q++) centroid[q] += p[q] / stillOpen.length; }
-    const anchor = indexOfKey(local, stillOpen[0].split('>')[0]);
-    const joints = [...(local.j(anchor) ?? [0, 0, 0, 0])];
-    const weights = [...(local.w(anchor) ?? [0, 0, 0, 0])]; // full mixed binding
-    const center = local.add(centroid, [0, 1, 0], [0, 0], local.weights.length ? joints : null, local.weights.length ? weights : null);
+    // Centre binding: average of all residual endpoints' bindings.
+    const centreJ = local.weights.length ? new Array(4).fill(0) : null;
+    const centreW = local.weights.length ? new Array(4).fill(0) : null;
+    if (local.weights.length) {
+      const byJoint = new Map();
+      for (const k of stillOpen) for (const end of [0, 1]) {
+        const idx = indexOfKey(local, k.split('>')[end]);
+        const js = local.j(idx), ws = local.w(idx);
+        for (let q = 0; q < 4; q++) if (ws[q] > 0) byJoint.set(js[q], (byJoint.get(js[q]) ?? 0) + ws[q] / (stillOpen.length * 2));
+      }
+      const top = [...byJoint.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const sum = top.reduce((acc, [, w]) => acc + w, 0) || 1;
+      top.forEach(([j, w], k) => { centreJ[k] = j; centreW[k] = w / sum; });
+      for (let k = top.length; k < 4; k++) centreJ[k] = top[0][0];
+    }
+    const center = local.add(centroid, [0, 1, 0], [0, 0], centreJ, centreW);
     for (const k of stillOpen) {
-      const pa = local.p(indexOfKey(local, k.split('>')[1]));
-      const pb = local.p(indexOfKey(local, k.split('>')[0]));
+      const idxA = indexOfKey(local, k.split('>')[1]);
+      const idxB = indexOfKey(local, k.split('>')[0]);
+      const pa = local.p(idxA);
+      const pb = local.p(idxB);
       const gn = triangleNormal(pa, pb, centroid);
-      const v0 = local.add(pa, gn, [0, 0], joints, weights);
-      const v1 = local.add(pb, gn, [0, 0], joints, weights);
-      const v2 = local.add(centroid, gn, [0, 0], joints, weights);
+      const v0 = local.add(pa, gn, [0, 0], local.j(idxA), local.w(idxA));
+      const v1 = local.add(pb, gn, [0, 0], local.j(idxB), local.w(idxB));
+      const v2 = local.add(centroid, gn, [0, 0], centreJ, centreW);
       triangles.push([v0, v1, v2]);
     }
   }

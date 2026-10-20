@@ -38,3 +38,25 @@ test('negative: zeroed inverse bind matrices must break bind-pose skinning', asy
   verifyActorSkin(source, { head: corrupted }, failures, notes);
   assert.ok(failures.length > 0, 'zeroed IBM must fail skin verification');
 });
+
+test('negative: perturbed residual cap endpoint weight must break boundary continuity', async () => {
+  const { verifyActorSkin } = await import('./verify-fracture-assets.mjs');
+  const { readAccessor } = await import('./glb-io.mjs');
+  const source = readGlb('assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb');
+  // Find a chunk with residual cap vertices (torso has them).
+  const doc = readGlb('assets/fracture/e04-bulwark/torso.glb');
+  const corrupted = { json: JSON.parse(JSON.stringify(doc.json)), bin: Buffer.from(doc.bin) };
+  // Perturb one cap prim vertex's weight in the chunk's binary buffer.
+  const mesh = corrupted.json.meshes[0];
+  const capPrim = mesh.primitives[1];
+  if (!capPrim || capPrim.attributes.WEIGHTS_0 === undefined) { assert.fail('torso cap prim missing'); return; }
+  const wAcc = corrupted.json.accessors[capPrim.attributes.WEIGHTS_0];
+  const wView = corrupted.json.bufferViews[wAcc.bufferView];
+  const offset = (wView.byteOffset ?? 0) + (wAcc.byteOffset ?? 0);
+  // Flip the first weight from dominant to zero (swap w[0] and w[1]).
+  corrupted.bin.writeFloatLE(corrupted.bin.readFloatLE(offset + 4), offset);
+  corrupted.bin.writeFloatLE(0, offset + 4);
+  const failures = [], notes = [];
+  verifyActorSkin(source, { torso: corrupted }, failures, notes);
+  assert.ok(failures.length > 0, 'perturbed cap weight must fail boundary continuity');
+});
