@@ -3284,6 +3284,28 @@
       "reviewedAt": "2026-10-20",
       "reviewedSourceCommit": "ad4973e8312ce191602ad27d7f54c417cb828308"
     },
+    {
+      "id": "fracture-runtime-budget",
+      "path": "docs/architecture/fracture-runtime-budget-20261020.md",
+      "title": "碎片运行与预算（WU-04）",
+      "role": "runtime",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "fracture",
+        "vfx",
+        "runtime",
+        "budget",
+        "object-pool"
+      ],
+      "read": "真实/简化两层播放、准入校验、事件去重、句柄代次、优先级/TTL/淡出预算、异常原子清理、ObjectPool 租约账目、可观察统计、固定步长生命周期",
+      "sourceRefs": [
+        "fracture-physics-backend",
+        "scene-schema"
+      ],
+      "reviewedAt": "2026-10-20",
+      "reviewedSourceCommit": "f540850b87a882a8c3642938a4a29d2b473809e0"
+    },
 
   ]
 }
