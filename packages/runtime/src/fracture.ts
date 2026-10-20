@@ -37,7 +37,14 @@ export interface FractureEvent {
   readonly seed: number;
   readonly profile: FractureProfileRef;
   readonly target: FractureTarget;
+  /**
+   * 激活 tick 的目标世界变换快照（位置/旋转/尺度）。资产 assemblyScale 与身高归一化
+   * 已在发布前组合进该世界变换（资产局部 → assemblyScale → 目标局部 → 世界，唯一
+   * 转换链只执行一次）；消费者不得在槽位回收后重读目标，也不得二次缩放。
+   */
   readonly position: FractureVec3;
+  readonly rotation: FractureQuat;
+  readonly scale: FractureVec3;
   readonly contact: FractureVec3 | null;
   readonly normal: FractureVec3 | null;
   readonly impulse: FractureVec3 | null;
@@ -63,7 +70,10 @@ export function frozenFractureEvent(event: FractureEvent): FractureEvent {
   const frozen = <T extends readonly unknown[]>(v: T): T => Object.freeze([...v]) as T;
   return Object.freeze({
     ...event,
+    target: Object.freeze({ ...event.target }),
     position: frozen(event.position),
+    rotation: frozen(event.rotation),
+    scale: frozen(event.scale),
     contact: event.contact === null ? null : frozen(event.contact),
     normal: event.normal === null ? null : frozen(event.normal),
     impulse: event.impulse === null ? null : frozen(event.impulse),

@@ -8,7 +8,8 @@ const event: FractureEvent = {
   sequence: 7, tick: 1204, seed: 42,
   profile: { path: 'assets/fracture/crate/crate.fracture.json', guid: 'as_fract1' },
   target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_crate01' },
-  position: [1, 0.5, -2], contact: [1, 0.5, -2], normal: [0, 1, 0], impulse: [3, 1, 0],
+  position: [1, 0.5, -2], rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2], scale: [2, 1, 1],
+  contact: [1, 0.5, -2], normal: [0, 1, 0], impulse: [3, 1, 0],
   source: { weaponId: 'pistol', hitSequence: 3 },
 };
 
@@ -34,6 +35,31 @@ describe('碎裂事件契约', () => {
     expect(() => { (frozen.position as unknown as number[])[0] = 9; }).toThrow();
     expect(frozen.contact).toEqual([1, 0.5, -2]);
     expect(frozenFractureEvent({ ...event, contact: null, impulse: null }).contact).toBeNull();
+  });
+
+  it('FR-WU01-02：target 是复制冻结，生产者/消费者都改不了已发布身份与去重键', () => {
+    const producer: FractureEvent = { ...event, target: { kind: 'npc', runId: 'run-1', slot: 1, id: 5, generation: 3 } };
+    const frozen = frozenFractureEvent(producer);
+    expect(Object.isFrozen(frozen.target)).toBe(true);
+    const keyBefore = fractureEventKey(frozen);
+    (producer.target as { generation: number }).generation = 999;
+    if (frozen.target.kind !== 'npc') throw new Error('expected npc target');
+    expect(frozen.target.generation).toBe(3);
+    expect(fractureEventKey(frozen)).toBe(keyBefore);
+    expect(() => { (frozen.target as { generation: number }).generation = 1; }).toThrow();
+  });
+
+  it('FR-WU01-03：世界旋转/尺度快照保真，生产者后续修改被隔离', () => {
+    const producer: FractureEvent = { ...event };
+    const frozen = frozenFractureEvent(producer);
+    expect(frozen.rotation).toEqual([0, Math.SQRT1_2, 0, Math.SQRT1_2]);
+    expect(frozen.scale).toEqual([2, 1, 1]);
+    expect(Object.isFrozen(frozen.rotation)).toBe(true);
+    expect(Object.isFrozen(frozen.scale)).toBe(true);
+    (producer.rotation as unknown as number[])[1] = 0;
+    (producer.scale as unknown as number[])[0] = 9;
+    expect(frozen.rotation).toEqual([0, Math.SQRT1_2, 0, Math.SQRT1_2]);
+    expect(frozen.scale).toEqual([2, 1, 1]);
   });
 
   it('预算取值域校验：越界预算在入口被拒绝', () => {
