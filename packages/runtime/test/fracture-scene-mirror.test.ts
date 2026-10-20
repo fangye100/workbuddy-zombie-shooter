@@ -1,8 +1,8 @@
 /**
- * WU-03!�����Ј������� SceneGraph!ܟ� collider!ԟȒݙ��՝Ï��
- *"����Ќ�� collider ܟ���������ɇ��՜Ïǻڄί�ܟ��Ҟ��
- * �ϑ٨/�Ԩ/ڒ׏������Ƞ٦ʃ¹�٦՜ÏЎ����ɓ����ݏϘ͢ diagnostic��
- *!�مʢ�� Rapier WASM��
+ * WU-03 宿主组合测试：从 SceneGraph 真实 collider 生成静态镜像，
+ * 验证「同一 collider 真源」——碎片与镜像出的环境真实碰撞；
+ * 触发器/禁用/隐藏跳过；删除节点移除镜像后通路打开；坏变换 diagnostic。
+ * 实际加载 Rapier WASM。
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { SceneGraph } from '@aether/scene';
@@ -25,15 +25,15 @@ function makeScene(): SceneGraph {
     { kind: 'Collider', enabled: true, isTrigger: false, layer: 1, shape: { type: 'box', halfExtents: [0.25, 1.5, 3] } } as never,
   ] });
   g.setLocalTransform(wall, { position: [3, 1.5, 0] });
-  //"�ϑ٫��˿ϖ̃۷������՝Ï
+  // 触发器（拾取范围）：不镜像
   g.addNode({ id: 'nd_pickup', name: 'pickup', components: [
     { kind: 'Collider', enabled: true, isTrigger: true, layer: 1, shape: { type: 'sphere', radius: 1 } } as never,
   ] });
-  //!�Ԩ collides����՝Ï
+  // 禁用 collider：不镜像
   g.addNode({ id: 'nd_disabled', name: 'disabled', components: [
     { kind: 'Collider', enabled: false, isTrigger: false, layer: 1, shape: { type: 'box', halfExtents: [1, 1, 1] } } as never,
   ] });
-  // ڒ׏ʂ»����՝Ï
+  // 隐藏节点：不镜像
   g.addNode({ id: 'nd_hidden', name: 'hidden', visible: false, components: [
     { kind: 'Collider', enabled: true, isTrigger: false, layer: 1, shape: { type: 'box', halfExtents: [1, 1, 1] } } as never,
   ] });
@@ -41,8 +41,8 @@ function makeScene(): SceneGraph {
   return g;
 }
 
-describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��ܟ����', () => {
-  it('՜Ïݞ�ϑ܉Ո collider���ϑ٨/�Ԩ/ڒ׏����', async () => {
+describe('宿主组合：SceneGraph collider → 静态镜像（同一真源）', () => {
+  it('镜像非触发有效 collider；触发器/禁用/隐藏跳过', async () => {
     const g = makeScene();
     const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
     const r = syncStaticMirrorsFromScene(g, b);
@@ -52,18 +52,18 @@ describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��
     b.destroy();
   });
 
-  it('՜Ïǻڄ�ܟ�ػ̡�ɇ��ɩІ�ڄدܻٯ collider!ܟ����', async () => {
+  it('镜像出的墙真实阻挡碎片（物理读的是场景 collider 真源）', async () => {
     const g = makeScene();
     const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
     syncStaticMirrorsFromScene(g, b);
     b.addBody(h('c'), { position: [0, 1.5, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [0.4, 0.4, 0.4] }, mass: 1, friction: 0, restitution: 0, linearVelocity: [8, 0, 0], groups: CHUNK_GROUPS });
     for (let i = 0; i < 40; i++) b.step(i);
-    //!�ܨ x=3!͋Κ 0.25 ƒ ��ݢ 2.75��ݗ͊� 0.4 ƒ!��ܨ x<2.4
+    // 墙在 x=3 半厚 0.25 → 左面 2.75，块半宽 0.4 → 停在 x<2.4
     expect(b.snapshot(h('c'))!.position[0]).toBeLessThan(2.4);
     b.destroy();
   });
 
-  it('Ȣ٦ʂ¹Џ�٦՝Ï������ɓ����ס���� collider��', async () => {
+  it('删除节点后移除镜像，通路打开（无幽灵 collider）', async () => {
     const g = makeScene();
     const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
     syncStaticMirrorsFromScene(g, b);
@@ -71,7 +71,7 @@ describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��
     for (let i = 0; i < 40; i++) b.step(i);
     const blocked = b.snapshot(h('m'))!.position[0];
     expect(blocked).toBeLessThan(2.4);
-    //!Ȣ٤�ʃ¹ + �٥Ŷ՝Ï
+    // 删除墙节点 + 移除其镜像
     g.removeNode('nd_wall');
     b.removeStatic('nd_wall');
     expect(b.ledger.staticColliders).toBe(1);
@@ -81,7 +81,7 @@ describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��
     b.destroy();
   });
 
-  it('��� TRS��ȶ����Ծʚ��՜Ï box', async () => {
+  it('嵌套 TRS：父级缩放折进镜像 box', async () => {
     const g = new SceneGraph();
     const parent = g.addNode({ id: 'nd_parent', name: 'parent' });
     g.setLocalTransform(parent, { scale: [2, 2, 2], position: [10, 0, 0] });
@@ -92,8 +92,8 @@ describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��
     const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
     const r = syncStaticMirrorsFromScene(g, b);
     expect(r.mirrored).toBe(1);
-    //!��Ռ���� = parent(10,0,0) + child(0,0,0)*scale(2) = (10,0,0+��halfExtents 1*2=2
-    //!ԩ��ݗ����ֻн��څ�ɇ��՜Ï����ܨ (10, 2, 0+��͊�2 ƒ � y=2���ɇ͊�0.3!�� yɈ2.3��
+    // 世界位置 = parent(10,0,0) + child(0,0,0)*scale(2) = (10,0,0)；halfExtents 1*2=2
+    // 用一块从上方落下的碎片验证镜像中心在 (10, 2, 0)（半高2 → 顶 y=2，碎片半高0.3 停 y≈2.3）
     b.addBody(h('d'), { position: [10, 6, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [0.3, 0.3, 0.3] }, mass: 1, friction: 0.5, restitution: 0, groups: CHUNK_GROUPS });
     for (let i = 0; i < 180; i++) b.step(i);
     const y = b.snapshot(h('d'))!.position[1];
@@ -102,7 +102,7 @@ describe('�����Ћ��SceneGraph collider ƒ ݙ��՜Ï��Ќ��
     b.destroy();
   });
 
-  it('ݏϙͣ��Ǻ diagnostic��ݟ݇̀��Ծ sphere ˓��������ݙ������', async () => {
+  it('坏变换产出 diagnostic（非均匀缩放 sphere 拒绝），不静默近似', async () => {
     const g = new SceneGraph();
     const parent = g.addNode({ id: 'nd_p', name: 'p' });
     g.setLocalTransform(parent, { scale: [2, 1, 1] });

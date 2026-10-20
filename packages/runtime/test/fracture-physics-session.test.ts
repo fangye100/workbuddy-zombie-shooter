@@ -1,6 +1,6 @@
 /**
- * WU-03!É©Ð† session!û…Ðˆõ‹ï—üšgeneration!î‰Í« + Stop"Ç‹Ô¾ô§Û®À‚
- *!îžÙ…Ê¢ý½ Rapier WASMÀ‚
+ * WU-03 ç‰©ç† session ç»„åˆæµ‹è¯•ï¼šgeneration å®ˆå« + Stop é‡Šæ”¾è´¦ç›®ã€‚
+ * å®žé™…åŠ è½½ Rapier WASMã€‚
  */
 import { describe, it, expect } from 'vitest';
 import { createFracturePhysicsSession } from '../src/fracture-physics-session';
@@ -9,8 +9,8 @@ import type { FractureBodyHandle } from '../src/fracture';
 const STEP = 1 / 60;
 const h = (key: string): FractureBodyHandle => ({ key, chunkId: key, layer: 'rigid' });
 
-describe('É©Ð† session û…Ð‹üˆî¿ø»ê„û…Ð‰Å¥Ï£ü‰', () => {
-  it('start È›û»Ë¬ë‹Ðë¯ü›dispose!ÜŸîžÇ‹Ô¾ø–ô§Û®ý’Û¶', async () => {
+describe('ç‰©ç† session ç»„åˆï¼ˆå®¿ä¸»çª„ç»„åˆå…¥å£ï¼‰', () => {
+  it('start åˆ›å»ºç‹¬ç«‹åŽç«¯ï¼›dispose çœŸå®žé‡Šæ”¾ä¸”è´¦ç›®å½’é›¶', async () => {
     const s = createFracturePhysicsSession();
     const backend = await s.start({ fixedStepSec: STEP });
     expect(backend).not.toBeNull();
@@ -25,16 +25,16 @@ describe('É©Ð† session û…Ð‹üˆî¿ø»ê„û…Ð‰Å¥Ï£ü‰', () => {
     expect(backend!.ledger.dynamicBodies).toBe(0);
   });
 
-  it('dispose!ÐŽÿŸÈ±Ú„ start!øäô» backengüˆüƒí¥Èç‹Ì–ÿŸÈ±Ï—öˆü‰', async () => {
+  it('dispose åŽè¿Ÿåˆ°çš„ start ä¸å¤æ´» backendï¼ˆå¼‚æ­¥åˆå§‹åŒ–è¿Ÿåˆ°å–æ¶ˆï¼‰', async () => {
     const s = createFracturePhysicsSession();
     const pending = s.start({ fixedStepSec: STEP });
-    s.dispose(); // Èç‹Ì– resolve É Stop
+    s.dispose(); // åˆå§‹åŒ– resolve å‰ Stop
     const result = await pending;
     expect(result).toBeNull();
     expect(s.backend).toBeNull();
   });
 
-  it('ø¥øª session!Ú„ World"Ú”æ»ü›ø€øª dispose!øý±ÓÏ§ø€øª', async () => {
+  it('ä¸¤ä¸ª session çš„ World éš”ç¦»ï¼šä¸€ä¸ª dispose ä¸å½±å“å¦ä¸€ä¸ª', async () => {
     const s1 = createFracturePhysicsSession();
     const s2 = createFracturePhysicsSession();
     const b1 = await s1.start({ fixedStepSec: STEP });
@@ -43,14 +43,14 @@ describe('É©Ð† session û…Ð‹üˆî¿ø»ê„û…Ð‰Å¥Ï£ü‰', () => {
     b2!.addBody(h('y'), { position: [5, 2, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.3 }, mass: 1, friction: 0.5, restitution: 0 });
     s1.dispose();
     expect(s1.backend).toBeNull();
-    // s2 ûË­ë‹Ï¯Ô¨
+    // s2 ä»ç‹¬ç«‹å¯ç”¨
     b2!.step(0);
     expect(b2!.snapshot(h('y'))).not.toBeNull();
     expect(b2!.ledger.destroyed).toBe(false);
     s2.dispose();
   });
 
-  it('Çä dispose!î‰Å¨', async () => {
+  it('é‡å¤ dispose å®‰å…¨', async () => {
     const s = createFracturePhysicsSession();
     await s.start({ fixedStepSec: STEP });
     s.dispose();

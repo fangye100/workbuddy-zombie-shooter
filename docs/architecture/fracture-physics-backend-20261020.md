@@ -65,7 +65,7 @@ WU-03 只交付真实三维物理后端与镜像，不实现碎片播放调度�
 ## 验证（实际命令与证据）
 
 - pnpm run typecheck：0 错误。
-- pnpm run architecture:check：errors=[]（110 framework 文件）。
+- pnpm run architecture:check：errors=[]（111 framework 文件）。
 - pnpm exec vitest run packages/runtime：19 文件 127 测试全过，其中新增：
   - fracture-rapier.test.ts 22 测试：落地/墙碰/块间接触/偏心冲量旋转/休眠/恢复
     系数/固定步长/分组排除玩家/碎片撞大块/速度上限/移除镜像通路/upsert 不叠加/

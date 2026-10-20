@@ -1,9 +1,9 @@
 /**
- * WU-03!î¿ø»û…Ğˆü›ûÜºÙ¯ collider ÜŸú“üˆSceneGraph"ÊƒÂ¹ + ÜŸîŸø–Õß«Øµü‰
- * É»ÇÔŸÈ Rapier"İ™ÀƒÕÃÀ‚ÿ™Ø¯ÀĞø€ collider!ÜŸúÀÚ„Ğ½Â¹À”À•É©Ğ†Ğë¯
- *!øÏ¦À¡Ü²İ¢/â™ı“üÏªÕÃ×¢Ü‹İç¦Ï‘ collidesü›ç¦Ï‘Ù¨ÀæÔ¨ÀÚ’×Ê‚Â»÷³ÿ‡üŒ
- * ø loader!Ú„îŸÿƒı“Ï£ş…ø€Ç´ÀƒøÔ¯ÌÚ„Ï™Í£û sceneColliderToStaticMirror
- *!ú§Çº diagnosticüŠİİ‡ÌĞƒ/Ã¶ÛŠÀshearÀƒÀÌ–ü‹üûøİ›û˜ÿ‘ü¼À‚
+ * WU-03 å®¿ä¸»ç»„åˆï¼šä»åœºæ™¯ collider çœŸæºï¼ˆSceneGraph èŠ‚ç‚¹ + çœŸå®ä¸–ç•ŒçŸ©é˜µï¼‰
+ * æ‰¹é‡ç”Ÿæˆ Rapier é™æ€é•œåƒã€‚è¿™æ˜¯ã€ŒåŒä¸€ collider çœŸæºã€çš„è½ç‚¹â€”â€”ç‰©ç†åç«¯
+ * ä¸å¦é€ åœ°é¢/å¢™ä½“ï¼Œåªé•œåƒæ—¢æœ‰éè§¦å‘ colliderï¼›è§¦å‘å™¨ã€ç¦ç”¨ã€éšè—èŠ‚ç‚¹è·³è¿‡ï¼Œ
+ * ä¸ loader çš„å®å¿ƒä½“å£å¾„ä¸€è‡´ã€‚ä¸æ”¯æŒçš„å˜æ¢ç» sceneColliderToStaticMirror
+ * äº§å‡º diagnosticï¼ˆéå‡åŒ€çƒ/èƒ¶å›Šã€shearã€é€€åŒ–ï¼‰ï¼Œç»ä¸é™é»˜è¿‘ä¼¼ã€‚
  */
 
 import type { SceneGraph, ColliderComponent, NodeId } from '@aether/scene';
@@ -11,16 +11,16 @@ import { sceneColliderToStaticMirror } from './fracture-static-mirror';
 import type { RapierFractureBackend } from './fracture-rapier';
 
 export interface StaticMirrorSyncResult {
-  /** È‘ÊŸÕœÃÚ„ nodeId Õ°À‚ */
+  /** æˆåŠŸé•œåƒçš„ nodeId æ•°ã€‚ */
   mirrored: number;
-  /**!Ë’ûÚ„ collidesüˆnodeId + ÎŸÛ£ü‰À‚ */
+  /** æ‹’ç»çš„ colliderï¼ˆnodeId + åŸå› ï¼‰ã€‚ */
   rejected: readonly { nodeId: NodeId; diagnostic: string }[];
 }
 
 /**
- *!ÊŠ SceneGraph ı“ÉÅ¨Ã©Ü‰Õˆ collider"ÕœÃÿ›Ğë¯À‚ÇäğƒÔ¨ï¹ĞŒ nodeId Í³ÛµÖ°
- *#üˆupsert"ï­ù‹ü‹üŒøü›Ï Ê¡ù½Áµ colliderü›ğƒÔ¨Ö»ôŸô£ÜªÊƒÂ¹È¢Ù¥×¶ğƒÔ¨
- * backend.removeStatic(nodeId)À‚
+ * æŠŠ SceneGraph å½“å‰å…¨éƒ¨æœ‰æ•ˆ collider é•œåƒè¿›åç«¯ã€‚é‡å¤è°ƒç”¨å¯¹åŒ nodeId å³æ›´æ–°
+ * ï¼ˆupsert è¯­ä¹‰ï¼‰ï¼Œä¸ä¼šå åŠ å¹½çµ colliderï¼›è°ƒç”¨æ–¹è´Ÿè´£åœ¨èŠ‚ç‚¹åˆ é™¤æ—¶è°ƒç”¨
+ * backend.removeStatic(nodeId)ã€‚
  */
 export function syncStaticMirrorsFromScene(graph: SceneGraph, backend: RapierFractureBackend): StaticMirrorSyncResult {
   let mirrored = 0;
@@ -32,7 +32,7 @@ export function syncStaticMirrorsFromScene(graph: SceneGraph, backend: RapierFra
       if (col.isTrigger || !col.enabled || !graph.isEffectivelyVisible(node.id)) continue;
       const result = sceneColliderToStaticMirror(node.id, col.shape, col.isTrigger, graph.worldMatrix(node.id));
       if (!result.ok || !result.spec) {
-        rejected.push({ nodeId: node.id, diagnostic: result.diagnostic ?? 'Ü«ß¥ÎŸÛ ' });
+        rejected.push({ nodeId: node.id, diagnostic: result.diagnostic ?? 'æœªçŸ¥åŸå› ' });
         continue;
       }
       backend.upsertStatic(node.id, {

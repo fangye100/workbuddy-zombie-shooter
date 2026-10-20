@@ -1,27 +1,27 @@
 /**
- * WU-03!É©Ğ‡Ğë¯üšïû„Ğ‹ü›ÊŠ RapierFractureBackend!Ì‚ÿ› Preview/Play!üÔŸÑ½Ñ©ÜŸÀ‚
+ * WU-03 ç‰©ç†åç«¯ä¼šè¯ç»„åˆï¼šæŠŠ RapierFractureBackend æŒ‚è¿› Preview/Play å¼ç”Ÿå‘½å‘¨æœŸã€‚
  *
- * WASM!è¡İ—û£àû ensureRapier()!Å±ú«ü›World/body/collider Ì‰ session"Ú•æ»À‚
- * generation!î‰Í«ÿŸï Stop/Í¢Ü»Ù¯ĞÿŸÈ±Ú„üƒí¥Èç‹Ì—øäô»×§ Worldü›
- * dispose()!ÜŸîÇ‹Ô¾ù·û£ö³ÀŒStop!Ğô§Û® pending=0ÀÚ„È¥Í®À‚ÿ™Ø¯ş›î¿ø»
- *#ü‰æ‚ PlayController!Ú„ registerResourcgü‰ı¿Ô©Ú…ê„û…Ğ‰Å¥Ï£üøäÈ·ì¬úå—è¡ËŸÀ‚
+ * WASM æ¨¡å—ä»£ç ç» ensureRapier() å…±äº«ï¼›World/body/collider æŒ‰ session éš”ç¦»ã€‚
+ * generation å®ˆå«ä¿è¯ Stop/æ¢åœºæ™¯åè¿Ÿåˆ°çš„å¼‚æ­¥åˆå§‹åŒ–ä¸å¤æ´»æ—§ Worldï¼›
+ * dispose() çœŸå®é‡Šæ”¾å¹¶æ»¡è¶³ã€ŒStop åè´¦ç›® pending=0ã€çš„åˆ¤æ®ã€‚è¿™æ˜¯ä¾›å®¿ä¸»
+ * ï¼ˆå¦‚ PlayController çš„ registerResourceï¼‰ä½¿ç”¨çš„çª„ç»„åˆå…¥å£ï¼Œä¸å¤åˆ¶ç¬¬äºŒå¥—æ¨¡æ‹Ÿã€‚
  */
 
 import { createRapierBackend, type RapierFractureBackend, type RapierBackendOptions } from './fracture-rapier';
 
 export interface FracturePhysicsSession {
-  /** ı“ÉĞë¯ü›ü‚í¥Èç‹Ì—Ü«îŒÈ‘È—÷²â« generation!Ï—öˆ×·øº nullÀ‚ */
+  /** å½“å‰åç«¯ï¼›å¼‚æ­¥åˆå§‹åŒ–æœªå®Œæˆæˆ–å·²è¢« generation å–æ¶ˆæ—¶ä¸º nullã€‚ */
   readonly backend: RapierFractureBackend | null;
   readonly generation: number;
-  /** ÜŸîÇŠÔ¿Ğë¯ù·ı¿Ü¬ session Ú„ generation!ä±ÕˆüŠÚĞ init øÆÆ™Å§ü‰À‚ */
+  /** çœŸå®é‡Šæ”¾åç«¯å¹¶ä½¿æœ¬ session çš„ generation å¤±æ•ˆï¼ˆéšå init ä¸å†å†™å…¥ï¼‰ã€‚ */
   dispose(): void;
   readonly disposed: boolean;
 }
 
 /**
- * È›û»ø€ø«É©Ğ† sessionÀ‚ğƒÔ©Ö¹Ü¨ Play/Preview!Ğ¯Ê¨×¶ newüÜ¨ Stop!×¶ dispose()
- *#üŠÀšø¹û PlaySession.registerResource!Ù»î³ü‰À‚Ï¯ÚĞğƒÔ¨ start()!ü‚í¥Èç‹Ì—ü›
- *"Ë¥Ü¨Èç‹Ì– resolve É dispose()üŒbackend!ÿÌ nuloüˆÿŸÈ±Ï–ö‹ü‰À‚
+ * åˆ›å»ºä¸€ä¸ªç‰©ç† sessionã€‚è°ƒç”¨æ–¹åœ¨ Play/Preview å¯åŠ¨æ—¶ newï¼Œåœ¨ Stop æ—¶ dispose()
+ * ï¼ˆé€šå¸¸ç» PlaySession.registerResource ç™»è®°ï¼‰ã€‚å¯éšåè°ƒç”¨ start() å¼‚æ­¥åˆå§‹åŒ–ï¼›
+ * è‹¥åœ¨åˆå§‹åŒ– resolve å‰ dispose()ï¼Œbackend ä¿æŒ nullï¼ˆè¿Ÿåˆ°å–æ¶ˆï¼‰ã€‚
  */
 export function createFracturePhysicsSession(): FracturePhysicsSession & {
   start(opts: RapierBackendOptions): Promise<RapierFractureBackend | null>;
@@ -37,8 +37,8 @@ export function createFracturePhysicsSession(): FracturePhysicsSession & {
       const myGen = generation;
       const created = await createRapierBackend(opts, () => !disposed && generation === myGen);
       if (created === null) return null;
-      // úì¡îˆÍ«üšawait!ÜŸ×¶Ë§â« disposgüŒcreated øº nuloüˆøü›È°ÿ›Çü‰ü›
-      // Ë¥ generation!÷³Ï˜ü‰Ö° starwü‰üøæ†Û—Ö° backendÀ‚
+      // äºŒæ¬¡å®ˆå«ï¼šawait æœŸé—´è‹¥è¢« disposeï¼Œcreated ä¸º nullï¼ˆä¸ä¼šåˆ°è¿™é‡Œï¼‰ï¼›
+      // è‹¥ generation å·²å˜ï¼ˆæ–° startï¼‰ï¼Œä¸è¦†ç›–æ–° backendã€‚
       if (disposed || generation !== myGen) { created.destroy(); return null; }
       backend = created;
       return created;

@@ -190,7 +190,14 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     rb.setLinvel(lv[0], lv[1], lv[2]).setAngvel({ x: av[0], y: av[1], z: av[2] });
     if (spec.ccd === true) rb.setCcdEnabled(true);
     const body = this.world.createRigidBody(rb);
-    const collider = this.world.createCollider(this.colliderDescFor(spec), body);
+    let collider: RapierCollider;
+    try {
+      collider = this.world.createCollider(this.colliderDescFor(spec), body);
+    } catch (e) {
+      // collider 创建失败时移除刚体，避免不入账的孤儿占用到 destroy。
+      this.world.removeRigidBody(body);
+      throw e;
+    }
     this.bodies.set(handle.key, {
       key: handle.key, chunkId: handle.chunkId, layer: handle.layer,
       body, collider,
@@ -302,7 +309,13 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       position: spec.position, rotation: spec.rotation, shape: spec.shape,
       mass: 0, friction: 0.6, restitution: 0.1, groups: spec.groups ?? collisionGroups(FRACTURE_GROUP.environment, 0xffff),
     };
-    const collider = this.world.createCollider(this.colliderDescFor(shapeSpec), body);
+    let collider: RapierCollider;
+    try {
+      collider = this.world.createCollider(this.colliderDescFor(shapeSpec), body);
+    } catch (e) {
+      this.world.removeRigidBody(body);
+      throw e;
+    }
     this.statics.set(nodeId, { nodeId, body, collider });
   }
 
