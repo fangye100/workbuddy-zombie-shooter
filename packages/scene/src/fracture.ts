@@ -96,7 +96,7 @@ const finite = (n: unknown, min: number, max: number): n is number =>
 const vec3 = (v: unknown, min: number, max: number): boolean =>
   Array.isArray(v) && v.length === 3 && v.every(n => finite(n, min, max));
 const quat = (v: unknown): boolean =>
-  Array.isArray(v) && v.length === 4 && v.every(n => finite(n, -1, 1)) && Math.hypot(...v as number[]) > 1e-8;
+  Array.isArray(v) && v.length === 4 && v.every(n => finite(n, -1, 1)) && Math.abs(Math.hypot(...v as number[]) - 1) <= 0.001;
 
 function validProxyShape(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -130,10 +130,14 @@ function validNpc(value: unknown): boolean {
 function validPlayback(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const p = value as FracturePlayback;
+  const companion = p.companionVfx;
+  if (companion === undefined) return false;
+  const validCompanion = companion === null
+    || (!!companion && typeof companion === 'object' && validAssetGuidRef(companion.resource) && companion.resource.path.endsWith('.vfx.json')
+      && typeof companion.effectKey === 'string' && /^[a-z][a-z0-9-]{0,63}$/.test(companion.effectKey));
   return Number.isInteger(p.priority) && p.priority >= 0 && p.priority <= 3
     && finite(p.lifetimeSec, 0.5, 30) && finite(p.fadeSec, 0, 5) && p.fadeSec <= p.lifetimeSec
-    && (p.companionVfx === null || (validAssetGuidRef(p.companionVfx.resource) && p.companionVfx.resource.path.endsWith('.vfx.json')
-      && typeof p.companionVfx.effectKey === 'string' && /^[a-z][a-z0-9-]{0,63}$/.test(p.companionVfx.effectKey)));
+    && validCompanion;
 }
 
 /** 静态校验，返回诊断列表；未来版本、坏代理、非法数值、重复 chunkId、超预算均显式报错。 */
@@ -156,9 +160,9 @@ export function validateFractureAsset(value: unknown): string[] {
   for (const [i, c] of a.chunks.entries()) {
     const at = `碎块[${i}]`;
     if (!c || typeof c !== 'object') { errors.push(`${at} 不是对象`); continue; }
-    if (!CHUNK_ID_RE.test(c.chunkId)) errors.push(`${at} chunkId 非法`);
+    if (typeof c.chunkId !== 'string' || !CHUNK_ID_RE.test(c.chunkId)) errors.push(`${at} chunkId 非法`);
     else if (seen.has(c.chunkId)) errors.push(`chunkId 重复：${c.chunkId}`);
-    seen.add(c.chunkId);
+    if (typeof c.chunkId === 'string') seen.add(c.chunkId);
     if (c.class === 'large') large++;
     else if (c.class !== 'small') errors.push(`${at} class 必须是 large/small`);
     if (!validAssetGuidRef(c.mesh) || !c.mesh.path.endsWith('.glb')) errors.push(`${at} 碎块几何引用非法`);
@@ -169,6 +173,8 @@ export function validateFractureAsset(value: unknown): string[] {
   if (large > FRACTURE_BUDGET.largeChunks) errors.push(`large 碎块超过资产预算（${large} > ${FRACTURE_BUDGET.largeChunks}）`);
   if (a.kind === 'npc' && !validNpc(a.npc)) errors.push('NPC 破碎资产必须携带合法 actor/骨骼映射对齐块');
   if (a.kind === 'object' && a.npc !== null && a.npc !== undefined) errors.push('物体破碎资产不能携带 NPC 对齐块');
+  if (a.npc !== null && a.npc !== undefined && !!a.npc && typeof a.npc === 'object' && !!a.npc.boneMap && typeof a.npc.boneMap === 'object' && !Array.isArray(a.npc.boneMap))
+    for (const block of Object.keys(a.npc.boneMap)) if (!seen.has(block)) errors.push(`骨骼映射指向不存在的碎块：${block}`);
   if (!validPlayback(a.playback)) errors.push('Fracture 播放策略非法（优先级/寿命/淡出/伴随 VFX）');
   return errors;
 }

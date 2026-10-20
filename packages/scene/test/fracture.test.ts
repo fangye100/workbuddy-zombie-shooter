@@ -69,6 +69,37 @@ describe('fracture 资产契约', () => {
     expect(validateFractureAsset(asset({ kind: 'npc', npc: { actorId: 'E-04', mode: 'skinned', boneMap: { 'chunk-0001': 'Bone.001' }, normalizeHeightM: 2.05, footOffsetM: 0 } }))).toEqual([]);
   });
 
+  it('FR-WU01-01：缺失 chunkId / 缺失 companionVfx 键返回诊断而不是漏报或抛异常', () => {
+    const noChunkId = asset();
+    delete (noChunkId.chunks[1]! as Partial<typeof noChunkId.chunks[1]>).chunkId;
+    const errors = validateFractureAsset(noChunkId);
+    expect(errors.some(e => e.includes('chunkId 非法'))).toBe(true);
+
+    const noCompanion = asset({ playback: { priority: 1, lifetimeSec: 3, fadeSec: 0.5 } } as unknown as FractureAsset);
+    expect(() => validateFractureAsset(noCompanion)).not.toThrow();
+    expect(validateFractureAsset(noCompanion)).toContainEqual('Fracture 播放策略非法（优先级/寿命/淡出/伴随 VFX）');
+
+    expect(validateFractureAsset(asset())).toEqual([]);
+  });
+
+  it('FR-WU01-01：bind 四元数必须是单位四元数（容差 0.001）', () => {
+    const nonUnit = asset();
+    nonUnit.chunks[0]!.bind.rotation = [1, 1, 1, 1];
+    expect(validateFractureAsset(nonUnit).some(e => e.includes('还原 TRS 非法'))).toBe(true);
+
+    const unit = asset();
+    unit.chunks[0]!.bind.rotation = [0, Math.SQRT1_2, 0, Math.SQRT1_2];
+    expect(validateFractureAsset(unit)).toEqual([]);
+  });
+
+  it('FR-WU01-01：NPC 骨骼映射 key 必须指向资产内真实存在的碎块', () => {
+    const ghost = asset({ kind: 'npc', npc: { actorId: 'E-04', mode: 'skinned', boneMap: { 'chunk-9999': 'Bone.001' }, normalizeHeightM: 2.05, footOffsetM: 0 } });
+    expect(validateFractureAsset(ghost)).toContainEqual('骨骼映射指向不存在的碎块：chunk-9999');
+
+    const ok = asset({ kind: 'npc', npc: { actorId: 'E-04', mode: 'skinned', boneMap: { 'chunk-0001': 'Bone.001' }, normalizeHeightM: 2.05, footOffsetM: 0 } });
+    expect(validateFractureAsset(ok)).toEqual([]);
+  });
+
   it('迁移克隆结果且拒绝非法输入；类型化引用覆盖模型/碎块/凸包/伴随VFX', () => {
     const source = asset();
     const migrated = migrateFractureAsset(source);
