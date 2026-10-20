@@ -8,7 +8,7 @@ fracture-system-development-plan-20261020.md。
 
 | 模块 | 职责 | 边界 |
 |---|---|---|
-| tools/fracture/glb-io.mjs | GLB 容器读写、accessor 解码、按位置焊接（保留首个顶点属性） | 只支持本仓资产链产出的非 sparse accessor |
+| tools/fracture/glb-io.mjs | GLB 容器读写、accessor 解码、蒙皮契约读取（含 IBM） | 只支持本仓资产链产出的非 sparse accessor；按位置焊接已删除（§11.5） |
 | tools/fracture/split-core.mjs | 几何核心：骨骼分区组装、有向边拓扑、封口（刚体主骨扇形/残边收口/切面独立副本与平面法线）、拓扑与体积统计 | 纯函数无 IO；拓扑按量化位置键统计，渲染顶点保留 UV/法线/蒙皮接缝；手写平面切割路径已被 CSG 取代并移除（§11.5 去重） |
 | tools/fracture/build-fracture-assets.mjs | 正式资产构建：油桶 CSG 切块（UV/法线作为顶点属性随布尔运算插值、接缝经 merge 向量保留）、盾卫骨骼分区+蒙皮保持，逐块输出独立 GLB 与 .fracture.json 及合并保留式 sidecar | 不做物理/渲染/玩法（WU-03/05/06/07） |
 | tools/fracture/verify-fracture-assets.mjs | 数值验收：闭合/非退化/有限值/法线/UV、装配守恒（体积或外表面精确分割）、代理/质量、蒙皮保持与非 bind 姿态采样 | 输出报告 JSON，失败 exit 1 |
@@ -51,7 +51,8 @@ node tools/verify/fracture-assets-probe.mjs --headed --out .workbuddy/tmp/fractu
 源实体体积（CSG 精确，0.221548 m³ 全等）且外表面逐三角形投影回源表面核对属性
 （maxUvDelta≈4e-8、法线角≈0°）；盾卫外表面角点（位置+UV+法线）与源网格精确集合相等
 （6515=6515）；蒙皮：输出自带骨架+inverseBindMatrices，非 bind 姿态（run@0.4s）共享顶点
-与源逐点相等（maxDelta=0），906 个封口三角形刚体保形（边长漂移≈2e-9m）。
+与源逐点相等（maxDelta=0），封口边界副本继承外表面完整混合 JOINTS/WEIGHTS，
+边界连续性（bind+run@0.4s gap）精确为 0（容差 0.1mm）。
 
 ## 失败行为
 
@@ -73,7 +74,7 @@ node tools/verify/fracture-assets-probe.mjs --headed --out .workbuddy/tmp/fractu
 
 - 分块静态展示用既有 MeshRenderer/材质路径；刚体运动、动态实例扩展、真实伤害/死亡
   接线、作者面板分别属 WU-03/05/06/07/08。
-- 盾卫封口为刚体主骨绑定的扇形/残边面（切面顶点独立副本+平面法线）：有向闭合与
-  刚体保形已验证；夹点区域（腋下/胯部多股边界交点）经 per-strand 顶点副本处理，
-  对称 2/2 定向副本在位置键普查中呈现为夹点伪差（边界恒为 0）。
+- 盾卫封口为混合绑定的扇形/残边面（切面顶点独立副本+平面法线，边界副本继承
+  对应外表面角点的完整 JOINTS/WEIGHTS）：有向闭合与边界连续性已验证；
+  夹点区域经 per-strand 顶点副本处理，对称 2/2 定向副本为夹点伪差（边界恒为 0）。
 - 油桶切块依赖 manifold-3d（Apache-2.0）；该依赖不进入运行时包。
