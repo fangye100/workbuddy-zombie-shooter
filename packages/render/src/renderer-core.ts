@@ -199,6 +199,8 @@ export interface CoreCylinderOverlay {
  * （三处同步的第三处在 runtime-bridge 的打包循环）。
  */
 export const DYNAMIC_INSTANCE_FLOATS = 20;
+/** 刚体模式每实例 12 float（3×vec4 基向量）；与 20-float 实例行并存。 */
+export const RIGID_INSTANCE_FLOATS = 12;
 
 /**
  * 一批动态实例的绘制描述（WU-3）。
@@ -232,6 +234,12 @@ export interface CoreDynamicBatch {
   instances: Float32Array<ArrayBuffer>;
   /** 实际实例数（≤ instances.length / DYNAMIC_INSTANCE_FLOATS） */
   count: number;
+  /**
+   * 刚体模式实例基向量（可选）：每实例 12 个 float（3×vec4，xyz = 基向量）。
+   * 提供时调用方需在实例行 anim.z 置 bit1；缺省/长度不足则该实例按旧 yaw 分支绘制。
+   * 与 20-float 行并存，不改动 palette/transition/impactPulse/burnClock 语义。
+   */
+  rigid?: Float32Array<ArrayBuffer>;
   /** 是否画 inverted-hull 描边（默认风格的动态实体建议开） */
   outline: boolean;
 }
@@ -383,7 +391,7 @@ export class RendererCore {
    * 互相借用位置与颜色（数量不等时还会读到上一帧的残留尾巴）。
    * 见 PR #3 review（codex P1 / copilot）。
    */
-  private dynamicInstSlots: { buf: GPUBuffer; bg: GPUBindGroup; cap: number; poseBuf: GPUBuffer;
+  private dynamicInstSlots: { buf: GPUBuffer; bg: GPUBindGroup; cap: number; poseBuf: GPUBuffer; rigidBuf: GPUBuffer; rigidCap: number;
     poseData?: Float32Array<ArrayBuffer>; poseRevision?: number }[] = [];
   /**
    * 烘焙姿态调色板 storage buffer（binding 4，docs/20 §3.2）：所有角色的
@@ -713,6 +721,8 @@ export class RendererCore {
         // 4：烘焙姿态调色板（storage 只读，仅顶点阶段查表蒙皮，docs/20 §3.2）
         { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
         { binding: 5, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        // 6：刚体模式基向量（flags bit1）。碎块用，角色批次绑哑 buffer 不读它。
+        { binding: 6, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       ],
     });
     const dyVertex = {
@@ -847,7 +857,7 @@ export class RendererCore {
    * （惰性重建，成本一次性，且调色板只在装配期变，不在帧循环里）。
    */
   setDynamicPalette(data: Float32Array<ArrayBuffer> | null): void {
-    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); }
+    for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
     this.dynamicInstSlots = [];
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
@@ -880,6 +890,10 @@ export class RendererCore {
       // 每批次写进自己的 buffer：共用一份则所有 draw 都会读到最后一次上传（见字段注释）
       const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64);
       this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
+      if (b.rigid !== undefined && b.rigid.length > 0) {
+        const nRigid = Math.min(n, Math.floor(b.rigid.length / RIGID_INSTANCE_FLOATS));
+        this.device.queue.writeBuffer(slot.rigidBuf, 0, b.rigid, 0, nRigid * RIGID_INSTANCE_FLOATS);
+      }
       if (b.poseTransitions && (slot.poseData !== b.poseTransitions.data || slot.poseRevision !== b.poseTransitions.revision)) {
         this.device.queue.writeBuffer(slot.poseBuf, 0, b.poseTransitions.data);
         slot.poseData = b.poseTransitions.data; slot.poseRevision = b.poseTransitions.revision;
@@ -908,11 +922,19 @@ export class RendererCore {
     if (slot === undefined || slot.cap < need || slot.poseBuf.size < poseBytes) {
       slot?.buf.destroy();
       slot?.poseBuf.destroy();
+      slot?.rigidBuf.destroy();
       const poseBuf = this.device.createBuffer({ label: `dynamic-pose-snapshots-${i}`,
         size: Math.max(64, poseBytes, slot?.poseBuf.size ?? 0), usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
       const buf = this.device.createBuffer({
         label: `dynamic-instances-${i}`,
         size: Math.max(need, slot?.cap ?? 0),
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      // 刚体基向量槽：即使本帧没有刚体批次也要存在（binding 6 必须可绑）。
+      const rigidCap = Math.max(count * RIGID_INSTANCE_FLOATS * 4, 64, slot?.rigidCap ?? 0);
+      const rigidBuf = this.device.createBuffer({
+        label: 'dynamic-rigid-' + i,
+        size: rigidCap,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       const bg = this.device.createBindGroup({
@@ -927,9 +949,10 @@ export class RendererCore {
           // flags bit0=0 的实例不会真的读它
           { binding: 4, resource: { buffer: this.dynamicPaletteBuf ?? this.dummyPaletteBuf } },
           { binding: 5, resource: { buffer: poseBuf } },
+          { binding: 6, resource: { buffer: rigidBuf } },
         ],
       });
-      slot = { buf, bg, cap: buf.size, poseBuf };
+      slot = { buf, bg, cap: buf.size, poseBuf, rigidBuf, rigidCap };
       this.dynamicInstSlots[i] = slot;
     }
     return slot;

@@ -82,6 +82,13 @@ struct DInst {
 /** 烘焙姿态调色板：[(paletteBase + poseIndex) * PALETTE_JOINT_COUNT + joint] 的 mat4 */
 @group(0) @binding(4) var<storage, read> palette : array<mat4x4f>;
 @group(0) @binding(5) var<storage, read> snapshots : array<mat4x4f>;
+/**
+ * 刚体模式（flags bit1）的实例基向量：每实例 3 个 vec4（xyz = 基向量，w 未用）。
+ * 碎块走这里做完整三轴旋转 + 世界尺度；旧角色分支（bit1=0）继续用 posYaw/scale.xyz，
+ * 20-float 行里的 palette/transition/impactPulse/burnClock 语义不变。
+ */
+struct RigidInst { m0 : vec4f, m1 : vec4f, m2 : vec4f };
+@group(0) @binding(6) var<storage, read> rigid : array<RigidInst>;
 @group(1) @binding(0) var albedoTex : texture_2d<f32>;
 @group(1) @binding(1) var albedoSampler : sampler;
 
@@ -109,6 +116,22 @@ fn poseMatrix(i : DInst, joint : u32) -> mat4x4f {
   let t = clamp(i.blend.x, 0.0, 1.0);
   return mat4x4f(mix(poseA[0], poseB[0], t), mix(poseA[1], poseB[1], t),
     mix(poseA[2], poseB[2], t), mix(poseA[3], poseB[3], t));
+}
+
+fn isRigid(i : DInst) -> bool {
+  return (u32(i.anim.z) & 2u) != 0u;
+}
+
+/** 刚体模式：p 先过 3x3 基（含旋转与尺度），再加实例位置。 */
+fn rigidPos(ii : u32, p : vec3f) -> vec3f {
+  let m = rigid[ii];
+  return m.m0.xyz * p.x + m.m1.xyz * p.y + m.m2.xyz * p.z + inst[ii].posYaw.xyz;
+}
+
+/** 刚体模式方向：同一 3x3 基变换后归一化（均匀尺度下等价逆转置）。 */
+fn rigidDir(ii : u32, n : vec3f) -> vec3f {
+  let m = rigid[ii];
+  return normalize(m.m0.xyz * n.x + m.m1.xyz * n.y + m.m2.xyz * n.z);
 }
 
 /** 绕 Y 轴旋转（yaw），再平移到实例位置。动态实体不俯仰不翻滚 */
@@ -168,14 +191,16 @@ fn vs_main(
   var out : VSOut;
   // 先蒙皮再放置：蒙皮在「实例本地空间」做（调色板矩阵已是模型空间），
   // place() 的 yaw/缩放/平移随后叠加 —— 与静态通道「蒙皮矩阵 → 世界矩阵」同序
-  let worldPos = place(i, skinPos(i, position, joints, weights));
+  let worldPos = select(place(i, skinPos(i, position, joints, weights)),
+                        rigidPos(ii, position), isRigid(i));
   out.worldPos = worldPos;
   // 非均匀缩放下的正确法线要乘逆转置；这里缩放只来自「胶囊半径 / 身高」两个标量，
   // 直接除以缩放再归一化就够（且能自动处理负值退化）
   let n = normalize(skinDir(i, normal, joints, weights) / max(vec3f(1e-4), abs(i.scale.xyz)));
   let c = cos(i.posYaw.w);
   let s = sin(i.posYaw.w);
-  out.normal = normalize(vec3f(n.x * c + n.z * s, n.y, -n.x * s + n.z * c));
+  let yawN = normalize(vec3f(n.x * c + n.z * s, n.y, -n.x * s + n.z * c));
+  out.normal = select(yawN, rigidDir(ii, normal), isRigid(i));
   out.albedo = i.color.rgb;
   out.uv = uv;
   out.local=position;out.effects=i.blend.zw;
@@ -194,7 +219,8 @@ fn vs_outline(
 ) -> VSOut {
   let i = inst[ii];
   var out : VSOut;
-  let worldPos = place(i, skinPos(i, position, joints, weights));
+  let worldPos = select(place(i, skinPos(i, position, joints, weights)),
+                        rigidPos(ii, position), isRigid(i));
 
   // 与 scene.wgsl 的 vs_outline 同理由：外扩必须用 smoothNormal，
   // 硬边几何的着色法线在棱角处不连续，拿去外扩会让描边裂开。
@@ -202,7 +228,8 @@ fn vs_outline(
   let n0 = normalize(skinDir(i, smoothNormal, joints, weights) / max(vec3f(1e-4), abs(i.scale.xyz)));
   let c = cos(i.posYaw.w);
   let s = sin(i.posYaw.w);
-  let n = normalize(vec3f(n0.x * c + n0.z * s, n0.y, -n0.x * s + n0.z * c));
+  let yawN = normalize(vec3f(n0.x * c + n0.z * s, n0.y, -n0.x * s + n0.z * c));
+  let n = select(yawN, rigidDir(ii, smoothNormal), isRigid(i));
 
   let dist = length(frame.cameraPos.xyz - worldPos);
   let pxHere = 2.0 * dist / max(1.0, frame.screen.y * frame.screen.z);
