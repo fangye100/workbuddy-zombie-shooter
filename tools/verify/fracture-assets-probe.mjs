@@ -22,7 +22,9 @@ const { chrome, cdp } = await launchEditorSession({ chromePath: arg('chrome', 'C
 const send = cdp.send.bind(cdp);
 cdp.send = (method, params = {}) => new Promise((resolve, reject) => { const timer = setTimeout(() => reject(new Error('CDP ' + method + ' exceeded 15s')), 15000); send(method, params).then(r => { clearTimeout(timer); resolve(r); }, e => { clearTimeout(timer); reject(e); }); });
 const capture = async name => { await cdp.eval('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))'); const r = await cdp.send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, name + '.png'), Buffer.from(r.data, 'base64')); };
-const aim = async (target, distance, elevation, yaw) => { await cdp.eval('window.__editor.renderer.setEditorCamera && window.__editor.renderer.setEditorCamera(' + JSON.stringify({ target, distance, elevation, yaw }) + '); true'); };
+const aim = async (target, distance, elevationDeg, yaw) => {
+  await cdp.eval('(() => { const c = window.__editor.camera; c.target = ' + JSON.stringify(target) + '; c.distance = ' + distance + '; c.yaw = ' + yaw + '; window.__editor.params.cameraElevation = ' + elevationDeg + '; return true; })()');
+};
 
 try {
   await cdp.send('Page.navigate', { url: url + '?scene=' + encodeURIComponent('assets/scenes/sandbox/fracture-wu02.scene.json') });
