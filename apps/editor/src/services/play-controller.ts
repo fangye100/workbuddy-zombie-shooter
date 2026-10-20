@@ -87,8 +87,6 @@ export class PlayController {
   private fractureRegistered = false;
   /** 碎片资产 IO（默认走编辑器 /__fs/file；测试可注入）。 */
   private readonly fractureIO: FractureAssetIO;
-  /** 已核验的 GLB 路径缓存（按本控制器生命周期复用，避免每次激活重读数 MB）。 */
-  private readonly fractureVerified = new Set<string>();
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -187,7 +185,6 @@ export class PlayController {
     // 否则新 binding 不登记、Stop 时无人释放，账目 pending=0 是假账。
     this.fractureBinding = null;
     this.fractureRegistered = false;
-    this.fractureVerified.clear();
     // 快照必须在装载成功之后：装载失败不该动作者状态
     this.snap = this.renderer.snapshotAuthorState();
     for (const node of doc.nodes) {
@@ -329,7 +326,6 @@ export class PlayController {
     const prepared = await prepareFractureActivation(event, {
       io: this.fractureIO,
       resolveConvexPoints: createGlbConvexResolver(),
-      verifiedRefs: this.fractureVerified,
     });
     if (!prepared.ok) {
       return {
@@ -427,7 +423,6 @@ export class PlayController {
     this.session.stop();
     this.fractureBinding = null;
     this.fractureRegistered = false;
-    this.fractureVerified.clear();
     this.bridge.attach(null);
     this.notify();
   }

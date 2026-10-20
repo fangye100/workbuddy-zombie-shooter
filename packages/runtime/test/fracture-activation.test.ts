@@ -219,18 +219,33 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.failure.stage).toBe('ref-binary');
 
-    // 已核验缓存：同一路径第二次不再读（证明缓存真的生效，不是每次重读）
-    const verified = new Set<string>();
+    // 不做跨调用缓存：每次准入都重读当前字节。这样才能发现"上次可读、这次失效"。
     let reads = 0;
     const io3 = makeIO();
     const orig3 = io3.readBinary.bind(io3);
-    io3.readBinary = async (path: string) => { reads++; return orig3(path); };
-    const ok1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io3, verifiedRefs: verified });
+    let broken = false;
+    io3.readBinary = async (path: string) => {
+      reads++;
+      if (broken && path.includes('chunk-0001.glb')) throw new Error('EIO 资源已失效');
+      return orig3(path);
+    };
+    const ok1 = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io: io3 });
     expect(ok1.ok).toBe(true);
     const readsAfterFirst = reads;
-    const ok2 = await prepareFractureActivation(ev(P01, 'as_p01frct', { sequence: 999 }), { io: io3, verifiedRefs: verified });
+    expect(readsAfterFirst).toBeGreaterThan(0);
+    // 同代第二次仍然重读（不是拿"路径曾成功过"当当前可用性）
+    const ok2 = await prepareFractureActivation(ev(P01, 'as_p01frct', { sequence: 999 }), { io: io3 });
     expect(ok2.ok).toBe(true);
-    expect(reads).toBe(readsAfterFirst); // 第二次零额外读取
+    expect(reads).toBeGreaterThan(readsAfterFirst);
+    // 同一路径随后失效：下一次准入必须被拒（旧缓存实现会错误放行）
+    broken = true;
+    const r3 = await prepareFractureActivation(ev(P01, 'as_p01frct', { sequence: 1000 }), { io: io3 });
+    expect(r3.ok).toBe(false);
+    if (!r3.ok) expect(r3.failure.stage).toBe('ref-binary');
+    // 恢复合法源后可重试成功
+    broken = false;
+    const r4 = await prepareFractureActivation(ev(P01, 'as_p01frct', { sequence: 1001 }), { io: io3 });
+    expect(r4.ok).toBe(true);
   });
 
   it('错误 GUID（事件/profile/sidecar 不一致）在分配前拒绝', async () => {

@@ -424,6 +424,93 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(res.rejection?.reason).toBe('session-closed');
   }, 30000);
 
+  it('旧代挂起的资产读取完成后不污染新代：新代坏资源仍被拒，恢复后可重试', async () => {
+    const textG = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    const metaG = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    const binG = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const modelG = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const rel = (k: string) => k.replace(/^.*?(?=assets\/)/, '');
+    const text = new Map(Object.entries({ ...textG, ...metaG }).map(([k, v]) => [rel(k), v] as const));
+    const bins = new Map(Object.entries({ ...binG, ...modelG }).map(([k, v]) => [rel(k), v] as const));
+
+    const target = 'assets/fracture/p01-barrel/chunk-0001.glb';
+    let suspend = false;
+    let releaseHeld: (() => void) | null = null;
+    let chunkBroken = false;
+    const io = {
+      async readText(path: string) {
+        const v = text.get(path);
+        if (v === undefined) throw new Error('未找到：' + path);
+        return v;
+      },
+      async readBinary(path: string) {
+        // 挂起的那次读取已经拿到真实字节（旧代）；之后的读取才看到"资源失效"
+        const isSuspendedCall = path === target && suspend;
+        if (isSuspendedCall) {
+          suspend = false;
+          await new Promise<void>((r) => { releaseHeld = r; });
+        }
+        if (!isSuspendedCall && path === target && chunkBroken) throw new Error('EIO 资源已不可读');
+        const l = bins.get(path);
+        if (l === undefined) throw new Error('未找到二进制：' + path);
+        const b = await l();
+        return b.slice().buffer;
+      },
+    };
+
+    const mkEvent = (nodeId: string, seq: number) => frozenFractureEvent({
+      sequence: seq, tick: 0, seed: 5,
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      target: { kind: 'scene-object', runId: 'run-1', nodeId },
+      position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+      source: { weaponId: 'w_pistol', hitSequence: seq },
+    });
+
+    const { ctl } = make(scene(), { fractureIO: io });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    // 旧代读到 chunk 时挂起
+    suspend = true;
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    // 等到真的挂在该 chunk 的读取上（前面的源模型读取也要时间，不能写死 sleep）
+    for (let i = 0; i < 200 && releaseHeld === null; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(releaseHeld).not.toBeNull();
+
+    // Stop → 换场景重开 → 新代就绪；此时该 chunk 在新代不可读
+    ctl.stop();
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+    chunkBroken = true;
+
+    // 放行旧代读取：它必须返回 session-closed，且不得让新代跳过校验
+    releaseHeld!();
+    const oldRes = await oldPending;
+    expect(oldRes.accepted).toBe(false);
+    expect(oldRes.rejection?.reason).toBe('session-closed');
+
+    // 新代对同一个坏资源必须被拒，且不产生队列/body
+    const bad = await ctl.spawnFracture(mkEvent('nd_new_bad', 2));
+    expect(bad.accepted).toBe(false);
+    expect(bad.rejection?.reason).toBe('ref-binary');
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+    expect(second.backend()!.ledger.dynamicBodies).toBe(0);
+
+    // 恢复合法源后可重试成功（不是把坏状态永久缓存）
+    chunkBroken = false;
+    const good = await ctl.spawnFracture(mkEvent('nd_new_ok', 3));
+    expect(good.accepted).toBe(true);
+    ctl.update(1 / 30);
+    expect(second.runtime.stats.rigidActive).toBe(12);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 60000);
+
   it('门镜像在碎片 tick 之前同步（帧内不滞后）', async () => {
     const SANDBOX2 = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
     const key = Object.keys(SANDBOX2)[0]!;

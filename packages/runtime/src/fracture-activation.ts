@@ -85,11 +85,6 @@ export interface PrepareOptions {
   readonly io: FractureAssetIO;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
   readonly resolveConvexPoints?: ConvexPointsResolver;
-  /**
-   * 已核验过的二进制引用路径缓存（可选，按会话复用）。
-   * 同一 profile 的 GLB 在会话内不变，重复激活无需每次重读数 MB 数据。
-   */
-  readonly verifiedRefs?: Set<string>;
 }
 
 /**
@@ -126,14 +121,14 @@ export function createGlbConvexResolver(): ConvexPointsResolver {
 
 /**
  * 核验引用资产二进制：能读到、不是 LFS 指针、是合法 GLB（magic + 声明长度）。
- * 已核验路径记入 verifiedRefs 缓存（按会话复用，避免每次激活重读数 MB）。
+ * 不做跨调用缓存：路径曾经可读不代表当前仍可用/仍是同一版本。
  */
 async function checkRefBinary(
   io: FractureAssetIO,
   path: string,
-  verified: Set<string> | undefined,
 ): Promise<FractureAdmissionFailure | null> {
-  if (verified?.has(path)) return null;
+  // 每次都读当前字节：路径曾经读成功过**不等于**当前资源仍可用/仍是同一版本。
+  // （跨调用缓存曾让 Stop 后迟到的旧读取污染新代，并让已失效资源错误准入。）
   let buf: ArrayBuffer;
   try {
     buf = await io.readBinary(path);
@@ -151,7 +146,6 @@ async function checkRefBinary(
   if (declared !== buf.byteLength) {
     return { stage: 'ref-binary', detail: 'GLB 声明长度 ' + declared + ' 与实际 ' + buf.byteLength + ' 不一致（' + path + '）' };
   }
-  verified?.add(path);
   return null;
 }
 
@@ -262,7 +256,7 @@ export async function prepareFractureActivation(
   //     逐个核验 conic（source + 每块 mesh），坏文件在分配前拒绝而不是播到一半崩。
   const refs = [profile.source.model.path, ...profile.chunks.map((c) => c.mesh.path)];
   for (const path of refs) {
-    const bf = await checkRefBinary(opts.io, path, opts.verifiedRefs);
+    const bf = await checkRefBinary(opts.io, path);
     if (bf) return { ok: false, failure: bf };
   }
 
