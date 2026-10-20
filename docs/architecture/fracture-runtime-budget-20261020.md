@@ -84,9 +84,15 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 197 测试全过，其中
-  fracture-runtime.test.ts 35 测试、fracture-activation.test.ts 13 测试、
-  fracture-play-composition.test.ts 5 测试：
+- pnpm exec vitest run packages/runtime：22 文件 201 测试全过，其中
+  fracture-runtime.test.ts 37 测试、fracture-activation.test.ts 13 测试、
+  fracture-play-composition.test.ts 6 测试。
+- pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
+  23 文件 218 测试全过。宿主接线（R3）的 owner 证据在
+  apps/editor/test/play-controller.test.ts（17 测试），其中「真实 PlayController.update
+  推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
+  驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
+  20 轮登记/释放各 60 次。
   - 两层播放与真实物理组合：large 建真实 body 且速度进求解器、small 简化积分、
     固定输入同 seed 可复现（容差 1e-6）、正常容量 large 全走真实路径。
   - 去重与身份：同 run/target 去重、不同身份分别碎裂、句柄含 session+激活代次。
@@ -125,6 +131,11 @@ assemblyScale 已含在事件世界变换、不二次乘，只执行一次）生
 (ox+tF·ddx, oy+tF·ddy, oz+tF·ddz) 旋转回世界系，取世界 Y 分量加中心 Y 作为支撑面顶。
 漏掉 ddx/ddz 会把高度低估成 tF·cos²θ（30° 时 x=1 少 0.22 m、x=3 少 0.51 m）。
 局部系求交同时给出足印判定：竖线不与盒相交即无支撑，足印外不会产生虚假平台。
+
+球与胶囊静态镜像同样参与支撑（不再静默穿过）：竖向线在圆截面内（d ≤ r）时
+支撑高度 = 中心 Y + 圆柱段半高 + sqrt(r² − d²)，胶囊圆柱段半高 = height/2 − radius
+（至少 0），球为 0；截面外返回 null。球/胶囊按竖直姿态处理（旋转不改变其竖向轮廓）。
+测试覆盖球顶 1.5、胶囊顶 1.75 的落停与足印外继续下落。
 
 支撑面选择按本步竖向穿越窗口（prevY ≥ topY ≥ currY）取最高面，不选头顶天花板；
 已贴伏（底部距面 ≤ 1 cm）的块保持贴面；无穿越且未贴伏返回 null，块继续下落。
