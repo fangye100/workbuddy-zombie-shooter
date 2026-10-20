@@ -3306,7 +3306,7 @@
       "reviewedAt": "2026-10-20",
       "reviewedSourceCommit": "8c3140d462a97d31f0d6640f6e6e6945fd172305"
     },
-{
+    {
       "id": "fracture-rendering",
       "path": "docs/architecture/fracture-rendering-20261020.md",
       "title": "碎片动态渲染（WU-05）",
@@ -3314,20 +3314,20 @@
       "authority": "guide",
       "status": "current",
       "topics": [
-            "fracture",
-            "vfx",
-            "render",
-            "instancing",
-            "material"
+        "fracture",
+        "vfx",
+        "render",
+        "instancing",
+        "material"
       ],
       "read": "原 CoreDynamicBatch 刚体模式扩展（binding 6 基向量）、子网格材质路由（外表面贴图/切口纯色）、pivot 与 worldScale 组合、Play 资源 owner 与 Stop 销毁、headed 真实 GPU 证据与限制",
       "sourceRefs": [
-            "scene-schema",
-            "architecture-policy"
+        "scene-schema",
+        "architecture-policy"
       ],
       "reviewedAt": "2026-10-21",
-      "reviewedSourceCommit": "4ee7c8f9eff1123f586c46603fbb614575cae411"
-}
+      "reviewedSourceCommit": "052863234a906ba4845c2492c4e17b24fe6fdfa9"
+    }
 
   ]
 }

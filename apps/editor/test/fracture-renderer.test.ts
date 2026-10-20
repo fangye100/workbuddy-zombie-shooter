@@ -158,6 +158,41 @@ describe('WU-05 碎片动态批次装配', () => {
     renderer.dispose();
   }, 30000);
 
+  it('TTL 到期后实例从批次中移除（不留下残影）', async () => {
+    const glb = makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
+    const io = makeIO({ 'chunk.glb': glb });
+    const renderer = new PlayFractureRenderer(io);
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    expect(rt.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'small',
+        mesh: { path: 'chunk.glb', guid: 'g1' },
+        position: [0, 2, 0], rotation: [0, 0, 0, 1], scale: 1,
+        shape: { type: 'sphere', radius: 0.25 },
+        mass: 1, friction: 0.5, restitution: 0, pivot: [0, 0, 0],
+        linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+      }],
+      priority: 1, lifetimeSec: 0.1, fadeSec: 0,
+    }).accepted).toBe(true);
+    rt.stepOnce();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 60 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    expect(renderer.dynamicBatches.length).toBeGreaterThan(0);
+    // 推进超过 lifetime（0.1s @1/60 ≈ 6 tick）
+    for (let i = 0; i < 12; i++) rt.stepOnce();
+    renderer.sync(rt, backend);
+    expect(rt.active.length).toBe(0);
+    expect(renderer.dynamicBatches.length).toBe(0);   // 实例随到期移除
+    expect(renderer.stats.instances).toBe(0);
+    rt.dispose();
+    renderer.dispose();
+  }, 30000);
+
   it('small 块读简化 sim；缺失网格不会抛错', () => {
     const renderer = new PlayFractureRenderer(makeIO({}));
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
