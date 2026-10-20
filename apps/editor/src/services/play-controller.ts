@@ -310,6 +310,11 @@ export class PlayController {
     const graph = SceneGraph.fromDocument(doc);
     graph.updateWorldTransforms();
     this.fractureBinding = this.createFractureBinding(graph);
+    // reset 后 NavigationGates 已恢复到 initialOpen 姿态；新 binding 的首次镜像仍来自
+    // 作者文档，必须在 ready 后立刻对齐，不能等到下一次 update/step。
+    void this.fractureBinding.ready.then((ok) => {
+      if (ok) this.syncGateMirrors();
+    });
   }
 
   /**
@@ -333,7 +338,28 @@ export class PlayController {
         activationGen: 0,
       };
     }
-    return binding.runtime.play(prepared.activation);
+    // IO 是异步的：读取期间可能发生 Stop/Reset/换场景。await 之后必须重新核对
+    // 当前代，不能拿捕获的旧 binding 直接 play（否则要么复活旧代，要么抛未预期异常）。
+    if (this.fractureBinding !== binding || binding.backend() === null) {
+      return {
+        accepted: false,
+        rejection: {
+          reason: 'session-closed',
+          detail: '碎片资产读取期间会话已结束或换绑，本次激活作废（可重试）',
+          eventKey: '',
+        },
+        activationGen: 0,
+      };
+    }
+    try {
+      return binding.runtime.play(prepared.activation);
+    } catch (e) {
+      return {
+        accepted: false,
+        rejection: { reason: 'runtime-unavailable', detail: String(e), eventKey: '' },
+        activationGen: 0,
+      };
+    }
   }
 
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */

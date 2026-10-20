@@ -583,6 +583,23 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(vb).toBeLessThan(0);
   });
 
+  it('R6：capsule 代理的 halfHeight→全高→圆柱段半高语义逐级正确', async () => {
+    // profile capsule：halfHeight=0.5（含端帽的总半高）、radius=0.25
+    // → chunk 输入 height = 2*halfHeight = 1.0（全高）
+    // → 后端 capsule 圆柱段半高 = height/2 - radius = 0.25
+    // 世界顶点高度 = 圆柱半高 + radius = 0.5（相对 body 中心）。
+    const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01.chunks = [{
+      ...p01.chunks[0],
+      proxy: { ...p01.chunks[0].proxy, shape: { type: 'capsule', halfHeight: 0.5, radius: 0.25 } },
+    }];
+    const io = makeIO({ [P01]: JSON.stringify(p01) });
+    const r = await prepareFractureActivation(ev(P01, 'as_p01frct'), { io });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.activation.chunks[0]!.shape).toEqual({ type: 'capsule', radius: 0.25, height: 1 });
+  });
+
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {
     // 构造 pivot=[1,0,0]、bind 绕 Z 旋转 90°、均匀 scale=3 的单块 profile
     const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);

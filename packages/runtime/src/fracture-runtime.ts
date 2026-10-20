@@ -127,6 +127,9 @@ export interface SimplifiedState {
   /** 简化摩擦/恢复（来自输入策略，非固定常数）。 */
   friction: number;
   restitution: number;
+  /** 块级线/角速度上限（资产 profile 声明；简化层与 rigid 层同样消费）。 */
+  maxLinearSpeed?: number;
+  maxAngularSpeed?: number;
   resting: boolean;
 }
 
@@ -266,10 +269,17 @@ function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | nu
  * - 多块中保守选顶面较低者（不向上跳到更高面）；
  * - 无支撑返回 null（继续下落，不生成无限地面）。
  */
+/**
+ * 查询本步竖向运动能接触的支撑面顶 Y（R2）：
+ * prevCenter/currCenter 是**质心**的起止 Y；内部换成「底面」（质心 − 支撑半径）再做
+ * 穿越判定，否则质心尚未到支撑面顶时不会接触，会先穿透约一个支撑半径再被抬回。
+ */
 function supportHeightAt(
   surfaces: readonly SupportSurface[],
-  x: number, prevY: number, currY: number, z: number,
+  x: number, prevCenter: number, currCenter: number, z: number, supportRadius: number,
 ): number | null {
+  const prevY = prevCenter - supportRadius;
+  const currY = currCenter - supportRadius;
   let crossed: number | null = null;
   let resting: number | null = null;
   for (const su of surfaces) {
@@ -286,6 +296,26 @@ function supportHeightAt(
     }
   }
   return crossed ?? resting;
+}
+
+/** 按块级上限夹紧简化层线/角速度（未声明上限时不动）。 */
+function clampSimplifiedSpeed(s: SimplifiedState): void {
+  if (s.maxLinearSpeed !== undefined) {
+    const v = s.linearVelocity;
+    const len = Math.hypot(v[0], v[1], v[2]);
+    if (len > s.maxLinearSpeed && len > 0) {
+      const k = s.maxLinearSpeed / len;
+      s.linearVelocity = [v[0] * k, v[1] * k, v[2] * k];
+    }
+  }
+  if (s.maxAngularSpeed !== undefined) {
+    const w = s.angularVelocity;
+    const len = Math.hypot(w[0], w[1], w[2]);
+    if (len > s.maxAngularSpeed && len > 0) {
+      const k = s.maxAngularSpeed / len;
+      s.angularVelocity = [w[0] * k, w[1] * k, w[2] * k];
+    }
+  }
 }
 
 /** 有界简化三维积分：位置/速度/四元数/角速度 + 场景支撑面接触 + 休眠。仍是 mesh 运动状态。 */
@@ -313,6 +343,9 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
   s.position[0] += s.linearVelocity[0] * dt;
   s.position[1] += s.linearVelocity[1] * dt;
   s.position[2] += s.linearVelocity[2] * dt;
+  // 块级速度上限：简化层此前只在 rigid 后端生效，导致声明 1m/s 的小块仍以 400m/s 飞。
+  // 在积分起点夹紧，保证与后端同一份 profile 配置产生同样的有界运动。
+  clampSimplifiedSpeed(s);
   // 四元数积分：q' = q + 0.5*dt*ω⊗q（归一化）
   const [qx, qy, qz, qw] = s.rotation;
   const [wx, wy, wz] = s.angularVelocity;
@@ -326,7 +359,7 @@ function integrateSimplified(s: SimplifiedState, dt: number, surfaces: readonly 
   // 有界环境接触（R2）：用竖向扫掠选择本步能接触的支撑面（不选头顶天花板）；
   // 质心停在 支撑面顶 + 块支撑半径，不把质心塞进地板。
   // 无支撑面（场景无 collider/已移出边界）则继续下落。
-  const top = supportHeightAt(surfaces, s.position[0], prevY, s.position[1], s.position[2]);
+  const top = supportHeightAt(surfaces, s.position[0], prevY, s.position[1], s.position[2], s.supportRadius);
   if (top === null) return;
   const floor = top + s.supportRadius;
   // 质心降至支撑面+半径以下（含本步穿越）且正在下落时接触。
@@ -562,6 +595,8 @@ export function createFractureRuntime(
             linearVelocity: [...c.linearVelocity] as [number, number, number],
             angularVelocity: [...c.angularVelocity] as [number, number, number],
             supportRadius, friction: c.friction, restitution: c.restitution, resting: false,
+            ...(c.maxLinearSpeed !== undefined ? { maxLinearSpeed: c.maxLinearSpeed } : {}),
+            ...(c.maxAngularSpeed !== undefined ? { maxAngularSpeed: c.maxAngularSpeed } : {}),
           };
         }
         // 资源已就位；先入 built（携带清理所需的 handle/layer），再借租约。

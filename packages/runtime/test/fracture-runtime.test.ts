@@ -665,6 +665,48 @@ describe('WU-04 审核修复 R2/R4/R5/R6', () => {
     backend.destroy();
   });
 
+  it('W04-04：简化小块同样消费块级线/角速度上限', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    const rt = createFractureRuntime(backend);
+    const wild: FractureChunkInput = {
+      ...chunk('c1', 'small'), position: [0, 5, 0],
+      shape: { type: 'sphere', radius: 0.25 },
+      linearVelocity: [400, 0, 0], angularVelocity: [0, 400, 0],
+      maxLinearSpeed: 1, maxAngularSpeed: 2,
+    };
+    expect(rt.play(act('n1', [wild])).accepted).toBe(true);
+    rt.stepOnce();
+    const sim = rt.active[0]!.sim!;
+    const lin = Math.hypot(sim.linearVelocity[0], sim.linearVelocity[1], sim.linearVelocity[2]);
+    const ang = Math.hypot(sim.angularVelocity[0], sim.angularVelocity[1], sim.angularVelocity[2]);
+    expect(lin).toBeLessThan(1.5);
+    expect(lin).toBeGreaterThan(0.5);
+    expect(ang).toBeLessThanOrEqual(2.0001);
+    rt.dispose();
+    backend.destroy();
+  });
+
+  it('R2：简化块首次接触按底面判定（不穿透一个支撑半径）', () => {
+    const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
+    backend.upsertStatic('floor', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });
+    const rt = createFractureRuntime(backend);
+    // 地板顶 0.5，球半径 0.25 → 正确静止质心 0.75。初始质心 0.76（只高 1cm），
+    // 一步就会越过"质心对顶面"的旧窗口，旧实现会先掉到 ~0.51 再被抬回。
+    const c: FractureChunkInput = {
+      ...chunk('c1', 'small'), position: [0, 0.76, 0],
+      shape: { type: 'sphere', radius: 0.25 }, restitution: 0,
+      linearVelocity: [0, 0, 0], angularVelocity: [0, 0, 0],
+    };
+    expect(rt.play(act('n1', [c])).accepted).toBe(true);
+    let minY = Infinity;
+    for (let i = 0; i < 30; i++) { rt.stepOnce(); minY = Math.min(minY, rt.active[0]!.sim!.position[1]); }
+    // 全程不低于正确接触位置（允许 1cm 数值容差），终态停在 0.75
+    expect(minY).toBeGreaterThan(0.74);
+    expect(rt.active[0]!.sim!.position[1]).toBeCloseTo(0.75, 2);
+    rt.dispose();
+    backend.destroy();
+  });
+
   it('R2：支撑删除后休眠块重新下落', () => {
     const backend = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, -9.81, 0] });
     backend.upsertStatic('floor', { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [10, 0.5, 10] } });

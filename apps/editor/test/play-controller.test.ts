@@ -358,6 +358,72 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     ctl.stop();
   }, 30000);
 
+  it('reset 后新代 ready 时 initialOpen 门镜像已对齐（不等下一帧）', async () => {
+    const SANDBOX4 = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
+    const key = Object.keys(SANDBOX4)[0]!;
+    const doc = JSON.parse(JSON.stringify((SANDBOX4[key] as { default: unknown }).default)) as SceneDocument;
+    for (const n of doc.nodes) {
+      for (const c of n.components as unknown as { kind: string; count?: number; clearRule?: string }[]) {
+        if (c.kind === 'SpawnPoint') c.count = 0;
+        if (c.kind === 'RoomVolume') c.clearRule = 'interact';
+      }
+    }
+    const { ctl } = make(doc);
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+    ctl.reset();
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+    const rt = ctl.session.runtime!;
+    const gate = rt.gateSnapshot().find((g) => g.nodeId === 'nd_gate_stairs')!;
+    const mirror = second.backend()!.staticPose('scene-mirror:nd_gate_stairs')!;
+    expect(mirror.y).toBeCloseTo(gate.position[1], 4);
+    expect(mirror.y).toBeGreaterThan(3.5); // 不是作者文档的关闭位置
+    ctl.stop();
+  }, 30000);
+
+  it('资产读取期间 Stop：迟到的 spawnFracture 返回结构化拒绝而非抛错', async () => {
+    // 真实资产 + 人为延迟：让准备成功完成，只是"完成得比 Stop 晚"。
+    const textG = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    const metaG = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+    const binG = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const modelG = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+    const rel = (k: string) => k.replace(/^.*?(?=assets\/)/, '');
+    const text = new Map(Object.entries({ ...textG, ...metaG }).map(([k, v]) => [rel(k), v] as const));
+    const bins = new Map(Object.entries({ ...binG, ...modelG }).map(([k, v]) => [rel(k), v] as const));
+    let firstRead = true;
+    const io = {
+      async readText(path: string) {
+        if (firstRead) { firstRead = false; await new Promise((r) => setTimeout(r, 60)); }
+        const v = text.get(path);
+        if (v === undefined) throw new Error('未找到：' + path);
+        return v;
+      },
+      async readBinary(path: string) {
+        const l = bins.get(path);
+        if (l === undefined) throw new Error('未找到二进制：' + path);
+        const b = await l();
+        return b.slice().buffer;
+      },
+    };
+    const { ctl } = make(scene(), { fractureIO: io });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+    const event = frozenFractureEvent({
+      sequence: 1, tick: 0, seed: 1,
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_x' },
+      position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+      source: { weaponId: 'w_pistol', hitSequence: 1 },
+    });
+    const pending = ctl.spawnFracture(event);
+    ctl.stop(); // 读取期间 Stop
+    const res = await pending;
+    expect(res.accepted).toBe(false);
+    expect(res.rejection?.reason).toBe('session-closed');
+  }, 30000);
+
   it('门镜像在碎片 tick 之前同步（帧内不滞后）', async () => {
     const SANDBOX2 = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
     const key = Object.keys(SANDBOX2)[0]!;
@@ -506,6 +572,18 @@ describe('PlayController —— 生产激活入口（WU-04 W04-01/09 回归）',
     ctl.update(1 / 30);
     expect(ctl.fracture!.runtime.active.length).toBe(12);
     expect(ctl.fracture!.runtime.stats.rigidActive).toBe(12);
+
+    // 零四元数经真实生产入口同样在分配前拒绝（不是只有准备层测试）
+    const zeroQ = frozenFractureEvent({
+      ...event,
+      sequence: 3,
+      rotation: [0, 0, 0, 0] as [number, number, number, number],
+      target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_zeroq' },
+    });
+    const resQ = await ctl.spawnFracture(zeroQ);
+    expect(resQ.accepted).toBe(false);
+    expect(resQ.rejection?.reason).toBe('transform');
+    expect(ctl.fracture!.runtime.stats.queuedEvents).toBe(0);
 
     // 坏输入（GUID 不符）在分配前拒绝，且不进入运行时
     const bad = frozenFractureEvent({
