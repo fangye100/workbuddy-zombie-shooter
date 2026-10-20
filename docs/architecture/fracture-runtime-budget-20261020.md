@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-0cc6ef86c13ce8ead588f873c295f7f08b4e6b2f（本文件单独一笔提交，只改文档）。
+8bf782cf06a5018befa53ad2c2f12afc9e376c23（本文件单独一笔提交，只改文档）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
@@ -84,11 +84,11 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 204 测试全过，其中
-  fracture-runtime.test.ts 37 测试、fracture-activation.test.ts 14 测试、
+- pnpm exec vitest run packages/runtime：22 文件 209 测试全过，其中
+  fracture-runtime.test.ts 39 测试、fracture-activation.test.ts 16 测试、
   fracture-play-composition.test.ts 8 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 222 测试全过。宿主接线（R3）的 owner 证据在
+  23 文件 229 测试全过（play-controller 19）。宿主接线（R3）的 owner 证据在
   apps/editor/test/play-controller.test.ts（17 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
@@ -118,6 +118,41 @@ sidecar.guid 且 kind=fracture；quarantined 在分配 body/租约前拒绝（�
 assemblyScale 已含在事件世界变换、不二次乘，只执行一次）生成 chunk 世界位置；由来向/接触/seed（mulberry32 确定性）
 驱动初始线/角速度；离线 convex 代理经注入 resolveConvexPoints 端口真实读入。IO 经
 注入端口（readText/readBinary），runtime 不碰 fs/DOM，Preview/Play 共用。
+
+## 生产激活入口与准入补强（W04-01/02/09）
+
+PlayController.spawnFracture(event) 是生产激活入口：用编辑器 IO（/__fs/file）读
+profile/sidecar/GLB，走 prepareFractureActivation + 生产凸代理 resolver，再交给
+runtime.play。WU-06/07 的伤害/死亡策略从这里喂事件；不存在「只有测试调用准备函数」
+的断层。
+
+准入在分配 body/租约前完成以下检查，失败一律返回带 stage 的诊断：
+- profile 版本/格式/quarantine、profile/sidecar/event 三方 GUID；
+- profile.kind 与事件目标 kind 对齐（object 不能由 NPC 事件激活，反之亦然）；
+- source.model 与每块 mesh 的 sidecar 身份；
+- 引用资产的二进制可用性：能读到、非 LFS 指针、GLB magic 与声明长度一致
+  （sidecar 合法不代表文件读得到）。已核验路径可按会话缓存，避免每次激活重读数 MB；
+- 凸代理：按 15 浮点步长取 POSITION、减去 pivot、非退化校验（NaN/共线/共面/零体积）。
+
+## 凸代理坐标合同（F2 续）
+
+profile 的 pivot 是资产原始坐标里的局部点（实测 chunk-0009 原始 POSITION
+y=0.6005..0.9005，pivot.y=0.789352）。因此解析器用
+parseGlb(buffer, null, 'auto', { normalize: false }) 取未规整化坐标，再由准备函数
+减去 pivot，得到「以 pivot 为原点」的代理局部系；body 平移 = pivot + 事件世界变换。
+若改用默认的居中/贴地结果，碰撞体会整体偏离 body（chunk-0009 偏差约 0.79 m）。
+测试同时覆盖 chunk-0001（pivot 接近原点）与 chunk-0009（pivot 远离原点），
+并有手写已知偏移 GLB 的逐点闭式对照。
+
+## 运行期门姿态与终态（F3 续）
+
+- 门：PlayController.syncGates() 在更新渲染对象后调用
+  binding.syncRuntimePoses(gateSnapshot())，把 scene-mirror:<nodeId> 重定位到当前
+  姿态（复用登记形状，不新建碰撞源）。
+- 终态：PlaySession 在 game-over/floor-clear 后仍可能返回步数，但世界已冻结；
+  update() 只在 outcome === 'running' 时驱动碎片，step() 额外要求非终态。
+  回归在真实控制器上把 outcome mock 成 game-over，断言碎片 tick 不再增长，
+  恢复 running 后单步重新生效。
 
 ## 简化层场景接触（R2）
 
