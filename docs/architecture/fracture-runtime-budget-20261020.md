@@ -30,8 +30,8 @@ WU-04 交付通用碎片播放器（runtime）：真实/简化两层播放、准
 - **简化层（small 块）**：有界简化三维积分（位置/速度/四元数/角速度 + 重力 +
   地面接触反弹 + 摩擦衰减 + 休眠）。简化块仍是 mesh 运动状态（ActiveChunk.sim
   持有三维变换与速度），不是伪装成 mesh 的 sprite；实际绘制留 WU-05。
-- 简化积分不建物理 body、不占真实刚体容量；地面接触用 defaultGroundY（宿主可
-  按静态镜像近似提供），禁用大规模块间求解。
+- 简化积分不建物理 body、不占真实刚体容量；环境接触查询场景静态
+  镜像的最高支撑面（见 R2），无场景支撑时继续下落，禁用大规模块间求解。
 
 ## 身份、去重与代次
 
@@ -47,7 +47,7 @@ play() 在分配任何物理资源/租约之前校验：碎块集合非空、chu
 有限正数、质量为有限正数、变换/速度分量有限、priority/lifetimeSec/fadeSec 合法。
 非法输入返回 { accepted:false, rejection:{ reason:'invalid-activation' } }，不建 body、
 不消耗租约。正式 profile 的 status 必须是 accepted（quarantined 隔离资产在激活前
-拒绝）；profile/source/sidecar 身份核对由宿主在组合 FractureActivation 前完成。
+拒绝）；profile/source/sidecar 身份核对已由生产准入准备 prepareFractureActivation（R1）承担。
 
 ## 预算、优先级与 TTL
 
@@ -79,10 +79,10 @@ rejectedAdmission、evicted、expired、skipped（满额跳块）、poolActive/p
 integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-05/09 绘制
 链路，本单元未测，不伪造零值或性能通过。
 
-## 验证（实际命令与证据，SHA f540850）
+## 验证（实际命令与证据，SHA 2481aa4 含 R1–R6 修复）
 
 - pnpm run typecheck：0 错误。
-- pnpm run architecture:check：errors=[]（112 framework 文件）。
+- pnpm run architecture:check：errors=[]（114 framework 文件）。
 - pnpm exec vitest run packages/runtime：22 文件 190 测试全过，其中新增
   fracture-runtime.test.ts 32 测试：
   - 两层播放与真实物理组合：large 建真实 body 且速度进求解器、small 简化积分、
@@ -153,10 +153,10 @@ chunk.shape 是未缩放的资产局部代理；激活时 scaledShape 按 scale 
 ## 边界与遗留
 
 - 不实现 GPU 渲染（WU-05）、伤害/死亡策略（WU-06/07）、作者 UI（WU-08）。
-- 宿主接线（PlayController 在 Play 启动 createFracturePhysicsSession + 场景变化后
-  再 syncStaticMirrorsFromScene + 伤害事实转 FractureActivation）属 WU-06/07；
-  本单元提供 createFractureRuntime 作为播放入口，由宿主按固定 tick 驱动。
-- 简化层地面接触用单一 defaultGroundY，未按静态镜像逐块求高度（计划 §6.3 允许
-  「复用现有碰撞查询或由后端提供有界环境接触」）；逐块接触精度属后续改进。
+- Play 生命周期组合已由 bindFractureToPlay（fracture-play-composition.ts，R3）交付：
+  Play 启动装配/场景变化镜像 sync/Stop 账目释放/重开新 session；伤害事实
+  转 FractureActivation 的业务接线属 WU-06/07。
+- 简化层环境接触已按场景静态镜像逐块求最高支撑面（R2）；更精细的
+  多点接触/休眠唤醒策略属后续改进。
 - NPC 当前可见姿态烘焙（WU-07）与离线凸代理读入（WU-04 接口已支持 convex 形状）
   属后续接线。
