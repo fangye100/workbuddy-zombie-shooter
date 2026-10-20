@@ -2,7 +2,8 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-29cdbdecb4004101e5b6ac4e225445eaa6b84063（本文件单独一笔提交，只改文档）。
+c05f28ceb0e196b8b0426763f1bfe1cc1e04ef43（实现与测试；本文件是其后的
+一笔仅文档提交，验收以 supervisor 绑定的 final 为准）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
 
