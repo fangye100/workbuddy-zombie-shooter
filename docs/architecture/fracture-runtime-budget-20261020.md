@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-b8d4f91e85660c83cd3b9ca78ae02b4a8d77f6e6（实现与测试；本文件是其后的
+6ab1848b07e4bf4542f42013ddc19a105505abc6（实现与测试；本文件是其后的
 一笔仅文档提交，验收以 supervisor 绑定的 final 为准）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
@@ -85,11 +85,11 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
 
 - pnpm run typecheck：0 错误。
 - pnpm run architecture:check：errors=[]。
-- pnpm exec vitest run packages/runtime：22 文件 216 测试全过，其中
-  fracture-runtime.test.ts 41 测试、fracture-activation.test.ts 19 测试、
+- pnpm exec vitest run packages/runtime：22 文件 217 测试全过，其中
+  fracture-runtime.test.ts 42 测试、fracture-activation.test.ts 19 测试、
   fracture-play-composition.test.ts 10 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 241 测试全过（play-controller 25）。宿主接线（R3）的 owner 证据在
+  23 文件 242 测试全过（play-controller 25）。宿主接线（R3）的 owner 证据在
   apps/editor/test/play-controller.test.ts（25 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
