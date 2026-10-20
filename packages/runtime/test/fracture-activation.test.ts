@@ -271,5 +271,24 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct', { scale: [1, 2, 3] }), { io: makeIO() });
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.failure.stage).toBe('transform');
+
+    // P2：bindT ≠ 0 钉住变换链——bind 平移不随 bind 旋转/尺度改变（公式 T + R·S·pivot）。
+    // 同 pivot/旋转/尺度，bindT 从 [0,0,0] 改为 [10,20,30]：世界位置应恰好平移 [10,20,30]。
+    const p01b = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01b.chunks = [{
+      chunkId: 'c1', class: 'large',
+      mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' },
+      bind: { position: [10, 20, 30], rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2], scale: [3, 3, 3] },
+      pivot: [1, 0, 0],
+      proxy: { shape: { type: 'box', halfExtents: [0.15, 0.15, 0.15] }, mass: 1.5, friction: 0.6, restitution: 0.35, collisionGroup: 'debris' },
+    }];
+    const io2 = makeIO({ [P01]: JSON.stringify(p01b) });
+    const r3 = await prepareFractureActivation(ev(P01, 'as_p01frct', { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }), { io: io2 });
+    expect(r3.ok).toBe(true);
+    if (!r3.ok) return;
+    // bind 局部质心 = bindT + bindR·(bindS·pivot) = [10,20,30] + [0,3,0] = [10,23,30]
+    expect(r3.activation.chunks[0]!.position[0]).toBeCloseTo(10, 5);
+    expect(r3.activation.chunks[0]!.position[1]).toBeCloseTo(23, 5);
+    expect(r3.activation.chunks[0]!.position[2]).toBeCloseTo(30, 5);
   });
 });

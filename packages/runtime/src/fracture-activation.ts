@@ -248,8 +248,8 @@ export async function prepareFractureActivation(
       if (degenerate) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理含非有限值' } };
       }
-      // 非退化三维凸包校验：检查是否存在非共面四点（体积 > 1e-8）。
-      // 取前四点（或所有点中最远三点+第四点）计算有向体积。
+      // 非退化三维凸包校验：找非共面四点（点到基面距离 > 1e-6 米）。
+      // maxDist/maxArea 为平方量（阈值 1e-12 对应长度/叉积 < 1e-6），maxVol 为长度量。
       {
         const nPts = pts.length / 3;
         // 找最远两点作为基线

@@ -248,7 +248,8 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
-    this.fractureBinding?.onFixedTick(this.session.fixedStep);
+    // 只在暂停态实际推进时驱动碎片（非暂停下 stepOnce 为空操作，不重复 tick）。
+    if (this.session.state === 'paused') this.fractureBinding?.onFixedTick(this.session.fixedStep);
     this.syncGates();
     this.decals?.sync(this.session.runtime);
     this.sharedMotions?.sync(this.session.runtime);

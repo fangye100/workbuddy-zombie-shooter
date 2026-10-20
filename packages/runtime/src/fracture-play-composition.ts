@@ -127,7 +127,11 @@ export function bindFractureToPlaySession(
   binding = bindFractureToPlay(host, opts);
   return Object.assign(binding, {
     onFixedTick(dtSec: number): void {
-      if (binding !== null) binding.runtime.tick(dtSec);
+      // R3：后端未就绪（Rapier WASM 加载中）时不抛异常，静默跳过本步。
+      // 碎片是装饰：宁可延迟几帧也不阻断整个 Play 帧。
+      if (binding !== null && binding.backend() !== null) {
+        try { binding.runtime.tick(dtSec); } catch { /* 未就绪/已释放：静默跳过 */ }
+      }
     },
   });
 }

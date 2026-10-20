@@ -42,9 +42,9 @@ export interface FractureChunkInput {
   readonly linearVelocity: FractureVec3;
   readonly angularVelocity: FractureVec3;
   readonly ccd?: boolean;
-  /** 块级线速度上限（资产 profile 声明；0=用后端默认值）。 */
+  /** 块级线速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
   readonly maxLinearSpeed?: number;
-  /** 块级角速度上限（资产 profile 声明；0=用后端默认值）。 */
+  /** 块级角速度上限（资产 profile 声明；schema 校验 [0.1,200]，未声明时取后端默认与全局上限的较小值）。 */
   readonly maxAngularSpeed?: number;
 }
 
@@ -195,18 +195,39 @@ function quatRotate(qx: number, qy: number, qz: number, qw: number, vx: number, 
 }
 
 /**
- * 求 OBB 在查询点 (qx,qz) 处的真实支撑面顶 Y（R2 旋转平台修复）。
- * 把查询点逆旋转到 OBB 局部系，若 |x|<=halfX && |z|<=halfZ 则返回
- * 旋转后的局部顶面世界 Y；否则返回 null。
+ * 求竖向直线 x=qx, z=qz 与 OBB 的最高交点世界 Y（R2 旋转平台修复）：
+ * 把竖线逆旋转到 OBB 局部系得射线 o+t·d（局部 d 一般非轴对齐），
+ * slab 法求进入/离开区间 [tN,tF]，tF>=max(tN,0) 时返回竖线交点世界 Y
+ * （oy 参数化以世界 y=0 为原点，结果已是世界 Y）。倾斜盒在足印外不再
+ * 产生虚假支撑，高度也无系统性偏差。
  */
 function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | null {
-  // 逆旋转：把查询点从世界系变到 OBB 局部系
+  // 逆旋转：把竖线（过查询点、方向世界 +Y）变到 OBB 局部系
   const [iqx, iqy, iqz, iqw] = quatConj(su.qx, su.qy, su.qz, su.qw);
   const dx = qx - su.x, dz = qz - su.z;
-  const [lx, , lz] = quatRotate(iqx, iqy, iqz, iqw, dx, 0, dz);
-  if (Math.abs(lx) > su.localHalfX || Math.abs(lz) > su.localHalfZ) return null;
-  // 局部顶面 (lx, localHalfY, lz) 经旋转回世界系
-  const [, wy] = quatRotate(su.qx, su.qy, su.qz, su.qw, lx, su.localHalfY, lz);
+  const [ox, oy, oz] = quatRotate(iqx, iqy, iqz, iqw, dx, -su.centerY, dz);
+  const [ddx, ddy, ddz] = quatRotate(iqx, iqy, iqz, iqw, 0, 1, 0);
+  const eps = 1e-12;
+  let tN = -Infinity, tF = Infinity;
+  const slab = (o: number, d: number, h: number): boolean => {
+    if (Math.abs(d) < eps) return Math.abs(o) <= h;
+    let t1 = (-h - o) / d, t2 = (h - o) / d;
+    if (t1 > t2) { const t = t1; t1 = t2; t2 = t; }
+    if (t1 > tN) tN = t1;
+    if (t2 < tF) tF = t2;
+    return tN <= tF;
+  };
+  if (!slab(ox, ddx, su.localHalfX)) return null;
+  if (!slab(oy, ddy, su.localHalfY)) return null;
+  if (!slab(oz, ddz, su.localHalfZ)) return null;
+  // 只接受向上方向（t>0）存在的最高交点；线整体在盒下方时无支撑。
+  const tExit = tF;
+  if (tExit <= 0) return null;
+  const tHit = Math.max(tN, 0);
+  if (tHit > tExit) return null;
+  // 局部交点 (ox, oy+tExit*ddy, oz) 旋转回世界系；世界 Y 分量才是支撑高度
+  // （局部 Y ≠ 世界 Y，旋转会把局部 X/Z 也折进世界 Y，斜坡上必须完整旋转）。
+  const [, wy] = quatRotate(su.qx, su.qy, su.qz, su.qw, ox, oy + tExit * ddy, oz);
   return su.centerY + wy;
 }
 
