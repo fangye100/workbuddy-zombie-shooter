@@ -347,6 +347,45 @@ describe('R3：速度上限在求解推进前夹紧（首个 tick 不超限位�
     expect(() => new RapierFractureBackend(rapier, { fixedStepSec: STEP, maxAngularSpeed: -5 })).toThrow(/有限正数/);
   });
 
+  it('R5：非法限值在分配 World 之前拒绝——四次失败构造的真实 World 分配计数为 0', () => {
+    // 用真实 Rapier 模块仅包装 World 构造/free 计数（不替换求解器），
+    // 证明非法选项失败路径不遗留任何已分配 World。
+    let allocated = 0;
+    let freed = 0;
+    const observed = {
+      ...rapier,
+      World: class {
+        private readonly inner: InstanceType<RapierModule['World']>;
+        constructor(gravity: { x: number; y: number; z: number }) {
+          this.inner = new rapier.World(gravity);
+          allocated++;
+        }
+        get timestep(): number { return this.inner.timestep; }
+        set timestep(v: number) { this.inner.timestep = v; }
+        free(): void { freed++; this.inner.free(); }
+      },
+    } as unknown as RapierModule;
+    for (const opt of [{ maxLinearSpeed: NaN }, { maxLinearSpeed: Infinity }, { maxLinearSpeed: 0 }, { maxAngularSpeed: -5 }]) {
+      expect(() => new RapierFractureBackend(observed, { fixedStepSec: STEP, ...opt })).toThrow(/有限正数/);
+    }
+    expect(allocated).toBe(0);
+    expect(freed).toBe(0);
+  });
+
+  it('R5：非法固定步长/非有限重力同样在分配前拒绝，World 分配计数为 0', () => {
+    let allocated = 0;
+    const observed = {
+      ...rapier,
+      World: class {
+        constructor(_gravity: { x: number; y: number; z: number }) { allocated++; }
+      },
+    } as unknown as RapierModule;
+    expect(() => new RapierFractureBackend(observed, { fixedStepSec: 0 })).toThrow(/固定步长/);
+    expect(() => new RapierFractureBackend(observed, { fixedStepSec: NaN })).toThrow(/固定步长/);
+    expect(() => new RapierFractureBackend(observed, { fixedStepSec: STEP, gravity: [0, NaN, 0] })).toThrow(/重力/);
+    expect(allocated).toBe(0);
+  });
+
   it('非有限初始速度分量归零而非传播 NaN', () => {
     const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
     b.addBody(h('n'), { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.2 }, mass: 1, friction: 0, restitution: 0, linearVelocity: [NaN, 5, Infinity] });

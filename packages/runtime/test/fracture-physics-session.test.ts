@@ -78,6 +78,24 @@ describe('物理 session 组合（宿主窄组合入口）', () => {
     expect(s.backend).toBeNull();
   });
 
+  it('R1-非法选项的 start 失败抛错后 session 仍可安全重试与 dispose', async () => {
+    // 校验在 World 分配之前抛错：失败的 start 不产生半初始化后端，
+    // session 保持可用（busy=false、backend=null），可用合法参数重试并成功 Stop。
+    const s = createFracturePhysicsSession();
+    await expect(s.start({ fixedStepSec: STEP, maxLinearSpeed: NaN })).rejects.toThrow(/有限正数/);
+    expect(s.busy).toBe(false);
+    expect(s.backend).toBeNull();
+    expect(s.disposed).toBe(false);
+    // 重试合法参数：正常启动
+    const r = await s.start({ fixedStepSec: STEP });
+    expect(r.status).toBe('started');
+    expect(s.backend).toBe(r.backend);
+    // Stop：真实释放，账目归零
+    s.dispose();
+    expect(r.backend!.ledger.destroyed).toBe(true);
+    expect(s.backend).toBeNull();
+  });
+
   it('两个 session 的 World 隔离：一个 dispose 不影响另一个', async () => {
     const s1 = createFracturePhysicsSession();
     const s2 = createFracturePhysicsSession();

@@ -165,15 +165,31 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     if (!Number.isFinite(opts.fixedStepSec) || opts.fixedStepSec <= 0) {
       throw new Error('固定步长必须为有限正数');
     }
-    this.rapier = rapier;
+    // 所有可预先验证的选项校验都在分配 WASM World 之前完成：
+    // 校验失败时构造抛错且未分配任何 World，调用方无需也无法 destroy。
     const g = opts.gravity ?? [0, -9.81, 0];
-    this.world = new rapier.World({ x: g[0], y: g[1], z: g[2] });
-    this.world.timestep = opts.fixedStepSec;
-    this.maxLinearSpeed = this.validSpeedLimit(opts.maxLinearSpeed, DEFAULT_MAX_LINEAR, '线速度上限');
-    this.maxAngularSpeed = this.validSpeedLimit(opts.maxAngularSpeed, DEFAULT_MAX_ANGULAR, '角速度上限');
+    if (!Number.isFinite(g[0]) || !Number.isFinite(g[1]) || !Number.isFinite(g[2])) {
+      throw new Error('重力分量必须为有限数');
+    }
+    const maxLinearSpeed = RapierFractureBackend.validSpeedLimit(opts.maxLinearSpeed, DEFAULT_MAX_LINEAR, '线速度上限');
+    const maxAngularSpeed = RapierFractureBackend.validSpeedLimit(opts.maxAngularSpeed, DEFAULT_MAX_ANGULAR, '角速度上限');
+    this.rapier = rapier;
+    // 分配后仅写入 timestep（纯赋值）；仍包 try/catch 保证失败原子性：
+    // 分配后任何意外抛错都必须 free 已分配 World，不留给无法拿到引用的调用方。
+    let world: RapierWorld | null = null;
+    try {
+      world = new rapier.World({ x: g[0], y: g[1], z: g[2] });
+      world.timestep = opts.fixedStepSec;
+    } catch (e) {
+      world?.free();
+      throw e;
+    }
+    this.world = world;
+    this.maxLinearSpeed = maxLinearSpeed;
+    this.maxAngularSpeed = maxAngularSpeed;
   }
 
-  private validSpeedLimit(v: number | undefined, fallback: number, label: string): number {
+  private static validSpeedLimit(v: number | undefined, fallback: number, label: string): number {
     if (v === undefined) return fallback;
     if (!Number.isFinite(v) || v <= 0) throw new Error(label + '必须为有限正数');
     return v;
