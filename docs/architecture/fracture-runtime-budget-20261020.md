@@ -132,7 +132,8 @@ runtime.play。WU-06/07 的伤害/死亡策略从这里喂事件；不存在「�
 - profile.kind 与事件目标 kind 对齐（object 不能由 NPC 事件激活，反之亦然）；
 - source.model 与每块 mesh 的 sidecar 身份；
 - 引用资产的二进制可用性：能读到、非 LFS 指针、GLB magic 与声明长度一致
-  （sidecar 合法不代表文件读得到）。已核验路径可按会话缓存，避免每次激活重读数 MB；
+  （sidecar 合法不代表文件读得到）。每次 prepare 都重读当前字节，不做跨调用缓存，
+  以免"曾读成功"被当成当前可用性；
 - 凸代理：按 15 浮点步长取 POSITION、减去 pivot、非退化校验（NaN/共线/共面/零体积）。
 
 ## 凸代理坐标合同（F2 续）
@@ -300,8 +301,9 @@ activate 用快照身份/变换，不再读外部可变对象。提交后改写�
 
 chunk.shape 是未缩放的资产局部代理；激活时 scaledShape 按 scale 折进世界尺寸（唯一
 一次，不重复乘）：box halfExtents、sphere radius、capsule radius/height、convex 点集
-整体缩放（复制 TypedArray）。supportRadiusOf 推导支撑半径供简化层接触与 WU-05 显示
-尺度共用。capsule 资产 halfHeight → 后端 height（全高）语义在 fracture-activation 核对。
+整体缩放（复制 TypedArray）。supportRadiusOf 推导的支撑半径**只**用于简化层接触
+（质心到支撑面的距离）；WU-05 的显示尺度用 worldScale，不用 supportRadius。
+capsule 资产 halfHeight → 后端 height（全高）语义在 fracture-activation 核对。
 
 ## 边界与遗留
 

@@ -111,7 +111,7 @@ export interface ActiveChunk {
   /** 是否正在淡出（0=未开始，越接近 1 越透明）。 */
   fade: number;
   expired: boolean;
-  /** 块代理支撑半径（世界尺度；简化层接触 + WU-05 显示尺度共用）。 */
+  /** 块代理支撑半径（世界尺度；**仅**供简化层接触，显示尺度用 worldScale）。 */
   readonly supportRadius: number;
   /** 内部租约（dispose/retire 归还）。 */
   lease: Lease | null;
@@ -122,7 +122,7 @@ export interface SimplifiedState {
   rotation: [number, number, number, number];
   linearVelocity: [number, number, number];
   angularVelocity: [number, number, number];
-  /** 块代理的支撑半径（世界尺度，从 shape*scale 推出；接触时质心停在支撑面+radius）。 */
+  /** 块代理的支撑半径（世界尺度，从 shape*scale 推出；接触时质心停在支撑面+radius；不用于显示）。 */
   supportRadius: number;
   /** 简化摩擦/恢复（来自输入策略，非固定常数）。 */
   friction: number;
@@ -266,7 +266,7 @@ function obbSupportTopY(su: SupportSurface, qx: number, qz: number): number | nu
  * 查询本次竖向运动能接触的支撑面顶 Y（R2）：
  * - 只考虑本步下落会穿越的面（prevY >= topY >= currY），不选头顶天花板；
  * - 无穿越面时，已贴伏的块（底部距面 ≤ 1cm）贴住该面；
- * - 多块中保守选顶面较低者（不向上跳到更高面）；
+ * - 多块穿越时取最高可接触面（运动路径上最先接触的面），不穿到更低面；
  * - 无支撑返回 null（继续下落，不生成无限地面）。
  */
 /**
@@ -539,7 +539,7 @@ export function createFractureRuntime(
     return { type: 'convex', points: pts };
   }
 
-  /** chunk 代理的支撑半径（世界尺度，用于简化层支撑面接触与显示尺度携带）。 */
+  /** chunk 代理的支撑半径（世界尺度，只用于简化层支撑面接触；显示尺度是 worldScale）。 */
   function supportRadiusOf(c: FractureChunkInput): number {
     const sh = c.shape;
     if (sh.type === 'sphere') return sh.radius * c.scale;
@@ -571,7 +571,7 @@ export function createFractureRuntime(
           chunkId: c.chunkId,
           layer,
         };
-        // R6：scale 折进代理（唯一一次）；支撑半径供简化层与 WU-05 显示尺度。
+        // R6：scale 折进代理（唯一一次）；支撑半径只供简化层接触，显示用 worldScale。
         const worldShape = scaledShape(c);
         const supportRadius = supportRadiusOf(c);
         // R4：每个中间资源从分配开始即有清理 owner——先建资源并入 built，再借租约。
