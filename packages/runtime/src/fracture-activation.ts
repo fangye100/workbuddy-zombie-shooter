@@ -266,6 +266,20 @@ export async function prepareFractureActivation(
     if (bf) return { ok: false, failure: bf };
   }
 
+  // 6c) 事件旋转必须是有限单位四元数：零/非单位四元数会让刚体姿态退化，
+  //     必须在分配 body/租约前拒绝（与尺度校验同一层）。
+  const er = event.rotation;
+  const erLen = Math.hypot(er[0], er[1], er[2], er[3]);
+  if (!er.every((v) => Number.isFinite(v)) || Math.abs(erLen - 1) > 1e-3) {
+    return {
+      ok: false,
+      failure: {
+        stage: 'transform',
+        detail: '事件旋转不是有限单位四元数（|q|=' + erLen + '，q=' + er.join(',') + '）',
+      },
+    };
+  }
+
   // 7) R6：事件世界尺度必须均匀（非均匀组合不平均近似，明确拒绝）。
   const ws = event.scale;
   if (!isUniformScale(ws)) {
@@ -274,6 +288,18 @@ export async function prepareFractureActivation(
   const rng = makeRng(event.seed);
   const chunks: FractureChunkInput[] = [];
   for (const c of profile.chunks) {
+    // bind.rotation 同样必须是有限单位四元数（否则 bind 组合出来的世界姿态退化）。
+    const br = c.bind.rotation;
+    const brLen = Math.hypot(br[0], br[1], br[2], br[3]);
+    if (!br.every((v) => Number.isFinite(v)) || Math.abs(brLen - 1) > 1e-3) {
+      return {
+        ok: false,
+        failure: {
+          stage: 'transform',
+          detail: '碎块 ' + c.chunkId + ' bind.rotation 不是有限单位四元数（|q|=' + brLen + '）',
+        },
+      };
+    }
     // R6：bind.scale 三轴也必须均匀（schema 允许非均匀，但物理代理标量尺度无法表示；明确拒绝）。
     const bs = c.bind.scale;
     if (!isUniformScale(bs)) {
@@ -395,7 +421,11 @@ export async function prepareFractureActivation(
     }
 
     // 来向/接触/seed 驱动初始运动：冲量方向 + 命中点偏离质心产生角运动 + 确定性抖动。
-    const imp = event.impulse ?? [0, 1, 0];
+    // 来向：事件带 impulse 时以其方向为主；没有 impulse 时必须由 normal 决定方向
+    // （否则 normal 成了纯装饰输入，反转来向得到完全相同的初速度）。
+    const nrm = event.normal;
+    const nLen = nrm === null ? 0 : Math.hypot(nrm[0], nrm[1], nrm[2]);
+    const imp = event.impulse ?? (nrm !== null && nLen > 1e-6 ? [nrm[0], nrm[1], nrm[2]] : [0, 1, 0]);
     const jitter = 0.3;
     const lv: FractureVec3 = [
       imp[0] / c.proxy.mass + (rng() - 0.5) * jitter,

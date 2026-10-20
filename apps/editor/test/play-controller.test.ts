@@ -219,6 +219,18 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     };
   }
 
+  /** 混合激活：1 个 large（真实 Rapier body）+ 1 个 small（简化层），覆盖两层账目。 */
+  function mixedActivation(nodeId: string) {
+    const a = smallActivation(nodeId);
+    a.chunks.push({
+      ...a.chunks[0]!,
+      chunkId: 'c2', cls: 'large' as never,
+      mesh: { path: 'assets/fracture/p01-barrel/chunk-0002.glb', guid: 'as_6b0d0d0b' },
+      position: [1, 4, 0] as [number, number, number],
+    });
+    return a;
+  }
+
   it('真实 PlayController.update 推进碎片物理（删除宿主驱动会失败）', async () => {
     const { ctl } = make();
     expect(ctl.start()).toBe(true);
@@ -230,7 +242,7 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(binding!.backend()!.ledger.destroyed).toBe(false);
 
     // 激活先入队（准入在分配前完成），首个固定 tick 才真正 spawn
-    expect(binding!.runtime.play(smallActivation('nd_frag')).accepted).toBe(true);
+    expect(binding!.runtime.play(mixedActivation('nd_frag')).accepted).toBe(true);
     expect(binding!.runtime.stats.queuedEvents).toBe(1);
     const tick0 = binding!.runtime.stats.ticks;
     expect(tick0).toBe(0);
@@ -240,11 +252,17 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(n).toBeGreaterThan(0);
     const tick1 = binding!.runtime.stats.ticks;
     expect(tick1).toBe(tick0 + n);
-    expect(binding!.runtime.active.length).toBe(1);
-    const y0 = binding!.runtime.active[0]!.sim!.position[1];
+    expect(binding!.runtime.active.length).toBe(2);
+    // 两层都在：1 large 真实 body + 1 small 简化
+    const st0 = binding!.runtime.stats;
+    expect(st0.rigidActive).toBe(1);
+    expect(st0.simplifiedActive).toBe(1);
+    expect(st0.poolActive).toBe(2);
+    const simChunk = binding!.runtime.active.find((a) => a.sim !== null)!;
+    const y0 = simChunk.sim!.position[1];
 
     ctl.update(1 / 30);
-    const y1 = binding!.runtime.active[0]!.sim!.position[1];
+    const y1 = simChunk.sim!.position[1];
     expect(y1).not.toBe(y0); // 物理真的被推进了
     const tick2 = binding!.runtime.stats.ticks;
     expect(tick2).toBeGreaterThan(tick1);
@@ -313,6 +331,31 @@ describe('PlayController —— 碎片运行时接线（WU-04 R3 回归）', () 
     expect(secondRuntime.stats.poolActive).toBe(0);
     expect(secondBackend.ledger.destroyed).toBe(true);
     expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('initialOpen:true 的门在启动 ready 后立即同步（不等第一帧）', async () => {
+    const SANDBOX3 = import.meta.glob('../../../assets/scenes/sandbox/dynamic-navigation-whitebox.scene.json', { eager: true });
+    const key = Object.keys(SANDBOX3)[0]!;
+    const doc = JSON.parse(JSON.stringify((SANDBOX3[key] as { default: unknown }).default)) as SceneDocument;
+    for (const n of doc.nodes) {
+      for (const c of n.components as unknown as { kind: string; count?: number; clearRule?: string }[]) {
+        if (c.kind === 'SpawnPoint') c.count = 0;
+        if (c.kind === 'RoomVolume') c.clearRule = 'interact';
+      }
+    }
+    const { ctl } = make(doc);
+    expect(ctl.start()).toBe(true);
+    const binding = ctl.fracture!;
+    await expect(binding.ready).resolves.toBe(true);
+    // ready 回调已经把运行期门姿态灌进镜像：不推进任何帧也应一致
+    const rt = ctl.session.runtime!;
+    const gate = rt.gateSnapshot().find((g) => g.nodeId === 'nd_gate_stairs')!;
+    expect(gate.state).toBe('open');
+    const mirror = binding.backend()!.staticPose('scene-mirror:nd_gate_stairs')!;
+    expect(mirror.y).toBeCloseTo(gate.position[1], 4);
+    // 作者文档的初始位置是关闭态（y 更低），证明镜像不是照抄作者文档
+    expect(mirror.y).toBeGreaterThan(3.5);
+    ctl.stop();
   }, 30000);
 
   it('门镜像在碎片 tick 之前同步（帧内不滞后）', async () => {

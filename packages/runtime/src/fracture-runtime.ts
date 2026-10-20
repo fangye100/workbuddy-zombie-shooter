@@ -452,6 +452,9 @@ export function createFractureRuntime(
       if (!Number.isFinite(c.scale) || c.scale <= 0) return `${c.chunkId} 尺度非法：${c.scale}`;
       if (!Number.isFinite(c.mass) || c.mass <= 0) return `${c.chunkId} 质量非法：${c.mass}`;
       const v = [...c.position, ...c.rotation, ...c.linearVelocity, ...c.angularVelocity];
+      // 旋转必须是单位四元数：零/非单位会让刚体姿态退化（Rapier 不报错，物理却失效）。
+      const qLen = Math.hypot(c.rotation[0], c.rotation[1], c.rotation[2], c.rotation[3]);
+      if (Math.abs(qLen - 1) > 1e-3) return c.chunkId + ' 旋转不是单位四元数（|q|=' + qLen + '）';
       if (v.some((n) => !Number.isFinite(n))) return `${c.chunkId} 变换/速度含非有限分量`;
     }
     return null;

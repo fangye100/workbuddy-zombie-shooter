@@ -241,6 +241,12 @@ export class PlayController {
       // 这样 reset 换绑（旧代释放、新代接管）后 Stop 仍释放新绑定，
       // 也不会像之前那样每轮额外登记一项，把 pending 从 2/3 顶到 4/5。
       this.fractureBinding = this.createFractureBinding(graph);
+      // 初始即开启的导航门（initialOpen:true）在运行时已处于开启姿态，而作者文档
+      // 仍是关闭位置。binding ready 后、接受首个碎片 tick 前把当前门姿态灌进镜像，
+      // 否则启动瞬间的静态可观察状态是错的（要等第一帧才纠正）。
+      void this.fractureBinding.ready.then((ok) => {
+        if (ok) this.syncGateMirrors();
+      });
     }
 
     this.lastError = null;

@@ -541,6 +541,48 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     expect(b.max).toEqual([14, 6, 24]);
   });
 
+  it('事件/bind 旋转必须是有限单位四元数（分配前拒绝）', async () => {
+    // 零四元数：姿态退化，Rapier 不报错但物理失效，必须在准入阶段拒绝
+    const r1 = await prepareFractureActivation(ev(P01, 'as_p01frct', {
+      rotation: [0, 0, 0, 0] as [number, number, number, number],
+    }), { io: makeIO() });
+    expect(r1.ok).toBe(false);
+    if (!r1.ok) expect(r1.failure.stage).toBe('transform');
+
+    // 非单位四元数
+    const r2 = await prepareFractureActivation(ev(P01, 'as_p01frct', {
+      rotation: [0, 0, 0, 3] as [number, number, number, number],
+    }), { io: makeIO() });
+    expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failure.stage).toBe('transform');
+
+    // bind.rotation 同样拒绝
+    const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
+    p01.chunks[0].bind.rotation = [0, 0, 0, 0];
+    const r3 = await prepareFractureActivation(ev(P01, 'as_p01frct'), {
+      io: makeIO({ [P01]: JSON.stringify(p01) }),
+    });
+    expect(r3.ok).toBe(false);
+    // 零 bind 四元数会被 scene 的 profile 校验更早拒绝（profile-validate）；
+    // 若校验放宽，transform 层的单位长度检查仍是第二道闸。
+    if (!r3.ok) expect(['profile-validate', 'transform']).toContain(r3.failure.stage);
+  });
+
+  it('事件 normal 参与初始运动（无 impulse 时由来向决定方向）', async () => {
+    const withImpulse = ev(P01, 'as_p01frct', { impulse: null, normal: [1, 0, 0] });
+    const reversed = ev(P01, 'as_p01frct', { impulse: null, normal: [-1, 0, 0] });
+    const a = await prepareFractureActivation(withImpulse, { io: makeIO() });
+    const b = await prepareFractureActivation(reversed, { io: makeIO() });
+    expect(a.ok && b.ok).toBe(true);
+    if (!a.ok || !b.ok) return;
+    // 来向反转后，同一块的水平初速度符号必须相反（不能完全相同）
+    const va = a.activation.chunks[0]!.linearVelocity[0];
+    const vb = b.activation.chunks[0]!.linearVelocity[0];
+    expect(Math.sign(va)).not.toBe(Math.sign(vb));
+    expect(va).toBeGreaterThan(0);
+    expect(vb).toBeLessThan(0);
+  });
+
   it('R6：bind 旋转/尺度组合、事件世界 TRS、非均匀尺度拒绝', async () => {
     // 构造 pivot=[1,0,0]、bind 绕 Z 旋转 90°、均匀 scale=3 的单块 profile
     const p01 = JSON.parse(textGlob['../../../assets/fracture/p01-barrel/p01-barrel.fracture.json']!);
