@@ -71,9 +71,10 @@ describe('宿主组合：SceneGraph collider → 静态镜像（同一真源）'
     for (let i = 0; i < 40; i++) b.step(i);
     const blocked = b.snapshot(h('m'))!.position[0];
     expect(blocked).toBeLessThan(2.4);
-    // 删除墙节点 + 移除其镜像
+    // 删除墙节点 + 再次 sync 差分移除其镜像（本组合负责失效移除）
     g.removeNode('nd_wall');
-    b.removeStatic('nd_wall');
+    g.updateWorldTransforms();
+    syncStaticMirrorsFromScene(g, b);
     expect(b.ledger.staticColliders).toBe(1);
     b.applyImpulse(h('m'), [8, 0, 0], null);
     for (let i = 0; i < 60; i++) b.step(i);
@@ -116,6 +117,142 @@ describe('宿主组合：SceneGraph collider → 静态镜像（同一真源）'
     expect(r.rejected).toHaveLength(1);
     expect(r.rejected[0]!.diagnostic).toMatch(/非均匀/);
     expect(b.ledger.staticColliders).toBe(0);
+    b.destroy();
+  });
+});
+
+describe('R2：场景同步组合负责失效移除（差分）', () => {
+  const wallScene = (): SceneGraph => {
+    const g = new SceneGraph();
+    const ground = g.addNode({ id: 'nd_ground', name: 'ground', components: [
+      { kind: 'Collider', enabled: true, isTrigger: false, layer: 1, shape: { type: 'box', halfExtents: [30, 0.5, 30] } } as never,
+    ] });
+    g.setLocalTransform(ground, { position: [0, 0, 0] });
+    const wall = g.addNode({ id: 'nd_wall', name: 'wall', components: [
+      { kind: 'Collider', enabled: true, isTrigger: false, layer: 1, shape: { type: 'box', halfExtents: [0.25, 1.5, 3] } } as never,
+    ] });
+    g.setLocalTransform(wall, { position: [3, 1.5, 0] });
+    g.updateWorldTransforms();
+    return g;
+  };
+  const dropAndRun = (b: RapierFractureBackend, key: string): void => {
+    b.addBody(h(key), { position: [0, 1.5, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [0.4, 0.4, 0.4] }, mass: 1, friction: 0, restitution: 0, linearVelocity: [8, 0, 0], groups: CHUNK_GROUPS });
+    for (let i = 0; i < 60; i++) b.step(i);
+  };
+
+  it('有效→禁用 collider 后再次 sync：旧镜像移除，通路打开', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    syncStaticMirrorsFromScene(g, b);
+    expect(b.ledger.staticColliders).toBe(2);
+    // 禁用墙 collider（真实编辑操作）
+    const node = g.getNode('nd_wall')!;
+    (node.components![0] as { enabled: boolean }).enabled = false;
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.mirrored).toBe(1); // 仅 ground
+    expect(r.removed).toBe(1); // 墙镜像被差分移除
+    expect(b.ledger.staticColliders).toBe(1);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0); // 不再被旧墙挡
+    b.destroy();
+  });
+
+  it('有效→trigger 后再次 sync：旧镜像移除', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    syncStaticMirrorsFromScene(g, b);
+    (g.getNode('nd_wall')!.components![0] as { isTrigger: boolean }).isTrigger = true;
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.removed).toBe(1);
+    expect(b.ledger.staticColliders).toBe(1);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0);
+    b.destroy();
+  });
+
+  it('有效→隐藏节点后再次 sync：旧镜像移除', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    syncStaticMirrorsFromScene(g, b);
+    (g.getNode('nd_wall') as { visible: boolean }).visible = false;
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.removed).toBe(1);
+    expect(b.ledger.staticColliders).toBe(1);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0);
+    b.destroy();
+  });
+
+  it('删除 Collider 组件后再次 sync：旧镜像移除', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    syncStaticMirrorsFromScene(g, b);
+    g.getNode('nd_wall')!.components = [];
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.removed).toBe(1);
+    expect(b.ledger.staticColliders).toBe(1);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0);
+    b.destroy();
+  });
+
+  it('删除节点后再次 sync：旧镜像移除（无需调用方手动 removeStatic）', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    syncStaticMirrorsFromScene(g, b);
+    g.removeNode('nd_wall');
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.removed).toBe(1);
+    expect(b.ledger.staticColliders).toBe(1);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0);
+    b.destroy();
+  });
+
+  it('变换转为非法（非均匀 sphere）后再次 sync：diagnostic 保留且旧镜像移除，不挡路', async () => {
+    const g = new SceneGraph();
+    const parent = g.addNode({ id: 'nd_p', name: 'p' });
+    g.setLocalTransform(parent, { scale: [1, 1, 1] });
+    const s = g.addNode({ id: 'nd_s', name: 's', parent, components: [
+      { kind: 'Collider', enabled: true, isTrigger: false, layer: 1, shape: { type: 'sphere', radius: 1 } } as never,
+    ] });
+    g.setLocalTransform(s, { position: [3, 1.5, 0] });
+    g.updateWorldTransforms();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    const r1 = syncStaticMirrorsFromScene(g, b);
+    expect(r1.mirrored).toBe(1);
+    // 变为非均匀缩放 → 变换拒绝
+    g.setLocalTransform(parent, { scale: [2, 1, 1] });
+    g.updateWorldTransforms();
+    const r2 = syncStaticMirrorsFromScene(g, b);
+    expect(r2.mirrored).toBe(0);
+    expect(r2.rejected).toHaveLength(1);
+    expect(r2.rejected[0]!.diagnostic).toMatch(/非均匀/);
+    expect(r2.removed).toBe(1); // 旧镜像已移除
+    expect(b.ledger.staticColliders).toBe(0);
+    dropAndRun(b, 'm');
+    expect(b.snapshot(h('m'))!.position[0]).toBeGreaterThan(3.0);
+    b.destroy();
+  });
+
+  it('差分只移除本组合拥有的镜像，其他 owner 登记的静态项保留', async () => {
+    const g = wallScene();
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP });
+    // 其他 owner 登记的独立静态项（无前缀）
+    b.upsertStatic('other-owner-floor', { position: [0, -2, 0], rotation: [0, 0, 0, 1], shape: { type: 'box', halfExtents: [5, 0.5, 5] } });
+    syncStaticMirrorsFromScene(g, b);
+    expect(b.ledger.staticColliders).toBe(3);
+    g.removeNode('nd_wall');
+    g.updateWorldTransforms();
+    const r = syncStaticMirrorsFromScene(g, b);
+    expect(r.removed).toBe(1);
+    expect(b.ledger.staticColliders).toBe(2); // ground 镜像 + 其他 owner 的 floor 均保留
+    expect(b.staticKeys()).toContain('other-owner-floor');
     b.destroy();
   });
 });

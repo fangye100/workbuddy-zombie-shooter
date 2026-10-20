@@ -169,8 +169,35 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     const g = opts.gravity ?? [0, -9.81, 0];
     this.world = new rapier.World({ x: g[0], y: g[1], z: g[2] });
     this.world.timestep = opts.fixedStepSec;
-    this.maxLinearSpeed = opts.maxLinearSpeed ?? DEFAULT_MAX_LINEAR;
-    this.maxAngularSpeed = opts.maxAngularSpeed ?? DEFAULT_MAX_ANGULAR;
+    this.maxLinearSpeed = this.validSpeedLimit(opts.maxLinearSpeed, DEFAULT_MAX_LINEAR, '线速度上限');
+    this.maxAngularSpeed = this.validSpeedLimit(opts.maxAngularSpeed, DEFAULT_MAX_ANGULAR, '角速度上限');
+  }
+
+  private validSpeedLimit(v: number | undefined, fallback: number, label: string): number {
+    if (v === undefined) return fallback;
+    if (!Number.isFinite(v) || v <= 0) throw new Error(label + '必须为有限正数');
+    return v;
+  }
+
+  /** 夹紧单个速度向量到上限；非有限分量归零（防 NaN/Infinity 关闭保护）。返回夹紧后向量。 */
+  private clampSpeed(v: FractureVec3, max: number): FractureVec3 {
+    const x = Number.isFinite(v[0]) ? v[0] : 0;
+    const y = Number.isFinite(v[1]) ? v[1] : 0;
+    const z = Number.isFinite(v[2]) ? v[2] : 0;
+    const s = Math.hypot(x, y, z);
+    if (s <= max) return [x, y, z];
+    const k = max / s;
+    return [x * k, y * k, z * k];
+  }
+
+  /** 在求解推进前把速度夹进边界，使首个 tick 也不超限位移。 */
+  private clampBodySpeeds(body: RapierBody, maxLin: number, maxAng: number): void {
+    const lv = body.linvel();
+    const cl = this.clampSpeed([lv.x, lv.y, lv.z], maxLin);
+    if (cl[0] !== lv.x || cl[1] !== lv.y || cl[2] !== lv.z) body.setLinvel({ x: cl[0], y: cl[1], z: cl[2] }, true);
+    const av = body.angvel();
+    const ca = this.clampSpeed([av.x, av.y, av.z], maxAng);
+    if (ca[0] !== av.x || ca[1] !== av.y || ca[2] !== av.z) body.setAngvel({ x: ca[0], y: ca[1], z: ca[2] }, true);
   }
 
   private assertAlive(): void {
@@ -185,8 +212,9 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     const rb = this.rapier.RigidBodyDesc.dynamic()
       .setTranslation(spec.position[0], spec.position[1], spec.position[2])
       .setRotation({ x: spec.rotation[0], y: spec.rotation[1], z: spec.rotation[2], w: spec.rotation[3] });
-    const lv = spec.linearVelocity ?? [0, 0, 0];
-    const av = spec.angularVelocity ?? [0, 0, 0];
+    // 初始速度在创建前即夹进边界（含非有限分量归零）。
+    const lv = this.clampSpeed(spec.linearVelocity ?? [0, 0, 0], this.maxLinearSpeed);
+    const av = this.clampSpeed(spec.angularVelocity ?? [0, 0, 0], this.maxAngularSpeed);
     rb.setLinvel(lv[0], lv[1], lv[2]).setAngvel({ x: av[0], y: av[1], z: av[2] });
     if (spec.ccd === true) rb.setCcdEnabled(true);
     const body = this.world.createRigidBody(rb);
@@ -198,6 +226,8 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
       this.world.removeRigidBody(body);
       throw e;
     }
+    // 初始速度在求解前夹进边界，防止首个 tick 已超限位移。
+    this.clampBodySpeeds(body, this.maxLinearSpeed, this.maxAngularSpeed);
     this.bodies.set(handle.key, {
       key: handle.key, chunkId: handle.chunkId, layer: handle.layer,
       body, collider,
@@ -250,26 +280,21 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     const i = { x: impulse[0], y: impulse[1], z: impulse[2] };
     if (point) t.body.applyImpulseAtPoint(i, { x: point[0], y: point[1], z: point[2] }, true);
     else t.body.applyImpulse(i, true);
+    // 冲量结果在下一步求解前夹进边界。
+    this.clampBodySpeeds(t.body, t.maxLinearSpeed, t.maxAngularSpeed);
   }
 
-  /** 恰推进一个固定 step；不反向推进时钟。随后夹紧速度上限（有界）。 */
+  /** 恰推进一个固定 step；不反向推进时钟。推进前先夹紧速度上限（首个 tick 也不超限位移），
+   *  推进后再次夹紧以约束接触求解后的结果。 */
   step(_tick: number): void {
     if (this.destroyed) return;
+    for (const t of this.bodies.values()) {
+      this.clampBodySpeeds(t.body, t.maxLinearSpeed, t.maxAngularSpeed);
+    }
     this.world.step();
     this.tickCount++;
     for (const t of this.bodies.values()) {
-      const lv = t.body.linvel();
-      const ls = Math.hypot(lv.x, lv.y, lv.z);
-      if (ls > t.maxLinearSpeed) {
-        const k = t.maxLinearSpeed / ls;
-        t.body.setLinvel({ x: lv.x * k, y: lv.y * k, z: lv.z * k }, true);
-      }
-      const av = t.body.angvel();
-      const as = Math.hypot(av.x, av.y, av.z);
-      if (as > t.maxAngularSpeed) {
-        const k = t.maxAngularSpeed / as;
-        t.body.setAngvel({ x: av.x * k, y: av.y * k, z: av.z * k }, true);
-      }
+      this.clampBodySpeeds(t.body, t.maxLinearSpeed, t.maxAngularSpeed);
     }
   }
 
@@ -326,6 +351,11 @@ export class RapierFractureBackend implements FracturePhysicsBackend {
     if (!m) return;
     this.statics.delete(nodeId);
     this.world.removeRigidBody(m.body);
+  }
+
+  /** 当前登记的静态镜像 key（供组合层差分；只读视图）。 */
+  staticKeys(): readonly string[] {
+    return [...this.statics.keys()];
   }
 
   /** 活动资源账目（区分 world/body/collider，不以单一 JS 计数归零自证）。 */

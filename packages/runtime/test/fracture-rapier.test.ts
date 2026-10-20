@@ -305,3 +305,54 @@ describe('静态镜像变换适配', () => {
     expect(r.diagnostic).toMatch(/非有限/);
   });
 });
+
+describe('R3：速度上限在求解推进前夹紧（首个 tick 不超限位移）', () => {
+  it('初始线速度 6000 → 单 tick 无碰撞位移按上限 60 计（约 1），而非超限的 100', () => {
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0], maxLinearSpeed: 60 });
+    b.addBody(h('f'), { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.2 }, mass: 1, friction: 0, restitution: 0, linearVelocity: [6000, 0, 0] });
+    b.step(0);
+    const x = b.snapshot(h('f'))!.position[0];
+    // 60 m/s × (1/60) s = 1；超限 6000 会到 100。容差考虑积分，应远小于超限位移。
+    expect(x).toBeLessThan(2);
+    expect(x).toBeGreaterThan(0.5);
+    b.destroy();
+  });
+
+  it('初始角速度超限 → 求解前已夹紧（角速度上限生效）', () => {
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0], maxAngularSpeed: 40 });
+    b.addBody(h('a'), { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.2 }, mass: 1, friction: 0, restitution: 0, angularVelocity: [500, 0, 0] });
+    // 创建即夹紧：求解前快照的角速度不超上限
+    const s = b.snapshot(h('a'))!;
+    expect(Math.hypot(...s.angularVelocity)).toBeLessThanOrEqual(40 + 1e-3);
+    b.destroy();
+  });
+
+  it('偏心冲量后下一步求解前夹紧（冲量产生的超限速度不进入位移）', () => {
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0], maxLinearSpeed: 60 });
+    b.addBody(h('p'), { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.2 }, mass: 1, friction: 0, restitution: 0 });
+    b.applyImpulse(h('p'), [6000, 0, 0], null); // 大冲量
+    // 冲量后立即夹紧：求解前快照不超上限
+    const s = b.snapshot(h('p'))!;
+    expect(Math.hypot(...s.linearVelocity)).toBeLessThanOrEqual(60 + 1e-3);
+    b.step(0);
+    const x = b.snapshot(h('p'))!.position[0];
+    expect(x).toBeLessThan(2);
+    b.destroy();
+  });
+
+  it('非法限值（NaN/Infinity/0/负数）显式报错，不关闭保护', () => {
+    expect(() => new RapierFractureBackend(rapier, { fixedStepSec: STEP, maxLinearSpeed: NaN })).toThrow(/有限正数/);
+    expect(() => new RapierFractureBackend(rapier, { fixedStepSec: STEP, maxLinearSpeed: Infinity })).toThrow(/有限正数/);
+    expect(() => new RapierFractureBackend(rapier, { fixedStepSec: STEP, maxLinearSpeed: 0 })).toThrow(/有限正数/);
+    expect(() => new RapierFractureBackend(rapier, { fixedStepSec: STEP, maxAngularSpeed: -5 })).toThrow(/有限正数/);
+  });
+
+  it('非有限初始速度分量归零而非传播 NaN', () => {
+    const b = new RapierFractureBackend(rapier, { fixedStepSec: STEP, gravity: [0, 0, 0] });
+    b.addBody(h('n'), { position: [0, 0, 0], rotation: [0, 0, 0, 1], shape: { type: 'sphere', radius: 0.2 }, mass: 1, friction: 0, restitution: 0, linearVelocity: [NaN, 5, Infinity] });
+    const s = b.snapshot(h('n'))!;
+    expect(Number.isFinite(s.linearVelocity[0])).toBe(true);
+    expect(Number.isFinite(s.linearVelocity[2])).toBe(true);
+    b.destroy();
+  });
+});
