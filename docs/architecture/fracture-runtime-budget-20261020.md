@@ -2,7 +2,7 @@
 
 日期：2026-10-20（2026-10-21 增补）。基线：codex/vfx-system-20261019，
 WU-base = WU-03 批准 SHA 1e17e909；本指南描述的 WU-04 实现 SHA 为
-6ab1848b07e4bf4542f42013ddc19a105505abc6（实现与测试；本文件是其后的
+509a4334c48dda5036aadae0bee9e24c2cad53c7（实现与测试；本文件是其后的
 一笔仅文档提交，验收以 supervisor 绑定的 final 为准）。
 权威计划：fracture-system-development-plan-20261020.md（§3、§6.3、§10 WU-04、§11）。
 上游契约：packages/runtime/src/fracture.ts（WU-01）；物理后端 packages/runtime/src/fracture-rapier.ts（WU-03）。
@@ -89,8 +89,8 @@ integrateMs/updateMs、ticks。三角形/材质批/上传字节/GPU draw 属 WU-
   fracture-runtime.test.ts 42 测试、fracture-activation.test.ts 19 测试、
   fracture-play-composition.test.ts 10 测试。
 - pnpm exec vitest run packages/runtime apps/editor/test/play-controller.test.ts：
-  23 文件 242 测试全过（play-controller 25）。宿主接线（R3）的 owner 证据在
-  apps/editor/test/play-controller.test.ts（25 测试），其中「真实 PlayController.update
+  23 文件 243 测试全过（play-controller 26）。宿主接线（R3）的 owner 证据在
+  apps/editor/test/play-controller.test.ts（26 测试），其中「真实 PlayController.update
   推进碎片物理」「reset 换绑碎片代数」两条只经真实 update/pause/step/stop/reset
   驱动，删除 update→onFixedTick 接线会失败；账目用例断言每轮恰 3 项、
   20 轮登记/释放各 60 次。
@@ -153,6 +153,19 @@ parseGlb(buffer, null, 'auto', { normalize: false }) 取未规整化坐标，再
 - 来向：事件带 impulse 时以其方向为主；没有 impulse 时由 normal 决定初始方向
   （normal 缺失才回退世界向上）。反转 normal 会得到相反的水平初速度，不再出现
   「两个来向不同的合法事件产生完全相同初速度」。
+
+## 资产验证状态不跨代共享（F4）
+
+准入的二进制可用性核验**不做跨调用缓存**：路径曾经可读，不代表当前仍可读、仍是同一
+版本。此前控制器持有一个共享的 verified Paths 集合，旧代挂起的读取在 Stop/重开之后
+仍会写回该集合，导致新代跳过 chunk 读取并错误准入（监督用真实控制器复现：新代目标
+GLB 完全不可读，spawnFracture 仍 accepted，下一次 update 建出 12 个 body）。
+
+现在每次 prepare 都读当前字节（GLB magic + 声明长度 + 实际长度），失败在
+body/租约/队列分配前返回 ref-binary；恢复合法源后可立即重试成功。旧代迟到的读取只
+影响它自己的结果（最终返回 session-closed），不会改动任何跨代状态。
+代价是每次激活重读引用资产；带版本/失效合同的资产缓存属后续资产管线（WU-05/09），
+不在本单元另造缓存系统。
 
 ## 迟到 IO 与 reset 门同步（W04-08/09）
 
