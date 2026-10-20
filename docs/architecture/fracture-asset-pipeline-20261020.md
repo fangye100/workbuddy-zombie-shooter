@@ -59,15 +59,21 @@ node tools/verify/fracture-assets-probe.mjs --headed --out .workbuddy/tmp/fractu
 - 源网格非定向闭合流形、CSG 单元失败、关节未映射、耳切停摆：构建器显式抛错退出，
   不产出 accepted 资产。
 - 数值验收任一项失败：verify-fracture-assets.mjs exit 1 并输出完整失败清单
-  （.workbuddy/tmp/wu02/fracture-verify-report.json）。
+  （.workbuddy/tmp/wu02-fix/fracture-verify-report.json）。
 - sidecar 身份不匹配（guid ≠ 资产 id）：gen-asset-meta 显式报错（WU-01 语义）。
 
 ## 证据（2026-10-20，Windows/NVIDIA Lovelace 真实 GPU）
 
-- 数值：.workbuddy/tmp/wu02/fracture-verify-report.json（failures=[]，含逐块统计）。
-- headed：.workbuddy/tmp/fracture-assets/（01 原桶近景、02 油桶分块与切口、
-  03 盾卫分块；results.json 记录 adapter 信息与 5/5 检查通过）。
-- 场景门禁：pnpm run scene:check 通过（312 元数据同步、43 场景 v25、
+- 数值：.workbuddy/tmp/wu02-fix/fracture-verify-report.json（failures=[]，含逐块统计）。
+  该报告由四修后版本（eda4b09）运行，覆盖当前正式资产；四修仅调整残边端点绑定与
+  sidecar/腿块 GLB，其后五修/六修未改动资产或验收器。
+- headed：.workbuddy/tmp/fracture-assets-fix/（01 原桶近景、02 油桶分块与切口、
+  03 盾卫分块；results.json 记录 adapter 信息、5/5 检查通过与执行时
+  commit d091bb056cda3a28f8cae69b75453a74dd76513c）。
+  .workbuddy/tmp/fracture-assets/ 是初版失败图（构图不合格），仅作历史保留，
+  不作为当前通过依据；其后六轮修复只改实现/注释，未改变已核实的静态展示路径，
+  未重拍截图。
+- 场景门禁：pnpm run scene:check 通过（332 元数据同步、43 场景 v25、
   scene-files 17/17 含 fracture 资产跨文件校验）。
 
 ## 边界与遗留
