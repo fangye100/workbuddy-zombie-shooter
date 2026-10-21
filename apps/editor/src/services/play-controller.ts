@@ -289,8 +289,12 @@ export class PlayController {
 
   /** 最近一次碎片网格准备失败的原因（null = 无失败；供 HUD/诊断读取）。 */
   get fractureRenderError(): string | null {
-    // 网格准备失败（碎片渲染装配）+ GPU 网格部分分配失败（renderer-core）都算诊断。
-    return this.fractureRenderer?.error ?? this.renderer.core.dynamicError ?? null;
+    // 当前仍失败：网格准备（碎片渲染装配）或 GPU 网格构建（renderer-core）。
+    const current = this.fractureRenderer?.error ?? this.renderer.core.dynamicError;
+    if (current !== null && current !== undefined) return current;
+    // 曾经失败但已恢复：保留"发生过 N 次"的明确说明，不冒充当前仍坏。
+    const failures = this.renderer.core.dynamicFailureCount;
+    return failures > 0 ? ('曾发生 ' + failures + ' 次 GPU 网格构建失败（当前已恢复）') : null;
   }
 
   /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
