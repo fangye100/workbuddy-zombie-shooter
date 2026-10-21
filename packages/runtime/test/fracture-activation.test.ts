@@ -83,6 +83,36 @@ it.each(['source','chunk','convex'] as const)('WU08 F08-01：当前 %s sidecar�
 });
 
 /** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
+it.each(['source','chunk','convex','assemblyScale'] as const)('WU08 F08-04：当前磁盘 %s 只读漂移不能被合法作者草稿遮蔽',async kind=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset;
+  if(kind==='convex')profile.chunks[0]!.proxy.shape={type:'convex',mesh:{...profile.chunks[0]!.mesh}};
+  io.set(P01,JSON.stringify(profile));
+  const draft=structuredClone(profile);draft.playback.lifetimeSec=9;draft.chunks[0]!.proxy.mass=17;
+  const prepare=(withDraft:boolean)=>prepareFractureActivation(ev(P01,profile.id),{io,...(withDraft?{draftProfile:draft}:{}),resolveConvexPoints:createGlbConvexResolver()});
+  expect((await prepare(true)).ok).toBe(true);
+  const changed=structuredClone(profile);
+  if(kind==='source')changed.source.model.guid='as_current_external_wrong';
+  if(kind==='chunk')changed.chunks[0]!.mesh.guid='as_current_external_wrong';
+  if(kind==='convex'&&changed.chunks[0]!.proxy.shape.type==='convex')changed.chunks[0]!.proxy.shape.mesh.guid='as_current_external_wrong';
+  if(kind==='assemblyScale')changed.assemblyScale=2;
+  io.set(P01,JSON.stringify(changed));
+  let reads=0;const base=io.readBinary;io.readBinary=async path=>{reads++;return base(path);};
+  const rejected=await prepare(true);expect(rejected.ok).toBe(false);expect(reads).toBe(0);
+  if(!rejected.ok){expect(rejected.failure.stage).toBe('profile-validate');expect(rejected.failure.detail).toContain('只读');}
+  if(kind!=='assemblyScale')expect((await prepare(false)).ok).toBe(false);
+  io.set(P01,JSON.stringify(profile));const recovered=await prepare(true);expect(recovered.ok).toBe(true);
+  if(recovered.ok){expect(recovered.activation.lifetimeSec).toBe(9);expect(recovered.activation.chunks[0]!.mass).toBe(17);}
+  expect(draft.playback.lifetimeSec).toBe(9);expect(draft.chunks[0]!.proxy.mass).toBe(17);
+});
+it('WU08当前磁盘仅作者参数变化时，合法未保存参数仍可预览而不强制Save',async()=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset,draft=structuredClone(profile);
+  draft.playback.lifetimeSec=9;draft.chunks[0]!.proxy.mass=17;
+  profile.playback.lifetimeSec=11;profile.chunks[0]!.proxy.mass=3;io.set(P01,JSON.stringify(profile));
+  const result=await prepareFractureActivation(ev(P01,profile.id),{io,draftProfile:draft});expect(result.ok).toBe(true);
+  if(result.ok){expect(result.activation.lifetimeSec).toBe(9);expect(result.activation.chunks[0]!.mass).toBe(17);}
+  expect(JSON.parse(await io.readText(P01))).toEqual(profile);
+});
+
 function makeIO(
   overrides: Record<string, string> = {},
   binOverrides: Record<string, ArrayBuffer> = {},

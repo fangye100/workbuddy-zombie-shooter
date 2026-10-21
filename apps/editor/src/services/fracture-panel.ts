@@ -129,6 +129,7 @@ export class FracturePanel {
       if(revision!==this.contextRevision||key!==this.key()||openId!==this.openId)return;
       if(!admission.ok)throw new Error(admission.failure.stage+'：'+admission.failure.detail);
       if(admission.profile.kind!==asset.kind)throw new Error('当前资源类型已变化，草稿保留');
+      fractureAuthorDraft(asset,admission.profile);
       const current=this.port.document()?.nodes.find(n=>n.id===node.id);
       if(JSON.stringify(current)!==nodeVersion||JSON.stringify(d.value)!==version||this.requireAsset().text!==raw)throw new Error('校验期间出现新的节点/草稿修改，请重新Apply；输入已保留');
       const result=this.port.edit('应用碎裂配置',nodes=>{const n=nodes.find(n=>n.id===node.id)!;if(spawn){const c=n.components.find(c=>c.kind==='SpawnPoint')!;if(c.kind==='SpawnPoint')c.deathFracture=value.enabled?{profile:value.profile}:null;}else{n.components=n.components.filter(c=>c.kind!=='Destructible');n.components.push(value);}},false);

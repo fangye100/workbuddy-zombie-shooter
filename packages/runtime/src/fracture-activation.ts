@@ -21,6 +21,16 @@ import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
 import { bakeSkinVertices, paletteForNamedPose } from '@aether/render';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
+import { changedJsonPaths } from './doc-diff';
+
+/** 作者只修改物理/播放参数；当前磁盘只读身份不可被旧草稿覆盖。编辑侧共用此约束。 */
+export function fractureAuthorDraft(value: unknown, baseline: FractureAsset): FractureAsset {
+  const next=migrateFractureAsset(value);
+  const allowed=/^(name|playback\.(priority|lifetimeSec|fadeSec)|chunks\[\d+\]\.(class|proxy\.(mass|friction|restitution|collisionGroup|maxLinearSpeed|maxAngularSpeed)))$/;
+  const rejected=changedJsonPaths(baseline,next).find(change=>!allowed.test(change.path));
+  if(rejected)throw new Error('离线配方的身份/来源/坐标/代理形状及未支持字段为只读：'+rejected.path+'；当前草稿已保留，请重载或合并当前磁盘版本');
+  return next;
+}
 
 /** 资产读取端口（宿主注入；编辑器/Preview/Play 各自实现 fs/devfs/内存）。 */
 export interface FractureAssetIO {
@@ -226,9 +236,13 @@ export async function prepareFractureActivation(
   const diskProfile=admitted.profile;
   const draftErrors=opts.draftProfile?validateFractureAsset(opts.draftProfile):[];
   if(draftErrors.length)return {ok:false,failure:{stage:'profile-validate',detail:draftErrors.join('；')}};
-  const profile=opts.draftProfile?migrateFractureAsset(opts.draftProfile):diskProfile;
+  let profile=opts.draftProfile?migrateFractureAsset(opts.draftProfile):diskProfile;
   if(profile.id!==diskProfile.id||profile.kind!==diskProfile.kind)return {ok:false,failure:{stage:'identity',detail:'草稿与当前磁盘的GUID/kind不一致'}};
   if(profile.status!=='accepted')return {ok:false,failure:{stage:'quarantined',detail:profilePath+' 草稿被隔离'}};
+  if(opts.draftProfile){
+    try{profile=fractureAuthorDraft(profile,diskProfile);}
+    catch(error){return {ok:false,failure:{stage:'profile-validate',detail:'当前磁盘配方与草稿不一致：'+String(error)}};}
+  }
   const wantNpc=profile.kind==='npc';
   if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
 
