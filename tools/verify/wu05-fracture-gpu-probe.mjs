@@ -23,6 +23,8 @@ const chrome = spawn(CHROME, [
   '--no-first-run', '--no-default-browser-check',
   '--ignore-certificate-errors',
   '--window-size=1280,800',
+  // 本机多显示器：窗口固定到 Windows DISPLAY1（x=1920 起），不覆盖用户其他屏。
+  '--window-position=1920,80',
   `--remote-debugging-port=${PORT}`,
   `--user-data-dir=${USER_DIR}`,
   'about:blank',
@@ -73,6 +75,12 @@ async function evalJs(expr) {
 
 await send('Page.enable');
 await send('Runtime.enable');
+// 记录窗口实际位置（应落在 DISPLAY1：x≈1920）
+try {
+  const win = await send('Browser.getWindowForTarget');
+  const bounds = await send('Browser.getWindowBounds', { windowId: win.windowId });
+  console.log('WINDOW', JSON.stringify(bounds.bounds));
+} catch (e) { console.log('WINDOW_ERR', String(e)); }
 await send('Page.navigate', { url: URL_APP });
 
 // 等编辑器与 GPU 就绪

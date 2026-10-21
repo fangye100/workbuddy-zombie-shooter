@@ -232,13 +232,15 @@ export class Cdp {
 /**
  * 构造既有 Chrome 参数；严格TLS调用显式关闭证书忽略。
  */
-export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',userDataDir='.workbuddy/tmp/chrome-profile',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
+export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',windowPosition=null,userDataDir='.workbuddy/tmp/chrome-profile',ignoreCertificateErrors=appUrl.startsWith('https://')}) {
   // 这四条 WebGPU flag 是一个整体，缺一条 requestAdapter() 就返回 null
   const flags = [
     '--enable-unsafe-webgpu',
     `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${path.resolve(userDataDir)}`,
     `--window-size=${windowSize}`,
+    // 本机多显示器：验证窗口固定到 Windows DISPLAY1（x=1920 起），不覆盖用户其他屏。
+    ...(windowPosition ? [`--window-position=${windowPosition}`] : []),
     '--no-first-run',
     '--no-default-browser-check',
   ];
@@ -258,9 +260,9 @@ export function editorSessionFlags({cdpPort,headed,appUrl,windowSize='1280,800',
   return flags;
 }
 
-export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', grantClipboard = false, userDataDir='.workbuddy/tmp/chrome-profile', ignoreCertificateErrors=appUrl.startsWith('https://'), setupTimeoutMs=0 }) {
+export async function launchEditorSession({ chromePath, cdpPort, headed, appUrl, windowSize = '1280,800', windowPosition = null, grantClipboard = false, userDataDir='.workbuddy/tmp/chrome-profile', ignoreCertificateErrors=appUrl.startsWith('https://'), setupTimeoutMs=0 }) {
   console.log(`启动 ${headed ? 'headed' : 'headless'} Chrome（WebGPU）→ ${appUrl}`);
-  const flags=editorSessionFlags({cdpPort,headed,appUrl,windowSize,userDataDir,ignoreCertificateErrors});
+  const flags=editorSessionFlags({cdpPort,headed,appUrl,windowSize,windowPosition,userDataDir,ignoreCertificateErrors});
   const chrome = spawn(chromePath, [...flags, 'about:blank'], { stdio: 'ignore' });
   let setupWs,setupTimer;
   try {

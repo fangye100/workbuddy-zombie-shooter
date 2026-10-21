@@ -50,7 +50,7 @@ export async function runGameProbe(options,scenario) {
     appUrl=new URL(options.url??(url.startsWith('https:')?url.replace('localhost','fangye-win11-office.tail6b29a2.ts.net'):url));
     appUrl.searchParams.set('scene',scene);
     ({chrome,cdp,ws}=await launchEditorSession({chromePath,cdpPort,headed,appUrl:appUrl.href,
-      windowSize:options.windowSize??'1600,1000',ignoreCertificateErrors:false,setupTimeoutMs:20000}));
+      windowSize:options.windowSize??'1600,1000',windowPosition:options.windowPosition??null,ignoreCertificateErrors:false,setupTimeoutMs:20000}));
     await cdp.send('Page.navigate',{url:appUrl.href});
     await waitForEditorReady(cdp,{expectedScene:scene});
     await normalizeEditorState(cdp);

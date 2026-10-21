@@ -30,10 +30,16 @@ const ROW_HELPER = `window.__wu05Row=(s,t)=>{
 async function main(){
   return runGameProbe({name:'wu05-hitburn',outDir:OUT_DIR,port:Number(arg('port',5100)),cdpPort:Number(arg('cdp',9345)),
     chromePath:arg('chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'),headed:has('headed'),
-    windowSize:arg('window-size','1600,1000'),url:arg('url',null),scene:arg('scene',GAME_PROBE_SCENE),results,check,summary},
+    windowSize:arg('window-size','1280,800'),windowPosition:arg('window-position','1920,80'),url:arg('url',null),scene:arg('scene',GAME_PROBE_SCENE),results,check,summary},
   async({cdp,details,url})=>{
     const scenePath=arg('scene',GAME_PROBE_SCENE);
     await navigateProbeScene(cdp,url,scenePath);
+    // 记录窗口实际位置（应落在 DISPLAY1：x≈1920）
+    try {
+      const win = await cdp.send('Browser.getWindowForTarget');
+      const bounds = await cdp.send('Browser.getWindowBounds', { windowId: win.windowId });
+      check('验证窗口固定在 DISPLAY1', bounds.bounds.left >= 1900, JSON.stringify(bounds.bounds));
+    } catch (e) { check('验证窗口固定在 DISPLAY1', false, String(e)); }
     await playPaused(cdp);
     await cdp.eval(ROW_HELPER);
     // 先推进一帧，让角色动态批次真正写出实例行

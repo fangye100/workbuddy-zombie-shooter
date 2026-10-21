@@ -152,6 +152,9 @@
 - 门禁工具：`editor:smoke` = `tools/verify/editor-smoke.mjs`（已支持 `--headed`，默认
   headless 兼容 CI；**本机验证一律带 `--headed`**）；手写 CDP 连已运行 dev server 用
   `tools/verify/cdp-verify.mjs`。
+- 🔴 **多显示器**：本机浏览器验证窗口必须固定在 Windows DISPLAY1（坐标 x=1920 起，
+  1920×1080），不得覆盖用户在 DISPLAY5（主屏）与 DISPLAY2 上的工作；探针用
+  --window-position=1920,80，headed 探针默认即在此屏运行。
 - 本项目自动化固定 profile：`.workbuddy/tmp/chrome-profile`（已 gitignore；保留
   证书/登录态/窗口状态，`editor-smoke.mjs --headed` 默认复用它，不要删除重建）。
 - 本机环境：win11 + NVIDIA Lovelace —— 属 skill ref A/D 里的「headless+SwiftShader
