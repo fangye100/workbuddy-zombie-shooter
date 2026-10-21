@@ -1059,16 +1059,17 @@ describe('PlayController —— 旧代异步事件跨代隔离（WU-06 S6-03/R6-
     expect(ctl.ledger.pending).toBe(0);
   }, 30000);
 
-  /** 在 start() 之前把首个 binding 的 ready 属性换成可控挂起（守卫回调注册在该属性上）。 */
-  function holdFirstBindingReady(ctl: PlayController): { release: () => void } {
+  /** 在 start() 之前安装覆写：把第 nth 次 createFractureBinding 产出的 binding.ready 换成可控挂起。
+   *  nth=1 即 start() 创建的启动代；nth=2 是第一次 reset/rebuild 创建的重建代（R6-02a）。 */
+  function holdNthBindingReady(ctl: PlayController, nth: number): { release: () => void } {
     let release!: () => void;
     const anyCtl = ctl as unknown as Record<string, unknown>;
     const orig = (anyCtl.createFractureBinding as (g: unknown) => unknown).bind(ctl);
-    let first = true;
+    let created = 0;
     anyCtl.createFractureBinding = (graph: unknown) => {
       const b = orig(graph) as { ready: Promise<boolean> };
-      if (first) {
-        first = false;
+      created += 1;
+      if (created === nth) {
         (b as unknown as { ready: Promise<boolean> }).ready = new Promise<boolean>(res => { release = () => res(true); });
       }
       return b;
@@ -1087,7 +1088,7 @@ describe('PlayController —— 旧代异步事件跨代隔离（WU-06 S6-03/R6-
 
   it('启动路径门镜像 ready 守卫：Stop→新 Play 后旧代 ready 迟到不触碰新代镜像', async () => {
     const { ctl } = makeW6(realIO());
-    const hold = holdFirstBindingReady(ctl);
+    const hold = holdNthBindingReady(ctl, 1);
     expect(ctl.start()).toBe(true);
     const first = ctl.fracture!;
     ctl.stop();                    // 旧代释放（其 mirror ready 回调仍挂在起上）
@@ -1102,17 +1103,21 @@ describe('PlayController —— 旧代异步事件跨代隔离（WU-06 S6-03/R6-
     expect(ctl.ledger.pending).toBe(0);
   }, 30000);
 
-  it('reset 重建路径门镜像 ready 守卫：旧代 ready 迟到不触碰新代镜像', async () => {
+  it('reset 重建路径门镜像 ready 守卫：重建代 ready 迟到于第三代之后释放，不触碰新代镜像', async () => {
     const { ctl } = makeW6(realIO());
-    const hold = holdFirstBindingReady(ctl);
+    // 挂起目标必须是 rebuildFractureBinding 创建的 binding（第 2 次 createFractureBinding），
+    // 不是 start() 创建的启动代 —— 否则测的还是启动守卫（监督裁决 R6-02a）。
+    const hold = holdNthBindingReady(ctl, 2);
     expect(ctl.start()).toBe(true);
-    const first = ctl.fracture!;
-    ctl.reset();                   // rebuildFractureBinding：旧代 ready 仍挂起
+    await ctl.fracture!.ready;     // 启动代正常就绪（不挂起）
+    ctl.reset();                   // 第二代由 rebuild 创建，其 ready 被挂起、重建回调注册在挂起 Promise 上
     const second = ctl.fracture!;
-    expect(second === first).toBe(false);
-    await second.ready;
+    ctl.reset();                   // 第三代创建并正常就绪，使第二代成为旧代
+    const third = ctl.fracture!;
+    expect(third === second).toBe(false);
+    await third.ready;
     const syncCalls = spyGateSync(ctl);
-    hold.release();
+    hold.release();                // 重建代（第二代）ready 此刻才完成
     await new Promise(res => setTimeout(res, 100));
     expect(syncCalls()).toBe(0);
     ctl.stop();
