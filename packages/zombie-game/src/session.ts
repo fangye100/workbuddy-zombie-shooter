@@ -30,7 +30,7 @@ import { ZombieSurfaceCrowdNavigation } from './surface-crowd-navigation';
 import { NPC_STATS, PLAYER_STATS, PLAYER_WEAPON, lookupCharacterStats } from '@aether/content';
 import type { CharacterStatsEntry } from '@aether/content';
 import type { NodeId } from '@aether/scene';
-import type { LevelRuntimeDesc, LoadDiagnostic } from './loader';
+import type { LevelRuntimeDesc, LoadDiagnostic, DestructibleDesc } from './loader';
 import type { BehaviorContext, BehaviorExecutor, BehaviorLogEntry } from "@aether/runtime";
 import { NULL_BEHAVIOR_EXECUTOR } from "@aether/runtime";
 import {CombatDecalJournal} from "./combat-decals";
@@ -39,7 +39,8 @@ import { NavigationGates, gateOverlapsActor, type SolidColliderDesc } from '@aet
 import { RunProgress, type RunCarry } from './run-progress';
 import { legacyWeaponArsenal } from '@aether/scene';
 import { WeaponSystem } from "@aether/runtime";
-import { WeaponCombat, type WeaponWorld,type WeaponDamageFacts } from "@aether/runtime";
+import { WeaponCombat, type WeaponWorld,type WeaponDamageFacts, type FractureEvent,
+  type WeaponSceneDamageKind, type WeaponSceneTarget } from "@aether/runtime";
 
 /**
  * 行为日志条数上限。行为可能每 tick 都打日志，必须封顶——
@@ -386,15 +387,75 @@ export class RuntimeSession {
 
   private readonly navigation: ZombieCrowdNavigation | ZombieSurfaceCrowdNavigation;
   private readonly navigationGates:NavigationGates;
+  /** 可破坏对象的 Play 副本：作者文档只读，initial hp / broken 只活在本会话。 */
+  private readonly destructibleStates = new Map<NodeId,{desc:DestructibleDesc;hp:number;broken:boolean}>();
+  private destructibleEventBuf: FractureEvent[] = [];
+  private destructibleSeq = 0;
   private liveSolids:readonly SolidColliderDesc[]=[];
   gateSnapshot(){return this.navigationGates.snapshot();}
   setGateOpen(nodeId:NodeId,open:boolean):void {
     if(this.outcomeState!=='running')throw new Error('终态不能操作门');
     this.navigationGates.setOpen(nodeId,open);
   }
+  /** Play 副本的可破坏状态（HUD/测试观察；不暴露可写引用）。 */
+  destructibleSnapshot(){return [...this.destructibleStates.values()].map(s=>({nodeId:s.desc.nodeId,hp:s.hp,broken:s.broken}));}
+  /** 当前实际参与射线/导航的 collision 身份（测试/探针观察，不暴露可写引用）。 */
+  collisionSnapshot(){return {solids:this.liveSolids.map(s=>s.nodeId),dynamicObstacles:this.destructibleObstacles().map(o=>o.id)};}
+  /** 取走本步产生的破坏事实；每次只交付一次，表现层按稳定 NodeId 消费。 */
+  takeDestructibleEvents():FractureEvent[]{const e=this.destructibleEventBuf;this.destructibleEventBuf=[];return e;}
+  private sceneTargets():WeaponSceneTarget[]{
+    const out:WeaponSceneTarget[]=[];
+    for(const s of this.destructibleStates.values()){
+      if(s.broken)continue;
+      const b=s.desc.bounds;
+      out.push({nodeId:s.desc.nodeId,position:[b.x,(b.minY+b.maxY)/2,b.z],
+        radius:Math.max(b.halfX,b.halfZ,Math.max(0,(b.maxY-b.minY)/2))});
+    }
+    return out;
+  }
+  /** 场景物体伤害：一次状态转换后再发不可变事实；表现失败不回滚本事实。 */
+  damageSceneObject(nodeId:string,damage:number,facts:WeaponDamageFacts|undefined,kind:WeaponSceneDamageKind,
+    point?:readonly [number,number,number],normal?:readonly [number,number,number]):number{
+    const s=this.destructibleStates.get(nodeId as NodeId);
+    if(!s||s.broken||!Number.isFinite(damage)||damage<=0)return 0;
+    const allowed=kind==='explosion'?s.desc.trigger.explosion:kind==='burn'?s.desc.trigger.burn:s.desc.trigger.direct;
+    if(!allowed)return 0;
+    const applied=Math.min(s.hp,damage);s.hp-=applied;
+    if(s.hp>1e-6)return applied;
+    s.hp=0;s.broken=true;
+    const d=s.desc,b=d.bounds;
+    let h=2166136261;for(let i=0;i<nodeId.length;i++)h=Math.imul(h^nodeId.charCodeAt(i),16777619);
+    const seq=++this.destructibleSeq;
+    const contact:[number,number,number]=point?[point[0],point[1],point[2]]:[b.x,(b.minY+b.maxY)/2,b.z];
+    const ev:FractureEvent={
+      sequence:seq,tick:this.tickCount,seed:(this.seed^(h>>>0))>>>0,
+      profile:{path:d.profile.path,guid:d.profile.guid},
+      target:{kind:'scene-object',runId:String(this.runId),nodeId},
+      position:[d.position[0],d.position[1],d.position[2]],
+      rotation:[d.rotation[0],d.rotation[1],d.rotation[2],d.rotation[3]],
+      scale:[d.scale[0],d.scale[1],d.scale[2]],
+      contact,normal:normal?[normal[0],normal[1],normal[2]]:null,impulse:null,
+      source:{weaponId:facts?.weaponId??'unknown',...(kind==='burn'?{damageKind:'burn' as const}:{}),
+        hitSequence:facts?.vfxSequence??seq},
+    };
+    this.destructibleEventBuf.push(ev);
+    this.syncGates();
+    return applied;
+  }
   private syncGates():void {
-    if(this.navigation instanceof ZombieSurfaceCrowdNavigation)this.navigation.surface.setDynamicObstacles(this.navigationGates.obstacles());
-    this.liveSolids=[...this.desc.shotColliders,...this.navigationGates.solids()];
+    if(this.navigation instanceof ZombieSurfaceCrowdNavigation)this.navigation.surface.setDynamicObstacles([...this.navigationGates.obstacles(),...this.destructibleObstacles()]);
+    this.liveSolids=[...this.desc.shotColliders,...this.navigationGates.solids(),
+      ...[...this.destructibleStates.values()].filter(s=>!s.broken&&s.desc.solid!==null).map(s=>s.desc.solid!)];
+  }
+  /** 当前仍intact且要求clear-blocking的目标：交给三维地表导航的既有动态覆盖。 */
+  private destructibleObstacles(): {id:NodeId;minX:number;maxX:number;minY:number;maxY:number;minZ:number;maxZ:number}[] {
+    const out:{id:NodeId;minX:number;maxX:number;minY:number;maxY:number;minZ:number;maxZ:number}[]=[];
+    for(const s of this.destructibleStates.values()){
+      if(s.broken||s.desc.obstacle===null)continue;
+      const b=s.desc.bounds;
+      out.push({id:s.desc.nodeId,minX:b.x-b.halfX,maxX:b.x+b.halfX,minY:b.minY,maxY:b.maxY,minZ:b.z-b.halfZ,maxZ:b.z+b.halfZ});
+    }
+    return out;
   }
   private advanceGates():void {
     const t=this.table;
@@ -556,6 +617,7 @@ export class RuntimeSession {
     }
     this.goalX = opts.desc.playerStart.x;
     this.goalZ = opts.desc.playerStart.z;
+    for(const d of opts.desc.destructibles)this.destructibleStates.set(d.nodeId,{desc:d,hp:d.maxDurability,broken:false});
     this.navigation = nav.surface ? new ZombieSurfaceCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ,opts.desc.playerStart.y??0)
       : new ZombieCrowdNavigation(nav,opts.desc.obstacles,capacity,this.goalX,this.goalZ);
     if(opts.desc.navigationGates?.length&&!nav.surface)throw new Error('运动门需要显式三维地表导航');
@@ -983,6 +1045,8 @@ export class RuntimeSession {
     this.fireHeld = false;
     this.goalX = this.desc.playerStart.x;
     this.goalZ = this.desc.playerStart.z;
+    for(const s of this.destructibleStates.values()){s.hp=s.desc.maxDurability;s.broken=false;}
+    this.destructibleEventBuf.length=0;this.destructibleSeq=0;
     this.navigationGates.reset();this.syncGates();
     this.navigation.reset(this.goalX,this.goalZ,this.desc.playerStart.y??0);
     // 刷怪随机流由 initialSeed ⊗ nodeId 派生（见 spawnBatch），天然回到初始态 ——
@@ -1504,6 +1568,12 @@ export class RuntimeSession {
         return {actor:target,distance,point,kind:target?'entity':surface?'scene':'miss',nodeId:target?undefined:surface?.nodeId,...(!target&&surface?{surface}:{}),normal:target?[-direction[0],-direction[1],-direction[2]]:surface?.normal};
       },
       solidImpact:(hit,from,direction,w,tick)=>{if(!['hitscan','pellets','piercing'].includes(w.behavior)&&(w.behavior!=='projectile'||w.effects.blastRadiusM>0))return;if(hit.surface)this.decalEvents.append(this.runId,{event:"weapon-solid-impact",tick,receiver:hit.surface.nodeId,point:[...hit.surface.point],normal:[...hit.surface.normal],from:[...from],direction:[...direction],weaponId:w.id});},
+      sceneTargets:()=>this.sceneTargets(),
+      damageScene:(nodeId,damage,facts,kind,point,normal)=>this.damageSceneObject(nodeId,damage,facts,kind,point,normal),
+      blockedExcept:(from,to,ignoreNodeId)=>{
+        const l=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);if(l<=1e-6)return false;
+        return nearestSolidHit(from,[(to[0]-from[0])/l,(to[1]-from[1])/l,(to[2]-from[2])/l],this.liveSolids.filter(s=>s.nodeId!==ignoreNodeId),l)!==null;
+      },
       damage:(id,damage,facts)=>{
         const a=actor(id);if(!a)return 0;const dealt=Math.min(a.hp,damage);this.applyDamage(id,damage,p,facts);
         t.health[p]=Math.min(t.maxHp[p]!,t.health[p]!+dealt*(this.progress?.strength('leech')??0));

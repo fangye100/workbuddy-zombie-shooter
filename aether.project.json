@@ -261,6 +261,12 @@
       "path": "assets/scenes/sandbox/fracture-wu02.scene.json",
       "name": "碎裂 WU-02 · 正式资产与分块近景",
       "enabled": true
+    },
+    {
+      "id": "sc_fracture_wu06",
+      "path": "assets/scenes/sandbox/fracture-wu06.scene.json",
+      "name": "可破坏庭院 WU-06 · 真实武器/爆炸/导航闭环",
+      "enabled": true
     }
   ],
   "startIndex": 1,

@@ -90,6 +90,10 @@ export class PlayController {
   private readonly fractureIO: FractureAssetIO;
   /** 碎片动态渲染装配（WU-05）：ActiveChunk → 原 CoreDynamicBatch。 */
   private fractureRenderer: PlayFractureRenderer | null = null;
+  /** 本 Play 内已破坏的稳定 NodeId（Reset/Stop 恢复完整显示）。 */
+  private readonly brokenNodes = new Set<string>();
+  private pendingDestructibleEvents: FractureEvent[] = [];
+  private lastDestructibleError: string | null = null;
   /** Play 相机控制器。null = 不接管相机（保持编辑相机） */
   private readonly playCamera: PlayCameraController | null;
   private readonly worldPosOf: WorldPosOf | null;
@@ -307,6 +311,61 @@ export class PlayController {
     };
   }
 
+  /** 场景物体破坏→碎裂表现失败诊断（null = 无失败）。 */
+  get destructibleError(): string | null {
+    return this.lastDestructibleError;
+  }
+
+  /**
+   * 消费游戏会话的一次性破坏事实：先切完整表现/碰撞，再走正式 spawnFracture。
+   * 事实在会话侧已完成状态转换；表现失败不回滚，只记录诊断。
+   */
+  private consumeDestructibleEvents(): void {
+    const rt = this.session.runtime;
+    if (rt === null) return;
+    this.pendingDestructibleEvents.push(...rt.takeDestructibleEvents());
+    if (this.pendingDestructibleEvents.length === 0) return;
+    // 碎片运行时尚未就绪时保留事实，下一次 update 再试；不重复破坏。
+    if (this.fractureBinding === null || this.fractureBinding.backend() === null) return;
+    for (const ev of this.pendingDestructibleEvents.splice(0)) {
+      if (ev.target.kind !== 'scene-object') continue;
+      const nodeId = ev.target.nodeId;
+      this.brokenNodes.add(nodeId);
+      const index = this.renderer.findObjectIndexByNodeId(nodeId);
+      if (index !== null) this.renderer.setObjectVisible(index, false);
+      const graph = this.runtimeGraphWithoutBroken();
+      if (graph !== null) this.fractureBinding.syncScene(graph);
+      void this.spawnFracture(ev).then((r) => {
+        if (!r.accepted) {
+          const rej = r.rejection;
+          this.lastDestructibleError = nodeId + '：' + (rej === null ? 'fracture-rejected' : rej.reason + ' — ' + rej.detail);
+          console.warn('[fracture] ' + this.lastDestructibleError);
+        }
+      });
+    }
+  }
+
+  /** 从作者文档派生运行期图：仅把已破坏节点标为不可见，用于移除其物理镜像。 */
+  private runtimeGraphWithoutBroken(): SceneGraph | null {
+    const doc = this.renderer.getDocument();
+    if (doc === null) return null;
+    const copy = structuredClone(doc);
+    for (const n of copy.nodes) if (this.brokenNodes.has(n.id)) n.visible = false;
+    const graph = SceneGraph.fromDocument(copy);
+    graph.updateWorldTransforms();
+    return graph;
+  }
+
+  private restoreBrokenNodes(): void {
+    for (const nodeId of this.brokenNodes) {
+      const index = this.renderer.findObjectIndexByNodeId(nodeId);
+      if (index !== null) this.renderer.setObjectVisible(index, true);
+    }
+    this.brokenNodes.clear();
+    this.pendingDestructibleEvents = [];
+    this.lastDestructibleError = null;
+  }
+
   /** 把当前运行时状态同步成动态批次（large 读后端快照，small 读简化 sim）。 */
   private syncFractureBatches(): void {
     const binding = this.fractureBinding;
@@ -418,6 +477,7 @@ export class PlayController {
   /** 单步。只在暂停下有效（语义由 PlaySession 保证） */
   step(): void {
     this.session.stepOnce();
+    this.consumeDestructibleEvents();
     // 只在暂停态实际推进时驱动碎片（非暂停下 stepOnce 为空操作，不重复 tick）。
     if (this.session.state === 'paused' && this.session.outcome === 'running') {
       this.syncGateMirrors();
@@ -442,6 +502,7 @@ export class PlayController {
     // 再按当前场景重建，避免旧代碎片跨重跑残留。
     this.rebuildFractureBinding();
     this.session.reset();
+    this.restoreBrokenNodes();
     this.decals?.start(this.session.runtime);
     this.syncGates();
     this.sharedMotions?.sync(this.session.runtime);
@@ -475,6 +536,9 @@ export class PlayController {
       }
       this.snap = null;
     }
+    this.brokenNodes.clear();
+    this.pendingDestructibleEvents = [];
+    this.lastDestructibleError = null;
     // 先还原相机，再断会话：反过来做的话，恢复期间画面还挂着游戏机位，
     // 会闪一下"关卡回到编辑态但视角还在游戏里"的鬼影。
     this.playCamera?.detach();
@@ -489,6 +553,7 @@ export class PlayController {
   /** 每帧调用：推进固定步 → 同步实例数据 → 跟随相机。返回本帧走的步数 */
   update(dt: number): number {
     const n = this.session.advance(dt);
+    this.consumeDestructibleEvents();
     if (n > 0) {
       // R3：真实固定步驱动碎片物理（渲染频率不反推物理时钟）。
       // 终态（game-over / floor-clear）时 PlaySession 仍可能返回步数，但世界已冻结：

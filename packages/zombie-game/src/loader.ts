@@ -24,7 +24,7 @@
  * position"，那只对了没有旋转和缩放的场景 —— 一旦有父级缩放，刷怪点就会飘。
  */
 
-import { SceneGraph, validateSceneDocument, validRunRules, validNavigationSettings, validSurfaceNavigationSettings, type SurfaceNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
+import { SceneGraph, decomposeMatrixToTrs, validateSceneDocument, validRunRules, validNavigationSettings, validSurfaceNavigationSettings, type SurfaceNavigationSettings, type NavigationSettings, type RunRulesComponent } from '@aether/scene';
 import type { NavigationSurface } from '@aether/ai';
 import { lookupCharacterStats } from '@aether/content';
 import { solidCollider, type SolidColliderDesc, type NavigationGateDesc } from "@aether/runtime";
@@ -37,6 +37,7 @@ import type {
   SceneNodeRuntime,
   ScriptComponent,
   SpawnPointComponent,
+  DestructibleComponent,
 } from '@aether/scene';
 import type { ScriptDesc } from "@aether/runtime";
 
@@ -121,6 +122,29 @@ export interface NavDesc {
   surfaces?:NavigationSurface[];
 }
 
+/**
+ * 可破坏场景对象：作者配置 + Play 激活所需的世界快照。
+ * 当前耐久属于运行会话副本；这里只保存装载出的初始配置与碰撞/导航身份。
+ */
+export interface DestructibleDesc {
+  nodeId: NodeId;
+  name: string;
+  profile: DestructibleComponent['profile'];
+  maxDurability: number;
+  trigger: DestructibleComponent['trigger'];
+  onBroken: DestructibleComponent['onBroken'];
+  world: Float32Array;
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+  scale: [number, number, number];
+  /** 世界 AABB：爆炸目标中心/半径与动态导航障碍共用同一 collider 真源。 */
+  bounds: { x: number; z: number; halfX: number; halfZ: number; radius: number; minY: number; maxY: number };
+  /** onBroken.collider === 'remove' 时为会话持有的射线/物理镜像；否则 null。 */
+  solid: SolidColliderDesc | null;
+  /** onBroken.navigation === 'clear-blocking' 时为动态障碍；否则 null。 */
+  obstacle: ObstacleDesc | null;
+}
+
 /** 运行描述：装载产物，RuntimeSession 的唯一输入（除种子与固定步长外） */
 export interface LevelRuntimeDesc {
   runRules?: RunRulesComponent | null;
@@ -133,6 +157,8 @@ export interface LevelRuntimeDesc {
   rooms: RoomDesc[];
   spawns: SpawnDesc[];
   obstacles: ObstacleDesc[];
+  /** 场景可破坏对象（作者配置 + 世界快照）；运行期状态由 RuntimeSession 持有。 */
+  destructibles: DestructibleDesc[];
   /** Actual finite 3D Collider solids, separate from the navigation XZ projection. */
   shotColliders: SolidColliderDesc[];
   navigationGates?:NavigationGateDesc[];
@@ -325,6 +351,13 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
   const navigationGates:NavigationGateDesc[]=[];
   const surfaces:NavigationSurface[]=[];
   const scripts: ScriptDesc[] = [];
+  const destructibles: DestructibleDesc[] = [];
+  const destructibleByNode = new Map<NodeId, DestructibleComponent>();
+  for (const n of doc.nodes) for (const c of n.components) {
+    if (c.kind === 'Destructible' && c.enabled) destructibleByNode.set(n.id, c as DestructibleComponent);
+  }
+  const surfaceNavRequested = doc.nodes.some(n => n.components.some(c => c.kind === 'NavZone' && c.enabled
+    && (c as { surface?: unknown }).surface !== undefined));
   let nav: NavDesc | null = null;
 
   graph.traverse((n) => {
@@ -425,8 +458,11 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           continue; // 活动门不能裁掉底图格；其射线几何由运行控制器生成。
         }
         if (col.enabled && graph.isEffectivelyVisible(n.id)) {
-          try { shotColliders.push(solidCollider(n.id, col.shape, graph.worldMatrix(n.id))); }
-          catch (e) { err('E_SHOT_COLLIDER', String(e), n.id); }
+          const dtor = destructibleByNode.get(n.id);
+          if (dtor?.onBroken.collider !== 'remove') {
+            try { shotColliders.push(solidCollider(n.id, col.shape, graph.worldMatrix(n.id))); }
+            catch (e) { err('E_SHOT_COLLIDER', String(e), n.id); }
+          }
         }
         // 🔴 必须按**世界矩阵**（含旋转、缩放与父级链）算障碍范围。
         // 曾经直接用 `halfExtents` 当世界半宽 —— 旋转过的长条盒在世界系里可能
@@ -438,7 +474,15 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
           shape: col.shape.type,
           enabled: col.enabled,
         };
-        obstacles.push(o);
+        // navigation=clear-blocking 的目标走动态障碍，不能烘进基础导航格；
+        // 平面导航没有动态覆盖，保留静态并在装载期显式提示。
+        const dtorNav = destructibleByNode.get(n.id)?.onBroken.navigation === 'clear-blocking';
+        if (dtorNav && surfaceNavRequested) {
+          // 由 synced dynamic obstacles 在会话期提供；基础 obstacles 不烘入。
+        } else {
+          if (dtorNav) warn('W_DESTRUCTIBLE_NAV_STATIC', '可破坏对象的导航清除需要三维地表导航；本场景为平面导航，破坏后仍保留该静态障碍', n.id);
+          obstacles.push(o);
+        }
       } else if (c.kind === 'NavSurface') {
         if(!c.enabled)continue;
         if(!Array.isArray(c.size)||c.size.length!==2||!c.size.every(v=>Number.isFinite(v)&&v>0)){
@@ -509,6 +553,42 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
     }
   });
 
+  // ---------------------------------------------------------- 可破坏对象
+  for (const [nodeId, dtor] of destructibleByNode) {
+    const node = graph.getNode(nodeId);
+    if (node === null) { err('E_DESTRUCTIBLE_NODE', '可破坏组件指向不存在的节点', nodeId); continue; }
+    const col = node.components.find((c) => c.kind === 'Collider' && c.enabled && !c.isTrigger) as ColliderComponent | undefined;
+    if (col === undefined) {
+      err('E_DESTRUCTIBLE_COLLIDER', '可破坏对象必须有启用的非触发 Collider，否则无法被真实武器命中', nodeId);
+      continue;
+    }
+    const world = new Float32Array(graph.worldMatrix(nodeId));
+    const trs = decomposeMatrixToTrs(world);
+    const aabb = colliderWorldAabb(graph, nodeId, col.shape);
+    let solid: SolidColliderDesc | null = null;
+    if (dtor.onBroken.collider === 'remove') {
+      try { solid = solidCollider(nodeId, col.shape, world); }
+      catch (e) { err('E_DESTRUCTIBLE_SOLID', String(e), nodeId); }
+    }
+    const obstacle: ObstacleDesc | null = dtor.onBroken.navigation === 'clear-blocking' && surfaceNavRequested
+      ? { nodeId, name: node.name, ...aabb, shape: col.shape.type, enabled: true }
+      : null;
+    destructibles.push({
+      nodeId, name: node.name,
+      profile: structuredClone(dtor.profile),
+      maxDurability: dtor.maxDurability,
+      trigger: { ...dtor.trigger },
+      onBroken: { ...dtor.onBroken },
+      world,
+      position: [trs.t[0], trs.t[1], trs.t[2]],
+      rotation: [trs.r[0], trs.r[1], trs.r[2], trs.r[3]],
+      scale: [trs.s[0], trs.s[1], trs.s[2]],
+      bounds: aabb,
+      solid,
+      obstacle,
+    });
+  }
+
   // ---------------------------------------------------------- 完整性
   if (nav === null) {
     err(
@@ -573,6 +653,7 @@ export function loadLevelRuntime(doc: SceneDocument): LoadResult {
       rooms,
       spawns,
       obstacles,
+      destructibles,
       shotColliders,
       navigationGates,
       nav,

@@ -4,6 +4,9 @@ import type { SolidContact } from './solid-ray';
 export type WeaponPoint=[number,number,number];
 export interface WeaponActor { id:number;generation:number;x:number;y?:number;height?:number;z:number;radius:number;hp:number }
 export interface WeaponHit { actor:WeaponActor|null; point:WeaponPoint; distance:number; surface?:SolidContact; kind?:'entity'|'scene'|'miss'; nodeId?:string|undefined; normal?:WeaponPoint|undefined }
+/** 场景物体伤害来源：沿同一武器事实链，DOT 明确标 burn，不借直接命中序号。 */
+export type WeaponSceneDamageKind='direct'|'projectile'|'explosion'|'burn';
+export interface WeaponSceneTarget { readonly nodeId:string; readonly position:WeaponPoint; readonly radius:number }
 export interface WeaponVfxEvent { readonly sequence:number; readonly tick:number; readonly weaponId:string; readonly kind:'fire'|'trace'|'impact'|'projectile'|'projectile-end'; readonly effectId?:number; readonly from:readonly number[]; readonly to:readonly number[]; readonly contact:'entity'|'scene'|'miss'; readonly actor:Readonly<WeaponActor>|null; readonly nodeId:string|null; readonly normal:readonly number[]|null }
 export interface WeaponDamageFacts {readonly weaponId:string;readonly vfxSequence?:number;readonly damageKind?:'burn'}
 export interface WeaponWorld {
@@ -13,6 +16,13 @@ export interface WeaponWorld {
   damage(id:number,damage:number,facts?:WeaponDamageFacts):number;
   displace(id:number,from:WeaponPoint,distance:number):void;
   solidImpact?(hit:WeaponHit,from:WeaponPoint,direction:WeaponPoint,weapon:WeaponDefinition,tick:number):void;
+  /** 场景可破坏目标的爆炸/范围查询；物体 HP 仍由游戏 runtime 持有。 */
+  sceneTargets?():readonly WeaponSceneTarget[];
+  /** 对稳定 NodeId 施加伤害；返回实际扣除量（0 = 非目标/来源不允许/已破坏）。 */
+  damageScene?(nodeId:string,damage:number,facts:WeaponDamageFacts|undefined,kind:WeaponSceneDamageKind,
+    point?:WeaponPoint,normal?:WeaponPoint):number;
+  /** 爆炸遮挡查询：忽略目标自身 collider，避免把自身当墙。 */
+  blockedExcept?(from:WeaponPoint,to:WeaponPoint,ignoreNodeId:string):boolean;
 }
 export interface WeaponEffect { id:number;tick:number;weaponId:string;kind:'shot'|'pellet'|'pierce'|'projectile'|'explosion'|'slash'|'flame'|'burn';from:WeaponPoint;to:WeaponPoint;position:WeaponPoint;duration:number;radius:number;spreadDeg:number;color:string;hit:boolean }
 interface Projectile {effect:WeaponEffect|null;definition:WeaponDefinition|null;damage:number;direction:WeaponPoint;age:number;travel:number;velocityY:number}
@@ -30,7 +40,12 @@ class RayWeapon implements WeaponImplementation {
       const d:WeaponPoint=[c.direction[0]*Math.cos(angle)-c.direction[2]*Math.sin(angle),0,c.direction[0]*Math.sin(angle)+c.direction[2]*Math.cos(angle)];
       const ignore=new Set<number>();let end:WeaponPoint=[c.from[0]+d[0]*w.rangeM,c.from[1],c.from[2]+d[2]*w.rangeM],hit=false;
       for(let p=0;p<(this.pierce?w.penetration:1);p++){
-        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);if(!result.actor){if(result.surface)c.world.solidImpact?.(result,c.from,d,w,c.tick);break;}
+        const result=c.world.trace(c.from,d,w.rangeM,ignore);end=result.point;c.combat.recordTrace(w,c.from,result,c.tick);
+        if(!result.actor){
+          if(result.nodeId)c.world.damageScene?.(result.nodeId,c.damage,{weaponId:w.id},'direct',result.surface?.point,result.normal);
+          if(result.surface)c.world.solidImpact?.(result,c.from,d,w,c.tick);
+          break;
+        }
         hit=true;ignore.add(result.actor.id);c.combat.impact(c.weapon,result.actor,c.damage,c.tick,c.world,c.from,result.point);
       }
       c.combat.effect(w,this.pellets?'pellet':this.pierce?'pierce':'shot',c.from,end,c.tick,.12,0,hit);
@@ -46,6 +61,12 @@ class AreaWeapon implements WeaponImplementation {
       if(actor.y!==undefined&&(c.from[1]<actor.y||c.from[1]>actor.y+(actor.height??1.8)))continue;
       if(distance>w.rangeM+actor.radius || distance>0 && (dx*c.direction[0]+dz*c.direction[2])/distance<Math.cos(half) || c.world.blocked(c.from,point))continue;
       hit=true;c.combat.impact(w,actor,c.damage,c.tick,c.world,c.from);
+    }
+    // 火焰/近战同样沿原武器事实作用于场景目标；是否允许由目标 trigger 配置决定。
+    for(const s of c.world.sceneTargets?.()??[]){
+      const dx=s.position[0]-c.from[0],dz=s.position[2]-c.from[2],distance=Math.hypot(dx,dz);
+      if(distance>w.rangeM+s.radius || distance>0 && (dx*c.direction[0]+dz*c.direction[2])/distance<Math.cos(half) || c.world.blocked(c.from,s.position))continue;
+      c.world.damageScene?.(s.nodeId,c.damage,{weaponId:w.id},this.flame?'burn':'direct',s.position,undefined);
     }
     c.combat.effect(w,this.flame?'flame':'slash',c.from,end,c.tick,this.flame?.18:.2,w.rangeM,hit);
   }
@@ -116,6 +137,14 @@ export class WeaponCombat {
       const vfxSequence=this.recordVfx(w,'impact',point,{actor:a,point:[a.x,(a.y??0)+(a.height??1.8)*.55,a.z],distance:0,kind:'entity'},tick);
       world.damage(a.id,damage,{weaponId:w.id,vfxSequence});if(world.actor(a.id))world.displace(a.id,point,w.effects.knockbackM);
     }
+    // 场景物体沿用同一爆心/距离/遮挡查询；被墙挡住的 target 不变，忽略目标自身 collider。
+    for(const s of world.sceneTargets?.()??[]){
+      const distance=Math.hypot(s.position[0]-point[0],s.position[1]-point[1],s.position[2]-point[2]);
+      if(distance>w.effects.blastRadiusM+s.radius)continue;
+      const blocked=world.blockedExcept?.(point,s.position,s.nodeId) ?? world.blocked(point,s.position);
+      if(blocked)continue;
+      world.damageScene?.(s.nodeId,damage,{weaponId:w.id},'explosion',point,undefined);
+    }
   }
   launch(c:FireContext):void {
     if(this.projectiles.length>=64)throw new Error('Projectile pool capacity exceeded');
@@ -148,7 +177,10 @@ export class WeaponCombat {
         this.recordVfx(w,'projectile-end',from,{...hit,point:[...p.effect!.position]},tick,p.effect!.id);
         if(w.effects.blastRadiusM>0)this.explode(w,p.effect!.position,p.damage,tick,world);
         else if(hit.actor)this.impact(w,hit.actor,p.damage,tick,world,from);
-        else if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
+        else if(hit.nodeId){
+          world.damageScene?.(hit.nodeId,p.damage,{weaponId:w.id},'projectile',[p.effect!.position[0],p.effect!.position[1],p.effect!.position[2]],hit.normal);
+          if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
+        } else if(hit.surface&&groundT>=hit.distance)world.solidImpact?.(hit,from,direction,w,tick);
         this.projectiles.splice(i,1);this.effects.splice(this.effects.indexOf(p.effect!),1);this.projectilePool.release(p);
       }else this.recordVfx(w,'projectile',from,hit,tick,p.effect!.id);
     }

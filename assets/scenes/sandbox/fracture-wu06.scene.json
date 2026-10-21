@@ -1,0 +1,2664 @@
+{
+  "schemaVersion": 25,
+  "id": "sc_fracture_wu06",
+  "name": "可破坏庭院 WU-06 · 真实武器/爆炸/导航闭环",
+  "act": null,
+  "environment": {
+    "ambient": {
+      "color": "#2a2f3a",
+      "intensity": 0.55
+    },
+    "hemisphere": {
+      "sky": "#8fa6c4",
+      "skyIntensity": 0.55,
+      "ground": "#2b2419",
+      "groundIntensity": 0.35
+    },
+    "fog": {
+      "color": "#2a2f3a",
+      "density": 0.012,
+      "heightFalloff": 0.08
+    },
+    "rim": {
+      "color": "#6b7a90",
+      "intensity": 0.35,
+      "power": 2.5,
+      "topBias": 0.35
+    },
+    "exposure": 1,
+    "postOverride": null
+  },
+  "editorCamera": {
+    "target": [
+      0.6,
+      0.7,
+      0
+    ],
+    "distance": 4.6,
+    "yaw": 0.5,
+    "elevation": 0.32
+  },
+  "entryCamera": "nd_cam0000",
+  "playerStart": "nd_fr_player",
+  "loseCondition": "player-death",
+  "dependencies": [],
+  "nodes": [
+    {
+      "id": "nd_key0000",
+      "name": "Key Light",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Light",
+          "enabled": true,
+          "type": "directional",
+          "color": "#fff3e0",
+          "intensity": 1.2,
+          "range": 0,
+          "spotAngle": 0,
+          "castShadow": false,
+          "priority": 100
+        }
+      ]
+    },
+    {
+      "id": "nd_cam0000",
+      "name": "Main Camera",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          1.4,
+          3.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "Camera",
+          "enabled": true,
+          "fovDeg": 45,
+          "near": 0.1,
+          "far": 200,
+          "mode": "orbit-follow",
+          "followTarget": null,
+          "pitchDeg": 10,
+          "distance": 3.2,
+          "yawOffset": 0,
+          "yawMode": "world"
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_ground",
+      "name": "Ground",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          -0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              12,
+              0.2,
+              12
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              6,
+              0.1,
+              6
+            ]
+          },
+          "physicsMaterial": null
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_room",
+      "name": "Room",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "RoomVolume",
+          "enabled": true,
+          "roomType": "combat",
+          "theme": "none",
+          "clearTarget": null,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              12,
+              4,
+              12
+            ]
+          }
+        },
+        {
+          "kind": "RunRules",
+          "enabled": true,
+          "attackTokenCount": 4,
+          "npcTiming": {
+            "decisionMinSec": 0.08,
+            "decisionMaxSec": 0.35,
+            "recoveryMinSec": 0.2,
+            "recoveryMaxSec": 0.55,
+            "windupJitterFrac": 0.15,
+            "cooldownJitterFrac": 0.35
+          },
+          "campaign": "act1",
+          "scrapPerKill": 3,
+          "firstChoiceKills": 1,
+          "choiceEveryKills": 8,
+          "eventScrap": 25,
+          "healCost": 18,
+          "healAmount": 35,
+          "talentCost": 30,
+          "floorEssence": 5,
+          "aimAssist": false,
+          "weapon": {
+            "magazineSize": 18,
+            "reserveRounds": 120,
+            "reloadSec": 1.6,
+            "ammoPerKill": 8,
+            "ammoCost": 12,
+            "ammoSupply": 60
+          },
+          "bossAttack": null,
+          "talents": [
+            {
+              "id": "heavy",
+              "name": "重型弹头",
+              "description": "每层伤害 +35%；叠满三层形成高伤流派。",
+              "effect": "damage",
+              "value": 0.35,
+              "maxStacks": 3
+            },
+            {
+              "id": "rapid",
+              "name": "快速供弹",
+              "description": "每层射速 +30%，持续压制尸潮。",
+              "effect": "haste",
+              "value": 0.3,
+              "maxStacks": 3
+            },
+            {
+              "id": "leech",
+              "name": "尸髓回流",
+              "description": "命中恢复实际伤害的 8% 生命。",
+              "effect": "leech",
+              "value": 0.08,
+              "maxStacks": 3
+            },
+            {
+              "id": "shock",
+              "name": "震荡弹池",
+              "description": "解锁新的范围流派选项：每层 2 米半额冲击波。",
+              "effect": "blast",
+              "value": 2,
+              "maxStacks": 3,
+              "unlockCost": 15
+            },
+            {
+              "id": "blast",
+              "name": "破片弹药",
+              "description": "命中造成半额范围伤害；每层扩大 1.2 米。",
+              "effect": "blast",
+              "value": 1.2,
+              "maxStacks": 3
+            },
+            {
+              "id": "dash",
+              "name": "轻装步伐",
+              "description": "每层移动速度 +15%，更容易拉开距离。",
+              "effect": "speed",
+              "value": 0.15,
+              "maxStacks": 3
+            }
+          ],
+          "arsenal": {
+            "equipped": "pistol",
+            "switchSec": 0.4,
+            "definitions": [
+              {
+                "id": "pistol",
+                "name": "手枪",
+                "nameEn": "Pistol",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "hitscan",
+                "damage": 12,
+                "cooldownSec": 0.35,
+                "rangeM": 18,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 18,
+                  "reserveRounds": 120,
+                  "reloadSec": 1.6,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-01/game_ready/WPN-01_lod0.glb",
+                    "guid": "as_e4ugmrq3"
+                  },
+                  "placeholder": "pistol",
+                  "color": "#ffc531",
+                  "lengthM": 0.3,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.11000000000000003,
+                        0.03,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.23000000000000004,
+                        0.03,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.5900000000000001,
+                        0.497,
+                        0.0799999999999999
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.14600000000000002,
+                        -0.07,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.2,
+                        0.07,
+                        -1.3877787807814457e-17
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "pistol-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "pistol-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "pistol-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "pistol-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "pistol-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "pistol-muzzle",
+                    "trail": "pistol-trail",
+                    "impact": "pistol-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.08,
+                        1.19,
+                        0.34
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "magazine",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-01/game_ready/WPN-MAG-01_lod0.glb",
+                          "guid": "as_30abf3e8f08f"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "magazine",
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.08010323525202694,
+                        0.2363754820823669,
+                        0.5000341653823853
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "id": "shotgun",
+                "name": "霰弹枪",
+                "nameEn": "Shotgun",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "pellets",
+                "damage": 8,
+                "cooldownSec": 0.85,
+                "rangeM": 9,
+                "spreadDeg": 32,
+                "pellets": 7,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0.8
+                },
+                "ammo": {
+                  "magazineSize": 6,
+                  "reserveRounds": 48,
+                  "reloadSec": 0.55,
+                  "perShot": 1,
+                  "reloadMode": "shell"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-02-SHOTGUN/game_ready/WPN-02-SHOTGUN_lod0.glb",
+                    "guid": "as_cdf2dc294f5f"
+                  },
+                  "placeholder": "shotgun",
+                  "color": "#ef934b",
+                  "lengthM": 0.98,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.08500000000000002,
+                        0.2,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.47700000000000004,
+                        0.2,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.7975714069001726,
+                        0.64118075580614,
+                        0.050386154901703784
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.2026,
+                        0.1,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.379,
+                        0.24000000000000002,
+                        0.020386154901703923
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "shotgun-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "shotgun-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "shotgun-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "shotgun-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "shotgun-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "shotgun-muzzle",
+                    "trail": "shotgun-trail",
+                    "impact": "shotgun-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.029510609846269128,
+                        1.107910163857817,
+                        0.21257823875506016
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.324285645940184,
+                        0.34761240413744543
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-SHELL-01-primer-fixed_lod0.glb",
+                          "guid": "as_738efc1ba301"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0.5000000000000001,
+                            0.5000000000000001,
+                            -0.5000000000000001,
+                            0.5000000000000001
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "smg",
+                "name": "冲锋枪",
+                "nameEn": "SMG",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "hitscan",
+                "damage": 6,
+                "cooldownSec": 0.09,
+                "rangeM": 16,
+                "spreadDeg": 5,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 32,
+                  "reserveRounds": 192,
+                  "reloadSec": 1.8,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-03-SMG/game_ready/WPN-03-SMG-without-mag_lod0.glb",
+                    "guid": "as_a96a571ba3ef"
+                  },
+                  "placeholder": "smg",
+                  "color": "#d5df8a",
+                  "lengthM": 0.58,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.10500000000000002,
+                        0.09999999999999998,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.337,
+                        0.09999999999999998,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.5701073142491059,
+                        0.6678460357028457,
+                        0.0496763409866834
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.17460000000000003,
+                        -2.7755575615628914e-17,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.279,
+                        0.13999999999999999,
+                        0.019676340986683444
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "smg-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "smg-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "smg-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "smg-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "smg-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "smg-muzzle",
+                    "trail": "smg-trail",
+                    "impact": "smg-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030220423761289618,
+                        1.2946546783873611,
+                        0.16693230429292394
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.41103016046972807,
+                        0.3219664696753092
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SMG-fit_lod0.glb",
+                          "guid": "as_bc00f36d6062"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "sniper",
+                "name": "狙击枪",
+                "nameEn": "Sniper",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "piercing",
+                "damage": 70,
+                "cooldownSec": 1.1,
+                "rangeM": 38,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 3,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 5,
+                  "reserveRounds": 30,
+                  "reloadSec": 2.1,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-04-SNIPER/game_ready/WPN-04-SNIPER_lod0.glb",
+                    "guid": "as_6a1a6e91ec15"
+                  },
+                  "placeholder": "sniper",
+                  "color": "#92d2e9",
+                  "lengthM": 1.18,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.04500000000000002,
+                        0.14,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.517,
+                        0.14,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.7867843275880398,
+                        0.6403199483950968,
+                        0.04955632789688591
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.1866,
+                        0.04,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.399,
+                        0.18,
+                        0.019556327896886216
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "sniper-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "sniper-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "sniper-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "sniper-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "sniper-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "sniper-muzzle",
+                    "trail": "sniper-trail",
+                    "impact": "sniper-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.030340436851086807,
+                        1.1444801838558436,
+                        0.23487557731296227
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.30085566593821056,
+                        0.32990974269534756
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-MAG-02-SMG/game_ready/WPN-MAG-02-SNIPER-derived_lod0.glb",
+                          "guid": "as_a17fcc3a5a85"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "chainsaw",
+                "name": "电锯",
+                "nameEn": "Chainsaw",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "melee",
+                "damage": 9,
+                "cooldownSec": 0.12,
+                "rangeM": 2.3,
+                "spreadDeg": 115,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0.25,
+                  "slowSec": 0.4,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 0,
+                  "reserveRounds": 0,
+                  "reloadSec": 0,
+                  "perShot": 0,
+                  "reloadMode": "none"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 0
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-05-CHAINSAW/game_ready/WPN-05-CHAINSAW_lod0.glb",
+                    "guid": "as_c12ac01417cb"
+                  },
+                  "placeholder": "chainsaw",
+                  "color": "#f8a247",
+                  "lengthM": 0.85,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.07500000000000001,
+                        0.09999999999999998,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.41500000000000004,
+                        0.09999999999999998,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.9529250177036406,
+                        0.510082573051635,
+                        0.05206811649393661
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.177,
+                        -2.7755575615628914e-17,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.33,
+                        0.13999999999999999,
+                        0.022068116493936862
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "chainsaw-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "chainsaw-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "chainsaw-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "chainsaw-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "chainsaw-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "chainsaw-muzzle",
+                    "trail": "chainsaw-trail",
+                    "impact": "chainsaw-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.027828648254036182,
+                        1.1444720106114232,
+                        0.45286094333396854
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.26084749269379015,
+                        0.5778951087163537
+                      ]
+                    },
+                    "attachments": [],
+                    "reloadAttachmentId": null
+                  }
+                }
+              },
+              {
+                "id": "flame",
+                "name": "火焰喷射器",
+                "nameEn": "Flamethrower",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "flame",
+                "damage": 3,
+                "cooldownSec": 0.1,
+                "rangeM": 6,
+                "spreadDeg": 40,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 0,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 0
+                },
+                "effects": {
+                  "blastRadiusM": 0,
+                  "burnDps": 6,
+                  "burnSec": 2,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0
+                },
+                "ammo": {
+                  "magazineSize": 60,
+                  "reserveRounds": 240,
+                  "reloadSec": 2.2,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-06-FLAME/game_ready/WPN-06-FLAME-without-can_lod0.glb",
+                    "guid": "as_420ed26a291b"
+                  },
+                  "placeholder": "flame",
+                  "color": "#ff7045",
+                  "lengthM": 0.8,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.10500000000000002,
+                        0.2,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.4250000000000001,
+                        0.2,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.6865598128041001,
+                        0.7142374415012813,
+                        0.047900916003125835
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.201,
+                        0.1,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.34500000000000003,
+                        0.24000000000000002,
+                        0.017900916003126044
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.02,
+                    "recoilPitchDeg": 3,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "flame-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "flame-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "flame-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "flame-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "flame-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "flame-muzzle",
+                    "trail": "flame-trail",
+                    "impact": "flame-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.03199584874484702,
+                        1.094944000305416,
+                        0.24456153719258167
+                      ],
+                      "rotation": [
+                        0,
+                        0.7071067811865476,
+                        0,
+                        0.7071067811865476
+                      ]
+                    },
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.05,
+                        0.311319482387783,
+                        0.3995957025749669
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-FUEL-01/game_ready/WPN-FUEL-01-fit-can_lod0.glb",
+                          "guid": "as_837e48912f68"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "insertion",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0.7071067811865476,
+                            0,
+                            0.7071067811865476
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart"
+                  }
+                }
+              },
+              {
+                "id": "launcher",
+                "name": "榴弹发射器",
+                "nameEn": "Grenade prototype",
+                "description": "Authored prototype tuning; GDD six bases plus projectile extension fixture. Missing resources explicitly use procedural presentation.",
+                "behavior": "projectile",
+                "damage": 42,
+                "cooldownSec": 1.1,
+                "rangeM": 16,
+                "spreadDeg": 0,
+                "pellets": 1,
+                "penetration": 1,
+                "projectile": {
+                  "speedMps": 12,
+                  "gravity": 5,
+                  "radiusM": 0.12,
+                  "lifetimeSec": 3,
+                  "launchSpeedY": 3
+                },
+                "effects": {
+                  "blastRadiusM": 3,
+                  "burnDps": 0,
+                  "burnSec": 0,
+                  "slowFrac": 0,
+                  "slowSec": 0,
+                  "knockbackM": 0.8
+                },
+                "ammo": {
+                  "magazineSize": 4,
+                  "reserveRounds": 24,
+                  "reloadSec": 2.4,
+                  "perShot": 1,
+                  "reloadMode": "magazine"
+                },
+                "upgrades": {
+                  "maxLevel": 5,
+                  "baseCost": 15,
+                  "costStep": 10,
+                  "damageStep": 0.2,
+                  "hasteStep": 0.08,
+                  "magazineStep": 2
+                },
+                "presentation": {
+                  "model": {
+                    "path": "assets/art/models/WPN-07-LAUNCHER/game_ready/WPN-07-LAUNCHER_lod0.glb",
+                    "guid": "as_f2f39beb7444"
+                  },
+                  "placeholder": "launcher",
+                  "color": "#a7dc7c",
+                  "lengthM": 0.675,
+                  "markers": {
+                    "primaryGrip": {
+                      "position": [
+                        0.09000000000000002,
+                        0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "right-hand"
+                    },
+                    "supportGrip": {
+                      "position": [
+                        0.39000000000000007,
+                        0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "left-hand"
+                    },
+                    "muzzle": {
+                      "position": [
+                        0.6725000000000001,
+                        0.622,
+                        0.21999999999999997
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "magazine": {
+                      "position": [
+                        0.18000000000000002,
+                        -0.05,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    },
+                    "chamber": {
+                      "position": [
+                        0.315,
+                        0.09,
+                        -0.09000000000000001
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ],
+                      "effector": "none"
+                    }
+                  },
+                  "procedural": {
+                    "recoilM": 0.055,
+                    "recoilPitchDeg": 8,
+                    "recoilSec": 0.2,
+                    "magazineOutPhase": 0.2,
+                    "magazineInPhase": 0.65,
+                    "chamberPhase": 0.85
+                  },
+                  "animations": {
+                    "idle": {
+                      "clip": "launcher-idle",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "fire": {
+                      "clip": "launcher-fire",
+                      "fallback": "attack",
+                      "resource": null
+                    },
+                    "reload": {
+                      "clip": "launcher-reload",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "equip": {
+                      "clip": "launcher-equip",
+                      "fallback": "idle",
+                      "resource": null
+                    },
+                    "unequip": {
+                      "clip": "launcher-unequip",
+                      "fallback": "idle",
+                      "resource": null
+                    }
+                  },
+                  "vfx": {
+                    "resource": {
+                      "path": "assets/vfx/comic-pistol.vfx.json",
+                      "guid": "as_vfx_comic_pistol"
+                    },
+                    "muzzle": "launcher-muzzle",
+                    "trail": "launcher-trail",
+                    "impact": "launcher-impact"
+                  },
+                  "assembly": {
+                    "holdPose": {
+                      "position": [
+                        -0.31,
+                        1.2,
+                        0.245
+                      ],
+                      "rotation": [
+                        0,
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    "attachments": [
+                      {
+                        "id": "reloadPart",
+                        "model": {
+                          "path": "assets/art/models/WPN-SHELL-01/game_ready/WPN-07-LAUNCHER-round-derived_lod0.glb",
+                          "guid": "as_29ec6c7622e0"
+                        },
+                        "parentSocket": "magazine",
+                        "childSocket": "base",
+                        "offset": {
+                          "position": [
+                            0,
+                            0,
+                            0
+                          ],
+                          "rotation": [
+                            0,
+                            0,
+                            0,
+                            1
+                          ]
+                        }
+                      }
+                    ],
+                    "reloadAttachmentId": "reloadPart",
+                    "holdSlot": {
+                      "bone": "Hips",
+                      "position": [
+                        -0.22010323525202694,
+                        0.2663754820823669,
+                        0.3850341653823853
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "audio": {
+            "enabled": true,
+            "masterGain": 0.65,
+            "maxVoices": 24,
+            "maxImpactVoices": 4,
+            "decodedBudgetMiB": 24,
+            "distanceM": 28,
+            "warningDistanceM": 18,
+            "cues": [
+              {
+                "id": "SFX-WPN-PISTOL-SHOT",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v01.wav",
+                    "guid": "as_1708bbad45af52c797d6f0a8"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v02.wav",
+                    "guid": "as_d1e18ed99aa651619e81661c"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-PISTOL-SHOT/SFX-WPN-PISTOL-SHOT__v03.wav",
+                    "guid": "as_7322cd1698b95b23b1b100f3"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.7,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-WPN-SMG-SHOT",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v01.wav",
+                    "guid": "as_b2cc40a39371508591967cca"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v02.wav",
+                    "guid": "as_bca63d52d1e25957be078251"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v03.wav",
+                    "guid": "as_bbcb9f1d77e35ef29b63af48"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-SMG-SHOT/SFX-WPN-SMG-SHOT__v04.wav",
+                    "guid": "as_7b8a4e9953eb548fa6067d7d"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.7,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-HIT-FLESH",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v01.wav",
+                    "guid": "as_bdf9e61fedd45210b1c218ba"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v02.wav",
+                    "guid": "as_d4ae79059b285188a8fd2a82"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v03.wav",
+                    "guid": "as_8bd7f943fefb599ba62d44f3"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-HIT-FLESH/SFX-HIT-FLESH__v04.wav",
+                    "guid": "as_a4632b2d13f25a558198c3be"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.27,
+                "priority": 4,
+                "cooldownSec": 0.1,
+                "bus": "impact"
+              },
+              {
+                "id": "SFX-WPN-FLAME-LOOP",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v01.wav",
+                    "guid": "as_71f8b4add9455486b076694c"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-WPN-FLAME-LOOP/SFX-WPN-FLAME-LOOP__v02.wav",
+                    "guid": "as_acd015093ccf573ab6cfa98b"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.3,
+                "priority": 6,
+                "cooldownSec": 0,
+                "bus": "weapon"
+              },
+              {
+                "id": "SFX-E03-ACID-POOL",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v01.wav",
+                    "guid": "as_0e06b98abf60551291ccbbbc"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-POOL/SFX-E03-ACID-POOL__v02.wav",
+                    "guid": "as_173fa76401d551aab33111e8"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.3,
+                "priority": 3,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-E03-ACID-LAUNCH",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v01.wav",
+                    "guid": "as_63b63e001c58581a90a66539"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v02.wav",
+                    "guid": "as_16fec97c0e1d5d698117ec64"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E03-ACID-LAUNCH/SFX-E03-ACID-LAUNCH__v03.wav",
+                    "guid": "as_e6078c3ba7b65e888a5224f5"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.3,
+                "priority": 3,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-E02-POUNCE-WARN",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v01.wav",
+                    "guid": "as_4980700b78225240a405af06"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v02.wav",
+                    "guid": "as_beee82dc33065833bf3a09e8"
+                  },
+                  {
+                    "path": "assets/audio/calibration/SFX-E02-POUNCE-WARN/SFX-E02-POUNCE-WARN__v03.wav",
+                    "guid": "as_0d6beee715985530b1e68e22"
+                  }
+                ],
+                "loop": false,
+                "gain": 0.3,
+                "priority": 8,
+                "cooldownSec": 0,
+                "bus": "enemy"
+              },
+              {
+                "id": "SFX-ENV-HIGHWAY-BED",
+                "variants": [
+                  {
+                    "path": "assets/audio/calibration/SFX-ENV-HIGHWAY-BED/SFX-ENV-HIGHWAY-BED__v01.wav",
+                    "guid": "as_348fff9d005a5641bdb47e38"
+                  }
+                ],
+                "loop": true,
+                "gain": 0.18,
+                "priority": 0,
+                "cooldownSec": 0,
+                "bus": "ambience"
+              }
+            ],
+            "ambience": {
+              "cue": "SFX-ENV-HIGHWAY-BED",
+              "rate": 1,
+              "gain": 1
+            },
+            "weapons": {
+              "pistol": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 1,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "smg": {
+                "fire": {
+                  "cue": "SFX-WPN-SMG-SHOT",
+                  "rate": 1,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "shotgun": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.7,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "sniper": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.8,
+                  "gain": 1
+                },
+                "loop": null
+              },
+              "launcher": {
+                "fire": {
+                  "cue": "SFX-WPN-PISTOL-SHOT",
+                  "rate": 0.6,
+                  "gain": 0.7
+                },
+                "loop": null
+              },
+              "chainsaw": {
+                "fire": null,
+                "loop": {
+                  "cue": "SFX-WPN-FLAME-LOOP",
+                  "rate": 0.6,
+                  "gain": 0.7
+                }
+              },
+              "flame": {
+                "fire": null,
+                "loop": {
+                  "cue": "SFX-WPN-FLAME-LOOP",
+                  "rate": 1,
+                  "gain": 1
+                }
+              }
+            },
+            "warnings": {
+              "E-02": {
+                "cue": "SFX-E02-POUNCE-WARN",
+                "rate": 1,
+                "gain": 1
+              }
+            },
+            "fleshHit": {
+              "cue": "SFX-HIT-FLESH",
+              "rate": 1,
+              "gain": 1
+            },
+            "acidLaunch": {
+              "cue": "SFX-E03-ACID-LAUNCH",
+              "rate": 1,
+              "gain": 1
+            },
+            "acidPool": {
+              "cue": "SFX-E03-ACID-POOL",
+              "rate": 1,
+              "gain": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_nav",
+      "name": "NavZone",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "NavZone",
+          "enabled": true,
+          "bounds": {
+            "center": [
+              0,
+              0,
+              0
+            ],
+            "size": [
+              12,
+              6,
+              12
+            ]
+          },
+          "cellSize": 0.5,
+          "baked": null,
+          "crowd": {
+            "maxNeighbors": 12,
+            "timeHorizonSec": 0.8,
+            "skinM": 0.02,
+            "acceleration": 8,
+            "collisionIterations": 4,
+            "stuckWindowSec": 0.5,
+            "stuckProgressRatio": 0.15,
+            "flowCellBudget": 2048
+          },
+          "surface": {
+            "maxSlopeDeg": 40,
+            "maxStepM": 0.3,
+            "agentRadius": 0.5,
+            "agentHeight": 2.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_player",
+      "name": "玩家出生点",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          1.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              0.4,
+              1.7,
+              0.4
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_barrel",
+      "name": "P-01 油桶（可破坏）",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2,
+          2,
+          2
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+              "guid": "as_74w6e6hg"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "physicsMaterial": null
+        },
+        {
+          "kind": "Destructible",
+          "enabled": true,
+          "profile": {
+            "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+            "guid": "as_p01frct"
+          },
+          "maxDurability": 40,
+          "trigger": {
+            "direct": true,
+            "explosion": true,
+            "burn": false
+          },
+          "onBroken": {
+            "collider": "remove",
+            "navigation": "clear-blocking"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_fr_spawn",
+      "name": "E-04 刷怪（致死碎裂）",
+      "parent": "nd_fr_room",
+      "transform": {
+        "position": [
+          0,
+          0,
+          -3.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "SpawnPoint",
+          "enabled": true,
+          "characterId": "E-04",
+          "count": 1,
+          "wave": 1,
+          "trigger": "room-enter",
+          "delaySec": 0.5,
+          "radius": 0.4,
+          "prefab": null
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_navsurface",
+      "name": "W6 导航地表",
+      "parent": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": false,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "NavSurface",
+          "enabled": true,
+          "size": [
+            12,
+            12
+          ],
+          "supportCollider": "nd_fr_ground"
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_barrel_b",
+      "name": "B 油桶",
+      "parent": null,
+      "transform": {
+        "position": [
+          1.8,
+          0.9,
+          2.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2,
+          2,
+          2
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+              "guid": "as_74w6e6hg"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "physicsMaterial": null
+        },
+        {
+          "kind": "Destructible",
+          "enabled": true,
+          "profile": {
+            "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+            "guid": "as_p01frct"
+          },
+          "maxDurability": 40,
+          "trigger": {
+            "direct": true,
+            "explosion": true,
+            "burn": false
+          },
+          "onBroken": {
+            "collider": "remove",
+            "navigation": "clear-blocking"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_barrel_c",
+      "name": "C 油桶",
+      "parent": null,
+      "transform": {
+        "position": [
+          -1.8,
+          0.9,
+          0.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          2,
+          2,
+          2
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "asset",
+            "ref": {
+              "path": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+              "guid": "as_74w6e6hg"
+            }
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.45,
+              0.3
+            ]
+          },
+          "physicsMaterial": null
+        },
+        {
+          "kind": "Destructible",
+          "enabled": true,
+          "profile": {
+            "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+            "guid": "as_p01frct"
+          },
+          "maxDurability": 40,
+          "trigger": {
+            "direct": true,
+            "explosion": true,
+            "burn": false
+          },
+          "onBroken": {
+            "collider": "remove",
+            "navigation": "clear-blocking"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_control",
+      "name": "未配置对照箱",
+      "parent": null,
+      "transform": {
+        "position": [
+          3,
+          0.4,
+          4.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              0.6,
+              0.8,
+              0.6
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              0.3,
+              0.4,
+              0.3
+            ]
+          },
+          "physicsMaterial": null
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_wall_l",
+      "name": "可破坏屏障墙",
+      "parent": null,
+      "transform": {
+        "position": [
+          -3.5,
+          1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              5.0,
+              2,
+              0.3
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              2.5,
+              1,
+              0.15
+            ]
+          },
+          "physicsMaterial": null
+        }
+      ]
+    },
+    {
+      "id": "nd_w6_wall_r",
+      "name": "可破坏屏障墙",
+      "parent": null,
+      "transform": {
+        "position": [
+          3.5,
+          1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "visible": true,
+      "pickable": true,
+      "prefab": null,
+      "components": [
+        {
+          "kind": "MeshRenderer",
+          "enabled": true,
+          "source": {
+            "type": "builtin",
+            "shape": "box",
+            "params": [
+              5.0,
+              2,
+              0.3
+            ]
+          },
+          "materials": [],
+          "visible": true,
+          "layer": 0,
+          "importScale": 1
+        },
+        {
+          "kind": "Collider",
+          "enabled": true,
+          "isTrigger": false,
+          "shape": {
+            "type": "box",
+            "halfExtents": [
+              2.5,
+              1,
+              0.15
+            ]
+          },
+          "physicsMaterial": null
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-20T04:51:14.204Z",
+    "updatedAt": "2026-10-20T04:51:14.205Z"
+  }
+}

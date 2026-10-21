@@ -429,3 +429,30 @@ describe('loadLevelRuntime —— 小数 wave 必须显式报警', () => {
     }
   });
 });
+
+
+describe('loadLevelRuntime —— W06 可破坏庭院', () => {
+  const W6 = import.meta.glob('../../../assets/scenes/sandbox/fracture-wu06.scene.json', { eager: true });
+
+  it('正式可破坏对象产出世界快照，并从静态射线/基础导航中移交给 Play 动态责任', () => {
+    const key = Object.keys(W6)[0]!;
+    const doc = (W6[key] as { default: unknown }).default as SceneDocument;
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const d = r.desc!;
+    expect(d.nav?.surface).toBeDefined();
+    expect(d.destructibles.map((x) => x.nodeId)).toEqual(['nd_fr_barrel', 'nd_w6_barrel_b', 'nd_w6_barrel_c']);
+    for (const target of d.destructibles) {
+      expect(target.solid).not.toBeNull();
+      expect(target.obstacle).not.toBeNull();
+      expect(target.maxDurability).toBe(40);
+      expect(target.profile.path.endsWith('.fracture.json')).toBe(true);
+      expect(d.shotColliders.some((s) => s.nodeId === target.nodeId)).toBe(false);
+      expect(d.obstacles.some((o) => o.nodeId === target.nodeId)).toBe(false);
+    }
+    // 遮挡墙与未配置对照仍走静态 collider，不因可破坏对象改动而消失。
+    expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_wall_l')).toBe(true);
+    expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_wall_r')).toBe(true);
+    expect(d.shotColliders.some((s) => s.nodeId === 'nd_w6_control')).toBe(true);
+  });
+});

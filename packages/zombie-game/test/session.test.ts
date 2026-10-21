@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { RuntimeSession } from '../src/session';
 import { loadLevelRuntime } from '../src/loader';
 import type { SceneDocument } from '@aether/scene';
-import type { LevelRuntimeDesc, NavDesc } from '../src/loader';
+import { solidCollider } from '@aether/runtime';
+import type { LevelRuntimeDesc, NavDesc, DestructibleDesc } from '../src/loader';
 
 /** 最小合成运行描述：一块空导航区，可选障碍。输入链路测试用它，不碰真实关卡 */
 function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDesc {
@@ -16,6 +17,7 @@ function bareDesc(obstacles: LevelRuntimeDesc['obstacles'] = []): LevelRuntimeDe
     rooms: [],
     spawns: [],
     obstacles,
+  destructibles: [],
     shotColliders: [],
     // 合成场景显式声明失败条件（v4 真源）：玩家死亡 = 失败
     loseCondition: 'player-death',
@@ -520,5 +522,79 @@ describe('WU-5 前置：改一处刷怪点不牵动其它刷怪点', () => {
     const a = new RuntimeSession({ desc: desc(), seed: 1 }).view().map((e) => e.x.toFixed(6));
     const b = new RuntimeSession({ desc: desc(), seed: 2 }).view().map((e) => e.x.toFixed(6));
     expect(b).not.toEqual(a);
+  });
+});
+
+
+describe('RuntimeSession —— W06 可破坏物体状态', () => {
+  function target(): DestructibleDesc {
+    const world = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0.5,0,1]);
+    return {
+      nodeId: 'nd_crate', name: 'crate',
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      maxDurability: 20,
+      trigger: { direct: true, explosion: true, burn: false },
+      onBroken: { collider: 'remove', navigation: 'clear-blocking' },
+      world, position: [0, 0.5, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      bounds: { x: 0, z: 0, halfX: 0.3, halfZ: 0.3, radius: 0.3, minY: 0, maxY: 1 },
+      solid: solidCollider('nd_crate', { type: 'box', halfExtents: [0.3, 0.5, 0.3] }, world),
+      obstacle: null,
+    };
+  }
+
+  it('伤害一次转换、来源门控、碰撞移除与 Reset 恢复都由同一 Play 副本拥有', () => {
+    const layout = bareDesc();
+    layout.destructibles = [target()];
+    const s = new RuntimeSession({ desc: layout, seed: 7 });
+    expect(s.collisionSnapshot().solids).toContain('nd_crate');
+
+    expect(s.damageSceneObject('nd_crate', 5, { weaponId: 'w_pistol' }, 'direct')).toBe(5);
+    expect(s.destructibleSnapshot()).toEqual([{ nodeId: 'nd_crate', hp: 15, broken: false }]);
+    // burn 未允许时同一次事实不能借其它来源推进。
+    expect(s.damageSceneObject('nd_crate', 5, { weaponId: 'w_flame' }, 'burn')).toBe(0);
+    expect(s.destructibleSnapshot()[0]!.hp).toBe(15);
+
+    const applied = s.damageSceneObject('nd_crate', 20, { weaponId: 'w_pistol', vfxSequence: 91 }, 'direct', [0, 0.6, 0], [0, 0, 1]);
+    expect(applied).toBe(15);
+    const events = s.takeDestructibleEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.target.kind).toBe('scene-object');
+    expect((events[0]!.target as { nodeId: string }).nodeId).toBe('nd_crate');
+    expect(events[0]!.source.hitSequence).toBe(91);
+    expect(events[0]!.position).toEqual([0, 0.5, 0]);
+    expect(events[0]!.rotation).toEqual([0, 0, 0, 1]);
+    expect(events[0]!.contact).toEqual([0, 0.6, 0]);
+    expect(s.takeDestructibleEvents()).toHaveLength(0);
+    expect(s.damageSceneObject('nd_crate', 100, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
+    expect(s.destructibleSnapshot()).toEqual([{ nodeId: 'nd_crate', hp: 0, broken: true }]);
+    expect(s.collisionSnapshot().solids).not.toContain('nd_crate');
+    expect(s.collisionSnapshot().dynamicObstacles).not.toContain('nd_crate');
+
+    s.reset();
+    expect(s.destructibleSnapshot()).toEqual([{ nodeId: 'nd_crate', hp: 20, broken: false }]);
+    expect(s.collisionSnapshot().solids).toContain('nd_crate');
+  });
+});
+
+
+describe('RuntimeSession —— W06 正式可破坏庭院', () => {
+  const W6 = import.meta.glob('../../../assets/scenes/sandbox/fracture-wu06.scene.json', { eager: true });
+  it('表面导航成立，三个可破坏对象在 Play 副本中可单独破坏', () => {
+    const key = Object.keys(W6)[0]!;
+    const doc = (W6[key] as { default: unknown }).default as SceneDocument;
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const s = new RuntimeSession({ desc: r.desc!, seed: 3 });
+    expect(s.destructibleSnapshot().map((x) => x.nodeId)).toEqual(['nd_fr_barrel', 'nd_w6_barrel_b', 'nd_w6_barrel_c']);
+    expect(s.collisionSnapshot().solids).toEqual(expect.arrayContaining(['nd_fr_barrel', 'nd_w6_barrel_b', 'nd_w6_barrel_c']));
+    expect(s.collisionSnapshot().dynamicObstacles).toEqual(expect.arrayContaining(['nd_fr_barrel', 'nd_w6_barrel_b', 'nd_w6_barrel_c']));
+    expect(s.damageSceneObject('nd_fr_barrel', 40, { weaponId: 'w_pistol' }, 'direct')).toBe(40);
+    expect(s.destructibleSnapshot()[0]).toEqual({ nodeId: 'nd_fr_barrel', hp: 0, broken: true });
+    expect(s.collisionSnapshot().solids).not.toContain('nd_fr_barrel');
+    expect(s.collisionSnapshot().dynamicObstacles).not.toContain('nd_fr_barrel');
+    expect(s.takeDestructibleEvents()).toHaveLength(1);
+    s.reset();
+    expect(s.destructibleSnapshot()[0]).toEqual({ nodeId: 'nd_fr_barrel', hp: 40, broken: false });
+    expect(s.collisionSnapshot().solids).toContain('nd_fr_barrel');
   });
 });
