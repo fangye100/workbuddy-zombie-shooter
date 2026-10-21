@@ -1,0 +1,828 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu06.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu06.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "gitHead": "958d8ecfe2a1c9f1c035d419ee4da3ce2c473efa",
+    "formalHashes": {
+      "assets/fracture/p01-barrel/p01-barrel.fracture.json": "07a8bf077152f7d79ea0b2b3aa389b838107815a2e5aa2c61cacfcefa1e43901",
+      "assets/fracture/p01-barrel/p01-barrel.fracture.json.meta.json": "2709cbca003398974b6605ea2127e87eaedbe64416fc26f73889b75aee08c7e5",
+      "aether.project.json": "9670c8f4eaaf3bfef2e1fcb4a7edaf96b7edac6aeebe67483a51ebeb81f68173",
+      "assets/scenes/sandbox/fracture-wu06.scene.json": "85798be0d736cdbcb340d68e94b7ec2db07ef8a9d0ffccf38f2974a74c2fe942",
+      "assets/environment/models/P-01/tex2/P-01_baked.glb": "3077b96922ae4e47733f1bce9714f2dbcabcfff4d534382691a2fe186a1cdef3",
+      "assets/environment/models/P-01/tex2/P-01_baked.glb.meta.json": "e82855508d386618ac2f5b29d97a9b41c4da4a343a753f479e3f94472d490838",
+      "assets/fracture/p01-barrel/chunk-0001.glb": "f1fa75b02f2f23bc7e1235e2d8fba7d617428c8807812300f1355ae6755c4fe1",
+      "assets/fracture/p01-barrel/chunk-0001.glb.meta.json": "a6afdd27d60d49bf734de0c2465d55fe0ed94b236f83ef2743486572338acd3a",
+      "assets/fracture/p01-barrel/chunk-0002.glb": "b6cb6fc695bccc49dbfe5826d64acbf8b37bb0920f0bbe686af19fa072e913f2",
+      "assets/fracture/p01-barrel/chunk-0002.glb.meta.json": "ac964b05789f19fe62a66e4036471b2330c0932f808f8d85c557ee57fb01b403",
+      "assets/fracture/p01-barrel/chunk-0003.glb": "836cadb73fd408ae4160a07388aa5de56f8fbe2a08a2fd3184a4cd98c9ce411a",
+      "assets/fracture/p01-barrel/chunk-0003.glb.meta.json": "8f305783eadf2f71be5085bd66080d50b11ed455ce8fff3d4fd936ae5044bc89",
+      "assets/fracture/p01-barrel/chunk-0004.glb": "eb41772bd1b7181470c1d8d005c3f2223dab674edee0e8b334261194bf3234b7",
+      "assets/fracture/p01-barrel/chunk-0004.glb.meta.json": "0f7ce9c8d7c4cece047cbe2a8f20ebab28def3ef89ca0029bdea717a229170a7",
+      "assets/fracture/p01-barrel/chunk-0005.glb": "db1c48cf7860a2df45bae86e68cf549ac4f5670e124ff47ce6e740de6d3828f9",
+      "assets/fracture/p01-barrel/chunk-0005.glb.meta.json": "ff794f7c86dda4d6925051b20cf4c3a1ed16d9ec21016dd32b53cb6d6ad9f85c",
+      "assets/fracture/p01-barrel/chunk-0006.glb": "e70b9cefc2fd2cc78f81cd3abc9dd0ab2032dbfc73c816faa8aa01f61a34abb8",
+      "assets/fracture/p01-barrel/chunk-0006.glb.meta.json": "813c7ad12f75928fecf51c9c630cec4decf2f2e7fcff80a5ec2a513375d1b8a3",
+      "assets/fracture/p01-barrel/chunk-0007.glb": "049422ae9cf00cf9634ede6fff7237bd3e93f21676a10dbe36cff284dc1c3e40",
+      "assets/fracture/p01-barrel/chunk-0007.glb.meta.json": "5495a998df1eded9a513386ccff26fc6e2651a6292cf1487e9edd0f5df627c33",
+      "assets/fracture/p01-barrel/chunk-0008.glb": "8cef7ad0dfae7e2c8ae1b61444a1ac1520b9c8b12c8f24f1079aecb71d9c9269",
+      "assets/fracture/p01-barrel/chunk-0008.glb.meta.json": "8f50cc8e0aa0444a060a21eba176d4822c73415b2f1b239f4dabc33890b7e7c2",
+      "assets/fracture/p01-barrel/chunk-0009.glb": "b84443333b9f361b0ddf492f0556b460fd7e08a4a586d837dd15a756aea2bb94",
+      "assets/fracture/p01-barrel/chunk-0009.glb.meta.json": "3dc000141ccc4be47e91bbc8ffa46f7c03af0cf8fcdfb96e35386d5d6c869054",
+      "assets/fracture/p01-barrel/chunk-0010.glb": "713da30321b1c9fe7e5d78facdb0b2667625b55cd079cee625a8b4cb8dfb3d6f",
+      "assets/fracture/p01-barrel/chunk-0010.glb.meta.json": "8bab1f7f4d9c13d15d8a805c0a0dd490e2d1afae5c3f7d6c78b673b19f50667c",
+      "assets/fracture/p01-barrel/chunk-0011.glb": "985dbcbd0d74c2d279d554c4ef0d88e692f88cd8ea23310820110ab63425e4b3",
+      "assets/fracture/p01-barrel/chunk-0011.glb.meta.json": "9755001297b127176c418253973963afdd7e350c445319dbc788ca81ab01a5ab",
+      "assets/fracture/p01-barrel/chunk-0012.glb": "3f347778b2b7e62f8ebf5f5cb2677ba1ecccb6266e58c4b3a28329cb353fa088",
+      "assets/fracture/p01-barrel/chunk-0012.glb.meta.json": "7c80c7071873027548f85e39d3b6b350e3825150d2478ba200373aed5d50e910"
+    },
+    "sourceHashes": {
+      "packages/runtime/src/fracture-activation.ts": "45f6c1c642a8c1343e9244213a8f82c7fe8529cd298a558d3ff6d55b4f6fbb27",
+      "apps/editor/src/services/fracture-panel.ts": "2ebb92207c7ce480fabad73664fef117d3b88ad143ce29b01b4babc9ed4cc007",
+      "apps/editor/src/services/fracture-preview.ts": "b99235e3f025bf06e36663b7aeabb4e3db403ff73862591780aeb480ff38ef6d",
+      "apps/editor/src/services/author-resource-document.ts": "451836118ef38bbeff0f3030cba95c1309ee132410a630b67ce4eb9ceb71fdea"
+    },
+    "variant": {
+      "profile": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+      "convex": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+      "guid": "as_wu08_virtual_convex",
+      "note": "沿正式准入探针相同合法独立convex输入；只改当前tab IO，不写正式文件。每负例只将真实GLB JSON首字符从{改为!；magic/version/声明长度及其余字节完全保留，sidecar摘要同步坏字节。"
+    },
+    "inputs": {
+      "source": {
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "originalHash": "3077b96922ae4e47733f1bce9714f2dbcabcfff4d534382691a2fe186a1cdef3",
+        "badHash": "149ac6375001d951aa61d503b2cd44477a3e5b6adddf6d268a9fce0507d6fcf4",
+        "bytes": 3294272,
+        "changedOffsets": [
+          20
+        ],
+        "glbMagic": 1179937895,
+        "version": 2,
+        "declared": 3294272,
+        "jsonLength": 1588,
+        "parseError": "SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+      },
+      "convex": {
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "originalHash": "f1fa75b02f2f23bc7e1235e2d8fba7d617428c8807812300f1355ae6755c4fe1",
+        "badHash": "64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925",
+        "bytes": 2480172,
+        "changedOffsets": [
+          20
+        ],
+        "glbMagic": 1179937895,
+        "version": 2,
+        "declared": 2480172,
+        "jsonLength": 1632,
+        "parseError": "SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+      }
+    },
+    "cases": [
+      {
+        "kind": "source",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb",
+        "afterHash": "1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb",
+        "beforeHp": 40,
+        "requestedHp": 41,
+        "actualHp": 40,
+        "sceneApplyDiagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+        "sceneUnchanged": true,
+        "assetApply": {
+          "beforeHash": "565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af",
+          "afterHash": "565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af",
+          "undoBefore": 0,
+          "undoAfter": 0,
+          "requestedTTL": 9,
+          "actualTTL": 4,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+        },
+        "cpu": {
+          "admission": {
+            "ok": false,
+            "failure": {
+              "stage": "ref-binary",
+              "detail": "引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+            }
+          },
+          "prepare": {
+            "ok": false,
+            "failure": {
+              "stage": "ref-binary",
+              "detail": "引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+            }
+          }
+        },
+        "preview": {
+          "ready": false,
+          "paused": true,
+          "triggered": false,
+          "sourceVisible": false,
+          "takingOver": false,
+          "tick": 0,
+          "owner": "fracture-preview-7",
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "event": null,
+          "active": 0,
+          "stats": null,
+          "batches": [],
+          "backend": null,
+          "meshCount": 0,
+          "binaryHits": 5,
+          "metaHits": 5
+        },
+        "recovery": {
+          "hp": 41,
+          "requestedHp": 41,
+          "ttl": 11,
+          "requestedTTL": 11,
+          "undoBefore": 0,
+          "undoAfter": 1,
+          "assetDiagnostic": "配方已应用，可撤销；磁盘尚未保存",
+          "sceneDiagnostic": "碎裂配置已应用到场景，可Undo/Redo，请保存"
+        },
+        "recoveryGPU": {
+          "preview": {
+            "ready": true,
+            "paused": true,
+            "triggered": true,
+            "sourceVisible": false,
+            "takingOver": false,
+            "tick": 0,
+            "owner": "fracture-preview-12",
+            "diagnostic": "",
+            "event": {
+              "sequence": 12,
+              "tick": 0,
+              "seed": 7,
+              "profile": {
+                "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+                "guid": "as_p01frct"
+              },
+              "target": {
+                "kind": "scene-object",
+                "runId": "fracture-preview-12",
+                "nodeId": "nd_fr_barrel"
+              },
+              "position": [
+                0,
+                0.9,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                2,
+                2,
+                2
+              ],
+              "contact": null,
+              "normal": [
+                0,
+                0,
+                1
+              ],
+              "impulse": [
+                0,
+                2,
+                3
+              ],
+              "source": {
+                "weaponId": "author-preview",
+                "hitSequence": 12
+              }
+            },
+            "active": 12,
+            "stats": {
+              "rigidActive": 12,
+              "simplifiedActive": 0,
+              "queuedEvents": 0,
+              "deduplicated": 0,
+              "rejectedAdmission": 0,
+              "evicted": 0,
+              "expired": 0,
+              "skipped": 0,
+              "failedActivations": 0,
+              "poolActive": 12,
+              "poolHighWater": 12,
+              "physicsMs": 0,
+              "integrateMs": 0,
+              "updateMs": 1.800000011920929,
+              "ticks": 0
+            },
+            "batches": [
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-12:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+                "count": 1
+              }
+            ]
+          },
+          "backend": {
+            "dynamicBodies": 12,
+            "staticColliders": 6,
+            "ticks": 0,
+            "destroyed": false
+          }
+        }
+      },
+      {
+        "kind": "convex",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd",
+        "afterHash": "f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd",
+        "beforeHp": 41,
+        "requestedHp": 42,
+        "actualHp": 41,
+        "sceneApplyDiagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+        "sceneUnchanged": true,
+        "assetApply": {
+          "beforeHash": "f17424c24b894d3c46cea4fb43b68c05ae671425006726cdcb61243adca9f079",
+          "afterHash": "f17424c24b894d3c46cea4fb43b68c05ae671425006726cdcb61243adca9f079",
+          "undoBefore": 1,
+          "undoAfter": 1,
+          "requestedTTL": 9,
+          "actualTTL": 11,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+        },
+        "cpu": {
+          "admission": {
+            "ok": false,
+            "failure": {
+              "stage": "ref-binary",
+              "detail": "引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+            }
+          },
+          "prepare": {
+            "ok": false,
+            "failure": {
+              "stage": "ref-binary",
+              "detail": "引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+            }
+          }
+        },
+        "preview": {
+          "ready": false,
+          "paused": true,
+          "triggered": false,
+          "sourceVisible": false,
+          "takingOver": false,
+          "tick": 0,
+          "owner": "fracture-preview-14",
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "event": null,
+          "active": 0,
+          "stats": null,
+          "batches": [],
+          "backend": null,
+          "meshCount": 0,
+          "binaryHits": 5,
+          "metaHits": 5
+        },
+        "recovery": {
+          "hp": 42,
+          "requestedHp": 42,
+          "ttl": 12,
+          "requestedTTL": 12,
+          "undoBefore": 1,
+          "undoAfter": 2,
+          "assetDiagnostic": "配方已应用，可撤销；磁盘尚未保存",
+          "sceneDiagnostic": "碎裂配置已应用到场景，可Undo/Redo，请保存"
+        },
+        "recoveryGPU": {
+          "preview": {
+            "ready": true,
+            "paused": true,
+            "triggered": true,
+            "sourceVisible": false,
+            "takingOver": false,
+            "tick": 0,
+            "owner": "fracture-preview-19",
+            "diagnostic": "",
+            "event": {
+              "sequence": 19,
+              "tick": 0,
+              "seed": 7,
+              "profile": {
+                "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+                "guid": "as_p01frct"
+              },
+              "target": {
+                "kind": "scene-object",
+                "runId": "fracture-preview-19",
+                "nodeId": "nd_fr_barrel"
+              },
+              "position": [
+                0,
+                0.9,
+                0
+              ],
+              "rotation": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "scale": [
+                2,
+                2,
+                2
+              ],
+              "contact": null,
+              "normal": [
+                0,
+                0,
+                1
+              ],
+              "impulse": [
+                0,
+                2,
+                3
+              ],
+              "source": {
+                "weaponId": "author-preview",
+                "hitSequence": 19
+              }
+            },
+            "active": 12,
+            "stats": {
+              "rigidActive": 12,
+              "simplifiedActive": 0,
+              "queuedEvents": 0,
+              "deduplicated": 0,
+              "rejectedAdmission": 0,
+              "evicted": 0,
+              "expired": 0,
+              "skipped": 0,
+              "failedActivations": 0,
+              "poolActive": 12,
+              "poolHighWater": 12,
+              "physicsMs": 0,
+              "integrateMs": 0,
+              "updateMs": 1.800000011920929,
+              "ticks": 0
+            },
+            "batches": [
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+                "count": 1
+              },
+              {
+                "meshId": "fracture-preview-19:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+                "count": 1
+              }
+            ]
+          },
+          "backend": {
+            "dynamicBodies": 12,
+            "staticColliders": 6,
+            "ticks": 0,
+            "destroyed": false
+          }
+        }
+      }
+    ],
+    "validControl": {
+      "preview": {
+        "ready": true,
+        "paused": true,
+        "triggered": true,
+        "sourceVisible": false,
+        "takingOver": false,
+        "tick": 0,
+        "owner": "fracture-preview-5",
+        "diagnostic": "",
+        "event": {
+          "sequence": 5,
+          "tick": 0,
+          "seed": 7,
+          "profile": {
+            "path": "assets/fracture/p01-barrel/p01-barrel.fracture.json",
+            "guid": "as_p01frct"
+          },
+          "target": {
+            "kind": "scene-object",
+            "runId": "fracture-preview-5",
+            "nodeId": "nd_fr_barrel"
+          },
+          "position": [
+            0,
+            0.9,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            2,
+            2,
+            2
+          ],
+          "contact": null,
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "impulse": [
+            0,
+            2,
+            3
+          ],
+          "source": {
+            "weaponId": "author-preview",
+            "hitSequence": 5
+          }
+        },
+        "active": 12,
+        "stats": {
+          "rigidActive": 12,
+          "simplifiedActive": 0,
+          "queuedEvents": 0,
+          "deduplicated": 0,
+          "rejectedAdmission": 0,
+          "evicted": 0,
+          "expired": 0,
+          "skipped": 0,
+          "failedActivations": 0,
+          "poolActive": 12,
+          "poolHighWater": 12,
+          "physicsMs": 0,
+          "integrateMs": 0,
+          "updateMs": 6.099999964237213,
+          "ticks": 0
+        },
+        "batches": [
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0001.glb#62a39320984b83e0",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0002.glb#694c2933faf5cb18",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0003.glb#0e501d3137560237",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0004.glb#2d548fe878130390",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0005.glb#46dd658a7257cc61",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0006.glb#b4992277c8262da2",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0007.glb#cc27e8244d084b2f",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0008.glb#42135f7faa19e430",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0009.glb#924b575b6475a978",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0010.glb#81f7d3779e862f3f",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0011.glb#59030122005309e9",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+            "count": 1
+          },
+          {
+            "meshId": "fracture-preview-5:assets/fracture/p01-barrel/chunk-0012.glb#89bac162ba85d1af",
+            "count": 1
+          }
+        ]
+      },
+      "backend": {
+        "dynamicBodies": 12,
+        "staticColliders": 6,
+        "ticks": 0,
+        "destroyed": false
+      }
+    },
+    "fileChanges": [],
+    "sourceChanges": []
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "故障前合法独立convex经原UI进入12真body与实际GPU接管",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source：内容损坏GLB必须拒绝Scene Apply并保留Document",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb\",\"afterHash\":\"1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb\",\"beforeHp\":40,\"requestedHp\":41,\"actualHp\":40,\"sceneApplyDiagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"sceneUnchanged\":true}"
+    },
+    {
+      "name": "source：内容损坏GLB必须拒绝Asset Apply且不增历史",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af\",\"afterHash\":\"565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af\",\"undoBefore\":0,\"undoAfter\":0,\"requestedTTL\":9,\"actualTTL\":4,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}"
+    },
+    {
+      "name": "source：同输入原Preview拒绝，无World/GPU",
+      "ok": true,
+      "detail": "{\"cpu\":{\"admission\":{\"ok\":false,\"failure\":{\"stage\":\"ref-binary\",\"detail\":\"引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}},\"prepare\":{\"ok\":false,\"failure\":{\"stage\":\"ref-binary\",\"detail\":\"引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}}},\"preview\":{\"ready\":false,\"paused\":true,\"triggered\":false,\"sourceVisible\":false,\"takingOver\":false,\"tick\":0,\"owner\":\"fracture-preview-7\",\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"event\":null,\"active\":0,\"stats\":null,\"batches\":[],\"backend\":null,\"meshCount\":0,\"binaryHits\":5,\"metaHits\":5}}"
+    },
+    {
+      "name": "source：恢复后用新的不同值真实提交两种Apply",
+      "ok": true,
+      "detail": "{\"hp\":41,\"requestedHp\":41,\"ttl\":11,\"requestedTTL\":11,\"undoBefore\":0,\"undoAfter\":1,\"assetDiagnostic\":\"配方已应用，可撤销；磁盘尚未保存\",\"sceneDiagnostic\":\"碎裂配置已应用到场景，可Undo/Redo，请保存\"}"
+    },
+    {
+      "name": "source：恢复有效字节后12真body/GPU重新接管",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex：内容损坏GLB必须拒绝Scene Apply并保留Document",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd\",\"afterHash\":\"f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd\",\"beforeHp\":41,\"requestedHp\":42,\"actualHp\":41,\"sceneApplyDiagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"sceneUnchanged\":true}"
+    },
+    {
+      "name": "convex：内容损坏GLB必须拒绝Asset Apply且不增历史",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"f17424c24b894d3c46cea4fb43b68c05ae671425006726cdcb61243adca9f079\",\"afterHash\":\"f17424c24b894d3c46cea4fb43b68c05ae671425006726cdcb61243adca9f079\",\"undoBefore\":1,\"undoAfter\":1,\"requestedTTL\":9,\"actualTTL\":11,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}"
+    },
+    {
+      "name": "convex：同输入原Preview拒绝，无World/GPU",
+      "ok": true,
+      "detail": "{\"cpu\":{\"admission\":{\"ok\":false,\"failure\":{\"stage\":\"ref-binary\",\"detail\":\"引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}},\"prepare\":{\"ok\":false,\"failure\":{\"stage\":\"ref-binary\",\"detail\":\"引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}}},\"preview\":{\"ready\":false,\"paused\":true,\"triggered\":false,\"sourceVisible\":false,\"takingOver\":false,\"tick\":0,\"owner\":\"fracture-preview-14\",\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"event\":null,\"active\":0,\"stats\":null,\"batches\":[],\"backend\":null,\"meshCount\":0,\"binaryHits\":5,\"metaHits\":5}}"
+    },
+    {
+      "name": "convex：恢复后用新的不同值真实提交两种Apply",
+      "ok": true,
+      "detail": "{\"hp\":42,\"requestedHp\":42,\"ttl\":12,\"requestedTTL\":12,\"undoBefore\":1,\"undoAfter\":2,\"assetDiagnostic\":\"配方已应用，可撤销；磁盘尚未保存\",\"sceneDiagnostic\":\"碎裂配置已应用到场景，可Undo/Redo，请保存\"}"
+    },
+    {
+      "name": "convex：恢复有效字节后12真body/GPU重新接管",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "所有正式文件及受测源码字节保持冻结",
+      "ok": true,
+      "detail": "{\"files\":[],\"source\":[]}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

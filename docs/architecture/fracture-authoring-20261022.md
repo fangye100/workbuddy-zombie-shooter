@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`9001502332114ab46da6564a2ca1236b26122c33`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`cca7ffbd0f5daab56c826c1fe619d2bdf5b5ff85`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -34,7 +34,7 @@ NPC 案例也可打开 `assets/scenes/sandbox/fracture-wu07.scene.json`，选 E-
 |---|---|
 | 场景配置与历史 | `packages/scene/src/fracture.ts`、`document.ts` 既有 v25/v1 契约；`SpawnEditStore.editNodes`、原 History、`AuthorSceneSaver`。没有新 schema 版本或第二份 HP。 |
 | 资产历史/CAS | 从原 `VfxDocument` 局部抽离 `AuthorResourceDocument`，VFX 入口保留薄适配；碎裂使用同一实现，未复制历史/保存栈。 |
-| 当前准入 | 原 `admitFractureProfile` 收敛当前 profile/sidecar、合法草稿及 source/chunk/convex 的全部 sidecar 与 GLB；Scene Apply、Asset Apply、Preview 和 Play 共用。原 `prepareFractureActivation` 复用当次已验 NPC 字节继续姿态/事件/代理准备。 |
+| 当前准入 | 原 `admitFractureProfile` 收敛当前 profile/sidecar、合法草稿及全部 source/chunk/独立 convex sidecar 和实际 GLB；复用原 `parseGlb` 解码并检查有限几何/权重与索引。Scene Apply、Asset Apply、Preview、Play 共用；NPC 复用当次已验原字节继续准备。 |
 | 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。runtime 唯一 `fractureAuthorDraft` 约束可写字段，编辑侧保留薄转出。 |
 | 预览组合 | `FracturePreview` 注入独立 host，复用 `bindFractureToPlay`、固定 tick、真 Rapier、原简化 sim、租约和正式准备器。没有调用游戏伤害或建立 Preview 专用运动求解。 |
 | 完整 NPC 与碎块 | 原 ActorLibrary/动作选择/poseIndexAt 取当前姿态；原 `bakeSkinVertices` 求完整四权重表面。`paletteForNamedPose` 按接收 GLB 的骨名映射，不借另一份 rig 的下标；原 WU07 准备器也使用该 helper。 |
@@ -59,12 +59,12 @@ WASM compat 内嵌模块没有独立下载请求；模块代码可共享，World
 
 | 命令/证据 | 实际结果 |
 |---|---|
-| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；完整准入变更后 8 文件/189，最终资产历史及旧 VFX 作者路径另复跑 2 文件/23。没有冒称重新执行最终全仓。 |
+| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；最终真实内容准入后 8 文件/189 通过；未重新执行最终全仓。 |
 | `pnpm run typecheck` / `architecture:check` / `editor:build` | 当前通过；架构 434 文件、0 错误，构建保留 bundle 大小提示。 |
 | `pnpm run scene:check` | 最终作者验收副本清理后通过，正式资产/项目保持原字节。 |
 | Node fs owner runner | 最近独立 4/4，源/sidecar 事务、CAS、typed refs 及失败回滚；该 owner 本轮后续未改，按源码身份继承。 |
 | `node tools/verify/wu08-author-probe.mjs --headed` | 48/48，严格 TLS、DISPLAY1、真实 NVIDIA Lovelace 非 fallback，0 console error/exception；原生 UI 与受控 IO/GPU 故障分开记录。 |
-| `node tools/verify/wu08-admission-probe.mjs --headed` | 当前 129/129，原生场景及资产 Apply、精确 IO 故障、真实 World/GPU 拒绝与恢复、迟到操作隔离；正式文件未写入。 |
+| `node tools/verify/wu08-admission-probe.mjs --headed` | 当前 165/165，三类引用各九类故障；含哈希匹配且头/长度合法的坏 JSON 和非有限 POSITION。两种 Apply 拒绝/保留草稿与历史、World/GPU 前拒绝及恢复均通过。 |
 | 正式 NPC 原生击杀回归 | 最近原生 23/23；按未变的相机/玩法/渲染消费者及新 owner、E04 实际预览证据继承，未冒称本轮再次完整实射。 |
 | 正式物体/爆炸/导航回归 | 最近原生 43/43；按未变的合法数据与原消费者继承，当前共享准入/PlayController owner 及实际作者 Play 读取另外通过。 |
 | 原 Editor 核心 UI 回归 | 最近独立完整副本 123 PASS/2 FAIL/0 SKIP、exit1；复制两项为有原生对照的宿主限制，未称整套通过。 |
@@ -137,3 +137,15 @@ F08-04反例：打开合法配方并保留TTL9草稿后，当前磁盘profile内
 完整准入新增owner覆盖同样21组合，Apply公共入口、带draft/无draft prepare均拒绝并恢复；NPC字节Map与单读复用实测通过。相关8文件189通过；最后资产只读revisiongetter及既有VFX/历史owner另复跑2文件23通过。完整原作者创建、保存、CAS、整页reload、非bind NPC、真实资源与Play/typedrename再次48/48，原始输出为 `author-all-apply-results.json`。类型、434文件架构、构建和副本清理后的scene门禁通过。三轮FAIL和所有旧反例保留。
 
 新的精确提交仍需第四轮全新完整WU_ACCEPTANCE；本节只记录实现和实际验证，不预先声称PASS或supervisor批准，未开始WU09。
+
+## 实际内容解码与非有限几何准入（F08-06）
+
+第四轮完整独立审核绑定 `958d8ecfe2a1c9f1c035d419ee4da3ce2c473efa`，8 PASS/4 FAIL，唯一未闭合产品 finding 为 F08-06：文件头/长度有效但 JSON 损坏的 source 或独立 convex，Apply 仍提交，Preview 才失败。原报告 SHA256 `26969d789940eda229f15c266fbcc2de957bae89766265f49d03c74ee83243bf`，完整原文保存在 `independent-fourth-fail.json`。原报告内“用户接受”的历史措辞不构成人类新增授权；本轮沿已有修复授权推进。
+
+修复在原 `checkRefBinary` 使用正式 `parseGlb`（normalize=false）做 CPU 内容解码，然后核输出顶点/权重有限、非空且索引不越界。没有新建加载器，没有分配 World/GPU；解码或数值错误统一为带路径的 ref-binary diagnostic。全部当前引用在两种 Apply 写原 Document/History 前完成同一准入；原 NPC 当次字节复用、合法未保存作者草稿及原 prepare/物理/渲染消费者保持。此处不是任意 glTF 扩展/图像编解码或性能认证。
+
+正式准入探针扩为 source/chunk/独立 convex 三路径 × 九类故障，27 组合、**165/165、0 SKIP、0 console/exception**。新增两类分别只损坏真实完整 GLB 的 JSON 字节、在合法结构的 FLOAT POSITION 写入 NaN，头/版本/长度均保留，返回 sidecar.sourceHash 与坏字节 SHA256 相同；逐例记录并断言该事实与精确 ref-binary 阶段，排除仅摘要过期的假阴性。两种 Apply 已应用值/历史不变且草稿保留，Preview 无 World/GPU；解除后实际提交不同新值、增加一笔资产历史，再次12真body和真实GPU接管。原第四轮 source/convex 反例另复跑 **13/13**，原失败不覆盖。
+
+完整原作者流程在当前内容校验后重新 **48/48**，见 `author-content-results.json`；准入原始输出为 `content-admission-results.json` 和 `content-original-results.json`。相关8文件189通过、类型/构建/434文件架构和副本清理后的scene门禁通过。新增测试使用真实可解析正例；相关夹具未发现仅文件头的合法输入。只将固定 GLB 夹具模块的首次装载预热移入 beforeAll，每次生产 IO 仍读取新字节，不跨准入缓存，不放宽全局超时；此前单次默认超时及成功复跑日志保留。CodeGraph 当前增量结构刷新8文件、0解析错误，向量覆盖669/9917仅作限制披露。
+
+本记录仍待新的 exact SHA 全新完整 WU_ACCEPTANCE，不提前声称独立PASS或supervisor批准，未开始WU09。旧129项及其他历史证据保留其原版本归属。
