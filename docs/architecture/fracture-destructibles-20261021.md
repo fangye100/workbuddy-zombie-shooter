@@ -69,7 +69,7 @@
   collider 已移除、完整对象隐藏，`destructibleError` 给出
   `profile-read — profile 读取失败`；后端未就绪时同样先隐藏/移除镜像并给出
   “等待重试”，恢复后同一事实重试成功（24 批）；Stop ledger 15/15、pending=0，作者文档与静态件恢复。
-- 原始结果：`.workbuddy/tmp/wu06-probe/wu06-destructible-results.json` 与截图
+- 原始结果：`.workbuddy/tmp/wu06-final/wu06-destructible-results.json` 与截图
   `direct-broken.png`、`explosion.png`。
 
 相关 owner 测试：`packages/runtime/test/weapon-scene-damage.test.ts`（pellets/piercing/
