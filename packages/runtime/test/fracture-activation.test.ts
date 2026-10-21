@@ -41,6 +41,44 @@ beforeAll(async () => {
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
+it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range','nan','infinity','zero-unused','identity-tail'].map(mode=>[role,mode])))
+('WU08 F08-07：真实NPC %s 的 %s 蒙皮输入沿同一静态合同准入/拒绝并恢复',async(role,mode)=>{
+  const io=makeIO(),profile=e04Profile(),ref={path:E04,guid:profile.id};
+  const path=role==='source'?profile.source.model.path:profile.chunks[0]!.mesh.path;
+  const original=await io.readBinary(path),bad=original.slice(0),v=new DataView(bad);
+  const gltf=JSON.parse(new TextDecoder().decode(bad.slice(20,20+v.getUint32(12,true))));
+  let bin=12;while(bin<bad.byteLength&&v.getUint32(bin+4,true)!==0x004e4942)bin+=8+v.getUint32(bin,true);
+  bin+=8;
+  const primitive=gltf.meshes.flatMap((m:{primitives:unknown[]})=>m.primitives).find((p:{attributes:Record<string,number>})=>p.attributes.WEIGHTS_0!==undefined);
+  const weights=gltf.accessors[primitive.attributes.WEIGHTS_0],joints=gltf.accessors[primitive.attributes.JOINTS_0];
+  expect(weights.componentType).toBe(5126);
+  const offset=(a:{bufferView:number;byteOffset?:number})=>bin+(gltf.bufferViews[a.bufferView].byteOffset??0)+(a.byteOffset??0);
+  const wo=offset(weights),jo=offset(joints),count=parseGlb(original,null,'auto',{normalize:false}).skeleton!.jointNames.length;
+  const jw=(i:number,n:number)=>joints.componentType===5123?v.setUint16(jo+i*2,n,true):v.setUint8(jo+i,n);
+  let values=[1,0,0,0];
+  if(mode==='negative')values=[-.25,1.25,0,0];
+  if(mode==='sum')values=[.5,0,0,0];
+  if(mode==='zero')values=[0,0,0,0];
+  if(mode==='nan')values=[NaN,0,0,0];
+  if(mode==='infinity')values=[Infinity,0,0,0];
+  values.forEach((n,i)=>v.setFloat32(wo+i*4,n,true));
+  if(mode==='joint-range')jw(0,count+1);
+  if(mode==='zero-unused'){jw(0,0);for(let i=1;i<4;i++)jw(i,joints.componentType===5123?65535:255);}
+  if(mode==='identity-tail')jw(0,count);
+  const valid=mode==='zero-unused'||mode==='identity-tail';
+  const event=ev(E04,profile.id,{target:{kind:'npc',runId:'skin-admit',slot:0,id:1,generation:1},npcPose:e04Pose(()=>[...IDENTITY16])});
+  expect((await admitFractureProfile(ref,io,profile)).ok).toBe(true);
+  io.setBin(path,bad);
+  for(const draft of [undefined,profile]){
+    const admission=await admitFractureProfile(ref,io,draft),prepared=await prepareFractureActivation(event,draft?{io,draftProfile:draft}:{io});
+    expect(admission.ok).toBe(valid);expect(prepared.ok).toBe(valid);
+    if(!admission.ok){expect(admission.failure.stage).toBe('ref-binary');expect(admission.failure.detail).toContain(path);}
+  }
+  io.setBin(path,original);
+  expect((await admitFractureProfile(ref,io,profile)).ok).toBe(true);
+  expect((await prepareFractureActivation(event,{io,draftProfile:profile})).ok).toBe(true);
+});
+
 it('WU08合法未保存配方进入正式prepare，当前隔离/外改身份仍先拒绝，恢复可重试',async()=>{
   const io=makeIO(),disk=JSON.parse(await io.readText(P01)) as FractureAsset;
   const draft=structuredClone(disk);draft.playback.lifetimeSec=9;draft.playback.fadeSec=2;draft.chunks[0]!.proxy.mass=17;
@@ -551,7 +589,7 @@ describe('WU-04 生产准入与激活准备（R1）', () => {
     const io = makeIO({}, { [profile.chunks[0]!.mesh.path]: makePointCloudGlb(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 1])) });
     const missing = await prepareFractureActivation(event, { io });
     expect(missing.ok).toBe(false);
-    if (!missing.ok) expect(missing.failure.stage).toBe('pose-missing');
+    if (!missing.ok) { expect(missing.failure.stage).toBe('ref-binary'); expect(missing.failure.detail).toContain(profile.chunks[0]!.mesh.path); expect(missing.failure.detail).toContain('具名骨架'); }
     profile.chunks[0]!.bind.position[0] = 1;
     const bind = await prepareFractureActivation(event, { io: makeIO({ [E04]: JSON.stringify(profile) }) });
     expect(bind.ok).toBe(false);

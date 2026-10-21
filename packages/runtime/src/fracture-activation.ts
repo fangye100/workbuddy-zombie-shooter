@@ -18,7 +18,7 @@ import {
   type FractureAsset,
 } from '@aether/scene';
 import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
-import { bakeSkinVertices, paletteForNamedPose } from '@aether/render';
+import { bakeSkinVertices, paletteForNamedPose, validateSkinMesh } from '@aether/render';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 import { changedJsonPaths } from './doc-diff';
@@ -141,6 +141,7 @@ async function checkRefBinary(
   io: FractureAssetIO,
   path: string,
   currentBinaries?: Map<string, ArrayBuffer>,
+  requireSkin = false,
 ): Promise<FractureAdmissionFailure | null> {
   // 每次都读当前字节：路径曾经读成功过**不等于**当前资源仍可用/仍是同一版本。
   // （跨调用缓存曾让 Stop 后迟到的旧读取污染新代，并让已失效资源错误准入。）
@@ -170,6 +171,11 @@ async function checkRefBinary(
     }
     if (parsed.mesh.indices.some(index=>index>=count)) {
       return { stage:'ref-binary', detail:'引用资产解码后索引越界（'+path+'）' };
+    }
+    if (requireSkin) {
+      if (!parsed.skeleton || parsed.skeleton.jointNames.some(name=>!name)) throw new Error('NPC 引用缺少完整具名骨架');
+      // 与paletteForNamedPose一致：最后一项是未蒙皮primitive的恒等关节。
+      validateSkinMesh(parsed.mesh, parsed.skeleton.jointNames.length + 1);
     }
   } catch(error) {
     return { stage:'ref-binary', detail:'引用资产 GLB 内容解码失败（'+path+'）：'+String(error) };
@@ -258,8 +264,9 @@ export async function admitFractureProfile(ref:{readonly path:string;readonly gu
   const refs = [profile.source.model.path, ...profile.chunks.map(c=>c.mesh.path), ...profile.chunks.flatMap(c=>c.proxy.shape.type==='convex'?[c.proxy.shape.mesh.path]:[])];
   // 仅本次准备持有原字节，NPC 随后解析同一份 chunk，不跨事件缓存/重读。
   const currentBinaries = profile.kind==='npc' ? new Map<string, ArrayBuffer>() : undefined;
+  const skinRefs = profile.kind==='npc' ? new Set([profile.source.model.path,...profile.chunks.map(c=>c.mesh.path)]) : new Set<string>();
   for (const path of new Set(refs)) {
-    const bf = await checkRefBinary(io, path, currentBinaries);
+    const bf = await checkRefBinary(io, path, currentBinaries, skinRefs.has(path));
     if (bf) return { ok: false, failure: bf };
   }
   return {ok:true,profile,binaries:currentBinaries};

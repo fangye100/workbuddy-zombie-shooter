@@ -392,6 +392,28 @@ export function paletteForNamedPose(jointNames: readonly (string | null)[], pose
   return palette;
 }
 
+/** 原蒙皮消费者的静态输入合同；jointCount 包含原palette末尾恒等关节。 */
+export function validateSkinMesh(mesh: MeshData, jointCount: number): void {
+  const fail = (detail: string): never => { throw new Error('[skin-bake] ' + detail); };
+  const count = mesh.vertices.length / VERTEX_FLOATS;
+  if (!Number.isInteger(count) || count === 0) fail('顶点缓冲必须包含完整的 15-float 顶点');
+  if (!Number.isInteger(jointCount) || jointCount < 1) fail('关节数量必须为正整数');
+  const joints = mesh.joints, weights = mesh.weights;
+  if (!joints || !weights || joints.length !== count * 4 || weights.length !== count * 4) {
+    return fail('缺少完整的四权重 JOINTS/WEIGHTS');
+  }
+  for (let v = 0; v < count; v++) {
+    let sum = 0;
+    for (let k = 0; k < 4; k++) {
+      const i = v * 4 + k, w = weights[i]!;
+      if (!Number.isFinite(w) || w < 0) fail('顶点 ' + v + ' 权重非法');
+      sum += w;
+      if (w > 0 && joints[i]! >= jointCount) fail('顶点 ' + v + ' 关节越界');
+    }
+    if (Math.abs(sum - 1) > 1e-3) fail('顶点 ' + v + ' 权重和不为 1');
+  }
+}
+
 /**
  * 将原始 mesh 一次性烘成当前可见的模型空间表面（不求值/推进动画）。
  * normalization 是源 actor 的 T，palette 已是 T·S·T⁻¹，不能再次共轭。
@@ -420,23 +442,12 @@ export function bakeSkinVertices(
   if (!Number.isFinite(det) || det === 0) fail('normalization 不可逆');
   if (palette.length === 0 || palette.length % 16 !== 0) fail('palette 长度必须为 16 的正整数倍');
   for (let j = 0; j < palette.length; j += 16) affine(palette, j);
+  validateSkinMesh(mesh, palette.length / 16);
   const count = mesh.vertices.length / VERTEX_FLOATS;
-  if (!Number.isInteger(count) || count === 0) fail('顶点缓冲必须包含完整的 15-float 顶点');
-  const joints = mesh.joints, weights = mesh.weights;
-  if (!joints || !weights || joints.length !== count * 4 || weights.length !== count * 4) {
-    return fail('缺少完整的四权重 JOINTS/WEIGHTS');
-  }
+  const joints = mesh.joints!, weights = mesh.weights!;
   const out = new Float32Array(mesh.vertices);
   for (let v = 0; v < count; v++) {
     const base = v * VERTEX_FLOATS, skin = v * 4;
-    let sum = 0;
-    for (let k = 0; k < 4; k++) {
-      const w = weights[skin + k]!;
-      if (!Number.isFinite(w) || w < 0) fail('顶点 ' + v + ' 权重非法');
-      sum += w;
-      if (w > 0 && joints[skin + k]! >= palette.length / 16) fail('顶点 ' + v + ' 关节越界');
-    }
-    if (Math.abs(sum - 1) > 1e-3) fail('顶点 ' + v + ' 权重和不为 1');
     for (const offset of [0, 3, 6]) {
       const o = base + offset, point = offset === 0;
       const x = mesh.vertices[o]!, y = mesh.vertices[o + 1]!, z = mesh.vertices[o + 2]!;
