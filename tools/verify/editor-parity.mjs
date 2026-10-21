@@ -126,6 +126,8 @@ const chrome = spawn(
     '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding',
     '--window-size=1600,900',
+    // 多显示器：验证窗口固定 DISPLAY1，不覆盖用户其他屏。
+    '--window-position=1920,80',
     URL_APP,
   ],
   { stdio: 'ignore' },

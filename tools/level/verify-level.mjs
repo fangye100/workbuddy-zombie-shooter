@@ -53,6 +53,8 @@ async function main() {
         `--remote-debugging-port=${PORT}`,
         `--user-data-dir=${USER_DIR}`,
         '--window-size=1440,900',
+        // 多显示器：验证窗口固定 DISPLAY1，不覆盖用户其他屏。
+        '--window-position=1920,80',
         '--no-first-run',
         '--ignore-certificate-errors',
         APP_URL,

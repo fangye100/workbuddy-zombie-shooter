@@ -182,6 +182,8 @@ const chrome = spawn(CHROME, [
   '--no-first-run',
   '--no-default-browser-check',
   '--window-size=1600,900',
+  // 多显示器：验证窗口固定 DISPLAY1，不覆盖用户其他屏。
+  '--window-position=1920,80',
   URL_APP,
 ], { detached: false, stdio: 'ignore' });
 
