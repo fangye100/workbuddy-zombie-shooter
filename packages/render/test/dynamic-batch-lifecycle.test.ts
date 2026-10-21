@@ -21,6 +21,30 @@ function host() {
 const batch=(meshId:string):CoreDynamicBatch=>({meshId,vertices:new Float32Array(45),indices:new Uint32Array([0,1,2]),skin:null,instances:new Float32Array(20),rigid:new Float32Array(12),count:1,outline:true});
 
 describe('动态GPU实际上传回执与姿态网格退役',()=>{
+  it('Preview原实例分配中途失败回收半成品；关闭只清自己的诊断，不污染下一代',()=>{
+    const {core,gpu}=host();gpu.dynamicInstSlots=[];gpu.dynamicOwnedInstSlots=new Map();gpu.dynamicMaterials=new Map();
+    gpu.dynamicErrors.set('actor:E-04','unrelated actor diagnostic');const created:{size:number;destroy:ReturnType<typeof vi.fn>}[]=[];
+    gpu.device.createBuffer=vi.fn(({size}:{size:number})=>{if(created.length===1)throw new Error('allocation boundary');const b={size,destroy:vi.fn()};created.push(b);return b;});
+    vi.stubGlobal('GPUBufferUsage',{STORAGE:1,COPY_DST:2});
+    try{
+      const slot=(RendererCore.prototype as unknown as Record<string,any>).dynamicInstSlot.call(gpu,0,1,64,'preview-allocation');
+      expect(slot).toBeNull();expect(created[0]!.destroy).toHaveBeenCalledOnce();expect([...gpu.dynamicErrors.values()].some(d=>String(d).includes('allocation boundary'))).toBe(true);
+      core.releaseDynamicOwner('preview-allocation');expect(gpu.dynamicErrors.has('actor:E-04')).toBe(true);expect([...gpu.dynamicErrors.values()]).toEqual(['unrelated actor diagnostic']);
+    }finally{vi.unstubAllGlobals();}
+  });
+  it('独立Preview owner销毁自己的真实资源引用，保留Play/其他Preview和共享palette',()=>{
+    const {core,gpu,draw,resources}=host();
+    draw([batch('preview-a:source'),batch('preview-a:chunk'),batch('preview-b:source'),batch('actor:E-04')]);
+    const own=resources.get('preview-a:source'),other=resources.get('preview-b:source'),actor=resources.get('actor:E-04');
+    const slots=()=>({buf:{destroy:vi.fn()},poseBuf:{destroy:vi.fn()},rigidBuf:{destroy:vi.fn()}});
+    const owned=slots(),unrelated=slots(),play=slots(),palette={destroy:vi.fn()};
+    gpu.dynamicOwnedInstSlots=new Map([['preview-a',[owned]],['preview-b',[unrelated]]]);gpu.dynamicInstSlots=[play];gpu.dynamicPaletteBuf=palette;
+    const texture={destroy:vi.fn()},shared={destroy:vi.fn()};gpu.dynamicMaterials=new Map([['preview-a:texture',{texture}],['shared',{texture:shared}]]);
+    core.releaseDynamicOwner('preview-a');core.releaseDynamicOwner('preview-a');
+    for(const b of [own.vbuf,own.ibuf,own.skinVb,owned.buf,owned.poseBuf,owned.rigidBuf,texture])expect(b.destroy).toHaveBeenCalledOnce();
+    for(const b of [other.vbuf,actor.vbuf,unrelated.buf,play.buf,palette,shared])expect(b.destroy).not.toHaveBeenCalled();
+    expect(resources.has('preview-b:source')).toBe(true);expect(gpu.dynamicOwnedInstSlots.has('preview-a')).toBe(false);expect(gpu.dynamicOwnedInstSlots.has('preview-b')).toBe(true);
+  });
   it('分配前没有ready；真实原上传+draw编码成功后才发布ready',()=>{
     const {core,draw,gpu,pass}=host(),b=batch('fracture:pose:1');
     expect(core.dynamicBatchState([b])).toBe('pending');

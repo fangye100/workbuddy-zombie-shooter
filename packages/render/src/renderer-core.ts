@@ -213,6 +213,8 @@ export const RIGID_INSTANCE_FLOATS = 12;
  * GPU 资源归 core 所有）；之后每帧只需重传 `instances`。
  */
 export interface CoreDynamicBatch {
+  /** 独立Preview资源域；缺省保持原Play/角色资源owner。 */
+  owner?: string;
   /** Interrupted/current pose snapshots, revised only when a source or row changes. */
   poseTransitions?: { data: Float32Array<ArrayBuffer>; revision: number };
   albedo?: ImageBitmap | null;
@@ -410,6 +412,7 @@ export class RendererCore {
    * 整场不变。null = 本轮没有真模型角色（bind group 绑哑 buffer 兜底）。
    */
   private dynamicPaletteBuf: GPUBuffer | null = null;
+  private readonly dynamicOwnedInstSlots = new Map<string, typeof this.dynamicInstSlots>();
   /** 哑调色板（单个恒等 mat4）：palette 未设置时让 bind group 始终可建 */
   private readonly dummyPaletteBuf: GPUBuffer;
   /** 诊断：setDynamicPalette 实际上传次数（探针断言「重传已发生」的可观测信号） */
@@ -962,6 +965,20 @@ export class RendererCore {
     }
   }
 
+  /** Preview仅释放自己命名的几何/材质/实例槽，不撤下共享角色palette或Editor资源。 */
+  releaseDynamicOwner(owner: string): void {
+    if (!owner) throw new Error('动态资源 owner 不能为空');
+    this.releaseDynamicMeshesWithPrefix(owner + ':');
+    for (const [key, value] of this.dynamicMaterials) if (key.startsWith(owner + ':')) {
+      value.texture.destroy(); this.dynamicMaterials.delete(key); this.dynamicErrors.delete('dynamic-material:' + key);
+    }
+    for (const slot of this.dynamicOwnedInstSlots.get(owner) ?? []) if (slot) {
+      slot.buf.destroy(); slot.poseBuf.destroy(); slot.rigidBuf.destroy();
+    }
+    this.dynamicOwnedInstSlots.delete(owner);
+    for (const key of this.dynamicErrors.keys()) if (key.startsWith(owner + ':') || key.startsWith('dynamic-material:' + owner + ':')) this.dynamicErrors.delete(key);
+  }
+
   /** 新 Play 会话开始时清空动态构建诊断（失败计数按会话口径，不跨 Stop 累加）。 */
   resetDynamicDiagnostics(): void {
     this.dynamicFailureCount = 0;
@@ -985,6 +1002,8 @@ export class RendererCore {
     this.solidDynamicTexture = null;
     this.solidDynamicMaterialCache = null;
     this.dynamicInstSlots = [];
+    for (const slots of this.dynamicOwnedInstSlots.values()) for (const s of slots) if (s) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
+    this.dynamicOwnedInstSlots.clear();
     this.dynamicPaletteBuf?.destroy();
     this.dynamicPaletteBuf = null;
     if (data === null || data.length === 0) return;
@@ -1017,7 +1036,7 @@ export class RendererCore {
       // 每批次写进自己的 buffer：共用一份则所有 draw 都会读到最后一次上传（见字段注释）
       // 局部资源构建/绘制失败只降级当前批次：记录诊断、跳过 draw，不让异常冲进主帧。
       try {
-        const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64);
+        const slot = this.dynamicInstSlot(bi, n, b.poseTransitions?.data.byteLength ?? 64, b.owner);
         if (slot === null) { this.dynamicBatchResults.set(b.meshId,'failed'); continue; }
         this.device.queue.writeBuffer(slot.buf, 0, b.instances, 0, n * DYNAMIC_INSTANCE_FLOATS);
         if (b.rigid !== undefined && b.rigid.length > 0) {
@@ -1059,9 +1078,12 @@ export class RendererCore {
   }
 
   /** 取（或按需扩容）第 `i` 个批次的实例 buffer + bind group。容量只增不减，避免每帧重建。 */
-  private dynamicInstSlot(i: number, count: number, poseBytes: number): (typeof this.dynamicInstSlots)[number] | null {
+  private dynamicInstSlot(i: number, count: number, poseBytes: number, owner?: string): (typeof this.dynamicInstSlots)[number] | null {
+    const errorKey=(owner ? owner + ':' : '') + 'dynamic-instances-' + i;
     const need = Math.max(count * DYNAMIC_INSTANCE_FLOATS * 4, 4096);
-    const slot = this.dynamicInstSlots[i];
+    const slots = owner ? (this.dynamicOwnedInstSlots.get(owner) ?? []) : this.dynamicInstSlots;
+    if (owner) this.dynamicOwnedInstSlots.set(owner, slots);
+    const slot = slots[i];
     const needRigid = Math.max(count * RIGID_INSTANCE_FLOATS * 4, 64);
     if (slot !== undefined && slot.cap >= need && slot.poseBuf.size >= poseBytes && slot.rigidCap >= needRigid) {
       return slot;
@@ -1103,8 +1125,8 @@ export class RendererCore {
         ],
       });
       const next = { buf, bg, cap: buf.size, poseBuf, rigidBuf, rigidCap };
-      this.dynamicInstSlots[i] = next;
-      this.dynamicErrors.delete('dynamic-instances-' + i);
+      slots[i] = next;
+      this.dynamicErrors.delete(errorKey);
       // 提交成功后才释放被替换的旧 slot。
       slot?.buf.destroy();
       slot?.poseBuf.destroy();
@@ -1112,7 +1134,7 @@ export class RendererCore {
       return next;
     } catch (e) {
       for (const b of created) b.destroy();
-      this.recordDynamicFailure('dynamic-instances-' + i, e);
+      this.recordDynamicFailure(errorKey, e);
       return null;
     }
   }
@@ -1128,6 +1150,8 @@ export class RendererCore {
     this.contactPass.clear();
     for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
     this.dynamicInstSlots = [];
+    for (const slots of this.dynamicOwnedInstSlots.values()) for (const s of slots) if (s) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
+    this.dynamicOwnedInstSlots.clear();
     this.solidDynamicTexture?.destroy();
     this.solidDynamicTexture = null;
     this.solidDynamicMaterialCache = null;
@@ -1496,6 +1520,8 @@ export class RendererCore {
     this.cylinderTintBuf.destroy();
     for (const s of this.dynamicInstSlots) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
     this.dynamicInstSlots = [];
+    for (const slots of this.dynamicOwnedInstSlots.values()) for (const s of slots) if (s) { s.buf.destroy(); s.poseBuf.destroy(); s.rigidBuf.destroy(); }
+    this.dynamicOwnedInstSlots.clear();
     this.solidDynamicTexture?.destroy();
     this.solidDynamicTexture = null;
     this.solidDynamicMaterialCache = null;

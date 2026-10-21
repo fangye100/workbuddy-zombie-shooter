@@ -380,6 +380,18 @@ export function evalJointMatrices(state: SkinState, out: Float32Array, frame?:Po
   for (let j = 0; j < 16; j++) out[oId + j] = IDENT[j]!;
 }
 
+/** 以接收网格的稳定骨名装配palette，不能借用另一份rig的下标/关节数量。末项为未蒙皮primitive的恒等关节。 */
+export function paletteForNamedPose(jointNames: readonly (string | null)[], pose: Readonly<Record<string, ArrayLike<number>>>): Float32Array<ArrayBuffer> {
+  const palette=new Float32Array((jointNames.length+1)*16);
+  for(let i=0;i<jointNames.length;i++){
+    const name=jointNames[i],matrix=name?pose[name]:undefined;
+    if(!matrix || matrix.length!==16)throw new Error('[skin-palette] 接收网格缺少合法关节矩阵 '+String(name));
+    palette.set(matrix,i*16);
+  }
+  for(let k=0;k<16;k++)palette[jointNames.length*16+k]=k%5===0?1:0;
+  return palette;
+}
+
 /**
  * 将原始 mesh 一次性烘成当前可见的模型空间表面（不求值/推进动画）。
  * normalization 是源 actor 的 T，palette 已是 T·S·T⁻¹，不能再次共轭。

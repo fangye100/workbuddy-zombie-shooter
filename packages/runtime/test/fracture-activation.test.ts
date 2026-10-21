@@ -39,6 +39,26 @@ beforeAll(async () => {
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
+it('WU08合法未保存配方进入正式prepare，当前隔离/外改身份仍先拒绝，恢复可重试',async()=>{
+  const io=makeIO(),disk=JSON.parse(await io.readText(P01)) as FractureAsset;
+  const draft=structuredClone(disk);draft.playback.lifetimeSec=9;draft.playback.fadeSec=2;draft.chunks[0]!.proxy.mass=17;
+  const prepare=()=>prepareFractureActivation(ev(P01,draft.id),{io,draftProfile:draft,resolveConvexPoints:createGlbConvexResolver()});
+  const first=await prepare();expect(first.ok).toBe(true);if(first.ok){expect(first.activation.lifetimeSec).toBe(9);expect(first.activation.fadeSec).toBe(2);expect(first.activation.chunks[0]!.mass).toBe(17);}
+  expect(JSON.parse(await io.readText(P01))).toEqual(disk);
+  const meta=JSON.parse(await io.readText(P01+'.meta.json'));
+  io.set(P01+'.meta.json',JSON.stringify({...meta,userData:{...meta.userData,status:'quarantined'}}));expect((await prepare()).ok).toBe(false);
+  io.set(P01+'.meta.json',JSON.stringify(meta));io.set(P01,JSON.stringify({...disk,status:'quarantined'}));expect((await prepare()).ok).toBe(false);
+  io.set(P01,JSON.stringify({...disk,id:'as_external'}));expect((await prepare()).ok).toBe(false);
+  io.set(P01,JSON.stringify(disk));expect((await prepare()).ok).toBe(true);
+});
+it('WU08坏草稿不触发二进制读取，future磁盘不能被有效草稿遮蔽',async()=>{
+  const io=makeIO(),disk=JSON.parse(await io.readText(P01)) as FractureAsset;
+  let reads=0;const base=io.readBinary;io.readBinary=async path=>{reads++;return base(path);};
+  const bad=structuredClone(disk);bad.chunks[0]!.proxy.mass=-1;
+  const rejected=await prepareFractureActivation(ev(P01,disk.id),{io,draftProfile:bad});expect(rejected.ok).toBe(false);expect(reads).toBe(0);
+  io.set(P01,JSON.stringify({...disk,version:999}));const future=await prepareFractureActivation(ev(P01,disk.id),{io,draftProfile:disk});expect(future.ok).toBe(false);expect(reads).toBe(0);
+});
+
 /** 内存 IO 端口：从 glob 取文本/二进制；可被测试外改以模拟 sidecar 状态变化。 */
 function makeIO(
   overrides: Record<string, string> = {},

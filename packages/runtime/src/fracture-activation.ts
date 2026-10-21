@@ -15,9 +15,10 @@ import {
   migrateFractureAsset,
   validateAssetMeta,
   type AssetMeta,
+  type FractureAsset,
 } from '@aether/scene';
 import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
-import { bakeSkinVertices } from '@aether/render';
+import { bakeSkinVertices, paletteForNamedPose } from '@aether/render';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
 
@@ -84,6 +85,8 @@ export interface ConvexPointsResolver {
 
 export interface PrepareOptions {
   readonly io: FractureAssetIO;
+  /** 作者未保存配方；磁盘源/sidecar仍先重新准入，草稿不能绕过隔离与身份。 */
+  readonly draftProfile?: FractureAsset;
   /** 离线 convex 点集解析；仅在 profile 含 convex 代理时必需。 */
   readonly resolveConvexPoints?: ConvexPointsResolver;
 }
@@ -190,58 +193,41 @@ async function checkRefMeta(
  * 任一准入失败在分配物理资源前返回诊断（不建 body/租约）。异步迟到/Stop 由调用方
  * 经 session generation 守卫（本函数纯数据准备，不持有会话）。
  */
+/** 当前profile/sidecar准入唯一入口。作者Apply、Preview和Play共用；不分配GPU/物理资源。 */
+export async function admitFractureProfile(ref:{readonly path:string;readonly guid:string},io:FractureAssetIO):Promise<
+  {readonly ok:true;readonly profile:FractureAsset}|{readonly ok:false;readonly failure:FractureAdmissionFailure}> {
+  let raw:unknown;
+  try{raw=JSON.parse(await io.readText(ref.path));}
+  catch(error){return {ok:false,failure:{stage:'profile-read',detail:'profile 读取失败：'+String(error)}};}
+  const errors=validateFractureAsset(raw);
+  if(errors.length)return {ok:false,failure:{stage:'profile-validate',detail:errors.join('；')}};
+  const profile=migrateFractureAsset(raw);
+  let meta:AssetMeta;
+  try{meta=JSON.parse(await io.readText(ref.path+'.meta.json')) as AssetMeta;}
+  catch(error){return {ok:false,failure:{stage:'sidecar-read',detail:'sidecar 读取失败：'+String(error)}};}
+  const metaErrors=validateAssetMeta(meta);
+  if(metaErrors.some(d=>d.severity==='error'))return {ok:false,failure:{stage:'sidecar-validate',detail:metaErrors.map(d=>d.message).join('；')}};
+  if(meta.kind!=='fracture')return {ok:false,failure:{stage:'identity',detail:'sidecar kind='+meta.kind+'，应为 fracture'}};
+  if(ref.guid!==profile.id||profile.id!==meta.guid)return {ok:false,failure:{stage:'identity',detail:'GUID 不一致：event='+ref.guid+' profile='+profile.id+' sidecar='+meta.guid}};
+  if(profile.status!=='accepted'||meta.userData?.status==='quarantined')return {ok:false,failure:{stage:'quarantined',detail:ref.path+' 当前profile/sidecar被隔离'}};
+  return {ok:true,profile};
+}
+
 export async function prepareFractureActivation(
   event: FractureEvent,
   opts: PrepareOptions,
 ): Promise<FracturePrepareResult> {
-  const profilePath = event.profile.path;
-  // 1) 读 profile
-  let profileRaw: unknown;
-  try {
-    profileRaw = JSON.parse(await opts.io.readText(profilePath));
-  } catch (e) {
-    return { ok: false, failure: { stage: 'profile-read', detail: 'profile 读取失败：' + String(e) } };
-  }
-  // 2) scene 格式校验（版本/坏代理/非法数值/重复 chunkId/超预算均显式报错）
-  const profileErrors = validateFractureAsset(profileRaw);
-  if (profileErrors.length) {
-    return { ok: false, failure: { stage: 'profile-validate', detail: profileErrors.join('；') } };
-  }
-  const profile = migrateFractureAsset(profileRaw); // 已校验，structuredClone
-  // 3) sidecar 准入：profile 文件自身的 .meta.json 必须有合法 guid/kind/status
-  let meta: AssetMeta;
-  try {
-    meta = JSON.parse(await opts.io.readText(profilePath + '.meta.json')) as AssetMeta;
-  } catch (e) {
-    return { ok: false, failure: { stage: 'sidecar-read', detail: 'sidecar 读取失败：' + String(e) } };
-  }
-  const metaErrs = validateAssetMeta(meta);
-  if (metaErrs.some((d) => d.severity === 'error')) {
-    return { ok: false, failure: { stage: 'sidecar-validate', detail: metaErrs.map((d) => d.message).join('；') } };
-  }
-  // 4) 身份核验：事件 profile.guid 必须等于 profile.id 且等于 sidecar guid；kind 必须是 fracture。
-  if (meta.kind !== 'fracture') {
-    return { ok: false, failure: { stage: 'identity', detail: 'sidecar kind=' + meta.kind + '，应为 fracture' } };
-  }
-  if (event.profile.guid !== profile.id || profile.id !== meta.guid) {
-    return { ok: false, failure: { stage: 'identity', detail: 'GUID 不一致：event=' + event.profile.guid + ' profile=' + profile.id + ' sidecar=' + meta.guid } };
-  }
-  // 4b) 目标类型必须与 profile.kind 对齐：object 资产不能被 NPC 事件激活，反之亦然。
-  const wantNpc = profile.kind === 'npc';
-  const isNpcTarget = event.target.kind === 'npc';
-  if (wantNpc !== isNpcTarget) {
-    return {
-      ok: false,
-      failure: {
-        stage: 'target-kind',
-        detail: 'profile kind=' + profile.kind + ' 与事件目标 kind=' + event.target.kind + ' 不匹配',
-      },
-    };
-  }
-  // 5) 隔离：quarantined 在分配前拒绝（恢复 accepted 后下一次播放可重新准入）。
-  if (profile.status !== 'accepted') {
-    return { ok: false, failure: { stage: 'quarantined', detail: 'profile 状态 ' + profile.status + '，未验收' } };
-  }
+  const profilePath=event.profile.path;
+  const admitted=await admitFractureProfile(event.profile,opts.io);
+  if(!admitted.ok)return admitted;
+  const diskProfile=admitted.profile;
+  const draftErrors=opts.draftProfile?validateFractureAsset(opts.draftProfile):[];
+  if(draftErrors.length)return {ok:false,failure:{stage:'profile-validate',detail:draftErrors.join('；')}};
+  const profile=opts.draftProfile?migrateFractureAsset(opts.draftProfile):diskProfile;
+  if(profile.id!==diskProfile.id||profile.kind!==diskProfile.kind)return {ok:false,failure:{stage:'identity',detail:'草稿与当前磁盘的GUID/kind不一致'}};
+  if(profile.status!=='accepted')return {ok:false,failure:{stage:'quarantined',detail:profilePath+' 草稿被隔离'}};
+  const wantNpc=profile.kind==='npc';
+  if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
 
   // 6) R1：核验全部引用资产的 sidecar 身份（source.model + 每个 chunk.mesh + 每个 convex.mesh），
   //    证明引用指向正确资产而非仅格式合法。
@@ -333,7 +319,6 @@ export async function prepareFractureActivation(
       if (!sk || sk.jointNames.length !== sk.joints.length || !parsed.mesh.joints || !parsed.mesh.weights) {
         return { ok: false, failure: { stage: 'pose-missing', detail: 'NPC 碎块 ' + c.chunkId + ' 缺少完整 skeleton/JOINTS/WEIGHTS' } };
       }
-      const palette = new Float32Array((sk.joints.length + 1) * 16);
       for (let j = 0; j < sk.joints.length; j++) {
         const name = sk.jointNames[j];
         const matrix = name ? event.npcPose![name] : undefined;
@@ -343,10 +328,9 @@ export async function prepareFractureActivation(
         if (matrix.length !== 16) {
           return { ok: false, failure: { stage: 'pose-invalid', detail: 'NPC 关节 ' + name + ' 矩阵长度 ' + matrix.length + ' 不为 16' } };
         }
-        palette.set(matrix, j * 16);
       }
       // parseGlb 为未蒙皮 primitive 使用末尾恒等关节，与正常渲染一致。
-      for (let k = 0; k < 16; k++) palette[sk.joints.length * 16 + k] = k % 5 === 0 ? 1 : 0;
+      const palette = paletteForNamedPose(sk.jointNames,event.npcPose!);
       try {
         bakedVertices = bakeSkinVertices(parsed.mesh, palette, event.npcNormalization!);
       } catch (e) {

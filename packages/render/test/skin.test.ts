@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   advance,
   bakeSkinVertices,
+  paletteForNamedPose,
   createSkinState,
   evalJointMatrices,
   seek,
@@ -217,6 +218,15 @@ describe('packSkin · 顶点缓冲交织', () => {
 
 describe('bakeSkinVertices · 当前表面CPU数学', () => {
   const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  it('接收网格按骨名映射不同rig顺序，不能借生产者下标；末尾未蒙皮关节保持恒等',()=>{
+    const a=[...identity],b=[...identity];a[12]=2;b[12]=-5;
+    const palette=paletteForNamedPose(['A','B'],{B:b,A:a,Extra:identity});
+    const input={vertices:new Float32Array([1,2,3,0,1,0,0,1,0,0,0,1,1,1,1]),indices:new Uint32Array([0]),joints:new Uint16Array([0,0,0,0]),weights:new Float32Array([1,0,0,0])};
+    expect(Array.from(bakeSkinVertices(input,palette,identity).subarray(0,3))).toEqual([3,2,3]);
+    input.joints[0]=2;expect(Array.from(bakeSkinVertices(input,palette,identity).subarray(0,3))).toEqual([1,2,3]);
+    expect(()=>paletteForNamedPose(['missing'],{A:a})).toThrow('missing');
+    expect(()=>paletteForNamedPose(['A'],{A:[1,2]})).toThrow('合法');
+  });
   function mesh() {
     return {
       vertices: new Float32Array([1, 2, 3, 1, 2, 0, 0, 1, 2, 0.25, 0.75, 1, 0.6, 0.2, 1]),

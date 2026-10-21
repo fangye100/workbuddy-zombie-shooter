@@ -22,6 +22,9 @@ import { AuthorSceneSaver } from './services/author-scene-save';
 import { SceneAuthorPanel } from './services/scene-author-panel';
 import {VfxGraphPanel} from './services/vfx-graph-panel';
 import { VfxPanel } from './services/vfx-panel';
+import { FracturePanel } from './services/fracture-panel';
+import { FracturePreview } from './services/fracture-preview';
+import { createEditorFractureIO } from './services/fracture-io';
 import {VfxEmitterPanel} from './services/vfx-emitter-panel';
 import {VfxBindingPanel} from './services/vfx-binding-panel';
 import { RuntimeMotionPanel } from './services/runtime-motion-panel';
@@ -354,9 +357,10 @@ async function boot(): Promise<void> {
   }, error => { console.error('[actors] Runtime preload failed', error); editorMenu.message(`角色装配失败：${String(error)}`); });
   actorLib.setRequestHandler(id => actorPreloader.request(id));
   let playAuthorParams: LabParams | null = null;
+  let stopFractureAuthor=()=>{};
   function startPlay(): boolean {
     if (authorProjectionBusy) { editorMenu.message('场景正在更新，请稍后再播放'); return false; }
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || fracturePanel.hasSceneDraft) { editorMenu.message('请先应用或放弃表单修改'); return false; }
     if (renderer.pendingAssetCount > 0 || renderer.getSceneSource() === null) {
       editorMenu.message('场景或资产尚未加载完成，请稍后再播放'); return false;
     }
@@ -366,6 +370,7 @@ async function boot(): Promise<void> {
     focusAnim = null;
     pointers.clear();
     const paramsBeforePlay = structuredClone(panel.params);
+    fracturePanel.stop();
     actorPreloader.stop();
     actorLib.beginPlay();
     const ok = playCtl.start();
@@ -773,6 +778,7 @@ async function boot(): Promise<void> {
 
   let editorMenu!: EditorMenu;
   async function loadAuthorScene(requested: string) {
+    stopFractureAuthor();
     const assetFailures: unknown[] = [];
     const r = await renderer.loadScene(requested);
     if (!r.ok) {
@@ -1287,18 +1293,18 @@ async function boot(): Promise<void> {
   const lerp = (a: number, b: number, k: number): number => a + (b - a) * k;
 
   /** 聚焦到某物体（null = 无选中，回默认取景）。距离按包围球适配视锥，留 1.5 倍余量 */
-  function focusOn(index: number | null): void {
+  function focusOn(index: number | null, overrideBounds?: {center:[number,number,number];radius:number}): void {
     // 自由相机持有期间不聚焦：focusAnim 在帧循环里排在飞行块之后，会每帧覆写
     // target 和 distance，把刚飞到的机位拽走（独立审核 P1-2）。飞行中"飞过去看"
     // 本来就是自由相机的职责，聚焦没有意义。
     if (freeCamOn) return;
     let toT: [number, number, number];
     let toD: number;
-    if (index === null) {
+    if (index === null && !overrideBounds) {
       toT = [...DEFAULT_VIEW.target];
       toD = DEFAULT_VIEW.distance;
     } else {
-      const b = renderer.getObjectBounds(index);
+      const b = overrideBounds ?? renderer.getObjectBounds(index!);
       if (b === null) return;
       toT = b.center;
       toD = clamp((b.radius / Math.tan(FOVY / 2)) * 1.5, ZOOM_MIN, ZOOM_MAX);
@@ -1358,6 +1364,18 @@ async function boot(): Promise<void> {
     edit: editAuthorNodes,
   });
   const atmosphereHost = document.createElement('div'); authorHost.before(atmosphereHost);
+  const fractureHost=document.createElement('div');atmosphereHost.before(fractureHost);
+  const fracturePreview=new FracturePreview(renderer.core,createEditorFractureIO(),{hide:nodeId=>{
+    const index=renderer.findObjectIndexByNodeId(nodeId);if(index===null)return ()=>{};
+    const visible=renderer.state.objects[index]?.visible??true;renderer.setObjectVisible(index,false);
+    return ()=>{const current=renderer.findObjectIndexByNodeId(nodeId);if(current!==null)renderer.setObjectVisible(current,visible);};
+  }});
+  const fracturePanel=new FracturePanel(fractureHost,fracturePreview,{document:()=>spawnStore?.document??null,
+    scenePath:()=>renderer.getSceneSource()?.url??'',selected:()=>{if(spawnSelActive)return selectedSpawnNode;const index=renderer.getSelected();return index===null?null:renderer.getObjectNodeId(index);},
+    locked:()=>playCtl.isPlaying||authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,
+    redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,focus:bounds=>focusOn(null,bounds)});
+  stopFractureAuthor=()=>fracturePanel.stop();
+  (window as unknown as {__editor:Record<string,unknown>}).__editor.fractureAuthor={snapshot:()=>fracturePanel.snapshot(),resources:()=>fracturePreview.resources,lastReleased:()=>fracturePreview.lastReleased};
   const vfxHost=document.createElement('div');atmosphereHost.before(vfxHost);
   const vfxPanel=new VfxPanel(vfxHost,renderer.core,{receivers:doc=>decalReceivers(renderer,doc),document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy,edit:editAuthorNodes,undo:undoSpawnEdit,redo:()=>reportAuthorTransform(authorTransform.history(true)),save:saveSpawnEdits,playStats:()=>playCtl.vfx.snapshot()});
   const vfxGraphPanel=new VfxGraphPanel(vfxHost,renderer.core,{document:()=>spawnStore?.document??null,locked:()=>playCtl.isPlaying || authorProjectionBusy});
@@ -1403,6 +1421,7 @@ async function boot(): Promise<void> {
     editAuthorNodes('删除节点及子节点', nodes => removeNodeTree(nodes, id), true);
   }
   async function rebuildAuthorScene(reportFailure = false): Promise<void> {
+    stopFractureAuthor();
     const store = spawnStore, source = renderer.getSceneSource();
     if (!store || !source || authorProjectionBusy) return;
     authorProjectionBusy = true;
@@ -1435,7 +1454,7 @@ async function boot(): Promise<void> {
   });
   editorMenu = new EditorMenu({
     document: () => spawnStore?.document ?? null,
-    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft || vfxGraphPanel.hasDraft || decalWorkbench.hasDraft,
+    dirty: () => (spawnStore?.dirty ?? false) || sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || vfxPanel.hasDraft || vfxGraphPanel.hasDraft || decalWorkbench.hasDraft || fracturePanel.hasDraft,
     playing: () => playCtl.isPlaying,
     current: () => {
       const s = renderer.getSceneSource(); const d = renderer.getDocument();
@@ -1639,7 +1658,7 @@ async function boot(): Promise<void> {
 
   /** UI assembly only: field authority, snapshots and concurrent saves belong to authorSaver. */
   async function saveSpawnEdits(): Promise<void> {
-    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
+    if (sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || fracturePanel.hasSceneDraft || authorProjectionBusy) { editorMenu.message('请先应用或放弃表单修改，并等待场景更新完成'); return; }
     if (playCtl.isPlaying) {
       spawnMsg = { text: 'Play 期间禁止作者场景保存，请先停止 Play', kind: 'warn' };
       refreshSpawnPanel();
@@ -3648,6 +3667,7 @@ async function boot(): Promise<void> {
   const dockEl = document.getElementById('asset-dock');
   if (inspectorEl !== null && dockEl !== null) {
     const inspector = new AssetInspector(inspectorEl, {
+      onFracture:path=>{switchInspectorTab('scene');fracturePanel.openAsset(path);},
       onSpawn: (p) => void spawnAssetAt(p, null),
     });
     assetPreview = previewHostEl !== null ? new AssetPreview(previewHostEl, gpu) : null;
@@ -3715,7 +3735,7 @@ async function boot(): Promise<void> {
       },
       onSpawn: (p) => void spawnAssetAt(p, null),
       onRename: async (path, newName) => {
-        if (playCtl.isPlaying || spawnStore?.dirty) {
+        if (playCtl.isPlaying || spawnStore?.dirty || fracturePanel.hasDraft) {
           panel.setModelInfo('重命名冲突：请先停止 Play 并保存或处理作者修改；本地编辑已保留');
           hudDirty = true;
           return false;
@@ -3754,6 +3774,7 @@ async function boot(): Promise<void> {
           if (latest.ok) { assetManifest = latest.json; actorLib.setManifest(assetManifest); }
           else extras.push('角色清单重新载入失败，请重新打开编辑器');
         }
+        await fracturePanel.renamed(r);
         if (r.metaRenamed) extras.push(t('sidecar 已随迁'));
         if (r.projectUpdated) extras.push(t('项目登记已更新'));
         // The transaction reports explicit recovery information on failure; successful paths are complete.
@@ -4076,7 +4097,7 @@ async function boot(): Promise<void> {
       decalWorkbench.destroy();
       actorPreloader.stop();
       animationDebugPanel.dispose();
-      vfxPanel.stop();vfxGraphPanel.stop();
+      vfxPanel.stop();vfxGraphPanel.stop();fracturePanel.stop();
       gatePanel.dispose();
       renderer.destroy();
     });
@@ -4093,7 +4114,7 @@ async function boot(): Promise<void> {
     store: () => spawnStore,
     path: () => renderer.getSceneSource()?.url ?? null,
     busy: () => authorProjectionBusy,
-    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft,
+    draft: () => sceneAuthorPanel.hasDraft || atmospherePanel.hasDraft || decalWorkbench.hasDraft || fracturePanel.hasSceneDraft,
     playing: () => playCtl.isPlaying,
     pendingAssets: () => renderer.pendingAssetCount,
     open: async path => {
@@ -4139,7 +4160,7 @@ async function boot(): Promise<void> {
     const dt = Math.min(0.1, wallDt);
     last = now;
     elapsed += dt;
-    vfxPanel.frame(dt);vfxGraphPanel.frame(dt);
+    vfxPanel.frame(dt);vfxGraphPanel.frame(dt);fracturePanel.frame(dt);
     vfxBindingPanel.frame();
     vfxEmitterPanel.frame();vfxDecalPanel.frame();
     frames++;
@@ -4265,7 +4286,7 @@ async function boot(): Promise<void> {
       editorMenu.refresh();
     }
     // 角色批次（原动态路径）+ 碎片批次（WU-05 刚体模式）；两边各自打包，这里只合并。
-    renderer.setDynamicBatches([...(bridge.batches() ?? []), ...playCtl.fractureBatches]);
+    renderer.setDynamicBatches([...(bridge.batches() ?? []), ...playCtl.fractureBatches, ...fracturePreview.batches]);
     // P5 C5 终态提示（一次性）：世界已由 runtime 冻结，这里只负责让玩家看见。
     // 🔴 不自动 Stop —— 让玩家看清死状/战果，何时退出由玩家决定（docs/23 §2.5）。
     if (playCtl.isPlaying) {

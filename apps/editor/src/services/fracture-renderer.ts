@@ -54,7 +54,7 @@ function mipChainBytes(width: number, height: number): number {
 }
 
 /** 刚体实例的 3×3 基向量（列主序，含旋转与世界尺度）。 */
-function basisFromQuat(q: readonly [number, number, number, number], scale: number, out: Float32Array, offset: number): void {
+export function basisFromQuat(q: readonly [number, number, number, number], scale: number, out: Float32Array, offset: number): void {
   const [x, y, z, w] = q;
   const xx = x * x, yy = y * y, zz = z * z;
   const xy = x * y, xz = x * z, yz = y * z;
@@ -116,7 +116,7 @@ export class PlayFractureRenderer {
   /** 失败后的重试间隔（毫秒）；测试可注入较小值验证"可重试"。 */
   private readonly retryDelayMs: number;
 
-  constructor(io: FractureAssetIO, opts: { retryDelayMs?: number } = {}) {
+  constructor(io: FractureAssetIO, private readonly opts: { retryDelayMs?: number; owner?: string } = {}) {
     this.io = io;
     this.retryDelayMs = opts.retryDelayMs ?? 2000;
   }
@@ -213,7 +213,8 @@ export class PlayFractureRenderer {
         if (hit === undefined) {
           groups.set(key, {
             batch: {
-              meshId: 'fracture:' + chunk.mesh.path + '#' + geometryKey,
+              ...(this.opts.owner ? { owner: this.opts.owner } : {}),
+              meshId: (this.opts.owner ? this.opts.owner + ':' : 'fracture:') + chunk.mesh.path + '#' + geometryKey,
               vertices,
               indices: entry.indices,
               skin: null,
@@ -360,7 +361,7 @@ export class PlayFractureRenderer {
           const imgBuf = await parsed.image.arrayBuffer();
           textureFileBytes = imgBuf.byteLength;
           const digest = await crypto.subtle.digest('SHA-256', imgBuf);
-          textureKey = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+          textureKey = (this.opts.owner ? this.opts.owner + ':' : '') + Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
           // 解码失败必须走统一失败路径（诊断 + 可重试），不能静默退化成白材质。
           albedo = await createImageBitmap(parsed.image);
           // 上传只提交基础级；mip 链由 GPU 生成并常驻。两者都按 RGBA8 计。

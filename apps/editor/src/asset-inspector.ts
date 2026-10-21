@@ -43,6 +43,7 @@ export async function loadAssetInspectorModel(path: string) {
 export interface AssetInspectorHooks {
   /** 「载入场景」按钮（与浏览器双击 .glb 同一条路径） */
   onSpawn(path: string): void;
+  onFracture?(path: string): void;
 }
 
 export class AssetInspector {
@@ -97,6 +98,11 @@ export class AssetInspector {
       return;
     }
 
+    if (path.endsWith('.fracture.json') && this.hooks.onFracture) {
+      const button = document.createElement('button'); button.type = 'button';
+      button.textContent = '编辑碎裂配方与预览';
+      button.onclick = () => this.hooks.onFracture?.(path); extra.append(button);
+    }
     if (isImageExt(entry.ext)) {
       const box = document.createElement('div');
       box.className = 'ai-preview';

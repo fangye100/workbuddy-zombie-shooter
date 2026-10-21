@@ -1,4 +1,4 @@
-#scene-author-panel { padding: 10px; border-bottom: 1px solid #38404b; }
+:is(#scene-author-panel, #fracture-panel) { padding: 10px; border-bottom: 1px solid #38404b; }
 #runtime-body-ik-panel { position: fixed; right: 14px; bottom: 14px; z-index: 80; max-width: 340px; max-height: 55vh; overflow: auto; padding: 8px; background: var(--panel); border: 2px solid var(--ink); border-radius: 6px; font-size: 11px; }
 #runtime-body-ik-panel[hidden], body.game-view #runtime-body-ik-panel { display: none !important; }
 #runtime-body-ik-panel summary { cursor: pointer; }
@@ -13,14 +13,14 @@
 .atmosphere-panel button { margin:5px 4px 0 0; }
 .atmosphere-panel summary { cursor:pointer; font-weight:600; }
 .atmosphere-panel [role=status] { color:#edc482; font-size:12px; }
-#scene-author-panel fieldset { border: 0; padding: 8px 0; min-width: 0; }
-#scene-author-panel label { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(60px, 1.2fr); align-items: center; gap: 6px; margin: 7px 0; font-size: 12px; }
-#scene-author-panel input, #scene-author-panel select { min-width: 0; max-width: 100%; color: inherit; background: #171e28; border: 1px solid #465166; border-radius: 3px; padding: 5px; }
-#scene-author-panel fieldset > select { width: 100%; margin-bottom: 8px; }
-#scene-author-panel button { margin: 4px 4px 4px 0; padding: 5px 7px; }
-#scene-author-panel details details { margin: 8px 0; padding-left: 8px; border-left: 2px solid #38404b; }
-#scene-author-panel summary { cursor: pointer; font-weight: 600; padding: 5px 0; }
-#scene-author-panel [role=status] { color: #edc482; overflow-wrap: anywhere; }
+:is(#scene-author-panel, #fracture-panel) fieldset { border: 0; padding: 8px 0; min-width: 0; }
+:is(#scene-author-panel, #fracture-panel) label { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(60px, 1.2fr); align-items: center; gap: 6px; margin: 7px 0; font-size: 12px; }
+:is(#scene-author-panel, #fracture-panel) input, :is(#scene-author-panel, #fracture-panel) select { min-width: 0; max-width: 100%; color: inherit; background: #171e28; border: 1px solid #465166; border-radius: 3px; padding: 5px; }
+:is(#scene-author-panel, #fracture-panel) fieldset > select { width: 100%; margin-bottom: 8px; }
+:is(#scene-author-panel, #fracture-panel) button { margin: 4px 4px 4px 0; padding: 5px 7px; }
+:is(#scene-author-panel, #fracture-panel) details details { margin: 8px 0; padding-left: 8px; border-left: 2px solid #38404b; }
+:is(#scene-author-panel, #fracture-panel) summary { cursor: pointer; font-weight: 600; padding: 5px 0; }
+:is(#scene-author-panel, #fracture-panel) [role=status] { color: #edc482; overflow-wrap: anywhere; }
 #vfx-panel { padding:10px;border-bottom:1px solid #38404b; }
 #vfx-panel summary { cursor:pointer;font-weight:600; }
 #vfx-panel fieldset { border:0;padding:6px 0;min-width:0; }
