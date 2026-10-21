@@ -1,0 +1,1475 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu07.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu07.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "input": {
+      "identity": {
+        "runId": 1,
+        "id": 1,
+        "generation": 1
+      },
+      "kill": 1
+    },
+    "takeover": {
+      "active": 10,
+      "queued": 0,
+      "corpses": 0,
+      "batches": 20,
+      "error": null
+    },
+    "activeResources": {
+      "active": 10,
+      "pool": 10,
+      "backend": {
+        "dynamicBodies": 3,
+        "staticColliders": 4,
+        "ticks": 27,
+        "destroyed": false
+      },
+      "tick": 0,
+      "outcome": "running",
+      "batches": 20,
+      "meshIds": [
+        "fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso",
+        "fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper",
+        "fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper",
+        "fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin",
+        "fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head",
+        "fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm",
+        "fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm",
+        "fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh",
+        "fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh",
+        "fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin"
+      ],
+      "buffers": [
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v",
+          "size": 285120,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i",
+          "size": 9504,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin",
+          "size": 114048,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v",
+          "size": 196560,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i",
+          "size": 6552,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin",
+          "size": 78624,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": false
+        }
+      ],
+      "aliveBytes": 2944296
+    },
+    "expiredResources": {
+      "active": 0,
+      "pool": 0,
+      "backend": {
+        "dynamicBodies": 0,
+        "staticColliders": 4,
+        "ticks": 427,
+        "destroyed": false
+      },
+      "tick": 0,
+      "outcome": "running",
+      "batches": 0,
+      "meshIds": [],
+      "buffers": [
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        }
+      ],
+      "aliveBytes": 0
+    },
+    "repeatInput": {
+      "accepted": true,
+      "rejection": null,
+      "activationGen": 2
+    },
+    "repeatActiveResources": {
+      "active": 10,
+      "pool": 10,
+      "backend": {
+        "dynamicBodies": 3,
+        "staticColliders": 4,
+        "ticks": 428,
+        "destroyed": false
+      },
+      "tick": 0,
+      "outcome": "running",
+      "batches": 20,
+      "meshIds": [
+        "fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head",
+        "fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso",
+        "fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper",
+        "fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm",
+        "fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper",
+        "fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm",
+        "fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh",
+        "fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin",
+        "fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh",
+        "fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin"
+      ],
+      "buffers": [
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-v",
+          "size": 196560,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-i",
+          "size": 6552,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-skin",
+          "size": 78624,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-v",
+          "size": 285120,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-i",
+          "size": 9504,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-skin",
+          "size": 114048,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": false
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": false
+        }
+      ],
+      "aliveBytes": 2944296
+    },
+    "repeatExpiredResources": {
+      "active": 0,
+      "pool": 0,
+      "backend": {
+        "dynamicBodies": 0,
+        "staticColliders": 4,
+        "ticks": 828,
+        "destroyed": false
+      },
+      "tick": 0,
+      "outcome": "running",
+      "batches": 0,
+      "meshIds": [],
+      "buffers": [
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        }
+      ],
+      "aliveBytes": 0
+    },
+    "stoppedResources": {
+      "active": null,
+      "pool": null,
+      "backend": null,
+      "tick": 0,
+      "outcome": "running",
+      "batches": 0,
+      "meshIds": [],
+      "buffers": [
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-v",
+          "size": 196560,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-i",
+          "size": 6552,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-skin",
+          "size": 78624,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-v",
+          "size": 285120,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-i",
+          "size": 9504,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-skin",
+          "size": 114048,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-v",
+          "size": 224640,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-i",
+          "size": 7488,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-skin",
+          "size": 89856,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-v",
+          "size": 139680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-i",
+          "size": 4656,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-skin",
+          "size": 55872,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-v",
+          "size": 140400,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-i",
+          "size": 4680,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-skin",
+          "size": 56160,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-v",
+          "size": 135360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-i",
+          "size": 4512,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-skin",
+          "size": 54144,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-v",
+          "size": 326880,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-i",
+          "size": 10896,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-skin",
+          "size": 130752,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-v",
+          "size": 151920,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-i",
+          "size": 5064,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-skin",
+          "size": 60768,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-v",
+          "size": 300240,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-i",
+          "size": 10008,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-skin",
+          "size": 120096,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-v",
+          "size": 153360,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-i",
+          "size": 5112,
+          "destroyed": true
+        },
+        {
+          "label": "dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-skin",
+          "size": 61344,
+          "destroyed": true
+        }
+      ],
+      "aliveBytes": 0
+    },
+    "bodyFailureInput": {
+      "identity": {
+        "runId": 2,
+        "id": 1,
+        "generation": 1
+      },
+      "kill": 1
+    },
+    "bodyAllocationFailure": {
+      "thrown": null,
+      "called": 1,
+      "error": "E-04#1@2:1：死亡碎裂 物理接管失败或容量不足（保留原死亡表现）",
+      "active": 0,
+      "pool": 0,
+      "backend": {
+        "dynamicBodies": 0,
+        "staticColliders": 4,
+        "ticks": 0,
+        "destroyed": false
+      },
+      "corpse": 1
+    },
+    "gpuFailureInput": {
+      "identity": {
+        "runId": 3,
+        "id": 1,
+        "generation": 1
+      },
+      "kill": 1
+    },
+    "gpuUploadFailure": {
+      "triggered": 30,
+      "corpses": 1,
+      "active": 0,
+      "error": "E-04#1@3:1：死亡碎裂 fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:3:1:1:1#g3-1:head：REVIEW_GPU_INSTANCE_UPLOAD_FAILURE（保留原死亡表现）",
+      "gpuError": null
+    },
+    "gpuRecovered": {
+      "active": 10,
+      "queued": 0,
+      "corpses": 0,
+      "batches": 20,
+      "error": null
+    }
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "DISPLAY1",
+      "ok": true,
+      "detail": "{\"left\":1920,\"top\":80,\"width\":1600,\"height\":1000,\"windowState\":\"normal\"}"
+    },
+    {
+      "name": "受控真实kill经正式消费者接管",
+      "ok": true,
+      "detail": "{\"active\":10,\"queued\":0,\"corpses\":0,\"batches\":20,\"error\":null}"
+    },
+    {
+      "name": "到期后物理块/租约/批次归零",
+      "ok": true,
+      "detail": "{\"active\":0,\"pool\":0,\"batches\":0,\"outcome\":\"running\"}"
+    },
+    {
+      "name": "到期后本次唯一姿态GPUBuffer已destroy或有界复用",
+      "ok": true,
+      "detail": "{\"aliveBytes\":0,\"meshIds\":[],\"buffers\":[{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v\",\"size\":285120,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i\",\"size\":9504,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin\",\"size\":114048,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v\",\"size\":224640,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i\",\"size\":7488,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin\",\"size\":89856,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v\",\"size\":140400,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i\",\"size\":4680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin\",\"size\":56160,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v\",\"size\":151920,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i\",\"size\":5064,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin\",\"size\":60768,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v\",\"size\":196560,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i\",\"size\":6552,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin\",\"size\":78624,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v\",\"size\":139680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i\",\"size\":4656,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin\",\"size\":55872,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v\",\"size\":135360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i\",\"size\":4512,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin\",\"size\":54144,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v\",\"size\":326880,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i\",\"size\":10896,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin\",\"size\":130752,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v\",\"size\":300240,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i\",\"size\":10008,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin\",\"size\":120096,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v\",\"size\":153360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i\",\"size\":5112,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin\",\"size\":61344,\"destroyed\":true}]}"
+    },
+    {
+      "name": "同run第二个合法姿态请求已接受",
+      "ok": true,
+      "detail": "{\"accepted\":true,\"rejection\":null,\"activationGen\":2}"
+    },
+    {
+      "name": "重复激活/到期后唯一姿态GPU驻留不累积",
+      "ok": true,
+      "detail": "{\"first\":0,\"second\":0,\"active\":0,\"pool\":0,\"batches\":0}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":8,\"disposed\":8,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":5,\"afterObjects\":5,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":8,\"disposed\":8,\"pending\":0}"
+    },
+    {
+      "name": "Stop实际destroy全部已保留GPUBuffer",
+      "ok": true,
+      "detail": "{\"active\":null,\"pool\":null,\"backend\":null,\"tick\":0,\"outcome\":\"running\",\"batches\":0,\"meshIds\":[],\"buffers\":[{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-v\",\"size\":285120,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-i\",\"size\":9504,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:1#g1-1:torso-skin\",\"size\":114048,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-v\",\"size\":224640,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-i\",\"size\":7488,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:1#g1-1:arm-l-upper-skin\",\"size\":89856,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-v\",\"size\":140400,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-i\",\"size\":4680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:1#g1-1:arm-r-upper-skin\",\"size\":56160,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-v\",\"size\":151920,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-i\",\"size\":5064,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:1#g1-1:leg-l-shin-skin\",\"size\":60768,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-v\",\"size\":196560,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-i\",\"size\":6552,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:1#g1-1:head-skin\",\"size\":78624,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-v\",\"size\":139680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-i\",\"size\":4656,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:1#g1-1:arm-l-forearm-skin\",\"size\":55872,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-v\",\"size\":135360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-i\",\"size\":4512,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:1#g1-1:arm-r-forearm-skin\",\"size\":54144,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-v\",\"size\":326880,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-i\",\"size\":10896,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:1#g1-1:leg-l-thigh-skin\",\"size\":130752,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-v\",\"size\":300240,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-i\",\"size\":10008,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:1#g1-1:leg-r-thigh-skin\",\"size\":120096,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-v\",\"size\":153360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-i\",\"size\":5112,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:1#g1-1:leg-r-shin-skin\",\"size\":61344,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-v\",\"size\":196560,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-i\",\"size\":6552,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:1:1:1:2#g1-2:head-skin\",\"size\":78624,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-v\",\"size\":285120,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-i\",\"size\":9504,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:1:1:1:2#g1-2:torso-skin\",\"size\":114048,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-v\",\"size\":224640,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-i\",\"size\":7488,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:1:1:1:2#g1-2:arm-l-upper-skin\",\"size\":89856,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-v\",\"size\":139680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-i\",\"size\":4656,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:1:1:1:2#g1-2:arm-l-forearm-skin\",\"size\":55872,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-v\",\"size\":140400,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-i\",\"size\":4680,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:1:1:1:2#g1-2:arm-r-upper-skin\",\"size\":56160,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-v\",\"size\":135360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-i\",\"size\":4512,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:1:1:1:2#g1-2:arm-r-forearm-skin\",\"size\":54144,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-v\",\"size\":326880,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-i\",\"size\":10896,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:1:1:1:2#g1-2:leg-l-thigh-skin\",\"size\":130752,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-v\",\"size\":151920,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-i\",\"size\":5064,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:1:1:1:2#g1-2:leg-l-shin-skin\",\"size\":60768,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-v\",\"size\":300240,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-i\",\"size\":10008,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:1:1:1:2#g1-2:leg-r-thigh-skin\",\"size\":120096,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-v\",\"size\":153360,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-i\",\"size\":5112,\"destroyed\":true},{\"label\":\"dyn-fracture:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:1:1:1:2#g1-2:leg-r-shin-skin\",\"size\":61344,\"destroyed\":true}],\"aliveBytes\":0}"
+    },
+    {
+      "name": "后端故障前正式消费者确实入队",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "真后端分配失败由宿主诊断且不外抛",
+      "ok": true,
+      "detail": "{\"thrown\":null,\"called\":1,\"error\":\"E-04#1@2:1：死亡碎裂 物理接管失败或容量不足（保留原死亡表现）\",\"active\":0,\"pool\":0,\"backend\":{\"dynamicBodies\":0,\"staticColliders\":4,\"ticks\":0,\"destroyed\":false},\"corpse\":1}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":16,\"disposed\":16,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":5,\"afterObjects\":5,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":16,\"disposed\":16,\"pending\":0}"
+    },
+    {
+      "name": "首个实例GPU上传失败时保留完整death",
+      "ok": true,
+      "detail": "{\"triggered\":30,\"corpses\":1,\"active\":0,\"error\":\"E-04#1@3:1：死亡碎裂 fracture:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:3:1:1:1#g3-1:head：REVIEW_GPU_INSTANCE_UPLOAD_FAILURE（保留原死亡表现）\",\"gpuError\":null}"
+    },
+    {
+      "name": "上传边界恢复后后续合法NPC正常接管",
+      "ok": true,
+      "detail": "{\"active\":10,\"queued\":0,\"corpses\":0,\"batches\":20,\"error\":null}"
+    },
+    {
+      "name": "Stop恢复作者文档与静态物件",
+      "ok": true,
+      "detail": "{\"stopped\":true,\"ledger\":{\"registered\":25,\"disposed\":25,\"pending\":0},\"ids\":[],\"runtime\":true,\"objects\":5,\"afterObjects\":5,\"sameDocument\":true,\"sameState\":true}"
+    },
+    {
+      "name": "Stop释放全部Play资源与动态GPU批次",
+      "ok": true,
+      "detail": "{\"registered\":25,\"disposed\":25,\"pending\":0}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

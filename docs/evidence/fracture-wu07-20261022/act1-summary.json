@@ -1,0 +1,277 @@
+{
+  "checks": [
+    {
+      "name": "1 绑定武器及实战标签纹理完整加载",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 保持初始pistol且无预算/资源失败",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 pistol 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pistol 实际关卡GPU局部可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/pistol Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 shotgun 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/shotgun Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 smg 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/smg Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 sniper 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "真实击杀后强化模态出现",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "原生选择强化后继续真实战斗",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/sniper Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 flame 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "flame 实际关卡GPU局部可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/flame Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 chainsaw 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1/chainsaw Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 launcher 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "1 Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "2 绑定武器及实战标签纹理完整加载",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "2 保持初始pistol且无预算/资源失败",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "2 pistol 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "2 Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "3 绑定武器及实战标签纹理完整加载",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "3 保持初始pistol且无预算/资源失败",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "三层真实盾卫冲锋Ribbon",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "三层冲锋Ribbon局部GPU可见",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "3 pistol 原生输入产生真实GPU事实",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "3 Stop账目归零及真实GPU销毁",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "HTTPS真实NVIDIA非fallback",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "无浏览器或GPU错误",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "正式场景未被验收写回",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "gpu": {
+    "secure": true,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace"
+    },
+    "fallback": false
+  },
+  "sceneHashes": {
+    "assets/scenes/act1/floor-1.scene.json": "1eb29a366e9b506ab6377b1647404df7ccc9ab83862cf23418c890fb7b9c931d",
+    "assets/scenes/act1/floor-2.scene.json": "d5327cf01a28d71c708c6012e5e594ce50743006617572caa34793f216616a9c",
+    "assets/scenes/act1/floor-3.scene.json": "032301f0b67aec60c0282226f4120ac6ced8644ec46a8a297dc64dea7d5fd027"
+  },
+  "verificationSources": {
+    "tools/verify/vfx-gameplay-probe.mjs": "e801251ac0e6bf17a3a61636c1aecbde6abd0907cd1aed656c2490a66bfeab25",
+    "tools/verify/editor-smoke-lib.mjs": "ce18b33637d9e0650b90b1fcdf3276f4c17713b0dc41bef4edc76b61f7d05652",
+    "tools/verify/vfx-m2-pixels.mjs": "5a1b4075482c125f37085f08789864c58a8292f03efacd7329d58664f6bbd2dc",
+    "apps/editor/src/services/play-vfx.ts": "6138766161ee920094684fe0cbc5842208e7ed9c21f4720ee21e2584e2160d41",
+    "packages/render/src/renderer-core.ts": "1f3d41bcaee870ec4cc1c56f8d532469196db1d69b26ae17cf34608955dca2f0",
+    "apps/editor/src/services/play-controller.ts": "cb8f92b5d5d8388b6203bdcf7983468b378fe990763e95db75ab874bef5a2e11",
+    "packages/zombie-game/src/presentation/vfx-planner.ts": "c22ebfcd091f3d38ddc5485ce0c2fa93e0426498f4fae25d248aad5bb8f7a693",
+    "packages/zombie-game/src/presentation/combat-overlay.ts": "65bcf03cdf453608fc496e8b5e31d8f31f9318465caecbdace14058086a0907b",
+    "packages/zombie-game/src/presentation/combat-ink.ts": "3ebbc2b4facf0b1d71ab4fd143cdca19a85c259322e8a313190f40d034ccdd3c",
+    "assets/vfx/comic-acid-pool.svg": "4b6978f0b7b7b6b3ea3a01272bc8d36a28ad25c69935c4dfea3ee319db363c42",
+    "assets/vfx/comic-acid.svg": "0c6359210deb6435a9deff5421b245382940321af439203ca0548d7dd5a1bd8b",
+    "assets/vfx/comic-arc.svg": "155723cabea7678ffae9afe009bc11e992d7b7dda2314b947e39282642508ac6",
+    "assets/vfx/comic-blast.svg": "88e58b675b20c29d01c5ba06602b17e0b605a711737999a6f05159abdaa92a1f",
+    "assets/vfx/comic-compute-spark.svg": "fdd5bb08d54eb5d2b459596cc8b34b50d5a13f5504b25af17540e2ea5ff7a44f",
+    "assets/vfx/comic-compute.vfx.json": "cca9f5952a1156db53e610519195e03d23d1253351b74fa7556f961ea3c752d9",
+    "assets/vfx/comic-decal.vfx.json": "29ab44d43bb8aea209beb65550f1179623e9c46790363b99fceb6a194d44bbfb",
+    "assets/vfx/comic-dust.svg": "a50d193fe9018383b1adc9a8d277ce91ebece21fb0f26fc82885a98a9105ae00",
+    "assets/vfx/comic-enemies.vfx.json": "a5a8bc4b5d7fa455b0db9f436a1ce4e73cef5e18a3991f6b84d31d61d6582f30",
+    "assets/vfx/comic-flame.svg": "4f6eefc7ca7d7a034cf57f914007ca3e7588e096f20c886430ca9e9a93d1a201",
+    "assets/vfx/comic-gameplay-soft.vfx.json": "72f3e3bcd2c9b165ffd19f691a4a51affdaa18fb6e26e10cff041aea6c776056",
+    "assets/vfx/comic-graph.vfx.json": "60abbe2d95d654a7ce3f33f087d5f81b3b055cd26ec23b85e358febd571c5069",
+    "assets/vfx/comic-grenade.svg": "81eb48ec79ffab62b3f7d8f5f5bb316bfb8847791a39e6da26843bad570c590e",
+    "assets/vfx/comic-ground-impact.svg": "fa67f1f36144e268fa2c78a8c3254a258289ae2de9e12c9cd38c76af61011223",
+    "assets/vfx/comic-ground-mark.svg": "bd51a1b71648a5fc25dad71957397421278bc67b2267be3877ba3b3c76a4684a",
+    "assets/vfx/comic-impact.svg": "4d541c4abb7cdc628393e8fa2e00b0062a7fd7ee87d7c3fad3cdba8fbca5a174",
+    "assets/vfx/comic-motion.vfx.json": "678f2701f484e00b0938f1a9dac5c20c692eeddfa4c73908aa092e129c5d9942",
+    "assets/vfx/comic-muzzle.svg": "4e2daa7a4ccaf5df7d799f5b740c2a77cf86cf0d348fa7cd5dfa6ff6a6c821f8",
+    "assets/vfx/comic-pistol.vfx.json": "25ef512340bce96afc56cdde065938e25b0d06142eb01c7c2750c4a12b1f233a",
+    "assets/vfx/comic-projection.svg": "42c2af5ef9f3625cece69a758275f0fab4538b98b3c1a8a6887c1c1e4610765c",
+    "assets/vfx/comic-ribbon.svg": "de30547342b429a18419024da72eae527a82e62dbe59e6461ae1e52351b8ba2b",
+    "assets/vfx/comic-ribbon.vfx.json": "181c377500a6db24ced40c7aa0ae9493b81f5a66e42e92fbb274db2800e2bf64",
+    "assets/vfx/comic-smoke.svg": "da3dfac7d973f687830b609ea61447347eae660f25913f3dcd79ebdcbe528ead",
+    "assets/vfx/comic-soft.vfx.json": "4f074d8e4dddba9b169a460f435cb494a14df9465e53c0d2709580d3484bc718",
+    "assets/vfx/comic-spark.svg": "add8c247570cba81990c6a1d987463b7dad84bf4c42917b709310f38ee053af9",
+    "assets/vfx/comic-trail.svg": "49301e3748fe3c7b0d8ab44f3a7eb2e3bad8537c2b73f4635b653566bb3daffa"
+  },
+  "raw": {
+    "path": "C:\\Users\\fangy\\WorkBuddy\\game-design-zombie\\.workbuddy\\tmp\\wu07-act1-accepted\\result.json",
+    "sha256": "e6b8cedacc973c5f09774b3c6f6a37cea7b1a5e4a5ffe9bb5284bc8acca8b01f",
+    "bytes": 1955830
+  },
+  "floors": [
+    {
+      "floor": 1,
+      "weapons": [
+        {
+          "id": "pistol",
+          "triggered": true
+        },
+        {
+          "id": "shotgun",
+          "triggered": true
+        },
+        {
+          "id": "smg",
+          "triggered": true
+        },
+        {
+          "id": "sniper",
+          "triggered": true
+        },
+        {
+          "id": "flame",
+          "triggered": true
+        },
+        {
+          "id": "chainsaw",
+          "triggered": true
+        },
+        {
+          "id": "launcher",
+          "triggered": true
+        }
+      ]
+    },
+    {
+      "floor": 2,
+      "weapons": [
+        {
+          "id": "pistol",
+          "triggered": true
+        }
+      ]
+    },
+    {
+      "floor": 3,
+      "weapons": [
+        {
+          "id": "pistol",
+          "triggered": true
+        }
+      ]
+    }
+  ]
+}
