@@ -3328,6 +3328,29 @@
       "reviewedAt": "2026-10-21",
       "reviewedSourceCommit": "509c343be5b6274714f1c25bd4f38f0a3d66375f"
     }
-
+,
+    {
+      "id": "fracture-destructibles-wu06",
+      "path": "docs/architecture/fracture-destructibles-20261021.md",
+      "title": "可破坏物体玩法闭环（WU-06）",
+      "role": "validation",
+      "authority": "guide",
+      "status": "current",
+      "topics": [
+        "fracture",
+        "destructible",
+        "weapon",
+        "collision",
+        "navigation",
+        "play"
+      ],
+      "read": "Destructible 作者配置→武器事实→Play 耐久一次转换→collider/物理镜像/动态导航同步→正式碎片接管；Reset/Stop 与失败保底；正式场景与 headed 证据",
+      "sourceRefs": [
+        "scene-schema",
+        "architecture-policy"
+      ],
+      "reviewedAt": "2026-10-21",
+      "reviewedSourceCommit": "e25d74a0bf5b0ad6a90663b5917fa33b82b35390"
+    }
   ]
 }
