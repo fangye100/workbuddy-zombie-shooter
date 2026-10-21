@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`cca7ffbd0f5daab56c826c1fe619d2bdf5b5ff85`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`4434694d4fe989a742da6e97e6699fead01f5c14`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -34,7 +34,7 @@ NPC 案例也可打开 `assets/scenes/sandbox/fracture-wu07.scene.json`，选 E-
 |---|---|
 | 场景配置与历史 | `packages/scene/src/fracture.ts`、`document.ts` 既有 v25/v1 契约；`SpawnEditStore.editNodes`、原 History、`AuthorSceneSaver`。没有新 schema 版本或第二份 HP。 |
 | 资产历史/CAS | 从原 `VfxDocument` 局部抽离 `AuthorResourceDocument`，VFX 入口保留薄适配；碎裂使用同一实现，未复制历史/保存栈。 |
-| 当前准入 | 原 `admitFractureProfile` 收敛当前 profile/sidecar、合法草稿及全部 source/chunk/独立 convex sidecar 和实际 GLB；复用原 `parseGlb` 解码并检查有限几何/权重与索引。Scene Apply、Asset Apply、Preview、Play 共用；NPC 复用当次已验原字节继续准备。 |
+| 当前准入 | 原 `admitFractureProfile` 统一当前 profile/sidecar、合法草稿和全部引用 GLB。NPC source/chunk 复用原 skin owner 的 `validateSkinMesh` 静态合同；正式 `bakeSkinVertices` 同用该函数。两种 Apply/Preview/Play 共用，NPC 仍复用当次原字节。 |
 | 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。runtime 唯一 `fractureAuthorDraft` 约束可写字段，编辑侧保留薄转出。 |
 | 预览组合 | `FracturePreview` 注入独立 host，复用 `bindFractureToPlay`、固定 tick、真 Rapier、原简化 sim、租约和正式准备器。没有调用游戏伤害或建立 Preview 专用运动求解。 |
 | 完整 NPC 与碎块 | 原 ActorLibrary/动作选择/poseIndexAt 取当前姿态；原 `bakeSkinVertices` 求完整四权重表面。`paletteForNamedPose` 按接收 GLB 的骨名映射，不借另一份 rig 的下标；原 WU07 准备器也使用该 helper。 |
@@ -59,7 +59,7 @@ WASM compat 内嵌模块没有独立下载请求；模块代码可共享，World
 
 | 命令/证据 | 实际结果 |
 |---|---|
-| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；最终真实内容准入后 8 文件/189 通过；未重新执行最终全仓。 |
+| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；最终共享蒙皮校验后 8 文件/205 通过，含16条真实NPC source/chunk边界；未重新执行最终全仓。 |
 | `pnpm run typecheck` / `architecture:check` / `editor:build` | 当前通过；架构 434 文件、0 错误，构建保留 bundle 大小提示。 |
 | `pnpm run scene:check` | 最终作者验收副本清理后通过，正式资产/项目保持原字节。 |
 | Node fs owner runner | 最近独立 4/4，源/sidecar 事务、CAS、typed refs 及失败回滚；该 owner 本轮后续未改，按源码身份继承。 |
@@ -149,3 +149,15 @@ F08-04反例：打开合法配方并保留TTL9草稿后，当前磁盘profile内
 完整原作者流程在当前内容校验后重新 **48/48**，见 `author-content-results.json`；准入原始输出为 `content-admission-results.json` 和 `content-original-results.json`。相关8文件189通过、类型/构建/434文件架构和副本清理后的scene门禁通过。新增测试使用真实可解析正例；相关夹具未发现仅文件头的合法输入。只将固定 GLB 夹具模块的首次装载预热移入 beforeAll，每次生产 IO 仍读取新字节，不跨准入缓存，不放宽全局超时；此前单次默认超时及成功复跑日志保留。CodeGraph 当前增量结构刷新8文件、0解析错误，向量覆盖669/9917仅作限制披露。
 
 本记录仍待新的 exact SHA 全新完整 WU_ACCEPTANCE，不提前声称独立PASS或supervisor批准，未开始WU09。旧129项及其他历史证据保留其原版本归属。
+
+## 复用正式蒙皮静态合同（F08-07）
+
+第五轮全新独立整单审核绑定 `59f345d4d7eea4d7497c3cfef0a7db1a240e88c0`，8 PASS/4 FAIL，唯一未闭合 F08-07：实际 E04 head GLB 的有限四权重 `[-0.25,1.25,0,0]`（和仍为1）经两种 Apply 成功提交，但后续正式 skin owner 拒绝。原报告 SHA256 `306f75ce733b1c0c1b8a6a7b14a74af9e69404fe0c81f076e48e5eaa93d53fb1`，完整原文保存在 `independent-fifth-fail.json`，旧失败未被覆盖。
+
+从原 `bakeSkinVertices` 在同一 skin.ts 局部抽离 `validateSkinMesh`：完整15-float顶点与四权重、权重有限/非负/和为1（沿原1e-3容差）、正权重关节范围。原bake调用此函数后继续原矩阵/坐标/法线烘焙，删除旧内联静态检查，没有复制蒙皮算法；矩阵/姿态结果错误仍由原bake处理。共用准入在真实解码后，对NPC source和chunk调用同一个静态函数，按原palette数量包含尾部恒等关节；独立convex的纯点集不被误要求蒙皮。缺少NPC具名骨架也在引用阶段定位拒绝，保留原错误信息和草稿。原prepare仍消费当次已验原字节，无跨事件缓存或假palette烘焙。
+
+新增16条真实GLB owner用例：source/chunk各覆盖有限负权重、非单位和、全零、正权重关节越界、NaN、Infinity，以及合法零权重无效关节/恒等尾关节。带草稿/无草稿的共用准入与正式prepare分别拒绝或合法通过，恢复原字节可重试。旧缺skin用例改为核更早的ref-binary、当前路径和缺骨架诊断，未把非法输入改成合法或放松拒绝。相关8文件 **205/205**；原skin23个已知闭式数值/失败用例仍通过。
+
+原第五轮UI反例在相同head字节、摘要配对及正确期望下重跑 **12/12**（原10项外另核两种Apply的ref-binary/权重诊断及TTL9/启用草稿保留）；另将同类有限负权重仅注入真实source GLB，原UI同样 **12/12**。两种Apply均不改Document/资产历史、保留草稿并定位ref-binary/权重非法；同输入Preview在World/GPU前拒绝，解除后真正不同值成功，正式NPC重新10块/3真body/GPU接管。故障只替换精确IO，正式磁盘未改；脚本和输入回执在ignored审核根，原始输出为 `skin-chunk-results.json`、`skin-source-results.json`。
+
+当前完整作者流程重新 **48/48**，含保存/重载/CAS、非bind表面连续及真资源释放；原正式准入探针重新 **165/165**，见 `author-skin-results.json`、`admission-skin-results.json`。typecheck、build、434文件架构及副本清理后scene门禁通过。首次新增导出时Vite旧变换导致页面未就绪的失败日志保留；保持源码字节不变触发原模块刷新后恢复，原PID21604未重启。最初测试类型错误及缺skin旧阶段断言失败也保留，修正后才计205/205。本记录仍待新exact的fresh完整WU_ACCEPTANCE，不预先宣称独立PASS/supervisor批准，未进入WU09。

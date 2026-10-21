@@ -1,0 +1,2550 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu06.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu06.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "gitHead": "59f345d4d7eea4d7497c3cfef0a7db1a240e88c0",
+    "formalHashes": {
+      "assets/fracture/e04-bulwark/e04-bulwark.fracture.json": "ee3b795b1989ddc0c56874f080a729d3048aa3fa56dc30a186f3c3efa7240713",
+      "assets/fracture/e04-bulwark/e04-bulwark.fracture.json.meta.json": "da52cb5f1b1ba2f37b6e1967db657428f06a45892b60f828cfda4e6830660987",
+      "aether.project.json": "9670c8f4eaaf3bfef2e1fcb4a7edaf96b7edac6aeebe67483a51ebeb81f68173",
+      "assets/scenes/sandbox/fracture-wu06.scene.json": "85798be0d736cdbcb340d68e94b7ec2db07ef8a9d0ffccf38f2974a74c2fe942",
+      "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb": "f94a041ee223c9632e26d178315045647f7af27918d3f3c5fb280e2bff13fb00",
+      "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb.meta.json": "cf065964040402604c480fc462cde86d3d1c2e8416d86e3fd3abf7b0b64ec0da",
+      "assets/fracture/e04-bulwark/head.glb": "e6e22e135948111ae8b20b1615276888d0c32ed358ce9607d91e7d217dcd0900",
+      "assets/fracture/e04-bulwark/head.glb.meta.json": "db43c1670e584a53712abc3e71a950cdde4b4090512e80b6d3be7e049d5cba68",
+      "assets/fracture/e04-bulwark/torso.glb": "5d0b79ff5daab4b9b6796394fe03494180a59df0288bdca6232a7e5f2dc868e8",
+      "assets/fracture/e04-bulwark/torso.glb.meta.json": "ff154c2533f3279a82ab6e2e396b3ee8265a4091e3bc0ee1e83bc0a2307e8a73",
+      "assets/fracture/e04-bulwark/arm-l-upper.glb": "c0f896dd2da1619052f1f18988bdeb57a8f98628ff87479dd90b097f8e945adb",
+      "assets/fracture/e04-bulwark/arm-l-upper.glb.meta.json": "9c22b3ba2c31728a0bf12dd4857f983cb4f02516e0aeffe858fe2340175679e3",
+      "assets/fracture/e04-bulwark/arm-l-forearm.glb": "964d936ef3655c929b720e1466e1d24c8a3d5df3437277cf60bfc378702e3564",
+      "assets/fracture/e04-bulwark/arm-l-forearm.glb.meta.json": "6efe4a69fe3506af3a047463cc48ce20be17622b7377f1d24e09f588045afcc5",
+      "assets/fracture/e04-bulwark/arm-r-upper.glb": "544b8f5120fe750ce69d3e48d9ba20ffd89d720deae96a28a3478a797e6b7457",
+      "assets/fracture/e04-bulwark/arm-r-upper.glb.meta.json": "a1e15359fd9dc49e75afe8c4c2ddff07b6ac0b8f5b087a136b98bc8fbc1b5687",
+      "assets/fracture/e04-bulwark/arm-r-forearm.glb": "c2f05cfd2add6c8b25d4b04ff685610f4299ff3389adc7cd492c8736772896ab",
+      "assets/fracture/e04-bulwark/arm-r-forearm.glb.meta.json": "f4dfface5b2d9dfffe089ae733a154c58295d9a87924291e502119e7f9fda86e",
+      "assets/fracture/e04-bulwark/leg-l-thigh.glb": "5a50018c1a1e986eeb6c504d040d39fe5f82289528eac6b3d721c6b508d1404a",
+      "assets/fracture/e04-bulwark/leg-l-thigh.glb.meta.json": "1f0453f460b010d8c43b419e1f8895bad729dafb7fc0a1dd175393398ac92113",
+      "assets/fracture/e04-bulwark/leg-l-shin.glb": "9a8a5a006d48f936017b0cac8afc8f1bbe8c06db9cf669d9044bd0771fed05eb",
+      "assets/fracture/e04-bulwark/leg-l-shin.glb.meta.json": "a7508ae156404cccd1c5abe716f6ba33bb6a4f579b60720db56820882d8801e6",
+      "assets/fracture/e04-bulwark/leg-r-thigh.glb": "86ed9eb50088f4af801cf36b441533502a243a3b46ffbfda330f6d3e6fd70753",
+      "assets/fracture/e04-bulwark/leg-r-thigh.glb.meta.json": "28c10ad7ef0202ecf996e16c2324b058252c8987d2b2020f9152fe58cabcdd69",
+      "assets/fracture/e04-bulwark/leg-r-shin.glb": "5115abd4bc23f6a54f744c8dc4fc77ac66805a73b51c6fcbbe517c79e5abc08c",
+      "assets/fracture/e04-bulwark/leg-r-shin.glb.meta.json": "5317484cda7fbbe30475f52e834b5728e4777bb72af43d20fdefdc23961e8681"
+    },
+    "input": {
+      "target": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+      "offset": 303332,
+      "before": [
+        0.2622314393520355,
+        0.2602848708629608,
+        0.25998976826667786,
+        0.2174939215183258
+      ],
+      "after": [
+        -0.25,
+        1.25,
+        0,
+        0
+      ],
+      "byteLength": 2908132,
+      "declared": 2908132,
+      "originalHash": "f94a041ee223c9632e26d178315045647f7af27918d3f3c5fb280e2bff13fb00",
+      "badHash": "91ed7dd874adbf9be398f648fbd45c1e66d49c1af7c1a59b571114cc2ec48009"
+    },
+    "valid": {
+      "snapshot": {
+        "locked": false,
+        "resourceLoading": false,
+        "applyingNode": false,
+        "applyingAsset": false,
+        "openId": 5,
+        "nodeId": "nd_fr_spawn",
+        "path": "assets/fracture/e04-bulwark/e04-bulwark.fracture.json",
+        "hasDraft": false,
+        "sceneDirty": false,
+        "assetDirty": false,
+        "asset": {
+          "version": 1,
+          "id": "as_e04frct",
+          "name": "盾卫 E-04 致死碎裂",
+          "status": "accepted",
+          "kind": "npc",
+          "source": {
+            "model": {
+              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+              "guid": "as_68c5qqtl"
+            },
+            "origin": "正式 rigged NPC（E-04 盾卫，Git LFS，HumanIK 蒙皮，6 个动画含 death）"
+          },
+          "assemblyScale": 1,
+          "chunks": [
+            {
+              "chunkId": "head",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/head.glb",
+                "guid": "as_388d3f15",
+                "sub": "node:head"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.01532,
+                1.790702,
+                -0.002695
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3613,
+                    0.2564,
+                    0.2708
+                  ]
+                },
+                "mass": 5.838,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "torso",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/torso.glb",
+                "guid": "as_4a546985",
+                "sub": "node:torso"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.003102,
+                1.224791,
+                0.026582
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.4008,
+                    0.4058,
+                    0.2867
+                  ]
+                },
+                "mass": 13.663,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-l-upper",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-l-upper.glb",
+                "guid": "as_971317fc",
+                "sub": "node:arm-l-upper"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.271542,
+                1.494793,
+                -0.001497
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.2545,
+                    0.4022,
+                    0.2603
+                  ]
+                },
+                "mass": 7.992,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-l-forearm",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-l-forearm.glb",
+                "guid": "as_69c504b2",
+                "sub": "node:arm-l-forearm"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.524209,
+                1.384974,
+                -0.037863
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1877,
+                    0.4605,
+                    0.2339
+                  ]
+                },
+                "mass": 5.917,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-r-upper",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-r-upper.glb",
+                "guid": "as_76175b53",
+                "sub": "node:arm-r-upper"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.28664,
+                1.519683,
+                -0.02782
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.2118,
+                    0.3423,
+                    0.2416
+                  ]
+                },
+                "mass": 7.084,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-r-forearm",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-r-forearm.glb",
+                "guid": "as_81d593f4",
+                "sub": "node:arm-r-forearm"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.530869,
+                1.308789,
+                -0.026991
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1766,
+                    0.4058,
+                    0.1998
+                  ]
+                },
+                "mass": 3.529,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-l-thigh",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-l-thigh.glb",
+                "guid": "as_e7bcd129",
+                "sub": "node:leg-l-thigh"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.317151,
+                0.847601,
+                0.045994
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3757,
+                    0.4207,
+                    0.2677
+                  ]
+                },
+                "mass": 12.807,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-l-shin",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-l-shin.glb",
+                "guid": "as_f984411e",
+                "sub": "node:leg-l-shin"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.234534,
+                0.21168,
+                -0.020887
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1717,
+                    0.2642,
+                    0.2715
+                  ]
+                },
+                "mass": 6.095,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-r-thigh",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-r-thigh.glb",
+                "guid": "as_e3172daf",
+                "sub": "node:leg-r-thigh"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.311021,
+                0.823566,
+                0.046402
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3538,
+                    0.4,
+                    0.2397
+                  ]
+                },
+                "mass": 10.919,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-r-shin",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-r-shin.glb",
+                "guid": "as_6946502e",
+                "sub": "node:leg-r-shin"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.275702,
+                0.203074,
+                -0.019855
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1734,
+                    0.2819,
+                    0.2715
+                  ]
+                },
+                "mass": 6.157,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            }
+          ],
+          "npc": {
+            "actorId": "E-04",
+            "mode": "skinned",
+            "boneMap": {
+              "head": "Head",
+              "torso": "Spine1",
+              "arm-l-upper": "LeftArm",
+              "arm-l-forearm": "LeftForeArm",
+              "arm-r-upper": "RightArm",
+              "arm-r-forearm": "RightForeArm",
+              "leg-l-thigh": "LeftUpLeg",
+              "leg-l-shin": "LeftLeg",
+              "leg-r-thigh": "RightUpLeg",
+              "leg-r-shin": "RightLeg"
+            },
+            "normalizeHeightM": 2.05,
+            "footOffsetM": 0
+          },
+          "playback": {
+            "priority": 2,
+            "lifetimeSec": 5,
+            "fadeSec": 1,
+            "companionVfx": null
+          }
+        },
+        "assetUndoDepth": 0,
+        "assetRevision": 0,
+        "preview": {
+          "ready": true,
+          "paused": true,
+          "triggered": true,
+          "sourceVisible": false,
+          "takingOver": false,
+          "tick": 1,
+          "owner": "fracture-preview-6",
+          "diagnostic": "",
+          "event": {
+            "sequence": 6,
+            "tick": 1,
+            "seed": 7,
+            "profile": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark.fracture.json",
+              "guid": "as_e04frct"
+            },
+            "target": {
+              "kind": "npc",
+              "runId": "fracture-preview-6",
+              "slot": 0,
+              "id": 0,
+              "generation": 6
+            },
+            "position": [
+              0,
+              0,
+              -3.5
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "contact": null,
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "impulse": [
+              0,
+              2,
+              3
+            ],
+            "source": {
+              "weaponId": "author-preview",
+              "hitSequence": 6
+            },
+            "npcPose": {
+              "Hips": [
+                0.9187281131744385,
+                0.005585391074419022,
+                -0.3948511481285095,
+                0,
+                0.036825548857450485,
+                0.9943308234214783,
+                0.09974997490644455,
+                0,
+                0.3931698203086853,
+                -0.106183722615242,
+                0.9133139848709106,
+                0,
+                -0.00748889846727252,
+                -0.0028255567885935307,
+                -0.04382076486945152,
+                1
+              ],
+              "Spine": [
+                0.9339311122894287,
+                0.07343041151762009,
+                -0.3498295545578003,
+                0,
+                0.02146817371249199,
+                0.9653833508491516,
+                0.2599502503871918,
+                0,
+                0.3568078577518463,
+                -0.2502858340740204,
+                0.9000250697135925,
+                0,
+                0.00684303930029273,
+                0.016632724553346634,
+                -0.23258399963378906,
+                1
+              ],
+              "Spine1": [
+                0.950756847858429,
+                0.16117481887340546,
+                -0.2647342383861542,
+                0,
+                -0.056748729199171066,
+                0.9302388429641724,
+                0.36254027485847473,
+                0,
+                0.3046984076499939,
+                -0.32966428995132446,
+                0.8935772180557251,
+                0,
+                0.10800813138484955,
+                0.054812971502542496,
+                -0.37499645352363586,
+                1
+              ],
+              "Spine2": [
+                0.9596073031425476,
+                0.22741016745567322,
+                -0.16564571857452393,
+                0,
+                -0.28031793236732483,
+                0.8230404853820801,
+                -0.49399012327194214,
+                0,
+                0.02399473823606968,
+                0.5204700231552124,
+                0.8535427451133728,
+                0,
+                0.4191419184207916,
+                0.35170644521713257,
+                0.9723164439201355,
+                1
+              ],
+              "Neck": [
+                0.9698491096496582,
+                0.22407163679599762,
+                -0.09583646059036255,
+                0,
+                -0.13447454571723938,
+                0.8199976682662964,
+                0.5563457012176514,
+                0,
+                0.20324695110321045,
+                -0.5266838073730469,
+                0.8254058361053467,
+                0,
+                0.15730807185173035,
+                0.404122918844223,
+                -0.8540018200874329,
+                1
+              ],
+              "Head": [
+                0.987923264503479,
+                -0.07651827484369278,
+                -0.13473160564899445,
+                0,
+                0.15433821082115173,
+                0.5627896189689636,
+                0.8120638132095337,
+                0,
+                0.013687842525541782,
+                -0.8230509757995605,
+                0.5678026080131531,
+                0,
+                -0.3658009469509125,
+                0.9258101582527161,
+                -1.3063966035842896,
+                1
+              ],
+              "HeadTip": [
+                0.987923264503479,
+                -0.07651827484369278,
+                -0.13473160564899445,
+                0,
+                0.15433821082115173,
+                0.5627896189689636,
+                0.8120638132095337,
+                0,
+                0.013687842525541782,
+                -0.8230509757995605,
+                0.5678026080131531,
+                0,
+                -0.3658009469509125,
+                0.9258100986480713,
+                -1.3063966035842896,
+                1
+              ],
+              "LeftShoulder": [
+                0.953620195388794,
+                0.3008136451244354,
+                0.010946604423224926,
+                0,
+                -0.25708410143852234,
+                0.7949972748756409,
+                0.5494425892829895,
+                0,
+                0.15657728910446167,
+                -0.5267736911773682,
+                0.8354597687721252,
+                0,
+                0.39380908012390137,
+                0.29316896200180054,
+                -0.7652636170387268,
+                1
+              ],
+              "LeftArm": [
+                0.2609989643096924,
+                0.8552882671356201,
+                0.44761762022972107,
+                0,
+                -0.22362254559993744,
+                0.5046448707580566,
+                -0.8338624835014343,
+                0,
+                -0.9390807747840881,
+                0.11753985285758972,
+                0.3229735195636749,
+                0,
+                0.518505871295929,
+                0.6092932820320129,
+                1.3059144020080566,
+                1
+              ],
+              "LeftForeArm": [
+                0.45652851462364197,
+                0.8417490124702454,
+                0.2881673276424408,
+                0,
+                -0.13512851297855377,
+                0.3857317864894867,
+                -0.9126617312431335,
+                0,
+                -0.879387378692627,
+                0.37771645188331604,
+                0.2898418605327606,
+                0,
+                0.3102857768535614,
+                0.7776119709014893,
+                1.4847662448883057,
+                1
+              ],
+              "LeftHand": [
+                -0.014722912572324276,
+                0.1745915412902832,
+                0.9845309257507324,
+                0,
+                0.3446800708770752,
+                0.9251719117164612,
+                -0.15891073644161224,
+                0,
+                -0.9386047720909119,
+                0.33700859546661377,
+                -0.07379940897226334,
+                0,
+                0.14963604509830475,
+                0.6680546998977661,
+                0.4890660345554352,
+                1
+              ],
+              "LeftHandTip": [
+                -0.014722912572324276,
+                0.1745915412902832,
+                0.9845309257507324,
+                0,
+                0.3446800708770752,
+                0.9251719117164612,
+                -0.15891073644161224,
+                0,
+                -0.9386047720909119,
+                0.33700859546661377,
+                -0.07379940897226334,
+                0,
+                0.14963604509830475,
+                0.6680546998977661,
+                0.4890660047531128,
+                1
+              ],
+              "RightShoulder": [
+                0.8812459707260132,
+                0.18724918365478516,
+                0.43398550152778625,
+                0,
+                -0.38444018363952637,
+                0.8181204795837402,
+                0.4276501536369324,
+                0,
+                -0.2749752700328827,
+                -0.543706476688385,
+                0.7929514646530151,
+                0,
+                0.5520244836807251,
+                0.2583768367767334,
+                -0.46067845821380615,
+                1
+              ],
+              "RightArm": [
+                0.3838534355163574,
+                -0.8363677859306335,
+                -0.3913380801677704,
+                0,
+                -0.10098778456449509,
+                0.38323792815208435,
+                -0.9181122779846191,
+                0,
+                0.9178550839424133,
+                0.3919409215450287,
+                0.06264423578977585,
+                0,
+                -0.013374537229537964,
+                0.6583412289619446,
+                1.389880657196045,
+                1
+              ],
+              "RightForeArm": [
+                0.6032706499099731,
+                -0.7467934489250183,
+                -0.2799359858036041,
+                0,
+                -0.14322860538959503,
+                0.24384675920009613,
+                -0.9591790437698364,
+                0,
+                0.7845699787139893,
+                0.6187394261360168,
+                0.04014340788125992,
+                0,
+                0.1450168490409851,
+                0.8894831538200378,
+                1.4970405101776123,
+                1
+              ],
+              "RightHand": [
+                -0.1493842452764511,
+                -0.1243700459599495,
+                -0.9809263944625854,
+                0,
+                -0.1947738379240036,
+                0.9763216376304626,
+                -0.09412433952093124,
+                0,
+                0.9694057703018188,
+                0.17699812352657318,
+                -0.1700710654258728,
+                0,
+                -0.23823727667331696,
+                0.6340229511260986,
+                0.3824833035469055,
+                1
+              ],
+              "RightHandTip": [
+                -0.1493842452764511,
+                -0.1243700459599495,
+                -0.9809263944625854,
+                0,
+                -0.1947738379240036,
+                0.9763216376304626,
+                -0.09412433952093124,
+                0,
+                0.9694057703018188,
+                0.17699812352657318,
+                -0.1700710654258728,
+                0,
+                -0.23823726177215576,
+                0.6340229511260986,
+                0.3824833035469055,
+                1
+              ],
+              "LeftUpLeg": [
+                0.8379105925559998,
+                0.07343128323554993,
+                -0.5408453941345215,
+                0,
+                -0.07216637581586838,
+                0.9971139430999756,
+                0.023574907332658768,
+                0,
+                0.541015625,
+                0.01927717588841915,
+                0.8407915830612183,
+                0,
+                0.12365604192018509,
+                -0.01028420403599739,
+                0.053429558873176575,
+                1
+              ],
+              "LeftLeg": [
+                0.8976851105690002,
+                0.1452823132276535,
+                -0.41599828004837036,
+                0,
+                -0.11501767486333847,
+                0.988610029220581,
+                0.09706265479326248,
+                0,
+                0.4253615736961365,
+                -0.03928455710411072,
+                0.9041704535484314,
+                0,
+                0.14627446234226227,
+                -0.016582326963543892,
+                -0.02624158188700676,
+                1
+              ],
+              "LeftFoot": [
+                0.9377700090408325,
+                -0.054464031010866165,
+                -0.3429594337940216,
+                0,
+                0.18513794243335724,
+                0.9139692187309265,
+                0.36108753085136414,
+                0,
+                0.2937880754470825,
+                -0.40211188793182373,
+                0.8671762943267822,
+                0,
+                0.08616230636835098,
+                0.00040267716394737363,
+                -0.07952326536178589,
+                1
+              ],
+              "LeftToeBase": [
+                0.9597513675689697,
+                0.03432612121105194,
+                0.2787456512451172,
+                0,
+                -0.019795233383774757,
+                0.9983022809028625,
+                -0.054778944700956345,
+                0,
+                -0.2801527976989746,
+                0.04705629125237465,
+                0.9588014483451843,
+                0,
+                0.18003541231155396,
+                -0.09969878196716309,
+                -0.25162607431411743,
+                1
+              ],
+              "LeftToeTip": [
+                0.9597513675689697,
+                0.03432612121105194,
+                0.2787456512451172,
+                0,
+                -0.019795233383774757,
+                0.9983022809028625,
+                -0.054778944700956345,
+                0,
+                -0.2801527976989746,
+                0.04705629125237465,
+                0.9588014483451843,
+                0,
+                0.18003542721271515,
+                -0.09969878196716309,
+                -0.25162604451179504,
+                1
+              ],
+              "RightUpLeg": [
+                0.9611943960189819,
+                0.07624181360006332,
+                -0.2651272416114807,
+                0,
+                -0.03424428775906563,
+                0.9865937232971191,
+                0.1595621556043625,
+                0,
+                0.27373820543289185,
+                -0.14429116249084473,
+                0.9509192705154419,
+                0,
+                0.060871195048093796,
+                0.01606588251888752,
+                -0.0726633295416832,
+                1
+              ],
+              "RightLeg": [
+                0.9634867906570435,
+                0.030942896381020546,
+                -0.26596176624298096,
+                0,
+                0.01064310036599636,
+                0.9880891442298889,
+                0.1535138487815857,
+                0,
+                0.26754412055015564,
+                -0.15073922276496887,
+                0.9516815543174744,
+                0,
+                0.03407023474574089,
+                0.005264393985271454,
+                -0.06916681677103043,
+                1
+              ],
+              "RightFoot": [
+                0.959455132484436,
+                0.054429080337285995,
+                -0.27655625343322754,
+                0,
+                0.04240209981799126,
+                0.9421396255493164,
+                0.3325279951095581,
+                0,
+                0.2786538302898407,
+                -0.3307722210884094,
+                0.9016328454017639,
+                0,
+                0.030513610690832138,
+                -0.0033886153250932693,
+                -0.09869655966758728,
+                1
+              ],
+              "RightToeBase": [
+                0.61334228515625,
+                0.000278476276434958,
+                -0.7898171544075012,
+                0,
+                -0.00004284565875423141,
+                0.9999998807907104,
+                0.0003192820877302438,
+                0,
+                0.7898172736167908,
+                -0.00016199950187001377,
+                0.61334228515625,
+                0,
+                -0.1464863419532776,
+                -0.07376282662153244,
+                -0.1829947829246521,
+                1
+              ],
+              "RightToeTip": [
+                0.61334228515625,
+                0.000278476276434958,
+                -0.7898171544075012,
+                0,
+                -0.00004284565875423141,
+                0.9999998807907104,
+                0.0003192820877302438,
+                0,
+                0.7898172736167908,
+                -0.00016199950187001377,
+                0.61334228515625,
+                0,
+                -0.1464863270521164,
+                -0.07376282662153244,
+                -0.1829947531223297,
+                1
+              ]
+            },
+            "npcNormalization": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          "active": 10,
+          "stats": {
+            "rigidActive": 3,
+            "simplifiedActive": 7,
+            "queuedEvents": 0,
+            "deduplicated": 0,
+            "rejectedAdmission": 0,
+            "evicted": 0,
+            "expired": 0,
+            "skipped": 0,
+            "failedActivations": 0,
+            "poolActive": 10,
+            "poolHighWater": 10,
+            "physicsMs": 0,
+            "integrateMs": 0,
+            "updateMs": 2,
+            "ticks": 0
+          },
+          "batches": [
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:fracture-preview-6:0:0:6#g1-1:head",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:fracture-preview-6:0:0:6#g1-1:head",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:fracture-preview-6:0:0:6#g1-1:torso",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:fracture-preview-6:0:0:6#g1-1:torso",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-l-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-l-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-l-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-l-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-r-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-r-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-r-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:fracture-preview-6:0:0:6#g1-1:arm-r-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-l-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-l-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-l-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-l-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-r-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-r-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-r-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-6:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:fracture-preview-6:0:0:6#g1-1:leg-r-shin",
+              "count": 1
+            }
+          ]
+        },
+        "diagnostic": "碎裂配置已应用到场景，可Undo/Redo，请保存"
+      },
+      "backend": {
+        "dynamicBodies": 3,
+        "staticColliders": 7,
+        "ticks": 0,
+        "destroyed": false
+      }
+    },
+    "sceneApply": {
+      "beforeHash": "07505bb55e339266ea5770f5e3bf62de591f47321d9ba96427c7117b96c65840",
+      "afterHash": "07505bb55e339266ea5770f5e3bf62de591f47321d9ba96427c7117b96c65840",
+      "beforeDeath": null,
+      "afterDeath": null,
+      "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法",
+      "hits": {
+        "binary": 1,
+        "meta": 1
+      }
+    },
+    "sceneDraft": {
+      "ttl": "9",
+      "enabled": true
+    },
+    "assetApply": {
+      "beforeHash": "ae13c0d62fe4353eaa7fc6735494398bcc5b3ea0ec80f36d9443bda83c8915ac",
+      "afterHash": "ae13c0d62fe4353eaa7fc6735494398bcc5b3ea0ec80f36d9443bda83c8915ac",
+      "undoBefore": 0,
+      "undoAfter": 0,
+      "ttlBefore": 5,
+      "ttlAfter": 5,
+      "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法"
+    },
+    "assetDraft": {
+      "ttl": "9",
+      "enabled": true
+    },
+    "preview": {
+      "preview": {
+        "ready": false,
+        "paused": true,
+        "triggered": false,
+        "sourceVisible": false,
+        "takingOver": false,
+        "tick": 0,
+        "owner": "fracture-preview-10",
+        "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法",
+        "event": null,
+        "active": 0,
+        "stats": null,
+        "batches": []
+      },
+      "backend": null,
+      "meshes": 0,
+      "hits": 3
+    },
+    "recovery": {
+      "snapshot": {
+        "locked": false,
+        "resourceLoading": false,
+        "applyingNode": false,
+        "applyingAsset": false,
+        "openId": 10,
+        "nodeId": "nd_fr_spawn",
+        "path": "assets/fracture/e04-bulwark/e04-bulwark.fracture.json",
+        "hasDraft": true,
+        "sceneDirty": false,
+        "assetDirty": true,
+        "asset": {
+          "version": 1,
+          "id": "as_e04frct",
+          "name": "盾卫 E-04 致死碎裂",
+          "status": "accepted",
+          "kind": "npc",
+          "source": {
+            "model": {
+              "path": "assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb",
+              "guid": "as_68c5qqtl"
+            },
+            "origin": "正式 rigged NPC（E-04 盾卫，Git LFS，HumanIK 蒙皮，6 个动画含 death）"
+          },
+          "assemblyScale": 1,
+          "chunks": [
+            {
+              "chunkId": "head",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/head.glb",
+                "guid": "as_388d3f15",
+                "sub": "node:head"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.01532,
+                1.790702,
+                -0.002695
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3613,
+                    0.2564,
+                    0.2708
+                  ]
+                },
+                "mass": 5.838,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "torso",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/torso.glb",
+                "guid": "as_4a546985",
+                "sub": "node:torso"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.003102,
+                1.224791,
+                0.026582
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.4008,
+                    0.4058,
+                    0.2867
+                  ]
+                },
+                "mass": 13.663,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-l-upper",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-l-upper.glb",
+                "guid": "as_971317fc",
+                "sub": "node:arm-l-upper"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.271542,
+                1.494793,
+                -0.001497
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.2545,
+                    0.4022,
+                    0.2603
+                  ]
+                },
+                "mass": 7.992,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-l-forearm",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-l-forearm.glb",
+                "guid": "as_69c504b2",
+                "sub": "node:arm-l-forearm"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.524209,
+                1.384974,
+                -0.037863
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1877,
+                    0.4605,
+                    0.2339
+                  ]
+                },
+                "mass": 5.917,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-r-upper",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-r-upper.glb",
+                "guid": "as_76175b53",
+                "sub": "node:arm-r-upper"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.28664,
+                1.519683,
+                -0.02782
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.2118,
+                    0.3423,
+                    0.2416
+                  ]
+                },
+                "mass": 7.084,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "arm-r-forearm",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/arm-r-forearm.glb",
+                "guid": "as_81d593f4",
+                "sub": "node:arm-r-forearm"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.530869,
+                1.308789,
+                -0.026991
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1766,
+                    0.4058,
+                    0.1998
+                  ]
+                },
+                "mass": 3.529,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-l-thigh",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-l-thigh.glb",
+                "guid": "as_e7bcd129",
+                "sub": "node:leg-l-thigh"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.317151,
+                0.847601,
+                0.045994
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3757,
+                    0.4207,
+                    0.2677
+                  ]
+                },
+                "mass": 12.807,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-l-shin",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-l-shin.glb",
+                "guid": "as_f984411e",
+                "sub": "node:leg-l-shin"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                0.234534,
+                0.21168,
+                -0.020887
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1717,
+                    0.2642,
+                    0.2715
+                  ]
+                },
+                "mass": 6.095,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-r-thigh",
+              "class": "large",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-r-thigh.glb",
+                "guid": "as_e3172daf",
+                "sub": "node:leg-r-thigh"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.311021,
+                0.823566,
+                0.046402
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.3538,
+                    0.4,
+                    0.2397
+                  ]
+                },
+                "mass": 10.919,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            },
+            {
+              "chunkId": "leg-r-shin",
+              "class": "small",
+              "mesh": {
+                "path": "assets/fracture/e04-bulwark/leg-r-shin.glb",
+                "guid": "as_6946502e",
+                "sub": "node:leg-r-shin"
+              },
+              "bind": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation": [
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "scale": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "pivot": [
+                -0.275702,
+                0.203074,
+                -0.019855
+              ],
+              "proxy": {
+                "shape": {
+                  "type": "box",
+                  "halfExtents": [
+                    0.1734,
+                    0.2819,
+                    0.2715
+                  ]
+                },
+                "mass": 6.157,
+                "friction": 0.7,
+                "restitution": 0.2,
+                "collisionGroup": "debris"
+              }
+            }
+          ],
+          "npc": {
+            "actorId": "E-04",
+            "mode": "skinned",
+            "boneMap": {
+              "head": "Head",
+              "torso": "Spine1",
+              "arm-l-upper": "LeftArm",
+              "arm-l-forearm": "LeftForeArm",
+              "arm-r-upper": "RightArm",
+              "arm-r-forearm": "RightForeArm",
+              "leg-l-thigh": "LeftUpLeg",
+              "leg-l-shin": "LeftLeg",
+              "leg-r-thigh": "RightUpLeg",
+              "leg-r-shin": "RightLeg"
+            },
+            "normalizeHeightM": 2.05,
+            "footOffsetM": 0
+          },
+          "playback": {
+            "priority": 2,
+            "lifetimeSec": 11,
+            "fadeSec": 1,
+            "companionVfx": null
+          }
+        },
+        "assetUndoDepth": 1,
+        "assetRevision": 1,
+        "preview": {
+          "ready": true,
+          "paused": true,
+          "triggered": true,
+          "sourceVisible": false,
+          "takingOver": false,
+          "tick": 1,
+          "owner": "fracture-preview-15",
+          "diagnostic": "",
+          "event": {
+            "sequence": 15,
+            "tick": 1,
+            "seed": 7,
+            "profile": {
+              "path": "assets/fracture/e04-bulwark/e04-bulwark.fracture.json",
+              "guid": "as_e04frct"
+            },
+            "target": {
+              "kind": "npc",
+              "runId": "fracture-preview-15",
+              "slot": 0,
+              "id": 0,
+              "generation": 15
+            },
+            "position": [
+              0,
+              0,
+              -3.5
+            ],
+            "rotation": [
+              0,
+              0,
+              0,
+              1
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "contact": null,
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "impulse": [
+              0,
+              2,
+              3
+            ],
+            "source": {
+              "weaponId": "author-preview",
+              "hitSequence": 15
+            },
+            "npcPose": {
+              "Hips": [
+                0.9187281131744385,
+                0.005585391074419022,
+                -0.3948511481285095,
+                0,
+                0.036825548857450485,
+                0.9943308234214783,
+                0.09974997490644455,
+                0,
+                0.3931698203086853,
+                -0.106183722615242,
+                0.9133139848709106,
+                0,
+                -0.00748889846727252,
+                -0.0028255567885935307,
+                -0.04382076486945152,
+                1
+              ],
+              "Spine": [
+                0.9339311122894287,
+                0.07343041151762009,
+                -0.3498295545578003,
+                0,
+                0.02146817371249199,
+                0.9653833508491516,
+                0.2599502503871918,
+                0,
+                0.3568078577518463,
+                -0.2502858340740204,
+                0.9000250697135925,
+                0,
+                0.00684303930029273,
+                0.016632724553346634,
+                -0.23258399963378906,
+                1
+              ],
+              "Spine1": [
+                0.950756847858429,
+                0.16117481887340546,
+                -0.2647342383861542,
+                0,
+                -0.056748729199171066,
+                0.9302388429641724,
+                0.36254027485847473,
+                0,
+                0.3046984076499939,
+                -0.32966428995132446,
+                0.8935772180557251,
+                0,
+                0.10800813138484955,
+                0.054812971502542496,
+                -0.37499645352363586,
+                1
+              ],
+              "Spine2": [
+                0.9596073031425476,
+                0.22741016745567322,
+                -0.16564571857452393,
+                0,
+                -0.28031793236732483,
+                0.8230404853820801,
+                -0.49399012327194214,
+                0,
+                0.02399473823606968,
+                0.5204700231552124,
+                0.8535427451133728,
+                0,
+                0.4191419184207916,
+                0.35170644521713257,
+                0.9723164439201355,
+                1
+              ],
+              "Neck": [
+                0.9698491096496582,
+                0.22407163679599762,
+                -0.09583646059036255,
+                0,
+                -0.13447454571723938,
+                0.8199976682662964,
+                0.5563457012176514,
+                0,
+                0.20324695110321045,
+                -0.5266838073730469,
+                0.8254058361053467,
+                0,
+                0.15730807185173035,
+                0.404122918844223,
+                -0.8540018200874329,
+                1
+              ],
+              "Head": [
+                0.987923264503479,
+                -0.07651827484369278,
+                -0.13473160564899445,
+                0,
+                0.15433821082115173,
+                0.5627896189689636,
+                0.8120638132095337,
+                0,
+                0.013687842525541782,
+                -0.8230509757995605,
+                0.5678026080131531,
+                0,
+                -0.3658009469509125,
+                0.9258101582527161,
+                -1.3063966035842896,
+                1
+              ],
+              "HeadTip": [
+                0.987923264503479,
+                -0.07651827484369278,
+                -0.13473160564899445,
+                0,
+                0.15433821082115173,
+                0.5627896189689636,
+                0.8120638132095337,
+                0,
+                0.013687842525541782,
+                -0.8230509757995605,
+                0.5678026080131531,
+                0,
+                -0.3658009469509125,
+                0.9258100986480713,
+                -1.3063966035842896,
+                1
+              ],
+              "LeftShoulder": [
+                0.953620195388794,
+                0.3008136451244354,
+                0.010946604423224926,
+                0,
+                -0.25708410143852234,
+                0.7949972748756409,
+                0.5494425892829895,
+                0,
+                0.15657728910446167,
+                -0.5267736911773682,
+                0.8354597687721252,
+                0,
+                0.39380908012390137,
+                0.29316896200180054,
+                -0.7652636170387268,
+                1
+              ],
+              "LeftArm": [
+                0.2609989643096924,
+                0.8552882671356201,
+                0.44761762022972107,
+                0,
+                -0.22362254559993744,
+                0.5046448707580566,
+                -0.8338624835014343,
+                0,
+                -0.9390807747840881,
+                0.11753985285758972,
+                0.3229735195636749,
+                0,
+                0.518505871295929,
+                0.6092932820320129,
+                1.3059144020080566,
+                1
+              ],
+              "LeftForeArm": [
+                0.45652851462364197,
+                0.8417490124702454,
+                0.2881673276424408,
+                0,
+                -0.13512851297855377,
+                0.3857317864894867,
+                -0.9126617312431335,
+                0,
+                -0.879387378692627,
+                0.37771645188331604,
+                0.2898418605327606,
+                0,
+                0.3102857768535614,
+                0.7776119709014893,
+                1.4847662448883057,
+                1
+              ],
+              "LeftHand": [
+                -0.014722912572324276,
+                0.1745915412902832,
+                0.9845309257507324,
+                0,
+                0.3446800708770752,
+                0.9251719117164612,
+                -0.15891073644161224,
+                0,
+                -0.9386047720909119,
+                0.33700859546661377,
+                -0.07379940897226334,
+                0,
+                0.14963604509830475,
+                0.6680546998977661,
+                0.4890660345554352,
+                1
+              ],
+              "LeftHandTip": [
+                -0.014722912572324276,
+                0.1745915412902832,
+                0.9845309257507324,
+                0,
+                0.3446800708770752,
+                0.9251719117164612,
+                -0.15891073644161224,
+                0,
+                -0.9386047720909119,
+                0.33700859546661377,
+                -0.07379940897226334,
+                0,
+                0.14963604509830475,
+                0.6680546998977661,
+                0.4890660047531128,
+                1
+              ],
+              "RightShoulder": [
+                0.8812459707260132,
+                0.18724918365478516,
+                0.43398550152778625,
+                0,
+                -0.38444018363952637,
+                0.8181204795837402,
+                0.4276501536369324,
+                0,
+                -0.2749752700328827,
+                -0.543706476688385,
+                0.7929514646530151,
+                0,
+                0.5520244836807251,
+                0.2583768367767334,
+                -0.46067845821380615,
+                1
+              ],
+              "RightArm": [
+                0.3838534355163574,
+                -0.8363677859306335,
+                -0.3913380801677704,
+                0,
+                -0.10098778456449509,
+                0.38323792815208435,
+                -0.9181122779846191,
+                0,
+                0.9178550839424133,
+                0.3919409215450287,
+                0.06264423578977585,
+                0,
+                -0.013374537229537964,
+                0.6583412289619446,
+                1.389880657196045,
+                1
+              ],
+              "RightForeArm": [
+                0.6032706499099731,
+                -0.7467934489250183,
+                -0.2799359858036041,
+                0,
+                -0.14322860538959503,
+                0.24384675920009613,
+                -0.9591790437698364,
+                0,
+                0.7845699787139893,
+                0.6187394261360168,
+                0.04014340788125992,
+                0,
+                0.1450168490409851,
+                0.8894831538200378,
+                1.4970405101776123,
+                1
+              ],
+              "RightHand": [
+                -0.1493842452764511,
+                -0.1243700459599495,
+                -0.9809263944625854,
+                0,
+                -0.1947738379240036,
+                0.9763216376304626,
+                -0.09412433952093124,
+                0,
+                0.9694057703018188,
+                0.17699812352657318,
+                -0.1700710654258728,
+                0,
+                -0.23823727667331696,
+                0.6340229511260986,
+                0.3824833035469055,
+                1
+              ],
+              "RightHandTip": [
+                -0.1493842452764511,
+                -0.1243700459599495,
+                -0.9809263944625854,
+                0,
+                -0.1947738379240036,
+                0.9763216376304626,
+                -0.09412433952093124,
+                0,
+                0.9694057703018188,
+                0.17699812352657318,
+                -0.1700710654258728,
+                0,
+                -0.23823726177215576,
+                0.6340229511260986,
+                0.3824833035469055,
+                1
+              ],
+              "LeftUpLeg": [
+                0.8379105925559998,
+                0.07343128323554993,
+                -0.5408453941345215,
+                0,
+                -0.07216637581586838,
+                0.9971139430999756,
+                0.023574907332658768,
+                0,
+                0.541015625,
+                0.01927717588841915,
+                0.8407915830612183,
+                0,
+                0.12365604192018509,
+                -0.01028420403599739,
+                0.053429558873176575,
+                1
+              ],
+              "LeftLeg": [
+                0.8976851105690002,
+                0.1452823132276535,
+                -0.41599828004837036,
+                0,
+                -0.11501767486333847,
+                0.988610029220581,
+                0.09706265479326248,
+                0,
+                0.4253615736961365,
+                -0.03928455710411072,
+                0.9041704535484314,
+                0,
+                0.14627446234226227,
+                -0.016582326963543892,
+                -0.02624158188700676,
+                1
+              ],
+              "LeftFoot": [
+                0.9377700090408325,
+                -0.054464031010866165,
+                -0.3429594337940216,
+                0,
+                0.18513794243335724,
+                0.9139692187309265,
+                0.36108753085136414,
+                0,
+                0.2937880754470825,
+                -0.40211188793182373,
+                0.8671762943267822,
+                0,
+                0.08616230636835098,
+                0.00040267716394737363,
+                -0.07952326536178589,
+                1
+              ],
+              "LeftToeBase": [
+                0.9597513675689697,
+                0.03432612121105194,
+                0.2787456512451172,
+                0,
+                -0.019795233383774757,
+                0.9983022809028625,
+                -0.054778944700956345,
+                0,
+                -0.2801527976989746,
+                0.04705629125237465,
+                0.9588014483451843,
+                0,
+                0.18003541231155396,
+                -0.09969878196716309,
+                -0.25162607431411743,
+                1
+              ],
+              "LeftToeTip": [
+                0.9597513675689697,
+                0.03432612121105194,
+                0.2787456512451172,
+                0,
+                -0.019795233383774757,
+                0.9983022809028625,
+                -0.054778944700956345,
+                0,
+                -0.2801527976989746,
+                0.04705629125237465,
+                0.9588014483451843,
+                0,
+                0.18003542721271515,
+                -0.09969878196716309,
+                -0.25162604451179504,
+                1
+              ],
+              "RightUpLeg": [
+                0.9611943960189819,
+                0.07624181360006332,
+                -0.2651272416114807,
+                0,
+                -0.03424428775906563,
+                0.9865937232971191,
+                0.1595621556043625,
+                0,
+                0.27373820543289185,
+                -0.14429116249084473,
+                0.9509192705154419,
+                0,
+                0.060871195048093796,
+                0.01606588251888752,
+                -0.0726633295416832,
+                1
+              ],
+              "RightLeg": [
+                0.9634867906570435,
+                0.030942896381020546,
+                -0.26596176624298096,
+                0,
+                0.01064310036599636,
+                0.9880891442298889,
+                0.1535138487815857,
+                0,
+                0.26754412055015564,
+                -0.15073922276496887,
+                0.9516815543174744,
+                0,
+                0.03407023474574089,
+                0.005264393985271454,
+                -0.06916681677103043,
+                1
+              ],
+              "RightFoot": [
+                0.959455132484436,
+                0.054429080337285995,
+                -0.27655625343322754,
+                0,
+                0.04240209981799126,
+                0.9421396255493164,
+                0.3325279951095581,
+                0,
+                0.2786538302898407,
+                -0.3307722210884094,
+                0.9016328454017639,
+                0,
+                0.030513610690832138,
+                -0.0033886153250932693,
+                -0.09869655966758728,
+                1
+              ],
+              "RightToeBase": [
+                0.61334228515625,
+                0.000278476276434958,
+                -0.7898171544075012,
+                0,
+                -0.00004284565875423141,
+                0.9999998807907104,
+                0.0003192820877302438,
+                0,
+                0.7898172736167908,
+                -0.00016199950187001377,
+                0.61334228515625,
+                0,
+                -0.1464863419532776,
+                -0.07376282662153244,
+                -0.1829947829246521,
+                1
+              ],
+              "RightToeTip": [
+                0.61334228515625,
+                0.000278476276434958,
+                -0.7898171544075012,
+                0,
+                -0.00004284565875423141,
+                0.9999998807907104,
+                0.0003192820877302438,
+                0,
+                0.7898172736167908,
+                -0.00016199950187001377,
+                0.61334228515625,
+                0,
+                -0.1464863270521164,
+                -0.07376282662153244,
+                -0.1829947531223297,
+                1
+              ]
+            },
+            "npcNormalization": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          },
+          "active": 10,
+          "stats": {
+            "rigidActive": 3,
+            "simplifiedActive": 7,
+            "queuedEvents": 0,
+            "deduplicated": 0,
+            "rejectedAdmission": 0,
+            "evicted": 0,
+            "expired": 0,
+            "skipped": 0,
+            "failedActivations": 0,
+            "poolActive": 10,
+            "poolHighWater": 10,
+            "physicsMs": 0,
+            "integrateMs": 0,
+            "updateMs": 0.30000001192092896,
+            "ticks": 0
+          },
+          "batches": [
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:fracture-preview-15:0:0:15#g2-1:head",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/head.glb#8075f4a2e5087a0f:pose:npc:fracture-preview-15:0:0:15#g2-1:head",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:fracture-preview-15:0:0:15#g2-1:torso",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/torso.glb#22ea870f55d39e8c:pose:npc:fracture-preview-15:0:0:15#g2-1:torso",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-l-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-l-upper.glb#e6492ad0497dd58c:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-l-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-l-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-l-forearm.glb#6b7a405fde81f3cf:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-l-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-r-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-r-upper.glb#cc05a6c56d893046:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-r-upper",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-r-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/arm-r-forearm.glb#a3e9a1cdb2c6aaa1:pose:npc:fracture-preview-15:0:0:15#g2-1:arm-r-forearm",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-l-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-l-thigh.glb#8a9113daef67dbbb:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-l-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-l-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-l-shin.glb#437eb7bce3ba5e01:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-l-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-r-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-r-thigh.glb#2e2732c3229cf86c:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-r-thigh",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-r-shin",
+              "count": 1
+            },
+            {
+              "meshId": "fracture-preview-15:assets/fracture/e04-bulwark/leg-r-shin.glb#5b13f05d4cbfc23c:pose:npc:fracture-preview-15:0:0:15#g2-1:leg-r-shin",
+              "count": 1
+            }
+          ]
+        },
+        "diagnostic": "已打开正式碎裂资产；引用和参数仍需分别 Apply"
+      },
+      "backend": {
+        "dynamicBodies": 3,
+        "staticColliders": 7,
+        "ticks": 0,
+        "destroyed": false
+      }
+    },
+    "fileChanges": []
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "真实E04合法配置经原Scene Apply提交",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "真实E04合法控制：10块/3真body与GPU接管",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "有限负权重必须拒绝Scene Apply且原Document不变",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"07505bb55e339266ea5770f5e3bf62de591f47321d9ba96427c7117b96c65840\",\"afterHash\":\"07505bb55e339266ea5770f5e3bf62de591f47321d9ba96427c7117b96c65840\",\"beforeDeath\":null,\"afterDeath\":null,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法\",\"hits\":{\"binary\":1,\"meta\":1}}"
+    },
+    {
+      "name": "Scene坏权重定位ref-binary/权重并保留TTL9及启用草稿",
+      "ok": true,
+      "detail": "{\"ttl\":\"9\",\"enabled\":true}"
+    },
+    {
+      "name": "有限负权重必须拒绝Asset Apply且原资产/历史不变",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"ae13c0d62fe4353eaa7fc6735494398bcc5b3ea0ec80f36d9443bda83c8915ac\",\"afterHash\":\"ae13c0d62fe4353eaa7fc6735494398bcc5b3ea0ec80f36d9443bda83c8915ac\",\"undoBefore\":0,\"undoAfter\":0,\"ttlBefore\":5,\"ttlAfter\":5,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法\"}"
+    },
+    {
+      "name": "Asset坏权重定位ref-binary/权重并保留TTL9及启用草稿",
+      "ok": true,
+      "detail": "{\"ttl\":\"9\",\"enabled\":true}"
+    },
+    {
+      "name": "同输入原NPC Preview/bake明确拒绝，World/GPU未分配",
+      "ok": true,
+      "detail": "{\"preview\":{\"ready\":false,\"paused\":true,\"triggered\":false,\"sourceVisible\":false,\"takingOver\":false,\"tick\":0,\"owner\":\"fracture-preview-10\",\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/characters/models/E-04/rigged/E04_Bulwark_1600_rigged_animated.glb）：Error: [skin-bake] 顶点 0 权重非法\",\"event\":null,\"active\":0,\"stats\":null,\"batches\":[]},\"backend\":null,\"meshes\":0,\"hits\":3}"
+    },
+    {
+      "name": "恢复真实字节后真正新TTL11提交且只增一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":11,\"undo\":1,\"status\":\"配方已应用，可撤销；磁盘尚未保存\"}"
+    },
+    {
+      "name": "恢复后真正不同的新场景值成功Apply",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "恢复后正式NPC真body/GPU新预览可用",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "正式资产/project/scene未改写",
+      "ok": true,
+      "detail": "[]"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}
