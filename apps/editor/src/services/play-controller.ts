@@ -284,7 +284,8 @@ export class PlayController {
 
   /** 最近一次碎片网格准备失败的原因（null = 无失败；供 HUD/诊断读取）。 */
   get fractureRenderError(): string | null {
-    return this.fractureRenderer?.error ?? null;
+    // 网格准备失败（碎片渲染装配）+ GPU 网格部分分配失败（renderer-core）都算诊断。
+    return this.fractureRenderer?.error ?? this.renderer.core.dynamicError ?? null;
   }
 
   /** 碎片渲染统计（验收观察：已加载网格/实例/三角形）。 */
