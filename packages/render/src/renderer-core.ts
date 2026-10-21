@@ -822,13 +822,21 @@ export class RendererCore {
       return this.buildDynamicMesh(b, created);
     } catch (e) {
       for (const buf of created) buf.destroy();
-      this.dynamicError = b.meshId + '：' + (e instanceof Error ? e.message : String(e));
+      this.dynamicFailureCount++;
+      this.dynamicErrors.set(b.meshId, b.meshId + '：' + (e instanceof Error ? e.message : String(e)));
       return null;
     }
   }
 
-  /** 动态网格的 GPU 资源是否在部分分配失败时被回收（验收观察）。 */
-  dynamicError: string | null = null;
+  /** 逐网格的 GPU 构建失败原因（成功构建会清除该项；全部恢复后 getter 返回 null）。 */
+  private readonly dynamicErrors = new Map<string, string>();
+  /** 当前仍处于失败状态的网格诊断（无失败为 null）。 */
+  /** 本会话累计的 GPU 网格构建失败次数（诊断观察；成功不归零）。 */
+  dynamicFailureCount = 0;
+  get dynamicError(): string | null {
+    const first = this.dynamicErrors.values().next();
+    return first.done ? null : first.value;
+  }
 
   private buildDynamicMesh(
     b: CoreDynamicBatch,
@@ -839,14 +847,15 @@ export class RendererCore {
       size: b.vertices.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
+    // 立即登记：后续 ibuf/skinVb 创建失败时 catch 才能回收它。
+    created.push(vbuf);
     const ibuf = this.device.createBuffer({
       label: `dyn-${b.meshId}-i`,
       size: b.indices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
-    created.push(vbuf);
-    this.device.queue.writeBuffer(vbuf, 0, b.vertices);
     created.push(ibuf);
+    this.device.queue.writeBuffer(vbuf, 0, b.vertices);
     this.device.queue.writeBuffer(ibuf, 0, b.indices);
     const vcount = b.vertices.length / 15;
     const skinVb = this.device.createBuffer({
@@ -863,6 +872,7 @@ export class RendererCore {
     // 几何与材质分离：材质按 textureKey（或 meshId）共享，避免同图重复建 GPUTexture。
     const mesh = { vbuf, ibuf, skinVb, indexCount: b.indices.length };
     this.dynamicMeshes.set(b.meshId, mesh);
+    this.dynamicErrors.delete(b.meshId);
     return mesh;
   }
 

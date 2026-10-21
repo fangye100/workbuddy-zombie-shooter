@@ -319,7 +319,9 @@ fn fs_outline(in : VSOut) -> FragOut {
   // 描边也要随实例淡出，否则末段只剩一圈黑边
   out.hdr = vec4f(applyFog(ink, in.worldPos), in.alpha);
   // aux.a = 描边 mask：后处理据此跳过 grading / 半调 / 暗角，与静态场景一致
-  out.aux = vec4f(0.0, 0.0, 0.0, 1.0);
+  // aux.a 是后处理的「不透明 ink 豁免」标记。淡出中的实例（alpha<1）必须放弃该豁免，
+  // 否则描边会以全强度 ink 盖住已经透明的主表面；alpha=1 的旧角色行为不变。
+  out.aux = vec4f(0.0, 0.0, 0.0, select(1.0, 0.0, in.alpha < 0.999));
   return out;
 }
 `;

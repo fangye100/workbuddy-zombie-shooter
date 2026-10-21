@@ -104,8 +104,11 @@
 
 - 真实武器/物体破坏（WU-06）、NPC 致死与当前姿态烘焙（WU-07）、作者 UI 与
   Preview owner（WU-08）不在本单元。
-- 逐实例淡出：运行时 chunk.fade(0..1) 写入刚体基向量 m0.w，主表面与 inverted-hull
-  描边都使用该 alpha，动态管线开启 alpha 混合（alpha=1 的旧角色输出与不透明一致）。
+- 逐实例淡出：运行时 chunk.fade(0..1) 写入刚体基向量 m0.w，主表面与描边都使用该
+  alpha；描边在 alpha<1 时放弃后处理的「不透明 ink 豁免」（aux.a=0），否则描边会以
+  全强度 ink 盖住已透明的主表面。alpha=1 的旧角色输出与不透明一致。
+- GPU 网格构建失败：vbuf/ibuf/skinVb 任一创建失败都会销毁已建 buffer；失败按 meshId
+  记录（成功构建清除该项），并累计到 fractureRenderFailures 供宿主诊断。
 - 部分分配失败：动态网格的 vbuf/ibuf/skinVb 任一创建失败会销毁已建 buffer、记录
   core.dynamicError 并跳过该批，不留半成品 GPU 资源。
 - 原角色蒙皮/调色板：本场景 NPC 走胶囊代理批次（探针记录 charBatches=2、本帧未上传

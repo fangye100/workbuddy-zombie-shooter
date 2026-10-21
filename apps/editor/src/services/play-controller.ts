@@ -282,6 +282,11 @@ export class PlayController {
     return this.fractureRenderer?.dynamicBatches ?? [];
   }
 
+  /** 本 Play 会话累计的碎片渲染失败次数（GPU 网格构建 + 网格准备）。 */
+  get fractureRenderFailures(): number {
+    return this.renderer.core.dynamicFailureCount;
+  }
+
   /** 最近一次碎片网格准备失败的原因（null = 无失败；供 HUD/诊断读取）。 */
   get fractureRenderError(): string | null {
     // 网格准备失败（碎片渲染装配）+ GPU 网格部分分配失败（renderer-core）都算诊断。
