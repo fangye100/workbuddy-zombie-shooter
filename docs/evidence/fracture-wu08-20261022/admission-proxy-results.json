@@ -1,0 +1,2126 @@
+{
+  "scene": "assets/scenes/sandbox/fracture-wu06.scene.json",
+  "url": "https://fangye-win11-office.tail6b29a2.ts.net:5100/?scene=assets%2Fscenes%2Fsandbox%2Ffracture-wu06.scene.json",
+  "hardware": {
+    "secure": true,
+    "fallback": false,
+    "info": {
+      "vendor": "nvidia",
+      "architecture": "lovelace",
+      "description": ""
+    }
+  },
+  "details": {
+    "gitHead": "d22c3e608f6f951965db829a08f8911da3e0983a",
+    "sourceHashes": {
+      "packages/runtime/src/fracture-activation.ts": "b05d5c9c44b1b4b08a31a43f5332a0e16210515e82574ccb42fd974f4bfcaa59",
+      "packages/runtime/src/doc-diff.ts": "0732536d8d7bf152f7fa11612d0e259d656051b2782db7fe35a7ff5442fe405e",
+      "apps/editor/src/services/author-resource-document.ts": "451836118ef38bbeff0f3030cba95c1309ee132410a630b67ce4eb9ceb71fdea",
+      "apps/editor/src/services/fracture-panel.ts": "2ebb92207c7ce480fabad73664fef117d3b88ad143ce29b01b4babc9ed4cc007",
+      "apps/editor/src/services/fracture-preview.ts": "b99235e3f025bf06e36663b7aeabb4e3db403ff73862591780aeb480ff38ef6d",
+      "apps/editor/src/services/fracture-author-draft.ts": "4084bb1b638ac717cee1af7f8e2d2fc7a9804e8c9a48265ac36a36da6c2fcb33",
+      "tools/verify/wu08-admission-probe.mjs": "4550f07bce337f96ddad53078cf180bdf36dfd8c1cb888c483b41ea8d4d1ce32",
+      "tools/verify/game-probe-lib.mjs": "dbad8345c4498d256646af696e6ca5fdd9562a9bef56e594c48a5ce8838b4295",
+      "tools/verify/editor-smoke-lib.mjs": "ce18b33637d9e0650b90b1fcdf3276f4c17713b0dc41bef4edc76b61f7d05652"
+    },
+    "formalFileHashes": {
+      "assets/fracture/p01-barrel/p01-barrel.fracture.json": "07a8bf077152f7d79ea0b2b3aa389b838107815a2e5aa2c61cacfcefa1e43901",
+      "assets/fracture/p01-barrel/p01-barrel.fracture.json.meta.json": "2709cbca003398974b6605ea2127e87eaedbe64416fc26f73889b75aee08c7e5",
+      "aether.project.json": "9670c8f4eaaf3bfef2e1fcb4a7edaf96b7edac6aeebe67483a51ebeb81f68173",
+      "assets/scenes/sandbox/fracture-wu06.scene.json": "85798be0d736cdbcb340d68e94b7ec2db07ef8a9d0ffccf38f2974a74c2fe942",
+      "assets/environment/models/P-01/tex2/P-01_baked.glb": "3077b96922ae4e47733f1bce9714f2dbcabcfff4d534382691a2fe186a1cdef3",
+      "assets/environment/models/P-01/tex2/P-01_baked.glb.meta.json": "e82855508d386618ac2f5b29d97a9b41c4da4a343a753f479e3f94472d490838",
+      "assets/fracture/p01-barrel/chunk-0001.glb": "f1fa75b02f2f23bc7e1235e2d8fba7d617428c8807812300f1355ae6755c4fe1",
+      "assets/fracture/p01-barrel/chunk-0001.glb.meta.json": "a6afdd27d60d49bf734de0c2465d55fe0ed94b236f83ef2743486572338acd3a",
+      "assets/fracture/p01-barrel/chunk-0002.glb": "b6cb6fc695bccc49dbfe5826d64acbf8b37bb0920f0bbe686af19fa072e913f2",
+      "assets/fracture/p01-barrel/chunk-0002.glb.meta.json": "ac964b05789f19fe62a66e4036471b2330c0932f808f8d85c557ee57fb01b403",
+      "assets/fracture/p01-barrel/chunk-0003.glb": "836cadb73fd408ae4160a07388aa5de56f8fbe2a08a2fd3184a4cd98c9ce411a",
+      "assets/fracture/p01-barrel/chunk-0003.glb.meta.json": "8f305783eadf2f71be5085bd66080d50b11ed455ce8fff3d4fd936ae5044bc89",
+      "assets/fracture/p01-barrel/chunk-0004.glb": "eb41772bd1b7181470c1d8d005c3f2223dab674edee0e8b334261194bf3234b7",
+      "assets/fracture/p01-barrel/chunk-0004.glb.meta.json": "0f7ce9c8d7c4cece047cbe2a8f20ebab28def3ef89ca0029bdea717a229170a7",
+      "assets/fracture/p01-barrel/chunk-0005.glb": "db1c48cf7860a2df45bae86e68cf549ac4f5670e124ff47ce6e740de6d3828f9",
+      "assets/fracture/p01-barrel/chunk-0005.glb.meta.json": "ff794f7c86dda4d6925051b20cf4c3a1ed16d9ec21016dd32b53cb6d6ad9f85c",
+      "assets/fracture/p01-barrel/chunk-0006.glb": "e70b9cefc2fd2cc78f81cd3abc9dd0ab2032dbfc73c816faa8aa01f61a34abb8",
+      "assets/fracture/p01-barrel/chunk-0006.glb.meta.json": "813c7ad12f75928fecf51c9c630cec4decf2f2e7fcff80a5ec2a513375d1b8a3",
+      "assets/fracture/p01-barrel/chunk-0007.glb": "049422ae9cf00cf9634ede6fff7237bd3e93f21676a10dbe36cff284dc1c3e40",
+      "assets/fracture/p01-barrel/chunk-0007.glb.meta.json": "5495a998df1eded9a513386ccff26fc6e2651a6292cf1487e9edd0f5df627c33",
+      "assets/fracture/p01-barrel/chunk-0008.glb": "8cef7ad0dfae7e2c8ae1b61444a1ac1520b9c8b12c8f24f1079aecb71d9c9269",
+      "assets/fracture/p01-barrel/chunk-0008.glb.meta.json": "8f50cc8e0aa0444a060a21eba176d4822c73415b2f1b239f4dabc33890b7e7c2",
+      "assets/fracture/p01-barrel/chunk-0009.glb": "b84443333b9f361b0ddf492f0556b460fd7e08a4a586d837dd15a756aea2bb94",
+      "assets/fracture/p01-barrel/chunk-0009.glb.meta.json": "3dc000141ccc4be47e91bbc8ffa46f7c03af0cf8fcdfb96e35386d5d6c869054",
+      "assets/fracture/p01-barrel/chunk-0010.glb": "713da30321b1c9fe7e5d78facdb0b2667625b55cd079cee625a8b4cb8dfb3d6f",
+      "assets/fracture/p01-barrel/chunk-0010.glb.meta.json": "8bab1f7f4d9c13d15d8a805c0a0dd490e2d1afae5c3f7d6c78b673b19f50667c",
+      "assets/fracture/p01-barrel/chunk-0011.glb": "985dbcbd0d74c2d279d554c4ef0d88e692f88cd8ea23310820110ab63425e4b3",
+      "assets/fracture/p01-barrel/chunk-0011.glb.meta.json": "9755001297b127176c418253973963afdd7e350c445319dbc788ca81ab01a5ab",
+      "assets/fracture/p01-barrel/chunk-0012.glb": "3f347778b2b7e62f8ebf5f5cb2677ba1ecccb6266e58c4b3a28329cb353fa088",
+      "assets/fracture/p01-barrel/chunk-0012.glb.meta.json": "7c80c7071873027548f85e39d3b6b350e3825150d2478ba200373aed5d50e910"
+    },
+    "variant": {
+      "note": "仅当前tab的profile响应改为合法独立convex引用；虚拟IO提供正式chunk原字节，所有原文件不写入。",
+      "path": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+      "guid": "as_wu08_virtual_convex",
+      "byteHash": "f1fa75b02f2f23bc7e1235e2d8fba7d617428c8807812300f1355ae6755c4fe1",
+      "profileTextHash": "565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af"
+    },
+    "cases": [
+      {
+        "kind": "source",
+        "mode": "guid",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb",
+        "afterHash": "1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "pending": "41",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af",
+          "afterHash": "565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af",
+          "beforeUndo": 0,
+          "afterUndo": 0,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 1
+        },
+        "recoveredDurability": 41,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-9",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "kind",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd",
+        "afterHash": "f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "pending": "42",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 1,
+          "afterUndo": 1,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 2
+        },
+        "recoveredDurability": 42,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-15",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "quarantined",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "394cbdcde0e02d33ed0caa125216bae14bb10d693fabb8bae29aa81de34f5592",
+        "afterHash": "394cbdcde0e02d33ed0caa125216bae14bb10d693fabb8bae29aa81de34f5592",
+        "apply": {
+          "hits": 1,
+          "status": "Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "pending": "43",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 2,
+          "afterUndo": 2,
+          "hits": 1,
+          "diagnostic": "Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 3
+        },
+        "recoveredDurability": 43,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-21",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "future",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "c93303be32d5d6a406cc68d14e48876b16d6316d6ff0e18092e4c4eaee15aa29",
+        "afterHash": "c93303be32d5d6a406cc68d14e48876b16d6316d6ff0e18092e4c4eaee15aa29",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1",
+          "pending": "44",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 3,
+          "afterUndo": 3,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 4
+        },
+        "recoveredDurability": 44,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-27",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "meta-missing",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "b0dcb4438ad85fe99fca6739cff0567e38b8f39165e46388bcfeddca6fa03d77",
+        "afterHash": "b0dcb4438ad85fe99fca6739cff0567e38b8f39165e46388bcfeddca6fa03d77",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing",
+          "pending": "45",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 4,
+          "afterUndo": 4,
+          "hits": 1,
+          "diagnostic": "Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 5
+        },
+        "recoveredDurability": 45,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-33",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "binary-missing",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "19f5a33ad34eb329e61624ae8efe90a47ac468ed619e435d3d630850ff42a9fe",
+        "afterHash": "19f5a33ad34eb329e61624ae8efe90a47ac468ed619e435d3d630850ff42a9fe",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing",
+          "pending": "46",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 5,
+          "afterUndo": 5,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 6
+        },
+        "recoveredDurability": 46,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-39",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "binary-invalid",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "51242dcb50127764fcc74dfedba8370cd790689c56726aca3dad25439cdf37b2",
+        "afterHash": "51242dcb50127764fcc74dfedba8370cd790689c56726aca3dad25439cdf37b2",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "pending": "47",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 6,
+          "afterUndo": 6,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 7
+        },
+        "recoveredDurability": 47,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-45",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "binary-content",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "f2222971824a4ec928517e41a7987e4fe3ac7a798580710fe8ce878e5f211306",
+        "afterHash": "f2222971824a4ec928517e41a7987e4fe3ac7a798580710fe8ce878e5f211306",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "pending": "48",
+          "ttl": "10",
+          "payloadHash": "sha256:149ac6375001d951aa61d503b2cd44477a3e5b6adddf6d268a9fce0507d6fcf4",
+          "metaHash": "sha256:149ac6375001d951aa61d503b2cd44477a3e5b6adddf6d268a9fce0507d6fcf4",
+          "bytes": 3294272,
+          "declared": 3294272
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 7,
+          "afterUndo": 7,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 8
+        },
+        "recoveredDurability": 48,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-51",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "source",
+        "mode": "binary-nonfinite",
+        "target": "assets/environment/models/P-01/tex2/P-01_baked.glb",
+        "beforeHash": "7d8a0e2fc0cab2104b497719044cd5242588befd28a760fb4f5f89fe77560348",
+        "afterHash": "7d8a0e2fc0cab2104b497719044cd5242588befd28a760fb4f5f89fe77560348",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "pending": "49",
+          "ttl": "9",
+          "payloadHash": "sha256:91e02e7563d43f71f6ef3a600f3410e030d88bcb456761691b61f92f31506c44",
+          "metaHash": "sha256:91e02e7563d43f71f6ef3a600f3410e030d88bcb456761691b61f92f31506c44",
+          "bytes": 3294272,
+          "declared": 3294272
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 8,
+          "afterUndo": 8,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 9
+        },
+        "recoveredDurability": 49,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-57",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "guid",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "ea01f7e3bfb27da2e0230b89f557559ef97d937d79079d391fbda20129fcbed9",
+        "afterHash": "ea01f7e3bfb27da2e0230b89f557559ef97d937d79079d391fbda20129fcbed9",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "pending": "50",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 9,
+          "afterUndo": 9,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 10
+        },
+        "recoveredDurability": 50,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-63",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "kind",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "08386171937248a35690598a2342759e34e16cae93ec5045e0613b6da517a792",
+        "afterHash": "08386171937248a35690598a2342759e34e16cae93ec5045e0613b6da517a792",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "pending": "51",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 10,
+          "afterUndo": 10,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 11
+        },
+        "recoveredDurability": 51,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-69",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "quarantined",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "6aa2aa5f6dad0dc32b9d990ae9909323adad577be102e845c3ba629a2bd28574",
+        "afterHash": "6aa2aa5f6dad0dc32b9d990ae9909323adad577be102e845c3ba629a2bd28574",
+        "apply": {
+          "hits": 1,
+          "status": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "pending": "52",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 11,
+          "afterUndo": 11,
+          "hits": 1,
+          "diagnostic": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 12
+        },
+        "recoveredDurability": 52,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-75",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "future",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "9784a887aea1c2c2a3f76023068cfad7d237d58f3201fd3d52631c882e1eff90",
+        "afterHash": "9784a887aea1c2c2a3f76023068cfad7d237d58f3201fd3d52631c882e1eff90",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1",
+          "pending": "53",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 12,
+          "afterUndo": 12,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 13
+        },
+        "recoveredDurability": 53,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-81",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "meta-missing",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "92ebc75a3e730c828538e08eeca14ffc1679f48cd13af6318d7cf453231c0120",
+        "afterHash": "92ebc75a3e730c828538e08eeca14ffc1679f48cd13af6318d7cf453231c0120",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing",
+          "pending": "54",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 13,
+          "afterUndo": 13,
+          "hits": 1,
+          "diagnostic": "Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 14
+        },
+        "recoveredDurability": 54,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-87",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "binary-missing",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "5588c66fb065e1e14d5bbc1d93a0284dd5e05335b00f5f9e0ef5585ccddf9f0b",
+        "afterHash": "5588c66fb065e1e14d5bbc1d93a0284dd5e05335b00f5f9e0ef5585ccddf9f0b",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing",
+          "pending": "55",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 14,
+          "afterUndo": 14,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 15
+        },
+        "recoveredDurability": 55,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-93",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "binary-invalid",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "61da9f8e2812249908772006c041d54fe276145844d1ed8ccb0a10e755b2ae23",
+        "afterHash": "61da9f8e2812249908772006c041d54fe276145844d1ed8ccb0a10e755b2ae23",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "pending": "56",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 15,
+          "afterUndo": 15,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 16
+        },
+        "recoveredDurability": 56,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-99",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "binary-content",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "77045b20f2ec21779635cd178f21b17782e9be7d644bd3ceeb1256aad31632ae",
+        "afterHash": "77045b20f2ec21779635cd178f21b17782e9be7d644bd3ceeb1256aad31632ae",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "pending": "57",
+          "ttl": "9",
+          "payloadHash": "sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925",
+          "metaHash": "sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925",
+          "bytes": 2480172,
+          "declared": 2480172
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 16,
+          "afterUndo": 16,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 17
+        },
+        "recoveredDurability": 57,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-105",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "chunk",
+        "mode": "binary-nonfinite",
+        "target": "assets/fracture/p01-barrel/chunk-0001.glb",
+        "beforeHash": "629ff603ca9fe9eecaf456d400f538c15a7be1c380eb2b9a79aa0d1aa7ef55fc",
+        "afterHash": "629ff603ca9fe9eecaf456d400f538c15a7be1c380eb2b9a79aa0d1aa7ef55fc",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "pending": "58",
+          "ttl": "10",
+          "payloadHash": "sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5",
+          "metaHash": "sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5",
+          "bytes": 2480172,
+          "declared": 2480172
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 17,
+          "afterUndo": 17,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 18
+        },
+        "recoveredDurability": 58,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-111",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "guid",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "eaa5c30ea3b522ffbc1342dbed26f6f9dde6745b3b2b07732598fde53a09ad4e",
+        "afterHash": "eaa5c30ea3b522ffbc1342dbed26f6f9dde6745b3b2b07732598fde53a09ad4e",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "pending": "59",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 18,
+          "afterUndo": 18,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 19
+        },
+        "recoveredDurability": 59,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-117",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "kind",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "606710872ed6d3629b9b59fbc821dc24da4f30b99d8fc0ed5ed6241dafd0d5f3",
+        "afterHash": "606710872ed6d3629b9b59fbc821dc24da4f30b99d8fc0ed5ed6241dafd0d5f3",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "pending": "60",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 19,
+          "afterUndo": 19,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 20
+        },
+        "recoveredDurability": 60,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-123",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "quarantined",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "3650b21aeeb5273d5e82d4cf7aee897377023fc20394a14999aec6f35ca1f129",
+        "afterHash": "3650b21aeeb5273d5e82d4cf7aee897377023fc20394a14999aec6f35ca1f129",
+        "apply": {
+          "hits": 1,
+          "status": "Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "pending": "61",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 20,
+          "afterUndo": 20,
+          "hits": 1,
+          "diagnostic": "Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 21
+        },
+        "recoveredDurability": 61,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-129",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "future",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "adf693c5b8906736f1e043e7d2d000d163352e2eb00eb81450722b6d41054af8",
+        "afterHash": "adf693c5b8906736f1e043e7d2d000d163352e2eb00eb81450722b6d41054af8",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）",
+          "pending": "62",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 21,
+          "afterUndo": 21,
+          "hits": 1,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 22
+        },
+        "recoveredDurability": 62,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-135",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "meta-missing",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "4de42e8e1e8bc5a27a506e8b393a9f5222fb3a6150a0582369d3fe51f104760e",
+        "afterHash": "4de42e8e1e8bc5a27a506e8b393a9f5222fb3a6150a0582369d3fe51f104760e",
+        "apply": {
+          "hits": 1,
+          "status": "Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing",
+          "pending": "63",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 22,
+          "afterUndo": 22,
+          "hits": 1,
+          "diagnostic": "Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing"
+        },
+        "preview": {
+          "hits": 1,
+          "ready": false,
+          "diagnostic": "Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 23
+        },
+        "recoveredDurability": 63,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-141",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "binary-missing",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "4fc2a170c2d77ed754f21f2dc5a1db23a6247b6b4f6f54e47181d347710d305f",
+        "afterHash": "4fc2a170c2d77ed754f21f2dc5a1db23a6247b6b4f6f54e47181d347710d305f",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing",
+          "pending": "64",
+          "ttl": "10",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 23,
+          "afterUndo": 23,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 24
+        },
+        "recoveredDurability": 64,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-147",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "binary-invalid",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "8f1d3983f230581880e09beebb4b0046f50b53f316bfe37a59753711d977434e",
+        "afterHash": "8f1d3983f230581880e09beebb4b0046f50b53f316bfe37a59753711d977434e",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "pending": "65",
+          "ttl": "9",
+          "payloadHash": null,
+          "metaHash": null,
+          "bytes": 0,
+          "declared": 0
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 24,
+          "afterUndo": 24,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 25
+        },
+        "recoveredDurability": 65,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-153",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "binary-content",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "f288ffe505052618ed5bfc233db4cbc7134fcd16a2421fbb6c6338dc12ba4280",
+        "afterHash": "f288ffe505052618ed5bfc233db4cbc7134fcd16a2421fbb6c6338dc12ba4280",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "pending": "66",
+          "ttl": "10",
+          "payloadHash": "sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925",
+          "metaHash": "sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925",
+          "bytes": 2480172,
+          "declared": 2480172
+        },
+        "assetApply": {
+          "beforeHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "afterHash": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+          "beforeUndo": 25,
+          "afterUndo": 25,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \"!\"asset\":{\"... is not valid JSON",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 10,
+          "undo": 26
+        },
+        "recoveredDurability": 66,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-159",
+          "meshes": 12
+        }
+      },
+      {
+        "kind": "convex",
+        "mode": "binary-nonfinite",
+        "target": "assets/fracture/p01-barrel/_wu08-virtual-convex.glb",
+        "beforeHash": "5ce096eeba0a21eb382006f44aeee388f2c8bd4352ea62f18dcde30006af3540",
+        "afterHash": "5ce096eeba0a21eb382006f44aeee388f2c8bd4352ea62f18dcde30006af3540",
+        "apply": {
+          "hits": 2,
+          "status": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "pending": "67",
+          "ttl": "9",
+          "payloadHash": "sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5",
+          "metaHash": "sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5",
+          "bytes": 2480172,
+          "declared": 2480172
+        },
+        "assetApply": {
+          "beforeHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "afterHash": "088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9",
+          "beforeUndo": 26,
+          "afterUndo": 26,
+          "hits": 2,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）"
+        },
+        "preview": {
+          "hits": 2,
+          "ready": false,
+          "diagnostic": "Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）",
+          "backend": null,
+          "meshes": 0
+        },
+        "assetRecovery": {
+          "ttl": 9,
+          "undo": 27
+        },
+        "recoveredDurability": 67,
+        "recovery": {
+          "active": 12,
+          "bodies": 12,
+          "sourceVisible": false,
+          "pool": 12,
+          "owner": "fracture-preview-165",
+          "meshes": 12
+        }
+      }
+    ],
+    "changedDuringAdmission": {
+      "before": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+      "after": "bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96",
+      "undoBefore": 27,
+      "undoAfter": 27,
+      "diagnostic": "Error: 校验期间出现新的资产输入或历史修改；当前草稿已保留，请重新Apply"
+    },
+    "closedDuringAdmission": {
+      "ttl": 12,
+      "undo": 28,
+      "diagnostic": "配方已应用，可撤销；磁盘尚未保存"
+    },
+    "sourceChanges": [],
+    "fileChanges": []
+  },
+  "results": [
+    {
+      "name": "secure context与实际编辑器硬件GPU",
+      "ok": true,
+      "detail": "{\"secure\":true,\"fallback\":false,\"info\":{\"vendor\":\"nvidia\",\"architecture\":\"lovelace\",\"description\":\"\"}}"
+    },
+    {
+      "name": "source/guid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"guid\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb\",\"afterHash\":\"1af5b2db1830c328f10024e2dee73736e74e086a92ccb61b4d33b108e6495adb\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"pending\":\"41\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/guid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af\",\"afterHash\":\"565712cbac8feb1b31ab193eb573ae12c35dab8429eff70295f0196af41959af\",\"beforeUndo\":0,\"afterUndo\":0,\"hits\":1,\"diagnostic\":\"Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）\"}"
+    },
+    {
+      "name": "source/guid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：源模型 guid 不一致：profile 引用=as_74w6e6hg sidecar=as_current_wrong（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/guid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":1}"
+    },
+    {
+      "name": "source/guid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/guid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-9\",\"meshes\":12}"
+    },
+    {
+      "name": "source/kind：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"kind\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd\",\"afterHash\":\"f6021ccb9fef568254f176d9f7ec430462264eb9bf3a78952ddb008ee64ccffd\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"pending\":\"42\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/kind：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":1,\"afterUndo\":1,\"hits\":1,\"diagnostic\":\"Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）\"}"
+    },
+    {
+      "name": "source/kind：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：源模型 kind=fracture，应为 gltf（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/kind：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":2}"
+    },
+    {
+      "name": "source/kind：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/kind：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-15\",\"meshes\":12}"
+    },
+    {
+      "name": "source/quarantined：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"quarantined\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"394cbdcde0e02d33ed0caa125216bae14bb10d693fabb8bae29aa81de34f5592\",\"afterHash\":\"394cbdcde0e02d33ed0caa125216bae14bb10d693fabb8bae29aa81de34f5592\",\"apply\":{\"hits\":1,\"status\":\"Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"pending\":\"43\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/quarantined：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":2,\"afterUndo\":2,\"hits\":1,\"diagnostic\":\"Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）\"}"
+    },
+    {
+      "name": "source/quarantined：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: quarantined：源模型 当前 sidecar 被隔离（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/quarantined：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":3}"
+    },
+    {
+      "name": "source/quarantined：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/quarantined：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-21\",\"meshes\":12}"
+    },
+    {
+      "name": "source/future：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"future\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"c93303be32d5d6a406cc68d14e48876b16d6316d6ff0e18092e4c4eaee15aa29\",\"afterHash\":\"c93303be32d5d6a406cc68d14e48876b16d6316d6ff0e18092e4c4eaee15aa29\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1\",\"pending\":\"44\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/future：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":3,\"afterUndo\":3,\"hits\":1,\"diagnostic\":\"Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1\"}"
+    },
+    {
+      "name": "source/future：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：源模型 sidecar 非法（assets/environment/models/P-01/tex2/P-01_baked.glb）：元数据版本 999 高于支持的 1\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/future：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":4}"
+    },
+    {
+      "name": "source/future：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/future：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-27\",\"meshes\":12}"
+    },
+    {
+      "name": "source/meta-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"meta-missing\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"b0dcb4438ad85fe99fca6739cff0567e38b8f39165e46388bcfeddca6fa03d77\",\"afterHash\":\"b0dcb4438ad85fe99fca6739cff0567e38b8f39165e46388bcfeddca6fa03d77\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing\",\"pending\":\"45\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/meta-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":4,\"afterUndo\":4,\"hits\":1,\"diagnostic\":\"Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing\"}"
+    },
+    {
+      "name": "source/meta-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-read：源模型 sidecar 读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current sidecar missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/meta-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":5}"
+    },
+    {
+      "name": "source/meta-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/meta-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-33\",\"meshes\":12}"
+    },
+    {
+      "name": "source/binary-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"binary-missing\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"19f5a33ad34eb329e61624ae8efe90a47ac468ed619e435d3d630850ff42a9fe\",\"afterHash\":\"19f5a33ad34eb329e61624ae8efe90a47ac468ed619e435d3d630850ff42a9fe\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing\",\"pending\":\"46\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/binary-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":5,\"afterUndo\":5,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing\"}"
+    },
+    {
+      "name": "source/binary-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：Error: WU08 current binary missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/binary-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":6}"
+    },
+    {
+      "name": "source/binary-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/binary-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-39\",\"meshes\":12}"
+    },
+    {
+      "name": "source/binary-invalid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"binary-invalid\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"51242dcb50127764fcc74dfedba8370cd790689c56726aca3dad25439cdf37b2\",\"afterHash\":\"51242dcb50127764fcc74dfedba8370cd790689c56726aca3dad25439cdf37b2\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"pending\":\"47\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "source/binary-invalid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":6,\"afterUndo\":6,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）\"}"
+    },
+    {
+      "name": "source/binary-invalid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/environment/models/P-01/tex2/P-01_baked.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/binary-invalid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":7}"
+    },
+    {
+      "name": "source/binary-invalid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/binary-invalid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-45\",\"meshes\":12}"
+    },
+    {
+      "name": "source/binary-content：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"binary-content\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"f2222971824a4ec928517e41a7987e4fe3ac7a798580710fe8ce878e5f211306\",\"afterHash\":\"f2222971824a4ec928517e41a7987e4fe3ac7a798580710fe8ce878e5f211306\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"pending\":\"48\",\"ttl\":\"10\",\"payloadHash\":\"sha256:149ac6375001d951aa61d503b2cd44477a3e5b6adddf6d268a9fce0507d6fcf4\",\"metaHash\":\"sha256:149ac6375001d951aa61d503b2cd44477a3e5b6adddf6d268a9fce0507d6fcf4\",\"bytes\":3294272,\"declared\":3294272}}"
+    },
+    {
+      "name": "source/binary-content：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":7,\"afterUndo\":7,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}"
+    },
+    {
+      "name": "source/binary-content：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/environment/models/P-01/tex2/P-01_baked.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/binary-content：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":8}"
+    },
+    {
+      "name": "source/binary-content：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/binary-content：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-51\",\"meshes\":12}"
+    },
+    {
+      "name": "source/binary-nonfinite：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"source\",\"mode\":\"binary-nonfinite\",\"target\":\"assets/environment/models/P-01/tex2/P-01_baked.glb\",\"beforeHash\":\"7d8a0e2fc0cab2104b497719044cd5242588befd28a760fb4f5f89fe77560348\",\"afterHash\":\"7d8a0e2fc0cab2104b497719044cd5242588befd28a760fb4f5f89fe77560348\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"pending\":\"49\",\"ttl\":\"9\",\"payloadHash\":\"sha256:91e02e7563d43f71f6ef3a600f3410e030d88bcb456761691b61f92f31506c44\",\"metaHash\":\"sha256:91e02e7563d43f71f6ef3a600f3410e030d88bcb456761691b61f92f31506c44\",\"bytes\":3294272,\"declared\":3294272}}"
+    },
+    {
+      "name": "source/binary-nonfinite：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":8,\"afterUndo\":8,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）\"}"
+    },
+    {
+      "name": "source/binary-nonfinite：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/environment/models/P-01/tex2/P-01_baked.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "source/binary-nonfinite：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":9}"
+    },
+    {
+      "name": "source/binary-nonfinite：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "source/binary-nonfinite：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-57\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/guid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"guid\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"ea01f7e3bfb27da2e0230b89f557559ef97d937d79079d391fbda20129fcbed9\",\"afterHash\":\"ea01f7e3bfb27da2e0230b89f557559ef97d937d79079d391fbda20129fcbed9\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）\",\"pending\":\"50\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/guid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":9,\"afterUndo\":9,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）\"}"
+    },
+    {
+      "name": "chunk/guid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 guid 不一致：profile 引用=as_29a7ad90 sidecar=as_current_wrong（assets/fracture/p01-barrel/chunk-0001.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/guid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":10}"
+    },
+    {
+      "name": "chunk/guid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/guid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-63\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/kind：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"kind\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"08386171937248a35690598a2342759e34e16cae93ec5045e0613b6da517a792\",\"afterHash\":\"08386171937248a35690598a2342759e34e16cae93ec5045e0613b6da517a792\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）\",\"pending\":\"51\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/kind：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":10,\"afterUndo\":10,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）\"}"
+    },
+    {
+      "name": "chunk/kind：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 kind=fracture，应为 gltf（assets/fracture/p01-barrel/chunk-0001.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/kind：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":11}"
+    },
+    {
+      "name": "chunk/kind：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/kind：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-69\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/quarantined：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"quarantined\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"6aa2aa5f6dad0dc32b9d990ae9909323adad577be102e845c3ba629a2bd28574\",\"afterHash\":\"6aa2aa5f6dad0dc32b9d990ae9909323adad577be102e845c3ba629a2bd28574\",\"apply\":{\"hits\":1,\"status\":\"Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）\",\"pending\":\"52\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/quarantined：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":11,\"afterUndo\":11,\"hits\":1,\"diagnostic\":\"Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）\"}"
+    },
+    {
+      "name": "chunk/quarantined：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: quarantined：碎块 chunk-0001 当前 sidecar 被隔离（assets/fracture/p01-barrel/chunk-0001.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/quarantined：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":12}"
+    },
+    {
+      "name": "chunk/quarantined：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/quarantined：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-75\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/future：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"future\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"9784a887aea1c2c2a3f76023068cfad7d237d58f3201fd3d52631c882e1eff90\",\"afterHash\":\"9784a887aea1c2c2a3f76023068cfad7d237d58f3201fd3d52631c882e1eff90\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1\",\"pending\":\"53\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/future：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":12,\"afterUndo\":12,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1\"}"
+    },
+    {
+      "name": "chunk/future：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 sidecar 非法（assets/fracture/p01-barrel/chunk-0001.glb）：元数据版本 999 高于支持的 1\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/future：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":13}"
+    },
+    {
+      "name": "chunk/future：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/future：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-81\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/meta-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"meta-missing\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"92ebc75a3e730c828538e08eeca14ffc1679f48cd13af6318d7cf453231c0120\",\"afterHash\":\"92ebc75a3e730c828538e08eeca14ffc1679f48cd13af6318d7cf453231c0120\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing\",\"pending\":\"54\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/meta-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":13,\"afterUndo\":13,\"hits\":1,\"diagnostic\":\"Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing\"}"
+    },
+    {
+      "name": "chunk/meta-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-read：碎块 chunk-0001 sidecar 读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current sidecar missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/meta-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":14}"
+    },
+    {
+      "name": "chunk/meta-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/meta-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-87\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/binary-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"binary-missing\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"5588c66fb065e1e14d5bbc1d93a0284dd5e05335b00f5f9e0ef5585ccddf9f0b\",\"afterHash\":\"5588c66fb065e1e14d5bbc1d93a0284dd5e05335b00f5f9e0ef5585ccddf9f0b\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing\",\"pending\":\"55\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/binary-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":14,\"afterUndo\":14,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing\"}"
+    },
+    {
+      "name": "chunk/binary-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/chunk-0001.glb）：Error: WU08 current binary missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/binary-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":15}"
+    },
+    {
+      "name": "chunk/binary-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/binary-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-93\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/binary-invalid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"binary-invalid\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"61da9f8e2812249908772006c041d54fe276145844d1ed8ccb0a10e755b2ae23\",\"afterHash\":\"61da9f8e2812249908772006c041d54fe276145844d1ed8ccb0a10e755b2ae23\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"pending\":\"56\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "chunk/binary-invalid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":15,\"afterUndo\":15,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）\"}"
+    },
+    {
+      "name": "chunk/binary-invalid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/chunk-0001.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/binary-invalid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":16}"
+    },
+    {
+      "name": "chunk/binary-invalid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/binary-invalid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-99\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/binary-content：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"binary-content\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"77045b20f2ec21779635cd178f21b17782e9be7d644bd3ceeb1256aad31632ae\",\"afterHash\":\"77045b20f2ec21779635cd178f21b17782e9be7d644bd3ceeb1256aad31632ae\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"pending\":\"57\",\"ttl\":\"9\",\"payloadHash\":\"sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925\",\"metaHash\":\"sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925\",\"bytes\":2480172,\"declared\":2480172}}"
+    },
+    {
+      "name": "chunk/binary-content：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":16,\"afterUndo\":16,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}"
+    },
+    {
+      "name": "chunk/binary-content：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/chunk-0001.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/binary-content：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":17}"
+    },
+    {
+      "name": "chunk/binary-content：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/binary-content：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-105\",\"meshes\":12}"
+    },
+    {
+      "name": "chunk/binary-nonfinite：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"chunk\",\"mode\":\"binary-nonfinite\",\"target\":\"assets/fracture/p01-barrel/chunk-0001.glb\",\"beforeHash\":\"629ff603ca9fe9eecaf456d400f538c15a7be1c380eb2b9a79aa0d1aa7ef55fc\",\"afterHash\":\"629ff603ca9fe9eecaf456d400f538c15a7be1c380eb2b9a79aa0d1aa7ef55fc\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）\",\"pending\":\"58\",\"ttl\":\"10\",\"payloadHash\":\"sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5\",\"metaHash\":\"sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5\",\"bytes\":2480172,\"declared\":2480172}}"
+    },
+    {
+      "name": "chunk/binary-nonfinite：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":17,\"afterUndo\":17,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）\"}"
+    },
+    {
+      "name": "chunk/binary-nonfinite：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/chunk-0001.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "chunk/binary-nonfinite：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":18}"
+    },
+    {
+      "name": "chunk/binary-nonfinite：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chunk/binary-nonfinite：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-111\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/guid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"guid\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"eaa5c30ea3b522ffbc1342dbed26f6f9dde6745b3b2b07732598fde53a09ad4e\",\"afterHash\":\"eaa5c30ea3b522ffbc1342dbed26f6f9dde6745b3b2b07732598fde53a09ad4e\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"pending\":\"59\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/guid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":18,\"afterUndo\":18,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\"}"
+    },
+    {
+      "name": "convex/guid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 guid 不一致：profile 引用=as_wu08_virtual_convex sidecar=as_current_wrong（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/guid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":19}"
+    },
+    {
+      "name": "convex/guid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/guid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-117\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/kind：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"kind\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"606710872ed6d3629b9b59fbc821dc24da4f30b99d8fc0ed5ed6241dafd0d5f3\",\"afterHash\":\"606710872ed6d3629b9b59fbc821dc24da4f30b99d8fc0ed5ed6241dafd0d5f3\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"pending\":\"60\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/kind：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":19,\"afterUndo\":19,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\"}"
+    },
+    {
+      "name": "convex/kind：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 kind=fracture，应为 gltf（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/kind：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":20}"
+    },
+    {
+      "name": "convex/kind：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/kind：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-123\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/quarantined：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"quarantined\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"3650b21aeeb5273d5e82d4cf7aee897377023fc20394a14999aec6f35ca1f129\",\"afterHash\":\"3650b21aeeb5273d5e82d4cf7aee897377023fc20394a14999aec6f35ca1f129\",\"apply\":{\"hits\":1,\"status\":\"Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"pending\":\"61\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/quarantined：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":20,\"afterUndo\":20,\"hits\":1,\"diagnostic\":\"Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\"}"
+    },
+    {
+      "name": "convex/quarantined：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: quarantined：碎块 chunk-0001 凸代理 当前 sidecar 被隔离（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/quarantined：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":21}"
+    },
+    {
+      "name": "convex/quarantined：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/quarantined：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-129\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/future：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"future\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"adf693c5b8906736f1e043e7d2d000d163352e2eb00eb81450722b6d41054af8\",\"afterHash\":\"adf693c5b8906736f1e043e7d2d000d163352e2eb00eb81450722b6d41054af8\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）\",\"pending\":\"62\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/future：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":21,\"afterUndo\":21,\"hits\":1,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）\"}"
+    },
+    {
+      "name": "convex/future：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-identity：碎块 chunk-0001 凸代理 sidecar 非法（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：元数据版本 999 高于支持的 1；guid 格式异常：as_wu08_virtual_convex（建议 as_xxxxxxxx）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/future：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":22}"
+    },
+    {
+      "name": "convex/future：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/future：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-135\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/meta-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"meta-missing\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"4de42e8e1e8bc5a27a506e8b393a9f5222fb3a6150a0582369d3fe51f104760e\",\"afterHash\":\"4de42e8e1e8bc5a27a506e8b393a9f5222fb3a6150a0582369d3fe51f104760e\",\"apply\":{\"hits\":1,\"status\":\"Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing\",\"pending\":\"63\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/meta-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":22,\"afterUndo\":22,\"hits\":1,\"diagnostic\":\"Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing\"}"
+    },
+    {
+      "name": "convex/meta-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":1,\"ready\":false,\"diagnostic\":\"Error: ref-read：碎块 chunk-0001 凸代理 sidecar 读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current sidecar missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/meta-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":23}"
+    },
+    {
+      "name": "convex/meta-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/meta-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-141\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/binary-missing：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"binary-missing\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"4fc2a170c2d77ed754f21f2dc5a1db23a6247b6b4f6f54e47181d347710d305f\",\"afterHash\":\"4fc2a170c2d77ed754f21f2dc5a1db23a6247b6b4f6f54e47181d347710d305f\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing\",\"pending\":\"64\",\"ttl\":\"10\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/binary-missing：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":23,\"afterUndo\":23,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing\"}"
+    },
+    {
+      "name": "convex/binary-missing：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产读取失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：Error: WU08 current binary missing\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/binary-missing：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":24}"
+    },
+    {
+      "name": "convex/binary-missing：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/binary-missing：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-147\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/binary-invalid：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"binary-invalid\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"8f1d3983f230581880e09beebb4b0046f50b53f316bfe37a59753711d977434e\",\"afterHash\":\"8f1d3983f230581880e09beebb4b0046f50b53f316bfe37a59753711d977434e\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"pending\":\"65\",\"ttl\":\"9\",\"payloadHash\":null,\"metaHash\":null,\"bytes\":0,\"declared\":0}}"
+    },
+    {
+      "name": "convex/binary-invalid：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":24,\"afterUndo\":24,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）\"}"
+    },
+    {
+      "name": "convex/binary-invalid：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产不是合法 GLB（assets/fracture/p01-barrel/_wu08-virtual-convex.glb 仅 4 字节，疑似 LFS 指针/空文件）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/binary-invalid：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":25}"
+    },
+    {
+      "name": "convex/binary-invalid：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/binary-invalid：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-153\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/binary-content：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"binary-content\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"f288ffe505052618ed5bfc233db4cbc7134fcd16a2421fbb6c6338dc12ba4280\",\"afterHash\":\"f288ffe505052618ed5bfc233db4cbc7134fcd16a2421fbb6c6338dc12ba4280\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"pending\":\"66\",\"ttl\":\"10\",\"payloadHash\":\"sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925\",\"metaHash\":\"sha256:64658e86c7615348ef0c03c41d4fd9afb6607eb00076a150e7a705e3e31cb925\",\"bytes\":2480172,\"declared\":2480172}}"
+    },
+    {
+      "name": "convex/binary-content：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"afterHash\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"beforeUndo\":25,\"afterUndo\":25,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\"}"
+    },
+    {
+      "name": "convex/binary-content：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产 GLB 内容解码失败（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）：SyntaxError: Unexpected token '!', \\\"!\\\"asset\\\":{\\\"... is not valid JSON\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/binary-content：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":10,\"undo\":26}"
+    },
+    {
+      "name": "convex/binary-content：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/binary-content：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-159\",\"meshes\":12}"
+    },
+    {
+      "name": "convex/binary-nonfinite：坏引用Apply拒绝，原Document与新草稿保留",
+      "ok": true,
+      "detail": "{\"kind\":\"convex\",\"mode\":\"binary-nonfinite\",\"target\":\"assets/fracture/p01-barrel/_wu08-virtual-convex.glb\",\"beforeHash\":\"5ce096eeba0a21eb382006f44aeee388f2c8bd4352ea62f18dcde30006af3540\",\"afterHash\":\"5ce096eeba0a21eb382006f44aeee388f2c8bd4352ea62f18dcde30006af3540\",\"apply\":{\"hits\":2,\"status\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"pending\":\"67\",\"ttl\":\"9\",\"payloadHash\":\"sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5\",\"metaHash\":\"sha256:e319c2b4b8bd59e2af930e94df1ca8212b7d788ad3e66c2ffb77a304e01900d5\",\"bytes\":2480172,\"declared\":2480172}}"
+    },
+    {
+      "name": "convex/binary-nonfinite：资产Apply同样拒绝，原资产与历史/草稿保留",
+      "ok": true,
+      "detail": "{\"beforeHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"afterHash\":\"088e53f7f37c622f855072e37683baee622ea1dbb3d4a5c1541df0f6bd4bdcd9\",\"beforeUndo\":26,\"afterUndo\":26,\"hits\":2,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\"}"
+    },
+    {
+      "name": "convex/binary-nonfinite：同一当前引用在World/GPU前拒绝",
+      "ok": true,
+      "detail": "{\"hits\":2,\"ready\":false,\"diagnostic\":\"Error: ref-binary：引用资产解码后含非有限或空几何（assets/fracture/p01-barrel/_wu08-virtual-convex.glb）\",\"backend\":null,\"meshes\":0}"
+    },
+    {
+      "name": "convex/binary-nonfinite：恢复后原资产草稿Apply为一笔历史",
+      "ok": true,
+      "detail": "{\"ttl\":9,\"undo\":27}"
+    },
+    {
+      "name": "convex/binary-nonfinite：恢复后原场景草稿Apply成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "convex/binary-nonfinite：恢复后真实物理/GPU接管",
+      "ok": true,
+      "detail": "{\"active\":12,\"bodies\":12,\"sourceVisible\":false,\"pool\":12,\"owner\":\"fracture-preview-165\",\"meshes\":12}"
+    },
+    {
+      "name": "资产Apply校验期间的新输入保留，旧候选不改资产/历史",
+      "ok": true,
+      "detail": "{\"before\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"after\":\"bf5f40eb04777f6fd455f9072413a63676998a34c2a70e1e1e55eff3c3114b96\",\"undoBefore\":27,\"undoAfter\":27,\"diagnostic\":\"Error: 校验期间出现新的资产输入或历史修改；当前草稿已保留，请重新Apply\"}"
+    },
+    {
+      "name": "关闭面板后的迟到资产准入失败不覆盖新Apply/历史/诊断",
+      "ok": true,
+      "detail": "{\"ttl\":12,\"undo\":28,\"diagnostic\":\"配方已应用，可撤销；磁盘尚未保存\"}"
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": []
+}

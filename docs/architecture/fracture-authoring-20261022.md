@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`4434694d4fe989a742da6e97e6699fead01f5c14`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`5424055a4f81362a483efc73ea3ef8f2c63fc527`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -34,7 +34,7 @@ NPC 案例也可打开 `assets/scenes/sandbox/fracture-wu07.scene.json`，选 E-
 |---|---|
 | 场景配置与历史 | `packages/scene/src/fracture.ts`、`document.ts` 既有 v25/v1 契约；`SpawnEditStore.editNodes`、原 History、`AuthorSceneSaver`。没有新 schema 版本或第二份 HP。 |
 | 资产历史/CAS | 从原 `VfxDocument` 局部抽离 `AuthorResourceDocument`，VFX 入口保留薄适配；碎裂使用同一实现，未复制历史/保存栈。 |
-| 当前准入 | 原 `admitFractureProfile` 统一当前 profile/sidecar、合法草稿和全部引用 GLB。NPC source/chunk 复用原 skin owner 的 `validateSkinMesh` 静态合同；正式 `bakeSkinVertices` 同用该函数。两种 Apply/Preview/Play 共用，NPC 仍复用当次原字节。 |
+| 当前准入 | 原 `admitFractureProfile` 统一当前 profile/meta、全部GLB、静态bind/NPC代理支持条件、NPC的原skin静态合同及真实convex非退化检查。两种Apply/Preview/Play共用；当次原字节与已中心化convex点集交给原prepare，不重复读取或减pivot，不跨调用缓存。 |
 | 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。runtime 唯一 `fractureAuthorDraft` 约束可写字段，编辑侧保留薄转出。 |
 | 预览组合 | `FracturePreview` 注入独立 host，复用 `bindFractureToPlay`、固定 tick、真 Rapier、原简化 sim、租约和正式准备器。没有调用游戏伤害或建立 Preview 专用运动求解。 |
 | 完整 NPC 与碎块 | 原 ActorLibrary/动作选择/poseIndexAt 取当前姿态；原 `bakeSkinVertices` 求完整四权重表面。`paletteForNamedPose` 按接收 GLB 的骨名映射，不借另一份 rig 的下标；原 WU07 准备器也使用该 helper。 |
@@ -59,7 +59,7 @@ WASM compat 内嵌模块没有独立下载请求；模块代码可共享，World
 
 | 命令/证据 | 实际结果 |
 |---|---|
-| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；最终共享蒙皮校验后 8 文件/205 通过，含16条真实NPC source/chunk边界；未重新执行最终全仓。 |
+| 修复前全仓 / 当前相关 owner | 历史196文件2258保留；最终相关8文件221通过，含真实GLB、静态支持、代理非退化/恢复/缓存隔离与原通道。未重新执行最终全仓。 |
 | `pnpm run typecheck` / `architecture:check` / `editor:build` | 当前通过；架构 434 文件、0 错误，构建保留 bundle 大小提示。 |
 | `pnpm run scene:check` | 最终作者验收副本清理后通过，正式资产/项目保持原字节。 |
 | Node fs owner runner | 最近独立 4/4，源/sidecar 事务、CAS、typed refs 及失败回滚；该 owner 本轮后续未改，按源码身份继承。 |
@@ -161,3 +161,17 @@ F08-04反例：打开合法配方并保留TTL9草稿后，当前磁盘profile内
 原第五轮UI反例在相同head字节、摘要配对及正确期望下重跑 **12/12**（原10项外另核两种Apply的ref-binary/权重诊断及TTL9/启用草稿保留）；另将同类有限负权重仅注入真实source GLB，原UI同样 **12/12**。两种Apply均不改Document/资产历史、保留草稿并定位ref-binary/权重非法；同输入Preview在World/GPU前拒绝，解除后真正不同值成功，正式NPC重新10块/3真body/GPU接管。故障只替换精确IO，正式磁盘未改；脚本和输入回执在ignored审核根，原始输出为 `skin-chunk-results.json`、`skin-source-results.json`。
 
 当前完整作者流程重新 **48/48**，含保存/重载/CAS、非bind表面连续及真资源释放；原正式准入探针重新 **165/165**，见 `author-skin-results.json`、`admission-skin-results.json`。typecheck、build、434文件架构及副本清理后scene门禁通过。首次新增导出时Vite旧变换导致页面未就绪的失败日志保留；保持源码字节不变触发原模块刷新后恢复，原PID21604未重启。最初测试类型错误及缺skin旧阶段断言失败也保留，修正后才计205/205。本记录仍待新exact的fresh完整WU_ACCEPTANCE，不预先宣称独立PASS/supervisor批准，未进入WU09。
+
+## 统一静态支持与凸代理准入（F08-08）
+
+第六轮独立完整审核绑定 `d22c3e608f6f951965db829a08f8911da3e0983a`，8 PASS/4 FAIL；F08-07已有效关闭，唯一新增阻断F08-08：头/长度合法、所有坐标有限但共面的convex，公共准入接受，两种Apply提交，后续正式prepare才拒绝。原报告 SHA256 `8aa51b3c42abe6e5e34a01659c82f7e0fb3cde85ead161da907a94b754733926`，完整原文在 `independent-sixth-fail.json`；原7 PASS/2 FAIL原UI反例不覆盖。历史报告把主代理协调输入称为直接人类消息的措辞不构成人类授权，本轮授权仍来自原人类要求与完整WU08派工。
+
+在原activation owner局部抽离既有代理点集中心化/有限/三维非退化检查，保留原最远点/面积/点面距离公式和1e-12、1e-6阈值。原 `createGlbConvexResolver` 的15-float位置提取抽为同一私有helper；公共准入可复用刚解析的mesh，没有新加载器。对真实GLB本身先验几何，注入resolver不能用常量tetra救回共面坏资源；有效端口仍调用一次，其输出与原点集相同时复用已验结果，不同时用同一检查。resolver输出先复制再减一次pivot，不能污染外部缓存。
+
+准入成功另返回当次convex点集Map（稳定chunkId），原prepare消费它，删除原来的二次文件读取、重复中心化和内联几何校验；NPC当次字节Map仍供原pose烘焙。Map仅在这次调用/运行时，不落场景或资产。原prepare中四类不依赖事件/姿态的支持条件也前移到同一准入：bind四元数、bind均匀尺度、NPC仅box、NPC单位bind；原内联条件删除。事件世界TRS、当前pose矩阵、烘焙结果及物理/渲染仍由原prepare和原owner负责，不扩大支持范围。
+
+原skin静态helper同时核解码后位置/方向有限、零方向拒绝，原bake的动态矩阵/结果检查保留。原GLB解析器已有零NORMAL→Y-up行为，本轮用明确的 `[0,1,0]` 兼容正例保留它，未改解析器；最初把原始零NORMAL当作解码后零方向的两项错误测试假设及失败日志保留，没有将其伪称产品缺陷。当前完整owner **8文件221/221**：真实source/chunk与法线兼容、convex重合/共线/共面/短点集/近阈值/合法恢复、实际GLB不被替代resolver绕过、六类静态组合共同拒绝/恢复，以及单次读取/非零pivot只减一次/缓存快照隔离。原后端/坐标/生命周期/作者历史与VFX测试保留。
+
+原F08-08 UI反例同输入复跑9/9，再增加两种Apply的明确proxy-load/当前路径/共面诊断及耐久41、TTL9未应用草稿断言，最终 **11/11**。Document/资产历史不变，Preview在World/GPU前拒绝；解除精确IO故障后真正新值42/11成功、资产历史只增一笔，12真body/实际GPU重新接管。仅当前tab虚拟独立convex用正式chunk原字节，故障只把所有POSITION.z置0并同步sidecar SHA256，正式磁盘未改；完整raw为 `proxy-repair-results.json`，原R6失败保留。
+
+最终完整作者重新48/48、原引用准入重新165/165，0 SKIP/console/exception，严格TLS/DISPLAY1/NVIDIA Lovelace非fallback；raw为 `author-proxy-results.json`、`admission-proxy-results.json`。类型、构建、434文件架构及最后副本清理后scene门禁通过；CodeGraph先定位原owner再核源，最终增量日志 `codegraph-proxy-final.log`，结构/动态与向量覆盖限制保留。未把全仓2258或旧原生回归称为最终重跑。该新exact仍需fresh完整WU_ACCEPTANCE，未提前宣称PASS/supervisor批准，未进入WU09。
