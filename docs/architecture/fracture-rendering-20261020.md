@@ -50,7 +50,8 @@
   顺序释放——先销毁 GPU 资源，再 dispose 渲染装配（关闭 ImageBitmap、清 CPU 缓存、
   递增代次）。
 - TTL/淘汰：`sync` 每帧按 `runtime.active` 重建批次，到期的块自然从批次里消失；
-  已加载的网格 GPU 缓存保留到 Stop（本单元不做逐网格引用计数，属后续优化）。
+  TTL 淘汰不逐网格释放；Reset/换绑释放 `fracture:` 前缀的 GPU 网格，Stop 再统一
+  释放其余动态资源（本单元不做逐网格引用计数，属后续优化）。
 - 失败：网格读取/解析失败 → 该块不画，原因记录在 fractureRenderError
   （路径 + 具体错误），2 秒后允许重试（不做永久负缓存）；成功加载会清空该诊断。
 - 迟到：loadMesh 捕获装配代次，await 之后若已 dispose 或换代会关闭迟到的
@@ -60,15 +61,20 @@
 - 贴图共享：同一张 baseColor 图（按字节 SHA-256 内容身份）只建一份 GPUTexture/材质，
   12 个 P-01 碎块共用 1 份 4096 贴图；fractureRenderStats.textures 记录唯一纹理数。
   字节口径分开记录，不再把 JPEG 文件长度当 GPU 量：
-  `textureFileBytes`（源文件 IO）、`textureUploadBytes`（解码基础级 RGBA8 提交）、
-  `textureResidentBytes`（基础级 + mip 链驻留）、`geometryBytes`（顶点+索引+全零
-  skin slot）、`uploadBytes = geometryBytes + textureUploadBytes`、
-  `residentBytes = geometryBytes + textureResidentBytes`、
+  `textureFileBytes`（源文件 IO）、`textureUploadBytes`（本次装配代新提交的解码
+  基础级 RGBA8；Reset 后复用同一 GPUTexture 不再计）、
+  `textureResidentBytes`（当前活动内容的基础级 + mip 链驻留）、
+  `geometryBytes`（顶点+索引+全零 skin slot）、
+  `uploadBytes = geometryBytes + textureUploadBytes`（本次装配代新提交）、
+  `residentBytes = geometryBytes + textureResidentBytes`（当前活动内容驻留）、
   `instanceBytes`（本帧 20+12 float 实例行写入量）。P-01 实测：
   geometry 5,741,472 / file 2,355,534 / upload 72,850,336 / resident 95,219,956 /
   instance 3,072。
 - Reset/换绑：PlayController.rebuildFractureBinding 调 beginGeneration()，让换绑前
-  挂起的读取按代次失效（Stop 与 Reset 两条路径都不回填缓存）。
+  挂起的读取按代次失效，并释放 `fracture:` 前缀 GPU 网格；core 的材质贴图按内容
+  身份复用，不重复上传（Stop 与 Reset 两条路径都不回填旧几何缓存）。实测 Reset 后
+  第二次装配 `uploadBytes=5,741,472`（仅几何），`textureUploadBytes=0`、
+  `textureResidentBytes=89,478,484` 仍为当前驻留。
 - 纹理失败：新增/解析 baseColor 图失败会进入统一失败处理（fractureRenderError +
   重试），不再静默退化为白色材质。
 
@@ -80,8 +86,8 @@
 - `PlayController.start()` → 受控 `spawnFracture`（正式 P-01 profile，事件 scale=3，
   渲染验收注入而非真实武器破坏）→ `accepted=true`。
 - 统计：12 块 → 24 批次（每块外表面 + 切口各一批）、12 个网格、37,260 三角形；
-  碎片固定新增 24 个 draw。整帧 drawCall 绝对值随相机可见静态集变化（历史取样 118→142，
-  另一机位复核为 73），不作为固定成本结论。
+  24 个批次 = 24 次主表面 + 24 次描边 = 48 次 drawIndexed；同机位控制测试 94→142
+  （+48）。整帧绝对值仍随相机可见静态集变化（历史聚焦样本 118→142），不作为固定成本结论。
 - 材质：浏览器侧逐批读取 `{tex:true,tint:[1,1,1]}` 与
   `{tex:false,tint:[0.09,0.062,0.055]}`，与 GLB 的 outer/inner 材质一致。
 - 资源量：12 个碎片网格的几何提交为 5,741,472 字节（顶点 + 索引 + 全零 skin slot）；
@@ -91,7 +97,7 @@
   instanceBytes；GPU 缓存按 meshId 只上传一次，同图按内容身份只计一次。
 - 截图：`.workbuddy/tmp/wu05-gpu/fracture-air.png`（空中翻滚）、
   `fracture-play.png`（落地）。
-- Pause/Step：暂停后碎片 tick 不变，单步 +1（本次样本 162→162、163），与游戏时钟一致。
+- Pause/Step：暂停后碎片 tick 不变，单步 +1（官方命令本次样本 19→19、20；历史聚焦样本 162→162、163），与游戏时钟一致。
 - 近景：探针把碎片放在相机与玩家之间 20% 处、事件 scale=3，可清楚看到外表面
   贴图（油桶锈红木条）与深色切口平面，三轴旋转与描边正常。
 - Stop：batches=0 / dynamicInstSlots=0 / dynamicMeshes=0 / ledger.pending=0，
@@ -106,7 +112,7 @@
 
 - 目标角色行 \`flags\` = 1（bit0 蒙皮、bit1 刚体均符合预期）；
 - 手枪真实命中：\`impactPulse(blend.z)\` 0.63 → 0，\`hitFlash\` 非零；
-- 数字键切到 \`flame\` 后持续开火：\`burning=true\`、\`burnClock(blend.w)\` = 3.17；
+- 数字键切到 \`flame\` 后持续开火：\`burning=true\`、\`burnClock(blend.w)\` 非零（历史样本 3.17、本轮复核 2.90/3.03，随开火时长变化）；
 - 全程无 console error；本场景 \`fractureBatches=0\`，24 个角色行不受碎片影响。
 
 终态/Reset（同一 GPU 探针）：

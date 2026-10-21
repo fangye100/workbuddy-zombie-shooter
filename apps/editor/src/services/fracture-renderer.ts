@@ -88,6 +88,8 @@ export class PlayFractureRenderer {
   private readonly retryAt = new Map<string, number>();
   /** 已计入上传字节的贴图内容身份（同图只算一次）。 */
   private readonly sharedTextures = new Set<string>();
+  /** 跨 beginGeneration 保留的已上传贴图身份：core 在 Reset 时复用材质，不能重复计上传。 */
+  private readonly uploadedTextures = new Set<string>();
   /** 每次读取的归属 token（防止旧代完成时删掉新代同路径的 pending）。 */
   private pendingSeq = 0;
   private readonly pendingToken = new Map<string, number>();
@@ -240,8 +242,12 @@ export class PlayFractureRenderer {
         this.sharedTextures.add(tk);
         this.stats.textures++;
         this.stats.textureFileBytes += g.textureFileBytes;
-        this.stats.textureUploadBytes += g.textureUploadBytes;
         this.stats.textureResidentBytes += g.textureResidentBytes;
+        // 贴图按内容身份只提交一次；Reset 后 core 复用同一 GPUTexture，不再算新上传。
+        if (!this.uploadedTextures.has(tk)) {
+          this.uploadedTextures.add(tk);
+          this.stats.textureUploadBytes += g.textureUploadBytes;
+        }
       }
     }
     this.stats.uploadBytes = this.stats.geometryBytes + this.stats.textureUploadBytes;
@@ -274,6 +280,7 @@ export class PlayFractureRenderer {
     this.pendingToken.clear();
     this.retryAt.clear();
     this.sharedTextures.clear();
+    // uploadedTextures 不清：GPU 贴图在 Reset 时仍被 core 复用。
     this.batches = [];
     this.lastError = null;
     this.stats.meshes = 0;
@@ -300,6 +307,7 @@ export class PlayFractureRenderer {
     this.pendingToken.clear();
     this.retryAt.clear();
     this.sharedTextures.clear();
+    this.uploadedTextures.clear();
     this.lastError = null;
     this.batches = [];
     this.stats.meshes = 0;

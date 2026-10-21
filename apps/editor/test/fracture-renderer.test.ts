@@ -550,6 +550,20 @@ describe('WU-05 碎片动态批次装配', () => {
     expect(s.textureFileBytes).not.toBe(s.textureUploadBytes);
     expect(s.uploadBytes).toBe(s.geometryBytes + s.textureUploadBytes);
     expect(s.residentBytes).toBe(s.geometryBytes + s.textureResidentBytes);
+    // Reset 后 core 复用同一 GPUTexture：只重新上传几何，不再把 67MB 贴图算作新上传。
+    renderer.beginGeneration();
+    renderer.sync(rt, backend);
+    for (let i = 0; i < 100 && renderer.dynamicBatches.length === 0; i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      renderer.sync(rt, backend);
+    }
+    const after = renderer.stats;
+    expect(after.textures).toBe(1);
+    expect(after.textureUploadBytes).toBe(0);
+    expect(after.textureResidentBytes).toBeGreaterThan(0);
+    expect(after.geometryBytes).toBeGreaterThan(0);
+    expect(after.uploadBytes).toBe(after.geometryBytes);
+    expect(after.residentBytes).toBe(after.geometryBytes + after.textureResidentBytes);
     rt.dispose();
     renderer.dispose();
   }, 30000);
