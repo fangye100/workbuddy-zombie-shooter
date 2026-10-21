@@ -1,7 +1,7 @@
 # 碎裂作者配置、独立 Preview 与持久化（WU-08）
 
 日期：2026-10-22（Asia/Singapore）。已批准 base：`8b5a07a957c4cf5f3153a9feb9f8590274bc6b3f`。
-本指南核对的源码提交：`39423c8c9cf9f05c3f97a771b5e1fb3ae712108e`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
+本指南核对的源码提交：`9001502332114ab46da6564a2ca1236b26122c33`；最终是否放行仍由 supervisor 对冻结 exact SHA 裁决。
 
 ## 使用原入口
 
@@ -34,7 +34,7 @@ NPC 案例也可打开 `assets/scenes/sandbox/fracture-wu07.scene.json`，选 E-
 |---|---|
 | 场景配置与历史 | `packages/scene/src/fracture.ts`、`document.ts` 既有 v25/v1 契约；`SpawnEditStore.editNodes`、原 History、`AuthorSceneSaver`。没有新 schema 版本或第二份 HP。 |
 | 资产历史/CAS | 从原 `VfxDocument` 局部抽离 `AuthorResourceDocument`，VFX 入口保留薄适配；碎裂使用同一实现，未复制历史/保存栈。 |
-| 当前准入 | `admitFractureProfile` 从原 activation 前段抽离，Apply/Preview/Play 共用；完整激活继续由原 `prepareFractureActivation` 核源/chunk/convex 的当前身份、状态与真实 GLB。 |
+| 当前准入 | 原 `admitFractureProfile` 收敛当前 profile/sidecar、合法草稿及 source/chunk/convex 的全部 sidecar 与 GLB；Scene Apply、Asset Apply、Preview 和 Play 共用。原 `prepareFractureActivation` 复用当次已验 NPC 字节继续姿态/事件/代理准备。 |
 | 草稿配方 | `PrepareOptions.draftProfile` 仅替换合法配方内容；磁盘版本/GUID/kind/隔离先校验，草稿不能覆盖磁盘拒绝。runtime 唯一 `fractureAuthorDraft` 约束可写字段，编辑侧保留薄转出。 |
 | 预览组合 | `FracturePreview` 注入独立 host，复用 `bindFractureToPlay`、固定 tick、真 Rapier、原简化 sim、租约和正式准备器。没有调用游戏伤害或建立 Preview 专用运动求解。 |
 | 完整 NPC 与碎块 | 原 ActorLibrary/动作选择/poseIndexAt 取当前姿态；原 `bakeSkinVertices` 求完整四权重表面。`paletteForNamedPose` 按接收 GLB 的骨名映射，不借另一份 rig 的下标；原 WU07 准备器也使用该 helper。 |
@@ -59,15 +59,16 @@ WASM compat 内嵌模块没有独立下载请求；模块代码可共享，World
 
 | 命令/证据 | 实际结果 |
 |---|---|
-| `pnpm test` | 196 文件、2258 项通过；`final-vitest-accepted.log`。 |
-| `pnpm run typecheck` / `architecture:check` / `editor:build` | 通过；架构 433 文件、0 错误，构建保留 bundle 大小提示。 |
-| `pnpm run scene:check` | 通过；正式资产/项目在验收副本清理后与 base 相同。音频门禁通过不等于新增听音验收。 |
-| Node fs owner runner | 4/4；包含真实源/sidecar 事务、CAS、typed refs 和受控原子替换失败回滚。 |
+| 修复前全仓 / 当前相关 owner | 历史全仓 196 文件/2258 保留；完整准入变更后 8 文件/189，最终资产历史及旧 VFX 作者路径另复跑 2 文件/23。没有冒称重新执行最终全仓。 |
+| `pnpm run typecheck` / `architecture:check` / `editor:build` | 当前通过；架构 434 文件、0 错误，构建保留 bundle 大小提示。 |
+| `pnpm run scene:check` | 最终作者验收副本清理后通过，正式资产/项目保持原字节。 |
+| Node fs owner runner | 最近独立 4/4，源/sidecar 事务、CAS、typed refs 及失败回滚；该 owner 本轮后续未改，按源码身份继承。 |
 | `node tools/verify/wu08-author-probe.mjs --headed` | 48/48，严格 TLS、DISPLAY1、真实 NVIDIA Lovelace 非 fallback，0 console error/exception；原生 UI 与受控 IO/GPU 故障分开记录。 |
-| 当前正式 NPC 原生击杀回归 | 23/23，通过；严格 TLS、DISPLAY1、真实 NVIDIA Lovelace。 |
-| 当前正式物体/爆炸/导航回归 | 43/43，通过；严格 TLS、DISPLAY1、真实 NVIDIA Lovelace。 |
-| 原 Editor 核心 UI 回归 | 111 项通过、1 项失败后中止；剪贴板 HUD 成功但系统读回为空，其后用例未执行，不算整套通过。 |
-| 当前独立 Three 数值 oracle（开发侧复跑历史原脚本，独占输出） | 1/1；22 骨完整源表面/法线/世界 TRS/真 Rapier，容差 3e-5。 |
+| `node tools/verify/wu08-admission-probe.mjs --headed` | 当前 129/129，原生场景及资产 Apply、精确 IO 故障、真实 World/GPU 拒绝与恢复、迟到操作隔离；正式文件未写入。 |
+| 正式 NPC 原生击杀回归 | 最近原生 23/23；按未变的相机/玩法/渲染消费者及新 owner、E04 实际预览证据继承，未冒称本轮再次完整实射。 |
+| 正式物体/爆炸/导航回归 | 最近原生 43/43；按未变的合法数据与原消费者继承，当前共享准入/PlayController owner 及实际作者 Play 读取另外通过。 |
+| 原 Editor 核心 UI 回归 | 最近独立完整副本 123 PASS/2 FAIL/0 SKIP、exit1；复制两项为有原生对照的宿主限制，未称整套通过。 |
+| 独立 Three 数值 oracle | 最近独立 1/1，22 骨完整源表面/法线/世界 TRS/真 Rapier；本次只收敛准入，不改 skin/几何公式，新增原字节单读复用测试通过。 |
 
 作者探针通过原菜单创建并登记每轮独占场景，原 UI 添加物体/NPC 配置、Apply/Undo/Redo、预览、
 资产/场景 Save、真实外改 CAS、明确重载、timeOrigin 变化、原选择器重开和实际 Play 配置读取。
@@ -120,3 +121,19 @@ F08-04反例：打开合法配方并保留TTL9草稿后，当前磁盘profile内
 新增owner反例覆盖source/chunk/convex错误GUID，以及合法但只读的assemblyScale变化，均在draft二进制读取前拒绝；另有当前disk仅作者参数变化仍允许未保存TTL9/质量17的正例。相关runtime/preview/editor作者约束 **62/62** 通过。原UI/真实GPU补验 **7/7**：source与chunk两种当前外改时，Scene Apply原子拒绝、作者输入保留、Preview在World/GPU前拒绝；恢复后Scene Apply与真实绘制均成功。正式完整作者链再次 **48/48**，类型/架构/构建通过。新正式raw `author-readonly-results.json` / `readonly-reference-results.json` 包含具体环境和输入输出；原失败反例继续保留。
 
 第三轮全新完整WU_ACCEPTANCE在新的冻结exact上另行裁决；本段只记录修复与开发侧实测，不预称独立PASS或supervisor批准。
+
+## Scene/Asset Apply 共用完整引用准入（F08-05）
+
+第三轮完整独立审核绑定 `86bbc5e9134291819696c44993148cd8ccfa53bd`，9 PASS/3 FAIL，原报告 SHA256 `92e5140902771358ebcfb705555f343b9b26be383d44c7934b0449984d266670`。完整原文保存在 `independent-third-fail.json`；唯一剩余产品 finding 是 F08-05：当前 source/chunk sidecar GUID 错误时，Preview拒绝而Scene Apply仍改耐久。其余 F08-01/03/04有效关闭保留；F08-02仍为两项实际失败及有事实界定的宿主限制。
+
+修复不是新增简化校验器：将原prepare内部的全部引用 sidecar/GLB 准入收敛到原 `admitFractureProfile`，先校当前profile及合法草稿，再读取全部source/chunk/独立convex元数据与实际二进制。Scene Apply、资产参数 Apply、Preview 预检和正式 prepare 都调用同一入口；NPC返回当次已验原字节，原pose烘焙不重读chunk。原World/物理/几何/渲染转换、两种历史、CAS保存owner均保留。
+
+资产参数Apply也以当前资源准入为前置条件，再交原AuthorResourceDocument写一笔历史。异步期间核对asset实例、打开代次、当前raw输入及该Document原有editRevision（只新增只读getter），新输入/Undo/重载不能被旧结果覆盖；关闭面板、换资源/节点、Play互斥或新预览会使旧操作失效。只读snapshot提供已应用资产和历史深度用于实证，不新建可编辑真源。
+
+新增正式可复跑工具 `tools/verify/wu08-admission-probe.mjs`：source/chunk/独立convex三路径 × GUID/kind/quarantined/未来版本/缺sidecar/缺二进制/坏GLB七类输入，共21组合。每组合在原UI验证两种Apply均拒绝、两份已应用Document/历史和输入保留、Preview无World/GPU；恢复后资产Apply只增一笔历史、场景Apply成功、12真body与实际GPU接管成功。另验资产读取期间新输入保留，以及关闭后的旧失败不污染新Apply/历史/诊断。合计 **129/129、0 SKIP、0console/exception**，严格TLS、DISPLAY1、真实NVIDIA Lovelace非fallback。
+
+其中正常P01物体和真实GLB字节不变；仅当前tab把配方响应设置为合法独立convex引用，并提供该正式chunk的原始字节/独立GUID，故障只替换精确IO响应，不改正式文件。JSON区分这一受控输入与正式物理资产；不把虚拟路径发布成实际可选资产或将故障注入冒称原生文件外改。当前 `full-admission-results.json` 保留21组合、文档hash/历史/命中/World/GPU/恢复及正式文件前后hash。
+
+完整准入新增owner覆盖同样21组合，Apply公共入口、带draft/无draft prepare均拒绝并恢复；NPC字节Map与单读复用实测通过。相关8文件189通过；最后资产只读revisiongetter及既有VFX/历史owner另复跑2文件23通过。完整原作者创建、保存、CAS、整页reload、非bind NPC、真实资源与Play/typedrename再次48/48，原始输出为 `author-all-apply-results.json`。类型、434文件架构、构建和副本清理后的scene门禁通过。三轮FAIL和所有旧反例保留。
+
+新的精确提交仍需第四轮全新完整WU_ACCEPTANCE；本节只记录实现和实际验证，不预先声称PASS或supervisor批准，未开始WU09。
