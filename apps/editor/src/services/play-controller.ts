@@ -259,7 +259,9 @@ export class PlayController {
       // 初始即开启的导航门（initialOpen:true）在运行时已处于开启姿态，而作者文档
       // 仍是关闭位置。binding ready 后、接受首个碎片 tick 前把当前门姿态灌进镜像，
       // 否则启动瞬间的静态可观察状态是错的（要等第一帧才纠正）。
-      void this.fractureBinding.ready.then((ok) => {
+        const binding = this.fractureBinding;
+        void binding.ready.then((ok) => {
+          if (this.fractureBinding !== binding) return;
         if (ok) this.syncGateMirrors();
       });
     }
@@ -476,7 +478,9 @@ export class PlayController {
     this.fractureBinding = this.createFractureBinding(graph);
     // reset 后 NavigationGates 已恢复到 initialOpen 姿态；新 binding 的首次镜像仍来自
     // 作者文档，必须在 ready 后立刻对齐，不能等到下一次 update/step。
-    void this.fractureBinding.ready.then((ok) => {
+      const binding = this.fractureBinding;
+      void binding.ready.then((ok) => {
+        if (this.fractureBinding !== binding) return;
       if (ok) this.syncGateMirrors();
     });
   }

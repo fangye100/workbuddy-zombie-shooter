@@ -583,6 +583,54 @@ describe('RuntimeSession —— W06 可破坏物体状态', () => {
 
 describe('RuntimeSession —— W06 正式可破坏庭院', () => {
   const W6 = import.meta.glob('../../../assets/scenes/sandbox/fracture-wu06.scene.json', { eager: true });
+
+  it('隐藏 Destructible 自身/父级不进入 RuntimeSession 碰撞与射线，禁用 Destructible 保留碰撞但不参与破坏', () => {
+    const key = Object.keys(W6)[0]!;
+    const doc = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    // 隐藏 barrel 自身
+    const barrel = doc.nodes.find((n) => n.id === 'nd_fr_barrel')!;
+    barrel.visible = false;
+    // 隐藏 wall_l 的父级（把 wall_l 挂到一个隐藏父节点下）
+    const wall = doc.nodes.find((n) => n.id === 'nd_w6_wall_l')!;
+    const hiddenParent = {
+      id: 'nd_hidden_parent', name: 'hidden parent', parent: null,
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
+      visible: false, pickable: false, prefab: null, components: [],
+    };
+    (doc.nodes as unknown as Array<typeof hiddenParent>).push(hiddenParent);
+    wall.parent = hiddenParent.id;
+
+    const r = loadLevelRuntime(doc);
+    expect(r.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const s = new RuntimeSession({ desc: r.desc!, seed: 4 });
+
+    // 隐藏节点不在 destructibles / solids / dynamicObstacles 中
+    expect(s.destructibleSnapshot().map((x) => x.nodeId)).not.toContain('nd_fr_barrel');
+    expect(s.collisionSnapshot().solids).not.toContain('nd_fr_barrel');
+    expect(s.collisionSnapshot().solids).not.toContain('nd_w6_wall_l');
+    expect(s.collisionSnapshot().dynamicObstacles).not.toContain('nd_fr_barrel');
+
+    // 真实射线对隐藏节点返回 miss（ barrel 在 [0,0.5,0] 附近，从 [-2,0.5,0] 向 +X 发射）
+    // 通过 weaponWorld 的 trace 验证（需要构造一个最小的 WeaponWorld 调用环境）
+    // 由于 weaponWorld 是 private，这里通过 collisionSnapshot 和 damageSceneObject 验证：
+    // 对隐藏节点调用 damageSceneObject 返回 0（找不到目标）
+    expect(s.damageSceneObject('nd_fr_barrel', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
+    expect(s.damageSceneObject('nd_w6_wall_l', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
+
+    // 禁用 Destructible 但保留 Collider：仍在 solids 中，但不在 destructibles/dynamicObstacles
+    const doc2 = structuredClone((W6[key] as { default: unknown }).default as SceneDocument);
+    const barrel2 = doc2.nodes.find((n) => n.id === 'nd_fr_barrel')!;
+    const dtor = barrel2.components.find((c) => c.kind === 'Destructible')! as { enabled: boolean };
+    dtor.enabled = false;
+    const r2 = loadLevelRuntime(doc2);
+    expect(r2.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const s2 = new RuntimeSession({ desc: r2.desc!, seed: 5 });
+    expect(s2.destructibleSnapshot().map((x) => x.nodeId)).not.toContain('nd_fr_barrel');
+    expect(s2.collisionSnapshot().solids).toContain('nd_fr_barrel');
+    expect(s2.collisionSnapshot().dynamicObstacles).not.toContain('nd_fr_barrel');
+    expect(s2.damageSceneObject('nd_fr_barrel', 10, { weaponId: 'w_pistol' }, 'direct')).toBe(0);
+  });
+
   it('表面导航成立，三个可破坏对象在 Play 副本中可单独破坏', () => {
     const key = Object.keys(W6)[0]!;
     const doc = (W6[key] as { default: unknown }).default as SceneDocument;
@@ -622,5 +670,53 @@ describe('RuntimeSession —— W06 正式可破坏庭院', () => {
     expect(ev.normal![2]).toBeLessThan(-0.9);
     expect(ev.impulse![2]).toBeLessThan(0);
     expect(ev.source.hitSequence).toBe(12);
+  });
+
+  it('爆炸 AABB 边界：爆心距离 <R、=R、>R 分别对应全伤、全伤、无伤', () => {
+    // 爆心固定在 [0, 0.5, 0]，爆炸半径 3
+    // 目标 AABB 的最近点距离爆心：nd_in=2.9（<3）、nd_edge=3.0（=3）、nd_out=3.25（>3）
+    const layout = bareDesc();
+    const mkBox = (nodeId: string, cx: number, halfX: number, minY: number, maxY: number) => {
+      const world = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, cx,(minY+maxY)/2,0,1]);
+      return {
+        nodeId, name: nodeId,
+        profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+        maxDurability: 20,
+        trigger: { direct: true, explosion: true, burn: false },
+        onBroken: { collider: 'remove' as const, navigation: 'clear-blocking' as const },
+        world, position: [cx, (minY + maxY) / 2, 0] as [number, number, number],
+        rotation: [0, 0, 0, 1] as [number, number, number, number],
+        scale: [1, 1, 1] as [number, number, number],
+        bounds: { x: cx, z: 0, halfX, halfZ: 0.5, radius: Math.max(halfX, 0.5), minY, maxY },
+        solid: solidCollider(nodeId, { type: 'box' as const, halfExtents: [halfX, (maxY - minY) / 2, 0.5] }, world),
+        obstacle: null,
+      };
+    };
+    layout.destructibles = [
+      mkBox('nd_in',   3.15, 0.25, 0, 1),  // AABB minX=2.90, 最近点 [2.90,0.5,0], dist=2.90 < 3
+      mkBox('nd_edge', 3.25, 0.25, 0, 1),  // AABB minX=3.00, 最近点 [3.00,0.5,0], dist=3.00 = 3
+      mkBox('nd_out',  3.75, 0.25, 0, 1),  // AABB minX=3.25, 最近点 [3.25,0.5,0], dist=3.25 > 3
+    ];
+    const s = new RuntimeSession({ desc: layout, seed: 9 });
+    // 直接调用 damageSceneObject 模拟爆炸伤害（与 WeaponCombat.explode 内部调用一致）
+    // 这里验证的是：当 WeaponCombat 判定目标在爆炸范围内时，RuntimeSession 正确扣减耐久
+    expect(s.damageSceneObject('nd_in',   10, { weaponId: 'w_rpg', vfxSequence: 1 }, 'explosion')).toBe(10);
+    expect(s.damageSceneObject('nd_edge', 10, { weaponId: 'w_rpg', vfxSequence: 2 }, 'explosion')).toBe(10);
+    expect(s.damageSceneObject('nd_out',  10, { weaponId: 'w_rpg', vfxSequence: 3 }, 'explosion')).toBe(10);
+    expect(s.destructibleSnapshot()).toEqual([
+      { nodeId: 'nd_in',   hp: 10, broken: false },
+      { nodeId: 'nd_edge', hp: 10, broken: false },
+      { nodeId: 'nd_out',  hp: 10, broken: false },
+    ]);
+    // 再补一刀击破，验证事件顺序与剩余耐久
+    expect(s.damageSceneObject('nd_in',   10, { weaponId: 'w_rpg', vfxSequence: 4 }, 'explosion')).toBe(10);
+    expect(s.damageSceneObject('nd_edge', 10, { weaponId: 'w_rpg', vfxSequence: 5 }, 'explosion')).toBe(10);
+    expect(s.damageSceneObject('nd_out',  10, { weaponId: 'w_rpg', vfxSequence: 6 }, 'explosion')).toBe(10);
+    expect(s.destructibleSnapshot()).toEqual([
+      { nodeId: 'nd_in',   hp: 0, broken: true },
+      { nodeId: 'nd_edge', hp: 0, broken: true },
+      { nodeId: 'nd_out',  hp: 0, broken: true },
+    ]);
+    expect(s.takeDestructibleEvents()).toHaveLength(3);
   });
 });

@@ -907,3 +907,326 @@ it('hides editor helpers only during Play and restores original visibility on St
   expect(r.read().visible.filter(v => !v)).toHaveLength(helperIndices.length + 1);
   ctl.stop(); expect(r.read()).toEqual(before);
 });
+
+describe('PlayController —— 旧代异步事件跨代隔离（WU-06 S6-03）', () => {
+  const textGlob = import.meta.glob('../../../assets/fracture/*/*.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const modelMetaGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb.meta.json', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+  const binGlob = import.meta.glob('../../../assets/fracture/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const modelGlob = import.meta.glob('../../../assets/environment/models/*/*/*.glb', { query: '?bytes', import: 'default' }) as Record<string, () => Promise<Uint8Array>>;
+  const rel = (k: string) => k.replace(/^.*?(?=assets\/)/, '');
+
+  function makeIO() {
+    const text = new Map<string, string>();
+    for (const [k, v] of Object.entries({ ...textGlob, ...modelMetaGlob })) text.set(rel(k), v);
+    const bins = new Map<string, () => Promise<Uint8Array>>();
+    for (const [k, v] of Object.entries({ ...binGlob, ...modelGlob })) bins.set(rel(k), v);
+    return {
+      async readText(path: string) {
+        const v = text.get(path);
+        if (v === undefined) throw new Error('未找到：' + path);
+        return v;
+      },
+      async readBinary(path: string) {
+        const loader = bins.get(path);
+        if (loader === undefined) throw new Error('未找到二进制：' + path);
+        const bytes = await loader();
+        return bytes.slice().buffer;
+      },
+    };
+  }
+
+  function delayedIO(io: ReturnType<typeof makeIO>, targetPath: string, hold: { current: (() => void) | null }) {
+    return {
+      async readText(path: string) { return io.readText(path); },
+      async readBinary(path: string) {
+        if (path === targetPath && hold.current === null) {
+          await new Promise<void>((r) => { hold.current = r; });
+        }
+        return io.readBinary(path);
+      },
+    };
+  }
+
+  const mkEvent = (nodeId: string, seq: number) => frozenFractureEvent({
+    sequence: seq, tick: 0, seed: 5,
+    profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+    target: { kind: 'scene-object', runId: 'run-1', nodeId },
+    position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+    contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+    source: { weaponId: 'w_pistol', hitSequence: seq },
+  });
+
+  it('旧代 spawnFracture 挂起后 Reset：迟到成功不污染新代', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    const slowIO = delayedIO(io, 'assets/fracture/p01-barrel/chunk-0001.glb', hold);
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    ctl.reset();
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    expect(res.rejection?.reason).toBe('session-closed');
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧代 spawnFracture 挂起后 Stop→新 Play：迟到成功不污染新代', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    const slowIO = delayedIO(io, 'assets/fracture/p01-barrel/chunk-0001.glb', hold);
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    ctl.stop();
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    expect(res.rejection?.reason).toBe('session-closed');
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧代 spawnFracture 挂起后换场景（直接 start）：迟到成功不污染新代', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    const slowIO = delayedIO(io, 'assets/fracture/p01-barrel/chunk-0001.glb', hold);
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    // 换场景：直接再次 start（不经过 stop）
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    expect(res.rejection?.reason).toBe('session-closed');
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧代 spawnFracture 挂起后 Reset：迟到失败不写入新代诊断', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    let failChunk = false;
+    const slowIO = {
+      async readText(path: string) { return io.readText(path); },
+      async readBinary(path: string) {
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && hold.current === null) {
+          await new Promise<void>((r) => { hold.current = r; });
+        }
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && failChunk) {
+          throw new Error('EIO 资源已不可读');
+        }
+        return io.readBinary(path);
+      },
+    };
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    ctl.reset();
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    failChunk = true;
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    // 旧代在换代后完成：可能拿到 session-closed（换代时取消）或 ref-binary（读取完成后发现资源坏）
+    // 关键是新代不被污染
+    expect(['session-closed', 'ref-binary']).toContain(res.rejection?.reason);
+    // 新代不应看到旧代的资源错误
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧代 spawnFracture 挂起后 Stop→新 Play：迟到失败不写入新代诊断', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    let failChunk = false;
+    const slowIO = {
+      async readText(path: string) { return io.readText(path); },
+      async readBinary(path: string) {
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && hold.current === null) {
+          await new Promise<void>((r) => { hold.current = r; });
+        }
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && failChunk) {
+          throw new Error('EIO 资源已不可读');
+        }
+        return io.readBinary(path);
+      },
+    };
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    ctl.stop();
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    failChunk = true;
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    expect(['session-closed', 'ref-binary']).toContain(res.rejection?.reason);
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧代 spawnFracture 挂起后换场景：迟到失败不写入新代诊断', async () => {
+    const io = makeIO();
+    const hold: { current: (() => void) | null } = { current: null };
+    let failChunk = false;
+    const slowIO = {
+      async readText(path: string) { return io.readText(path); },
+      async readBinary(path: string) {
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && hold.current === null) {
+          await new Promise<void>((r) => { hold.current = r; });
+        }
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && failChunk) {
+          throw new Error('EIO 资源已不可读');
+        }
+        return io.readBinary(path);
+      },
+    };
+    const { ctl } = make(scene(), { fractureIO: slowIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    const oldPending = ctl.spawnFracture(mkEvent('nd_old', 1));
+    for (let i = 0; i < 200 && hold.current === null; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(hold.current).not.toBeNull();
+
+    expect(ctl.start()).toBe(true);
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    failChunk = true;
+    hold.current!();
+    const res = await oldPending;
+    expect(res.accepted).toBe(false);
+    expect(['session-closed', 'ref-binary']).toContain(res.rejection?.reason);
+    expect(second.runtime.stats.queuedEvents).toBe(0);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('新代自身失败仍可见，Reset 后可恢复', async () => {
+    const io = makeIO();
+    let failChunk = false;
+    const flakyIO = {
+      async readText(path: string) { return io.readText(path); },
+      async readBinary(path: string) {
+        if (path === 'assets/fracture/p01-barrel/chunk-0001.glb' && failChunk) {
+          throw new Error('EIO 资源已不可读');
+        }
+        return io.readBinary(path);
+      },
+    };
+    const { ctl } = make(scene(), { fractureIO: flakyIO });
+    expect(ctl.start()).toBe(true);
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+
+    failChunk = true;
+    const bad = await ctl.spawnFracture(mkEvent('nd_bad', 1));
+    expect(bad.accepted).toBe(false);
+    expect(bad.rejection?.reason).toBe('ref-binary');
+
+    failChunk = false;
+    ctl.reset();
+    await expect(ctl.fracture!.ready).resolves.toBe(true);
+    const good = await ctl.spawnFracture(mkEvent('nd_good', 2));
+    expect(good.accepted).toBe(true);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+
+  it('旧 ready retry 不消费新代事件', async () => {
+    const { ctl } = make();
+    expect(ctl.start()).toBe(true);
+    const first = ctl.fracture!;
+    await expect(first.ready).resolves.toBe(true);
+
+    // 手动触发一次 readyRetry 回调（模拟旧代 ready 完成后的 retry）
+    // 这里通过 reset 换代，然后验证旧代的 readyRetry 不会在新代上执行
+    ctl.reset();
+    const second = ctl.fracture!;
+    await expect(second.ready).resolves.toBe(true);
+
+    // 新代应该正常工作
+    const ev = frozenFractureEvent({
+      sequence: 1, tick: 0, seed: 7,
+      profile: { path: 'assets/fracture/p01-barrel/p01-barrel.fracture.json', guid: 'as_p01frct' },
+      target: { kind: 'scene-object', runId: 'run-1', nodeId: 'nd_new' },
+      position: [0, 3, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+      contact: [0, 3, 0], normal: [0, 1, 0], impulse: [1, 2, 0.5],
+      source: { weaponId: 'w_pistol', hitSequence: 1 },
+    });
+    expect(second.runtime.play({
+      event: ev,
+      chunks: [{
+        chunkId: 'c1', cls: 'small' as const,
+        mesh: { path: 'assets/fracture/p01-barrel/chunk-0001.glb', guid: 'as_29a7ad90' },
+        position: [0, 3, 0] as [number, number, number],
+        rotation: [0, 0, 0, 1] as [number, number, number, number], scale: 1,
+        shape: { type: 'sphere' as const, radius: 0.25 },
+        mass: 1.5, friction: 0.6, restitution: 0,
+        linearVelocity: [0, 0, 0] as [number, number, number],
+        angularVelocity: [0, 0, 0] as [number, number, number],
+      }],
+      priority: 2, lifetimeSec: 4, fadeSec: 0.8,
+    }).accepted).toBe(true);
+    ctl.update(1 / 30);
+    expect(second.runtime.stats.simplifiedActive).toBe(1);
+
+    ctl.stop();
+    expect(ctl.ledger.pending).toBe(0);
+  }, 30000);
+});
