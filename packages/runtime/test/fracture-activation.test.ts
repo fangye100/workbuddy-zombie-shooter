@@ -41,7 +41,7 @@ beforeAll(async () => {
 const P01 = 'assets/fracture/p01-barrel/p01-barrel.fracture.json';
 const E04 = 'assets/fracture/e04-bulwark/e04-bulwark.fracture.json';
 
-it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range','nan','infinity','zero-unused','identity-tail'].map(mode=>[role,mode])))
+it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range','nan','infinity','normal-fallback','zero-unused','identity-tail'].map(mode=>[role,mode])))
 ('WU08 F08-07：真实NPC %s 的 %s 蒙皮输入沿同一静态合同准入/拒绝并恢复',async(role,mode)=>{
   const io=makeIO(),profile=e04Profile(),ref={path:E04,guid:profile.id};
   const path=role==='source'?profile.source.model.path:profile.chunks[0]!.mesh.path;
@@ -65,7 +65,13 @@ it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range',
   if(mode==='joint-range')jw(0,count+1);
   if(mode==='zero-unused'){jw(0,0);for(let i=1;i<4;i++)jw(i,joints.componentType===5123?65535:255);}
   if(mode==='identity-tail')jw(0,count);
-  const valid=mode==='zero-unused'||mode==='identity-tail';
+  if(mode==='normal-fallback'){
+    const normal=gltf.accessors[primitive.attributes.NORMAL];expect(normal.componentType).toBe(5126);
+    for(let i=0;i<3;i++)v.setFloat32(offset(normal)+i*4,0,true);
+  }
+  // 原parseGlb将零NORMAL解释为Y-up；保留该既有语义，而不是伪造解码后零方向负例。
+  if(mode==='normal-fallback')expect(Array.from(parseGlb(bad,null,'auto',{normalize:false}).mesh.vertices.subarray(3,6))).toEqual([0,1,0]);
+  const valid=mode==='zero-unused'||mode==='identity-tail'||mode==='normal-fallback';
   const event=ev(E04,profile.id,{target:{kind:'npc',runId:'skin-admit',slot:0,id:1,generation:1},npcPose:e04Pose(()=>[...IDENTITY16])});
   expect((await admitFractureProfile(ref,io,profile)).ok).toBe(true);
   io.setBin(path,bad);
@@ -77,6 +83,74 @@ it.each(['source','chunk'].flatMap(role=>['negative','sum','zero','joint-range',
   io.setBin(path,original);
   expect((await admitFractureProfile(ref,io,profile)).ok).toBe(true);
   expect((await prepareFractureActivation(event,{io,draftProfile:profile})).ok).toBe(true);
+});
+
+it.each(['coincident','collinear','coplanar','short','near-flat','valid','thin-valid'])
+('WU08 F08-08：真实GLB的 %s convex沿公共准入/正式prepare一致判定并恢复',async mode=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset,c=profile.chunks[0]!;
+  const proxy={path:'assets/fracture/p01-barrel/checked-convex.glb',guid:'as_checked_convex'};
+  c.proxy.shape={type:'convex',mesh:proxy};io.set(P01,JSON.stringify(profile));
+  const meta=JSON.parse(await io.readText(c.mesh.path+'.meta.json'));meta.guid=proxy.guid;io.set(proxy.path+'.meta.json',JSON.stringify(meta));
+  const good=makePointCloudGlb(new Float32Array([0,0,0,1,0,0,0,1,0,0,0,1]));io.setBin(proxy.path,good);
+  const ref={path:P01,guid:profile.id},event=ev(P01,profile.id),resolver=createGlbConvexResolver();
+  expect((await admitFractureProfile(ref,io)).ok).toBe(true);
+  let pts=[0,0,0,1,0,0,0,1,0,0,0,1];
+  if(mode==='coincident')pts=Array(12).fill(0);
+  if(mode==='collinear')pts=[0,0,0,1,0,0,2,0,0,3,0,0];
+  if(mode==='coplanar')pts=[0,0,0,1,0,0,0,1,0,1,1,0];
+  if(mode==='short')pts=[0,0,0,1,0,0];
+  if(mode==='near-flat')pts=[0,0,0,1,0,0,0,1,0,0,0,1e-7];
+  if(mode==='thin-valid')pts=[0,0,0,1,0,0,0,1,0,0,0,2e-6];
+  io.setBin(proxy.path,makePointCloudGlb(new Float32Array(pts)));
+  const valid=mode==='valid'||mode==='thin-valid';
+  for(const draft of [undefined,profile]){
+    const admission=await admitFractureProfile(ref,io,draft),prepared=await prepareFractureActivation(event,draft?{io,draftProfile:draft,resolveConvexPoints:resolver}:{io,resolveConvexPoints:resolver});
+    expect(admission.ok).toBe(valid);expect(prepared.ok).toBe(valid);
+    if(!admission.ok){expect(admission.failure.stage).toBe('proxy-load');expect(admission.failure.detail).toContain(proxy.path);expect(admission.failure.detail).toContain(c.chunkId);}
+  }
+  if(!valid){
+    let calls=0;const substitute=()=>{calls++;return new Float32Array([0,0,0,1,0,0,0,1,0,0,0,1]);};
+    expect((await admitFractureProfile(ref,io,profile,substitute)).ok).toBe(false);
+    expect((await prepareFractureActivation(event,{io,draftProfile:profile,resolveConvexPoints:substitute})).ok).toBe(false);
+    expect(calls).toBe(0);
+  }
+  io.setBin(proxy.path,good);
+  expect((await admitFractureProfile(ref,io,profile)).ok).toBe(true);
+  expect((await prepareFractureActivation(event,{io,draftProfile:profile,resolveConvexPoints:resolver})).ok).toBe(true);
+});
+
+it('WU08 F08-08：convex只读一次且pivot只减一次，resolver缓存与当次已验点集相互隔离',async()=>{
+  const io=makeIO(),profile=JSON.parse(await io.readText(P01)) as FractureAsset,c=profile.chunks[0]!;
+  const proxy={path:'assets/fracture/p01-barrel/snapshot-convex.glb',guid:'as_snapshot_convex'};
+  c.proxy.shape={type:'convex',mesh:proxy};c.pivot=[10,20,30];io.set(P01,JSON.stringify(profile));
+  const meta=JSON.parse(await io.readText(c.mesh.path+'.meta.json'));meta.guid=proxy.guid;io.set(proxy.path+'.meta.json',JSON.stringify(meta));
+  const raw=new Float32Array([10,20,30,11,20,30,10,21,30,10,20,31]);io.setBin(proxy.path,makePointCloudGlb(raw));
+  const base=io.readBinary;let reads=0,calls=0;
+  io.readBinary=async path=>{if(path===proxy.path)reads++;return base(path);};
+  const resolve=()=>{calls++;return raw;};
+  const result=await prepareFractureActivation(ev(P01,profile.id),{io,resolveConvexPoints:resolve});
+  expect(result.ok).toBe(true);expect(reads).toBe(1);expect(calls).toBe(1);
+  expect(Array.from(raw)).toEqual([10,20,30,11,20,30,10,21,30,10,20,31]);
+  raw.fill(99);
+  if(result.ok){const shape=result.activation.chunks[0]!.shape;expect(shape.type).toBe('convex');if(shape.type==='convex')expect(Array.from(shape.points)).toEqual([0,0,0,1,0,0,0,1,0,0,0,1]);}
+});
+
+it.each(['object-scale','object-quat','npc-bind','npc-sphere','npc-capsule','npc-convex'])
+('WU08静态支持条件 %s 在两种Apply共用准入与prepare前一致拒绝并恢复',async mode=>{
+  const io=makeIO(),npc=mode.startsWith('npc'),path=npc?E04:P01,original=await io.readText(path),profile=JSON.parse(original) as FractureAsset,c=profile.chunks[0]!;
+  const ref={path,guid:profile.id},event=npc?ev(path,profile.id,{target:{kind:'npc',runId:'static-support',id:1,slot:0,generation:1},npcPose:e04Pose(()=>[...IDENTITY16])}):ev(path,profile.id);
+  expect((await admitFractureProfile(ref,io)).ok).toBe(true);
+  if(mode==='object-scale')c.bind.scale=[1,2,1];
+  if(mode==='object-quat')c.bind.rotation=[0,0,0,2];
+  if(mode==='npc-bind')c.bind.position[0]=1;
+  if(mode==='npc-sphere')c.proxy.shape={type:'sphere',radius:.2};
+  if(mode==='npc-capsule')c.proxy.shape={type:'capsule',radius:.2,halfHeight:.3};
+  if(mode==='npc-convex')c.proxy.shape={type:'convex',mesh:c.mesh};
+  io.set(path,JSON.stringify(profile));
+  const admission=await admitFractureProfile(ref,io,profile),prepared=await prepareFractureActivation(event,{io,draftProfile:profile});
+  expect(admission.ok).toBe(false);expect(prepared.ok).toBe(false);
+  if(!admission.ok&&!prepared.ok)expect(admission.failure).toEqual(prepared.failure);
+  io.set(path,original);expect((await admitFractureProfile(ref,io)).ok).toBe(true);expect((await prepareFractureActivation(event,{io})).ok).toBe(true);
 });
 
 it('WU08合法未保存配方进入正式prepare，当前隔离/外改身份仍先拒绝，恢复可重试',async()=>{

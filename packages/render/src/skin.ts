@@ -411,6 +411,13 @@ export function validateSkinMesh(mesh: MeshData, jointCount: number): void {
       if (w > 0 && joints[i]! >= jointCount) fail('顶点 ' + v + ' 关节越界');
     }
     if (Math.abs(sum - 1) > 1e-3) fail('顶点 ' + v + ' 权重和不为 1');
+    // 零方向经过任何线性蒙皮仍为零；在准入与实际烘焙前使用同一静态合同。
+    for (const offset of [0, 3, 6]) {
+      const i = v * VERTEX_FLOATS + offset;
+      const x = mesh.vertices[i]!, y = mesh.vertices[i+1]!, z = mesh.vertices[i+2]!;
+      if (![x,y,z].every(Number.isFinite)) fail('顶点 ' + v + ' 位置/方向含非有限值');
+      if (offset !== 0 && Math.hypot(x,y,z) === 0) fail('顶点 ' + v + ' 蒙皮方向退化');
+    }
   }
 }
 

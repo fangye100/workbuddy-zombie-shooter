@@ -17,7 +17,7 @@ import {
   type AssetMeta,
   type FractureAsset,
 } from '@aether/scene';
-import { parseGlb, VERTEX_FLOATS } from '@aether/scene';
+import { parseGlb, VERTEX_FLOATS, type GltfResult, type MeshData } from '@aether/scene';
 import { bakeSkinVertices, paletteForNamedPose, validateSkinMesh } from '@aether/render';
 import type { FractureEvent, FractureVec3, FractureQuat } from './fracture';
 import type { FractureActivation, FractureChunkInput } from './fracture-runtime';
@@ -115,22 +115,18 @@ export interface PrepareOptions {
  * 法线/UV/颜色当成坐标，碰撞体被撑到 [-1,1]。这里逐顶点只取前 3 个分量。
  */
 export function createGlbConvexResolver(): ConvexPointsResolver {
-  return (buffer: ArrayBuffer): Float32Array => {
-    const verts = parseGlb(buffer, null, 'auto', { normalize: false }).mesh.vertices;
-    const stride = VERTEX_FLOATS;
-    if (verts.length % stride !== 0) {
-      throw new Error('GLB 顶点缓冲长度 ' + verts.length + ' 不是顶点步长 ' + stride + ' 的整数倍');
-    }
-    const count = verts.length / stride;
-    const out = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const o = i * stride;
-      out[i * 3] = verts[o]!;
-      out[i * 3 + 1] = verts[o + 1]!;
-      out[i * 3 + 2] = verts[o + 2]!;
-    }
-    return out;
-  };
+  return buffer => convexPointsFromMesh(parseGlb(buffer, null, 'auto', { normalize: false }).mesh);
+}
+
+function convexPointsFromMesh(mesh: MeshData): Float32Array {
+  const verts = mesh.vertices, stride = VERTEX_FLOATS;
+  if (verts.length % stride !== 0) throw new Error('GLB 顶点缓冲长度 '+verts.length+' 不是顶点步长 '+stride+' 的整数倍');
+  const count = verts.length / stride, out = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const o = i * stride;
+    out[i*3] = verts[o]!; out[i*3+1] = verts[o+1]!; out[i*3+2] = verts[o+2]!;
+  }
+  return out;
 }
 
 /**
@@ -140,9 +136,8 @@ export function createGlbConvexResolver(): ConvexPointsResolver {
 async function checkRefBinary(
   io: FractureAssetIO,
   path: string,
-  currentBinaries?: Map<string, ArrayBuffer>,
   requireSkin = false,
-): Promise<FractureAdmissionFailure | null> {
+): Promise<FractureAdmissionFailure | {buffer:ArrayBuffer;parsed:GltfResult}> {
   // 每次都读当前字节：路径曾经读成功过**不等于**当前资源仍可用/仍是同一版本。
   // （跨调用缓存曾让 Stop 后迟到的旧读取污染新代，并让已失效资源错误准入。）
   let buf: ArrayBuffer;
@@ -177,11 +172,10 @@ async function checkRefBinary(
       // 与paletteForNamedPose一致：最后一项是未蒙皮primitive的恒等关节。
       validateSkinMesh(parsed.mesh, parsed.skeleton.jointNames.length + 1);
     }
+    return {buffer:buf,parsed};
   } catch(error) {
     return { stage:'ref-binary', detail:'引用资产 GLB 内容解码失败（'+path+'）：'+String(error) };
   }
-  currentBinaries?.set(path, buf);
-  return null;
 }
 
 const SCALE_EPS = 1e-4;
@@ -220,9 +214,105 @@ async function checkRefMeta(
   return null;
 }
 
+/** 原prepare中与事件/姿态无关的支持条件；两种Apply与正式准备共用。 */
+function checkStaticProfile(profile: FractureAsset): FractureAdmissionFailure | null {
+  for (const c of profile.chunks) {
+    // bind.rotation 同样必须是有限单位四元数（否则 bind 组合出来的世界姿态退化）。
+    const br = c.bind.rotation;
+    const brLen = Math.hypot(br[0], br[1], br[2], br[3]);
+    if (!br.every((v) => Number.isFinite(v)) || Math.abs(brLen - 1) > 1e-3) {
+      return {
+        stage: 'transform',
+        detail: '碎块 ' + c.chunkId + ' bind.rotation 不是有限单位四元数（|q|=' + brLen + '）',
+      };
+    }
+    // R6：bind.scale 三轴也必须均匀（schema 允许非均匀，但物理代理标量尺度无法表示；明确拒绝）。
+    const bs = c.bind.scale;
+    if (!isUniformScale(bs)) {
+      return { stage: 'transform', detail: '碎块 ' + c.chunkId + ' bind.scale 非均匀（' + bs.join(',') + '），不支持近似，请改用均匀尺度' };
+    }
+    if (profile.kind === 'npc') {
+      // 当前 LBS 会改变代理的形状；只明确支持 posed AABB box，不拿 bind 代理冒充。
+      if (c.proxy.shape.type !== 'box') {
+        return { stage: 'proxy-load', detail: 'NPC 碎块 ' + c.chunkId + ' 当前姿态烘焙仅支持 box 代理，不支持 ' + c.proxy.shape.type };
+      }
+      // 正式 skin chunk 已与源 mesh 同空间；非单位 bind 不能被忽略或重复叠加。
+      if (c.bind.position.some((v) => Math.abs(v) > 1e-6) || bs.some((v) => Math.abs(v - 1) > 1e-6)
+        || br.slice(0, 3).some((v) => Math.abs(v) > 1e-6) || Math.abs(Math.abs(br[3]) - 1) > 1e-6) {
+        return { stage: 'transform', detail: 'NPC 碎块 ' + c.chunkId + ' 的 skin 已在源模型空间，仅支持单位 bind' };
+      }
+    }
+  }
+  return null;
+}
+
+/** 原convex校验与唯一pivot中心化；复制resolver输出，避免重复准备污染其缓存。 */
+function prepareConvexProxyPoints(input: unknown, pivot: FractureVec3): Float32Array {
+  if (!(input instanceof Float32Array) || input.length < 9 || input.length % 3 !== 0) {
+    throw new Error('convex 代理点数非法（需 ≥3 点且为 3 的倍数），实际 '+(input instanceof Float32Array?input.length:'非Float32Array'));
+  }
+  const pts = new Float32Array(input);
+  // resolver给资产原始坐标；只在这里减一次pivot，原三维非退化公式/阈值保留。
+  for (let i = 0; i < pts.length; i += 3) {
+    pts[i] = pts[i]! - pivot[0]; pts[i+1] = pts[i+1]! - pivot[1]; pts[i+2] = pts[i+2]! - pivot[2];
+  }
+  let degenerate = false;
+  for (let i = 0; i < pts.length; i++) { if (!Number.isFinite(pts[i])) { degenerate = true; break; } }
+  if (degenerate) {
+    throw new Error('convex 代理含非有限值');
+  }
+  // 非退化三维凸包校验：找非共面四点（点到基面距离 > 1e-6 米）。
+  // maxDist/maxArea 为平方量（阈值 1e-12 对应长度/叉积 < 1e-6），maxVol 为长度量。
+  {
+    const nPts = pts.length / 3;
+    // 找最远两点作为基线
+    let maxDist = 0, i0 = 0, i1 = 1;
+    for (let a = 0; a < nPts; a++) for (let b = a + 1; b < nPts; b++) {
+      const dx = pts[a*3]!-pts[b*3]!, dy = pts[a*3+1]!-pts[b*3+1]!, dz = pts[a*3+2]!-pts[b*3+2]!;
+      const d = dx*dx+dy*dy+dz*dz;
+      if (d > maxDist) { maxDist = d; i0 = a; i1 = b; }
+    }
+    if (maxDist < 1e-12) {
+      throw new Error('convex 代理所有点重合（零体积）');
+    }
+    // 找离基线最远的点
+    const ax = pts[i0*3]!, ay = pts[i0*3+1]!, az = pts[i0*3+2]!;
+    const bx = pts[i1*3]!, by = pts[i1*3+1]!, bz = pts[i1*3+2]!;
+    const abx = bx-ax, aby = by-ay, abz = bz-az;
+    let maxArea = 0, i2 = -1;
+    for (let a = 0; a < nPts; a++) {
+      if (a === i0 || a === i1) continue;
+      const cx = pts[a*3]!, cy = pts[a*3+1]!, cz = pts[a*3+2]!;
+      const acx = cx-ax, acy = cy-ay, acz = cz-az;
+      // 叉积 |AB × AC| = 2 * 三角形面积
+      const nx = aby*acz - abz*acy, ny = abz*acx - abx*acz, nz = abx*acy - aby*acx;
+      const area = nx*nx + ny*ny + nz*nz;
+      if (area > maxArea) { maxArea = area; i2 = a; }
+    }
+    if (maxArea < 1e-12 || i2 < 0) {
+      throw new Error('convex 代理所有点共线（零面积）');
+    }
+    // 找离平面最远的点（非共面校验）
+    const cx2 = pts[i2*3]!, cy2 = pts[i2*3+1]!, cz2 = pts[i2*3+2]!;
+    const nx = aby*(cz2-az) - abz*(cy2-ay), ny2 = abz*(cx2-ax) - abx*(cz2-az), nz2 = abx*(cy2-ay) - aby*(cx2-ax);
+    const nLen = Math.sqrt(nx*nx + ny2*ny2 + nz2*nz2);
+    let maxVol = 0;
+    for (let a = 0; a < nPts; a++) {
+      if (a === i0 || a === i1 || a === i2) continue;
+      const dx2 = pts[a*3]!-ax, dy2 = pts[a*3+1]!-ay, dz2 = pts[a*3+2]!-az;
+      const vol = Math.abs(nx*dx2 + ny2*dy2 + nz2*dz2) / (nLen || 1);
+      if (vol > maxVol) maxVol = vol;
+    }
+    if (maxVol < 1e-6) {
+      throw new Error('convex 代理所有点共面（零体积）');
+    }
+  }
+  return pts;
+}
+
 /** 当前profile、草稿和全部引用准入。Apply/Preview/Play共用，不分配GPU/物理资源。 */
-export async function admitFractureProfile(ref:{readonly path:string;readonly guid:string},io:FractureAssetIO,draftProfile?:FractureAsset):Promise<
-  {readonly ok:true;readonly profile:FractureAsset;readonly binaries:Map<string,ArrayBuffer>|undefined}|{readonly ok:false;readonly failure:FractureAdmissionFailure}> {
+export async function admitFractureProfile(ref:{readonly path:string;readonly guid:string},io:FractureAssetIO,draftProfile?:FractureAsset,resolveConvexPoints?:ConvexPointsResolver):Promise<
+  {readonly ok:true;readonly profile:FractureAsset;readonly binaries:Map<string,ArrayBuffer>|undefined;readonly convexPoints:Map<string,Float32Array>}|{readonly ok:false;readonly failure:FractureAdmissionFailure}> {
   let raw:unknown;
   try{raw=JSON.parse(await io.readText(ref.path));}
   catch(error){return {ok:false,failure:{stage:'profile-read',detail:'profile 读取失败：'+String(error)}};}
@@ -265,11 +355,33 @@ export async function admitFractureProfile(ref:{readonly path:string;readonly gu
   // 仅本次准备持有原字节，NPC 随后解析同一份 chunk，不跨事件缓存/重读。
   const currentBinaries = profile.kind==='npc' ? new Map<string, ArrayBuffer>() : undefined;
   const skinRefs = profile.kind==='npc' ? new Set([profile.source.model.path,...profile.chunks.map(c=>c.mesh.path)]) : new Set<string>();
+  const convexSources = new Map<string,{buffer:ArrayBuffer;parsed:GltfResult}>();
+  const convexRefs = new Set(profile.chunks.flatMap(c=>c.proxy.shape.type==='convex'?[c.proxy.shape.mesh.path]:[]));
   for (const path of new Set(refs)) {
-    const bf = await checkRefBinary(io, path, currentBinaries, skinRefs.has(path));
-    if (bf) return { ok: false, failure: bf };
+    const checked = await checkRefBinary(io, path, skinRefs.has(path));
+    if ('stage' in checked) return {ok:false,failure:checked};
+    currentBinaries?.set(path,checked.buffer);
+    if (convexRefs.has(path)) convexSources.set(path,checked);
   }
-  return {ok:true,profile,binaries:currentBinaries};
+  const staticFailure=checkStaticProfile(profile);
+  if(staticFailure)return {ok:false,failure:staticFailure};
+  const currentConvexPoints = new Map<string,Float32Array>();
+  for (const c of profile.chunks) if(c.proxy.shape.type==='convex') {
+    const path=c.proxy.shape.mesh.path, checked=convexSources.get(path)!;
+    try {
+      // 始终验当前GLB本身；自定义端口不能用替代点集救回坏资源。
+      const raw=convexPointsFromMesh(checked.parsed.mesh);
+      const validated=prepareConvexProxyPoints(raw,c.pivot);
+      if (resolveConvexPoints) {
+        const converted=resolveConvexPoints(checked.buffer);
+        const same=converted instanceof Float32Array&&converted.length===raw.length&&converted.every((v,i)=>v===raw[i]);
+        currentConvexPoints.set(c.chunkId,same?validated:prepareConvexProxyPoints(converted,c.pivot));
+      } else currentConvexPoints.set(c.chunkId,validated);
+    } catch(error) {
+      return {ok:false,failure:{stage:'proxy-load',detail:'碎块 '+c.chunkId+' convex 代理解析/校验失败（'+path+'）：'+String(error)}};
+    }
+  }
+  return {ok:true,profile,binaries:currentBinaries,convexPoints:currentConvexPoints};
 }
 
 /** 正式数据准备：当前资源准入后，按真实事件变换/姿态生成激活输入，不建body/租约。 */
@@ -277,9 +389,9 @@ export async function prepareFractureActivation(
   event: FractureEvent,
   opts: PrepareOptions,
 ): Promise<FracturePrepareResult> {
-  const admitted=await admitFractureProfile(event.profile,opts.io,opts.draftProfile);
+  const admitted=await admitFractureProfile(event.profile,opts.io,opts.draftProfile,opts.resolveConvexPoints);
   if(!admitted.ok)return admitted;
-  const {profile,binaries:currentBinaries}=admitted;
+  const {profile,binaries:currentBinaries,convexPoints:currentConvexPoints}=admitted;
   const wantNpc=profile.kind==='npc';
   if(wantNpc!==(event.target.kind==='npc'))return {ok:false,failure:{stage:'target-kind',detail:'profile kind='+profile.kind+' 与事件目标 kind='+event.target.kind+' 不匹配'}};
 
@@ -308,23 +420,6 @@ export async function prepareFractureActivation(
   const rng = makeRng(event.seed);
   const chunks: FractureChunkInput[] = [];
   for (const c of profile.chunks) {
-    // bind.rotation 同样必须是有限单位四元数（否则 bind 组合出来的世界姿态退化）。
-    const br = c.bind.rotation;
-    const brLen = Math.hypot(br[0], br[1], br[2], br[3]);
-    if (!br.every((v) => Number.isFinite(v)) || Math.abs(brLen - 1) > 1e-3) {
-      return {
-        ok: false,
-        failure: {
-          stage: 'transform',
-          detail: '碎块 ' + c.chunkId + ' bind.rotation 不是有限单位四元数（|q|=' + brLen + '）',
-        },
-      };
-    }
-    // R6：bind.scale 三轴也必须均匀（schema 允许非均匀，但物理代理标量尺度无法表示；明确拒绝）。
-    const bs = c.bind.scale;
-    if (!isUniformScale(bs)) {
-      return { ok: false, failure: { stage: 'transform', detail: '碎块 ' + c.chunkId + ' bind.scale 非均匀（' + bs.join(',') + '），不支持近似，请改用均匀尺度' } };
-    }
     let bakedVertices: Float32Array<ArrayBuffer> | undefined;
     let posedHalfExtents: FractureVec3 | undefined;
     let pivot: FractureVec3 = [c.pivot[0], c.pivot[1], c.pivot[2]];
@@ -332,15 +427,6 @@ export async function prepareFractureActivation(
     let worldRot: FractureQuat;
     let worldScale: number;
     if (wantNpc) {
-      // 当前 LBS 会改变代理的形状；只明确支持 posed AABB box，不拿 bind 代理冒充。
-      if (c.proxy.shape.type !== 'box') {
-        return { ok: false, failure: { stage: 'proxy-load', detail: 'NPC 碎块 ' + c.chunkId + ' 当前姿态烘焙仅支持 box 代理，不支持 ' + c.proxy.shape.type } };
-      }
-      // 正式 skin chunk 已与源 mesh 同空间；非单位 bind 不能被忽略或重复叠加。
-      if (c.bind.position.some((v) => Math.abs(v) > 1e-6) || bs.some((v) => Math.abs(v - 1) > 1e-6)
-        || br.slice(0, 3).some((v) => Math.abs(v) > 1e-6) || Math.abs(Math.abs(br[3]) - 1) > 1e-6) {
-        return { ok: false, failure: { stage: 'transform', detail: 'NPC 碎块 ' + c.chunkId + ' 的 skin 已在源模型空间，仅支持单位 bind' } };
-      }
       let parsed: ReturnType<typeof parseGlb>;
       try {
         parsed = parseGlb(currentBinaries!.get(c.mesh.path)!, null, 'auto', { normalize: false });
@@ -415,84 +501,8 @@ export async function prepareFractureActivation(
       if (!opts.resolveConvexPoints) {
         return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' 需离线 convex 代理但未提供 resolveConvexPoints' } };
       }
-      let buf: ArrayBuffer;
-      try {
-        buf = await opts.io.readBinary(c.proxy.shape.mesh.path);
-      } catch (e) {
-        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理读取失败：' + String(e) } };
-      }
-      let pts: Float32Array;
-      try {
-        pts = opts.resolveConvexPoints(buf);
-      } catch (e) {
-        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理解析失败：' + String(e) } };
-      }
-      // 代理局部系以 profile.pivot 为原点：resolver 给的是资产原始坐标，
-      // 减去 pivot 后与 body 的世界平移自洽。body 平移的完整公式见下方变换链：
-      // eventT + eventR·(bindT + bindR·(bindS·pivot))·eventS
-      // （bind 为单位变换时才退化成 pivot + 事件世界变换）。
-      if (pts instanceof Float32Array && pts.length % 3 === 0 && pts.length >= 3) {
-        const px = c.pivot[0], py = c.pivot[1], pz = c.pivot[2];
-        for (let i = 0; i < pts.length; i += 3) {
-          pts[i] = pts[i]! - px;
-          pts[i + 1] = pts[i + 1]! - py;
-          pts[i + 2] = pts[i + 2]! - pz;
-        }
-      }
-      if (!(pts instanceof Float32Array) || pts.length < 9 || pts.length % 3 !== 0) {
-        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理点数非法（需 ≥3 点且为 3 的倍数），实际 ' + pts.length } };
-      }
-      let degenerate = false;
-      for (let i = 0; i < pts.length; i++) { if (!Number.isFinite(pts[i])) { degenerate = true; break; } }
-      if (degenerate) {
-        return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理含非有限值' } };
-      }
-      // 非退化三维凸包校验：找非共面四点（点到基面距离 > 1e-6 米）。
-      // maxDist/maxArea 为平方量（阈值 1e-12 对应长度/叉积 < 1e-6），maxVol 为长度量。
-      {
-        const nPts = pts.length / 3;
-        // 找最远两点作为基线
-        let maxDist = 0, i0 = 0, i1 = 1;
-        for (let a = 0; a < nPts; a++) for (let b = a + 1; b < nPts; b++) {
-          const dx = pts[a*3]!-pts[b*3]!, dy = pts[a*3+1]!-pts[b*3+1]!, dz = pts[a*3+2]!-pts[b*3+2]!;
-          const d = dx*dx+dy*dy+dz*dz;
-          if (d > maxDist) { maxDist = d; i0 = a; i1 = b; }
-        }
-        if (maxDist < 1e-12) {
-          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点重合（零体积）' } };
-        }
-        // 找离基线最远的点
-        const ax = pts[i0*3]!, ay = pts[i0*3+1]!, az = pts[i0*3+2]!;
-        const bx = pts[i1*3]!, by = pts[i1*3+1]!, bz = pts[i1*3+2]!;
-        const abx = bx-ax, aby = by-ay, abz = bz-az;
-        let maxArea = 0, i2 = -1;
-        for (let a = 0; a < nPts; a++) {
-          if (a === i0 || a === i1) continue;
-          const cx = pts[a*3]!, cy = pts[a*3+1]!, cz = pts[a*3+2]!;
-          const acx = cx-ax, acy = cy-ay, acz = cz-az;
-          // 叉积 |AB × AC| = 2 * 三角形面积
-          const nx = aby*acz - abz*acy, ny = abz*acx - abx*acz, nz = abx*acy - aby*acx;
-          const area = nx*nx + ny*ny + nz*nz;
-          if (area > maxArea) { maxArea = area; i2 = a; }
-        }
-        if (maxArea < 1e-12 || i2 < 0) {
-          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点共线（零面积）' } };
-        }
-        // 找离平面最远的点（非共面校验）
-        const cx2 = pts[i2*3]!, cy2 = pts[i2*3+1]!, cz2 = pts[i2*3+2]!;
-        const nx = aby*(cz2-az) - abz*(cy2-ay), ny2 = abz*(cx2-ax) - abx*(cz2-az), nz2 = abx*(cy2-ay) - aby*(cx2-ax);
-        const nLen = Math.sqrt(nx*nx + ny2*ny2 + nz2*nz2);
-        let maxVol = 0;
-        for (let a = 0; a < nPts; a++) {
-          if (a === i0 || a === i1 || a === i2) continue;
-          const dx2 = pts[a*3]!-ax, dy2 = pts[a*3+1]!-ay, dz2 = pts[a*3+2]!-az;
-          const vol = Math.abs(nx*dx2 + ny2*dy2 + nz2*dz2) / (nLen || 1);
-          if (vol > maxVol) maxVol = vol;
-        }
-        if (maxVol < 1e-6) {
-          return { ok: false, failure: { stage: 'proxy-load', detail: '碎块 ' + c.chunkId + ' convex 代理所有点共面（零体积）' } };
-        }
-      }
+      const pts = currentConvexPoints.get(c.chunkId);
+      if (!pts) return {ok:false,failure:{stage:'proxy-load',detail:'碎块 '+c.chunkId+' 缺少当次已验convex代理'}};
       shape = { type: 'convex', points: pts };
     } else if (c.proxy.shape.type === 'box') {
       shape = { type: 'box', halfExtents: [c.proxy.shape.halfExtents[0], c.proxy.shape.halfExtents[1], c.proxy.shape.halfExtents[2]] };
